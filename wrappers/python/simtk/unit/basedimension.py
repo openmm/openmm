@@ -16,7 +16,7 @@ Portions copyright (c) 2012 Stanford University and the Authors.
 Authors: Christopher M. Bruns
 Contributors: Peter Eastman
 
-Permission is hereby granted, free of charge, to any person obtaining a 
+Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
 to deal in the Software without restriction, including without limitation
 the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -42,7 +42,7 @@ __version__ = "0.6"
 class BaseDimension(object):
     '''
     A physical dimension such as length, mass, or temperature.
-    
+
     It is unlikely the user will need to create new ones.
     '''
     # Keep deterministic order of dimensions
@@ -57,7 +57,7 @@ class BaseDimension(object):
         'angle': 8,
     }
     _next_unused_index = 9
-    
+
     def __init__(self, name):
         """Create a new BaseDimension.
 
@@ -70,17 +70,17 @@ class BaseDimension(object):
             BaseDimension._index_by_name[name] = BaseDimension._next_unused_index
             BaseDimension._next_unused_index += 1
         self._index = BaseDimension._index_by_name[name]
-        
+
     def __lt__(self, other):
         """
         The implicit order of BaseDimensions is the order in which they were created.
         This method is used for using BaseDimensions as hash keys, and also affects
         the order in which units appear in multi-dimensional Quantities.
-        
+
         Returns True if self < other, False otherwise.
         """
         return self._index < other._index
-        
+
     def __hash__(self):
         """
         Needed for using BaseDimensions as hash keys.

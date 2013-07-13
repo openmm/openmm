@@ -12,7 +12,7 @@ Portions copyright (c) 2012 Stanford University and the Authors.
 Authors: Christopher M. Bruns
 Contributors:
 
-Permission is hereby granted, free of charge, to any person obtaining a 
+Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
 to deal in the Software without restriction, including without limitation
 the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -38,13 +38,13 @@ from simtk.unit import daltons
 
 class Element:
     """An Element represents a chemical element.
-    
+
     The simtk.openmm.app.element module contains objects for all the standard chemical elements,
     such as element.hydrogen or element.carbon.  You can also call the static method Element.getBySymbol() to
     look up the Element with a particular chemical symbol."""
 
     _elements_by_symbol = {}
-    
+
     def __init__(self, number, name, symbol, mass):
         ## The atomic number of the element
         self.atomic_number = number

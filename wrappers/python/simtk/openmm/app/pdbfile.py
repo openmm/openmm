@@ -10,7 +10,7 @@ Portions copyright (c) 2012 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors:
 
-Permission is hereby granted, free of charge, to any person obtaining a 
+Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
 to deal in the Software without restriction, including without limitation
 the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -48,28 +48,28 @@ except:
 
 class PDBFile(object):
     """PDBFile parses a Protein Data Bank (PDB) file and constructs a Topology and a set of atom positions from it.
-    
+
     This class also provides methods for creating PDB files.  To write a file containing a single model, call
     writeFile().  You also can create files that contain multiple models.  To do this, first call writeHeader(),
     then writeModel() once for each model in the file, and finally writeFooter() to complete the file."""
-    
+
     _residueNameReplacements = {}
     _atomNameReplacements = {}
-    
+
     def __init__(self, file):
         """Load a PDB file.
-        
+
         The atom positions and Topology can be retrieved by calling getPositions() and getTopology().
-        
+
         Parameters:
          - file (string) the name of the file to load
         """
         top = Topology()
         ## The Topology read from the PDB file
         self.topology = top
-        
+
         # Load the PDB file
-        
+
         pdb = PdbStructure(open(file), load_all_models=True)
         PDBFile._loadNameReplacementTables()
 
@@ -95,7 +95,7 @@ class PDBFile(object):
                     element = atom.element
                     if element is None:
                         # Try to guess the element.
-                        
+
                         upper = atomName.upper()
                         if upper.startswith('CL'):
                             element = elem.chlorine
@@ -133,9 +133,9 @@ class PDBFile(object):
         self.topology.createStandardBonds()
         self.topology.createDisulfideBonds(self.positions)
         self._numpyPositions = None
-        
+
         # Add bonds based on CONECT records.
-        
+
         connectBonds = []
         for connect in pdb.models[0].connects:
             i = connect[0]
@@ -152,14 +152,14 @@ class PDBFile(object):
     def getTopology(self):
         """Get the Topology of the model."""
         return self.topology
-        
+
     def getNumFrames(self):
         """Get the number of frames stored in the file."""
         return len(self._positions)
-    
+
     def getPositions(self, asNumpy=False, frame=0):
         """Get the atomic positions.
-        
+
         Parameters:
          - asNumpy (boolean=False) if true, the values are returned as a numpy array instead of a list of Vec3s
          - frame (int=0) the index of the frame for which to get positions
@@ -213,11 +213,11 @@ class PDBFile(object):
             name = atom.attrib['name']
             for id in atom.attrib:
                 map[atom.attrib[id]] = name
-    
+
     @staticmethod
     def writeFile(topology, positions, file=sys.stdout, modelIndex=None):
         """Write a PDB file containing a single model.
-                
+
         Parameters:
          - topology (Topology) The Topology defining the model to write
          - positions (list) The list of atomic positions to write
@@ -230,7 +230,7 @@ class PDBFile(object):
     @staticmethod
     def writeHeader(topology, file=sys.stdout):
         """Write out the header for a PDB file.
-        
+
         Parameters:
          - topology (Topology) The Topology defining the molecular system being written
          - file (file=stdout) A file to write the file to
@@ -239,11 +239,11 @@ class PDBFile(object):
         if boxSize is not None:
             size = boxSize.value_in_unit(angstroms)
             print >>file, "CRYST1%9.3f%9.3f%9.3f  90.00  90.00  90.00 P 1           1 " % size
-    
+
     @staticmethod
     def writeModel(topology, positions, file=sys.stdout, modelIndex=None):
         """Write out a model to a PDB file.
-                
+
         Parameters:
          - topology (Topology) The Topology defining the model to write
          - positions (list) The list of atomic positions to write
@@ -251,7 +251,7 @@ class PDBFile(object):
          - modelIndex (int=None) If not None, the model will be surrounded by MODEL/ENDMDL records with this index
         """
         if len(list(topology.atoms())) != len(positions):
-            raise ValueError('The number of positions must match the number of atoms') 
+            raise ValueError('The number of positions must match the number of atoms')
         if is_quantity(positions):
             positions = positions.value_in_unit(angstroms)
         if any(math.isnan(norm(pos)) for pos in positions):
@@ -295,7 +295,7 @@ class PDBFile(object):
     @staticmethod
     def writeFooter(topology, file=sys.stdout):
         """Write out the footer for a PDB file.
-        
+
         Parameters:
          - topology (Topology) The Topology defining the molecular system being written
          - file (file=stdout) A file to write the file to

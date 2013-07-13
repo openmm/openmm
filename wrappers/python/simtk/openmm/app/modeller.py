@@ -10,7 +10,7 @@ Portions copyright (c) 2012-2013 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors:
 
-Permission is hereby granted, free of charge, to any person obtaining a 
+Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
 to deal in the Software without restriction, including without limitation
 the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -48,19 +48,19 @@ from math import ceil, floor
 
 class Modeller(object):
     """Modeller provides tools for editing molecular models, such as adding water or missing hydrogens.
-    
+
     To use it, create a Modeller object, specifying the initial Topology and atom positions.  You can
     then call various methods to change the model in different ways.  Each time you do, a new Topology
     and list of coordinates is created to represent the changed model.  Finally, call getTopology()
     and getPositions() to get the results.
     """
-        
+
     _residueHydrogens = {}
     _hasLoadedStandardHydrogens = False
 
     def __init__(self, topology, positions):
         """Create a new Modeller object
-        
+
         Parameters:
          - topology (Topology) the initial Topology of the model
          - positions (list) the initial atomic positions
@@ -71,27 +71,27 @@ class Modeller(object):
             positions = positions*nanometer
         ## The list of atom positions
         self.positions = positions
-        
+
     def getTopology(self):
         """Get the Topology of the model."""
         return self.topology
-        
+
     def getPositions(self):
         """Get the atomic positions."""
         return self.positions
 
     def add(self, addTopology, addPositions):
         """Add chains, residues, atoms, and bonds to the model.
-        
+
         Specify what to add by providing a new Topology object and the corresponding atomic positions.
         All chains, residues, atoms, and bonds contained in the Topology are added to the model.
-        
+
         Parameters:
          - addTopoology (Topology) a Topology whose contents should be added to the model
          - addPositions (list) the positions of the atoms to add
         """
         # Copy over the existing model.
-        
+
         newTopology = Topology()
         newTopology.setUnitCellDimensions(deepcopy(self.topology.getUnitCellDimensions()))
         newAtoms = {}
@@ -106,7 +106,7 @@ class Modeller(object):
                     newPositions.append(deepcopy(self.positions[atom.index]))
         for bond in self.topology.bonds():
             newTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]])
-        
+
         # Add the new model
 
         newAtoms = {}
@@ -125,16 +125,16 @@ class Modeller(object):
 
     def delete(self, toDelete):
         """Delete chains, residues, atoms, and bonds from the model.
-        
+
         You can specify objects to delete at any granularity: atoms, residues, or chains.  Passing
         in an Atom object causes that Atom to be deleted.  Passing in a Residue object causes that
         Residue and all Atoms it contains to be deleted.  Passing in a Chain object causes that
         Chain and all Residues and Atoms it contains to be deleted.
-        
+
         In all cases, when an Atom is deleted, any bonds it participates in are also deleted.
         You also can specify a bond (as a tuple of Atom objects) to delete just that bond without
         deleting the Atoms it connects.
-        
+
         Parameters:
          - toDelete (list) a list of Atoms, Residues, Chains, and bonds (specified as tuples of Atoms) to delete
         """
@@ -166,14 +166,14 @@ class Modeller(object):
                     newTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]])
         self.topology = newTopology
         self.positions = newPositions
-    
+
     def deleteWater(self):
         """Delete all water molecules from the model."""
         self.delete(res for res in self.topology.residues() if res.name == "HOH")
-    
+
     def convertWater(self, model='tip3p'):
         """Convert all water molecules to a different water model.
-        
+
         Parameters:
          - model (string='tip3p') the water model to convert to.  Supported values are 'tip3p', 'spce', 'tip4pew', and 'tip5p'.
         """
@@ -211,9 +211,9 @@ class Modeller(object):
                     newPositions.append(po)
                     newPositions.append(ph1)
                     newPositions.append(ph2)
-                    
+
                     # Add virtual sites.
-                    
+
                     if sites == 4:
                         newTopology.addAtom('M', None, newResidue)
                         newPositions.append(0.786646558*po + 0.106676721*ph1 + 0.106676721*ph2)
@@ -239,19 +239,19 @@ class Modeller(object):
 
     def addSolvent(self, forcefield, model='tip3p', boxSize=None, padding=None, positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*molar):
         """Add solvent (both water and ions) to the model to fill a rectangular box.
-        
+
         The algorithm works as follows:
         1. Water molecules are added to fill the box.
         2. Water molecules are removed if their distance to any solute atom is less than the sum of their van der Waals radii.
         3. If the solute is charged, enough positive or negative ions are added to neutralize it.  Each ion is added by
            randomly selecting a water molecule and replacing it with the ion.
         4. Ion pairs are added to give the requested total ionic strength.
-        
+
         The box size can be specified in three ways.  First, you can explicitly give a box size to use.  Alternatively, you can
         give a padding distance.  The largest dimension of the solute (along the x, y, or z axis) is determined, and a cubic
         box of size (largest dimension)+2*padding is used.  Finally, if neither a box size nor a padding distance is specified,
         the existing Topology's unit cell dimensions are used.
-        
+
         Parameters:
          - forcefield (ForceField) the ForceField to use for determining van der Waals radii and atomic charges
          - model (string='tip3p') the water model to use.  Supported values are 'tip3p', 'spce', 'tip4pew', and 'tip5p'.
@@ -264,7 +264,7 @@ class Modeller(object):
            does not include ions that are added to neutralize the system.
         """
         # Pick a unit cell size.
-        
+
         if boxSize is not None:
             if is_quantity(boxSize):
                 boxSize = boxSize.value_in_unit(nanometer)
@@ -278,9 +278,9 @@ class Modeller(object):
                 raise ValueError('Neither the box size nor padding was specified, and the Topology does not define unit cell dimensions')
         box = box.value_in_unit(nanometer)
         invBox = Vec3(1.0/box[0], 1.0/box[1], 1.0/box[2])
-        
+
         # Identify the ion types.
-        
+
         posIonElements = {'Cs+':elem.cesium, 'K+':elem.potassium, 'Li+':elem.lithium, 'Na+':elem.sodium, 'Rb+':elem.rubidium}
         negIonElements = {'Cl-':elem.chlorine, 'Br-':elem.bromine, 'F-':elem.fluorine, 'I-':elem.iodine}
         if positiveIon not in posIonElements:
@@ -289,9 +289,9 @@ class Modeller(object):
             raise ValueError('Illegal value for negative ion: %s' % negativeIon)
         positiveElement = posIonElements[positiveIon]
         negativeElement = negIonElements[negativeIon]
-        
+
         # Load the pre-equilibrated water box.
-        
+
         vdwRadiusPerSigma = 0.5612310241546864907
         if model == 'tip3p':
             waterRadius = 0.31507524065751241*vdwRadiusPerSigma
@@ -308,9 +308,9 @@ class Modeller(object):
         pdbPositions = pdb.getPositions().value_in_unit(nanometer)
         pdbResidues = list(pdbTopology.residues())
         pdbBoxSize = pdbTopology.getUnitCellDimensions().value_in_unit(nanometer)
-        
+
         # Have the ForceField build a System for the solute from which we can determine van der Waals radii.
-        
+
         system = forcefield.createSystem(self.topology)
         nonbonded = None
         for i in range(system.getNumForces()):
@@ -324,7 +324,7 @@ class Modeller(object):
             maxCutoff = waterCutoff
         else:
             maxCutoff = max(waterCutoff, max(cutoff))
-        
+
         # Copy the solute over.
 
         newTopology = Topology()
@@ -341,9 +341,9 @@ class Modeller(object):
                     newPositions.append(deepcopy(self.positions[atom.index]))
         for bond in self.topology.bonds():
             newTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]])
-        
+
         # Sort the solute atoms into cells for fast lookup.
-        
+
         if len(self.positions) == 0:
             positions = []
         else:
@@ -357,9 +357,9 @@ class Modeller(object):
                 cells[cell].append(i)
             else:
                 cells[cell] = [i]
-        
+
         # Create a generator that loops over atoms close to a position.
-        
+
         def neighbors(pos):
             centralCell = tuple((int(floor(pos[i]/cellSize[i])) for i in range(3)))
             offsets = (-1, 0, 1)
@@ -370,16 +370,16 @@ class Modeller(object):
                         if cell in cells:
                             for atom in cells[cell]:
                                 yield atom
-        
+
         # Define a function to compute the distance between two points, taking periodic boundary conditions into account.
-        
+
         def periodicDistance(pos1, pos2):
             delta = pos1-pos2
             delta = [delta[i]-floor(delta[i]*invBox[i]+0.5)*box[i] for i in range(3)]
             return norm(delta)
-        
+
         # Find the list of water molecules to add.
-        
+
         newChain = newTopology.addChain()
         if len(positions) == 0:
             center = Vec3(0, 0, 0)
@@ -397,18 +397,18 @@ class Modeller(object):
                         atomPos = pdbPositions[oxygen.index]+offset
                         if not any((atomPos[i] > box[i] for i in range(3))):
                             # This molecule is inside the box, so see how close to it is to the solute.
-                            
+
                             atomPos += center-box/2
                             for i in neighbors(atomPos):
                                 if periodicDistance(atomPos, positions[i]) < cutoff[i]:
                                     break
                             else:
                                 # Record this water molecule as one to add.
-                            
+
                                 addedWaters.append((residue.index, atomPos))
-        
+
         # There could be clashes between water molecules at the box edges.  Find ones to remove.
-        
+
         upperCutoff = center+box/2-Vec3(waterCutoff, waterCutoff, waterCutoff)
         lowerCutoff = center-box/2+Vec3(waterCutoff, waterCutoff, waterCutoff)
         lowerSkinPositions = [pos for index, pos in addedWaters if pos[0] < lowerCutoff[0] or pos[1] < lowerCutoff[1] or pos[2] < lowerCutoff[2]]
@@ -428,9 +428,9 @@ class Modeller(object):
                 if not any((periodicDistance(lowerSkinPositions[i], pos) < waterCutoff and norm(lowerSkinPositions[i]-pos) > waterCutoff for i in neighbors(pos))):
                     filteredWaters.append(entry)
         addedWaters = filteredWaters
-        
+
         # Add ions to neutralize the system.
-        
+
         totalCharge = int(floor(0.5+sum((nonbonded.getParticleParameters(i)[0].value_in_unit(elementary_charge) for i in range(system.getNumParticles())))))
         if abs(totalCharge) > len(addedWaters):
             raise Exception('Cannot neutralize the system because the charge is greater than the number of available positions for ions')
@@ -443,18 +443,18 @@ class Modeller(object):
             del addedWaters[index]
         for i in range(abs(totalCharge)):
             addIon(positiveElement if totalCharge < 0 else negativeElement)
-        
+
         # Add ions based on the desired ionic strength.
-        
+
         numIons = len(addedWaters)*ionicStrength/(55.4*molar) # Pure water is about 55.4 molar (depending on temperature)
         numPairs = int(floor(numIons/2+0.5))
         for i in range(numPairs):
             addIon(positiveElement)
         for i in range(numPairs):
             addIon(negativeElement)
-        
+
         # Add the water molecules.
-        
+
         for index, pos in addedWaters:
             newResidue = newTopology.addResidue(residue.name, newChain)
             residue = pdbResidues[index]
@@ -472,14 +472,14 @@ class Modeller(object):
         newTopology.setUnitCellDimensions(deepcopy(box)*nanometer)
         self.topology = newTopology
         self.positions = newPositions
-    
+
     class _ResidueData:
         """Inner class used to encapsulate data about the hydrogens for a residue."""
         def __init__(self, name):
             self.name = name
             self.variants = []
             self.hydrogens = []
-    
+
     class _Hydrogen:
         """Inner class used to encapsulate data about a hydrogen atom."""
         def __init__(self, name, parent, maxph, variants, terminal):
@@ -488,11 +488,11 @@ class Modeller(object):
             self.maxph = maxph
             self.variants = variants
             self.terminal = terminal
-    
+
     @staticmethod
     def loadHydrogenDefinitions(file):
         """Load an XML file containing definitions of hydrogens that should be added by addHydrogens().
-        
+
         The built in hydrogens.xml file containing definitions for standard amino acids and nucleotides is loaded automatically.
         This method can be used to load additional definitions for other residue types.  They will then be used in subsequent
         calls to addHydrogens().
@@ -516,45 +516,45 @@ class Modeller(object):
                 if 'terminal' in hydrogen.attrib:
                     terminal = hydrogen.attrib['terminal']
                 data.hydrogens.append(Modeller._Hydrogen(hydrogen.attrib['name'], hydrogen.attrib['parent'], maxph, atomVariants, terminal))
-    
+
     def addHydrogens(self, forcefield, pH=7.0, variants=None):
         """Add missing hydrogens to the model.
-        
+
         Some residues can exist in multiple forms depending on the pH and properties of the local environment.  These
         variants differ in the presence or absence of particular hydrogens.  In particular, the following variants
         are supported:
-        
+
         Aspartic acid:
             ASH: Neutral form with a hydrogen on one of the delta oxygens
             ASP: Negatively charged form without a hydrogen on either delta oxygen
-            
+
         Cysteine:
             CYS: Neutral form with a hydrogen on the sulfur
             CYX: No hydrogen on the sulfur (either negatively charged, or part of a disulfide bond)
-            
+
         Glutamic acid:
             GLH: Neutral form with a hydrogen on one of the epsilon oxygens
             GLU: Negatively charged form without a hydrogen on either epsilon oxygen
-            
+
         Histidine:
             HID: Neutral form with a hydrogen on the ND1 atom
             HIE: Neutral form with a hydrogen on the NE2 atom
             HIP: Positively charged form with hydrogens on both ND1 and NE2
-            
+
         Lysine:
             LYN: Neutral form with two hydrogens on the zeta nitrogen
             LYS: Positively charged form with three hydrogens on the zeta nitrogen
-        
+
         The variant to use for each residue is determined by the following rules:
-        
+
         1. The most common variant at the specified pH is selected.
         2. Any Cysteine that participates in a disulfide bond uses the CYX variant regardless of pH.
         3. For a neutral Histidine residue, the HID or HIE variant is selected based on which one forms a better hydrogen bond.
-        
+
         You can override these rules by explicitly specifying a variant for any residue.  Also keep in mind that this
         function will only add hydrogens.  It will never remove ones that are already present in the model, regardless
         of the specified pH.
-        
+
         Definitions for standard amino acids and nucleotides are built in.  You can call loadHydrogenDefinitions() to load
         additional definitions for other residue types.
 
@@ -567,7 +567,7 @@ class Modeller(object):
         Returns: a list of what variant was actually selected for each residue, in the same format as the variants parameter
         """
         # Check the list of variants.
-        
+
         residues = list(self.topology.residues())
         if variants is not None:
             if len(variants) != len(residues):
@@ -575,23 +575,23 @@ class Modeller(object):
         else:
             variants = [None]*len(residues)
         actualVariants = [None]*len(residues)
-        
+
         # Load the residue specifications.
-        
+
         if not Modeller._hasLoadedStandardHydrogens:
             Modeller.loadHydrogenDefinitions(os.path.join(os.path.dirname(__file__), 'data', 'hydrogens.xml'))
 
         # Make a list of atoms bonded to each atom.
-        
+
         bonded = {}
         for atom in self.topology.atoms():
             bonded[atom] = []
         for atom1, atom2 in self.topology.bonds():
             bonded[atom1].append(atom2)
             bonded[atom2].append(atom1)
-        
+
         # Define a function that decides whether a set of atoms form a hydrogen bond, using fairly tolerant criteria.
-        
+
         def isHbond(d, h, a):
             if norm(d-a) > 0.35*nanometer:
                 return False
@@ -600,9 +600,9 @@ class Modeller(object):
             deltaDH /= norm(deltaDH)
             deltaHA /= norm(deltaHA)
             return acos(dot(deltaDH, deltaHA)) < 50*degree
-        
+
         # Loop over residues.
-        
+
         newTopology = Topology()
         newTopology.setUnitCellDimensions(deepcopy(self.topology.getUnitCellDimensions()))
         newAtoms = {}
@@ -617,19 +617,19 @@ class Modeller(object):
                 isCTerminal = (residue == chain._residues[-1])
                 if residue.name in Modeller._residueHydrogens:
                     # Add hydrogens.  First select which variant to use.
-                    
+
                     spec = Modeller._residueHydrogens[residue.name]
                     variant = variants[residue.index]
                     if variant is None:
                         if residue.name == 'CYS':
                             # If this is part of a disulfide, use CYX.
-                            
+
                             sulfur = [atom for atom in residue.atoms() if atom.element == elem.sulfur]
                             if len(sulfur) == 1 and any((atom.residue != residue for atom in bonded[sulfur[0]])):
                                 variant = 'CYX'
                         if residue.name == 'HIS' and pH > 6.5:
                             # See if either nitrogen already has a hydrogen attached.
-                            
+
                             nd1 = [atom for atom in residue.atoms() if atom.name == 'ND1']
                             ne2 = [atom for atom in residue.atoms() if atom.name == 'NE2']
                             if len(nd1) != 1 or len(ne2) != 1:
@@ -646,7 +646,7 @@ class Modeller(object):
                                 variant = 'HIE'
                             else:
                                 # Estimate the hydrogen positions.
-                                
+
                                 nd1Pos = self.positions[nd1.index]
                                 ne2Pos = self.positions[ne2.index]
                                 hd1Delta = Vec3(0, 0, 0)*nanometer
@@ -661,7 +661,7 @@ class Modeller(object):
                                 he2Pos = ne2Pos+he2Delta
 
                                 # See whether either hydrogen would form a hydrogen bond.
-    
+
                                 nd1IsBonded = False
                                 ne2IsBonded = False
                                 for acceptor in acceptors:
@@ -681,31 +681,31 @@ class Modeller(object):
                     if variant is not None and variant not in spec.variants:
                         raise ValueError('Illegal variant for %s residue: %s' % (residue.name, variant))
                     actualVariants[residue.index] = variant
-                    
+
                     # Make a list of hydrogens that should be present in the residue.
-                    
+
                     parents = [atom for atom in residue.atoms() if atom.element != elem.hydrogen]
                     parentNames = [atom.name for atom in parents]
                     hydrogens = [h for h in spec.hydrogens if (variant is None and pH <= h.maxph) or (h.variants is None and pH <= h.maxph) or (h.variants is not None and variant in h.variants)]
                     hydrogens = [h for h in hydrogens if h.terminal is None or (isNTerminal and h.terminal == 'N') or (isCTerminal and h.terminal == 'C')]
                     hydrogens = [h for h in hydrogens if h.parent in parentNames]
-                    
+
                     # Loop over atoms in the residue, adding them to the new topology along with required hydrogens.
-                    
+
                     for parent in residue.atoms():
                         # Add the atom.
-                        
+
                         newAtom = newTopology.addAtom(parent.name, parent.element, newResidue)
                         newAtoms[parent] = newAtom
                         newPositions.append(deepcopy(self.positions[parent.index]))
                         if parent in parents:
                             # Match expected hydrogens with existing ones and find which ones need to be added.
-                            
+
                             existing = [atom for atom in bonded[parent] if atom.element == elem.hydrogen]
                             expected = [h for h in hydrogens if h.parent == parent.name]
                             if len(existing) < len(expected):
                                 # Try to match up existing hydrogens to expected ones.
-                                
+
                                 matches = []
                                 for e in existing:
                                     match = [h for h in expected if h.name == e.name]
@@ -714,16 +714,16 @@ class Modeller(object):
                                         expected.remove(match[0])
                                     else:
                                         matches.append(None)
-                                
+
                                 # If any hydrogens couldn't be matched by name, just match them arbitrarily.
-                                
+
                                 for i in range(len(matches)):
                                     if matches[i] is None:
                                         matches[i] = expected[-1]
                                         expected.remove(expected[-1])
-                                
+
                                 # Add the missing hydrogens.
-                                
+
                                 for h in expected:
                                     newH = newTopology.addAtom(h.name, elem.hydrogen, newResidue)
                                     newIndices.append(newH.index)
@@ -740,7 +740,7 @@ class Modeller(object):
                                     newTopology.addBond(newAtom, newH)
                 else:
                     # Just copy over the residue.
-                    
+
                     for atom in residue.atoms():
                         newAtom = newTopology.addAtom(atom.name, atom.element, newResidue)
                         newAtoms[atom] = newAtom
@@ -748,9 +748,9 @@ class Modeller(object):
         for bond in self.topology.bonds():
             if bond[0] in newAtoms and bond[1] in newAtoms:
                 newTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]])
-        
+
         # The hydrogens were added at random positions.  Now use the ForceField to fix them up.
-        
+
         system = forcefield.createSystem(newTopology, rigidWater=False)
         atoms = list(newTopology.atoms())
         for i in range(system.getNumParticles()):
@@ -763,23 +763,23 @@ class Modeller(object):
         self.topology = newTopology
         self.positions = context.getState(getPositions=True).getPositions()
         return actualVariants
-    
+
     def addExtraParticles(self, forcefield):
         """Add missing extra particles to the model that are required by a force field.
-        
+
         Some force fields use "extra particles" that do not represent actual atoms, but still need to be included in
         the System.  Examples include lone pairs, Drude particles, and the virtual sites used in some water models
         to adjust the charge distribution.  Extra particles can be recognized by the fact that their element is None.
-        
+
         This method is primarily used to add extra particles, but it can also remove them.  It tries to match every
         residue in the Topology to a template in the force field.  If there is no match, it will both add and remove
         extra particles as necessary to make it match.
-        
+
         Parameters:
          - forcefield (ForceField) the ForceField defining what extra particles should be present
         """
         # Create copies of all residue templates that have had all extra points removed.
-        
+
         templatesNoEP = {}
         for resName, template in forcefield._templates.iteritems():
             if any(atom.element is None for atom in template.atoms):
@@ -800,9 +800,9 @@ class Modeller(object):
                     if b in newIndex:
                         newTemplate.externalBonds.append(newIndex[b])
                 templatesNoEP[template] = newTemplate
-        
+
         # Record which atoms are bonded to each other atom, with and without extra particles.
-        
+
         bondedToAtom = []
         bondedToAtomNoEP = []
         for atom in self.topology.atoms():
@@ -814,18 +814,18 @@ class Modeller(object):
             if atom1.element is not None and atom2.element is not None:
                 bondedToAtomNoEP[atom1.index].add(atom2.index)
                 bondedToAtomNoEP[atom2.index].add(atom1.index)
-        
+
         # If the force field has a DrudeForce, record the types of Drude particles and their parents since we'll
         # need them for picking particle positions.
-        
+
         drudeTypeMap = {}
         for force in forcefield._forces:
             if isinstance(force, DrudeGenerator):
                 for type in force.typeMap:
                     drudeTypeMap[type] = force.typeMap[type][0]
-        
+
         # Create the new Topology.
-        
+
         newTopology = Topology()
         newTopology.setUnitCellDimensions(deepcopy(self.topology.getUnitCellDimensions()))
         newAtoms = {}
@@ -834,9 +834,9 @@ class Modeller(object):
             newChain = newTopology.addChain()
             for residue in chain.residues():
                 newResidue = newTopology.addResidue(residue.name, newChain)
-                
+
                 # Look for a matching template.
-                
+
                 matchFound = False
                 signature = _createResidueSignature([atom.element for atom in residue.atoms()])
                 if signature in forcefield._templateSignatures:
@@ -845,7 +845,7 @@ class Modeller(object):
                             matchFound = True
                 if matchFound:
                     # Just copy the residue over.
-                    
+
                     for atom in residue.atoms():
                         newAtom = newTopology.addAtom(atom.name, atom.element, newResidue)
                         newAtoms[atom] = newAtom
@@ -853,7 +853,7 @@ class Modeller(object):
                 else:
                     # There's no matching template.  Try to find one that matches based on everything except
                     # extra points.
-                    
+
                     template = None
                     residueNoEP = Residue(residue.name, residue.index, residue.chain)
                     residueNoEP._atoms = [atom for atom in residue.atoms() if atom.element is not None]
@@ -873,16 +873,16 @@ class Modeller(object):
                                     break
                     if template is None:
                         raise ValueError('Residue %d (%s) does not match any template defined by the ForceField.' % (residue.index+1, residue.name))
-                    
+
                     # Add the regular atoms.
-                    
+
                     for atom in residue.atoms():
                         if atom.element is not None:
                             newAtoms[atom] = newTopology.addAtom(atom.name, atom.element, newResidue)
                             newPositions.append(deepcopy(self.positions[atom.index]))
-                    
+
                     # Add the extra points.
-                    
+
                     templateAtomPositions = len(template.atoms)*[None]
                     for index, atom in enumerate(template.atoms):
                         if atom in matchingAtoms:
@@ -894,7 +894,7 @@ class Modeller(object):
                             for site in template.virtualSites:
                                 if site.index == index:
                                     # This is a virtual site.  Compute its position by the correct rule.
-                                    
+
                                     if site.type == 'average2':
                                         position = site.weights[0]*templateAtomPositions[index+site.atoms[0]] + site.weights[1]*templateAtomPositions[index+site.atoms[1]]
                                     elif site.type == 'average3':
@@ -906,14 +906,14 @@ class Modeller(object):
                                         position = templateAtomPositions[index+site.atoms[0]] + site.weights[0]*v1 + site.weights[1]*v2 + site.weights[2]*cross
                             if position is None and atom.type in drudeTypeMap:
                                 # This is a Drude particle.  Put it on top of its parent atom.
-                                
+
                                 for atom2, pos in zip(template.atoms, templateAtomPositions):
                                     if atom2.type in drudeTypeMap[atom.type]:
                                         position = deepcopy(pos)
                             if position is None:
                                 # We couldn't figure out the correct position.  As a wild guess, just put it at the center of the residue
                                 # and hope that energy minimization will fix it.
-                                
+
                                 knownPositions = [x for x in templateAtomPositions if x is not None]
                                 position = sum(knownPositions)/len(knownPositions)
                             newPositions.append(position*nanometer)

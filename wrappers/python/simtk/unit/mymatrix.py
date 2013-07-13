@@ -10,7 +10,7 @@ Portions copyright (c) 2012 Stanford University and the Authors.
 Authors: Christopher M. Bruns
 Contributors: Peter Eastman
 
-Permission is hereby granted, free of charge, to any person obtaining a 
+Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
 to deal in the Software without restriction, including without limitation
 the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -34,7 +34,7 @@ import sys
 def eye(size):
     """
     Returns identity matrix.
-    
+
     >>> print(eye(3))
     [[1, 0, 0]
      [0, 1, 0]
@@ -50,11 +50,11 @@ def eye(size):
                 r.append(0)
         result.append(r)
     return MyMatrix(result)
-    
+
 def zeros(m, n=None):
     """
     Returns matrix of zeroes
-    
+
     >>> print(zeros(3))
     [[0, 0, 0]
      [0, 0, 0]
@@ -82,7 +82,7 @@ class MyVector(object):
 
     def __str__(self):
         return str(self.data)
-        
+
     def __repr__(self):
         return self.__class__.__name__ + "(" + repr(self.data) + ")"
 
@@ -91,20 +91,20 @@ class MyVector(object):
 
     def __contains__(self, item):
         return item in self.data
-        
+
     def __delitem__(self, key):
         del self.data[key]
-        
+
     def __iter__(self):
         for item in self.data:
             yield item
 
     def __len__(self):
         return len(self.data)
-    
+
     def __setitem__(self, key, value):
         self.data[key] = value
-        
+
     def __rmul__(self, lhs):
         try:
             len(lhs)
@@ -119,7 +119,7 @@ class MyVector(object):
 class MyMatrix(MyVector):
     """
     Pure python linear algebra matrix for internal matrix inversion in UnitSystem.
-    
+
     >>> m = MyMatrix([[1,0,],[0,1,]])
     >>> print(m)
     [[1, 0]
@@ -158,7 +158,7 @@ class MyMatrix(MyVector):
     """
     def numRows(self):
         return len(self.data)
-        
+
     def numCols(self):
         if len(self.data) == 0:
             return 0
@@ -179,13 +179,13 @@ class MyMatrix(MyVector):
             start_char = " "
         result += "]"
         return result
-        
+
     def __repr__(self):
         return 'MyMatrix(' + MyVector.__repr__(self) + ')'
 
     def is_square(self):
         return self.numRows() == self.numCols()
-    
+
     def __iter__(self):
         for item in self.data:
             yield MyVector(item)
@@ -206,7 +206,7 @@ class MyMatrix(MyVector):
     def __mul__(self, rhs):
         """
         Matrix multiplication.
-        
+
         >>> a = MyMatrix([[1,2],[3,4]])
         >>> b = MyMatrix([[5,6],[7,8]])
         >>> print(a)
@@ -218,7 +218,7 @@ class MyMatrix(MyVector):
         >>> print(a*b)
         [[19, 22]
          [43, 50]]
-        
+
         """
         m = self.numRows()
         n = len(rhs[0])
@@ -235,7 +235,7 @@ class MyMatrix(MyVector):
     def __add__(self, rhs):
         """
         Matrix addition.
-        
+
         >>> print(MyMatrix([[1, 2],[3, 4]]) + MyMatrix([[5, 6],[7, 8]]))
         [[6, 8]
          [10, 12]]
@@ -253,7 +253,7 @@ class MyMatrix(MyVector):
     def __sub__(self, rhs):
         """
         Matrix subtraction.
-        
+
         >>> print(MyMatrix([[1, 2],[3, 4]]) - MyMatrix([[5, 6],[7, 8]]))
         [[-4, -4]
          [-4, -4]]
@@ -270,7 +270,7 @@ class MyMatrix(MyVector):
 
     def __pos__(self):
         return self
-        
+
     def __neg__(self):
         m = self.numRows()
         n = self.numCols()
@@ -384,7 +384,7 @@ class MyMatrix(MyVector):
                 for k in range(0,n):
                     temp = a[k][indxr[l]]
                     a[k][indxr[l]] = a[k][indxc[l]]
-                    a[k][indxc[l]] = temp                
+                    a[k][indxc[l]] = temp
             return a
 
     def transpose(self):
@@ -395,13 +395,13 @@ class MyMatrixTranspose(MyMatrix):
 
     def transpose(self):
         return MyMatrix(self.data)
-        
+
     def numRows(self):
         if len(self.data) == 0:
             return 0
         else:
             return len(self.data[0])
-        
+
     def numCols(self):
         return len(self.data)
 
@@ -461,7 +461,7 @@ class MyMatrixTranspose(MyMatrix):
 
 # run module directly for testing
 if __name__=='__main__':
-    
+
     # Test the examples in the docstrings
     import doctest, sys
     doctest.testmod(sys.modules[__name__])

@@ -10,7 +10,7 @@ In particular, there is no underlying set of 'canonical' base
 units, whereas in Scientific.Physics.PhysicalQuantities all
 units are secretly in terms of SI units.  Also, it is easier
 to add new fundamental dimensions to simtk.dimensions.  You
-might want to make new dimensions for, say, "currency" or 
+might want to make new dimensions for, say, "currency" or
 "information".
 
 Two possible enhancements that have not been implemented are
@@ -28,7 +28,7 @@ Portions copyright (c) 2012 Stanford University and the Authors.
 Authors: Christopher M. Bruns
 Contributors: Peter Eastman
 
-Permission is hereby granted, free of charge, to any person obtaining a 
+Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
 to deal in the Software without restriction, including without limitation
 the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -60,7 +60,7 @@ from quantity import Quantity, is_quantity
 def _unit_class_rdiv(self, other):
     """
     Divide another object type by a Unit.
-    
+
     Returns a new Quantity with a value of other and units
     of the inverse of self.
     """
@@ -78,14 +78,14 @@ Unit.__rdiv__ = _unit_class_rdiv
 
 def _unit_class_mul(self, other):
     """Multiply a Unit by an object.
-    
-    If other is another Unit, returns a new composite Unit.  
-    Exponents of similar dimensions are added.  If self and 
+
+    If other is another Unit, returns a new composite Unit.
+    Exponents of similar dimensions are added.  If self and
     other share similar BaseDimension, but
     with different BaseUnits, the resulting BaseUnit for that
     BaseDimension will be that used in self.
-    
-    If other is a not another Unit, this method returns a 
+
+    If other is a not another Unit, this method returns a
     new Quantity...  UNLESS other is a Quantity and the resulting
     unit is dimensionless, in which case the underlying value type
     of the Quantity is returned.
@@ -133,7 +133,7 @@ def _unit_class_mul(self, other):
         # Is reduce_unit needed here?  I hope not, there is a performance issue...
         # return Quantity(other, self).reduce_unit(self)
         return Quantity(other, self)
-        
+
 Unit.__mul__ = _unit_class_mul
 Unit.__rmul__ = Unit.__mul__
 Unit._multiplication_cache = {}

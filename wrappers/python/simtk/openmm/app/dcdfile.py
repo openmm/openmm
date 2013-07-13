@@ -10,7 +10,7 @@ Portions copyright (c) 2012 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors:
 
-Permission is hereby granted, free of charge, to any person obtaining a 
+Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
 to deal in the Software without restriction, including without limitation
 the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -40,18 +40,18 @@ from simtk.unit import picoseconds, nanometers, angstroms, is_quantity, norm
 
 class DCDFile(object):
     """DCDFile provides methods for creating DCD files.
-    
+
     DCD is a file format for storing simulation trajectories.  It is supported by many programs, such
     as CHARMM, NAMD, and X-PLOR.  Note, however, that different programs produce subtly different
     versions of the format.  This class generates the CHARMM version.  Also note that there is no
     standard byte ordering (big-endian or little-endian) for this format.  This class always generates
     files with little-endian ordering.
-    
+
     To use this class, create a DCDFile object, then call writeModel() once for each model in the file."""
-    
+
     def __init__(self, file, topology, dt, firstStep=0, interval=1):
         """Create a DCD file and write out the header.
-        
+
         Parameters:
          - file (file) A file to write to
          - topology (Topology) The Topology defining the molecular system being written
@@ -76,10 +76,10 @@ class DCDFile(object):
         header += struct.pack('<80s', 'Created '+time.asctime(time.localtime(time.time())))
         header += struct.pack('<4i', 164, 4, len(list(topology.atoms())), 4)
         file.write(header)
-    
+
     def writeModel(self, positions, unitCellDimensions=None):
         """Write out a model to the DCD file.
-                
+
         Parameters:
          - positions (list) The list of atomic positions to write
          - unitCellDimensions (Vec3=None) The dimensions of the crystallographic unit cell.  If None, the dimensions specified in
@@ -87,7 +87,7 @@ class DCDFile(object):
            represent a periodic system.
         """
         if len(list(self._topology.atoms())) != len(positions):
-            raise ValueError('The number of positions must match the number of atoms') 
+            raise ValueError('The number of positions must match the number of atoms')
         if is_quantity(positions):
             positions = positions.value_in_unit(nanometers)
         if any(math.isnan(norm(pos)) for pos in positions):
@@ -95,17 +95,17 @@ class DCDFile(object):
         if any(math.isinf(norm(pos)) for pos in positions):
             raise ValueError('Particle position is infinite')
         file = self._file
-        
+
         # Update the header.
-        
+
         self._modelCount += 1
         file.seek(8, os.SEEK_SET)
         file.write(struct.pack('<i', self._modelCount))
         file.seek(20, os.SEEK_SET)
         file.write(struct.pack('<i', self._firstStep+self._modelCount*self._interval))
-        
+
         # Write the data.
-        
+
         file.seek(0, os.SEEK_END)
         boxSize = self._topology.getUnitCellDimensions()
         if boxSize is not None:
