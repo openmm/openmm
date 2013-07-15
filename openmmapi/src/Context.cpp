@@ -33,7 +33,7 @@
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/ForceImpl.h"
-#include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
+#include "SimTKOpenMMRealType.h"
 #include "sfmt/SFMT.h"
 #include <cmath>
 

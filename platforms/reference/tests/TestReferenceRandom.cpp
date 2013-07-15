@@ -34,7 +34,7 @@
  */
 
 #include "openmm/internal/AssertionUtilities.h"
-#include "../src/SimTKUtilities/SimTKOpenMMUtilities.h"
+#include "SimTKOpenMMUtilities.h"
 #include "openmm/Context.h"
 #include "ReferencePlatform.h"
 #include "openmm/VerletIntegrator.h"

@@ -34,11 +34,11 @@
  */
 
 #include "openmm/internal/AssertionUtilities.h"
-#include "../src/OpenCLArray.h"
-#include "../src/OpenCLContext.h"
-#include "../src/OpenCLFFT3D.h"
-#include "../src/OpenCLSort.h"
-#include "../src/SimTKReference/fftpack.h"
+#include "OpenCLArray.h"
+#include "OpenCLContext.h"
+#include "OpenCLFFT3D.h"
+#include "OpenCLSort.h"
+#include "fftpack.h"
 #include "sfmt/SFMT.h"
 #include "openmm/System.h"
 #include <iostream>
@@ -54,7 +54,7 @@ template <class Real2>
 void testTransform() {
     System system;
     system.addParticle(0.0);
-    OpenCLPlatform::PlatformData platformData(system, "", "", platform.getPropertyDefaultValue("OpenCLPrecision"));
+    OpenCLPlatform::PlatformData platformData(system, "", "", platform.getPropertyDefaultValue("OpenCLPrecision"), "false");
     OpenCLContext& context = *platformData.contexts[0];
     context.initialize();
     OpenMM_SFMT::SFMT sfmt;

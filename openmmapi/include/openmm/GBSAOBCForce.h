@@ -40,13 +40,19 @@ namespace OpenMM {
 
 /**
  * This class implements an implicit solvation force using the GBSA-OBC model.
- * <p>
+ * 
  * To use this class, create a GBSAOBCForce object, then call addParticle() once for each particle in the
  * System to define its parameters.  The number of particles for which you define GBSA parameters must
  * be exactly equal to the number of particles in the System, or else an exception will be thrown when you
  * try to create a Context.  After a particle has been added, you can modify its force field parameters
  * by calling setParticleParameters().  This will have no effect on Contexts that already exist unless you
  * call updateParametersInContext().
+ * 
+ * When using this Force, the System should also include a NonbondedForce, and both objects must specify
+ * identical charges for all particles.  Otherwise, the results will not be correct.  Furthermore, if the
+ * nonbonded method is set to CutoffNonPeriodic or CutoffPeriodic, you should call setReactionFieldDielectric(1.0)
+ * on the NonbondedForce to turn off the reaction field approximation, which does not produce correct results
+ * when combined with GBSA.
  */
 
 class OPENMM_EXPORT GBSAOBCForce : public Force {
@@ -70,7 +76,7 @@ public:
          */
         CutoffPeriodic = 2,
     };
-    /*
+    /**
      * Create a GBSAOBCForce.
      */
     GBSAOBCForce();

@@ -231,6 +231,10 @@ CudaContext::~CudaContext() {
         delete forces[i];
     for (int i = 0; i < (int) reorderListeners.size(); i++)
         delete reorderListeners[i];
+    for (int i = 0; i < (int) preComputations.size(); i++)
+        delete preComputations[i];
+    for (int i = 0; i < (int) postComputations.size(); i++)
+        delete postComputations[i];
     if (pinnedBuffer != NULL)
         cuMemFreeHost(pinnedBuffer);
     if (posq != NULL)
@@ -743,7 +747,8 @@ void CudaContext::findMoleculeGroups() {
             for (int j = 0; j < forces[i]->getNumParticleGroups(); j++) {
                 vector<int> particles;
                 forces[i]->getParticlesInGroup(j, particles);
-                molecules[atomMolecule[particles[0]]].groups[i].push_back(j);
+                if (particles.size() > 0)
+                    molecules[atomMolecule[particles[0]]].groups[i].push_back(j);
             }
     }
 
@@ -1100,6 +1105,14 @@ void CudaContext::reorderAtomsImpl() {
 
 void CudaContext::addReorderListener(ReorderListener* listener) {
     reorderListeners.push_back(listener);
+}
+
+void CudaContext::addPreComputation(ForcePreComputation* computation) {
+    preComputations.push_back(computation);
+}
+
+void CudaContext::addPostComputation(ForcePostComputation* computation) {
+    postComputations.push_back(computation);
 }
 
 struct CudaContext::WorkThread::ThreadData {

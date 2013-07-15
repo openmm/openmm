@@ -30,7 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/internal/AssertionUtilities.h"
-#include "../src/SimTKReference/ReferenceNeighborList.h"
+#include "ReferenceNeighborList.h"
 #include "sfmt/SFMT.h"
 #include <cassert>
 #include <iostream>

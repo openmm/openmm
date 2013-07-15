@@ -10,7 +10,7 @@ Portions copyright (c) 2012 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors:
 
-Permission is hereby granted, free of charge, to any person obtaining a 
+Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
 to deal in the Software without restriction, including without limitation
 the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -40,15 +40,15 @@ except:
 
 class AmberInpcrdFile(object):
     """AmberInpcrdFile parses an AMBER inpcrd file and loads the data stored in it."""
-    
+
     def __init__(self, file, loadVelocities=False, loadBoxVectors=False):
         """Load an inpcrd file.
-        
+
         An inpcrd file contains atom positions and, optionally, velocities and periodic box dimensions.
         Unfortunately, it is sometimes impossible to determine from the file itself exactly what data
         it contains.  You therefore must specify in advance what data to load.  It is stored into this
         object's "positions", "velocities", and "boxVectors" fields.
-        
+
         Parameters:
          - file (string) the name of the file to load
          - loadVelocities (boolean=False) whether to load velocities from the file
@@ -78,7 +78,7 @@ class AmberInpcrdFile(object):
 
     def getPositions(self, asNumpy=False):
         """Get the atomic positions.
-        
+
         Parameters:
          - asNumpy (boolean=False) if true, the values are returned as a numpy array instead of a list of Vec3s
          """
@@ -87,10 +87,10 @@ class AmberInpcrdFile(object):
                 self._numpyPositions = Quantity(numpy.array(self.positions.value_in_unit(nanometers)), nanometers)
             return self._numpyPositions
         return self.positions
-    
+
     def getVelocities(self, asNumpy=False):
         """Get the atomic velocities.
-        
+
         Parameters:
          - asNumpy (boolean=False) if true, the vectors are returned as numpy arrays instead of Vec3s
          """
@@ -99,10 +99,10 @@ class AmberInpcrdFile(object):
                 self._numpyVelocities = Quantity(numpy.array(self.velocities.value_in_unit(nanometers/picoseconds)), nanometers/picoseconds)
             return self._numpyVelocities
         return self.velocities
-    
+
     def getBoxVectors(self, asNumpy=False):
         """Get the periodic box vectors.
-        
+
         Parameters:
          - asNumpy (boolean=False) if true, the values are returned as a numpy array instead of a list of Vec3s
          """
@@ -114,4 +114,4 @@ class AmberInpcrdFile(object):
                 self._numpyBoxVectors.append(Quantity(numpy.array(self.boxVectors[2].value_in_unit(nanometers)), nanometers))
             return self._numpyBoxVectors
         return self.boxVectors
-        
+

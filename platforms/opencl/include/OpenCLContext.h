@@ -158,6 +158,8 @@ public:
     class WorkTask;
     class WorkThread;
     class ReorderListener;
+    class ForcePreComputation;
+    class ForcePostComputation;
     static const int ThreadBlockSize;
     static const int TileSize;
     OpenCLContext(const System& system, int platformIndex, int deviceIndex, const std::string& precision, OpenCLPlatform::PlatformData& platformData);
@@ -555,6 +557,28 @@ public:
         return reorderListeners;
     }
     /**
+     * Add a pre-computation that should be called at the very start of force and energy evaluations.
+     * The OpenCLContext assumes ownership of the object, and deletes it when the context itself is deleted.
+     */
+    void addPreComputation(ForcePreComputation* computation);
+    /**
+     * Get the list of ForcePreComputations.
+     */
+    std::vector<ForcePreComputation*>& getPreComputations() {
+        return preComputations;
+    }
+    /**
+     * Add a post-computation that should be called at the very end of force and energy evaluations.
+     * The OpenCLContext assumes ownership of the object, and deletes it when the context itself is deleted.
+     */
+    void addPostComputation(ForcePostComputation* computation);
+    /**
+     * Get the list of ForcePostComputations.
+     */
+    std::vector<ForcePostComputation*>& getPostComputations() {
+        return postComputations;
+    }
+    /**
      * Mark that the current molecule definitions (and hence the atom order) may be invalid.
      * This should be called whenever force field parameters change.  It will cause the definitions
      * and order to be revalidated.
@@ -625,6 +649,8 @@ private:
     std::vector<cl::Memory*> autoclearBuffers;
     std::vector<int> autoclearBufferSizes;
     std::vector<ReorderListener*> reorderListeners;
+    std::vector<ForcePreComputation*> preComputations;
+    std::vector<ForcePostComputation*> postComputations;
     OpenCLIntegrationUtilities* integration;
     OpenCLExpressionUtilities* expression;
     OpenCLBondedUtilities* bonded;
@@ -686,7 +712,7 @@ private:
 
 /**
  * This abstract class defines a function to be executed whenever atoms get reordered.
- * Objects that need to know when reordering happens should create a reorderListener
+ * Objects that need to know when reordering happens should create a ReorderListener
  * and register it by calling addReorderListener().
  */
 class OpenCLContext::ReorderListener {
@@ -694,6 +720,39 @@ public:
     virtual void execute() = 0;
     virtual ~ReorderListener() {
     }
+};
+
+/**
+ * This abstract class defines a function to be executed at the very beginning of force and
+ * energy evaluation, before any other calculation has been done.  It is useful for operations
+ * that need to be performed at a nonstandard point in the process.  After creating a
+ * ForcePreComputation, register it by calling addForcePreComputation().
+ */
+class OpenCLContext::ForcePreComputation {
+public:
+    /**
+     * @param includeForce  true if forces should be computed
+     * @param includeEnergy true if potential energy should be computed
+     * @param groups        a set of bit flags for which force groups to include
+     */
+    virtual void computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) = 0;
+};
+
+/**
+ * This abstract class defines a function to be executed at the very end of force and
+ * energy evaluation, after all other calculations have been done.  It is useful for operations
+ * that need to be performed at a nonstandard point in the process.  After creating a
+ * ForcePostComputation, register it by calling addForcePostComputation().
+ */
+class OpenCLContext::ForcePostComputation {
+public:
+    /**
+     * @param includeForce  true if forces should be computed
+     * @param includeEnergy true if potential energy should be computed
+     * @param groups        a set of bit flags for which force groups to include
+     * @return an optional contribution to add to the potential energy.
+     */
+    virtual double computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) = 0;
 };
 
 } // namespace OpenMM

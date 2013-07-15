@@ -1155,6 +1155,70 @@ public:
     virtual void execute(ContextImpl& context) = 0;
 };
 
+/**
+ * This kernel performs the reciprocal space calculation for PME.  In most cases, this
+ * calculation is done directly by CalcNonbondedForceKernel so this kernel is unneeded.
+ * In some cases it may want to outsource the work to a different kernel.  In particular,
+ * GPU based platforms sometimes use a CPU based implementation provided by a separate
+ * plugin.
+ */
+class CalcPmeReciprocalForceKernel : public KernelImpl {
+public:
+    class IO;
+    static std::string Name() {
+        return "CalcPmeReciprocalForce";
+    }
+    CalcPmeReciprocalForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     * 
+     * @param gridx        the x size of the PME grid
+     * @param gridy        the y size of the PME grid
+     * @param gridz        the z size of the PME grid
+     * @param numParticles the number of particles in the system
+     * @param alpha        the Ewald blending parameter
+     */
+    virtual void initialize(int gridx, int gridy, int gridz, int numParticles, double alpha) = 0;
+    /**
+     * Begin computing the force and energy.
+     * 
+     * @param io               an object that coordinates data transfer
+     * @param periodicBoxSize  the size of the periodic box (measured in nm)
+     * @param includeEnergy    true if potential energy should be computed
+     */
+    virtual void beginComputation(IO& io, Vec3 periodicBoxSize, bool includeEnergy) = 0;
+    /**
+     * Finish computing the force and energy.
+     * 
+     * @param io   an object that coordinates data transfer
+     * @return the potential energy due to the PME reciprocal space interactions
+     */
+    virtual double finishComputation(IO& io) = 0;
+};
+
+/**
+ * Any class that uses CalcPmeReciprocalForceKernel should create an implementation of this
+ * class, then pass it to the kernel to manage communication with it.
+ */
+class CalcPmeReciprocalForceKernel::IO {
+public:
+    /**
+     * Get a pointer to the atom charges and positions.  This array should contain four
+     * elements for each atom: x, y, z, and q in that order.
+     */
+    virtual float* getPosq() = 0;
+    /**
+     * Record the forces calculated by the kernel.
+     * 
+     * @param force    an array containing four elements for each atom.  The first three
+     *                 are the x, y, and z components of the force, while the fourth element
+     *                 should be ignored.
+     */
+    virtual void setForce(float* force) = 0;
+};
+
+
 } // namespace OpenMM
 
 #endif /*OPENMM_KERNELS_H_*/

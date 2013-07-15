@@ -66,28 +66,6 @@ private:
     Kernel kernel;
 };
 
-class MonteCarloAnisotropicBarostatImpl : public ForceImpl {
-public:
-    MonteCarloAnisotropicBarostatImpl(const MonteCarloAnisotropicBarostat& owner);
-    void initialize(ContextImpl& context);
-    const MonteCarloAnisotropicBarostat& getOwner() const {
-        return owner;
-    }
-    void updateContextState(ContextImpl& context);
-    double calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
-        // This force doesn't apply forces to particles.
-        return 0.0;
-    }
-    std::map<std::string, double> getDefaultParameters();
-    std::vector<std::string> getKernelNames();
-private:
-    const MonteCarloAnisotropicBarostat& owner;
-    int step, numAttempted[3], numAccepted[3];
-    double volumeScale[3];
-    OpenMM_SFMT::SFMT random;
-    Kernel kernel;
-};
-
 } // namespace OpenMM
 
 #endif /*OPENMM_MONTECARLOBAROSTATIMPL_H_*/

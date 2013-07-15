@@ -42,7 +42,7 @@
 #include "openmm/LangevinIntegrator.h"
 #include "openmm/VerletIntegrator.h"
 #include "sfmt/SFMT.h"
-#include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
+#include "SimTKOpenMMRealType.h"
 #include <iostream>
 #include <vector>
 
@@ -89,7 +89,7 @@ void testChangingBoxSize() {
     ASSERT(ok);
 }
 
-void testIdealGas(int aniso) {
+void testIdealGas() {
     const int numParticles = 64;
     const int frequency = 10;
     const int steps = 1000;
@@ -98,9 +98,9 @@ void testIdealGas(int aniso) {
     const double temp[] = {300.0, 600.0, 1000.0};
     const double initialVolume = numParticles*BOLTZ*temp[1]/pressureInMD;
     const double initialLength = std::pow(initialVolume, 1.0/3.0);
-    
+
     // Create a gas of noninteracting particles.
-    
+
     System system;
     system.setDefaultPeriodicBoxVectors(Vec3(initialLength, 0, 0), Vec3(0, 0.5*initialLength, 0), Vec3(0, 0, 2*initialLength));
     vector<Vec3> positions(numParticles);
@@ -111,33 +111,29 @@ void testIdealGas(int aniso) {
         positions[i] = Vec3(initialLength*genrand_real2(sfmt), 0.5*initialLength*genrand_real2(sfmt), 2*initialLength*genrand_real2(sfmt));
     }
     MonteCarloBarostat* barostat = new MonteCarloBarostat(pressure, temp[0], frequency);
-    if (aniso)
-        MonteCarloAnisotropicBarostat* barostat = new MonteCarloAnisotropicBarostat(pressure, pressure, pressure, temp[0], frequency);
     system.addForce(barostat);
-    
+
     // Test it for three different temperatures.
-    
+
     for (int i = 0; i < 3; i++) {
         barostat->setTemperature(temp[i]);
         LangevinIntegrator integrator(temp[i], 0.1, 0.01);
         Context context(system, integrator, platform);
         context.setPositions(positions);
-        
+
         // Let it equilibrate.
-        
+
         integrator.step(10000);
-        
+
         // Now run it for a while and see if the volume is correct.
-        
+
         double volume = 0.0;
         for (int j = 0; j < steps; ++j) {
             Vec3 box[3];
             context.getState(0).getPeriodicBoxVectors(box[0], box[1], box[2]);
             volume += box[0][0]*box[1][1]*box[2][2];
-            if (!aniso) {
-                ASSERT_EQUAL_TOL(0.5*box[0][0], box[1][1], 1e-5);
-                ASSERT_EQUAL_TOL(2*box[0][0], box[2][2], 1e-5);
-            }
+            ASSERT_EQUAL_TOL(0.5*box[0][0], box[1][1], 1e-5);
+            ASSERT_EQUAL_TOL(2*box[0][0], box[2][2], 1e-5);
             integrator.step(frequency);
         }
         volume /= steps;
@@ -168,9 +164,9 @@ void testRandomSeed() {
         positions[i] = Vec3((i%2 == 0 ? 2 : -2), (i%4 < 2 ? 2 : -2), (i < 4 ? 2 : -2));
         velocities[i] = Vec3(0, 0, 0);
     }
-    
+
     // Try twice with the same random seed.
-    
+
     barostat->setRandomNumberSeed(5);
     Context context(system, integrator, platform);
     context.setPositions(positions);
@@ -182,9 +178,9 @@ void testRandomSeed() {
     context.setVelocities(velocities);
     integrator.step(10);
     State state2 = context.getState(State::Positions);
-    
+
     // Try twice with a different random seed.
-    
+
     barostat->setRandomNumberSeed(10);
     context.reinitialize();
     context.setPositions(positions);
@@ -196,9 +192,9 @@ void testRandomSeed() {
     context.setVelocities(velocities);
     integrator.step(10);
     State state4 = context.getState(State::Positions);
-    
+
     // Compare the results.
-    
+
     for (int i = 0; i < numParticles; i++) {
         for (int j = 0; j < 3; j++) {
             ASSERT(state1.getPositions()[i][j] == state2.getPositions()[i][j]);
@@ -208,7 +204,7 @@ void testRandomSeed() {
     }
 }
 
-void testWater(int aniso) {
+void testWater() {
     const int gridSize = 8;
     const int numMolecules = gridSize*gridSize*gridSize;
     const int frequency = 10;
@@ -219,9 +215,9 @@ void testWater(int aniso) {
     const double angle = 109.47*M_PI/180;
     const double dOH = 0.1;
     const double dHH = dOH*2*std::sin(0.5*angle);
-    
+
     // Create a box of SPC water molecules.
-    
+
     System system;
     system.setDefaultPeriodicBoxVectors(Vec3(gridSize*spacing, 0, 0), Vec3(0, gridSize*spacing, 0), Vec3(0, 0, gridSize*spacing));
     NonbondedForce* nonbonded = new NonbondedForce();
@@ -255,12 +251,10 @@ void testWater(int aniso) {
     }
     system.addForce(nonbonded);
     MonteCarloBarostat* barostat = new MonteCarloBarostat(pressure, temp, frequency);
-    if (aniso)
-        MonteCarloAnisotropicBarostat* barostat = new MonteCarloAnisotropicBarostat(pressure, pressure, pressure, temp, frequency);
     system.addForce(barostat);
-    
+
     // Simulate it and see if the density matches the expected value (1 g/mL).
-    
+
     LangevinIntegrator integrator(temp, 1.0, 0.002);
     Context context(system, integrator, platform);
     context.setPositions(positions);
@@ -282,11 +276,9 @@ int main(int argc, char* argv[]) {
         if (argc > 1)
             platform.setPropertyDefaultValue("CudaPrecision", string(argv[1]));
         testChangingBoxSize();
-        testIdealGas(0);
-        testIdealGas(1);
+        testIdealGas();
         testRandomSeed();
-        testWater(0);
-        testWater(1);
+        testWater();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

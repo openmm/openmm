@@ -11,7 +11,7 @@ Portions copyright (c) 2012 Stanford University and the Authors.
 Authors: Christopher M. Bruns
 Contributors: Peter Eastman
 
-Permission is hereby granted, free of charge, to any person obtaining a 
+Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
 to deal in the Software without restriction, including without limitation
 the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -44,14 +44,14 @@ import sys
 class SiPrefix(object):
     """
     Unit prefix that can be multiplied by a unit to yield a new unit.
-    
+
     e.g. millimeter = milli*meter
     """
     def __init__(self, prefix, factor, symbol):
         self.prefix = prefix
         self.factor = factor
         self.symbol = symbol
-        
+
     def __mul__(self, unit):
         """
         SiPrefix * BaseUnit yields new BaseUnit
@@ -136,7 +136,7 @@ si_prefixes = (   yotto
 def define_prefixed_units(base_unit, module = sys.modules[__name__]):
     """
     Create attributes for prefixed units derived from a particular BaseUnit, e.g. "kilometer" from "meter_base_unit"
-    
+
     Parameters
      - base_unit (BaseUnit) existing base unit to use as a basis for prefixed units
      - module (Module) module which will contain the new attributes.  Defaults to simtk.unit module.
@@ -146,7 +146,7 @@ def define_prefixed_units(base_unit, module = sys.modules[__name__]):
         name = new_base_unit.name
         new_unit = Unit({new_base_unit: 1.0})
         # Create base_unit attribute, needed for creating UnitSystems
-        module.__dict__[name + '_base_unit'] = new_base_unit # e.g. "kilometer_base_unit"        
+        module.__dict__[name + '_base_unit'] = new_base_unit # e.g. "kilometer_base_unit"
         # Create attribue in this module
         module.__dict__[name] = new_unit # e.g. "kilometer"
         # And plural version

@@ -10,7 +10,7 @@ Portions copyright (c) 2012 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors:
 
-Permission is hereby granted, free of charge, to any person obtaining a 
+Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
 to deal in the Software without restriction, including without limitation
 the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -33,25 +33,25 @@ __version__ = "1.0"
 
 import simtk.openmm as mm
 import simtk.unit as unit
-    
+
 class Simulation(object):
     """Simulation provides a simplified API for running simulations with OpenMM and reporting results.
-    
+
     A Simulation ties together various objects used for running a simulation: a Topology, System,
     Integrator, and Context.  To use it, you provide the Topology, System, and Integrator, and it
     creates the Context automatically.
-    
+
     Simulation also maintains a list of "reporter" objects that record or analyze data as the simulation
     runs, such as writing coordinates to files or displaying structures on the screen.  For example,
     the following line will cause a file called "output.pdb" to be created, and a structure written to
     it every 1000 time steps:
-    
+
     simulation.reporters.append(PDBReporter('output.pdb', 1000))
     """
-    
+
     def __init__(self, topology, system, integrator, platform=None, platformProperties=None):
         """Create a Simulation.
-        
+
         Parameters:
          - topology (Topology) A Topology describing the the system to simulate
          - system (System) The OpenMM System object to simulate
@@ -77,17 +77,17 @@ class Simulation(object):
             self.context = mm.Context(system, integrator, platform)
         else:
             self.context = mm.Context(system, integrator, platform, platformProperties)
-    
+
     def minimizeEnergy(self, tolerance=1*unit.kilojoule/unit.mole, maxIterations=0):
         """Perform a local energy minimization on the system.
-        
+
         Parameters:
          - tolerance (energy=1*kilojoule/mole) The energy tolerance to which the system should be minimized
          - maxIterations (int=0) The maximum number of iterations to perform.  If this is 0, minimization is continued
            until the results converge without regard to how many iterations it takes.
         """
         mm.LocalEnergyMinimizer.minimize(self.context, tolerance, maxIterations)
-       
+
     def step(self, steps):
         """Advance the simulation by integrating a specified number of time steps."""
         stepTo = self.currentStep+steps

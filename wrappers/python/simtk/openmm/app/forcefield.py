@@ -10,7 +10,7 @@ Portions copyright (c) 2012-2013 Stanford University and the Authors.
 Authors: Peter Eastman, Mark Friedrichs
 Contributors:
 
-Permission is hereby granted, free of charge, to any person obtaining a 
+Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
 to deal in the Software without restriction, including without limitation
 the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -63,7 +63,7 @@ class ForceField(object):
 
     def __init__(self, *files):
         """Load one or more XML files and create a ForceField object based on them.
-        
+
         Parameters:
          - files A list of XML files defining the force field.  Each entry may be an absolute file path, a path relative to the
            current working directory, or a path relative to this module's data subdirectory (for built in force fields).
@@ -80,9 +80,9 @@ class ForceField(object):
             except IOError:
                 tree = etree.parse(os.path.join(os.path.dirname(__file__), 'data', file))
             root = tree.getroot()
-            
+
             # Load the atom types.
-            
+
             if tree.getroot().find('AtomTypes') is not None:
                 for type in tree.getroot().find('AtomTypes').findall('Type'):
                     element = None
@@ -92,9 +92,9 @@ class ForceField(object):
                     if name in self._atomTypes:
                         raise ValueError('Found multiple definitions for atom type: '+name)
                     self._atomTypes[name] = (type.attrib['class'], float(type.attrib['mass']), element)
-            
+
             # Load the residue templates.
-            
+
             if tree.getroot().find('Residues') is not None:
                 for residue in root.find('Residues').findall('Residue'):
                     resName = residue.attrib['name']
@@ -119,9 +119,9 @@ class ForceField(object):
                     self._templateSignatures[signature].append(template)
                 else:
                     self._templateSignatures[signature] = [template]
-            
+
             # Build sets of every atom type belonging to each class
-            
+
             for type in self._atomTypes:
                 atomClass = self._atomTypes[type][0]
                 if atomClass in self._atomClasses:
@@ -131,15 +131,15 @@ class ForceField(object):
                     self._atomClasses[atomClass] = typeSet
                 typeSet.add(type)
                 self._atomClasses[''].add(type)
-            
+
             # Load force definitions
-            
+
             for child in root:
                 if child.tag in parsers:
                     parsers[child.tag](child, self)
-            
+
             # Load scripts
-            
+
             for node in tree.getroot().findall('Script'):
                 self._scripts.append(node.text)
 
@@ -181,8 +181,8 @@ class ForceField(object):
             torsion.phase.append(float(attrib['phase%d'%index]))
             torsion.k.append(float(attrib['k%d'%index]))
             index += 1
-        return torsion            
-        
+        return torsion
+
     class _SystemData:
         """Inner class used to encapsulate data about the system being created."""
         def __init__(self):
@@ -221,7 +221,7 @@ class ForceField(object):
             self.atom2 = atom2
             self.isConstrained = False
             self.length = 0.0
-    
+
     class _VirtualSiteData:
         """Inner class used to encapsulate data about a virtual site."""
         def __init__(self, node):
@@ -244,7 +244,7 @@ class ForceField(object):
     def createSystem(self, topology, nonbondedMethod=NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
                      constraints=None, rigidWater=True, removeCMMotion=True, **args):
         """Construct an OpenMM System representing a Topology with this force field.
-        
+
         Parameters:
          - topology (Topology) The Topology for which to create a System
          - nonbondedMethod (object=NoCutoff) The method to use for nonbonded interactions.  Allowed values are
@@ -262,12 +262,12 @@ class ForceField(object):
         data.atoms = list(topology.atoms())
 
         # Make a list of all bonds
-        
+
         for bond in topology.bonds():
             data.bonds.append(ForceField._BondData(bond[0].index, bond[1].index))
 
         # Record which atoms are bonded to each other atom
-        
+
         bondedToAtom = []
         for i in range(len(data.atoms)):
             bondedToAtom.append(set())
@@ -280,7 +280,7 @@ class ForceField(object):
             data.atomBonds[bond.atom2].append(i)
 
         # Find the template matching each residue and assign atom types.
-        
+
         for chain in topology.chains():
             for res in chain.residues():
                 template = None
@@ -301,13 +301,13 @@ class ForceField(object):
                             data.virtualSites[atom] = site
 
         # Create the System and add atoms
-        
+
         sys = mm.System()
         for atom in topology.atoms():
             sys.addParticle(self._atomTypes[data.atomType[atom]][1])
-        
+
         # Set periodic boundary conditions.
-        
+
         boxSize = topology.getUnitCellDimensions()
         if boxSize is not None:
             sys.setDefaultPeriodicBoxVectors((boxSize[0], 0, 0), (0, boxSize[1], 0), (0, 0, boxSize[2]))
@@ -315,7 +315,7 @@ class ForceField(object):
             raise ValueError('Requested periodic boundary conditions for a Topology that does not specify periodic box dimensions')
 
         # Make a list of all unique angles
-        
+
         uniqueAngles = set()
         for bond in data.bonds:
             for atom in bondedToAtom[bond.atom1]:
@@ -331,9 +331,9 @@ class ForceField(object):
                     else:
                         uniqueAngles.add((atom, bond.atom2, bond.atom1))
         data.angles = sorted(list(uniqueAngles))
-        
+
         # Make a list of all unique proper torsions
-        
+
         uniquePropers = set()
         for angle in data.angles:
             for atom in bondedToAtom[angle[0]]:
@@ -349,17 +349,17 @@ class ForceField(object):
                     else:
                         uniquePropers.add((atom, angle[2], angle[1], angle[0]))
         data.propers = sorted(list(uniquePropers))
-        
+
         # Make a list of all unique improper torsions
-        
+
         for atom in range(len(bondedToAtom)):
             bondedTo = bondedToAtom[atom]
             if len(bondedTo) > 2:
                 for subset in itertools.combinations(bondedTo, 3):
                     data.impropers.append((atom, subset[0], subset[1], subset[2]))
-        
+
         # Identify bonds that should be implemented with constraints
-        
+
         if constraints == AllBonds or constraints == HAngles:
             for bond in data.bonds:
                 bond.isConstrained = True
@@ -374,9 +374,9 @@ class ForceField(object):
                 atom2 = data.atoms[bond.atom2]
                 if atom1.residue.name == 'HOH' and atom2.residue.name == 'HOH':
                     bond.isConstrained = True
-        
+
         # Identify angles that should be implemented with constraints
-        
+
         if constraints == HAngles:
             for angle in data.angles:
                 atom1 = data.atoms[angle[0]]
@@ -398,9 +398,9 @@ class ForceField(object):
                 atom3 = data.atoms[angle[2]]
                 if atom1.residue.name == 'HOH' and atom2.residue.name == 'HOH' and atom3.residue.name == 'HOH':
                     data.isAngleConstrained[i] = True
-        
+
         # Add virtual sites
-        
+
         for atom in data.virtualSites:
             site = data.virtualSites[atom]
             index = atom.index
@@ -410,22 +410,22 @@ class ForceField(object):
                 sys.setVirtualSite(index, mm.ThreeParticleAverageSite(index+site.atoms[0], index+site.atoms[1], index+site.atoms[2], site.weights[0], site.weights[1], site.weights[2]))
             elif site.type == 'outOfPlane':
                 sys.setVirtualSite(index, mm.OutOfPlaneSite(index+site.atoms[0], index+site.atoms[1], index+site.atoms[2], site.weights[0], site.weights[1], site.weights[2]))
-        
+
         # Add forces to the System
-        
+
         for force in self._forces:
             force.createForce(sys, data, nonbondedMethod, nonbondedCutoff, args)
         if removeCMMotion:
             sys.addForce(mm.CMMotionRemover())
-        
+
         # Let generators do postprocessing
-        
+
         for force in self._forces:
             if 'postprocessSystem' in dir(force):
                 force.postprocessSystem(sys, data, args)
-        
+
         # Execute scripts found in the XML files.
-        
+
         for script in self._scripts:
             exec script
         return sys
@@ -445,7 +445,7 @@ def _createResidueSignature(elements):
     for c in counts:
         sig.append((c, counts[c]))
     sig.sort(key=lambda x: -x[0].mass)
-    
+
     # Convert it to a string.
 
     s = ''
@@ -456,7 +456,7 @@ def _createResidueSignature(elements):
 
 def _matchResidue(res, template, bondedToAtom):
     """Determine whether a residue matches a template and return a list of corresponding atoms.
-    
+
     Parameters:
      - res (Residue) The residue to check
      - template (_TemplateData) The template to compare it to
@@ -469,9 +469,9 @@ def _matchResidue(res, template, bondedToAtom):
         return None
     matches = len(atoms)*[0]
     hasMatch = len(atoms)*[False]
-    
+
     # Translate from global to local atom indices, and record the bonds for each atom.
-    
+
     renumberAtoms = {}
     for i in range(len(atoms)):
         renumberAtoms[atoms[i].index] = i
@@ -496,11 +496,11 @@ def _findAtomMatches(atoms, template, bondedTo, externalBonds, matches, hasMatch
         atom = template.atoms[i]
         if (atom.element == elem or (atom.element is None and atom.name == name)) and not hasMatch[i] and len(atom.bondedTo) == len(bondedTo[position]) and atom.externalBonds == externalBonds[position]:
             # See if the bonds for this identification are consistent
-            
+
             allBondsMatch = all((bonded > position or matches[bonded] in atom.bondedTo for bonded in bondedTo[position]))
             if allBondsMatch:
                 # This is a possible match, so trying matching the rest of the residue.
-                
+
                 matches[position] = i
                 hasMatch[i] = True
                 if _findAtomMatches(atoms, template, bondedTo, externalBonds, matches, hasMatch, position+1):
@@ -517,13 +517,13 @@ def _findAtomMatches(atoms, template, bondedTo, externalBonds, matches, hasMatch
 ## @private
 class HarmonicBondGenerator:
     """A HarmonicBondGenerator constructs a HarmonicBondForce."""
-    
+
     def __init__(self):
         self.types1 = []
         self.types2 = []
         self.length = []
         self.k = []
-    
+
     @staticmethod
     def parseElement(element, ff):
         generator = HarmonicBondGenerator()
@@ -535,7 +535,7 @@ class HarmonicBondGenerator:
                 generator.types2.append(types[1])
                 generator.length.append(float(bond.attrib['length']))
                 generator.k.append(float(bond.attrib['k']))
-    
+
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         existing = [sys.getForce(i) for i in range(sys.getNumForces())]
         existing = [f for f in existing if type(f) == mm.HarmonicBondForce]
@@ -564,14 +564,14 @@ parsers["HarmonicBondForce"] = HarmonicBondGenerator.parseElement
 ## @private
 class HarmonicAngleGenerator:
     """A HarmonicAngleGenerator constructs a HarmonicAngleForce."""
-    
+
     def __init__(self):
         self.types1 = []
         self.types2 = []
         self.types3 = []
         self.angle = []
         self.k = []
-    
+
     @staticmethod
     def parseElement(element, ff):
         generator = HarmonicAngleGenerator()
@@ -584,7 +584,7 @@ class HarmonicAngleGenerator:
                 generator.types3.append(types[2])
                 generator.angle.append(float(angle.attrib['angle']))
                 generator.k.append(float(angle.attrib['k']))
-    
+
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         existing = [sys.getForce(i) for i in range(sys.getNumForces())]
         existing = [f for f in existing if type(f) == mm.HarmonicAngleForce]
@@ -604,7 +604,7 @@ class HarmonicAngleGenerator:
                 if (type1 in types1 and type2 in types2 and type3 in types3) or (type1 in types3 and type2 in types2 and type3 in types1):
                     if isConstrained:
                         # Find the two bonds that make this angle.
-                        
+
                         bond1 = None
                         bond2 = None
                         for bond in data.atomBonds[angle[1]]:
@@ -614,9 +614,9 @@ class HarmonicAngleGenerator:
                                 bond1 = bond
                             elif atom1 == angle[2] or atom2 == angle[2]:
                                 bond2 = bond
-                        
+
                         # Compute the distance between atoms and add a constraint
-                        
+
                         if bond1 is not None and bond2 is not None:
                             l1 = data.bonds[bond1].length
                             l2 = data.bonds[bond2].length
@@ -646,11 +646,11 @@ class PeriodicTorsion:
 ## @private
 class PeriodicTorsionGenerator:
     """A PeriodicTorsionGenerator constructs a PeriodicTorsionForce."""
-    
+
     def __init__(self):
         self.proper = []
         self.improper = []
-    
+
     @staticmethod
     def parseElement(element, ff):
         generator = PeriodicTorsionGenerator()
@@ -664,7 +664,7 @@ class PeriodicTorsionGenerator:
             torsion = ff._parseTorsion(torsion)
             if torsion is not None:
                 generator.improper.append(torsion)
-    
+
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         existing = [sys.getForce(i) for i in range(sys.getNumForces())]
         existing = [f for f in existing if type(f) == mm.PeriodicTorsionForce]
@@ -745,11 +745,11 @@ class RBTorsion:
 ## @private
 class RBTorsionGenerator:
     """An RBTorsionGenerator constructs an RBTorsionForce."""
-    
+
     def __init__(self):
         self.proper = []
         self.improper = []
-    
+
     @staticmethod
     def parseElement(element, ff):
         generator = RBTorsionGenerator()
@@ -763,7 +763,7 @@ class RBTorsionGenerator:
             types = ff._findAtomTypes(torsion, 4)
             if None not in types:
                 generator.improper.append(RBTorsion(types, [float(torsion.attrib['c'+str(i)]) for i in range(6)]))
-    
+
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         existing = [sys.getForce(i) for i in range(sys.getNumForces())]
         existing = [f for f in existing if type(f) == mm.RBTorsionForce]
@@ -841,11 +841,11 @@ class CMAPTorsion:
 ## @private
 class CMAPTorsionGenerator:
     """A CMAPTorsionGenerator constructs a CMAPTorsionForce."""
-    
+
     def __init__(self):
         self.torsions = []
         self.maps = []
-    
+
     @staticmethod
     def parseElement(element, ff):
         generator = CMAPTorsionGenerator()
@@ -861,7 +861,7 @@ class CMAPTorsionGenerator:
             types = ff._findAtomTypes(torsion, 5)
             if None not in types:
                 generator.torsions.append(CMAPTorsion(types, int(torsion.attrib['map'])))
-    
+
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         existing = [sys.getForce(i) for i in range(sys.getNumForces())]
         existing = [f for f in existing if type(f) == mm.CMAPTorsionForce]
@@ -872,9 +872,9 @@ class CMAPTorsionGenerator:
             force = existing[0]
         for map in self.maps:
             force.addMap(int(sqrt(len(map))), map)
-        
+
         # Find all chains of length 5
-        
+
         uniqueTorsions = set()
         for torsion in data.propers:
             for bond in (data.bonds[x] for x in data.atomBonds[torsion[0]]):
@@ -921,7 +921,7 @@ parsers["CMAPTorsionForce"] = CMAPTorsionGenerator.parseElement
 ## @private
 class NonbondedGenerator:
     """A NonbondedGenerator constructs a NonbondedForce."""
-    
+
     def __init__(self, coulomb14scale, lj14scale):
         self.coulomb14scale = coulomb14scale
         self.lj14scale = lj14scale
@@ -937,14 +937,14 @@ class NonbondedGenerator:
             # Multiple <NonbondedForce> tags were found, probably in different files.  Simply add more types to the existing one.
             generator = existing[0]
             if generator.coulomb14scale != float(element.attrib['coulomb14scale']) or generator.lj14scale != float(element.attrib['lj14scale']):
-                raise ValueError('Found multiple NonbondedForce tags with different 1-4 scales') 
+                raise ValueError('Found multiple NonbondedForce tags with different 1-4 scales')
         for atom in element.findall('Atom'):
             types = ff._findAtomTypes(atom, 1)
             if None not in types:
                 values = (float(atom.attrib['charge']), float(atom.attrib['sigma']), float(atom.attrib['epsilon']))
                 for t in types[0]:
                     generator.typeMap[t] = values
-    
+
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         methodMap = {NoCutoff:mm.NonbondedForce.NoCutoff,
                      CutoffNonPeriodic:mm.NonbondedForce.CutoffNonPeriodic,
@@ -952,7 +952,7 @@ class NonbondedGenerator:
                      Ewald:mm.NonbondedForce.Ewald,
                      PME:mm.NonbondedForce.PME}
         if nonbondedMethod not in methodMap:
-            raise ValueError('Illegal nonbonded method for NonbondedForce') 
+            raise ValueError('Illegal nonbonded method for NonbondedForce')
         force = mm.NonbondedForce()
         for atom in data.atoms:
             t = data.atomType[atom]
@@ -966,7 +966,7 @@ class NonbondedGenerator:
         if 'ewaldErrorTolerance' in args:
             force.setEwaldErrorTolerance(args['ewaldErrorTolerance'])
         sys.addForce(force)
-    
+
     def postprocessSystem(self, sys, data, args):
         # Create exceptions based on bonds, virtual sites, and Drude particles.
         bondIndices = []
@@ -996,7 +996,7 @@ class NonbondedGenerator:
                 if drude2 is not None:
                     bondIndices.append((atom1, drude2))
         nonbonded = [f for f in sys.getForces() if isinstance(f, mm.NonbondedForce)][0]
-        nonbonded.createExceptionsFromBonds(bondIndices, self.coulomb14scale, self.lj14scale)        
+        nonbonded.createExceptionsFromBonds(bondIndices, self.coulomb14scale, self.lj14scale)
 
 parsers["NonbondedForce"] = NonbondedGenerator.parseElement
 
@@ -1004,7 +1004,7 @@ parsers["NonbondedForce"] = NonbondedGenerator.parseElement
 ## @private
 class GBSAOBCGenerator:
     """A GBSAOBCGenerator constructs a GBSAOBCForce."""
-    
+
     def __init__(self):
         self.typeMap = {}
 
@@ -1023,13 +1023,13 @@ class GBSAOBCGenerator:
                 values = (float(atom.attrib['charge']), float(atom.attrib['radius']), float(atom.attrib['scale']))
                 for t in types[0]:
                     generator.typeMap[t] = values
-    
+
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         methodMap = {NoCutoff:mm.NonbondedForce.NoCutoff,
                      CutoffNonPeriodic:mm.NonbondedForce.CutoffNonPeriodic,
                      CutoffPeriodic:mm.NonbondedForce.CutoffPeriodic}
         if nonbondedMethod not in methodMap:
-            raise ValueError('Illegal nonbonded method for GBSAOBCForce') 
+            raise ValueError('Illegal nonbonded method for GBSAOBCForce')
         force = mm.GBSAOBCForce()
         for atom in data.atoms:
             t = data.atomType[atom]
@@ -1037,7 +1037,7 @@ class GBSAOBCGenerator:
                 values = self.typeMap[t]
                 force.addParticle(values[0], values[1], values[2])
             else:
-                raise ValueError('No GBSAOBC parameters defined for atom type '+t) 
+                raise ValueError('No GBSAOBC parameters defined for atom type '+t)
         force.setNonbondedMethod(methodMap[nonbondedMethod])
         force.setCutoffDistance(nonbondedCutoff)
         if 'soluteDielectric' in args:
@@ -1046,6 +1046,13 @@ class GBSAOBCGenerator:
             force.setSolventDielectric(float(args['solventDielectric']))
         sys.addForce(force)
 
+    def postprocessSystem(self, sys, data, args):
+        # Disable the reaction field approximation, since it produces bad results when combined with GB.
+
+        for force in sys.getForces():
+            if isinstance(force, mm.NonbondedForce):
+                force.setReactionFieldDielectric(1.0)
+
 parsers["GBSAOBCForce"] = GBSAOBCGenerator.parseElement
 
 
@@ -1053,7 +1060,7 @@ parsers["GBSAOBCForce"] = GBSAOBCGenerator.parseElement
 class GBVIGenerator:
 
     """A GBVIGenerator constructs a GBVIForce."""
-    
+
     def __init__(self,ff):
 
         self.ff = ff
@@ -1080,7 +1087,7 @@ class GBVIGenerator:
                 values = (float(atom.attrib['charge']), float(atom.attrib['radius']), float(atom.attrib['gamma']))
                 for t in types[0]:
                     generator.typeMap[t] = values
-    
+
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
 
         methodMap = {NoCutoff:mm.NonbondedForce.NoCutoff,
@@ -1088,7 +1095,7 @@ class GBVIGenerator:
                      CutoffPeriodic:mm.NonbondedForce.CutoffPeriodic}
 
         if nonbondedMethod not in methodMap:
-            raise ValueError('Illegal nonbonded method for GB/VI Force') 
+            raise ValueError('Illegal nonbonded method for GB/VI Force')
 
         # add particles
 
@@ -1099,18 +1106,18 @@ class GBVIGenerator:
                 values = self.typeMap[t]
                 force.addParticle(values[0], values[1], values[2])
             else:
-                raise ValueError('No GB/VI parameters defined for atom type '+t) 
+                raise ValueError('No GB/VI parameters defined for atom type '+t)
 
         # get HarmonicBond generator -- exit if not found
 
         hbGenerator = 0
         for generator in self.ff._forces:
-            if (generator.__class__.__name__ == 'HarmonicBondGenerator'): 
+            if (generator.__class__.__name__ == 'HarmonicBondGenerator'):
                hbGenerator = generator
                break
 
         if (hbGenerator == 0):
-            raise ValueError('HarmonicBondGenerator not found.') 
+            raise ValueError('HarmonicBondGenerator not found.')
 
         # add bonds
 
@@ -1132,7 +1139,7 @@ class GBVIGenerator:
         force.setBornRadiusScalingMethod(self.fixedParameters['scalingMethod'])
         force.setQuinticLowerLimitFactor(self.fixedParameters['quinticLowerLimitFactor'])
         force.setQuinticUpperBornRadiusLimit(self.fixedParameters['quinticUpperBornRadiusLimit'])
-        
+
         sys.addForce(force)
 
 parsers["GBVIForce"] = GBVIGenerator.parseElement
@@ -1140,14 +1147,14 @@ parsers["GBVIForce"] = GBVIGenerator.parseElement
 ## @private
 class CustomBondGenerator:
     """A CustomBondGenerator constructs a CustomBondForce."""
-    
+
     def __init__(self):
         self.types1 = []
         self.types2 = []
         self.globalParams = {}
         self.perBondParams = []
         self.paramValues = []
-    
+
     @staticmethod
     def parseElement(element, ff):
         generator = CustomBondGenerator()
@@ -1163,7 +1170,7 @@ class CustomBondGenerator:
                 generator.types1.append(types[0])
                 generator.types2.append(types[1])
                 generator.paramValues.append([float(bond.attrib[param]) for param in generator.perBondParams])
-    
+
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         force = mm.CustomBondForce(self.energy)
         sys.addForce(force)
@@ -1187,7 +1194,7 @@ parsers["CustomBondForce"] = CustomBondGenerator.parseElement
 ## @private
 class CustomAngleGenerator:
     """A CustomAngleGenerator constructs a CustomAngleForce."""
-    
+
     def __init__(self):
         self.types1 = []
         self.types2 = []
@@ -1195,7 +1202,7 @@ class CustomAngleGenerator:
         self.globalParams = {}
         self.perAngleParams = []
         self.paramValues = []
-    
+
     @staticmethod
     def parseElement(element, ff):
         generator = CustomAngleGenerator()
@@ -1212,7 +1219,7 @@ class CustomAngleGenerator:
                 generator.types2.append(types[1])
                 generator.types3.append(types[2])
                 generator.paramValues.append([float(angle.attrib[param]) for param in generator.perAngleParams])
-    
+
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         force = mm.CustomAngleForce(self.energy)
         sys.addForce(force)
@@ -1249,13 +1256,13 @@ class CustomTorsion:
 ## @private
 class CustomTorsionGenerator:
     """A CustomTorsionGenerator constructs a CustomTorsionForce."""
-    
+
     def __init__(self):
         self.proper = []
         self.improper = []
         self.globalParams = {}
         self.perTorsionParams = []
-    
+
     @staticmethod
     def parseElement(element, ff):
         generator = CustomTorsionGenerator()
@@ -1274,7 +1281,7 @@ class CustomTorsionGenerator:
             types = ff._findAtomTypes(torsion, 4)
             if None not in types:
                 generator.improper.append(CustomTorsion(types, [float(torsion.attrib[param]) for param in generator.perTorsionParams]))
-    
+
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         force = mm.CustomTorsionForce(self.energy)
         sys.addForce(force)
@@ -1339,7 +1346,7 @@ parsers["CustomTorsionForce"] = CustomTorsionGenerator.parseElement
 ## @private
 class CustomGBGenerator:
     """A CustomGBGenerator constructs a CustomGBForce."""
-    
+
     def __init__(self):
         self.typeMap = {}
         self.globalParams = {}
@@ -1373,13 +1380,13 @@ class CustomGBGenerator:
         for function in element.findall("Function"):
             values = [float(x) for x in function.text.split()]
             generator.functions.append((function.attrib['name'], values, float(function.attrib['min']), float(function.attrib['max'])))
-    
+
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         methodMap = {NoCutoff:mm.CustomGBForce.NoCutoff,
                      CutoffNonPeriodic:mm.CustomGBForce.CutoffNonPeriodic,
                      CutoffPeriodic:mm.CustomGBForce.CutoffPeriodic}
         if nonbondedMethod not in methodMap:
-            raise ValueError('Illegal nonbonded method for CustomGBForce') 
+            raise ValueError('Illegal nonbonded method for CustomGBForce')
         force = mm.CustomGBForce()
         for param in self.globalParams:
             force.addGlobalParameter(param, self.globalParams[param])
@@ -1397,7 +1404,7 @@ class CustomGBGenerator:
                 values = self.typeMap[t]
                 force.addParticle(self.typeMap[t])
             else:
-                raise ValueError('No CustomGB parameters defined for atom type '+t) 
+                raise ValueError('No CustomGB parameters defined for atom type '+t)
         force.setNonbondedMethod(methodMap[nonbondedMethod])
         force.setCutoffDistance(nonbondedCutoff)
         sys.addForce(force)
@@ -1428,7 +1435,7 @@ def countConstraint(data):
     for (angle, isConstrained) in zip(data.angles, data.isAngleConstrained):
         if (isConstrained):
             angleCount += 1
- 
+
     print "Constraints bond=%d angle=%d  total=%d" % (bondCount, angleCount, (bondCount+angleCount))
 
 ## @private
@@ -1439,7 +1446,7 @@ class AmoebaBondGenerator:
     """An AmoebaBondGenerator constructs a AmoebaBondForce."""
 
     #=============================================================================================
-    
+
     def __init__(self, cubic, quartic):
 
         self.cubic = cubic
@@ -1448,7 +1455,7 @@ class AmoebaBondGenerator:
         self.types2 = []
         self.length = []
         self.k = []
-    
+
     #=============================================================================================
 
     @staticmethod
@@ -1456,7 +1463,7 @@ class AmoebaBondGenerator:
 
         # <AmoebaBondForce bond-cubic="-25.5" bond-quartic="379.3125">
         # <Bond class1="1" class2="2" length="0.1437" k="156900.0"/>
-    
+
         generator = AmoebaBondGenerator(float(element.attrib['bond-cubic']), float(element.attrib['bond-quartic']))
         forceField._forces.append(generator)
         for bond in element.findall('Bond'):
@@ -1470,8 +1477,8 @@ class AmoebaBondGenerator:
                 outputString = "AmoebaBondGenerator: error getting types: %s %s" % (
                                     bond.attrib['class1'],
                                     bond.attrib['class2'])
-                raise ValueError(outputString) 
-    
+                raise ValueError(outputString)
+
     #=============================================================================================
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
@@ -1505,20 +1512,20 @@ class AmoebaBondGenerator:
                         force.addBond(bond.atom1, bond.atom2, self.length[i], self.k[i])
                     break
 
-            if (hit == 0): 
+            if (hit == 0):
                 outputString = "AmoebaBondGenerator missing: types=[%5s %5s] atoms=[%6d %6d] " % (type1, type2, bond.atom1, bond.atom2)
-                raise ValueError(outputString) 
+                raise ValueError(outputString)
 
 parsers["AmoebaBondForce"] = AmoebaBondGenerator.parseElement
 
 #=============================================================================================
 # Add angle constraint
 #=============================================================================================
-    
+
 def addAngleConstraint(angle, idealAngle, data, sys):
 
     # Find the two bonds that make this angle.
-                    
+
     bond1 = None
     bond2 = None
     for bond in data.atomBonds[angle[1]]:
@@ -1528,9 +1535,9 @@ def addAngleConstraint(angle, idealAngle, data, sys):
             bond1 = bond
         elif atom1 == angle[2] or atom2 == angle[2]:
             bond2 = bond
-                    
+
         # Compute the distance between atoms and add a constraint
-                    
+
         if bond1 is not None and bond2 is not None:
             l1 = data.bonds[bond1].length
             l2 = data.bonds[bond2].length
@@ -1546,7 +1553,7 @@ class AmoebaAngleGenerator:
     #=============================================================================================
     """An AmoebaAngleGenerator constructs a AmoebaAngleForce."""
     #=============================================================================================
-    
+
     def __init__(self, forceField, cubic, quartic, pentic, sextic):
 
         self.forceField = forceField
@@ -1561,7 +1568,7 @@ class AmoebaAngleGenerator:
 
         self.angle = []
         self.k = []
-    
+
     #=============================================================================================
 
     @staticmethod
@@ -1598,13 +1605,13 @@ class AmoebaAngleGenerator:
                                     angle.attrib['class1'],
                                     angle.attrib['class2'],
                                     angle.attrib['class3'])
-                raise ValueError(outputString) 
-    
+                raise ValueError(outputString)
+
     #=============================================================================================
     # createForce is bypassed here since the AmoebaOutOfPlaneBendForce generator must first execute
     # and partition angles into in-plane and non-in-plane angles
     #=============================================================================================
-    
+
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         pass
 
@@ -1612,7 +1619,7 @@ class AmoebaAngleGenerator:
     # createForcePostOpBendAngle is called by AmoebaOutOfPlaneBendForce with the list of
     # non-in-plane angles
     #=============================================================================================
-    
+
     def createForcePostOpBendAngle(self, sys, data, nonbondedMethod, nonbondedCutoff, angleList, args):
 
         # get force
@@ -1667,26 +1674,26 @@ class AmoebaAngleGenerator:
                                 angleValue =  self.angle[i][numberOfHydrogens]
                             else:
                                 outputString = "AmoebaAngleGenerator angle index=%d is out of range: [0, %5d] " % (numberOfHydrogens, lenAngle)
-                                raise ValueError(outputString) 
+                                raise ValueError(outputString)
                         else:
                             angleValue =  self.angle[i][0]
-               
+
                         angleDict['idealAngle'] = angleValue
                         force.addAngle(angle[0], angle[1], angle[2], angleValue, self.k[i])
                     break
-            if (hit == 0): 
+            if (hit == 0):
                 outputString = "AmoebaAngleGenerator missing types: [%s %s %s] for atoms: " % (type1, type2, type3)
                 outputString += getAtomPrint( data, angle[0] ) + ' '
                 outputString += getAtomPrint( data, angle[1] ) + ' '
                 outputString += getAtomPrint( data, angle[2] )
                 outputString += " indices: [%6d %6d %6d]" % (angle[0], angle[1], angle[2])
-                raise ValueError(outputString) 
+                raise ValueError(outputString)
 
     #=============================================================================================
     # createForcePostOpBendInPlaneAngle is called by AmoebaOutOfPlaneBendForce with the list of
     # in-plane angles
     #=============================================================================================
-    
+
     def createForcePostOpBendInPlaneAngle(self, sys, data, nonbondedMethod, nonbondedCutoff, angleList, args):
 
         # get force
@@ -1708,7 +1715,7 @@ class AmoebaAngleGenerator:
         force.setAmoebaGlobalInPlaneAngleSextic(self.sextic)
 
         for angleDict in angleList:
- 
+
             angle = angleDict['angle']
             isConstrained = angleDict['isConstrained']
 
@@ -1732,13 +1739,13 @@ class AmoebaAngleGenerator:
                         force.addAngle(angle[0], angle[1], angle[2], angle[3], self.angle[i][0], self.k[i])
                     break
 
-            if (hit == 0): 
+            if (hit == 0):
                 outputString = "AmoebaInPlaneAngleGenerator missing types: [%s %s %s] atoms: " % (type1, type2, type3)
                 outputString += getAtomPrint( data, angle[0] ) + ' '
                 outputString += getAtomPrint( data, angle[1] ) + ' '
                 outputString += getAtomPrint( data, angle[2] )
                 outputString += " indices: [%6d %6d %6d]" % (angle[0], angle[1], angle[2])
-                raise ValueError(outputString) 
+                raise ValueError(outputString)
 
 parsers["AmoebaAngleForce"] = AmoebaAngleGenerator.parseElement
 
@@ -1754,7 +1761,7 @@ class AmoebaOutOfPlaneBendGenerator:
     #=============================================================================================
 
     """An AmoebaOutOfPlaneBendGenerator constructs a AmoebaOutOfPlaneBendForce."""
-    
+
     #=============================================================================================
 
     def __init__(self, forceField, type, cubic, quartic, pentic, sextic):
@@ -1777,7 +1784,7 @@ class AmoebaOutOfPlaneBendGenerator:
     # Local version of findAtomTypes needed since class indices are 0 (i.e., not recognized)
     # for types3 and 4
     #=============================================================================================
-    
+
     def findAtomTypes(self, forceField, node, num):
         """Parse the attributes on an XML tag to find the set of atom types for each atom it involves."""
         types = []
@@ -1803,7 +1810,7 @@ class AmoebaOutOfPlaneBendGenerator:
         #  <AmoebaOutOfPlaneBendForce type="ALLINGER" opbend-cubic="-0.014" opbend-quartic="5.6e-05" opbend-pentic="-7e-07" opbend-sextic="2.2e-08">
         #   <Angle class1="2" class2="1" class3="0" class4="0" k="0.0531474541591"/>
         #   <Angle class1="3" class2="1" class3="0" class4="0" k="0.0898536095496"/>
-         
+
         # get global scalar parameters
 
         generator = AmoebaOutOfPlaneBendGenerator(forceField, element.attrib['type'],
@@ -1828,21 +1835,21 @@ class AmoebaOutOfPlaneBendGenerator:
             else:
                 outputString = "AmoebaOutOfPlaneBendGenerator error getting types: %s %s %s %s." % (
                                angle.attrib['class1'], angle.attrib['class2'], angle.attrib['class3'], angle.attrib['class4'])
-                raise ValueError(outputString) 
-    
+                raise ValueError(outputString)
+
     #=============================================================================================
     # Get middle atom in a angle
     # return index of middle atom or -1 if no middle is found
     # This method appears not to be needed since the angle[1] entry appears to always
     # be the middle atom. However, was unsure if this is guaranteed
     #=============================================================================================
-    
+
     def getMiddleAtom(self, angle, data):
 
         # find atom shared by both bonds making up the angle
 
         middleAtom = -1
-        for atomIndex in angle: 
+        for atomIndex in angle:
             isMiddle = 0
             for bond in data.atomBonds[atomIndex]:
                 atom1 = data.bonds[bond].atom1
@@ -1851,7 +1858,7 @@ class AmoebaOutOfPlaneBendGenerator:
                     partner = atom1
                 else:
                     partner = atom2
-                if (partner == angle[0] or partner == angle[1] or partner == angle[2]): 
+                if (partner == angle[0] or partner == angle[1] or partner == angle[2]):
                     isMiddle += 1
 
             if (isMiddle == 2):
@@ -1902,10 +1909,10 @@ class AmoebaOutOfPlaneBendGenerator:
                 middleType = -1
                 middleCovalency = -1
 
-            # if middle atom has covalency of 3 and 
+            # if middle atom has covalency of 3 and
             # the types of the middle atom and the partner atom (atom bonded to
             # middle atom, but not in angle) match types1 and types2, then
-            # three out-of-plane bend angles are generated. Three in-plane angle 
+            # three out-of-plane bend angles are generated. Three in-plane angle
             # are also generated. If the conditions are not satisfied, the angle is marked as 'generic' angle (not a in-plane angle)
 
             if (middleAtom > -1 and middleCovalency == 3 and middleAtom not in skipAtoms):
@@ -1932,7 +1939,7 @@ class AmoebaOutOfPlaneBendGenerator:
                             partnerSet.add(partner)
                             partnerTypes.append(partnerType)
                             partnerK.append(self.ks[i])
-             
+
                 if (len(partners) == 3):
 
                     force.addOutOfPlaneBend(partners[0], middleAtom, partners[1], partners[2], partnerK[2])
@@ -1977,7 +1984,7 @@ class AmoebaOutOfPlaneBendGenerator:
                 if (middleAtom > -1 and middleCovalency == 3 and middleAtom in skipAtoms):
 
                     partnerSet = skipAtoms[middleAtom]
-                  
+
                     angleDict = {}
 
                     angleList = []
@@ -2008,12 +2015,12 @@ class AmoebaOutOfPlaneBendGenerator:
         # get AmoebaAngleGenerator and add AmoebaAngle and AmoebaInPlaneAngle forces
 
         for force in self.forceField._forces:
-            if (force.__class__.__name__ == 'AmoebaAngleGenerator'): 
+            if (force.__class__.__name__ == 'AmoebaAngleGenerator'):
                 force.createForcePostOpBendAngle(sys, data, nonbondedMethod, nonbondedCutoff, nonInPlaneAngles, args)
                 force.createForcePostOpBendInPlaneAngle(sys, data, nonbondedMethod, nonbondedCutoff, inPlaneAngles, args)
 
         for force in self.forceField._forces:
-            if (force.__class__.__name__ == 'AmoebaStretchBendGenerator'): 
+            if (force.__class__.__name__ == 'AmoebaStretchBendGenerator'):
                 for angleDict in inPlaneAngles:
                     nonInPlaneAngles.append(angleDict)
                 force.createForcePostAmoebaBondForce(sys, data, nonbondedMethod, nonbondedCutoff, nonInPlaneAngles, args)
@@ -2041,7 +2048,7 @@ class AmoebaTorsionGenerator:
         self.t1 = []
         self.t2 = []
         self.t3 = []
-    
+
     #=============================================================================================
 
     @staticmethod
@@ -2050,7 +2057,7 @@ class AmoebaTorsionGenerator:
         #  <AmoebaTorsionForce torsionUnit="0.5">
         #   <Torsion class1="3" class2="1" class3="2" class4="3"   amp1="0.0" angle1="0.0"   amp2="0.0" angle2="3.14159265359"   amp3="0.0" angle3="0.0" />
         #   <Torsion class1="3" class2="1" class3="2" class4="6"   amp1="0.0" angle1="0.0"   amp2="0.0" angle2="3.14159265359"   amp3="-0.263592" angle3="0.0" />
-         
+
         generator = AmoebaTorsionGenerator(float(element.attrib['torsionUnit']))
         forceField._forces.append(generator)
 
@@ -2088,8 +2095,8 @@ class AmoebaTorsionGenerator:
                                     stretchBend.attrib['class2'],
                                     stretchBend.attrib['class3'],
                                     stretchBend.attrib['class4'])
-                raise ValueError(outputString) 
-    
+                raise ValueError(outputString)
+
     #=============================================================================================
 
     def createForce(self, sys, data, nontorsionedMethod, nontorsionedCutoff, args):
@@ -2129,14 +2136,14 @@ class AmoebaTorsionGenerator:
                         force.addTorsion(torsion[0], torsion[1], torsion[2], torsion[3], 3, self.t3[i][1], self.t3[i][0])
                     break
 
-            if (hit == 0): 
+            if (hit == 0):
                 outputString = "AmoebaTorsionGenerator missing type: [%s %s %s %s] atoms: " % (type1, type2, type3, type4)
                 outputString += getAtomPrint( data, torsion[0] ) + ' '
                 outputString += getAtomPrint( data, torsion[1] ) + ' '
                 outputString += getAtomPrint( data, torsion[2] ) + ' '
                 outputString += getAtomPrint( data, torsion[3] )
                 outputString += " indices: [%6d %6d %6d %6d]" % (torsion[0], torsion[1], torsion[2], torsion[3])
-                raise ValueError(outputString) 
+                raise ValueError(outputString)
 
 parsers["AmoebaTorsionForce"] = AmoebaTorsionGenerator.parseElement
 
@@ -2150,13 +2157,13 @@ class AmoebaPiTorsionGenerator:
     """An AmoebaPiTorsionGenerator constructs a AmoebaPiTorsionForce."""
 
     #=============================================================================================
-    
+
     def __init__(self, piTorsionUnit):
-        self.piTorsionUnit = piTorsionUnit 
+        self.piTorsionUnit = piTorsionUnit
         self.types1 = []
         self.types2 = []
         self.k = []
-    
+
     #=============================================================================================
 
     @staticmethod
@@ -2178,8 +2185,8 @@ class AmoebaPiTorsionGenerator:
                 outputString = "AmoebaPiTorsionGenerator: error getting types: %s %s " % (
                                     piTorsion.attrib['class1'],
                                     piTorsion.attrib['class2'])
-                raise ValueError(outputString) 
-    
+                raise ValueError(outputString)
+
     #=============================================================================================
 
     def createForce(self, sys, data, nonpiTorsionedMethod, nonpiTorsionedCutoff, args):
@@ -2196,10 +2203,10 @@ class AmoebaPiTorsionGenerator:
         for bond in data.bonds:
 
             # search for bonds with both atoms in bond having covalency == 3
- 
+
             atom1 = bond.atom1
             atom2 = bond.atom2
- 
+
             if (len(data.atomBonds[atom1]) == 3 and len(data.atomBonds[atom1]) == 3):
 
                 type1 = data.atomType[data.atoms[atom1]]
@@ -2212,8 +2219,8 @@ class AmoebaPiTorsionGenerator:
 
                    if (type1 in types1 and type2 in types2) or (type1 in types2 and type2 in types1):
 
-                       # piTorsionAtom1, piTorsionAtom2 are the atoms bonded to atom1, excluding atom2 
-                       # piTorsionAtom5, piTorsionAtom6 are the atoms bonded to atom2, excluding atom1 
+                       # piTorsionAtom1, piTorsionAtom2 are the atoms bonded to atom1, excluding atom2
+                       # piTorsionAtom5, piTorsionAtom6 are the atoms bonded to atom2, excluding atom1
 
                        piTorsionAtom1 = -1
                        piTorsionAtom2 = -1
@@ -2232,7 +2239,7 @@ class AmoebaPiTorsionGenerator:
                                b1 = bondedAtom2
                            if (b1 != atom2):
                                if (piTorsionAtom1 == -1):
-                                   piTorsionAtom1 = b1 
+                                   piTorsionAtom1 = b1
                                else:
                                    piTorsionAtom2 = b1
 
@@ -2246,10 +2253,10 @@ class AmoebaPiTorsionGenerator:
 
                            if (b1 != atom1):
                                if (piTorsionAtom5 == -1):
-                                   piTorsionAtom5 = b1 
+                                   piTorsionAtom5 = b1
                                else:
                                    piTorsionAtom6 = b1
-    
+
                        force.addPiTorsion(piTorsionAtom1, piTorsionAtom2, piTorsionAtom3, piTorsionAtom4, piTorsionAtom5, piTorsionAtom6, self.k[i])
 
 parsers["AmoebaPiTorsionForce"] = AmoebaPiTorsionGenerator.parseElement
@@ -2274,7 +2281,7 @@ class AmoebaTorsionTorsionGenerator:
         self.gridIndex = []
 
         self.grids = []
-    
+
     #=============================================================================================
 
     @staticmethod
@@ -2309,8 +2316,8 @@ class AmoebaTorsionTorsionGenerator:
                                     torsionTorsion.attrib['class3'],
                                     torsionTorsion.attrib['class4'],
                                     torsionTorsion.attrib['class5'] )
-                raise ValueError(outputString) 
-    
+                raise ValueError(outputString)
+
         # load grid
 
         # xml source
@@ -2321,12 +2328,12 @@ class AmoebaTorsionTorsionGenerator:
 
         # output grid:
 
-        #     grid[x][y][0] = x value 
-        #     grid[x][y][1] = y value 
-        #     grid[x][y][2] = function value 
-        #     grid[x][y][3] = dfdx value 
-        #     grid[x][y][4] = dfdy value 
-        #     grid[x][y][5] = dfd(xy) value 
+        #     grid[x][y][0] = x value
+        #     grid[x][y][1] = y value
+        #     grid[x][y][2] = function value
+        #     grid[x][y][3] = dfdx value
+        #     grid[x][y][4] = dfdy value
+        #     grid[x][y][5] = dfd(xy) value
 
         maxGridIndex    += 1
         generator.grids = maxGridIndex*[]
@@ -2358,7 +2365,7 @@ class AmoebaTorsionTorsionGenerator:
                     gridCol = []
                     gridColIndex = 0
 
-            
+
             if (gridIndex == len(generator.grids)):
                 generator.grids.append(grid)
             else:
@@ -2394,33 +2401,33 @@ class AmoebaTorsionTorsionGenerator:
                         atomE = hit
                     else:
                         atomF = hit
-       
+
             # raise error if atoms E or F not found
 
             if (atomE == -1 or atomF == -1):
                 outputString = "getChiralAtomIndex: error getting bonded partners of atomC=%s %d %s" % (atomC.name, atomC.resiude.index, atomC.resiude.name,)
-                raise ValueError(outputString) 
+                raise ValueError(outputString)
 
             # check for different type/mass between atoms E & F
 
             typeE = int(data.atomType[data.atoms[atomE]])
             typeF = int(data.atomType[data.atoms[atomF]])
             if (typeE > typeF):
-                chiralAtomIndex = atomE 
+                chiralAtomIndex = atomE
             if (typeF > typeE):
-                chiralAtomIndex = atomF 
+                chiralAtomIndex = atomF
 
             massE = sys.getParticleMass(atomE)/unit.dalton
             massF = sys.getParticleMass(atomE)/unit.dalton
             if (massE > massF):
-                chiralAtomIndex = massE 
+                chiralAtomIndex = massE
             if (massF > massE):
-                chiralAtomIndex = massF 
+                chiralAtomIndex = massF
 
         return chiralAtomIndex
 
     #=============================================================================================
- 
+
     def createForce(self, sys, data, nonpiTorsionedMethod, nonpiTorsionedCutoff, args):
 
         existing = [sys.getForce(i) for i in range(sys.getNumForces())]
@@ -2434,8 +2441,8 @@ class AmoebaTorsionTorsionGenerator:
 
         for angle in data.angles:
 
-            # search for bitorsions; based on TINKER subroutine bitors() 
- 
+            # search for bitorsions; based on TINKER subroutine bitors()
+
             ib = angle[0]
             ic = angle[1]
             id = angle[2]
@@ -2492,7 +2499,7 @@ class AmoebaTorsionTorsionGenerator:
 
         for (index, grid) in enumerate(self.grids):
             force.setTorsionTorsionGrid(index, grid)
- 
+
 parsers["AmoebaTorsionTorsionForce"] = AmoebaTorsionTorsionGenerator.parseElement
 
 #=============================================================================================
@@ -2512,7 +2519,7 @@ class AmoebaStretchBendGenerator:
 
         self.k1 = []
         self.k2 = []
-    
+
     #=============================================================================================
 
     @staticmethod
@@ -2540,15 +2547,15 @@ class AmoebaStretchBendGenerator:
                                     stretchBend.attrib['class1'],
                                     stretchBend.attrib['class2'],
                                     stretchBend.attrib['class3'])
-                raise ValueError(outputString) 
-    
+                raise ValueError(outputString)
+
     #=============================================================================================
 
-    # The setup of this force is dependent on AmoebaBondForce and AmoebaAngleForce 
+    # The setup of this force is dependent on AmoebaBondForce and AmoebaAngleForce
     # having been called since the ideal bond lengths and angle are needed here.
     # As a conseqeunce, createForce() is not implemented since it is not guaranteed that the generator for
-    # AmoebaBondForce and AmoebaAngleForce have been called prior to AmoebaStretchBendGenerator(). 
-    # Instead, createForcePostAmoebaBondForce() is called 
+    # AmoebaBondForce and AmoebaAngleForce have been called prior to AmoebaStretchBendGenerator().
+    # Instead, createForcePostAmoebaBondForce() is called
     # after the generators for AmoebaBondForce and AmoebaAngleForce have been called
 
     #=============================================================================================
@@ -2595,7 +2602,7 @@ class AmoebaStretchBendGenerator:
                 # get ideal bond lengths, bondAB, bondCB
                 # get ideal angle
 
-                if (type2 in types2 and ((type1 in types1 and type3 in types3) or (type3 in types1 and type1 in types3))): 
+                if (type2 in types2 and ((type1 in types1 and type3 in types3) or (type3 in types1 and type1 in types3))):
                     bondAB = -1.0
                     bondCB = -1.0
                     swap = 0
@@ -2611,7 +2618,7 @@ class AmoebaStretchBendGenerator:
                             bondCB = length
                         if (atom2 == angle[0]):
                             bondAB = length
-                    
+
                     # check that ideal angle and bonds are set
 
                     if ('idealAngle' not in angleDict):
@@ -2621,7 +2628,7 @@ class AmoebaStretchBendGenerator:
                        outputString += getAtomPrint( data, angle[0] ) + ' '
                        outputString += getAtomPrint( data, angle[1] ) + ' '
                        outputString += getAtomPrint( data, angle[2] )
-                       raise ValueError(outputString) 
+                       raise ValueError(outputString)
 
                     elif (bondAB < 0 or bondCB < 0):
 
@@ -2630,7 +2637,7 @@ class AmoebaStretchBendGenerator:
                        outputString += getAtomPrint( data, angle[0] ) + ' '
                        outputString += getAtomPrint( data, angle[1] ) + ' '
                        outputString += getAtomPrint( data, angle[2] )
-                       raise ValueError(outputString) 
+                       raise ValueError(outputString)
 
                     else:
                         force.addStretchBend(angle[0], angle[1], angle[2], bondAB, bondCB, angleDict['idealAngle']/radian, self.k1[i])
@@ -2645,12 +2652,12 @@ parsers["AmoebaStretchBendForce"] = AmoebaStretchBendGenerator.parseElement
 class AmoebaVdwGenerator:
 
     """A AmoebaVdwGenerator constructs a AmoebaVdwForce."""
-    
+
     #=============================================================================================
 
     def __init__(self, type, radiusrule, radiustype, radiussize, epsilonrule, vdw13Scale, vdw14Scale, vdw15Scale):
 
-        self.type = type 
+        self.type = type
 
         self.radiusrule = radiusrule
         self.radiustype = radiustype
@@ -2670,11 +2677,11 @@ class AmoebaVdwGenerator:
     def parseElement(element, forceField):
 
         # <AmoebaVdwForce type="BUFFERED-14-7" radiusrule="CUBIC-MEAN" radiustype="R-MIN" radiussize="DIAMETER" epsilonrule="HHG" vdw-13-scale="0.0" vdw-14-scale="1.0" vdw-15-scale="1.0" >
-        #   <Vdw class="1" sigma="0.371" epsilon="0.46024" reduction="1.0" /> 
-        #   <Vdw class="2" sigma="0.382" epsilon="0.422584" reduction="1.0" /> 
-         
-        generator = AmoebaVdwGenerator(element.attrib['type'], element.attrib['radiusrule'], element.attrib['radiustype'], element.attrib['radiussize'], element.attrib['epsilonrule'], 
-                                        float(element.attrib['vdw-13-scale']), float(element.attrib['vdw-14-scale']), float(element.attrib['vdw-15-scale'])) 
+        #   <Vdw class="1" sigma="0.371" epsilon="0.46024" reduction="1.0" />
+        #   <Vdw class="2" sigma="0.382" epsilon="0.422584" reduction="1.0" />
+
+        generator = AmoebaVdwGenerator(element.attrib['type'], element.attrib['radiusrule'], element.attrib['radiustype'], element.attrib['radiussize'], element.attrib['epsilonrule'],
+                                        float(element.attrib['vdw-13-scale']), float(element.attrib['vdw-14-scale']), float(element.attrib['vdw-15-scale']))
         forceField._forces.append(generator)
         two_six = 1.122462048309372
 
@@ -2690,17 +2697,17 @@ class AmoebaVdwGenerator:
 
                 if (generator.radiustype == 'SIGMA'):
                     values[0] *= two_six
-      
+
                 if (generator.radiussize == 'DIAMETER'):
                     values[0] *= 0.5
 
                 for t in types[0]:
                     generator.typeMap[t] = values
-    
+
             else:
                 outputString = "AmoebaVdwGenerator: error getting type: %s" % (atom.attrib['class'])
-                raise ValueError(outputString) 
-    
+                raise ValueError(outputString)
+
     #=============================================================================================
 
     # Return a set containing the indices of particles bonded to particle with index=particleIndex
@@ -2721,7 +2728,7 @@ class AmoebaVdwGenerator:
                 bondedParticleSet.add(atom2)
 
         return bondedParticleSet
-          
+
     #=============================================================================================
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
@@ -2755,10 +2762,10 @@ class AmoebaVdwGenerator:
                     force.setEpsilonCombiningRule(epsilonRule.upper())
                 else:
                     stringList = ' ' . join(str(x) for x in epsilonMap.keys())
-                    raise ValueError( "AmoebaVdwGenerator: epsilon combining rule %s not recognized; valid values are %s; using default." % (epsilonRule, stringList) )  
+                    raise ValueError( "AmoebaVdwGenerator: epsilon combining rule %s not recognized; valid values are %s; using default." % (epsilonRule, stringList) )
             else:
                 force.setEpsilonCombiningRule(self.epsilonrule)
-               
+
             # cutoff
 
             if ('vdwCutoff' in args):
@@ -2773,19 +2780,19 @@ class AmoebaVdwGenerator:
 
             if (nonbondedMethod == PME):
                 force.setNonbondedMethod(mm.AmoebaVdwForce.CutoffPeriodic)
-           
+
         else:
             force = existing[0]
 
         # add particles to force
-        # throw error if particle type not available 
+        # throw error if particle type not available
 
         for (i, atom) in enumerate(data.atoms):
             t = data.atomType[atom]
             if t in self.typeMap:
 
                 values = self.typeMap[t]
-   
+
                 # ivIndex = index of bonded partner for hydrogens; otherwise ivIndex = particle index
 
                 ivIndex = i
@@ -2812,7 +2819,7 @@ class AmoebaVdwGenerator:
             bondedParticleSets.append(AmoebaVdwGenerator.getBondedParticleSet(i, data))
 
         for (i,atom) in enumerate(data.atoms):
- 
+
             # 1-2 partners
 
             exclusionSet = bondedParticleSets[i].copy()
@@ -2839,7 +2846,7 @@ class AmoebaMultipoleGenerator:
     #=============================================================================================
 
     """A AmoebaMultipoleGenerator constructs a AmoebaMultipoleForce."""
-    
+
     #=============================================================================================
 
     def __init__(self, forceField,
@@ -2850,25 +2857,25 @@ class AmoebaMultipoleGenerator:
 
         self.forceField = forceField
 
-        self.direct11Scale = direct11Scale 
-        self.direct12Scale = direct12Scale 
-        self.direct13Scale = direct13Scale 
-        self.direct14Scale = direct14Scale 
+        self.direct11Scale = direct11Scale
+        self.direct12Scale = direct12Scale
+        self.direct13Scale = direct13Scale
+        self.direct14Scale = direct14Scale
 
-        self.mpole12Scale = mpole12Scale 
-        self.mpole13Scale = mpole13Scale 
-        self.mpole14Scale = mpole14Scale 
-        self.mpole15Scale = mpole15Scale 
+        self.mpole12Scale = mpole12Scale
+        self.mpole13Scale = mpole13Scale
+        self.mpole14Scale = mpole14Scale
+        self.mpole15Scale = mpole15Scale
 
-        self.mutual11Scale = mutual11Scale 
-        self.mutual12Scale = mutual12Scale 
-        self.mutual13Scale = mutual13Scale 
-        self.mutual14Scale = mutual14Scale 
+        self.mutual11Scale = mutual11Scale
+        self.mutual12Scale = mutual12Scale
+        self.mutual13Scale = mutual13Scale
+        self.mutual14Scale = mutual14Scale
 
-        self.polar12Scale = polar12Scale 
-        self.polar13Scale = polar13Scale 
-        self.polar14Scale = polar14Scale 
-        self.polar15Scale = polar15Scale 
+        self.polar12Scale = polar12Scale
+        self.polar13Scale = polar13Scale
+        self.polar14Scale = polar14Scale
+        self.polar15Scale = polar15Scale
 
         self.typeMap = {}
 
@@ -2886,12 +2893,12 @@ class AmoebaMultipoleGenerator:
                     ky = kIndices[3]
                 else:
                     ky = 0
-   
+
                 if (kIndicesLen > 2):
                     kx = kIndices[2]
                 else:
                     kx = 0
-   
+
                 if (kIndicesLen > 1):
                     kz = kIndices[1]
                 else:
@@ -2912,9 +2919,9 @@ class AmoebaMultipoleGenerator:
                 if (kz < 0 and kx < 0 and ky  < 0):
                     axisType = mm.AmoebaMultipoleForce.ThreeFold
 
-                kIndices[1] = abs(kz)   
-                kIndices[2] = abs(kx)   
-                kIndices[3] = abs(ky)   
+                kIndices[1] = abs(kz)
+                kIndices[2] = abs(kx)
+                kIndices[3] = abs(ky)
 
                 return axisType
 
@@ -2923,7 +2930,7 @@ class AmoebaMultipoleGenerator:
     @staticmethod
     def parseElement(element, forceField):
 
-        #   <AmoebaMultipoleForce  direct11Scale="0.0"  direct12Scale="1.0"  direct13Scale="1.0"  direct14Scale="1.0"  mpole12Scale="0.0"  mpole13Scale="0.0"  mpole14Scale="0.4"  mpole15Scale="0.8"  mutual11Scale="1.0"  mutual12Scale="1.0"  mutual13Scale="1.0"  mutual14Scale="1.0"  polar12Scale="0.0"  polar13Scale="0.0"  polar14Intra="0.5"  polar14Scale="1.0"  polar15Scale="1.0"  > 
+        #   <AmoebaMultipoleForce  direct11Scale="0.0"  direct12Scale="1.0"  direct13Scale="1.0"  direct14Scale="1.0"  mpole12Scale="0.0"  mpole13Scale="0.0"  mpole14Scale="0.4"  mpole15Scale="0.8"  mutual11Scale="1.0"  mutual12Scale="1.0"  mutual13Scale="1.0"  mutual14Scale="1.0"  polar12Scale="0.0"  polar13Scale="0.0"  polar14Intra="0.5"  polar14Scale="1.0"  polar15Scale="1.0"  >
         # <Multipole class="1"    kz="2"    kx="4"    c0="-0.22620" d1="0.08214" d2="0.00000" d3="0.34883" q11="0.11775" q21="0.00000" q22="-1.02185" q31="-0.17555" q32="0.00000" q33="0.90410"  />
         # <Multipole class="2"    kz="1"    kx="3"    c0="-0.15245" d1="0.19517" d2="0.00000" d3="0.19687" q11="-0.20677" q21="0.00000" q22="-0.48084" q31="-0.01672" q32="0.00000" q33="0.68761"  />
 
@@ -2967,17 +2974,17 @@ class AmoebaMultipoleGenerator:
                     try:
                         if (atom.attrib[kString]):
                              kIndices.append(int(atom.attrib[kString]))
-                    except: 
+                    except:
                         pass
 
-                # set axis type based on k-Indices 
+                # set axis type based on k-Indices
 
                 axisType = AmoebaMultipoleGenerator.setAxisType(kIndices)
 
                 # set multipole
 
                 charge = float(atom.attrib['c0'])
- 
+
                 conversion = 1.0
                 dipole = [ conversion*float(atom.attrib['d1']), conversion*float(atom.attrib['d2']), conversion*float(atom.attrib['d3'])]
 
@@ -2999,18 +3006,18 @@ class AmoebaMultipoleGenerator:
                     valueMap = dict()
                     valueMap['classIndex'] = atom.attrib['type']
                     valueMap['kIndices'] = kIndices
-                    valueMap['charge'] = charge 
+                    valueMap['charge'] = charge
                     valueMap['dipole'] = dipole
                     valueMap['quadrupole'] = quadrupole
                     valueMap['axisType'] = axisType
                     generator.typeMap[t].append(valueMap)
-    
+
             else:
                 outputString = "AmoebaMultipoleGenerator: error getting type for multipole: %s" % (atom.attrib['class'])
-                raise ValueError(outputString) 
-    
+                raise ValueError(outputString)
+
         # polarization parameters
- 
+
         for atom in element.findall('Polarize'):
             types = forceField._findAtomTypes(atom, 1)
             if None not in types:
@@ -3032,7 +3039,7 @@ class AmoebaMultipoleGenerator:
                 for t in types[0]:
                     if (t not in generator.typeMap):
                         outputString = "AmoebaMultipoleGenerator: polarize type not present: %s" % (atom.attrib['type'])
-                        raise ValueError(outputString) 
+                        raise ValueError(outputString)
                     else:
                         typeMapList = generator.typeMap[t]
                         hit = 0
@@ -3042,18 +3049,18 @@ class AmoebaMultipoleGenerator:
                                 typeMap['polarizability'] = polarizability
                                 typeMap['thole'] = thole
                                 typeMap['pdamp'] = pdamp
-                                typeMap['pgrpMap'] = pgrpMap 
+                                typeMap['pgrpMap'] = pgrpMap
                                 typeMapList[ii] = typeMap
                                 hit = 1
 
                         if (hit == 0):
                             outputString = "AmoebaMultipoleGenerator: error getting type for polarize: class index=%s not in multipole list?" % (atom.attrib['class'])
-                            raise ValueError(outputString) 
-    
+                            raise ValueError(outputString)
+
             else:
                 outputString = "AmoebaMultipoleGenerator: error getting type for polarize: %s" % (atom.attrib['class'])
-                raise ValueError(outputString) 
-    
+                raise ValueError(outputString)
+
     #=============================================================================================
 
     def setPolarGroups(self, data, bonded12ParticleSets, force):
@@ -3074,7 +3081,7 @@ class AmoebaMultipoleGenerator:
                 if (bondedAtomType in pgrpMap):
                     atom.polarizationGroups[bondedAtomIndex] = 1
                     bondedAtom.polarizationGroups[atomIndex] = 1
-                    
+
         # pgrp11
 
         for (atomIndex, atom) in enumerate(data.atoms):
@@ -3121,7 +3128,7 @@ class AmoebaMultipoleGenerator:
             pgrp12 = pgrp12 - pgrp11
             for pgrpAtomIndex in pgrp11:
                 data.atoms[pgrpAtomIndex].polarizationGroupSet.append(pgrp12)
-                
+
         for (atomIndex, atom) in enumerate(data.atoms):
             atom.polarizationGroupSet[1] = sorted(atom.polarizationGroupSet[1])
             force.setCovalentMap(atomIndex, mm.AmoebaMultipoleForce.PolarizationCovalent12, atom.polarizationGroupSet[1])
@@ -3143,7 +3150,7 @@ class AmoebaMultipoleGenerator:
             pgrp13 = pgrp13 - set(pgrp11)
             for pgrpAtomIndex in pgrp11:
                 data.atoms[pgrpAtomIndex].polarizationGroupSet.append(pgrp13)
-                
+
         for (atomIndex, atom) in enumerate(data.atoms):
             atom.polarizationGroupSet[2] = sorted(atom.polarizationGroupSet[2])
             force.setCovalentMap(atomIndex, mm.AmoebaMultipoleForce.PolarizationCovalent13, atom.polarizationGroupSet[2])
@@ -3169,7 +3176,7 @@ class AmoebaMultipoleGenerator:
 
             for pgrpAtomIndex in pgrp11:
                 data.atoms[pgrpAtomIndex].polarizationGroupSet.append(pgrp14)
-                
+
         for (atomIndex, atom) in enumerate(data.atoms):
             atom.polarizationGroupSet[3] = sorted(atom.polarizationGroupSet[3])
             force.setCovalentMap(atomIndex, mm.AmoebaMultipoleForce.PolarizationCovalent14, atom.polarizationGroupSet[3])
@@ -3188,7 +3195,7 @@ class AmoebaMultipoleGenerator:
         if len(existing) == 0:
             force = mm.AmoebaMultipoleForce()
             sys.addForce(force)
-            if (nonbondedMethod not in methodMap): 
+            if (nonbondedMethod not in methodMap):
                 raise ValueError( "AmoebaMultipoleForce: input cutoff method not available." )
             else:
                 force.setNonbondedMethod(methodMap[nonbondedMethod])
@@ -3220,7 +3227,7 @@ class AmoebaMultipoleGenerator:
             force = existing[0]
 
         # add particles to force
-        # throw error if particle type not available 
+        # throw error if particle type not available
 
         # get 1-2, 1-3, 1-4, 1-5 bonded sets
 
@@ -3238,7 +3245,7 @@ class AmoebaMultipoleGenerator:
         for i in range(len(data.atoms)):
             bonded13Set = set()
             bonded12ParticleSet = bonded12ParticleSets[i]
-            for j in bonded12ParticleSet: 
+            for j in bonded12ParticleSet:
                 bonded13Set = bonded13Set.union(bonded12ParticleSets[j])
 
             # remove 1-2 and self from set
@@ -3256,9 +3263,9 @@ class AmoebaMultipoleGenerator:
         for i in range(len(data.atoms)):
             bonded14Set = set()
             bonded13ParticleSet = bonded13ParticleSets[i]
-            for j in bonded13ParticleSet: 
+            for j in bonded13ParticleSet:
                 bonded14Set = bonded14Set.union(bonded12ParticleSets[j])
-           
+
             # remove 1-3, 1-2 and self from set
 
             bonded14Set = bonded14Set - bonded12ParticleSets[i]
@@ -3275,7 +3282,7 @@ class AmoebaMultipoleGenerator:
         for i in range(len(data.atoms)):
             bonded15Set = set()
             bonded14ParticleSet = bonded14ParticleSets[i]
-            for j in bonded14ParticleSet: 
+            for j in bonded14ParticleSet:
                 bonded15Set = bonded15Set.union(bonded12ParticleSets[j])
 
             # remove 1-4, 1-3, 1-2 and self from set
@@ -3305,15 +3312,15 @@ class AmoebaMultipoleGenerator:
                         break
 
                     kIndices = multipoleDict['kIndices']
-    
-                    kz = kIndices[1]   
+
+                    kz = kIndices[1]
                     kx = kIndices[2]
                     ky = kIndices[3]
 
                     # assign multipole parameters
                     #    (1) get bonded partners
                     #    (2) match parameter types
-    
+
                     bondedAtomIndices = bonded12ParticleSets[atomIndex]
                     zaxis = -1
                     xaxis = -1
@@ -3357,7 +3364,7 @@ class AmoebaMultipoleGenerator:
                                               yaxis = bondedAtomYIndex
                                               savedMultipoleDict = multipoleDict
                                               hit = 2
-                                         
+
                 # assign multipole parameters via 1-2 and 1-3 connected atoms
 
                 for multipoleDict in multipoleList:
@@ -3366,15 +3373,15 @@ class AmoebaMultipoleGenerator:
                         break
 
                     kIndices = multipoleDict['kIndices']
-    
-                    kz = kIndices[1]   
+
+                    kz = kIndices[1]
                     kx = kIndices[2]
                     ky = kIndices[3]
-    
+
                     # assign multipole parameters
                     #    (1) get bonded partners
                     #    (2) match parameter types
-    
+
                     bondedAtom12Indices = bonded12ParticleSets[atomIndex]
                     bondedAtom13Indices = bonded13ParticleSets[atomIndex]
 
@@ -3421,7 +3428,7 @@ class AmoebaMultipoleGenerator:
                                               yaxis = bondedAtomYIndex
                                               savedMultipoleDict = multipoleDict
                                               hit = 4
-                                         
+
                 # assign multipole parameters via only a z-defining atom
 
                 for multipoleDict in multipoleList:
@@ -3430,10 +3437,10 @@ class AmoebaMultipoleGenerator:
                         break
 
                     kIndices = multipoleDict['kIndices']
-    
-                    kz = kIndices[1]   
-                    kx = kIndices[2]   
-    
+
+                    kz = kIndices[1]
+                    kx = kIndices[2]
+
                     zaxis = -1
                     xaxis = -1
                     yaxis = -1
@@ -3459,9 +3466,9 @@ class AmoebaMultipoleGenerator:
                         break
 
                     kIndices = multipoleDict['kIndices']
-    
-                    kz = kIndices[1]   
-    
+
+                    kz = kIndices[1]
+
                     zaxis = -1
                     xaxis = -1
                     yaxis = -1
@@ -3469,7 +3476,7 @@ class AmoebaMultipoleGenerator:
                     if (kz == 0):
                         savedMultipoleDict = multipoleDict
                         hit = 6
-                
+
                 # add particle if there was a hit
 
                 if (hit != 0):
@@ -3502,19 +3509,19 @@ parsers["AmoebaMultipoleForce"] = AmoebaMultipoleGenerator.parseElement
 class AmoebaWcaDispersionGenerator:
 
     """A AmoebaWcaDispersionGenerator constructs a AmoebaWcaDispersionForce."""
-    
+
     #=========================================================================================
 
     def __init__(self, epso, epsh, rmino, rminh, awater, slevy, dispoff, shctd):
 
-        self.epso = epso 
-        self.epsh = epsh 
+        self.epso = epso
+        self.epsh = epsh
         self.rmino = rmino
         self.rminh = rminh
         self.awater = awater
         self.slevy = slevy
         self.dispoff = dispoff
-        self.shctd = shctd 
+        self.shctd = shctd
 
         self.typeMap = {}
 
@@ -3526,15 +3533,15 @@ class AmoebaWcaDispersionGenerator:
         #  <AmoebaWcaDispersionForce epso="0.46024" epsh="0.056484" rmino="0.17025" rminh="0.13275" awater="33.428" slevy="1.0"  dispoff="0.026" shctd="0.81" >
         #   <WcaDispersion class="1" radius="0.1855" epsilon="0.46024" />
         #   <WcaDispersion class="2" radius="0.191" epsilon="0.422584" />
-      
+
         generator = AmoebaWcaDispersionGenerator(element.attrib['epso'],
                                                   element.attrib['epsh'],
                                                   element.attrib['rmino'],
                                                   element.attrib['rminh'],
-                                                  element.attrib['awater'], 
+                                                  element.attrib['awater'],
                                                   element.attrib['slevy'],
                                                   element.attrib['dispoff'],
-                                                  element.attrib['shctd']) 
+                                                  element.attrib['shctd'])
         forceField._forces.append(generator)
 
         # typeMap[] = [ radius, epsilon ]
@@ -3548,10 +3555,10 @@ class AmoebaWcaDispersionGenerator:
                     generator.typeMap[t] = values
             else:
                 outputString = "AmoebaWcaDispersionGenerator: error getting type: %s" % (atom.attrib['class'])
-                raise ValueError(outputString) 
-    
+                raise ValueError(outputString)
+
     #=========================================================================================
-    
+
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
 
         # get or create force depending on whether it has already been added to the system
@@ -3565,7 +3572,7 @@ class AmoebaWcaDispersionGenerator:
             force = existing[0]
 
         # add particles to force
-        # throw error if particle type not available 
+        # throw error if particle type not available
 
         force.setEpso(   float(self.epso   ))
         force.setEpsh(   float(self.epsh   ))
@@ -3593,7 +3600,7 @@ parsers["AmoebaWcaDispersionForce"] = AmoebaWcaDispersionGenerator.parseElement
 class AmoebaGeneralizedKirkwoodGenerator:
 
     """A AmoebaGeneralizedKirkwoodGenerator constructs a AmoebaGeneralizedKirkwoodForce."""
-    
+
     #=========================================================================================
 
     def __init__(self, forceField, solventDielectric, soluteDielectric, includeCavityTerm, probeRadius, surfaceAreaFactor):
@@ -3607,7 +3614,7 @@ class AmoebaGeneralizedKirkwoodGenerator:
 
         self.radiusTypeMap = {}
         self.radiusTypeMap['Bondi'] = {}
-        bondiMap = self.radiusTypeMap['Bondi'] 
+        bondiMap = self.radiusTypeMap['Bondi']
         rscale = 1.03
 
         bondiMap[0] = 0.00
@@ -3643,28 +3650,28 @@ class AmoebaGeneralizedKirkwoodGenerator:
         shct = -1.0
 
         # shct
- 
+
         if (atomicNumber == 1):                 # H(1)
-            shct = 0.85       
+            shct = 0.85
         elif (atomicNumber == 6):               # C(6)
-            shct = 0.72         
+            shct = 0.72
         elif (atomicNumber == 7):               # N(7)
-            shct = 0.79        
+            shct = 0.79
         elif (atomicNumber == 8):               # O(8)
-            shct = 0.85       
+            shct = 0.85
         elif (atomicNumber == 9):               # F(9)
-            shct = 0.88    
-        elif (atomicNumber == 15):              # P(15)              
-            shct = 0.86 
+            shct = 0.88
+        elif (atomicNumber == 15):              # P(15)
+            shct = 0.86
         elif (atomicNumber == 16):              # S(16)
             shct = 0.96
         elif (atomicNumber == 26):              # Fe(26)
             shct = 0.88
 
-        if (shct < 0.0): 
+        if (shct < 0.0):
             raise ValueError( "getObcShct: no GK overlap scale factor for atom %s of %s %d" % (atom.name, atom.residue.name, atom.residue.index) )
- 
-        return shct 
+
+        return shct
 
     #=========================================================================================
 
@@ -3675,12 +3682,12 @@ class AmoebaGeneralizedKirkwoodGenerator:
         radius = -1.0
 
         if (atomicNumber == 1):                  # H(1)
- 
+
             radius = 0.132
- 
+
             if (len(bondedAtomIndices) < 1):
                  raise ValueError( "AmoebaGeneralizedKirkwoodGenerator: error getting atom bonded to %s of %s %d " % (atom.name, atom.residue.name, atom.residue.index) )
- 
+
             for bondedAtomIndex in bondedAtomIndices:
                 bondedAtomAtomicNumber = data.atoms[bondedAtomIndex].element.atomic_number
 
@@ -3688,11 +3695,11 @@ class AmoebaGeneralizedKirkwoodGenerator:
                 radius = 0.11
             if (bondedAtomAtomicNumber == 8):
                 radius = 0.105
- 
+
         elif (atomicNumber == 3):               # Li(3)
             radius = 0.15
         elif (atomicNumber == 6):               # C(6)
-            
+
             radius = 0.20
             if (len(bondedAtomIndices) == 3):
                 radius = 0.205
@@ -3711,60 +3718,60 @@ class AmoebaGeneralizedKirkwoodGenerator:
                 radius = 0.145
         elif (atomicNumber == 9):               # F(9)
             radius = 0.154
-        elif (atomicNumber == 10):              
+        elif (atomicNumber == 10):
             radius = 0.146
-        elif (atomicNumber == 11):              
+        elif (atomicNumber == 11):
             radius = 0.209
-        elif (atomicNumber == 12):              
+        elif (atomicNumber == 12):
             radius = 0.179
-        elif (atomicNumber == 14):              
+        elif (atomicNumber == 14):
             radius = 0.189
-        elif (atomicNumber == 15):              # P(15)              
+        elif (atomicNumber == 15):              # P(15)
             radius = 0.196
         elif (atomicNumber == 16):              # S(16)
             radius = 0.186
-        elif (atomicNumber == 17):              
+        elif (atomicNumber == 17):
             radius = 0.182
-        elif (atomicNumber == 18):              
+        elif (atomicNumber == 18):
             radius = 0.179
-        elif (atomicNumber == 19):              
+        elif (atomicNumber == 19):
             radius = 0.223
-        elif (atomicNumber == 20):              
+        elif (atomicNumber == 20):
             radius = 0.191
-        elif (atomicNumber == 35):         
+        elif (atomicNumber == 35):
             radius = 2.00
-        elif (atomicNumber == 36):   
+        elif (atomicNumber == 36):
             radius = 0.190
-        elif (atomicNumber == 37):              
+        elif (atomicNumber == 37):
             radius = 0.226
-        elif (atomicNumber == 53):              
+        elif (atomicNumber == 53):
             radius = 0.237
-        elif (atomicNumber == 54):              
+        elif (atomicNumber == 54):
             radius = 0.207
-        elif (atomicNumber == 55):              
+        elif (atomicNumber == 55):
             radius = 0.263
-        elif (atomicNumber == 56):         
+        elif (atomicNumber == 56):
             radius = 0.230
 
-        if (radius < 0.0): 
+        if (radius < 0.0):
             outputString = "No GK radius for atom %s of %s %d" % (atom.name, atom.residue.name, atom.residue.index)
             raise ValueError( outputString )
- 
+
         return radius
 
     #=========================================================================================
 
     def getBondiTypeRadius(self, data, bondedAtomIndices, atomIndex):
 
-        bondiMap = self.radiusTypeMap['Bondi'] 
+        bondiMap = self.radiusTypeMap['Bondi']
         atom = data.atoms[atomIndex]
         atomicNumber = atom.element.atomic_number
-        if (atomicNumber in bondiMap): 
+        if (atomicNumber in bondiMap):
             radius = bondiMap[atomicNumber]
         else:
             outputString = "Warning no Bondi radius for atom %s of %s %d using default value=%f" % (atom.name, atom.residue.name, atom.residue.index, radius)
             raise ValueError( outputString )
- 
+
         return radius
 
     #=========================================================================================
@@ -3775,14 +3782,14 @@ class AmoebaGeneralizedKirkwoodGenerator:
         #  <AmoebaGeneralizedKirkwoodForce solventDielectric="78.3" soluteDielectric="1.0" includeCavityTerm="1" probeRadius="0.14" surfaceAreaFactor="-170.351730663">
         #   <GeneralizedKirkwood type="1" charge="-0.22620" shct="0.79"  />
         #   <GeneralizedKirkwood type="2" charge="-0.15245" shct="0.72"  />
-        
+
         generator = AmoebaGeneralizedKirkwoodGenerator(forceField, element.attrib['solventDielectric'], element.attrib['soluteDielectric'],
-                                                        element.attrib['includeCavityTerm'], 
-                                                        element.attrib['probeRadius'], element.attrib['surfaceAreaFactor']) 
+                                                        element.attrib['includeCavityTerm'],
+                                                        element.attrib['probeRadius'], element.attrib['surfaceAreaFactor'])
         forceField._forces.append(generator)
 
     #=========================================================================================
-    
+
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
 
         if( nonbondedMethod != NoCutoff ):
@@ -3799,9 +3806,9 @@ class AmoebaGeneralizedKirkwoodGenerator:
             # call AmoebaMultipoleForceGenerator.createForce() to ensure charges have been set
 
             for force in self.forceField._forces:
-                if (force.__class__.__name__ == 'AmoebaMultipoleGenerator'): 
+                if (force.__class__.__name__ == 'AmoebaMultipoleGenerator'):
                     force.createForce(sys, data, nonbondedMethod, nonbondedCutoff, args)
-          
+
         # get or create force depending on whether it has already been added to the system
 
         existing = [f for f in existing if type(f) == mm.AmoebaGeneralizedKirkwoodForce]
@@ -3809,7 +3816,7 @@ class AmoebaGeneralizedKirkwoodGenerator:
 
             force = mm.AmoebaGeneralizedKirkwoodForce()
             sys.addForce(force)
- 
+
             if ('solventDielectric' in args):
                 force.setSolventDielectric(float(args['solventDielectric']))
             else:
@@ -3829,7 +3836,7 @@ class AmoebaGeneralizedKirkwoodGenerator:
             force = existing[0]
 
         # add particles to force
-        # throw error if particle type not available 
+        # throw error if particle type not available
 
         force.setProbeRadius(         float(self.probeRadius))
         force.setSurfaceAreaFactor(   float(self.surfaceAreaFactor))
@@ -3863,7 +3870,7 @@ class AmoebaUreyBradleyGenerator:
     #=============================================================================================
     """An AmoebaUreyBradleyGenerator constructs a AmoebaUreyBradleyForce."""
     #=============================================================================================
-    
+
     def __init__(self):
 
         self.types1 = []
@@ -3879,7 +3886,7 @@ class AmoebaUreyBradleyGenerator:
     def parseElement(element, forceField):
 
         #  <AmoebaUreyBradleyForce>
-        #   <UreyBradley class1="74" class2="73" class3="74" k="16003.8" d="0.15537" /> 
+        #   <UreyBradley class1="74" class2="73" class3="74" k="16003.8" d="0.15537" />
 
         generator = AmoebaUreyBradleyGenerator()
         forceField._forces.append(generator)
@@ -3897,8 +3904,8 @@ class AmoebaUreyBradleyGenerator:
             else:
                 outputString = "AmoebaUreyBradleyGenerator: error getting types: %s %s %s" % (
                                     bond.attrib['class1'], bond.attrib['class2'], bond.attrib['class3'])
-                raise ValueError(outputString) 
-    
+                raise ValueError(outputString)
+
     #=============================================================================================
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
@@ -3934,7 +3941,7 @@ parsers["AmoebaUreyBradleyForce"] = AmoebaUreyBradleyGenerator.parseElement
 ## @private
 class DrudeGenerator:
     """A DrudeGenerator constructs a DrudeForce."""
-    
+
     def __init__(self):
         self.typeMap = {}
 
@@ -3959,14 +3966,14 @@ class DrudeGenerator:
                 values = (types[1], types[2], types[3], types[4], float(particle.attrib['charge']), float(particle.attrib['polarizability']), aniso12, aniso34, float(particle.attrib['thole']))
                 for t in types[0]:
                     generator.typeMap[t] = values
-    
+
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         force = mm.DrudeForce()
         if not any(isinstance(f, mm.NonbondedForce) for f in sys.getForces()):
             raise ValueError('<DrudeForce> must come after <NonbondedForce> in XML file')
-        
+
         # Add Drude particles.
-        
+
         drudeMap = {}
         parentMap = {}
         for atom in data.atoms:
@@ -3989,10 +3996,10 @@ class DrudeGenerator:
                 drudeMap[atom.index] = p[0]
                 parentMap[p[0]] = (atom.index, drudeIndex)
         sys.addForce(force)
-    
+
     def postprocessSystem(self, sys, data, args):
         # For every nonbonded exclusion between Drude particles, add a screened pair.
-        
+
         drude = [f for f in sys.getForces() if isinstance(f, mm.DrudeForce)][0]
         nonbonded = [f for f in sys.getForces() if isinstance(f, mm.NonbondedForce)][0]
         particleMap = {}

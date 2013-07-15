@@ -1,5 +1,5 @@
-#ifndef OPENMM_REFERENCEKERNELS_H_
-#define OPENMM_REFERENCEKERNELS_H_
+#ifndef OPENMM_CUDAKERNELS_H_
+#define OPENMM_CUDAKERNELS_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -13,44 +13,28 @@
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
- * Permission is hereby granted, free of charge, to any person obtaining a    *
- * copy of this software and associated documentation files (the "Software"), *
- * to deal in the Software without restriction, including without limitation  *
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,   *
- * and/or sell copies of the Software, and to permit persons to whom the      *
- * Software is furnished to do so, subject to the following conditions:       *
+ * This program is free software: you can redistribute it and/or modify       *
+ * it under the terms of the GNU Lesser General Public License as published   *
+ * by the Free Software Foundation, either version 3 of the License, or       *
+ * (at your option) any later version.                                        *
  *                                                                            *
- * The above copyright notice and this permission notice shall be included in *
- * all copies or substantial portions of the Software.                        *
+ * This program is distributed in the hope that it will be useful,            *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of             *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the              *
+ * GNU Lesser General Public License for more details.                        *
  *                                                                            *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR *
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,   *
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL    *
- * THE AUTHORS, CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,    *
- * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR      *
- * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE  *
- * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
+ * You should have received a copy of the GNU Lesser General Public License   *
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "ReferencePlatform.h"
+#include "CudaPlatform.h"
+#include "CudaArray.h"
+#include "CudaContext.h"
+#include "CudaParameterSet.h"
+#include "CudaSort.h"
 #include "openmm/kernels.h"
-#include "SimTKUtilities/SimTKOpenMMRealType.h"
-#include "SimTKReference/ReferenceNeighborList.h"
-#include "lepton/ExpressionProgram.h"
-
-class CpuObc;
-class CpuGBVI;
-class ReferenceAndersenThermostat;
-class ReferenceCustomCompoundBondIxn;
-class ReferenceCustomHbondIxn;
-class ReferenceBrownianDynamics;
-class ReferenceStochasticDynamics;
-class ReferenceConstraintAlgorithm;
-class ReferenceMonteCarloBarostat;
-class ReferenceVariableStochasticDynamics;
-class ReferenceVariableVerletDynamics;
-class ReferenceVerletDynamics;
-class ReferenceCustomDynamics;
+#include "openmm/System.h"
+#include <cufft.h>
 
 namespace OpenMM {
 
@@ -59,13 +43,13 @@ namespace OpenMM {
  * Platform a chance to clear buffers and do other initialization at the beginning, and to do any
  * necessary work at the end to determine the final results.
  */
-class ReferenceCalcForcesAndEnergyKernel : public CalcForcesAndEnergyKernel {
+class CudaCalcForcesAndEnergyKernel : public CalcForcesAndEnergyKernel {
 public:
-    ReferenceCalcForcesAndEnergyKernel(std::string name, const Platform& platform) : CalcForcesAndEnergyKernel(name, platform) {
+    CudaCalcForcesAndEnergyKernel(std::string name, const Platform& platform, CudaContext& cu) : CalcForcesAndEnergyKernel(name, platform), cu(cu) {
     }
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      */
     void initialize(const System& system);
@@ -93,16 +77,16 @@ public:
      */
     double finishComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups);
 private:
-    std::vector<RealVec> savedForces;
+   CudaContext& cu;
 };
 
 /**
  * This kernel provides methods for setting and retrieving various state data: time, positions,
  * velocities, and forces.
  */
-class ReferenceUpdateStateDataKernel : public UpdateStateDataKernel {
+class CudaUpdateStateDataKernel : public UpdateStateDataKernel {
 public:
-    ReferenceUpdateStateDataKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) : UpdateStateDataKernel(name, platform), data(data) {
+    CudaUpdateStateDataKernel(std::string name, const Platform& platform, CudaContext& cu) : UpdateStateDataKernel(name, platform), cu(cu) {
     }
     /**
      * Initialize the kernel.
@@ -181,18 +165,17 @@ public:
      */
     void loadCheckpoint(ContextImpl& context, std::istream& stream);
 private:
-    ReferencePlatform::PlatformData& data;
+    CudaContext& cu;
 };
 
 /**
  * This kernel modifies the positions of particles to enforce distance constraints.
  */
-class ReferenceApplyConstraintsKernel : public ApplyConstraintsKernel {
+class CudaApplyConstraintsKernel : public ApplyConstraintsKernel {
 public:
-    ReferenceApplyConstraintsKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) :
-            ApplyConstraintsKernel(name, platform), data(data), constraints(0) {
+    CudaApplyConstraintsKernel(std::string name, const Platform& platform, CudaContext& cu) : ApplyConstraintsKernel(name, platform),
+            cu(cu), hasInitializedKernel(false) {
     }
-    ~ReferenceApplyConstraintsKernel();
     /**
      * Initialize the kernel.
      *
@@ -214,21 +197,17 @@ public:
      */
     void applyToVelocities(ContextImpl& context, double tol);
 private:
-    ReferencePlatform::PlatformData& data;
-    ReferenceConstraintAlgorithm* constraints;
-    std::vector<RealOpenMM> masses;
-    std::vector<RealOpenMM> inverseMasses;
-    std::vector<std::pair<int, int> > constraintIndices;
-    std::vector<RealOpenMM> constraintDistances;
-    int numConstraints;
+    CudaContext& cu;
+    bool hasInitializedKernel;
+    CUfunction applyDeltasKernel;
 };
 
 /**
  * This kernel recomputes the positions of virtual sites.
  */
-class ReferenceVirtualSitesKernel : public VirtualSitesKernel {
+class CudaVirtualSitesKernel : public VirtualSitesKernel {
 public:
-    ReferenceVirtualSitesKernel(std::string name, const Platform& platform) : VirtualSitesKernel(name, platform) {
+    CudaVirtualSitesKernel(std::string name, const Platform& platform, CudaContext& cu) : VirtualSitesKernel(name, platform), cu(cu) {
     }
     /**
      * Initialize the kernel.
@@ -242,19 +221,22 @@ public:
      * @param context    the context in which to execute this kernel
      */
     void computePositions(ContextImpl& context);
+private:
+    CudaContext& cu;
 };
 
 /**
  * This kernel is invoked by HarmonicBondForce to calculate the forces acting on the system and the energy of the system.
  */
-class ReferenceCalcHarmonicBondForceKernel : public CalcHarmonicBondForceKernel {
+class CudaCalcHarmonicBondForceKernel : public CalcHarmonicBondForceKernel {
 public:
-    ReferenceCalcHarmonicBondForceKernel(std::string name, const Platform& platform) : CalcHarmonicBondForceKernel(name, platform) {
+    CudaCalcHarmonicBondForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcHarmonicBondForceKernel(name, platform),
+            hasInitializedKernel(false), cu(cu), system(system), params(NULL) {
     }
-    ~ReferenceCalcHarmonicBondForceKernel();
+    ~CudaCalcHarmonicBondForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the HarmonicBondForce this kernel will be used for
      */
@@ -277,18 +259,21 @@ public:
     void copyParametersToContext(ContextImpl& context, const HarmonicBondForce& force);
 private:
     int numBonds;
-    int **bondIndexArray;
-    RealOpenMM **bondParamArray;
+    bool hasInitializedKernel;
+    CudaContext& cu;
+    const System& system;
+    CudaArray* params;
 };
 
 /**
  * This kernel is invoked by CustomBondForce to calculate the forces acting on the system and the energy of the system.
  */
-class ReferenceCalcCustomBondForceKernel : public CalcCustomBondForceKernel {
+class CudaCalcCustomBondForceKernel : public CalcCustomBondForceKernel {
 public:
-    ReferenceCalcCustomBondForceKernel(std::string name, const Platform& platform) : CalcCustomBondForceKernel(name, platform) {
+    CudaCalcCustomBondForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcCustomBondForceKernel(name, platform),
+            hasInitializedKernel(false), cu(cu), system(system), params(NULL), globals(NULL) {
     }
-    ~ReferenceCalcCustomBondForceKernel();
+    ~CudaCalcCustomBondForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -314,23 +299,27 @@ public:
     void copyParametersToContext(ContextImpl& context, const CustomBondForce& force);
 private:
     int numBonds;
-    int **bondIndexArray;
-    RealOpenMM **bondParamArray;
-    Lepton::ExpressionProgram energyExpression, forceExpression;
-    std::vector<std::string> parameterNames, globalParameterNames;
+    bool hasInitializedKernel;
+    CudaContext& cu;
+    const System& system;
+    CudaParameterSet* params;
+    CudaArray* globals;
+    std::vector<std::string> globalParamNames;
+    std::vector<float> globalParamValues;
 };
 
 /**
  * This kernel is invoked by HarmonicAngleForce to calculate the forces acting on the system and the energy of the system.
  */
-class ReferenceCalcHarmonicAngleForceKernel : public CalcHarmonicAngleForceKernel {
+class CudaCalcHarmonicAngleForceKernel : public CalcHarmonicAngleForceKernel {
 public:
-    ReferenceCalcHarmonicAngleForceKernel(std::string name, const Platform& platform) : CalcHarmonicAngleForceKernel(name, platform) {
+    CudaCalcHarmonicAngleForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcHarmonicAngleForceKernel(name, platform),
+            hasInitializedKernel(false), cu(cu), system(system), params(NULL) {
     }
-    ~ReferenceCalcHarmonicAngleForceKernel();
+    ~CudaCalcHarmonicAngleForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the HarmonicAngleForce this kernel will be used for
      */
@@ -353,18 +342,21 @@ public:
     void copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force);
 private:
     int numAngles;
-    int **angleIndexArray;
-    RealOpenMM **angleParamArray;
+    bool hasInitializedKernel;
+    CudaContext& cu;
+    const System& system;
+    CudaArray* params;
 };
 
 /**
  * This kernel is invoked by CustomAngleForce to calculate the forces acting on the system and the energy of the system.
  */
-class ReferenceCalcCustomAngleForceKernel : public CalcCustomAngleForceKernel {
+class CudaCalcCustomAngleForceKernel : public CalcCustomAngleForceKernel {
 public:
-    ReferenceCalcCustomAngleForceKernel(std::string name, const Platform& platform) : CalcCustomAngleForceKernel(name, platform) {
+    CudaCalcCustomAngleForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcCustomAngleForceKernel(name, platform),
+            hasInitializedKernel(false), cu(cu), system(system), params(NULL), globals(NULL) {
     }
-    ~ReferenceCalcCustomAngleForceKernel();
+    ~CudaCalcCustomAngleForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -390,23 +382,27 @@ public:
     void copyParametersToContext(ContextImpl& context, const CustomAngleForce& force);
 private:
     int numAngles;
-    int **angleIndexArray;
-    RealOpenMM **angleParamArray;
-    Lepton::ExpressionProgram energyExpression, forceExpression;
-    std::vector<std::string> parameterNames, globalParameterNames;
+    bool hasInitializedKernel;
+    CudaContext& cu;
+    const System& system;
+    CudaParameterSet* params;
+    CudaArray* globals;
+    std::vector<std::string> globalParamNames;
+    std::vector<float> globalParamValues;
 };
 
 /**
  * This kernel is invoked by PeriodicTorsionForce to calculate the forces acting on the system and the energy of the system.
  */
-class ReferenceCalcPeriodicTorsionForceKernel : public CalcPeriodicTorsionForceKernel {
+class CudaCalcPeriodicTorsionForceKernel : public CalcPeriodicTorsionForceKernel {
 public:
-    ReferenceCalcPeriodicTorsionForceKernel(std::string name, const Platform& platform) : CalcPeriodicTorsionForceKernel(name, platform) {
+    CudaCalcPeriodicTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcPeriodicTorsionForceKernel(name, platform),
+            hasInitializedKernel(false), cu(cu), system(system), params(NULL) {
     }
-    ~ReferenceCalcPeriodicTorsionForceKernel();
+    ~CudaCalcPeriodicTorsionForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the PeriodicTorsionForce this kernel will be used for
      */
@@ -429,21 +425,24 @@ public:
     void copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force);
 private:
     int numTorsions;
-    int **torsionIndexArray;
-    RealOpenMM **torsionParamArray;
+    bool hasInitializedKernel;
+    CudaContext& cu;
+    const System& system;
+    CudaArray* params;
 };
 
 /**
  * This kernel is invoked by RBTorsionForce to calculate the forces acting on the system and the energy of the system.
  */
-class ReferenceCalcRBTorsionForceKernel : public CalcRBTorsionForceKernel {
+class CudaCalcRBTorsionForceKernel : public CalcRBTorsionForceKernel {
 public:
-    ReferenceCalcRBTorsionForceKernel(std::string name, const Platform& platform) : CalcRBTorsionForceKernel(name, platform) {
+    CudaCalcRBTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcRBTorsionForceKernel(name, platform),
+            hasInitializedKernel(false), cu(cu), system(system), params1(NULL), params2(NULL) {
     }
-    ~ReferenceCalcRBTorsionForceKernel();
+    ~CudaCalcRBTorsionForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the RBTorsionForce this kernel will be used for
      */
@@ -466,17 +465,22 @@ public:
     void copyParametersToContext(ContextImpl& context, const RBTorsionForce& force);
 private:
     int numTorsions;
-    int **torsionIndexArray;
-    RealOpenMM **torsionParamArray;
+    bool hasInitializedKernel;
+    CudaContext& cu;
+    const System& system;
+    CudaArray* params1;
+    CudaArray* params2;
 };
 
 /**
  * This kernel is invoked by CMAPTorsionForce to calculate the forces acting on the system and the energy of the system.
  */
-class ReferenceCalcCMAPTorsionForceKernel : public CalcCMAPTorsionForceKernel {
+class CudaCalcCMAPTorsionForceKernel : public CalcCMAPTorsionForceKernel {
 public:
-    ReferenceCalcCMAPTorsionForceKernel(std::string name, const Platform& platform) : CalcCMAPTorsionForceKernel(name, platform) {
+    CudaCalcCMAPTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcCMAPTorsionForceKernel(name, platform),
+            hasInitializedKernel(false), cu(cu), system(system), coefficients(NULL), mapPositions(NULL), torsionMaps(NULL) {
     }
+    ~CudaCalcCMAPTorsionForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -494,19 +498,24 @@ public:
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
-    std::vector<std::vector<std::vector<RealOpenMM> > > coeff;
-    std::vector<int> torsionMaps;
-    std::vector<std::vector<int> > torsionIndices;
+    int numTorsions;
+    bool hasInitializedKernel;
+    CudaContext& cu;
+    const System& system;
+    CudaArray* coefficients;
+    CudaArray* mapPositions;
+    CudaArray* torsionMaps;
 };
 
 /**
  * This kernel is invoked by CustomTorsionForce to calculate the forces acting on the system and the energy of the system.
  */
-class ReferenceCalcCustomTorsionForceKernel : public CalcCustomTorsionForceKernel {
+class CudaCalcCustomTorsionForceKernel : public CalcCustomTorsionForceKernel {
 public:
-    ReferenceCalcCustomTorsionForceKernel(std::string name, const Platform& platform) : CalcCustomTorsionForceKernel(name, platform) {
+    CudaCalcCustomTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcCustomTorsionForceKernel(name, platform),
+            hasInitializedKernel(false), cu(cu), system(system), params(NULL), globals(NULL) {
     }
-    ~ReferenceCalcCustomTorsionForceKernel();
+    ~CudaCalcCustomTorsionForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -532,23 +541,28 @@ public:
     void copyParametersToContext(ContextImpl& context, const CustomTorsionForce& force);
 private:
     int numTorsions;
-    int **torsionIndexArray;
-    RealOpenMM **torsionParamArray;
-    Lepton::ExpressionProgram energyExpression, forceExpression;
-    std::vector<std::string> parameterNames, globalParameterNames;
+    bool hasInitializedKernel;
+    CudaContext& cu;
+    const System& system;
+    CudaParameterSet* params;
+    CudaArray* globals;
+    std::vector<std::string> globalParamNames;
+    std::vector<float> globalParamValues;
 };
 
 /**
  * This kernel is invoked by NonbondedForce to calculate the forces acting on the system.
  */
-class ReferenceCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
+class CudaCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
 public:
-    ReferenceCalcNonbondedForceKernel(std::string name, const Platform& platform) : CalcNonbondedForceKernel(name, platform) {
+    CudaCalcNonbondedForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcNonbondedForceKernel(name, platform),
+            cu(cu), hasInitializedFFT(false), sigmaEpsilon(NULL), exceptionParams(NULL), cosSinSums(NULL), directPmeGrid(NULL), reciprocalPmeGrid(NULL),
+            pmeBsplineModuliX(NULL), pmeBsplineModuliY(NULL), pmeBsplineModuliZ(NULL),  pmeAtomRange(NULL), pmeAtomGridIndex(NULL), sort(NULL), pmeio(NULL) {
     }
-    ~ReferenceCalcNonbondedForceKernel();
+    ~CudaCalcNonbondedForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the NonbondedForce this kernel will be used for
      */
@@ -559,6 +573,7 @@ public:
      * @param context        the context in which to execute this kernel
      * @param includeForces  true if forces should be calculated
      * @param includeEnergy  true if the energy should be calculated
+     * @param includeDirect  true if direct space interactions should be included
      * @param includeReciprocal  true if reciprocal space interactions should be included
      * @return the potential energy due to the force
      */
@@ -571,25 +586,61 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const NonbondedForce& force);
 private:
-    int numParticles, num14;
-    int **exclusionArray, **bonded14IndexArray;
-    RealOpenMM **particleParamArray, **bonded14ParamArray;
-    RealOpenMM nonbondedCutoff, switchingDistance, rfDielectric, ewaldAlpha, dispersionCoefficient;
-    int kmax[3], gridSize[3];
-    bool useSwitchingFunction;
-    std::vector<std::set<int> > exclusions;
-    NonbondedMethod nonbondedMethod;
-    NeighborList* neighborList;
+    class SortTrait : public CudaSort::SortTrait {
+        int getDataSize() const {return 8;}
+        int getKeySize() const {return 4;}
+        const char* getDataType() const {return "int2";}
+        const char* getKeyType() const {return "int";}
+        const char* getMinKey() const {return "INT_MIN";}
+        const char* getMaxKey() const {return "INT_MAX";}
+        const char* getMaxValue() const {return "make_int2(INT_MAX, INT_MAX)";}
+        const char* getSortKey() const {return "value.y";}
+    };
+    class PmeIO;
+    class PmePreComputation;
+    class PmePostComputation;
+    CudaContext& cu;
+    bool hasInitializedFFT;
+    CudaArray* sigmaEpsilon;
+    CudaArray* exceptionParams;
+    CudaArray* cosSinSums;
+    CudaArray* directPmeGrid;
+    CudaArray* reciprocalPmeGrid;
+    CudaArray* pmeBsplineModuliX;
+    CudaArray* pmeBsplineModuliY;
+    CudaArray* pmeBsplineModuliZ;
+    CudaArray* pmeAtomRange;
+    CudaArray* pmeAtomGridIndex;
+    CudaSort* sort;
+    Kernel cpuPme;
+    PmeIO* pmeio;
+    cufftHandle fftForward;
+    cufftHandle fftBackward;
+    CUfunction ewaldSumsKernel;
+    CUfunction ewaldForcesKernel;
+    CUfunction pmeGridIndexKernel;
+    CUfunction pmeSpreadChargeKernel;
+    CUfunction pmeFinishSpreadChargeKernel;
+    CUfunction pmeEvalEnergyKernel;
+    CUfunction pmeConvolutionKernel;
+    CUfunction pmeInterpolateForceKernel;
+    std::map<std::string, std::string> pmeDefines;
+    std::vector<std::pair<int, int> > exceptionAtoms;
+    double ewaldSelfEnergy, dispersionCoefficient, alpha;
+    int interpolateForceThreads;
+    bool hasCoulomb, hasLJ;
+    static const int PmeOrder = 5;
 };
 
 /**
  * This kernel is invoked by CustomNonbondedForce to calculate the forces acting on the system.
  */
-class ReferenceCalcCustomNonbondedForceKernel : public CalcCustomNonbondedForceKernel {
+class CudaCalcCustomNonbondedForceKernel : public CalcCustomNonbondedForceKernel {
 public:
-    ReferenceCalcCustomNonbondedForceKernel(std::string name, const Platform& platform) : CalcCustomNonbondedForceKernel(name, platform), forceCopy(NULL) {
+    CudaCalcCustomNonbondedForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcCustomNonbondedForceKernel(name, platform),
+            cu(cu), params(NULL), globals(NULL), tabulatedFunctionParams(NULL), forceCopy(NULL), system(system) {
     }
-    ~ReferenceCalcCustomNonbondedForceKernel();
+    ~CudaCalcCustomNonbondedForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -614,31 +665,31 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force);
 private:
-    int numParticles;
-    int **exclusionArray;
-    RealOpenMM **particleParamArray;
-    RealOpenMM nonbondedCutoff, switchingDistance, periodicBoxSize[3], longRangeCoefficient;
-    bool useSwitchingFunction, hasInitializedLongRangeCorrection;
+    CudaContext& cu;
+    CudaParameterSet* params;
+    CudaArray* globals;
+    CudaArray* tabulatedFunctionParams;
+    std::vector<std::string> globalParamNames;
+    std::vector<float> globalParamValues;
+    std::vector<CudaArray*> tabulatedFunctions;
+    double longRangeCoefficient;
+    bool hasInitializedLongRangeCorrection;
     CustomNonbondedForce* forceCopy;
-    std::map<std::string, double> globalParamValues;
-    std::vector<std::set<int> > exclusions;
-    Lepton::ExpressionProgram energyExpression, forceExpression;
-    std::vector<std::string> parameterNames, globalParameterNames;
-    NonbondedMethod nonbondedMethod;
-    NeighborList* neighborList;
+    const System& system;
 };
 
 /**
  * This kernel is invoked by GBSAOBCForce to calculate the forces acting on the system.
  */
-class ReferenceCalcGBSAOBCForceKernel : public CalcGBSAOBCForceKernel {
+class CudaCalcGBSAOBCForceKernel : public CalcGBSAOBCForceKernel {
 public:
-    ReferenceCalcGBSAOBCForceKernel(std::string name, const Platform& platform) : CalcGBSAOBCForceKernel(name, platform) {
+    CudaCalcGBSAOBCForceKernel(std::string name, const Platform& platform, CudaContext& cu) : CalcGBSAOBCForceKernel(name, platform), cu(cu),
+            hasCreatedKernels(false), params(NULL), bornSum(NULL), bornRadii(NULL), bornForce(NULL), obcChain(NULL) {
     }
-    ~ReferenceCalcGBSAOBCForceKernel();
+    ~CudaCalcGBSAOBCForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the GBSAOBCForce this kernel will be used for
      */
@@ -660,50 +711,32 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const GBSAOBCForce& force);
 private:
-    CpuObc* obc;
-    std::vector<RealOpenMM> charges;
-    bool isPeriodic;
-};
-
-/**
- * This kernel is invoked by GBVIForce to calculate the forces acting on the system.
- */
-class ReferenceCalcGBVIForceKernel : public CalcGBVIForceKernel {
-public:
-    ReferenceCalcGBVIForceKernel(std::string name, const Platform& platform) : CalcGBVIForceKernel(name, platform) {
-    }
-    ~ReferenceCalcGBVIForceKernel();
-    /**
-     * Initialize the kernel.
-     * 
-     * @param system       the System this kernel will be applied to
-     * @param force        the GBVIForce this kernel will be used for
-     * @param scaled radii the scaled radii (Eq. 5 of Labute paper)
-     */
-    void initialize(const System& system, const GBVIForce& force, const std::vector<double> & scaledRadii);
-    /**
-     * Execute the kernel to calculate the forces and/or energy.
-     *
-     * @param context        the context in which to execute this kernel
-     * @param includeForces  true if forces should be calculated
-     * @param includeEnergy  true if the energy should be calculated
-     * @return the potential energy due to the force
-     */
-    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-private:
-    CpuGBVI * gbvi;
-    std::vector<RealOpenMM> charges;
-    bool isPeriodic;
+    double prefactor;
+    bool hasCreatedKernels;
+    int maxTiles;
+    CudaContext& cu;
+    CudaArray* params;
+    CudaArray* bornSum;
+    CudaArray* bornRadii;
+    CudaArray* bornForce;
+    CudaArray* obcChain;
+    CUfunction computeBornSumKernel;
+    CUfunction reduceBornSumKernel;
+    CUfunction force1Kernel;
+    CUfunction reduceBornForceKernel;
+    std::vector<void*> computeSumArgs, force1Args;
 };
 
 /**
  * This kernel is invoked by CustomGBForce to calculate the forces acting on the system.
  */
-class ReferenceCalcCustomGBForceKernel : public CalcCustomGBForceKernel {
+class CudaCalcCustomGBForceKernel : public CalcCustomGBForceKernel {
 public:
-    ReferenceCalcCustomGBForceKernel(std::string name, const Platform& platform) : CalcCustomGBForceKernel(name, platform) {
+    CudaCalcCustomGBForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcCustomGBForceKernel(name, platform),
+            hasInitializedKernels(false), cu(cu), params(NULL), computedValues(NULL), energyDerivs(NULL), longEnergyDerivs(NULL), globals(NULL),
+            valueBuffers(NULL), tabulatedFunctionParams(NULL), system(system) {
     }
-    ~ReferenceCalcCustomGBForceKernel();
+    ~CudaCalcCustomGBForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -728,32 +761,36 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const CustomGBForce& force);
 private:
-    int numParticles;
-    bool isPeriodic;
-    RealOpenMM **particleParamArray;
-    RealOpenMM nonbondedCutoff;
-    std::vector<std::set<int> > exclusions;
-    std::vector<std::string> particleParameterNames, globalParameterNames, valueNames;
-    std::vector<Lepton::ExpressionProgram> valueExpressions;
-    std::vector<std::vector<Lepton::ExpressionProgram> > valueDerivExpressions;
-    std::vector<std::vector<Lepton::ExpressionProgram> > valueGradientExpressions;
-    std::vector<OpenMM::CustomGBForce::ComputationType> valueTypes;
-    std::vector<Lepton::ExpressionProgram> energyExpressions;
-    std::vector<std::vector<Lepton::ExpressionProgram> > energyDerivExpressions;
-    std::vector<std::vector<Lepton::ExpressionProgram> > energyGradientExpressions;
-    std::vector<OpenMM::CustomGBForce::ComputationType> energyTypes;
-    NonbondedMethod nonbondedMethod;
-    NeighborList* neighborList;
+    bool hasInitializedKernels, needParameterGradient;
+    int maxTiles, numComputedValues;
+    CudaContext& cu;
+    CudaParameterSet* params;
+    CudaParameterSet* computedValues;
+    CudaParameterSet* energyDerivs;
+    CudaArray* longEnergyDerivs;
+    CudaArray* globals;
+    CudaArray* valueBuffers;
+    CudaArray* tabulatedFunctionParams;
+    std::vector<std::string> globalParamNames;
+    std::vector<float> globalParamValues;
+    std::vector<CudaArray*> tabulatedFunctions;
+    std::vector<bool> pairValueUsesParam, pairEnergyUsesParam, pairEnergyUsesValue;
+    const System& system;
+    CUfunction pairValueKernel, perParticleValueKernel, pairEnergyKernel, perParticleEnergyKernel, gradientChainRuleKernel;
+    std::vector<void*> pairValueArgs, perParticleValueArgs, pairEnergyArgs, perParticleEnergyArgs, gradientChainRuleArgs;
+    std::string pairValueSrc, pairEnergySrc;
+    std::map<std::string, std::string> pairValueDefines, pairEnergyDefines;
 };
 
 /**
  * This kernel is invoked by CustomExternalForce to calculate the forces acting on the system and the energy of the system.
  */
-class ReferenceCalcCustomExternalForceKernel : public CalcCustomExternalForceKernel {
+class CudaCalcCustomExternalForceKernel : public CalcCustomExternalForceKernel {
 public:
-    ReferenceCalcCustomExternalForceKernel(std::string name, const Platform& platform) : CalcCustomExternalForceKernel(name, platform) {
+    CudaCalcCustomExternalForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcCustomExternalForceKernel(name, platform),
+            hasInitializedKernel(false), cu(cu), system(system), params(NULL), globals(NULL) {
     }
-    ~ReferenceCalcCustomExternalForceKernel();
+    ~CudaCalcCustomExternalForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -779,20 +816,25 @@ public:
     void copyParametersToContext(ContextImpl& context, const CustomExternalForce& force);
 private:
     int numParticles;
-    std::vector<int> particles;
-    RealOpenMM **particleParamArray;
-    Lepton::ExpressionProgram energyExpression, forceExpressionX, forceExpressionY, forceExpressionZ;
-    std::vector<std::string> parameterNames, globalParameterNames;
+    bool hasInitializedKernel;
+    CudaContext& cu;
+    const System& system;
+    CudaParameterSet* params;
+    CudaArray* globals;
+    std::vector<std::string> globalParamNames;
+    std::vector<float> globalParamValues;
 };
 
 /**
  * This kernel is invoked by CustomHbondForce to calculate the forces acting on the system.
  */
-class ReferenceCalcCustomHbondForceKernel : public CalcCustomHbondForceKernel {
+class CudaCalcCustomHbondForceKernel : public CalcCustomHbondForceKernel {
 public:
-    ReferenceCalcCustomHbondForceKernel(std::string name, const Platform& platform) : CalcCustomHbondForceKernel(name, platform), ixn(NULL) {
+    CudaCalcCustomHbondForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcCustomHbondForceKernel(name, platform),
+            hasInitializedKernel(false), cu(cu), donorParams(NULL), acceptorParams(NULL), donors(NULL), acceptors(NULL),
+            globals(NULL), donorExclusions(NULL), acceptorExclusions(NULL), tabulatedFunctionParams(NULL), system(system) {
     }
-    ~ReferenceCalcCustomHbondForceKernel();
+    ~CudaCalcCustomHbondForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -817,24 +859,34 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const CustomHbondForce& force);
 private:
-    int numDonors, numAcceptors, numParticles;
-    bool isPeriodic;
-    int **exclusionArray;
-    RealOpenMM **donorParamArray, **acceptorParamArray;
-    RealOpenMM nonbondedCutoff;
-    ReferenceCustomHbondIxn* ixn;
-    std::vector<std::set<int> > exclusions;
-    std::vector<std::string> globalParameterNames;
+    int numDonors, numAcceptors;
+    bool hasInitializedKernel;
+    CudaContext& cu;
+    CudaParameterSet* donorParams;
+    CudaParameterSet* acceptorParams;
+    CudaArray* globals;
+    CudaArray* donors;
+    CudaArray* acceptors;
+    CudaArray* donorExclusions;
+    CudaArray* acceptorExclusions;
+    CudaArray* tabulatedFunctionParams;
+    std::vector<std::string> globalParamNames;
+    std::vector<float> globalParamValues;
+    std::vector<CudaArray*> tabulatedFunctions;
+    std::vector<void*> donorArgs, acceptorArgs;
+    const System& system;
+    CUfunction donorKernel, acceptorKernel;
 };
 
 /**
  * This kernel is invoked by CustomCompoundBondForce to calculate the forces acting on the system.
  */
-class ReferenceCalcCustomCompoundBondForceKernel : public CalcCustomCompoundBondForceKernel {
+class CudaCalcCustomCompoundBondForceKernel : public CalcCustomCompoundBondForceKernel {
 public:
-    ReferenceCalcCustomCompoundBondForceKernel(std::string name, const Platform& platform) : CalcCustomCompoundBondForceKernel(name, platform), ixn(NULL) {
+    CudaCalcCustomCompoundBondForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcCustomCompoundBondForceKernel(name, platform),
+            cu(cu), params(NULL), globals(NULL), tabulatedFunctionParams(NULL), system(system) {
     }
-    ~ReferenceCalcCustomCompoundBondForceKernel();
+    ~CudaCalcCustomCompoundBondForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -858,32 +910,37 @@ public:
      * @param force      the CustomCompoundBondForce to copy the parameters from
      */
     void copyParametersToContext(ContextImpl& context, const CustomCompoundBondForce& force);
+
 private:
-    int numBonds, numParticles;
-    RealOpenMM **bondParamArray;
-    ReferenceCustomCompoundBondIxn* ixn;
-    std::vector<std::string> globalParameterNames;
+    int numBonds;
+    CudaContext& cu;
+    CudaParameterSet* params;
+    CudaArray* globals;
+    CudaArray* tabulatedFunctionParams;
+    std::vector<std::string> globalParamNames;
+    std::vector<float> globalParamValues;
+    std::vector<CudaArray*> tabulatedFunctions;
+    const System& system;
 };
 
 /**
  * This kernel is invoked by VerletIntegrator to take one time step.
  */
-class ReferenceIntegrateVerletStepKernel : public IntegrateVerletStepKernel {
+class CudaIntegrateVerletStepKernel : public IntegrateVerletStepKernel {
 public:
-    ReferenceIntegrateVerletStepKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) : IntegrateVerletStepKernel(name, platform),
-        data(data), dynamics(0), constraints(0) {
+    CudaIntegrateVerletStepKernel(std::string name, const Platform& platform, CudaContext& cu) : IntegrateVerletStepKernel(name, platform), cu(cu) {
     }
-    ~ReferenceIntegrateVerletStepKernel();
+    ~CudaIntegrateVerletStepKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param integrator the VerletIntegrator this kernel will be used for
      */
     void initialize(const System& system, const VerletIntegrator& integrator);
     /**
      * Execute the kernel.
-     * 
+     *
      * @param context    the context in which to execute this kernel
      * @param integrator the VerletIntegrator this kernel is being used for
      */
@@ -896,33 +953,29 @@ public:
      */
     double computeKineticEnergy(ContextImpl& context, const VerletIntegrator& integrator);
 private:
-    ReferencePlatform::PlatformData& data;
-    ReferenceVerletDynamics* dynamics;
-    ReferenceConstraintAlgorithm* constraints;
-    std::vector<RealOpenMM> masses;
-    int numConstraints;
+    CudaContext& cu;
     double prevStepSize;
+    CUfunction kernel1, kernel2;
 };
 
 /**
  * This kernel is invoked by LangevinIntegrator to take one time step.
  */
-class ReferenceIntegrateLangevinStepKernel : public IntegrateLangevinStepKernel {
+class CudaIntegrateLangevinStepKernel : public IntegrateLangevinStepKernel {
 public:
-    ReferenceIntegrateLangevinStepKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) : IntegrateLangevinStepKernel(name, platform),
-        data(data), dynamics(0), constraints(0) {
+    CudaIntegrateLangevinStepKernel(std::string name, const Platform& platform, CudaContext& cu) : IntegrateLangevinStepKernel(name, platform), cu(cu), params(NULL) {
     }
-    ~ReferenceIntegrateLangevinStepKernel();
+    ~CudaIntegrateLangevinStepKernel();
     /**
      * Initialize the kernel, setting up the particle masses.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param integrator the LangevinIntegrator this kernel will be used for
      */
     void initialize(const System& system, const LangevinIntegrator& integrator);
     /**
      * Execute the kernel.
-     * 
+     *
      * @param context    the context in which to execute this kernel
      * @param integrator the LangevinIntegrator this kernel is being used for
      */
@@ -935,33 +988,30 @@ public:
      */
     double computeKineticEnergy(ContextImpl& context, const LangevinIntegrator& integrator);
 private:
-    ReferencePlatform::PlatformData& data;
-    ReferenceStochasticDynamics* dynamics;
-    ReferenceConstraintAlgorithm* constraints;
-    std::vector<RealOpenMM> masses;
-    int numConstraints;
+    CudaContext& cu;
     double prevTemp, prevFriction, prevStepSize;
+    CudaArray* params;
+    CUfunction kernel1, kernel2;
 };
 
 /**
  * This kernel is invoked by BrownianIntegrator to take one time step.
  */
-class ReferenceIntegrateBrownianStepKernel : public IntegrateBrownianStepKernel {
+class CudaIntegrateBrownianStepKernel : public IntegrateBrownianStepKernel {
 public:
-    ReferenceIntegrateBrownianStepKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) : IntegrateBrownianStepKernel(name, platform),
-        data(data), dynamics(0), constraints(0) {
+    CudaIntegrateBrownianStepKernel(std::string name, const Platform& platform, CudaContext& cu) : IntegrateBrownianStepKernel(name, platform), cu(cu) {
     }
-    ~ReferenceIntegrateBrownianStepKernel();
+    ~CudaIntegrateBrownianStepKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param integrator the BrownianIntegrator this kernel will be used for
      */
     void initialize(const System& system, const BrownianIntegrator& integrator);
     /**
      * Execute the kernel.
-     * 
+     *
      * @param context    the context in which to execute this kernel
      * @param integrator the BrownianIntegrator this kernel is being used for
      */
@@ -974,64 +1024,19 @@ public:
      */
     double computeKineticEnergy(ContextImpl& context, const BrownianIntegrator& integrator);
 private:
-    ReferencePlatform::PlatformData& data;
-    ReferenceBrownianDynamics* dynamics;
-    ReferenceConstraintAlgorithm* constraints;
-    std::vector<RealOpenMM> masses;
-    int numConstraints;
+    CudaContext& cu;
     double prevTemp, prevFriction, prevStepSize;
-};
-
-/**
- * This kernel is invoked by VariableLangevinIntegrator to take one time step.
- */
-class ReferenceIntegrateVariableLangevinStepKernel : public IntegrateVariableLangevinStepKernel {
-public:
-    ReferenceIntegrateVariableLangevinStepKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) : IntegrateVariableLangevinStepKernel(name, platform),
-        data(data), dynamics(0), constraints(0) {
-    }
-    ~ReferenceIntegrateVariableLangevinStepKernel();
-    /**
-     * Initialize the kernel.
-     *
-     * @param system     the System this kernel will be applied to
-     * @param integrator the VariableLangevinIntegrator this kernel will be used for
-     */
-    void initialize(const System& system, const VariableLangevinIntegrator& integrator);
-    /**
-     * Execute the kernel.
-     *
-     * @param context    the context in which to execute this kernel
-     * @param integrator the VariableLangevinIntegrator this kernel is being used for
-     * @param maxTime    the maximum time beyond which the simulation should not be advanced
-     * @return the size of the step that was taken
-     */
-    double execute(ContextImpl& context, const VariableLangevinIntegrator& integrator, double maxTime);
-    /**
-     * Compute the kinetic energy.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @param integrator the VariableLangevinIntegrator this kernel is being used for
-     */
-    double computeKineticEnergy(ContextImpl& context, const VariableLangevinIntegrator& integrator);
-private:
-    ReferencePlatform::PlatformData& data;
-    ReferenceVariableStochasticDynamics* dynamics;
-    ReferenceConstraintAlgorithm* constraints;
-    std::vector<RealOpenMM> masses;
-    int numConstraints;
-    double prevTemp, prevFriction, prevErrorTol;
+    CUfunction kernel1, kernel2;
 };
 
 /**
  * This kernel is invoked by VariableVerletIntegrator to take one time step.
  */
-class ReferenceIntegrateVariableVerletStepKernel : public IntegrateVariableVerletStepKernel {
+class CudaIntegrateVariableVerletStepKernel : public IntegrateVariableVerletStepKernel {
 public:
-    ReferenceIntegrateVariableVerletStepKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) : IntegrateVariableVerletStepKernel(name, platform),
-        data(data), dynamics(0), constraints(0) {
+    CudaIntegrateVariableVerletStepKernel(std::string name, const Platform& platform, CudaContext& cu) : IntegrateVariableVerletStepKernel(name, platform), cu(cu) {
     }
-    ~ReferenceIntegrateVariableVerletStepKernel();
+    ~CudaIntegrateVariableVerletStepKernel();
     /**
      * Initialize the kernel.
      *
@@ -1056,23 +1061,61 @@ public:
      */
     double computeKineticEnergy(ContextImpl& context, const VariableVerletIntegrator& integrator);
 private:
-    ReferencePlatform::PlatformData& data;
-    ReferenceVariableVerletDynamics* dynamics;
-    ReferenceConstraintAlgorithm* constraints;
-    std::vector<RealOpenMM> masses;
-    int numConstraints;
-    double prevErrorTol;
+    CudaContext& cu;
+    int blockSize;
+    CUfunction kernel1, kernel2, selectSizeKernel;
+};
+
+/**
+ * This kernel is invoked by VariableLangevinIntegrator to take one time step.
+ */
+class CudaIntegrateVariableLangevinStepKernel : public IntegrateVariableLangevinStepKernel {
+public:
+    CudaIntegrateVariableLangevinStepKernel(std::string name, const Platform& platform, CudaContext& cu) : IntegrateVariableLangevinStepKernel(name, platform),
+            cu(cu), params(NULL) {
+    }
+    ~CudaIntegrateVariableLangevinStepKernel();
+    /**
+     * Initialize the kernel, setting up the particle masses.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param integrator the VariableLangevinIntegrator this kernel will be used for
+     */
+    void initialize(const System& system, const VariableLangevinIntegrator& integrator);
+    /**
+     * Execute the kernel.
+     *
+     * @param context    the context in which to execute this kernel
+     * @param integrator the VariableLangevinIntegrator this kernel is being used for
+     * @param maxTime    the maximum time beyond which the simulation should not be advanced
+     * @return the size of the step that was taken
+     */
+    double execute(ContextImpl& context, const VariableLangevinIntegrator& integrator, double maxTime);
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the VariableLangevinIntegrator this kernel is being used for
+     */
+    double computeKineticEnergy(ContextImpl& context, const VariableLangevinIntegrator& integrator);
+private:
+    CudaContext& cu;
+    int blockSize;
+    CudaArray* params;
+    CUfunction kernel1, kernel2, selectSizeKernel;
+    double prevTemp, prevFriction, prevErrorTol;
 };
 
 /**
  * This kernel is invoked by CustomIntegrator to take one time step.
  */
-class ReferenceIntegrateCustomStepKernel : public IntegrateCustomStepKernel {
+class CudaIntegrateCustomStepKernel : public IntegrateCustomStepKernel {
 public:
-    ReferenceIntegrateCustomStepKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) : IntegrateCustomStepKernel(name, platform),
-        data(data), dynamics(0), constraints(0) {
+    CudaIntegrateCustomStepKernel(std::string name, const Platform& platform, CudaContext& cu) : IntegrateCustomStepKernel(name, platform), cu(cu),
+            hasInitializedKernels(false), localValuesAreCurrent(false), globalValues(NULL), contextParameterValues(NULL), sumBuffer(NULL), potentialEnergy(NULL),
+            kineticEnergy(NULL), uniformRandoms(NULL), randomSeed(NULL), perDofValues(NULL) {
     }
-    ~ReferenceIntegrateCustomStepKernel();
+    ~CudaIntegrateCustomStepKernel();
     /**
      * Initialize the kernel.
      * 
@@ -1133,49 +1176,83 @@ public:
      */
     void setPerDofVariable(ContextImpl& context, int variable, const std::vector<Vec3>& values);
 private:
-    ReferencePlatform::PlatformData& data;
-    ReferenceCustomDynamics* dynamics;
-    ReferenceConstraintAlgorithm* constraints;
-    std::vector<RealOpenMM> masses, globalValues;
-    std::vector<std::vector<OpenMM::RealVec> > perDofValues; 
-    int numConstraints;
+    class ReorderListener;
+    std::string createGlobalComputation(const std::string& variable, const Lepton::ParsedExpression& expr, CustomIntegrator& integrator, const std::string& energyName);
+    std::string createPerDofComputation(const std::string& variable, const Lepton::ParsedExpression& expr, int component, CustomIntegrator& integrator, const std::string& forceName, const std::string& energyName);
+    void prepareForComputation(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid);
+    void recordChangedParameters(ContextImpl& context);
+    CudaContext& cu;
+    double prevStepSize;
+    int numGlobalVariables;
+    bool hasInitializedKernels, deviceValuesAreCurrent, modifiesParameters, keNeedsForce;
+    mutable bool localValuesAreCurrent;
+    CudaArray* globalValues;
+    CudaArray* contextParameterValues;
+    CudaArray* sumBuffer;
+    CudaArray* potentialEnergy;
+    CudaArray* kineticEnergy;
+    CudaArray* uniformRandoms;
+    CudaArray* randomSeed;
+    std::map<int, CudaArray*> savedForces;
+    std::set<int> validSavedForces;
+    CudaParameterSet* perDofValues;
+    mutable std::vector<std::vector<float> > localPerDofValuesFloat;
+    mutable std::vector<std::vector<double> > localPerDofValuesDouble;
+    std::vector<float> contextValuesFloat;
+    std::vector<double> contextValuesDouble;
+    std::vector<std::vector<CUfunction> > kernels;
+    std::vector<std::vector<std::vector<void*> > > kernelArgs;
+    std::vector<void*> kineticEnergyArgs;
+    CUfunction sumPotentialEnergyKernel, randomKernel, kineticEnergyKernel, sumKineticEnergyKernel;
+    std::vector<CustomIntegrator::ComputationType> stepType;
+    std::vector<bool> needsForces;
+    std::vector<bool> needsEnergy;
+    std::vector<bool> invalidatesForces;
+    std::vector<bool> merged;
+    std::vector<int> forceGroup;
+    std::vector<int> requiredGaussian;
+    std::vector<int> requiredUniform;
+    std::vector<std::string> parameterNames;
 };
 
 /**
  * This kernel is invoked by AndersenThermostat at the start of each time step to adjust the particle velocities.
  */
-class ReferenceApplyAndersenThermostatKernel : public ApplyAndersenThermostatKernel {
+class CudaApplyAndersenThermostatKernel : public ApplyAndersenThermostatKernel {
 public:
-    ReferenceApplyAndersenThermostatKernel(std::string name, const Platform& platform) : ApplyAndersenThermostatKernel(name, platform), thermostat(0) {
+    CudaApplyAndersenThermostatKernel(std::string name, const Platform& platform, CudaContext& cu) : ApplyAndersenThermostatKernel(name, platform), cu(cu),
+            atomGroups(NULL) {
     }
-    ~ReferenceApplyAndersenThermostatKernel();
+    ~CudaApplyAndersenThermostatKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param thermostat the AndersenThermostat this kernel will be used for
      */
     void initialize(const System& system, const AndersenThermostat& thermostat);
     /**
      * Execute the kernel.
-     * 
+     *
      * @param context    the context in which to execute this kernel
      */
     void execute(ContextImpl& context);
 private:
-    ReferenceAndersenThermostat* thermostat;
-    std::vector<std::vector<int> > particleGroups;
-    std::vector<RealOpenMM> masses;
+    CudaContext& cu;
+    int randomSeed;
+    CudaArray* atomGroups;
+    CUfunction kernel;
 };
 
 /**
  * This kernel is invoked by MonteCarloBarostat to adjust the periodic box volume
  */
-class ReferenceApplyMonteCarloBarostatKernel : public ApplyMonteCarloBarostatKernel {
+class CudaApplyMonteCarloBarostatKernel : public ApplyMonteCarloBarostatKernel {
 public:
-    ReferenceApplyMonteCarloBarostatKernel(std::string name, const Platform& platform) : ApplyMonteCarloBarostatKernel(name, platform), barostat(NULL) {
+    CudaApplyMonteCarloBarostatKernel(std::string name, const Platform& platform, CudaContext& cu) : ApplyMonteCarloBarostatKernel(name, platform), cu(cu),
+            hasInitializedKernels(false), savedPositions(NULL), moleculeAtoms(NULL), moleculeStartIndex(NULL) {
     }
-    ~ReferenceApplyMonteCarloBarostatKernel();
+    ~CudaApplyMonteCarloBarostatKernel();
     /**
      * Initialize the kernel.
      *
@@ -1204,35 +1281,45 @@ public:
      */
     void restoreCoordinates(ContextImpl& context);
 private:
-    ReferenceMonteCarloBarostat* barostat;
+    CudaContext& cu;
+    bool hasInitializedKernels;
+    int numMolecules;
+    CudaArray* savedPositions;
+    CudaArray* moleculeAtoms;
+    CudaArray* moleculeStartIndex;
+    CUfunction kernel;
+    std::vector<int> lastAtomOrder;
 };
 
 /**
  * This kernel is invoked to remove center of mass motion from the system.
  */
-class ReferenceRemoveCMMotionKernel : public RemoveCMMotionKernel {
+class CudaRemoveCMMotionKernel : public RemoveCMMotionKernel {
 public:
-    ReferenceRemoveCMMotionKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) : RemoveCMMotionKernel(name, platform), data(data) {
+    CudaRemoveCMMotionKernel(std::string name, const Platform& platform, CudaContext& cu) : RemoveCMMotionKernel(name, platform), cu(cu), cmMomentum(NULL) {
     }
+    ~CudaRemoveCMMotionKernel();
     /**
      * Initialize the kernel, setting up the particle masses.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the CMMotionRemover this kernel will be used for
      */
     void initialize(const System& system, const CMMotionRemover& force);
     /**
      * Execute the kernel.
-     * 
+     *
      * @param context    the context in which to execute this kernel
      */
     void execute(ContextImpl& context);
 private:
-    ReferencePlatform::PlatformData& data;
-    std::vector<double> masses;
+    CudaContext& cu;
     int frequency;
+    CudaArray* cmMomentum;
+    CUfunction kernel1, kernel2;
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_REFERENCEKERNELS_H_*/
+#endif /*OPENMM_CUDAKERNELS_H_*/
+

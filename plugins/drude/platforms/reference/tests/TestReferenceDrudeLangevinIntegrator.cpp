@@ -41,7 +41,7 @@
 #include "openmm/VirtualSite.h"
 #include "openmm/DrudeForce.h"
 #include "openmm/DrudeLangevinIntegrator.h"
-#include "SimTKUtilities/SimTKOpenMMUtilities.h"
+#include "SimTKOpenMMUtilities.h"
 #include <iostream>
 #include <vector>
 

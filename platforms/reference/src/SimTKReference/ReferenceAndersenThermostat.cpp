@@ -25,7 +25,7 @@
 #include <string.h>
 #include <sstream>
 
-#include "../SimTKUtilities/SimTKOpenMMUtilities.h"
+#include "SimTKOpenMMUtilities.h"
 #include "ReferenceAndersenThermostat.h"
 
 using std::vector;

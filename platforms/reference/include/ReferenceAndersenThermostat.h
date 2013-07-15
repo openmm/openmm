@@ -25,7 +25,7 @@
 #ifndef __ReferenceAndersenThermostat_H__
 #define __ReferenceAndersenThermostat_H__
 
-#include "../SimTKUtilities/SimTKOpenMMCommon.h"
+#include "SimTKOpenMMCommon.h"
 #include <vector>
 
 // ---------------------------------------------------------------------------------------

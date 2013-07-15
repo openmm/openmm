@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2012 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -29,23 +29,17 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#ifndef __ReferenceVirtualSites_H__
-#define __ReferenceVirtualSites_H__
+#include "openmm/MonteCarloAnisotropicBarostat.h"
+#include "openmm/internal/MonteCarloAnisotropicBarostatImpl.h"
+#include <ctime>
 
-#include "openmm/System.h"
-#include "../SimTKUtilities/RealVec.h"
-#include <vector>
+using namespace OpenMM;
 
-class OPENMM_EXPORT ReferenceVirtualSites {
-public:
-    /**
-     * Compute the positions of all virtual sites.
-     */
-    static void computePositions(const OpenMM::System& system, std::vector<OpenMM::RealVec>& atomCoordinates);
-    /**
-     * Distribute forces from virtual sites to the atoms they are based on.
-     */
-    static void distributeForces(const OpenMM::System& system, const std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& forces);
-};
+MonteCarloAnisotropicBarostat::MonteCarloAnisotropicBarostat(const Vec3& defaultPressure, double temperature, int frequency, bool scaleX, bool scaleY, bool scaleZ) :
+        defaultPressure(defaultPressure), temperature(temperature), frequency(frequency), scaleX(scaleX), scaleY(scaleY), scaleZ(scaleZ) {
+    setRandomNumberSeed((int) time(NULL));
+}
 
-#endif // __ReferenceVirtualSites_H__
+ForceImpl* MonteCarloAnisotropicBarostat::createImpl() const {
+    return new MonteCarloAnisotropicBarostatImpl(*this);
+}

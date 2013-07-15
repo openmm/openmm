@@ -40,7 +40,7 @@
 #include "openmm/System.h"
 #include "openmm/VerletIntegrator.h"
 #include "openmm/DrudeForce.h"
-#include "SimTKUtilities/SimTKOpenMMUtilities.h"
+#include "SimTKOpenMMUtilities.h"
 #include <iostream>
 #include <vector>
 

@@ -34,14 +34,14 @@
  */
 
 #include "openmm/internal/AssertionUtilities.h"
-#include "../src/OpenCLArray.h"
-#include "../src/OpenCLContext.h"
-#include "../src/OpenCLIntegrationUtilities.h"
+#include "OpenCLArray.h"
+#include "OpenCLContext.h"
+#include "OpenCLIntegrationUtilities.h"
 #include "openmm/System.h"
 #include "openmm/Context.h"
 #include "OpenCLPlatform.h"
 #include "openmm/VerletIntegrator.h"
-#include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
+#include "SimTKOpenMMRealType.h"
 #include <iostream>
 
 using namespace OpenMM;
@@ -54,7 +54,7 @@ void testGaussian() {
     System system;
     for (int i = 0; i < numAtoms; i++)
         system.addParticle(1.0);
-    OpenCLPlatform::PlatformData platformData(system, "", "", platform.getPropertyDefaultValue("OpenCLPrecision"));
+    OpenCLPlatform::PlatformData platformData(system, "", "", platform.getPropertyDefaultValue("OpenCLPrecision"), "false");
     OpenCLContext& context = *platformData.contexts[0];
     context.initialize();
     context.getIntegrationUtilities().initRandomNumberGenerator(0);
