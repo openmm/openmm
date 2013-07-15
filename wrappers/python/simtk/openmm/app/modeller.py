@@ -757,7 +757,9 @@ class Modeller(object):
             if atoms[i].element != elem.hydrogen:
                 # This is a heavy atom, so make it immobile.
                 system.setParticleMass(i, 0)
-        context = Context(system, VerletIntegrator(0.0))
+        from simtk.openmm import Platform
+        plt = Platform.getPlatformByName('Reference')
+        context = Context(system, VerletIntegrator(0.0), plt)
         context.setPositions(newPositions)
         LocalEnergyMinimizer.minimize(context)
         self.topology = newTopology
