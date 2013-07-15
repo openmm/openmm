@@ -920,6 +920,10 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
         molecularQuadrupolesVec.push_back((float) quadrupole[4]);
         molecularQuadrupolesVec.push_back((float) quadrupole[5]);
     }
+    hasQuadrupoles = false;
+    for (int i = 0; i < (int) molecularQuadrupolesVec.size(); i++)
+        if (molecularQuadrupolesVec[i] != 0.0)
+            hasQuadrupoles = true;
     int paddedNumAtoms = cu.getPaddedNumAtoms();
     for (int i = numMultipoles; i < paddedNumAtoms; i++) {
         dampingAndTholeVec.push_back(make_float2(0, 0));
@@ -1039,6 +1043,8 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
         defines["DIRECT_POLARIZATION"] = "";
     if (useShuffle)
         defines["USE_SHUFFLE"] = "";
+    if (hasQuadrupoles)
+        defines["INCLUDE_QUADRUPOLES"] = "";
     defines["TILE_SIZE"] = cu.intToString(CudaContext::TileSize);
     int numExclusionTiles = tilesWithExclusions.size();
     defines["NUM_TILES_WITH_EXCLUSIONS"] = cu.intToString(numExclusionTiles);
@@ -1103,9 +1109,9 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
     if (usePME) {
         electrostaticsSource << CudaKernelSources::vectorOps;
         electrostaticsSource << CudaAmoebaKernelSources::pmeMultipoleElectrostatics;
-        electrostaticsSource << CudaAmoebaKernelSources::pmeElectrostaticPairForce;
+        electrostaticsSource << (hasQuadrupoles ? CudaAmoebaKernelSources::pmeElectrostaticPairForce : CudaAmoebaKernelSources::pmeElectrostaticPairForceNoQuadrupoles);
         electrostaticsSource << "#define APPLY_SCALE\n";
-        electrostaticsSource << CudaAmoebaKernelSources::pmeElectrostaticPairForce;
+        electrostaticsSource << (hasQuadrupoles ? CudaAmoebaKernelSources::pmeElectrostaticPairForce : CudaAmoebaKernelSources::pmeElectrostaticPairForceNoQuadrupoles);
         electrostaticsThreadMemory = 24*elementSize+3*sizeof(float)+3*sizeof(int)/(double) cu.TileSize;
         if (!useShuffle)
             electrostaticsThreadMemory += 3*elementSize;
@@ -1114,13 +1120,13 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
         electrostaticsSource << CudaKernelSources::vectorOps;
         electrostaticsSource << CudaAmoebaKernelSources::multipoleElectrostatics;
         electrostaticsSource << "#define F1\n";
-        electrostaticsSource << CudaAmoebaKernelSources::electrostaticPairForce;
+        electrostaticsSource << (hasQuadrupoles ? CudaAmoebaKernelSources::electrostaticPairForce : CudaAmoebaKernelSources::electrostaticPairForceNoQuadrupoles);
         electrostaticsSource << "#undef F1\n";
         electrostaticsSource << "#define T1\n";
-        electrostaticsSource << CudaAmoebaKernelSources::electrostaticPairForce;
+        electrostaticsSource << (hasQuadrupoles ? CudaAmoebaKernelSources::electrostaticPairForce : CudaAmoebaKernelSources::electrostaticPairForceNoQuadrupoles);
         electrostaticsSource << "#undef T1\n";
         electrostaticsSource << "#define T3\n";
-        electrostaticsSource << CudaAmoebaKernelSources::electrostaticPairForce;
+        electrostaticsSource << (hasQuadrupoles ? CudaAmoebaKernelSources::electrostaticPairForce : CudaAmoebaKernelSources::electrostaticPairForceNoQuadrupoles);
         electrostaticsThreadMemory = 21*elementSize+2*sizeof(float)+3*sizeof(int)/(double) cu.TileSize;
         if (!useShuffle)
             electrostaticsThreadMemory += 3*elementSize;
@@ -1831,6 +1837,11 @@ void CudaCalcAmoebaMultipoleForceKernel::copyParametersToContext(ContextImpl& co
         molecularQuadrupolesVec.push_back((float) quadrupole[2]);
         molecularQuadrupolesVec.push_back((float) quadrupole[4]);
         molecularQuadrupolesVec.push_back((float) quadrupole[5]);
+    }
+    if (!hasQuadrupoles) {
+        for (int i = 0; i < (int) molecularQuadrupolesVec.size(); i++)
+            if (molecularQuadrupolesVec[i] != 0.0)
+                throw OpenMMException("updateParametersInContext: Cannot set a non-zero quadrupole moment, because quadrupoles were excluded from the kernel");
     }
     for (int i = force.getNumMultipoles(); i < cu.getPaddedNumAtoms(); i++) {
         dampingAndTholeVec.push_back(make_float2(0, 0));
