@@ -296,12 +296,25 @@ void CudaIntegrateRPMDStepKernel::setPositions(int copy, const vector<Vec3>& pos
         throw OpenMMException("RPMDIntegrator: Cannot set positions before the integrator is added to a Context");
     if (pos.size() != numParticles)
         throw OpenMMException("RPMDIntegrator: wrong number of values passed to setPositions()");
+
+    // Adjust the positions based on the current cell offsets.
+    
+    const vector<int>& order = cu.getAtomIndex();
+    double4 periodicBoxSize = cu.getPeriodicBoxSize();
+    vector<Vec3> offsetPos(numParticles);
+    for (int i = 0; i < numParticles; ++i) {
+        int4 offset = cu.getPosCellOffsets()[i];
+        offsetPos[order[i]] = pos[order[i]] + Vec3(offset.x*periodicBoxSize.x, offset.y*periodicBoxSize.y, offset.z*periodicBoxSize.z);
+    }
+
+    // Record the positions.
+
     CUresult result;
     if (cu.getUseDoublePrecision()) {
         vector<double4> posq(cu.getPaddedNumAtoms());
         cu.getPosq().download(posq);
         for (int i = 0; i < numParticles; i++)
-            posq[i] = make_double4(pos[i][0], pos[i][1], pos[i][2], posq[i].w);
+            posq[i] = make_double4(offsetPos[i][0], offsetPos[i][1], offsetPos[i][2], posq[i].w);
         result = cuMemcpyHtoD(positions->getDevicePointer()+copy*cu.getPaddedNumAtoms()*sizeof(double4), &posq[0], numParticles*sizeof(double4));
     }
     else if (cu.getUseMixedPrecision()) {
@@ -309,14 +322,14 @@ void CudaIntegrateRPMDStepKernel::setPositions(int copy, const vector<Vec3>& pos
         cu.getPosq().download(posqf);
         vector<double4> posq(cu.getPaddedNumAtoms());
         for (int i = 0; i < numParticles; i++)
-            posq[i] = make_double4(pos[i][0], pos[i][1], pos[i][2], posqf[i].w);
+            posq[i] = make_double4(offsetPos[i][0], offsetPos[i][1], offsetPos[i][2], posqf[i].w);
         result = cuMemcpyHtoD(positions->getDevicePointer()+copy*cu.getPaddedNumAtoms()*sizeof(double4), &posq[0], numParticles*sizeof(double4));
     }
     else {
         vector<float4> posq(cu.getPaddedNumAtoms());
         cu.getPosq().download(posq);
         for (int i = 0; i < numParticles; i++)
-            posq[i] = make_float4((float) pos[i][0], (float) pos[i][1], (float) pos[i][2], posq[i].w);
+            posq[i] = make_float4((float) offsetPos[i][0], (float) offsetPos[i][1], (float) offsetPos[i][2], posq[i].w);
         result = cuMemcpyHtoD(positions->getDevicePointer()+copy*cu.getPaddedNumAtoms()*sizeof(float4), &posq[0], numParticles*sizeof(float4));
     }
     if (result != CUDA_SUCCESS) {
