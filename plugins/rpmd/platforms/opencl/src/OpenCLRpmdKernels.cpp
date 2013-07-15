@@ -312,11 +312,24 @@ void OpenCLIntegrateRPMDStepKernel::setPositions(int copy, const vector<Vec3>& p
         throw OpenMMException("RPMDIntegrator: Cannot set positions before the integrator is added to a Context");
     if (pos.size() != numParticles)
         throw OpenMMException("RPMDIntegrator: wrong number of values passed to setPositions()");
+
+    // Adjust the positions based on the current cell offsets.
+    
+    const vector<int>& order = cl.getAtomIndex();
+    mm_double4 periodicBoxSize = cl.getPeriodicBoxSizeDouble();
+    vector<Vec3> offsetPos(numParticles);
+    for (int i = 0; i < numParticles; ++i) {
+        mm_int4 offset = cl.getPosCellOffsets()[i];
+        offsetPos[order[i]] = pos[order[i]] + Vec3(offset.x*periodicBoxSize.x, offset.y*periodicBoxSize.y, offset.z*periodicBoxSize.z);
+    }
+
+    // Record the positions.
+
     if (cl.getUseDoublePrecision()) {
         vector<mm_double4> posq(cl.getPaddedNumAtoms());
         cl.getPosq().download(posq);
         for (int i = 0; i < numParticles; i++)
-            posq[i] = mm_double4(pos[i][0], pos[i][1], pos[i][2], posq[i].w);
+            posq[i] = mm_double4(offsetPos[i][0], offsetPos[i][1], offsetPos[i][2], posq[i].w);
         cl.getQueue().enqueueWriteBuffer(positions->getDeviceBuffer(), CL_TRUE, copy*cl.getPaddedNumAtoms()*sizeof(mm_double4), numParticles*sizeof(mm_double4), &posq[0]);
     }
     else if (cl.getUseMixedPrecision()) {
@@ -324,14 +337,14 @@ void OpenCLIntegrateRPMDStepKernel::setPositions(int copy, const vector<Vec3>& p
         cl.getPosq().download(posqf);
         vector<mm_double4> posq(cl.getPaddedNumAtoms());
         for (int i = 0; i < numParticles; i++)
-            posq[i] = mm_double4(pos[i][0], pos[i][1], pos[i][2], posqf[i].w);
+            posq[i] = mm_double4(offsetPos[i][0], offsetPos[i][1], offsetPos[i][2], posqf[i].w);
         cl.getQueue().enqueueWriteBuffer(positions->getDeviceBuffer(), CL_TRUE, copy*cl.getPaddedNumAtoms()*sizeof(mm_double4), numParticles*sizeof(mm_double4), &posq[0]);
     }
     else {
         vector<mm_float4> posq(cl.getPaddedNumAtoms());
         cl.getPosq().download(posq);
         for (int i = 0; i < numParticles; i++)
-            posq[i] = mm_float4((cl_float) pos[i][0], (cl_float) pos[i][1], (cl_float) pos[i][2], posq[i].w);
+            posq[i] = mm_float4((cl_float) offsetPos[i][0], (cl_float) offsetPos[i][1], (cl_float) offsetPos[i][2], posq[i].w);
         cl.getQueue().enqueueWriteBuffer(positions->getDeviceBuffer(), CL_TRUE, copy*cl.getPaddedNumAtoms()*sizeof(mm_float4), numParticles*sizeof(mm_float4), &posq[0]);
     }
 }
