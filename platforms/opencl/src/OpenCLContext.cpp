@@ -277,7 +277,8 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
     clearFiveBuffersKernel = cl::Kernel(utilities, "clearFiveBuffers");
     clearSixBuffersKernel = cl::Kernel(utilities, "clearSixBuffers");
     reduceReal4Kernel = cl::Kernel(utilities, "reduceReal4Buffer");
-    reduceForcesKernel = cl::Kernel(utilities, "reduceForces");
+    if (supports64BitGlobalAtomics)
+        reduceForcesKernel = cl::Kernel(utilities, "reduceForces");
 
     // Decide whether native_sqrt(), native_rsqrt(), and native_recip() are sufficiently accurate to use.
 

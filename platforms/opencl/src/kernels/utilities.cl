@@ -81,6 +81,7 @@ __kernel void reduceReal4Buffer(__global real4* restrict buffer, int bufferSize,
     }
 }
 
+#ifdef SUPPORTS_64_BIT_ATOMICS
 /**
  * Sum the various buffers containing forces.
  */
@@ -94,6 +95,7 @@ __kernel void reduceForces(__global const long* restrict longBuffer, __global re
         buffer[index] = sum;
     }
 }
+#endif
 
 /**
  * This is called to determine the accuracy of various native functions.
