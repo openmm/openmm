@@ -37,7 +37,12 @@ extern "C" __global__ void integrateVerletPart1(const mixed2* __restrict__ dt, c
 extern "C" __global__ void integrateVerletPart2(mixed2* __restrict__ dt, real4* __restrict__ posq,
         real4* __restrict__ posqCorrection, mixed4* __restrict__ velm, const mixed4* __restrict__ posDelta) {
     mixed2 stepSize = dt[0];
+#if __CUDA_ARCH__ >= 130
     double oneOverDt = 1.0/stepSize.y;
+#else
+    float oneOverDt = 1.0f/stepSize.y;
+    float correction = (1.0f-oneOverDt*stepSize.y)/stepSize.y;
+#endif
     int index = blockIdx.x*blockDim.x+threadIdx.x;
     if (index == 0)
         dt[0].x = stepSize.y;
@@ -55,7 +60,11 @@ extern "C" __global__ void integrateVerletPart2(mixed2* __restrict__ dt, real4* 
             pos.x += delta.x;
             pos.y += delta.y;
             pos.z += delta.z;
+#if __CUDA_ARCH__ >= 130
             velocity = make_mixed4((mixed) (delta.x*oneOverDt), (mixed) (delta.y*oneOverDt), (mixed) (delta.z*oneOverDt), velocity.w);
+#else
+            velocity = make_mixed4((mixed) (delta.x*oneOverDt+delta.x*correction), (mixed) (delta.y*oneOverDt+delta.y*correction), (mixed) (delta.z*oneOverDt+delta.z*correction), velocity.w);
+#endif
 #ifdef USE_MIXED_PRECISION
             posq[index] = make_real4((real) pos.x, (real) pos.y, (real) pos.z, (real) pos.w);
             posqCorrection[index] = make_real4(pos.x-(real) pos.x, pos.y-(real) pos.y, pos.z-(real) pos.z, 0);

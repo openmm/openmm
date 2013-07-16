@@ -32,7 +32,12 @@ extern "C" __global__ void integrateLangevinPart1(mixed4* __restrict__ velm, con
  */
 
 extern "C" __global__ void integrateLangevinPart2(real4* __restrict__ posq, real4* __restrict__ posqCorrection, const mixed4* __restrict__ posDelta, mixed4* __restrict__ velm, const mixed2* __restrict__ dt) {
+#if __CUDA_ARCH__ >= 130
     double invStepSize = 1.0/dt[0].y;
+#else
+    float invStepSize = 1.0f/dt[0].y;
+    float correction = (1.0f-invStepSize*dt[0].y)/dt[0].y;
+#endif
     int index = blockIdx.x*blockDim.x+threadIdx.x;
     while (index < NUM_ATOMS) {
         mixed4 vel = velm[index];
@@ -48,9 +53,15 @@ extern "C" __global__ void integrateLangevinPart2(real4* __restrict__ posq, real
             pos.x += delta.x;
             pos.y += delta.y;
             pos.z += delta.z;
+#if __CUDA_ARCH__ >= 130
             vel.x = (mixed) (invStepSize*delta.x);
             vel.y = (mixed) (invStepSize*delta.y);
             vel.z = (mixed) (invStepSize*delta.z);
+#else
+            vel.x = invStepSize*delta.x + correction*delta.x;
+            vel.y = invStepSize*delta.y + correction*delta.x;
+            vel.z = invStepSize*delta.z + correction*delta.x;
+#endif
 #ifdef USE_MIXED_PRECISION
             posq[index] = make_real4((real) pos.x, (real) pos.y, (real) pos.z, (real) pos.w);
             posqCorrection[index] = make_real4(pos.x-(real) pos.x, pos.y-(real) pos.y, pos.z-(real) pos.z, 0);

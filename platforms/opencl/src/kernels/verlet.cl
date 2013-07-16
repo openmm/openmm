@@ -38,6 +38,7 @@ __kernel void integrateVerletPart2(int numAtoms, __global mixed2* restrict dt, _
     double oneOverDt = 1.0/stepSize.y;
 #else
     float oneOverDt = 1.0f/stepSize.y;
+    float correction = (1.0f-oneOverDt*stepSize.y)/stepSize.y;
 #endif
     if (get_global_id(0) == 0)
         dt[0].x = stepSize.y;
@@ -58,7 +59,7 @@ __kernel void integrateVerletPart2(int numAtoms, __global mixed2* restrict dt, _
 #ifdef SUPPORTS_DOUBLE_PRECISION
             velocity.xyz = convert_mixed4(convert_double4(delta)*oneOverDt).xyz;
 #else
-            velocity.xyz = delta.xyz*oneOverDt;
+            velocity.xyz = delta.xyz*oneOverDt + delta.xyz*correction;
 #endif
 #ifdef USE_MIXED_PRECISION
             posq[index] = convert_real4(pos);
