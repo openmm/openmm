@@ -97,7 +97,6 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
             // Try to figure out which device is the fastest.
 
             int bestSpeed = -1;
-            bool bestSupportsDouble = false;
             for (int i = 0; i < (int) devices.size(); i++) {
                 if (platformVendor == "Apple" && devices[i].getInfo<CL_DEVICE_VENDOR>() == "AMD")
                     continue; // Don't use AMD GPUs on OS X due to serious bugs.
@@ -136,11 +135,9 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
                     }
                 }
                 int speed = devices[i].getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>()*processingElementsPerComputeUnit*devices[i].getInfo<CL_DEVICE_MAX_CLOCK_FREQUENCY>();
-                bool supportsDouble = (devices[i].getInfo<CL_DEVICE_EXTENSIONS>().find("cl_khr_fp64") != string::npos);
-                if (maxSize >= minThreadBlockSize && speed > bestSpeed && (supportsDouble || !bestSupportsDouble)) {
+                if (maxSize >= minThreadBlockSize && speed > bestSpeed) {
                     deviceIndex = i;
                     bestSpeed = speed;
-                    bestSupportsDouble = supportsDouble;
                 }
             }
         }
