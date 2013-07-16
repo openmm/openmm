@@ -455,7 +455,7 @@ void testSwitchingFunction() {
         positions[1] = Vec3(r+delta, 0, 0);
         context.setPositions(positions);
         double e2 = context.getState(State::Energy).getPotentialEnergy();
-        ASSERT_EQUAL_TOL((e2-e1)/(2*delta), state.getForces()[0][0], 1e-3);
+        ASSERT_EQUAL_TOL((e2-e1)/(2*delta), state.getForces()[0][0], 2e-3);
     }
 }
 
