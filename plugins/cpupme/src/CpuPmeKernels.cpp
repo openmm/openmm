@@ -119,8 +119,9 @@ static void spreadCharge(int start, int end, float* posq, float* grid, int gridx
     for (int i = start; i < end; i++) {
         // Find the position relative to the nearest grid point.
         
-        __m128 pos = _mm_load_ps(&posq[4*i]);
-        __m128 posInBox = _mm_sub_ps(pos, _mm_mul_ps(boxSize, _mm_floor_ps(_mm_mul_ps(pos, invBoxSize))));
+        __m128 pos = _mm_loadu_ps(&posq[4*i]);
+        __m128 posFloor = _mm_floor_ps(_mm_mul_ps(pos, invBoxSize));
+        __m128 posInBox = _mm_sub_ps(pos, _mm_mul_ps(boxSize, posFloor));
         __m128 t = _mm_mul_ps(_mm_mul_ps(posInBox, invBoxSize), gridSize);
         __m128i ti = _mm_cvttps_epi32(t);
         __m128 dr = _mm_sub_ps(t, _mm_cvtepi32_ps(ti));
@@ -309,8 +310,9 @@ static void interpolateForces(int start, int end, float* posq, float* force, flo
     for (int i = start; i < end; i++) {
         // Find the position relative to the nearest grid point.
         
-        __m128 pos = _mm_load_ps(&posq[4*i]);
-        __m128 posInBox = _mm_sub_ps(pos, _mm_mul_ps(boxSize, _mm_floor_ps(_mm_mul_ps(pos, invBoxSize))));
+        __m128 pos = _mm_loadu_ps(&posq[4*i]);
+        __m128 posFloor = _mm_floor_ps(_mm_mul_ps(pos, invBoxSize));
+        __m128 posInBox = _mm_sub_ps(pos, _mm_mul_ps(boxSize, posFloor));
         __m128 t = _mm_mul_ps(_mm_mul_ps(posInBox, invBoxSize), gridSize);
         __m128i ti = _mm_cvttps_epi32(t);
         __m128 dr = _mm_sub_ps(t, _mm_cvtepi32_ps(ti));
