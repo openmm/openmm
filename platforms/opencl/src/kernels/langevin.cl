@@ -36,6 +36,7 @@ __kernel void integrateLangevinPart2(__global real4* restrict posq, __global rea
     double invStepSize = 1.0/dt[0].y;
 #else
     float invStepSize = 1.0f/dt[0].y;
+    float correction = (1.0f-invStepSize*dt[0].y)/dt[0].y;
 #endif
     int index = get_global_id(0);
     while (index < NUM_ATOMS) {
@@ -53,7 +54,7 @@ __kernel void integrateLangevinPart2(__global real4* restrict posq, __global rea
 #ifdef SUPPORTS_DOUBLE_PRECISION
             vel.xyz = convert_mixed4(invStepSize*convert_double4(delta)).xyz;
 #else
-            vel.xyz = invStepSize*delta.xyz;
+            vel.xyz = invStepSize*delta.xyz + correction*delta.xyz;
 #endif
 #ifdef USE_MIXED_PRECISION
             posq[index] = convert_real4(pos);
