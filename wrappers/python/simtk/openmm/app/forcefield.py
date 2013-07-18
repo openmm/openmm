@@ -42,17 +42,47 @@ from simtk.openmm.app import Topology
 
 # Enumerated values for nonbonded method
 
-NoCutoff = object()
-CutoffNonPeriodic = object()
-CutoffPeriodic = object()
-Ewald = object()
-PME = object()
+class NoCutoff(object):
+    def __repr__(self):
+        return 'NoCutoff'
+NoCutoff = NoCutoff()
+
+class CutoffNonPeriodic(object):
+    def __repr__(self):
+        return 'CutoffNonPeriodic'
+CutoffNonPeriodic = CutoffNonPeriodic()
+
+class CutoffPeriodic(object):
+    def __repr__(self):
+        return 'CutoffPeriodic'
+CutoffPeriodic = CutoffPeriodic()
+
+class Ewald(object):
+    def __repr__(self):
+        return 'Ewald'
+Ewald = Ewald()
+
+class PME(object):
+    def __repr__(self):
+        return 'PME'
+PME = PME()
 
 # Enumerated values for constraint type
 
-HBonds = object()
-AllBonds = object()
-HAngles = object()
+class HBonds(object):
+    def __repr__(self):
+        return 'HBonds'
+HBonds = HBonds()
+
+class AllBonds(object):
+    def __repr__(self):
+        return 'AllBonds'
+AllBonds = AllBonds()
+
+class HAngles(object):
+    def __repr__(self):
+        return 'HAngles'
+HAngles = HAngles()
 
 # A map of functions to parse elements of the XML file.
 
