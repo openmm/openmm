@@ -5444,6 +5444,10 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
     cl.setTime(cl.getTime()+integrator.getStepSize());
     cl.setStepCount(cl.getStepCount()+1);
     cl.reorderAtoms();
+    if (cl.getAtomsWereReordered()) {
+        forcesAreValid = false;
+        validSavedForces.clear();
+    }
     
     // Reduce UI lag.
     

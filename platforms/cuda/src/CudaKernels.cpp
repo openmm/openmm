@@ -5222,6 +5222,10 @@ void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrat
     cu.setTime(cu.getTime()+integrator.getStepSize());
     cu.setStepCount(cu.getStepCount()+1);
     cu.reorderAtoms();
+    if (cu.getAtomsWereReordered()) {
+        forcesAreValid = false;
+        validSavedForces.clear();
+    }
 }
 
 double CudaIntegrateCustomStepKernel::computeKineticEnergy(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid) {
