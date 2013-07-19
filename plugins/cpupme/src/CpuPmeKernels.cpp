@@ -640,11 +640,11 @@ int CpuCalcPmeReciprocalForceKernel::findFFTDimension(int minimum) {
         // Attempt to factor the current value.
 
         int unfactored = minimum;
-        for (int factor = 2; factor < 12; factor++) {
+        for (int factor = 2; factor < 8; factor++) {
             while (unfactored > 1 && unfactored%factor == 0)
                 unfactored /= factor;
         }
-        if (unfactored == 1)
+        if (unfactored == 1 || unfactored == 11 || unfactored == 13)
             return minimum;
         minimum++;
     }
