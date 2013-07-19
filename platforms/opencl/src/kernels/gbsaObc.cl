@@ -424,6 +424,7 @@ __kernel void computeGBSAForce1(
             localData[localAtomIndex].z = posq1.z;
             localData[localAtomIndex].q = posq1.w;
             localData[get_local_id(0)].bornRadius = bornRadius1;
+            SYNC_WARPS;
             for (unsigned int j = 0; j < TILE_SIZE; j++) {
                 if (atom1 < NUM_ATOMS && y*TILE_SIZE+j < NUM_ATOMS) {
                     real4 posq2 = (real4) (localData[tbx+j].x, localData[tbx+j].y, localData[tbx+j].z, localData[tbx+j].q);
@@ -454,8 +455,8 @@ __kernel void computeGBSAForce1(
 #ifdef USE_CUTOFF
                     }
 #endif
-                SYNC_WARPS;
                 }
+                SYNC_WARPS;
             }
         }
         else {
@@ -472,6 +473,7 @@ __kernel void computeGBSAForce1(
             localData[get_local_id(0)].fy = 0.0f;
             localData[get_local_id(0)].fz = 0.0f;
             localData[get_local_id(0)].fw = 0.0f;
+            SYNC_WARPS;
             unsigned int tj = tgx;
             for (j = 0; j < TILE_SIZE; j++) {
                 if (atom1 < NUM_ATOMS && y*TILE_SIZE+tj < NUM_ATOMS) {
@@ -627,6 +629,7 @@ __kernel void computeGBSAForce1(
                 localData[get_local_id(0)].fz = 0.0f;
                 localData[get_local_id(0)].fw = 0.0f;
             }
+            SYNC_WARPS;
 #ifdef USE_PERIODIC
             if (singlePeriodicCopy) {
                 // The box is small enough that we can just translate all the atoms into a single periodic

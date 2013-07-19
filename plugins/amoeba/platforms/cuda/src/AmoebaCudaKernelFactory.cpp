@@ -33,7 +33,7 @@
 
 using namespace OpenMM;
 
-extern "C" void registerPlatforms() {
+extern "C" OPENMM_EXPORT void registerPlatforms() {
 }
 
 extern "C" OPENMM_EXPORT void registerKernelFactories() {
