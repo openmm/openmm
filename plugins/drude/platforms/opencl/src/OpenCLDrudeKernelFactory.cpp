@@ -34,10 +34,10 @@
 
 using namespace OpenMM;
 
-extern "C" void registerPlatforms() {
+extern "C" OPENMM_EXPORT void registerPlatforms() {
 }
 
-extern "C" void registerKernelFactories() {
+extern "C" OPENMM_EXPORT void registerKernelFactories() {
     try {
         Platform& platform = Platform::getPlatformByName("OpenCL");
         OpenCLDrudeKernelFactory* factory = new OpenCLDrudeKernelFactory();

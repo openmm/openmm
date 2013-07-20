@@ -81,7 +81,7 @@ OpenCLNonbondedUtilities::OpenCLNonbondedUtilities(OpenCLContext& context) : con
     }
     else {
         numForceThreadBlocks = context.getNumThreadBlocks();
-        forceThreadBlockSize = OpenCLContext::ThreadBlockSize;
+        forceThreadBlockSize = (context.getSIMDWidth() >= 32 ? OpenCLContext::ThreadBlockSize : 32);
         if (context.getSupports64BitGlobalAtomics()) {
             // Even though using longForceBuffer, still need a single forceBuffer for the reduceForces kernel to convert the long results into float4 which will be used by later kernels.
             numForceBuffers = 1;

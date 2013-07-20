@@ -124,6 +124,10 @@ void testPME() {
 
 int main(int argc, char* argv[]) {
     try {
+        if (!CpuCalcPmeReciprocalForceKernel::isProcessorSupported()) {
+            cout << "CPU is not supported.  Exiting." << endl;
+            return 0;
+        }
         testPME();
     }
     catch(const exception& e) {

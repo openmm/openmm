@@ -28,16 +28,16 @@
 
 #include "OpenCLRpmdKernelFactory.h"
 #include "OpenCLRpmdKernels.h"
-#include "openmm/internal/windowsExport.h"
+#include "openmm/internal/windowsExportRpmd.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/OpenMMException.h"
 
 using namespace OpenMM;
 
-extern "C" void registerPlatforms() {
+extern "C" OPENMM_EXPORT void registerPlatforms() {
 }
 
-extern "C" void registerKernelFactories() {
+extern "C" OPENMM_EXPORT void registerKernelFactories() {
     try {
         Platform& platform = Platform::getPlatformByName("OpenCL");
         OpenCLRpmdKernelFactory* factory = new OpenCLRpmdKernelFactory();

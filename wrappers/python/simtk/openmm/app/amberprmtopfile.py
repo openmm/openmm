@@ -41,10 +41,25 @@ import simtk.openmm as mm
 
 # Enumerated values for implicit solvent model
 
-HCT = object()
-OBC1 = object()
-OBC2 = object()
-GBn = object()
+class HCT(object):
+    def __repr__(self):
+        return 'HCT'
+HCT = HCT()
+
+class OBC1(object):
+    def __repr__(self):
+        return 'OBC1'
+OBC1 = OBC1()
+
+class OBC2(object):
+    def __repr__(self):
+        return 'OBC2'
+OBC2 = OBC2()
+
+class GBn(object):
+    def __repr__(self):
+        return 'GBn'
+GBn = GBn()
 
 class AmberPrmtopFile(object):
     """AmberPrmtopFile parses an AMBER prmtop file and constructs a Topology and (optionally) an OpenMM System from it."""

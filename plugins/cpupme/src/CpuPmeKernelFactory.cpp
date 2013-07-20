@@ -32,10 +32,10 @@
 
 using namespace OpenMM;
 
-extern "C" void registerPlatforms() {
+extern "C" OPENMM_EXPORT_PME void registerPlatforms() {
 }
 
-extern "C" void registerKernelFactories() {
+extern "C" OPENMM_EXPORT_PME void registerKernelFactories() {
     if (CpuCalcPmeReciprocalForceKernel::isProcessorSupported()) {
         CpuPmeKernelFactory* factory = new CpuPmeKernelFactory();
         for (int i = 0; i < Platform::getNumPlatforms(); i++)
