@@ -67,7 +67,7 @@ class StateDataReporter(object):
         self._reportInterval = reportInterval
         self._openedFile = isinstance(file, str)
         if self._openedFile:
-            self._out = open(file, 'w')
+            self._out = open(file, 'w', 0)
         else:
             self._out = file
         self._step = step
