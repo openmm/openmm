@@ -20,6 +20,5 @@ find_library (FFTW_THREADS_LIBRARY NAMES fftw3f_threads)
 # all listed variables are TRUE
 include (FindPackageHandleStandardArgs)
 find_package_handle_standard_args (FFTW DEFAULT_MSG FFTW_LIBRARY FFTW_INCLUDES)
-find_package_handle_standard_args (FFTW_THREADS DEFAULT_MSG FFTW_THREADS_LIBRARY FFTW_INCLUDES)
 
 mark_as_advanced (FFTW_LIBRARY FFTW_THREADS_LIBRARY FFTW_INCLUDES)

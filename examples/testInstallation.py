@@ -30,6 +30,7 @@ for i in range(numPlatforms):
         simulation = Simulation(pdb.topology, system, integrator, platform)
         simulation.context.setPositions(pdb.positions)
         forces[i] = simulation.context.getState(getForces=True).getForces()
+        del simulation
         print "- Successfully computed forces"
     except:
         print "- Error computing forces with", platform.getName(), "platform"

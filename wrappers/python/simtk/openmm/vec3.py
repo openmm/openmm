@@ -40,6 +40,10 @@ class Vec3(tuple):
         """Create a new Vec3."""
         return tuple.__new__(cls, (x, y, z))
 
+    def __getnewargs__(self):
+        "Support for pickle protocol 2: http://docs.python.org/2/library/pickle.html#pickling-and-unpickling-normal-class-instances"
+        return self[0], self[1], self[2]
+
     def __add__(self, other):
         """Add two Vec3s."""
         return Vec3(self[0]+other[0], self[1]+other[1], self[2]+other[2])
