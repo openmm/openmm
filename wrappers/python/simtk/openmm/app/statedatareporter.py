@@ -109,6 +109,7 @@ class StateDataReporter(object):
             self._initializeConstants(simulation)
             headers = self._constructHeaders()
             print >>self._out, '#"%s"' % ('"'+self._separator+'"').join(headers)
+            self._out.flush()
             self._hasInitialized = True
 
         # Check for errors.
@@ -119,6 +120,7 @@ class StateDataReporter(object):
 
         # Write the values.
         print >>self._out, self._separator.join(str(v) for v in values)
+        self._out.flush()
 
     def _constructReportValues(self, simulation, state):
         """Query the simulation for the current state of our observables of interest.
