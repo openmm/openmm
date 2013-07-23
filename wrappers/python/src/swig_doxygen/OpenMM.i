@@ -69,7 +69,7 @@ using namespace OpenMM;
   # actual classes, and not the swigregistration methods, which have already
   # been called, and are now unneeded by the user code, and only pollute the
   # namespace
-  __all__ = [k for k in locals().keys() if not k.endswith('_swigregister')]
+  __all__ = [k for k in locals().keys() if not (k.endswith('_swigregister') or k.startswith('_'))]
 %}
 
 /*
