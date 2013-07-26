@@ -47,6 +47,7 @@
 #include <iostream>
 #include <sstream>
 #include <typeinfo>
+#include <unistd.h>
 #include <cudaProfiler.h>
 
 
@@ -397,7 +398,9 @@ CUmodule CudaContext::createModule(const string source, const map<string, string
     // Write out the source to a temporary file.
     
     stringstream tempFileName;
-    tempFileName << "openmmTempKernel" << this; // Include a pointer to this context as part of the filename to avoid collisions.
+    // include the pointer to this context and the process id to avoid
+    // a name collision
+    tempFileName << "openmmTempKernel_" << this << "_" << getpid();
     string inputFile = (tempDir+tempFileName.str()+".cu");
     string outputFile = (tempDir+tempFileName.str()+".ptx");
     string logFile = (tempDir+tempFileName.str()+".log");
