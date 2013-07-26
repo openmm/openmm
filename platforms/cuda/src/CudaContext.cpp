@@ -402,7 +402,7 @@ CUmodule CudaContext::createModule(const string source, const map<string, string
     stringstream tempFileName;
 #ifdef WIN32
     // on windows include the address of the CudaContext in the temporary file name
-    tempFileName << "openmmTempKernel_" << this << "_" << getpid();
+    tempFileName << "openmmTempKernel_" << this;
 #else
     // on other platforms include the address of the CudaContext and the process id
     tempFileName << "openmmTempKernel_" << this << "_" << getpid();
