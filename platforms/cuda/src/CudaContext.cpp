@@ -49,6 +49,9 @@
 #include <typeinfo>
 #include <cudaProfiler.h>
 
+#ifndef WIN32
+#include <unistd.h>
+#endif
 
 #define CHECK_RESULT(result) CHECK_RESULT2(result, errorMessage);
 #define CHECK_RESULT2(result, prefix) \
@@ -397,7 +400,13 @@ CUmodule CudaContext::createModule(const string source, const map<string, string
     // Write out the source to a temporary file.
     
     stringstream tempFileName;
-    tempFileName << "openmmTempKernel" << this; // Include a pointer to this context as part of the filename to avoid collisions.
+#ifdef WIN32
+    // on windows include the address of the CudaContext in the temporary file name
+    tempFileName << "openmmTempKernel_" << this;
+#else
+    // on other platforms include the address of the CudaContext and the process id
+    tempFileName << "openmmTempKernel_" << this << "_" << getpid();
+#endif
     string inputFile = (tempDir+tempFileName.str()+".cu");
     string outputFile = (tempDir+tempFileName.str()+".ptx");
     string logFile = (tempDir+tempFileName.str()+".log");
