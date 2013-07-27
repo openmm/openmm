@@ -176,6 +176,8 @@ class Modeller(object):
 
         Parameters:
          - model (string='tip3p') the water model to convert to.  Supported values are 'tip3p', 'spce', 'tip4pew', and 'tip5p'.
+        
+        @deprecated Use addExtraParticles() instead.  It performs the same function but in a more general way.
         """
         if model in ('tip3p', 'spce'):
             sites = 3
@@ -517,7 +519,7 @@ class Modeller(object):
                     terminal = hydrogen.attrib['terminal']
                 data.hydrogens.append(Modeller._Hydrogen(hydrogen.attrib['name'], hydrogen.attrib['parent'], maxph, atomVariants, terminal))
 
-    def addHydrogens(self, forcefield, pH=7.0, variants=None):
+    def addHydrogens(self, forcefield, pH=7.0, variants=None, platform=None):
         """Add missing hydrogens to the model.
 
         Some residues can exist in multiple forms depending on the pH and properties of the local environment.  These
@@ -564,6 +566,8 @@ class Modeller(object):
          - variants (list=None) an optional list of variants to use.  If this is specified, its length must equal the number
            of residues in the model.  variants[i] is the name of the variant to use for residue i (indexed starting at 0).
            If an element is None, the standard rules will be followed to select a variant for that residue.
+         - platform (Platform=None) the Platform to use when computing the hydrogen atom positions.  If this is None,
+           the default Platform will be used.
         Returns: a list of what variant was actually selected for each residue, in the same format as the variants parameter
         """
         # Check the list of variants.
@@ -757,7 +761,10 @@ class Modeller(object):
             if atoms[i].element != elem.hydrogen:
                 # This is a heavy atom, so make it immobile.
                 system.setParticleMass(i, 0)
-        context = Context(system, VerletIntegrator(0.0))
+        if platform is None:
+            context = Context(system, VerletIntegrator(0.0))
+        else:
+            context = Context(system, VerletIntegrator(0.0), platform)
         context.setPositions(newPositions)
         LocalEnergyMinimizer.minimize(context)
         self.topology = newTopology
