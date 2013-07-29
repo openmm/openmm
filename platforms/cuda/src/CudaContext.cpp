@@ -44,6 +44,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <fstream>
+#include <locale>
 #include <iostream>
 #include <sstream>
 #include <typeinfo>
@@ -396,22 +397,25 @@ CUmodule CudaContext::createModule(const string source, const map<string, string
     if (!defines.empty())
         src << endl;
     src << source << endl;
-    
-    // Write out the source to a temporary file.
-    
+
+    locale loc;  // the "C" locale
+    const collate<char>& coll = use_facet<collate<char> >(loc);
     stringstream tempFileName;
-    tempFileName << "openmmTempKernel" << this; // Include a pointer to this context as part of the filename to avoid collisions.
+    // Write out the source to a temporary file.
+    string srcString = src.str();
+    tempFileName << "openmmTempKernel" << coll.hash(srcString.data(), srcString.data() + srcString.length());
+    // Include a pointer to this context as part of the filename to avoid collisions.
+    tempFileName << this;
+
 #ifdef WIN32
     tempFileName << "_" << GetCurrentProcessId();
 #else
     tempFileName << "_" << getpid();
 #endif
+
     string inputFile = (tempDir+tempFileName.str()+".cu");
     string outputFile = (tempDir+tempFileName.str()+".ptx");
     string logFile = (tempDir+tempFileName.str()+".log");
-    ofstream out(inputFile.c_str());
-    out << src.str();
-    out.close();
     string bits = intToString(8*sizeof(void*));
 #ifdef WIN32
 #ifdef _DEBUG
@@ -419,11 +423,21 @@ CUmodule CudaContext::createModule(const string source, const map<string, string
 #else
     string command = "\""+compiler+"\" --ptx -lineinfo --machine "+bits+" -arch=sm_"+gpuArchitecture+" -o "+outputFile+" "+options+" "+inputFile+" 2> "+logFile;
 #endif
-    int res = compileInWindows(command);
 #else
     string command = "\""+compiler+"\" --ptx --machine "+bits+" -arch=sm_"+gpuArchitecture+" -o \""+outputFile+"\" "+options+" \""+inputFile+"\" 2> \""+logFile+"\"";
+#endif
+
+    ofstream out(inputFile.c_str());
+    // Include the compilation command at the top of the file
+    out << "//" << command << endl << src.str();
+    out.close();
+
+#ifdef WIN32
+    int res = compileInWindows(command);
+#else
     int res = std::system(command.c_str());
 #endif
+
     try {
         if (res != 0) {
             // Load the error log.
@@ -439,7 +453,19 @@ CUmodule CudaContext::createModule(const string source, const map<string, string
                 }
                 log.close();
             }
-            throw OpenMMException(error.str());
+
+
+	    cout << error.str()  << endl;
+	    while (1) {
+	      ifstream ofile(outputFile.c_str());
+	      cout << "Sleeping..." << endl;;
+	      sleep(1);
+	      cout << endl;
+	      if (ofile) {
+		cout << "Found output!" << endl;
+		break;
+	      }
+	    }
         }
         CUmodule module;
         CUresult result = cuModuleLoad(&module, outputFile.c_str());
@@ -449,7 +475,7 @@ CUmodule CudaContext::createModule(const string source, const map<string, string
             throw OpenMMException(m.str());
         }
         remove(inputFile.c_str());
-        remove(outputFile.c_str());
+        //remove(outputFile.c_str());
         remove(logFile.c_str());
         return module;
     }
