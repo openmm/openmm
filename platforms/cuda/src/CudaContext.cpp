@@ -35,6 +35,7 @@
 #include "CudaIntegrationUtilities.h"
 #include "CudaKernelSources.h"
 #include "CudaNonbondedUtilities.h"
+#include "SHA1.h"
 #include "hilbert.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/Platform.h"
@@ -44,6 +45,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <sstream>
 #include <typeinfo>
@@ -397,6 +399,23 @@ CUmodule CudaContext::createModule(const string source, const map<string, string
         src << endl;
     src << source << endl;
     
+    // See whether we already have PTX for this kernel cached.
+    
+    CSHA1 sha1;
+    sha1.Update((const UINT_8*) src.str().c_str(), src.str().size());
+    sha1.Final();
+    UINT_8 hash[20];
+    sha1.GetHash(hash);
+    stringstream cacheFile;
+    cacheFile << tempDir;
+    cacheFile.flags(ios::hex);
+    for (int i = 0; i < 20; i++)
+        cacheFile << setw(2) << setfill('0') << (int) hash[i];
+    cacheFile << '_' << gpuArchitecture;
+    CUmodule module;
+    if (cuModuleLoad(&module, cacheFile.str().c_str()) == CUDA_SUCCESS)
+        return module;
+    
     // Write out the source to a temporary file.
     
     stringstream tempFileName;
@@ -441,7 +460,6 @@ CUmodule CudaContext::createModule(const string source, const map<string, string
             }
             throw OpenMMException(error.str());
         }
-        CUmodule module;
         CUresult result = cuModuleLoad(&module, outputFile.c_str());
         if (result != CUDA_SUCCESS) {
             std::stringstream m;
@@ -449,7 +467,8 @@ CUmodule CudaContext::createModule(const string source, const map<string, string
             throw OpenMMException(m.str());
         }
         remove(inputFile.c_str());
-        remove(outputFile.c_str());
+        if (rename(outputFile.c_str(), cacheFile.str().c_str()) != 0)
+            remove(outputFile.c_str());
         remove(logFile.c_str());
         return module;
     }
