@@ -2,7 +2,7 @@
 /* Convert python list of tuples to C++ std::vector of Vec3 objects */
 %typemap(in) std::vector<Vec3>& (std::vector<OpenMM::Vec3> vVec) {
   // typemap -- %typemap(in) std::vector<Vec3>& (std::vector<OpenMM::Vec3> vVec)
-  int i, pLength;
+  int i, pLength, itemLength;
   double x, y, z;
   PyObject *o;
   PyObject *o1;
@@ -10,6 +10,11 @@
   pLength=(int)PySequence_Length($input);
   for (i=0; i<pLength; i++) {
     o=PySequence_GetItem($input, i);
+    itemLength = (int) PySequence_Length(o);
+    if (itemLength != 3) {
+      PyErr_SetString(PyExc_TypeError, "Item must have length 3");
+      return NULL;
+    }
 
     o1=PySequence_GetItem(o, 0);
     x=PyFloat_AsDouble(o1);
