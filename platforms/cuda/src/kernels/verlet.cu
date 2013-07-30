@@ -2,13 +2,13 @@
  * Perform the first step of Verlet integration.
  */
 
-extern "C" __global__ void integrateVerletPart1(const mixed2* __restrict__ dt, const real4* __restrict__ posq,
+extern "C" __global__ void integrateVerletPart1(int numAtoms, int paddedNumAtoms, const mixed2* __restrict__ dt, const real4* __restrict__ posq,
         const real4* __restrict__ posqCorrection, mixed4* __restrict__ velm, const long long* __restrict__ force, mixed4* __restrict__ posDelta) {
     const mixed2 stepSize = dt[0];
     const mixed dtPos = stepSize.y;
     const mixed dtVel = 0.5f*(stepSize.x+stepSize.y);
     const mixed scale = dtVel/(mixed) 0x100000000;
-    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_ATOMS; index += blockDim.x*gridDim.x) {
+    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < numAtoms; index += blockDim.x*gridDim.x) {
         mixed4 velocity = velm[index];
         if (velocity.w != 0.0) {
 #ifdef USE_MIXED_PRECISION
@@ -19,8 +19,8 @@ extern "C" __global__ void integrateVerletPart1(const mixed2* __restrict__ dt, c
             real4 pos = posq[index];
 #endif
             velocity.x += scale*force[index]*velocity.w;
-            velocity.y += scale*force[index+PADDED_NUM_ATOMS]*velocity.w;
-            velocity.z += scale*force[index+PADDED_NUM_ATOMS*2]*velocity.w;
+            velocity.y += scale*force[index+paddedNumAtoms]*velocity.w;
+            velocity.z += scale*force[index+paddedNumAtoms*2]*velocity.w;
             pos.x = velocity.x*dtPos;
             pos.y = velocity.y*dtPos;
             pos.z = velocity.z*dtPos;
@@ -34,7 +34,7 @@ extern "C" __global__ void integrateVerletPart1(const mixed2* __restrict__ dt, c
  * Perform the second step of Verlet integration.
  */
 
-extern "C" __global__ void integrateVerletPart2(mixed2* __restrict__ dt, real4* __restrict__ posq,
+extern "C" __global__ void integrateVerletPart2(int numAtoms, mixed2* __restrict__ dt, real4* __restrict__ posq,
         real4* __restrict__ posqCorrection, mixed4* __restrict__ velm, const mixed4* __restrict__ posDelta) {
     mixed2 stepSize = dt[0];
 #if __CUDA_ARCH__ >= 130
@@ -46,7 +46,7 @@ extern "C" __global__ void integrateVerletPart2(mixed2* __restrict__ dt, real4* 
     int index = blockIdx.x*blockDim.x+threadIdx.x;
     if (index == 0)
         dt[0].x = stepSize.y;
-    for (; index < NUM_ATOMS; index += blockDim.x*gridDim.x) {
+    for (; index < numAtoms; index += blockDim.x*gridDim.x) {
         mixed4 velocity = velm[index];
         if (velocity.w != 0.0) {
 #ifdef USE_MIXED_PRECISION
@@ -80,14 +80,14 @@ extern "C" __global__ void integrateVerletPart2(mixed2* __restrict__ dt, real4* 
  * Select the step size to use for the next step.
  */
 
-extern "C" __global__ void selectVerletStepSize(mixed maxStepSize, mixed errorTol, mixed2* __restrict__ dt, const mixed4* __restrict__ velm, const long long* __restrict__ force) {
+extern "C" __global__ void selectVerletStepSize(int numAtoms, int paddedNumAtoms, mixed maxStepSize, mixed errorTol, mixed2* __restrict__ dt, const mixed4* __restrict__ velm, const long long* __restrict__ force) {
     // Calculate the error.
 
     extern __shared__ mixed error[];
     mixed err = 0.0f;
     const mixed scale = RECIP((mixed) 0x100000000);
-    for (int index = threadIdx.x; index < NUM_ATOMS; index += blockDim.x*gridDim.x) {
-        mixed3 f = make_mixed3(scale*force[index], scale*force[index+PADDED_NUM_ATOMS], scale*force[index+PADDED_NUM_ATOMS*2]);
+    for (int index = threadIdx.x; index < numAtoms; index += blockDim.x*gridDim.x) {
+        mixed3 f = make_mixed3(scale*force[index], scale*force[index+paddedNumAtoms], scale*force[index+paddedNumAtoms*2]);
         mixed invMass = velm[index].w;
         err += (f.x*f.x + f.y*f.y + f.z*f.z)*invMass;
     }
@@ -102,7 +102,7 @@ extern "C" __global__ void selectVerletStepSize(mixed maxStepSize, mixed errorTo
         __syncthreads();
     }
     if (threadIdx.x == 0) {
-        mixed totalError = SQRT(error[0]/(NUM_ATOMS*3));
+        mixed totalError = SQRT(error[0]/(numAtoms*3));
         mixed newStepSize = SQRT(errorTol/totalError);
         mixed oldStepSize = dt[0].y;
         if (oldStepSize > 0.0f)
