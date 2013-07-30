@@ -92,10 +92,14 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     }
     else
         throw OpenMMException("Illegal value for CudaPrecision: "+precision);
+    char* cacheVariable = getenv("OPENMM_CACHE_DIR");
+    cacheDir = (cacheVariable == NULL ? tempDir : string(cacheVariable));
 #ifdef WIN32
     this->tempDir = tempDir+"\\";
+    cacheDir = cacheDir+"\\";
 #else
     this->tempDir = tempDir+"/";
+    cacheDir = cacheDir+"/";
 #endif
     contextIndex = platformData.contexts.size();
     int numDevices;
@@ -408,7 +412,7 @@ CUmodule CudaContext::createModule(const string source, const map<string, string
     UINT_8 hash[20];
     sha1.GetHash(hash);
     stringstream cacheFile;
-    cacheFile << tempDir;
+    cacheFile << cacheDir;
     cacheFile.flags(ios::hex);
     for (int i = 0; i < 20; i++)
         cacheFile << setw(2) << setfill('0') << (int) hash[i];
