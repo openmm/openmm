@@ -352,6 +352,7 @@ static bool compileInWindows(const string &command) {
 #endif
 
 CUmodule CudaContext::createModule(const string source, const map<string, string>& defines, const char* optimizationFlags) {
+    string bits = intToString(8*sizeof(void*));
     string options = (optimizationFlags == NULL ? defaultOptimizationOptions : string(optimizationFlags));
     stringstream src;
     if (!options.empty())
@@ -411,7 +412,7 @@ CUmodule CudaContext::createModule(const string source, const map<string, string
     cacheFile.flags(ios::hex);
     for (int i = 0; i < 20; i++)
         cacheFile << setw(2) << setfill('0') << (int) hash[i];
-    cacheFile << '_' << gpuArchitecture;
+    cacheFile << '_' << gpuArchitecture << '_' << bits;
     CUmodule module;
     if (cuModuleLoad(&module, cacheFile.str().c_str()) == CUDA_SUCCESS)
         return module;
@@ -431,7 +432,6 @@ CUmodule CudaContext::createModule(const string source, const map<string, string
     ofstream out(inputFile.c_str());
     out << src.str();
     out.close();
-    string bits = intToString(8*sizeof(void*));
 #ifdef WIN32
 #ifdef _DEBUG
     string command = "\""+compiler+"\" --ptx -G -g --machine "+bits+" -arch=sm_"+gpuArchitecture+" -o "+outputFile+" "+options+" "+inputFile+" 2> "+logFile;
