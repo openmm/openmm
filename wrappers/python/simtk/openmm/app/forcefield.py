@@ -465,9 +465,7 @@ def _countResidueAtoms(elements):
     """Count the number of atoms of each element in a residue."""
     counts = {}
     for element in elements:
-        if element is None:
-            pass # This residue contains "atoms" (probably virtual sites) that should match any element
-        elif element in counts:
+        if element in counts:
             counts[element] += 1
         else:
             counts[element] = 1
@@ -479,7 +477,8 @@ def _createResidueSignature(elements):
     counts = _countResidueAtoms(elements)
     sig = []
     for c in counts:
-        sig.append((c, counts[c]))
+        if c is not None:
+            sig.append((c, counts[c]))
     sig.sort(key=lambda x: -x[0].mass)
 
     # Convert it to a string.
@@ -549,7 +548,7 @@ def _findMatchErrors(forcefield, res):
     """Try to guess why a residue failed to match any template and return an error message."""
     residueCounts = _countResidueAtoms([atom.element for atom in res.atoms()])
     numResidueAtoms = sum(residueCounts.itervalues())
-    numResidueHeavyAtoms = sum(residueCounts[element] for element in residueCounts if element.symbol != 'H')
+    numResidueHeavyAtoms = sum(residueCounts[element] for element in residueCounts if element not in (None, elem.hydrogen))
     
     # Loop over templates and see how closely each one might match.
     
@@ -568,7 +567,7 @@ def _findMatchErrors(forcefield, res):
         # If there are too many missing atoms, discard this template.
         
         numTemplateAtoms = sum(templateCounts.itervalues())
-        numTemplateHeavyAtoms = sum(templateCounts[element] for element in templateCounts if element.symbol != 'H')
+        numTemplateHeavyAtoms = sum(templateCounts[element] for element in templateCounts if element not in (None, elem.hydrogen))
         if numTemplateAtoms > numBestMatchAtoms:
             continue
         if numTemplateHeavyAtoms > numBestMatchHeavyAtoms:
@@ -586,6 +585,7 @@ def _findMatchErrors(forcefield, res):
         bestMatchName = templateName
         numBestMatchAtoms = numTemplateAtoms
         numBestMatchHeavyAtoms = numTemplateHeavyAtoms
+        numBestMatchExtraParticles = len([atom for atom in template.atoms if atom.element is None])
     
     # Return an appropriate error message.
     
@@ -596,7 +596,11 @@ def _findMatchErrors(forcefield, res):
         return 'The set of atoms matches %s, but the bonds are different.' % bestMatchName
     if bestMatchName is not None:
         if numBestMatchHeavyAtoms == numResidueHeavyAtoms:
-            return 'The set of atoms is similar to %s, but it is missing %d hydrogen atoms.' % (bestMatchName, numBestMatchAtoms-numResidueAtoms)
+            numResidueExtraParticles = len([atom for atom in res.atoms() if atom.element is None])
+            if numResidueExtraParticles == 0 and numBestMatchExtraParticles == 0:
+                return 'The set of atoms is similar to %s, but it is missing %d hydrogen atoms.' % (bestMatchName, numBestMatchAtoms-numResidueAtoms)
+            if numBestMatchExtraParticles-numResidueExtraParticles == numBestMatchAtoms-numResidueAtoms:
+                return 'The set of atoms is similar to %s, but it is missing %d extra particles.  You can add them with Modeller.addExtraParticles().' % (bestMatchName, numBestMatchAtoms-numResidueAtoms)
         return 'The set of atoms is similar to %s, but it is missing %d atoms.' % (bestMatchName, numBestMatchAtoms-numResidueAtoms)
     return 'This might mean your input topology is missing some atoms or bonds, or possibly that you are using the wrong force field.'
 
