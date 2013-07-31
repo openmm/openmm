@@ -323,7 +323,7 @@ class ForceField(object):
                             template = t
                             break
                 if matches is None:
-                    raise ValueError('No template found for residue %d (%s).  This might mean your input topology is missing some atoms or bonds, or possibly that you are using the wrong force field.' % (res.index+1, res.name))
+                    raise ValueError('No template found for residue %d (%s).  %s' % (res.index+1, res.name, _findMatchErrors(self, res)))
                 for atom, match in zip(res.atoms(), matches):
                     data.atomType[atom] = template.atoms[match].type
                     for site in template.virtualSites:
@@ -461,19 +461,24 @@ class ForceField(object):
         return sys
 
 
-def _createResidueSignature(elements):
-    """Create a signature for a residue based on the elements of the atoms it contains."""
+def _countResidueAtoms(elements):
+    """Count the number of atoms of each element in a residue."""
     counts = {}
     for element in elements:
-        if element is None:
-            pass # This residue contains "atoms" (probably virtual sites) that should match any element
-        elif element in counts:
+        if element in counts:
             counts[element] += 1
         else:
             counts[element] = 1
+    return counts
+
+
+def _createResidueSignature(elements):
+    """Create a signature for a residue based on the elements of the atoms it contains."""
+    counts = _countResidueAtoms(elements)
     sig = []
     for c in counts:
-        sig.append((c, counts[c]))
+        if c is not None:
+            sig.append((c, counts[c]))
     sig.sort(key=lambda x: -x[0].mass)
 
     # Convert it to a string.
@@ -537,6 +542,67 @@ def _findAtomMatches(atoms, template, bondedTo, externalBonds, matches, hasMatch
                     return True
                 hasMatch[i] = False
     return False
+
+
+def _findMatchErrors(forcefield, res):
+    """Try to guess why a residue failed to match any template and return an error message."""
+    residueCounts = _countResidueAtoms([atom.element for atom in res.atoms()])
+    numResidueAtoms = sum(residueCounts.itervalues())
+    numResidueHeavyAtoms = sum(residueCounts[element] for element in residueCounts if element not in (None, elem.hydrogen))
+    
+    # Loop over templates and see how closely each one might match.
+    
+    bestMatchName = None
+    numBestMatchAtoms = 3*numResidueAtoms
+    numBestMatchHeavyAtoms = 2*numResidueHeavyAtoms
+    for templateName in forcefield._templates:
+        template = forcefield._templates[templateName]
+        templateCounts = _countResidueAtoms([atom.element for atom in template.atoms])
+        
+        # Does the residue have any atoms that clearly aren't in the template?
+        
+        if any(element not in templateCounts or templateCounts[element] < residueCounts[element] for element in residueCounts):
+            continue
+        
+        # If there are too many missing atoms, discard this template.
+        
+        numTemplateAtoms = sum(templateCounts.itervalues())
+        numTemplateHeavyAtoms = sum(templateCounts[element] for element in templateCounts if element not in (None, elem.hydrogen))
+        if numTemplateAtoms > numBestMatchAtoms:
+            continue
+        if numTemplateHeavyAtoms > numBestMatchHeavyAtoms:
+            continue
+        
+        # If this template has the same number of missing atoms as our previous best one, look at the name
+        # to decide which one to use.
+        
+        if numTemplateAtoms == numBestMatchAtoms:
+            if bestMatchName == res.name or res.name not in templateName:
+                continue
+        
+        # Accept this as our new best match.
+        
+        bestMatchName = templateName
+        numBestMatchAtoms = numTemplateAtoms
+        numBestMatchHeavyAtoms = numTemplateHeavyAtoms
+        numBestMatchExtraParticles = len([atom for atom in template.atoms if atom.element is None])
+    
+    # Return an appropriate error message.
+    
+    if numBestMatchAtoms == numResidueAtoms:
+        chainLength = len(list(res.chain.residues()))
+        if chainLength > 1 and (res.index == 0 or res.index == chainLength-1):
+            return 'The set of atoms matches %s, but the bonds are different.  Perhaps the chain is missing a terminal group?' % bestMatchName
+        return 'The set of atoms matches %s, but the bonds are different.' % bestMatchName
+    if bestMatchName is not None:
+        if numBestMatchHeavyAtoms == numResidueHeavyAtoms:
+            numResidueExtraParticles = len([atom for atom in res.atoms() if atom.element is None])
+            if numResidueExtraParticles == 0 and numBestMatchExtraParticles == 0:
+                return 'The set of atoms is similar to %s, but it is missing %d hydrogen atoms.' % (bestMatchName, numBestMatchAtoms-numResidueAtoms)
+            if numBestMatchExtraParticles-numResidueExtraParticles == numBestMatchAtoms-numResidueAtoms:
+                return 'The set of atoms is similar to %s, but it is missing %d extra particles.  You can add them with Modeller.addExtraParticles().' % (bestMatchName, numBestMatchAtoms-numResidueAtoms)
+        return 'The set of atoms is similar to %s, but it is missing %d atoms.' % (bestMatchName, numBestMatchAtoms-numResidueAtoms)
+    return 'This might mean your input topology is missing some atoms or bonds, or possibly that you are using the wrong force field.'
 
 
 # The following classes are generators that know how to create Force subclasses and add them to a System that is being
