@@ -2,16 +2,16 @@
  * Perform the first step of Brownian integration.
  */
 
-extern "C" __global__ void integrateBrownianPart1(mixed tauDeltaT, mixed noiseAmplitude, const long long* __restrict__ force,
+extern "C" __global__ void integrateBrownianPart1(int numAtoms, int paddedNumAtoms, mixed tauDeltaT, mixed noiseAmplitude, const long long* __restrict__ force,
         mixed4* __restrict__ posDelta, const mixed4* __restrict__ velm, const float4* __restrict__ random, unsigned int randomIndex) {
     randomIndex += blockIdx.x*blockDim.x+threadIdx.x;
     const mixed fscale = tauDeltaT/(mixed) 0x100000000;
-    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_ATOMS; index += blockDim.x*gridDim.x) {
+    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < numAtoms; index += blockDim.x*gridDim.x) {
         mixed invMass = velm[index].w;
         if (invMass != 0) {
             posDelta[index].x = fscale*invMass*force[index] + noiseAmplitude*SQRT(invMass)*random[randomIndex].x;
-            posDelta[index].y = fscale*invMass*force[index+PADDED_NUM_ATOMS] + noiseAmplitude*SQRT(invMass)*random[randomIndex].y;
-            posDelta[index].z = fscale*invMass*force[index+PADDED_NUM_ATOMS*2] + noiseAmplitude*SQRT(invMass)*random[randomIndex].z;
+            posDelta[index].y = fscale*invMass*force[index+paddedNumAtoms] + noiseAmplitude*SQRT(invMass)*random[randomIndex].y;
+            posDelta[index].z = fscale*invMass*force[index+paddedNumAtoms*2] + noiseAmplitude*SQRT(invMass)*random[randomIndex].z;
         }
         randomIndex += blockDim.x*gridDim.x;
     }
@@ -21,9 +21,9 @@ extern "C" __global__ void integrateBrownianPart1(mixed tauDeltaT, mixed noiseAm
  * Perform the second step of Brownian integration.
  */
 
-extern "C" __global__ void integrateBrownianPart2(mixed deltaT, real4* posq, real4* __restrict__ posqCorrection, mixed4* velm, const mixed4* __restrict__ posDelta) {
+extern "C" __global__ void integrateBrownianPart2(int numAtoms, mixed deltaT, real4* posq, real4* __restrict__ posqCorrection, mixed4* velm, const mixed4* __restrict__ posDelta) {
     const mixed oneOverDeltaT = RECIP(deltaT);
-    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_ATOMS; index += blockDim.x*gridDim.x) {
+    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < numAtoms; index += blockDim.x*gridDim.x) {
         if (velm[index].w != 0) {
             mixed4 delta = posDelta[index];
             velm[index].x = oneOverDeltaT*delta.x;

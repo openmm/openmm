@@ -515,7 +515,7 @@ private:
     int numAtomBlocks;
     int numThreadBlocks;
     bool useBlockingSync, useDoublePrecision, useMixedPrecision, contextIsValid, atomsWereReordered;
-    std::string compiler, tempDir, gpuArchitecture;
+    std::string compiler, tempDir, cacheDir, gpuArchitecture;
     float4 periodicBoxSizeFloat, invPeriodicBoxSizeFloat;
     double4 periodicBoxSize, invPeriodicBoxSize;
     std::string defaultOptimizationOptions;
