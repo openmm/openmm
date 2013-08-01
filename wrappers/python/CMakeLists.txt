@@ -36,7 +36,7 @@ execute_process(
   ERROR_QUIET
 )
 if(NOT rev_hash_str)
-  set(rev_hash_str "'Unknown'")
+  set(rev_hash_str "Unknown")
 endif()
 file(WRITE "${OPENMM_PYTHON_STAGING_DIR}/simtk/openmm/version.py" "git_revision = '${rev_hash_str}'\n")
 
