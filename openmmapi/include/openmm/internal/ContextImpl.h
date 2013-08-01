@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -250,9 +250,13 @@ public:
     void integratorDeleted() {
         integratorIsDeleted = true;
     }
+    /**
+     * This is the routine that actually computes the list of molecules returned by getMolecules().  Normally
+     * you should never call it.  It is exposed here because the same logic is useful to other classes too.
+     */
+    static std::vector<std::vector<int> > findMolecules(int numParticles, std::vector<std::vector<int> >& particleBonds);
 private:
     friend class Context;
-    static void tagParticlesInMolecule(int particle, int molecule, std::vector<int>& particleMolecule, std::vector<std::vector<int> >& particleBonds);
     Context& owner;
     const System& system;
     Integrator& integrator;
