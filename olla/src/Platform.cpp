@@ -279,8 +279,12 @@ const string& Platform::getDefaultPluginsDirectory() {
     return directory;
 }
 
+// Some bizarre preprocessor magic required to convert a macro to a string...
+#define STRING1(x) #x
+#define STRING(x) STRING1(x)
+
 const string& Platform::getOpenMMVersion() {
-    static const string version = "5.1";
+    static const string version = STRING(OPENMM_MAJOR_VERSION) "." STRING(OPENMM_MINOR_VERSION);
     return version;
 }
 
