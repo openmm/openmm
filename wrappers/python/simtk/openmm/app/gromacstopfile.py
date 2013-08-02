@@ -462,6 +462,24 @@ class GromacsTopFile(object):
         topologyAtoms = list(self.topology.atoms())
         exceptions = []
         fudgeQQ = float(self._defaults[4])
+        
+        # Build a lookup table to let us process dihedrals more quickly.
+        
+        dihedralTypeTable = {}
+        for key in self._dihedralTypes:
+            if key[1] != 'X' and key[2] != 'X':
+                if (key[1], key[2]) not in dihedralTypeTable:
+                    dihedralTypeTable[(key[1], key[2])] = []
+                dihedralTypeTable[(key[1], key[2])].append(key)
+                if (key[2], key[1]) not in dihedralTypeTable:
+                    dihedralTypeTable[(key[2], key[1])] = []
+                dihedralTypeTable[(key[2], key[1])].append(key)
+        wildcardDihedralTypes = []
+        for key in self._dihedralTypes:
+            if key[1] == 'X' or key[2] == 'X':
+                wildcardDihedralTypes.append(key)
+                for types in dihedralTypeTable.itervalues():
+                    types.append(key)
 
         # Loop over molecules and create the specified number of each type.
 
@@ -584,7 +602,11 @@ class GromacsTopFile(object):
                     else:
                         # Look for a matching dihedral type.
                         paramsList = None
-                        for key in self._dihedralTypes:
+                        if (types[1], types[2]) in dihedralTypeTable:
+                            dihedralTypes = dihedralTypeTable[(types[1], types[2])]
+                        else:
+                            dihedralTypes = wildcardDihedralTypes
+                        for key in dihedralTypes:
                             if all(a == b or a == 'X' for a, b in zip(key, types)) or all(a == b or a == 'X' for a, b in zip(key, reversedTypes)):
                                 paramsList = self._dihedralTypes[key]
                                 if 'X' not in key:
