@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2013 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -42,6 +42,7 @@
 #include "openmm/System.h"
 #include "openmm/VirtualSite.h"
 #include "CudaExpressionUtilities.h"
+#include "openmm/internal/ContextImpl.h"
 #include <algorithm>
 #include <cstdlib>
 #include <fstream>
@@ -647,15 +648,6 @@ void CudaContext::clearAutoclearBuffers() {
     }
 }
 
-void CudaContext::tagAtomsInMolecule(int atom, int molecule, vector<int>& atomMolecule, vector<vector<int> >& atomBonds) {
-    // Recursively tag atoms as belonging to a particular molecule.
-
-    atomMolecule[atom] = molecule;
-    for (int i = 0; i < (int) atomBonds[atom].size(); i++)
-        if (atomMolecule[atomBonds[atom][i]] == -1)
-            tagAtomsInMolecule(atomBonds[atom][i], molecule, atomMolecule, atomBonds);
-}
-
 /**
  * This class ensures that atom reordering doesn't break virtual sites.
  */
@@ -750,16 +742,14 @@ void CudaContext::findMoleculeGroups() {
             }
         }
 
-        // Now tag atoms by which molecule they belong to.
+        // Now identify atoms by which molecule they belong to.
 
-        vector<int> atomMolecule(numAtoms, -1);
-        int numMolecules = 0;
-        for (int i = 0; i < numAtoms; i++)
-            if (atomMolecule[i] == -1)
-                tagAtomsInMolecule(i, numMolecules++, atomMolecule, atomBonds);
-        vector<vector<int> > atomIndices(numMolecules);
-        for (int i = 0; i < numAtoms; i++)
-            atomIndices[atomMolecule[i]].push_back(i);
+        vector<vector<int> > atomIndices = ContextImpl::findMolecules(numAtoms, atomBonds);
+        int numMolecules = atomIndices.size();
+        vector<int> atomMolecule(numAtoms);
+        for (int i = 0; i < (int) atomIndices.size(); i++)
+            for (int j = 0; j < (int) atomIndices[i].size(); j++)
+                atomMolecule[atomIndices[i][j]] = i;
 
         // Construct a description of each molecule.
 
