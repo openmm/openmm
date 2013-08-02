@@ -132,6 +132,8 @@
 #include <stdlib.h>
 #endif
 
+#include "openmm/internal/windowsExport.h"
+
 // You can define the endian mode in your files without modifying the SHA-1
 // source files. Just #define SHA1_LITTLE_ENDIAN or #define SHA1_BIG_ENDIAN
 // in your files, before including the SHA1.h header file. If you don't
@@ -218,7 +220,7 @@ typedef union
 	UINT_32 l[16];
 } SHA1_WORKSPACE_BLOCK;
 
-class CSHA1
+class OPENMM_EXPORT CSHA1
 {
 public:
 #ifdef SHA1_UTILITY_FUNCTIONS
