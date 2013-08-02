@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -288,26 +288,54 @@ const vector<vector<int> >& ContextImpl::getMolecules() const {
         particleBonds[bonds[i].second].push_back(bonds[i].first);
     }
 
-    // Now tag particles by which molecule they belong to.
+    // Now identify particles by which molecule they belong to.
 
-    vector<int> particleMolecule(numParticles, -1);
-    int numMolecules = 0;
-    for (int i = 0; i < numParticles; i++)
-        if (particleMolecule[i] == -1)
-            tagParticlesInMolecule(i, numMolecules++, particleMolecule, particleBonds);
-    molecules.resize(numMolecules);
-    for (int i = 0; i < numParticles; i++)
-        molecules[particleMolecule[i]].push_back(i);
+    molecules = findMolecules(numParticles, particleBonds);
     return molecules;
 }
 
-void ContextImpl::tagParticlesInMolecule(int particle, int molecule, vector<int>& particleMolecule, vector<vector<int> >& particleBonds) {
-    // Recursively tag particles as belonging to a particular molecule.
-
-    particleMolecule[particle] = molecule;
-    for (int i = 0; i < (int) particleBonds[particle].size(); i++)
-        if (particleMolecule[particleBonds[particle][i]] == -1)
-            tagParticlesInMolecule(particleBonds[particle][i], molecule, particleMolecule, particleBonds);
+vector<vector<int> > ContextImpl::findMolecules(int numParticles, vector<vector<int> >& particleBonds) {
+    // This is essentially a recursive algorithm, but it is reformulated as a loop to avoid
+    // stack overflows.  It selects a particle, marks it as a new molecule, then recursively
+    // marks every particle bonded to it as also being in that molecule.
+    
+    vector<int> particleMolecule(numParticles, -1);
+    int numMolecules = 0;
+    for (int i = 0; i < numParticles; i++)
+        if (particleMolecule[i] == -1) {
+            // Start a new molecule.
+            
+            vector<int> particleStack;
+            vector<int> neighborStack;
+            particleStack.push_back(i);
+            neighborStack.push_back(0);
+            int molecule = numMolecules++;
+            
+            // Recursively tag all the bonded particles.
+            
+            while (particleStack.size() > 0) {
+                int particle = particleStack.back();
+                particleMolecule[particle] = molecule;
+                int& neighbor = neighborStack.back();
+                while (neighbor < particleBonds[particle].size() && particleMolecule[particleBonds[particle][neighbor]] != -1)
+                    neighbor++;
+                if (neighbor < particleBonds[particle].size()) {
+                    particleStack.push_back(particleBonds[particle][neighbor]);
+                    neighborStack.push_back(0);
+                }
+                else {
+                    particleStack.pop_back();
+                    neighborStack.pop_back();
+                }
+            }
+        }
+    
+    // Build the final output vector.
+    
+    vector<vector<int> > molecules(numMolecules);
+    for (int i = 0; i < numParticles; i++)
+        molecules[particleMolecule[i]].push_back(i);
+    return molecules;
 }
 
 static void writeString(ostream& stream, string str) {
