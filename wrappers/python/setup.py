@@ -13,9 +13,9 @@ import sys
 import platform
 from distutils.core import setup
 
-MAJOR_VERSION_NUM='5'
-MINOR_VERSION_NUM='1'
-BUILD_INFO='0'
+MAJOR_VERSION_NUM='@OPENMM_MAJOR_VERSION@'
+MINOR_VERSION_NUM='@OPENMM_MINOR_VERSION@'
+BUILD_INFO='@OPENMM_BUILD_VERSION@'
 IS_RELEASED = False
 
 
@@ -67,7 +67,7 @@ def uninstall(verbose=True):
     sys.path=save_path
 
 
-def write_version_py(filename="simtk/openmm/version.py", major_version_num=MAJOR_VERSION_NUM,
+def writeVersionPy(filename="simtk/openmm/version.py", major_version_num=MAJOR_VERSION_NUM,
                      minor_version_num=MINOR_VERSION_NUM, build_info=BUILD_INFO):
     """Write a version.py file into the python source directory before installation.
     If a version.py file already exists, we assume that it contains only the git_revision
@@ -238,7 +238,7 @@ def main():
         uninstall()
     except:
         pass
-    write_version_py()
+    writeVersionPy()
     setupKeywords=buildKeywordDictionary()
     setup(**setupKeywords)
 
