@@ -43,6 +43,7 @@
 #include "openmm/System.h"
 #include "openmm/VerletIntegrator.h"
 #include <iostream>
+#include <set>
 #include <vector>
 
 using namespace OpenMM;
@@ -470,6 +471,43 @@ void testLongRangeCorrection() {
     ASSERT_EQUAL_TOL(standardEnergy1-standardEnergy2, customEnergy1-customEnergy2, 1e-4);
 }
 
+void testInteractionGroups() {
+    const int numParticles = 6;
+    ReferencePlatform platform;
+    System system;
+    VerletIntegrator integrator(0.01);
+    CustomNonbondedForce* nonbonded = new CustomNonbondedForce("v1+v2");
+    nonbonded->addPerParticleParameter("v");
+    vector<double> params(1, 0.001);
+    for (int i = 0; i < numParticles; i++) {
+        system.addParticle(1.0);
+        nonbonded->addParticle(params);
+        params[0] *= 10;
+    }
+    set<int> set1, set2, set3, set4;
+    set1.insert(2);
+    set2.insert(0);
+    set2.insert(1);
+    set2.insert(2);
+    set2.insert(3);
+    set2.insert(4);
+    set2.insert(5);
+    nonbonded->addInteractionGroup(set1, set2); // Particle 2 interacts with every other particle.
+    set3.insert(0);
+    set3.insert(1);
+    set4.insert(4);
+    set4.insert(5);
+    nonbonded->addInteractionGroup(set3, set4); // Particles 0 and 1 interact with 4 and 5.
+    nonbonded->addExclusion(1, 2); // Add an exclusion to make sure it gets skipped.
+    system.addForce(nonbonded);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(numParticles);
+    context.setPositions(positions);
+    State state = context.getState(State::Energy);
+    double expectedEnergy = 331.423; // Each digit is the number of interactions a particle particle is involved in.
+    ASSERT_EQUAL_TOL(expectedEnergy, state.getPotentialEnergy(), TOL);
+}
+
 int main() {
     try {
         testSimpleExpression();
@@ -481,6 +519,7 @@ int main() {
         testCoulombLennardJones();
         testSwitchingFunction();
         testLongRangeCorrection();
+        testInteractionGroups();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

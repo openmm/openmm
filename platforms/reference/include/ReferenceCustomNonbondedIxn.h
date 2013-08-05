@@ -29,6 +29,8 @@
 #include "ReferenceNeighborList.h"
 #include "lepton/ExpressionProgram.h"
 #include <map>
+#include <set>
+#include <utility>
 #include <vector>
 
 // ---------------------------------------------------------------------------------------
@@ -47,6 +49,7 @@ class ReferenceCustomNonbondedIxn {
       Lepton::ExpressionProgram forceExpression;
       std::vector<std::string> paramNames;
       std::vector<std::string> particleParamNames;
+      std::vector<std::pair<std::set<int>, std::set<int> > > interactionGroups;
 
       /**---------------------------------------------------------------------------------------
 
@@ -98,6 +101,17 @@ class ReferenceCustomNonbondedIxn {
       void setUseCutoff( RealOpenMM distance, const OpenMM::NeighborList& neighbors );
 
       /**---------------------------------------------------------------------------------------
+
+         Restrict the force to a list of interaction groups.
+
+         @param distance            the cutoff distance
+         @param neighbors           the neighbor list to use
+
+         --------------------------------------------------------------------------------------- */
+
+      void setInteractionGroups(const std::vector<std::pair<std::set<int>, std::set<int> > >& groups);
+
+      /**---------------------------------------------------------------------------------------
       
          Set the force to use a switching function.
       
@@ -126,10 +140,8 @@ class ReferenceCustomNonbondedIxn {
          @param numberOfAtoms    number of atoms
          @param atomCoordinates  atom coordinates
          @param atomParameters   atom parameters (charges, c6, c12, ...)     atomParameters[atomIndex][paramterIndex]
-         @param exclusions       atom exclusion indices                      exclusions[atomIndex][atomToExcludeIndex]
-                                 exclusions[atomIndex][0] = number of exclusions
-                                 exclusions[atomIndex][1-no.] = atom indices of atoms to excluded from
-                                 interacting w/ atom atomIndex
+         @param exclusions       atom exclusion indices
+                                 exclusions[atomIndex] contains the list of exclusions for that atom
          @param fixedParameters  non atom parameters (not currently used)
          @param globalParameters the values of global parameters
          @param forces           force array (forces added)
@@ -139,7 +151,7 @@ class ReferenceCustomNonbondedIxn {
          --------------------------------------------------------------------------------------- */
 
       void calculatePairIxn( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
-                            RealOpenMM** atomParameters, int** exclusions,
+                            RealOpenMM** atomParameters, std::vector<std::set<int> >& exclusions,
                             RealOpenMM* fixedParameters, const std::map<std::string, double>& globalParameters,
                             std::vector<OpenMM::RealVec>& forces, RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const;
 
