@@ -11,7 +11,8 @@ typedef struct {
 } AtomData;
 
 extern "C" __global__ void computeInteractionGroups(
-        unsigned long long* __restrict__ forceBuffers, real* __restrict__ energyBuffer, const real4* __restrict__ posq, const int4* __restrict__ groupData
+        unsigned long long* __restrict__ forceBuffers, real* __restrict__ energyBuffer, const real4* __restrict__ posq, const int4* __restrict__ groupData,
+        real4 periodicBoxSize, real4 invPeriodicBoxSize
         PARAMETER_ARGUMENTS) {
     const unsigned int totalWarps = (blockDim.x*gridDim.x)/TILE_SIZE;
     const unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/TILE_SIZE; // global warpIndex
@@ -53,20 +54,26 @@ extern "C" __global__ void computeInteractionGroups(
             delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
             real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
-            real invR = RSQRT(r2);
-            real r = RECIP(invR);
-            LOAD_ATOM2_PARAMETERS
-            real dEdR = 0.0f;
-            real tempEnergy = 0.0f;
-            COMPUTE_INTERACTION
-            energy += tempEnergy;
-            delta *= dEdR;
-            force.x -= delta.x;
-            force.y -= delta.y;
-            force.z -= delta.z;
-            localData[localIndex].fx += delta.x;
-            localData[localIndex].fy += delta.y;
-            localData[localIndex].fz += delta.z;
+#ifdef USE_CUTOFF
+            if (!isExcluded && r2 < CUTOFF_SQUARED) {
+#endif
+                real invR = RSQRT(r2);
+                real r = RECIP(invR);
+                LOAD_ATOM2_PARAMETERS
+                real dEdR = 0.0f;
+                real tempEnergy = 0.0f;
+                COMPUTE_INTERACTION
+                energy += tempEnergy;
+                delta *= dEdR;
+                force.x -= delta.x;
+                force.y -= delta.y;
+                force.z -= delta.z;
+                localData[localIndex].fx += delta.x;
+                localData[localIndex].fy += delta.y;
+                localData[localIndex].fz += delta.z;
+#ifdef USE_CUTOFF
+            }
+#endif
             tj = (tj == rangeEnd-1 ? rangeStart : tj+1);
         }
         if (exclusions != 0) {

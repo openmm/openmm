@@ -46,6 +46,7 @@
 #include "lepton/ParsedExpression.h"
 #include "SimTKOpenMMRealType.h"
 #include "SimTKOpenMMUtilities.h"
+#include <algorithm>
 #include <cmath>
 #include <set>
 
@@ -2290,6 +2291,8 @@ double CudaCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool in
             interactionGroupArgs.push_back(&cu.getEnergyBuffer().getDevicePointer());
             interactionGroupArgs.push_back(&cu.getPosq().getDevicePointer());
             interactionGroupArgs.push_back(&interactionGroupData->getDevicePointer());
+            interactionGroupArgs.push_back(cu.getPeriodicBoxSizePointer());
+            interactionGroupArgs.push_back(cu.getInvPeriodicBoxSizePointer());
             for (int i = 0; i < (int) params->getBuffers().size(); i++)
                 interactionGroupArgs.push_back(&params->getBuffers()[i].getMemory());
             if (globals != NULL)
