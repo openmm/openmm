@@ -538,6 +538,109 @@ void testLongRangeCorrection() {
     ASSERT_EQUAL_TOL(standardEnergy1-standardEnergy2, customEnergy1-customEnergy2, 1e-4);
 }
 
+void testInteractionGroups() {
+    const int numParticles = 6;
+    System system;
+    VerletIntegrator integrator(0.01);
+    CustomNonbondedForce* nonbonded = new CustomNonbondedForce("v1+v2");
+    nonbonded->addPerParticleParameter("v");
+    vector<double> params(1, 0.001);
+    for (int i = 0; i < numParticles; i++) {
+        system.addParticle(1.0);
+        nonbonded->addParticle(params);
+        params[0] *= 10;
+    }
+    set<int> set1, set2, set3, set4;
+    set1.insert(2);
+    set2.insert(0);
+    set2.insert(1);
+    set2.insert(2);
+    set2.insert(3);
+    set2.insert(4);
+    set2.insert(5);
+    nonbonded->addInteractionGroup(set1, set2); // Particle 2 interacts with every other particle.
+    set3.insert(0);
+    set3.insert(1);
+    set4.insert(4);
+    set4.insert(5);
+    nonbonded->addInteractionGroup(set3, set4); // Particles 0 and 1 interact with 4 and 5.
+    nonbonded->addExclusion(1, 2); // Add an exclusion to make sure it gets skipped.
+    system.addForce(nonbonded);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(numParticles);
+    context.setPositions(positions);
+    State state = context.getState(State::Energy);
+    double expectedEnergy = 331.423; // Each digit is the number of interactions a particle particle is involved in.
+    ASSERT_EQUAL_TOL(expectedEnergy, state.getPotentialEnergy(), TOL);
+}
+
+void testLargeInteractionGroup() {
+    const int numMolecules = 300;
+    const int numParticles = numMolecules*2;
+    const double boxSize = 20.0;
+    
+    // Create a large system.
+    
+    System system;
+    for (int i = 0; i < numParticles; i++)
+        system.addParticle(1.0);
+    CustomNonbondedForce* nonbonded = new CustomNonbondedForce("4*eps*((sigma/r)^12-(sigma/r)^6)+138.935456*q/r; q=q1*q2; sigma=0.5*(sigma1+sigma2); eps=sqrt(eps1*eps2)");
+    nonbonded->addPerParticleParameter("q");
+    nonbonded->addPerParticleParameter("sigma");
+    nonbonded->addPerParticleParameter("eps");
+    vector<Vec3> positions(numParticles);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    vector<double> params(3);
+    for (int i = 0; i < numMolecules; i++) {
+        if (i < numMolecules/2) {
+            params[0] = 1.0;
+            params[1] = 0.2;
+            params[2] = 0.1;
+            nonbonded->addParticle(params);
+            params[0] = -1.0;
+            params[1] = 0.1;
+            nonbonded->addParticle(params);
+        }
+        else {
+            params[0] = 1.0;
+            params[1] = 0.2;
+            params[2] = 0.2;
+            nonbonded->addParticle(params);
+            params[0] = -1.0;
+            params[1] = 0.1;
+            nonbonded->addParticle(params);
+        }
+        positions[2*i] = Vec3(boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt));
+        positions[2*i+1] = Vec3(positions[2*i][0]+1.0, positions[2*i][1], positions[2*i][2]);
+        nonbonded->addExclusion(2*i, 2*i+1);
+    }
+    nonbonded->setNonbondedMethod(CustomNonbondedForce::NoCutoff);
+    system.addForce(nonbonded);
+    
+    // Compute the forces.
+    
+    VerletIntegrator integrator(0.01);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    State state1 = context.getState(State::Forces);
+    
+    // Modify the force so only one particle interacts with everything else.
+    
+    set<int> set1, set2;
+    set1.insert(151);
+    for (int i = 0; i < numParticles; i++)
+        set2.insert(i);
+    nonbonded->addInteractionGroup(set1, set2);
+    context.reinitialize();
+    context.setPositions(positions);
+    State state2 = context.getState(State::Forces);
+    
+    // The force on that one particle should be the same.
+    
+    ASSERT_EQUAL_VEC(state1.getForces()[151], state2.getForces()[151], 1e-4);
+}
+
 int main(int argc, char* argv[]) {
     try {
         if (argc > 1)
@@ -553,6 +656,8 @@ int main(int argc, char* argv[]) {
         testParallelComputation();
         testSwitchingFunction();
         testLongRangeCorrection();
+        testInteractionGroups();
+        testLargeInteractionGroup();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;
