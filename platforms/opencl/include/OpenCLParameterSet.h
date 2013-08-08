@@ -85,6 +85,13 @@ public:
      * Get a set of OpenCLNonbondedUtilities::ParameterInfo objects which describe the Buffers
      * containing the data.
      */
+    std::vector<OpenCLNonbondedUtilities::ParameterInfo>& getBuffers() {
+        return buffers;
+    }
+    /**
+     * Get a set of OpenCLNonbondedUtilities::ParameterInfo objects which describe the Buffers
+     * containing the data.
+     */
     const std::vector<OpenCLNonbondedUtilities::ParameterInfo>& getBuffers() const {
         return buffers;
     }

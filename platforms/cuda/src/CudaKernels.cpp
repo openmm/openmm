@@ -2072,7 +2072,7 @@ void CudaCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNonbo
         
         // Find how many tiles we will create for this group.
         
-        int tileWidth = min(32, (int) atoms2.size());
+        int tileWidth = min(min(32, (int) atoms1.size()), (int) atoms2.size());
         int numBlocks1 = (atoms1.size()+tileWidth-1)/tileWidth;
         int numBlocks2 = (atoms2.size()+tileWidth-1)/tileWidth;
         

@@ -615,7 +615,7 @@ void testLargeInteractionGroup() {
         positions[2*i+1] = Vec3(positions[2*i][0]+1.0, positions[2*i][1], positions[2*i][2]);
         nonbonded->addExclusion(2*i, 2*i+1);
     }
-    nonbonded->setNonbondedMethod(CustomNonbondedForce::NoCutoff);
+    nonbonded->setNonbondedMethod(CustomNonbondedForce::CutoffPeriodic);
     system.addForce(nonbonded);
     
     // Compute the forces.
