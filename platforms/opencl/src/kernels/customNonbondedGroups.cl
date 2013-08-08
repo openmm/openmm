@@ -14,8 +14,37 @@ typedef struct {
 #endif
 } AtomData;
 
+/**
+ * This function is used on devices that don't support 64 bit atomics.  Multiple threads within
+ * a single tile might have computed forces on the same atom.  This loops over them and makes sure
+ * that only one thread updates the force on any given atom.
+ */
+void writeForces(__global real4* forceBuffers,__local AtomData* localData, int atomIndex) {
+    localData[get_local_id(0)].x = atomIndex;
+    SYNC_WARPS;
+    real4 forceSum = (real4) 0;
+    int start = (get_local_id(0)/TILE_SIZE)*TILE_SIZE;
+    int end = start+32;
+    bool isFirst = true;
+    for (int i = start; i < end; i++)
+        if (localData[i].x == atomIndex) {
+            forceSum += (real4) (localData[i].fx, localData[i].fy, localData[i].fz, 0);
+            isFirst &= (i >= get_local_id(0));
+        }
+    const unsigned int warp = get_global_id(0)/TILE_SIZE;
+    unsigned int offset = atomIndex + warp*PADDED_NUM_ATOMS;
+    if (isFirst)
+        forceBuffers[offset] += forceSum;
+    SYNC_WARPS;
+}
+
 __kernel void computeInteractionGroups(
-        __global long* restrict forceBuffers, __global real* restrict energyBuffer, __global const real4* restrict posq,
+#ifdef SUPPORTS_64_BIT_ATOMICS
+        __global long* restrict forceBuffers,
+#else
+        __global real4* restrict forceBuffers,
+#endif
+        __global real* restrict energyBuffer, __global const real4* restrict posq,
         __global const int4* restrict groupData, real4 periodicBoxSize, real4 invPeriodicBoxSize
         PARAMETER_ARGUMENTS) {
     const unsigned int totalWarps = get_global_size(0)/TILE_SIZE;
@@ -78,6 +107,7 @@ __kernel void computeInteractionGroups(
             tj = (tj == rangeEnd-1 ? rangeStart : tj+1);
             SYNC_WARPS;
         }
+#ifdef SUPPORTS_64_BIT_ATOMICS
         if (exclusions != 0) {
             atom_add(&forceBuffers[atom1], (long) (force.x*0x100000000));
             atom_add(&forceBuffers[atom1+PADDED_NUM_ATOMS], (long) (force.y*0x100000000));
@@ -86,6 +116,13 @@ __kernel void computeInteractionGroups(
             atom_add(&forceBuffers[atom2+PADDED_NUM_ATOMS], (long) (localData[get_local_id(0)].fy*0x100000000));
             atom_add(&forceBuffers[atom2+2*PADDED_NUM_ATOMS], (long) (localData[get_local_id(0)].fz*0x100000000));
         }
+#else
+        writeForces(forceBuffers, localData, atom2);
+        localData[get_local_id(0)].fx = force.x;
+        localData[get_local_id(0)].fy = force.y;
+        localData[get_local_id(0)].fz = force.z;
+        writeForces(forceBuffers, localData, atom1);
+#endif
     }
     energyBuffer[get_global_id(0)] += energy;
 }

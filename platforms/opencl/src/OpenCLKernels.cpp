@@ -2178,11 +2178,19 @@ void OpenCLCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
     vector<mm_int4> groupData;
     for (int tileSet = 0; tileSet < numTileSets; tileSet++) {
         int indexInTileSet = 0;
+        int minSize = 0;
+        if (cl.getSIMDWidth() < 32) {
+            // We need to include a barrier inside the inner loop, so ensure that all
+            // threads will loop the same number of times.
+            
+            for (int i = tileSetStart[tileSet]; i < tileSetStart[tileSet+1]; i++)
+                minSize = max(minSize, (int) atomLists[tiles[tileOrder[i].second].first].size());
+        }
         for (int i = tileSetStart[tileSet]; i < tileSetStart[tileSet+1]; i++) {
             int tile = tileOrder[i].second;
             vector<int>& atoms1 = atomLists[tiles[tile].first];
             vector<int>& atoms2 = atomLists[tiles[tile].second];
-            int range = indexInTileSet + ((indexInTileSet+atoms1.size())<<16);
+            int range = indexInTileSet + ((indexInTileSet+max(minSize, (int) atoms1.size()))<<16);
             int allFlags = (1<<atoms2.size())-1;
             for (int j = 0; j < (int) atoms1.size(); j++) {
                 int a1 = atoms1[j];
@@ -2193,7 +2201,7 @@ void OpenCLCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
             indexInTileSet += atoms1.size();
         }
         for (; indexInTileSet < 32; indexInTileSet++)
-            groupData.push_back(mm_int4(0, 0, 0, 0));
+            groupData.push_back(mm_int4(0, 0, minSize<<16, 0));
     }
     interactionGroupData = OpenCLArray::create<mm_int4>(cl, groupData.size(), "interactionGroupData");
     interactionGroupData->upload(groupData);
@@ -2242,7 +2250,7 @@ void OpenCLCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
         if (buffers[i].getNumComponents() == 1)
             load2<<buffers[i].getType()<<" params"<<(i+1)<<"2 = localData[localIndex].params"<<(i+1)<<";\n";
         else {
-            load2<<buffers[i].getType()<<" params"<<(i+1)<<"2 = make_"<<buffers[i].getType()<<"(";
+            load2<<buffers[i].getType()<<" params"<<(i+1)<<"2 = ("<<buffers[i].getType()<<") (";
             for (int j = 0; j < buffers[i].getNumComponents(); ++j) {
                 if (j > 0)
                     load2<<", ";
@@ -2299,7 +2307,8 @@ double OpenCLCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool 
         if (!hasInitializedKernel) {
             hasInitializedKernel = true;
             int index = 0;
-            interactionGroupKernel.setArg<cl::Buffer>(index++, cl.getLongForceBuffer().getDeviceBuffer());
+            bool useLong = cl.getSupports64BitGlobalAtomics();
+            interactionGroupKernel.setArg<cl::Buffer>(index++, (useLong ? cl.getLongForceBuffer() : cl.getForceBuffers()).getDeviceBuffer());
             interactionGroupKernel.setArg<cl::Buffer>(index++, cl.getEnergyBuffer().getDeviceBuffer());
             interactionGroupKernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
             interactionGroupKernel.setArg<cl::Buffer>(index++, interactionGroupData->getDeviceBuffer());
@@ -2310,7 +2319,7 @@ double OpenCLCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool 
             if (globals != NULL)
                 interactionGroupKernel.setArg<cl::Buffer>(index++, globals->getDeviceBuffer());
         }
-        int forceThreadBlockSize = cl.getNonbondedUtilities().getForceThreadBlockSize();
+        int forceThreadBlockSize = max(32, cl.getNonbondedUtilities().getForceThreadBlockSize());
         cl.executeKernel(interactionGroupKernel, numGroupThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
     }
     mm_double4 boxSize = cl.getPeriodicBoxSizeDouble();
