@@ -6,15 +6,18 @@ setup.py: Used for building python wrappers for Simbios' OpenMM library.
 __author__ = "Randall J. Radmer"
 __version__ = "1.0"
 
-
-import os, sys, platform, glob, shutil
-import struct
-
+import ast
+import re
+import os
+import sys
+import platform
 from distutils.core import setup
 
-MAJOR_VERSION_NUM='5'
-MINOR_VERSION_NUM='1'
-BUILD_INFO='0'
+MAJOR_VERSION_NUM='@OPENMM_MAJOR_VERSION@'
+MINOR_VERSION_NUM='@OPENMM_MINOR_VERSION@'
+BUILD_INFO='@OPENMM_BUILD_VERSION@'
+IS_RELEASED = False
+
 
 def reportError(message):
     sys.stdout.write("ERROR: ")
@@ -62,6 +65,57 @@ def uninstall(verbose=True):
     except ImportError:
         pass
     sys.path=save_path
+
+
+def writeVersionPy(filename="simtk/openmm/version.py", major_version_num=MAJOR_VERSION_NUM,
+                     minor_version_num=MINOR_VERSION_NUM, build_info=BUILD_INFO):
+    """Write a version.py file into the python source directory before installation.
+    If a version.py file already exists, we assume that it contains only the git_revision
+    information, since from within this python session in the python staging directory, we're
+    not in the version controlled directory hierarchy.
+
+    When cmake is copying files into the PYTHON_STAGING_DIRECTORY, it will write the
+    git revision to version.py. We read that, and then overwrite it.
+    """
+
+    cnt = """
+# THIS FILE IS GENERATED FROM OPENMM SETUP.PY
+short_version = '%(version)s'
+version = '%(version)s'
+full_version = '%(full_version)s'
+git_revision = '%(git_revision)s'
+release = %(isrelease)s
+
+if not release:
+    version = full_version
+"""
+
+    if os.path.exists(filename):
+        # git_revision is written to the file by cmake
+        with open(filename) as f:
+            text = f.read()
+            match = re.search(r"git_revision\s+=\s+(.*)", text, re.MULTILINE)
+        try:
+            git_revision = ast.literal_eval(match.group(1))
+        except:
+            # except anything, including no re match or
+            # literal_eval failing
+            git_revision = 'Unknown'
+    else:
+        git_revision = 'Unknown'
+
+    version = full_version = '%s.%s.%s' % (major_version_num, minor_version_num, build_info)
+    if not IS_RELEASED:
+        full_version += '.dev-' + git_revision[:7]
+
+    a = open(filename, 'w')
+    try:
+        a.write(cnt % {'version': version,
+                       'full_version' : full_version,
+                       'git_revision' : git_revision,
+                       'isrelease': str(IS_RELEASED)})
+    finally:
+        a.close()
 
 
 def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
@@ -184,6 +238,7 @@ def main():
         uninstall()
     except:
         pass
+    writeVersionPy()
     setupKeywords=buildKeywordDictionary()
     setup(**setupKeywords)
 

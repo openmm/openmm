@@ -1,5 +1,5 @@
-extern "C" __global__ void applyPositionDeltas(real4* __restrict__ posq, real4* __restrict__ posqCorrection, mixed4* __restrict__ posDelta) {
-    for (unsigned int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_ATOMS; index += blockDim.x*gridDim.x) {
+extern "C" __global__ void applyPositionDeltas(int numAtoms, real4* __restrict__ posq, real4* __restrict__ posqCorrection, mixed4* __restrict__ posDelta) {
+    for (unsigned int index = blockIdx.x*blockDim.x+threadIdx.x; index < numAtoms; index += blockDim.x*gridDim.x) {
 #ifdef USE_MIXED_PRECISION
         real4 pos1 = posq[index];
         real4 pos2 = posqCorrection[index];
