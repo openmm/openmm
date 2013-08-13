@@ -78,32 +78,34 @@ __kernel void computeInteractionGroups(
         int tj = tgx;
         SYNC_WARPS;
         for (int j = rangeStart; j < rangeEnd; j++) {
-            bool isExcluded = (((exclusions>>tj)&1) == 0);
-            int localIndex = tbx+tj;
-            posq2 = (real4) (localData[localIndex].x, localData[localIndex].y, localData[localIndex].z, localData[localIndex].q);
-            real4 delta = (real4) (posq2.xyz - posq1.xyz, 0);
+            if (tj < rangeEnd) {
+                bool isExcluded = (((exclusions>>tj)&1) == 0);
+                int localIndex = tbx+tj;
+                posq2 = (real4) (localData[localIndex].x, localData[localIndex].y, localData[localIndex].z, localData[localIndex].q);
+                real4 delta = (real4) (posq2.xyz - posq1.xyz, 0);
 #ifdef USE_PERIODIC
-            delta.xyz -= floor(delta.xyz*invPeriodicBoxSize.xyz+0.5f)*periodicBoxSize.xyz;
+                delta.xyz -= floor(delta.xyz*invPeriodicBoxSize.xyz+0.5f)*periodicBoxSize.xyz;
 #endif
-            real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
+                real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
 #ifdef USE_CUTOFF
-            if (!isExcluded && r2 < CUTOFF_SQUARED) {
+                if (!isExcluded && r2 < CUTOFF_SQUARED) {
 #endif
-                real invR = RSQRT(r2);
-                real r = RECIP(invR);
-                LOAD_ATOM2_PARAMETERS
-                real dEdR = 0.0f;
-                real tempEnergy = 0.0f;
-                COMPUTE_INTERACTION
-                energy += tempEnergy;
-                delta *= dEdR;
-                force.xyz -= delta.xyz;
-                localData[localIndex].fx += delta.x;
-                localData[localIndex].fy += delta.y;
-                localData[localIndex].fz += delta.z;
+                    real invR = RSQRT(r2);
+                    real r = RECIP(invR);
+                    LOAD_ATOM2_PARAMETERS
+                    real dEdR = 0.0f;
+                    real tempEnergy = 0.0f;
+                    COMPUTE_INTERACTION
+                    energy += tempEnergy;
+                    delta *= dEdR;
+                    force.xyz -= delta.xyz;
+                    localData[localIndex].fx += delta.x;
+                    localData[localIndex].fy += delta.y;
+                    localData[localIndex].fz += delta.z;
 #ifdef USE_CUTOFF
+                }
+#endif
             }
-#endif
             tj = (tj == rangeEnd-1 ? rangeStart : tj+1);
             SYNC_WARPS;
         }
@@ -112,10 +114,10 @@ __kernel void computeInteractionGroups(
             atom_add(&forceBuffers[atom1], (long) (force.x*0x100000000));
             atom_add(&forceBuffers[atom1+PADDED_NUM_ATOMS], (long) (force.y*0x100000000));
             atom_add(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], (long) (force.z*0x100000000));
-            atom_add(&forceBuffers[atom2], (long) (localData[get_local_id(0)].fx*0x100000000));
-            atom_add(&forceBuffers[atom2+PADDED_NUM_ATOMS], (long) (localData[get_local_id(0)].fy*0x100000000));
-            atom_add(&forceBuffers[atom2+2*PADDED_NUM_ATOMS], (long) (localData[get_local_id(0)].fz*0x100000000));
         }
+        atom_add(&forceBuffers[atom2], (long) (localData[get_local_id(0)].fx*0x100000000));
+        atom_add(&forceBuffers[atom2+PADDED_NUM_ATOMS], (long) (localData[get_local_id(0)].fy*0x100000000));
+        atom_add(&forceBuffers[atom2+2*PADDED_NUM_ATOMS], (long) (localData[get_local_id(0)].fz*0x100000000));
 #else
         writeForces(forceBuffers, localData, atom2);
         localData[get_local_id(0)].fx = force.x;

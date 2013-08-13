@@ -177,13 +177,15 @@ void ReferenceCustomNonbondedIxn::calculatePairIxn( int numberOfAtoms, vector<Re
             const set<int>& set2 = interactionGroups[group].second;
             for (set<int>::const_iterator atom1 = set1.begin(); atom1 != set1.end(); ++atom1) {
                 for (set<int>::const_iterator atom2 = set2.begin(); atom2 != set2.end(); ++atom2) {
-                    if (*atom1 != *atom2 && exclusions[*atom1].find(*atom2) == exclusions[*atom1].end()) {
-                        for (int j = 0; j < (int) paramNames.size(); j++) {
-                            variables[particleParamNames[j*2]] = atomParameters[*atom1][j];
-                            variables[particleParamNames[j*2+1]] = atomParameters[*atom2][j];
-                        }
-                        calculateOneIxn(*atom1, *atom2, atomCoordinates, variables, forces, energyByAtom, totalEnergy);
+                    if (*atom1 == *atom2 || exclusions[*atom1].find(*atom2) != exclusions[*atom1].end())
+                        continue; // This is an excluded interaction.
+                    if (*atom1 > *atom2 && set1.find(*atom2) != set1.end() && set2.find(*atom1) != set2.end())
+                        continue; // Both atoms are in both sets, so skip duplicate interactions.
+                    for (int j = 0; j < (int) paramNames.size(); j++) {
+                        variables[particleParamNames[j*2]] = atomParameters[*atom1][j];
+                        variables[particleParamNames[j*2+1]] = atomParameters[*atom2][j];
                     }
+                    calculateOneIxn(*atom1, *atom2, atomCoordinates, variables, forces, energyByAtom, totalEnergy);
                 }
             }
         }

@@ -582,6 +582,7 @@ void testLargeInteractionGroup() {
     // Create a large system.
     
     System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
     for (int i = 0; i < numParticles; i++)
         system.addParticle(1.0);
     CustomNonbondedForce* nonbonded = new CustomNonbondedForce("4*eps*((sigma/r)^12-(sigma/r)^6)+138.935456*q/r; q=q1*q2; sigma=0.5*(sigma1+sigma2); eps=sqrt(eps1*eps2)");
@@ -639,6 +640,18 @@ void testLargeInteractionGroup() {
     // The force on that one particle should be the same.
     
     ASSERT_EQUAL_VEC(state1.getForces()[151], state2.getForces()[151], 1e-4);
+    
+    // Modify the interaction group so it includes all interactions.  This should now reproduce the original forces
+    // on all atoms.
+
+    for (int i = 0; i < numParticles; i++)
+        set1.insert(i);
+    nonbonded->setInteractionGroupParameters(0, set1, set2);
+    context.reinitialize();
+    context.setPositions(positions);
+    State state3 = context.getState(State::Forces);
+    for (int i = 0; i < numParticles; i++)
+        ASSERT_EQUAL_VEC(state1.getForces()[i], state3.getForces()[i], 1e-4);
 }
 
 int main(int argc, char* argv[]) {

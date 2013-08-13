@@ -405,6 +405,14 @@ public:
      */
     void getInteractionGroupParameters(int index, std::set<int>& set1, std::set<int>& set2) const;
     /**
+     * Set the parameters for an interaction group.
+     * 
+     * @param index   the index of the interaction group for which to set parameters
+     * @param set1    the first set of particles forming the interaction group
+     * @param set2    the second set of particles forming the interaction group
+     */
+    void setInteractionGroupParameters(int index, const std::set<int>& set1, const std::set<int>& set2);
+    /**
      * Update the per-particle parameters in a Context to match those stored in this Force object.  This method provides
      * an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
      * Simply call setParticleParameters() to modify this object's parameters, then call updateParametersInContext()

@@ -2059,6 +2059,7 @@ void CudaCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNonbo
     
     vector<vector<int> > atomLists;
     vector<pair<int, int> > tiles;
+    map<pair<int, int>, int> duplicateInteractions;
     for (int group = 0; group < force.getNumInteractionGroups(); group++) {
         // Get the list of atoms in this group and sort them.
         
@@ -2100,6 +2101,23 @@ void CudaCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNonbo
                 atoms.push_back(atoms2[j]);
             atomLists.push_back(atoms);
         }
+        
+        // If this group contains duplicate interactions, record that we need to skip them once.
+        
+        for (int i = 0; i < (int) atoms1.size(); i++) {
+            int a1 = atoms1[i];
+            if (set2.find(a1) == set2.end())
+                continue;
+            for (int j = 0; j < (int) atoms2.size() && atoms2[j] < a1; j++) {
+                int a2 = atoms2[j];
+                if (set1.find(a2) != set1.end()) {
+                    pair<int, int> key = make_pair(a2, a1);
+                    if (duplicateInteractions.find(key) == duplicateInteractions.end())
+                        duplicateInteractions[key] = 0;
+                    duplicateInteractions[key]++;
+                }
+            }
+        }
     }
     
     // Build a lookup table for quickly identifying excluded interactions.
@@ -2108,7 +2126,7 @@ void CudaCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNonbo
     for (int i = 0; i < force.getNumExclusions(); i++) {
         int p1, p2;
         force.getExclusionParticles(i, p1, p2);
-        exclusions.insert(make_pair(p1, p2));
+        exclusions.insert(make_pair(min(p1, p2), max(p1, p2)));
     }
     
     // Build the exclusion flags for each tile.  While we're at it, filter out tiles
@@ -2126,13 +2144,23 @@ void CudaCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNonbo
         }
         vector<int>& atoms1 = atomLists[tiles[tile].first];
         vector<int>& atoms2 = atomLists[tiles[tile].second];
-        vector<int> flags(atoms1.size(), (1<<atoms2.size())-1);
+        vector<int> flags(atoms1.size(), (1L<<atoms2.size())-1);
         int numExcluded = 0;
         for (int i = 0; i < (int) atoms1.size(); i++)
             for (int j = 0; j < (int) atoms2.size(); j++) {
                 int a1 = atoms1[i];
                 int a2 = atoms2[j];
-                if (a1 == a2 || exclusions.find(make_pair(a1, a2)) != exclusions.end() || exclusions.find(make_pair(a2, a1)) != exclusions.end()) {
+                bool isExcluded = false;
+                pair<int, int> key = make_pair(min(a1, a2), max(a1, a2));
+                if (a1 == a2 || exclusions.find(key) != exclusions.end())
+                    isExcluded = true; // This is an excluded interaction.
+                else if (duplicateInteractions.find(key) != duplicateInteractions.end() && duplicateInteractions[key] > 0) {
+                    // Both atoms are in both sets, so skip duplicate interactions.
+                    
+                    isExcluded = true;
+                    duplicateInteractions[key]--;
+                }
+                if (isExcluded) {
                     flags[i] &= -1-(1<<j);
                     numExcluded++;
                 }
@@ -2140,8 +2168,7 @@ void CudaCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNonbo
         if (numExcluded == atoms1.size()*atoms2.size())
             continue; // All interactions are excluded.
         tileOrder.push_back(make_pair((int) -atoms2.size(), tile));
-        if (numExcluded > 0)
-            exclusionFlags[tile] = flags;
+        exclusionFlags[tile] = flags;
     }
     sort(tileOrder.begin(), tileOrder.end());
     

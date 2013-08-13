@@ -508,6 +508,87 @@ void testInteractionGroups() {
     ASSERT_EQUAL_TOL(expectedEnergy, state.getPotentialEnergy(), TOL);
 }
 
+void testLargeInteractionGroup() {
+    const int numMolecules = 300;
+    const int numParticles = numMolecules*2;
+    const double boxSize = 20.0;
+    
+    // Create a large system.
+    
+    ReferencePlatform platform;
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    for (int i = 0; i < numParticles; i++)
+        system.addParticle(1.0);
+    CustomNonbondedForce* nonbonded = new CustomNonbondedForce("4*eps*((sigma/r)^12-(sigma/r)^6)+138.935456*q/r; q=q1*q2; sigma=0.5*(sigma1+sigma2); eps=sqrt(eps1*eps2)");
+    nonbonded->addPerParticleParameter("q");
+    nonbonded->addPerParticleParameter("sigma");
+    nonbonded->addPerParticleParameter("eps");
+    vector<Vec3> positions(numParticles);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    vector<double> params(3);
+    for (int i = 0; i < numMolecules; i++) {
+        if (i < numMolecules/2) {
+            params[0] = 1.0;
+            params[1] = 0.2;
+            params[2] = 0.1;
+            nonbonded->addParticle(params);
+            params[0] = -1.0;
+            params[1] = 0.1;
+            nonbonded->addParticle(params);
+        }
+        else {
+            params[0] = 1.0;
+            params[1] = 0.2;
+            params[2] = 0.2;
+            nonbonded->addParticle(params);
+            params[0] = -1.0;
+            params[1] = 0.1;
+            nonbonded->addParticle(params);
+        }
+        positions[2*i] = Vec3(boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt));
+        positions[2*i+1] = Vec3(positions[2*i][0]+1.0, positions[2*i][1], positions[2*i][2]);
+        nonbonded->addExclusion(2*i, 2*i+1);
+    }
+    nonbonded->setNonbondedMethod(CustomNonbondedForce::CutoffPeriodic);
+    system.addForce(nonbonded);
+    
+    // Compute the forces.
+    
+    VerletIntegrator integrator(0.01);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    State state1 = context.getState(State::Forces);
+    
+    // Modify the force so only one particle interacts with everything else.
+    
+    set<int> set1, set2;
+    set1.insert(151);
+    for (int i = 0; i < numParticles; i++)
+        set2.insert(i);
+    nonbonded->addInteractionGroup(set1, set2);
+    context.reinitialize();
+    context.setPositions(positions);
+    State state2 = context.getState(State::Forces);
+    
+    // The force on that one particle should be the same.
+    
+    ASSERT_EQUAL_VEC(state1.getForces()[151], state2.getForces()[151], 1e-4);
+    
+    // Modify the interaction group so it includes all interactions.  This should now reproduce the original forces
+    // on all atoms.
+
+    for (int i = 0; i < numParticles; i++)
+        set1.insert(i);
+    nonbonded->setInteractionGroupParameters(0, set1, set2);
+    context.reinitialize();
+    context.setPositions(positions);
+    State state3 = context.getState(State::Forces);
+    for (int i = 0; i < numParticles; i++)
+        ASSERT_EQUAL_VEC(state1.getForces()[i], state3.getForces()[i], 1e-4);
+}
+
 int main() {
     try {
         testSimpleExpression();
@@ -520,6 +601,7 @@ int main() {
         testSwitchingFunction();
         testLongRangeCorrection();
         testInteractionGroups();
+        testLargeInteractionGroup();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;
