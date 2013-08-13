@@ -589,6 +589,64 @@ void testLargeInteractionGroup() {
         ASSERT_EQUAL_VEC(state1.getForces()[i], state3.getForces()[i], 1e-4);
 }
 
+void testInteractionGroupLongRangeCorrection() {
+    const int numParticles = 10;
+    const double boxSize = 10.0;
+    const double cutoff = 0.5;
+    ReferencePlatform platform;
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    CustomNonbondedForce* nonbonded = new CustomNonbondedForce("c1*c2*r^-4");
+    nonbonded->addPerParticleParameter("c");
+    vector<Vec3> positions(numParticles);
+    vector<double> params(1);
+    for (int i = 0; i < numParticles; i++) {
+        system.addParticle(1.0);
+        params[0] = (i%2 == 0 ? 1.1 : 2.0);
+        nonbonded->addParticle(params);
+        positions[i] = Vec3(0.5*i, 0, 0);
+    }
+    nonbonded->setNonbondedMethod(CustomNonbondedForce::CutoffPeriodic);
+    nonbonded->setCutoffDistance(cutoff);
+    system.addForce(nonbonded);
+    
+    // Setup nonbonded groups.  They involve 1 interaction of type AA,
+    // 2 of type BB, and 5 of type AB.
+    
+    set<int> set1, set2, set3, set4, set5;
+    set1.insert(0);
+    set1.insert(1);
+    set1.insert(2);
+    nonbonded->addInteractionGroup(set1, set1);
+    set2.insert(3);
+    set3.insert(4);
+    set3.insert(6);
+    set3.insert(8);
+    nonbonded->addInteractionGroup(set2, set3);
+    set4.insert(5);
+    set5.insert(7);
+    set5.insert(9);
+    nonbonded->addInteractionGroup(set4, set5);
+    
+    // Compute energy with and without the correction.
+    
+    VerletIntegrator integrator(0.01);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    double energy1 = context.getState(State::Energy).getPotentialEnergy();
+    nonbonded->setUseLongRangeCorrection(true);
+    context.reinitialize();
+    context.setPositions(positions);
+    double energy2 = context.getState(State::Energy).getPotentialEnergy();
+    
+    // Check the result.
+    
+    double sum = (1.1*1.1 + 2*2.0*2.0 + 5*1.1*2.0)*2.0;
+    int numPairs = (numParticles*(numParticles+1))/2;
+    double expected = 2*M_PI*numParticles*numParticles*sum/(numPairs*boxSize*boxSize*boxSize);
+    ASSERT_EQUAL_TOL(expected, energy2-energy1, 1e-4);
+}
+
 int main() {
     try {
         testSimpleExpression();
@@ -602,6 +660,7 @@ int main() {
         testLongRangeCorrection();
         testInteractionGroups();
         testLargeInteractionGroup();
+        testInteractionGroupLongRangeCorrection();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;
