@@ -639,7 +639,7 @@ private:
 class OpenCLCalcCustomNonbondedForceKernel : public CalcCustomNonbondedForceKernel {
 public:
     OpenCLCalcCustomNonbondedForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcCustomNonbondedForceKernel(name, platform),
-            cl(cl), params(NULL), globals(NULL), tabulatedFunctionParams(NULL), forceCopy(NULL), system(system) {
+            cl(cl), params(NULL), globals(NULL), tabulatedFunctionParams(NULL), interactionGroupData(NULL), forceCopy(NULL), system(system), hasInitializedKernel(false) {
     }
     ~OpenCLCalcCustomNonbondedForceKernel();
     /**
@@ -666,15 +666,20 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force);
 private:
+    void initInteractionGroups(const CustomNonbondedForce& force, const std::string& interactionSource);
     OpenCLContext& cl;
     OpenCLParameterSet* params;
     OpenCLArray* globals;
     OpenCLArray* tabulatedFunctionParams;
+    OpenCLArray* interactionGroupData;
+    cl::Kernel interactionGroupKernel;
+    std::vector<void*> interactionGroupArgs;
     std::vector<std::string> globalParamNames;
     std::vector<cl_float> globalParamValues;
     std::vector<OpenCLArray*> tabulatedFunctions;
     double longRangeCoefficient;
-    bool hasInitializedLongRangeCorrection;
+    bool hasInitializedLongRangeCorrection, hasInitializedKernel;
+    int numGroupThreadBlocks;
     CustomNonbondedForce* forceCopy;
     const System& system;
 };

@@ -615,7 +615,6 @@ public:
     void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force);
 private:
     int numParticles;
-    int **exclusionArray;
     RealOpenMM **particleParamArray;
     RealOpenMM nonbondedCutoff, switchingDistance, periodicBoxSize[3], longRangeCoefficient;
     bool useSwitchingFunction, hasInitializedLongRangeCorrection;
@@ -624,6 +623,7 @@ private:
     std::vector<std::set<int> > exclusions;
     Lepton::ExpressionProgram energyExpression, forceExpression;
     std::vector<std::string> parameterNames, globalParameterNames;
+    std::vector<std::pair<std::set<int>, std::set<int> > > interactionGroups;
     NonbondedMethod nonbondedMethod;
     NeighborList* neighborList;
 };
