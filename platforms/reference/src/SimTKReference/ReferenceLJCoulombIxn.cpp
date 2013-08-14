@@ -37,6 +37,7 @@
 // make sure that erf() and erfc() are defined.
 #include "openmm/internal/MSVC_erfc.h"
 
+using std::set;
 using std::vector;
 using OpenMM::RealVec;
 
@@ -169,10 +170,8 @@ void ReferenceLJCoulombIxn::setUseSwitchingFunction( RealOpenMM distance ) {
    @param numberOfAtoms    number of atoms
    @param atomCoordinates  atom coordinates
    @param atomParameters   atom parameters                             atomParameters[atomIndex][paramterIndex]
-   @param exclusions       atom exclusion indices                      exclusions[atomIndex][atomToExcludeIndex]
-                           exclusions[atomIndex][0] = number of exclusions
-                           exclusions[atomIndex][1-no.] = atom indices of atoms to excluded from
-                           interacting w/ atom atomIndex
+   @param exclusions       atom exclusion indices
+                           exclusions[atomIndex] contains the list of exclusions for that atom
    @param fixedParameters  non atom parameters (not currently used)
    @param forces           force array (forces added)
    @param energyByAtom     atom energy
@@ -183,7 +182,7 @@ void ReferenceLJCoulombIxn::setUseSwitchingFunction( RealOpenMM distance ) {
    --------------------------------------------------------------------------------------- */
 
 void ReferenceLJCoulombIxn::calculateEwaldIxn(int numberOfAtoms, vector<RealVec>& atomCoordinates,
-                                             RealOpenMM** atomParameters, int** exclusions,
+                                             RealOpenMM** atomParameters, vector<set<int> >& exclusions,
                                              RealOpenMM* fixedParameters, vector<RealVec>& forces,
                                              RealOpenMM* energyByAtom, RealOpenMM* totalEnergy, bool includeDirect, bool includeReciprocal) const {
     typedef std::complex<RealOpenMM> d_complex;
@@ -423,10 +422,10 @@ void ReferenceLJCoulombIxn::calculateEwaldIxn(int numberOfAtoms, vector<RealVec>
 
     RealOpenMM totalExclusionEnergy = 0.0f;
     for (int i = 0; i < numberOfAtoms; i++)
-        for (int j = 1; j <= exclusions[i][0]; j++)
-            if (exclusions[i][j] > i) {
+        for (set<int>::const_iterator iter = exclusions[i].begin(); iter != exclusions[i].end(); ++iter) {
+            if (*iter > i) {
                int ii = i;
-               int jj = exclusions[i][j];
+               int jj = *iter;
 
                RealOpenMM deltaR[2][ReferenceForce::LastDeltaRIndex];
                ReferenceForce::getDeltaR( atomCoordinates[jj], atomCoordinates[ii], deltaR[0] );
@@ -454,6 +453,7 @@ void ReferenceLJCoulombIxn::calculateEwaldIxn(int numberOfAtoms, vector<RealVec>
                    energyByAtom[jj] -= realSpaceEwaldEnergy;
                }
             }
+        }
 
     if( totalEnergy )
         *totalEnergy -= totalExclusionEnergy;
@@ -467,10 +467,8 @@ void ReferenceLJCoulombIxn::calculateEwaldIxn(int numberOfAtoms, vector<RealVec>
    @param numberOfAtoms    number of atoms
    @param atomCoordinates  atom coordinates
    @param atomParameters   atom parameters                             atomParameters[atomIndex][paramterIndex]
-   @param exclusions       atom exclusion indices                      exclusions[atomIndex][atomToExcludeIndex]
-                           exclusions[atomIndex][0] = number of exclusions
-                           exclusions[atomIndex][1-no.] = atom indices of atoms to excluded from
-                           interacting w/ atom atomIndex
+   @param exclusions       atom exclusion indices
+                           exclusions[atomIndex] contains the list of exclusions for that atom
    @param fixedParameters  non atom parameters (not currently used)
    @param forces           force array (forces added)
    @param energyByAtom     atom energy
@@ -481,7 +479,7 @@ void ReferenceLJCoulombIxn::calculateEwaldIxn(int numberOfAtoms, vector<RealVec>
    --------------------------------------------------------------------------------------- */
 
 void ReferenceLJCoulombIxn::calculatePairIxn(int numberOfAtoms, vector<RealVec>& atomCoordinates,
-                                             RealOpenMM** atomParameters, int** exclusions,
+                                             RealOpenMM** atomParameters, vector<set<int> >& exclusions,
                                              RealOpenMM* fixedParameters, vector<RealVec>& forces,
                                              RealOpenMM* energyByAtom, RealOpenMM* totalEnergy, bool includeDirect, bool includeReciprocal) const {
 
@@ -499,32 +497,13 @@ void ReferenceLJCoulombIxn::calculatePairIxn(int numberOfAtoms, vector<RealVec>&
        }
    }
    else {
-       // allocate and initialize exclusion array
-
-       int* exclusionIndices = new int[numberOfAtoms];
        for( int ii = 0; ii < numberOfAtoms; ii++ ){
-          exclusionIndices[ii] = -1;
-       }
-
-       for( int ii = 0; ii < numberOfAtoms; ii++ ){
-
-          // set exclusions
-
-          for( int jj = 1; jj <= exclusions[ii][0]; jj++ ){
-             exclusionIndices[exclusions[ii][jj]] = ii;
-          }
-
           // loop over atom pairs
 
-          for( int jj = ii+1; jj < numberOfAtoms; jj++ ){
-
-             if( exclusionIndices[jj] != ii ){
-                 calculateOneIxn(ii, jj, atomCoordinates, atomParameters, forces, energyByAtom, totalEnergy);
-             }
-          }
+          for( int jj = ii+1; jj < numberOfAtoms; jj++ )
+              if (exclusions[jj].find(ii) == exclusions[jj].end())
+                  calculateOneIxn(ii, jj, atomCoordinates, atomParameters, forces, energyByAtom, totalEnergy);
        }
-
-       delete[] exclusionIndices;
    }
 }
 

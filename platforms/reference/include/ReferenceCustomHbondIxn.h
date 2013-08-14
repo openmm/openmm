@@ -29,6 +29,7 @@
 #include "lepton/ExpressionProgram.h"
 #include "lepton/ParsedExpression.h"
 #include <map>
+#include <set>
 #include <vector>
 
 // ---------------------------------------------------------------------------------------
@@ -143,10 +144,8 @@ class ReferenceCustomHbondIxn : public ReferenceBondIxn {
          @param atomCoordinates    atom coordinates
          @param donorParameters    donor parameters values       donorParameters[donorIndex][parameterIndex]
          @param acceptorParameters acceptor parameters values    acceptorParameters[acceptorIndex][parameterIndex]
-         @param exclusions         exclusion indices             exclusions[donorIndex][acceptorToExcludeIndex]
-                                   exclusions[donorIndex][0] = number of exclusions
-                                   exclusions[donorIndex][no.-1] = indices of acceptors to excluded from
-                                   interacting w/ donor donorIndex
+         @param exclusions         exclusion indices
+                                   exclusions[donorIndex] contains the list of excluded acceptors for that donor
          @param globalParameters   the values of global parameters
          @param forces             force array (forces added)
          @param totalEnergy        total energy
@@ -154,7 +153,7 @@ class ReferenceCustomHbondIxn : public ReferenceBondIxn {
          --------------------------------------------------------------------------------------- */
 
       void calculatePairIxn(std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM** donorParameters, RealOpenMM** acceptorParameters,
-                            int** exclusions, const std::map<std::string, double>& globalParameters,
+                            std::vector<std::set<int> >& exclusions, const std::map<std::string, double>& globalParameters,
                             std::vector<OpenMM::RealVec>& forces, RealOpenMM* totalEnergy) const;
 
 // ---------------------------------------------------------------------------------------
