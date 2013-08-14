@@ -42,14 +42,10 @@
 #include "lepton/Parser.h"
 #include <cmath>
 #include <sstream>
+#include <utility>
 
 using namespace OpenMM;
-using std::map;
-using std::pair;
-using std::vector;
-using std::set;
-using std::string;
-using std::stringstream;
+using namespace std;
 
 CustomNonbondedForceImpl::CustomNonbondedForceImpl(const CustomNonbondedForce& owner) : owner(owner) {
 }
@@ -176,20 +172,6 @@ double CustomNonbondedForceImpl::calcLongRangeCorrection(const CustomNonbondedFo
     if (force.getNonbondedMethod() == CustomNonbondedForce::NoCutoff || force.getNonbondedMethod() == CustomNonbondedForce::CutoffNonPeriodic)
         return 0.0;
     
-    // Identify all particle classes (defined by parameters), and count the number of
-    // particles in each class.
-
-    map<vector<double>, int> classCounts;
-    for (int i = 0; i < force.getNumParticles(); i++) {
-        vector<double> parameters;
-        force.getParticleParameters(i, parameters);
-        map<vector<double>, int>::iterator entry = classCounts.find(parameters);
-        if (entry == classCounts.end())
-            classCounts[parameters] = 1;
-        else
-            entry->second++;
-    }
-    
     // Parse the energy expression.
     
     map<string, Lepton::CustomFunction*> functions;
@@ -201,20 +183,69 @@ double CustomNonbondedForceImpl::calcLongRangeCorrection(const CustomNonbondedFo
         functions[name] = new TabulatedFunction(min, max, values);
     }
     Lepton::ExpressionProgram expression = Lepton::Parser::parse(force.getEnergyFunction(), functions).optimize().createProgram();
+    
+    // Identify all particle classes (defined by parameters), and record the class of each particle.
+    
+    int numParticles = force.getNumParticles();
+    vector<vector<double> > classes;
+    map<vector<double>, int> classIndex;
+    vector<int> atomClass(numParticles);
+    for (int i = 0; i < numParticles; i++) {
+        vector<double> parameters;
+        force.getParticleParameters(i, parameters);
+        if (classIndex.find(parameters) == classIndex.end()) {
+            classIndex[parameters] = classes.size();
+            classes.push_back(parameters);
+        }
+        atomClass[i] = classIndex[parameters];
+    }
+    int numClasses = classes.size();
+    
+    // Count the total number of particle pairs for each pair of classes.
+    
+    map<pair<int, int>, int> interactionCount;
+    if (force.getNumInteractionGroups() == 0) {
+        // Count the particles of each class.
+        
+        vector<int> classCounts(numClasses, 0);
+        for (int i = 0; i < numParticles; i++)
+            classCounts[atomClass[i]]++;
+        for (int i = 0; i < numClasses; i++) {
+            interactionCount[make_pair(i, i)] = (classCounts[i]*(classCounts[i]+1))/2;
+            for (int j = i+1; j < numClasses; j++)
+                interactionCount[make_pair(i, j)] = classCounts[i]*classCounts[j];
+        }
+    }
+    else {
+        // Initialize the counts to 0.
+        
+        for (int i = 0; i < numClasses; i++) {
+            for (int j = i; j < numClasses; j++)
+                interactionCount[make_pair(i, j)] = 0;
+        }
+        
+        // Loop over interaction groups and count the interactions in each one.
+        
+        for (int group = 0; group < force.getNumInteractionGroups(); group++) {
+            set<int> set1, set2;
+            force.getInteractionGroupParameters(group, set1, set2);
+            for (set<int>::const_iterator a1 = set1.begin(); a1 != set1.end(); ++a1)
+                for (set<int>::const_iterator a2 = set2.begin(); a2 != set2.end(); ++a2) {
+                    if (*a1 >= *a2 && set1.find(*a2) != set1.end() && set2.find(*a1) != set2.end())
+                        continue;
+                    int class1 = atomClass[*a1];
+                    int class2 = atomClass[*a2];
+                    interactionCount[make_pair(min(class1, class2), max(class1, class2))]++;
+                }
+        }
+    }
 
     // Loop over all pairs of classes to compute the coefficient.
 
     double sum = 0;
-    for (map<vector<double>, int>::const_iterator entry = classCounts.begin(); entry != classCounts.end(); ++entry) {
-        int count = (entry->second*(entry->second+1))/2;
-        sum += count*integrateInteraction(expression, entry->first, entry->first, force, context);
-    }
-    for (map<vector<double>, int>::const_iterator class1 = classCounts.begin(); class1 != classCounts.end(); ++class1)
-        for (map<vector<double>, int>::const_iterator class2 = classCounts.begin(); class2 != class1; ++class2) {
-            int count = class1->second*class2->second;
-            sum += count*integrateInteraction(expression, class1->first, class2->first, force, context);
-        }
-    int numParticles = force.getNumParticles();
+    for (int i = 0; i < numClasses; i++)
+        for (int j = i; j < numClasses; j++)
+            sum += interactionCount[make_pair(i, j)]*integrateInteraction(expression, classes[i], classes[j], force, context);
     int numInteractions = (numParticles*(numParticles+1))/2;
     sum /= numInteractions;
     return 2*M_PI*numParticles*numParticles*sum;
