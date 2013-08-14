@@ -12,7 +12,6 @@ It also tries to load any plugin modules it can find.
 """
 
 __author__ = "Randall J. Radmer"
-__version__ = "1.0"
 
 import os, sys, glob
 if sys.platform == "win32":
@@ -36,3 +35,4 @@ else:
 from simtk.openmm.openmm import *
 from simtk.openmm.vec3 import Vec3
 pluginLoadedLibNames = Platform.loadPluginsFromDirectory(Platform.getDefaultPluginsDirectory())
+__version__ = Platform.getOpenMMVersion()

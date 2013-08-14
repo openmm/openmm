@@ -805,7 +805,6 @@ void ReferenceCalcCustomTorsionForceKernel::copyParametersToContext(ContextImpl&
 
 ReferenceCalcNonbondedForceKernel::~ReferenceCalcNonbondedForceKernel() {
     disposeRealArray(particleParamArray, numParticles);
-    disposeIntArray(exclusionArray, numParticles);
     disposeIntArray(bonded14IndexArray, num14);
     disposeRealArray(bonded14ParamArray, num14);
     if (neighborList != NULL)
@@ -843,14 +842,6 @@ void ReferenceCalcNonbondedForceKernel::initialize(const System& system, const N
         particleParamArray[i][2] = static_cast<RealOpenMM>(charge);
     }
     this->exclusions = exclusions;
-    exclusionArray = new int*[numParticles];
-    for (int i = 0; i < numParticles; ++i) {
-        exclusionArray[i] = new int[exclusions[i].size()+1];
-        exclusionArray[i][0] = exclusions[i].size();
-        int index = 0;
-        for (set<int>::const_iterator iter = exclusions[i].begin(); iter != exclusions[i].end(); ++iter)
-            exclusionArray[i][++index] = *iter;
-    }
     for (int i = 0; i < num14; ++i) {
         int particle1, particle2;
         double charge, radius, depth;
@@ -914,7 +905,7 @@ double ReferenceCalcNonbondedForceKernel::execute(ContextImpl& context, bool inc
         clj.setUsePME(ewaldAlpha, gridSize);
     if (useSwitchingFunction)
         clj.setUseSwitchingFunction(switchingDistance);
-    clj.calculatePairIxn(numParticles, posData, particleParamArray, exclusionArray, 0, forceData, 0, includeEnergy ? &energy : NULL, includeDirect, includeReciprocal);
+    clj.calculatePairIxn(numParticles, posData, particleParamArray, exclusions, 0, forceData, 0, includeEnergy ? &energy : NULL, includeDirect, includeReciprocal);
     if (includeDirect) {
         ReferenceBondForce refBondForce;
         ReferenceLJCoulomb14 nonbonded14;
@@ -1500,7 +1491,6 @@ void ReferenceCalcCustomExternalForceKernel::copyParametersToContext(ContextImpl
 ReferenceCalcCustomHbondForceKernel::~ReferenceCalcCustomHbondForceKernel() {
     disposeRealArray(donorParamArray, numDonors);
     disposeRealArray(acceptorParamArray, numAcceptors);
-    disposeIntArray(exclusionArray, numDonors);
     if (ixn != NULL)
         delete ixn;
 }
@@ -1546,14 +1536,6 @@ void ReferenceCalcCustomHbondForceKernel::initialize(const System& system, const
         acceptorParticles[i].push_back(a3);
         for (int j = 0; j < numAcceptorParameters; j++)
             acceptorParamArray[i][j] = static_cast<RealOpenMM>(parameters[j]);
-    }
-    exclusionArray = new int*[numDonors];
-    for (int i = 0; i < numDonors; ++i) {
-        exclusionArray[i] = new int[exclusions[i].size()+1];
-        exclusionArray[i][0] = exclusions[i].size();
-        int index = 0;
-        for (set<int>::const_iterator iter = exclusions[i].begin(); iter != exclusions[i].end(); ++iter)
-            exclusionArray[i][++index] = *iter;
     }
     NonbondedMethod nonbondedMethod = CalcCustomHbondForceKernel::NonbondedMethod(force.getNonbondedMethod());
     nonbondedCutoff = (RealOpenMM) force.getCutoffDistance();
@@ -1603,7 +1585,7 @@ double ReferenceCalcCustomHbondForceKernel::execute(ContextImpl& context, bool i
     map<string, double> globalParameters;
     for (int i = 0; i < (int) globalParameterNames.size(); i++)
         globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
-    ixn->calculatePairIxn(posData, donorParamArray, acceptorParamArray, exclusionArray, globalParameters, forceData, includeEnergy ? &energy : NULL);
+    ixn->calculatePairIxn(posData, donorParamArray, acceptorParamArray, exclusions, globalParameters, forceData, includeEnergy ? &energy : NULL);
     return energy;
 }
 
