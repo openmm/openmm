@@ -19,6 +19,7 @@
 <xsl:variable name="map_property_type_id" select="/GCC_XML/Class[starts-with(@name, 'map&lt;std::basic_string') and not(contains(@name, 'double'))]/@id"/>
 <xsl:variable name="vector_double_type_id" select="/GCC_XML/Class[starts-with(@name, 'vector&lt;double')]/@id"/>
 <xsl:variable name="vector_int_type_id" select="/GCC_XML/Class[starts-with(@name, 'vector&lt;int')]/@id"/>
+<xsl:variable name="set_int_type_id" select="/GCC_XML/Class[starts-with(@name, 'set&lt;int')]/@id"/>
 <xsl:variable name="newline">
 <xsl:text>
 </xsl:text>
@@ -152,6 +153,10 @@ OPENMM_EXPORT const char* OpenMM_PropertyArray_get(const OpenMM_PropertyArray* a
  <xsl:with-param name="element_type" select="'int'"/>
  <xsl:with-param name="name" select="'OpenMM_IntArray'"/>
 </xsl:call-template>
+<xsl:call-template name="primitive_set">
+ <xsl:with-param name="element_type" select="'int'"/>
+ <xsl:with-param name="name" select="'OpenMM_IntSet'"/>
+</xsl:call-template>
 
 /* These methods need to be handled specially, since their C++ APIs cannot be directly translated to C.
    Unlike the C++ versions, the return value is allocated on the heap, and you must delete it yourself. */
@@ -197,6 +202,25 @@ OPENMM_EXPORT void <xsl:value-of select="$name"/>_set(<xsl:value-of select="$nam
 }
 OPENMM_EXPORT <xsl:value-of select="concat($element_type, ' ')"/> <xsl:value-of select="$name"/>_get(const <xsl:value-of select="$name"/>* array, int index) {
     return (*reinterpret_cast&lt;const vector&lt;<xsl:value-of select="$element_type"/>&gt;*&gt;(array))[index];
+}
+</xsl:template>
+
+<!-- Print out the definitions for a (Primitive)Set type -->
+<xsl:template name="primitive_set">
+ <xsl:param name="element_type"/>
+ <xsl:param name="name"/>
+/* <xsl:value-of select="$name"/> */
+OPENMM_EXPORT <xsl:value-of select="$name"/>* <xsl:value-of select="$name"/>_create() {
+    return reinterpret_cast&lt;<xsl:value-of select="$name"/>*&gt;(new set&lt;<xsl:value-of select="$element_type"/>&gt;());
+}
+OPENMM_EXPORT void <xsl:value-of select="$name"/>_destroy(<xsl:value-of select="$name"/>* s) {
+    delete reinterpret_cast&lt;set&lt;<xsl:value-of select="$element_type"/>&gt;*&gt;(s);
+}
+OPENMM_EXPORT int <xsl:value-of select="$name"/>_getSize(const <xsl:value-of select="$name"/>* s) {
+    return reinterpret_cast&lt;const set&lt;<xsl:value-of select="$element_type"/>&gt;*&gt;(s)->size();
+}
+OPENMM_EXPORT void <xsl:value-of select="$name"/>_insert(<xsl:value-of select="$name"/>* s, <xsl:value-of select="$element_type"/> value) {
+    reinterpret_cast&lt;set&lt;<xsl:value-of select="$element_type"/>&gt;*&gt;(s)->insert(value);
 }
 </xsl:template>
 
@@ -354,6 +378,9 @@ OPENMM_EXPORT <xsl:call-template name="wrap_type"><xsl:with-param name="type_id"
   </xsl:when>
   <xsl:when test="$type_id=$vector_int_type_id">
    <xsl:value-of select="'OpenMM_IntArray'"/>
+  </xsl:when>
+  <xsl:when test="$type_id=$set_int_type_id">
+   <xsl:value-of select="'OpenMM_IntSet'"/>
   </xsl:when>
   <xsl:when test="local-name($node)='ReferenceType' or local-name($node)='PointerType'">
    <xsl:call-template name="wrap_type">
