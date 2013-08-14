@@ -34,6 +34,9 @@
  * This tests all the different force terms in the CUDA implementation of CustomNonbondedForce.
  */
 
+#ifdef WIN32
+  #define _USE_MATH_DEFINES // Needed to get M_PI
+#endif
 #include "openmm/internal/AssertionUtilities.h"
 #include "sfmt/SFMT.h"
 #include "openmm/Context.h"
@@ -42,6 +45,7 @@
 #include "openmm/NonbondedForce.h"
 #include "openmm/System.h"
 #include "openmm/VerletIntegrator.h"
+#include <cmath>
 #include <iostream>
 #include <vector>
 
