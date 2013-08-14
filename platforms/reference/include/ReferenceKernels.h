@@ -572,7 +572,7 @@ public:
     void copyParametersToContext(ContextImpl& context, const NonbondedForce& force);
 private:
     int numParticles, num14;
-    int **exclusionArray, **bonded14IndexArray;
+    int **bonded14IndexArray;
     RealOpenMM **particleParamArray, **bonded14ParamArray;
     RealOpenMM nonbondedCutoff, switchingDistance, rfDielectric, ewaldAlpha, dispersionCoefficient;
     int kmax[3], gridSize[3];
@@ -819,7 +819,6 @@ public:
 private:
     int numDonors, numAcceptors, numParticles;
     bool isPeriodic;
-    int **exclusionArray;
     RealOpenMM **donorParamArray, **acceptorParamArray;
     RealOpenMM nonbondedCutoff;
     ReferenceCustomHbondIxn* ixn;
