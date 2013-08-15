@@ -34,6 +34,7 @@
 
 using std::map;
 using std::pair;
+using std::set;
 using std::string;
 using std::stringstream;
 using std::vector;
@@ -109,10 +110,8 @@ void ReferenceCustomHbondIxn::setPeriodic(RealVec& boxSize) {
    @param atomCoordinates    atom coordinates
    @param donorParameters    donor parameters values       donorParameters[donorIndex][parameterIndex]
    @param acceptorParameters acceptor parameters values    acceptorParameters[acceptorIndex][parameterIndex]
-   @param exclusions         exclusion indices             exclusions[donorIndex][acceptorToExcludeIndex]
-                             exclusions[donorIndex][0] = number of exclusions
-                             exclusions[donorIndex][no.-1] = indices of acceptors to excluded from
-                             interacting w/ donor donorIndex
+   @param exclusions         exclusion indices
+                             exclusions[donorIndex] contains the list of excluded acceptors for that donor
    @param globalParameters   the values of global parameters
    @param forces             force array (forces added)
    @param totalEnergy        total energy
@@ -120,7 +119,7 @@ void ReferenceCustomHbondIxn::setPeriodic(RealVec& boxSize) {
    --------------------------------------------------------------------------------------- */
 
 void ReferenceCustomHbondIxn::calculatePairIxn(vector<RealVec>& atomCoordinates, RealOpenMM** donorParameters, RealOpenMM** acceptorParameters,
-                                             int** exclusions, const map<string, double>& globalParameters, vector<RealVec>& forces,
+                                             vector<set<int> >& exclusions, const map<string, double>& globalParameters, vector<RealVec>& forces,
                                              RealOpenMM* totalEnergy) const {
 
    map<string, double> variables = globalParameters;
@@ -129,18 +128,8 @@ void ReferenceCustomHbondIxn::calculatePairIxn(vector<RealVec>& atomCoordinates,
 
    int numDonors = donorAtoms.size();
    int numAcceptors = acceptorAtoms.size();
-   int* exclusionIndices = new int[numAcceptors];
-   for( int ii = 0; ii < numAcceptors; ii++ ){
-      exclusionIndices[ii] = -1;
-   }
 
    for( int donor = 0; donor < numDonors; donor++ ){
-
-      // set exclusions
-
-      for (int j = 1; j <= exclusions[donor][0]; j++)
-         exclusionIndices[exclusions[donor][j]] = donor;
-
       // Initialize per-donor parameters.
 
       for (int j = 0; j < (int) donorParamNames.size(); j++)
@@ -149,16 +138,13 @@ void ReferenceCustomHbondIxn::calculatePairIxn(vector<RealVec>& atomCoordinates,
       // loop over atom pairs
 
       for( int acceptor = 0; acceptor < numAcceptors; acceptor++ ){
-
-         if( exclusionIndices[acceptor] != donor ){
+         if (exclusions[donor].find(acceptor) == exclusions[donor].end()) {
              for (int j = 0; j < (int) acceptorParamNames.size(); j++)
                  variables[acceptorParamNames[j]] = acceptorParameters[acceptor][j];
              calculateOneIxn(donor, acceptor, atomCoordinates, variables, forces, totalEnergy);
          }
       }
    }
-
-   delete[] exclusionIndices;
 }
 
   /**---------------------------------------------------------------------------------------

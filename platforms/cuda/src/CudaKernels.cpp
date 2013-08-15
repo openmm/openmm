@@ -46,6 +46,7 @@
 #include "lepton/ParsedExpression.h"
 #include "SimTKOpenMMRealType.h"
 #include "SimTKOpenMMUtilities.h"
+#include <algorithm>
 #include <cmath>
 #include <set>
 
@@ -1862,6 +1863,17 @@ void CudaCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context,
 class CudaCustomNonbondedForceInfo : public CudaForceInfo {
 public:
     CudaCustomNonbondedForceInfo(const CustomNonbondedForce& force) : force(force) {
+        if (force.getNumInteractionGroups() > 0) {
+            groupsForParticle.resize(force.getNumParticles());
+            for (int i = 0; i < force.getNumInteractionGroups(); i++) {
+                set<int> set1, set2;
+                force.getInteractionGroupParameters(i, set1, set2);
+                for (set<int>::const_iterator iter = set1.begin(); iter != set1.end(); ++iter)
+                    groupsForParticle[*iter].insert(2*i);
+                for (set<int>::const_iterator iter = set2.begin(); iter != set2.end(); ++iter)
+                    groupsForParticle[*iter].insert(2*i+1);
+            }
+        }
     }
     bool areParticlesIdentical(int particle1, int particle2) {
         vector<double> params1;
@@ -1871,6 +1883,8 @@ public:
         for (int i = 0; i < (int) params1.size(); i++)
             if (params1[i] != params2[i])
                 return false;
+        if (groupsForParticle.size() > 0 && groupsForParticle[particle1] != groupsForParticle[particle2])
+            return false;
         return true;
     }
     int getNumParticleGroups() {
@@ -1888,6 +1902,7 @@ public:
     }
 private:
     const CustomNonbondedForce& force;
+    vector<set<int> > groupsForParticle;
 };
 
 CudaCalcCustomNonbondedForceKernel::~CudaCalcCustomNonbondedForceKernel() {
@@ -1898,6 +1913,8 @@ CudaCalcCustomNonbondedForceKernel::~CudaCalcCustomNonbondedForceKernel() {
         delete globals;
     if (tabulatedFunctionParams != NULL)
         delete tabulatedFunctionParams;
+    if (interactionGroupData != NULL)
+        delete interactionGroupData;
     for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
         delete tabulatedFunctions[i];
     if (forceCopy != NULL)
@@ -1909,7 +1926,7 @@ void CudaCalcCustomNonbondedForceKernel::initialize(const System& system, const 
     int forceIndex;
     for (forceIndex = 0; forceIndex < system.getNumForces() && &system.getForce(forceIndex) != &force; ++forceIndex)
         ;
-    string prefix = "custom"+cu.intToString(forceIndex)+"_";
+    string prefix = (force.getNumInteractionGroups() == 0 ? "custom"+cu.intToString(forceIndex)+"_" : "");
 
     // Record parameters and exclusions.
 
@@ -2010,14 +2027,18 @@ void CudaCalcCustomNonbondedForceKernel::initialize(const System& system, const 
         replacements["SWITCH_C5"] = cu.doubleToString(6/pow(force.getSwitchingDistance()-force.getCutoffDistance(), 5.0));
     }
     string source = cu.replaceStrings(CudaKernelSources::customNonbonded, replacements);
-    cu.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, source, force.getForceGroup());
-    for (int i = 0; i < (int) params->getBuffers().size(); i++) {
-        CudaNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
-        cu.getNonbondedUtilities().addParameter(CudaNonbondedUtilities::ParameterInfo(prefix+"params"+cu.intToString(i+1), buffer.getComponentType(), buffer.getNumComponents(), buffer.getSize(), buffer.getMemory()));
-    }
-    if (globals != NULL) {
-        globals->upload(globalParamValues);
-        cu.getNonbondedUtilities().addArgument(CudaNonbondedUtilities::ParameterInfo(prefix+"globals", "float", 1, sizeof(float), globals->getDevicePointer()));
+    if (force.getNumInteractionGroups() > 0)
+        initInteractionGroups(force, source);
+    else {
+        cu.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, source, force.getForceGroup());
+        for (int i = 0; i < (int) params->getBuffers().size(); i++) {
+            CudaNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
+            cu.getNonbondedUtilities().addParameter(CudaNonbondedUtilities::ParameterInfo(prefix+"params"+cu.intToString(i+1), buffer.getComponentType(), buffer.getNumComponents(), buffer.getSize(), buffer.getMemory()));
+        }
+        if (globals != NULL) {
+            globals->upload(globalParamValues);
+            cu.getNonbondedUtilities().addArgument(CudaNonbondedUtilities::ParameterInfo(prefix+"globals", "float", 1, sizeof(float), globals->getDevicePointer()));
+        }
     }
     cu.addForce(new CudaCustomNonbondedForceInfo(force));
     
@@ -2031,6 +2052,242 @@ void CudaCalcCustomNonbondedForceKernel::initialize(const System& system, const 
         longRangeCoefficient = 0.0;
         hasInitializedLongRangeCorrection = true;
     }
+}
+
+void CudaCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNonbondedForce& force, const string& interactionSource) {
+    // Process groups to form tiles.
+    
+    vector<vector<int> > atomLists;
+    vector<pair<int, int> > tiles;
+    map<pair<int, int>, int> duplicateInteractions;
+    for (int group = 0; group < force.getNumInteractionGroups(); group++) {
+        // Get the list of atoms in this group and sort them.
+        
+        set<int> set1, set2;
+        force.getInteractionGroupParameters(group, set1, set2);
+        vector<int> atoms1, atoms2;
+        atoms1.insert(atoms1.begin(), set1.begin(), set1.end());
+        atoms2.insert(atoms2.begin(), set2.begin(), set2.end());
+        sort(atoms1.begin(), atoms1.end());
+        sort(atoms2.begin(), atoms2.end());
+        
+        // Find how many tiles we will create for this group.
+        
+        int tileWidth = min(min(32, (int) atoms1.size()), (int) atoms2.size());
+        int numBlocks1 = (atoms1.size()+tileWidth-1)/tileWidth;
+        int numBlocks2 = (atoms2.size()+tileWidth-1)/tileWidth;
+        
+        // Add the tiles.
+        
+        for (int i = 0; i < numBlocks1; i++)
+            for (int j = 0; j < numBlocks2; j++)
+                tiles.push_back(make_pair(atomLists.size()+i, atomLists.size()+numBlocks1+j));
+        
+        // Add the atom lists.
+        
+        for (int i = 0; i < numBlocks1; i++) {
+            vector<int> atoms;
+            int first = i*tileWidth;
+            int last = min((i+1)*tileWidth, (int) atoms1.size());
+            for (int j = first; j < last; j++)
+                atoms.push_back(atoms1[j]);
+            atomLists.push_back(atoms);
+        }
+        for (int i = 0; i < numBlocks2; i++) {
+            vector<int> atoms;
+            int first = i*tileWidth;
+            int last = min((i+1)*tileWidth, (int) atoms2.size());
+            for (int j = first; j < last; j++)
+                atoms.push_back(atoms2[j]);
+            atomLists.push_back(atoms);
+        }
+        
+        // If this group contains duplicate interactions, record that we need to skip them once.
+        
+        for (int i = 0; i < (int) atoms1.size(); i++) {
+            int a1 = atoms1[i];
+            if (set2.find(a1) == set2.end())
+                continue;
+            for (int j = 0; j < (int) atoms2.size() && atoms2[j] < a1; j++) {
+                int a2 = atoms2[j];
+                if (set1.find(a2) != set1.end()) {
+                    pair<int, int> key = make_pair(a2, a1);
+                    if (duplicateInteractions.find(key) == duplicateInteractions.end())
+                        duplicateInteractions[key] = 0;
+                    duplicateInteractions[key]++;
+                }
+            }
+        }
+    }
+    
+    // Build a lookup table for quickly identifying excluded interactions.
+    
+    set<pair<int, int> > exclusions;
+    for (int i = 0; i < force.getNumExclusions(); i++) {
+        int p1, p2;
+        force.getExclusionParticles(i, p1, p2);
+        exclusions.insert(make_pair(min(p1, p2), max(p1, p2)));
+    }
+    
+    // Build the exclusion flags for each tile.  While we're at it, filter out tiles
+    // where all interactions are excluded, and sort the tiles by size.
+
+    vector<vector<int> > exclusionFlags(tiles.size());
+    vector<pair<int, int> > tileOrder;
+    for (int tile = 0; tile < tiles.size(); tile++) {
+        if (atomLists[tiles[tile].first].size() < atomLists[tiles[tile].second].size()) {
+            // For efficiency, we want the first axis to be the larger one.
+            
+            int swap = tiles[tile].first;
+            tiles[tile].first = tiles[tile].second;
+            tiles[tile].second = swap;
+        }
+        vector<int>& atoms1 = atomLists[tiles[tile].first];
+        vector<int>& atoms2 = atomLists[tiles[tile].second];
+        vector<int> flags(atoms1.size(), (int) (1LL<<atoms2.size())-1);
+        int numExcluded = 0;
+        for (int i = 0; i < (int) atoms1.size(); i++)
+            for (int j = 0; j < (int) atoms2.size(); j++) {
+                int a1 = atoms1[i];
+                int a2 = atoms2[j];
+                bool isExcluded = false;
+                pair<int, int> key = make_pair(min(a1, a2), max(a1, a2));
+                if (a1 == a2 || exclusions.find(key) != exclusions.end())
+                    isExcluded = true; // This is an excluded interaction.
+                else if (duplicateInteractions.find(key) != duplicateInteractions.end() && duplicateInteractions[key] > 0) {
+                    // Both atoms are in both sets, so skip duplicate interactions.
+                    
+                    isExcluded = true;
+                    duplicateInteractions[key]--;
+                }
+                if (isExcluded) {
+                    flags[i] &= -1-(1<<j);
+                    numExcluded++;
+                }
+            }
+        if (numExcluded == atoms1.size()*atoms2.size())
+            continue; // All interactions are excluded.
+        tileOrder.push_back(make_pair((int) -atoms2.size(), tile));
+        exclusionFlags[tile] = flags;
+    }
+    sort(tileOrder.begin(), tileOrder.end());
+    
+    // Merge tiles to get as close as possible to 32 along the first axis of each one.
+    
+    vector<int> tileSetStart;
+    tileSetStart.push_back(0);
+    int tileSetSize = 0;
+    for (int i = 0; i < tileOrder.size(); i++) {
+        int tile = tileOrder[i].second;
+        int size = atomLists[tiles[tile].first].size();
+        if (tileSetSize+size > 32) {
+            tileSetStart.push_back(i);
+            tileSetSize = 0;
+        }
+        tileSetSize += size;
+    }
+    tileSetStart.push_back(tileOrder.size());
+    
+    // Build the data structures.
+    
+    int numTileSets = tileSetStart.size()-1;
+    vector<int4> groupData;
+    for (int tileSet = 0; tileSet < numTileSets; tileSet++) {
+        int indexInTileSet = 0;
+        for (int i = tileSetStart[tileSet]; i < tileSetStart[tileSet+1]; i++) {
+            int tile = tileOrder[i].second;
+            vector<int>& atoms1 = atomLists[tiles[tile].first];
+            vector<int>& atoms2 = atomLists[tiles[tile].second];
+            int range = indexInTileSet + ((indexInTileSet+atoms1.size())<<16);
+            int allFlags = (1<<atoms2.size())-1;
+            for (int j = 0; j < (int) atoms1.size(); j++) {
+                int a1 = atoms1[j];
+                int a2 = (j < atoms2.size() ? atoms2[j] : 0);
+                int flags = (exclusionFlags[tile].size() > 0 ? exclusionFlags[tile][j] : allFlags);
+                groupData.push_back(make_int4(a1, a2, range, flags<<indexInTileSet));
+            }
+            indexInTileSet += atoms1.size();
+        }
+        for (; indexInTileSet < 32; indexInTileSet++)
+            groupData.push_back(make_int4(0, 0, 0, 0));
+    }
+    interactionGroupData = CudaArray::create<int4>(cu, groupData.size(), "interactionGroupData");
+    interactionGroupData->upload(groupData);
+    
+    // Create the kernel.
+    
+    map<string, string> replacements;
+    replacements["COMPUTE_INTERACTION"] = interactionSource;
+    const string suffixes[] = {"x", "y", "z", "w"};
+    stringstream localData;
+    int localDataSize = 0;
+    vector<CudaNonbondedUtilities::ParameterInfo>& buffers = params->getBuffers(); 
+    for (int i = 0; i < (int) buffers.size(); i++) {
+        if (buffers[i].getNumComponents() == 1)
+            localData<<buffers[i].getComponentType()<<" params"<<(i+1)<<";\n";
+        else {
+            for (int j = 0; j < buffers[i].getNumComponents(); ++j)
+                localData<<buffers[i].getComponentType()<<" params"<<(i+1)<<"_"<<suffixes[j]<<";\n";
+        }
+        localDataSize += buffers[i].getSize();
+    }
+    replacements["ATOM_PARAMETER_DATA"] = localData.str();
+    stringstream args;
+    for (int i = 0; i < (int) buffers.size(); i++)
+        args<<", const "<<buffers[i].getType()<<"* __restrict__ global_params"<<(i+1);
+    if (globals != NULL)
+        args<<", const float* __restrict__ globals";
+    replacements["PARAMETER_ARGUMENTS"] = args.str();
+    stringstream load1;
+    for (int i = 0; i < (int) buffers.size(); i++)
+        load1<<buffers[i].getType()<<" params"<<(i+1)<<"1 = global_params"<<(i+1)<<"[atom1];\n";
+    replacements["LOAD_ATOM1_PARAMETERS"] = load1.str();
+    stringstream loadLocal2;
+    for (int i = 0; i < (int) buffers.size(); i++) {
+        if (buffers[i].getNumComponents() == 1)
+            loadLocal2<<"localData[threadIdx.x].params"<<(i+1)<<" = global_params"<<(i+1)<<"[atom2];\n";
+        else {
+            loadLocal2<<buffers[i].getType()<<" temp_params"<<(i+1)<<" = global_params"<<(i+1)<<"[atom2];\n";
+            for (int j = 0; j < buffers[i].getNumComponents(); ++j)
+                loadLocal2<<"localData[threadIdx.x].params"<<(i+1)<<"_"<<suffixes[j]<<" = temp_params"<<(i+1)<<"."<<suffixes[j]<<";\n";
+        }
+    }
+    replacements["LOAD_LOCAL_PARAMETERS"] = loadLocal2.str();
+    stringstream load2;
+    for (int i = 0; i < (int) buffers.size(); i++) {
+        if (buffers[i].getNumComponents() == 1)
+            load2<<buffers[i].getType()<<" params"<<(i+1)<<"2 = localData[localIndex].params"<<(i+1)<<";\n";
+        else {
+            load2<<buffers[i].getType()<<" params"<<(i+1)<<"2 = make_"<<buffers[i].getType()<<"(";
+            for (int j = 0; j < buffers[i].getNumComponents(); ++j) {
+                if (j > 0)
+                    load2<<", ";
+                load2<<"localData[localIndex].params"<<(i+1)<<"_"<<suffixes[j];
+            }
+            load2<<");\n";
+        }
+    }
+    replacements["LOAD_ATOM2_PARAMETERS"] = load2.str();
+    map<string, string> defines;
+    if (force.getNonbondedMethod() != CustomNonbondedForce::NoCutoff)
+        defines["USE_CUTOFF"] = "1";
+    if (force.getNonbondedMethod() == CustomNonbondedForce::CutoffPeriodic)
+        defines["USE_PERIODIC"] = "1";
+    defines["THREAD_BLOCK_SIZE"] = cu.intToString(cu.getNonbondedUtilities().getForceThreadBlockSize());
+    double cutoff = force.getCutoffDistance();
+    defines["CUTOFF_SQUARED"] = cu.doubleToString(cutoff*cutoff);
+    defines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
+    defines["TILE_SIZE"] = "32";
+    int numContexts = cu.getPlatformData().contexts.size();
+    int startIndex = cu.getContextIndex()*numTileSets/numContexts;
+    int endIndex = (cu.getContextIndex()+1)*numTileSets/numContexts;
+    defines["FIRST_TILE"] = cu.intToString(startIndex);
+    defines["LAST_TILE"] = cu.intToString(endIndex);
+    if ((localDataSize/4)%2 == 0 && !cu.getUseDoublePrecision())
+        defines["PARAMETER_SIZE_IS_EVEN"] = "1";
+    CUmodule program = cu.createModule(CudaKernelSources::vectorOps+cu.replaceStrings(CudaKernelSources::customNonbondedGroups, replacements), defines);
+    interactionGroupKernel = cu.getKernel(program, "computeInteractionGroups");
+    numGroupThreadBlocks = cu.getNonbondedUtilities().getNumForceThreadBlocks();
 }
 
 double CudaCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -2053,6 +2310,23 @@ double CudaCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool in
     if (!hasInitializedLongRangeCorrection) {
         longRangeCoefficient = CustomNonbondedForceImpl::calcLongRangeCorrection(*forceCopy, context.getOwner());
         hasInitializedLongRangeCorrection = true;
+    }
+    if (interactionGroupData != NULL) {
+        if (!hasInitializedKernel) {
+            hasInitializedKernel = true;
+            interactionGroupArgs.push_back(&cu.getForce().getDevicePointer());
+            interactionGroupArgs.push_back(&cu.getEnergyBuffer().getDevicePointer());
+            interactionGroupArgs.push_back(&cu.getPosq().getDevicePointer());
+            interactionGroupArgs.push_back(&interactionGroupData->getDevicePointer());
+            interactionGroupArgs.push_back(cu.getPeriodicBoxSizePointer());
+            interactionGroupArgs.push_back(cu.getInvPeriodicBoxSizePointer());
+            for (int i = 0; i < (int) params->getBuffers().size(); i++)
+                interactionGroupArgs.push_back(&params->getBuffers()[i].getMemory());
+            if (globals != NULL)
+                interactionGroupArgs.push_back(&globals->getDevicePointer());
+        }
+        int forceThreadBlockSize = cu.getNonbondedUtilities().getForceThreadBlockSize();
+        cu.executeKernel(interactionGroupKernel, &interactionGroupArgs[0], numGroupThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
     }
     double4 boxSize = cu.getPeriodicBoxSize();
     return longRangeCoefficient/(boxSize.x*boxSize.y*boxSize.z);

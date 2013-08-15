@@ -32,8 +32,10 @@
 #include "ReferenceCustomNonbondedIxn.h"
 
 using std::map;
+using std::pair;
 using std::string;
 using std::stringstream;
+using std::set;
 using std::vector;
 using OpenMM::RealVec;
 
@@ -96,6 +98,19 @@ ReferenceCustomNonbondedIxn::~ReferenceCustomNonbondedIxn( ){
 
 /**---------------------------------------------------------------------------------------
 
+   Restrict the force to a list of interaction groups.
+
+   @param distance            the cutoff distance
+   @param neighbors           the neighbor list to use
+
+   --------------------------------------------------------------------------------------- */
+
+void ReferenceCustomNonbondedIxn::setInteractionGroups(const vector<pair<set<int>, set<int> > >& groups) {
+    interactionGroups = groups;
+}
+
+/**---------------------------------------------------------------------------------------
+
    Set the force to use a switching function.
 
    @param distance            the switching distance
@@ -138,10 +153,8 @@ void ReferenceCustomNonbondedIxn::setUseSwitchingFunction( RealOpenMM distance )
    @param numberOfAtoms    number of atoms
    @param atomCoordinates  atom coordinates
    @param atomParameters   atom parameters                             atomParameters[atomIndex][paramterIndex]
-   @param exclusions       atom exclusion indices                      exclusions[atomIndex][atomToExcludeIndex]
-                           exclusions[atomIndex][0] = number of exclusions
-                           exclusions[atomIndex][1-no.] = atom indices of atoms to excluded from
-                           interacting w/ atom atomIndex
+   @param exclusions       atom exclusion indices
+                           exclusions[atomIndex] contains the list of exclusions for that atom
    @param fixedParameters  non atom parameters (not currently used)
    @param globalParameters the values of global parameters
    @param forces           force array (forces added)
@@ -151,53 +164,59 @@ void ReferenceCustomNonbondedIxn::setUseSwitchingFunction( RealOpenMM distance )
    --------------------------------------------------------------------------------------- */
 
 void ReferenceCustomNonbondedIxn::calculatePairIxn( int numberOfAtoms, vector<RealVec>& atomCoordinates,
-                                             RealOpenMM** atomParameters, int** exclusions,
+                                             RealOpenMM** atomParameters, vector<set<int> >& exclusions,
                                              RealOpenMM* fixedParameters, const map<string, double>& globalParameters, vector<RealVec>& forces,
                                              RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const {
 
-   map<string, double> variables = globalParameters;
-   if (cutoff) {
-       for (int i = 0; i < (int) neighborList->size(); i++) {
-           OpenMM::AtomPair pair = (*neighborList)[i];
-           for (int j = 0; j < (int) paramNames.size(); j++) {
-               variables[particleParamNames[j*2]] = atomParameters[pair.first][j];
-               variables[particleParamNames[j*2+1]] = atomParameters[pair.second][j];
-           }
-           calculateOneIxn(pair.first, pair.second, atomCoordinates, variables, forces, energyByAtom, totalEnergy);
-       }
-   }
-   else {
-       // allocate and initialize exclusion array
-
-       int* exclusionIndices = new int[numberOfAtoms];
-       for( int ii = 0; ii < numberOfAtoms; ii++ ){
-          exclusionIndices[ii] = -1;
-       }
-
-       for( int ii = 0; ii < numberOfAtoms; ii++ ){
-
-          // set exclusions
-
-          for( int jj = 1; jj <= exclusions[ii][0]; jj++ ){
-             exclusionIndices[exclusions[ii][jj]] = ii;
-          }
-
-          // loop over atom pairs
-
-          for( int jj = ii+1; jj < numberOfAtoms; jj++ ){
-
-             if( exclusionIndices[jj] != ii ){
-                 for (int j = 0; j < (int) paramNames.size(); j++) {
-                     variables[particleParamNames[j*2]] = atomParameters[ii][j];
-                     variables[particleParamNames[j*2+1]] = atomParameters[jj][j];
-                 }
-                 calculateOneIxn(ii, jj, atomCoordinates, variables, forces, energyByAtom, totalEnergy);
-             }
-          }
-       }
-
-       delete[] exclusionIndices;
-   }
+    map<string, double> variables = globalParameters;
+    if (interactionGroups.size() > 0) {
+        // The user has specified interaction groups, so compute only the requested interactions.
+        
+        for (int group = 0; group < (int) interactionGroups.size(); group++) {
+            const set<int>& set1 = interactionGroups[group].first;
+            const set<int>& set2 = interactionGroups[group].second;
+            for (set<int>::const_iterator atom1 = set1.begin(); atom1 != set1.end(); ++atom1) {
+                for (set<int>::const_iterator atom2 = set2.begin(); atom2 != set2.end(); ++atom2) {
+                    if (*atom1 == *atom2 || exclusions[*atom1].find(*atom2) != exclusions[*atom1].end())
+                        continue; // This is an excluded interaction.
+                    if (*atom1 > *atom2 && set1.find(*atom2) != set1.end() && set2.find(*atom1) != set2.end())
+                        continue; // Both atoms are in both sets, so skip duplicate interactions.
+                    for (int j = 0; j < (int) paramNames.size(); j++) {
+                        variables[particleParamNames[j*2]] = atomParameters[*atom1][j];
+                        variables[particleParamNames[j*2+1]] = atomParameters[*atom2][j];
+                    }
+                    calculateOneIxn(*atom1, *atom2, atomCoordinates, variables, forces, energyByAtom, totalEnergy);
+                }
+            }
+        }
+    }
+    else if (cutoff) {
+        // We are using a cutoff, so get the interactions from the neighbor list.
+        
+        for (int i = 0; i < (int) neighborList->size(); i++) {
+            OpenMM::AtomPair pair = (*neighborList)[i];
+            for (int j = 0; j < (int) paramNames.size(); j++) {
+                variables[particleParamNames[j*2]] = atomParameters[pair.first][j];
+                variables[particleParamNames[j*2+1]] = atomParameters[pair.second][j];
+            }
+            calculateOneIxn(pair.first, pair.second, atomCoordinates, variables, forces, energyByAtom, totalEnergy);
+        }
+    }
+    else {
+        // Every particle interacts with every other one.
+        
+        for (int ii = 0; ii < numberOfAtoms; ii++) {
+            for (int jj = ii+1; jj < numberOfAtoms; jj++) {
+                if (exclusions[jj].find(ii) == exclusions[jj].end()) {
+                    for (int j = 0; j < (int) paramNames.size(); j++) {
+                        variables[particleParamNames[j*2]] = atomParameters[ii][j];
+                        variables[particleParamNames[j*2+1]] = atomParameters[jj][j];
+                    }
+                    calculateOneIxn(ii, jj, atomCoordinates, variables, forces, energyByAtom, totalEnergy);
+                }
+            }
+        }
+    }
 }
 
   /**---------------------------------------------------------------------------------------

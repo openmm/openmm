@@ -638,7 +638,7 @@ private:
 class CudaCalcCustomNonbondedForceKernel : public CalcCustomNonbondedForceKernel {
 public:
     CudaCalcCustomNonbondedForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcCustomNonbondedForceKernel(name, platform),
-            cu(cu), params(NULL), globals(NULL), tabulatedFunctionParams(NULL), forceCopy(NULL), system(system) {
+            cu(cu), params(NULL), globals(NULL), tabulatedFunctionParams(NULL), interactionGroupData(NULL), forceCopy(NULL), system(system), hasInitializedKernel(false) {
     }
     ~CudaCalcCustomNonbondedForceKernel();
     /**
@@ -665,15 +665,20 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force);
 private:
+    void initInteractionGroups(const CustomNonbondedForce& force, const std::string& interactionSource);
     CudaContext& cu;
     CudaParameterSet* params;
     CudaArray* globals;
     CudaArray* tabulatedFunctionParams;
+    CudaArray* interactionGroupData;
+    CUfunction interactionGroupKernel;
+    std::vector<void*> interactionGroupArgs;
     std::vector<std::string> globalParamNames;
     std::vector<float> globalParamValues;
     std::vector<CudaArray*> tabulatedFunctions;
     double longRangeCoefficient;
-    bool hasInitializedLongRangeCorrection;
+    bool hasInitializedLongRangeCorrection, hasInitializedKernel;
+    int numGroupThreadBlocks;
     CustomNonbondedForce* forceCopy;
     const System& system;
 };

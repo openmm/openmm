@@ -46,6 +46,7 @@
 #include "lepton/ParsedExpression.h"
 #include "SimTKOpenMMRealType.h"
 #include "SimTKOpenMMUtilities.h"
+#include <algorithm>
 #include <cmath>
 #include <set>
 
@@ -1875,6 +1876,17 @@ void OpenCLCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& contex
 class OpenCLCustomNonbondedForceInfo : public OpenCLForceInfo {
 public:
     OpenCLCustomNonbondedForceInfo(int requiredBuffers, const CustomNonbondedForce& force) : OpenCLForceInfo(requiredBuffers), force(force) {
+        if (force.getNumInteractionGroups() > 0) {
+            groupsForParticle.resize(force.getNumParticles());
+            for (int i = 0; i < force.getNumInteractionGroups(); i++) {
+                set<int> set1, set2;
+                force.getInteractionGroupParameters(i, set1, set2);
+                for (set<int>::const_iterator iter = set1.begin(); iter != set1.end(); ++iter)
+                    groupsForParticle[*iter].insert(2*i);
+                for (set<int>::const_iterator iter = set2.begin(); iter != set2.end(); ++iter)
+                    groupsForParticle[*iter].insert(2*i+1);
+            }
+        }
     }
     bool areParticlesIdentical(int particle1, int particle2) {
         vector<double> params1;
@@ -1884,6 +1896,8 @@ public:
         for (int i = 0; i < (int) params1.size(); i++)
             if (params1[i] != params2[i])
                 return false;
+        if (groupsForParticle.size() > 0 && groupsForParticle[particle1] != groupsForParticle[particle2])
+            return false;
         return true;
     }
     int getNumParticleGroups() {
@@ -1901,6 +1915,7 @@ public:
     }
 private:
     const CustomNonbondedForce& force;
+    vector<set<int> > groupsForParticle;
 };
 
 OpenCLCalcCustomNonbondedForceKernel::~OpenCLCalcCustomNonbondedForceKernel() {
@@ -1910,6 +1925,8 @@ OpenCLCalcCustomNonbondedForceKernel::~OpenCLCalcCustomNonbondedForceKernel() {
         delete globals;
     if (tabulatedFunctionParams != NULL)
         delete tabulatedFunctionParams;
+    if (interactionGroupData != NULL)
+        delete interactionGroupData;
     for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
         delete tabulatedFunctions[i];
     if (forceCopy != NULL)
@@ -1920,7 +1937,7 @@ void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, cons
     int forceIndex;
     for (forceIndex = 0; forceIndex < system.getNumForces() && &system.getForce(forceIndex) != &force; ++forceIndex)
         ;
-    string prefix = "custom"+cl.intToString(forceIndex)+"_";
+    string prefix = (force.getNumInteractionGroups() == 0 ? "custom"+cl.intToString(forceIndex)+"_" : "");
 
     // Record parameters and exclusions.
 
@@ -2021,14 +2038,18 @@ void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, cons
         replacements["SWITCH_C5"] = cl.doubleToString(6/pow(force.getSwitchingDistance()-force.getCutoffDistance(), 5.0));
     }
     string source = cl.replaceStrings(OpenCLKernelSources::customNonbonded, replacements);
-    cl.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, source, force.getForceGroup());
-    for (int i = 0; i < (int) params->getBuffers().size(); i++) {
-        const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
-        cl.getNonbondedUtilities().addParameter(OpenCLNonbondedUtilities::ParameterInfo(prefix+"params"+cl.intToString(i+1), buffer.getComponentType(), buffer.getNumComponents(), buffer.getSize(), buffer.getMemory()));
-    }
-    if (globals != NULL) {
-        globals->upload(globalParamValues);
-        cl.getNonbondedUtilities().addArgument(OpenCLNonbondedUtilities::ParameterInfo(prefix+"globals", "float", 1, sizeof(cl_float), globals->getDeviceBuffer()));
+    if (force.getNumInteractionGroups() > 0)
+        initInteractionGroups(force, source);
+    else {
+        cl.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, source, force.getForceGroup());
+        for (int i = 0; i < (int) params->getBuffers().size(); i++) {
+            const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
+            cl.getNonbondedUtilities().addParameter(OpenCLNonbondedUtilities::ParameterInfo(prefix+"params"+cl.intToString(i+1), buffer.getComponentType(), buffer.getNumComponents(), buffer.getSize(), buffer.getMemory()));
+        }
+        if (globals != NULL) {
+            globals->upload(globalParamValues);
+            cl.getNonbondedUtilities().addArgument(OpenCLNonbondedUtilities::ParameterInfo(prefix+"globals", "float", 1, sizeof(cl_float), globals->getDeviceBuffer()));
+        }
     }
     cl.addForce(new OpenCLCustomNonbondedForceInfo(cl.getNonbondedUtilities().getNumForceBuffers(), force));
     
@@ -2042,6 +2063,250 @@ void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, cons
         longRangeCoefficient = 0.0;
         hasInitializedLongRangeCorrection = true;
     }
+}
+
+void OpenCLCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNonbondedForce& force, const string& interactionSource) {
+    // Process groups to form tiles.
+    
+    vector<vector<int> > atomLists;
+    vector<pair<int, int> > tiles;
+    map<pair<int, int>, int> duplicateInteractions;
+    for (int group = 0; group < force.getNumInteractionGroups(); group++) {
+        // Get the list of atoms in this group and sort them.
+        
+        set<int> set1, set2;
+        force.getInteractionGroupParameters(group, set1, set2);
+        vector<int> atoms1, atoms2;
+        atoms1.insert(atoms1.begin(), set1.begin(), set1.end());
+        atoms2.insert(atoms2.begin(), set2.begin(), set2.end());
+        sort(atoms1.begin(), atoms1.end());
+        sort(atoms2.begin(), atoms2.end());
+        
+        // Find how many tiles we will create for this group.
+        
+        int tileWidth = min(min(32, (int) atoms1.size()), (int) atoms2.size());
+        int numBlocks1 = (atoms1.size()+tileWidth-1)/tileWidth;
+        int numBlocks2 = (atoms2.size()+tileWidth-1)/tileWidth;
+        
+        // Add the tiles.
+        
+        for (int i = 0; i < numBlocks1; i++)
+            for (int j = 0; j < numBlocks2; j++)
+                tiles.push_back(make_pair(atomLists.size()+i, atomLists.size()+numBlocks1+j));
+        
+        // Add the atom lists.
+        
+        for (int i = 0; i < numBlocks1; i++) {
+            vector<int> atoms;
+            int first = i*tileWidth;
+            int last = min((i+1)*tileWidth, (int) atoms1.size());
+            for (int j = first; j < last; j++)
+                atoms.push_back(atoms1[j]);
+            atomLists.push_back(atoms);
+        }
+        for (int i = 0; i < numBlocks2; i++) {
+            vector<int> atoms;
+            int first = i*tileWidth;
+            int last = min((i+1)*tileWidth, (int) atoms2.size());
+            for (int j = first; j < last; j++)
+                atoms.push_back(atoms2[j]);
+            atomLists.push_back(atoms);
+        }
+        
+        // If this group contains duplicate interactions, record that we need to skip them once.
+        
+        for (int i = 0; i < (int) atoms1.size(); i++) {
+            int a1 = atoms1[i];
+            if (set2.find(a1) == set2.end())
+                continue;
+            for (int j = 0; j < (int) atoms2.size() && atoms2[j] < a1; j++) {
+                int a2 = atoms2[j];
+                if (set1.find(a2) != set1.end()) {
+                    pair<int, int> key = make_pair(a2, a1);
+                    if (duplicateInteractions.find(key) == duplicateInteractions.end())
+                        duplicateInteractions[key] = 0;
+                    duplicateInteractions[key]++;
+                }
+            }
+        }
+    }
+    
+    // Build a lookup table for quickly identifying excluded interactions.
+    
+    set<pair<int, int> > exclusions;
+    for (int i = 0; i < force.getNumExclusions(); i++) {
+        int p1, p2;
+        force.getExclusionParticles(i, p1, p2);
+        exclusions.insert(make_pair(min(p1, p2), max(p1, p2)));
+    }
+    
+    // Build the exclusion flags for each tile.  While we're at it, filter out tiles
+    // where all interactions are excluded, and sort the tiles by size.
+
+    vector<vector<int> > exclusionFlags(tiles.size());
+    vector<pair<int, int> > tileOrder;
+    for (int tile = 0; tile < tiles.size(); tile++) {
+        if (atomLists[tiles[tile].first].size() < atomLists[tiles[tile].second].size()) {
+            // For efficiency, we want the first axis to be the larger one.
+            
+            int swap = tiles[tile].first;
+            tiles[tile].first = tiles[tile].second;
+            tiles[tile].second = swap;
+        }
+        vector<int>& atoms1 = atomLists[tiles[tile].first];
+        vector<int>& atoms2 = atomLists[tiles[tile].second];
+        vector<int> flags(atoms1.size(), (int) (1LL<<atoms2.size())-1);
+        int numExcluded = 0;
+        for (int i = 0; i < (int) atoms1.size(); i++)
+            for (int j = 0; j < (int) atoms2.size(); j++) {
+                int a1 = atoms1[i];
+                int a2 = atoms2[j];
+                bool isExcluded = false;
+                pair<int, int> key = make_pair(min(a1, a2), max(a1, a2));
+                if (a1 == a2 || exclusions.find(key) != exclusions.end())
+                    isExcluded = true; // This is an excluded interaction.
+                else if (duplicateInteractions.find(key) != duplicateInteractions.end() && duplicateInteractions[key] > 0) {
+                    // Both atoms are in both sets, so skip duplicate interactions.
+                    
+                    isExcluded = true;
+                    duplicateInteractions[key]--;
+                }
+                if (isExcluded) {
+                    flags[i] &= -1-(1<<j);
+                    numExcluded++;
+                }
+            }
+        if (numExcluded == atoms1.size()*atoms2.size())
+            continue; // All interactions are excluded.
+        tileOrder.push_back(make_pair((int) -atoms2.size(), tile));
+        exclusionFlags[tile] = flags;
+    }
+    sort(tileOrder.begin(), tileOrder.end());
+    
+    // Merge tiles to get as close as possible to 32 along the first axis of each one.
+    
+    vector<int> tileSetStart;
+    tileSetStart.push_back(0);
+    int tileSetSize = 0;
+    for (int i = 0; i < tileOrder.size(); i++) {
+        int tile = tileOrder[i].second;
+        int size = atomLists[tiles[tile].first].size();
+        if (tileSetSize+size > 32) {
+            tileSetStart.push_back(i);
+            tileSetSize = 0;
+        }
+        tileSetSize += size;
+    }
+    tileSetStart.push_back(tileOrder.size());
+    
+    // Build the data structures.
+    
+    int numTileSets = tileSetStart.size()-1;
+    vector<mm_int4> groupData;
+    for (int tileSet = 0; tileSet < numTileSets; tileSet++) {
+        int indexInTileSet = 0;
+        int minSize = 0;
+        if (cl.getSIMDWidth() < 32) {
+            // We need to include a barrier inside the inner loop, so ensure that all
+            // threads will loop the same number of times.
+            
+            for (int i = tileSetStart[tileSet]; i < tileSetStart[tileSet+1]; i++)
+                minSize = max(minSize, (int) atomLists[tiles[tileOrder[i].second].first].size());
+        }
+        for (int i = tileSetStart[tileSet]; i < tileSetStart[tileSet+1]; i++) {
+            int tile = tileOrder[i].second;
+            vector<int>& atoms1 = atomLists[tiles[tile].first];
+            vector<int>& atoms2 = atomLists[tiles[tile].second];
+            int range = indexInTileSet + ((indexInTileSet+max(minSize, (int) atoms1.size()))<<16);
+            int allFlags = (1<<atoms2.size())-1;
+            for (int j = 0; j < (int) atoms1.size(); j++) {
+                int a1 = atoms1[j];
+                int a2 = (j < atoms2.size() ? atoms2[j] : 0);
+                int flags = (exclusionFlags[tile].size() > 0 ? exclusionFlags[tile][j] : allFlags);
+                groupData.push_back(mm_int4(a1, a2, range, flags<<indexInTileSet));
+            }
+            indexInTileSet += atoms1.size();
+        }
+        for (; indexInTileSet < 32; indexInTileSet++)
+            groupData.push_back(mm_int4(0, 0, minSize<<16, 0));
+    }
+    interactionGroupData = OpenCLArray::create<mm_int4>(cl, groupData.size(), "interactionGroupData");
+    interactionGroupData->upload(groupData);
+    
+    // Create the kernel.
+    
+    map<string, string> replacements;
+    replacements["COMPUTE_INTERACTION"] = interactionSource;
+    const string suffixes[] = {"x", "y", "z", "w"};
+    stringstream localData;
+    int localDataSize = 0;
+    vector<OpenCLNonbondedUtilities::ParameterInfo>& buffers = params->getBuffers(); 
+    for (int i = 0; i < (int) buffers.size(); i++) {
+        if (buffers[i].getNumComponents() == 1)
+            localData<<buffers[i].getComponentType()<<" params"<<(i+1)<<";\n";
+        else {
+            for (int j = 0; j < buffers[i].getNumComponents(); ++j)
+                localData<<buffers[i].getComponentType()<<" params"<<(i+1)<<"_"<<suffixes[j]<<";\n";
+        }
+        localDataSize += buffers[i].getSize();
+    }
+    replacements["ATOM_PARAMETER_DATA"] = localData.str();
+    stringstream args;
+    for (int i = 0; i < (int) buffers.size(); i++)
+        args<<", __global const "<<buffers[i].getType()<<"* restrict global_params"<<(i+1);
+    if (globals != NULL)
+        args<<", __global const float* restrict globals";
+    replacements["PARAMETER_ARGUMENTS"] = args.str();
+    stringstream load1;
+    for (int i = 0; i < (int) buffers.size(); i++)
+        load1<<buffers[i].getType()<<" params"<<(i+1)<<"1 = global_params"<<(i+1)<<"[atom1];\n";
+    replacements["LOAD_ATOM1_PARAMETERS"] = load1.str();
+    stringstream loadLocal2;
+    for (int i = 0; i < (int) buffers.size(); i++) {
+        if (buffers[i].getNumComponents() == 1)
+            loadLocal2<<"localData[get_local_id(0)].params"<<(i+1)<<" = global_params"<<(i+1)<<"[atom2];\n";
+        else {
+            loadLocal2<<buffers[i].getType()<<" temp_params"<<(i+1)<<" = global_params"<<(i+1)<<"[atom2];\n";
+            for (int j = 0; j < buffers[i].getNumComponents(); ++j)
+                loadLocal2<<"localData[get_local_id(0)].params"<<(i+1)<<"_"<<suffixes[j]<<" = temp_params"<<(i+1)<<"."<<suffixes[j]<<";\n";
+        }
+    }
+    replacements["LOAD_LOCAL_PARAMETERS"] = loadLocal2.str();
+    stringstream load2;
+    for (int i = 0; i < (int) buffers.size(); i++) {
+        if (buffers[i].getNumComponents() == 1)
+            load2<<buffers[i].getType()<<" params"<<(i+1)<<"2 = localData[localIndex].params"<<(i+1)<<";\n";
+        else {
+            load2<<buffers[i].getType()<<" params"<<(i+1)<<"2 = ("<<buffers[i].getType()<<") (";
+            for (int j = 0; j < buffers[i].getNumComponents(); ++j) {
+                if (j > 0)
+                    load2<<", ";
+                load2<<"localData[localIndex].params"<<(i+1)<<"_"<<suffixes[j];
+            }
+            load2<<");\n";
+        }
+    }
+    replacements["LOAD_ATOM2_PARAMETERS"] = load2.str();
+    map<string, string> defines;
+    if (force.getNonbondedMethod() != CustomNonbondedForce::NoCutoff)
+        defines["USE_CUTOFF"] = "1";
+    if (force.getNonbondedMethod() == CustomNonbondedForce::CutoffPeriodic)
+        defines["USE_PERIODIC"] = "1";
+    defines["THREAD_BLOCK_SIZE"] = cl.intToString(cl.getNonbondedUtilities().getForceThreadBlockSize());
+    double cutoff = force.getCutoffDistance();
+    defines["CUTOFF_SQUARED"] = cl.doubleToString(cutoff*cutoff);
+    defines["PADDED_NUM_ATOMS"] = cl.intToString(cl.getPaddedNumAtoms());
+    defines["TILE_SIZE"] = "32";
+    int numContexts = cl.getPlatformData().contexts.size();
+    int startIndex = cl.getContextIndex()*numTileSets/numContexts;
+    int endIndex = (cl.getContextIndex()+1)*numTileSets/numContexts;
+    defines["FIRST_TILE"] = cl.intToString(startIndex);
+    defines["LAST_TILE"] = cl.intToString(endIndex);
+    if ((localDataSize/4)%2 == 0 && !cl.getUseDoublePrecision())
+        defines["PARAMETER_SIZE_IS_EVEN"] = "1";
+    cl::Program program = cl.createProgram(cl.replaceStrings(OpenCLKernelSources::customNonbondedGroups, replacements), defines);
+    interactionGroupKernel = cl::Kernel(program, "computeInteractionGroups");
+    numGroupThreadBlocks = cl.getNonbondedUtilities().getNumForceThreadBlocks();
 }
 
 double OpenCLCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -2064,6 +2329,25 @@ double OpenCLCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool 
     if (!hasInitializedLongRangeCorrection) {
         longRangeCoefficient = CustomNonbondedForceImpl::calcLongRangeCorrection(*forceCopy, context.getOwner());
         hasInitializedLongRangeCorrection = true;
+    }
+    if (interactionGroupData != NULL) {
+        if (!hasInitializedKernel) {
+            hasInitializedKernel = true;
+            int index = 0;
+            bool useLong = cl.getSupports64BitGlobalAtomics();
+            interactionGroupKernel.setArg<cl::Buffer>(index++, (useLong ? cl.getLongForceBuffer() : cl.getForceBuffers()).getDeviceBuffer());
+            interactionGroupKernel.setArg<cl::Buffer>(index++, cl.getEnergyBuffer().getDeviceBuffer());
+            interactionGroupKernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
+            interactionGroupKernel.setArg<cl::Buffer>(index++, interactionGroupData->getDeviceBuffer());
+            setPeriodicBoxSizeArg(cl, interactionGroupKernel, index++);
+            setInvPeriodicBoxSizeArg(cl, interactionGroupKernel, index++);
+            for (int i = 0; i < (int) params->getBuffers().size(); i++)
+                interactionGroupKernel.setArg<cl::Memory>(index++, params->getBuffers()[i].getMemory());
+            if (globals != NULL)
+                interactionGroupKernel.setArg<cl::Buffer>(index++, globals->getDeviceBuffer());
+        }
+        int forceThreadBlockSize = max(32, cl.getNonbondedUtilities().getForceThreadBlockSize());
+        cl.executeKernel(interactionGroupKernel, numGroupThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
     }
     mm_double4 boxSize = cl.getPeriodicBoxSizeDouble();
     return longRangeCoefficient/(boxSize.x*boxSize.y*boxSize.z);

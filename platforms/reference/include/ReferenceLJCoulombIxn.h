@@ -156,10 +156,8 @@ class ReferenceLJCoulombIxn {
          @param numberOfAtoms    number of atoms
          @param atomCoordinates  atom coordinates
          @param atomParameters   atom parameters (charges, c6, c12, ...)     atomParameters[atomIndex][paramterIndex]
-         @param exclusions       atom exclusion indices                      exclusions[atomIndex][atomToExcludeIndex]
-                                 exclusions[atomIndex][0] = number of exclusions
-                                 exclusions[atomIndex][1-no.] = atom indices of atoms to excluded from
-                                 interacting w/ atom atomIndex
+         @param exclusions       atom exclusion indices
+                                 exclusions[atomIndex] contains the list of exclusions for that atom
          @param fixedParameters  non atom parameters (not currently used)
          @param forces           force array (forces added)
          @param energyByAtom     atom energy
@@ -170,7 +168,7 @@ class ReferenceLJCoulombIxn {
          --------------------------------------------------------------------------------------- */
           
       void calculatePairIxn(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
-                            RealOpenMM** atomParameters, int** exclusions,
+                            RealOpenMM** atomParameters, std::vector<std::set<int> >& exclusions,
                             RealOpenMM* fixedParameters, std::vector<OpenMM::RealVec>& forces,
                             RealOpenMM* energyByAtom, RealOpenMM* totalEnergy, bool includeDirect, bool includeReciprocal) const;
 
@@ -182,10 +180,8 @@ private:
          @param numberOfAtoms    number of atoms
          @param atomCoordinates  atom coordinates
          @param atomParameters   atom parameters (charges, c6, c12, ...)     atomParameters[atomIndex][paramterIndex]
-         @param exclusions       atom exclusion indices                      exclusions[atomIndex][atomToExcludeIndex]
-                                 exclusions[atomIndex][0] = number of exclusions
-                                 exclusions[atomIndex][1-no.] = atom indices of atoms to excluded from
-                                 interacting w/ atom atomIndex
+         @param exclusions       atom exclusion indices
+                                 exclusions[atomIndex] contains the list of exclusions for that atom
          @param fixedParameters  non atom parameters (not currently used)
          @param forces           force array (forces added)
          @param energyByAtom     atom energy
@@ -196,7 +192,7 @@ private:
          --------------------------------------------------------------------------------------- */
           
       void calculateEwaldIxn(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
-                            RealOpenMM** atomParameters, int** exclusions,
+                            RealOpenMM** atomParameters, std::vector<std::set<int> >& exclusions,
                             RealOpenMM* fixedParameters, std::vector<OpenMM::RealVec>& forces,
                             RealOpenMM* energyByAtom, RealOpenMM* totalEnergy, bool includeDirect, bool includeReciprocal) const;
 };

@@ -80,6 +80,25 @@ namespace OpenMM {
  * if the labels 1 and 2 are reversed.  In contrast, if it depended on the difference sigma1-sigma2, the results would
  * be undefined, because reversing the labels 1 and 2 would change the energy.
  * 
+ * CustomNonbondedForce can operate in two modes.  By default, it computes the interaction of every particle in the System
+ * with every other particle.  Alternatively, you can restrict it to only a subset of particle pairs.  To do this, specify
+ * one or more "interaction groups".  An interaction group consists of two sets of particles that should interact with
+ * each other.  Every particle in the first set interacts with every particle in the second set.  For example, you might use
+ * this feature to compute a solute-solvent interaction energy, while omitting all interactions between two solute atoms
+ * or two solvent atoms.
+ * 
+ * To create an interaction group, call addInteractionGroup().  You may add as many interaction groups as you want.
+ * Be aware of the following:
+ * 
+ * <ul>
+ * <li>Exclusions are still taken into account, so the interactions between excluded pairs are omitted.</li>
+ * <li>Likewise, a particle will never interact with itself, even if it appears in both sets of an interaction group.</li>
+ * <li>If a particle pair appears in two different interaction groups, its interaction will be computed twice.  This is
+ * sometimes useful, but be aware of it so you do not accidentally create unwanted duplicate interactions.</li>
+ * <li>If you do not add any interaction groups to a CustomNonbondedForce, it operates in the default mode where every
+ * particle interacts with every other particle.</li>
+ * </ul>
+ * 
  * When using a cutoff, by default the interaction is sharply truncated at the cutoff distance.
  * Optionally you can instead use a switching function to make the interaction smoothly go to zero over a finite
  * distance range.  To enable this, call setUseSwitchingFunction().  You must also call setSwitchingDistance()
@@ -166,6 +185,12 @@ public:
      */
     int getNumFunctions() const {
         return functions.size();
+    }
+    /**
+     * Get the number of interaction groups that have been defined.
+     */
+    int getNumInteractionGroups() const {
+        return interactionGroups.size();
     }
     /**
      * Get the algebraic expression that gives the interaction energy between two particles
@@ -364,9 +389,33 @@ public:
      */
     void setFunctionParameters(int index, const std::string& name, const std::vector<double>& values, double min, double max);
     /**
+     * Add an interaction group.  An interaction will be computed between every particle in set1 and every particle in set2.
+     * 
+     * @param set1    the first set of particles forming the interaction group
+     * @param set2    the second set of particles forming the interaction group
+     * @return the index of the interaction group that was added
+     */
+    int addInteractionGroup(const std::set<int>& set1, const std::set<int>& set2);
+    /**
+     * Get the parameters for an interaction group.
+     * 
+     * @param index   the index of the interaction group for which to get parameters
+     * @param set1    the first set of particles forming the interaction group
+     * @param set2    the second set of particles forming the interaction group
+     */
+    void getInteractionGroupParameters(int index, std::set<int>& set1, std::set<int>& set2) const;
+    /**
+     * Set the parameters for an interaction group.
+     * 
+     * @param index   the index of the interaction group for which to set parameters
+     * @param set1    the first set of particles forming the interaction group
+     * @param set2    the second set of particles forming the interaction group
+     */
+    void setInteractionGroupParameters(int index, const std::set<int>& set1, const std::set<int>& set2);
+    /**
      * Update the per-particle parameters in a Context to match those stored in this Force object.  This method provides
      * an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
-     * Simply call setParticleParameters() to modify this object's parameters, then call updateParametersInState()
+     * Simply call setParticleParameters() to modify this object's parameters, then call updateParametersInContext()
      * to copy them over to the Context.
      * 
      * This method has several limitations.  The only information it updates is the values of per-particle parameters.
@@ -383,6 +432,7 @@ private:
     class GlobalParameterInfo;
     class ExclusionInfo;
     class FunctionInfo;
+    class InteractionGroupInfo;
     NonbondedMethod nonbondedMethod;
     double cutoffDistance, switchingDistance;
     bool useSwitchingFunction, useLongRangeCorrection;
@@ -392,6 +442,7 @@ private:
     std::vector<ParticleInfo> particles;
     std::vector<ExclusionInfo> exclusions;
     std::vector<FunctionInfo> functions;
+    std::vector<InteractionGroupInfo> interactionGroups;
 };
 
 /**
@@ -462,6 +513,20 @@ public:
     }
     FunctionInfo(const std::string& name, const std::vector<double>& values, double min, double max) :
         name(name), values(values), min(min), max(max) {
+    }
+};
+
+/**
+ * This is an internal class used to record information about an interaction group.
+ * @private
+ */
+class CustomNonbondedForce::InteractionGroupInfo {
+public:
+    std::set<int> set1, set2;
+    InteractionGroupInfo() {
+    }
+    InteractionGroupInfo(const std::set<int>& set1, const std::set<int>& set2) :
+        set1(set1), set2(set2) {
     }
 };
 

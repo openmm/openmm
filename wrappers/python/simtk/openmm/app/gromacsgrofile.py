@@ -122,7 +122,7 @@ class GromacsGroFile(object):
                 na = int(line.strip())
             elif _is_gro_coord(line):
                 if frame == 0: # Create the list of residues, atom names etc. only if it's the first frame.
-                    (thisresnum, thisresname, thisatomname, thisatomnum) = [line[i*5:i*5+5].strip() for i in range(4)]
+                    (thisresnum, thisresname, thisatomname) = [line[i*5:i*5+5].strip() for i in range(3)]
                     resname.append(thisresname)
                     resid.append(int(thisresnum))
                     atomname.append(thisatomname)
@@ -133,7 +133,10 @@ class GromacsGroFile(object):
                             elements.append(elem.get_by_symbol(thiselem))
                         except KeyError:
                             elements.append(None)
-                pos = [float(line[20+i*8:28+i*8]) for i in range(3)]
+                firstDecimalPos = line.index('.', 20)
+                secondDecimalPos = line.index('.', firstDecimalPos+1)
+                digits = secondDecimalPos-firstDecimalPos
+                pos = [float(line[20+i*digits:20+(i+1)*digits]) for i in range(3)]
                 xyz.append(Vec3(pos[0], pos[1], pos[2]))
             elif _is_gro_box(line) and ln == na + 2:
                 sline = line.split()
