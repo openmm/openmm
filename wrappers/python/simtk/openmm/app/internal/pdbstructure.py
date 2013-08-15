@@ -163,7 +163,7 @@ class PdbStructure(object):
             elif (pdb_line.find("TER") == 0 and pdb_line.split()[0] == "TER"):
                 self._current_model._current_chain._add_ter_record()
             elif (pdb_line.find("CRYST1") == 0):
-                self._unit_cell_dimensions = (float(pdb_line[6:15]), float(pdb_line[15:24]), float(pdb_line[24:33]))*unit.angstroms
+                self._unit_cell_dimensions = Vec3(float(pdb_line[6:15]), float(pdb_line[15:24]), float(pdb_line[24:33]))*unit.angstroms
             elif (pdb_line.find("CONECT") == 0):
                 atoms = [int(pdb_line[6:11])]
                 for pos in (11,16,21,26):
