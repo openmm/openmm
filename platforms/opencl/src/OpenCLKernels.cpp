@@ -2155,7 +2155,7 @@ void OpenCLCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
         }
         vector<int>& atoms1 = atomLists[tiles[tile].first];
         vector<int>& atoms2 = atomLists[tiles[tile].second];
-        vector<int> flags(atoms1.size(), (1L<<atoms2.size())-1);
+        vector<int> flags(atoms1.size(), (int) (1LL<<atoms2.size())-1);
         int numExcluded = 0;
         for (int i = 0; i < (int) atoms1.size(); i++)
             for (int j = 0; j < (int) atoms2.size(); j++) {
