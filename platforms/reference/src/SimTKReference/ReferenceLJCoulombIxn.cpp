@@ -432,25 +432,27 @@ void ReferenceLJCoulombIxn::calculateEwaldIxn(int numberOfAtoms, vector<RealVec>
                RealOpenMM r         = deltaR[0][ReferenceForce::RIndex];
                RealOpenMM inverseR  = one/(deltaR[0][ReferenceForce::RIndex]);
                RealOpenMM alphaR    = alphaEwald * r;
-               RealOpenMM dEdR      = (RealOpenMM) (ONE_4PI_EPS0 * atomParameters[ii][QIndex] * atomParameters[jj][QIndex] * inverseR * inverseR * inverseR);
-                          dEdR      = (RealOpenMM) (dEdR * (erf(alphaR) - 2 * alphaR * exp ( - alphaR * alphaR) / SQRT_PI ));
+               if (erf(alphaR) > 1e-6) {
+                   RealOpenMM dEdR      = (RealOpenMM) (ONE_4PI_EPS0 * atomParameters[ii][QIndex] * atomParameters[jj][QIndex] * inverseR * inverseR * inverseR);
+                              dEdR      = (RealOpenMM) (dEdR * (erf(alphaR) - 2 * alphaR * exp ( - alphaR * alphaR) / SQRT_PI ));
 
-               // accumulate forces
+                   // accumulate forces
 
-               for( int kk = 0; kk < 3; kk++ ){
-                  RealOpenMM force  = dEdR*deltaR[0][kk];
-                  forces[ii][kk]   -= force;
-                  forces[jj][kk]   += force;
-               }
+                   for( int kk = 0; kk < 3; kk++ ){
+                      RealOpenMM force  = dEdR*deltaR[0][kk];
+                      forces[ii][kk]   -= force;
+                      forces[jj][kk]   += force;
+                   }
 
-               // accumulate energies
+                   // accumulate energies
 
-               realSpaceEwaldEnergy = (RealOpenMM) (ONE_4PI_EPS0*atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*inverseR*erf(alphaR));
+                   realSpaceEwaldEnergy = (RealOpenMM) (ONE_4PI_EPS0*atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*inverseR*erf(alphaR));
 
-               totalExclusionEnergy += realSpaceEwaldEnergy;
-               if( energyByAtom ){
-                   energyByAtom[ii] -= realSpaceEwaldEnergy;
-                   energyByAtom[jj] -= realSpaceEwaldEnergy;
+                   totalExclusionEnergy += realSpaceEwaldEnergy;
+                   if( energyByAtom ){
+                       energyByAtom[ii] -= realSpaceEwaldEnergy;
+                       energyByAtom[jj] -= realSpaceEwaldEnergy;
+                   }
                }
             }
         }
