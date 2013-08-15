@@ -22,8 +22,10 @@ if ((!isExcluded && r2 < CUTOFF_SQUARED) || needCorrection) {
     if (needCorrection) {
         // Subtract off the part of this interaction that was included in the reciprocal space contribution.
 
-        tempForce = -prefactor*((1.0f-erfcAlphaR)-alphaR*expAlphaRSqr*TWO_OVER_SQRT_PI);
-        tempEnergy += -prefactor*(1.0f-erfcAlphaR);
+        if (1-erfcAlphaR > 1e-6) {
+            tempForce = -prefactor*((1.0f-erfcAlphaR)-alphaR*expAlphaRSqr*TWO_OVER_SQRT_PI);
+            tempEnergy += -prefactor*(1.0f-erfcAlphaR);
+        }
     }
     else {
 #if HAS_LENNARD_JONES
