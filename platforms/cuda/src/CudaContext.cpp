@@ -224,6 +224,8 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     compilationDefines["ACOS"] = useDoublePrecision ? "acos" : "acosf";
     compilationDefines["ASIN"] = useDoublePrecision ? "asin" : "asinf";
     compilationDefines["ATAN"] = useDoublePrecision ? "atan" : "atanf";
+    compilationDefines["ERF"] = useDoublePrecision ? "erf" : "erff";
+    compilationDefines["ERFC"] = useDoublePrecision ? "erfc" : "erfcf";
     
     // Create the work thread used for parallelization when running on multiple devices.
     
