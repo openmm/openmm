@@ -114,8 +114,8 @@ extern "C" __global__ void contractForces(long long* force, long long* contracte
         
         // Store results.
         
-        force[forceIndex] = (long long) (FORCE_SCALE*freal[indexInBlock].x);
-        force[forceIndex+PADDED_NUM_ATOMS] = (long long) (FORCE_SCALE*freal[indexInBlock].y);
-        force[forceIndex+PADDED_NUM_ATOMS*2] = (long long) (FORCE_SCALE*freal[indexInBlock].z);
+        force[forceIndex] += (long long) (FORCE_SCALE*freal[indexInBlock].x);
+        force[forceIndex+PADDED_NUM_ATOMS] += (long long) (FORCE_SCALE*freal[indexInBlock].y);
+        force[forceIndex+PADDED_NUM_ATOMS*2] += (long long) (FORCE_SCALE*freal[indexInBlock].z);
     }
 }
