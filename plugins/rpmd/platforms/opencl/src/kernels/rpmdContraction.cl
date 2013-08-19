@@ -113,6 +113,6 @@ __kernel void contractForces(__global real4* force, __global real4* contracted) 
         
         // Store results.
 
-        force[index] = convert_real4(FORCE_SCALE*freal[indexInBlock]);
+        force[index] += convert_real4(FORCE_SCALE*freal[indexInBlock]);
     }
 }
