@@ -335,8 +335,8 @@ class PrmtopLoader(object):
                                  % ((bondPointers[ii],
                                      bondPointers[ii+1]),))
              iType=int(bondPointers[ii+2])-1
-             returnList.append((int(bondPointers[ii])/3,
-                                int(bondPointers[ii+1])/3,
+             returnList.append((int(bondPointers[ii])//3,
+                                int(bondPointers[ii+1])//3,
                                 float(forceConstant[iType])*forceConstConversionFactor,
                                 float(bondEquil[iType])*lengthConversionFactor))
         return returnList
@@ -383,9 +383,9 @@ class PrmtopLoader(object):
                                      anglePointers[ii+1],
                                      anglePointers[ii+2]),))
              iType=int(anglePointers[ii+3])-1
-             self._angleList.append((int(anglePointers[ii])/3,
-                                int(anglePointers[ii+1])/3,
-                                int(anglePointers[ii+2])/3,
+             self._angleList.append((int(anglePointers[ii])//3,
+                                int(anglePointers[ii+1])//3,
+                                int(anglePointers[ii+2])//3,
                                 float(forceConstant[iType])*forceConstConversionFactor,
                                 float(angleEquil[iType])))
         return self._angleList
@@ -411,10 +411,10 @@ class PrmtopLoader(object):
                                     dihedralPointers[ii+2],
                                     dihedralPointers[ii+3]),))
              iType=int(dihedralPointers[ii+4])-1
-             self._dihedralList.append((int(dihedralPointers[ii])/3,
-                                int(dihedralPointers[ii+1])/3,
-                                abs(int(dihedralPointers[ii+2]))/3,
-                                abs(int(dihedralPointers[ii+3]))/3,
+             self._dihedralList.append((int(dihedralPointers[ii])//3,
+                                int(dihedralPointers[ii+1])//3,
+                                abs(int(dihedralPointers[ii+2]))//3,
+                                abs(int(dihedralPointers[ii+3]))//3,
                                 float(forceConstant[iType])*forceConstConversionFactor,
                                 float(phase[iType]),
                                 int(0.5+float(periodicity[iType]))))
@@ -429,8 +429,8 @@ class PrmtopLoader(object):
         nonbondTerms = self.getNonbondTerms()
         for ii in range(0,len(dihedralPointers),5):
              if int(dihedralPointers[ii+2])>0 and int(dihedralPointers[ii+3])>0:
-                 iAtom = int(dihedralPointers[ii])/3
-                 lAtom = int(dihedralPointers[ii+3])/3
+                 iAtom = int(dihedralPointers[ii])//3
+                 lAtom = int(dihedralPointers[ii+3])//3
                  chargeProd = charges[iAtom]*charges[lAtom]
                  (rVdwI, epsilonI) = nonbondTerms[iAtom]
                  (rVdwL, epsilonL) = nonbondTerms[lAtom]
