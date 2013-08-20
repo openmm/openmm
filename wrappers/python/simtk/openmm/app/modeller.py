@@ -769,6 +769,7 @@ class Modeller(object):
         LocalEnergyMinimizer.minimize(context)
         self.topology = newTopology
         self.positions = context.getState(getPositions=True).getPositions()
+        del context
         return actualVariants
 
     def addExtraParticles(self, forcefield):
