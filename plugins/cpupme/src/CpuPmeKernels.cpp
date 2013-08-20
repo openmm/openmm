@@ -95,6 +95,16 @@ static int getNumProcessors() {
 #define cpuid __cpuid
 #else
 static void cpuid(int cpuInfo[4], int infoType){
+#ifdef __LP64__
+    __asm__ __volatile__ (
+        "cpuid":
+        "=a" (cpuInfo[0]),
+        "=b" (cpuInfo[1]),
+        "=c" (cpuInfo[2]),
+        "=d" (cpuInfo[3]) :
+        "a" (infoType)
+    );
+#else
     __asm__ __volatile__ (
         "pushl %%ebx\n"
         "cpuid\n"
@@ -106,6 +116,7 @@ static void cpuid(int cpuInfo[4], int infoType){
         "=d" (cpuInfo[3]) :
         "a" (infoType)
     );
+#endif
 }
 #endif
 
