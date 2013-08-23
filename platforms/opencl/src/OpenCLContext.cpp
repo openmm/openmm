@@ -88,7 +88,7 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
         contextIndex = platformData.contexts.size();
         std::vector<cl::Platform> platforms;
         cl::Platform::get(&platforms);
-	const int minThreadBlockSize = 32;
+        const int minThreadBlockSize = 32;
 
         int bestSpeed = -1;
         int bestDevice = -1;
