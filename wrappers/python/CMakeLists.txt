@@ -13,6 +13,7 @@ mark_as_advanced(OPENMM_PYTHON_STAGING_DIR)
 file(MAKE_DIRECTORY ${OPENMM_PYTHON_STAGING_DIR}/simtk/openmm)
 file(MAKE_DIRECTORY ${OPENMM_PYTHON_STAGING_DIR}/simtk/unit)
 file(MAKE_DIRECTORY ${OPENMM_PYTHON_STAGING_DIR}/src/swig_doxygen/swig_lib/python)
+file(MAKE_DIRECTORY ${OPENMM_PYTHON_STAGING_DIR}/tests)
 
 ##############################################################################
 ### Identify files that need to be copied from source area to staging area ###
@@ -46,7 +47,7 @@ file(WRITE "${OPENMM_PYTHON_STAGING_DIR}/simtk/openmm/version.py" "git_revision 
 #     set(temp2 "${temp2}\n${f}")
 # endforeach()
 
-set(SUBDIRS src simtk)
+set(SUBDIRS src simtk tests)
 foreach(SUBDIR ${SUBDIRS})
     file(GLOB_RECURSE STAGING_INPUT_FILES1 RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*README.txt"
@@ -55,6 +56,8 @@ foreach(SUBDIR ${SUBDIRS})
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.sh"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.xml"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.pdb"
+        "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.prmtop"
+        "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.top"
     )
     foreach(file ${STAGING_INPUT_FILES1})
         set(STAGING_INPUT_FILES ${STAGING_INPUT_FILES} "${file}")
