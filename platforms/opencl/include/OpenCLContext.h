@@ -192,6 +192,12 @@ public:
         return deviceIndex;
     }
     /**
+     * Get the index of the cl::Platform associated with this object.
+     */
+    int getPlatformIndex() {
+        return platformIndex;
+    }
+    /**
      * Get the PlatformData object this context is part of.
      */
     OpenCLPlatform::PlatformData& getPlatformData() {
@@ -604,6 +610,7 @@ private:
     double time;
     OpenCLPlatform::PlatformData& platformData;
     int deviceIndex;
+    int platformIndex;
     int contextIndex;
     int stepCount;
     int computeForceCount;
