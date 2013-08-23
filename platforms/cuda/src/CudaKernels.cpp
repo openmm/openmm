@@ -2427,6 +2427,8 @@ void CudaCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOBCF
     posq.upload(cu.getPinnedBuffer());
     params->upload(paramsVector);
     prefactor = -ONE_4PI_EPS0*((1.0/force.getSoluteDielectric())-(1.0/force.getSolventDielectric()));
+    krf = pow(force.getCutoffDistance(), -3.0)*(force.getSolventDielectric()-1.0)/(2.0*force.getSolventDielectric()+1.0);
+    crf = (1.0/force.getCutoffDistance())*(3.0*force.getSolventDielectric())/(2.0*force.getSolventDielectric()+1.0);
     bool useCutoff = (force.getNonbondedMethod() != GBSAOBCForce::NoCutoff);
     bool usePeriodic = (force.getNonbondedMethod() != GBSAOBCForce::NoCutoff && force.getNonbondedMethod() != GBSAOBCForce::CutoffNonPeriodic);
     string source = CudaKernelSources::gbsaObc2;
@@ -2444,8 +2446,11 @@ double CudaCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeFor
         hasCreatedKernels = true;
         maxTiles = (nb.getUseCutoff() ? nb.getInteractingTiles().getSize() : cu.getNumAtomBlocks()*(cu.getNumAtomBlocks()+1)/2);
         map<string, string> defines;
-        if (nb.getUseCutoff())
+        if (nb.getUseCutoff()) {
             defines["USE_CUTOFF"] = "1";
+            defines["REACTION_FIELD_K"] = cu.doubleToString(krf);
+            defines["REACTION_FIELD_C"] = cu.doubleToString(crf);
+        }
         if (nb.getUsePeriodic())
             defines["USE_PERIODIC"] = "1";
         if (cu.getComputeCapability() >= 3.0 && !cu.getUseDoublePrecision())

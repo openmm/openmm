@@ -57,6 +57,7 @@ void testOBC(GBSAOBCForce::NonbondedMethod obcMethod, CustomGBForce::NonbondedMe
     const int numMolecules = 70;
     const int numParticles = numMolecules*2;
     const double boxSize = 10.0;
+    const double cutoff = 2.0;
     ReferencePlatform platform;
 
     // Create two systems: one with a GBSAOBCForce, and one using a CustomGBForce to implement the same interaction.
@@ -71,8 +72,8 @@ void testOBC(GBSAOBCForce::NonbondedMethod obcMethod, CustomGBForce::NonbondedMe
     customSystem.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0.0, 0.0), Vec3(0.0, boxSize, 0.0), Vec3(0.0, 0.0, boxSize));
     GBSAOBCForce* obc = new GBSAOBCForce();
     CustomGBForce* custom = new CustomGBForce();
-    obc->setCutoffDistance(2.0);
-    custom->setCutoffDistance(2.0);
+    obc->setCutoffDistance(cutoff);
+    custom->setCutoffDistance(cutoff);
     custom->addPerParticleParameter("q");
     custom->addPerParticleParameter("radius");
     custom->addPerParticleParameter("scale");
@@ -88,7 +89,16 @@ void testOBC(GBSAOBCForce::NonbondedMethod obcMethod, CustomGBForce::NonbondedMe
     custom->addComputedValue("B", "1/(1/or-tanh(1*psi-0.8*psi^2+4.85*psi^3)/radius);"
                                   "psi=I*or; or=radius-0.009", CustomGBForce::SingleParticle);
     custom->addEnergyTerm("28.3919551*(radius+0.14)^2*(radius/B)^6-0.5*138.935485*(1/soluteDielectric-1/solventDielectric)*q^2/B", CustomGBForce::SingleParticle);
-    custom->addEnergyTerm("-138.935485*(1/soluteDielectric-1/solventDielectric)*q1*q2/f;"
+    string rfScale = "";
+    if (obcMethod != GBSAOBCForce::NoCutoff) {
+        double eps = obc->getSolventDielectric();
+        double k = (eps-1)/((2*eps+1)*cutoff*cutoff*cutoff);
+        double c = 3*eps/((2*eps+1)*cutoff);
+        stringstream s;
+        s<<"*("<<k<<"*r^3-"<<c<<"*r+1)";
+        rfScale = s.str();
+    }
+    custom->addEnergyTerm("-138.935485*(1/soluteDielectric-1/solventDielectric)*q1*q2"+rfScale+"/f;"
                           "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))", CustomGBForce::ParticlePairNoExclusions);
     vector<Vec3> positions(numParticles);
     vector<Vec3> velocities(numParticles);

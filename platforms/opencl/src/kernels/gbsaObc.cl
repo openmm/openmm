@@ -448,6 +448,14 @@ __kernel void computeGBSAForce1(
                         real Gpol = tempEnergy*RECIP(denominator2);
                         real dGpol_dalpha2_ij = -0.5f*Gpol*expTerm*(1.0f+D_ij);
                         real dEdR = Gpol*(1.0f - 0.25f*expTerm);
+#ifdef USE_CUTOFF
+                        if (atom1 != y*TILE_SIZE+j) {
+                            real rfScale = (REACTION_FIELD_K*r2-REACTION_FIELD_C)*r+1;
+                            dEdR = dEdR*rfScale - tempEnergy*(3*REACTION_FIELD_K*r2-REACTION_FIELD_C)/r;
+                            tempEnergy *= rfScale;
+                            dGpol_dalpha2_ij *= rfScale;
+                        }
+#endif
                         force.w += dGpol_dalpha2_ij*bornRadius2;
                         energy += 0.5f*tempEnergy;
                         delta.xyz *= dEdR;
@@ -498,6 +506,12 @@ __kernel void computeGBSAForce1(
                         real Gpol = tempEnergy*RECIP(denominator2);
                         real dGpol_dalpha2_ij = -0.5f*Gpol*expTerm*(1.0f+D_ij);
                         real dEdR = Gpol*(1.0f - 0.25f*expTerm);
+#ifdef USE_CUTOFF
+                        real rfScale = (REACTION_FIELD_K*r2-REACTION_FIELD_C)*r+1;
+                        dEdR = dEdR*rfScale - tempEnergy*(3*REACTION_FIELD_K*r2-REACTION_FIELD_C)/r;
+                        tempEnergy *= rfScale;
+                        dGpol_dalpha2_ij *= rfScale;
+#endif
                         force.w += dGpol_dalpha2_ij*bornRadius2;
                         energy += tempEnergy;
                         delta.xyz *= dEdR;
@@ -661,6 +675,12 @@ __kernel void computeGBSAForce1(
                             real Gpol = tempEnergy*RECIP(denominator2);
                             real dGpol_dalpha2_ij = -0.5f*Gpol*expTerm*(1.0f+D_ij);
                             real dEdR = Gpol*(1.0f - 0.25f*expTerm);
+#ifdef USE_CUTOFF
+                            real rfScale = (REACTION_FIELD_K*r2-REACTION_FIELD_C)*r+1;
+                            dEdR = dEdR*rfScale - tempEnergy*(3*REACTION_FIELD_K*r2-REACTION_FIELD_C)/r;
+                            tempEnergy *= rfScale;
+                            dGpol_dalpha2_ij *= rfScale;
+#endif
                             force.w += dGpol_dalpha2_ij*bornRadius2;
                             energy += tempEnergy;
                             delta.xyz *= dEdR;
@@ -705,6 +725,12 @@ __kernel void computeGBSAForce1(
                             real Gpol = tempEnergy*RECIP(denominator2);
                             real dGpol_dalpha2_ij = -0.5f*Gpol*expTerm*(1.0f+D_ij);
                             real dEdR = Gpol*(1.0f - 0.25f*expTerm);
+#ifdef USE_CUTOFF
+                            real rfScale = (REACTION_FIELD_K*r2-REACTION_FIELD_C)*r+1;
+                            dEdR = dEdR*rfScale - tempEnergy*(3*REACTION_FIELD_K*r2-REACTION_FIELD_C)/r;
+                            tempEnergy *= rfScale;
+                            dGpol_dalpha2_ij *= rfScale;
+#endif
                             force.w += dGpol_dalpha2_ij*bornRadius2;
                             energy += tempEnergy;
                             delta.xyz *= dEdR;

@@ -716,7 +716,7 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const GBSAOBCForce& force);
 private:
-    double prefactor;
+    double prefactor, krf, crf;
     bool hasCreatedKernels;
     int maxTiles;
     CudaContext& cu;
