@@ -161,6 +161,8 @@ OpenCLPlatform::PlatformData::PlatformData(const System& system, const string& p
         deviceIndex << contexts[i]->getDeviceIndex();
         deviceName << contexts[i]->getDevice().getInfo<CL_DEVICE_NAME>();
     }
+    platformIndex = contexts[0]->getPlatformIndex();
+
     useCpuPme = (cpuPmeProperty == "true" && !contexts[0]->getUseDoublePrecision());
     propertyValues[OpenCLPlatform::OpenCLDeviceIndex()] = deviceIndex.str();
     propertyValues[OpenCLPlatform::OpenCLDeviceName()] = deviceName.str();

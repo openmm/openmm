@@ -88,19 +88,19 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
         contextIndex = platformData.contexts.size();
         std::vector<cl::Platform> platforms;
         cl::Platform::get(&platforms);
+	const int minThreadBlockSize = 32;
 
         int bestSpeed = -1;
         int bestDevice = -1;
         int bestPlatform = -1;
-        for (j = 0; i < platforms.size(); j++) {
+        for (int j = 0; j < platforms.size(); j++) {
             // if they supplied a valid platformIndex, we only look through that platform
-            if (j != plaformIndex && platformIndex >= 0 && platformIndex < (int) platforms.size())
+            if (j != platformIndex && platformIndex >= 0 && platformIndex < (int) platforms.size())
                 continue;
 
             string platformVendor = platforms[j].getInfo<CL_PLATFORM_VENDOR>();
             vector<cl::Device> devices;
             platforms[j].getDevices(CL_DEVICE_TYPE_ALL, &devices);
-            const int minThreadBlockSize = 32;
 
             for (int i = 0; i < (int) devices.size(); i++) {
                 // if they supplied a valid deviceIndex, we only look through that one
@@ -160,9 +160,11 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
 
         vector<cl::Device> devices;
         platforms[bestPlatform].getDevices(CL_DEVICE_TYPE_ALL, &devices);
+        string platformVendor = platforms[bestPlatform].getInfo<CL_PLATFORM_VENDOR>();
         device = devices[bestDevice];
 
         this->deviceIndex = bestDevice;
+        this->platformIndex = bestPlatform;
         if (device.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>() < minThreadBlockSize)
             throw OpenMMException("The specified OpenCL device is not compatible with OpenMM");
         compilationDefines["WORK_GROUP_SIZE"] = intToString(ThreadBlockSize);
@@ -244,7 +246,7 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
             compilationDefines["SYNC_WARPS"] = "barrier(CLK_LOCAL_MEM_FENCE)";
         vector<cl::Device> contextDevices;
         contextDevices.push_back(device);
-        cl_context_properties cprops[] = {CL_CONTEXT_PLATFORM, (cl_context_properties) platforms[platformIndex](), 0};
+        cl_context_properties cprops[] = {CL_CONTEXT_PLATFORM, (cl_context_properties) platforms[bestPlatform](), 0};
         context = cl::Context(contextDevices, cprops, errorCallback);
         queue = cl::CommandQueue(context, device);
         numAtoms = system.getNumParticles();
