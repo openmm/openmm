@@ -98,8 +98,6 @@ class TestGromacsTopFile(unittest.TestCase):
                     found_matching_solvent_dielectric = True
                 if force.getSoluteDielectric() == 0.9:
                     found_matching_solute_dielectric = True
-            if isinstance(force, NonbondedForce):
-                self.assertEqual(force.getReactionFieldDielectric(), 1.0)
         self.assertTrue(found_matching_solvent_dielectric and 
                         found_matching_solute_dielectric)
 

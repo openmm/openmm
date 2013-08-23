@@ -50,9 +50,9 @@ namespace OpenMM {
  * 
  * When using this Force, the System should also include a NonbondedForce, and both objects must specify
  * identical charges for all particles.  Otherwise, the results will not be correct.  Furthermore, if the
- * nonbonded method is set to CutoffNonPeriodic or CutoffPeriodic, you should call setReactionFieldDielectric(1.0)
- * on the NonbondedForce to turn off the reaction field approximation, which does not produce correct results
- * when combined with GBSA.
+ * nonbonded method is set to CutoffNonPeriodic or CutoffPeriodic, you should call setReactionFieldDielectric()
+ * on the NonbondedForce to set it equal to the GBSAOBCForce's solvent dielectric, so both forces will be
+ * cut off in the same way.
  */
 
 class OPENMM_EXPORT GBSAOBCForce : public Force {
