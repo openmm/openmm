@@ -53,44 +53,6 @@ using namespace std;
 
 CudaPlatform platform;
 
-void testChangingBoxSize() {
-    System system;
-    system.setDefaultPeriodicBoxVectors(Vec3(4, 0, 0), Vec3(0, 5, 0), Vec3(0, 0, 6));
-    system.addParticle(1.0);
-    NonbondedForce* nb = new NonbondedForce();
-    nb->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
-    nb->setCutoffDistance(2.0);
-    nb->addParticle(1, 0.5, 0.5);
-    system.addForce(nb);
-    LangevinIntegrator integrator(300.0, 1.0, 0.01);
-    Context context(system, integrator, platform);
-    vector<Vec3> positions;
-    positions.push_back(Vec3());
-    context.setPositions(positions);
-    Vec3 x, y, z;
-    context.getState(State::Forces).getPeriodicBoxVectors(x, y, z);
-    ASSERT_EQUAL_VEC(Vec3(4, 0, 0), x, 0);
-    ASSERT_EQUAL_VEC(Vec3(0, 5, 0), y, 0);
-    ASSERT_EQUAL_VEC(Vec3(0, 0, 6), z, 0);
-    context.setPeriodicBoxVectors(Vec3(7, 0, 0), Vec3(0, 8, 0), Vec3(0, 0, 9));
-    context.getState(State::Forces).getPeriodicBoxVectors(x, y, z);
-    ASSERT_EQUAL_VEC(Vec3(7, 0, 0), x, 0);
-    ASSERT_EQUAL_VEC(Vec3(0, 8, 0), y, 0);
-    ASSERT_EQUAL_VEC(Vec3(0, 0, 9), z, 0);
-    
-    // Shrinking the box too small should produce an exception.
-    
-    context.setPeriodicBoxVectors(Vec3(7, 0, 0), Vec3(0, 3.9, 0), Vec3(0, 0, 9));
-    bool ok = true;
-    try {
-        context.getState(State::Forces).getPeriodicBoxVectors(x, y, z);
-        ok = false;
-    }
-    catch (exception& ex) {
-    }
-    ASSERT(ok);
-}
-
 void testIdealGas() {
     const int numParticles = 64;
     const int frequency = 10;
@@ -112,7 +74,7 @@ void testIdealGas() {
         system.addParticle(1.0);
         positions[i] = Vec3(initialLength*genrand_real2(sfmt), 0.5*initialLength*genrand_real2(sfmt), 2*initialLength*genrand_real2(sfmt));
     }
-    MonteCarloAnisotropicBarostat* barostat = new MonteCarloAnisotropicBarostat(Vec3(pressure, pressure, pressure), temp[0], frequency);
+    MonteCarloAnisotropicBarostat* barostat = new MonteCarloAnisotropicBarostat(Vec3(pressure, pressure, pressure), temp[0], true, true, true, frequency);
     system.addForce(barostat);
     
     // Test it for three different temperatures.
@@ -170,7 +132,7 @@ void testIdealGasAxis(int axis) {
         system.addParticle(1.0);
         positions[i] = Vec3(initialLength*genrand_real2(sfmt), 0.5*initialLength*genrand_real2(sfmt), 2*initialLength*genrand_real2(sfmt));
     }
-    MonteCarloAnisotropicBarostat* barostat = new MonteCarloAnisotropicBarostat(Vec3(pressure, pressure, pressure), temp[0], frequency, scaleX, scaleY, scaleZ);
+    MonteCarloAnisotropicBarostat* barostat = new MonteCarloAnisotropicBarostat(Vec3(pressure, pressure, pressure), temp[0], scaleX, scaleY, scaleZ, frequency);
     system.addForce(barostat);
     
     // Test it for three different temperatures.
@@ -226,7 +188,7 @@ void testRandomSeed() {
         forceField->addParticle((i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
     }
     system.addForce(forceField);
-    MonteCarloAnisotropicBarostat* barostat = new MonteCarloAnisotropicBarostat(Vec3(pressure, pressure, pressure), temp, 1);
+    MonteCarloAnisotropicBarostat* barostat = new MonteCarloAnisotropicBarostat(Vec3(pressure, pressure, pressure), temp, true, true, true, 1);
     system.addForce(barostat);
     vector<Vec3> positions(numParticles);
     vector<Vec3> velocities(numParticles);
@@ -332,7 +294,7 @@ void testEinsteinCrystal() {
             system.addForce(force);
             system.addForce(nb);
             // Create the barostat.
-            MonteCarloAnisotropicBarostat* barostat = new MonteCarloAnisotropicBarostat(Vec3(pres3[p], pres3[p], pres3[p]), temp, frequency, (a==0||a==3), (a==1||a==3), (a==2||a==3));
+            MonteCarloAnisotropicBarostat* barostat = new MonteCarloAnisotropicBarostat(Vec3(pres3[p], pres3[p], pres3[p]), temp, (a==0||a==3), (a==1||a==3), (a==2||a==3), frequency);
             system.addForce(barostat);
             barostat->setTemperature(temp);
             LangevinIntegrator integrator(temp, 0.1, 0.01);
@@ -422,7 +384,6 @@ int main(int argc, char* argv[]) {
     try {
         if (argc > 1)
             platform.setPropertyDefaultValue("CudaPrecision", string(argv[1]));
-        testChangingBoxSize();
         testIdealGas();
         testIdealGasAxis(0);
         testIdealGasAxis(1);

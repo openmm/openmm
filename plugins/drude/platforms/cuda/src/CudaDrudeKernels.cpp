@@ -406,6 +406,7 @@ void CudaIntegrateDrudeSCFStepKernel::execute(ContextImpl& context, const DrudeS
     cu.setAsCurrent();
     CudaIntegrationUtilities& integration = cu.getIntegrationUtilities();
     int numAtoms = cu.getNumAtoms();
+    int paddedNumAtoms = cu.getPaddedNumAtoms();
     double dt = integrator.getStepSize();
     if (dt != prevStepSize) {
         if (cu.getUseDoublePrecision() || cu.getUseMixedPrecision()) {
@@ -424,7 +425,7 @@ void CudaIntegrateDrudeSCFStepKernel::execute(ContextImpl& context, const DrudeS
     // Call the first integration kernel.
 
     CUdeviceptr posCorrection = (cu.getUseMixedPrecision() ? cu.getPosqCorrection().getDevicePointer() : 0);
-    void* args1[] = {&cu.getIntegrationUtilities().getStepSize().getDevicePointer(), &cu.getPosq().getDevicePointer(), &posCorrection,
+    void* args1[] = {&numAtoms, &paddedNumAtoms, &cu.getIntegrationUtilities().getStepSize().getDevicePointer(), &cu.getPosq().getDevicePointer(), &posCorrection,
             &cu.getVelm().getDevicePointer(), &cu.getForce().getDevicePointer(), &integration.getPosDelta().getDevicePointer()};
     cu.executeKernel(kernel1, args1, numAtoms);
 
@@ -434,7 +435,7 @@ void CudaIntegrateDrudeSCFStepKernel::execute(ContextImpl& context, const DrudeS
 
     // Call the second integration kernel.
 
-    void* args2[] = {&cu.getIntegrationUtilities().getStepSize().getDevicePointer(), &cu.getPosq().getDevicePointer(), &posCorrection,
+    void* args2[] = {&numAtoms, &cu.getIntegrationUtilities().getStepSize().getDevicePointer(), &cu.getPosq().getDevicePointer(), &posCorrection,
             &cu.getVelm().getDevicePointer(), &integration.getPosDelta().getDevicePointer()};
     cu.executeKernel(kernel2, args2, numAtoms);
 

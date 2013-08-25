@@ -13,6 +13,7 @@ mark_as_advanced(OPENMM_PYTHON_STAGING_DIR)
 file(MAKE_DIRECTORY ${OPENMM_PYTHON_STAGING_DIR}/simtk/openmm)
 file(MAKE_DIRECTORY ${OPENMM_PYTHON_STAGING_DIR}/simtk/unit)
 file(MAKE_DIRECTORY ${OPENMM_PYTHON_STAGING_DIR}/src/swig_doxygen/swig_lib/python)
+file(MAKE_DIRECTORY ${OPENMM_PYTHON_STAGING_DIR}/tests)
 
 ##############################################################################
 ### Identify files that need to be copied from source area to staging area ###
@@ -21,15 +22,32 @@ set(STAGING_OUTPUT_FILES "") # Will contain all required package files
 file(GLOB STAGING_INPUT_FILES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
     "${CMAKE_CURRENT_SOURCE_DIR}/MANIFEST.in"
     "${CMAKE_CURRENT_SOURCE_DIR}/README.txt"
-    "${CMAKE_CURRENT_SOURCE_DIR}/*.py"
+    "${CMAKE_CURRENT_SOURCE_DIR}/filterPythonFiles.py"
 )
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/setup.py ${OPENMM_PYTHON_STAGING_DIR}/setup.py)
+
+###########################################################
+### Check the git revision of the source, and write it  ###
+### to a python file in the in the staging directory    ###
+###########################################################
+execute_process(
+  COMMAND git rev-parse HEAD
+  WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+  OUTPUT_VARIABLE rev_hash_str
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+  ERROR_QUIET
+)
+if(NOT rev_hash_str)
+  set(rev_hash_str "Unknown")
+endif()
+file(WRITE "${OPENMM_PYTHON_STAGING_DIR}/simtk/openmm/version.py" "git_revision = '${rev_hash_str}'\n")
 
 # file(GLOB_RECURSE temp RELATIVE "${CMAKE_SOURCE_DIR}" "${CMAKE_SOURCE_DIR}/src/*.i")
 # foreach(f ${temp})
 #     set(temp2 "${temp2}\n${f}")
 # endforeach()
 
-set(SUBDIRS src simtk)
+set(SUBDIRS src simtk tests)
 foreach(SUBDIR ${SUBDIRS})
     file(GLOB_RECURSE STAGING_INPUT_FILES1 RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*README.txt"
@@ -38,6 +56,8 @@ foreach(SUBDIR ${SUBDIRS})
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.sh"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.xml"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.pdb"
+        "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.prmtop"
+        "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.top"
     )
     foreach(file ${STAGING_INPUT_FILES1})
         set(STAGING_INPUT_FILES ${STAGING_INPUT_FILES} "${file}")

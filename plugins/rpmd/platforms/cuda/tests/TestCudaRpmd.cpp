@@ -391,7 +391,7 @@ void testContractions() {
     map<int, int> contractions;
     contractions[1] = 3;
     contractions[2] = 1;
-    RPMDIntegrator integ(numCopies, temperature, 10.0, 0.001, contractions);
+    RPMDIntegrator integ(numCopies, temperature, 50.0, 0.001, contractions);
     Platform& platform = Platform::getPlatformByName("CUDA");
     Context context(system, integ, platform);
     for (int copy = 0; copy < numCopies; copy++) {

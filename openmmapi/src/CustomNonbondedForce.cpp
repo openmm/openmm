@@ -199,6 +199,23 @@ void CustomNonbondedForce::setFunctionParameters(int index, const std::string& n
     functions[index].max = max;
 }
 
+int CustomNonbondedForce::addInteractionGroup(const std::set<int>& set1, const std::set<int>& set2) {
+    interactionGroups.push_back(InteractionGroupInfo(set1, set2));
+    return interactionGroups.size()-1;
+}
+
+void CustomNonbondedForce::getInteractionGroupParameters(int index, std::set<int>& set1, std::set<int>& set2) const {
+    ASSERT_VALID_INDEX(index, interactionGroups);
+    set1 = interactionGroups[index].set1;
+    set2 = interactionGroups[index].set2;
+}
+
+void CustomNonbondedForce::setInteractionGroupParameters(int index, const std::set<int>& set1, const std::set<int>& set2) {
+    ASSERT_VALID_INDEX(index, interactionGroups);
+    interactionGroups[index].set1 = set1;
+    interactionGroups[index].set2 = set2;
+}
+
 ForceImpl* CustomNonbondedForce::createImpl() const {
     return new CustomNonbondedForceImpl(*this);
 }

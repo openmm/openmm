@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2013 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -39,6 +39,7 @@
 #include "openmm/Platform.h"
 #include "openmm/System.h"
 #include "openmm/VirtualSite.h"
+#include "openmm/internal/ContextImpl.h"
 #include <algorithm>
 #include <fstream>
 #include <iostream>
@@ -87,17 +88,25 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
         contextIndex = platformData.contexts.size();
         std::vector<cl::Platform> platforms;
         cl::Platform::get(&platforms);
-        if (platformIndex < 0 || platformIndex >= (int) platforms.size())
-            throw OpenMMException("Illegal value for OpenCL platform index");
-        string platformVendor = platforms[platformIndex].getInfo<CL_PLATFORM_VENDOR>();
-        vector<cl::Device> devices;
-        platforms[platformIndex].getDevices(CL_DEVICE_TYPE_ALL, &devices);
         const int minThreadBlockSize = 32;
-        if (deviceIndex < 0 || deviceIndex >= (int) devices.size()) {
-            // Try to figure out which device is the fastest.
 
-            int bestSpeed = -1;
+        int bestSpeed = -1;
+        int bestDevice = -1;
+        int bestPlatform = -1;
+        for (int j = 0; j < platforms.size(); j++) {
+            // if they supplied a valid platformIndex, we only look through that platform
+            if (j != platformIndex && platformIndex >= 0 && platformIndex < (int) platforms.size())
+                continue;
+
+            string platformVendor = platforms[j].getInfo<CL_PLATFORM_VENDOR>();
+            vector<cl::Device> devices;
+            platforms[j].getDevices(CL_DEVICE_TYPE_ALL, &devices);
+
             for (int i = 0; i < (int) devices.size(); i++) {
+                // if they supplied a valid deviceIndex, we only look through that one
+                if (i != deviceIndex && deviceIndex >= 0 && deviceIndex < (int) devices.size())
+                    continue;
+
                 if (platformVendor == "Apple" && devices[i].getInfo<CL_DEVICE_VENDOR>() == "AMD")
                     continue; // Don't use AMD GPUs on OS X due to serious bugs.
                 int maxSize = devices[i].getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>()[0];
@@ -136,15 +145,26 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
                 }
                 int speed = devices[i].getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>()*processingElementsPerComputeUnit*devices[i].getInfo<CL_DEVICE_MAX_CLOCK_FREQUENCY>();
                 if (maxSize >= minThreadBlockSize && speed > bestSpeed) {
-                    deviceIndex = i;
+                    bestDevice = i;
                     bestSpeed = speed;
+                    bestPlatform = j;
                 }
             }
         }
-        if (deviceIndex == -1)
+
+        if (bestPlatform == -1)
+            throw OpenMMException("No compatible OpenCL platform is available");
+
+        if (bestDevice == -1)
             throw OpenMMException("No compatible OpenCL device is available");
-        device = devices[deviceIndex];
-        this->deviceIndex = deviceIndex;
+
+        vector<cl::Device> devices;
+        platforms[bestPlatform].getDevices(CL_DEVICE_TYPE_ALL, &devices);
+        string platformVendor = platforms[bestPlatform].getInfo<CL_PLATFORM_VENDOR>();
+        device = devices[bestDevice];
+
+        this->deviceIndex = bestDevice;
+        this->platformIndex = bestPlatform;
         if (device.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>() < minThreadBlockSize)
             throw OpenMMException("The specified OpenCL device is not compatible with OpenMM");
         compilationDefines["WORK_GROUP_SIZE"] = intToString(ThreadBlockSize);
@@ -226,7 +246,7 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
             compilationDefines["SYNC_WARPS"] = "barrier(CLK_LOCAL_MEM_FENCE)";
         vector<cl::Device> contextDevices;
         contextDevices.push_back(device);
-        cl_context_properties cprops[] = {CL_CONTEXT_PLATFORM, (cl_context_properties) platforms[platformIndex](), 0};
+        cl_context_properties cprops[] = {CL_CONTEXT_PLATFORM, (cl_context_properties) platforms[bestPlatform](), 0};
         context = cl::Context(contextDevices, cprops, errorCallback);
         queue = cl::CommandQueue(context, device);
         numAtoms = system.getNumParticles();
@@ -618,15 +638,6 @@ void OpenCLContext::reduceBuffer(OpenCLArray& array, int numBuffers) {
     executeKernel(reduceReal4Kernel, bufferSize, 128);
 }
 
-void OpenCLContext::tagAtomsInMolecule(int atom, int molecule, vector<int>& atomMolecule, vector<vector<int> >& atomBonds) {
-    // Recursively tag atoms as belonging to a particular molecule.
-
-    atomMolecule[atom] = molecule;
-    for (int i = 0; i < (int) atomBonds[atom].size(); i++)
-        if (atomMolecule[atomBonds[atom][i]] == -1)
-            tagAtomsInMolecule(atomBonds[atom][i], molecule, atomMolecule, atomBonds);
-}
-
 /**
  * This class ensures that atom reordering doesn't break virtual sites.
  */
@@ -722,16 +733,14 @@ void OpenCLContext::findMoleculeGroups() {
             }
         }
 
-        // Now tag atoms by which molecule they belong to.
+        // Now identify atoms by which molecule they belong to.
 
-        vector<int> atomMolecule(numAtoms, -1);
-        int numMolecules = 0;
-        for (int i = 0; i < numAtoms; i++)
-            if (atomMolecule[i] == -1)
-                tagAtomsInMolecule(i, numMolecules++, atomMolecule, atomBonds);
-        vector<vector<int> > atomIndices(numMolecules);
-        for (int i = 0; i < numAtoms; i++)
-            atomIndices[atomMolecule[i]].push_back(i);
+        vector<vector<int> > atomIndices = ContextImpl::findMolecules(numAtoms, atomBonds);
+        int numMolecules = atomIndices.size();
+        vector<int> atomMolecule(numAtoms);
+        for (int i = 0; i < (int) atomIndices.size(); i++)
+            for (int j = 0; j < (int) atomIndices[i].size(); j++)
+                atomMolecule[atomIndices[i][j]] = i;
 
         // Construct a description of each molecule.
 

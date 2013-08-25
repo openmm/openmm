@@ -270,8 +270,19 @@ class GromacsTopFile(object):
     def _processAtomType(self, line):
         """Process a line in the [ atomtypes ] category."""
         fields = line.split()
-        if len(fields) < 7:
+        if len(fields) < 6:
             raise ValueError('Too few fields in [ atomtypes ] line: '+line);
+        if len(fields[3]) == 1:
+            # Bonded type and atomic number are both missing.
+            fields.insert(1, None)
+            fields.insert(1, None)
+        elif len(fields[4]) == 1 and len(fields[5]) > 1:
+            if fields[1][0].isalpha():
+                # Atomic number is missing.
+                fields.insert(2, None)
+            else:
+                # Bonded type is missing.
+                fields.insert(1, None)
         self._atomTypes[fields[0]] = fields
 
     def _processBondType(self, line):
@@ -462,6 +473,24 @@ class GromacsTopFile(object):
         topologyAtoms = list(self.topology.atoms())
         exceptions = []
         fudgeQQ = float(self._defaults[4])
+        
+        # Build a lookup table to let us process dihedrals more quickly.
+        
+        dihedralTypeTable = {}
+        for key in self._dihedralTypes:
+            if key[1] != 'X' and key[2] != 'X':
+                if (key[1], key[2]) not in dihedralTypeTable:
+                    dihedralTypeTable[(key[1], key[2])] = []
+                dihedralTypeTable[(key[1], key[2])].append(key)
+                if (key[2], key[1]) not in dihedralTypeTable:
+                    dihedralTypeTable[(key[2], key[1])] = []
+                dihedralTypeTable[(key[2], key[1])].append(key)
+        wildcardDihedralTypes = []
+        for key in self._dihedralTypes:
+            if key[1] == 'X' or key[2] == 'X':
+                wildcardDihedralTypes.append(key)
+                for types in dihedralTypeTable.itervalues():
+                    types.append(key)
 
         # Loop over molecules and create the specified number of each type.
 
@@ -474,9 +503,10 @@ class GromacsTopFile(object):
                 baseAtomIndex = sys.getNumParticles()
                 atomTypes = [atom[1] for atom in moleculeType.atoms]
                 try:
-                    [self._atomTypes[t][1] for t in atomTypes]
+                    bondedTypes = [self._atomTypes[t][1] for t in atomTypes]
                 except KeyError as e:
                     raise ValueError('Unknown atom type: '+e.message)
+                bondedTypes = [b if b is not None else a for a, b in zip(atomTypes, bondedTypes)]
 
                 # Add atoms.
 
@@ -484,7 +514,7 @@ class GromacsTopFile(object):
                     if len(fields) >= 8:
                         mass = float(fields[7])
                     else:
-                        mass = float(self._atomTypes[fields[1]][2])
+                        mass = float(self._atomTypes[fields[1]][3])
                     sys.addParticle(mass)
 
                 # Add bonds.
@@ -492,7 +522,7 @@ class GromacsTopFile(object):
                 atomBonds = [{} for x in range(len(moleculeType.atoms))]
                 for fields in moleculeType.bonds:
                     atoms = [int(x)-1 for x in fields[:2]]
-                    types = tuple(atomTypes[i] for i in atoms)
+                    types = tuple(bondedTypes[i] for i in atoms)
                     if len(fields) >= 5:
                         params = fields[3:5]
                     elif types in self._bondTypes:
@@ -529,7 +559,7 @@ class GromacsTopFile(object):
                 degToRad = math.pi/180
                 for fields in moleculeType.angles:
                     atoms = [int(x)-1 for x in fields[:3]]
-                    types = tuple(atomTypes[i] for i in atoms)
+                    types = tuple(bondedTypes[i] for i in atoms)
                     if len(fields) >= 6:
                         params = fields[4:]
                     elif types in self._angleTypes:
@@ -575,7 +605,7 @@ class GromacsTopFile(object):
 
                 for fields in moleculeType.dihedrals:
                     atoms = [int(x)-1 for x in fields[:4]]
-                    types = tuple(atomTypes[i] for i in atoms)
+                    types = tuple(bondedTypes[i] for i in atoms)
                     dihedralType = fields[4]
                     reversedTypes = types[::-1]+(dihedralType,)
                     types = types+(dihedralType,)
@@ -584,7 +614,11 @@ class GromacsTopFile(object):
                     else:
                         # Look for a matching dihedral type.
                         paramsList = None
-                        for key in self._dihedralTypes:
+                        if (types[1], types[2]) in dihedralTypeTable:
+                            dihedralTypes = dihedralTypeTable[(types[1], types[2])]
+                        else:
+                            dihedralTypes = wildcardDihedralTypes
+                        for key in dihedralTypes:
                             if all(a == b or a == 'X' for a, b in zip(key, types)) or all(a == b or a == 'X' for a, b in zip(key, reversedTypes)):
                                 paramsList = self._dihedralTypes[key]
                                 if 'X' not in key:
@@ -623,7 +657,7 @@ class GromacsTopFile(object):
 
                 for fields in moleculeType.cmaps:
                     atoms = [int(x)-1 for x in fields[:5]]
-                    types = tuple(atomTypes[i] for i in atoms)
+                    types = tuple(bondedTypes[i] for i in atoms)
                     if len(fields) >= 8 and len(fields) >= 8+int(fields[6])*int(fields[7]):
                         params = fields
                     elif types in self._cmapTypes:
@@ -655,8 +689,8 @@ class GromacsTopFile(object):
                     if len(fields) > 6:
                         q = float(fields[6])
                     else:
-                        q = float(params[3])
-                    nb.addParticle(q, float(params[5]), float(params[6]))
+                        q = float(params[4])
+                    nb.addParticle(q, float(params[6]), float(params[7]))
                     if implicitSolvent is OBC2:
                         if fields[1] not in self._implicitTypes:
                             raise ValueError('No implicit solvent parameters specified for atom type: '+fields[1])

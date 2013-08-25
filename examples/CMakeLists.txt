@@ -93,7 +93,7 @@ FOREACH(EX_ROOT ${F_EXAMPLES})
     INSTALL(FILES ${EX_ROOT}.f90 DESTINATION examples)
 ENDFOREACH(EX_ROOT ${F_EXAMPLES})
 
-INSTALL(FILES simulateAmber.py simulatePdb.py testInstallation.py argon-chemical-potential.py input.inpcrd input.prmtop input.pdb
+INSTALL(FILES simulateAmber.py simulatePdb.py simulateGromacs.py testInstallation.py argon-chemical-potential.py input.inpcrd input.prmtop input.pdb input.gro input.top
         DESTINATION examples)
 
 INSTALL(FILES VisualStudio/HelloArgon.vcproj 

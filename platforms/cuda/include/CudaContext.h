@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2013 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -489,7 +489,6 @@ private:
     struct MoleculeGroup;
     class VirtualSiteInfo;
     void findMoleculeGroups();
-    static void tagAtomsInMolecule(int atom, int molecule, std::vector<int>& atomMolecule, std::vector<std::vector<int> >& atomBonds);
     /**
      * Ensure that all molecules marked as "identical" really are identical.  This should be
      * called whenever force field parameters change.  If necessary, it will rebuild the list
@@ -515,7 +514,7 @@ private:
     int numAtomBlocks;
     int numThreadBlocks;
     bool useBlockingSync, useDoublePrecision, useMixedPrecision, contextIsValid, atomsWereReordered;
-    std::string compiler, tempDir, gpuArchitecture;
+    std::string compiler, tempDir, cacheDir, gpuArchitecture;
     float4 periodicBoxSizeFloat, invPeriodicBoxSizeFloat;
     double4 periodicBoxSize, invPeriodicBoxSize;
     std::string defaultOptimizationOptions;

@@ -336,7 +336,7 @@ void ReferenceIntegrateRPMDStepKernel::computeForces(ContextImpl& context, const
                     q[k] = t_complex(0, 0);
                 fftpack_exec_1d(fft, FFTPACK_BACKWARD, &q[0], &q[0]);
                 for (int k = 0; k < totalCopies; k++)
-                    forces[k][particle][component] = scale2*q[k].re;
+                    forces[k][particle][component] += scale2*q[k].re;
             }
         }
     }

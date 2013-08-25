@@ -275,6 +275,7 @@ Parameters:
   }
 
   %feature(docstring, "This method exists only for backward compatibility. @deprecated Use deserialize() instead.") deserializeSystem;
+  %newobject deserializeSystem;
   static OpenMM::System* deserializeSystem(const char* inputString) {
       std::stringstream ss;
       ss << inputString;
@@ -287,6 +288,7 @@ Parameters:
       return ss.str();
   }
 
+  %newobject _deserializeForce;
   static OpenMM::Force* _deserializeForce(const char* inputString) {
       std::stringstream ss;
       ss << inputString;
@@ -299,6 +301,7 @@ Parameters:
       return ss.str();
   }
 
+  %newobject _deserializeIntegrator;
   static OpenMM::Integrator* _deserializeIntegrator(const char* inputString) {
       std::stringstream ss;
       ss << inputString;

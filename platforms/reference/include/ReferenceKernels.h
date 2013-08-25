@@ -572,7 +572,7 @@ public:
     void copyParametersToContext(ContextImpl& context, const NonbondedForce& force);
 private:
     int numParticles, num14;
-    int **exclusionArray, **bonded14IndexArray;
+    int **bonded14IndexArray;
     RealOpenMM **particleParamArray, **bonded14ParamArray;
     RealOpenMM nonbondedCutoff, switchingDistance, rfDielectric, ewaldAlpha, dispersionCoefficient;
     int kmax[3], gridSize[3];
@@ -615,7 +615,6 @@ public:
     void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force);
 private:
     int numParticles;
-    int **exclusionArray;
     RealOpenMM **particleParamArray;
     RealOpenMM nonbondedCutoff, switchingDistance, periodicBoxSize[3], longRangeCoefficient;
     bool useSwitchingFunction, hasInitializedLongRangeCorrection;
@@ -624,6 +623,7 @@ private:
     std::vector<std::set<int> > exclusions;
     Lepton::ExpressionProgram energyExpression, forceExpression;
     std::vector<std::string> parameterNames, globalParameterNames;
+    std::vector<std::pair<std::set<int>, std::set<int> > > interactionGroups;
     NonbondedMethod nonbondedMethod;
     NeighborList* neighborList;
 };
@@ -819,7 +819,6 @@ public:
 private:
     int numDonors, numAcceptors, numParticles;
     bool isPeriodic;
-    int **exclusionArray;
     RealOpenMM **donorParamArray, **acceptorParamArray;
     RealOpenMM nonbondedCutoff;
     ReferenceCustomHbondIxn* ixn;

@@ -133,7 +133,7 @@ void OpenCLPlatform::contextDestroyed(ContextImpl& context) const {
 
 OpenCLPlatform::PlatformData::PlatformData(const System& system, const string& platformPropValue, const string& deviceIndexProperty,
         const string& precisionProperty, const string& cpuPmeProperty) : removeCM(false), stepCount(0), computeForceCount(0), time(0.0)  {
-    int platformIndex = 0;
+    int platformIndex = -1;
     if (platformPropValue.length() > 0)
         stringstream(platformPropValue) >> platformIndex;
     vector<string> devices;
@@ -161,6 +161,8 @@ OpenCLPlatform::PlatformData::PlatformData(const System& system, const string& p
         deviceIndex << contexts[i]->getDeviceIndex();
         deviceName << contexts[i]->getDevice().getInfo<CL_DEVICE_NAME>();
     }
+    platformIndex = contexts[0]->getPlatformIndex();
+
     useCpuPme = (cpuPmeProperty == "true" && !contexts[0]->getUseDoublePrecision());
     propertyValues[OpenCLPlatform::OpenCLDeviceIndex()] = deviceIndex.str();
     propertyValues[OpenCLPlatform::OpenCLDeviceName()] = deviceName.str();

@@ -20,6 +20,7 @@ See https://simtk.org/home/pyopenmm for details"
 
 %include "std_map.i"
 %include "std_pair.i"
+%include "std_set.i"
 %include "std_vector.i"
 namespace std {
   %template(pairii) pair<int,int>;
@@ -32,6 +33,7 @@ namespace std {
   %template(mapstringstring) map<string,string>;
   %template(mapstringdouble) map<string,double>;
   %template(mapii) map<int,int>;
+  %template(seti) set<int>;
 };
 
 %include "windows.i"
@@ -69,7 +71,7 @@ using namespace OpenMM;
   # actual classes, and not the swigregistration methods, which have already
   # been called, and are now unneeded by the user code, and only pollute the
   # namespace
-  __all__ = [k for k in locals().keys() if not k.endswith('_swigregister')]
+  __all__ = [k for k in locals().keys() if not (k.endswith('_swigregister') or k.startswith('_'))]
 %}
 
 /*
