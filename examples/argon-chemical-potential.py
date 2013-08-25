@@ -15,6 +15,7 @@
 # [1] Michael R. Shirts and John D. Chodera. Statistically optimal analysis of samples from multiple equilibrium states.
 # J. Chem. Phys. 129:124105 (2008)  http://dx.doi.org/10.1063/1.2978177
 
+from __future__ import print_function
 from simtk.openmm import *
 from simtk.unit import *
 import numpy
@@ -51,15 +52,15 @@ nlambda = len(lambda_values)
 volume = nparticles*(sigma**3)/reduced_density
 box_edge = volume**(1.0/3.0)
 cutoff = min(box_edge*0.49, 2.5*sigma) # Compute cutoff
-print "sigma = %s" % sigma
-print "box_edge = %s" % box_edge
-print "cutoff = %s" % cutoff
+print("sigma = %s" % sigma)
+print("box_edge = %s" % box_edge)
+print("cutoff = %s" % cutoff)
 
 # =============================================================================
 # Build systems at each alchemical lambda value.
 # =============================================================================
 
-print "Building alchemically-modified systems..."
+print("Building alchemically-modified systems...")
 alchemical_systems = list() # alchemical_systems[i] is the alchemically-modified System object corresponding to lambda_values[i]
 for lambda_value in lambda_values:
    # Create argon system where first particle is alchemically modified by lambda_value.
@@ -112,17 +113,17 @@ for (lambda_index, lambda_value) in enumerate(lambda_values):
    context.setPositions(positions)
 
    # Minimize energy from coordinates.
-   print "Lambda %d/%d : minimizing..." % (lambda_index+1, nlambda)
+   print("Lambda %d/%d : minimizing..." % (lambda_index+1, nlambda))
    LocalEnergyMinimizer.minimize(context)
 
    # Equilibrate.
-   print "Lambda %d/%d : equilibrating..." % (lambda_index+1, nlambda)
+   print("Lambda %d/%d : equilibrating..." % (lambda_index+1, nlambda))
    integrator.step(nequil_steps)
 
    # Sample.
    position_history = list() # position_history[i] is the set of positions after iteration i
    for iteration in range(nprod_iterations):
-      print "Lambda %d/%d : production iteration %d/%d" % (lambda_index+1, nlambda, iteration+1, nprod_iterations)
+      print("Lambda %d/%d : production iteration %d/%d" % (lambda_index+1, nlambda, iteration+1, nprod_iterations))
 
       # Run dynamics.
       integrator.step(nprod_steps)
@@ -138,7 +139,7 @@ for (lambda_index, lambda_value) in enumerate(lambda_values):
    del context, integrator
 
    # Compute reduced potentials of all snapshots at all alchemical states for MBAR.
-   print "Lambda %d/%d : computing energies at all states..." % (lambda_index+1, nlambda)
+   print("Lambda %d/%d : computing energies at all states..." % (lambda_index+1, nlambda))
    beta = 1.0 / (BOLTZMANN_CONSTANT_kB * AVOGADRO_CONSTANT_NA * temperature) # inverse temperature
    for l in range(nlambda):
       # Set up Context just to evaluate energies.
@@ -159,13 +160,13 @@ try:
    from timeseries import subsampleCorrelatedData
    from pymbar import MBAR
 except:
-   raise "pymbar [https://simtk.org/home/pymbar] must be installed to complete analysis of free energies."
+   raise ImportError("pymbar [https://simtk.org/home/pymbar] must be installed to complete analysis of free energies.")
    
 # =============================================================================
 # Subsample correlated samples to generate uncorrelated subsample.
 # =============================================================================
 
-print "Subsampling data to remove correlation..."
+print("Subsampling data to remove correlation...")
 K = nlambda # number of states
 N_k = nprod_iterations*numpy.ones([K], numpy.int32) # N_k[k] is the number of uncorrelated samples at state k
 u_kln_subsampled = numpy.zeros([K,K,nprod_iterations], numpy.float64) # subsampled data
@@ -176,24 +177,24 @@ for k in range(K):
    N_k[k] = len(indices)
    for l in range(K):
       u_kln_subsampled[k,l,0:len(indices)] = u_kln[k,l,indices]
-print "Number of uncorrelated samples per state:"
-print N_k
+print("Number of uncorrelated samples per state:")
+print(N_k)
 
 # =============================================================================
 # Analyze with MBAR to compute free energy differences and statistical errors.
 # =============================================================================
 
-print "Analyzing with MBAR..."
+print("Analyzing with MBAR...")
 mbar = MBAR(u_kln_subsampled, N_k)
-[Deltaf_ij, dDeltaf_ij] = mbar.getFreeEnergyDifferences()
-print "Free energy differences (in kT)"
-print Deltaf_ij
-print "Statistical errors (in kT)"
-print dDeltaf_ij
+Deltaf_ij, dDeltaf_ij = mbar.getFreeEnergyDifferences()
+print("Free energy differences (in kT)")
+print(Deltaf_ij)
+print("Statistical errors (in kT)")
+print(dDeltaf_ij)
 
 # =============================================================================
 # Report result.
 # =============================================================================
 
-print "Free energy of inserting argon particle: %.3f +- %.3f kT" % (Deltaf_ij[0,K-1], dDeltaf_ij[0,K-1])
+print("Free energy of inserting argon particle: %.3f +- %.3f kT" % (Deltaf_ij[0,K-1], dDeltaf_ij[0,K-1]))
 
