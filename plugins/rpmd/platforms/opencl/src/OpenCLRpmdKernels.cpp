@@ -301,6 +301,13 @@ void OpenCLIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
             cl.executeKernel(forceContractionKernels[copies], numParticles*numCopies, workgroupSize);
         }
     }
+    if (groupsByCopies.size() > 0) {
+        // Ensure the Context contains the positions from the last copy, since we'll assume that later.
+        
+        copyToContextKernel.setArg<cl::Buffer>(2, positions->getDeviceBuffer());
+        copyToContextKernel.setArg<cl_int>(5, numCopies-1);
+        cl.executeKernel(copyToContextKernel, cl.getNumAtoms());
+    }
 }
 
 double OpenCLIntegrateRPMDStepKernel::computeKineticEnergy(ContextImpl& context, const RPMDIntegrator& integrator) {
