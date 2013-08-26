@@ -285,6 +285,14 @@ void CudaIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
         void* contractForceArgs[] = {&forces->getDevicePointer(), &contractedForces->getDevicePointer()};
         cu.executeKernel(forceContractionKernels[copies], contractForceArgs, numParticles*numCopies, workgroupSize);
     }
+    if (groupsByCopies.size() > 0) {
+        // Ensure the Context contains the positions from the last copy, since we'll assume that later.
+        
+        int i = numCopies-1;
+        void* copyToContextArgs[] = {&velocities->getDevicePointer(), &cu.getVelm().getDevicePointer(), &positions->getDevicePointer(),
+                &cu.getPosq().getDevicePointer(), &cu.getAtomIndexArray().getDevicePointer(), &i};
+        cu.executeKernel(copyToContextKernel, copyToContextArgs, cu.getNumAtoms());
+    }
 }
 
 double CudaIntegrateRPMDStepKernel::computeKineticEnergy(ContextImpl& context, const RPMDIntegrator& integrator) {
