@@ -78,6 +78,10 @@ MODULE OpenMM_Types
         integer*8 :: handle = 0
     end type
 
+    type OpenMM_IntSet
+        integer*8 :: handle = 0
+    end type
+
     ! Enumerations
 
     integer*4, parameter :: OpenMM_False = 0
