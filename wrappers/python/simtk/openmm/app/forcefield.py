@@ -1142,13 +1142,6 @@ class GBSAOBCGenerator:
             force.setSolventDielectric(float(args['solventDielectric']))
         sys.addForce(force)
 
-    def postprocessSystem(self, sys, data, args):
-        # Disable the reaction field approximation, since it produces bad results when combined with GB.
-
-        for force in sys.getForces():
-            if isinstance(force, mm.NonbondedForce):
-                force.setReactionFieldDielectric(1.0)
-
 parsers["GBSAOBCForce"] = GBSAOBCGenerator.parseElement
 
 

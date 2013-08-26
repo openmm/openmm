@@ -187,13 +187,20 @@ for i in range (len(d0)):
     d0[i]=d0[i]/10
     m0[i]=m0[i]*10
 
+def _createReactionFieldCutoff(cutoff, solventDielectric):
+    """Create an expression that the energy should be multiplied by to implement a smooth cutoff."""
+    if cutoff is None:
+        return ""
+    k = (solventDielectric-1)/((2*solventDielectric+1)*cutoff*cutoff*cutoff)
+    c = 3*solventDielectric/((2*solventDielectric+1)*cutoff)
+    return "*("+str(k)+"*r^3-"+str(c)+"*r+1)"
 
 """
 Amber Equivalent: igb = 1
 """
 
 
-def GBSAHCTForce(solventDielectric=78.5, soluteDielectric=1, SA=None):
+def GBSAHCTForce(solventDielectric=78.5, soluteDielectric=1, SA=None, cutoff=None):
 
     custom = CustomGBForce()
 
@@ -219,7 +226,8 @@ def GBSAHCTForce(solventDielectric=78.5, soluteDielectric=1, SA=None):
         custom.addEnergyTerm("28.3919551*(radius+0.14)^2*(radius/B)^6", CustomGBForce.SingleParticle)
     elif SA is not None:
         raise ValueError('Unknown surface area method: '+SA)
-    custom.addEnergyTerm("-138.935485*(1/soluteDielectric-1/solventDielectric)*q1*q2/f;"
+    rfScale = _createReactionFieldCutoff(cutoff, solventDielectric)
+    custom.addEnergyTerm("-138.935485*(1/soluteDielectric-1/solventDielectric)*q1*q2"+rfScale+"/f;"
                            "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))", CustomGBForce.ParticlePairNoExclusions)
 
     return custom
@@ -227,7 +235,7 @@ def GBSAHCTForce(solventDielectric=78.5, soluteDielectric=1, SA=None):
 """
 Amber Equivalents: igb = 2
 """
-def GBSAOBC1Force(solventDielectric=78.5, soluteDielectric=1, SA=None):
+def GBSAOBC1Force(solventDielectric=78.5, soluteDielectric=1, SA=None, cutoff=None):
 
     custom = CustomGBForce()
 
@@ -252,7 +260,8 @@ def GBSAOBC1Force(solventDielectric=78.5, soluteDielectric=1, SA=None):
         custom.addEnergyTerm("28.3919551*(radius+0.14)^2*(radius/B)^6", CustomGBForce.SingleParticle)
     elif SA is not None:
         raise ValueError('Unknown surface area method: '+SA)
-    custom.addEnergyTerm("-138.935485*(1/soluteDielectric-1/solventDielectric)*q1*q2/f;"
+    rfScale = _createReactionFieldCutoff(cutoff, solventDielectric)
+    custom.addEnergyTerm("-138.935485*(1/soluteDielectric-1/solventDielectric)*q1*q2"+rfScale+"/f;"
                            "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))", CustomGBForce.ParticlePairNoExclusions)
 
     return custom
@@ -260,7 +269,7 @@ def GBSAOBC1Force(solventDielectric=78.5, soluteDielectric=1, SA=None):
 """
 Amber Equivalents: igb = 5
 """
-def GBSAOBC2Force(solventDielectric=78.5, soluteDielectric=1, SA=None):
+def GBSAOBC2Force(solventDielectric=78.5, soluteDielectric=1, SA=None, cutoff=None):
 
     custom = CustomGBForce()
 
@@ -285,7 +294,8 @@ def GBSAOBC2Force(solventDielectric=78.5, soluteDielectric=1, SA=None):
         custom.addEnergyTerm("28.3919551*(radius+0.14)^2*(radius/B)^6", CustomGBForce.SingleParticle)
     elif SA is not None:
         raise ValueError('Unknown surface area method: '+SA)
-    custom.addEnergyTerm("-138.935485*(1/soluteDielectric-1/solventDielectric)*q1*q2/f;"
+    rfScale = _createReactionFieldCutoff(cutoff, solventDielectric)
+    custom.addEnergyTerm("-138.935485*(1/soluteDielectric-1/solventDielectric)*q1*q2"+rfScale+"/f;"
                            "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))", CustomGBForce.ParticlePairNoExclusions)
 
     return custom
@@ -293,7 +303,7 @@ def GBSAOBC2Force(solventDielectric=78.5, soluteDielectric=1, SA=None):
 """
 Amber Equivalents: igb = 7
 """
-def GBSAGBnForce(solventDielectric=78.5, soluteDielectric=1, SA=None):
+def GBSAGBnForce(solventDielectric=78.5, soluteDielectric=1, SA=None, cutoff=None):
 
 
     """
@@ -337,7 +347,8 @@ def GBSAGBnForce(solventDielectric=78.5, soluteDielectric=1, SA=None):
         custom.addEnergyTerm("28.3919551*(radius+0.14)^2*(radius/B)^6", CustomGBForce.SingleParticle)
     elif SA is not None:
         raise ValueError('Unknown surface area method: '+SA)
-    custom.addEnergyTerm("-138.935485*(1/soluteDielectric-1/solventDielectric)*q1*q2/f;"
+    rfScale = _createReactionFieldCutoff(cutoff, solventDielectric)
+    custom.addEnergyTerm("-138.935485*(1/soluteDielectric-1/solventDielectric)*q1*q2"+rfScale+"/f;"
                            "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))", CustomGBForce.ParticlePairNoExclusions)
 
     return custom

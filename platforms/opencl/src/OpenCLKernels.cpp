@@ -2455,6 +2455,8 @@ void OpenCLCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOB
         cl.getPosq().upload(posqf);
     params->upload(paramsVector);
     prefactor = -ONE_4PI_EPS0*((1.0/force.getSoluteDielectric())-(1.0/force.getSolventDielectric()));
+    krf = pow(force.getCutoffDistance(), -3.0)*(force.getSolventDielectric()-1.0)/(2.0*force.getSolventDielectric()+1.0);
+    crf = (1.0/force.getCutoffDistance())*(3.0*force.getSolventDielectric())/(2.0*force.getSolventDielectric()+1.0);
     bool useCutoff = (force.getNonbondedMethod() != GBSAOBCForce::NoCutoff);
     bool usePeriodic = (force.getNonbondedMethod() != GBSAOBCForce::NoCutoff && force.getNonbondedMethod() != GBSAOBCForce::CutoffNonPeriodic);
     string source = OpenCLKernelSources::gbsaObc2;
@@ -2473,8 +2475,11 @@ double OpenCLCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
         hasCreatedKernels = true;
         maxTiles = (nb.getUseCutoff() ? nb.getInteractingTiles().getSize() : 0);
         map<string, string> defines;
-        if (nb.getUseCutoff())
+        if (nb.getUseCutoff()) {
             defines["USE_CUTOFF"] = "1";
+            defines["REACTION_FIELD_K"] = cl.doubleToString(krf);
+            defines["REACTION_FIELD_C"] = cl.doubleToString(crf);
+        }
         if (nb.getUsePeriodic())
             defines["USE_PERIODIC"] = "1";
         defines["CUTOFF_SQUARED"] = cl.doubleToString(nb.getCutoffDistance()*nb.getCutoffDistance());

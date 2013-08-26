@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -50,9 +50,9 @@ namespace OpenMM {
  * 
  * When using this Force, the System should also include a NonbondedForce, and both objects must specify
  * identical charges for all particles.  Otherwise, the results will not be correct.  Furthermore, if the
- * nonbonded method is set to CutoffNonPeriodic or CutoffPeriodic, you should call setReactionFieldDielectric(1.0)
- * on the NonbondedForce to turn off the reaction field approximation, which does not produce correct results
- * when combined with GBSA.
+ * nonbonded method is set to CutoffNonPeriodic or CutoffPeriodic, you should call setReactionFieldDielectric()
+ * on the NonbondedForce to set it equal to the GBSAOBCForce's solvent dielectric, so both forces will be
+ * cut off in the same way.
  */
 
 class OPENMM_EXPORT GBSAOBCForce : public Force {
@@ -67,12 +67,14 @@ public:
          */
         NoCutoff = 0,
         /**
-         * Interactions beyond the cutoff distance are ignored.
+         * Interactions beyond the cutoff distance are ignored.  Interactions closer than the cutoff distance
+         * are modified using the reaction field method.
          */
         CutoffNonPeriodic = 1,
         /**
          * Periodic boundary conditions are used, so that each particle interacts only with the nearest periodic copy of
-         * each other particle.  Interactions beyond the cutoff distance are ignored.
+         * each other particle.  Interactions beyond the cutoff distance are ignored.  Interactions closer than the cutoff distance
+         * are modified using the reaction field method.
          */
         CutoffPeriodic = 2,
     };

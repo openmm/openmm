@@ -351,7 +351,7 @@ void ObcParameters::setUseCutoff( RealOpenMM distance ) {
 
       --------------------------------------------------------------------------------------- */
 
-bool ObcParameters::getUseCutoff() {
+bool ObcParameters::getUseCutoff() const {
      return _cutoff;
 }
 
@@ -361,7 +361,7 @@ bool ObcParameters::getUseCutoff() {
 
       --------------------------------------------------------------------------------------- */
 
-RealOpenMM ObcParameters::getCutoffDistance() {
+RealOpenMM ObcParameters::getCutoffDistance() const {
      return _cutoffDistance;
 }
 
