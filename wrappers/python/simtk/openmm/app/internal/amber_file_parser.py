@@ -793,19 +793,24 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
         if verbose: print "Adding GB parameters..."
         charges = prmtop.getCharges()
         symbls = None
+        cutoff = None
+        if nonbondedMethod != 'NoCutoff':
+            cutoff = nonbondedCutoff
+            if units.is_quantity(cutoff):
+                cutoff = cutoff.value_in_unit(units.nanometers)
         if gbmodel == 'GBn':
             symbls = prmtop.getAtomTypes()
         gb_parms = prmtop.getGBParms(symbls)
         if gbmodel == 'HCT':
-            gb = customgb.GBSAHCTForce(solventDielectric, soluteDielectric, 'ACE')
+            gb = customgb.GBSAHCTForce(solventDielectric, soluteDielectric, 'ACE', cutoff)
         elif gbmodel == 'OBC1':
-            gb = customgb.GBSAOBC1Force(solventDielectric, soluteDielectric, 'ACE')
+            gb = customgb.GBSAOBC1Force(solventDielectric, soluteDielectric, 'ACE', cutoff)
         elif gbmodel == 'OBC2':
             gb = mm.GBSAOBCForce()
             gb.setSoluteDielectric(soluteDielectric)
             gb.setSolventDielectric(solventDielectric)
         elif gbmodel == 'GBn':
-            gb = customgb.GBSAGBnForce(solventDielectric, soluteDielectric, 'ACE')
+            gb = customgb.GBSAGBnForce(solventDielectric, soluteDielectric, 'ACE', cutoff)
         else:
             raise Exception("Illegal value specified for implicit solvent model")
         for iAtom in range(prmtop.getNumAtoms()):

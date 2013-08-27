@@ -93,42 +93,44 @@ class TestAmberPrmtopFile(unittest.TestCase):
             self.assertTrue(any(isinstance(f, force_type) for f in forces))
 
     def test_ImplicitSolventParameters(self):
-        """Test that solventDielectric and soluteDielectric are passed correctly 
-        for the different types of implicit solvent.
-
-        """
+        """Test that parameters are set correctly for the different types of implicit solvent."""
+        methodMap = {NoCutoff:NonbondedForce.NoCutoff,
+                     CutoffNonPeriodic:NonbondedForce.CutoffNonPeriodic}
         for implicitSolvent_value in [HCT, OBC1, OBC2, GBn]:
-            system = self.prmtop2.createSystem(implicitSolvent=implicitSolvent_value, 
-                                               solventDielectric=50.0, 
-                                               soluteDielectric = 0.9)
-            found_matching_solvent_dielectric=False
-            found_matching_solute_dielectric=False
-            if implicitSolvent_value in set([HCT, OBC1, GBn]):
-                for force in system.getForces():
-                    if isinstance(force, CustomGBForce):
-                        for j in range(force.getNumGlobalParameters()):
-                            if (force.getGlobalParameterName(j) == 'solventDielectric' and
-                               force.getGlobalParameterDefaultValue(j) == 50.0):
+            for method in methodMap:
+                system = self.prmtop2.createSystem(implicitSolvent=implicitSolvent_value, 
+                                    solventDielectric=50.0, soluteDielectric=0.9, nonbondedMethod=method)
+                found_matching_solvent_dielectric=False
+                found_matching_solute_dielectric=False
+                if implicitSolvent_value in set([HCT, OBC1, GBn]):
+                    for force in system.getForces():
+                        if isinstance(force, CustomGBForce):
+                            self.assertEqual(force.getNonbondedMethod(), methodMap[method])
+                            for j in range(force.getNumGlobalParameters()):
+                                if (force.getGlobalParameterName(j) == 'solventDielectric' and
+                                   force.getGlobalParameterDefaultValue(j) == 50.0):
+                                    found_matching_solvent_dielectric = True
+                                if (force.getGlobalParameterName(j) == 'soluteDielectric' and
+                                   force.getGlobalParameterDefaultValue(j) == 0.9):
+                                    found_matching_solute_dielectric = True
+                        if isinstance(force, NonbondedForce):
+                            self.assertEqual(force.getReactionFieldDielectric(), 1.0)
+                            self.assertEqual(force.getNonbondedMethod(), methodMap[method])
+                    self.assertTrue(found_matching_solvent_dielectric and 
+                                    found_matching_solute_dielectric)
+                else:
+                    for force in system.getForces():
+                        if isinstance(force, GBSAOBCForce):
+                            self.assertEqual(force.getNonbondedMethod(), methodMap[method])
+                            if force.getSolventDielectric() == 50.0:
                                 found_matching_solvent_dielectric = True
-                            if (force.getGlobalParameterName(j) == 'soluteDielectric' and
-                               force.getGlobalParameterDefaultValue(j) == 0.9):
+                            if force.getSoluteDielectric() == 0.9:
                                 found_matching_solute_dielectric = True
-                    if isinstance(force, NonbondedForce):
-                        self.assertEqual(force.getReactionFieldDielectric(), 1.0)
-                self.assertTrue(found_matching_solvent_dielectric and 
-                                found_matching_solute_dielectric)
-            else:
-                for force in system.getForces():
-                    if isinstance(force, GBSAOBCForce):
-                        if force.getSolventDielectric() == 50.0:
-                            found_matching_solvent_dielectric = True
-                        if force.getSoluteDielectric() == 0.9:
-                            found_matching_solute_dielectric = True
-                    if isinstance(force, NonbondedForce):
-                        self.assertEqual(force.getReactionFieldDielectric(), 1.0)
-                self.assertTrue(found_matching_solvent_dielectric and 
-                                found_matching_solute_dielectric)
+                        if isinstance(force, NonbondedForce):
+                            self.assertEqual(force.getReactionFieldDielectric(), 1.0)
+                            self.assertEqual(force.getNonbondedMethod(), methodMap[method])
+                    self.assertTrue(found_matching_solvent_dielectric and 
+                                    found_matching_solute_dielectric)
 
 if __name__ == '__main__':
     unittest.main()
-
