@@ -188,12 +188,27 @@ for i in range (len(d0)):
     m0[i]=m0[i]*10
 
 
+def _createEnergyTerms(force, SA, cutoff):
+    # Add the energy terms to the CustomGBForce.  These are identical for all the GB models.
+    
+    force.addEnergyTerm("-0.5*138.935485*(1/soluteDielectric-1/solventDielectric)*q^2/B", CustomGBForce.SingleParticle)
+    if SA=='ACE':
+        force.addEnergyTerm("28.3919551*(radius+0.14)^2*(radius/B)^6", CustomGBForce.SingleParticle)
+    elif SA is not None:
+        raise ValueError('Unknown surface area method: '+SA)
+    if cutoff is None:
+        force.addEnergyTerm("-138.935485*(1/soluteDielectric-1/solventDielectric)*q1*q2/f;"
+                            "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))", CustomGBForce.ParticlePairNoExclusions)
+    else:
+        force.addEnergyTerm("-138.935485*(1/soluteDielectric-1/solventDielectric)*q1*q2*(1/f-"+str(1/cutoff)+");"
+                            "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))", CustomGBForce.ParticlePairNoExclusions)
+
 """
 Amber Equivalent: igb = 1
 """
 
 
-def GBSAHCTForce(solventDielectric=78.5, soluteDielectric=1, SA=None):
+def GBSAHCTForce(solventDielectric=78.5, soluteDielectric=1, SA=None, cutoff=None):
 
     custom = CustomGBForce()
 
@@ -212,22 +227,13 @@ def GBSAHCTForce(solventDielectric=78.5, soluteDielectric=1, SA=None):
 
     custom.addComputedValue("B", "1/(1/or-I);"
                                   "or=radius-offset", CustomGBForce.SingleParticle)
-
-
-    custom.addEnergyTerm("-0.5*138.935485*(1/soluteDielectric-1/solventDielectric)*q^2/B", CustomGBForce.SingleParticle)
-    if SA=='ACE':
-        custom.addEnergyTerm("28.3919551*(radius+0.14)^2*(radius/B)^6", CustomGBForce.SingleParticle)
-    elif SA is not None:
-        raise ValueError('Unknown surface area method: '+SA)
-    custom.addEnergyTerm("-138.935485*(1/soluteDielectric-1/solventDielectric)*q1*q2/f;"
-                           "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))", CustomGBForce.ParticlePairNoExclusions)
-
+    _createEnergyTerms(custom, SA, cutoff)
     return custom
 
 """
 Amber Equivalents: igb = 2
 """
-def GBSAOBC1Force(solventDielectric=78.5, soluteDielectric=1, SA=None):
+def GBSAOBC1Force(solventDielectric=78.5, soluteDielectric=1, SA=None, cutoff=None):
 
     custom = CustomGBForce()
 
@@ -246,21 +252,13 @@ def GBSAOBC1Force(solventDielectric=78.5, soluteDielectric=1, SA=None):
 
     custom.addComputedValue("B", "1/(1/or-tanh(0.8*psi+2.909125*psi^3)/radius);"
                                   "psi=I*or; or=radius-offset", CustomGBForce.SingleParticle)
-
-    custom.addEnergyTerm("-0.5*138.935485*(1/soluteDielectric-1/solventDielectric)*q^2/B", CustomGBForce.SingleParticle)
-    if SA=='ACE':
-        custom.addEnergyTerm("28.3919551*(radius+0.14)^2*(radius/B)^6", CustomGBForce.SingleParticle)
-    elif SA is not None:
-        raise ValueError('Unknown surface area method: '+SA)
-    custom.addEnergyTerm("-138.935485*(1/soluteDielectric-1/solventDielectric)*q1*q2/f;"
-                           "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))", CustomGBForce.ParticlePairNoExclusions)
-
+    _createEnergyTerms(custom, SA, cutoff)
     return custom
 
 """
 Amber Equivalents: igb = 5
 """
-def GBSAOBC2Force(solventDielectric=78.5, soluteDielectric=1, SA=None):
+def GBSAOBC2Force(solventDielectric=78.5, soluteDielectric=1, SA=None, cutoff=None):
 
     custom = CustomGBForce()
 
@@ -279,21 +277,13 @@ def GBSAOBC2Force(solventDielectric=78.5, soluteDielectric=1, SA=None):
 
     custom.addComputedValue("B", "1/(1/or-tanh(psi-0.8*psi^2+4.85*psi^3)/radius);"
                                   "psi=I*or; or=radius-offset", CustomGBForce.SingleParticle)
-
-    custom.addEnergyTerm("-0.5*138.935485*(1/soluteDielectric-1/solventDielectric)*q^2/B", CustomGBForce.SingleParticle)
-    if SA=='ACE':
-        custom.addEnergyTerm("28.3919551*(radius+0.14)^2*(radius/B)^6", CustomGBForce.SingleParticle)
-    elif SA is not None:
-        raise ValueError('Unknown surface area method: '+SA)
-    custom.addEnergyTerm("-138.935485*(1/soluteDielectric-1/solventDielectric)*q1*q2/f;"
-                           "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))", CustomGBForce.ParticlePairNoExclusions)
-
+    _createEnergyTerms(custom, SA, cutoff)
     return custom
 
 """
 Amber Equivalents: igb = 7
 """
-def GBSAGBnForce(solventDielectric=78.5, soluteDielectric=1, SA=None):
+def GBSAGBnForce(solventDielectric=78.5, soluteDielectric=1, SA=None, cutoff=None):
 
 
     """
@@ -331,13 +321,5 @@ def GBSAGBnForce(solventDielectric=78.5, soluteDielectric=1, SA=None):
 
     custom.addComputedValue("B", "1/(1/or-tanh(1.09511284*psi-1.907992938*psi^2+2.50798245*psi^3)/radius);"
                               "psi=I*or; or=radius-offset", CustomGBForce.SingleParticle)
-
-    custom.addEnergyTerm("-0.5*138.935485*(1/soluteDielectric-1/solventDielectric)*q^2/B", CustomGBForce.SingleParticle)
-    if SA=='ACE':
-        custom.addEnergyTerm("28.3919551*(radius+0.14)^2*(radius/B)^6", CustomGBForce.SingleParticle)
-    elif SA is not None:
-        raise ValueError('Unknown surface area method: '+SA)
-    custom.addEnergyTerm("-138.935485*(1/soluteDielectric-1/solventDielectric)*q1*q2/f;"
-                           "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))", CustomGBForce.ParticlePairNoExclusions)
-
+    _createEnergyTerms(custom, SA, cutoff)
     return custom
