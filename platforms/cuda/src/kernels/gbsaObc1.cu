@@ -468,11 +468,16 @@ extern "C" __global__ void computeGBSAForce1(unsigned long long* __restrict__ fo
                         real expTerm = EXP(-D_ij);
                         real denominator2 = r2 + alpha2_ij*expTerm;
                         real denominator = SQRT(denominator2);
-                        real tempEnergy = (PREFACTOR*posq1.w*posq2.w)*RECIP(denominator);
+                        real scaledChargeProduct = PREFACTOR*posq1.w*posq2.w;
+                        real tempEnergy = scaledChargeProduct*RECIP(denominator);
                         real Gpol = tempEnergy*RECIP(denominator2);
                         real dGpol_dalpha2_ij = -0.5f*Gpol*expTerm*(1.0f+D_ij);
                         real dEdR = Gpol*(1.0f - 0.25f*expTerm);
                         force.w += dGpol_dalpha2_ij*bornRadius2;
+#ifdef USE_CUTOFF
+                        if (atom1 != y*TILE_SIZE+j)
+                            tempEnergy -= scaledChargeProduct/CUTOFF;
+#endif
                         energy += 0.5f*tempEnergy;
                         delta *= dEdR;
                         force.x -= delta.x;
@@ -520,11 +525,15 @@ extern "C" __global__ void computeGBSAForce1(unsigned long long* __restrict__ fo
                         real expTerm = EXP(-D_ij);
                         real denominator2 = r2 + alpha2_ij*expTerm;
                         real denominator = SQRT(denominator2);
-                        real tempEnergy = (PREFACTOR*posq1.w*posq2.w)*RECIP(denominator);
+                        real scaledChargeProduct = PREFACTOR*posq1.w*posq2.w;
+                        real tempEnergy = scaledChargeProduct*RECIP(denominator);
                         real Gpol = tempEnergy*RECIP(denominator2);
                         real dGpol_dalpha2_ij = -0.5f*Gpol*expTerm*(1.0f+D_ij);
                         real dEdR = Gpol*(1.0f - 0.25f*expTerm);
                         force.w += dGpol_dalpha2_ij*bornRadius2;
+#ifdef USE_CUTOFF
+                        tempEnergy -= scaledChargeProduct/CUTOFF;
+#endif
                         energy += tempEnergy;
                         delta *= dEdR;
                         force.x -= delta.x;
@@ -670,11 +679,15 @@ extern "C" __global__ void computeGBSAForce1(unsigned long long* __restrict__ fo
                             real expTerm = EXP(-D_ij);
                             real denominator2 = r2 + alpha2_ij*expTerm;
                             real denominator = SQRT(denominator2);
-                            real tempEnergy = (PREFACTOR*posq1.w*posq2.w)*RECIP(denominator);
+                            real scaledChargeProduct = PREFACTOR*posq1.w*posq2.w;
+                            real tempEnergy = scaledChargeProduct*RECIP(denominator);
                             real Gpol = tempEnergy*RECIP(denominator2);
                             real dGpol_dalpha2_ij = -0.5f*Gpol*expTerm*(1.0f+D_ij);
                             real dEdR = Gpol*(1.0f - 0.25f*expTerm);
                             force.w += dGpol_dalpha2_ij*bornRadius2;
+#ifdef USE_CUTOFF
+                            tempEnergy -= scaledChargeProduct/CUTOFF;
+#endif
                             energy += tempEnergy;
                             delta *= dEdR;
                             force.x -= delta.x;
@@ -717,11 +730,15 @@ extern "C" __global__ void computeGBSAForce1(unsigned long long* __restrict__ fo
                             real expTerm = EXP(-D_ij);
                             real denominator2 = r2 + alpha2_ij*expTerm;
                             real denominator = SQRT(denominator2);
-                            real tempEnergy = (PREFACTOR*posq1.w*posq2.w)*RECIP(denominator);
+                            real scaledChargeProduct = PREFACTOR*posq1.w*posq2.w;
+                            real tempEnergy = scaledChargeProduct*RECIP(denominator);
                             real Gpol = tempEnergy*RECIP(denominator2);
                             real dGpol_dalpha2_ij = -0.5f*Gpol*expTerm*(1.0f+D_ij);
                             real dEdR = Gpol*(1.0f - 0.25f*expTerm);
                             force.w += dGpol_dalpha2_ij*bornRadius2;
+#ifdef USE_CUTOFF
+                            tempEnergy -= scaledChargeProduct/CUTOFF;
+#endif
                             energy += tempEnergy;
                             delta *= dEdR;
                             force.x -= delta.x;

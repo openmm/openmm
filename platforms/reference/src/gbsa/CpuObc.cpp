@@ -308,23 +308,18 @@ RealOpenMM CpuObc::computeBornEnergyForces( const vector<RealVec>& atomCoordinat
     static const RealOpenMM fourth  = static_cast<RealOpenMM>( 0.25 );
     static const RealOpenMM eighth  = static_cast<RealOpenMM>( 0.125 );
 
-    // ---------------------------------------------------------------------------------------
-
-    const ObcParameters* obcParameters = getObcParameters();
-    const int numberOfAtoms            = obcParameters->getNumberOfAtoms();
-
-    // ---------------------------------------------------------------------------------------
-
     // constants
 
+    const int numberOfAtoms = _obcParameters->getNumberOfAtoms();
+    const RealOpenMM dielectricOffset = _obcParameters->getDielectricOffset();
+    const RealOpenMM cutoffDistance = _obcParameters->getCutoffDistance();
+    const RealOpenMM soluteDielectric = _obcParameters->getSoluteDielectric();
+    const RealOpenMM solventDielectric = _obcParameters->getSolventDielectric();
     RealOpenMM preFactor;
-    if( obcParameters->getSoluteDielectric() != zero && obcParameters->getSolventDielectric() != zero ){
-        preFactor = two*obcParameters->getElectricConstant()*( (one/obcParameters->getSoluteDielectric()) - (one/obcParameters->getSolventDielectric()) );
-    } else {
+    if (soluteDielectric != zero && solventDielectric != zero)
+        preFactor = two*_obcParameters->getElectricConstant()*((one/soluteDielectric) - (one/solventDielectric));
+    else
         preFactor = zero;
-    }   
-
-    const RealOpenMM dielectricOffset    = obcParameters->getDielectricOffset();
 
     // ---------------------------------------------------------------------------------------
 
@@ -343,7 +338,7 @@ RealOpenMM CpuObc::computeBornEnergyForces( const vector<RealVec>& atomCoordinat
     // compute the nonpolar solvation via ACE approximation
      
     if( includeAceApproximation() ){
-       computeAceNonPolarForce( obcParameters, bornRadii, &obcEnergy, bornForces );
+       computeAceNonPolarForce( _obcParameters, bornRadii, &obcEnergy, bornForces );
     }
  
     // ---------------------------------------------------------------------------------------
@@ -360,7 +355,7 @@ RealOpenMM CpuObc::computeBornEnergyForces( const vector<RealVec>& atomCoordinat
               ReferenceForce::getDeltaRPeriodic( atomCoordinates[atomI], atomCoordinates[atomJ], _obcParameters->getPeriodicBox(), deltaR );
           else
               ReferenceForce::getDeltaR( atomCoordinates[atomI], atomCoordinates[atomJ], deltaR );
-          if (_obcParameters->getUseCutoff() && deltaR[ReferenceForce::RIndex] > _obcParameters->getCutoffDistance())
+          if (_obcParameters->getUseCutoff() && deltaR[ReferenceForce::RIndex] > cutoffDistance)
               continue;
 
           RealOpenMM r2                 = deltaR[ReferenceForce::R2Index];
@@ -379,9 +374,14 @@ RealOpenMM CpuObc::computeBornEnergyForces( const vector<RealVec>& atomCoordinat
           RealOpenMM dGpol_dr           = -Gpol*( one - fourth*expTerm )/denominator2;  
 
           RealOpenMM dGpol_dalpha2_ij   = -half*Gpol*expTerm*( one + D_ij )/denominator2;
+          
+          RealOpenMM energy = Gpol;
 
           if( atomI != atomJ ){
 
+              if (_obcParameters->getUseCutoff())
+                  energy -= partialChargeI*partialCharges[atomJ]/cutoffDistance;
+              
               bornForces[atomJ]        += dGpol_dalpha2_ij*bornRadii[atomI];
 
               deltaX                   *= dGpol_dr;
@@ -397,10 +397,10 @@ RealOpenMM CpuObc::computeBornEnergyForces( const vector<RealVec>& atomCoordinat
               inputForces[atomJ][2]    -= deltaZ;
 
           } else {
-             Gpol *= half;
+             energy *= half;
           }
 
-          obcEnergy         += Gpol;
+          obcEnergy         += energy;
           bornForces[atomI] += dGpol_dalpha2_ij*bornRadii[atomJ];
 
        }
@@ -411,12 +411,12 @@ RealOpenMM CpuObc::computeBornEnergyForces( const vector<RealVec>& atomCoordinat
     // second main loop
 
     const RealOpenMMVector& obcChain            = getObcChain();
-    const RealOpenMMVector& atomicRadii         = obcParameters->getAtomicRadii();
+    const RealOpenMMVector& atomicRadii         = _obcParameters->getAtomicRadii();
 
-    const RealOpenMM alphaObc                   = obcParameters->getAlphaObc();
-    const RealOpenMM betaObc                    = obcParameters->getBetaObc();
-    const RealOpenMM gammaObc                   = obcParameters->getGammaObc();
-    const RealOpenMMVector& scaledRadiusFactor  = obcParameters->getScaledRadiusFactors();
+    const RealOpenMM alphaObc                   = _obcParameters->getAlphaObc();
+    const RealOpenMM betaObc                    = _obcParameters->getBetaObc();
+    const RealOpenMM gammaObc                   = _obcParameters->getGammaObc();
+    const RealOpenMMVector& scaledRadiusFactor  = _obcParameters->getScaledRadiusFactors();
 
     // compute factor that depends only on the outer loop index
 
@@ -440,7 +440,7 @@ RealOpenMM CpuObc::computeBornEnergyForces( const vector<RealVec>& atomCoordinat
                 ReferenceForce::getDeltaRPeriodic( atomCoordinates[atomI], atomCoordinates[atomJ], _obcParameters->getPeriodicBox(), deltaR );
              else 
                 ReferenceForce::getDeltaR( atomCoordinates[atomI], atomCoordinates[atomJ], deltaR );
-             if (_obcParameters->getUseCutoff() && deltaR[ReferenceForce::RIndex] > _obcParameters->getCutoffDistance())
+             if (_obcParameters->getUseCutoff() && deltaR[ReferenceForce::RIndex] > cutoffDistance)
                     continue;
     
              RealOpenMM deltaX             = deltaR[ReferenceForce::XIndex];
