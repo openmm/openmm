@@ -590,8 +590,8 @@ def _findMatchErrors(forcefield, res):
     # Return an appropriate error message.
     
     if numBestMatchAtoms == numResidueAtoms:
-        chainLength = len(list(res.chain.residues()))
-        if chainLength > 1 and (res.index == 0 or res.index == chainLength-1):
+        chainResidues = list(res.chain.residues())
+        if len(chainResidues) > 1 and (res == chainResidues[0] or res == chainResidues[-1]):
             return 'The set of atoms matches %s, but the bonds are different.  Perhaps the chain is missing a terminal group?' % bestMatchName
         return 'The set of atoms matches %s, but the bonds are different.' % bestMatchName
     if bestMatchName is not None:
