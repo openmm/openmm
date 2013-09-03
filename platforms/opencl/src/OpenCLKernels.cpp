@@ -5978,7 +5978,7 @@ void OpenCLRemoveCMMotionKernel::initialize(const System& system, const CMMotion
     for (int i = 0; i < numAtoms; i++)
         totalMass += system.getParticleMass(i);
     map<string, string> defines;
-    defines["INVERSE_TOTAL_MASS"] = cl.doubleToString(1.0/totalMass);
+    defines["INVERSE_TOTAL_MASS"] = cl.doubleToString(totalMass == 0 ? 0.0 : 1.0/totalMass);
     cl::Program program = cl.createProgram(OpenCLKernelSources::removeCM, defines);
     kernel1 = cl::Kernel(program, "calcCenterOfMassMomentum");
     kernel1.setArg<cl_int>(0, numAtoms);

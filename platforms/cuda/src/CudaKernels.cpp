@@ -5752,7 +5752,7 @@ void CudaRemoveCMMotionKernel::initialize(const System& system, const CMMotionRe
     for (int i = 0; i < numAtoms; i++)
         totalMass += system.getParticleMass(i);
     map<string, string> defines;
-    defines["INVERSE_TOTAL_MASS"] = cu.doubleToString(1.0/totalMass);
+    defines["INVERSE_TOTAL_MASS"] = cu.doubleToString(totalMass == 0 ? 0.0 : 1.0/totalMass);
     CUmodule module = cu.createModule(CudaKernelSources::removeCM, defines);
     kernel1 = cu.getKernel(module, "calcCenterOfMassMomentum");
     kernel2 = cu.getKernel(module, "removeCenterOfMassMomentum");
