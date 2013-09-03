@@ -70,7 +70,10 @@ class PDBFile(object):
 
         # Load the PDB file
 
-        pdb = PdbStructure(open(file), load_all_models=True)
+        inputfile = file
+        if isinstance(file, str):
+            inputfile = open(file)
+        pdb = PdbStructure(inputfile, load_all_models=True)
         PDBFile._loadNameReplacementTables()
 
         # Build the topology
@@ -140,7 +143,8 @@ class PDBFile(object):
         for connect in pdb.models[0].connects:
             i = connect[0]
             for j in connect[1:]:
-                connectBonds.append((atomByNumber[i], atomByNumber[j]))
+                if i in atomByNumber and j in atomByNumber:
+                    connectBonds.append((atomByNumber[i], atomByNumber[j]))
         if len(connectBonds) > 0:
             # Only add bonds that don't already exist.
             existingBonds = set(top.bonds())
