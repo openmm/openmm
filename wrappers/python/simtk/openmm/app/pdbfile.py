@@ -70,10 +70,13 @@ class PDBFile(object):
 
         # Load the PDB file
 
-        inputfile = file
-        if isinstance(file, str):
-            inputfile = open(file)
-        pdb = PdbStructure(inputfile, load_all_models=True)
+        if isinstance(file, PdbStructure):
+            pdb = file
+        else:
+            inputfile = file
+            if isinstance(file, str):
+                inputfile = open(file)
+            pdb = PdbStructure(inputfile, load_all_models=True)
         PDBFile._loadNameReplacementTables()
 
         # Build the topology
