@@ -128,12 +128,12 @@ void CudaIntegrateRPMDStepKernel::initialize(const System& system, const RPMDInt
         if (copies != numCopies) {
             if (groupsByCopies.find(copies) == groupsByCopies.end()) {
                 groupsByCopies[copies] = 1<<group;
-                groupsNotContracted -= 1<<group;
                 if (copies > maxContractedCopies)
                     maxContractedCopies = copies;
             }
             else
                 groupsByCopies[copies] |= 1<<group;
+            groupsNotContracted -= 1<<group;
         }
     }
     if (maxContractedCopies > 0) {
