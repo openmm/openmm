@@ -14,7 +14,13 @@
     if (getForces) types |= State::Forces;
     if (getEnergy) types |= State::Energy;
     if (getParameters) types |= State::Parameters;
-    state = self->getState(types, enforcePeriodic, groups);
+    try {
+        state = self->getState(types, enforcePeriodic, groups);
+    }
+    catch (...) {
+        Py_END_ALLOW_THREADS
+        throw;
+    }
     Py_END_ALLOW_THREADS
     return _convertStateToLists(state);
   }
@@ -157,7 +163,13 @@ Parameters:
     if (getForces) types |= State::Forces;
     if (getEnergy) types |= State::Energy;
     if (getParameters) types |= State::Parameters;
-    state = self->getState(copy, types, enforcePeriodic, groups);
+    try {
+        state = self->getState(copy, types, enforcePeriodic, groups);
+    }
+    catch (...) {
+        Py_END_ALLOW_THREADS
+        throw;
+    }
     Py_END_ALLOW_THREADS
     return _convertStateToLists(state);
   }
