@@ -7,7 +7,7 @@
                             int enforcePeriodic,
                             int groups) {
     State state;
-    Py_BEGIN_ALLOW_THREADS
+    PyThreadState* _savePythonThreadState = PyEval_SaveThread();
     int types = 0;
     if (getPositions) types |= State::Positions;
     if (getVelocities) types |= State::Velocities;
@@ -18,10 +18,10 @@
         state = self->getState(types, enforcePeriodic, groups);
     }
     catch (...) {
-        Py_END_ALLOW_THREADS
+        PyEval_RestoreThread(_savePythonThreadState);
         throw;
     }
-    Py_END_ALLOW_THREADS
+    PyEval_RestoreThread(_savePythonThreadState);
     return _convertStateToLists(state);
   }
 
@@ -156,7 +156,7 @@ Parameters:
                             int enforcePeriodic,
                             int groups) {
     State state;
-    Py_BEGIN_ALLOW_THREADS
+    PyThreadState* _savePythonThreadState = PyEval_SaveThread();
     int types = 0;
     if (getPositions) types |= State::Positions;
     if (getVelocities) types |= State::Velocities;
@@ -167,10 +167,10 @@ Parameters:
         state = self->getState(copy, types, enforcePeriodic, groups);
     }
     catch (...) {
-        Py_END_ALLOW_THREADS
+        PyEval_RestoreThread(_savePythonThreadState);
         throw;
     }
-    Py_END_ALLOW_THREADS
+    PyEval_RestoreThread(_savePythonThreadState);
     return _convertStateToLists(state);
   }
 
