@@ -718,6 +718,7 @@
   <Bond from="CG" to="HG2"/>
   <Bond from="CG" to="HG3"/>
   <Bond from="H" to="N"/>
+  <Bond from="H2" to="N"/>
   <Bond from="H3" to="N"/>
   <Bond from="HXT" to="OXT"/>
  </Residue>
