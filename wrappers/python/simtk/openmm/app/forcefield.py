@@ -516,6 +516,27 @@ def _matchResidue(res, template, bondedToAtom):
         bonds = [renumberAtoms[x] for x in bondedToAtom[atom.index] if x in renumberAtoms]
         bondedTo.append(bonds)
         externalBonds.append(len([x for x in bondedToAtom[atom.index] if x not in renumberAtoms]))
+
+    # For each unique combination of element and number of bonds, make sure the residue and
+    # template have the same number of atoms.
+
+    residueTypeCount = {}
+    for i, atom in enumerate(atoms):
+        key = (atom.element, len(bondedTo[i]), externalBonds[i])
+        if key not in residueTypeCount:
+            residueTypeCount[key] = 1
+        residueTypeCount[key] += 1
+    templateTypeCount = {}
+    for i, atom in enumerate(template.atoms):
+        key = (atom.element, len(atom.bondedTo), atom.externalBonds)
+        if key not in templateTypeCount:
+            templateTypeCount[key] = 1
+        templateTypeCount[key] += 1
+    if residueTypeCount != templateTypeCount:
+        return None
+
+    # Recursively match atoms.
+
     if _findAtomMatches(atoms, template, bondedTo, externalBonds, matches, hasMatch, 0):
         return matches
     return None
