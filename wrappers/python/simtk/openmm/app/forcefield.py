@@ -272,7 +272,7 @@ class ForceField(object):
             self.atoms = [x-self.index for x in self.atoms]
 
     def createSystem(self, topology, nonbondedMethod=NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
-                     constraints=None, rigidWater=True, removeCMMotion=True, **args):
+                     constraints=None, rigidWater=True, removeCMMotion=True, hydrogenMass=None, **args):
         """Construct an OpenMM System representing a Topology with this force field.
 
         Parameters:
@@ -284,6 +284,8 @@ class ForceField(object):
            Allowed values are None, HBonds, AllBonds, or HAngles.
          - rigidWater (boolean=True) If true, water molecules will be fully rigid regardless of the value passed for the constraints argument
          - removeCMMotion (boolean=True) If true, a CMMotionRemover will be added to the System
+         - hydrogenMass (mass=None) The mass to use for hydrogen atoms bound to heavy atoms.  Any mass added to a hydrogen is
+           subtracted from the heavy atom to keep their total mass the same.
          - args Arbitrary additional keyword arguments may also be specified.  This allows extra parameters to be specified that are specific to
            particular force fields.
         Returns: the newly created System
@@ -335,6 +337,17 @@ class ForceField(object):
         sys = mm.System()
         for atom in topology.atoms():
             sys.addParticle(self._atomTypes[data.atomType[atom]][1])
+        
+        # Adjust masses.
+        
+        if hydrogenMass is not None:
+            for atom1, atom2 in topology.bonds():
+                if atom1.element == elem.hydrogen:
+                    (atom1, atom2) = (atom2, atom1)
+                if atom2.element == elem.hydrogen and atom1.element not in (elem.hydrogen, None):
+                    transferMass = hydrogenMass-sys.getParticleMass(atom2.index)
+                    sys.setParticleMass(atom2.index, hydrogenMass)
+                    sys.setParticleMass(atom1.index, sys.getParticleMass(atom1.index)-transferMass)
 
         # Set periodic boundary conditions.
 
