@@ -138,6 +138,7 @@ class PdbStructure(object):
         self.default_model = None
         self.models_by_number = {}
         self._unit_cell_dimensions = None
+        self.sequences = []
         # read file
         self._load(input_stream)
 
@@ -172,6 +173,11 @@ class PdbStructure(object):
                     except:
                         pass
                 self._current_model.connects.append(atoms)
+            elif (pdb_line.find("SEQRES") == 0):
+                chain_id = pdb_line[11]
+                if len(self.sequences) == 0 or chain_id != self.sequences[-1].chain_id:
+                    self.sequences.append(Sequence(chain_id))
+                self.sequences[-1].residues.extend(pdb_line[19:].split())
         self._finalize()
 
     def write(self, output_stream=sys.stdout):
@@ -264,6 +270,13 @@ class PdbStructure(object):
     def get_unit_cell_dimensions(self):
         """Get the dimensions of the crystallographic unit cell (may be None)."""
         return self._unit_cell_dimensions
+
+
+class Sequence(object):
+    """Sequence holds the sequence of a chain, as specified by SEQRES records."""
+    def __init__(self, chain_id):
+        self.chain_id = chain_id
+        self.residues = []
 
 
 class Model(object):

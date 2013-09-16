@@ -89,7 +89,6 @@ void ReferenceIntegrateRPMDStepKernel::initialize(const System& system, const RP
         if (copies != numCopies) {
             if (groupsByCopies.find(copies) == groupsByCopies.end()) {
                 groupsByCopies[copies] = 1<<group;
-                groupsNotContracted -= 1<<group;
                 contractionFFT[copies] = NULL;
                 fftpack_init_1d(&contractionFFT[copies], copies);
                 if (copies > maxContractedCopies)
@@ -97,6 +96,7 @@ void ReferenceIntegrateRPMDStepKernel::initialize(const System& system, const RP
             }
             else
                 groupsByCopies[copies] |= 1<<group;
+            groupsNotContracted -= 1<<group;
         }
     }
     

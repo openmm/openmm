@@ -1,5 +1,6 @@
 <Residues>
  <Residue name="A">
+  <H name="HO5'" parent="O5'" terminal="N"/>
   <H name="H1'" parent="C1'"/>
   <H name="H2" parent="C2"/>
   <H name="H2'" parent="C2'"/>
@@ -11,9 +12,7 @@
   <H name="H62" parent="N6"/>
   <H name="H8" parent="C8"/>
   <H name="HO2'" parent="O2'"/>
-  <H name="HO3'" parent="O3'"/>
-  <H name="HOP2" parent="OP2"/>
-  <H name="HOP3" parent="OP3"/>
+  <H name="HO3'" parent="O3'" terminal="C"/>
  </Residue>
  <Residue name="ACE">
   <H name="H" parent="C" terminal="C"/>
@@ -80,6 +79,7 @@
   <H name="HD2" parent="OD2" maxph="4.4" variant="ASH"/>
  </Residue>
  <Residue name="C">
+  <H name="HO5'" parent="O5'" terminal="N"/>
   <H name="H1'" parent="C1'"/>
   <H name="H2'" parent="C2'"/>
   <H name="H3'" parent="C3'"/>
@@ -91,9 +91,7 @@
   <H name="H5''" parent="C5'"/>
   <H name="H6" parent="C6"/>
   <H name="HO2'" parent="O2'"/>
-  <H name="HO3'" parent="O3'"/>
-  <H name="HOP2" parent="OP2"/>
-  <H name="HOP3" parent="OP3"/>
+  <H name="HO3'" parent="O3'" terminal="C"/>
  </Residue>
  <Residue name="CYS">
   <Variant name="CYS"/>
@@ -107,6 +105,7 @@
   <H name="HG" parent="SG" maxph="8.5" variant="CYS"/>
  </Residue>
  <Residue name="DA">
+  <H name="HO5'" parent="O5'" terminal="N"/>
   <H name="H1'" parent="C1'"/>
   <H name="H2" parent="C2"/>
   <H name="H2'" parent="C2'"/>
@@ -118,11 +117,10 @@
   <H name="H61" parent="N6"/>
   <H name="H62" parent="N6"/>
   <H name="H8" parent="C8"/>
-  <H name="HO3'" parent="O3'"/>
-  <H name="HOP2" parent="OP2"/>
-  <H name="HOP3" parent="OP3"/>
+  <H name="HO3'" parent="O3'" terminal="C"/>
  </Residue>
  <Residue name="DC">
+  <H name="HO5'" parent="O5'" terminal="N"/>
   <H name="H1'" parent="C1'"/>
   <H name="H2'" parent="C2'"/>
   <H name="H2''" parent="C2'"/>
@@ -134,11 +132,10 @@
   <H name="H5'" parent="C5'"/>
   <H name="H5''" parent="C5'"/>
   <H name="H6" parent="C6"/>
-  <H name="HO3'" parent="O3'"/>
-  <H name="HOP2" parent="OP2"/>
-  <H name="HOP3" parent="OP3"/>
+  <H name="HO3'" parent="O3'" terminal="C"/>
  </Residue>
  <Residue name="DG">
+  <H name="HO5'" parent="O5'" terminal="N"/>
   <H name="H1" parent="N1"/>
   <H name="H1'" parent="C1'"/>
   <H name="H2'" parent="C2'"/>
@@ -150,11 +147,10 @@
   <H name="H5'" parent="C5'"/>
   <H name="H5''" parent="C5'"/>
   <H name="H8" parent="C8"/>
-  <H name="HO3'" parent="O3'"/>
-  <H name="HOP2" parent="OP2"/>
-  <H name="HOP3" parent="OP3"/>
+  <H name="HO3'" parent="O3'" terminal="C"/>
  </Residue>
  <Residue name="DT">
+  <H name="HO5'" parent="O5'" terminal="N"/>
   <H name="H1'" parent="C1'"/>
   <H name="H2'" parent="C2'"/>
   <H name="H2''" parent="C2'"/>
@@ -167,15 +163,14 @@
   <H name="H71" parent="C7"/>
   <H name="H72" parent="C7"/>
   <H name="H73" parent="C7"/>
-  <H name="HO3'" parent="O3'"/>
-  <H name="HOP2" parent="OP2"/>
-  <H name="HOP3" parent="OP3"/>
+  <H name="HO3'" parent="O3'" terminal="C"/>
  </Residue>
  <Residue name="FOR">
   <H name="H1" parent="C"/>
   <H name="H2" parent="C"/>
  </Residue>
  <Residue name="G">
+  <H name="HO5'" parent="O5'" terminal="N"/>
   <H name="H1" parent="N1"/>
   <H name="H1'" parent="C1'"/>
   <H name="H2'" parent="C2'"/>
@@ -187,9 +182,7 @@
   <H name="H5''" parent="C5'"/>
   <H name="H8" parent="C8"/>
   <H name="HO2'" parent="O2'"/>
-  <H name="HO3'" parent="O3'"/>
-  <H name="HOP2" parent="OP2"/>
-  <H name="HOP3" parent="OP3"/>
+  <H name="HO3'" parent="O3'" terminal="C"/>
  </Residue>
  <Residue name="GLN">
   <H name="H" parent="N"/>
@@ -409,6 +402,7 @@
   <H name="HH" parent="OH"/>
  </Residue>
  <Residue name="U">
+  <H name="HO5'" parent="O5'" terminal="N"/>
   <H name="H1'" parent="C1'"/>
   <H name="H2'" parent="C2'"/>
   <H name="H3" parent="N3"/>
@@ -419,9 +413,7 @@
   <H name="H5''" parent="C5'"/>
   <H name="H6" parent="C6"/>
   <H name="HO2'" parent="O2'"/>
-  <H name="HO3'" parent="O3'"/>
-  <H name="HOP2" parent="OP2"/>
-  <H name="HOP3" parent="OP3"/>
+  <H name="HO3'" parent="O3'" terminal="C"/>
  </Residue>
  <Residue name="UNK">
   <H name="H" parent="N"/>
