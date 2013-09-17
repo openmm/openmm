@@ -180,7 +180,7 @@ class PdbStructure(object):
                     self.sequences.append(Sequence(chain_id))
                 self.sequences[-1].residues.extend(pdb_line[19:].split())
             elif (pdb_line.find("MODRES") == 0):
-                self.modified_residues.append(ModifiedResidue(pdb_line[16], int(pdb_line[18:22]), pdb_line[12:15], pdb_line[24:27]))
+                self.modified_residues.append(ModifiedResidue(pdb_line[16], int(pdb_line[18:22]), pdb_line[12:15].strip(), pdb_line[24:27].strip()))
         self._finalize()
 
     def write(self, output_stream=sys.stdout):
