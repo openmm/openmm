@@ -8,7 +8,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012 Stanford University and the Authors.
+Portions copyright (c) 2012-2013 Stanford University and the Authors.
 Authors: Christopher M. Bruns
 Contributors: Peter Eastman
 
@@ -139,6 +139,7 @@ class PdbStructure(object):
         self.models_by_number = {}
         self._unit_cell_dimensions = None
         self.sequences = []
+        self.modified_residues = []
         # read file
         self._load(input_stream)
 
@@ -178,6 +179,8 @@ class PdbStructure(object):
                 if len(self.sequences) == 0 or chain_id != self.sequences[-1].chain_id:
                     self.sequences.append(Sequence(chain_id))
                 self.sequences[-1].residues.extend(pdb_line[19:].split())
+            elif (pdb_line.find("MODRES") == 0):
+                self.modified_residues.append(ModifiedResidue(pdb_line[16], int(pdb_line[18:22]), pdb_line[12:15], pdb_line[24:27]))
         self._finalize()
 
     def write(self, output_stream=sys.stdout):
@@ -277,6 +280,14 @@ class Sequence(object):
     def __init__(self, chain_id):
         self.chain_id = chain_id
         self.residues = []
+
+class ModifiedResidue(object):
+    """ModifiedResidue holds information about a modified residue, as specified by a MODRES record."""
+    def __init__(self, chain_id, number, residue_name, standard_name):
+        self.chain_id = chain_id
+        self.number = number
+        self.residue_name = residue_name
+        self.standard_name = standard_name
 
 
 class Model(object):
