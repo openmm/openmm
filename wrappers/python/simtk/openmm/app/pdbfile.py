@@ -36,7 +36,8 @@ import sys
 import math
 import xml.etree.ElementTree as etree
 from copy import copy
-from simtk.openmm import Vec3
+from datetime import date
+from simtk.openmm import Vec3, Platform
 from simtk.openmm.app.internal.pdbstructure import PdbStructure
 from simtk.openmm.app import Topology
 from simtk.unit import nanometers, angstroms, is_quantity, norm, Quantity
@@ -242,6 +243,7 @@ class PDBFile(object):
          - topology (Topology) The Topology defining the molecular system being written
          - file (file=stdout) A file to write the file to
         """
+        print >>file, "REMARK   1 CREATED WITH OPENMM %s, %s" % (Platform.getOpenMMVersion(), str(date.today()))
         boxSize = topology.getUnitCellDimensions()
         if boxSize is not None:
             size = boxSize.value_in_unit(angstroms)
