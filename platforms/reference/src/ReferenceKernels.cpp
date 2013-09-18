@@ -2026,6 +2026,7 @@ void ReferenceIntegrateCustomStepKernel::initialize(const System& system, const 
     // Create the computation objects.
 
     dynamics = new ReferenceCustomDynamics(system.getNumParticles(), integrator);
+    SimTKOpenMMUtilities::setRandomNumberSeed((unsigned int) integrator.getRandomNumberSeed());
     vector<ReferenceCCMAAlgorithm::AngleInfo> angles;
     findAnglesForCCMA(system, angles);
     constraints = new ReferenceCCMAAlgorithm(system.getNumParticles(), numConstraints, constraintIndices, constraintDistances, masses, angles, (RealOpenMM)integrator.getConstraintTolerance());
