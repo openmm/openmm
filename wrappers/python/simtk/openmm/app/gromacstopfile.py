@@ -40,6 +40,7 @@ import simtk.unit as unit
 import simtk.openmm as mm
 import math
 import os
+import distutils
 
 HBonds = ff.HBonds
 AllBonds = ff.AllBonds
@@ -342,16 +343,20 @@ class GromacsTopFile(object):
             raise ValueError('Unsupported function type in [ cmaptypes ] line: '+line);
         self._cmapTypes[tuple(fields[:5])] = fields
 
-    def __init__(self, file, unitCellDimensions=None, includeDir='/usr/local/gromacs/share/gromacs/top', defines={}):
+    def __init__(self, file, unitCellDimensions=None, includeDir=None, defines={}):
         """Load a top file.
 
         Parameters:
          - file (string) the name of the file to load
          - unitCellDimensions (Vec3=None) the dimensions of the crystallographic unit cell
-         - includeDir (string=/usr/local/gromacs/share/gromacs/top) a directory in which to look for other files
-           included from the top file
+         - includeDir (string=None) A directory in which to look for other files
+           included from the top file. If not specified, we will attempt to locate a gromacs
+           installation on your system. When gromacs is installed in /usr/local, this will resolve
+           to  /usr/local/gromacs/share/gromacs/top
          - defines (map={}) preprocessor definitions that should be predefined when parsing the file
          """
+        if includeDir is None:
+            includeDir = _defaultGromacsIncludeDir()
         self._includeDirs = (os.path.dirname(file), includeDir)
         self._defines = defines
 
@@ -752,3 +757,19 @@ class GromacsTopFile(object):
         if removeCMMotion:
             sys.addForce(mm.CMMotionRemover())
         return sys
+
+def _defaultGromacsIncludeDir():
+    """Find the location where gromacs #include files are referenced from, by searching
+    for (1) gromacs environment variavles in the prsented system, (2) for the gromacs
+    binary 'pdb2gmx' in the PATH, or (3) just using the default gromacs install location,
+    /usr/local/gromacs/share/gromacs/top """
+    if 'GMXDATA' in os.environ:
+        return os.path.join(os.environ['GMXDATA'], 'top')
+    if 'GMXBIN' in os.environ:
+        return os.path.abspath(os.path.join(os.environ['GMXBIN'], '..', 'share', 'gromacs', 'top'))
+
+    pdb2gmx_path = distutils.spawn.find_executable('pdb2gmx')
+    if pdb2gmx_path is not None:
+        return os.path.abspath(os.path.join(os.path.dirname(pdb2gmx_path), '..', 'share', 'gromacs', 'top'))
+
+    return '/usr/local/gromacs/share/gromacs/top'
