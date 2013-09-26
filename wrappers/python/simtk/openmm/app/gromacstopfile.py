@@ -127,6 +127,9 @@ class GromacsTopFile(object):
                 if len(self._ifStack) == 0:
                     raise ValueError('Unexpected line in .top file: '+line)
                 del(self._ifStack[-1])
+            elif command == '#else':
+                # Reverse the last entry on the if stack
+                self._ifStack[-1] = (not self._ifStack[-1])
 
         elif not ignore:
             # A line of data for the current category
