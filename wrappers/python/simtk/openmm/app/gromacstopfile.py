@@ -759,10 +759,10 @@ class GromacsTopFile(object):
         return sys
 
 def _defaultGromacsIncludeDir():
-    """Find the location where gromacs #include files are referenced from, by searching
-    for (1) gromacs environment variavles in the prsented system, (2) for the gromacs
-    binary 'pdb2gmx' in the PATH, or (3) just using the default gromacs install location,
-    /usr/local/gromacs/share/gromacs/top """
+    """Find the location where gromacs #include files are referenced from, by
+    searching for (1) gromacs environment variables, (2) for the gromacs binary
+    'pdb2gmx' in the PATH, or (3) just using the default gromacs install
+    location, /usr/local/gromacs/share/gromacs/top """
     if 'GMXDATA' in os.environ:
         return os.path.join(os.environ['GMXDATA'], 'top')
     if 'GMXBIN' in os.environ:
