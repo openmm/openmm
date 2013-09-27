@@ -90,6 +90,9 @@ class GromacsTopFile(object):
             # A preprocessor command.
             fields = stripped.split()
             command = fields[0]
+            if len(self._ifStack) != len(self._elseStack):
+                raise RuntimeError('#if/#else stack out of sync')
+
             if command == '#include' and not ignore:
                 # Locate the file to include
                 name = stripped[len(command):].strip(' \t"<>')
@@ -116,20 +119,29 @@ class GromacsTopFile(object):
                     raise ValueError('Illegal line in .top file: '+line)
                 name = fields[1]
                 self._ifStack.append(name in self._defines)
+                self._elseStack.append(False)
             elif command == '#ifndef':
                 # See whether this block should be ignored.
                 if len(fields) < 2:
                     raise ValueError('Illegal line in .top file: '+line)
                 name = fields[1]
                 self._ifStack.append(name not in self._defines)
+                self._elseStack.append(False)
             elif command == '#endif':
                 # Pop an entry off the if stack.
                 if len(self._ifStack) == 0:
                     raise ValueError('Unexpected line in .top file: '+line)
                 del(self._ifStack[-1])
+                del(self._elseStack[-1])
             elif command == '#else':
                 # Reverse the last entry on the if stack
+                if len(self._ifStack) == 0:
+                    raise ValueError('Unexpected line in .top file: '+line)
+                if self._elseStack[-1]:
+                    raise ValueError('Unexpected line in .top file: '
+                                     '#else has already been used ' + line)
                 self._ifStack[-1] = (not self._ifStack[-1])
+                self._elseStack[-1] = True
 
         elif not ignore:
             # A line of data for the current category
@@ -362,6 +374,7 @@ class GromacsTopFile(object):
 
         self._currentCategory = None
         self._ifStack = []
+        self._elseStack = []
         self._moleculeTypes = {}
         self._molecules = []
         self._currentMoleculeType = None
