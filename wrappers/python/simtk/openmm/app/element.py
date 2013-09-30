@@ -44,6 +44,7 @@ class Element:
     look up the Element with a particular chemical symbol."""
 
     _elements_by_symbol = {}
+    _elements_by_atomic_number = {}
 
     def __init__(self, number, name, symbol, mass):
         ## The atomic number of the element
@@ -58,6 +59,16 @@ class Element:
         s = symbol.strip().upper()
         assert s not in Element._elements_by_symbol
         Element._elements_by_symbol[s] = self
+        if number in Element._elements_by_atomic_number:
+            other_element = Element._elements_by_atomic_number[number]
+            if mass < other_element.mass:
+                # If two "elements" sharethe same atomic number, they're
+                # probably hydrogen and deuterium, and we want to choose
+                # the lighter one to put in the table by atomic_number,
+                # since it's the "canonical" element.
+                Element._elements_by_atomic_number[number] = self
+        else:
+            Element._elements_by_atomic_number[number] = self
 
     @staticmethod
     def getBySymbol(symbol):
@@ -65,10 +76,17 @@ class Element:
         s = symbol.strip().upper()
         return Element._elements_by_symbol[s]
 
+    @staticmethod
+    def getByAtomicNumber(atomic_number):
+        return Element._elements_by_atomic_number[atomic_number]
+
 # This is for backward compatibility.
 def get_by_symbol(symbol):
     s = symbol.strip().upper()
     return Element._elements_by_symbol[s]
+
+def get_by_atomic_number(atomic_number):
+    return Element._elements_by_atomic_number[atomic_number]
 
 
 hydrogen =       Element(  1, "hydrogen", "H", 1.007947*daltons)
