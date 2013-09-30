@@ -287,7 +287,7 @@ class PDBFile(object):
                     else:
                         atomName = atom.name
                     coords = positions[posIndex]
-                    line = "ATOM  %5d %-4s %3s %s%4d    %s%s%s  1.00  0.00           %-2s " % (
+                    line = "ATOM  %5d %-4s %3s %s%4d    %s%s%s  1.00  0.00          %2s  " % (
                         atomIndex%100000, atomName, resName, chainName,
                         (resIndex+1)%10000, _format_83(coords[0]),
                         _format_83(coords[1]), _format_83(coords[2]), atom.element.symbol)
