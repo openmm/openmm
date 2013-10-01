@@ -31,9 +31,9 @@ from simtk import openmm as mm
 from simtk.openmm.app import forcefield as ff
 from simtk.openmm.app import Element, Topology, PDBFile
 from simtk.openmm.app.element import hydrogen
-from simtk.unit import (Quantity, nanometer, angstrom, dalton,
+from simtk.unit import (nanometer, angstrom, dalton, radian,
                         kilocalorie_per_mole, kilojoule_per_mole,
-                        radian, degree, elementary_charge)
+                        degree, elementary_charge)
 
 
 class DesmondDMSFile(object):
@@ -126,7 +126,7 @@ class DesmondDMSFile(object):
 
         return top, positions
 
-    def createSystem(self, nonbondedMethod=ff.NoCutoff, nonbondedCutoff=Quantity(value=1.0, unit=nanometer),
+    def createSystem(self, nonbondedMethod=ff.NoCutoff, nonbondedCutoff=1.0*nanometer,
                      ewaldErrorTolerance=0.0005, removeCMMotion=True, hydrogenMass=None):
         '''Construct an OpenMM System representing the topology described by this dms file
 
