@@ -315,8 +315,6 @@ void ReferenceApplyConstraintsKernel::initialize(const System& system) {
         masses[i] = static_cast<RealOpenMM>(system.getParticleMass(i));
         inverseMasses[i] = 1.0/masses[i];
     }
-    vector<pair<int, int> > constraintIndices;
-    vector<RealOpenMM> constraintDistances;
     for (int i = 0; i < system.getNumConstraints(); ++i) {
         int particle1, particle2;
         double distance;
