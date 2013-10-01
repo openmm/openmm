@@ -271,18 +271,19 @@ void ReferenceIntegrateDrudeLangevinStepKernel::initialize(const System& system,
     
     // Prepare constraints.
     
-    int numConstraints = system.getNumConstraints();
-    if (numConstraints > 0) {
-        vector<pair<int, int> > constraintIndices(numConstraints);
-        vector<RealOpenMM> constraintDistances(numConstraints);
-        for (int i = 0; i < numConstraints; ++i) {
+    if (system.getNumConstraints() > 0) {
+        vector<pair<int, int> > constraintIndices;
+        vector<RealOpenMM> constraintDistances;
+        for (int i = 0; i < system.getNumConstraints(); ++i) {
             int particle1, particle2;
             double distance;
             system.getConstraintParameters(i, particle1, particle2, distance);
-            constraintIndices[i].first = particle1;
-            constraintIndices[i].second = particle2;
-            constraintDistances[i] = static_cast<RealOpenMM>(distance);
+            if (system.getParticleMass(particle1) != 0 || system.getParticleMass(particle2) != 0) {
+                constraintIndices.push_back(make_pair(particle1, particle2));
+                constraintDistances.push_back(distance);
+            }
         }
+        int numConstraints = constraintIndices.size();
         vector<ReferenceCCMAAlgorithm::AngleInfo> angles;
         findAnglesForCCMA(system, angles);
         constraints = new ReferenceCCMAAlgorithm(system.getNumParticles(), numConstraints, constraintIndices, constraintDistances, particleMass, angles, (RealOpenMM)integrator.getConstraintTolerance());
@@ -395,18 +396,19 @@ void ReferenceIntegrateDrudeSCFStepKernel::initialize(const System& system, cons
     
     // Prepare constraints.
     
-    int numConstraints = system.getNumConstraints();
-    if (numConstraints > 0) {
-        vector<pair<int, int> > constraintIndices(numConstraints);
-        vector<RealOpenMM> constraintDistances(numConstraints);
-        for (int i = 0; i < numConstraints; ++i) {
+    if (system.getNumConstraints() > 0) {
+        vector<pair<int, int> > constraintIndices;
+        vector<RealOpenMM> constraintDistances;
+        for (int i = 0; i < system.getNumConstraints(); ++i) {
             int particle1, particle2;
             double distance;
             system.getConstraintParameters(i, particle1, particle2, distance);
-            constraintIndices[i].first = particle1;
-            constraintIndices[i].second = particle2;
-            constraintDistances[i] = static_cast<RealOpenMM>(distance);
+            if (system.getParticleMass(particle1) != 0 || system.getParticleMass(particle2) != 0) {
+                constraintIndices.push_back(make_pair(particle1, particle2));
+                constraintDistances.push_back(distance);
+            }
         }
+        int numConstraints = constraintIndices.size();
         vector<ReferenceCCMAAlgorithm::AngleInfo> angles;
         findAnglesForCCMA(system, angles);
         constraints = new ReferenceCCMAAlgorithm(system.getNumParticles(), numConstraints, constraintIndices, constraintDistances, particleMass, angles, (RealOpenMM)integrator.getConstraintTolerance());
