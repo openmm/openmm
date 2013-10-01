@@ -71,8 +71,6 @@ class DesmondDMSFile(object):
                              'DMS file. You can add a forcefield with the '
                              'viparr command line tool distributed with desmond')
 
-        print dict(zip(self._tables['particle'], self._conn.execute('SELECT * from particle WHERE name="Vrt0"').fetchone()))
-
         # Build the topology
         self.topology, self.positions = self._createTopology()
         self._topologyAtoms = list(self.topology.atoms())
@@ -128,7 +126,7 @@ class DesmondDMSFile(object):
 
             if atomName in atomReplacements:
                 atomName = atomReplacements[atomName]
-            
+
             atoms[atomId] = top.addAtom(atomName, elem, r)
             positions.append(mm.Vec3(x, y, z)*angstrom)
 
@@ -375,7 +373,7 @@ class DesmondDMSFile(object):
             nb.addException(p0, p1, q_ij, new_sigma, new_epsilon, True)
 
         n_total = self._conn.execute('''SELECT COUNT(*) FROM pair_12_6_es_term''').fetchone()
-        n_in_exclusions= self._conn.execute('''SELECT COUNT(*)
+        n_in_exclusions = self._conn.execute('''SELECT COUNT(*)
         FROM exclusion INNER JOIN pair_12_6_es_term
         ON exclusion.p0==pair_12_6_es_term.p0 AND exclusion.p1==pair_12_6_es_term.p1''').fetchone()
         if not n_total == n_in_exclusions:
@@ -384,15 +382,38 @@ class DesmondDMSFile(object):
         return nb
 
     def _addVirtualSitesToSystem(self, sys):
+        '''Create any virtual sites in the systempy
+        '''
         if not any(t.startswith('virtual_') for t in self._tables.keys()):
             return
-        
+
+        if 'virtual_lc2_term' in self._tables:
+            q = '''SELECT p0, p1, p2, c1
+            FROM virtual_lc2_term INNER JOIN virtual_lc2_param
+            ON virtual_lc2_term.param=virtual_lc2_param.id'''
+            for p0, p1, p2, c1 in self._conn.execute(q):
+                vsite = mm.TwoParticleAverageSite(p1, p2, (1-c1), c1)
+                sys.setVirtualSite(p0, vsite)
+
+        if 'virtual_lc3_term' in self._tables:
+            q = '''SELECT p0, p1, p2, p3, c1, c2
+            FROM virtual_lc3_term INNER JOIN virtual_lc3_param
+            ON virtual_lc3_term.param=virtual_lc3_param.id'''
+            for p0, p1, p2, p3, c1, c2 in self._conn.execute(q):
+                vsite = mm.ThreeParticleAverageSite(p1, p2, p3, (1-c1-c2), c1, c2)
+                sys.setVirtualSite(p0, vsite)
+
         if 'virtual_out3_term' in self._tables:
             q = '''SELECT p0, p1, p2, p3, c1, c2, c3
             FROM virtual_out3_term INNER JOIN virtual_out3_param
-            ON virtual_out3_term.param=virtual_out3_param.id;'''
+            ON virtual_out3_term.param=virtual_out3_param.id'''
             for p0, p1, p2, p3, c1, c2, c3 in self._conn.execute(q):
-                vsite = mm.OutOfPlaneSite
+                vsite = mm.OutOfPlaneSite(p1, p2, p3, c1, c2, c3)
+                sys.setVirtualSite(p0, vsite)
+
+        if 'virtual_fdat3_term' in self._tables:
+            raise NotImplementedError('OpenMM does not currently support '
+                                      'fdat3-style virtual sites')
 
 
     def _hasTable(self, table_name):
@@ -423,16 +444,29 @@ class DesmondDMSFile(object):
         if any((t in self._tables) for t in flat_bottom_potential_terms):
             raise NotImplementedError('Flat bottom potential terms '
                                       'are not implemeneted')
-        
+
         nbinfo = dict(zip(self._tables['nonbonded_info'],
                           self._conn.execute('SELECT * FROM nonbonded_info').fetchone()))
 
         if nbinfo['vdw_funct'] != u'vdw_12_6':
-            raise NotImplementedError('Only Leonard-Jones van der Waals interactions are '
-                                      'supported')
+            raise NotImplementedError('Only Leonard-Jones van der Waals '
+                                      'interactions are currently supported')
         if nbinfo['vdw_rule'] != u'arithmetic/geometric':
-            raise NotImplementedError('Only Lorentz-Berthelot nonbonded combining rules '
-                                      'are supported')
+            raise NotImplementedError('Only Lorentz-Berthelot nonbonded '
+                                      'combining rules are currently supported')
+
+        if 'nonbonded_combined_param' in self._tables:
+            raise NotImplementedError('nonbonded_combined_param interactions '
+                                      'are not currently supported')
+
+        if 'alchemical_particle' in self._tables:
+            raise NotImplementedError('Alchemical particles are not supported')
+        if 'alchemical_stretch_harm' in self._tables:
+            raise NotImplementedError('Alchemical bonds are not supported')
+
+        if 'polar_term' in self._tables:
+            if self._conn.execute("SELECT COUNT(*) FROM polar_term").fetchone()[0] != 0:
+                raise NotImplementedError('Drude particles are not currently supported')
 
     def close(self):
         '''Close the SQL connection
