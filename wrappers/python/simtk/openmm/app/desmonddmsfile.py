@@ -25,6 +25,7 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 '''
 
+import os
 import math
 
 from simtk import openmm as mm
@@ -57,14 +58,20 @@ class DesmondDMSFile(object):
 
         self._open = False
         self._tables = None
+        if not  os.path.exists(str(file)):
+            raise IOError("No such file or directory: '%s'" % str(file))
         self._conn = sqlite3.connect(file)
         self._open = True
         self._readSchemas()
 
+        if len(self._tables) == 0:
+            raise IOError('DMS file was not loaded sucessfully. No tables found')
         if 'nbtype' not in self._tables['particle']:
             raise ValueError('No nonbonded parameters associated with this '
                              'DMS file. You can add a forcefield with the '
                              'viparr command line tool distributed with desmond')
+
+        print dict(zip(self._tables['particle'], self._conn.execute('SELECT * from particle WHERE name="Vrt0"').fetchone()))
 
         # Build the topology
         self.topology, self.positions = self._createTopology()
@@ -114,10 +121,14 @@ class DesmondDMSFile(object):
                 else:
                     atomReplacements = {}
 
+            if atomNumber == 0 and atomName.startswith('Vrt'):
+                elem = None
+            else:
+                elem = Element.getByAtomicNumber(atomNumber)
+
             if atomName in atomReplacements:
                 atomName = atomReplacements[atomName]
-
-            elem = Element.getByAtomicNumber(atomNumber)
+            
             atoms[atomId] = top.addAtom(atomName, elem, r)
             positions.append(mm.Vec3(x, y, z)*angstrom)
 
@@ -161,6 +172,7 @@ class DesmondDMSFile(object):
         self._addPeriodicTorsionsToSystem(sys)
         self._addImproperHarmonicTorsionsToSystem(sys)
         self._addCMAPToSystem(sys)
+        self._addVirtualSitesToSystem(sys)
         nb = self._addNonbondedForceToSystem(sys)
 
         # Finish configuring the NonbondedForce.
@@ -371,6 +383,18 @@ class DesmondDMSFile(object):
 
         return nb
 
+    def _addVirtualSitesToSystem(self, sys):
+        if not any(t.startswith('virtual_') for t in self._tables.keys()):
+            return
+        
+        if 'virtual_out3_term' in self._tables:
+            q = '''SELECT p0, p1, p2, p3, c1, c2, c3
+            FROM virtual_out3_term INNER JOIN virtual_out3_param
+            ON virtual_out3_term.param=virtual_out3_param.id;'''
+            for p0, p1, p2, p3, c1, c2, c3 in self._conn.execute(q):
+                vsite = mm.OutOfPlaneSite
+
+
     def _hasTable(self, table_name):
         '''Does our DMS file contain this table?
         '''
@@ -399,6 +423,16 @@ class DesmondDMSFile(object):
         if any((t in self._tables) for t in flat_bottom_potential_terms):
             raise NotImplementedError('Flat bottom potential terms '
                                       'are not implemeneted')
+        
+        nbinfo = dict(zip(self._tables['nonbonded_info'],
+                          self._conn.execute('SELECT * FROM nonbonded_info').fetchone()))
+
+        if nbinfo['vdw_funct'] != u'vdw_12_6':
+            raise NotImplementedError('Only Leonard-Jones van der Waals interactions are '
+                                      'supported')
+        if nbinfo['vdw_rule'] != u'arithmetic/geometric':
+            raise NotImplementedError('Only Lorentz-Berthelot nonbonded combining rules '
+                                      'are supported')
 
     def close(self):
         '''Close the SQL connection
