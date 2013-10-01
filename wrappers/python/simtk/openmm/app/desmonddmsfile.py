@@ -71,6 +71,17 @@ class DesmondDMSFile(object):
                              'DMS file. You can add a forcefield with the '
                              'viparr command line tool distributed with desmond')
 
+        # build the provenance string
+        provenance = []
+        q = '''SELECT id, user, timestamp, version, workdir, cmdline, executable
+        FROM provenance'''
+        #for id, user, timestamp, version, workdir, cmdline, executable in self._conn.execute(q):
+        for row in self._conn.execute('SELECT * FROM provenance'):
+            rowdict = dict(zip(self._tables['provenance'], row))
+            provenance.append('%(id)d) %(timestamp)s: %(user)s\n  version: %(version)s\n  '
+                              'cmdline: %(cmdline)s\n  executable: %(executable)s\n' % rowdict)
+        self.provenance = ''.join(provenance)
+
         # Build the topology
         self.topology, self.positions = self._createTopology()
         self._topologyAtoms = list(self.topology.atoms())
@@ -86,6 +97,11 @@ class DesmondDMSFile(object):
         '''Get the topology of the system
         '''
         return self.topology
+
+    def getProvenance(self):
+        '''Get the provenance string of this system
+        '''
+        return self.provenance
 
     def _createTopology(self):
         '''Build the topology of the system
