@@ -343,6 +343,9 @@ class DesmondDMSFile(object):
         for charge, sigma, epsilon in self._conn.execute(q):
             nb.addParticle(charge, sigma*angstrom, epsilon*kilocalorie_per_mole)
 
+        for p0, p1 in self._conn.execute('SELECT p0, p1 FROM exclusion'):
+            nb.addException(p0, p1, 0.0, 1.0, 0.0)
+
         q = '''SELECT p0, p1, aij, bij, qij
         FROM pair_12_6_es_term INNER JOIN pair_12_6_es_param
         ON pair_12_6_es_term.param=pair_12_6_es_param.id;'''
@@ -357,7 +360,7 @@ class DesmondDMSFile(object):
             else:
                 new_epsilon =  b_ij**2/(4*a_ij)
                 new_sigma = (a_ij / b_ij)**(1.0/6.0)
-            nb.addException(p0, p1, q_ij, new_sigma, new_epsilon)
+            nb.addException(p0, p1, q_ij, new_sigma, new_epsilon, True)
 
         n_total = self._conn.execute('''SELECT COUNT(*) FROM pair_12_6_es_term''').fetchone()
         n_in_exclusions= self._conn.execute('''SELECT COUNT(*)
@@ -365,19 +368,6 @@ class DesmondDMSFile(object):
         ON exclusion.p0==pair_12_6_es_term.p0 AND exclusion.p1==pair_12_6_es_term.p1''').fetchone()
         if not n_total == n_in_exclusions:
             raise NotImplementedError('All pair_12_6_es_terms must have a corresponding exclusion')
-
-        # Desmond puts scaled 1-4 interactions in the pair_12_6_es
-        # table, and then adds a corresponding exception here. We are
-        # using the exception part of NonbondedForce, so we're just
-        # adding the 1-4 interaction as an exception when its
-        # registered, and then NOT registering it as an exception here.
-        q = '''SELECT E.p0, E.p1
-        FROM exclusion E LEFT OUTER JOIN pair_12_6_es_term P ON
-        E.p0 = P.p0 and E.p1 = P.p1
-        WHERE P.p0 is NULL'''
-        # http://stackoverflow.com/questions/5464131/finding-pairs-that-do-not-exist-in-a-different-table
-        for p0, p1 in self._conn.execute(q):
-            nb.addException(p0, p1, 0.0, 1.0, 0.0)
 
         return nb
 
