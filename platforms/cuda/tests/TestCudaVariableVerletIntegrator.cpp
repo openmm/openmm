@@ -211,6 +211,37 @@ void testConstrainedClusters() {
     ASSERT(context.getState(State::Positions).getTime() > 0.1);
 }
 
+void testConstrainedMasslessParticles() {
+    System system;
+    system.addParticle(0.0);
+    system.addParticle(1.0);
+    system.addConstraint(0, 1, 1.5);
+    vector<Vec3> positions(2);
+    positions[0] = Vec3(-1, 0, 0);
+    positions[1] = Vec3(1, 0, 0);
+    VariableVerletIntegrator integrator(0.01);
+    bool failed = false;
+    try {
+        // This should throw an exception.
+        
+        Context context(system, integrator, platform);
+    }
+    catch (exception& ex) {
+        failed = true;
+    }
+    ASSERT(failed);
+    
+    // Now make both particles massless, which should work.
+    
+    system.setParticleMass(1, 0.0);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    context.setVelocitiesToTemperature(300.0);
+    integrator.step(1);
+    State state = context.getState(State::Velocities);
+    ASSERT_EQUAL(0.0, state.getVelocities()[0][0]);
+}
+
 void testArgonBox() {
     const int gridSize = 8;
     const double mass = 40.0;            // Ar atomic mass
@@ -274,6 +305,7 @@ int main(int argc, char* argv[]) {
         testSingleBond();
         testConstraints();
         testConstrainedClusters();
+        testConstrainedMasslessParticles();
         testArgonBox();
     }
     catch(const exception& e) {
