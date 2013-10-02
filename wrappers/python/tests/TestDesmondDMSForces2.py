@@ -15,7 +15,7 @@ from simtk.unit import *
 DESMOND_PATH = distutils.spawn.find_executable('desmond')
 
 
-class TestDesmondDMSForces1(unittest.TestCase):
+class TestDesmondDMSForces2(unittest.TestCase):
     def setUp(self):
         """Set up the tests by loading the input files."""
 
@@ -25,14 +25,29 @@ class TestDesmondDMSForces1(unittest.TestCase):
 
     @unittest.skipIf(DESMOND_PATH is None, "desmond is required to be available in your PATH")
     def testForces(self):
-        self._mmForces(nonbondedCutoff=10*angstrom)
-        self._desmondForces(nonbondedCutoff=10*angstrom)
+        with print_options(suppress=True):
+            cutoffs = [8, 9, 10, 11, 12]*angstrom
+            for cutoff in cutoffs:
+                print 'OpenMM nonbondedCutoff = %s' % cutoff
+                print self._mmForces(nonbondedCutoff=cutoff)[:10]
+
+            print '\n\n'
+            for cutoff in cutoffs:
+                print 'Desmond nonbondedCutoff = %s' % cutoff
+                print self._desmondForces(nonbondedCutoff=cutoff)[:10]
+
+
 
     def _mmForces(self, nonbondedCutoff):
         system = self.dms.createSystem(nonbondedMethod=PME, nonbondedCutoff=nonbondedCutoff)
         context = Context(system, VerletIntegrator(0.0))
         context.setPositions(self.dms.positions)
-        forces = np.array(context.getState(getForces=True).getForces(asNumpy=True))  
+        forces = np.array(context.getState(getForces=True).getForces(asNumpy=True))
+
+        nonbonded = [system.getForce(i) for i in range(system.getNumForces()) if isinstance(system.getForce(i), NonbondedForce)][0]
+
+        totalCharge = sum([nonbonded.getParticleParameters(i)[0].value_in_unit(elementary_charge) for i in range(system.getNumParticles())])
+        assert totalCharge == 0
         return forces
 
     def _desmondForces(self, nonbondedCutoff):
@@ -40,7 +55,7 @@ class TestDesmondDMSForces1(unittest.TestCase):
             raise ImportError("Need desmond")
         sys.path.insert(0, os.path.join(os.path.dirname(DESMOND_PATH), '..', 'lib', 'python'))
         import framesettools
-        
+
         dms_path = os.path.abspath(self.path)
         with temporary_directory():
             with open('desmond.cfg', 'w') as f:
@@ -57,8 +72,10 @@ class TestDesmondDMSForces1(unittest.TestCase):
         u = self.dms.topology.getUnitCellDimensions()[0].value_in_unit(angstrom)
         p1 = (np.array(positions.value_in_unit(angstrom)) + u) % u
         p2 = (np.array(self.dms.positions.value_in_unit(angstroms)) + u) % u
-        print 'RMSD gro to dtr: ', np.sqrt(np.mean(np.square(np.sum(p1-p2, axis=1))))
-    
+        assert np.sqrt(np.mean(np.square(np.sum(p1-p2, axis=1)))) < 1e-5
+
+        return forces.value_in_unit(kilojoules_per_mole/nanometer)
+
     def _desmondConfig(self, nonbondedCutoff):
         return """
         app = mdsim
@@ -112,11 +129,11 @@ class TestDesmondDMSForces1(unittest.TestCase):
           checkpt = none
         }
         """ % {'cutoff': nonbondedCutoff.value_in_unit(angstroms),
-               'clone': nonbondedCutoff.value_in_unit(angstroms)/2,
+               'clone': nonbondedCutoff.value_in_unit(angstroms)/2 + 1,
                'sigma': nonbondedCutoff.value_in_unit(angstroms)/(3*np.sqrt(2))}
-        
-    
-    
+
+
+
 @contextlib.contextmanager
 def temporary_directory():
     """A context manager which changes the working directory to a
@@ -128,3 +145,14 @@ def temporary_directory():
     yield
     os.chdir(prev_cwd)
     shutil.rmtree(tempdir)
+
+@contextlib.contextmanager
+def print_options(**opts):
+    oldopts = np.get_printoptions()
+    newopts = oldopts.copy()
+    newopts.update(opts)
+    try:
+        np.set_printoptions(**newopts)
+        yield
+    finally:
+        np.set_printoptions(**oldopts)
