@@ -46,7 +46,7 @@ class TestDesmondDMSForces2(unittest.TestCase):
 
         for residue in self.dms.topology.residues():
             aind = np.array([a.index for a in residue.atoms()])
-            print 'Max error in Residue %d (%s): %f' % (residue.index, residue.name, np.max(error[aind]))
+            #print 'Max error in Residue %d (%s): %f' % (residue.index, residue.name, np.max(error[aind]))
 
         write_pdb_with_b_factor('ala2-desmond-openmm-force-error.pdb',
                                 self.dms.topology, self.dms.positions,
