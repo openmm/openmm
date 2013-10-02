@@ -122,10 +122,12 @@ class DesmondDMSFile(object):
         q = '''SELECT id, name, anum, resname, resid, chain, x, y, z
         FROM particle'''
         for (atomId, atomName, atomNumber, resName, resId, chain, x, y, z) in self._conn.execute(q):
+            newChain = False
             if chain != lastChain:
                 lastChain = chain
                 c = top.addChain()
-            if resId != lastResId:
+                newChain = True
+            if resId != lastResId or newChain:
                 lastResId = resId
                 if resName in PDBFile._residueNameReplacements:
                     resName = PDBFile._residueNameReplacements[resName]
