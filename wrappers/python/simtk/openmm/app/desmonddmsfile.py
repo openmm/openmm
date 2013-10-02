@@ -146,11 +146,12 @@ class DesmondDMSFile(object):
                 atomName = atomReplacements[atomName]
 
             atoms[atomId] = top.addAtom(atomName, elem, r)
-            positions.append(mm.Vec3(x, y, z)*angstrom)
+            positions.append(mm.Vec3(x, y, z))
 
         for p0, p1 in self._conn.execute('SELECT p0, p1 FROM bond'):
             top.addBond(atoms[p0], atoms[p1])
 
+        positions = positions*angstroms
         return top, positions
 
     def createSystem(self, nonbondedMethod=ff.NoCutoff, nonbondedCutoff=1.0*nanometer,
