@@ -48,6 +48,11 @@ class TestDesmondDMSForces2(unittest.TestCase):
             aind = np.array([a.index for a in residue.atoms()])
             print 'Max error in Residue %d (%s): %f' % (residue.index, residue.name, np.max(error[aind]))
 
+        print self.dms.topology.getUnitCellDimensions()
+        write_pdb_with_b_factor('ala2-desmond-openmm-force-error.pdb',
+                                self.dms.topology, self.dms.positions,
+                                error*99/np.max(error))
+
         np.testing.assert_array_almost_equal(mmForces, desmondForces, decimal=1)
 
     def _printForcesVsNBCutoff(self):
@@ -180,3 +185,21 @@ def print_options(**opts):
         yield
     finally:
         np.set_printoptions(**oldopts)
+
+def write_pdb_with_b_factor(filename, topology, positions, b_factors):
+    assert len(positions) == len(b_factors)
+    with open(filename, 'w') as f:
+        app.PDBFile.writeFile(topology, positions)
+
+    out = []
+    b_factors = iter(b_factors)
+    with open(filename) as f:
+        for line in f:
+            if line[0:6] == "ATOM  ":
+                out.append("%s%6.2F%s" % (line[:60],next(b_factors),
+                                      line[66:]))
+            else:
+                out.append(line)
+    with open(filename, 'w') as f:
+        f.write(''.join(out))
+
