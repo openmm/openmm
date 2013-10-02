@@ -111,9 +111,9 @@ class DesmondDMSFile(object):
 
         boxVectors = []
         for x, y, z in self._conn.execute('SELECT x, y, z FROM global_cell'):
-            boxVectors.append(mm.Vec3(x, y, z)*angstrom)
+            boxVectors.append(mm.Vec3(x, y, z))
         unitCellDimensions = [boxVectors[0][0], boxVectors[1][1], boxVectors[2][2]]
-        top.setUnitCellDimensions(unitCellDimensions)
+        top.setUnitCellDimensions(unitCellDimensions*angstrom)
 
         atoms = {}
         lastChain = None
