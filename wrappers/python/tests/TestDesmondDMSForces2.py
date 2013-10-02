@@ -8,6 +8,8 @@ import distutils
 from subprocess import check_output
 
 import numpy as np
+from scipy.stats import scoreatpercentile
+
 from simtk.openmm.app import *
 from simtk.openmm import *
 from simtk.unit import *
@@ -25,18 +27,40 @@ class TestDesmondDMSForces2(unittest.TestCase):
 
     @unittest.skipIf(DESMOND_PATH is None, "desmond is required to be available in your PATH")
     def testForces(self):
+        mmForces = self._mmForces(nonbondedCutoff=10*angstrom)
+        mmNorms = np.sqrt(np.sum(np.square(mmForces), axis=1))
+        desmondForces = self._desmondForces(nonbondedCutoff=10*angstrom)
+        desmondNorms = np.sqrt(np.sum(np.square(desmondForces), axis=1))
+
+        print mmNorms
+        print desmondNorms
+        error = np.abs(mmNorms - desmondNorms)
+
+        print 'OpenMM vs. Desmond, difference in force magnitudes'
+        print 'Min:             %f' % np.min(error)
+        print '5th percentile:  %f' % scoreatpercentile(error, 5)
+        print 'Median:          %f' % np.median(error)
+        print 'Mean:            %f' % np.mean(error)
+        print '95th percentile: %f' % scoreatpercentile(error, 95)
+        print 'Max:             %f' % np.max(error)
+
+        for residue in self.dms.topology.residues():
+            aind = np.array([a.index for a in residue.atoms()])
+            print 'Max error in Residue %d (%s): %f' % (residue.index, residue.name, np.max(error[aind]))
+
+        np.testing.assert_array_almost_equal(mmForces, desmondForces, decimal=1)
+
+    def _printForcesVsNBCutoff(self):
         with print_options(suppress=True):
             cutoffs = [8, 9, 10, 11, 12]*angstrom
             for cutoff in cutoffs:
                 print 'OpenMM nonbondedCutoff = %s' % cutoff
-                print self._mmForces(nonbondedCutoff=cutoff)[:10]
+                print self._mmForces(nonbondedCutoff=cutoff)[:3]
 
             print '\n\n'
             for cutoff in cutoffs:
                 print 'Desmond nonbondedCutoff = %s' % cutoff
-                print self._desmondForces(nonbondedCutoff=cutoff)[:10]
-
-
+                print self._desmondForces(nonbondedCutoff=cutoff)[:3]
 
     def _mmForces(self, nonbondedCutoff):
         system = self.dms.createSystem(nonbondedMethod=PME, nonbondedCutoff=nonbondedCutoff)
@@ -92,12 +116,12 @@ class TestDesmondDMSForces2(unittest.TestCase):
                   constraint = none
                   nonbonded = { sigma = %(sigma)s
                                 r_cut = %(cutoff)s
-                                n_zone = 1
+                                n_zone = 1024
                                 near = { type = default
                                          taper = none }
                                 far = { type = pme
                                         order = [4 4 4]
-                                        n_k = [128 128 128] }
+                                        n_k = [64 64 64] }
                               }
                   ignore_com_dofs = false }
         migration = { first = 0.0
