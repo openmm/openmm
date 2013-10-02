@@ -151,7 +151,7 @@ class DesmondDMSFile(object):
         for p0, p1 in self._conn.execute('SELECT p0, p1 FROM bond'):
             top.addBond(atoms[p0], atoms[p1])
 
-        positions = positions*angstroms
+        positions = positions*angstrom
         return top, positions
 
     def createSystem(self, nonbondedMethod=ff.NoCutoff, nonbondedCutoff=1.0*nanometer,
