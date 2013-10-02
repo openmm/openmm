@@ -44,7 +44,7 @@ class TestDesmondDMSForces1(unittest.TestCase):
         dms_path = os.path.abspath(self.path)
         with temporary_directory():
             with open('desmond.cfg', 'w') as f:
-                f.write(self._desmondConfig())
+                f.write(self._desmondConfig(nonbondedCutoff))
             check_output('desmond --include desmond.cfg --cfg boot.file=%s' % dms_path, shell=True)
 
             fframe = [f for f in framesettools.FrameSet('forces.dtr')][0]
@@ -54,9 +54,9 @@ class TestDesmondDMSForces1(unittest.TestCase):
         positions = Quantity(tframe.POSITION.reshape(-1,3), angstroms)
 
         # Make sure that the geometry used by OpenMM and Desmond is the same
-        u = self.dms.topology.getUnitCellDimension()[0].value_in_unit(angstrom)
+        u = self.dms.topology.getUnitCellDimensions()[0].value_in_unit(angstrom)
         p1 = (np.array(positions.value_in_unit(angstrom)) + u) % u
-        p2 = (np.array(app.GromacsGroFile(gro_fn).positions.value_in_unit(angstroms)) + u) % u
+        p2 = (np.array(self.dms.positions.value_in_unit(angstroms)) + u) % u
         print 'RMSD gro to dtr: ', np.sqrt(np.mean(np.square(np.sum(p1-p2, axis=1))))
     
     def _desmondConfig(self, nonbondedCutoff):
@@ -111,9 +111,9 @@ class TestDesmondDMSForces1(unittest.TestCase):
           }
           checkpt = none
         }
-        """ % {'cutoff': nonbondedCutoff.value_in_unit(unit.angstroms),
-               'clone': nonbondedCutoff.value_in_unit(unit.angstroms)/2,
-               'sigma': nonbondedCutoff.value_in_unit(unit.angstroms)/(3*np.sqrt(2))}
+        """ % {'cutoff': nonbondedCutoff.value_in_unit(angstroms),
+               'clone': nonbondedCutoff.value_in_unit(angstroms)/2,
+               'sigma': nonbondedCutoff.value_in_unit(angstroms)/(3*np.sqrt(2))}
         
     
     
