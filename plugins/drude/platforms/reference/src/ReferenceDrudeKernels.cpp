@@ -34,7 +34,7 @@
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/ContextImpl.h"
 #include "SimTKOpenMMUtilities.h"
-#include "ReferenceCCMAAlgorithm.h"
+#include "ReferenceConstraints.h"
 #include "ReferenceVirtualSites.h"
 #include <set>
 
@@ -54,20 +54,6 @@ static vector<RealVec>& extractVelocities(ContextImpl& context) {
 static vector<RealVec>& extractForces(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
     return *((vector<RealVec>*) data->forces);
-}
-
-static void findAnglesForCCMA(const System& system, vector<ReferenceCCMAAlgorithm::AngleInfo>& angles) {
-    for (int i = 0; i < system.getNumForces(); i++) {
-        const HarmonicAngleForce* force = dynamic_cast<const HarmonicAngleForce*>(&system.getForce(i));
-        if (force != NULL) {
-            for (int j = 0; j < force->getNumAngles(); j++) {
-                int atom1, atom2, atom3;
-                double angle, k;
-                force->getAngleParameters(j, atom1, atom2, atom3, angle, k);
-                angles.push_back(ReferenceCCMAAlgorithm::AngleInfo(atom1, atom2, atom3, (RealOpenMM)angle));
-            }
-        }
-    }
 }
 
 static double computeShiftedKineticEnergy(ContextImpl& context, vector<double>& inverseMasses, double timeShift, ReferenceConstraintAlgorithm* constraints) {
@@ -283,10 +269,7 @@ void ReferenceIntegrateDrudeLangevinStepKernel::initialize(const System& system,
                 constraintDistances.push_back(distance);
             }
         }
-        int numConstraints = constraintIndices.size();
-        vector<ReferenceCCMAAlgorithm::AngleInfo> angles;
-        findAnglesForCCMA(system, angles);
-        constraints = new ReferenceCCMAAlgorithm(system.getNumParticles(), numConstraints, constraintIndices, constraintDistances, particleMass, angles, (RealOpenMM)integrator.getConstraintTolerance());
+        constraints = new ReferenceConstraints(system, (RealOpenMM) integrator.getConstraintTolerance());
     }
 }
 
@@ -408,10 +391,7 @@ void ReferenceIntegrateDrudeSCFStepKernel::initialize(const System& system, cons
                 constraintDistances.push_back(distance);
             }
         }
-        int numConstraints = constraintIndices.size();
-        vector<ReferenceCCMAAlgorithm::AngleInfo> angles;
-        findAnglesForCCMA(system, angles);
-        constraints = new ReferenceCCMAAlgorithm(system.getNumParticles(), numConstraints, constraintIndices, constraintDistances, particleMass, angles, (RealOpenMM)integrator.getConstraintTolerance());
+        constraints = new ReferenceConstraints(system, (RealOpenMM) integrator.getConstraintTolerance());
     }
     
     // Initialize the energy minimizer.
