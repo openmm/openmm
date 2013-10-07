@@ -159,7 +159,7 @@ void testConstraints() {
  * Test an integrator that applies constraints directly to velocities.
  */
 void testVelocityConstraints() {
-    const int numParticles = 8;
+    const int numParticles = 10;
     ReferencePlatform platform;
     System system;
     CustomIntegrator integrator(0.002);
@@ -176,7 +176,21 @@ void testVelocityConstraints() {
         system.addParticle(i%2 == 0 ? 5.0 : 10.0);
         forceField->addParticle((i%2 == 0 ? 0.2 : -0.2), 0.5, 5.0);
     }
-    for (int i = 0; i < numParticles-1; ++i)
+    
+    // Constrain the first three particles with SHAKE.
+    
+    system.addConstraint(0, 1, 1.0);
+    system.addConstraint(1, 2, 1.0);
+    
+    // Constrain the next three with SETTLE.
+    
+    system.addConstraint(3, 4, 1.0);
+    system.addConstraint(5, 4, 1.0);
+    system.addConstraint(3, 5, sqrt(2.0));
+    
+    // Constraint the rest with CCMA.
+    
+    for (int i = 6; i < numParticles-1; ++i)
         system.addConstraint(i, i+1, 1.0);
     system.addForce(forceField);
     Context context(system, integrator, platform);
@@ -196,6 +210,7 @@ void testVelocityConstraints() {
     
     double initialEnergy = 0.0;
     for (int i = 0; i < 1000; ++i) {
+        integrator.step(2);
         State state = context.getState(State::Positions | State::Velocities | State::Energy);
         for (int j = 0; j < system.getNumConstraints(); ++j) {
             int particle1, particle2;
@@ -213,11 +228,10 @@ void testVelocityConstraints() {
             }
         }
         double energy = state.getKineticEnergy()+state.getPotentialEnergy();
-        if (i == 1)
+        if (i == 0)
             initialEnergy = energy;
-        else if (i > 1)
+        else if (i > 0)
             ASSERT_EQUAL_TOL(initialEnergy, energy, 0.01);
-        integrator.step(2);
     }
 }
 
