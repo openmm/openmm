@@ -47,7 +47,7 @@ void ReferenceSETTLEAlgorithm::setTolerance(RealOpenMM tolerance) {
     this->tolerance = tolerance;
 }
 
-int ReferenceSETTLEAlgorithm::apply(int numberOfAtoms, vector<OpenMM::RealVec>& atomCoordinates, vector<OpenMM::RealVec>& atomCoordinatesP, vector<RealOpenMM>& inverseMasses) {
+void ReferenceSETTLEAlgorithm::apply(vector<OpenMM::RealVec>& atomCoordinates, vector<OpenMM::RealVec>& atomCoordinatesP, vector<RealOpenMM>& inverseMasses) {
     for (int index = 0; index < (int) atom1.size(); ++index) {
         RealVec apos0 = atomCoordinates[atom1[index]];
         RealVec xp0 = atomCoordinatesP[atom1[index]]-apos0;
@@ -188,10 +188,9 @@ int ReferenceSETTLEAlgorithm::apply(int numberOfAtoms, vector<OpenMM::RealVec>& 
         atomCoordinatesP[atom2[index]] = xp1+apos1;
         atomCoordinatesP[atom3[index]] = xp2+apos2;
     }
-    return SimTKOpenMMCommon::DefaultReturn;
 }
 
-int ReferenceSETTLEAlgorithm::applyToVelocities(int numberOfAtoms, vector<OpenMM::RealVec>& atomCoordinates, vector<OpenMM::RealVec>& velocities, vector<RealOpenMM>& inverseMasses) {
+void ReferenceSETTLEAlgorithm::applyToVelocities(vector<OpenMM::RealVec>& atomCoordinates, vector<OpenMM::RealVec>& velocities, vector<RealOpenMM>& inverseMasses) {
     for (int index = 0; index < (int) atom1.size(); ++index) {
         RealVec apos0 = atomCoordinates[atom1[index]];
         RealVec apos1 = atomCoordinates[atom2[index]];
@@ -238,5 +237,4 @@ int ReferenceSETTLEAlgorithm::applyToVelocities(int numberOfAtoms, vector<OpenMM
         velocities[atom2[index]] = v1;
         velocities[atom3[index]] = v2;
     }
-    return SimTKOpenMMCommon::DefaultReturn;
 }

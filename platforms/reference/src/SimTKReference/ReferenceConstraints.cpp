@@ -202,18 +202,16 @@ void ReferenceConstraints::setTolerance(RealOpenMM tolerance) {
         settle->setTolerance(tolerance);
 }
 
-int ReferenceConstraints::apply(int numberOfAtoms, vector<OpenMM::RealVec>& atomCoordinates, vector<OpenMM::RealVec>& atomCoordinatesP, vector<RealOpenMM>& inverseMasses) {
+void ReferenceConstraints::apply(vector<OpenMM::RealVec>& atomCoordinates, vector<OpenMM::RealVec>& atomCoordinatesP, vector<RealOpenMM>& inverseMasses) {
     if (ccma != NULL)
-        ccma->apply(numberOfAtoms, atomCoordinates, atomCoordinatesP, inverseMasses);
+        ccma->apply(atomCoordinates, atomCoordinatesP, inverseMasses);
     if (settle != NULL)
-        settle->apply(numberOfAtoms, atomCoordinates, atomCoordinatesP, inverseMasses);
-    return SimTKOpenMMCommon::DefaultReturn;
+        settle->apply(atomCoordinates, atomCoordinatesP, inverseMasses);
 }
 
-int ReferenceConstraints::applyToVelocities(int numberOfAtoms, vector<OpenMM::RealVec>& atomCoordinates, vector<OpenMM::RealVec>& velocities, vector<RealOpenMM>& inverseMasses) {
+void ReferenceConstraints::applyToVelocities(vector<OpenMM::RealVec>& atomCoordinates, vector<OpenMM::RealVec>& velocities, vector<RealOpenMM>& inverseMasses) {
     if (ccma != NULL)
-        ccma->applyToVelocities(numberOfAtoms, atomCoordinates, velocities, inverseMasses);
+        ccma->applyToVelocities(atomCoordinates, velocities, inverseMasses);
     if (settle != NULL)
-        settle->applyToVelocities(numberOfAtoms, atomCoordinates, velocities, inverseMasses);
-    return SimTKOpenMMCommon::DefaultReturn;
+        settle->applyToVelocities(atomCoordinates, velocities, inverseMasses);
 }
