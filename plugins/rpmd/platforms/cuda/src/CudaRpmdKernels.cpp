@@ -205,7 +205,8 @@ void CudaIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDIntegr
     void* frictionPtr = (useDoublePrecision ? (void*) &friction : (void*) &frictionFloat);
     int randomIndex = integration.prepareRandomNumbers(numParticles*numCopies);
     void* pileArgs[] = {&velocities->getDevicePointer(), &integration.getRandom().getDevicePointer(), &randomIndex, dtPtr, kTPtr, frictionPtr};
-    cu.executeKernel(pileKernel, pileArgs, numParticles*numCopies, workgroupSize);
+    if (integrator.getApplyThermostat())
+        cu.executeKernel(pileKernel, pileArgs, numParticles*numCopies, workgroupSize);
 
     // Update positions and velocities.
     
@@ -223,8 +224,10 @@ void CudaIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDIntegr
 
     // Apply the PILE-L thermostat again.
 
-    randomIndex = integration.prepareRandomNumbers(numParticles*numCopies);
-    cu.executeKernel(pileKernel, pileArgs, numParticles*numCopies, workgroupSize);
+    if (integrator.getApplyThermostat()) {
+        randomIndex = integration.prepareRandomNumbers(numParticles*numCopies);
+        cu.executeKernel(pileKernel, pileArgs, numParticles*numCopies, workgroupSize);
+    }
 
     // Update the time and step count.
 
