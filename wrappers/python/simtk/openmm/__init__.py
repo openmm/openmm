@@ -35,7 +35,7 @@ else:
 from simtk.openmm.openmm import *
 from simtk.openmm.vec3 import Vec3
 from simtk.openmm import version
-if os.getenv('OPENMM_PLUGIN_DIR') is None:
+if os.getenv('OPENMM_PLUGIN_DIR') is None and os.path.isdir(version.openmm_library_path):
     pluginLoadedLibNames = Platform.loadPluginsFromDirectory(os.path.join(version.openmm_library_path, 'plugins'))
 else:
     pluginLoadedLibNames = Platform.loadPluginsFromDirectory(Platform.getDefaultPluginsDirectory())
