@@ -85,6 +85,7 @@ version = '%(version)s'
 full_version = '%(full_version)s'
 git_revision = '%(git_revision)s'
 release = %(isrelease)s
+openmm_library_path = '%(path)s'
 
 if not release:
     version = full_version
@@ -113,7 +114,8 @@ if not release:
         a.write(cnt % {'version': version,
                        'full_version' : full_version,
                        'git_revision' : git_revision,
-                       'isrelease': str(IS_RELEASED)})
+                       'isrelease': str(IS_RELEASED),
+                       'path': os.getenv('OPENMM_LIB_PATH')})
     finally:
         a.close()
 
@@ -197,7 +199,7 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
             macVersion = [int(x) for x in platform.mac_ver()[0].split('.')]
             if tuple(macVersion) < (10, 6):
                 os.environ['MACOSX_DEPLOYMENT_TARGET']='10.5'
-            extra_link_args.append('-Wl,-rpath,@loader_path/OpenMM')
+            extra_link_args.append('-Wl,-rpath,'+openmm_lib_path)
 
 
     library_dirs=[openmm_lib_path]
@@ -209,6 +211,7 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
                  include_dirs = include_dirs,
                  define_macros = define_macros,
                  library_dirs = library_dirs,
+                 runtime_library_dirs = library_dirs,
                  libraries = libraries,
                  extra_compile_args=extra_compile_args,
                  extra_link_args=extra_link_args,
@@ -238,8 +241,8 @@ def main():
         uninstall()
     except:
         pass
-    writeVersionPy()
     setupKeywords=buildKeywordDictionary()
+    writeVersionPy()
     setup(**setupKeywords)
 
 if __name__ == '__main__':
