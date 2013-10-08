@@ -77,7 +77,7 @@ static double computeShiftedKineticEnergy(ContextImpl& context, vector<double>& 
     
     if (constraints != NULL) {
         constraints->setTolerance(1e-4);
-        constraints->applyToVelocities(numParticles, posData, shiftedVel, inverseMasses);
+        constraints->applyToVelocities(posData, shiftedVel, inverseMasses);
     }
     
     // Compute the kinetic energy.
@@ -331,7 +331,7 @@ void ReferenceIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, co
     // Apply constraints.
     
     if (constraints != NULL)
-        constraints->apply(numParticles, pos, xPrime, particleInvMass);
+        constraints->apply(pos, xPrime, particleInvMass);
     
     // Record the constrained positions and velocities.
     
@@ -425,7 +425,7 @@ void ReferenceIntegrateDrudeSCFStepKernel::execute(ContextImpl& context, const D
     // Apply constraints.
     
     if (constraints != NULL)
-        constraints->apply(numParticles, pos, xPrime, particleInvMass);
+        constraints->apply(pos, xPrime, particleInvMass);
     
     // Record the constrained positions and velocities.
     

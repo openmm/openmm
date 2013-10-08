@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2011 Stanford University and Simbios.
+/* Portions copyright (c) 2011-2013 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -252,12 +252,12 @@ void ReferenceCustomDynamics::update(ContextImpl& context, int numberOfAtoms, ve
                 break;
             }
             case CustomIntegrator::ConstrainPositions: {
-                getReferenceConstraintAlgorithm()->apply(numberOfAtoms, oldPos, atomCoordinates, inverseMasses);
+                getReferenceConstraintAlgorithm()->apply(oldPos, atomCoordinates, inverseMasses);
                 oldPos = atomCoordinates;
                 break;
             }
             case CustomIntegrator::ConstrainVelocities: {
-                getReferenceConstraintAlgorithm()->applyToVelocities(numberOfAtoms, oldPos, velocities, inverseMasses);
+                getReferenceConstraintAlgorithm()->applyToVelocities(oldPos, velocities, inverseMasses);
                 break;
             }
             case CustomIntegrator::UpdateContextState: {

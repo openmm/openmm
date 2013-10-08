@@ -58,22 +58,20 @@ public:
     /**
      * Apply the constraint algorithm.
      * 
-     * @param numberOfAtoms    number of atoms
      * @param atomCoordinates  the original atom coordinates
      * @param atomCoordinatesP the new atom coordinates
      * @param inverseMasses    1/mass
      */
-    int apply(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& atomCoordinatesP, std::vector<RealOpenMM>& inverseMasses);
+    void apply(std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& atomCoordinatesP, std::vector<RealOpenMM>& inverseMasses);
 
     /**
      * Apply the constraint algorithm to velocities.
      * 
-     * @param numberOfAtoms    number of atoms
      * @param atomCoordinates  the atom coordinates
      * @param atomCoordinatesP the velocities to modify
      * @param inverseMasses    1/mass
      */
-    int applyToVelocities(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& velocities, std::vector<RealOpenMM>& inverseMasses);
+    void applyToVelocities(std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& velocities, std::vector<RealOpenMM>& inverseMasses);
 private:
     RealOpenMM tolerance;
     std::vector<int> atom1;
