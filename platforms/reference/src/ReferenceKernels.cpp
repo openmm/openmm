@@ -160,7 +160,7 @@ static double computeShiftedKineticEnergy(ContextImpl& context, vector<double>& 
         for (int i = 0; i < numParticles; i++)
             inverseMasses[i] = (masses[i] == 0 ? 0 : 1/masses[i]);
         constraints->setTolerance(1e-4);
-        constraints->applyToVelocities(numParticles, posData, shiftedVel, inverseMasses);
+        constraints->applyToVelocities(posData, shiftedVel, inverseMasses);
     }
     
     // Compute the kinetic energy.
@@ -324,7 +324,7 @@ void ReferenceApplyConstraintsKernel::apply(ContextImpl& context, double tol) {
         constraints = new ReferenceConstraints(context.getSystem(), (RealOpenMM) tol);
     vector<RealVec>& positions = extractPositions(context);
     constraints->setTolerance(tol);
-    constraints->apply(data.numParticles, positions, positions, inverseMasses);
+    constraints->apply(positions, positions, inverseMasses);
     ReferenceVirtualSites::computePositions(context.getSystem(), positions);
 }
 
@@ -334,7 +334,7 @@ void ReferenceApplyConstraintsKernel::applyToVelocities(ContextImpl& context, do
     vector<RealVec>& positions = extractPositions(context);
     vector<RealVec>& velocities = extractVelocities(context);
     constraints->setTolerance(tol);
-    constraints->applyToVelocities(data.numParticles, positions, velocities, inverseMasses);
+    constraints->applyToVelocities(positions, velocities, inverseMasses);
 }
 
 void ReferenceVirtualSitesKernel::initialize(const System& system) {
