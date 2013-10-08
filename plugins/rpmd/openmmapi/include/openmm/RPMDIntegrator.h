@@ -47,6 +47,9 @@ namespace OpenMM {
  * springs to form a ring.  This allows certain quantum mechanical effects to be efficiently
  * simulated.
  * 
+ * By default this Integrator applies a PILE thermostat to the system to simulate constant
+ * temperature dynamics.  You can disable the thermostat by calling setApplyThermostat(false).
+ * 
  * Because this Integrator simulates many copies of the System at once, it must be used
  * differently from other Integrators.  Instead of setting positions and velocities by
  * calling methods of the Context, you should use the corresponding methods of the Integrator
@@ -126,6 +129,18 @@ public:
      */
     void setFriction(double coeff) {
         friction = coeff;
+    }
+    /**
+     * Get whether a thermostat is applied to the system.
+     */
+    bool getApplyThermostat() const {
+        return applyThermostat;
+    }
+    /**
+     * Set whether a thermostat is applied to the system.
+     */
+    void setApplyThermostat(bool apply) {
+        applyThermostat = apply;
     }
     /**
      * Get the random number seed.  See setRandomNumberSeed() for details.
@@ -213,6 +228,7 @@ protected:
 private:
     double temperature, friction;
     int numCopies, randomNumberSeed;
+    bool applyThermostat;
     std::map<int, int> contractions;
     bool forcesAreValid, hasSetPosition, hasSetVelocity, isFirstStep;
     Kernel kernel;
