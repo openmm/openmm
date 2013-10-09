@@ -180,8 +180,9 @@ public:
                         voxelIndex.y = (y+ny)%ny;
                         voxelIndex.z = (z+nz)%nz;
                     }
-                    if (voxelMap.find(voxelIndex) == voxelMap.end()) continue; // no such voxel; skip
-                    const Voxel& voxel = voxelMap.find(voxelIndex)->second;
+                    const map<VoxelIndex, Voxel>::const_iterator voxelEntry = voxelMap.find(voxelIndex);
+                    if (voxelEntry == voxelMap.end()) continue; // no such voxel; skip
+                    const Voxel& voxel = voxelEntry->second;
                     for (Voxel::const_iterator itemIter = voxel.begin(); itemIter != voxel.end(); ++itemIter)
                     {
                         const AtomIndex atomJ = itemIter->second;
@@ -234,9 +235,9 @@ void OPENMM_EXPORT computeNeighborListVoxelHash(
     if (!usePeriodic)
         edgeSizeX = edgeSizeY = edgeSizeZ = maxDistance; // TODO - adjust this as needed
     else {
-        edgeSizeX = periodicBoxSize[0]/floor(periodicBoxSize[0]/maxDistance);
-        edgeSizeY = periodicBoxSize[1]/floor(periodicBoxSize[1]/maxDistance);
-        edgeSizeZ = periodicBoxSize[2]/floor(periodicBoxSize[2]/maxDistance);
+        edgeSizeX = 0.5*periodicBoxSize[0]/floor(periodicBoxSize[0]/maxDistance);
+        edgeSizeY = 0.5*periodicBoxSize[1]/floor(periodicBoxSize[1]/maxDistance);
+        edgeSizeZ = 0.5*periodicBoxSize[2]/floor(periodicBoxSize[2]/maxDistance);
     }
     VoxelHash voxelHash(edgeSizeX, edgeSizeY, edgeSizeZ, periodicBoxSize, usePeriodic);
     for (AtomIndex atomJ = 0; atomJ < (AtomIndex) nAtoms; ++atomJ) // use "j", because j > i for pairs

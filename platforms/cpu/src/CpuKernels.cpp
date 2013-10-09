@@ -155,7 +155,7 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
             posq[4*i+1] = (float) posData[i][1];
             posq[4*i+2] = (float) posData[i][2];
         }
-    neighborList.computeNeighborList(numParticles, posq, exclusions, floatBoxSize, periodic || ewald || pme, nonbondedCutoff, 0.0);
+    neighborList.computeNeighborList(numParticles, posq, exclusions, floatBoxSize, periodic || ewald || pme, nonbondedCutoff);
 //    if (nonbondedMethod != NoCutoff) {
 //        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, extractBoxSize(context), periodic || ewald || pme, nonbondedCutoff, 0.0);
 //        clj.setUseCutoff(nonbondedCutoff, *neighborList, rfDielectric);

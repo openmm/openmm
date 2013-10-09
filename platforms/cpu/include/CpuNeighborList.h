@@ -15,9 +15,7 @@ public:
                              const std::vector<std::set<int> >& exclusions,
                              const float* periodicBoxSize,
                              bool usePeriodic,
-                             float maxDistance,
-                             float minDistance = 0.0f,
-                             bool reportSymmetricPairs = false);
+                             float maxDistance);
     const std::vector<std::pair<int, int> >& getNeighbors();
 private:
     std::vector<std::pair<int, int> > neighbors;
