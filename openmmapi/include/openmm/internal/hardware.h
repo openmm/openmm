@@ -1,3 +1,6 @@
+#ifndef OPENMM_HARDWARE_H_
+#define OPENMM_HARDWARE_H_
+
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -29,34 +32,82 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "CpuPlatform.h"
-#include "CpuKernelFactory.h"
-#include "CpuKernels.h"
-#include "openmm/internal/hardware.h"
+/**
+ * This file defines a collection of functions for querying the specific hardware being used.
+ */
 
-using namespace OpenMM;
+/**
+ * Get the number of CPU cores available.
+ */
+#ifdef __APPLE__
+   #include <sys/sysctl.h>
+   #include <dlfcn.h>
+#else
+   #ifdef WIN32
+      #include <windows.h>
+   #else
+      #include <dlfcn.h>
+      #include <unistd.h>
+   #endif
+#endif
 
-extern "C" OPENMM_EXPORT_CPU void registerPlatforms() {
-    // Only register this platform if the CPU supports SSE 4.1.
-
-    int cpuInfo[4];
-    cpuid(cpuInfo, 0);
-    if (cpuInfo[0] >= 1) {
-        cpuid(cpuInfo, 1);
-        if ((cpuInfo[2] & ((int) 1 << 19)) != 0)
-            Platform::registerPlatform(new CpuPlatform());
-    }
+static int getNumProcessors() {
+#ifdef __APPLE__
+    int ncpu;
+    size_t len = 4;
+    if (sysctlbyname("hw.logicalcpu", &ncpu, &len, NULL, 0) == 0)
+       return ncpu;
+    else
+       return 1;
+#else
+#ifdef WIN32
+    SYSTEM_INFO siSysInfo;
+    int ncpu;
+    GetSystemInfo(&siSysInfo);
+    ncpu = siSysInfo.dwNumberOfProcessors;
+    if (ncpu < 1)
+        ncpu = 1;
+    return ncpu;
+#else
+    long nProcessorsOnline = sysconf(_SC_NPROCESSORS_ONLN);
+    if (nProcessorsOnline == -1)
+        return 1;
+    else
+        return (int) nProcessorsOnline;
+#endif
+#endif
 }
 
-CpuPlatform::CpuPlatform() {
-    CpuKernelFactory* factory = new CpuKernelFactory();
-    registerKernelFactory(CalcNonbondedForceKernel::Name(), factory);
+/**
+ * Get a description of the CPU's capabilities.
+ */
+#ifdef _WIN32
+#define cpuid __cpuid
+#else
+static void cpuid(int cpuInfo[4], int infoType){
+#ifdef __LP64__
+    __asm__ __volatile__ (
+        "cpuid":
+        "=a" (cpuInfo[0]),
+        "=b" (cpuInfo[1]),
+        "=c" (cpuInfo[2]),
+        "=d" (cpuInfo[3]) :
+        "a" (infoType)
+    );
+#else
+    __asm__ __volatile__ (
+        "pushl %%ebx\n"
+        "cpuid\n"
+        "movl %%ebx, %1\n"
+        "popl %%ebx\n" :
+        "=a" (cpuInfo[0]),
+        "=r" (cpuInfo[1]),
+        "=c" (cpuInfo[2]),
+        "=d" (cpuInfo[3]) :
+        "a" (infoType)
+    );
+#endif
 }
+#endif
 
-double CpuPlatform::getSpeed() const {
-    return 10;
-}
-
-bool CpuPlatform::supportsDoublePrecision() const {
-    return false;
-}
+#endif // OPENMM_HARDWARE_H_

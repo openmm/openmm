@@ -1,4 +1,5 @@
 #include "CpuNeighborList.h"
+#include "openmm/internal/hardware.h"
 #include <set>
 #include <map>
 #include <cmath>
@@ -166,7 +167,7 @@ static void* threadBody(void* args) {
 
 CpuNeighborList::CpuNeighborList() {
     isDeleted = false;
-    numThreads = 4;
+    numThreads = getNumProcessors();
     pthread_cond_init(&startCondition, NULL);
     pthread_cond_init(&endCondition, NULL);
     pthread_mutex_init(&lock, NULL);
