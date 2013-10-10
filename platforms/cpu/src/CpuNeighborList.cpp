@@ -32,7 +32,7 @@ public:
 typedef pair<const float*, int> VoxelItem;
 typedef vector< VoxelItem > Voxel;
 
-class VoxelHash {
+class CpuNeighborList::VoxelHash {
 public:
     VoxelHash(float vsx, float vsy, float vsz, const float* periodicBoxSize, bool usePeriodic) :
             voxelSizeX(vsx), voxelSizeY(vsy), voxelSizeZ(vsz), periodicBoxSize(periodicBoxSize), usePeriodic(usePeriodic) {
@@ -117,7 +117,7 @@ public:
                         const int atomJ = itemIter->second;
 
                         // Ignore self hits
-                        if (atomI == atomJ)
+                        if (atomI >= atomJ)
                             continue;
                         
                         // Ignore exclusions.
@@ -148,12 +148,52 @@ private:
     map<VoxelIndex, Voxel> voxelMap;
 };
 
+class CpuNeighborList::ThreadData {
+public:
+    ThreadData(int index, CpuNeighborList& owner) : index(index), owner(owner) {
+    }
+    int index;
+    CpuNeighborList& owner;
+    vector<pair<int, int> > threadNeighbors;
+};
 
-// O(n) neighbor list method using voxel hash data structure
-void CpuNeighborList::computeNeighborList(int nAtoms, const vector<float>& atomLocations, const vector<set<int> >& exclusions,
+static void* threadBody(void* args) {
+    CpuNeighborList::ThreadData& data = *reinterpret_cast<CpuNeighborList::ThreadData*>(args);
+    data.owner.runThread(data.index, data.threadNeighbors);
+    delete &data;
+    return 0;
+}
+
+CpuNeighborList::CpuNeighborList() {
+    isDeleted = false;
+    numThreads = 4;
+    pthread_cond_init(&startCondition, NULL);
+    pthread_cond_init(&endCondition, NULL);
+    pthread_mutex_init(&lock, NULL);
+    thread.resize(numThreads);
+    for (int i = 0; i < numThreads; i++) {
+        ThreadData* data = new ThreadData(i, *this);
+        threadData.push_back(data);
+        pthread_create(&thread[i], NULL, threadBody, data);
+    }
+}
+
+CpuNeighborList::~CpuNeighborList() {
+    isDeleted = true;
+    pthread_mutex_lock(&lock);
+    pthread_cond_broadcast(&startCondition);
+    pthread_mutex_unlock(&lock);
+    for (int i = 0; i < (int) thread.size(); i++)
+        pthread_join(thread[i], NULL);
+    pthread_mutex_destroy(&lock);
+    pthread_cond_destroy(&startCondition);
+    pthread_cond_destroy(&endCondition);
+}
+
+void CpuNeighborList::computeNeighborList(int numAtoms, const vector<float>& atomLocations, const vector<set<int> >& exclusions,
             const float* periodicBoxSize, bool usePeriodic, float maxDistance) {
-    neighbors.clear();
-
+    // Build the voxel hash.
+    
     float edgeSizeX, edgeSizeY, edgeSizeZ;
     if (!usePeriodic)
         edgeSizeX = edgeSizeY = edgeSizeZ = maxDistance; // TODO - adjust this as needed
@@ -163,22 +203,57 @@ void CpuNeighborList::computeNeighborList(int nAtoms, const vector<float>& atomL
         edgeSizeZ = 0.5f*periodicBoxSize[2]/floorf(periodicBoxSize[2]/maxDistance);
     }
     VoxelHash voxelHash(edgeSizeX, edgeSizeY, edgeSizeZ, periodicBoxSize, usePeriodic);
-    for (int atomJ = 0; atomJ < (int) nAtoms; ++atomJ) { // use "j", because j > i for pairs
-        // 1) Find other atoms that are close to this one
-        const float* location = &atomLocations[4*atomJ];
-        voxelHash.getNeighbors(
-            neighbors, 
-            VoxelItem(location, atomJ),
-            exclusions,
-            maxDistance);
-            
-        // 2) Add this atom to the voxelHash
-        voxelHash.insert(atomJ, location);
-    }
+    for (int i = 0; i < numAtoms; i++)
+        voxelHash.insert(i, &atomLocations[4*i]);
+    
+    // Record the parameters for the threads.
+    
+    this->voxelHash = &voxelHash;
+    this->exclusions = &exclusions;
+    this->atomLocations = &atomLocations[0];
+    this->periodicBoxSize = periodicBoxSize;
+    this->numAtoms = numAtoms;
+    this->usePeriodic = usePeriodic;
+    this->maxDistance = maxDistance;
+    
+    // Signal the threads to start running and wait for them to finish.
+    
+    pthread_mutex_lock(&lock);
+    waitCount = 0;
+    pthread_cond_broadcast(&startCondition);
+    while (waitCount < numThreads)
+        pthread_cond_wait(&endCondition, &lock);
+    pthread_mutex_unlock(&lock);
+    
+    // Combine the results from all the threads.
+    
+    neighbors.clear();
+    for (int i = 0; i < numThreads; i++)
+        neighbors.insert(neighbors.end(), threadData[i]->threadNeighbors.begin(), threadData[i]->threadNeighbors.end());
 }
 
 const vector<pair<int, int> >& CpuNeighborList::getNeighbors() {
     return neighbors;
+}
+
+void CpuNeighborList::runThread(int index, vector<pair<int, int> >& threadNeighbors) {
+    while (true) {
+        // Wait for the signal to start running.
+        
+        pthread_mutex_lock(&lock);
+        waitCount++;
+        pthread_cond_signal(&endCondition);
+        pthread_cond_wait(&startCondition, &lock);
+        pthread_mutex_unlock(&lock);
+        if (isDeleted)
+            break;
+        
+        // Compute this thread's subset of neighbors.
+        
+        threadNeighbors.clear();
+        for (int i = index; i < numAtoms; i += numThreads)
+            voxelHash->getNeighbors(threadNeighbors, VoxelItem(&atomLocations[4*i], i), *exclusions, maxDistance);
+    }
 }
 
 } // namespace OpenMM
