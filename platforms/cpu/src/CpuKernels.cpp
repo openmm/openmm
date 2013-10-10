@@ -30,7 +30,11 @@
  * -------------------------------------------------------------------------- */
 
 #include "CpuKernels.h"
+#include "CpuNonbondedForce.h"
+#include "ReferenceBondForce.h"
+#include "ReferenceLJCoulomb14.h"
 #include "openmm/Context.h"
+#include "openmm/OpenMMException.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
 #include "RealVec.h"
@@ -59,6 +63,9 @@ static RealVec& extractBoxSize(ContextImpl& context) {
 }
 
 CpuCalcNonbondedForceKernel::~CpuCalcNonbondedForceKernel() {
+    delete bonded14IndexArray; // Do this properly
+    delete bonded14ParamArray; // Do this properly
+    delete particleParamArray; // Do this properly
 }
 
 void CpuCalcNonbondedForceKernel::initialize(const System& system, const NonbondedForce& force) {
@@ -66,6 +73,8 @@ void CpuCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
     // Identify which exceptions are 1-4 interactions.
 
     numParticles = force.getNumParticles();
+    posq.resize(4*numParticles, 0);
+    forces.resize(4*numParticles, 0);
     exclusions.resize(numParticles);
     vector<int> nb14s;
     for (int i = 0; i < force.getNumExceptions(); i++) {
@@ -81,29 +90,33 @@ void CpuCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
     // Record the particle parameters.
 
     num14 = nb14s.size();
-//    bonded14IndexArray = allocateIntArray(num14, 2);
-//    bonded14ParamArray = allocateRealArray(num14, 3);
-//    particleParamArray = allocateRealArray(numParticles, 3);
-    posq.resize(4*numParticles, 0);
+    bonded14IndexArray = new int*[num14];
+    for (int i = 0; i < num14; i++)
+        bonded14IndexArray[i] = new int[2];
+    bonded14ParamArray = new double*[num14];
+    for (int i = 0; i < num14; i++)
+        bonded14ParamArray[i] = new double[3];
+    particleParamArray = new float*[numParticles];
+    for (int i = 0; i < numParticles; i++)
+        particleParamArray[i] = new float[3];
     for (int i = 0; i < numParticles; ++i) {
         double charge, radius, depth;
         force.getParticleParameters(i, charge, radius, depth);
         posq[4*i+3] = (float) charge;
-//        particleParamArray[i][0] = static_cast<RealOpenMM>(0.5*radius);
-//        particleParamArray[i][1] = static_cast<RealOpenMM>(2.0*sqrt(depth));
-//        particleParamArray[i][2] = static_cast<RealOpenMM>(charge);
+        particleParamArray[i][0] = (float) (0.5*radius);
+        particleParamArray[i][1] = (float) (2.0*sqrt(depth));
+        particleParamArray[i][2] = (float) (charge);
     }
-//    this->exclusions = exclusions;
-//    for (int i = 0; i < num14; ++i) {
-//        int particle1, particle2;
-//        double charge, radius, depth;
-//        force.getExceptionParameters(nb14s[i], particle1, particle2, charge, radius, depth);
-//        bonded14IndexArray[i][0] = particle1;
-//        bonded14IndexArray[i][1] = particle2;
-//        bonded14ParamArray[i][0] = static_cast<RealOpenMM>(radius);
-//        bonded14ParamArray[i][1] = static_cast<RealOpenMM>(4.0*depth);
-//        bonded14ParamArray[i][2] = static_cast<RealOpenMM>(charge);
-//    }
+    for (int i = 0; i < num14; ++i) {
+        int particle1, particle2;
+        double charge, radius, depth;
+        force.getExceptionParameters(nb14s[i], particle1, particle2, charge, radius, depth);
+        bonded14IndexArray[i][0] = particle1;
+        bonded14IndexArray[i][1] = particle2;
+        bonded14ParamArray[i][0] = static_cast<RealOpenMM>(radius);
+        bonded14ParamArray[i][1] = static_cast<RealOpenMM>(4.0*depth);
+        bonded14ParamArray[i][2] = static_cast<RealOpenMM>(charge);
+    }
     nonbondedMethod = CalcNonbondedForceKernel::NonbondedMethod(force.getNonbondedMethod());
     nonbondedCutoff = force.getCutoffDistance();
     if (nonbondedMethod == NoCutoff)
@@ -135,7 +148,7 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
     RealVec boxSize = extractBoxSize(context);
     float floatBoxSize[3] = {(float) boxSize[0], (float) boxSize[1], (float) boxSize[2]};
     double energy = 0;
-//    CpuLJCoulombIxn clj;
+    CpuNonbondedForce clj;
     bool periodic = (nonbondedMethod == CutoffPeriodic);
     bool ewald  = (nonbondedMethod == Ewald);
     bool pme  = (nonbondedMethod == PME);
@@ -155,75 +168,79 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
             posq[4*i+1] = (float) posData[i][1];
             posq[4*i+2] = (float) posData[i][2];
         }
-    neighborList.computeNeighborList(numParticles, posq, exclusions, floatBoxSize, periodic || ewald || pme, nonbondedCutoff);
-//    if (nonbondedMethod != NoCutoff) {
-//        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, extractBoxSize(context), periodic || ewald || pme, nonbondedCutoff, 0.0);
-//        clj.setUseCutoff(nonbondedCutoff, *neighborList, rfDielectric);
-//    }
-//    if (periodic || ewald || pme) {
-//        RealVec& box = extractBoxSize(context);
-//        double minAllowedSize = 1.999999*nonbondedCutoff;
-//        if (box[0] < minAllowedSize || box[1] < minAllowedSize || box[2] < minAllowedSize)
-//            throw OpenMMException("The periodic box size has decreased to less than twice the nonbonded cutoff.");
-//        clj.setPeriodic(box);
-//    }
-//    if (ewald)
-//        clj.setUseEwald(ewaldAlpha, kmax[0], kmax[1], kmax[2]);
-//    if (pme)
-//        clj.setUsePME(ewaldAlpha, gridSize);
-//    if (useSwitchingFunction)
-//        clj.setUseSwitchingFunction(switchingDistance);
-//    clj.calculatePairIxn(numParticles, posData, particleParamArray, exclusions, 0, forceData, 0, includeEnergy ? &energy : NULL, includeDirect, includeReciprocal);
-//    if (includeDirect) {
-//        CpuBondForce refBondForce;
-//        CpuLJCoulomb14 nonbonded14;
-//        refBondForce.calculateForce(num14, bonded14IndexArray, posData, bonded14ParamArray, forceData, includeEnergy ? &energy : NULL, nonbonded14);
-//        if (periodic || ewald || pme) {
-//            RealVec& boxSize = extractBoxSize(context);
-//            energy += dispersionCoefficient/(boxSize[0]*boxSize[1]*boxSize[2]);
-//        }
-//    }
-//    return energy;
-    return 0.0;
+    for (int i = 0; i < 4*numParticles; i++)
+        forces[i] = 0.0f;
+    if (nonbondedMethod != NoCutoff) {
+        neighborList.computeNeighborList(numParticles, posq, exclusions, floatBoxSize, periodic || ewald || pme, nonbondedCutoff);
+        clj.setUseCutoff(nonbondedCutoff, neighborList.getNeighbors(), rfDielectric);
+    }
+    if (periodic || ewald || pme) {
+        double minAllowedSize = 1.999999*nonbondedCutoff;
+        if (boxSize[0] < minAllowedSize || boxSize[1] < minAllowedSize || boxSize[2] < minAllowedSize)
+            throw OpenMMException("The periodic box size has decreased to less than twice the nonbonded cutoff.");
+        clj.setPeriodic(floatBoxSize);
+    }
+    if (ewald)
+        clj.setUseEwald(ewaldAlpha, kmax[0], kmax[1], kmax[2]);
+    if (pme)
+        clj.setUsePME(ewaldAlpha, gridSize);
+    if (useSwitchingFunction)
+        clj.setUseSwitchingFunction(switchingDistance);
+    float directEnergy = 0;
+    clj.calculatePairIxn(numParticles, &posq[0], particleParamArray, exclusions, 0, &forces[0], includeEnergy ? &directEnergy : NULL, includeDirect, includeReciprocal);
+    energy += directEnergy;
+    for (int i = 0; i < numParticles; i++) {
+        forceData[i][0] += forces[4*i];
+        forceData[i][1] += forces[4*i+1];
+        forceData[i][2] += forces[4*i+2];
+    }
+    if (includeDirect) {
+        ReferenceBondForce refBondForce;
+        ReferenceLJCoulomb14 nonbonded14;
+        refBondForce.calculateForce(num14, bonded14IndexArray, posData, bonded14ParamArray, forceData, includeEnergy ? &energy : NULL, nonbonded14);
+        if (periodic || ewald || pme)
+            energy += dispersionCoefficient/(boxSize[0]*boxSize[1]*boxSize[2]);
+    }
+    return energy;
 }
 
 void CpuCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force) {
-//    if (force.getNumParticles() != numParticles)
-//        throw OpenMMException("updateParametersInContext: The number of particles has changed");
-//    vector<int> nb14s;
-//    for (int i = 0; i < force.getNumExceptions(); i++) {
-//        int particle1, particle2;
-//        double chargeProd, sigma, epsilon;
-//        force.getExceptionParameters(i, particle1, particle2, chargeProd, sigma, epsilon);
-//        if (chargeProd != 0.0 || epsilon != 0.0)
-//            nb14s.push_back(i);
-//    }
-//    if (nb14s.size() != num14)
-//        throw OpenMMException("updateParametersInContext: The number of non-excluded exceptions has changed");
-//
-//    // Record the values.
-//
-//    for (int i = 0; i < numParticles; ++i) {
-//        double charge, radius, depth;
-//        force.getParticleParameters(i, charge, radius, depth);
-//        particleParamArray[i][0] = static_cast<RealOpenMM>(0.5*radius);
-//        particleParamArray[i][1] = static_cast<RealOpenMM>(2.0*sqrt(depth));
-//        particleParamArray[i][2] = static_cast<RealOpenMM>(charge);
-//    }
-//    for (int i = 0; i < num14; ++i) {
-//        int particle1, particle2;
-//        double charge, radius, depth;
-//        force.getExceptionParameters(nb14s[i], particle1, particle2, charge, radius, depth);
-//        bonded14IndexArray[i][0] = particle1;
-//        bonded14IndexArray[i][1] = particle2;
-//        bonded14ParamArray[i][0] = static_cast<RealOpenMM>(radius);
-//        bonded14ParamArray[i][1] = static_cast<RealOpenMM>(4.0*depth);
-//        bonded14ParamArray[i][2] = static_cast<RealOpenMM>(charge);
-//    }
-//    
-//    // Recompute the coefficient for the dispersion correction.
-//
-//    NonbondedForce::NonbondedMethod method = force.getNonbondedMethod();
-//    if (force.getUseDispersionCorrection() && (method == NonbondedForce::CutoffPeriodic || method == NonbondedForce::Ewald || method == NonbondedForce::PME))
-//        dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(context.getSystem(), force);
+    if (force.getNumParticles() != numParticles)
+        throw OpenMMException("updateParametersInContext: The number of particles has changed");
+    vector<int> nb14s;
+    for (int i = 0; i < force.getNumExceptions(); i++) {
+        int particle1, particle2;
+        double chargeProd, sigma, epsilon;
+        force.getExceptionParameters(i, particle1, particle2, chargeProd, sigma, epsilon);
+        if (chargeProd != 0.0 || epsilon != 0.0)
+            nb14s.push_back(i);
+    }
+    if (nb14s.size() != num14)
+        throw OpenMMException("updateParametersInContext: The number of non-excluded exceptions has changed");
+
+    // Record the values.
+
+    for (int i = 0; i < numParticles; ++i) {
+        double charge, radius, depth;
+        force.getParticleParameters(i, charge, radius, depth);
+        particleParamArray[i][0] = (float) (0.5*radius);
+        particleParamArray[i][1] = (float) (2.0*sqrt(depth));
+        particleParamArray[i][2] = (float) (charge);
+    }
+    for (int i = 0; i < num14; ++i) {
+        int particle1, particle2;
+        double charge, radius, depth;
+        force.getExceptionParameters(nb14s[i], particle1, particle2, charge, radius, depth);
+        bonded14IndexArray[i][0] = particle1;
+        bonded14IndexArray[i][1] = particle2;
+        bonded14ParamArray[i][0] = static_cast<RealOpenMM>(radius);
+        bonded14ParamArray[i][1] = static_cast<RealOpenMM>(4.0*depth);
+        bonded14ParamArray[i][2] = static_cast<RealOpenMM>(charge);
+    }
+    
+    // Recompute the coefficient for the dispersion correction.
+
+    NonbondedForce::NonbondedMethod method = force.getNonbondedMethod();
+    if (force.getUseDispersionCorrection() && (method == NonbondedForce::CutoffPeriodic || method == NonbondedForce::Ewald || method == NonbondedForce::PME))
+        dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(context.getSystem(), force);
 }

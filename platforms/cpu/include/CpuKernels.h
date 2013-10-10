@@ -75,12 +75,14 @@ public:
 private:
     int numParticles, num14;
     int **bonded14IndexArray;
-    double **particleParamArray, **bonded14ParamArray;
+    float **particleParamArray;
+    double **bonded14ParamArray;
     double nonbondedCutoff, switchingDistance, rfDielectric, ewaldAlpha, dispersionCoefficient;
     int kmax[3], gridSize[3];
     bool useSwitchingFunction;
     std::vector<std::set<int> > exclusions;
     std::vector<float> posq;
+    std::vector<float> forces;
     NonbondedMethod nonbondedMethod;
     CpuNeighborList neighborList;
 };
