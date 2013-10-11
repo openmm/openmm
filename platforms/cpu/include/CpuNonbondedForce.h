@@ -29,6 +29,7 @@
 #include <set>
 #include <utility>
 #include <vector>
+#include <smmintrin.h>
 // ---------------------------------------------------------------------------------------
 
 class CpuNonbondedForce {
@@ -47,6 +48,7 @@ class CpuNonbondedForce {
       float alphaEwald;
       int numRx, numRy, numRz;
       int meshDim[3];
+      __m128 boxSize, invBoxSize, half;
 
       // parameter indices
 
@@ -69,7 +71,7 @@ class CpuNonbondedForce {
           
       void calculateOneIxn( int atom1, int atom2, float* atomCoordinates,
                             float** atomParameters, float* forces,
-                            float* totalEnergy ) const;
+                            double* totalEnergy ) const;
 
 
    public:
@@ -122,7 +124,7 @@ class CpuNonbondedForce {
       
          --------------------------------------------------------------------------------------- */
       
-      void setPeriodic( float* boxSize );
+      void setPeriodic( float* periodicBoxSize );
        
       /**---------------------------------------------------------------------------------------
       
@@ -194,8 +196,7 @@ private:
                             float* fixedParameters, float* forces,
                             float* totalEnergy, bool includeDirect, bool includeReciprocal) const;
       
-      void getDeltaR(const float* atomCoordinatesI, const float* atomCoordinatesJ,
-                               const float* boxSize, float* deltaR, bool periodic) const;
+      void getDeltaR(const __m128& posI, const __m128& posJ, __m128& deltaR, float& r2, bool periodic) const;
 
 };
 

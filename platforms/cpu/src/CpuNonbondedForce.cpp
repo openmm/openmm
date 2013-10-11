@@ -113,16 +113,19 @@ void CpuNonbondedForce::setUseSwitchingFunction(float distance) {
 
      --------------------------------------------------------------------------------------- */
 
-  void CpuNonbondedForce::setPeriodic(float* boxSize) {
+  void CpuNonbondedForce::setPeriodic(float* periodicBoxSize) {
 
     assert(cutoff);
-    assert(boxSize[0] >= 2*cutoffDistance);
-    assert(boxSize[1] >= 2*cutoffDistance);
-    assert(boxSize[2] >= 2*cutoffDistance);
+    assert(periodicBoxSize[0] >= 2*cutoffDistance);
+    assert(periodicBoxSize[1] >= 2*cutoffDistance);
+    assert(periodicBoxSize[2] >= 2*cutoffDistance);
     periodic = true;
-    periodicBoxSize[0] = boxSize[0];
-    periodicBoxSize[1] = boxSize[1];
-    periodicBoxSize[2] = boxSize[2];
+    this->periodicBoxSize[0] = periodicBoxSize[0];
+    this->periodicBoxSize[1] = periodicBoxSize[1];
+    this->periodicBoxSize[2] = periodicBoxSize[2];
+    boxSize = _mm_set_ps(0, periodicBoxSize[2], periodicBoxSize[1], periodicBoxSize[0]);
+    invBoxSize = _mm_set_ps(0, (1/periodicBoxSize[2]), (1/periodicBoxSize[1]), (1/periodicBoxSize[0]));
+    half = _mm_set1_ps(0.5);
   }
 
   /**---------------------------------------------------------------------------------------
@@ -198,7 +201,6 @@ void CpuNonbondedForce::calculateEwaldIxn(int numberOfAtoms, float* atomCoordina
     float totalSelfEwaldEnergy     = 0.0;
     float realSpaceEwaldEnergy     = 0.0;
     float recipEnergy              = 0.0;
-    float totalRecipEnergy         = 0.0;
     float vdwEnergy                = 0.0;
 
 // **************************************************************************************
@@ -207,7 +209,7 @@ void CpuNonbondedForce::calculateEwaldIxn(int numberOfAtoms, float* atomCoordina
 
     if (includeReciprocal) {
         for (int atomID = 0; atomID < numberOfAtoms; atomID++){
-            float selfEwaldEnergy       = (float) (ONE_4PI_EPS0*atomParameters[atomID][QIndex]*atomParameters[atomID][QIndex] * alphaEwald/SQRT_PI);
+            float selfEwaldEnergy       = (float) (ONE_4PI_EPS0*atomCoordinates[4*atomID+3]*atomCoordinates[4*atomID+3] * alphaEwald/SQRT_PI);
             totalSelfEwaldEnergy            -= selfEwaldEnergy;
         }
     }
@@ -326,11 +328,8 @@ void CpuNonbondedForce::calculateEwaldIxn(int numberOfAtoms, float* atomCoordina
             f[2] += 2 * recipCoeff * force * kz;
           }
 
-          recipEnergy       = recipCoeff * ak * (cs * cs + ss * ss);
-          totalRecipEnergy += recipEnergy;
-
           if (totalEnergy)
-             *totalEnergy += recipEnergy;
+             *totalEnergy += recipCoeff * ak * (cs * cs + ss * ss);
 
           lowrz = 1 - numRz;
         }
@@ -345,18 +344,21 @@ void CpuNonbondedForce::calculateEwaldIxn(int numberOfAtoms, float* atomCoordina
 
     if (!includeDirect)
         return;
-    float totalVdwEnergy            = 0.0f;
-    float totalRealSpaceEwaldEnergy = 0.0f;
+    double totalVdwEnergy            = 0.0f;
+    double totalRealSpaceEwaldEnergy = 0.0f;
 
     for (int i = 0; i < (int) neighborList->size(); i++) {
        pair<int, int> pair = (*neighborList)[i];
        int ii = pair.first;
        int jj = pair.second;
 
-       float deltaR[2][ReferenceForce::LastDeltaRIndex];
-       getDeltaR(atomCoordinates+4*jj, atomCoordinates+4*ii, periodicBoxSize, deltaR[0], true);
-       float r         = deltaR[0][ReferenceForce::RIndex];
-       float inverseR  = one/(deltaR[0][ReferenceForce::RIndex]);
+       __m128 deltaR;
+       __m128 posI = _mm_loadu_ps(atomCoordinates+4*ii);
+       __m128 posJ = _mm_loadu_ps(atomCoordinates+4*jj);
+       float r2;
+       getDeltaR(posJ, posI, deltaR, r2, true);
+       float r         = sqrtf(r2);
+       float inverseR  = 1/r;
        float switchValue = 1, switchDeriv = 0;
        if (useSwitch && r > switchingDistance) {
            float t = (r-switchingDistance)/(cutoffDistance-switchingDistance);
@@ -366,8 +368,9 @@ void CpuNonbondedForce::calculateEwaldIxn(int numberOfAtoms, float* atomCoordina
        float alphaR    = alphaEwald * r;
 
 
-       float dEdR      = (float) (ONE_4PI_EPS0 * atomParameters[ii][QIndex] * atomParameters[jj][QIndex] * inverseR * inverseR * inverseR);
-                  dEdR      = (float) (dEdR * (erfc(alphaR) + 2 * alphaR * exp (- alphaR * alphaR) / SQRT_PI));
+       float chargeProd = ONE_4PI_EPS0*atomCoordinates[4*ii+3]*atomCoordinates[4*jj+3];
+       float dEdR      = (float) (chargeProd * inverseR * inverseR * inverseR);
+             dEdR      = (float) (dEdR * (erfc(alphaR) + 2 * alphaR * exp (- alphaR * alphaR) / SQRT_PI));
 
        float sig       = atomParameters[ii][SigIndex] +  atomParameters[jj][SigIndex];
        float sig2      = inverseR*sig;
@@ -383,15 +386,13 @@ void CpuNonbondedForce::calculateEwaldIxn(int numberOfAtoms, float* atomCoordina
 
        // accumulate forces
 
-       for (int kk = 0; kk < 3; kk++){
-          float force  = dEdR*deltaR[0][kk];
-          forces[4*ii+kk]   += force;
-          forces[4*jj+kk]   -= force;
-       }
+       __m128 result = _mm_mul_ps(deltaR, _mm_set1_ps(dEdR));
+       _mm_storeu_ps(forces+4*ii, _mm_add_ps(_mm_loadu_ps(forces+4*ii), result));
+       _mm_storeu_ps(forces+4*jj, _mm_sub_ps(_mm_loadu_ps(forces+4*jj), result));
 
        // accumulate energies
 
-       realSpaceEwaldEnergy        = (float) (ONE_4PI_EPS0*atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*inverseR*erfc(alphaR));
+       realSpaceEwaldEnergy        = (float) (chargeProd*inverseR*erfc(alphaR));
 
        totalVdwEnergy             += vdwEnergy;
        totalRealSpaceEwaldEnergy  += realSpaceEwaldEnergy;
@@ -410,26 +411,28 @@ void CpuNonbondedForce::calculateEwaldIxn(int numberOfAtoms, float* atomCoordina
                int ii = i;
                int jj = *iter;
 
-               float deltaR[2][ReferenceForce::LastDeltaRIndex];
-               getDeltaR(atomCoordinates+4*jj, atomCoordinates+4*ii, periodicBoxSize, deltaR[0], false);
-               float r         = deltaR[0][ReferenceForce::RIndex];
-               float inverseR  = one/(deltaR[0][ReferenceForce::RIndex]);
+               __m128 deltaR;
+               __m128 posI = _mm_loadu_ps(atomCoordinates+4*ii);
+               __m128 posJ = _mm_loadu_ps(atomCoordinates+4*jj);
+               float r2;
+               getDeltaR(posJ, posI, deltaR, r2, false);
+               float r         = sqrtf(r2);
+               float inverseR  = 1/r;
                float alphaR    = alphaEwald * r;
                if (erf(alphaR) > 1e-6) {
-                   float dEdR      = (float) (ONE_4PI_EPS0 * atomParameters[ii][QIndex] * atomParameters[jj][QIndex] * inverseR * inverseR * inverseR);
-                              dEdR      = (float) (dEdR * (erf(alphaR) - 2 * alphaR * exp (- alphaR * alphaR) / SQRT_PI));
+                   float chargeProd = ONE_4PI_EPS0*atomCoordinates[4*ii+3]*atomCoordinates[4*jj+3];
+                   float dEdR      = (float) (chargeProd * inverseR * inverseR * inverseR);
+                         dEdR      = (float) (dEdR * (erf(alphaR) - 2 * alphaR * exp (- alphaR * alphaR) / SQRT_PI));
 
                    // accumulate forces
 
-                   for (int kk = 0; kk < 3; kk++){
-                      float force  = dEdR*deltaR[0][kk];
-                      forces[4*ii+kk]   -= force;
-                      forces[4*jj+kk]   += force;
-                   }
+                   __m128 result = _mm_mul_ps(deltaR, _mm_set1_ps(dEdR));
+                   _mm_storeu_ps(forces+4*ii, _mm_add_ps(_mm_loadu_ps(forces+4*ii), result));
+                   _mm_storeu_ps(forces+4*jj, _mm_sub_ps(_mm_loadu_ps(forces+4*jj), result));
 
                    // accumulate energies
 
-                   realSpaceEwaldEnergy = (float) (ONE_4PI_EPS0*atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*inverseR*erf(alphaR));
+                   realSpaceEwaldEnergy = (float) (chargeProd*inverseR*erf(alphaR));
 
                    totalExclusionEnergy += realSpaceEwaldEnergy;
                }
@@ -470,10 +473,12 @@ void CpuNonbondedForce::calculatePairIxn(int numberOfAtoms, float* atomCoordinat
    }
    if (!includeDirect)
        return;
+   double directEnergy = 0;
+   double* energyPtr = (totalEnergy == NULL ? NULL : &directEnergy);
    if (cutoff) {
        for (int i = 0; i < (int) neighborList->size(); i++) {
            pair<int, int> pair = (*neighborList)[i];
-           calculateOneIxn(pair.first, pair.second, atomCoordinates, atomParameters, forces, totalEnergy);
+           calculateOneIxn(pair.first, pair.second, atomCoordinates, atomParameters, forces, energyPtr);
        }
    }
    else {
@@ -482,9 +487,11 @@ void CpuNonbondedForce::calculatePairIxn(int numberOfAtoms, float* atomCoordinat
 
           for (int jj = ii+1; jj < numberOfAtoms; jj++)
               if (exclusions[jj].find(ii) == exclusions[jj].end())
-                  calculateOneIxn(ii, jj, atomCoordinates, atomParameters, forces, totalEnergy);
+                  calculateOneIxn(ii, jj, atomCoordinates, atomParameters, forces, energyPtr);
        }
    }
+   if (totalEnergy != NULL)
+       *totalEnergy += (float) directEnergy;
 }
 
   /**---------------------------------------------------------------------------------------
@@ -502,90 +509,63 @@ void CpuNonbondedForce::calculatePairIxn(int numberOfAtoms, float* atomCoordinat
 
 void CpuNonbondedForce::calculateOneIxn(int ii, int jj, float* atomCoordinates,
                         float** atomParameters, float* forces,
-                        float* totalEnergy) const {
-
-    // ---------------------------------------------------------------------------------------
-
-    static const std::string methodName = "\nCpuNonbondedForce::calculateOneIxn";
-
-    // ---------------------------------------------------------------------------------------
-
-    // constants -- reduce Visual Studio warnings regarding conversions between float & double
-
-    static const float zero        =  0.0;
-    static const float one         =  1.0;
-    static const float two         =  2.0;
-    static const float three       =  3.0;
-    static const float six         =  6.0;
-    static const float twelve      = 12.0;
-    static const float oneM        = -1.0;
-
-    static const int threeI             = 3;
-
-    static const int LastAtomIndex      = 2;
-
-    float deltaR[2][ReferenceForce::LastDeltaRIndex];
-
+                        double* totalEnergy) const {
     // get deltaR, R2, and R between 2 atoms
 
-    getDeltaR(atomCoordinates+4*jj, atomCoordinates+4*ii, periodicBoxSize, deltaR[0], periodic);
-
-    float r2        = deltaR[0][ReferenceForce::R2Index];
-    float inverseR  = one/(deltaR[0][ReferenceForce::RIndex]);
+    __m128 deltaR;
+    __m128 posI = _mm_loadu_ps(atomCoordinates+4*ii);
+    __m128 posJ = _mm_loadu_ps(atomCoordinates+4*jj);
+    float r2;
+    getDeltaR(posJ, posI, deltaR, r2, periodic);
+    float r = sqrtf(r2);
+    float inverseR = 1/r;
     float switchValue = 1, switchDeriv = 0;
-    if (useSwitch) {
-        float r = deltaR[0][ReferenceForce::RIndex];
-        if (r > switchingDistance) {
-            float t = (r-switchingDistance)/(cutoffDistance-switchingDistance);
-            switchValue = 1+t*t*t*(-10+t*(15-t*6));
-            switchDeriv = t*t*(-30+t*(60-t*30))/(cutoffDistance-switchingDistance);
-        }
+    if (useSwitch && r > switchingDistance) {
+        float t = (r-switchingDistance)/(cutoffDistance-switchingDistance);
+        switchValue = 1+t*t*t*(-10+t*(15-t*6));
+        switchDeriv = t*t*(-30+t*(60-t*30))/(cutoffDistance-switchingDistance);
     }
     float sig       = atomParameters[ii][SigIndex] +  atomParameters[jj][SigIndex];
     float sig2      = inverseR*sig;
-               sig2     *= sig2;
+          sig2     *= sig2;
     float sig6      = sig2*sig2*sig2;
 
     float eps       = atomParameters[ii][EpsIndex]*atomParameters[jj][EpsIndex];
-    float dEdR      = switchValue*eps*(twelve*sig6 - six)*sig6;
+    float dEdR      = switchValue*eps*(12.0f*sig6 - 6.0f)*sig6;
+    float chargeProd = ONE_4PI_EPS0*atomCoordinates[4*ii+3]*atomCoordinates[4*jj+3];
     if (cutoff)
-        dEdR += (float) (ONE_4PI_EPS0*atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*(inverseR-2.0f*krf*r2));
+        dEdR += (float) (chargeProd*(inverseR-2.0f*krf*r2));
     else
-        dEdR += (float) (ONE_4PI_EPS0*atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*inverseR);
+        dEdR += (float) (chargeProd*inverseR);
     dEdR     *= inverseR*inverseR;
-    float energy = eps*(sig6-one)*sig6;
+    float energy = eps*(sig6-1.0f)*sig6;
     if (useSwitch) {
         dEdR -= energy*switchDeriv*inverseR;
         energy *= switchValue;
     }
-    if (cutoff)
-        energy += (float) (ONE_4PI_EPS0*atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*(inverseR+krf*r2-crf));
-    else
-        energy += (float) (ONE_4PI_EPS0*atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*inverseR);
-
-    // accumulate forces
-
-    for (int kk = 0; kk < 3; kk++){
-       float force  = dEdR*deltaR[0][kk];
-       forces[4*ii+kk]   += force;
-       forces[4*jj+kk]   -= force;
-    }
 
     // accumulate energies
 
-    if (totalEnergy)
-       *totalEnergy += energy;
+    if (totalEnergy) {
+        if (cutoff)
+            energy += (float) (chargeProd*(inverseR+krf*r2-crf));
+        else
+            energy += (float) (chargeProd*inverseR);
+        *totalEnergy += energy;
+    }
+
+    // accumulate forces
+
+    __m128 result = _mm_mul_ps(deltaR, _mm_set1_ps(dEdR));
+    _mm_storeu_ps(forces+4*ii, _mm_add_ps(_mm_loadu_ps(forces+4*ii), result));
+    _mm_storeu_ps(forces+4*jj, _mm_sub_ps(_mm_loadu_ps(forces+4*jj), result));
   }
 
-void CpuNonbondedForce::getDeltaR(const float* atomCoordinatesI, const float* atomCoordinatesJ, const float* boxSize, float* deltaR, bool periodic) const {
-    deltaR[ReferenceForce::XIndex]    = atomCoordinatesJ[0] - atomCoordinatesI[0];
-    deltaR[ReferenceForce::YIndex]    = atomCoordinatesJ[1] - atomCoordinatesI[1];
-    deltaR[ReferenceForce::ZIndex]    = atomCoordinatesJ[2] - atomCoordinatesI[2];
+void CpuNonbondedForce::getDeltaR(const __m128& posI, const __m128& posJ, __m128& deltaR, float& r2, bool periodic) const {
+    deltaR = _mm_sub_ps(posJ, posI);
     if (periodic) {
-        deltaR[ReferenceForce::XIndex] -= (float) (floor(deltaR[ReferenceForce::XIndex]/boxSize[0]+0.5)*boxSize[0]);
-        deltaR[ReferenceForce::YIndex] -= (float) (floor(deltaR[ReferenceForce::YIndex]/boxSize[1]+0.5)*boxSize[1]);
-        deltaR[ReferenceForce::ZIndex] -= (float) (floor(deltaR[ReferenceForce::ZIndex]/boxSize[2]+0.5)*boxSize[2]);
+        __m128 base = _mm_mul_ps(_mm_floor_ps(_mm_add_ps(_mm_mul_ps(deltaR, invBoxSize), half)), boxSize);
+        deltaR = _mm_sub_ps(deltaR, base);
     }
-    deltaR[ReferenceForce::R2Index]   = DOT3(deltaR, deltaR);
-    deltaR[ReferenceForce::RIndex]    = (float) SQRT(deltaR[ReferenceForce::R2Index]);
+    r2 = _mm_cvtss_f32(_mm_dp_ps(deltaR, deltaR, 0x71));
 }

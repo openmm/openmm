@@ -93,28 +93,28 @@ void testEwaldPME(bool includeExceptions) {
         }
     }
 
-//    (1)  Check whether the Reference and CUDA platforms agree when using Ewald Method
+//    (1)  Check whether the Reference and CPU platforms agree when using Ewald Method
 
     VerletIntegrator integrator1(0.01);
     VerletIntegrator integrator2(0.01);
-    Context cuContext(system, integrator1, platform);
+    Context cpuContext(system, integrator1, platform);
     Context referenceContext(system, integrator2, reference);
-    cuContext.setPositions(positions);
+    cpuContext.setPositions(positions);
     referenceContext.setPositions(positions);
-    State cuState = cuContext.getState(State::Forces | State::Energy);
+    State cpuState = cpuContext.getState(State::Forces | State::Energy);
     State referenceState = referenceContext.getState(State::Forces | State::Energy);
     tol = 1e-2;
     for (int i = 0; i < numParticles; i++) {
-        ASSERT_EQUAL_VEC(referenceState.getForces()[i], cuState.getForces()[i], tol);
+        ASSERT_EQUAL_VEC(referenceState.getForces()[i], cpuState.getForces()[i], tol);
     }
     tol = 1e-5;
-    ASSERT_EQUAL_TOL(referenceState.getPotentialEnergy(), cuState.getPotentialEnergy(), tol);
+    ASSERT_EQUAL_TOL(referenceState.getPotentialEnergy(), cpuState.getPotentialEnergy(), tol);
 
-//    (2) Check whether Ewald method in CUDA is self-consistent
+//    (2) Check whether Ewald method in CPU is self-consistent
 
     double norm = 0.0;
     for (int i = 0; i < numParticles; ++i) {
-        Vec3 f = cuState.getForces()[i];
+        Vec3 f = cpuState.getForces()[i];
         norm += f[0]*f[0] + f[1]*f[1] + f[2]*f[2];
     }
 
@@ -123,38 +123,38 @@ void testEwaldPME(bool includeExceptions) {
     double step = delta/norm;
     for (int i = 0; i < numParticles; ++i) {
         Vec3 p = positions[i];
-        Vec3 f = cuState.getForces()[i];
+        Vec3 f = cpuState.getForces()[i];
         positions[i] = Vec3(p[0]-f[0]*step, p[1]-f[1]*step, p[2]-f[2]*step);
     }
     VerletIntegrator integrator3(0.01);
-    Context cuContext2(system, integrator3, platform);
-    cuContext2.setPositions(positions);
+    Context cpuContext2(system, integrator3, platform);
+    cpuContext2.setPositions(positions);
 
     tol = 1e-2;
-    State cuState2 = cuContext2.getState(State::Energy);
-    ASSERT_EQUAL_TOL(norm, (cuState2.getPotentialEnergy()-cuState.getPotentialEnergy())/delta, tol)
+    State cpuState2 = cpuContext2.getState(State::Energy);
+    ASSERT_EQUAL_TOL(norm, (cpuState2.getPotentialEnergy()-cpuState.getPotentialEnergy())/delta, tol)
 
-//    (3)  Check whether the Reference and CUDA platforms agree when using PME
+//    (3)  Check whether the Reference and CPU platforms agree when using PME
 
     nonbonded->setNonbondedMethod(NonbondedForce::PME);
-    cuContext.reinitialize();
+    cpuContext.reinitialize();
     referenceContext.reinitialize();
-    cuContext.setPositions(positions);
+    cpuContext.setPositions(positions);
     referenceContext.setPositions(positions);
-    cuState = cuContext.getState(State::Forces | State::Energy);
+    cpuState = cpuContext.getState(State::Forces | State::Energy);
     referenceState = referenceContext.getState(State::Forces | State::Energy);
     tol = 1e-2;
     for (int i = 0; i < numParticles; i++) {
-        ASSERT_EQUAL_VEC(referenceState.getForces()[i], cuState.getForces()[i], tol);
+        ASSERT_EQUAL_VEC(referenceState.getForces()[i], cpuState.getForces()[i], tol);
     }
     tol = 1e-5;
-    ASSERT_EQUAL_TOL(referenceState.getPotentialEnergy(), cuState.getPotentialEnergy(), tol);
+    ASSERT_EQUAL_TOL(referenceState.getPotentialEnergy(), cpuState.getPotentialEnergy(), tol);
 
-//    (4) Check whether PME method in CUDA is self-consistent
+//    (4) Check whether PME method in CPU is self-consistent
 
     norm = 0.0;
     for (int i = 0; i < numParticles; ++i) {
-        Vec3 f = cuState.getForces()[i];
+        Vec3 f = cpuState.getForces()[i];
         norm += f[0]*f[0] + f[1]*f[1] + f[2]*f[2];
     }
 
@@ -162,16 +162,16 @@ void testEwaldPME(bool includeExceptions) {
     step = delta/norm;
     for (int i = 0; i < numParticles; ++i) {
         Vec3 p = positions[i];
-        Vec3 f = cuState.getForces()[i];
+        Vec3 f = cpuState.getForces()[i];
         positions[i] = Vec3(p[0]-f[0]*step, p[1]-f[1]*step, p[2]-f[2]*step);
     }
     VerletIntegrator integrator4(0.01);
-    Context cuContext3(system, integrator4, platform);
-    cuContext3.setPositions(positions);
+    Context cpuContext3(system, integrator4, platform);
+    cpuContext3.setPositions(positions);
 
     tol = 1e-2;
-    State cuState3 = cuContext3.getState(State::Energy);
-    ASSERT_EQUAL_TOL(norm, (cuState3.getPotentialEnergy()-cuState.getPotentialEnergy())/delta, tol)
+    State cpuState3 = cpuContext3.getState(State::Energy);
+    ASSERT_EQUAL_TOL(norm, (cpuState3.getPotentialEnergy()-cpuState.getPotentialEnergy())/delta, tol)
 }
 
 void testEwald2Ions() {
