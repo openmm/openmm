@@ -63,9 +63,14 @@ static RealVec& extractBoxSize(ContextImpl& context) {
 }
 
 CpuCalcNonbondedForceKernel::~CpuCalcNonbondedForceKernel() {
-    delete bonded14IndexArray; // Do this properly
-    delete bonded14ParamArray; // Do this properly
-    delete particleParamArray; // Do this properly
+    if (bonded14ParamArray != NULL) {
+        for (int i = 0; i < num14; i++) {
+            delete[] bonded14IndexArray[i];
+            delete[] bonded14ParamArray[i];
+        }
+        delete bonded14IndexArray;
+        delete bonded14ParamArray;
+    }
 }
 
 void CpuCalcNonbondedForceKernel::initialize(const System& system, const NonbondedForce& force) {
@@ -96,16 +101,14 @@ void CpuCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
     bonded14ParamArray = new double*[num14];
     for (int i = 0; i < num14; i++)
         bonded14ParamArray[i] = new double[3];
-    particleParamArray = new float*[numParticles];
-    for (int i = 0; i < numParticles; i++)
-        particleParamArray[i] = new float[3];
+    particleParams.resize(numParticles);
+    double sumSquaredCharges = 0.0;
     for (int i = 0; i < numParticles; ++i) {
         double charge, radius, depth;
         force.getParticleParameters(i, charge, radius, depth);
         posq[4*i+3] = (float) charge;
-        particleParamArray[i][0] = (float) (0.5*radius);
-        particleParamArray[i][1] = (float) (2.0*sqrt(depth));
-        particleParamArray[i][2] = (float) (charge);
+        particleParams[i] = make_pair((float) (0.5*radius), (float) (2.0*sqrt(depth)));
+        sumSquaredCharges += charge*charge;
     }
     for (int i = 0; i < num14; ++i) {
         int particle1, particle2;
@@ -135,6 +138,10 @@ void CpuCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
         NonbondedForceImpl::calcPMEParameters(system, force, alpha, gridSize[0], gridSize[1], gridSize[2]);
         ewaldAlpha = alpha;
     }
+    if (nonbondedMethod == Ewald || nonbondedMethod == PME)
+        ewaldSelfEnergy = -ONE_4PI_EPS0*ewaldAlpha*sumSquaredCharges/sqrt(M_PI);
+    else
+        ewaldSelfEnergy = 0.0;
     rfDielectric = force.getReactionFieldDielectric();
     if (force.getUseDispersionCorrection())
         dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(system, force);
@@ -147,7 +154,7 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
     vector<RealVec>& forceData = extractForces(context);
     RealVec boxSize = extractBoxSize(context);
     float floatBoxSize[3] = {(float) boxSize[0], (float) boxSize[1], (float) boxSize[2]};
-    double energy = 0;
+    double energy = ewaldSelfEnergy;
     CpuNonbondedForce clj;
     bool periodic = (nonbondedMethod == CutoffPeriodic);
     bool ewald  = (nonbondedMethod == Ewald);
@@ -186,9 +193,12 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
         clj.setUsePME(ewaldAlpha, gridSize);
     if (useSwitchingFunction)
         clj.setUseSwitchingFunction(switchingDistance);
-    float directEnergy = 0;
-    clj.calculatePairIxn(numParticles, &posq[0], particleParamArray, exclusions, 0, &forces[0], includeEnergy ? &directEnergy : NULL, includeDirect, includeReciprocal);
-    energy += directEnergy;
+    float nonbondedEnergy = 0;
+    if (includeDirect)
+        clj.calculateDirectIxn(numParticles, &posq[0], particleParams, exclusions, 0, &forces[0], includeEnergy ? &nonbondedEnergy : NULL);
+    if (includeReciprocal)
+        clj.calculateReciprocalIxn(numParticles, &posq[0], posData, particleParams, exclusions, 0, forceData, includeEnergy ? &nonbondedEnergy : NULL);
+    energy += nonbondedEnergy;
     for (int i = 0; i < numParticles; i++) {
         forceData[i][0] += forces[4*i];
         forceData[i][1] += forces[4*i+1];
@@ -220,13 +230,18 @@ void CpuCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, 
 
     // Record the values.
 
+    double sumSquaredCharges = 0.0;
     for (int i = 0; i < numParticles; ++i) {
         double charge, radius, depth;
         force.getParticleParameters(i, charge, radius, depth);
-        particleParamArray[i][0] = (float) (0.5*radius);
-        particleParamArray[i][1] = (float) (2.0*sqrt(depth));
-        particleParamArray[i][2] = (float) (charge);
+        posq[4*i+3] = (float) charge;
+        particleParams[i] = make_pair((float) (0.5*radius), (float) (2.0*sqrt(depth)));
+        sumSquaredCharges += charge*charge;
     }
+    if (nonbondedMethod == Ewald || nonbondedMethod == PME)
+        ewaldSelfEnergy = -ONE_4PI_EPS0*ewaldAlpha*sumSquaredCharges/sqrt(M_PI);
+    else
+        ewaldSelfEnergy = 0.0;
     for (int i = 0; i < num14; ++i) {
         int particle1, particle2;
         double charge, radius, depth;

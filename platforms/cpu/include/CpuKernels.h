@@ -44,7 +44,7 @@ namespace OpenMM {
  */
 class CpuCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
 public:
-    CpuCalcNonbondedForceKernel(std::string name, const Platform& platform) : CalcNonbondedForceKernel(name, platform) {
+    CpuCalcNonbondedForceKernel(std::string name, const Platform& platform) : CalcNonbondedForceKernel(name, platform), bonded14IndexArray(NULL), bonded14ParamArray(NULL) {
     }
     ~CpuCalcNonbondedForceKernel();
     /**
@@ -75,12 +75,12 @@ public:
 private:
     int numParticles, num14;
     int **bonded14IndexArray;
-    float **particleParamArray;
     double **bonded14ParamArray;
-    double nonbondedCutoff, switchingDistance, rfDielectric, ewaldAlpha, dispersionCoefficient;
+    double nonbondedCutoff, switchingDistance, rfDielectric, ewaldAlpha, ewaldSelfEnergy, dispersionCoefficient;
     int kmax[3], gridSize[3];
     bool useSwitchingFunction;
     std::vector<std::set<int> > exclusions;
+    std::vector<std::pair<float, float> > particleParams;
     std::vector<float> posq;
     std::vector<float> forces;
     NonbondedMethod nonbondedMethod;

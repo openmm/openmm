@@ -49,30 +49,7 @@ class CpuNonbondedForce {
       int numRx, numRy, numRz;
       int meshDim[3];
       __m128 boxSize, invBoxSize, half;
-
-      // parameter indices
-
-      static const int SigIndex = 0;
-      static const int EpsIndex = 1;
-      static const int   QIndex = 2;
-            
-      /**---------------------------------------------------------------------------------------
-      
-         Calculate LJ Coulomb pair ixn between two atoms
-      
-         @param atom1            the index of the first atom
-         @param atom2            the index of the second atom
-         @param atomCoordinates  atom coordinates
-         @param atomParameters   atom parameters (charges, c6, c12, ...)     atomParameters[atomIndex][paramterIndex]
-         @param forces           force array (forces added)
-         @param totalEnergy      total energy
-            
-         --------------------------------------------------------------------------------------- */
-          
-      void calculateOneIxn( int atom1, int atom2, float* atomCoordinates,
-                            float** atomParameters, float* forces,
-                            double* totalEnergy ) const;
-
+      static float TWO_OVER_SQRT_PI;
 
    public:
 
@@ -150,54 +127,86 @@ class CpuNonbondedForce {
          --------------------------------------------------------------------------------------- */
       
       void setUsePME(float alpha, int meshSize[3]);
+
+      /**---------------------------------------------------------------------------------------
+      
+         Calculate Ewald ixn
+      
+         @param numberOfAtoms    number of atoms
+         @param posq             atom coordinates and charges
+         @param atomCoordinates  atom coordinates (in format needed by PME)
+         @param atomParameters   atom parameters (sigma/2, 2*sqrt(epsilon))
+         @param exclusions       atom exclusion indices
+                                 exclusions[atomIndex] contains the list of exclusions for that atom
+         @param fixedParameters  non atom parameters (not currently used)
+         @param forces           force array (forces added)
+         @param totalEnergy      total energy
+            
+         --------------------------------------------------------------------------------------- */
+          
+      void calculateReciprocalIxn(int numberOfAtoms, float* posq, std::vector<OpenMM::RealVec>& atomCoordinates,
+                            const std::vector<std::pair<float, float> >& atomParameters, const std::vector<std::set<int> >& exclusions,
+                            float* fixedParameters, std::vector<OpenMM::RealVec>& forces, float* totalEnergy) const;
       
       /**---------------------------------------------------------------------------------------
       
          Calculate LJ Coulomb pair ixn
       
          @param numberOfAtoms    number of atoms
-         @param atomCoordinates  atom coordinates
-         @param atomParameters   atom parameters (charges, c6, c12, ...)     atomParameters[atomIndex][paramterIndex]
+         @param posq             atom coordinates and charges
+         @param atomParameters   atom parameters (sigma/2, 2*sqrt(epsilon))
          @param exclusions       atom exclusion indices
                                  exclusions[atomIndex] contains the list of exclusions for that atom
          @param fixedParameters  non atom parameters (not currently used)
          @param forces           force array (forces added)
          @param totalEnergy      total energy
-         @param includeDirect      true if direct space interactions should be included
-         @param includeReciprocal  true if reciprocal space interactions should be included
       
          --------------------------------------------------------------------------------------- */
           
-      void calculatePairIxn(int numberOfAtoms, float* atomCoordinates,
-                            float** atomParameters, std::vector<std::set<int> >& exclusions,
-                            float* fixedParameters, float* forces,
-                            float* totalEnergy, bool includeDirect, bool includeReciprocal) const;
+      void calculateDirectIxn(int numberOfAtoms, float* posq,
+                            const std::vector<std::pair<float, float> >& atomParameters, const std::vector<std::set<int> >& exclusions,
+                            float* fixedParameters, float* forces, float* totalEnergy) const;
 
 private:
+            
       /**---------------------------------------------------------------------------------------
       
-         Calculate Ewald ixn
+         Calculate LJ Coulomb pair ixn between two atoms
       
-         @param numberOfAtoms    number of atoms
-         @param atomCoordinates  atom coordinates
-         @param atomParameters   atom parameters (charges, c6, c12, ...)     atomParameters[atomIndex][paramterIndex]
-         @param exclusions       atom exclusion indices
-                                 exclusions[atomIndex] contains the list of exclusions for that atom
-         @param fixedParameters  non atom parameters (not currently used)
+         @param atom1            the index of the first atom
+         @param atom2            the index of the second atom
+         @param posq             atom coordinates and charges
+         @param atomParameters   atom parameters (sigma/2, 2*sqrt(epsilon))
          @param forces           force array (forces added)
          @param totalEnergy      total energy
-         @param includeDirect      true if direct space interactions should be included
-         @param includeReciprocal  true if reciprocal space interactions should be included
             
          --------------------------------------------------------------------------------------- */
           
-      void calculateEwaldIxn(int numberOfAtoms, float* atomCoordinates,
-                            float** atomParameters, std::vector<std::set<int> >& exclusions,
-                            float* fixedParameters, float* forces,
-                            float* totalEnergy, bool includeDirect, bool includeReciprocal) const;
+      void calculateOneIxn( int atom1, int atom2, float* posq,
+                            const std::vector<std::pair<float, float> >& atomParameters, float* forces,
+                            double* totalEnergy ) const;
+            
+      /**---------------------------------------------------------------------------------------
+      
+         Calculate LJ Coulomb pair ixn between two atoms
+      
+         @param atom1            the index of the first atom
+         @param atom2            the index of the second atom
+         @param posq             atom coordinates and charges
+         @param atomParameters   atom parameters (sigma/2, 2*sqrt(epsilon))
+         @param forces           force array (forces added)
+         @param totalEnergy      total energy
+            
+         --------------------------------------------------------------------------------------- */
+          
+      void calculateOneEwaldIxn( int atom1, int atom2, float* posq,
+                            const std::vector<std::pair<float, float> >& atomParameters, float* forces,
+                            double* totalEnergy ) const;
+
       
       void getDeltaR(const __m128& posI, const __m128& posJ, __m128& deltaR, float& r2, bool periodic) const;
 
+      static float erfcApprox(float x);
 };
 
 // ---------------------------------------------------------------------------------------
