@@ -62,6 +62,26 @@ static RealVec& extractBoxSize(ContextImpl& context) {
     return *(RealVec*) data->periodicBoxSize;
 }
 
+class CpuCalcNonbondedForceKernel::PmeIO : public CalcPmeReciprocalForceKernel::IO {
+public:
+    PmeIO(float* posq, float* force, int numParticles) : posq(posq), force(force), numParticles(numParticles) {
+    }
+    float* getPosq() {
+        return posq;
+    }
+    void setForce(float* f) {
+        for (int i = 0; i < numParticles; i++) {
+            force[4*i] += f[4*i];
+            force[4*i+1] += f[4*i+1];
+            force[4*i+2] += f[4*i+2];
+        }
+    }
+private:
+    float* posq;
+    float* force;
+    int numParticles;
+};
+
 CpuCalcNonbondedForceKernel::~CpuCalcNonbondedForceKernel() {
     if (bonded14ParamArray != NULL) {
         for (int i = 0; i < num14; i++) {
@@ -110,6 +130,9 @@ void CpuCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
         particleParams[i] = make_pair((float) (0.5*radius), (float) (2.0*sqrt(depth)));
         sumSquaredCharges += charge*charge;
     }
+    
+    // Recorded exception parameters.
+    
     for (int i = 0; i < num14; ++i) {
         int particle1, particle2;
         double charge, radius, depth;
@@ -120,6 +143,9 @@ void CpuCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
         bonded14ParamArray[i][1] = static_cast<RealOpenMM>(4.0*depth);
         bonded14ParamArray[i][2] = static_cast<RealOpenMM>(charge);
     }
+    
+    // Record other parameters.
+    
     nonbondedMethod = CalcNonbondedForceKernel::NonbondedMethod(force.getNonbondedMethod());
     nonbondedCutoff = force.getCutoffDistance();
     if (nonbondedMethod == NoCutoff)
@@ -150,6 +176,22 @@ void CpuCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
 }
 
 double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy, bool includeDirect, bool includeReciprocal) {
+    if (!hasInitializedPme) {
+        hasInitializedPme = true;
+        useOptimizedPme = false;
+        if (nonbondedMethod == PME) {
+            // If available, use the optimized PME implementation.
+
+            try {
+                optimizedPme = getPlatform().createKernel(CalcPmeReciprocalForceKernel::Name(), context);
+                optimizedPme.getAs<CalcPmeReciprocalForceKernel>().initialize(gridSize[0], gridSize[1], gridSize[2], numParticles, ewaldAlpha);
+                useOptimizedPme = true;
+            }
+            catch (OpenMMException& ex) {
+                // The CPU PME plugin isn't available.
+            }
+        }
+    }
     vector<RealVec>& posData = extractPositions(context);
     vector<RealVec>& forceData = extractForces(context);
     RealVec boxSize = extractBoxSize(context);
@@ -196,8 +238,16 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
     float nonbondedEnergy = 0;
     if (includeDirect)
         clj.calculateDirectIxn(numParticles, &posq[0], particleParams, exclusions, 0, &forces[0], includeEnergy ? &nonbondedEnergy : NULL);
-    if (includeReciprocal)
-        clj.calculateReciprocalIxn(numParticles, &posq[0], posData, particleParams, exclusions, 0, forceData, includeEnergy ? &nonbondedEnergy : NULL);
+    if (includeReciprocal) {
+        if (useOptimizedPme) {
+            PmeIO io(&posq[0], &forces[0], numParticles);
+            Vec3 periodicBoxSize(boxSize[0], boxSize[1], boxSize[2]);
+            optimizedPme.getAs<CalcPmeReciprocalForceKernel>().beginComputation(io, periodicBoxSize, includeEnergy);
+            optimizedPme.getAs<CalcPmeReciprocalForceKernel>().finishComputation(io);
+        }
+        else
+            clj.calculateReciprocalIxn(numParticles, &posq[0], posData, particleParams, exclusions, 0, forceData, includeEnergy ? &nonbondedEnergy : NULL);
+    }
     energy += nonbondedEnergy;
     for (int i = 0; i < numParticles; i++) {
         forceData[i][0] += forces[4*i];
