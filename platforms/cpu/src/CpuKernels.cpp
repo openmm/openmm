@@ -30,7 +30,6 @@
  * -------------------------------------------------------------------------- */
 
 #include "CpuKernels.h"
-#include "CpuNonbondedForce.h"
 #include "ReferenceBondForce.h"
 #include "ReferenceLJCoulomb14.h"
 #include "openmm/Context.h"
@@ -197,7 +196,6 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
     RealVec boxSize = extractBoxSize(context);
     float floatBoxSize[3] = {(float) boxSize[0], (float) boxSize[1], (float) boxSize[2]};
     double energy = ewaldSelfEnergy;
-    CpuNonbondedForce clj;
     bool periodic = (nonbondedMethod == CutoffPeriodic);
     bool ewald  = (nonbondedMethod == Ewald);
     bool pme  = (nonbondedMethod == PME);
@@ -221,23 +219,23 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
         forces[i] = 0.0f;
     if (nonbondedMethod != NoCutoff) {
         neighborList.computeNeighborList(numParticles, posq, exclusions, floatBoxSize, periodic || ewald || pme, nonbondedCutoff);
-        clj.setUseCutoff(nonbondedCutoff, neighborList.getNeighbors(), rfDielectric);
+        nonbonded.setUseCutoff(nonbondedCutoff, neighborList.getNeighbors(), rfDielectric);
     }
     if (periodic || ewald || pme) {
         double minAllowedSize = 1.999999*nonbondedCutoff;
         if (boxSize[0] < minAllowedSize || boxSize[1] < minAllowedSize || boxSize[2] < minAllowedSize)
             throw OpenMMException("The periodic box size has decreased to less than twice the nonbonded cutoff.");
-        clj.setPeriodic(floatBoxSize);
+        nonbonded.setPeriodic(floatBoxSize);
     }
     if (ewald)
-        clj.setUseEwald(ewaldAlpha, kmax[0], kmax[1], kmax[2]);
+        nonbonded.setUseEwald(ewaldAlpha, kmax[0], kmax[1], kmax[2]);
     if (pme)
-        clj.setUsePME(ewaldAlpha, gridSize);
+        nonbonded.setUsePME(ewaldAlpha, gridSize);
     if (useSwitchingFunction)
-        clj.setUseSwitchingFunction(switchingDistance);
+        nonbonded.setUseSwitchingFunction(switchingDistance);
     float nonbondedEnergy = 0;
     if (includeDirect)
-        clj.calculateDirectIxn(numParticles, &posq[0], particleParams, exclusions, 0, &forces[0], includeEnergy ? &nonbondedEnergy : NULL);
+        nonbonded.calculateDirectIxn(numParticles, &posq[0], particleParams, exclusions, 0, &forces[0], includeEnergy ? &nonbondedEnergy : NULL);
     if (includeReciprocal) {
         if (useOptimizedPme) {
             PmeIO io(&posq[0], &forces[0], numParticles);
@@ -246,7 +244,7 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
             optimizedPme.getAs<CalcPmeReciprocalForceKernel>().finishComputation(io);
         }
         else
-            clj.calculateReciprocalIxn(numParticles, &posq[0], posData, particleParams, exclusions, 0, forceData, includeEnergy ? &nonbondedEnergy : NULL);
+            nonbonded.calculateReciprocalIxn(numParticles, &posq[0], posData, particleParams, exclusions, 0, forceData, includeEnergy ? &nonbondedEnergy : NULL);
     }
     energy += nonbondedEnergy;
     for (int i = 0; i < numParticles; i++) {

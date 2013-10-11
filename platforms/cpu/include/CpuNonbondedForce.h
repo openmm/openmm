@@ -26,6 +26,7 @@
 #define OPENMM_CPU_NONBONDED_FORCE_H__
 
 #include "ReferencePairIxn.h"
+#include <pthread.h>
 #include <set>
 #include <utility>
 #include <vector>
@@ -33,25 +34,8 @@
 // ---------------------------------------------------------------------------------------
 
 class CpuNonbondedForce {
-
-   private:
-       
-      bool cutoff;
-      bool useSwitch;
-      bool periodic;
-      bool ewald;
-      bool pme;
-      const std::vector<std::pair<int, int> >* neighborList;
-      float periodicBoxSize[3];
-      float cutoffDistance, switchingDistance;
-      float krf, crf;
-      float alphaEwald;
-      int numRx, numRy, numRz;
-      int meshDim[3];
-      __m128 boxSize, invBoxSize, half;
-      static float TWO_OVER_SQRT_PI;
-
-   public:
+    public:
+        class ThreadData;
 
       /**---------------------------------------------------------------------------------------
       
@@ -59,7 +43,7 @@ class CpuNonbondedForce {
       
          --------------------------------------------------------------------------------------- */
 
-       CpuNonbondedForce( );
+       CpuNonbondedForce();
 
       /**---------------------------------------------------------------------------------------
       
@@ -67,7 +51,7 @@ class CpuNonbondedForce {
       
          --------------------------------------------------------------------------------------- */
 
-       ~CpuNonbondedForce( );
+       ~CpuNonbondedForce();
 
       /**---------------------------------------------------------------------------------------
       
@@ -79,7 +63,7 @@ class CpuNonbondedForce {
       
          --------------------------------------------------------------------------------------- */
       
-      void setUseCutoff( float distance, const std::vector<std::pair<int, int> >& neighbors, float solventDielectric );
+      void setUseCutoff(float distance, const std::vector<std::pair<int, int> >& neighbors, float solventDielectric);
 
       /**---------------------------------------------------------------------------------------
       
@@ -89,7 +73,7 @@ class CpuNonbondedForce {
       
          --------------------------------------------------------------------------------------- */
       
-      void setUseSwitchingFunction( float distance );
+      void setUseSwitchingFunction(float distance);
       
       /**---------------------------------------------------------------------------------------
       
@@ -101,7 +85,7 @@ class CpuNonbondedForce {
       
          --------------------------------------------------------------------------------------- */
       
-      void setPeriodic( float* periodicBoxSize );
+      void setPeriodic(float* periodicBoxSize);
        
       /**---------------------------------------------------------------------------------------
       
@@ -165,9 +149,40 @@ class CpuNonbondedForce {
           
       void calculateDirectIxn(int numberOfAtoms, float* posq,
                             const std::vector<std::pair<float, float> >& atomParameters, const std::vector<std::set<int> >& exclusions,
-                            float* fixedParameters, float* forces, float* totalEnergy) const;
+                            float* fixedParameters, float* forces, float* totalEnergy);
+
+    /**
+     * This routine contains the code executed by each thread.
+     */
+    void runThread(int index, std::vector<float>& threadForce, double& threadEnergy);
 
 private:
+        bool cutoff;
+        bool useSwitch;
+        bool periodic;
+        bool ewald;
+        bool pme;
+        const std::vector<std::pair<int, int> >* neighborList;
+        float periodicBoxSize[3];
+        float cutoffDistance, switchingDistance;
+        float krf, crf;
+        float alphaEwald;
+        int numRx, numRy, numRz;
+        int meshDim[3];
+        __m128 boxSize, invBoxSize, half;
+        bool isDeleted;
+        int numThreads, waitCount;
+        std::vector<pthread_t> thread;
+        std::vector<ThreadData*> threadData;
+        pthread_cond_t startCondition, endCondition;
+        pthread_mutex_t lock;
+        // The following variables are used to make information accessible to the individual threads.
+        float* posq;
+        std::vector<std::pair<float, float> > atomParameters;        
+        std::vector<std::set<int> > exclusions;
+        bool includeEnergy;
+
+        static float TWO_OVER_SQRT_PI;
             
       /**---------------------------------------------------------------------------------------
       
@@ -175,16 +190,12 @@ private:
       
          @param atom1            the index of the first atom
          @param atom2            the index of the second atom
-         @param posq             atom coordinates and charges
-         @param atomParameters   atom parameters (sigma/2, 2*sqrt(epsilon))
          @param forces           force array (forces added)
          @param totalEnergy      total energy
             
          --------------------------------------------------------------------------------------- */
           
-      void calculateOneIxn( int atom1, int atom2, float* posq,
-                            const std::vector<std::pair<float, float> >& atomParameters, float* forces,
-                            double* totalEnergy ) const;
+      void calculateOneIxn(int atom1, int atom2, float* forces, double* totalEnergy);
             
       /**---------------------------------------------------------------------------------------
       
@@ -192,16 +203,12 @@ private:
       
          @param atom1            the index of the first atom
          @param atom2            the index of the second atom
-         @param posq             atom coordinates and charges
-         @param atomParameters   atom parameters (sigma/2, 2*sqrt(epsilon))
          @param forces           force array (forces added)
          @param totalEnergy      total energy
             
          --------------------------------------------------------------------------------------- */
           
-      void calculateOneEwaldIxn( int atom1, int atom2, float* posq,
-                            const std::vector<std::pair<float, float> >& atomParameters, float* forces,
-                            double* totalEnergy ) const;
+      void calculateOneEwaldIxn(int atom1, int atom2, float* forces, double* totalEnergy);
 
       
       void getDeltaR(const __m128& posI, const __m128& posJ, __m128& deltaR, float& r2, bool periodic) const;

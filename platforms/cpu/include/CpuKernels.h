@@ -34,6 +34,7 @@
 
 #include "CpuPlatform.h"
 #include "CpuNeighborList.h"
+#include "CpuNonbondedForce.h"
 #include "openmm/kernels.h"
 #include "openmm/System.h"
 
@@ -87,6 +88,7 @@ private:
     std::vector<float> forces;
     NonbondedMethod nonbondedMethod;
     CpuNeighborList neighborList;
+    CpuNonbondedForce nonbonded;
     Kernel optimizedPme;
 };
 
