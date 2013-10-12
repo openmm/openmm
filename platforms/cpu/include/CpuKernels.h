@@ -86,6 +86,7 @@ private:
     std::vector<std::pair<float, float> > particleParams;
     std::vector<float> posq;
     std::vector<float> forces;
+    std::vector<RealVec> lastPositions;
     NonbondedMethod nonbondedMethod;
     CpuNeighborList neighborList;
     CpuNonbondedForce nonbonded;

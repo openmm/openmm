@@ -122,7 +122,6 @@ class CpuNonbondedForce {
          @param atomParameters   atom parameters (sigma/2, 2*sqrt(epsilon))
          @param exclusions       atom exclusion indices
                                  exclusions[atomIndex] contains the list of exclusions for that atom
-         @param fixedParameters  non atom parameters (not currently used)
          @param forces           force array (forces added)
          @param totalEnergy      total energy
             
@@ -130,7 +129,7 @@ class CpuNonbondedForce {
           
       void calculateReciprocalIxn(int numberOfAtoms, float* posq, std::vector<OpenMM::RealVec>& atomCoordinates,
                             const std::vector<std::pair<float, float> >& atomParameters, const std::vector<std::set<int> >& exclusions,
-                            float* fixedParameters, std::vector<OpenMM::RealVec>& forces, float* totalEnergy) const;
+                            std::vector<OpenMM::RealVec>& forces, float* totalEnergy) const;
       
       /**---------------------------------------------------------------------------------------
       
@@ -141,15 +140,13 @@ class CpuNonbondedForce {
          @param atomParameters   atom parameters (sigma/2, 2*sqrt(epsilon))
          @param exclusions       atom exclusion indices
                                  exclusions[atomIndex] contains the list of exclusions for that atom
-         @param fixedParameters  non atom parameters (not currently used)
          @param forces           force array (forces added)
          @param totalEnergy      total energy
       
          --------------------------------------------------------------------------------------- */
           
-      void calculateDirectIxn(int numberOfAtoms, float* posq,
-                            const std::vector<std::pair<float, float> >& atomParameters, const std::vector<std::set<int> >& exclusions,
-                            float* fixedParameters, float* forces, float* totalEnergy);
+      void calculateDirectIxn(int numberOfAtoms, float* posq, const std::vector<std::pair<float, float> >& atomParameters,
+            const std::vector<std::set<int> >& exclusions, float* forces, float* totalEnergy);
 
     /**
      * This routine contains the code executed by each thread.

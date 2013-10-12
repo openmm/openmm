@@ -172,6 +172,7 @@ void CpuCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
         dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(system, force);
     else
         dispersionCoefficient = 0.0;
+    lastPositions.resize(numParticles, Vec3(1e10, 1e10, 1e10));
 }
 
 double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy, bool includeDirect, bool includeReciprocal) {
@@ -218,7 +219,21 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
     for (int i = 0; i < 4*numParticles; i++)
         forces[i] = 0.0f;
     if (nonbondedMethod != NoCutoff) {
-        neighborList.computeNeighborList(numParticles, posq, exclusions, floatBoxSize, periodic || ewald || pme, nonbondedCutoff);
+        // Determine whether we need to recompute the neighbor list.
+        
+        double padding = 0.1*nonbondedCutoff;
+        bool needRecompute = false;
+        for (int i = 0; i < numParticles; i++) {
+            RealVec delta = posData[i]-lastPositions[i];
+            if (delta.dot(delta) > 0.25*padding*padding) {
+                needRecompute = true;
+                break;
+            }
+        }
+        if (needRecompute) {
+            neighborList.computeNeighborList(numParticles, posq, exclusions, floatBoxSize, periodic || ewald || pme, nonbondedCutoff+padding);
+            lastPositions = posData;
+        }
         nonbonded.setUseCutoff(nonbondedCutoff, neighborList.getNeighbors(), rfDielectric);
     }
     if (periodic || ewald || pme) {
@@ -235,7 +250,7 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
         nonbonded.setUseSwitchingFunction(switchingDistance);
     float nonbondedEnergy = 0;
     if (includeDirect)
-        nonbonded.calculateDirectIxn(numParticles, &posq[0], particleParams, exclusions, 0, &forces[0], includeEnergy ? &nonbondedEnergy : NULL);
+        nonbonded.calculateDirectIxn(numParticles, &posq[0], particleParams, exclusions, &forces[0], includeEnergy ? &nonbondedEnergy : NULL);
     if (includeReciprocal) {
         if (useOptimizedPme) {
             PmeIO io(&posq[0], &forces[0], numParticles);
@@ -244,7 +259,7 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
             optimizedPme.getAs<CalcPmeReciprocalForceKernel>().finishComputation(io);
         }
         else
-            nonbonded.calculateReciprocalIxn(numParticles, &posq[0], posData, particleParams, exclusions, 0, forceData, includeEnergy ? &nonbondedEnergy : NULL);
+            nonbonded.calculateReciprocalIxn(numParticles, &posq[0], posData, particleParams, exclusions, forceData, includeEnergy ? &nonbondedEnergy : NULL);
     }
     energy += nonbondedEnergy;
     for (int i = 0; i < numParticles; i++) {

@@ -191,7 +191,7 @@ void CpuNonbondedForce::setUseSwitchingFunction(float distance) {
 
 void CpuNonbondedForce::calculateReciprocalIxn(int numberOfAtoms, float* posq, vector<OpenMM::RealVec>& atomCoordinates,
                                              const vector<pair<float, float> >& atomParameters, const vector<set<int> >& exclusions,
-                                             float* fixedParameters, vector<OpenMM::RealVec>& forces, float* totalEnergy) const {
+                                             vector<OpenMM::RealVec>& forces, float* totalEnergy) const {
     typedef std::complex<float> d_complex;
 
     static const float epsilon     =  1.0;
@@ -303,9 +303,8 @@ void CpuNonbondedForce::calculateReciprocalIxn(int numberOfAtoms, float* posq, v
 }
 
 
-void CpuNonbondedForce::calculateDirectIxn(int numberOfAtoms, float* posq,
-                                             const vector<pair<float, float> >& atomParameters, const vector<set<int> >& exclusions,
-                                             float* fixedParameters, float* forces, float* totalEnergy) {
+void CpuNonbondedForce::calculateDirectIxn(int numberOfAtoms, float* posq, const vector<pair<float, float> >& atomParameters,
+                const vector<set<int> >& exclusions, float* forces, float* totalEnergy) {
     // Record the parameters for the threads.
     
     this->posq = posq;
@@ -425,6 +424,8 @@ void CpuNonbondedForce::calculateOneIxn(int ii, int jj, float* forces, double* t
     __m128 posJ = _mm_loadu_ps(posq+4*jj);
     float r2;
     getDeltaR(posJ, posI, deltaR, r2, periodic);
+    if (cutoff && r2 >= cutoffDistance*cutoffDistance)
+        return;
     float r = sqrtf(r2);
     float inverseR = 1/r;
     float switchValue = 1, switchDeriv = 0;
@@ -475,6 +476,8 @@ void CpuNonbondedForce::calculateOneEwaldIxn(int ii, int jj, float* forces, doub
     __m128 posJ = _mm_loadu_ps(posq+4*jj);
     float r2;
     getDeltaR(posJ, posI, deltaR, r2, true);
+    if (r2 >= cutoffDistance*cutoffDistance)
+        return;
     float r         = sqrtf(r2);
     float inverseR  = 1/r;
     float switchValue = 1, switchDeriv = 0;
