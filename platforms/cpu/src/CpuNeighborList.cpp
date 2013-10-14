@@ -172,11 +172,16 @@ CpuNeighborList::CpuNeighborList() {
     pthread_cond_init(&endCondition, NULL);
     pthread_mutex_init(&lock, NULL);
     thread.resize(numThreads);
+    pthread_mutex_lock(&lock);
+    waitCount = 0;
     for (int i = 0; i < numThreads; i++) {
         ThreadData* data = new ThreadData(i, *this);
         threadData.push_back(data);
         pthread_create(&thread[i], NULL, threadBody, data);
     }
+    while (waitCount < numThreads)
+        pthread_cond_wait(&endCondition, &lock);
+    pthread_mutex_unlock(&lock);
 }
 
 CpuNeighborList::~CpuNeighborList() {
