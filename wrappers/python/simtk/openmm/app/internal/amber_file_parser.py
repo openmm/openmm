@@ -474,15 +474,15 @@ class PrmtopLoader(object):
         # Update screening parameters for GBn if specified
         if symbls:
             for (i, symbl) in enumerate(symbls):
-                if symbl[0] == ('c' or 'C'):
+                if symbl[0] in ('c', 'C'):
                     screen[i] = 0.48435382330
-                elif symbl[0] == ('h' or 'H'):
+                elif symbl[0] in ('h', 'H'):
                     screen[i] = 1.09085413633
-                elif symbl[0] == ('n' or 'N'):
+                elif symbl[0] in ('n', 'N'):
                     screen[i] = 0.700147318409
-                elif symbl[0] == ('o' or 'O'):
+                elif symbl[0] in ('o', 'O'):
                     screen[i] = 1.06557401132
-                elif symbl[0] == ('s' or 'S'):
+                elif symbl[0] in ('s', 'S'):
                     screen[i] = 0.602256336067
                 else:
                     screen[i] = 0.5
@@ -829,6 +829,8 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
             gb.setCutoffDistance(nonbondedCutoff)
         else:
             raise Exception("Illegal nonbonded method for use with GBSA")
+        # This applies the reaction field dielectric to the NonbondedForce
+        # created above. Do not bind force to another name before this!
         force.setReactionFieldDielectric(1.0)
 
     # TODO: Add GBVI terms?
