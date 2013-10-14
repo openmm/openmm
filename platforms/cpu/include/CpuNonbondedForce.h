@@ -166,6 +166,8 @@ private:
         float alphaEwald;
         int numRx, numRy, numRz;
         int meshDim[3];
+        std::vector<float> ewaldScaleX, ewaldScaleY, ewaldScaleDeriv;
+        float ewaldDX, ewaldDXInv;
         __m128 boxSize, invBoxSize, half;
         bool isDeleted;
         int numThreads, waitCount;
@@ -179,7 +181,8 @@ private:
         std::vector<std::set<int> > exclusions;
         bool includeEnergy;
 
-        static float TWO_OVER_SQRT_PI;
+        static const float TWO_OVER_SQRT_PI;
+        static const int NUM_TABLE_POINTS;
             
       /**---------------------------------------------------------------------------------------
       
@@ -207,10 +210,26 @@ private:
           
       void calculateOneEwaldIxn(int atom1, int atom2, float* forces, double* totalEnergy);
 
-      
+      /**
+       * Compute the displacement and squared distance between two points, optionally using
+       * periodic boundary conditions.
+       */
       void getDeltaR(const __m128& posI, const __m128& posJ, __m128& deltaR, float& r2, bool periodic) const;
 
+      /**
+       * Compute a fast approximation to erfc(x).
+       */
       static float erfcApprox(float x);
+
+      /**
+       * Create a lookup table for the scale factor used with Ewald and PME.
+       */
+      void tabulateEwaldScaleFactor();
+      
+      /**
+       * Evaluate the scale factor used with Ewald and PME: erfc(alpha*r) + 2*alpha*r*exp(-alpha*alpha*r*r)/sqrt(PI)
+       */
+      float ewaldScaleFunction(float x);
 };
 
 // ---------------------------------------------------------------------------------------

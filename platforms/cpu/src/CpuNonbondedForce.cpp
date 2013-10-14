@@ -31,15 +31,17 @@
 #include "ReferenceForce.h"
 #include "ReferencePME.h"
 #include "openmm/internal/hardware.h"
+#include "openmm/internal/SplineFitter.h"
 
 // In case we're using some primitive version of Visual Studio this will
 // make sure that erf() and erfc() are defined.
 #include "openmm/internal/MSVC_erfc.h"
 
 using namespace std;
+using namespace OpenMM;
 
-float CpuNonbondedForce::TWO_OVER_SQRT_PI = (float) (2/sqrt(PI_M));
-
+const float CpuNonbondedForce::TWO_OVER_SQRT_PI = (float) (2/sqrt(PI_M));
+const int CpuNonbondedForce::NUM_TABLE_POINTS = 1025;
 
 class CpuNonbondedForce::ThreadData {
 public:
@@ -175,6 +177,7 @@ void CpuNonbondedForce::setUseSwitchingFunction(float distance) {
       numRy = kmaxy;
       numRz = kmaxz;
       ewald = true;
+      tabulateEwaldScaleFactor();
   }
 
   /**---------------------------------------------------------------------------------------
@@ -192,11 +195,36 @@ void CpuNonbondedForce::setUseSwitchingFunction(float distance) {
       meshDim[1] = meshSize[1];
       meshDim[2] = meshSize[2];
       pme = true;
+      tabulateEwaldScaleFactor();
   }
 
-void CpuNonbondedForce::calculateReciprocalIxn(int numberOfAtoms, float* posq, vector<OpenMM::RealVec>& atomCoordinates,
+  
+void CpuNonbondedForce::tabulateEwaldScaleFactor() {
+    ewaldDX = cutoffDistance/(NUM_TABLE_POINTS-2);
+    ewaldDXInv = 1.0f/ewaldDX;
+    vector<double> x(NUM_TABLE_POINTS);
+    vector<double> y(NUM_TABLE_POINTS);
+    vector<double> deriv;
+    for (int i = 0; i < NUM_TABLE_POINTS; i++) {
+        double r = i*cutoffDistance/(NUM_TABLE_POINTS-2);
+        double alphaR = alphaEwald*r;
+        x[i] = r;
+        y[i] = erfc(alphaR) + TWO_OVER_SQRT_PI*alphaR*exp(-alphaR*alphaR);
+    }
+    SplineFitter::createNaturalSpline(x, y, deriv);
+    ewaldScaleX.resize(NUM_TABLE_POINTS);
+    ewaldScaleY.resize(NUM_TABLE_POINTS);
+    ewaldScaleDeriv.resize(NUM_TABLE_POINTS);
+    for (int i = 0; i < NUM_TABLE_POINTS; i++) {
+        ewaldScaleX[i] = (float) x[i];
+        ewaldScaleY[i] = (float) y[i];
+        ewaldScaleDeriv[i] = (float) (deriv[i]*ewaldDX*ewaldDX/6);
+    }
+}
+  
+void CpuNonbondedForce::calculateReciprocalIxn(int numberOfAtoms, float* posq, vector<RealVec>& atomCoordinates,
                                              const vector<pair<float, float> >& atomParameters, const vector<set<int> >& exclusions,
-                                             vector<OpenMM::RealVec>& forces, float* totalEnergy) const {
+                                             vector<RealVec>& forces, float* totalEnergy) const {
     typedef std::complex<float> d_complex;
 
     static const float epsilon     =  1.0;
@@ -344,27 +372,23 @@ void CpuNonbondedForce::calculateDirectIxn(int numberOfAtoms, float* posq, const
         for (int i = 0; i < numberOfAtoms; i++)
             for (set<int>::const_iterator iter = exclusions[i].begin(); iter != exclusions[i].end(); ++iter) {
                 if (*iter > i) {
-                   int ii = i;
-                   int jj = *iter;
-                   __m128 deltaR;
-                   __m128 posI = _mm_loadu_ps(posq+4*ii);
-                   __m128 posJ = _mm_loadu_ps(posq+4*jj);
-                   float r2;
-                   getDeltaR(posJ, posI, deltaR, r2, false);
-                   float r         = sqrtf(r2);
-                   float inverseR  = 1/r;
-                   float alphaR    = alphaEwald * r;
-                   float erfAlphaR = 1.0f-erfcApprox(alphaR);
-                   if (erfAlphaR > 1e-6) {
-                       float chargeProd = ONE_4PI_EPS0*posq[4*ii+3]*posq[4*jj+3];
-                       float dEdR      = (float) (chargeProd * inverseR * inverseR * inverseR);
-                             dEdR      = (float) (dEdR * (erfAlphaR - TWO_OVER_SQRT_PI * alphaR * exp (- alphaR * alphaR)));
-                       __m128 result = _mm_mul_ps(deltaR, _mm_set1_ps(dEdR));
-                       _mm_storeu_ps(forces+4*ii, _mm_sub_ps(_mm_loadu_ps(forces+4*ii), result));
-                       _mm_storeu_ps(forces+4*jj, _mm_add_ps(_mm_loadu_ps(forces+4*jj), result));
-                       if (includeEnergy)
-                           directEnergy -= chargeProd*inverseR*erfAlphaR;
-                   }
+                    int ii = i;
+                    int jj = *iter;
+                    __m128 deltaR;
+                    __m128 posI = _mm_loadu_ps(posq+4*ii);
+                    __m128 posJ = _mm_loadu_ps(posq+4*jj);
+                    float r2;
+                    getDeltaR(posJ, posI, deltaR, r2, false);
+                    float r         = sqrtf(r2);
+                    float inverseR  = 1/r;
+                    float chargeProd = ONE_4PI_EPS0*posq[4*ii+3]*posq[4*jj+3];
+                    float dEdR      = (float) (chargeProd * inverseR * inverseR * inverseR);
+                          dEdR      = (float) (dEdR * (1.0f-ewaldScaleFunction(r)));
+                    __m128 result = _mm_mul_ps(deltaR, _mm_set1_ps(dEdR));
+                    _mm_storeu_ps(forces+4*ii, _mm_sub_ps(_mm_loadu_ps(forces+4*ii), result));
+                    _mm_storeu_ps(forces+4*jj, _mm_add_ps(_mm_loadu_ps(forces+4*jj), result));
+                    if (includeEnergy)
+                        directEnergy -= chargeProd*inverseR*(1.0f-erfcApprox(alphaEwald*r));
                 }
             }
     }
@@ -451,7 +475,7 @@ void CpuNonbondedForce::calculateOneIxn(int ii, int jj, float* forces, double* t
         dEdR += (float) (chargeProd*(inverseR-2.0f*krf*r2));
     else
         dEdR += (float) (chargeProd*inverseR);
-    dEdR     *= inverseR*inverseR;
+    dEdR *= inverseR*inverseR;
     float energy = eps*(sig6-1.0f)*sig6;
     if (useSwitch) {
         dEdR -= energy*switchDeriv*inverseR;
@@ -491,18 +515,15 @@ void CpuNonbondedForce::calculateOneEwaldIxn(int ii, int jj, float* forces, doub
         switchValue = 1+t*t*t*(-10+t*(15-t*6));
         switchDeriv = t*t*(-30+t*(60-t*30))/(cutoffDistance-switchingDistance);
     }
-    float alphaR    = alphaEwald * r;
-    float erfcAlphaR = erfcApprox(alphaR);
     float chargeProd = ONE_4PI_EPS0*posq[4*ii+3]*posq[4*jj+3];
-    float dEdR      = (float) (chargeProd * inverseR * inverseR * inverseR);
-          dEdR      = (float) (dEdR * (erfcAlphaR + TWO_OVER_SQRT_PI * alphaR * exp(-alphaR*alphaR)));
-
+    float dEdR      = chargeProd*inverseR*ewaldScaleFunction(r);
     float sig       = atomParameters[ii].first +  atomParameters[jj].first;
     float sig2      = inverseR*sig;
           sig2     *= sig2;
     float sig6      = sig2*sig2*sig2;
     float eps       = atomParameters[ii].second*atomParameters[jj].second;
-          dEdR     += switchValue*eps*(12.0f*sig6 - 6.0f)*sig6*inverseR*inverseR;
+          dEdR     += switchValue*eps*(12.0f*sig6 - 6.0f)*sig6;
+    dEdR *= inverseR*inverseR;
     float energy = eps*(sig6-1.0f)*sig6;
     if (useSwitch) {
         dEdR -= energy*switchDeriv*inverseR;
@@ -518,7 +539,7 @@ void CpuNonbondedForce::calculateOneEwaldIxn(int ii, int jj, float* forces, doub
     // accumulate energies
 
     if (totalEnergy) {
-        energy += (float) (chargeProd*inverseR*erfcAlphaR);
+        energy += (float) (chargeProd*inverseR*erfcApprox(alphaEwald*r));
         *totalEnergy += energy;
     }
 }
@@ -542,4 +563,14 @@ float CpuNonbondedForce::erfcApprox(float x) {
     t *= t;
     t *= t;
     return 1.0f/(t*t);
+}
+
+float CpuNonbondedForce::ewaldScaleFunction(float x) {
+    // Compute the tabulated Ewald scale factor: erfc(alpha*r) + 2*alpha*r*exp(-alpha*alpha*r*r)/sqrt(PI)
+
+    int lower = (int) (x*ewaldDXInv);
+    int upper = lower+1;
+    float a = (ewaldScaleX[upper]-x)*ewaldDXInv;
+    float b = 1.0f-a;
+    return a*ewaldScaleY[lower]+b*ewaldScaleY[upper]+((a*a*a-a)*ewaldScaleDeriv[lower] + (b*b*b-b)*ewaldScaleDeriv[upper]);
 }
