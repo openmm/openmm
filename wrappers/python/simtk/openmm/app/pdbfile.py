@@ -313,6 +313,56 @@ class PDBFile(object):
          - topology (Topology) The Topology defining the molecular system being written
          - file (file=stdout) A file to write the file to
         """
+        # Identify bonds that should be listed as CONECT records.
+        
+        standardResidues = ['ALA', 'ASN', 'CYS', 'GLU', 'HIS', 'LEU', 'MET', 'PRO', 'THR', 'TYR',
+                            'ARG', 'ASP', 'GLN', 'GLY', 'ILE', 'LYS', 'PHE', 'SER', 'TRP', 'VAL',
+                            'A', 'G', 'C', 'U', 'I', 'DA', 'DG', 'DC', 'DT', 'DI', 'HOH']
+        conectBonds = []
+        for atom1, atom2 in topology.bonds():
+            if atom1.residue.name not in standardResidues or atom2.residue.name not in standardResidues:
+                conectBonds.append((atom1, atom2))
+            elif atom1.name == 'SG' and atom2.name == 'SG' and atom1.residue.name == 'CYS' and atom2.residue.name == 'CYS':
+                conectBonds.append((atom1, atom2))
+        if len(conectBonds) > 0:
+            
+            # Work out the index used in the PDB file for each atom.
+            
+            atomIndex = {}
+            nextAtomIndex = 0
+            prevChain = None
+            for chain in topology.chains():
+                for atom in chain.atoms():
+                    if atom.residue.chain != prevChain:
+                        nextAtomIndex += 1
+                        prevChain = atom.residue.chain
+                    atomIndex[atom] = nextAtomIndex
+                    nextAtomIndex += 1
+            
+            # Record which other atoms each atom is bonded to.
+            
+            atomBonds = {}
+            for atom1, atom2 in conectBonds:
+                index1 = atomIndex[atom1]
+                index2 = atomIndex[atom2]
+                if index1 not in atomBonds:
+                    atomBonds[index1] = []
+                if index2 not in atomBonds:
+                    atomBonds[index2] = []
+                atomBonds[index1].append(index2)
+                atomBonds[index2].append(index1)
+            
+            # Write the CONECT records.
+            
+            for index1 in sorted(atomBonds):
+                bonded = atomBonds[index1]
+                while len(bonded) > 4:
+                    print >>file, "CONECT%5d%5d%5d%5d" % (index1, bonded[0], bonded[1], bonded[2])
+                    del bonded[:4]
+                line = "CONECT%5d" % index1
+                for index2 in bonded:
+                    line = "%s%5d" % (line, index2)
+                print >>file, line
         print >>file, "END"
 
 
