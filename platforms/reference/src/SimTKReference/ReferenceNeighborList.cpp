@@ -44,9 +44,7 @@ void OPENMM_EXPORT computeNeighborListNaive(
                               bool usePeriodic,
                               double maxDistance,
                               double minDistance,
-                              bool reportSymmetricPairs
-                             )
-{
+                              bool reportSymmetricPairs) {
     neighborList.clear();
     
     double maxDistanceSquared = maxDistance * maxDistance;
@@ -102,15 +100,19 @@ public:
             nx = (int) floor(periodicBoxSize[0]/voxelSizeX+0.5);
             ny = (int) floor(periodicBoxSize[1]/voxelSizeY+0.5);
             nz = (int) floor(periodicBoxSize[2]/voxelSizeZ+0.5);
+            voxelSizeX = periodicBoxSize[0]/nx;
+            voxelSizeY = periodicBoxSize[0]/ny;
+            voxelSizeZ = periodicBoxSize[0]/nz;
         }
     }
 
     void insert(const AtomIndex& item, const RealVec& location)
     {
         VoxelIndex voxelIndex = getVoxelIndex(location);
-        if ( voxelMap.find(voxelIndex) == voxelMap.end() ) voxelMap[voxelIndex] = Voxel(); 
+        if (voxelMap.find(voxelIndex) == voxelMap.end())
+            voxelMap[voxelIndex] = Voxel(); 
         Voxel& voxel = voxelMap.find(voxelIndex)->second;
-        voxel.push_back( VoxelItem(&location, item) );
+        voxel.push_back(VoxelItem(&location, item));
     }
 
 
@@ -191,12 +193,12 @@ public:
                         // Ignore self hits
                         if (atomI == atomJ) continue;
                         
-                        // Ignore exclusions.
-                        if (exclusions[atomI].find(atomJ) != exclusions[atomI].end()) continue;
-                        
                         double dSquared = compPairDistanceSquared(locationI, locationJ, periodicBoxSize, usePeriodic);
                         if (dSquared > maxDistanceSquared) continue;
                         if (dSquared < minDistanceSquared) continue;
+                        
+                        // Ignore exclusions.
+                        if (exclusions[atomI].find(atomJ) != exclusions[atomI].end()) continue;
                         
                         neighbors.push_back( AtomPair(atomI, atomJ) );
                         if (reportSymmetricPairs)

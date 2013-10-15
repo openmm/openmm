@@ -41,16 +41,20 @@ public:
             nx = (int) floorf(periodicBoxSize[0]/voxelSizeX+0.5f);
             ny = (int) floorf(periodicBoxSize[1]/voxelSizeY+0.5f);
             nz = (int) floorf(periodicBoxSize[2]/voxelSizeZ+0.5f);
+            voxelSizeX = periodicBoxSize[0]/nx;
+            voxelSizeY = periodicBoxSize[0]/ny;
+            voxelSizeZ = periodicBoxSize[0]/nz;
         }
     }
 
     void insert(const int& item, const float* location) {
         VoxelIndex voxelIndex = getVoxelIndex(location);
-        if (voxelMap.find(voxelIndex) == voxelMap.end()) voxelMap[voxelIndex] = Voxel(); 
+        if (voxelMap.find(voxelIndex) == voxelMap.end())
+            voxelMap[voxelIndex] = Voxel(); 
         Voxel& voxel = voxelMap.find(voxelIndex)->second;
         voxel.push_back(VoxelItem(location, item));
     }
-
+    
 
     VoxelIndex getVoxelIndex(const float* location) const {
         float xperiodic, yperiodic, zperiodic;
