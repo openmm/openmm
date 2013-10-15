@@ -383,13 +383,15 @@ void CpuNonbondedForce::calculateDirectIxn(int numberOfAtoms, float* posq, const
                     float r         = sqrtf(r2);
                     float inverseR  = 1/r;
                     float chargeProd = ONE_4PI_EPS0*posq[4*ii+3]*posq[4*jj+3];
+                    float alphaR = alphaEwald*r;
+                    float erfcAlphaR = erfcApprox(alphaR);
                     float dEdR      = (float) (chargeProd * inverseR * inverseR * inverseR);
-                          dEdR      = (float) (dEdR * (1.0f-ewaldScaleFunction(r)));
+                          dEdR      = (float) (dEdR * (1.0f-erfcAlphaR-TWO_OVER_SQRT_PI*alphaR*exp(-alphaR*alphaR)));
                     __m128 result = _mm_mul_ps(deltaR, _mm_set1_ps(dEdR));
                     _mm_storeu_ps(forces+4*ii, _mm_sub_ps(_mm_loadu_ps(forces+4*ii), result));
                     _mm_storeu_ps(forces+4*jj, _mm_add_ps(_mm_loadu_ps(forces+4*jj), result));
                     if (includeEnergy)
-                        directEnergy -= chargeProd*inverseR*(1.0f-erfcApprox(alphaEwald*r));
+                        directEnergy -= chargeProd*inverseR*(1.0f-erfcAlphaR);
                 }
             }
     }
@@ -505,42 +507,42 @@ void CpuNonbondedForce::calculateOneEwaldIxn(int ii, int jj, float* forces, doub
     __m128 posJ = _mm_loadu_ps(posq+4*jj);
     float r2;
     getDeltaR(posJ, posI, deltaR, r2, true);
-    if (r2 >= cutoffDistance*cutoffDistance)
-        return;
-    float r         = sqrtf(r2);
-    float inverseR  = 1/r;
-    float switchValue = 1, switchDeriv = 0;
-    if (useSwitch && r > switchingDistance) {
-        float t = (r-switchingDistance)/(cutoffDistance-switchingDistance);
-        switchValue = 1+t*t*t*(-10+t*(15-t*6));
-        switchDeriv = t*t*(-30+t*(60-t*30))/(cutoffDistance-switchingDistance);
-    }
-    float chargeProd = ONE_4PI_EPS0*posq[4*ii+3]*posq[4*jj+3];
-    float dEdR      = chargeProd*inverseR*ewaldScaleFunction(r);
-    float sig       = atomParameters[ii].first +  atomParameters[jj].first;
-    float sig2      = inverseR*sig;
-          sig2     *= sig2;
-    float sig6      = sig2*sig2*sig2;
-    float eps       = atomParameters[ii].second*atomParameters[jj].second;
-          dEdR     += switchValue*eps*(12.0f*sig6 - 6.0f)*sig6;
-    dEdR *= inverseR*inverseR;
-    float energy = eps*(sig6-1.0f)*sig6;
-    if (useSwitch) {
-        dEdR -= energy*switchDeriv*inverseR;
-        energy *= switchValue;
-    }
+    if (r2 < cutoffDistance*cutoffDistance) {
+        float r         = sqrtf(r2);
+        float inverseR  = 1/r;
+        float switchValue = 1, switchDeriv = 0;
+        if (useSwitch && r > switchingDistance) {
+            float t = (r-switchingDistance)/(cutoffDistance-switchingDistance);
+            switchValue = 1+t*t*t*(-10+t*(15-t*6));
+            switchDeriv = t*t*(-30+t*(60-t*30))/(cutoffDistance-switchingDistance);
+        }
+        float chargeProd = ONE_4PI_EPS0*posq[4*ii+3]*posq[4*jj+3];
+        float dEdR      = chargeProd*inverseR*ewaldScaleFunction(r);
+        float sig       = atomParameters[ii].first +  atomParameters[jj].first;
+        float sig2      = inverseR*sig;
+              sig2     *= sig2;
+        float sig6      = sig2*sig2*sig2;
+        float eps       = atomParameters[ii].second*atomParameters[jj].second;
+              dEdR     += switchValue*eps*(12.0f*sig6 - 6.0f)*sig6;
+        dEdR *= inverseR*inverseR;
+        float energy = eps*(sig6-1.0f)*sig6;
+        if (useSwitch) {
+            dEdR -= energy*switchDeriv*inverseR;
+            energy *= switchValue;
+        }
 
-    // accumulate forces
+        // accumulate forces
 
-    __m128 result = _mm_mul_ps(deltaR, _mm_set1_ps(dEdR));
-    _mm_storeu_ps(forces+4*ii, _mm_add_ps(_mm_loadu_ps(forces+4*ii), result));
-    _mm_storeu_ps(forces+4*jj, _mm_sub_ps(_mm_loadu_ps(forces+4*jj), result));
+        __m128 result = _mm_mul_ps(deltaR, _mm_set1_ps(dEdR));
+        _mm_storeu_ps(forces+4*ii, _mm_add_ps(_mm_loadu_ps(forces+4*ii), result));
+        _mm_storeu_ps(forces+4*jj, _mm_sub_ps(_mm_loadu_ps(forces+4*jj), result));
 
-    // accumulate energies
+        // accumulate energies
 
-    if (totalEnergy) {
-        energy += (float) (chargeProd*inverseR*erfcApprox(alphaEwald*r));
-        *totalEnergy += energy;
+        if (totalEnergy) {
+            energy += (float) (chargeProd*inverseR*erfcApprox(alphaEwald*r));
+            *totalEnergy += energy;
+        }
     }
 }
 
