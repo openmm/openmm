@@ -44,9 +44,7 @@ void OPENMM_EXPORT computeNeighborListNaive(
                               bool usePeriodic,
                               double maxDistance,
                               double minDistance,
-                              bool reportSymmetricPairs
-                             )
-{
+                              bool reportSymmetricPairs) {
     neighborList.clear();
     
     double maxDistanceSquared = maxDistance * maxDistance;
@@ -102,15 +100,19 @@ public:
             nx = (int) floor(periodicBoxSize[0]/voxelSizeX+0.5);
             ny = (int) floor(periodicBoxSize[1]/voxelSizeY+0.5);
             nz = (int) floor(periodicBoxSize[2]/voxelSizeZ+0.5);
+            voxelSizeX = periodicBoxSize[0]/nx;
+            voxelSizeY = periodicBoxSize[1]/ny;
+            voxelSizeZ = periodicBoxSize[2]/nz;
         }
     }
 
     void insert(const AtomIndex& item, const RealVec& location)
     {
         VoxelIndex voxelIndex = getVoxelIndex(location);
-        if ( voxelMap.find(voxelIndex) == voxelMap.end() ) voxelMap[voxelIndex] = Voxel(); 
+        if (voxelMap.find(voxelIndex) == voxelMap.end())
+            voxelMap[voxelIndex] = Voxel(); 
         Voxel& voxel = voxelMap.find(voxelIndex)->second;
-        voxel.push_back( VoxelItem(&location, item) );
+        voxel.push_back(VoxelItem(&location, item));
     }
 
 
@@ -180,8 +182,9 @@ public:
                         voxelIndex.y = (y+ny)%ny;
                         voxelIndex.z = (z+nz)%nz;
                     }
-                    if (voxelMap.find(voxelIndex) == voxelMap.end()) continue; // no such voxel; skip
-                    const Voxel& voxel = voxelMap.find(voxelIndex)->second;
+                    const map<VoxelIndex, Voxel>::const_iterator voxelEntry = voxelMap.find(voxelIndex);
+                    if (voxelEntry == voxelMap.end()) continue; // no such voxel; skip
+                    const Voxel& voxel = voxelEntry->second;
                     for (Voxel::const_iterator itemIter = voxel.begin(); itemIter != voxel.end(); ++itemIter)
                     {
                         const AtomIndex atomJ = itemIter->second;
@@ -190,12 +193,12 @@ public:
                         // Ignore self hits
                         if (atomI == atomJ) continue;
                         
-                        // Ignore exclusions.
-                        if (exclusions[atomI].find(atomJ) != exclusions[atomI].end()) continue;
-                        
                         double dSquared = compPairDistanceSquared(locationI, locationJ, periodicBoxSize, usePeriodic);
                         if (dSquared > maxDistanceSquared) continue;
                         if (dSquared < minDistanceSquared) continue;
+                        
+                        // Ignore exclusions.
+                        if (exclusions[atomI].find(atomJ) != exclusions[atomI].end()) continue;
                         
                         neighbors.push_back( AtomPair(atomI, atomJ) );
                         if (reportSymmetricPairs)
@@ -234,9 +237,9 @@ void OPENMM_EXPORT computeNeighborListVoxelHash(
     if (!usePeriodic)
         edgeSizeX = edgeSizeY = edgeSizeZ = maxDistance; // TODO - adjust this as needed
     else {
-        edgeSizeX = periodicBoxSize[0]/floor(periodicBoxSize[0]/maxDistance);
-        edgeSizeY = periodicBoxSize[1]/floor(periodicBoxSize[1]/maxDistance);
-        edgeSizeZ = periodicBoxSize[2]/floor(periodicBoxSize[2]/maxDistance);
+        edgeSizeX = 0.5*periodicBoxSize[0]/floor(periodicBoxSize[0]/maxDistance);
+        edgeSizeY = 0.5*periodicBoxSize[1]/floor(periodicBoxSize[1]/maxDistance);
+        edgeSizeZ = 0.5*periodicBoxSize[2]/floor(periodicBoxSize[2]/maxDistance);
     }
     VoxelHash voxelHash(edgeSizeX, edgeSizeY, edgeSizeZ, periodicBoxSize, usePeriodic);
     for (AtomIndex atomJ = 0; atomJ < (AtomIndex) nAtoms; ++atomJ) // use "j", because j > i for pairs
