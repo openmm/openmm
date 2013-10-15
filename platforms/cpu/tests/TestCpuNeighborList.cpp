@@ -46,12 +46,13 @@ using namespace std;
 void testNeighborList(bool periodic) {
     const int numParticles = 500;
     const float cutoff = 2.0f;
-    const float boxSize = 20.0f;
+    const float boxSize[3] = {20.0f, 15.0f, 22.0f};
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);
     vector<float> positions(4*numParticles);
     for (int i = 0; i < 4*numParticles; i++)
-        positions[i] = boxSize*genrand_real2(sfmt);
+        if (i%4 < 3)
+            positions[i] = boxSize[i%4]*genrand_real2(sfmt);
     vector<set<int> > exclusions(numParticles);
     for (int i = 0; i < numParticles; i++) {
         int num = min(i+1, 10);
@@ -61,8 +62,7 @@ void testNeighborList(bool periodic) {
         }
     }
     CpuNeighborList neighborList;
-    float box[3] = {boxSize, boxSize, boxSize};
-    neighborList.computeNeighborList(numParticles, positions, exclusions, box, periodic, cutoff);
+    neighborList.computeNeighborList(numParticles, positions, exclusions, boxSize, periodic, cutoff);
     
     // Convert the neighbor list to a set for faster lookup.
     
@@ -82,9 +82,9 @@ void testNeighborList(bool periodic) {
             float dy = positions[4*i+1]-positions[4*j+1];
             float dz = positions[4*i+2]-positions[4*j+2];
             if (periodic) {
-                dx -= floor(dx/boxSize+0.5f)*boxSize;
-                dy -= floor(dy/boxSize+0.5f)*boxSize;
-                dz -= floor(dz/boxSize+0.5f)*boxSize;
+                dx -= floor(dx/boxSize[0]+0.5f)*boxSize[0];
+                dy -= floor(dy/boxSize[1]+0.5f)*boxSize[1];
+                dz -= floor(dz/boxSize[2]+0.5f)*boxSize[2];
             }
             if (dx*dx + dy*dy + dz*dz > cutoff*cutoff)
                 shouldInclude = false;

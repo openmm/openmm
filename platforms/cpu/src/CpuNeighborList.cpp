@@ -42,8 +42,8 @@ public:
             ny = (int) floorf(periodicBoxSize[1]/voxelSizeY+0.5f);
             nz = (int) floorf(periodicBoxSize[2]/voxelSizeZ+0.5f);
             voxelSizeX = periodicBoxSize[0]/nx;
-            voxelSizeY = periodicBoxSize[0]/ny;
-            voxelSizeZ = periodicBoxSize[0]/nz;
+            voxelSizeY = periodicBoxSize[1]/ny;
+            voxelSizeZ = periodicBoxSize[2]/nz;
         }
     }
 
