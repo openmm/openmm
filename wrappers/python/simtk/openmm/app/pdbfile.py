@@ -315,6 +315,32 @@ class PDBFile(object):
         """
         print >>file, "END"
 
+    @staticmethod
+    def writeBonds(topology, file=sys.stdout):
+        """Write out the bonds as a PDB CONECT entry.  
+
+        Parameters:
+         - topology (Topology) The Topology defining the molecular system being written
+         - file (file=stdout) A file to write the file to
+         
+        Notes:
+        This writes all bonds to the PDB file, which is not appropriate
+        for protein, DNA, and RNA molecules (e.g. polymers).  
+        """
+        bond_dict = dict((a.index + 1, []) for a in topology.atoms())
+        for (a0, a1) in topology.bonds():
+            a0 = a0.index + 1
+            a1 = a1.index + 1
+            bond_dict[a0].append(a1)
+            bond_dict[a1].append(a0)
+        
+        for (atom, bonds) in bond_dict.iteritems():            
+            assert len(bonds) <= 4, "Cannot write CONECT with more than 4 bonds"
+            line = "CONECT %4d" % atom
+            for atom2 in bonds:
+                line = line + " %4d" % atom2
+            print >> file, line
+
 
 def _format_83(f):
     """Format a single float into a string of width 8, with ideally 3 decimal
