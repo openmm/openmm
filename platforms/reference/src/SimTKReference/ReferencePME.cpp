@@ -33,7 +33,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "PME.h"
+#include "ReferencePME.h"
 #include "fftpack.h"
 
 using std::vector;
@@ -317,10 +317,8 @@ pme_update_bsplines(pme_t    pme)
 
 
 static void
-pme_grid_spread_charge(pme_t      pme,
-                       RealOpenMM **   atomParameters)
+pme_grid_spread_charge(pme_t      pme, vector<RealOpenMM>& charges)
 {
-        static const int   QIndex = 2; // atom charges are stored in atomParameters[atomID][2]
     int       order;
     int       i;
     int       ix,iy,iz;
@@ -342,7 +340,7 @@ pme_grid_spread_charge(pme_t      pme,
 
     for(i=0;i<pme->natoms;i++)
     {
-        q = atomParameters[i][QIndex];
+        q = charges[i];
 
         /* Grid index for the actual atom position */
         x0index = pme->particleindex[i][0];
@@ -523,10 +521,9 @@ pme_reciprocal_convolution(pme_t     pme,
 static void
 pme_grid_interpolate_force(pme_t      pme,
                            const RealOpenMM     periodicBoxSize[3],
-                           RealOpenMM **   atomParameters,
+                           vector<RealOpenMM>& charges,
                            vector<RealVec>&   forces)
 {
-        static const int   QIndex = 2; // atom charges are stored in atomParameters[atomID][2]
     int       i;
     int       ix,iy,iz;
     int       x0index,y0index,z0index;
@@ -558,7 +555,7 @@ pme_grid_interpolate_force(pme_t      pme,
     {
         fx = fy = fz = 0;
 
-        q = atomParameters[i][QIndex];
+        q = charges[i];
 
         /* Grid index for the actual atom position */
         x0index = pme->particleindex[i][0];
@@ -671,7 +668,7 @@ pme_init(pme_t *       ppme,
 int pme_exec(pme_t       pme,
              vector<RealVec>&   atomCoordinates,
              vector<RealVec>&   forces,
-             RealOpenMM **   atomParameters,
+             vector<RealOpenMM>& charges,
              const RealOpenMM      periodicBoxSize[3],
              RealOpenMM *    energy,
              RealOpenMM      pme_virial[3][3])
@@ -692,7 +689,7 @@ int pme_exec(pme_t       pme,
     pme_update_bsplines(pme);
 
     /* Spread the charges on grid (using newly calculated bsplines in the pme structure) */
-    pme_grid_spread_charge(pme,atomParameters);
+    pme_grid_spread_charge(pme, charges);
 
     /* do 3d-fft */
     fftpack_exec_3d(pme->fftplan,FFTPACK_FORWARD,pme->grid,pme->grid);
@@ -704,7 +701,7 @@ int pme_exec(pme_t       pme,
     fftpack_exec_3d(pme->fftplan,FFTPACK_BACKWARD,pme->grid,pme->grid);
 
     /* Get the particle forces from the grid and bsplines in the pme structure */
-    pme_grid_interpolate_force(pme,periodicBoxSize,atomParameters,forces);
+    pme_grid_interpolate_force(pme,periodicBoxSize,charges,forces);
 
     return 0;
 }

@@ -86,7 +86,7 @@ void verifyNeighborList(NeighborList& list, int numParticles, vector<RealVec>& p
         for (int j = i+1; j < numParticles; j++)
             if (distance2(positions[i], positions[j], periodicBoxSize) <= cutoff*cutoff)
                 count++;
-    ASSERT(count == list.size());
+    ASSERT_EQUAL(count, list.size());
 }
 
 void testPeriodic() {
@@ -112,16 +112,15 @@ void testPeriodic() {
 
 int main() 
 {
-try {
-    testNeighborList();
-    testPeriodic();
-    
-    cout << "Test Passed" << endl;
+    try {
+        testNeighborList();
+        testPeriodic();
+    }
+    catch(const exception& e) {
+        cout << "exception: " << e.what() << endl;
+        return 1;
+    }
+    cout << "Done" << endl;
     return 0;
-}
-catch (...) {
-    cerr << "*** ERROR: Test Failed ***" << endl;
-    return 1;
-}
 }
 
