@@ -176,9 +176,10 @@ private:
         pthread_cond_t startCondition, endCondition;
         pthread_mutex_t lock;
         // The following variables are used to make information accessible to the individual threads.
+        int numberOfAtoms;
         float* posq;
-        std::vector<std::pair<float, float> > atomParameters;        
-        std::vector<std::set<int> > exclusions;
+        std::pair<float, float> const* atomParameters;        
+        std::set<int> const* exclusions;
         bool includeEnergy;
 
         static const float TWO_OVER_SQRT_PI;

@@ -340,9 +340,10 @@ void CpuNonbondedForce::calculateDirectIxn(int numberOfAtoms, float* posq, const
                 const vector<set<int> >& exclusions, float* forces, float* totalEnergy) {
     // Record the parameters for the threads.
     
+    this->numberOfAtoms = numberOfAtoms;
     this->posq = posq;
-    this->atomParameters = atomParameters;
-    this->exclusions = exclusions;
+    this->atomParameters = &atomParameters[0];
+    this->exclusions = &exclusions[0];
     includeEnergy = (totalEnergy != NULL);
     
     // Signal the threads to start running and wait for them to finish.
@@ -413,7 +414,6 @@ void CpuNonbondedForce::runThread(int index, vector<float>& threadForce, double&
         
         threadEnergy = 0;
         double* energyPtr = (includeEnergy ? &threadEnergy : NULL);
-        int numberOfAtoms = atomParameters.size();
         threadForce.resize(4*numberOfAtoms, 0.0f);
         for (int i = 0; i < 4*numberOfAtoms; i++)
             threadForce[i] = 0.0f;

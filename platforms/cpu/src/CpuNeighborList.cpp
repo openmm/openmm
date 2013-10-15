@@ -117,13 +117,9 @@ public:
                     for (Voxel::const_iterator itemIter = voxel.begin(); itemIter != voxel.end(); ++itemIter) {
                         const int atomJ = itemIter->second;
 
-                        // Ignore self hits
-                        if (atomI >= atomJ)
-                            continue;
-                        
-                        // Ignore exclusions.
-                        if (exclusions[atomI].find(atomJ) != exclusions[atomI].end())
-                            continue;
+                        // Avoid duplicate entries.
+                        if (atomJ >= atomI)
+                            break;
                         
                         __m128 posJ = _mm_loadu_ps(itemIter->first);
                         __m128 delta = _mm_sub_ps(posJ, posI);
@@ -134,6 +130,11 @@ public:
                         float dSquared = _mm_cvtss_f32(_mm_dp_ps(delta, delta, 0x71));
                         if (dSquared > maxDistanceSquared)
                             continue;
+                        
+                        // Ignore exclusions.
+                        if (exclusions[atomI].find(atomJ) != exclusions[atomI].end())
+                            continue;
+
                         neighbors.push_back(make_pair(atomI, atomJ));
                     }
                 }
