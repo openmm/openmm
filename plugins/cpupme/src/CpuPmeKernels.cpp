@@ -93,6 +93,8 @@ static void spreadCharge(int start, int end, float* posq, float* grid, int gridx
         int gridIndexX = _mm_extract_epi32(gridIndex, 0);
         int gridIndexY = _mm_extract_epi32(gridIndex, 1);
         int gridIndexZ = _mm_extract_epi32(gridIndex, 2);
+        if (gridIndexX < 0)
+            return; // This happens when a simulation blows up and coordinates become NaN.
         int zindex[PME_ORDER];
         for (int j = 0; j < PME_ORDER; j++) {
             zindex[j] = gridIndexZ+j;
@@ -288,6 +290,8 @@ static void interpolateForces(int start, int end, float* posq, float* force, flo
         int gridIndexX = _mm_extract_epi32(gridIndex, 0);
         int gridIndexY = _mm_extract_epi32(gridIndex, 1);
         int gridIndexZ = _mm_extract_epi32(gridIndex, 2);
+        if (gridIndexX < 0)
+            return; // This happens when a simulation blows up and coordinates become NaN.
         int zindex[PME_ORDER];
         for (int j = 0; j < PME_ORDER; j++) {
             zindex[j] = gridIndexZ+j;
