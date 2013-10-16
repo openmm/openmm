@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009 Stanford University and the Authors.           *
+ * Portions copyright (c) 2009=2013 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -39,6 +39,7 @@
 
 namespace Lepton {
 
+class CompiledExpression;
 class ExpressionProgram;
 
 /**
@@ -97,6 +98,10 @@ public:
      * Create an ExpressionProgram that represents the same calculation as this expression.
      */
     ExpressionProgram createProgram() const;
+    /**
+     * Create a CompiledExpression that represents the same calculation as this expression.
+     */
+    CompiledExpression createCompiledExpression() const;
     /**
      * Create a new ParsedExpression which is identical to this one, except that the names of some
      * variables have been changed.

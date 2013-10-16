@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -35,7 +35,7 @@
 #include "ForceImpl.h"
 #include "openmm/CustomNonbondedForce.h"
 #include "openmm/Kernel.h"
-#include "lepton/ExpressionProgram.h"
+#include "lepton/CompiledExpression.h"
 #include <utility>
 #include <map>
 #include <string>
@@ -68,7 +68,7 @@ public:
     static double calcLongRangeCorrection(const CustomNonbondedForce& force, const Context& context);
 private:
     class TabulatedFunction;
-    static double integrateInteraction(const Lepton::ExpressionProgram& expression, const std::vector<double>& params1, const std::vector<double>& params2,
+    static double integrateInteraction(Lepton::CompiledExpression& expression, const std::vector<double>& params1, const std::vector<double>& params2,
             const CustomNonbondedForce& force, const Context& context);
     const CustomNonbondedForce& owner;
     Kernel kernel;

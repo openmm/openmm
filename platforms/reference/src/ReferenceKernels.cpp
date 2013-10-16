@@ -420,8 +420,8 @@ void ReferenceCalcCustomBondForceKernel::initialize(const System& system, const 
     // Parse the expression used to calculate the force.
 
     Lepton::ParsedExpression expression = Lepton::Parser::parse(force.getEnergyFunction()).optimize();
-    energyExpression = expression.createProgram();
-    forceExpression = expression.differentiate("r").optimize().createProgram();
+    energyExpression = expression.createCompiledExpression();
+    forceExpression = expression.differentiate("r").createCompiledExpression();
     for (int i = 0; i < numParameters; i++)
         parameterNames.push_back(force.getPerBondParameterName(i));
     for (int i = 0; i < force.getNumGlobalParameters(); i++)
@@ -534,8 +534,8 @@ void ReferenceCalcCustomAngleForceKernel::initialize(const System& system, const
     // Parse the expression used to calculate the force.
 
     Lepton::ParsedExpression expression = Lepton::Parser::parse(force.getEnergyFunction()).optimize();
-    energyExpression = expression.createProgram();
-    forceExpression = expression.differentiate("theta").optimize().createProgram();
+    energyExpression = expression.createCompiledExpression();
+    forceExpression = expression.differentiate("theta").createCompiledExpression();
     for (int i = 0; i < numParameters; i++)
         parameterNames.push_back(force.getPerAngleParameterName(i));
     for (int i = 0; i < force.getNumGlobalParameters(); i++)
@@ -744,8 +744,8 @@ void ReferenceCalcCustomTorsionForceKernel::initialize(const System& system, con
     // Parse the expression used to calculate the force.
 
     Lepton::ParsedExpression expression = Lepton::Parser::parse(force.getEnergyFunction()).optimize();
-    energyExpression = expression.createProgram();
-    forceExpression = expression.differentiate("theta").optimize().createProgram();
+    energyExpression = expression.createCompiledExpression();
+    forceExpression = expression.differentiate("theta").createCompiledExpression();
     for (int i = 0; i < numParameters; i++)
         parameterNames.push_back(force.getPerTorsionParameterName(i));
     for (int i = 0; i < force.getNumGlobalParameters(); i++)
@@ -1028,8 +1028,8 @@ void ReferenceCalcCustomNonbondedForceKernel::initialize(const System& system, c
     // Parse the various expressions used to calculate the force.
 
     Lepton::ParsedExpression expression = Lepton::Parser::parse(force.getEnergyFunction(), functions).optimize();
-    energyExpression = expression.createProgram();
-    forceExpression = expression.differentiate("r").optimize().createProgram();
+    energyExpression = expression.createCompiledExpression();
+    forceExpression = expression.differentiate("r").createCompiledExpression();
     for (int i = 0; i < numParameters; i++)
         parameterNames.push_back(force.getPerParticleParameterName(i));
     for (int i = 0; i < force.getNumGlobalParameters(); i++) {
@@ -1426,10 +1426,10 @@ void ReferenceCalcCustomExternalForceKernel::initialize(const System& system, co
     // Parse the expression used to calculate the force.
 
     Lepton::ParsedExpression expression = Lepton::Parser::parse(force.getEnergyFunction()).optimize();
-    energyExpression = expression.createProgram();
-    forceExpressionX = expression.differentiate("x").optimize().createProgram();
-    forceExpressionY = expression.differentiate("y").optimize().createProgram();
-    forceExpressionZ = expression.differentiate("z").optimize().createProgram();
+    energyExpression = expression.createCompiledExpression();
+    forceExpressionX = expression.differentiate("x").createCompiledExpression();
+    forceExpressionY = expression.differentiate("y").createCompiledExpression();
+    forceExpressionZ = expression.differentiate("z").createCompiledExpression();
     for (int i = 0; i < numParameters; i++)
         parameterNames.push_back(force.getPerParticleParameterName(i));
     for (int i = 0; i < force.getNumGlobalParameters(); i++)

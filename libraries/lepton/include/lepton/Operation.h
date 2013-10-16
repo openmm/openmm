@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009 Stanford University and the Authors.           *
+ * Portions copyright (c) 2009-2013 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -965,6 +965,8 @@ private:
 class LEPTON_EXPORT Operation::PowerConstant : public Operation {
 public:
     PowerConstant(double value) : value(value) {
+        intValue = (int) value;
+        isIntPower = (intValue == value);
     }
     std::string getName() const {
         std::stringstream name;
@@ -981,7 +983,26 @@ public:
         return new PowerConstant(value);
     }
     double evaluate(double* args, const std::map<std::string, double>& variables) const {
-        return std::pow(args[0], value);
+        if (isIntPower) {
+            // Integer powers can be computed much more quickly by repeated multiplication.
+            
+            int exponent = intValue;
+            double base = args[0];
+            if (exponent < 0) {
+                exponent = -exponent;
+                base = 1.0/base;
+            }
+            double result = 1.0;
+            while (exponent != 0) {
+                if ((exponent&1) == 1)
+                    result *= base;
+                base *= base;
+                exponent = exponent>>1;
+           }
+           return result;
+        }
+        else
+            return std::pow(args[0], value);
     }
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
     double getValue() const {
@@ -996,6 +1017,8 @@ public:
     }
 private:
     double value;
+    int intValue;
+    bool isIntPower;
 };
 
 class LEPTON_EXPORT Operation::Min : public Operation {

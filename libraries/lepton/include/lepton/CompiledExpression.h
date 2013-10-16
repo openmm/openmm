@@ -1,5 +1,5 @@
-#ifndef LEPTON_H_
-#define LEPTON_H_
+#ifndef LEPTON_COMPILED_EXPRESSION_H_
+#define LEPTON_COMPILED_EXPRESSION_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   Lepton                                   *
@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009 Stanford University and the Authors.           *
+ * Portions copyright (c) 2013 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,12 +32,60 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "lepton/CompiledExpression.h"
-#include "lepton/CustomFunction.h"
-#include "lepton/ExpressionProgram.h"
-#include "lepton/ExpressionTreeNode.h"
-#include "lepton/Operation.h"
-#include "lepton/ParsedExpression.h"
-#include "lepton/Parser.h"
+#include "ExpressionTreeNode.h"
+#include "windowsIncludes.h"
+#include <map>
+#include <set>
+#include <string>
+#include <vector>
 
-#endif /*LEPTON_H_*/
+namespace Lepton {
+
+class Operation;
+class ParsedExpression;
+
+/**
+ * A CompiledExpression is a highly optimized representation of an expression for cases when you want to evaluate
+ * it many times as quickly as possible.  You should treat it as an opaque object; none of the internal representation
+ * is visible.
+ * 
+ * A CompiledExpression is created by calling createCompiledExpression() on a ParsedExpression.
+ */
+
+class LEPTON_EXPORT CompiledExpression {
+public:
+    CompiledExpression();
+    CompiledExpression(const CompiledExpression& expression);
+    ~CompiledExpression();
+    CompiledExpression& operator=(const CompiledExpression& expression);
+    /**
+     * Get the names of all variables used by this expression.
+     */
+    const std::set<std::string>& getVariables() const;
+    /**
+     * Get a reference to the memory location where the value of a particular variable is stored.  This can be used
+     * to set the value of the variable before calling evaluate().
+     */
+    double& getVariableReference(const std::string& name);
+    /**
+     * Evaluate the expression.  The values of all variables should have been set before calling this.
+     */
+    double evaluate() const;
+private:
+    friend class ParsedExpression;
+    CompiledExpression(const ParsedExpression& expression);
+    void compileExpression(const ExpressionTreeNode& node, std::vector<std::pair<ExpressionTreeNode, int> >& temps);
+    int findTempIndex(const ExpressionTreeNode& node, std::vector<std::pair<ExpressionTreeNode, int> >& temps);
+    std::vector<std::vector<int> > arguments;
+    std::vector<int> target;
+    std::vector<Operation*> operation;
+    std::map<std::string, int> variableIndices;
+    std::set<std::string> variableNames;
+    mutable std::vector<double> workspace;
+    mutable std::vector<double> argValues;
+    std::map<std::string, double> dummyVariables;
+};
+
+} // namespace Lepton
+
+#endif /*LEPTON_COMPILED_EXPRESSION_H_*/

@@ -1,5 +1,4 @@
-
-/* Portions copyright (c) 2006 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2013 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -25,6 +24,7 @@
 #ifndef __ReferenceForce_H__
 #define __ReferenceForce_H__
 
+#include "lepton/CompiledExpression.h"
 #include "openmm/internal/windowsExport.h"
 
 // ---------------------------------------------------------------------------------------
@@ -109,6 +109,18 @@ class OPENMM_EXPORT  ReferenceForce {
       
       static void getDeltaROnly( const RealOpenMM* atomCoordinatesI, const RealOpenMM* atomCoordinatesJ,
                                 RealOpenMM* deltaR );
+
+      /**
+       * Get a pointer to the memory for setting a variable in a CompiledExpression.  If the expression
+       * does not use the specified variable, return NULL.
+       */
+      static double* getVariablePointer(Lepton::CompiledExpression& expression, const std::string& name);
+
+      /**
+       * Set the value of a variable in a CompiledExpression, using the pointer that was returned by getVariablePointer().
+       */
+      static void setVariable(double* pointer, double value);
+
 };
 
 // ---------------------------------------------------------------------------------------
