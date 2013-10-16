@@ -1,4 +1,4 @@
-/* Portions copyright (c) 2010 Stanford University and Simbios.
+/* Portions copyright (c) 2010-2013 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -25,17 +25,20 @@
 #define __ReferenceCustomTorsionIxn_H__
 
 #include "ReferenceBondIxn.h"
-#include "lepton/ExpressionProgram.h"
+#include "lepton/CompiledExpression.h"
 
 // ---------------------------------------------------------------------------------------
 
 class ReferenceCustomTorsionIxn : public ReferenceBondIxn {
 
    private:
-      Lepton::ExpressionProgram energyExpression;
-      Lepton::ExpressionProgram forceExpression;
-      std::vector<std::string> paramNames;
-      std::map<std::string, double> globalParameters;
+      Lepton::CompiledExpression energyExpression;
+      Lepton::CompiledExpression forceExpression;
+      std::vector<double*> energyParams;
+      std::vector<double*> forceParams;
+      double* energyTheta;
+      double* forceTheta;
+      int numParameters;
 
    public:
 
@@ -45,7 +48,7 @@ class ReferenceCustomTorsionIxn : public ReferenceBondIxn {
 
          --------------------------------------------------------------------------------------- */
 
-       ReferenceCustomTorsionIxn(const Lepton::ExpressionProgram& energyExpression, const Lepton::ExpressionProgram& forceExpression,
+       ReferenceCustomTorsionIxn(const Lepton::CompiledExpression& energyExpression, const Lepton::CompiledExpression& forceExpression,
                               const std::vector<std::string>& parameterNames, std::map<std::string, double> globalParameters);
 
       /**---------------------------------------------------------------------------------------
