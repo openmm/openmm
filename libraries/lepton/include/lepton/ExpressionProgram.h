@@ -48,9 +48,7 @@ class ParsedExpression;
  * evaluated and the result is pushed back onto the stack.  At the end, the stack contains a single value,
  * which is the value of the expression.
  *
- * An ExpressionProgram is created by calling createProgram() on a ParsedExpression.  It can generally be evaluated
- * more quickly than the ParsedExpression itself, so when you need to evaluate an expression many times, it is
- * most efficient to create an ExpressionProgram from it.
+ * An ExpressionProgram is created by calling createProgram() on a ParsedExpression.
  */
 
 class LEPTON_EXPORT ExpressionProgram {
