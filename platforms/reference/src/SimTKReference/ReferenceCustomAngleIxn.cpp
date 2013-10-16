@@ -1,4 +1,4 @@
-/* Portions copyright (c) 2010 Stanford University and Simbios.
+/* Portions copyright (c) 2010-2013 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -39,16 +39,21 @@ using namespace std;
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceCustomAngleIxn::ReferenceCustomAngleIxn(const Lepton::ExpressionProgram& energyExpression,
-        const Lepton::ExpressionProgram& forceExpression, const vector<string>& parameterNames, map<string, double> globalParameters) :
-        energyExpression(energyExpression), forceExpression(forceExpression), paramNames(parameterNames), globalParameters(globalParameters) {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceCustomAngleIxn::ReferenceCustomAngleIxn";
-
-   // ---------------------------------------------------------------------------------------
-
+ReferenceCustomAngleIxn::ReferenceCustomAngleIxn(const Lepton::CompiledExpression& energyExpression,
+        const Lepton::CompiledExpression& forceExpression, const vector<string>& parameterNames, map<string, double> globalParameters) :
+        energyExpression(energyExpression), forceExpression(forceExpression) {
+    
+    energyTheta = ReferenceForce::getVariablePointer(this->energyExpression, "theta");
+    forceTheta = ReferenceForce::getVariablePointer(this->forceExpression, "theta");
+    numParameters = parameterNames.size();
+    for (int i = 0; i < (int) numParameters; i++) {
+        energyParams.push_back(ReferenceForce::getVariablePointer(this->energyExpression, parameterNames[i]));
+        forceParams.push_back(ReferenceForce::getVariablePointer(this->forceExpression, parameterNames[i]));
+    }
+    for (map<string, double>::const_iterator iter = globalParameters.begin(); iter != globalParameters.end(); ++iter) {
+        ReferenceForce::setVariable(ReferenceForce::getVariablePointer(this->energyExpression, iter->first), iter->second);
+        ReferenceForce::setVariable(ReferenceForce::getVariablePointer(this->forceExpression, iter->first), iter->second);
+    }
 }
 
 /**---------------------------------------------------------------------------------------
@@ -91,9 +96,10 @@ void ReferenceCustomAngleIxn::calculateBondIxn( int* atomIndices,
    static const RealOpenMM one         = 1.0;
 
    RealOpenMM deltaR[2][ReferenceForce::LastDeltaRIndex];
-   map<string, double> variables = globalParameters;
-   for (int i = 0; i < (int) paramNames.size(); ++i)
-       variables[paramNames[i]] = parameters[i];
+   for (int i = 0; i < numParameters; i++) {
+       ReferenceForce::setVariable(energyParams[i], parameters[i]);
+       ReferenceForce::setVariable(forceParams[i], parameters[i]);
+   }
 
    // ---------------------------------------------------------------------------------------
 
@@ -118,12 +124,13 @@ void ReferenceCustomAngleIxn::calculateBondIxn( int* atomIndices,
       angle = PI_M;
    else
       angle = ACOS(cosine);
-   variables["theta"] = angle;
+   ReferenceForce::setVariable(energyTheta, angle);
+   ReferenceForce::setVariable(forceTheta, angle);
 
    // Compute the force and energy, and apply them to the atoms.
    
-   RealOpenMM energy = (RealOpenMM) energyExpression.evaluate(variables);
-   RealOpenMM dEdR = (RealOpenMM) forceExpression.evaluate(variables);
+   RealOpenMM energy = (RealOpenMM) energyExpression.evaluate();
+   RealOpenMM dEdR = (RealOpenMM) forceExpression.evaluate();
    RealOpenMM termA =  dEdR/(deltaR[0][ReferenceForce::R2Index]*rp);
    RealOpenMM termC = -dEdR/(deltaR[1][ReferenceForce::R2Index]*rp);
 

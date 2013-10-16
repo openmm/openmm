@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2013 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -45,8 +45,8 @@ using OpenMM::RealVec;
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceCustomNonbondedIxn::ReferenceCustomNonbondedIxn(const Lepton::ExpressionProgram& energyExpression,
-        const Lepton::ExpressionProgram& forceExpression, const vector<string>& parameterNames) :
+ReferenceCustomNonbondedIxn::ReferenceCustomNonbondedIxn(const Lepton::CompiledExpression& energyExpression,
+        const Lepton::CompiledExpression& forceExpression, const vector<string>& parameterNames) :
             cutoff(false), useSwitch(false), periodic(false), energyExpression(energyExpression), forceExpression(forceExpression), paramNames(parameterNames) {
 
    // ---------------------------------------------------------------------------------------
@@ -55,11 +55,14 @@ ReferenceCustomNonbondedIxn::ReferenceCustomNonbondedIxn(const Lepton::Expressio
 
    // ---------------------------------------------------------------------------------------
 
+    energyR = ReferenceForce::getVariablePointer(this->energyExpression, "r");
+    forceR = ReferenceForce::getVariablePointer(this->forceExpression, "r");
     for (int i = 0; i < (int) paramNames.size(); i++) {
         for (int j = 1; j < 3; j++) {
             stringstream name;
             name << paramNames[i] << j;
-            particleParamNames.push_back(name.str());
+            energyParticleParams.push_back(ReferenceForce::getVariablePointer(this->energyExpression, name.str()));
+            forceParticleParams.push_back(ReferenceForce::getVariablePointer(this->forceExpression, name.str()));
         }
     }
 }
@@ -166,9 +169,12 @@ void ReferenceCustomNonbondedIxn::setUseSwitchingFunction( RealOpenMM distance )
 void ReferenceCustomNonbondedIxn::calculatePairIxn( int numberOfAtoms, vector<RealVec>& atomCoordinates,
                                              RealOpenMM** atomParameters, vector<set<int> >& exclusions,
                                              RealOpenMM* fixedParameters, const map<string, double>& globalParameters, vector<RealVec>& forces,
-                                             RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const {
+                                             RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) {
 
-    map<string, double> variables = globalParameters;
+    for (map<string, double>::const_iterator iter = globalParameters.begin(); iter != globalParameters.end(); ++iter) {
+        ReferenceForce::setVariable(ReferenceForce::getVariablePointer(energyExpression, iter->first), iter->second);
+        ReferenceForce::setVariable(ReferenceForce::getVariablePointer(forceExpression, iter->first), iter->second);
+    }
     if (interactionGroups.size() > 0) {
         // The user has specified interaction groups, so compute only the requested interactions.
         
@@ -182,10 +188,12 @@ void ReferenceCustomNonbondedIxn::calculatePairIxn( int numberOfAtoms, vector<Re
                     if (*atom1 > *atom2 && set1.find(*atom2) != set1.end() && set2.find(*atom1) != set2.end())
                         continue; // Both atoms are in both sets, so skip duplicate interactions.
                     for (int j = 0; j < (int) paramNames.size(); j++) {
-                        variables[particleParamNames[j*2]] = atomParameters[*atom1][j];
-                        variables[particleParamNames[j*2+1]] = atomParameters[*atom2][j];
+                        ReferenceForce::setVariable(energyParticleParams[j*2], atomParameters[*atom1][j]);
+                        ReferenceForce::setVariable(energyParticleParams[j*2+1], atomParameters[*atom2][j]);
+                        ReferenceForce::setVariable(forceParticleParams[j*2], atomParameters[*atom1][j]);
+                        ReferenceForce::setVariable(forceParticleParams[j*2+1], atomParameters[*atom2][j]);
                     }
-                    calculateOneIxn(*atom1, *atom2, atomCoordinates, variables, forces, energyByAtom, totalEnergy);
+                    calculateOneIxn(*atom1, *atom2, atomCoordinates, forces, energyByAtom, totalEnergy);
                 }
             }
         }
@@ -196,10 +204,12 @@ void ReferenceCustomNonbondedIxn::calculatePairIxn( int numberOfAtoms, vector<Re
         for (int i = 0; i < (int) neighborList->size(); i++) {
             OpenMM::AtomPair pair = (*neighborList)[i];
             for (int j = 0; j < (int) paramNames.size(); j++) {
-                variables[particleParamNames[j*2]] = atomParameters[pair.first][j];
-                variables[particleParamNames[j*2+1]] = atomParameters[pair.second][j];
+                ReferenceForce::setVariable(energyParticleParams[j*2], atomParameters[pair.first][j]);
+                ReferenceForce::setVariable(energyParticleParams[j*2+1], atomParameters[pair.second][j]);
+                ReferenceForce::setVariable(forceParticleParams[j*2], atomParameters[pair.first][j]);
+                ReferenceForce::setVariable(forceParticleParams[j*2+1], atomParameters[pair.second][j]);
             }
-            calculateOneIxn(pair.first, pair.second, atomCoordinates, variables, forces, energyByAtom, totalEnergy);
+            calculateOneIxn(pair.first, pair.second, atomCoordinates, forces, energyByAtom, totalEnergy);
         }
     }
     else {
@@ -209,10 +219,12 @@ void ReferenceCustomNonbondedIxn::calculatePairIxn( int numberOfAtoms, vector<Re
             for (int jj = ii+1; jj < numberOfAtoms; jj++) {
                 if (exclusions[jj].find(ii) == exclusions[jj].end()) {
                     for (int j = 0; j < (int) paramNames.size(); j++) {
-                        variables[particleParamNames[j*2]] = atomParameters[ii][j];
-                        variables[particleParamNames[j*2+1]] = atomParameters[jj][j];
+                        ReferenceForce::setVariable(energyParticleParams[j*2], atomParameters[ii][j]);
+                        ReferenceForce::setVariable(energyParticleParams[j*2+1], atomParameters[jj][j]);
+                        ReferenceForce::setVariable(forceParticleParams[j*2], atomParameters[ii][j]);
+                        ReferenceForce::setVariable(forceParticleParams[j*2+1], atomParameters[jj][j]);
                     }
-                    calculateOneIxn(ii, jj, atomCoordinates, variables, forces, energyByAtom, totalEnergy);
+                    calculateOneIxn(ii, jj, atomCoordinates, forces, energyByAtom, totalEnergy);
                 }
             }
         }
@@ -233,9 +245,8 @@ void ReferenceCustomNonbondedIxn::calculatePairIxn( int numberOfAtoms, vector<Re
 
      --------------------------------------------------------------------------------------- */
 
-void ReferenceCustomNonbondedIxn::calculateOneIxn( int ii, int jj, vector<RealVec>& atomCoordinates,
-                        map<string, double>& variables, vector<RealVec>& forces,
-                        RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const {
+void ReferenceCustomNonbondedIxn::calculateOneIxn( int ii, int jj, vector<RealVec>& atomCoordinates, vector<RealVec>& forces,
+                        RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) {
 
     // ---------------------------------------------------------------------------------------
 
@@ -266,9 +277,10 @@ void ReferenceCustomNonbondedIxn::calculateOneIxn( int ii, int jj, vector<RealVe
 
     // accumulate forces
 
-    variables["r"] = r;
-    RealOpenMM dEdR = (RealOpenMM) (forceExpression.evaluate(variables)/(deltaR[ReferenceForce::RIndex]));
-    RealOpenMM energy = (RealOpenMM) energyExpression.evaluate(variables);
+    ReferenceForce::setVariable(energyR, r);
+    ReferenceForce::setVariable(forceR, r);
+    RealOpenMM dEdR = (RealOpenMM) (forceExpression.evaluate()/(deltaR[ReferenceForce::RIndex]));
+    RealOpenMM energy = (RealOpenMM) energyExpression.evaluate();
     if (useSwitch) {
         if (r > switchingDistance) {
             RealOpenMM t = (r-switchingDistance)/(cutoffDistance-switchingDistance);

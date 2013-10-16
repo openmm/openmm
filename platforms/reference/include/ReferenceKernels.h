@@ -36,6 +36,7 @@
 #include "openmm/kernels.h"
 #include "SimTKOpenMMRealType.h"
 #include "ReferenceNeighborList.h"
+#include "lepton/CompiledExpression.h"
 #include "lepton/ExpressionProgram.h"
 
 class CpuObc;
@@ -316,7 +317,7 @@ private:
     int numBonds;
     int **bondIndexArray;
     RealOpenMM **bondParamArray;
-    Lepton::ExpressionProgram energyExpression, forceExpression;
+    Lepton::CompiledExpression energyExpression, forceExpression;
     std::vector<std::string> parameterNames, globalParameterNames;
 };
 
@@ -392,7 +393,7 @@ private:
     int numAngles;
     int **angleIndexArray;
     RealOpenMM **angleParamArray;
-    Lepton::ExpressionProgram energyExpression, forceExpression;
+    Lepton::CompiledExpression energyExpression, forceExpression;
     std::vector<std::string> parameterNames, globalParameterNames;
 };
 
@@ -534,7 +535,7 @@ private:
     int numTorsions;
     int **torsionIndexArray;
     RealOpenMM **torsionParamArray;
-    Lepton::ExpressionProgram energyExpression, forceExpression;
+    Lepton::CompiledExpression energyExpression, forceExpression;
     std::vector<std::string> parameterNames, globalParameterNames;
 };
 
@@ -621,7 +622,7 @@ private:
     CustomNonbondedForce* forceCopy;
     std::map<std::string, double> globalParamValues;
     std::vector<std::set<int> > exclusions;
-    Lepton::ExpressionProgram energyExpression, forceExpression;
+    Lepton::CompiledExpression energyExpression, forceExpression;
     std::vector<std::string> parameterNames, globalParameterNames;
     std::vector<std::pair<std::set<int>, std::set<int> > > interactionGroups;
     NonbondedMethod nonbondedMethod;
@@ -781,7 +782,7 @@ private:
     int numParticles;
     std::vector<int> particles;
     RealOpenMM **particleParamArray;
-    Lepton::ExpressionProgram energyExpression, forceExpressionX, forceExpressionY, forceExpressionZ;
+    Lepton::CompiledExpression energyExpression, forceExpressionX, forceExpressionY, forceExpressionZ;
     std::vector<std::string> parameterNames, globalParameterNames;
 };
 

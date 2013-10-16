@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2013 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -26,19 +26,26 @@
 #define __ReferenceCustomExternalIxn_H__
 
 #include "ReferenceCustomExternalIxn.h"
-#include "lepton/ExpressionProgram.h"
+#include "lepton/CompiledExpression.h"
 
 // ---------------------------------------------------------------------------------------
 
 class ReferenceCustomExternalIxn {
 
    private:
-      Lepton::ExpressionProgram energyExpression;
-      Lepton::ExpressionProgram forceExpressionX;
-      Lepton::ExpressionProgram forceExpressionY;
-      Lepton::ExpressionProgram forceExpressionZ;
-      std::vector<std::string> paramNames;
-      std::map<std::string, double> globalParameters;
+      Lepton::CompiledExpression energyExpression;
+      Lepton::CompiledExpression forceExpressionX;
+      Lepton::CompiledExpression forceExpressionY;
+      Lepton::CompiledExpression forceExpressionZ;
+      std::vector<double*> energyParams;
+      std::vector<double*> forceXParams;
+      std::vector<double*> forceYParams;
+      std::vector<double*> forceZParams;
+      double *energyX, *energyY, *energyZ;
+      double *forceXX, *forceXY, *forceXZ;
+      double *forceYX, *forceYY, *forceYZ;
+      double *forceZX, *forceZY, *forceZZ;
+      int numParameters;
 
    public:
 
@@ -48,8 +55,8 @@ class ReferenceCustomExternalIxn {
 
          --------------------------------------------------------------------------------------- */
 
-       ReferenceCustomExternalIxn(const Lepton::ExpressionProgram& energyExpression, const Lepton::ExpressionProgram& forceExpressionX,
-                              const Lepton::ExpressionProgram& forceExpressionY, const Lepton::ExpressionProgram& forceExpressionZ,
+       ReferenceCustomExternalIxn(const Lepton::CompiledExpression& energyExpression, const Lepton::CompiledExpression& forceExpressionX,
+                              const Lepton::CompiledExpression& forceExpressionY, const Lepton::CompiledExpression& forceExpressionZ,
                               const std::vector<std::string>& parameterNames, std::map<std::string, double> globalParameters);
 
       /**---------------------------------------------------------------------------------------
