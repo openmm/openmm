@@ -254,6 +254,10 @@ void testErrorTolerance(NonbondedForce::NonbondedMethod method) {
 
 int main(int argc, char* argv[]) {
     try {
+        if (!CpuPlatform::isProcessorSupported()) {
+            cout << "CPU is not supported.  Exiting." << endl;
+            return 0;
+        }
         testEwaldPME(false);
         testEwaldPME(true);
 //        testEwald2Ions();
