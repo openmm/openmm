@@ -34,7 +34,7 @@
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/ContextImpl.h"
 #include "SimTKOpenMMUtilities.h"
-#include "ReferenceCCMAAlgorithm.h"
+#include "ReferenceConstraints.h"
 #include "ReferenceVirtualSites.h"
 #include <set>
 
@@ -54,20 +54,6 @@ static vector<RealVec>& extractVelocities(ContextImpl& context) {
 static vector<RealVec>& extractForces(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
     return *((vector<RealVec>*) data->forces);
-}
-
-static void findAnglesForCCMA(const System& system, vector<ReferenceCCMAAlgorithm::AngleInfo>& angles) {
-    for (int i = 0; i < system.getNumForces(); i++) {
-        const HarmonicAngleForce* force = dynamic_cast<const HarmonicAngleForce*>(&system.getForce(i));
-        if (force != NULL) {
-            for (int j = 0; j < force->getNumAngles(); j++) {
-                int atom1, atom2, atom3;
-                double angle, k;
-                force->getAngleParameters(j, atom1, atom2, atom3, angle, k);
-                angles.push_back(ReferenceCCMAAlgorithm::AngleInfo(atom1, atom2, atom3, (RealOpenMM)angle));
-            }
-        }
-    }
 }
 
 static double computeShiftedKineticEnergy(ContextImpl& context, vector<double>& inverseMasses, double timeShift, ReferenceConstraintAlgorithm* constraints) {
@@ -91,7 +77,7 @@ static double computeShiftedKineticEnergy(ContextImpl& context, vector<double>& 
     
     if (constraints != NULL) {
         constraints->setTolerance(1e-4);
-        constraints->applyToVelocities(numParticles, posData, shiftedVel, inverseMasses);
+        constraints->applyToVelocities(posData, shiftedVel, inverseMasses);
     }
     
     // Compute the kinetic energy.
@@ -271,21 +257,19 @@ void ReferenceIntegrateDrudeLangevinStepKernel::initialize(const System& system,
     
     // Prepare constraints.
     
-    int numConstraints = system.getNumConstraints();
-    if (numConstraints > 0) {
-        vector<pair<int, int> > constraintIndices(numConstraints);
-        vector<RealOpenMM> constraintDistances(numConstraints);
-        for (int i = 0; i < numConstraints; ++i) {
+    if (system.getNumConstraints() > 0) {
+        vector<pair<int, int> > constraintIndices;
+        vector<RealOpenMM> constraintDistances;
+        for (int i = 0; i < system.getNumConstraints(); ++i) {
             int particle1, particle2;
             double distance;
             system.getConstraintParameters(i, particle1, particle2, distance);
-            constraintIndices[i].first = particle1;
-            constraintIndices[i].second = particle2;
-            constraintDistances[i] = static_cast<RealOpenMM>(distance);
+            if (system.getParticleMass(particle1) != 0 || system.getParticleMass(particle2) != 0) {
+                constraintIndices.push_back(make_pair(particle1, particle2));
+                constraintDistances.push_back(distance);
+            }
         }
-        vector<ReferenceCCMAAlgorithm::AngleInfo> angles;
-        findAnglesForCCMA(system, angles);
-        constraints = new ReferenceCCMAAlgorithm(system.getNumParticles(), numConstraints, constraintIndices, constraintDistances, particleMass, angles, (RealOpenMM)integrator.getConstraintTolerance());
+        constraints = new ReferenceConstraints(system, (RealOpenMM) integrator.getConstraintTolerance());
     }
 }
 
@@ -347,7 +331,7 @@ void ReferenceIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, co
     // Apply constraints.
     
     if (constraints != NULL)
-        constraints->apply(numParticles, pos, xPrime, particleInvMass);
+        constraints->apply(pos, xPrime, particleInvMass);
     
     // Record the constrained positions and velocities.
     
@@ -395,21 +379,19 @@ void ReferenceIntegrateDrudeSCFStepKernel::initialize(const System& system, cons
     
     // Prepare constraints.
     
-    int numConstraints = system.getNumConstraints();
-    if (numConstraints > 0) {
-        vector<pair<int, int> > constraintIndices(numConstraints);
-        vector<RealOpenMM> constraintDistances(numConstraints);
-        for (int i = 0; i < numConstraints; ++i) {
+    if (system.getNumConstraints() > 0) {
+        vector<pair<int, int> > constraintIndices;
+        vector<RealOpenMM> constraintDistances;
+        for (int i = 0; i < system.getNumConstraints(); ++i) {
             int particle1, particle2;
             double distance;
             system.getConstraintParameters(i, particle1, particle2, distance);
-            constraintIndices[i].first = particle1;
-            constraintIndices[i].second = particle2;
-            constraintDistances[i] = static_cast<RealOpenMM>(distance);
+            if (system.getParticleMass(particle1) != 0 || system.getParticleMass(particle2) != 0) {
+                constraintIndices.push_back(make_pair(particle1, particle2));
+                constraintDistances.push_back(distance);
+            }
         }
-        vector<ReferenceCCMAAlgorithm::AngleInfo> angles;
-        findAnglesForCCMA(system, angles);
-        constraints = new ReferenceCCMAAlgorithm(system.getNumParticles(), numConstraints, constraintIndices, constraintDistances, particleMass, angles, (RealOpenMM)integrator.getConstraintTolerance());
+        constraints = new ReferenceConstraints(system, (RealOpenMM) integrator.getConstraintTolerance());
     }
     
     // Initialize the energy minimizer.
@@ -443,7 +425,7 @@ void ReferenceIntegrateDrudeSCFStepKernel::execute(ContextImpl& context, const D
     // Apply constraints.
     
     if (constraints != NULL)
-        constraints->apply(numParticles, pos, xPrime, particleInvMass);
+        constraints->apply(pos, xPrime, particleInvMass);
     
     // Record the constrained positions and velocities.
     

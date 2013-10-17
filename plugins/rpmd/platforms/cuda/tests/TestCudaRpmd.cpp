@@ -431,6 +431,71 @@ void testContractions() {
     ASSERT_USUALLY_EQUAL_TOL(expectedKE, meanKE, 1e-2);
 }
 
+void testWithoutThermostat() {
+    const int numParticles = 20;
+    const int numCopies = 10;
+    const double temperature = 300.0;
+    const double mass = 2.0;
+    
+    // Create a chain of particles.
+    
+    System system;
+    HarmonicBondForce* bonds = new HarmonicBondForce();
+    system.addForce(bonds);
+    for (int i = 0; i < numParticles; i++) {
+        system.addParticle(mass);
+        if (i > 0)
+            bonds->addBond(i-1, i, 1.0, 1000.0);
+    }
+    RPMDIntegrator integ(numCopies, temperature, 1.0, 0.001);
+    integ.setApplyThermostat(false);
+    Platform& platform = Platform::getPlatformByName("CUDA");
+    Context context(system, integ, platform);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    vector<vector<Vec3> > positions(numCopies);
+    for (int i = 0; i < numCopies; i++) {
+        positions[i].resize(numParticles);
+        for (int j = 0; j < numParticles; j++)
+            positions[i][j] = Vec3(0.95*j, 0.01*genrand_real2(sfmt), 0.01*genrand_real2(sfmt));
+        integ.setPositions(i, positions[i]);
+    }
+    
+    // Simulate it and see if the energy remains constant.
+    
+    double initialEnergy;
+    int numSteps = 100;
+    const double hbar = 1.054571628e-34*AVOGADRO/(1000*1e-12);
+    const double wn = numCopies*BOLTZ*temperature/hbar;
+    const double springConstant = mass*wn*wn;
+    for (int i = 0; i < numSteps; i++) {
+        integ.step(1);
+        
+        // Sum the energies of all the copies.
+        
+        double energy = 0.0;
+        for (int j = 0; j < numCopies; j++) {
+            State state = integ.getState(j, State::Positions | State::Energy);
+            positions[j] = state.getPositions();
+            energy += state.getPotentialEnergy()+state.getKineticEnergy();
+        }
+        
+        // Add the energy from the springs connecting copies.
+        
+        for (int j = 0; j < numCopies; j++) {
+            int previous = (j == 0 ? numCopies-1 : j-1);
+            for (int k = 0; k < numParticles; k++) {
+                Vec3 delta = positions[j][k]-positions[previous][k];
+                energy += 0.5*springConstant*delta.dot(delta);
+            }
+        }
+        if (i == 0)
+            initialEnergy = energy;
+        else
+            ASSERT_EQUAL_TOL(initialEnergy, energy, 1e-4);
+    }
+}
+
 int main(int argc, char* argv[]) {
     try {
         registerRPMDCudaKernelFactories();
@@ -441,6 +506,7 @@ int main(int argc, char* argv[]) {
         testCMMotionRemoval();
         testVirtualSites();
         testContractions();
+        testWithoutThermostat();
     }
     catch(const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;

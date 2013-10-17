@@ -25,6 +25,7 @@
 #ifndef __ReferencePairIxn_H__
 #define __ReferencePairIxn_H__
 
+#include "RealVec.h"
 #include "openmm/internal/windowsExport.h"
 
 // ---------------------------------------------------------------------------------------

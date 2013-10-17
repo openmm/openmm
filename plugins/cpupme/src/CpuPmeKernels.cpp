@@ -34,6 +34,7 @@
 #endif
 #include "CpuPmeKernels.h"
 #include "SimTKOpenMMRealType.h"
+#include "openmm/internal/hardware.h"
 #include <cmath>
 #include <cstring>
 #include <smmintrin.h>
@@ -47,78 +48,6 @@ bool CpuCalcPmeReciprocalForceKernel::hasInitializedThreads = false;
 int CpuCalcPmeReciprocalForceKernel::numThreads = 0;
 
 #define EXTRACT_FLOAT(v, element) _mm_cvtss_f32(_mm_shuffle_ps(v, v, _MM_SHUFFLE(0, 0, 0, element)))
-
-// Define function to get the number of processors.
-
-#ifdef __APPLE__
-   #include <sys/sysctl.h>
-   #include <dlfcn.h>
-#else
-   #ifdef WIN32
-      #include <windows.h>
-   #else
-      #include <dlfcn.h>
-      #include <unistd.h>
-   #endif
-#endif
-
-static int getNumProcessors() {
-#ifdef __APPLE__
-    int ncpu;
-    size_t len = 4;
-    if (sysctlbyname("hw.logicalcpu", &ncpu, &len, NULL, 0) == 0)
-       return ncpu;
-    else
-       return 1;
-#else
-#ifdef WIN32
-    SYSTEM_INFO siSysInfo;
-    int ncpu;
-    GetSystemInfo(&siSysInfo);
-    ncpu = siSysInfo.dwNumberOfProcessors;
-    if (ncpu < 1)
-        ncpu = 1;
-    return ncpu;
-#else
-    long nProcessorsOnline = sysconf(_SC_NPROCESSORS_ONLN);
-    if (nProcessorsOnline == -1)
-        return 1;
-    else
-        return (int) nProcessorsOnline;
-#endif
-#endif
-}
-
-// Define a function to check the CPU's capabilities.
-
-#ifdef _WIN32
-#define cpuid __cpuid
-#else
-static void cpuid(int cpuInfo[4], int infoType){
-#ifdef __LP64__
-    __asm__ __volatile__ (
-        "cpuid":
-        "=a" (cpuInfo[0]),
-        "=b" (cpuInfo[1]),
-        "=c" (cpuInfo[2]),
-        "=d" (cpuInfo[3]) :
-        "a" (infoType)
-    );
-#else
-    __asm__ __volatile__ (
-        "pushl %%ebx\n"
-        "cpuid\n"
-        "movl %%ebx, %1\n"
-        "popl %%ebx\n" :
-        "=a" (cpuInfo[0]),
-        "=r" (cpuInfo[1]),
-        "=c" (cpuInfo[2]),
-        "=d" (cpuInfo[3]) :
-        "a" (infoType)
-    );
-#endif
-}
-#endif
 
 static void spreadCharge(int start, int end, float* posq, float* grid, int gridx, int gridy, int gridz, int numParticles, Vec3 periodicBoxSize) {
     float temp[4];
@@ -164,6 +93,8 @@ static void spreadCharge(int start, int end, float* posq, float* grid, int gridx
         int gridIndexX = _mm_extract_epi32(gridIndex, 0);
         int gridIndexY = _mm_extract_epi32(gridIndex, 1);
         int gridIndexZ = _mm_extract_epi32(gridIndex, 2);
+        if (gridIndexX < 0)
+            return; // This happens when a simulation blows up and coordinates become NaN.
         int zindex[PME_ORDER];
         for (int j = 0; j < PME_ORDER; j++) {
             zindex[j] = gridIndexZ+j;
@@ -359,6 +290,8 @@ static void interpolateForces(int start, int end, float* posq, float* force, flo
         int gridIndexX = _mm_extract_epi32(gridIndex, 0);
         int gridIndexY = _mm_extract_epi32(gridIndex, 1);
         int gridIndexZ = _mm_extract_epi32(gridIndex, 2);
+        if (gridIndexX < 0)
+            return; // This happens when a simulation blows up and coordinates become NaN.
         int zindex[PME_ORDER];
         for (int j = 0; j < PME_ORDER; j++) {
             zindex[j] = gridIndexZ+j;

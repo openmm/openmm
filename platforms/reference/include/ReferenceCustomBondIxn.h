@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2013 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -26,17 +26,20 @@
 #define __ReferenceCustomBondIxn_H__
 
 #include "ReferenceBondIxn.h"
-#include "lepton/ExpressionProgram.h"
+#include "lepton/CompiledExpression.h"
 
 // ---------------------------------------------------------------------------------------
 
 class ReferenceCustomBondIxn : public ReferenceBondIxn {
 
    private:
-      Lepton::ExpressionProgram energyExpression;
-      Lepton::ExpressionProgram forceExpression;
-      std::vector<std::string> paramNames;
-      std::map<std::string, double> globalParameters;
+      Lepton::CompiledExpression energyExpression;
+      Lepton::CompiledExpression forceExpression;
+      std::vector<double*> energyParams;
+      std::vector<double*> forceParams;
+      double* energyR;
+      double* forceR;
+      int numParameters;
 
    public:
 
@@ -46,7 +49,7 @@ class ReferenceCustomBondIxn : public ReferenceBondIxn {
 
          --------------------------------------------------------------------------------------- */
 
-       ReferenceCustomBondIxn(const Lepton::ExpressionProgram& energyExpression, const Lepton::ExpressionProgram& forceExpression,
+       ReferenceCustomBondIxn(const Lepton::CompiledExpression& energyExpression, const Lepton::CompiledExpression& forceExpression,
                               const std::vector<std::string>& parameterNames, std::map<std::string, double> globalParameters);
 
       /**---------------------------------------------------------------------------------------

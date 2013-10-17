@@ -41,9 +41,9 @@ USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import os
 import os.path
-import copy
 import re
 import math
+import warnings
 
 try:
     import numpy
@@ -428,15 +428,25 @@ class PrmtopLoader(object):
         charges=self.getCharges()
         nonbondTerms = self.getNonbondTerms()
         for ii in range(0,len(dihedralPointers),5):
-             if int(dihedralPointers[ii+2])>0 and int(dihedralPointers[ii+3])>0:
-                 iAtom = int(dihedralPointers[ii])//3
-                 lAtom = int(dihedralPointers[ii+3])//3
-                 chargeProd = charges[iAtom]*charges[lAtom]
-                 (rVdwI, epsilonI) = nonbondTerms[iAtom]
-                 (rVdwL, epsilonL) = nonbondTerms[lAtom]
-                 rMin = (rVdwI+rVdwL)
-                 epsilon = math.sqrt(epsilonI*epsilonL)
-                 returnList.append((iAtom, lAtom, chargeProd, rMin, epsilon))
+            if int(dihedralPointers[ii+2])>0 and int(dihedralPointers[ii+3])>0:
+                iAtom = int(dihedralPointers[ii])//3
+                lAtom = int(dihedralPointers[ii+3])//3
+                iidx = int(dihedralPointers[ii+4]) - 1
+                chargeProd = charges[iAtom]*charges[lAtom]
+                (rVdwI, epsilonI) = nonbondTerms[iAtom]
+                (rVdwL, epsilonL) = nonbondTerms[lAtom]
+                rMin = (rVdwI+rVdwL)
+                epsilon = math.sqrt(epsilonI*epsilonL)
+                try:
+                    iScee = float(self._raw_data["SCEE_SCALE_FACTOR"][iidx])
+                except KeyError:
+                    iScee = 1.2
+                try:
+                    iScnb = float(self._raw_data["SCNB_SCALE_FACTOR"][iidx])
+                except KeyError:
+                    iScnb = 2.0
+
+                returnList.append((iAtom, lAtom, chargeProd, rMin, epsilon, iScee, iScnb))
         return returnList
 
     def getExcludedAtoms(self):
@@ -474,15 +484,15 @@ class PrmtopLoader(object):
         # Update screening parameters for GBn if specified
         if symbls:
             for (i, symbl) in enumerate(symbls):
-                if symbl[0] == ('c' or 'C'):
+                if symbl[0] in ('c', 'C'):
                     screen[i] = 0.48435382330
-                elif symbl[0] == ('h' or 'H'):
+                elif symbl[0] in ('h', 'H'):
                     screen[i] = 1.09085413633
-                elif symbl[0] == ('n' or 'N'):
+                elif symbl[0] in ('n', 'N'):
                     screen[i] = 0.700147318409
-                elif symbl[0] == ('o' or 'O'):
+                elif symbl[0] in ('o', 'O'):
                     screen[i] = 1.06557401132
-                elif symbl[0] == ('s' or 'S'):
+                elif symbl[0] in ('s', 'S'):
                     screen[i] = 0.602256336067
                 else:
                     screen[i] = 0.5
@@ -502,11 +512,15 @@ class PrmtopLoader(object):
                 units.Quantity(y, units.angstrom),
                 units.Quantity(z, units.angstrom))
 
+    @property
+    def has_scee_scnb(self):
+        return ("SCEE_SCALE_FACTOR" in self._raw_data and "SCNB_SCALE_FACTOR" in self._raw_data)
+
 #=============================================================================================
 # AMBER System builder (based on, but not identical to, systemManager from 'zander')
 #=============================================================================================
 
-def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmodel=None, soluteDielectric=1.0, solventDielectric=78.5, nonbondedCutoff=None, nonbondedMethod='NoCutoff', scee=1.2, scnb=2.0, mm=None, verbose=False, EwaldErrorTolerance=None, flexibleConstraints=True, rigidWater=True):
+def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmodel=None, soluteDielectric=1.0, solventDielectric=78.5, nonbondedCutoff=None, nonbondedMethod='NoCutoff', scee=None, scnb=None, mm=None, verbose=False, EwaldErrorTolerance=None, flexibleConstraints=True, rigidWater=True):
     """
     Create an OpenMM System from an Amber prmtop file.
 
@@ -520,8 +534,8 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
       soluteDielectric (float) - The solute dielectric constant to use in the implicit solvent model (default: 1.0)
       solventDielectric (float) - The solvent dielectric constant to use in the implicit solvent model (default: 78.5)
       nonbondedCutoff (float) - if specified, will set nonbondedCutoff (default: None)
-      scnb (float) - 1-4 Lennard-Jones scaling factor (default: 1.2)
-      scee (float) - 1-4 electrostatics scaling factor (default: 2.0)
+      scnb (float) - 1-4 Lennard-Jones scaling factor (default: taken from prmtop or 1.2 if not present there)
+      scee (float) - 1-4 electrostatics scaling factor (default: taken from prmtop or 2.0 if not present there)
       mm - if specified, this module will be used in place of pyopenmm (default: None)
       verbose (boolean) - if True, print out information on progress (default: False)
       flexibleConstraints (boolean) - if True, flexible bonds will be added in addition ot constrained bonds
@@ -571,6 +585,10 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
     if prmtop.getIfBox()>1:
         raise Exception("only standard periodic boxes are currently supported")
 
+    if prmtop.has_scee_scnb and (scee is not None or scnb is not None):
+        warnings.warn("1-4 scaling parameters in topology file are being ignored. "
+            "This is not recommended unless you know what you are doing.")
+
     # Use pyopenmm implementation of OpenMM by default.
     if mm is None:
         mm = simtk.openmm
@@ -615,7 +633,7 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
     if shake == 'h-angles':
         numConstrainedBonds = system.getNumConstraints()
         atomConstraints = [[]]*system.getNumParticles()
-        for i in range(system.getNumConstraints()):
+        for i in range(numConstrainedBonds):
             c = system.getConstraintParameters(i)
             distance = c[2].value_in_unit(units.nanometer)
             atomConstraints[c[0]].append((c[1], distance))
@@ -712,9 +730,12 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
     # Add 1-4 Interactions
     excludedAtomPairs = set()
     sigmaScale = 2**(-1./6.)
-    for (iAtom, lAtom, chargeProd, rMin, epsilon) in prmtop.get14Interactions():
-        chargeProd /= scee
-        epsilon /= scnb
+    _scee, _scnb = scee, scnb
+    for (iAtom, lAtom, chargeProd, rMin, epsilon, iScee, iScnb) in prmtop.get14Interactions():
+        if scee is None: _scee = iScee
+        if scnb is None: _scnb = iScnb
+        chargeProd /= _scee
+        epsilon /= _scnb
         sigma = rMin * sigmaScale
         force.addException(iAtom, lAtom, chargeProd, sigma, epsilon)
         excludedAtomPairs.add(min((iAtom, lAtom), (lAtom, iAtom)))
@@ -829,6 +850,8 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
             gb.setCutoffDistance(nonbondedCutoff)
         else:
             raise Exception("Illegal nonbonded method for use with GBSA")
+        # This applies the reaction field dielectric to the NonbondedForce
+        # created above. Do not bind force to another name before this!
         force.setReactionFieldDielectric(1.0)
 
     # TODO: Add GBVI terms?

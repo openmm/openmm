@@ -30,6 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "lepton/ParsedExpression.h"
+#include "lepton/CompiledExpression.h"
 #include "lepton/ExpressionProgram.h"
 #include "lepton/Operation.h"
 #include <limits>
@@ -292,6 +293,10 @@ double ParsedExpression::getConstantValue(const ExpressionTreeNode& node) {
 
 ExpressionProgram ParsedExpression::createProgram() const {
     return ExpressionProgram(*this);
+}
+
+CompiledExpression ParsedExpression::createCompiledExpression() const {
+    return CompiledExpression(*this);
 }
 
 ParsedExpression ParsedExpression::renameVariables(const map<string, string>& replacements) const {

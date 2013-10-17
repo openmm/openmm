@@ -172,6 +172,37 @@ void testConstraints() {
     }
 }
 
+void testConstrainedMasslessParticles() {
+    System system;
+    system.addParticle(0.0);
+    system.addParticle(1.0);
+    system.addConstraint(0, 1, 1.5);
+    vector<Vec3> positions(2);
+    positions[0] = Vec3(-1, 0, 0);
+    positions[1] = Vec3(1, 0, 0);
+    VariableLangevinIntegrator integrator(300.0, 2.0, 0.01);
+    bool failed = false;
+    try {
+        // This should throw an exception.
+        
+        Context context(system, integrator, platform);
+    }
+    catch (exception& ex) {
+        failed = true;
+    }
+    ASSERT(failed);
+    
+    // Now make both particles massless, which should work.
+    
+    system.setParticleMass(1, 0.0);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    context.setVelocitiesToTemperature(300.0);
+    integrator.step(1);
+    State state = context.getState(State::Velocities);
+    ASSERT_EQUAL(0.0, state.getVelocities()[0][0]);
+}
+
 void testRandomSeed() {
     const int numParticles = 8;
     const double temp = 100.0;
@@ -295,6 +326,7 @@ int main(int argc, char* argv[]) {
         testSingleBond();
         testTemperature();
         testConstraints();
+        testConstrainedMasslessParticles();
         testRandomSeed();
         testArgonBox();
     }

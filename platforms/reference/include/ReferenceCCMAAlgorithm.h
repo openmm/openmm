@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2009 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2013 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -34,151 +34,89 @@
 
 class OPENMM_EXPORT ReferenceCCMAAlgorithm : public ReferenceConstraintAlgorithm {
 
-   protected:
+protected:
 
-      int _maximumNumberOfIterations;
-      RealOpenMM _tolerance;
+    int _maximumNumberOfIterations;
+    RealOpenMM _tolerance;
 
-      int _numberOfConstraints;
-      std::vector<std::pair<int, int> > _atomIndices;
-      std::vector<RealOpenMM> _distance;
+    int _numberOfConstraints;
+    std::vector<std::pair<int, int> > _atomIndices;
+    std::vector<RealOpenMM> _distance;
 
-      std::vector<OpenMM::RealVec> _r_ij;
-      RealOpenMM* _d_ij2;
-      RealOpenMM* _distanceTolerance;
-      RealOpenMM* _reducedMasses;
-      bool _hasInitializedMasses;
-      std::vector<std::vector<std::pair<int, RealOpenMM> > > _matrix;
+    std::vector<OpenMM::RealVec> _r_ij;
+    RealOpenMM* _d_ij2;
+    RealOpenMM* _distanceTolerance;
+    RealOpenMM* _reducedMasses;
+    bool _hasInitializedMasses;
+    std::vector<std::vector<std::pair<int, RealOpenMM> > > _matrix;
 
-   private:
+private:
 
-      int applyConstraints(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
+    void applyConstraints(std::vector<OpenMM::RealVec>& atomCoordinates,
                        std::vector<OpenMM::RealVec>& atomCoordinatesP, std::vector<RealOpenMM>& inverseMasses, bool constrainingVelocities);
           
-   public:
-      class AngleInfo;
+public:
+    class AngleInfo;
 
-      /**---------------------------------------------------------------------------------------
+    /**
+     * Create a ReferenceCCMAAlgorithm object.
+     * 
+     * @param numberOfAtoms            the number of atoms in the system
+     * @param numberOfConstraints      the number of constraints
+     * @param atomIndices              atom indices for contraints
+     * @param distance                 distances for constraints
+     * @param masses                   atom masses
+     * @param angles                   angle force field terms
+     * @param tolerance                constraint tolerance
+     */
+    ReferenceCCMAAlgorithm( int numberOfAtoms, int numberOfConstraints, const std::vector<std::pair<int, int> >& atomIndices, const std::vector<RealOpenMM>& distance, std::vector<RealOpenMM>& masses, std::vector<AngleInfo>& angles, RealOpenMM tolerance );
 
-         ReferenceCCMAAlgorithm constructor
+    ~ReferenceCCMAAlgorithm( );
 
-         @param numberOfAtoms    number of atoms
-         @param numberOfConstraints      number of constraints
-         @param atomIndices              atom indices for contraints
-         @param distance                 distances for constraints
-         @param masses                   atom masses
-         @param angles                   angle force field terms
-         @param tolerance                constraint tolerance
+    /**
+     * Get the number of constraints.
+     */
+    int getNumberOfConstraints( void ) const;
 
-         --------------------------------------------------------------------------------------- */
+    /**
+     * Get the maximum number of iterations to perform.
+     */
+    int getMaximumNumberOfIterations( void ) const;
 
-      ReferenceCCMAAlgorithm( int numberOfAtoms, int numberOfConstraints, const std::vector<std::pair<int, int> >& atomIndices, const std::vector<RealOpenMM>& distance, std::vector<RealOpenMM>& masses, std::vector<AngleInfo>& angles, RealOpenMM tolerance );
+    /**
+     * Set the maximum number of iterations to perform.
+     */
+    void setMaximumNumberOfIterations( int maximumNumberOfIterations );
 
-      /**---------------------------------------------------------------------------------------
+    /**
+     * Get the constraint tolerance.
+     */
+    RealOpenMM getTolerance( void ) const;
 
-         Destructor
+    /**
+     * Set the constraint tolerance.
+     */
+    void setTolerance( RealOpenMM tolerance );
 
-         --------------------------------------------------------------------------------------- */
+    /**
+     * Apply the constraint algorithm.
+     * 
+     * @param atomCoordinates  the original atom coordinates
+     * @param atomCoordinatesP the new atom coordinates
+     * @param inverseMasses    1/mass
+     */
+    void apply(std::vector<OpenMM::RealVec>& atomCoordinates,
+                       std::vector<OpenMM::RealVec>& atomCoordinatesP, std::vector<RealOpenMM>& inverseMasses);
 
-       ~ReferenceCCMAAlgorithm( );
-
-      /**---------------------------------------------------------------------------------------
-
-         Get number of constraints
-
-         @return number of constraints
-
-         --------------------------------------------------------------------------------------- */
-
-      int getNumberOfConstraints( void ) const;
-
-      /**---------------------------------------------------------------------------------------
-
-         Get maximum number of iterations
-
-         @return maximum number of iterations
-
-         --------------------------------------------------------------------------------------- */
-
-      int getMaximumNumberOfIterations( void ) const;
-
-      /**---------------------------------------------------------------------------------------
-
-         Set maximum number of iterations
-
-         @param maximumNumberOfIterations   new maximum number of iterations
-
-         --------------------------------------------------------------------------------------- */
-
-      void setMaximumNumberOfIterations( int maximumNumberOfIterations );
-
-      /**---------------------------------------------------------------------------------------
-
-         Get tolerance
-
-         @return tolerance
-
-         --------------------------------------------------------------------------------------- */
-
-      RealOpenMM getTolerance( void ) const;
-
-      /**---------------------------------------------------------------------------------------
-
-         Set tolerance
-
-         @param tolerance new tolerance
-
-         --------------------------------------------------------------------------------------- */
-
-      void setTolerance( RealOpenMM tolerance );
-
-      /**---------------------------------------------------------------------------------------
-
-         Apply CCMA algorithm
-
-         @param numberOfAtoms    number of atoms
-         @param atomCoordinates  atom coordinates
-         @param atomCoordinatesP atom coordinates prime
-         @param inverseMasses    1/mass
-
-         @return SimTKOpenMMCommon::DefaultReturn if converge; else
-          return SimTKOpenMMCommon::ErrorReturn
-
-         --------------------------------------------------------------------------------------- */
-
-      int apply( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
-                       std::vector<OpenMM::RealVec>& atomCoordinatesP, std::vector<RealOpenMM>& inverseMasses );
-
-      /**---------------------------------------------------------------------------------------
-
-         Apply constraint algorithm to velocities.
-
-         @param numberOfAtoms    number of atoms
-         @param atomCoordinates  atom coordinates
-         @param velocities       atom velocities
-         @param inverseMasses    1/mass
-
-         @return SimTKOpenMMCommon::DefaultReturn if converge; else
-          return SimTKOpenMMCommon::ErrorReturn
-
-         --------------------------------------------------------------------------------------- */
-
-      int applyToVelocities(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
+    /**
+     * Apply the constraint algorithm to velocities.
+     * 
+     * @param atomCoordinates  the atom coordinates
+     * @param atomCoordinatesP the velocities to modify
+     * @param inverseMasses    1/mass
+     */
+    void applyToVelocities(std::vector<OpenMM::RealVec>& atomCoordinates,
                      std::vector<OpenMM::RealVec>& velocities, std::vector<RealOpenMM>& inverseMasses);
-
-      /**---------------------------------------------------------------------------------------
-
-         Report any violated constraints
-
-         @param numberOfAtoms    number of atoms
-         @param atomCoordinates  atom coordinates
-         @param message          report
-
-         @return number of violated constraints
-
-         --------------------------------------------------------------------------------------- */
-
-      int reportCCMA( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, std::stringstream& message );
 };
 
 class ReferenceCCMAAlgorithm::AngleInfo
