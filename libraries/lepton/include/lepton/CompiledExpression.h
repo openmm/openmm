@@ -50,6 +50,9 @@ class ParsedExpression;
  * is visible.
  * 
  * A CompiledExpression is created by calling createCompiledExpression() on a ParsedExpression.
+ * 
+ * WARNING: CompiledExpression is NOT thread safe.  You should never access a CompiledExpression from two threads at
+ * the same time.
  */
 
 class LEPTON_EXPORT CompiledExpression {
