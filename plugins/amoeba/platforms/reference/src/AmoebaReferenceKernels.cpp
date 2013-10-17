@@ -683,6 +683,25 @@ double ReferenceCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bo
     return static_cast<double>(energy);
 }
 
+void ReferenceCalcAmoebaMultipoleForceKernel::getInducedDipoles(ContextImpl& context, vector<Vec3>& outputDipoles) {
+    int numParticles = context.getSystem().getNumParticles();
+    outputDipoles.resize(numParticles);
+
+    // Create an AmoebaReferenceMultipoleForce to do the calculation.
+    
+    AmoebaReferenceMultipoleForce* amoebaReferenceMultipoleForce = setupAmoebaReferenceMultipoleForce( context );
+    vector<RealVec>& posData = extractPositions(context);
+    
+    // Retrieve the induced dipoles.
+    
+    vector<RealVec> inducedDipoles;
+    amoebaReferenceMultipoleForce->calculateInducedDipoles(posData, charges, dipoles, quadrupoles, tholes,
+            dampingFactors, polarity, axisTypes, multipoleAtomZs, multipoleAtomXs, multipoleAtomYs, multipoleAtomCovalentInfo, inducedDipoles);
+    for (int i = 0; i < numParticles; i++)
+        outputDipoles[i] = inducedDipoles[i];
+    delete amoebaReferenceMultipoleForce;
+}
+
 void ReferenceCalcAmoebaMultipoleForceKernel::getElectrostaticPotential(ContextImpl& context, const std::vector< Vec3 >& inputGrid,
                                                                         std::vector< double >& outputElectrostaticPotential ){
 
@@ -704,8 +723,6 @@ void ReferenceCalcAmoebaMultipoleForceKernel::getElectrostaticPotential(ContextI
     }
 
     delete amoebaReferenceMultipoleForce;
-
-    return;
 }
 
 void ReferenceCalcAmoebaMultipoleForceKernel::getSystemMultipoleMoments(ContextImpl& context, std::vector< double >& outputMultipoleMoments){
@@ -726,8 +743,6 @@ void ReferenceCalcAmoebaMultipoleForceKernel::getSystemMultipoleMoments(ContextI
                                                                           multipoleAtomCovalentInfo, outputMultipoleMoments );
 
     delete amoebaReferenceMultipoleForce;
-
-    return;
 }
 
 void ReferenceCalcAmoebaMultipoleForceKernel::copyParametersToContext(ContextImpl& context, const AmoebaMultipoleForce& force) {

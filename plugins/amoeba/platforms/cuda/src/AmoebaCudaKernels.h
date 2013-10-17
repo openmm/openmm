@@ -328,6 +328,13 @@ public:
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
     /**
+     * Get the induced dipole moments of all particles.
+     * 
+     * @param context    the Context for which to get the induced dipoles
+     * @param dipoles    the induced dipole moment of particle i is stored into the i'th element
+     */
+    void getInducedDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
+    /**
      * Execute the kernel to calculate the electrostatic potential
      *
      * @param context        the context in which to execute this kernel
