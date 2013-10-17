@@ -1633,6 +1633,24 @@ void CudaCalcAmoebaMultipoleForceKernel::ensureMultipolesValid(ContextImpl& cont
         context.calcForcesAndEnergy(false, false, -1);
 }
 
+void CudaCalcAmoebaMultipoleForceKernel::getInducedDipoles(ContextImpl& context, vector<Vec3>& dipoles) {
+    ensureMultipolesValid(context);
+    int numParticles = cu.getNumAtoms();
+    dipoles.resize(numParticles);
+    if (cu.getUseDoublePrecision()) {
+        vector<double> d;
+        inducedDipole->download(d);
+        for (int i = 0; i < numParticles; i++)
+            dipoles[i] = Vec3(d[3*i], d[3*i+1], d[3*i+2]);
+    }
+    else {
+        vector<float> d;
+        inducedDipole->download(d);
+        for (int i = 0; i < numParticles; i++)
+            dipoles[i] = Vec3(d[3*i], d[3*i+1], d[3*i+2]);
+    }
+}
+
 void CudaCalcAmoebaMultipoleForceKernel::getElectrostaticPotential(ContextImpl& context, const vector<Vec3>& inputGrid, vector<double>& outputElectrostaticPotential) {
     ensureMultipolesValid(context);
     int numPoints = inputGrid.size();
