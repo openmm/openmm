@@ -35,6 +35,7 @@
 
 #include "openmm/internal/AssertionUtilities.h"
 #include "CpuNeighborList.h"
+#include "CpuPlatform.h"
 #include "sfmt/SFMT.h"
 #include <iostream>
 #include <set>
@@ -95,6 +96,10 @@ void testNeighborList(bool periodic) {
 
 int main() {
     try {
+        if (!CpuPlatform::isProcessorSupported()) {
+            cout << "CPU is not supported.  Exiting." << endl;
+            return 0;
+        }
         testNeighborList(false);
         testNeighborList(true);
     }

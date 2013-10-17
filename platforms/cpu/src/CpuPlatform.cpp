@@ -39,13 +39,8 @@ using namespace OpenMM;
 extern "C" OPENMM_EXPORT_CPU void registerPlatforms() {
     // Only register this platform if the CPU supports SSE 4.1.
 
-    int cpuInfo[4];
-    cpuid(cpuInfo, 0);
-    if (cpuInfo[0] >= 1) {
-        cpuid(cpuInfo, 1);
-        if ((cpuInfo[2] & ((int) 1 << 19)) != 0)
-            Platform::registerPlatform(new CpuPlatform());
-    }
+    if (CpuPlatform::isProcessorSupported())
+        Platform::registerPlatform(new CpuPlatform());
 }
 
 CpuPlatform::CpuPlatform() {
@@ -58,5 +53,17 @@ double CpuPlatform::getSpeed() const {
 }
 
 bool CpuPlatform::supportsDoublePrecision() const {
+    return false;
+}
+
+bool CpuPlatform::isProcessorSupported() {
+    // Make sure the CPU supports SSE 4.1.
+    
+    int cpuInfo[4];
+    cpuid(cpuInfo, 0);
+    if (cpuInfo[0] >= 1) {
+        cpuid(cpuInfo, 1);
+        return ((cpuInfo[2] & ((int) 1 << 19)) != 0);
+    }
     return false;
 }

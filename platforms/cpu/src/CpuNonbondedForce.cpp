@@ -155,9 +155,6 @@ void CpuNonbondedForce::setUseSwitchingFunction(float distance) {
     this->periodicBoxSize[0] = periodicBoxSize[0];
     this->periodicBoxSize[1] = periodicBoxSize[1];
     this->periodicBoxSize[2] = periodicBoxSize[2];
-    boxSize = _mm_set_ps(0, periodicBoxSize[2], periodicBoxSize[1], periodicBoxSize[0]);
-    invBoxSize = _mm_set_ps(0, (1/periodicBoxSize[2]), (1/periodicBoxSize[1]), (1/periodicBoxSize[0]));
-    half = _mm_set1_ps(0.5);
   }
 
   /**---------------------------------------------------------------------------------------
@@ -370,6 +367,8 @@ void CpuNonbondedForce::calculateDirectIxn(int numberOfAtoms, float* posq, const
     if (ewald || pme) {
         // Now subtract off the exclusions, since they were implicitly included in the reciprocal space sum.
 
+        __m128 boxSize = _mm_set_ps(0, periodicBoxSize[2], periodicBoxSize[1], periodicBoxSize[0]);
+        __m128 invBoxSize = _mm_set_ps(0, (1/periodicBoxSize[2]), (1/periodicBoxSize[1]), (1/periodicBoxSize[0]));
         for (int i = 0; i < numberOfAtoms; i++)
             for (set<int>::const_iterator iter = exclusions[i].begin(); iter != exclusions[i].end(); ++iter) {
                 if (*iter > i) {
@@ -379,7 +378,7 @@ void CpuNonbondedForce::calculateDirectIxn(int numberOfAtoms, float* posq, const
                     __m128 posI = _mm_loadu_ps(posq+4*ii);
                     __m128 posJ = _mm_loadu_ps(posq+4*jj);
                     float r2;
-                    getDeltaR(posJ, posI, deltaR, r2, false);
+                    getDeltaR(posJ, posI, deltaR, r2, false, boxSize, invBoxSize);
                     float r         = sqrtf(r2);
                     float inverseR  = 1/r;
                     float chargeProd = ONE_4PI_EPS0*posq[4*ii+3]*posq[4*jj+3];
@@ -419,12 +418,14 @@ void CpuNonbondedForce::runThread(int index, vector<float>& threadForce, double&
         threadForce.resize(4*numberOfAtoms, 0.0f);
         for (int i = 0; i < 4*numberOfAtoms; i++)
             threadForce[i] = 0.0f;
+        __m128 boxSize = _mm_set_ps(0, periodicBoxSize[2], periodicBoxSize[1], periodicBoxSize[0]);
+        __m128 invBoxSize = _mm_set_ps(0, (1/periodicBoxSize[2]), (1/periodicBoxSize[1]), (1/periodicBoxSize[0]));
         if (ewald || pme) {
             // Compute the interactions from the neighbor list.
 
             for (int i = index; i < (int) neighborList->size(); i += numThreads) {
                 pair<int, int> pair = (*neighborList)[i];
-                calculateOneEwaldIxn(pair.first, pair.second, &threadForce[0], energyPtr);
+                calculateOneEwaldIxn(pair.first, pair.second, &threadForce[0], energyPtr, boxSize, invBoxSize);
             }
         }
         else if (cutoff) {
@@ -432,7 +433,7 @@ void CpuNonbondedForce::runThread(int index, vector<float>& threadForce, double&
 
             for (int i = index; i < (int) neighborList->size(); i += numThreads) {
                 pair<int, int> pair = (*neighborList)[i];
-                calculateOneIxn(pair.first, pair.second, &threadForce[0], energyPtr);
+                calculateOneIxn(pair.first, pair.second, &threadForce[0], energyPtr, boxSize, invBoxSize);
             }
         }
         else {
@@ -441,20 +442,20 @@ void CpuNonbondedForce::runThread(int index, vector<float>& threadForce, double&
             for (int i = index; i < numberOfAtoms; i += numThreads){
                 for (int j = i+1; j < numberOfAtoms; j++)
                     if (exclusions[j].find(i) == exclusions[j].end())
-                        calculateOneIxn(i, j, &threadForce[0], energyPtr);
+                        calculateOneIxn(i, j, &threadForce[0], energyPtr, boxSize, invBoxSize);
             }
         }
     }
 }
 
-void CpuNonbondedForce::calculateOneIxn(int ii, int jj, float* forces, double* totalEnergy) {
+void CpuNonbondedForce::calculateOneIxn(int ii, int jj, float* forces, double* totalEnergy, const __m128& boxSize, const __m128& invBoxSize) {
     // get deltaR, R2, and R between 2 atoms
 
     __m128 deltaR;
     __m128 posI = _mm_loadu_ps(posq+4*ii);
     __m128 posJ = _mm_loadu_ps(posq+4*jj);
     float r2;
-    getDeltaR(posJ, posI, deltaR, r2, periodic);
+    getDeltaR(posJ, posI, deltaR, r2, periodic, boxSize, invBoxSize);
     if (cutoff && r2 >= cutoffDistance*cutoffDistance)
         return;
     float r = sqrtf(r2);
@@ -501,12 +502,12 @@ void CpuNonbondedForce::calculateOneIxn(int ii, int jj, float* forces, double* t
     _mm_storeu_ps(forces+4*jj, _mm_sub_ps(_mm_loadu_ps(forces+4*jj), result));
   }
 
-void CpuNonbondedForce::calculateOneEwaldIxn(int ii, int jj, float* forces, double* totalEnergy) {
+void CpuNonbondedForce::calculateOneEwaldIxn(int ii, int jj, float* forces, double* totalEnergy, const __m128& boxSize, const __m128& invBoxSize) {
     __m128 deltaR;
     __m128 posI = _mm_loadu_ps(posq+4*ii);
     __m128 posJ = _mm_loadu_ps(posq+4*jj);
     float r2;
-    getDeltaR(posJ, posI, deltaR, r2, true);
+    getDeltaR(posJ, posI, deltaR, r2, true, boxSize, invBoxSize);
     if (r2 < cutoffDistance*cutoffDistance) {
         float r         = sqrtf(r2);
         float inverseR  = 1/r;
@@ -546,10 +547,10 @@ void CpuNonbondedForce::calculateOneEwaldIxn(int ii, int jj, float* forces, doub
     }
 }
 
-void CpuNonbondedForce::getDeltaR(const __m128& posI, const __m128& posJ, __m128& deltaR, float& r2, bool periodic) const {
+void CpuNonbondedForce::getDeltaR(const __m128& posI, const __m128& posJ, __m128& deltaR, float& r2, bool periodic, const __m128& boxSize, const __m128& invBoxSize) const {
     deltaR = _mm_sub_ps(posJ, posI);
     if (periodic) {
-        __m128 base = _mm_mul_ps(_mm_floor_ps(_mm_add_ps(_mm_mul_ps(deltaR, invBoxSize), half)), boxSize);
+        __m128 base = _mm_mul_ps(_mm_floor_ps(_mm_add_ps(_mm_mul_ps(deltaR, invBoxSize), _mm_set1_ps(0.5))), boxSize);
         deltaR = _mm_sub_ps(deltaR, base);
     }
     r2 = _mm_cvtss_f32(_mm_dp_ps(deltaR, deltaR, 0x71));

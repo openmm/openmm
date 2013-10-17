@@ -50,6 +50,7 @@ public:
     }
     double getSpeed() const;
     bool supportsDoublePrecision() const;
+    static bool isProcessorSupported();
 };
 
 } // namespace OpenMM
