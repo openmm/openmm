@@ -168,7 +168,6 @@ private:
         int meshDim[3];
         std::vector<float> ewaldScaleX, ewaldScaleY, ewaldScaleDeriv;
         float ewaldDX, ewaldDXInv;
-        __m128 boxSize, invBoxSize, half;
         bool isDeleted;
         int numThreads, waitCount;
         std::vector<pthread_t> thread;
@@ -196,7 +195,7 @@ private:
             
          --------------------------------------------------------------------------------------- */
           
-      void calculateOneIxn(int atom1, int atom2, float* forces, double* totalEnergy);
+      void calculateOneIxn(int atom1, int atom2, float* forces, double* totalEnergy, const __m128& boxSize, const __m128& invBoxSize);
             
       /**---------------------------------------------------------------------------------------
       
@@ -209,13 +208,13 @@ private:
             
          --------------------------------------------------------------------------------------- */
           
-      void calculateOneEwaldIxn(int atom1, int atom2, float* forces, double* totalEnergy);
+      void calculateOneEwaldIxn(int atom1, int atom2, float* forces, double* totalEnergy, const __m128& boxSize, const __m128& invBoxSize);
 
       /**
        * Compute the displacement and squared distance between two points, optionally using
        * periodic boundary conditions.
        */
-      void getDeltaR(const __m128& posI, const __m128& posJ, __m128& deltaR, float& r2, bool periodic) const;
+      void getDeltaR(const __m128& posI, const __m128& posJ, __m128& deltaR, float& r2, bool periodic, const __m128& boxSize, const __m128& invBoxSize) const;
 
       /**
        * Compute a fast approximation to erfc(x).
