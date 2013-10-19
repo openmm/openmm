@@ -61,6 +61,11 @@ class GBn(object):
         return 'GBn'
 GBn = GBn()
 
+class GBn2(object):
+    def __repr__(self):
+        return 'GBn2'
+GBn2 = GBn2()
+
 class AmberPrmtopFile(object):
     """AmberPrmtopFile parses an AMBER prmtop file and constructs a Topology and (optionally) an OpenMM System from it."""
 
@@ -69,6 +74,7 @@ class AmberPrmtopFile(object):
         top = Topology()
         ## The Topology read from the prmtop file
         self.topology = top
+        self.elements = []
 
         # Load the prmtop file
 
@@ -96,21 +102,30 @@ class AmberPrmtopFile(object):
             if atomName in atomReplacements:
                 atomName = atomReplacements[atomName]
 
-            # Try to guess the element.
-
-            upper = atomName.upper()
-            if upper.startswith('CL'):
-                element = elem.chlorine
-            elif upper.startswith('NA'):
-                element = elem.sodium
-            elif upper.startswith('MG'):
-                element = elem.magnesium
-            else:
+            # Get the element from the prmtop file if available
+            if prmtop.has_atomic_number:
                 try:
-                    element = elem.get_by_symbol(atomName[0])
+                    element = elem.Element.getByAtomicNumber(int(prmtop._raw_data['ATOMIC_NUMBER'][index]))
                 except KeyError:
                     element = None
+            else:
+                # Try to guess the element from the atom name.
+
+                upper = atomName.upper()
+                if upper.startswith('CL'):
+                    element = elem.chlorine
+                elif upper.startswith('NA'):
+                    element = elem.sodium
+                elif upper.startswith('MG'):
+                    element = elem.magnesium
+                else:
+                    try:
+                        element = elem.get_by_symbol(atomName[0])
+                    except KeyError:
+                        element = None
+
             top.addAtom(atomName, element, r)
+            self.elements.append(element)
 
         # Add bonds to the topology
 
@@ -167,19 +182,22 @@ class AmberPrmtopFile(object):
             raise ValueError('Illegal value for constraints')
         if implicitSolvent is None:
             implicitString = None
-        elif implicitSolvent == HCT:
+        elif implicitSolvent is HCT:
             implicitString = 'HCT'
-        elif implicitSolvent == OBC1:
+        elif implicitSolvent is OBC1:
             implicitString = 'OBC1'
-        elif implicitSolvent == OBC2:
+        elif implicitSolvent is OBC2:
             implicitString = 'OBC2'
-        elif implicitSolvent == GBn:
+        elif implicitSolvent is GBn:
             implicitString = 'GBn'
+        elif implicitSolvent is GBn2:
+            implicitString = 'GBn2'
         else:
             raise ValueError('Illegal value for implicit solvent model')
         sys = amber_file_parser.readAmberSystem(prmtop_loader=self._prmtop, shake=constraintString, nonbondedCutoff=nonbondedCutoff,
                                                  nonbondedMethod=methodMap[nonbondedMethod], flexibleConstraints=False, gbmodel=implicitString,
-                                                 soluteDielectric=soluteDielectric, solventDielectric=solventDielectric, rigidWater=rigidWater)
+                                                 soluteDielectric=soluteDielectric, solventDielectric=solventDielectric, rigidWater=rigidWater,
+                                                 elements=self.elements)
         if hydrogenMass is not None:
             for atom1, atom2 in self.topology.bonds():
                 if atom1.element == elem.hydrogen:

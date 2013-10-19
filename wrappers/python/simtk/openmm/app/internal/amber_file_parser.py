@@ -52,6 +52,7 @@ except:
 
 import simtk.unit as units
 import simtk.openmm
+from simtk.openmm.app import element as elem
 import customgbforces as customgb
 
 #=============================================================================================
@@ -472,34 +473,74 @@ class PrmtopLoader(object):
             self._excludedAtoms.append(atomList)
         return self._excludedAtoms
 
-    def getGBParms(self, symbls=None):
+    def getGBParms(self, gbmodel, elements):
         """Return list giving GB params, Radius and screening factor"""
-        try:
-            return self._gb_List
-        except AttributeError:
-            pass
-        self._gb_List=[]
-        radii=self._raw_data["RADII"]
-        screen=self._raw_data["SCREEN"]
+        gb_List=[]
+        radii=[float(r) for r in self._raw_data["RADII"]]
+        screen=[float(s) for s in self._raw_data["SCREEN"]]
+        if gbmodel == 'GBn2':
+            alpha = [0 for i in self._raw_data['RADII']]
+            beta = [0 for i in self._raw_data['RADII']]
+            gamma = [0 for i in self._raw_data['RADII']]
         # Update screening parameters for GBn if specified
-        if symbls:
-            for (i, symbl) in enumerate(symbls):
-                if symbl[0] in ('c', 'C'):
+        if gbmodel == 'GBn':
+            if elements is None:
+                raise Exception('GBn model requires element information')
+            for i, element in enumerate(elements):
+                if element is elem.carbon:
                     screen[i] = 0.48435382330
-                elif symbl[0] in ('h', 'H'):
+                elif element is elem.hydrogen:
                     screen[i] = 1.09085413633
-                elif symbl[0] in ('n', 'N'):
+                elif element is elem.nitrogen:
                     screen[i] = 0.700147318409
-                elif symbl[0] in ('o', 'O'):
+                elif element is elem.oxygen:
                     screen[i] = 1.06557401132
-                elif symbl[0] in ('s', 'S'):
+                elif element is elem.sulfur:
                     screen[i] = 0.602256336067
                 else:
                     screen[i] = 0.5
+        if gbmodel == 'GBn2':
+            if elements is None:
+                raise Exception('GBn2 model requires element information')
+            for i, element in enumerate(elements):
+                if element is elem.carbon:
+                    screen[i] = 1.058554
+                    alpha[i] = 0.733756
+                    beta[i] = 0.506378
+                    gamma[i] = 0.205844
+                elif element is elem.hydrogen:
+                    screen[i] = 1.425952
+                    alpha[i] = 0.788440
+                    beta[i] = 0.798699
+                    gamma[i] = 0.437334
+                elif element is elem.nitrogen:
+                    screen[i] = 0.733599
+                    alpha[i] = 0.503364
+                    beta[i] = 0.316828
+                    gamma[i] = 0.192915
+                elif element is elem.oxygen:
+                    screen[i] = 1.061039
+                    alpha[i] = 0.867814
+                    beta[i] = 0.876635
+                    gamma[i] = 0.387882
+                elif element is elem.sulfur:
+                    screen[i] = -0.703469
+                    alpha[i] = 0.867814
+                    beta[i] = 0.876635
+                    gamma[i] = 0.387882
+                else: # not optimized
+                    screen[i] = 0.5
+                    alpha[i] = 1.0
+                    beta[i] = 0.8
+                    gamma[i] = 4.85
         lengthConversionFactor = units.angstrom.conversion_factor_to(units.nanometer)
-        for iAtom in range(len(radii)):
-            self._gb_List.append((float(radii[iAtom])*lengthConversionFactor, float(screen[iAtom])))
-        return self._gb_List
+        if gbmodel == 'GBn2':
+            for rad, scr, alp, bet, gam in zip(radii, screen, alpha, beta, gamma):
+                gb_List.append((rad*lengthConversionFactor, scr, alp, bet, gam))
+        else:
+            for rad, scr in zip(radii, screen):
+                gb_List.append((rad*lengthConversionFactor, scr))
+        return gb_List
 
     def getBoxBetaAndDimensions(self):
         """Return periodic boundary box beta angle and dimensions"""
@@ -516,11 +557,17 @@ class PrmtopLoader(object):
     def has_scee_scnb(self):
         return ("SCEE_SCALE_FACTOR" in self._raw_data and "SCNB_SCALE_FACTOR" in self._raw_data)
 
+    @property
+    def has_atomic_number(self):
+        return 'ATOMIC_NUMBER' in self._raw_data
+
 #=============================================================================================
 # AMBER System builder (based on, but not identical to, systemManager from 'zander')
 #=============================================================================================
 
-def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmodel=None, soluteDielectric=1.0, solventDielectric=78.5, nonbondedCutoff=None, nonbondedMethod='NoCutoff', scee=None, scnb=None, mm=None, verbose=False, EwaldErrorTolerance=None, flexibleConstraints=True, rigidWater=True):
+def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmodel=None, soluteDielectric=1.0, solventDielectric=78.5,
+                    nonbondedCutoff=None, nonbondedMethod='NoCutoff', scee=None, scnb=None, mm=None, verbose=False,
+                    EwaldErrorTolerance=None, flexibleConstraints=True, rigidWater=True, elements=None):
     """
     Create an OpenMM System from an Amber prmtop file.
 
@@ -813,15 +860,12 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
     if gbmodel is not None:
         if verbose: print "Adding GB parameters..."
         charges = prmtop.getCharges()
-        symbls = None
         cutoff = None
         if nonbondedMethod != 'NoCutoff':
             cutoff = nonbondedCutoff
             if units.is_quantity(cutoff):
                 cutoff = cutoff.value_in_unit(units.nanometers)
-        if gbmodel == 'GBn':
-            symbls = prmtop.getAtomTypes()
-        gb_parms = prmtop.getGBParms(symbls)
+        gb_parms = prmtop.getGBParms(gbmodel, elements)
         if gbmodel == 'HCT':
             gb = customgb.GBSAHCTForce(solventDielectric, soluteDielectric, 'ACE', cutoff)
         elif gbmodel == 'OBC1':
@@ -832,11 +876,16 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
             gb.setSolventDielectric(solventDielectric)
         elif gbmodel == 'GBn':
             gb = customgb.GBSAGBnForce(solventDielectric, soluteDielectric, 'ACE', cutoff)
+        elif gbmodel == 'GBn2':
+            gb = customgb.GBSAGBn2Force(solventDielectric, soluteDielectric, 'ACE', cutoff)
         else:
             raise Exception("Illegal value specified for implicit solvent model")
         for iAtom in range(prmtop.getNumAtoms()):
             if gbmodel == 'OBC2':
                 gb.addParticle(charges[iAtom], gb_parms[iAtom][0], gb_parms[iAtom][1])
+            elif gbmodel == 'GBn2':
+                gb.addParticle([charges[iAtom], gb_parms[iAtom][0], gb_parms[iAtom][1],
+                                gb_parms[iAtom][2], gb_parms[iAtom][3], gb_parms[iAtom][4]])
             else:
                 gb.addParticle([charges[iAtom], gb_parms[iAtom][0], gb_parms[iAtom][1]])
         system.addForce(gb)
