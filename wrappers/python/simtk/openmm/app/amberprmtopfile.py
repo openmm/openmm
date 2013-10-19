@@ -152,7 +152,7 @@ class AmberPrmtopFile(object):
          - constraints (object=None) Specifies which bonds angles should be implemented with constraints.
            Allowed values are None, HBonds, AllBonds, or HAngles.
          - rigidWater (boolean=True) If true, water molecules will be fully rigid regardless of the value passed for the constraints argument
-         - implicitSolvent (object=None) If not None, the implicit solvent model to use.  Allowed values are HCT, OBC1, OBC2, or GBn.
+         - implicitSolvent (object=None) If not None, the implicit solvent model to use.  Allowed values are HCT, OBC1, OBC2, GBn, or GBn2.
          - soluteDielectric (float=1.0) The solute dielectric constant to use in the implicit solvent model.
          - solventDielectric (float=78.5) The solvent dielectric constant to use in the implicit solvent model.
          - removeCMMotion (boolean=True) If true, a CMMotionRemover will be added to the System
