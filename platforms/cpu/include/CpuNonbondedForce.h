@@ -26,11 +26,11 @@
 #define OPENMM_CPU_NONBONDED_FORCE_H__
 
 #include "ReferencePairIxn.h"
+#include "openmm/internal/vectorize.h"
 #include <pthread.h>
 #include <set>
 #include <utility>
 #include <vector>
-#include <smmintrin.h>
 // ---------------------------------------------------------------------------------------
 
 class CpuNonbondedForce {
@@ -195,7 +195,7 @@ private:
             
          --------------------------------------------------------------------------------------- */
           
-      void calculateOneIxn(int atom1, int atom2, float* forces, double* totalEnergy, const __m128& boxSize, const __m128& invBoxSize);
+      void calculateOneIxn(int atom1, int atom2, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize);
             
       /**---------------------------------------------------------------------------------------
       
@@ -208,13 +208,13 @@ private:
             
          --------------------------------------------------------------------------------------- */
           
-      void calculateOneEwaldIxn(int atom1, int atom2, float* forces, double* totalEnergy, const __m128& boxSize, const __m128& invBoxSize);
+      void calculateOneEwaldIxn(int atom1, int atom2, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize);
 
       /**
        * Compute the displacement and squared distance between two points, optionally using
        * periodic boundary conditions.
        */
-      void getDeltaR(const __m128& posI, const __m128& posJ, __m128& deltaR, float& r2, bool periodic, const __m128& boxSize, const __m128& invBoxSize) const;
+      void getDeltaR(const fvec4& posI, const fvec4& posJ, fvec4& deltaR, float& r2, bool periodic, const fvec4& boxSize, const fvec4& invBoxSize) const;
 
       /**
        * Compute a fast approximation to erfc(x).

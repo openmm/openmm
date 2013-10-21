@@ -1,5 +1,7 @@
 #include "CpuNeighborList.h"
 #include "openmm/internal/hardware.h"
+#include "openmm/internal/vectorize.h"
+#include <algorithm>
 #include <set>
 #include <map>
 #include <cmath>
@@ -82,10 +84,9 @@ public:
 
         const int atomI = referencePoint.second;
         const float* locationI = referencePoint.first;
-        __m128 posI = _mm_loadu_ps(locationI);
-        __m128 boxSize = _mm_set_ps(0, periodicBoxSize[2], periodicBoxSize[1], periodicBoxSize[0]);
-        __m128 invBoxSize = _mm_set_ps(0, (1/periodicBoxSize[2]), (1/periodicBoxSize[1]), (1/periodicBoxSize[0]));
-        __m128 half = _mm_set1_ps(0.5);
+        fvec4 posI(locationI);
+        fvec4 boxSize(periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2], 0);
+        fvec4 invBoxSize(1/periodicBoxSize[0], 1/periodicBoxSize[1], 1/periodicBoxSize[2], 0);
         
         float maxDistanceSquared = maxDistance * maxDistance;
 
@@ -125,13 +126,13 @@ public:
                         if (atomJ >= atomI)
                             break;
                         
-                        __m128 posJ = _mm_loadu_ps(itemIter->first);
-                        __m128 delta = _mm_sub_ps(posJ, posI);
+                        fvec4 posJ(itemIter->first);
+                        fvec4 delta = posJ-posI;
                         if (usePeriodic) {
-                            __m128 base = _mm_mul_ps(_mm_floor_ps(_mm_add_ps(_mm_mul_ps(delta, invBoxSize), half)), boxSize);
-                            delta = _mm_sub_ps(delta, base);
+                            fvec4 base = round(delta*invBoxSize)*boxSize;
+                            delta = delta-base;
                         }
-                        float dSquared = _mm_cvtss_f32(_mm_dp_ps(delta, delta, 0x71));
+                        float dSquared = dot3(delta, delta);
                         if (dSquared > maxDistanceSquared)
                             continue;
                         
