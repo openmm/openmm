@@ -234,7 +234,7 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
             neighborList.computeNeighborList(numParticles, posq, exclusions, floatBoxSize, periodic || ewald || pme, nonbondedCutoff+padding);
             lastPositions = posData;
         }
-        nonbonded.setUseCutoff(nonbondedCutoff, neighborList.getNeighbors(), rfDielectric);
+        nonbonded.setUseCutoff(nonbondedCutoff, neighborList, rfDielectric);
     }
     if (periodic || ewald || pme) {
         double minAllowedSize = 1.999999*nonbondedCutoff;

@@ -1,6 +1,7 @@
 #include "CpuNeighborList.h"
 #include "openmm/internal/hardware.h"
 #include "openmm/internal/vectorize.h"
+#include "hilbert.h"
 #include <algorithm>
 #include <set>
 #include <map>
@@ -10,6 +11,8 @@
 using namespace std;
 
 namespace OpenMM {
+
+const int CpuNeighborList::BlockSize = 4;
 
 class VoxelIndex 
 {
@@ -77,23 +80,22 @@ public:
         return VoxelIndex(x, y, z);
     }
 
-    void getNeighbors(vector<pair<int, int> >& neighbors, const VoxelItem& referencePoint, const vector<set<int> >& exclusions, float maxDistance) const {
-
-        // Loop over neighboring voxels
-        // TODO use more clever selection of neighboring voxels
-
-        const int atomI = referencePoint.second;
-        const float* locationI = referencePoint.first;
-        fvec4 posI(locationI);
+    void getNeighbors(vector<int>& neighbors, int blockIndex, fvec4 blockCenter, fvec4 blockWidth, const vector<int>& sortedAtoms, vector<char>& exclusions, float maxDistance, const vector<int> blockAtoms, const float* atomLocations) const {
+        neighbors.resize(0);
+        exclusions.resize(0);
         fvec4 boxSize(periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2], 0);
         fvec4 invBoxSize(1/periodicBoxSize[0], 1/periodicBoxSize[1], 1/periodicBoxSize[2], 0);
         
         float maxDistanceSquared = maxDistance * maxDistance;
+        float refineCutoff = maxDistance-max(max(blockWidth[0], blockWidth[1]), blockWidth[2]);
+        float refineCutoffSquared = refineCutoff*refineCutoff;
 
-        int dIndexX = int(maxDistance / voxelSizeX) + 1; // How may voxels away do we have to look?
-        int dIndexY = int(maxDistance / voxelSizeY) + 1;
-        int dIndexZ = int(maxDistance / voxelSizeZ) + 1;
-        VoxelIndex centerVoxelIndex = getVoxelIndex(locationI);
+        int dIndexX = int((maxDistance+blockWidth[0])/voxelSizeX) + 1; // How may voxels away do we have to look?
+        int dIndexY = int((maxDistance+blockWidth[1])/voxelSizeY) + 1;
+        int dIndexZ = int((maxDistance+blockWidth[2])/voxelSizeZ) + 1;
+        float centerPos[4];
+        blockCenter.store(centerPos);
+        VoxelIndex centerVoxelIndex = getVoxelIndex(centerPos);
         int lastx = centerVoxelIndex.x+dIndexX;
         int lasty = centerVoxelIndex.y+dIndexY;
         int lastz = centerVoxelIndex.z+dIndexZ;
@@ -102,6 +104,7 @@ public:
             lasty = min(lasty, centerVoxelIndex.y-dIndexY+ny-1);
             lastz = min(lastz, centerVoxelIndex.z-dIndexZ+nz-1);
         }
+        int lastSortedIndex = BlockSize*(blockIndex+1);
         VoxelIndex voxelIndex(0, 0, 0);
         for (int x = centerVoxelIndex.x - dIndexX; x <= lastx; ++x) {
             voxelIndex.x = x;
@@ -120,27 +123,52 @@ public:
                         continue; // no such voxel; skip
                     const Voxel& voxel = voxelEntry->second;
                     for (Voxel::const_iterator itemIter = voxel.begin(); itemIter != voxel.end(); ++itemIter) {
-                        const int atomJ = itemIter->second;
+                        const int sortedIndex = itemIter->second;
 
                         // Avoid duplicate entries.
-                        if (atomJ >= atomI)
+                        if (sortedIndex >= lastSortedIndex)
                             break;
                         
-                        fvec4 posJ(itemIter->first);
-                        fvec4 delta = posJ-posI;
+                        fvec4 atomPos(itemIter->first);
+                        fvec4 delta = atomPos-centerPos;
                         if (usePeriodic) {
                             fvec4 base = round(delta*invBoxSize)*boxSize;
                             delta = delta-base;
                         }
+                        delta = max(0.0f, abs(delta)-blockWidth);
                         float dSquared = dot3(delta, delta);
                         if (dSquared > maxDistanceSquared)
                             continue;
                         
-                        // Ignore exclusions.
-                        if (exclusions[atomI].find(atomJ) != exclusions[atomI].end())
-                            continue;
-
-                        neighbors.push_back(make_pair(atomI, atomJ));
+                        if (dSquared > refineCutoffSquared) {
+                            // The distance is large enough that there might not be any actual interactions.
+                            // Check individual atom pairs to be sure.
+                            
+                            bool any = false;
+                            for (int k = 0; k < (int) blockAtoms.size(); k++) {
+                                fvec4 pos1(&atomLocations[4*blockAtoms[k]]);
+                                delta = atomPos-pos1;
+                                if (usePeriodic) {
+                                    fvec4 base = round(delta*invBoxSize)*boxSize;
+                                    delta = delta-base;
+                                }
+                                float r2 = dot3(delta, delta);
+                                if (r2 < maxDistanceSquared) {
+                                    any = true;
+                                    break;
+                                }
+                            }
+                            if (!any)
+                                continue;
+                        }
+                        
+                        // Add this atom to the list of neighbors.
+                        
+                        neighbors.push_back(sortedAtoms[sortedIndex]);
+                        if (sortedIndex < BlockSize*blockIndex)
+                            exclusions.push_back(0);
+                        else
+                            exclusions.push_back(0xF & (0xF<<(sortedIndex-BlockSize*blockIndex)));
                     }
                 }
             }
@@ -161,12 +189,11 @@ public:
     }
     int index;
     CpuNeighborList& owner;
-    vector<pair<int, int> > threadNeighbors;
 };
 
 static void* threadBody(void* args) {
     CpuNeighborList::ThreadData& data = *reinterpret_cast<CpuNeighborList::ThreadData*>(args);
-    data.owner.runThread(data.index, data.threadNeighbors);
+    data.owner.runThread(data.index);
     delete &data;
     return 0;
 }
@@ -204,6 +231,45 @@ CpuNeighborList::~CpuNeighborList() {
 
 void CpuNeighborList::computeNeighborList(int numAtoms, const vector<float>& atomLocations, const vector<set<int> >& exclusions,
             const float* periodicBoxSize, bool usePeriodic, float maxDistance) {
+    int numBlocks = (numAtoms+BlockSize-1)/BlockSize;
+    blockNeighbors.resize(numBlocks);
+    blockExclusions.resize(numBlocks);
+    sortedAtoms.resize(numAtoms);
+    
+    // Sort the atoms based on a Hilbert curve.
+    
+    float minx = atomLocations[0], maxx = atomLocations[0];
+    float miny = atomLocations[1], maxy = atomLocations[1];
+    float minz = atomLocations[2], maxz = atomLocations[2];
+    for (int i = 0; i < numAtoms; i++) {
+        const float* pos = &atomLocations[4*i];
+        if (pos[0] < minx)
+            minx = pos[0];
+        if (pos[1] < miny)
+            miny = pos[1];
+        if (pos[2] < minz)
+            minz = pos[2];
+        if (pos[0] > maxx)
+            maxx = pos[0];
+        if (pos[1] > maxy)
+            maxy = pos[1];
+        if (pos[2] > maxz)
+            maxz = pos[2];
+    }
+    float binWidth = max(max(maxx-minx, maxy-miny), maxz-minz)/255.0f;
+    float invBinWidth = 1.0f/binWidth;
+    vector<pair<int, int> > atomBins(numAtoms);
+    bitmask_t coords[3];
+    for (int i = 0; i < numAtoms; i++) {
+        const float* pos = &atomLocations[4*i];
+        coords[0] = (bitmask_t) ((pos[0]-minx)*invBinWidth);
+        coords[1] = (bitmask_t) ((pos[1]-miny)*invBinWidth);
+        coords[2] = (bitmask_t) ((pos[2]-minz)*invBinWidth);
+        int bin = (int) hilbert_c2i(3, 8, coords);
+        atomBins[i] = pair<int, int>(bin, i);
+    }
+    sort(atomBins.begin(), atomBins.end());
+
     // Build the voxel hash.
     
     float edgeSizeX, edgeSizeY, edgeSizeZ;
@@ -215,8 +281,11 @@ void CpuNeighborList::computeNeighborList(int numAtoms, const vector<float>& ato
         edgeSizeZ = 0.5f*periodicBoxSize[2]/floorf(periodicBoxSize[2]/maxDistance);
     }
     VoxelHash voxelHash(edgeSizeX, edgeSizeY, edgeSizeZ, periodicBoxSize, usePeriodic);
-    for (int i = 0; i < numAtoms; i++)
-        voxelHash.insert(i, &atomLocations[4*i]);
+    for (int i = 0; i < numAtoms; i++) {
+        int atomIndex = atomBins[i].second;
+        sortedAtoms[i] = atomIndex;
+        voxelHash.insert(i, &atomLocations[4*atomIndex]);
+    }
     
     // Record the parameters for the threads.
     
@@ -237,18 +306,37 @@ void CpuNeighborList::computeNeighborList(int numAtoms, const vector<float>& ato
         pthread_cond_wait(&endCondition, &lock);
     pthread_mutex_unlock(&lock);
     
-    // Combine the results from all the threads.
+    // Add padding atoms to fill up the last block.
     
-    neighbors.clear();
-    for (int i = 0; i < numThreads; i++)
-        neighbors.insert(neighbors.end(), threadData[i]->threadNeighbors.begin(), threadData[i]->threadNeighbors.end());
+    int numPadding = numBlocks*BlockSize-numAtoms;
+    if (numPadding > 0) {
+        char mask = (0xF0 >> numPadding) & 0xF;
+        for (int i = 0; i < numPadding; i++)
+            sortedAtoms.push_back(0);
+        vector<char>& exc = blockExclusions[blockExclusions.size()-1];
+        for (int i = 0; i < (int) exc.size(); i++)
+            exc[i] |= mask;
+    }
 }
 
-const vector<pair<int, int> >& CpuNeighborList::getNeighbors() {
-    return neighbors;
+int CpuNeighborList::getNumBlocks() const {
+    return sortedAtoms.size()/BlockSize;
 }
 
-void CpuNeighborList::runThread(int index, vector<pair<int, int> >& threadNeighbors) {
+const std::vector<int>& CpuNeighborList::getSortedAtoms() const {
+    return sortedAtoms;
+}
+
+const std::vector<int>& CpuNeighborList::getBlockNeighbors(int blockIndex) const {
+    return blockNeighbors[blockIndex];
+}
+
+const std::vector<char>& CpuNeighborList::getBlockExclusions(int blockIndex) const {
+    return blockExclusions[blockIndex];
+    
+}
+
+void CpuNeighborList::runThread(int index) {
     while (true) {
         // Wait for the signal to start running.
         
@@ -262,9 +350,41 @@ void CpuNeighborList::runThread(int index, vector<pair<int, int> >& threadNeighb
         
         // Compute this thread's subset of neighbors.
         
-        threadNeighbors.clear();
-        for (int i = index; i < numAtoms; i += numThreads)
-            voxelHash->getNeighbors(threadNeighbors, VoxelItem(&atomLocations[4*i], i), *exclusions, maxDistance);
+        int numBlocks = blockNeighbors.size();
+        vector<int> blockAtoms;
+        for (int i = index; i < numBlocks; i += numThreads) {
+            {
+            int firstIndex = BlockSize*i;
+            int atomsInBlock = min(BlockSize, numAtoms-firstIndex);
+            blockAtoms.resize(atomsInBlock);
+            for (int j = 0; j < atomsInBlock; j++)
+                blockAtoms[j] = sortedAtoms[firstIndex+j];
+            }
+
+                        
+            int firstIndex = BlockSize*i;
+            fvec4 minPos(&atomLocations[4*sortedAtoms[firstIndex]]);
+            fvec4 maxPos = minPos;
+            int atomsInBlock = min(BlockSize, numAtoms-firstIndex);
+            for (int j = 1; j < atomsInBlock; j++) {
+                fvec4 pos(&atomLocations[4*sortedAtoms[firstIndex+j]]);
+                minPos = min(minPos, pos);
+                maxPos = max(maxPos, pos);
+            }
+            voxelHash->getNeighbors(blockNeighbors[i], i, (maxPos+minPos)*0.5f, (maxPos-minPos)*0.5f, sortedAtoms, blockExclusions[i], maxDistance, blockAtoms, atomLocations);
+            
+            // Record the exclusions for this block.
+            
+            for (int j = 0; j < atomsInBlock; j++) {
+                const set<int>& atomExclusions = (*exclusions)[sortedAtoms[firstIndex+j]];
+                char mask = 1<<j;
+                for (int k = 0; k < (int) blockNeighbors[i].size(); k++) {
+                    int atomIndex = blockNeighbors[i][k];
+                    if (atomExclusions.find(atomIndex) != atomExclusions.end())
+                        blockExclusions[i][k] |= mask;
+                }
+            }
+        }
     }
 }
 

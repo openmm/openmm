@@ -25,6 +25,7 @@
 #ifndef OPENMM_CPU_NONBONDED_FORCE_H__
 #define OPENMM_CPU_NONBONDED_FORCE_H__
 
+#include "CpuNeighborList.h"
 #include "ReferencePairIxn.h"
 #include "openmm/internal/vectorize.h"
 #include <pthread.h>
@@ -32,6 +33,8 @@
 #include <utility>
 #include <vector>
 // ---------------------------------------------------------------------------------------
+
+namespace OpenMM {
 
 class CpuNonbondedForce {
     public:
@@ -63,7 +66,7 @@ class CpuNonbondedForce {
       
          --------------------------------------------------------------------------------------- */
       
-      void setUseCutoff(float distance, const std::vector<std::pair<int, int> >& neighbors, float solventDielectric);
+      void setUseCutoff(float distance, const CpuNeighborList& neighbors, float solventDielectric);
 
       /**---------------------------------------------------------------------------------------
       
@@ -127,9 +130,9 @@ class CpuNonbondedForce {
             
          --------------------------------------------------------------------------------------- */
           
-      void calculateReciprocalIxn(int numberOfAtoms, float* posq, std::vector<OpenMM::RealVec>& atomCoordinates,
+      void calculateReciprocalIxn(int numberOfAtoms, float* posq, std::vector<RealVec>& atomCoordinates,
                             const std::vector<std::pair<float, float> >& atomParameters, const std::vector<std::set<int> >& exclusions,
-                            std::vector<OpenMM::RealVec>& forces, float* totalEnergy) const;
+                            std::vector<RealVec>& forces, float* totalEnergy) const;
       
       /**---------------------------------------------------------------------------------------
       
@@ -159,14 +162,14 @@ private:
         bool periodic;
         bool ewald;
         bool pme;
-        const std::vector<std::pair<int, int> >* neighborList;
+        const CpuNeighborList* neighborList;
         float periodicBoxSize[3];
         float cutoffDistance, switchingDistance;
         float krf, crf;
         float alphaEwald;
         int numRx, numRy, numRz;
         int meshDim[3];
-        std::vector<float> ewaldScaleX, ewaldScaleY, ewaldScaleDeriv;
+        std::vector<float> ewaldScaleTable;
         float ewaldDX, ewaldDXInv;
         bool isDeleted;
         int numThreads, waitCount;
@@ -199,16 +202,27 @@ private:
             
       /**---------------------------------------------------------------------------------------
       
-         Calculate LJ Coulomb pair ixn between two atoms
+         Calculate all the interactions for one atom block.
       
-         @param atom1            the index of the first atom
-         @param atom2            the index of the second atom
+         @param blockIndex       the index of the atom block
          @param forces           force array (forces added)
          @param totalEnergy      total energy
             
          --------------------------------------------------------------------------------------- */
           
-      void calculateOneEwaldIxn(int atom1, int atom2, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize);
+      void calculateBlockIxn(int blockIndex, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize);
+            
+      /**---------------------------------------------------------------------------------------
+      
+         Calculate all the interactions for one atom block.
+      
+         @param blockIndex       the index of the atom block
+         @param forces           force array (forces added)
+         @param totalEnergy      total energy
+            
+         --------------------------------------------------------------------------------------- */
+          
+      void calculateBlockEwaldIxn(int blockIndex, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize);
 
       /**
        * Compute the displacement and squared distance between two points, optionally using
@@ -219,7 +233,7 @@ private:
       /**
        * Compute a fast approximation to erfc(x).
        */
-      static float erfcApprox(float x);
+      static fvec4 erfcApprox(fvec4 x);
 
       /**
        * Create a lookup table for the scale factor used with Ewald and PME.
@@ -229,8 +243,10 @@ private:
       /**
        * Evaluate the scale factor used with Ewald and PME: erfc(alpha*r) + 2*alpha*r*exp(-alpha*alpha*r*r)/sqrt(PI)
        */
-      float ewaldScaleFunction(float x);
+      fvec4 ewaldScaleFunction(fvec4 x);
 };
+
+} // namespace OpenMM
 
 // ---------------------------------------------------------------------------------------
 

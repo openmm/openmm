@@ -13,19 +13,25 @@ class OPENMM_EXPORT_CPU CpuNeighborList {
 public:
     class ThreadData;
     class VoxelHash;
+    static const int BlockSize;
     CpuNeighborList();
     ~CpuNeighborList();
     void computeNeighborList(int numAtoms, const std::vector<float>& atomLocations, const std::vector<std::set<int> >& exclusions,
             const float* periodicBoxSize, bool usePeriodic, float maxDistance);
-    const std::vector<std::pair<int, int> >& getNeighbors();
+    int getNumBlocks() const;
+    const std::vector<int>& getSortedAtoms() const;
+    const std::vector<int>& getBlockNeighbors(int blockIndex) const;
+    const std::vector<char>& getBlockExclusions(int blockIndex) const;
     /**
      * This routine contains the code executed by each thread.
      */
-    void runThread(int index, std::vector<std::pair<int, int> >& threadNeighbors);
+    void runThread(int index);
 private:
     bool isDeleted;
     int numThreads, waitCount;
-    std::vector<std::pair<int, int> > neighbors;
+    std::vector<int> sortedAtoms;
+    std::vector<std::vector<int> > blockNeighbors;
+    std::vector<std::vector<char> > blockExclusions;
     std::vector<pthread_t> thread;
     std::vector<ThreadData*> threadData;
     pthread_cond_t startCondition, endCondition;
