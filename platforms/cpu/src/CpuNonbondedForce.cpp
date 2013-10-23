@@ -364,36 +364,6 @@ void CpuNonbondedForce::calculateDirectIxn(int numberOfAtoms, float* posq, const
         f.store(forces+4*i);
     }
 
-    if (ewald || pme) {
-        // Now subtract off the exclusions, since they were implicitly included in the reciprocal space sum.
-
-        fvec4 boxSize(periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2], 0);
-        fvec4 invBoxSize((1/periodicBoxSize[0]), (1/periodicBoxSize[1]), (1/periodicBoxSize[2]), 0);
-        for (int i = 0; i < numberOfAtoms; i++)
-            for (set<int>::const_iterator iter = exclusions[i].begin(); iter != exclusions[i].end(); ++iter) {
-                if (*iter > i) {
-                    int ii = i;
-                    int jj = *iter;
-                    fvec4 deltaR;
-                    fvec4 posI(posq+4*ii);
-                    fvec4 posJ(posq+4*jj);
-                    float r2;
-                    getDeltaR(posJ, posI, deltaR, r2, false, boxSize, invBoxSize);
-                    float r         = sqrtf(r2);
-                    float inverseR  = 1/r;
-                    float chargeProd = ONE_4PI_EPS0*posq[4*ii+3]*posq[4*jj+3];
-                    float alphaR = alphaEwald*r;
-                    float erfcAlphaR = erfcApprox(alphaR)[0];
-                    float dEdR      = (float) (chargeProd * inverseR * inverseR * inverseR);
-                          dEdR      = (float) (dEdR * (1.0f-erfcAlphaR-TWO_OVER_SQRT_PI*alphaR*exp(-alphaR*alphaR)));
-                    fvec4 result = deltaR*dEdR;
-                    (fvec4(forces+4*ii)-result).store(forces+4*ii);
-                    (fvec4(forces+4*jj)+result).store(forces+4*jj);
-                    if (includeEnergy)
-                        directEnergy -= chargeProd*inverseR*(1.0f-erfcAlphaR);
-                }
-            }
-    }
     if (totalEnergy != NULL)
         *totalEnergy += (float) directEnergy;
 }
@@ -425,6 +395,34 @@ void CpuNonbondedForce::runThread(int index, vector<float>& threadForce, double&
 
             for (int i = index; i < neighborList->getNumBlocks(); i += numThreads)
                 calculateBlockEwaldIxn(i, &threadForce[0], energyPtr, boxSize, invBoxSize);
+            
+            // Now subtract off the exclusions, since they were implicitly included in the reciprocal space sum.
+
+            fvec4 boxSize(periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2], 0);
+            fvec4 invBoxSize((1/periodicBoxSize[0]), (1/periodicBoxSize[1]), (1/periodicBoxSize[2]), 0);
+            for (int i = index; i < numberOfAtoms; i += numThreads)
+                for (set<int>::const_iterator iter = exclusions[i].begin(); iter != exclusions[i].end(); ++iter) {
+                    if (*iter > i) {
+                        int j = *iter;
+                        fvec4 deltaR;
+                        fvec4 posI(posq+4*i);
+                        fvec4 posJ(posq+4*j);
+                        float r2;
+                        getDeltaR(posJ, posI, deltaR, r2, false, boxSize, invBoxSize);
+                        float r = sqrtf(r2);
+                        float inverseR = 1/r;
+                        float chargeProd = ONE_4PI_EPS0*posq[4*i+3]*posq[4*j+3];
+                        float alphaR = alphaEwald*r;
+                        float erfcAlphaR = erfcApprox(alphaR)[0];
+                        float dEdR = (float) (chargeProd * inverseR * inverseR * inverseR);
+                        dEdR = (float) (dEdR * (1.0f-erfcAlphaR-TWO_OVER_SQRT_PI*alphaR*exp(-alphaR*alphaR)));
+                        fvec4 result = deltaR*dEdR;
+                        (fvec4(&threadForce[4*i])-result).store(&threadForce[4*i]);
+                        (fvec4(&threadForce[4*j])+result).store(&threadForce[4*j]);
+                        if (includeEnergy)
+                            threadEnergy -= chargeProd*inverseR*(1.0f-erfcAlphaR);
+                    }
+                }
         }
         else if (cutoff) {
             // Compute the interactions from the neighbor list.
