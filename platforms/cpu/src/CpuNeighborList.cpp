@@ -17,67 +17,112 @@ const int CpuNeighborList::BlockSize = 4;
 class VoxelIndex 
 {
 public:
-    VoxelIndex(int xx, int yy, int zz) : x(xx), y(yy), z(zz) {
+    VoxelIndex(int x, int y) : x(x), y(y) {
     }
-
-    // operator<() needed for map
-    bool operator<(const VoxelIndex& other) const {
-        if      (x < other.x) return true;
-        else if (x > other.x) return false;
-        else if (y < other.y) return true;
-        else if (y > other.y) return false;
-        else if (z < other.z) return true;
-        else return false;
-    }
-    
     int x;
     int y;
-    int z;
 };
 
 typedef pair<const float*, int> VoxelItem;
-typedef vector< VoxelItem > Voxel;
 
-class CpuNeighborList::VoxelHash {
+/**
+ * This data structure organizes the particles spatially.  It divides them into bins along the x and y axes,
+ * then sorts each bin along the z axis so ranges can be identified quickly with a binary search.
+ */
+class CpuNeighborList::Voxels {
 public:
-    VoxelHash(float vsx, float vsy, float vsz, const float* periodicBoxSize, bool usePeriodic) :
-            voxelSizeX(vsx), voxelSizeY(vsy), voxelSizeZ(vsz), periodicBoxSize(periodicBoxSize), usePeriodic(usePeriodic) {
+    Voxels(float vsx, float vsy, float minx, float maxx, float miny, float maxy, const float* periodicBoxSize, bool usePeriodic) :
+            voxelSizeX(vsx), voxelSizeY(vsy), minx(minx), maxx(maxx), miny(miny), maxy(maxy), periodicBoxSize(periodicBoxSize), usePeriodic(usePeriodic) {
         if (usePeriodic) {
             nx = (int) floorf(periodicBoxSize[0]/voxelSizeX+0.5f);
             ny = (int) floorf(periodicBoxSize[1]/voxelSizeY+0.5f);
-            nz = (int) floorf(periodicBoxSize[2]/voxelSizeZ+0.5f);
             voxelSizeX = periodicBoxSize[0]/nx;
             voxelSizeY = periodicBoxSize[1]/ny;
-            voxelSizeZ = periodicBoxSize[2]/nz;
+        }
+        else {
+            nx = max(1, (int) floorf((maxx-minx)/voxelSizeX+0.5f));
+            ny = max(1, (int) floorf((maxy-miny)/voxelSizeY+0.5f));
+            if (maxx > minx)
+                voxelSizeX = (maxx-minx)/nx;
+            if (maxy > miny)
+                voxelSizeY = (maxy-miny)/ny;
+        }
+        bins.resize(nx);
+        for (int i = 0; i < nx; i++) {
+            bins[i].resize(ny);
+            for (int j = 0; j < ny; j++)
+                bins[i][j].resize(0);
         }
     }
 
-    void insert(const int& item, const float* location) {
+    /**
+     * Insert a particle into the voxel data structure.
+     */
+    void insert(const int& atom, const float* location) {
         VoxelIndex voxelIndex = getVoxelIndex(location);
-        if (voxelMap.find(voxelIndex) == voxelMap.end())
-            voxelMap[voxelIndex] = Voxel(); 
-        Voxel& voxel = voxelMap.find(voxelIndex)->second;
-        voxel.push_back(VoxelItem(location, item));
+        bins[voxelIndex.x][voxelIndex.y].push_back(make_pair(location[2], VoxelItem(location, atom)));
     }
     
+    /**
+     * Sort the particles in each voxel by z coordinate.
+     */
+    void sortItems() {
+        for (int i = 0; i < nx; i++)
+            for (int j = 0; j < ny; j++)
+                sort(bins[i][j].begin(), bins[i][j].end());
+    }
+    
+    /**
+     * Find the index of the first particle in voxel (x,y) whose z coordinate in >= the specified value.
+     */
+    int findLowerBound(int x, int y, double z) const {
+        const vector<pair<float, VoxelItem> >& bin = bins[x][y];
+        int lower = 0;
+        int upper = bin.size();
+        while (lower < upper) {
+            int middle = (lower+upper)/2;
+            if (bin[middle].first < z)
+                lower = middle+1;
+            else
+                upper = middle;
+        }
+        return lower;
+    }
+    
+    /**
+     * Find the index of the first particle in voxel (x,y) whose z coordinate in greater than the specified value.
+     */
+    int findUpperBound(int x, int y, double z) const {
+        const vector<pair<float, VoxelItem> >& bin = bins[x][y];
+        int lower = 0;
+        int upper = bin.size();
+        while (lower < upper) {
+            int middle = (lower+upper)/2;
+            if (bin[middle].first > z)
+                upper = middle;
+            else
+                lower = middle+1;
+        }
+        return upper;
+    }
 
+    /**
+     * Get the voxel index containing a particular location.
+     */
     VoxelIndex getVoxelIndex(const float* location) const {
-        float xperiodic, yperiodic, zperiodic;
+        float xperiodic, yperiodic;
         if (!usePeriodic) {
-            xperiodic = location[0];
-            yperiodic = location[1];
-            zperiodic = location[2];
+            xperiodic = location[0]-minx;
+            yperiodic = location[1]-miny;
         }
         else {
             xperiodic = location[0]-periodicBoxSize[0]*floorf(location[0]/periodicBoxSize[0]);
             yperiodic = location[1]-periodicBoxSize[1]*floorf(location[1]/periodicBoxSize[1]);
-            zperiodic = location[2]-periodicBoxSize[2]*floorf(location[2]/periodicBoxSize[2]);
         }
-        int x = int(floorf(xperiodic / voxelSizeX));
-        int y = int(floorf(yperiodic / voxelSizeY));
-        int z = int(floorf(zperiodic / voxelSizeZ));
+        int x = min(nx-1, int(floorf(xperiodic / voxelSizeX)));
+        int y = min(ny-1, int(floorf(yperiodic / voxelSizeY)));
         
-        return VoxelIndex(x, y, z);
+        return VoxelIndex(x, y);
     }
 
     void getNeighbors(vector<int>& neighbors, int blockIndex, fvec4 blockCenter, fvec4 blockWidth, const vector<int>& sortedAtoms, vector<char>& exclusions, float maxDistance, const vector<int> blockAtoms, const float* atomLocations) const {
@@ -90,46 +135,74 @@ public:
         float refineCutoff = maxDistance-max(max(blockWidth[0], blockWidth[1]), blockWidth[2]);
         float refineCutoffSquared = refineCutoff*refineCutoff;
 
-        int dIndexX = int((maxDistance+blockWidth[0])/voxelSizeX) + 1; // How may voxels away do we have to look?
-        int dIndexY = int((maxDistance+blockWidth[1])/voxelSizeY) + 1;
-        int dIndexZ = int((maxDistance+blockWidth[2])/voxelSizeZ) + 1;
+        int dIndexX = min(nx/2, int((maxDistance+blockWidth[0])/voxelSizeX)+1); // How may voxels away do we have to look?
+        int dIndexY = min(ny/2, int((maxDistance+blockWidth[1])/voxelSizeY)+1);
         float centerPos[4];
         blockCenter.store(centerPos);
         VoxelIndex centerVoxelIndex = getVoxelIndex(centerPos);
-        int lastx = centerVoxelIndex.x+dIndexX;
-        int lasty = centerVoxelIndex.y+dIndexY;
-        int lastz = centerVoxelIndex.z+dIndexZ;
+        int startx = centerVoxelIndex.x-dIndexX;
+        int starty = centerVoxelIndex.y-dIndexY;
+        int endx = centerVoxelIndex.x+dIndexX;
+        int endy = centerVoxelIndex.y+dIndexY;
+        int numRanges;
         if (usePeriodic) {
-            lastx = min(lastx, centerVoxelIndex.x-dIndexX+nx-1);
-            lasty = min(lasty, centerVoxelIndex.y-dIndexY+ny-1);
-            lastz = min(lastz, centerVoxelIndex.z-dIndexZ+nz-1);
+            endx = min(endx, centerVoxelIndex.x-dIndexX+nx-1);
+            endy = min(endy, centerVoxelIndex.y-dIndexY+ny-1);
+            numRanges = 2;
+        }
+        else {
+            startx = max(startx, 0);
+            starty = max(starty, 0);
+            endx = min(endx, nx-1);
+            endy = min(endy, ny-1);
+            numRanges = 1;
         }
         int lastSortedIndex = BlockSize*(blockIndex+1);
-        VoxelIndex voxelIndex(0, 0, 0);
-        for (int x = centerVoxelIndex.x - dIndexX; x <= lastx; ++x) {
+        VoxelIndex voxelIndex(0, 0);
+        for (int x = startx; x <= endx; ++x) {
             voxelIndex.x = x;
             if (usePeriodic)
                 voxelIndex.x = (x < 0 ? x+nx : (x >= nx ? x-nx : x));
-            for (int y = centerVoxelIndex.y - dIndexY; y <= lasty; ++y) {
+            float dx = max(0.0f, voxelSizeX*max(0, abs(centerVoxelIndex.x-x)-1)-blockWidth[0]);
+            for (int y = starty; y <= endy; ++y) {
                 voxelIndex.y = y;
                 if (usePeriodic)
                     voxelIndex.y = (y < 0 ? y+ny : (y >= ny ? y-ny : y));
-                for (int z = centerVoxelIndex.z - dIndexZ; z <= lastz; ++z) {
-                    voxelIndex.z = z;
-                    if (usePeriodic)
-                        voxelIndex.z = (z < 0 ? z+nz : (z >= nz ? z-nz : z));
-                    const map<VoxelIndex, Voxel>::const_iterator voxelEntry = voxelMap.find(voxelIndex);
-                    if (voxelEntry == voxelMap.end())
-                        continue; // no such voxel; skip
-                    const Voxel& voxel = voxelEntry->second;
-                    for (Voxel::const_iterator itemIter = voxel.begin(); itemIter != voxel.end(); ++itemIter) {
-                        const int sortedIndex = itemIter->second;
+                float dy = max(0.0f, voxelSizeY*max(0, abs(centerVoxelIndex.y-y)-1)-blockWidth[1]);
+                
+                // Identify the range of atoms within this bin we need to search.  When using periodic boundary
+                // conditions, there may be two separate ranges.
+                
+                float dz = maxDistance+blockWidth[2];
+                dz = sqrtf(max(0.0f, dz*dz-dx*dx-dy*dy));
+                int rangeStart[2];
+                int rangeEnd[2];
+                rangeStart[0] = findLowerBound(voxelIndex.x, voxelIndex.y, centerPos[2]-dz);
+                if (usePeriodic) {
+                    rangeEnd[0] = findUpperBound(voxelIndex.x, voxelIndex.y, centerPos[2]+dz);
+                    if (rangeStart[0] > 0) {
+                        rangeStart[1] = 0;
+                        rangeEnd[1] = min(findUpperBound(voxelIndex.x, voxelIndex.y, centerPos[2]+dz-periodicBoxSize[2]), rangeStart[0]);
+                    }
+                    else {
+                        rangeStart[1] = max(findLowerBound(voxelIndex.x, voxelIndex.y, centerPos[2]-dz+periodicBoxSize[2]), rangeEnd[0]);
+                        rangeEnd[1] = bins[voxelIndex.x][voxelIndex.y].size();
+                    }
+                }
+                else
+                    rangeEnd[0] = findUpperBound(voxelIndex.x, voxelIndex.y, centerPos[2]+dz);
+                
+                // Loop over atoms and check to see if they are neighbors of this block.
+                
+                for (int range = 0; range < numRanges; range++) {
+                    for (int item = rangeStart[range]; item < rangeEnd[range]; item++) {
+                        const int sortedIndex = bins[voxelIndex.x][voxelIndex.y][item].second.second;
 
                         // Avoid duplicate entries.
                         if (sortedIndex >= lastSortedIndex)
-                            break;
+                            continue;
                         
-                        fvec4 atomPos(itemIter->first);
+                        fvec4 atomPos(bins[voxelIndex.x][voxelIndex.y][item].second.first);
                         fvec4 delta = atomPos-centerPos;
                         if (usePeriodic) {
                             fvec4 base = round(delta*invBoxSize)*boxSize;
@@ -176,11 +249,12 @@ public:
     }
 
 private:
-    float voxelSizeX, voxelSizeY, voxelSizeZ;
-    int nx, ny, nz;
+    float voxelSizeX, voxelSizeY;
+    float minx, maxx, miny, maxy;
+    int nx, ny;
     const float* periodicBoxSize;
     const bool usePeriodic;
-    map<VoxelIndex, Voxel> voxelMap;
+    vector<vector<vector<pair<float, VoxelItem> > > > bins;
 };
 
 class CpuNeighborList::ThreadData {
@@ -272,24 +346,24 @@ void CpuNeighborList::computeNeighborList(int numAtoms, const vector<float>& ato
 
     // Build the voxel hash.
     
-    float edgeSizeX, edgeSizeY, edgeSizeZ;
+    float edgeSizeX, edgeSizeY;
     if (!usePeriodic)
-        edgeSizeX = edgeSizeY = edgeSizeZ = maxDistance; // TODO - adjust this as needed
+        edgeSizeX = edgeSizeY = maxDistance; // TODO - adjust this as needed
     else {
         edgeSizeX = 0.5f*periodicBoxSize[0]/floorf(periodicBoxSize[0]/maxDistance);
         edgeSizeY = 0.5f*periodicBoxSize[1]/floorf(periodicBoxSize[1]/maxDistance);
-        edgeSizeZ = 0.5f*periodicBoxSize[2]/floorf(periodicBoxSize[2]/maxDistance);
     }
-    VoxelHash voxelHash(edgeSizeX, edgeSizeY, edgeSizeZ, periodicBoxSize, usePeriodic);
+    Voxels voxels(edgeSizeX, edgeSizeY, minx, maxx, miny, maxy, periodicBoxSize, usePeriodic);
     for (int i = 0; i < numAtoms; i++) {
         int atomIndex = atomBins[i].second;
         sortedAtoms[i] = atomIndex;
-        voxelHash.insert(i, &atomLocations[4*atomIndex]);
+        voxels.insert(i, &atomLocations[4*atomIndex]);
     }
+    voxels.sortItems();
     
     // Record the parameters for the threads.
     
-    this->voxelHash = &voxelHash;
+    this->voxels = &voxels;
     this->exclusions = &exclusions;
     this->atomLocations = &atomLocations[0];
     this->periodicBoxSize = periodicBoxSize;
@@ -371,7 +445,7 @@ void CpuNeighborList::runThread(int index) {
                 minPos = min(minPos, pos);
                 maxPos = max(maxPos, pos);
             }
-            voxelHash->getNeighbors(blockNeighbors[i], i, (maxPos+minPos)*0.5f, (maxPos-minPos)*0.5f, sortedAtoms, blockExclusions[i], maxDistance, blockAtoms, atomLocations);
+            voxels->getNeighbors(blockNeighbors[i], i, (maxPos+minPos)*0.5f, (maxPos-minPos)*0.5f, sortedAtoms, blockExclusions[i], maxDistance, blockAtoms, atomLocations);
             
             // Record the exclusions for this block.
             

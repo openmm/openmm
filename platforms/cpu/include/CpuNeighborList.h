@@ -12,7 +12,7 @@ namespace OpenMM {
 class OPENMM_EXPORT_CPU CpuNeighborList {
 public:
     class ThreadData;
-    class VoxelHash;
+    class Voxels;
     static const int BlockSize;
     CpuNeighborList();
     ~CpuNeighborList();
@@ -37,7 +37,7 @@ private:
     pthread_cond_t startCondition, endCondition;
     pthread_mutex_t lock;
     // The following variables are used to make information accessible to the individual threads.
-    VoxelHash* voxelHash;
+    Voxels* voxels;
     const std::vector<std::set<int> >* exclusions;
     const float* atomLocations;
     const float* periodicBoxSize;

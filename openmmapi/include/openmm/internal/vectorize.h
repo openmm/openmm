@@ -88,8 +88,8 @@ public:
     fvec4 operator-() const {
         return _mm_sub_ps(_mm_set1_ps(0.0f), val);
     }
-    fvec4 operator&(__m128i other) const {
-        return _mm_and_si128(val, other);
+    fvec4 operator&(fvec4 other) const {
+        return _mm_and_ps(val, other);
     }
     fvec4 operator==(fvec4 other) const {
         return _mm_cmpeq_ps(val, other);
