@@ -144,9 +144,9 @@ inline static void swap(w128_t *array, int size);
 #endif
 
 #if defined(HAVE_ALTIVEC)
-  #include "SFMT-alti.h"
+  #include "sfmt/SFMT-alti.h"
 #elif defined(HAVE_SSE2)
-  #include "SFMT-sse2.h"
+  #include "sfmt/SFMT-sse2.h"
 #endif
 
 /**
