@@ -310,38 +310,36 @@ void CpuNeighborList::computeNeighborList(int numAtoms, const vector<float>& ato
     blockExclusions.resize(numBlocks);
     sortedAtoms.resize(numAtoms);
     
+    // Record the parameters for the threads.
+    
+    this->exclusions = &exclusions;
+    this->atomLocations = &atomLocations[0];
+    this->periodicBoxSize = periodicBoxSize;
+    this->numAtoms = numAtoms;
+    this->usePeriodic = usePeriodic;
+    this->maxDistance = maxDistance;
+    
+    // Identify the range of atom positions along each axis.
+    
+    fvec4 minPos(&atomLocations[0]);
+    fvec4 maxPos = minPos;
+    for (int i = 0; i < numAtoms; i++) {
+        fvec4 pos(&atomLocations[4*i]);
+        minPos = min(minPos, pos);
+        maxPos = max(maxPos, pos);
+    }
+    minx = minPos[0];
+    maxx = maxPos[0];
+    miny = minPos[1];
+    maxy = maxPos[1];
+    minz = minPos[2];
+    maxz = maxPos[2];
+    
     // Sort the atoms based on a Hilbert curve.
     
-    float minx = atomLocations[0], maxx = atomLocations[0];
-    float miny = atomLocations[1], maxy = atomLocations[1];
-    float minz = atomLocations[2], maxz = atomLocations[2];
-    for (int i = 0; i < numAtoms; i++) {
-        const float* pos = &atomLocations[4*i];
-        if (pos[0] < minx)
-            minx = pos[0];
-        if (pos[1] < miny)
-            miny = pos[1];
-        if (pos[2] < minz)
-            minz = pos[2];
-        if (pos[0] > maxx)
-            maxx = pos[0];
-        if (pos[1] > maxy)
-            maxy = pos[1];
-        if (pos[2] > maxz)
-            maxz = pos[2];
-    }
-    float binWidth = max(max(maxx-minx, maxy-miny), maxz-minz)/255.0f;
-    float invBinWidth = 1.0f/binWidth;
-    vector<pair<int, int> > atomBins(numAtoms);
-    bitmask_t coords[3];
-    for (int i = 0; i < numAtoms; i++) {
-        const float* pos = &atomLocations[4*i];
-        coords[0] = (bitmask_t) ((pos[0]-minx)*invBinWidth);
-        coords[1] = (bitmask_t) ((pos[1]-miny)*invBinWidth);
-        coords[2] = (bitmask_t) ((pos[2]-minz)*invBinWidth);
-        int bin = (int) hilbert_c2i(3, 8, coords);
-        atomBins[i] = pair<int, int>(bin, i);
-    }
+    atomBins.resize(numAtoms);
+    pthread_mutex_lock(&lock);
+    advanceThreads();
     sort(atomBins.begin(), atomBins.end());
 
     // Build the voxel hash.
@@ -360,24 +358,11 @@ void CpuNeighborList::computeNeighborList(int numAtoms, const vector<float>& ato
         voxels.insert(i, &atomLocations[4*atomIndex]);
     }
     voxels.sortItems();
-    
-    // Record the parameters for the threads.
-    
     this->voxels = &voxels;
-    this->exclusions = &exclusions;
-    this->atomLocations = &atomLocations[0];
-    this->periodicBoxSize = periodicBoxSize;
-    this->numAtoms = numAtoms;
-    this->usePeriodic = usePeriodic;
-    this->maxDistance = maxDistance;
     
     // Signal the threads to start running and wait for them to finish.
     
-    pthread_mutex_lock(&lock);
-    waitCount = 0;
-    pthread_cond_broadcast(&startCondition);
-    while (waitCount < numThreads)
-        pthread_cond_wait(&endCondition, &lock);
+    advanceThreads();
     pthread_mutex_unlock(&lock);
     
     // Add padding atoms to fill up the last block.
@@ -414,13 +399,24 @@ void CpuNeighborList::runThread(int index) {
     while (true) {
         // Wait for the signal to start running.
         
-        pthread_mutex_lock(&lock);
-        waitCount++;
-        pthread_cond_signal(&endCondition);
-        pthread_cond_wait(&startCondition, &lock);
-        pthread_mutex_unlock(&lock);
+        threadWait();
         if (isDeleted)
             break;
+        
+        // Compute the positions of atoms along the Hilbert curve.
+
+        float binWidth = max(max(maxx-minx, maxy-miny), maxz-minz)/255.0f;
+        float invBinWidth = 1.0f/binWidth;
+        bitmask_t coords[3];
+        for (int i = index; i < numAtoms; i += numThreads) {
+            const float* pos = &atomLocations[4*i];
+            coords[0] = (bitmask_t) ((pos[0]-minx)*invBinWidth);
+            coords[1] = (bitmask_t) ((pos[1]-miny)*invBinWidth);
+            coords[2] = (bitmask_t) ((pos[2]-minz)*invBinWidth);
+            int bin = (int) hilbert_c2i(3, 8, coords);
+            atomBins[i] = pair<int, int>(bin, i);
+        }
+        threadWait();
         
         // Compute this thread's subset of neighbors.
         
@@ -459,6 +455,22 @@ void CpuNeighborList::runThread(int index) {
                 }
             }
         }
+    }
+}
+
+void CpuNeighborList::threadWait() {
+    pthread_mutex_lock(&lock);
+    waitCount++;
+    pthread_cond_signal(&endCondition);
+    pthread_cond_wait(&startCondition, &lock);
+    pthread_mutex_unlock(&lock);
+}
+
+void CpuNeighborList::advanceThreads() {
+    waitCount = 0;
+    pthread_cond_broadcast(&startCondition);
+    while (waitCount < numThreads) {
+        pthread_cond_wait(&endCondition, &lock);
     }
 }
 

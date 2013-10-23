@@ -27,6 +27,14 @@ public:
      */
     void runThread(int index);
 private:
+    /**
+     * This is called by the worker threads to wait until the master thread instructs them to advance.
+     */
+    void threadWait();
+    /**
+     * This is called by the master thread to instruct all the worker threads to advance.
+     */
+    void advanceThreads();
     bool isDeleted;
     int numThreads, waitCount;
     std::vector<int> sortedAtoms;
@@ -37,6 +45,8 @@ private:
     pthread_cond_t startCondition, endCondition;
     pthread_mutex_t lock;
     // The following variables are used to make information accessible to the individual threads.
+    float minx, maxx, miny, maxy, minz, maxz;
+    std::vector<std::pair<int, int> > atomBins;
     Voxels* voxels;
     const std::vector<std::set<int> >* exclusions;
     const float* atomLocations;
