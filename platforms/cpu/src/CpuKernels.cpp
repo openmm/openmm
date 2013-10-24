@@ -244,6 +244,7 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
 
             int numMoved = moved.size();
             double cutoff2 = nonbondedCutoff*nonbondedCutoff;
+            double paddedCutoff2 = (nonbondedCutoff+padding)*(nonbondedCutoff+padding);
             for (int i = 1; i < numMoved && !needRecompute; i++)
                 for (int j = 0; j < i; j++) {
                     RealVec delta = posData[moved[i]]-posData[moved[j]];
@@ -251,7 +252,7 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
                         // These particles should interact.  See if they are in the neighbor list.
                         
                         RealVec oldDelta = lastPositions[moved[i]]-lastPositions[moved[j]];
-                        if (oldDelta.dot(oldDelta) > cutoff2) {
+                        if (oldDelta.dot(oldDelta) > paddedCutoff2) {
                             needRecompute = true;
                             break;
                         }
