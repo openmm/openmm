@@ -223,12 +223,40 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
         
         double padding = 0.1*nonbondedCutoff;
         bool needRecompute = false;
+        double closeCutoff2 = 0.25*padding*padding;
+        double farCutoff2 = 0.5*padding*padding;
+        int maxNumMoved = numParticles/10;
+        vector<int> moved;
         for (int i = 0; i < numParticles; i++) {
             RealVec delta = posData[i]-lastPositions[i];
-            if (delta.dot(delta) > 0.25*padding*padding) {
-                needRecompute = true;
-                break;
+            double dist2 = delta.dot(delta);
+            if (dist2 > closeCutoff2) {
+                moved.push_back(i);
+                if (dist2 > farCutoff2 || moved.size() > maxNumMoved) {
+                    needRecompute = true;
+                    break;
+                }
             }
+        }
+        if (!needRecompute && moved.size() > 0) {
+            // Some particles have moved further than half the padding distance.  Look for pairs
+            // that are missing from the neighbor list.
+
+            int numMoved = moved.size();
+            double cutoff2 = nonbondedCutoff*nonbondedCutoff;
+            for (int i = 1; i < numMoved && !needRecompute; i++)
+                for (int j = 0; j < i; j++) {
+                    RealVec delta = posData[moved[i]]-posData[moved[j]];
+                    if (delta.dot(delta) < cutoff2) {
+                        // These particles should interact.  See if they are in the neighbor list.
+                        
+                        RealVec oldDelta = lastPositions[moved[i]]-lastPositions[moved[j]];
+                        if (oldDelta.dot(oldDelta) > cutoff2) {
+                            needRecompute = true;
+                            break;
+                        }
+                    }
+                }
         }
         if (needRecompute) {
             neighborList.computeNeighborList(numParticles, posq, exclusions, floatBoxSize, periodic || ewald || pme, nonbondedCutoff+padding);
