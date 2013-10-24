@@ -221,7 +221,7 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
     if (nonbondedMethod != NoCutoff) {
         // Determine whether we need to recompute the neighbor list.
         
-        double padding = 0.1*nonbondedCutoff;
+        double padding = 0.15*nonbondedCutoff;
         bool needRecompute = false;
         double closeCutoff2 = 0.25*padding*padding;
         double farCutoff2 = 0.5*padding*padding;
