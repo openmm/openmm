@@ -44,6 +44,7 @@ class Element:
     look up the Element with a particular chemical symbol."""
 
     _elements_by_symbol = {}
+    _elements_by_atomic_number = {}
 
     def __init__(self, number, name, symbol, mass):
         ## The atomic number of the element
@@ -58,12 +59,26 @@ class Element:
         s = symbol.strip().upper()
         assert s not in Element._elements_by_symbol
         Element._elements_by_symbol[s] = self
+        if number in Element._elements_by_atomic_number:
+            other_element = Element._elements_by_atomic_number[number]
+            if mass < other_element.mass:
+                # If two "elements" share the same atomic number, they're
+                # probably hydrogen and deuterium, and we want to choose
+                # the lighter one to put in the table by atomic_number,
+                # since it's the "canonical" element.
+                Element._elements_by_atomic_number[number] = self
+        else:
+            Element._elements_by_atomic_number[number] = self
 
     @staticmethod
     def getBySymbol(symbol):
         """Get the Element with a particular chemical symbol."""
         s = symbol.strip().upper()
         return Element._elements_by_symbol[s]
+
+    @staticmethod
+    def getByAtomicNumber(atomic_number):
+        return Element._elements_by_atomic_number[atomic_number]
 
 # This is for backward compatibility.
 def get_by_symbol(symbol):
@@ -188,3 +203,8 @@ ununtrium =      Element(113, "ununtrium",      "Uut", 284*daltons)
 ununquadium =    Element(114, "ununquadium",    "Uuq", 289*daltons)
 ununpentium =    Element(115, "ununpentium",    "Uup", 288*daltons)
 ununhexium =     Element(116, "ununhexium",     "Uuh", 292*daltons)
+
+# Aliases to recognize common alternative spellings. Both the '==' and 'is'
+# relational operators will work with any chosen name
+sulphur = sulfur
+aluminium = aluminum

@@ -56,6 +56,12 @@ void verifyEvaluation(const string& expression, double expectedValue) {
     ExpressionProgram program = parsed.createProgram();
     value = program.evaluate();
     ASSERT_EQUAL_TOL(expectedValue, value, 1e-10);
+
+    // Create a CompiledExpression and see if that also gives the same result.
+
+    CompiledExpression compiled = parsed.createCompiledExpression();
+    value = compiled.evaluate();
+    ASSERT_EQUAL_TOL(expectedValue, value, 1e-10);
 }
 
 /**
@@ -84,6 +90,16 @@ void verifyEvaluation(const string& expression, double x, double y, double expec
 
     ExpressionProgram program = parsed.createProgram();
     value = program.evaluate(variables);
+    ASSERT_EQUAL_TOL(expectedValue, value, 1e-10);
+
+    // Create a CompiledExpression and see if that also gives the same result.
+
+    CompiledExpression compiled = parsed.createCompiledExpression();
+    if (compiled.getVariables().find("x") != compiled.getVariables().end())
+        compiled.getVariableReference("x") = x;
+    if (compiled.getVariables().find("y") != compiled.getVariables().end())
+        compiled.getVariableReference("y") = y;
+    value = compiled.evaluate();
     ASSERT_EQUAL_TOL(expectedValue, value, 1e-10);
 
     // Make sure that variable renaming works.

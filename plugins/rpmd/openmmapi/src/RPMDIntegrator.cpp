@@ -42,7 +42,7 @@ using namespace OpenMM;
 using namespace std;
 
 RPMDIntegrator::RPMDIntegrator(int numCopies, double temperature, double frictionCoeff, double stepSize, const map<int, int>& contractions) :
-        numCopies(numCopies), contractions(contractions), forcesAreValid(false), hasSetPosition(false), hasSetVelocity(false), isFirstStep(true) {
+        numCopies(numCopies), applyThermostat(true), contractions(contractions), forcesAreValid(false), hasSetPosition(false), hasSetVelocity(false), isFirstStep(true) {
     setTemperature(temperature);
     setFriction(frictionCoeff);
     setStepSize(stepSize);
@@ -51,7 +51,7 @@ RPMDIntegrator::RPMDIntegrator(int numCopies, double temperature, double frictio
 }
 
 RPMDIntegrator::RPMDIntegrator(int numCopies, double temperature, double frictionCoeff, double stepSize) :
-        numCopies(numCopies), forcesAreValid(false), hasSetPosition(false), hasSetVelocity(false), isFirstStep(true) {
+        numCopies(numCopies), applyThermostat(true), forcesAreValid(false), hasSetPosition(false), hasSetVelocity(false), isFirstStep(true) {
     setTemperature(temperature);
     setFriction(frictionCoeff);
     setStepSize(stepSize);

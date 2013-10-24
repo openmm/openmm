@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2013 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -160,4 +160,15 @@ void ReferenceForce::getDeltaROnly( const RealOpenMM* atomCoordinatesI,
    deltaR[XIndex]    = atomCoordinatesJ[0] - atomCoordinatesI[0];
    deltaR[YIndex]    = atomCoordinatesJ[1] - atomCoordinatesI[1];
    deltaR[ZIndex]    = atomCoordinatesJ[2] - atomCoordinatesI[2];
+}
+
+double* ReferenceForce::getVariablePointer(Lepton::CompiledExpression& expression, const std::string& name) {
+    if (expression.getVariables().find(name) == expression.getVariables().end())
+        return NULL;
+    return &expression.getVariableReference(name);
+}
+
+void ReferenceForce::setVariable(double* pointer, double value) {
+    if (pointer != NULL)
+        *pointer = value;
 }

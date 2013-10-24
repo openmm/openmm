@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2013 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -36,54 +36,34 @@ public:
 
     virtual ~ReferenceConstraintAlgorithm() {};
 
-      /**---------------------------------------------------------------------------------------
-
-         Get the constraint tolerance
-
-         --------------------------------------------------------------------------------------- */
-
+    /**
+     * Get the constraint tolerance.
+     */
     virtual RealOpenMM getTolerance() const = 0;
 
-      /**---------------------------------------------------------------------------------------
-
-         Set the constraint tolerance
-
-         --------------------------------------------------------------------------------------- */
-
+    /**
+     * Set the constraint tolerance.
+     */
     virtual void setTolerance(RealOpenMM tolerance) = 0;
 
-      /**---------------------------------------------------------------------------------------
-
-         Apply constraint algorithm
-
-         @param numberOfAtoms    number of atoms
-         @param atomCoordinates  atom coordinates
-         @param atomCoordinatesP atom coordinates prime
-         @param inverseMasses    1/mass
-
-         @return SimTKOpenMMCommon::DefaultReturn if converge; else
-          return SimTKOpenMMCommon::ErrorReturn
-
-         --------------------------------------------------------------------------------------- */
-
-    virtual int apply(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
+    /**
+     * Apply the constraint algorithm.
+     * 
+     * @param atomCoordinates  the original atom coordinates
+     * @param atomCoordinatesP the new atom coordinates
+     * @param inverseMasses    1/mass
+     */
+    virtual void apply(std::vector<OpenMM::RealVec>& atomCoordinates,
                      std::vector<OpenMM::RealVec>& atomCoordinatesP, std::vector<RealOpenMM>& inverseMasses) = 0;
 
-      /**---------------------------------------------------------------------------------------
-
-         Apply constraint algorithm to velocities.
-
-         @param numberOfAtoms    number of atoms
-         @param atomCoordinates  atom coordinates
-         @param velocities       atom velocities
-         @param inverseMasses    1/mass
-
-         @return SimTKOpenMMCommon::DefaultReturn if converge; else
-          return SimTKOpenMMCommon::ErrorReturn
-
-         --------------------------------------------------------------------------------------- */
-
-    virtual int applyToVelocities(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
+    /**
+     * Apply the constraint algorithm to velocities.
+     * 
+     * @param atomCoordinates  the atom coordinates
+     * @param atomCoordinatesP the velocities to modify
+     * @param inverseMasses    1/mass
+     */
+    virtual void applyToVelocities(std::vector<OpenMM::RealVec>& atomCoordinates,
                      std::vector<OpenMM::RealVec>& velocities, std::vector<RealOpenMM>& inverseMasses) = 0;
 };
 

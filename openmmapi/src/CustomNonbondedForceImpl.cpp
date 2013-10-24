@@ -182,7 +182,7 @@ double CustomNonbondedForceImpl::calcLongRangeCorrection(const CustomNonbondedFo
         force.getFunctionParameters(i, name, values, min, max);
         functions[name] = new TabulatedFunction(min, max, values);
     }
-    Lepton::ExpressionProgram expression = Lepton::Parser::parse(force.getEnergyFunction(), functions).optimize().createProgram();
+    Lepton::CompiledExpression expression = Lepton::Parser::parse(force.getEnergyFunction(), functions).createCompiledExpression();
     
     // Identify all particle classes (defined by parameters), and record the class of each particle.
     
@@ -251,25 +251,35 @@ double CustomNonbondedForceImpl::calcLongRangeCorrection(const CustomNonbondedFo
     return 2*M_PI*numParticles*numParticles*sum;
 }
 
-double CustomNonbondedForceImpl::integrateInteraction(const Lepton::ExpressionProgram& expression, const vector<double>& params1, const vector<double>& params2,
+double CustomNonbondedForceImpl::integrateInteraction(Lepton::CompiledExpression& expression, const vector<double>& params1, const vector<double>& params2,
         const CustomNonbondedForce& force, const Context& context) {
-    map<std::string, double> variables;
+    const set<string>& variables = expression.getVariables();
     for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
         stringstream name1, name2;
         name1 << force.getPerParticleParameterName(i) << 1;
         name2 << force.getPerParticleParameterName(i) << 2;
-        variables[name1.str()] = params1[i];
-        variables[name2.str()] = params2[i];
+        if (variables.find(name1.str()) != variables.end())
+            expression.getVariableReference(name1.str()) = params1[i];
+        if (variables.find(name2.str()) != variables.end())
+            expression.getVariableReference(name2.str()) = params2[i];
     }
     for (int i = 0; i < force.getNumGlobalParameters(); i++) {
         const string& name = force.getGlobalParameterName(i);
-        variables[name] = context.getParameter(name);
+        if (variables.find(name) != variables.end())
+            expression.getVariableReference(name) = context.getParameter(name);
     }
     
     // To integrate from r_cutoff to infinity, make the change of variables x=r_cutoff/r and integrate from 0 to 1.
     // This introduces another r^2 into the integral, which along with the r^2 in the formula for the correction
     // means we multiply the function by r^4.  Use the midpoint method.
 
+    double* rPointer;
+    try {
+        rPointer = &expression.getVariableReference("r");
+    }
+    catch (exception& ex) {
+        throw OpenMMException("CustomNonbondedForce: Cannot use long range correction with a force that does not depend on r.");
+    }
     double cutoff = force.getCutoffDistance();
     double sum = 0;
     int numPoints = 1;
@@ -281,9 +291,9 @@ double CustomNonbondedForceImpl::integrateInteraction(const Lepton::ExpressionPr
                 continue;
             double x = (i+0.5)/numPoints;
             double r = cutoff/x;
-            variables["r"] = r;
+            *rPointer = r;
             double r2 = r*r;
-            newSum += expression.evaluate(variables)*r2*r2;
+            newSum += expression.evaluate()*r2*r2;
         }
         sum = newSum/numPoints + oldSum/3;
         if (iteration > 2 && (fabs((sum-oldSum)/sum) < 1e-5 || sum == 0))
@@ -309,8 +319,8 @@ double CustomNonbondedForceImpl::integrateInteraction(const Lepton::ExpressionPr
                 double x = (i+0.5)/numPoints;
                 double r = rswitch+x*(cutoff-rswitch);
                 double switchValue = x*x*x*(10+x*(-15+x*6));
-                variables["r"] = r;
-                newSum += switchValue*expression.evaluate(variables)*r*r;
+                *rPointer = r;
+                newSum += switchValue*expression.evaluate()*r*r;
             }
             sum2 = newSum/numPoints + oldSum/3;
             if (iteration > 2 && (fabs((sum2-oldSum)/sum2) < 1e-5 || sum2 == 0))

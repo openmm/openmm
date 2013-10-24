@@ -223,7 +223,8 @@ void OpenCLIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDInte
         stepKernel.setArg<cl_float>(4, (cl_float) (integrator.getTemperature()*BOLTZ));
         velocitiesKernel.setArg<cl_float>(2, (cl_float) dt);
     }
-    cl.executeKernel(pileKernel, numParticles*numCopies, workgroupSize);
+    if (integrator.getApplyThermostat())
+        cl.executeKernel(pileKernel, numParticles*numCopies, workgroupSize);
 
     // Update positions and velocities.
     
@@ -238,8 +239,10 @@ void OpenCLIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDInte
 
     // Apply the PILE-L thermostat again.
 
-    pileKernel.setArg<cl_uint>(2, integration.prepareRandomNumbers(numParticles*numCopies));
-    cl.executeKernel(pileKernel, numParticles*numCopies, workgroupSize);
+    if (integrator.getApplyThermostat()) {
+        pileKernel.setArg<cl_uint>(2, integration.prepareRandomNumbers(numParticles*numCopies));
+        cl.executeKernel(pileKernel, numParticles*numCopies, workgroupSize);
+    }
 
     // Update the time and step count.
 

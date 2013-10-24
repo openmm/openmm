@@ -2700,6 +2700,40 @@ static void testPMEMutualPolarizationLargeWater( FILE* log ) {
 
 }
 
+// test querying particle induced dipoles
+
+static void testParticleInducedDipoles() {
+    int numberOfParticles     = 8;
+    int inputPmeGridDimension = 0;
+    double cutoff             = 9000000.0;
+    std::vector<Vec3> forces;
+    double energy;
+
+    System system;
+    AmoebaMultipoleForce* amoebaMultipoleForce = new AmoebaMultipoleForce();;
+    setupMultipoleAmmonia(system, amoebaMultipoleForce, AmoebaMultipoleForce::NoCutoff, AmoebaMultipoleForce::Mutual, 
+                                             cutoff, inputPmeGridDimension);
+    LangevinIntegrator integrator(0.0, 0.1, 0.01);
+    Context context(system, integrator, Platform::getPlatformByName("CUDA"));
+    getForcesEnergyMultipoleAmmonia(context, forces, energy);
+    std::vector<Vec3> dipole;
+    amoebaMultipoleForce->getInducedDipoles(context, dipole);
+    
+    // Compare to values calculated by TINKER.
+    
+    std::vector<Vec3> expectedDipole(numberOfParticles);
+    expectedDipole[0] = Vec3(0.0031710288, 9.3687453e-7, -0.0006919963);
+    expectedDipole[1] = Vec3(8.0279737504e-5, -0.000279376, 4.778060103e-5);
+    expectedDipole[2] = Vec3(0.000079322, 0.0002789804, 4.8696656126e-5);
+    expectedDipole[3] = Vec3(-0.0001407394, 1.540638116e-6, -0.0007077775);
+    expectedDipole[4] = Vec3(0.0019564439, -1.0409717e-7, 0.0007332188);
+    expectedDipole[5] = Vec3(0.0008213891, -0.0007749618, -0.0003883865);
+    expectedDipole[6] = Vec3(0.0046133992, -7.2868019e-7, 0.0002500622);
+    expectedDipole[7] = Vec3(0.0008204731, 0.0007772727, -0.0003856176);
+    for (int i = 0; i < numberOfParticles; i++)
+        ASSERT_EQUAL_VEC(expectedDipole[i], dipole[i], 1e-4);
+}
+
 // test computation of system multipole moments
 
 static void testSystemMultipoleMoments( FILE* log ) {
@@ -2963,6 +2997,10 @@ int main(int argc, char* argv[]) {
         testMultipoleIonsAndWaterPMEMutualPolarization( log );
         testMultipoleIonsAndWaterPMEDirectPolarization( log );
 
+        // test querying induced dipoles
+        
+        testParticleInducedDipoles();
+        
         // test computation of system multipole moments
 
         testSystemMultipoleMoments( log );

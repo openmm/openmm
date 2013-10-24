@@ -34,9 +34,10 @@
 #endif
 #include "CpuPmeKernels.h"
 #include "SimTKOpenMMRealType.h"
+#include "openmm/internal/hardware.h"
+#include "openmm/internal/vectorize.h"
 #include <cmath>
 #include <cstring>
-#include <smmintrin.h>
 
 using namespace OpenMM;
 using namespace std;
@@ -46,145 +47,73 @@ static const int PME_ORDER = 5;
 bool CpuCalcPmeReciprocalForceKernel::hasInitializedThreads = false;
 int CpuCalcPmeReciprocalForceKernel::numThreads = 0;
 
-#define EXTRACT_FLOAT(v, element) _mm_cvtss_f32(_mm_shuffle_ps(v, v, _MM_SHUFFLE(0, 0, 0, element)))
-
-// Define function to get the number of processors.
-
-#ifdef __APPLE__
-   #include <sys/sysctl.h>
-   #include <dlfcn.h>
-#else
-   #ifdef WIN32
-      #include <windows.h>
-   #else
-      #include <dlfcn.h>
-      #include <unistd.h>
-   #endif
-#endif
-
-static int getNumProcessors() {
-#ifdef __APPLE__
-    int ncpu;
-    size_t len = 4;
-    if (sysctlbyname("hw.logicalcpu", &ncpu, &len, NULL, 0) == 0)
-       return ncpu;
-    else
-       return 1;
-#else
-#ifdef WIN32
-    SYSTEM_INFO siSysInfo;
-    int ncpu;
-    GetSystemInfo(&siSysInfo);
-    ncpu = siSysInfo.dwNumberOfProcessors;
-    if (ncpu < 1)
-        ncpu = 1;
-    return ncpu;
-#else
-    long nProcessorsOnline = sysconf(_SC_NPROCESSORS_ONLN);
-    if (nProcessorsOnline == -1)
-        return 1;
-    else
-        return (int) nProcessorsOnline;
-#endif
-#endif
-}
-
-// Define a function to check the CPU's capabilities.
-
-#ifdef _WIN32
-#define cpuid __cpuid
-#else
-static void cpuid(int cpuInfo[4], int infoType){
-#ifdef __LP64__
-    __asm__ __volatile__ (
-        "cpuid":
-        "=a" (cpuInfo[0]),
-        "=b" (cpuInfo[1]),
-        "=c" (cpuInfo[2]),
-        "=d" (cpuInfo[3]) :
-        "a" (infoType)
-    );
-#else
-    __asm__ __volatile__ (
-        "pushl %%ebx\n"
-        "cpuid\n"
-        "movl %%ebx, %1\n"
-        "popl %%ebx\n" :
-        "=a" (cpuInfo[0]),
-        "=r" (cpuInfo[1]),
-        "=c" (cpuInfo[2]),
-        "=d" (cpuInfo[3]) :
-        "a" (infoType)
-    );
-#endif
-}
-#endif
-
 static void spreadCharge(int start, int end, float* posq, float* grid, int gridx, int gridy, int gridz, int numParticles, Vec3 periodicBoxSize) {
     float temp[4];
-    __m128 boxSize = _mm_set_ps(0, (float) periodicBoxSize[2], (float) periodicBoxSize[1], (float) periodicBoxSize[0]);
-    __m128 invBoxSize = _mm_set_ps(0, (float) (1/periodicBoxSize[2]), (float) (1/periodicBoxSize[1]), (float) (1/periodicBoxSize[0]));
-    __m128 gridSize = _mm_set_ps(0, gridz, gridy, gridx);
-    __m128i gridSizeInt = _mm_set_epi32(0, gridz, gridy, gridx);
-    __m128 one  = _mm_set1_ps(1);
-    __m128 scale = _mm_set1_ps(1.0f/(PME_ORDER-1));
+    fvec4 boxSize((float) periodicBoxSize[0], (float) periodicBoxSize[1], (float) periodicBoxSize[2], 0);
+    fvec4 invBoxSize((float) (1/periodicBoxSize[0]), (float) (1/periodicBoxSize[1]), (float) (1/periodicBoxSize[2]), 0);
+    fvec4 gridSize(gridx, gridy, gridz, 0);
+    ivec4 gridSizeInt(gridx, gridy, gridz, 0);
+    fvec4 one(1);
+    fvec4 scale(1.0f/(PME_ORDER-1));
     const float epsilonFactor = sqrt(ONE_4PI_EPS0);
     memset(grid, 0, sizeof(float)*gridx*gridy*gridz);
     for (int i = start; i < end; i++) {
         // Find the position relative to the nearest grid point.
         
-        __m128 pos = _mm_loadu_ps(&posq[4*i]);
-        __m128 posFloor = _mm_floor_ps(_mm_mul_ps(pos, invBoxSize));
-        __m128 posInBox = _mm_sub_ps(pos, _mm_mul_ps(boxSize, posFloor));
-        __m128 t = _mm_mul_ps(_mm_mul_ps(posInBox, invBoxSize), gridSize);
-        __m128i ti = _mm_cvttps_epi32(t);
-        __m128 dr = _mm_sub_ps(t, _mm_cvtepi32_ps(ti));
-        __m128i gridIndex = _mm_sub_epi32(ti, _mm_and_si128(gridSizeInt, _mm_cmpeq_epi32(ti, gridSizeInt)));
+        fvec4 pos(&posq[4*i]);
+        fvec4 posFloor = floor(pos*invBoxSize);
+        fvec4 posInBox = pos-boxSize*posFloor;
+        fvec4 t = posInBox*invBoxSize*gridSize;
+        ivec4 ti = t;
+        fvec4 dr = t-ti;
+        ivec4 gridIndex = ti-(gridSizeInt&ti==gridSizeInt);
         
         // Compute the B-spline coefficients.
         
-        __m128 data[PME_ORDER];
-        data[PME_ORDER-1] = _mm_setzero_ps();
+        fvec4 data[PME_ORDER];
+        data[PME_ORDER-1] = 0.0f;
         data[1] = dr;
-        data[0] = _mm_sub_ps(one, dr);
+        data[0] = one-dr;
         for (int j = 3; j < PME_ORDER; j++) {
-            __m128 div = _mm_set1_ps(1.0f/(j-1));
-            data[j-1] = _mm_mul_ps(_mm_mul_ps(div, dr), data[j-2]);
+            fvec4 div(1.0f/(j-1));
+            data[j-1] = div*dr*data[j-2];
             for (int k = 1; k < j-1; k++)
-                data[j-k-1] = _mm_mul_ps(div, _mm_add_ps(_mm_mul_ps(_mm_add_ps(dr, _mm_set1_ps(k)), data[j-k-2]), _mm_mul_ps(_mm_sub_ps(_mm_set1_ps(j-k), dr), data[j-k-1])));
-            data[0] = _mm_mul_ps(_mm_mul_ps(div, _mm_sub_ps(one, dr)), data[0]);
+                data[j-k-1] = div*((dr+k)*data[j-k-2]+(fvec4(j-k)-dr)*data[j-k-1]);
+            data[0] = div*(one-dr)*data[0];
         }
-        data[PME_ORDER-1] = _mm_mul_ps(_mm_mul_ps(scale, dr), data[PME_ORDER-2]);
+        data[PME_ORDER-1] = scale*dr*data[PME_ORDER-2];
         for (int j = 1; j < (PME_ORDER-1); j++)
-            data[PME_ORDER-j-1] = _mm_mul_ps(scale, _mm_add_ps(_mm_mul_ps(_mm_add_ps(dr, _mm_set1_ps(j)), data[PME_ORDER-j-2]), _mm_mul_ps(_mm_sub_ps(_mm_set1_ps(PME_ORDER-j), dr), data[PME_ORDER-j-1])));
-        data[0] = _mm_mul_ps(_mm_mul_ps(scale, _mm_sub_ps(one, dr)), data[0]);
+            data[PME_ORDER-j-1] = scale*((dr+j)*data[PME_ORDER-j-2]+(fvec4(PME_ORDER-j)-dr)*data[PME_ORDER-j-1]);
+        data[0] = scale*(one-dr)*data[0];
         
         // Spread the charges.
         
-        int gridIndexX = _mm_extract_epi32(gridIndex, 0);
-        int gridIndexY = _mm_extract_epi32(gridIndex, 1);
-        int gridIndexZ = _mm_extract_epi32(gridIndex, 2);
+        int gridIndexX = gridIndex[0];
+        int gridIndexY = gridIndex[1];
+        int gridIndexZ = gridIndex[2];
+        if (gridIndexX < 0)
+            return; // This happens when a simulation blows up and coordinates become NaN.
         int zindex[PME_ORDER];
         for (int j = 0; j < PME_ORDER; j++) {
             zindex[j] = gridIndexZ+j;
             zindex[j] -= (zindex[j] >= gridz ? gridz : 0);
         }
         float charge = epsilonFactor*posq[4*i+3];
-        __m128 zdata0to3 = _mm_set_ps(EXTRACT_FLOAT(data[3], 2), EXTRACT_FLOAT(data[2], 2), EXTRACT_FLOAT(data[1], 2), EXTRACT_FLOAT(data[0], 2));
-        float zdata4 = EXTRACT_FLOAT(data[4], 2);
+        fvec4 zdata0to3(data[0][2], data[1][2], data[2][2], data[3][2]);
+        float zdata4 = data[4][2];
         if (gridIndexZ+4 < gridz) {
             for (int ix = 0; ix < PME_ORDER; ix++) {
                 int xbase = gridIndexX+ix;
                 xbase -= (xbase >= gridx ? gridx : 0);
                 xbase = xbase*gridy*gridz;
-                float xdata = charge*EXTRACT_FLOAT(data[ix], 0);
+                float xdata = charge*data[ix][0];
                 for (int iy = 0; iy < PME_ORDER; iy++) {
                     int ybase = gridIndexY+iy;
                     ybase -= (ybase >= gridy ? gridy : 0);
                     ybase = xbase + ybase*gridz;
-                    float multiplier = xdata*EXTRACT_FLOAT(data[iy], 1);
-                    __m128 add0to3 = _mm_mul_ps(zdata0to3, _mm_set1_ps(multiplier));
-                    _mm_storeu_ps(&grid[ybase+gridIndexZ], _mm_add_ps(_mm_loadu_ps(&grid[ybase+gridIndexZ]), add0to3));
+                    float multiplier = xdata*data[iy][1];
+                    fvec4 add0to3 = zdata0to3*multiplier;
+                    (fvec4(&grid[ybase+gridIndexZ])+add0to3).store(&grid[ybase+gridIndexZ]);
                     grid[ybase+zindex[4]] += multiplier*zdata4;
                 }
             }
@@ -194,14 +123,14 @@ static void spreadCharge(int start, int end, float* posq, float* grid, int gridx
                 int xbase = gridIndexX+ix;
                 xbase -= (xbase >= gridx ? gridx : 0);
                 xbase = xbase*gridy*gridz;
-                float xdata = charge*EXTRACT_FLOAT(data[ix], 0);
+                float xdata = charge*data[ix][0];
                 for (int iy = 0; iy < PME_ORDER; iy++) {
                     int ybase = gridIndexY+iy;
                     ybase -= (ybase >= gridy ? gridy : 0);
                     ybase = xbase + ybase*gridz;
-                    float multiplier = xdata*EXTRACT_FLOAT(data[iy], 1);
-                    __m128 add0to3 = _mm_mul_ps(zdata0to3, _mm_set1_ps(multiplier));
-                    _mm_store_ps(temp, add0to3);
+                    float multiplier = xdata*data[iy][1];
+                    fvec4 add0to3 = zdata0to3*multiplier;
+                    add0to3.store(temp);
                     grid[ybase+zindex[0]] += temp[0];
                     grid[ybase+zindex[1]] += temp[1];
                     grid[ybase+zindex[2]] += temp[2];
@@ -314,84 +243,86 @@ static void reciprocalConvolution(int start, int end, fftwf_complex* grid, int g
 }
 
 static void interpolateForces(int start, int end, float* posq, float* force, float* grid, int gridx, int gridy, int gridz, int numParticles, Vec3 periodicBoxSize) {
-    __m128 boxSize = _mm_set_ps(0, (float) periodicBoxSize[2], (float) periodicBoxSize[1], (float) periodicBoxSize[0]);
-    __m128 invBoxSize = _mm_set_ps(0, (float) (1/periodicBoxSize[2]), (float) (1/periodicBoxSize[1]), (float) (1/periodicBoxSize[0]));
-    __m128 gridSize = _mm_set_ps(0, gridz, gridy, gridx);
-    __m128i gridSizeInt = _mm_set_epi32(0, gridz, gridy, gridx);
-    __m128 one  = _mm_set1_ps(1);
-    __m128 scale = _mm_set1_ps(1.0f/(PME_ORDER-1));
+    fvec4 boxSize((float) periodicBoxSize[0], (float) periodicBoxSize[1], (float) periodicBoxSize[2], 0);
+    fvec4 invBoxSize((float) (1/periodicBoxSize[0]), (float) (1/periodicBoxSize[1]), (float) (1/periodicBoxSize[2]), 0);
+    fvec4 gridSize(gridx, gridy, gridz, 0);
+    ivec4 gridSizeInt(gridx, gridy, gridz, 0);
+    fvec4 one(1);
+    fvec4 scale(1.0f/(PME_ORDER-1));
     const float epsilonFactor = sqrt(ONE_4PI_EPS0);
     for (int i = start; i < end; i++) {
         // Find the position relative to the nearest grid point.
         
-        __m128 pos = _mm_loadu_ps(&posq[4*i]);
-        __m128 posFloor = _mm_floor_ps(_mm_mul_ps(pos, invBoxSize));
-        __m128 posInBox = _mm_sub_ps(pos, _mm_mul_ps(boxSize, posFloor));
-        __m128 t = _mm_mul_ps(_mm_mul_ps(posInBox, invBoxSize), gridSize);
-        __m128i ti = _mm_cvttps_epi32(t);
-        __m128 dr = _mm_sub_ps(t, _mm_cvtepi32_ps(ti));
-        __m128i gridIndex = _mm_sub_epi32(ti, _mm_and_si128(gridSizeInt, _mm_cmpeq_epi32(ti, gridSizeInt)));
+        fvec4 pos(&posq[4*i]);
+        fvec4 posFloor = floor(pos*invBoxSize);
+        fvec4 posInBox = pos-boxSize*posFloor;
+        fvec4 t = posInBox*invBoxSize*gridSize;
+        ivec4 ti = t;
+        fvec4 dr = t-ti;
+        ivec4 gridIndex = ti-(gridSizeInt&ti==gridSizeInt);
         
         // Compute the B-spline coefficients.
         
-        __m128 data[PME_ORDER];
-        __m128 ddata[PME_ORDER];
-        data[PME_ORDER-1] = _mm_setzero_ps();
+        fvec4 data[PME_ORDER];
+        fvec4 ddata[PME_ORDER];
+        data[PME_ORDER-1] = 0.0f;
         data[1] = dr;
-        data[0] = _mm_sub_ps(one, dr);
+        data[0] = one-dr;
         for (int j = 3; j < PME_ORDER; j++) {
-            __m128 div = _mm_set1_ps(1.0f/(j-1));
-            data[j-1] = _mm_mul_ps(_mm_mul_ps(div, dr), data[j-2]);
+            fvec4 div(1.0f/(j-1));
+            data[j-1] = div*dr*data[j-2];
             for (int k = 1; k < j-1; k++)
-                data[j-k-1] = _mm_mul_ps(div, _mm_add_ps(_mm_mul_ps(_mm_add_ps(dr, _mm_set1_ps(k)), data[j-k-2]), _mm_mul_ps(_mm_sub_ps(_mm_set1_ps(j-k), dr), data[j-k-1])));
-            data[0] = _mm_mul_ps(_mm_mul_ps(div, _mm_sub_ps(one, dr)), data[0]);
+                data[j-k-1] = div*((dr+k)*data[j-k-2]+(fvec4(j-k)-dr)*data[j-k-1]);
+            data[0] = div*(one-dr)*data[0];
         }
-        ddata[0] = _mm_sub_ps(_mm_set1_ps(0), data[0]);
+        ddata[0] = -data[0];
         for (int j = 1; j < PME_ORDER; j++)
-            ddata[j] = _mm_sub_ps(data[j-1], data[j]);
-        data[PME_ORDER-1] = _mm_mul_ps(_mm_mul_ps(scale, dr), data[PME_ORDER-2]);
+            ddata[j] = data[j-1]-data[j];
+        data[PME_ORDER-1] = scale*dr*data[PME_ORDER-2];
         for (int j = 1; j < (PME_ORDER-1); j++)
-            data[PME_ORDER-j-1] = _mm_mul_ps(scale, _mm_add_ps(_mm_mul_ps(_mm_add_ps(dr, _mm_set1_ps(j)), data[PME_ORDER-j-2]), _mm_mul_ps(_mm_sub_ps(_mm_set1_ps(PME_ORDER-j), dr), data[PME_ORDER-j-1])));
-        data[0] = _mm_mul_ps(_mm_mul_ps(scale, _mm_sub_ps(one, dr)), data[0]);
+            data[PME_ORDER-j-1] = scale*((dr+j)*data[PME_ORDER-j-2]+(fvec4(PME_ORDER-j)-dr)*data[PME_ORDER-j-1]);
+        data[0] = scale*(one-dr)*data[0];
                 
         // Compute the force on this atom.
         
-        int gridIndexX = _mm_extract_epi32(gridIndex, 0);
-        int gridIndexY = _mm_extract_epi32(gridIndex, 1);
-        int gridIndexZ = _mm_extract_epi32(gridIndex, 2);
+        int gridIndexX = gridIndex[0];
+        int gridIndexY = gridIndex[1];
+        int gridIndexZ = gridIndex[2];
+        if (gridIndexX < 0)
+            return; // This happens when a simulation blows up and coordinates become NaN.
         int zindex[PME_ORDER];
         for (int j = 0; j < PME_ORDER; j++) {
             zindex[j] = gridIndexZ+j;
             zindex[j] -= (zindex[j] >= gridz ? gridz : 0);
         }
-        __m128 zdata[PME_ORDER];
+        fvec4 zdata[PME_ORDER];
         for (int j = 0; j < PME_ORDER; j++)
-            zdata[j] = _mm_set_ps(0, EXTRACT_FLOAT(ddata[j], 2), EXTRACT_FLOAT(data[j], 2), EXTRACT_FLOAT(data[j], 2));
-        __m128 f = _mm_set1_ps(0);
+            zdata[j] = fvec4(data[j][2], data[j][2], ddata[j][2], 0);
+        fvec4 f = 0.0f;
         for (int ix = 0; ix < PME_ORDER; ix++) {
             int xbase = gridIndexX+ix;
             xbase -= (xbase >= gridx ? gridx : 0);
             xbase = xbase*gridy*gridz;
-            float dx = EXTRACT_FLOAT(data[ix], 0);
-            float ddx = EXTRACT_FLOAT(ddata[ix], 0);
-            __m128 xdata = _mm_set_ps(0, dx, dx, ddx);
+            float dx = data[ix][0];
+            float ddx = ddata[ix][0];
+            fvec4 xdata(ddx, dx, dx, 0);
 
             for (int iy = 0; iy < PME_ORDER; iy++) {
                 int ybase = gridIndexY+iy;
                 ybase -= (ybase >= gridy ? gridy : 0);
                 ybase = xbase + ybase*gridz;
-                float dy = EXTRACT_FLOAT(data[iy], 1);
-                float ddy = EXTRACT_FLOAT(ddata[iy], 1);
-                __m128 xydata = _mm_mul_ps(xdata, _mm_set_ps(0, dy, ddy, dy));
+                float dy = data[iy][1];
+                float ddy = ddata[iy][1];
+                fvec4 xydata = xdata*fvec4(dy, ddy, dy, 0);
 
                 for (int iz = 0; iz < PME_ORDER; iz++) {
-                    __m128 gridValue = _mm_set1_ps(grid[ybase+zindex[iz]]);
-                    f = _mm_add_ps(f, _mm_mul_ps(xydata, _mm_mul_ps(zdata[iz], gridValue)));
+                    fvec4 gridValue(grid[ybase+zindex[iz]]);
+                    f = f+xydata*zdata[iz]*gridValue;
                 }
             }
         }
-        f = _mm_mul_ps(invBoxSize, _mm_mul_ps(gridSize, _mm_mul_ps(f, _mm_set1_ps(-epsilonFactor*posq[4*i+3]))));
-        _mm_store_ps(&force[4*i], f);        
+        f = invBoxSize*gridSize*f*(-epsilonFactor*posq[4*i+3]);
+        f.store(&force[4*i]);
     }
 }
 
@@ -576,10 +507,10 @@ void CpuCalcPmeReciprocalForceKernel::runThread(int index) {
             threadWait();
             int numGrids = threadData.size();
             for (int i = gridStart; i < gridEnd; i += 4) {
-                __m128 sum = _mm_load_ps(&realGrid[i]);
+                fvec4 sum(&realGrid[i]);
                 for (int j = 1; j < numGrids; j++)
-                    sum = _mm_add_ps(sum, _mm_load_ps(&threadData[j]->tempGrid[i]));
-                _mm_store_ps(&realGrid[i], sum);
+                    sum += fvec4(&threadData[j]->tempGrid[i]);
+                sum.store(&realGrid[i]);
             }
             threadWait();
             if (lastBoxSize != periodicBoxSize) {

@@ -69,7 +69,9 @@ ContextImpl::ContextImpl(Context& owner, const System& system, Integrator& integ
         int particle1, particle2;
         double distance;
         system.getConstraintParameters(i, particle1, particle2, distance);
-        if (system.getParticleMass(particle1) == 0.0 || system.getParticleMass(particle2) == 0.0)
+        double mass1 = system.getParticleMass(particle1);
+        double mass2 = system.getParticleMass(particle2);
+        if ((mass1 == 0.0 && mass2 != 0.0) || (mass2 == 0.0 && mass1 != 0.0))
             throw OpenMMException("A constraint cannot involve a massless particle");
     }
     

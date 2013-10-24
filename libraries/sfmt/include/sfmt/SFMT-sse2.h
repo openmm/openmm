@@ -49,22 +49,23 @@ PRE_ALWAYS static __m128i mm_recursion(__m128i *a, __m128i *b,
  * This function fills the internal state array with pseudorandom
  * integers.
  */
-inline static void gen_rand_all(void) {
+inline static void gen_rand_all(SFMT& sfmt) {
     int i;
     __m128i r, r1, r2, mask;
     mask = _mm_set_epi32(MSK4, MSK3, MSK2, MSK1);
 
-    r1 = _mm_load_si128(&sfmt[N - 2].si);
-    r2 = _mm_load_si128(&sfmt[N - 1].si);
+    SFMTData& data = *sfmt.data;
+    r1 = _mm_load_si128(&data.sfmt[N - 2].si);
+    r2 = _mm_load_si128(&data.sfmt[N - 1].si);
     for (i = 0; i < N - POS1; i++) {
-	r = mm_recursion(&sfmt[i].si, &sfmt[i + POS1].si, r1, r2, mask);
-	_mm_store_si128(&sfmt[i].si, r);
+	r = mm_recursion(&data.sfmt[i].si, &data.sfmt[i + POS1].si, r1, r2, mask);
+	_mm_store_si128(&data.sfmt[i].si, r);
 	r1 = r2;
 	r2 = r;
     }
     for (; i < N; i++) {
-	r = mm_recursion(&sfmt[i].si, &sfmt[i + POS1 - N].si, r1, r2, mask);
-	_mm_store_si128(&sfmt[i].si, r);
+	r = mm_recursion(&data.sfmt[i].si, &data.sfmt[i + POS1 - N].si, r1, r2, mask);
+	_mm_store_si128(&data.sfmt[i].si, r);
 	r1 = r2;
 	r2 = r;
     }
@@ -77,21 +78,22 @@ inline static void gen_rand_all(void) {
  * @param array an 128-bit array to be filled by pseudorandom numbers.  
  * @param size number of 128-bit pesudorandom numbers to be generated.
  */
-inline static void gen_rand_array(w128_t *array, int size) {
+inline static void gen_rand_array(w128_t *array, int size, SFMT& sfmt) {
     int i, j;
     __m128i r, r1, r2, mask;
     mask = _mm_set_epi32(MSK4, MSK3, MSK2, MSK1);
 
-    r1 = _mm_load_si128(&sfmt[N - 2].si);
-    r2 = _mm_load_si128(&sfmt[N - 1].si);
+    SFMTData& data = *sfmt.data;
+    r1 = _mm_load_si128(&data.sfmt[N - 2].si);
+    r2 = _mm_load_si128(&data.sfmt[N - 1].si);
     for (i = 0; i < N - POS1; i++) {
-	r = mm_recursion(&sfmt[i].si, &sfmt[i + POS1].si, r1, r2, mask);
+	r = mm_recursion(&data.sfmt[i].si, &data.sfmt[i + POS1].si, r1, r2, mask);
 	_mm_store_si128(&array[i].si, r);
 	r1 = r2;
 	r2 = r;
     }
     for (; i < N; i++) {
-	r = mm_recursion(&sfmt[i].si, &array[i + POS1 - N].si, r1, r2, mask);
+	r = mm_recursion(&data.sfmt[i].si, &array[i + POS1 - N].si, r1, r2, mask);
 	_mm_store_si128(&array[i].si, r);
 	r1 = r2;
 	r2 = r;
@@ -106,13 +108,13 @@ inline static void gen_rand_array(w128_t *array, int size) {
     }
     for (j = 0; j < 2 * N - size; j++) {
 	r = _mm_load_si128(&array[j + size - N].si);
-	_mm_store_si128(&sfmt[j].si, r);
+	_mm_store_si128(&data.sfmt[j].si, r);
     }
     for (; i < size; i++) {
 	r = mm_recursion(&array[i - N].si, &array[i + POS1 - N].si, r1, r2,
 			 mask);
 	_mm_store_si128(&array[i].si, r);
-	_mm_store_si128(&sfmt[j++].si, r);
+	_mm_store_si128(&data.sfmt[j++].si, r);
 	r1 = r2;
 	r2 = r;
     }

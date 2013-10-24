@@ -141,15 +141,21 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
 
     // Record the set of constraints and how many constraints each atom is involved in.
 
-    int numConstraints = system.getNumConstraints();
-    vector<int> atom1(numConstraints);
-    vector<int> atom2(numConstraints);
-    vector<double> distance(numConstraints);
+    vector<int> atom1;
+    vector<int> atom2;
+    vector<double> distance;
     vector<int> constraintCount(context.getNumAtoms(), 0);
-    for (int i = 0; i < numConstraints; i++) {
-        system.getConstraintParameters(i, atom1[i], atom2[i], distance[i]);
-        constraintCount[atom1[i]]++;
-        constraintCount[atom2[i]]++;
+    for (int i = 0; i < system.getNumConstraints(); i++) {
+        int p1, p2;
+        double d;
+        system.getConstraintParameters(i, p1, p2, d);
+        if (system.getParticleMass(p1) != 0 || system.getParticleMass(p2) != 0) {
+            atom1.push_back(p1);
+            atom2.push_back(p2);
+            distance.push_back(d);
+            constraintCount[p1]++;
+            constraintCount[p2]++;
+        }
     }
 
     // Identify clusters of three atoms that can be treated with SETTLE.  First, for every
