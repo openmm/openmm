@@ -32,6 +32,7 @@
 #include "ReferencePME.h"
 #include "openmm/internal/hardware.h"
 #include "openmm/internal/SplineFitter.h"
+#include "openmm/internal/vectorize.h"
 
 // In case we're using some primitive version of Visual Studio this will
 // make sure that erf() and erfc() are defined.
@@ -113,7 +114,7 @@ CpuNonbondedForce::~CpuNonbondedForce(){
 
      --------------------------------------------------------------------------------------- */
 
-  void CpuNonbondedForce::setUseCutoff(float distance, const vector<pair<int, int> >& neighbors, float solventDielectric) {
+  void CpuNonbondedForce::setUseCutoff(float distance, const CpuNeighborList& neighbors, float solventDielectric) {
 
     cutoff = true;
     cutoffDistance = distance;
@@ -199,23 +200,22 @@ void CpuNonbondedForce::setUseSwitchingFunction(float distance) {
 void CpuNonbondedForce::tabulateEwaldScaleFactor() {
     ewaldDX = cutoffDistance/(NUM_TABLE_POINTS-2);
     ewaldDXInv = 1.0f/ewaldDX;
-    vector<double> x(NUM_TABLE_POINTS);
-    vector<double> y(NUM_TABLE_POINTS);
+    vector<double> x(NUM_TABLE_POINTS+1);
+    vector<double> y(NUM_TABLE_POINTS+1);
     vector<double> deriv;
-    for (int i = 0; i < NUM_TABLE_POINTS; i++) {
+    for (int i = 0; i < NUM_TABLE_POINTS+1; i++) {
         double r = i*cutoffDistance/(NUM_TABLE_POINTS-2);
         double alphaR = alphaEwald*r;
         x[i] = r;
         y[i] = erfc(alphaR) + TWO_OVER_SQRT_PI*alphaR*exp(-alphaR*alphaR);
     }
     SplineFitter::createNaturalSpline(x, y, deriv);
-    ewaldScaleX.resize(NUM_TABLE_POINTS);
-    ewaldScaleY.resize(NUM_TABLE_POINTS);
-    ewaldScaleDeriv.resize(NUM_TABLE_POINTS);
+    ewaldScaleTable.resize(4*NUM_TABLE_POINTS);
     for (int i = 0; i < NUM_TABLE_POINTS; i++) {
-        ewaldScaleX[i] = (float) x[i];
-        ewaldScaleY[i] = (float) y[i];
-        ewaldScaleDeriv[i] = (float) (deriv[i]*ewaldDX*ewaldDX/6);
+        ewaldScaleTable[4*i] = (float) y[i];
+        ewaldScaleTable[4*i+1] = (float) y[i+1];
+        ewaldScaleTable[4*i+2] = (float) (deriv[i]*ewaldDX*ewaldDX/6);
+        ewaldScaleTable[4*i+3] = (float) (deriv[i+1]*ewaldDX*ewaldDX/6);
     }
 }
   
@@ -358,42 +358,12 @@ void CpuNonbondedForce::calculateDirectIxn(int numberOfAtoms, float* posq, const
     for (int i = 0; i < numThreads; i++)
         directEnergy += threadData[i]->threadEnergy;
     for (int i = 0; i < numberOfAtoms; i++) {
-        __m128 f = _mm_loadu_ps(forces+4*i);
+        fvec4 f(forces+4*i);
         for (int j = 0; j < numThreads; j++)
-            f = _mm_add_ps(f, _mm_loadu_ps(&threadData[j]->threadForce[4*i]));
-        _mm_storeu_ps(forces+4*i, f);
+            f += fvec4(&threadData[j]->threadForce[4*i]);
+        f.store(forces+4*i);
     }
 
-    if (ewald || pme) {
-        // Now subtract off the exclusions, since they were implicitly included in the reciprocal space sum.
-
-        __m128 boxSize = _mm_set_ps(0, periodicBoxSize[2], periodicBoxSize[1], periodicBoxSize[0]);
-        __m128 invBoxSize = _mm_set_ps(0, (1/periodicBoxSize[2]), (1/periodicBoxSize[1]), (1/periodicBoxSize[0]));
-        for (int i = 0; i < numberOfAtoms; i++)
-            for (set<int>::const_iterator iter = exclusions[i].begin(); iter != exclusions[i].end(); ++iter) {
-                if (*iter > i) {
-                    int ii = i;
-                    int jj = *iter;
-                    __m128 deltaR;
-                    __m128 posI = _mm_loadu_ps(posq+4*ii);
-                    __m128 posJ = _mm_loadu_ps(posq+4*jj);
-                    float r2;
-                    getDeltaR(posJ, posI, deltaR, r2, false, boxSize, invBoxSize);
-                    float r         = sqrtf(r2);
-                    float inverseR  = 1/r;
-                    float chargeProd = ONE_4PI_EPS0*posq[4*ii+3]*posq[4*jj+3];
-                    float alphaR = alphaEwald*r;
-                    float erfcAlphaR = erfcApprox(alphaR);
-                    float dEdR      = (float) (chargeProd * inverseR * inverseR * inverseR);
-                          dEdR      = (float) (dEdR * (1.0f-erfcAlphaR-TWO_OVER_SQRT_PI*alphaR*exp(-alphaR*alphaR)));
-                    __m128 result = _mm_mul_ps(deltaR, _mm_set1_ps(dEdR));
-                    _mm_storeu_ps(forces+4*ii, _mm_sub_ps(_mm_loadu_ps(forces+4*ii), result));
-                    _mm_storeu_ps(forces+4*jj, _mm_add_ps(_mm_loadu_ps(forces+4*jj), result));
-                    if (includeEnergy)
-                        directEnergy -= chargeProd*inverseR*(1.0f-erfcAlphaR);
-                }
-            }
-    }
     if (totalEnergy != NULL)
         *totalEnergy += (float) directEnergy;
 }
@@ -418,23 +388,47 @@ void CpuNonbondedForce::runThread(int index, vector<float>& threadForce, double&
         threadForce.resize(4*numberOfAtoms, 0.0f);
         for (int i = 0; i < 4*numberOfAtoms; i++)
             threadForce[i] = 0.0f;
-        __m128 boxSize = _mm_set_ps(0, periodicBoxSize[2], periodicBoxSize[1], periodicBoxSize[0]);
-        __m128 invBoxSize = _mm_set_ps(0, (1/periodicBoxSize[2]), (1/periodicBoxSize[1]), (1/periodicBoxSize[0]));
+        fvec4 boxSize(periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2], 0);
+        fvec4 invBoxSize((1/periodicBoxSize[0]), (1/periodicBoxSize[1]), (1/periodicBoxSize[2]), 0);
         if (ewald || pme) {
             // Compute the interactions from the neighbor list.
 
-            for (int i = index; i < (int) neighborList->size(); i += numThreads) {
-                pair<int, int> pair = (*neighborList)[i];
-                calculateOneEwaldIxn(pair.first, pair.second, &threadForce[0], energyPtr, boxSize, invBoxSize);
-            }
+            for (int i = index; i < neighborList->getNumBlocks(); i += numThreads)
+                calculateBlockEwaldIxn(i, &threadForce[0], energyPtr, boxSize, invBoxSize);
+            
+            // Now subtract off the exclusions, since they were implicitly included in the reciprocal space sum.
+
+            fvec4 boxSize(periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2], 0);
+            fvec4 invBoxSize((1/periodicBoxSize[0]), (1/periodicBoxSize[1]), (1/periodicBoxSize[2]), 0);
+            for (int i = index; i < numberOfAtoms; i += numThreads)
+                for (set<int>::const_iterator iter = exclusions[i].begin(); iter != exclusions[i].end(); ++iter) {
+                    if (*iter > i) {
+                        int j = *iter;
+                        fvec4 deltaR;
+                        fvec4 posI(posq+4*i);
+                        fvec4 posJ(posq+4*j);
+                        float r2;
+                        getDeltaR(posJ, posI, deltaR, r2, false, boxSize, invBoxSize);
+                        float r = sqrtf(r2);
+                        float inverseR = 1/r;
+                        float chargeProd = ONE_4PI_EPS0*posq[4*i+3]*posq[4*j+3];
+                        float alphaR = alphaEwald*r;
+                        float erfcAlphaR = erfcApprox(alphaR)[0];
+                        float dEdR = (float) (chargeProd * inverseR * inverseR * inverseR);
+                        dEdR = (float) (dEdR * (1.0f-erfcAlphaR-TWO_OVER_SQRT_PI*alphaR*exp(-alphaR*alphaR)));
+                        fvec4 result = deltaR*dEdR;
+                        (fvec4(&threadForce[4*i])-result).store(&threadForce[4*i]);
+                        (fvec4(&threadForce[4*j])+result).store(&threadForce[4*j]);
+                        if (includeEnergy)
+                            threadEnergy -= chargeProd*inverseR*(1.0f-erfcAlphaR);
+                    }
+                }
         }
         else if (cutoff) {
             // Compute the interactions from the neighbor list.
 
-            for (int i = index; i < (int) neighborList->size(); i += numThreads) {
-                pair<int, int> pair = (*neighborList)[i];
-                calculateOneIxn(pair.first, pair.second, &threadForce[0], energyPtr, boxSize, invBoxSize);
-            }
+            for (int i = index; i < neighborList->getNumBlocks(); i += numThreads)
+                calculateBlockIxn(i, &threadForce[0], energyPtr, boxSize, invBoxSize);
         }
         else {
             // Loop over all atom pairs
@@ -448,12 +442,12 @@ void CpuNonbondedForce::runThread(int index, vector<float>& threadForce, double&
     }
 }
 
-void CpuNonbondedForce::calculateOneIxn(int ii, int jj, float* forces, double* totalEnergy, const __m128& boxSize, const __m128& invBoxSize) {
+void CpuNonbondedForce::calculateOneIxn(int ii, int jj, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize) {
     // get deltaR, R2, and R between 2 atoms
 
-    __m128 deltaR;
-    __m128 posI = _mm_loadu_ps(posq+4*ii);
-    __m128 posJ = _mm_loadu_ps(posq+4*jj);
+    fvec4 deltaR;
+    fvec4 posI(posq+4*ii);
+    fvec4 posJ(posq+4*jj);
     float r2;
     getDeltaR(posJ, posI, deltaR, r2, periodic, boxSize, invBoxSize);
     if (cutoff && r2 >= cutoffDistance*cutoffDistance)
@@ -497,83 +491,239 @@ void CpuNonbondedForce::calculateOneIxn(int ii, int jj, float* forces, double* t
 
     // accumulate forces
 
-    __m128 result = _mm_mul_ps(deltaR, _mm_set1_ps(dEdR));
-    _mm_storeu_ps(forces+4*ii, _mm_add_ps(_mm_loadu_ps(forces+4*ii), result));
-    _mm_storeu_ps(forces+4*jj, _mm_sub_ps(_mm_loadu_ps(forces+4*jj), result));
+    fvec4 result = deltaR*dEdR;
+    (fvec4(forces+4*ii)+result).store(forces+4*ii);
+    (fvec4(forces+4*jj)-result).store(forces+4*jj);
   }
 
-void CpuNonbondedForce::calculateOneEwaldIxn(int ii, int jj, float* forces, double* totalEnergy, const __m128& boxSize, const __m128& invBoxSize) {
-    __m128 deltaR;
-    __m128 posI = _mm_loadu_ps(posq+4*ii);
-    __m128 posJ = _mm_loadu_ps(posq+4*jj);
-    float r2;
-    getDeltaR(posJ, posI, deltaR, r2, true, boxSize, invBoxSize);
-    if (r2 < cutoffDistance*cutoffDistance) {
-        float r         = sqrtf(r2);
-        float inverseR  = 1/r;
-        float switchValue = 1, switchDeriv = 0;
-        if (useSwitch && r > switchingDistance) {
-            float t = (r-switchingDistance)/(cutoffDistance-switchingDistance);
-            switchValue = 1+t*t*t*(-10+t*(15-t*6));
-            switchDeriv = t*t*(-30+t*(60-t*30))/(cutoffDistance-switchingDistance);
+void CpuNonbondedForce::calculateBlockIxn(int blockIndex, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize) {
+    // Load the positions and parameters of the atoms in the block.
+    
+    int blockAtom[4];
+    fvec4 blockAtomPosq[4];
+    fvec4 blockAtomForce[4];
+    for (int i = 0; i < 4; i++) {
+        blockAtom[i] = neighborList->getSortedAtoms()[4*blockIndex+i];
+        blockAtomPosq[i] = fvec4(posq+4*blockAtom[i]);
+        blockAtomForce[i] = fvec4(0.0f);
+    }
+    fvec4 blockAtomCharge = fvec4(ONE_4PI_EPS0)*fvec4(blockAtomPosq[0][3], blockAtomPosq[1][3], blockAtomPosq[2][3], blockAtomPosq[3][3]);
+    fvec4 blockAtomSigma(atomParameters[blockAtom[0]].first, atomParameters[blockAtom[1]].first, atomParameters[blockAtom[2]].first, atomParameters[blockAtom[3]].first);
+    fvec4 blockAtomEpsilon(atomParameters[blockAtom[0]].second, atomParameters[blockAtom[1]].second, atomParameters[blockAtom[2]].second, atomParameters[blockAtom[3]].second);
+    
+    // Loop over neighbors for this block.
+    
+    const vector<int>& neighbors = neighborList->getBlockNeighbors(blockIndex);
+    const vector<char>& exclusions = neighborList->getBlockExclusions(blockIndex);
+    float blockAtomR2[4];
+    bool include[4];
+    fvec4 blockAtomDelta[4];
+    for (int i = 0; i < (int) neighbors.size(); i++) {
+        // Load the next neighbor.
+        
+        int atom = neighbors[i];
+        fvec4 atomPosq(posq+4*atom);
+        
+        // Compute the distances to the block atoms.
+        
+        bool any = false;
+        for (int j = 0; j < 4; j++) {
+            getDeltaR(atomPosq, blockAtomPosq[j], blockAtomDelta[j], blockAtomR2[j], periodic, boxSize, invBoxSize);
+            include[j] = (((exclusions[i]>>j)&1) == 0 && (!cutoff || blockAtomR2[j] < cutoffDistance*cutoffDistance));
+            any |= include[j];
         }
-        float chargeProd = ONE_4PI_EPS0*posq[4*ii+3]*posq[4*jj+3];
-        float dEdR      = chargeProd*inverseR*ewaldScaleFunction(r);
-        float sig       = atomParameters[ii].first +  atomParameters[jj].first;
-        float sig2      = inverseR*sig;
-              sig2     *= sig2;
-        float sig6      = sig2*sig2*sig2;
-        float eps       = atomParameters[ii].second*atomParameters[jj].second;
-              dEdR     += switchValue*eps*(12.0f*sig6 - 6.0f)*sig6;
+        if (!any)
+            continue; // No interactions to compute.
+        
+        // Compute the interactions.
+        
+        fvec4 r2(blockAtomR2);
+        fvec4 r = sqrt(r2);
+        fvec4 inverseR = fvec4(1.0f)/r;
+        fvec4 switchValue(1.0f), switchDeriv(0.0f);
+        if (useSwitch) {
+            fvec4 t = (r>switchingDistance) & ((r-switchingDistance)/(cutoffDistance-switchingDistance));
+            switchValue = 1+t*t*t*(-10.0f+t*(15.0f-t*6.0f));
+            switchDeriv = t*t*(-30.0f+t*(60.0f-t*30.0f))/(cutoffDistance-switchingDistance);
+        }
+        fvec4 sig = blockAtomSigma+atomParameters[atom].first;
+        fvec4 sig2 = inverseR*sig;
+        sig2 *= sig2;
+        fvec4 sig6 = sig2*sig2*sig2;
+        fvec4 eps = blockAtomEpsilon*atomParameters[atom].second;
+        fvec4 dEdR = switchValue*eps*(12.0f*sig6 - 6.0f)*sig6;
+        fvec4 chargeProd = blockAtomCharge*posq[4*atom+3];
+        if (cutoff)
+            dEdR += chargeProd*(inverseR-2.0f*krf*r2);
+        else
+            dEdR += chargeProd*inverseR;
         dEdR *= inverseR*inverseR;
-        float energy = eps*(sig6-1.0f)*sig6;
+        fvec4 energy = eps*(sig6-1.0f)*sig6;
         if (useSwitch) {
             dEdR -= energy*switchDeriv*inverseR;
             energy *= switchValue;
         }
 
-        // accumulate forces
-
-        __m128 result = _mm_mul_ps(deltaR, _mm_set1_ps(dEdR));
-        _mm_storeu_ps(forces+4*ii, _mm_add_ps(_mm_loadu_ps(forces+4*ii), result));
-        _mm_storeu_ps(forces+4*jj, _mm_sub_ps(_mm_loadu_ps(forces+4*jj), result));
-
-        // accumulate energies
+        // Accumulate energies.
 
         if (totalEnergy) {
-            energy += (float) (chargeProd*inverseR*erfcApprox(alphaEwald*r));
-            *totalEnergy += energy;
+            if (cutoff)
+                energy += chargeProd*(inverseR+krf*r2-crf);
+            else
+                energy += chargeProd*inverseR;
+            for (int j = 0; j < 4; j++)
+                if (include[j])
+                    *totalEnergy += energy[j];
         }
+
+        // Accumulate forces.
+
+        fvec4 atomForce(forces+4*atom);
+        for (int j = 0; j < 4; j++) {
+            if (include[j]) {
+                fvec4 result = blockAtomDelta[j]*dEdR[j];
+                blockAtomForce[j] += result;
+                atomForce -= result;
+            }
+        }
+        atomForce.store(forces+4*atom);
     }
+    
+    // Record the forces on the block atoms.
+    
+    for (int j = 0; j < 4; j++)
+        (fvec4(forces+4*blockAtom[j])+blockAtomForce[j]).store(forces+4*blockAtom[j]);
+  }
+
+void CpuNonbondedForce::calculateBlockEwaldIxn(int blockIndex, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize) {
+    // Load the positions and parameters of the atoms in the block.
+    
+    int blockAtom[4];
+    fvec4 blockAtomPosq[4];
+    fvec4 blockAtomForce[4];
+    for (int i = 0; i < 4; i++) {
+        blockAtom[i] = neighborList->getSortedAtoms()[4*blockIndex+i];
+        blockAtomPosq[i] = fvec4(posq+4*blockAtom[i]);
+        blockAtomForce[i] = fvec4(0.0f);
+    }
+    fvec4 blockAtomCharge = fvec4(ONE_4PI_EPS0)*fvec4(blockAtomPosq[0][3], blockAtomPosq[1][3], blockAtomPosq[2][3], blockAtomPosq[3][3]);
+    fvec4 blockAtomSigma(atomParameters[blockAtom[0]].first, atomParameters[blockAtom[1]].first, atomParameters[blockAtom[2]].first, atomParameters[blockAtom[3]].first);
+    fvec4 blockAtomEpsilon(atomParameters[blockAtom[0]].second, atomParameters[blockAtom[1]].second, atomParameters[blockAtom[2]].second, atomParameters[blockAtom[3]].second);
+    
+    // Loop over neighbors for this block.
+    
+    const vector<int>& neighbors = neighborList->getBlockNeighbors(blockIndex);
+    const vector<char>& exclusions = neighborList->getBlockExclusions(blockIndex);
+    float blockAtomR2[4];
+    bool include[4];
+    fvec4 blockAtomDelta[4];
+    for (int i = 0; i < (int) neighbors.size(); i++) {
+        // Load the next neighbor.
+        
+        int atom = neighbors[i];
+        fvec4 atomPosq(posq+4*atom);
+        
+        // Compute the distances to the block atoms.
+        
+        bool any = false;
+        for (int j = 0; j < 4; j++) {
+            getDeltaR(atomPosq, blockAtomPosq[j], blockAtomDelta[j], blockAtomR2[j], periodic, boxSize, invBoxSize);
+            include[j] = (((exclusions[i]>>j)&1) == 0 && blockAtomR2[j] < cutoffDistance*cutoffDistance);
+            any |= include[j];
+        }
+        if (!any)
+            continue; // No interactions to compute.
+        
+        // Compute the interactions.
+        
+        fvec4 r2(blockAtomR2);
+        fvec4 r = sqrt(r2);
+        fvec4 inverseR = fvec4(1.0f)/r;
+        fvec4 switchValue(1.0f), switchDeriv(0.0f);
+        if (useSwitch) {
+            fvec4 t = (r>switchingDistance) & ((r-switchingDistance)/(cutoffDistance-switchingDistance));
+            switchValue = 1+t*t*t*(-10.0f+t*(15.0f-t*6.0f));
+            switchDeriv = t*t*(-30.0f+t*(60.0f-t*30.0f))/(cutoffDistance-switchingDistance);
+        }
+        fvec4 chargeProd = blockAtomCharge*posq[4*atom+3];
+        fvec4 dEdR = chargeProd*inverseR*ewaldScaleFunction(r);
+        fvec4 sig = blockAtomSigma+atomParameters[atom].first;
+        fvec4 sig2 = inverseR*sig;
+        sig2 *= sig2;
+        fvec4 sig6 = sig2*sig2*sig2;
+        fvec4 eps = blockAtomEpsilon*atomParameters[atom].second;
+        dEdR += switchValue*eps*(12.0f*sig6 - 6.0f)*sig6;
+        dEdR *= inverseR*inverseR;
+        fvec4 energy = eps*(sig6-1.0f)*sig6;
+        if (useSwitch) {
+            dEdR -= energy*switchDeriv*inverseR;
+            energy *= switchValue;
+        }
+
+        // Accumulate energies.
+
+        if (totalEnergy) {
+            energy += chargeProd*inverseR*erfcApprox(alphaEwald*r);
+            for (int j = 0; j < 4; j++)
+                if (include[j])
+                    *totalEnergy += energy[j];
+        }
+
+        // Accumulate forces.
+
+        fvec4 atomForce(forces+4*atom);
+        for (int j = 0; j < 4; j++) {
+            if (include[j]) {
+                fvec4 result = blockAtomDelta[j]*dEdR[j];
+                blockAtomForce[j] += result;
+                atomForce -= result;
+            }
+        }
+        atomForce.store(forces+4*atom);
+    }
+    
+    // Record the forces on the block atoms.
+    
+    for (int j = 0; j < 4; j++)
+        (fvec4(forces+4*blockAtom[j])+blockAtomForce[j]).store(forces+4*blockAtom[j]);
 }
 
-void CpuNonbondedForce::getDeltaR(const __m128& posI, const __m128& posJ, __m128& deltaR, float& r2, bool periodic, const __m128& boxSize, const __m128& invBoxSize) const {
-    deltaR = _mm_sub_ps(posJ, posI);
+void CpuNonbondedForce::getDeltaR(const fvec4& posI, const fvec4& posJ, fvec4& deltaR, float& r2, bool periodic, const fvec4& boxSize, const fvec4& invBoxSize) const {
+    deltaR = posJ-posI;
     if (periodic) {
-        __m128 base = _mm_mul_ps(_mm_floor_ps(_mm_add_ps(_mm_mul_ps(deltaR, invBoxSize), _mm_set1_ps(0.5))), boxSize);
-        deltaR = _mm_sub_ps(deltaR, base);
+        fvec4 base = round(deltaR*invBoxSize)*boxSize;
+        deltaR = deltaR-base;
     }
-    r2 = _mm_cvtss_f32(_mm_dp_ps(deltaR, deltaR, 0x71));
+    r2 = dot3(deltaR, deltaR);
 }
 
-float CpuNonbondedForce::erfcApprox(float x) {
+fvec4 CpuNonbondedForce::erfcApprox(fvec4 x) {
     // This approximation for erfc is from Abramowitz and Stegun (1964) p. 299.  They cite the following as
     // the original source: C. Hastings, Jr., Approximations for Digital Computers (1955).  It has a maximum
     // error of 3e-7.
 
-    float t = 1.0f+(0.0705230784f+(0.0422820123f+(0.0092705272f+(0.0001520143f+(0.0002765672f+0.0000430638f*x)*x)*x)*x)*x)*x;
+    fvec4 t = 1.0f+(0.0705230784f+(0.0422820123f+(0.0092705272f+(0.0001520143f+(0.0002765672f+0.0000430638f*x)*x)*x)*x)*x)*x;
     t *= t;
     t *= t;
     t *= t;
     return 1.0f/(t*t);
 }
 
-float CpuNonbondedForce::ewaldScaleFunction(float x) {
+fvec4 CpuNonbondedForce::ewaldScaleFunction(fvec4 x) {
     // Compute the tabulated Ewald scale factor: erfc(alpha*r) + 2*alpha*r*exp(-alpha*alpha*r*r)/sqrt(PI)
 
-    int lower = (int) (x*ewaldDXInv);
-    int upper = lower+1;
-    float a = (ewaldScaleX[upper]-x)*ewaldDXInv;
-    float b = 1.0f-a;
-    return a*ewaldScaleY[lower]+b*ewaldScaleY[upper]+((a*a*a-a)*ewaldScaleDeriv[lower] + (b*b*b-b)*ewaldScaleDeriv[upper]);
+    float y[4];
+    fvec4 x1 = x*ewaldDXInv;
+    ivec4 index = floor(x1);
+    fvec4 coeff[4];
+    coeff[1] = x1-index;
+    coeff[0] = 1.0f-coeff[1];
+    coeff[2] = coeff[0]*coeff[0]*coeff[0]-coeff[0];
+    coeff[3] = coeff[1]*coeff[1]*coeff[1]-coeff[1];
+    _MM_TRANSPOSE4_PS(coeff[0], coeff[1], coeff[2], coeff[3]);
+    for (int i = 0; i < 4; i++) {
+        if (index[i] < NUM_TABLE_POINTS)
+            y[i] = dot4(coeff[i], fvec4(&ewaldScaleTable[4*index[i]]));
+    }
+    return fvec4(y);
 }

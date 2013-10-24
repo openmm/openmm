@@ -145,6 +145,8 @@ SKIP_METHODS = [('State',),
                 ('IntegrateDrudeSCFStepKernel',),
                 ('XmlSerializer',  'serialize'),
                 ('XmlSerializer',  'deserialize'),
+                ('fvec4',),
+                ('ivec4',),
 ]
 
 # The build script assumes method args that are non-const references are

@@ -252,6 +252,7 @@ FOREACH(subdir ${OPENMM_SOURCE_SUBDIRS})
     ## OpenMM was previously installed there.
     INCLUDE_DIRECTORIES(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/${subdir}/include)
 ENDFOREACH(subdir)
+SET_SOURCE_FILES_PROPERTIES(${CMAKE_SOURCE_DIR}/libraries/sfmt/src/SFMT.cpp PROPERTIES COMPILE_FLAGS "-msse2 -DHAVE_SSE2=1")
 
 # If API wrappers are being generated, and add them to the build.
 FIND_PROGRAM(GCCXML_PATH gccxml PATH

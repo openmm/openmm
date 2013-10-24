@@ -39,6 +39,7 @@
 #include "sfmt/SFMT.h"
 #include <iostream>
 #include <set>
+#include <utility>
 #include <vector>
 
 using namespace OpenMM;
@@ -68,10 +69,19 @@ void testNeighborList(bool periodic) {
     // Convert the neighbor list to a set for faster lookup.
     
     set<pair<int, int> > neighbors;
-    for (int i = 0; i < (int) neighborList.getNeighbors().size(); i++) {
-        pair<int, int> entry = neighborList.getNeighbors()[i];
-        ASSERT(neighbors.find(entry) == neighbors.end() && neighbors.find(make_pair(entry.second, entry.first)) == neighbors.end()); // No duplicates
-        neighbors.insert(entry);
+    for (int i = 0; i < (int) neighborList.getSortedAtoms().size(); i++) {
+        int blockIndex = i/CpuNeighborList::BlockSize;
+        int indexInBlock = i-blockIndex*CpuNeighborList::BlockSize;
+        char mask = 1<<indexInBlock;
+        for (int j = 0; j < (int) neighborList.getBlockExclusions(blockIndex).size(); j++) {
+            if ((neighborList.getBlockExclusions(blockIndex)[j] & mask) == 0) {
+                int atom1 = neighborList.getSortedAtoms()[i];
+                int atom2 = neighborList.getBlockNeighbors(blockIndex)[j];
+                pair<int, int> entry = make_pair(min(atom1, atom2), max(atom1, atom2));
+                ASSERT(neighbors.find(entry) == neighbors.end() && neighbors.find(make_pair(entry.second, entry.first)) == neighbors.end()); // No duplicates
+                neighbors.insert(entry);
+            }
+        }
     }
     
     // Check each particle pair and figure out whether they should be in the neighbor list.
@@ -90,7 +100,8 @@ void testNeighborList(bool periodic) {
             if (dx*dx + dy*dy + dz*dz > cutoff*cutoff)
                 shouldInclude = false;
             bool isIncluded = (neighbors.find(make_pair(i, j)) != neighbors.end() || neighbors.find(make_pair(j, i)) != neighbors.end());
-            ASSERT_EQUAL(shouldInclude, isIncluded);
+            if (shouldInclude)
+                ASSERT(isIncluded);
         }
 }
 
