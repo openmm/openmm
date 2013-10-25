@@ -23,8 +23,6 @@ public:
     int y;
 };
 
-typedef pair<const float*, int> VoxelItem;
-
 /**
  * This data structure organizes the particles spatially.  It divides them into bins along the x and y axes,
  * then sorts each bin along the z axis so ranges can be identified quickly with a binary search.
@@ -60,7 +58,7 @@ public:
      */
     void insert(const int& atom, const float* location) {
         VoxelIndex voxelIndex = getVoxelIndex(location);
-        bins[voxelIndex.x][voxelIndex.y].push_back(make_pair(location[2], VoxelItem(location, atom)));
+        bins[voxelIndex.x][voxelIndex.y].push_back(make_pair(location[2], atom));
     }
     
     /**
@@ -76,7 +74,7 @@ public:
      * Find the index of the first particle in voxel (x,y) whose z coordinate in >= the specified value.
      */
     int findLowerBound(int x, int y, double z) const {
-        const vector<pair<float, VoxelItem> >& bin = bins[x][y];
+        const vector<pair<float, int> >& bin = bins[x][y];
         int lower = 0;
         int upper = bin.size();
         while (lower < upper) {
@@ -93,7 +91,7 @@ public:
      * Find the index of the first particle in voxel (x,y) whose z coordinate in greater than the specified value.
      */
     int findUpperBound(int x, int y, double z) const {
-        const vector<pair<float, VoxelItem> >& bin = bins[x][y];
+        const vector<pair<float, int> >& bin = bins[x][y];
         int lower = 0;
         int upper = bin.size();
         while (lower < upper) {
@@ -196,13 +194,13 @@ public:
                 
                 for (int range = 0; range < numRanges; range++) {
                     for (int item = rangeStart[range]; item < rangeEnd[range]; item++) {
-                        const int sortedIndex = bins[voxelIndex.x][voxelIndex.y][item].second.second;
+                        const int sortedIndex = bins[voxelIndex.x][voxelIndex.y][item].second;
 
                         // Avoid duplicate entries.
                         if (sortedIndex >= lastSortedIndex)
                             continue;
                         
-                        fvec4 atomPos(bins[voxelIndex.x][voxelIndex.y][item].second.first);
+                        fvec4 atomPos(atomLocations+4*sortedAtoms[sortedIndex]);
                         fvec4 delta = atomPos-centerPos;
                         if (usePeriodic) {
                             fvec4 base = round(delta*invBoxSize)*boxSize;
@@ -254,7 +252,7 @@ private:
     int nx, ny;
     const float* periodicBoxSize;
     const bool usePeriodic;
-    vector<vector<vector<pair<float, VoxelItem> > > > bins;
+    vector<vector<vector<pair<float, int> > > > bins;
 };
 
 class CpuNeighborList::ThreadData {
