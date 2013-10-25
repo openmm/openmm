@@ -1,6 +1,6 @@
 
 /* Convert python list of tuples to C++ std::vector of Vec3 objects */
-%typemap(in) std::vector<Vec3>& (std::vector<OpenMM::Vec3> vVec) {
+%typemap(in) const std::vector<Vec3>& (std::vector<OpenMM::Vec3> vVec) {
   // typemap -- %typemap(in) std::vector<Vec3>& (std::vector<OpenMM::Vec3> vVec)
   int i, pLength, itemLength;
   double x, y, z;
@@ -34,6 +34,32 @@
   $1 = &vVec;
 }
 
+/* The following two typemaps cause a non-const vector<Vec3>& to become a return value. */
+%typemap(in, numinputs=0) std::vector<Vec3>& (std::vector<Vec3> temp) {
+    $1 = &temp;
+}
+
+%typemap(argout) std::vector<Vec3>& {
+    int i, n;
+    PyObject *pyList;
+
+    n=(*$1).size(); 
+    pyList=PyList_New(n);
+    PyObject* mm = PyImport_AddModule("simtk.openmm");
+    PyObject* vec3 = PyObject_GetAttrString(mm, "Vec3");
+    for (i=0; i<n; i++) {
+        OpenMM::Vec3& v = (*$1).at(i);
+        PyObject* args = Py_BuildValue("(d,d,d)", v[0], v[1], v[2]);
+        PyObject* pyVec = PyObject_CallObject(vec3, args);
+        Py_DECREF(args);
+        PyList_SET_ITEM(pyList, i, pyVec);
+    }
+    $result = pyList;
+}
+
+/* const vector<Vec3> should NOT become an output. */
+%typemap(argout) const std::vector<Vec3>& {
+}
 
 /* Convert python tuple to C++ Vec3 object*/
 %typemap(typecheck) Vec3 {
