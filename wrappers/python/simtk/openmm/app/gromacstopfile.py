@@ -40,7 +40,7 @@ import simtk.unit as unit
 import simtk.openmm as mm
 import math
 import os
-import distutils
+import distutils.spawn
 
 HBonds = ff.HBonds
 AllBonds = ff.AllBonds
