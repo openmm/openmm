@@ -30,7 +30,6 @@
 #include "CpuNonbondedForce.h"
 #include "ReferenceForce.h"
 #include "ReferencePME.h"
-#include "openmm/internal/hardware.h"
 #include "openmm/internal/SplineFitter.h"
 #include "openmm/internal/vectorize.h"
 
@@ -44,22 +43,15 @@ using namespace OpenMM;
 const float CpuNonbondedForce::TWO_OVER_SQRT_PI = (float) (2/sqrt(PI_M));
 const int CpuNonbondedForce::NUM_TABLE_POINTS = 1025;
 
-class CpuNonbondedForce::ThreadData {
+class CpuNonbondedForce::ComputeDirectTask : public ThreadPool::Task {
 public:
-    ThreadData(int index, CpuNonbondedForce& owner) : index(index), owner(owner) {
+    ComputeDirectTask(CpuNonbondedForce& owner) : owner(owner) {
     }
-    int index;
+    void execute(ThreadPool& threads, int threadIndex) {
+        owner.threadComputeDirect(threads, threadIndex);
+    }
     CpuNonbondedForce& owner;
-    vector<float> threadForce;
-    double threadEnergy;
 };
-
-static void* threadBody(void* args) {
-    CpuNonbondedForce::ThreadData& data = *reinterpret_cast<CpuNonbondedForce::ThreadData*>(args);
-    data.owner.runThread(data.index, data.threadForce, data.threadEnergy);
-    delete &data;
-    return 0;
-}
 
 /**---------------------------------------------------------------------------------------
 
@@ -68,40 +60,6 @@ static void* threadBody(void* args) {
    --------------------------------------------------------------------------------------- */
 
 CpuNonbondedForce::CpuNonbondedForce() : cutoff(false), useSwitch(false), periodic(false), ewald(false), pme(false) {
-    isDeleted = false;
-    numThreads = getNumProcessors();
-    pthread_cond_init(&startCondition, NULL);
-    pthread_cond_init(&endCondition, NULL);
-    pthread_mutex_init(&lock, NULL);
-    thread.resize(numThreads);
-    pthread_mutex_lock(&lock);
-    waitCount = 0;
-    for (int i = 0; i < numThreads; i++) {
-        ThreadData* data = new ThreadData(i, *this);
-        threadData.push_back(data);
-        pthread_create(&thread[i], NULL, threadBody, data);
-    }
-    while (waitCount < numThreads)
-        pthread_cond_wait(&endCondition, &lock);
-    pthread_mutex_unlock(&lock);
-}
-
-/**---------------------------------------------------------------------------------------
-
-   CpuNonbondedForce destructor
-
-   --------------------------------------------------------------------------------------- */
-
-CpuNonbondedForce::~CpuNonbondedForce(){
-    isDeleted = true;
-    pthread_mutex_lock(&lock);
-    pthread_cond_broadcast(&startCondition);
-    pthread_mutex_unlock(&lock);
-    for (int i = 0; i < (int) thread.size(); i++)
-        pthread_join(thread[i], NULL);
-    pthread_mutex_destroy(&lock);
-    pthread_cond_destroy(&startCondition);
-    pthread_cond_destroy(&endCondition);
 }
 
   /**---------------------------------------------------------------------------------------
@@ -334,7 +292,7 @@ void CpuNonbondedForce::calculateReciprocalIxn(int numberOfAtoms, float* posq, v
 
 
 void CpuNonbondedForce::calculateDirectIxn(int numberOfAtoms, float* posq, const vector<pair<float, float> >& atomParameters,
-                const vector<set<int> >& exclusions, float* forces, float* totalEnergy) {
+                const vector<set<int> >& exclusions, float* forces, float* totalEnergy, ThreadPool& threads) {
     // Record the parameters for the threads.
     
     this->numberOfAtoms = numberOfAtoms;
@@ -342,25 +300,25 @@ void CpuNonbondedForce::calculateDirectIxn(int numberOfAtoms, float* posq, const
     this->atomParameters = &atomParameters[0];
     this->exclusions = &exclusions[0];
     includeEnergy = (totalEnergy != NULL);
+    threadEnergy.resize(threads.getNumThreads());
+    threadForce.resize(threads.getNumThreads());
     
     // Signal the threads to start running and wait for them to finish.
     
-    pthread_mutex_lock(&lock);
-    waitCount = 0;
-    pthread_cond_broadcast(&startCondition);
-    while (waitCount < numThreads)
-        pthread_cond_wait(&endCondition, &lock);
-    pthread_mutex_unlock(&lock);
+    ComputeDirectTask task(*this);
+    threads.execute(task);
+    threads.waitForThreads();
     
     // Combine the results from all the threads.
     
     double directEnergy = 0;
+    int numThreads = threads.getNumThreads();
     for (int i = 0; i < numThreads; i++)
-        directEnergy += threadData[i]->threadEnergy;
+        directEnergy += threadEnergy[i];
     for (int i = 0; i < numberOfAtoms; i++) {
         fvec4 f(forces+4*i);
         for (int j = 0; j < numThreads; j++)
-            f += fvec4(&threadData[j]->threadForce[4*i]);
+            f += fvec4(&threadForce[j][4*i]);
         f.store(forces+4*i);
     }
 
@@ -368,76 +326,65 @@ void CpuNonbondedForce::calculateDirectIxn(int numberOfAtoms, float* posq, const
         *totalEnergy += (float) directEnergy;
 }
 
+void CpuNonbondedForce::threadComputeDirect(ThreadPool& threads, int threadIndex) {
+    // Compute this thread's subset of interactions.
 
-void CpuNonbondedForce::runThread(int index, vector<float>& threadForce, double& threadEnergy) {
-    while (true) {
-        // Wait for the signal to start running.
-        
-        pthread_mutex_lock(&lock);
-        waitCount++;
-        pthread_cond_signal(&endCondition);
-        pthread_cond_wait(&startCondition, &lock);
-        pthread_mutex_unlock(&lock);
-        if (isDeleted)
-            break;
-        
-        // Compute this thread's subset of interactions.
-        
-        threadEnergy = 0;
-        double* energyPtr = (includeEnergy ? &threadEnergy : NULL);
-        threadForce.resize(4*numberOfAtoms, 0.0f);
-        for (int i = 0; i < 4*numberOfAtoms; i++)
-            threadForce[i] = 0.0f;
+    int numThreads = threads.getNumThreads();
+    threadEnergy[threadIndex] = 0;
+    double* energyPtr = (includeEnergy ? &threadEnergy[threadIndex] : NULL);
+    threadForce[threadIndex].resize(4*numberOfAtoms, 0.0f);
+    float* forces = &threadForce[threadIndex][0];
+    for (int i = 0; i < 4*numberOfAtoms; i++)
+        forces[i] = 0.0f;
+    fvec4 boxSize(periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2], 0);
+    fvec4 invBoxSize((1/periodicBoxSize[0]), (1/periodicBoxSize[1]), (1/periodicBoxSize[2]), 0);
+    if (ewald || pme) {
+        // Compute the interactions from the neighbor list.
+
+        for (int i = threadIndex; i < neighborList->getNumBlocks(); i += numThreads)
+            calculateBlockEwaldIxn(i, forces, energyPtr, boxSize, invBoxSize);
+
+        // Now subtract off the exclusions, since they were implicitly included in the reciprocal space sum.
+
         fvec4 boxSize(periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2], 0);
         fvec4 invBoxSize((1/periodicBoxSize[0]), (1/periodicBoxSize[1]), (1/periodicBoxSize[2]), 0);
-        if (ewald || pme) {
-            // Compute the interactions from the neighbor list.
-
-            for (int i = index; i < neighborList->getNumBlocks(); i += numThreads)
-                calculateBlockEwaldIxn(i, &threadForce[0], energyPtr, boxSize, invBoxSize);
-            
-            // Now subtract off the exclusions, since they were implicitly included in the reciprocal space sum.
-
-            fvec4 boxSize(periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2], 0);
-            fvec4 invBoxSize((1/periodicBoxSize[0]), (1/periodicBoxSize[1]), (1/periodicBoxSize[2]), 0);
-            for (int i = index; i < numberOfAtoms; i += numThreads)
-                for (set<int>::const_iterator iter = exclusions[i].begin(); iter != exclusions[i].end(); ++iter) {
-                    if (*iter > i) {
-                        int j = *iter;
-                        fvec4 deltaR;
-                        fvec4 posI(posq+4*i);
-                        fvec4 posJ(posq+4*j);
-                        float r2;
-                        getDeltaR(posJ, posI, deltaR, r2, false, boxSize, invBoxSize);
-                        float r = sqrtf(r2);
-                        float inverseR = 1/r;
-                        float chargeProd = ONE_4PI_EPS0*posq[4*i+3]*posq[4*j+3];
-                        float alphaR = alphaEwald*r;
-                        float erfcAlphaR = erfcApprox(alphaR)[0];
-                        float dEdR = (float) (chargeProd * inverseR * inverseR * inverseR);
-                        dEdR = (float) (dEdR * (1.0f-erfcAlphaR-TWO_OVER_SQRT_PI*alphaR*exp(-alphaR*alphaR)));
-                        fvec4 result = deltaR*dEdR;
-                        (fvec4(&threadForce[4*i])-result).store(&threadForce[4*i]);
-                        (fvec4(&threadForce[4*j])+result).store(&threadForce[4*j]);
-                        if (includeEnergy)
-                            threadEnergy -= chargeProd*inverseR*(1.0f-erfcAlphaR);
-                    }
+        for (int i = threadIndex; i < numberOfAtoms; i += numThreads)
+            for (set<int>::const_iterator iter = exclusions[i].begin(); iter != exclusions[i].end(); ++iter) {
+                if (*iter > i) {
+                    int j = *iter;
+                    fvec4 deltaR;
+                    fvec4 posI(posq+4*i);
+                    fvec4 posJ(posq+4*j);
+                    float r2;
+                    getDeltaR(posJ, posI, deltaR, r2, false, boxSize, invBoxSize);
+                    float r = sqrtf(r2);
+                    float inverseR = 1/r;
+                    float chargeProd = ONE_4PI_EPS0*posq[4*i+3]*posq[4*j+3];
+                    float alphaR = alphaEwald*r;
+                    float erfcAlphaR = erfcApprox(alphaR)[0];
+                    float dEdR = (float) (chargeProd * inverseR * inverseR * inverseR);
+                    dEdR = (float) (dEdR * (1.0f-erfcAlphaR-TWO_OVER_SQRT_PI*alphaR*exp(-alphaR*alphaR)));
+                    fvec4 result = deltaR*dEdR;
+                    (fvec4(forces+4*i)-result).store(forces+4*i);
+                    (fvec4(forces+4*j)+result).store(forces+4*j);
+                    if (includeEnergy)
+                        threadEnergy[threadIndex] -= chargeProd*inverseR*(1.0f-erfcAlphaR);
                 }
-        }
-        else if (cutoff) {
-            // Compute the interactions from the neighbor list.
-
-            for (int i = index; i < neighborList->getNumBlocks(); i += numThreads)
-                calculateBlockIxn(i, &threadForce[0], energyPtr, boxSize, invBoxSize);
-        }
-        else {
-            // Loop over all atom pairs
-
-            for (int i = index; i < numberOfAtoms; i += numThreads){
-                for (int j = i+1; j < numberOfAtoms; j++)
-                    if (exclusions[j].find(i) == exclusions[j].end())
-                        calculateOneIxn(i, j, &threadForce[0], energyPtr, boxSize, invBoxSize);
             }
+    }
+    else if (cutoff) {
+        // Compute the interactions from the neighbor list.
+
+        for (int i = threadIndex; i < neighborList->getNumBlocks(); i += numThreads)
+            calculateBlockIxn(i, forces, energyPtr, boxSize, invBoxSize);
+    }
+    else {
+        // Loop over all atom pairs
+
+        for (int i = threadIndex; i < numberOfAtoms; i += numThreads){
+            for (int j = i+1; j < numberOfAtoms; j++)
+                if (exclusions[j].find(i) == exclusions[j].end())
+                    calculateOneIxn(i, j, forces, energyPtr, boxSize, invBoxSize);
         }
     }
 }

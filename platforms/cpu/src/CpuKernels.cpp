@@ -260,7 +260,7 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
                 }
         }
         if (needRecompute) {
-            neighborList.computeNeighborList(numParticles, posq, exclusions, floatBoxSize, periodic || ewald || pme, nonbondedCutoff+padding);
+            neighborList.computeNeighborList(numParticles, posq, exclusions, floatBoxSize, periodic || ewald || pme, nonbondedCutoff+padding, threads);
             lastPositions = posData;
         }
         nonbonded.setUseCutoff(nonbondedCutoff, neighborList, rfDielectric);
@@ -279,7 +279,7 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
         nonbonded.setUseSwitchingFunction(switchingDistance);
     float nonbondedEnergy = 0;
     if (includeDirect)
-        nonbonded.calculateDirectIxn(numParticles, &posq[0], particleParams, exclusions, &forces[0], includeEnergy ? &nonbondedEnergy : NULL);
+        nonbonded.calculateDirectIxn(numParticles, &posq[0], particleParams, exclusions, &forces[0], includeEnergy ? &nonbondedEnergy : NULL, threads);
     if (includeReciprocal) {
         if (useOptimizedPme) {
             PmeIO io(&posq[0], &forces[0], numParticles);

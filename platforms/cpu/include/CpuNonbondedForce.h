@@ -27,8 +27,8 @@
 
 #include "CpuNeighborList.h"
 #include "ReferencePairIxn.h"
+#include "openmm/internal/ThreadPool.h"
 #include "openmm/internal/vectorize.h"
-#include <pthread.h>
 #include <set>
 #include <utility>
 #include <vector>
@@ -38,7 +38,7 @@ namespace OpenMM {
 
 class CpuNonbondedForce {
     public:
-        class ThreadData;
+        class ComputeDirectTask;
 
       /**---------------------------------------------------------------------------------------
       
@@ -47,14 +47,6 @@ class CpuNonbondedForce {
          --------------------------------------------------------------------------------------- */
 
        CpuNonbondedForce();
-
-      /**---------------------------------------------------------------------------------------
-      
-         Destructor
-      
-         --------------------------------------------------------------------------------------- */
-
-       ~CpuNonbondedForce();
 
       /**---------------------------------------------------------------------------------------
       
@@ -145,16 +137,17 @@ class CpuNonbondedForce {
                                  exclusions[atomIndex] contains the list of exclusions for that atom
          @param forces           force array (forces added)
          @param totalEnergy      total energy
+         @param threads          the thread pool to use
       
          --------------------------------------------------------------------------------------- */
           
       void calculateDirectIxn(int numberOfAtoms, float* posq, const std::vector<std::pair<float, float> >& atomParameters,
-            const std::vector<std::set<int> >& exclusions, float* forces, float* totalEnergy);
+            const std::vector<std::set<int> >& exclusions, float* forces, float* totalEnergy, ThreadPool& threads);
 
     /**
      * This routine contains the code executed by each thread.
      */
-    void runThread(int index, std::vector<float>& threadForce, double& threadEnergy);
+    void threadComputeDirect(ThreadPool& threads, int threadIndex);
 
 private:
         bool cutoff;
@@ -171,12 +164,8 @@ private:
         int meshDim[3];
         std::vector<float> ewaldScaleTable;
         float ewaldDX, ewaldDXInv;
-        bool isDeleted;
-        int numThreads, waitCount;
-        std::vector<pthread_t> thread;
-        std::vector<ThreadData*> threadData;
-        pthread_cond_t startCondition, endCondition;
-        pthread_mutex_t lock;
+        std::vector<std::vector<float> > threadForce;
+        std::vector<double> threadEnergy;
         // The following variables are used to make information accessible to the individual threads.
         int numberOfAtoms;
         float* posq;
