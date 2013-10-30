@@ -37,6 +37,7 @@
 #include "CpuNonbondedForce.h"
 #include "openmm/kernels.h"
 #include "openmm/System.h"
+#include "openmm/internal/ThreadPool.h"
 
 namespace OpenMM {
 
@@ -90,6 +91,7 @@ private:
     NonbondedMethod nonbondedMethod;
     CpuNeighborList neighborList;
     CpuNonbondedForce nonbonded;
+    ThreadPool threads;
     Kernel optimizedPme;
 };
 

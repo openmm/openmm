@@ -1,3 +1,34 @@
+/* -------------------------------------------------------------------------- *
+ *                                   OpenMM                                   *
+ * -------------------------------------------------------------------------- *
+ * This is part of the OpenMM molecular simulation toolkit originating from   *
+ * Simbios, the NIH National Center for Physics-Based Simulation of           *
+ * Biological Structures at Stanford, funded under the NIH Roadmap for        *
+ * Medical Research, grant U54 GM072970. See https://simtk.org.               *
+ *                                                                            *
+ * Portions copyright (c) 2013 Stanford University and the Authors.           *
+ * Authors: Peter Eastman                                                     *
+ * Contributors:                                                              *
+ *                                                                            *
+ * Permission is hereby granted, free of charge, to any person obtaining a    *
+ * copy of this software and associated documentation files (the "Software"), *
+ * to deal in the Software without restriction, including without limitation  *
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,   *
+ * and/or sell copies of the Software, and to permit persons to whom the      *
+ * Software is furnished to do so, subject to the following conditions:       *
+ *                                                                            *
+ * The above copyright notice and this permission notice shall be included in *
+ * all copies or substantial portions of the Software.                        *
+ *                                                                            *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR *
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,   *
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL    *
+ * THE AUTHORS, CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,    *
+ * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR      *
+ * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE  *
+ * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
+ * -------------------------------------------------------------------------- */
+
 #include "CpuNeighborList.h"
 #include "openmm/internal/hardware.h"
 #include "openmm/internal/vectorize.h"
@@ -255,54 +286,21 @@ private:
     vector<vector<vector<pair<float, int> > > > bins;
 };
 
-class CpuNeighborList::ThreadData {
+class CpuNeighborList::ThreadTask : public ThreadPool::Task {
 public:
-    ThreadData(int index, CpuNeighborList& owner) : index(index), owner(owner) {
+    ThreadTask(CpuNeighborList& owner) : owner(owner) {
     }
-    int index;
+    void execute(ThreadPool& threads, int threadIndex) {
+        owner.threadComputeNeighborList(threads, threadIndex);
+    }
     CpuNeighborList& owner;
 };
 
-static void* threadBody(void* args) {
-    CpuNeighborList::ThreadData& data = *reinterpret_cast<CpuNeighborList::ThreadData*>(args);
-    data.owner.runThread(data.index);
-    delete &data;
-    return 0;
-}
-
 CpuNeighborList::CpuNeighborList() {
-    isDeleted = false;
-    numThreads = getNumProcessors();
-    pthread_cond_init(&startCondition, NULL);
-    pthread_cond_init(&endCondition, NULL);
-    pthread_mutex_init(&lock, NULL);
-    thread.resize(numThreads);
-    pthread_mutex_lock(&lock);
-    waitCount = 0;
-    for (int i = 0; i < numThreads; i++) {
-        ThreadData* data = new ThreadData(i, *this);
-        threadData.push_back(data);
-        pthread_create(&thread[i], NULL, threadBody, data);
-    }
-    while (waitCount < numThreads)
-        pthread_cond_wait(&endCondition, &lock);
-    pthread_mutex_unlock(&lock);
-}
-
-CpuNeighborList::~CpuNeighborList() {
-    isDeleted = true;
-    pthread_mutex_lock(&lock);
-    pthread_cond_broadcast(&startCondition);
-    pthread_mutex_unlock(&lock);
-    for (int i = 0; i < (int) thread.size(); i++)
-        pthread_join(thread[i], NULL);
-    pthread_mutex_destroy(&lock);
-    pthread_cond_destroy(&startCondition);
-    pthread_cond_destroy(&endCondition);
 }
 
 void CpuNeighborList::computeNeighborList(int numAtoms, const vector<float>& atomLocations, const vector<set<int> >& exclusions,
-            const float* periodicBoxSize, bool usePeriodic, float maxDistance) {
+            const float* periodicBoxSize, bool usePeriodic, float maxDistance, ThreadPool& threads) {
     int numBlocks = (numAtoms+BlockSize-1)/BlockSize;
     blockNeighbors.resize(numBlocks);
     blockExclusions.resize(numBlocks);
@@ -336,8 +334,9 @@ void CpuNeighborList::computeNeighborList(int numAtoms, const vector<float>& ato
     // Sort the atoms based on a Hilbert curve.
     
     atomBins.resize(numAtoms);
-    pthread_mutex_lock(&lock);
-    advanceThreads();
+    ThreadTask task(*this);
+    threads.execute(task);
+    threads.waitForThreads();
     sort(atomBins.begin(), atomBins.end());
 
     // Build the voxel hash.
@@ -360,8 +359,8 @@ void CpuNeighborList::computeNeighborList(int numAtoms, const vector<float>& ato
     
     // Signal the threads to start running and wait for them to finish.
     
-    advanceThreads();
-    pthread_mutex_unlock(&lock);
+    threads.resumeThreads();
+    threads.waitForThreads();
     
     // Add padding atoms to fill up the last block.
     
@@ -393,82 +392,55 @@ const std::vector<char>& CpuNeighborList::getBlockExclusions(int blockIndex) con
     
 }
 
-void CpuNeighborList::runThread(int index) {
-    while (true) {
-        // Wait for the signal to start running.
-        
-        threadWait();
-        if (isDeleted)
-            break;
-        
-        // Compute the positions of atoms along the Hilbert curve.
+void CpuNeighborList::threadComputeNeighborList(ThreadPool& threads, int threadIndex) {
+    // Compute the positions of atoms along the Hilbert curve.
 
-        float binWidth = max(max(maxx-minx, maxy-miny), maxz-minz)/255.0f;
-        float invBinWidth = 1.0f/binWidth;
-        bitmask_t coords[3];
-        for (int i = index; i < numAtoms; i += numThreads) {
-            const float* pos = &atomLocations[4*i];
-            coords[0] = (bitmask_t) ((pos[0]-minx)*invBinWidth);
-            coords[1] = (bitmask_t) ((pos[1]-miny)*invBinWidth);
-            coords[2] = (bitmask_t) ((pos[2]-minz)*invBinWidth);
-            int bin = (int) hilbert_c2i(3, 8, coords);
-            atomBins[i] = pair<int, int>(bin, i);
-        }
-        threadWait();
-        
-        // Compute this thread's subset of neighbors.
-        
-        int numBlocks = blockNeighbors.size();
-        vector<int> blockAtoms;
-        for (int i = index; i < numBlocks; i += numThreads) {
-            {
-            int firstIndex = BlockSize*i;
-            int atomsInBlock = min(BlockSize, numAtoms-firstIndex);
-            blockAtoms.resize(atomsInBlock);
-            for (int j = 0; j < atomsInBlock; j++)
-                blockAtoms[j] = sortedAtoms[firstIndex+j];
-            }
-
-                        
-            int firstIndex = BlockSize*i;
-            fvec4 minPos(&atomLocations[4*sortedAtoms[firstIndex]]);
-            fvec4 maxPos = minPos;
-            int atomsInBlock = min(BlockSize, numAtoms-firstIndex);
-            for (int j = 1; j < atomsInBlock; j++) {
-                fvec4 pos(&atomLocations[4*sortedAtoms[firstIndex+j]]);
-                minPos = min(minPos, pos);
-                maxPos = max(maxPos, pos);
-            }
-            voxels->getNeighbors(blockNeighbors[i], i, (maxPos+minPos)*0.5f, (maxPos-minPos)*0.5f, sortedAtoms, blockExclusions[i], maxDistance, blockAtoms, atomLocations);
-            
-            // Record the exclusions for this block.
-            
-            for (int j = 0; j < atomsInBlock; j++) {
-                const set<int>& atomExclusions = (*exclusions)[sortedAtoms[firstIndex+j]];
-                char mask = 1<<j;
-                for (int k = 0; k < (int) blockNeighbors[i].size(); k++) {
-                    int atomIndex = blockNeighbors[i][k];
-                    if (atomExclusions.find(atomIndex) != atomExclusions.end())
-                        blockExclusions[i][k] |= mask;
-                }
-            }
-        }
+    float binWidth = max(max(maxx-minx, maxy-miny), maxz-minz)/255.0f;
+    float invBinWidth = 1.0f/binWidth;
+    bitmask_t coords[3];
+    int numThreads = threads.getNumThreads();
+    for (int i = threadIndex; i < numAtoms; i += numThreads) {
+        const float* pos = &atomLocations[4*i];
+        coords[0] = (bitmask_t) ((pos[0]-minx)*invBinWidth);
+        coords[1] = (bitmask_t) ((pos[1]-miny)*invBinWidth);
+        coords[2] = (bitmask_t) ((pos[2]-minz)*invBinWidth);
+        int bin = (int) hilbert_c2i(3, 8, coords);
+        atomBins[i] = pair<int, int>(bin, i);
     }
-}
+    threads.syncThreads();
 
-void CpuNeighborList::threadWait() {
-    pthread_mutex_lock(&lock);
-    waitCount++;
-    pthread_cond_signal(&endCondition);
-    pthread_cond_wait(&startCondition, &lock);
-    pthread_mutex_unlock(&lock);
-}
+    // Compute this thread's subset of neighbors.
 
-void CpuNeighborList::advanceThreads() {
-    waitCount = 0;
-    pthread_cond_broadcast(&startCondition);
-    while (waitCount < numThreads) {
-        pthread_cond_wait(&endCondition, &lock);
+    int numBlocks = blockNeighbors.size();
+    vector<int> blockAtoms;
+    for (int i = threadIndex; i < numBlocks; i += numThreads) {
+        // Find the atoms in this block and compute their bounding box.
+        
+        int firstIndex = BlockSize*i;
+        int atomsInBlock = min(BlockSize, numAtoms-firstIndex);
+        blockAtoms.resize(atomsInBlock);
+        for (int j = 0; j < atomsInBlock; j++)
+            blockAtoms[j] = sortedAtoms[firstIndex+j];
+        fvec4 minPos(&atomLocations[4*sortedAtoms[firstIndex]]);
+        fvec4 maxPos = minPos;
+        for (int j = 1; j < atomsInBlock; j++) {
+            fvec4 pos(&atomLocations[4*sortedAtoms[firstIndex+j]]);
+            minPos = min(minPos, pos);
+            maxPos = max(maxPos, pos);
+        }
+        voxels->getNeighbors(blockNeighbors[i], i, (maxPos+minPos)*0.5f, (maxPos-minPos)*0.5f, sortedAtoms, blockExclusions[i], maxDistance, blockAtoms, atomLocations);
+
+        // Record the exclusions for this block.
+
+        for (int j = 0; j < atomsInBlock; j++) {
+            const set<int>& atomExclusions = (*exclusions)[sortedAtoms[firstIndex+j]];
+            char mask = 1<<j;
+            for (int k = 0; k < (int) blockNeighbors[i].size(); k++) {
+                int atomIndex = blockNeighbors[i][k];
+                if (atomExclusions.find(atomIndex) != atomExclusions.end())
+                    blockExclusions[i][k] |= mask;
+            }
+        }
     }
 }
 

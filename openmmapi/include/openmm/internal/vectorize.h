@@ -212,6 +212,10 @@ static inline float dot4(fvec4 v1, fvec4 v2) {
     return _mm_cvtss_f32(_mm_dp_ps(v1, v2, 0xF1));
 }
 
+static inline void transpose(fvec4& v1, fvec4& v2, fvec4& v3, fvec4& v4) {
+    _MM_TRANSPOSE4_PS(v1, v2, v3, v4);
+}
+
 // Functions that operate on ivec4s.
 
 static inline ivec4 min(ivec4 v1, ivec4 v2) {
