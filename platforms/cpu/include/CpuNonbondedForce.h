@@ -122,7 +122,7 @@ class CpuNonbondedForce {
             
          --------------------------------------------------------------------------------------- */
           
-      void calculateReciprocalIxn(int numberOfAtoms, float* posq, std::vector<RealVec>& atomCoordinates,
+      void calculateReciprocalIxn(int numberOfAtoms, float* posq, const std::vector<RealVec>& atomCoordinates,
                             const std::vector<std::pair<float, float> >& atomParameters, const std::vector<std::set<int> >& exclusions,
                             std::vector<RealVec>& forces, float* totalEnergy) const;
       
@@ -132,6 +132,7 @@ class CpuNonbondedForce {
       
          @param numberOfAtoms    number of atoms
          @param posq             atom coordinates and charges
+         @param atomCoordinates  atom coordinates (periodic boundary conditions not applied)
          @param atomParameters   atom parameters (sigma/2, 2*sqrt(epsilon))
          @param exclusions       atom exclusion indices
                                  exclusions[atomIndex] contains the list of exclusions for that atom
@@ -141,7 +142,7 @@ class CpuNonbondedForce {
       
          --------------------------------------------------------------------------------------- */
           
-      void calculateDirectIxn(int numberOfAtoms, float* posq, const std::vector<std::pair<float, float> >& atomParameters,
+      void calculateDirectIxn(int numberOfAtoms, float* posq, const std::vector<RealVec>& atomCoordinates, const std::vector<std::pair<float, float> >& atomParameters,
             const std::vector<std::set<int> >& exclusions, float* forces, float* totalEnergy, ThreadPool& threads);
 
     /**
@@ -169,6 +170,7 @@ private:
         // The following variables are used to make information accessible to the individual threads.
         int numberOfAtoms;
         float* posq;
+        RealVec const* atomCoordinates;
         std::pair<float, float> const* atomParameters;        
         std::set<int> const* exclusions;
         bool includeEnergy;
