@@ -27,8 +27,8 @@
 
 #include "CpuNeighborList.h"
 #include "ReferencePairIxn.h"
+#include "openmm/internal/ThreadPool.h"
 #include "openmm/internal/vectorize.h"
-#include <pthread.h>
 #include <set>
 #include <utility>
 #include <vector>
@@ -38,7 +38,7 @@ namespace OpenMM {
 
 class CpuNonbondedForce {
     public:
-        class ThreadData;
+        class ComputeDirectTask;
 
       /**---------------------------------------------------------------------------------------
       
@@ -47,14 +47,6 @@ class CpuNonbondedForce {
          --------------------------------------------------------------------------------------- */
 
        CpuNonbondedForce();
-
-      /**---------------------------------------------------------------------------------------
-      
-         Destructor
-      
-         --------------------------------------------------------------------------------------- */
-
-       ~CpuNonbondedForce();
 
       /**---------------------------------------------------------------------------------------
       
@@ -130,7 +122,7 @@ class CpuNonbondedForce {
             
          --------------------------------------------------------------------------------------- */
           
-      void calculateReciprocalIxn(int numberOfAtoms, float* posq, std::vector<RealVec>& atomCoordinates,
+      void calculateReciprocalIxn(int numberOfAtoms, float* posq, const std::vector<RealVec>& atomCoordinates,
                             const std::vector<std::pair<float, float> >& atomParameters, const std::vector<std::set<int> >& exclusions,
                             std::vector<RealVec>& forces, float* totalEnergy) const;
       
@@ -140,21 +132,23 @@ class CpuNonbondedForce {
       
          @param numberOfAtoms    number of atoms
          @param posq             atom coordinates and charges
+         @param atomCoordinates  atom coordinates (periodic boundary conditions not applied)
          @param atomParameters   atom parameters (sigma/2, 2*sqrt(epsilon))
          @param exclusions       atom exclusion indices
                                  exclusions[atomIndex] contains the list of exclusions for that atom
          @param forces           force array (forces added)
          @param totalEnergy      total energy
+         @param threads          the thread pool to use
       
          --------------------------------------------------------------------------------------- */
           
-      void calculateDirectIxn(int numberOfAtoms, float* posq, const std::vector<std::pair<float, float> >& atomParameters,
-            const std::vector<std::set<int> >& exclusions, float* forces, float* totalEnergy);
+      void calculateDirectIxn(int numberOfAtoms, float* posq, const std::vector<RealVec>& atomCoordinates, const std::vector<std::pair<float, float> >& atomParameters,
+            const std::vector<std::set<int> >& exclusions, float* forces, float* totalEnergy, ThreadPool& threads);
 
     /**
      * This routine contains the code executed by each thread.
      */
-    void runThread(int index, std::vector<float>& threadForce, double& threadEnergy);
+    void threadComputeDirect(ThreadPool& threads, int threadIndex);
 
 private:
         bool cutoff;
@@ -171,15 +165,12 @@ private:
         int meshDim[3];
         std::vector<float> ewaldScaleTable;
         float ewaldDX, ewaldDXInv;
-        bool isDeleted;
-        int numThreads, waitCount;
-        std::vector<pthread_t> thread;
-        std::vector<ThreadData*> threadData;
-        pthread_cond_t startCondition, endCondition;
-        pthread_mutex_t lock;
+        std::vector<std::vector<float> > threadForce;
+        std::vector<double> threadEnergy;
         // The following variables are used to make information accessible to the individual threads.
         int numberOfAtoms;
         float* posq;
+        RealVec const* atomCoordinates;
         std::pair<float, float> const* atomParameters;        
         std::set<int> const* exclusions;
         bool includeEnergy;
@@ -229,6 +220,12 @@ private:
        * periodic boundary conditions.
        */
       void getDeltaR(const fvec4& posI, const fvec4& posJ, fvec4& deltaR, float& r2, bool periodic, const fvec4& boxSize, const fvec4& invBoxSize) const;
+
+      /**
+       * Compute the displacement and squared distance between a collection of points, optionally using
+       * periodic boundary conditions.
+       */
+      void getDeltaR(const fvec4& posI, const fvec4& x, const fvec4& y, const fvec4& z, fvec4& dx, fvec4& dy, fvec4& dz, fvec4& r2, bool periodic, const fvec4& boxSize, const fvec4& invBoxSize) const;
 
       /**
        * Compute a fast approximation to erfc(x).

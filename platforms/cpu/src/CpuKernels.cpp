@@ -203,11 +203,11 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
     
     // Convert the positions to single precision.
     
-    if (periodic)
+    if (periodic || ewald || pme)
         for (int i = 0; i < numParticles; i++)
             for (int j = 0; j < 3; j++) {
                 RealOpenMM x = posData[i][j];
-                double base = floor(x/boxSize[j]+0.5)*boxSize[j];
+                double base = floor(x/boxSize[j])*boxSize[j];
                 posq[4*i+j] = (float) (x-base);
             }
     else
@@ -244,6 +244,7 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
 
             int numMoved = moved.size();
             double cutoff2 = nonbondedCutoff*nonbondedCutoff;
+            double paddedCutoff2 = (nonbondedCutoff+padding)*(nonbondedCutoff+padding);
             for (int i = 1; i < numMoved && !needRecompute; i++)
                 for (int j = 0; j < i; j++) {
                     RealVec delta = posData[moved[i]]-posData[moved[j]];
@@ -251,7 +252,7 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
                         // These particles should interact.  See if they are in the neighbor list.
                         
                         RealVec oldDelta = lastPositions[moved[i]]-lastPositions[moved[j]];
-                        if (oldDelta.dot(oldDelta) > cutoff2) {
+                        if (oldDelta.dot(oldDelta) > paddedCutoff2) {
                             needRecompute = true;
                             break;
                         }
@@ -259,7 +260,7 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
                 }
         }
         if (needRecompute) {
-            neighborList.computeNeighborList(numParticles, posq, exclusions, floatBoxSize, periodic || ewald || pme, nonbondedCutoff+padding);
+            neighborList.computeNeighborList(numParticles, posq, exclusions, floatBoxSize, periodic || ewald || pme, nonbondedCutoff+padding, threads);
             lastPositions = posData;
         }
         nonbonded.setUseCutoff(nonbondedCutoff, neighborList, rfDielectric);
@@ -278,7 +279,7 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
         nonbonded.setUseSwitchingFunction(switchingDistance);
     float nonbondedEnergy = 0;
     if (includeDirect)
-        nonbonded.calculateDirectIxn(numParticles, &posq[0], particleParams, exclusions, &forces[0], includeEnergy ? &nonbondedEnergy : NULL);
+        nonbonded.calculateDirectIxn(numParticles, &posq[0], posData, particleParams, exclusions, &forces[0], includeEnergy ? &nonbondedEnergy : NULL, threads);
     if (includeReciprocal) {
         if (useOptimizedPme) {
             PmeIO io(&posq[0], &forces[0], numParticles);

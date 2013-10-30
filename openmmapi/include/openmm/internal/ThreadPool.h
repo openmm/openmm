@@ -1,5 +1,5 @@
-#ifndef OPENMM_CPU_NEIGHBORLIST_H_
-#define OPENMM_CPU_NEIGHBORLIST_H_
+#ifndef OPENMM_THREAD_POOL_H_
+#define OPENMM_THREAD_POOL_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -32,47 +32,73 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "windowsExportCpu.h"
-#include "openmm/internal/ThreadPool.h"
-#include <set>
-#include <utility>
+#include "windowsExport.h"
+#include <pthread.h>
 #include <vector>
 
 namespace OpenMM {
-    
-class OPENMM_EXPORT_CPU CpuNeighborList {
+
+/**
+ * A ThreadPool creates a set of worker threads that can be used to execute tasks in parallel.
+ * After creating a ThreadPool, call execute() to start a task running then waitForThreads()
+ * to block until all threads have finished.  You also can synchronize the threads in the middle
+ * of the task by having them call syncThreads().  In this case, the parent thread should call
+ * waitForThreads() an additional time; each call waits until all worker threads have reached the
+ * next syncThreads(), and the final call waits until they exit from the Task's execute() method.
+ * After calling waitForThreads() to block at a synchronization point, the parent thread should
+ * call resumeThreads() to instruct the worker threads to resume.
+ */
+class OPENMM_EXPORT ThreadPool {
 public:
-    class ThreadTask;
-    class Voxels;
-    static const int BlockSize;
-    CpuNeighborList();
-    void computeNeighborList(int numAtoms, const std::vector<float>& atomLocations, const std::vector<std::set<int> >& exclusions,
-            const float* periodicBoxSize, bool usePeriodic, float maxDistance, ThreadPool& threads);
-    int getNumBlocks() const;
-    const std::vector<int>& getSortedAtoms() const;
-    const std::vector<int>& getBlockNeighbors(int blockIndex) const;
-    const std::vector<char>& getBlockExclusions(int blockIndex) const;
+    class Task;
+    class ThreadData;
+    ThreadPool();
+    ~ThreadPool();
     /**
-     * This routine contains the code executed by each thread.
+     * Get the number of worker threads in the pool.
      */
-    void threadComputeNeighborList(ThreadPool& threads, int threadIndex);
-    void runThread(int index);
+    int getNumThreads() const;
+    /**
+     * Execute a Task in parallel on the worker threads.
+     */
+    void execute(Task& task);
+    /**
+     * This is called by the worker threads to block until all threads have reached the same point
+     * and the master thread instructs them to continue by calling resumeThreads().
+     */
+    void syncThreads();
+    /**
+     * This is called by the master thread to wait until all threads have completed the Task.  Alternatively,
+     * if the threads call syncThreads(), this blocks until all threads have reached the synchronization point.
+     */
+    void waitForThreads();
+    /**
+     * Instruct the threads to resume running after blocking at a synchronization point.
+     */
+    void resumeThreads();
 private:
-    std::vector<int> sortedAtoms;
-    std::vector<std::vector<int> > blockNeighbors;
-    std::vector<std::vector<char> > blockExclusions;
-    // The following variables are used to make information accessible to the individual threads.
-    float minx, maxx, miny, maxy, minz, maxz;
-    std::vector<std::pair<int, int> > atomBins;
-    Voxels* voxels;
-    const std::vector<std::set<int> >* exclusions;
-    const float* atomLocations;
-    const float* periodicBoxSize;
-    int numAtoms;
-    bool usePeriodic;
-    float maxDistance;
+    bool isDeleted;
+    int numThreads, waitCount;
+    std::vector<pthread_t> thread;
+    std::vector<ThreadData*> threadData;
+    pthread_cond_t startCondition, endCondition;
+    pthread_mutex_t lock;
+};
+
+/**
+ * This defines a task that can be executed in parallel by the worker threads.
+ */
+class OPENMM_EXPORT ThreadPool::Task {
+public:
+    /**
+     * Execute the task on each thread.
+     * 
+     * @param pool         the ThreadPool being used to execute the task
+     * @param threadIndex  the index of the thread invoking this method
+     */
+    virtual void execute(ThreadPool& pool, int threadIndex) = 0;
 };
 
 } // namespace OpenMM
 
-#endif // OPENMM_CPU_NEIGHBORLIST_H_
+#endif // OPENMM_THREAD_POOL_H_

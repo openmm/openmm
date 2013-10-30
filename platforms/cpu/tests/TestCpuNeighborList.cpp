@@ -34,6 +34,7 @@
  */
 
 #include "openmm/internal/AssertionUtilities.h"
+#include "openmm/internal/ThreadPool.h"
 #include "CpuNeighborList.h"
 #include "CpuPlatform.h"
 #include "sfmt/SFMT.h"
@@ -63,8 +64,9 @@ void testNeighborList(bool periodic) {
             exclusions[i-j].insert(i);
         }
     }
+    ThreadPool threads;
     CpuNeighborList neighborList;
-    neighborList.computeNeighborList(numParticles, positions, exclusions, boxSize, periodic, cutoff);
+    neighborList.computeNeighborList(numParticles, positions, exclusions, boxSize, periodic, cutoff, threads);
     
     // Convert the neighbor list to a set for faster lookup.
     

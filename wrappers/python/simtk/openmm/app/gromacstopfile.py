@@ -40,7 +40,7 @@ import simtk.unit as unit
 import simtk.openmm as mm
 import math
 import os
-import distutils
+import distutils.spawn
 
 HBonds = ff.HBonds
 AllBonds = ff.AllBonds
@@ -358,7 +358,7 @@ class GromacsTopFile(object):
             raise ValueError('Unsupported function type in [ cmaptypes ] line: '+line);
         self._cmapTypes[tuple(fields[:5])] = fields
 
-    def __init__(self, file, unitCellDimensions=None, includeDir=None, defines={}):
+    def __init__(self, file, unitCellDimensions=None, includeDir=None, defines=None):
         """Load a top file.
 
         Parameters:
@@ -368,12 +368,18 @@ class GromacsTopFile(object):
            included from the top file. If not specified, we will attempt to locate a gromacs
            installation on your system. When gromacs is installed in /usr/local, this will resolve
            to  /usr/local/gromacs/share/gromacs/top
-         - defines (map={}) preprocessor definitions that should be predefined when parsing the file
+         - defines (dict={}) preprocessor definitions that should be predefined when parsing the file
          """
         if includeDir is None:
             includeDir = _defaultGromacsIncludeDir()
         self._includeDirs = (os.path.dirname(file), includeDir)
-        self._defines = defines
+        # Most of the gromacs water itp files for different forcefields,
+        # unless the preprocessor #define FLEXIBLE is given, don't define
+        # bonds between the water hydrogen and oxygens, but only give the
+        # constraint distances and exclusions.
+        self._defines = {'FLEXIBLE': True}
+        if defines is not None:
+            self._defines.update(defines)
 
         # Parse the file.
 
