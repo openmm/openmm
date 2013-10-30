@@ -1563,6 +1563,28 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateForceAndEnergy( const std::ve
     return energy;
 }
 
+void AmoebaReferenceMultipoleForce::calculateInducedDipoles(const std::vector<RealVec>& particlePositions,
+                                                            const std::vector<RealOpenMM>& charges,
+                                                            const std::vector<RealOpenMM>& dipoles,
+                                                            const std::vector<RealOpenMM>& quadrupoles,
+                                                            const std::vector<RealOpenMM>& tholes,
+                                                            const std::vector<RealOpenMM>& dampingFactors,
+                                                            const std::vector<RealOpenMM>& polarity,
+                                                            const std::vector<int>& axisTypes,
+                                                            const std::vector<int>& multipoleAtomZs,
+                                                            const std::vector<int>& multipoleAtomXs,
+                                                            const std::vector<int>& multipoleAtomYs,
+                                                            const std::vector< std::vector< std::vector<int> > >& multipoleAtomCovalentInfo,
+                                                            std::vector<RealVec>& outputInducedDipoles) {
+    // setup, including calculating induced dipoles
+
+    std::vector<MultipoleParticleData> particleData;
+    setup( particlePositions, charges, dipoles, quadrupoles, tholes,
+           dampingFactors, polarity, axisTypes, multipoleAtomZs, multipoleAtomXs, multipoleAtomYs,
+           multipoleAtomCovalentInfo, particleData );
+    outputInducedDipoles = _inducedDipole;
+}
+
 void AmoebaReferenceMultipoleForce::calculateAmoebaSystemMultipoleMoments( const std::vector<RealOpenMM>& masses,
                                                                            const std::vector<RealVec>& particlePositions,
                                                                            const std::vector<RealOpenMM>& charges,

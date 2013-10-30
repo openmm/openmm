@@ -472,6 +472,38 @@ public:
                                         std::vector<OpenMM::RealVec>& forces );
 
     /**
+     * Calculate particle induced dipoles.
+     *
+     * @param masses                    particle masses
+     * @param particlePositions         Cartesian coordinates of particles
+     * @param charges                   scalar charges for each particle
+     * @param dipoles                   molecular frame dipoles for each particle
+     * @param quadrupoles               molecular frame quadrupoles for each particle
+     * @param tholes                    Thole factors for each particle
+     * @param dampingFactors            dampling factors for each particle
+     * @param polarity                  polarity for each particle
+     * @param axisTypes                 axis type (Z-then-X, ... ) for each particle
+     * @param multipoleAtomZs           indicies of particle specifying the molecular frame z-axis for each particle
+     * @param multipoleAtomXs           indicies of particle specifying the molecular frame x-axis for each particle
+     * @param multipoleAtomYs           indicies of particle specifying the molecular frame y-axis for each particle
+     * @param multipoleAtomCovalentInfo covalent info needed to set scaling factors
+     * @param outputMultipoleMoments    output multipole moments
+     */
+    void calculateInducedDipoles(const std::vector<OpenMM::RealVec>& particlePositions,
+                                 const std::vector<RealOpenMM>& charges,
+                                 const std::vector<RealOpenMM>& dipoles,
+                                 const std::vector<RealOpenMM>& quadrupoles,
+                                 const std::vector<RealOpenMM>& tholes,
+                                 const std::vector<RealOpenMM>& dampingFactors,
+                                 const std::vector<RealOpenMM>& polarity,
+                                 const std::vector<int>& axisTypes,
+                                 const std::vector<int>& multipoleAtomZs,
+                                 const std::vector<int>& multipoleAtomXs,
+                                 const std::vector<int>& multipoleAtomYs,
+                                 const std::vector< std::vector< std::vector<int> > >& multipoleAtomCovalentInfo,
+                                 std::vector<RealVec>& outputInducedDipoles);
+
+    /**
      * Calculate system multipole moments.
      *
      * @param masses                    particle masses

@@ -31,9 +31,10 @@ USE OR OTHER DEALINGS IN THE SOFTWARE.
 __author__ = "Peter Eastman"
 __version__ = "1.0"
 
+import bz2
+import gzip
 import simtk.openmm as mm
 import simtk.unit as unit
-from simtk.openmm.app import PDBFile
 import math
 
 class StateDataReporter(object):
@@ -67,7 +68,14 @@ class StateDataReporter(object):
         self._reportInterval = reportInterval
         self._openedFile = isinstance(file, str)
         if self._openedFile:
-            self._out = open(file, 'w', 0)
+            # Detect the desired compression scheme from the filename extension
+            # and open all files unbuffered
+            if file.endswith('.gz'):
+                self._out = gzip.GzipFile(fileobj=open(file, 'wb', 0))
+            elif file.endswith('.bz2'):
+                self._out = bz2.BZ2File(file, 'w', 0)
+            else:
+                self._out = open(file, 'w', 0)
         else:
             self._out = file
         self._step = step
@@ -109,7 +117,10 @@ class StateDataReporter(object):
             self._initializeConstants(simulation)
             headers = self._constructHeaders()
             print >>self._out, '#"%s"' % ('"'+self._separator+'"').join(headers)
-            self._out.flush()
+            try:
+                self._out.flush()
+            except AttributeError:
+                pass
             self._hasInitialized = True
 
         # Check for errors.
@@ -120,7 +131,10 @@ class StateDataReporter(object):
 
         # Write the values.
         print >>self._out, self._separator.join(str(v) for v in values)
-        self._out.flush()
+        try:
+            self._out.flush()
+        except AttributeError:
+            pass
 
     def _constructReportValues(self, simulation, state):
         """Query the simulation for the current state of our observables of interest.

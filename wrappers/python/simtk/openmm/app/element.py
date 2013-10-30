@@ -203,3 +203,8 @@ ununtrium =      Element(113, "ununtrium",      "Uut", 284*daltons)
 ununquadium =    Element(114, "ununquadium",    "Uuq", 289*daltons)
 ununpentium =    Element(115, "ununpentium",    "Uup", 288*daltons)
 ununhexium =     Element(116, "ununhexium",     "Uuh", 292*daltons)
+
+# Aliases to recognize common alternative spellings. Both the '==' and 'is'
+# relational operators will work with any chosen name
+sulphur = sulfur
+aluminium = aluminum
