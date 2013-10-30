@@ -462,6 +462,15 @@ void CpuNonbondedForce::calculateBlockIxn(int blockIndex, float* forces, double*
     fvec4 blockAtomCharge = fvec4(ONE_4PI_EPS0)*fvec4(blockAtomPosq[0][3], blockAtomPosq[1][3], blockAtomPosq[2][3], blockAtomPosq[3][3]);
     fvec4 blockAtomSigma(atomParameters[blockAtom[0]].first, atomParameters[blockAtom[1]].first, atomParameters[blockAtom[2]].first, atomParameters[blockAtom[3]].first);
     fvec4 blockAtomEpsilon(atomParameters[blockAtom[0]].second, atomParameters[blockAtom[1]].second, atomParameters[blockAtom[2]].second, atomParameters[blockAtom[3]].second);
+    bool needPeriodic = false;
+    if (periodic) {
+        for (int i = 0; i < 4 && !needPeriodic; i++)
+            for (int j = 0; j < 3; j++)
+                if (blockAtomPosq[i][j]-cutoffDistance < 0.0 || blockAtomPosq[i][j]+cutoffDistance > boxSize[j]) {
+                    needPeriodic = true;
+                    break;
+                }
+    }
     
     // Loop over neighbors for this block.
     
@@ -478,7 +487,7 @@ void CpuNonbondedForce::calculateBlockIxn(int blockIndex, float* forces, double*
         
         bool any = false;
         fvec4 dx, dy, dz, r2;
-        getDeltaR(atomPosq, blockAtomX, blockAtomY, blockAtomZ, dx, dy, dz, r2, periodic, boxSize, invBoxSize);
+        getDeltaR(atomPosq, blockAtomX, blockAtomY, blockAtomZ, dx, dy, dz, r2, needPeriodic, boxSize, invBoxSize);
         for (int j = 0; j < 4; j++) {
             include[j] = (((exclusions[i]>>j)&1) == 0 && (!cutoff || r2[j] < cutoffDistance*cutoffDistance));
             any |= include[j];
