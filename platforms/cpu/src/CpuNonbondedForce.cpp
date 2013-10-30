@@ -177,7 +177,7 @@ void CpuNonbondedForce::tabulateEwaldScaleFactor() {
     }
 }
   
-void CpuNonbondedForce::calculateReciprocalIxn(int numberOfAtoms, float* posq, vector<RealVec>& atomCoordinates,
+void CpuNonbondedForce::calculateReciprocalIxn(int numberOfAtoms, float* posq, const vector<RealVec>& atomCoordinates,
                                              const vector<pair<float, float> >& atomParameters, const vector<set<int> >& exclusions,
                                              vector<RealVec>& forces, float* totalEnergy) const {
     typedef std::complex<float> d_complex;
@@ -291,12 +291,13 @@ void CpuNonbondedForce::calculateReciprocalIxn(int numberOfAtoms, float* posq, v
 }
 
 
-void CpuNonbondedForce::calculateDirectIxn(int numberOfAtoms, float* posq, const vector<pair<float, float> >& atomParameters,
+void CpuNonbondedForce::calculateDirectIxn(int numberOfAtoms, float* posq, const vector<RealVec>& atomCoordinates, const vector<pair<float, float> >& atomParameters,
                 const vector<set<int> >& exclusions, float* forces, float* totalEnergy, ThreadPool& threads) {
     // Record the parameters for the threads.
     
     this->numberOfAtoms = numberOfAtoms;
     this->posq = posq;
+    this->atomCoordinates = &atomCoordinates[0];
     this->atomParameters = &atomParameters[0];
     this->exclusions = &exclusions[0];
     includeEnergy = (totalEnergy != NULL);
@@ -348,13 +349,13 @@ void CpuNonbondedForce::threadComputeDirect(ThreadPool& threads, int threadIndex
 
         fvec4 boxSize(periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2], 0);
         fvec4 invBoxSize((1/periodicBoxSize[0]), (1/periodicBoxSize[1]), (1/periodicBoxSize[2]), 0);
-        for (int i = threadIndex; i < numberOfAtoms; i += numThreads)
+        for (int i = threadIndex; i < numberOfAtoms; i += numThreads) {
+            fvec4 posI((float) atomCoordinates[i][0], (float) atomCoordinates[i][1], (float) atomCoordinates[i][2], 0.0f);
             for (set<int>::const_iterator iter = exclusions[i].begin(); iter != exclusions[i].end(); ++iter) {
                 if (*iter > i) {
                     int j = *iter;
                     fvec4 deltaR;
-                    fvec4 posI(posq+4*i);
-                    fvec4 posJ(posq+4*j);
+                    fvec4 posJ((float) atomCoordinates[j][0], (float) atomCoordinates[j][1], (float) atomCoordinates[j][2], 0.0f);
                     float r2;
                     getDeltaR(posJ, posI, deltaR, r2, false, boxSize, invBoxSize);
                     float r = sqrtf(r2);
@@ -371,6 +372,7 @@ void CpuNonbondedForce::threadComputeDirect(ThreadPool& threads, int threadIndex
                         threadEnergy[threadIndex] -= chargeProd*inverseR*(1.0f-erfcAlphaR);
                 }
             }
+        }
     }
     else if (cutoff) {
         // Compute the interactions from the neighbor list.
@@ -561,6 +563,13 @@ void CpuNonbondedForce::calculateBlockEwaldIxn(int blockIndex, float* forces, do
     fvec4 blockAtomCharge = fvec4(ONE_4PI_EPS0)*fvec4(blockAtomPosq[0][3], blockAtomPosq[1][3], blockAtomPosq[2][3], blockAtomPosq[3][3]);
     fvec4 blockAtomSigma(atomParameters[blockAtom[0]].first, atomParameters[blockAtom[1]].first, atomParameters[blockAtom[2]].first, atomParameters[blockAtom[3]].first);
     fvec4 blockAtomEpsilon(atomParameters[blockAtom[0]].second, atomParameters[blockAtom[1]].second, atomParameters[blockAtom[2]].second, atomParameters[blockAtom[3]].second);
+    bool needPeriodic = false;
+    for (int i = 0; i < 4 && !needPeriodic; i++)
+        for (int j = 0; j < 3; j++)
+            if (blockAtomPosq[i][j]-cutoffDistance < 0.0 || blockAtomPosq[i][j]+cutoffDistance > boxSize[j]) {
+                needPeriodic = true;
+                break;
+            }
     
     // Loop over neighbors for this block.
     
@@ -577,7 +586,7 @@ void CpuNonbondedForce::calculateBlockEwaldIxn(int blockIndex, float* forces, do
         
         bool any = false;
         fvec4 dx, dy, dz, r2;
-        getDeltaR(atomPosq, blockAtomX, blockAtomY, blockAtomZ, dx, dy, dz, r2, periodic, boxSize, invBoxSize);
+        getDeltaR(atomPosq, blockAtomX, blockAtomY, blockAtomZ, dx, dy, dz, r2, needPeriodic, boxSize, invBoxSize);
         for (int j = 0; j < 4; j++) {
             include[j] = (((exclusions[i]>>j)&1) == 0 && r2[j] < cutoffDistance*cutoffDistance);
             any |= include[j];

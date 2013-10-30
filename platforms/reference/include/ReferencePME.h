@@ -75,9 +75,9 @@ pme_init(pme_t *       ppme,
  */
 int
 pme_exec(pme_t       pme,
-         std::vector<OpenMM::RealVec>& atomCoordinates,
+         const std::vector<OpenMM::RealVec>& atomCoordinates,
          std::vector<OpenMM::RealVec>& forces,
-         std::vector<RealOpenMM>& charges,
+         const std::vector<RealOpenMM>& charges,
          const RealOpenMM  periodicBoxSize[3],
          RealOpenMM *    energy,
          RealOpenMM      pme_virial[3][3]);

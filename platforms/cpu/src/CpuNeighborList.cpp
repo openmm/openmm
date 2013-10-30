@@ -177,14 +177,12 @@ public:
         if (usePeriodic) {
             endx = min(endx, centerVoxelIndex.x-dIndexX+nx-1);
             endy = min(endy, centerVoxelIndex.y-dIndexY+ny-1);
-            numRanges = 2;
         }
         else {
             startx = max(startx, 0);
             starty = max(starty, 0);
             endx = min(endx, nx-1);
             endy = min(endy, ny-1);
-            numRanges = 1;
         }
         int lastSortedIndex = BlockSize*(blockIndex+1);
         VoxelIndex voxelIndex(0, 0);
@@ -204,10 +202,12 @@ public:
                 
                 float dz = maxDistance+blockWidth[2];
                 dz = sqrtf(max(0.0f, dz*dz-dx*dx-dy*dy));
+                bool needPeriodic = (voxelIndex.x != x || voxelIndex.y != y || centerPos[2]-dz < 0.0f || centerPos[2]+dz > periodicBoxSize[2]);
                 int rangeStart[2];
                 int rangeEnd[2];
                 rangeStart[0] = findLowerBound(voxelIndex.x, voxelIndex.y, centerPos[2]-dz);
-                if (usePeriodic) {
+                if (needPeriodic) {
+                    numRanges = 2;
                     rangeEnd[0] = findUpperBound(voxelIndex.x, voxelIndex.y, centerPos[2]+dz);
                     if (rangeStart[0] > 0) {
                         rangeStart[1] = 0;
@@ -218,8 +218,10 @@ public:
                         rangeEnd[1] = bins[voxelIndex.x][voxelIndex.y].size();
                     }
                 }
-                else
+                else {
+                    numRanges = 1;
                     rangeEnd[0] = findUpperBound(voxelIndex.x, voxelIndex.y, centerPos[2]+dz);
+                }
                 
                 // Loop over atoms and check to see if they are neighbors of this block.
                 
@@ -233,7 +235,7 @@ public:
                         
                         fvec4 atomPos(atomLocations+4*sortedAtoms[sortedIndex]);
                         fvec4 delta = atomPos-centerPos;
-                        if (usePeriodic) {
+                        if (needPeriodic) {
                             fvec4 base = round(delta*invBoxSize)*boxSize;
                             delta = delta-base;
                         }
@@ -250,7 +252,7 @@ public:
                             for (int k = 0; k < (int) blockAtoms.size(); k++) {
                                 fvec4 pos1(&atomLocations[4*blockAtoms[k]]);
                                 delta = atomPos-pos1;
-                                if (usePeriodic) {
+                                if (needPeriodic) {
                                     fvec4 base = round(delta*invBoxSize)*boxSize;
                                     delta = delta-base;
                                 }
