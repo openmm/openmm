@@ -38,8 +38,10 @@
 using namespace OpenMM;
 
 KernelImpl* CpuKernelFactory::createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const {
-    ReferencePlatform::PlatformData& data = *static_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
+    CpuPlatform::PlatformData& data = CpuPlatform::getPlatformData(context);
+    if (name == CalcForcesAndEnergyKernel::Name())
+        return new CpuCalcForcesAndEnergyKernel(name, platform, data, context);
     if (name == CalcNonbondedForceKernel::Name())
-        return new CpuCalcNonbondedForceKernel(name, platform);
+        return new CpuCalcNonbondedForceKernel(name, platform, data);
     throw OpenMMException((std::string("Tried to create kernel with illegal kernel name '") + name + "'").c_str());
 }

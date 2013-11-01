@@ -143,7 +143,7 @@ class CpuNonbondedForce {
          --------------------------------------------------------------------------------------- */
           
       void calculateDirectIxn(int numberOfAtoms, float* posq, const std::vector<RealVec>& atomCoordinates, const std::vector<std::pair<float, float> >& atomParameters,
-            const std::vector<std::set<int> >& exclusions, float* forces, float* totalEnergy, ThreadPool& threads);
+            const std::vector<std::set<int> >& exclusions, std::vector<std::vector<float> >& threadForce, float* totalEnergy, ThreadPool& threads);
 
     /**
      * This routine contains the code executed by each thread.
@@ -165,7 +165,6 @@ private:
         int meshDim[3];
         std::vector<float> ewaldScaleTable;
         float ewaldDX, ewaldDXInv;
-        std::vector<std::vector<float> > threadForce;
         std::vector<double> threadEnergy;
         // The following variables are used to make information accessible to the individual threads.
         int numberOfAtoms;
@@ -173,6 +172,7 @@ private:
         RealVec const* atomCoordinates;
         std::pair<float, float> const* atomParameters;        
         std::set<int> const* exclusions;
+        std::vector<std::vector<float> >* threadForce;
         bool includeEnergy;
 
         static const float TWO_OVER_SQRT_PI;

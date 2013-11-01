@@ -35,6 +35,7 @@
 #include "openmm/internal/hardware.h"
 
 using namespace OpenMM;
+using namespace std;
 
 extern "C" OPENMM_EXPORT_CPU void registerPlatforms() {
     // Only register this platform if the CPU supports SSE 4.1.
@@ -43,8 +44,11 @@ extern "C" OPENMM_EXPORT_CPU void registerPlatforms() {
         Platform::registerPlatform(new CpuPlatform());
 }
 
+map<ContextImpl*, CpuPlatform::PlatformData*> CpuPlatform::contextData;
+
 CpuPlatform::CpuPlatform() {
     CpuKernelFactory* factory = new CpuKernelFactory();
+    registerKernelFactory(CalcForcesAndEnergyKernel::Name(), factory);
     registerKernelFactory(CalcNonbondedForceKernel::Name(), factory);
 }
 
@@ -66,4 +70,29 @@ bool CpuPlatform::isProcessorSupported() {
         return ((cpuInfo[2] & ((int) 1 << 19)) != 0);
     }
     return false;
+}
+
+void CpuPlatform::contextCreated(ContextImpl& context, const map<string, string>& properties) const {
+    ReferencePlatform::contextCreated(context, properties);
+    PlatformData* data = new PlatformData(context.getSystem().getNumParticles());
+    contextData[&context] = data;
+}
+
+void CpuPlatform::contextDestroyed(ContextImpl& context) const {
+    PlatformData* data = contextData[&context];
+    delete data;
+    contextData.erase(&context);
+}
+
+CpuPlatform::PlatformData& CpuPlatform::getPlatformData(ContextImpl& context) {
+    return *contextData[&context];
+}
+
+CpuPlatform::PlatformData::PlatformData(int numParticles) {
+    posq.resize(4*numParticles);
+    int numThreads = threads.getNumThreads();
+    threadForce.resize(numThreads);
+    for (int i = 0; i < numThreads; i++)
+        threadForce[i].resize(4*numParticles);
+    isPeriodic = false;
 }

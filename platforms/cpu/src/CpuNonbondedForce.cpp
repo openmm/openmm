@@ -292,7 +292,7 @@ void CpuNonbondedForce::calculateReciprocalIxn(int numberOfAtoms, float* posq, c
 
 
 void CpuNonbondedForce::calculateDirectIxn(int numberOfAtoms, float* posq, const vector<RealVec>& atomCoordinates, const vector<pair<float, float> >& atomParameters,
-                const vector<set<int> >& exclusions, float* forces, float* totalEnergy, ThreadPool& threads) {
+                const vector<set<int> >& exclusions, vector<vector<float> >& threadForce, float* totalEnergy, ThreadPool& threads) {
     // Record the parameters for the threads.
     
     this->numberOfAtoms = numberOfAtoms;
@@ -300,9 +300,9 @@ void CpuNonbondedForce::calculateDirectIxn(int numberOfAtoms, float* posq, const
     this->atomCoordinates = &atomCoordinates[0];
     this->atomParameters = &atomParameters[0];
     this->exclusions = &exclusions[0];
+    this->threadForce = &threadForce;
     includeEnergy = (totalEnergy != NULL);
     threadEnergy.resize(threads.getNumThreads());
-    threadForce.resize(threads.getNumThreads());
     
     // Signal the threads to start running and wait for them to finish.
     
@@ -310,21 +310,15 @@ void CpuNonbondedForce::calculateDirectIxn(int numberOfAtoms, float* posq, const
     threads.execute(task);
     threads.waitForThreads();
     
-    // Combine the results from all the threads.
+    // Combine the energies from all the threads.
     
-    double directEnergy = 0;
-    int numThreads = threads.getNumThreads();
-    for (int i = 0; i < numThreads; i++)
-        directEnergy += threadEnergy[i];
-    for (int i = 0; i < numberOfAtoms; i++) {
-        fvec4 f(forces+4*i);
-        for (int j = 0; j < numThreads; j++)
-            f += fvec4(&threadForce[j][4*i]);
-        f.store(forces+4*i);
-    }
-
-    if (totalEnergy != NULL)
+    if (totalEnergy != NULL) {
+        double directEnergy = 0;
+        int numThreads = threads.getNumThreads();
+        for (int i = 0; i < numThreads; i++)
+            directEnergy += threadEnergy[i];
         *totalEnergy += (float) directEnergy;
+    }
 }
 
 void CpuNonbondedForce::threadComputeDirect(ThreadPool& threads, int threadIndex) {
@@ -333,10 +327,7 @@ void CpuNonbondedForce::threadComputeDirect(ThreadPool& threads, int threadIndex
     int numThreads = threads.getNumThreads();
     threadEnergy[threadIndex] = 0;
     double* energyPtr = (includeEnergy ? &threadEnergy[threadIndex] : NULL);
-    threadForce[threadIndex].resize(4*numberOfAtoms, 0.0f);
-    float* forces = &threadForce[threadIndex][0];
-    for (int i = 0; i < 4*numberOfAtoms; i++)
-        forces[i] = 0.0f;
+    float* forces = &(*threadForce)[threadIndex][0];
     fvec4 boxSize(periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2], 0);
     fvec4 invBoxSize((1/periodicBoxSize[0]), (1/periodicBoxSize[1]), (1/periodicBoxSize[2]), 0);
     if (ewald || pme) {
