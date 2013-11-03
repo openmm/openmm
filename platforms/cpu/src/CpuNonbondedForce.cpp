@@ -464,7 +464,7 @@ void CpuNonbondedForce::calculateBlockIxn(int blockIndex, float* forces, double*
     fvec4 blockAtomEpsilon(atomParameters[blockAtom[0]].second, atomParameters[blockAtom[1]].second, atomParameters[blockAtom[2]].second, atomParameters[blockAtom[3]].second);
     bool needPeriodic = false;
     if (periodic) {
-        for (int i = 0; i < 4 && !needPeriodic; i++)
+        for (int i = 0; i < 4; i++)
             if (blockAtomPosq[i][0]-cutoffDistance < 0.0 || blockAtomPosq[i][0]+cutoffDistance > boxSize[0] ||
                 blockAtomPosq[i][1]-cutoffDistance < 0.0 || blockAtomPosq[i][1]+cutoffDistance > boxSize[1] ||
                 blockAtomPosq[i][2]-cutoffDistance < 0.0 || blockAtomPosq[i][2]+cutoffDistance > boxSize[2]) {
@@ -574,7 +574,7 @@ void CpuNonbondedForce::calculateBlockEwaldIxn(int blockIndex, float* forces, do
     fvec4 blockAtomSigma(atomParameters[blockAtom[0]].first, atomParameters[blockAtom[1]].first, atomParameters[blockAtom[2]].first, atomParameters[blockAtom[3]].first);
     fvec4 blockAtomEpsilon(atomParameters[blockAtom[0]].second, atomParameters[blockAtom[1]].second, atomParameters[blockAtom[2]].second, atomParameters[blockAtom[3]].second);
     bool needPeriodic = false;
-    for (int i = 0; i < 4 && !needPeriodic; i++)
+    for (int i = 0; i < 4; i++)
         if (blockAtomPosq[i][0]-cutoffDistance < 0.0 || blockAtomPosq[i][0]+cutoffDistance > boxSize[0] ||
             blockAtomPosq[i][1]-cutoffDistance < 0.0 || blockAtomPosq[i][1]+cutoffDistance > boxSize[1] ||
             blockAtomPosq[i][2]-cutoffDistance < 0.0 || blockAtomPosq[i][2]+cutoffDistance > boxSize[2]) {
