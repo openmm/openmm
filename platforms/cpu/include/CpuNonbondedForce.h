@@ -124,7 +124,7 @@ class CpuNonbondedForce {
           
       void calculateReciprocalIxn(int numberOfAtoms, float* posq, const std::vector<RealVec>& atomCoordinates,
                             const std::vector<std::pair<float, float> >& atomParameters, const std::vector<std::set<int> >& exclusions,
-                            std::vector<RealVec>& forces, float* totalEnergy) const;
+                            std::vector<RealVec>& forces, double* totalEnergy) const;
       
       /**---------------------------------------------------------------------------------------
       
@@ -143,7 +143,7 @@ class CpuNonbondedForce {
          --------------------------------------------------------------------------------------- */
           
       void calculateDirectIxn(int numberOfAtoms, float* posq, const std::vector<RealVec>& atomCoordinates, const std::vector<std::pair<float, float> >& atomParameters,
-            const std::vector<std::set<int> >& exclusions, std::vector<std::vector<float> >& threadForce, float* totalEnergy, ThreadPool& threads);
+            const std::vector<std::set<int> >& exclusions, std::vector<std::vector<float> >& threadForce, double* totalEnergy, ThreadPool& threads);
 
     /**
      * This routine contains the code executed by each thread.

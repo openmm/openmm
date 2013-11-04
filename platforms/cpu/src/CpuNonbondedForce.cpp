@@ -22,7 +22,6 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include <string.h>
 #include <complex>
 
 #include "SimTKOpenMMCommon.h"
@@ -179,7 +178,7 @@ void CpuNonbondedForce::tabulateEwaldScaleFactor() {
   
 void CpuNonbondedForce::calculateReciprocalIxn(int numberOfAtoms, float* posq, const vector<RealVec>& atomCoordinates,
                                              const vector<pair<float, float> >& atomParameters, const vector<set<int> >& exclusions,
-                                             vector<RealVec>& forces, float* totalEnergy) const {
+                                             vector<RealVec>& forces, double* totalEnergy) const {
     typedef std::complex<float> d_complex;
 
     static const float epsilon     =  1.0;
@@ -292,7 +291,7 @@ void CpuNonbondedForce::calculateReciprocalIxn(int numberOfAtoms, float* posq, c
 
 
 void CpuNonbondedForce::calculateDirectIxn(int numberOfAtoms, float* posq, const vector<RealVec>& atomCoordinates, const vector<pair<float, float> >& atomParameters,
-                const vector<set<int> >& exclusions, vector<vector<float> >& threadForce, float* totalEnergy, ThreadPool& threads) {
+                const vector<set<int> >& exclusions, vector<vector<float> >& threadForce, double* totalEnergy, ThreadPool& threads) {
     // Record the parameters for the threads.
     
     this->numberOfAtoms = numberOfAtoms;
@@ -317,7 +316,7 @@ void CpuNonbondedForce::calculateDirectIxn(int numberOfAtoms, float* posq, const
         int numThreads = threads.getNumThreads();
         for (int i = 0; i < numThreads; i++)
             directEnergy += threadEnergy[i];
-        *totalEnergy += (float) directEnergy;
+        *totalEnergy += directEnergy;
     }
 }
 

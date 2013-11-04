@@ -322,7 +322,7 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
         nonbonded.setUsePME(ewaldAlpha, gridSize);
     if (useSwitchingFunction)
         nonbonded.setUseSwitchingFunction(switchingDistance);
-    float nonbondedEnergy = 0;
+    double nonbondedEnergy = 0;
     if (includeDirect)
         nonbonded.calculateDirectIxn(numParticles, &posq[0], posData, particleParams, exclusions, data.threadForce, includeEnergy ? &nonbondedEnergy : NULL, data.threads);
     if (includeReciprocal) {
@@ -390,4 +390,51 @@ void CpuCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, 
     NonbondedForce::NonbondedMethod method = force.getNonbondedMethod();
     if (force.getUseDispersionCorrection() && (method == NonbondedForce::CutoffPeriodic || method == NonbondedForce::Ewald || method == NonbondedForce::PME))
         dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(context.getSystem(), force);
+}
+
+CpuCalcGBSAOBCForceKernel::~CpuCalcGBSAOBCForceKernel() {
+}
+
+void CpuCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOBCForce& force) {
+    int numParticles = system.getNumParticles();
+    particleParams.resize(numParticles);
+    for (int i = 0; i < numParticles; ++i) {
+        double charge, radius, scalingFactor;
+        force.getParticleParameters(i, charge, radius, scalingFactor);
+        data.posq[4*i+3] = (float) charge;
+        particleParams[i] = make_pair((float) radius, (float) scalingFactor);
+    }
+    obc.setParticleParameters(particleParams);
+    obc.setSolventDielectric((float) force.getSolventDielectric());
+    obc.setSoluteDielectric((float) force.getSoluteDielectric());
+    if (force.getNonbondedMethod() != GBSAOBCForce::NoCutoff)
+        obc.setUseCutoff((float) force.getCutoffDistance());
+    data.isPeriodic = (force.getNonbondedMethod() == GBSAOBCForce::CutoffPeriodic);
+}
+
+double CpuCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    if (data.isPeriodic) {
+        RealVec& boxSize = extractBoxSize(context);
+        float floatBoxSize[3] = {(float) boxSize[0], (float) boxSize[1], (float) boxSize[2]};
+        obc.setPeriodic(floatBoxSize);
+    }
+    double energy = 0.0;
+    obc.computeForce(data.posq, data.threadForce, includeEnergy ? &energy : NULL, data.threads);
+    return energy;
+}
+
+void CpuCalcGBSAOBCForceKernel::copyParametersToContext(ContextImpl& context, const GBSAOBCForce& force) {
+    int numParticles = force.getNumParticles();
+    if (numParticles != obc.getParticleParameters().size())
+        throw OpenMMException("updateParametersInContext: The number of particles has changed");
+
+    // Record the values.
+
+    for (int i = 0; i < numParticles; ++i) {
+        double charge, radius, scalingFactor;
+        force.getParticleParameters(i, charge, radius, scalingFactor);
+        data.posq[4*i+3] = (float) charge;
+        particleParams[i] = make_pair((float) radius, (float) scalingFactor);
+    }
+    obc.setParticleParameters(particleParams);
 }

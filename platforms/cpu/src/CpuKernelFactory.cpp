@@ -43,5 +43,7 @@ KernelImpl* CpuKernelFactory::createKernelImpl(std::string name, const Platform&
         return new CpuCalcForcesAndEnergyKernel(name, platform, data, context);
     if (name == CalcNonbondedForceKernel::Name())
         return new CpuCalcNonbondedForceKernel(name, platform, data);
+    if (name == CalcGBSAOBCForceKernel::Name())
+        return new CpuCalcGBSAOBCForceKernel(name, platform, data);
     throw OpenMMException((std::string("Tried to create kernel with illegal kernel name '") + name + "'").c_str());
 }

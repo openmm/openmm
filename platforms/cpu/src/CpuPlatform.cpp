@@ -50,6 +50,7 @@ CpuPlatform::CpuPlatform() {
     CpuKernelFactory* factory = new CpuKernelFactory();
     registerKernelFactory(CalcForcesAndEnergyKernel::Name(), factory);
     registerKernelFactory(CalcNonbondedForceKernel::Name(), factory);
+    registerKernelFactory(CalcGBSAOBCForceKernel::Name(), factory);
 }
 
 double CpuPlatform::getSpeed() const {
