@@ -92,7 +92,7 @@ def runOneTest(testName, options):
     
     # Run the simulation.
     
-    integ = mm.LangevinIntegrator(300*unit.kelvin, 91*(1/unit.picoseconds), dt*unit.femtoseconds)
+    integ = mm.LangevinIntegrator(300*unit.kelvin, 91*(1/unit.picoseconds), dt)
     integ.setConstraintTolerance(1e-5)
     if len(properties) > 0:
         context = mm.Context(system, integ, platform, properties)
