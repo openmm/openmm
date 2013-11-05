@@ -402,7 +402,8 @@ void CpuCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOBCFo
         double charge, radius, scalingFactor;
         force.getParticleParameters(i, charge, radius, scalingFactor);
         data.posq[4*i+3] = (float) charge;
-        particleParams[i] = make_pair((float) radius, (float) scalingFactor);
+        radius -= 0.009;
+        particleParams[i] = make_pair((float) radius, (float) (scalingFactor*radius));
     }
     obc.setParticleParameters(particleParams);
     obc.setSolventDielectric((float) force.getSolventDielectric());
@@ -434,7 +435,8 @@ void CpuCalcGBSAOBCForceKernel::copyParametersToContext(ContextImpl& context, co
         double charge, radius, scalingFactor;
         force.getParticleParameters(i, charge, radius, scalingFactor);
         data.posq[4*i+3] = (float) charge;
-        particleParams[i] = make_pair((float) radius, (float) scalingFactor);
+        radius -= 0.009;
+        particleParams[i] = make_pair((float) radius, (float) (scalingFactor*radius));
     }
     obc.setParticleParameters(particleParams);
 }

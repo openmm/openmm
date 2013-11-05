@@ -123,8 +123,7 @@ void CpuGBSAOBCForce::threadComputeForce(ThreadPool& threads, int threadIndex) {
 
     for (int atomI = start; atomI < end; atomI++) {
         fvec4 posI(posq+4*atomI);
-        float radiusI = particleParams[atomI].first;
-        float offsetRadiusI = radiusI - dielectricOffset;
+        float offsetRadiusI = particleParams[atomI].first;
         float radiusIInverse = 1.0f/offsetRadiusI;
         float sum = 0.0f;
         for (int atomJ = 0; atomJ < numParticles; atomJ++) {
@@ -136,8 +135,7 @@ void CpuGBSAOBCForce::threadComputeForce(ThreadPool& threads, int threadIndex) {
                 if (cutoff && r2 >= cutoffDistance*cutoffDistance)
                     continue;
                 float r = sqrtf(r2);
-                float offsetRadiusJ = particleParams[atomJ].first - dielectricOffset; 
-                float scaledRadiusJ = offsetRadiusJ*particleParams[atomJ].second;
+                float scaledRadiusJ = particleParams[atomJ].second;
                 float rScaledRadiusJ = r + scaledRadiusJ;
                 if (offsetRadiusI < rScaledRadiusJ) {
                     float rInverse = 1.0f/r;
@@ -158,6 +156,7 @@ void CpuGBSAOBCForce::threadComputeForce(ThreadPool& threads, int threadIndex) {
         float sum2 = sum*sum;
         float sum3 = sum*sum2;
         float tanhSum = tanh(alphaObc*sum - betaObc*sum2 + gammaObc*sum3);
+        float radiusI = offsetRadiusI + dielectricOffset;
         bornRadii[atomI] = 1.0f/(1.0f/offsetRadiusI - tanhSum/radiusI);
         obcChain[atomI] = offsetRadiusI*(alphaObc - 2.0f*betaObc*sum + 3.0f*gammaObc*sum2);
         obcChain[atomI] = (1.0f - tanhSum*tanhSum)*obcChain[atomI]/radiusI;
@@ -174,8 +173,9 @@ void CpuGBSAOBCForce::threadComputeForce(ThreadPool& threads, int threadIndex) {
         bornForces[i] = 0.0f;
     for (int atomI = start; atomI < end; atomI++) {
         if (bornRadii[atomI] > 0) {
-            float r = particleParams[atomI].first + probeRadius;
-            float ratio6 = powf(particleParams[atomI].first/bornRadii[atomI], 6.0f);
+            float radiusI = particleParams[atomI].first + dielectricOffset;
+            float r = radiusI + probeRadius;
+            float ratio6 = powf(radiusI/bornRadii[atomI], 6.0f);
             float saTerm = surfaceAreaFactor*r*r*ratio6;
             energy += saTerm;
             bornForces[atomI] = -6.0f*saTerm/bornRadii[atomI]; 
@@ -239,8 +239,7 @@ void CpuGBSAOBCForce::threadComputeForce(ThreadPool& threads, int threadIndex) {
         for (int i = 0; i < numThreads; i++)
             bornForce += threadBornForces[i][atomI];
         bornForce *= bornRadii[atomI]*bornRadii[atomI]*obcChain[atomI];      
-        float radiusI = particleParams[atomI].first;
-        float offsetRadiusI = radiusI - dielectricOffset;
+        float offsetRadiusI = particleParams[atomI].first;
         fvec4 posI(posq+4*atomI);
         fvec4 forceI(0.0f);
 
@@ -253,8 +252,7 @@ void CpuGBSAOBCForce::threadComputeForce(ThreadPool& threads, int threadIndex) {
                 if (cutoff && r2 >= cutoffDistance*cutoffDistance)
                     continue;
                 float r = sqrtf(r2);
-                float offsetRadiusJ = particleParams[atomJ].first - dielectricOffset;
-                float scaledRadiusJ = offsetRadiusJ*particleParams[atomJ].second;
+                float scaledRadiusJ = particleParams[atomJ].second;
                 float scaledRadiusJ2 = scaledRadiusJ*scaledRadiusJ;
                 float rScaledRadiusJ = r + scaledRadiusJ;
                 if (offsetRadiusI < rScaledRadiusJ) {

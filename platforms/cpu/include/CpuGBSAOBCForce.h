@@ -66,12 +66,12 @@ public:
     void setSolventDielectric(float dielectric);
     
     /**
-     * Get the per-particle parameters (atomic radius, scaling factor).
+     * Get the per-particle parameters (offset radius, scaled radius).
      */
     const std::vector<std::pair<float, float> >& getParticleParameters() const;
     
     /**
-     * Set the per-particle parameters (atomic radius, scaling factor).
+     * Set the per-particle parameters (offset radius, scaled radius).
      */
     void setParticleParameters(const std::vector<std::pair<float, float> >& params);
 
