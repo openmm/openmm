@@ -106,11 +106,11 @@ private:
     std::vector<std::vector<float> >* threadForce;
     bool includeEnergy;
   
-  /**
-   * Compute the displacement and squared distance between two points, optionally using
-   * periodic boundary conditions.
-   */
-  void getDeltaR(const fvec4& posI, const fvec4& posJ, fvec4& deltaR, float& r2, bool periodic, const fvec4& boxSize, const fvec4& invBoxSize) const;
+    /**
+     * Compute the displacement and squared distance between a collection of points, optionally using
+     * periodic boundary conditions.
+     */
+    void getDeltaR(const fvec4& posI, const fvec4& x, const fvec4& y, const fvec4& z, fvec4& dx, fvec4& dy, fvec4& dz, fvec4& r2, bool periodic, const fvec4& boxSize, const fvec4& invBoxSize) const;
 };
 
 } // namespace OpenMM

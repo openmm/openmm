@@ -160,6 +160,21 @@ public:
     ivec4 operator==(ivec4 other) const {
         return _mm_cmpeq_epi32(val, other);
     }
+    ivec4 operator!=(ivec4 other) const {
+        return _mm_xor_si128(val==other, _mm_set1_epi32(0xFFFFFFFF));
+    }
+    ivec4 operator>(ivec4 other) const {
+        return _mm_cmpgt_epi32(val, other);
+    }
+    ivec4 operator<(ivec4 other) const {
+        return _mm_cmplt_epi32(val, other);
+    }
+    ivec4 operator>=(ivec4 other) const {
+        return _mm_xor_si128(_mm_cmplt_epi32(val, other), _mm_set1_epi32(0xFFFFFFFF));
+    }
+    ivec4 operator<=(ivec4 other) const {
+        return _mm_xor_si128(_mm_cmpgt_epi32(val, other), _mm_set1_epi32(0xFFFFFFFF));
+    }
     operator fvec4() const;
 };
 
@@ -228,6 +243,10 @@ static inline ivec4 max(ivec4 v1, ivec4 v2) {
 
 static inline ivec4 abs(ivec4 v) {
     return ivec4(_mm_abs_epi32(v.val));
+}
+
+static inline bool any(ivec4 v) {
+    return !_mm_test_all_zeros(v, _mm_set1_epi32(0xFFFFFFFF));
 }
 
 // Mathematical operators involving a scalar and a vector.
