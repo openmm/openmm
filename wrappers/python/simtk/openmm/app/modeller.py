@@ -776,22 +776,35 @@ class Modeller(object):
             system.addForce(nonbonded)
             system.addForce(bonds)
             system.addForce(angles)
+            bondedTo = []
             for atom in newTopology.atoms():
                 nonbonded.addParticle([])
                 if atom.element != elem.hydrogen:
                     system.addParticle(0.0)
                 else:
                     system.addParticle(1.0)
+                bondedTo.append([])
             for atom1, atom2 in newTopology.bonds():
                 if atom1.element == elem.hydrogen or atom2.element == elem.hydrogen:
                     bonds.addBond(atom1.index, atom2.index, 0.1, 100000.0)
+                bondedTo[atom1.index].append(atom2)
+                bondedTo[atom2.index].append(atom1)
             for residue in newTopology.residues():
                 if residue.name == 'HOH':
+                    # Add an angle term to make the water geometry correct.
+                    
                     atoms = list(residue.atoms())
                     oindex = [i for i in range(len(atoms)) if atoms[i].element == elem.oxygen]
                     if len(atoms) == 3 and len(oindex) == 1:
                         hindex = list(set([0,1,2])-set(oindex))
                         angles.addAngle(atoms[hindex[0]].index, atoms[oindex[0]].index, atoms[hindex[1]].index, 1.824, 836.8)
+                else:
+                    # Add angle terms for any hydroxyls.
+                    
+                    for atom in residue.atoms():
+                        index = atom.index
+                        if atom.element == elem.oxygen and len(bondedTo[index]) == 2 and elem.hydrogen in (a.element for a in bondedTo[index]):
+                            angles.addAngle(bondedTo[index][0].index, index, bondedTo[index][1].index, 1.894, 460.24)
             
         if platform is None:
             context = Context(system, VerletIntegrator(0.0))
