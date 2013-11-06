@@ -223,7 +223,6 @@ void testForce(int numParticles, NonbondedForce::NonbondedMethod method, GBSAOBC
 
 int main() {
     try {
-        testForce(729, NonbondedForce::CutoffNonPeriodic, GBSAOBCForce::CutoffNonPeriodic);
         testSingleParticle();
         testCutoffAndPeriodic();
         for (int i = 5; i < 11; i++) {
