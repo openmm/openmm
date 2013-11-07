@@ -161,7 +161,7 @@ public:
         return _mm_cmpeq_epi32(val, other);
     }
     ivec4 operator!=(ivec4 other) const {
-        return _mm_xor_si128(val==other, _mm_set1_epi32(0xFFFFFFFF));
+        return _mm_xor_si128(*this==other, _mm_set1_epi32(0xFFFFFFFF));
     }
     ivec4 operator>(ivec4 other) const {
         return _mm_cmpgt_epi32(val, other);

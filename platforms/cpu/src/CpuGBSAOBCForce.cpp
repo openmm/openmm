@@ -174,13 +174,13 @@ void CpuGBSAOBCForce::threadComputeForce(ThreadPool& threads, int threadIndex) {
         }
         for (int i = 0; i < numInBlock; i++) {
             int atomIndex = blockStart+i;
-            sum[i] *= 0.5f*offsetRadiusI[i];
+            sum[i] *= 0.5f*atomRadius[i];
             float sum2 = sum[i]*sum[i];
             float sum3 = sum[i]*sum2;
             float tanhSum = tanh(alphaObc*sum[i] - betaObc*sum2 + gammaObc*sum3);
-            float radiusI = offsetRadiusI[i] + dielectricOffset;
-            bornRadii[atomIndex] = 1.0f/(1.0f/offsetRadiusI[i] - tanhSum/radiusI);
-            obcChain[atomIndex] = offsetRadiusI[i]*(alphaObc - 2.0f*betaObc*sum[i] + 3.0f*gammaObc*sum2);
+            float radiusI = atomRadius[i] + dielectricOffset;
+            bornRadii[atomIndex] = 1.0f/(1.0f/atomRadius[i] - tanhSum/radiusI);
+            obcChain[atomIndex] = atomRadius[i]*(alphaObc - 2.0f*betaObc*sum[i] + 3.0f*gammaObc*sum2);
             obcChain[atomIndex] = (1.0f - tanhSum*tanhSum)*obcChain[atomIndex]/radiusI;
         }
     }
