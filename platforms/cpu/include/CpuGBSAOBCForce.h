@@ -101,16 +101,25 @@ private:
     std::vector<std::vector<float> > threadBornForces;
     std::vector<float> obcChain;
     std::vector<double> threadEnergy;
+    std::vector<float> logTable;
+    float logDX, logDXInv;
     // The following variables are used to make information accessible to the individual threads.
     float const* posq;
     std::vector<std::vector<float> >* threadForce;
     bool includeEnergy;
   
+    static const int NUM_TABLE_POINTS;
+
     /**
      * Compute the displacement and squared distance between a collection of points, optionally using
      * periodic boundary conditions.
      */
     void getDeltaR(const fvec4& posI, const fvec4& x, const fvec4& y, const fvec4& z, fvec4& dx, fvec4& dy, fvec4& dz, fvec4& r2, bool periodic, const fvec4& boxSize, const fvec4& invBoxSize) const;
+    
+    /**
+     * Evaluate log(x) using a lookup table for speed.
+     */
+    fvec4 fastLog(fvec4 x);
 };
 
 } // namespace OpenMM

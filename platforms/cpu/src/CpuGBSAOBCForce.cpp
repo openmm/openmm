@@ -24,11 +24,14 @@
 
 #include "CpuGBSAOBCForce.h"
 #include "SimTKOpenMMRealType.h"
+#include "openmm/internal/SplineFitter.h"
 #include "openmm/internal/vectorize.h"
 #include <cmath>
 
 using namespace std;
 using namespace OpenMM;
+
+const int CpuGBSAOBCForce::NUM_TABLE_POINTS = 1025;
 
 class CpuGBSAOBCForce::ComputeTask : public ThreadPool::Task {
 public:
@@ -41,6 +44,23 @@ public:
 };
 
 CpuGBSAOBCForce::CpuGBSAOBCForce() : cutoff(false), periodic(false) {
+    logDX = 0.5/NUM_TABLE_POINTS;
+    logDXInv = 1.0f/logDX;
+    vector<double> x(NUM_TABLE_POINTS+1);
+    vector<double> y(NUM_TABLE_POINTS+1);
+    vector<double> deriv;
+    for (int i = 0; i < NUM_TABLE_POINTS+1; i++) {
+        x[i] = 0.5+i*0.5/NUM_TABLE_POINTS;
+        y[i] = log(x[i]);
+    }
+    SplineFitter::createNaturalSpline(x, y, deriv);
+    logTable.resize(4*NUM_TABLE_POINTS);
+    for (int i = 0; i < NUM_TABLE_POINTS; i++) {
+        logTable[4*i] = (float) y[i];
+        logTable[4*i+1] = (float) y[i+1];
+        logTable[4*i+2] = (float) (deriv[i]*logDX*logDX/6);
+        logTable[4*i+3] = (float) (deriv[i+1]*logDX*logDX/6);
+    }
 }
 
 void CpuGBSAOBCForce::setUseCutoff(float distance) {
@@ -161,8 +181,7 @@ void CpuGBSAOBCForce::threadComputeForce(ThreadPool& threads, int threadIndex) {
             fvec4 u_ij2 = u_ij*u_ij;
             fvec4 rInverse = 1.0f/r;
             fvec4 r2Inverse = rInverse*rInverse;
-            fvec4 ratio = u_ij/l_ij;
-            fvec4 logRatio(logf(ratio[0]), logf(ratio[1]), logf(ratio[2]), logf(ratio[3]));
+            fvec4 logRatio = fastLog(u_ij/l_ij);
             fvec4 term = l_ij - u_ij + 0.25f*r*(u_ij2 - l_ij2) + (0.5f*rInverse*logRatio) + (0.25f*scaledRadiusJ*scaledRadiusJ*rInverse)*(l_ij2 - u_ij2);
             for (int j = 0; j < 4; j++) {
                 if (include[j]) {
@@ -329,8 +348,7 @@ void CpuGBSAOBCForce::threadComputeForce(ThreadPool& threads, int threadIndex) {
             fvec4 u_ij2 = u_ij*u_ij;
             fvec4 rInverse = 1.0f/r;
             fvec4 r2Inverse = rInverse*rInverse;
-            fvec4 ratio = u_ij/l_ij;
-            fvec4 logRatio(logf(ratio[0]), logf(ratio[1]), logf(ratio[2]), logf(ratio[3]));
+            fvec4 logRatio = fastLog(u_ij/l_ij);
             fvec4 t3 = 0.125f*(1.0f + scaledRadiusJ2*r2Inverse)*(l_ij2 - u_ij2) + 0.25f*logRatio*r2Inverse;
             fvec4 de = bornForce*t3*rInverse;
             fvec4 result[4] = {dx*de, dy*de, dz*de, 0.0f};
@@ -362,4 +380,26 @@ void CpuGBSAOBCForce::getDeltaR(const fvec4& posI, const fvec4& x, const fvec4& 
         dz -= round(dz*invBoxSize[2])*boxSize[2];
     }
     r2 = dx*dx + dy*dy + dz*dz;
+}
+
+fvec4 CpuGBSAOBCForce::fastLog(fvec4 x) {
+    // Evaluate log(x) using a lookup table for speed.
+
+    float y[4];
+    fvec4 x1 = (x-0.5f)*logDXInv;
+    ivec4 index = floor(x1);
+    fvec4 coeff[4];
+    coeff[1] = x1-index;
+    coeff[0] = 1.0f-coeff[1];
+    coeff[2] = coeff[0]*coeff[0]*coeff[0]-coeff[0];
+    coeff[3] = coeff[1]*coeff[1]*coeff[1]-coeff[1];
+    transpose(coeff[0], coeff[1], coeff[2], coeff[3]);
+    static float maxdiff = 0.0f;
+    for (int i = 0; i < 4; i++) {
+        if (index[i] >= 0 && index[i] < NUM_TABLE_POINTS)
+            y[i] = dot4(coeff[i], fvec4(&logTable[4*index[i]]));
+        else
+            y[i] = logf(x[i]);
+    }
+    return fvec4(y);
 }
