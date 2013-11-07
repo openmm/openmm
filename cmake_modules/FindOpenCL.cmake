@@ -16,6 +16,15 @@ find_path(OPENCL_INCLUDE_DIR
     PATH_SUFFIXES "include"
     NO_DEFAULT_PATH
 )
+# On Macs, look inside the platform SDK
+if(DEFINED CMAKE_OSX_SYSROOT)
+    find_path(OPENCL_INCLUDE_DIR
+        NAMES opencl.h opencl.h
+        PATHS
+            "${CMAKE_OSX_SYSROOT}/System/Library/Frameworks/OpenCL.framework/Headers"
+        NO_DEFAULT_PATH
+    )
+endif(DEFINED CMAKE_OSX_SYSROOT)
 # As a last resort, look in default system areas followed by other possible locations
 find_path(OPENCL_INCLUDE_DIR
     NAMES OpenCL/opencl.h CL/opencl.h
