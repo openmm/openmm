@@ -105,15 +105,16 @@ ELSE( CMAKE_SIZEOF_VOID_P EQUAL 8 )
   SET( LIB64  )
 ENDIF( CMAKE_SIZEOF_VOID_P EQUAL 8 )
 
-# Build universal binaries compatible with OS X 10.5
+# Build universal binaries compatible with OS X 10.7
 IF (APPLE AND NOT CMAKE_OSX_DEPLOYMENT_TARGET)
     SET (CMAKE_OSX_ARCHITECTURES "i386;x86_64" CACHE STRING "The processor architectures to build for" FORCE)
-    SET (CMAKE_OSX_DEPLOYMENT_TARGET "10.5" CACHE STRING "The minimum version of OS X to support" FORCE)
+    SET (CMAKE_OSX_DEPLOYMENT_TARGET "10.7" CACHE STRING "The minimum version of OS X to support" FORCE)
 ENDIF (APPLE AND NOT CMAKE_OSX_DEPLOYMENT_TARGET)
 
 # Improve the linking behavior of Mac libraries
 IF (APPLE)
     SET (CMAKE_INSTALL_NAME_DIR "@rpath")
+    SET_PROPERTY(GLOBAL PROPERTY COMPILE_FLAGS "-stdlib=libc++ -mmacosx-version-min=10.7")
 ENDIF (APPLE)
 
 IF(UNIX AND NOT CMAKE_BUILD_TYPE)
