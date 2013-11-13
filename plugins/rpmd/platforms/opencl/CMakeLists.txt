@@ -12,10 +12,6 @@
 #   libOpenMMRPMDOpenCL[_d].so
 #----------------------------------------------------
 
-IF (APPLE)
-    SET (CMAKE_OSX_DEPLOYMENT_TARGET "10.6")
-ENDIF (APPLE)
-
 # The source is organized into subdirectories, but we handle them all from
 # this CMakeLists file rather than letting CMake visit them as SUBDIRS.
 SET(OPENMM_SOURCE_SUBDIRS .)

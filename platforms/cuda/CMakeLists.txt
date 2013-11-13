@@ -14,10 +14,6 @@
 #   libOpenMMCUDA_static[_d].a
 #----------------------------------------------------
 
-IF (APPLE)
-    SET (CMAKE_OSX_DEPLOYMENT_TARGET "10.6")
-ENDIF (APPLE)
-
 set(OPENMM_BUILD_CUDA_TESTS TRUE CACHE BOOL "Whether to build CUDA test cases")
 if(OPENMM_BUILD_CUDA_TESTS)
     SUBDIRS (tests)
