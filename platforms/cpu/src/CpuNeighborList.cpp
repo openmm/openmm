@@ -164,8 +164,12 @@ public:
         float refineCutoff = maxDistance-max(max(blockWidth[0], blockWidth[1]), blockWidth[2]);
         float refineCutoffSquared = refineCutoff*refineCutoff;
 
-        int dIndexX = min(nx/2, int((maxDistance+blockWidth[0])/voxelSizeX)+1); // How may voxels away do we have to look?
-        int dIndexY = min(ny/2, int((maxDistance+blockWidth[1])/voxelSizeY)+1);
+        int dIndexX = int((maxDistance+blockWidth[0])/voxelSizeX)+1; // How may voxels away do we have to look?
+        int dIndexY = int((maxDistance+blockWidth[1])/voxelSizeY)+1;
+        if (usePeriodic) {
+            dIndexX = min(nx/2, dIndexX);
+            dIndexY = min(ny/2, dIndexY);
+        }
         float centerPos[4];
         blockCenter.store(centerPos);
         VoxelIndex centerVoxelIndex = getVoxelIndex(centerPos);
@@ -202,7 +206,9 @@ public:
                 
                 float dz = maxDistance+blockWidth[2];
                 dz = sqrtf(max(0.0f, dz*dz-dx*dx-dy*dy));
-                bool needPeriodic = (voxelIndex.x != x || voxelIndex.y != y || centerPos[2]-dz < 0.0f || centerPos[2]+dz > periodicBoxSize[2]);
+                bool needPeriodic = (centerPos[0]-blockWidth[0] < maxDistance || centerPos[0]+blockWidth[0] > periodicBoxSize[0]-maxDistance ||
+                                     centerPos[1]-blockWidth[1] < maxDistance || centerPos[1]+blockWidth[1] > periodicBoxSize[1]-maxDistance ||
+                                     centerPos[2]-dz < 0.0f || centerPos[2]+dz > periodicBoxSize[2]);
                 int rangeStart[2];
                 int rangeEnd[2];
                 rangeStart[0] = findLowerBound(voxelIndex.x, voxelIndex.y, centerPos[2]-dz);

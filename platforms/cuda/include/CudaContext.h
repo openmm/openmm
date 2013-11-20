@@ -623,6 +623,8 @@ public:
  */
 class CudaContext::ForcePreComputation {
 public:
+    virtual ~ForcePreComputation() {
+    }
     /**
      * @param includeForce  true if forces should be computed
      * @param includeEnergy true if potential energy should be computed
@@ -639,6 +641,8 @@ public:
  */
 class CudaContext::ForcePostComputation {
 public:
+    virtual ~ForcePostComputation() {
+    }
     /**
      * @param includeForce  true if forces should be computed
      * @param includeEnergy true if potential energy should be computed

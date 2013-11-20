@@ -12,10 +12,6 @@
 #   libOpenMMDrudeCUDA[_d].so
 #----------------------------------------------------
 
-IF (APPLE)
-    SET (CMAKE_OSX_DEPLOYMENT_TARGET "10.6")
-ENDIF (APPLE)
-
 # The source is organized into subdirectories, but we handle them all from
 # this CMakeLists file rather than letting CMake visit them as SUBDIRS.
 SET(OPENMM_SOURCE_SUBDIRS .)
@@ -114,6 +110,9 @@ TARGET_LINK_LIBRARIES(${SHARED_TARGET} ${MAIN_OPENMM_LIB}  ${CUDA_LIBRARIES} ${P
 TARGET_LINK_LIBRARIES(${SHARED_TARGET} debug ${OPENMM_LIBRARY_NAME}CUDA_d optimized ${OPENMM_LIBRARY_NAME}CUDA)
 TARGET_LINK_LIBRARIES(${SHARED_TARGET} debug ${SHARED_DRUDE_TARGET} optimized ${SHARED_DRUDE_TARGET})
 SET_TARGET_PROPERTIES(${SHARED_TARGET} PROPERTIES COMPILE_FLAGS "-DOPENMM_BUILDING_SHARED_LIBRARY")
+IF (APPLE)
+    SET_TARGET_PROPERTIES(${SHARED_TARGET} PROPERTIES LINK_FLAGS "-F/Library/Frameworks -framework CUDA")
+ENDIF (APPLE)
 
 INSTALL(TARGETS ${SHARED_TARGET} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/plugins)
 # Ensure that links to the main CUDA library will be resolved.

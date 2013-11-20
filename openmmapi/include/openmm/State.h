@@ -34,6 +34,7 @@
 
 #include "Vec3.h"
 #include <map>
+#include <string>
 #include <vector>
 #include "internal/windowsExport.h"
 

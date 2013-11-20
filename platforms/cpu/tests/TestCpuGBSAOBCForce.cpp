@@ -30,39 +30,34 @@
  * -------------------------------------------------------------------------- */
 
 /**
- * This tests the OpenCL implementation of GBSAOBCForce.
+ * This tests the CPU implementation of GBSAOBCForce.
  */
 
 #include "openmm/internal/AssertionUtilities.h"
 #include "openmm/Context.h"
-#include "OpenCLPlatform.h"
-#include "ReferencePlatform.h"
+#include "CpuPlatform.h"
 #include "openmm/GBSAOBCForce.h"
 #include "openmm/System.h"
 #include "openmm/LangevinIntegrator.h"
+#include "openmm/NonbondedForce.h"
 #include "SimTKOpenMMRealType.h"
 #include "sfmt/SFMT.h"
-#include "openmm/NonbondedForce.h"
 #include <iostream>
 #include <vector>
 
 using namespace OpenMM;
 using namespace std;
 
-static OpenCLPlatform platform;
-
 const double TOL = 1e-5;
 
 void testSingleParticle() {
+    CpuPlatform platform;
     System system;
     system.addParticle(2.0);
     LangevinIntegrator integrator(0, 0.1, 0.01);
-    GBSAOBCForce* gbsa = new GBSAOBCForce();
-    NonbondedForce* nonbonded = new NonbondedForce();
-    gbsa->addParticle( 0.5, 0.15, 1);
-    nonbonded->addParticle(0.5, 1, 0);
-    system.addForce(gbsa);
-    system.addForce(nonbonded);
+    GBSAOBCForce* forceField = new GBSAOBCForce();
+    forceField->addParticle(0.5, 0.15, 1);
+    system.addForce(forceField);
     Context context(system, integrator, platform);
     vector<Vec3> positions(1);
     positions[0] = Vec3(0, 0, 0);
@@ -70,24 +65,25 @@ void testSingleParticle() {
     State state = context.getState(State::Energy);
     double bornRadius = 0.15-0.009; // dielectric offset
     double eps0 = EPSILON0;
-    double bornEnergy = (-0.5*0.5/(8*PI_M*eps0))*(1.0/gbsa->getSoluteDielectric()-1.0/gbsa->getSolventDielectric())/bornRadius;
+    double bornEnergy = (-0.5*0.5/(8*PI_M*eps0))*(1.0/forceField->getSoluteDielectric()-1.0/forceField->getSolventDielectric())/bornRadius;
     double extendedRadius = 0.15+0.14; // probe radius
     double nonpolarEnergy = CAL2JOULE*PI_M*0.0216*(10*extendedRadius)*(10*extendedRadius)*std::pow(0.15/bornRadius, 6.0); // Where did this formula come from?  Just copied it from CpuImplicitSolvent.cpp
     ASSERT_EQUAL_TOL((bornEnergy+nonpolarEnergy), state.getPotentialEnergy(), 0.01);
     
     // Change the parameters and see if it is still correct.
     
-    gbsa->setParticleParameters(0, 0.4, 0.25, 1);
-    gbsa->updateParametersInContext(context);
+    forceField->setParticleParameters(0, 0.4, 0.25, 1);
+    forceField->updateParametersInContext(context);
     state = context.getState(State::Energy);
     bornRadius = 0.25-0.009; // dielectric offset
-    bornEnergy = (-0.4*0.4/(8*PI_M*eps0))*(1.0/gbsa->getSoluteDielectric()-1.0/gbsa->getSolventDielectric())/bornRadius;
+    bornEnergy = (-0.4*0.4/(8*PI_M*eps0))*(1.0/forceField->getSoluteDielectric()-1.0/forceField->getSolventDielectric())/bornRadius;
     extendedRadius = bornRadius+0.14;
     nonpolarEnergy = CAL2JOULE*PI_M*0.0216*(10*extendedRadius)*(10*extendedRadius)*std::pow(0.25/bornRadius, 6.0);
     ASSERT_EQUAL_TOL((bornEnergy+nonpolarEnergy), state.getPotentialEnergy(), 0.01);
 }
 
 void testCutoffAndPeriodic() {
+    CpuPlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -144,6 +140,7 @@ void testCutoffAndPeriodic() {
 }
 
 void testForce(int numParticles, NonbondedForce::NonbondedMethod method, GBSAOBCForce::NonbondedMethod method2) {
+    CpuPlatform platform;
     ReferencePlatform reference;
     System system;
     GBSAOBCForce* gbsa = new GBSAOBCForce();
@@ -187,7 +184,7 @@ void testForce(int numParticles, NonbondedForce::NonbondedMethod method, GBSAOBC
     State state = context.getState(State::Forces | State::Energy);
     State refState = refContext.getState(State::Forces | State::Energy);
 
-    // Make sure the OpenCL and Reference platforms agree.
+    // Make sure the CPU and Reference platforms agree.
 
     double norm = 0.0;
     double diff = 0.0;
@@ -241,4 +238,3 @@ int main() {
     cout << "Done" << endl;
     return 0;
 }
-
