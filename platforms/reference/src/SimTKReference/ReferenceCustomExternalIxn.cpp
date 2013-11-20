@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2013 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -40,18 +40,37 @@ using namespace OpenMM;
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceCustomExternalIxn::ReferenceCustomExternalIxn(const Lepton::ExpressionProgram& energyExpression,
-        const Lepton::ExpressionProgram& forceExpressionX, const Lepton::ExpressionProgram& forceExpressionY,
-        const Lepton::ExpressionProgram& forceExpressionZ, const vector<string>& parameterNames, map<string, double> globalParameters) :
+ReferenceCustomExternalIxn::ReferenceCustomExternalIxn(const Lepton::CompiledExpression& energyExpression,
+        const Lepton::CompiledExpression& forceExpressionX, const Lepton::CompiledExpression& forceExpressionY,
+        const Lepton::CompiledExpression& forceExpressionZ, const vector<string>& parameterNames, map<string, double> globalParameters) :
         energyExpression(energyExpression), forceExpressionX(forceExpressionX), forceExpressionY(forceExpressionY),
-        forceExpressionZ(forceExpressionZ), paramNames(parameterNames), globalParameters(globalParameters) {
+        forceExpressionZ(forceExpressionZ) {
 
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceCustomExternalIxn::ReferenceCustomExternalIxn";
-
-   // ---------------------------------------------------------------------------------------
-
+    energyX = ReferenceForce::getVariablePointer(this->energyExpression, "x");
+    energyY = ReferenceForce::getVariablePointer(this->energyExpression, "y");
+    energyZ = ReferenceForce::getVariablePointer(this->energyExpression, "z");
+    forceXX = ReferenceForce::getVariablePointer(this->forceExpressionX, "x");
+    forceXY = ReferenceForce::getVariablePointer(this->forceExpressionX, "y");
+    forceXZ = ReferenceForce::getVariablePointer(this->forceExpressionX, "z");
+    forceYX = ReferenceForce::getVariablePointer(this->forceExpressionY, "x");
+    forceYY = ReferenceForce::getVariablePointer(this->forceExpressionY, "y");
+    forceYZ = ReferenceForce::getVariablePointer(this->forceExpressionY, "z");
+    forceZX = ReferenceForce::getVariablePointer(this->forceExpressionZ, "x");
+    forceZY = ReferenceForce::getVariablePointer(this->forceExpressionZ, "y");
+    forceZZ = ReferenceForce::getVariablePointer(this->forceExpressionZ, "z");
+    numParameters = parameterNames.size();
+    for (int i = 0; i < (int) numParameters; i++) {
+        energyParams.push_back(ReferenceForce::getVariablePointer(this->energyExpression, parameterNames[i]));
+        forceXParams.push_back(ReferenceForce::getVariablePointer(this->forceExpressionX, parameterNames[i]));
+        forceYParams.push_back(ReferenceForce::getVariablePointer(this->forceExpressionY, parameterNames[i]));
+        forceZParams.push_back(ReferenceForce::getVariablePointer(this->forceExpressionZ, parameterNames[i]));
+    }
+    for (map<string, double>::const_iterator iter = globalParameters.begin(); iter != globalParameters.end(); ++iter) {
+        ReferenceForce::setVariable(ReferenceForce::getVariablePointer(this->energyExpression, iter->first), iter->second);
+        ReferenceForce::setVariable(ReferenceForce::getVariablePointer(this->forceExpressionX, iter->first), iter->second);
+        ReferenceForce::setVariable(ReferenceForce::getVariablePointer(this->forceExpressionY, iter->first), iter->second);
+        ReferenceForce::setVariable(ReferenceForce::getVariablePointer(this->forceExpressionZ, iter->first), iter->second);
+    }
 }
 
 /**---------------------------------------------------------------------------------------
@@ -90,18 +109,30 @@ void ReferenceCustomExternalIxn::calculateForce( int atomIndex,
 
    static const std::string methodName = "\nReferenceCustomExternalIxn::calculateBondIxn";
 
-   map<string, double> variables = globalParameters;
-   for (int i = 0; i < (int) paramNames.size(); ++i)
-       variables[paramNames[i]] = parameters[i];
-   variables["x"] = atomCoordinates[atomIndex][0];
-   variables["y"] = atomCoordinates[atomIndex][1];
-   variables["z"] = atomCoordinates[atomIndex][2];
+   for (int i = 0; i < numParameters; i++) {
+       ReferenceForce::setVariable(energyParams[i], parameters[i]);
+       ReferenceForce::setVariable(forceXParams[i], parameters[i]);
+       ReferenceForce::setVariable(forceYParams[i], parameters[i]);
+       ReferenceForce::setVariable(forceZParams[i], parameters[i]);
+   }
+   ReferenceForce::setVariable(energyX, atomCoordinates[atomIndex][0]);
+   ReferenceForce::setVariable(energyY, atomCoordinates[atomIndex][1]);
+   ReferenceForce::setVariable(energyZ, atomCoordinates[atomIndex][2]);
+   ReferenceForce::setVariable(forceXX, atomCoordinates[atomIndex][0]);
+   ReferenceForce::setVariable(forceXY, atomCoordinates[atomIndex][1]);
+   ReferenceForce::setVariable(forceXZ, atomCoordinates[atomIndex][2]);
+   ReferenceForce::setVariable(forceYX, atomCoordinates[atomIndex][0]);
+   ReferenceForce::setVariable(forceYY, atomCoordinates[atomIndex][1]);
+   ReferenceForce::setVariable(forceYZ, atomCoordinates[atomIndex][2]);
+   ReferenceForce::setVariable(forceZX, atomCoordinates[atomIndex][0]);
+   ReferenceForce::setVariable(forceZY, atomCoordinates[atomIndex][1]);
+   ReferenceForce::setVariable(forceZZ, atomCoordinates[atomIndex][2]);
 
    // ---------------------------------------------------------------------------------------
 
-   forces[atomIndex][0] -= (RealOpenMM) forceExpressionX.evaluate(variables);
-   forces[atomIndex][1] -= (RealOpenMM) forceExpressionY.evaluate(variables);
-   forces[atomIndex][2] -= (RealOpenMM) forceExpressionZ.evaluate(variables);
+   forces[atomIndex][0] -= (RealOpenMM) forceExpressionX.evaluate();
+   forces[atomIndex][1] -= (RealOpenMM) forceExpressionY.evaluate();
+   forces[atomIndex][2] -= (RealOpenMM) forceExpressionZ.evaluate();
    if (energy != NULL)
-       *energy += (RealOpenMM) energyExpression.evaluate(variables);
+       *energy += (RealOpenMM) energyExpression.evaluate();
 }

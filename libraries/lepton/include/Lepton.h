@@ -32,6 +32,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include "lepton/CompiledExpression.h"
 #include "lepton/CustomFunction.h"
 #include "lepton/ExpressionProgram.h"
 #include "lepton/ExpressionTreeNode.h"

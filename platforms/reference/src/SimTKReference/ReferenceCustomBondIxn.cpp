@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2013 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -40,16 +40,20 @@ using namespace OpenMM;
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceCustomBondIxn::ReferenceCustomBondIxn(const Lepton::ExpressionProgram& energyExpression,
-        const Lepton::ExpressionProgram& forceExpression, const vector<string>& parameterNames, map<string, double> globalParameters) :
-        energyExpression(energyExpression), forceExpression(forceExpression), paramNames(parameterNames), globalParameters(globalParameters) {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceCustomBondIxn::ReferenceCustomBondIxn";
-
-   // ---------------------------------------------------------------------------------------
-
+ReferenceCustomBondIxn::ReferenceCustomBondIxn(const Lepton::CompiledExpression& energyExpression,
+        const Lepton::CompiledExpression& forceExpression, const vector<string>& parameterNames, map<string, double> globalParameters) :
+        energyExpression(energyExpression), forceExpression(forceExpression) {
+    energyR = ReferenceForce::getVariablePointer(this->energyExpression, "r");
+    forceR = ReferenceForce::getVariablePointer(this->forceExpression, "r");
+    numParameters = parameterNames.size();
+    for (int i = 0; i < (int) numParameters; i++) {
+        energyParams.push_back(ReferenceForce::getVariablePointer(this->energyExpression, parameterNames[i]));
+        forceParams.push_back(ReferenceForce::getVariablePointer(this->forceExpression, parameterNames[i]));
+    }
+    for (map<string, double>::const_iterator iter = globalParameters.begin(); iter != globalParameters.end(); ++iter) {
+        ReferenceForce::setVariable(ReferenceForce::getVariablePointer(this->energyExpression, iter->first), iter->second);
+        ReferenceForce::setVariable(ReferenceForce::getVariablePointer(this->forceExpression, iter->first), iter->second);
+    }
 }
 
 /**---------------------------------------------------------------------------------------
@@ -95,9 +99,10 @@ void ReferenceCustomBondIxn::calculateBondIxn( int* atomIndices,
    static const RealOpenMM half        = 0.5;
 
    RealOpenMM deltaR[ReferenceForce::LastDeltaRIndex];
-   map<string, double> variables = globalParameters;
-   for (int i = 0; i < (int) paramNames.size(); ++i)
-       variables[paramNames[i]] = parameters[i];
+   for (int i = 0; i < numParameters; i++) {
+       ReferenceForce::setVariable(energyParams[i], parameters[i]);
+       ReferenceForce::setVariable(forceParams[i], parameters[i]);
+   }
 
    // ---------------------------------------------------------------------------------------
 
@@ -106,8 +111,10 @@ void ReferenceCustomBondIxn::calculateBondIxn( int* atomIndices,
    int atomAIndex = atomIndices[0];
    int atomBIndex = atomIndices[1];
    ReferenceForce::getDeltaR( atomCoordinates[atomAIndex], atomCoordinates[atomBIndex], deltaR );
-   variables["r"]             = deltaR[ReferenceForce::RIndex];
-   RealOpenMM dEdR            = (RealOpenMM) forceExpression.evaluate(variables);
+   
+   ReferenceForce::setVariable(energyR, deltaR[ReferenceForce::RIndex]);
+   ReferenceForce::setVariable(forceR, deltaR[ReferenceForce::RIndex]);
+   RealOpenMM dEdR            = (RealOpenMM) forceExpression.evaluate();
    dEdR                       = deltaR[ReferenceForce::RIndex] > zero ? (dEdR/deltaR[ReferenceForce::RIndex]) : zero;
 
    forces[atomAIndex][0]     += dEdR*deltaR[ReferenceForce::XIndex];
@@ -119,5 +126,5 @@ void ReferenceCustomBondIxn::calculateBondIxn( int* atomIndices,
    forces[atomBIndex][2]     -= dEdR*deltaR[ReferenceForce::ZIndex];
 
    if (totalEnergy != NULL)
-       *totalEnergy += (RealOpenMM) energyExpression.evaluate(variables);
+       *totalEnergy += (RealOpenMM) energyExpression.evaluate();
 }

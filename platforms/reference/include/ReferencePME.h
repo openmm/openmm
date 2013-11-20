@@ -54,11 +54,11 @@ pme_t;
  */
 int 
 pme_init(pme_t *       ppme,
-         RealOpenMM        ewaldcoeff,
+         RealOpenMM    ewaldcoeff,
          int           natoms,
-         const int           ngrid[3],
+         const int     ngrid[3],
          int           pme_order,
-             RealOpenMM        epsilon_r);
+         RealOpenMM    epsilon_r);
 
 /*
  * Evaluate reciprocal space PME energy and forces.
@@ -75,9 +75,9 @@ pme_init(pme_t *       ppme,
  */
 int
 pme_exec(pme_t       pme,
-         std::vector<OpenMM::RealVec>&  atomCoordinates,
-         std::vector<OpenMM::RealVec>&  forces,
-         RealOpenMM **  atomParameters,
+         const std::vector<OpenMM::RealVec>& atomCoordinates,
+         std::vector<OpenMM::RealVec>& forces,
+         const std::vector<RealOpenMM>& charges,
          const RealOpenMM  periodicBoxSize[3],
          RealOpenMM *    energy,
          RealOpenMM      pme_virial[3][3]);

@@ -89,7 +89,6 @@ void ReferenceIntegrateRPMDStepKernel::initialize(const System& system, const RP
         if (copies != numCopies) {
             if (groupsByCopies.find(copies) == groupsByCopies.end()) {
                 groupsByCopies[copies] = 1<<group;
-                groupsNotContracted -= 1<<group;
                 contractionFFT[copies] = NULL;
                 fftpack_init_1d(&contractionFFT[copies], copies);
                 if (copies > maxContractedCopies)
@@ -97,6 +96,7 @@ void ReferenceIntegrateRPMDStepKernel::initialize(const System& system, const RP
             }
             else
                 groupsByCopies[copies] |= 1<<group;
+            groupsNotContracted -= 1<<group;
         }
     }
     
@@ -135,36 +135,38 @@ void ReferenceIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDI
     const RealOpenMM twown = 2.0*nkT/hbar;
     const RealOpenMM c1_0 = exp(-halfdt*integrator.getFriction());
     const RealOpenMM c2_0 = sqrt(1.0-c1_0*c1_0);
-    for (int particle = 0; particle < numParticles; particle++) {
-        if (system.getParticleMass(particle) == 0.0)
-            continue;
-        const RealOpenMM c3_0 = c2_0*sqrt(nkT/system.getParticleMass(particle));
-        for (int component = 0; component < 3; component++) {
-            for (int k = 0; k < numCopies; k++)
-                v[k] = t_complex(scale*velocities[k][particle][component], 0.0);
-            fftpack_exec_1d(fft, FFTPACK_FORWARD, &v[0], &v[0]);
-            
-            // Apply a local Langevin thermostat to the centroid mode.
+    if (integrator.getApplyThermostat()) {
+        for (int particle = 0; particle < numParticles; particle++) {
+            if (system.getParticleMass(particle) == 0.0)
+                continue;
+            const RealOpenMM c3_0 = c2_0*sqrt(nkT/system.getParticleMass(particle));
+            for (int component = 0; component < 3; component++) {
+                for (int k = 0; k < numCopies; k++)
+                    v[k] = t_complex(scale*velocities[k][particle][component], 0.0);
+                fftpack_exec_1d(fft, FFTPACK_FORWARD, &v[0], &v[0]);
 
-            v[0].re = v[0].re*c1_0 + c3_0*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+                // Apply a local Langevin thermostat to the centroid mode.
 
-            // Use critical damping white noise for the remaining modes.
-            
-            for (int k = 1; k <= numCopies/2; k++) {
-                const bool isCenter = (numCopies%2 == 0 && k == numCopies/2);
-                const RealOpenMM wk = twown*sin(k*M_PI/numCopies);
-                const RealOpenMM c1 = exp(-2.0*wk*halfdt);
-                const RealOpenMM c2 = sqrt((1.0-c1*c1)/2) * (isCenter ? sqrt(2.0) : 1.0);
-                const RealOpenMM c3 = c2*sqrt(nkT/system.getParticleMass(particle));
-                RealOpenMM rand1 = c3*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
-                RealOpenMM rand2 = (isCenter ? 0.0 : c3*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber());
-                v[k] = v[k]*c1 + t_complex(rand1, rand2);
-                if (k < numCopies-k)
-                    v[numCopies-k] = v[numCopies-k]*c1 + t_complex(rand1, -rand2);
+                v[0].re = v[0].re*c1_0 + c3_0*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+
+                // Use critical damping white noise for the remaining modes.
+
+                for (int k = 1; k <= numCopies/2; k++) {
+                    const bool isCenter = (numCopies%2 == 0 && k == numCopies/2);
+                    const RealOpenMM wk = twown*sin(k*M_PI/numCopies);
+                    const RealOpenMM c1 = exp(-2.0*wk*halfdt);
+                    const RealOpenMM c2 = sqrt((1.0-c1*c1)/2) * (isCenter ? sqrt(2.0) : 1.0);
+                    const RealOpenMM c3 = c2*sqrt(nkT/system.getParticleMass(particle));
+                    RealOpenMM rand1 = c3*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+                    RealOpenMM rand2 = (isCenter ? 0.0 : c3*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber());
+                    v[k] = v[k]*c1 + t_complex(rand1, rand2);
+                    if (k < numCopies-k)
+                        v[numCopies-k] = v[numCopies-k]*c1 + t_complex(rand1, -rand2);
+                }
+                fftpack_exec_1d(fft, FFTPACK_BACKWARD, &v[0], &v[0]);
+                for (int k = 0; k < numCopies; k++)
+                    velocities[k][particle][component] = scale*v[k].re;
             }
-            fftpack_exec_1d(fft, FFTPACK_BACKWARD, &v[0], &v[0]);
-            for (int k = 0; k < numCopies; k++)
-                velocities[k][particle][component] = scale*v[k].re;
         }
     }
 
@@ -220,36 +222,38 @@ void ReferenceIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDI
 
     // Apply the PILE-L thermostat again.
     
-    for (int particle = 0; particle < numParticles; particle++) {
-        if (system.getParticleMass(particle) == 0.0)
-            continue;
-        const RealOpenMM c3_0 = c2_0*sqrt(nkT/system.getParticleMass(particle));
-        for (int component = 0; component < 3; component++) {
-            for (int k = 0; k < numCopies; k++)
-                v[k] = t_complex(scale*velocities[k][particle][component], 0.0);
-            fftpack_exec_1d(fft, FFTPACK_FORWARD, &v[0], &v[0]);
-            
-            // Apply a local Langevin thermostat to the centroid mode.
+    if (integrator.getApplyThermostat()) {
+        for (int particle = 0; particle < numParticles; particle++) {
+            if (system.getParticleMass(particle) == 0.0)
+                continue;
+            const RealOpenMM c3_0 = c2_0*sqrt(nkT/system.getParticleMass(particle));
+            for (int component = 0; component < 3; component++) {
+                for (int k = 0; k < numCopies; k++)
+                    v[k] = t_complex(scale*velocities[k][particle][component], 0.0);
+                fftpack_exec_1d(fft, FFTPACK_FORWARD, &v[0], &v[0]);
 
-            v[0].re = v[0].re*c1_0 + c3_0*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+                // Apply a local Langevin thermostat to the centroid mode.
 
-            // Use critical damping white noise for the remaining modes.
-            
-            for (int k = 1; k <= numCopies/2; k++) {
-                const bool isCenter = (numCopies%2 == 0 && k == numCopies/2);
-                const RealOpenMM wk = twown*sin(k*M_PI/numCopies);
-                const RealOpenMM c1 = exp(-2.0*wk*halfdt);
-                const RealOpenMM c2 = sqrt((1.0-c1*c1)/2) * (isCenter ? sqrt(2.0) : 1.0);
-                const RealOpenMM c3 = c2*sqrt(nkT/system.getParticleMass(particle));
-                RealOpenMM rand1 = c3*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
-                RealOpenMM rand2 = (isCenter ? 0.0 : c3*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber());
-                v[k] = v[k]*c1 + t_complex(rand1, rand2);
-                if (k < numCopies-k)
-                    v[numCopies-k] = v[numCopies-k]*c1 + t_complex(rand1, -rand2);
+                v[0].re = v[0].re*c1_0 + c3_0*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+
+                // Use critical damping white noise for the remaining modes.
+
+                for (int k = 1; k <= numCopies/2; k++) {
+                    const bool isCenter = (numCopies%2 == 0 && k == numCopies/2);
+                    const RealOpenMM wk = twown*sin(k*M_PI/numCopies);
+                    const RealOpenMM c1 = exp(-2.0*wk*halfdt);
+                    const RealOpenMM c2 = sqrt((1.0-c1*c1)/2) * (isCenter ? sqrt(2.0) : 1.0);
+                    const RealOpenMM c3 = c2*sqrt(nkT/system.getParticleMass(particle));
+                    RealOpenMM rand1 = c3*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+                    RealOpenMM rand2 = (isCenter ? 0.0 : c3*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber());
+                    v[k] = v[k]*c1 + t_complex(rand1, rand2);
+                    if (k < numCopies-k)
+                        v[numCopies-k] = v[numCopies-k]*c1 + t_complex(rand1, -rand2);
+                }
+                fftpack_exec_1d(fft, FFTPACK_BACKWARD, &v[0], &v[0]);
+                for (int k = 0; k < numCopies; k++)
+                    velocities[k][particle][component] = scale*v[k].re;
             }
-            fftpack_exec_1d(fft, FFTPACK_BACKWARD, &v[0], &v[0]);
-            for (int k = 0; k < numCopies; k++)
-                velocities[k][particle][component] = scale*v[k].re;
         }
     }
     

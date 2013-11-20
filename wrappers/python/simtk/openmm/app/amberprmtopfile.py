@@ -61,6 +61,11 @@ class GBn(object):
         return 'GBn'
 GBn = GBn()
 
+class GBn2(object):
+    def __repr__(self):
+        return 'GBn2'
+GBn2 = GBn2()
+
 class AmberPrmtopFile(object):
     """AmberPrmtopFile parses an AMBER prmtop file and constructs a Topology and (optionally) an OpenMM System from it."""
 
@@ -69,6 +74,7 @@ class AmberPrmtopFile(object):
         top = Topology()
         ## The Topology read from the prmtop file
         self.topology = top
+        self.elements = []
 
         # Load the prmtop file
 
@@ -96,21 +102,30 @@ class AmberPrmtopFile(object):
             if atomName in atomReplacements:
                 atomName = atomReplacements[atomName]
 
-            # Try to guess the element.
-
-            upper = atomName.upper()
-            if upper.startswith('CL'):
-                element = elem.chlorine
-            elif upper.startswith('NA'):
-                element = elem.sodium
-            elif upper.startswith('MG'):
-                element = elem.magnesium
-            else:
+            # Get the element from the prmtop file if available
+            if prmtop.has_atomic_number:
                 try:
-                    element = elem.get_by_symbol(atomName[0])
+                    element = elem.Element.getByAtomicNumber(int(prmtop._raw_data['ATOMIC_NUMBER'][index]))
                 except KeyError:
                     element = None
+            else:
+                # Try to guess the element from the atom name.
+
+                upper = atomName.upper()
+                if upper.startswith('CL'):
+                    element = elem.chlorine
+                elif upper.startswith('NA'):
+                    element = elem.sodium
+                elif upper.startswith('MG'):
+                    element = elem.magnesium
+                else:
+                    try:
+                        element = elem.get_by_symbol(atomName[0])
+                    except KeyError:
+                        element = None
+
             top.addAtom(atomName, element, r)
+            self.elements.append(element)
 
         # Add bonds to the topology
 
@@ -127,7 +142,7 @@ class AmberPrmtopFile(object):
 
     def createSystem(self, nonbondedMethod=ff.NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
                      constraints=None, rigidWater=True, implicitSolvent=None, soluteDielectric=1.0, solventDielectric=78.5, removeCMMotion=True,
-                     ewaldErrorTolerance=0.0005):
+                     hydrogenMass=None, ewaldErrorTolerance=0.0005):
         """Construct an OpenMM System representing the topology described by this prmtop file.
 
         Parameters:
@@ -137,10 +152,12 @@ class AmberPrmtopFile(object):
          - constraints (object=None) Specifies which bonds angles should be implemented with constraints.
            Allowed values are None, HBonds, AllBonds, or HAngles.
          - rigidWater (boolean=True) If true, water molecules will be fully rigid regardless of the value passed for the constraints argument
-         - implicitSolvent (object=None) If not None, the implicit solvent model to use.  Allowed values are HCT, OBC1, OBC2, or GBn.
+         - implicitSolvent (object=None) If not None, the implicit solvent model to use.  Allowed values are HCT, OBC1, OBC2, GBn, or GBn2.
          - soluteDielectric (float=1.0) The solute dielectric constant to use in the implicit solvent model.
          - solventDielectric (float=78.5) The solvent dielectric constant to use in the implicit solvent model.
          - removeCMMotion (boolean=True) If true, a CMMotionRemover will be added to the System
+         - hydrogenMass (mass=None) The mass to use for hydrogen atoms bound to heavy atoms.  Any mass added to a hydrogen is
+           subtracted from the heavy atom to keep their total mass the same.
          - ewaldErrorTolerance (float=0.0005) The error tolerance to use if nonbondedMethod is Ewald or PME.
         Returns: the newly created System
         """
@@ -165,19 +182,30 @@ class AmberPrmtopFile(object):
             raise ValueError('Illegal value for constraints')
         if implicitSolvent is None:
             implicitString = None
-        elif implicitSolvent == HCT:
+        elif implicitSolvent is HCT:
             implicitString = 'HCT'
-        elif implicitSolvent == OBC1:
+        elif implicitSolvent is OBC1:
             implicitString = 'OBC1'
-        elif implicitSolvent == OBC2:
+        elif implicitSolvent is OBC2:
             implicitString = 'OBC2'
-        elif implicitSolvent == GBn:
+        elif implicitSolvent is GBn:
             implicitString = 'GBn'
+        elif implicitSolvent is GBn2:
+            implicitString = 'GBn2'
         else:
             raise ValueError('Illegal value for implicit solvent model')
         sys = amber_file_parser.readAmberSystem(prmtop_loader=self._prmtop, shake=constraintString, nonbondedCutoff=nonbondedCutoff,
                                                  nonbondedMethod=methodMap[nonbondedMethod], flexibleConstraints=False, gbmodel=implicitString,
-                                                 soluteDielectric=soluteDielectric, solventDielectric=solventDielectric, rigidWater=rigidWater)
+                                                 soluteDielectric=soluteDielectric, solventDielectric=solventDielectric, rigidWater=rigidWater,
+                                                 elements=self.elements)
+        if hydrogenMass is not None:
+            for atom1, atom2 in self.topology.bonds():
+                if atom1.element == elem.hydrogen:
+                    (atom1, atom2) = (atom2, atom1)
+                if atom2.element == elem.hydrogen and atom1.element not in (elem.hydrogen, None):
+                    transferMass = hydrogenMass-sys.getParticleMass(atom2.index)
+                    sys.setParticleMass(atom2.index, hydrogenMass)
+                    sys.setParticleMass(atom1.index, sys.getParticleMass(atom1.index)-transferMass)
         for force in sys.getForces():
             if isinstance(force, mm.NonbondedForce):
                 force.setEwaldErrorTolerance(ewaldErrorTolerance)

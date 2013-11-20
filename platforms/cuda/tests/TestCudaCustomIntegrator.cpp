@@ -233,6 +233,43 @@ void testVelocityConstraints() {
     }
 }
 
+void testConstrainedMasslessParticles() {
+    System system;
+    system.addParticle(0.0);
+    system.addParticle(1.0);
+    system.addConstraint(0, 1, 1.5);
+    vector<Vec3> positions(2);
+    positions[0] = Vec3(-1, 0, 0);
+    positions[1] = Vec3(1, 0, 0);
+    CustomIntegrator integrator(0.002);
+    integrator.addPerDofVariable("oldx", 0);
+    integrator.addComputePerDof("v", "v+dt*f/m");
+    integrator.addComputePerDof("oldx", "x");
+    integrator.addComputePerDof("x", "x+dt*v");
+    integrator.addConstrainPositions();
+    integrator.addComputePerDof("v", "(x-oldx)/dt");
+    bool failed = false;
+    try {
+        // This should throw an exception.
+        
+        Context context(system, integrator, platform);
+    }
+    catch (exception& ex) {
+        failed = true;
+    }
+    ASSERT(failed);
+    
+    // Now make both particles massless, which should work.
+    
+    system.setParticleMass(1, 0.0);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    context.setVelocitiesToTemperature(300.0);
+    integrator.step(1);
+    State state = context.getState(State::Velocities | State::Positions);
+    ASSERT_EQUAL(0.0, state.getVelocities()[0][0]);
+}
+
 /**
  * Test an integrator with an AndersenThermostat to see if updateContextState()
  * is being handled correctly.
@@ -724,6 +761,7 @@ int main(int argc, char* argv[]) {
         testSingleBond();
         testConstraints();
         testVelocityConstraints();
+        testConstrainedMasslessParticles();
         testWithThermostat();
         testMonteCarlo();
         testSum();

@@ -272,7 +272,7 @@ class ForceField(object):
             self.atoms = [x-self.index for x in self.atoms]
 
     def createSystem(self, topology, nonbondedMethod=NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
-                     constraints=None, rigidWater=True, removeCMMotion=True, **args):
+                     constraints=None, rigidWater=True, removeCMMotion=True, hydrogenMass=None, **args):
         """Construct an OpenMM System representing a Topology with this force field.
 
         Parameters:
@@ -284,6 +284,8 @@ class ForceField(object):
            Allowed values are None, HBonds, AllBonds, or HAngles.
          - rigidWater (boolean=True) If true, water molecules will be fully rigid regardless of the value passed for the constraints argument
          - removeCMMotion (boolean=True) If true, a CMMotionRemover will be added to the System
+         - hydrogenMass (mass=None) The mass to use for hydrogen atoms bound to heavy atoms.  Any mass added to a hydrogen is
+           subtracted from the heavy atom to keep their total mass the same.
          - args Arbitrary additional keyword arguments may also be specified.  This allows extra parameters to be specified that are specific to
            particular force fields.
         Returns: the newly created System
@@ -335,6 +337,17 @@ class ForceField(object):
         sys = mm.System()
         for atom in topology.atoms():
             sys.addParticle(self._atomTypes[data.atomType[atom]][1])
+        
+        # Adjust masses.
+        
+        if hydrogenMass is not None:
+            for atom1, atom2 in topology.bonds():
+                if atom1.element == elem.hydrogen:
+                    (atom1, atom2) = (atom2, atom1)
+                if atom2.element == elem.hydrogen and atom1.element not in (elem.hydrogen, None):
+                    transferMass = hydrogenMass-sys.getParticleMass(atom2.index)
+                    sys.setParticleMass(atom2.index, hydrogenMass)
+                    sys.setParticleMass(atom1.index, sys.getParticleMass(atom1.index)-transferMass)
 
         # Set periodic boundary conditions.
 
@@ -516,6 +529,27 @@ def _matchResidue(res, template, bondedToAtom):
         bonds = [renumberAtoms[x] for x in bondedToAtom[atom.index] if x in renumberAtoms]
         bondedTo.append(bonds)
         externalBonds.append(len([x for x in bondedToAtom[atom.index] if x not in renumberAtoms]))
+
+    # For each unique combination of element and number of bonds, make sure the residue and
+    # template have the same number of atoms.
+
+    residueTypeCount = {}
+    for i, atom in enumerate(atoms):
+        key = (atom.element, len(bondedTo[i]), externalBonds[i])
+        if key not in residueTypeCount:
+            residueTypeCount[key] = 1
+        residueTypeCount[key] += 1
+    templateTypeCount = {}
+    for i, atom in enumerate(template.atoms):
+        key = (atom.element, len(atom.bondedTo), atom.externalBonds)
+        if key not in templateTypeCount:
+            templateTypeCount[key] = 1
+        templateTypeCount[key] += 1
+    if residueTypeCount != templateTypeCount:
+        return None
+
+    # Recursively match atoms.
+
     if _findAtomMatches(atoms, template, bondedTo, externalBonds, matches, hasMatch, 0):
         return matches
     return None
@@ -590,8 +624,8 @@ def _findMatchErrors(forcefield, res):
     # Return an appropriate error message.
     
     if numBestMatchAtoms == numResidueAtoms:
-        chainLength = len(list(res.chain.residues()))
-        if chainLength > 1 and (res.index == 0 or res.index == chainLength-1):
+        chainResidues = list(res.chain.residues())
+        if len(chainResidues) > 1 and (res == chainResidues[0] or res == chainResidues[-1]):
             return 'The set of atoms matches %s, but the bonds are different.  Perhaps the chain is missing a terminal group?' % bestMatchName
         return 'The set of atoms matches %s, but the bonds are different.' % bestMatchName
     if bestMatchName is not None:

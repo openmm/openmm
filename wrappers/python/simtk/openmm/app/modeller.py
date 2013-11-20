@@ -37,7 +37,7 @@ from simtk.openmm.app import Topology, PDBFile, ForceField
 from simtk.openmm.app.forcefield import HAngles, _createResidueSignature, _matchResidue, DrudeGenerator
 from simtk.openmm.app.topology import Residue
 from simtk.openmm.vec3 import Vec3
-from simtk.openmm import System, Context, NonbondedForce, VerletIntegrator, LocalEnergyMinimizer
+from simtk.openmm import System, Context, NonbondedForce, CustomNonbondedForce, HarmonicBondForce, HarmonicAngleForce, VerletIntegrator, LocalEnergyMinimizer
 from simtk.unit import nanometer, molar, elementary_charge, amu, gram, liter, degree, sqrt, acos, is_quantity, dot, norm
 import element as elem
 import os
@@ -519,7 +519,7 @@ class Modeller(object):
                     terminal = hydrogen.attrib['terminal']
                 data.hydrogens.append(Modeller._Hydrogen(hydrogen.attrib['name'], hydrogen.attrib['parent'], maxph, atomVariants, terminal))
 
-    def addHydrogens(self, forcefield, pH=7.0, variants=None, platform=None):
+    def addHydrogens(self, forcefield=None, pH=7.0, variants=None, platform=None):
         """Add missing hydrogens to the model.
 
         Some residues can exist in multiple forms depending on the pH and properties of the local environment.  These
@@ -561,7 +561,8 @@ class Modeller(object):
         additional definitions for other residue types.
 
         Parameters:
-         - forcefield (ForceField) the ForceField to use for determining the positions of hydrogens
+         - forcefield (ForceField=None) the ForceField to use for determining the positions of hydrogens.  If this is None,
+           positions will be picked which are generally reasonable but not optimized for any particular ForceField.
          - pH (float=7.0) the pH based on which to select variants
          - variants (list=None) an optional list of variants to use.  If this is specified, its length must equal the number
            of residues in the model.  variants[i] is the name of the variant to use for residue i (indexed starting at 0).
@@ -753,14 +754,45 @@ class Modeller(object):
             if bond[0] in newAtoms and bond[1] in newAtoms:
                 newTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]])
 
-        # The hydrogens were added at random positions.  Now use the ForceField to fix them up.
+        # The hydrogens were added at random positions.  Now perform an energy minimization to fix them up.
 
-        system = forcefield.createSystem(newTopology, rigidWater=False)
-        atoms = list(newTopology.atoms())
-        for i in range(system.getNumParticles()):
-            if atoms[i].element != elem.hydrogen:
-                # This is a heavy atom, so make it immobile.
-                system.setParticleMass(i, 0)
+        if forcefield is not None:
+            # Use the ForceField the user specified.
+            
+            system = forcefield.createSystem(newTopology, rigidWater=False)
+            atoms = list(newTopology.atoms())
+            for i in range(system.getNumParticles()):
+                if atoms[i].element != elem.hydrogen:
+                    # This is a heavy atom, so make it immobile.
+                    system.setParticleMass(i, 0)
+        else:
+            # Create a System that restrains the distance of each hydrogen from its parent atom
+            # and causes hydrogens to spread out evenly.
+            
+            system = System()
+            nonbonded = CustomNonbondedForce('1/((r/0.1)^4+1)')
+            bonds = HarmonicBondForce()
+            angles = HarmonicAngleForce()
+            system.addForce(nonbonded)
+            system.addForce(bonds)
+            system.addForce(angles)
+            for atom in newTopology.atoms():
+                nonbonded.addParticle([])
+                if atom.element != elem.hydrogen:
+                    system.addParticle(0.0)
+                else:
+                    system.addParticle(1.0)
+            for atom1, atom2 in newTopology.bonds():
+                if atom1.element == elem.hydrogen or atom2.element == elem.hydrogen:
+                    bonds.addBond(atom1.index, atom2.index, 0.1, 100000.0)
+            for residue in newTopology.residues():
+                if residue.name == 'HOH':
+                    atoms = list(residue.atoms())
+                    oindex = [i for i in range(len(atoms)) if atoms[i].element == elem.oxygen]
+                    if len(atoms) == 3 and len(oindex) == 1:
+                        hindex = list(set([0,1,2])-set(oindex))
+                        angles.addAngle(atoms[hindex[0]].index, atoms[oindex[0]].index, atoms[hindex[1]].index, 1.824, 836.8)
+            
         if platform is None:
             context = Context(system, VerletIntegrator(0.0))
         else:

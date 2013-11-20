@@ -128,12 +128,12 @@ void CudaIntegrateRPMDStepKernel::initialize(const System& system, const RPMDInt
         if (copies != numCopies) {
             if (groupsByCopies.find(copies) == groupsByCopies.end()) {
                 groupsByCopies[copies] = 1<<group;
-                groupsNotContracted -= 1<<group;
                 if (copies > maxContractedCopies)
                     maxContractedCopies = copies;
             }
             else
                 groupsByCopies[copies] |= 1<<group;
+            groupsNotContracted -= 1<<group;
         }
     }
     if (maxContractedCopies > 0) {
@@ -205,7 +205,8 @@ void CudaIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDIntegr
     void* frictionPtr = (useDoublePrecision ? (void*) &friction : (void*) &frictionFloat);
     int randomIndex = integration.prepareRandomNumbers(numParticles*numCopies);
     void* pileArgs[] = {&velocities->getDevicePointer(), &integration.getRandom().getDevicePointer(), &randomIndex, dtPtr, kTPtr, frictionPtr};
-    cu.executeKernel(pileKernel, pileArgs, numParticles*numCopies, workgroupSize);
+    if (integrator.getApplyThermostat())
+        cu.executeKernel(pileKernel, pileArgs, numParticles*numCopies, workgroupSize);
 
     // Update positions and velocities.
     
@@ -223,8 +224,10 @@ void CudaIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDIntegr
 
     // Apply the PILE-L thermostat again.
 
-    randomIndex = integration.prepareRandomNumbers(numParticles*numCopies);
-    cu.executeKernel(pileKernel, pileArgs, numParticles*numCopies, workgroupSize);
+    if (integrator.getApplyThermostat()) {
+        randomIndex = integration.prepareRandomNumbers(numParticles*numCopies);
+        cu.executeKernel(pileKernel, pileArgs, numParticles*numCopies, workgroupSize);
+    }
 
     // Update the time and step count.
 
@@ -284,6 +287,14 @@ void CudaIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
         
         void* contractForceArgs[] = {&forces->getDevicePointer(), &contractedForces->getDevicePointer()};
         cu.executeKernel(forceContractionKernels[copies], contractForceArgs, numParticles*numCopies, workgroupSize);
+    }
+    if (groupsByCopies.size() > 0) {
+        // Ensure the Context contains the positions from the last copy, since we'll assume that later.
+        
+        int i = numCopies-1;
+        void* copyToContextArgs[] = {&velocities->getDevicePointer(), &cu.getVelm().getDevicePointer(), &positions->getDevicePointer(),
+                &cu.getPosq().getDevicePointer(), &cu.getAtomIndexArray().getDevicePointer(), &i};
+        cu.executeKernel(copyToContextKernel, copyToContextArgs, cu.getNumAtoms());
     }
 }
 
@@ -374,7 +385,6 @@ void CudaIntegrateRPMDStepKernel::copyToContext(int copy, ContextImpl& context) 
 
 string CudaIntegrateRPMDStepKernel::createFFT(int size, const string& variable, bool forward) {
     stringstream source;
-    int unfactored = size;
     int stage = 0;
     int L = size;
     int m = 1;
@@ -390,16 +400,27 @@ string CudaIntegrateRPMDStepKernel::createFFT(int size, const string& variable, 
 
     // Factor size, generating an appropriate block of code for each factor.
 
-    while (unfactored > 1) {
+    while (L > 1) {
         int input = stage%2;
         int output = 1-input;
+        int radix;
+        if (L%5 == 0)
+            radix = 5;
+        else if (L%4 == 0)
+            radix = 4;
+        else if (L%3 == 0)
+            radix = 3;
+        else if (L%2 == 0)
+            radix = 2;
+        else
+            throw OpenMMException("Illegal size for FFT: "+cu.intToString(size));
         source<<"{\n";
-        if (unfactored%5 == 0) {
-            L = L/5;
-            source<<"// Pass "<<(stage+1)<<" (radix 5)\n";
-            source<<"if (indexInBlock < "<<(L*m)<<") {\n";
-            source<<"int i = indexInBlock;\n";
-            source<<"int j = i/"<<m<<";\n";
+        L = L/radix;
+        source<<"// Pass "<<(stage+1)<<" (radix "<<radix<<")\n";
+        source<<"if (indexInBlock < "<<(L*m)<<") {\n";
+        source<<"int i = indexInBlock;\n";
+        source<<"int j = i/"<<m<<";\n";
+        if (radix == 5) {
             source<<"mixed3 c0r = real"<<input<<"[i];\n";
             source<<"mixed3 c0i = imag"<<input<<"[i];\n";
             source<<"mixed3 c1r = real"<<input<<"[i+"<<(L*m)<<"];\n";
@@ -443,16 +464,8 @@ string CudaIntegrateRPMDStepKernel::createFFT(int size, const string& variable, 
             source<<"imag"<<output<<"[i+(4*j+3)*"<<m<<"] = "<<multImag<<"(w[j*"<<(3*size)<<"/"<<(5*L)<<"], d8r-d10r, d8i-d10i);\n";
             source<<"real"<<output<<"[i+(4*j+4)*"<<m<<"] = "<<multReal<<"(w[j*"<<(4*size)<<"/"<<(5*L)<<"], d7r-d9r, d7i-d9i);\n";
             source<<"imag"<<output<<"[i+(4*j+4)*"<<m<<"] = "<<multImag<<"(w[j*"<<(4*size)<<"/"<<(5*L)<<"], d7r-d9r, d7i-d9i);\n";
-            source<<"}\n";
-            m = m*5;
-            unfactored /= 5;
         }
-        else if (unfactored%4 == 0) {
-            L = L/4;
-            source<<"// Pass "<<(stage+1)<<" (radix 4)\n";
-            source<<"if (indexInBlock < "<<(L*m)<<") {\n";
-            source<<"int i = indexInBlock;\n";
-            source<<"int j = i/"<<m<<";\n";
+        else if (radix == 4) {
             source<<"mixed3 c0r = real"<<input<<"[i];\n";
             source<<"mixed3 c0i = imag"<<input<<"[i];\n";
             source<<"mixed3 c1r = real"<<input<<"[i+"<<(L*m)<<"];\n";
@@ -477,16 +490,8 @@ string CudaIntegrateRPMDStepKernel::createFFT(int size, const string& variable, 
             source<<"imag"<<output<<"[i+(3*j+2)*"<<m<<"] = "<<multImag<<"(w[j*"<<(2*size)<<"/"<<(4*L)<<"], d0r-d2r, d0i-d2i);\n";
             source<<"real"<<output<<"[i+(3*j+3)*"<<m<<"] = "<<multReal<<"(w[j*"<<(3*size)<<"/"<<(4*L)<<"], d1r-d3r, d1i-d3i);\n";
             source<<"imag"<<output<<"[i+(3*j+3)*"<<m<<"] = "<<multImag<<"(w[j*"<<(3*size)<<"/"<<(4*L)<<"], d1r-d3r, d1i-d3i);\n";
-            source<<"}\n";
-            m = m*4;
-            unfactored /= 4;
         }
-        else if (unfactored%3 == 0) {
-            L = L/3;
-            source<<"// Pass "<<(stage+1)<<" (radix 3)\n";
-            source<<"if (indexInBlock < "<<(L*m)<<") {\n";
-            source<<"int i = indexInBlock;\n";
-            source<<"int j = i/"<<m<<";\n";
+        else if (radix == 3) {
             source<<"mixed3 c0r = real"<<input<<"[i];\n";
             source<<"mixed3 c0i = imag"<<input<<"[i];\n";
             source<<"mixed3 c1r = real"<<input<<"[i+"<<(L*m)<<"];\n";
@@ -505,16 +510,8 @@ string CudaIntegrateRPMDStepKernel::createFFT(int size, const string& variable, 
             source<<"imag"<<output<<"[i+(2*j+1)*"<<m<<"] = "<<multImag<<"(w[j*"<<size<<"/"<<(3*L)<<"], d1r+d2r, d1i+d2i);\n";
             source<<"real"<<output<<"[i+(2*j+2)*"<<m<<"] = "<<multReal<<"(w[j*"<<(2*size)<<"/"<<(3*L)<<"], d1r-d2r, d1i-d2i);\n";
             source<<"imag"<<output<<"[i+(2*j+2)*"<<m<<"] = "<<multImag<<"(w[j*"<<(2*size)<<"/"<<(3*L)<<"], d1r-d2r, d1i-d2i);\n";
-            source<<"}\n";
-            m = m*3;
-            unfactored /= 3;
         }
-        else if (unfactored%2 == 0) {
-            L = L/2;
-            source<<"// Pass "<<(stage+1)<<" (radix 2)\n";
-            source<<"if (indexInBlock < "<<(L*m)<<") {\n";
-            source<<"int i = indexInBlock;\n";
-            source<<"int j = i/"<<m<<";\n";
+        else if (radix == 2) {
             source<<"mixed3 c0r = real"<<input<<"[i];\n";
             source<<"mixed3 c0i = imag"<<input<<"[i];\n";
             source<<"mixed3 c1r = real"<<input<<"[i+"<<(L*m)<<"];\n";
@@ -523,12 +520,9 @@ string CudaIntegrateRPMDStepKernel::createFFT(int size, const string& variable, 
             source<<"imag"<<output<<"[i+j*"<<m<<"] = c0i+c1i;\n";
             source<<"real"<<output<<"[i+(j+1)*"<<m<<"] = "<<multReal<<"(w[j*"<<size<<"/"<<(2*L)<<"], c0r-c1r, c0i-c1i);\n";
             source<<"imag"<<output<<"[i+(j+1)*"<<m<<"] = "<<multImag<<"(w[j*"<<size<<"/"<<(2*L)<<"], c0r-c1r, c0i-c1i);\n";
-            source<<"}\n";
-            m = m*2;
-            unfactored /= 2;
         }
-        else
-            throw OpenMMException("Illegal size for FFT: "+cu.intToString(size));
+        source<<"}\n";
+        m = m*radix;
         source<<"__syncthreads();\n";
         source<<"}\n";
         ++stage;

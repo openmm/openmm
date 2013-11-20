@@ -31,7 +31,7 @@
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceLJCoulombIxn.h"
 #include "ReferenceForce.h"
-#include "PME.h"
+#include "ReferencePME.h"
 
 // In case we're using some primitive version of Visual Studio this will
 // make sure that erf() and erfc() are defined.
@@ -233,7 +233,10 @@ void ReferenceLJCoulombIxn::calculateEwaldIxn(int numberOfAtoms, vector<RealVec>
 
     pme_init(&pmedata,alphaEwald,numberOfAtoms,meshDim,5,1);
 
-    pme_exec(pmedata,atomCoordinates,forces,atomParameters,periodicBoxSize,&recipEnergy,virial);
+    vector<RealOpenMM> charges(numberOfAtoms);
+    for (int i = 0; i < numberOfAtoms; i++)
+        charges[i] = atomParameters[i][QIndex];
+    pme_exec(pmedata,atomCoordinates,forces,charges,periodicBoxSize,&recipEnergy,virial);
 
     if( totalEnergy )
        *totalEnergy += recipEnergy;

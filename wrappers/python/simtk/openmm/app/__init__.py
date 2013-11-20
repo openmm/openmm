@@ -24,6 +24,7 @@ from dcdreporter import DCDReporter
 from modeller import Modeller
 from statedatareporter import StateDataReporter
 from element import Element
+from desmonddmsfile import DesmondDMSFile
 
 # Enumerated values
 

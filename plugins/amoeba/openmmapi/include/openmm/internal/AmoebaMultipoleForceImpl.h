@@ -82,6 +82,8 @@ public:
      */
     static void getCovalentDegree( const AmoebaMultipoleForce& force, std::vector<int>& covalentDegree );
 
+    void getInducedDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
+
     void getElectrostaticPotential( ContextImpl& context, const std::vector< Vec3 >& inputGrid,
                                     std::vector< double >& outputElectrostaticPotential );
 

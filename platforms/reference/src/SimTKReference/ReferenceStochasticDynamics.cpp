@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2012 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2013 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -234,9 +234,8 @@ void ReferenceStochasticDynamics::update(const OpenMM::System& system, vector<Re
    updatePart2( numberOfAtoms, atomCoordinates, velocities, forces, inverseMasses, xPrime );
 
    ReferenceConstraintAlgorithm* referenceConstraintAlgorithm = getReferenceConstraintAlgorithm();
-   if( referenceConstraintAlgorithm ){
-      referenceConstraintAlgorithm->apply( numberOfAtoms, atomCoordinates, xPrime, inverseMasses );
-   }
+   if (referenceConstraintAlgorithm)
+      referenceConstraintAlgorithm->apply(atomCoordinates, xPrime, inverseMasses);
 
    // copy xPrime -> atomCoordinates
 

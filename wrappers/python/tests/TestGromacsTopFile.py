@@ -3,6 +3,7 @@ from validateConstraints import *
 from simtk.openmm.app import *
 from simtk.openmm import *
 from simtk.unit import *
+import simtk.openmm.app.element as elem
 
 class TestGromacsTopFile(unittest.TestCase):
 
@@ -102,6 +103,21 @@ class TestGromacsTopFile(unittest.TestCase):
                 self.assertEqual(force.getReactionFieldDielectric(), 1.0)
         self.assertTrue(found_matching_solvent_dielectric and 
                         found_matching_solute_dielectric)
+
+    def test_HydrogenMass(self):
+        """Test that altering the mass of hydrogens works correctly."""
+        
+        topology = self.top1.topology
+        hydrogenMass = 4*amu
+        system1 = self.top1.createSystem()
+        system2 = self.top1.createSystem(hydrogenMass=hydrogenMass)
+        for atom in topology.atoms():
+            if atom.element == elem.hydrogen:
+                self.assertNotEqual(hydrogenMass, system1.getParticleMass(atom.index))
+                self.assertEqual(hydrogenMass, system2.getParticleMass(atom.index))
+        totalMass1 = sum([system1.getParticleMass(i) for i in range(system1.getNumParticles())]).value_in_unit(amu)
+        totalMass2 = sum([system2.getParticleMass(i) for i in range(system2.getNumParticles())]).value_in_unit(amu)
+        self.assertAlmostEqual(totalMass1, totalMass2)
 
 if __name__ == '__main__':
     unittest.main()

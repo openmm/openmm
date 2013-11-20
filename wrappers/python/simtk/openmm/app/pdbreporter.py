@@ -79,5 +79,6 @@ class PDBReporter(object):
         self._nextModel += 1
 
     def __del__(self):
-        PDBFile.writeFooter(self._topology, self._out)
+        if self._topology is not None:
+            PDBFile.writeFooter(self._topology, self._out)
         self._out.close()
