@@ -241,8 +241,8 @@ class CHeaderGenerator(WrapperGenerator):
                     self.writeArguments(methodNode, False)
                     self.out.write(");\n")
     
-            # Write destructor
-            self.out.write("extern OPENMM_EXPORT void %s_destroy(%s* target);\n" % (typeName, typeName))
+        # Write destructor
+        self.out.write("extern OPENMM_EXPORT void %s_destroy(%s* target);\n" % (typeName, typeName))
 
         # Record method names for future reference.
         methodNames = {}
@@ -489,10 +489,10 @@ class CSourceGenerator(WrapperGenerator):
                     self.out.write("));\n")
                     self.out.write("}\n")
     
-            # Write destructor
-            self.out.write("OPENMM_EXPORT void %s_destroy(%s* target) {\n" % (typeName, typeName))
-            self.out.write("    delete reinterpret_cast<%s*>(target);\n" % className)
-            self.out.write("}\n")
+        # Write destructor
+        self.out.write("OPENMM_EXPORT void %s_destroy(%s* target) {\n" % (typeName, typeName))
+        self.out.write("    delete reinterpret_cast<%s*>(target);\n" % className)
+        self.out.write("}\n")
 
         # Record method names for future reference.
         methodNames = {}
@@ -779,6 +779,17 @@ OPENMM_EXPORT void %(name)s_insert(%(name)s* s, %(type)s value) {
     reinterpret_cast<set<%(type)s>*>(s)->insert(value);
 }""" % values
 
+        print >>self.out, """
+/* These methods need to be handled specially, since their C++ APIs cannot be directly translated to C.
+   Unlike the C++ versions, the return value is allocated on the heap, and you must delete it yourself. */
+OPENMM_EXPORT OpenMM_State* OpenMM_Context_getState(const OpenMM_Context* target, int types, int enforcePeriodicBox) {
+    State result = reinterpret_cast<const Context*>(target)->getState(types, enforcePeriodicBox);
+    return reinterpret_cast<OpenMM_State*>(new State(result));
+};
+OPENMM_EXPORT OpenMM_StringArray* OpenMM_Platform_loadPluginsFromDirectory(const char* directory) {
+    vector<string> result = Platform::loadPluginsFromDirectory(string(directory));
+    return reinterpret_cast<OpenMM_StringArray*>(new vector<string>(result));
+};"""
         self.writeClasses()
         print >>self.out, "}\n"
 
@@ -879,11 +890,11 @@ class FortranHeaderGenerator(WrapperGenerator):
                     self.declareArguments(methodNode)
                     self.out.write("        end subroutine\n")
     
-            # Write destructor
-            self.out.write("        subroutine %s_destroy(destroy)\n" % typeName)
-            self.out.write("            use OpenMM_Types; implicit none\n")
-            self.out.write("            type (%s) destroy\n" % typeName)
-            self.out.write("        end subroutine\n")
+        # Write destructor
+        self.out.write("        subroutine %s_destroy(destroy)\n" % typeName)
+        self.out.write("            use OpenMM_Types; implicit none\n")
+        self.out.write("            type (%s) destroy\n" % typeName)
+        self.out.write("        end subroutine\n")
 
         # Record method names for future reference.
         methodNames = {}
@@ -1252,7 +1263,577 @@ MODULE OpenMM
     end interface
 END MODULE OpenMM"""
 
-#inputDirname = '/Users/peastman/workspace/openmm/bin-release/wrappers/doxygen/xml'
+
+class FortranSourceGenerator(WrapperGenerator):
+    """This class generates the source file for the Fortran API wrappers."""
+
+    def __init__(self, inputDirname, output):
+        WrapperGenerator.__init__(self, inputDirname, output)
+        self.typeTranslations = {'bool': 'OpenMM_Boolean',
+                                 'Vec3': 'OpenMM_Vec3',
+                                 'std::string': 'char*',
+                                 'const std::string &': 'const char*',
+                                 'std::vector< std::string >': 'OpenMM_StringArray',
+                                 'std::vector< Vec3 >': 'OpenMM_Vec3Array',
+                                 'std::vector< std::pair< int, int > >': 'OpenMM_BondArray',
+                                 'std::map< std::string, double >': 'OpenMM_ParameterArray',
+                                 'std::map< std::string, std::string >': 'OpenMM_PropertyArray',
+                                 'std::vector< double >': 'OpenMM_DoubleArray',
+                                 'std::vector< int >': 'OpenMM_IntArray',
+                                 'std::set< int >': 'OpenMM_IntSet'}
+        self.inverseTranslations = dict((self.typeTranslations[key], key) for key in self.typeTranslations)
+        self.classesByShortName = {}
+        self.enumerationTypes = {}
+        self.findTypes()
+    
+    def findTypes(self):
+        for classNode in self._orderedClassNodes:
+            className = getText("compoundname", classNode)
+            shortName = stripOpenMMPrefix(className)
+            typeName = convertOpenMMPrefix(className)
+            self.typesByShortName[shortName] = typeName
+            self.classesByShortName[shortName] = className
+
+    def findEnumerations(self, classNode):
+        enumNodes = []
+        for section in findNodes(classNode, "sectiondef", kind="public-type"):
+            for node in findNodes(section, "memberdef", kind="enum", prot="public"):
+                enumNodes.append(node)
+        className = getText("compoundname", classNode)
+        typeName = convertOpenMMPrefix(className)
+        for enumNode in enumNodes:
+            enumName = getText("name", enumNode)
+            enumTypeName = "%s_%s" % (typeName, enumName)
+            enumClassName = "%s::%s" % (className, enumName)
+            self.typesByShortName[enumName] = enumTypeName
+            self.classesByShortName[enumName] = enumClassName
+            self.enumerationTypes[enumClassName] = enumTypeName
+
+    def writeClasses(self):
+        for classNode in self._orderedClassNodes:
+            className = stripOpenMMPrefix(getText("compoundname", classNode))
+            self.out.write("\n/* OpenMM::%s */\n" % className)
+            self.findEnumerations(classNode)
+            self.writeMethods(classNode)
+        self.out.write("\n")
+
+    def writeMethods(self, classNode):
+        methodList = self.getClassMethods(classNode)
+        className = getText("compoundname", classNode)
+        shortClassName = stripOpenMMPrefix(className)
+        typeName = convertOpenMMPrefix(className)
+        destructorName = '~'+shortClassName
+
+        if not ('abstract' in classNode.attrib and classNode.attrib['abstract'] == 'yes'):
+            # Write constructors
+            numConstructors = 0
+            for methodNode in methodList:
+                methodDefinition = getText("definition", methodNode)
+                shortMethodDefinition = stripOpenMMPrefix(methodDefinition)
+                methodName = shortMethodDefinition.split()[-1]
+                if methodName == shortClassName:
+                    if self.shouldHideMethod(methodNode):
+                        continue
+                    numConstructors += 1
+                    if numConstructors == 1:
+                        suffix = ""
+                    else:
+                        suffix = "_%d" % numConstructors
+                    functionName = "%s_create%s" % (typeName, suffix)
+                    self.writeOneConstructor(classNode, methodNode, functionName, functionName.lower()+'_')
+                    self.writeOneConstructor(classNode, methodNode, functionName, functionName.upper())
+    
+        # Write destructor
+        functionName = "%s_destroy" % typeName
+        self.writeOneDestructor(typeName, functionName.lower()+'_')
+        self.writeOneDestructor(typeName, functionName.upper())
+
+        # Record method names for future reference.
+        methodNames = {}
+        for methodNode in methodList:
+            methodDefinition = getText("definition", methodNode)
+            shortMethodDefinition = stripOpenMMPrefix(methodDefinition)
+            methodNames[methodNode] = shortMethodDefinition.split()[-1]
+        
+        # Write other methods
+        for methodNode in methodList:
+            methodName = methodNames[methodNode]
+            if methodName in (shortClassName, destructorName):
+                continue
+            if '~' in methodName:
+                print '***', methodName, destructorName
+            if self.shouldHideMethod(methodNode):
+                continue
+            isConstMethod = (methodNode.attrib['const'] == 'yes')
+            if isConstMethod and any(methodNames[m] == methodName and m.attrib['const'] == 'no' for m in methodList):
+                # There are two identical methods that differ only in whether they are const.  Skip the const one.
+                continue
+            functionName = "%s_%s" % (typeName, methodName)
+            self.writeOneMethod(classNode, methodNode, functionName, functionName.lower()+'_')
+            self.writeOneMethod(classNode, methodNode, functionName, functionName.upper())
+    
+    def writeOneConstructor(self, classNode, methodNode, functionName, wrapperFunctionName):
+        className = getText("compoundname", classNode)
+        shortClassName = stripOpenMMPrefix(className)
+        typeName = convertOpenMMPrefix(className)
+        self.out.write("OPENMM_EXPORT void %s(%s*& result" % (wrapperFunctionName, typeName))
+        self.writeArguments(methodNode, True)
+        self.out.write(") {\n")
+        self.out.write("    result = %s(" % functionName)
+        self.writeInvocationArguments(methodNode, False)
+        self.out.write(");\n")
+        self.out.write("}\n")
+    
+    def writeOneDestructor(self, typeName, wrapperFunctionName):
+        self.out.write("OPENMM_EXPORT void %s(%s*& destroy) {\n" % (wrapperFunctionName, typeName))
+        self.out.write("    %s_destroy(destroy);\n" % typeName)
+        self.out.write("    destroy = 0;\n")
+        self.out.write("}\n")
+    
+    def writeOneMethod(self, classNode, methodNode, methodName, wrapperFunctionName):
+        className = getText("compoundname", classNode)
+        typeName = convertOpenMMPrefix(className)
+
+
+        isConstMethod = (methodNode.attrib['const'] == 'yes')
+        methodType = getText("type", methodNode)
+        returnType = self.getType(methodType)
+        hasReturnValue = (returnType in ('int', 'bool', 'double'))
+        hasReturnArg = not (hasReturnValue or returnType == 'void')
+        if methodType in self.classesByShortName:
+            methodType = self.classesByShortName[methodType]
+        self.out.write("OPENMM_EXPORT ")
+        if hasReturnValue:
+            self.out.write(returnType)
+        else:
+            self.out.write('void')
+        self.out.write(" %s(" % wrapperFunctionName)
+        isInstanceMethod = (methodNode.attrib['static'] != 'yes')
+        if isInstanceMethod:
+            if isConstMethod:
+                self.out.write('const ')
+            self.out.write("%s*& target" % typeName)
+        returnArg = None
+        if hasReturnArg:
+            if returnType == 'const char*':
+                # We need a non-const buffer to copy the result into
+                returnArg = 'char* result'
+            else:
+                returnArg = "%s& result" % returnType
+        numArgs = self.writeArguments(methodNode, isInstanceMethod, returnArg)
+        if hasReturnArg and returnType == 'const char*':
+            self.out.write(", int result_length")
+        self.out.write(") {\n")
+        self.out.write("    ")
+        if hasReturnValue:
+            self.out.write("return ")
+        if hasReturnArg:
+            if returnType == 'const char*':
+                self.out.write("const char* result_chars = ")
+            else:
+                self.out.write("result = ")
+        self.out.write("%s(" % methodName)
+        if isInstanceMethod:
+            self.out.write("target")
+        self.writeInvocationArguments(methodNode, isInstanceMethod)
+        self.out.write(');\n')
+        if hasReturnArg and returnType == 'const char*':
+            self.out.write("    copyAndPadString(result, result_chars, result_length);\n")
+        self.out.write("}\n")
+    
+    def writeArguments(self, methodNode, initialSeparator, extraArg=None):
+        paramList = findNodes(methodNode, 'param')
+        if initialSeparator:
+            separator = ", "
+        else:
+            separator = ""
+        numArgs = 0
+        
+        # Write the arguments.
+        
+        for node in paramList:
+            try:
+                type = getText('type', node)
+            except IndexError:
+                type = getText('type/ref', node)
+            if type == 'void':
+                continue
+            type = self.getType(type)
+            if self.isHandleType(type):
+                type = type+'&'
+            elif type[-1] not in ('&', '*'):
+                type = type+' const&'
+            name = getText('declname', node)
+            self.out.write("%s%s %s" % (separator, type, name))
+            separator = ", "
+            numArgs += 1
+        
+        # If an extra argument is needed for the return value, write it.
+        
+        if extraArg is not None:
+            self.out.write("%s%s" % (separator, extraArg))
+            separator = ", "
+            numArgs += 1
+        
+        # Write length arguments for strings.
+        
+        for node in paramList:
+            try:
+                type = getText('type', node)
+            except IndexError:
+                type = getText('type/ref', node)
+            if type == 'const std::string &':
+                name = getText('declname', node)
+                self.out.write(", int %s_length" % name)
+                numArgs += 1
+        return numArgs
+    
+    def writeInvocationArguments(self, methodNode, initialSeparator):
+        paramList = findNodes(methodNode, 'param')
+        if initialSeparator:
+            separator = ", "
+        else:
+            separator = ""
+        for node in paramList:
+            try:
+                type = getText('type', node)
+            except IndexError:
+                type = getText('type/ref', node)
+            if type == 'void':
+                continue
+            name = getText('declname', node)
+            if type == 'const std::string &':
+                name = 'makeString(%s, %s_length).c_str()' % (name, name)
+            self.out.write("%s%s" % (separator, name))
+            separator = ", "
+    
+    def getType(self, type):
+        if type in self.typeTranslations:
+            return self.typeTranslations[type]
+        if type in self.typesByShortName:
+            return self.typesByShortName[type]
+        if type.startswith('const '):
+            return 'const '+self.getType(type[6:].strip())
+        if type.endswith('&') or type.endswith('*'):
+            return self.getType(type[:-1].strip())+'*'
+        return type
+    
+    def isHandleType(self, type):
+        if type.startswith('OpenMM_'):
+            return True;
+        if type == 'Vec3':
+            return True
+        if type.endswith('*') or type.endswith('&'):
+            return self.isHandleType(type[:-1].strip())
+        if type.startswith('const '):
+            return self.isHandleType(type[6:].strip())
+        return False
+
+    def writeOutput(self):
+        print >>self.out, """
+#include "OpenMM.h"
+#include "OpenMMCWrapper.h"
+#include <cstring>
+#include <vector>
+
+using namespace OpenMM;
+using namespace std;
+
+/* Utilities for dealing with Fortran's blank-padded strings. */
+static void copyAndPadString(char* dest, const char* source, int length) {
+    bool reachedEnd = false;
+    for (int i = 0; i < length; i++) {
+        if (source[i] == 0)
+            reachedEnd = true;
+        dest[i] = (reachedEnd ? ' ' : source[i]);
+    }
+}
+
+static string makeString(const char* fsrc, int length) {
+    while (length && fsrc[length-1]==' ')
+        --length;
+    return string(fsrc, length);
+}
+
+extern "C" {
+
+/* OpenMM_Vec3 */
+OPENMM_EXPORT void openmm_vec3_scale_(const OpenMM_Vec3& vec, double const& scale, OpenMM_Vec3& result) {
+    result = OpenMM_Vec3_scale(vec, scale);
+}
+OPENMM_EXPORT void OPENMM_VEC3_SCALE(const OpenMM_Vec3& vec, double const& scale, OpenMM_Vec3& result) {
+    result = OpenMM_Vec3_scale(vec, scale);
+}
+
+/* OpenMM_Vec3Array */
+OPENMM_EXPORT void openmm_vec3array_create_(OpenMM_Vec3Array*& result, const int& size) {
+    result = OpenMM_Vec3Array_create(size);
+}
+OPENMM_EXPORT void OPENMM_VEC3ARRAY_CREATE(OpenMM_Vec3Array*& result, const int& size) {
+    result = OpenMM_Vec3Array_create(size);
+}
+OPENMM_EXPORT void openmm_vec3array_destroy_(OpenMM_Vec3Array*& array) {
+    OpenMM_Vec3Array_destroy(array);
+    array = 0;
+}
+OPENMM_EXPORT void OPENMM_VEC3ARRAY_DESTROY(OpenMM_Vec3Array*& array) {
+    OpenMM_Vec3Array_destroy(array);
+    array = 0;
+}
+OPENMM_EXPORT int openmm_vec3array_getsize_(const OpenMM_Vec3Array* const& array) {
+    return OpenMM_Vec3Array_getSize(array);
+}
+OPENMM_EXPORT int OPENMM_VEC3ARRAY_GETSIZE(const OpenMM_Vec3Array* const& array) {
+    return OpenMM_Vec3Array_getSize(array);
+}
+OPENMM_EXPORT void openmm_vec3array_resize_(OpenMM_Vec3Array* const& array, const int& size) {
+    OpenMM_Vec3Array_resize(array, size);
+}
+OPENMM_EXPORT void OPENMM_VEC3ARRAY_RESIZE(OpenMM_Vec3Array* const& array, const int& size) {
+    OpenMM_Vec3Array_resize(array, size);
+}
+OPENMM_EXPORT void openmm_vec3array_append_(OpenMM_Vec3Array* const& array, const OpenMM_Vec3& vec) {
+    OpenMM_Vec3Array_append(array, vec);
+}
+OPENMM_EXPORT void OPENMM_VEC3ARRAY_APPEND(OpenMM_Vec3Array* const& array, const OpenMM_Vec3& vec) {
+    OpenMM_Vec3Array_append(array, vec);
+}
+OPENMM_EXPORT void openmm_vec3array_set_(OpenMM_Vec3Array* const& array, const int& index, const OpenMM_Vec3& vec) {
+    OpenMM_Vec3Array_set(array, index-1, vec);
+}
+OPENMM_EXPORT void OPENMM_VEC3ARRAY_SET(OpenMM_Vec3Array* const& array, const int& index, const OpenMM_Vec3& vec) {
+    OpenMM_Vec3Array_set(array, index-1, vec);
+}
+OPENMM_EXPORT void openmm_vec3array_get_(const OpenMM_Vec3Array* const& array, const int& index, OpenMM_Vec3& result) {
+    result = *OpenMM_Vec3Array_get(array, index-1);
+}
+OPENMM_EXPORT void OPENMM_VEC3ARRAY_GET(const OpenMM_Vec3Array* const& array, const int& index, OpenMM_Vec3& result) {
+    result = *OpenMM_Vec3Array_get(array, index-1);
+}
+
+/* OpenMM_StringArray */
+OPENMM_EXPORT void openmm_stringarray_create_(OpenMM_StringArray*& result, const int& size) {
+    result = OpenMM_StringArray_create(size);
+}
+OPENMM_EXPORT void OPENMM_STRINGARRAY_CREATE(OpenMM_StringArray*& result, const int& size) {
+    result = OpenMM_StringArray_create(size);
+}
+OPENMM_EXPORT void openmm_stringarray_destroy_(OpenMM_StringArray*& array) {
+    OpenMM_StringArray_destroy(array);
+    array = 0;
+}
+OPENMM_EXPORT void OPENMM_STRINGARRAY_DESTROY(OpenMM_StringArray*& array) {
+    OpenMM_StringArray_destroy(array);
+    array = 0;
+}
+OPENMM_EXPORT int openmm_stringarray_getsize_(const OpenMM_StringArray* const& array) {
+    return OpenMM_StringArray_getSize(array);
+}
+OPENMM_EXPORT int OPENMM_STRINGARRAY_GETSIZE(const OpenMM_StringArray* const& array) {
+    return OpenMM_StringArray_getSize(array);
+}
+OPENMM_EXPORT void openmm_stringarray_resize_(OpenMM_StringArray* const& array, const int& size) {
+    OpenMM_StringArray_resize(array, size);
+}
+OPENMM_EXPORT void OPENMM_STRINGARRAY_RESIZE(OpenMM_StringArray* const& array, const int& size) {
+    OpenMM_StringArray_resize(array, size);
+}
+OPENMM_EXPORT void openmm_stringarray_append_(OpenMM_StringArray* const& array, const char* str, int length) {
+    OpenMM_StringArray_append(array, makeString(str, length).c_str());
+}
+OPENMM_EXPORT void OPENMM_STRINGARRAY_APPEND(OpenMM_StringArray* const& array, const char* str, int length) {
+    OpenMM_StringArray_append(array, makeString(str, length).c_str());
+}
+OPENMM_EXPORT void openmm_stringarray_set_(OpenMM_StringArray* const& array, const int& index, const char* str, int length) {
+  OpenMM_StringArray_set(array, index-1, makeString(str, length).c_str());
+  }
+OPENMM_EXPORT void OPENMM_STRINGARRAY_SET(OpenMM_StringArray* const& array, const int& index, const char* str, int length) {
+  OpenMM_StringArray_set(array, index-1, makeString(str, length).c_str());
+}
+OPENMM_EXPORT void openmm_stringarray_get_(const OpenMM_StringArray* const& array, const int& index, char* result, int length) {
+    const char* str = OpenMM_StringArray_get(array, index-1);
+    copyAndPadString(result, str, length);
+}
+OPENMM_EXPORT void OPENMM_STRINGARRAY_GET(const OpenMM_StringArray* const& array, const int& index, char* result, int length) {
+    const char* str = OpenMM_StringArray_get(array, index-1);
+    copyAndPadString(result, str, length);
+}
+
+/* OpenMM_BondArray */
+OPENMM_EXPORT void openmm_bondarray_create_(OpenMM_BondArray*& result, const int& size) {
+    result = OpenMM_BondArray_create(size);
+}
+OPENMM_EXPORT void OPENMM_BONDARRAY_CREATE(OpenMM_BondArray*& result, const int& size) {
+    result = OpenMM_BondArray_create(size);
+}
+OPENMM_EXPORT void openmm_bondarray_destroy_(OpenMM_BondArray*& array) {
+    OpenMM_BondArray_destroy(array);
+    array = 0;
+}
+OPENMM_EXPORT void OPENMM_BONDARRAY_DESTROY(OpenMM_BondArray*& array) {
+    OpenMM_BondArray_destroy(array);
+    array = 0;
+}
+OPENMM_EXPORT int openmm_bondarray_getsize_(const OpenMM_BondArray* const& array) {
+    return OpenMM_BondArray_getSize(array);
+}
+OPENMM_EXPORT int OPENMM_BONDARRAY_GETSIZE(const OpenMM_BondArray* const& array) {
+    return OpenMM_BondArray_getSize(array);
+}
+OPENMM_EXPORT void openmm_bondarray_resize_(OpenMM_BondArray* const& array, const int& size) {
+    OpenMM_BondArray_resize(array, size);
+}
+OPENMM_EXPORT void OPENMM_BONDARRAY_RESIZE(OpenMM_BondArray* const& array, const int& size) {
+    OpenMM_BondArray_resize(array, size);
+}
+OPENMM_EXPORT void openmm_bondarray_append_(OpenMM_BondArray* const& array, const int& particle1, const int& particle2) {
+    OpenMM_BondArray_append(array, particle1, particle2);
+}
+OPENMM_EXPORT void OPENMM_BONDARRAY_APPEND(OpenMM_BondArray* const& array, const int& particle1, const int& particle2) {
+    OpenMM_BondArray_append(array, particle1, particle2);
+}
+OPENMM_EXPORT void openmm_bondarray_set_(OpenMM_BondArray* const& array, const int& index, const int& particle1, const int& particle2) {
+    OpenMM_BondArray_set(array, index-1, particle1, particle2);
+}
+OPENMM_EXPORT void OPENMM_BONDARRAY_SET(OpenMM_BondArray* const& array, const int& index, const int& particle1, const int& particle2) {
+    OpenMM_BondArray_set(array, index-1, particle1, particle2);
+}
+OPENMM_EXPORT void openmm_bondarray_get_(const OpenMM_BondArray* const& array, const int& index, int* particle1, int* particle2) {
+    OpenMM_BondArray_get(array, index-1, particle1, particle2);
+}
+OPENMM_EXPORT void OPENMM_BONDARRAY_GET(const OpenMM_BondArray* const& array, const int& index, int* particle1, int* particle2) {
+    OpenMM_BondArray_get(array, index-1, particle1, particle2);
+}
+
+/* OpenMM_ParameterArray */
+OPENMM_EXPORT int openmm_parameterarray_getsize_(const OpenMM_ParameterArray* const& array) {
+    return OpenMM_ParameterArray_getSize(array);
+}
+OPENMM_EXPORT int OPENMM_PARAMETERARRAY_GETSIZE(const OpenMM_ParameterArray* const& array) {
+    return OpenMM_ParameterArray_getSize(array);
+}
+OPENMM_EXPORT double openmm_parameterarray_get_(const OpenMM_ParameterArray* const& array, const char* name, int length) {
+    return OpenMM_ParameterArray_get(array, makeString(name, length).c_str());
+}
+OPENMM_EXPORT double OPENMM_PARAMETERARRAY_GET(const OpenMM_ParameterArray* const& array, const char* name, int length) {
+    return OpenMM_ParameterArray_get(array, makeString(name, length).c_str());
+}
+
+/* OpenMM_PropertyArray */
+OPENMM_EXPORT int openmm_propertyarray_getsize_(const OpenMM_PropertyArray* const& array) {
+    return OpenMM_PropertyArray_getSize(array);
+}
+OPENMM_EXPORT int OPENMM_PROPERTYARRAY_GETSIZE(const OpenMM_PropertyArray* const& array) {
+    return OpenMM_PropertyArray_getSize(array);
+}
+OPENMM_EXPORT const char* openmm_propertyarray_get_(const OpenMM_PropertyArray* const& array, const char* name, int length) {
+    return OpenMM_PropertyArray_get(array, makeString(name, length).c_str());
+}
+OPENMM_EXPORT const char* OPENMM_PROPERTYARRAY_GET(const OpenMM_PropertyArray* const& array, const char* name, int length) {
+    return OpenMM_PropertyArray_get(array, makeString(name, length).c_str());
+}"""
+
+        for type in ('double', 'int'):
+            name = 'OpenMM_%sArray' % type.capitalize()
+            values = {'type':type, 'name':name, 'name_lower':name.lower(), 'name_upper':name.upper()}
+            print >>self.out, """
+/* %(name)s */
+OPENMM_EXPORT void %(name_lower)s_create_(%(name)s*& result, const int& size) {
+    result = %(name)s_create(size);
+}
+OPENMM_EXPORT void %(name_upper)s_CREATE(%(name)s*& result, const int& size) {
+    result = %(name)s_create(size);
+}
+OPENMM_EXPORT void %(name_lower)s_destroy_(%(name)s*& array) {
+    %(name)s_destroy(array);
+    array = 0;
+}
+OPENMM_EXPORT void %(name_upper)s_DESTROY(%(name)s*& array) {
+    %(name)s_destroy(array);
+    array = 0;
+}
+OPENMM_EXPORT int %(name_lower)s_getsize_(const %(name)s* const& array) {
+    return %(name)s_getSize(array);
+}
+OPENMM_EXPORT int %(name_upper)s_GETSIZE(const %(name)s* const& array) {
+    return %(name)s_getSize(array);
+}
+OPENMM_EXPORT void %(name_lower)s_resize_(%(name)s* const& array, const int& size) {
+    %(name)s_resize(array, size);
+}
+OPENMM_EXPORT void %(name_upper)s_RESIZE(%(name)s* const& array, const int& size) {
+    %(name)s_resize(array, size);
+}
+OPENMM_EXPORT void %(name_lower)s_append_(%(name)s* const& array, const %(type)s& value) {
+    %(name)s_append(array, value);
+}
+OPENMM_EXPORT void %(name_upper)s_APPEND(%(name)s* const& array, const %(type)s& value) {
+    %(name)s_append(array, value);
+}
+OPENMM_EXPORT void %(name_lower)s_set_(%(name)s* const& array, const int& index, const %(type)s& value) {
+    %(name)s_set(array, index-1, value);
+}
+OPENMM_EXPORT void %(name_upper)s_SET(%(name)s* const& array, const int& index, const %(type)s& value) {
+    %(name)s_set(array, index-1, value);
+}
+OPENMM_EXPORT void %(name_lower)s_get_(const %(name)s* const& array, const int& index, %(type)s& result) {
+    result = %(name)s_get(array, index-1);
+}
+OPENMM_EXPORT void %(name_upper)s_GET(const %(name)s* const& array, const int& index, %(type)s& result) {
+    result = %(name)s_get(array, index-1);
+}""" % values
+
+        for type in ('int', ):
+            name = 'OpenMM_%sSet' % type.capitalize()
+            values = {'type':type, 'name':name, 'name_lower':name.lower(), 'name_upper':name.upper()}
+            print >>self.out, """
+/* %(name)s */
+OPENMM_EXPORT void %(name_lower)s_create_(%(name)s*& result) {
+    result = %(name)s_create();
+}
+OPENMM_EXPORT void %(name_upper)s_CREATE(%(name)s*& result) {
+    result = %(name)s_create();
+}
+OPENMM_EXPORT void %(name_lower)s_destroy_(%(name)s*& array) {
+    %(name)s_destroy(array);
+    array = 0;
+}
+OPENMM_EXPORT void %(name_upper)s_DESTROY(%(name)s*& array) {
+    %(name)s_destroy(array);
+    array = 0;
+}
+OPENMM_EXPORT int %(name_lower)s_getsize_(const %(name)s* const& array) {
+    return %(name)s_getSize(array);
+}
+OPENMM_EXPORT int %(name_upper)s_GETSIZE(const %(name)s* const& array) {
+    return %(name)s_getSize(array);
+}
+OPENMM_EXPORT void %(name_lower)s_insert_(%(name)s* const& array, const %(type)s& value) {
+    %(name)s_insert(array, value);
+}
+OPENMM_EXPORT void %(name_upper)s_INSERT(%(name)s* const& array, const %(type)s& value) {
+    %(name)s_insert(array, value);
+}""" % values
+
+        print >>self.out, """
+/* These methods need to be handled specially, since their C++ APIs cannot be directly translated to C.
+   Unlike the C++ versions, the return value is allocated on the heap, and you must delete it yourself. */
+OPENMM_EXPORT void openmm_context_getstate_(const OpenMM_Context*& target, int const& types, int const& enforcePeriodicBox, OpenMM_State*& result) {
+    result = OpenMM_Context_getState(target, types, enforcePeriodicBox);
+};
+OPENMM_EXPORT void OPENMM_CONTEXT_GETSTATE(const OpenMM_Context*& target, int const& types, int const& enforcePeriodicBox, OpenMM_State*& result) {
+    result = OpenMM_Context_getState(target, types, enforcePeriodicBox);
+};
+OPENMM_EXPORT void openmm_platform_loadpluginsfromdirectory_(const char* directory, OpenMM_StringArray*& result, int length) {
+    result = OpenMM_Platform_loadPluginsFromDirectory(makeString(directory, length).c_str());
+};
+OPENMM_EXPORT void OPENMM_PLATFORM_LOADPLUGINSFROMDIRECTORY(const char* directory, OpenMM_StringArray*& result, int length) {
+    result = OpenMM_Platform_loadPluginsFromDirectory(makeString(directory, length).c_str());
+};"""
+
+        self.writeClasses()
+        print >>self.out, "}"
+
 inputDirname = sys.argv[1]
 builder = CHeaderGenerator(inputDirname, open(os.path.join(sys.argv[2], 'OpenMMCWrapper.h'), 'w'))
 builder.writeOutput()
@@ -1260,5 +1841,5 @@ builder = CSourceGenerator(inputDirname, open(os.path.join(sys.argv[2], 'OpenMMC
 builder.writeOutput()
 builder = FortranHeaderGenerator(inputDirname, open(os.path.join(sys.argv[2], 'OpenMMFortranModule.f90'), 'w'))
 builder.writeOutput()
-#builder = FortranHeaderGenerator(inputDirname, sys.stdout)
-#builder.writeOutput()
+builder = FortranSourceGenerator(inputDirname, open(os.path.join(sys.argv[2], 'OpenMMFortranWrapper.cpp'), 'w'))
+builder.writeOutput()
