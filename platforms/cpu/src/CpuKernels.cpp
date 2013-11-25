@@ -260,7 +260,7 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
     vector<RealVec>& forceData = extractForces(context);
     RealVec boxSize = extractBoxSize(context);
     float floatBoxSize[3] = {(float) boxSize[0], (float) boxSize[1], (float) boxSize[2]};
-    double energy = ewaldSelfEnergy;
+    double energy = (includeReciprocal ? ewaldSelfEnergy : 0.0);
     bool ewald  = (nonbondedMethod == Ewald);
     bool pme  = (nonbondedMethod == PME);
     if (nonbondedMethod != NoCutoff) {
@@ -330,7 +330,7 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
             PmeIO io(&posq[0], &data.threadForce[0][0], numParticles);
             Vec3 periodicBoxSize(boxSize[0], boxSize[1], boxSize[2]);
             optimizedPme.getAs<CalcPmeReciprocalForceKernel>().beginComputation(io, periodicBoxSize, includeEnergy);
-            optimizedPme.getAs<CalcPmeReciprocalForceKernel>().finishComputation(io);
+            nonbondedEnergy += optimizedPme.getAs<CalcPmeReciprocalForceKernel>().finishComputation(io);
         }
         else
             nonbonded.calculateReciprocalIxn(numParticles, &posq[0], posData, particleParams, exclusions, forceData, includeEnergy ? &nonbondedEnergy : NULL);
