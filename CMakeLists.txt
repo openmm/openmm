@@ -73,7 +73,7 @@ ENDIF(${CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT})
 
 # The source is organized into subdirectories, but we handle them all from
 # this CMakeLists file rather than letting CMake visit them as SUBDIRS.
-SET(OPENMM_SOURCE_SUBDIRS . openmmapi olla libraries/jama libraries/quern libraries/lepton libraries/sfmt libraries/lbfgs libraries/hilbert libraries/csha1 platforms/reference libraries/validate)
+SET(OPENMM_SOURCE_SUBDIRS . openmmapi olla libraries/jama libraries/quern libraries/lepton libraries/sfmt libraries/lbfgs libraries/hilbert libraries/csha1 platforms/reference serialization libraries/validate)
 IF(WIN32)
     SET(OPENMM_SOURCE_SUBDIRS ${OPENMM_SOURCE_SUBDIRS} libraries/pthreads)
     ADD_CUSTOM_TARGET(PthreadsLibraries ALL)
@@ -429,18 +429,14 @@ INSTALL_FILES(/include/openmm/reference FILES ${REFERENCE_HEADERS})
 
 # Serialization support
 
-SET(OPENMM_BUILD_SERIALIZATION_SUPPORT ON CACHE BOOL "Whether to build the serialization support library")
-IF (OPENMM_BUILD_SERIALIZATION_SUPPORT)
-    ADD_SUBDIRECTORY(serialization)
-ENDIF (OPENMM_BUILD_SERIALIZATION_SUPPORT)
+ADD_SUBDIRECTORY(serialization)
+FILE(GLOB serialization_files  ${CMAKE_SOURCE_DIR}/serialization/src/*.cpp)
+SET_SOURCE_FILES_PROPERTIES(${serialization_files} PROPERTIES COMPILE_FLAGS "-DOPENMM_BUILDING_SHARED_LIBRARY -DTIXML_USE_STL -DIEEE_8087")
 
 # Python wrappers
 
 SET(OPENMM_BUILD_PYTHON_WRAPPERS ON CACHE BOOL "Build wrappers for Python")
 IF(OPENMM_BUILD_PYTHON_WRAPPERS)
-    IF(NOT OPENMM_BUILD_SERIALIZATION_SUPPORT)
-        MESSAGE(SEND_ERROR "The Python wrappers require that serialization support be built.")
-    ENDIF(NOT OPENMM_BUILD_SERIALIZATION_SUPPORT)
     IF(NOT OPENMM_BUILD_AMOEBA_PLUGIN)
         MESSAGE(SEND_ERROR "The Python wrappers require that the AMOEBA plugin be built.")
     ENDIF(NOT OPENMM_BUILD_AMOEBA_PLUGIN)
