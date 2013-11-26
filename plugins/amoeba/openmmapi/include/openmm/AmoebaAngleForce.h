@@ -175,6 +175,10 @@ private:
     std::vector<AngleInfo> angles;
 };
 
+/**
+ * This is an internal class used to record information about an angle.
+ * @private
+ */
 class AmoebaAngleForce::AngleInfo {
 public:
     int particle1, particle2, particle3;

@@ -66,8 +66,8 @@ class WrapperGenerator:
     """This is the parent class of generators for various API wrapper files.  It defines functions common to all of them."""
     
     def __init__(self, inputDirname, output):
-        self.skipClasses = ['OpenMM::Vec3', 'OpenMM::XmlSerializer', 'OpenMM::Kernel', 'OpenMM::KernelImpl', 'OpenMM::KernelFactory', 'OpenMM::ContextImpl', 'OpenMM::SerializationNode', 'OpenMM::SerializationProxy']
-        self.skipMethods = ['OpenMM::Context::getState', 'OpenMM::Platform::loadPluginsFromDirectory', 'OpenMM::Context::createCheckpoint', 'OpenMM::Context::loadCheckpoint']
+        self.skipClasses = []
+        self.skipMethods = []
         self.hideClasses = ['Kernel', 'KernelImpl', 'KernelFactory', 'ContextImpl', 'SerializationNode', 'SerializationProxy']
         self.nodeByID={}
 
@@ -152,6 +152,7 @@ class CHeaderGenerator(WrapperGenerator):
         WrapperGenerator.__init__(self, inputDirname, output)
         self.typeTranslations = {'bool': 'OpenMM_Boolean',
                                  'Vec3': 'OpenMM_Vec3',
+                                 'Context': 'OpenMM_Context',
                                  'std::string': 'char*',
                                  'const std::string &': 'const char*',
                                  'std::vector< std::string >': 'OpenMM_StringArray',
@@ -161,7 +162,9 @@ class CHeaderGenerator(WrapperGenerator):
                                  'std::map< std::string, std::string >': 'OpenMM_PropertyArray',
                                  'std::vector< double >': 'OpenMM_DoubleArray',
                                  'std::vector< int >': 'OpenMM_IntArray',
-                                 'std::set< int >': 'OpenMM_IntSet'}
+                                 'std::set< int >': 'OpenMM_IntSet',
+                                 'std::vector< std::vector< int > >': 'OpenMM_2D_IntArray',
+                                 'std::vector< std::vector< std::vector< double > > >': 'OpenMM_3D_DoubleArray'}
     
     def writeGlobalConstants(self):
         self.out.write("/* Global Constants */\n\n")
@@ -237,12 +240,12 @@ class CHeaderGenerator(WrapperGenerator):
                         suffix = ""
                     else:
                         suffix = "_%d" % numConstructors
-                    self.out.write("extern OPENMM_EXPORT %s* %s_create%s(" % (typeName, typeName, suffix))
+                    self.out.write("extern OPENMM_EXPORT_AMOEBA %s* %s_create%s(" % (typeName, typeName, suffix))
                     self.writeArguments(methodNode, False)
                     self.out.write(");\n")
     
         # Write destructor
-        self.out.write("extern OPENMM_EXPORT void %s_destroy(%s* target);\n" % (typeName, typeName))
+        self.out.write("extern OPENMM_EXPORT_AMOEBA void %s_destroy(%s* target);\n" % (typeName, typeName))
 
         # Record method names for future reference.
         methodNames = {}
@@ -263,7 +266,7 @@ class CHeaderGenerator(WrapperGenerator):
                 # There are two identical methods that differ only in whether they are const.  Skip the const one.
                 continue
             returnType = self.getType(getText("type", methodNode))
-            self.out.write("extern OPENMM_EXPORT %s %s_%s(" % (returnType, typeName, methodName))
+            self.out.write("extern OPENMM_EXPORT_AMOEBA %s %s_%s(" % (returnType, typeName, methodName))
             isInstanceMethod = (methodNode.attrib['static'] != 'yes')
             if isInstanceMethod:
                 if isConstMethod:
@@ -303,98 +306,26 @@ class CHeaderGenerator(WrapperGenerator):
 
     def writeOutput(self):
         print >>self.out, """
-#ifndef OPENMM_CWRAPPER_H_
-#define OPENMM_CWRAPPER_H_
+#ifndef AMOEBA_OPENMM_CWRAPPER_H_
+#define AMOEBA_OPENMM_CWRAPPER_H_
 
-#ifndef OPENMM_EXPORT
-#define OPENMM_EXPORT
-#endif
-"""
+#ifndef OPENMM_EXPORT_AMOEBA
+#define OPENMM_EXPORT_AMOEBA
+#endif"""
         self.writeGlobalConstants()
         self.writeTypeDeclarations()
         print >>self.out, """
-typedef struct OpenMM_Vec3Array_struct OpenMM_Vec3Array;
-typedef struct OpenMM_StringArray_struct OpenMM_StringArray;
-typedef struct OpenMM_BondArray_struct OpenMM_BondArray;
-typedef struct OpenMM_ParameterArray_struct OpenMM_ParameterArray;
-typedef struct OpenMM_PropertyArray_struct OpenMM_PropertyArray;
-typedef struct OpenMM_DoubleArray_struct OpenMM_DoubleArray;
-typedef struct OpenMM_IntArray_struct OpenMM_IntArray;
-typedef struct OpenMM_IntSet_struct OpenMM_IntSet;
-typedef struct {double x, y, z;} OpenMM_Vec3;
-
-typedef enum {OpenMM_False = 0, OpenMM_True = 1} OpenMM_Boolean;
+typedef struct OpenMM_2D_IntArray_struct OpenMM_2D_IntArray;
+typedef struct OpenMM_3D_DoubleArray_struct OpenMM_3D_DoubleArray;
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
 
-/* OpenMM_Vec3 */
-extern OPENMM_EXPORT OpenMM_Vec3 OpenMM_Vec3_scale(const OpenMM_Vec3 vec, double scale);
-
-/* OpenMM_Vec3Array */
-extern OPENMM_EXPORT OpenMM_Vec3Array* OpenMM_Vec3Array_create(int size);
-extern OPENMM_EXPORT void OpenMM_Vec3Array_destroy(OpenMM_Vec3Array* array);
-extern OPENMM_EXPORT int OpenMM_Vec3Array_getSize(const OpenMM_Vec3Array* array);
-extern OPENMM_EXPORT void OpenMM_Vec3Array_resize(OpenMM_Vec3Array* array, int size);
-extern OPENMM_EXPORT void OpenMM_Vec3Array_append(OpenMM_Vec3Array* array, const OpenMM_Vec3 vec);
-extern OPENMM_EXPORT void OpenMM_Vec3Array_set(OpenMM_Vec3Array* array, int index, const OpenMM_Vec3 vec);
-extern OPENMM_EXPORT const OpenMM_Vec3* OpenMM_Vec3Array_get(const OpenMM_Vec3Array* array, int index);
-
-/* OpenMM_StringArray */
-extern OPENMM_EXPORT OpenMM_StringArray* OpenMM_StringArray_create(int size);
-extern OPENMM_EXPORT void OpenMM_StringArray_destroy(OpenMM_StringArray* array);
-extern OPENMM_EXPORT int OpenMM_StringArray_getSize(const OpenMM_StringArray* array);
-extern OPENMM_EXPORT void OpenMM_StringArray_resize(OpenMM_StringArray* array, int size);
-extern OPENMM_EXPORT void OpenMM_StringArray_append(OpenMM_StringArray* array, const char* string);
-extern OPENMM_EXPORT void OpenMM_StringArray_set(OpenMM_StringArray* array, int index, const char* string);
-extern OPENMM_EXPORT const char* OpenMM_StringArray_get(const OpenMM_StringArray* array, int index);
-
-/* OpenMM_BondArray */
-extern OPENMM_EXPORT OpenMM_BondArray* OpenMM_BondArray_create(int size);
-extern OPENMM_EXPORT void OpenMM_BondArray_destroy(OpenMM_BondArray* array);
-extern OPENMM_EXPORT int OpenMM_BondArray_getSize(const OpenMM_BondArray* array);
-extern OPENMM_EXPORT void OpenMM_BondArray_resize(OpenMM_BondArray* array, int size);
-extern OPENMM_EXPORT void OpenMM_BondArray_append(OpenMM_BondArray* array, int particle1, int particle2);
-extern OPENMM_EXPORT void OpenMM_BondArray_set(OpenMM_BondArray* array, int index, int particle1, int particle2);
-extern OPENMM_EXPORT void OpenMM_BondArray_get(const OpenMM_BondArray* array, int index, int* particle1, int* particle2);
-
-/* OpenMM_ParameterArray */
-extern OPENMM_EXPORT int OpenMM_ParameterArray_getSize(const OpenMM_ParameterArray* array);
-extern OPENMM_EXPORT double OpenMM_ParameterArray_get(const OpenMM_ParameterArray* array, const char* name);
-
-/* OpenMM_PropertyArray */
-extern OPENMM_EXPORT int OpenMM_PropertyArray_getSize(const OpenMM_PropertyArray* array);
-extern OPENMM_EXPORT const char* OpenMM_PropertyArray_get(const OpenMM_PropertyArray* array, const char* name);"""
-
-        for type in ('double', 'int'):
-            name = 'OpenMM_%sArray' % type.capitalize()
-            values = {'type':type, 'name':name}
-            print >>self.out, """
-/* %(name)s */
-extern OPENMM_EXPORT %(name)s* %(name)s_create(int size);
-extern OPENMM_EXPORT void %(name)s_destroy(%(name)s* array);
-extern OPENMM_EXPORT int %(name)s_getSize(const %(name)s* array);
-extern OPENMM_EXPORT void %(name)s_resize(%(name)s* array, int size);
-extern OPENMM_EXPORT void %(name)s_append(%(name)s* array, %(type)s value);
-extern OPENMM_EXPORT void %(name)s_set(%(name)s* array, int index, %(type)s value);
-extern OPENMM_EXPORT %(type)s %(name)s_get(const %(name)s* array, int index);""" % values
-
-        for type in ('int',):
-            name = 'OpenMM_%sSet' % type.capitalize()
-            values = {'type':type, 'name':name}
-            print >>self.out, """
-/* %(name)s */
-extern OPENMM_EXPORT %(name)s* %(name)s_create();
-extern OPENMM_EXPORT void %(name)s_destroy(%(name)s* set);
-extern OPENMM_EXPORT int %(name)s_getSize(const %(name)s* set);
-extern OPENMM_EXPORT void %(name)s_insert(%(name)s* set, %(type)s value);""" % values
-
-        print >>self.out, """
-/* These methods need to be handled specially, since their C++ APIs cannot be directly translated to C.
-   Unlike the C++ versions, the return value is allocated on the heap, and you must delete it yourself. */
-extern OPENMM_EXPORT OpenMM_State* OpenMM_Context_getState(const OpenMM_Context* target, int types, int enforcePeriodicBox);
-extern OPENMM_EXPORT OpenMM_StringArray* OpenMM_Platform_loadPluginsFromDirectory(const char* directory);"""
+/* OpenMM_3D_DoubleArray */
+OPENMM_EXPORT_AMOEBA OpenMM_3D_DoubleArray* OpenMM_3D_DoubleArray_create(int size1, int size2, int size3);
+OPENMM_EXPORT_AMOEBA void OpenMM_3D_DoubleArray_set(OpenMM_3D_DoubleArray* array, int index1, int index2, OpenMM_DoubleArray* values);
+OPENMM_EXPORT_AMOEBA void OpenMM_3D_DoubleArray_destroy( OpenMM_3D_DoubleArray* array);"""
 
         self.writeClasses()
 
@@ -403,7 +334,7 @@ extern OPENMM_EXPORT OpenMM_StringArray* OpenMM_Platform_loadPluginsFromDirector
 }
 #endif
 
-#endif /*OPENMM_CWRAPPER_H_*/"""
+#endif /*AMOEBA_OPENMM_CWRAPPER_H_*/"""
 
 
 class CSourceGenerator(WrapperGenerator):
@@ -413,6 +344,7 @@ class CSourceGenerator(WrapperGenerator):
         WrapperGenerator.__init__(self, inputDirname, output)
         self.typeTranslations = {'bool': 'OpenMM_Boolean',
                                  'Vec3': 'OpenMM_Vec3',
+                                 'Context': 'OpenMM_Context',
                                  'std::string': 'char*',
                                  'const std::string &': 'const char*',
                                  'std::vector< std::string >': 'OpenMM_StringArray',
@@ -422,7 +354,9 @@ class CSourceGenerator(WrapperGenerator):
                                  'std::map< std::string, std::string >': 'OpenMM_PropertyArray',
                                  'std::vector< double >': 'OpenMM_DoubleArray',
                                  'std::vector< int >': 'OpenMM_IntArray',
-                                 'std::set< int >': 'OpenMM_IntSet'}
+                                 'std::set< int >': 'OpenMM_IntSet',
+                                 'std::vector< std::vector< int > >': 'OpenMM_2D_IntArray',
+                                 'std::vector< std::vector< std::vector< double > > >': 'OpenMM_3D_DoubleArray'}
         self.inverseTranslations = dict((self.typeTranslations[key], key) for key in self.typeTranslations)
         self.classesByShortName = {}
         self.enumerationTypes = {}
@@ -481,7 +415,7 @@ class CSourceGenerator(WrapperGenerator):
                         suffix = ""
                     else:
                         suffix = "_%d" % numConstructors
-                    self.out.write("OPENMM_EXPORT %s* %s_create%s(" % (typeName, typeName, suffix))
+                    self.out.write("OPENMM_EXPORT_AMOEBA %s* %s_create%s(" % (typeName, typeName, suffix))
                     self.writeArguments(methodNode, False)
                     self.out.write(") {\n")
                     self.out.write("    return reinterpret_cast<%s*>(new %s(" % (typeName, className))
@@ -490,7 +424,7 @@ class CSourceGenerator(WrapperGenerator):
                     self.out.write("}\n")
     
         # Write destructor
-        self.out.write("OPENMM_EXPORT void %s_destroy(%s* target) {\n" % (typeName, typeName))
+        self.out.write("OPENMM_EXPORT_AMOEBA void %s_destroy(%s* target) {\n" % (typeName, typeName))
         self.out.write("    delete reinterpret_cast<%s*>(target);\n" % className)
         self.out.write("}\n")
 
@@ -516,7 +450,7 @@ class CSourceGenerator(WrapperGenerator):
             returnType = self.getType(methodType)
             if methodType in self.classesByShortName:
                 methodType = self.classesByShortName[methodType]
-            self.out.write("OPENMM_EXPORT %s %s_%s(" % (returnType, typeName, methodName))
+            self.out.write("OPENMM_EXPORT_AMOEBA %s %s_%s(" % (returnType, typeName, methodName))
             isInstanceMethod = (methodNode.attrib['static'] != 'yes')
             if isInstanceMethod:
                 if isConstMethod:
@@ -624,7 +558,9 @@ class CSourceGenerator(WrapperGenerator):
     def writeOutput(self):
         print >>self.out, """
 #include "OpenMM.h"
-#include "OpenMMCWrapper.h"
+#include "OpenMMAmoeba.h"
+#include "../../../wrappers/OpenMMCWrapper.h"
+#include "AmoebaOpenMMCWrapper.h"
 #include <cstring>
 #include <vector>
 
@@ -633,163 +569,73 @@ using namespace std;
 
 extern "C" {
 
-/* OpenMM_Vec3 */
-OPENMM_EXPORT OpenMM_Vec3 OpenMM_Vec3_scale(const OpenMM_Vec3 vec, double scale) {
-    OpenMM_Vec3 result = {vec.x*scale, vec.y*scale, vec.z*scale};
-    return result;
+/* OpenMM_2D_IntArray */
+OPENMM_EXPORT_AMOEBA OpenMM_2D_IntArray* OpenMM_2D_IntArray_create(int size) {
+    return reinterpret_cast<OpenMM_2D_IntArray*>(new vector<vector<int> >(size));
+}
+OPENMM_EXPORT_AMOEBA void OpenMM_2D_IntArray_destroy(OpenMM_2D_IntArray* array) {
+    delete reinterpret_cast<vector<vector<int> >*>(array);
+}
+OPENMM_EXPORT_AMOEBA int OpenMM_2D_IntArray_getSize(const OpenMM_2D_IntArray* array) {
+    return reinterpret_cast<const vector<vector<int> >*>(array)->size();
+}
+OPENMM_EXPORT_AMOEBA void OpenMM_2D_IntArray_resize(OpenMM_2D_IntArray* array, int size) {
+    reinterpret_cast<vector<vector<int> >*>(array)->resize(size);
+}
+OPENMM_EXPORT_AMOEBA void OpenMM_2D_IntArray_append(OpenMM_2D_IntArray* array, int index1, int value ) {
+    vector<vector<int> >* array2DInt = reinterpret_cast<vector<vector<int> >*>(array);
+    if( array2DInt->size() <= index1 ){
+        array2DInt->resize( index1+1 );
+    }
+    (*array2DInt)[index1].push_back( value );
+}
+OPENMM_EXPORT_AMOEBA void OpenMM_2D_IntArray_set(OpenMM_2D_IntArray* array, int index1, int index2, int value) {
+    vector<vector<int> >* array2DInt = reinterpret_cast<vector<vector<int> >*>(array);
+    if( array2DInt->size() <= index1 ){
+        array2DInt->resize( index1+1 );
+    }
+    if( array2DInt[index1].size() <= index2 ){
+        array2DInt[index1].resize( index2+1 );
+    }
+    (*array2DInt)[index1][index2] = value;
+}
+OPENMM_EXPORT_AMOEBA void OpenMM_2D_IntArray_get(const OpenMM_2D_IntArray* array, int index1, int index2, int* value) {
+    const vector<vector<int> >* array2DInt = reinterpret_cast<const vector<vector<int> >*>(array);
+    if ( array2DInt->size() <= index1 )
+        throw OpenMMException("OpenMM_2D_IntArray_get: first index out of range.");
+
+    if ( (*array2DInt)[index1].size() <= index2 )
+        throw OpenMMException("OpenMM_2D_IntArray_get: second index out of range.");
+    *value = (*array2DInt)[index1][index2];
 }
 
-/* OpenMM_Vec3Array */
-OPENMM_EXPORT OpenMM_Vec3Array* OpenMM_Vec3Array_create(int size) {
-    return reinterpret_cast<OpenMM_Vec3Array*>(new vector<Vec3>(size));
-}
-OPENMM_EXPORT void OpenMM_Vec3Array_destroy(OpenMM_Vec3Array* array) {
-    delete reinterpret_cast<vector<Vec3>*>(array);
-}
-OPENMM_EXPORT int OpenMM_Vec3Array_getSize(const OpenMM_Vec3Array* array) {
-    return reinterpret_cast<const vector<Vec3>*>(array)->size();
-}
-OPENMM_EXPORT void OpenMM_Vec3Array_resize(OpenMM_Vec3Array* array, int size) {
-    reinterpret_cast<vector<Vec3>*>(array)->resize(size);
-}
-OPENMM_EXPORT void OpenMM_Vec3Array_append(OpenMM_Vec3Array* array, const OpenMM_Vec3 vec) {
-    reinterpret_cast<vector<Vec3>*>(array)->push_back(Vec3(vec.x, vec.y, vec.z));
-}
-OPENMM_EXPORT void OpenMM_Vec3Array_set(OpenMM_Vec3Array* array, int index, const OpenMM_Vec3 vec) {
-    (*reinterpret_cast<vector<Vec3>*>(array))[index] = Vec3(vec.x, vec.y, vec.z);
-}
-OPENMM_EXPORT const OpenMM_Vec3* OpenMM_Vec3Array_get(const OpenMM_Vec3Array* array, int index) {
-    return reinterpret_cast<const OpenMM_Vec3*>((&(*reinterpret_cast<const vector<Vec3>*>(array))[index]));
+/* OpenMM_3D_DoubleArray */
+OPENMM_EXPORT_AMOEBA OpenMM_3D_DoubleArray* OpenMM_3D_DoubleArray_create(int size1, int size2, int size3) {
+    int ii, jj;  
+    std::vector< std::vector< std::vector<double> > >* v3D_Array = new std::vector<std::vector<std::vector<double> > >(size1);
+
+    for( ii = 0; ii < size1; ii++ ){
+        (*v3D_Array)[ii].resize(size2);
+        for( jj = 0; jj < size2; jj++ ){
+           (*v3D_Array)[ii][jj].resize(size3);
+        }    
+    }    
+    return reinterpret_cast<OpenMM_3D_DoubleArray*>(v3D_Array);
 }
 
-/* OpenMM_StringArray */
-OPENMM_EXPORT OpenMM_StringArray* OpenMM_StringArray_create(int size) {
-    return reinterpret_cast<OpenMM_StringArray*>(new vector<string>(size));
-}
-OPENMM_EXPORT void OpenMM_StringArray_destroy(OpenMM_StringArray* array) {
-    delete reinterpret_cast<vector<string>*>(array);
-}
-OPENMM_EXPORT int OpenMM_StringArray_getSize(const OpenMM_StringArray* array) {
-    return reinterpret_cast<const vector<string>*>(array)->size();
-}
-OPENMM_EXPORT void OpenMM_StringArray_resize(OpenMM_StringArray* array, int size) {
-    reinterpret_cast<vector<string>*>(array)->resize(size);
-}
-OPENMM_EXPORT void OpenMM_StringArray_append(OpenMM_StringArray* array, const char* str) {
-    reinterpret_cast<vector<string>*>(array)->push_back(string(str));
-}
-OPENMM_EXPORT void OpenMM_StringArray_set(OpenMM_StringArray* array, int index, const char* str) {
-    (*reinterpret_cast<vector<string>*>(array))[index] = string(str);
-}
-OPENMM_EXPORT const char* OpenMM_StringArray_get(const OpenMM_StringArray* array, int index) {
-    return (*reinterpret_cast<const vector<string>*>(array))[index].c_str();
+OPENMM_EXPORT_AMOEBA void OpenMM_3D_DoubleArray_set(OpenMM_3D_DoubleArray* array, int index1, int index2, OpenMM_DoubleArray* values) {
+    unsigned int ii;
+    std::vector< std::vector< std::vector<double> > >* v3D_Array = reinterpret_cast<std::vector<std::vector<std::vector<double> > >*>(array);
+    std::vector<double> * value_array                            = reinterpret_cast<std::vector<double> *>(values);
+    for( ii = 0; ii < (*value_array).size(); ii++ ){
+        (*v3D_Array)[index1][index2][ii] = (*value_array)[ii];
+    }    
 }
 
-/* OpenMM_BondArray */
-OPENMM_EXPORT OpenMM_BondArray* OpenMM_BondArray_create(int size) {
-    return reinterpret_cast<OpenMM_BondArray*>(new vector<pair<int, int> >(size));
-}
-OPENMM_EXPORT void OpenMM_BondArray_destroy(OpenMM_BondArray* array) {
-    delete reinterpret_cast<vector<pair<int, int> >*>(array);
-}
-OPENMM_EXPORT int OpenMM_BondArray_getSize(const OpenMM_BondArray* array) {
-    return reinterpret_cast<const vector<pair<int, int> >*>(array)->size();
-}
-OPENMM_EXPORT void OpenMM_BondArray_resize(OpenMM_BondArray* array, int size) {
-    reinterpret_cast<vector<pair<int, int> >*>(array)->resize(size);
-}
-OPENMM_EXPORT void OpenMM_BondArray_append(OpenMM_BondArray* array, int particle1, int particle2) {
-    reinterpret_cast<vector<pair<int, int> >*>(array)->push_back(pair<int, int>(particle1, particle2));
-}
-OPENMM_EXPORT void OpenMM_BondArray_set(OpenMM_BondArray* array, int index, int particle1, int particle2) {
-    (*reinterpret_cast<vector<pair<int, int> >*>(array))[index] = pair<int, int>(particle1, particle2);
-}
-OPENMM_EXPORT void OpenMM_BondArray_get(const OpenMM_BondArray* array, int index, int* particle1, int* particle2) {
-    pair<int, int> particles = (*reinterpret_cast<const vector<pair<int, int> >*>(array))[index];
-    *particle1 = particles.first;
-    *particle2 = particles.second;
-}
-
-/* OpenMM_ParameterArray */
-OPENMM_EXPORT int OpenMM_ParameterArray_getSize(const OpenMM_ParameterArray* array) {
-    return reinterpret_cast<const map<string, double>*>(array)->size();
-}
-OPENMM_EXPORT double OpenMM_ParameterArray_get(const OpenMM_ParameterArray* array, const char* name) {
-    const map<string, double>* params = reinterpret_cast<const map<string, double>*>(array);
-    const map<string, double>::const_iterator iter = params->find(string(name));
-    if (iter == params->end())
-        throw OpenMMException("OpenMM_ParameterArray_get: No such parameter");
-    return iter->second;
-}
-
-/* OpenMM_PropertyArray */
-OPENMM_EXPORT int OpenMM_PropertyArray_getSize(const OpenMM_PropertyArray* array) {
-    return reinterpret_cast<const map<string, double>*>(array)->size();
-}
-OPENMM_EXPORT const char* OpenMM_PropertyArray_get(const OpenMM_PropertyArray* array, const char* name) {
-    const map<string, string>* params = reinterpret_cast<const map<string, string>*>(array);
-    const map<string, string>::const_iterator iter = params->find(string(name));
-    if (iter == params->end())
-        throw OpenMMException("OpenMM_PropertyArray_get: No such property");
-    return iter->second.c_str();
+OPENMM_EXPORT_AMOEBA void OpenMM_3D_DoubleArray_destroy( OpenMM_3D_DoubleArray* array) {
+    delete reinterpret_cast<std::vector<std::vector<std::vector<double> > >*>(array);
 }"""
 
-        for type in ('double', 'int'):
-            name = 'OpenMM_%sArray' % type.capitalize()
-            values = {'type':type, 'name':name}
-            print >>self.out, """
-/* %(name)s */
-OPENMM_EXPORT %(name)s* %(name)s_create(int size) {
-    return reinterpret_cast<%(name)s*>(new vector<%(type)s>(size));
-}
-OPENMM_EXPORT void %(name)s_destroy(%(name)s* array) {
-    delete reinterpret_cast<vector<%(type)s>*>(array);
-}
-OPENMM_EXPORT int %(name)s_getSize(const %(name)s* array) {
-    return reinterpret_cast<const vector<%(type)s>*>(array)->size();
-}
-OPENMM_EXPORT void %(name)s_resize(%(name)s* array, int size) {
-    reinterpret_cast<vector<%(type)s>*>(array)->resize(size);
-}
-OPENMM_EXPORT void %(name)s_append(%(name)s* array, %(type)s value) {
-    reinterpret_cast<vector<%(type)s>*>(array)->push_back(value);
-}
-OPENMM_EXPORT void %(name)s_set(%(name)s* array, int index, %(type)s value) {
-    (*reinterpret_cast<vector<%(type)s>*>(array))[index] = value;
-}
-OPENMM_EXPORT %(type)s %(name)s_get(const %(name)s* array, int index) {
-    return (*reinterpret_cast<const vector<%(type)s>*>(array))[index];
-}""" % values
-
-        for type in ('int',):
-            name = 'OpenMM_%sSet' % type.capitalize()
-            values = {'type':type, 'name':name}
-            print >>self.out, """
-/* %(name)s */
-OPENMM_EXPORT %(name)s* %(name)s_create() {
-    return reinterpret_cast<%(name)s*>(new set<%(type)s>());
-}
-OPENMM_EXPORT void %(name)s_destroy(%(name)s* s) {
-    delete reinterpret_cast<set<%(type)s>*>(s);
-}
-OPENMM_EXPORT int %(name)s_getSize(const %(name)s* s) {
-    return reinterpret_cast<const set<%(type)s>*>(s)->size();
-}
-OPENMM_EXPORT void %(name)s_insert(%(name)s* s, %(type)s value) {
-    reinterpret_cast<set<%(type)s>*>(s)->insert(value);
-}""" % values
-
-        print >>self.out, """
-/* These methods need to be handled specially, since their C++ APIs cannot be directly translated to C.
-   Unlike the C++ versions, the return value is allocated on the heap, and you must delete it yourself. */
-OPENMM_EXPORT OpenMM_State* OpenMM_Context_getState(const OpenMM_Context* target, int types, int enforcePeriodicBox) {
-    State result = reinterpret_cast<const Context*>(target)->getState(types, enforcePeriodicBox);
-    return reinterpret_cast<OpenMM_State*>(new State(result));
-};
-OPENMM_EXPORT OpenMM_StringArray* OpenMM_Platform_loadPluginsFromDirectory(const char* directory) {
-    vector<string> result = Platform::loadPluginsFromDirectory(string(directory));
-    return reinterpret_cast<OpenMM_StringArray*>(new vector<string>(result));
-};"""
         self.writeClasses()
         print >>self.out, "}\n"
 
@@ -990,8 +836,6 @@ class FortranHeaderGenerator(WrapperGenerator):
     def getType(self, type):
         if type in self.typeTranslations:
             return self.typeTranslations[type]
-        if type in self.enumerationTypes:
-            return 'integer*4'
         if type in self.typesByShortName:
             return 'type (%s)' % self.typesByShortName[type]
         if type.startswith('const '):
@@ -1008,42 +852,11 @@ MODULE OpenMM_Types
         self.writeGlobalConstants()
         self.writeTypeDeclarations()
         print >>self.out, """
-    type OpenMM_Vec3Array
-        integer*8 :: handle = 0
-    end type
-
-    type OpenMM_StringArray
-        integer*8 :: handle = 0
-    end type
-
-    type OpenMM_BondArray
-        integer*8 :: handle = 0
-    end type
-
-    type OpenMM_ParameterArray
-        integer*8 :: handle = 0
-    end type
-
-    type OpenMM_PropertyArray
-        integer*8 :: handle = 0
-    end type
-
-    type OpenMM_DoubleArray
-        integer*8 :: handle = 0
-    end type
-
-    type OpenMM_IntArray
-        integer*8 :: handle = 0
-    end type
-
-    type OpenMM_IntSet
-        integer*8 :: handle = 0
-    end type
-
     ! Enumerations
 
     integer*4, parameter :: OpenMM_False = 0
     integer*4, parameter :: OpenMM_True = 1"""
+
         for classNode in self._orderedClassNodes:
             self.writeEnumerations(classNode)
         print >>self.out, """
@@ -1052,216 +865,7 @@ END MODULE OpenMM_Types
 MODULE OpenMM
     use OpenMM_Types; implicit none
     interface
-
-        ! OpenMM_Vec3
-        subroutine OpenMM_Vec3_scale(vec, scale, result)
-            use OpenMM_Types; implicit none
-            real*8 vec(3)
-            real*8 scale
-            real*8 result(3)
-        end subroutine
-
-        ! OpenMM_Vec3Array
-        subroutine OpenMM_Vec3Array_create(result, size)
-            use OpenMM_Types; implicit none
-            integer*4 size
-            type (OpenMM_Vec3Array) result
-        end subroutine
-        subroutine OpenMM_Vec3Array_destroy(destroy)
-            use OpenMM_Types; implicit none
-            type (OpenMM_Vec3Array) destroy
-        end subroutine
-        function OpenMM_Vec3Array_getSize(target)
-            use OpenMM_Types; implicit none
-            type (OpenMM_Vec3Array) target
-            integer*4 OpenMM_Vec3Array_getSize
-        end function
-        subroutine OpenMM_Vec3Array_resize(target, size)
-            use OpenMM_Types; implicit none
-            type (OpenMM_Vec3Array) target
-            integer*4 size
-        end subroutine
-        subroutine OpenMM_Vec3Array_append(target, vec)
-            use OpenMM_Types; implicit none
-            type (OpenMM_Vec3Array) target
-            real*8 vec(3)
-        end subroutine
-        subroutine OpenMM_Vec3Array_set(target, index, vec)
-            use OpenMM_Types; implicit none
-            type (OpenMM_Vec3Array) target
-            integer*4 index
-            real*8 vec(3)
-        end subroutine
-        subroutine OpenMM_Vec3Array_get(target, index, result)
-            use OpenMM_Types; implicit none
-            type (OpenMM_Vec3Array) target
-            integer*4 index
-            real*8 result(3)
-        end subroutine
-
-        ! OpenMM_StringArray
-        subroutine OpenMM_StringArray_create(result, size)
-            use OpenMM_Types; implicit none
-            integer*4 size
-            type (OpenMM_StringArray) result
-        end subroutine
-        subroutine OpenMM_StringArray_destroy(destroy)
-            use OpenMM_Types; implicit none
-            type (OpenMM_StringArray) destroy
-        end subroutine
-        function OpenMM_StringArray_getSize(target)
-            use OpenMM_Types; implicit none
-            type (OpenMM_StringArray) target
-            integer*4 OpenMM_StringArray_getSize
-        end function
-        subroutine OpenMM_StringArray_resize(target, size)
-            use OpenMM_Types; implicit none
-            type (OpenMM_StringArray) target
-            integer*4 size
-        end subroutine
-        subroutine OpenMM_StringArray_append(target, str)
-            use OpenMM_Types; implicit none
-            type (OpenMM_StringArray) target
-            character(*) str
-        end subroutine
-        subroutine OpenMM_StringArray_set(target, index, str)
-            use OpenMM_Types; implicit none
-            type (OpenMM_StringArray) target
-            integer*4 index
-            character(*) str
-        end subroutine
-        subroutine OpenMM_StringArray_get(target, index, result)
-            use OpenMM_Types; implicit none
-            type (OpenMM_StringArray) target
-            integer*4 index
-            character(*) result
-        end subroutine
-
-        ! OpenMM_BondArray
-        subroutine OpenMM_BondArray_create(result, size)
-            use OpenMM_Types; implicit none
-            integer*4 size
-            type (OpenMM_BondArray) result
-        end subroutine
-        subroutine OpenMM_BondArray_destroy(destroy)
-            use OpenMM_Types; implicit none
-            type (OpenMM_BondArray) destroy
-        end subroutine
-        function OpenMM_BondArray_getSize(target)
-            use OpenMM_Types; implicit none
-            type (OpenMM_BondArray) target
-            integer*4 OpenMM_BondArray_getSize
-        end function
-        subroutine OpenMM_BondArray_resize(target, size)
-            use OpenMM_Types; implicit none
-            type (OpenMM_BondArray) target
-            integer*4 size
-        end subroutine
-        subroutine OpenMM_BondArray_append(target, particle1, particle2)
-            use OpenMM_Types; implicit none
-            type (OpenMM_BondArray) target
-            integer*4 particle1
-            integer*4 particle2
-        end subroutine
-        subroutine OpenMM_BondArray_set(target, index, particle1, particle2)
-            use OpenMM_Types; implicit none
-            type (OpenMM_BondArray) target
-            integer*4 index
-            integer*4 particle1
-            integer*4 particle2
-        end subroutine
-        subroutine OpenMM_BondArray_get(target, index, particle1, particle2)
-            use OpenMM_Types; implicit none
-            type (OpenMM_BondArray) target
-            integer*4 index
-            integer*4 particle1
-            integer*4 particle2
-        end subroutine
-
-        ! OpenMM_ParameterArray
-        function OpenMM_ParameterArray_getSize(target)
-            use OpenMM_Types; implicit none
-            type (OpenMM_ParameterArray) target
-            integer*4 OpenMM_ParameterArray_getSize
-        end function
-        subroutine OpenMM_ParameterArray_get(target, name, result)
-            use OpenMM_Types; implicit none
-            type (OpenMM_ParameterArray) target
-            character(*) name
-            character(*) result
-        end subroutine
-
-        ! OpenMM_PropertyArray
-        function OpenMM_PropertyArray_getSize(target)
-            use OpenMM_Types; implicit none
-            type (OpenMM_ParameterArray) target
-            integer*4 OpenMM_PropertyArray_getSize
-        end function
-        subroutine OpenMM_PropertyArray_get(target, name, result)
-            use OpenMM_Types; implicit none
-            type (OpenMM_PropertyArray) target
-            character(*) name
-            character(*) result
-        end subroutine"""
-
-        arrayTypes = {'OpenMM_DoubleArray':'real*8', 'OpenMM_IntArray':'integer*4'}
-        for name in arrayTypes:
-            values = {'type':arrayTypes[name], 'name':name}
-            print >>self.out, """
-        ! %(name)s
-        subroutine %(name)s_create(result, size)
-            use OpenMM_Types; implicit none
-            integer*4 size
-            type (%(name)s) result
-        end subroutine
-        subroutine %(name)s_destroy(destroy)
-            use OpenMM_Types; implicit none
-            type (%(name)s) destroy
-        end subroutine
-        function %(name)s_getSize(target)
-            use OpenMM_Types; implicit none
-            type (%(name)s) target
-            integer*4 %(name)s_getSize
-        end function
-        subroutine %(name)s_resize(target, size)
-            use OpenMM_Types; implicit none
-            type (%(name)s) target
-            integer*4 size
-        end subroutine
-        subroutine %(name)s_append(target, value)
-            use OpenMM_Types; implicit none
-            type (%(name)s) target
-            %(type)s value
-        end subroutine
-        subroutine %(name)s_set(target, index, value)
-            use OpenMM_Types; implicit none
-            type (%(name)s) target
-            integer*4 index
-            %(type)s value
-        end subroutine
-        subroutine %(name)s_get(target, index, result)
-            use OpenMM_Types; implicit none
-            type (%(name)s) target
-            integer*4 index
-            %(type)s result
-        end subroutine""" % values
-        
-        print >>self.out, """
-        ! These methods need to be handled specially, since their C++ APIs cannot be directly translated to Fortran.
-        ! Unlike the C++ versions, the return value is allocated on the heap, and you must delete it yourself.
-        subroutine OpenMM_Context_getState(target, types, enforcePeriodicBox, result)
-            use OpenMM_Types; implicit none
-            type (OpenMM_Context) target
-            integer*4 types
-            integer*4 enforcePeriodicBox
-            type (OpenMM_State) result
-        end subroutine
-
-        subroutine OpenMM_Platform_loadPluginsFromDirectory(directory, result)
-            use OpenMM_Types; implicit none
-            character(*) directory
-            type (OpenMM_StringArray) result
-        end subroutine"""
+"""
         
         self.writeClasses()
         
@@ -1277,6 +881,7 @@ class FortranSourceGenerator(WrapperGenerator):
         WrapperGenerator.__init__(self, inputDirname, output)
         self.typeTranslations = {'bool': 'OpenMM_Boolean',
                                  'Vec3': 'OpenMM_Vec3',
+                                 'Context': 'OpenMM_Context',
                                  'std::string': 'char*',
                                  'const std::string &': 'const char*',
                                  'std::vector< std::string >': 'OpenMM_StringArray',
@@ -1286,7 +891,9 @@ class FortranSourceGenerator(WrapperGenerator):
                                  'std::map< std::string, std::string >': 'OpenMM_PropertyArray',
                                  'std::vector< double >': 'OpenMM_DoubleArray',
                                  'std::vector< int >': 'OpenMM_IntArray',
-                                 'std::set< int >': 'OpenMM_IntSet'}
+                                 'std::set< int >': 'OpenMM_IntSet',
+                                 'std::vector< std::vector< int > >': 'OpenMM_2D_IntArray',
+                                 'std::vector< std::vector< std::vector< double > > >': 'OpenMM_3D_DoubleArray'}
         self.inverseTranslations = dict((self.typeTranslations[key], key) for key in self.typeTranslations)
         self.classesByShortName = {}
         self.enumerationTypes = {}
@@ -1382,7 +989,7 @@ class FortranSourceGenerator(WrapperGenerator):
         className = getText("compoundname", classNode)
         shortClassName = stripOpenMMPrefix(className)
         typeName = convertOpenMMPrefix(className)
-        self.out.write("OPENMM_EXPORT void %s(%s*& result" % (wrapperFunctionName, typeName))
+        self.out.write("OPENMM_EXPORT_AMOEBA void %s(%s*& result" % (wrapperFunctionName, typeName))
         self.writeArguments(methodNode, True)
         self.out.write(") {\n")
         self.out.write("    result = %s(" % functionName)
@@ -1391,7 +998,7 @@ class FortranSourceGenerator(WrapperGenerator):
         self.out.write("}\n")
     
     def writeOneDestructor(self, typeName, wrapperFunctionName):
-        self.out.write("OPENMM_EXPORT void %s(%s*& destroy) {\n" % (wrapperFunctionName, typeName))
+        self.out.write("OPENMM_EXPORT_AMOEBA void %s(%s*& destroy) {\n" % (wrapperFunctionName, typeName))
         self.out.write("    %s_destroy(destroy);\n" % typeName)
         self.out.write("    destroy = 0;\n")
         self.out.write("}\n")
@@ -1408,7 +1015,7 @@ class FortranSourceGenerator(WrapperGenerator):
         hasReturnArg = not (hasReturnValue or returnType == 'void')
         if methodType in self.classesByShortName:
             methodType = self.classesByShortName[methodType]
-        self.out.write("OPENMM_EXPORT ")
+        self.out.write("OPENMM_EXPORT_AMOEBA ")
         if hasReturnValue:
             self.out.write(returnType)
         else:
@@ -1538,7 +1145,9 @@ class FortranSourceGenerator(WrapperGenerator):
     def writeOutput(self):
         print >>self.out, """
 #include "OpenMM.h"
-#include "OpenMMCWrapper.h"
+#include "OpenMMAmoeba.h"
+#include "../../../wrappers/OpenMMCWrapper.h"
+#include "AmoebaOpenMMCWrapper.h"
 #include <cstring>
 #include <vector>
 
@@ -1562,290 +1171,17 @@ static string makeString(const char* fsrc, int length) {
 }
 
 extern "C" {
-
-/* OpenMM_Vec3 */
-OPENMM_EXPORT void openmm_vec3_scale_(const OpenMM_Vec3& vec, double const& scale, OpenMM_Vec3& result) {
-    result = OpenMM_Vec3_scale(vec, scale);
-}
-OPENMM_EXPORT void OPENMM_VEC3_SCALE(const OpenMM_Vec3& vec, double const& scale, OpenMM_Vec3& result) {
-    result = OpenMM_Vec3_scale(vec, scale);
-}
-
-/* OpenMM_Vec3Array */
-OPENMM_EXPORT void openmm_vec3array_create_(OpenMM_Vec3Array*& result, const int& size) {
-    result = OpenMM_Vec3Array_create(size);
-}
-OPENMM_EXPORT void OPENMM_VEC3ARRAY_CREATE(OpenMM_Vec3Array*& result, const int& size) {
-    result = OpenMM_Vec3Array_create(size);
-}
-OPENMM_EXPORT void openmm_vec3array_destroy_(OpenMM_Vec3Array*& array) {
-    OpenMM_Vec3Array_destroy(array);
-    array = 0;
-}
-OPENMM_EXPORT void OPENMM_VEC3ARRAY_DESTROY(OpenMM_Vec3Array*& array) {
-    OpenMM_Vec3Array_destroy(array);
-    array = 0;
-}
-OPENMM_EXPORT int openmm_vec3array_getsize_(const OpenMM_Vec3Array* const& array) {
-    return OpenMM_Vec3Array_getSize(array);
-}
-OPENMM_EXPORT int OPENMM_VEC3ARRAY_GETSIZE(const OpenMM_Vec3Array* const& array) {
-    return OpenMM_Vec3Array_getSize(array);
-}
-OPENMM_EXPORT void openmm_vec3array_resize_(OpenMM_Vec3Array* const& array, const int& size) {
-    OpenMM_Vec3Array_resize(array, size);
-}
-OPENMM_EXPORT void OPENMM_VEC3ARRAY_RESIZE(OpenMM_Vec3Array* const& array, const int& size) {
-    OpenMM_Vec3Array_resize(array, size);
-}
-OPENMM_EXPORT void openmm_vec3array_append_(OpenMM_Vec3Array* const& array, const OpenMM_Vec3& vec) {
-    OpenMM_Vec3Array_append(array, vec);
-}
-OPENMM_EXPORT void OPENMM_VEC3ARRAY_APPEND(OpenMM_Vec3Array* const& array, const OpenMM_Vec3& vec) {
-    OpenMM_Vec3Array_append(array, vec);
-}
-OPENMM_EXPORT void openmm_vec3array_set_(OpenMM_Vec3Array* const& array, const int& index, const OpenMM_Vec3& vec) {
-    OpenMM_Vec3Array_set(array, index-1, vec);
-}
-OPENMM_EXPORT void OPENMM_VEC3ARRAY_SET(OpenMM_Vec3Array* const& array, const int& index, const OpenMM_Vec3& vec) {
-    OpenMM_Vec3Array_set(array, index-1, vec);
-}
-OPENMM_EXPORT void openmm_vec3array_get_(const OpenMM_Vec3Array* const& array, const int& index, OpenMM_Vec3& result) {
-    result = *OpenMM_Vec3Array_get(array, index-1);
-}
-OPENMM_EXPORT void OPENMM_VEC3ARRAY_GET(const OpenMM_Vec3Array* const& array, const int& index, OpenMM_Vec3& result) {
-    result = *OpenMM_Vec3Array_get(array, index-1);
-}
-
-/* OpenMM_StringArray */
-OPENMM_EXPORT void openmm_stringarray_create_(OpenMM_StringArray*& result, const int& size) {
-    result = OpenMM_StringArray_create(size);
-}
-OPENMM_EXPORT void OPENMM_STRINGARRAY_CREATE(OpenMM_StringArray*& result, const int& size) {
-    result = OpenMM_StringArray_create(size);
-}
-OPENMM_EXPORT void openmm_stringarray_destroy_(OpenMM_StringArray*& array) {
-    OpenMM_StringArray_destroy(array);
-    array = 0;
-}
-OPENMM_EXPORT void OPENMM_STRINGARRAY_DESTROY(OpenMM_StringArray*& array) {
-    OpenMM_StringArray_destroy(array);
-    array = 0;
-}
-OPENMM_EXPORT int openmm_stringarray_getsize_(const OpenMM_StringArray* const& array) {
-    return OpenMM_StringArray_getSize(array);
-}
-OPENMM_EXPORT int OPENMM_STRINGARRAY_GETSIZE(const OpenMM_StringArray* const& array) {
-    return OpenMM_StringArray_getSize(array);
-}
-OPENMM_EXPORT void openmm_stringarray_resize_(OpenMM_StringArray* const& array, const int& size) {
-    OpenMM_StringArray_resize(array, size);
-}
-OPENMM_EXPORT void OPENMM_STRINGARRAY_RESIZE(OpenMM_StringArray* const& array, const int& size) {
-    OpenMM_StringArray_resize(array, size);
-}
-OPENMM_EXPORT void openmm_stringarray_append_(OpenMM_StringArray* const& array, const char* str, int length) {
-    OpenMM_StringArray_append(array, makeString(str, length).c_str());
-}
-OPENMM_EXPORT void OPENMM_STRINGARRAY_APPEND(OpenMM_StringArray* const& array, const char* str, int length) {
-    OpenMM_StringArray_append(array, makeString(str, length).c_str());
-}
-OPENMM_EXPORT void openmm_stringarray_set_(OpenMM_StringArray* const& array, const int& index, const char* str, int length) {
-  OpenMM_StringArray_set(array, index-1, makeString(str, length).c_str());
-  }
-OPENMM_EXPORT void OPENMM_STRINGARRAY_SET(OpenMM_StringArray* const& array, const int& index, const char* str, int length) {
-  OpenMM_StringArray_set(array, index-1, makeString(str, length).c_str());
-}
-OPENMM_EXPORT void openmm_stringarray_get_(const OpenMM_StringArray* const& array, const int& index, char* result, int length) {
-    const char* str = OpenMM_StringArray_get(array, index-1);
-    copyAndPadString(result, str, length);
-}
-OPENMM_EXPORT void OPENMM_STRINGARRAY_GET(const OpenMM_StringArray* const& array, const int& index, char* result, int length) {
-    const char* str = OpenMM_StringArray_get(array, index-1);
-    copyAndPadString(result, str, length);
-}
-
-/* OpenMM_BondArray */
-OPENMM_EXPORT void openmm_bondarray_create_(OpenMM_BondArray*& result, const int& size) {
-    result = OpenMM_BondArray_create(size);
-}
-OPENMM_EXPORT void OPENMM_BONDARRAY_CREATE(OpenMM_BondArray*& result, const int& size) {
-    result = OpenMM_BondArray_create(size);
-}
-OPENMM_EXPORT void openmm_bondarray_destroy_(OpenMM_BondArray*& array) {
-    OpenMM_BondArray_destroy(array);
-    array = 0;
-}
-OPENMM_EXPORT void OPENMM_BONDARRAY_DESTROY(OpenMM_BondArray*& array) {
-    OpenMM_BondArray_destroy(array);
-    array = 0;
-}
-OPENMM_EXPORT int openmm_bondarray_getsize_(const OpenMM_BondArray* const& array) {
-    return OpenMM_BondArray_getSize(array);
-}
-OPENMM_EXPORT int OPENMM_BONDARRAY_GETSIZE(const OpenMM_BondArray* const& array) {
-    return OpenMM_BondArray_getSize(array);
-}
-OPENMM_EXPORT void openmm_bondarray_resize_(OpenMM_BondArray* const& array, const int& size) {
-    OpenMM_BondArray_resize(array, size);
-}
-OPENMM_EXPORT void OPENMM_BONDARRAY_RESIZE(OpenMM_BondArray* const& array, const int& size) {
-    OpenMM_BondArray_resize(array, size);
-}
-OPENMM_EXPORT void openmm_bondarray_append_(OpenMM_BondArray* const& array, const int& particle1, const int& particle2) {
-    OpenMM_BondArray_append(array, particle1, particle2);
-}
-OPENMM_EXPORT void OPENMM_BONDARRAY_APPEND(OpenMM_BondArray* const& array, const int& particle1, const int& particle2) {
-    OpenMM_BondArray_append(array, particle1, particle2);
-}
-OPENMM_EXPORT void openmm_bondarray_set_(OpenMM_BondArray* const& array, const int& index, const int& particle1, const int& particle2) {
-    OpenMM_BondArray_set(array, index-1, particle1, particle2);
-}
-OPENMM_EXPORT void OPENMM_BONDARRAY_SET(OpenMM_BondArray* const& array, const int& index, const int& particle1, const int& particle2) {
-    OpenMM_BondArray_set(array, index-1, particle1, particle2);
-}
-OPENMM_EXPORT void openmm_bondarray_get_(const OpenMM_BondArray* const& array, const int& index, int* particle1, int* particle2) {
-    OpenMM_BondArray_get(array, index-1, particle1, particle2);
-}
-OPENMM_EXPORT void OPENMM_BONDARRAY_GET(const OpenMM_BondArray* const& array, const int& index, int* particle1, int* particle2) {
-    OpenMM_BondArray_get(array, index-1, particle1, particle2);
-}
-
-/* OpenMM_ParameterArray */
-OPENMM_EXPORT int openmm_parameterarray_getsize_(const OpenMM_ParameterArray* const& array) {
-    return OpenMM_ParameterArray_getSize(array);
-}
-OPENMM_EXPORT int OPENMM_PARAMETERARRAY_GETSIZE(const OpenMM_ParameterArray* const& array) {
-    return OpenMM_ParameterArray_getSize(array);
-}
-OPENMM_EXPORT double openmm_parameterarray_get_(const OpenMM_ParameterArray* const& array, const char* name, int length) {
-    return OpenMM_ParameterArray_get(array, makeString(name, length).c_str());
-}
-OPENMM_EXPORT double OPENMM_PARAMETERARRAY_GET(const OpenMM_ParameterArray* const& array, const char* name, int length) {
-    return OpenMM_ParameterArray_get(array, makeString(name, length).c_str());
-}
-
-/* OpenMM_PropertyArray */
-OPENMM_EXPORT int openmm_propertyarray_getsize_(const OpenMM_PropertyArray* const& array) {
-    return OpenMM_PropertyArray_getSize(array);
-}
-OPENMM_EXPORT int OPENMM_PROPERTYARRAY_GETSIZE(const OpenMM_PropertyArray* const& array) {
-    return OpenMM_PropertyArray_getSize(array);
-}
-OPENMM_EXPORT const char* openmm_propertyarray_get_(const OpenMM_PropertyArray* const& array, const char* name, int length) {
-    return OpenMM_PropertyArray_get(array, makeString(name, length).c_str());
-}
-OPENMM_EXPORT const char* OPENMM_PROPERTYARRAY_GET(const OpenMM_PropertyArray* const& array, const char* name, int length) {
-    return OpenMM_PropertyArray_get(array, makeString(name, length).c_str());
-}"""
-
-        for type in ('double', 'int'):
-            name = 'OpenMM_%sArray' % type.capitalize()
-            values = {'type':type, 'name':name, 'name_lower':name.lower(), 'name_upper':name.upper()}
-            print >>self.out, """
-/* %(name)s */
-OPENMM_EXPORT void %(name_lower)s_create_(%(name)s*& result, const int& size) {
-    result = %(name)s_create(size);
-}
-OPENMM_EXPORT void %(name_upper)s_CREATE(%(name)s*& result, const int& size) {
-    result = %(name)s_create(size);
-}
-OPENMM_EXPORT void %(name_lower)s_destroy_(%(name)s*& array) {
-    %(name)s_destroy(array);
-    array = 0;
-}
-OPENMM_EXPORT void %(name_upper)s_DESTROY(%(name)s*& array) {
-    %(name)s_destroy(array);
-    array = 0;
-}
-OPENMM_EXPORT int %(name_lower)s_getsize_(const %(name)s* const& array) {
-    return %(name)s_getSize(array);
-}
-OPENMM_EXPORT int %(name_upper)s_GETSIZE(const %(name)s* const& array) {
-    return %(name)s_getSize(array);
-}
-OPENMM_EXPORT void %(name_lower)s_resize_(%(name)s* const& array, const int& size) {
-    %(name)s_resize(array, size);
-}
-OPENMM_EXPORT void %(name_upper)s_RESIZE(%(name)s* const& array, const int& size) {
-    %(name)s_resize(array, size);
-}
-OPENMM_EXPORT void %(name_lower)s_append_(%(name)s* const& array, const %(type)s& value) {
-    %(name)s_append(array, value);
-}
-OPENMM_EXPORT void %(name_upper)s_APPEND(%(name)s* const& array, const %(type)s& value) {
-    %(name)s_append(array, value);
-}
-OPENMM_EXPORT void %(name_lower)s_set_(%(name)s* const& array, const int& index, const %(type)s& value) {
-    %(name)s_set(array, index-1, value);
-}
-OPENMM_EXPORT void %(name_upper)s_SET(%(name)s* const& array, const int& index, const %(type)s& value) {
-    %(name)s_set(array, index-1, value);
-}
-OPENMM_EXPORT void %(name_lower)s_get_(const %(name)s* const& array, const int& index, %(type)s& result) {
-    result = %(name)s_get(array, index-1);
-}
-OPENMM_EXPORT void %(name_upper)s_GET(const %(name)s* const& array, const int& index, %(type)s& result) {
-    result = %(name)s_get(array, index-1);
-}""" % values
-
-        for type in ('int', ):
-            name = 'OpenMM_%sSet' % type.capitalize()
-            values = {'type':type, 'name':name, 'name_lower':name.lower(), 'name_upper':name.upper()}
-            print >>self.out, """
-/* %(name)s */
-OPENMM_EXPORT void %(name_lower)s_create_(%(name)s*& result) {
-    result = %(name)s_create();
-}
-OPENMM_EXPORT void %(name_upper)s_CREATE(%(name)s*& result) {
-    result = %(name)s_create();
-}
-OPENMM_EXPORT void %(name_lower)s_destroy_(%(name)s*& array) {
-    %(name)s_destroy(array);
-    array = 0;
-}
-OPENMM_EXPORT void %(name_upper)s_DESTROY(%(name)s*& array) {
-    %(name)s_destroy(array);
-    array = 0;
-}
-OPENMM_EXPORT int %(name_lower)s_getsize_(const %(name)s* const& array) {
-    return %(name)s_getSize(array);
-}
-OPENMM_EXPORT int %(name_upper)s_GETSIZE(const %(name)s* const& array) {
-    return %(name)s_getSize(array);
-}
-OPENMM_EXPORT void %(name_lower)s_insert_(%(name)s* const& array, const %(type)s& value) {
-    %(name)s_insert(array, value);
-}
-OPENMM_EXPORT void %(name_upper)s_INSERT(%(name)s* const& array, const %(type)s& value) {
-    %(name)s_insert(array, value);
-}""" % values
-
-        print >>self.out, """
-/* These methods need to be handled specially, since their C++ APIs cannot be directly translated to C.
-   Unlike the C++ versions, the return value is allocated on the heap, and you must delete it yourself. */
-OPENMM_EXPORT void openmm_context_getstate_(const OpenMM_Context*& target, int const& types, int const& enforcePeriodicBox, OpenMM_State*& result) {
-    result = OpenMM_Context_getState(target, types, enforcePeriodicBox);
-};
-OPENMM_EXPORT void OPENMM_CONTEXT_GETSTATE(const OpenMM_Context*& target, int const& types, int const& enforcePeriodicBox, OpenMM_State*& result) {
-    result = OpenMM_Context_getState(target, types, enforcePeriodicBox);
-};
-OPENMM_EXPORT void openmm_platform_loadpluginsfromdirectory_(const char* directory, OpenMM_StringArray*& result, int length) {
-    result = OpenMM_Platform_loadPluginsFromDirectory(makeString(directory, length).c_str());
-};
-OPENMM_EXPORT void OPENMM_PLATFORM_LOADPLUGINSFROMDIRECTORY(const char* directory, OpenMM_StringArray*& result, int length) {
-    result = OpenMM_Platform_loadPluginsFromDirectory(makeString(directory, length).c_str());
-};"""
+"""
 
         self.writeClasses()
         print >>self.out, "}"
 
 inputDirname = sys.argv[1]
-builder = CHeaderGenerator(inputDirname, open(os.path.join(sys.argv[2], 'OpenMMCWrapper.h'), 'w'))
+builder = CHeaderGenerator(inputDirname, open(os.path.join(sys.argv[2], 'AmoebaOpenMMCWrapper.h'), 'w'))
 builder.writeOutput()
-builder = CSourceGenerator(inputDirname, open(os.path.join(sys.argv[2], 'OpenMMCWrapper.cpp'), 'w'))
+builder = CSourceGenerator(inputDirname, open(os.path.join(sys.argv[2], 'AmoebaOpenMMCWrapper.cpp'), 'w'))
 builder.writeOutput()
-builder = FortranHeaderGenerator(inputDirname, open(os.path.join(sys.argv[2], 'OpenMMFortranModule.f90'), 'w'))
+builder = FortranHeaderGenerator(inputDirname, open(os.path.join(sys.argv[2], 'AmoebaOpenMMFortranModule.f90'), 'w'))
 builder.writeOutput()
-builder = FortranSourceGenerator(inputDirname, open(os.path.join(sys.argv[2], 'OpenMMFortranWrapper.cpp'), 'w'))
+builder = FortranSourceGenerator(inputDirname, open(os.path.join(sys.argv[2], 'AmoebaOpenMMFortranWrapper.cpp'), 'w'))
 builder.writeOutput()

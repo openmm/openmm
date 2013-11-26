@@ -121,6 +121,10 @@ private:
     std::vector<PiTorsionInfo> piTorsions;
 };
 
+/**
+ * This is an internal class used to record information about a torsion.
+ * @private
+ */
 class AmoebaPiTorsionForce::PiTorsionInfo {
 public:
     int particle1, particle2, particle3, particle4, particle5, particle6;

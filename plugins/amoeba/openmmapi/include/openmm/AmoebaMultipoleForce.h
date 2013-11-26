@@ -368,6 +368,10 @@ private:
     std::vector<MultipoleInfo> multipoles;
 };
 
+/**
+ * This is an internal class used to record information about a multipole.
+ * @private
+ */
 class AmoebaMultipoleForce::MultipoleInfo {
 public:
 
