@@ -256,18 +256,8 @@ ENDFOREACH(subdir)
 SET_SOURCE_FILES_PROPERTIES(${CMAKE_SOURCE_DIR}/libraries/sfmt/src/SFMT.cpp PROPERTIES COMPILE_FLAGS "-msse2 -DHAVE_SSE2=1")
 
 # If API wrappers are being generated, and add them to the build.
-FIND_PROGRAM(GCCXML_PATH gccxml PATH
-    /usr/local/bin
-    "C:/Program Files/gccxml 0.9/bin"
-)
-IF(GCCXML_PATH)
-    SET(OPENMM_BUILD_C_AND_FORTRAN_WRAPPERS ON CACHE BOOL "Build wrappers for C and Fortran")
-ELSE(GCCXML_PATH)
-    SET(OPENMM_BUILD_C_AND_FORTRAN_WRAPPERS OFF CACHE BOOL "Build wrappers for C and Fortran")
-ENDIF(GCCXML_PATH)
+SET(OPENMM_BUILD_C_AND_FORTRAN_WRAPPERS ON CACHE BOOL "Build wrappers for C and Fortran")
 IF(OPENMM_BUILD_C_AND_FORTRAN_WRAPPERS)
-    FIND_PACKAGE(Java)
-    MARK_AS_ADVANCED(CLEAR JAVA_RUNTIME)
     ADD_SUBDIRECTORY(wrappers)
     SET(SOURCE_FILES ${SOURCE_FILES} wrappers/OpenMMCWrapper.cpp  wrappers/OpenMMFortranWrapper.cpp)
     SET_SOURCE_FILES_PROPERTIES(wrappers/OpenMMCWrapper.cpp wrappers/OpenMMFortranWrapper.cpp PROPERTIES GENERATED TRUE)
