@@ -365,6 +365,7 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
             }
             break;
         }
+        interactingBlocksThreadBlockSize = (deviceIsCpu ? 1 : groupSize);
     }
 }
 
@@ -401,7 +402,7 @@ void OpenCLNonbondedUtilities::prepareInteractions() {
     context.executeKernel(sortBoxDataKernel, context.getNumAtoms());
     setPeriodicBoxSizeArg(context, findInteractingBlocksKernel, 0);
     setInvPeriodicBoxSizeArg(context, findInteractingBlocksKernel, 1);
-    context.executeKernel(findInteractingBlocksKernel, context.getNumAtoms(), deviceIsCpu ? 1 : 128);
+    context.executeKernel(findInteractingBlocksKernel, context.getNumAtoms(), interactingBlocksThreadBlockSize);
 }
 
 void OpenCLNonbondedUtilities::computeInteractions() {
