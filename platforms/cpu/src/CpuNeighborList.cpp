@@ -48,6 +48,8 @@ const int CpuNeighborList::BlockSize = 4;
 class VoxelIndex 
 {
 public:
+    VoxelIndex() : x(0), y(0) {
+    }
     VoxelIndex(int x, int y) : x(x), y(y) {
     }
     int x;
@@ -173,6 +175,9 @@ public:
         float centerPos[4];
         blockCenter.store(centerPos);
         VoxelIndex centerVoxelIndex = getVoxelIndex(centerPos);
+        VoxelIndex atomVoxelIndex[BlockSize];
+        for (int i = 0; i < (int) blockAtoms.size(); i++)
+            atomVoxelIndex[i] = getVoxelIndex(&atomLocations[4*blockAtoms[i]]);
         int startx = centerVoxelIndex.x-dIndexX;
         int starty = centerVoxelIndex.y-dIndexY;
         int endx = centerVoxelIndex.x+dIndexX;
@@ -194,39 +199,57 @@ public:
             voxelIndex.x = x;
             if (usePeriodic)
                 voxelIndex.x = (x < 0 ? x+nx : (x >= nx ? x-nx : x));
-            float dx = max(0.0f, voxelSizeX*max(0, abs(centerVoxelIndex.x-x)-1)-blockWidth[0]);
             for (int y = starty; y <= endy; ++y) {
                 voxelIndex.y = y;
                 if (usePeriodic)
                     voxelIndex.y = (y < 0 ? y+ny : (y >= ny ? y-ny : y));
-                float dy = max(0.0f, voxelSizeY*max(0, abs(centerVoxelIndex.y-y)-1)-blockWidth[1]);
                 
                 // Identify the range of atoms within this bin we need to search.  When using periodic boundary
                 // conditions, there may be two separate ranges.
                 
-                float dz = maxDistance+blockWidth[2];
-                dz = sqrtf(max(0.0f, dz*dz-dx*dx-dy*dy));
+                float minz = centerPos[2];
+                float maxz = centerPos[2];
+                fvec4 offset(voxelSizeX*x+(usePeriodic ? 0.0f : minx), voxelSizeY*y+(usePeriodic ? 0.0f : miny), 0, 0);
+                for (int k = 0; k < (int) blockAtoms.size(); k++) {
+                    const float* atomPos = &atomLocations[4*blockAtoms[k]];
+                    fvec4 posVec(atomPos);
+                    fvec4 delta1 = offset-posVec;
+                    fvec4 delta2 = delta1+fvec4(voxelSizeX, voxelSizeY, 0, 0);
+                    if (usePeriodic) {
+                        delta1 -= round(delta1*invBoxSize)*boxSize;
+                        delta2 -= round(delta2*invBoxSize)*boxSize;
+                    }
+                    fvec4 delta = min(abs(delta1), abs(delta2));
+                    float dx = (x == atomVoxelIndex[k].x ? 0.0f : delta[0]);
+                    float dy = (y == atomVoxelIndex[k].y ? 0.0f : delta[1]);
+                    float dist2 = maxDistanceSquared-dx*dx-dy*dy;
+                    if (dist2 > 0) {
+                        float dist = sqrtf(dist2);
+                        minz = min(minz, atomPos[2]-dist);
+                        maxz = max(maxz, atomPos[2]+dist);
+                    }
+                }
                 bool needPeriodic = (centerPos[0]-blockWidth[0] < maxDistance || centerPos[0]+blockWidth[0] > periodicBoxSize[0]-maxDistance ||
                                      centerPos[1]-blockWidth[1] < maxDistance || centerPos[1]+blockWidth[1] > periodicBoxSize[1]-maxDistance ||
-                                     centerPos[2]-dz < 0.0f || centerPos[2]+dz > periodicBoxSize[2]);
+                                     minz < 0.0f || maxz > periodicBoxSize[2]);
                 int rangeStart[2];
                 int rangeEnd[2];
-                rangeStart[0] = findLowerBound(voxelIndex.x, voxelIndex.y, centerPos[2]-dz);
+                rangeStart[0] = findLowerBound(voxelIndex.x, voxelIndex.y, minz);
                 if (needPeriodic) {
                     numRanges = 2;
-                    rangeEnd[0] = findUpperBound(voxelIndex.x, voxelIndex.y, centerPos[2]+dz);
+                    rangeEnd[0] = findUpperBound(voxelIndex.x, voxelIndex.y, maxz);
                     if (rangeStart[0] > 0) {
                         rangeStart[1] = 0;
-                        rangeEnd[1] = min(findUpperBound(voxelIndex.x, voxelIndex.y, centerPos[2]+dz-periodicBoxSize[2]), rangeStart[0]);
+                        rangeEnd[1] = min(findUpperBound(voxelIndex.x, voxelIndex.y, maxz-periodicBoxSize[2]), rangeStart[0]);
                     }
                     else {
-                        rangeStart[1] = max(findLowerBound(voxelIndex.x, voxelIndex.y, centerPos[2]-dz+periodicBoxSize[2]), rangeEnd[0]);
+                        rangeStart[1] = max(findLowerBound(voxelIndex.x, voxelIndex.y, minz+periodicBoxSize[2]), rangeEnd[0]);
                         rangeEnd[1] = bins[voxelIndex.x][voxelIndex.y].size();
                     }
                 }
                 else {
                     numRanges = 1;
-                    rangeEnd[0] = findUpperBound(voxelIndex.x, voxelIndex.y, centerPos[2]+dz);
+                    rangeEnd[0] = findUpperBound(voxelIndex.x, voxelIndex.y, maxz);
                 }
                 
                 // Loop over atoms and check to see if they are neighbors of this block.
@@ -353,8 +376,8 @@ void CpuNeighborList::computeNeighborList(int numAtoms, const vector<float>& ato
     if (!usePeriodic)
         edgeSizeX = edgeSizeY = maxDistance; // TODO - adjust this as needed
     else {
-        edgeSizeX = 0.5f*periodicBoxSize[0]/floorf(periodicBoxSize[0]/maxDistance);
-        edgeSizeY = 0.5f*periodicBoxSize[1]/floorf(periodicBoxSize[1]/maxDistance);
+        edgeSizeX = 0.6f*periodicBoxSize[0]/floorf(periodicBoxSize[0]/maxDistance);
+        edgeSizeY = 0.6f*periodicBoxSize[1]/floorf(periodicBoxSize[1]/maxDistance);
     }
     Voxels voxels(edgeSizeX, edgeSizeY, minx, maxx, miny, maxy, periodicBoxSize, usePeriodic);
     for (int i = 0; i < numAtoms; i++) {
