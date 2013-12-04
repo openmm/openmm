@@ -107,6 +107,7 @@ private:
     float const* posq;
     std::vector<std::vector<float> >* threadForce;
     bool includeEnergy;
+    void* atomicCounter;
   
     static const int NUM_TABLE_POINTS;
 

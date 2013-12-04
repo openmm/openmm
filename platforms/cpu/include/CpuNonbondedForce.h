@@ -156,6 +156,7 @@ private:
         bool periodic;
         bool ewald;
         bool pme;
+        bool tableIsValid;
         const CpuNeighborList* neighborList;
         float periodicBoxSize[3];
         float cutoffDistance, switchingDistance;
@@ -174,6 +175,7 @@ private:
         std::set<int> const* exclusions;
         std::vector<std::vector<float> >* threadForce;
         bool includeEnergy;
+        void* atomicCounter;
 
         static const float TWO_OVER_SQRT_PI;
         static const int NUM_TABLE_POINTS;
