@@ -29,8 +29,8 @@
 #include "CpuNonbondedForce.h"
 #include "ReferenceForce.h"
 #include "ReferencePME.h"
-#include "openmm/internal/SplineFitter.h"
 #include "openmm/internal/vectorize.h"
+#include "gmx_atomic.h"
 
 // In case we're using some primitive version of Visual Studio this will
 // make sure that erf() and erfc() are defined.
@@ -40,7 +40,7 @@ using namespace std;
 using namespace OpenMM;
 
 const float CpuNonbondedForce::TWO_OVER_SQRT_PI = (float) (2/sqrt(PI_M));
-const int CpuNonbondedForce::NUM_TABLE_POINTS = 1025;
+const int CpuNonbondedForce::NUM_TABLE_POINTS = 2048;
 
 class CpuNonbondedForce::ComputeDirectTask : public ThreadPool::Task {
 public:
@@ -58,21 +58,22 @@ public:
 
    --------------------------------------------------------------------------------------- */
 
-CpuNonbondedForce::CpuNonbondedForce() : cutoff(false), useSwitch(false), periodic(false), ewald(false), pme(false) {
+CpuNonbondedForce::CpuNonbondedForce() : cutoff(false), useSwitch(false), periodic(false), ewald(false), pme(false), tableIsValid(false) {
 }
 
-  /**---------------------------------------------------------------------------------------
+/**---------------------------------------------------------------------------------------
 
-     Set the force to use a cutoff.
+   Set the force to use a cutoff.
 
-     @param distance            the cutoff distance
-     @param neighbors           the neighbor list to use
-     @param solventDielectric   the dielectric constant of the bulk solvent
+   @param distance            the cutoff distance
+   @param neighbors           the neighbor list to use
+   @param solventDielectric   the dielectric constant of the bulk solvent
 
      --------------------------------------------------------------------------------------- */
 
-  void CpuNonbondedForce::setUseCutoff(float distance, const CpuNeighborList& neighbors, float solventDielectric) {
-
+void CpuNonbondedForce::setUseCutoff(float distance, const CpuNeighborList& neighbors, float solventDielectric) {
+    if (distance != cutoffDistance)
+        tableIsValid = false;
     cutoff = true;
     cutoffDistance = distance;
     neighborList = &neighbors;
@@ -127,6 +128,8 @@ void CpuNonbondedForce::setUseSwitchingFunction(float distance) {
      --------------------------------------------------------------------------------------- */
 
   void CpuNonbondedForce::setUseEwald(float alpha, int kmaxx, int kmaxy, int kmaxz) {
+      if (alpha != alphaEwald)
+          tableIsValid = false;
       alphaEwald = alpha;
       numRx = kmaxx;
       numRy = kmaxy;
@@ -145,6 +148,8 @@ void CpuNonbondedForce::setUseSwitchingFunction(float distance) {
      --------------------------------------------------------------------------------------- */
 
   void CpuNonbondedForce::setUsePME(float alpha, int meshSize[3]) {
+      if (alpha != alphaEwald)
+          tableIsValid = false;
       alphaEwald = alpha;
       meshDim[0] = meshSize[0];
       meshDim[1] = meshSize[1];
@@ -155,24 +160,16 @@ void CpuNonbondedForce::setUseSwitchingFunction(float distance) {
 
   
 void CpuNonbondedForce::tabulateEwaldScaleFactor() {
+    if (tableIsValid)
+        return;
+    tableIsValid = true;
     ewaldDX = cutoffDistance/(NUM_TABLE_POINTS-2);
     ewaldDXInv = 1.0f/ewaldDX;
-    vector<double> x(NUM_TABLE_POINTS+1);
-    vector<double> y(NUM_TABLE_POINTS+1);
-    vector<double> deriv;
+    ewaldScaleTable.resize(NUM_TABLE_POINTS+1);
     for (int i = 0; i < NUM_TABLE_POINTS+1; i++) {
-        double r = i*cutoffDistance/(NUM_TABLE_POINTS-2);
+        double r = i*ewaldDX;
         double alphaR = alphaEwald*r;
-        x[i] = r;
-        y[i] = erfc(alphaR) + TWO_OVER_SQRT_PI*alphaR*exp(-alphaR*alphaR);
-    }
-    SplineFitter::createNaturalSpline(x, y, deriv);
-    ewaldScaleTable.resize(4*NUM_TABLE_POINTS);
-    for (int i = 0; i < NUM_TABLE_POINTS; i++) {
-        ewaldScaleTable[4*i] = (float) y[i];
-        ewaldScaleTable[4*i+1] = (float) y[i+1];
-        ewaldScaleTable[4*i+2] = (float) (deriv[i]*ewaldDX*ewaldDX/6);
-        ewaldScaleTable[4*i+3] = (float) (deriv[i+1]*ewaldDX*ewaldDX/6);
+        ewaldScaleTable[i] = erfc(alphaR) + TWO_OVER_SQRT_PI*alphaR*exp(-alphaR*alphaR);
     }
 }
   
@@ -302,6 +299,9 @@ void CpuNonbondedForce::calculateDirectIxn(int numberOfAtoms, float* posq, const
     this->threadForce = &threadForce;
     includeEnergy = (totalEnergy != NULL);
     threadEnergy.resize(threads.getNumThreads());
+    gmx_atomic_t counter;
+    gmx_atomic_set(&counter, 0);
+    this->atomicCounter = &counter;
     
     // Signal the threads to start running and wait for them to finish.
     
@@ -332,8 +332,12 @@ void CpuNonbondedForce::threadComputeDirect(ThreadPool& threads, int threadIndex
     if (ewald || pme) {
         // Compute the interactions from the neighbor list.
 
-        for (int i = threadIndex; i < neighborList->getNumBlocks(); i += numThreads)
-            calculateBlockEwaldIxn(i, forces, energyPtr, boxSize, invBoxSize);
+        while (true) {
+            int nextBlock = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
+            if (nextBlock >= neighborList->getNumBlocks())
+                break;
+            calculateBlockEwaldIxn(nextBlock, forces, energyPtr, boxSize, invBoxSize);
+        }
 
         // Now subtract off the exclusions, since they were implicitly included in the reciprocal space sum.
 
@@ -367,13 +371,20 @@ void CpuNonbondedForce::threadComputeDirect(ThreadPool& threads, int threadIndex
     else if (cutoff) {
         // Compute the interactions from the neighbor list.
 
-        for (int i = threadIndex; i < neighborList->getNumBlocks(); i += numThreads)
-            calculateBlockIxn(i, forces, energyPtr, boxSize, invBoxSize);
+        while (true) {
+            int nextBlock = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
+            if (nextBlock >= neighborList->getNumBlocks())
+                break;
+            calculateBlockIxn(nextBlock, forces, energyPtr, boxSize, invBoxSize);
+        }
     }
     else {
         // Loop over all atom pairs
 
-        for (int i = threadIndex; i < numberOfAtoms; i += numThreads){
+        while (true) {
+            int i = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
+            if (i >= numberOfAtoms)
+                break;
             for (int j = i+1; j < numberOfAtoms; j++)
                 if (exclusions[j].find(i) == exclusions[j].end())
                     calculateOneIxn(i, j, forces, energyPtr, boxSize, invBoxSize);
@@ -609,10 +620,10 @@ void CpuNonbondedForce::calculateBlockEwaldIxn(int blockIndex, float* forces, do
         fvec4 sig2 = inverseR*sig;
         sig2 *= sig2;
         fvec4 sig6 = sig2*sig2*sig2;
-        fvec4 eps = blockAtomEpsilon*atomParameters[atom].second;
-        dEdR += switchValue*eps*(12.0f*sig6 - 6.0f)*sig6;
+        fvec4 epsSig6 = blockAtomEpsilon*atomParameters[atom].second*sig6;
+        dEdR += switchValue*epsSig6*(12.0f*sig6 - 6.0f);
         dEdR *= inverseR*inverseR;
-        fvec4 energy = eps*(sig6-1.0f)*sig6;
+        fvec4 energy = epsSig6*(sig6-1.0f);
         if (useSwitch) {
             dEdR -= energy*switchDeriv*inverseR;
             energy *= switchValue;
@@ -683,18 +694,16 @@ fvec4 CpuNonbondedForce::erfcApprox(fvec4 x) {
 fvec4 CpuNonbondedForce::ewaldScaleFunction(fvec4 x) {
     // Compute the tabulated Ewald scale factor: erfc(alpha*r) + 2*alpha*r*exp(-alpha*alpha*r*r)/sqrt(PI)
 
-    float y[4];
     fvec4 x1 = x*ewaldDXInv;
     ivec4 index = floor(x1);
-    fvec4 coeff[4];
-    coeff[1] = x1-index;
-    coeff[0] = 1.0f-coeff[1];
-    coeff[2] = coeff[0]*coeff[0]*coeff[0]-coeff[0];
-    coeff[3] = coeff[1]*coeff[1]*coeff[1]-coeff[1];
-    transpose(coeff[0], coeff[1], coeff[2], coeff[3]);
+    fvec4 coeff2 = x1-index;
+    fvec4 coeff1 = 1.0f-coeff2;
+    float table1[4], table2[4];
     for (int i = 0; i < 4; i++) {
-        if (index[i] < NUM_TABLE_POINTS)
-            y[i] = dot4(coeff[i], fvec4(&ewaldScaleTable[4*index[i]]));
+        int tableIndex = index[i];
+        if (tableIndex < NUM_TABLE_POINTS)
+            table1[i] = ewaldScaleTable[tableIndex];
+            table2[i] = ewaldScaleTable[tableIndex+1];
     }
-    return fvec4(y);
+    return coeff1*fvec4(table1) + coeff2*fvec4(table2);
 }

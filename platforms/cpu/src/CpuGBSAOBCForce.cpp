@@ -24,14 +24,14 @@
 
 #include "CpuGBSAOBCForce.h"
 #include "SimTKOpenMMRealType.h"
-#include "openmm/internal/SplineFitter.h"
 #include "openmm/internal/vectorize.h"
+#include "gmx_atomic.h"
 #include <cmath>
 
 using namespace std;
 using namespace OpenMM;
 
-const int CpuGBSAOBCForce::NUM_TABLE_POINTS = 1025;
+const int CpuGBSAOBCForce::NUM_TABLE_POINTS = 2048;
 
 class CpuGBSAOBCForce::ComputeTask : public ThreadPool::Task {
 public:
@@ -46,20 +46,10 @@ public:
 CpuGBSAOBCForce::CpuGBSAOBCForce() : cutoff(false), periodic(false) {
     logDX = 0.5/NUM_TABLE_POINTS;
     logDXInv = 1.0f/logDX;
-    vector<double> x(NUM_TABLE_POINTS+1);
-    vector<double> y(NUM_TABLE_POINTS+1);
-    vector<double> deriv;
+    logTable.resize(NUM_TABLE_POINTS+1);
     for (int i = 0; i < NUM_TABLE_POINTS+1; i++) {
-        x[i] = 0.5+i*0.5/NUM_TABLE_POINTS;
-        y[i] = log(x[i]);
-    }
-    SplineFitter::createNaturalSpline(x, y, deriv);
-    logTable.resize(4*NUM_TABLE_POINTS);
-    for (int i = 0; i < NUM_TABLE_POINTS; i++) {
-        logTable[4*i] = (float) y[i];
-        logTable[4*i+1] = (float) y[i+1];
-        logTable[4*i+2] = (float) (deriv[i]*logDX*logDX/6);
-        logTable[4*i+3] = (float) (deriv[i+1]*logDX*logDX/6);
+        double x = 0.5+i*logDX;
+        logTable[i] = log(x);
     }
 }
 
@@ -104,16 +94,22 @@ void CpuGBSAOBCForce::computeForce(const std::vector<float>& posq, vector<vector
     threadBornForces.resize(numThreads);
     for (int i = 0; i < numThreads; i++)
         threadBornForces[i].resize(particleParams.size()+3);
+    gmx_atomic_t counter;
+    this->atomicCounter = &counter;
     
     // Signal the threads to start running and wait for them to finish.
     
     ComputeTask task(*this);
+    gmx_atomic_set(&counter, 0);
     threads.execute(task);
     threads.waitForThreads(); // Compute Born radii
+    gmx_atomic_set(&counter, 0);
     threads.resumeThreads();
     threads.waitForThreads(); // Compute surface area term
+    gmx_atomic_set(&counter, 0);
     threads.resumeThreads();
     threads.waitForThreads(); // First loop
+    gmx_atomic_set(&counter, 0);
     threads.resumeThreads();
     threads.waitForThreads(); // Second loop
     
@@ -141,8 +137,11 @@ void CpuGBSAOBCForce::threadComputeForce(ThreadPool& threads, int threadIndex) {
 
     // Calculate Born radii
 
-    for (int blockStart = start; blockStart < end; blockStart += 4) {
-        int numInBlock = min(4, end-blockStart);
+    while (true) {
+        int blockStart = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 4);
+        if (blockStart >= numParticles)
+            break;
+        int numInBlock = min(4, numParticles-blockStart);
         ivec4 blockAtomIndex(blockStart, blockStart+1, blockStart+2, blockStart+3);
         float atomRadius[4], atomx[4], atomy[4], atomz[4];
         int blockMask[4] = {0, 0, 0, 0};
@@ -213,7 +212,10 @@ void CpuGBSAOBCForce::threadComputeForce(ThreadPool& threads, int threadIndex) {
     vector<float>& bornForces = threadBornForces[threadIndex];
     for (int i = 0; i < numParticles; i++)
         bornForces[i] = 0.0f;
-    for (int atomI = start; atomI < end; atomI++) {
+    while (true) {
+        int atomI = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
+        if (atomI >= numParticles)
+            break;
         if (bornRadii[atomI] > 0) {
             float radiusI = particleParams[atomI].first + dielectricOffset;
             float r = radiusI + probeRadius;
@@ -235,8 +237,11 @@ void CpuGBSAOBCForce::threadComputeForce(ThreadPool& threads, int threadIndex) {
         preFactor = ONE_4PI_EPS0*((1.0f/solventDielectric) - (1.0f/soluteDielectric));
     else
         preFactor = 0.0f;
-    for (int blockStart = start; blockStart < end; blockStart += 4) {
-        int numInBlock = min(4, end-blockStart);
+    while (true) {
+        int blockStart = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 4);
+        if (blockStart >= numParticles)
+            break;
+        int numInBlock = min(4, numParticles-blockStart);
         ivec4 blockAtomIndex(blockStart, blockStart+1, blockStart+2, blockStart+3);
         float atomCharge[4], atomx[4], atomy[4], atomz[4];
         int blockMask[4] = {0, 0, 0, 0};
@@ -303,13 +308,16 @@ void CpuGBSAOBCForce::threadComputeForce(ThreadPool& threads, int threadIndex) {
 
     // Second loop of Born energy computation.
 
-    for (int blockStart = start; blockStart < end; blockStart += 4) {
+    while (true) {
+        int blockStart = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 4);
+        if (blockStart >= numParticles)
+            break;
         fvec4 bornForce(0.0f);
         for (int i = 0; i < numThreads; i++)
             bornForce += fvec4(&threadBornForces[i][blockStart]);
         fvec4 radii(&bornRadii[blockStart]);
         bornForce *= radii*radii*fvec4(&obcChain[blockStart]);
-        int numInBlock = min(4, end-blockStart);
+        int numInBlock = min(4, numParticles-blockStart);
         ivec4 blockAtomIndex(blockStart, blockStart+1, blockStart+2, blockStart+3);
         float atomRadius[4], atomx[4], atomy[4], atomz[4];
         int blockMask[4] = {0, 0, 0, 0};
@@ -385,21 +393,16 @@ void CpuGBSAOBCForce::getDeltaR(const fvec4& posI, const fvec4& x, const fvec4& 
 fvec4 CpuGBSAOBCForce::fastLog(fvec4 x) {
     // Evaluate log(x) using a lookup table for speed.
 
-    float y[4];
     fvec4 x1 = (x-0.5f)*logDXInv;
     ivec4 index = floor(x1);
-    fvec4 coeff[4];
-    coeff[1] = x1-index;
-    coeff[0] = 1.0f-coeff[1];
-    coeff[2] = coeff[0]*coeff[0]*coeff[0]-coeff[0];
-    coeff[3] = coeff[1]*coeff[1]*coeff[1]-coeff[1];
-    transpose(coeff[0], coeff[1], coeff[2], coeff[3]);
-    static float maxdiff = 0.0f;
+    fvec4 coeff2 = x1-index;
+    fvec4 coeff1 = 1.0f-coeff2;
+    float table1[4], table2[4];
     for (int i = 0; i < 4; i++) {
-        if (index[i] >= 0 && index[i] < NUM_TABLE_POINTS)
-            y[i] = dot4(coeff[i], fvec4(&logTable[4*index[i]]));
-        else
-            y[i] = logf(x[i]);
+        int tableIndex = index[i];
+        if (tableIndex < NUM_TABLE_POINTS)
+            table1[i] = logTable[tableIndex];
+            table2[i] = logTable[tableIndex+1];
     }
-    return fvec4(y);
+    return coeff1*fvec4(table1) + coeff2*fvec4(table2);
 }
