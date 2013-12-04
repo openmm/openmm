@@ -330,7 +330,7 @@ public:
 CpuNeighborList::CpuNeighborList() {
 }
 
-void CpuNeighborList::computeNeighborList(int numAtoms, const vector<float>& atomLocations, const vector<set<int> >& exclusions,
+void CpuNeighborList::computeNeighborList(int numAtoms, const AlignedArray<float>& atomLocations, const vector<set<int> >& exclusions,
             const float* periodicBoxSize, bool usePeriodic, float maxDistance, ThreadPool& threads) {
     int numBlocks = (numAtoms+BlockSize-1)/BlockSize;
     blockNeighbors.resize(numBlocks);

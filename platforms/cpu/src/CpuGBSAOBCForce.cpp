@@ -31,7 +31,9 @@
 using namespace std;
 using namespace OpenMM;
 
-const int CpuGBSAOBCForce::NUM_TABLE_POINTS = 2048;
+const int CpuGBSAOBCForce::NUM_TABLE_POINTS = 4096;
+const float CpuGBSAOBCForce::TABLE_MIN = 0.25f;
+const float CpuGBSAOBCForce::TABLE_MAX = 1.5f;
 
 class CpuGBSAOBCForce::ComputeTask : public ThreadPool::Task {
 public:
@@ -44,11 +46,11 @@ public:
 };
 
 CpuGBSAOBCForce::CpuGBSAOBCForce() : cutoff(false), periodic(false) {
-    logDX = 0.5/NUM_TABLE_POINTS;
+    logDX = (TABLE_MAX-TABLE_MIN)/NUM_TABLE_POINTS;
     logDXInv = 1.0f/logDX;
     logTable.resize(NUM_TABLE_POINTS+1);
     for (int i = 0; i < NUM_TABLE_POINTS+1; i++) {
-        double x = 0.5+i*logDX;
+        double x = TABLE_MIN+i*logDX;
         logTable[i] = log(x);
     }
 }
@@ -83,7 +85,7 @@ void CpuGBSAOBCForce::setParticleParameters(const std::vector<std::pair<float, f
     obcChain.resize(params.size()+3);
 }
 
-void CpuGBSAOBCForce::computeForce(const std::vector<float>& posq, vector<vector<float> >& threadForce, double* totalEnergy, ThreadPool& threads) {
+void CpuGBSAOBCForce::computeForce(const AlignedArray<float>& posq, vector<AlignedArray<float> >& threadForce, double* totalEnergy, ThreadPool& threads) {
     // Record the parameters for the threads.
     
     this->posq = &posq[0];
@@ -393,16 +395,17 @@ void CpuGBSAOBCForce::getDeltaR(const fvec4& posI, const fvec4& x, const fvec4& 
 fvec4 CpuGBSAOBCForce::fastLog(fvec4 x) {
     // Evaluate log(x) using a lookup table for speed.
 
-    fvec4 x1 = (x-0.5f)*logDXInv;
+    if (any(x < TABLE_MIN) || any(x >= TABLE_MAX))
+        return fvec4(logf(x[0]), logf(x[1]), logf(x[2]), logf(x[3]));
+    fvec4 x1 = (x-TABLE_MIN)*logDXInv;
     ivec4 index = floor(x1);
     fvec4 coeff2 = x1-index;
     fvec4 coeff1 = 1.0f-coeff2;
     float table1[4], table2[4];
     for (int i = 0; i < 4; i++) {
         int tableIndex = index[i];
-        if (tableIndex < NUM_TABLE_POINTS)
-            table1[i] = logTable[tableIndex];
-            table2[i] = logTable[tableIndex+1];
+        table1[i] = logTable[tableIndex];
+        table2[i] = logTable[tableIndex+1];
     }
     return coeff1*fvec4(table1) + coeff2*fvec4(table2);
 }

@@ -288,7 +288,7 @@ void CpuNonbondedForce::calculateReciprocalIxn(int numberOfAtoms, float* posq, c
 
 
 void CpuNonbondedForce::calculateDirectIxn(int numberOfAtoms, float* posq, const vector<RealVec>& atomCoordinates, const vector<pair<float, float> >& atomParameters,
-                const vector<set<int> >& exclusions, vector<vector<float> >& threadForce, double* totalEnergy, ThreadPool& threads) {
+                const vector<set<int> >& exclusions, vector<AlignedArray<float> >& threadForce, double* totalEnergy, ThreadPool& threads) {
     // Record the parameters for the threads.
     
     this->numberOfAtoms = numberOfAtoms;
@@ -701,9 +701,10 @@ fvec4 CpuNonbondedForce::ewaldScaleFunction(fvec4 x) {
     float table1[4], table2[4];
     for (int i = 0; i < 4; i++) {
         int tableIndex = index[i];
-        if (tableIndex < NUM_TABLE_POINTS)
+        if (tableIndex < NUM_TABLE_POINTS) {
             table1[i] = ewaldScaleTable[tableIndex];
             table2[i] = ewaldScaleTable[tableIndex+1];
+        }
     }
     return coeff1*fvec4(table1) + coeff2*fvec4(table2);
 }

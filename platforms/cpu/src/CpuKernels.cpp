@@ -81,7 +81,7 @@ void CpuCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool i
     
     // Convert the positions to single precision and apply periodic boundary conditions
     
-    vector<float>& posq = data.posq;
+    AlignedArray<float>& posq = data.posq;
     vector<RealVec>& posData = extractPositions(context);
     RealVec boxSize = extractBoxSize(context);
     float floatBoxSize[3] = {(float) boxSize[0], (float) boxSize[1], (float) boxSize[2]};
@@ -255,7 +255,7 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
             }
         }
     }
-    vector<float>& posq = data.posq;
+    AlignedArray<float>& posq = data.posq;
     vector<RealVec>& posData = extractPositions(context);
     vector<RealVec>& forceData = extractForces(context);
     RealVec boxSize = extractBoxSize(context);

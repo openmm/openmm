@@ -1,3 +1,6 @@
+#ifndef OPENMM_ALIGNEDARRAY_H_
+#define OPENMM_ALIGNEDARRAY_H_
+
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -29,70 +32,73 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "CpuPlatform.h"
-#include "CpuKernelFactory.h"
-#include "CpuKernels.h"
-#include "openmm/internal/hardware.h"
+namespace OpenMM {
 
-using namespace OpenMM;
-using namespace std;
-
-extern "C" OPENMM_EXPORT_CPU void registerPlatforms() {
-    // Only register this platform if the CPU supports SSE 4.1.
-
-    if (CpuPlatform::isProcessorSupported())
-        Platform::registerPlatform(new CpuPlatform());
-}
-
-map<ContextImpl*, CpuPlatform::PlatformData*> CpuPlatform::contextData;
-
-CpuPlatform::CpuPlatform() {
-    CpuKernelFactory* factory = new CpuKernelFactory();
-    registerKernelFactory(CalcForcesAndEnergyKernel::Name(), factory);
-    registerKernelFactory(CalcNonbondedForceKernel::Name(), factory);
-    registerKernelFactory(CalcGBSAOBCForceKernel::Name(), factory);
-}
-
-double CpuPlatform::getSpeed() const {
-    return 10;
-}
-
-bool CpuPlatform::supportsDoublePrecision() const {
-    return false;
-}
-
-bool CpuPlatform::isProcessorSupported() {
-    // Make sure the CPU supports SSE 4.1.
-    
-    int cpuInfo[4];
-    cpuid(cpuInfo, 0);
-    if (cpuInfo[0] >= 1) {
-        cpuid(cpuInfo, 1);
-        return ((cpuInfo[2] & ((int) 1 << 19)) != 0);
+/**
+ * This class represents an array in memory whose starting point is guaranteed to
+ * be aligned with a 16 byte boundary.  This can improve the performance of vectorized
+ * code, since loads and stores are more efficient.
+ */
+template <class T>
+class AlignedArray {
+public:
+    /**
+     * Default constructor, to allow AlignedArrays to be used inside collections.
+     */
+    AlignedArray() : dataSize(0), baseData(0), data(0) {
     }
-    return false;
-}
+    /**
+     * Create an Aligned array that contains a specified number of elements.
+     */
+    AlignedArray(int size) {
+        allocate(size);
+    }
+    ~AlignedArray() {
+        if (baseData != 0)
+            delete[] baseData;
+    }
+    /**
+     * Get the number of elements in the array.
+     */
+    int size() const {
+        return dataSize;
+    }
+    /**
+     * Change the size of the array.  This may cause all contents to be lost.
+     */
+    void resize(int size) {
+        if (dataSize == size)
+            return;
+        if (baseData != 0)
+            delete[] baseData;
+        allocate(size);
+    }
+    /**
+     * Get a reference to an element of the array.
+     */
+    T& operator[](int i) {
+        return data[i];
+    }
+    /**
+     * Get a const reference to an element of the array.
+     */
+    const T& operator[](int i) const {
+        return data[i];
+    }
+private:
+    void allocate(int size) {
+        dataSize = size;
+        baseData = new char[size*sizeof(T)+16];
+        char* offsetData = baseData+15;
+        offsetData -= (long long)offsetData&0xF;
+        data = (T*) offsetData;
+    }
+    int dataSize;
+    char* baseData;
+    T* data;
+};
 
-void CpuPlatform::contextCreated(ContextImpl& context, const map<string, string>& properties) const {
-    ReferencePlatform::contextCreated(context, properties);
-    PlatformData* data = new PlatformData(context.getSystem().getNumParticles());
-    contextData[&context] = data;
-}
+} // namespace OpenMM
 
-void CpuPlatform::contextDestroyed(ContextImpl& context) const {
-    PlatformData* data = contextData[&context];
-    delete data;
-    contextData.erase(&context);
-}
+#endif /*OPENMM_ALIGNEDARRAY_H_*/
 
-CpuPlatform::PlatformData& CpuPlatform::getPlatformData(ContextImpl& context) {
-    return *contextData[&context];
-}
-
-CpuPlatform::PlatformData::PlatformData(int numParticles) : posq(4*numParticles) {
-    int numThreads = threads.getNumThreads();
-    threadForce.resize(numThreads);
-    for (int i = 0; i < numThreads; i++)
-        threadForce[i].resize(4*numParticles);
-    isPeriodic = false;
-}
