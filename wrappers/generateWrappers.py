@@ -394,7 +394,13 @@ extern OPENMM_EXPORT void %(name)s_insert(%(name)s* set, %(type)s value);""" % v
 /* These methods need to be handled specially, since their C++ APIs cannot be directly translated to C.
    Unlike the C++ versions, the return value is allocated on the heap, and you must delete it yourself. */
 extern OPENMM_EXPORT OpenMM_State* OpenMM_Context_getState(const OpenMM_Context* target, int types, int enforcePeriodicBox);
-extern OPENMM_EXPORT OpenMM_StringArray* OpenMM_Platform_loadPluginsFromDirectory(const char* directory);"""
+extern OPENMM_EXPORT OpenMM_StringArray* OpenMM_Platform_loadPluginsFromDirectory(const char* directory);
+extern OPENMM_EXPORT char* OpenMM_XmlSerializer_serializeSystem(const OpenMM_System* system);
+extern OPENMM_EXPORT char* OpenMM_XmlSerializer_serializeState(const OpenMM_State* state);
+extern OPENMM_EXPORT char* OpenMM_XmlSerializer_serializeIntegrator(const OpenMM_Integrator* integrator);
+extern OPENMM_EXPORT OpenMM_System* OpenMM_XmlSerializer_deserializeSystem(const char* xml);
+extern OPENMM_EXPORT OpenMM_State* OpenMM_XmlSerializer_deserializeState(const char* xml);
+extern OPENMM_EXPORT OpenMM_Integrator* OpenMM_XmlSerializer_deserializeIntegrator(const char* xml);"""
 
         self.writeClasses()
 
@@ -625,7 +631,9 @@ class CSourceGenerator(WrapperGenerator):
         print >>self.out, """
 #include "OpenMM.h"
 #include "OpenMMCWrapper.h"
+#include <cstdlib>
 #include <cstring>
+#include <sstream>
 #include <vector>
 
 using namespace OpenMM;
@@ -785,11 +793,48 @@ OPENMM_EXPORT void %(name)s_insert(%(name)s* s, %(type)s value) {
 OPENMM_EXPORT OpenMM_State* OpenMM_Context_getState(const OpenMM_Context* target, int types, int enforcePeriodicBox) {
     State result = reinterpret_cast<const Context*>(target)->getState(types, enforcePeriodicBox);
     return reinterpret_cast<OpenMM_State*>(new State(result));
-};
+}
 OPENMM_EXPORT OpenMM_StringArray* OpenMM_Platform_loadPluginsFromDirectory(const char* directory) {
     vector<string> result = Platform::loadPluginsFromDirectory(string(directory));
     return reinterpret_cast<OpenMM_StringArray*>(new vector<string>(result));
-};"""
+}
+static char* createStringFromStream(stringstream& stream) {
+    int length = stream.str().size();
+    char* result = (char*) malloc(length+1);
+    stream.str().copy(result, length);
+    result[length] = 0;
+    return result;
+}
+OPENMM_EXPORT char* OpenMM_XmlSerializer_serializeSystem(const OpenMM_System* system) {
+    stringstream stream;
+    OpenMM::XmlSerializer::serialize<OpenMM::System>(reinterpret_cast<const OpenMM::System*>(system), "System", stream);
+    return createStringFromStream(stream);
+}
+OPENMM_EXPORT char* OpenMM_XmlSerializer_serializeState(const OpenMM_State* state) {
+    stringstream stream;
+    OpenMM::XmlSerializer::serialize<OpenMM::State>(reinterpret_cast<const OpenMM::State*>(state), "State", stream);
+    return createStringFromStream(stream);
+}
+OPENMM_EXPORT char* OpenMM_XmlSerializer_serializeIntegrator(const OpenMM_Integrator* integrator) {
+    stringstream stream;
+    OpenMM::XmlSerializer::serialize<OpenMM::Integrator>(reinterpret_cast<const OpenMM::Integrator*>(integrator), "Integrator", stream);
+    return createStringFromStream(stream);
+}
+OPENMM_EXPORT OpenMM_System* OpenMM_XmlSerializer_deserializeSystem(const char* xml) {
+    string input(xml);
+    stringstream stream(input);
+    return reinterpret_cast<OpenMM_System*>(OpenMM::XmlSerializer::deserialize<OpenMM::System>(stream));
+}
+OPENMM_EXPORT OpenMM_State* OpenMM_XmlSerializer_deserializeState(const char* xml) {
+    string input(xml);
+    stringstream stream(input);
+    return reinterpret_cast<OpenMM_State*>(OpenMM::XmlSerializer::deserialize<OpenMM::State>(stream));
+}
+OPENMM_EXPORT OpenMM_Integrator* OpenMM_XmlSerializer_deserializeIntegrator(const char* xml) {
+    string input(xml);
+    stringstream stream(input);
+    return reinterpret_cast<OpenMM_Integrator*>(OpenMM::XmlSerializer::deserialize<OpenMM::Integrator>(stream));
+}"""
         self.writeClasses()
         print >>self.out, "}\n"
 
@@ -1254,13 +1299,45 @@ MODULE OpenMM
             type (OpenMM_Context) target
             integer*4 types
             integer*4 enforcePeriodicBox
-            type (OpenMM_State) result
+            type(OpenMM_State) result
         end subroutine
-
         subroutine OpenMM_Platform_loadPluginsFromDirectory(directory, result)
             use OpenMM_Types; implicit none
             character(*) directory
-            type (OpenMM_StringArray) result
+            type(OpenMM_StringArray) result
+        end subroutine
+        subroutine OpenMM_XmlSerializer_serializeSystem(system, result, result_length)
+            use iso_c_binding; use OpenMM_Types; implicit none
+            type(OpenMM_System), intent(in) :: system
+            type(c_ptr), intent(out) :: result
+            integer, intent(out) :: result_length
+        end subroutine
+        subroutine OpenMM_XmlSerializer_serializeState(state, result, result_length)
+            use iso_c_binding; use OpenMM_Types; implicit none
+            type(OpenMM_State), intent(in) :: state
+            type(c_ptr), intent(out) :: result
+            integer, intent(out) :: result_length
+        end subroutine
+        subroutine OpenMM_XmlSerializer_serializeIntegrator(integrator, result, result_length)
+            use iso_c_binding; use OpenMM_Types; implicit none
+            type(OpenMM_Integrator), intent(in) :: integrator
+            type(c_ptr), intent(out) :: result
+            integer, intent(out) :: result_length
+        end subroutine
+        subroutine OpenMM_XmlSerializer_deserializeSystem(xml, result)
+            use OpenMM_Types; implicit none
+            character(*) xml
+            type(OpenMM_System) result
+        end subroutine
+        subroutine OpenMM_XmlSerializer_deserializeState(xml, result)
+            use OpenMM_Types; implicit none
+            character(*) xml
+            type(OpenMM_State) result
+        end subroutine
+        subroutine OpenMM_XmlSerializer_deserializeIntegrator(xml, result)
+            use OpenMM_Types; implicit none
+            character(*) xml
+            type(OpenMM_Integrator) result
         end subroutine"""
         
         self.writeClasses()
@@ -1561,6 +1638,13 @@ static string makeString(const char* fsrc, int length) {
     return string(fsrc, length);
 }
 
+static void convertStringToChars(char* source, char*& cstr, int& length) {
+	length = strlen(source);
+	cstr = new char[length+1];
+	strcpy(cstr, source);
+    free(source);
+}
+
 extern "C" {
 
 /* OpenMM_Vec3 */
@@ -1826,16 +1910,52 @@ OPENMM_EXPORT void %(name_upper)s_INSERT(%(name)s* const& array, const %(type)s&
    Unlike the C++ versions, the return value is allocated on the heap, and you must delete it yourself. */
 OPENMM_EXPORT void openmm_context_getstate_(const OpenMM_Context*& target, int const& types, int const& enforcePeriodicBox, OpenMM_State*& result) {
     result = OpenMM_Context_getState(target, types, enforcePeriodicBox);
-};
+}
 OPENMM_EXPORT void OPENMM_CONTEXT_GETSTATE(const OpenMM_Context*& target, int const& types, int const& enforcePeriodicBox, OpenMM_State*& result) {
     result = OpenMM_Context_getState(target, types, enforcePeriodicBox);
-};
+}
 OPENMM_EXPORT void openmm_platform_loadpluginsfromdirectory_(const char* directory, OpenMM_StringArray*& result, int length) {
     result = OpenMM_Platform_loadPluginsFromDirectory(makeString(directory, length).c_str());
-};
+}
 OPENMM_EXPORT void OPENMM_PLATFORM_LOADPLUGINSFROMDIRECTORY(const char* directory, OpenMM_StringArray*& result, int length) {
     result = OpenMM_Platform_loadPluginsFromDirectory(makeString(directory, length).c_str());
-};"""
+}
+OPENMM_EXPORT void openmm_xmlserializer_serializesystem_(OpenMM_System*& system, char*& result, int& result_length) {
+    convertStringToChars(OpenMM_XmlSerializer_serializeSystem(system), result, result_length);
+}
+OPENMM_EXPORT void OPENMM_XMLSERIALIZER_SERIALIZESYSTEM(OpenMM_System*& system, char*& result, int& result_length) {
+    convertStringToChars(OpenMM_XmlSerializer_serializeSystem(system), result, result_length);
+}
+OPENMM_EXPORT void openmm_xmlserializer_serializestate_(OpenMM_State*& state, char*& result, int& result_length) {
+    convertStringToChars(OpenMM_XmlSerializer_serializeState(state), result, result_length);
+}
+OPENMM_EXPORT void OPENMM_XMLSERIALIZER_SERIALIZESTATE(OpenMM_State*& state, char*& result, int& result_length) {
+    convertStringToChars(OpenMM_XmlSerializer_serializeState(state), result, result_length);
+}
+OPENMM_EXPORT void openmm_xmlserializer_serializeintegrator_(OpenMM_Integrator*& integrator, char*& result, int& result_length) {
+    convertStringToChars(OpenMM_XmlSerializer_serializeIntegrator(integrator), result, result_length);
+}
+OPENMM_EXPORT void OPENMM_XMLSERIALIZER_SERIALIZEINTEGRATOR(OpenMM_Integrator*& integrator, char*& result, int& result_length) {
+    convertStringToChars(OpenMM_XmlSerializer_serializeIntegrator(integrator), result, result_length);
+}
+OPENMM_EXPORT void openmm_xmlserializer_deserializesystem_(const char* xml, OpenMM_System*& result, int length) {
+    result = OpenMM_XmlSerializer_deserializeSystem(makeString(xml, length).c_str());
+}
+OPENMM_EXPORT void OPENMM_XMLSERIALIZER_DESERIALIZESYSTEM(const char* xml, OpenMM_System*& result, int length) {
+    result = OpenMM_XmlSerializer_deserializeSystem(makeString(xml, length).c_str());
+}
+OPENMM_EXPORT void openmm_xmlserializer_deserializestate_(const char* xml, OpenMM_State*& result, int length) {
+    result = OpenMM_XmlSerializer_deserializeState(makeString(xml, length).c_str());
+}
+OPENMM_EXPORT void OPENMM_XMLSERIALIZER_DESERIALIZESTATE(const char* xml, OpenMM_State*& result, int length) {
+    result = OpenMM_XmlSerializer_deserializeState(makeString(xml, length).c_str());
+}
+OPENMM_EXPORT void openmm_xmlserializer_deserializeintegrator_(const char* xml, OpenMM_Integrator*& result, int length) {
+    result = OpenMM_XmlSerializer_deserializeIntegrator(makeString(xml, length).c_str());
+}
+OPENMM_EXPORT void OPENMM_XMLSERIALIZER_DESERIALIZEINTEGRATOR(const char* xml, OpenMM_Integrator*& result, int length) {
+    result = OpenMM_XmlSerializer_deserializeIntegrator(makeString(xml, length).c_str());
+}"""
 
         self.writeClasses()
         print >>self.out, "}"
