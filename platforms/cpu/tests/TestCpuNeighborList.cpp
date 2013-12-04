@@ -35,6 +35,7 @@
 
 #include "openmm/internal/AssertionUtilities.h"
 #include "openmm/internal/ThreadPool.h"
+#include "AlignedArray.h"
 #include "CpuNeighborList.h"
 #include "CpuPlatform.h"
 #include "sfmt/SFMT.h"
@@ -52,7 +53,7 @@ void testNeighborList(bool periodic) {
     const float boxSize[3] = {20.0f, 15.0f, 22.0f};
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);
-    vector<float> positions(4*numParticles);
+    AlignedArray<float> positions(4*numParticles);
     for (int i = 0; i < 4*numParticles; i++)
         if (i%4 < 3)
             positions[i] = boxSize[i%4]*genrand_real2(sfmt);
