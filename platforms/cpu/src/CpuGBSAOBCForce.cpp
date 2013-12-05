@@ -48,8 +48,8 @@ public:
 CpuGBSAOBCForce::CpuGBSAOBCForce() : cutoff(false), periodic(false) {
     logDX = (TABLE_MAX-TABLE_MIN)/NUM_TABLE_POINTS;
     logDXInv = 1.0f/logDX;
-    logTable.resize(NUM_TABLE_POINTS+1);
-    for (int i = 0; i < NUM_TABLE_POINTS+1; i++) {
+    logTable.resize(NUM_TABLE_POINTS+4);
+    for (int i = 0; i < NUM_TABLE_POINTS+4; i++) {
         double x = TABLE_MIN+i*logDX;
         logTable[i] = log(x);
     }
@@ -395,17 +395,16 @@ void CpuGBSAOBCForce::getDeltaR(const fvec4& posI, const fvec4& x, const fvec4& 
 fvec4 CpuGBSAOBCForce::fastLog(fvec4 x) {
     // Evaluate log(x) using a lookup table for speed.
 
-    if (any(x < TABLE_MIN) || any(x >= TABLE_MAX))
+    if (any((x < TABLE_MIN) | (x >= TABLE_MAX)))
         return fvec4(logf(x[0]), logf(x[1]), logf(x[2]), logf(x[3]));
     fvec4 x1 = (x-TABLE_MIN)*logDXInv;
     ivec4 index = floor(x1);
     fvec4 coeff2 = x1-index;
     fvec4 coeff1 = 1.0f-coeff2;
-    float table1[4], table2[4];
-    for (int i = 0; i < 4; i++) {
-        int tableIndex = index[i];
-        table1[i] = logTable[tableIndex];
-        table2[i] = logTable[tableIndex+1];
-    }
-    return coeff1*fvec4(table1) + coeff2*fvec4(table2);
+    fvec4 t1(&logTable[index[0]]);
+    fvec4 t2(&logTable[index[1]]);
+    fvec4 t3(&logTable[index[2]]);
+    fvec4 t4(&logTable[index[3]]);
+    transpose(t1, t2, t3, t4);
+    return coeff1*t1 + coeff2*t2;
 }

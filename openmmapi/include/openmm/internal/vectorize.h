@@ -91,6 +91,9 @@ public:
     fvec4 operator&(fvec4 other) const {
         return _mm_and_ps(val, other);
     }
+    fvec4 operator|(fvec4 other) const {
+        return _mm_or_ps(val, other);
+    }
     fvec4 operator==(fvec4 other) const {
         return _mm_cmpeq_ps(val, other);
     }
@@ -156,6 +159,9 @@ public:
     }
     ivec4 operator&(ivec4 other) const {
         return _mm_and_si128(val, other);
+    }
+    ivec4 operator|(ivec4 other) const {
+        return _mm_or_si128(val, other);
     }
     ivec4 operator==(ivec4 other) const {
         return _mm_cmpeq_epi32(val, other);
