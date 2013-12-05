@@ -89,6 +89,16 @@ class BaseDimension(object):
 
     def __repr__(self):
         return 'BaseDimension("%s")' % self.name
+    
+    def __eq__(self, other):
+        if self._index == other._index:
+            return True
+        return False
+    
+    def __ne__(self, other):
+        if self._index == other._index:
+            return False
+        return True
 
 
 # run module directly for testing
