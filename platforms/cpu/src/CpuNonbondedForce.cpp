@@ -163,10 +163,10 @@ void CpuNonbondedForce::tabulateEwaldScaleFactor() {
     if (tableIsValid)
         return;
     tableIsValid = true;
-    ewaldDX = cutoffDistance/(NUM_TABLE_POINTS-2);
+    ewaldDX = cutoffDistance/NUM_TABLE_POINTS;
     ewaldDXInv = 1.0f/ewaldDX;
-    ewaldScaleTable.resize(NUM_TABLE_POINTS+1);
-    for (int i = 0; i < NUM_TABLE_POINTS+1; i++) {
+    ewaldScaleTable.resize(NUM_TABLE_POINTS+4);
+    for (int i = 0; i < NUM_TABLE_POINTS+4; i++) {
         double r = i*ewaldDX;
         double alphaR = alphaEwald*r;
         ewaldScaleTable[i] = erfc(alphaR) + TWO_OVER_SQRT_PI*alphaR*exp(-alphaR*alphaR);
@@ -510,16 +510,17 @@ void CpuNonbondedForce::calculateBlockIxn(int blockIndex, float* forces, double*
         fvec4 sig2 = inverseR*sig;
         sig2 *= sig2;
         fvec4 sig6 = sig2*sig2*sig2;
-        fvec4 eps = blockAtomEpsilon*atomParameters[atom].second;
-        fvec4 dEdR = switchValue*eps*(12.0f*sig6 - 6.0f)*sig6;
+        fvec4 epsSig6 = blockAtomEpsilon*atomParameters[atom].second*sig6;
+        fvec4 dEdR = switchValue*epsSig6*(12.0f*sig6 - 6.0f);
         fvec4 chargeProd = blockAtomCharge*posq[4*atom+3];
         if (cutoff)
             dEdR += chargeProd*(inverseR-2.0f*krf*r2);
         else
             dEdR += chargeProd*inverseR;
         dEdR *= inverseR*inverseR;
-        fvec4 energy = eps*(sig6-1.0f)*sig6;
+        fvec4 energy;
         if (useSwitch) {
+            energy = epsSig6*(sig6-1.0f);
             dEdR -= energy*switchDeriv*inverseR;
             energy *= switchValue;
         }
@@ -527,6 +528,8 @@ void CpuNonbondedForce::calculateBlockIxn(int blockIndex, float* forces, double*
         // Accumulate energies.
 
         if (totalEnergy) {
+            if (!useSwitch)
+                 energy = epsSig6*(sig6-1.0f);
             if (cutoff)
                 energy += chargeProd*(inverseR+krf*r2-crf);
             else
@@ -623,8 +626,9 @@ void CpuNonbondedForce::calculateBlockEwaldIxn(int blockIndex, float* forces, do
         fvec4 epsSig6 = blockAtomEpsilon*atomParameters[atom].second*sig6;
         dEdR += switchValue*epsSig6*(12.0f*sig6 - 6.0f);
         dEdR *= inverseR*inverseR;
-        fvec4 energy = epsSig6*(sig6-1.0f);
+        fvec4 energy;
         if (useSwitch) {
+            energy = epsSig6*(sig6-1.0f);
             dEdR -= energy*switchDeriv*inverseR;
             energy *= switchValue;
         }
@@ -632,6 +636,8 @@ void CpuNonbondedForce::calculateBlockEwaldIxn(int blockIndex, float* forces, do
         // Accumulate energies.
 
         if (totalEnergy) {
+            if (!useSwitch)
+                 energy = epsSig6*(sig6-1.0f);
             energy += chargeProd*inverseR*erfcApprox(alphaEwald*r);
             for (int j = 0; j < 4; j++)
                 if (include[j])
@@ -695,16 +701,13 @@ fvec4 CpuNonbondedForce::ewaldScaleFunction(fvec4 x) {
     // Compute the tabulated Ewald scale factor: erfc(alpha*r) + 2*alpha*r*exp(-alpha*alpha*r*r)/sqrt(PI)
 
     fvec4 x1 = x*ewaldDXInv;
-    ivec4 index = floor(x1);
+    ivec4 index = min(floor(x1), NUM_TABLE_POINTS);
     fvec4 coeff2 = x1-index;
     fvec4 coeff1 = 1.0f-coeff2;
-    float table1[4], table2[4];
-    for (int i = 0; i < 4; i++) {
-        int tableIndex = index[i];
-        if (tableIndex < NUM_TABLE_POINTS) {
-            table1[i] = ewaldScaleTable[tableIndex];
-            table2[i] = ewaldScaleTable[tableIndex+1];
-        }
-    }
-    return coeff1*fvec4(table1) + coeff2*fvec4(table2);
+    fvec4 t1(&ewaldScaleTable[index[0]]);
+    fvec4 t2(&ewaldScaleTable[index[1]]);
+    fvec4 t3(&ewaldScaleTable[index[2]]);
+    fvec4 t4(&ewaldScaleTable[index[3]]);
+    transpose(t1, t2, t3, t4);
+    return coeff1*t1 + coeff2*t2;
 }
