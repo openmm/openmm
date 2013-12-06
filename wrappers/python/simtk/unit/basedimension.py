@@ -91,14 +91,14 @@ class BaseDimension(object):
         return 'BaseDimension("%s")' % self.name
     
     def __eq__(self, other):
-        if self._index == other._index:
-            return True
+        if isInstance(other, BaseDimension):
+            return self._index == other._index
         return False
     
     def __ne__(self, other):
-        if self._index == other._index:
-            return False
-        return True
+        if isInstance(other, BaseDimension):
+            return self._index != other._index
+        return False
 
 
 # run module directly for testing
