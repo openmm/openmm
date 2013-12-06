@@ -273,5 +273,11 @@ static inline fvec4 operator/(float v1, fvec4 v2) {
     return fvec4(v1)/v2;
 }
 
+// Operations for blending fvec4s based on an ivec4.
+
+static inline fvec4 blend(fvec4 v1, fvec4 v2, ivec4 mask) {
+    return fvec4(_mm_blendv_ps(v1.val, v2.val, _mm_castsi128_ps(mask.val)));
+}
+
 #endif /*OPENMM_VECTORIZE_H_*/
 
