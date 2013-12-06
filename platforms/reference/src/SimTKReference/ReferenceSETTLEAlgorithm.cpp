@@ -35,19 +35,11 @@ using namespace OpenMM;
 using namespace std;
 
 ReferenceSETTLEAlgorithm::ReferenceSETTLEAlgorithm(const vector<int>& atom1, const vector<int>& atom2, const vector<int>& atom3,
-        const vector<RealOpenMM>& distance1, const vector<RealOpenMM>& distance2, vector<RealOpenMM>& masses, RealOpenMM tolerance) :
-        atom1(atom1), atom2(atom2), atom3(atom3), distance1(distance1), distance2(distance2), masses(masses), tolerance(tolerance) {
+        const vector<RealOpenMM>& distance1, const vector<RealOpenMM>& distance2, vector<RealOpenMM>& masses) :
+        atom1(atom1), atom2(atom2), atom3(atom3), distance1(distance1), distance2(distance2), masses(masses) {
 }
 
-RealOpenMM ReferenceSETTLEAlgorithm::getTolerance() const {
-    return tolerance;
-}
-
-void ReferenceSETTLEAlgorithm::setTolerance(RealOpenMM tolerance) {
-    this->tolerance = tolerance;
-}
-
-void ReferenceSETTLEAlgorithm::apply(vector<OpenMM::RealVec>& atomCoordinates, vector<OpenMM::RealVec>& atomCoordinatesP, vector<RealOpenMM>& inverseMasses) {
+void ReferenceSETTLEAlgorithm::apply(vector<OpenMM::RealVec>& atomCoordinates, vector<OpenMM::RealVec>& atomCoordinatesP, vector<RealOpenMM>& inverseMasses, RealOpenMM tolerance) {
     for (int index = 0; index < (int) atom1.size(); ++index) {
         RealVec apos0 = atomCoordinates[atom1[index]];
         RealVec xp0 = atomCoordinatesP[atom1[index]]-apos0;
@@ -190,7 +182,7 @@ void ReferenceSETTLEAlgorithm::apply(vector<OpenMM::RealVec>& atomCoordinates, v
     }
 }
 
-void ReferenceSETTLEAlgorithm::applyToVelocities(vector<OpenMM::RealVec>& atomCoordinates, vector<OpenMM::RealVec>& velocities, vector<RealOpenMM>& inverseMasses) {
+void ReferenceSETTLEAlgorithm::applyToVelocities(vector<OpenMM::RealVec>& atomCoordinates, vector<OpenMM::RealVec>& velocities, vector<RealOpenMM>& inverseMasses, RealOpenMM tolerance) {
     for (int index = 0; index < (int) atom1.size(); ++index) {
         RealVec apos0 = atomCoordinates[atom1[index]];
         RealVec apos1 = atomCoordinates[atom2[index]];

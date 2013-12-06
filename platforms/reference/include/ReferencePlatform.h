@@ -33,6 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/Platform.h"
+#include "openmm/System.h"
 #include "openmm/internal/windowsExport.h"
 
 namespace OpenMM {
@@ -57,7 +58,7 @@ public:
 
 class ReferencePlatform::PlatformData {
 public:
-    PlatformData(int numParticles);
+    PlatformData(const System& system);
     ~PlatformData();
     int numParticles, stepCount;
     double time;
@@ -65,6 +66,7 @@ public:
     void* velocities;
     void* forces;
     void* periodicBoxSize;
+    void* constraints;
 };
 } // namespace OpenMM
 

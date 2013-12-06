@@ -133,11 +133,16 @@ static RealVec& extractBoxSize(ContextImpl& context) {
     return *(RealVec*) data->periodicBoxSize;
 }
 
+static ReferenceConstraints& extractConstraints(ContextImpl& context) {
+    ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
+    return *(ReferenceConstraints*) data->constraints;
+}
+
 /**
  * Compute the kinetic energy of the system, possibly shifting the velocities in time to account
  * for a leapfrog integrator.
  */
-static double computeShiftedKineticEnergy(ContextImpl& context, vector<double>& masses, double timeShift, ReferenceConstraintAlgorithm* constraints) {
+static double computeShiftedKineticEnergy(ContextImpl& context, vector<double>& masses, double timeShift) {
     vector<RealVec>& posData = extractPositions(context);
     vector<RealVec>& velData = extractVelocities(context);
     vector<RealVec>& forceData = extractForces(context);
@@ -155,13 +160,10 @@ static double computeShiftedKineticEnergy(ContextImpl& context, vector<double>& 
     
     // Apply constraints to them.
     
-    if (constraints != NULL) {
-        vector<double> inverseMasses(numParticles);
-        for (int i = 0; i < numParticles; i++)
-            inverseMasses[i] = (masses[i] == 0 ? 0 : 1/masses[i]);
-        constraints->setTolerance(1e-4);
-        constraints->applyToVelocities(posData, shiftedVel, inverseMasses);
-    }
+    vector<double> inverseMasses(numParticles);
+    for (int i = 0; i < numParticles; i++)
+        inverseMasses[i] = (masses[i] == 0 ? 0 : 1/masses[i]);
+    extractConstraints(context).applyToVelocities(posData, shiftedVel, inverseMasses, 1e-4);
     
     // Compute the kinetic energy.
     
@@ -302,39 +304,21 @@ void ReferenceApplyConstraintsKernel::initialize(const System& system) {
         masses[i] = static_cast<RealOpenMM>(system.getParticleMass(i));
         inverseMasses[i] = 1.0/masses[i];
     }
-    for (int i = 0; i < system.getNumConstraints(); ++i) {
-        int particle1, particle2;
-        double distance;
-        system.getConstraintParameters(i, particle1, particle2, distance);
-        if (system.getParticleMass(particle1) != 0 || system.getParticleMass(particle2) != 0) {
-            constraintIndices.push_back(make_pair(particle1, particle2));
-            constraintDistances.push_back(distance);
-        }
-    }
-    numConstraints = constraintIndices.size();
 }
 
 ReferenceApplyConstraintsKernel::~ReferenceApplyConstraintsKernel() {
-    if (constraints)
-        delete constraints;
 }
 
 void ReferenceApplyConstraintsKernel::apply(ContextImpl& context, double tol) {
-    if (constraints == NULL)
-        constraints = new ReferenceConstraints(context.getSystem(), (RealOpenMM) tol);
     vector<RealVec>& positions = extractPositions(context);
-    constraints->setTolerance(tol);
-    constraints->apply(positions, positions, inverseMasses);
+    extractConstraints(context).apply(positions, positions, inverseMasses, tol);
     ReferenceVirtualSites::computePositions(context.getSystem(), positions);
 }
 
 void ReferenceApplyConstraintsKernel::applyToVelocities(ContextImpl& context, double tol) {
-    if (constraints == NULL)
-        constraints = new ReferenceConstraints(context.getSystem(), (RealOpenMM) tol);
     vector<RealVec>& positions = extractPositions(context);
     vector<RealVec>& velocities = extractVelocities(context);
-    constraints->setTolerance(tol);
-    constraints->applyToVelocities(positions, velocities, inverseMasses);
+    extractConstraints(context).applyToVelocities(positions, velocities, inverseMasses, tol);
 }
 
 void ReferenceVirtualSitesKernel::initialize(const System& system) {
@@ -1686,8 +1670,6 @@ void ReferenceCalcCustomCompoundBondForceKernel::copyParametersToContext(Context
 ReferenceIntegrateVerletStepKernel::~ReferenceIntegrateVerletStepKernel() {
     if (dynamics)
         delete dynamics;
-    if (constraints)
-        delete constraints;
 }
 
 void ReferenceIntegrateVerletStepKernel::initialize(const System& system, const VerletIntegrator& integrator) {
@@ -1695,19 +1677,6 @@ void ReferenceIntegrateVerletStepKernel::initialize(const System& system, const 
     masses.resize(numParticles);
     for (int i = 0; i < numParticles; ++i)
         masses[i] = static_cast<RealOpenMM>(system.getParticleMass(i));
-    vector<pair<int, int> > constraintIndices;
-    vector<RealOpenMM> constraintDistances;
-    for (int i = 0; i < system.getNumConstraints(); ++i) {
-        int particle1, particle2;
-        double distance;
-        system.getConstraintParameters(i, particle1, particle2, distance);
-        if (system.getParticleMass(particle1) != 0 || system.getParticleMass(particle2) != 0) {
-            constraintIndices.push_back(make_pair(particle1, particle2));
-            constraintDistances.push_back(distance);
-        }
-    }
-    numConstraints = constraintIndices.size();
-    constraints = new ReferenceConstraints(system, (RealOpenMM) integrator.getConstraintTolerance());
 }
 
 void ReferenceIntegrateVerletStepKernel::execute(ContextImpl& context, const VerletIntegrator& integrator) {
@@ -1721,24 +1690,21 @@ void ReferenceIntegrateVerletStepKernel::execute(ContextImpl& context, const Ver
         if (dynamics)
             delete dynamics;
         dynamics = new ReferenceVerletDynamics(context.getSystem().getNumParticles(), static_cast<RealOpenMM>(stepSize) );
-        dynamics->setReferenceConstraintAlgorithm(constraints);
+        dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
         prevStepSize = stepSize;
     }
-    constraints->setTolerance(integrator.getConstraintTolerance());
-    dynamics->update(context.getSystem(), posData, velData, forceData, masses);
+    dynamics->update(context.getSystem(), posData, velData, forceData, masses, integrator.getConstraintTolerance());
     data.time += stepSize;
     data.stepCount++;
 }
 
 double ReferenceIntegrateVerletStepKernel::computeKineticEnergy(ContextImpl& context, const VerletIntegrator& integrator) {
-    return computeShiftedKineticEnergy(context, masses, 0.5*integrator.getStepSize(), constraints);
+    return computeShiftedKineticEnergy(context, masses, 0.5*integrator.getStepSize());
 }
 
 ReferenceIntegrateLangevinStepKernel::~ReferenceIntegrateLangevinStepKernel() {
     if (dynamics)
         delete dynamics;
-    if (constraints)
-        delete constraints;
 }
 
 void ReferenceIntegrateLangevinStepKernel::initialize(const System& system, const LangevinIntegrator& integrator) {
@@ -1746,20 +1712,7 @@ void ReferenceIntegrateLangevinStepKernel::initialize(const System& system, cons
     masses.resize(numParticles);
     for (int i = 0; i < numParticles; ++i)
         masses[i] = static_cast<RealOpenMM>(system.getParticleMass(i));
-    vector<pair<int, int> > constraintIndices;
-    vector<RealOpenMM> constraintDistances;
-    for (int i = 0; i < system.getNumConstraints(); ++i) {
-        int particle1, particle2;
-        double distance;
-        system.getConstraintParameters(i, particle1, particle2, distance);
-        if (system.getParticleMass(particle1) != 0 || system.getParticleMass(particle2) != 0) {
-            constraintIndices.push_back(make_pair(particle1, particle2));
-            constraintDistances.push_back(distance);
-        }
-    }
-    numConstraints = constraintIndices.size();
     SimTKOpenMMUtilities::setRandomNumberSeed((unsigned int) integrator.getRandomNumberSeed());
-    constraints = new ReferenceConstraints(system, (RealOpenMM) integrator.getConstraintTolerance());
 }
 
 void ReferenceIntegrateLangevinStepKernel::execute(ContextImpl& context, const LangevinIntegrator& integrator) {
@@ -1780,26 +1733,23 @@ void ReferenceIntegrateLangevinStepKernel::execute(ContextImpl& context, const L
                 static_cast<RealOpenMM>(stepSize), 
                 static_cast<RealOpenMM>(tau), 
                 static_cast<RealOpenMM>(temperature) );
-        dynamics->setReferenceConstraintAlgorithm(constraints);
+        dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
         prevTemp = temperature;
         prevFriction = friction;
         prevStepSize = stepSize;
     }
-    constraints->setTolerance(integrator.getConstraintTolerance());
-    dynamics->update(context.getSystem(), posData, velData, forceData, masses);
+    dynamics->update(context.getSystem(), posData, velData, forceData, masses, integrator.getConstraintTolerance());
     data.time += stepSize;
     data.stepCount++;
 }
 
 double ReferenceIntegrateLangevinStepKernel::computeKineticEnergy(ContextImpl& context, const LangevinIntegrator& integrator) {
-    return computeShiftedKineticEnergy(context, masses, 0.5*integrator.getStepSize(), constraints);
+    return computeShiftedKineticEnergy(context, masses, 0.5*integrator.getStepSize());
 }
 
 ReferenceIntegrateBrownianStepKernel::~ReferenceIntegrateBrownianStepKernel() {
     if (dynamics)
         delete dynamics;
-    if (constraints)
-        delete constraints;
 }
 
 void ReferenceIntegrateBrownianStepKernel::initialize(const System& system, const BrownianIntegrator& integrator) {
@@ -1807,20 +1757,7 @@ void ReferenceIntegrateBrownianStepKernel::initialize(const System& system, cons
     masses.resize(numParticles);
     for (int i = 0; i < numParticles; ++i)
         masses[i] = static_cast<RealOpenMM>(system.getParticleMass(i));
-    vector<pair<int, int> > constraintIndices;
-    vector<RealOpenMM> constraintDistances;
-    for (int i = 0; i < system.getNumConstraints(); ++i) {
-        int particle1, particle2;
-        double distance;
-        system.getConstraintParameters(i, particle1, particle2, distance);
-        if (system.getParticleMass(particle1) != 0 || system.getParticleMass(particle2) != 0) {
-            constraintIndices.push_back(make_pair(particle1, particle2));
-            constraintDistances.push_back(distance);
-        }
-    }
-    numConstraints = constraintIndices.size();
     SimTKOpenMMUtilities::setRandomNumberSeed((unsigned int) integrator.getRandomNumberSeed());
-    constraints = new ReferenceConstraints(system, (RealOpenMM) integrator.getConstraintTolerance());
 }
 
 void ReferenceIntegrateBrownianStepKernel::execute(ContextImpl& context, const BrownianIntegrator& integrator) {
@@ -1840,26 +1777,23 @@ void ReferenceIntegrateBrownianStepKernel::execute(ContextImpl& context, const B
                 static_cast<RealOpenMM>(stepSize), 
                 static_cast<RealOpenMM>(friction), 
                 static_cast<RealOpenMM>(temperature) );
-        dynamics->setReferenceConstraintAlgorithm(constraints);
+        dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
         prevTemp = temperature;
         prevFriction = friction;
         prevStepSize = stepSize;
     }
-    constraints->setTolerance(integrator.getConstraintTolerance());
-    dynamics->update(context.getSystem(), posData, velData, forceData, masses);
+    dynamics->update(context.getSystem(), posData, velData, forceData, masses, integrator.getConstraintTolerance());
     data.time += stepSize;
     data.stepCount++;
 }
 
 double ReferenceIntegrateBrownianStepKernel::computeKineticEnergy(ContextImpl& context, const BrownianIntegrator& integrator) {
-    return computeShiftedKineticEnergy(context, masses, 0, constraints);
+    return computeShiftedKineticEnergy(context, masses, 0);
 }
 
 ReferenceIntegrateVariableLangevinStepKernel::~ReferenceIntegrateVariableLangevinStepKernel() {
     if (dynamics)
         delete dynamics;
-    if (constraints)
-        delete constraints;
 }
 
 void ReferenceIntegrateVariableLangevinStepKernel::initialize(const System& system, const VariableLangevinIntegrator& integrator) {
@@ -1867,20 +1801,7 @@ void ReferenceIntegrateVariableLangevinStepKernel::initialize(const System& syst
     masses.resize(numParticles);
     for (int i = 0; i < numParticles; ++i)
         masses[i] = static_cast<RealOpenMM>(system.getParticleMass(i));
-    vector<pair<int, int> > constraintIndices;
-    vector<RealOpenMM> constraintDistances;
-    for (int i = 0; i < system.getNumConstraints(); ++i) {
-        int particle1, particle2;
-        double distance;
-        system.getConstraintParameters(i, particle1, particle2, distance);
-        if (system.getParticleMass(particle1) != 0 || system.getParticleMass(particle2) != 0) {
-            constraintIndices.push_back(make_pair(particle1, particle2));
-            constraintDistances.push_back(distance);
-        }
-    }
-    numConstraints = constraintIndices.size();
     SimTKOpenMMUtilities::setRandomNumberSeed((unsigned int) integrator.getRandomNumberSeed());
-    constraints = new ReferenceConstraints(system, (RealOpenMM) integrator.getConstraintTolerance());
 }
 
 double ReferenceIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, const VariableLangevinIntegrator& integrator, double maxTime) {
@@ -1897,14 +1818,13 @@ double ReferenceIntegrateVariableLangevinStepKernel::execute(ContextImpl& contex
             delete dynamics;
         RealOpenMM tau = static_cast<RealOpenMM>( friction == 0.0 ? 0.0 : 1.0/friction );
         dynamics = new ReferenceVariableStochasticDynamics(context.getSystem().getNumParticles(), (RealOpenMM) tau, (RealOpenMM) temperature, (RealOpenMM) errorTol);
-        dynamics->setReferenceConstraintAlgorithm(constraints);
+        dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
         prevTemp = temperature;
         prevFriction = friction;
         prevErrorTol = errorTol;
     }
-    constraints->setTolerance(integrator.getConstraintTolerance());
     RealOpenMM maxStepSize = (RealOpenMM) (maxTime-data.time);
-    dynamics->update(context.getSystem(), posData, velData, forceData, masses, maxStepSize);
+    dynamics->update(context.getSystem(), posData, velData, forceData, masses, maxStepSize, integrator.getConstraintTolerance());
     data.time += dynamics->getDeltaT();
     if (dynamics->getDeltaT() == maxStepSize)
         data.time = maxTime; // Avoid round-off error
@@ -1913,14 +1833,12 @@ double ReferenceIntegrateVariableLangevinStepKernel::execute(ContextImpl& contex
 }
 
 double ReferenceIntegrateVariableLangevinStepKernel::computeKineticEnergy(ContextImpl& context, const VariableLangevinIntegrator& integrator) {
-    return computeShiftedKineticEnergy(context, masses, 0.5*integrator.getStepSize(), constraints);
+    return computeShiftedKineticEnergy(context, masses, 0.5*integrator.getStepSize());
 }
 
 ReferenceIntegrateVariableVerletStepKernel::~ReferenceIntegrateVariableVerletStepKernel() {
     if (dynamics)
         delete dynamics;
-    if (constraints)
-        delete constraints;
 }
 
 void ReferenceIntegrateVariableVerletStepKernel::initialize(const System& system, const VariableVerletIntegrator& integrator) {
@@ -1928,19 +1846,6 @@ void ReferenceIntegrateVariableVerletStepKernel::initialize(const System& system
     masses.resize(numParticles);
     for (int i = 0; i < numParticles; ++i)
         masses[i] = static_cast<RealOpenMM>(system.getParticleMass(i));
-    vector<pair<int, int> > constraintIndices;
-    vector<RealOpenMM> constraintDistances;
-    for (int i = 0; i < system.getNumConstraints(); ++i) {
-        int particle1, particle2;
-        double distance;
-        system.getConstraintParameters(i, particle1, particle2, distance);
-        if (system.getParticleMass(particle1) != 0 || system.getParticleMass(particle2) != 0) {
-            constraintIndices.push_back(make_pair(particle1, particle2));
-            constraintDistances.push_back(distance);
-        }
-    }
-    numConstraints = constraintIndices.size();
-    constraints = new ReferenceConstraints(system, (RealOpenMM) integrator.getConstraintTolerance());
 }
 
 double ReferenceIntegrateVariableVerletStepKernel::execute(ContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime) {
@@ -1954,12 +1859,11 @@ double ReferenceIntegrateVariableVerletStepKernel::execute(ContextImpl& context,
         if (dynamics)
             delete dynamics;
         dynamics = new ReferenceVariableVerletDynamics(context.getSystem().getNumParticles(), (RealOpenMM) errorTol);
-        dynamics->setReferenceConstraintAlgorithm(constraints);
+        dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
         prevErrorTol = errorTol;
     }
-    constraints->setTolerance(integrator.getConstraintTolerance());
     RealOpenMM maxStepSize = (RealOpenMM) (maxTime-data.time);
-    dynamics->update(context.getSystem(), posData, velData, forceData, masses, maxStepSize);
+    dynamics->update(context.getSystem(), posData, velData, forceData, masses, maxStepSize, integrator.getConstraintTolerance());
     data.time += dynamics->getDeltaT();
     if (dynamics->getDeltaT() == maxStepSize)
         data.time = maxTime; // Avoid round-off error
@@ -1968,14 +1872,12 @@ double ReferenceIntegrateVariableVerletStepKernel::execute(ContextImpl& context,
 }
 
 double ReferenceIntegrateVariableVerletStepKernel::computeKineticEnergy(ContextImpl& context, const VariableVerletIntegrator& integrator) {
-    return computeShiftedKineticEnergy(context, masses, 0.5*integrator.getStepSize(), constraints);
+    return computeShiftedKineticEnergy(context, masses, 0.5*integrator.getStepSize());
 }
 
 ReferenceIntegrateCustomStepKernel::~ReferenceIntegrateCustomStepKernel() {
     if (dynamics)
         delete dynamics;
-    if (constraints)
-        delete constraints;
 }
 
 void ReferenceIntegrateCustomStepKernel::initialize(const System& system, const CustomIntegrator& integrator) {
@@ -1983,18 +1885,6 @@ void ReferenceIntegrateCustomStepKernel::initialize(const System& system, const 
     masses.resize(numParticles);
     for (int i = 0; i < numParticles; ++i)
         masses[i] = static_cast<RealOpenMM>(system.getParticleMass(i));
-    vector<pair<int, int> > constraintIndices;
-    vector<RealOpenMM> constraintDistances;
-    for (int i = 0; i < system.getNumConstraints(); ++i) {
-        int particle1, particle2;
-        double distance;
-        system.getConstraintParameters(i, particle1, particle2, distance);
-        if (system.getParticleMass(particle1) != 0 || system.getParticleMass(particle2) != 0) {
-            constraintIndices.push_back(make_pair(particle1, particle2));
-            constraintDistances.push_back(distance);
-        }
-    }
-    numConstraints = constraintIndices.size();
     perDofValues.resize(integrator.getNumPerDofVariables());
     for (int i = 0; i < (int) perDofValues.size(); i++)
         perDofValues[i].resize(numParticles);
@@ -2003,8 +1893,6 @@ void ReferenceIntegrateCustomStepKernel::initialize(const System& system, const 
 
     dynamics = new ReferenceCustomDynamics(system.getNumParticles(), integrator);
     SimTKOpenMMUtilities::setRandomNumberSeed((unsigned int) integrator.getRandomNumberSeed());
-    constraints = new ReferenceConstraints(system, (RealOpenMM) integrator.getConstraintTolerance());
-    dynamics->setReferenceConstraintAlgorithm(constraints);
 }
 
 void ReferenceIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid) {
@@ -2021,8 +1909,8 @@ void ReferenceIntegrateCustomStepKernel::execute(ContextImpl& context, CustomInt
     
     // Execute the step.
     
-    constraints->setTolerance(integrator.getConstraintTolerance());
-    dynamics->update(context, context.getSystem().getNumParticles(), posData, velData, forceData, masses, globals, perDofValues, forcesAreValid);
+    dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
+    dynamics->update(context, context.getSystem().getNumParticles(), posData, velData, forceData, masses, globals, perDofValues, forcesAreValid, integrator.getConstraintTolerance());
     
     // Record changed global variables.
     

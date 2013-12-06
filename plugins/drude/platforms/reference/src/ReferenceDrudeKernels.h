@@ -86,7 +86,7 @@ private:
 class ReferenceIntegrateDrudeLangevinStepKernel : public IntegrateDrudeLangevinStepKernel {
 public:
     ReferenceIntegrateDrudeLangevinStepKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) :
-        IntegrateDrudeLangevinStepKernel(name, platform), data(data), constraints(NULL) {
+        IntegrateDrudeLangevinStepKernel(name, platform), data(data) {
     }
     ~ReferenceIntegrateDrudeLangevinStepKernel();
     /**
@@ -118,7 +118,6 @@ private:
     std::vector<double> particleInvMass;
     std::vector<double> pairInvTotalMass;
     std::vector<double> pairInvReducedMass;
-    ReferenceConstraintAlgorithm* constraints;
 };
 
 /**
@@ -127,7 +126,7 @@ private:
 class ReferenceIntegrateDrudeSCFStepKernel : public IntegrateDrudeSCFStepKernel {
 public:
     ReferenceIntegrateDrudeSCFStepKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) :
-        IntegrateDrudeSCFStepKernel(name, platform), data(data), constraints(NULL), minimizerPos(NULL) {
+        IntegrateDrudeSCFStepKernel(name, platform), data(data), minimizerPos(NULL) {
     }
     ~ReferenceIntegrateDrudeSCFStepKernel();
     /**
@@ -157,7 +156,6 @@ private:
     ReferencePlatform::PlatformData& data;
     std::vector<int> drudeParticles;
     std::vector<double> particleInvMass;
-    ReferenceConstraintAlgorithm* constraints;
     lbfgsfloatval_t *minimizerPos;
     lbfgs_parameter_t minimizerParams;
 };

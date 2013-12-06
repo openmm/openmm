@@ -92,12 +92,13 @@ public:
          @param globals             a map containing values of global variables
          @param perDof              the values of per-DOF variables
          @param forcesAreValid      whether the current forces are valid or need to be recomputed
+         @param tolerance           the constraint tolerance
       
          --------------------------------------------------------------------------------------- */
      
       void update(OpenMM::ContextImpl& context, int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
                   std::vector<OpenMM::RealVec>& velocities, std::vector<OpenMM::RealVec>& forces, std::vector<RealOpenMM>& masses,
-                  std::map<std::string, RealOpenMM>& globals, std::vector<std::vector<OpenMM::RealVec> >& perDof, bool& forcesAreValid);
+                  std::map<std::string, RealOpenMM>& globals, std::vector<std::vector<OpenMM::RealVec> >& perDof, bool& forcesAreValid, RealOpenMM tolerance);
       
       /**---------------------------------------------------------------------------------------
       
