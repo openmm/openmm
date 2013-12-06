@@ -477,7 +477,6 @@ void CpuNonbondedForce::calculateBlockIxn(int blockIndex, float* forces, double*
     
     const vector<int>& neighbors = neighborList->getBlockNeighbors(blockIndex);
     const vector<char>& exclusions = neighborList->getBlockExclusions(blockIndex);
-    bool include[4];
     for (int i = 0; i < (int) neighbors.size(); i++) {
         // Load the next neighbor.
         
@@ -486,75 +485,77 @@ void CpuNonbondedForce::calculateBlockIxn(int blockIndex, float* forces, double*
         
         // Compute the distances to the block atoms.
         
-        bool any = false;
         fvec4 dx, dy, dz, r2;
         getDeltaR(atomPosq, blockAtomX, blockAtomY, blockAtomZ, dx, dy, dz, r2, needPeriodic, boxSize, invBoxSize);
-        for (int j = 0; j < 4; j++) {
-            include[j] = (((exclusions[i]>>j)&1) == 0 && (!cutoff || r2[j] < cutoffDistance*cutoffDistance));
-            any |= include[j];
-        }
-        if (!any)
+        ivec4 include;
+        char excl = exclusions[i];
+        if (excl == 0)
+            include = -1;
+        else
+            include = ivec4(excl&1 ? 0 : -1, excl&2 ? 0 : -1, excl&4 ? 0 : -1, excl&8 ? 0 : -1);
+        include = include & (r2 < cutoffDistance*cutoffDistance);
+        if (!any(include))
             continue; // No interactions to compute.
         
         // Compute the interactions.
         
         fvec4 r = sqrt(r2);
         fvec4 inverseR = fvec4(1.0f)/r;
-        fvec4 switchValue(1.0f), switchDeriv(0.0f);
-        if (useSwitch) {
-            fvec4 t = (r>switchingDistance) & ((r-switchingDistance)/(cutoffDistance-switchingDistance));
-            switchValue = 1+t*t*t*(-10.0f+t*(15.0f-t*6.0f));
-            switchDeriv = t*t*(-30.0f+t*(60.0f-t*30.0f))/(cutoffDistance-switchingDistance);
+        fvec4 energy, dEdR;
+        float atomEpsilon = atomParameters[atom].second;
+        if (atomEpsilon != 0.0f) {
+            fvec4 sig = blockAtomSigma+atomParameters[atom].first;
+            fvec4 sig2 = inverseR*sig;
+            sig2 *= sig2;
+            fvec4 sig6 = sig2*sig2*sig2;
+            fvec4 epsSig6 = blockAtomEpsilon*atomEpsilon*sig6;
+            dEdR = epsSig6*(12.0f*sig6 - 6.0f);
+            energy = epsSig6*(sig6-1.0f);
+            if (useSwitch) {
+                fvec4 t = (r>switchingDistance) & ((r-switchingDistance)/(cutoffDistance-switchingDistance));
+                fvec4 switchValue = 1+t*t*t*(-10.0f+t*(15.0f-t*6.0f));
+                fvec4 switchDeriv = t*t*(-30.0f+t*(60.0f-t*30.0f))/(cutoffDistance-switchingDistance);
+                dEdR = switchValue*dEdR - energy*switchDeriv*r;
+                energy *= switchValue;
+            }
         }
-        fvec4 sig = blockAtomSigma+atomParameters[atom].first;
-        fvec4 sig2 = inverseR*sig;
-        sig2 *= sig2;
-        fvec4 sig6 = sig2*sig2*sig2;
-        fvec4 epsSig6 = blockAtomEpsilon*atomParameters[atom].second*sig6;
-        fvec4 dEdR = switchValue*epsSig6*(12.0f*sig6 - 6.0f);
+        else {
+            energy = 0.0f;
+            dEdR = 0.0f;
+        }
         fvec4 chargeProd = blockAtomCharge*posq[4*atom+3];
         if (cutoff)
             dEdR += chargeProd*(inverseR-2.0f*krf*r2);
         else
             dEdR += chargeProd*inverseR;
         dEdR *= inverseR*inverseR;
-        fvec4 energy;
-        if (useSwitch) {
-            energy = epsSig6*(sig6-1.0f);
-            dEdR -= energy*switchDeriv*inverseR;
-            energy *= switchValue;
-        }
 
         // Accumulate energies.
 
         if (totalEnergy) {
-            if (!useSwitch)
-                 energy = epsSig6*(sig6-1.0f);
             if (cutoff)
                 energy += chargeProd*(inverseR+krf*r2-crf);
             else
                 energy += chargeProd*inverseR;
-            for (int j = 0; j < 4; j++)
-                if (include[j])
-                    *totalEnergy += energy[j];
+            energy = blend(0.0f, energy, include);
+            *totalEnergy += dot4(energy, 1.0f);
         }
 
         // Accumulate forces.
 
+        dEdR = blend(0.0f, dEdR, include);
         fvec4 result[4] = {dx*dEdR, dy*dEdR, dz*dEdR, 0.0f};
         transpose(result[0], result[1], result[2], result[3]);
         fvec4 atomForce(forces+4*atom);
         for (int j = 0; j < 4; j++) {
-            if (include[j]) {
-                blockAtomForce[j] += result[j];
-                atomForce -= result[j];
-            }
+            blockAtomForce[j] += result[j];
+            atomForce -= result[j];
         }
         atomForce.store(forces+4*atom);
     }
     
     // Record the forces on the block atoms.
-    
+
     for (int j = 0; j < 4; j++)
         (fvec4(forces+4*blockAtom[j])+blockAtomForce[j]).store(forces+4*blockAtom[j]);
   }
@@ -588,7 +589,6 @@ void CpuNonbondedForce::calculateBlockEwaldIxn(int blockIndex, float* forces, do
     
     const vector<int>& neighbors = neighborList->getBlockNeighbors(blockIndex);
     const vector<char>& exclusions = neighborList->getBlockExclusions(blockIndex);
-    bool include[4];
     for (int i = 0; i < (int) neighbors.size(); i++) {
         // Load the next neighbor.
         
@@ -597,63 +597,65 @@ void CpuNonbondedForce::calculateBlockEwaldIxn(int blockIndex, float* forces, do
         
         // Compute the distances to the block atoms.
         
-        bool any = false;
         fvec4 dx, dy, dz, r2;
         getDeltaR(atomPosq, blockAtomX, blockAtomY, blockAtomZ, dx, dy, dz, r2, needPeriodic, boxSize, invBoxSize);
-        for (int j = 0; j < 4; j++) {
-            include[j] = (((exclusions[i]>>j)&1) == 0 && r2[j] < cutoffDistance*cutoffDistance);
-            any |= include[j];
-        }
-        if (!any)
+        ivec4 include;
+        char excl = exclusions[i];
+        if (excl == 0)
+            include = -1;
+        else
+            include = ivec4(excl&1 ? 0 : -1, excl&2 ? 0 : -1, excl&4 ? 0 : -1, excl&8 ? 0 : -1);
+        include = include & (r2 < cutoffDistance*cutoffDistance);
+        if (!any(include))
             continue; // No interactions to compute.
         
         // Compute the interactions.
         
         fvec4 r = sqrt(r2);
         fvec4 inverseR = fvec4(1.0f)/r;
-        fvec4 switchValue(1.0f), switchDeriv(0.0f);
-        if (useSwitch) {
-            fvec4 t = (r>switchingDistance) & ((r-switchingDistance)/(cutoffDistance-switchingDistance));
-            switchValue = 1+t*t*t*(-10.0f+t*(15.0f-t*6.0f));
-            switchDeriv = t*t*(-30.0f+t*(60.0f-t*30.0f))/(cutoffDistance-switchingDistance);
+        fvec4 energy, dEdR;
+        float atomEpsilon = atomParameters[atom].second;
+        if (atomEpsilon != 0.0f) {
+            fvec4 sig = blockAtomSigma+atomParameters[atom].first;
+            fvec4 sig2 = inverseR*sig;
+            sig2 *= sig2;
+            fvec4 sig6 = sig2*sig2*sig2;
+            fvec4 epsSig6 = blockAtomEpsilon*atomEpsilon*sig6;
+            dEdR = epsSig6*(12.0f*sig6 - 6.0f);
+            energy = epsSig6*(sig6-1.0f);
+            if (useSwitch) {
+                fvec4 t = (r>switchingDistance) & ((r-switchingDistance)/(cutoffDistance-switchingDistance));
+                fvec4 switchValue = 1+t*t*t*(-10.0f+t*(15.0f-t*6.0f));
+                fvec4 switchDeriv = t*t*(-30.0f+t*(60.0f-t*30.0f))/(cutoffDistance-switchingDistance);
+                dEdR = switchValue*dEdR - energy*switchDeriv*r;
+                energy *= switchValue;
+            }
+        }
+        else {
+            energy = 0.0f;
+            dEdR = 0.0f;
         }
         fvec4 chargeProd = blockAtomCharge*posq[4*atom+3];
-        fvec4 dEdR = chargeProd*inverseR*ewaldScaleFunction(r);
-        fvec4 sig = blockAtomSigma+atomParameters[atom].first;
-        fvec4 sig2 = inverseR*sig;
-        sig2 *= sig2;
-        fvec4 sig6 = sig2*sig2*sig2;
-        fvec4 epsSig6 = blockAtomEpsilon*atomParameters[atom].second*sig6;
-        dEdR += switchValue*epsSig6*(12.0f*sig6 - 6.0f);
-        dEdR *= inverseR*inverseR;
-        fvec4 energy;
-        if (useSwitch) {
-            energy = epsSig6*(sig6-1.0f);
-            dEdR -= energy*switchDeriv*inverseR;
-            energy *= switchValue;
-        }
+        dEdR += chargeProd*inverseR*ewaldScaleFunction(r);
+        dEdR *= inverseR*inverseR;        
 
         // Accumulate energies.
 
         if (totalEnergy) {
-            if (!useSwitch)
-                 energy = epsSig6*(sig6-1.0f);
             energy += chargeProd*inverseR*erfcApprox(alphaEwald*r);
-            for (int j = 0; j < 4; j++)
-                if (include[j])
-                    *totalEnergy += energy[j];
+            energy = blend(0.0f, energy, include);
+            *totalEnergy += dot4(energy, 1.0f);
         }
 
         // Accumulate forces.
 
+        dEdR = blend(0.0f, dEdR, include);
         fvec4 result[4] = {dx*dEdR, dy*dEdR, dz*dEdR, 0.0f};
         transpose(result[0], result[1], result[2], result[3]);
         fvec4 atomForce(forces+4*atom);
         for (int j = 0; j < 4; j++) {
-            if (include[j]) {
-                blockAtomForce[j] += result[j];
-                atomForce -= result[j];
-            }
+            blockAtomForce[j] += result[j];
+            atomForce -= result[j];
         }
         atomForce.store(forces+4*atom);
     }
