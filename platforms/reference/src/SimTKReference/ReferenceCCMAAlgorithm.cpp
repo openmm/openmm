@@ -48,14 +48,12 @@ ReferenceCCMAAlgorithm::ReferenceCCMAAlgorithm(int numberOfAtoms,
                                                   const vector<pair<int, int> >& atomIndices,
                                                   const vector<RealOpenMM>& distance,
                                                   vector<RealOpenMM>& masses,
-                                                  vector<AngleInfo>& angles,
-                                                  RealOpenMM tolerance) {
+                                                  vector<AngleInfo>& angles) {
     _numberOfConstraints = numberOfConstraints;
     _atomIndices = atomIndices;
     _distance = distance;
 
     _maximumNumberOfIterations = 150;
-    _tolerance = tolerance;
     _hasInitializedMasses = false;
 
     // work arrays
@@ -201,28 +199,20 @@ void ReferenceCCMAAlgorithm::setMaximumNumberOfIterations(int maximumNumberOfIte
     _maximumNumberOfIterations = maximumNumberOfIterations;
 }
 
-RealOpenMM ReferenceCCMAAlgorithm::getTolerance() const {
-    return _tolerance;
-}
-
-void ReferenceCCMAAlgorithm::setTolerance(RealOpenMM tolerance) {
-    _tolerance = tolerance;
-}
-
 void ReferenceCCMAAlgorithm::apply(vector<RealVec>& atomCoordinates,
                                          vector<RealVec>& atomCoordinatesP,
-                                         vector<RealOpenMM>& inverseMasses) {
-    applyConstraints(atomCoordinates, atomCoordinatesP, inverseMasses, false);
+                                         vector<RealOpenMM>& inverseMasses, RealOpenMM tolerance) {
+    applyConstraints(atomCoordinates, atomCoordinatesP, inverseMasses, false, tolerance);
 }
 
 void ReferenceCCMAAlgorithm::applyToVelocities(std::vector<OpenMM::RealVec>& atomCoordinates,
-               std::vector<OpenMM::RealVec>& velocities, std::vector<RealOpenMM>& inverseMasses) {
-    applyConstraints(atomCoordinates, velocities, inverseMasses, true);
+               std::vector<OpenMM::RealVec>& velocities, std::vector<RealOpenMM>& inverseMasses, RealOpenMM tolerance) {
+    applyConstraints(atomCoordinates, velocities, inverseMasses, true, tolerance);
 }
 
 void ReferenceCCMAAlgorithm::applyConstraints(vector<RealVec>& atomCoordinates,
                                          vector<RealVec>& atomCoordinatesP,
-                                         vector<RealOpenMM>& inverseMasses, bool constrainingVelocities) {
+                                         vector<RealOpenMM>& inverseMasses, bool constrainingVelocities, RealOpenMM tolerance) {
     // temp arrays
 
     vector<RealVec>& r_ij = _r_ij;
@@ -242,15 +232,14 @@ void ReferenceCCMAAlgorithm::applyConstraints(vector<RealVec>& atomCoordinates,
 
     // setup: r_ij for each (i,j) constraint
 
-    RealOpenMM tolerance = getTolerance()*2;
     for (int ii = 0; ii < _numberOfConstraints; ii++) {
         int atomI = _atomIndices[ii].first;
         int atomJ = _atomIndices[ii].second;
         r_ij[ii] = atomCoordinates[atomI] - atomCoordinates[atomJ];
         d_ij2[ii] = r_ij[ii].dot(r_ij[ii]);
     }
-    RealOpenMM lowerTol = 1-2*getTolerance()+getTolerance()*getTolerance();
-    RealOpenMM upperTol = 1+2*getTolerance()+getTolerance()*getTolerance();
+    RealOpenMM lowerTol = 1-2*tolerance+tolerance*tolerance;
+    RealOpenMM upperTol = 1+2*tolerance+tolerance*tolerance;
 
     // main loop
 
@@ -267,7 +256,7 @@ void ReferenceCCMAAlgorithm::applyConstraints(vector<RealVec>& atomCoordinates,
             if (constrainingVelocities) {
                 RealOpenMM rrpr = rp_ij.dot(r_ij[ii]);
                 constraintDelta[ii] = -2*reducedMasses[ii]*rrpr/d_ij2[ii];
-                if (fabs(constraintDelta[ii]) <= getTolerance())
+                if (fabs(constraintDelta[ii]) <= tolerance)
                     numberConverged++;
             }
             else {

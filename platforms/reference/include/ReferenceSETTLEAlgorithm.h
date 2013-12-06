@@ -44,16 +44,7 @@ namespace OpenMM {
 class OPENMM_EXPORT ReferenceSETTLEAlgorithm : public ReferenceConstraintAlgorithm {
 public:
     ReferenceSETTLEAlgorithm(const std::vector<int>& atom1, const std::vector<int>& atom2, const std::vector<int>& atom3,
-            const std::vector<RealOpenMM>& distance1, const std::vector<RealOpenMM>& distance2, std::vector<RealOpenMM>& masses, RealOpenMM tolerance);
-    /**
-     * Get the constraint tolerance.
-     */
-    RealOpenMM getTolerance() const;
-
-    /**
-     * Set the constraint tolerance.
-     */
-    void setTolerance(RealOpenMM tolerance);
+            const std::vector<RealOpenMM>& distance1, const std::vector<RealOpenMM>& distance2, std::vector<RealOpenMM>& masses);
 
     /**
      * Apply the constraint algorithm.
@@ -61,8 +52,9 @@ public:
      * @param atomCoordinates  the original atom coordinates
      * @param atomCoordinatesP the new atom coordinates
      * @param inverseMasses    1/mass
+     * @param tolerance        the constraint tolerance
      */
-    void apply(std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& atomCoordinatesP, std::vector<RealOpenMM>& inverseMasses);
+    void apply(std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& atomCoordinatesP, std::vector<RealOpenMM>& inverseMasses, RealOpenMM tolerance);
 
     /**
      * Apply the constraint algorithm to velocities.
@@ -70,10 +62,10 @@ public:
      * @param atomCoordinates  the atom coordinates
      * @param atomCoordinatesP the velocities to modify
      * @param inverseMasses    1/mass
+     * @param tolerance        the constraint tolerance
      */
-    void applyToVelocities(std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& velocities, std::vector<RealOpenMM>& inverseMasses);
+    void applyToVelocities(std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& velocities, std::vector<RealOpenMM>& inverseMasses, RealOpenMM tolerance);
 private:
-    RealOpenMM tolerance;
     std::vector<int> atom1;
     std::vector<int> atom2;
     std::vector<int> atom3;

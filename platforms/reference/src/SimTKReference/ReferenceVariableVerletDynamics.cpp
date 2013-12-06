@@ -104,7 +104,7 @@ void ReferenceVariableVerletDynamics::setAccuracy( RealOpenMM accuracy ) {
 
 void ReferenceVariableVerletDynamics::update(const OpenMM::System& system, vector<RealVec>& atomCoordinates,
                                           vector<RealVec>& velocities,
-                                          vector<RealVec>& forces, vector<RealOpenMM>& masses, RealOpenMM maxStepSize ){
+                                          vector<RealVec>& forces, vector<RealOpenMM>& masses, RealOpenMM maxStepSize, RealOpenMM tolerance) {
 
     // ---------------------------------------------------------------------------------------
 
@@ -155,7 +155,7 @@ void ReferenceVariableVerletDynamics::update(const OpenMM::System& system, vecto
     }
     ReferenceConstraintAlgorithm* referenceConstraintAlgorithm = getReferenceConstraintAlgorithm();
     if (referenceConstraintAlgorithm)
-        referenceConstraintAlgorithm->apply(atomCoordinates, xPrime, inverseMasses);
+        referenceConstraintAlgorithm->apply(atomCoordinates, xPrime, inverseMasses, tolerance);
 
    // Update the positions and velocities.
 

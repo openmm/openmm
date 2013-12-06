@@ -37,7 +37,6 @@ class OPENMM_EXPORT ReferenceCCMAAlgorithm : public ReferenceConstraintAlgorithm
 protected:
 
     int _maximumNumberOfIterations;
-    RealOpenMM _tolerance;
 
     int _numberOfConstraints;
     std::vector<std::pair<int, int> > _atomIndices;
@@ -53,7 +52,7 @@ protected:
 private:
 
     void applyConstraints(std::vector<OpenMM::RealVec>& atomCoordinates,
-                       std::vector<OpenMM::RealVec>& atomCoordinatesP, std::vector<RealOpenMM>& inverseMasses, bool constrainingVelocities);
+                       std::vector<OpenMM::RealVec>& atomCoordinatesP, std::vector<RealOpenMM>& inverseMasses, bool constrainingVelocities, RealOpenMM tolerance);
           
 public:
     class AngleInfo;
@@ -67,9 +66,8 @@ public:
      * @param distance                 distances for constraints
      * @param masses                   atom masses
      * @param angles                   angle force field terms
-     * @param tolerance                constraint tolerance
      */
-    ReferenceCCMAAlgorithm( int numberOfAtoms, int numberOfConstraints, const std::vector<std::pair<int, int> >& atomIndices, const std::vector<RealOpenMM>& distance, std::vector<RealOpenMM>& masses, std::vector<AngleInfo>& angles, RealOpenMM tolerance );
+    ReferenceCCMAAlgorithm(int numberOfAtoms, int numberOfConstraints, const std::vector<std::pair<int, int> >& atomIndices, const std::vector<RealOpenMM>& distance, std::vector<RealOpenMM>& masses, std::vector<AngleInfo>& angles);
 
     ~ReferenceCCMAAlgorithm( );
 
@@ -89,24 +87,15 @@ public:
     void setMaximumNumberOfIterations( int maximumNumberOfIterations );
 
     /**
-     * Get the constraint tolerance.
-     */
-    RealOpenMM getTolerance( void ) const;
-
-    /**
-     * Set the constraint tolerance.
-     */
-    void setTolerance( RealOpenMM tolerance );
-
-    /**
      * Apply the constraint algorithm.
      * 
      * @param atomCoordinates  the original atom coordinates
      * @param atomCoordinatesP the new atom coordinates
      * @param inverseMasses    1/mass
+     * @param tolerance        the constraint tolerance
      */
     void apply(std::vector<OpenMM::RealVec>& atomCoordinates,
-                       std::vector<OpenMM::RealVec>& atomCoordinatesP, std::vector<RealOpenMM>& inverseMasses);
+                       std::vector<OpenMM::RealVec>& atomCoordinatesP, std::vector<RealOpenMM>& inverseMasses, RealOpenMM tolerance);
 
     /**
      * Apply the constraint algorithm to velocities.
@@ -114,9 +103,10 @@ public:
      * @param atomCoordinates  the atom coordinates
      * @param atomCoordinatesP the velocities to modify
      * @param inverseMasses    1/mass
+     * @param tolerance        the constraint tolerance
      */
     void applyToVelocities(std::vector<OpenMM::RealVec>& atomCoordinates,
-                     std::vector<OpenMM::RealVec>& velocities, std::vector<RealOpenMM>& inverseMasses);
+                     std::vector<OpenMM::RealVec>& velocities, std::vector<RealOpenMM>& inverseMasses, RealOpenMM tolerance);
 };
 
 class ReferenceCCMAAlgorithm::AngleInfo
