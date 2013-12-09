@@ -1,5 +1,5 @@
-#ifndef OPENMM_REFERENCECONSTRAINTS_H_
-#define OPENMM_REFERENCECONSTRAINTS_H_
+#ifndef OPENMM_CPUSETTLE_H_
+#define OPENMM_CPUSETTLE_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -32,20 +32,22 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "ReferenceConstraintAlgorithm.h"
+#include "ReferenceSETTLEAlgorithm.h"
 #include "openmm/System.h"
+#include "openmm/internal/ThreadPool.h"
+#include <vector>
 
 namespace OpenMM {
 
 /**
- * This class uses multiple algorithms to apply constraints as efficiently as possible.  It identifies clusters
- * of three atoms that can be handled by SETTLE, and creates a ReferenceSETTLEAlgorithm object to handle them.
- * It then creates a ReferenceCCMAAlgorithm object to handle any remaining constraints.
+ * This class uses multiple ReferenceSETTLEAlgorithm objects to execute the algorithm in parallel.
  */
-class OPENMM_EXPORT ReferenceConstraints : public ReferenceConstraintAlgorithm {
+class OPENMM_EXPORT CpuSETTLE : public ReferenceConstraintAlgorithm {
 public:
-    ReferenceConstraints(const System& system);
-    virtual ~ReferenceConstraints();
+    class ApplyToPositionsTask;
+    class ApplyToVelocitiesTask;
+    CpuSETTLE(const System& system, const ReferenceSETTLEAlgorithm& settle, ThreadPool& threads);
+    ~CpuSETTLE();
 
     /**
      * Apply the constraint algorithm.
@@ -66,10 +68,11 @@ public:
      * @param tolerance        the constraint tolerance
      */
     void applyToVelocities(std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& velocities, std::vector<RealOpenMM>& inverseMasses, RealOpenMM tolerance);
-    ReferenceConstraintAlgorithm* ccma;
-    ReferenceConstraintAlgorithm* settle;
+private:
+    std::vector<ReferenceSETTLEAlgorithm*> threadSettle;
+    ThreadPool& threads;
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_REFERENCECONSTRAINTS_H_*/
+#endif /*OPENMM_CPUSETTLE_H_*/

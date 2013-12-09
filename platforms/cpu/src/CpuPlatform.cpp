@@ -32,6 +32,8 @@
 #include "CpuPlatform.h"
 #include "CpuKernelFactory.h"
 #include "CpuKernels.h"
+#include "CpuSETTLE.h"
+#include "ReferenceConstraints.h"
 #include "openmm/internal/hardware.h"
 
 using namespace OpenMM;
@@ -77,6 +79,12 @@ void CpuPlatform::contextCreated(ContextImpl& context, const map<string, string>
     ReferencePlatform::contextCreated(context, properties);
     PlatformData* data = new PlatformData(context.getSystem().getNumParticles());
     contextData[&context] = data;
+    ReferenceConstraints& constraints = *(ReferenceConstraints*) reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData())->constraints;
+    if (constraints.settle != NULL) {
+        CpuSETTLE* parallelSettle = new CpuSETTLE(context.getSystem(), *(ReferenceSETTLEAlgorithm*) constraints.settle, data->threads);
+        delete constraints.settle;
+        constraints.settle = parallelSettle;
+    }
 }
 
 void CpuPlatform::contextDestroyed(ContextImpl& context) const {
