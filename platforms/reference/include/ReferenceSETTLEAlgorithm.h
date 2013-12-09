@@ -47,6 +47,21 @@ public:
             const std::vector<RealOpenMM>& distance1, const std::vector<RealOpenMM>& distance2, std::vector<RealOpenMM>& masses);
 
     /**
+     * Get the number of clusters.
+     */
+    int getNumClusters() const;
+    /**
+     * Get the parameters describing one cluster.
+     * 
+     * @param index       the index of the cluster to get
+     * @param atom1       the index of the first atom in the cluster
+     * @param atom2       the index of the second atom in the cluster
+     * @param atom3       the index of the third atom in the cluster
+     * @param distance1   the distance between atoms 1 and 2
+     * @param distance2   the distance between atoms 2 and 3
+     */
+    void getClusterParameters(int index, int& atom1, int& atom2, int& atom3, RealOpenMM& distance1, RealOpenMM& distance2) const;
+    /**
      * Apply the constraint algorithm.
      * 
      * @param atomCoordinates  the original atom coordinates

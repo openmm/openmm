@@ -30,6 +30,8 @@
  * -------------------------------------------------------------------------- */
 
 #include "ReferenceConstraints.h"
+#include "ReferenceCCMAAlgorithm.h"
+#include "ReferenceSETTLEAlgorithm.h"
 #include "openmm/HarmonicAngleForce.h"
 #include "openmm/OpenMMException.h"
 #include <map>

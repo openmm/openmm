@@ -39,6 +39,18 @@ ReferenceSETTLEAlgorithm::ReferenceSETTLEAlgorithm(const vector<int>& atom1, con
         atom1(atom1), atom2(atom2), atom3(atom3), distance1(distance1), distance2(distance2), masses(masses) {
 }
 
+int ReferenceSETTLEAlgorithm::getNumClusters() const {
+    return atom1.size();
+}
+
+void ReferenceSETTLEAlgorithm::getClusterParameters(int index, int& atom1, int& atom2, int& atom3, RealOpenMM& distance1, RealOpenMM& distance2) const {
+    atom1 = this->atom1[index];
+    atom2 = this->atom2[index];
+    atom3 = this->atom3[index];
+    distance1 = this->distance1[index];
+    distance2 = this->distance2[index];
+}
+
 void ReferenceSETTLEAlgorithm::apply(vector<OpenMM::RealVec>& atomCoordinates, vector<OpenMM::RealVec>& atomCoordinatesP, vector<RealOpenMM>& inverseMasses, RealOpenMM tolerance) {
     for (int index = 0; index < (int) atom1.size(); ++index) {
         RealVec apos0 = atomCoordinates[atom1[index]];
