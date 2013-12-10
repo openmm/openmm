@@ -32,6 +32,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include "AlignedArray.h"
 #include "windowsExportCpu.h"
 #include "openmm/internal/ThreadPool.h"
 #include <set>
@@ -46,7 +47,7 @@ public:
     class Voxels;
     static const int BlockSize;
     CpuNeighborList();
-    void computeNeighborList(int numAtoms, const std::vector<float>& atomLocations, const std::vector<std::set<int> >& exclusions,
+    void computeNeighborList(int numAtoms, const AlignedArray<float>& atomLocations, const std::vector<std::set<int> >& exclusions,
             const float* periodicBoxSize, bool usePeriodic, float maxDistance, ThreadPool& threads);
     int getNumBlocks() const;
     const std::vector<int>& getSortedAtoms() const;

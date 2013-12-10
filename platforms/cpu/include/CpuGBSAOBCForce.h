@@ -25,6 +25,7 @@
 #ifndef OPENMM_CPU_GBSAOBC_FORCE_H__
 #define OPENMM_CPU_GBSAOBC_FORCE_H__
 
+#include "AlignedArray.h"
 #include "openmm/internal/ThreadPool.h"
 #include "openmm/internal/vectorize.h"
 #include <set>
@@ -84,7 +85,7 @@ public:
      * @param totalEnergy      total energy
      * @param threads          the thread pool to use
      */
-    void computeForce(const std::vector<float>& posq, std::vector<std::vector<float> >& threadForce, double* totalEnergy, ThreadPool& threads);
+    void computeForce(const AlignedArray<float>& posq, std::vector<AlignedArray<float> >& threadForce, double* totalEnergy, ThreadPool& threads);
 
     /**
      * This routine contains the code executed by each thread.
@@ -105,10 +106,13 @@ private:
     float logDX, logDXInv;
     // The following variables are used to make information accessible to the individual threads.
     float const* posq;
-    std::vector<std::vector<float> >* threadForce;
+    std::vector<AlignedArray<float> >* threadForce;
     bool includeEnergy;
+    void* atomicCounter;
   
     static const int NUM_TABLE_POINTS;
+    static const float TABLE_MIN;
+    static const float TABLE_MAX;
 
     /**
      * Compute the displacement and squared distance between a collection of points, optionally using

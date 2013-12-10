@@ -30,6 +30,8 @@
  * -------------------------------------------------------------------------- */
 
 #include "ReferenceConstraints.h"
+#include "ReferenceCCMAAlgorithm.h"
+#include "ReferenceSETTLEAlgorithm.h"
 #include "openmm/HarmonicAngleForce.h"
 #include "openmm/OpenMMException.h"
 #include <map>
@@ -39,8 +41,7 @@
 using namespace OpenMM;
 using namespace std;
 
-ReferenceConstraints::ReferenceConstraints(const System& system, RealOpenMM tolerance) : ccma(NULL), settle(NULL) {
-    this->tolerance = tolerance;
+ReferenceConstraints::ReferenceConstraints(const System& system) : ccma(NULL), settle(NULL) {
     int numParticles = system.getNumParticles();
     vector<RealOpenMM> masses(numParticles);
     for (int i = 0; i < numParticles; ++i)
@@ -141,7 +142,7 @@ ReferenceConstraints::ReferenceConstraints(const System& system, RealOpenMM tole
             isSettleAtom[p2] = true;
             isSettleAtom[p3] = true;
         }
-        settle = new ReferenceSETTLEAlgorithm(atom1, atom2, atom3, distance1, distance2, masses, tolerance);
+        settle = new ReferenceSETTLEAlgorithm(atom1, atom2, atom3, distance1, distance2, masses);
     }
 
     // All other constraints are handled with CCMA.
@@ -179,7 +180,7 @@ ReferenceConstraints::ReferenceConstraints(const System& system, RealOpenMM tole
         
         // Create the CCMA object.
         
-        ccma = new ReferenceCCMAAlgorithm(numParticles, numCCMA, ccmaIndices, ccmaDistance, masses, angles, tolerance);
+        ccma = new ReferenceCCMAAlgorithm(numParticles, numCCMA, ccmaIndices, ccmaDistance, masses, angles);
     }
 }
 
@@ -190,28 +191,16 @@ ReferenceConstraints::~ReferenceConstraints() {
         delete settle;
 }
 
-RealOpenMM ReferenceConstraints::getTolerance() const {
-    return tolerance;
+void ReferenceConstraints::apply(vector<OpenMM::RealVec>& atomCoordinates, vector<OpenMM::RealVec>& atomCoordinatesP, vector<RealOpenMM>& inverseMasses, RealOpenMM tolerance) {
+    if (ccma != NULL)
+        ccma->apply(atomCoordinates, atomCoordinatesP, inverseMasses, tolerance);
+    if (settle != NULL)
+        settle->apply(atomCoordinates, atomCoordinatesP, inverseMasses, tolerance);
 }
 
-void ReferenceConstraints::setTolerance(RealOpenMM tolerance) {
-    this->tolerance = tolerance;
+void ReferenceConstraints::applyToVelocities(vector<OpenMM::RealVec>& atomCoordinates, vector<OpenMM::RealVec>& velocities, vector<RealOpenMM>& inverseMasses, RealOpenMM tolerance) {
     if (ccma != NULL)
-        ccma->setTolerance(tolerance);
+        ccma->applyToVelocities(atomCoordinates, velocities, inverseMasses, tolerance);
     if (settle != NULL)
-        settle->setTolerance(tolerance);
-}
-
-void ReferenceConstraints::apply(vector<OpenMM::RealVec>& atomCoordinates, vector<OpenMM::RealVec>& atomCoordinatesP, vector<RealOpenMM>& inverseMasses) {
-    if (ccma != NULL)
-        ccma->apply(atomCoordinates, atomCoordinatesP, inverseMasses);
-    if (settle != NULL)
-        settle->apply(atomCoordinates, atomCoordinatesP, inverseMasses);
-}
-
-void ReferenceConstraints::applyToVelocities(vector<OpenMM::RealVec>& atomCoordinates, vector<OpenMM::RealVec>& velocities, vector<RealOpenMM>& inverseMasses) {
-    if (ccma != NULL)
-        ccma->applyToVelocities(atomCoordinates, velocities, inverseMasses);
-    if (settle != NULL)
-        settle->applyToVelocities(atomCoordinates, velocities, inverseMasses);
+        settle->applyToVelocities(atomCoordinates, velocities, inverseMasses, tolerance);
 }

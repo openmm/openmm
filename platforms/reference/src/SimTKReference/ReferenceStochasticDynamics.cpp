@@ -200,7 +200,7 @@ void ReferenceStochasticDynamics::updatePart2( int numberOfAtoms, vector<RealVec
    --------------------------------------------------------------------------------------- */
 
 void ReferenceStochasticDynamics::update(const OpenMM::System& system, vector<RealVec>& atomCoordinates,
-                                          vector<RealVec>& velocities, vector<RealVec>& forces, vector<RealOpenMM>& masses ){
+                                          vector<RealVec>& velocities, vector<RealVec>& forces, vector<RealOpenMM>& masses, RealOpenMM tolerance) {
 
    // ---------------------------------------------------------------------------------------
 
@@ -235,7 +235,7 @@ void ReferenceStochasticDynamics::update(const OpenMM::System& system, vector<Re
 
    ReferenceConstraintAlgorithm* referenceConstraintAlgorithm = getReferenceConstraintAlgorithm();
    if (referenceConstraintAlgorithm)
-      referenceConstraintAlgorithm->apply(atomCoordinates, xPrime, inverseMasses);
+      referenceConstraintAlgorithm->apply(atomCoordinates, xPrime, inverseMasses, tolerance);
 
    // copy xPrime -> atomCoordinates
 

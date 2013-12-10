@@ -56,7 +56,12 @@ static vector<RealVec>& extractForces(ContextImpl& context) {
     return *((vector<RealVec>*) data->forces);
 }
 
-static double computeShiftedKineticEnergy(ContextImpl& context, vector<double>& inverseMasses, double timeShift, ReferenceConstraintAlgorithm* constraints) {
+static ReferenceConstraints& extractConstraints(ContextImpl& context) {
+    ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
+    return *(ReferenceConstraints*) data->constraints;
+}
+
+static double computeShiftedKineticEnergy(ContextImpl& context, vector<double>& inverseMasses, double timeShift) {
     const System& system = context.getSystem();
     int numParticles = system.getNumParticles();
     vector<RealVec>& posData = extractPositions(context);
@@ -75,10 +80,7 @@ static double computeShiftedKineticEnergy(ContextImpl& context, vector<double>& 
     
     // Apply constraints to them.
     
-    if (constraints != NULL) {
-        constraints->setTolerance(1e-4);
-        constraints->applyToVelocities(posData, shiftedVel, inverseMasses);
-    }
+    extractConstraints(context).applyToVelocities(posData, shiftedVel, inverseMasses, 1e-4);
     
     // Compute the kinetic energy.
     
@@ -224,8 +226,6 @@ void ReferenceCalcDrudeForceKernel::copyParametersToContext(ContextImpl& context
 }
 
 ReferenceIntegrateDrudeLangevinStepKernel::~ReferenceIntegrateDrudeLangevinStepKernel() {
-    if (constraints != NULL)
-        delete constraints;
 }
 
 void ReferenceIntegrateDrudeLangevinStepKernel::initialize(const System& system, const DrudeLangevinIntegrator& integrator, const DrudeForce& force) {
@@ -254,23 +254,6 @@ void ReferenceIntegrateDrudeLangevinStepKernel::initialize(const System& system,
         pairInvReducedMass.push_back((m1+m2)/(m1*m2));
     }
     normalParticles.insert(normalParticles.begin(), particles.begin(), particles.end());
-    
-    // Prepare constraints.
-    
-    if (system.getNumConstraints() > 0) {
-        vector<pair<int, int> > constraintIndices;
-        vector<RealOpenMM> constraintDistances;
-        for (int i = 0; i < system.getNumConstraints(); ++i) {
-            int particle1, particle2;
-            double distance;
-            system.getConstraintParameters(i, particle1, particle2, distance);
-            if (system.getParticleMass(particle1) != 0 || system.getParticleMass(particle2) != 0) {
-                constraintIndices.push_back(make_pair(particle1, particle2));
-                constraintDistances.push_back(distance);
-            }
-        }
-        constraints = new ReferenceConstraints(system, (RealOpenMM) integrator.getConstraintTolerance());
-    }
 }
 
 void ReferenceIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, const DrudeLangevinIntegrator& integrator) {
@@ -330,8 +313,7 @@ void ReferenceIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, co
     
     // Apply constraints.
     
-    if (constraints != NULL)
-        constraints->apply(pos, xPrime, particleInvMass);
+    extractConstraints(context).apply(pos, xPrime, particleInvMass, integrator.getConstraintTolerance());
     
     // Record the constrained positions and velocities.
     
@@ -348,12 +330,10 @@ void ReferenceIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, co
 }
 
 double ReferenceIntegrateDrudeLangevinStepKernel::computeKineticEnergy(ContextImpl& context, const DrudeLangevinIntegrator& integrator) {
-    return computeShiftedKineticEnergy(context, particleInvMass, 0.5*integrator.getStepSize(), constraints);
+    return computeShiftedKineticEnergy(context, particleInvMass, 0.5*integrator.getStepSize());
 }
 
 ReferenceIntegrateDrudeSCFStepKernel::~ReferenceIntegrateDrudeSCFStepKernel() {
-    if (constraints != NULL)
-        delete constraints;
     if (minimizerPos != NULL)
         lbfgs_free(minimizerPos);
 }
@@ -375,23 +355,6 @@ void ReferenceIntegrateDrudeSCFStepKernel::initialize(const System& system, cons
         double mass = system.getParticleMass(i);
         particleMass.push_back(mass);
         particleInvMass.push_back(mass == 0.0 ? 0.0 : 1.0/mass);
-    }
-    
-    // Prepare constraints.
-    
-    if (system.getNumConstraints() > 0) {
-        vector<pair<int, int> > constraintIndices;
-        vector<RealOpenMM> constraintDistances;
-        for (int i = 0; i < system.getNumConstraints(); ++i) {
-            int particle1, particle2;
-            double distance;
-            system.getConstraintParameters(i, particle1, particle2, distance);
-            if (system.getParticleMass(particle1) != 0 || system.getParticleMass(particle2) != 0) {
-                constraintIndices.push_back(make_pair(particle1, particle2));
-                constraintDistances.push_back(distance);
-            }
-        }
-        constraints = new ReferenceConstraints(system, (RealOpenMM) integrator.getConstraintTolerance());
     }
     
     // Initialize the energy minimizer.
@@ -424,8 +387,7 @@ void ReferenceIntegrateDrudeSCFStepKernel::execute(ContextImpl& context, const D
         
     // Apply constraints.
     
-    if (constraints != NULL)
-        constraints->apply(pos, xPrime, particleInvMass);
+    extractConstraints(context).apply(pos, xPrime, particleInvMass, integrator.getConstraintTolerance());
     
     // Record the constrained positions and velocities.
     
@@ -446,7 +408,7 @@ void ReferenceIntegrateDrudeSCFStepKernel::execute(ContextImpl& context, const D
 }
 
 double ReferenceIntegrateDrudeSCFStepKernel::computeKineticEnergy(ContextImpl& context, const DrudeSCFIntegrator& integrator) {
-    return computeShiftedKineticEnergy(context, particleInvMass, 0.5*integrator.getStepSize(), constraints);
+    return computeShiftedKineticEnergy(context, particleInvMass, 0.5*integrator.getStepSize());
 }
 
 struct MinimizerData {

@@ -29,8 +29,8 @@
 #include "CpuNonbondedForce.h"
 #include "ReferenceForce.h"
 #include "ReferencePME.h"
-#include "openmm/internal/SplineFitter.h"
 #include "openmm/internal/vectorize.h"
+#include "gmx_atomic.h"
 
 // In case we're using some primitive version of Visual Studio this will
 // make sure that erf() and erfc() are defined.
@@ -40,7 +40,7 @@ using namespace std;
 using namespace OpenMM;
 
 const float CpuNonbondedForce::TWO_OVER_SQRT_PI = (float) (2/sqrt(PI_M));
-const int CpuNonbondedForce::NUM_TABLE_POINTS = 1025;
+const int CpuNonbondedForce::NUM_TABLE_POINTS = 2048;
 
 class CpuNonbondedForce::ComputeDirectTask : public ThreadPool::Task {
 public:
@@ -58,21 +58,22 @@ public:
 
    --------------------------------------------------------------------------------------- */
 
-CpuNonbondedForce::CpuNonbondedForce() : cutoff(false), useSwitch(false), periodic(false), ewald(false), pme(false) {
+CpuNonbondedForce::CpuNonbondedForce() : cutoff(false), useSwitch(false), periodic(false), ewald(false), pme(false), tableIsValid(false) {
 }
 
-  /**---------------------------------------------------------------------------------------
+/**---------------------------------------------------------------------------------------
 
-     Set the force to use a cutoff.
+   Set the force to use a cutoff.
 
-     @param distance            the cutoff distance
-     @param neighbors           the neighbor list to use
-     @param solventDielectric   the dielectric constant of the bulk solvent
+   @param distance            the cutoff distance
+   @param neighbors           the neighbor list to use
+   @param solventDielectric   the dielectric constant of the bulk solvent
 
      --------------------------------------------------------------------------------------- */
 
-  void CpuNonbondedForce::setUseCutoff(float distance, const CpuNeighborList& neighbors, float solventDielectric) {
-
+void CpuNonbondedForce::setUseCutoff(float distance, const CpuNeighborList& neighbors, float solventDielectric) {
+    if (distance != cutoffDistance)
+        tableIsValid = false;
     cutoff = true;
     cutoffDistance = distance;
     neighborList = &neighbors;
@@ -127,6 +128,8 @@ void CpuNonbondedForce::setUseSwitchingFunction(float distance) {
      --------------------------------------------------------------------------------------- */
 
   void CpuNonbondedForce::setUseEwald(float alpha, int kmaxx, int kmaxy, int kmaxz) {
+      if (alpha != alphaEwald)
+          tableIsValid = false;
       alphaEwald = alpha;
       numRx = kmaxx;
       numRy = kmaxy;
@@ -145,6 +148,8 @@ void CpuNonbondedForce::setUseSwitchingFunction(float distance) {
      --------------------------------------------------------------------------------------- */
 
   void CpuNonbondedForce::setUsePME(float alpha, int meshSize[3]) {
+      if (alpha != alphaEwald)
+          tableIsValid = false;
       alphaEwald = alpha;
       meshDim[0] = meshSize[0];
       meshDim[1] = meshSize[1];
@@ -155,24 +160,16 @@ void CpuNonbondedForce::setUseSwitchingFunction(float distance) {
 
   
 void CpuNonbondedForce::tabulateEwaldScaleFactor() {
-    ewaldDX = cutoffDistance/(NUM_TABLE_POINTS-2);
+    if (tableIsValid)
+        return;
+    tableIsValid = true;
+    ewaldDX = cutoffDistance/NUM_TABLE_POINTS;
     ewaldDXInv = 1.0f/ewaldDX;
-    vector<double> x(NUM_TABLE_POINTS+1);
-    vector<double> y(NUM_TABLE_POINTS+1);
-    vector<double> deriv;
-    for (int i = 0; i < NUM_TABLE_POINTS+1; i++) {
-        double r = i*cutoffDistance/(NUM_TABLE_POINTS-2);
+    ewaldScaleTable.resize(NUM_TABLE_POINTS+4);
+    for (int i = 0; i < NUM_TABLE_POINTS+4; i++) {
+        double r = i*ewaldDX;
         double alphaR = alphaEwald*r;
-        x[i] = r;
-        y[i] = erfc(alphaR) + TWO_OVER_SQRT_PI*alphaR*exp(-alphaR*alphaR);
-    }
-    SplineFitter::createNaturalSpline(x, y, deriv);
-    ewaldScaleTable.resize(4*NUM_TABLE_POINTS);
-    for (int i = 0; i < NUM_TABLE_POINTS; i++) {
-        ewaldScaleTable[4*i] = (float) y[i];
-        ewaldScaleTable[4*i+1] = (float) y[i+1];
-        ewaldScaleTable[4*i+2] = (float) (deriv[i]*ewaldDX*ewaldDX/6);
-        ewaldScaleTable[4*i+3] = (float) (deriv[i+1]*ewaldDX*ewaldDX/6);
+        ewaldScaleTable[i] = erfc(alphaR) + TWO_OVER_SQRT_PI*alphaR*exp(-alphaR*alphaR);
     }
 }
   
@@ -291,7 +288,7 @@ void CpuNonbondedForce::calculateReciprocalIxn(int numberOfAtoms, float* posq, c
 
 
 void CpuNonbondedForce::calculateDirectIxn(int numberOfAtoms, float* posq, const vector<RealVec>& atomCoordinates, const vector<pair<float, float> >& atomParameters,
-                const vector<set<int> >& exclusions, vector<vector<float> >& threadForce, double* totalEnergy, ThreadPool& threads) {
+                const vector<set<int> >& exclusions, vector<AlignedArray<float> >& threadForce, double* totalEnergy, ThreadPool& threads) {
     // Record the parameters for the threads.
     
     this->numberOfAtoms = numberOfAtoms;
@@ -302,6 +299,9 @@ void CpuNonbondedForce::calculateDirectIxn(int numberOfAtoms, float* posq, const
     this->threadForce = &threadForce;
     includeEnergy = (totalEnergy != NULL);
     threadEnergy.resize(threads.getNumThreads());
+    gmx_atomic_t counter;
+    gmx_atomic_set(&counter, 0);
+    this->atomicCounter = &counter;
     
     // Signal the threads to start running and wait for them to finish.
     
@@ -332,8 +332,12 @@ void CpuNonbondedForce::threadComputeDirect(ThreadPool& threads, int threadIndex
     if (ewald || pme) {
         // Compute the interactions from the neighbor list.
 
-        for (int i = threadIndex; i < neighborList->getNumBlocks(); i += numThreads)
-            calculateBlockEwaldIxn(i, forces, energyPtr, boxSize, invBoxSize);
+        while (true) {
+            int nextBlock = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
+            if (nextBlock >= neighborList->getNumBlocks())
+                break;
+            calculateBlockEwaldIxn(nextBlock, forces, energyPtr, boxSize, invBoxSize);
+        }
 
         // Now subtract off the exclusions, since they were implicitly included in the reciprocal space sum.
 
@@ -367,13 +371,20 @@ void CpuNonbondedForce::threadComputeDirect(ThreadPool& threads, int threadIndex
     else if (cutoff) {
         // Compute the interactions from the neighbor list.
 
-        for (int i = threadIndex; i < neighborList->getNumBlocks(); i += numThreads)
-            calculateBlockIxn(i, forces, energyPtr, boxSize, invBoxSize);
+        while (true) {
+            int nextBlock = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
+            if (nextBlock >= neighborList->getNumBlocks())
+                break;
+            calculateBlockIxn(nextBlock, forces, energyPtr, boxSize, invBoxSize);
+        }
     }
     else {
         // Loop over all atom pairs
 
-        for (int i = threadIndex; i < numberOfAtoms; i += numThreads){
+        while (true) {
+            int i = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
+            if (i >= numberOfAtoms)
+                break;
             for (int j = i+1; j < numberOfAtoms; j++)
                 if (exclusions[j].find(i) == exclusions[j].end())
                     calculateOneIxn(i, j, forces, energyPtr, boxSize, invBoxSize);
@@ -461,12 +472,12 @@ void CpuNonbondedForce::calculateBlockIxn(int blockIndex, float* forces, double*
                     break;
                 }
     }
+    const float invSwitchingInterval = 1/(cutoffDistance-switchingDistance);
     
     // Loop over neighbors for this block.
     
     const vector<int>& neighbors = neighborList->getBlockNeighbors(blockIndex);
     const vector<char>& exclusions = neighborList->getBlockExclusions(blockIndex);
-    bool include[4];
     for (int i = 0; i < (int) neighbors.size(); i++) {
         // Load the next neighbor.
         
@@ -475,43 +486,50 @@ void CpuNonbondedForce::calculateBlockIxn(int blockIndex, float* forces, double*
         
         // Compute the distances to the block atoms.
         
-        bool any = false;
         fvec4 dx, dy, dz, r2;
         getDeltaR(atomPosq, blockAtomX, blockAtomY, blockAtomZ, dx, dy, dz, r2, needPeriodic, boxSize, invBoxSize);
-        for (int j = 0; j < 4; j++) {
-            include[j] = (((exclusions[i]>>j)&1) == 0 && (!cutoff || r2[j] < cutoffDistance*cutoffDistance));
-            any |= include[j];
-        }
-        if (!any)
+        ivec4 include;
+        char excl = exclusions[i];
+        if (excl == 0)
+            include = -1;
+        else
+            include = ivec4(excl&1 ? 0 : -1, excl&2 ? 0 : -1, excl&4 ? 0 : -1, excl&8 ? 0 : -1);
+        include = include & (r2 < cutoffDistance*cutoffDistance);
+        if (!any(include))
             continue; // No interactions to compute.
         
         // Compute the interactions.
         
         fvec4 r = sqrt(r2);
         fvec4 inverseR = fvec4(1.0f)/r;
-        fvec4 switchValue(1.0f), switchDeriv(0.0f);
-        if (useSwitch) {
-            fvec4 t = (r>switchingDistance) & ((r-switchingDistance)/(cutoffDistance-switchingDistance));
-            switchValue = 1+t*t*t*(-10.0f+t*(15.0f-t*6.0f));
-            switchDeriv = t*t*(-30.0f+t*(60.0f-t*30.0f))/(cutoffDistance-switchingDistance);
+        fvec4 energy, dEdR;
+        float atomEpsilon = atomParameters[atom].second;
+        if (atomEpsilon != 0.0f) {
+            fvec4 sig = blockAtomSigma+atomParameters[atom].first;
+            fvec4 sig2 = inverseR*sig;
+            sig2 *= sig2;
+            fvec4 sig6 = sig2*sig2*sig2;
+            fvec4 epsSig6 = blockAtomEpsilon*atomEpsilon*sig6;
+            dEdR = epsSig6*(12.0f*sig6 - 6.0f);
+            energy = epsSig6*(sig6-1.0f);
+            if (useSwitch) {
+                fvec4 t = (r>switchingDistance) & ((r-switchingDistance)*invSwitchingInterval);
+                fvec4 switchValue = 1+t*t*t*(-10.0f+t*(15.0f-t*6.0f));
+                fvec4 switchDeriv = t*t*(-30.0f+t*(60.0f-t*30.0f))*invSwitchingInterval;
+                dEdR = switchValue*dEdR - energy*switchDeriv*r;
+                energy *= switchValue;
+            }
         }
-        fvec4 sig = blockAtomSigma+atomParameters[atom].first;
-        fvec4 sig2 = inverseR*sig;
-        sig2 *= sig2;
-        fvec4 sig6 = sig2*sig2*sig2;
-        fvec4 eps = blockAtomEpsilon*atomParameters[atom].second;
-        fvec4 dEdR = switchValue*eps*(12.0f*sig6 - 6.0f)*sig6;
+        else {
+            energy = 0.0f;
+            dEdR = 0.0f;
+        }
         fvec4 chargeProd = blockAtomCharge*posq[4*atom+3];
         if (cutoff)
             dEdR += chargeProd*(inverseR-2.0f*krf*r2);
         else
             dEdR += chargeProd*inverseR;
         dEdR *= inverseR*inverseR;
-        fvec4 energy = eps*(sig6-1.0f)*sig6;
-        if (useSwitch) {
-            dEdR -= energy*switchDeriv*inverseR;
-            energy *= switchValue;
-        }
 
         // Accumulate energies.
 
@@ -520,27 +538,25 @@ void CpuNonbondedForce::calculateBlockIxn(int blockIndex, float* forces, double*
                 energy += chargeProd*(inverseR+krf*r2-crf);
             else
                 energy += chargeProd*inverseR;
-            for (int j = 0; j < 4; j++)
-                if (include[j])
-                    *totalEnergy += energy[j];
+            energy = blend(0.0f, energy, include);
+            *totalEnergy += dot4(energy, 1.0f);
         }
 
         // Accumulate forces.
 
+        dEdR = blend(0.0f, dEdR, include);
         fvec4 result[4] = {dx*dEdR, dy*dEdR, dz*dEdR, 0.0f};
         transpose(result[0], result[1], result[2], result[3]);
         fvec4 atomForce(forces+4*atom);
         for (int j = 0; j < 4; j++) {
-            if (include[j]) {
-                blockAtomForce[j] += result[j];
-                atomForce -= result[j];
-            }
+            blockAtomForce[j] += result[j];
+            atomForce -= result[j];
         }
         atomForce.store(forces+4*atom);
     }
     
     // Record the forces on the block atoms.
-    
+
     for (int j = 0; j < 4; j++)
         (fvec4(forces+4*blockAtom[j])+blockAtomForce[j]).store(forces+4*blockAtom[j]);
   }
@@ -569,12 +585,12 @@ void CpuNonbondedForce::calculateBlockEwaldIxn(int blockIndex, float* forces, do
                 needPeriodic = true;
                 break;
             }
+    const float invSwitchingInterval = 1/(cutoffDistance-switchingDistance);
     
     // Loop over neighbors for this block.
     
     const vector<int>& neighbors = neighborList->getBlockNeighbors(blockIndex);
     const vector<char>& exclusions = neighborList->getBlockExclusions(blockIndex);
-    bool include[4];
     for (int i = 0; i < (int) neighbors.size(); i++) {
         // Load the next neighbor.
         
@@ -583,60 +599,65 @@ void CpuNonbondedForce::calculateBlockEwaldIxn(int blockIndex, float* forces, do
         
         // Compute the distances to the block atoms.
         
-        bool any = false;
         fvec4 dx, dy, dz, r2;
         getDeltaR(atomPosq, blockAtomX, blockAtomY, blockAtomZ, dx, dy, dz, r2, needPeriodic, boxSize, invBoxSize);
-        for (int j = 0; j < 4; j++) {
-            include[j] = (((exclusions[i]>>j)&1) == 0 && r2[j] < cutoffDistance*cutoffDistance);
-            any |= include[j];
-        }
-        if (!any)
+        ivec4 include;
+        char excl = exclusions[i];
+        if (excl == 0)
+            include = -1;
+        else
+            include = ivec4(excl&1 ? 0 : -1, excl&2 ? 0 : -1, excl&4 ? 0 : -1, excl&8 ? 0 : -1);
+        include = include & (r2 < cutoffDistance*cutoffDistance);
+        if (!any(include))
             continue; // No interactions to compute.
         
         // Compute the interactions.
         
         fvec4 r = sqrt(r2);
         fvec4 inverseR = fvec4(1.0f)/r;
-        fvec4 switchValue(1.0f), switchDeriv(0.0f);
-        if (useSwitch) {
-            fvec4 t = (r>switchingDistance) & ((r-switchingDistance)/(cutoffDistance-switchingDistance));
-            switchValue = 1+t*t*t*(-10.0f+t*(15.0f-t*6.0f));
-            switchDeriv = t*t*(-30.0f+t*(60.0f-t*30.0f))/(cutoffDistance-switchingDistance);
+        fvec4 energy, dEdR;
+        float atomEpsilon = atomParameters[atom].second;
+        if (atomEpsilon != 0.0f) {
+            fvec4 sig = blockAtomSigma+atomParameters[atom].first;
+            fvec4 sig2 = inverseR*sig;
+            sig2 *= sig2;
+            fvec4 sig6 = sig2*sig2*sig2;
+            fvec4 epsSig6 = blockAtomEpsilon*atomEpsilon*sig6;
+            dEdR = epsSig6*(12.0f*sig6 - 6.0f);
+            energy = epsSig6*(sig6-1.0f);
+            if (useSwitch) {
+                fvec4 t = (r>switchingDistance) & ((r-switchingDistance)*invSwitchingInterval);
+                fvec4 switchValue = 1+t*t*t*(-10.0f+t*(15.0f-t*6.0f));
+                fvec4 switchDeriv = t*t*(-30.0f+t*(60.0f-t*30.0f))*invSwitchingInterval;
+                dEdR = switchValue*dEdR - energy*switchDeriv*r;
+                energy *= switchValue;
+            }
+        }
+        else {
+            energy = 0.0f;
+            dEdR = 0.0f;
         }
         fvec4 chargeProd = blockAtomCharge*posq[4*atom+3];
-        fvec4 dEdR = chargeProd*inverseR*ewaldScaleFunction(r);
-        fvec4 sig = blockAtomSigma+atomParameters[atom].first;
-        fvec4 sig2 = inverseR*sig;
-        sig2 *= sig2;
-        fvec4 sig6 = sig2*sig2*sig2;
-        fvec4 eps = blockAtomEpsilon*atomParameters[atom].second;
-        dEdR += switchValue*eps*(12.0f*sig6 - 6.0f)*sig6;
-        dEdR *= inverseR*inverseR;
-        fvec4 energy = eps*(sig6-1.0f)*sig6;
-        if (useSwitch) {
-            dEdR -= energy*switchDeriv*inverseR;
-            energy *= switchValue;
-        }
+        dEdR += chargeProd*inverseR*ewaldScaleFunction(r);
+        dEdR *= inverseR*inverseR;        
 
         // Accumulate energies.
 
         if (totalEnergy) {
             energy += chargeProd*inverseR*erfcApprox(alphaEwald*r);
-            for (int j = 0; j < 4; j++)
-                if (include[j])
-                    *totalEnergy += energy[j];
+            energy = blend(0.0f, energy, include);
+            *totalEnergy += dot4(energy, 1.0f);
         }
 
         // Accumulate forces.
 
+        dEdR = blend(0.0f, dEdR, include);
         fvec4 result[4] = {dx*dEdR, dy*dEdR, dz*dEdR, 0.0f};
         transpose(result[0], result[1], result[2], result[3]);
         fvec4 atomForce(forces+4*atom);
         for (int j = 0; j < 4; j++) {
-            if (include[j]) {
-                blockAtomForce[j] += result[j];
-                atomForce -= result[j];
-            }
+            blockAtomForce[j] += result[j];
+            atomForce -= result[j];
         }
         atomForce.store(forces+4*atom);
     }
@@ -683,18 +704,14 @@ fvec4 CpuNonbondedForce::erfcApprox(fvec4 x) {
 fvec4 CpuNonbondedForce::ewaldScaleFunction(fvec4 x) {
     // Compute the tabulated Ewald scale factor: erfc(alpha*r) + 2*alpha*r*exp(-alpha*alpha*r*r)/sqrt(PI)
 
-    float y[4];
     fvec4 x1 = x*ewaldDXInv;
-    ivec4 index = floor(x1);
-    fvec4 coeff[4];
-    coeff[1] = x1-index;
-    coeff[0] = 1.0f-coeff[1];
-    coeff[2] = coeff[0]*coeff[0]*coeff[0]-coeff[0];
-    coeff[3] = coeff[1]*coeff[1]*coeff[1]-coeff[1];
-    transpose(coeff[0], coeff[1], coeff[2], coeff[3]);
-    for (int i = 0; i < 4; i++) {
-        if (index[i] < NUM_TABLE_POINTS)
-            y[i] = dot4(coeff[i], fvec4(&ewaldScaleTable[4*index[i]]));
-    }
-    return fvec4(y);
+    ivec4 index = min(floor(x1), NUM_TABLE_POINTS);
+    fvec4 coeff2 = x1-index;
+    fvec4 coeff1 = 1.0f-coeff2;
+    fvec4 t1(&ewaldScaleTable[index[0]]);
+    fvec4 t2(&ewaldScaleTable[index[1]]);
+    fvec4 t3(&ewaldScaleTable[index[2]]);
+    fvec4 t4(&ewaldScaleTable[index[3]]);
+    transpose(t1, t2, t3, t4);
+    return coeff1*t1 + coeff2*t2;
 }

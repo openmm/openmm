@@ -98,11 +98,12 @@ class ReferenceVariableStochasticDynamics : public ReferenceDynamics {
          @param forces              forces
          @param masses              atom masses
          @param maxStepSize         maximum time step
+         @param tolerance           the constraint tolerance
 
          --------------------------------------------------------------------------------------- */
 
       void update(const OpenMM::System& system, std::vector<OpenMM::RealVec>& atomCoordinates,
-                  std::vector<OpenMM::RealVec>& velocities, std::vector<OpenMM::RealVec>& forces, std::vector<RealOpenMM>& masses, RealOpenMM maxStepSize );
+                  std::vector<OpenMM::RealVec>& velocities, std::vector<OpenMM::RealVec>& forces, std::vector<RealOpenMM>& masses, RealOpenMM maxStepSize, RealOpenMM tolerance);
 
       /**---------------------------------------------------------------------------------------
 

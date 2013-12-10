@@ -32,6 +32,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include "AlignedArray.h"
 #include "ReferencePlatform.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/ThreadPool.h"
@@ -69,8 +70,8 @@ private:
 class CpuPlatform::PlatformData {
 public:
     PlatformData(int numParticles);
-    std::vector<float> posq;
-    std::vector<std::vector<float> > threadForce;
+    AlignedArray<float> posq;
+    std::vector<AlignedArray<float> > threadForce;
     ThreadPool threads;
     bool isPeriodic;
 };

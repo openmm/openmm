@@ -30,6 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "ReferencePlatform.h"
+#include "ReferenceConstraints.h"
 #include "ReferenceKernelFactory.h"
 #include "ReferenceKernels.h"
 #include "openmm/internal/ContextImpl.h"
@@ -82,7 +83,7 @@ bool ReferencePlatform::supportsDoublePrecision() const {
 }
 
 void ReferencePlatform::contextCreated(ContextImpl& context, const map<string, string>& properties) const {
-    context.setPlatformData(new PlatformData(context.getSystem().getNumParticles()));
+    context.setPlatformData(new PlatformData(context.getSystem()));
 }
 
 void ReferencePlatform::contextDestroyed(ContextImpl& context) const {
@@ -90,11 +91,12 @@ void ReferencePlatform::contextDestroyed(ContextImpl& context) const {
     delete data;
 }
 
-ReferencePlatform::PlatformData::PlatformData(int numParticles) : time(0.0), stepCount(0), numParticles(numParticles) {
+ReferencePlatform::PlatformData::PlatformData(const System& system) : time(0.0), stepCount(0), numParticles(system.getNumParticles()) {
     positions = new vector<RealVec>(numParticles);
     velocities = new vector<RealVec>(numParticles);
     forces = new vector<RealVec>(numParticles);
     periodicBoxSize = new RealVec();
+    constraints = new ReferenceConstraints(system);
 }
 
 ReferencePlatform::PlatformData::~PlatformData() {
@@ -102,4 +104,5 @@ ReferencePlatform::PlatformData::~PlatformData() {
     delete (vector<RealVec>*) velocities;
     delete (vector<RealVec>*) forces;
     delete (RealVec*) periodicBoxSize;
+    delete (ReferenceConstraints*) constraints;
 }

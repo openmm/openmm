@@ -1,5 +1,5 @@
-#ifndef OPENMM_REFERENCECONSTRAINTS_H_
-#define OPENMM_REFERENCECONSTRAINTS_H_
+#ifndef OPENMM_ALIGNEDARRAY_H_
+#define OPENMM_ALIGNEDARRAY_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -32,44 +32,73 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "ReferenceConstraintAlgorithm.h"
-#include "openmm/System.h"
-
 namespace OpenMM {
 
 /**
- * This class uses multiple algorithms to apply constraints as efficiently as possible.  It identifies clusters
- * of three atoms that can be handled by SETTLE, and creates a ReferenceSETTLEAlgorithm object to handle them.
- * It then creates a ReferenceCCMAAlgorithm object to handle any remaining constraints.
+ * This class represents an array in memory whose starting point is guaranteed to
+ * be aligned with a 16 byte boundary.  This can improve the performance of vectorized
+ * code, since loads and stores are more efficient.
  */
-class OPENMM_EXPORT ReferenceConstraints : public ReferenceConstraintAlgorithm {
+template <class T>
+class AlignedArray {
 public:
-    ReferenceConstraints(const System& system);
-    virtual ~ReferenceConstraints();
-
     /**
-     * Apply the constraint algorithm.
-     * 
-     * @param atomCoordinates  the original atom coordinates
-     * @param atomCoordinatesP the new atom coordinates
-     * @param inverseMasses    1/mass
-     * @param tolerance        the constraint tolerance
+     * Default constructor, to allow AlignedArrays to be used inside collections.
      */
-    void apply(std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& atomCoordinatesP, std::vector<RealOpenMM>& inverseMasses, RealOpenMM tolerance);
-
+    AlignedArray() : dataSize(0), baseData(0), data(0) {
+    }
     /**
-     * Apply the constraint algorithm to velocities.
-     * 
-     * @param atomCoordinates  the atom coordinates
-     * @param atomCoordinatesP the velocities to modify
-     * @param inverseMasses    1/mass
-     * @param tolerance        the constraint tolerance
+     * Create an Aligned array that contains a specified number of elements.
      */
-    void applyToVelocities(std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& velocities, std::vector<RealOpenMM>& inverseMasses, RealOpenMM tolerance);
-    ReferenceConstraintAlgorithm* ccma;
-    ReferenceConstraintAlgorithm* settle;
+    AlignedArray(int size) {
+        allocate(size);
+    }
+    ~AlignedArray() {
+        if (baseData != 0)
+            delete[] baseData;
+    }
+    /**
+     * Get the number of elements in the array.
+     */
+    int size() const {
+        return dataSize;
+    }
+    /**
+     * Change the size of the array.  This may cause all contents to be lost.
+     */
+    void resize(int size) {
+        if (dataSize == size)
+            return;
+        if (baseData != 0)
+            delete[] baseData;
+        allocate(size);
+    }
+    /**
+     * Get a reference to an element of the array.
+     */
+    T& operator[](int i) {
+        return data[i];
+    }
+    /**
+     * Get a const reference to an element of the array.
+     */
+    const T& operator[](int i) const {
+        return data[i];
+    }
+private:
+    void allocate(int size) {
+        dataSize = size;
+        baseData = new char[size*sizeof(T)+16];
+        char* offsetData = baseData+15;
+        offsetData -= (long long)offsetData&0xF;
+        data = (T*) offsetData;
+    }
+    int dataSize;
+    char* baseData;
+    T* data;
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_REFERENCECONSTRAINTS_H_*/
+#endif /*OPENMM_ALIGNEDARRAY_H_*/
+
