@@ -84,13 +84,13 @@ void CpuCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool i
     AlignedArray<float>& posq = data.posq;
     vector<RealVec>& posData = extractPositions(context);
     RealVec boxSize = extractBoxSize(context);
-    float floatBoxSize[3] = {(float) boxSize[0], (float) boxSize[1], (float) boxSize[2]};
+    double invBoxSize[3] = {1/boxSize[0], 1/boxSize[1], 1/boxSize[2]};
     int numParticles = context.getSystem().getNumParticles();
     if (data.isPeriodic)
         for (int i = 0; i < numParticles; i++)
             for (int j = 0; j < 3; j++) {
                 RealOpenMM x = posData[i][j];
-                double base = floor(x/boxSize[j])*boxSize[j];
+                double base = floor(x*invBoxSize[j])*boxSize[j];
                 posq[4*i+j] = (float) (x-base);
             }
     else
