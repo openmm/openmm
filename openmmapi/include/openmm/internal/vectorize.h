@@ -91,6 +91,9 @@ public:
     fvec4 operator&(fvec4 other) const {
         return _mm_and_ps(val, other);
     }
+    fvec4 operator|(fvec4 other) const {
+        return _mm_or_ps(val, other);
+    }
     fvec4 operator==(fvec4 other) const {
         return _mm_cmpeq_ps(val, other);
     }
@@ -156,6 +159,9 @@ public:
     }
     ivec4 operator&(ivec4 other) const {
         return _mm_and_si128(val, other);
+    }
+    ivec4 operator|(ivec4 other) const {
+        return _mm_or_si128(val, other);
     }
     ivec4 operator==(ivec4 other) const {
         return _mm_cmpeq_epi32(val, other);
@@ -265,6 +271,12 @@ static inline fvec4 operator*(float v1, fvec4 v2) {
 
 static inline fvec4 operator/(float v1, fvec4 v2) {
     return fvec4(v1)/v2;
+}
+
+// Operations for blending fvec4s based on an ivec4.
+
+static inline fvec4 blend(fvec4 v1, fvec4 v2, ivec4 mask) {
+    return fvec4(_mm_blendv_ps(v1.val, v2.val, _mm_castsi128_ps(mask.val)));
 }
 
 #endif /*OPENMM_VECTORIZE_H_*/

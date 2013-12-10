@@ -249,11 +249,12 @@ void ReferenceDynamics::setReferenceConstraintAlgorithm( ReferenceConstraintAlgo
    @param velocities          velocities
    @param forces              forces
    @param masses              atom masses
+   @param tolerance           the constraint tolerance
 
    --------------------------------------------------------------------------------------- */
 
 void ReferenceDynamics::update(const OpenMM::System& system, vector<RealVec>& atomCoordinates,
-                               vector<RealVec>& velocities, vector<RealVec>& forces, vector<RealOpenMM>& masses ){
+                               vector<RealVec>& velocities, vector<RealVec>& forces, vector<RealOpenMM>& masses, RealOpenMM tolerance) {
 
    // ---------------------------------------------------------------------------------------
 

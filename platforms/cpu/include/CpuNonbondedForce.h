@@ -25,6 +25,7 @@
 #ifndef OPENMM_CPU_NONBONDED_FORCE_H__
 #define OPENMM_CPU_NONBONDED_FORCE_H__
 
+#include "AlignedArray.h"
 #include "CpuNeighborList.h"
 #include "ReferencePairIxn.h"
 #include "openmm/internal/ThreadPool.h"
@@ -143,7 +144,7 @@ class CpuNonbondedForce {
          --------------------------------------------------------------------------------------- */
           
       void calculateDirectIxn(int numberOfAtoms, float* posq, const std::vector<RealVec>& atomCoordinates, const std::vector<std::pair<float, float> >& atomParameters,
-            const std::vector<std::set<int> >& exclusions, std::vector<std::vector<float> >& threadForce, double* totalEnergy, ThreadPool& threads);
+            const std::vector<std::set<int> >& exclusions, std::vector<AlignedArray<float> >& threadForce, double* totalEnergy, ThreadPool& threads);
 
     /**
      * This routine contains the code executed by each thread.
@@ -156,6 +157,7 @@ private:
         bool periodic;
         bool ewald;
         bool pme;
+        bool tableIsValid;
         const CpuNeighborList* neighborList;
         float periodicBoxSize[3];
         float cutoffDistance, switchingDistance;
@@ -172,8 +174,9 @@ private:
         RealVec const* atomCoordinates;
         std::pair<float, float> const* atomParameters;        
         std::set<int> const* exclusions;
-        std::vector<std::vector<float> >* threadForce;
+        std::vector<AlignedArray<float> >* threadForce;
         bool includeEnergy;
+        void* atomicCounter;
 
         static const float TWO_OVER_SQRT_PI;
         static const int NUM_TABLE_POINTS;

@@ -14,10 +14,6 @@
 #   libOpenMMCPU_static[_d].a
 #----------------------------------------------------
 
-IF (APPLE)
-    SET (CMAKE_OSX_DEPLOYMENT_TARGET "10.6")
-ENDIF (APPLE)
-
 SUBDIRS (tests)
 
 # The source is organized into subdirectories, but we handle them all from
