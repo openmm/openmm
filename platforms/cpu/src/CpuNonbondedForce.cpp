@@ -472,6 +472,7 @@ void CpuNonbondedForce::calculateBlockIxn(int blockIndex, float* forces, double*
                     break;
                 }
     }
+    const float invSwitchingInterval = 1/(cutoffDistance-switchingDistance);
     
     // Loop over neighbors for this block.
     
@@ -512,9 +513,9 @@ void CpuNonbondedForce::calculateBlockIxn(int blockIndex, float* forces, double*
             dEdR = epsSig6*(12.0f*sig6 - 6.0f);
             energy = epsSig6*(sig6-1.0f);
             if (useSwitch) {
-                fvec4 t = (r>switchingDistance) & ((r-switchingDistance)/(cutoffDistance-switchingDistance));
+                fvec4 t = (r>switchingDistance) & ((r-switchingDistance)*invSwitchingInterval);
                 fvec4 switchValue = 1+t*t*t*(-10.0f+t*(15.0f-t*6.0f));
-                fvec4 switchDeriv = t*t*(-30.0f+t*(60.0f-t*30.0f))/(cutoffDistance-switchingDistance);
+                fvec4 switchDeriv = t*t*(-30.0f+t*(60.0f-t*30.0f))*invSwitchingInterval;
                 dEdR = switchValue*dEdR - energy*switchDeriv*r;
                 energy *= switchValue;
             }
@@ -584,6 +585,7 @@ void CpuNonbondedForce::calculateBlockEwaldIxn(int blockIndex, float* forces, do
                 needPeriodic = true;
                 break;
             }
+    const float invSwitchingInterval = 1/(cutoffDistance-switchingDistance);
     
     // Loop over neighbors for this block.
     
@@ -624,9 +626,9 @@ void CpuNonbondedForce::calculateBlockEwaldIxn(int blockIndex, float* forces, do
             dEdR = epsSig6*(12.0f*sig6 - 6.0f);
             energy = epsSig6*(sig6-1.0f);
             if (useSwitch) {
-                fvec4 t = (r>switchingDistance) & ((r-switchingDistance)/(cutoffDistance-switchingDistance));
+                fvec4 t = (r>switchingDistance) & ((r-switchingDistance)*invSwitchingInterval);
                 fvec4 switchValue = 1+t*t*t*(-10.0f+t*(15.0f-t*6.0f));
-                fvec4 switchDeriv = t*t*(-30.0f+t*(60.0f-t*30.0f))/(cutoffDistance-switchingDistance);
+                fvec4 switchDeriv = t*t*(-30.0f+t*(60.0f-t*30.0f))*invSwitchingInterval;
                 dEdR = switchValue*dEdR - energy*switchDeriv*r;
                 energy *= switchValue;
             }

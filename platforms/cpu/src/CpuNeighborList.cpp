@@ -229,6 +229,8 @@ public:
                         maxz = max(maxz, atomPos[2]+dist);
                     }
                 }
+                if (minz == maxz)
+                    continue;
                 bool needPeriodic = (centerPos[0]-blockWidth[0] < maxDistance || centerPos[0]+blockWidth[0] > periodicBoxSize[0]-maxDistance ||
                                      centerPos[1]-blockWidth[1] < maxDistance || centerPos[1]+blockWidth[1] > periodicBoxSize[1]-maxDistance ||
                                      minz < 0.0f || maxz > periodicBoxSize[2]);

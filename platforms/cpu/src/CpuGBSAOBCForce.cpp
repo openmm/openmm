@@ -361,14 +361,13 @@ void CpuGBSAOBCForce::threadComputeForce(ThreadPool& threads, int threadIndex) {
             fvec4 logRatio = fastLog(u_ij/l_ij);
             fvec4 t3 = 0.125f*(1.0f + scaledRadiusJ2*r2Inverse)*(l_ij2 - u_ij2) + 0.25f*logRatio*r2Inverse;
             fvec4 de = bornForce*t3*rInverse;
+            de = blend(0.0f, de, include);
             fvec4 result[4] = {dx*de, dy*de, dz*de, 0.0f};
             transpose(result[0], result[1], result[2], result[3]);
             fvec4 atomForce(forces+4*atomJ);
             for (int j = 0; j < 4; j++) {
-                if (include[j]) {
-                    blockAtomForce[j] += result[j];
-                    atomForce -= result[j];
-                }
+                blockAtomForce[j] += result[j];
+                atomForce -= result[j];
             }
             atomForce.store(forces+4*atomJ);
         }
