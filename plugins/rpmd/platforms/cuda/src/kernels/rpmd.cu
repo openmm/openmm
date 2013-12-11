@@ -217,7 +217,7 @@ extern "C" __global__ void copyDataFromContext(long long* srcForce, long long* d
 }
 
 /**
- * Update atom positions so all copies are offset by the same number of periodic box widths.
+ * Atom positions in one copy have been modified.  Apply the same offsets to all the other copies.
  */
 extern "C" __global__ void applyCellTranslations(mixed4* posq, real4* movedPos, int* order, int movedCopy) {
     for (int particle = blockIdx.x*blockDim.x+threadIdx.x; particle < NUM_ATOMS; particle += blockDim.x*gridDim.x) {
