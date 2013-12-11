@@ -275,7 +275,22 @@ void ReferenceIntegrateRPMDStepKernel::computeForces(ContextImpl& context, const
         pos = positions[i];
         vel = velocities[i];
         context.computeVirtualSites();
+        Vec3 initialBox[3];
+        context.getPeriodicBoxVectors(initialBox[0], initialBox[1], initialBox[2]);
         context.updateContextState();
+        Vec3 finalBox[3];
+        context.getPeriodicBoxVectors(finalBox[0], finalBox[1], finalBox[2]);
+        if (initialBox[0] != finalBox[0] || initialBox[1] != finalBox[1] || initialBox[2] != finalBox[2]) {
+            // A barostat was applied during updateContextState().  Adjust the particle positions in all the
+            // other copies to match this one.
+            
+            for (int j = 0; j < numParticles; j++) {
+                Vec3 delta = pos[j]-positions[i][j];
+                for (int k = 0; k < totalCopies; k++)
+                    if (k != i)
+                        positions[k][j] += delta;
+            }
+        }
         positions[i] = pos;
         velocities[i] = vel;
         context.calcForcesAndEnergy(true, false, groupsNotContracted);

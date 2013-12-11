@@ -204,7 +204,7 @@ __kernel void copyDataFromContext(__global real4* srcForce, __global real4* dstF
 }
 
 /**
- * Update atom positions so all copies are offset by the same number of periodic box widths.
+ * Atom positions in one copy have been modified.  Apply the same offsets to all the other copies.
  */
 __kernel void applyCellTranslations(__global mixed4* posq, __global real4* movedPos, __global int* order, int movedCopy) {
     for (int particle = get_global_id(0); particle < NUM_ATOMS; particle += get_global_size(0)) {
