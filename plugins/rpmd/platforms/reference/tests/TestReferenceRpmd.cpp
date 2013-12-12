@@ -51,6 +51,8 @@
 using namespace OpenMM;
 using namespace std;
 
+extern "C" OPENMM_EXPORT void registerRpmdReferenceKernelFactories();
+
 void testFreeParticles() {
     const int numParticles = 100;
     const int numCopies = 30;
@@ -455,6 +457,7 @@ void testWithBarostat() {
 
 int main() {
     try {
+        registerRpmdReferenceKernelFactories();
         testFreeParticles();
         testCMMotionRemoval();
         testVirtualSites();

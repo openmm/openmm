@@ -48,6 +48,8 @@
 using namespace OpenMM;
 using namespace std;
 
+extern "C" OPENMM_EXPORT void registerDrudeReferenceKernelFactories();
+
 void testWater() {
     // Create a box of SWM4-NDP water molecules.  This involves constraints, virtual sites,
     // and Drude particles.
@@ -126,6 +128,7 @@ void testWater() {
 
 int main() {
     try {
+        registerDrudeReferenceKernelFactories();
         testWater();
     }
     catch(const std::exception& e) {

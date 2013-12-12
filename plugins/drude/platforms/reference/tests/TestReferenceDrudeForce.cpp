@@ -47,6 +47,8 @@
 using namespace OpenMM;
 using namespace std;
 
+extern "C" OPENMM_EXPORT void registerDrudeReferenceKernelFactories();
+
 void validateForce(System& system, vector<Vec3>& positions, double expectedEnergy) {
     // Given a System containing a Drude force, check that its energy has the expected value.
     
@@ -193,6 +195,7 @@ void testChangingParameters() {
 
 int main() {
     try {
+        registerDrudeReferenceKernelFactories();
         testSingleParticle();
         testAnisotropicParticle();
         testThole();
