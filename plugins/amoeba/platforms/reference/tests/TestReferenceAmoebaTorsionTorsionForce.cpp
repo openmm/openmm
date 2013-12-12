@@ -44,6 +44,9 @@
 #include <vector>
 
 using namespace OpenMM;
+
+extern "C" OPENMM_EXPORT void registerAmoebaReferenceKernelFactories();
+
 const double TOL = 1e-4;
 
 TorsionTorsionGrid& getTorsionGrid( int gridIndex ) {
@@ -2683,6 +2686,7 @@ int main( int numberOfArguments, char* argv[] ) {
 
     try {
         std::cout << "TestReferenceAmoebaTorsionTorsionForce running test..." << std::endl;
+        registerAmoebaReferenceKernelFactories();
         //registerAmoebaCudaKernelFactories();
 
         FILE* log = NULL;

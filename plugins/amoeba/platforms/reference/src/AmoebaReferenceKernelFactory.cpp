@@ -6,8 +6,8 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
- * Authors:                                                                   *
+ * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
+ * Authors: Mark Friedrichs, Peter Eastman                                    *
  * Contributors:                                                              *
  *                                                                            *
  * This program is free software: you can redistribute it and/or modify       *
@@ -32,38 +32,31 @@
 
 using namespace OpenMM;
 
-#if defined(WIN32)
-    #include <windows.h>
-    extern "C" void initAmoebaReferenceKernels();
-    BOOL WINAPI DllMain(HANDLE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved) {
-        if (ul_reason_for_call == DLL_PROCESS_ATTACH)
-            initAmoebaReferenceKernels();
-        return TRUE;
-    }
-#else
-    extern "C" void __attribute__((constructor)) initAmoebaReferenceKernels();
-#endif
+extern "C" OPENMM_EXPORT void registerPlatforms() {
+}
 
-extern "C" void initAmoebaReferenceKernels() {
-    for( int ii = 0; ii < Platform::getNumPlatforms(); ii++ ){
-        Platform& platform = Platform::getPlatform(ii);
-        if( platform.getName() == "Reference" ){
-
+extern "C" OPENMM_EXPORT void registerKernelFactories() {
+    for (int i = 0; i < Platform::getNumPlatforms(); i++) {
+        Platform& platform = Platform::getPlatform(i);
+        if (dynamic_cast<ReferencePlatform*>(&platform) != NULL) {
              AmoebaReferenceKernelFactory* factory = new AmoebaReferenceKernelFactory();
-
-             platform.registerKernelFactory(CalcAmoebaBondForceKernel::Name(),          factory);
-             platform.registerKernelFactory(CalcAmoebaAngleForceKernel::Name(),         factory);
-             platform.registerKernelFactory(CalcAmoebaInPlaneAngleForceKernel::Name(),  factory);
-             platform.registerKernelFactory(CalcAmoebaPiTorsionForceKernel::Name(),             factory);
-             platform.registerKernelFactory(CalcAmoebaStretchBendForceKernel::Name(),           factory);
-             platform.registerKernelFactory(CalcAmoebaOutOfPlaneBendForceKernel::Name(),        factory);
-             platform.registerKernelFactory(CalcAmoebaTorsionTorsionForceKernel::Name(),        factory);
-             platform.registerKernelFactory(CalcAmoebaVdwForceKernel::Name(),                   factory);
-             platform.registerKernelFactory(CalcAmoebaMultipoleForceKernel::Name(),             factory);
+             platform.registerKernelFactory(CalcAmoebaBondForceKernel::Name(), factory);
+             platform.registerKernelFactory(CalcAmoebaAngleForceKernel::Name(), factory);
+             platform.registerKernelFactory(CalcAmoebaInPlaneAngleForceKernel::Name(), factory);
+             platform.registerKernelFactory(CalcAmoebaPiTorsionForceKernel::Name(), factory);
+             platform.registerKernelFactory(CalcAmoebaStretchBendForceKernel::Name(), factory);
+             platform.registerKernelFactory(CalcAmoebaOutOfPlaneBendForceKernel::Name(), factory);
+             platform.registerKernelFactory(CalcAmoebaTorsionTorsionForceKernel::Name(), factory);
+             platform.registerKernelFactory(CalcAmoebaVdwForceKernel::Name(), factory);
+             platform.registerKernelFactory(CalcAmoebaMultipoleForceKernel::Name(), factory);
              platform.registerKernelFactory(CalcAmoebaGeneralizedKirkwoodForceKernel::Name(), factory);
              platform.registerKernelFactory(CalcAmoebaWcaDispersionForceKernel::Name(), factory);
         }
     }
+}
+
+extern "C" OPENMM_EXPORT void registerAmoebaReferenceKernelFactories() {
+    registerKernelFactories();
 }
 
 KernelImpl* AmoebaReferenceKernelFactory::createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const {

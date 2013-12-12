@@ -50,6 +50,9 @@
 
 
 using namespace OpenMM;
+
+extern "C" OPENMM_EXPORT void registerAmoebaReferenceKernelFactories();
+
 const double TOL = 1e-4;
 
 void compareForcesEnergy( std::string& testName, double expectedEnergy, double energy,
@@ -171,6 +174,7 @@ int main( int numberOfArguments, char* argv[] ) {
 
     try {
         std::cout << "TestCudaAmoebaWcaDispersionForce running test..." << std::endl;
+        registerAmoebaReferenceKernelFactories();
 
         FILE* log = NULL;
 
