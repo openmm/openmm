@@ -869,7 +869,7 @@ class FortranHeaderGenerator(WrapperGenerator):
                 iDef = getText("initializer", memberNode)
                 if iDef.startswith("="):
                     iDef = iDef[1:]
-                self.out.write("    real*8, parameter :: %s = %s\n" % (vDef, iDef))
+                self.out.write("    real*8, parameter :: OpenMM_%s = %s\n" % (vDef, iDef))
 
     def writeTypeDeclarations(self):
         self.out.write("\n    ! Type Declarations\n")
@@ -1306,19 +1306,19 @@ MODULE OpenMM
             character(*) directory
             type(OpenMM_StringArray) result
         end subroutine
-        subroutine OpenMM_XmlSerializer_serializeSystem(system, result, result_length)
+        subroutine OpenMM_XmlSerializer_serializeSystemToC(system, result, result_length)
             use iso_c_binding; use OpenMM_Types; implicit none
             type(OpenMM_System), intent(in) :: system
             type(c_ptr), intent(out) :: result
             integer, intent(out) :: result_length
         end subroutine
-        subroutine OpenMM_XmlSerializer_serializeState(state, result, result_length)
+        subroutine OpenMM_XmlSerializer_serializeStateToC(state, result, result_length)
             use iso_c_binding; use OpenMM_Types; implicit none
             type(OpenMM_State), intent(in) :: state
             type(c_ptr), intent(out) :: result
             integer, intent(out) :: result_length
         end subroutine
-        subroutine OpenMM_XmlSerializer_serializeIntegrator(integrator, result, result_length)
+        subroutine OpenMM_XmlSerializer_serializeIntegratorToC(integrator, result, result_length)
             use iso_c_binding; use OpenMM_Types; implicit none
             type(OpenMM_Integrator), intent(in) :: integrator
             type(c_ptr), intent(out) :: result
@@ -1344,6 +1344,63 @@ MODULE OpenMM
         
         print >>self.out, """
     end interface
+
+contains
+
+    subroutine OpenMM_XmlSerializer_serializeSystem(system, result)
+        use iso_c_binding, only: c_ptr, c_int, c_char, c_f_pointer
+        type(OpenMM_System), intent(in) :: system
+        character(len=1), allocatable, dimension(:), intent(out) :: result
+
+        character(kind=c_char), pointer, dimension(:) :: fstr
+        type(c_ptr) :: cstr
+        integer :: i
+        integer(kind=c_int) :: result_length
+
+        call OpenMM_XmlSerializer_serializeSystemToC(system, cstr, result_length)
+        call c_f_pointer(cstr, fstr, [ result_length ])
+        allocate(character(len=1) :: result(result_length))
+        do i=1,result_length
+           result(i) = fstr(i)
+        end do
+    end subroutine
+
+    subroutine OpenMM_XmlSerializer_serializeState(state, result)
+        use iso_c_binding, only: c_ptr, c_int, c_char, c_f_pointer
+        type(OpenMM_State), intent(in) :: state
+        character(len=1), allocatable, dimension(:), intent(out) :: result
+
+        character(kind=c_char), pointer, dimension(:) :: fstr
+        type(c_ptr) :: cstr
+        integer :: i
+        integer(kind=c_int) :: result_length
+
+        call OpenMM_XmlSerializer_serializeStateToC(state, cstr, result_length)
+        call c_f_pointer(cstr, fstr, [ result_length ])
+        allocate(character(len=1) :: result(result_length))
+        do i=1,result_length
+           result(i) = fstr(i)
+        end do
+    end subroutine
+
+    subroutine OpenMM_XmlSerializer_serializeIntegrator(integrator, result)
+        use iso_c_binding, only: c_ptr, c_int, c_char, c_f_pointer
+        type(OpenMM_Integrator), intent(in) :: integrator
+        character(len=1), allocatable, dimension(:), intent(out) :: result
+
+        character(kind=c_char), pointer, dimension(:) :: fstr
+        type(c_ptr) :: cstr
+        integer :: i
+        integer(kind=c_int) :: result_length
+
+        call OpenMM_XmlSerializer_serializeIntegratorToC(integrator, cstr, result_length)
+        call c_f_pointer(cstr, fstr, [ result_length ])
+        allocate(character(len=1) :: result(result_length))
+        do i=1,result_length
+           result(i) = fstr(i)
+        end do
+    end subroutine
+
 END MODULE OpenMM"""
 
 
@@ -1618,6 +1675,7 @@ class FortranSourceGenerator(WrapperGenerator):
 #include "OpenMMCWrapper.h"
 #include <cstring>
 #include <vector>
+#include <cstdlib>
 
 using namespace OpenMM;
 using namespace std;
@@ -1920,22 +1978,22 @@ OPENMM_EXPORT void openmm_platform_loadpluginsfromdirectory_(const char* directo
 OPENMM_EXPORT void OPENMM_PLATFORM_LOADPLUGINSFROMDIRECTORY(const char* directory, OpenMM_StringArray*& result, int length) {
     result = OpenMM_Platform_loadPluginsFromDirectory(makeString(directory, length).c_str());
 }
-OPENMM_EXPORT void openmm_xmlserializer_serializesystem_(OpenMM_System*& system, char*& result, int& result_length) {
+OPENMM_EXPORT void openmm_xmlserializer_serializesystemtoc_(OpenMM_System*& system, char*& result, int& result_length) {
     convertStringToChars(OpenMM_XmlSerializer_serializeSystem(system), result, result_length);
 }
-OPENMM_EXPORT void OPENMM_XMLSERIALIZER_SERIALIZESYSTEM(OpenMM_System*& system, char*& result, int& result_length) {
+OPENMM_EXPORT void OPENMM_XMLSERIALIZER_SERIALIZESYSTEMTOC(OpenMM_System*& system, char*& result, int& result_length) {
     convertStringToChars(OpenMM_XmlSerializer_serializeSystem(system), result, result_length);
 }
-OPENMM_EXPORT void openmm_xmlserializer_serializestate_(OpenMM_State*& state, char*& result, int& result_length) {
+OPENMM_EXPORT void openmm_xmlserializer_serializestatetoc_(OpenMM_State*& state, char*& result, int& result_length) {
     convertStringToChars(OpenMM_XmlSerializer_serializeState(state), result, result_length);
 }
-OPENMM_EXPORT void OPENMM_XMLSERIALIZER_SERIALIZESTATE(OpenMM_State*& state, char*& result, int& result_length) {
+OPENMM_EXPORT void OPENMM_XMLSERIALIZER_SERIALIZESTATETOC(OpenMM_State*& state, char*& result, int& result_length) {
     convertStringToChars(OpenMM_XmlSerializer_serializeState(state), result, result_length);
 }
-OPENMM_EXPORT void openmm_xmlserializer_serializeintegrator_(OpenMM_Integrator*& integrator, char*& result, int& result_length) {
+OPENMM_EXPORT void openmm_xmlserializer_serializeintegratortoc_(OpenMM_Integrator*& integrator, char*& result, int& result_length) {
     convertStringToChars(OpenMM_XmlSerializer_serializeIntegrator(integrator), result, result_length);
 }
-OPENMM_EXPORT void OPENMM_XMLSERIALIZER_SERIALIZEINTEGRATOR(OpenMM_Integrator*& integrator, char*& result, int& result_length) {
+OPENMM_EXPORT void OPENMM_XMLSERIALIZER_SERIALIZEINTEGRATORTOC(OpenMM_Integrator*& integrator, char*& result, int& result_length) {
     convertStringToChars(OpenMM_XmlSerializer_serializeIntegrator(integrator), result, result_length);
 }
 OPENMM_EXPORT void openmm_xmlserializer_deserializesystem_(const char* xml, OpenMM_System*& result, int length) {
