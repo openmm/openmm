@@ -72,10 +72,12 @@ using OpenMM::RealVec;
 
                   for (int j = 0; j < (int) atomGroups[i].size(); j++) {
                       int atom = atomGroups[i][j];
-                      const RealOpenMM velocityScale = static_cast<RealOpenMM>(sqrt(BOLTZ*temperature/atomMasses[atom]));
-                      atomVelocities[atom][0] = velocityScale*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
-                      atomVelocities[atom][1] = velocityScale*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
-                      atomVelocities[atom][2] = velocityScale*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+                      if (atomMasses[atom] != 0) {
+                          const RealOpenMM velocityScale = static_cast<RealOpenMM>(sqrt(BOLTZ*temperature/atomMasses[atom]));
+                          atomVelocities[atom][0] = velocityScale*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+                          atomVelocities[atom][1] = velocityScale*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+                          atomVelocities[atom][2] = velocityScale*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+                      }
                   }
               }
           }
