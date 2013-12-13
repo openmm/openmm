@@ -116,9 +116,13 @@ IF (APPLE)
 
     # Improve the linking behavior of Mac libraries
     SET (CMAKE_INSTALL_NAME_DIR "@rpath")
-    SET(EXTRA_COMPILE_FLAGS "-stdlib=libc++")
+    SET(EXTRA_COMPILE_FLAGS "-msse2 -stdlib=libc++")
 ELSE (APPLE)
-    SET(EXTRA_COMPILE_FLAGS)
+    IF (WIN32)
+        SET(EXTRA_COMPILE_FLAGS)
+    ELSE (WIN32)
+        SET(EXTRA_COMPILE_FLAGS "-msse2")
+    ENDIF (WIN32)
 ENDIF (APPLE)
 
 IF(UNIX AND NOT CMAKE_BUILD_TYPE)
@@ -257,7 +261,7 @@ FOREACH(subdir ${OPENMM_SOURCE_SUBDIRS})
     ## OpenMM was previously installed there.
     INCLUDE_DIRECTORIES(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/${subdir}/include)
 ENDFOREACH(subdir)
-SET_SOURCE_FILES_PROPERTIES(${CMAKE_SOURCE_DIR}/libraries/sfmt/src/SFMT.cpp PROPERTIES COMPILE_FLAGS "-msse2 -DHAVE_SSE2=1")
+SET_SOURCE_FILES_PROPERTIES(${CMAKE_SOURCE_DIR}/libraries/sfmt/src/SFMT.cpp PROPERTIES COMPILE_FLAGS "-DHAVE_SSE2=1")
 
 # If API wrappers are being generated, and add them to the build.
 SET(OPENMM_BUILD_C_AND_FORTRAN_WRAPPERS ON CACHE BOOL "Build wrappers for C and Fortran")

@@ -48,6 +48,8 @@
 using namespace OpenMM;
 using namespace std;
 
+extern "C" OPENMM_EXPORT void registerDrudeReferenceKernelFactories();
+
 void testSinglePair() {
     const double temperature = 300.0;
     const double temperatureDrude = 10.0;
@@ -174,6 +176,7 @@ void testWater() {
 
 int main() {
     try {
+        registerDrudeReferenceKernelFactories();
         testSinglePair();
         testWater();
     }

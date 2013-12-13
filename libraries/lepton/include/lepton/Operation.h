@@ -40,6 +40,7 @@
 #include <string>
 #include <vector>
 #include <sstream>
+#include <algorithm>
 
 namespace Lepton {
 
@@ -1002,7 +1003,7 @@ public:
            return result;
         }
         else
-            return std::pow(args[0], value);
+        return std::pow(args[0], value);
     }
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
     double getValue() const {

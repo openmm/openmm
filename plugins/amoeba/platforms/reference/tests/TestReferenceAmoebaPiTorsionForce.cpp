@@ -43,6 +43,8 @@
 
 using namespace OpenMM;
 
+extern "C" OPENMM_EXPORT void registerAmoebaReferenceKernelFactories();
+
 const double TOL = 1e-5;
 #define PI_M               3.141592653589
 #define RADIAN            57.29577951308
@@ -318,6 +320,7 @@ int main( int numberOfArguments, char* argv[] ) {
 
     try {
         std::cout << "TestReferenceAmoebaPiTorsionForce running test..." << std::endl;
+        registerAmoebaReferenceKernelFactories();
         FILE* log = NULL;
         //FILE* log = stderr;
         //FILE* log = fopen( "AmoebaPiTorsionForce1.log", "w" );;

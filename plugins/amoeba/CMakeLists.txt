@@ -18,7 +18,7 @@
 
 # The source is organized into subdirectories, but we handle them all from
 # this CMakeLists file rather than letting CMake visit them as SUBDIRS.
-SET(OPENMM_AMOEBA_PLUGIN_SOURCE_SUBDIRS . openmmapi platforms/reference serialization)
+SET(OPENMM_AMOEBA_PLUGIN_SOURCE_SUBDIRS . openmmapi serialization)
 
 # Collect up information about the version of the OpenMM library we're building
 # and make it available to the code so it can be built into the binaries.
@@ -82,11 +82,6 @@ FOREACH(subdir ${OPENMM_AMOEBA_PLUGIN_SOURCE_SUBDIRS})
     INCLUDE_DIRECTORIES(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/${subdir}/include)
 ENDFOREACH(subdir)
 
-INCLUDE_DIRECTORIES(BEFORE ${OPENMM_DIR}/platforms/reference/src)
-INCLUDE_DIRECTORIES(BEFORE ${OPENMM_DIR}/platforms/reference/src/SimTKReference)
-INCLUDE_DIRECTORIES(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/platforms/reference/src)
-INCLUDE_DIRECTORIES(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/platforms/reference/src/SimTKReference)
-
 # ----------------------------------------------------------------------------
 
 # If API_AMOEBA wrappers are being generated, and add them to the build.
@@ -138,9 +133,10 @@ IF(OPENMM_BUILD_STATIC_LIB)
     TARGET_LINK_LIBRARIES( ${STATIC_AMOEBA_TARGET} ${STATIC_TARGET} )
 ENDIF(OPENMM_BUILD_STATIC_LIB)
 
-ADD_SUBDIRECTORY(platforms/reference/tests)
-
 # Which hardware platforms to build
+
+ADD_SUBDIRECTORY(platforms/reference)
+
 IF(CUDA_FOUND)
     SET(OPENMM_BUILD_AMOEBA_CUDA_LIB ON CACHE BOOL "Build OpenMMAmoebaCuda library for Nvidia GPUs")
 ELSE(CUDA_FOUND)
@@ -151,15 +147,9 @@ SET(OPENMM_BUILD_AMOEBA_PATH)
 SET(OPENMM_BUILD_AMOEBA_CUDA_PATH)
 IF(OPENMM_BUILD_AMOEBA_CUDA_LIB)
     ADD_SUBDIRECTORY(platforms/cuda)
-    SET(OPENMM_BUILD_AMOEBA_PATH ${CMAKE_CURRENT_SOURCE_DIR}/platforms/cuda)
     SET(OPENMM_BUILD_AMOEBA_CUDA_PATH ${CMAKE_CURRENT_SOURCE_DIR}/platforms/cuda)
     SET(OPENMM_AMOEBA_CUDA_SOURCE_SUBDIRS . openmmapi olla platforms/cuda)
 ENDIF(OPENMM_BUILD_AMOEBA_CUDA_LIB)
-
-#SET(OPENMM_BUILD_OPENCL_LIB OFF CACHE BOOL "Build OpenMMOpenCL library for Nvidia GPUs")
-#IF(OPENMM_BUILD_OPENCL_LIB)
-#    ADD_SUBDIRECTORY(platforms/opencl)
-#ENDIF(OPENMM_BUILD_OPENCL_LIB)
 
 INSTALL_TARGETS(/lib RUNTIME_DIRECTORY /lib ${SHARED_AMOEBA_TARGET})
 IF(OPENMM_BUILD_STATIC_LIB)
@@ -171,18 +161,6 @@ FILE(GLOB INTERNAL_HEADERS include/openmm/internal/*.h */include/openmm/internal
 INSTALL_FILES(/include                 FILES ${CORE_HEADERS})
 INSTALL_FILES(/include/openmm          FILES ${TOP_HEADERS})
 INSTALL_FILES(/include/openmm/internal FILES ${INTERNAL_HEADERS})
-
-#
-# Allow automated build and dashboard.
-#
-#INCLUDE (Dart)
-
-#IF (UNIX AND NOT CYGWIN AND NOT APPLE)
-#  IF (NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE MATCHES Debug)
-#    ADD_DEFINITIONS(-fprofile-arcs -ftest-coverage)
-#    LINK_LIBRARIES(gcov)
-#  ENDIF (NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE MATCHES Debug)
-#ENDIF (UNIX AND NOT CYGWIN AND NOT APPLE)
 
 #
 # Testing
@@ -197,8 +175,3 @@ ELSE (EXECUTABLE_OUTPUT_PATH)
 ENDIF (EXECUTABLE_OUTPUT_PATH)
 
 ADD_SUBDIRECTORY(serialization/tests)
-
-#INCLUDE(ApiDoxygen.cmake)
-
-#ADD_SUBDIRECTORY(tests)
-#ADD_SUBDIRECTORY(examples)

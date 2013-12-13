@@ -32,22 +32,21 @@
 
 using namespace OpenMM;
 
-#if defined(WIN32)
-    #include <windows.h>
-    extern "C" void initRpmdReferenceKernels();
-    BOOL WINAPI DllMain(HANDLE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved) {
-        if (ul_reason_for_call == DLL_PROCESS_ATTACH)
-            initRpmdReferenceKernels();
-        return TRUE;
-    }
-#else
-    extern "C" void __attribute__((constructor)) initRpmdReferenceKernels();
-#endif
+extern "C" OPENMM_EXPORT void registerPlatforms() {
+}
 
-extern "C" void initRpmdReferenceKernels() {
-    Platform& platform = Platform::getPlatformByName("Reference");
-    ReferenceRpmdKernelFactory* factory = new ReferenceRpmdKernelFactory();
-    platform.registerKernelFactory(IntegrateRPMDStepKernel::Name(), factory);
+extern "C" OPENMM_EXPORT void registerKernelFactories() {
+    for (int i = 0; i < Platform::getNumPlatforms(); i++) {
+        Platform& platform = Platform::getPlatform(i);
+        if (dynamic_cast<ReferencePlatform*>(&platform) != NULL) {
+            ReferenceRpmdKernelFactory* factory = new ReferenceRpmdKernelFactory();
+            platform.registerKernelFactory(IntegrateRPMDStepKernel::Name(), factory);
+        }
+    }
+}
+
+extern "C" OPENMM_EXPORT void registerRpmdReferenceKernelFactories() {
+    registerKernelFactories();
 }
 
 KernelImpl* ReferenceRpmdKernelFactory::createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const {

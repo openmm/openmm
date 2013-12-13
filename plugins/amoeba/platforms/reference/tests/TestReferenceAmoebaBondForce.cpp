@@ -44,6 +44,8 @@
 
 using namespace OpenMM;
 
+extern "C" OPENMM_EXPORT void registerAmoebaReferenceKernelFactories();
+
 const double TOL = 1e-5;
 
 static void computeAmoebaBondForce(int bondIndex,  std::vector<Vec3>& positions, AmoebaBondForce& AmoebaBondForce,
@@ -222,6 +224,7 @@ int main( int numberOfArguments, char* argv[] ) {
 
     try {
         std::cout << "TestReferenceAmoebaBondForce running test..." << std::endl;
+        registerAmoebaReferenceKernelFactories();
         FILE* log = NULL;
         //FILE* log = stderr;
 

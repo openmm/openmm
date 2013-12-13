@@ -45,6 +45,8 @@ const double DegreesToRadians = 3.14159265/180.0;
 
 using namespace OpenMM;
 
+extern "C" OPENMM_EXPORT void registerAmoebaReferenceKernelFactories();
+
 const double TOL = 1e-4;
 #define PI_M               3.141592653589
 #define RADIAN            57.29577951308
@@ -304,6 +306,7 @@ int main( int numberOfArguments, char* argv[] ) {
 
     try {
         std::cout << "TestReferenceAmoebaStretchBendForce running test..." << std::endl;
+        registerAmoebaReferenceKernelFactories();
 
         FILE* log = NULL;
         //FILE* log = stderr;
