@@ -72,9 +72,11 @@ const int CudaContext::TileSize = sizeof(tileflags)*8;
 bool CudaContext::hasInitializedCuda = false;
 
 CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlockingSync, const string& precision, const string& compiler,
-        const string& tempDir, CudaPlatform::PlatformData& platformData) : system(system), compiler(compiler),
+        const string& tempDir, const std::string& hostCompiler, CudaPlatform::PlatformData& platformData) : system(system), compiler(compiler),
         time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), stepsSinceReorder(99999), contextIsValid(false), atomsWereReordered(false), pinnedBuffer(NULL), posq(NULL),
         posqCorrection(NULL), velm(NULL), force(NULL), energyBuffer(NULL), integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL), thread(NULL) {
+    if (hostCompiler.size() > 0)
+        this->compiler = compiler+" --compiler-bindir "+hostCompiler;
     if (!hasInitializedCuda) {
         CHECK_RESULT2(cuInit(0), "Error initializing CUDA");
         hasInitializedCuda = true;

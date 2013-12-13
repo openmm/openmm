@@ -90,6 +90,7 @@ CudaPlatform::CudaPlatform() {
     platformProperties.push_back(CudaUseCpuPme());
     platformProperties.push_back(CudaCompiler());
     platformProperties.push_back(CudaTempDirectory());
+    platformProperties.push_back(CudaHostCompiler());
     setPropertyDefaultValue(CudaDeviceIndex(), "");
     setPropertyDefaultValue(CudaDeviceName(), "");
     setPropertyDefaultValue(CudaUseBlockingSync(), "true");
@@ -114,6 +115,8 @@ CudaPlatform::CudaPlatform() {
     string tmp = (tmpdir == NULL ? string(P_tmpdir) : string(tmpdir));
     setPropertyDefaultValue(CudaTempDirectory(), tmp);
 #endif
+    char* hostCompiler = getenv("CUDA_HOST_COMPILER");
+    setPropertyDefaultValue(CudaHostCompiler(), (hostCompiler == NULL ? "" : string(hostCompiler)));
 }
 
 double CudaPlatform::getSpeed() const {
@@ -149,6 +152,8 @@ void CudaPlatform::contextCreated(ContextImpl& context, const map<string, string
             getPropertyDefaultValue(CudaCompiler()) : properties.find(CudaCompiler())->second);
     const string& tempPropValue = (properties.find(CudaTempDirectory()) == properties.end() ?
             getPropertyDefaultValue(CudaTempDirectory()) : properties.find(CudaTempDirectory())->second);
+    const string& hostCompilerPropValue = (properties.find(CudaHostCompiler()) == properties.end() ?
+            getPropertyDefaultValue(CudaHostCompiler()) : properties.find(CudaHostCompiler())->second);
     transform(blockingPropValue.begin(), blockingPropValue.end(), blockingPropValue.begin(), ::tolower);
     transform(precisionPropValue.begin(), precisionPropValue.end(), precisionPropValue.begin(), ::tolower);
     transform(cpuPmePropValue.begin(), cpuPmePropValue.end(), cpuPmePropValue.begin(), ::tolower);
@@ -156,7 +161,7 @@ void CudaPlatform::contextCreated(ContextImpl& context, const map<string, string
     pmeKernelName.push_back(CalcPmeReciprocalForceKernel::Name());
     if (!supportsKernels(pmeKernelName))
         cpuPmePropValue = "false";
-    context.setPlatformData(new PlatformData(&context, context.getSystem(), devicePropValue, blockingPropValue, precisionPropValue, cpuPmePropValue, compilerPropValue, tempPropValue));
+    context.setPlatformData(new PlatformData(&context, context.getSystem(), devicePropValue, blockingPropValue, precisionPropValue, cpuPmePropValue, compilerPropValue, tempPropValue, hostCompilerPropValue));
 }
 
 void CudaPlatform::contextDestroyed(ContextImpl& context) const {
@@ -165,7 +170,7 @@ void CudaPlatform::contextDestroyed(ContextImpl& context) const {
 }
 
 CudaPlatform::PlatformData::PlatformData(ContextImpl* context, const System& system, const string& deviceIndexProperty, const string& blockingProperty, const string& precisionProperty,
-            const string& cpuPmeProperty, const string& compilerProperty, const string& tempProperty) : context(context), removeCM(false), stepCount(0), computeForceCount(0), time(0.0)  {
+            const string& cpuPmeProperty, const string& compilerProperty, const string& tempProperty, const string& hostCompilerProperty) : context(context), removeCM(false), stepCount(0), computeForceCount(0), time(0.0) {
     bool blocking = (blockingProperty == "true");
     vector<string> devices;
     size_t searchPos = 0, nextPos;
@@ -178,11 +183,11 @@ CudaPlatform::PlatformData::PlatformData(ContextImpl* context, const System& sys
         if (devices[i].length() > 0) {
             unsigned int deviceIndex;
             stringstream(devices[i]) >> deviceIndex;
-            contexts.push_back(new CudaContext(system, deviceIndex, blocking, precisionProperty, compilerProperty, tempProperty, *this));
+            contexts.push_back(new CudaContext(system, deviceIndex, blocking, precisionProperty, compilerProperty, tempProperty, hostCompilerProperty, *this));
         }
     }
     if (contexts.size() == 0)
-        contexts.push_back(new CudaContext(system, -1, blocking, precisionProperty, compilerProperty, tempProperty, *this));
+        contexts.push_back(new CudaContext(system, -1, blocking, precisionProperty, compilerProperty, tempProperty, hostCompilerProperty, *this));
     stringstream deviceIndex, deviceName;
     for (int i = 0; i < (int) contexts.size(); i++) {
         if (i > 0) {
@@ -202,6 +207,7 @@ CudaPlatform::PlatformData::PlatformData(ContextImpl* context, const System& sys
     propertyValues[CudaPlatform::CudaUseCpuPme()] = useCpuPme ? "true" : "false";
     propertyValues[CudaPlatform::CudaCompiler()] = compilerProperty;
     propertyValues[CudaPlatform::CudaTempDirectory()] = tempProperty;
+    propertyValues[CudaPlatform::CudaHostCompiler()] = hostCompilerProperty;
     contextEnergy.resize(contexts.size());
     
     // Determine whether peer-to-peer copying is supported, and enable it if so.

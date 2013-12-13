@@ -96,6 +96,13 @@ public:
         return key;
     }
     /**
+     * This is the name of the parameter for specifying the host compiler for the CUDA compiler to use.
+     */
+    static const std::string& CudaHostCompiler() {
+        static const std::string key = "CudaHostCompiler";
+        return key;
+    }
+    /**
      * This is the name of the parameter for specifying the path to the directory for creating temporary files.
      */
     static const std::string& CudaTempDirectory() {
@@ -107,7 +114,7 @@ public:
 class OPENMM_EXPORT_CUDA CudaPlatform::PlatformData {
 public:
     PlatformData(ContextImpl* context, const System& system, const std::string& deviceIndexProperty, const std::string& blockingProperty, const std::string& precisionProperty,
-            const std::string& cpuPmeProperty, const std::string& compilerProperty, const std::string& tempProperty);
+            const std::string& cpuPmeProperty, const std::string& compilerProperty, const std::string& tempProperty, const std::string& hostCompilerProperty);
     ~PlatformData();
     void initializeContexts(const System& system);
     void syncContexts();
