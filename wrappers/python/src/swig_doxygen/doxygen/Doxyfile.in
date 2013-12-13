@@ -618,6 +618,9 @@ EXCLUDE_PATTERNS       = */tests/* \
                          */openmmapi/src/* \
                          */internal/* \
                          */.svn/* \
+                         *amoebaKernels.h \
+                         *DrudeKernels.h \
+                         *RpmdKernels.h \
                          *OpenMMFortranModule.f90 \
                          *OpenMMCWrapper.h
 

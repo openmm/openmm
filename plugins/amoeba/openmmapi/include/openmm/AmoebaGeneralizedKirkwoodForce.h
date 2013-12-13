@@ -174,6 +174,10 @@ private:
     std::vector<ParticleInfo> particles;
 };
 
+/**
+ * This is an internal class used to record information about a particle.
+ * @private
+ */
 class AmoebaGeneralizedKirkwoodForce::ParticleInfo {
 public:
     double charge, radius, scalingFactor;

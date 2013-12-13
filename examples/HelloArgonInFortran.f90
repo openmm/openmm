@@ -11,6 +11,8 @@
 ! other visualization tool to produce an animation of the resulting trajectory.
 ! -----------------------------------------------------------------------------
 
+INCLUDE 'OpenMMFortranModule.f90'
+
 PROGRAM HelloArgon
     use OpenMM; implicit none
     type(OpenMM_System)           system

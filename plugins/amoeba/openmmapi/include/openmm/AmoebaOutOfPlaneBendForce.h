@@ -172,6 +172,10 @@ private:
     std::vector<OutOfPlaneBendInfo> outOfPlaneBends;
 };
 
+/**
+ * This is an internal class used to record information about a bend.
+ * @private
+ */
 class AmoebaOutOfPlaneBendForce::OutOfPlaneBendInfo {
 public:
     int particle1, particle2, particle3, particle4;
