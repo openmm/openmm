@@ -88,7 +88,12 @@ const string& Platform::getPropertyDefaultValue(const string& property) const {
 }
 
 void Platform::setPropertyDefaultValue(const string& property, const string& value) {
-    defaultProperties[property] = value;
+    for (int i = 0; i < (int) platformProperties.size(); i++)
+        if (platformProperties[i] == property) {
+            defaultProperties[property] = value;
+            return;
+        }
+    throw OpenMMException("setPropertyDefaultValue: Illegal property name");
 }
 
 void Platform::contextCreated(ContextImpl& context, const map<string, string>& properties) const {

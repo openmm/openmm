@@ -75,6 +75,20 @@ ContextImpl::ContextImpl(Context& owner, const System& system, Integrator& integ
             throw OpenMMException("A constraint cannot involve a massless particle");
     }
     
+    // Validate the list of properties.
+
+    const vector<string>& platformProperties = platform->getPropertyNames();
+    for (map<string, string>::const_iterator iter = properties.begin(); iter != properties.end(); ++iter) {
+        bool valid = false;
+        for (int i = 0; i < (int) platformProperties.size(); i++)
+            if (platformProperties[i] == iter->first) {
+                valid = true;
+                break;
+            }
+        if (!valid)
+            throw OpenMMException("Illegal property name: "+iter->first);
+    }
+    
     // Find the list of kernels required.
     
     vector<string> kernelNames;
