@@ -12,7 +12,7 @@
    <Atom name="H2" type="swm4ndp-H"/>
    <Atom name="M" type="swm4ndp-M"/>
    <Atom name="OD" type="swm4ndp-OD"/>
-   <VirtualSite type="average3" index="3" atom1="0" atom2="1" atom3="2" weight1="0.786646558" weight2="0.106676721" weight3="0.106676721"/>
+   <VirtualSite type="average3" index="3" atom1="0" atom2="1" atom3="2" weight1="0.589781071" weight2="0.2051094645" weight3="0.2051094645"/>
    <Bond from="0" to="1"/>
    <Bond from="0" to="2"/>
   </Residue>
