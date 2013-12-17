@@ -132,6 +132,12 @@ public:
     operator __m256i() const {
         return val;
     }
+    ivec4 lowerVec() const {
+        return _mm256_castsi256_si128(val);
+    }
+    ivec4 upperVec() const {
+        return _mm256_extractf128_si256(val, 1);
+    }
     void store(int* v) const {
         _mm256_storeu_si256((__m256i*) v, val);
     }
