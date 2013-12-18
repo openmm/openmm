@@ -228,7 +228,7 @@ private:
        * Compute the displacement and squared distance between a collection of points, optionally using
        * periodic boundary conditions.
        */
-      void getDeltaR(const fvec4& posI, const fvec8& x, const fvec8& y, const fvec8& z, fvec8& dx, fvec8& dy, fvec8& dz, fvec8& r2, bool periodic, const fvec4& boxSize, const fvec4& invBoxSize) const;
+      void getDeltaR(const float* posI, const fvec8& x, const fvec8& y, const fvec8& z, fvec8& dx, fvec8& dy, fvec8& dz, fvec8& r2, bool periodic, const fvec4& boxSize, const fvec4& invBoxSize) const;
 
       /**
        * Compute a fast approximation to erfc(x).

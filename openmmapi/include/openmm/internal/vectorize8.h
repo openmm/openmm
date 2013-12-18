@@ -192,7 +192,8 @@ static inline fvec8 sqrt(fvec8 v) {
 }
 
 static inline float dot8(fvec8 v1, fvec8 v2) {
-    return dot4(v1.lowerVec(), v2.lowerVec())+dot4(v1.upperVec(), v2.upperVec());
+    fvec8 result = _mm256_dp_ps(v1, v2, 0xF1);
+    return _mm_cvtss_f32(result.lowerVec())+_mm_cvtss_f32(result.upperVec());
 }
 
 static inline void transpose(fvec4 in1, fvec4 in2, fvec4 in3, fvec4 in4, fvec4 in5, fvec4 in6, fvec4 in7, fvec4 in8, fvec8& out1, fvec8& out2, fvec8& out3, fvec8& out4) {
@@ -222,7 +223,6 @@ static inline void transpose(fvec8 in1, fvec8 in2, fvec8 in3, fvec8 in4, fvec4& 
 }
 
 // Functions that operate on ivec8s.
-
 
 static inline bool any(ivec8 v) {
     return !_mm256_testz_si256(v, _mm256_set1_epi32(0xFFFFFFFF));

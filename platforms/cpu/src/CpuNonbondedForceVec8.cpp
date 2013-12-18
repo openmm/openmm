@@ -451,27 +451,18 @@ void CpuNonbondedForceVec8::calculateBlockIxn(int blockIndex, float* forces, dou
     
     int blockAtom[8];
     fvec4 blockAtomPosq[8];
-    fvec4 blockAtomForce[8];
+    fvec8 blockAtomForceX(0.0f), blockAtomForceY(0.0f), blockAtomForceZ(0.0f);
+    fvec8 blockAtomX, blockAtomY, blockAtomZ, blockAtomCharge;
     for (int i = 0; i < 8; i++) {
         blockAtom[i] = neighborList->getSortedAtoms()[8*blockIndex+i];
         blockAtomPosq[i] = fvec4(posq+4*blockAtom[i]);
-        blockAtomForce[i] = fvec4(0.0f);
     }
-    fvec8 blockAtomX = fvec8(blockAtomPosq[0][0], blockAtomPosq[1][0], blockAtomPosq[2][0], blockAtomPosq[3][0], blockAtomPosq[4][0], blockAtomPosq[5][0], blockAtomPosq[6][0], blockAtomPosq[7][0]);
-    fvec8 blockAtomY = fvec8(blockAtomPosq[0][1], blockAtomPosq[1][1], blockAtomPosq[2][1], blockAtomPosq[3][1], blockAtomPosq[4][1], blockAtomPosq[5][1], blockAtomPosq[6][1], blockAtomPosq[7][1]);
-    fvec8 blockAtomZ = fvec8(blockAtomPosq[0][2], blockAtomPosq[1][2], blockAtomPosq[2][2], blockAtomPosq[3][2], blockAtomPosq[4][2], blockAtomPosq[5][2], blockAtomPosq[6][2], blockAtomPosq[7][2]);
-    fvec8 blockAtomCharge = fvec8(ONE_4PI_EPS0)*fvec8(blockAtomPosq[0][3], blockAtomPosq[1][3], blockAtomPosq[2][3], blockAtomPosq[3][3], blockAtomPosq[4][3], blockAtomPosq[5][3], blockAtomPosq[6][3], blockAtomPosq[7][3]);
+    transpose(blockAtomPosq[0], blockAtomPosq[1], blockAtomPosq[2], blockAtomPosq[3], blockAtomPosq[4], blockAtomPosq[5], blockAtomPosq[6], blockAtomPosq[7], blockAtomX, blockAtomY, blockAtomZ, blockAtomCharge);
+    blockAtomCharge *= ONE_4PI_EPS0;
     fvec8 blockAtomSigma(atomParameters[blockAtom[0]].first, atomParameters[blockAtom[1]].first, atomParameters[blockAtom[2]].first, atomParameters[blockAtom[3]].first, atomParameters[blockAtom[4]].first, atomParameters[blockAtom[5]].first, atomParameters[blockAtom[6]].first, atomParameters[blockAtom[7]].first);
     fvec8 blockAtomEpsilon(atomParameters[blockAtom[0]].second, atomParameters[blockAtom[1]].second, atomParameters[blockAtom[2]].second, atomParameters[blockAtom[3]].second, atomParameters[blockAtom[4]].second, atomParameters[blockAtom[5]].second, atomParameters[blockAtom[6]].second, atomParameters[blockAtom[7]].second);
-    bool needPeriodic = false;
-    if (periodic) {
-        for (int i = 0; i < 8 && !needPeriodic; i++)
-            for (int j = 0; j < 3; j++)
-                if (blockAtomPosq[i][j]-cutoffDistance < 0.0 || blockAtomPosq[i][j]+cutoffDistance > boxSize[j]) {
-                    needPeriodic = true;
-                    break;
-                }
-    }
+    bool needPeriodic = (periodic && (any(blockAtomX < cutoffDistance) || any(blockAtomY < cutoffDistance) || any(blockAtomZ < cutoffDistance) ||
+            any(blockAtomX > boxSize[0]-cutoffDistance) || any(blockAtomY > boxSize[1]-cutoffDistance) || any(blockAtomZ > boxSize[2]-cutoffDistance)));
     const float invSwitchingInterval = 1/(cutoffDistance-switchingDistance);
     
     // Loop over neighbors for this block.
@@ -482,12 +473,11 @@ void CpuNonbondedForceVec8::calculateBlockIxn(int blockIndex, float* forces, dou
         // Load the next neighbor.
         
         int atom = neighbors[i];
-        fvec4 atomPosq(posq+4*atom);
         
         // Compute the distances to the block atoms.
         
         fvec8 dx, dy, dz, r2;
-        getDeltaR(atomPosq, blockAtomX, blockAtomY, blockAtomZ, dx, dy, dz, r2, needPeriodic, boxSize, invBoxSize);
+        getDeltaR(&posq[4*atom], blockAtomX, blockAtomY, blockAtomZ, dx, dy, dz, r2, needPeriodic, boxSize, invBoxSize);
         ivec8 include;
         char excl = exclusions[i];
         if (excl == 0)
@@ -533,33 +523,37 @@ void CpuNonbondedForceVec8::calculateBlockIxn(int blockIndex, float* forces, dou
 
         // Accumulate energies.
 
+        fvec8 one(1.0f);
         if (totalEnergy) {
             if (cutoff)
                 energy += chargeProd*(inverseR+krf*r2-crf);
             else
                 energy += chargeProd*inverseR;
             energy = blend(0.0f, energy, include);
-            *totalEnergy += dot8(energy, 1.0f);
+            *totalEnergy += dot8(energy, one);
         }
 
         // Accumulate forces.
 
         dEdR = blend(0.0f, dEdR, include);
-        fvec8 result[4] = {dx*dEdR, dy*dEdR, dz*dEdR, 0.0f};
-        fvec4 rt[8];
-        transpose(result[0], result[1], result[2], result[3], rt[0], rt[1], rt[2], rt[3], rt[4], rt[5], rt[6], rt[7]);
-        fvec4 atomForce(forces+4*atom);
-        for (int j = 0; j < 8; j++) {
-            blockAtomForce[j] += rt[j];
-            atomForce -= rt[j];
-        }
-        atomForce.store(forces+4*atom);
+        fvec8 fx = dx*dEdR;
+        fvec8 fy = dy*dEdR;
+        fvec8 fz = dz*dEdR;
+        blockAtomForceX += fx;
+        blockAtomForceY += fy;
+        blockAtomForceZ += fz;
+        float* atomForce = forces+4*atom;
+        atomForce[0] -= dot8(fx, one);
+        atomForce[1] -= dot8(fy, one);
+        atomForce[2] -= dot8(fz, one);
     }
     
     // Record the forces on the block atoms.
 
+    fvec4 f[8];
+    transpose(blockAtomForceX, blockAtomForceY, blockAtomForceZ, 0.0f, f[0], f[1], f[2], f[3], f[4], f[5], f[6], f[7]);
     for (int j = 0; j < 8; j++)
-        (fvec4(forces+4*blockAtom[j])+blockAtomForce[j]).store(forces+4*blockAtom[j]);
+        (fvec4(forces+4*blockAtom[j])+f[j]).store(forces+4*blockAtom[j]);
   }
 
 void CpuNonbondedForceVec8::calculateBlockEwaldIxn(int blockIndex, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize) {
@@ -567,27 +561,18 @@ void CpuNonbondedForceVec8::calculateBlockEwaldIxn(int blockIndex, float* forces
     
     int blockAtom[8];
     fvec4 blockAtomPosq[8];
-    fvec4 blockAtomForce[8];
+    fvec8 blockAtomForceX(0.0f), blockAtomForceY(0.0f), blockAtomForceZ(0.0f);
+    fvec8 blockAtomX, blockAtomY, blockAtomZ, blockAtomCharge;
     for (int i = 0; i < 8; i++) {
         blockAtom[i] = neighborList->getSortedAtoms()[8*blockIndex+i];
         blockAtomPosq[i] = fvec4(posq+4*blockAtom[i]);
-        blockAtomForce[i] = fvec4(0.0f);
     }
-    fvec8 blockAtomX = fvec8(blockAtomPosq[0][0], blockAtomPosq[1][0], blockAtomPosq[2][0], blockAtomPosq[3][0], blockAtomPosq[4][0], blockAtomPosq[5][0], blockAtomPosq[6][0], blockAtomPosq[7][0]);
-    fvec8 blockAtomY = fvec8(blockAtomPosq[0][1], blockAtomPosq[1][1], blockAtomPosq[2][1], blockAtomPosq[3][1], blockAtomPosq[4][1], blockAtomPosq[5][1], blockAtomPosq[6][1], blockAtomPosq[7][1]);
-    fvec8 blockAtomZ = fvec8(blockAtomPosq[0][2], blockAtomPosq[1][2], blockAtomPosq[2][2], blockAtomPosq[3][2], blockAtomPosq[4][2], blockAtomPosq[5][2], blockAtomPosq[6][2], blockAtomPosq[7][2]);
-    fvec8 blockAtomCharge = fvec8(ONE_4PI_EPS0)*fvec8(blockAtomPosq[0][3], blockAtomPosq[1][3], blockAtomPosq[2][3], blockAtomPosq[3][3], blockAtomPosq[4][3], blockAtomPosq[5][3], blockAtomPosq[6][3], blockAtomPosq[7][3]);
+    transpose(blockAtomPosq[0], blockAtomPosq[1], blockAtomPosq[2], blockAtomPosq[3], blockAtomPosq[4], blockAtomPosq[5], blockAtomPosq[6], blockAtomPosq[7], blockAtomX, blockAtomY, blockAtomZ, blockAtomCharge);
+    blockAtomCharge *= ONE_4PI_EPS0;
     fvec8 blockAtomSigma(atomParameters[blockAtom[0]].first, atomParameters[blockAtom[1]].first, atomParameters[blockAtom[2]].first, atomParameters[blockAtom[3]].first, atomParameters[blockAtom[4]].first, atomParameters[blockAtom[5]].first, atomParameters[blockAtom[6]].first, atomParameters[blockAtom[7]].first);
     fvec8 blockAtomEpsilon(atomParameters[blockAtom[0]].second, atomParameters[blockAtom[1]].second, atomParameters[blockAtom[2]].second, atomParameters[blockAtom[3]].second, atomParameters[blockAtom[4]].second, atomParameters[blockAtom[5]].second, atomParameters[blockAtom[6]].second, atomParameters[blockAtom[7]].second);
-    bool needPeriodic = false;
-    if (periodic) {
-        for (int i = 0; i < 8 && !needPeriodic; i++)
-            for (int j = 0; j < 3; j++)
-                if (blockAtomPosq[i][j]-cutoffDistance < 0.0 || blockAtomPosq[i][j]+cutoffDistance > boxSize[j]) {
-                    needPeriodic = true;
-                    break;
-                }
-    }
+    bool needPeriodic = (periodic && (any(blockAtomX < cutoffDistance) || any(blockAtomY < cutoffDistance) || any(blockAtomZ < cutoffDistance) ||
+            any(blockAtomX > boxSize[0]-cutoffDistance) || any(blockAtomY > boxSize[1]-cutoffDistance) || any(blockAtomZ > boxSize[2]-cutoffDistance)));
     const float invSwitchingInterval = 1/(cutoffDistance-switchingDistance);
     
     // Loop over neighbors for this block.
@@ -598,12 +583,11 @@ void CpuNonbondedForceVec8::calculateBlockEwaldIxn(int blockIndex, float* forces
         // Load the next neighbor.
         
         int atom = neighbors[i];
-        fvec4 atomPosq(posq+4*atom);
         
         // Compute the distances to the block atoms.
         
         fvec8 dx, dy, dz, r2;
-        getDeltaR(atomPosq, blockAtomX, blockAtomY, blockAtomZ, dx, dy, dz, r2, needPeriodic, boxSize, invBoxSize);
+        getDeltaR(&posq[4*atom], blockAtomX, blockAtomY, blockAtomZ, dx, dy, dz, r2, needPeriodic, boxSize, invBoxSize);
         ivec8 include;
         char excl = exclusions[i];
         if (excl == 0)
@@ -646,30 +630,34 @@ void CpuNonbondedForceVec8::calculateBlockEwaldIxn(int blockIndex, float* forces
 
         // Accumulate energies.
 
+        fvec8 one(1.0f);
         if (totalEnergy) {
             energy += chargeProd*inverseR*erfcApprox(alphaEwald*r);
             energy = blend(0.0f, energy, include);
-            *totalEnergy += dot8(energy, 1.0f);
+            *totalEnergy += dot8(energy, one);
         }
 
         // Accumulate forces.
 
         dEdR = blend(0.0f, dEdR, include);
-        fvec8 result[4] = {dx*dEdR, dy*dEdR, dz*dEdR, 0.0f};
-        fvec4 rt[8];
-        transpose(result[0], result[1], result[2], result[3], rt[0], rt[1], rt[2], rt[3], rt[4], rt[5], rt[6], rt[7]);
-        fvec4 atomForce(forces+4*atom);
-        for (int j = 0; j < 8; j++) {
-            blockAtomForce[j] += rt[j];
-            atomForce -= rt[j];
-        }
-        atomForce.store(forces+4*atom);
+        fvec8 fx = dx*dEdR;
+        fvec8 fy = dy*dEdR;
+        fvec8 fz = dz*dEdR;
+        blockAtomForceX += fx;
+        blockAtomForceY += fy;
+        blockAtomForceZ += fz;
+        float* atomForce = forces+4*atom;
+        atomForce[0] -= dot8(fx, one);
+        atomForce[1] -= dot8(fy, one);
+        atomForce[2] -= dot8(fz, one);
     }
     
     // Record the forces on the block atoms.
     
+    fvec4 f[8];
+    transpose(blockAtomForceX, blockAtomForceY, blockAtomForceZ, 0.0f, f[0], f[1], f[2], f[3], f[4], f[5], f[6], f[7]);
     for (int j = 0; j < 8; j++)
-        (fvec4(forces+4*blockAtom[j])+blockAtomForce[j]).store(forces+4*blockAtom[j]);
+        (fvec4(forces+4*blockAtom[j])+f[j]).store(forces+4*blockAtom[j]);
 }
 
 void CpuNonbondedForceVec8::getDeltaR(const fvec4& posI, const fvec4& posJ, fvec4& deltaR, float& r2, bool periodic, const fvec4& boxSize, const fvec4& invBoxSize) const {
@@ -681,7 +669,7 @@ void CpuNonbondedForceVec8::getDeltaR(const fvec4& posI, const fvec4& posJ, fvec
     r2 = dot3(deltaR, deltaR);
 }
 
-void CpuNonbondedForceVec8::getDeltaR(const fvec4& posI, const fvec8& x, const fvec8& y, const fvec8& z, fvec8& dx, fvec8& dy, fvec8& dz, fvec8& r2, bool periodic, const fvec4& boxSize, const fvec4& invBoxSize) const {
+void CpuNonbondedForceVec8::getDeltaR(const float* posI, const fvec8& x, const fvec8& y, const fvec8& z, fvec8& dx, fvec8& dy, fvec8& dz, fvec8& r2, bool periodic, const fvec4& boxSize, const fvec4& invBoxSize) const {
     dx = x-posI[0];
     dy = y-posI[1];
     dz = z-posI[2];
