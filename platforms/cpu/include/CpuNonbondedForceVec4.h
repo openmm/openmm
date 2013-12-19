@@ -22,23 +22,25 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef OPENMM_CPU_NONBONDED_FORCE_VEC8_H__
-#define OPENMM_CPU_NONBONDED_FORCE_VEC8_H__
-
-#ifdef __AVX__
+#ifndef OPENMM_CPU_NONBONDED_FORCE_VEC4_H__
+#define OPENMM_CPU_NONBONDED_FORCE_VEC4_H__
 
 #include "CpuNonbondedForce.h"
-#include "openmm/internal/vectorize8.h"
-
 // ---------------------------------------------------------------------------------------
 
 namespace OpenMM {
 
-class CpuNonbondedForceVec8 : public CpuNonbondedForce {
+class CpuNonbondedForceVec4 : public CpuNonbondedForce {
 public:
-       CpuNonbondedForceVec8();
+      /**---------------------------------------------------------------------------------------
+      
+         Constructor
+      
+         --------------------------------------------------------------------------------------- */
 
-protected:            
+       CpuNonbondedForceVec4();
+
+protected:
       /**---------------------------------------------------------------------------------------
       
          Calculate all the interactions for one atom block.
@@ -67,23 +69,21 @@ protected:
        * Compute the displacement and squared distance between a collection of points, optionally using
        * periodic boundary conditions.
        */
-      void getDeltaR(const float* posI, const fvec8& x, const fvec8& y, const fvec8& z, fvec8& dx, fvec8& dy, fvec8& dz, fvec8& r2, bool periodic, const fvec4& boxSize, const fvec4& invBoxSize) const;
+      void getDeltaR(const float* posI, const fvec4& x, const fvec4& y, const fvec4& z, fvec4& dx, fvec4& dy, fvec4& dz, fvec4& r2, bool periodic, const fvec4& boxSize, const fvec4& invBoxSize) const;
 
       /**
        * Compute a fast approximation to erfc(x).
        */
-      static fvec8 erfcApprox(fvec8 x);
+      static fvec4 erfcApprox(fvec4 x);
       
       /**
        * Evaluate the scale factor used with Ewald and PME: erfc(alpha*r) + 2*alpha*r*exp(-alpha*alpha*r*r)/sqrt(PI)
        */
-      fvec8 ewaldScaleFunction(fvec8 x);
+      fvec4 ewaldScaleFunction(fvec4 x);
 };
 
 } // namespace OpenMM
 
 // ---------------------------------------------------------------------------------------
 
-#endif // __AVX__
-
-#endif // OPENMM_CPU_NONBONDED_FORCE_VEC8_H__
+#endif // OPENMM_CPU_NONBONDED_FORCE_VEC4_H__

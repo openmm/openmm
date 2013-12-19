@@ -48,7 +48,13 @@ class CpuNonbondedForce {
          --------------------------------------------------------------------------------------- */
 
        CpuNonbondedForce();
+       
+        /**
+         * Virtual destructor.
+         */
 
+        virtual ~CpuNonbondedForce();
+        
       /**---------------------------------------------------------------------------------------
       
          Set the force to use a cutoff.
@@ -151,7 +157,7 @@ class CpuNonbondedForce {
      */
     void threadComputeDirect(ThreadPool& threads, int threadIndex);
 
-private:
+protected:
         bool cutoff;
         bool useSwitch;
         bool periodic;
@@ -204,7 +210,7 @@ private:
             
          --------------------------------------------------------------------------------------- */
           
-      void calculateBlockIxn(int blockIndex, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize);
+      virtual void calculateBlockIxn(int blockIndex, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize) = 0;
             
       /**---------------------------------------------------------------------------------------
       
@@ -216,7 +222,7 @@ private:
             
          --------------------------------------------------------------------------------------- */
           
-      void calculateBlockEwaldIxn(int blockIndex, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize);
+      virtual void calculateBlockEwaldIxn(int blockIndex, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize) = 0;
 
       /**
        * Compute the displacement and squared distance between two points, optionally using
@@ -225,25 +231,14 @@ private:
       void getDeltaR(const fvec4& posI, const fvec4& posJ, fvec4& deltaR, float& r2, bool periodic, const fvec4& boxSize, const fvec4& invBoxSize) const;
 
       /**
-       * Compute the displacement and squared distance between a collection of points, optionally using
-       * periodic boundary conditions.
+       * Create a lookup table for the scale factor used with Ewald and PME.
        */
-      void getDeltaR(const float* posI, const fvec4& x, const fvec4& y, const fvec4& z, fvec4& dx, fvec4& dy, fvec4& dz, fvec4& r2, bool periodic, const fvec4& boxSize, const fvec4& invBoxSize) const;
+      void tabulateEwaldScaleFactor();
 
       /**
        * Compute a fast approximation to erfc(x).
        */
-      static fvec4 erfcApprox(fvec4 x);
-
-      /**
-       * Create a lookup table for the scale factor used with Ewald and PME.
-       */
-      void tabulateEwaldScaleFactor();
-      
-      /**
-       * Evaluate the scale factor used with Ewald and PME: erfc(alpha*r) + 2*alpha*r*exp(-alpha*alpha*r*r)/sqrt(PI)
-       */
-      fvec4 ewaldScaleFunction(fvec4 x);
+      static float erfcApprox(float x);
 };
 
 } // namespace OpenMM

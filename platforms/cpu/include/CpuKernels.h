@@ -88,9 +88,7 @@ private:
  */
 class CpuCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
 public:
-    CpuCalcNonbondedForceKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data) : CalcNonbondedForceKernel(name, platform),
-            data(data), bonded14IndexArray(NULL), bonded14ParamArray(NULL), hasInitializedPme(false) {
-    }
+    CpuCalcNonbondedForceKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data);
     ~CpuCalcNonbondedForceKernel();
     /**
      * Initialize the kernel.
@@ -130,8 +128,8 @@ private:
     std::vector<std::pair<float, float> > particleParams;
     std::vector<RealVec> lastPositions;
     NonbondedMethod nonbondedMethod;
-    CpuNeighborList neighborList;
-    CpuNonbondedForce nonbonded;
+    CpuNeighborList* neighborList;
+    CpuNonbondedForce* nonbonded;
     Kernel optimizedPme;
 };
 

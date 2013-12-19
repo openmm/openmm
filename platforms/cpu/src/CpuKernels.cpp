@@ -145,6 +145,22 @@ private:
     int numParticles;
 };
 
+bool isVec8Supported();
+CpuNonbondedForce* createCpuNonbondedForceVec4();
+CpuNonbondedForce* createCpuNonbondedForceVec8();
+
+CpuCalcNonbondedForceKernel::CpuCalcNonbondedForceKernel(string name, const Platform& platform, CpuPlatform::PlatformData& data) : CalcNonbondedForceKernel(name, platform),
+        data(data), bonded14IndexArray(NULL), bonded14ParamArray(NULL), hasInitializedPme(false), neighborList(NULL), nonbonded(NULL) {
+    if (isVec8Supported) {
+        neighborList = new CpuNeighborList(8);
+        nonbonded = createCpuNonbondedForceVec8();
+    }
+    else {
+        neighborList = new CpuNeighborList(4);
+        nonbonded = createCpuNonbondedForceVec4();
+    }
+}
+
 CpuCalcNonbondedForceKernel::~CpuCalcNonbondedForceKernel() {
     if (bonded14ParamArray != NULL) {
         for (int i = 0; i < num14; i++) {
@@ -154,6 +170,10 @@ CpuCalcNonbondedForceKernel::~CpuCalcNonbondedForceKernel() {
         delete bonded14IndexArray;
         delete bonded14ParamArray;
     }
+    if (nonbonded != NULL)
+        delete nonbonded;
+    if (neighborList != NULL)
+        delete neighborList;
 }
 
 void CpuCalcNonbondedForceKernel::initialize(const System& system, const NonbondedForce& force) {
@@ -305,26 +325,26 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
                 }
         }
         if (needRecompute) {
-            neighborList.computeNeighborList(numParticles, posq, exclusions, floatBoxSize, data.isPeriodic, nonbondedCutoff+padding, data.threads);
+            neighborList->computeNeighborList(numParticles, posq, exclusions, floatBoxSize, data.isPeriodic, nonbondedCutoff+padding, data.threads);
             lastPositions = posData;
         }
-        nonbonded.setUseCutoff(nonbondedCutoff, neighborList, rfDielectric);
+        nonbonded->setUseCutoff(nonbondedCutoff, *neighborList, rfDielectric);
     }
     if (data.isPeriodic) {
         double minAllowedSize = 1.999999*nonbondedCutoff;
         if (boxSize[0] < minAllowedSize || boxSize[1] < minAllowedSize || boxSize[2] < minAllowedSize)
             throw OpenMMException("The periodic box size has decreased to less than twice the nonbonded cutoff.");
-        nonbonded.setPeriodic(floatBoxSize);
+        nonbonded->setPeriodic(floatBoxSize);
     }
     if (ewald)
-        nonbonded.setUseEwald(ewaldAlpha, kmax[0], kmax[1], kmax[2]);
+        nonbonded->setUseEwald(ewaldAlpha, kmax[0], kmax[1], kmax[2]);
     if (pme)
-        nonbonded.setUsePME(ewaldAlpha, gridSize);
+        nonbonded->setUsePME(ewaldAlpha, gridSize);
     if (useSwitchingFunction)
-        nonbonded.setUseSwitchingFunction(switchingDistance);
+        nonbonded->setUseSwitchingFunction(switchingDistance);
     double nonbondedEnergy = 0;
     if (includeDirect)
-        nonbonded.calculateDirectIxn(numParticles, &posq[0], posData, particleParams, exclusions, data.threadForce, includeEnergy ? &nonbondedEnergy : NULL, data.threads);
+        nonbonded->calculateDirectIxn(numParticles, &posq[0], posData, particleParams, exclusions, data.threadForce, includeEnergy ? &nonbondedEnergy : NULL, data.threads);
     if (includeReciprocal) {
         if (useOptimizedPme) {
             PmeIO io(&posq[0], &data.threadForce[0][0], numParticles);
@@ -333,7 +353,7 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
             nonbondedEnergy += optimizedPme.getAs<CalcPmeReciprocalForceKernel>().finishComputation(io);
         }
         else
-            nonbonded.calculateReciprocalIxn(numParticles, &posq[0], posData, particleParams, exclusions, forceData, includeEnergy ? &nonbondedEnergy : NULL);
+            nonbonded->calculateReciprocalIxn(numParticles, &posq[0], posData, particleParams, exclusions, forceData, includeEnergy ? &nonbondedEnergy : NULL);
     }
     energy += nonbondedEnergy;
     if (includeDirect) {
