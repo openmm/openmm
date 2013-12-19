@@ -151,7 +151,7 @@ CpuNonbondedForce* createCpuNonbondedForceVec8();
 
 CpuCalcNonbondedForceKernel::CpuCalcNonbondedForceKernel(string name, const Platform& platform, CpuPlatform::PlatformData& data) : CalcNonbondedForceKernel(name, platform),
         data(data), bonded14IndexArray(NULL), bonded14ParamArray(NULL), hasInitializedPme(false), neighborList(NULL), nonbonded(NULL) {
-    if (isVec8Supported) {
+    if (isVec8Supported()) {
         neighborList = new CpuNeighborList(8);
         nonbonded = createCpuNonbondedForceVec8();
     }
