@@ -53,6 +53,7 @@ CpuPlatform::CpuPlatform() {
     registerKernelFactory(CalcForcesAndEnergyKernel::Name(), factory);
     registerKernelFactory(CalcNonbondedForceKernel::Name(), factory);
     registerKernelFactory(CalcGBSAOBCForceKernel::Name(), factory);
+    registerKernelFactory(IntegrateLangevinStepKernel::Name(), factory);
 }
 
 double CpuPlatform::getSpeed() const {

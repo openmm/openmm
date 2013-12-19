@@ -33,6 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "CpuGBSAOBCForce.h"
+#include "CpuLangevinDynamics.h"
 #include "CpuNeighborList.h"
 #include "CpuNonbondedForce.h"
 #include "CpuPlatform.h"
@@ -169,6 +170,43 @@ private:
     CpuPlatform::PlatformData& data;
     std::vector<std::pair<float, float> > particleParams;
     CpuGBSAOBCForce obc;
+};
+
+/**
+ * This kernel is invoked by LangevinIntegrator to take one time step.
+ */
+class CpuIntegrateLangevinStepKernel : public IntegrateLangevinStepKernel {
+public:
+    CpuIntegrateLangevinStepKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data) : IntegrateLangevinStepKernel(name, platform),
+        data(data), dynamics(NULL) {
+    }
+    ~CpuIntegrateLangevinStepKernel();
+    /**
+     * Initialize the kernel, setting up the particle masses.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param integrator the LangevinIntegrator this kernel will be used for
+     */
+    void initialize(const System& system, const LangevinIntegrator& integrator);
+    /**
+     * Execute the kernel.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the LangevinIntegrator this kernel is being used for
+     */
+    void execute(ContextImpl& context, const LangevinIntegrator& integrator);
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the LangevinIntegrator this kernel is being used for
+     */
+    double computeKineticEnergy(ContextImpl& context, const LangevinIntegrator& integrator);
+private:
+    CpuPlatform::PlatformData& data;
+    CpuLangevinDynamics* dynamics;
+    std::vector<RealOpenMM> masses;
+    double prevTemp, prevFriction, prevStepSize;
 };
 
 } // namespace OpenMM

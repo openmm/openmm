@@ -31,6 +31,7 @@
 
 #include "CpuKernels.h"
 #include "ReferenceBondForce.h"
+#include "ReferenceConstraints.h"
 #include "ReferenceKernelFactory.h"
 #include "ReferenceKernels.h"
 #include "ReferenceLJCoulomb14.h"
@@ -62,6 +63,47 @@ static vector<RealVec>& extractForces(ContextImpl& context) {
 static RealVec& extractBoxSize(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
     return *(RealVec*) data->periodicBoxSize;
+}
+
+static ReferenceConstraints& extractConstraints(ContextImpl& context) {
+    ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
+    return *(ReferenceConstraints*) data->constraints;
+}
+
+/**
+ * Compute the kinetic energy of the system, possibly shifting the velocities in time to account
+ * for a leapfrog integrator.
+ */
+static double computeShiftedKineticEnergy(ContextImpl& context, vector<double>& masses, double timeShift) {
+    vector<RealVec>& posData = extractPositions(context);
+    vector<RealVec>& velData = extractVelocities(context);
+    vector<RealVec>& forceData = extractForces(context);
+    int numParticles = context.getSystem().getNumParticles();
+    
+    // Compute the shifted velocities.
+    
+    vector<RealVec> shiftedVel(numParticles);
+    for (int i = 0; i < numParticles; ++i) {
+        if (masses[i] > 0)
+            shiftedVel[i] = velData[i]+forceData[i]*(timeShift/masses[i]);
+        else
+            shiftedVel[i] = velData[i];
+    }
+    
+    // Apply constraints to them.
+    
+    vector<double> inverseMasses(numParticles);
+    for (int i = 0; i < numParticles; i++)
+        inverseMasses[i] = (masses[i] == 0 ? 0 : 1/masses[i]);
+    extractConstraints(context).applyToVelocities(posData, shiftedVel, inverseMasses, 1e-4);
+    
+    // Compute the kinetic energy.
+    
+    double energy = 0.0;
+    for (int i = 0; i < numParticles; ++i)
+        if (masses[i] > 0)
+            energy += masses[i]*(shiftedVel[i].dot(shiftedVel[i]));
+    return 0.5*energy;
 }
 
 CpuCalcForcesAndEnergyKernel::CpuCalcForcesAndEnergyKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data, ContextImpl& context) :
@@ -459,4 +501,46 @@ void CpuCalcGBSAOBCForceKernel::copyParametersToContext(ContextImpl& context, co
         particleParams[i] = make_pair((float) radius, (float) (scalingFactor*radius));
     }
     obc.setParticleParameters(particleParams);
+}
+
+CpuIntegrateLangevinStepKernel::~CpuIntegrateLangevinStepKernel() {
+    if (dynamics)
+        delete dynamics;
+}
+
+void CpuIntegrateLangevinStepKernel::initialize(const System& system, const LangevinIntegrator& integrator) {
+    int numParticles = system.getNumParticles();
+    masses.resize(numParticles);
+    for (int i = 0; i < numParticles; ++i)
+        masses[i] = static_cast<RealOpenMM>(system.getParticleMass(i));
+    data.random.initialize(integrator.getRandomNumberSeed(), data.threads.getNumThreads());
+}
+
+void CpuIntegrateLangevinStepKernel::execute(ContextImpl& context, const LangevinIntegrator& integrator) {
+    double temperature = integrator.getTemperature();
+    double friction = integrator.getFriction();
+    double stepSize = integrator.getStepSize();
+    vector<RealVec>& posData = extractPositions(context);
+    vector<RealVec>& velData = extractVelocities(context);
+    vector<RealVec>& forceData = extractForces(context);
+    if (dynamics == 0 || temperature != prevTemp || friction != prevFriction || stepSize != prevStepSize) {
+        // Recreate the computation objects with the new parameters.
+        
+        if (dynamics)
+            delete dynamics;
+        RealOpenMM tau = (friction == 0.0 ? 0.0 : 1.0/friction);
+        dynamics = new CpuLangevinDynamics(context.getSystem().getNumParticles(), stepSize, tau, temperature, data.threads, data.random);
+        dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
+        prevTemp = temperature;
+        prevFriction = friction;
+        prevStepSize = stepSize;
+    }
+    dynamics->update(context.getSystem(), posData, velData, forceData, masses, integrator.getConstraintTolerance());
+    ReferencePlatform::PlatformData* refData = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
+    refData->time += stepSize;
+    refData->stepCount++;
+}
+
+double CpuIntegrateLangevinStepKernel::computeKineticEnergy(ContextImpl& context, const LangevinIntegrator& integrator) {
+    return computeShiftedKineticEnergy(context, masses, 0.5*integrator.getStepSize());
 }
