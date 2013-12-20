@@ -142,10 +142,10 @@ public:
         _mm256_storeu_si256((__m256i*) v, val);
     }
     ivec8 operator&(ivec8 other) const {
-        return _mm256_and_ps(_mm256_castsi256_ps(val), _mm256_castsi256_ps(other.val));
+        return _mm256_castps_si256(_mm256_and_ps(_mm256_castsi256_ps(val), _mm256_castsi256_ps(other.val)));
     }
     ivec8 operator|(ivec8 other) const {
-        return _mm256_or_ps(_mm256_castsi256_ps(val), _mm256_castsi256_ps(other.val));
+        return _mm256_castps_si256(_mm256_or_ps(_mm256_castsi256_ps(val), _mm256_castsi256_ps(other.val)));
     }
     operator fvec8() const;
 };
