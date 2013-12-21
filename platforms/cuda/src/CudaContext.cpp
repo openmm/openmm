@@ -72,9 +72,10 @@ const int CudaContext::TileSize = sizeof(tileflags)*8;
 bool CudaContext::hasInitializedCuda = false;
 
 CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlockingSync, const string& precision, const string& compiler,
-        const string& tempDir, const std::string& hostCompiler, CudaPlatform::PlatformData& platformData) : system(system), compiler(compiler),
+        const string& tempDir, const std::string& hostCompiler, CudaPlatform::PlatformData& platformData) : system(system),
         time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), stepsSinceReorder(99999), contextIsValid(false), atomsWereReordered(false), pinnedBuffer(NULL), posq(NULL),
         posqCorrection(NULL), velm(NULL), force(NULL), energyBuffer(NULL), integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL), thread(NULL) {
+    this->compiler = "\""+compiler+"\"";
     if (hostCompiler.size() > 0)
         this->compiler = compiler+" --compiler-bindir "+hostCompiler;
     if (!hasInitializedCuda) {
@@ -443,13 +444,13 @@ CUmodule CudaContext::createModule(const string source, const map<string, string
     out.close();
 #ifdef WIN32
 #ifdef _DEBUG
-    string command = "\""+compiler+"\" --ptx -G -g --machine "+bits+" -arch=sm_"+gpuArchitecture+" -o "+outputFile+" "+options+" "+inputFile+" 2> "+logFile;
+    string command = compiler+" --ptx -G -g --machine "+bits+" -arch=sm_"+gpuArchitecture+" -o "+outputFile+" "+options+" "+inputFile+" 2> "+logFile;
 #else
-    string command = "\""+compiler+"\" --ptx -lineinfo --machine "+bits+" -arch=sm_"+gpuArchitecture+" -o "+outputFile+" "+options+" "+inputFile+" 2> "+logFile;
+    string command = compiler+" --ptx -lineinfo --machine "+bits+" -arch=sm_"+gpuArchitecture+" -o "+outputFile+" "+options+" "+inputFile+" 2> "+logFile;
 #endif
     int res = compileInWindows(command);
 #else
-    string command = "\""+compiler+"\" --ptx --machine "+bits+" -arch=sm_"+gpuArchitecture+" -o \""+outputFile+"\" "+options+" \""+inputFile+"\" 2> \""+logFile+"\"";
+    string command = compiler+" --ptx --machine "+bits+" -arch=sm_"+gpuArchitecture+" -o \""+outputFile+"\" "+options+" \""+inputFile+"\" 2> \""+logFile+"\"";
     int res = std::system(command.c_str());
 #endif
     try {
