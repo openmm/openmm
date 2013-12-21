@@ -1,5 +1,5 @@
-#ifndef OPENMM_CPUPLATFORM_H_
-#define OPENMM_CPUPLATFORM_H_
+#ifndef OPENMM_CPURANDOM_H_
+#define OPENMM_CPURANDOM_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -32,52 +32,29 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "AlignedArray.h"
-#include "CpuRandom.h"
-#include "ReferencePlatform.h"
-#include "openmm/internal/ContextImpl.h"
-#include "openmm/internal/ThreadPool.h"
-#include "windowsExportCpu.h"
-#include <map>
+#include "sfmt/SFMT.h"
+#include <vector>
 
 namespace OpenMM {
-    
+
 /**
- * This Platform subclass uses CPU implementations of the OpenMM kernels.
+ * This class provides a multithreaded random number generator.
  */
-
-class OPENMM_EXPORT_CPU CpuPlatform : public ReferencePlatform {
+class OPENMM_EXPORT CpuRandom {
 public:
-    class PlatformData;
-    CpuPlatform();
-    const std::string& getName() const {
-        static const std::string name = "CPU";
-        return name;
-    }
-    double getSpeed() const;
-    bool supportsDoublePrecision() const;
-    static bool isProcessorSupported();
-    void contextCreated(ContextImpl& context, const std::map<std::string, std::string>& properties) const;
-    void contextDestroyed(ContextImpl& context) const;
-    /**
-     * We cannot use the standard mechanism for platform data, because that is already used by the superclass.
-     * Instead, we maintain a table of ContextImpls to PlatformDatas.
-     */
-    static PlatformData& getPlatformData(ContextImpl& context);
+    CpuRandom();
+    ~CpuRandom();
+    void initialize(int seed, int numThreads);
+    float getGaussianRandom(int threadIndex);
+    float getUniformRandom(int threadIndex);
 private:
-    static std::map<ContextImpl*, PlatformData*> contextData;
-};
-
-class CpuPlatform::PlatformData {
-public:
-    PlatformData(int numParticles);
-    AlignedArray<float> posq;
-    std::vector<AlignedArray<float> > threadForce;
-    ThreadPool threads;
-    bool isPeriodic;
-    CpuRandom random;
+    bool hasInitialized;
+    int randomSeed;
+    std::vector<OpenMM_SFMT::SFMT*> threadRandom;
+    std::vector<float> nextGaussian;
+    std::vector<int> nextGaussianIsValid;
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_CPUPLATFORM_H_*/
+#endif /*OPENMM_CPURANDOM_H_*/
