@@ -106,6 +106,30 @@ static double computeShiftedKineticEnergy(ContextImpl& context, vector<double>& 
     return 0.5*energy;
 }
 
+class CpuCalcForcesAndEnergyKernel::SumForceTask : public ThreadPool::Task {
+public:
+    SumForceTask(int numParticles, vector<RealVec>& forceData, CpuPlatform::PlatformData& data) : numParticles(numParticles), forceData(forceData), data(data) {
+    }
+    void execute(ThreadPool& threads, int threadIndex) {
+        // Sum the contributions to forces that have been calculated by different threads.
+        
+        int numThreads = threads.getNumThreads();
+        int start = threadIndex*numParticles/numThreads;
+        int end = (threadIndex+1)*numParticles/numThreads;
+        for (int i = start; i < end; i++) {
+            fvec4 f(0.0f);
+            for (int j = 0; j < numThreads; j++)
+                f += fvec4(&data.threadForce[j][4*i]);
+            forceData[i][0] += f[0];
+            forceData[i][1] += f[1];
+            forceData[i][2] += f[2];
+        }
+    }
+    int numParticles;
+    vector<RealVec>& forceData;
+    CpuPlatform::PlatformData& data;
+};
+
 CpuCalcForcesAndEnergyKernel::CpuCalcForcesAndEnergyKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data, ContextImpl& context) :
         CalcForcesAndEnergyKernel(name, platform), data(data) {
     // Create a Reference platform version of this kernel.
@@ -153,17 +177,9 @@ void CpuCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool i
 double CpuCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups) {
     // Sum the forces from all the threads.
     
-    int numParticles = context.getSystem().getNumParticles();
-    int numThreads = data.threads.getNumThreads();
-    vector<RealVec>& forceData = extractForces(context);
-    for (int i = 0; i < numParticles; i++) {
-        fvec4 f(0.0f);
-        for (int j = 0; j < numThreads; j++)
-            f += fvec4(&data.threadForce[j][4*i]);
-        forceData[i][0] += f[0];
-        forceData[i][1] += f[1];
-        forceData[i][2] += f[2];
-    }
+    SumForceTask task(context.getSystem().getNumParticles(), extractForces(context), data);
+    data.threads.execute(task);
+    data.threads.waitForThreads();
     return referenceKernel.getAs<ReferenceCalcForcesAndEnergyKernel>().finishComputation(context, includeForce, includeEnergy, groups);
 }
 
