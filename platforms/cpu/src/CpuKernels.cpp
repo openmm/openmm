@@ -31,6 +31,7 @@
 
 #include "CpuKernels.h"
 #include "ReferenceBondForce.h"
+#include "ReferenceConstraints.h"
 #include "ReferenceKernelFactory.h"
 #include "ReferenceKernels.h"
 #include "ReferenceLJCoulomb14.h"
@@ -63,6 +64,71 @@ static RealVec& extractBoxSize(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
     return *(RealVec*) data->periodicBoxSize;
 }
+
+static ReferenceConstraints& extractConstraints(ContextImpl& context) {
+    ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
+    return *(ReferenceConstraints*) data->constraints;
+}
+
+/**
+ * Compute the kinetic energy of the system, possibly shifting the velocities in time to account
+ * for a leapfrog integrator.
+ */
+static double computeShiftedKineticEnergy(ContextImpl& context, vector<double>& masses, double timeShift) {
+    vector<RealVec>& posData = extractPositions(context);
+    vector<RealVec>& velData = extractVelocities(context);
+    vector<RealVec>& forceData = extractForces(context);
+    int numParticles = context.getSystem().getNumParticles();
+    
+    // Compute the shifted velocities.
+    
+    vector<RealVec> shiftedVel(numParticles);
+    for (int i = 0; i < numParticles; ++i) {
+        if (masses[i] > 0)
+            shiftedVel[i] = velData[i]+forceData[i]*(timeShift/masses[i]);
+        else
+            shiftedVel[i] = velData[i];
+    }
+    
+    // Apply constraints to them.
+    
+    vector<double> inverseMasses(numParticles);
+    for (int i = 0; i < numParticles; i++)
+        inverseMasses[i] = (masses[i] == 0 ? 0 : 1/masses[i]);
+    extractConstraints(context).applyToVelocities(posData, shiftedVel, inverseMasses, 1e-4);
+    
+    // Compute the kinetic energy.
+    
+    double energy = 0.0;
+    for (int i = 0; i < numParticles; ++i)
+        if (masses[i] > 0)
+            energy += masses[i]*(shiftedVel[i].dot(shiftedVel[i]));
+    return 0.5*energy;
+}
+
+class CpuCalcForcesAndEnergyKernel::SumForceTask : public ThreadPool::Task {
+public:
+    SumForceTask(int numParticles, vector<RealVec>& forceData, CpuPlatform::PlatformData& data) : numParticles(numParticles), forceData(forceData), data(data) {
+    }
+    void execute(ThreadPool& threads, int threadIndex) {
+        // Sum the contributions to forces that have been calculated by different threads.
+        
+        int numThreads = threads.getNumThreads();
+        int start = threadIndex*numParticles/numThreads;
+        int end = (threadIndex+1)*numParticles/numThreads;
+        for (int i = start; i < end; i++) {
+            fvec4 f(0.0f);
+            for (int j = 0; j < numThreads; j++)
+                f += fvec4(&data.threadForce[j][4*i]);
+            forceData[i][0] += f[0];
+            forceData[i][1] += f[1];
+            forceData[i][2] += f[2];
+        }
+    }
+    int numParticles;
+    vector<RealVec>& forceData;
+    CpuPlatform::PlatformData& data;
+};
 
 CpuCalcForcesAndEnergyKernel::CpuCalcForcesAndEnergyKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data, ContextImpl& context) :
         CalcForcesAndEnergyKernel(name, platform), data(data) {
@@ -111,17 +177,9 @@ void CpuCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool i
 double CpuCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups) {
     // Sum the forces from all the threads.
     
-    int numParticles = context.getSystem().getNumParticles();
-    int numThreads = data.threads.getNumThreads();
-    vector<RealVec>& forceData = extractForces(context);
-    for (int i = 0; i < numParticles; i++) {
-        fvec4 f(0.0f);
-        for (int j = 0; j < numThreads; j++)
-            f += fvec4(&data.threadForce[j][4*i]);
-        forceData[i][0] += f[0];
-        forceData[i][1] += f[1];
-        forceData[i][2] += f[2];
-    }
+    SumForceTask task(context.getSystem().getNumParticles(), extractForces(context), data);
+    data.threads.execute(task);
+    data.threads.waitForThreads();
     return referenceKernel.getAs<ReferenceCalcForcesAndEnergyKernel>().finishComputation(context, includeForce, includeEnergy, groups);
 }
 
@@ -145,6 +203,22 @@ private:
     int numParticles;
 };
 
+bool isVec8Supported();
+CpuNonbondedForce* createCpuNonbondedForceVec4();
+CpuNonbondedForce* createCpuNonbondedForceVec8();
+
+CpuCalcNonbondedForceKernel::CpuCalcNonbondedForceKernel(string name, const Platform& platform, CpuPlatform::PlatformData& data) : CalcNonbondedForceKernel(name, platform),
+        data(data), bonded14IndexArray(NULL), bonded14ParamArray(NULL), hasInitializedPme(false), neighborList(NULL), nonbonded(NULL) {
+    if (isVec8Supported()) {
+        neighborList = new CpuNeighborList(8);
+        nonbonded = createCpuNonbondedForceVec8();
+    }
+    else {
+        neighborList = new CpuNeighborList(4);
+        nonbonded = createCpuNonbondedForceVec4();
+    }
+}
+
 CpuCalcNonbondedForceKernel::~CpuCalcNonbondedForceKernel() {
     if (bonded14ParamArray != NULL) {
         for (int i = 0; i < num14; i++) {
@@ -154,6 +228,10 @@ CpuCalcNonbondedForceKernel::~CpuCalcNonbondedForceKernel() {
         delete bonded14IndexArray;
         delete bonded14ParamArray;
     }
+    if (nonbonded != NULL)
+        delete nonbonded;
+    if (neighborList != NULL)
+        delete neighborList;
 }
 
 void CpuCalcNonbondedForceKernel::initialize(const System& system, const NonbondedForce& force) {
@@ -305,26 +383,26 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
                 }
         }
         if (needRecompute) {
-            neighborList.computeNeighborList(numParticles, posq, exclusions, floatBoxSize, data.isPeriodic, nonbondedCutoff+padding, data.threads);
+            neighborList->computeNeighborList(numParticles, posq, exclusions, floatBoxSize, data.isPeriodic, nonbondedCutoff+padding, data.threads);
             lastPositions = posData;
         }
-        nonbonded.setUseCutoff(nonbondedCutoff, neighborList, rfDielectric);
+        nonbonded->setUseCutoff(nonbondedCutoff, *neighborList, rfDielectric);
     }
     if (data.isPeriodic) {
         double minAllowedSize = 1.999999*nonbondedCutoff;
         if (boxSize[0] < minAllowedSize || boxSize[1] < minAllowedSize || boxSize[2] < minAllowedSize)
             throw OpenMMException("The periodic box size has decreased to less than twice the nonbonded cutoff.");
-        nonbonded.setPeriodic(floatBoxSize);
+        nonbonded->setPeriodic(floatBoxSize);
     }
     if (ewald)
-        nonbonded.setUseEwald(ewaldAlpha, kmax[0], kmax[1], kmax[2]);
+        nonbonded->setUseEwald(ewaldAlpha, kmax[0], kmax[1], kmax[2]);
     if (pme)
-        nonbonded.setUsePME(ewaldAlpha, gridSize);
+        nonbonded->setUsePME(ewaldAlpha, gridSize);
     if (useSwitchingFunction)
-        nonbonded.setUseSwitchingFunction(switchingDistance);
+        nonbonded->setUseSwitchingFunction(switchingDistance);
     double nonbondedEnergy = 0;
     if (includeDirect)
-        nonbonded.calculateDirectIxn(numParticles, &posq[0], posData, particleParams, exclusions, data.threadForce, includeEnergy ? &nonbondedEnergy : NULL, data.threads);
+        nonbonded->calculateDirectIxn(numParticles, &posq[0], posData, particleParams, exclusions, data.threadForce, includeEnergy ? &nonbondedEnergy : NULL, data.threads);
     if (includeReciprocal) {
         if (useOptimizedPme) {
             PmeIO io(&posq[0], &data.threadForce[0][0], numParticles);
@@ -333,7 +411,7 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
             nonbondedEnergy += optimizedPme.getAs<CalcPmeReciprocalForceKernel>().finishComputation(io);
         }
         else
-            nonbonded.calculateReciprocalIxn(numParticles, &posq[0], posData, particleParams, exclusions, forceData, includeEnergy ? &nonbondedEnergy : NULL);
+            nonbonded->calculateReciprocalIxn(numParticles, &posq[0], posData, particleParams, exclusions, forceData, includeEnergy ? &nonbondedEnergy : NULL);
     }
     energy += nonbondedEnergy;
     if (includeDirect) {
@@ -439,4 +517,46 @@ void CpuCalcGBSAOBCForceKernel::copyParametersToContext(ContextImpl& context, co
         particleParams[i] = make_pair((float) radius, (float) (scalingFactor*radius));
     }
     obc.setParticleParameters(particleParams);
+}
+
+CpuIntegrateLangevinStepKernel::~CpuIntegrateLangevinStepKernel() {
+    if (dynamics)
+        delete dynamics;
+}
+
+void CpuIntegrateLangevinStepKernel::initialize(const System& system, const LangevinIntegrator& integrator) {
+    int numParticles = system.getNumParticles();
+    masses.resize(numParticles);
+    for (int i = 0; i < numParticles; ++i)
+        masses[i] = static_cast<RealOpenMM>(system.getParticleMass(i));
+    data.random.initialize(integrator.getRandomNumberSeed(), data.threads.getNumThreads());
+}
+
+void CpuIntegrateLangevinStepKernel::execute(ContextImpl& context, const LangevinIntegrator& integrator) {
+    double temperature = integrator.getTemperature();
+    double friction = integrator.getFriction();
+    double stepSize = integrator.getStepSize();
+    vector<RealVec>& posData = extractPositions(context);
+    vector<RealVec>& velData = extractVelocities(context);
+    vector<RealVec>& forceData = extractForces(context);
+    if (dynamics == 0 || temperature != prevTemp || friction != prevFriction || stepSize != prevStepSize) {
+        // Recreate the computation objects with the new parameters.
+        
+        if (dynamics)
+            delete dynamics;
+        RealOpenMM tau = (friction == 0.0 ? 0.0 : 1.0/friction);
+        dynamics = new CpuLangevinDynamics(context.getSystem().getNumParticles(), stepSize, tau, temperature, data.threads, data.random);
+        dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
+        prevTemp = temperature;
+        prevFriction = friction;
+        prevStepSize = stepSize;
+    }
+    dynamics->update(context.getSystem(), posData, velData, forceData, masses, integrator.getConstraintTolerance());
+    ReferencePlatform::PlatformData* refData = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
+    refData->time += stepSize;
+    refData->stepCount++;
+}
+
+double CpuIntegrateLangevinStepKernel::computeKineticEnergy(ContextImpl& context, const LangevinIntegrator& integrator) {
+    return computeShiftedKineticEnergy(context, masses, 0.5*integrator.getStepSize());
 }

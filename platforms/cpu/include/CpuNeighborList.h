@@ -45,8 +45,7 @@ class OPENMM_EXPORT_CPU CpuNeighborList {
 public:
     class ThreadTask;
     class Voxels;
-    static const int BlockSize;
-    CpuNeighborList();
+    CpuNeighborList(int blockSize);
     void computeNeighborList(int numAtoms, const AlignedArray<float>& atomLocations, const std::vector<std::set<int> >& exclusions,
             const float* periodicBoxSize, bool usePeriodic, float maxDistance, ThreadPool& threads);
     int getNumBlocks() const;
@@ -59,6 +58,7 @@ public:
     void threadComputeNeighborList(ThreadPool& threads, int threadIndex);
     void runThread(int index);
 private:
+    int blockSize;
     std::vector<int> sortedAtoms;
     std::vector<std::vector<int> > blockNeighbors;
     std::vector<std::vector<char> > blockExclusions;

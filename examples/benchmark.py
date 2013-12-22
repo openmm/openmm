@@ -88,7 +88,7 @@ def runOneTest(testName, options):
         if platform.getName() == 'CUDA':
             properties['CudaPrecision'] = options.precision
         elif platform.getName() == 'OpenCL':
-            properties['OpenCLPrecision'] = options.device
+            properties['OpenCLPrecision'] = options.precision
     
     # Run the simulation.
     

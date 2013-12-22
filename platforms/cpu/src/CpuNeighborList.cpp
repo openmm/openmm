@@ -43,8 +43,6 @@ using namespace std;
 
 namespace OpenMM {
 
-const int CpuNeighborList::BlockSize = 4;
-
 class VoxelIndex 
 {
 public:
@@ -62,8 +60,8 @@ public:
  */
 class CpuNeighborList::Voxels {
 public:
-    Voxels(float vsx, float vsy, float minx, float maxx, float miny, float maxy, const float* periodicBoxSize, bool usePeriodic) :
-            voxelSizeX(vsx), voxelSizeY(vsy), minx(minx), maxx(maxx), miny(miny), maxy(maxy), periodicBoxSize(periodicBoxSize), usePeriodic(usePeriodic) {
+    Voxels(int blockSize, float vsx, float vsy, float minx, float maxx, float miny, float maxy, const float* periodicBoxSize, bool usePeriodic) :
+            blockSize(blockSize), voxelSizeX(vsx), voxelSizeY(vsy), minx(minx), maxx(maxx), miny(miny), maxy(maxy), periodicBoxSize(periodicBoxSize), usePeriodic(usePeriodic) {
         if (usePeriodic) {
             nx = (int) floorf(periodicBoxSize[0]/voxelSizeX+0.5f);
             ny = (int) floorf(periodicBoxSize[1]/voxelSizeY+0.5f);
@@ -156,7 +154,7 @@ public:
         return VoxelIndex(x, y);
     }
 
-    void getNeighbors(vector<int>& neighbors, int blockIndex, fvec4 blockCenter, fvec4 blockWidth, const vector<int>& sortedAtoms, vector<char>& exclusions, float maxDistance, const vector<int> blockAtoms, const float* atomLocations) const {
+    void getNeighbors(vector<int>& neighbors, int blockIndex, fvec4 blockCenter, fvec4 blockWidth, const vector<int>& sortedAtoms, vector<char>& exclusions, float maxDistance, const vector<int>& blockAtoms, const float* atomLocations, const vector<VoxelIndex>& atomVoxelIndex) const {
         neighbors.resize(0);
         exclusions.resize(0);
         fvec4 boxSize(periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2], 0);
@@ -175,9 +173,6 @@ public:
         float centerPos[4];
         blockCenter.store(centerPos);
         VoxelIndex centerVoxelIndex = getVoxelIndex(centerPos);
-        VoxelIndex atomVoxelIndex[BlockSize];
-        for (int i = 0; i < (int) blockAtoms.size(); i++)
-            atomVoxelIndex[i] = getVoxelIndex(&atomLocations[4*blockAtoms[i]]);
         int startx = centerVoxelIndex.x-dIndexX;
         int starty = centerVoxelIndex.y-dIndexY;
         int endx = centerVoxelIndex.x+dIndexX;
@@ -193,7 +188,7 @@ public:
             endx = min(endx, nx-1);
             endy = min(endy, ny-1);
         }
-        int lastSortedIndex = BlockSize*(blockIndex+1);
+        int lastSortedIndex = blockSize*(blockIndex+1);
         VoxelIndex voxelIndex(0, 0);
         for (int x = startx; x <= endx; ++x) {
             voxelIndex.x = x;
@@ -300,10 +295,12 @@ public:
                         // Add this atom to the list of neighbors.
                         
                         neighbors.push_back(sortedAtoms[sortedIndex]);
-                        if (sortedIndex < BlockSize*blockIndex)
+                        if (sortedIndex < blockSize*blockIndex)
                             exclusions.push_back(0);
-                        else
-                            exclusions.push_back(0xF & (0xF<<(sortedIndex-BlockSize*blockIndex)));
+                        else {
+                            int mask = (1<<blockSize)-1;
+                            exclusions.push_back(mask & (mask<<(sortedIndex-blockSize*blockIndex)));
+                        }
                     }
                 }
             }
@@ -311,6 +308,7 @@ public:
     }
 
 private:
+    int blockSize;
     float voxelSizeX, voxelSizeY;
     float minx, maxx, miny, maxy;
     int nx, ny;
@@ -329,12 +327,12 @@ public:
     CpuNeighborList& owner;
 };
 
-CpuNeighborList::CpuNeighborList() {
+CpuNeighborList::CpuNeighborList(int blockSize) : blockSize(blockSize) {
 }
 
 void CpuNeighborList::computeNeighborList(int numAtoms, const AlignedArray<float>& atomLocations, const vector<set<int> >& exclusions,
             const float* periodicBoxSize, bool usePeriodic, float maxDistance, ThreadPool& threads) {
-    int numBlocks = (numAtoms+BlockSize-1)/BlockSize;
+    int numBlocks = (numAtoms+blockSize-1)/blockSize;
     blockNeighbors.resize(numBlocks);
     blockExclusions.resize(numBlocks);
     sortedAtoms.resize(numAtoms);
@@ -381,7 +379,7 @@ void CpuNeighborList::computeNeighborList(int numAtoms, const AlignedArray<float
         edgeSizeX = 0.6f*periodicBoxSize[0]/floorf(periodicBoxSize[0]/maxDistance);
         edgeSizeY = 0.6f*periodicBoxSize[1]/floorf(periodicBoxSize[1]/maxDistance);
     }
-    Voxels voxels(edgeSizeX, edgeSizeY, minx, maxx, miny, maxy, periodicBoxSize, usePeriodic);
+    Voxels voxels(blockSize, edgeSizeX, edgeSizeY, minx, maxx, miny, maxy, periodicBoxSize, usePeriodic);
     for (int i = 0; i < numAtoms; i++) {
         int atomIndex = atomBins[i].second;
         sortedAtoms[i] = atomIndex;
@@ -397,9 +395,9 @@ void CpuNeighborList::computeNeighborList(int numAtoms, const AlignedArray<float
     
     // Add padding atoms to fill up the last block.
     
-    int numPadding = numBlocks*BlockSize-numAtoms;
+    int numPadding = numBlocks*blockSize-numAtoms;
     if (numPadding > 0) {
-        char mask = (0xF0 >> numPadding) & 0xF;
+        char mask = ((0xFFFF-(1<<blockSize)+1) >> numPadding);
         for (int i = 0; i < numPadding; i++)
             sortedAtoms.push_back(0);
         vector<char>& exc = blockExclusions[blockExclusions.size()-1];
@@ -409,7 +407,7 @@ void CpuNeighborList::computeNeighborList(int numAtoms, const AlignedArray<float
 }
 
 int CpuNeighborList::getNumBlocks() const {
-    return sortedAtoms.size()/BlockSize;
+    return sortedAtoms.size()/blockSize;
 }
 
 const std::vector<int>& CpuNeighborList::getSortedAtoms() const {
@@ -446,14 +444,18 @@ void CpuNeighborList::threadComputeNeighborList(ThreadPool& threads, int threadI
 
     int numBlocks = blockNeighbors.size();
     vector<int> blockAtoms;
+    vector<VoxelIndex> atomVoxelIndex;
     for (int i = threadIndex; i < numBlocks; i += numThreads) {
         // Find the atoms in this block and compute their bounding box.
         
-        int firstIndex = BlockSize*i;
-        int atomsInBlock = min(BlockSize, numAtoms-firstIndex);
+        int firstIndex = blockSize*i;
+        int atomsInBlock = min(blockSize, numAtoms-firstIndex);
         blockAtoms.resize(atomsInBlock);
-        for (int j = 0; j < atomsInBlock; j++)
+        atomVoxelIndex.resize(atomsInBlock);
+        for (int j = 0; j < atomsInBlock; j++) {
             blockAtoms[j] = sortedAtoms[firstIndex+j];
+            atomVoxelIndex[j] = voxels->getVoxelIndex(&atomLocations[4*blockAtoms[j]]);
+        }
         fvec4 minPos(&atomLocations[4*sortedAtoms[firstIndex]]);
         fvec4 maxPos = minPos;
         for (int j = 1; j < atomsInBlock; j++) {
@@ -461,7 +463,7 @@ void CpuNeighborList::threadComputeNeighborList(ThreadPool& threads, int threadI
             minPos = min(minPos, pos);
             maxPos = max(maxPos, pos);
         }
-        voxels->getNeighbors(blockNeighbors[i], i, (maxPos+minPos)*0.5f, (maxPos-minPos)*0.5f, sortedAtoms, blockExclusions[i], maxDistance, blockAtoms, atomLocations);
+        voxels->getNeighbors(blockNeighbors[i], i, (maxPos+minPos)*0.5f, (maxPos-minPos)*0.5f, sortedAtoms, blockExclusions[i], maxDistance, blockAtoms, atomLocations, atomVoxelIndex);
 
         // Record the exclusions for this block.
 

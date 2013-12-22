@@ -51,6 +51,7 @@ void testNeighborList(bool periodic) {
     const int numParticles = 500;
     const float cutoff = 2.0f;
     const float boxSize[3] = {20.0f, 15.0f, 22.0f};
+    const int blockSize = 8;
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);
     AlignedArray<float> positions(4*numParticles);
@@ -66,15 +67,15 @@ void testNeighborList(bool periodic) {
         }
     }
     ThreadPool threads;
-    CpuNeighborList neighborList;
+    CpuNeighborList neighborList(blockSize);
     neighborList.computeNeighborList(numParticles, positions, exclusions, boxSize, periodic, cutoff, threads);
     
     // Convert the neighbor list to a set for faster lookup.
     
     set<pair<int, int> > neighbors;
     for (int i = 0; i < (int) neighborList.getSortedAtoms().size(); i++) {
-        int blockIndex = i/CpuNeighborList::BlockSize;
-        int indexInBlock = i-blockIndex*CpuNeighborList::BlockSize;
+        int blockIndex = i/blockSize;
+        int indexInBlock = i-blockIndex*blockSize;
         char mask = 1<<indexInBlock;
         for (int j = 0; j < (int) neighborList.getBlockExclusions(blockIndex).size(); j++) {
             if ((neighborList.getBlockExclusions(blockIndex)[j] & mask) == 0) {
