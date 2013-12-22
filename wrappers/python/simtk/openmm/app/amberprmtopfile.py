@@ -142,7 +142,8 @@ class AmberPrmtopFile(object):
 
     def createSystem(self, nonbondedMethod=ff.NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
                      constraints=None, rigidWater=True, implicitSolvent=None,
-                     implicitSolventKappa=0.0, soluteDielectric=1.0, solventDielectric=78.5,
+                     implicitSolventKappa=0.0*(1/unit.nanometer),
+                     soluteDielectric=1.0, solventDielectric=78.5,
                      removeCMMotion=True, hydrogenMass=None, ewaldErrorTolerance=0.0005):
         """Construct an OpenMM System representing the topology described by this prmtop file.
 
@@ -154,7 +155,7 @@ class AmberPrmtopFile(object):
            Allowed values are None, HBonds, AllBonds, or HAngles.
          - rigidWater (boolean=True) If true, water molecules will be fully rigid regardless of the value passed for the constraints argument
          - implicitSolvent (object=None) If not None, the implicit solvent model to use.  Allowed values are HCT, OBC1, OBC2, GBn, or GBn2.
-         - implicitSolventKappa (float=0.0) The Debye-screening parameter corresponding to ionic strength used for implicit solvent
+         - implicitSolventKappa (float=0.0*1/unit.nanometer) The Debye-screening parameter corresponding to ionic strength used for implicit solvent
          - soluteDielectric (float=1.0) The solute dielectric constant to use in the implicit solvent model.
          - solventDielectric (float=78.5) The solvent dielectric constant to use in the implicit solvent model.
          - removeCMMotion (boolean=True) If true, a CMMotionRemover will be added to the System

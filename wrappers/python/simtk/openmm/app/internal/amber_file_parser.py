@@ -565,9 +565,11 @@ class PrmtopLoader(object):
 # AMBER System builder (based on, but not identical to, systemManager from 'zander')
 #=============================================================================================
 
-def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmodel=None, soluteDielectric=1.0, solventDielectric=78.5,
-                    implicitSolventKappa=0.0, nonbondedCutoff=None, nonbondedMethod='NoCutoff', scee=None, scnb=None, mm=None, verbose=False,
-                    EwaldErrorTolerance=None, flexibleConstraints=True, rigidWater=True, elements=None):
+def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmodel=None,
+          soluteDielectric=1.0, solventDielectric=78.5,
+          implicitSolventKappa=0.0*(1/units.nanometer), nonbondedCutoff=None,
+          nonbondedMethod='NoCutoff', scee=None, scnb=None, mm=None, verbose=False,
+          EwaldErrorTolerance=None, flexibleConstraints=True, rigidWater=True, elements=None):
     """
     Create an OpenMM System from an Amber prmtop file.
 
