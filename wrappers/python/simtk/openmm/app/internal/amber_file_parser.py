@@ -863,7 +863,7 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
     if gbmodel is not None:
         # Convert implicitSolventKappa to nanometers if it is a unit.
         if units.is_quantity(implicitSolventKappa):
-            implicitSolventKappa = implicitSolventKappa.value_in_unit(1/units.nanometers)
+            implicitSolventKappa = implicitSolventKappa.value_in_unit((1/units.nanometers).unit)
         if verbose: print "Adding GB parameters..."
         charges = prmtop.getCharges()
         cutoff = None
