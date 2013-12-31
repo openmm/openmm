@@ -137,9 +137,9 @@ public:
     return ((char*)ptr) + offset;
   }
   
-  void* operator new[](size_t size)
-  {
+  void* operator new[](size_t size) {
     size_t offset = FieldAlign();
+    void* ptr = NULL;
 #ifdef _MSC_VER
     ptr = _aligned_malloc(size + offset, 16);
 #else
@@ -158,7 +158,7 @@ public:
 #endif
   }
  
-  void operator delete(void* ptr)
+  void operator delete[](void* ptr)
   {
     size_t offset = FieldAlign();
 #ifdef _MSC_VER
