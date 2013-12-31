@@ -40,3 +40,7 @@ if os.getenv('OPENMM_PLUGIN_DIR') is None and os.path.isdir(version.openmm_libra
 else:
     pluginLoadedLibNames = Platform.loadPluginsFromDirectory(Platform.getDefaultPluginsDirectory())
 __version__ = Platform.getOpenMMVersion()
+
+if sys.platform not in ['win32', 'darwin']:
+    # rset the dlopen flags on linux
+    sys.setdlopenflags(flags)
