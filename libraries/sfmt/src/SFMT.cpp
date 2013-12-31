@@ -50,8 +50,8 @@ typedef union W128_T w128_t;
 
 /** 128-bit data structure */
 union W128_T {
-  __m128i si;
-  uint32_t u[4];
+    __m128i si;
+    uint32_t u[4];
 };
 /** 128-bit data type */
 typedef union W128_T w128_t;
