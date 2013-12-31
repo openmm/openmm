@@ -50,7 +50,7 @@ typedef union W128_T w128_t;
 
 /** 128-bit data structure */
 union W128_T {
-  __m128i si __attribute__((aligned (16)));
+  __m128i si;
   uint32_t u[4];
 };
 /** 128-bit data type */
@@ -87,13 +87,6 @@ typedef struct W128_T w128_t;
 ///** a parity check vector which certificate the period of 2^{MEXP} */
 //static uint32_t parity[4] = {PARITY1, PARITY2, PARITY3, PARITY4};
 
-void print128_num(__m128i var)
-{
-  uint16_t *val = (uint16_t*) &var;//can also use uint32_t instead of 16_t
-  printf("Numerical: %i %i %i %i %i %i %i %i \n", 
-	 val[0], val[1], val[2], val[3], val[4], val[5], 
-	 val[6], val[7]);
-}
 namespace OpenMM_SFMT {
 
 class SFMTData {
