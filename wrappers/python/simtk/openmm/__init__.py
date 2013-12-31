@@ -14,15 +14,7 @@ It also tries to load any plugin modules it can find.
 __author__ = "Randall J. Radmer"
 
 import os, sys, glob, os.path
-if sys.platform == "win32":
-    libPrefix=""
-    libExt="dll"
-elif sys.platform == 'darwin':
-    libPrefix="lib"
-    libExt="dylib"
-else:
-    libPrefix="lib"
-    libExt="so"
+if sys.platform not in ['win32', 'darwin']:
     # The following is an evil incantation that is needed to permit
     # the POSIX "dlopen" function to work.  I do not understand
     # it.  If a better solution is known, please forward to the
