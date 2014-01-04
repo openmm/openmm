@@ -94,6 +94,8 @@ ContextImpl::ContextImpl(Context& owner, const System& system, Integrator& integ
     vector<string> kernelNames;
     kernelNames.push_back(CalcForcesAndEnergyKernel::Name());
     kernelNames.push_back(UpdateStateDataKernel::Name());
+    kernelNames.push_back(ApplyConstraintsKernel::Name());
+    kernelNames.push_back(VirtualSitesKernel::Name());
     for (int i = 0; i < system.getNumForces(); ++i) {
         forceImpls.push_back(system.getForce(i).createImpl());
         map<string, double> forceParameters = forceImpls[forceImpls.size()-1]->getDefaultParameters();
