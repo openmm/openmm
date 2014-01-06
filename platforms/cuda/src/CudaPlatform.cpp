@@ -174,15 +174,24 @@ CudaPlatform::PlatformData::PlatformData(ContextImpl* context, const System& sys
         searchPos = nextPos+1;
     }
     devices.push_back(deviceIndexProperty.substr(searchPos));
-    for (int i = 0; i < (int) devices.size(); i++) {
-        if (devices[i].length() > 0) {
-            unsigned int deviceIndex;
-            stringstream(devices[i]) >> deviceIndex;
-            contexts.push_back(new CudaContext(system, deviceIndex, blocking, precisionProperty, compilerProperty, tempProperty, *this));
+    try {
+        for (int i = 0; i < (int) devices.size(); i++) {
+            if (devices[i].length() > 0) {
+                unsigned int deviceIndex;
+                stringstream(devices[i]) >> deviceIndex;
+                contexts.push_back(new CudaContext(system, deviceIndex, blocking, precisionProperty, compilerProperty, tempProperty, *this));
+            }
         }
+        if (contexts.size() == 0)
+            contexts.push_back(new CudaContext(system, -1, blocking, precisionProperty, compilerProperty, tempProperty, *this));
     }
-    if (contexts.size() == 0)
-        contexts.push_back(new CudaContext(system, -1, blocking, precisionProperty, compilerProperty, tempProperty, *this));
+    catch (...) {
+        // If an exception was thrown, do our best to clean up memory.
+        
+        for (int i = 0; i < (int) contexts.size(); i++)
+            delete contexts[i];
+        throw;
+    }
     stringstream deviceIndex, deviceName;
     for (int i = 0; i < (int) contexts.size(); i++) {
         if (i > 0) {

@@ -253,8 +253,6 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
         paddedNumAtoms = TileSize*((numAtoms+TileSize-1)/TileSize);
         numAtomBlocks = (paddedNumAtoms+(TileSize-1))/TileSize;
         numThreadBlocks = numThreadBlocksPerComputeUnit*device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>();
-        bonded = new OpenCLBondedUtilities(*this);
-        nonbonded = new OpenCLNonbondedUtilities(*this);
         if (useDoublePrecision) {
             posq = OpenCLArray::create<mm_double4>(*this, paddedNumAtoms, "posq");
             velm = OpenCLArray::create<mm_double4>(*this, paddedNumAtoms, "velm");
@@ -343,6 +341,8 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
     
     // Create utilities objects.
     
+    bonded = new OpenCLBondedUtilities(*this);
+    nonbonded = new OpenCLNonbondedUtilities(*this);
     integration = new OpenCLIntegrationUtilities(*this, system);
     expression = new OpenCLExpressionUtilities(*this);
 }

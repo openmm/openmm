@@ -153,9 +153,6 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     CHECK_RESULT(cuDeviceGetAttribute(&multiprocessors, CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT, device));
     int numThreadBlocksPerComputeUnit = 6;
     numThreadBlocks = numThreadBlocksPerComputeUnit*multiprocessors;
-    bonded = new CudaBondedUtilities(*this);
-    nonbonded = new CudaNonbondedUtilities(*this);
-    int numEnergyBuffers = max(numThreadBlocks*ThreadBlockSize, nonbonded->getNumEnergyBuffers());
     if (useDoublePrecision) {
         posq = CudaArray::create<double4>(*this, paddedNumAtoms, "posq");
         velm = CudaArray::create<double4>(*this, paddedNumAtoms, "velm");
@@ -166,9 +163,6 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
         compilationDefines["make_mixed2"] = "make_double2";
         compilationDefines["make_mixed3"] = "make_double3";
         compilationDefines["make_mixed4"] = "make_double4";
-        energyBuffer = CudaArray::create<double>(*this, numEnergyBuffers, "energyBuffer");
-        int pinnedBufferSize = max(paddedNumAtoms*4, numEnergyBuffers);
-        CHECK_RESULT(cuMemHostAlloc(&pinnedBuffer, pinnedBufferSize*sizeof(double), 0));
     }
     else if (useMixedPrecision) {
         posq = CudaArray::create<float4>(*this, paddedNumAtoms, "posq");
@@ -181,9 +175,6 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
         compilationDefines["make_mixed2"] = "make_double2";
         compilationDefines["make_mixed3"] = "make_double3";
         compilationDefines["make_mixed4"] = "make_double4";
-        energyBuffer = CudaArray::create<float>(*this, numEnergyBuffers, "energyBuffer");
-        int pinnedBufferSize = max(paddedNumAtoms*4, numEnergyBuffers);
-        CHECK_RESULT(cuMemHostAlloc(&pinnedBuffer, pinnedBufferSize*sizeof(double), 0));
     }
     else {
         posq = CudaArray::create<float4>(*this, paddedNumAtoms, "posq");
@@ -194,9 +185,6 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
         compilationDefines["make_mixed2"] = "make_float2";
         compilationDefines["make_mixed3"] = "make_float3";
         compilationDefines["make_mixed4"] = "make_float4";
-        energyBuffer = CudaArray::create<float>(*this, numEnergyBuffers, "energyBuffer");
-        int pinnedBufferSize = max(paddedNumAtoms*6, numEnergyBuffers);
-        CHECK_RESULT(cuMemHostAlloc(&pinnedBuffer, pinnedBufferSize*sizeof(float), 0));
     }
     posCellOffsets.resize(paddedNumAtoms, make_int4(0, 0, 0, 0));
 
@@ -233,6 +221,8 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     
     // Create utilities objects.
     
+    bonded = new CudaBondedUtilities(*this);
+    nonbonded = new CudaNonbondedUtilities(*this);
     integration = new CudaIntegrationUtilities(*this, system);
     expression = new CudaExpressionUtilities(*this);
 }
@@ -280,6 +270,22 @@ CudaContext::~CudaContext() {
 void CudaContext::initialize() {
     cuCtxSetCurrent(context);
     string errorMessage = "Error initializing Context";
+    int numEnergyBuffers = max(numThreadBlocks*ThreadBlockSize, nonbonded->getNumEnergyBuffers());
+    if (useDoublePrecision) {
+        energyBuffer = CudaArray::create<double>(*this, numEnergyBuffers, "energyBuffer");
+        int pinnedBufferSize = max(paddedNumAtoms*4, numEnergyBuffers);
+        CHECK_RESULT(cuMemHostAlloc(&pinnedBuffer, pinnedBufferSize*sizeof(double), 0));
+    }
+    else if (useMixedPrecision) {
+        energyBuffer = CudaArray::create<float>(*this, numEnergyBuffers, "energyBuffer");
+        int pinnedBufferSize = max(paddedNumAtoms*4, numEnergyBuffers);
+        CHECK_RESULT(cuMemHostAlloc(&pinnedBuffer, pinnedBufferSize*sizeof(double), 0));
+    }
+    else {
+        energyBuffer = CudaArray::create<float>(*this, numEnergyBuffers, "energyBuffer");
+        int pinnedBufferSize = max(paddedNumAtoms*6, numEnergyBuffers);
+        CHECK_RESULT(cuMemHostAlloc(&pinnedBuffer, pinnedBufferSize*sizeof(float), 0));
+    }
     for (int i = 0; i < numAtoms; i++) {
         double mass = system.getParticleMass(i);
         if (useDoublePrecision || useMixedPrecision)

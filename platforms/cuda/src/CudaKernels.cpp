@@ -1460,8 +1460,9 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
     int numParticles = force.getNumParticles();
     sigmaEpsilon = CudaArray::create<float2>(cu, cu.getPaddedNumAtoms(), "sigmaEpsilon");
     CudaArray& posq = cu.getPosq();
-    float4* posqf = (float4*) cu.getPinnedBuffer();
-    double4* posqd = (double4*) cu.getPinnedBuffer();
+    vector<double4> temp(posq.getSize());
+    float4* posqf = (float4*) &temp[0];
+    double4* posqd = (double4*) &temp[0];
     vector<float2> sigmaEpsilonVector(cu.getPaddedNumAtoms(), make_float2(0, 0));
     vector<vector<int> > exclusionList(numParticles);
     double sumSquaredCharges = 0.0;
@@ -1486,7 +1487,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
         exclusionList[exclusions[i].first].push_back(exclusions[i].second);
         exclusionList[exclusions[i].second].push_back(exclusions[i].first);
     }
-    posq.upload(cu.getPinnedBuffer());
+    posq.upload(&temp[0]);
     sigmaEpsilon->upload(sigmaEpsilonVector);
     bool useCutoff = (force.getNonbondedMethod() != NonbondedForce::NoCutoff);
     bool usePeriodic = (force.getNonbondedMethod() != NonbondedForce::NoCutoff && force.getNonbondedMethod() != NonbondedForce::CutoffNonPeriodic);
@@ -2410,8 +2411,9 @@ void CudaCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOBCF
     cu.addAutoclearBuffer(*bornSum);
     cu.addAutoclearBuffer(*bornForce);
     CudaArray& posq = cu.getPosq();
-    float4* posqf = (float4*) cu.getPinnedBuffer();
-    double4* posqd = (double4*) cu.getPinnedBuffer();
+    vector<double4> temp(posq.getSize());
+    float4* posqf = (float4*) &temp[0];
+    double4* posqd = (double4*) &temp[0];
     vector<float2> paramsVector(cu.getPaddedNumAtoms(), make_float2(1, 1));
     const double dielectricOffset = 0.009;
     for (int i = 0; i < force.getNumParticles(); i++) {
@@ -2424,7 +2426,7 @@ void CudaCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOBCF
         else
             posqf[i] = make_float4(0, 0, 0, (float) charge);
     }
-    posq.upload(cu.getPinnedBuffer());
+    posq.upload(&temp[0]);
     params->upload(paramsVector);
     prefactor = -ONE_4PI_EPS0*((1.0/force.getSoluteDielectric())-(1.0/force.getSolventDielectric()));
     bool useCutoff = (force.getNonbondedMethod() != GBSAOBCForce::NoCutoff);
