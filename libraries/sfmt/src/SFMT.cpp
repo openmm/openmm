@@ -13,6 +13,7 @@
 #include "sfmt/SFMT.h"
 #include "sfmt/SFMT-params.h"
 
+#include "stdio.h"
 #include <cstring>
 #include <cassert>
 #include <iostream>
@@ -90,32 +91,87 @@ namespace OpenMM_SFMT {
 
 class SFMTData {
 public:
-	/** the 128-bit internal state array */
-	w128_t sfmt[N];
-	/** the 32bit integer pointer to the 128-bit internal state array */
-	uint32_t *psfmt32;
-	#if !defined(BIG_ENDIAN64) || defined(ONLY64)
-	/** the 64bit integer pointer to the 128-bit internal state array */
-	uint64_t *psfmt64;
-	#endif
-	/** index counter to the 32-bit internal state array */
-	int idx;
-	/** a flag: it is 0 if and only if the internal state is not yet
-	 * initialized. */
-	int initialized;
-	/** a parity check vector which certificate the period of 2^{MEXP} */
-	uint32_t parity[4];
-	SFMTData() {
-		psfmt32 = &sfmt[0].u[0];
+  w128_t padding;
+  /** the 128-bit internal state array */
+  w128_t sfmt[N];
+  /** the 32bit integer pointer to the 128-bit internal state array */
+  uint32_t *psfmt32;
 #if !defined(BIG_ENDIAN64) || defined(ONLY64)
-		psfmt64 = (uint64_t *)&sfmt[0].u[0];
+  /** the 64bit integer pointer to the 128-bit internal state array */
+  uint64_t *psfmt64;
 #endif
-		initialized = 0;
-		parity[0] = PARITY1;
-		parity[1] = PARITY2;
-		parity[2] = PARITY3;
-		parity[3] = PARITY4;
-	}
+  /** index counter to the 32-bit internal state array */
+  int idx;
+  /** a flag: it is 0 if and only if the internal state is not yet
+   * initialized. */
+  int initialized;
+  /** a parity check vector which certificate the period of 2^{MEXP} */
+  uint32_t parity[4];
+  
+private:
+  static size_t FieldAlign() {
+    size_t align;
+    union { w128_t SFMTData::*_field; size_t _ofs; } offset;
+    offset._field = &SFMTData::padding;
+    align = offset._ofs;
+    if (!(align % 16)) return 0;
+    return 16 - (align % 16);
+  }
+     
+public:
+  void* operator new(size_t size) {
+    size_t offset = FieldAlign();
+    void* ptr = NULL;
+#ifdef _MSC_VER
+    ptr = _aligned_malloc(size + offset, 16);
+#else
+    posix_memalign(&ptr, 16, size + offset); 
+#endif
+    return ((char*)ptr) + offset;
+  }
+  
+  void* operator new[](size_t size) {
+    size_t offset = FieldAlign();
+    void* ptr = NULL;
+#ifdef _MSC_VER
+    ptr = _aligned_malloc(size + offset, 16);
+#else
+    posix_memalign(&ptr, 16, size + offset);
+#endif
+    return ((char*)ptr) + offset;
+  }
+ 
+  void operator delete(void* ptr)
+  {
+    size_t offset = FieldAlign();
+#ifdef _MSC_VER
+    _aligned_free(((char*)ptr) - offset);
+#else
+    free(((char*)ptr) - offset);
+#endif
+  }
+ 
+  void operator delete[](void* ptr)
+  {
+    size_t offset = FieldAlign();
+#ifdef _MSC_VER
+    _aligned_free(((char*)ptr) - offset);
+#else
+    free(((char*)ptr) - offset);
+#endif
+  }
+ 
+  SFMTData() {
+    psfmt32 = &sfmt[0].u[0];
+#if !defined(BIG_ENDIAN64) || defined(ONLY64)
+    psfmt64 = (uint64_t *)&sfmt[0].u[0];
+#endif
+    initialized = 0;
+    parity[0] = PARITY1;
+    parity[1] = PARITY2;
+    parity[2] = PARITY3;
+    parity[3] = PARITY4;
+  }
 };
 
 void SFMT::createCheckpoint(std::ostream& stream) {
