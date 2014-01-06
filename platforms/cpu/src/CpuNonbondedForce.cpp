@@ -57,7 +57,7 @@ public:
 
    --------------------------------------------------------------------------------------- */
 
-CpuNonbondedForce::CpuNonbondedForce() : cutoff(false), useSwitch(false), periodic(false), ewald(false), pme(false), tableIsValid(false) {
+CpuNonbondedForce::CpuNonbondedForce() : cutoff(false), useSwitch(false), periodic(false), ewald(false), pme(false), tableIsValid(false), cutoffDistance(0.0f), alphaEwald(0.0f) {
 }
 
 CpuNonbondedForce::~CpuNonbondedForce() {
