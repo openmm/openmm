@@ -225,8 +225,8 @@ CpuCalcNonbondedForceKernel::~CpuCalcNonbondedForceKernel() {
             delete[] bonded14IndexArray[i];
             delete[] bonded14ParamArray[i];
         }
-        delete bonded14IndexArray;
-        delete bonded14ParamArray;
+        delete[] bonded14IndexArray;
+        delete[] bonded14ParamArray;
     }
     if (nonbonded != NULL)
         delete nonbonded;
