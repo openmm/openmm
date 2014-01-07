@@ -58,7 +58,7 @@ extern "C" __global__ void computeInteractionGroups(
             if (!isExcluded && r2 < CUTOFF_SQUARED) {
 #endif
                 real invR = RSQRT(r2);
-                real r = RECIP(invR);
+                real r = r2*invR;
                 LOAD_ATOM2_PARAMETERS
                 real dEdR = 0.0f;
                 real tempEnergy = 0.0f;

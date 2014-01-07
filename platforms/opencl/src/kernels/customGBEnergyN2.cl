@@ -67,7 +67,7 @@ __kernel void computeN2Energy(
                 if (r2 < CUTOFF_SQUARED) {
 #endif
                     real invR = RSQRT(r2);
-                    real r = RECIP(invR);
+                    real r = r2*invR;
                     LOAD_ATOM2_PARAMETERS
                     atom2 = y*TILE_SIZE+j;
                     real dEdR = 0;
@@ -117,7 +117,7 @@ __kernel void computeN2Energy(
                 if (r2 < CUTOFF_SQUARED) {
 #endif
                     real invR = RSQRT(r2);
-                    real r = RECIP(invR);
+                    real r = r2*invR;
                     LOAD_ATOM2_PARAMETERS
                     atom2 = y*TILE_SIZE+tj;
                     real dEdR = 0;
@@ -279,7 +279,7 @@ __kernel void computeN2Energy(
                     real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
                     if (r2 < CUTOFF_SQUARED) {
                         real invR = RSQRT(r2);
-                        real r = RECIP(invR);
+                        real r = r2*invR;
                         LOAD_ATOM2_PARAMETERS
                         atom2 = atomIndices[tbx+tj];
                         real dEdR = 0;
@@ -317,7 +317,7 @@ __kernel void computeN2Energy(
                     if (r2 < CUTOFF_SQUARED) {
 #endif
                         real invR = RSQRT(r2);
-                        real r = RECIP(invR);
+                        real r = r2*invR;
                         LOAD_ATOM2_PARAMETERS
                         atom2 = atomIndices[tbx+tj];
                         real dEdR = 0;

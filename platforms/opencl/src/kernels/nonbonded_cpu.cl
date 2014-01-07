@@ -72,7 +72,7 @@ __kernel void computeNonbonded(
                     if (r2 < CUTOFF_SQUARED) {
 #endif
                         real invR = RSQRT(r2);
-                        real r = RECIP(invR);
+                        real r = r2*invR;
                         unsigned int atom2 = j;
                         LOAD_ATOM2_PARAMETERS
                         atom2 = y*TILE_SIZE+j;
@@ -140,7 +140,7 @@ __kernel void computeNonbonded(
                     if (r2 < CUTOFF_SQUARED) {
 #endif
                         real invR = RSQRT(r2);
-                        real r = RECIP(invR);
+                        real r = r2*invR;
                         unsigned int atom2 = j;
                         LOAD_ATOM2_PARAMETERS
                         atom2 = y*TILE_SIZE+j;
@@ -307,7 +307,7 @@ __kernel void computeNonbonded(
                         real r2 = dot(delta.xyz, delta.xyz);
                         if (r2 < CUTOFF_SQUARED) {
                             real invR = RSQRT(r2);
-                            real r = RECIP(invR);
+                            real r = r2*invR;
                             unsigned int atom2 = j;
                             LOAD_ATOM2_PARAMETERS
                             atom2 = atomIndices[j];
@@ -371,7 +371,7 @@ __kernel void computeNonbonded(
                         if (r2 < CUTOFF_SQUARED) {
 #endif
                             real invR = RSQRT(r2);
-                            real r = RECIP(invR);
+                            real r = r2*invR;
                             unsigned int atom2 = j;
                             LOAD_ATOM2_PARAMETERS
                             atom2 = atomIndices[j];
