@@ -90,8 +90,10 @@ namespace OpenMM_SFMT {
 
 class SFMTData {
 public:
+    /** Possibly incorrectly aligned memory for internal state array */
+    char baseData[(N+1)*sizeof(w128_t)];
 	/** the 128-bit internal state array */
-	w128_t sfmt[N];
+	w128_t* sfmt;
 	/** the 32bit integer pointer to the 128-bit internal state array */
 	uint32_t *psfmt32;
 	#if !defined(BIG_ENDIAN64) || defined(ONLY64)
@@ -106,6 +108,9 @@ public:
 	/** a parity check vector which certificate the period of 2^{MEXP} */
 	uint32_t parity[4];
 	SFMTData() {
+        char* offsetData = baseData+15;
+        offsetData -= (long long)offsetData&0xF;
+        sfmt = (w128_t*) offsetData;
 		psfmt32 = &sfmt[0].u[0];
 #if !defined(BIG_ENDIAN64) || defined(ONLY64)
 		psfmt64 = (uint64_t *)&sfmt[0].u[0];
