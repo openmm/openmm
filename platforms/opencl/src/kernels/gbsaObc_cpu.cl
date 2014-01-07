@@ -71,7 +71,7 @@ __kernel void computeBornSum(
                     if (atom1 < NUM_ATOMS && y*TILE_SIZE+j < NUM_ATOMS) {
 #endif
                         real invR = RSQRT(r2);
-                        real r = RECIP(invR);
+                        real r = r2*invR;
                         float2 params2 = (float2) (localData[j].radius, localData[j].scaledRadius);
                         real rScaledRadiusJ = r+params2.y;
                         if ((j != tgx) && (params1.x < rScaledRadiusJ)) {
@@ -120,7 +120,7 @@ __kernel void computeBornSum(
                     if (atom1 < NUM_ATOMS && y*TILE_SIZE+j < NUM_ATOMS) {
 #endif
                         real invR = RSQRT(r2);
-                        real r = RECIP(invR);
+                        real r = r2*invR;
                         float2 params2 = (float2) (localData[j].radius, localData[j].scaledRadius);
                         real rScaledRadiusJ = r+params2.y;
                         if (params1.x < rScaledRadiusJ) {
@@ -269,7 +269,7 @@ __kernel void computeBornSum(
                         int atom2 = atomIndices[j];
                         if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS && r2 < CUTOFF_SQUARED) {
                             real invR = RSQRT(r2);
-                            real r = RECIP(invR);
+                            real r = r2*invR;
                             float2 params2 = (float2) (localData[j].radius, localData[j].scaledRadius);
                             real rScaledRadiusJ = r+params2.y;
                             if (params1.x < rScaledRadiusJ) {
@@ -331,7 +331,7 @@ __kernel void computeBornSum(
                         if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
 #endif
                             real invR = RSQRT(r2);
-                            real r = RECIP(invR);
+                            real r = r2*invR;
                             float2 params2 = (float2) (localData[j].radius, localData[j].scaledRadius);
                             real rScaledRadiusJ = r+params2.y;
                             if (params1.x < rScaledRadiusJ) {
@@ -461,7 +461,7 @@ __kernel void computeGBSAForce1(
                     if (atom1 < NUM_ATOMS && y*TILE_SIZE+j < NUM_ATOMS) {
 #endif
                         real invR = RSQRT(r2);
-                        real r = RECIP(invR);
+                        real r = r2*invR;
                         real bornRadius2 = localData[j].bornRadius;
                         real alpha2_ij = bornRadius1*bornRadius2;
                         real D_ij = r2*RECIP(4.0f*alpha2_ij);
@@ -520,7 +520,7 @@ __kernel void computeGBSAForce1(
                     if (atom1 < NUM_ATOMS && y*TILE_SIZE+j < NUM_ATOMS) {
 #endif
                         real invR = RSQRT(r2);
-                        real r = RECIP(invR);
+                        real r = r2*invR;
                         real bornRadius2 = localData[j].bornRadius;
                         real alpha2_ij = bornRadius1*bornRadius2;
                         real D_ij = r2*RECIP(4.0f*alpha2_ij);
@@ -677,7 +677,7 @@ __kernel void computeGBSAForce1(
                         int atom2 = atomIndices[j];
                         if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS && r2 < CUTOFF_SQUARED) {
                             real invR = RSQRT(r2);
-                            real r = RECIP(invR);
+                            real r = r2*invR;
                             real bornRadius2 = localData[j].bornRadius;
                             real alpha2_ij = bornRadius1*bornRadius2;
                             real D_ij = r2*RECIP(4.0f*alpha2_ij);
@@ -737,7 +737,7 @@ __kernel void computeGBSAForce1(
                         if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
 #endif
                             real invR = RSQRT(r2);
-                            real r = RECIP(invR);
+                            real r = r2*invR;
                             real bornRadius2 = localData[j].bornRadius;
                             real alpha2_ij = bornRadius1*bornRadius2;
                             real D_ij = r2*RECIP(4.0f*alpha2_ij);
