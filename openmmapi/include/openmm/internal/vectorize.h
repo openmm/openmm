@@ -55,8 +55,9 @@ public:
         return val;
     }
     float operator[](int i) const {
-        int resultBits = _mm_extract_ps(val, i);
-        return *((float*) &resultBits);
+        float result[4];
+        store(result);
+        return result[i];
     }
     void store(float* v) const {
         _mm_storeu_ps(v, val);
@@ -131,7 +132,9 @@ public:
         return val;
     }
     int operator[](int i) const {
-        return _mm_extract_epi32(val, i);
+        int result[4];
+        store(result);
+        return result[i];
     }
     void store(int* v) const {
         _mm_storeu_si128((__m128i*) v, val);
