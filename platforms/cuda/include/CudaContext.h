@@ -75,7 +75,7 @@ public:
     static const int ThreadBlockSize;
     static const int TileSize;
     CudaContext(const System& system, int deviceIndex, bool useBlockingSync, const std::string& precision,
-            const std::string& compiler, const std::string& tempDir, CudaPlatform::PlatformData& platformData);
+            const std::string& compiler, const std::string& tempDir, const std::string& hostCompiler, CudaPlatform::PlatformData& platformData);
     ~CudaContext();
     /**
      * This is called to initialize internal data structures after all Forces in the system

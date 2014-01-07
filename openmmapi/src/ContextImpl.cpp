@@ -39,6 +39,7 @@
 #include "openmm/State.h"
 #include "openmm/VirtualSite.h"
 #include "openmm/Context.h"
+#include <algorithm>
 #include <iostream>
 #include <map>
 #include <utility>
@@ -94,6 +95,8 @@ ContextImpl::ContextImpl(Context& owner, const System& system, Integrator& integ
     vector<string> kernelNames;
     kernelNames.push_back(CalcForcesAndEnergyKernel::Name());
     kernelNames.push_back(UpdateStateDataKernel::Name());
+    kernelNames.push_back(ApplyConstraintsKernel::Name());
+    kernelNames.push_back(VirtualSitesKernel::Name());
     for (int i = 0; i < system.getNumForces(); ++i) {
         forceImpls.push_back(system.getForce(i).createImpl());
         map<string, double> forceParameters = forceImpls[forceImpls.size()-1]->getDefaultParameters();
@@ -104,14 +107,40 @@ ContextImpl::ContextImpl(Context& owner, const System& system, Integrator& integ
     hasInitializedForces = true;
     vector<string> integratorKernels = integrator.getKernelNames();
     kernelNames.insert(kernelNames.begin(), integratorKernels.begin(), integratorKernels.end());
-    if (platform == 0)
-        this->platform = platform = &Platform::findPlatform(kernelNames);
-    else if (!platform->supportsKernels(kernelNames))
-        throw OpenMMException("Specified a Platform for a Context which does not support all required kernels");
+    
+    // Select a platform to use.
+    
+    vector<pair<double, Platform*> > candidatePlatforms;
+    if (platform == NULL) {
+        for (int i = 0; i < Platform::getNumPlatforms(); i++) {
+            Platform& p = Platform::getPlatform(i);
+            if (p.supportsKernels(kernelNames))
+                candidatePlatforms.push_back(make_pair(p.getSpeed(), &p));
+        }
+        if (candidatePlatforms.size() == 0)
+            throw OpenMMException("No Platform supports all the requested kernels");
+        sort(candidatePlatforms.begin(), candidatePlatforms.end());
+    }
+    else {
+        if (!platform->supportsKernels(kernelNames))
+            throw OpenMMException("Specified a Platform for a Context which does not support all required kernels");
+        candidatePlatforms.push_back(make_pair(platform->getSpeed(), platform));
+    }
+    for (int i = candidatePlatforms.size()-1; i >= 0; i--) {
+        try {
+            this->platform = platform = candidatePlatforms[i].second;
+            platform->contextCreated(*this, properties);
+            break;
+        }
+        catch (...) {
+            if (i > 0)
+                continue;
+            throw;
+        }
+    }
     
     // Create and initialize kernels and other objects.
     
-    platform->contextCreated(*this, properties);
     initializeForcesKernel = platform->createKernel(CalcForcesAndEnergyKernel::Name(), *this);
     initializeForcesKernel.getAs<CalcForcesAndEnergyKernel>().initialize(system);
     updateStateDataKernel = platform->createKernel(UpdateStateDataKernel::Name(), *this);
