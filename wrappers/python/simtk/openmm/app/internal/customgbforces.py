@@ -206,11 +206,19 @@ def _createEnergyTerms(force, SA, cutoff, kappa):
     elif SA is not None:
         raise ValueError('Unknown surface area method: '+SA)
     if cutoff is None:
-        force.addEnergyTerm("-138.935485*(1/soluteDielectric-exp(-kappa*f)/solventDielectric)*q1*q2/f;"
-                            "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))", CustomGBForce.ParticlePairNoExclusions)
+        if kappa > 0:
+            force.addEnergyTerm("-138.935485*(1/soluteDielectric-exp(-kappa*f)/solventDielectric)*q1*q2/f;"
+                                "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))", CustomGBForce.ParticlePairNoExclusions)
+        else:
+            force.addEnergyTerm("-138.935485*(1/soluteDielectric-1/solventDielectric)*q1*q2/f;"
+                                "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))", CustomGBForce.ParticlePairNoExclusions)
     else:
-        force.addEnergyTerm("-138.935485*(1/soluteDielectric-1/solventDielectric)*q1*q2*(1/f-"+str(1/cutoff)+");"
-                            "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))", CustomGBForce.ParticlePairNoExclusions)
+        if kappa > 0:
+            force.addEnergyTerm("-138.935485*(1/soluteDielectric-kappa/solventDielectric)*q1*q2*(1/f-"+str(1/cutoff)+");"
+                                "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))", CustomGBForce.ParticlePairNoExclusions)
+        else:
+            force.addEnergyTerm("-138.935485*(1/soluteDielectric-1/solventDielectric)*q1*q2*(1/f-"+str(1/cutoff)+");"
+                                "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))", CustomGBForce.ParticlePairNoExclusions)
 
 """
 Amber Equivalent: igb = 1
