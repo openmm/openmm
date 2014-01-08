@@ -123,7 +123,7 @@ private:
     /**
      * Evaluate log(x) using a lookup table for speed.
      */
-    fvec4 fastLog(fvec4 x);
+    fvec4 fastLog(const fvec4& x);
 };
 
 } // namespace OpenMM

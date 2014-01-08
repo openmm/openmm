@@ -33,6 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "sfmt/SFMT.h"
+#include "windowsExportCpu.h"
 #include <vector>
 
 namespace OpenMM {
@@ -40,7 +41,7 @@ namespace OpenMM {
 /**
  * This class provides a multithreaded random number generator.
  */
-class OPENMM_EXPORT CpuRandom {
+class OPENMM_EXPORT_CPU CpuRandom {
 public:
     CpuRandom();
     ~CpuRandom();

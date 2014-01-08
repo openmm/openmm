@@ -25,6 +25,7 @@
 #include "SimTKOpenMMCommon.h"
 #include "SimTKOpenMMUtilities.h"
 #include "CpuNonbondedForceVec8.h"
+#include "openmm/OpenMMException.h"
 #include "openmm/internal/hardware.h"
 
 using namespace std;
@@ -296,7 +297,7 @@ void CpuNonbondedForceVec8::getDeltaR(const float* posI, const fvec8& x, const f
     r2 = dx*dx + dy*dy + dz*dz;
 }
 
-fvec8 CpuNonbondedForceVec8::erfcApprox(fvec8 x) {
+fvec8 CpuNonbondedForceVec8::erfcApprox(const fvec8& x) {
     // This approximation for erfc is from Abramowitz and Stegun (1964) p. 299.  They cite the following as
     // the original source: C. Hastings, Jr., Approximations for Digital Computers (1955).  It has a maximum
     // error of 3e-7.
@@ -308,7 +309,7 @@ fvec8 CpuNonbondedForceVec8::erfcApprox(fvec8 x) {
     return 1.0f/(t*t);
 }
 
-fvec8 CpuNonbondedForceVec8::ewaldScaleFunction(fvec8 x) {
+fvec8 CpuNonbondedForceVec8::ewaldScaleFunction(const fvec8& x) {
     // Compute the tabulated Ewald scale factor: erfc(alpha*r) + 2*alpha*r*exp(-alpha*alpha*r*r)/sqrt(PI)
 
     fvec8 x1 = x*ewaldDXInv;

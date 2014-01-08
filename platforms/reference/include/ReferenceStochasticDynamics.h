@@ -26,10 +26,11 @@
 #define __ReferenceStochasticDynamics_H__
 
 #include "ReferenceDynamics.h"
+#include "openmm/internal/windowsExport.h"
 
 // ---------------------------------------------------------------------------------------
 
-class ReferenceStochasticDynamics : public ReferenceDynamics {
+class OPENMM_EXPORT ReferenceStochasticDynamics : public ReferenceDynamics {
 
    protected:
 

@@ -62,55 +62,55 @@ public:
     void store(float* v) const {
         _mm_storeu_ps(v, val);
     }
-    fvec4 operator+(fvec4 other) const {
+    fvec4 operator+(const fvec4& other) const {
         return _mm_add_ps(val, other);
     }
-    fvec4 operator-(fvec4 other) const {
+    fvec4 operator-(const fvec4& other) const {
         return _mm_sub_ps(val, other);
     }
-    fvec4 operator*(fvec4 other) const {
+    fvec4 operator*(const fvec4& other) const {
         return _mm_mul_ps(val, other);
     }
-    fvec4 operator/(fvec4 other) const {
+    fvec4 operator/(const fvec4& other) const {
         return _mm_div_ps(val, other);
     }
-    void operator+=(fvec4 other) {
+    void operator+=(const fvec4& other) {
         val = _mm_add_ps(val, other);
     }
-    void operator-=(fvec4 other) {
+    void operator-=(const fvec4& other) {
         val = _mm_sub_ps(val, other);
     }
-    void operator*=(fvec4 other) {
+    void operator*=(const fvec4& other) {
         val = _mm_mul_ps(val, other);
     }
-    void operator/=(fvec4 other) {
+    void operator/=(const fvec4& other) {
         val = _mm_div_ps(val, other);
     }
     fvec4 operator-() const {
         return _mm_sub_ps(_mm_set1_ps(0.0f), val);
     }
-    fvec4 operator&(fvec4 other) const {
+    fvec4 operator&(const fvec4& other) const {
         return _mm_and_ps(val, other);
     }
-    fvec4 operator|(fvec4 other) const {
+    fvec4 operator|(const fvec4& other) const {
         return _mm_or_ps(val, other);
     }
-    fvec4 operator==(fvec4 other) const {
+    fvec4 operator==(const fvec4& other) const {
         return _mm_cmpeq_ps(val, other);
     }
-    fvec4 operator!=(fvec4 other) const {
+    fvec4 operator!=(const fvec4& other) const {
         return _mm_cmpneq_ps(val, other);
     }
-    fvec4 operator>(fvec4 other) const {
+    fvec4 operator>(const fvec4& other) const {
         return _mm_cmpgt_ps(val, other);
     }
-    fvec4 operator<(fvec4 other) const {
+    fvec4 operator<(const fvec4& other) const {
         return _mm_cmplt_ps(val, other);
     }
-    fvec4 operator>=(fvec4 other) const {
+    fvec4 operator>=(const fvec4& other) const {
         return _mm_cmpge_ps(val, other);
     }
-    fvec4 operator<=(fvec4 other) const {
+    fvec4 operator<=(const fvec4& other) const {
         return _mm_cmple_ps(val, other);
     }
     operator ivec4() const;
@@ -139,49 +139,49 @@ public:
     void store(int* v) const {
         _mm_storeu_si128((__m128i*) v, val);
     }
-    ivec4 operator+(ivec4 other) const {
+    ivec4 operator+(const ivec4& other) const {
         return _mm_add_epi32(val, other);
     }
-    ivec4 operator-(ivec4 other) const {
+    ivec4 operator-(const ivec4& other) const {
         return _mm_sub_epi32(val, other);
     }
-    ivec4 operator*(ivec4 other) const {
+    ivec4 operator*(const ivec4& other) const {
         return _mm_mul_epi32(val, other);
     }
-    void operator+=(ivec4 other) {
+    void operator+=(const ivec4& other) {
         val = _mm_add_epi32(val, other);
     }
-    void operator-=(ivec4 other) {
+    void operator-=(const ivec4& other) {
         val = _mm_sub_epi32(val, other);
     }
-    void operator*=(ivec4 other) {
+    void operator*=(const ivec4& other) {
         val = _mm_mul_epi32(val, other);
     }
     ivec4 operator-() const {
         return _mm_sub_epi32(_mm_set1_epi32(0), val);
     }
-    ivec4 operator&(ivec4 other) const {
+    ivec4 operator&(const ivec4& other) const {
         return _mm_and_si128(val, other);
     }
-    ivec4 operator|(ivec4 other) const {
+    ivec4 operator|(const ivec4& other) const {
         return _mm_or_si128(val, other);
     }
-    ivec4 operator==(ivec4 other) const {
+    ivec4 operator==(const ivec4& other) const {
         return _mm_cmpeq_epi32(val, other);
     }
-    ivec4 operator!=(ivec4 other) const {
+    ivec4 operator!=(const ivec4& other) const {
         return _mm_xor_si128(*this==other, _mm_set1_epi32(0xFFFFFFFF));
     }
-    ivec4 operator>(ivec4 other) const {
+    ivec4 operator>(const ivec4& other) const {
         return _mm_cmpgt_epi32(val, other);
     }
-    ivec4 operator<(ivec4 other) const {
+    ivec4 operator<(const ivec4& other) const {
         return _mm_cmplt_epi32(val, other);
     }
-    ivec4 operator>=(ivec4 other) const {
+    ivec4 operator>=(const ivec4& other) const {
         return _mm_xor_si128(_mm_cmplt_epi32(val, other), _mm_set1_epi32(0xFFFFFFFF));
     }
-    ivec4 operator<=(ivec4 other) const {
+    ivec4 operator<=(const ivec4& other) const {
         return _mm_xor_si128(_mm_cmpgt_epi32(val, other), _mm_set1_epi32(0xFFFFFFFF));
     }
     operator fvec4() const;
@@ -199,40 +199,40 @@ inline ivec4::operator fvec4() const {
 
 // Functions that operate on fvec4s.
 
-static inline fvec4 floor(fvec4 v) {
+static inline fvec4 floor(const fvec4& v) {
     return fvec4(_mm_floor_ps(v.val));
 }
 
-static inline fvec4 ceil(fvec4 v) {
+static inline fvec4 ceil(const fvec4& v) {
     return fvec4(_mm_ceil_ps(v.val));
 }
 
-static inline fvec4 round(fvec4 v) {
+static inline fvec4 round(const fvec4& v) {
     return fvec4(_mm_round_ps(v.val, _MM_FROUND_TO_NEAREST_INT));
 }
 
-static inline fvec4 min(fvec4 v1, fvec4 v2) {
+static inline fvec4 min(const fvec4& v1, const fvec4& v2) {
     return fvec4(_mm_min_ps(v1.val, v2.val));
 }
 
-static inline fvec4 max(fvec4 v1, fvec4 v2) {
+static inline fvec4 max(const fvec4& v1, const fvec4& v2) {
     return fvec4(_mm_max_ps(v1.val, v2.val));
 }
 
-static inline fvec4 abs(fvec4 v) {
+static inline fvec4 abs(const fvec4& v) {
     static const __m128 mask = _mm_castsi128_ps(_mm_set1_epi32(0x7FFFFFFF));
     return fvec4(_mm_and_ps(v.val, mask));
 }
 
-static inline fvec4 sqrt(fvec4 v) {
+static inline fvec4 sqrt(const fvec4& v) {
     return fvec4(_mm_sqrt_ps(v.val));
 }
 
-static inline float dot3(fvec4 v1, fvec4 v2) {
+static inline float dot3(const fvec4& v1, const fvec4& v2) {
     return _mm_cvtss_f32(_mm_dp_ps(v1, v2, 0x71));
 }
 
-static inline float dot4(fvec4 v1, fvec4 v2) {
+static inline float dot4(const fvec4& v1, const fvec4& v2) {
     return _mm_cvtss_f32(_mm_dp_ps(v1, v2, 0xF1));
 }
 
@@ -242,43 +242,43 @@ static inline void transpose(fvec4& v1, fvec4& v2, fvec4& v3, fvec4& v4) {
 
 // Functions that operate on ivec4s.
 
-static inline ivec4 min(ivec4 v1, ivec4 v2) {
+static inline ivec4 min(const ivec4& v1, const ivec4& v2) {
     return ivec4(_mm_min_epi32(v1.val, v2.val));
 }
 
-static inline ivec4 max(ivec4 v1, ivec4 v2) {
+static inline ivec4 max(const ivec4& v1, const ivec4& v2) {
     return ivec4(_mm_max_epi32(v1.val, v2.val));
 }
 
-static inline ivec4 abs(ivec4 v) {
+static inline ivec4 abs(const ivec4& v) {
     return ivec4(_mm_abs_epi32(v.val));
 }
 
-static inline bool any(ivec4 v) {
+static inline bool any(const ivec4& v) {
     return !_mm_test_all_zeros(v, _mm_set1_epi32(0xFFFFFFFF));
 }
 
 // Mathematical operators involving a scalar and a vector.
 
-static inline fvec4 operator+(float v1, fvec4 v2) {
+static inline fvec4 operator+(float v1, const fvec4& v2) {
     return fvec4(v1)+v2;
 }
 
-static inline fvec4 operator-(float v1, fvec4 v2) {
+static inline fvec4 operator-(float v1, const fvec4& v2) {
     return fvec4(v1)-v2;
 }
 
-static inline fvec4 operator*(float v1, fvec4 v2) {
+static inline fvec4 operator*(float v1, const fvec4& v2) {
     return fvec4(v1)*v2;
 }
 
-static inline fvec4 operator/(float v1, fvec4 v2) {
+static inline fvec4 operator/(float v1, const fvec4& v2) {
     return fvec4(v1)/v2;
 }
 
 // Operations for blending fvec4s based on an ivec4.
 
-static inline fvec4 blend(fvec4 v1, fvec4 v2, ivec4 mask) {
+static inline fvec4 blend(const fvec4& v1, const fvec4& v2, const ivec4& mask) {
     return fvec4(_mm_blendv_ps(v1.val, v2.val, _mm_castsi128_ps(mask.val)));
 }
 

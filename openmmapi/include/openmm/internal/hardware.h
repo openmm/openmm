@@ -44,6 +44,7 @@
    #include <dlfcn.h>
 #else
    #ifdef WIN32
+      #define NOMINMAX
       #include <windows.h>
    #else
       #include <dlfcn.h>

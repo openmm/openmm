@@ -32,7 +32,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/serialization/internal/windowsExportAmoebaSerialization.h"
+#include "openmm/internal/windowsExportAmoeba.h"
 #include "openmm/serialization/SerializationProxy.h"
 
 namespace OpenMM {
@@ -41,7 +41,7 @@ namespace OpenMM {
  * This is a proxy for serializing AmoebaGeneralizedKirkwoodForce objects.
  */
 
-class OPENMM_EXPORT_AMOEBA_SERIALIZATION AmoebaGeneralizedKirkwoodForceProxy : public SerializationProxy {
+class OPENMM_EXPORT_AMOEBA AmoebaGeneralizedKirkwoodForceProxy : public SerializationProxy {
 public:
     AmoebaGeneralizedKirkwoodForceProxy();
     void serialize(const void* object, SerializationNode& node) const;

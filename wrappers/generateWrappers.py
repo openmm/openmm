@@ -1,3 +1,4 @@
+from __future__ import print_function
 import sys, os
 import time
 import getopt
@@ -303,17 +304,17 @@ class CHeaderGenerator(WrapperGenerator):
         return type
 
     def writeOutput(self):
-        print >>self.out, """
+        print("""
 #ifndef OPENMM_CWRAPPER_H_
 #define OPENMM_CWRAPPER_H_
 
 #ifndef OPENMM_EXPORT
 #define OPENMM_EXPORT
 #endif
-"""
+""", file=self.out)
         self.writeGlobalConstants()
         self.writeTypeDeclarations()
-        print >>self.out, """
+        print("""
 typedef struct OpenMM_Vec3Array_struct OpenMM_Vec3Array;
 typedef struct OpenMM_StringArray_struct OpenMM_StringArray;
 typedef struct OpenMM_BondArray_struct OpenMM_BondArray;
@@ -366,12 +367,12 @@ extern OPENMM_EXPORT double OpenMM_ParameterArray_get(const OpenMM_ParameterArra
 
 /* OpenMM_PropertyArray */
 extern OPENMM_EXPORT int OpenMM_PropertyArray_getSize(const OpenMM_PropertyArray* array);
-extern OPENMM_EXPORT const char* OpenMM_PropertyArray_get(const OpenMM_PropertyArray* array, const char* name);"""
+extern OPENMM_EXPORT const char* OpenMM_PropertyArray_get(const OpenMM_PropertyArray* array, const char* name);""", file=self.out)
 
         for type in ('double', 'int'):
             name = 'OpenMM_%sArray' % type.capitalize()
             values = {'type':type, 'name':name}
-            print >>self.out, """
+            print("""
 /* %(name)s */
 extern OPENMM_EXPORT %(name)s* %(name)s_create(int size);
 extern OPENMM_EXPORT void %(name)s_destroy(%(name)s* array);
@@ -379,19 +380,19 @@ extern OPENMM_EXPORT int %(name)s_getSize(const %(name)s* array);
 extern OPENMM_EXPORT void %(name)s_resize(%(name)s* array, int size);
 extern OPENMM_EXPORT void %(name)s_append(%(name)s* array, %(type)s value);
 extern OPENMM_EXPORT void %(name)s_set(%(name)s* array, int index, %(type)s value);
-extern OPENMM_EXPORT %(type)s %(name)s_get(const %(name)s* array, int index);""" % values
+extern OPENMM_EXPORT %(type)s %(name)s_get(const %(name)s* array, int index);""" % values, file=self.out)
 
         for type in ('int',):
             name = 'OpenMM_%sSet' % type.capitalize()
             values = {'type':type, 'name':name}
-            print >>self.out, """
+            print("""
 /* %(name)s */
 extern OPENMM_EXPORT %(name)s* %(name)s_create();
 extern OPENMM_EXPORT void %(name)s_destroy(%(name)s* set);
 extern OPENMM_EXPORT int %(name)s_getSize(const %(name)s* set);
-extern OPENMM_EXPORT void %(name)s_insert(%(name)s* set, %(type)s value);""" % values
+extern OPENMM_EXPORT void %(name)s_insert(%(name)s* set, %(type)s value);""" % values, file=self.out)
 
-        print >>self.out, """
+        print("""
 /* These methods need to be handled specially, since their C++ APIs cannot be directly translated to C.
    Unlike the C++ versions, the return value is allocated on the heap, and you must delete it yourself. */
 extern OPENMM_EXPORT OpenMM_State* OpenMM_Context_getState(const OpenMM_Context* target, int types, int enforcePeriodicBox);
@@ -401,16 +402,16 @@ extern OPENMM_EXPORT char* OpenMM_XmlSerializer_serializeState(const OpenMM_Stat
 extern OPENMM_EXPORT char* OpenMM_XmlSerializer_serializeIntegrator(const OpenMM_Integrator* integrator);
 extern OPENMM_EXPORT OpenMM_System* OpenMM_XmlSerializer_deserializeSystem(const char* xml);
 extern OPENMM_EXPORT OpenMM_State* OpenMM_XmlSerializer_deserializeState(const char* xml);
-extern OPENMM_EXPORT OpenMM_Integrator* OpenMM_XmlSerializer_deserializeIntegrator(const char* xml);"""
+extern OPENMM_EXPORT OpenMM_Integrator* OpenMM_XmlSerializer_deserializeIntegrator(const char* xml);""", file=self.out)
 
         self.writeClasses()
 
-        print >>self.out, """
+        print("""
 #if defined(__cplusplus)
 }
 #endif
 
-#endif /*OPENMM_CWRAPPER_H_*/"""
+#endif /*OPENMM_CWRAPPER_H_*/""", file=self.out)
 
 
 class CSourceGenerator(WrapperGenerator):
@@ -630,7 +631,7 @@ class CSourceGenerator(WrapperGenerator):
         return 'reinterpret_cast<%s>(%s)' % (type, value)
 
     def writeOutput(self):
-        print >>self.out, """
+        print("""
 #include "OpenMM.h"
 #include "OpenMMCWrapper.h"
 #include <cstdlib>
@@ -742,12 +743,12 @@ OPENMM_EXPORT const char* OpenMM_PropertyArray_get(const OpenMM_PropertyArray* a
     if (iter == params->end())
         throw OpenMMException("OpenMM_PropertyArray_get: No such property");
     return iter->second.c_str();
-}"""
+}""", file=self.out)
 
         for type in ('double', 'int'):
             name = 'OpenMM_%sArray' % type.capitalize()
             values = {'type':type, 'name':name}
-            print >>self.out, """
+            print("""
 /* %(name)s */
 OPENMM_EXPORT %(name)s* %(name)s_create(int size) {
     return reinterpret_cast<%(name)s*>(new vector<%(type)s>(size));
@@ -769,12 +770,12 @@ OPENMM_EXPORT void %(name)s_set(%(name)s* array, int index, %(type)s value) {
 }
 OPENMM_EXPORT %(type)s %(name)s_get(const %(name)s* array, int index) {
     return (*reinterpret_cast<const vector<%(type)s>*>(array))[index];
-}""" % values
+}""" % values, file=self.out)
 
         for type in ('int',):
             name = 'OpenMM_%sSet' % type.capitalize()
             values = {'type':type, 'name':name}
-            print >>self.out, """
+            print("""
 /* %(name)s */
 OPENMM_EXPORT %(name)s* %(name)s_create() {
     return reinterpret_cast<%(name)s*>(new set<%(type)s>());
@@ -787,9 +788,9 @@ OPENMM_EXPORT int %(name)s_getSize(const %(name)s* s) {
 }
 OPENMM_EXPORT void %(name)s_insert(%(name)s* s, %(type)s value) {
     reinterpret_cast<set<%(type)s>*>(s)->insert(value);
-}""" % values
+}""" % values, file=self.out)
 
-        print >>self.out, """
+        print("""
 /* These methods need to be handled specially, since their C++ APIs cannot be directly translated to C.
    Unlike the C++ versions, the return value is allocated on the heap, and you must delete it yourself. */
 OPENMM_EXPORT OpenMM_State* OpenMM_Context_getState(const OpenMM_Context* target, int types, int enforcePeriodicBox) {
@@ -836,9 +837,9 @@ OPENMM_EXPORT OpenMM_Integrator* OpenMM_XmlSerializer_deserializeIntegrator(cons
     string input(xml);
     stringstream stream(input);
     return reinterpret_cast<OpenMM_Integrator*>(OpenMM::XmlSerializer::deserialize<OpenMM::Integrator>(stream));
-}"""
+}""", file=self.out)
         self.writeClasses()
-        print >>self.out, "}\n"
+        print("}\n", file=self.out)
 
 class FortranHeaderGenerator(WrapperGenerator):
     """This class generates the header file for the Fortran API wrappers."""
@@ -1049,13 +1050,13 @@ class FortranHeaderGenerator(WrapperGenerator):
         return type
 
     def writeOutput(self):
-        print >>self.out, """
+        print("""
 MODULE OpenMM_Types
     implicit none
-"""
+""", file=self.out)
         self.writeGlobalConstants()
         self.writeTypeDeclarations()
-        print >>self.out, """
+        print("""
     type OpenMM_Vec3Array
         integer*8 :: handle = 0
     end type
@@ -1091,10 +1092,10 @@ MODULE OpenMM_Types
     ! Enumerations
 
     integer*4, parameter :: OpenMM_False = 0
-    integer*4, parameter :: OpenMM_True = 1"""
+    integer*4, parameter :: OpenMM_True = 1""", file=self.out)
         for classNode in self._orderedClassNodes:
             self.writeEnumerations(classNode)
-        print >>self.out, """
+        print("""
 END MODULE OpenMM_Types
 
 MODULE OpenMM
@@ -1250,12 +1251,12 @@ MODULE OpenMM
             type (OpenMM_PropertyArray) target
             character(*) name
             character(*) result
-        end subroutine"""
+        end subroutine""", file=self.out)
 
         arrayTypes = {'OpenMM_DoubleArray':'real*8', 'OpenMM_IntArray':'integer*4'}
         for name in arrayTypes:
             values = {'type':arrayTypes[name], 'name':name}
-            print >>self.out, """
+            print("""
         ! %(name)s
         subroutine %(name)s_create(result, size)
             use OpenMM_Types; implicit none
@@ -1292,9 +1293,9 @@ MODULE OpenMM
             type (%(name)s) target
             integer*4 index
             %(type)s result
-        end subroutine""" % values
+        end subroutine""" % values, file=self.out)
         
-        print >>self.out, """
+        print("""
         ! These methods need to be handled specially, since their C++ APIs cannot be directly translated to Fortran.
         ! Unlike the C++ versions, the return value is allocated on the heap, and you must delete it yourself.
         subroutine OpenMM_Context_getState(target, types, enforcePeriodicBox, result)
@@ -1341,11 +1342,11 @@ MODULE OpenMM
             use OpenMM_Types; implicit none
             character(*) xml
             type(OpenMM_Integrator) result
-        end subroutine"""
+        end subroutine""", file=self.out)
         
         self.writeClasses()
         
-        print >>self.out, """
+        print("""
     end interface
 
 contains
@@ -1404,7 +1405,7 @@ contains
         end do
     end subroutine
 
-END MODULE OpenMM"""
+END MODULE OpenMM""", file=self.out)
 
 
 class FortranSourceGenerator(WrapperGenerator):
@@ -1505,7 +1506,7 @@ class FortranSourceGenerator(WrapperGenerator):
             if methodName in (shortClassName, destructorName):
                 continue
             if '~' in methodName:
-                print '***', methodName, destructorName
+                print('***', methodName, destructorName)
             if self.shouldHideMethod(methodNode):
                 continue
             isConstMethod = (methodNode.attrib['const'] == 'yes')
@@ -1674,7 +1675,7 @@ class FortranSourceGenerator(WrapperGenerator):
         return False
 
     def writeOutput(self):
-        print >>self.out, """
+        print("""
 #include "OpenMM.h"
 #include "OpenMMCWrapper.h"
 #include <cstring>
@@ -1883,12 +1884,12 @@ OPENMM_EXPORT const char* openmm_propertyarray_get_(const OpenMM_PropertyArray* 
 }
 OPENMM_EXPORT const char* OPENMM_PROPERTYARRAY_GET(const OpenMM_PropertyArray* const& array, const char* name, int length) {
     return OpenMM_PropertyArray_get(array, makeString(name, length).c_str());
-}"""
+}""", file=self.out)
 
         for type in ('double', 'int'):
             name = 'OpenMM_%sArray' % type.capitalize()
             values = {'type':type, 'name':name, 'name_lower':name.lower(), 'name_upper':name.upper()}
-            print >>self.out, """
+            print("""
 /* %(name)s */
 OPENMM_EXPORT void %(name_lower)s_create_(%(name)s*& result, const int& size) {
     result = %(name)s_create(size);
@@ -1933,12 +1934,12 @@ OPENMM_EXPORT void %(name_lower)s_get_(const %(name)s* const& array, const int& 
 }
 OPENMM_EXPORT void %(name_upper)s_GET(const %(name)s* const& array, const int& index, %(type)s& result) {
     result = %(name)s_get(array, index-1);
-}""" % values
+}""" % values, file=self.out)
 
         for type in ('int', ):
             name = 'OpenMM_%sSet' % type.capitalize()
             values = {'type':type, 'name':name, 'name_lower':name.lower(), 'name_upper':name.upper()}
-            print >>self.out, """
+            print("""
 /* %(name)s */
 OPENMM_EXPORT void %(name_lower)s_create_(%(name)s*& result) {
     result = %(name)s_create();
@@ -1965,9 +1966,9 @@ OPENMM_EXPORT void %(name_lower)s_insert_(%(name)s* const& array, const %(type)s
 }
 OPENMM_EXPORT void %(name_upper)s_INSERT(%(name)s* const& array, const %(type)s& value) {
     %(name)s_insert(array, value);
-}""" % values
+}""" % values, file=self.out)
 
-        print >>self.out, """
+        print("""
 /* These methods need to be handled specially, since their C++ APIs cannot be directly translated to C.
    Unlike the C++ versions, the return value is allocated on the heap, and you must delete it yourself. */
 OPENMM_EXPORT void openmm_context_getstate_(const OpenMM_Context*& target, int const& types, int const& enforcePeriodicBox, OpenMM_State*& result) {
@@ -2017,10 +2018,10 @@ OPENMM_EXPORT void openmm_xmlserializer_deserializeintegrator_(const char* xml, 
 }
 OPENMM_EXPORT void OPENMM_XMLSERIALIZER_DESERIALIZEINTEGRATOR(const char* xml, OpenMM_Integrator*& result, int length) {
     result = OpenMM_XmlSerializer_deserializeIntegrator(makeString(xml, length).c_str());
-}"""
+}""", file=self.out)
 
         self.writeClasses()
-        print >>self.out, "}"
+        print("}", file=self.out)
 
 inputDirname = sys.argv[1]
 builder = CHeaderGenerator(inputDirname, open(os.path.join(sys.argv[2], 'OpenMMCWrapper.h'), 'w'))
