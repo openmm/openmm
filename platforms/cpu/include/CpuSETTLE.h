@@ -33,6 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "ReferenceSETTLEAlgorithm.h"
+#include "windowsExportCpu.h"
 #include "openmm/System.h"
 #include "openmm/internal/ThreadPool.h"
 #include <vector>
@@ -42,7 +43,7 @@ namespace OpenMM {
 /**
  * This class uses multiple ReferenceSETTLEAlgorithm objects to execute the algorithm in parallel.
  */
-class OPENMM_EXPORT CpuSETTLE : public ReferenceConstraintAlgorithm {
+class OPENMM_EXPORT_CPU CpuSETTLE : public ReferenceConstraintAlgorithm {
 public:
     class ApplyToPositionsTask;
     class ApplyToVelocitiesTask;

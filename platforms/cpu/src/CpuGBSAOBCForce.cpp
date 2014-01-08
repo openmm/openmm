@@ -26,7 +26,9 @@
 #include "SimTKOpenMMRealType.h"
 #include "openmm/internal/vectorize.h"
 #include "gmx_atomic.h"
+#include <algorithm>
 #include <cmath>
+#include <cstdlib>
 
 using namespace std;
 using namespace OpenMM;
@@ -391,7 +393,7 @@ void CpuGBSAOBCForce::getDeltaR(const fvec4& posI, const fvec4& x, const fvec4& 
     r2 = dx*dx + dy*dy + dz*dz;
 }
 
-fvec4 CpuGBSAOBCForce::fastLog(fvec4 x) {
+fvec4 CpuGBSAOBCForce::fastLog(const fvec4& x) {
     // Evaluate log(x) using a lookup table for speed.
 
     if (any((x < TABLE_MIN) | (x >= TABLE_MAX)))

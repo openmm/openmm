@@ -32,6 +32,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#define NOMINMAX
 #include "windowsExport.h"
 #include <pthread.h>
 #include <vector>

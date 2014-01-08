@@ -65,11 +65,10 @@
 #include "openmm/serialization/AmoebaTorsionTorsionForceProxy.h"
 #include "openmm/serialization/AmoebaVdwForceProxy.h"
 #include "openmm/serialization/AmoebaWcaDispersionForceProxy.h"
-#include "openmm/serialization/internal/windowsExportAmoebaSerialization.h"
 
 #if defined(WIN32)
     #include <windows.h>
-    extern "C" OPENMM_EXPORT_AMOEBA_SERIALIZATION void registerAmoebaSerializationProxies();
+    extern "C" OPENMM_EXPORT_AMOEBA void registerAmoebaSerializationProxies();
     BOOL WINAPI DllMain(HANDLE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved) {
         if (ul_reason_for_call == DLL_PROCESS_ATTACH)
             registerAmoebaSerializationProxies();
@@ -81,7 +80,7 @@
 
 using namespace OpenMM;
 
-extern "C" OPENMM_EXPORT_AMOEBA_SERIALIZATION void registerAmoebaSerializationProxies() {
+extern "C" OPENMM_EXPORT_AMOEBA void registerAmoebaSerializationProxies() {
     SerializationProxy::registerProxy(typeid(AmoebaGeneralizedKirkwoodForce),         new AmoebaGeneralizedKirkwoodForceProxy());
     SerializationProxy::registerProxy(typeid(AmoebaBondForce),                new AmoebaBondForceProxy());
     SerializationProxy::registerProxy(typeid(AmoebaAngleForce),               new AmoebaAngleForceProxy());

@@ -74,12 +74,12 @@ protected:
       /**
        * Compute a fast approximation to erfc(x).
        */
-      static fvec4 erfcApprox(fvec4 x);
+      static fvec4 erfcApprox(const fvec4& x);
       
       /**
        * Evaluate the scale factor used with Ewald and PME: erfc(alpha*r) + 2*alpha*r*exp(-alpha*alpha*r*r)/sqrt(PI)
        */
-      fvec4 ewaldScaleFunction(fvec4 x);
+      fvec4 ewaldScaleFunction(const fvec4& x);
 };
 
 } // namespace OpenMM

@@ -30,6 +30,7 @@
 #include "ReferenceForce.h"
 #include "ReferencePME.h"
 #include "gmx_atomic.h"
+#include <algorithm>
 
 // In case we're using some primitive version of Visual Studio this will
 // make sure that erf() and erfc() are defined.
@@ -182,7 +183,7 @@ void CpuNonbondedForce::calculateReciprocalIxn(int numberOfAtoms, float* posq, c
 
     static const float epsilon     =  1.0;
 
-    int kmax                            = (ewald ? std::max(numRx, std::max(numRy,numRz)) : 0);
+    int kmax                       = (ewald ? max(numRx, max(numRy,numRz)) : 0);
     float factorEwald              = -1 / (4*alphaEwald*alphaEwald);
     float TWO_PI                   = 2.0 * PI_M;
     float recipCoeff               = (float)(ONE_4PI_EPS0*4*PI_M/(periodicBoxSize[0] * periodicBoxSize[1] * periodicBoxSize[2]) /epsilon);

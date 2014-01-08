@@ -25,9 +25,10 @@
 #ifndef OPENMM_CPU_NONBONDED_FORCE_VEC8_H__
 #define OPENMM_CPU_NONBONDED_FORCE_VEC8_H__
 
+#include "CpuNonbondedForce.h"
+
 #ifdef __AVX__
 
-#include "CpuNonbondedForce.h"
 #include "openmm/internal/vectorize8.h"
 
 // ---------------------------------------------------------------------------------------
@@ -72,12 +73,12 @@ protected:
       /**
        * Compute a fast approximation to erfc(x).
        */
-      static fvec8 erfcApprox(fvec8 x);
+      static fvec8 erfcApprox(const fvec8& x);
       
       /**
        * Evaluate the scale factor used with Ewald and PME: erfc(alpha*r) + 2*alpha*r*exp(-alpha*alpha*r*r)/sqrt(PI)
        */
-      fvec8 ewaldScaleFunction(fvec8 x);
+      fvec8 ewaldScaleFunction(const fvec8& x);
 };
 
 } // namespace OpenMM

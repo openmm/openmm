@@ -1,3 +1,4 @@
+from __future__ import print_function
 import sys, os
 import time
 import getopt
@@ -305,16 +306,16 @@ class CHeaderGenerator(WrapperGenerator):
         return type
 
     def writeOutput(self):
-        print >>self.out, """
+        print("""
 #ifndef AMOEBA_OPENMM_CWRAPPER_H_
 #define AMOEBA_OPENMM_CWRAPPER_H_
 
 #ifndef OPENMM_EXPORT_AMOEBA
 #define OPENMM_EXPORT_AMOEBA
-#endif"""
+#endif""", file=self.out)
         self.writeGlobalConstants()
         self.writeTypeDeclarations()
-        print >>self.out, """
+        print("""
 typedef struct OpenMM_2D_IntArray_struct OpenMM_2D_IntArray;
 typedef struct OpenMM_3D_DoubleArray_struct OpenMM_3D_DoubleArray;
 
@@ -325,16 +326,16 @@ extern "C" {
 /* OpenMM_3D_DoubleArray */
 OPENMM_EXPORT_AMOEBA OpenMM_3D_DoubleArray* OpenMM_3D_DoubleArray_create(int size1, int size2, int size3);
 OPENMM_EXPORT_AMOEBA void OpenMM_3D_DoubleArray_set(OpenMM_3D_DoubleArray* array, int index1, int index2, OpenMM_DoubleArray* values);
-OPENMM_EXPORT_AMOEBA void OpenMM_3D_DoubleArray_destroy( OpenMM_3D_DoubleArray* array);"""
+OPENMM_EXPORT_AMOEBA void OpenMM_3D_DoubleArray_destroy( OpenMM_3D_DoubleArray* array);""", file=self.out)
 
         self.writeClasses()
 
-        print >>self.out, """
+        print("""
 #if defined(__cplusplus)
 }
 #endif
 
-#endif /*AMOEBA_OPENMM_CWRAPPER_H_*/"""
+#endif /*AMOEBA_OPENMM_CWRAPPER_H_*/""", file=self.out)
 
 
 class CSourceGenerator(WrapperGenerator):
@@ -556,7 +557,7 @@ class CSourceGenerator(WrapperGenerator):
         return 'reinterpret_cast<%s>(%s)' % (type, value)
 
     def writeOutput(self):
-        print >>self.out, """
+        print("""
 #include "OpenMM.h"
 #include "OpenMMAmoeba.h"
 #include "../../../wrappers/OpenMMCWrapper.h"
@@ -634,10 +635,10 @@ OPENMM_EXPORT_AMOEBA void OpenMM_3D_DoubleArray_set(OpenMM_3D_DoubleArray* array
 
 OPENMM_EXPORT_AMOEBA void OpenMM_3D_DoubleArray_destroy( OpenMM_3D_DoubleArray* array) {
     delete reinterpret_cast<std::vector<std::vector<std::vector<double> > >*>(array);
-}"""
+}""", file=self.out)
 
         self.writeClasses()
-        print >>self.out, "}\n"
+        print("}\n", file=self.out)
 
 class FortranHeaderGenerator(WrapperGenerator):
     """This class generates the header file for the Fortran API wrappers."""
@@ -845,33 +846,33 @@ class FortranHeaderGenerator(WrapperGenerator):
         return type
 
     def writeOutput(self):
-        print >>self.out, """
+        print("""
 MODULE OpenMM_Types
     implicit none
-"""
+""", file=self.out)
         self.writeGlobalConstants()
         self.writeTypeDeclarations()
-        print >>self.out, """
+        print("""
     ! Enumerations
 
     integer*4, parameter :: OpenMM_False = 0
-    integer*4, parameter :: OpenMM_True = 1"""
+    integer*4, parameter :: OpenMM_True = 1""", file=self.out)
 
         for classNode in self._orderedClassNodes:
             self.writeEnumerations(classNode)
-        print >>self.out, """
+        print("""
 END MODULE OpenMM_Types
 
 MODULE OpenMM
     use OpenMM_Types; implicit none
     interface
-"""
+""", file=self.out)
         
         self.writeClasses()
         
-        print >>self.out, """
+        print("""
     end interface
-END MODULE OpenMM"""
+END MODULE OpenMM""", file=self.out)
 
 
 class FortranSourceGenerator(WrapperGenerator):
@@ -974,7 +975,7 @@ class FortranSourceGenerator(WrapperGenerator):
             if methodName in (shortClassName, destructorName):
                 continue
             if '~' in methodName:
-                print '***', methodName, destructorName
+                print('***', methodName, destructorName)
             if self.shouldHideMethod(methodNode):
                 continue
             isConstMethod = (methodNode.attrib['const'] == 'yes')
@@ -1143,7 +1144,7 @@ class FortranSourceGenerator(WrapperGenerator):
         return False
 
     def writeOutput(self):
-        print >>self.out, """
+        print("""
 #include "OpenMM.h"
 #include "OpenMMAmoeba.h"
 #include "../../../wrappers/OpenMMCWrapper.h"
@@ -1171,10 +1172,10 @@ static string makeString(const char* fsrc, int length) {
 }
 
 extern "C" {
-"""
+""", file=self.out)
 
         self.writeClasses()
-        print >>self.out, "}"
+        print("}", file=self.out)
 
 inputDirname = sys.argv[1]
 builder = CHeaderGenerator(inputDirname, open(os.path.join(sys.argv[2], 'AmoebaOpenMMCWrapper.h'), 'w'))

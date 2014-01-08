@@ -32,8 +32,8 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/serialization/internal/windowsExportDrudeSerialization.h"
 #include "openmm/serialization/SerializationProxy.h"
+#include "openmm/internal/windowsExportDrude.h"
 
 namespace OpenMM {
 
@@ -41,7 +41,7 @@ namespace OpenMM {
  * This is a proxy for serializing DrudeForce objects.
  */
 
-class OPENMM_EXPORT_DRUDE_SERIALIZATION DrudeForceProxy : public SerializationProxy {
+class OPENMM_EXPORT_DRUDE DrudeForceProxy : public SerializationProxy {
 public:
     DrudeForceProxy();
     void serialize(const void* object, SerializationNode& node) const;

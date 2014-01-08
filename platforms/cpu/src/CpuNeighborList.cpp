@@ -154,7 +154,7 @@ public:
         return VoxelIndex(x, y);
     }
 
-    void getNeighbors(vector<int>& neighbors, int blockIndex, fvec4 blockCenter, fvec4 blockWidth, const vector<int>& sortedAtoms, vector<char>& exclusions, float maxDistance, const vector<int>& blockAtoms, const float* atomLocations, const vector<VoxelIndex>& atomVoxelIndex) const {
+    void getNeighbors(vector<int>& neighbors, int blockIndex, const fvec4& blockCenter, const fvec4& blockWidth, const vector<int>& sortedAtoms, vector<char>& exclusions, float maxDistance, const vector<int>& blockAtoms, const float* atomLocations, const vector<VoxelIndex>& atomVoxelIndex) const {
         neighbors.resize(0);
         exclusions.resize(0);
         fvec4 boxSize(periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2], 0);
