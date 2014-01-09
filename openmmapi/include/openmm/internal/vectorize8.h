@@ -201,13 +201,13 @@ static inline void transpose(const fvec4& in1, const fvec4& in2, const fvec4& in
     fvec4 i5 = in5, i6 = in6, i7 = in7, i8 = in8;
     _MM_TRANSPOSE4_PS(i1, i2, i3, i4);
     _MM_TRANSPOSE4_PS(i5, i6, i7, i8);
-    out1 = _mm256_castps128_ps256(in1);
+    out1 = _mm256_castps128_ps256(i1);
     out1 = _mm256_insertf128_ps(out1, i5, 1);
-    out2 = _mm256_castps128_ps256(in2);
+    out2 = _mm256_castps128_ps256(i2);
     out2 = _mm256_insertf128_ps(out2, i6, 1);
-    out3 = _mm256_castps128_ps256(in3);
+    out3 = _mm256_castps128_ps256(i3);
     out3 = _mm256_insertf128_ps(out3, i7, 1);
-    out4 = _mm256_castps128_ps256(in4);
+    out4 = _mm256_castps128_ps256(i4);
     out4 = _mm256_insertf128_ps(out4, i8, 1);
 }
 
