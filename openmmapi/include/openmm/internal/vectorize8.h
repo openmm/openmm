@@ -63,55 +63,55 @@ public:
     void store(float* v) const {
         _mm256_storeu_ps(v, val);
     }
-    fvec8 operator+(fvec8 other) const {
+    fvec8 operator+(const fvec8& other) const {
         return _mm256_add_ps(val, other);
     }
-    fvec8 operator-(fvec8 other) const {
+    fvec8 operator-(const fvec8& other) const {
         return _mm256_sub_ps(val, other);
     }
-    fvec8 operator*(fvec8 other) const {
+    fvec8 operator*(const fvec8& other) const {
         return _mm256_mul_ps(val, other);
     }
-    fvec8 operator/(fvec8 other) const {
+    fvec8 operator/(const fvec8& other) const {
         return _mm256_div_ps(val, other);
     }
-    void operator+=(fvec8 other) {
+    void operator+=(const fvec8& other) {
         val = _mm256_add_ps(val, other);
     }
-    void operator-=(fvec8 other) {
+    void operator-=(const fvec8& other) {
         val = _mm256_sub_ps(val, other);
     }
-    void operator*=(fvec8 other) {
+    void operator*=(const fvec8& other) {
         val = _mm256_mul_ps(val, other);
     }
-    void operator/=(fvec8 other) {
+    void operator/=(const fvec8& other) {
         val = _mm256_div_ps(val, other);
     }
     fvec8 operator-() const {
         return _mm256_sub_ps(_mm256_set1_ps(0.0f), val);
     }
-    fvec8 operator&(fvec8 other) const {
+    fvec8 operator&(const fvec8& other) const {
         return _mm256_and_ps(val, other);
     }
-    fvec8 operator|(fvec8 other) const {
+    fvec8 operator|(const fvec8& other) const {
         return _mm256_or_ps(val, other);
     }
-    fvec8 operator==(fvec8 other) const {
+    fvec8 operator==(const fvec8& other) const {
         return _mm256_cmp_ps(val, other, _CMP_EQ_OQ);
     }
-    fvec8 operator!=(fvec8 other) const {
+    fvec8 operator!=(const fvec8& other) const {
         return _mm256_cmp_ps(val, other, _CMP_NEQ_OQ);
     }
-    fvec8 operator>(fvec8 other) const {
+    fvec8 operator>(const fvec8& other) const {
         return _mm256_cmp_ps(val, other, _CMP_GT_OQ);
     }
-    fvec8 operator<(fvec8 other) const {
+    fvec8 operator<(const fvec8& other) const {
         return _mm256_cmp_ps(val, other, _CMP_LT_OQ);
     }
-    fvec8 operator>=(fvec8 other) const {
+    fvec8 operator>=(const fvec8& other) const {
         return _mm256_cmp_ps(val, other, _CMP_GE_OQ);
     }
-    fvec8 operator<=(fvec8 other) const {
+    fvec8 operator<=(const fvec8& other) const {
         return _mm256_cmp_ps(val, other, _CMP_LE_OQ);
     }
     operator ivec8() const;
@@ -141,10 +141,10 @@ public:
     void store(int* v) const {
         _mm256_storeu_si256((__m256i*) v, val);
     }
-    ivec8 operator&(ivec8 other) const {
+    ivec8 operator&(const ivec8& other) const {
         return _mm256_castps_si256(_mm256_and_ps(_mm256_castsi256_ps(val), _mm256_castsi256_ps(other.val)));
     }
-    ivec8 operator|(ivec8 other) const {
+    ivec8 operator|(const ivec8& other) const {
         return _mm256_castps_si256(_mm256_or_ps(_mm256_castsi256_ps(val), _mm256_castsi256_ps(other.val)));
     }
     operator fvec8() const;
@@ -162,54 +162,56 @@ inline ivec8::operator fvec8() const {
 
 // Functions that operate on fvec8s.
 
-static inline fvec8 floor(fvec8 v) {
-    return fvec8(_mm256_floor_ps(v.val));
+static inline fvec8 floor(const fvec8& v) {
+    return fvec8(_mm256_round_ps(v.val, 0x09));
 }
 
-static inline fvec8 ceil(fvec8 v) {
-    return fvec8(_mm256_ceil_ps(v.val));
+static inline fvec8 ceil(const fvec8& v) {
+    return fvec8(_mm256_round_ps(v.val, 0x0A));
 }
 
-static inline fvec8 round(fvec8 v) {
+static inline fvec8 round(const fvec8& v) {
     return fvec8(_mm256_round_ps(v.val, _MM_FROUND_TO_NEAREST_INT));
 }
 
-static inline fvec8 min(fvec8 v1, fvec8 v2) {
+static inline fvec8 min(const fvec8& v1, const fvec8& v2) {
     return fvec8(_mm256_min_ps(v1.val, v2.val));
 }
 
-static inline fvec8 max(fvec8 v1, fvec8 v2) {
+static inline fvec8 max(const fvec8& v1, const fvec8& v2) {
     return fvec8(_mm256_max_ps(v1.val, v2.val));
 }
 
-static inline fvec8 abs(fvec8 v) {
+static inline fvec8 abs(const fvec8& v) {
     static const __m256 mask = _mm256_castsi256_ps(_mm256_set1_epi32(0x7FFFFFFF));
     return fvec8(_mm256_and_ps(v.val, mask));
 }
 
-static inline fvec8 sqrt(fvec8 v) {
+static inline fvec8 sqrt(const fvec8& v) {
     return fvec8(_mm256_sqrt_ps(v.val));
 }
 
-static inline float dot8(fvec8 v1, fvec8 v2) {
+static inline float dot8(const fvec8& v1, const fvec8& v2) {
     fvec8 result = _mm256_dp_ps(v1, v2, 0xF1);
     return _mm_cvtss_f32(result.lowerVec())+_mm_cvtss_f32(result.upperVec());
 }
 
-static inline void transpose(fvec4 in1, fvec4 in2, fvec4 in3, fvec4 in4, fvec4 in5, fvec4 in6, fvec4 in7, fvec4 in8, fvec8& out1, fvec8& out2, fvec8& out3, fvec8& out4) {
-    _MM_TRANSPOSE4_PS(in1, in2, in3, in4);
-    _MM_TRANSPOSE4_PS(in5, in6, in7, in8);
+static inline void transpose(const fvec4& in1, const fvec4& in2, const fvec4& in3, const fvec4& in4, const fvec4& in5, const fvec4& in6, const fvec4& in7, const fvec4& in8, fvec8& out1, fvec8& out2, fvec8& out3, fvec8& out4) {
+    fvec4 i1 = in1, i2 = in2, i3 = in3, i4 = in4;
+    fvec4 i5 = in5, i6 = in6, i7 = in7, i8 = in8;
+    _MM_TRANSPOSE4_PS(i1, i2, i3, i4);
+    _MM_TRANSPOSE4_PS(i5, i6, i7, i8);
     out1 = _mm256_castps128_ps256(in1);
-    out1 = _mm256_insertf128_ps(out1, in5, 1);
+    out1 = _mm256_insertf128_ps(out1, i5, 1);
     out2 = _mm256_castps128_ps256(in2);
-    out2 = _mm256_insertf128_ps(out2, in6, 1);
+    out2 = _mm256_insertf128_ps(out2, i6, 1);
     out3 = _mm256_castps128_ps256(in3);
-    out3 = _mm256_insertf128_ps(out3, in7, 1);
+    out3 = _mm256_insertf128_ps(out3, i7, 1);
     out4 = _mm256_castps128_ps256(in4);
-    out4 = _mm256_insertf128_ps(out4, in8, 1);
+    out4 = _mm256_insertf128_ps(out4, i8, 1);
 }
 
-static inline void transpose(fvec8 in1, fvec8 in2, fvec8 in3, fvec8 in4, fvec4& out1, fvec4& out2, fvec4& out3, fvec4& out4, fvec4& out5, fvec4& out6, fvec4& out7, fvec4& out8) {
+static inline void transpose(const fvec8& in1, const fvec8& in2, const fvec8& in3, const fvec8& in4, fvec4& out1, fvec4& out2, fvec4& out3, fvec4& out4, fvec4& out5, fvec4& out6, fvec4& out7, fvec4& out8) {
     out1 = in1.lowerVec();
     out2 = in2.lowerVec();
     out3 = in3.lowerVec();
@@ -224,31 +226,31 @@ static inline void transpose(fvec8 in1, fvec8 in2, fvec8 in3, fvec8 in4, fvec4& 
 
 // Functions that operate on ivec8s.
 
-static inline bool any(ivec8 v) {
+static inline bool any(const ivec8& v) {
     return !_mm256_testz_si256(v, _mm256_set1_epi32(0xFFFFFFFF));
 }
 
 // Mathematical operators involving a scalar and a vector.
 
-static inline fvec8 operator+(float v1, fvec8 v2) {
+static inline fvec8 operator+(float v1, const fvec8& v2) {
     return fvec8(v1)+v2;
 }
 
-static inline fvec8 operator-(float v1, fvec8 v2) {
+static inline fvec8 operator-(float v1, const fvec8& v2) {
     return fvec8(v1)-v2;
 }
 
-static inline fvec8 operator*(float v1, fvec8 v2) {
+static inline fvec8 operator*(float v1, const fvec8& v2) {
     return fvec8(v1)*v2;
 }
 
-static inline fvec8 operator/(float v1, fvec8 v2) {
+static inline fvec8 operator/(float v1, const fvec8& v2) {
     return fvec8(v1)/v2;
 }
 
 // Operations for blending fvec8s based on an ivec8.
 
-static inline fvec8 blend(fvec8 v1, fvec8 v2, ivec8 mask) {
+static inline fvec8 blend(const fvec8& v1, const fvec8& v2, const ivec8& mask) {
     return fvec8(_mm256_blendv_ps(v1.val, v2.val, _mm256_castsi256_ps(mask.val)));
 }
 

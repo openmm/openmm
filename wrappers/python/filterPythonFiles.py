@@ -1,3 +1,4 @@
+from __future__ import print_function
 import sys
 
 # Doxygen does a bad job of generating documentation based on docstrings.  This script is run as a filter
@@ -14,10 +15,10 @@ while True:
         split = stripped.split()
         if split[0] == 'class' and split[1][0].islower():
             # Classes that start with a lowercase letter were defined by SWIG.  We want to hide them.
-            print "%s## @private" % prefix
+            print("%s## @private" % prefix)
         if split[1][0] == '_' and split[1][1] != '_':
             # Names starting with a single _ are assumed to be private.
-            print "%s## @private" % prefix
+            print("%s## @private" % prefix)
         
         # We're at the start of a class or function definition.  Find all lines that contain the declaration.
         
@@ -51,9 +52,9 @@ while True:
         # Print out the docstring in Doxygen syntax, followed by the declaration.
         
         for s in docstrings:
-            print "%s##%s" % (prefix, s.strip())
-        print declaration
+            print("%s##%s" % (prefix, s.strip()))
+        print(declaration)
         if len(docstrings) == 0:
-            print line
+            print(line)
     else:
-        print line
+        print(line)
