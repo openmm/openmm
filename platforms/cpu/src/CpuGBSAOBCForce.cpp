@@ -249,7 +249,7 @@ void CpuGBSAOBCForce::threadComputeForce(ThreadPool& threads, int threadIndex) {
         ivec4 blockAtomIndex(blockStart, blockStart+1, blockStart+2, blockStart+3);
         float atomCharge[4], atomx[4], atomy[4], atomz[4];
         int blockMask[4] = {0, 0, 0, 0};
-        fvec4 blockAtomForce[4];
+        fvec4 blockAtomForceX(0.0f), blockAtomForceY(0.0f), blockAtomForceZ(0.0f), blockAtomBornForce(0.0f);
         for (int i = 0; i < numInBlock; i++) {
             int atomIndex = blockStart+i;
             atomx[i] = posq[4*atomIndex];
@@ -257,7 +257,6 @@ void CpuGBSAOBCForce::threadComputeForce(ThreadPool& threads, int threadIndex) {
             atomz[i] = posq[4*atomIndex+2];
             atomCharge[i] = preFactor*posq[4*atomIndex+3];
             blockMask[i] = 0xFFFFFFFF;
-            blockAtomForce[i] = 0.0f;
         }
         fvec4 radii(&bornRadii[blockStart]);
         fvec4 x(atomx);
@@ -277,35 +276,40 @@ void CpuGBSAOBCForce::threadComputeForce(ThreadPool& threads, int threadIndex) {
             fvec4 r = sqrt(r2);
             fvec4 alpha2_ij = radii*bornRadii[atomJ];
             fvec4 D_ij = r2/(4.0f*alpha2_ij);
-            fvec4 expTerm(exp(-D_ij[0]), exp(-D_ij[1]), exp(-D_ij[2]), exp(-D_ij[3]));
+            fvec4 expTerm(expf(-D_ij[0]), expf(-D_ij[1]), expf(-D_ij[2]), expf(-D_ij[3]));
             fvec4 denominator2 = r2 + alpha2_ij*expTerm; 
             fvec4 denominator = sqrt(denominator2);
             fvec4 Gpol = (partialChargeI*posJ[3])/denominator; 
             fvec4 dGpol_dr = -Gpol*(1.0f - 0.25f*expTerm)/denominator2;  
             fvec4 dGpol_dalpha2_ij = -0.5f*Gpol*expTerm*(1.0f + D_ij)/denominator2;
-            fvec4 result[4] = {dx*dGpol_dr, dy*dGpol_dr, dz*dGpol_dr, 0.0f};
-            transpose(result[0], result[1], result[2], result[3]);
-            fvec4 atomForce(forces+4*atomJ);
-            for (int j = 0; j < 4; j++) {
-                if (include[j]) {
-                    float termEnergy = Gpol[j];
-                    if (blockStart+j != atomJ) {
-                        if (cutoff)
-                            termEnergy -= partialChargeI[j]*posJ[3]/cutoffDistance;
-                        bornForces[atomJ] += dGpol_dalpha2_ij[j]*radii[j];
-                        blockAtomForce[j] -= result[j];
-                        (fvec4(forces+4*atomJ)+result[j]).store(forces+4*atomJ);
-                    }
-                    else
-                        termEnergy *= 0.5f;
-                    energy += termEnergy;
-                    bornForces[blockStart+j] += dGpol_dalpha2_ij[j]*bornRadii[atomJ];
-                }
-            }
+            dGpol_dr = blend(0.0f, dGpol_dr, include);
+            dGpol_dalpha2_ij = blend(0.0f, dGpol_dalpha2_ij, include);
+            fvec4 fx = dx*dGpol_dr;
+            fvec4 fy = dy*dGpol_dr;
+            fvec4 fz = dz*dGpol_dr;
+            blockAtomForceX -= fx;
+            blockAtomForceY -= fy;
+            blockAtomForceZ -= fz;
+            blockAtomBornForce += dGpol_dalpha2_ij*bornRadii[atomJ];
+            float* atomForce = forces+4*atomJ;
+            fvec4 one(1.0f);
+            atomForce[0] += dot4(fx, one);
+            atomForce[1] += dot4(fy, one);
+            atomForce[2] += dot4(fz, one);
+            ivec4 atomJMask = include & (blockAtomIndex != ivec4(atomJ));
+            fvec4 termEnergy = blend(0.0f, Gpol, include);
+            if (cutoff)
+                termEnergy -= blend(0.0f, partialChargeI*posJ[3]/cutoffDistance, atomJMask);
+            termEnergy *= blend(0.5f, 1.0f, atomJMask);
+            energy += dot4(termEnergy, one);
+            bornForces[atomJ] += dot4(blend(0.0f, dGpol_dalpha2_ij, atomJMask), radii);
         }
+        fvec4 f[4] = {blockAtomForceX, blockAtomForceY, blockAtomForceZ, 0.0f};
+        transpose(f[0], f[1], f[2], f[3]);
         for (int i = 0; i < numInBlock; i++) {
             int atomIndex = blockStart+i;
-            (fvec4(forces+4*atomIndex)+blockAtomForce[i]).store(forces+4*atomIndex);
+            (fvec4(forces+4*atomIndex)+f[i]).store(forces+4*atomIndex);
+            bornForces[atomIndex] += blockAtomBornForce[i];
         }
     }
     threads.syncThreads();
@@ -325,7 +329,7 @@ void CpuGBSAOBCForce::threadComputeForce(ThreadPool& threads, int threadIndex) {
         ivec4 blockAtomIndex(blockStart, blockStart+1, blockStart+2, blockStart+3);
         float atomRadius[4], atomx[4], atomy[4], atomz[4];
         int blockMask[4] = {0, 0, 0, 0};
-        fvec4 blockAtomForce[4];
+        fvec4 blockAtomForceX(0.0f), blockAtomForceY(0.0f), blockAtomForceZ(0.0f);
         for (int i = 0; i < numInBlock; i++) {
             int atomIndex = blockStart+i;
             atomRadius[i] = particleParams[atomIndex].first;
@@ -333,7 +337,6 @@ void CpuGBSAOBCForce::threadComputeForce(ThreadPool& threads, int threadIndex) {
             atomy[i] = posq[4*atomIndex+1];
             atomz[i] = posq[4*atomIndex+2];
             blockMask[i] = 0xFFFFFFFF;
-            blockAtomForce[i] = 0.0f;
         }
         fvec4 offsetRadiusI(atomRadius);
         fvec4 x(atomx);
@@ -364,18 +367,23 @@ void CpuGBSAOBCForce::threadComputeForce(ThreadPool& threads, int threadIndex) {
             fvec4 t3 = 0.125f*(1.0f + scaledRadiusJ2*r2Inverse)*(l_ij2 - u_ij2) + 0.25f*logRatio*r2Inverse;
             fvec4 de = bornForce*t3*rInverse;
             de = blend(0.0f, de, include);
-            fvec4 result[4] = {dx*de, dy*de, dz*de, 0.0f};
-            transpose(result[0], result[1], result[2], result[3]);
-            fvec4 atomForce(forces+4*atomJ);
-            for (int j = 0; j < 4; j++) {
-                blockAtomForce[j] += result[j];
-                atomForce -= result[j];
-            }
-            atomForce.store(forces+4*atomJ);
+            fvec4 fx = dx*de;
+            fvec4 fy = dy*de;
+            fvec4 fz = dz*de;
+            blockAtomForceX += fx;
+            blockAtomForceY += fy;
+            blockAtomForceZ += fz;
+            float* atomForce = forces+4*atomJ;
+            fvec4 one(1.0f);
+            atomForce[0] -= dot4(fx, one);
+            atomForce[1] -= dot4(fy, one);
+            atomForce[2] -= dot4(fz, one);
         }
+        fvec4 f[4] = {blockAtomForceX, blockAtomForceY, blockAtomForceZ, 0.0f};
+        transpose(f[0], f[1], f[2], f[3]);
         for (int i = 0; i < numInBlock; i++) {
             int atomIndex = blockStart+i;
-            (fvec4(forces+4*atomIndex)+blockAtomForce[i]).store(forces+4*atomIndex);
+            (fvec4(forces+4*atomIndex)+f[i]).store(forces+4*atomIndex);
         }
     }
     threadEnergy[threadIndex] = energy;
