@@ -2602,6 +2602,8 @@ CudaCalcCustomGBForceKernel::~CudaCalcCustomGBForceKernel() {
         delete computedValues;
     if (energyDerivs != NULL)
         delete energyDerivs;
+    if (energyDerivChain != NULL)
+        delete energyDerivChain;
     if (longEnergyDerivs != NULL)
         delete longEnergyDerivs;
     if (globals != NULL)
@@ -2745,6 +2747,7 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
     }
     longEnergyDerivs = CudaArray::create<long long>(cu, force.getNumComputedValues()*cu.getPaddedNumAtoms(), "customGBLongEnergyDerivatives");
     energyDerivs = new CudaParameterSet(cu, force.getNumComputedValues(), cu.getPaddedNumAtoms(), "customGBEnergyDerivatives", true);
+    energyDerivChain = new CudaParameterSet(cu, force.getNumComputedValues(), cu.getPaddedNumAtoms(), "customGBEnergyDerivativeChain", true);
  
     // Create the kernels.
 
@@ -3011,6 +3014,11 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
             extraArgs << ", " << buffer.getType() << "* __restrict__ derivBuffers" << index;
             compute << buffer.getType() << " deriv" << index << " = derivBuffers" << index << "[index];\n";
         }
+        for (int i = 0; i < (int) energyDerivChain->getBuffers().size(); i++) {
+            CudaNonbondedUtilities::ParameterInfo& buffer = energyDerivChain->getBuffers()[i];
+            string index = cu.intToString(i+1);
+            extraArgs << ", " << buffer.getType() << "* __restrict__ derivChain" << index;
+        }
         extraArgs << ", const long long* __restrict__ derivBuffersIn";
         for (int i = 0; i < energyDerivs->getNumParameters(); ++i)
             load << "derivBuffers" << energyDerivs->getParameterSuffix(i, "[index]") <<
@@ -3056,6 +3064,10 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
         
         // Record values.
         
+        for (int i = 0; i < (int) energyDerivs->getBuffers().size(); i++) {
+            string index = cu.intToString(i+1);
+            compute << "derivBuffers" << index << "[index] = deriv" << index << ";\n";
+        }
         compute << "forceBuffers[index] += (long long) (force.x*0x100000000);\n";
         compute << "forceBuffers[index+PADDED_NUM_ATOMS] += (long long) (force.y*0x100000000);\n";
         compute << "forceBuffers[index+PADDED_NUM_ATOMS*2] += (long long) (force.z*0x100000000);\n";
@@ -3068,7 +3080,7 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
         }
         for (int i = 0; i < (int) energyDerivs->getBuffers().size(); i++) {
             string index = cu.intToString(i+1);
-            compute << "derivBuffers" << index << "[index] = deriv" << index << ";\n";
+            compute << "derivChain" << index << "[index] = deriv" << index << ";\n";
         }
         map<string, string> replacements;
         replacements["PARAMETER_ARGUMENTS"] = extraArgs.str()+tableArgs.str();
@@ -3206,9 +3218,9 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
             if (chainStr.find(paramName+"1") != chainStr.npos || chainStr.find(paramName+"2") != chainStr.npos)
                 parameters.push_back(CudaNonbondedUtilities::ParameterInfo(paramName, buffer.getComponentType(), buffer.getNumComponents(), buffer.getSize(), buffer.getMemory()));
         }
-        for (int i = 0; i < (int) energyDerivs->getBuffers().size(); i++) {
+        for (int i = 0; i < (int) energyDerivChain->getBuffers().size(); i++) {
             if (needChainForValue[i]) { 
-                CudaNonbondedUtilities::ParameterInfo& buffer = energyDerivs->getBuffers()[i];
+                CudaNonbondedUtilities::ParameterInfo& buffer = energyDerivChain->getBuffers()[i];
                 string paramName = prefix+"dEdV"+cu.intToString(i+1);
                 parameters.push_back(CudaNonbondedUtilities::ParameterInfo(paramName, buffer.getComponentType(), buffer.getNumComponents(), buffer.getSize(), buffer.getMemory()));
             }
@@ -3354,6 +3366,8 @@ double CudaCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeFo
             perParticleEnergyArgs.push_back(&computedValues->getBuffers()[i].getMemory());
         for (int i = 0; i < (int) energyDerivs->getBuffers().size(); i++)
             perParticleEnergyArgs.push_back(&energyDerivs->getBuffers()[i].getMemory());
+        for (int i = 0; i < (int) energyDerivChain->getBuffers().size(); i++)
+            perParticleEnergyArgs.push_back(&energyDerivChain->getBuffers()[i].getMemory());
         perParticleEnergyArgs.push_back(&longEnergyDerivs->getDevicePointer());
         if (tabulatedFunctionParams != NULL) {
             for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
