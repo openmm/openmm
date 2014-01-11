@@ -738,7 +738,7 @@ private:
 class CudaCalcCustomGBForceKernel : public CalcCustomGBForceKernel {
 public:
     CudaCalcCustomGBForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcCustomGBForceKernel(name, platform),
-            hasInitializedKernels(false), cu(cu), params(NULL), computedValues(NULL), energyDerivs(NULL), longEnergyDerivs(NULL), globals(NULL),
+            hasInitializedKernels(false), cu(cu), params(NULL), computedValues(NULL), energyDerivs(NULL), energyDerivChain(NULL), longEnergyDerivs(NULL), globals(NULL),
             valueBuffers(NULL), tabulatedFunctionParams(NULL), system(system) {
     }
     ~CudaCalcCustomGBForceKernel();
@@ -772,6 +772,7 @@ private:
     CudaParameterSet* params;
     CudaParameterSet* computedValues;
     CudaParameterSet* energyDerivs;
+    CudaParameterSet* energyDerivChain;
     CudaArray* longEnergyDerivs;
     CudaArray* globals;
     CudaArray* valueBuffers;

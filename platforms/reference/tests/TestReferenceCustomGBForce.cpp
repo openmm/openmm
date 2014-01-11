@@ -251,7 +251,7 @@ void testMembrane() {
     for (int i = 0; i < (int) forces.size(); ++i)
         norm += forces[i].dot(forces[i]);
     norm = std::sqrt(norm);
-    const double stepSize = 1e-3;
+    const double stepSize = 1e-2;
     double step = 0.5*stepSize/norm;
     vector<Vec3> positions2(numParticles), positions3(numParticles);
     for (int i = 0; i < (int) positions.size(); ++i) {
