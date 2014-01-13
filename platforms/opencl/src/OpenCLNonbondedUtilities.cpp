@@ -317,42 +317,55 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
         for (int i = 0; i < (int) exclusionBlocksForBlock.size(); i++)
             maxExclusions = (maxExclusions > exclusionBlocksForBlock[i].size() ? maxExclusions : exclusionBlocksForBlock[i].size());
         defines["MAX_EXCLUSIONS"] = context.intToString(maxExclusions);
-        defines["GROUP_SIZE"] = (deviceIsCpu ? "32" : "128");
         defines["BUFFER_GROUPS"] = (deviceIsCpu ? "4" : "2");
         string file = (deviceIsCpu ? OpenCLKernelSources::findInteractingBlocks_cpu : OpenCLKernelSources::findInteractingBlocks);
-        cl::Program interactingBlocksProgram = context.createProgram(file, defines);
-        findBlockBoundsKernel = cl::Kernel(interactingBlocksProgram, "findBlockBounds");
-        findBlockBoundsKernel.setArg<cl_int>(0, context.getNumAtoms());
-        findBlockBoundsKernel.setArg<cl::Buffer>(3, context.getPosq().getDeviceBuffer());
-        findBlockBoundsKernel.setArg<cl::Buffer>(4, blockCenter->getDeviceBuffer());
-        findBlockBoundsKernel.setArg<cl::Buffer>(5, blockBoundingBox->getDeviceBuffer());
-        findBlockBoundsKernel.setArg<cl::Buffer>(6, rebuildNeighborList->getDeviceBuffer());
-        findBlockBoundsKernel.setArg<cl::Buffer>(7, sortedBlocks->getDeviceBuffer());
-        sortBoxDataKernel = cl::Kernel(interactingBlocksProgram, "sortBoxData");
-        sortBoxDataKernel.setArg<cl::Buffer>(0, sortedBlocks->getDeviceBuffer());
-        sortBoxDataKernel.setArg<cl::Buffer>(1, blockCenter->getDeviceBuffer());
-        sortBoxDataKernel.setArg<cl::Buffer>(2, blockBoundingBox->getDeviceBuffer());
-        sortBoxDataKernel.setArg<cl::Buffer>(3, sortedBlockCenter->getDeviceBuffer());
-        sortBoxDataKernel.setArg<cl::Buffer>(4, sortedBlockBoundingBox->getDeviceBuffer());
-        sortBoxDataKernel.setArg<cl::Buffer>(5, context.getPosq().getDeviceBuffer());
-        sortBoxDataKernel.setArg<cl::Buffer>(6, oldPositions->getDeviceBuffer());
-        sortBoxDataKernel.setArg<cl::Buffer>(7, interactionCount->getDeviceBuffer());
-        sortBoxDataKernel.setArg<cl::Buffer>(8, rebuildNeighborList->getDeviceBuffer());
-        findInteractingBlocksKernel = cl::Kernel(interactingBlocksProgram, "findBlocksWithInteractions");
-        findInteractingBlocksKernel.setArg<cl::Buffer>(2, interactionCount->getDeviceBuffer());
-        findInteractingBlocksKernel.setArg<cl::Buffer>(3, interactingTiles->getDeviceBuffer());
-        findInteractingBlocksKernel.setArg<cl::Buffer>(4, interactingAtoms->getDeviceBuffer());
-        findInteractingBlocksKernel.setArg<cl::Buffer>(5, context.getPosq().getDeviceBuffer());
-        findInteractingBlocksKernel.setArg<cl_uint>(6, interactingTiles->getSize());
-        findInteractingBlocksKernel.setArg<cl_uint>(7, startBlockIndex);
-        findInteractingBlocksKernel.setArg<cl_uint>(8, numBlocks);
-        findInteractingBlocksKernel.setArg<cl::Buffer>(9, sortedBlocks->getDeviceBuffer());
-        findInteractingBlocksKernel.setArg<cl::Buffer>(10, sortedBlockCenter->getDeviceBuffer());
-        findInteractingBlocksKernel.setArg<cl::Buffer>(11, sortedBlockBoundingBox->getDeviceBuffer());
-        findInteractingBlocksKernel.setArg<cl::Buffer>(12, exclusionIndices->getDeviceBuffer());
-        findInteractingBlocksKernel.setArg<cl::Buffer>(13, exclusionRowIndices->getDeviceBuffer());
-        findInteractingBlocksKernel.setArg<cl::Buffer>(14, oldPositions->getDeviceBuffer());
-        findInteractingBlocksKernel.setArg<cl::Buffer>(15, rebuildNeighborList->getDeviceBuffer());
+        int groupSize = (deviceIsCpu ? 32 : 128);
+        while (true) {
+            defines["GROUP_SIZE"] = context.intToString(groupSize);
+            cl::Program interactingBlocksProgram = context.createProgram(file, defines);
+            findBlockBoundsKernel = cl::Kernel(interactingBlocksProgram, "findBlockBounds");
+            findBlockBoundsKernel.setArg<cl_int>(0, context.getNumAtoms());
+            findBlockBoundsKernel.setArg<cl::Buffer>(3, context.getPosq().getDeviceBuffer());
+            findBlockBoundsKernel.setArg<cl::Buffer>(4, blockCenter->getDeviceBuffer());
+            findBlockBoundsKernel.setArg<cl::Buffer>(5, blockBoundingBox->getDeviceBuffer());
+            findBlockBoundsKernel.setArg<cl::Buffer>(6, rebuildNeighborList->getDeviceBuffer());
+            findBlockBoundsKernel.setArg<cl::Buffer>(7, sortedBlocks->getDeviceBuffer());
+            sortBoxDataKernel = cl::Kernel(interactingBlocksProgram, "sortBoxData");
+            sortBoxDataKernel.setArg<cl::Buffer>(0, sortedBlocks->getDeviceBuffer());
+            sortBoxDataKernel.setArg<cl::Buffer>(1, blockCenter->getDeviceBuffer());
+            sortBoxDataKernel.setArg<cl::Buffer>(2, blockBoundingBox->getDeviceBuffer());
+            sortBoxDataKernel.setArg<cl::Buffer>(3, sortedBlockCenter->getDeviceBuffer());
+            sortBoxDataKernel.setArg<cl::Buffer>(4, sortedBlockBoundingBox->getDeviceBuffer());
+            sortBoxDataKernel.setArg<cl::Buffer>(5, context.getPosq().getDeviceBuffer());
+            sortBoxDataKernel.setArg<cl::Buffer>(6, oldPositions->getDeviceBuffer());
+            sortBoxDataKernel.setArg<cl::Buffer>(7, interactionCount->getDeviceBuffer());
+            sortBoxDataKernel.setArg<cl::Buffer>(8, rebuildNeighborList->getDeviceBuffer());
+            findInteractingBlocksKernel = cl::Kernel(interactingBlocksProgram, "findBlocksWithInteractions");
+            findInteractingBlocksKernel.setArg<cl::Buffer>(2, interactionCount->getDeviceBuffer());
+            findInteractingBlocksKernel.setArg<cl::Buffer>(3, interactingTiles->getDeviceBuffer());
+            findInteractingBlocksKernel.setArg<cl::Buffer>(4, interactingAtoms->getDeviceBuffer());
+            findInteractingBlocksKernel.setArg<cl::Buffer>(5, context.getPosq().getDeviceBuffer());
+            findInteractingBlocksKernel.setArg<cl_uint>(6, interactingTiles->getSize());
+            findInteractingBlocksKernel.setArg<cl_uint>(7, startBlockIndex);
+            findInteractingBlocksKernel.setArg<cl_uint>(8, numBlocks);
+            findInteractingBlocksKernel.setArg<cl::Buffer>(9, sortedBlocks->getDeviceBuffer());
+            findInteractingBlocksKernel.setArg<cl::Buffer>(10, sortedBlockCenter->getDeviceBuffer());
+            findInteractingBlocksKernel.setArg<cl::Buffer>(11, sortedBlockBoundingBox->getDeviceBuffer());
+            findInteractingBlocksKernel.setArg<cl::Buffer>(12, exclusionIndices->getDeviceBuffer());
+            findInteractingBlocksKernel.setArg<cl::Buffer>(13, exclusionRowIndices->getDeviceBuffer());
+            findInteractingBlocksKernel.setArg<cl::Buffer>(14, oldPositions->getDeviceBuffer());
+            findInteractingBlocksKernel.setArg<cl::Buffer>(15, rebuildNeighborList->getDeviceBuffer());
+            if (findInteractingBlocksKernel.getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(context.getDevice()) < groupSize) {
+                // The device can't handle this block size, so reduce it.
+                
+                groupSize -= 32;
+                if (groupSize < 32)
+                    throw OpenMMException("Failed to create findInteractingBlocks kernel");
+                continue;
+            }
+            break;
+        }
+        interactingBlocksThreadBlockSize = (deviceIsCpu ? 1 : groupSize);
     }
 }
 
@@ -389,7 +402,7 @@ void OpenCLNonbondedUtilities::prepareInteractions() {
     context.executeKernel(sortBoxDataKernel, context.getNumAtoms());
     setPeriodicBoxSizeArg(context, findInteractingBlocksKernel, 0);
     setInvPeriodicBoxSizeArg(context, findInteractingBlocksKernel, 1);
-    context.executeKernel(findInteractingBlocksKernel, context.getNumAtoms(), deviceIsCpu ? 1 : 128);
+    context.executeKernel(findInteractingBlocksKernel, context.getNumAtoms(), interactingBlocksThreadBlockSize);
 }
 
 void OpenCLNonbondedUtilities::computeInteractions() {
