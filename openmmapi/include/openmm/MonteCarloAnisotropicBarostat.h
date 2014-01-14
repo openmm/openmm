@@ -106,7 +106,7 @@ public:
      *
      * @param pressure   the default pressure acting on the system, measured in bar.
      */
-    void setDefaultPressure(Vec3 pressure) {
+    void setDefaultPressure(const Vec3& pressure) {
         defaultPressure = pressure;
     }
     /**
