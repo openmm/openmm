@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013 Stanford University and the Authors.           *
+ * Portions copyright (c) 2013-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -201,13 +201,21 @@ static inline void transpose(const fvec4& in1, const fvec4& in2, const fvec4& in
     fvec4 i5 = in5, i6 = in6, i7 = in7, i8 = in8;
     _MM_TRANSPOSE4_PS(i1, i2, i3, i4);
     _MM_TRANSPOSE4_PS(i5, i6, i7, i8);
+#ifdef _MSC_VER
+    // Visual Studio has a bug in _mm256_castps128_ps256, so we have to use the more expensive _mm256_insertf128_ps.
+    out1 = _mm256_insertf128_ps(out1, i1, 0);
+    out2 = _mm256_insertf128_ps(out2, i2, 0);
+    out3 = _mm256_insertf128_ps(out3, i3, 0);
+    out4 = _mm256_insertf128_ps(out4, i4, 0);
+#else
     out1 = _mm256_castps128_ps256(i1);
-    out1 = _mm256_insertf128_ps(out1, i5, 1);
     out2 = _mm256_castps128_ps256(i2);
-    out2 = _mm256_insertf128_ps(out2, i6, 1);
     out3 = _mm256_castps128_ps256(i3);
-    out3 = _mm256_insertf128_ps(out3, i7, 1);
     out4 = _mm256_castps128_ps256(i4);
+#endif
+    out1 = _mm256_insertf128_ps(out1, i5, 1);
+    out2 = _mm256_insertf128_ps(out2, i6, 1);
+    out3 = _mm256_insertf128_ps(out3, i7, 1);
     out4 = _mm256_insertf128_ps(out4, i8, 1);
 }
 
