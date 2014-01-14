@@ -27,9 +27,9 @@ SET(SHARED_TARGET ${OPENMMDRUDEOPENCL_LIBRARY_NAME})
 
 # Ensure that debug libraries have "_d" appended to their names.
 # CMake gets this right on Windows automatically with this definition.
-IF (${CMAKE_GENERATOR} MATCHES "Visual Studio")
+IF (MSVC)
     SET(CMAKE_DEBUG_POSTFIX "_d" CACHE INTERNAL "" FORCE)
-ENDIF (${CMAKE_GENERATOR} MATCHES "Visual Studio")
+ENDIF (MSVC)
 
 # But on Unix or Cygwin we have to add the suffix manually
 IF (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
