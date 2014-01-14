@@ -162,11 +162,11 @@ ADD_DEFINITIONS(-DOPENMM_LIBRARY_NAME=${OPENMM_LIBRARY_NAME}
 # to add them ourselves for Linux or Cygwin. Two cases to avoid duplicate quotes
 # in Visual Studio which end up in the binary.
 
-IF (${CMAKE_GENERATOR} MATCHES "Visual Studio")
+IF (MSVC)
    SET(NEED_QUOTES FALSE)
-ELSE (${CMAKE_GENERATOR} MATCHES "Visual Studio")
+ELSE (MSVC)
    SET(NEED_QUOTES TRUE)
-ENDIF (${CMAKE_GENERATOR} MATCHES "Visual Studio")
+ENDIF (MSVC)
 
 ##TODO: doesn't work without quotes in nightly build
 SET(NEED_QUOTES TRUE)
@@ -208,9 +208,9 @@ SET(${PROJECT_NAME}_LIBRARY_DIR    ${LIBRARY_OUTPUT_PATH}/${CMAKE_CFG_INTDIR})
 
 # Ensure that debug libraries have "_d" appended to their names.
 # CMake gets this right on Windows automatically with this definition.
-IF (${CMAKE_GENERATOR} MATCHES "Visual Studio")
+IF (MSVC)
     SET(CMAKE_DEBUG_POSTFIX "_d" CACHE INTERNAL "" FORCE)
-ENDIF (${CMAKE_GENERATOR} MATCHES "Visual Studio")
+ENDIF (MSVC)
 
 # But on Unix or Cygwin we have to add the suffix manually
 IF (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
