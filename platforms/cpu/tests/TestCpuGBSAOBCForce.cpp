@@ -223,6 +223,10 @@ void testForce(int numParticles, NonbondedForce::NonbondedMethod method, GBSAOBC
 
 int main() {
     try {
+        if (!CpuPlatform::isProcessorSupported()) {
+            cout << "CPU is not supported.  Exiting." << endl;
+            return 0;
+        }
         testSingleParticle();
         testCutoffAndPeriodic();
         for (int i = 5; i < 11; i++) {
