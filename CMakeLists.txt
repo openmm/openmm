@@ -14,6 +14,8 @@
 #   libOpenMM_static[_d].a
 #----------------------------------------------------
 
+find_program(PYTHON_EXECUTABLE NAMES python)
+
 # Don't create a new project name if this is part of a mega-build from the
 # parent directory
 IF( NOT PROJECT_NAME )
