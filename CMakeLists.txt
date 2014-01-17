@@ -53,15 +53,15 @@ if(COMMAND cmake_policy)
 endif(COMMAND cmake_policy)
 
 # Where to install
-IF(${CMAKE_C_COMPILER} MATCHES "gcc")
-    IF(NOT OPENMM_INSTALL_PREFIX)
-        SET(OPENMM_INSTALL_PREFIX "/usr/local/openmm")
-    ENDIF(NOT OPENMM_INSTALL_PREFIX)
-ELSE(${CMAKE_C_COMPILER} MATCHES "gcc")
+IF(WIN32)
     IF(NOT OPENMM_INSTALL_PREFIX)
         SET(OPENMM_INSTALL_PREFIX "$ENV{ProgramFiles}/OpenMM")
     ENDIF(NOT OPENMM_INSTALL_PREFIX)
-ENDIF(${CMAKE_C_COMPILER} MATCHES "gcc")
+ELSE(WIN32)
+    IF(NOT OPENMM_INSTALL_PREFIX)
+        SET(OPENMM_INSTALL_PREFIX "/usr/local/openmm")
+    ENDIF(NOT OPENMM_INSTALL_PREFIX)
+ENDIF(WIN32)
 
 # It seems that on linux and mac, everything is trying to be installed in /usr/local/openmm
 # But if every install target is prefixed with /openmm/, on Windows the install files
