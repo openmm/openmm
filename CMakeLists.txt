@@ -146,11 +146,11 @@ ENDIF (NOT CMAKE_CXX_FLAGS_RELEASE)
 # and make it available to the code so it can be built into the binaries.
 
 SET(OPENMM_LIBRARY_NAME OpenMM)
-SET(OPENMM_MAJOR_VERSION 5)
-SET(OPENMM_MINOR_VERSION 2)
+SET(OPENMM_MAJOR_VERSION 6)
+SET(OPENMM_MINOR_VERSION 0)
 SET(OPENMM_BUILD_VERSION 0)
 
-SET(OPENMM_COPYRIGHT_YEARS "2008")
+SET(OPENMM_COPYRIGHT_YEARS "2008-2014")
 
 # underbar separated list of dotted authors, no spaces or commas
 SET(OPENMM_AUTHORS "Peter.Eastman")
