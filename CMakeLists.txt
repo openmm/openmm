@@ -14,6 +14,8 @@
 #   libOpenMM_static[_d].a
 #----------------------------------------------------
 
+find_program(PYTHON_EXECUTABLE NAMES python)
+
 # Don't create a new project name if this is part of a mega-build from the
 # parent directory
 IF( NOT PROJECT_NAME )
@@ -51,15 +53,15 @@ if(COMMAND cmake_policy)
 endif(COMMAND cmake_policy)
 
 # Where to install
-IF(${CMAKE_C_COMPILER} MATCHES "gcc")
-    IF(NOT OPENMM_INSTALL_PREFIX)
-        SET(OPENMM_INSTALL_PREFIX "/usr/local/openmm")
-    ENDIF(NOT OPENMM_INSTALL_PREFIX)
-ELSE(${CMAKE_C_COMPILER} MATCHES "gcc")
+IF(WIN32)
     IF(NOT OPENMM_INSTALL_PREFIX)
         SET(OPENMM_INSTALL_PREFIX "$ENV{ProgramFiles}/OpenMM")
     ENDIF(NOT OPENMM_INSTALL_PREFIX)
-ENDIF(${CMAKE_C_COMPILER} MATCHES "gcc")
+ELSE(WIN32)
+    IF(NOT OPENMM_INSTALL_PREFIX)
+        SET(OPENMM_INSTALL_PREFIX "/usr/local/openmm")
+    ENDIF(NOT OPENMM_INSTALL_PREFIX)
+ENDIF(WIN32)
 
 # It seems that on linux and mac, everything is trying to be installed in /usr/local/openmm
 # But if every install target is prefixed with /openmm/, on Windows the install files
@@ -144,11 +146,11 @@ ENDIF (NOT CMAKE_CXX_FLAGS_RELEASE)
 # and make it available to the code so it can be built into the binaries.
 
 SET(OPENMM_LIBRARY_NAME OpenMM)
-SET(OPENMM_MAJOR_VERSION 5)
-SET(OPENMM_MINOR_VERSION 2)
+SET(OPENMM_MAJOR_VERSION 6)
+SET(OPENMM_MINOR_VERSION 0)
 SET(OPENMM_BUILD_VERSION 0)
 
-SET(OPENMM_COPYRIGHT_YEARS "2008")
+SET(OPENMM_COPYRIGHT_YEARS "2008-2014")
 
 # underbar separated list of dotted authors, no spaces or commas
 SET(OPENMM_AUTHORS "Peter.Eastman")

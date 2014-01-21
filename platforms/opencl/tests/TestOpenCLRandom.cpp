@@ -50,7 +50,7 @@ using namespace std;
 static OpenCLPlatform platform;
 
 void testGaussian() {
-    int numAtoms = 5000;
+    int numAtoms = 10000;
     System system;
     for (int i = 0; i < numAtoms; i++)
         system.addParticle(1.0);
@@ -82,10 +82,10 @@ void testGaussian() {
     double c2 = var-mean*mean;
     double c3 = skew-3*var*mean+2*mean*mean*mean;
     double c4 = kurtosis-4*skew*mean-3*var*var+12*var*mean*mean-6*mean*mean*mean*mean;
-    ASSERT_EQUAL_TOL(0.0, mean, 3.0/sqrt((double)numValues));
-    ASSERT_EQUAL_TOL(1.0, c2, 3.0/pow(numValues, 1.0/3.0));
-    ASSERT_EQUAL_TOL(0.0, c3, 3.0/pow(numValues, 1.0/4.0));
-    ASSERT_EQUAL_TOL(0.0, c4, 3.0/pow(numValues, 1.0/4.0));
+    ASSERT_EQUAL_TOL(0.0, mean, 4.0/sqrt((double)numValues));
+    ASSERT_EQUAL_TOL(1.0, c2, 4.0/pow(numValues, 1.0/3.0));
+    ASSERT_EQUAL_TOL(0.0, c3, 4.0/pow(numValues, 1.0/4.0));
+    ASSERT_EQUAL_TOL(0.0, c4, 4.0/pow(numValues, 1.0/4.0));
 }
 
 void testRandomVelocities() {
