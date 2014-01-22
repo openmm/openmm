@@ -11,10 +11,10 @@ before_install:
   - sudo apt-get install python-scipy
   
 script:
-  - cmake .
+  - cmake -DCMAKE_INSTALL_PREFIX=~/OpenMM . 
   - make 
 #  - make test 
-  - make DESTDIR=~/OpenMM install
+  - make install
   - ls ~/OpenMM/include
   - export LD_LIBRARY_PATH=~/OpenMM/lib/
   - export OPENMM_LIB_PATH=~/OpenMM/lib/
