@@ -15,7 +15,7 @@ script:
   - make 
 #  - make test 
   - make DESTDIR=~/OpenMM install
-  - ls /OpenMM/include
+  - ls ~/OpenMM/include
   - export LD_LIBRARY_PATH=~/OpenMM/lib/
   - export OPENMM_LIB_PATH=~/OpenMM/lib/
   - export OPENMM_INCLUDE_PATH=~/OpenMM/include/
