@@ -35,6 +35,8 @@
 #include "ReferenceKernelFactory.h"
 #include "ReferenceKernels.h"
 #include "ReferenceLJCoulomb14.h"
+#include "ReferenceProperDihedralBond.h"
+#include "ReferenceRbDihedralBond.h"
 #include "openmm/Context.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/ContextImpl.h"
@@ -181,6 +183,134 @@ double CpuCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, boo
     data.threads.execute(task);
     data.threads.waitForThreads();
     return referenceKernel.getAs<ReferenceCalcForcesAndEnergyKernel>().finishComputation(context, includeForce, includeEnergy, groups);
+}
+
+CpuCalcPeriodicTorsionForceKernel::~CpuCalcPeriodicTorsionForceKernel() {
+    if (torsionIndexArray != NULL) {
+        for (int i = 0; i < numTorsions; i++) {
+            delete[] torsionIndexArray[i];
+            delete[] torsionParamArray[i];
+        }
+        delete[] torsionIndexArray;
+        delete[] torsionParamArray;
+    }
+}
+
+void CpuCalcPeriodicTorsionForceKernel::initialize(const System& system, const PeriodicTorsionForce& force) {
+    numTorsions = force.getNumTorsions();
+    torsionIndexArray = new int*[numTorsions];
+    for (int i = 0; i < numTorsions; i++)
+        torsionIndexArray[i] = new int[4];
+    torsionParamArray = new RealOpenMM*[numTorsions];
+    for (int i = 0; i < numTorsions; i++)
+        torsionParamArray[i] = new RealOpenMM[3];
+    for (int i = 0; i < numTorsions; ++i) {
+        int particle1, particle2, particle3, particle4, periodicity;
+        double phase, k;
+        force.getTorsionParameters(i, particle1, particle2, particle3, particle4, periodicity, phase, k);
+        torsionIndexArray[i][0] = particle1;
+        torsionIndexArray[i][1] = particle2;
+        torsionIndexArray[i][2] = particle3;
+        torsionIndexArray[i][3] = particle4;
+        torsionParamArray[i][0] = (RealOpenMM) k;
+        torsionParamArray[i][1] = (RealOpenMM) phase;
+        torsionParamArray[i][2] = (RealOpenMM) periodicity;
+    }
+    bondForce.initialize(system.getNumParticles(), numTorsions, 4, torsionIndexArray, data.threads);
+}
+
+double CpuCalcPeriodicTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    vector<RealVec>& posData = extractPositions(context);
+    vector<RealVec>& forceData = extractForces(context);
+    RealOpenMM energy = 0;
+    ReferenceProperDihedralBond periodicTorsionBond;
+    bondForce.calculateForce(posData, torsionParamArray, forceData, includeEnergy ? &energy : NULL, periodicTorsionBond);
+    return energy;
+}
+
+void CpuCalcPeriodicTorsionForceKernel::copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force) {
+    if (numTorsions != force.getNumTorsions())
+        throw OpenMMException("updateParametersInContext: The number of torsions has changed");
+
+    // Record the values.
+
+    for (int i = 0; i < numTorsions; ++i) {
+        int particle1, particle2, particle3, particle4, periodicity;
+        double phase, k;
+        force.getTorsionParameters(i, particle1, particle2, particle3, particle4, periodicity, phase, k);
+        if (particle1 != torsionIndexArray[i][0] || particle2 != torsionIndexArray[i][1] || particle3 != torsionIndexArray[i][2] || particle4 != torsionIndexArray[i][3])
+            throw OpenMMException("updateParametersInContext: The set of particles in a torsion has changed");
+        torsionParamArray[i][0] = (RealOpenMM) k;
+        torsionParamArray[i][1] = (RealOpenMM) phase;
+        torsionParamArray[i][2] = (RealOpenMM) periodicity;
+    }
+}
+
+CpuCalcRBTorsionForceKernel::~CpuCalcRBTorsionForceKernel() {
+    if (torsionIndexArray != NULL) {
+        for (int i = 0; i < numTorsions; i++) {
+            delete[] torsionIndexArray[i];
+            delete[] torsionParamArray[i];
+        }
+        delete[] torsionIndexArray;
+        delete[] torsionParamArray;
+    }
+}
+
+void CpuCalcRBTorsionForceKernel::initialize(const System& system, const RBTorsionForce& force) {
+    numTorsions = force.getNumTorsions();
+    torsionIndexArray = new int*[numTorsions];
+    for (int i = 0; i < numTorsions; i++)
+        torsionIndexArray[i] = new int[4];
+    torsionParamArray = new RealOpenMM*[numTorsions];
+    for (int i = 0; i < numTorsions; i++)
+        torsionParamArray[i] = new RealOpenMM[6];
+    for (int i = 0; i < numTorsions; ++i) {
+        int particle1, particle2, particle3, particle4;
+        double c0, c1, c2, c3, c4, c5;
+        force.getTorsionParameters(i, particle1, particle2, particle3, particle4, c0, c1, c2, c3, c4, c5);
+        torsionIndexArray[i][0] = particle1;
+        torsionIndexArray[i][1] = particle2;
+        torsionIndexArray[i][2] = particle3;
+        torsionIndexArray[i][3] = particle4;
+        torsionParamArray[i][0] = (RealOpenMM) c0;
+        torsionParamArray[i][1] = (RealOpenMM) c1;
+        torsionParamArray[i][2] = (RealOpenMM) c2;
+        torsionParamArray[i][3] = (RealOpenMM) c3;
+        torsionParamArray[i][4] = (RealOpenMM) c4;
+        torsionParamArray[i][5] = (RealOpenMM) c5;
+    }
+    bondForce.initialize(system.getNumParticles(), numTorsions, 4, torsionIndexArray, data.threads);
+}
+
+double CpuCalcRBTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    vector<RealVec>& posData = extractPositions(context);
+    vector<RealVec>& forceData = extractForces(context);
+    RealOpenMM energy = 0;
+    ReferenceRbDihedralBond rbTorsionBond;
+    bondForce.calculateForce(posData, torsionParamArray, forceData, includeEnergy ? &energy : NULL, rbTorsionBond);
+    return energy;
+}
+
+void CpuCalcRBTorsionForceKernel::copyParametersToContext(ContextImpl& context, const RBTorsionForce& force) {
+    if (numTorsions != force.getNumTorsions())
+        throw OpenMMException("updateParametersInContext: The number of torsions has changed");
+
+    // Record the values.
+
+    for (int i = 0; i < numTorsions; ++i) {
+        int particle1, particle2, particle3, particle4;
+        double c0, c1, c2, c3, c4, c5;
+        force.getTorsionParameters(i, particle1, particle2, particle3, particle4, c0, c1, c2, c3, c4, c5);
+        if (particle1 != torsionIndexArray[i][0] || particle2 != torsionIndexArray[i][1] || particle3 != torsionIndexArray[i][2] || particle4 != torsionIndexArray[i][3])
+            throw OpenMMException("updateParametersInContext: The set of particles in a torsion has changed");
+        torsionParamArray[i][0] = (RealOpenMM) c0;
+        torsionParamArray[i][1] = (RealOpenMM) c1;
+        torsionParamArray[i][2] = (RealOpenMM) c2;
+        torsionParamArray[i][3] = (RealOpenMM) c3;
+        torsionParamArray[i][4] = (RealOpenMM) c4;
+        torsionParamArray[i][5] = (RealOpenMM) c5;
+    }
 }
 
 class CpuCalcNonbondedForceKernel::PmeIO : public CalcPmeReciprocalForceKernel::IO {
