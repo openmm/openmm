@@ -14,11 +14,11 @@ script:
   - cmake .
   - make 
 #  - make test 
-  - sudo make DESTDIR=/OpenMM install
+  - make DESTDIR=~/OpenMM install
   - ls /OpenMM/include
-  - export LD_LIBRARY_PATH=/OpenMM/lib/
-  - export OPENMM_LIB_PATH=/OpenMM/lib/
-  - export OPENMM_INCLUDE_PATH=/OpenMM/include/
+  - export LD_LIBRARY_PATH=~/OpenMM/lib/
+  - export OPENMM_LIB_PATH=~/OpenMM/lib/
+  - export OPENMM_INCLUDE_PATH=~/OpenMM/include/
   - cd python
   - sudo -E python setup.py install
   - cd tests
