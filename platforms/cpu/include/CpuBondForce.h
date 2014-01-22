@@ -1,3 +1,6 @@
+#ifndef OPENMM_CPUBONDFORCE_H_
+#define OPENMM_CPUBONDFORCE_H_
+
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -6,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013 Stanford University and the Authors.           *
+ * Portions copyright (c) 2014 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -29,27 +32,46 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "CpuKernelFactory.h"
-#include "CpuKernels.h"
-#include "CpuPlatform.h"
-#include "openmm/internal/ContextImpl.h"
-#include "openmm/OpenMMException.h"
+#include "ReferenceBondIxn.h"
+#include "windowsExportCpu.h"
+#include "openmm/internal/ThreadPool.h"
+#include <list>
+#include <set>
+#include <vector>
 
-using namespace OpenMM;
+namespace OpenMM {
 
-KernelImpl* CpuKernelFactory::createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const {
-    CpuPlatform::PlatformData& data = CpuPlatform::getPlatformData(context);
-    if (name == CalcForcesAndEnergyKernel::Name())
-        return new CpuCalcForcesAndEnergyKernel(name, platform, data, context);
-    if (name == CalcPeriodicTorsionForceKernel::Name())
-        return new CpuCalcPeriodicTorsionForceKernel(name, platform, data);
-    if (name == CalcRBTorsionForceKernel::Name())
-        return new CpuCalcRBTorsionForceKernel(name, platform, data);
-    if (name == CalcNonbondedForceKernel::Name())
-        return new CpuCalcNonbondedForceKernel(name, platform, data);
-    if (name == CalcGBSAOBCForceKernel::Name())
-        return new CpuCalcGBSAOBCForceKernel(name, platform, data);
-    if (name == IntegrateLangevinStepKernel::Name())
-        return new CpuIntegrateLangevinStepKernel(name, platform, data);
-    throw OpenMMException((std::string("Tried to create kernel with illegal kernel name '") + name + "'").c_str());
-}
+/**
+ * This class parallelizes the calculation of bonded forces.
+ */
+class OPENMM_EXPORT_CPU CpuBondForce {
+public:
+    class ComputeForceTask;
+    CpuBondForce();
+    /**
+     * Analyze the set of bonds and decide which to compute with each thread.
+     */
+    void initialize(int numAtoms, int numBonds, int numAtomsPerBond, int** bondAtoms, ThreadPool& threads);
+    /**
+     * Compute the forces from all bonds.
+     */
+    void calculateForce(std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM** parameters, std::vector<OpenMM::RealVec>& forces, 
+            RealOpenMM* totalEnergy, ReferenceBondIxn& referenceBondIxn);
+    /**
+     * This routine contains the code executed by each thread.
+     */
+    void threadComputeForce(ThreadPool& threads, int threadIndex, std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM** parameters,
+            std::vector<OpenMM::RealVec>& forces, RealOpenMM* totalEnergy, ReferenceBondIxn& referenceBondIxn);
+private:
+    bool canAssignBond(int bond, int thread, std::vector<int>& atomThread);
+    void assignBond(int bond, int thread, std::vector<int>& atomThread, std::vector<int>& bondThread, std::vector<std::set<int> >& atomBonds, std::list<int>& candidateBonds);
+    int numBonds, numAtomsPerBond;
+    int** bondAtoms;
+    ThreadPool* threads;
+    std::vector<std::vector<int> > threadBonds;
+    std::vector<int> extraBonds;
+};
+
+} // namespace OpenMM
+
+#endif /*OPENMM_CPUBONDFORCE_H_*/
