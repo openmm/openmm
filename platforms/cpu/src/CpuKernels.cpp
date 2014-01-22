@@ -132,6 +132,46 @@ public:
     CpuPlatform::PlatformData& data;
 };
 
+class CpuCalcForcesAndEnergyKernel::InitForceTask : public ThreadPool::Task {
+public:
+    InitForceTask(int numParticles, ContextImpl& context, CpuPlatform::PlatformData& data) : numParticles(numParticles), context(context), data(data) {
+    }
+    void execute(ThreadPool& threads, int threadIndex) {
+        // Convert the positions to single precision and apply periodic boundary conditions
+
+        AlignedArray<float>& posq = data.posq;
+        vector<RealVec>& posData = extractPositions(context);
+        RealVec boxSize = extractBoxSize(context);
+        double invBoxSize[3] = {1/boxSize[0], 1/boxSize[1], 1/boxSize[2]};
+        int numParticles = context.getSystem().getNumParticles();
+        int numThreads = threads.getNumThreads();
+        int start = threadIndex*numParticles/numThreads;
+        int end = (threadIndex+1)*numParticles/numThreads;
+        if (data.isPeriodic)
+            for (int i = start; i < end; i++)
+                for (int j = 0; j < 3; j++) {
+                    RealOpenMM x = posData[i][j];
+                    double base = floor(x*invBoxSize[j])*boxSize[j];
+                    posq[4*i+j] = (float) (x-base);
+                }
+        else
+            for (int i = start; i < end; i++) {
+                posq[4*i] = (float) posData[i][0];
+                posq[4*i+1] = (float) posData[i][1];
+                posq[4*i+2] = (float) posData[i][2];
+            }
+
+        // Clear the forces.
+
+        fvec4 zero(0.0f);
+        for (int j = 0; j < numParticles; j++)
+            zero.store(&data.threadForce[threadIndex][j*4]);
+    }
+    int numParticles;
+    ContextImpl& context;
+    CpuPlatform::PlatformData& data;
+};
+
 CpuCalcForcesAndEnergyKernel::CpuCalcForcesAndEnergyKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data, ContextImpl& context) :
         CalcForcesAndEnergyKernel(name, platform), data(data) {
     // Create a Reference platform version of this kernel.
@@ -147,33 +187,11 @@ void CpuCalcForcesAndEnergyKernel::initialize(const System& system) {
 void CpuCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups) {
     referenceKernel.getAs<ReferenceCalcForcesAndEnergyKernel>().beginComputation(context, includeForce, includeEnergy, groups);
     
-    // Convert the positions to single precision and apply periodic boundary conditions
+    // Convert positions to single precision and clear the forces.
     
-    AlignedArray<float>& posq = data.posq;
-    vector<RealVec>& posData = extractPositions(context);
-    RealVec boxSize = extractBoxSize(context);
-    double invBoxSize[3] = {1/boxSize[0], 1/boxSize[1], 1/boxSize[2]};
-    int numParticles = context.getSystem().getNumParticles();
-    if (data.isPeriodic)
-        for (int i = 0; i < numParticles; i++)
-            for (int j = 0; j < 3; j++) {
-                RealOpenMM x = posData[i][j];
-                double base = floor(x*invBoxSize[j])*boxSize[j];
-                posq[4*i+j] = (float) (x-base);
-            }
-    else
-        for (int i = 0; i < numParticles; i++) {
-            posq[4*i] = (float) posData[i][0];
-            posq[4*i+1] = (float) posData[i][1];
-            posq[4*i+2] = (float) posData[i][2];
-        }
-    
-    // Clear the forces.
-    
-    fvec4 zero(0.0f);
-    for (int i = 0; i < (int) data.threadForce.size(); i++)
-        for (int j = 0; j < numParticles; j++)
-            zero.store(&data.threadForce[i][j*4]);
+    InitForceTask task(context.getSystem().getNumParticles(), context, data);
+    data.threads.execute(task);
+    data.threads.waitForThreads();
 }
 
 double CpuCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups) {
