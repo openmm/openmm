@@ -14,7 +14,7 @@ script:
   - cmake .
   - make 
   - make test 
-  - sudo make install
+  - sudo make DESTDIR=/OpenMM install
   - export LD_LIBRARY_PATH=/OpenMM/lib/
   - export OPENMM_LIB_PATH=/OpenMM/lib/
   - export OPENMM_INCLUDE_PATH=/OpenMM/include/
