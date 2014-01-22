@@ -13,7 +13,7 @@ before_install:
 script:
   - cmake -DCMAKE_INSTALL_PREFIX=~/OpenMM . 
   - make 
-#  - make test 
+  - make test 
   - make install
   - ls ~/OpenMM/include
   - export LD_LIBRARY_PATH=~/OpenMM/lib/
