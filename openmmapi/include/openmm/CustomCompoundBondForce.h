@@ -32,6 +32,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include "TabulatedFunction.h"
 #include "Force.h"
 #include "Vec3.h"
 #include <vector>
@@ -91,8 +92,8 @@ namespace OpenMM {
  * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, erf, erfc, min, max, abs, step, delta.  All trigonometric functions
  * are defined in radians, and log is the natural logarithm.  step(x) = 0 if x is less than 0, 1 otherwise.  delta(x) = 1 if x is 0, 0 otherwise.
  *
- * In addition, you can call addFunction() to define a new function based on tabulated values.  You specify a vector of
- * values, and a natural spline is created from them.  That function can then appear in the expression.
+ * In addition, you can call addFunction() to define a new function based on tabulated values.  You specify the function by
+ * creating a TabulatedFunction object.  That function can then appear in the expression.
  */
 
 class OPENMM_EXPORT CustomCompoundBondForce : public Force {
@@ -229,33 +230,54 @@ public:
      * Add a tabulated function that may appear in the energy expression.
      *
      * @param name           the name of the function as it appears in expressions
-     * @param values         the tabulated values of the function f(x) at uniformly spaced values of x between min and max.
-     *                       The function is assumed to be zero for x &lt; min or x &gt; max.
-     * @param min            the value of the independent variable corresponding to the first element of values
-     * @param max            the value of the independent variable corresponding to the last element of values
+     * @param function       a TabulatedFunction object defining the function.  The TabulatedFunction
+     *                       should have been created on the heap with the "new" operator.  The
+     *                       Force takes over ownership of it, and deletes it when the Force itself is deleted.
      * @return the index of the function that was added
+     */
+    int addFunction(const std::string& name, TabulatedFunction* function);
+    /**
+     * Get a const reference to a tabulated function that may appear in the energy expression.
+     *
+     * @param index     the index of the function to get
+     * @return the TabulatedFunction object defining the function
+     */
+    const TabulatedFunction& getFunction(int index) const;
+    /**
+     * Get a reference to a tabulated function that may appear in the energy expression.
+     *
+     * @param index     the index of the function to get
+     * @return the TabulatedFunction object defining the function
+     */
+    TabulatedFunction& getFunction(int index);
+    /**
+     * Get the name of a tabulated function that may appear in the energy expression.
+     *
+     * @param index     the index of the function to get
+     * @return the name of the function as it appears in expressions
+     */
+    const std::string& getFunctionName(int index);
+    /**
+     * Add a tabulated function that may appear in the energy expression.
+     *
+     * @deprecated This method exists only for backward compatibility.  Use the version that takes
+     * a TabulatedFunction instead.
      */
     int addFunction(const std::string& name, const std::vector<double>& values, double min, double max);
     /**
      * Get the parameters for a tabulated function that may appear in the energy expression.
      *
-     * @param index          the index of the function for which to get parameters
-     * @param name           the name of the function as it appears in expressions
-     * @param values         the tabulated values of the function f(x) at uniformly spaced values of x between min and max.
-     *                       The function is assumed to be zero for x &lt; min or x &gt; max.
-     * @param min            the value of the independent variable corresponding to the first element of values
-     * @param max            the value of the independent variable corresponding to the last element of values
+     * @deprecated This method exists only for backward compatibility.  Use the version that takes
+     * a TabulatedFunction instead.  If the specified function is not a Continuous1DFunction, this throws
+     * an exception.
      */
     void getFunctionParameters(int index, std::string& name, std::vector<double>& values, double& min, double& max) const;
     /**
-     * Set the parameters for a tabulated function that may appear in algebraic expressions.
+     * Set the parameters for a tabulated function that may appear in the energy expression.
      *
-     * @param index          the index of the function for which to set parameters
-     * @param name           the name of the function as it appears in expressions
-     * @param values         the tabulated values of the function f(x) at uniformly spaced values of x between min and max.
-     *                       The function is assumed to be zero for x &lt; min or x &gt; max.
-     * @param min            the value of the independent variable corresponding to the first element of values
-     * @param max            the value of the independent variable corresponding to the last element of values
+     * @deprecated This method exists only for backward compatibility.  Use the version that takes
+     * a TabulatedFunction instead.  If the specified function is not a Continuous1DFunction, this throws
+     * an exception.
      */
     void setFunctionParameters(int index, const std::string& name, const std::vector<double>& values, double min, double max);
     /**
@@ -333,12 +355,10 @@ public:
 class CustomCompoundBondForce::FunctionInfo {
 public:
     std::string name;
-    std::vector<double> values;
-    double min, max;
+    TabulatedFunction* function;
     FunctionInfo() {
     }
-    FunctionInfo(const std::string& name, const std::vector<double>& values, double min, double max) :
-        name(name), values(values), min(min), max(max) {
+    FunctionInfo(const std::string& name, TabulatedFunction* function) : name(name), function(function) {
     }
 };
 
