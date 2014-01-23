@@ -135,7 +135,7 @@ TabulatedFunction& CustomCompoundBondForce::getFunction(int index) {
     return *functions[index].function;
 }
 
-const string& CustomCompoundBondForce::getFunctionName(int index) {
+const string& CustomCompoundBondForce::getFunctionName(int index) const {
     ASSERT_VALID_INDEX(index, functions);
     return functions[index].name;
 }

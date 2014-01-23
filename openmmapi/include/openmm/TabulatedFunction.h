@@ -1,5 +1,5 @@
-#ifndef OPENMM_TabulatedFunction_H_
-#define OPENMM_TabulatedFunction_H_
+#ifndef OPENMM_TABULATEDFUNCTION_H_
+#define OPENMM_TABULATEDFUNCTION_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -103,4 +103,4 @@ private:
 
 } // namespace OpenMM
 
-#endif /*OPENMM_TabulatedFunction_H_*/
+#endif /*OPENMM_TABULATEDFUNCTION_H_*/

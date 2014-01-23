@@ -202,7 +202,7 @@ TabulatedFunction& CustomHbondForce::getFunction(int index) {
     return *functions[index].function;
 }
 
-const string& CustomHbondForce::getFunctionName(int index) {
+const string& CustomHbondForce::getFunctionName(int index) const {
     ASSERT_VALID_INDEX(index, functions);
     return functions[index].name;
 }

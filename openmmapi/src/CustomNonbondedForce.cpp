@@ -184,7 +184,7 @@ TabulatedFunction& CustomNonbondedForce::getFunction(int index) {
     return *functions[index].function;
 }
 
-const string& CustomNonbondedForce::getFunctionName(int index) {
+const string& CustomNonbondedForce::getFunctionName(int index) const {
     ASSERT_VALID_INDEX(index, functions);
     return functions[index].name;
 }

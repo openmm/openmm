@@ -482,7 +482,7 @@ public:
      * @param index     the index of the function to get
      * @return the name of the function as it appears in expressions
      */
-    const std::string& getFunctionName(int index);
+    const std::string& getFunctionName(int index) const;
     /**
      * Add a tabulated function that may appear in expressions.
      *
