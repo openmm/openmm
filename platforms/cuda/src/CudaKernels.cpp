@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -1958,21 +1958,19 @@ void CudaCalcCustomNonbondedForceKernel::initialize(const System& system, const 
     CudaExpressionUtilities::FunctionPlaceholder fp;
     map<string, Lepton::CustomFunction*> functions;
     vector<pair<string, string> > functionDefinitions;
-    vector<float4> tabulatedFunctionParamsVec(force.getNumFunctions());
+    vector<const TabulatedFunction*> functionList;
     for (int i = 0; i < force.getNumFunctions(); i++) {
-        string name;
-        vector<double> values;
-        double min, max;
-        force.getFunctionParameters(i, name, values, min, max);
+        functionList.push_back(&force.getFunction(i));
+        string name = force.getFunctionName(i);
         string arrayName = prefix+"table"+cu.intToString(i);
         functionDefinitions.push_back(make_pair(name, arrayName));
         functions[name] = &fp;
-        tabulatedFunctionParamsVec[i] = make_float4((float) min, (float) max, (float) ((values.size()-1)/(max-min)), (float) values.size()-2);
-        vector<float4> f = cu.getExpressionUtilities().computeFunctionCoefficients(values, min, max);
-        tabulatedFunctions.push_back(CudaArray::create<float4>(cu, values.size()-1, "TabulatedFunction"));
+        vector<float> f = cu.getExpressionUtilities().computeFunctionCoefficients(force.getFunction(i));
+        tabulatedFunctions.push_back(CudaArray::create<float>(cu, f.size(), "TabulatedFunction"));
         tabulatedFunctions[tabulatedFunctions.size()-1]->upload(f);
         cu.getNonbondedUtilities().addArgument(CudaNonbondedUtilities::ParameterInfo(arrayName, "float", 4, sizeof(float4), tabulatedFunctions[tabulatedFunctions.size()-1]->getDevicePointer()));
     }
+    vector<float4> tabulatedFunctionParamsVec = cu.getExpressionUtilities().computeFunctionParameters(functionList);
     if (force.getNumFunctions() > 0) {
         tabulatedFunctionParams = CudaArray::create<float4>(cu, tabulatedFunctionParamsVec.size(), "tabulatedFunctionParameters");
         tabulatedFunctionParams->upload(tabulatedFunctionParamsVec);
@@ -2672,23 +2670,21 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
     CudaExpressionUtilities::FunctionPlaceholder fp;
     map<string, Lepton::CustomFunction*> functions;
     vector<pair<string, string> > functionDefinitions;
-    vector<float4> tabulatedFunctionParamsVec(force.getNumFunctions());
+    vector<const TabulatedFunction*> functionList;
     stringstream tableArgs;
     for (int i = 0; i < force.getNumFunctions(); i++) {
-        string name;
-        vector<double> values;
-        double min, max;
-        force.getFunctionParameters(i, name, values, min, max);
+        functionList.push_back(&force.getFunction(i));
+        string name = force.getFunctionName(i);
         string arrayName = prefix+"table"+cu.intToString(i);
         functionDefinitions.push_back(make_pair(name, arrayName));
         functions[name] = &fp;
-        tabulatedFunctionParamsVec[i] = make_float4((float) min, (float) max, (float) ((values.size()-1)/(max-min)), (float) values.size()-2);
-        vector<float4> f = cu.getExpressionUtilities().computeFunctionCoefficients(values, min, max);
-        tabulatedFunctions.push_back(CudaArray::create<float4>(cu, values.size()-1, "TabulatedFunction"));
+        vector<float> f = cu.getExpressionUtilities().computeFunctionCoefficients(force.getFunction(i));
+        tabulatedFunctions.push_back(CudaArray::create<float>(cu, f.size(), "TabulatedFunction"));
         tabulatedFunctions[tabulatedFunctions.size()-1]->upload(f);
         cu.getNonbondedUtilities().addArgument(CudaNonbondedUtilities::ParameterInfo(arrayName, "float", 4, sizeof(float4), tabulatedFunctions[tabulatedFunctions.size()-1]->getDevicePointer()));
         tableArgs << ", const float4* __restrict__ " << arrayName;
     }
+    vector<float4> tabulatedFunctionParamsVec = cu.getExpressionUtilities().computeFunctionParameters(functionList);
     if (force.getNumFunctions() > 0) {
         tabulatedFunctionParams = CudaArray::create<float4>(cu, tabulatedFunctionParamsVec.size(), "tabulatedFunctionParameters");
         tabulatedFunctionParams->upload(tabulatedFunctionParamsVec);
@@ -3787,22 +3783,20 @@ void CudaCalcCustomHbondForceKernel::initialize(const System& system, const Cust
     CudaExpressionUtilities::FunctionPlaceholder fp;
     map<string, Lepton::CustomFunction*> functions;
     vector<pair<string, string> > functionDefinitions;
-    vector<float4> tabulatedFunctionParamsVec(force.getNumFunctions());
+    vector<const TabulatedFunction*> functionList;
     stringstream tableArgs;
     for (int i = 0; i < force.getNumFunctions(); i++) {
-        string name;
-        vector<double> values;
-        double min, max;
-        force.getFunctionParameters(i, name, values, min, max);
+        functionList.push_back(&force.getFunction(i));
+        string name = force.getFunctionName(i);
         string arrayName = "table"+cu.intToString(i);
         functionDefinitions.push_back(make_pair(name, arrayName));
         functions[name] = &fp;
-        tabulatedFunctionParamsVec[i] = make_float4((float) min, (float) max, (float) ((values.size()-1)/(max-min)), (float) values.size()-2);
-        vector<float4> f = cu.getExpressionUtilities().computeFunctionCoefficients(values, min, max);
-        tabulatedFunctions.push_back(CudaArray::create<float4>(cu, values.size()-1, "TabulatedFunction"));
+        vector<float> f = cu.getExpressionUtilities().computeFunctionCoefficients(force.getFunction(i));
+        tabulatedFunctions.push_back(CudaArray::create<float>(cu, f.size(), "TabulatedFunction"));
         tabulatedFunctions[tabulatedFunctions.size()-1]->upload(f);
         tableArgs << ", const float4* __restrict__ " << arrayName;
     }
+    vector<float4> tabulatedFunctionParamsVec = cu.getExpressionUtilities().computeFunctionParameters(functionList);
     if (force.getNumFunctions() > 0) {
         tabulatedFunctionParams = CudaArray::create<float4>(cu, tabulatedFunctionParamsVec.size(), "tabulatedFunctionParameters");
         tabulatedFunctionParams->upload(tabulatedFunctionParamsVec);
@@ -4181,22 +4175,20 @@ void CudaCalcCustomCompoundBondForceKernel::initialize(const System& system, con
     CudaExpressionUtilities::FunctionPlaceholder fp;
     map<string, Lepton::CustomFunction*> functions;
     vector<pair<string, string> > functionDefinitions;
-    vector<float4> tabulatedFunctionParamsVec(force.getNumFunctions());
+    vector<const TabulatedFunction*> functionList;
     stringstream tableArgs;
     for (int i = 0; i < force.getNumFunctions(); i++) {
-        string name;
-        vector<double> values;
-        double min, max;
-        force.getFunctionParameters(i, name, values, min, max);
+        functionList.push_back(&force.getFunction(i));
+        string name = force.getFunctionName(i);
         functions[name] = &fp;
-        tabulatedFunctionParamsVec[i] = make_float4((float) min, (float) max, (float) ((values.size()-1)/(max-min)), (float) values.size()-2);
-        vector<float4> f = cu.getExpressionUtilities().computeFunctionCoefficients(values, min, max);
-        CudaArray* array = CudaArray::create<float4>(cu, values.size()-1, "TabulatedFunction");
+        vector<float> f = cu.getExpressionUtilities().computeFunctionCoefficients(force.getFunction(i));
+        CudaArray* array = CudaArray::create<float>(cu, f.size(), "TabulatedFunction");
         tabulatedFunctions.push_back(array);
         array->upload(f);
         string arrayName = cu.getBondedUtilities().addArgument(array->getDevicePointer(), "float4");
         functionDefinitions.push_back(make_pair(name, arrayName));
     }
+    vector<float4> tabulatedFunctionParamsVec = cu.getExpressionUtilities().computeFunctionParameters(functionList);
     string functionParamsName;
     if (force.getNumFunctions() > 0) {
         tabulatedFunctionParams = CudaArray::create<float4>(cu, tabulatedFunctionParamsVec.size(), "tabulatedFunctionParameters");

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2011 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -341,16 +341,43 @@ void OpenCLExpressionUtilities::findRelatedPowers(const ExpressionTreeNode& node
             findRelatedPowers(node, searchNode.getChildren()[i], powers);
 }
 
-vector<mm_float4> OpenCLExpressionUtilities::computeFunctionCoefficients(const vector<double>& values, double min, double max) {
+vector<float> OpenCLExpressionUtilities::computeFunctionCoefficients(const TabulatedFunction& function) {
     // Compute the spline coefficients.
 
-    int numValues = values.size();
-    vector<double> x(numValues), derivs;
-    for (int i = 0; i < numValues; i++)
-        x[i] = min+i*(max-min)/(numValues-1);
-    SplineFitter::createNaturalSpline(x, values, derivs);
-    vector<mm_float4> f(numValues-1);
-    for (int i = 0; i < (int) values.size()-1; i++)
-        f[i] = mm_float4((cl_float) values[i], (cl_float) values[i+1], (cl_float) (derivs[i]/6.0), (cl_float) (derivs[i+1]/6.0));
-    return f;
+    if (dynamic_cast<const Continuous1DFunction*>(&function) != NULL) {
+        const Continuous1DFunction& fn = dynamic_cast<const Continuous1DFunction&>(function);
+        vector<double> values;
+        double min, max;
+        fn.getFunctionParameters(values, min, max);
+        int numValues = values.size();
+        vector<double> x(numValues), derivs;
+        for (int i = 0; i < numValues; i++)
+            x[i] = min+i*(max-min)/(numValues-1);
+        SplineFitter::createNaturalSpline(x, values, derivs);
+        vector<float> f(4*(numValues-1));
+        for (int i = 0; i < (int) values.size()-1; i++) {
+            f[4*i] = (float) values[i];
+            f[4*i+1] = (float) values[i+1];
+            f[4*i+2] = (float) (derivs[i]/6.0);
+            f[4*i+3] = (float) (derivs[i+1]/6.0);
+        }
+        return f;
+    }
+    throw OpenMMException("computeFunctionCoefficients: Unknown function type");
+}
+
+vector<mm_float4> OpenCLExpressionUtilities::computeFunctionParameters(const vector<const TabulatedFunction*>& functions) {
+    vector<mm_float4> params(functions.size());
+    for (int i = 0; i < (int) functions.size(); i++) {
+        if (dynamic_cast<const Continuous1DFunction*>(functions[i]) != NULL) {
+            const Continuous1DFunction& fn = dynamic_cast<const Continuous1DFunction&>(*functions[i]);
+            vector<double> values;
+            double min, max;
+            fn.getFunctionParameters(values, min, max);
+            params[i] = mm_float4((float) min, (float) max, (float) ((values.size()-1)/(max-min)), (float) values.size()-2);
+        }
+        else
+            throw OpenMMException("computeFunctionParameters: Unknown function type");
+    }
+    return params;
 }

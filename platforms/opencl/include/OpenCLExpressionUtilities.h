@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2011 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -28,6 +28,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "OpenCLContext.h"
+#include "openmm/TabulatedFunction.h"
 #include "lepton/CustomFunction.h"
 #include "lepton/ExpressionTreeNode.h"
 #include "lepton/ParsedExpression.h"
@@ -76,12 +77,17 @@ public:
     /**
      * Calculate the spline coefficients for a tabulated function that appears in expressions.
      *
-     * @param values         the tabulated values of the function
-     * @param min            the value of the independent variable corresponding to the first element of values
-     * @param max            the value of the independent variable corresponding to the last element of values
+     * @param function   the function for which to compute coefficients
      * @return the spline coefficients
      */
-    std::vector<mm_float4> computeFunctionCoefficients(const std::vector<double>& values, double min, double max);
+    std::vector<float> computeFunctionCoefficients(const TabulatedFunction& function);
+    /**
+     * Given the list of TabulatedFunctions used by a Force, create the parameter array describing them.
+     *
+     * @param functions   the list of functions to include in the array
+     * @return the parameter array
+     */
+    std::vector<mm_float4> computeFunctionParameters(const std::vector<const TabulatedFunction*>& functions);
     class FunctionPlaceholder;
 private:
     void processExpression(std::stringstream& out, const Lepton::ExpressionTreeNode& node,

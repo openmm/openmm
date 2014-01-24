@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -1968,21 +1968,19 @@ void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, cons
     OpenCLExpressionUtilities::FunctionPlaceholder fp;
     map<string, Lepton::CustomFunction*> functions;
     vector<pair<string, string> > functionDefinitions;
-    vector<mm_float4> tabulatedFunctionParamsVec(force.getNumFunctions());
+    vector<const TabulatedFunction*> functionList;
     for (int i = 0; i < force.getNumFunctions(); i++) {
-        string name;
-        vector<double> values;
-        double min, max;
-        force.getFunctionParameters(i, name, values, min, max);
+        functionList.push_back(&force.getFunction(i));
+        string name = force.getFunctionName(i);
         string arrayName = prefix+"table"+cl.intToString(i);
         functionDefinitions.push_back(make_pair(name, arrayName));
         functions[name] = &fp;
-        tabulatedFunctionParamsVec[i] = mm_float4((float) min, (float) max, (float) ((values.size()-1)/(max-min)), (float) values.size()-2);
-        vector<mm_float4> f = cl.getExpressionUtilities().computeFunctionCoefficients(values, min, max);
-        tabulatedFunctions.push_back(OpenCLArray::create<mm_float4>(cl, values.size()-1, "TabulatedFunction"));
+        vector<float> f = cl.getExpressionUtilities().computeFunctionCoefficients(force.getFunction(i));
+        tabulatedFunctions.push_back(OpenCLArray::create<float>(cl, f.size(), "TabulatedFunction"));
         tabulatedFunctions[tabulatedFunctions.size()-1]->upload(f);
         cl.getNonbondedUtilities().addArgument(OpenCLNonbondedUtilities::ParameterInfo(arrayName, "float", 4, sizeof(cl_float4), tabulatedFunctions[tabulatedFunctions.size()-1]->getDeviceBuffer()));
     }
+    vector<mm_float4> tabulatedFunctionParamsVec = cl.getExpressionUtilities().computeFunctionParameters(functionList);
     if (force.getNumFunctions() > 0) {
         tabulatedFunctionParams = OpenCLArray::create<mm_float4>(cl, tabulatedFunctionParamsVec.size(), "tabulatedFunctionParameters", CL_MEM_READ_ONLY);
         tabulatedFunctionParams->upload(tabulatedFunctionParamsVec);
@@ -2725,23 +2723,21 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
     OpenCLExpressionUtilities::FunctionPlaceholder fp;
     map<string, Lepton::CustomFunction*> functions;
     vector<pair<string, string> > functionDefinitions;
-    vector<mm_float4> tabulatedFunctionParamsVec(force.getNumFunctions());
+    vector<const TabulatedFunction*> functionList;
     stringstream tableArgs;
     for (int i = 0; i < force.getNumFunctions(); i++) {
-        string name;
-        vector<double> values;
-        double min, max;
-        force.getFunctionParameters(i, name, values, min, max);
+        functionList.push_back(&force.getFunction(i));
+        string name = force.getFunctionName(i);
         string arrayName = prefix+"table"+cl.intToString(i);
         functionDefinitions.push_back(make_pair(name, arrayName));
         functions[name] = &fp;
-        tabulatedFunctionParamsVec[i] = mm_float4((float) min, (float) max, (float) ((values.size()-1)/(max-min)), (float) values.size()-2);
-        vector<mm_float4> f = cl.getExpressionUtilities().computeFunctionCoefficients(values, min, max);
-        tabulatedFunctions.push_back(OpenCLArray::create<mm_float4>(cl, values.size()-1, "TabulatedFunction"));
+        vector<float> f = cl.getExpressionUtilities().computeFunctionCoefficients(force.getFunction(i));
+        tabulatedFunctions.push_back(OpenCLArray::create<float>(cl, f.size(), "TabulatedFunction"));
         tabulatedFunctions[tabulatedFunctions.size()-1]->upload(f);
         cl.getNonbondedUtilities().addArgument(OpenCLNonbondedUtilities::ParameterInfo(arrayName, "float", 4, sizeof(cl_float4), tabulatedFunctions[tabulatedFunctions.size()-1]->getDeviceBuffer()));
         tableArgs << ", __global const float4* restrict " << arrayName;
     }
+    vector<mm_float4> tabulatedFunctionParamsVec = cl.getExpressionUtilities().computeFunctionParameters(functionList);
     if (force.getNumFunctions() > 0) {
         tabulatedFunctionParams = OpenCLArray::create<mm_float4>(cl, tabulatedFunctionParamsVec.size(), "tabulatedFunctionParameters", CL_MEM_READ_ONLY);
         tabulatedFunctionParams->upload(tabulatedFunctionParamsVec);
@@ -3950,22 +3946,20 @@ void OpenCLCalcCustomHbondForceKernel::initialize(const System& system, const Cu
     OpenCLExpressionUtilities::FunctionPlaceholder fp;
     map<string, Lepton::CustomFunction*> functions;
     vector<pair<string, string> > functionDefinitions;
-    vector<mm_float4> tabulatedFunctionParamsVec(force.getNumFunctions());
+    vector<const TabulatedFunction*> functionList;
     stringstream tableArgs;
     for (int i = 0; i < force.getNumFunctions(); i++) {
-        string name;
-        vector<double> values;
-        double min, max;
-        force.getFunctionParameters(i, name, values, min, max);
+        functionList.push_back(&force.getFunction(i));
+        string name = force.getFunctionName(i);
         string arrayName = "table"+cl.intToString(i);
         functionDefinitions.push_back(make_pair(name, arrayName));
         functions[name] = &fp;
-        tabulatedFunctionParamsVec[i] = mm_float4((float) min, (float) max, (float) ((values.size()-1)/(max-min)), (float) values.size()-2);
-        vector<mm_float4> f = cl.getExpressionUtilities().computeFunctionCoefficients(values, min, max);
-        tabulatedFunctions.push_back(OpenCLArray::create<mm_float4>(cl, values.size()-1, "TabulatedFunction"));
+        vector<float> f = cl.getExpressionUtilities().computeFunctionCoefficients(force.getFunction(i));
+        tabulatedFunctions.push_back(OpenCLArray::create<float>(cl, f.size(), "TabulatedFunction"));
         tabulatedFunctions[tabulatedFunctions.size()-1]->upload(f);
         tableArgs << ", __global const float4* restrict " << arrayName;
     }
+    vector<mm_float4> tabulatedFunctionParamsVec = cl.getExpressionUtilities().computeFunctionParameters(functionList);
     if (force.getNumFunctions() > 0) {
         tabulatedFunctionParams = OpenCLArray::create<mm_float4>(cl, tabulatedFunctionParamsVec.size(), "tabulatedFunctionParameters", CL_MEM_READ_ONLY);
         tabulatedFunctionParams->upload(tabulatedFunctionParamsVec);
@@ -4346,22 +4340,20 @@ void OpenCLCalcCustomCompoundBondForceKernel::initialize(const System& system, c
     OpenCLExpressionUtilities::FunctionPlaceholder fp;
     map<string, Lepton::CustomFunction*> functions;
     vector<pair<string, string> > functionDefinitions;
-    vector<mm_float4> tabulatedFunctionParamsVec(force.getNumFunctions());
+    vector<const TabulatedFunction*> functionList;
     stringstream tableArgs;
     for (int i = 0; i < force.getNumFunctions(); i++) {
-        string name;
-        vector<double> values;
-        double min, max;
-        force.getFunctionParameters(i, name, values, min, max);
+        functionList.push_back(&force.getFunction(i));
+        string name = force.getFunctionName(i);
         functions[name] = &fp;
-        tabulatedFunctionParamsVec[i] = mm_float4((float) min, (float) max, (float) ((values.size()-1)/(max-min)), (float) values.size()-2);
-        vector<mm_float4> f = cl.getExpressionUtilities().computeFunctionCoefficients(values, min, max);
-        OpenCLArray* array = OpenCLArray::create<mm_float4>(cl, values.size()-1, "TabulatedFunction");
+        vector<float> f = cl.getExpressionUtilities().computeFunctionCoefficients(force.getFunction(i));
+        OpenCLArray* array = OpenCLArray::create<float>(cl, f.size(), "TabulatedFunction");
         tabulatedFunctions.push_back(array);
         array->upload(f);
         string arrayName = cl.getBondedUtilities().addArgument(array->getDeviceBuffer(), "float4");
         functionDefinitions.push_back(make_pair(name, arrayName));
     }
+    vector<mm_float4> tabulatedFunctionParamsVec = cl.getExpressionUtilities().computeFunctionParameters(functionList);
     string functionParamsName;
     if (force.getNumFunctions() > 0) {
         tabulatedFunctionParams = OpenCLArray::create<mm_float4>(cl, tabulatedFunctionParamsVec.size(), "tabulatedFunctionParameters", CL_MEM_READ_ONLY);
