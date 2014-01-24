@@ -71,7 +71,7 @@ void testSingleParticle() {
     double bornRadius = 0.15-0.009; // dielectric offset
     double eps0 = EPSILON0;
     double bornEnergy = (-0.5*0.5/(8*PI_M*eps0))*(1.0/gbsa->getSoluteDielectric()-1.0/gbsa->getSolventDielectric())/bornRadius;
-    double extendedRadius = bornRadius+0.14; // probe radius
+    double extendedRadius = 0.15+0.14; // probe radius
     double nonpolarEnergy = CAL2JOULE*PI_M*0.0216*(10*extendedRadius)*(10*extendedRadius)*std::pow(0.15/bornRadius, 6.0); // Where did this formula come from?  Just copied it from CpuImplicitSolvent.cpp
     ASSERT_EQUAL_TOL((bornEnergy+nonpolarEnergy), state.getPotentialEnergy(), 0.01);
     

@@ -35,8 +35,9 @@ __version__ = "1.0"
 
 
 from simtk.unit import daltons
+import copy_reg
 
-class Element:
+class Element(object):
     """An Element represents a chemical element.
 
     The simtk.openmm.app.element module contains objects for all the standard chemical elements,
@@ -85,6 +86,10 @@ def get_by_symbol(symbol):
     s = symbol.strip().upper()
     return Element._elements_by_symbol[s]
 
+def _pickle_element(element):
+    return (get_by_symbol, (element.symbol,))
+
+copy_reg.pickle(Element, _pickle_element)
 
 hydrogen =       Element(  1, "hydrogen", "H", 1.007947*daltons)
 deuterium =      Element(  1, "deuterium", "D", 2.01355321270*daltons)

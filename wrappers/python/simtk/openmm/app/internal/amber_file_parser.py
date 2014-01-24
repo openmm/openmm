@@ -565,9 +565,11 @@ class PrmtopLoader(object):
 # AMBER System builder (based on, but not identical to, systemManager from 'zander')
 #=============================================================================================
 
-def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmodel=None, soluteDielectric=1.0, solventDielectric=78.5,
-                    nonbondedCutoff=None, nonbondedMethod='NoCutoff', scee=None, scnb=None, mm=None, verbose=False,
-                    EwaldErrorTolerance=None, flexibleConstraints=True, rigidWater=True, elements=None):
+def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmodel=None,
+          soluteDielectric=1.0, solventDielectric=78.5,
+          implicitSolventKappa=0.0*(1/units.nanometer), nonbondedCutoff=None,
+          nonbondedMethod='NoCutoff', scee=None, scnb=None, mm=None, verbose=False,
+          EwaldErrorTolerance=None, flexibleConstraints=True, rigidWater=True, elements=None):
     """
     Create an OpenMM System from an Amber prmtop file.
 
@@ -580,6 +582,7 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
       gbmodel (String) - if 'OBC', OBC GBSA will be used; if 'GBVI', GB/VI will be used (default: None)
       soluteDielectric (float) - The solute dielectric constant to use in the implicit solvent model (default: 1.0)
       solventDielectric (float) - The solvent dielectric constant to use in the implicit solvent model (default: 78.5)
+      implicitSolventKappa (float) - The Debye screening parameter corresponding to implicit solvent ionic strength
       nonbondedCutoff (float) - if specified, will set nonbondedCutoff (default: None)
       scnb (float) - 1-4 Lennard-Jones scaling factor (default: taken from prmtop or 1.2 if not present there)
       scee (float) - 1-4 electrostatics scaling factor (default: taken from prmtop or 2.0 if not present there)
@@ -858,6 +861,9 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
 
     # Add GBSA model.
     if gbmodel is not None:
+        # Convert implicitSolventKappa to nanometers if it is a unit.
+        if units.is_quantity(implicitSolventKappa):
+            implicitSolventKappa = implicitSolventKappa.value_in_unit((1/units.nanometers).unit)
         if verbose: print "Adding GB parameters..."
         charges = prmtop.getCharges()
         cutoff = None
@@ -867,17 +873,20 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
                 cutoff = cutoff.value_in_unit(units.nanometers)
         gb_parms = prmtop.getGBParms(gbmodel, elements)
         if gbmodel == 'HCT':
-            gb = customgb.GBSAHCTForce(solventDielectric, soluteDielectric, 'ACE', cutoff)
+            gb = customgb.GBSAHCTForce(solventDielectric, soluteDielectric, 'ACE', cutoff, implicitSolventKappa)
         elif gbmodel == 'OBC1':
-            gb = customgb.GBSAOBC1Force(solventDielectric, soluteDielectric, 'ACE', cutoff)
+            gb = customgb.GBSAOBC1Force(solventDielectric, soluteDielectric, 'ACE', cutoff, implicitSolventKappa)
         elif gbmodel == 'OBC2':
-            gb = mm.GBSAOBCForce()
-            gb.setSoluteDielectric(soluteDielectric)
-            gb.setSolventDielectric(solventDielectric)
+            if implicitSolventKappa > 0:
+                gb = customgb.GBSAOBC2Force(solventDielectric, soluteDielectric, 'ACE', cutoff, implicitSolventKappa)
+            else:
+                gb = mm.GBSAOBCForce()
+                gb.setSoluteDielectric(soluteDielectric)
+                gb.setSolventDielectric(solventDielectric)
         elif gbmodel == 'GBn':
-            gb = customgb.GBSAGBnForce(solventDielectric, soluteDielectric, 'ACE', cutoff)
+            gb = customgb.GBSAGBnForce(solventDielectric, soluteDielectric, 'ACE', cutoff, implicitSolventKappa)
         elif gbmodel == 'GBn2':
-            gb = customgb.GBSAGBn2Force(solventDielectric, soluteDielectric, 'ACE', cutoff)
+            gb = customgb.GBSAGBn2Force(solventDielectric, soluteDielectric, 'ACE', cutoff, implicitSolventKappa)
         else:
             raise Exception("Illegal value specified for implicit solvent model")
         for iAtom in range(prmtop.getNumAtoms()):

@@ -26,12 +26,13 @@
 #define __ReferenceStochasticDynamics_H__
 
 #include "ReferenceDynamics.h"
+#include "openmm/internal/windowsExport.h"
 
 // ---------------------------------------------------------------------------------------
 
-class ReferenceStochasticDynamics : public ReferenceDynamics {
+class OPENMM_EXPORT ReferenceStochasticDynamics : public ReferenceDynamics {
 
-   private:
+   protected:
 
       std::vector<OpenMM::RealVec> xPrime;
       std::vector<RealOpenMM> inverseMasses;
@@ -79,11 +80,12 @@ class ReferenceStochasticDynamics : public ReferenceDynamics {
          @param velocities          velocities
          @param forces              forces
          @param masses              atom masses
+         @param tolerance           the constraint tolerance
       
          --------------------------------------------------------------------------------------- */
      
       void update(const OpenMM::System& system, std::vector<OpenMM::RealVec>& atomCoordinates,
-                  std::vector<OpenMM::RealVec>& velocities, std::vector<OpenMM::RealVec>& forces, std::vector<RealOpenMM>& masses );
+                  std::vector<OpenMM::RealVec>& velocities, std::vector<OpenMM::RealVec>& forces, std::vector<RealOpenMM>& masses, RealOpenMM tolerance);
      
       /**---------------------------------------------------------------------------------------
       
@@ -98,7 +100,7 @@ class ReferenceStochasticDynamics : public ReferenceDynamics {
       
          --------------------------------------------------------------------------------------- */
       
-      void updatePart1( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& velocities,
+      virtual void updatePart1( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& velocities,
                        std::vector<OpenMM::RealVec>& forces, std::vector<RealOpenMM>& inverseMasses, std::vector<OpenMM::RealVec>& xPrime );
       
       /**---------------------------------------------------------------------------------------
@@ -113,7 +115,7 @@ class ReferenceStochasticDynamics : public ReferenceDynamics {
       
          --------------------------------------------------------------------------------------- */
       
-      void updatePart2( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& velocities,
+      virtual void updatePart2( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& velocities,
                        std::vector<OpenMM::RealVec>& forces, std::vector<RealOpenMM>& inverseMasses, std::vector<OpenMM::RealVec>& xPrime );
       
 };

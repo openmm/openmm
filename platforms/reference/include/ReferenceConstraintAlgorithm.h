@@ -37,24 +37,15 @@ public:
     virtual ~ReferenceConstraintAlgorithm() {};
 
     /**
-     * Get the constraint tolerance.
-     */
-    virtual RealOpenMM getTolerance() const = 0;
-
-    /**
-     * Set the constraint tolerance.
-     */
-    virtual void setTolerance(RealOpenMM tolerance) = 0;
-
-    /**
      * Apply the constraint algorithm.
      * 
      * @param atomCoordinates  the original atom coordinates
      * @param atomCoordinatesP the new atom coordinates
      * @param inverseMasses    1/mass
+     * @param tolerance        the constraint tolerance
      */
     virtual void apply(std::vector<OpenMM::RealVec>& atomCoordinates,
-                     std::vector<OpenMM::RealVec>& atomCoordinatesP, std::vector<RealOpenMM>& inverseMasses) = 0;
+                     std::vector<OpenMM::RealVec>& atomCoordinatesP, std::vector<RealOpenMM>& inverseMasses, RealOpenMM tolerance) = 0;
 
     /**
      * Apply the constraint algorithm to velocities.
@@ -62,9 +53,10 @@ public:
      * @param atomCoordinates  the atom coordinates
      * @param atomCoordinatesP the velocities to modify
      * @param inverseMasses    1/mass
+     * @param tolerance        the constraint tolerance
      */
     virtual void applyToVelocities(std::vector<OpenMM::RealVec>& atomCoordinates,
-                     std::vector<OpenMM::RealVec>& velocities, std::vector<RealOpenMM>& inverseMasses) = 0;
+                     std::vector<OpenMM::RealVec>& velocities, std::vector<RealOpenMM>& inverseMasses, RealOpenMM tolerance) = 0;
 };
 
 // ---------------------------------------------------------------------------------------

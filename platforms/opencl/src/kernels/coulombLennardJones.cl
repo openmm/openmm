@@ -75,7 +75,7 @@ if ((!isExcluded && r2 < CUTOFF_SQUARED) || needCorrection) {
     real sig6 = sig2*sig2*sig2;
     real epssig6 = sig6*(sigmaEpsilon1.y*sigmaEpsilon2.y);
     tempForce = epssig6*(12.0f*sig6 - 6.0f);
-    real ljEnergy = select((real) 0, epssig6*(sig6-1), includeInteraction);
+    real ljEnergy = epssig6*(sig6-1);
     #if USE_LJ_SWITCH
     if (r > LJ_SWITCH_CUTOFF) {
         real x = r-LJ_SWITCH_CUTOFF;
@@ -85,6 +85,7 @@ if ((!isExcluded && r2 < CUTOFF_SQUARED) || needCorrection) {
         ljEnergy *= switchValue;
     }
     #endif
+    ljEnergy = select((real) 0, ljEnergy, includeInteraction);
     tempEnergy += ljEnergy;
   #endif
 #if HAS_COULOMB

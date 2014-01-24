@@ -1,5 +1,3 @@
-find_program(PYTHON_EXECUTABLE NAMES python)
-
 #############################################
 ### Copy all source files to staging area ###
 #############################################

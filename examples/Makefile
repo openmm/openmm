@@ -56,11 +56,11 @@ HelloSodiumChlorideInC: HelloSodiumChlorideInC.c
 
 HelloArgonInFortran: HelloArgonInFortran.f90 openmm.mod 
 	gfortran $(FFLAGS) HelloArgonInFortran.f90 \
-	    -L$(LIB_DIR) $(LIBS) $(FCPPLIBS) -o HelloArgonInFortran
+	    -I$(INCLUDE_DIR) -L$(LIB_DIR) $(LIBS) $(FCPPLIBS) -o HelloArgonInFortran
 
 HelloSodiumChlorideInFortran: HelloSodiumChlorideInFortran.f90 openmm.mod 
 	gfortran $(FFLAGS) HelloSodiumChlorideInFortran.f90 \
-	    -L$(LIB_DIR) $(LIBS) $(FCPPLIBS) -o HelloSodiumChlorideInFortran
+	    -I$(INCLUDE_DIR) -L$(LIB_DIR) $(LIBS) $(FCPPLIBS) -o HelloSodiumChlorideInFortran
 
 
 # Build Fortran 95 Module file

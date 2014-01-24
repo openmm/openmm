@@ -33,8 +33,6 @@
  * -------------------------------------------------------------------------- */
 
 #include "ReferenceConstraintAlgorithm.h"
-#include "ReferenceCCMAAlgorithm.h"
-#include "ReferenceSETTLEAlgorithm.h"
 #include "openmm/System.h"
 
 namespace OpenMM {
@@ -46,17 +44,8 @@ namespace OpenMM {
  */
 class OPENMM_EXPORT ReferenceConstraints : public ReferenceConstraintAlgorithm {
 public:
-    ReferenceConstraints(const System& system, RealOpenMM tolerance);
-    ~ReferenceConstraints();
-    /**
-     * Get the constraint tolerance.
-     */
-    RealOpenMM getTolerance() const;
-
-    /**
-     * Set the constraint tolerance.
-     */
-    void setTolerance(RealOpenMM tolerance);
+    ReferenceConstraints(const System& system);
+    virtual ~ReferenceConstraints();
 
     /**
      * Apply the constraint algorithm.
@@ -64,8 +53,9 @@ public:
      * @param atomCoordinates  the original atom coordinates
      * @param atomCoordinatesP the new atom coordinates
      * @param inverseMasses    1/mass
+     * @param tolerance        the constraint tolerance
      */
-    void apply(std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& atomCoordinatesP, std::vector<RealOpenMM>& inverseMasses);
+    void apply(std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& atomCoordinatesP, std::vector<RealOpenMM>& inverseMasses, RealOpenMM tolerance);
 
     /**
      * Apply the constraint algorithm to velocities.
@@ -73,12 +63,11 @@ public:
      * @param atomCoordinates  the atom coordinates
      * @param atomCoordinatesP the velocities to modify
      * @param inverseMasses    1/mass
+     * @param tolerance        the constraint tolerance
      */
-    void applyToVelocities(std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& velocities, std::vector<RealOpenMM>& inverseMasses);
-private:
-    RealOpenMM tolerance;
-    ReferenceCCMAAlgorithm* ccma;
-    ReferenceSETTLEAlgorithm* settle;
+    void applyToVelocities(std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& velocities, std::vector<RealOpenMM>& inverseMasses, RealOpenMM tolerance);
+    ReferenceConstraintAlgorithm* ccma;
+    ReferenceConstraintAlgorithm* settle;
 };
 
 } // namespace OpenMM

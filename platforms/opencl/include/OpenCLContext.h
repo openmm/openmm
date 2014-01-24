@@ -736,6 +736,8 @@ public:
  */
 class OpenCLContext::ForcePreComputation {
 public:
+    virtual ~ForcePreComputation() {
+    }
     /**
      * @param includeForce  true if forces should be computed
      * @param includeEnergy true if potential energy should be computed
@@ -752,6 +754,8 @@ public:
  */
 class OpenCLContext::ForcePostComputation {
 public:
+    virtual ~ForcePostComputation() {
+    }
     /**
      * @param includeForce  true if forces should be computed
      * @param includeEnergy true if potential energy should be computed

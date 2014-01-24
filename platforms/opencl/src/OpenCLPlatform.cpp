@@ -143,15 +143,24 @@ OpenCLPlatform::PlatformData::PlatformData(const System& system, const string& p
         searchPos = nextPos+1;
     }
     devices.push_back(deviceIndexProperty.substr(searchPos));
-    for (int i = 0; i < (int) devices.size(); i++) {
-        if (devices[i].length() > 0) {
-            unsigned int deviceIndex;
-            stringstream(devices[i]) >> deviceIndex;
-            contexts.push_back(new OpenCLContext(system, platformIndex, deviceIndex, precisionProperty, *this));
+    try {
+        for (int i = 0; i < (int) devices.size(); i++) {
+            if (devices[i].length() > 0) {
+                unsigned int deviceIndex;
+                stringstream(devices[i]) >> deviceIndex;
+                contexts.push_back(new OpenCLContext(system, platformIndex, deviceIndex, precisionProperty, *this));
+            }
         }
+        if (contexts.size() == 0)
+            contexts.push_back(new OpenCLContext(system, platformIndex, -1, precisionProperty, *this));
     }
-    if (contexts.size() == 0)
-        contexts.push_back(new OpenCLContext(system, platformIndex, -1, precisionProperty, *this));
+    catch (...) {
+        // If an exception was thrown, do our best to clean up memory.
+        
+        for (int i = 0; i < (int) contexts.size(); i++)
+            delete contexts[i];
+        throw;
+    }
     stringstream deviceIndex, deviceName;
     for (int i = 0; i < (int) contexts.size(); i++) {
         if (i > 0) {

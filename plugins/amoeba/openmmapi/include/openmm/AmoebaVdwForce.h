@@ -230,6 +230,10 @@ private:
     std::vector< std::vector< std::vector<double> > > sigEpsTable;
 };
 
+/**
+ * This is an internal class used to record information about a particle.
+ * @private
+ */
 class AmoebaVdwForce::VdwInfo {
 public:
     int parentIndex;

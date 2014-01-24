@@ -137,6 +137,10 @@ private:
     std::vector<WcaDispersionInfo> parameters;
 };
 
+/**
+ * This is an internal class used to record information about a particle.
+ * @private
+ */
 class AmoebaWcaDispersionForce::WcaDispersionInfo {
 public:
     double radius, epsilon;

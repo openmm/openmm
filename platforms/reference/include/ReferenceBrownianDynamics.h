@@ -79,11 +79,12 @@ class ReferenceBrownianDynamics : public ReferenceDynamics {
          @param velocities          velocities
          @param forces              forces
          @param masses              atom masses
+         @param tolerance           the constraint tolerance
       
          --------------------------------------------------------------------------------------- */
      
       void update(const OpenMM::System& system, std::vector<OpenMM::RealVec>& atomCoordinates,
-                  std::vector<OpenMM::RealVec>& velocities, std::vector<OpenMM::RealVec>& forces, std::vector<RealOpenMM>& masses );
+                  std::vector<OpenMM::RealVec>& velocities, std::vector<OpenMM::RealVec>& forces, std::vector<RealOpenMM>& masses, RealOpenMM tolerance);
       
 };
 

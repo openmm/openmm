@@ -51,6 +51,8 @@
 
 using namespace OpenMM;
 
+extern "C" OPENMM_EXPORT void registerAmoebaReferenceKernelFactories();
+
 const double TOL = 1e-4;
 
 void testVdw( FILE* log ) {
@@ -1983,6 +1985,7 @@ int main( int numberOfArguments, char* argv[] ) {
 
     try {
         std::cout << "TestReferenceAmoebaVdwForce running test..." << std::endl;
+        registerAmoebaReferenceKernelFactories();
 
         FILE* log = NULL;
 

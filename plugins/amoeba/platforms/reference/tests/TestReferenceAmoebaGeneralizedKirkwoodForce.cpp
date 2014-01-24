@@ -50,6 +50,9 @@
 
 
 using namespace OpenMM;
+
+extern "C" OPENMM_EXPORT void registerAmoebaReferenceKernelFactories();
+
 const double TOL = 1e-4;
 
 // setup for 2 ammonia molecules
@@ -8470,6 +8473,7 @@ int main( int numberOfArguments, char* argv[] ) {
 
     try {
         std::cout << "TestReferenceAmoebaGeneralizedKirkwoodForce running test..." << std::endl;
+        registerAmoebaReferenceKernelFactories();
 
         FILE* log = NULL;
 

@@ -145,6 +145,10 @@ private:
     std::vector<TorsionTorsionGridInfo> torsionTorsionGrids;
 };
 
+/**
+ * This is an internal class used to record information about a torsion-torsion term.
+ * @private
+ */
 class AmoebaTorsionTorsionForce::TorsionTorsionInfo {
 
 public:
@@ -163,6 +167,10 @@ public:
     }
 };
 
+/**
+ * This is an internal class used to record information about a grid.
+ * @private
+ */
 class AmoebaTorsionTorsionForce::TorsionTorsionGridInfo {
 
 public:

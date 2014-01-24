@@ -166,7 +166,6 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
                      ('MINOR_VERSION', minor_version_num)]
 
     libraries=['OpenMM',
-               'OpenMMSerialization', 
                'OpenMMAmoeba',
                'OpenMMRPMD',
                'OpenMMDrude',
@@ -196,11 +195,8 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
         extra_compile_args.append('/EHsc')
     else:
         if platform.system() == 'Darwin':
-            macVersion = [int(x) for x in platform.mac_ver()[0].split('.')]
-            if tuple(macVersion) < (10, 6):
-                os.environ['MACOSX_DEPLOYMENT_TARGET']='10.5'
-            extra_link_args.append('-Wl,-rpath,'+openmm_lib_path)
-
+            extra_compile_args += ['-stdlib=libc++', '-mmacosx-version-min=10.7']                                                                                                                                       
+            extra_link_args += ['-stdlib=libc++', '-mmacosx-version-min=10.7', '-Wl', '-rpath', openmm_lib_path]                                                                                                          
 
     library_dirs=[openmm_lib_path]
     include_dirs=openmm_include_path.split(';')

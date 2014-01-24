@@ -1,4 +1,4 @@
-#!/bin/env python
+#!/usr/bin/env python
 #
 #
  
@@ -135,9 +135,10 @@ class SwigInputBuilder:
         # Read all the XML files and merge them into a single document.
         self.doc = etree.ElementTree(etree.Element('root'))
         for file in os.listdir(inputDirname):
-            root = etree.parse(os.path.join(inputDirname, file)).getroot()
-            for node in root:
-                self.doc.getroot().append(node)
+            if file.lower().endswith('xml'):
+                root = etree.parse(os.path.join(inputDirname, file)).getroot()
+                for node in root:
+                    self.doc.getroot().append(node)
 
         if outputFilename:
             self.fOut = open(outputFilename, 'w')

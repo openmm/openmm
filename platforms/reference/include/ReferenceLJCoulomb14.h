@@ -26,10 +26,11 @@
 #define __ReferenceLJCoulomb14_H__
 
 #include "ReferenceBondIxn.h"
+#include "openmm/internal/windowsExport.h"
 
 // ---------------------------------------------------------------------------------------
 
-class ReferenceLJCoulomb14 : public ReferenceBondIxn {
+class OPENMM_EXPORT ReferenceLJCoulomb14 : public ReferenceBondIxn {
 
    public:
 

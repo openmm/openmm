@@ -65,7 +65,7 @@ extern "C" __global__ void computeN2Energy(unsigned long long* __restrict__ forc
                 if (r2 < CUTOFF_SQUARED) {
 #endif
                     real invR = RSQRT(r2);
-                    real r = RECIP(invR);
+                    real r = r2*invR;
                     LOAD_ATOM2_PARAMETERS
                     atom2 = y*TILE_SIZE+j;
                     real dEdR = 0;
@@ -117,7 +117,7 @@ extern "C" __global__ void computeN2Energy(unsigned long long* __restrict__ forc
                 if (r2 < CUTOFF_SQUARED) {
 #endif
                     real invR = RSQRT(r2);
-                    real r = RECIP(invR);
+                    real r = r2*invR;
                     LOAD_ATOM2_PARAMETERS
                     atom2 = y*TILE_SIZE+tj;
                     real dEdR = 0;
@@ -268,7 +268,7 @@ extern "C" __global__ void computeN2Energy(unsigned long long* __restrict__ forc
                     if (r2 < CUTOFF_SQUARED) {
 #endif
                         real invR = RSQRT(r2);
-                        real r = RECIP(invR);
+                        real r = r2*invR;
                         LOAD_ATOM2_PARAMETERS
                         atom2 = atomIndices[tbx+tj];
                         real dEdR = 0;
@@ -313,7 +313,7 @@ extern "C" __global__ void computeN2Energy(unsigned long long* __restrict__ forc
                     if (r2 < CUTOFF_SQUARED) {
 #endif
                         real invR = RSQRT(r2);
-                        real r = RECIP(invR);
+                        real r = r2*invR;
                         LOAD_ATOM2_PARAMETERS
                         atom2 = atomIndices[tbx+tj];
                         real dEdR = 0;

@@ -147,6 +147,10 @@ private:
     std::vector<BondInfo> bonds;
 };
 
+/**
+ * This is an internal class used to record information about a bond.
+ * @private
+ */
 class AmoebaBondForce::BondInfo {
 public:
     int particle1, particle2;

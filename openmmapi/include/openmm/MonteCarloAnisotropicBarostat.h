@@ -101,6 +101,15 @@ public:
         return defaultPressure;
     }
     /**
+     * Set the default pressure acting on the system.  This will affect any new Contexts you create,
+     * but not ones that already exist.
+     *
+     * @param pressure   the default pressure acting on the system, measured in bar.
+     */
+    void setDefaultPressure(const Vec3& pressure) {
+        defaultPressure = pressure;
+    }
+    /**
      * Get whether to allow the X dimension of the periodic box to change size.
      */
     bool getScaleX() const {

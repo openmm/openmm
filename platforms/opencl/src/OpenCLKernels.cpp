@@ -2654,6 +2654,8 @@ OpenCLCalcCustomGBForceKernel::~OpenCLCalcCustomGBForceKernel() {
         delete computedValues;
     if (energyDerivs != NULL)
         delete energyDerivs;
+    if (energyDerivChain != NULL)
+        delete energyDerivChain;
     if (longEnergyDerivs != NULL)
         delete longEnergyDerivs;
     if (globals != NULL)
@@ -2804,7 +2806,8 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
     }
     else
         energyDerivs = new OpenCLParameterSet(cl, force.getNumComputedValues(), cl.getPaddedNumAtoms()*cl.getNonbondedUtilities().getNumForceBuffers(), "customGBEnergyDerivatives", true);
- 
+    energyDerivChain = new OpenCLParameterSet(cl, force.getNumComputedValues(), cl.getPaddedNumAtoms(), "customGBEnergyDerivativeChain", true);
+
     // Create the kernels.
 
     bool useCutoff = (force.getNonbondedMethod() != CustomGBForce::NoCutoff);
@@ -3094,6 +3097,11 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
             extraArgs << ", __global " << buffer.getType() << "* restrict derivBuffers" << index;
             compute << buffer.getType() << " deriv" << index << " = derivBuffers" << index << "[index];\n";
         }
+        for (int i = 0; i < (int) energyDerivChain->getBuffers().size(); i++) {
+            const OpenCLNonbondedUtilities::ParameterInfo& buffer = energyDerivChain->getBuffers()[i];
+            string index = cl.intToString(i+1);
+            extraArgs << ", __global " << buffer.getType() << "* restrict derivChain" << index;
+        }
         if (useLong) {
             extraArgs << ", __global const long* restrict derivBuffersIn";
             for (int i = 0; i < energyDerivs->getNumParameters(); ++i)
@@ -3145,6 +3153,10 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         
         // Record values.
         
+        for (int i = 0; i < (int) energyDerivs->getBuffers().size(); i++) {
+            string index = cl.intToString(i+1);
+            compute << "derivBuffers" << index << "[index] = deriv" << index << ";\n";
+        }
         compute << "forceBuffers[index] = forceBuffers[index]+force;\n";
         for (int i = 1; i < force.getNumComputedValues(); i++) {
             compute << "real totalDeriv"<<i<<" = dV"<<i<<"dV0";
@@ -3155,7 +3167,7 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         }
         for (int i = 0; i < (int) energyDerivs->getBuffers().size(); i++) {
             string index = cl.intToString(i+1);
-            compute << "derivBuffers" << index << "[index] = deriv" << index << ";\n";
+            compute << "derivChain" << index << "[index] = deriv" << index << ";\n";
         }
         map<string, string> replacements;
         replacements["PARAMETER_ARGUMENTS"] = extraArgs.str()+tableArgs.str();
@@ -3292,9 +3304,9 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
             if (chainStr.find(paramName+"1") != chainStr.npos || chainStr.find(paramName+"2") != chainStr.npos)
                 parameters.push_back(OpenCLNonbondedUtilities::ParameterInfo(paramName, buffer.getComponentType(), buffer.getNumComponents(), buffer.getSize(), buffer.getMemory()));
         }
-        for (int i = 0; i < (int) energyDerivs->getBuffers().size(); i++) {
+        for (int i = 0; i < (int) energyDerivChain->getBuffers().size(); i++) {
             if (needChainForValue[i]) { 
-                const OpenCLNonbondedUtilities::ParameterInfo& buffer = energyDerivs->getBuffers()[i];
+                const OpenCLNonbondedUtilities::ParameterInfo& buffer = energyDerivChain->getBuffers()[i];
                 string paramName = prefix+"dEdV"+cl.intToString(i+1);
                 parameters.push_back(OpenCLNonbondedUtilities::ParameterInfo(paramName, buffer.getComponentType(), buffer.getNumComponents(), buffer.getSize(), buffer.getMemory()));
             }
@@ -3487,6 +3499,8 @@ double OpenCLCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
             perParticleEnergyKernel.setArg<cl::Memory>(index++, computedValues->getBuffers()[i].getMemory());
         for (int i = 0; i < (int) energyDerivs->getBuffers().size(); i++)
             perParticleEnergyKernel.setArg<cl::Memory>(index++, energyDerivs->getBuffers()[i].getMemory());
+        for (int i = 0; i < (int) energyDerivChain->getBuffers().size(); i++)
+            perParticleEnergyKernel.setArg<cl::Memory>(index++, energyDerivChain->getBuffers()[i].getMemory());
         if (useLong)
             perParticleEnergyKernel.setArg<cl::Memory>(index++, longEnergyDerivs->getDeviceBuffer());
         if (tabulatedFunctionParams != NULL) {

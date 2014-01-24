@@ -12,10 +12,6 @@
 #   libOpenMMDrudeOpenCL[_d].so
 #----------------------------------------------------
 
-IF (APPLE)
-    SET (CMAKE_OSX_DEPLOYMENT_TARGET "10.6")
-ENDIF (APPLE)
-
 # The source is organized into subdirectories, but we handle them all from
 # this CMakeLists file rather than letting CMake visit them as SUBDIRS.
 SET(OPENMM_SOURCE_SUBDIRS .)
@@ -31,9 +27,9 @@ SET(SHARED_TARGET ${OPENMMDRUDEOPENCL_LIBRARY_NAME})
 
 # Ensure that debug libraries have "_d" appended to their names.
 # CMake gets this right on Windows automatically with this definition.
-IF (${CMAKE_GENERATOR} MATCHES "Visual Studio")
+IF (MSVC)
     SET(CMAKE_DEBUG_POSTFIX "_d" CACHE INTERNAL "" FORCE)
-ENDIF (${CMAKE_GENERATOR} MATCHES "Visual Studio")
+ENDIF (MSVC)
 
 # But on Unix or Cygwin we have to add the suffix manually
 IF (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
@@ -113,7 +109,7 @@ ENDIF (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
 TARGET_LINK_LIBRARIES(${SHARED_TARGET} ${MAIN_OPENMM_LIB}  ${OPENCL_LIBRARIES} ${PTHREADS_LIB})
 TARGET_LINK_LIBRARIES(${SHARED_TARGET} debug ${OPENMM_LIBRARY_NAME}OpenCL_d optimized ${OPENMM_LIBRARY_NAME}OpenCL)
 TARGET_LINK_LIBRARIES(${SHARED_TARGET} debug ${SHARED_DRUDE_TARGET} optimized ${SHARED_DRUDE_TARGET})
-SET_TARGET_PROPERTIES(${SHARED_TARGET} PROPERTIES COMPILE_FLAGS "-msse2 -DOPENMM_BUILDING_SHARED_LIBRARY")
+SET_TARGET_PROPERTIES(${SHARED_TARGET} PROPERTIES LINK_FLAGS "${EXTRA_COMPILE_FLAGS}" COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS} -DOPENMM_BUILDING_SHARED_LIBRARY")
 
 INSTALL(TARGETS ${SHARED_TARGET} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/plugins)
 # Ensure that links to the main OpenCL library will be resolved.

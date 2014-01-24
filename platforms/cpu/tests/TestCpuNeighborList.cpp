@@ -34,6 +34,8 @@
  */
 
 #include "openmm/internal/AssertionUtilities.h"
+#include "openmm/internal/ThreadPool.h"
+#include "AlignedArray.h"
 #include "CpuNeighborList.h"
 #include "CpuPlatform.h"
 #include "sfmt/SFMT.h"
@@ -49,9 +51,10 @@ void testNeighborList(bool periodic) {
     const int numParticles = 500;
     const float cutoff = 2.0f;
     const float boxSize[3] = {20.0f, 15.0f, 22.0f};
+    const int blockSize = 8;
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);
-    vector<float> positions(4*numParticles);
+    AlignedArray<float> positions(4*numParticles);
     for (int i = 0; i < 4*numParticles; i++)
         if (i%4 < 3)
             positions[i] = boxSize[i%4]*genrand_real2(sfmt);
@@ -63,15 +66,16 @@ void testNeighborList(bool periodic) {
             exclusions[i-j].insert(i);
         }
     }
-    CpuNeighborList neighborList;
-    neighborList.computeNeighborList(numParticles, positions, exclusions, boxSize, periodic, cutoff);
+    ThreadPool threads;
+    CpuNeighborList neighborList(blockSize);
+    neighborList.computeNeighborList(numParticles, positions, exclusions, boxSize, periodic, cutoff, threads);
     
     // Convert the neighbor list to a set for faster lookup.
     
     set<pair<int, int> > neighbors;
     for (int i = 0; i < (int) neighborList.getSortedAtoms().size(); i++) {
-        int blockIndex = i/CpuNeighborList::BlockSize;
-        int indexInBlock = i-blockIndex*CpuNeighborList::BlockSize;
+        int blockIndex = i/blockSize;
+        int indexInBlock = i-blockIndex*blockSize;
         char mask = 1<<indexInBlock;
         for (int j = 0; j < (int) neighborList.getBlockExclusions(blockIndex).size(); j++) {
             if ((neighborList.getBlockExclusions(blockIndex)[j] & mask) == 0) {

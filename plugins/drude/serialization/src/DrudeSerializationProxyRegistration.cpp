@@ -47,11 +47,10 @@
 
 #include "openmm/serialization/DrudeForceProxy.h"
 #include "openmm/serialization/DrudeLangevinIntegratorProxy.h"
-#include "openmm/serialization/internal/windowsExportDrudeSerialization.h"
 
 #if defined(WIN32)
     #include <windows.h>
-    extern "C" OPENMM_EXPORT_DRUDE_SERIALIZATION void registerDrudeSerializationProxies();
+    extern "C" OPENMM_EXPORT_DRUDE void registerDrudeSerializationProxies();
     BOOL WINAPI DllMain(HANDLE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved) {
         if (ul_reason_for_call == DLL_PROCESS_ATTACH)
             registerDrudeSerializationProxies();
@@ -63,7 +62,7 @@
 
 using namespace OpenMM;
 
-extern "C" OPENMM_EXPORT_DRUDE_SERIALIZATION void registerDrudeSerializationProxies() {
+extern "C" OPENMM_EXPORT_DRUDE void registerDrudeSerializationProxies() {
     SerializationProxy::registerProxy(typeid(DrudeForce), new DrudeForceProxy());
     SerializationProxy::registerProxy(typeid(DrudeLangevinIntegrator), new DrudeLangevinIntegratorProxy());
 }

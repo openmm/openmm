@@ -397,44 +397,44 @@ void testLargeSystem() {
     system.addForce(bonds);
     VerletIntegrator integrator1(0.01);
     VerletIntegrator integrator2(0.01);
-    Context cuContext(system, integrator1, platform);
+    Context cpuContext(system, integrator1, platform);
     Context referenceContext(system, integrator2, reference);
-    cuContext.setPositions(positions);
-    cuContext.setVelocities(velocities);
+    cpuContext.setPositions(positions);
+    cpuContext.setVelocities(velocities);
     referenceContext.setPositions(positions);
     referenceContext.setVelocities(velocities);
-    State cuState = cuContext.getState(State::Positions | State::Velocities | State::Forces | State::Energy);
+    State cpuState = cpuContext.getState(State::Positions | State::Velocities | State::Forces | State::Energy);
     State referenceState = referenceContext.getState(State::Positions | State::Velocities | State::Forces | State::Energy);
     for (int i = 0; i < numParticles; i++) {
-        ASSERT_EQUAL_VEC(cuState.getPositions()[i], referenceState.getPositions()[i], tol);
-        ASSERT_EQUAL_VEC(cuState.getVelocities()[i], referenceState.getVelocities()[i], tol);
-        ASSERT_EQUAL_VEC(cuState.getForces()[i], referenceState.getForces()[i], tol);
+        ASSERT_EQUAL_VEC(cpuState.getPositions()[i], referenceState.getPositions()[i], tol);
+        ASSERT_EQUAL_VEC(cpuState.getVelocities()[i], referenceState.getVelocities()[i], tol);
+        ASSERT_EQUAL_VEC(cpuState.getForces()[i], referenceState.getForces()[i], tol);
     }
-    ASSERT_EQUAL_TOL(cuState.getPotentialEnergy(), referenceState.getPotentialEnergy(), tol);
+    ASSERT_EQUAL_TOL(cpuState.getPotentialEnergy(), referenceState.getPotentialEnergy(), tol);
 
     // Now do the same thing with periodic boundary conditions.
 
     nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
     system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
-    cuContext.reinitialize();
+    cpuContext.reinitialize();
     referenceContext.reinitialize();
-    cuContext.setPositions(positions);
-    cuContext.setVelocities(velocities);
+    cpuContext.setPositions(positions);
+    cpuContext.setVelocities(velocities);
     referenceContext.setPositions(positions);
     referenceContext.setVelocities(velocities);
-    cuState = cuContext.getState(State::Positions | State::Velocities | State::Forces | State::Energy);
+    cpuState = cpuContext.getState(State::Positions | State::Velocities | State::Forces | State::Energy);
     referenceState = referenceContext.getState(State::Positions | State::Velocities | State::Forces | State::Energy);
     for (int i = 0; i < numParticles; i++) {
-        double dx = cuState.getPositions()[i][0]-referenceState.getPositions()[i][0];
-        double dy = cuState.getPositions()[i][1]-referenceState.getPositions()[i][1];
-        double dz = cuState.getPositions()[i][2]-referenceState.getPositions()[i][2];
-        ASSERT_EQUAL_TOL(fmod(cuState.getPositions()[i][0]-referenceState.getPositions()[i][0], boxSize), 0, tol);
-        ASSERT_EQUAL_TOL(fmod(cuState.getPositions()[i][1]-referenceState.getPositions()[i][1], boxSize), 0, tol);
-        ASSERT_EQUAL_TOL(fmod(cuState.getPositions()[i][2]-referenceState.getPositions()[i][2], boxSize), 0, tol);
-        ASSERT_EQUAL_VEC(cuState.getVelocities()[i], referenceState.getVelocities()[i], tol);
-        ASSERT_EQUAL_VEC(cuState.getForces()[i], referenceState.getForces()[i], tol);
+        double dx = cpuState.getPositions()[i][0]-referenceState.getPositions()[i][0];
+        double dy = cpuState.getPositions()[i][1]-referenceState.getPositions()[i][1];
+        double dz = cpuState.getPositions()[i][2]-referenceState.getPositions()[i][2];
+        ASSERT_EQUAL_TOL(fmod(cpuState.getPositions()[i][0]-referenceState.getPositions()[i][0], boxSize), 0, tol);
+        ASSERT_EQUAL_TOL(fmod(cpuState.getPositions()[i][1]-referenceState.getPositions()[i][1], boxSize), 0, tol);
+        ASSERT_EQUAL_TOL(fmod(cpuState.getPositions()[i][2]-referenceState.getPositions()[i][2], boxSize), 0, tol);
+        ASSERT_EQUAL_VEC(cpuState.getVelocities()[i], referenceState.getVelocities()[i], tol);
+        ASSERT_EQUAL_VEC(cpuState.getForces()[i], referenceState.getForces()[i], tol);
     }
-    ASSERT_EQUAL_TOL(cuState.getPotentialEnergy(), referenceState.getPotentialEnergy(), tol);
+    ASSERT_EQUAL_TOL(cpuState.getPotentialEnergy(), referenceState.getPotentialEnergy(), tol);
 }
 
 void testDispersionCorrection() {
@@ -542,15 +542,15 @@ void testChangingParameters() {
     
     VerletIntegrator integrator1(0.01);
     VerletIntegrator integrator2(0.01);
-    Context cuContext(system, integrator1, platform);
+    Context cpuContext(system, integrator1, platform);
     Context referenceContext(system, integrator2, reference);
-    cuContext.setPositions(positions);
+    cpuContext.setPositions(positions);
     referenceContext.setPositions(positions);
-    State cuState = cuContext.getState(State::Forces | State::Energy);
+    State cpuState = cpuContext.getState(State::Forces | State::Energy);
     State referenceState = referenceContext.getState(State::Forces | State::Energy);
     for (int i = 0; i < numParticles; i++)
-        ASSERT_EQUAL_VEC(cuState.getForces()[i], referenceState.getForces()[i], tol);
-    ASSERT_EQUAL_TOL(cuState.getPotentialEnergy(), referenceState.getPotentialEnergy(), tol);
+        ASSERT_EQUAL_VEC(cpuState.getForces()[i], referenceState.getForces()[i], tol);
+    ASSERT_EQUAL_TOL(cpuState.getPotentialEnergy(), referenceState.getPotentialEnergy(), tol);
     
     // Now modify parameters and see if they still agree.
 
@@ -559,13 +559,13 @@ void testChangingParameters() {
         nonbonded->getParticleParameters(i, charge, sigma, epsilon);
         nonbonded->setParticleParameters(i, 1.5*charge, 1.1*sigma, 1.7*epsilon);
     }
-    nonbonded->updateParametersInContext(cuContext);
+    nonbonded->updateParametersInContext(cpuContext);
     nonbonded->updateParametersInContext(referenceContext);
-    cuState = cuContext.getState(State::Forces | State::Energy);
+    cpuState = cpuContext.getState(State::Forces | State::Energy);
     referenceState = referenceContext.getState(State::Forces | State::Energy);
     for (int i = 0; i < numParticles; i++)
-        ASSERT_EQUAL_VEC(cuState.getForces()[i], referenceState.getForces()[i], tol);
-    ASSERT_EQUAL_TOL(cuState.getPotentialEnergy(), referenceState.getPotentialEnergy(), tol);
+        ASSERT_EQUAL_VEC(cpuState.getForces()[i], referenceState.getForces()[i], tol);
+    ASSERT_EQUAL_TOL(cpuState.getPotentialEnergy(), referenceState.getPotentialEnergy(), tol);
 }
 
 void testSwitchingFunction(NonbondedForce::NonbondedMethod method) {

@@ -25,7 +25,9 @@
 #ifndef __ReferenceBondIxn_H__
 #define __ReferenceBondIxn_H__
 
-// #include "ReferenceIxn.h"
+#include "RealVec.h"
+#include "openmm/internal/windowsExport.h"
+#include <vector>
 
 // ---------------------------------------------------------------------------------------
 

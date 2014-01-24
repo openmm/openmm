@@ -32,8 +32,13 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include "AlignedArray.h"
+#include "CpuRandom.h"
 #include "ReferencePlatform.h"
+#include "openmm/internal/ContextImpl.h"
+#include "openmm/internal/ThreadPool.h"
 #include "windowsExportCpu.h"
+#include <map>
 
 namespace OpenMM {
     
@@ -43,6 +48,7 @@ namespace OpenMM {
 
 class OPENMM_EXPORT_CPU CpuPlatform : public ReferencePlatform {
 public:
+    class PlatformData;
     CpuPlatform();
     const std::string& getName() const {
         static const std::string name = "CPU";
@@ -51,6 +57,25 @@ public:
     double getSpeed() const;
     bool supportsDoublePrecision() const;
     static bool isProcessorSupported();
+    void contextCreated(ContextImpl& context, const std::map<std::string, std::string>& properties) const;
+    void contextDestroyed(ContextImpl& context) const;
+    /**
+     * We cannot use the standard mechanism for platform data, because that is already used by the superclass.
+     * Instead, we maintain a table of ContextImpls to PlatformDatas.
+     */
+    static PlatformData& getPlatformData(ContextImpl& context);
+private:
+    static std::map<ContextImpl*, PlatformData*> contextData;
+};
+
+class CpuPlatform::PlatformData {
+public:
+    PlatformData(int numParticles);
+    AlignedArray<float> posq;
+    std::vector<AlignedArray<float> > threadForce;
+    ThreadPool threads;
+    bool isPeriodic;
+    CpuRandom random;
 };
 
 } // namespace OpenMM

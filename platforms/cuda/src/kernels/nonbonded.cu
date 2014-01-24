@@ -161,7 +161,7 @@ extern "C" __global__ void computeNonbonded(
 #endif
                 real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
                 real invR = RSQRT(r2);
-                real r = RECIP(invR);
+                real r = r2*invR;
                 LOAD_ATOM2_PARAMETERS
                 atom2 = y*TILE_SIZE+j;
 #ifdef USE_SYMMETRIC
@@ -232,7 +232,7 @@ extern "C" __global__ void computeNonbonded(
                 if (r2 < CUTOFF_SQUARED) {
 #endif
                     real invR = RSQRT(r2);
-                    real r = RECIP(invR);
+                    real r = r2*invR;
                     LOAD_ATOM2_PARAMETERS
                     atom2 = y*TILE_SIZE+tj;
 #ifdef USE_SYMMETRIC
@@ -433,7 +433,7 @@ extern "C" __global__ void computeNonbonded(
                     real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
                     if (r2 < CUTOFF_SQUARED) {
                         real invR = RSQRT(r2);
-                        real r = RECIP(invR);
+                        real r = r2*invR;
                         LOAD_ATOM2_PARAMETERS
                         atom2 = atomIndices[tbx+tj];
 #ifdef USE_SYMMETRIC
@@ -507,7 +507,7 @@ extern "C" __global__ void computeNonbonded(
                     if (r2 < CUTOFF_SQUARED) {
 #endif
                         real invR = RSQRT(r2);
-                        real r = RECIP(invR);
+                        real r = r2*invR;
                         LOAD_ATOM2_PARAMETERS
                         atom2 = atomIndices[tbx+tj];
 #ifdef USE_SYMMETRIC

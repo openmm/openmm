@@ -30,6 +30,7 @@
  */
 
 #include "SimTKOpenMMCommon.h"
+#include "openmm/internal/windowsExport.h"
 #include <vector>
 
 typedef RealOpenMM rvec[3];
@@ -52,7 +53,7 @@ pme_t;
  * pme_order   Interpolation order, almost always 4
  * epsilon_r   Dielectric coefficient, typically 1.0.
  */
-int 
+int OPENMM_EXPORT
 pme_init(pme_t *       ppme,
          RealOpenMM    ewaldcoeff,
          int           natoms,
@@ -73,11 +74,11 @@ pme_init(pme_t *       ppme,
  * energy      Total energy (will be written in units of kJ/mol)
  * pme_virial  Long-range part of the virial, output.
  */
-int
+int OPENMM_EXPORT
 pme_exec(pme_t       pme,
-         std::vector<OpenMM::RealVec>& atomCoordinates,
+         const std::vector<OpenMM::RealVec>& atomCoordinates,
          std::vector<OpenMM::RealVec>& forces,
-         std::vector<RealOpenMM>& charges,
+         const std::vector<RealOpenMM>& charges,
          const RealOpenMM  periodicBoxSize[3],
          RealOpenMM *    energy,
          RealOpenMM      pme_virial[3][3]);
@@ -85,5 +86,5 @@ pme_exec(pme_t       pme,
 
 
 /* Release all memory in pme structure */
-int
+int OPENMM_EXPORT
 pme_destroy(pme_t    pme);

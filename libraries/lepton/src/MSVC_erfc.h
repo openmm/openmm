@@ -2,16 +2,16 @@
 #define LEPTON_MSVC_ERFC_H_
 
 /*
- * At least up to version 8 (VC++ 2005), Microsoft does not support the
- * standard C99 erf() and erfc() functions. For now we're including these
- * definitions for an MSVC compilation; if these are added later then
- * the #ifdef below should change to compare _MSC_VER with a particular
- * version level.
+ * Up to version 11 (VC++ 2012), Microsoft does not support the
+ * standard C99 erf() and erfc() functions so we have to fake them here. 
+ * These were added in version 12 (VC++ 2013), which sets _MSC_VER=1800
+ * (VC11 has _MSC_VER=1700).
  */
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) 
+#define M_PI 3.14159265358979323846264338327950288
 
-
+#if _MSC_VER <= 1700 // 1700 is VC11, 1800 is VC12 
 /***************************
 *   erf.cpp
 *   author:  Steve Strand
@@ -19,8 +19,6 @@
 ***************************/
 
 #include <cmath>
-
-#define M_PI 3.14159265358979323846264338327950288
 
 static const double rel_error= 1E-12;        //calculate 12 significant figures
 //you can adjust rel_error to trade off between accuracy and speed
@@ -83,6 +81,7 @@ static double erfc(double x)
     return one_sqrtpi*exp(-x*x)*q2;
 }
 
+#endif // _MSC_VER <= 1700
 #endif // _MSC_VER
 
 #endif // LEPTON_MSVC_ERFC_H_

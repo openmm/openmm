@@ -60,7 +60,7 @@ extern "C" __global__ void computeN2Value(const real4* __restrict__ posq, const 
                 if (r2 < CUTOFF_SQUARED) {
 #endif
                     real invR = RSQRT(r2);
-                    real r = RECIP(invR);
+                    real r = r2*invR;
                     LOAD_ATOM2_PARAMETERS
                     atom2 = y*TILE_SIZE+j;
                     real tempValue1 = 0;
@@ -108,7 +108,7 @@ extern "C" __global__ void computeN2Value(const real4* __restrict__ posq, const 
                 if (r2 < CUTOFF_SQUARED) {
 #endif
                     real invR = RSQRT(r2);
-                    real r = RECIP(invR);
+                    real r = r2*invR;
                     LOAD_ATOM2_PARAMETERS
                     atom2 = y*TILE_SIZE+tj;
                     real tempValue1 = 0;
@@ -241,7 +241,7 @@ extern "C" __global__ void computeN2Value(const real4* __restrict__ posq, const 
                     real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
                     if (r2 < CUTOFF_SQUARED) {
                         real invR = RSQRT(r2);
-                        real r = RECIP(invR);
+                        real r = r2*invR;
                         LOAD_ATOM2_PARAMETERS
                         atom2 = atomIndices[tbx+tj];
                         real tempValue1 = 0;
@@ -275,7 +275,7 @@ extern "C" __global__ void computeN2Value(const real4* __restrict__ posq, const 
                     if (r2 < CUTOFF_SQUARED) {
 #endif
                         real invR = RSQRT(r2);
-                        real r = RECIP(invR);
+                        real r = r2*invR;
                         LOAD_ATOM2_PARAMETERS
                         atom2 = atomIndices[tbx+tj];
                         real tempValue1 = 0;

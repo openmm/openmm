@@ -124,6 +124,10 @@ private:
     std::vector<StretchBendInfo> stretchBends;
 };
 
+/**
+ * This is an internal class used to record information about a stretch-bend.
+ * @private
+ */
 class AmoebaStretchBendForce::StretchBendInfo {
 public:
     int particle1, particle2, particle3;

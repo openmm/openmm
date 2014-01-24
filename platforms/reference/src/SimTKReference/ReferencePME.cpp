@@ -195,7 +195,7 @@ pme_calculate_bsplines_moduli(pme_t pme)
 
 static void
 pme_update_grid_index_and_fraction(pme_t    pme,
-                                   vector<RealVec>& atomCoordinates,
+                                   const vector<RealVec>& atomCoordinates,
                                    const RealOpenMM   periodicBoxSize[3])
 {
     int    i;
@@ -317,7 +317,7 @@ pme_update_bsplines(pme_t    pme)
 
 
 static void
-pme_grid_spread_charge(pme_t      pme, vector<RealOpenMM>& charges)
+pme_grid_spread_charge(pme_t pme, const vector<RealOpenMM>& charges)
 {
     int       order;
     int       i;
@@ -519,10 +519,10 @@ pme_reciprocal_convolution(pme_t     pme,
 
 
 static void
-pme_grid_interpolate_force(pme_t      pme,
-                           const RealOpenMM     periodicBoxSize[3],
-                           vector<RealOpenMM>& charges,
-                           vector<RealVec>&   forces)
+pme_grid_interpolate_force(pme_t pme,
+                           const RealOpenMM periodicBoxSize[3],
+                           const vector<RealOpenMM>& charges,
+                           vector<RealVec>& forces)
 {
     int       i;
     int       ix,iy,iz;
@@ -666,12 +666,12 @@ pme_init(pme_t *       ppme,
 
 
 int pme_exec(pme_t       pme,
-             vector<RealVec>&   atomCoordinates,
-             vector<RealVec>&   forces,
-             vector<RealOpenMM>& charges,
-             const RealOpenMM      periodicBoxSize[3],
-             RealOpenMM *    energy,
-             RealOpenMM      pme_virial[3][3])
+             const vector<RealVec>& atomCoordinates,
+             vector<RealVec>& forces,
+             const vector<RealOpenMM>& charges,
+             const RealOpenMM periodicBoxSize[3],
+             RealOpenMM* energy,
+             RealOpenMM pme_virial[3][3])
 {
     /* Routine is called with coordinates in x, a box, and charges in q */
 

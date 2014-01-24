@@ -69,5 +69,6 @@
 #include "openmm/VerletIntegrator.h"
 #include "openmm/VirtualSite.h"
 #include "openmm/Platform.h"
+#include "openmm/serialization/XmlSerializer.h"
 
 #endif /*OPENMM_H_*/

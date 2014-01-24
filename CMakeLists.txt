@@ -14,6 +14,8 @@
 #   libOpenMM_static[_d].a
 #----------------------------------------------------
 
+find_program(PYTHON_EXECUTABLE NAMES python)
+
 # Don't create a new project name if this is part of a mega-build from the
 # parent directory
 IF( NOT PROJECT_NAME )
@@ -51,15 +53,15 @@ if(COMMAND cmake_policy)
 endif(COMMAND cmake_policy)
 
 # Where to install
-IF(${CMAKE_C_COMPILER} MATCHES "gcc")
-    IF(NOT OPENMM_INSTALL_PREFIX)
-        SET(OPENMM_INSTALL_PREFIX "/usr/local/openmm")
-    ENDIF(NOT OPENMM_INSTALL_PREFIX)
-ELSE(${CMAKE_C_COMPILER} MATCHES "gcc")
+IF(WIN32)
     IF(NOT OPENMM_INSTALL_PREFIX)
         SET(OPENMM_INSTALL_PREFIX "$ENV{ProgramFiles}/OpenMM")
     ENDIF(NOT OPENMM_INSTALL_PREFIX)
-ENDIF(${CMAKE_C_COMPILER} MATCHES "gcc")
+ELSE(WIN32)
+    IF(NOT OPENMM_INSTALL_PREFIX)
+        SET(OPENMM_INSTALL_PREFIX "/usr/local/openmm")
+    ENDIF(NOT OPENMM_INSTALL_PREFIX)
+ENDIF(WIN32)
 
 # It seems that on linux and mac, everything is trying to be installed in /usr/local/openmm
 # But if every install target is prefixed with /openmm/, on Windows the install files
@@ -73,7 +75,7 @@ ENDIF(${CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT})
 
 # The source is organized into subdirectories, but we handle them all from
 # this CMakeLists file rather than letting CMake visit them as SUBDIRS.
-SET(OPENMM_SOURCE_SUBDIRS . openmmapi olla libraries/jama libraries/quern libraries/lepton libraries/sfmt libraries/lbfgs libraries/hilbert libraries/csha1 platforms/reference libraries/validate)
+SET(OPENMM_SOURCE_SUBDIRS . openmmapi olla libraries/jama libraries/quern libraries/lepton libraries/sfmt libraries/lbfgs libraries/hilbert libraries/csha1 platforms/reference serialization libraries/validate)
 IF(WIN32)
     SET(OPENMM_SOURCE_SUBDIRS ${OPENMM_SOURCE_SUBDIRS} libraries/pthreads)
     ADD_CUSTOM_TARGET(PthreadsLibraries ALL)
@@ -105,15 +107,24 @@ ELSE( CMAKE_SIZEOF_VOID_P EQUAL 8 )
   SET( LIB64  )
 ENDIF( CMAKE_SIZEOF_VOID_P EQUAL 8 )
 
-# Build universal binaries compatible with OS X 10.5
-IF (APPLE AND NOT CMAKE_OSX_DEPLOYMENT_TARGET)
-    SET (CMAKE_OSX_ARCHITECTURES "i386;x86_64" CACHE STRING "The processor architectures to build for" FORCE)
-    SET (CMAKE_OSX_DEPLOYMENT_TARGET "10.5" CACHE STRING "The minimum version of OS X to support" FORCE)
-ENDIF (APPLE AND NOT CMAKE_OSX_DEPLOYMENT_TARGET)
-
-# Improve the linking behavior of Mac libraries
 IF (APPLE)
+    # Build universal binaries compatible with OS X 10.7
+    IF (NOT CMAKE_OSX_DEPLOYMENT_TARGET)
+        SET (CMAKE_OSX_DEPLOYMENT_TARGET "10.7" CACHE STRING "The minimum version of OS X to support" FORCE)
+    ENDIF (NOT CMAKE_OSX_DEPLOYMENT_TARGET)
+    IF (NOT CMAKE_OSX_ARCHITECTURES)
+        SET (CMAKE_OSX_ARCHITECTURES "i386;x86_64" CACHE STRING "The processor architectures to build for" FORCE)
+    ENDIF (NOT CMAKE_OSX_ARCHITECTURES)
+
+    # Improve the linking behavior of Mac libraries
     SET (CMAKE_INSTALL_NAME_DIR "@rpath")
+    SET(EXTRA_COMPILE_FLAGS "-msse2 -stdlib=libc++")
+ELSE (APPLE)
+    IF (MSVC)
+        SET(EXTRA_COMPILE_FLAGS)
+    ELSE (MSVC)
+        SET(EXTRA_COMPILE_FLAGS "-msse2")
+    ENDIF (MSVC)
 ENDIF (APPLE)
 
 IF(UNIX AND NOT CMAKE_BUILD_TYPE)
@@ -135,11 +146,11 @@ ENDIF (NOT CMAKE_CXX_FLAGS_RELEASE)
 # and make it available to the code so it can be built into the binaries.
 
 SET(OPENMM_LIBRARY_NAME OpenMM)
-SET(OPENMM_MAJOR_VERSION 5)
-SET(OPENMM_MINOR_VERSION 2)
+SET(OPENMM_MAJOR_VERSION 6)
+SET(OPENMM_MINOR_VERSION 0)
 SET(OPENMM_BUILD_VERSION 0)
 
-SET(OPENMM_COPYRIGHT_YEARS "2008")
+SET(OPENMM_COPYRIGHT_YEARS "2008-2014")
 
 # underbar separated list of dotted authors, no spaces or commas
 SET(OPENMM_AUTHORS "Peter.Eastman")
@@ -153,11 +164,11 @@ ADD_DEFINITIONS(-DOPENMM_LIBRARY_NAME=${OPENMM_LIBRARY_NAME}
 # to add them ourselves for Linux or Cygwin. Two cases to avoid duplicate quotes
 # in Visual Studio which end up in the binary.
 
-IF (${CMAKE_GENERATOR} MATCHES "Visual Studio")
+IF (MSVC)
    SET(NEED_QUOTES FALSE)
-ELSE (${CMAKE_GENERATOR} MATCHES "Visual Studio")
+ELSE (MSVC)
    SET(NEED_QUOTES TRUE)
-ENDIF (${CMAKE_GENERATOR} MATCHES "Visual Studio")
+ENDIF (MSVC)
 
 ##TODO: doesn't work without quotes in nightly build
 SET(NEED_QUOTES TRUE)
@@ -199,9 +210,9 @@ SET(${PROJECT_NAME}_LIBRARY_DIR    ${LIBRARY_OUTPUT_PATH}/${CMAKE_CFG_INTDIR})
 
 # Ensure that debug libraries have "_d" appended to their names.
 # CMake gets this right on Windows automatically with this definition.
-IF (${CMAKE_GENERATOR} MATCHES "Visual Studio")
+IF (MSVC)
     SET(CMAKE_DEBUG_POSTFIX "_d" CACHE INTERNAL "" FORCE)
-ENDIF (${CMAKE_GENERATOR} MATCHES "Visual Studio")
+ENDIF (MSVC)
 
 # But on Unix or Cygwin we have to add the suffix manually
 IF (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
@@ -252,21 +263,11 @@ FOREACH(subdir ${OPENMM_SOURCE_SUBDIRS})
     ## OpenMM was previously installed there.
     INCLUDE_DIRECTORIES(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/${subdir}/include)
 ENDFOREACH(subdir)
-SET_SOURCE_FILES_PROPERTIES(${CMAKE_SOURCE_DIR}/libraries/sfmt/src/SFMT.cpp PROPERTIES COMPILE_FLAGS "-msse2 -DHAVE_SSE2=1")
+SET_SOURCE_FILES_PROPERTIES(${CMAKE_SOURCE_DIR}/libraries/sfmt/src/SFMT.cpp PROPERTIES COMPILE_FLAGS "-DHAVE_SSE2=1")
 
 # If API wrappers are being generated, and add them to the build.
-FIND_PROGRAM(GCCXML_PATH gccxml PATH
-    /usr/local/bin
-    "C:/Program Files/gccxml 0.9/bin"
-)
-IF(GCCXML_PATH)
-    SET(OPENMM_BUILD_C_AND_FORTRAN_WRAPPERS ON CACHE BOOL "Build wrappers for C and Fortran")
-ELSE(GCCXML_PATH)
-    SET(OPENMM_BUILD_C_AND_FORTRAN_WRAPPERS OFF CACHE BOOL "Build wrappers for C and Fortran")
-ENDIF(GCCXML_PATH)
+SET(OPENMM_BUILD_C_AND_FORTRAN_WRAPPERS ON CACHE BOOL "Build wrappers for C and Fortran")
 IF(OPENMM_BUILD_C_AND_FORTRAN_WRAPPERS)
-    FIND_PACKAGE(Java)
-    MARK_AS_ADVANCED(CLEAR JAVA_RUNTIME)
     ADD_SUBDIRECTORY(wrappers)
     SET(SOURCE_FILES ${SOURCE_FILES} wrappers/OpenMMCWrapper.cpp  wrappers/OpenMMFortranWrapper.cpp)
     SET_SOURCE_FILES_PROPERTIES(wrappers/OpenMMCWrapper.cpp wrappers/OpenMMFortranWrapper.cpp PROPERTIES GENERATED TRUE)
@@ -275,7 +276,7 @@ ENDIF(OPENMM_BUILD_C_AND_FORTRAN_WRAPPERS)
 INCLUDE_DIRECTORIES(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 ADD_LIBRARY(${SHARED_TARGET} SHARED ${SOURCE_FILES} ${SOURCE_INCLUDE_FILES} ${API_ABS_INCLUDE_FILES})
-SET_TARGET_PROPERTIES(${SHARED_TARGET} PROPERTIES COMPILE_FLAGS "-DOPENMM_BUILDING_SHARED_LIBRARY -DLEPTON_BUILDING_SHARED_LIBRARY -DOPENMM_VALIDATE_BUILDING_SHARED_LIBRARY")
+SET_TARGET_PROPERTIES(${SHARED_TARGET} PROPERTIES LINK_FLAGS "${EXTRA_COMPILE_FLAGS}" COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS} -DOPENMM_BUILDING_SHARED_LIBRARY -DLEPTON_BUILDING_SHARED_LIBRARY -DOPENMM_VALIDATE_BUILDING_SHARED_LIBRARY")
 IF(WIN32)
     ADD_DEPENDENCIES(${SHARED_TARGET} PthreadsLibraries)
 ENDIF(WIN32)
@@ -283,7 +284,7 @@ ENDIF(WIN32)
 SET(OPENMM_BUILD_STATIC_LIB OFF CACHE BOOL "Whether to build static OpenMM libraries")
 IF(OPENMM_BUILD_STATIC_LIB)
     ADD_LIBRARY(${STATIC_TARGET} STATIC ${SOURCE_FILES} ${SOURCE_INCLUDE_FILES} ${API_ABS_INCLUDE_FILES})
-    SET_TARGET_PROPERTIES(${STATIC_TARGET} PROPERTIES COMPILE_FLAGS "-DOPENMM_USE_STATIC_LIBRARIES -DOPENMM_BUILDING_STATIC_LIBRARY -DLEPTON_USE_STATIC_LIBRARIES -DLEPTON_BUILDING_STATIC_LIBRARY -DOPENMMM_VALIDATE_BUILDING_STATIC_LIBRARY -DOPENMM_VALIDATE_BUILDING_STATIC_LIBRARY")
+    SET_TARGET_PROPERTIES(${STATIC_TARGET} PROPERTIES LINK_FLAGS "${EXTRA_COMPILE_FLAGS}" COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS} -DOPENMM_USE_STATIC_LIBRARIES -DOPENMM_BUILDING_STATIC_LIBRARY -DLEPTON_USE_STATIC_LIBRARIES -DLEPTON_BUILDING_STATIC_LIBRARY -DOPENMMM_VALIDATE_BUILDING_STATIC_LIBRARY -DOPENMM_VALIDATE_BUILDING_STATIC_LIBRARY")
 ENDIF(OPENMM_BUILD_STATIC_LIB)
 
 IF(OPENMM_BUILD_C_AND_FORTRAN_WRAPPERS)
@@ -296,14 +297,14 @@ ENDIF(OPENMM_BUILD_C_AND_FORTRAN_WRAPPERS)
 # On Linux need to link to libdl
 FIND_LIBRARY(DL_LIBRARY dl)
 IF(DL_LIBRARY)
-  TARGET_LINK_LIBRARIES(${SHARED_TARGET} ${DL_LIBRARY})
+  TARGET_LINK_LIBRARIES(${SHARED_TARGET} ${DL_LIBRARY} ${PTHREADS_LIB})
   IF(OPENMM_BUILD_STATIC_LIB)
-    TARGET_LINK_LIBRARIES(${STATIC_TARGET} ${DL_LIBRARY})
+    TARGET_LINK_LIBRARIES(${STATIC_TARGET} ${DL_LIBRARY} ${PTHREADS_LIB})
   ENDIF(OPENMM_BUILD_STATIC_LIB)
+  MARK_AS_ADVANCED(DL_LIBRARY)
+ELSE(DL_LIBRARY)
+  TARGET_LINK_LIBRARIES(${SHARED_TARGET} ${PTHREADS_LIB})
 ENDIF(DL_LIBRARY)
-IF(WIN32)
-    MARK_AS_ADVANCED(DL_LIBRARY)
-ENDIF(WIN32)
 
 ADD_SUBDIRECTORY(platforms/reference/tests)
 
@@ -438,18 +439,14 @@ INSTALL_FILES(/include/openmm/reference FILES ${REFERENCE_HEADERS})
 
 # Serialization support
 
-SET(OPENMM_BUILD_SERIALIZATION_SUPPORT ON CACHE BOOL "Whether to build the serialization support library")
-IF (OPENMM_BUILD_SERIALIZATION_SUPPORT)
-    ADD_SUBDIRECTORY(serialization)
-ENDIF (OPENMM_BUILD_SERIALIZATION_SUPPORT)
+ADD_SUBDIRECTORY(serialization)
+FILE(GLOB serialization_files  ${CMAKE_SOURCE_DIR}/serialization/src/*.cpp)
+SET_SOURCE_FILES_PROPERTIES(${serialization_files} PROPERTIES COMPILE_FLAGS "-DOPENMM_BUILDING_SHARED_LIBRARY -DTIXML_USE_STL -DIEEE_8087")
 
 # Python wrappers
 
 SET(OPENMM_BUILD_PYTHON_WRAPPERS ON CACHE BOOL "Build wrappers for Python")
 IF(OPENMM_BUILD_PYTHON_WRAPPERS)
-    IF(NOT OPENMM_BUILD_SERIALIZATION_SUPPORT)
-        MESSAGE(SEND_ERROR "The Python wrappers require that serialization support be built.")
-    ENDIF(NOT OPENMM_BUILD_SERIALIZATION_SUPPORT)
     IF(NOT OPENMM_BUILD_AMOEBA_PLUGIN)
         MESSAGE(SEND_ERROR "The Python wrappers require that the AMOEBA plugin be built.")
     ENDIF(NOT OPENMM_BUILD_AMOEBA_PLUGIN)
