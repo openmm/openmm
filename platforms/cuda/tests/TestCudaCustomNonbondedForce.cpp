@@ -7,7 +7,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -261,7 +261,7 @@ void testPeriodic() {
     ASSERT_EQUAL_TOL(1.9+1+0.9, state.getPotentialEnergy(), TOL);
 }
 
-void testTabulatedFunction() {
+void testContinuous1DFunction() {
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -272,7 +272,7 @@ void testTabulatedFunction() {
     vector<double> table;
     for (int i = 0; i < 21; i++)
         table.push_back(std::sin(0.25*i));
-    forceField->addFunction("fn", table, 1.0, 6.0);
+    forceField->addFunction("fn", new Continuous1DFunction(table, 1.0, 6.0));
     system.addForce(forceField);
     Context context(system, integrator, platform);
     vector<Vec3> positions(2);
@@ -297,6 +297,33 @@ void testTabulatedFunction() {
         State state = context.getState(State::Energy);
         double energy = (x < 1.0 || x > 6.0 ? 0.0 : std::sin(x-1.0))+1.0;
         ASSERT_EQUAL_TOL(energy, state.getPotentialEnergy(), 1e-4);
+    }
+}
+
+void testDiscrete1DFunction() {
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    VerletIntegrator integrator(0.01);
+    CustomNonbondedForce* forceField = new CustomNonbondedForce("fn(r-1)+1");
+    forceField->addParticle(vector<double>());
+    forceField->addParticle(vector<double>());
+    vector<double> table;
+    for (int i = 0; i < 21; i++)
+        table.push_back(std::sin(0.25*i));
+    forceField->addFunction("fn", new Discrete1DFunction(table));
+    system.addForce(forceField);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(2);
+    positions[0] = Vec3(0, 0, 0);
+    for (int i = 0; i < (int) table.size(); i++) {
+        positions[1] = Vec3(i+1, 0, 0);
+        context.setPositions(positions);
+        State state = context.getState(State::Forces | State::Energy);
+        const vector<Vec3>& forces = state.getForces();
+        ASSERT_EQUAL_VEC(Vec3(0, 0, 0), forces[0], 1e-6);
+        ASSERT_EQUAL_VEC(Vec3(0, 0, 0), forces[1], 1e-6);
+        ASSERT_EQUAL_TOL(table[i]+1.0, state.getPotentialEnergy(), 1e-6);
     }
 }
 
@@ -725,7 +752,8 @@ int main(int argc, char* argv[]) {
         testExclusions();
         testCutoff();
         testPeriodic();
-        testTabulatedFunction();
+        testContinuous1DFunction();
+        testDiscrete1DFunction();
         testCoulombLennardJones();
         testParallelComputation();
         testSwitchingFunction();

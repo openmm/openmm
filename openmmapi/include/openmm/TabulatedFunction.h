@@ -101,6 +101,36 @@ private:
     double min, max;
 };
 
+/**
+ * This is a TabulatedFunction that computes a discrete one dimensional function.
+ */
+class OPENMM_EXPORT Discrete1DFunction : public TabulatedFunction {
+public:
+    /**
+     * Create a Discrete1DFunction f(x) based on a set of tabulated values.
+     * 
+     * @param values         the tabulated values of the function f(x).  The function is only defined
+     *                       for integer values of x in the range [0, values.size()].
+     */
+    Discrete1DFunction(const std::vector<double>& values);
+    /**
+     * Get the parameters for the tabulated function.
+     *
+     * @param values         the tabulated values of the function f(x).  The function is only defined
+     *                       for integer values of x in the range [0, values.size()].
+     */
+    void getFunctionParameters(std::vector<double>& values) const;
+    /**
+     * Set the parameters for the tabulated function.
+     *
+     * @param values         the tabulated values of the function f(x).  The function is only defined
+     *                       for integer values of x in the range [0, values.size()].
+     */
+    void setFunctionParameters(const std::vector<double>& values);
+private:
+    std::vector<double> values;
+};
+
 } // namespace OpenMM
 
 #endif /*OPENMM_TABULATEDFUNCTION_H_*/

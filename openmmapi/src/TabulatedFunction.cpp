@@ -60,3 +60,15 @@ void Continuous1DFunction::setFunctionParameters(const std::vector<double>& valu
     this->min = min;
     this->max = max;
 }
+
+Discrete1DFunction::Discrete1DFunction(const std::vector<double>& values) {
+    this->values = values;
+}
+
+void Discrete1DFunction::getFunctionParameters(std::vector<double>& values) const {
+    values = this->values;
+}
+
+void Discrete1DFunction::setFunctionParameters(const std::vector<double>& values) {
+    this->values = values;
+}

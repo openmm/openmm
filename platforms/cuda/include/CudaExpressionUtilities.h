@@ -54,33 +54,38 @@ public:
      * @param expressions    the expressions to generate code for (keys are the variables to store the output values in)
      * @param variables      defines the source code to generate for each variable that may appear in the expressions.  Keys are
      *                       variable names, and the values are the code to generate for them.
-     * @param functions      defines the variable name for each tabulated function that may appear in the expressions
+     * @param functions      the tabulated functions that may appear in the expressions
+     * @param functionNames  defines the variable name for each tabulated function that may appear in the expressions
      * @param prefix         a prefix to put in front of temporary variables
      * @param functionParams the variable name containing the parameters for each tabulated function
      * @param tempType       the type of value to use for temporary variables (defaults to "real")
      */
     std::string createExpressions(const std::map<std::string, Lepton::ParsedExpression>& expressions, const std::map<std::string, std::string>& variables,
-            const std::vector<std::pair<std::string, std::string> >& functions, const std::string& prefix, const std::string& functionParams, const std::string& tempType="real");
+            const std::vector<const TabulatedFunction*>& functions, const std::vector<std::pair<std::string, std::string> >& functionNames,
+            const std::string& prefix, const std::string& functionParams, const std::string& tempType="real");
     /**
      * Generate the source code for calculating a set of expressions.
      *
      * @param expressions    the expressions to generate code for (keys are the variables to store the output values in)
      * @param variables      defines the source code to generate for each variable or precomputed sub-expression that may appear in the expressions.
      *                       Each entry is an ExpressionTreeNode, and the code to generate wherever an identical node appears.
-     * @param functions      defines the variable name for each tabulated function that may appear in the expressions
+     * @param functions      the tabulated functions that may appear in the expressions
+     * @param functionNames  defines the variable name for each tabulated function that may appear in the expressions
      * @param prefix         a prefix to put in front of temporary variables
      * @param functionParams the variable name containing the parameters for each tabulated function
      * @param tempType       the type of value to use for temporary variables (defaults to "real")
      */
     std::string createExpressions(const std::map<std::string, Lepton::ParsedExpression>& expressions, const std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& variables,
-            const std::vector<std::pair<std::string, std::string> >& functions, const std::string& prefix, const std::string& functionParams, const std::string& tempType="real");
+            const std::vector<const TabulatedFunction*>& functions, const std::vector<std::pair<std::string, std::string> >& functionNames,
+            const std::string& prefix, const std::string& functionParams, const std::string& tempType="real");
     /**
      * Calculate the spline coefficients for a tabulated function that appears in expressions.
      *
      * @param function   the function for which to compute coefficients
+     * @param width      on output, the number of floats used for each value
      * @return the spline coefficients
      */
-    std::vector<float> computeFunctionCoefficients(const TabulatedFunction& function);
+    std::vector<float> computeFunctionCoefficients(const TabulatedFunction& function, int& width);
     /**
      * Given the list of TabulatedFunctions used by a Force, create the parameter array describing them.
      *
@@ -92,8 +97,8 @@ public:
 private:
     void processExpression(std::stringstream& out, const Lepton::ExpressionTreeNode& node,
             std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& temps,
-            const std::vector<std::pair<std::string, std::string> >& functions, const std::string& prefix, const std::string& functionParams,
-            const std::vector<Lepton::ParsedExpression>& allExpressions, const std::string& tempType);
+            const std::vector<const TabulatedFunction*>& functions, const std::vector<std::pair<std::string, std::string> >& functionNames,
+            const std::string& prefix, const std::string& functionParams, const std::vector<Lepton::ParsedExpression>& allExpressions, const std::string& tempType);
     std::string getTempName(const Lepton::ExpressionTreeNode& node, const std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& temps);
     void findRelatedTabulatedFunctions(const Lepton::ExpressionTreeNode& node, const Lepton::ExpressionTreeNode& searchNode,
             const Lepton::ExpressionTreeNode*& valueNode, const Lepton::ExpressionTreeNode*& derivNode);

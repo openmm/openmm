@@ -40,6 +40,8 @@ using Lepton::CustomFunction;
 extern "C" CustomFunction* createReferenceTabulatedFunction(const TabulatedFunction& function) {
     if (dynamic_cast<const Continuous1DFunction*>(&function) != NULL)
         return new ReferenceContinuous1DFunction(dynamic_cast<const Continuous1DFunction&>(function));
+    if (dynamic_cast<const Discrete1DFunction*>(&function) != NULL)
+        return new ReferenceDiscrete1DFunction(dynamic_cast<const Discrete1DFunction&>(function));
     throw OpenMMException("createReferenceTabulatedFunction: Unknown function type");
 }
 
@@ -72,4 +74,27 @@ double ReferenceContinuous1DFunction::evaluateDerivative(const double* arguments
 
 CustomFunction* ReferenceContinuous1DFunction::clone() const {
     return new ReferenceContinuous1DFunction(function);
+}
+
+ReferenceDiscrete1DFunction::ReferenceDiscrete1DFunction(const Discrete1DFunction& function) : function(function) {
+    function.getFunctionParameters(values);
+}
+
+int ReferenceDiscrete1DFunction::getNumArguments() const {
+    return 1;
+}
+
+double ReferenceDiscrete1DFunction::evaluate(const double* arguments) const {
+    int t = (int) arguments[0];
+    if (t < 0 || t >= values.size())
+        throw OpenMMException("ReferenceDiscrete1DFunction: argument out of range");
+    return values[t];
+}
+
+double ReferenceDiscrete1DFunction::evaluateDerivative(const double* arguments, const int* derivOrder) const {
+    return 0.0;
+}
+
+CustomFunction* ReferenceDiscrete1DFunction::clone() const {
+    return new ReferenceDiscrete1DFunction(function);
 }

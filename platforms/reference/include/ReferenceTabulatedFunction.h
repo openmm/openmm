@@ -60,6 +60,21 @@ private:
     std::vector<double> x, values, derivs;
 };
 
+/**
+ * This class adapts a Discrete1DFunction into a Lepton::CustomFunction.
+ */
+class OPENMM_EXPORT ReferenceDiscrete1DFunction : public Lepton::CustomFunction {
+public:
+    ReferenceDiscrete1DFunction(const Discrete1DFunction& function);
+    int getNumArguments() const;
+    double evaluate(const double* arguments) const;
+    double evaluateDerivative(const double* arguments, const int* derivOrder) const;
+    CustomFunction* clone() const;
+private:
+    const Discrete1DFunction& function;
+    std::vector<double> values;
+};
+
 } // namespace OpenMM
 
 #endif /*OPENMM_REFERENCETABULATEDFUNCTION_H_*/
