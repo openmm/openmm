@@ -33,6 +33,9 @@ using namespace OpenMM;
 using namespace Lepton;
 using namespace std;
 
+CudaExpressionUtilities::CudaExpressionUtilities(CudaContext& context) : context(context), fp1(1), fp2(2), fp3(3) {
+}
+
 string CudaExpressionUtilities::createExpressions(const map<string, ParsedExpression>& expressions, const map<string, string>& variables,
         const vector<const TabulatedFunction*>& functions, const vector<pair<string, string> >& functionNames, const string& prefix,
         const string& functionParams, const string& tempType) {
@@ -82,7 +85,6 @@ void CudaExpressionUtilities::processExpression(stringstream& out, const Express
                 ;
             if (i == functionNames.size())
                 throw OpenMMException("Unknown function in expression: "+node.getOperation().getName());
-            bool isDeriv = (dynamic_cast<const Operation::Custom*>(&node.getOperation())->getDerivOrder()[0] == 1);
             out << "0.0f;\n";
             temps.push_back(make_pair(node, name));
             hasRecordedNode = true;
@@ -90,23 +92,16 @@ void CudaExpressionUtilities::processExpression(stringstream& out, const Express
             // If both the value and derivative of the function are needed, it's faster to calculate them both
             // at once, so check to see if both are needed.
 
-            const ExpressionTreeNode* valueNode = NULL;
-            const ExpressionTreeNode* derivNode = NULL;
+            vector<const ExpressionTreeNode*> nodes;
             for (int j = 0; j < (int) allExpressions.size(); j++)
-                findRelatedTabulatedFunctions(node, allExpressions[j].getRootNode(), valueNode, derivNode);
-            string valueName = name;
-            string derivName = name;
-            if (valueNode != NULL && derivNode != NULL) {
+                findRelatedTabulatedFunctions(node, allExpressions[j].getRootNode(), nodes);
+            vector<string> nodeNames;
+            nodeNames.push_back(name);
+            for (int j = 1; j < (int) nodes.size(); j++) {
                 string name2 = prefix+context.intToString(temps.size());
                 out << tempType << " " << name2 << " = 0.0f;\n";
-                if (isDeriv) {
-                    valueName = name2;
-                    temps.push_back(make_pair(*valueNode, name2));
-                }
-                else {
-                    derivName = name2;
-                    temps.push_back(make_pair(*derivNode, name2));
-                }
+                nodeNames.push_back(name2);
+                temps.push_back(make_pair(*nodes[j], name2));
             }
             out << "{\n";
             if (dynamic_cast<const Continuous1DFunction*>(functions[i]) != NULL) {
@@ -119,20 +114,58 @@ void CudaExpressionUtilities::processExpression(stringstream& out, const Express
                 out << "float4 coeff = " << functionNames[i].second << "[index];\n";
                 out << "real b = x-index;\n";
                 out << "real a = 1.0f-b;\n";
-                if (valueNode != NULL)
-                    out << valueName << " = a*coeff.x+b*coeff.y+((a*a*a-a)*coeff.z+(b*b*b-b)*coeff.w)/(params.z*params.z);\n";
-                if (derivNode != NULL)
-                    out << derivName << " = (coeff.y-coeff.x)*params.z+((1.0f-3.0f*a*a)*coeff.z+(3.0f*b*b-1.0f)*coeff.w)/params.z;\n";
+                for (int j = 0; j < nodes.size(); j++) {
+                    const vector<int>& derivOrder = dynamic_cast<const Operation::Custom*>(&nodes[j]->getOperation())->getDerivOrder();
+                    if (derivOrder[0] == 0)
+                        out << nodeNames[j] << " = a*coeff.x+b*coeff.y+((a*a*a-a)*coeff.z+(b*b*b-b)*coeff.w)/(params.z*params.z);\n";
+                    else
+                        out << nodeNames[j] << " = (coeff.y-coeff.x)*params.z+((1.0f-3.0f*a*a)*coeff.z+(3.0f*b*b-1.0f)*coeff.w)/params.z;\n";
+                }
                 out << "}\n";
             }
             else if (dynamic_cast<const Discrete1DFunction*>(functions[i]) != NULL) {
-                if (valueNode != NULL) {
-                    out << "float4 params = " << functionParams << "[" << i << "];\n";
-                    out << "real x = " << getTempName(node.getChildren()[0], temps) << ";\n";
-                    out << "if (x >= 0 && x < params.x) {\n";
-                    out << "int index = (int) round(x);\n";
-                    out << valueName << " = " << functionNames[i].second << "[index];\n";
-                    out << "}\n";
+                for (int j = 0; j < nodes.size(); j++) {
+                    const vector<int>& derivOrder = dynamic_cast<const Operation::Custom*>(&nodes[j]->getOperation())->getDerivOrder();
+                    if (derivOrder[0] == 0) {
+                        out << "float4 params = " << functionParams << "[" << i << "];\n";
+                        out << "real x = " << getTempName(node.getChildren()[0], temps) << ";\n";
+                        out << "if (x >= 0 && x < params.x) {\n";
+                        out << "int index = (int) round(x);\n";
+                        out << nodeNames[j] << " = " << functionNames[i].second << "[index];\n";
+                        out << "}\n";
+                    }
+                }
+            }
+            else if (dynamic_cast<const Discrete2DFunction*>(functions[i]) != NULL) {
+                for (int j = 0; j < nodes.size(); j++) {
+                    const vector<int>& derivOrder = dynamic_cast<const Operation::Custom*>(&nodes[j]->getOperation())->getDerivOrder();
+                    if (derivOrder[0] == 0 && derivOrder[1] == 0) {
+                        out << "float4 params = " << functionParams << "[" << i << "];\n";
+                        out << "int x = (int) round(" << getTempName(node.getChildren()[0], temps) << ");\n";
+                        out << "int y = (int) round(" << getTempName(node.getChildren()[1], temps) << ");\n";
+                        out << "int xsize = (int) params.x;\n";
+                        out << "int ysize = (int) params.y;\n";
+                        out << "int index = x+y*xsize;\n";
+                        out << "if (index >= 0 && index < xsize*ysize)\n";
+                        out << nodeNames[j] << " = " << functionNames[i].second << "[index];\n";
+                    }
+                }
+            }
+            else if (dynamic_cast<const Discrete3DFunction*>(functions[i]) != NULL) {
+                for (int j = 0; j < nodes.size(); j++) {
+                    const vector<int>& derivOrder = dynamic_cast<const Operation::Custom*>(&nodes[j]->getOperation())->getDerivOrder();
+                    if (derivOrder[0] == 0 && derivOrder[1] == 0 && derivOrder[2] == 0) {
+                        out << "float4 params = " << functionParams << "[" << i << "];\n";
+                        out << "int x = (int) round(" << getTempName(node.getChildren()[0], temps) << ");\n";
+                        out << "int y = (int) round(" << getTempName(node.getChildren()[1], temps) << ");\n";
+                        out << "int z = (int) round(" << getTempName(node.getChildren()[2], temps) << ");\n";
+                        out << "int xsize = (int) params.x;\n";
+                        out << "int ysize = (int) params.y;\n";
+                        out << "int zsize = (int) params.z;\n";
+                        out << "int index = x+(y+z*ysize)*xsize;\n";
+                        out << "if (index >= 0 && index < xsize*ysize*zsize)\n";
+                        out << nodeNames[j] << " = " << functionNames[i].second << "[index];\n";
+                    }
                 }
             }
             out << "}";
@@ -327,16 +360,12 @@ string CudaExpressionUtilities::getTempName(const ExpressionTreeNode& node, cons
 }
 
 void CudaExpressionUtilities::findRelatedTabulatedFunctions(const ExpressionTreeNode& node, const ExpressionTreeNode& searchNode,
-            const ExpressionTreeNode*& valueNode, const ExpressionTreeNode*& derivNode) {
-    if (searchNode.getOperation().getId() == Operation::CUSTOM && node.getChildren()[0] == searchNode.getChildren()[0]) {
-        if (dynamic_cast<const Operation::Custom*>(&searchNode.getOperation())->getDerivOrder()[0] == 0)
-            valueNode = &searchNode;
-        else
-            derivNode = &searchNode;
-    }
+            vector<const Lepton::ExpressionTreeNode*>& nodes) {
+    if (searchNode.getOperation().getId() == Operation::CUSTOM && node.getChildren()[0] == searchNode.getChildren()[0])
+        nodes.push_back(&searchNode);
     else
         for (int i = 0; i < (int) searchNode.getChildren().size(); i++)
-            findRelatedTabulatedFunctions(node, searchNode.getChildren()[i], valueNode, derivNode);
+            findRelatedTabulatedFunctions(node, searchNode.getChildren()[i], nodes);
 }
 
 void CudaExpressionUtilities::findRelatedPowers(const ExpressionTreeNode& node, const ExpressionTreeNode& searchNode, map<int, const ExpressionTreeNode*>& powers) {
@@ -392,6 +421,34 @@ vector<float> CudaExpressionUtilities::computeFunctionCoefficients(const Tabulat
         width = 1;
         return f;
     }
+    if (dynamic_cast<const Discrete2DFunction*>(&function) != NULL) {
+        // Record the tabulated values.
+        
+        const Discrete2DFunction& fn = dynamic_cast<const Discrete2DFunction&>(function);
+        int xsize, ysize;
+        vector<double> values;
+        fn.getFunctionParameters(xsize, ysize, values);
+        int numValues = values.size();
+        vector<float> f(numValues);
+        for (int i = 0; i < numValues; i++)
+            f[i] = (float) values[i];
+        width = 1;
+        return f;
+    }
+    if (dynamic_cast<const Discrete3DFunction*>(&function) != NULL) {
+        // Record the tabulated values.
+        
+        const Discrete3DFunction& fn = dynamic_cast<const Discrete3DFunction&>(function);
+        int xsize, ysize, zsize;
+        vector<double> values;
+        fn.getFunctionParameters(xsize, ysize, zsize, values);
+        int numValues = values.size();
+        vector<float> f(numValues);
+        for (int i = 0; i < numValues; i++)
+            f[i] = (float) values[i];
+        width = 1;
+        return f;
+    }
     throw OpenMMException("computeFunctionCoefficients: Unknown function type");
 }
 
@@ -411,8 +468,34 @@ vector<float4> CudaExpressionUtilities::computeFunctionParameters(const vector<c
             fn.getFunctionParameters(values);
             params[i] = make_float4((float) values.size(), 0.0f, 0.0f, 0.0f);
         }
+        else if (dynamic_cast<const Discrete2DFunction*>(functions[i]) != NULL) {
+            const Discrete2DFunction& fn = dynamic_cast<const Discrete2DFunction&>(*functions[i]);
+            int xsize, ysize;
+            vector<double> values;
+            fn.getFunctionParameters(xsize, ysize, values);
+            params[i] = make_float4(xsize, ysize, 0.0f, 0.0f);
+        }
+        else if (dynamic_cast<const Discrete3DFunction*>(functions[i]) != NULL) {
+            const Discrete3DFunction& fn = dynamic_cast<const Discrete3DFunction&>(*functions[i]);
+            int xsize, ysize, zsize;
+            vector<double> values;
+            fn.getFunctionParameters(xsize, ysize, zsize, values);
+            params[i] = make_float4(xsize, ysize, zsize, 0.0f);
+        }
         else
             throw OpenMMException("computeFunctionParameters: Unknown function type");
     }
     return params;
+}
+
+Lepton::CustomFunction* CudaExpressionUtilities::getFunctionPlaceholder(const TabulatedFunction& function) {
+    if (dynamic_cast<const Continuous1DFunction*>(&function) != NULL)
+        return &fp1;
+    if (dynamic_cast<const Discrete1DFunction*>(&function) != NULL)
+        return &fp1;
+    if (dynamic_cast<const Discrete2DFunction*>(&function) != NULL)
+        return &fp2;
+    if (dynamic_cast<const Discrete3DFunction*>(&function) != NULL)
+        return &fp3;
+    throw OpenMMException("getFunctionPlaceholder: Unknown function type");
 }

@@ -32,6 +32,7 @@
 #include "ReferenceTabulatedFunction.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/SplineFitter.h"
+#include <cmath>
 
 using namespace OpenMM;
 using namespace std;
@@ -42,6 +43,10 @@ extern "C" CustomFunction* createReferenceTabulatedFunction(const TabulatedFunct
         return new ReferenceContinuous1DFunction(dynamic_cast<const Continuous1DFunction&>(function));
     if (dynamic_cast<const Discrete1DFunction*>(&function) != NULL)
         return new ReferenceDiscrete1DFunction(dynamic_cast<const Discrete1DFunction&>(function));
+    if (dynamic_cast<const Discrete2DFunction*>(&function) != NULL)
+        return new ReferenceDiscrete2DFunction(dynamic_cast<const Discrete2DFunction&>(function));
+    if (dynamic_cast<const Discrete3DFunction*>(&function) != NULL)
+        return new ReferenceDiscrete3DFunction(dynamic_cast<const Discrete3DFunction&>(function));
     throw OpenMMException("createReferenceTabulatedFunction: Unknown function type");
 }
 
@@ -85,10 +90,10 @@ int ReferenceDiscrete1DFunction::getNumArguments() const {
 }
 
 double ReferenceDiscrete1DFunction::evaluate(const double* arguments) const {
-    int t = (int) arguments[0];
-    if (t < 0 || t >= values.size())
+    int i = (int) round(arguments[0]);
+    if (i < 0 || i >= values.size())
         throw OpenMMException("ReferenceDiscrete1DFunction: argument out of range");
-    return values[t];
+    return values[i];
 }
 
 double ReferenceDiscrete1DFunction::evaluateDerivative(const double* arguments, const int* derivOrder) const {
@@ -97,4 +102,53 @@ double ReferenceDiscrete1DFunction::evaluateDerivative(const double* arguments, 
 
 CustomFunction* ReferenceDiscrete1DFunction::clone() const {
     return new ReferenceDiscrete1DFunction(function);
+}
+
+ReferenceDiscrete2DFunction::ReferenceDiscrete2DFunction(const Discrete2DFunction& function) : function(function) {
+    function.getFunctionParameters(xsize, ysize, values);
+}
+
+int ReferenceDiscrete2DFunction::getNumArguments() const {
+    return 2;
+}
+
+double ReferenceDiscrete2DFunction::evaluate(const double* arguments) const {
+    int i = (int) round(arguments[0]);
+    int j = (int) round(arguments[1]);
+    if (i < 0 || i >= xsize || j < 0 || j >= ysize)
+        throw OpenMMException("ReferenceDiscrete2DFunction: argument out of range");
+    return values[i+j*xsize];
+}
+
+double ReferenceDiscrete2DFunction::evaluateDerivative(const double* arguments, const int* derivOrder) const {
+    return 0.0;
+}
+
+CustomFunction* ReferenceDiscrete2DFunction::clone() const {
+    return new ReferenceDiscrete2DFunction(function);
+}
+
+ReferenceDiscrete3DFunction::ReferenceDiscrete3DFunction(const Discrete3DFunction& function) : function(function) {
+    function.getFunctionParameters(xsize, ysize, zsize, values);
+}
+
+int ReferenceDiscrete3DFunction::getNumArguments() const {
+    return 3;
+}
+
+double ReferenceDiscrete3DFunction::evaluate(const double* arguments) const {
+    int i = (int) round(arguments[0]);
+    int j = (int) round(arguments[1]);
+    int k = (int) round(arguments[2]);
+    if (i < 0 || i >= xsize || j < 0 || j >= ysize || k < 0 || k >= zsize)
+        throw OpenMMException("ReferenceDiscrete3DFunction: argument out of range");
+    return values[i+(j+k*ysize)*xsize];
+}
+
+double ReferenceDiscrete3DFunction::evaluateDerivative(const double* arguments, const int* derivOrder) const {
+    return 0.0;
+}
+
+CustomFunction* ReferenceDiscrete3DFunction::clone() const {
+    return new ReferenceDiscrete3DFunction(function);
 }

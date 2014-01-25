@@ -46,8 +46,7 @@ namespace OpenMM {
 
 class OPENMM_EXPORT_CUDA CudaExpressionUtilities {
 public:
-    CudaExpressionUtilities(CudaContext& context) : context(context) {
-    }
+    CudaExpressionUtilities(CudaContext& context);
     /**
      * Generate the source code for calculating a set of expressions.
      *
@@ -93,38 +92,43 @@ public:
      * @return the parameter array
      */
     std::vector<float4> computeFunctionParameters(const std::vector<const TabulatedFunction*>& functions);
-    class FunctionPlaceholder;
+    /**
+     * Get a Lepton::CustomFunction that can be used to represent a TabulatedFunction when parsing expressions.
+     * 
+     * @param function   the function for which to get a placeholder
+     */
+    Lepton::CustomFunction* getFunctionPlaceholder(const TabulatedFunction& function);
 private:
+    class FunctionPlaceholder : public Lepton::CustomFunction {
+        public:
+            FunctionPlaceholder(int numArgs) : numArgs(numArgs) {
+            }
+            int getNumArguments() const {
+                return numArgs;
+            }
+            double evaluate(const double* arguments) const {
+                return 0.0;
+            }
+            double evaluateDerivative(const double* arguments, const int* derivOrder) const {
+                return 0.0;
+            }
+            CustomFunction* clone() const {
+                return new FunctionPlaceholder(numArgs);
+            }
+        private:
+            int numArgs;
+    };
     void processExpression(std::stringstream& out, const Lepton::ExpressionTreeNode& node,
             std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& temps,
             const std::vector<const TabulatedFunction*>& functions, const std::vector<std::pair<std::string, std::string> >& functionNames,
             const std::string& prefix, const std::string& functionParams, const std::vector<Lepton::ParsedExpression>& allExpressions, const std::string& tempType);
     std::string getTempName(const Lepton::ExpressionTreeNode& node, const std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& temps);
     void findRelatedTabulatedFunctions(const Lepton::ExpressionTreeNode& node, const Lepton::ExpressionTreeNode& searchNode,
-            const Lepton::ExpressionTreeNode*& valueNode, const Lepton::ExpressionTreeNode*& derivNode);
+            std::vector<const Lepton::ExpressionTreeNode*>& nodes);
     void findRelatedPowers(const Lepton::ExpressionTreeNode& node, const Lepton::ExpressionTreeNode& searchNode,
             std::map<int, const Lepton::ExpressionTreeNode*>& powers);
     CudaContext& context;
-};
-
-/**
- * This class serves as a placeholder for custom functions in expressions.
- */
-
-class CudaExpressionUtilities::FunctionPlaceholder : public Lepton::CustomFunction {
-public:
-    int getNumArguments() const {
-        return 1;
-    }
-    double evaluate(const double* arguments) const {
-        return 0.0;
-    }
-    double evaluateDerivative(const double* arguments, const int* derivOrder) const {
-        return 0.0;
-    }
-    CustomFunction* clone() const {
-        return new FunctionPlaceholder();
-    }
+    FunctionPlaceholder fp1, fp2, fp3;
 };
 
 } // namespace OpenMM

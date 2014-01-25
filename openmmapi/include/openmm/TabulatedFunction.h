@@ -102,32 +102,112 @@ private:
 };
 
 /**
- * This is a TabulatedFunction that computes a discrete one dimensional function.
+ * This is a TabulatedFunction that computes a discrete one dimensional function f(x).
+ * To evaluate it, x is rounded to the nearest integer and the table element with that
+ * index is returned.  If the index is outside the range [0, size), the result is undefined.
  */
 class OPENMM_EXPORT Discrete1DFunction : public TabulatedFunction {
 public:
     /**
      * Create a Discrete1DFunction f(x) based on a set of tabulated values.
      * 
-     * @param values         the tabulated values of the function f(x).  The function is only defined
-     *                       for integer values of x in the range [0, values.size()].
+     * @param values         the tabulated values of the function f(x)
      */
     Discrete1DFunction(const std::vector<double>& values);
     /**
      * Get the parameters for the tabulated function.
      *
-     * @param values         the tabulated values of the function f(x).  The function is only defined
-     *                       for integer values of x in the range [0, values.size()].
+     * @param values         the tabulated values of the function f(x)
      */
     void getFunctionParameters(std::vector<double>& values) const;
     /**
      * Set the parameters for the tabulated function.
      *
-     * @param values         the tabulated values of the function f(x).  The function is only defined
-     *                       for integer values of x in the range [0, values.size()].
+     * @param values         the tabulated values of the function f(x)
      */
     void setFunctionParameters(const std::vector<double>& values);
 private:
+    std::vector<double> values;
+};
+
+/**
+ * This is a TabulatedFunction that computes a discrete two dimensional function f(x,y).
+ * To evaluate it, x and y are each rounded to the nearest integer and the table element with those
+ * indices is returned.  If either index is outside the range [0, size), the result is undefined.
+ */
+class OPENMM_EXPORT Discrete2DFunction : public TabulatedFunction {
+public:
+    /**
+     * Create a Discrete2DFunction f(x,y) based on a set of tabulated values.
+     * 
+     * @param xsize     the number of table elements along the x direction
+     * @param ysize     the number of table elements along the y direction
+     * @param values    the tabulated values of the function f(x,y), ordered so that
+     *                  values[i+xsize*j] = f(i,j).  This must be of length xsize*ysize.
+     */
+    Discrete2DFunction(int xsize, int ysize, const std::vector<double>& values);
+    /**
+     * Get the parameters for the tabulated function.
+     *
+     * @param xsize     the number of table elements along the x direction
+     * @param ysize     the number of table elements along the y direction
+     * @param values    the tabulated values of the function f(x,y), ordered so that
+     *                  values[i+xsize*j] = f(i,j).  This must be of length xsize*ysize.
+     */
+    void getFunctionParameters(int& xsize, int& ysize, std::vector<double>& values) const;
+    /**
+     * Set the parameters for the tabulated function.
+     *
+     * @param xsize     the number of table elements along the x direction
+     * @param ysize     the number of table elements along the y direction
+     * @param values    the tabulated values of the function f(x,y), ordered so that
+     *                  values[i+xsize*j] = f(i,j).  This must be of length xsize*ysize.
+     */
+    void setFunctionParameters(int xsize, int ysize, const std::vector<double>& values);
+private:
+    int xsize, ysize;
+    std::vector<double> values;
+};
+
+/**
+ * This is a TabulatedFunction that computes a discrete three dimensional function f(x,y,z).
+ * To evaluate it, x, y, and z are each rounded to the nearest integer and the table element with those
+ * indices is returned.  If any index is outside the range [0, size), the result is undefined.
+ */
+class OPENMM_EXPORT Discrete3DFunction : public TabulatedFunction {
+public:
+    /**
+     * Create a Discrete3DFunction f(x,y,z) based on a set of tabulated values.
+     * 
+     * @param xsize     the number of table elements along the x direction
+     * @param ysize     the number of table elements along the y direction
+     * @param zsize     the number of table elements along the z direction
+     * @param values    the tabulated values of the function f(x,y,z), ordered so that
+     *                  values[i+xsize*j+xsize*ysize*k] = f(i,j,k).  This must be of length xsize*ysize*zsize.
+     */
+    Discrete3DFunction(int xsize, int ysize, int zsize, const std::vector<double>& values);
+    /**
+     * Get the parameters for the tabulated function.
+     *
+     * @param xsize     the number of table elements along the x direction
+     * @param ysize     the number of table elements along the y direction
+     * @param zsize     the number of table elements along the z direction
+     * @param values    the tabulated values of the function f(x,y,z), ordered so that
+     *                  values[i+xsize*j+xsize*ysize*k] = f(i,j,k).  This must be of length xsize*ysize*zsize.
+     */
+    void getFunctionParameters(int& xsize, int& ysize, int& zsize, std::vector<double>& values) const;
+    /**
+     * Set the parameters for the tabulated function.
+     *
+     * @param xsize     the number of table elements along the x direction
+     * @param ysize     the number of table elements along the y direction
+     * @param zsize     the number of table elements along the z direction
+     * @param values    the tabulated values of the function f(x,y,z), ordered so that
+     *                  values[i+xsize*j+xsize*ysize*k] = f(i,j,k).  This must be of length xsize*ysize*zsize.
+     */
+    void setFunctionParameters(int xsize, int ysize, int zsize, const std::vector<double>& values);
+private:
+    int xsize, ysize, zsize;
     std::vector<double> values;
 };
 

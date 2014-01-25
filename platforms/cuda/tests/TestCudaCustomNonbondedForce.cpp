@@ -271,7 +271,7 @@ void testContinuous1DFunction() {
     forceField->addParticle(vector<double>());
     vector<double> table;
     for (int i = 0; i < 21; i++)
-        table.push_back(std::sin(0.25*i));
+        table.push_back(sin(0.25*i));
     forceField->addFunction("fn", new Continuous1DFunction(table, 1.0, 6.0));
     system.addForce(forceField);
     Context context(system, integrator, platform);
@@ -284,8 +284,8 @@ void testContinuous1DFunction() {
         context.setPositions(positions);
         State state = context.getState(State::Forces | State::Energy);
         const vector<Vec3>& forces = state.getForces();
-        double force = (x < 1.0 || x > 6.0 ? 0.0 : -std::cos(x-1.0));
-        double energy = (x < 1.0 || x > 6.0 ? 0.0 : std::sin(x-1.0))+1.0;
+        double force = (x < 1.0 || x > 6.0 ? 0.0 : -cos(x-1.0));
+        double energy = (x < 1.0 || x > 6.0 ? 0.0 : sin(x-1.0))+1.0;
         ASSERT_EQUAL_VEC(Vec3(-force, 0, 0), forces[0], 0.1);
         ASSERT_EQUAL_VEC(Vec3(force, 0, 0), forces[1], 0.1);
         ASSERT_EQUAL_TOL(energy, state.getPotentialEnergy(), 0.02);
@@ -295,7 +295,7 @@ void testContinuous1DFunction() {
         positions[1] = Vec3(x, 0, 0);
         context.setPositions(positions);
         State state = context.getState(State::Energy);
-        double energy = (x < 1.0 || x > 6.0 ? 0.0 : std::sin(x-1.0))+1.0;
+        double energy = (x < 1.0 || x > 6.0 ? 0.0 : sin(x-1.0))+1.0;
         ASSERT_EQUAL_TOL(energy, state.getPotentialEnergy(), 1e-4);
     }
 }
@@ -310,7 +310,7 @@ void testDiscrete1DFunction() {
     forceField->addParticle(vector<double>());
     vector<double> table;
     for (int i = 0; i < 21; i++)
-        table.push_back(std::sin(0.25*i));
+        table.push_back(sin(0.25*i));
     forceField->addFunction("fn", new Discrete1DFunction(table));
     system.addForce(forceField);
     Context context(system, integrator, platform);
@@ -319,6 +319,74 @@ void testDiscrete1DFunction() {
     for (int i = 0; i < (int) table.size(); i++) {
         positions[1] = Vec3(i+1, 0, 0);
         context.setPositions(positions);
+        State state = context.getState(State::Forces | State::Energy);
+        const vector<Vec3>& forces = state.getForces();
+        ASSERT_EQUAL_VEC(Vec3(0, 0, 0), forces[0], 1e-6);
+        ASSERT_EQUAL_VEC(Vec3(0, 0, 0), forces[1], 1e-6);
+        ASSERT_EQUAL_TOL(table[i]+1.0, state.getPotentialEnergy(), 1e-6);
+    }
+}
+
+void testDiscrete2DFunction() {
+    const int xsize = 10;
+    const int ysize = 5;
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    VerletIntegrator integrator(0.01);
+    CustomNonbondedForce* forceField = new CustomNonbondedForce("fn(r-1,a)+1");
+    forceField->addGlobalParameter("a", 0.0);
+    forceField->addParticle(vector<double>());
+    forceField->addParticle(vector<double>());
+    vector<double> table;
+    for (int i = 0; i < xsize; i++)
+        for (int j = 0; j < ysize; j++)
+            table.push_back(sin(0.25*i)+cos(0.33*j));
+    forceField->addFunction("fn", new Discrete2DFunction(xsize, ysize, table));
+    system.addForce(forceField);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(2);
+    positions[0] = Vec3(0, 0, 0);
+    for (int i = 0; i < (int) table.size(); i++) {
+        positions[1] = Vec3((i%xsize)+1, 0, 0);
+        context.setPositions(positions);
+        context.setParameter("a", i/xsize);
+        State state = context.getState(State::Forces | State::Energy);
+        const vector<Vec3>& forces = state.getForces();
+        ASSERT_EQUAL_VEC(Vec3(0, 0, 0), forces[0], 1e-6);
+        ASSERT_EQUAL_VEC(Vec3(0, 0, 0), forces[1], 1e-6);
+        ASSERT_EQUAL_TOL(table[i]+1.0, state.getPotentialEnergy(), 1e-6);
+    }
+}
+
+void testDiscrete3DFunction() {
+    const int xsize = 8;
+    const int ysize = 5;
+    const int zsize = 6;
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    VerletIntegrator integrator(0.01);
+    CustomNonbondedForce* forceField = new CustomNonbondedForce("fn(r-1,a,b)+1");
+    forceField->addGlobalParameter("a", 0.0);
+    forceField->addGlobalParameter("b", 0.0);
+    forceField->addParticle(vector<double>());
+    forceField->addParticle(vector<double>());
+    vector<double> table;
+    for (int i = 0; i < xsize; i++)
+        for (int j = 0; j < ysize; j++)
+            for (int k = 0; k < zsize; k++)
+                table.push_back(sin(0.25*i)+cos(0.33*j)+0.12345*k);
+    forceField->addFunction("fn", new Discrete3DFunction(xsize, ysize, zsize, table));
+    system.addForce(forceField);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(2);
+    positions[0] = Vec3(0, 0, 0);
+    for (int i = 0; i < (int) table.size(); i++) {
+        positions[1] = Vec3((i%xsize)+1, 0, 0);
+        context.setPositions(positions);
+        context.setParameter("a", (i/xsize)%ysize);
+        context.setParameter("b", i/(xsize*ysize));
         State state = context.getState(State::Forces | State::Energy);
         const vector<Vec3>& forces = state.getForces();
         ASSERT_EQUAL_VEC(Vec3(0, 0, 0), forces[0], 1e-6);
@@ -754,6 +822,8 @@ int main(int argc, char* argv[]) {
         testPeriodic();
         testContinuous1DFunction();
         testDiscrete1DFunction();
+        testDiscrete2DFunction();
+        testDiscrete3DFunction();
         testCoulombLennardJones();
         testParallelComputation();
         testSwitchingFunction();

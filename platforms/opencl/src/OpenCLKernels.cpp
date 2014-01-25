@@ -1968,7 +1968,6 @@ void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, cons
 
     // Record the tabulated functions.
 
-    OpenCLExpressionUtilities::FunctionPlaceholder fp;
     map<string, Lepton::CustomFunction*> functions;
     vector<pair<string, string> > functionDefinitions;
     vector<const TabulatedFunction*> functionList;
@@ -1977,7 +1976,7 @@ void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, cons
         string name = force.getFunctionName(i);
         string arrayName = prefix+"table"+cl.intToString(i);
         functionDefinitions.push_back(make_pair(name, arrayName));
-        functions[name] = &fp;
+        functions[name] = cl.getExpressionUtilities().getFunctionPlaceholder(force.getFunction(i));
         int width;
         vector<float> f = cl.getExpressionUtilities().computeFunctionCoefficients(force.getFunction(i), width);
         tabulatedFunctions.push_back(OpenCLArray::create<float>(cl, f.size(), "TabulatedFunction"));
@@ -2724,7 +2723,6 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
 
     // Record the tabulated functions.
 
-    OpenCLExpressionUtilities::FunctionPlaceholder fp;
     map<string, Lepton::CustomFunction*> functions;
     vector<pair<string, string> > functionDefinitions;
     vector<const TabulatedFunction*> functionList;
@@ -2734,7 +2732,7 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         string name = force.getFunctionName(i);
         string arrayName = prefix+"table"+cl.intToString(i);
         functionDefinitions.push_back(make_pair(name, arrayName));
-        functions[name] = &fp;
+        functions[name] = cl.getExpressionUtilities().getFunctionPlaceholder(force.getFunction(i));
         int width;
         vector<float> f = cl.getExpressionUtilities().computeFunctionCoefficients(force.getFunction(i), width);
         tabulatedFunctions.push_back(OpenCLArray::create<float>(cl, f.size(), "TabulatedFunction"));
@@ -3949,7 +3947,6 @@ void OpenCLCalcCustomHbondForceKernel::initialize(const System& system, const Cu
 
     // Record the tabulated functions.
 
-    OpenCLExpressionUtilities::FunctionPlaceholder fp;
     map<string, Lepton::CustomFunction*> functions;
     vector<pair<string, string> > functionDefinitions;
     vector<const TabulatedFunction*> functionList;
@@ -3959,7 +3956,7 @@ void OpenCLCalcCustomHbondForceKernel::initialize(const System& system, const Cu
         string name = force.getFunctionName(i);
         string arrayName = "table"+cl.intToString(i);
         functionDefinitions.push_back(make_pair(name, arrayName));
-        functions[name] = &fp;
+        functions[name] = cl.getExpressionUtilities().getFunctionPlaceholder(force.getFunction(i));
         int width;
         vector<float> f = cl.getExpressionUtilities().computeFunctionCoefficients(force.getFunction(i), width);
         tabulatedFunctions.push_back(OpenCLArray::create<float>(cl, f.size(), "TabulatedFunction"));
@@ -4347,7 +4344,6 @@ void OpenCLCalcCustomCompoundBondForceKernel::initialize(const System& system, c
 
     // Record the tabulated functions.
 
-    OpenCLExpressionUtilities::FunctionPlaceholder fp;
     map<string, Lepton::CustomFunction*> functions;
     vector<pair<string, string> > functionDefinitions;
     vector<const TabulatedFunction*> functionList;
@@ -4355,7 +4351,7 @@ void OpenCLCalcCustomCompoundBondForceKernel::initialize(const System& system, c
     for (int i = 0; i < force.getNumFunctions(); i++) {
         functionList.push_back(&force.getFunction(i));
         string name = force.getFunctionName(i);
-        functions[name] = &fp;
+        functions[name] = cl.getExpressionUtilities().getFunctionPlaceholder(force.getFunction(i));
         int width;
         vector<float> f = cl.getExpressionUtilities().computeFunctionCoefficients(force.getFunction(i), width);
         OpenCLArray* array = OpenCLArray::create<float>(cl, f.size(), "TabulatedFunction");

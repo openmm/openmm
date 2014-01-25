@@ -72,3 +72,50 @@ void Discrete1DFunction::getFunctionParameters(std::vector<double>& values) cons
 void Discrete1DFunction::setFunctionParameters(const std::vector<double>& values) {
     this->values = values;
 }
+
+Discrete2DFunction::Discrete2DFunction(int xsize, int ysize, const std::vector<double>& values) {
+    if (values.size() != xsize*ysize)
+        throw OpenMMException("Discrete2DFunction: incorrect number of values");
+    this->xsize = xsize;
+    this->ysize = ysize;
+    this->values = values;
+}
+
+void Discrete2DFunction::getFunctionParameters(int& xsize, int& ysize, std::vector<double>& values) const {
+    xsize = this->xsize;
+    ysize = this->ysize;
+    values = this->values;
+}
+
+void Discrete2DFunction::setFunctionParameters(int xsize, int ysize, const std::vector<double>& values) {
+    if (values.size() != xsize*ysize)
+        throw OpenMMException("Discrete2DFunction: incorrect number of values");
+    this->xsize = xsize;
+    this->ysize = ysize;
+    this->values = values;
+}
+
+Discrete3DFunction::Discrete3DFunction(int xsize, int ysize, int zsize, const std::vector<double>& values) {
+    if (values.size() != xsize*ysize*zsize)
+        throw OpenMMException("Discrete3DFunction: incorrect number of values");
+    this->xsize = xsize;
+    this->ysize = ysize;
+    this->zsize = zsize;
+    this->values = values;
+}
+
+void Discrete3DFunction::getFunctionParameters(int& xsize, int& ysize, int& zsize, std::vector<double>& values) const {
+    xsize = this->xsize;
+    ysize = this->ysize;
+    zsize = this->zsize;
+    values = this->values;
+}
+
+void Discrete3DFunction::setFunctionParameters(int xsize, int ysize, int zsize, const std::vector<double>& values) {
+    if (values.size() != xsize*ysize*zsize)
+        throw OpenMMException("Discrete3DFunction: incorrect number of values");
+    this->xsize = xsize;
+    this->ysize = ysize;
+    this->zsize = zsize;
+    this->values = values;
+}

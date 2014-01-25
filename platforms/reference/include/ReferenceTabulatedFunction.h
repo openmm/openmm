@@ -75,6 +75,38 @@ private:
     std::vector<double> values;
 };
 
+/**
+ * This class adapts a Discrete2DFunction into a Lepton::CustomFunction.
+ */
+class OPENMM_EXPORT ReferenceDiscrete2DFunction : public Lepton::CustomFunction {
+public:
+    ReferenceDiscrete2DFunction(const Discrete2DFunction& function);
+    int getNumArguments() const;
+    double evaluate(const double* arguments) const;
+    double evaluateDerivative(const double* arguments, const int* derivOrder) const;
+    CustomFunction* clone() const;
+private:
+    const Discrete2DFunction& function;
+    int xsize, ysize;
+    std::vector<double> values;
+};
+
+/**
+ * This class adapts a Discrete3DFunction into a Lepton::CustomFunction.
+ */
+class OPENMM_EXPORT ReferenceDiscrete3DFunction : public Lepton::CustomFunction {
+public:
+    ReferenceDiscrete3DFunction(const Discrete3DFunction& function);
+    int getNumArguments() const;
+    double evaluate(const double* arguments) const;
+    double evaluateDerivative(const double* arguments, const int* derivOrder) const;
+    CustomFunction* clone() const;
+private:
+    const Discrete3DFunction& function;
+    int xsize, ysize, zsize;
+    std::vector<double> values;
+};
+
 } // namespace OpenMM
 
 #endif /*OPENMM_REFERENCETABULATEDFUNCTION_H_*/

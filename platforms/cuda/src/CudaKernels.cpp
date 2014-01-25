@@ -1958,7 +1958,6 @@ void CudaCalcCustomNonbondedForceKernel::initialize(const System& system, const 
 
     // Record the tabulated functions.
 
-    CudaExpressionUtilities::FunctionPlaceholder fp;
     map<string, Lepton::CustomFunction*> functions;
     vector<pair<string, string> > functionDefinitions;
     vector<const TabulatedFunction*> functionList;
@@ -1967,7 +1966,7 @@ void CudaCalcCustomNonbondedForceKernel::initialize(const System& system, const 
         string name = force.getFunctionName(i);
         string arrayName = prefix+"table"+cu.intToString(i);
         functionDefinitions.push_back(make_pair(name, arrayName));
-        functions[name] = &fp;
+        functions[name] = cu.getExpressionUtilities().getFunctionPlaceholder(force.getFunction(i));
         int width;
         vector<float> f = cu.getExpressionUtilities().computeFunctionCoefficients(force.getFunction(i), width);
         tabulatedFunctions.push_back(CudaArray::create<float>(cu, f.size(), "TabulatedFunction"));
@@ -2671,7 +2670,6 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
 
     // Record the tabulated functions.
 
-    CudaExpressionUtilities::FunctionPlaceholder fp;
     map<string, Lepton::CustomFunction*> functions;
     vector<pair<string, string> > functionDefinitions;
     vector<const TabulatedFunction*> functionList;
@@ -2681,7 +2679,7 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
         string name = force.getFunctionName(i);
         string arrayName = prefix+"table"+cu.intToString(i);
         functionDefinitions.push_back(make_pair(name, arrayName));
-        functions[name] = &fp;
+        functions[name] = cu.getExpressionUtilities().getFunctionPlaceholder(force.getFunction(i));
         int width;
         vector<float> f = cu.getExpressionUtilities().computeFunctionCoefficients(force.getFunction(i), width);
         tabulatedFunctions.push_back(CudaArray::create<float>(cu, f.size(), "TabulatedFunction"));
@@ -3786,7 +3784,6 @@ void CudaCalcCustomHbondForceKernel::initialize(const System& system, const Cust
 
     // Record the tabulated functions.
 
-    CudaExpressionUtilities::FunctionPlaceholder fp;
     map<string, Lepton::CustomFunction*> functions;
     vector<pair<string, string> > functionDefinitions;
     vector<const TabulatedFunction*> functionList;
@@ -3796,7 +3793,7 @@ void CudaCalcCustomHbondForceKernel::initialize(const System& system, const Cust
         string name = force.getFunctionName(i);
         string arrayName = "table"+cu.intToString(i);
         functionDefinitions.push_back(make_pair(name, arrayName));
-        functions[name] = &fp;
+        functions[name] = cu.getExpressionUtilities().getFunctionPlaceholder(force.getFunction(i));
         int width;
         vector<float> f = cu.getExpressionUtilities().computeFunctionCoefficients(force.getFunction(i), width);
         tabulatedFunctions.push_back(CudaArray::create<float>(cu, f.size(), "TabulatedFunction"));
@@ -4182,7 +4179,6 @@ void CudaCalcCustomCompoundBondForceKernel::initialize(const System& system, con
 
     // Record the tabulated functions.
 
-    CudaExpressionUtilities::FunctionPlaceholder fp;
     map<string, Lepton::CustomFunction*> functions;
     vector<pair<string, string> > functionDefinitions;
     vector<const TabulatedFunction*> functionList;
@@ -4190,7 +4186,7 @@ void CudaCalcCustomCompoundBondForceKernel::initialize(const System& system, con
     for (int i = 0; i < force.getNumFunctions(); i++) {
         functionList.push_back(&force.getFunction(i));
         string name = force.getFunctionName(i);
-        functions[name] = &fp;
+        functions[name] = cu.getExpressionUtilities().getFunctionPlaceholder(force.getFunction(i));
         int width;
         vector<float> f = cu.getExpressionUtilities().computeFunctionCoefficients(force.getFunction(i), width);
         CudaArray* array = CudaArray::create<float>(cu, f.size(), "TabulatedFunction");
