@@ -50,6 +50,11 @@ using std::vector;
 CustomGBForce::CustomGBForce() : nonbondedMethod(NoCutoff), cutoffDistance(1.0) {
 }
 
+CustomGBForce::~CustomGBForce() {
+    for (int i = 0; i < (int) functions.size(); i++)
+        delete functions[i].function;
+}
+
 CustomGBForce::NonbondedMethod CustomGBForce::getNonbondedMethod() const {
     return nonbondedMethod;
 }

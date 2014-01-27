@@ -182,6 +182,7 @@ public:
      * Create a CustomGBForce.
      */
     CustomGBForce();
+    ~CustomGBForce();
     /**
      * Get the number of particles for which force field parameters have been defined.
      */

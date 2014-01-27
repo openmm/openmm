@@ -51,6 +51,12 @@ using std::vector;
 CustomCompoundBondForce::CustomCompoundBondForce(int numParticles, const string& energy) : particlesPerBond(numParticles), energyExpression(energy) {
 }
 
+
+CustomCompoundBondForce::~CustomCompoundBondForce() {
+    for (int i = 0; i < (int) functions.size(); i++)
+        delete functions[i].function;
+}
+
 const string& CustomCompoundBondForce::getEnergyFunction() const {
     return energyExpression;
 }

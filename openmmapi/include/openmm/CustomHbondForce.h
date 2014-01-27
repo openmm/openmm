@@ -125,6 +125,7 @@ public:
      *                  per-acceptor parameters
      */
     explicit CustomHbondForce(const std::string& energy);
+    ~CustomHbondForce();
     /**
      * Get the number of donors for which force field parameters have been defined.
      */

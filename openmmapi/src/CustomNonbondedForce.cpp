@@ -51,6 +51,11 @@ CustomNonbondedForce::CustomNonbondedForce(const string& energy) : energyExpress
     switchingDistance(-1.0), useSwitchingFunction(false), useLongRangeCorrection(false) {
 }
 
+CustomNonbondedForce::~CustomNonbondedForce() {
+    for (int i = 0; i < (int) functions.size(); i++)
+        delete functions[i].function;
+}
+
 const string& CustomNonbondedForce::getEnergyFunction() const {
     return energyExpression;
 }

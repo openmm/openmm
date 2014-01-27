@@ -107,6 +107,7 @@ public:
      *                      and per-bond parameters
      */
     explicit CustomCompoundBondForce(int numParticles, const std::string& energy);
+    ~CustomCompoundBondForce();
     /**
      * Get the number of particles used to define each bond.
      */

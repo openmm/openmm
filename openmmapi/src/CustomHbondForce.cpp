@@ -50,6 +50,12 @@ using std::vector;
 CustomHbondForce::CustomHbondForce(const string& energy) : energyExpression(energy), nonbondedMethod(NoCutoff), cutoffDistance(1.0) {
 }
 
+
+CustomHbondForce::~CustomHbondForce() {
+    for (int i = 0; i < (int) functions.size(); i++)
+        delete functions[i].function;
+}
+
 const string& CustomHbondForce::getEnergyFunction() const {
     return energyExpression;
 }

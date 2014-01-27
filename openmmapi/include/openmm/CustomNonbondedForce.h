@@ -157,6 +157,7 @@ public:
      *                  of r, the distance between them, as well as any global and per-particle parameters
      */
     explicit CustomNonbondedForce(const std::string& energy);
+    ~CustomNonbondedForce();
     /**
      * Get the number of particles for which force field parameters have been defined.
      */
