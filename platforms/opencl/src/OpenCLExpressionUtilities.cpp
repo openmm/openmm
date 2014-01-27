@@ -37,22 +37,21 @@ OpenCLExpressionUtilities::OpenCLExpressionUtilities(OpenCLContext& context) : c
 }
 
 string OpenCLExpressionUtilities::createExpressions(const map<string, ParsedExpression>& expressions, const map<string, string>& variables,
-        const vector<const TabulatedFunction*>& functions, const vector<pair<string, string> >& functionNames, const string& prefix,
-        const string& functionParams, const string& tempType) {
+        const vector<const TabulatedFunction*>& functions, const vector<pair<string, string> >& functionNames, const string& prefix, const string& tempType) {
     vector<pair<ExpressionTreeNode, string> > variableNodes;
     for (map<string, string>::const_iterator iter = variables.begin(); iter != variables.end(); ++iter)
         variableNodes.push_back(make_pair(ExpressionTreeNode(new Operation::Variable(iter->first)), iter->second));
-    return createExpressions(expressions, variableNodes, functions, functionNames, prefix, functionParams, tempType);
+    return createExpressions(expressions, variableNodes, functions, functionNames, prefix, tempType);
 }
 
 string OpenCLExpressionUtilities::createExpressions(const map<string, ParsedExpression>& expressions, const vector<pair<ExpressionTreeNode, string> >& variables,
-        const vector<const TabulatedFunction*>& functions, const vector<pair<string, string> >& functionNames, const string& prefix,
-        const string& functionParams, const string& tempType) {
+        const vector<const TabulatedFunction*>& functions, const vector<pair<string, string> >& functionNames, const string& prefix, const string& tempType) {
     stringstream out;
     vector<ParsedExpression> allExpressions;
     for (map<string, ParsedExpression>::const_iterator iter = expressions.begin(); iter != expressions.end(); ++iter)
         allExpressions.push_back(iter->second);
     vector<pair<ExpressionTreeNode, string> > temps = variables;
+    vector<vector<double> > functionParams = computeFunctionParameters(functions);
     for (map<string, ParsedExpression>::const_iterator iter = expressions.begin(); iter != expressions.end(); ++iter) {
         processExpression(out, iter->second.getRootNode(), temps, functions, functionNames, prefix, functionParams, allExpressions, tempType);
         out << iter->first << getTempName(iter->second.getRootNode(), temps) << ";\n";
@@ -61,7 +60,7 @@ string OpenCLExpressionUtilities::createExpressions(const map<string, ParsedExpr
 }
 
 void OpenCLExpressionUtilities::processExpression(stringstream& out, const ExpressionTreeNode& node, vector<pair<ExpressionTreeNode, string> >& temps,
-        const vector<const TabulatedFunction*>& functions, const vector<pair<string, string> >& functionNames, const string& prefix, const string& functionParams,
+        const vector<const TabulatedFunction*>& functions, const vector<pair<string, string> >& functionNames, const string& prefix, const vector<vector<double> >& functionParams,
         const vector<ParsedExpression>& allExpressions, const string& tempType) {
     for (int i = 0; i < (int) temps.size(); i++)
         if (temps[i].first == node)
@@ -104,22 +103,26 @@ void OpenCLExpressionUtilities::processExpression(stringstream& out, const Expre
                 temps.push_back(make_pair(*nodes[j], name2));
             }
             out << "{\n";
+            vector<string> paramsFloat, paramsInt;
+            for (int j = 0; j < (int) functionParams[i].size(); j++) {
+                paramsFloat.push_back(context.doubleToString(functionParams[i][j]));
+                paramsInt.push_back(context.intToString((int) functionParams[i][j]));
+            }
             if (dynamic_cast<const Continuous1DFunction*>(functions[i]) != NULL) {
-                out << "float4 params = " << functionParams << "[" << i << "];\n";
                 out << "real x = " << getTempName(node.getChildren()[0], temps) << ";\n";
-                out << "if (x >= params.x && x <= params.y) {\n";
-                out << "x = (x-params.x)*params.z;\n";
+                out << "if (x >= " << paramsFloat[0] << " && x <= " << paramsFloat[1] << ") {\n";
+                out << "x = (x-" << paramsFloat[0] << ")*" << paramsFloat[2] << ";\n";
                 out << "int index = (int) (floor(x));\n";
-                out << "index = min(index, (int) params.w);\n";
+                out << "index = min(index, " << paramsInt[3] << ");\n";
                 out << "float4 coeff = " << functionNames[i].second << "[index];\n";
                 out << "real b = x-index;\n";
                 out << "real a = 1.0f-b;\n";
                 for (int j = 0; j < nodes.size(); j++) {
                     const vector<int>& derivOrder = dynamic_cast<const Operation::Custom*>(&nodes[j]->getOperation())->getDerivOrder();
                     if (derivOrder[0] == 0)
-                        out << nodeNames[j] << " = a*coeff.x+b*coeff.y+((a*a*a-a)*coeff.z+(b*b*b-b)*coeff.w)/(params.z*params.z);\n";
+                        out << nodeNames[j] << " = a*coeff.x+b*coeff.y+((a*a*a-a)*coeff.z+(b*b*b-b)*coeff.w)/(" << paramsFloat[2] << "*" << paramsFloat[2] << ");\n";
                     else
-                        out << nodeNames[j] << " = (coeff.y-coeff.x)*params.z+((1.0f-3.0f*a*a)*coeff.z+(3.0f*b*b-1.0f)*coeff.w)/params.z;\n";
+                        out << nodeNames[j] << " = (coeff.y-coeff.x)*" << paramsFloat[2] << "+((1.0f-3.0f*a*a)*coeff.z+(3.0f*b*b-1.0f)*coeff.w)/" << paramsFloat[2] << ";\n";
                 }
                 out << "}\n";
             }
@@ -127,9 +130,8 @@ void OpenCLExpressionUtilities::processExpression(stringstream& out, const Expre
                 for (int j = 0; j < nodes.size(); j++) {
                     const vector<int>& derivOrder = dynamic_cast<const Operation::Custom*>(&nodes[j]->getOperation())->getDerivOrder();
                     if (derivOrder[0] == 0) {
-                        out << "float4 params = " << functionParams << "[" << i << "];\n";
                         out << "real x = " << getTempName(node.getChildren()[0], temps) << ";\n";
-                        out << "if (x >= 0 && x < params.x) {\n";
+                        out << "if (x >= 0 && x < " << paramsInt[0] << ") {\n";
                         out << "int index = (int) round(x);\n";
                         out << nodeNames[j] << " = " << functionNames[i].second << "[index];\n";
                         out << "}\n";
@@ -140,11 +142,10 @@ void OpenCLExpressionUtilities::processExpression(stringstream& out, const Expre
                 for (int j = 0; j < nodes.size(); j++) {
                     const vector<int>& derivOrder = dynamic_cast<const Operation::Custom*>(&nodes[j]->getOperation())->getDerivOrder();
                     if (derivOrder[0] == 0 && derivOrder[1] == 0) {
-                        out << "float4 params = " << functionParams << "[" << i << "];\n";
                         out << "int x = (int) round(" << getTempName(node.getChildren()[0], temps) << ");\n";
                         out << "int y = (int) round(" << getTempName(node.getChildren()[1], temps) << ");\n";
-                        out << "int xsize = (int) params.x;\n";
-                        out << "int ysize = (int) params.y;\n";
+                        out << "int xsize = " << paramsInt[0] << ";\n";
+                        out << "int ysize = " << paramsInt[1] << ";\n";
                         out << "int index = x+y*xsize;\n";
                         out << "if (index >= 0 && index < xsize*ysize)\n";
                         out << nodeNames[j] << " = " << functionNames[i].second << "[index];\n";
@@ -155,13 +156,12 @@ void OpenCLExpressionUtilities::processExpression(stringstream& out, const Expre
                 for (int j = 0; j < nodes.size(); j++) {
                     const vector<int>& derivOrder = dynamic_cast<const Operation::Custom*>(&nodes[j]->getOperation())->getDerivOrder();
                     if (derivOrder[0] == 0 && derivOrder[1] == 0 && derivOrder[2] == 0) {
-                        out << "float4 params = " << functionParams << "[" << i << "];\n";
                         out << "int x = (int) round(" << getTempName(node.getChildren()[0], temps) << ");\n";
                         out << "int y = (int) round(" << getTempName(node.getChildren()[1], temps) << ");\n";
                         out << "int z = (int) round(" << getTempName(node.getChildren()[2], temps) << ");\n";
-                        out << "int xsize = (int) params.x;\n";
-                        out << "int ysize = (int) params.y;\n";
-                        out << "int zsize = (int) params.z;\n";
+                        out << "int xsize = " << paramsInt[0] << ";\n";
+                        out << "int ysize = " << paramsInt[1] << ";\n";
+                        out << "int zsize = " << paramsInt[2] << ";\n";
                         out << "int index = x+(y+z*ysize)*xsize;\n";
                         out << "if (index >= 0 && index < xsize*ysize*zsize)\n";
                         out << nodeNames[j] << " = " << functionNames[i].second << "[index];\n";
@@ -452,35 +452,41 @@ vector<float> OpenCLExpressionUtilities::computeFunctionCoefficients(const Tabul
     throw OpenMMException("computeFunctionCoefficients: Unknown function type");
 }
 
-vector<mm_float4> OpenCLExpressionUtilities::computeFunctionParameters(const vector<const TabulatedFunction*>& functions) {
-    vector<mm_float4> params(functions.size());
+vector<vector<double> > OpenCLExpressionUtilities::computeFunctionParameters(const vector<const TabulatedFunction*>& functions) {
+    vector<vector<double> > params(functions.size());
     for (int i = 0; i < (int) functions.size(); i++) {
         if (dynamic_cast<const Continuous1DFunction*>(functions[i]) != NULL) {
             const Continuous1DFunction& fn = dynamic_cast<const Continuous1DFunction&>(*functions[i]);
             vector<double> values;
             double min, max;
             fn.getFunctionParameters(values, min, max);
-            params[i] = mm_float4((float) min, (float) max, (float) ((values.size()-1)/(max-min)), (float) values.size()-2);
+            params[i].push_back(min);
+            params[i].push_back(max);
+            params[i].push_back((values.size()-1)/(max-min));
+            params[i].push_back(values.size()-2);
         }
         else if (dynamic_cast<const Discrete1DFunction*>(functions[i]) != NULL) {
             const Discrete1DFunction& fn = dynamic_cast<const Discrete1DFunction&>(*functions[i]);
             vector<double> values;
             fn.getFunctionParameters(values);
-            params[i] = mm_float4((float) values.size(), 0.0f, 0.0f, 0.0f);
+            params[i].push_back(values.size());
         }
         else if (dynamic_cast<const Discrete2DFunction*>(functions[i]) != NULL) {
             const Discrete2DFunction& fn = dynamic_cast<const Discrete2DFunction&>(*functions[i]);
             int xsize, ysize;
             vector<double> values;
             fn.getFunctionParameters(xsize, ysize, values);
-            params[i] = mm_float4(xsize, ysize, 0.0f, 0.0f);
+            params[i].push_back(xsize);
+            params[i].push_back(ysize);
         }
         else if (dynamic_cast<const Discrete3DFunction*>(functions[i]) != NULL) {
             const Discrete3DFunction& fn = dynamic_cast<const Discrete3DFunction&>(*functions[i]);
             int xsize, ysize, zsize;
             vector<double> values;
             fn.getFunctionParameters(xsize, ysize, zsize, values);
-            params[i] = mm_float4(xsize, ysize, zsize, 0.0f);
+            params[i].push_back(xsize);
+            params[i].push_back(ysize);
+            params[i].push_back(zsize);
         }
         else
             throw OpenMMException("computeFunctionParameters: Unknown function type");

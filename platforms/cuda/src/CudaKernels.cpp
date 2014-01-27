@@ -597,7 +597,7 @@ void CudaCalcCustomBondForceKernel::initialize(const System& system, const Custo
     }
     vector<const TabulatedFunction*> functions;
     vector<pair<string, string> > functionNames;
-    compute << cu.getExpressionUtilities().createExpressions(expressions, variables, functions, functionNames, "temp", "");
+    compute << cu.getExpressionUtilities().createExpressions(expressions, variables, functions, functionNames, "temp");
     map<string, string> replacements;
     replacements["COMPUTE_FORCE"] = compute.str();
     cu.getBondedUtilities().addInteraction(atoms, cu.replaceStrings(CudaKernelSources::bondForce, replacements), force.getForceGroup());
@@ -833,7 +833,7 @@ void CudaCalcCustomAngleForceKernel::initialize(const System& system, const Cust
     }
     vector<const TabulatedFunction*> functions;
     vector<pair<string, string> > functionNames;
-    compute << cu.getExpressionUtilities().createExpressions(expressions, variables, functions, functionNames, "temp", "");
+    compute << cu.getExpressionUtilities().createExpressions(expressions, variables, functions, functionNames, "temp");
     map<string, string> replacements;
     replacements["COMPUTE_FORCE"] = compute.str();
     cu.getBondedUtilities().addInteraction(atoms, cu.replaceStrings(CudaKernelSources::angleForce, replacements), force.getForceGroup());
@@ -1257,7 +1257,7 @@ void CudaCalcCustomTorsionForceKernel::initialize(const System& system, const Cu
     }
     vector<const TabulatedFunction*> functions;
     vector<pair<string, string> > functionNames;
-    compute << cu.getExpressionUtilities().createExpressions(expressions, variables, functions, functionNames, "temp", "");
+    compute << cu.getExpressionUtilities().createExpressions(expressions, variables, functions, functionNames, "temp");
     map<string, string> replacements;
     replacements["COMPUTE_FORCE"] = compute.str();
     cu.getBondedUtilities().addInteraction(atoms, cu.replaceStrings(CudaKernelSources::torsionForce, replacements), force.getForceGroup());
@@ -1915,8 +1915,6 @@ CudaCalcCustomNonbondedForceKernel::~CudaCalcCustomNonbondedForceKernel() {
         delete params;
     if (globals != NULL)
         delete globals;
-    if (tabulatedFunctionParams != NULL)
-        delete tabulatedFunctionParams;
     if (interactionGroupData != NULL)
         delete interactionGroupData;
     for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
@@ -1973,12 +1971,6 @@ void CudaCalcCustomNonbondedForceKernel::initialize(const System& system, const 
         tabulatedFunctions[tabulatedFunctions.size()-1]->upload(f);
         cu.getNonbondedUtilities().addArgument(CudaNonbondedUtilities::ParameterInfo(arrayName, "float", width, width*sizeof(float), tabulatedFunctions[tabulatedFunctions.size()-1]->getDevicePointer()));
     }
-    vector<float4> tabulatedFunctionParamsVec = cu.getExpressionUtilities().computeFunctionParameters(functionList);
-    if (force.getNumFunctions() > 0) {
-        tabulatedFunctionParams = CudaArray::create<float4>(cu, tabulatedFunctionParamsVec.size(), "tabulatedFunctionParameters");
-        tabulatedFunctionParams->upload(tabulatedFunctionParamsVec);
-        cu.getNonbondedUtilities().addArgument(CudaNonbondedUtilities::ParameterInfo(prefix+"functionParams", "float", 4, sizeof(float4), tabulatedFunctionParams->getDevicePointer()));
-    }
 
     // Record information for the expressions.
 
@@ -2016,7 +2008,7 @@ void CudaCalcCustomNonbondedForceKernel::initialize(const System& system, const 
         variables.push_back(makeVariable(name, prefix+value));
     }
     stringstream compute;
-    compute << cu.getExpressionUtilities().createExpressions(forceExpressions, variables, functionList, functionDefinitions, prefix+"temp", prefix+"functionParams");
+    compute << cu.getExpressionUtilities().createExpressions(forceExpressions, variables, functionList, functionDefinitions, prefix+"temp");
     map<string, string> replacements;
     replacements["COMPUTE_FORCE"] = compute.str();
     replacements["USE_SWITCH"] = (useCutoff && force.getUseSwitchingFunction() ? "1" : "0");
@@ -2611,8 +2603,6 @@ CudaCalcCustomGBForceKernel::~CudaCalcCustomGBForceKernel() {
         delete globals;
     if (valueBuffers != NULL)
         delete valueBuffers;
-    if (tabulatedFunctionParams != NULL)
-        delete tabulatedFunctionParams;
     for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
         delete tabulatedFunctions[i];
 }
@@ -2686,13 +2676,6 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
         tabulatedFunctions[tabulatedFunctions.size()-1]->upload(f);
         cu.getNonbondedUtilities().addArgument(CudaNonbondedUtilities::ParameterInfo(arrayName, "float", width, width*sizeof(float), tabulatedFunctions[tabulatedFunctions.size()-1]->getDevicePointer()));
         tableArgs << ", const float4* __restrict__ " << arrayName;
-    }
-    vector<float4> tabulatedFunctionParamsVec = cu.getExpressionUtilities().computeFunctionParameters(functionList);
-    if (force.getNumFunctions() > 0) {
-        tabulatedFunctionParams = CudaArray::create<float4>(cu, tabulatedFunctionParamsVec.size(), "tabulatedFunctionParameters");
-        tabulatedFunctionParams->upload(tabulatedFunctionParamsVec);
-        cu.getNonbondedUtilities().addArgument(CudaNonbondedUtilities::ParameterInfo(prefix+"functionParams", "float", 4, sizeof(float4), tabulatedFunctionParams->getDevicePointer()));
-        tableArgs << ", const float4* " << prefix << "functionParams";
     }
 
     // Record the global parameters.
@@ -2778,7 +2761,7 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
         Lepton::ParsedExpression ex = Lepton::Parser::parse(computedValueExpressions[0], functions).optimize();
         n2ValueExpressions["tempValue1 = "] = ex;
         n2ValueExpressions["tempValue2 = "] = ex.renameVariables(rename);
-        n2ValueSource << cu.getExpressionUtilities().createExpressions(n2ValueExpressions, variables, functionList, functionDefinitions, "temp", prefix+"functionParams");
+        n2ValueSource << cu.getExpressionUtilities().createExpressions(n2ValueExpressions, variables, functionList, functionDefinitions, "temp");
         map<string, string> replacements;
         string n2ValueStr = n2ValueSource.str();
         replacements["COMPUTE_VALUE"] = n2ValueStr;
@@ -2856,7 +2839,7 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
             variables[computedValueNames[i-1]] = "local_values"+computedValues->getParameterSuffix(i-1);
             map<string, Lepton::ParsedExpression> valueExpressions;
             valueExpressions["local_values"+computedValues->getParameterSuffix(i)+" = "] = Lepton::Parser::parse(computedValueExpressions[i], functions).optimize();
-            reductionSource << cu.getExpressionUtilities().createExpressions(valueExpressions, variables, functionList, functionDefinitions, "value"+cu.intToString(i)+"_temp", prefix+"functionParams");
+            reductionSource << cu.getExpressionUtilities().createExpressions(valueExpressions, variables, functionList, functionDefinitions, "value"+cu.intToString(i)+"_temp");
         }
         for (int i = 0; i < (int) computedValues->getBuffers().size(); i++) {
             string valueName = "values"+cu.intToString(i+1);
@@ -2910,7 +2893,7 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
             }
             if (exclude)
                 n2EnergySource << "if (!isExcluded) {\n";
-            n2EnergySource << cu.getExpressionUtilities().createExpressions(n2EnergyExpressions, variables, functionList, functionDefinitions, "temp", prefix+"functionParams");
+            n2EnergySource << cu.getExpressionUtilities().createExpressions(n2EnergyExpressions, variables, functionList, functionDefinitions, "temp");
             if (exclude)
                 n2EnergySource << "}\n";
         }
@@ -3059,7 +3042,7 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
         for (int i = 1; i < force.getNumComputedValues(); i++)
             for (int j = 0; j < i; j++)
                 expressions["real dV"+cu.intToString(i)+"dV"+cu.intToString(j)+" = "] = valueDerivExpressions[i][j];
-        compute << cu.getExpressionUtilities().createExpressions(expressions, variables, functionList, functionDefinitions, "temp", prefix+"functionParams");
+        compute << cu.getExpressionUtilities().createExpressions(expressions, variables, functionList, functionDefinitions, "temp");
         
         // Record values.
         
@@ -3131,7 +3114,7 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
                     map<string, Lepton::ParsedExpression> derivExpressions;
                     string js = cu.intToString(j);
                     derivExpressions["real dV"+is+"dV"+js+" = "] = valueDerivExpressions[i][j];
-                    compute << cu.getExpressionUtilities().createExpressions(derivExpressions, variables, functionList, functionDefinitions, "temp_"+is+"_"+js, prefix+"functionParams");
+                    compute << cu.getExpressionUtilities().createExpressions(derivExpressions, variables, functionList, functionDefinitions, "temp_"+is+"_"+js);
                     compute << "dV"<<is<<"dR += dV"<<is<<"dV"<<js<<"*dV"<<js<<"dR;\n";
                 }
             }
@@ -3142,7 +3125,7 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
                 gradientExpressions["dV"+is+"dR.y += "] = valueGradientExpressions[i][1];
             if (!isZeroExpression(valueGradientExpressions[i][2]))
                 gradientExpressions["dV"+is+"dR.z += "] = valueGradientExpressions[i][2];
-            compute << cu.getExpressionUtilities().createExpressions(gradientExpressions, variables, functionList, functionDefinitions, "temp", prefix+"functionParams");
+            compute << cu.getExpressionUtilities().createExpressions(gradientExpressions, variables, functionList, functionDefinitions, "temp");
         }
         for (int i = 1; i < force.getNumComputedValues(); i++) {
             string is = cu.intToString(i);
@@ -3184,7 +3167,7 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
         Lepton::ParsedExpression dVdR = Lepton::Parser::parse(computedValueExpressions[0], functions).differentiate("r").optimize();
         derivExpressions["real dV0dR1 = "] = dVdR;
         derivExpressions["real dV0dR2 = "] = dVdR.renameVariables(rename);
-        chainSource << cu.getExpressionUtilities().createExpressions(derivExpressions, variables, functionList, functionDefinitions, prefix+"temp0_", prefix+"functionParams");
+        chainSource << cu.getExpressionUtilities().createExpressions(derivExpressions, variables, functionList, functionDefinitions, prefix+"temp0_");
         if (needChainForValue[0]) {
             if (useExclusionsForValue)
                 chainSource << "if (!isExcluded) {\n";
@@ -3303,11 +3286,8 @@ double CudaCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeFo
             if (pairValueUsesParam[i])
                 pairValueArgs.push_back(&params->getBuffers()[i].getMemory());
         }
-        if (tabulatedFunctionParams != NULL) {
-            for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
-                pairValueArgs.push_back(&tabulatedFunctions[i]->getDevicePointer());
-            pairValueArgs.push_back(&tabulatedFunctionParams->getDevicePointer());
-        }
+        for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
+            pairValueArgs.push_back(&tabulatedFunctions[i]->getDevicePointer());
         perParticleValueArgs.push_back(&cu.getPosq().getDevicePointer());
         perParticleValueArgs.push_back(&valueBuffers->getDevicePointer());
         if (globals != NULL)
@@ -3316,11 +3296,8 @@ double CudaCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeFo
             perParticleValueArgs.push_back(&params->getBuffers()[i].getMemory());
         for (int i = 0; i < (int) computedValues->getBuffers().size(); i++)
             perParticleValueArgs.push_back(&computedValues->getBuffers()[i].getMemory());
-        if (tabulatedFunctionParams != NULL) {
-            for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
-                perParticleValueArgs.push_back(&tabulatedFunctions[i]->getDevicePointer());
-            perParticleValueArgs.push_back(&tabulatedFunctionParams->getDevicePointer());
-        }
+        for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
+            perParticleValueArgs.push_back(&tabulatedFunctions[i]->getDevicePointer());
         pairEnergyArgs.push_back(&cu.getForce().getDevicePointer());
         pairEnergyArgs.push_back(&cu.getEnergyBuffer().getDevicePointer());
         pairEnergyArgs.push_back(&cu.getPosq().getDevicePointer());
@@ -3349,11 +3326,8 @@ double CudaCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeFo
                 pairEnergyArgs.push_back(&computedValues->getBuffers()[i].getMemory());
         }
         pairEnergyArgs.push_back(&longEnergyDerivs->getDevicePointer());
-        if (tabulatedFunctionParams != NULL) {
-            for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
-                pairEnergyArgs.push_back(&tabulatedFunctions[i]->getDevicePointer());
-            pairEnergyArgs.push_back(&tabulatedFunctionParams->getDevicePointer());
-        }
+        for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
+            pairEnergyArgs.push_back(&tabulatedFunctions[i]->getDevicePointer());
         perParticleEnergyArgs.push_back(&cu.getForce().getDevicePointer());
         perParticleEnergyArgs.push_back(&cu.getEnergyBuffer().getDevicePointer());
         perParticleEnergyArgs.push_back(&cu.getPosq().getDevicePointer());
@@ -3368,11 +3342,8 @@ double CudaCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeFo
         for (int i = 0; i < (int) energyDerivChain->getBuffers().size(); i++)
             perParticleEnergyArgs.push_back(&energyDerivChain->getBuffers()[i].getMemory());
         perParticleEnergyArgs.push_back(&longEnergyDerivs->getDevicePointer());
-        if (tabulatedFunctionParams != NULL) {
-            for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
-                perParticleEnergyArgs.push_back(&tabulatedFunctions[i]->getDevicePointer());
-            perParticleEnergyArgs.push_back(&tabulatedFunctionParams->getDevicePointer());
-        }
+        for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
+            perParticleEnergyArgs.push_back(&tabulatedFunctions[i]->getDevicePointer());
         if (needParameterGradient) {
             gradientChainRuleArgs.push_back(&cu.getForce().getDevicePointer());
             gradientChainRuleArgs.push_back(&cu.getPosq().getDevicePointer());
@@ -3544,7 +3515,7 @@ void CudaCalcCustomExternalForceKernel::initialize(const System& system, const C
     }
     vector<const TabulatedFunction*> functions;
     vector<pair<string, string> > functionNames;
-    compute << cu.getExpressionUtilities().createExpressions(expressions, variables, functions, functionNames, "temp", "");
+    compute << cu.getExpressionUtilities().createExpressions(expressions, variables, functions, functionNames, "temp");
     map<string, string> replacements;
     replacements["COMPUTE_FORCE"] = compute.str();
     cu.getBondedUtilities().addInteraction(atoms, cu.replaceStrings(CudaKernelSources::customExternalForce, replacements), force.getForceGroup());
@@ -3685,8 +3656,6 @@ CudaCalcCustomHbondForceKernel::~CudaCalcCustomHbondForceKernel() {
         delete donorExclusions;
     if (acceptorExclusions != NULL)
         delete acceptorExclusions;
-    if (tabulatedFunctionParams != NULL)
-        delete tabulatedFunctionParams;
     for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
         delete tabulatedFunctions[i];
 }
@@ -3803,12 +3772,6 @@ void CudaCalcCustomHbondForceKernel::initialize(const System& system, const Cust
             tableArgs << width;
         tableArgs << "* __restrict__ " << arrayName;
     }
-    vector<float4> tabulatedFunctionParamsVec = cu.getExpressionUtilities().computeFunctionParameters(functionList);
-    if (force.getNumFunctions() > 0) {
-        tabulatedFunctionParams = CudaArray::create<float4>(cu, tabulatedFunctionParamsVec.size(), "tabulatedFunctionParameters");
-        tabulatedFunctionParams->upload(tabulatedFunctionParamsVec);
-        tableArgs << ", const float4* __restrict__ functionParams";
-    }
 
     // Record information about parameters.
 
@@ -3923,9 +3886,9 @@ void CudaCalcCustomHbondForceKernel::initialize(const System& system, const Cust
 
     // Now evaluate the expressions.
 
-    computeAcceptor << cu.getExpressionUtilities().createExpressions(forceExpressions, variables, functionList, functionDefinitions, "temp", "functionParams");
+    computeAcceptor << cu.getExpressionUtilities().createExpressions(forceExpressions, variables, functionList, functionDefinitions, "temp");
     forceExpressions["energy += "] = energyExpression;
-    computeDonor << cu.getExpressionUtilities().createExpressions(forceExpressions, variables, functionList, functionDefinitions, "temp", "functionParams");
+    computeDonor << cu.getExpressionUtilities().createExpressions(forceExpressions, variables, functionList, functionDefinitions, "temp");
 
     // Finally, apply forces to atoms.
 
@@ -4037,11 +4000,8 @@ double CudaCalcCustomHbondForceKernel::execute(ContextImpl& context, bool includ
             CudaNonbondedUtilities::ParameterInfo& buffer = acceptorParams->getBuffers()[i];
             donorArgs.push_back(&buffer.getMemory());
         }
-        if (tabulatedFunctionParams != NULL) {
-            for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
-                donorArgs.push_back(&tabulatedFunctions[i]->getDevicePointer());
-            donorArgs.push_back(&tabulatedFunctionParams->getDevicePointer());
-        }
+        for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
+            donorArgs.push_back(&tabulatedFunctions[i]->getDevicePointer());
         index = 0;
         acceptorArgs.push_back(&cu.getForce().getDevicePointer());
         acceptorArgs.push_back(&cu.getEnergyBuffer().getDevicePointer());
@@ -4061,11 +4021,8 @@ double CudaCalcCustomHbondForceKernel::execute(ContextImpl& context, bool includ
             CudaNonbondedUtilities::ParameterInfo& buffer = acceptorParams->getBuffers()[i];
             acceptorArgs.push_back(&buffer.getMemory());
         }
-        if (tabulatedFunctionParams != NULL) {
-            for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
-                acceptorArgs.push_back(&tabulatedFunctions[i]->getDevicePointer());
-            acceptorArgs.push_back(&tabulatedFunctionParams->getDevicePointer());
-        }
+        for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
+            acceptorArgs.push_back(&tabulatedFunctions[i]->getDevicePointer());
     }
     int sharedMemorySize = 3*CudaContext::ThreadBlockSize*sizeof(float4);
     cu.executeKernel(donorKernel, &donorArgs[0], max(numDonors, numAcceptors), CudaContext::ThreadBlockSize, sharedMemorySize);
@@ -4149,8 +4106,6 @@ CudaCalcCustomCompoundBondForceKernel::~CudaCalcCustomCompoundBondForceKernel() 
         delete params;
     if (globals != NULL)
         delete globals;
-    if (tabulatedFunctionParams != NULL)
-        delete tabulatedFunctionParams;
     for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
         delete tabulatedFunctions[i];
 }
@@ -4194,13 +4149,6 @@ void CudaCalcCustomCompoundBondForceKernel::initialize(const System& system, con
         array->upload(f);
         string arrayName = cu.getBondedUtilities().addArgument(array->getDevicePointer(), width == 1 ? "float" : "float"+cu.intToString(width));
         functionDefinitions.push_back(make_pair(name, arrayName));
-    }
-    vector<float4> tabulatedFunctionParamsVec = cu.getExpressionUtilities().computeFunctionParameters(functionList);
-    string functionParamsName;
-    if (force.getNumFunctions() > 0) {
-        tabulatedFunctionParams = CudaArray::create<float4>(cu, tabulatedFunctionParamsVec.size(), "tabulatedFunctionParameters");
-        tabulatedFunctionParams->upload(tabulatedFunctionParamsVec);
-        functionParamsName = cu.getBondedUtilities().addArgument(tabulatedFunctionParams->getDevicePointer(), "float4");
     }
     
     // Record information about parameters.
@@ -4316,7 +4264,7 @@ void CudaCalcCustomCompoundBondForceKernel::initialize(const System& system, con
         compute<<buffer.getType()<<" bondParams"<<(i+1)<<" = "<<argName<<"[index];\n";
     }
     forceExpressions["energy += "] = energyExpression;
-    compute << cu.getExpressionUtilities().createExpressions(forceExpressions, variables, functionList, functionDefinitions, "temp", functionParamsName);
+    compute << cu.getExpressionUtilities().createExpressions(forceExpressions, variables, functionList, functionDefinitions, "temp");
 
     // Finally, apply forces to atoms.
 
@@ -4338,7 +4286,7 @@ void CudaCalcCustomCompoundBondForceKernel::initialize(const System& system, con
         if (!isZeroExpression(forceExpressionZ))
             expressions[forceName+".z -= "] = forceExpressionZ;
         if (expressions.size() > 0)
-            compute<<cu.getExpressionUtilities().createExpressions(expressions, variables, functionList, functionDefinitions, "coordtemp", functionParamsName);
+            compute<<cu.getExpressionUtilities().createExpressions(expressions, variables, functionList, functionDefinitions, "coordtemp");
         compute<<"}\n";
     }
     index = 0;
@@ -4950,7 +4898,7 @@ string CudaIntegrateCustomStepKernel::createGlobalComputation(const string& vari
         variables[parameterNames[i]] = "params["+cu.intToString(i)+"]";
     vector<const TabulatedFunction*> functions;
     vector<pair<string, string> > functionNames;
-    return cu.getExpressionUtilities().createExpressions(expressions, variables, functions, functionNames, "temp", "");
+    return cu.getExpressionUtilities().createExpressions(expressions, variables, functions, functionNames, "temp");
 }
 
 string CudaIntegrateCustomStepKernel::createPerDofComputation(const string& variable, const Lepton::ParsedExpression& expr, int component, CustomIntegrator& integrator, const string& forceName, const string& energyName) {
@@ -4988,7 +4936,7 @@ string CudaIntegrateCustomStepKernel::createPerDofComputation(const string& vari
         variables[parameterNames[i]] = "params["+cu.intToString(i)+"]";
     vector<const TabulatedFunction*> functions;
     vector<pair<string, string> > functionNames;
-    return cu.getExpressionUtilities().createExpressions(expressions, variables, functions, functionNames, "temp"+cu.intToString(component)+"_", "", "double");
+    return cu.getExpressionUtilities().createExpressions(expressions, variables, functions, functionNames, "temp"+cu.intToString(component)+"_", "double");
 }
 
 void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid) {

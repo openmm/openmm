@@ -56,12 +56,11 @@ public:
      * @param functions      the tabulated functions that may appear in the expressions
      * @param functionNames  defines the variable name for each tabulated function that may appear in the expressions
      * @param prefix         a prefix to put in front of temporary variables
-     * @param functionParams the variable name containing the parameters for each tabulated function
      * @param tempType       the type of value to use for temporary variables (defaults to "real")
      */
     std::string createExpressions(const std::map<std::string, Lepton::ParsedExpression>& expressions, const std::map<std::string, std::string>& variables,
             const std::vector<const TabulatedFunction*>& functions, const std::vector<std::pair<std::string, std::string> >& functionNames,
-            const std::string& prefix, const std::string& functionParams, const std::string& tempType="real");
+            const std::string& prefix, const std::string& tempType="real");
     /**
      * Generate the source code for calculating a set of expressions.
      *
@@ -71,12 +70,11 @@ public:
      * @param functions      the tabulated functions that may appear in the expressions
      * @param functionNames  defines the variable name for each tabulated function that may appear in the expressions
      * @param prefix         a prefix to put in front of temporary variables
-     * @param functionParams the variable name containing the parameters for each tabulated function
      * @param tempType       the type of value to use for temporary variables (defaults to "real")
      */
     std::string createExpressions(const std::map<std::string, Lepton::ParsedExpression>& expressions, const std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& variables,
             const std::vector<const TabulatedFunction*>& functions, const std::vector<std::pair<std::string, std::string> >& functionNames,
-            const std::string& prefix, const std::string& functionParams, const std::string& tempType="real");
+            const std::string& prefix, const std::string& tempType="real");
     /**
      * Calculate the spline coefficients for a tabulated function that appears in expressions.
      *
@@ -85,13 +83,6 @@ public:
      * @return the spline coefficients
      */
     std::vector<float> computeFunctionCoefficients(const TabulatedFunction& function, int& width);
-    /**
-     * Given the list of TabulatedFunctions used by a Force, create the parameter array describing them.
-     *
-     * @param functions   the list of functions to include in the array
-     * @return the parameter array
-     */
-    std::vector<float4> computeFunctionParameters(const std::vector<const TabulatedFunction*>& functions);
     /**
      * Get a Lepton::CustomFunction that can be used to represent a TabulatedFunction when parsing expressions.
      * 
@@ -121,12 +112,13 @@ private:
     void processExpression(std::stringstream& out, const Lepton::ExpressionTreeNode& node,
             std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& temps,
             const std::vector<const TabulatedFunction*>& functions, const std::vector<std::pair<std::string, std::string> >& functionNames,
-            const std::string& prefix, const std::string& functionParams, const std::vector<Lepton::ParsedExpression>& allExpressions, const std::string& tempType);
+            const std::string& prefix, const std::vector<std::vector<double> >& functionParams, const std::vector<Lepton::ParsedExpression>& allExpressions, const std::string& tempType);
     std::string getTempName(const Lepton::ExpressionTreeNode& node, const std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& temps);
     void findRelatedTabulatedFunctions(const Lepton::ExpressionTreeNode& node, const Lepton::ExpressionTreeNode& searchNode,
             std::vector<const Lepton::ExpressionTreeNode*>& nodes);
     void findRelatedPowers(const Lepton::ExpressionTreeNode& node, const Lepton::ExpressionTreeNode& searchNode,
             std::map<int, const Lepton::ExpressionTreeNode*>& powers);
+    std::vector<std::vector<double> > computeFunctionParameters(const std::vector<const TabulatedFunction*>& functions);
     CudaContext& context;
     FunctionPlaceholder fp1, fp2, fp3;
 };
