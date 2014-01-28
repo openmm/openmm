@@ -144,6 +144,7 @@ class AmberPrmtopFile(object):
     def createSystem(self, nonbondedMethod=ff.NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
                      constraints=None, rigidWater=True, implicitSolvent=None,
                      implicitSolventSaltConc=0.0*(unit.moles/unit.liter),
+                     implicitSolventKappa=None, temperature=298.15*unit.kelvin,
                      soluteDielectric=1.0, solventDielectric=78.5,
                      removeCMMotion=True, hydrogenMass=None, ewaldErrorTolerance=0.0005):
         """Construct an OpenMM System representing the topology described by this prmtop file.
@@ -157,7 +158,11 @@ class AmberPrmtopFile(object):
          - rigidWater (boolean=True) If true, water molecules will be fully rigid regardless of the value passed for the constraints argument
          - implicitSolvent (object=None) If not None, the implicit solvent model to use.  Allowed values are HCT, OBC1, OBC2, GBn, or GBn2.
          - implicitSolventSaltConc (float=0.0*unit.moles/unit.liter) The salt concentration for GB 
-                                             calculations (modelled as a debye screening parameter)
+                    calculations (modelled as a debye screening parameter). It is converted to the debye length (kappa)
+                    using the provided temperature and solventDielectric
+         - temperature (float=300*kelvin) Temperature of the system. Only used to compute the Debye length from
+                    implicitSolventSoltConc
+         - implicitSolventKappa (float units of 1/length) If this value is set, implicitSolventSaltConc will be ignored.
          - soluteDielectric (float=1.0) The solute dielectric constant to use in the implicit solvent model.
          - solventDielectric (float=78.5) The solvent dielectric constant to use in the implicit solvent model.
          - removeCMMotion (boolean=True) If true, a CMMotionRemover will be added to the System
@@ -199,20 +204,26 @@ class AmberPrmtopFile(object):
             implicitString = 'GBn2'
         else:
             raise ValueError('Illegal value for implicit solvent model')
-        # Use the conversion of ionic strength to kappa used by Amber (external
-        # dielectric of 78.5 -- it's unclear where the 0.10806 comes from
-        # though, although code comments in Amber say 'assuming M salt
-        # concentration, T=298.15, and epsext=78.5')
-        if unit.is_quantity(implicitSolventSaltConc):
-            implicitSolventSaltConc = implicitSolventSaltConc.value_in_unit(unit.moles/unit.liter)
-        # 0.73 to account for ion exclusions. The Amber Debye screening length
-        # units will be in 1/angstrom given these units. Not a pretty way to do
-        # this...
-        implicitSolventKappa = 0.73 * sqrt(0.10806 * implicitSolventSaltConc) / unit.angstrom
-        sys = amber_file_parser.readAmberSystem(prmtop_loader=self._prmtop, shake=constraintString, nonbondedCutoff=nonbondedCutoff,
-                                                 nonbondedMethod=methodMap[nonbondedMethod], flexibleConstraints=False, gbmodel=implicitString,
-                                                 soluteDielectric=soluteDielectric, solventDielectric=solventDielectric, implicitSolventKappa=implicitSolventKappa,
-                                                 rigidWater=rigidWater, elements=self.elements)
+        # If implicitSolventKappa is None, compute it from the salt concentration
+        if implicitSolvent is not None and implicitSolventKappa is None:
+            if unit.is_quantity(implicitSolventSaltConc):
+                implicitSolventSaltConc = implicitSolventSaltConc.value_in_unit(unit.moles/unit.liter)
+            # The constant is 1 / sqrt( epsilon_0 * kB / (2 * NA * q^2 * 1000) )
+            # where NA is avogadro's number, epsilon_0 is the permittivity of
+            # free space, q is the elementary charge (this number matches
+            # Amber's kappa conversion factor)
+            implicitSolventKappa = 50.33355 * sqrt(implicitSolventSaltConc / solventDielectric / temperature)
+            # Multiply by 0.73 to account for ion exclusions.
+            implicitSolventKappa *= 0.73
+        elif implicitSolvent is None:
+            implicitSolventKappa = 0.0
+
+        sys = amber_file_parser.readAmberSystem(prmtop_loader=self._prmtop, shake=constraintString,
+                        nonbondedCutoff=nonbondedCutoff, nonbondedMethod=methodMap[nonbondedMethod],
+                        flexibleConstraints=False, gbmodel=implicitString, soluteDielectric=soluteDielectric,
+                        solventDielectric=solventDielectric, implicitSolventKappa=implicitSolventKappa,
+                        rigidWater=rigidWater, elements=self.elements)
+
         if hydrogenMass is not None:
             for atom1, atom2 in self.topology.bonds():
                 if atom1.element == elem.hydrogen:
