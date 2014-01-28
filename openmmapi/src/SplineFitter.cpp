@@ -190,3 +190,183 @@ void SplineFitter::solveTridiagonalMatrix(const vector<double>& a, const vector<
     for (int i = n-2; i >= 0; i--)
         sol[i] -= gamma[i+1]*sol[i+1];
 }
+
+void SplineFitter::create2DNaturalSpline(const vector<double>& x, const vector<double>& y, const vector<double>& values, vector<vector<double> >& c) {
+    int xsize = x.size(), ysize = y.size();
+    if (xsize < 2 || ysize < 2)
+        throw OpenMMException("create2DNaturalSpline: must have at least two points along each axis");
+    if (values.size() != xsize*ysize)
+        throw OpenMMException("create2DNaturalSpline: incorrect number of values");
+    vector<double> d1(xsize*ysize), d2(xsize*ysize), d12(xsize*ysize);
+    vector<double> t(xsize), deriv(xsize);
+
+    // Compute derivatives with respect to x.
+
+    for (int i = 0; i < ysize; i++) {
+        for (int j = 0; j < xsize; j++)
+            t[j] = values[j+xsize*i];
+        SplineFitter::createNaturalSpline(x, t, deriv);
+        for (int j = 0; j < xsize; j++)
+            d1[j+xsize*i] = SplineFitter::evaluateSplineDerivative(x, t, deriv, x[j]);
+    }
+
+    // Compute derivatives with respect to y.
+
+    t.resize(ysize);
+    deriv.resize(ysize);
+    for (int i = 0; i < xsize; i++) {
+        for (int j = 0; j < ysize; j++)
+            t[j] = values[i+xsize*j];
+        SplineFitter::createNaturalSpline(y, t, deriv);
+        for (int j = 0; j < ysize; j++)
+            d2[i+xsize*j] = SplineFitter::evaluateSplineDerivative(x, t, deriv, x[j]);
+    }
+
+    // Compute cross derivatives.
+
+    t.resize(xsize);
+    deriv.resize(xsize);
+    for (int i = 0; i < ysize; i++) {
+        for (int j = 0; j < xsize; j++)
+            t[j] = d2[j+xsize*i];
+        SplineFitter::createNaturalSpline(x, t, deriv);
+        for (int j = 0; j < xsize; j++)
+            d12[j+xsize*i] = SplineFitter::evaluateSplineDerivative(x, t, deriv, x[j]);
+    }
+
+    // Now compute the coefficients.
+
+    const int wt[] = {
+        1, 0, -3, 2, 0, 0, 0, 0, -3, 0, 9, -6, 2, 0, -6, 4,
+        0, 0, 0, 0, 0, 0, 0, 0, 3, 0, -9, 6, -2, 0, 6, -4,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, -6, 0, 0, -6, 4,
+        0, 0, 3, -2, 0, 0, 0, 0, 0, 0, -9, 6, 0, 0, 6, -4,
+        0, 0, 0, 0, 1, 0, -3, 2, -2, 0, 6, -4, 1, 0, -3, 2,
+        0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 3, -2, 1, 0, -3, 2,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -3, 2, 0, 0, 3, -2,
+        0, 0, 0, 0, 0, 0, 3, -2, 0, 0, -6, 4, 0, 0, 3, -2,
+        0, 1, -2, 1, 0, 0, 0, 0, 0, -3, 6, -3, 0, 2, -4, 2,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 3, -6, 3, 0, -2, 4, -2,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -3, 3, 0, 0, 2, -2,
+        0, 0, -1, 1, 0, 0, 0, 0, 0, 0, 3, -3, 0, 0, -2, 2,
+        0, 0, 0, 0, 0, 1, -2, 1, 0, -2, 4, -2, 0, 1, -2, 1,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 2, -1, 0, 1, -2, 1,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, -1, 0, 0, -1, 1,
+        0, 0, 0, 0, 0, 0, -1, 1, 0, 0, 2, -2, 0, 0, -1, 1
+    };
+    vector<double> rhs(16);
+    c.resize(xsize*ysize);
+    for (int i = 0; i < xsize; i++) {
+        for (int j = 0; j < ysize; j++) {
+            // Compute the 16 coefficients for patch (i, j).
+
+            int nexti = i+1;
+            int nextj = j+1;
+            double deltax = x[nexti]-x[i];
+            double deltay = y[nextj]-y[j];
+            double e[] = {values[i+j*xsize], values[nexti+j*xsize], values[nexti+nextj*xsize], values[i+nextj*xsize]};
+            double e1[] = {d1[i+j*xsize], d1[nexti+j*xsize], d1[nexti+nextj*xsize], d1[i+nextj*xsize]};
+            double e2[] = {d2[i+j*xsize], d2[nexti+j*xsize], d2[nexti+nextj*xsize], d2[i+nextj*xsize]};
+            double e12[] = {d12[i+j*xsize], d12[nexti+j*xsize], d12[nexti+nextj*xsize], d12[i+nextj*xsize]};
+
+            for (int k = 0; k < 4; k++) {
+                rhs[k] = e[k];
+                rhs[k+4] = e1[k]*deltax;
+                rhs[k+8] = e2[k]*deltay;
+                rhs[k+12] = e12[k]*deltax*deltay;
+            }
+            vector<double>& coeff = c[i+j*xsize];
+            coeff.resize(16);
+            for (int k = 0; k < 16; k++) {
+                double sum = 0.0;
+                for (int m = 0; m < 16; m++)
+                    sum += wt[k+16*m]*rhs[m];
+                coeff[k] = sum;
+            }
+        }
+    }
+}
+
+double SplineFitter::evaluate2DSpline(const vector<double>& x, const vector<double>& y, const vector<double>& values, const vector<vector<double> >& c, double u, double v) {
+    int xsize = x.size();
+    int ysize = y.size();
+    if (u < x[0] || u > x[xsize-1] || v < y[0] || v > y[ysize-1])
+        throw OpenMMException("evaluate2DSpline: specified point is outside the range defined by the spline");
+
+    // Perform a binary search to identify the interval containing the point to evaluate.
+
+    int lowerx = 0;
+    int upperx = xsize-1;
+    while (upperx-lowerx > 1) {
+        int middle = (upperx+lowerx)/2;
+        if (x[middle] > u)
+            upperx = middle;
+        else
+            lowerx = middle;
+    }
+    int lowery = 0;
+    int uppery = ysize-1;
+    while (uppery-lowery > 1) {
+        int middle = (uppery+lowery)/2;
+        if (y[middle] > v)
+            uppery = middle;
+        else
+            lowery = middle;
+    }
+    double deltax = x[upperx]-x[lowerx];
+    double deltay = y[uppery]-y[lowery];
+    double da = (u-x[lowerx])/deltax;
+    double db = (v-y[lowery])/deltay;
+    const vector<double>& coeff = c[lowerx+xsize*lowery];
+
+    // Evaluate the spline to determine the value and gradients.
+
+    double value = 0;
+    for (int i = 3; i >= 0; i--)
+        value = da*value + ((coeff[i*4+3]*db + coeff[i*4+2])*db + coeff[i*4+1])*db + coeff[i*4+0];
+    return value;
+}
+
+void SplineFitter::evaluate2DSplineDerivatives(const vector<double>& x, const vector<double>& y, const vector<double>& values, const vector<vector<double> >& c, double u, double v, double& dx, double &dy) {
+    int xsize = x.size();
+    int ysize = y.size();
+    if (u < x[0] || u > x[xsize-1] || v < y[0] || v > y[ysize-1])
+        throw OpenMMException("evaluate2DSplineDerivatives: specified point is outside the range defined by the spline");
+
+    // Perform a binary search to identify the interval containing the point to evaluate.
+
+    int lowerx = 0;
+    int upperx = xsize-1;
+    while (upperx-lowerx > 1) {
+        int middle = (upperx+lowerx)/2;
+        if (x[middle] > u)
+            upperx = middle;
+        else
+            lowerx = middle;
+    }
+    int lowery = 0;
+    int uppery = ysize-1;
+    while (uppery-lowery > 1) {
+        int middle = (uppery+lowery)/2;
+        if (y[middle] > v)
+            uppery = middle;
+        else
+            lowery = middle;
+    }
+    double deltax = x[upperx]-x[lowerx];
+    double deltay = y[uppery]-y[lowery];
+    double da = (u-x[lowerx])/deltax;
+    double db = (v-y[lowery])/deltay;
+    const vector<double>& coeff = c[lowerx+xsize*lowery];
+
+    // Evaluate the spline to determine the value and gradients.
+
+    dx = 0;
+    dy = 0;
+    for (int i = 3; i >= 0; i--) {
+        dx = db*dx + (3.0*coeff[i+3*4]*da + 2.0*coeff[i+2*4])*da + coeff[i+1*4];
+        dy = da*dy + (3.0*coeff[i*4+3]*db + 2.0*coeff[i*4+2])*db + coeff[i*4+1];
+    }
+    dx /= deltax;
+    dy /= deltay;
+}
