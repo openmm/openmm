@@ -29,7 +29,7 @@
 
 // ---------------------------------------------------------------------------------------
 
-class ReferenceRbDihedralBond : public ReferenceBondIxn {
+class OPENMM_EXPORT ReferenceRbDihedralBond : public ReferenceBondIxn {
 
    private:
 
