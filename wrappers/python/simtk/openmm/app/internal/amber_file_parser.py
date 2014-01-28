@@ -890,7 +890,7 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
         else:
             raise Exception("Illegal value specified for implicit solvent model")
         for iAtom in range(prmtop.getNumAtoms()):
-            if gbmodel == 'OBC2':
+            if gbmodel == 'OBC2' and implicitSolventKappa == 0:
                 gb.addParticle(charges[iAtom], gb_parms[iAtom][0], gb_parms[iAtom][1])
             elif gbmodel == 'GBn2':
                 gb.addParticle([charges[iAtom], gb_parms[iAtom][0], gb_parms[iAtom][1],

@@ -208,6 +208,8 @@ class AmberPrmtopFile(object):
         if implicitSolvent is not None and implicitSolventKappa is None:
             if unit.is_quantity(implicitSolventSaltConc):
                 implicitSolventSaltConc = implicitSolventSaltConc.value_in_unit(unit.moles/unit.liter)
+            if unit.is_quantity(temperature):
+                temperature = temperature.value_in_unit(unit.kelvin)
             # The constant is 1 / sqrt( epsilon_0 * kB / (2 * NA * q^2 * 1000) )
             # where NA is avogadro's number, epsilon_0 is the permittivity of
             # free space, q is the elementary charge (this number matches
