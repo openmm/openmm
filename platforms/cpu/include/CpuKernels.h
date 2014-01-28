@@ -32,6 +32,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include "CpuBondForce.h"
 #include "CpuGBSAOBCForce.h"
 #include "CpuLangevinDynamics.h"
 #include "CpuNeighborList.h"
@@ -49,6 +50,7 @@ namespace OpenMM {
  */
 class CpuCalcForcesAndEnergyKernel : public CalcForcesAndEnergyKernel {
 public:
+    class InitForceTask;
     class SumForceTask;
     CpuCalcForcesAndEnergyKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data, ContextImpl& context);
     /**
@@ -83,6 +85,86 @@ public:
 private:
     CpuPlatform::PlatformData& data;
     Kernel referenceKernel;
+};
+
+/**
+ * This kernel is invoked by PeriodicTorsionForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CpuCalcPeriodicTorsionForceKernel : public CalcPeriodicTorsionForceKernel {
+public:
+    CpuCalcPeriodicTorsionForceKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data) :
+            CalcPeriodicTorsionForceKernel(name, platform), data(data), torsionIndexArray(NULL), torsionParamArray(NULL) {
+    }
+    ~CpuCalcPeriodicTorsionForceKernel();
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param force      the PeriodicTorsionForce this kernel will be used for
+     */
+    void initialize(const System& system, const PeriodicTorsionForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the PeriodicTorsionForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force);
+private:
+    CpuPlatform::PlatformData& data;
+    int numTorsions;
+    int **torsionIndexArray;
+    RealOpenMM **torsionParamArray;
+    CpuBondForce bondForce;
+};
+
+/**
+ * This kernel is invoked by RBTorsionForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CpuCalcRBTorsionForceKernel : public CalcRBTorsionForceKernel {
+public:
+    CpuCalcRBTorsionForceKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data) :
+            CalcRBTorsionForceKernel(name, platform), data(data), torsionIndexArray(NULL), torsionParamArray(NULL) {
+    }
+    ~CpuCalcRBTorsionForceKernel();
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param force      the RBTorsionForce this kernel will be used for
+     */
+    void initialize(const System& system, const RBTorsionForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the RBTorsionForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const RBTorsionForce& force);
+private:
+    CpuPlatform::PlatformData& data;
+    int numTorsions;
+    int **torsionIndexArray;
+    RealOpenMM **torsionParamArray;
+    CpuBondForce bondForce;
 };
 
 /**
