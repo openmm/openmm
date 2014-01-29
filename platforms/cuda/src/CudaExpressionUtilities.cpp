@@ -126,6 +126,49 @@ void CudaExpressionUtilities::processExpression(stringstream& out, const Express
                 }
                 out << "}\n";
             }
+            else if (dynamic_cast<const Continuous2DFunction*>(functions[i]) != NULL) {
+                out << "real x = " << getTempName(node.getChildren()[0], temps) << ";\n";
+                out << "real y = " << getTempName(node.getChildren()[1], temps) << ";\n";
+                out << "if (x >= " << paramsFloat[2] << " && x <= " << paramsFloat[3] << " && y >= " << paramsFloat[4] << " && y <= " << paramsFloat[5] << ") {\n";
+                out << "x = (x-" << paramsFloat[2] << ")*" << paramsFloat[6] << ";\n";
+                out << "y = (y-" << paramsFloat[4] << ")*" << paramsFloat[7] << ";\n";
+                out << "int s = min((int) floor(x), " << paramsInt[0] << ");\n";
+                out << "int t = min((int) floor(y), " << paramsInt[0] << ");\n";
+                out << "int coeffIndex = 4*(s+" << paramsInt[0] << "*t);\n";
+                out << "float4 c[4];\n";
+                out << "c[0] = " << functionNames[i].second << "[coeffIndex];\n";
+                out << "c[1] = " << functionNames[i].second << "[coeffIndex+1];\n";
+                out << "c[2] = " << functionNames[i].second << "[coeffIndex+2];\n";
+                out << "c[3] = " << functionNames[i].second << "[coeffIndex+3];\n";
+                out << "real da = x-s;";
+                out << "real db = y-t;";
+                for (int j = 0; j < nodes.size(); j++) {
+                    const vector<int>& derivOrder = dynamic_cast<const Operation::Custom*>(&nodes[j]->getOperation())->getDerivOrder();
+                    if (derivOrder[0] == 0 && derivOrder[1] == 0) {
+                        out << nodeNames[j] << " = da*" << nodeNames[j] << " + ((c[3].w*db + c[3].z)*db + c[3].y)*db + c[3].x;";
+                        out << nodeNames[j] << " = da*" << nodeNames[j] << " + ((c[2].w*db + c[2].z)*db + c[2].y)*db + c[2].x;";
+                        out << nodeNames[j] << " = da*" << nodeNames[j] << " + ((c[1].w*db + c[1].z)*db + c[1].y)*db + c[1].x;";
+                        out << nodeNames[j] << " = da*" << nodeNames[j] << " + ((c[0].w*db + c[0].z)*db + c[0].y)*db + c[0].x;";
+                    }
+                    else if (derivOrder[0] == 1 && derivOrder[1] == 0) {
+                        out << nodeNames[j] << " = db*" << nodeNames[j] << " + (3.0f*c[3].w*da + 2.0f*c[2].w)*da + c[1].w;";
+                        out << nodeNames[j] << " = db*" << nodeNames[j] << " + (3.0f*c[3].z*da + 2.0f*c[2].z)*da + c[1].z;";
+                        out << nodeNames[j] << " = db*" << nodeNames[j] << " + (3.0f*c[3].y*da + 2.0f*c[2].y)*da + c[1].y;";
+                        out << nodeNames[j] << " = db*" << nodeNames[j] << " + (3.0f*c[3].x*da + 2.0f*c[2].x)*da + c[1].x;";
+                        out << nodeNames[j] << " *= " << paramsFloat[6] << ";";
+                    }
+                    else if (derivOrder[0] == 0 && derivOrder[1] == 1) {
+                        out << nodeNames[j] << " = da*" << nodeNames[j] << " + (3.0f*c[3].w*db + 2.0f*c[3].z)*db + c[3].y;";
+                        out << nodeNames[j] << " = da*" << nodeNames[j] << " + (3.0f*c[2].w*db + 2.0f*c[2].z)*db + c[2].y;";
+                        out << nodeNames[j] << " = da*" << nodeNames[j] << " + (3.0f*c[1].w*db + 2.0f*c[1].z)*db + c[1].y;";
+                        out << nodeNames[j] << " = da*" << nodeNames[j] << " + (3.0f*c[0].w*db + 2.0f*c[0].z)*db + c[0].y;";
+                        out << nodeNames[j] << " *= " << paramsFloat[7] << ";";
+                    }
+                    else
+                        throw OpenMMException("Unsupported derivative order for Continuous2DFunction");
+                }
+                out << "}\n";
+            }
             else if (dynamic_cast<const Discrete1DFunction*>(functions[i]) != NULL) {
                 for (int j = 0; j < nodes.size(); j++) {
                     const vector<int>& derivOrder = dynamic_cast<const Operation::Custom*>(&nodes[j]->getOperation())->getDerivOrder();
@@ -408,6 +451,29 @@ vector<float> CudaExpressionUtilities::computeFunctionCoefficients(const Tabulat
         width = 4;
         return f;
     }
+    if (dynamic_cast<const Continuous2DFunction*>(&function) != NULL) {
+        // Compute the spline coefficients.
+
+        const Continuous2DFunction& fn = dynamic_cast<const Continuous2DFunction&>(function);
+        vector<double> values;
+        int xsize, ysize;
+        double xmin, xmax, ymin, ymax;
+        fn.getFunctionParameters(xsize, ysize, values, xmin, xmax, ymin, ymax);
+        vector<double> x(xsize), y(ysize);
+        for (int i = 0; i < xsize; i++)
+            x[i] = xmin+i*(xmax-xmin)/(xsize-1);
+        for (int i = 0; i < ysize; i++)
+            y[i] = ymin+i*(ymax-ymin)/(ysize-1);
+        vector<vector<double> > c;
+        SplineFitter::create2DNaturalSpline(x, y, values, c);
+        vector<float> f(16*c.size());
+        for (int i = 0; i < (int) c.size(); i++) {
+            for (int j = 0; j < 16; j++)
+                f[16*i+j] = (float) c[i][j];
+        }
+        width = 4;
+        return f;
+    }
     if (dynamic_cast<const Discrete1DFunction*>(&function) != NULL) {
         // Record the tabulated values.
         
@@ -465,6 +531,21 @@ vector<vector<double> > CudaExpressionUtilities::computeFunctionParameters(const
             params[i].push_back((values.size()-1)/(max-min));
             params[i].push_back(values.size()-2);
         }
+        else if (dynamic_cast<const Continuous2DFunction*>(functions[i]) != NULL) {
+            const Continuous2DFunction& fn = dynamic_cast<const Continuous2DFunction&>(*functions[i]);
+            vector<double> values;
+            int xsize, ysize;
+            double xmin, xmax, ymin, ymax;
+            fn.getFunctionParameters(xsize, ysize, values, xmin, xmax, ymin, ymax);
+            params[i].push_back(xsize-1);
+            params[i].push_back(ysize-1);
+            params[i].push_back(xmin);
+            params[i].push_back(xmax);
+            params[i].push_back(ymin);
+            params[i].push_back(ymax);
+            params[i].push_back((xsize-1)/(xmax-xmin));
+            params[i].push_back((ysize-1)/(ymax-ymin));
+        }
         else if (dynamic_cast<const Discrete1DFunction*>(functions[i]) != NULL) {
             const Discrete1DFunction& fn = dynamic_cast<const Discrete1DFunction&>(*functions[i]);
             vector<double> values;
@@ -497,6 +578,8 @@ vector<vector<double> > CudaExpressionUtilities::computeFunctionParameters(const
 Lepton::CustomFunction* CudaExpressionUtilities::getFunctionPlaceholder(const TabulatedFunction& function) {
     if (dynamic_cast<const Continuous1DFunction*>(&function) != NULL)
         return &fp1;
+    if (dynamic_cast<const Continuous2DFunction*>(&function) != NULL)
+        return &fp2;
     if (dynamic_cast<const Discrete1DFunction*>(&function) != NULL)
         return &fp1;
     if (dynamic_cast<const Discrete2DFunction*>(&function) != NULL)

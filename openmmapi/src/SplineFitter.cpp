@@ -255,9 +255,9 @@ void SplineFitter::create2DNaturalSpline(const vector<double>& x, const vector<d
         0, 0, 0, 0, 0, 0, -1, 1, 0, 0, 2, -2, 0, 0, -1, 1
     };
     vector<double> rhs(16);
-    c.resize(xsize*ysize);
-    for (int i = 0; i < xsize; i++) {
-        for (int j = 0; j < ysize; j++) {
+    c.resize((xsize-1)*(ysize-1));
+    for (int i = 0; i < xsize-1; i++) {
+        for (int j = 0; j < ysize-1; j++) {
             // Compute the 16 coefficients for patch (i, j).
 
             int nexti = i+1;
@@ -275,7 +275,7 @@ void SplineFitter::create2DNaturalSpline(const vector<double>& x, const vector<d
                 rhs[k+8] = e2[k]*deltay;
                 rhs[k+12] = e12[k]*deltax*deltay;
             }
-            vector<double>& coeff = c[i+j*xsize];
+            vector<double>& coeff = c[i+j*(xsize-1)];
             coeff.resize(16);
             for (int k = 0; k < 16; k++) {
                 double sum = 0.0;
@@ -317,7 +317,7 @@ double SplineFitter::evaluate2DSpline(const vector<double>& x, const vector<doub
     double deltay = y[uppery]-y[lowery];
     double da = (u-x[lowerx])/deltax;
     double db = (v-y[lowery])/deltay;
-    const vector<double>& coeff = c[lowerx+xsize*lowery];
+    const vector<double>& coeff = c[lowerx+(xsize-1)*lowery];
 
     // Evaluate the spline to determine the value and gradients.
 
@@ -357,7 +357,7 @@ void SplineFitter::evaluate2DSplineDerivatives(const vector<double>& x, const ve
     double deltay = y[uppery]-y[lowery];
     double da = (u-x[lowerx])/deltax;
     double db = (v-y[lowery])/deltay;
-    const vector<double>& coeff = c[lowerx+xsize*lowery];
+    const vector<double>& coeff = c[lowerx+(xsize-1)*lowery];
 
     // Evaluate the spline to determine the value and gradients.
 
