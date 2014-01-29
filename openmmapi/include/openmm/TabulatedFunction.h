@@ -70,7 +70,7 @@ public:
      * Create a Continuous1DFunction f(x) based on a set of tabulated values.
      * 
      * @param values         the tabulated values of the function f(x) at uniformly spaced values of x between min
-     *                       and max.  A natural cubic spline is used to interpolated between the tabulated values.
+     *                       and max.  A natural cubic spline is used to interpolate between the tabulated values.
      *                       The function is assumed to be zero for x &lt; min or x &gt; max.
      * @param min            the value of x corresponding to the first element of values
      * @param max            the value of x corresponding to the last element of values
@@ -80,7 +80,7 @@ public:
      * Get the parameters for the tabulated function.
      *
      * @param values         the tabulated values of the function f(x) at uniformly spaced values of x between min
-     *                       and max.  A natural cubic spline is used to interpolated between the tabulated values.
+     *                       and max.  A natural cubic spline is used to interpolate between the tabulated values.
      *                       The function is assumed to be zero for x &lt; min or x &gt; max.
      * @param min            the value of x corresponding to the first element of values
      * @param max            the value of x corresponding to the last element of values
@@ -90,7 +90,7 @@ public:
      * Set the parameters for the tabulated function.
      *
      * @param values         the tabulated values of the function f(x) at uniformly spaced values of x between min
-     *                       and max.  A natural cubic spline is used to interpolated between the tabulated values.
+     *                       and max.  A natural cubic spline is used to interpolate between the tabulated values.
      *                       The function is assumed to be zero for x &lt; min or x &gt; max.
      * @param min            the value of x corresponding to the first element of values
      * @param max            the value of x corresponding to the last element of values
@@ -99,6 +99,62 @@ public:
 private:
     std::vector<double> values;
     double min, max;
+};
+
+/**
+ * This is a TabulatedFunction that computes a continuous two dimensional function.
+ */
+class OPENMM_EXPORT Continuous2DFunction : public TabulatedFunction {
+public:
+    /**
+     * Create a Continuous2DFunction f(x,y) based on a set of tabulated values.
+     * 
+     * @param values     the tabulated values of the function f(x,y) at xsize uniformly spaced values of x between xmin
+     *                   and xmax, and ysize values of y between ymin and ymax.  A natural cubic spline is used to interpolate between the tabulated values.
+     *                   The function is assumed to be zero when x or y is outside its specified range.  The values should be ordered so that
+     *                   values[i+xsize*j] = f(x_i,y_j), where x_i is the i'th uniformly spaced value of x.  This must be of length xsize*ysize.
+     * @param xsize      the number of table elements along the x direction
+     * @param ysize      the number of table elements along the y direction
+     * @param xmin       the value of x corresponding to the first element of values
+     * @param xmax       the value of x corresponding to the last element of values
+     * @param ymin       the value of y corresponding to the first element of values
+     * @param ymax       the value of y corresponding to the last element of values
+     */
+    Continuous2DFunction(int xsize, int ysize, const std::vector<double>& values, double xmin, double xmax, double ymin, double ymax);
+    /**
+     * Get the parameters for the tabulated function.
+     *
+     * @param values     the tabulated values of the function f(x,y) at xsize uniformly spaced values of x between xmin
+     *                   and xmax, and ysize values of y between ymin and ymax.  A natural cubic spline is used to interpolate between the tabulated values.
+     *                   The function is assumed to be zero when x or y is outside its specified range.  The values should be ordered so that
+     *                   values[i+xsize*j] = f(x_i,y_j), where x_i is the i'th uniformly spaced value of x.  This must be of length xsize*ysize.
+     * @param xsize      the number of table elements along the x direction
+     * @param ysize      the number of table elements along the y direction
+     * @param xmin       the value of x corresponding to the first element of values
+     * @param xmax       the value of x corresponding to the last element of values
+     * @param ymin       the value of y corresponding to the first element of values
+     * @param ymax       the value of y corresponding to the last element of values
+     */
+    void getFunctionParameters(int& xsize, int& ysize, std::vector<double>& values, double& xmin, double& xmax, double& ymin, double& ymax) const;
+    /**
+     * Set the parameters for the tabulated function.
+     *
+     * @param values     the tabulated values of the function f(x,y) at xsize uniformly spaced values of x between xmin
+     *                   and xmax, and ysize values of y between ymin and ymax.  A natural cubic spline is used to interpolate between the tabulated values.
+     *                   The function is assumed to be zero when x or y is outside its specified range.  The values should be ordered so that
+     *                   values[i+xsize*j] = f(x_i,y_j), where x_i is the i'th uniformly spaced value of x.  This must be of length xsize*ysize.
+     * @param xsize      the number of table elements along the x direction
+     * @param ysize      the number of table elements along the y direction
+     * @param xmin       the value of x corresponding to the first element of values
+     * @param xmax       the value of x corresponding to the last element of values
+     * @param ymin       the value of y corresponding to the first element of values
+     * @param ymax       the value of y corresponding to the last element of values
+     */
+    void setFunctionParameters(int xsize, int ysize, const std::vector<double>& values, double xmin, double xmax, double ymin, double ymax);
+private:
+    std::vector<double> values;
+    int xsize, ysize;
+    double xmin, xmax, ymin, ymax;
 };
 
 /**

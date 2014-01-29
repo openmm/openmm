@@ -61,6 +61,24 @@ private:
 };
 
 /**
+ * This class adapts a Continuous2DFunction into a Lepton::CustomFunction.
+ */
+class OPENMM_EXPORT ReferenceContinuous2DFunction : public Lepton::CustomFunction {
+public:
+    ReferenceContinuous2DFunction(const Continuous2DFunction& function);
+    int getNumArguments() const;
+    double evaluate(const double* arguments) const;
+    double evaluateDerivative(const double* arguments, const int* derivOrder) const;
+    CustomFunction* clone() const;
+private:
+    const Continuous2DFunction& function;
+    int xsize, ysize;
+    double xmin, xmax, ymin, ymax;
+    std::vector<double> x, y, values;
+    std::vector<std::vector<double> > c;
+};
+
+/**
  * This class adapts a Discrete1DFunction into a Lepton::CustomFunction.
  */
 class OPENMM_EXPORT ReferenceDiscrete1DFunction : public Lepton::CustomFunction {

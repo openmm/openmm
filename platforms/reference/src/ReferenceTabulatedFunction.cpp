@@ -41,6 +41,8 @@ using Lepton::CustomFunction;
 extern "C" CustomFunction* createReferenceTabulatedFunction(const TabulatedFunction& function) {
     if (dynamic_cast<const Continuous1DFunction*>(&function) != NULL)
         return new ReferenceContinuous1DFunction(dynamic_cast<const Continuous1DFunction&>(function));
+    if (dynamic_cast<const Continuous2DFunction*>(&function) != NULL)
+        return new ReferenceContinuous2DFunction(dynamic_cast<const Continuous2DFunction&>(function));
     if (dynamic_cast<const Discrete1DFunction*>(&function) != NULL)
         return new ReferenceDiscrete1DFunction(dynamic_cast<const Discrete1DFunction&>(function));
     if (dynamic_cast<const Discrete2DFunction*>(&function) != NULL)
@@ -79,6 +81,51 @@ double ReferenceContinuous1DFunction::evaluateDerivative(const double* arguments
 
 CustomFunction* ReferenceContinuous1DFunction::clone() const {
     return new ReferenceContinuous1DFunction(function);
+}
+
+ReferenceContinuous2DFunction::ReferenceContinuous2DFunction(const Continuous2DFunction& function) : function(function) {
+    function.getFunctionParameters(xsize, ysize, values, xmin, xmax, ymin, ymax);
+    x.resize(xsize);
+    y.resize(ysize);
+    for (int i = 0; i < xsize; i++)
+        x[i] = xmin+i*(xmax-xmin)/(xsize-1);
+    for (int i = 0; i < ysize; i++)
+        y[i] = ymin+i*(ymax-ymin)/(ysize-1);
+    SplineFitter::create2DNaturalSpline(x, y, values, c);
+}
+
+int ReferenceContinuous2DFunction::getNumArguments() const {
+    return 2;
+}
+
+double ReferenceContinuous2DFunction::evaluate(const double* arguments) const {
+    double u = arguments[0];
+    if (u < xmin || u > xmax)
+        return 0.0;
+    double v = arguments[1];
+    if (v < ymin || v > ymax)
+        return 0.0;
+    return SplineFitter::evaluate2DSpline(x, y, values, c, u, v);
+}
+
+double ReferenceContinuous2DFunction::evaluateDerivative(const double* arguments, const int* derivOrder) const {
+    double u = arguments[0];
+    if (u < xmin || u > xmax)
+        return 0.0;
+    double v = arguments[1];
+    if (v < ymin || v > ymax)
+        return 0.0;
+    double dx, dy;
+    SplineFitter::evaluate2DSplineDerivatives(x, y, values, c, u, v, dx, dy);
+    if (derivOrder[0] == 1 && derivOrder[1] == 0)
+        return dx;
+    if (derivOrder[0] == 0 && derivOrder[1] == 1)
+        return dy;
+    throw OpenMMException("ReferenceContinuous2DFunction: Unsupported derivative order");
+}
+
+CustomFunction* ReferenceContinuous2DFunction::clone() const {
+    return new ReferenceContinuous2DFunction(function);
 }
 
 ReferenceDiscrete1DFunction::ReferenceDiscrete1DFunction(const Discrete1DFunction& function) : function(function) {

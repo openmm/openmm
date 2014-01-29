@@ -103,19 +103,17 @@ void test2DSpline() {
         for (int j = 0; j < ysize; j++) {
             double value = SplineFitter::evaluate2DSpline(x, y, f, c, x[i], y[j]);
             ASSERT_EQUAL_TOL(f[i+j*xsize], value, 1e-6);
-            double dx, dy;
-            SplineFitter::evaluate2DSplineDerivatives(x, y, f, c, x[i], y[j], dx, dy);
         }
     for (int i = 0; i < 10; i++) {
         for (int j = 0; j < 10; j++) {
             double s = x[0]+(i+1)*(x[xsize-1]-x[0])/11.0;
             double t = y[0]+(j+1)*(y[ysize-1]-y[0])/11.0;
             double value = SplineFitter::evaluate2DSpline(x, y, f, c, s, t);
-            ASSERT_EQUAL_TOL(sin(s)*cos(0.4*t), value, 0.05);
+            ASSERT_EQUAL_TOL(sin(s)*cos(0.4*t), value, 0.02);
             double dx, dy;
             SplineFitter::evaluate2DSplineDerivatives(x, y, f, c, s, t, dx, dy);
-            ASSERT_EQUAL_TOL(cos(s)*cos(0.4*t), dx, 0.1);
-            ASSERT_EQUAL_TOL(-0.4*sin(s)*sin(0.4*t), dy, 0.1);
+            ASSERT_EQUAL_TOL(cos(s)*cos(0.4*t), dx, 0.05);
+            ASSERT_EQUAL_TOL(-0.4*sin(s)*sin(0.4*t), dy, 0.05);
         }
     }
 }

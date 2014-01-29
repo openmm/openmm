@@ -219,7 +219,7 @@ void SplineFitter::create2DNaturalSpline(const vector<double>& x, const vector<d
             t[j] = values[i+xsize*j];
         SplineFitter::createNaturalSpline(y, t, deriv);
         for (int j = 0; j < ysize; j++)
-            d2[i+xsize*j] = SplineFitter::evaluateSplineDerivative(x, t, deriv, x[j]);
+            d2[i+xsize*j] = SplineFitter::evaluateSplineDerivative(y, t, deriv, y[j]);
     }
 
     // Compute cross derivatives.

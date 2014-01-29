@@ -35,7 +35,7 @@
 using namespace OpenMM;
 using namespace std;
 
-Continuous1DFunction::Continuous1DFunction(const std::vector<double>& values, double min, double max) {
+Continuous1DFunction::Continuous1DFunction(const vector<double>& values, double min, double max) {
     if (max <= min)
         throw OpenMMException("Continuous1DFunction: max <= min for a tabulated function.");
     if (values.size() < 2)
@@ -45,13 +45,13 @@ Continuous1DFunction::Continuous1DFunction(const std::vector<double>& values, do
     this->max = max;
 }
 
-void Continuous1DFunction::getFunctionParameters(std::vector<double>& values, double& min, double& max) const {
+void Continuous1DFunction::getFunctionParameters(vector<double>& values, double& min, double& max) const {
     values = this->values;
     min = this->min;
     max = this->max;
 }
 
-void Continuous1DFunction::setFunctionParameters(const std::vector<double>& values, double min, double max) {
+void Continuous1DFunction::setFunctionParameters(const vector<double>& values, double min, double max) {
     if (max <= min)
         throw OpenMMException("Continuous1DFunction: max <= min for a tabulated function.");
     if (values.size() < 2)
@@ -61,19 +61,65 @@ void Continuous1DFunction::setFunctionParameters(const std::vector<double>& valu
     this->max = max;
 }
 
-Discrete1DFunction::Discrete1DFunction(const std::vector<double>& values) {
+Continuous2DFunction::Continuous2DFunction(int xsize, int ysize, const vector<double>& values, double xmin, double xmax, double ymin, double ymax) {
+    if (xsize < 2 || ysize < 2)
+        throw OpenMMException("Continuous2DFunction: must have at least two points along each axis");
+    if (values.size() != xsize*ysize)
+        throw OpenMMException("Continuous2DFunction: incorrect number of values");
+    if (xmax <= xmin)
+        throw OpenMMException("Continuous2DFunction: xmax <= xmin for a tabulated function.");
+    if (ymax <= ymin)
+        throw OpenMMException("Continuous2DFunction: ymax <= ymin for a tabulated function.");
+    this->values = values;
+    this->xsize = xsize;
+    this->ysize = ysize;
+    this->xmin = xmin;
+    this->xmax = xmax;
+    this->ymin = ymin;
+    this->ymax = ymax;
+}
+
+void Continuous2DFunction::getFunctionParameters(int& xsize, int& ysize, vector<double>& values, double& xmin, double& xmax, double& ymin, double& ymax) const {
+    values = this->values;
+    xsize = this->xsize;
+    ysize = this->ysize;
+    xmin = this->xmin;
+    xmax = this->xmax;
+    ymin = this->ymin;
+    ymax = this->ymax;
+}
+
+void Continuous2DFunction::setFunctionParameters(int xsize, int ysize, const vector<double>& values, double xmin, double xmax, double ymin, double ymax) {
+    if (xsize < 2 || ysize < 2)
+        throw OpenMMException("Continuous2DFunction: must have at least two points along each axis");
+    if (values.size() != xsize*ysize)
+        throw OpenMMException("Continuous2DFunction: incorrect number of values");
+    if (xmax <= xmin)
+        throw OpenMMException("Continuous2DFunction: xmax <= xmin for a tabulated function.");
+    if (ymax <= ymin)
+        throw OpenMMException("Continuous2DFunction: ymax <= ymin for a tabulated function.");
+    this->values = values;
+    this->xsize = xsize;
+    this->ysize = ysize;
+    this->xmin = xmin;
+    this->xmax = xmax;
+    this->ymin = ymin;
+    this->ymax = ymax;
+}
+
+Discrete1DFunction::Discrete1DFunction(const vector<double>& values) {
     this->values = values;
 }
 
-void Discrete1DFunction::getFunctionParameters(std::vector<double>& values) const {
+void Discrete1DFunction::getFunctionParameters(vector<double>& values) const {
     values = this->values;
 }
 
-void Discrete1DFunction::setFunctionParameters(const std::vector<double>& values) {
+void Discrete1DFunction::setFunctionParameters(const vector<double>& values) {
     this->values = values;
 }
 
-Discrete2DFunction::Discrete2DFunction(int xsize, int ysize, const std::vector<double>& values) {
+Discrete2DFunction::Discrete2DFunction(int xsize, int ysize, const vector<double>& values) {
     if (values.size() != xsize*ysize)
         throw OpenMMException("Discrete2DFunction: incorrect number of values");
     this->xsize = xsize;
@@ -81,13 +127,13 @@ Discrete2DFunction::Discrete2DFunction(int xsize, int ysize, const std::vector<d
     this->values = values;
 }
 
-void Discrete2DFunction::getFunctionParameters(int& xsize, int& ysize, std::vector<double>& values) const {
+void Discrete2DFunction::getFunctionParameters(int& xsize, int& ysize, vector<double>& values) const {
     xsize = this->xsize;
     ysize = this->ysize;
     values = this->values;
 }
 
-void Discrete2DFunction::setFunctionParameters(int xsize, int ysize, const std::vector<double>& values) {
+void Discrete2DFunction::setFunctionParameters(int xsize, int ysize, const vector<double>& values) {
     if (values.size() != xsize*ysize)
         throw OpenMMException("Discrete2DFunction: incorrect number of values");
     this->xsize = xsize;
@@ -95,7 +141,7 @@ void Discrete2DFunction::setFunctionParameters(int xsize, int ysize, const std::
     this->values = values;
 }
 
-Discrete3DFunction::Discrete3DFunction(int xsize, int ysize, int zsize, const std::vector<double>& values) {
+Discrete3DFunction::Discrete3DFunction(int xsize, int ysize, int zsize, const vector<double>& values) {
     if (values.size() != xsize*ysize*zsize)
         throw OpenMMException("Discrete3DFunction: incorrect number of values");
     this->xsize = xsize;
@@ -104,14 +150,14 @@ Discrete3DFunction::Discrete3DFunction(int xsize, int ysize, int zsize, const st
     this->values = values;
 }
 
-void Discrete3DFunction::getFunctionParameters(int& xsize, int& ysize, int& zsize, std::vector<double>& values) const {
+void Discrete3DFunction::getFunctionParameters(int& xsize, int& ysize, int& zsize, vector<double>& values) const {
     xsize = this->xsize;
     ysize = this->ysize;
     zsize = this->zsize;
     values = this->values;
 }
 
-void Discrete3DFunction::setFunctionParameters(int xsize, int ysize, int zsize, const std::vector<double>& values) {
+void Discrete3DFunction::setFunctionParameters(int xsize, int ysize, int zsize, const vector<double>& values) {
     if (values.size() != xsize*ysize*zsize)
         throw OpenMMException("Discrete3DFunction: incorrect number of values");
     this->xsize = xsize;
