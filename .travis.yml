@@ -9,7 +9,7 @@ before_install:
   - sudo apt-get install doxygen
   - sudo apt-get install python-numpy
   - sudo apt-get install python-scipy
-  
+  - sudo apt-get install python-nose
 script:
   - cmake -DCMAKE_INSTALL_PREFIX=~/OpenMM . 
   - make 
@@ -22,12 +22,13 @@ script:
   - cd python
   - sudo -E python setup.py install
   - cd tests
-  - python TestAmberPrmtopFile.py
-  - python TestDesmondDMSFile.py
-  - python TestForceField.py
-  - python TestGromacsTopFile.py
-  - python TestModeller.py
-  - python TestNumpyCompatibility.py
-  - python validateConstraints.py
-  - python validateConstraints.pyc
-  - python validateModeller.py
+  - nosetests
+#  - python TestAmberPrmtopFile.py
+#  - python TestDesmondDMSFile.py
+#  - python TestForceField.py
+#  - python TestGromacsTopFile.py
+#  - python TestModeller.py
+#  - python TestNumpyCompatibility.py
+#  - python validateConstraints.py
+#  - python validateConstraints.pyc
+#  - python validateModeller.py
