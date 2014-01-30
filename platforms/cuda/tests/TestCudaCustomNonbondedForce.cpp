@@ -347,6 +347,64 @@ void testContinuous2DFunction() {
     }
 }
 
+void testContinuous3DFunction() {
+    const int xsize = 10;
+    const int ysize = 11;
+    const int zsize = 12;
+    const double xmin = 0.4;
+    const double xmax = 1.1;
+    const double ymin = 0.0;
+    const double ymax = 0.9;
+    const double zmin = 0.2;
+    const double zmax = 1.3;
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    VerletIntegrator integrator(0.01);
+    CustomNonbondedForce* forceField = new CustomNonbondedForce("fn(r,a,b)+1");
+    forceField->addGlobalParameter("a", 0.0);
+    forceField->addGlobalParameter("b", 0.0);
+    forceField->addParticle(vector<double>());
+    forceField->addParticle(vector<double>());
+    vector<double> table(xsize*ysize*zsize);
+    for (int i = 0; i < xsize; i++) {
+        for (int j = 0; j < ysize; j++) {
+            for (int k = 0; k < zsize; k++) {
+                double x = xmin + i*(xmax-xmin)/xsize;
+                double y = ymin + j*(ymax-ymin)/ysize;
+                double z = zmin + k*(zmax-zmin)/zsize;
+                table[i+xsize*j+xsize*ysize*k] = sin(0.25*x)*cos(0.33*y)*(1+z);
+            }
+        }
+    }
+    forceField->addFunction("fn", new Continuous3DFunction(xsize, ysize, zsize, table, xmin, xmax, ymin, ymax, zmin, zmax));
+    system.addForce(forceField);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(2);
+    positions[0] = Vec3(0, 0, 0);
+    for (double x = xmin-0.15; x < xmax+0.2; x += 0.1) {
+        for (double y = ymin-0.15; y < ymax+0.2; y += 0.1) {
+            for (double z = zmin-0.15; z < zmax+0.2; z += 0.1) {
+                positions[1] = Vec3(x, 0, 0);
+                context.setParameter("a", y);
+                context.setParameter("b", z);
+                context.setPositions(positions);
+                State state = context.getState(State::Forces | State::Energy);
+                const vector<Vec3>& forces = state.getForces();
+                double energy = 1;
+                double force = 0;
+                if (x >= xmin && x <= xmax && y >= ymin && y <= ymax && z >= zmin && z <= zmax) {
+                    energy = sin(0.25*x)*cos(0.33*y)*(1.0+z)+1.0;
+                    force = -0.25*cos(0.25*x)*cos(0.33*y)*(1.0+z);
+                }
+                ASSERT_EQUAL_VEC(Vec3(-force, 0, 0), forces[0], 0.1);
+                ASSERT_EQUAL_VEC(Vec3(force, 0, 0), forces[1], 0.1);
+                ASSERT_EQUAL_TOL(energy, state.getPotentialEnergy(), 0.05);
+            }
+        }
+    }
+}
+
 void testDiscrete1DFunction() {
     System system;
     system.addParticle(1.0);
@@ -869,6 +927,7 @@ int main(int argc, char* argv[]) {
         testPeriodic();
         testContinuous1DFunction();
         testContinuous2DFunction();
+        testContinuous3DFunction();
         testDiscrete1DFunction();
         testDiscrete2DFunction();
         testDiscrete3DFunction();

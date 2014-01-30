@@ -133,36 +133,100 @@ void CudaExpressionUtilities::processExpression(stringstream& out, const Express
                 out << "x = (x-" << paramsFloat[2] << ")*" << paramsFloat[6] << ";\n";
                 out << "y = (y-" << paramsFloat[4] << ")*" << paramsFloat[7] << ";\n";
                 out << "int s = min((int) floor(x), " << paramsInt[0] << ");\n";
-                out << "int t = min((int) floor(y), " << paramsInt[0] << ");\n";
+                out << "int t = min((int) floor(y), " << paramsInt[1] << ");\n";
                 out << "int coeffIndex = 4*(s+" << paramsInt[0] << "*t);\n";
                 out << "float4 c[4];\n";
-                out << "c[0] = " << functionNames[i].second << "[coeffIndex];\n";
-                out << "c[1] = " << functionNames[i].second << "[coeffIndex+1];\n";
-                out << "c[2] = " << functionNames[i].second << "[coeffIndex+2];\n";
-                out << "c[3] = " << functionNames[i].second << "[coeffIndex+3];\n";
-                out << "real da = x-s;";
-                out << "real db = y-t;";
+                for (int j = 0; j < 4; j++)
+                    out << "c[" << j << "] = " << functionNames[i].second << "[coeffIndex+" << j << "];\n";
+                out << "real da = x-s;\n";
+                out << "real db = y-t;\n";
                 for (int j = 0; j < nodes.size(); j++) {
                     const vector<int>& derivOrder = dynamic_cast<const Operation::Custom*>(&nodes[j]->getOperation())->getDerivOrder();
                     if (derivOrder[0] == 0 && derivOrder[1] == 0) {
-                        out << nodeNames[j] << " = da*" << nodeNames[j] << " + ((c[3].w*db + c[3].z)*db + c[3].y)*db + c[3].x;";
-                        out << nodeNames[j] << " = da*" << nodeNames[j] << " + ((c[2].w*db + c[2].z)*db + c[2].y)*db + c[2].x;";
-                        out << nodeNames[j] << " = da*" << nodeNames[j] << " + ((c[1].w*db + c[1].z)*db + c[1].y)*db + c[1].x;";
-                        out << nodeNames[j] << " = da*" << nodeNames[j] << " + ((c[0].w*db + c[0].z)*db + c[0].y)*db + c[0].x;";
+                        out << nodeNames[j] << " = da*" << nodeNames[j] << " + ((c[3].w*db + c[3].z)*db + c[3].y)*db + c[3].x;\n";
+                        out << nodeNames[j] << " = da*" << nodeNames[j] << " + ((c[2].w*db + c[2].z)*db + c[2].y)*db + c[2].x;\n";
+                        out << nodeNames[j] << " = da*" << nodeNames[j] << " + ((c[1].w*db + c[1].z)*db + c[1].y)*db + c[1].x;\n";
+                        out << nodeNames[j] << " = da*" << nodeNames[j] << " + ((c[0].w*db + c[0].z)*db + c[0].y)*db + c[0].x;\n";
                     }
                     else if (derivOrder[0] == 1 && derivOrder[1] == 0) {
-                        out << nodeNames[j] << " = db*" << nodeNames[j] << " + (3.0f*c[3].w*da + 2.0f*c[2].w)*da + c[1].w;";
-                        out << nodeNames[j] << " = db*" << nodeNames[j] << " + (3.0f*c[3].z*da + 2.0f*c[2].z)*da + c[1].z;";
-                        out << nodeNames[j] << " = db*" << nodeNames[j] << " + (3.0f*c[3].y*da + 2.0f*c[2].y)*da + c[1].y;";
-                        out << nodeNames[j] << " = db*" << nodeNames[j] << " + (3.0f*c[3].x*da + 2.0f*c[2].x)*da + c[1].x;";
-                        out << nodeNames[j] << " *= " << paramsFloat[6] << ";";
+                        out << nodeNames[j] << " = db*" << nodeNames[j] << " + (3.0f*c[3].w*da + 2.0f*c[2].w)*da + c[1].w;\n";
+                        out << nodeNames[j] << " = db*" << nodeNames[j] << " + (3.0f*c[3].z*da + 2.0f*c[2].z)*da + c[1].z;\n";
+                        out << nodeNames[j] << " = db*" << nodeNames[j] << " + (3.0f*c[3].y*da + 2.0f*c[2].y)*da + c[1].y;\n";
+                        out << nodeNames[j] << " = db*" << nodeNames[j] << " + (3.0f*c[3].x*da + 2.0f*c[2].x)*da + c[1].x;\n";
+                        out << nodeNames[j] << " *= " << paramsFloat[6] << ";\n";
                     }
                     else if (derivOrder[0] == 0 && derivOrder[1] == 1) {
-                        out << nodeNames[j] << " = da*" << nodeNames[j] << " + (3.0f*c[3].w*db + 2.0f*c[3].z)*db + c[3].y;";
-                        out << nodeNames[j] << " = da*" << nodeNames[j] << " + (3.0f*c[2].w*db + 2.0f*c[2].z)*db + c[2].y;";
-                        out << nodeNames[j] << " = da*" << nodeNames[j] << " + (3.0f*c[1].w*db + 2.0f*c[1].z)*db + c[1].y;";
-                        out << nodeNames[j] << " = da*" << nodeNames[j] << " + (3.0f*c[0].w*db + 2.0f*c[0].z)*db + c[0].y;";
-                        out << nodeNames[j] << " *= " << paramsFloat[7] << ";";
+                        out << nodeNames[j] << " = da*" << nodeNames[j] << " + (3.0f*c[3].w*db + 2.0f*c[3].z)*db + c[3].y;\n";
+                        out << nodeNames[j] << " = da*" << nodeNames[j] << " + (3.0f*c[2].w*db + 2.0f*c[2].z)*db + c[2].y;\n";
+                        out << nodeNames[j] << " = da*" << nodeNames[j] << " + (3.0f*c[1].w*db + 2.0f*c[1].z)*db + c[1].y;\n";
+                        out << nodeNames[j] << " = da*" << nodeNames[j] << " + (3.0f*c[0].w*db + 2.0f*c[0].z)*db + c[0].y;\n";
+                        out << nodeNames[j] << " *= " << paramsFloat[7] << ";\n";
+                    }
+                    else
+                        throw OpenMMException("Unsupported derivative order for Continuous2DFunction");
+                }
+                out << "}\n";
+            }
+            else if (dynamic_cast<const Continuous3DFunction*>(functions[i]) != NULL) {
+                out << "real x = " << getTempName(node.getChildren()[0], temps) << ";\n";
+                out << "real y = " << getTempName(node.getChildren()[1], temps) << ";\n";
+                out << "real z = " << getTempName(node.getChildren()[2], temps) << ";\n";
+                out << "if (x >= " << paramsFloat[3] << " && x <= " << paramsFloat[4] << " && y >= " << paramsFloat[5] << " && y <= " << paramsFloat[6] << " && z >= " << paramsFloat[7] << " && z <= " << paramsFloat[8] << ") {\n";
+                out << "x = (x-" << paramsFloat[3] << ")*" << paramsFloat[9] << ";\n";
+                out << "y = (y-" << paramsFloat[5] << ")*" << paramsFloat[10] << ";\n";
+                out << "z = (z-" << paramsFloat[7] << ")*" << paramsFloat[11] << ";\n";
+                out << "int s = min((int) floor(x), " << paramsInt[0] << ");\n";
+                out << "int t = min((int) floor(y), " << paramsInt[1] << ");\n";
+                out << "int u = min((int) floor(z), " << paramsInt[2] << ");\n";
+                out << "int coeffIndex = 16*(s+" << paramsInt[0] << "*(t+" << paramsInt[1] << "*u));\n";
+                out << "float4 c[16];\n";
+                for (int j = 0; j < 16; j++)
+                    out << "c[" << j << "] = " << functionNames[i].second << "[coeffIndex+" << j << "];\n";
+                out << "real da = x-s;\n";
+                out << "real db = y-t;\n";
+                out << "real dc = z-u;\n";
+                for (int j = 0; j < nodes.size(); j++) {
+                    const vector<int>& derivOrder = dynamic_cast<const Operation::Custom*>(&nodes[j]->getOperation())->getDerivOrder();
+                    if (derivOrder[0] == 0 && derivOrder[1] == 0 && derivOrder[2] == 0) {
+                        out << "real value[4] = {0, 0, 0, 0};\n";
+                        for (int k = 3; k >= 0; k--)
+                            for (int m = 0; m < 4; m++) {
+                                int base = k + 4*m;
+                                out << "value[" << m << "] = db*value[" << m << "] + ((c[" << base << "].w*da + c[" << base << "].z)*da + c[" << base << "].y)*da + c[" << base << "].x;\n";
+                            }
+                        out << nodeNames[j] << " = value[0] + dc*(value[1] + dc*(value[2] + dc*value[3]));\n";
+                    }
+                    else if (derivOrder[0] == 1 && derivOrder[1] == 0 && derivOrder[2] == 0) {
+                        out << "real derivx[4] = {0, 0, 0, 0};\n";
+                        for (int k = 3; k >= 0; k--)
+                            for (int m = 0; m < 4; m++) {
+                                int base = k + 4*m;
+                                out << "derivx[" << m << "] = db*derivx[" << m << "] + (3*c[" << base << "].w*da + 2*c[" << base << "].z)*da + c[" << base << "].y;\n";
+                            }
+                        out << nodeNames[j] << " = derivx[0] + dc*(derivx[1] + dc*(derivx[2] + dc*derivx[3]));\n";
+                        out << nodeNames[j] << " *= " << paramsFloat[9] << ";\n";
+                    }
+                    else if (derivOrder[0] == 0 && derivOrder[1] == 1 && derivOrder[2] == 0) {
+                        const string suffixes[] = {".x", ".y", ".z", ".w"};
+                        out << "real derivy[4] = {0, 0, 0, 0};\n";
+                        for (int k = 3; k >= 0; k--)
+                            for (int m = 0; m < 4; m++) {
+                                int base = 4*m;
+                                string suffix = suffixes[m];
+                                out << "derivy[" << m << "] = da*derivy[" << m << "] + (3*c[" << (base+3) << "]" << suffix << "*db + 2*c[" << (base+2) << "]" << suffix << ")*db + c[" << (base+1) << "]" << suffix << ";\n";
+                            }
+                        out << nodeNames[j] << " = derivy[0] + dc*(derivy[1] + dc*(derivy[2] + dc*derivy[3]));\n";
+                        out << nodeNames[j] << " *= " << paramsFloat[10] << ";\n";
+                    }
+                    else if (derivOrder[0] == 0 && derivOrder[1] == 0 && derivOrder[2] == 1) {
+                        out << "real derivz[4] = {0, 0, 0, 0};\n";
+                        for (int k = 3; k >= 0; k--)
+                            for (int m = 0; m < 4; m++) {
+                                int base = k + 4*m;
+                                out << "derivz[" << m << "] = db*derivz[" << m << "] + ((c[" << base << "].w*da + c[" << base << "].z)*da + c[" << base << "].y)*da + c[" << base << "].x;\n";
+                            }
+                        out << nodeNames[j] << " = derivz[1] + dc*(2*derivz[2] + dc*3*derivz[3]);\n";
+                        out << nodeNames[j] << " *= " << paramsFloat[11] << ";\n";
                     }
                     else
                         throw OpenMMException("Unsupported derivative order for Continuous2DFunction");
@@ -474,6 +538,31 @@ vector<float> CudaExpressionUtilities::computeFunctionCoefficients(const Tabulat
         width = 4;
         return f;
     }
+    if (dynamic_cast<const Continuous3DFunction*>(&function) != NULL) {
+        // Compute the spline coefficients.
+
+        const Continuous3DFunction& fn = dynamic_cast<const Continuous3DFunction&>(function);
+        vector<double> values;
+        int xsize, ysize, zsize;
+        double xmin, xmax, ymin, ymax, zmin, zmax;
+        fn.getFunctionParameters(xsize, ysize, zsize, values, xmin, xmax, ymin, ymax, zmin, zmax);
+        vector<double> x(xsize), y(ysize), z(zsize);
+        for (int i = 0; i < xsize; i++)
+            x[i] = xmin+i*(xmax-xmin)/(xsize-1);
+        for (int i = 0; i < ysize; i++)
+            y[i] = ymin+i*(ymax-ymin)/(ysize-1);
+        for (int i = 0; i < zsize; i++)
+            z[i] = zmin+i*(zmax-zmin)/(zsize-1);
+        vector<vector<double> > c;
+        SplineFitter::create3DNaturalSpline(x, y, z, values, c);
+        vector<float> f(64*c.size());
+        for (int i = 0; i < (int) c.size(); i++) {
+            for (int j = 0; j < 64; j++)
+                f[64*i+j] = (float) c[i][j];
+        }
+        width = 4;
+        return f;
+    }
     if (dynamic_cast<const Discrete1DFunction*>(&function) != NULL) {
         // Record the tabulated values.
         
@@ -546,6 +635,25 @@ vector<vector<double> > CudaExpressionUtilities::computeFunctionParameters(const
             params[i].push_back((xsize-1)/(xmax-xmin));
             params[i].push_back((ysize-1)/(ymax-ymin));
         }
+        else if (dynamic_cast<const Continuous3DFunction*>(functions[i]) != NULL) {
+            const Continuous3DFunction& fn = dynamic_cast<const Continuous3DFunction&>(*functions[i]);
+            vector<double> values;
+            int xsize, ysize, zsize;
+            double xmin, xmax, ymin, ymax, zmin, zmax;
+            fn.getFunctionParameters(xsize, ysize, zsize, values, xmin, xmax, ymin, ymax, zmin, zmax);
+            params[i].push_back(xsize-1);
+            params[i].push_back(ysize-1);
+            params[i].push_back(zsize-1);
+            params[i].push_back(xmin);
+            params[i].push_back(xmax);
+            params[i].push_back(ymin);
+            params[i].push_back(ymax);
+            params[i].push_back(zmin);
+            params[i].push_back(zmax);
+            params[i].push_back((xsize-1)/(xmax-xmin));
+            params[i].push_back((ysize-1)/(ymax-ymin));
+            params[i].push_back((zsize-1)/(zmax-zmin));
+        }
         else if (dynamic_cast<const Discrete1DFunction*>(functions[i]) != NULL) {
             const Discrete1DFunction& fn = dynamic_cast<const Discrete1DFunction&>(*functions[i]);
             vector<double> values;
@@ -580,6 +688,8 @@ Lepton::CustomFunction* CudaExpressionUtilities::getFunctionPlaceholder(const Ta
         return &fp1;
     if (dynamic_cast<const Continuous2DFunction*>(&function) != NULL)
         return &fp2;
+    if (dynamic_cast<const Continuous3DFunction*>(&function) != NULL)
+        return &fp3;
     if (dynamic_cast<const Discrete1DFunction*>(&function) != NULL)
         return &fp1;
     if (dynamic_cast<const Discrete2DFunction*>(&function) != NULL)
