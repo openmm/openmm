@@ -1,0 +1,34 @@
+language: cpp
+compiler:
+  - clang
+
+before_install:
+  - sudo apt-get update
+  - sudo apt-get install libpcre3 libpcre3-dev
+  - sudo apt-get install swig
+  - sudo apt-get install doxygen
+  - sudo apt-get install python-numpy
+  - sudo apt-get install python-scipy
+  - sudo apt-get install python-nose
+script:
+  - cmake -DCMAKE_INSTALL_PREFIX=~/OpenMM . 
+  - make 
+  - make test 
+  - make install
+  - ls ~/OpenMM/include
+  - export LD_LIBRARY_PATH=~/OpenMM/lib/
+  - export OPENMM_LIB_PATH=~/OpenMM/lib/
+  - export OPENMM_INCLUDE_PATH=~/OpenMM/include/
+  - cd python
+  - sudo -E python setup.py install
+  - cd tests
+  - nosetests
+#  - python TestAmberPrmtopFile.py
+#  - python TestDesmondDMSFile.py
+#  - python TestForceField.py
+#  - python TestGromacsTopFile.py
+#  - python TestModeller.py
+#  - python TestNumpyCompatibility.py
+#  - python validateConstraints.py
+#  - python validateConstraints.pyc
+#  - python validateModeller.py
