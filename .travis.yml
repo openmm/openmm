@@ -20,7 +20,7 @@ script:
   - cd python
   - sudo -E python setup.py install
   - cd tests
-  - nosetests
+  - nosetests -vv
 #  - python TestAmberPrmtopFile.py
 #  - python TestDesmondDMSFile.py
 #  - python TestForceField.py
