@@ -1,5 +1,7 @@
 ## OpenMM: A High Performance Molecular Dynamics Library
 
+[![Build Status](https://travis-ci.org/SimTk/openmm.png?branch=master)](https://travis-ci.org/SimTk/openmm)
+
 Introduction
 ------------
 
