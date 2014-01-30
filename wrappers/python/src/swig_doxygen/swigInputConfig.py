@@ -155,6 +155,7 @@ UNITS = {
 ("*", "getErrorTolerance") : (None, ()),
 ("*", "getEwaldErrorTolerance") : (None, ()),
 ("*", "getFriction") : ("1/unit.picosecond", ()),
+("*", "getFunction") : (None, ()),
 ("*", "getGlobalVariable") : (None, ()),
 ("*", "getIntegrator") : (None, ()),
 ("*", "getMapParameters") : (None, ()),

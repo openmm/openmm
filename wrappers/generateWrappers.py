@@ -42,7 +42,7 @@ def getText(subNodePath, node):
 def convertOpenMMPrefix(name):
     return name.replace('OpenMM::', 'OpenMM_')
 
-OPENMM_RE_PATTERN=re.compile("(.*)OpenMM:[a-zA-Z:]*:(.*)")
+OPENMM_RE_PATTERN=re.compile("(.*)OpenMM:[a-zA-Z0-9_:]*:(.*)")
 def stripOpenMMPrefix(name, rePattern=OPENMM_RE_PATTERN):
     try:
         m=rePattern.search(name)
@@ -123,6 +123,8 @@ class WrapperGenerator:
                 methodName = shortMethodDefinition.split()[-1]
                 if className+'::'+methodName in self.skipMethods:
                     continue
+                if any(getNodeText(node) == "Deprecated" for node in findNodes(memberNode, "detaileddescription/para/xrefsect/xreftitle")):
+                    continue    # Skip deprecated methods
                 methodList.append(memberNode)
         return methodList
     
