@@ -43,6 +43,8 @@ extern "C" CustomFunction* createReferenceTabulatedFunction(const TabulatedFunct
         return new ReferenceContinuous1DFunction(dynamic_cast<const Continuous1DFunction&>(function));
     if (dynamic_cast<const Continuous2DFunction*>(&function) != NULL)
         return new ReferenceContinuous2DFunction(dynamic_cast<const Continuous2DFunction&>(function));
+    if (dynamic_cast<const Continuous3DFunction*>(&function) != NULL)
+        return new ReferenceContinuous3DFunction(dynamic_cast<const Continuous3DFunction&>(function));
     if (dynamic_cast<const Discrete1DFunction*>(&function) != NULL)
         return new ReferenceDiscrete1DFunction(dynamic_cast<const Discrete1DFunction&>(function));
     if (dynamic_cast<const Discrete2DFunction*>(&function) != NULL)
@@ -126,6 +128,62 @@ double ReferenceContinuous2DFunction::evaluateDerivative(const double* arguments
 
 CustomFunction* ReferenceContinuous2DFunction::clone() const {
     return new ReferenceContinuous2DFunction(function);
+}
+
+ReferenceContinuous3DFunction::ReferenceContinuous3DFunction(const Continuous3DFunction& function) : function(function) {
+    function.getFunctionParameters(xsize, ysize, zsize, values, xmin, xmax, ymin, ymax, zmin, zmax);
+    x.resize(xsize);
+    y.resize(ysize);
+    z.resize(zsize);
+    for (int i = 0; i < xsize; i++)
+        x[i] = xmin+i*(xmax-xmin)/(xsize-1);
+    for (int i = 0; i < ysize; i++)
+        y[i] = ymin+i*(ymax-ymin)/(ysize-1);
+    for (int i = 0; i < zsize; i++)
+        z[i] = zmin+i*(zmax-zmin)/(zsize-1);
+    SplineFitter::create3DNaturalSpline(x, y, z, values, c);
+}
+
+int ReferenceContinuous3DFunction::getNumArguments() const {
+    return 3;
+}
+
+double ReferenceContinuous3DFunction::evaluate(const double* arguments) const {
+    double u = arguments[0];
+    if (u < xmin || u > xmax)
+        return 0.0;
+    double v = arguments[1];
+    if (v < ymin || v > ymax)
+        return 0.0;
+    double w = arguments[2];
+    if (w < zmin || w > zmax)
+        return 0.0;
+    return SplineFitter::evaluate3DSpline(x, y, z, values, c, u, v, w);
+}
+
+double ReferenceContinuous3DFunction::evaluateDerivative(const double* arguments, const int* derivOrder) const {
+    double u = arguments[0];
+    if (u < xmin || u > xmax)
+        return 0.0;
+    double v = arguments[1];
+    if (v < ymin || v > ymax)
+        return 0.0;
+    double w = arguments[2];
+    if (w < zmin || w > zmax)
+        return 0.0;
+    double dx, dy, dz;
+    SplineFitter::evaluate3DSplineDerivatives(x, y, z, values, c, u, v, w, dx, dy, dz);
+    if (derivOrder[0] == 1 && derivOrder[1] == 0 && derivOrder[2] == 0)
+        return dx;
+    if (derivOrder[0] == 0 && derivOrder[1] == 1 && derivOrder[2] == 0)
+        return dy;
+    if (derivOrder[0] == 0 && derivOrder[1] == 0 && derivOrder[2] == 1)
+        return dz;
+    throw OpenMMException("ReferenceContinuous3DFunction: Unsupported derivative order");
+}
+
+CustomFunction* ReferenceContinuous3DFunction::clone() const {
+    return new ReferenceContinuous3DFunction(function);
 }
 
 ReferenceDiscrete1DFunction::ReferenceDiscrete1DFunction(const Discrete1DFunction& function) : function(function) {

@@ -158,6 +158,77 @@ private:
 };
 
 /**
+ * This is a TabulatedFunction that computes a continuous three dimensional function.
+ */
+class OPENMM_EXPORT Continuous3DFunction : public TabulatedFunction {
+public:
+    /**
+     * Create a Continuous3DFunction f(x,y,z) based on a set of tabulated values.
+     * 
+     * @param values     the tabulated values of the function f(x,y,z) at xsize uniformly spaced values of x between xmin
+     *                   and xmax, ysize values of y between ymin and ymax, and zsize values of z between zmin and zmax.
+     *                   A natural cubic spline is used to interpolate between the tabulated values.  The function is
+     *                   assumed to be zero when x, y, or z is outside its specified range.  The values should be ordered so
+     *                   that values[i+xsize*j+xsize*ysize*k] = f(x_i,y_j,z_k), where x_i is the i'th uniformly spaced value of x.
+     *                   This must be of length xsize*ysize*zsize.
+     * @param xsize      the number of table elements along the x direction
+     * @param ysize      the number of table elements along the y direction
+     * @param ysize      the number of table elements along the z direction
+     * @param xmin       the value of x corresponding to the first element of values
+     * @param xmax       the value of x corresponding to the last element of values
+     * @param ymin       the value of y corresponding to the first element of values
+     * @param ymax       the value of y corresponding to the last element of values
+     * @param zmin       the value of z corresponding to the first element of values
+     * @param zmax       the value of z corresponding to the last element of values
+     */
+    Continuous3DFunction(int xsize, int ysize, int zsize, const std::vector<double>& values, double xmin, double xmax, double ymin, double ymax, double zmin, double zmax);
+    /**
+     * Get the parameters for the tabulated function.
+     *
+     * @param values     the tabulated values of the function f(x,y,z) at xsize uniformly spaced values of x between xmin
+     *                   and xmax, ysize values of y between ymin and ymax, and zsize values of z between zmin and zmax.
+     *                   A natural cubic spline is used to interpolate between the tabulated values.  The function is
+     *                   assumed to be zero when x, y, or z is outside its specified range.  The values should be ordered so
+     *                   that values[i+xsize*j+xsize*ysize*k] = f(x_i,y_j,z_k), where x_i is the i'th uniformly spaced value of x.
+     *                   This must be of length xsize*ysize*zsize.
+     * @param xsize      the number of table elements along the x direction
+     * @param ysize      the number of table elements along the y direction
+     * @param ysize      the number of table elements along the z direction
+     * @param xmin       the value of x corresponding to the first element of values
+     * @param xmax       the value of x corresponding to the last element of values
+     * @param ymin       the value of y corresponding to the first element of values
+     * @param ymax       the value of y corresponding to the last element of values
+     * @param zmin       the value of z corresponding to the first element of values
+     * @param zmax       the value of z corresponding to the last element of values
+     */
+    void getFunctionParameters(int& xsize, int& ysize, int& zsize, std::vector<double>& values, double& xmin, double& xmax, double& ymin, double& ymax, double& zmin, double& zmax) const;
+    /**
+     * Set the parameters for the tabulated function.
+     *
+     * @param values     the tabulated values of the function f(x,y,z) at xsize uniformly spaced values of x between xmin
+     *                   and xmax, ysize values of y between ymin and ymax, and zsize values of z between zmin and zmax.
+     *                   A natural cubic spline is used to interpolate between the tabulated values.  The function is
+     *                   assumed to be zero when x, y, or z is outside its specified range.  The values should be ordered so
+     *                   that values[i+xsize*j+xsize*ysize*k] = f(x_i,y_j,z_k), where x_i is the i'th uniformly spaced value of x.
+     *                   This must be of length xsize*ysize*zsize.
+     * @param xsize      the number of table elements along the x direction
+     * @param ysize      the number of table elements along the y direction
+     * @param ysize      the number of table elements along the z direction
+     * @param xmin       the value of x corresponding to the first element of values
+     * @param xmax       the value of x corresponding to the last element of values
+     * @param ymin       the value of y corresponding to the first element of values
+     * @param ymax       the value of y corresponding to the last element of values
+     * @param zmin       the value of z corresponding to the first element of values
+     * @param zmax       the value of z corresponding to the last element of values
+     */
+    void setFunctionParameters(int xsize, int ysize, int zsize, const std::vector<double>& values, double xmin, double xmax, double ymin, double ymax, double zmin, double zmax);
+private:
+    std::vector<double> values;
+    int xsize, ysize, zsize;
+    double xmin, xmax, ymin, ymax, zmin, zmax;
+};
+
+/**
  * This is a TabulatedFunction that computes a discrete one dimensional function f(x).
  * To evaluate it, x is rounded to the nearest integer and the table element with that
  * index is returned.  If the index is outside the range [0, size), the result is undefined.

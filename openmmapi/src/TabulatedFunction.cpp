@@ -107,6 +107,65 @@ void Continuous2DFunction::setFunctionParameters(int xsize, int ysize, const vec
     this->ymax = ymax;
 }
 
+Continuous3DFunction::Continuous3DFunction(int xsize, int ysize, int zsize, const vector<double>& values, double xmin, double xmax, double ymin, double ymax, double zmin, double zmax) {
+    if (xsize < 2 || ysize < 2 || zsize < 2)
+        throw OpenMMException("Continuous3DFunction: must have at least two points along each axis");
+    if (values.size() != xsize*ysize*zsize)
+        throw OpenMMException("Continuous3DFunction: incorrect number of values");
+    if (xmax <= xmin)
+        throw OpenMMException("Continuous3DFunction: xmax <= xmin for a tabulated function.");
+    if (ymax <= ymin)
+        throw OpenMMException("Continuous3DFunction: ymax <= ymin for a tabulated function.");
+    if (zmax <= zmin)
+        throw OpenMMException("Continuous3DFunction: zmax <= zmin for a tabulated function.");
+    this->values = values;
+    this->xsize = xsize;
+    this->ysize = ysize;
+    this->zsize = zsize;
+    this->xmin = xmin;
+    this->xmax = xmax;
+    this->ymin = ymin;
+    this->ymax = ymax;
+    this->zmin = zmin;
+    this->zmax = zmax;
+}
+
+void Continuous3DFunction::getFunctionParameters(int& xsize, int& ysize, int& zsize, vector<double>& values, double& xmin, double& xmax, double& ymin, double& ymax, double& zmin, double& zmax) const {
+    values = this->values;
+    xsize = this->xsize;
+    ysize = this->ysize;
+    zsize = this->zsize;
+    xmin = this->xmin;
+    xmax = this->xmax;
+    ymin = this->ymin;
+    ymax = this->ymax;
+    zmin = this->zmin;
+    zmax = this->zmax;
+}
+
+void Continuous3DFunction::setFunctionParameters(int xsize, int ysize, int zsize, const vector<double>& values, double xmin, double xmax, double ymin, double ymax, double zmin, double zmax) {
+    if (xsize < 2 || ysize < 2 || zsize < 2)
+        throw OpenMMException("Continuous3DFunction: must have at least two points along each axis");
+    if (values.size() != xsize*ysize*zsize)
+        throw OpenMMException("Continuous3DFunction: incorrect number of values");
+    if (xmax <= xmin)
+        throw OpenMMException("Continuous3DFunction: xmax <= xmin for a tabulated function.");
+    if (ymax <= ymin)
+        throw OpenMMException("Continuous3DFunction: ymax <= ymin for a tabulated function.");
+    if (zmax <= zmin)
+        throw OpenMMException("Continuous3DFunction: zmax <= zmin for a tabulated function.");
+    this->values = values;
+    this->xsize = xsize;
+    this->ysize = ysize;
+    this->zsize = zsize;
+    this->xmin = xmin;
+    this->xmax = xmax;
+    this->ymin = ymin;
+    this->ymax = ymax;
+    this->zmin = zmin;
+    this->zmax = zmax;
+}
+
 Discrete1DFunction::Discrete1DFunction(const vector<double>& values) {
     this->values = values;
 }

@@ -79,6 +79,24 @@ private:
 };
 
 /**
+ * This class adapts a Continuous3DFunction into a Lepton::CustomFunction.
+ */
+class OPENMM_EXPORT ReferenceContinuous3DFunction : public Lepton::CustomFunction {
+public:
+    ReferenceContinuous3DFunction(const Continuous3DFunction& function);
+    int getNumArguments() const;
+    double evaluate(const double* arguments) const;
+    double evaluateDerivative(const double* arguments, const int* derivOrder) const;
+    CustomFunction* clone() const;
+private:
+    const Continuous3DFunction& function;
+    int xsize, ysize, zsize;
+    double xmin, xmax, ymin, ymax, zmin, zmax;
+    std::vector<double> x, y, z, values;
+    std::vector<std::vector<double> > c;
+};
+
+/**
  * This class adapts a Discrete1DFunction into a Lepton::CustomFunction.
  */
 class OPENMM_EXPORT ReferenceDiscrete1DFunction : public Lepton::CustomFunction {
