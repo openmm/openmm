@@ -6,9 +6,9 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012 University of Virginia and the Authors.
+Portions copyright (c) 2012-2014 University of Virginia and the Authors.
 Authors: Christoph Klein, Michael R. Shirts
-Contributors: Jason M. Swails
+Contributors: Jason M. Swails, Peter Eastman
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -31,7 +31,7 @@ USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 from __future__ import division
 
-from simtk.openmm import CustomGBForce
+from simtk.openmm import CustomGBForce, Discrete1DFunction
 
 d0=[2.26685,2.32548,2.38397,2.44235,2.50057,2.55867,2.61663,2.67444,
     2.73212,2.78965,2.84705,2.9043,2.96141,3.0184,3.07524,3.13196,
@@ -331,8 +331,8 @@ def GBSAGBnForce(solventDielectric=78.5, soluteDielectric=1, SA=None,
     custom.addGlobalParameter("neckScale", 0.361825)
     custom.addGlobalParameter("neckCut", 0.68)
 
-    custom.addFunction("getd0", d0, 0, 440)
-    custom.addFunction("getm0", m0, 0, 440)
+    custom.addTabulatedFunction("getd0", Discrete1DFunction(d0))
+    custom.addTabulatedFunction("getm0", Discrete1DFunction(m0))
 
     custom.addComputedValue("I",  "Ivdw+neckScale*Ineck;"
                                   "Ineck=step(radius1+radius2+neckCut-r)*getm0(index)/(1+100*(r-getd0(index))^2+0.3*1000000*(r-getd0(index))^6);"
@@ -380,8 +380,8 @@ def GBSAGBn2Force(solventDielectric=78.5, soluteDielectric=1, SA=None,
     custom.addGlobalParameter("neckScale", 0.826836)
     custom.addGlobalParameter("neckCut", 0.68)
 
-    custom.addFunction("getd0", d0, 0, 440)
-    custom.addFunction("getm0", m0, 0, 440)
+    custom.addTabulatedFunction("getd0", Discrete1DFunction(d0))
+    custom.addTabulatedFunction("getm0", Discrete1DFunction(m0))
 
     custom.addComputedValue("I",  "Ivdw+neckScale*Ineck;"
                                   "Ineck=step(radius1+radius2+neckCut-r)*getm0(index)/(1+100*(r-getd0(index))^2+0.3*1000000*(r-getd0(index))^6);"
