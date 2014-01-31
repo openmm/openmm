@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -174,22 +174,22 @@ void CustomNonbondedForce::setExclusionParticles(int index, int particle1, int p
     exclusions[index].particle1 = particle1;
     exclusions[index].particle2 = particle2;
 }
-int CustomNonbondedForce::addFunction(const std::string& name, TabulatedFunction* function) {
+int CustomNonbondedForce::addTabulatedFunction(const std::string& name, TabulatedFunction* function) {
     functions.push_back(FunctionInfo(name, function));
     return functions.size()-1;
 }
 
-const TabulatedFunction& CustomNonbondedForce::getFunction(int index) const {
+const TabulatedFunction& CustomNonbondedForce::getTabulatedFunction(int index) const {
     ASSERT_VALID_INDEX(index, functions);
     return *functions[index].function;
 }
 
-TabulatedFunction& CustomNonbondedForce::getFunction(int index) {
+TabulatedFunction& CustomNonbondedForce::getTabulatedFunction(int index) {
     ASSERT_VALID_INDEX(index, functions);
     return *functions[index].function;
 }
 
-const string& CustomNonbondedForce::getFunctionName(int index) const {
+const string& CustomNonbondedForce::getTabulatedFunctionName(int index) const {
     ASSERT_VALID_INDEX(index, functions);
     return functions[index].name;
 }

@@ -1960,13 +1960,13 @@ void CudaCalcCustomNonbondedForceKernel::initialize(const System& system, const 
     vector<pair<string, string> > functionDefinitions;
     vector<const TabulatedFunction*> functionList;
     for (int i = 0; i < force.getNumFunctions(); i++) {
-        functionList.push_back(&force.getFunction(i));
-        string name = force.getFunctionName(i);
+        functionList.push_back(&force.getTabulatedFunction(i));
+        string name = force.getTabulatedFunctionName(i);
         string arrayName = prefix+"table"+cu.intToString(i);
         functionDefinitions.push_back(make_pair(name, arrayName));
-        functions[name] = cu.getExpressionUtilities().getFunctionPlaceholder(force.getFunction(i));
+        functions[name] = cu.getExpressionUtilities().getFunctionPlaceholder(force.getTabulatedFunction(i));
         int width;
-        vector<float> f = cu.getExpressionUtilities().computeFunctionCoefficients(force.getFunction(i), width);
+        vector<float> f = cu.getExpressionUtilities().computeFunctionCoefficients(force.getTabulatedFunction(i), width);
         tabulatedFunctions.push_back(CudaArray::create<float>(cu, f.size(), "TabulatedFunction"));
         tabulatedFunctions[tabulatedFunctions.size()-1]->upload(f);
         cu.getNonbondedUtilities().addArgument(CudaNonbondedUtilities::ParameterInfo(arrayName, "float", width, width*sizeof(float), tabulatedFunctions[tabulatedFunctions.size()-1]->getDevicePointer()));
@@ -2664,18 +2664,21 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
     vector<pair<string, string> > functionDefinitions;
     vector<const TabulatedFunction*> functionList;
     stringstream tableArgs;
-    for (int i = 0; i < force.getNumFunctions(); i++) {
-        functionList.push_back(&force.getFunction(i));
-        string name = force.getFunctionName(i);
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
+        functionList.push_back(&force.getTabulatedFunction(i));
+        string name = force.getTabulatedFunctionName(i);
         string arrayName = prefix+"table"+cu.intToString(i);
         functionDefinitions.push_back(make_pair(name, arrayName));
-        functions[name] = cu.getExpressionUtilities().getFunctionPlaceholder(force.getFunction(i));
+        functions[name] = cu.getExpressionUtilities().getFunctionPlaceholder(force.getTabulatedFunction(i));
         int width;
-        vector<float> f = cu.getExpressionUtilities().computeFunctionCoefficients(force.getFunction(i), width);
+        vector<float> f = cu.getExpressionUtilities().computeFunctionCoefficients(force.getTabulatedFunction(i), width);
         tabulatedFunctions.push_back(CudaArray::create<float>(cu, f.size(), "TabulatedFunction"));
         tabulatedFunctions[tabulatedFunctions.size()-1]->upload(f);
         cu.getNonbondedUtilities().addArgument(CudaNonbondedUtilities::ParameterInfo(arrayName, "float", width, width*sizeof(float), tabulatedFunctions[tabulatedFunctions.size()-1]->getDevicePointer()));
-        tableArgs << ", const float4* __restrict__ " << arrayName;
+        tableArgs << ", const float";
+        if (width > 1)
+            tableArgs << width;
+        tableArgs << "* __restrict__ " << arrayName;
     }
 
     // Record the global parameters.
@@ -3758,13 +3761,13 @@ void CudaCalcCustomHbondForceKernel::initialize(const System& system, const Cust
     vector<const TabulatedFunction*> functionList;
     stringstream tableArgs;
     for (int i = 0; i < force.getNumFunctions(); i++) {
-        functionList.push_back(&force.getFunction(i));
-        string name = force.getFunctionName(i);
+        functionList.push_back(&force.getTabulatedFunction(i));
+        string name = force.getTabulatedFunctionName(i);
         string arrayName = "table"+cu.intToString(i);
         functionDefinitions.push_back(make_pair(name, arrayName));
-        functions[name] = cu.getExpressionUtilities().getFunctionPlaceholder(force.getFunction(i));
+        functions[name] = cu.getExpressionUtilities().getFunctionPlaceholder(force.getTabulatedFunction(i));
         int width;
-        vector<float> f = cu.getExpressionUtilities().computeFunctionCoefficients(force.getFunction(i), width);
+        vector<float> f = cu.getExpressionUtilities().computeFunctionCoefficients(force.getTabulatedFunction(i), width);
         tabulatedFunctions.push_back(CudaArray::create<float>(cu, f.size(), "TabulatedFunction"));
         tabulatedFunctions[tabulatedFunctions.size()-1]->upload(f);
         tableArgs << ", const float";
@@ -4139,11 +4142,11 @@ void CudaCalcCustomCompoundBondForceKernel::initialize(const System& system, con
     vector<const TabulatedFunction*> functionList;
     stringstream tableArgs;
     for (int i = 0; i < force.getNumFunctions(); i++) {
-        functionList.push_back(&force.getFunction(i));
-        string name = force.getFunctionName(i);
-        functions[name] = cu.getExpressionUtilities().getFunctionPlaceholder(force.getFunction(i));
+        functionList.push_back(&force.getTabulatedFunction(i));
+        string name = force.getTabulatedFunctionName(i);
+        functions[name] = cu.getExpressionUtilities().getFunctionPlaceholder(force.getTabulatedFunction(i));
         int width;
-        vector<float> f = cu.getExpressionUtilities().computeFunctionCoefficients(force.getFunction(i), width);
+        vector<float> f = cu.getExpressionUtilities().computeFunctionCoefficients(force.getTabulatedFunction(i), width);
         CudaArray* array = CudaArray::create<float>(cu, f.size(), "TabulatedFunction");
         tabulatedFunctions.push_back(array);
         array->upload(f);

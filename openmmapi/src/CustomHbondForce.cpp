@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -193,22 +193,22 @@ void CustomHbondForce::setExclusionParticles(int index, int donor, int acceptor)
     exclusions[index].acceptor = acceptor;
 }
 
-int CustomHbondForce::addFunction(const std::string& name, TabulatedFunction* function) {
+int CustomHbondForce::addTabulatedFunction(const std::string& name, TabulatedFunction* function) {
     functions.push_back(FunctionInfo(name, function));
     return functions.size()-1;
 }
 
-const TabulatedFunction& CustomHbondForce::getFunction(int index) const {
+const TabulatedFunction& CustomHbondForce::getTabulatedFunction(int index) const {
     ASSERT_VALID_INDEX(index, functions);
     return *functions[index].function;
 }
 
-TabulatedFunction& CustomHbondForce::getFunction(int index) {
+TabulatedFunction& CustomHbondForce::getTabulatedFunction(int index) {
     ASSERT_VALID_INDEX(index, functions);
     return *functions[index].function;
 }
 
-const string& CustomHbondForce::getFunctionName(int index) const {
+const string& CustomHbondForce::getTabulatedFunctionName(int index) const {
     ASSERT_VALID_INDEX(index, functions);
     return functions[index].name;
 }

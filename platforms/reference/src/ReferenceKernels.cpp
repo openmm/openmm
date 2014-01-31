@@ -970,7 +970,7 @@ void ReferenceCalcCustomNonbondedForceKernel::initialize(const System& system, c
 
     map<string, Lepton::CustomFunction*> functions;
     for (int i = 0; i < force.getNumFunctions(); i++)
-        functions[force.getFunctionName(i)] = createReferenceTabulatedFunction(force.getFunction(i));
+        functions[force.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
 
     // Parse the various expressions used to calculate the force.
 
@@ -1252,7 +1252,7 @@ void ReferenceCalcCustomGBForceKernel::initialize(const System& system, const Cu
 
     map<string, Lepton::CustomFunction*> functions;
     for (int i = 0; i < force.getNumFunctions(); i++)
-        functions[force.getFunctionName(i)] = createReferenceTabulatedFunction(force.getFunction(i));
+        functions[force.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
 
     // Parse the expressions for computed values.
 
@@ -1466,7 +1466,7 @@ void ReferenceCalcCustomHbondForceKernel::initialize(const System& system, const
 
     map<string, Lepton::CustomFunction*> functions;
     for (int i = 0; i < force.getNumFunctions(); i++)
-        functions[force.getFunctionName(i)] = createReferenceTabulatedFunction(force.getFunction(i));
+        functions[force.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
 
     // Parse the expression and create the object used to calculate the interaction.
 
@@ -1563,7 +1563,7 @@ void ReferenceCalcCustomCompoundBondForceKernel::initialize(const System& system
 
     map<string, Lepton::CustomFunction*> functions;
     for (int i = 0; i < force.getNumFunctions(); i++)
-        functions[force.getFunctionName(i)] = createReferenceTabulatedFunction(force.getFunction(i));
+        functions[force.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
 
     // Parse the expression and create the object used to calculate the interaction.
 

@@ -123,8 +123,6 @@ class WrapperGenerator:
                 methodName = shortMethodDefinition.split()[-1]
                 if className+'::'+methodName in self.skipMethods:
                     continue
-                if any(getNodeText(node) == "Deprecated" for node in findNodes(memberNode, "detaileddescription/para/xrefsect/xreftitle")):
-                    continue    # Skip deprecated methods
                 methodList.append(memberNode)
         return methodList
     

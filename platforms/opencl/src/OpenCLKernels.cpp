@@ -1970,13 +1970,13 @@ void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, cons
     vector<pair<string, string> > functionDefinitions;
     vector<const TabulatedFunction*> functionList;
     for (int i = 0; i < force.getNumFunctions(); i++) {
-        functionList.push_back(&force.getFunction(i));
-        string name = force.getFunctionName(i);
+        functionList.push_back(&force.getTabulatedFunction(i));
+        string name = force.getTabulatedFunctionName(i);
         string arrayName = prefix+"table"+cl.intToString(i);
         functionDefinitions.push_back(make_pair(name, arrayName));
-        functions[name] = cl.getExpressionUtilities().getFunctionPlaceholder(force.getFunction(i));
+        functions[name] = cl.getExpressionUtilities().getFunctionPlaceholder(force.getTabulatedFunction(i));
         int width;
-        vector<float> f = cl.getExpressionUtilities().computeFunctionCoefficients(force.getFunction(i), width);
+        vector<float> f = cl.getExpressionUtilities().computeFunctionCoefficients(force.getTabulatedFunction(i), width);
         tabulatedFunctions.push_back(OpenCLArray::create<float>(cl, f.size(), "TabulatedFunction"));
         tabulatedFunctions[tabulatedFunctions.size()-1]->upload(f);
         cl.getNonbondedUtilities().addArgument(OpenCLNonbondedUtilities::ParameterInfo(arrayName, "float", width, width*sizeof(float), tabulatedFunctions[tabulatedFunctions.size()-1]->getDeviceBuffer()));
@@ -2717,18 +2717,21 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
     vector<pair<string, string> > functionDefinitions;
     vector<const TabulatedFunction*> functionList;
     stringstream tableArgs;
-    for (int i = 0; i < force.getNumFunctions(); i++) {
-        functionList.push_back(&force.getFunction(i));
-        string name = force.getFunctionName(i);
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
+        functionList.push_back(&force.getTabulatedFunction(i));
+        string name = force.getTabulatedFunctionName(i);
         string arrayName = prefix+"table"+cl.intToString(i);
         functionDefinitions.push_back(make_pair(name, arrayName));
-        functions[name] = cl.getExpressionUtilities().getFunctionPlaceholder(force.getFunction(i));
+        functions[name] = cl.getExpressionUtilities().getFunctionPlaceholder(force.getTabulatedFunction(i));
         int width;
-        vector<float> f = cl.getExpressionUtilities().computeFunctionCoefficients(force.getFunction(i), width);
+        vector<float> f = cl.getExpressionUtilities().computeFunctionCoefficients(force.getTabulatedFunction(i), width);
         tabulatedFunctions.push_back(OpenCLArray::create<float>(cl, f.size(), "TabulatedFunction"));
         tabulatedFunctions[tabulatedFunctions.size()-1]->upload(f);
         cl.getNonbondedUtilities().addArgument(OpenCLNonbondedUtilities::ParameterInfo(arrayName, "float", width, width*sizeof(float), tabulatedFunctions[tabulatedFunctions.size()-1]->getDeviceBuffer()));
-        tableArgs << ", __global const float4* restrict " << arrayName;
+        tableArgs << ", __global const float";
+        if (width > 1)
+            tableArgs << width;
+        tableArgs << "* restrict " << arrayName;
     }
 
     // Record the global parameters.
@@ -3921,13 +3924,13 @@ void OpenCLCalcCustomHbondForceKernel::initialize(const System& system, const Cu
     vector<const TabulatedFunction*> functionList;
     stringstream tableArgs;
     for (int i = 0; i < force.getNumFunctions(); i++) {
-        functionList.push_back(&force.getFunction(i));
-        string name = force.getFunctionName(i);
+        functionList.push_back(&force.getTabulatedFunction(i));
+        string name = force.getTabulatedFunctionName(i);
         string arrayName = "table"+cl.intToString(i);
         functionDefinitions.push_back(make_pair(name, arrayName));
-        functions[name] = cl.getExpressionUtilities().getFunctionPlaceholder(force.getFunction(i));
+        functions[name] = cl.getExpressionUtilities().getFunctionPlaceholder(force.getTabulatedFunction(i));
         int width;
-        vector<float> f = cl.getExpressionUtilities().computeFunctionCoefficients(force.getFunction(i), width);
+        vector<float> f = cl.getExpressionUtilities().computeFunctionCoefficients(force.getTabulatedFunction(i), width);
         tabulatedFunctions.push_back(OpenCLArray::create<float>(cl, f.size(), "TabulatedFunction"));
         tabulatedFunctions[tabulatedFunctions.size()-1]->upload(f);
         tableArgs << ", __global const float";
@@ -4304,11 +4307,11 @@ void OpenCLCalcCustomCompoundBondForceKernel::initialize(const System& system, c
     vector<const TabulatedFunction*> functionList;
     stringstream tableArgs;
     for (int i = 0; i < force.getNumFunctions(); i++) {
-        functionList.push_back(&force.getFunction(i));
-        string name = force.getFunctionName(i);
-        functions[name] = cl.getExpressionUtilities().getFunctionPlaceholder(force.getFunction(i));
+        functionList.push_back(&force.getTabulatedFunction(i));
+        string name = force.getTabulatedFunctionName(i);
+        functions[name] = cl.getExpressionUtilities().getFunctionPlaceholder(force.getTabulatedFunction(i));
         int width;
-        vector<float> f = cl.getExpressionUtilities().computeFunctionCoefficients(force.getFunction(i), width);
+        vector<float> f = cl.getExpressionUtilities().computeFunctionCoefficients(force.getTabulatedFunction(i), width);
         OpenCLArray* array = OpenCLArray::create<float>(cl, f.size(), "TabulatedFunction");
         tabulatedFunctions.push_back(array);
         array->upload(f);

@@ -272,7 +272,7 @@ void testContinuous1DFunction() {
     vector<double> table;
     for (int i = 0; i < 21; i++)
         table.push_back(sin(0.25*i));
-    forceField->addFunction("fn", new Continuous1DFunction(table, 1.0, 6.0));
+    forceField->addTabulatedFunction("fn", new Continuous1DFunction(table, 1.0, 6.0));
     system.addForce(forceField);
     Context context(system, integrator, platform);
     vector<Vec3> positions(2);
@@ -322,7 +322,7 @@ void testContinuous2DFunction() {
             table[i+xsize*j] = sin(0.25*x)*cos(0.33*y);
         }
     }
-    forceField->addFunction("fn", new Continuous2DFunction(xsize, ysize, table, xmin, xmax, ymin, ymax));
+    forceField->addTabulatedFunction("fn", new Continuous2DFunction(xsize, ysize, table, xmin, xmax, ymin, ymax));
     system.addForce(forceField);
     Context context(system, integrator, platform);
     vector<Vec3> positions(2);
@@ -377,7 +377,7 @@ void testContinuous3DFunction() {
             }
         }
     }
-    forceField->addFunction("fn", new Continuous3DFunction(xsize, ysize, zsize, table, xmin, xmax, ymin, ymax, zmin, zmax));
+    forceField->addTabulatedFunction("fn", new Continuous3DFunction(xsize, ysize, zsize, table, xmin, xmax, ymin, ymax, zmin, zmax));
     system.addForce(forceField);
     Context context(system, integrator, platform);
     vector<Vec3> positions(2);
@@ -416,7 +416,7 @@ void testDiscrete1DFunction() {
     vector<double> table;
     for (int i = 0; i < 21; i++)
         table.push_back(sin(0.25*i));
-    forceField->addFunction("fn", new Discrete1DFunction(table));
+    forceField->addTabulatedFunction("fn", new Discrete1DFunction(table));
     system.addForce(forceField);
     Context context(system, integrator, platform);
     vector<Vec3> positions(2);
@@ -447,7 +447,7 @@ void testDiscrete2DFunction() {
     for (int i = 0; i < xsize; i++)
         for (int j = 0; j < ysize; j++)
             table.push_back(sin(0.25*i)+cos(0.33*j));
-    forceField->addFunction("fn", new Discrete2DFunction(xsize, ysize, table));
+    forceField->addTabulatedFunction("fn", new Discrete2DFunction(xsize, ysize, table));
     system.addForce(forceField);
     Context context(system, integrator, platform);
     vector<Vec3> positions(2);
@@ -482,7 +482,7 @@ void testDiscrete3DFunction() {
         for (int j = 0; j < ysize; j++)
             for (int k = 0; k < zsize; k++)
                 table.push_back(sin(0.25*i)+cos(0.33*j)+0.12345*k);
-    forceField->addFunction("fn", new Discrete3DFunction(xsize, ysize, zsize, table));
+    forceField->addTabulatedFunction("fn", new Discrete3DFunction(xsize, ysize, zsize, table));
     system.addForce(forceField);
     Context context(system, integrator, platform);
     vector<Vec3> positions(2);

@@ -277,7 +277,7 @@ void testTabulatedFunction() {
     vector<double> table;
     for (int i = 0; i < 21; i++)
         table.push_back(std::sin(0.25*i));
-    force->addFunction("fn", table, 1.0, 6.0);
+    force->addTabulatedFunction("fn", new Continuous1DFunction(table, 1.0, 6.0));
     system.addForce(force);
     Context context(system, integrator, platform);
     vector<Vec3> positions(2);

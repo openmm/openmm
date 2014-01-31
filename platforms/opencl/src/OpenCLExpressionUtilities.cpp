@@ -468,8 +468,23 @@ string OpenCLExpressionUtilities::getTempName(const ExpressionTreeNode& node, co
 
 void OpenCLExpressionUtilities::findRelatedTabulatedFunctions(const ExpressionTreeNode& node, const ExpressionTreeNode& searchNode,
             vector<const Lepton::ExpressionTreeNode*>& nodes) {
-    if (searchNode.getOperation().getId() == Operation::CUSTOM && node.getChildren()[0] == searchNode.getChildren()[0])
+    if (searchNode.getOperation().getId() == Operation::CUSTOM && node.getOperation().getName() == searchNode.getOperation().getName()) {
+        // Make sure the arguments are identical.
+        
+        for (int i = 0; i < (int) node.getChildren().size(); i++)
+            if (node.getChildren()[i] != searchNode.getChildren()[i])
+                return;
+        
+        // See if we already have an identical node.
+        
+        for (int i = 0; i < (int) nodes.size(); i++)
+            if (*nodes[i] == searchNode)
+                return;
+        
+        // Add the node.
+        
         nodes.push_back(&searchNode);
+    }
     else
         for (int i = 0; i < (int) searchNode.getChildren().size(); i++)
             findRelatedTabulatedFunctions(node, searchNode.getChildren()[i], nodes);

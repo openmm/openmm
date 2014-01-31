@@ -189,7 +189,7 @@ void testContinuous2DFunction() {
             table[i+xsize*j] = sin(0.25*x)*cos(0.33*y);
         }
     }
-    forceField->addFunction("fn", new Continuous2DFunction(xsize, ysize, table, xmin, xmax, ymin, ymax));
+    forceField->addTabulatedFunction("fn", new Continuous2DFunction(xsize, ysize, table, xmin, xmax, ymin, ymax));
     system.addForce(forceField);
     Context context(system, integrator, platform);
     vector<Vec3> positions(1);
@@ -240,7 +240,7 @@ void testContinuous3DFunction() {
             }
         }
     }
-    forceField->addFunction("fn", new Continuous3DFunction(xsize, ysize, zsize, table, xmin, xmax, ymin, ymax, zmin, zmax));
+    forceField->addTabulatedFunction("fn", new Continuous3DFunction(xsize, ysize, zsize, table, xmin, xmax, ymin, ymax, zmin, zmax));
     system.addForce(forceField);
     Context context(system, integrator, platform);
     vector<Vec3> positions(1);
