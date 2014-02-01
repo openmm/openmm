@@ -1509,7 +1509,17 @@ class CustomGBGenerator:
             generator.energyTerms.append((term.text, computationMap[term.attrib['type']]))
         for function in element.findall("Function"):
             values = [float(x) for x in function.text.split()]
-            generator.functions.append((function.attrib['name'], values, float(function.attrib['min']), float(function.attrib['max'])))
+            if 'type' in function.attrib:
+                type = function.attrib['type']
+            else:
+                type = 'Continuous1D'
+            params = {}
+            for key in function.attrib:
+                if key.endswith('size'):
+                    params[key] = int(function.attrib[key])
+                elif key.endswith('min') or key.endswith('max'):
+                    params[key] = float(function.attrib[key])
+            generator.functions.append((function.attrib['name'], type, values, params))
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         methodMap = {NoCutoff:mm.CustomGBForce.NoCutoff,
@@ -1526,8 +1536,19 @@ class CustomGBGenerator:
             force.addComputedValue(value[0], value[1], value[2])
         for term in self.energyTerms:
             force.addEnergyTerm(term[0], term[1])
-        for function in self.functions:
-            force.addFunction(function[0], function[1], function[2], function[3])
+        for (name, type, values, params) in self.functions:
+            if type == 'Continuous1D':
+                force.addTabulatedFunction(name, mm.Continuous1DFunction(values, params['min'], params['max']))
+            elif type == 'Continuous2D':
+                force.addTabulatedFunction(name, mm.Continuous2DFunction(params['xsize'], params['ysize'], values, params['xmin'], params['xmax'], params['ymin'], params['ymax']))
+            elif type == 'Continuous3D':
+                force.addTabulatedFunction(name, mm.Continuous2DFunction(params['xsize'], params['ysize'], params['zsize'], values, params['xmin'], params['xmax'], params['ymin'], params['ymax'], params['zmin'], params['zmax']))
+            elif type == 'Discrete1D':
+                force.addTabulatedFunction(name, mm.Discrete1DFunction(values))
+            elif type == 'Discrete2D':
+                force.addTabulatedFunction(name, mm.Discrete2DFunction(params['xsize'], params['ysize'], values))
+            elif type == 'Discrete3D':
+                force.addTabulatedFunction(name, mm.Discrete2DFunction(params['xsize'], params['ysize'], params['zsize'], values))
         for atom in data.atoms:
             t = data.atomType[atom]
             if t in self.typeMap:
