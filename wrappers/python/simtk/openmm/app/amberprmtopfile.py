@@ -119,6 +119,8 @@ class AmberPrmtopFile(object):
                     element = elem.sodium
                 elif upper.startswith('MG'):
                     element = elem.magnesium
+                elif upper.startswith('ZN'):
+                    element = elem.zinc
                 else:
                     try:
                         element = elem.get_by_symbol(atomName[0])
