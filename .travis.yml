@@ -24,3 +24,4 @@ script:
   - sudo -E python setup.py install
   - cd tests
   - nosetests
+
