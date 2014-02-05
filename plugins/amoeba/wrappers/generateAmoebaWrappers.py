@@ -550,6 +550,8 @@ class CSourceGenerator(WrapperGenerator):
             unwrappedType = type[:-1].strip()
             if unwrappedType in self.classesByShortName:
                 unwrappedType  = self.classesByShortName[unwrappedType]
+            if unwrappedType == 'const std::string':
+                return 'std::string(%s)' % value
             return '*'+self.unwrapValue(unwrappedType+'*', value)
         if type in self.classesByShortName:
             return 'static_cast<%s>(%s)' % (self.classesByShortName[type], value)
