@@ -1134,14 +1134,14 @@ class FortranSourceGenerator(WrapperGenerator):
         return type
     
     def isHandleType(self, type):
-        if type.startswith('OpenMM_'):
-            return True;
-        if type == 'Vec3':
-            return True
+        if type == 'OpenMM_Vec3':
+            return False
         if type.endswith('*') or type.endswith('&'):
             return self.isHandleType(type[:-1].strip())
         if type.startswith('const '):
             return self.isHandleType(type[6:].strip())
+        if type.startswith('OpenMM_'):
+            return True;
         return False
 
     def writeOutput(self):
