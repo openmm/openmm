@@ -184,7 +184,7 @@ void CpuGBSAOBCForce::threadComputeForce(ThreadPool& threads, int threadIndex) {
             fvec4 u_ij2 = u_ij*u_ij;
             fvec4 rInverse = 1.0f/r;
             fvec4 r2Inverse = rInverse*rInverse;
-            fvec4 logRatio = fastLog(u_ij/l_ij);
+            fvec4 logRatio = fastLog(u_ij/l_ij, numInBlock);
             fvec4 term = l_ij - u_ij + 0.25f*r*(u_ij2 - l_ij2) + (0.5f*rInverse*logRatio) + (0.25f*scaledRadiusJ*scaledRadiusJ*rInverse)*(l_ij2 - u_ij2);
             for (int j = 0; j < 4; j++) {
                 if (include[j]) {
@@ -363,7 +363,7 @@ void CpuGBSAOBCForce::threadComputeForce(ThreadPool& threads, int threadIndex) {
             fvec4 u_ij2 = u_ij*u_ij;
             fvec4 rInverse = 1.0f/r;
             fvec4 r2Inverse = rInverse*rInverse;
-            fvec4 logRatio = fastLog(u_ij/l_ij);
+            fvec4 logRatio = fastLog(u_ij/l_ij, numInBlock);
             fvec4 t3 = 0.125f*(1.0f + scaledRadiusJ2*r2Inverse)*(l_ij2 - u_ij2) + 0.25f*logRatio*r2Inverse;
             fvec4 de = bornForce*t3*rInverse;
             de = blend(0.0f, de, include);
@@ -401,10 +401,10 @@ void CpuGBSAOBCForce::getDeltaR(const fvec4& posI, const fvec4& x, const fvec4& 
     r2 = dx*dx + dy*dy + dz*dz;
 }
 
-fvec4 CpuGBSAOBCForce::fastLog(const fvec4& x) {
+fvec4 CpuGBSAOBCForce::fastLog(const fvec4& x, int numElements) {
     // Evaluate log(x) using a lookup table for speed.
 
-    if (any((x < TABLE_MIN) | (x >= TABLE_MAX)))
+    if (any((x < TABLE_MIN) | (x >= TABLE_MAX)) || numElements < 4)
         return fvec4(logf(x[0]), logf(x[1]), logf(x[2]), logf(x[3]));
     fvec4 x1 = (x-TABLE_MIN)*logDXInv;
     ivec4 index = floor(x1);
