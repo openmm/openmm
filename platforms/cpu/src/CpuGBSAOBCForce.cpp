@@ -404,10 +404,10 @@ void CpuGBSAOBCForce::getDeltaR(const fvec4& posI, const fvec4& x, const fvec4& 
 fvec4 CpuGBSAOBCForce::fastLog(const fvec4& x) {
     // Evaluate log(x) using a lookup table for speed.
 
-    if (any((x < TABLE_MIN) | (x >= TABLE_MAX)))
-        return fvec4(logf(x[0]), logf(x[1]), logf(x[2]), logf(x[3]));
     fvec4 x1 = (x-TABLE_MIN)*logDXInv;
     ivec4 index = floor(x1);
+    if (any((index < 0) | (index >= NUM_TABLE_POINTS)))
+        return fvec4(logf(x[0]), logf(x[1]), logf(x[2]), logf(x[3]));
     fvec4 coeff2 = x1-index;
     fvec4 coeff1 = 1.0f-coeff2;
     fvec4 t1(&logTable[index[0]]);
