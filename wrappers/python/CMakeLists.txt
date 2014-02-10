@@ -56,6 +56,7 @@ foreach(SUBDIR ${SUBDIRS})
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.pdb"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.prmtop"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.top"
+        "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.dms"
     )
     foreach(file ${STAGING_INPUT_FILES1})
         set(STAGING_INPUT_FILES ${STAGING_INPUT_FILES} "${file}")
