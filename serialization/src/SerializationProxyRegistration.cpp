@@ -30,6 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/AndersenThermostat.h"
+#include "openmm/BrownianIntegrator.h"
 #include "openmm/CMAPTorsionForce.h"
 #include "openmm/CMMotionRemover.h"
 #include "openmm/CustomAngleForce.h"
@@ -38,26 +39,26 @@
 #include "openmm/CustomExternalForce.h"
 #include "openmm/CustomGBForce.h"
 #include "openmm/CustomHbondForce.h"
+#include "openmm/CustomIntegrator.h"
 #include "openmm/CustomNonbondedForce.h"
 #include "openmm/CustomTorsionForce.h"
-#include "openmm/HarmonicAngleForce.h"
 #include "openmm/GBSAOBCForce.h"
 #include "openmm/GBVIForce.h"
+#include "openmm/HarmonicAngleForce.h"
 #include "openmm/HarmonicBondForce.h"
+#include "openmm/LangevinIntegrator.h"
 #include "openmm/MonteCarloBarostat.h"
 #include "openmm/NonbondedForce.h"
 #include "openmm/PeriodicTorsionForce.h"
 #include "openmm/RBTorsionForce.h"
 #include "openmm/System.h"
-
-#include "openmm/BrownianIntegrator.h"
-#include "openmm/CustomIntegrator.h"
-#include "openmm/LangevinIntegrator.h"
+#include "openmm/TabulatedFunction.h"
 #include "openmm/VariableLangevinIntegrator.h"
 #include "openmm/VariableVerletIntegrator.h"
 #include "openmm/VerletIntegrator.h"
 
 #include "openmm/serialization/SerializationProxy.h"
+#include "openmm/serialization/BrownianIntegratorProxy.h"
 #include "openmm/serialization/AndersenThermostatProxy.h"
 #include "openmm/serialization/CMAPTorsionForceProxy.h"
 #include "openmm/serialization/CMMotionRemoverProxy.h"
@@ -67,23 +68,21 @@
 #include "openmm/serialization/CustomExternalForceProxy.h"
 #include "openmm/serialization/CustomGBForceProxy.h"
 #include "openmm/serialization/CustomHbondForceProxy.h"
+#include "openmm/serialization/CustomIntegratorProxy.h"
 #include "openmm/serialization/CustomNonbondedForceProxy.h"
 #include "openmm/serialization/CustomTorsionForceProxy.h"
 #include "openmm/serialization/GBSAOBCForceProxy.h"
 #include "openmm/serialization/GBVIForceProxy.h"
 #include "openmm/serialization/HarmonicAngleForceProxy.h"
 #include "openmm/serialization/HarmonicBondForceProxy.h"
+#include "openmm/serialization/LangevinIntegratorProxy.h"
 #include "openmm/serialization/MonteCarloBarostatProxy.h"
 #include "openmm/serialization/NonbondedForceProxy.h"
 #include "openmm/serialization/PeriodicTorsionForceProxy.h"
 #include "openmm/serialization/RBTorsionForceProxy.h"
-#include "openmm/serialization/SystemProxy.h"
-
 #include "openmm/serialization/StateProxy.h"
-
-#include "openmm/serialization/BrownianIntegratorProxy.h"
-#include "openmm/serialization/CustomIntegratorProxy.h"
-#include "openmm/serialization/LangevinIntegratorProxy.h"
+#include "openmm/serialization/SystemProxy.h"
+#include "openmm/serialization/TabulatedFunctionProxies.h"
 #include "openmm/serialization/VariableLangevinIntegratorProxy.h"
 #include "openmm/serialization/VariableVerletIntegratorProxy.h"
 #include "openmm/serialization/VerletIntegratorProxy.h"
@@ -104,29 +103,35 @@ using namespace OpenMM;
 
 extern "C" void registerSerializationProxies() {
     SerializationProxy::registerProxy(typeid(AndersenThermostat), new AndersenThermostatProxy());
+    SerializationProxy::registerProxy(typeid(BrownianIntegrator), new BrownianIntegratorProxy());
     SerializationProxy::registerProxy(typeid(CMAPTorsionForce), new CMAPTorsionForceProxy());
     SerializationProxy::registerProxy(typeid(CMMotionRemover), new CMMotionRemoverProxy());
+    SerializationProxy::registerProxy(typeid(Continuous1DFunction), new Continuous1DFunctionProxy());
+    SerializationProxy::registerProxy(typeid(Continuous2DFunction), new Continuous2DFunctionProxy());
+    SerializationProxy::registerProxy(typeid(Continuous3DFunction), new Continuous3DFunctionProxy());
     SerializationProxy::registerProxy(typeid(CustomAngleForce), new CustomAngleForceProxy());
     SerializationProxy::registerProxy(typeid(CustomBondForce), new CustomBondForceProxy());
     SerializationProxy::registerProxy(typeid(CustomCompoundBondForce), new CustomCompoundBondForceProxy());
     SerializationProxy::registerProxy(typeid(CustomExternalForce), new CustomExternalForceProxy());
     SerializationProxy::registerProxy(typeid(CustomGBForce), new CustomGBForceProxy());
     SerializationProxy::registerProxy(typeid(CustomHbondForce), new CustomHbondForceProxy());
+    SerializationProxy::registerProxy(typeid(CustomIntegrator), new CustomIntegratorProxy());
     SerializationProxy::registerProxy(typeid(CustomNonbondedForce), new CustomNonbondedForceProxy());
     SerializationProxy::registerProxy(typeid(CustomTorsionForce), new CustomTorsionForceProxy());
+    SerializationProxy::registerProxy(typeid(Discrete1DFunction), new Discrete1DFunctionProxy());
+    SerializationProxy::registerProxy(typeid(Discrete2DFunction), new Discrete2DFunctionProxy());
+    SerializationProxy::registerProxy(typeid(Discrete3DFunction), new Discrete3DFunctionProxy());
     SerializationProxy::registerProxy(typeid(GBSAOBCForce), new GBSAOBCForceProxy());
     SerializationProxy::registerProxy(typeid(GBVIForce), new GBVIForceProxy());
     SerializationProxy::registerProxy(typeid(HarmonicAngleForce), new HarmonicAngleForceProxy());
     SerializationProxy::registerProxy(typeid(HarmonicBondForce), new HarmonicBondForceProxy());
+    SerializationProxy::registerProxy(typeid(LangevinIntegrator), new LangevinIntegratorProxy());
     SerializationProxy::registerProxy(typeid(MonteCarloBarostat), new MonteCarloBarostatProxy());
     SerializationProxy::registerProxy(typeid(NonbondedForce), new NonbondedForceProxy());
     SerializationProxy::registerProxy(typeid(PeriodicTorsionForce), new PeriodicTorsionForceProxy());
     SerializationProxy::registerProxy(typeid(RBTorsionForce), new RBTorsionForceProxy());
     SerializationProxy::registerProxy(typeid(System), new SystemProxy());
     SerializationProxy::registerProxy(typeid(State), new StateProxy());
-    SerializationProxy::registerProxy(typeid(BrownianIntegrator), new BrownianIntegratorProxy());
-    SerializationProxy::registerProxy(typeid(CustomIntegrator), new CustomIntegratorProxy());
-    SerializationProxy::registerProxy(typeid(LangevinIntegrator), new LangevinIntegratorProxy());
     SerializationProxy::registerProxy(typeid(VariableLangevinIntegrator), new VariableLangevinIntegratorProxy());
     SerializationProxy::registerProxy(typeid(VariableVerletIntegrator), new VariableVerletIntegratorProxy());
     SerializationProxy::registerProxy(typeid(VerletIntegrator), new VerletIntegratorProxy());

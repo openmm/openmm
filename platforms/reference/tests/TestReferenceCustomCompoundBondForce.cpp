@@ -167,10 +167,111 @@ void testPositionDependence() {
     ASSERT_EQUAL_VEC(Vec3(-0.3, -2, 0), state.getForces()[1], 1e-5);
 }
 
+void testContinuous2DFunction() {
+    const int xsize = 10;
+    const int ysize = 11;
+    const double xmin = 0.4;
+    const double xmax = 1.1;
+    const double ymin = 0.0;
+    const double ymax = 0.9;
+    ReferencePlatform platform;
+    System system;
+    system.addParticle(1.0);
+    VerletIntegrator integrator(0.01);
+    CustomCompoundBondForce* forceField = new CustomCompoundBondForce(1, "fn(x1,y1)+1");
+    vector<int> particles(1, 0);
+    forceField->addBond(particles, vector<double>());
+    vector<double> table(xsize*ysize);
+    for (int i = 0; i < xsize; i++) {
+        for (int j = 0; j < ysize; j++) {
+            double x = xmin + i*(xmax-xmin)/xsize;
+            double y = ymin + j*(ymax-ymin)/ysize;
+            table[i+xsize*j] = sin(0.25*x)*cos(0.33*y);
+        }
+    }
+    forceField->addTabulatedFunction("fn", new Continuous2DFunction(xsize, ysize, table, xmin, xmax, ymin, ymax));
+    system.addForce(forceField);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(1);
+    for (double x = xmin-0.15; x < xmax+0.2; x += 0.1) {
+        for (double y = ymin-0.15; y < ymax+0.2; y += 0.1) {
+            positions[0] = Vec3(x, y, 1.5);
+            context.setPositions(positions);
+            State state = context.getState(State::Forces | State::Energy);
+            const vector<Vec3>& forces = state.getForces();
+            double energy = 1;
+            Vec3 force(0, 0, 0);
+            if (x >= xmin && x <= xmax && y >= ymin && y <= ymax) {
+                energy = sin(0.25*x)*cos(0.33*y)+1;
+                force[0] = -0.25*cos(0.25*x)*cos(0.33*y);
+                force[1] = 0.3*sin(0.25*x)*sin(0.33*y);
+            }
+            ASSERT_EQUAL_VEC(force, forces[0], 0.1);
+            ASSERT_EQUAL_TOL(energy, state.getPotentialEnergy(), 0.05);
+        }
+    }
+}
+
+void testContinuous3DFunction() {
+    const int xsize = 10;
+    const int ysize = 11;
+    const int zsize = 12;
+    const double xmin = 0.4;
+    const double xmax = 1.1;
+    const double ymin = 0.0;
+    const double ymax = 0.9;
+    const double zmin = 0.2;
+    const double zmax = 1.3;
+    ReferencePlatform platform;
+    System system;
+    system.addParticle(1.0);
+    VerletIntegrator integrator(0.01);
+    CustomCompoundBondForce* forceField = new CustomCompoundBondForce(1, "fn(x1,y1,z1)+1");
+    vector<int> particles(1, 0);
+    forceField->addBond(particles, vector<double>());
+    vector<double> table(xsize*ysize*zsize);
+    for (int i = 0; i < xsize; i++) {
+        for (int j = 0; j < ysize; j++) {
+            for (int k = 0; k < zsize; k++) {
+                double x = xmin + i*(xmax-xmin)/xsize;
+                double y = ymin + j*(ymax-ymin)/ysize;
+                double z = zmin + k*(zmax-zmin)/zsize;
+                table[i+xsize*j+xsize*ysize*k] = sin(0.25*x)*cos(0.33*y)*(1+z);
+            }
+        }
+    }
+    forceField->addTabulatedFunction("fn", new Continuous3DFunction(xsize, ysize, zsize, table, xmin, xmax, ymin, ymax, zmin, zmax));
+    system.addForce(forceField);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(1);
+    for (double x = xmin-0.15; x < xmax+0.2; x += 0.1) {
+        for (double y = ymin-0.15; y < ymax+0.2; y += 0.1) {
+            for (double z = zmin-0.15; z < zmax+0.2; z += 0.1) {
+                positions[0] = Vec3(x, y, z);
+                context.setPositions(positions);
+                State state = context.getState(State::Forces | State::Energy);
+                const vector<Vec3>& forces = state.getForces();
+                double energy = 1;
+                Vec3 force(0, 0, 0);
+                if (x >= xmin && x <= xmax && y >= ymin && y <= ymax && z >= zmin && z <= zmax) {
+                    energy = sin(0.25*x)*cos(0.33*y)*(1.0+z)+1;
+                    force[0] = -0.25*cos(0.25*x)*cos(0.33*y)*(1.0+z);
+                    force[1] = 0.3*sin(0.25*x)*sin(0.33*y)*(1.0+z);
+                    force[2] = -sin(0.25*x)*cos(0.33*y);
+                }
+                ASSERT_EQUAL_VEC(force, forces[0], 0.1);
+                ASSERT_EQUAL_TOL(energy, state.getPotentialEnergy(), 0.05);
+            }
+        }
+    }
+}
+
 int main() {
     try {
         testBond();
         testPositionDependence();
+        testContinuous2DFunction();
+        testContinuous3DFunction();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

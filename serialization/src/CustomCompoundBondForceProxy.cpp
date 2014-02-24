@@ -73,6 +73,9 @@ void CustomCompoundBondForceProxy::serialize(const void* object, SerializationNo
             node.setDoubleProperty(key.str(), params[j]);
         }
     }
+    SerializationNode& functions = node.createChildNode("Functions");
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++)
+        functions.createChildNode("Function", &force.getTabulatedFunction(i)).setStringProperty("name", force.getTabulatedFunctionName(i));
 }
 
 void* CustomCompoundBondForceProxy::deserialize(const SerializationNode& node) const {
@@ -109,6 +112,22 @@ void* CustomCompoundBondForceProxy::deserialize(const SerializationNode& node) c
                 params[j] = bond.getDoubleProperty(key.str());
             }
             force->addBond(particles, params);
+        }
+        const SerializationNode& functions = node.getChildNode("Functions");
+        for (int i = 0; i < (int) functions.getChildren().size(); i++) {
+            const SerializationNode& function = functions.getChildren()[i];
+            if (function.hasProperty("type")) {
+                force->addTabulatedFunction(function.getStringProperty("name"), function.decodeObject<TabulatedFunction>());
+            }
+            else {
+                // This is an old file created before TabulatedFunction existed.
+                
+                const SerializationNode& valuesNode = function.getChildNode("Values");
+                vector<double> values;
+                for (int j = 0; j < (int) valuesNode.getChildren().size(); j++)
+                    values.push_back(valuesNode.getChildren()[j].getDoubleProperty("v"));
+                force->addTabulatedFunction(function.getStringProperty("name"), new Continuous1DFunction(values, function.getDoubleProperty("min"), function.getDoubleProperty("max")));
+            }
         }
         return force;
     }

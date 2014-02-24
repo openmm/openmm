@@ -42,7 +42,7 @@ def getText(subNodePath, node):
 def convertOpenMMPrefix(name):
     return name.replace('OpenMM::', 'OpenMM_')
 
-OPENMM_RE_PATTERN=re.compile("(.*)OpenMM:[a-zA-Z:]*:(.*)")
+OPENMM_RE_PATTERN=re.compile("(.*)OpenMM:[a-zA-Z0-9_:]*:(.*)")
 def stripOpenMMPrefix(name, rePattern=OPENMM_RE_PATTERN):
     try:
         m=rePattern.search(name)
