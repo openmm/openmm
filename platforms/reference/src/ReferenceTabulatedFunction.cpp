@@ -32,11 +32,17 @@
 #include "ReferenceTabulatedFunction.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/SplineFitter.h"
-#include <cmath>
 
 using namespace OpenMM;
 using namespace std;
 using Lepton::CustomFunction;
+
+/**
+ * We need to define this ourselves, since Visual Studio is missing round() from cmath.
+ */
+static int round(double x) {
+    return (int) (x+0.5);
+}
 
 extern "C" CustomFunction* createReferenceTabulatedFunction(const TabulatedFunction& function) {
     if (dynamic_cast<const Continuous1DFunction*>(&function) != NULL)
@@ -195,7 +201,7 @@ int ReferenceDiscrete1DFunction::getNumArguments() const {
 }
 
 double ReferenceDiscrete1DFunction::evaluate(const double* arguments) const {
-    int i = (int) round(arguments[0]);
+    int i = round(arguments[0]);
     if (i < 0 || i >= values.size())
         throw OpenMMException("ReferenceDiscrete1DFunction: argument out of range");
     return values[i];
@@ -218,8 +224,8 @@ int ReferenceDiscrete2DFunction::getNumArguments() const {
 }
 
 double ReferenceDiscrete2DFunction::evaluate(const double* arguments) const {
-    int i = (int) round(arguments[0]);
-    int j = (int) round(arguments[1]);
+    int i = round(arguments[0]);
+    int j = round(arguments[1]);
     if (i < 0 || i >= xsize || j < 0 || j >= ysize)
         throw OpenMMException("ReferenceDiscrete2DFunction: argument out of range");
     return values[i+j*xsize];
@@ -242,9 +248,9 @@ int ReferenceDiscrete3DFunction::getNumArguments() const {
 }
 
 double ReferenceDiscrete3DFunction::evaluate(const double* arguments) const {
-    int i = (int) round(arguments[0]);
-    int j = (int) round(arguments[1]);
-    int k = (int) round(arguments[2]);
+    int i = round(arguments[0]);
+    int j = round(arguments[1]);
+    int k = round(arguments[2]);
     if (i < 0 || i >= xsize || j < 0 || j >= ysize || k < 0 || k >= zsize)
         throw OpenMMException("ReferenceDiscrete3DFunction: argument out of range");
     return values[i+(j+k*ysize)*xsize];
