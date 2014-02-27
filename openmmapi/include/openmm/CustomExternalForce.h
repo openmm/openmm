@@ -61,7 +61,7 @@ namespace OpenMM {
  * This force depends on four parameters: the spring constant k and equilibrium coordinates x0, y0, and z0.  The following code defines these parameters:
  *
  * <tt><pre>
- * force->addGlobalParameter("k");
+ * force->addGlobalParameter("k", 100.0);
  * force->addPerParticleParameter("x0");
  * force->addPerParticleParameter("y0");
  * force->addPerParticleParameter("z0");
