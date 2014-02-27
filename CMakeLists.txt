@@ -87,8 +87,11 @@ IF(WIN32)
     ENDFOREACH(lib)
     LINK_DIRECTORIES("${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}")
     SET(PTHREADS_LIB pthreadVC2)
+    SET(PTHREADS_LIB_STATIC pthreadVC2_static_mt)
 ELSE(WIN32)
     SET(PTHREADS_LIB pthread)
+    # in linux, even in static builds we link against the dynamic object (since its tied to libc versions)
+    SET(PTHREADS_LIB_STATIC pthread)
 ENDIF(WIN32)
 
 # The build system will set ARCH64 for 64 bit builds, which require

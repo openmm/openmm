@@ -49,9 +49,16 @@ using namespace std;
         throw OpenMMException(m.str());\
     }
 
+
+#ifdef OPENMM_CUDA_BUILDING_STATIC_LIBRARY
+extern "C" void registerCudaPlatform() {
+    Platform::registerPlatform(new CudaPlatform());
+}
+#else
 extern "C" OPENMM_EXPORT_CUDA void registerPlatforms() {
     Platform::registerPlatform(new CudaPlatform());
 }
+#endif
 
 CudaPlatform::CudaPlatform() {
     CudaKernelFactory* factory = new CudaKernelFactory();

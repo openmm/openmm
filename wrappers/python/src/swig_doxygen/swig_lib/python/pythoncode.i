@@ -219,19 +219,21 @@ class State(_object):
 # Strings can cause trouble
 # as can any container that has infinite levels of containment
 def _is_string(x):
-     # step 1) String is always a container
-     # and its contents are themselves containers.
-     try:
-         first_item = iter(x).next()
-         inner_item = iter(first_item).next()
-         if first_item == inner_item:
-             return True
-         else:
-             return False
-     except TypeError:
-         return False
-     except StopIteration:
-         return False
+    # step 1) String is always a container
+    # and its contents are themselves containers.
+    try:
+        first_item = iter(x).next()
+        inner_item = iter(first_item).next()
+        if first_item == inner_item:
+            return True
+        else:
+            return False
+    except TypeError:
+        return False
+    except StopIteration:
+        return False
+    except ValueError:
+        return False
 
 def stripUnits(args):
     """

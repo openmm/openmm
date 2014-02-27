@@ -893,8 +893,9 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
 
     numMultipoles = force.getNumMultipoles();
     CudaArray& posq = cu.getPosq();
-    float4* posqf = (float4*) cu.getPinnedBuffer();
-    double4* posqd = (double4*) cu.getPinnedBuffer();
+    vector<double4> temp(posq.getSize());
+    float4* posqf = (float4*) &temp[0];
+    double4* posqd = (double4*) &temp[0];
     vector<float2> dampingAndTholeVec;
     vector<float> polarizabilityVec;
     vector<float> molecularDipolesVec;
@@ -945,7 +946,7 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
     multipoleParticles->upload(multipoleParticlesVec);
     molecularDipoles->upload(molecularDipolesVec);
     molecularQuadrupoles->upload(molecularQuadrupolesVec);
-    posq.upload(cu.getPinnedBuffer());
+    posq.upload(&temp[0]);
     
     // Create workspace arrays.
     

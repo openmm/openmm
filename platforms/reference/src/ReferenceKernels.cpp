@@ -55,6 +55,7 @@
 #include "ReferenceProperDihedralBond.h"
 #include "ReferenceRbDihedralBond.h"
 #include "ReferenceStochasticDynamics.h"
+#include "ReferenceTabulatedFunction.h"
 #include "ReferenceVariableStochasticDynamics.h"
 #include "ReferenceVariableVerletDynamics.h"
 #include "ReferenceVerletDynamics.h"
@@ -69,7 +70,6 @@
 #include "openmm/internal/CustomNonbondedForceImpl.h"
 #include "openmm/internal/CMAPTorsionForceImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
-#include "openmm/internal/SplineFitter.h"
 #include "openmm/Integrator.h"
 #include "openmm/OpenMMException.h"
 #include "SimTKOpenMMUtilities.h"
@@ -923,38 +923,6 @@ void ReferenceCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& con
         dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(context.getSystem(), force);
 }
 
-class ReferenceTabulatedFunction : public Lepton::CustomFunction {
-public:
-    ReferenceTabulatedFunction(double min, double max, const vector<double>& values) :
-            min(min), max(max), values(values) {
-        int numValues = values.size();
-        x.resize(numValues);
-        for (int i = 0; i < numValues; i++)
-            x[i] = min+i*(max-min)/(numValues-1);
-        SplineFitter::createNaturalSpline(x, values, derivs);
-    }
-    int getNumArguments() const {
-        return 1;
-    }
-    double evaluate(const double* arguments) const {
-        double t = arguments[0];
-        if (t < min || t > max)
-            return 0.0;
-        return SplineFitter::evaluateSpline(x, values, derivs, t);
-    }
-    double evaluateDerivative(const double* arguments, const int* derivOrder) const {
-        double t = arguments[0];
-        if (t < min || t > max)
-            return 0.0;
-        return SplineFitter::evaluateSplineDerivative(x, values, derivs, t);
-    }
-    CustomFunction* clone() const {
-        return new ReferenceTabulatedFunction(min, max, values);
-    }
-    double min, max;
-    vector<double> x, values, derivs;
-};
-
 ReferenceCalcCustomNonbondedForceKernel::~ReferenceCalcCustomNonbondedForceKernel() {
     disposeRealArray(particleParamArray, numParticles);
     if (neighborList != NULL)
@@ -1001,13 +969,8 @@ void ReferenceCalcCustomNonbondedForceKernel::initialize(const System& system, c
     // Create custom functions for the tabulated functions.
 
     map<string, Lepton::CustomFunction*> functions;
-    for (int i = 0; i < force.getNumFunctions(); i++) {
-        string name;
-        vector<double> values;
-        double min, max;
-        force.getFunctionParameters(i, name, values, min, max);
-        functions[name] = new ReferenceTabulatedFunction(min, max, values);
-    }
+    for (int i = 0; i < force.getNumFunctions(); i++)
+        functions[force.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
 
     // Parse the various expressions used to calculate the force.
 
@@ -1288,13 +1251,8 @@ void ReferenceCalcCustomGBForceKernel::initialize(const System& system, const Cu
     // Create custom functions for the tabulated functions.
 
     map<string, Lepton::CustomFunction*> functions;
-    for (int i = 0; i < force.getNumFunctions(); i++) {
-        string name;
-        vector<double> values;
-        double min, max;
-        force.getFunctionParameters(i, name, values, min, max);
-        functions[name] = new ReferenceTabulatedFunction(min, max, values);
-    }
+    for (int i = 0; i < force.getNumFunctions(); i++)
+        functions[force.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
 
     // Parse the expressions for computed values.
 
@@ -1507,13 +1465,8 @@ void ReferenceCalcCustomHbondForceKernel::initialize(const System& system, const
     // Create custom functions for the tabulated functions.
 
     map<string, Lepton::CustomFunction*> functions;
-    for (int i = 0; i < force.getNumFunctions(); i++) {
-        string name;
-        vector<double> values;
-        double min, max;
-        force.getFunctionParameters(i, name, values, min, max);
-        functions[name] = new ReferenceTabulatedFunction(min, max, values);
-    }
+    for (int i = 0; i < force.getNumFunctions(); i++)
+        functions[force.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
 
     // Parse the expression and create the object used to calculate the interaction.
 
@@ -1609,13 +1562,8 @@ void ReferenceCalcCustomCompoundBondForceKernel::initialize(const System& system
     // Create custom functions for the tabulated functions.
 
     map<string, Lepton::CustomFunction*> functions;
-    for (int i = 0; i < force.getNumFunctions(); i++) {
-        string name;
-        vector<double> values;
-        double min, max;
-        force.getFunctionParameters(i, name, values, min, max);
-        functions[name] = new ReferenceTabulatedFunction(min, max, values);
-    }
+    for (int i = 0; i < force.getNumFunctions(); i++)
+        functions[force.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
 
     // Parse the expression and create the object used to calculate the interaction.
 

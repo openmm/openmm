@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -28,6 +28,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "CudaContext.h"
+#include "openmm/TabulatedFunction.h"
 #include "lepton/CustomFunction.h"
 #include "lepton/ExpressionTreeNode.h"
 #include "lepton/ParsedExpression.h"
@@ -45,75 +46,81 @@ namespace OpenMM {
 
 class OPENMM_EXPORT_CUDA CudaExpressionUtilities {
 public:
-    CudaExpressionUtilities(CudaContext& context) : context(context) {
-    }
+    CudaExpressionUtilities(CudaContext& context);
     /**
      * Generate the source code for calculating a set of expressions.
      *
      * @param expressions    the expressions to generate code for (keys are the variables to store the output values in)
      * @param variables      defines the source code to generate for each variable that may appear in the expressions.  Keys are
      *                       variable names, and the values are the code to generate for them.
-     * @param functions      defines the variable name for each tabulated function that may appear in the expressions
+     * @param functions      the tabulated functions that may appear in the expressions
+     * @param functionNames  defines the variable name for each tabulated function that may appear in the expressions
      * @param prefix         a prefix to put in front of temporary variables
-     * @param functionParams the variable name containing the parameters for each tabulated function
      * @param tempType       the type of value to use for temporary variables (defaults to "real")
      */
     std::string createExpressions(const std::map<std::string, Lepton::ParsedExpression>& expressions, const std::map<std::string, std::string>& variables,
-            const std::vector<std::pair<std::string, std::string> >& functions, const std::string& prefix, const std::string& functionParams, const std::string& tempType="real");
+            const std::vector<const TabulatedFunction*>& functions, const std::vector<std::pair<std::string, std::string> >& functionNames,
+            const std::string& prefix, const std::string& tempType="real");
     /**
      * Generate the source code for calculating a set of expressions.
      *
      * @param expressions    the expressions to generate code for (keys are the variables to store the output values in)
      * @param variables      defines the source code to generate for each variable or precomputed sub-expression that may appear in the expressions.
      *                       Each entry is an ExpressionTreeNode, and the code to generate wherever an identical node appears.
-     * @param functions      defines the variable name for each tabulated function that may appear in the expressions
+     * @param functions      the tabulated functions that may appear in the expressions
+     * @param functionNames  defines the variable name for each tabulated function that may appear in the expressions
      * @param prefix         a prefix to put in front of temporary variables
-     * @param functionParams the variable name containing the parameters for each tabulated function
      * @param tempType       the type of value to use for temporary variables (defaults to "real")
      */
     std::string createExpressions(const std::map<std::string, Lepton::ParsedExpression>& expressions, const std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& variables,
-            const std::vector<std::pair<std::string, std::string> >& functions, const std::string& prefix, const std::string& functionParams, const std::string& tempType="real");
+            const std::vector<const TabulatedFunction*>& functions, const std::vector<std::pair<std::string, std::string> >& functionNames,
+            const std::string& prefix, const std::string& tempType="real");
     /**
      * Calculate the spline coefficients for a tabulated function that appears in expressions.
      *
-     * @param values         the tabulated values of the function
-     * @param min            the value of the independent variable corresponding to the first element of values
-     * @param max            the value of the independent variable corresponding to the last element of values
+     * @param function   the function for which to compute coefficients
+     * @param width      on output, the number of floats used for each value
      * @return the spline coefficients
      */
-    std::vector<float4> computeFunctionCoefficients(const std::vector<double>& values, double min, double max);
-    class FunctionPlaceholder;
+    std::vector<float> computeFunctionCoefficients(const TabulatedFunction& function, int& width);
+    /**
+     * Get a Lepton::CustomFunction that can be used to represent a TabulatedFunction when parsing expressions.
+     * 
+     * @param function   the function for which to get a placeholder
+     */
+    Lepton::CustomFunction* getFunctionPlaceholder(const TabulatedFunction& function);
 private:
+    class FunctionPlaceholder : public Lepton::CustomFunction {
+        public:
+            FunctionPlaceholder(int numArgs) : numArgs(numArgs) {
+            }
+            int getNumArguments() const {
+                return numArgs;
+            }
+            double evaluate(const double* arguments) const {
+                return 0.0;
+            }
+            double evaluateDerivative(const double* arguments, const int* derivOrder) const {
+                return 0.0;
+            }
+            CustomFunction* clone() const {
+                return new FunctionPlaceholder(numArgs);
+            }
+        private:
+            int numArgs;
+    };
     void processExpression(std::stringstream& out, const Lepton::ExpressionTreeNode& node,
             std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& temps,
-            const std::vector<std::pair<std::string, std::string> >& functions, const std::string& prefix, const std::string& functionParams,
-            const std::vector<Lepton::ParsedExpression>& allExpressions, const std::string& tempType);
+            const std::vector<const TabulatedFunction*>& functions, const std::vector<std::pair<std::string, std::string> >& functionNames,
+            const std::string& prefix, const std::vector<std::vector<double> >& functionParams, const std::vector<Lepton::ParsedExpression>& allExpressions, const std::string& tempType);
     std::string getTempName(const Lepton::ExpressionTreeNode& node, const std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& temps);
     void findRelatedTabulatedFunctions(const Lepton::ExpressionTreeNode& node, const Lepton::ExpressionTreeNode& searchNode,
-            const Lepton::ExpressionTreeNode*& valueNode, const Lepton::ExpressionTreeNode*& derivNode);
+            std::vector<const Lepton::ExpressionTreeNode*>& nodes);
     void findRelatedPowers(const Lepton::ExpressionTreeNode& node, const Lepton::ExpressionTreeNode& searchNode,
             std::map<int, const Lepton::ExpressionTreeNode*>& powers);
+    std::vector<std::vector<double> > computeFunctionParameters(const std::vector<const TabulatedFunction*>& functions);
     CudaContext& context;
-};
-
-/**
- * This class serves as a placeholder for custom functions in expressions.
- */
-
-class CudaExpressionUtilities::FunctionPlaceholder : public Lepton::CustomFunction {
-public:
-    int getNumArguments() const {
-        return 1;
-    }
-    double evaluate(const double* arguments) const {
-        return 0.0;
-    }
-    double evaluateDerivative(const double* arguments, const int* derivOrder) const {
-        return 0.0;
-    }
-    CustomFunction* clone() const {
-        return new FunctionPlaceholder();
-    }
+    FunctionPlaceholder fp1, fp2, fp3;
 };
 
 } // namespace OpenMM
