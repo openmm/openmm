@@ -63,8 +63,8 @@ install both the drivers and toolkit.
 
 4. (Optional) If you plan to use the CPU platform, it is recommended that you
 install FFTW, available from http://www.fftw.org.  When configuring it, be sure
-to specify single precision and multiple threads (the :code:`--enable-float`
-and :code:`--enable-threads` options).  OpenMM will still work without FFTW,
+to specify single precision and multiple threads (the |--|\ :code:`enable-float`
+and |--|\ :code:`enable-threads` options).  OpenMM will still work without FFTW,
 but the performance of particle mesh Ewald (PME) will be much worse.
 
 5. Launch the Terminal application.  Change to the OpenMM directory by typing
@@ -127,7 +127,7 @@ Installing on Linux
 
 2. Make sure you have Python 2.6 or higher (earlier versions will not work) and
 a C++ compiler (typically gcc or clang) installed on your computer.  You can
-check what version of Python is installed by typing :code:`python --version`
+check what version of Python is installed by typing :code:`python` |--|\ :code:`version`
 into a console window.
 
 3. (Optional) If you want to run OpenMM on a GPU, install CUDA and/or OpenCL.
@@ -142,8 +142,8 @@ into a console window.
 install FFTW.  It is probably available through your system’s package manager
 such as :code:`yum` or :code:`apt-get`\ .  Alternatively, you can download
 it from http://www.fftw.org.  When configuring it, be sure to specify single
-precision and multiple threads (the :code:`--enable-float` and :code
-:`--enable-threads` options).  OpenMM will still work without FFTW, but the
+precision and multiple threads (the |--|\ :code:`enable-float` and
+|--|\ :code:`enable-threads` options).  OpenMM will still work without FFTW, but the
 performance of particle mesh Ewald (PME) will be much worse.
 
 5. In a console window, change to the OpenMM directory by typing

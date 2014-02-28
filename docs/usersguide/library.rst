@@ -2490,7 +2490,7 @@ Make sure you have Python 2.6 or later installed.  For Python installation
 packages and instructions, go to http://python.org.  If you do not have the
 correct Python version, install a valid version using the default options.  Most
 versions of Linux and Mac OS X have a suitable Python preinstalled.  You can
-check by typing “\ :code:`python --version`\ ” in a terminal window.
+check by typing “\ :code:`python` |--|\ :code:`version`\ ” in a terminal window.
 
 You must have a C++ compiler to install the OpenMM Python API.  If you are using
 a Mac, install Apple's Xcode development tools
