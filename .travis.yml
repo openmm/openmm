@@ -11,7 +11,7 @@ before_install:
 
 script:
   - mkdir build; cd build
-  - cmake -DCMAKE_INSTALL_PREFIX=~/OpenMM -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS_DEBUG=-fsanitize=address ..
+  - cmake -DCMAKE_INSTALL_PREFIX=~/OpenMM -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS_DEBUG="-g -fsanitize=address" .. 
   - make TestCpuSettle
   - ./TestCpuSettle
   - valgrind ./TestCpuSettle
