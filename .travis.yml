@@ -7,11 +7,12 @@ before_install:
   - sudo apt-get install -qq libpcre3 libpcre3-dev gromacs
   - sudo apt-get install -qq swig doxygen
   - sudo apt-get install -qq python-numpy python-scipy python-nose
-  - sudo apt-get install valgrind
+  - sudo apt-get install valgrind llvm-3.3
 
 script:
   - mkdir build; cd build
-  - cmake -DCMAKE_INSTALL_PREFIX=~/OpenMM -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS_DEBUG="-g -fsanitize=address" .. 
+  - export ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer-3.3
+  - cmake -DCMAKE_INSTALL_PREFIX=~/OpenMM -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS_DEBUG="-g -fsanitize=address -fno-omit-frame-pointer -O1" .. 
   - make TestCpuSettle
   - ./TestCpuSettle
   - valgrind ./TestCpuSettle
