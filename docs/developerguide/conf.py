@@ -26,7 +26,7 @@ sys.path.append(os.path.abspath('../sphinx'))
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.pngmath', 'sphinx.ext.mathjax', 'sphinxcontrib.bibtex', 'autonumber', 'samepage', 'caption', 'numsec']
+extensions = ['autonumber', 'numsec']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -41,8 +41,8 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'OpenMM Users Guide'
-copyright = u'2008-2014, Stanford University'
+project = u'OpenMM Developer Guide'
+copyright = u'2011-2014, Stanford University'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -165,7 +165,7 @@ html_static_path = ['_static']
 #html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'OpenMMUsersGuidedoc'
+htmlhelp_basename = 'OpenMMDeveloperGuidedoc'
 
 
 # -- Options for LaTeX output --------------------------------------------------
@@ -195,7 +195,7 @@ latex_elements = {
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'OpenMMUsersGuide.tex', u'OpenMM Users Guide',
+  ('index', 'OpenMMDeveloperGuide.tex', u'OpenMM Developer Guide',
    u'Peter Eastman', 'manual'),
 ]
 
@@ -225,7 +225,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'openmmusersguide', u'OpenMM Users Guide',
+    ('index', 'openmmdeveloperguide', u'OpenMM Developer Guide',
      [u'Peter Eastman'], 1)
 ]
 
@@ -239,8 +239,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'OpenMMUsersGuide', u'OpenMM Users Guide',
-   u'Peter Eastman', 'OpenMMUsersGuide', 'One line description of project.',
+  ('index', 'OpenMMDeveloperGuide', u'OpenMM Developer Guide',
+   u'Peter Eastman', 'OpenMMDeveloperGuide', 'One line description of project.',
    'Miscellaneous'),
 ]
 
