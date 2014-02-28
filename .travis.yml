@@ -10,8 +10,7 @@ before_install:
   - export ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer-3.3
 
 script:
-  - mkdir build; cd build
-  - cmake -DCMAKE_INSTALL_PREFIX=~/OpenMM -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS_DEBUG="-g -fsanitize=address -fno-omit-frame-pointer -O2" ..
+  - cmake -DCMAKE_INSTALL_PREFIX=~/OpenMM -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS_DEBUG="-g -fsanitize=address -fno-omit-frame-pointer -O2" .
   - make
   - make test
   - make install

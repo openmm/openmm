@@ -29,6 +29,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include <stdlib.h>
 #include "openmm/internal/ThreadPool.h"
 #include "openmm/internal/hardware.h"
 
@@ -61,7 +62,15 @@ static void* threadBody(void* args) {
 }
 
 ThreadPool::ThreadPool() {
-    numThreads = getNumProcessors();
+    char* openmmNumThreads = getenv("OPENMM_NUM_THREADS");
+    char* end = openmmNumThreads;
+    if (openmmNumThreads != NULL) {
+        numThreads = strtol(openmmNumThreads, &end, 0);
+    }
+    if (openmmNumThreads == NULL || openmmNumThreads==end) {
+        numThreads = getNumProcessors();
+    }
+        
     pthread_cond_init(&startCondition, NULL);
     pthread_cond_init(&endCondition, NULL);
     pthread_mutex_init(&lock, NULL);
