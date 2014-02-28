@@ -7,17 +7,11 @@ before_install:
   - sudo apt-get install -qq libpcre3 libpcre3-dev gromacs
   - sudo apt-get install -qq swig doxygen
   - sudo apt-get install -qq python-numpy python-scipy python-nose
+  - sudo apt-get install valgrind
 
 script:
-  - cmake -DCMAKE_INSTALL_PREFIX=~/OpenMM . 
-  - make 
-  - make test 
-  - make install
-  - ls ~/OpenMM/include
-  - export LD_LIBRARY_PATH=~/OpenMM/lib/
-  - export OPENMM_LIB_PATH=~/OpenMM/lib/
-  - export OPENMM_INCLUDE_PATH=~/OpenMM/include/
-  - cd python
-  - sudo -E python setup.py install
-  - cd tests
-  - nosetests -vv
+  - mkdir build; cd build
+  - cmake -DCMAKE_INSTALL_PREFIX=~/OpenMM -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS_DEBUG=-fsanitize=address ..
+  - make TestCpuSettle
+  - ./TestCpuSettle
+  - valgrind ./TestCpuSettle
