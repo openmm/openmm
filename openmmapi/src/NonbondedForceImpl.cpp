@@ -260,7 +260,7 @@ double NonbondedForceImpl::calcDispersionCorrection(const System& system, const 
                 sum3 += count*epsilon*(evalIntegral(cutoff, switchDist, cutoff, sigma)-evalIntegral(switchDist, switchDist, cutoff, sigma));
         }
     double numParticles = (double) system.getNumParticles();
-    int numInteractions = (numParticles*(numParticles+1))/2;
+    double numInteractions = (numParticles*(numParticles+1))/2;
     sum1 /= numInteractions;
     sum2 /= numInteractions;
     sum3 /= numInteractions;
