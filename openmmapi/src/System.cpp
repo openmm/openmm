@@ -119,3 +119,11 @@ void System::setDefaultPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Ve
     periodicBoxVectors[1] = b;
     periodicBoxVectors[2] = c;
 }
+
+int System::getNumDegreesOfFreedom() const {
+    int numMassiveParticles = 0;
+    for (int i = 0; i < (int) masses.size(); i++)
+        if (masses[i] != 0.0)
+            numMassiveParticles++;
+    return 3*numMassiveParticles-constraints.size();
+}

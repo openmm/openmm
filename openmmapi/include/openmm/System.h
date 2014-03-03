@@ -224,6 +224,12 @@ public:
      * @param c      the vector defining the third edge of the periodic box
      */
     void setDefaultPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Vec3& c);
+    /**
+     * Get the total number of degrees of freedom in this system.  This is equal to
+     * 3*(number of massive particles)-(number of constraints), where massive particles
+     * are ones whose mass does not equal zero.
+     */
+    int getNumDegreesOfFreedom() const;
 private:
     class ConstraintInfo;
     Vec3 periodicBoxVectors[3];
