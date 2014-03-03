@@ -126,7 +126,7 @@ void testRandomVelocities() {
         Vec3 v = state.getVelocities()[i];
         ke += 0.5*system.getParticleMass(i)*v.dot(v);
     }
-    double expected = 0.5*(numParticles*3-system.getNumConstraints())*BOLTZ*temperture;
+    double expected = 0.5*system.getNumDegreesOfFreedom()*BOLTZ*temperture;
     ASSERT_USUALLY_EQUAL_TOL(expected, ke, 4/sqrt((double) numParticles));
 }
 
