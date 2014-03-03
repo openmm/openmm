@@ -203,11 +203,11 @@ double CustomNonbondedForceImpl::calcLongRangeCorrection(const CustomNonbondedFo
     
     // Count the total number of particle pairs for each pair of classes.
     
-    map<pair<int, int>, int> interactionCount;
+    map<pair<int, int>, long long int> interactionCount;
     if (force.getNumInteractionGroups() == 0) {
         // Count the particles of each class.
         
-        vector<int> classCounts(numClasses, 0);
+        vector<long long int> classCounts(numClasses, 0);
         for (int i = 0; i < numParticles; i++)
             classCounts[atomClass[i]]++;
         for (int i = 0; i < numClasses; i++) {
@@ -246,9 +246,10 @@ double CustomNonbondedForceImpl::calcLongRangeCorrection(const CustomNonbondedFo
     for (int i = 0; i < numClasses; i++)
         for (int j = i; j < numClasses; j++)
             sum += interactionCount[make_pair(i, j)]*integrateInteraction(expression, classes[i], classes[j], force, context);
-    int numInteractions = (numParticles*(numParticles+1))/2;
+    double nPart = (double) numParticles;
+    double numInteractions = (nPart*(nPart+1))/2;
     sum /= numInteractions;
-    return 2*M_PI*numParticles*numParticles*sum;
+    return 2*M_PI*nPart*nPart*sum;
 }
 
 double CustomNonbondedForceImpl::integrateInteraction(Lepton::CompiledExpression& expression, const vector<double>& params1, const vector<double>& params2,
