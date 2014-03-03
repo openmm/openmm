@@ -239,7 +239,8 @@ double NonbondedForceImpl::calcDispersionCorrection(const System& system, const 
     for (map<pair<double, double>, int>::const_iterator entry = classCounts.begin(); entry != classCounts.end(); ++entry) {
         double sigma = entry->first.first;
         double epsilon = entry->first.second;
-        int count = (entry->second*(entry->second+1))/2;
+        double count = (double) entry->second;
+        count *= (count + 1) / 2;
         double sigma2 = sigma*sigma;
         double sigma6 = sigma2*sigma2*sigma2;
         sum1 += count*epsilon*sigma6*sigma6;
@@ -251,7 +252,8 @@ double NonbondedForceImpl::calcDispersionCorrection(const System& system, const 
         for (map<pair<double, double>, int>::const_iterator class2 = classCounts.begin(); class2 != class1; ++class2) {
             double sigma = 0.5*(class1->first.first+class2->first.first);
             double epsilon = sqrt(class1->first.second*class2->first.second);
-            int count = class1->second*class2->second;
+            double count = (double) class1->second;
+            count *= (double) class2->second;
             double sigma2 = sigma*sigma;
             double sigma6 = sigma2*sigma2*sigma2;
             sum1 += count*epsilon*sigma6*sigma6;
