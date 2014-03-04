@@ -124,7 +124,7 @@ void ReferenceCustomCompoundBondIxn::calculateOneIxn(int bond, vector<RealVec>& 
 
     // Compute all of the variables the energy can depend on.
 
-    const vector<int>& atoms = bondAtoms[0];
+    const vector<int>& atoms = bondAtoms[bond];
     for (int i = 0; i < (int) particleTerms.size(); i++) {
         const ParticleTermInfo& term = particleTerms[i];
         variables[term.name] = atomCoordinates[term.atom][term.component];
