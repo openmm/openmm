@@ -138,7 +138,7 @@ void testConstraints() {
         integrator.step(1);
     }
     ke /= numSteps;
-    double expected = 0.5*system.getNumDegreesOfFreedom()*BOLTZ*temp;
+    double expected = 0.5*(numParticles*3-system.getNumConstraints())*BOLTZ*temp;
     ASSERT_USUALLY_EQUAL_TOL(expected, ke, 0.1);
 }
 
