@@ -266,12 +266,61 @@ void testContinuous3DFunction() {
     }
 }
 
+void testMultipleBonds() {
+    // Two compound bonds using Urey-Bradley example from API doc
+    ReferencePlatform platform;
+    System customSystem;
+    customSystem.addParticle(1.0);
+    customSystem.addParticle(1.0);
+    customSystem.addParticle(1.0);
+    customSystem.addParticle(1.0);
+    CustomCompoundBondForce* custom = new CustomCompoundBondForce(3,
+            "0.5*(kangle*(angle(p1,p2,p3)-theta0)^2+kbond*(distance(p1,p3)-r0)^2)");
+    custom->addPerBondParameter("kangle");
+    custom->addPerBondParameter("kbond");
+    custom->addPerBondParameter("theta0");
+    custom->addPerBondParameter("r0");
+    vector<double> parameters(4);
+    parameters[0] = 1.0;
+    parameters[1] = 1.0;
+    parameters[2] = 2 * M_PI / 3;
+    parameters[3] = sqrt(3) / 2;
+    vector<int> particles0(3);
+    particles0[0] = 0;
+    particles0[1] = 1;
+    particles0[2] = 2;
+    vector<int> particles1(3);
+    particles1[0] = 1;
+    particles1[1] = 2;
+    particles1[2] = 3;
+    custom->addBond(particles0, parameters);
+    custom->addBond(particles1, parameters);
+    customSystem.addForce(custom);
+
+    vector<Vec3> positions(4);
+    positions[0] = Vec3(0, 0.5, 0);
+    positions[1] = Vec3(0, 0, 0);
+    positions[2] = Vec3(0.5, 0, 0);
+    positions[3] = Vec3(0.6, 0, 0.4);
+    VerletIntegrator integrator(0.01);
+    Context context(customSystem, integrator, platform);
+    context.setPositions(positions);
+    State state = context.getState(State::Forces | State::Energy);
+    ASSERT_EQUAL_TOL(0.199, state.getPotentialEnergy(), 1e-3);
+    vector<Vec3> forces(state.getForces());
+    ASSERT_EQUAL_VEC(Vec3(-1.160, 0.112, 0.0), forces[0], 1e-3);
+    ASSERT_EQUAL_VEC(Vec3(0.927, 1.047, -0.638), forces[1], 1e-3);
+    ASSERT_EQUAL_VEC(Vec3(-0.543, -1.160, 0.721), forces[2], 1e-3);
+    ASSERT_EQUAL_VEC(Vec3(0.776, 0.0, -0.084), forces[3], 1e-3);
+}
+
 int main() {
     try {
         testBond();
         testPositionDependence();
         testContinuous2DFunction();
         testContinuous3DFunction();
+        testMultipleBonds();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;
