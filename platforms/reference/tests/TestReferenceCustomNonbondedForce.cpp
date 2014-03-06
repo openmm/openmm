@@ -398,7 +398,7 @@ void testDiscrete1DFunction() {
         const vector<Vec3>& forces = state.getForces();
         ASSERT_EQUAL_VEC(Vec3(0, 0, 0), forces[0], 1e-6);
         ASSERT_EQUAL_VEC(Vec3(0, 0, 0), forces[1], 1e-6);
-        ASSERT_EQUAL(table[i]+1.0, state.getPotentialEnergy());
+        ASSERT_EQUAL_TOL(table[i]+1.0, state.getPotentialEnergy(), 1e-6);
     }
 }
 
@@ -431,7 +431,7 @@ void testDiscrete2DFunction() {
         const vector<Vec3>& forces = state.getForces();
         ASSERT_EQUAL_VEC(Vec3(0, 0, 0), forces[0], 1e-6);
         ASSERT_EQUAL_VEC(Vec3(0, 0, 0), forces[1], 1e-6);
-        ASSERT_EQUAL(table[i]+1.0, state.getPotentialEnergy());
+        ASSERT_EQUAL_TOL(table[i]+1.0, state.getPotentialEnergy(), 1e-6);
     }
 }
 
@@ -468,7 +468,7 @@ void testDiscrete3DFunction() {
         const vector<Vec3>& forces = state.getForces();
         ASSERT_EQUAL_VEC(Vec3(0, 0, 0), forces[0], 1e-6);
         ASSERT_EQUAL_VEC(Vec3(0, 0, 0), forces[1], 1e-6);
-        ASSERT_EQUAL(table[i]+1.0, state.getPotentialEnergy());
+        ASSERT_EQUAL_TOL(table[i]+1.0, state.getPotentialEnergy(), 1e-6);
     }
 }
 
