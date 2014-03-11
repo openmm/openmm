@@ -53,7 +53,13 @@ class OPENMM_EXPORT ThreadPool {
 public:
     class Task;
     class ThreadData;
-    ThreadPool();
+    /**
+     * Create a ThreadPool.
+     *
+     * @param numThreads  the number of worker threads to create.  If this is 0 (the default), the
+     *                    number of threads is set equal to the number of logical CPU cores available
+     */
+    ThreadPool(int numThreads=0);
     ~ThreadPool();
     /**
      * Get the number of worker threads in the pool.

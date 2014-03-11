@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013 Stanford University and the Authors.           *
+ * Portions copyright (c) 2013-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -35,6 +35,7 @@
 #include "CpuSETTLE.h"
 #include "ReferenceConstraints.h"
 #include "openmm/internal/hardware.h"
+#include <sstream>
 
 using namespace OpenMM;
 using namespace std;
@@ -53,7 +54,7 @@ extern "C" OPENMM_EXPORT_CPU void registerPlatforms() {
 }
 #endif
 
-map<ContextImpl*, CpuPlatform::PlatformData*> CpuPlatform::contextData;
+map<const ContextImpl*, CpuPlatform::PlatformData*> CpuPlatform::contextData;
 
 CpuPlatform::CpuPlatform() {
     CpuKernelFactory* factory = new CpuKernelFactory();
@@ -63,6 +64,23 @@ CpuPlatform::CpuPlatform() {
     registerKernelFactory(CalcNonbondedForceKernel::Name(), factory);
     registerKernelFactory(CalcGBSAOBCForceKernel::Name(), factory);
     registerKernelFactory(IntegrateLangevinStepKernel::Name(), factory);
+    platformProperties.push_back(CpuThreads());
+    int threads = getNumProcessors();
+    char* threadsEnv = getenv("OPENMM_CPU_THREADS");
+    if (threadsEnv != NULL)
+        stringstream(threadsEnv) >> threads;
+    stringstream defaultThreads;
+    defaultThreads << threads;
+    setPropertyDefaultValue(CpuThreads(), defaultThreads.str());
+}
+
+const string& CpuPlatform::getPropertyValue(const Context& context, const string& property) const {
+    const ContextImpl& impl = getContextImpl(context);
+    const PlatformData& data = getPlatformData(impl);
+    map<string, string>::const_iterator value = data.propertyValues.find(property);
+    if (value != data.propertyValues.end())
+        return value->second;
+    return ReferencePlatform::getPropertyValue(context, property);
 }
 
 double CpuPlatform::getSpeed() const {
@@ -87,7 +105,11 @@ bool CpuPlatform::isProcessorSupported() {
 
 void CpuPlatform::contextCreated(ContextImpl& context, const map<string, string>& properties) const {
     ReferencePlatform::contextCreated(context, properties);
-    PlatformData* data = new PlatformData(context.getSystem().getNumParticles());
+    const string& threadsPropValue = (properties.find(CpuThreads()) == properties.end() ?
+            getPropertyDefaultValue(CpuThreads()) : properties.find(CpuThreads())->second);
+    int numThreads;
+    stringstream(threadsPropValue) >> numThreads;
+    PlatformData* data = new PlatformData(context.getSystem().getNumParticles(), numThreads);
     contextData[&context] = data;
     ReferenceConstraints& constraints = *(ReferenceConstraints*) reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData())->constraints;
     if (constraints.settle != NULL) {
@@ -107,10 +129,17 @@ CpuPlatform::PlatformData& CpuPlatform::getPlatformData(ContextImpl& context) {
     return *contextData[&context];
 }
 
-CpuPlatform::PlatformData::PlatformData(int numParticles) : posq(4*numParticles) {
-    int numThreads = threads.getNumThreads();
+const CpuPlatform::PlatformData& CpuPlatform::getPlatformData(const ContextImpl& context) {
+    return *contextData[&context];
+}
+
+CpuPlatform::PlatformData::PlatformData(int numParticles, int numThreads) : posq(4*numParticles), threads(numThreads) {
+    numThreads = threads.getNumThreads();
     threadForce.resize(numThreads);
     for (int i = 0; i < numThreads; i++)
         threadForce[i].resize(4*numParticles);
     isPeriodic = false;
+    stringstream threadsProperty;
+    threadsProperty << numThreads;
+    propertyValues[CpuThreads()] = threadsProperty.str();
 }
