@@ -1878,6 +1878,24 @@ values.  For example,
 
 This tells it to use both devices 0 and 1, splitting the work between them.
 
+CPU Platform
+************
+
+The CPU Platform recognizes the following Platform-specific properties:
+
+* CpuThreads: This specifies the number of CPU threads to use.  If you do not
+  specify this, OpenMM will select a default number of threads as follows:
+
+  * If an environment variable called OPENMM_CPU_THREADS is set, its value is
+    used as the number of threads.
+  * Otherwise, the number of threads is set to the number of logical CPU cores
+    in the computer it is running on.
+
+  Usually the default value works well.  This is mainly useful when you are
+  running something else on the computer at the same time, and you want to
+  prevent OpenMM from monopolizing all available cores.
+
+
 .. _using-openmm-with-software-written-in-languages-other-than-c++:
 
 Using OpenMM with Software Written in Languages Other than C++

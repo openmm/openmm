@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013 Stanford University and the Authors.           *
+ * Portions copyright (c) 2013-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -60,8 +60,10 @@ static void* threadBody(void* args) {
     return 0;
 }
 
-ThreadPool::ThreadPool() {
-    numThreads = getNumProcessors();
+ThreadPool::ThreadPool(int numThreads) {
+    if (numThreads <= 0)
+        numThreads = getNumProcessors();
+    this->numThreads = numThreads;
     pthread_cond_init(&startCondition, NULL);
     pthread_cond_init(&endCondition, NULL);
     pthread_mutex_init(&lock, NULL);
