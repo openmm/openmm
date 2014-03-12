@@ -1,6 +1,9 @@
-<!-- Generated on 2014-03-11 from amoebapro13.prm -->
-
 <ForceField>
+ <Info>
+  <Source>amoebapro13.prm</Source>
+  <DateGenerated>2014-03-11</DateGenerated>
+  <Reference>Yue Shi, Zhen Xia, Jiajing Zhang, Robert Best, Chuanjie Wu, Jay W. Ponder, and Pengyu Ren. Polarizable Atomic Multipole-Based AMOEBA Force Field for Proteins. Journal of Chemical Theory and Computation, 9(9):4046–4063, 2013.</Reference>
+ </Info>
  <AtomTypes>
   <Type name="1" class="1" element="N" mass="14.007"/>
   <Type name="2" class="2" element="C" mass="12.011"/>

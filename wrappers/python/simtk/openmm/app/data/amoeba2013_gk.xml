@@ -1,6 +1,9 @@
-<!-- Generated on 2014-03-11 from amoebapro13.prm -->
-
 <ForceField>
+ <Info>
+  <Source>amoebapro13.prm</Source>
+  <DateGenerated>2014-03-11</DateGenerated>
+  <Reference>Yue Shi, Zhen Xia, Jiajing Zhang, Robert Best, Chuanjie Wu, Jay W. Ponder, and Pengyu Ren. Polarizable Atomic Multipole-Based AMOEBA Force Field for Proteins. Journal of Chemical Theory and Computation, 9(9):4046–4063, 2013.</Reference>
+ </Info>
  <AmoebaGeneralizedKirkwoodForce solventDielectric="78.3" soluteDielectric="1.0" includeCavityTerm="1" probeRadius="0.14" surfaceAreaFactor="-170.351730663">
   <GeneralizedKirkwood type="1" charge="-0.22483" shct="0.79"  /> 
   <GeneralizedKirkwood type="2" charge="-0.09722" shct="0.72"  /> 
