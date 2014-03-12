@@ -231,7 +231,6 @@ cl::Kernel OpenCLFFT3D::createKernel(int xsize, int ysize, int zsize, int& threa
         source<<"if (index < XSIZE*YSIZE)\n";
         source<<"out[y*(ZSIZE*XSIZE)+(get_local_id(0)%ZSIZE)*XSIZE+x] = data"<<(stage%2)<<"[get_local_id(0)];\n";
     }
-    source<<"barrier(CLK_GLOBAL_MEM_FENCE);";
     map<string, string> replacements;
     replacements["XSIZE"] = context.intToString(xsize);
     replacements["YSIZE"] = context.intToString(ysize);

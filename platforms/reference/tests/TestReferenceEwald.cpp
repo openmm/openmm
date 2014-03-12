@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2010 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -354,6 +354,55 @@ void testErrorTolerance(NonbondedForce::NonbondedMethod method) {
     }
 }
 
+void testPMEParameters() {
+    // Create a cloud of random point charges.
+
+    const int numParticles = 51;
+    const double boxWidth = 4.7;
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(boxWidth, 0, 0), Vec3(0, boxWidth, 0), Vec3(0, 0, boxWidth));
+    NonbondedForce* force = new NonbondedForce();
+    system.addForce(force);
+    vector<Vec3> positions(numParticles);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+
+    for (int i = 0; i < numParticles; i++) {
+        system.addParticle(1.0);
+        force->addParticle(-1.0+i*2.0/(numParticles-1), 1.0, 0.0);
+        positions[i] = Vec3(boxWidth*genrand_real2(sfmt), boxWidth*genrand_real2(sfmt), boxWidth*genrand_real2(sfmt));
+    }
+    force->setNonbondedMethod(NonbondedForce::PME);
+    ReferencePlatform platform;
+    
+    // Compute the energy with an error tolerance of 1e-3.
+
+    force->setEwaldErrorTolerance(1e-3);
+    VerletIntegrator integrator1(0.01);
+    Context context1(system, integrator1, platform);
+    context1.setPositions(positions);
+    double energy1 = context1.getState(State::Energy).getPotentialEnergy();
+    
+    // Try again with an error tolerance of 1e-4.
+
+    force->setEwaldErrorTolerance(1e-4);
+    VerletIntegrator integrator2(0.01);
+    Context context2(system, integrator2, platform);
+    context2.setPositions(positions);
+    double energy2 = context2.getState(State::Energy).getPotentialEnergy();
+    
+    // Now explicitly set the parameters.  These should match the values that were
+    // used for tolerance 1e-3.
+
+    force->setPMEParameters(2.49291157051793, 32, 32, 32);
+    VerletIntegrator integrator3(0.01);
+    Context context3(system, integrator3, platform);
+    context3.setPositions(positions);
+    double energy3 = context3.getState(State::Energy).getPotentialEnergy();
+    ASSERT_EQUAL_TOL(energy1, energy3, 1e-6);
+    ASSERT(fabs((energy1-energy2)/energy1) > 1e-5);
+}
+
 int main() {
     try {
      testEwaldExact();
@@ -362,6 +411,7 @@ int main() {
 //     testWaterSystem();
      testErrorTolerance(NonbondedForce::Ewald);
      testErrorTolerance(NonbondedForce::PME);
+     testPMEParameters();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

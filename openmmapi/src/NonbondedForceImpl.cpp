@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2010 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -149,16 +149,19 @@ void NonbondedForceImpl::calcEwaldParameters(const System& system, const Nonbond
 }
 
 void NonbondedForceImpl::calcPMEParameters(const System& system, const NonbondedForce& force, double& alpha, int& xsize, int& ysize, int& zsize) {
-    Vec3 boxVectors[3];
-    system.getDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
-    double tol = force.getEwaldErrorTolerance();
-    alpha = (1.0/force.getCutoffDistance())*std::sqrt(-log(2.0*tol));
-    xsize = (int) ceil(2*alpha*boxVectors[0][0]/(3*pow(tol, 0.2)));
-    ysize = (int) ceil(2*alpha*boxVectors[1][1]/(3*pow(tol, 0.2)));
-    zsize = (int) ceil(2*alpha*boxVectors[2][2]/(3*pow(tol, 0.2)));
-    xsize = max(xsize, 5);
-    ysize = max(ysize, 5);
-    zsize = max(zsize, 5);
+    force.getPMEParameters(alpha, xsize, ysize, zsize);
+    if (alpha == 0.0) {
+        Vec3 boxVectors[3];
+        system.getDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+        double tol = force.getEwaldErrorTolerance();
+        alpha = (1.0/force.getCutoffDistance())*std::sqrt(-log(2.0*tol));
+        xsize = (int) ceil(2*alpha*boxVectors[0][0]/(3*pow(tol, 0.2)));
+        ysize = (int) ceil(2*alpha*boxVectors[1][1]/(3*pow(tol, 0.2)));
+        zsize = (int) ceil(2*alpha*boxVectors[2][2]/(3*pow(tol, 0.2)));
+        xsize = max(xsize, 5);
+        ysize = max(ysize, 5);
+        zsize = max(zsize, 5);
+    }
 }
 
 int NonbondedForceImpl::findZero(const NonbondedForceImpl::ErrorFunction& f, int initialGuess) {
@@ -239,7 +242,8 @@ double NonbondedForceImpl::calcDispersionCorrection(const System& system, const 
     for (map<pair<double, double>, int>::const_iterator entry = classCounts.begin(); entry != classCounts.end(); ++entry) {
         double sigma = entry->first.first;
         double epsilon = entry->first.second;
-        int count = (entry->second*(entry->second+1))/2;
+        double count = (double) entry->second;
+        count *= (count + 1) / 2;
         double sigma2 = sigma*sigma;
         double sigma6 = sigma2*sigma2*sigma2;
         sum1 += count*epsilon*sigma6*sigma6;
@@ -251,7 +255,8 @@ double NonbondedForceImpl::calcDispersionCorrection(const System& system, const 
         for (map<pair<double, double>, int>::const_iterator class2 = classCounts.begin(); class2 != class1; ++class2) {
             double sigma = 0.5*(class1->first.first+class2->first.first);
             double epsilon = sqrt(class1->first.second*class2->first.second);
-            int count = class1->second*class2->second;
+            double count = (double) class1->second;
+            count *= (double) class2->second;
             double sigma2 = sigma*sigma;
             double sigma6 = sigma2*sigma2*sigma2;
             sum1 += count*epsilon*sigma6*sigma6;
@@ -259,8 +264,8 @@ double NonbondedForceImpl::calcDispersionCorrection(const System& system, const 
             if (useSwitch)
                 sum3 += count*epsilon*(evalIntegral(cutoff, switchDist, cutoff, sigma)-evalIntegral(switchDist, switchDist, cutoff, sigma));
         }
-    int numParticles = system.getNumParticles();
-    int numInteractions = (numParticles*(numParticles+1))/2;
+    double numParticles = (double) system.getNumParticles();
+    double numInteractions = (numParticles*(numParticles+1))/2;
     sum1 /= numInteractions;
     sum2 /= numInteractions;
     sum3 /= numInteractions;

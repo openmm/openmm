@@ -32,7 +32,17 @@
 #include "ReferenceTabulatedFunction.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/SplineFitter.h"
+
+#ifdef _MSC_VER
+/**
+ * We need to define this ourselves, since Visual Studio is missing round() from cmath.
+ */
+static int round(double x) {
+    return (int) (x+0.5);
+}
+#else
 #include <cmath>
+#endif
 
 using namespace OpenMM;
 using namespace std;

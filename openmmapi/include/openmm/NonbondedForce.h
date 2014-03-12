@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -182,15 +182,41 @@ public:
      * which is acceptable.  This value is used to select the reciprocal space cutoff and separation
      * parameter so that the average error level will be less than the tolerance.  There is not a
      * rigorous guarantee that all forces on all atoms will be less than the tolerance, however.
+     * 
+     * For PME calculations, if setPMEParameters() is used to set alpha to something other than 0,
+     * this value is ignored.
      */
     double getEwaldErrorTolerance() const;
     /**
-     * Get the error tolerance for Ewald summation.  This corresponds to the fractional error in the forces
+     * Set the error tolerance for Ewald summation.  This corresponds to the fractional error in the forces
      * which is acceptable.  This value is used to select the reciprocal space cutoff and separation
      * parameter so that the average error level will be less than the tolerance.  There is not a
      * rigorous guarantee that all forces on all atoms will be less than the tolerance, however.
+     * 
+     * For PME calculations, if setPMEParameters() is used to set alpha to something other than 0,
+     * this value is ignored.
      */
     void setEwaldErrorTolerance(double tol);
+    /**
+     * Get the parameters to use for PME calculations.  If alpha is 0 (the default), these parameters are
+     * ignored and instead their values are chosen based on the Ewald error tolerance.
+     * 
+     * @param alpha   the separation parameter
+     * @param nx      the number of grid points along the X axis
+     * @param ny      the number of grid points along the Y axis
+     * @param nz      the number of grid points along the Z axis
+     */
+    void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
+    /**
+     * Set the parameters to use for PME calculations.  If alpha is 0 (the default), these parameters are
+     * ignored and instead their values are chosen based on the Ewald error tolerance.
+     * 
+     * @param alpha   the separation parameter
+     * @param nx      the number of grid points along the X axis
+     * @param ny      the number of grid points along the Y axis
+     * @param nz      the number of grid points along the Z axis
+     */
+    void setPMEParameters(double alpha, int nx, int ny, int nz);
     /**
      * Add the nonbonded force parameters for a particle.  This should be called once for each particle
      * in the System.  When it is called for the i'th time, it specifies the parameters for the i'th particle.
@@ -332,9 +358,9 @@ private:
     class ParticleInfo;
     class ExceptionInfo;
     NonbondedMethod nonbondedMethod;
-    double cutoffDistance, switchingDistance, rfDielectric, ewaldErrorTol;
+    double cutoffDistance, switchingDistance, rfDielectric, ewaldErrorTol, alpha;
     bool useSwitchingFunction, useDispersionCorrection;
-    int recipForceGroup;
+    int recipForceGroup, nx, ny, nz;
     void addExclusionsToSet(const std::vector<std::set<int> >& bonded12, std::set<int>& exclusions, int baseParticle, int fromParticle, int currentLevel) const;
     std::vector<ParticleInfo> particles;
     std::vector<ExceptionInfo> exceptions;
