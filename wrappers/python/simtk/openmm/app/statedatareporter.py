@@ -92,11 +92,11 @@ class StateDataReporter(object):
             # and open all files unbuffered
             if file.endswith('.gz'):
                 if not have_gzip:
-                    raise RuntimeError("Cannpt write .gz file because Python could not import gzip library")
+                    raise RuntimeError("Cannot write .gz file because Python could not import gzip library")
                 self._out = gzip.GzipFile(fileobj=open(file, 'wb', 0))
             elif file.endswith('.bz2'):
                 if not have_bz2:
-                    raise RuntimeError("Cannpt write .bz2 file because Python could not import bz2 library")
+                    raise RuntimeError("Cannot write .bz2 file because Python could not import bz2 library")
                 self._out = bz2.BZ2File(file, 'w', 0)
             else:
                 self._out = open(file, 'w', 0)
