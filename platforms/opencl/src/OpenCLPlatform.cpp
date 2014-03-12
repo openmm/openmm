@@ -40,9 +40,15 @@ using std::string;
 using std::stringstream;
 using std::vector;
 
+#ifdef OPENMM_OPENCL_BUILDING_STATIC_LIBRARY
+extern "C" void registerOpenCLPlatform() {
+    Platform::registerPlatform(new OpenCLPlatform());
+}
+#else
 extern "C" OPENMM_EXPORT_OPENCL void registerPlatforms() {
     Platform::registerPlatform(new OpenCLPlatform());
 }
+#endif
 
 OpenCLPlatform::OpenCLPlatform() {
     OpenCLKernelFactory* factory = new OpenCLKernelFactory();

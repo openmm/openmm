@@ -42,7 +42,7 @@ def getText(subNodePath, node):
 def convertOpenMMPrefix(name):
     return name.replace('OpenMM::', 'OpenMM_')
 
-OPENMM_RE_PATTERN=re.compile("(.*)OpenMM:[a-zA-Z:]*:(.*)")
+OPENMM_RE_PATTERN=re.compile("(.*)OpenMM:[a-zA-Z0-9_:]*:(.*)")
 def stripOpenMMPrefix(name, rePattern=OPENMM_RE_PATTERN):
     try:
         m=rePattern.search(name)
@@ -624,6 +624,8 @@ class CSourceGenerator(WrapperGenerator):
             unwrappedType = type[:-1].strip()
             if unwrappedType in self.classesByShortName:
                 unwrappedType  = self.classesByShortName[unwrappedType]
+            if unwrappedType == 'const std::string':
+                return 'std::string(%s)' % value
             return '*'+self.unwrapValue(unwrappedType+'*', value)
         if type in self.classesByShortName:
             return 'static_cast<%s>(%s)' % (self.classesByShortName[type], value)
@@ -1665,14 +1667,14 @@ class FortranSourceGenerator(WrapperGenerator):
         return type
     
     def isHandleType(self, type):
-        if type.startswith('OpenMM_'):
-            return True;
-        if type == 'Vec3':
-            return True
+        if type == 'OpenMM_Vec3':
+            return False
         if type.endswith('*') or type.endswith('&'):
             return self.isHandleType(type[:-1].strip())
         if type.startswith('const '):
             return self.isHandleType(type[6:].strip())
+        if type.startswith('OpenMM_'):
+            return True;
         return False
 
     def writeOutput(self):

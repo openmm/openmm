@@ -39,12 +39,19 @@
 using namespace OpenMM;
 using namespace std;
 
+#ifdef OPENMM_CPU_BUILDING_STATIC_LIBRARY
+extern "C" void registerCpuPlatform() {
+    if (CpuPlatform::isProcessorSupported())
+        Platform::registerPlatform(new CpuPlatform());
+}
+#else
 extern "C" OPENMM_EXPORT_CPU void registerPlatforms() {
     // Only register this platform if the CPU supports SSE 4.1.
 
     if (CpuPlatform::isProcessorSupported())
         Platform::registerPlatform(new CpuPlatform());
 }
+#endif
 
 map<ContextImpl*, CpuPlatform::PlatformData*> CpuPlatform::contextData;
 

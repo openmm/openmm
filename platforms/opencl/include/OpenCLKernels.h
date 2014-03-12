@@ -639,7 +639,7 @@ private:
 class OpenCLCalcCustomNonbondedForceKernel : public CalcCustomNonbondedForceKernel {
 public:
     OpenCLCalcCustomNonbondedForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcCustomNonbondedForceKernel(name, platform),
-            cl(cl), params(NULL), globals(NULL), tabulatedFunctionParams(NULL), interactionGroupData(NULL), forceCopy(NULL), system(system), hasInitializedKernel(false) {
+            cl(cl), params(NULL), globals(NULL), interactionGroupData(NULL), forceCopy(NULL), system(system), hasInitializedKernel(false) {
     }
     ~OpenCLCalcCustomNonbondedForceKernel();
     /**
@@ -670,7 +670,6 @@ private:
     OpenCLContext& cl;
     OpenCLParameterSet* params;
     OpenCLArray* globals;
-    OpenCLArray* tabulatedFunctionParams;
     OpenCLArray* interactionGroupData;
     cl::Kernel interactionGroupKernel;
     std::vector<void*> interactionGroupArgs;
@@ -742,7 +741,7 @@ class OpenCLCalcCustomGBForceKernel : public CalcCustomGBForceKernel {
 public:
     OpenCLCalcCustomGBForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcCustomGBForceKernel(name, platform),
             hasInitializedKernels(false), cl(cl), params(NULL), computedValues(NULL), energyDerivs(NULL), energyDerivChain(NULL), longEnergyDerivs(NULL), globals(NULL),
-            valueBuffers(NULL), longValueBuffers(NULL), tabulatedFunctionParams(NULL), system(system) {
+            valueBuffers(NULL), longValueBuffers(NULL), system(system) {
     }
     ~OpenCLCalcCustomGBForceKernel();
     /**
@@ -780,7 +779,6 @@ private:
     OpenCLArray* globals;
     OpenCLArray* valueBuffers;
     OpenCLArray* longValueBuffers;
-    OpenCLArray* tabulatedFunctionParams;
     std::vector<std::string> globalParamNames;
     std::vector<cl_float> globalParamValues;
     std::vector<OpenCLArray*> tabulatedFunctions;
@@ -841,8 +839,7 @@ class OpenCLCalcCustomHbondForceKernel : public CalcCustomHbondForceKernel {
 public:
     OpenCLCalcCustomHbondForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcCustomHbondForceKernel(name, platform),
             hasInitializedKernel(false), cl(cl), donorParams(NULL), acceptorParams(NULL), donors(NULL), acceptors(NULL),
-            donorBufferIndices(NULL), acceptorBufferIndices(NULL), globals(NULL), donorExclusions(NULL), acceptorExclusions(NULL),
-            tabulatedFunctionParams(NULL), system(system) {
+            donorBufferIndices(NULL), acceptorBufferIndices(NULL), globals(NULL), donorExclusions(NULL), acceptorExclusions(NULL), system(system) {
     }
     ~OpenCLCalcCustomHbondForceKernel();
     /**
@@ -881,7 +878,6 @@ private:
     OpenCLArray* acceptorBufferIndices;
     OpenCLArray* donorExclusions;
     OpenCLArray* acceptorExclusions;
-    OpenCLArray* tabulatedFunctionParams;
     std::vector<std::string> globalParamNames;
     std::vector<cl_float> globalParamValues;
     std::vector<OpenCLArray*> tabulatedFunctions;
@@ -895,7 +891,7 @@ private:
 class OpenCLCalcCustomCompoundBondForceKernel : public CalcCustomCompoundBondForceKernel {
 public:
     OpenCLCalcCustomCompoundBondForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcCustomCompoundBondForceKernel(name, platform),
-            cl(cl), params(NULL), globals(NULL), tabulatedFunctionParams(NULL), system(system) {
+            cl(cl), params(NULL), globals(NULL), system(system) {
     }
     ~OpenCLCalcCustomCompoundBondForceKernel();
     /**
@@ -927,7 +923,6 @@ private:
     OpenCLContext& cl;
     OpenCLParameterSet* params;
     OpenCLArray* globals;
-    OpenCLArray* tabulatedFunctionParams;
     std::vector<std::string> globalParamNames;
     std::vector<cl_float> globalParamValues;
     std::vector<OpenCLArray*> tabulatedFunctions;

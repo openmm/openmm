@@ -32,9 +32,6 @@
 
 using namespace OpenMM;
 
-extern "C" OPENMM_EXPORT_PME void registerPlatforms() {
-}
-
 extern "C" OPENMM_EXPORT_PME void registerKernelFactories() {
     if (CpuCalcPmeReciprocalForceKernel::isProcessorSupported()) {
         CpuPmeKernelFactory* factory = new CpuPmeKernelFactory();
@@ -43,9 +40,17 @@ extern "C" OPENMM_EXPORT_PME void registerKernelFactories() {
     }
 }
 
+#ifdef OPENMM_PME_BUILDING_STATIC_LIBRARY
+extern "C" void registerCpuPmeKernelFactories() {
+    registerKernelFactories();
+}
+#else
 extern "C" OPENMM_EXPORT_PME void registerCpuPmeKernelFactories() {
     registerKernelFactories();
 }
+extern "C" OPENMM_EXPORT_PME void registerPlatforms() {
+}
+#endif
 
 KernelImpl* CpuPmeKernelFactory::createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const {
     if (name == CalcPmeReciprocalForceKernel::Name())
