@@ -417,7 +417,8 @@ and the number of nodes in the mesh along each dimension as
    {n}_{\text{mesh}}=\frac{2\alpha d}{{3d}^{1/5}}
 
 
-where *d* is the width of the periodic box along that dimension.  (Note that
+where *d* is the width of the periodic box along that dimension.  Alternatively,
+the user may choose to explicitly set values for these parameters.  (Note that
 some Platforms may choose to use a larger value of :math:`n_\text{mesh}` than that
 given by this equation.  For example, some FFT implementations require the mesh
 size to be a multiple of certain small prime numbers, so a Platform might round

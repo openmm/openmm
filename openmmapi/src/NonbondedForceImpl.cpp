@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2010 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -149,16 +149,19 @@ void NonbondedForceImpl::calcEwaldParameters(const System& system, const Nonbond
 }
 
 void NonbondedForceImpl::calcPMEParameters(const System& system, const NonbondedForce& force, double& alpha, int& xsize, int& ysize, int& zsize) {
-    Vec3 boxVectors[3];
-    system.getDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
-    double tol = force.getEwaldErrorTolerance();
-    alpha = (1.0/force.getCutoffDistance())*std::sqrt(-log(2.0*tol));
-    xsize = (int) ceil(2*alpha*boxVectors[0][0]/(3*pow(tol, 0.2)));
-    ysize = (int) ceil(2*alpha*boxVectors[1][1]/(3*pow(tol, 0.2)));
-    zsize = (int) ceil(2*alpha*boxVectors[2][2]/(3*pow(tol, 0.2)));
-    xsize = max(xsize, 5);
-    ysize = max(ysize, 5);
-    zsize = max(zsize, 5);
+    force.getPMEParameters(alpha, xsize, ysize, zsize);
+    if (alpha == 0.0) {
+        Vec3 boxVectors[3];
+        system.getDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+        double tol = force.getEwaldErrorTolerance();
+        alpha = (1.0/force.getCutoffDistance())*std::sqrt(-log(2.0*tol));
+        xsize = (int) ceil(2*alpha*boxVectors[0][0]/(3*pow(tol, 0.2)));
+        ysize = (int) ceil(2*alpha*boxVectors[1][1]/(3*pow(tol, 0.2)));
+        zsize = (int) ceil(2*alpha*boxVectors[2][2]/(3*pow(tol, 0.2)));
+        xsize = max(xsize, 5);
+        ysize = max(ysize, 5);
+        zsize = max(zsize, 5);
+    }
 }
 
 int NonbondedForceImpl::findZero(const NonbondedForceImpl::ErrorFunction& f, int initialGuess) {
