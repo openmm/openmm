@@ -75,9 +75,10 @@ class WrapperGenerator:
         # Read all the XML files and merge them into a single document.
         self.doc = etree.ElementTree(etree.Element('root'))
         for file in os.listdir(inputDirname):
-            root = etree.parse(os.path.join(inputDirname, file)).getroot()
-            for node in root:
-                self.doc.getroot().append(node)
+            if file.lower().endswith('xml'):
+                root = etree.parse(os.path.join(inputDirname, file)).getroot()
+                for node in root:
+                    self.doc.getroot().append(node)
 
         self.out = output
 
@@ -549,6 +550,8 @@ class CSourceGenerator(WrapperGenerator):
             unwrappedType = type[:-1].strip()
             if unwrappedType in self.classesByShortName:
                 unwrappedType  = self.classesByShortName[unwrappedType]
+            if unwrappedType == 'const std::string':
+                return 'std::string(%s)' % value
             return '*'+self.unwrapValue(unwrappedType+'*', value)
         if type in self.classesByShortName:
             return 'static_cast<%s>(%s)' % (self.classesByShortName[type], value)
@@ -1133,14 +1136,14 @@ class FortranSourceGenerator(WrapperGenerator):
         return type
     
     def isHandleType(self, type):
-        if type.startswith('OpenMM_'):
-            return True;
-        if type == 'Vec3':
-            return True
+        if type == 'OpenMM_Vec3':
+            return False
         if type.endswith('*') or type.endswith('&'):
             return self.isHandleType(type[:-1].strip())
         if type.startswith('const '):
             return self.isHandleType(type[6:].strip())
+        if type.startswith('OpenMM_'):
+            return True;
         return False
 
     def writeOutput(self):

@@ -36,6 +36,7 @@ import gzip
 import simtk.openmm as mm
 import simtk.unit as unit
 import math
+import time
 
 class StateDataReporter(object):
     """StateDataReporter outputs information about a simulation, such as energy and temperature, to a file.
@@ -45,7 +46,8 @@ class StateDataReporter(object):
     written in comma-separated-value (CSV) format, but you can specify a different separator to use.
     """
 
-    def __init__(self, file, reportInterval, step=False, time=False, potentialEnergy=False, kineticEnergy=False, totalEnergy=False, temperature=False, volume=False, density=False, separator=',', systemMass=None):
+    def __init__(self, file, reportInterval, step=False, time=False, potentialEnergy=False, kineticEnergy=False, totalEnergy=False, temperature=False, volume=False, density=False,
+                 progress=False, remainingTime=False, speed=False, separator=',', systemMass=None, totalSteps=None):
         """Create a StateDataReporter.
 
         Parameters:
@@ -59,14 +61,24 @@ class StateDataReporter(object):
          - temperature (boolean=False) Whether to write the instantaneous temperature to the file
          - volume (boolean=False) Whether to write the periodic box volume to the file
          - density (boolean=False) Whether to write the system density to the file
+         - progress (boolean=False) Whether to write current progress (percent completion) to the file.
+           If this is True, you must also specify totalSteps.
+         - remainingTime (boolean=False) Whether to write an estimate of the remaining clock time until
+           completion to the file.  If this is True, you must also specify totalSteps.
+         - speed (bool=False) Whether to write an estimate of the simulation speed in ns/day to the file
          - separator (string=',') The separator to use between columns in the file
          - systemMass (mass=None) The total mass to use for the system when reporting density.  If this is
            None (the default), the system mass is computed by summing the masses of all particles.  This
            parameter is useful when the particle masses do not reflect their actual physical mass, such as
            when some particles have had their masses set to 0 to immobilize them.
+         - totalSteps (int=None) The total number of steps that will be included in the simulation.  This
+           is required if either progress or remainingTime is set to True, and defines how many steps will
+           indicate 100% completion.
         """
         self._reportInterval = reportInterval
         self._openedFile = isinstance(file, str)
+        if (progress or remainingTime) and totalSteps is None:
+            raise ValueError('Reporting progress or remaining time requires total steps to be specified')
         if self._openedFile:
             # Detect the desired compression scheme from the filename extension
             # and open all files unbuffered
@@ -86,8 +98,12 @@ class StateDataReporter(object):
         self._temperature = temperature
         self._volume = volume
         self._density = density
+        self._progress = progress
+        self._remainingTime = remainingTime
+        self._speed = speed
         self._separator = separator
         self._totalMass = systemMass
+        self._totalSteps = totalSteps
         self._hasInitialized = False
         self._needsPositions = False
         self._needsVelocities = False
@@ -121,6 +137,9 @@ class StateDataReporter(object):
                 self._out.flush()
             except AttributeError:
                 pass
+            self._initialClockTime = time.time()
+            self._initialSimulationTime = state.getTime()
+            self._initialSteps = simulation.currentStep
             self._hasInitialized = True
 
         # Check for errors.
@@ -150,6 +169,9 @@ class StateDataReporter(object):
         values = []
         box = state.getPeriodicBoxVectors()
         volume = box[0][0]*box[1][1]*box[2][2]
+        clockTime = time.time()
+        if self._progress:
+            values.append('%.1f%%' % (100.0*simulation.currentStep/self._totalSteps))
         if self._step:
             values.append(simulation.currentStep)
         if self._time:
@@ -166,6 +188,33 @@ class StateDataReporter(object):
             values.append(volume.value_in_unit(unit.nanometer**3))
         if self._density:
             values.append((self._totalMass/volume).value_in_unit(unit.gram/unit.item/unit.milliliter))
+        if self._speed:
+            elapsedDays = (clockTime-self._initialClockTime)/86400
+            elapsedNs = (state.getTime()-self._initialSimulationTime).value_in_unit(unit.nanosecond)
+            values.append('%.3g' % (elapsedNs/elapsedDays))
+        if self._remainingTime:
+            elapsedSeconds = clockTime-self._initialClockTime
+            elapsedSteps = simulation.currentStep-self._initialSteps
+            if elapsedSteps == 0:
+                value = '--'
+            else:
+                estimatedTotalSeconds = (self._totalSteps-self._initialSteps)*elapsedSeconds/elapsedSteps
+                remainingSeconds = int(estimatedTotalSeconds-elapsedSeconds)
+                remainingDays = remainingSeconds//86400
+                remainingSeconds -= remainingDays*86400
+                remainingHours = remainingSeconds//3600
+                remainingSeconds -= remainingHours*3600
+                remainingMinutes = remainingSeconds//60
+                remainingSeconds -= remainingMinutes*60
+                if remainingDays > 0:
+                    value = "%d:%d:%02d:%02d" % (remainingDays, remainingHours, remainingMinutes, remainingSeconds)
+                elif remainingHours > 0:
+                    value = "%d:%02d:%02d" % (remainingHours, remainingMinutes, remainingSeconds)
+                elif remainingMinutes > 0:
+                    value = "%d:%02d" % (remainingMinutes, remainingSeconds)
+                else:
+                    value = "0:%02d" % remainingSeconds
+            values.append(value)
         return values
 
     def _initializeConstants(self, simulation):
@@ -200,6 +249,8 @@ class StateDataReporter(object):
         Returns: a list of strings giving the title of each observable being reported on.
         """
         headers = []
+        if self._progress:
+            headers.append('Progress (%)')
         if self._step:
             headers.append('Step')
         if self._time:
@@ -216,6 +267,10 @@ class StateDataReporter(object):
             headers.append('Box Volume (nm^3)')
         if self._density:
             headers.append('Density (g/mL)')
+        if self._speed:
+            headers.append('Speed (ns/day)')
+        if self._remainingTime:
+            headers.append('Time Remaining')
         return headers
 
     def _checkForErrors(self, simulation, state):

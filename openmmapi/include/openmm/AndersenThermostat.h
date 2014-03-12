@@ -75,12 +75,30 @@ public:
         return defaultTemp;
     }
     /**
+     * Set the default temperature of the heat bath.  This will affect any new Contexts you create,
+     * but not ones that already exist.
+     *
+     * @param temperature         the default temperature of the heat bath (in Kelvin)
+     */
+    void setDefaultTemperature(double temperature) {
+        defaultTemp = temperature;
+    }
+    /**
      * Get the default collision frequency (in 1/ps).
      *
      * @return the default collision frequency, measured in 1/ps.
      */
     double getDefaultCollisionFrequency() const {
         return defaultFreq;
+    }
+    /**
+     * Set the default collision frequency.  This will affect any new Contexts you create,
+     * but not ones that already exist.
+     *
+     * @param frequency         the default collision frequency (in 1/ps)
+     */
+    void setDefaultCollisionFrequency(double frequency) {
+        defaultFreq = frequency;
     }
     /**
      * Get the random number seed.  See setRandomNumberSeed() for details.

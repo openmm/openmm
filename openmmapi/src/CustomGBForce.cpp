@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -48,6 +48,11 @@ using std::stringstream;
 using std::vector;
 
 CustomGBForce::CustomGBForce() : nonbondedMethod(NoCutoff), cutoffDistance(1.0) {
+}
+
+CustomGBForce::~CustomGBForce() {
+    for (int i = 0; i < (int) functions.size(); i++)
+        delete functions[i].function;
 }
 
 CustomGBForce::NonbondedMethod CustomGBForce::getNonbondedMethod() const {
@@ -173,33 +178,47 @@ void CustomGBForce::setExclusionParticles(int index, int particle1, int particle
     exclusions[index].particle2 = particle2;
 }
 
+int CustomGBForce::addTabulatedFunction(const std::string& name, TabulatedFunction* function) {
+    functions.push_back(FunctionInfo(name, function));
+    return functions.size()-1;
+}
+
+const TabulatedFunction& CustomGBForce::getTabulatedFunction(int index) const {
+    ASSERT_VALID_INDEX(index, functions);
+    return *functions[index].function;
+}
+
+TabulatedFunction& CustomGBForce::getTabulatedFunction(int index) {
+    ASSERT_VALID_INDEX(index, functions);
+    return *functions[index].function;
+}
+
+const string& CustomGBForce::getTabulatedFunctionName(int index) const {
+    ASSERT_VALID_INDEX(index, functions);
+    return functions[index].name;
+}
+
 int CustomGBForce::addFunction(const std::string& name, const std::vector<double>& values, double min, double max) {
-    if (max <= min)
-        throw OpenMMException("CustomGBForce: max <= min for a tabulated function.");
-    if (values.size() < 2)
-        throw OpenMMException("CustomGBForce: a tabulated function must have at least two points");
-    functions.push_back(FunctionInfo(name, values, min, max));
+    functions.push_back(FunctionInfo(name, new Continuous1DFunction(values, min, max)));
     return functions.size()-1;
 }
 
 void CustomGBForce::getFunctionParameters(int index, std::string& name, std::vector<double>& values, double& min, double& max) const {
     ASSERT_VALID_INDEX(index, functions);
+    Continuous1DFunction* function = dynamic_cast<Continuous1DFunction*>(functions[index].function);
+    if (function == NULL)
+        throw OpenMMException("CustomGBForce: function is not a Continuous1DFunction");
     name = functions[index].name;
-    values = functions[index].values;
-    min = functions[index].min;
-    max = functions[index].max;
+    function->getFunctionParameters(values, min, max);
 }
 
 void CustomGBForce::setFunctionParameters(int index, const std::string& name, const std::vector<double>& values, double min, double max) {
-    if (max <= min)
-        throw OpenMMException("CustomGBForce: max <= min for a tabulated function.");
-    if (values.size() < 2)
-        throw OpenMMException("CustomGBForce: a tabulated function must have at least two points");
     ASSERT_VALID_INDEX(index, functions);
+    Continuous1DFunction* function = dynamic_cast<Continuous1DFunction*>(functions[index].function);
+    if (function == NULL)
+        throw OpenMMException("CustomGBForce: function is not a Continuous1DFunction");
     functions[index].name = name;
-    functions[index].values = values;
-    functions[index].min = min;
-    functions[index].max = max;
+    function->setFunctionParameters(values, min, max);
 }
 
 ForceImpl* CustomGBForce::createImpl() const {

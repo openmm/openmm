@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -48,7 +48,7 @@ using std::stringstream;
 using std::vector;
 
 NonbondedForce::NonbondedForce() : nonbondedMethod(NoCutoff), cutoffDistance(1.0), switchingDistance(-1.0), rfDielectric(78.3),
-        ewaldErrorTol(5e-4), useSwitchingFunction(false), useDispersionCorrection(true), recipForceGroup(-1) {
+        ewaldErrorTol(5e-4), alpha(0.0), useSwitchingFunction(false), useDispersionCorrection(true), recipForceGroup(-1), nx(0), ny(0), nz(0) {
 }
 
 NonbondedForce::NonbondedMethod NonbondedForce::getNonbondedMethod() const {
@@ -95,9 +95,22 @@ double NonbondedForce::getEwaldErrorTolerance() const {
     return ewaldErrorTol;
 }
 
-void NonbondedForce::setEwaldErrorTolerance(double tol)
-{
+void NonbondedForce::setEwaldErrorTolerance(double tol) {
     ewaldErrorTol = tol;
+}
+
+void NonbondedForce::getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {
+    alpha = this->alpha;
+    nx = this->nx;
+    ny = this->ny;
+    nz = this->nz;
+}
+
+void NonbondedForce::setPMEParameters(double alpha, int nx, int ny, int nz) {
+    this->alpha = alpha;
+    this->nx = nx;
+    this->ny = ny;
+    this->nz = nz;
 }
 
 int NonbondedForce::addParticle(double charge, double sigma, double epsilon) {

@@ -107,8 +107,8 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
                 if (i != deviceIndex && deviceIndex >= 0 && deviceIndex < (int) devices.size())
                     continue;
 
-                if (platformVendor == "Apple" && devices[i].getInfo<CL_DEVICE_VENDOR>() == "AMD")
-                    continue; // Don't use AMD GPUs on OS X due to serious bugs.
+                if (platformVendor == "Apple" && (devices[i].getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_CPU || devices[i].getInfo<CL_DEVICE_VENDOR>() == "AMD"))
+                    continue; // The CPU device on OS X won't work correctly, and there are serious bugs using AMD GPUs.
                 int maxSize = devices[i].getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>()[0];
                 int processingElementsPerComputeUnit = 8;
                 if (devices[i].getInfo<CL_DEVICE_TYPE>() != CL_DEVICE_TYPE_GPU) {

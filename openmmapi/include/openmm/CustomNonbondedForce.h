@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,6 +32,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include "TabulatedFunction.h"
 #include "Force.h"
 #include "Vec3.h"
 #include <map>
@@ -124,8 +125,8 @@ namespace OpenMM {
  * have the suffix "1" or "2" appended to them to indicate the values for the two interacting particles.  As seen in the above example,
  * the expression may also involve intermediate quantities that are defined following the main expression, using ";" as a separator.
  *
- * In addition, you can call addFunction() to define a new function based on tabulated values.  You specify a vector of
- * values, and a natural spline is created from them.  That function can then appear in the expression.
+ * In addition, you can call addTabulatedFunction() to define a new function based on tabulated values.  You specify the function by
+ * creating a TabulatedFunction object.  That function can then appear in the expression.
  */
 
 class OPENMM_EXPORT CustomNonbondedForce : public Force {
@@ -156,6 +157,7 @@ public:
      *                  of r, the distance between them, as well as any global and per-particle parameters
      */
     explicit CustomNonbondedForce(const std::string& energy);
+    ~CustomNonbondedForce();
     /**
      * Get the number of particles for which force field parameters have been defined.
      */
@@ -182,6 +184,14 @@ public:
     }
     /**
      * Get the number of tabulated functions that have been defined.
+     */
+    int getNumTabulatedFunctions() const {
+        return functions.size();
+    }
+    /**
+     * Get the number of tabulated functions that have been defined.
+     * 
+     * @deprecated This method exists only for backward compatibility.  Use getNumTabulatedFunctions() instead.
      */
     int getNumFunctions() const {
         return functions.size();
@@ -359,33 +369,51 @@ public:
      * Add a tabulated function that may appear in the energy expression.
      *
      * @param name           the name of the function as it appears in expressions
-     * @param values         the tabulated values of the function f(x) at uniformly spaced values of x between min and max.
-     *                       The function is assumed to be zero for x &lt; min or x &gt; max.
-     * @param min            the value of the independent variable corresponding to the first element of values
-     * @param max            the value of the independent variable corresponding to the last element of values
+     * @param function       a TabulatedFunction object defining the function.  The TabulatedFunction
+     *                       should have been created on the heap with the "new" operator.  The
+     *                       Force takes over ownership of it, and deletes it when the Force itself is deleted.
      * @return the index of the function that was added
+     */
+    int addTabulatedFunction(const std::string& name, TabulatedFunction* function);
+    /**
+     * Get a const reference to a tabulated function that may appear in the energy expression.
+     *
+     * @param index     the index of the function to get
+     * @return the TabulatedFunction object defining the function
+     */
+    const TabulatedFunction& getTabulatedFunction(int index) const;
+    /**
+     * Get a reference to a tabulated function that may appear in the energy expression.
+     *
+     * @param index     the index of the function to get
+     * @return the TabulatedFunction object defining the function
+     */
+    TabulatedFunction& getTabulatedFunction(int index);
+    /**
+     * Get the name of a tabulated function that may appear in the energy expression.
+     *
+     * @param index     the index of the function to get
+     * @return the name of the function as it appears in expressions
+     */
+    const std::string& getTabulatedFunctionName(int index) const;
+    /**
+     * Add a tabulated function that may appear in the energy expression.
+     *
+     * @deprecated This method exists only for backward compatibility.  Use addTabulatedFunction() instead.
      */
     int addFunction(const std::string& name, const std::vector<double>& values, double min, double max);
     /**
      * Get the parameters for a tabulated function that may appear in the energy expression.
      *
-     * @param index          the index of the function for which to get parameters
-     * @param name           the name of the function as it appears in expressions
-     * @param values         the tabulated values of the function f(x) at uniformly spaced values of x between min and max.
-     *                       The function is assumed to be zero for x &lt; min or x &gt; max.
-     * @param min            the value of the independent variable corresponding to the first element of values
-     * @param max            the value of the independent variable corresponding to the last element of values
+     * @deprecated This method exists only for backward compatibility.  Use getTabulatedFunctionParameters() instead.
+     * If the specified function is not a Continuous1DFunction, this throws an exception.
      */
     void getFunctionParameters(int index, std::string& name, std::vector<double>& values, double& min, double& max) const;
     /**
-     * Set the parameters for a tabulated function that may appear in algebraic expressions.
+     * Set the parameters for a tabulated function that may appear in the energy expression.
      *
-     * @param index          the index of the function for which to set parameters
-     * @param name           the name of the function as it appears in expressions
-     * @param values         the tabulated values of the function f(x) at uniformly spaced values of x between min and max.
-     *                       The function is assumed to be zero for x &lt; min or x &gt; max.
-     * @param min            the value of the independent variable corresponding to the first element of values
-     * @param max            the value of the independent variable corresponding to the last element of values
+     * @deprecated This method exists only for backward compatibility.  Use setTabulatedFunctionParameters() instead.
+     * If the specified function is not a Continuous1DFunction, this throws an exception.
      */
     void setFunctionParameters(int index, const std::string& name, const std::vector<double>& values, double min, double max);
     /**
@@ -507,12 +535,10 @@ public:
 class CustomNonbondedForce::FunctionInfo {
 public:
     std::string name;
-    std::vector<double> values;
-    double min, max;
+    TabulatedFunction* function;
     FunctionInfo() {
     }
-    FunctionInfo(const std::string& name, const std::vector<double>& values, double min, double max) :
-        name(name), values(values), min(min), max(max) {
+    FunctionInfo(const std::string& name, TabulatedFunction* function) : name(name), function(function) {
     }
 };
 

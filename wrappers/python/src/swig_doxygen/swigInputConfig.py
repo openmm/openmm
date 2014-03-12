@@ -136,6 +136,10 @@ NO_OUTPUT_ARGS = [('LocalEnergyMinimizer', 'minimize', 'context'),
 STEAL_OWNERSHIP = {("Platform", "registerPlatform") : [0],
                    ("System", "addForce") : [0],
                    ("System", "setVirtualSite") : [1],
+                   ("CustomNonbondedForce", "addTabulatedFunction") : [1],
+                   ("CustomGBForce", "addTabulatedFunction") : [1],
+                   ("CustomHbondForce", "addTabulatedFunction") : [1],
+                   ("CustomCompoundBondForce", "addTabulatedFunction") : [1],
 }
 
 # This is a list of units to attach to return values and method args.
@@ -179,6 +183,7 @@ UNITS = {
 ("*", "getSolventDielectric") : (None, ()),
 ("*", "getStepSize") : ("unit.picosecond", ()),
 ("*", "getSystem") : (None, ()),
+("*", "getTabulatedFunction") : (None, ()),
 ("*", "getUseDispersionCorrection") : (None, ()),
 ("*", "getTemperature") : ("unit.kelvin", ()),
 ("*", "getUseDispersionCorrection") : (None, ()),

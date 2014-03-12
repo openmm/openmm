@@ -105,6 +105,10 @@ void testConstraints() {
 
 int main(int argc, char* argv[]) {
     try {
+        if (!CpuPlatform::isProcessorSupported()) {
+            cout << "CPU is not supported.  Exiting." << endl;
+            return 0;
+        }
         testConstraints();
     }
     catch(const exception& e) {

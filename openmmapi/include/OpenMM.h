@@ -62,6 +62,7 @@
 #include "openmm/RBTorsionForce.h"
 #include "openmm/State.h"
 #include "openmm/System.h"
+#include "openmm/TabulatedFunction.h"
 #include "openmm/Units.h"
 #include "openmm/VariableLangevinIntegrator.h"
 #include "openmm/VariableVerletIntegrator.h"

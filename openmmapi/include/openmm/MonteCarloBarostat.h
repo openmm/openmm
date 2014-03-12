@@ -75,6 +75,15 @@ public:
         return defaultPressure;
     }
     /**
+     * Set the default pressure acting on the system.  This will affect any new Contexts you create,
+     * but not ones that already exist.
+     *
+     * @param pressure   the default pressure acting on the system, measured in bar.
+     */
+    void setDefaultPressure(double pressure) {
+        defaultPressure = pressure;
+    }
+    /**
      * Get the frequency (in time steps) at which Monte Carlo pressure changes should be attempted.  If this is set to
      * 0, the barostat is disabled.
      */

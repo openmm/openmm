@@ -14,6 +14,8 @@
 #   libOpenMM_static[_d].a
 #----------------------------------------------------
 
+find_program(PYTHON_EXECUTABLE NAMES python)
+
 # Don't create a new project name if this is part of a mega-build from the
 # parent directory
 IF( NOT PROJECT_NAME )
@@ -51,15 +53,15 @@ if(COMMAND cmake_policy)
 endif(COMMAND cmake_policy)
 
 # Where to install
-IF(${CMAKE_C_COMPILER} MATCHES "gcc")
-    IF(NOT OPENMM_INSTALL_PREFIX)
-        SET(OPENMM_INSTALL_PREFIX "/usr/local/openmm")
-    ENDIF(NOT OPENMM_INSTALL_PREFIX)
-ELSE(${CMAKE_C_COMPILER} MATCHES "gcc")
+IF(WIN32)
     IF(NOT OPENMM_INSTALL_PREFIX)
         SET(OPENMM_INSTALL_PREFIX "$ENV{ProgramFiles}/OpenMM")
     ENDIF(NOT OPENMM_INSTALL_PREFIX)
-ENDIF(${CMAKE_C_COMPILER} MATCHES "gcc")
+ELSE(WIN32)
+    IF(NOT OPENMM_INSTALL_PREFIX)
+        SET(OPENMM_INSTALL_PREFIX "/usr/local/openmm")
+    ENDIF(NOT OPENMM_INSTALL_PREFIX)
+ENDIF(WIN32)
 
 # It seems that on linux and mac, everything is trying to be installed in /usr/local/openmm
 # But if every install target is prefixed with /openmm/, on Windows the install files
@@ -85,8 +87,11 @@ IF(WIN32)
     ENDFOREACH(lib)
     LINK_DIRECTORIES("${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}")
     SET(PTHREADS_LIB pthreadVC2)
+    SET(PTHREADS_LIB_STATIC pthreadVC2_static_mt)
 ELSE(WIN32)
     SET(PTHREADS_LIB pthread)
+    # in linux, even in static builds we link against the dynamic object (since its tied to libc versions)
+    SET(PTHREADS_LIB_STATIC pthread)
 ENDIF(WIN32)
 
 # The build system will set ARCH64 for 64 bit builds, which require
@@ -144,11 +149,11 @@ ENDIF (NOT CMAKE_CXX_FLAGS_RELEASE)
 # and make it available to the code so it can be built into the binaries.
 
 SET(OPENMM_LIBRARY_NAME OpenMM)
-SET(OPENMM_MAJOR_VERSION 5)
-SET(OPENMM_MINOR_VERSION 2)
+SET(OPENMM_MAJOR_VERSION 6)
+SET(OPENMM_MINOR_VERSION 0)
 SET(OPENMM_BUILD_VERSION 0)
 
-SET(OPENMM_COPYRIGHT_YEARS "2008")
+SET(OPENMM_COPYRIGHT_YEARS "2008-2014")
 
 # underbar separated list of dotted authors, no spaces or commas
 SET(OPENMM_AUTHORS "Peter.Eastman")
@@ -162,11 +167,11 @@ ADD_DEFINITIONS(-DOPENMM_LIBRARY_NAME=${OPENMM_LIBRARY_NAME}
 # to add them ourselves for Linux or Cygwin. Two cases to avoid duplicate quotes
 # in Visual Studio which end up in the binary.
 
-IF (${CMAKE_GENERATOR} MATCHES "Visual Studio")
+IF (MSVC)
    SET(NEED_QUOTES FALSE)
-ELSE (${CMAKE_GENERATOR} MATCHES "Visual Studio")
+ELSE (MSVC)
    SET(NEED_QUOTES TRUE)
-ENDIF (${CMAKE_GENERATOR} MATCHES "Visual Studio")
+ENDIF (MSVC)
 
 ##TODO: doesn't work without quotes in nightly build
 SET(NEED_QUOTES TRUE)
@@ -208,9 +213,9 @@ SET(${PROJECT_NAME}_LIBRARY_DIR    ${LIBRARY_OUTPUT_PATH}/${CMAKE_CFG_INTDIR})
 
 # Ensure that debug libraries have "_d" appended to their names.
 # CMake gets this right on Windows automatically with this definition.
-IF (${CMAKE_GENERATOR} MATCHES "Visual Studio")
+IF (MSVC)
     SET(CMAKE_DEBUG_POSTFIX "_d" CACHE INTERNAL "" FORCE)
-ENDIF (${CMAKE_GENERATOR} MATCHES "Visual Studio")
+ENDIF (MSVC)
 
 # But on Unix or Cygwin we have to add the suffix manually
 IF (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)

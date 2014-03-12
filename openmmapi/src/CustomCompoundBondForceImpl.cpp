@@ -147,7 +147,7 @@ ParsedExpression CustomCompoundBondForceImpl::prepareExpression(const CustomComp
 ExpressionTreeNode CustomCompoundBondForceImpl::replaceFunctions(const ExpressionTreeNode& node, map<string, int> atoms,
         map<string, vector<int> >& distances, map<string, vector<int> >& angles, map<string, vector<int> >& dihedrals) {
     const Operation& op = node.getOperation();
-    if (op.getId() != Operation::CUSTOM || op.getNumArguments() < 2)
+    if (op.getId() != Operation::CUSTOM || (op.getName() != "distance" && op.getName() != "angle" && op.getName() != "dihedral"))
     {
         // This is not an angle or dihedral, so process its children.
 

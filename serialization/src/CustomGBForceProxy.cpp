@@ -87,16 +87,8 @@ void CustomGBForceProxy::serialize(const void* object, SerializationNode& node) 
         exclusions.createChildNode("Exclusion").setIntProperty("p1", particle1).setIntProperty("p2", particle2);
     }
     SerializationNode& functions = node.createChildNode("Functions");
-    for (int i = 0; i < force.getNumFunctions(); i++) {
-        string name;
-        vector<double> values;
-        double min, max;
-        force.getFunctionParameters(i, name, values, min, max);
-        SerializationNode& node = functions.createChildNode("Function").setStringProperty("name", name).setDoubleProperty("min", min).setDoubleProperty("max", max);
-        SerializationNode& valuesNode = node.createChildNode("Values");
-        for (int j = 0; j < (int) values.size(); j++)
-            valuesNode.createChildNode("Value").setDoubleProperty("v", values[j]);
-    }
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++)
+        functions.createChildNode("Function", &force.getTabulatedFunction(i)).setStringProperty("name", force.getTabulatedFunctionName(i));
 }
 
 void* CustomGBForceProxy::deserialize(const SerializationNode& node) const {
@@ -147,11 +139,18 @@ void* CustomGBForceProxy::deserialize(const SerializationNode& node) const {
         const SerializationNode& functions = node.getChildNode("Functions");
         for (int i = 0; i < (int) functions.getChildren().size(); i++) {
             const SerializationNode& function = functions.getChildren()[i];
-            const SerializationNode& valuesNode = function.getChildNode("Values");
-            vector<double> values;
-            for (int j = 0; j < (int) valuesNode.getChildren().size(); j++)
-                values.push_back(valuesNode.getChildren()[j].getDoubleProperty("v"));
-            force->addFunction(function.getStringProperty("name"), values, function.getDoubleProperty("min"), function.getDoubleProperty("max"));
+            if (function.hasProperty("type")) {
+                force->addTabulatedFunction(function.getStringProperty("name"), function.decodeObject<TabulatedFunction>());
+            }
+            else {
+                // This is an old file created before TabulatedFunction existed.
+                
+                const SerializationNode& valuesNode = function.getChildNode("Values");
+                vector<double> values;
+                for (int j = 0; j < (int) valuesNode.getChildren().size(); j++)
+                    values.push_back(valuesNode.getChildren()[j].getDoubleProperty("v"));
+                force->addTabulatedFunction(function.getStringProperty("name"), new Continuous1DFunction(values, function.getDoubleProperty("min"), function.getDoubleProperty("max")));
+            }
         }
         return force;
     }

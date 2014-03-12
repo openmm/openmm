@@ -638,7 +638,7 @@ private:
 class CudaCalcCustomNonbondedForceKernel : public CalcCustomNonbondedForceKernel {
 public:
     CudaCalcCustomNonbondedForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcCustomNonbondedForceKernel(name, platform),
-            cu(cu), params(NULL), globals(NULL), tabulatedFunctionParams(NULL), interactionGroupData(NULL), forceCopy(NULL), system(system), hasInitializedKernel(false) {
+            cu(cu), params(NULL), globals(NULL), interactionGroupData(NULL), forceCopy(NULL), system(system), hasInitializedKernel(false) {
     }
     ~CudaCalcCustomNonbondedForceKernel();
     /**
@@ -669,7 +669,6 @@ private:
     CudaContext& cu;
     CudaParameterSet* params;
     CudaArray* globals;
-    CudaArray* tabulatedFunctionParams;
     CudaArray* interactionGroupData;
     CUfunction interactionGroupKernel;
     std::vector<void*> interactionGroupArgs;
@@ -739,7 +738,7 @@ class CudaCalcCustomGBForceKernel : public CalcCustomGBForceKernel {
 public:
     CudaCalcCustomGBForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcCustomGBForceKernel(name, platform),
             hasInitializedKernels(false), cu(cu), params(NULL), computedValues(NULL), energyDerivs(NULL), energyDerivChain(NULL), longEnergyDerivs(NULL), globals(NULL),
-            valueBuffers(NULL), tabulatedFunctionParams(NULL), system(system) {
+            valueBuffers(NULL), system(system) {
     }
     ~CudaCalcCustomGBForceKernel();
     /**
@@ -776,7 +775,6 @@ private:
     CudaArray* longEnergyDerivs;
     CudaArray* globals;
     CudaArray* valueBuffers;
-    CudaArray* tabulatedFunctionParams;
     std::vector<std::string> globalParamNames;
     std::vector<float> globalParamValues;
     std::vector<CudaArray*> tabulatedFunctions;
@@ -838,7 +836,7 @@ class CudaCalcCustomHbondForceKernel : public CalcCustomHbondForceKernel {
 public:
     CudaCalcCustomHbondForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcCustomHbondForceKernel(name, platform),
             hasInitializedKernel(false), cu(cu), donorParams(NULL), acceptorParams(NULL), donors(NULL), acceptors(NULL),
-            globals(NULL), donorExclusions(NULL), acceptorExclusions(NULL), tabulatedFunctionParams(NULL), system(system) {
+            globals(NULL), donorExclusions(NULL), acceptorExclusions(NULL), system(system) {
     }
     ~CudaCalcCustomHbondForceKernel();
     /**
@@ -875,7 +873,6 @@ private:
     CudaArray* acceptors;
     CudaArray* donorExclusions;
     CudaArray* acceptorExclusions;
-    CudaArray* tabulatedFunctionParams;
     std::vector<std::string> globalParamNames;
     std::vector<float> globalParamValues;
     std::vector<CudaArray*> tabulatedFunctions;
@@ -890,7 +887,7 @@ private:
 class CudaCalcCustomCompoundBondForceKernel : public CalcCustomCompoundBondForceKernel {
 public:
     CudaCalcCustomCompoundBondForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcCustomCompoundBondForceKernel(name, platform),
-            cu(cu), params(NULL), globals(NULL), tabulatedFunctionParams(NULL), system(system) {
+            cu(cu), params(NULL), globals(NULL), system(system) {
     }
     ~CudaCalcCustomCompoundBondForceKernel();
     /**
@@ -922,7 +919,6 @@ private:
     CudaContext& cu;
     CudaParameterSet* params;
     CudaArray* globals;
-    CudaArray* tabulatedFunctionParams;
     std::vector<std::string> globalParamNames;
     std::vector<float> globalParamValues;
     std::vector<CudaArray*> tabulatedFunctions;

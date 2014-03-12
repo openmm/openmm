@@ -35,9 +35,9 @@ SET(STATIC_TARGET ${OPENMMCUDA_LIBRARY_NAME}_static)
 
 # Ensure that debug libraries have "_d" appended to their names.
 # CMake gets this right on Windows automatically with this definition.
-IF (${CMAKE_GENERATOR} MATCHES "Visual Studio")
+IF (MSVC)
     SET(CMAKE_DEBUG_POSTFIX "_d" CACHE INTERNAL "" FORCE)
-ENDIF (${CMAKE_GENERATOR} MATCHES "Visual Studio")
+ENDIF (MSVC)
 
 # But on Unix or Cygwin we have to add the suffix manually
 IF (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
@@ -104,3 +104,6 @@ FILE(GLOB CORE_HEADERS include/*.h)
 INSTALL_FILES(/include/openmm/cuda FILES ${CORE_HEADERS})
 
 SUBDIRS (sharedTarget)
+IF(OPENMM_BUILD_STATIC_LIB)
+    SUBDIRS (staticTarget)
+ENDIF(OPENMM_BUILD_STATIC_LIB)
