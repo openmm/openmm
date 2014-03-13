@@ -10,15 +10,16 @@ before_install:
   - export ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer-3.3
 
 script:
-  - cmake -DCMAKE_INSTALL_PREFIX=~/OpenMM -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS_DEBUG="-g -fsanitize=address -fno-omit-frame-pointer -O2" .
+  - cmake -DCMAKE_INSTALL_PREFIX=$HOME/OpenMM .
   - make
-  - make test
   - make install
-  - ls ~/OpenMM/include
-  - export LD_LIBRARY_PATH=~/OpenMM/lib/
-  - export OPENMM_LIB_PATH=~/OpenMM/lib/
-  - export OPENMM_INCLUDE_PATH=~/OpenMM/include/
-  - cd python
-  - sudo -E python setup.py install
-  - cd tests
+  - sudo make PythonInstall
+  - # run all of the tests
+  - ctest -V
+  - # get a list of all of the failed tests into this stupid ctest format
+  - python -c 'fn = "Testing/Temporary/LastTestsFailed.log"; import os; os.path.exists(fn) or exit(0); l = [line.split(":")[0] for line in open(fn)]; triplets = zip(l, l, [","]*len(l)); print "".join(",".join(t) for t in triplets)' > FailedTests.log
+  - # rerun all of the failed tests
+  - if [ -s FailedTests.log ]; then ctest -V -I FailedTests.log; fi;
+  - # run the python tests too
+  - cd python/tests
   - nosetests -vv
