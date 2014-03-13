@@ -33,6 +33,9 @@
  * This tests the OpenCL implementation of CustomCompoundBondForce.
  */
 
+#ifdef WIN32
+  #define _USE_MATH_DEFINES // Needed to get M_PI
+#endif
 #include "openmm/internal/AssertionUtilities.h"
 #include "openmm/Context.h"
 #include "OpenCLPlatform.h"
@@ -313,7 +316,7 @@ void testMultipleBonds() {
     parameters[0] = 1.0;
     parameters[1] = 1.0;
     parameters[2] = 2 * M_PI / 3;
-    parameters[3] = sqrt(3) / 2;
+    parameters[3] = sqrt(3.0) / 2;
     vector<int> particles0(3);
     particles0[0] = 0;
     particles0[1] = 1;
