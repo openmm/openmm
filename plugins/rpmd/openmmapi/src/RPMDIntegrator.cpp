@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -34,6 +34,7 @@
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/RpmdKernels.h"
+#include "SimTKOpenMMRealType.h"
 #include <cmath>
 #include <ctime>
 #include <string>
@@ -194,4 +195,28 @@ void RPMDIntegrator::step(int steps) {
         kernel.getAs<IntegrateRPMDStepKernel>().execute(*context, *this, forcesAreValid);
         forcesAreValid = true;
     }
+}
+
+double RPMDIntegrator::getTotalEnergy() {
+    const System& system = owner->getSystem();
+    int numParticles = system.getNumParticles();
+    double energy = 0.0;
+    const double hbar = 1.054571628e-34*AVOGADRO/(1000*1e-12);
+    const double wn = numCopies*BOLTZ*temperature/hbar;
+    State prevState = getState(numCopies-1, State::Positions);
+    for (int i = 0; i < numCopies; i++) {
+        // Add the energy of this copy.
+        
+        State state = getState(i, State::Positions | State::Energy);
+        energy += state.getKineticEnergy()+state.getPotentialEnergy();
+        
+        // Add the energy from the springs connecting it to the previous copy.
+        
+        for (int j = 0; j < numParticles; j++) {
+            Vec3 delta = state.getPositions()[j]-prevState.getPositions()[j];
+            energy += 0.5*wn*wn*system.getParticleMass(j)*delta.dot(delta);
+        }
+        prevState = state;
+    }
+    return energy;
 }
