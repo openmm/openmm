@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013 Stanford University and the Authors.           *
+ * Portions copyright (c) 2013-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -45,6 +45,7 @@
 #include "openmm/internal/NonbondedForceImpl.h"
 #include "openmm/internal/vectorize.h"
 #include "RealVec.h"
+#include "lepton/CompiledExpression.h"
 #include "lepton/CustomFunction.h"
 #include "lepton/Parser.h"
 #include "lepton/ParsedExpression.h"
@@ -623,6 +624,10 @@ void CpuCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, 
         dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(context.getSystem(), force);
 }
 
+CpuCalcCustomNonbondedForceKernel::CpuCalcCustomNonbondedForceKernel(string name, const Platform& platform, CpuPlatform::PlatformData& data) :
+            CalcCustomNonbondedForceKernel(name, platform), data(data), forceCopy(NULL), neighborList(NULL), nonbonded(NULL) {
+}
+
 CpuCalcCustomNonbondedForceKernel::~CpuCalcCustomNonbondedForceKernel() {
     if (particleParamArray != NULL) {
         for (int i = 0; i < numParticles; i++)
@@ -631,6 +636,8 @@ CpuCalcCustomNonbondedForceKernel::~CpuCalcCustomNonbondedForceKernel() {
     }
     if (neighborList != NULL)
         delete neighborList;
+    if (nonbonded != NULL)
+        delete nonbonded;
     if (forceCopy != NULL)
         delete forceCopy;
 }
@@ -679,8 +686,8 @@ void CpuCalcCustomNonbondedForceKernel::initialize(const System& system, const C
     // Parse the various expressions used to calculate the force.
 
     Lepton::ParsedExpression expression = Lepton::Parser::parse(force.getEnergyFunction(), functions).optimize();
-    energyExpression = expression.createCompiledExpression();
-    forceExpression = expression.differentiate("r").createCompiledExpression();
+    Lepton::CompiledExpression energyExpression = expression.createCompiledExpression();
+    Lepton::CompiledExpression forceExpression = expression.differentiate("r").createCompiledExpression();
     for (int i = 0; i < numParameters; i++)
         parameterNames.push_back(force.getPerParticleParameterName(i));
     for (int i = 0; i < force.getNumGlobalParameters(); i++) {
@@ -712,6 +719,7 @@ void CpuCalcCustomNonbondedForceKernel::initialize(const System& system, const C
         interactionGroups.push_back(make_pair(set1, set2));
     }
     data.isPeriodic = (nonbondedMethod == CutoffPeriodic);
+    nonbonded = new CpuCustomNonbondedForce(energyExpression, forceExpression, parameterNames, data.threads);
 }
 
 double CpuCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -720,20 +728,19 @@ double CpuCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool inc
     RealVec& box = extractBoxSize(context);
     float floatBoxSize[3] = {(float) box[0], (float) box[1], (float) box[2]};
     double energy = 0;
-    CpuCustomNonbondedForce ixn(energyExpression, forceExpression, parameterNames);
     bool periodic = (nonbondedMethod == CutoffPeriodic);
     if (nonbondedMethod != NoCutoff) {
         neighborList->computeNeighborList(numParticles, data.posq, exclusions, floatBoxSize, data.isPeriodic, nonbondedCutoff, data.threads);
-        ixn.setUseCutoff(nonbondedCutoff, *neighborList);
+        nonbonded->setUseCutoff(nonbondedCutoff, *neighborList);
     }
     if (periodic) {
         double minAllowedSize = 2*nonbondedCutoff;
         if (box[0] < minAllowedSize || box[1] < minAllowedSize || box[2] < minAllowedSize)
             throw OpenMMException("The periodic box size has decreased to less than twice the nonbonded cutoff.");
-        ixn.setPeriodic(box);
+        nonbonded->setPeriodic(box);
     }
     if (interactionGroups.size() > 0)
-        ixn.setInteractionGroups(interactionGroups);
+        nonbonded->setInteractionGroups(interactionGroups);
     bool globalParamsChanged = false;
     for (int i = 0; i < (int) globalParameterNames.size(); i++) {
         double value = context.getParameter(globalParameterNames[i]);
@@ -742,8 +749,8 @@ double CpuCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool inc
         globalParamValues[globalParameterNames[i]] = value;
     }
     if (useSwitchingFunction)
-        ixn.setUseSwitchingFunction(switchingDistance);
-    ixn.calculatePairIxn(numParticles, &data.posq[0], posData, particleParamArray, exclusions, 0, globalParamValues, data.threadForce, includeEnergy ? &energy : NULL, data.threads);
+        nonbonded->setUseSwitchingFunction(switchingDistance);
+    nonbonded->calculatePairIxn(numParticles, &data.posq[0], posData, particleParamArray, exclusions, 0, globalParamValues, data.threadForce, includeForces, includeEnergy, energy);
     
     // Add in the long range correction.
     

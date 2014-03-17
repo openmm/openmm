@@ -40,6 +40,8 @@ namespace OpenMM {
 class CpuCustomNonbondedForce {
 
    private:
+      class ComputeForceTask;
+      class ThreadData;
 
       bool cutoff;
       bool useSwitch;
@@ -47,13 +49,9 @@ class CpuCustomNonbondedForce {
       const CpuNeighborList* neighborList;
       RealOpenMM periodicBoxSize[3];
       RealOpenMM cutoffDistance, switchingDistance;
-      Lepton::CompiledExpression energyExpression;
-      Lepton::CompiledExpression forceExpression;
+      ThreadPool& threads;
+      std::vector<ThreadData*> threadData;
       std::vector<std::string> paramNames;
-      std::vector<double*> energyParticleParams;
-      std::vector<double*> forceParticleParams;
-      double* energyR;
-      double* forceR;
       std::vector<std::pair<std::set<int>, std::set<int> > > interactionGroups;
       std::vector<double> threadEnergy;
     // The following variables are used to make information accessible to the individual threads.
@@ -61,10 +59,16 @@ class CpuCustomNonbondedForce {
     float* posq;
     RealVec const* atomCoordinates;
     RealOpenMM** atomParameters;        
+    const std::map<std::string, double>* globalParameters;
     std::set<int> const* exclusions;
     std::vector<AlignedArray<float> >* threadForce;
-    bool includeEnergy;
+    bool includeForce, includeEnergy;
     void* atomicCounter;
+
+    /**
+     * This routine contains the code executed by each thread.
+     */
+    void threadComputeForce(ThreadPool& threads, int threadIndex);
 
       /**---------------------------------------------------------------------------------------
 
@@ -79,7 +83,7 @@ class CpuCustomNonbondedForce {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateOneIxn(int atom1, int atom2, float* forces, RealOpenMM* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize);
+      void calculateOneIxn(int atom1, int atom2, ThreadData& data, float* forces, double& totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize);
 
 
    public:
@@ -91,7 +95,7 @@ class CpuCustomNonbondedForce {
          --------------------------------------------------------------------------------------- */
 
        CpuCustomNonbondedForce(const Lepton::CompiledExpression& energyExpression, const Lepton::CompiledExpression& forceExpression,
-                                   const std::vector<std::string>& parameterNames);
+                                   const std::vector<std::string>& parameterNames, ThreadPool& threads);
 
       /**---------------------------------------------------------------------------------------
 
@@ -166,13 +170,24 @@ class CpuCustomNonbondedForce {
       void calculatePairIxn(int numberOfAtoms, float* posq, std::vector<OpenMM::RealVec>& atomCoordinates,
                             RealOpenMM** atomParameters, std::vector<std::set<int> >& exclusions,
                             RealOpenMM* fixedParameters, const std::map<std::string, double>& globalParameters,
-                            std::vector<AlignedArray<float> >& threadForce, double* totalEnergy, ThreadPool& threads);
+                            std::vector<AlignedArray<float> >& threadForce, bool includeForce, bool includeEnergy, double& totalEnergy);
 
       /**
        * Compute the displacement and squared distance between two points, optionally using
        * periodic boundary conditions.
        */
       void getDeltaR(const fvec4& posI, const fvec4& posJ, fvec4& deltaR, float& r2, const fvec4& boxSize, const fvec4& invBoxSize) const;
+};
+
+class CpuCustomNonbondedForce::ThreadData {
+public:
+    ThreadData(const Lepton::CompiledExpression& energyExpression, const Lepton::CompiledExpression& forceExpression, const std::vector<std::string>& parameterNames);
+    Lepton::CompiledExpression energyExpression;
+    Lepton::CompiledExpression forceExpression;
+    std::vector<double*> energyParticleParams;
+    std::vector<double*> forceParticleParams;
+    double* energyR;
+    double* forceR;
 };
 
 } // namespace OpenMM

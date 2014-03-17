@@ -41,7 +41,6 @@
 #include "CpuPlatform.h"
 #include "openmm/kernels.h"
 #include "openmm/System.h"
-#include "lepton/CompiledExpression.h"
 
 namespace OpenMM {
 
@@ -224,9 +223,7 @@ private:
  */
 class CpuCalcCustomNonbondedForceKernel : public CalcCustomNonbondedForceKernel {
 public:
-    CpuCalcCustomNonbondedForceKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data) : CalcCustomNonbondedForceKernel(name, platform),
-                data(data), forceCopy(NULL), neighborList(NULL) {
-    }
+    CpuCalcCustomNonbondedForceKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data);
     ~CpuCalcCustomNonbondedForceKernel();
     /**
      * Initialize the kernel.
@@ -260,11 +257,11 @@ private:
     CustomNonbondedForce* forceCopy;
     std::map<std::string, double> globalParamValues;
     std::vector<std::set<int> > exclusions;
-    Lepton::CompiledExpression energyExpression, forceExpression;
     std::vector<std::string> parameterNames, globalParameterNames;
     std::vector<std::pair<std::set<int>, std::set<int> > > interactionGroups;
     NonbondedMethod nonbondedMethod;
     CpuNeighborList* neighborList;
+    CpuCustomNonbondedForce* nonbonded;
 };
 
 /**

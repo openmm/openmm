@@ -35,104 +35,58 @@
 using namespace OpenMM;
 using namespace std;
 
-/**---------------------------------------------------------------------------------------
+class CpuCustomNonbondedForce::ComputeForceTask : public ThreadPool::Task {
+public:
+    ComputeForceTask(CpuCustomNonbondedForce& owner) : owner(owner) {
+    }
+    void execute(ThreadPool& threads, int threadIndex) {
+        owner.threadComputeForce(threads, threadIndex);
+    }
+    CpuCustomNonbondedForce& owner;
+};
 
-   CpuCustomNonbondedForce constructor
-
-   --------------------------------------------------------------------------------------- */
-
-CpuCustomNonbondedForce::CpuCustomNonbondedForce(const Lepton::CompiledExpression& energyExpression,
-        const Lepton::CompiledExpression& forceExpression, const vector<string>& parameterNames) :
-            cutoff(false), useSwitch(false), periodic(false), energyExpression(energyExpression), forceExpression(forceExpression), paramNames(parameterNames) {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nCpuCustomNonbondedForce::CpuCustomNonbondedForce";
-
-   // ---------------------------------------------------------------------------------------
-
+CpuCustomNonbondedForce::ThreadData::ThreadData(const Lepton::CompiledExpression& energyExpression, const Lepton::CompiledExpression& forceExpression, const vector<string>& parameterNames) :
+            energyExpression(energyExpression), forceExpression(forceExpression) {
     energyR = ReferenceForce::getVariablePointer(this->energyExpression, "r");
     forceR = ReferenceForce::getVariablePointer(this->forceExpression, "r");
-    for (int i = 0; i < (int) paramNames.size(); i++) {
+    for (int i = 0; i < (int) parameterNames.size(); i++) {
         for (int j = 1; j < 3; j++) {
             stringstream name;
-            name << paramNames[i] << j;
+            name << parameterNames[i] << j;
             energyParticleParams.push_back(ReferenceForce::getVariablePointer(this->energyExpression, name.str()));
             forceParticleParams.push_back(ReferenceForce::getVariablePointer(this->forceExpression, name.str()));
         }
     }
 }
 
-/**---------------------------------------------------------------------------------------
-
-   CpuCustomNonbondedForce destructor
-
-   --------------------------------------------------------------------------------------- */
-
-CpuCustomNonbondedForce::~CpuCustomNonbondedForce( ){
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nCpuCustomNonbondedForce::~CpuCustomNonbondedForce";
-
-   // ---------------------------------------------------------------------------------------
-
+CpuCustomNonbondedForce::CpuCustomNonbondedForce(const Lepton::CompiledExpression& energyExpression,
+            const Lepton::CompiledExpression& forceExpression, const vector<string>& parameterNames, ThreadPool& threads) :
+            cutoff(false), useSwitch(false), periodic(false), paramNames(parameterNames), threads(threads) {
+    for (int i = 0; i < threads.getNumThreads(); i++)
+        threadData.push_back(new ThreadData(energyExpression, forceExpression, parameterNames));
 }
 
-  /**---------------------------------------------------------------------------------------
+CpuCustomNonbondedForce::~CpuCustomNonbondedForce() {
+    for (int i = 0; i < (int) threadData.size(); i++)
+        delete threadData[i];
+}
 
-     Set the force to use a cutoff.
-
-     @param distance            the cutoff distance
-     @param neighbors           the neighbor list to use
-
-     --------------------------------------------------------------------------------------- */
-
-  void CpuCustomNonbondedForce::setUseCutoff( RealOpenMM distance, const CpuNeighborList& neighbors ) {
-
+void CpuCustomNonbondedForce::setUseCutoff(RealOpenMM distance, const CpuNeighborList& neighbors) {
     cutoff = true;
     cutoffDistance = distance;
     neighborList = &neighbors;
   }
 
-/**---------------------------------------------------------------------------------------
-
-   Restrict the force to a list of interaction groups.
-
-   @param distance            the cutoff distance
-   @param neighbors           the neighbor list to use
-
-   --------------------------------------------------------------------------------------- */
-
 void CpuCustomNonbondedForce::setInteractionGroups(const vector<pair<set<int>, set<int> > >& groups) {
     interactionGroups = groups;
 }
 
-/**---------------------------------------------------------------------------------------
-
-   Set the force to use a switching function.
-
-   @param distance            the switching distance
-
-   --------------------------------------------------------------------------------------- */
-
-void CpuCustomNonbondedForce::setUseSwitchingFunction( RealOpenMM distance ) {
+void CpuCustomNonbondedForce::setUseSwitchingFunction(RealOpenMM distance) {
     useSwitch = true;
     switchingDistance = distance;
 }
 
-  /**---------------------------------------------------------------------------------------
-
-     Set the force to use periodic boundary conditions.  This requires that a cutoff has
-     also been set, and the smallest side of the periodic box is at least twice the cutoff
-     distance.
-
-     @param boxSize             the X, Y, and Z widths of the periodic box
-
-     --------------------------------------------------------------------------------------- */
-
-  void CpuCustomNonbondedForce::setPeriodic( RealVec& boxSize ) {
-
+void CpuCustomNonbondedForce::setPeriodic(RealVec& boxSize) {
     assert(cutoff);
     assert(boxSize[0] >= 2.0*cutoffDistance);
     assert(boxSize[1] >= 2.0*cutoffDistance);
@@ -141,39 +95,61 @@ void CpuCustomNonbondedForce::setUseSwitchingFunction( RealOpenMM distance ) {
     periodicBoxSize[0] = boxSize[0];
     periodicBoxSize[1] = boxSize[1];
     periodicBoxSize[2] = boxSize[2];
-
-  }
+}
 
 
 void CpuCustomNonbondedForce::calculatePairIxn(int numberOfAtoms, float* posq, vector<RealVec>& atomCoordinates,
                                              RealOpenMM** atomParameters, vector<set<int> >& exclusions,
                                              RealOpenMM* fixedParameters, const map<string, double>& globalParameters,
-                                             vector<AlignedArray<float> >& threadForce, double* totalEnergy, ThreadPool& threads) {
+                                             vector<AlignedArray<float> >& threadForce, bool includeForce, bool includeEnergy, double& totalEnergy) {
     // Record the parameters for the threads.
     
     this->numberOfAtoms = numberOfAtoms;
     this->posq = posq;
     this->atomCoordinates = &atomCoordinates[0];
     this->atomParameters = atomParameters;
+    this->globalParameters = &globalParameters;
     this->exclusions = &exclusions[0];
     this->threadForce = &threadForce;
-    includeEnergy = (totalEnergy != NULL);
+    this->includeForce = includeForce;
+    this->includeEnergy = includeEnergy;
     threadEnergy.resize(threads.getNumThreads());
     gmx_atomic_t counter;
     gmx_atomic_set(&counter, 0);
     this->atomicCounter = &counter;
+    
+    // Signal the threads to start running and wait for them to finish.
+    
+    ComputeForceTask task(*this);
+    threads.execute(task);
+    threads.waitForThreads();
+    
+    // Combine the energies from all the threads.
+    
+    if (includeEnergy) {
+        int numThreads = threads.getNumThreads();
+        for (int i = 0; i < numThreads; i++)
+            totalEnergy += threadEnergy[i];
+    }
+}
 
-    
-    float* forces = &threadForce[0][0];
-    
-    
-    for (map<string, double>::const_iterator iter = globalParameters.begin(); iter != globalParameters.end(); ++iter) {
-        ReferenceForce::setVariable(ReferenceForce::getVariablePointer(energyExpression, iter->first), iter->second);
-        ReferenceForce::setVariable(ReferenceForce::getVariablePointer(forceExpression, iter->first), iter->second);
+void CpuCustomNonbondedForce::threadComputeForce(ThreadPool& threads, int threadIndex) {
+    // Compute this thread's subset of interactions.
+
+    int numThreads = threads.getNumThreads();
+    threadEnergy[threadIndex] = 0;
+    double& energy = threadEnergy[threadIndex];
+    float* forces = &(*threadForce)[threadIndex][0];
+    ThreadData& data = *threadData[threadIndex];
+    for (map<string, double>::const_iterator iter = globalParameters->begin(); iter != globalParameters->end(); ++iter) {
+        ReferenceForce::setVariable(ReferenceForce::getVariablePointer(data.energyExpression, iter->first), iter->second);
+        ReferenceForce::setVariable(ReferenceForce::getVariablePointer(data.forceExpression, iter->first), iter->second);
     }
     fvec4 boxSize(periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2], 0);
     fvec4 invBoxSize((1/periodicBoxSize[0]), (1/periodicBoxSize[1]), (1/periodicBoxSize[2]), 0);
     if (interactionGroups.size() > 0) {
+        if (threadIndex > 0)
+            return;
         // The user has specified interaction groups, so compute only the requested interactions.
         
         for (int group = 0; group < (int) interactionGroups.size(); group++) {
@@ -186,20 +162,23 @@ void CpuCustomNonbondedForce::calculatePairIxn(int numberOfAtoms, float* posq, v
                     if (*atom1 > *atom2 && set1.find(*atom2) != set1.end() && set2.find(*atom1) != set2.end())
                         continue; // Both atoms are in both sets, so skip duplicate interactions.
                     for (int j = 0; j < (int) paramNames.size(); j++) {
-                        ReferenceForce::setVariable(energyParticleParams[j*2], atomParameters[*atom1][j]);
-                        ReferenceForce::setVariable(energyParticleParams[j*2+1], atomParameters[*atom2][j]);
-                        ReferenceForce::setVariable(forceParticleParams[j*2], atomParameters[*atom1][j]);
-                        ReferenceForce::setVariable(forceParticleParams[j*2+1], atomParameters[*atom2][j]);
+                        ReferenceForce::setVariable(data.energyParticleParams[j*2], atomParameters[*atom1][j]);
+                        ReferenceForce::setVariable(data.energyParticleParams[j*2+1], atomParameters[*atom2][j]);
+                        ReferenceForce::setVariable(data.forceParticleParams[j*2], atomParameters[*atom1][j]);
+                        ReferenceForce::setVariable(data.forceParticleParams[j*2+1], atomParameters[*atom2][j]);
                     }
-                    calculateOneIxn(*atom1, *atom2, forces, totalEnergy, boxSize, invBoxSize);
+                    calculateOneIxn(*atom1, *atom2, data, forces, energy, boxSize, invBoxSize);
                 }
             }
         }
     }
     else if (cutoff) {
         // We are using a cutoff, so get the interactions from the neighbor list.
-        
-        for (int blockIndex = 0; blockIndex < neighborList->getNumBlocks(); blockIndex++) {
+
+        while (true) {
+            int blockIndex = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
+            if (blockIndex >= neighborList->getNumBlocks())
+                break;
             int blockAtom[4];
             for (int i = 0; i < 4; i++)
                 blockAtom[i] = neighborList->getSortedAtoms()[4*blockIndex+i];
@@ -208,84 +187,46 @@ void CpuCustomNonbondedForce::calculatePairIxn(int numberOfAtoms, float* posq, v
             for (int i = 0; i < (int) neighbors.size(); i++) {
                 int first = neighbors[i];
                 for (int j = 0; j < (int) paramNames.size(); j++) {
-                    ReferenceForce::setVariable(energyParticleParams[j*2], atomParameters[first][j]);
-                    ReferenceForce::setVariable(forceParticleParams[j*2], atomParameters[first][j]);
+                    ReferenceForce::setVariable(data.energyParticleParams[j*2], atomParameters[first][j]);
+                    ReferenceForce::setVariable(data.forceParticleParams[j*2], atomParameters[first][j]);
                 }
                 for (int k = 0; k < 4; k++) {
                     if ((exclusions[i] & (1<<k)) == 0) {
                         int second = blockAtom[k];
                         for (int j = 0; j < (int) paramNames.size(); j++) {
-                            ReferenceForce::setVariable(energyParticleParams[j*2+1], atomParameters[second][j]);
-                            ReferenceForce::setVariable(forceParticleParams[j*2+1], atomParameters[second][j]);
+                            ReferenceForce::setVariable(data.energyParticleParams[j*2+1], atomParameters[second][j]);
+                            ReferenceForce::setVariable(data.forceParticleParams[j*2+1], atomParameters[second][j]);
                         }
-                        calculateOneIxn(first, second, forces, totalEnergy, boxSize, invBoxSize);
+                        calculateOneIxn(first, second, data, forces, energy, boxSize, invBoxSize);
                     }
                 }
-                        
             }
         }
-//        for (int i = 0; i < (int) neighborList->size(); i++) {
-//            OpenMM::AtomPair pair = (*neighborList)[i];
-//            for (int j = 0; j < (int) paramNames.size(); j++) {
-//                ReferenceForce::setVariable(energyParticleParams[j*2], atomParameters[pair.first][j]);
-//                ReferenceForce::setVariable(energyParticleParams[j*2+1], atomParameters[pair.second][j]);
-//                ReferenceForce::setVariable(forceParticleParams[j*2], atomParameters[pair.first][j]);
-//                ReferenceForce::setVariable(forceParticleParams[j*2+1], atomParameters[pair.second][j]);
-//            }
-//            calculateOneIxn(pair.first, pair.second, atomCoordinates, forces, energyByAtom, totalEnergy);
-//        }
     }
     else {
         // Every particle interacts with every other one.
         
+        if (threadIndex > 0)
+            return;
         for (int ii = 0; ii < numberOfAtoms; ii++) {
             for (int jj = ii+1; jj < numberOfAtoms; jj++) {
                 if (exclusions[jj].find(ii) == exclusions[jj].end()) {
                     for (int j = 0; j < (int) paramNames.size(); j++) {
-                        ReferenceForce::setVariable(energyParticleParams[j*2], atomParameters[ii][j]);
-                        ReferenceForce::setVariable(energyParticleParams[j*2+1], atomParameters[jj][j]);
-                        ReferenceForce::setVariable(forceParticleParams[j*2], atomParameters[ii][j]);
-                        ReferenceForce::setVariable(forceParticleParams[j*2+1], atomParameters[jj][j]);
+                        ReferenceForce::setVariable(data.energyParticleParams[j*2], atomParameters[ii][j]);
+                        ReferenceForce::setVariable(data.energyParticleParams[j*2+1], atomParameters[jj][j]);
+                        ReferenceForce::setVariable(data.forceParticleParams[j*2], atomParameters[ii][j]);
+                        ReferenceForce::setVariable(data.forceParticleParams[j*2+1], atomParameters[jj][j]);
                     }
-                    calculateOneIxn(ii, jj, forces, totalEnergy, boxSize, invBoxSize);
+                    calculateOneIxn(ii, jj, data, forces, energy, boxSize, invBoxSize);
                 }
             }
         }
     }
 }
 
-  /**---------------------------------------------------------------------------------------
-
-     Calculate one pair ixn between two atoms
-
-     @param ii               the index of the first atom
-     @param jj               the index of the second atom
-     @param atomCoordinates  atom coordinates
-     @param atomParameters   atom parameters (charges, c6, c12, ...)     atomParameters[atomIndex][paramterIndex]
-     @param forces           force array (forces added)
-     @param totalEnergy      total energy
-
-     --------------------------------------------------------------------------------------- */
-
-void CpuCustomNonbondedForce::calculateOneIxn(int ii, int jj, float* forces, RealOpenMM* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize) {
-
-    // ---------------------------------------------------------------------------------------
-
-    static const std::string methodName = "\nCpuCustomNonbondedForce::calculateOneIxn";
-
-    // ---------------------------------------------------------------------------------------
-
-    // constants -- reduce Visual Studio warnings regarding conversions between float & double
-
-    static const RealOpenMM zero        =  0.0;
-    static const RealOpenMM one         =  1.0;
-    static const RealOpenMM two         =  2.0;
-    static const RealOpenMM three       =  3.0;
-    static const RealOpenMM six         =  6.0;
-    static const RealOpenMM twelve      = 12.0;
-    static const RealOpenMM oneM        = -1.0;
-
-    // get deltaR, R2, and R between 2 atoms
+void CpuCustomNonbondedForce::calculateOneIxn(int ii, int jj, ThreadData& data, 
+        float* forces, double& totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize) {
+    // Get deltaR, R2, and R between 2 atoms
 
     fvec4 deltaR;
     fvec4 posI(posq+4*ii);
@@ -298,10 +239,10 @@ void CpuCustomNonbondedForce::calculateOneIxn(int ii, int jj, float* forces, Rea
 
     // accumulate forces
 
-    ReferenceForce::setVariable(energyR, r);
-    ReferenceForce::setVariable(forceR, r);
-    double dEdR = forceExpression.evaluate()/r;
-    double energy = energyExpression.evaluate();
+    ReferenceForce::setVariable(data.energyR, r);
+    ReferenceForce::setVariable(data.forceR, r);
+    double dEdR = (includeForce ? data.forceExpression.evaluate()/r : 0.0);
+    double energy = (includeEnergy ? data.energyExpression.evaluate() : 0.0);
     if (useSwitch) {
         if (r > switchingDistance) {
             RealOpenMM t = (r-switchingDistance)/(cutoffDistance-switchingDistance);
@@ -317,8 +258,7 @@ void CpuCustomNonbondedForce::calculateOneIxn(int ii, int jj, float* forces, Rea
 
     // accumulate energies
 
-    if (totalEnergy)
-        *totalEnergy += energy;
+    totalEnergy += energy;
 }
 
 void CpuCustomNonbondedForce::getDeltaR(const fvec4& posI, const fvec4& posJ, fvec4& deltaR, float& r2, const fvec4& boxSize, const fvec4& invBoxSize) const {
