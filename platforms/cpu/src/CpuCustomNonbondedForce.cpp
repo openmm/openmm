@@ -60,8 +60,8 @@ CpuCustomNonbondedForce::ThreadData::ThreadData(const Lepton::CompiledExpression
 }
 
 CpuCustomNonbondedForce::CpuCustomNonbondedForce(const Lepton::CompiledExpression& energyExpression,
-            const Lepton::CompiledExpression& forceExpression, const vector<string>& parameterNames, ThreadPool& threads) :
-            cutoff(false), useSwitch(false), periodic(false), paramNames(parameterNames), threads(threads) {
+            const Lepton::CompiledExpression& forceExpression, const vector<string>& parameterNames, const vector<set<int> >& exclusions,ThreadPool& threads) :
+            cutoff(false), useSwitch(false), periodic(false), paramNames(parameterNames), exclusions(exclusions), threads(threads) {
     for (int i = 0; i < threads.getNumThreads(); i++)
         threadData.push_back(new ThreadData(energyExpression, forceExpression, parameterNames));
 }
@@ -78,7 +78,19 @@ void CpuCustomNonbondedForce::setUseCutoff(RealOpenMM distance, const CpuNeighbo
   }
 
 void CpuCustomNonbondedForce::setInteractionGroups(const vector<pair<set<int>, set<int> > >& groups) {
-    interactionGroups = groups;
+    for (int group = 0; group < (int) groups.size(); group++) {
+        const set<int>& set1 = groups[group].first;
+        const set<int>& set2 = groups[group].second;
+        for (set<int>::const_iterator atom1 = set1.begin(); atom1 != set1.end(); ++atom1) {
+            for (set<int>::const_iterator atom2 = set2.begin(); atom2 != set2.end(); ++atom2) {
+                if (*atom1 == *atom2 || exclusions[*atom1].find(*atom2) != exclusions[*atom1].end())
+                    continue; // This is an excluded interaction.
+                if (*atom1 > *atom2 && set1.find(*atom2) != set1.end() && set2.find(*atom1) != set2.end())
+                    continue; // Both atoms are in both sets, so skip duplicate interactions.
+                groupInteractions.push_back(make_pair(*atom1, *atom2));
+            }
+        }
+    }
 }
 
 void CpuCustomNonbondedForce::setUseSwitchingFunction(RealOpenMM distance) {
@@ -98,8 +110,7 @@ void CpuCustomNonbondedForce::setPeriodic(RealVec& boxSize) {
 }
 
 
-void CpuCustomNonbondedForce::calculatePairIxn(int numberOfAtoms, float* posq, vector<RealVec>& atomCoordinates,
-                                             RealOpenMM** atomParameters, vector<set<int> >& exclusions,
+void CpuCustomNonbondedForce::calculatePairIxn(int numberOfAtoms, float* posq, vector<RealVec>& atomCoordinates, RealOpenMM** atomParameters,
                                              RealOpenMM* fixedParameters, const map<string, double>& globalParameters,
                                              vector<AlignedArray<float> >& threadForce, bool includeForce, bool includeEnergy, double& totalEnergy) {
     // Record the parameters for the threads.
@@ -109,7 +120,6 @@ void CpuCustomNonbondedForce::calculatePairIxn(int numberOfAtoms, float* posq, v
     this->atomCoordinates = &atomCoordinates[0];
     this->atomParameters = atomParameters;
     this->globalParameters = &globalParameters;
-    this->exclusions = &exclusions[0];
     this->threadForce = &threadForce;
     this->includeForce = includeForce;
     this->includeEnergy = includeEnergy;
@@ -147,29 +157,22 @@ void CpuCustomNonbondedForce::threadComputeForce(ThreadPool& threads, int thread
     }
     fvec4 boxSize(periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2], 0);
     fvec4 invBoxSize((1/periodicBoxSize[0]), (1/periodicBoxSize[1]), (1/periodicBoxSize[2]), 0);
-    if (interactionGroups.size() > 0) {
-        if (threadIndex > 0)
-            return;
+    if (groupInteractions.size() > 0) {
         // The user has specified interaction groups, so compute only the requested interactions.
         
-        for (int group = 0; group < (int) interactionGroups.size(); group++) {
-            const set<int>& set1 = interactionGroups[group].first;
-            const set<int>& set2 = interactionGroups[group].second;
-            for (set<int>::const_iterator atom1 = set1.begin(); atom1 != set1.end(); ++atom1) {
-                for (set<int>::const_iterator atom2 = set2.begin(); atom2 != set2.end(); ++atom2) {
-                    if (*atom1 == *atom2 || exclusions[*atom1].find(*atom2) != exclusions[*atom1].end())
-                        continue; // This is an excluded interaction.
-                    if (*atom1 > *atom2 && set1.find(*atom2) != set1.end() && set2.find(*atom1) != set2.end())
-                        continue; // Both atoms are in both sets, so skip duplicate interactions.
-                    for (int j = 0; j < (int) paramNames.size(); j++) {
-                        ReferenceForce::setVariable(data.energyParticleParams[j*2], atomParameters[*atom1][j]);
-                        ReferenceForce::setVariable(data.energyParticleParams[j*2+1], atomParameters[*atom2][j]);
-                        ReferenceForce::setVariable(data.forceParticleParams[j*2], atomParameters[*atom1][j]);
-                        ReferenceForce::setVariable(data.forceParticleParams[j*2+1], atomParameters[*atom2][j]);
-                    }
-                    calculateOneIxn(*atom1, *atom2, data, forces, energy, boxSize, invBoxSize);
-                }
+        while (true) {
+            int i = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
+            if (i >= groupInteractions.size())
+                break;
+            int atom1 = groupInteractions[i].first;
+            int atom2 = groupInteractions[i].second;
+            for (int j = 0; j < (int) paramNames.size(); j++) {
+                ReferenceForce::setVariable(data.energyParticleParams[j*2], atomParameters[atom1][j]);
+                ReferenceForce::setVariable(data.energyParticleParams[j*2+1], atomParameters[atom2][j]);
+                ReferenceForce::setVariable(data.forceParticleParams[j*2], atomParameters[atom1][j]);
+                ReferenceForce::setVariable(data.forceParticleParams[j*2+1], atomParameters[atom2][j]);
             }
+            calculateOneIxn(atom1, atom2, data, forces, energy, boxSize, invBoxSize);
         }
     }
     else if (cutoff) {
@@ -206,9 +209,10 @@ void CpuCustomNonbondedForce::threadComputeForce(ThreadPool& threads, int thread
     else {
         // Every particle interacts with every other one.
         
-        if (threadIndex > 0)
-            return;
-        for (int ii = 0; ii < numberOfAtoms; ii++) {
+        while (true) {
+            int ii = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
+            if (ii >= numberOfAtoms)
+                break;
             for (int jj = ii+1; jj < numberOfAtoms; jj++) {
                 if (exclusions[jj].find(ii) == exclusions[jj].end()) {
                     for (int j = 0; j < (int) paramNames.size(); j++) {

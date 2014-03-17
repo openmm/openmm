@@ -719,7 +719,7 @@ void CpuCalcCustomNonbondedForceKernel::initialize(const System& system, const C
         interactionGroups.push_back(make_pair(set1, set2));
     }
     data.isPeriodic = (nonbondedMethod == CutoffPeriodic);
-    nonbonded = new CpuCustomNonbondedForce(energyExpression, forceExpression, parameterNames, data.threads);
+    nonbonded = new CpuCustomNonbondedForce(energyExpression, forceExpression, parameterNames, exclusions, data.threads);
 }
 
 double CpuCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -750,7 +750,7 @@ double CpuCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool inc
     }
     if (useSwitchingFunction)
         nonbonded->setUseSwitchingFunction(switchingDistance);
-    nonbonded->calculatePairIxn(numParticles, &data.posq[0], posData, particleParamArray, exclusions, 0, globalParamValues, data.threadForce, includeForces, includeEnergy, energy);
+    nonbonded->calculatePairIxn(numParticles, &data.posq[0], posData, particleParamArray, 0, globalParamValues, data.threadForce, includeForces, includeEnergy, energy);
     
     // Add in the long range correction.
     

@@ -38,54 +38,6 @@
 namespace OpenMM {
     
 class CpuCustomNonbondedForce {
-
-   private:
-      class ComputeForceTask;
-      class ThreadData;
-
-      bool cutoff;
-      bool useSwitch;
-      bool periodic;
-      const CpuNeighborList* neighborList;
-      RealOpenMM periodicBoxSize[3];
-      RealOpenMM cutoffDistance, switchingDistance;
-      ThreadPool& threads;
-      std::vector<ThreadData*> threadData;
-      std::vector<std::string> paramNames;
-      std::vector<std::pair<std::set<int>, std::set<int> > > interactionGroups;
-      std::vector<double> threadEnergy;
-    // The following variables are used to make information accessible to the individual threads.
-    int numberOfAtoms;
-    float* posq;
-    RealVec const* atomCoordinates;
-    RealOpenMM** atomParameters;        
-    const std::map<std::string, double>* globalParameters;
-    std::set<int> const* exclusions;
-    std::vector<AlignedArray<float> >* threadForce;
-    bool includeForce, includeEnergy;
-    void* atomicCounter;
-
-    /**
-     * This routine contains the code executed by each thread.
-     */
-    void threadComputeForce(ThreadPool& threads, int threadIndex);
-
-      /**---------------------------------------------------------------------------------------
-
-         Calculate custom pair ixn between two atoms
-
-         @param atom1            the index of the first atom
-         @param atom2            the index of the second atom
-         @param atomCoordinates  atom coordinates
-         @param atomParameters   atomParameters[atomIndex][parameterIndex]
-         @param forces           force array (forces added)
-         @param totalEnergy      total energy
-
-         --------------------------------------------------------------------------------------- */
-
-      void calculateOneIxn(int atom1, int atom2, ThreadData& data, float* forces, double& totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize);
-
-
    public:
 
       /**---------------------------------------------------------------------------------------
@@ -95,7 +47,7 @@ class CpuCustomNonbondedForce {
          --------------------------------------------------------------------------------------- */
 
        CpuCustomNonbondedForce(const Lepton::CompiledExpression& energyExpression, const Lepton::CompiledExpression& forceExpression,
-                                   const std::vector<std::string>& parameterNames, ThreadPool& threads);
+                                   const std::vector<std::string>& parameterNames, const std::vector<std::set<int> >& exclusions, ThreadPool& threads);
 
       /**---------------------------------------------------------------------------------------
 
@@ -103,7 +55,7 @@ class CpuCustomNonbondedForce {
 
          --------------------------------------------------------------------------------------- */
 
-       ~CpuCustomNonbondedForce( );
+       ~CpuCustomNonbondedForce();
 
       /**---------------------------------------------------------------------------------------
 
@@ -114,7 +66,7 @@ class CpuCustomNonbondedForce {
 
          --------------------------------------------------------------------------------------- */
 
-      void setUseCutoff( RealOpenMM distance, const CpuNeighborList& neighbors );
+      void setUseCutoff(RealOpenMM distance, const CpuNeighborList& neighbors);
 
       /**---------------------------------------------------------------------------------------
 
@@ -135,7 +87,7 @@ class CpuCustomNonbondedForce {
       
          --------------------------------------------------------------------------------------- */
       
-      void setUseSwitchingFunction( RealOpenMM distance );
+      void setUseSwitchingFunction(RealOpenMM distance);
 
       /**---------------------------------------------------------------------------------------
 
@@ -147,7 +99,7 @@ class CpuCustomNonbondedForce {
 
          --------------------------------------------------------------------------------------- */
 
-      void setPeriodic( OpenMM::RealVec& boxSize );
+      void setPeriodic(OpenMM::RealVec& boxSize);
 
       /**---------------------------------------------------------------------------------------
 
@@ -157,8 +109,6 @@ class CpuCustomNonbondedForce {
          @param posq             atom coordinates in float format
          @param atomCoordinates  atom coordinates
          @param atomParameters   atom parameters (charges, c6, c12, ...)     atomParameters[atomIndex][paramterIndex]
-         @param exclusions       atom exclusion indices
-                                 exclusions[atomIndex] contains the list of exclusions for that atom
          @param fixedParameters  non atom parameters (not currently used)
          @param globalParameters the values of global parameters
          @param forces           force array (forces added)
@@ -167,16 +117,58 @@ class CpuCustomNonbondedForce {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculatePairIxn(int numberOfAtoms, float* posq, std::vector<OpenMM::RealVec>& atomCoordinates,
-                            RealOpenMM** atomParameters, std::vector<std::set<int> >& exclusions,
-                            RealOpenMM* fixedParameters, const std::map<std::string, double>& globalParameters,
-                            std::vector<AlignedArray<float> >& threadForce, bool includeForce, bool includeEnergy, double& totalEnergy);
+    void calculatePairIxn(int numberOfAtoms, float* posq, std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM** atomParameters,
+                          RealOpenMM* fixedParameters, const std::map<std::string, double>& globalParameters,
+                          std::vector<AlignedArray<float> >& threadForce, bool includeForce, bool includeEnergy, double& totalEnergy);
+private:
+    class ComputeForceTask;
+    class ThreadData;
 
-      /**
-       * Compute the displacement and squared distance between two points, optionally using
-       * periodic boundary conditions.
-       */
-      void getDeltaR(const fvec4& posI, const fvec4& posJ, fvec4& deltaR, float& r2, const fvec4& boxSize, const fvec4& invBoxSize) const;
+    bool cutoff;
+    bool useSwitch;
+    bool periodic;
+    const CpuNeighborList* neighborList;
+    RealOpenMM periodicBoxSize[3];
+    RealOpenMM cutoffDistance, switchingDistance;
+    ThreadPool& threads;
+    const std::vector<std::set<int> > exclusions;
+    std::vector<ThreadData*> threadData;
+    std::vector<std::string> paramNames;
+    std::vector<std::pair<int, int> > groupInteractions;
+    std::vector<double> threadEnergy;
+    // The following variables are used to make information accessible to the individual threads.
+    int numberOfAtoms;
+    float* posq;
+    RealVec const* atomCoordinates;
+    RealOpenMM** atomParameters;        
+    const std::map<std::string, double>* globalParameters;
+    std::vector<AlignedArray<float> >* threadForce;
+    bool includeForce, includeEnergy;
+    void* atomicCounter;
+
+    /**
+     * This routine contains the code executed by each thread.
+     */
+    void threadComputeForce(ThreadPool& threads, int threadIndex);
+
+    /**
+     * Calculate the interaction between two atoms.
+     * 
+     * @param atom1            the index of the first atom
+     * @param atom2            the index of the second atom
+     * @param data             workspace for the current thread
+     * @param forces           force array (forces added)
+     * @param totalEnergy      total energy
+     * @param boxSize          the size of the periodic box
+     * @param boxSize          the inverse size of the periodic box
+     */
+    void calculateOneIxn(int atom1, int atom2, ThreadData& data, float* forces, double& totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize);
+
+    /**
+     * Compute the displacement and squared distance between two points, optionally using
+     * periodic boundary conditions.
+     */
+    void getDeltaR(const fvec4& posI, const fvec4& posJ, fvec4& deltaR, float& r2, const fvec4& boxSize, const fvec4& invBoxSize) const;
 };
 
 class CpuCustomNonbondedForce::ThreadData {
