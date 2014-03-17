@@ -720,6 +720,8 @@ void CpuCalcCustomNonbondedForceKernel::initialize(const System& system, const C
     }
     data.isPeriodic = (nonbondedMethod == CutoffPeriodic);
     nonbonded = new CpuCustomNonbondedForce(energyExpression, forceExpression, parameterNames, exclusions, data.threads);
+    if (interactionGroups.size() > 0)
+        nonbonded->setInteractionGroups(interactionGroups);
 }
 
 double CpuCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -739,8 +741,6 @@ double CpuCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool inc
             throw OpenMMException("The periodic box size has decreased to less than twice the nonbonded cutoff.");
         nonbonded->setPeriodic(box);
     }
-    if (interactionGroups.size() > 0)
-        nonbonded->setInteractionGroups(interactionGroups);
     bool globalParamsChanged = false;
     for (int i = 0; i < (int) globalParameterNames.size(); i++) {
         double value = context.getParameter(globalParameterNames[i]);
