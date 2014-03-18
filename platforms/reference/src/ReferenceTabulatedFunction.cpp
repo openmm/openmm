@@ -48,7 +48,7 @@ using namespace OpenMM;
 using namespace std;
 using Lepton::CustomFunction;
 
-extern "C" CustomFunction* createReferenceTabulatedFunction(const TabulatedFunction& function) {
+extern "C" OPENMM_EXPORT CustomFunction* createReferenceTabulatedFunction(const TabulatedFunction& function) {
     if (dynamic_cast<const Continuous1DFunction*>(&function) != NULL)
         return new ReferenceContinuous1DFunction(dynamic_cast<const Continuous1DFunction&>(function));
     if (dynamic_cast<const Continuous2DFunction*>(&function) != NULL)
