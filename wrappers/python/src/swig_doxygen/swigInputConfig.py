@@ -424,5 +424,6 @@ UNITS = {
 ("DrudeLangevinIntegrator", "getDrudeFriction") : ("1/unit.picosecond", ()),
 ("DrudeSCFIntegrator", "getMinimizationErrorTolerance") : ("unit.kilojoules_per_mole/unit.nanometer", ()),
 ("RPMDIntegrator", "getContractions") : (None, ()),
+("RPMDIntegrator", "getTotalEnergy") : ("unit.kilojoules_per_mole", ()),
 }
 

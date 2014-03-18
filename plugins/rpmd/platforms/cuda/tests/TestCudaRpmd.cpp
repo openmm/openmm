@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -466,30 +466,9 @@ void testWithoutThermostat() {
     
     double initialEnergy;
     int numSteps = 100;
-    const double hbar = 1.054571628e-34*AVOGADRO/(1000*1e-12);
-    const double wn = numCopies*BOLTZ*temperature/hbar;
-    const double springConstant = mass*wn*wn;
     for (int i = 0; i < numSteps; i++) {
         integ.step(1);
-        
-        // Sum the energies of all the copies.
-        
-        double energy = 0.0;
-        for (int j = 0; j < numCopies; j++) {
-            State state = integ.getState(j, State::Positions | State::Energy);
-            positions[j] = state.getPositions();
-            energy += state.getPotentialEnergy()+state.getKineticEnergy();
-        }
-        
-        // Add the energy from the springs connecting copies.
-        
-        for (int j = 0; j < numCopies; j++) {
-            int previous = (j == 0 ? numCopies-1 : j-1);
-            for (int k = 0; k < numParticles; k++) {
-                Vec3 delta = positions[j][k]-positions[previous][k];
-                energy += 0.5*springConstant*delta.dot(delta);
-            }
-        }
+        double energy = integ.getTotalEnergy();
         if (i == 0)
             initialEnergy = energy;
         else
