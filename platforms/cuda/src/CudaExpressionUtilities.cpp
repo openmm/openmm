@@ -290,11 +290,19 @@ void CudaExpressionUtilities::processExpression(stringstream& out, const Express
         case Operation::DIVIDE:
         {
             bool haveReciprocal = false;
-            for (int i = 0; i < (int) temps.size(); i++)
-                if (temps[i].first.getOperation().getId() == Operation::RECIPROCAL && temps[i].first.getChildren()[0] == node.getChildren()[1]) {
-                    haveReciprocal = true;
-                    out << getTempName(node.getChildren()[0], temps) << "*" << temps[i].second;
-                }
+            if (node.getChildren()[1].getOperation().getId() == Operation::RECIPROCAL) {
+                for (int i = 0; i < (int) temps.size(); i++)
+                    if (temps[i].first == node.getChildren()[1].getChildren()[1]) {
+                        haveReciprocal = true;
+                        out << getTempName(node.getChildren()[0], temps) << "*" << temps[i].second;
+                    }
+            }
+            if (!haveReciprocal)
+                for (int i = 0; i < (int) temps.size(); i++)
+                    if (temps[i].first.getOperation().getId() == Operation::RECIPROCAL && temps[i].first.getChildren()[0] == node.getChildren()[1]) {
+                        haveReciprocal = true;
+                        out << getTempName(node.getChildren()[0], temps) << "*" << temps[i].second;
+                    }
             if (!haveReciprocal)
                 out << getTempName(node.getChildren()[0], temps) << "/" << getTempName(node.getChildren()[1], temps);
             break;
