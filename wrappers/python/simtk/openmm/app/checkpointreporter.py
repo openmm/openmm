@@ -107,6 +107,7 @@ class CheckpointReporter(object):
         self._out.seek(0)
         chk = simulation.context.createCheckpoint()
         self._out.write(chk)
+        self._out.truncate()
         self._out.flush()
 
     def __del__(self):
