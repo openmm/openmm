@@ -39,6 +39,7 @@ from simtk.openmm.app.topology import Residue
 from simtk.openmm.vec3 import Vec3
 from simtk.openmm import System, Context, NonbondedForce, CustomNonbondedForce, HarmonicBondForce, HarmonicAngleForce, VerletIntegrator, LocalEnergyMinimizer
 from simtk.unit import nanometer, molar, elementary_charge, amu, gram, liter, degree, sqrt, acos, is_quantity, dot, norm
+import simtk.unit as unit
 import element as elem
 import os
 import random
@@ -843,7 +844,9 @@ class Modeller(object):
                     if atom.element is not None:
                         newIndex[i] = index
                         index += 1
-                        newTemplate.atoms.append(ForceField._TemplateAtomData(atom.name, atom.type, atom.element))
+                        newAtom = ForceField._TemplateAtomData(atom.name, atom.type, atom.element)
+                        newAtom.externalBonds = atom.externalBonds
+                        newTemplate.atoms.append(newAtom)
                 for b1, b2 in template.bonds:
                     if b1 in newIndex and b2 in newIndex:
                         newTemplate.bonds.append((newIndex[b1], newIndex[b2]))
@@ -968,7 +971,7 @@ class Modeller(object):
                                 # and hope that energy minimization will fix it.
 
                                 knownPositions = [x for x in templateAtomPositions if x is not None]
-                                position = sum(knownPositions)/len(knownPositions)
+                                position = unit.sum(knownPositions)/len(knownPositions)
                             newPositions.append(position*nanometer)
         for bond in self.topology.bonds():
             if bond[0] in newAtoms and bond[1] in newAtoms:
