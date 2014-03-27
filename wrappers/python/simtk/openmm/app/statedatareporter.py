@@ -189,9 +189,12 @@ class StateDataReporter(object):
         if self._density:
             values.append((self._totalMass/volume).value_in_unit(unit.gram/unit.item/unit.milliliter))
         if self._speed:
-            elapsedDays = (clockTime-self._initialClockTime)/86400
+            elapsedDays = (clockTime-self._initialClockTime)/86400.0
             elapsedNs = (state.getTime()-self._initialSimulationTime).value_in_unit(unit.nanosecond)
-            values.append('%.3g' % (elapsedNs/elapsedDays))
+            if elapsedDays > 0.0:
+                values.append('%.3g' % (elapsedNs/elapsedDays))
+            else:
+                values.append('--')
         if self._remainingTime:
             elapsedSeconds = clockTime-self._initialClockTime
             elapsedSteps = simulation.currentStep-self._initialSteps
