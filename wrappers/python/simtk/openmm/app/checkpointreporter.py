@@ -78,9 +78,11 @@ class CheckpointReporter(object):
 
         self._reportInterval = reportInterval
         if isinstance(file, basestring):
-            self._out = open(file, 'w+b')
+            self._own_handle = true
+            self._out = open(file, 'w+b', 0)
         else:
             self._out = file
+            self._own_handle = False
 
     def describeNextReport(self, simulation):
         """Get information about the next report this object will generate.
@@ -105,3 +107,9 @@ class CheckpointReporter(object):
         self._out.seek(0)
         chk = simulation.context.createCheckpoint()
         self._out.write(chk)
+        self._out.flush()
+
+    def __del__(self):
+        if self._own_handle:
+            self._out.close()
+
