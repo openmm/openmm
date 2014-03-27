@@ -156,3 +156,6 @@
   $3 = &tempC;
 }
 
+%typemap(out) std::string OpenMM::Context::createCheckpoint{
+    $result = PyBytes_FromString($1.c_str());
+}
