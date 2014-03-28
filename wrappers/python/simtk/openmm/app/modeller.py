@@ -812,7 +812,7 @@ class Modeller(object):
         else:
             context = Context(system, VerletIntegrator(0.0), platform)
         context.setPositions(newPositions)
-        LocalEnergyMinimizer.minimize(context)
+        LocalEnergyMinimizer.minimize(context, 1.0, 50)
         self.topology = newTopology
         self.positions = context.getState(getPositions=True).getPositions()
         del context
