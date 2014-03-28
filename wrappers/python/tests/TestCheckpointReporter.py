@@ -20,7 +20,10 @@ class TestCheckpointReporter(unittest.TestCase):
         self.simulation.reporters.append(app.CheckpointReporter(file, 1))
         self.simulation.step(1)
         
+        with open(file.name, 'rb') as f:
+            self.simulation.context.loadCheckpoint(f.read())
 
+        file.close()
 
 if __name__ == '__main__':
     unittest.main()

@@ -37,11 +37,11 @@ __all__ = ['CheckpointReporter']
 
 class CheckpointReporter(object):
     """CheckpointReporter saves periodic checkpoints of a simulation.
-    The checkpoints will overwrite one and other -- only the last checkpoint
+    The checkpoints will overwrite one another -- only the last checkpoint
     will be saved in the file.
 
     To use it, create a CheckpointReporter, then add it to the Simulation's
-    list of reporters. To load a checkpoint file a continue a simulation,
+    list of reporters. To load a checkpoint file and continue a simulation,
     use the following recipe:
 
     >>> with open('checkput.chk', 'rb') as f:
