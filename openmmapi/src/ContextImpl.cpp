@@ -44,9 +44,12 @@
 #include <map>
 #include <utility>
 #include <vector>
+#include <string.h>
 
 using namespace OpenMM;
 using namespace std;
+const static char CHECKPOINT_MAGIC_BYTES[] = "\x1C\xEB\x00\xDA";
+
 
 ContextImpl::ContextImpl(Context& owner, const System& system, Integrator& integrator, Platform* platform, const map<string, string>& properties) :
         owner(owner), system(system), integrator(integrator), hasInitializedForces(false), hasSetPositions(false), integratorIsDeleted(false),
@@ -398,6 +401,7 @@ static string readString(istream& stream) {
 }
 
 void ContextImpl::createCheckpoint(ostream& stream) {
+    stream.write(CHECKPOINT_MAGIC_BYTES, 4);
     writeString(stream, getPlatform().getName());
     int numParticles = getSystem().getNumParticles();
     stream.write((char*) &numParticles, sizeof(int));
@@ -412,6 +416,11 @@ void ContextImpl::createCheckpoint(ostream& stream) {
 }
 
 void ContextImpl::loadCheckpoint(istream& stream) {
+    char magicbytes[4];
+    stream.read(magicbytes, 4);
+    if (memcmp(magicbytes, &CHECKPOINT_MAGIC_BYTES[0], 4*sizeof(char)) != 0)
+        throw OpenMMException("loadCheckpoint: Checkpoint header was not correct");
+
     string platformName = readString(stream);
     if (platformName != getPlatform().getName())
         throw OpenMMException("loadCheckpoint: Checkpoint was created with a different Platform: "+platformName);
