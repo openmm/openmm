@@ -418,7 +418,7 @@ void ContextImpl::createCheckpoint(ostream& stream) {
 void ContextImpl::loadCheckpoint(istream& stream) {
     char magicbytes[4];
     stream.read(magicbytes, 4);
-    if (memcmp(magicbytes, &CHECKPOINT_MAGIC_BYTES[0], 4*sizeof(char)) != 0)
+    if (memcmp(magicbytes, CHECKPOINT_MAGIC_BYTES, 4*sizeof(char)) != 0)
         throw OpenMMException("loadCheckpoint: Checkpoint header was not correct");
 
     string platformName = readString(stream);
