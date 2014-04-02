@@ -297,6 +297,7 @@ UNITS = {
 ("AmoebaWcaDispersionForce",              "getShctd")                                      :  ( None, ()),
 
 ("Context", "getParameter") : (None, ()),
+("Context", "getMolecules") : (None, ()),
 ("CMAPTorsionForce", "getMapParameters") : (None, ()),
 ("CMAPTorsionForce", "getTorsionParameters") : (None, ()),
 ("CMMotionRemover", "getFrequency") : (None, ()),
