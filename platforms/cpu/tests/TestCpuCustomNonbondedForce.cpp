@@ -843,6 +843,10 @@ void testInteractionGroupLongRangeCorrection() {
 
 int main() {
     try {
+        if (!CpuPlatform::isProcessorSupported()) {
+            cout << "CPU is not supported.  Exiting." << endl;
+            return 0;
+        }
         testSimpleExpression();
         testParameters();
         testExclusions();
