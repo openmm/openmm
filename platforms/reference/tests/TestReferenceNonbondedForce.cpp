@@ -184,7 +184,7 @@ void testExclusionsAnd14() {
     }
 }
 
-void testCutoff() {
+void testCutoffNonPeriodic() {
     ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
@@ -196,6 +196,42 @@ void testCutoff() {
     forceField->addParticle(1.0, 1, 0);
     forceField->addParticle(1.0, 1, 0);
     forceField->setNonbondedMethod(NonbondedForce::CutoffNonPeriodic);
+    const double cutoff = 2.9;
+    forceField->setCutoffDistance(cutoff);
+    const double eps = 50.0;
+    forceField->setReactionFieldDielectric(eps);
+    system.addForce(forceField);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(3);
+    positions[0] = Vec3(0, 0, 0);
+    positions[1] = Vec3(0, 2, 0);
+    positions[2] = Vec3(0, 3, 0);
+    context.setPositions(positions);
+    State state = context.getState(State::Forces | State::Energy);
+    const vector<Vec3>& forces = state.getForces();
+    const double force1 = ONE_4PI_EPS0*(1.0)*(0.25);
+    const double force2 = ONE_4PI_EPS0*(1.0)*(1.0);
+    ASSERT_EQUAL_VEC(Vec3(0, -force1, 0), forces[0], TOL);
+    ASSERT_EQUAL_VEC(Vec3(0, force1-force2, 0), forces[1], TOL);
+    ASSERT_EQUAL_VEC(Vec3(0, force2, 0), forces[2], TOL);
+    const double energy1 = ONE_4PI_EPS0*(1.0)*(0.5);
+    const double energy2 = ONE_4PI_EPS0*(1.0)*(1.0);
+    ASSERT_EQUAL_TOL(energy1+energy2, state.getPotentialEnergy(), TOL);
+}
+
+void testCutoffPeriodic() {
+    ReferencePlatform platform;
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.setDefaultPeriodicBoxVectors(Vec3(6, 0, 0), Vec3(0, 6, 0), Vec3(0, 0, 6));
+    VerletIntegrator integrator(0.01);
+    NonbondedForce* forceField = new NonbondedForce();
+    forceField->addParticle(1.0, 1, 0);
+    forceField->addParticle(1.0, 1, 0);
+    forceField->addParticle(1.0, 1, 0);
+    forceField->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
     const double cutoff = 2.9;
     forceField->setCutoffDistance(cutoff);
     const double eps = 50.0;
@@ -465,19 +501,24 @@ void testSwitchingFunction(NonbondedForce::NonbondedMethod method) {
     
     // Compute the interaction at various distances.
     
-    for (double x = sigma; x < boxsize-sigma; x += 0.01) {
+    for (double x = -(boxsize-sigma); x < +(boxsize-sigma); x += 0.01) {
+        if (abs(x) < sigma) continue;
+      
         positions[1] = Vec3(x, 0, 0);
         context.setPositions(positions);
         State state = context.getState(State::Forces | State::Energy);
         
 	// Compute distance, using minimum image convention if system is periodic.
-	double r = x;
+	double r = abs(x);
 	if ((method == NonbondedForce::CutoffPeriodic) || (method == NonbondedForce::Ewald) || (method == NonbondedForce::PME))
-	  r = boxsize - x;
+	  if (r > boxsize/2.0)
+	    r = boxsize - r;
 
         // Compare the analytically-computed potential energy with OpenMM-computed potential energy.
-
-        double switchValue = switch_function(r, r_switch, r_cutoff);        
+	
+	double switchValue = 1.0;
+	if (method != NonbondedForce::NoCutoff) 
+	  switchValue = switch_function(r, r_switch, r_cutoff);        
         double expectedEnergy = switchValue * 4.0*epsilon*(std::pow((sigma/r), 12.0)-std::pow((sigma/r), 6.0));
 	double computedEnergy = state.getPotentialEnergy();
 	double energy_error = computedEnergy - expectedEnergy;
@@ -487,18 +528,18 @@ void testSwitchingFunction(NonbondedForce::NonbondedMethod method) {
         // Compare the OpenMM-computed force with finite-difference gradient (using central differences).
         
         double delta = TOL; // displacement for finite-difference gradient
-        positions[1] = Vec3(r-delta, 0, 0);
+        positions[1] = Vec3(x-delta, 0, 0);
         context.setPositions(positions);
         double e1 = context.getState(State::Energy).getPotentialEnergy();
-        positions[1] = Vec3(r+delta, 0, 0);
+        positions[1] = Vec3(x+delta, 0, 0);
         context.setPositions(positions);
         double e2 = context.getState(State::Energy).getPotentialEnergy();
 	double finite_difference_gradient = (e2-e1)/(2*delta);
 	double gradient_error = finite_difference_gradient - state.getForces()[0][0];
 	//printf("%8.3f %d | switch %8.5f | energy %16.8f %16.8f | gradient %16.8f %16.8f | error %16.8f %16.8f\n", x, method, switchValue, expectedEnergy, computedEnergy, finite_difference_gradient, +state.getForces()[0][0], energy_error, gradient_error);
 
-        ASSERT_EQUAL_TOL(finite_difference_gradient, +state.getForces()[0][0], TOL);
-        ASSERT_EQUAL_TOL(finite_difference_gradient, -state.getForces()[1][0], TOL);
+        ASSERT_EQUAL_TOL(finite_difference_gradient, +state.getForces()[0][0], 10*TOL);
+        ASSERT_EQUAL_TOL(finite_difference_gradient, -state.getForces()[1][0], 10*TOL);
         ASSERT_EQUAL_TOL(0.0, state.getForces()[0][1], TOL);
         ASSERT_EQUAL_TOL(0.0, state.getForces()[0][2], TOL);
         ASSERT_EQUAL_TOL(0.0, state.getForces()[1][1], TOL);
@@ -511,7 +552,8 @@ int main() {
 	testCoulomb();
         testLJ();
         testExclusionsAnd14();
-        testCutoff();
+        testCutoffNonPeriodic();
+        testCutoffPeriodic();
         testCutoff14();
         testPeriodic();
         testDispersionCorrection();
