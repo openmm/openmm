@@ -492,14 +492,15 @@ void testSwitchingFunction(NonbondedForce::NonbondedMethod method) {
     NonbondedForce* nonbonded = new NonbondedForce();
     double sigma = 0.340; // argon
     double epsilon = 0.996; // argon
-    double r_switch = 1.5; 
-    double r_cutoff = 2.0;
+    double r_switch = 1.5*sigma; 
+    double r_cutoff = 2.0*sigma;
     nonbonded->addParticle(0, sigma, epsilon);
     nonbonded->addParticle(0, sigma, epsilon);
     nonbonded->setNonbondedMethod(method);
     nonbonded->setUseSwitchingFunction(true);
     nonbonded->setSwitchingDistance(r_switch);
     nonbonded->setCutoffDistance(r_cutoff);
+    nonbonded->setEwaldErrorTolerance(0.1); // we aren't using charges, so set the Ewald tolerance high to minimize number of k-vectors needed, speeding up test for Ewald
     nonbonded->setUseDispersionCorrection(false);
     system.addForce(nonbonded);
     Context context(system, integrator, platform);
@@ -545,7 +546,7 @@ void testSwitchingFunction(NonbondedForce::NonbondedMethod method) {
         // Compare the analytically-computed force with OpenMM-computed force.
         
 	double gradient_error = expectedDeriv - state.getForces()[0][0];
-	//printf("%8.3f %d | S %10.5f dSdr %10.5f | energy %16.8f %16.8f | gradient %16.8f %16.8f | error %16.8f %16.8f\n", x, method, S, dSdr, expectedEnergy, computedEnergy, expectedDeriv, +state.getForces()[1][0], energy_error, gradient_error);
+	//printf("%8.3f %d | S %10.5f dSdr %10.5f | energy %16.8f %16.8f | gradient %16.8f %16.8f | error %16.8f %16.8f\n", x, method, S, dSdr, expectedEnergy, computedEnergy, expectedDeriv, +state.getForces()[0][0], energy_error, gradient_error);
 	
         ASSERT_EQUAL_TOL(expectedDeriv, +state.getForces()[0][0], TOL);
         ASSERT_EQUAL_TOL(expectedDeriv, -state.getForces()[1][0], TOL);
@@ -561,16 +562,16 @@ int main() {
 	testCoulomb();
         testLJ();
         testExclusionsAnd14();
-        //testCutoffNonPeriodic(); // Uncomment once reaction-field is removed for CutoffNonPeriodic
+        //testCutoffNonPeriodic(); // Uncomment once reaction-field electrostatics is removed for CutoffNonPeriodic
         testCutoffPeriodic();
         testCutoff14();
         testPeriodic();
         testDispersionCorrection();
         testSwitchingFunction(NonbondedForce::NoCutoff);
-        //testSwitchingFunction(NonbondedForce::CutoffNonPeriodic); // Uncomment once reaction-field is removed for CutoffNonPeriodic
+        testSwitchingFunction(NonbondedForce::CutoffNonPeriodic);
         testSwitchingFunction(NonbondedForce::CutoffPeriodic);
-        testSwitchingFunction(NonbondedForce::PME);
         testSwitchingFunction(NonbondedForce::Ewald);
+        testSwitchingFunction(NonbondedForce::PME);
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;
