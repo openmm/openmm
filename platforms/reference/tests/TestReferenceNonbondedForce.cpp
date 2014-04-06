@@ -518,8 +518,8 @@ void testSwitchingFunction(NonbondedForce::NonbondedMethod method) {
 	
 	double switchValue = 1.0;
 	if (method != NonbondedForce::NoCutoff) 
-	  switchValue = switch_function(r, r_switch, r_cutoff);        
-        double expectedEnergy = switchValue * 4.0*epsilon*(std::pow((sigma/r), 12.0)-std::pow((sigma/r), 6.0));
+	  switchValue = switch_function(r, r_switch, r_cutoff);
+	double expectedEnergy = switchValue * 4.0*epsilon*(std::pow((sigma/r), 12.0)-std::pow((sigma/r), 6.0));
 	double computedEnergy = state.getPotentialEnergy();
 	double energy_error = computedEnergy - expectedEnergy;
 
@@ -537,9 +537,9 @@ void testSwitchingFunction(NonbondedForce::NonbondedMethod method) {
 	double finite_difference_gradient = (e2-e1)/(2*delta);
 	double gradient_error = finite_difference_gradient - state.getForces()[0][0];
 	//printf("%8.3f %d | switch %8.5f | energy %16.8f %16.8f | gradient %16.8f %16.8f | error %16.8f %16.8f\n", x, method, switchValue, expectedEnergy, computedEnergy, finite_difference_gradient, +state.getForces()[0][0], energy_error, gradient_error);
-
-        ASSERT_EQUAL_TOL(finite_difference_gradient, +state.getForces()[0][0], 10*TOL);
-        ASSERT_EQUAL_TOL(finite_difference_gradient, -state.getForces()[1][0], 10*TOL);
+	
+        ASSERT_EQUAL_TOL(finite_difference_gradient, +state.getForces()[0][0], TOL);
+        ASSERT_EQUAL_TOL(finite_difference_gradient, -state.getForces()[1][0], TOL);
         ASSERT_EQUAL_TOL(0.0, state.getForces()[0][1], TOL);
         ASSERT_EQUAL_TOL(0.0, state.getForces()[0][2], TOL);
         ASSERT_EQUAL_TOL(0.0, state.getForces()[1][1], TOL);
@@ -549,6 +549,11 @@ void testSwitchingFunction(NonbondedForce::NonbondedMethod method) {
 
 int main() {
     try {
+        testSwitchingFunction(NonbondedForce::NoCutoff);
+        testSwitchingFunction(NonbondedForce::Ewald);
+        testSwitchingFunction(NonbondedForce::PME);
+        testSwitchingFunction(NonbondedForce::CutoffPeriodic);
+        testSwitchingFunction(NonbondedForce::CutoffNonPeriodic);
 	testCoulomb();
         testLJ();
         testExclusionsAnd14();
@@ -557,11 +562,6 @@ int main() {
         testCutoff14();
         testPeriodic();
         testDispersionCorrection();
-        testSwitchingFunction(NonbondedForce::NoCutoff);
-        testSwitchingFunction(NonbondedForce::CutoffNonPeriodic);
-        testSwitchingFunction(NonbondedForce::CutoffPeriodic);
-        testSwitchingFunction(NonbondedForce::Ewald);
-        testSwitchingFunction(NonbondedForce::PME);
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;
