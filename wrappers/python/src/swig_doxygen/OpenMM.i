@@ -64,7 +64,7 @@ using namespace OpenMM;
 
 %include OpenMM_docstring.i
 
-%include OpenMM_headers.i
+%include OpenMMSwigHeaders.i
 
 %pythoncode %{
   # when we import * from the python module, we only want to import the
