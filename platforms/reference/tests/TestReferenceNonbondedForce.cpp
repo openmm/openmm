@@ -419,72 +419,106 @@ void testDispersionCorrection() {
     ASSERT_EQUAL_TOL(expected, energy1-energy2, 1e-4);
 }
 
+double switch_function(double r, double r_switch, double r_cutoff) {
+  // Compute switching function, as described in OpenMM User Guide ("Lennard-Jones Interaction").
+  
+  double S; // switching function value
+  if (r <= r_switch) 
+    // switch is not yet active
+    S = 1.0;
+  else if (r >= r_cutoff)
+    // distane is beyond cutoff 
+    S = 0.0;
+  else {
+    // compute switching function, defined only in intermediate regime
+    double x = (r - r_switch) / (r_cutoff - r_switch);
+    S = 1.0 - 6.*pow(x, 5) + 15.*pow(x, 4) - 10.*pow(x, 3);
+  }
+  
+  return S;
+}
+
 void testSwitchingFunction(NonbondedForce::NonbondedMethod method) {
     ReferencePlatform platform;
     System system;
-    system.setDefaultPeriodicBoxVectors(Vec3(6, 0, 0), Vec3(0, 6, 0), Vec3(0, 0, 6));
+    double boxsize = 6.0; 
+    system.setDefaultPeriodicBoxVectors(Vec3(boxsize, 0, 0), Vec3(0, boxsize, 0), Vec3(0, 0, boxsize));
     system.addParticle(1.0);
     system.addParticle(1.0);
     VerletIntegrator integrator(0.01);
     NonbondedForce* nonbonded = new NonbondedForce();
-    nonbonded->addParticle(0, 1.2, 1);
-    nonbonded->addParticle(0, 1.4, 2);
+    double sigma = 0.340; // argon
+    double epsilon = 0.996; // argon
+    double r_switch = 1.5; 
+    double r_cutoff = 2.0;
+    nonbonded->addParticle(0, sigma, epsilon);
+    nonbonded->addParticle(0, sigma, epsilon);
     nonbonded->setNonbondedMethod(method);
-    nonbonded->setCutoffDistance(2.0);
     nonbonded->setUseSwitchingFunction(true);
-    nonbonded->setSwitchingDistance(1.5);
+    nonbonded->setSwitchingDistance(r_switch);
+    nonbonded->setCutoffDistance(r_cutoff);
     nonbonded->setUseDispersionCorrection(false);
     system.addForce(nonbonded);
     Context context(system, integrator, platform);
     vector<Vec3> positions(2);
-    positions[0] = Vec3(0, 0, 0);
-    double eps = SQRT_TWO;
+    positions[0] = Vec3(0, 0, 0); // particle 1 is fixed at the origin, while particle 2 moves
     
     // Compute the interaction at various distances.
     
-    for (double r = 1.0; r < 2.5; r += 0.1) {
-        positions[1] = Vec3(r, 0, 0);
+    for (double x = sigma; x < boxsize-sigma; x += 0.01) {
+        positions[1] = Vec3(x, 0, 0);
         context.setPositions(positions);
         State state = context.getState(State::Forces | State::Energy);
         
-        // See if the energy is correct.
+	// Compute distance, using minimum image convention if system is periodic.
+	double r = x;
+	if ((method == NonbondedForce::CutoffPeriodic) || (method == NonbondedForce::Ewald) || (method == NonbondedForce::PME))
+	  r = boxsize - x;
+
+        // Compare the analytically-computed potential energy with OpenMM-computed potential energy.
+
+        double switchValue = switch_function(r, r_switch, r_cutoff);        
+        double expectedEnergy = switchValue * 4.0*epsilon*(std::pow((sigma/r), 12.0)-std::pow((sigma/r), 6.0));
+	double computedEnergy = state.getPotentialEnergy();
+	double energy_error = computedEnergy - expectedEnergy;
+
+        ASSERT_EQUAL_TOL(expectedEnergy, computedEnergy, TOL);
         
-        double x = 1.3/r;
-        double expectedEnergy = 4.0*eps*(std::pow(x, 12.0)-std::pow(x, 6.0));
-        double switchValue;
-        if (r <= 1.5)
-            switchValue = 1;
-        else if (r >= 2.0)
-            switchValue = 0;
-        else {
-            double t = (r-1.5)/0.5;
-            switchValue = 1+t*t*t*(-10+t*(15-t*6));
-        }
-        ASSERT_EQUAL_TOL(switchValue*expectedEnergy, state.getPotentialEnergy(), TOL);
+        // Compare the OpenMM-computed force with finite-difference gradient (using central differences).
         
-        // See if the force is the gradient of the energy.
-        
-        double delta = 1e-3;
+        double delta = TOL; // displacement for finite-difference gradient
         positions[1] = Vec3(r-delta, 0, 0);
         context.setPositions(positions);
         double e1 = context.getState(State::Energy).getPotentialEnergy();
         positions[1] = Vec3(r+delta, 0, 0);
         context.setPositions(positions);
         double e2 = context.getState(State::Energy).getPotentialEnergy();
-        ASSERT_EQUAL_TOL((e2-e1)/(2*delta), state.getForces()[0][0], 1e-3);
+	double finite_difference_gradient = (e2-e1)/(2*delta);
+	double gradient_error = finite_difference_gradient - state.getForces()[0][0];
+	//printf("%8.3f %d | switch %8.5f | energy %16.8f %16.8f | gradient %16.8f %16.8f | error %16.8f %16.8f\n", x, method, switchValue, expectedEnergy, computedEnergy, finite_difference_gradient, +state.getForces()[0][0], energy_error, gradient_error);
+
+        ASSERT_EQUAL_TOL(finite_difference_gradient, +state.getForces()[0][0], TOL);
+        ASSERT_EQUAL_TOL(finite_difference_gradient, -state.getForces()[1][0], TOL);
+        ASSERT_EQUAL_TOL(0.0, state.getForces()[0][1], TOL);
+        ASSERT_EQUAL_TOL(0.0, state.getForces()[0][2], TOL);
+        ASSERT_EQUAL_TOL(0.0, state.getForces()[1][1], TOL);
+        ASSERT_EQUAL_TOL(0.0, state.getForces()[1][2], TOL);
     }
 }
 
 int main() {
     try {
-        testCoulomb();
+	testCoulomb();
         testLJ();
         testExclusionsAnd14();
         testCutoff();
         testCutoff14();
         testPeriodic();
         testDispersionCorrection();
+        testSwitchingFunction(NonbondedForce::NoCutoff);
         testSwitchingFunction(NonbondedForce::CutoffNonPeriodic);
+        testSwitchingFunction(NonbondedForce::CutoffPeriodic);
+        testSwitchingFunction(NonbondedForce::Ewald);
         testSwitchingFunction(NonbondedForce::PME);
     }
     catch(const exception& e) {
