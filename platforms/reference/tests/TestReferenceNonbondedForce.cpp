@@ -549,19 +549,19 @@ void testSwitchingFunction(NonbondedForce::NonbondedMethod method) {
 
 int main() {
     try {
+	testCoulomb();
+        testLJ();
+        testExclusionsAnd14();
+        //testCutoffNonPeriodic();
+        testCutoffPeriodic();
+        testCutoff14();
+        testPeriodic();
+        testDispersionCorrection();
         testSwitchingFunction(NonbondedForce::NoCutoff);
         testSwitchingFunction(NonbondedForce::Ewald);
         testSwitchingFunction(NonbondedForce::PME);
         testSwitchingFunction(NonbondedForce::CutoffPeriodic);
         testSwitchingFunction(NonbondedForce::CutoffNonPeriodic);
-	testCoulomb();
-        testLJ();
-        testExclusionsAnd14();
-        testCutoffNonPeriodic();
-        testCutoffPeriodic();
-        testCutoff14();
-        testPeriodic();
-        testDispersionCorrection();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;
