@@ -455,23 +455,30 @@ void testDispersionCorrection() {
     ASSERT_EQUAL_TOL(expected, energy1-energy2, 1e-4);
 }
 
-double switch_function(double r, double r_switch, double r_cutoff) {
+void switch_function(double r, double r_switch, double r_cutoff, double &S, double &dSdr) {
   // Compute switching function, as described in OpenMM User Guide ("Lennard-Jones Interaction").
   
-  double S; // switching function value
-  if (r <= r_switch) 
+  if (r <= r_switch) {
     // switch is not yet active
     S = 1.0;
-  else if (r >= r_cutoff)
+    dSdr = 0.0;
+  } else if (r >= r_cutoff) {
     // distane is beyond cutoff 
     S = 0.0;
-  else {
+    dSdr = 0.0;
+  } else {
     // compute switching function, defined only in intermediate regime
     double x = (r - r_switch) / (r_cutoff - r_switch);
-    S = 1.0 - 6.*pow(x, 5) + 15.*pow(x, 4) - 10.*pow(x, 3);
+    S = 1.0 - 6.*pow(x,5) + 15.*pow(x,4) - 10.*pow(x,3);
+    double dSdx = - 30.*pow(x,4) + 60.*pow(x,3) - 30.*pow(x,2);
+    double dxdr = 1.0 / (r_cutoff - r_switch);
+    dSdr = dSdx * dxdr;
   }
-  
-  return S;
+}
+
+double sign(double x) {
+  // Return +1 if x is nonnegative, otherwise -1.
+  return (x < 0.0) ? -1 : +1; 
 }
 
 void testSwitchingFunction(NonbondedForce::NonbondedMethod method) {
@@ -510,36 +517,38 @@ void testSwitchingFunction(NonbondedForce::NonbondedMethod method) {
         
 	// Compute distance, using minimum image convention if system is periodic.
 	double r = abs(x);
+	double drdx = sign(x); // +1 if r is increasing with x, -1 if it is decreasing
 	if ((method == NonbondedForce::CutoffPeriodic) || (method == NonbondedForce::Ewald) || (method == NonbondedForce::PME))
-	  if (r > boxsize/2.0)
+	  if (r > boxsize/2.0) {
 	    r = boxsize - r;
+	    drdx = -drdx;
+	  }
+
+	// Compute analytical energy and gradient.
+
+	double S = 1.0;
+	double dSdr = 0.0;
+	if (method != NonbondedForce::NoCutoff) 
+	  switch_function(r, r_switch, r_cutoff, S, dSdr);
+	double LennardJones_E = 4.0*epsilon*(std::pow((sigma/r), 12.0)-std::pow((sigma/r), 6.0));
+	double LennardJones_dEdr = 4.0*epsilon*(12.*std::pow((sigma/r), 11.0)-6.*std::pow((sigma/r), 5.0))*(-(sigma/r)/r);
+
+	double expectedEnergy = S * LennardJones_E;
+	double expectedDeriv = drdx * (S * LennardJones_dEdr + dSdr * LennardJones_E);
 
         // Compare the analytically-computed potential energy with OpenMM-computed potential energy.
 	
-	double switchValue = 1.0;
-	if (method != NonbondedForce::NoCutoff) 
-	  switchValue = switch_function(r, r_switch, r_cutoff);
-	double expectedEnergy = switchValue * 4.0*epsilon*(std::pow((sigma/r), 12.0)-std::pow((sigma/r), 6.0));
 	double computedEnergy = state.getPotentialEnergy();
 	double energy_error = computedEnergy - expectedEnergy;
-
         ASSERT_EQUAL_TOL(expectedEnergy, computedEnergy, TOL);
         
-        // Compare the OpenMM-computed force with finite-difference gradient (using central differences).
+        // Compare the analytically-computed force with OpenMM-computed force.
         
-        double delta = TOL; // displacement for finite-difference gradient
-        positions[1] = Vec3(x-delta, 0, 0);
-        context.setPositions(positions);
-        double e1 = context.getState(State::Energy).getPotentialEnergy();
-        positions[1] = Vec3(x+delta, 0, 0);
-        context.setPositions(positions);
-        double e2 = context.getState(State::Energy).getPotentialEnergy();
-	double finite_difference_gradient = (e2-e1)/(2*delta);
-	double gradient_error = finite_difference_gradient - state.getForces()[0][0];
-	//printf("%8.3f %d | switch %8.5f | energy %16.8f %16.8f | gradient %16.8f %16.8f | error %16.8f %16.8f\n", x, method, switchValue, expectedEnergy, computedEnergy, finite_difference_gradient, +state.getForces()[0][0], energy_error, gradient_error);
+	double gradient_error = expectedDeriv - state.getForces()[0][0];
+	//printf("%8.3f %d | S %10.5f dSdr %10.5f | energy %16.8f %16.8f | gradient %16.8f %16.8f | error %16.8f %16.8f\n", x, method, S, dSdr, expectedEnergy, computedEnergy, expectedDeriv, +state.getForces()[1][0], energy_error, gradient_error);
 	
-        ASSERT_EQUAL_TOL(finite_difference_gradient, +state.getForces()[0][0], TOL);
-        ASSERT_EQUAL_TOL(finite_difference_gradient, -state.getForces()[1][0], TOL);
+        ASSERT_EQUAL_TOL(expectedDeriv, +state.getForces()[0][0], TOL);
+        ASSERT_EQUAL_TOL(expectedDeriv, -state.getForces()[1][0], TOL);
         ASSERT_EQUAL_TOL(0.0, state.getForces()[0][1], TOL);
         ASSERT_EQUAL_TOL(0.0, state.getForces()[0][2], TOL);
         ASSERT_EQUAL_TOL(0.0, state.getForces()[1][1], TOL);
@@ -558,10 +567,10 @@ int main() {
         testPeriodic();
         testDispersionCorrection();
         testSwitchingFunction(NonbondedForce::NoCutoff);
-        testSwitchingFunction(NonbondedForce::Ewald);
-        testSwitchingFunction(NonbondedForce::PME);
-        testSwitchingFunction(NonbondedForce::CutoffPeriodic);
         testSwitchingFunction(NonbondedForce::CutoffNonPeriodic);
+        testSwitchingFunction(NonbondedForce::CutoffPeriodic);
+        testSwitchingFunction(NonbondedForce::PME);
+        testSwitchingFunction(NonbondedForce::Ewald);
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;
