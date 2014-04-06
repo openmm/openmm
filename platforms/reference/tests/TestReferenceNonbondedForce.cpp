@@ -561,13 +561,13 @@ int main() {
 	testCoulomb();
         testLJ();
         testExclusionsAnd14();
-        //testCutoffNonPeriodic();
+        //testCutoffNonPeriodic(); // Uncomment once reaction-field is removed for CutoffNonPeriodic
         testCutoffPeriodic();
         testCutoff14();
         testPeriodic();
         testDispersionCorrection();
         testSwitchingFunction(NonbondedForce::NoCutoff);
-        testSwitchingFunction(NonbondedForce::CutoffNonPeriodic);
+        //testSwitchingFunction(NonbondedForce::CutoffNonPeriodic); // Uncomment once reaction-field is removed for CutoffNonPeriodic
         testSwitchingFunction(NonbondedForce::CutoffPeriodic);
         testSwitchingFunction(NonbondedForce::PME);
         testSwitchingFunction(NonbondedForce::Ewald);
