@@ -21,6 +21,7 @@ class CharmmFile(object):
     """
 
     def __init__(self, fname, mode='r'):
+        self.closed = False
         if mode not in ('r', 'w'):
             raise ValueError('Cannot open CharmmFile with mode "%s"' % mode)
         if mode == 'r':
@@ -31,7 +32,6 @@ class CharmmFile(object):
             self._handle = open(fname, mode)
         except IOError, e:
             raise CharmmFileError(str(e))
-        self.closed = False
         self.line_number = 0
 
     def write(self, *args, **kwargs):
@@ -75,7 +75,11 @@ class CharmmFile(object):
         self._handle.seek(0)
 
     def __del__(self):
-        self.closed or self._handle.close()
+        try:
+            self.closed or self._handle.close()
+        except AttributeError:
+            # It didn't make it out of the constructor
+            pass
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
