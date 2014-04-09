@@ -7,6 +7,12 @@ Contributors:
 Date: April 9, 2014
 """
 
+class CharmmError(Exception):
+    """ Base class for all exceptions raised in this package """
+
+class CharmmWarning(Warning):
+    """ Base class for all warnings emitted in this package """
+
 class CharmmPSFError(CharmmError):
     """ If there is a problem parsing CHARMM PSF files """
 
