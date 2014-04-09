@@ -21,11 +21,11 @@ simulation with CHARMM; specifically PSF, PAR, RTF, and STR files
             field parameter files
 """
 
-__all__ = ['psf', 'parameters', 'openmmloader']
+__all__ = ['psf', 'parameters']
 __authors__ = 'Jason Swails'
 __contributors__ = ''
-__license__ = 'GPL v.3'
-__date__ = 'Mar. 31, 2014'
+__license__ = 'MIT'
+__date__ = 'Apr. 9, 2014'
 
 
 __private__ = ['topologyobjects', '_charmmfile']
