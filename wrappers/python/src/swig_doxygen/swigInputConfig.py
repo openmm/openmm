@@ -399,6 +399,7 @@ UNITS = {
            'unit.kilojoule_per_mole/(unit.nanometer*unit.nanometer)')),
 ("MonteCarloBarostat", "getFrequency") : (None, ()),
 ("MonteCarloAnisotropicBarostat", "getFrequency") : (None, ()),
+("NonbondedForce", "getPMEParameters") : (None, ('1/unit.nanometer', None, None, None)),
 ("NonbondedForce", "getExceptionParameters")
  : (None, (None, None,
            'unit.elementary_charge*unit.elementary_charge',
