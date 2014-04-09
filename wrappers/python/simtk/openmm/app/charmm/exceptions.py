@@ -36,3 +36,6 @@ class CmapError(CharmmError):
 
 class BondError(CharmmError):
     """ Prevent an atom from bonding to itself """
+
+class MoleculeError(CharmmError):
+    """ For (impossibly) messed up connectivity """

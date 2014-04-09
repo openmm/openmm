@@ -9,14 +9,8 @@ Date: April 9, 2014
 from __future__ import division
 
 from functools import wraps
-from simtk.openmm.app.charmm._charmmfile import CharmmFile
-from simtk.openmm.app.charmm.topologyobjects import (ResidueList, AtomList,
-                TrackedList, Bond, Angle, Dihedral, Improper, AcceptorDonor,
-                Group, Cmap, UreyBradley, NoUreyBradley)
-from simtk.openmm.app.charmm.exceptions import (CharmmPSFError, MoleculeError,
-                CharmmPSFWarning, MissingParameter)
+from math import pi, cos, sin, sqrt
 import os
-import warnings
 import simtk.openmm as mm
 from simtk.openmm.vec3 import Vec3
 import simtk.unit as u
@@ -24,6 +18,14 @@ from simtk.openmm.app import (forcefield as ff, Topology, element)
 from simtk.openmm.app.amberprmtopfile import HCT, OBC1, OBC2, GBn, GBn2
 from simtk.openmm.app.internal.customgbforces import (GBSAHCTForce,
                 GBSAOBC1Force, GBSAOBC2Force, GBSAGBnForce, GBSAGBn2Force)
+# CHARMM imports
+from simtk.openmm.app.charmm._charmmfile import CharmmFile
+from simtk.openmm.app.charmm.topologyobjects import (ResidueList, AtomList,
+                TrackedList, Bond, Angle, Dihedral, Improper, AcceptorDonor,
+                Group, Cmap, UreyBradley, NoUreyBradley)
+from simtk.openmm.app.charmm.exceptions import (CharmmPSFError, MoleculeError,
+                CharmmPSFWarning, MissingParameter)
+import warnings
 
 TINY = 1e-8
 WATNAMES = ('WAT', 'HOH', 'TIP3', 'TIP4', 'TIP5', 'SPCE', 'SPC')
@@ -778,8 +780,8 @@ class ProteinStructure(object):
             if atom.residue.idx != last_residue:
                 last_residue = atom.residue.idx
                 residue = topology.addResidue(atom.residue.resname, chain)
-            element_name = element_by_mass(atom.mass)
-            elem = element.get_by_symbol(element_name)
+            atomic_num = atom.type.atomic_number
+            elem = element.Element.getByAtomicNumber(atomic_num)
             topology.addAtom(atom.name, elem, residue)
 
         # Add all of the bonds
@@ -1338,8 +1340,9 @@ class ProteinStructure(object):
         try:
             return self._system
         except AttributeError:
-            raise APIError('You must initialize the system with createSystem '
-                           'before accessing the cached object.')
+            raise AttributeError('You must initialize the system with '
+                                 'createSystem before accessing the cached '
+                                 'object.')
 
     @property
     def positions(self):
