@@ -7,7 +7,7 @@ Author: Jason M. Swails
 Contributors:
 Date: April 9, 2014
 """
-from simtk.openmm.app.charmm.exceptions import CharmmFileError
+from simtk.openmm.app.internal.charmm.exceptions import CharmmFileError
 
 class CharmmFile(object):
     """

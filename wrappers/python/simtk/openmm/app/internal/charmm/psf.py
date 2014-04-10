@@ -19,12 +19,14 @@ from simtk.openmm.app.amberprmtopfile import HCT, OBC1, OBC2, GBn, GBn2
 from simtk.openmm.app.internal.customgbforces import (GBSAHCTForce,
                 GBSAOBC1Force, GBSAOBC2Force, GBSAGBnForce, GBSAGBn2Force)
 # CHARMM imports
-from simtk.openmm.app.charmm._charmmfile import CharmmFile
-from simtk.openmm.app.charmm.topologyobjects import (ResidueList, AtomList,
-                TrackedList, Bond, Angle, Dihedral, Improper, AcceptorDonor,
-                Group, Cmap, UreyBradley, NoUreyBradley)
-from simtk.openmm.app.charmm.exceptions import (CharmmPSFError, MoleculeError,
-                CharmmPSFWarning, MissingParameter)
+from simtk.openmm.app.internal.charmm._charmmfile import CharmmFile
+from simtk.openmm.app.internal.charmm.topologyobjects import (
+                ResidueList, AtomList, TrackedList, Bond, Angle, Dihedral,
+                Improper, AcceptorDonor, Group, Cmap, UreyBradley,
+                NoUreyBradley)
+from simtk.openmm.app.internal.charmm.exceptions import (
+                CharmmPSFError, MoleculeError, CharmmPSFWarning,
+                MissingParameter)
 import warnings
 
 TINY = 1e-8

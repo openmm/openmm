@@ -6,8 +6,9 @@ Author: Jason M. Swails
 Contributors:
 Date: April 9, 2014
 """
-from simtk.openmm.app.charmm.exceptions import (SplitResidueWarning, BondError,
-                ResidueError, CmapError, MissingParameter)
+from simtk.openmm.app.internal.charmm.exceptions import (
+                SplitResidueWarning, BondError, ResidueError, CmapError,
+                MissingParameter)
 import simtk.unit as u
 import warnings
 

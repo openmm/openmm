@@ -7,11 +7,12 @@ Author: Jason M. Swails
 Contributors:
 Date: April 5, 2014
 """
-from simtk.openmm.app.charmm._charmmfile import CharmmFile, CharmmStreamFile
-from simtk.openmm.app.charmm.topologyobjects import (AtomType, BondType,
-                    AngleType, DihedralType, ImproperType, CmapType,
-                    UreyBradleyType, NoUreyBradley)
-from simtk.openmm.app.charmm.exceptions import CharmmFileError
+from simtk.openmm.app.internal.charmm._charmmfile import (
+            CharmmFile, CharmmStreamFile)
+from simtk.openmm.app.internal.charmm.topologyobjects import (
+            AtomType, BondType, AngleType, DihedralType, ImproperType, CmapType,
+            UreyBradleyType, NoUreyBradley)
+from simtk.openmm.app.internal.charmm.exceptions import CharmmFileError
 from simtk.openmm.app.element import Element, get_by_symbol
 import simtk.unit as u
 import warnings

@@ -145,7 +145,7 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
                                           "simtk.openmm",
                                           "simtk.openmm.app",
                                           "simtk.openmm.app.internal",
-                                          "simtk.openmm.app.charmm"]
+                                          "simtk.openmm.app.internal.charmm"]
     setupKeywords["data_files"]        = []
     setupKeywords["package_data"]      = {"simtk" : [],
                                           "simtk.unit" : [],
