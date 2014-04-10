@@ -734,15 +734,11 @@ class ProteinStructure(object):
         Sets the periodic box boundary conditions.
 
         Parameters:
-            - box (list of 6 floats) : A list of 6 numbers representing a, b, c,
-                alpha, beta, and gamma, respectively (box lengths and angles).
-                If None, the system is assumed to be aperiodic
-        Notes:
-            The box can alternatively be a list of 3 numbers representing the
-            box lengths. In this case, the angles are assumed to be 90 degrees
-
-            The box here is copied via slicing, so changing the box that was
-            passed in will have no effect after set_box is called.
+            - lengths (list of 3 distances) : A sequence of 3 distances that
+                    represent the lengths of the periodic box vectors
+            - angles (list of 3 angles) : A list of 3 angle measurements between
+                    the periodic box vectors. Default is 90 degrees if lengths
+                    is not None
         """
         if len(lengths) != 3:
             raise ValueError('set_box requires 3 box lengths')
