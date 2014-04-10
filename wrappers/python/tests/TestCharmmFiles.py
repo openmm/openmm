@@ -62,32 +62,35 @@ class TestCharmmFiles(unittest.TestCase):
             system = self.psf_c.createSystem(removeCMMotion=b)
             self.assertEqual(any(isinstance(f, CMMotionRemover) for f in system.getForces()), b)
 
-#   def test_ImplicitSolvent(self):
-#       """Test implicit solvent using the implicitSolvent parameter.
+    def test_ImplicitSolvent(self):
+        """Test implicit solvent using the implicitSolvent parameter.
 
-#       """
-#       system = self.psf_v.createSystem(implicitSolvent=OBC2)
-#       self.assertTrue(any(isinstance(f, CustomGBForce) for f in system.getForces()))
+        """
+        system = self.psf_v.createSystem(implicitSolvent=OBC2)
+        self.assertTrue(any(isinstance(f, CustomGBForce) for f in system.getForces()))
 
-#   def test_ImplicitSolventParameters(self):
-#       """Test that solventDielectric and soluteDielectric are passed correctly.
+    def test_ImplicitSolventParameters(self):
+        """Test that solventDielectric and soluteDielectric are passed correctly.
 
-#       """
-#       system = self.psf_x.createSystem(implicitSolvent=GBn,
-#                                        solventDielectric=50.0, 
-#                                        soluteDielectric = 0.9)
-#       found_matching_solvent_dielectric=False
-#       found_matching_solute_dielectric=False
-#       for force in system.getForces():
-#           if isinstance(force, CustomGBForce):
-#               if force.getSolventDielectric() == 50.0:
-#                   found_matching_solvent_dielectric = True
-#               if force.getSoluteDielectric() == 0.9:
-#                   found_matching_solute_dielectric = True
-#           if isinstance(force, NonbondedForce):
-#               self.assertEqual(force.getReactionFieldDielectric(), 1.0)
-#       self.assertTrue(found_matching_solvent_dielectric and 
-#                       found_matching_solute_dielectric)
+        """
+        system = self.psf_x.createSystem(implicitSolvent=GBn,
+                                         solventDielectric=50.0, 
+                                         soluteDielectric = 0.9)
+        found_matching_solvent_dielectric=False
+        found_matching_solute_dielectric=False
+        for force in system.getForces():
+            if isinstance(force, CustomGBForce):
+                for i in range(force.getNumGlobalParameters()):
+                    if force.getGlobalParameterName(i) == 'solventDielectric':
+                        if force.getGlobalParameterDefaultValue(i) == 50.0:
+                            found_matching_solvent_dielectric = True
+                    elif force.getGlobalParameterName(i) == 'soluteDielectric':
+                        if force.getGlobalParameterDefaultValue(i) == 0.9:
+                            found_matching_solute_dielectric = True
+            if isinstance(force, NonbondedForce):
+                self.assertEqual(force.getReactionFieldDielectric(), 1.0)
+        self.assertTrue(found_matching_solvent_dielectric and 
+                        found_matching_solute_dielectric)
 
     def test_HydrogenMass(self):
         """Test that altering the mass of hydrogens works correctly."""
