@@ -8,6 +8,7 @@ Date: April 9, 2014
 """
 from simtk.openmm.app.charmm.exceptions import (SplitResidueWarning, BondError,
                 ResidueError, CmapError, MissingParameter)
+import simtk.unit as u
 import warnings
 
 TINY = 1e-8
@@ -61,7 +62,7 @@ class AtomType(object):
         else:
             self.name = name
             self.number = int(number)
-        self.mass = mass
+        self.mass = mass * u.daltons
         self.atomic_number = atomic_number
         # We have no LJ parameters as of yet
         self.epsilon = self.rmin = self.epsilon_14 = self.rmin_14 = None
@@ -179,7 +180,7 @@ class Atom(object):
         self.attype = attype
         self.type = None
         self.charge = charge
-        self.mass = mass
+        self.mass = mass * u.daltons
         self.idx = -1
         self.props = props
         self.system = system

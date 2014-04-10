@@ -13,7 +13,7 @@ from simtk.openmm.app.charmm.topologyobjects import (AtomType, BondType,
                     UreyBradleyType, NoUreyBradley)
 from simtk.openmm.app.charmm.exceptions import CharmmFileError
 from simtk.openmm.app.element import Element, get_by_symbol
-from simtk.unit import daltons
+import simtk.unit as u
 import warnings
 
 class ParameterSet(object):
@@ -512,7 +512,7 @@ def element_by_mass(mass):
 
     for key in Element._elements_by_atomic_number:
         element = Element._elements_by_atomic_number[key]
-        massdiff = abs(element.mass.value_in_unit(daltons) - mass)
+        massdiff = abs(element.mass.value_in_unit(u.daltons) - mass)
         if massdiff < diff:
             best_guess = element
             diff = massdiff

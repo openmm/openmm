@@ -112,6 +112,7 @@ class ProteinStructure(object):
         self.group_list = groups
         self.title = title
         self.flags = flags
+        self.box_vectors = None
 
     @staticmethod
     def _convert(string, type, message):
@@ -728,7 +729,7 @@ class ProteinStructure(object):
 
         self.positions = positions
 
-    def set_box(self, box):
+    def set_box(self, lengths, angles=None):
         """
         Sets the periodic box boundary conditions.
 
@@ -743,15 +744,16 @@ class ProteinStructure(object):
             The box here is copied via slicing, so changing the box that was
             passed in will have no effect after set_box is called.
         """
-        if box is None:
-            self.box = None
-        elif len(box) == 6:
-            self.box = list(box[:])
-        elif len(box) == 3:
-            self.box = list(box[:]) + [90.0, 90.0, 90.0]
-        else:
-            raise ValueError('set_box requires 3 box lengths, 3 box lengths '
-                             'and 3 angles, or None for no box')
+        if len(lengths) != 3:
+            raise ValueError('set_box requires 3 box lengths')
+        if angles is not None and len(angles) != 3:
+            raise ValueError('set_box requires 3 box angles')
+        if angles is None:
+            angles = [90.0, 90.0, 90.0] * u.degrees
+        self.box_vectors = _box_vectors_from_lengths_angles(
+                                lengths[0], lengths[1], lengths[2],
+                                angles[0], angles[1], angles[2],
+        )
         # If we already have a _topology instance, then we have possibly changed
         # the existence of box information (whether or not this is a periodic
         # system), so delete any cached reference to a topology so it's
@@ -792,8 +794,8 @@ class ProteinStructure(object):
             topology.addBond(atoms[bond.atom1.idx], atoms[bond.atom2.idx])
 
         # Add the periodic box if there is one
-        if hasattr(self, 'box') and self.box is not None:
-            topology.setUnitCellDimensions(self.box[:3] * u.angstroms)
+        if self.box_vectors is not None:
+            topology.setUnitCellDimensions(self.box_lengths)
 
         return topology
 
@@ -1373,27 +1375,12 @@ class ProteinStructure(object):
         return self._velocities
 
     @property
-    def box_vectors(self):
-        """ Return tuple of box vectors """
-        if hasattr(self, 'rst7'):
-            box = [x*u.angstrom for x in self.rst7.box[:3]]
-            ang = [self.rst7.box[3], self.rst7.box[4], self.rst7.box[5]]
-            return _box_vectors_from_lengths_angles(box[0], box[1], box[2],
-                                                    ang[0], ang[1], ang[2])
-        else:
-            box = [x*u.angstrom for x in self.parm_data['BOX_DIMENSIONS'][1:]]
-            ang = [self.parm_data['BOX_DIMENSIONS'][0]] * 3
-            return _box_vectors_from_lengths_angles(box[0], box[1], box[2],
-                                                    ang[0], ang[1], ang[2])
-
-    @property
     def box_lengths(self):
         """ Return tuple of 3 units """
-        if hasattr(self, 'rst7'):
-            box = [x*u.angstrom for x in self.rst7.box[:3]]
-        else:
-            box = [x*u.angstrom for x in self.parm_data['BOX_DIMENSIONS'][1:]]
-        return tuple(box)
+        if self.box_vectors is not None:
+            return (self.box_vectors[0][0], self.box_vectors[0][1],
+                    self.box_vectors[0][2])
+        return None
 
 def _box_vectors_from_lengths_angles(a, b, c, alpha, beta, gamma):
     """
