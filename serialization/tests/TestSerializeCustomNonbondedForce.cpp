@@ -38,12 +38,6 @@
 using namespace OpenMM;
 using namespace std;
 
-void show_set(std::set<int> &set) {
-    for(std::set<int>::iterator it = set.begin(); it != set.end(); it++)
-      cout << *it << " ";
-    cout << endl;
-}
-
 void testSerialization() {
     // Create a Force.
 
