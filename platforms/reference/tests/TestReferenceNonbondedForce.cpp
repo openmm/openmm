@@ -184,7 +184,7 @@ void testExclusionsAnd14() {
     }
 }
 
-void testCutoff() {
+void testCutoffNonPeriodic() {
     ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
@@ -196,6 +196,42 @@ void testCutoff() {
     forceField->addParticle(1.0, 1, 0);
     forceField->addParticle(1.0, 1, 0);
     forceField->setNonbondedMethod(NonbondedForce::CutoffNonPeriodic);
+    const double cutoff = 2.9;
+    forceField->setCutoffDistance(cutoff);
+    const double eps = 50.0;
+    forceField->setReactionFieldDielectric(eps);
+    system.addForce(forceField);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(3);
+    positions[0] = Vec3(0, 0, 0);
+    positions[1] = Vec3(0, 2, 0);
+    positions[2] = Vec3(0, 3, 0);
+    context.setPositions(positions);
+    State state = context.getState(State::Forces | State::Energy);
+    const vector<Vec3>& forces = state.getForces();
+    const double force1 = ONE_4PI_EPS0*(1.0)*(0.25);
+    const double force2 = ONE_4PI_EPS0*(1.0)*(1.0);
+    ASSERT_EQUAL_VEC(Vec3(0, -force1, 0), forces[0], TOL);
+    ASSERT_EQUAL_VEC(Vec3(0, force1-force2, 0), forces[1], TOL);
+    ASSERT_EQUAL_VEC(Vec3(0, force2, 0), forces[2], TOL);
+    const double energy1 = ONE_4PI_EPS0*(1.0)*(0.5);
+    const double energy2 = ONE_4PI_EPS0*(1.0)*(1.0);
+    ASSERT_EQUAL_TOL(energy1+energy2, state.getPotentialEnergy(), TOL);
+}
+
+void testCutoffPeriodic() {
+    ReferencePlatform platform;
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.setDefaultPeriodicBoxVectors(Vec3(6, 0, 0), Vec3(0, 6, 0), Vec3(0, 0, 6));
+    VerletIntegrator integrator(0.01);
+    NonbondedForce* forceField = new NonbondedForce();
+    forceField->addParticle(1.0, 1, 0);
+    forceField->addParticle(1.0, 1, 0);
+    forceField->addParticle(1.0, 1, 0);
+    forceField->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
     const double cutoff = 2.9;
     forceField->setCutoffDistance(cutoff);
     const double eps = 50.0;
@@ -419,72 +455,122 @@ void testDispersionCorrection() {
     ASSERT_EQUAL_TOL(expected, energy1-energy2, 1e-4);
 }
 
+void switch_function(double r, double r_switch, double r_cutoff, double &S, double &dSdr) {
+  // Compute switching function, as described in OpenMM User Guide ("Lennard-Jones Interaction").
+  
+  if (r <= r_switch) {
+    // switch is not yet active
+    S = 1.0;
+    dSdr = 0.0;
+  } else if (r >= r_cutoff) {
+    // distane is beyond cutoff 
+    S = 0.0;
+    dSdr = 0.0;
+  } else {
+    // compute switching function, defined only in intermediate regime
+    double x = (r - r_switch) / (r_cutoff - r_switch);
+    S = 1.0 - 6.*pow(x,5) + 15.*pow(x,4) - 10.*pow(x,3);
+    double dSdx = - 30.*pow(x,4) + 60.*pow(x,3) - 30.*pow(x,2);
+    double dxdr = 1.0 / (r_cutoff - r_switch);
+    dSdr = dSdx * dxdr;
+  }
+}
+
+double sign(double x) {
+  // Return +1 if x is nonnegative, otherwise -1.
+  return (x < 0.0) ? -1 : +1; 
+}
+
 void testSwitchingFunction(NonbondedForce::NonbondedMethod method) {
     ReferencePlatform platform;
     System system;
-    system.setDefaultPeriodicBoxVectors(Vec3(6, 0, 0), Vec3(0, 6, 0), Vec3(0, 0, 6));
+    double boxsize = 6.0; 
+    system.setDefaultPeriodicBoxVectors(Vec3(boxsize, 0, 0), Vec3(0, boxsize, 0), Vec3(0, 0, boxsize));
     system.addParticle(1.0);
     system.addParticle(1.0);
     VerletIntegrator integrator(0.01);
     NonbondedForce* nonbonded = new NonbondedForce();
-    nonbonded->addParticle(0, 1.2, 1);
-    nonbonded->addParticle(0, 1.4, 2);
+    double sigma = 0.340; // argon
+    double epsilon = 0.996; // argon
+    double r_switch = 1.5*sigma; 
+    double r_cutoff = 2.0*sigma;
+    nonbonded->addParticle(0, sigma, epsilon);
+    nonbonded->addParticle(0, sigma, epsilon);
     nonbonded->setNonbondedMethod(method);
-    nonbonded->setCutoffDistance(2.0);
     nonbonded->setUseSwitchingFunction(true);
-    nonbonded->setSwitchingDistance(1.5);
+    nonbonded->setSwitchingDistance(r_switch);
+    nonbonded->setCutoffDistance(r_cutoff);
+    nonbonded->setEwaldErrorTolerance(0.1); // we aren't using charges, so set the Ewald tolerance high to minimize number of k-vectors needed, speeding up test for Ewald
     nonbonded->setUseDispersionCorrection(false);
     system.addForce(nonbonded);
     Context context(system, integrator, platform);
     vector<Vec3> positions(2);
-    positions[0] = Vec3(0, 0, 0);
-    double eps = SQRT_TWO;
+    positions[0] = Vec3(0, 0, 0); // particle 1 is fixed at the origin, while particle 2 moves
     
     // Compute the interaction at various distances.
     
-    for (double r = 1.0; r < 2.5; r += 0.1) {
-        positions[1] = Vec3(r, 0, 0);
+    for (double x = -(boxsize-sigma); x < +(boxsize-sigma); x += 0.01) {
+        if (abs(x) < sigma) continue;
+      
+        positions[1] = Vec3(x, 0, 0);
         context.setPositions(positions);
         State state = context.getState(State::Forces | State::Energy);
         
-        // See if the energy is correct.
+	// Compute distance, using minimum image convention if system is periodic.
+	double r = abs(x);
+	double drdx = sign(x); // +1 if r is increasing with x, -1 if it is decreasing
+	if ((method == NonbondedForce::CutoffPeriodic) || (method == NonbondedForce::Ewald) || (method == NonbondedForce::PME))
+	  if (r > boxsize/2.0) {
+	    r = boxsize - r;
+	    drdx = -drdx;
+	  }
+
+	// Compute analytical energy and gradient.
+
+	double S = 1.0;
+	double dSdr = 0.0;
+	if (method != NonbondedForce::NoCutoff) 
+	  switch_function(r, r_switch, r_cutoff, S, dSdr);
+	double LennardJones_E = 4.0*epsilon*(std::pow((sigma/r), 12.0)-std::pow((sigma/r), 6.0));
+	double LennardJones_dEdr = 4.0*epsilon*(12.*std::pow((sigma/r), 11.0)-6.*std::pow((sigma/r), 5.0))*(-(sigma/r)/r);
+
+	double expectedEnergy = S * LennardJones_E;
+	double expectedDeriv = drdx * (S * LennardJones_dEdr + dSdr * LennardJones_E);
+
+        // Compare the analytically-computed potential energy with OpenMM-computed potential energy.
+	
+	double computedEnergy = state.getPotentialEnergy();
+	double energy_error = computedEnergy - expectedEnergy;
+        ASSERT_EQUAL_TOL(expectedEnergy, computedEnergy, TOL);
         
-        double x = 1.3/r;
-        double expectedEnergy = 4.0*eps*(std::pow(x, 12.0)-std::pow(x, 6.0));
-        double switchValue;
-        if (r <= 1.5)
-            switchValue = 1;
-        else if (r >= 2.0)
-            switchValue = 0;
-        else {
-            double t = (r-1.5)/0.5;
-            switchValue = 1+t*t*t*(-10+t*(15-t*6));
-        }
-        ASSERT_EQUAL_TOL(switchValue*expectedEnergy, state.getPotentialEnergy(), TOL);
+        // Compare the analytically-computed force with OpenMM-computed force.
         
-        // See if the force is the gradient of the energy.
-        
-        double delta = 1e-3;
-        positions[1] = Vec3(r-delta, 0, 0);
-        context.setPositions(positions);
-        double e1 = context.getState(State::Energy).getPotentialEnergy();
-        positions[1] = Vec3(r+delta, 0, 0);
-        context.setPositions(positions);
-        double e2 = context.getState(State::Energy).getPotentialEnergy();
-        ASSERT_EQUAL_TOL((e2-e1)/(2*delta), state.getForces()[0][0], 1e-3);
+	double gradient_error = expectedDeriv - state.getForces()[0][0];
+	//printf("%8.3f %d | S %10.5f dSdr %10.5f | energy %16.8f %16.8f | gradient %16.8f %16.8f | error %16.8f %16.8f\n", x, method, S, dSdr, expectedEnergy, computedEnergy, expectedDeriv, +state.getForces()[0][0], energy_error, gradient_error);
+	
+        ASSERT_EQUAL_TOL(expectedDeriv, +state.getForces()[0][0], TOL);
+        ASSERT_EQUAL_TOL(expectedDeriv, -state.getForces()[1][0], TOL);
+        ASSERT_EQUAL_TOL(0.0, state.getForces()[0][1], TOL);
+        ASSERT_EQUAL_TOL(0.0, state.getForces()[0][2], TOL);
+        ASSERT_EQUAL_TOL(0.0, state.getForces()[1][1], TOL);
+        ASSERT_EQUAL_TOL(0.0, state.getForces()[1][2], TOL);
     }
 }
 
 int main() {
     try {
-        testCoulomb();
+	testCoulomb();
         testLJ();
         testExclusionsAnd14();
-        testCutoff();
+        //testCutoffNonPeriodic(); // Uncomment once reaction-field electrostatics is removed for CutoffNonPeriodic
+        testCutoffPeriodic();
         testCutoff14();
         testPeriodic();
         testDispersionCorrection();
+        testSwitchingFunction(NonbondedForce::NoCutoff);
         testSwitchingFunction(NonbondedForce::CutoffNonPeriodic);
+        testSwitchingFunction(NonbondedForce::CutoffPeriodic);
+        testSwitchingFunction(NonbondedForce::Ewald);
         testSwitchingFunction(NonbondedForce::PME);
     }
     catch(const exception& e) {
