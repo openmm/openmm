@@ -38,6 +38,12 @@
 using namespace OpenMM;
 using namespace std;
 
+void show_set(std::set<int> &set) {
+    for(std::set<int>::iterator it = set.begin(); it != set.end(); it++)
+      cout << *it << " ";
+    cout << endl;
+}
+
 void testSerialization() {
     // Create a Force.
 
@@ -124,6 +130,8 @@ void testSerialization() {
     ASSERT_EQUAL(force.getNumInteractionGroups(), force2.getNumInteractionGroups());
     std::set<int> set1c, set2c;
     force2.getInteractionGroupParameters(0, set1c, set2c);
+    ASSERT_EQUAL_CONTAINERS(set1, set1c);
+    ASSERT_EQUAL_CONTAINERS(set2, set2c);
 }
 
 int main() {

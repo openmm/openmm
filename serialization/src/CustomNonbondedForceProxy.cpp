@@ -90,7 +90,7 @@ void CustomNonbondedForceProxy::serialize(const void* object, SerializationNode&
       for (std::set<int>::iterator it = set1.begin(); it != set1.end(); ++it)
 	set1node.createChildNode("Particle").setIntProperty("index", *it);
       SerializationNode& set2node = interactionGroup.createChildNode("Set2");
-      for (std::set<int>::iterator it = set1.begin(); it != set1.end(); ++it)
+      for (std::set<int>::iterator it = set2.begin(); it != set2.end(); ++it)
 	set2node.createChildNode("Particle").setIntProperty("index", *it);
     }
 }
