@@ -115,6 +115,8 @@ class ProteinStructure(object):
         self.title = title
         self.flags = flags
         self.box_vectors = None
+        # Determine if we've loaded any parameters into our parameter set
+        self._parameters_loaded = False
 
     @staticmethod
     def _convert(string, type, message):
@@ -589,6 +591,10 @@ class ProteinStructure(object):
               separate Dihedral object for each term for types that have a
               multi-term expansion
         """
+        # If parameters have already been loaded, issue a warning and return
+        if self._parameters_loaded:
+            warnings.warn('PSF has already been parametrized. Skipping.')
+            return
         # First load the atom types
         types_are_int = False
         for atom in self.atom_list:
@@ -695,6 +701,7 @@ class ProteinStructure(object):
         # If the types started out as integers, change them back
         if types_are_int:
             for atom in self.atom_list: atom.type_to_int()
+        self._parameters_loaded = True
 
     def set_coordinates(self, positions, velocities=None):
         """
@@ -896,7 +903,9 @@ class ProteinStructure(object):
                      verbose=False):
         """
         Construct an OpenMM System representing the topology described by the
-        prmtop file.
+        prmtop file. You MUST have loaded a parameter set into this PSF before
+        calling createSystem. If not, AttributeError will be raised. ValueError
+        is raised for illegal input.
 
         Parameters:
          -  nonbondedMethod (object=NoCutoff) The method to use for nonbonded
@@ -937,6 +946,9 @@ class ProteinStructure(object):
          -  flexibleConstraints (bool=True) Are our constraints flexible or not?
          -  verbose (bool=False) Optionally prints out a running progress report
         """
+        if not self._parameters_loaded:
+            raise AttributeError('You must load a parameter set before '
+                                 'creating the OpenMM System.')
         hasbox = self.topology.getUnitCellDimensions() is not None
         # Set the cutoff distance in nanometers
         cutoff = None
@@ -1365,6 +1377,24 @@ class ProteinStructure(object):
         self._positions = tuple([Vec3(a.xx, a.xy, a.xz)
                                for a in self.atom_list]) * u.angstroms
         return self._positions
+
+    @positions.setter
+    def positions(self, stuff):
+        """
+        Replace the cached positions and the positions of each atom. If no units
+        are applied to "stuff", it is assumed to be Angstroms.
+        """
+        if not u.is_quantity(stuff):
+            # Assume this is Angstroms
+            stuff *= u.angstroms
+
+        # If we got a 1-D array, reshape it into an natom list of Vec3's
+        if len(stuff) == len(self.atom_list) * 3:
+            stuff = [Vec3(stuff[i*3], stuff[i*3+1], stuff[i*3+2])
+                     for i in range(len(self.atom_list))]
+        self._positions = stuff
+        for atom, pos in zip(self.atom_list, stuff):
+            atom.xx, atom.xy, atom.xz = pos.value_in_unit(u.angstrom)
 
     @property
     def velocities(self):
