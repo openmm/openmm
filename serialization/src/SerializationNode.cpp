@@ -122,7 +122,7 @@ SerializationNode& SerializationNode::setIntProperty(const string& name, int val
 }
 
 
-int SerializationNode::getBoolProperty(const string& name) const {
+bool SerializationNode::getBoolProperty(const string& name) const {
     map<string, string>::const_iterator iter = properties.find(name);
     if (iter == properties.end())
         throw OpenMMException("Unknown property '"+name+"' in node '"+getName()+"'");
@@ -131,7 +131,7 @@ int SerializationNode::getBoolProperty(const string& name) const {
     return value;
 }
 
-int SerializationNode::getBoolProperty(const string& name, bool defaultValue) const {
+bool SerializationNode::getBoolProperty(const string& name, bool defaultValue) const {
     map<string, string>::const_iterator iter = properties.find(name);
     if (iter == properties.end())
         return defaultValue;

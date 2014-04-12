@@ -158,7 +158,7 @@ public:
      *
      * @param name   the name of the property to get
      */
-    int getBoolProperty(const std::string& name) const;
+    bool getBoolProperty(const std::string& name) const;
     /**
      * Get the property with a particular name, specified as a bool.  If there is no property with
      * the specified name, a default value is returned instead.
@@ -166,7 +166,7 @@ public:
      * @param name          the name of the property to get
      * @param defaultValue  the value to return if the specified property does not exist
      */
-    int getBoolProperty(const std::string& name, bool defaultValue) const;
+    bool getBoolProperty(const std::string& name, bool defaultValue) const;
     /**
      * Set the value of a property, specified as a bool.
      *
