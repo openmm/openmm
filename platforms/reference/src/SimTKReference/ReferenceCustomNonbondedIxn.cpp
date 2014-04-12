@@ -177,6 +177,7 @@ void ReferenceCustomNonbondedIxn::calculatePairIxn( int numberOfAtoms, vector<Re
     }
     if (interactionGroups.size() > 0) {
         // The user has specified interaction groups, so compute only the requested interactions.
+        
         for (int group = 0; group < (int) interactionGroups.size(); group++) {
             const set<int>& set1 = interactionGroups[group].first;
             const set<int>& set2 = interactionGroups[group].second;

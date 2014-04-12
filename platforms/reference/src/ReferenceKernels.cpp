@@ -1004,7 +1004,6 @@ void ReferenceCalcCustomNonbondedForceKernel::initialize(const System& system, c
     
     for (int i = 0; i < force.getNumInteractionGroups(); i++) {
         set<int> set1, set2;
-	printf("initializing interaction group %d\n", i); // DEBUG
         force.getInteractionGroupParameters(i, set1, set2);
         interactionGroups.push_back(make_pair(set1, set2));
     }
