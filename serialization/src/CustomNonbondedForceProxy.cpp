@@ -88,10 +88,10 @@ void CustomNonbondedForceProxy::serialize(const void* object, SerializationNode&
       force.getInteractionGroupParameters(i, set1, set2);
       SerializationNode& set1node = interactionGroup.createChildNode("Set1");
       for (std::set<int>::iterator it = set1.begin(); it != set1.end(); ++it)
-	set1node.createChildNode("Particle").setIntProperty("index", *it);
+          set1node.createChildNode("Particle").setIntProperty("index", *it);
       SerializationNode& set2node = interactionGroup.createChildNode("Set2");
       for (std::set<int>::iterator it = set2.begin(); it != set2.end(); ++it)
-	set2node.createChildNode("Particle").setIntProperty("index", *it);
+          set2node.createChildNode("Particle").setIntProperty("index", *it);
     }
 }
 
@@ -103,9 +103,9 @@ void* CustomNonbondedForceProxy::deserialize(const SerializationNode& node) cons
         CustomNonbondedForce* force = new CustomNonbondedForce(node.getStringProperty("energy"));
         force->setNonbondedMethod((CustomNonbondedForce::NonbondedMethod) node.getIntProperty("method"));
         force->setCutoffDistance(node.getDoubleProperty("cutoff"));
-	force->setUseSwitchingFunction(node.getBoolProperty("useSwitchingFunction"));
+        force->setUseSwitchingFunction(node.getBoolProperty("useSwitchingFunction"));
         force->setSwitchingDistance(node.getDoubleProperty("switchingDistance"));
-	force->setUseLongRangeCorrection(node.getBoolProperty("useLongRangeCorrection"));
+        force->setUseLongRangeCorrection(node.getBoolProperty("useLongRangeCorrection"));
         const SerializationNode& perParticleParams = node.getChildNode("PerParticleParameters");
         for (int i = 0; i < (int) perParticleParams.getChildren().size(); i++) {
             const SerializationNode& parameter = perParticleParams.getChildren()[i];
@@ -141,7 +141,7 @@ void* CustomNonbondedForceProxy::deserialize(const SerializationNode& node) cons
             }
             else {
                 // This is an old file created before TabulatedFunction existed.
-                
+
                 const SerializationNode& valuesNode = function.getChildNode("Values");
                 vector<double> values;
                 for (int j = 0; j < (int) valuesNode.getChildren().size(); j++)
@@ -152,18 +152,18 @@ void* CustomNonbondedForceProxy::deserialize(const SerializationNode& node) cons
         const SerializationNode& interactionGroups = node.getChildNode("InteractionGroups");
         for (int i = 0; i < (int) interactionGroups.getChildren().size(); i++) {
             const SerializationNode& interactionGroup = interactionGroups.getChildren()[i];
-	    // Get set 1.
-	    const SerializationNode& set1node = interactionGroup.getChildNode("Set1");
-	    std::set<int> set1;
-	    for (int j = 0; j < (int) set1node.getChildren().size(); j++)
-	      set1.insert(set1node.getChildren()[j].getIntProperty("index"));
-	    // Get set 2.
-	    const SerializationNode& set2node = interactionGroup.getChildNode("Set2");
-	    std::set<int> set2;
-	    for (int j = 0; j < (int) set2node.getChildren().size(); j++)
-	      set2.insert(set2node.getChildren()[j].getIntProperty("index"));
-	    force->addInteractionGroup(set1, set2);
-	}
+            // Get set 1.
+            const SerializationNode& set1node = interactionGroup.getChildNode("Set1");
+            std::set<int> set1;
+            for (int j = 0; j < (int) set1node.getChildren().size(); j++)
+              set1.insert(set1node.getChildren()[j].getIntProperty("index"));
+            // Get set 2.
+            const SerializationNode& set2node = interactionGroup.getChildNode("Set2");
+            std::set<int> set2;
+            for (int j = 0; j < (int) set2node.getChildren().size(); j++)
+              set2.insert(set2node.getChildren()[j].getIntProperty("index"));
+            force->addInteractionGroup(set1, set2);
+        }
         return force;
     }
     catch (...) {
