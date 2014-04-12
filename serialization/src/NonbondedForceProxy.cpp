@@ -51,6 +51,14 @@ void NonbondedForceProxy::serialize(const void* object, SerializationNode& node)
     node.setDoubleProperty("ewaldTolerance", force.getEwaldErrorTolerance());
     node.setDoubleProperty("rfDielectric", force.getReactionFieldDielectric());
     node.setIntProperty("dispersionCorrection", force.getUseDispersionCorrection());
+    double alpha;
+    int nx, ny, nz;
+    force.getPMEParameters(alpha, nx, ny, nz);
+    node.setDoubleProperty("alpha", alpha);
+    node.setIntProperty("nx", nx);
+    node.setIntProperty("ny", ny);
+    node.setIntProperty("nz", nz);
+    node.setIntProperty("recipForceGroup", force.getReciprocalSpaceForceGroup());
     SerializationNode& particles = node.createChildNode("Particles");
     for (int i = 0; i < force.getNumParticles(); i++) {
         double charge, sigma, epsilon;
@@ -78,6 +86,14 @@ void* NonbondedForceProxy::deserialize(const SerializationNode& node) const {
         force->setEwaldErrorTolerance(node.getDoubleProperty("ewaldTolerance"));
         force->setReactionFieldDielectric(node.getDoubleProperty("rfDielectric"));
         force->setUseDispersionCorrection(node.getIntProperty("dispersionCorrection"));
+        double alpha;
+        int nx, ny, nz;
+        alpha = node.getDoubleProperty("alpha");
+        nx = node.getIntProperty("nx");
+        ny = node.getIntProperty("ny");
+        nz = node.getIntProperty("nz");
+        force->setPMEParameters(alpha, nx, ny, nz);
+        force->setReciprocalSpaceForceGroup(node.getIntProperty("recipForceGroup"));
         const SerializationNode& particles = node.getChildNode("Particles");
         for (int i = 0; i < (int) particles.getChildren().size(); i++) {
             const SerializationNode& particle = particles.getChildren()[i];

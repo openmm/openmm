@@ -49,6 +49,9 @@ void testSerialization() {
     force.setEwaldErrorTolerance(1e-3);
     force.setReactionFieldDielectric(50.0);
     force.setUseDispersionCorrection(false);
+    double alpha = 0.5;
+    int nx = 3, ny = 5, nz = 7;
+    force.setPMEParameters(alpha, nx, ny, nz);
     force.addParticle(1, 0.1, 0.01);
     force.addParticle(0.5, 0.2, 0.02);
     force.addParticle(-0.5, 0.3, 0.03);
@@ -72,6 +75,13 @@ void testSerialization() {
     ASSERT_EQUAL(force.getReactionFieldDielectric(), force2.getReactionFieldDielectric());
     ASSERT_EQUAL(force.getUseDispersionCorrection(), force2.getUseDispersionCorrection());
     ASSERT_EQUAL(force.getNumParticles(), force2.getNumParticles());
+    double alpha2;
+    int nx2, ny2, nz2;
+    force2.getPMEParameters(alpha2, nx2, ny2, nz2);
+    ASSERT_EQUAL(alpha, alpha2);
+    ASSERT_EQUAL(nx, nx2);
+    ASSERT_EQUAL(ny, ny2);
+    ASSERT_EQUAL(nz, nz2);    
     for (int i = 0; i < force.getNumParticles(); i++) {
         double charge1, sigma1, epsilon1;
         double charge2, sigma2, epsilon2;
