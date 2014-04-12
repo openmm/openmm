@@ -46,6 +46,8 @@ void NonbondedForceProxy::serialize(const void* object, SerializationNode& node)
     const NonbondedForce& force = *reinterpret_cast<const NonbondedForce*>(object);
     node.setIntProperty("method", (int) force.getNonbondedMethod());
     node.setDoubleProperty("cutoff", force.getCutoffDistance());
+    node.setBoolProperty("useSwitchingFunction", force.getUseSwitchingFunction());
+    node.setDoubleProperty("switchingDistance", force.getSwitchingDistance());
     node.setDoubleProperty("ewaldTolerance", force.getEwaldErrorTolerance());
     node.setDoubleProperty("rfDielectric", force.getReactionFieldDielectric());
     node.setIntProperty("dispersionCorrection", force.getUseDispersionCorrection());
@@ -71,6 +73,8 @@ void* NonbondedForceProxy::deserialize(const SerializationNode& node) const {
     try {
         force->setNonbondedMethod((NonbondedForce::NonbondedMethod) node.getIntProperty("method"));
         force->setCutoffDistance(node.getDoubleProperty("cutoff"));
+        force->setUseSwitchingFunction(node.getDoubleProperty("useSwitchingFunction"));
+        force->setSwitchingDistance(node.getDoubleProperty("switchingDistance"));
         force->setEwaldErrorTolerance(node.getDoubleProperty("ewaldTolerance"));
         force->setReactionFieldDielectric(node.getDoubleProperty("rfDielectric"));
         force->setUseDispersionCorrection(node.getIntProperty("dispersionCorrection"));
