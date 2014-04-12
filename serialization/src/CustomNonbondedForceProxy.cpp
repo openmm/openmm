@@ -47,6 +47,9 @@ void CustomNonbondedForceProxy::serialize(const void* object, SerializationNode&
     node.setStringProperty("energy", force.getEnergyFunction());
     node.setIntProperty("method", (int) force.getNonbondedMethod());
     node.setDoubleProperty("cutoff", force.getCutoffDistance());
+    node.setBoolProperty("useSwitchingFunction", force.getUseSwitchingFunction());
+    node.setDoubleProperty("switchingDistance", force.getSwitchingDistance());
+    node.setBoolProperty("useLongRangeCorrection", force.getUseLongRangeCorrection());
     SerializationNode& perParticleParams = node.createChildNode("PerParticleParameters");
     for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
         perParticleParams.createChildNode("Parameter").setStringProperty("name", force.getPerParticleParameterName(i));
@@ -100,6 +103,9 @@ void* CustomNonbondedForceProxy::deserialize(const SerializationNode& node) cons
         CustomNonbondedForce* force = new CustomNonbondedForce(node.getStringProperty("energy"));
         force->setNonbondedMethod((CustomNonbondedForce::NonbondedMethod) node.getIntProperty("method"));
         force->setCutoffDistance(node.getDoubleProperty("cutoff"));
+	force->setUseSwitchingFunction(node.getBoolProperty("useSwitchingFunction"));
+        force->setSwitchingDistance(node.getDoubleProperty("switchingDistance"));
+	force->setUseLongRangeCorrection(node.getBoolProperty("useLongRangeCorrection"));
         const SerializationNode& perParticleParams = node.getChildNode("PerParticleParameters");
         for (int i = 0; i < (int) perParticleParams.getChildren().size(); i++) {
             const SerializationNode& parameter = perParticleParams.getChildren()[i];
