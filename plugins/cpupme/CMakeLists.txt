@@ -1,14 +1,15 @@
 #---------------------------------------------------
 # OpenMM CPU PME Plugin
 #
-# Creates plugin library, base name=OpenMMPME.
-# Default libraries are shared & optimized.
+# Creates OpenMMPME plugin library.
 #
 # Windows:
-#   OpenMMPME[_d].dll
-#   OpenMMPME[_d].lib
+#   OpenMMPME.dll
+#   OpenMMPME.lib
+#   OpenMMPME_static.lib
 # Unix:
-#   libOpenMMPME[_d].so
+#   libOpenMMPME.so
+#   libOpenMMPME_static.a
 #----------------------------------------------------
 
 # The source is organized into subdirectories, but we handle them all from
@@ -23,18 +24,6 @@ SET(OPENMMPME_LIBRARY_NAME OpenMMPME)
 
 SET(SHARED_TARGET ${OPENMMPME_LIBRARY_NAME})
 SET(STATIC_TARGET ${OPENMMPME_LIBRARY_NAME}_static)
-
-# Ensure that debug libraries have "_d" appended to their names.
-# CMake gets this right on Windows automatically with this definition.
-IF (MSVC)
-    SET(CMAKE_DEBUG_POSTFIX "_d" CACHE INTERNAL "" FORCE)
-ENDIF (MSVC)
-
-# But on Unix or Cygwin we have to add the suffix manually
-IF (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
-    SET(SHARED_TARGET ${SHARED_TARGET}_d)
-    SET(STATIC_TARGET ${STATIC_TARGET}_d)
-ENDIF (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
 
 
 # These are all the places to search for header files which are
@@ -77,12 +66,7 @@ INCLUDE_DIRECTORIES(${FFTW_INCLUDES})
 # Build the shared plugin library.
 ADD_LIBRARY(${SHARED_TARGET} SHARED ${SOURCE_FILES} ${SOURCE_INCLUDE_FILES} ${API_INCLUDE_FILES})
 
-IF (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
-    SET(MAIN_OPENMM_LIB ${OPENMM_LIBRARY_NAME}_d)
-ELSE (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
-    SET(MAIN_OPENMM_LIB ${OPENMM_LIBRARY_NAME})
-ENDIF (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
-TARGET_LINK_LIBRARIES(${SHARED_TARGET} ${MAIN_OPENMM_LIB} ${PTHREADS_LIB} ${FFTW_LIBRARY})
+TARGET_LINK_LIBRARIES(${SHARED_TARGET} ${OPENMM_LIBRARY_NAME} ${PTHREADS_LIB} ${FFTW_LIBRARY})
 IF (FFTW_THREADS_LIBRARY)
     TARGET_LINK_LIBRARIES(${SHARED_TARGET} ${FFTW_THREADS_LIBRARY})
 ENDIF (FFTW_THREADS_LIBRARY)
@@ -94,12 +78,7 @@ INSTALL_TARGETS(/lib/plugins RUNTIME_DIRECTORY /lib/plugins ${SHARED_TARGET})
 IF(OPENMM_BUILD_STATIC_LIB)
     ADD_LIBRARY(${STATIC_TARGET} STATIC ${SOURCE_FILES} ${SOURCE_INCLUDE_FILES} ${API_INCLUDE_FILES})
 
-    IF (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
-        SET(MAIN_OPENMM_LIB ${OPENMM_LIBRARY_NAME}_d)
-    ELSE (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
-        SET(MAIN_OPENMM_LIB ${OPENMM_LIBRARY_NAME})
-    ENDIF (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
-    TARGET_LINK_LIBRARIES(${STATIC_TARGET} ${MAIN_OPENMM_LIB} ${PTHREADS_LIB} ${FFTW_LIBRARY})
+    TARGET_LINK_LIBRARIES(${STATIC_TARGET} ${OPENMM_LIBRARY_NAME} ${PTHREADS_LIB} ${FFTW_LIBRARY})
     IF (FFTW_THREADS_LIBRARY)
         TARGET_LINK_LIBRARIES(${STATIC_TARGET} ${FFTW_THREADS_LIBRARY})
     ENDIF (FFTW_THREADS_LIBRARY)
