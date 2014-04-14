@@ -81,7 +81,7 @@ void* NonbondedForceProxy::deserialize(const SerializationNode& node) const {
     try {
         force->setNonbondedMethod((NonbondedForce::NonbondedMethod) node.getIntProperty("method"));
         force->setCutoffDistance(node.getDoubleProperty("cutoff",1.0));
-        force->setUseSwitchingFunction(node.getDoubleProperty("useSwitchingFunction",false));
+        force->setUseSwitchingFunction(node.getBoolProperty("useSwitchingFunction",false));
         force->setSwitchingDistance(node.getDoubleProperty("switchingDistance",-1.0));
         force->setEwaldErrorTolerance(node.getDoubleProperty("ewaldTolerance",5e-4));
         force->setReactionFieldDielectric(node.getDoubleProperty("rfDielectric",78.3));
