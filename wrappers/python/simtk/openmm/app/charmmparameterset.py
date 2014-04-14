@@ -17,11 +17,18 @@ from simtk.openmm.app.element import Element, get_by_symbol
 import simtk.unit as u
 import warnings
 
-class ParameterSet(object):
+class CharmmParameterSet(object):
     """
     Stores a parameter set defined by CHARMM files. It stores the equivalent of
     the information found in the MASS section of the CHARMM topology file
     (TOP/RTF) and all of the information in the parameter files (PAR)
+
+    Parameters:
+        - filenames : List of topology, parameter, and stream files to load into
+          the parameter set.
+            Parameter files must have the suffix .par or .prm.
+            Residue topology files must have the suffix .rtf or .top
+            Stream files must have the suffix .str
 
     Attributes:
         All type lists are dictionaries whose keys are tuples (with however
@@ -45,6 +52,9 @@ class ParameterSet(object):
         the atom type. The tuple is guaranteed to be the most robust, although
         when only the integer or string is available the other dictionaries are
         helpful
+
+    Example:
+    >>> params = CharmmParameterSet('charmm22.top', 'charmm22.par', 'file.str')
     """
 
     @staticmethod
@@ -58,7 +68,7 @@ class ParameterSet(object):
         except ValueError:
             raise CharmmFileError('Could not convert %s to %s' % (msg, type))
 
-    def __init__(self):
+    def __init__(self, *args):
         # Instantiate the list types
         self.atom_types_str = dict()
         self.atom_types_int = dict()
@@ -72,11 +82,26 @@ class ParameterSet(object):
         self.nbfix_types = dict()
         self.parametersets = []
 
+        # Load all of the files
+        tops, pars, strs = [], [], []
+        for arg in args:
+            if arg.endswith('.rtf') or arg.endswith('.top'):
+                tops.append(arg)
+            elif arg.endswith('.par') or arg.endswith('.prm'):
+                pars.append(arg)
+            elif arg.endswith('.str'):
+                strs.append(arg)
+            else:
+                raise ValueError('Unrecognized file type: %s' % arg)
+        for top in tops: self.readTopologyFile(top)
+        for par in pars: self.readParameterFile(par)
+        for strf in strs: self.readStreamFile(strf)
+
     @classmethod
-    def load_set(cls, tfile=None, pfile=None, sfiles=[]):
+    def loadSet(cls, tfile=None, pfile=None, sfiles=[]):
         """
-        Instantiates a ParameterSet from a Topology file and a Parameter file
-        (or just a Parameter file if it has all information)
+        Instantiates a CharmmParameterSet from a Topology file and a Parameter
+        file (or just a Parameter file if it has all information)
 
         Parameters:
             - tfile (str) : Name of the Topology (RTF/TOP) file
@@ -84,7 +109,7 @@ class ParameterSet(object):
             - sfiles (list of str) : List or tuple of stream (STR) file names.
 
         Returns:
-            New ParameterSet populated with the parameters found in the
+            New CharmmParameterSet populated with the parameters found in the
             provided files.
             
         Notes:
@@ -96,19 +121,19 @@ class ParameterSet(object):
         """
         inst = cls()
         if tfile is not None:
-            inst.read_topology_file(tfile)
+            inst.readTopologyFile(tfile)
         if pfile is not None:
-            inst.read_parameter_file(pfile)
+            inst.readParameterFile(pfile)
         if isinstance(sfiles, str):
             # The API docstring requests a list, but allow for users to pass a
             # string with a single filename instead
-            inst.read_stream_file(sfiles)
+            inst.readStreamFile(sfiles)
         elif sfiles is not None:
             for sfile in sfiles:
-                inst.read_stream_file(sfile)
+                inst.readStreamFile(sfile)
         return inst
 
-    def read_parameter_file(self, pfile):
+    def readParameterFile(self, pfile):
         """
         Reads all of the parameters from a parameter file. Versions 36 and
         later of the CHARMM force field files have an ATOMS section defining
@@ -123,7 +148,7 @@ class ParameterSet(object):
         RTF/TOP file first. Failure to do so will result in a raised
         RuntimeError.
         """
-        conv = ParameterSet._convert
+        conv = CharmmParameterSet._convert
         if isinstance(pfile, str):
             own_handle = True
             f = CharmmFile(pfile)
@@ -382,7 +407,7 @@ class ParameterSet(object):
         if parameterset is not None: self.parametersets.append(parameterset)
         if own_handle: f.close()
 
-    def read_topology_file(self, tfile):
+    def readTopologyFile(self, tfile):
         """
         Reads _only_ the atom type definitions from a topology file. This is
         unnecessary for versions 36 and later of the CHARMM force field.
@@ -392,7 +417,7 @@ class ParameterSet(object):
 
         Note: The CHARMM TOPology file is also called a Residue Topology File
         """
-        conv = ParameterSet._convert
+        conv = CharmmParameterSet._convert
         if isinstance(tfile, str):
             own_handle = True
             f = CharmmFile(tfile)
@@ -424,7 +449,7 @@ class ParameterSet(object):
             self.atom_types_tuple[(atype.name, atype.number)] = atype
         if own_handle: f.close()
 
-    def read_stream_file(self, sfile):
+    def readStreamFile(self, sfile):
         """
         Reads RTF and PAR sections from a stream file and dispatches the
         sections to read_topology_file or read_parameter_file
@@ -463,7 +488,7 @@ class ParameterSet(object):
             time.
 
         Example:
-        >>> params = ParameterSet.load_set(pfile='charmm.prm').condense()
+        >>> params = CharmmParameterSet.loadSet(pfile='charmm.prm').condense()
         """
         # First scan through all of the bond types
         self._condense_types(self.bond_types)

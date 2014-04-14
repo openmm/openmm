@@ -50,13 +50,13 @@ def _catchindexerror(func):
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-class ProteinStructure(object):
+class CharmmPsfFile(object):
     """
     A chemical structure instantiated from CHARMM files. You can instantiate a
     ProteinStructure from a PSF file using the load_from_psf constructor
 
     Example:
-    >>> cs = ProteinStructure.load_from_psf("testfiles/test.psf")
+    >>> cs = CharmmPsfFile("testfiles/test.psf")
     
     This structure has numerous attributes that are lists of the elements of
     this structure, including atoms, bonds, torsions, etc. The attributes are
@@ -71,8 +71,8 @@ class ProteinStructure(object):
         - acceptor_list # hbond acceptors?
         - group_list    # list of nonbonded interaction groups
 
-    Additional attribute is available if a ParameterSet is loaded into this
-    structure.
+    Additional attribute is available if a CharmmParameterSet is loaded into
+    this structure.
         
         - urey_bradley_list
 
@@ -99,83 +99,8 @@ class ProteinStructure(object):
     NONBONDED_FORCE_GROUP = 6
     GB_FORCE_GROUP = 6
     
-    def __init__(self, residues, atoms, bonds=None, angles=None,
-                 dihedrals=None, impropers=None, cmaps=None, donors=None,
-                 acceptors=None, groups=None, title=None, flags=None):
-        self.residue_list = residues
-        self.atom_list = atoms
-        self.bond_list = bonds
-        self.angle_list = angles
-        self.dihedral_list = dihedrals
-        self.improper_list = impropers
-        self.cmap_list = cmaps
-        self.donor_list = donors
-        self.acceptor_list = acceptors
-        self.group_list = groups
-        self.title = title
-        self.flags = flags
-        self.box_vectors = None
-        # Determine if we've loaded any parameters into our parameter set
-        self._parameters_loaded = False
-
-    @staticmethod
-    def _convert(string, type, message):
-        """
-        Converts a string to a specific type, making sure to raise
-        CharmmPSFError with the given message in the event of a failure.
-
-        Parameters:
-            - string (str) : Input string to process
-            - type (type) : Type of data to convert to
-            - message (str) : Error message to put in exception if failed
-        """
-        try:
-            return type(string)
-        except ValueError, e:
-            print e
-            raise CharmmPSFError('Could not convert %s' % message)
-
-    @staticmethod
-    def _parse_psf_section(psf, dtype):
-        """
-        This method parses a section of the PSF file
-
-        Parameters:
-            - psf (CharmmFile) : Open file that is pointing to the first line
-                                 of the section that is to be parsed
-            - dtype (type) : The data type to convert all of the data into
-        
-        Returns:
-            (pointers, data)
-            
-            - pointers (int/tuple of ints) : If one pointer is set, pointers is
-                    simply the integer that is value of that pointer. Otherwise
-                    it is a tuple with every pointer value defined in the first
-                    line
-            - data (list) : A list of all data in the parsed section converted
-                    to `dtype'
-        """
-        conv = ProteinStructure._convert
-        words = psf.readline().split()
-        if len(words) == 1:
-            pointers = conv(words[0], int, 'pointer')
-        else:
-            pointers = tuple([conv(w, int, 'pointer') for w in words])
-        line = psf.readline().strip()
-        if not line:
-            # This will correctly handle the NNB section (which has a spurious
-            # blank line) as well as any sections that have 0 members.
-            line = psf.readline().strip()
-        data = []
-        while line:
-            words = line.split()
-            data.extend([conv(w, dtype, 'PSF data') for w in words])
-            line = psf.readline().strip()
-        return pointers, data
-
-    @classmethod
     @_catchindexerror
-    def load_from_psf(cls, psf_name):
+    def __init__(self, psf_name):
         """
         Opens and parses a PSF file, then instantiates a ProteinStructure
         instance from the data.
@@ -392,14 +317,76 @@ class ProteinStructure(object):
                          atom_list[id7], atom_list[id8])
             )
         cmap_list.changed = False
-        # Now instantiate the object and return it
-        inst = cls(residues=residue_list, atoms=atom_list, bonds=bond_list,
-                   angles=angle_list, dihedrals=dihedral_list,
-                   impropers=improper_list, donors=donor_list,
-                   acceptors=acceptor_list, groups=group_list, cmaps=cmap_list,
-                   title=title, flags=psf_flags)
-        # Assign some potentially useful attributes
-        return inst
+
+        # Now set the instance attributes
+        self.residue_list = residue_list
+        self.atom_list = atom_list
+        self.bond_list = bond_list
+        self.angle_list = angle_list
+        self.dihedral_list = dihedral_list
+        self.improper_list = improper_list
+        self.cmap_list = cmap_list
+        self.donor_list = donor_list
+        self.acceptor_list = acceptor_list
+        self.group_list = group_list
+        self.title = title
+        self.flags = psf_flags
+        self.box_vectors = None
+
+    @staticmethod
+    def _convert(string, type, message):
+        """
+        Converts a string to a specific type, making sure to raise
+        CharmmPSFError with the given message in the event of a failure.
+
+        Parameters:
+            - string (str) : Input string to process
+            - type (type) : Type of data to convert to
+            - message (str) : Error message to put in exception if failed
+        """
+        try:
+            return type(string)
+        except ValueError, e:
+            print e
+            raise CharmmPSFError('Could not convert %s' % message)
+
+    @staticmethod
+    def _parse_psf_section(psf, dtype):
+        """
+        This method parses a section of the PSF file
+
+        Parameters:
+            - psf (CharmmFile) : Open file that is pointing to the first line
+                                 of the section that is to be parsed
+            - dtype (type) : The data type to convert all of the data into
+        
+        Returns:
+            (pointers, data)
+            
+            - pointers (int/tuple of ints) : If one pointer is set, pointers is
+                    simply the integer that is value of that pointer. Otherwise
+                    it is a tuple with every pointer value defined in the first
+                    line
+            - data (list) : A list of all data in the parsed section converted
+                    to `dtype'
+        """
+        conv = ProteinStructure._convert
+        words = psf.readline().split()
+        if len(words) == 1:
+            pointers = conv(words[0], int, 'pointer')
+        else:
+            pointers = tuple([conv(w, int, 'pointer') for w in words])
+        line = psf.readline().strip()
+        if not line:
+            # This will correctly handle the NNB section (which has a spurious
+            # blank line) as well as any sections that have 0 members.
+            line = psf.readline().strip()
+        data = []
+        while line:
+            words = line.split()
+            data.extend([conv(w, dtype, 'PSF data') for w in words])
+            line = psf.readline().strip()
+        return pointers, data
 
     def write_psf(self, dest, vmd=False):
         """
@@ -576,7 +563,7 @@ class ProteinStructure(object):
         PAR, and STR files.
 
         Parameters:
-            - parmset (ParameterSet) : List of all parameters
+            - parmset (CharmmParameterSet) : List of all parameters
 
         Notes:
             - If any parameters that are necessary cannot be found, a
@@ -591,10 +578,6 @@ class ProteinStructure(object):
               separate Dihedral object for each term for types that have a
               multi-term expansion
         """
-        # If parameters have already been loaded, issue a warning and return
-        if self._parameters_loaded:
-            warnings.warn('PSF has already been parametrized. Skipping.')
-            return
         # First load the atom types
         types_are_int = False
         for atom in self.atom_list:
@@ -701,7 +684,6 @@ class ProteinStructure(object):
         # If the types started out as integers, change them back
         if types_are_int:
             for atom in self.atom_list: atom.type_to_int()
-        self._parameters_loaded = True
 
     def set_coordinates(self, positions, velocities=None):
         """
@@ -885,7 +867,7 @@ class ProteinStructure(object):
             return zip(radii, screen, alpha, beta, gamma)
         return zip(radii, screen)
 
-    def createSystem(self, nonbondedMethod=ff.NoCutoff,
+    def createSystem(self, params, nonbondedMethod=ff.NoCutoff,
                      nonbondedCutoff=1.0*u.nanometer,
                      switchDistance=0.0*u.nanometer,
                      constraints=None,
@@ -908,6 +890,8 @@ class ProteinStructure(object):
         is raised for illegal input.
 
         Parameters:
+         -  params (CharmmParameterSet) The parameter set to use to parametrize
+               this molecule
          -  nonbondedMethod (object=NoCutoff) The method to use for nonbonded
                interactions. Allowed values are NoCutoff, CutoffNonPeriodic,
                CutoffPeriodic, Ewald, or PME.
@@ -946,9 +930,10 @@ class ProteinStructure(object):
          -  flexibleConstraints (bool=True) Are our constraints flexible or not?
          -  verbose (bool=False) Optionally prints out a running progress report
         """
-        if not self._parameters_loaded:
-            raise AttributeError('You must load a parameter set before '
-                                 'creating the OpenMM System.')
+        # back up the dihedral list
+        dihedral_list = self.dihedral_list
+        # Load the parameter set
+        self.load_parameters(params)
         hasbox = self.topology.getUnitCellDimensions() is not None
         # Set the cutoff distance in nanometers
         cutoff = None
@@ -1347,6 +1332,9 @@ class ProteinStructure(object):
 
         # Cache our system for easy access
         self._system = system
+
+        # Restore the dihedral list to allow reparametrization later
+        self.dihedral_list = dihedral_list
 
         return system
 

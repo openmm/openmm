@@ -26,8 +26,8 @@ from statedatareporter import StateDataReporter
 from element import Element
 from desmonddmsfile import DesmondDMSFile
 from checkpointreporter import CheckpointReporter
-from internal.charmm.psf import ProteinStructure as CharmmPSF
-from internal.charmm.parameters import ParameterSet as CharmmParameterSet
+from charmmpsffile import CharmmPsfFile
+from charmmparameterset import CharmmParameterSet
 
 # Enumerated values
 
