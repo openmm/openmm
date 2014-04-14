@@ -80,20 +80,20 @@ void* NonbondedForceProxy::deserialize(const SerializationNode& node) const {
     NonbondedForce* force = new NonbondedForce();
     try {
         force->setNonbondedMethod((NonbondedForce::NonbondedMethod) node.getIntProperty("method"));
-        force->setCutoffDistance(node.getDoubleProperty("cutoff"));
-        force->setUseSwitchingFunction(node.getDoubleProperty("useSwitchingFunction"));
-        force->setSwitchingDistance(node.getDoubleProperty("switchingDistance"));
-        force->setEwaldErrorTolerance(node.getDoubleProperty("ewaldTolerance"));
-        force->setReactionFieldDielectric(node.getDoubleProperty("rfDielectric"));
-        force->setUseDispersionCorrection(node.getIntProperty("dispersionCorrection"));
+        force->setCutoffDistance(node.getDoubleProperty("cutoff", 1.0));
+        force->setUseSwitchingFunction(node.getDoubleProperty("useSwitchingFunction", false));
+        force->setSwitchingDistance(node.getDoubleProperty("switchingDistance", -1.0));
+        force->setEwaldErrorTolerance(node.getDoubleProperty("ewaldTolerance", 5e-4));
+        force->setReactionFieldDielectric(node.getDoubleProperty("rfDielectric", 78.3));
+        force->setUseDispersionCorrection(node.getIntProperty("dispersionCorrection",true));
         double alpha;
         int nx, ny, nz;
-        alpha = node.getDoubleProperty("alpha");
-        nx = node.getIntProperty("nx");
-        ny = node.getIntProperty("ny");
-        nz = node.getIntProperty("nz");
+        alpha = node.getDoubleProperty("alpha", 0.0);
+        nx = node.getIntProperty("nx", 0);
+        ny = node.getIntProperty("ny", 0);
+        nz = node.getIntProperty("nz", 0);
         force->setPMEParameters(alpha, nx, ny, nz);
-        force->setReciprocalSpaceForceGroup(node.getIntProperty("recipForceGroup"));
+        force->setReciprocalSpaceForceGroup(node.getIntProperty("recipForceGroup", -1));
         const SerializationNode& particles = node.getChildNode("Particles");
         for (int i = 0; i < (int) particles.getChildren().size(); i++) {
             const SerializationNode& particle = particles.getChildren()[i];
