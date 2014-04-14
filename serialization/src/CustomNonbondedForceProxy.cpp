@@ -103,9 +103,9 @@ void* CustomNonbondedForceProxy::deserialize(const SerializationNode& node) cons
         CustomNonbondedForce* force = new CustomNonbondedForce(node.getStringProperty("energy"));
         force->setNonbondedMethod((CustomNonbondedForce::NonbondedMethod) node.getIntProperty("method"));
         force->setCutoffDistance(node.getDoubleProperty("cutoff"));
-        force->setUseSwitchingFunction(node.getBoolProperty("useSwitchingFunction", false));
-        force->setSwitchingDistance(node.getDoubleProperty("switchingDistance", -1.0));
-        force->setUseLongRangeCorrection(node.getBoolProperty("useLongRangeCorrection", false));
+        force->setUseSwitchingFunction(node.getBoolProperty("useSwitchingFunction"));
+        force->setSwitchingDistance(node.getDoubleProperty("switchingDistance"));
+        force->setUseLongRangeCorrection(node.getBoolProperty("useLongRangeCorrection"));
         const SerializationNode& perParticleParams = node.getChildNode("PerParticleParameters");
         for (int i = 0; i < (int) perParticleParams.getChildren().size(); i++) {
             const SerializationNode& parameter = perParticleParams.getChildren()[i];
@@ -149,10 +149,8 @@ void* CustomNonbondedForceProxy::deserialize(const SerializationNode& node) cons
                 force->addTabulatedFunction(function.getStringProperty("name"), new Continuous1DFunction(values, function.getDoubleProperty("min"), function.getDoubleProperty("max")));
             }
         }
-        // Look for interaction group definitions in a backward-compatible way.
-        try {
-          const SerializationNode& interactionGroups = node.getChildNode("InteractionGroups");
-          for (int i = 0; i < (int) interactionGroups.getChildren().size(); i++) {
+        const SerializationNode& interactionGroups = node.getChildNode("InteractionGroups");
+        for (int i = 0; i < (int) interactionGroups.getChildren().size(); i++) {
             const SerializationNode& interactionGroup = interactionGroups.getChildren()[i];
             // Get set 1.
             const SerializationNode& set1node = interactionGroup.getChildNode("Set1");
@@ -165,9 +163,6 @@ void* CustomNonbondedForceProxy::deserialize(const SerializationNode& node) cons
             for (int j = 0; j < (int) set2node.getChildren().size(); j++)
               set2.insert(set2node.getChildren()[j].getIntProperty("index"));
             force->addInteractionGroup(set1, set2);
-          }
-        } catch (exception &e) {
-          // Do nothing, since we have to assume that InteractionGroups is not present and allow for this possibility.
         }
         return force;
     }
