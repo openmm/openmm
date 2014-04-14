@@ -47,6 +47,9 @@ void CustomNonbondedForceProxy::serialize(const void* object, SerializationNode&
     node.setStringProperty("energy", force.getEnergyFunction());
     node.setIntProperty("method", (int) force.getNonbondedMethod());
     node.setDoubleProperty("cutoff", force.getCutoffDistance());
+    node.setBoolProperty("useSwitchingFunction", force.getUseSwitchingFunction());
+    node.setDoubleProperty("switchingDistance", force.getSwitchingDistance());
+    node.setBoolProperty("useLongRangeCorrection", force.getUseLongRangeCorrection());
     SerializationNode& perParticleParams = node.createChildNode("PerParticleParameters");
     for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
         perParticleParams.createChildNode("Parameter").setStringProperty("name", force.getPerParticleParameterName(i));
@@ -76,6 +79,20 @@ void CustomNonbondedForceProxy::serialize(const void* object, SerializationNode&
     SerializationNode& functions = node.createChildNode("Functions");
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++)
         functions.createChildNode("Function", &force.getTabulatedFunction(i)).setStringProperty("name", force.getTabulatedFunctionName(i));
+
+    SerializationNode& interactionGroups = node.createChildNode("InteractionGroups");
+    for (int i = 0; i < force.getNumInteractionGroups(); i++) {
+      SerializationNode& interactionGroup = interactionGroups.createChildNode("InteractionGroup");
+      std::set<int> set1;
+      std::set<int> set2;
+      force.getInteractionGroupParameters(i, set1, set2);
+      SerializationNode& set1node = interactionGroup.createChildNode("Set1");
+      for (std::set<int>::iterator it = set1.begin(); it != set1.end(); ++it)
+          set1node.createChildNode("Particle").setIntProperty("index", *it);
+      SerializationNode& set2node = interactionGroup.createChildNode("Set2");
+      for (std::set<int>::iterator it = set2.begin(); it != set2.end(); ++it)
+          set2node.createChildNode("Particle").setIntProperty("index", *it);
+    }
 }
 
 void* CustomNonbondedForceProxy::deserialize(const SerializationNode& node) const {
@@ -85,7 +102,10 @@ void* CustomNonbondedForceProxy::deserialize(const SerializationNode& node) cons
     try {
         CustomNonbondedForce* force = new CustomNonbondedForce(node.getStringProperty("energy"));
         force->setNonbondedMethod((CustomNonbondedForce::NonbondedMethod) node.getIntProperty("method"));
-        force->setCutoffDistance(node.getDoubleProperty("cutoff"));
+        force->setCutoffDistance(node.getDoubleProperty("cutoff", 1.0));
+        force->setUseSwitchingFunction(node.getBoolProperty("useSwitchingFunction", false));
+        force->setSwitchingDistance(node.getDoubleProperty("switchingDistance", -1.0));
+        force->setUseLongRangeCorrection(node.getBoolProperty("useLongRangeCorrection", false));
         const SerializationNode& perParticleParams = node.getChildNode("PerParticleParameters");
         for (int i = 0; i < (int) perParticleParams.getChildren().size(); i++) {
             const SerializationNode& parameter = perParticleParams.getChildren()[i];
@@ -121,13 +141,33 @@ void* CustomNonbondedForceProxy::deserialize(const SerializationNode& node) cons
             }
             else {
                 // This is an old file created before TabulatedFunction existed.
-                
+
                 const SerializationNode& valuesNode = function.getChildNode("Values");
                 vector<double> values;
                 for (int j = 0; j < (int) valuesNode.getChildren().size(); j++)
                     values.push_back(valuesNode.getChildren()[j].getDoubleProperty("v"));
                 force->addTabulatedFunction(function.getStringProperty("name"), new Continuous1DFunction(values, function.getDoubleProperty("min"), function.getDoubleProperty("max")));
             }
+        }
+        // Catch exceptions if InteractionGroups node is missing, in order to give backwards compatibility.
+        try{
+          const SerializationNode& interactionGroups = node.getChildNode("InteractionGroups");
+          for (int i = 0; i < (int) interactionGroups.getChildren().size(); i++) {
+            const SerializationNode& interactionGroup = interactionGroups.getChildren()[i];
+            // Get set 1.
+            const SerializationNode& set1node = interactionGroup.getChildNode("Set1");
+            std::set<int> set1;
+            for (int j = 0; j < (int) set1node.getChildren().size(); j++)
+              set1.insert(set1node.getChildren()[j].getIntProperty("index"));
+            // Get set 2.
+            const SerializationNode& set2node = interactionGroup.getChildNode("Set2");
+            std::set<int> set2;
+            for (int j = 0; j < (int) set2node.getChildren().size(); j++)
+              set2.insert(set2node.getChildren()[j].getIntProperty("index"));
+            force->addInteractionGroup(set1, set2);
+          }
+        } catch (...) {
+          // do nothing to allow backwards-compatibility
         }
         return force;
     }

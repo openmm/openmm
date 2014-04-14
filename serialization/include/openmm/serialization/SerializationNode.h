@@ -153,6 +153,28 @@ public:
      */
     SerializationNode& setIntProperty(const std::string& name, int value);
     /**
+     * Get the property with a particular name, specified as an bool.  If there is no property with
+     * the specified name, an exception is thrown.
+     *
+     * @param name   the name of the property to get
+     */
+    bool getBoolProperty(const std::string& name) const;
+    /**
+     * Get the property with a particular name, specified as a bool.  If there is no property with
+     * the specified name, a default value is returned instead.
+     *
+     * @param name          the name of the property to get
+     * @param defaultValue  the value to return if the specified property does not exist
+     */
+    bool getBoolProperty(const std::string& name, bool defaultValue) const;
+    /**
+     * Set the value of a property, specified as a bool.
+     *
+     * @param name   the name of the property to set
+     * @param value  the value to set for the property
+     */
+    SerializationNode& setBoolProperty(const std::string& name, bool value);
+    /**
      * Get the property with a particular name, specified as a double.  If there is no property with
      * the specified name, an exception is thrown.
      *

@@ -46,9 +46,19 @@ void NonbondedForceProxy::serialize(const void* object, SerializationNode& node)
     const NonbondedForce& force = *reinterpret_cast<const NonbondedForce*>(object);
     node.setIntProperty("method", (int) force.getNonbondedMethod());
     node.setDoubleProperty("cutoff", force.getCutoffDistance());
+    node.setBoolProperty("useSwitchingFunction", force.getUseSwitchingFunction());
+    node.setDoubleProperty("switchingDistance", force.getSwitchingDistance());
     node.setDoubleProperty("ewaldTolerance", force.getEwaldErrorTolerance());
     node.setDoubleProperty("rfDielectric", force.getReactionFieldDielectric());
     node.setIntProperty("dispersionCorrection", force.getUseDispersionCorrection());
+    double alpha;
+    int nx, ny, nz;
+    force.getPMEParameters(alpha, nx, ny, nz);
+    node.setDoubleProperty("alpha", alpha);
+    node.setIntProperty("nx", nx);
+    node.setIntProperty("ny", ny);
+    node.setIntProperty("nz", nz);
+    node.setIntProperty("recipForceGroup", force.getReciprocalSpaceForceGroup());
     SerializationNode& particles = node.createChildNode("Particles");
     for (int i = 0; i < force.getNumParticles(); i++) {
         double charge, sigma, epsilon;
@@ -70,10 +80,20 @@ void* NonbondedForceProxy::deserialize(const SerializationNode& node) const {
     NonbondedForce* force = new NonbondedForce();
     try {
         force->setNonbondedMethod((NonbondedForce::NonbondedMethod) node.getIntProperty("method"));
-        force->setCutoffDistance(node.getDoubleProperty("cutoff"));
-        force->setEwaldErrorTolerance(node.getDoubleProperty("ewaldTolerance"));
-        force->setReactionFieldDielectric(node.getDoubleProperty("rfDielectric"));
-        force->setUseDispersionCorrection(node.getIntProperty("dispersionCorrection"));
+        force->setCutoffDistance(node.getDoubleProperty("cutoff",1.0));
+        force->setUseSwitchingFunction(node.getBoolProperty("useSwitchingFunction",false));
+        force->setSwitchingDistance(node.getDoubleProperty("switchingDistance",-1.0));
+        force->setEwaldErrorTolerance(node.getDoubleProperty("ewaldTolerance",5e-4));
+        force->setReactionFieldDielectric(node.getDoubleProperty("rfDielectric",78.3));
+        force->setUseDispersionCorrection(node.getIntProperty("dispersionCorrection",true));
+        double alpha;
+        int nx, ny, nz;
+        alpha = node.getDoubleProperty("alpha",0.0);
+        nx = node.getIntProperty("nx",0);
+        ny = node.getIntProperty("ny",0);
+        nz = node.getIntProperty("nz",0);
+        force->setPMEParameters(alpha, nx, ny, nz);
+        force->setReciprocalSpaceForceGroup(node.getIntProperty("recipForceGroup",-1));
         const SerializationNode& particles = node.getChildNode("Particles");
         for (int i = 0; i < (int) particles.getChildren().size(); i++) {
             const SerializationNode& particle = particles.getChildren()[i];
