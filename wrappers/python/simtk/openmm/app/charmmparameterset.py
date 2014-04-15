@@ -92,7 +92,7 @@ class CharmmParameterSet(object):
             elif arg.endswith('.str'):
                 strs.append(arg)
             else:
-                raise ValueError('Unrecognized file type: %s' % arg)
+                raise TypeError('Unrecognized file type: %s' % arg)
         for top in tops: self.readTopologyFile(top)
         for par in pars: self.readParameterFile(par)
         for strf in strs: self.readStreamFile(strf)
