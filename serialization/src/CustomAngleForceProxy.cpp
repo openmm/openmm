@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -44,6 +44,7 @@ CustomAngleForceProxy::CustomAngleForceProxy() : SerializationProxy("CustomAngle
 void CustomAngleForceProxy::serialize(const void* object, SerializationNode& node) const {
     node.setIntProperty("version", 1);
     const CustomAngleForce& force = *reinterpret_cast<const CustomAngleForce*>(object);
+    node.setIntProperty("forceGroup", force.getForceGroup());
     node.setStringProperty("energy", force.getEnergyFunction());
     SerializationNode& perAngleParams = node.createChildNode("PerAngleParameters");
     for (int i = 0; i < force.getNumPerAngleParameters(); i++) {
@@ -74,6 +75,7 @@ void* CustomAngleForceProxy::deserialize(const SerializationNode& node) const {
     CustomAngleForce* force = NULL;
     try {
         CustomAngleForce* force = new CustomAngleForce(node.getStringProperty("energy"));
+        force->setForceGroup(node.getIntProperty("forceGroup", 0));
         const SerializationNode& perAngleParams = node.getChildNode("PerAngleParameters");
         for (int i = 0; i < (int) perAngleParams.getChildren().size(); i++) {
             const SerializationNode& parameter = perAngleParams.getChildren()[i];

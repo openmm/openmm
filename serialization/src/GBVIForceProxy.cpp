@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -44,6 +44,7 @@ GBVIForceProxy::GBVIForceProxy() : SerializationProxy("GBVIForce") {
 void GBVIForceProxy::serialize(const void* object, SerializationNode& node) const {
     node.setIntProperty("version", 2);
     const GBVIForce& force = *reinterpret_cast<const GBVIForce*>(object);
+    node.setIntProperty("forceGroup", force.getForceGroup());
     node.setIntProperty("method", (int) force.getNonbondedMethod());
     node.setIntProperty("scalingMethod", (int) force.getBornRadiusScalingMethod());
     node.setDoubleProperty("quinticLowerLimitFactor", force.getQuinticLowerLimitFactor());
@@ -71,6 +72,7 @@ void* GBVIForceProxy::deserialize(const SerializationNode& node) const {
         throw OpenMMException("Unsupported version number");
     GBVIForce* force = new GBVIForce();
     try {
+        force->setForceGroup(node.getIntProperty("forceGroup", 0));
         force->setNonbondedMethod((GBVIForce::NonbondedMethod) node.getIntProperty("method"));
         force->setCutoffDistance(node.getDoubleProperty("cutoff"));
         force->setSoluteDielectric(node.getDoubleProperty("soluteDielectric"));
