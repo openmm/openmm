@@ -1466,8 +1466,7 @@ def _box_vectors_from_lengths_angles(a, b, c, alpha, beta, gamma):
 
 def set_molecules(atom_list):
     """
-    Correctly sets the ATOMS_PER_MOLECULE and SOLVENT_POINTERS sections of the
-    topology file.
+    Correctly sets the molecularity of the system based on connectivity
     """
     from sys import setrecursionlimit, getrecursionlimit
     # Since we use a recursive function here, we make sure that the recursion
