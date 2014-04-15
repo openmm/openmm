@@ -52,8 +52,7 @@ def _catchindexerror(func):
 
 class CharmmPsfFile(object):
     """
-    A chemical structure instantiated from CHARMM files. You can instantiate a
-    CharmmPsfFile from a PSF file using the load_from_psf constructor
+    A chemical structure instantiated from CHARMM files.
 
     Example:
     >>> cs = CharmmPsfFile("testfiles/test.psf")
@@ -400,7 +399,7 @@ class CharmmPsfFile(object):
             - vmd (bool) : If True, it will write out a PSF in the format that
                     VMD prints it in (i.e., no NUMLP/NUMLPH or MOLNT sections)
         Example:
-            >>> cs = CharmmPsfFile.load_from_psf('testfiles/test.psf')
+            >>> cs = CharmmPsfFile('testfiles/test.psf')
             >>> cs.write_psf('testfiles/test2.psf')
         """
         # See if this is an extended format
