@@ -25,10 +25,14 @@ class CharmmParameterSet(object):
 
     Parameters:
         - filenames : List of topology, parameter, and stream files to load into
-          the parameter set.
-            Parameter files must have the suffix .par or .prm.
-            Residue topology files must have the suffix .rtf or .top
-            Stream files must have the suffix .str
+          the parameter set. The following file type suffixes are recognized.
+          Unrecognized file types raise a TypeError
+            .rtf, .top -- Residue topology file
+            .par, .prm -- Parameter file
+            .str -- Stream file
+            .inp -- If "par" is in the file name, it is a parameter file. If
+                    "top" is in the file name, it is a topology file. Otherwise,
+                    raise TypeError
 
     Attributes:
         All type lists are dictionaries whose keys are tuples (with however
@@ -91,6 +95,13 @@ class CharmmParameterSet(object):
                 pars.append(arg)
             elif arg.endswith('.str'):
                 strs.append(arg)
+            elif arg.endswith('.inp'):
+                if 'par' in arg:
+                    pars.append(arg)
+                elif 'top' in arg:
+                    tops.append(arg)
+                else:
+                    raise TypeError('Unrecognized file type: %s' % arg)
             else:
                 raise TypeError('Unrecognized file type: %s' % arg)
         for top in tops: self.readTopologyFile(top)
