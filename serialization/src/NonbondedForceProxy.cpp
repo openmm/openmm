@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -80,20 +80,18 @@ void* NonbondedForceProxy::deserialize(const SerializationNode& node) const {
     NonbondedForce* force = new NonbondedForce();
     try {
         force->setNonbondedMethod((NonbondedForce::NonbondedMethod) node.getIntProperty("method"));
-        force->setCutoffDistance(node.getDoubleProperty("cutoff",1.0));
-        force->setUseSwitchingFunction(node.getBoolProperty("useSwitchingFunction",false));
-        force->setSwitchingDistance(node.getDoubleProperty("switchingDistance",-1.0));
-        force->setEwaldErrorTolerance(node.getDoubleProperty("ewaldTolerance",5e-4));
-        force->setReactionFieldDielectric(node.getDoubleProperty("rfDielectric",78.3));
-        force->setUseDispersionCorrection(node.getIntProperty("dispersionCorrection",true));
-        double alpha;
-        int nx, ny, nz;
-        alpha = node.getDoubleProperty("alpha",0.0);
-        nx = node.getIntProperty("nx",0);
-        ny = node.getIntProperty("ny",0);
-        nz = node.getIntProperty("nz",0);
+        force->setCutoffDistance(node.getDoubleProperty("cutoff"));
+        force->setUseSwitchingFunction(node.getBoolProperty("useSwitchingFunction", false));
+        force->setSwitchingDistance(node.getDoubleProperty("switchingDistance", -1.0));
+        force->setEwaldErrorTolerance(node.getDoubleProperty("ewaldTolerance"));
+        force->setReactionFieldDielectric(node.getDoubleProperty("rfDielectric"));
+        force->setUseDispersionCorrection(node.getIntProperty("dispersionCorrection"));
+        double alpha = node.getDoubleProperty("alpha", 0.0);
+        int nx = node.getIntProperty("nx", 0);
+        int ny = node.getIntProperty("ny", 0);
+        int nz = node.getIntProperty("nz", 0);
         force->setPMEParameters(alpha, nx, ny, nz);
-        force->setReciprocalSpaceForceGroup(node.getIntProperty("recipForceGroup",-1));
+        force->setReciprocalSpaceForceGroup(node.getIntProperty("recipForceGroup", -1));
         const SerializationNode& particles = node.getChildNode("Particles");
         for (int i = 0; i < (int) particles.getChildren().size(); i++) {
             const SerializationNode& particle = particles.getChildren()[i];

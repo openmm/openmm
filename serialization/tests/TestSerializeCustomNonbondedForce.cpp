@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -66,6 +66,7 @@ void testSerialization() {
     std::set<int> set1, set2;
     set1.insert(0);
     set2.insert(1);
+    set2.insert(2);
     force.addInteractionGroup(set1, set2);
 
     // Serialize and then deserialize it.

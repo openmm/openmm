@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -82,16 +82,16 @@ void CustomNonbondedForceProxy::serialize(const void* object, SerializationNode&
 
     SerializationNode& interactionGroups = node.createChildNode("InteractionGroups");
     for (int i = 0; i < force.getNumInteractionGroups(); i++) {
-      SerializationNode& interactionGroup = interactionGroups.createChildNode("InteractionGroup");
-      std::set<int> set1;
-      std::set<int> set2;
-      force.getInteractionGroupParameters(i, set1, set2);
-      SerializationNode& set1node = interactionGroup.createChildNode("Set1");
-      for (std::set<int>::iterator it = set1.begin(); it != set1.end(); ++it)
-          set1node.createChildNode("Particle").setIntProperty("index", *it);
-      SerializationNode& set2node = interactionGroup.createChildNode("Set2");
-      for (std::set<int>::iterator it = set2.begin(); it != set2.end(); ++it)
-          set2node.createChildNode("Particle").setIntProperty("index", *it);
+        SerializationNode& interactionGroup = interactionGroups.createChildNode("InteractionGroup");
+        std::set<int> set1;
+        std::set<int> set2;
+        force.getInteractionGroupParameters(i, set1, set2);
+        SerializationNode& set1node = interactionGroup.createChildNode("Set1");
+        for (std::set<int>::iterator it = set1.begin(); it != set1.end(); ++it)
+            set1node.createChildNode("Particle").setIntProperty("index", *it);
+        SerializationNode& set2node = interactionGroup.createChildNode("Set2");
+        for (std::set<int>::iterator it = set2.begin(); it != set2.end(); ++it)
+            set2node.createChildNode("Particle").setIntProperty("index", *it);
     }
 }
 
@@ -102,7 +102,7 @@ void* CustomNonbondedForceProxy::deserialize(const SerializationNode& node) cons
     try {
         CustomNonbondedForce* force = new CustomNonbondedForce(node.getStringProperty("energy"));
         force->setNonbondedMethod((CustomNonbondedForce::NonbondedMethod) node.getIntProperty("method"));
-        force->setCutoffDistance(node.getDoubleProperty("cutoff", 1.0));
+        force->setCutoffDistance(node.getDoubleProperty("cutoff"));
         force->setUseSwitchingFunction(node.getBoolProperty("useSwitchingFunction", false));
         force->setSwitchingDistance(node.getDoubleProperty("switchingDistance", -1.0));
         force->setUseLongRangeCorrection(node.getBoolProperty("useLongRangeCorrection", false));
@@ -149,25 +149,27 @@ void* CustomNonbondedForceProxy::deserialize(const SerializationNode& node) cons
                 force->addTabulatedFunction(function.getStringProperty("name"), new Continuous1DFunction(values, function.getDoubleProperty("min"), function.getDoubleProperty("max")));
             }
         }
-        // Catch exceptions if InteractionGroups node is missing, in order to give backwards compatibility.
-        try{
-          const SerializationNode& interactionGroups = node.getChildNode("InteractionGroups");
-          for (int i = 0; i < (int) interactionGroups.getChildren().size(); i++) {
-            const SerializationNode& interactionGroup = interactionGroups.getChildren()[i];
-            // Get set 1.
-            const SerializationNode& set1node = interactionGroup.getChildNode("Set1");
-            std::set<int> set1;
-            for (int j = 0; j < (int) set1node.getChildren().size(); j++)
-              set1.insert(set1node.getChildren()[j].getIntProperty("index"));
-            // Get set 2.
-            const SerializationNode& set2node = interactionGroup.getChildNode("Set2");
-            std::set<int> set2;
-            for (int j = 0; j < (int) set2node.getChildren().size(); j++)
-              set2.insert(set2node.getChildren()[j].getIntProperty("index"));
-            force->addInteractionGroup(set1, set2);
-          }
-        } catch (...) {
-          // do nothing to allow backwards-compatibility
+        bool hasInteractionGroups = false; // Older files will be missing this block.
+        for (int i = 0; i < (int) node.getChildren().size(); i++) {
+            if (node.getChildren()[i].getName() == "InteractionGroups")
+                hasInteractionGroups = true;
+        }
+        if (hasInteractionGroups) {
+            const SerializationNode& interactionGroups = node.getChildNode("InteractionGroups");
+            for (int i = 0; i < (int) interactionGroups.getChildren().size(); i++) {
+                const SerializationNode& interactionGroup = interactionGroups.getChildren()[i];
+                // Get set 1.
+                const SerializationNode& set1node = interactionGroup.getChildNode("Set1");
+                std::set<int> set1;
+                for (int j = 0; j < (int) set1node.getChildren().size(); j++)
+                    set1.insert(set1node.getChildren()[j].getIntProperty("index"));
+                // Get set 2.
+                const SerializationNode& set2node = interactionGroup.getChildNode("Set2");
+                std::set<int> set2;
+                for (int j = 0; j < (int) set2node.getChildren().size(); j++)
+                    set2.insert(set2node.getChildren()[j].getIntProperty("index"));
+                force->addInteractionGroup(set1, set2);
+            }
         }
         return force;
     }
