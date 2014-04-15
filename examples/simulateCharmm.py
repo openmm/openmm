@@ -4,20 +4,17 @@ from simtk.unit import *
 from sys import stdout
 
 # Read the PSF
-psf = CharmmPSF.load_from_psf('ala_ala_ala.psf')
+psf = CharmmPsfFile('ala_ala_ala.psf')
 
 # Get the coordinates from the PDB
 pdb = PDBFile('ala_ala_ala.pdb')
 
 # Read and condense the parameter set
-params = CharmmParameterSet.load_set(tfile='charmm22.rtf',
-                                     pfile='charmm22.par').condense()
-
-# Load the parameter set !! do not forget this !!
-psf.load_parameters(params)
+params = CharmmParameterSet('charmm22.rtf', 'charmm22.par')
 
 # Instantiate the system
-system = psf.createSystem(nonbondedMethod=NoCutoff, nonbondedCutoff=None)
+system = psf.createSystem(params, nonbondedMethod=NoCutoff,
+                          nonbondedCutoff=None)
 integrator = LangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
 simulation = Simulation(psf.topology, system, integrator)
 simulation.context.setPositions(pdb.getPositions())
