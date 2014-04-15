@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -47,6 +47,7 @@ void AndersenThermostatProxy::serialize(const void* object, SerializationNode& n
     node.setDoubleProperty("temperature", force.getDefaultTemperature());
     node.setDoubleProperty("frequency", force.getDefaultCollisionFrequency());
     node.setIntProperty("randomSeed", force.getRandomNumberSeed());
+    node.setIntProperty("forceGroup", force.getForceGroup());
 }
 
 void* AndersenThermostatProxy::deserialize(const SerializationNode& node) const {
@@ -55,6 +56,7 @@ void* AndersenThermostatProxy::deserialize(const SerializationNode& node) const 
     AndersenThermostat* force = NULL;
     try {
         AndersenThermostat* force = new AndersenThermostat(node.getDoubleProperty("temperature"), node.getDoubleProperty("frequency"));
+        force->setForceGroup(node.getIntProperty("forceGroup", 0));
         force->setRandomNumberSeed(node.getIntProperty("randomSeed"));
         return force;
     }

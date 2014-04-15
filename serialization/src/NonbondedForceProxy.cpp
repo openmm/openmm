@@ -44,6 +44,7 @@ NonbondedForceProxy::NonbondedForceProxy() : SerializationProxy("NonbondedForce"
 void NonbondedForceProxy::serialize(const void* object, SerializationNode& node) const {
     node.setIntProperty("version", 1);
     const NonbondedForce& force = *reinterpret_cast<const NonbondedForce*>(object);
+    node.setIntProperty("forceGroup", force.getForceGroup());
     node.setIntProperty("method", (int) force.getNonbondedMethod());
     node.setDoubleProperty("cutoff", force.getCutoffDistance());
     node.setBoolProperty("useSwitchingFunction", force.getUseSwitchingFunction());
@@ -79,6 +80,7 @@ void* NonbondedForceProxy::deserialize(const SerializationNode& node) const {
         throw OpenMMException("Unsupported version number");
     NonbondedForce* force = new NonbondedForce();
     try {
+        force->setForceGroup(node.getIntProperty("forceGroup", 0));
         force->setNonbondedMethod((NonbondedForce::NonbondedMethod) node.getIntProperty("method"));
         force->setCutoffDistance(node.getDoubleProperty("cutoff"));
         force->setUseSwitchingFunction(node.getBoolProperty("useSwitchingFunction", false));
