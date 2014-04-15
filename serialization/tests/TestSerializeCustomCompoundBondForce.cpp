@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -42,6 +42,7 @@ void testSerialization() {
     // Create a Force.
 
     CustomCompoundBondForce force(3, "5*sin(distance(p1,p2))^2+y*z");
+    force.setForceGroup(3);
     force.addGlobalParameter("x", 1.3);
     force.addGlobalParameter("y", 2.221);
     force.addPerBondParameter("z");
@@ -76,6 +77,7 @@ void testSerialization() {
     // Compare the two forces to see if they are identical.
 
     CustomCompoundBondForce& force2 = *copy;
+    ASSERT_EQUAL(force.getForceGroup(), force2.getForceGroup());
     ASSERT_EQUAL(force.getNumParticlesPerBond(), force2.getNumParticlesPerBond());
     ASSERT_EQUAL(force.getEnergyFunction(), force2.getEnergyFunction());
     ASSERT_EQUAL(force.getNumPerBondParameters(), force2.getNumPerBondParameters());

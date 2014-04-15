@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -44,6 +44,7 @@ CustomBondForceProxy::CustomBondForceProxy() : SerializationProxy("CustomBondFor
 void CustomBondForceProxy::serialize(const void* object, SerializationNode& node) const {
     node.setIntProperty("version", 1);
     const CustomBondForce& force = *reinterpret_cast<const CustomBondForce*>(object);
+    node.setIntProperty("forceGroup", force.getForceGroup());
     node.setStringProperty("energy", force.getEnergyFunction());
     SerializationNode& perBondParams = node.createChildNode("PerBondParameters");
     for (int i = 0; i < force.getNumPerBondParameters(); i++) {
@@ -74,6 +75,7 @@ void* CustomBondForceProxy::deserialize(const SerializationNode& node) const {
     CustomBondForce* force = NULL;
     try {
         CustomBondForce* force = new CustomBondForce(node.getStringProperty("energy"));
+        force->setForceGroup(node.getIntProperty("forceGroup", 0));
         const SerializationNode& perBondParams = node.getChildNode("PerBondParameters");
         for (int i = 0; i < (int) perBondParams.getChildren().size(); i++) {
             const SerializationNode& parameter = perBondParams.getChildren()[i];

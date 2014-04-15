@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -44,6 +44,7 @@ CustomHbondForceProxy::CustomHbondForceProxy() : SerializationProxy("CustomHbond
 void CustomHbondForceProxy::serialize(const void* object, SerializationNode& node) const {
     node.setIntProperty("version", 1);
     const CustomHbondForce& force = *reinterpret_cast<const CustomHbondForce*>(object);
+    node.setIntProperty("forceGroup", force.getForceGroup());
     node.setStringProperty("energy", force.getEnergyFunction());
     node.setIntProperty("method", (int) force.getNonbondedMethod());
     node.setDoubleProperty("cutoff", force.getCutoffDistance());
@@ -102,6 +103,7 @@ void* CustomHbondForceProxy::deserialize(const SerializationNode& node) const {
     CustomHbondForce* force = NULL;
     try {
         CustomHbondForce* force = new CustomHbondForce(node.getStringProperty("energy"));
+        force->setForceGroup(node.getIntProperty("forceGroup", 0));
         force->setNonbondedMethod((CustomHbondForce::NonbondedMethod) node.getIntProperty("method"));
         force->setCutoffDistance(node.getDoubleProperty("cutoff"));
         const SerializationNode& perDonorParams = node.getChildNode("PerDonorParameters");
