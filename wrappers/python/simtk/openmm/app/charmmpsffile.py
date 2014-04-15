@@ -867,6 +867,7 @@ class CharmmPsfFile(object):
                 radii = _mbondi_radii(self.atom_list)
 
         length_conv = u.angstrom.conversion_factor_to(u.nanometer)
+        radii = [x * length_conv for x in radii]
 
         if gb_model is GBn2:
             return zip(radii, screen, alpha, beta, gamma)
