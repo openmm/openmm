@@ -13,19 +13,12 @@ class TestCharmmFiles(unittest.TestCase):
         """Set up the tests by loading the input files."""
 
         # alanine tripeptide; no waters
-        self.psf_c = CharmmPSF.load_from_psf('systems/ala_ala_ala.psf')
-        self.psf_x = CharmmPSF.load_from_psf('systems/ala_ala_ala.xpsf')
-        self.psf_v = CharmmPSF.load_from_psf('systems/ala_ala_ala.vpsf')
-        params = CharmmParameterSet.load_set(
-                            tfile='systems/charmm22.rtf',
-                            pfile='systems/charmm22.par',
-        ).condense()
+        self.psf_c = CharmmPsfFile('systems/ala_ala_ala.psf')
+        self.psf_x = CharmmPsfFile('systems/ala_ala_ala.xpsf')
+        self.psf_v = CharmmPsfFile('systems/ala_ala_ala.vpsf')
+        self.params = CharmmParameterSet(
+                            'systems/charmm22.rtf', 'systems/charmm22.par')
         self.pdb = PDBFile('systems/ala_ala_ala.pdb')
-
-        # Load parameters
-        self.psf_c.load_parameters(params)
-        self.psf_x.load_parameters(params)
-        self.psf_v.load_parameters(params)
 
     def test_NonbondedMethod(self):
         """Test both non-periodic methods for the systems"""
@@ -34,7 +27,7 @@ class TestCharmmFiles(unittest.TestCase):
                      CutoffNonPeriodic:NonbondedForce.CutoffNonPeriodic}
         for top in (self.psf_c, self.psf_x, self.psf_v):
             for method in methodMap:
-                system = top.createSystem(nonbondedMethod=method)
+                system = top.createSystem(self.params, nonbondedMethod=method)
                 forces = system.getForces()
                 self.assertTrue(any(isinstance(f, NonbondedForce) and 
                                     f.getNonbondedMethod()==methodMap[method] 
@@ -45,7 +38,7 @@ class TestCharmmFiles(unittest.TestCase):
 
         for top in (self.psf_c, self.psf_x, self.psf_v):
             for method in [CutoffNonPeriodic]:
-                system = top.createSystem(nonbondedMethod=method, 
+                system = top.createSystem(self.params, nonbondedMethod=method,
                                           nonbondedCutoff=2*nanometer, 
                                           constraints=HBonds)
                 cutoff_distance = 0.0*nanometer
@@ -59,21 +52,21 @@ class TestCharmmFiles(unittest.TestCase):
         """Test both options (True and False) for the removeCMMotion parameter."""
 
         for b in [True, False]:
-            system = self.psf_c.createSystem(removeCMMotion=b)
+            system = self.psf_c.createSystem(self.params, removeCMMotion=b)
             self.assertEqual(any(isinstance(f, CMMotionRemover) for f in system.getForces()), b)
 
     def test_ImplicitSolvent(self):
         """Test implicit solvent using the implicitSolvent parameter.
 
         """
-        system = self.psf_v.createSystem(implicitSolvent=OBC2)
+        system = self.psf_v.createSystem(self.params, implicitSolvent=OBC2)
         self.assertTrue(any(isinstance(f, CustomGBForce) for f in system.getForces()))
 
     def test_ImplicitSolventParameters(self):
         """Test that solventDielectric and soluteDielectric are passed correctly.
 
         """
-        system = self.psf_x.createSystem(implicitSolvent=GBn,
+        system = self.psf_x.createSystem(self.params, implicitSolvent=GBn,
                                          solventDielectric=50.0, 
                                          soluteDielectric = 0.9)
         found_matching_solvent_dielectric=False
@@ -97,8 +90,8 @@ class TestCharmmFiles(unittest.TestCase):
         
         topology = self.psf_v.topology
         hydrogenMass = 4*amu
-        system1 = self.psf_v.createSystem()
-        system2 = self.psf_v.createSystem(hydrogenMass=hydrogenMass)
+        system1 = self.psf_v.createSystem(self.params)
+        system2 = self.psf_v.createSystem(self.params, hydrogenMass=hydrogenMass)
         for atom in topology.atoms():
             if atom.element == elem.hydrogen:
                 self.assertNotEqual(hydrogenMass, system1.getParticleMass(atom.index))

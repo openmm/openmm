@@ -34,7 +34,7 @@ __author__ = "Christopher M. Bruns"
 __version__ = "1.0"
 
 
-from simtk.unit import daltons
+from simtk.unit import daltons, is_quantity
 import copy_reg
 
 class Element(object):
@@ -92,6 +92,23 @@ class Element(object):
     @staticmethod
     def getByAtomicNumber(atomic_number):
         return Element._elements_by_atomic_number[atomic_number]
+
+    @staticmethod
+    def getByMass(mass):
+        # Assume masses are in daltons if they are not units
+        if not is_quantity(mass):
+            mass = mass * daltons
+        diff = mass
+        best_guess = 'EP'
+
+        for key in Element._elements_by_atomic_number:
+            element = Element._elements_by_atomic_number[key]
+            massdiff = abs(element.mass - mass)
+            if massdiff < diff:
+                best_guess = element
+                diff = massdiff
+
+        return best_guess
 
     @property
     def atomic_number(self):

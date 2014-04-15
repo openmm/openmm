@@ -220,7 +220,7 @@ class CharmmParameterSet(object):
                     atomic_number = get_by_symbol(elem).atomic_number
                 except (IndexError, KeyError):
                     # Figure it out from the mass
-                    atomic_number = element_by_mass(mass).atomic_number
+                    atomic_number = Element.getByMass(mass).atomic_number
                 atype = AtomType(name=name, number=idx, mass=mass,
                                  atomic_number=atomic_number)
                 self.atom_types_str[atype.name] = atype
@@ -441,7 +441,7 @@ class CharmmParameterSet(object):
                 atomic_number = get_by_symbol(elem).atomic_number
             except (IndexError, KeyError):
                 # Figure it out from the mass
-                atomic_number = element_by_mass(mass).atomic_number
+                atomic_number = Element.getByMass(mass).atomic_number
             atype = AtomType(name=name, number=idx, mass=mass,
                              atomic_number=atomic_number)
             self.atom_types_str[atype.name] = atype
@@ -488,7 +488,7 @@ class CharmmParameterSet(object):
             time.
 
         Example:
-        >>> params = CharmmParameterSet.loadSet(pfile='charmm.prm').condense()
+        >>> params = CharmmParameterSet('charmm.prm').condense()
         """
         # First scan through all of the bond types
         self._condense_types(self.bond_types)
@@ -529,18 +529,3 @@ class CharmmParameterSet(object):
                     typedict[key2] = typedict[key1]
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-def element_by_mass(mass):
-    """ Determines what element the given atom is based on its mass """
-
-    diff = mass
-    best_guess = 'EP'
-
-    for key in Element._elements_by_atomic_number:
-        element = Element._elements_by_atomic_number[key]
-        massdiff = abs(element.mass.value_in_unit(u.daltons) - mass)
-        if massdiff < diff:
-            best_guess = element
-            diff = massdiff
-
-    return best_guess

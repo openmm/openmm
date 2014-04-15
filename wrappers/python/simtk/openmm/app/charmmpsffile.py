@@ -53,7 +53,7 @@ def _catchindexerror(func):
 class CharmmPsfFile(object):
     """
     A chemical structure instantiated from CHARMM files. You can instantiate a
-    ProteinStructure from a PSF file using the load_from_psf constructor
+    CharmmPsfFile from a PSF file using the load_from_psf constructor
 
     Example:
     >>> cs = CharmmPsfFile("testfiles/test.psf")
@@ -80,7 +80,7 @@ class CharmmPsfFile(object):
     etc.)
 
     Example:
-    >>> cs = ProteinStructure.load_from_psf("testfiles/test.psf")
+    >>> cs = CharmmPsfFile("testfiles/test.psf")
     >>> len(cs.atom_list)
     33
     >>> len(cs.bond_list)
@@ -102,8 +102,8 @@ class CharmmPsfFile(object):
     @_catchindexerror
     def __init__(self, psf_name):
         """
-        Opens and parses a PSF file, then instantiates a ProteinStructure
-        instance from the data.
+        Opens and parses a PSF file, then instantiates a CharmmPsfFile instance
+        from the data.
             
         Parameters:
             psf_name (str) : Name of the PSF file (it must exist)
@@ -112,7 +112,7 @@ class CharmmPsfFile(object):
             IOError : If file "psf_name" does not exist
             CharmmPSFError: If any parsing errors are encountered
         """
-        conv = ProteinStructure._convert
+        conv = CharmmPsfFile._convert
         # Make sure the file exists
         if not os.path.exists(psf_name):
             raise IOError('Could not find PSF file %s' % psf_name)
@@ -164,7 +164,7 @@ class CharmmPsfFile(object):
         # Eat the next line
         psf.readline()
         # Now get the number of bonds
-        nbond, holder = ProteinStructure._parse_psf_section(psf, int)
+        nbond, holder = CharmmPsfFile._parse_psf_section(psf, int)
         bond_list = TrackedList()
         if len(holder) != nbond * 2:
             raise CharmmPSFError('Got %d indexes for %d bonds' %
@@ -175,7 +175,7 @@ class CharmmPsfFile(object):
             bond_list.append(Bond(atom_list[id1], atom_list[id2]))
         bond_list.changed = False
         # Now get the number of angles and the angle list
-        ntheta, holder = ProteinStructure._parse_psf_section(psf, int)
+        ntheta, holder = CharmmPsfFile._parse_psf_section(psf, int)
         angle_list = TrackedList()
         if len(holder) != ntheta * 3:
             raise CharmmPSFError('Got %d indexes for %d angles' %
@@ -189,7 +189,7 @@ class CharmmPsfFile(object):
             )
         angle_list.changed = False
         # Now get the number of torsions and the torsion list
-        nphi, holder = ProteinStructure._parse_psf_section(psf, int)
+        nphi, holder = CharmmPsfFile._parse_psf_section(psf, int)
         dihedral_list = TrackedList()
         if len(holder) != nphi * 4:
             raise CharmmPSFError('Got %d indexes for %d torsions' %
@@ -205,7 +205,7 @@ class CharmmPsfFile(object):
             )
         dihedral_list.changed = False
         # Now get the number of improper torsions
-        nimphi, holder = ProteinStructure._parse_psf_section(psf, int)
+        nimphi, holder = CharmmPsfFile._parse_psf_section(psf, int)
         improper_list = TrackedList()
         if len(holder) != nimphi * 4:
             raise CharmmPSFError('Got %d indexes for %d impropers' %
@@ -221,7 +221,7 @@ class CharmmPsfFile(object):
             )
         improper_list.changed = False
         # Now handle the donors (what is this used for??)
-        ndon, holder = ProteinStructure._parse_psf_section(psf, int)
+        ndon, holder = CharmmPsfFile._parse_psf_section(psf, int)
         donor_list = TrackedList()
         if len(holder) != ndon * 2:
             raise CharmmPSFError('Got %d indexes for %d donors' %
@@ -232,7 +232,7 @@ class CharmmPsfFile(object):
             donor_list.append(AcceptorDonor(atom_list[id1], atom_list[id2]))
         donor_list.changed = False
         # Now handle the acceptors (what is this used for??)
-        nacc, holder = ProteinStructure._parse_psf_section(psf, int)
+        nacc, holder = CharmmPsfFile._parse_psf_section(psf, int)
         acceptor_list = TrackedList()
         if len(holder) != nacc * 2:
             raise CharmmPSFError('Got %d indexes for %d acceptors' %
@@ -244,9 +244,9 @@ class CharmmPsfFile(object):
         acceptor_list.changed = False
         # Now get the NNB section. Not sure what this section is for or what it
         # does...
-        nnb, holder = ProteinStructure._parse_psf_section(psf, int)
+        nnb, holder = CharmmPsfFile._parse_psf_section(psf, int)
         # Now get the group sections
-        pointers, holder = ProteinStructure._parse_psf_section(psf, int)
+        pointers, holder = CharmmPsfFile._parse_psf_section(psf, int)
         group_list = TrackedList()
         try:
             ngrp, nst2 = pointers
@@ -273,7 +273,7 @@ class CharmmPsfFile(object):
         # and the number of entries in the group. If the # of entries is
         # NATOM, assume we have MOLNT section. Warn if the MOLNT section is
         # 'wrong'...
-        pointer, holder = ProteinStructure._parse_psf_section(psf, int)
+        pointer, holder = CharmmPsfFile._parse_psf_section(psf, int)
 
         # Assign all of the atoms to molecules recursively
         set_molecules(atom_list)
@@ -292,7 +292,7 @@ class CharmmPsfFile(object):
                                      'section.')
             psf.readline() # blank
             # Now we get to the cross-term section
-            ncrterm, holder = ProteinStructure._parse_psf_section(psf, int)
+            ncrterm, holder = CharmmPsfFile._parse_psf_section(psf, int)
         else:
             ncrterm = pointer
         # At this point, ncrterm and holder are both set to the CMAP list for
@@ -370,7 +370,7 @@ class CharmmPsfFile(object):
             - data (list) : A list of all data in the parsed section converted
                     to `dtype'
         """
-        conv = ProteinStructure._convert
+        conv = CharmmPsfFile._convert
         words = psf.readline().split()
         if len(words) == 1:
             pointers = conv(words[0], int, 'pointer')
@@ -400,7 +400,7 @@ class CharmmPsfFile(object):
             - vmd (bool) : If True, it will write out a PSF in the format that
                     VMD prints it in (i.e., no NUMLP/NUMLPH or MOLNT sections)
         Example:
-            >>> cs = ProteinStructure.load_from_psf('testfiles/test.psf')
+            >>> cs = CharmmPsfFile.load_from_psf('testfiles/test.psf')
             >>> cs.write_psf('testfiles/test2.psf')
         """
         # See if this is an extended format
@@ -769,8 +769,13 @@ class CharmmPsfFile(object):
             if atom.residue.idx != last_residue:
                 last_residue = atom.residue.idx
                 residue = topology.addResidue(atom.residue.resname, chain)
-            atomic_num = atom.type.atomic_number
-            elem = element.Element.getByAtomicNumber(atomic_num)
+            if atom.type is not None:
+                # This is the most reliable way of determining the element
+                atomic_num = atom.type.atomic_number
+                elem = element.Element.getByAtomicNumber(atomic_num)
+            else:
+                # If we didn't load a parameter set yet, try based on mass
+                elem = element.Element.getByMass(atom.mass)
             topology.addAtom(atom.name, elem, residue)
 
         # Add all of the bonds
@@ -933,7 +938,7 @@ class CharmmPsfFile(object):
         # back up the dihedral list
         dihedral_list = self.dihedral_list
         # Load the parameter set
-        self.load_parameters(params)
+        self.load_parameters(params.condense())
         hasbox = self.topology.getUnitCellDimensions() is not None
         # Set the cutoff distance in nanometers
         cutoff = None
