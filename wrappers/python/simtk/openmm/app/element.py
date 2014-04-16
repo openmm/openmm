@@ -103,7 +103,7 @@ class Element(object):
         if not is_quantity(mass):
             mass = mass * daltons
         diff = mass
-        best_guess = Element._elements_by_atomic_number[0]
+        best_guess = None
 
         for key in Element._elements_by_atomic_number:
             element = Element._elements_by_atomic_number[key]
@@ -147,7 +147,6 @@ def _pickle_element(element):
 
 copy_reg.pickle(Element, _pickle_element)
 
-virtualsite =    Element(  0, "virtual site", "EP", 0.0*daltons)
 hydrogen =       Element(  1, "hydrogen", "H", 1.007947*daltons)
 deuterium =      Element(  1, "deuterium", "D", 2.01355321270*daltons)
 helium =         Element(  2, "helium", "He", 4.003*daltons)
@@ -270,5 +269,3 @@ ununhexium =     Element(116, "ununhexium",     "Uuh", 292*daltons)
 # relational operators will work with any chosen name
 sulphur = sulfur
 aluminium = aluminum
-extrapoint = virtualsite
-lonepair = virtualsite

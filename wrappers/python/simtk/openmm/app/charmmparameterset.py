@@ -231,7 +231,11 @@ class CharmmParameterSet(object):
                     atomic_number = get_by_symbol(elem).atomic_number
                 except (IndexError, KeyError):
                     # Figure it out from the mass
-                    atomic_number = Element.getByMass(mass).atomic_number
+                    masselem = Element.getByMass(mass)
+                    if masselem is None:
+                        atomic_number = 0 # Extra point or something
+                    else:
+                        atomic_number = masselem.atomic_number
                 atype = AtomType(name=name, number=idx, mass=mass,
                                  atomic_number=atomic_number)
                 self.atom_types_str[atype.name] = atype
@@ -452,7 +456,11 @@ class CharmmParameterSet(object):
                 atomic_number = get_by_symbol(elem).atomic_number
             except (IndexError, KeyError):
                 # Figure it out from the mass
-                atomic_number = Element.getByMass(mass).atomic_number
+                masselem = Element.getByMass(mass)
+                if masselem is None:
+                    atomic_number = 0 # Extra point or something
+                else:
+                    atomic_number = masselem.atomic_number
             atype = AtomType(name=name, number=idx, mass=mass,
                              atomic_number=atomic_number)
             self.atom_types_str[atype.name] = atype
