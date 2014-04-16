@@ -387,7 +387,7 @@ class CharmmPsfFile(object):
             line = psf.readline().strip()
         return pointers, data
 
-    def write_psf(self, dest, vmd=False):
+    def writePsf(self, dest, vmd=False):
         """
         Writes a PSF file from the stored molecule
 
@@ -400,7 +400,7 @@ class CharmmPsfFile(object):
                     VMD prints it in (i.e., no NUMLP/NUMLPH or MOLNT sections)
         Example:
             >>> cs = CharmmPsfFile('testfiles/test.psf')
-            >>> cs.write_psf('testfiles/test2.psf')
+            >>> cs.writePsf('testfiles/test2.psf')
         """
         # See if this is an extended format
         ext = 'EXT' in self.flags
@@ -556,7 +556,7 @@ class CharmmPsfFile(object):
         if own_handle:
             dest.close()
         
-    def load_parameters(self, parmset):
+    def loadParameters(self, parmset):
         """
         Loads parameters from a parameter set that was loaded via CHARMM RTF,
         PAR, and STR files.
@@ -684,7 +684,7 @@ class CharmmPsfFile(object):
         if types_are_int:
             for atom in self.atom_list: atom.type_to_int()
 
-    def set_coordinates(self, positions, velocities=None):
+    def setCoordinates(self, positions, velocities=None):
         """
         This method loads the coordinates and velocity information from an
         external object or passed data.
@@ -719,7 +719,7 @@ class CharmmPsfFile(object):
 
         self.positions = positions
 
-    def set_box(self, lengths, angles=None):
+    def setBox(self, lengths, angles=None):
         """
         Sets the periodic box boundary conditions.
 
@@ -731,9 +731,9 @@ class CharmmPsfFile(object):
                     is not None
         """
         if len(lengths) != 3:
-            raise ValueError('set_box requires 3 box lengths')
+            raise ValueError('setBox requires 3 box lengths')
         if angles is not None and len(angles) != 3:
-            raise ValueError('set_box requires 3 box angles')
+            raise ValueError('setBox requires 3 box angles')
         if angles is None:
             angles = [90.0, 90.0, 90.0] * u.degrees
         self.box_vectors = _box_vectors_from_lengths_angles(
@@ -938,7 +938,7 @@ class CharmmPsfFile(object):
         # back up the dihedral list
         dihedral_list = self.dihedral_list
         # Load the parameter set
-        self.load_parameters(params.condense())
+        self.loadParameters(params.condense())
         hasbox = self.topology.getUnitCellDimensions() is not None
         # Set the cutoff distance in nanometers
         cutoff = None
@@ -1403,7 +1403,7 @@ class CharmmPsfFile(object):
         return self._velocities
 
     @property
-    def box_lengths(self):
+    def boxLengths(self):
         """ Return tuple of 3 units """
         if self.box_vectors is not None:
             return (self.box_vectors[0][0], self.box_vectors[0][1],

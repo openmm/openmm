@@ -95,11 +95,15 @@ class Element(object):
 
     @staticmethod
     def getByMass(mass):
+        """
+        Get the element whose mass is CLOSEST to the requested mass. This method
+        should not be used for repartitioned masses
+        """
         # Assume masses are in daltons if they are not units
         if not is_quantity(mass):
             mass = mass * daltons
         diff = mass
-        best_guess = 'EP'
+        best_guess = Element._elements_by_atomic_number[0]
 
         for key in Element._elements_by_atomic_number:
             element = Element._elements_by_atomic_number[key]
@@ -133,15 +137,14 @@ class Element(object):
         return '<Element %s>' % self.name
 
 # This is for backward compatibility.
-def get_by_symbol(symbol):
-    s = symbol.strip().upper()
-    return Element._elements_by_symbol[s]
+get_by_symbol = Element.getBySymbol
 
 def _pickle_element(element):
     return (get_by_symbol, (element.symbol,))
 
 copy_reg.pickle(Element, _pickle_element)
 
+virtualsite =    Element(  0, "virtual site", "EP", 0.0*daltons)
 hydrogen =       Element(  1, "hydrogen", "H", 1.007947*daltons)
 deuterium =      Element(  1, "deuterium", "D", 2.01355321270*daltons)
 helium =         Element(  2, "helium", "He", 4.003*daltons)
@@ -264,3 +267,5 @@ ununhexium =     Element(116, "ununhexium",     "Uuh", 292*daltons)
 # relational operators will work with any chosen name
 sulphur = sulfur
 aluminium = aluminum
+extrapoint = virtualsite
+lonepair = virtualsite
