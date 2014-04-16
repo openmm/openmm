@@ -774,7 +774,7 @@ class CharmmPsfFile(object):
                 elem = element.Element.getByAtomicNumber(atomic_num)
             else:
                 # Figure it out from the mass
-                masselem = Element.getByMass(mass)
+                masselem = element.Element.getByMass(mass)
                 if masselem is None:
                     atomic_number = 0 # Extra point or something
                 else:
