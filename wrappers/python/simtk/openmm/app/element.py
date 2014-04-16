@@ -137,7 +137,10 @@ class Element(object):
         return '<Element %s>' % self.name
 
 # This is for backward compatibility.
-get_by_symbol = Element.getBySymbol
+def get_by_symbol(symbol):
+    """ Get the element with a particular chemical symbol. """
+    s = symbol.strip().upper()
+    return Element._elements_by_symbol[s]
 
 def _pickle_element(element):
     return (get_by_symbol, (element.symbol,))
