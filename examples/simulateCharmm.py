@@ -3,31 +3,21 @@ from simtk.openmm import *
 from simtk.unit import *
 from sys import stdout, exit, stderr
 
-# Define a user-interface
-from optparse import OptionParser
-
-parser = OptionParser()
-parser.add_option('-t', '--top', dest='top', default=None,
-                  help='CHARMM RTF file to use in the simulation.')
-parser.add_option('-p', '--param', dest='par', default=None,
-                  help='CHARMM parameter file to use in the simulation.')
-opt, arg = parser.parse_args()
-
-if arg:
-    stderr.write('Unexpected arguments: %s' % ', '.join(arg) + '\n')
-    exit(parser.print_help() or 1)
-if opt.top is None or opt.par is None:
-    stderr.write('You must provide a top AND parameter file\n')
-    exit(parser.print_help() or 1)
-
 # Read the PSF
 psf = CharmmPsfFile('ala_ala_ala.psf')
 
 # Get the coordinates from the PDB
 pdb = PDBFile('ala_ala_ala.pdb')
 
-# Read and condense the parameter set
-params = CharmmParameterSet(opt.top, opt.par)
+# Load the parameter set.
+params = CharmmParameterSet('charmm22.rtf', 'charmm22.par')
+
+# NOTICE:
+# -------
+# The CHARMM 22 parameter set is out-of-date and NOT recommended for general
+# use. It is included here as an illustrative example, but for production
+# simulations you should download the latest versions of the force fields at
+# http://mackerell.umaryland.edu/CHARMM_ff_params.html
 
 # Instantiate the system
 system = psf.createSystem(params, nonbondedMethod=NoCutoff,
