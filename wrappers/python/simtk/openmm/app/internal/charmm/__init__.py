@@ -25,7 +25,8 @@ __all__ = ['psf', 'parameters']
 __authors__ = 'Jason Swails'
 __contributors__ = ''
 __license__ = 'MIT'
-__date__ = 'Apr. 9, 2014'
+__copyright__ = 'Copyright 2014, Jason Swails'
+__date__ = 'Apr. 18, 2014'
 
 
 __private__ = ['topologyobjects', '_charmmfile']
