@@ -812,7 +812,7 @@ class CharmmPsfFile(object):
 
         # Add the periodic box if there is one
         if self.box_vectors is not None:
-            topology.setUnitCellDimensions(self.box_lengths)
+            topology.setUnitCellDimensions(self.boxLengths)
 
         return topology
 
@@ -1199,7 +1199,7 @@ class CharmmPsfFile(object):
             # Set cutoff
             if cutoff is None:
                 # Compute cutoff automatically
-                box = self.box_lengths
+                box = self.boxLengths
                 min_box_width = min((box[0]/u.nanometers,
                                      box[1]/u.nanometers,
                                      box[2]/u.nanometers))
