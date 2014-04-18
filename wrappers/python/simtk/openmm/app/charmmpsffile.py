@@ -774,11 +774,7 @@ class CharmmPsfFile(object):
                 elem = element.Element.getByAtomicNumber(atomic_num)
             else:
                 # Figure it out from the mass
-                masselem = element.Element.getByMass(atom.mass)
-                if masselem is None:
-                    atomic_number = 0 # Extra point or something
-                else:
-                    atomic_number = masselem.atomic_number
+                elem = element.Element.getByMass(atom.mass)
             topology.addAtom(atom.name, elem, residue)
 
         # Add all of the bonds
