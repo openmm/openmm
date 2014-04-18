@@ -1436,6 +1436,21 @@ class CharmmPsfFile(object):
                     self.box_vectors[0][2])
         return None
 
+    @boxLengths.setter
+    def boxLengths(self, stuff):
+        raise RuntimeError('Use setBox to set a box with lengths and angles '
+                           'or set the boxVectors attribute with box vectors')
+    
+    @property
+    def boxVectors(self):
+        """ Return the box vectors """
+        return self.box_vectors
+
+    @boxVectors.setter
+    def boxVectors(self, stuff):
+        """ Sets the box vectors """
+        self.box_vectors = stuff
+
 def _box_vectors_from_lengths_angles(a, b, c, alpha, beta, gamma):
     """
     This method takes the lengths and angles from a unit cell and creates unit
