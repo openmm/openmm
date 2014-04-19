@@ -745,27 +745,18 @@ class CharmmPsfFile(object):
 
         self.positions = positions
 
-    def setBox(self, lengths, angles=None):
+    def setBox(self, a, b, c, alpha=90.0*u.degrees, beta=90.0*u.degrees,
+               gamma=90.0*u.degrees):
         """
         Sets the periodic box boundary conditions.
 
         Parameters:
-            - lengths (list of 3 distances) : A sequence of 3 distances that
-                    represent the lengths of the periodic box vectors
-            - angles (list of 3 angles) : A list of 3 angle measurements between
-                    the periodic box vectors. Default is 90 degrees if lengths
-                    is not None
+            - a, b, c (floats) : Lengths of the periodic cell
+            - alpha, beta, gamma (floats, optional) : Angles between the
+                periodic cells.
         """
-        if len(lengths) != 3:
-            raise ValueError('setBox requires 3 box lengths')
-        if angles is not None and len(angles) != 3:
-            raise ValueError('setBox requires 3 box angles')
-        if angles is None:
-            angles = [90.0, 90.0, 90.0] * u.degrees
-        self.box_vectors = _box_vectors_from_lengths_angles(
-                                lengths[0], lengths[1], lengths[2],
-                                angles[0], angles[1], angles[2],
-        )
+        self.box_vectors = _box_vectors_from_lengths_angles(a, b, c,
+                                                            alpha, beta, gamma)
         # If we already have a _topology instance, then we have possibly changed
         # the existence of box information (whether or not this is a periodic
         # system), so delete any cached reference to a topology so it's
