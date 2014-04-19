@@ -26,8 +26,9 @@ from statedatareporter import StateDataReporter
 from element import Element
 from desmonddmsfile import DesmondDMSFile
 from checkpointreporter import CheckpointReporter
-from charmmpsffile import CharmmPsfFile
+from charmmcrdfiles import CharmmCrdFile, CharmmRstFile
 from charmmparameterset import CharmmParameterSet
+from charmmpsffile import CharmmPsfFile
 
 # Enumerated values
 
