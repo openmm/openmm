@@ -36,8 +36,9 @@ USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 from simtk.openmm.app.internal.charmm.exceptions import CharmmFileError
 import simtk.unit as u
+from simtk.openmm.vec3 import Vec3
 
-charmlen = 22
+CHARMMLEN = 22
 TIMESCALE = 4.888821E-14 * 1e12 # AKMA time units to picoseconds
 ONE_TIMESCALE = 1 / TIMESCALE
 
@@ -103,23 +104,21 @@ class CharmmCrdFile(object):
                 self.resno.append(int(line[1]))
                 self.resname.append(line[2])
                 self.attype.append(line[3])
-                self.positions.append(float(line[4]))
-                self.positions.append(float(line[5]))
-                self.positions.append(float(line[6]))
+                pos = Vec3(float(line[4]), float(line[5]), float(line[6]))
+                self.positions.append(pos * u.angstroms)
                 self.segid.append(line[7])
                 self.resid.append(int(line[8]))
                 self.weighting.append(float(line[9]))
 
-            if 3*self.natom != len(self.positions):
+            if self.natom != len(self.positions):
                 raise CharmmFileError("Error parsing CHARMM .crd file: %d "
                                       "atoms requires %d positions (not %d)" %
-                                      (self.natom, 3*self.natom,
+                                      (self.natom, self.natom,
                                        len(self.positions))
                 )
 
         except (ValueError, IndexError), e:
             raise CharmmFileError('Error parsing CHARMM coordinate file')
-        self.positions *= u.angstrom
 
 class CharmmRstFile(object):
     """
@@ -235,18 +234,18 @@ class CharmmRstFile(object):
             if not line:
                 raise CharmmFileError('Premature end of file')
 
-            if len(line) < 3*charmlen:
+            if len(line) < 3*CHARMMLEN:
                 raise CharmmFileError("Less than 3 coordinates present in "
                                       "coordinate row or positions may be "
                                       "truncated.") 
 
             line = line.replace('D','E')     # CHARMM uses 'D' for exponentials
 
-            # CHARMM uses fixed format (len = charmlen = 22) for crds in .rst's
+            # CHARMM uses fixed format (len = CHARMMLEN = 22) for crds in .rst's
 
-            crds.append(float(line[0:charmlen]))  
-            crds.append(float(line[charmlen:2*charmlen]))
-            crds.append(float(line[2*charmlen:3*charmlen]))
+            c = Vec3(float(line[0:CHARMMLEN]), float(line[CHARMMLEN:2*CHARMMLEN]),
+                     float(line[2*CHARMMLEN:3*CHARMMLEN]))
+            crds.append(c)
 
 
     def printcoords(self, crds):
