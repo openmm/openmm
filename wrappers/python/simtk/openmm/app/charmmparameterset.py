@@ -499,7 +499,7 @@ class CharmmParameterSet(object):
     def readStreamFile(self, sfile):
         """
         Reads RTF and PAR sections from a stream file and dispatches the
-        sections to read_topology_file or read_parameter_file
+        sections to readTopologyFile or readParameterFile
 
         Parameters:
             - sfile (str or CharmmStreamFile) : Stream file to parse
@@ -514,10 +514,10 @@ class CharmmParameterSet(object):
             words = title.lower().split()
             if words[1] == 'rtf':
                 # This is a Residue Topology File section.
-                self.read_topology_file(section)
+                self.readTopologyFile(section)
             elif words[1].startswith('para'):
                 # This is a Parameter file section
-                self.read_parameter_file(section)
+                self.readParameterFile(section)
             title, section = f.next_section()
 
     def condense(self):
