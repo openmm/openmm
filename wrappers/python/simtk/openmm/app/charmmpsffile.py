@@ -1442,6 +1442,10 @@ class CharmmPsfFile(object):
         """ Sets the box vectors """
         self.box_vectors = stuff
 
+    def deleteCmap(self):
+        """ Deletes the CMAP terms from the CHARMM PSF """
+        self.cmap_list = TrackedList()
+
 def _box_vectors_from_lengths_angles(a, b, c, alpha, beta, gamma):
     """
     This method takes the lengths and angles from a unit cell and creates unit
