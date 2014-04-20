@@ -33,6 +33,7 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
+import os
 from simtk.openmm.app.internal.charmm._charmmfile import (
             CharmmFile, CharmmStreamFile)
 from simtk.openmm.app.internal.charmm.topologyobjects import (
@@ -122,9 +123,10 @@ class CharmmParameterSet(object):
             elif arg.endswith('.str'):
                 strs.append(arg)
             elif arg.endswith('.inp'):
-                if 'par' in arg:
+                fname = os.path.split(arg)[1]
+                if 'par' in fname:
                     pars.append(arg)
-                elif 'top' in arg:
+                elif 'top' in fname:
                     tops.append(arg)
                 else:
                     raise TypeError('Unrecognized file type: %s' % arg)
