@@ -48,7 +48,7 @@
 
 using namespace OpenMM;
 using namespace std;
-const static char CHECKPOINT_MAGIC_BYTES[] = "\x1C\xEB\x00\xDA";
+const static char CHECKPOINT_MAGIC_BYTES[] = "OpenMM Binary Checkpoint\n";
 
 
 ContextImpl::ContextImpl(Context& owner, const System& system, Integrator& integrator, Platform* platform, const map<string, string>& properties) :
@@ -401,7 +401,7 @@ static string readString(istream& stream) {
 }
 
 void ContextImpl::createCheckpoint(ostream& stream) {
-    stream.write(CHECKPOINT_MAGIC_BYTES, 4);
+    stream.write(CHECKPOINT_MAGIC_BYTES, sizeof(CHECKPOINT_MAGIC_BYTES)/sizeof(CHECKPOINT_MAGIC_BYTES[0]));
     writeString(stream, getPlatform().getName());
     int numParticles = getSystem().getNumParticles();
     stream.write((char*) &numParticles, sizeof(int));
@@ -416,9 +416,10 @@ void ContextImpl::createCheckpoint(ostream& stream) {
 }
 
 void ContextImpl::loadCheckpoint(istream& stream) {
-    char magicbytes[4];
-    stream.read(magicbytes, 4);
-    if (memcmp(magicbytes, CHECKPOINT_MAGIC_BYTES, 4*sizeof(char)) != 0)
+    static const int magiclength = sizeof(CHECKPOINT_MAGIC_BYTES)/sizeof(CHECKPOINT_MAGIC_BYTES[0]);
+    char magicbytes[magiclength];
+    stream.read(magicbytes, magiclength);
+    if (memcmp(magicbytes, CHECKPOINT_MAGIC_BYTES, magiclength) != 0)
         throw OpenMMException("loadCheckpoint: Checkpoint header was not correct");
 
     string platformName = readString(stream);
