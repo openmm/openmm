@@ -55,7 +55,7 @@ class CharmmCrdFile(object):
     Example:
     >>> chm = CharmmCrdFile('testfiles/1tnm.crd')
     >>> print '%d atoms; %d coords' % (chm.natom, len(chm.positions))
-    1414 atoms; 4242 coords
+    1414 atoms; 1414 coords
     """
 
     def __init__(self, fname):
@@ -139,7 +139,7 @@ class CharmmRstFile(object):
     >>> natom, nc, nco = chm.natom, len(chm.positions), len(chm.positionsold)
     >>> nv = len(chm.velocities)
     >>> print '%d atoms; %d crds; %d old crds; %d vels' % (natom, nc, nco, nv)
-    256 atoms; 768 crds; 768 old crds; 768 vels
+    256 atoms; 256 crds; 256 old crds; 256 vels
     """
 
     def __init__(self, fname):
