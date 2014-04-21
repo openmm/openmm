@@ -1596,7 +1596,7 @@ def _mbondi_radii(atom_list):
             else:
                 radii[i] = 1.2
         # Radius of C atom depends on what type it is
-        elif atom.atomic_number == 6:
+        elif atom.type.atomic_number == 6:
             radii[i] = 1.7
         # All other elements have fixed radii for all types/partners
         elif atom.type.atomic_number == 7:
