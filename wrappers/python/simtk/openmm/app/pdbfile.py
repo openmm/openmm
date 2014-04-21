@@ -377,5 +377,5 @@ def _format_83(f):
         return '%8.3f' % f
     if -9999999 < f < 99999999:
         return ('%8.3f' % f)[:8]
-    raise ValueError('coordinate "%s" could not be represnted '
+    raise ValueError('coordinate "%s" could not be represented '
                      'in a width-8 field' % f)
