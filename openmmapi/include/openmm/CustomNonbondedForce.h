@@ -457,8 +457,8 @@ public:
      *
      * @return         true if this Force uses periodic box vectors, false otherwise.
      */
-    bool usesPeriodicBoxVectors() const {
-      return (nonbondedMethod == CustomNonbondedForce::CutoffPeriodic);
+    virtual bool usesPeriodicBoxVectors() const {
+      return (nonbondedMethod == CutoffPeriodic);
     }
 protected:
     ForceImpl* createImpl() const;

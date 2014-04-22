@@ -357,8 +357,8 @@ public:
      *
      * @return         true if this Force uses periodic box vectors, false otherwise.
      */
-    bool usesPeriodicBoxVectors() const {
-      return (nonbondedMethod == NonbondedForce::CutoffPeriodic) || (nonbondedMethod == NonbondedForce::Ewald) || (nonbondedMethod == NonbondedForce::PME);
+    virtual bool usesPeriodicBoxVectors() const {
+      return (nonbondedMethod == CutoffPeriodic) || (nonbondedMethod == Ewald) || (nonbondedMethod == PME);
     }
 protected:
     ForceImpl* createImpl() const;

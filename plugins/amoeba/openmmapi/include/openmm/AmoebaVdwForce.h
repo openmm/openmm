@@ -212,7 +212,14 @@ public:
      * (the nonbonded method, the cutoff distance, etc.) are unaffected and can only be changed by reinitializing the Context.
      */
     void updateParametersInContext(Context& context);
-
+    /**
+     * Query whether this Force uses the System periodic box vectors in computing interactions.
+     *
+     * @return         true if this Force uses periodic box vectors, false otherwise.
+     */
+    virtual bool usesPeriodicBoxVectors() const {
+      return (nonbondedMethod == CutoffPeriodic);
+    }
 protected:
     ForceImpl* createImpl() const;
 private:

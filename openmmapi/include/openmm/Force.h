@@ -83,10 +83,7 @@ public:
      *
      * @return         true if this Force uses periodic box vectors, false otherwise.
      */
-    bool usesPeriodicBoxVectors() const{
-      // Default implementation returns false.
-      return false;
-    }
+    virtual bool usesPeriodicBoxVectors() const = 0;
 protected:
     friend class ContextImpl;
     /**
