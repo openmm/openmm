@@ -357,6 +357,7 @@ public:
     virtual bool usesPeriodicBoxVectors() const {
       return (nonbondedMethod == PME);
     }
+
 protected:
     ForceImpl* createImpl() const;
 private:
