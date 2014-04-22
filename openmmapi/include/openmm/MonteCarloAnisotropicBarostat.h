@@ -177,7 +177,7 @@ public:
      * @return         true if this Force uses periodic box vectors, false otherwise.
      */
     bool usesPeriodicBoxVectors() const {
-      return True;
+      return true;
     }
 protected:
     ForceImpl* createImpl() const;
