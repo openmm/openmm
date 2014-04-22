@@ -78,6 +78,15 @@ public:
      * @param group    the group index.  Legal values are between 0 and 31 (inclusive).
      */
     void setForceGroup(int group);
+    /**
+     * Query whether this Force uses the System periodic box vectors in computing interactions.
+     *
+     * @return         true if this Force uses periodic box vectors, false otherwise.
+     */
+    bool usesPeriodicBoxVectors() const{
+      // Default implementation returns false.
+      return false;
+    }
 protected:
     friend class ContextImpl;
     /**

@@ -127,6 +127,14 @@ public:
     void setRandomNumberSeed(int seed) {
         randomNumberSeed = seed;
     }
+    /**
+     * Query whether this Force uses the System periodic box vectors in computing interactions.
+     *
+     * @return         true if this Force uses periodic box vectors, false otherwise.
+     */
+    bool usesPeriodicBoxVectors() const {
+      return true;
+    }
 protected:
     ForceImpl* createImpl() const;
 private:
