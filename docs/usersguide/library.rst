@@ -2733,7 +2733,7 @@ Multiplication or division of two Units results in a composite Unit.
 
     mps = meter / second
 
-Unlike amount (moles), angle (radians) is arguably dimensionless.  Butsimtk.unit
+Unlike amount (moles), angle (radians) is arguably dimensionless.  But simtk.unit
 treats angle as another dimension.   Use the trigonometric functions from the
 simtk.unit module (not those from the Python math module!) when dealing with
 Units and Quantities.
