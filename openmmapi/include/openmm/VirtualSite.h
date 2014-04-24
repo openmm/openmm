@@ -187,7 +187,7 @@ private:
  * the x axis points from particle 1 toward the midpoint between particles 2 and 3.
  * 
  * The z direction is computed as zdir = xdir x ydir.  To ensure the axes are all orthogonal,
- * ydir is then recomputed as ydir = zdir x xdir.  All three axis vectors are then normalize, and
+ * ydir is then recomputed as ydir = zdir x xdir.  All three axis vectors are then normalized, and
  * the virtual site location is set to
  * 
  * origin + x*xdir + y*ydir + z*zdir
