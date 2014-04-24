@@ -95,7 +95,7 @@ in the new window.
 
 If you plan to use the CUDA platform, OpenMM also needs to locate the CUDA
 kernel compiler (nvcc).  By default it looks for it in the location
-/usr/local/cuda/bin/nvcc.  If you have installed the CUDA toolkit in a different
+:file:`/usr/local/cuda/bin/nvcc`.  If you have installed the CUDA toolkit in a different
 location, you can set OPENMM_CUDA_COMPILER to tell OpenMM where to find it.  For
 example,
 ::
@@ -174,7 +174,7 @@ the new window.
 
 If you plan to use the CUDA platform, OpenMM also needs to locate the CUDA
 kernel compiler (nvcc).  By default it looks for it in the location
-/usr/local/cuda/bin/nvcc.  If you have installed the CUDA toolkit in a different
+:file:`/usr/local/cuda/bin/nvcc`.  If you have installed the CUDA toolkit in a different
 location, you can set OPENMM_CUDA_COMPILER to tell OpenMM where to find it.  For
 example,
 ::
@@ -197,8 +197,8 @@ Installing on Windows
 *********************
 
 1. Download the pre-compiled binary of OpenMM for Windows, then double click the
-.zip file to expand it.  Move the files to C:\\Program Files\\OpenMM.  (On 64 bit
-Windows, use C:\\Program Files (x86)\\OpenMM).
+.zip file to expand it.  Move the files to :file:`C:\\Program Files\\OpenMM`.  (On 64 bit
+Windows, use :file:`C:\\Program Files (x86)\\OpenMM`).
 
 2. Make sure you have the 32-bit version of Python 3.3 (other versions will not
 work) installed on your computer.  To do this, launch the Python program (either
@@ -248,7 +248,7 @@ your PATH.
 
         dir C:\py*
 
-    The files are typically located in a directory like C:\\Python33.  Remember this
+    The files are typically located in a directory like :file:`C:\\Python33`.  Remember this
     location.  You will need to enter it, along with the location of the OpenMM
     libraries, later in this process.
 
@@ -257,7 +257,7 @@ your PATH.
   * Click on the “Advanced” tab or the “Advanced system settings” link
   * Click “Environment Variables”
   * Under “System variables,” select the line for “Path” and click “Edit…”
-  * Add C:\\Program Files\\OpenMM\\lib and C:\\Program Files\\OpenMM\\lib\\plugins
+  * Add :file:`C:\\Program Files\\OpenMM\\lib` and :file:`C:\\Program Files\\OpenMM\\lib\\plugins`
     to the “Variable value”.  If you also need to add Python or FFTW to your
     PATH, enter their directory locations here.  Directory locations need to be
     separated by semi-colons (;).
@@ -265,8 +265,8 @@ your PATH.
 
     If you installed OpenMM somewhere other than the default location, you must also
     set OPENMM_PLUGIN_DIR to point to the plugins directory.  If this variable is
-    not set, it will assume plugins are in the default location (C:\\Program
-    Files\\OpenMM\\lib\\plugins or C:\\Program Files (x86)\\OpenMM\\lib\\plugins).
+    not set, it will assume plugins are in the default location (:file:`C:\\Program
+    Files\\OpenMM\\lib\\plugins` or :file:`C:\\Program Files (x86)\\OpenMM\\lib\\plugins`).
 
 7. Verify your installation by running the “testInstallation.py” script found in
 the “examples” folder of your OpenMM installation.  To run it, open a command
@@ -328,8 +328,8 @@ on setting up the window to use OpenMM).  Navigate to the “examples” folder 
 
     cd <examples_directory>
 
-where the typical directory is :code:`/usr/local/openmm/examples` on Linux
-and Mac machines and  “\ :code:`C:\\Program Files\\OpenMM\\examples”` on Windows
+where the typical directory is :file:`/usr/local/openmm/examples` on Linux
+and Mac machines and  :file:`C:\\Program Files\\OpenMM\\examples` on Windows
 machines.
 
 Then type
@@ -566,8 +566,8 @@ which stores all the force field parameters directly in a prmtop file, Gromacs j
 references to force field definition files that are installed with the Gromacs
 application.  OpenMM needs to know where to find these files, so the
 :code:`includeDir` parameter specifies the directory containing them.  If you
-omit this parameter, OpenMM will assume the default location
-/usr/local/gromacs/share/gromacs/top, which is often where they are installed on
+omit this parameter, OpenMM will assume the default location :file:`/usr/local/gromacs/share/gromacs/top`, 
+which is often where they are installed on
 Unix-like operating systems.  So in :numref:`Example,Gromacs example` we actually could have omitted
 this parameter, but if the Gromacs files were installed in any other location,
 we would need to include it.
@@ -620,7 +620,7 @@ The following lines specify to use the CUDA Platform:
     platform = Platform.getPlatformByName('CUDA')
     simulation = Simulation(prmtop.topology, system, integrator, platform)
 
-The Platform name should be :code:`OpenCL`\ , :code:`CUDA`\ , or
+The Platform name should be :code:`OpenCL`\ , :code:`CUDA`\ , :code:`CPU`\, or
 :code:`Reference`\ .
 
 You also can specify Platform-specific properties that customize how
