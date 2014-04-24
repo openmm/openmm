@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -101,7 +101,7 @@ CudaIntegrationUtilities::CudaIntegrationUtilities(CudaContext& context, const S
         ccmaReducedMass(NULL), ccmaAtomConstraints(NULL), ccmaNumAtomConstraints(NULL), ccmaConstraintMatrixColumn(NULL),
         ccmaConstraintMatrixValue(NULL), ccmaDelta1(NULL), ccmaDelta2(NULL), ccmaConverged(NULL), ccmaConvergedMemory(NULL),
         vsite2AvgAtoms(NULL), vsite2AvgWeights(NULL), vsite3AvgAtoms(NULL), vsite3AvgWeights(NULL),
-        vsiteOutOfPlaneAtoms(NULL), vsiteOutOfPlaneWeights(NULL) {
+        vsiteOutOfPlaneAtoms(NULL), vsiteOutOfPlaneWeights(NULL), vsiteLocalCoordsAtoms(NULL), vsiteLocalCoordsParams(NULL) {
     // Create workspace arrays.
 
     if (context.getUseDoublePrecision() || context.getUseMixedPrecision()) {
@@ -553,6 +553,8 @@ CudaIntegrationUtilities::CudaIntegrationUtilities(CudaContext& context, const S
     vector<double4> vsite3AvgWeightVec;
     vector<int4> vsiteOutOfPlaneAtomVec;
     vector<double4> vsiteOutOfPlaneWeightVec;
+    vector<int4> vsiteLocalCoordsAtomVec;
+    vector<double> vsiteLocalCoordsParamVec;
     for (int i = 0; i < numAtoms; i++) {
         if (system.isVirtualSite(i)) {
             if (dynamic_cast<const TwoParticleAverageSite*>(&system.getVirtualSite(i)) != NULL) {
@@ -576,35 +578,65 @@ CudaIntegrationUtilities::CudaIntegrationUtilities(CudaContext& context, const S
                 vsiteOutOfPlaneAtomVec.push_back(make_int4(i, site.getParticle(0), site.getParticle(1), site.getParticle(2)));
                 vsiteOutOfPlaneWeightVec.push_back(make_double4(site.getWeight12(), site.getWeight13(), site.getWeightCross(), 0.0));
             }
+            else if (dynamic_cast<const LocalCoordinatesSite*>(&system.getVirtualSite(i)) != NULL) {
+                // An out of plane site.
+                
+                const LocalCoordinatesSite& site = dynamic_cast<const LocalCoordinatesSite&>(system.getVirtualSite(i));
+                vsiteLocalCoordsAtomVec.push_back(make_int4(i, site.getParticle(0), site.getParticle(1), site.getParticle(2)));
+                Vec3 origin = site.getOriginWeights();
+                Vec3 x = site.getXWeights();
+                Vec3 y = site.getYWeights();
+                Vec3 pos = site.getLocalPosition();
+                vsiteLocalCoordsParamVec.push_back(origin[0]);
+                vsiteLocalCoordsParamVec.push_back(origin[1]);
+                vsiteLocalCoordsParamVec.push_back(origin[2]);
+                vsiteLocalCoordsParamVec.push_back(x[0]);
+                vsiteLocalCoordsParamVec.push_back(x[1]);
+                vsiteLocalCoordsParamVec.push_back(x[2]);
+                vsiteLocalCoordsParamVec.push_back(y[0]);
+                vsiteLocalCoordsParamVec.push_back(y[1]);
+                vsiteLocalCoordsParamVec.push_back(y[2]);
+                vsiteLocalCoordsParamVec.push_back(pos[0]);
+                vsiteLocalCoordsParamVec.push_back(pos[1]);
+                vsiteLocalCoordsParamVec.push_back(pos[2]);
+            }
         }
     }
     int num2Avg = vsite2AvgAtomVec.size();
     int num3Avg = vsite3AvgAtomVec.size();
     int numOutOfPlane = vsiteOutOfPlaneAtomVec.size();
+    int numLocalCoords = vsiteLocalCoordsAtomVec.size();
     vsite2AvgAtoms = CudaArray::create<int4>(context, max(1, num2Avg), "vsite2AvgAtoms");
     vsite3AvgAtoms = CudaArray::create<int4>(context, max(1, num3Avg), "vsite3AvgAtoms");
     vsiteOutOfPlaneAtoms = CudaArray::create<int4>(context, max(1, numOutOfPlane), "vsiteOutOfPlaneAtoms");
+    vsiteLocalCoordsAtoms = CudaArray::create<int4>(context, max(1, numLocalCoords), "vsiteLocalCoordinatesAtoms");
     if (num2Avg > 0)
         vsite2AvgAtoms->upload(vsite2AvgAtomVec);
     if (num3Avg > 0)
         vsite3AvgAtoms->upload(vsite3AvgAtomVec);
     if (numOutOfPlane > 0)
         vsiteOutOfPlaneAtoms->upload(vsiteOutOfPlaneAtomVec);
+    if (numLocalCoords > 0)
+        vsiteLocalCoordsAtoms->upload(vsiteLocalCoordsAtomVec);
     if (context.getUseDoublePrecision()) {
         vsite2AvgWeights = CudaArray::create<double2>(context, max(1, num2Avg), "vsite2AvgWeights");
         vsite3AvgWeights = CudaArray::create<double4>(context, max(1, num3Avg), "vsite3AvgWeights");
         vsiteOutOfPlaneWeights = CudaArray::create<double4>(context, max(1, numOutOfPlane), "vsiteOutOfPlaneWeights");
+        vsiteLocalCoordsParams = CudaArray::create<double>(context, max(1, 12*numLocalCoords), "vsiteLocalCoordinatesParams");
         if (num2Avg > 0)
             vsite2AvgWeights->upload(vsite2AvgWeightVec);
         if (num3Avg > 0)
             vsite3AvgWeights->upload(vsite3AvgWeightVec);
         if (numOutOfPlane > 0)
             vsiteOutOfPlaneWeights->upload(vsiteOutOfPlaneWeightVec);
+        if (numLocalCoords > 0)
+            vsiteLocalCoordsParams->upload(vsiteLocalCoordsParamVec);
     }
     else {
         vsite2AvgWeights = CudaArray::create<float2>(context, max(1, num2Avg), "vsite2AvgWeights");
         vsite3AvgWeights = CudaArray::create<float4>(context, max(1, num3Avg), "vsite3AvgWeights");
         vsiteOutOfPlaneWeights = CudaArray::create<float4>(context, max(1, numOutOfPlane), "vsiteOutOfPlaneWeights");
+        vsiteLocalCoordsParams = CudaArray::create<float>(context, max(1, 12*numLocalCoords), "vsiteLocalCoordinatesParams");
         if (num2Avg > 0) {
             vector<float2> floatWeights(num2Avg);
             for (int i = 0; i < num2Avg; i++)
@@ -623,6 +655,12 @@ CudaIntegrationUtilities::CudaIntegrationUtilities(CudaContext& context, const S
                 floatWeights[i] = make_float4((float) vsiteOutOfPlaneWeightVec[i].x, (float) vsiteOutOfPlaneWeightVec[i].y, (float) vsiteOutOfPlaneWeightVec[i].z, 0.0f);
             vsiteOutOfPlaneWeights->upload(floatWeights);
         }
+        if (numLocalCoords > 0) {
+            vector<float> floatParams(vsiteLocalCoordsParamVec.size());
+            for (int i = 0; i < (int) vsiteLocalCoordsParamVec.size(); i++)
+                floatParams[i] = (float) vsiteLocalCoordsParamVec[i];
+            vsiteLocalCoordsParams->upload(floatParams);
+        }
     }
 
     // Create the kernels used by this class.
@@ -633,6 +671,7 @@ CudaIntegrationUtilities::CudaIntegrationUtilities(CudaContext& context, const S
     defines["NUM_2_AVERAGE"] = context.intToString(num2Avg);
     defines["NUM_3_AVERAGE"] = context.intToString(num3Avg);
     defines["NUM_OUT_OF_PLANE"] = context.intToString(numOutOfPlane);
+    defines["NUM_LOCAL_COORDS"] = context.intToString(numLocalCoords);
     defines["PADDED_NUM_ATOMS"] = context.intToString(context.getPaddedNumAtoms());
     CUmodule module = context.createModule(CudaKernelSources::vectorOps+CudaKernelSources::integrationUtilities, defines);
     settlePosKernel = context.getKernel(module, "applySettleToPositions");
@@ -647,7 +686,7 @@ CudaIntegrationUtilities::CudaIntegrationUtilities(CudaContext& context, const S
     CHECK_RESULT2(cuEventCreate(&ccmaEvent, CU_EVENT_DISABLE_TIMING), "Error creating event for CCMA");
     vsitePositionKernel = context.getKernel(module, "computeVirtualSites");
     vsiteForceKernel = context.getKernel(module, "distributeVirtualSiteForces");
-    numVsites = num2Avg+num3Avg+numOutOfPlane;
+    numVsites = num2Avg+num3Avg+numOutOfPlane+numLocalCoords;
     randomKernel = context.getKernel(module, "generateRandomNumbers");
     timeShiftKernel = context.getKernel(module, "timeShiftVelocities");
 }
@@ -704,6 +743,10 @@ CudaIntegrationUtilities::~CudaIntegrationUtilities() {
         delete vsiteOutOfPlaneAtoms;
     if (vsiteOutOfPlaneWeights != NULL)
         delete vsiteOutOfPlaneWeights;
+    if (vsiteLocalCoordsAtoms != NULL)
+        delete vsiteLocalCoordsAtoms;
+    if (vsiteLocalCoordsParams != NULL)
+        delete vsiteLocalCoordsParams;
 }
 
 void CudaIntegrationUtilities::applyConstraints(double tol) {
@@ -779,7 +822,8 @@ void CudaIntegrationUtilities::computeVirtualSites() {
         CUdeviceptr posCorrection = (context.getUseMixedPrecision() ? context.getPosqCorrection().getDevicePointer() : 0);
         void* args[] = {&context.getPosq().getDevicePointer(), &posCorrection, &vsite2AvgAtoms->getDevicePointer(), &vsite2AvgWeights->getDevicePointer(),
                 &vsite3AvgAtoms->getDevicePointer(), &vsite3AvgWeights->getDevicePointer(),
-                &vsiteOutOfPlaneAtoms->getDevicePointer(), &vsiteOutOfPlaneWeights->getDevicePointer()};
+                &vsiteOutOfPlaneAtoms->getDevicePointer(), &vsiteOutOfPlaneWeights->getDevicePointer(),
+                &vsiteLocalCoordsAtoms->getDevicePointer(), &vsiteLocalCoordsParams->getDevicePointer()};
         context.executeKernel(vsitePositionKernel, args, numVsites);
     }
 }
@@ -790,7 +834,8 @@ void CudaIntegrationUtilities::distributeForcesFromVirtualSites() {
         void* args[] = {&context.getPosq().getDevicePointer(), &posCorrection, &context.getForce().getDevicePointer(),
                 &vsite2AvgAtoms->getDevicePointer(), &vsite2AvgWeights->getDevicePointer(),
                 &vsite3AvgAtoms->getDevicePointer(), &vsite3AvgWeights->getDevicePointer(),
-                &vsiteOutOfPlaneAtoms->getDevicePointer(), &vsiteOutOfPlaneWeights->getDevicePointer()};
+                &vsiteOutOfPlaneAtoms->getDevicePointer(), &vsiteOutOfPlaneWeights->getDevicePointer(),
+                &vsiteLocalCoordsAtoms->getDevicePointer(), &vsiteLocalCoordsParams->getDevicePointer()};
         context.executeKernel(vsiteForceKernel, args, numVsites);
     }
 }
