@@ -44,6 +44,8 @@ void testSerialization() {
     NonbondedForce force;
     force.setForceGroup(3);
     force.setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    force.setSwitchingDistance(1.5);
+    force.setUseSwitchingFunction(true);
     force.setCutoffDistance(2.0);
     force.setEwaldErrorTolerance(1e-3);
     force.setReactionFieldDielectric(50.0);
@@ -65,6 +67,8 @@ void testSerialization() {
     NonbondedForce& force2 = *copy;
     ASSERT_EQUAL(force.getForceGroup(), force2.getForceGroup());
     ASSERT_EQUAL(force.getNonbondedMethod(), force2.getNonbondedMethod());
+    ASSERT_EQUAL(force.getSwitchingDistance(), force2.getSwitchingDistance());
+    ASSERT_EQUAL(force.getUseSwitchingFunction(), force2.getUseSwitchingFunction());
     ASSERT_EQUAL(force.getCutoffDistance(), force2.getCutoffDistance());
     ASSERT_EQUAL(force.getEwaldErrorTolerance(), force2.getEwaldErrorTolerance());
     ASSERT_EQUAL(force.getReactionFieldDielectric(), force2.getReactionFieldDielectric());

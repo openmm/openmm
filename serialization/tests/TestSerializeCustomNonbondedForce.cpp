@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -44,6 +44,9 @@ void testSerialization() {
     CustomNonbondedForce force("5*sin(x)^2+y*z");
     force.setForceGroup(3);
     force.setNonbondedMethod(CustomNonbondedForce::CutoffPeriodic);
+    force.setUseSwitchingFunction(true);
+    force.setUseLongRangeCorrection(true);
+    force.setSwitchingDistance(2.0);
     force.setCutoffDistance(2.1);
     force.addGlobalParameter("x", 1.3);
     force.addGlobalParameter("y", 2.221);
@@ -61,6 +64,11 @@ void testSerialization() {
     for (int i = 0; i < 10; i++)
         values[i] = sin((double) i);
     force.addFunction("f", values, 0.5, 1.5);
+    std::set<int> set1, set2;
+    set1.insert(0);
+    set2.insert(1);
+    set2.insert(2);
+    force.addInteractionGroup(set1, set2);
 
     // Serialize and then deserialize it.
 
@@ -75,6 +83,9 @@ void testSerialization() {
     ASSERT_EQUAL(force.getEnergyFunction(), force2.getEnergyFunction());
     ASSERT_EQUAL(force.getNonbondedMethod(), force2.getNonbondedMethod());
     ASSERT_EQUAL(force.getCutoffDistance(), force2.getCutoffDistance());
+    ASSERT_EQUAL(force.getSwitchingDistance(), force2.getSwitchingDistance());
+    ASSERT_EQUAL(force.getUseSwitchingFunction(), force2.getUseSwitchingFunction());
+    ASSERT_EQUAL(force.getUseLongRangeCorrection(), force2.getUseLongRangeCorrection());
     ASSERT_EQUAL(force.getNumPerParticleParameters(), force2.getNumPerParticleParameters());
     for (int i = 0; i < force.getNumPerParticleParameters(); i++)
         ASSERT_EQUAL(force.getPerParticleParameterName(i), force2.getPerParticleParameterName(i));
@@ -114,6 +125,11 @@ void testSerialization() {
         for (int j = 0; j < (int) val1.size(); j++)
             ASSERT_EQUAL(val1[j], val2[j]);
     }
+    ASSERT_EQUAL(force.getNumInteractionGroups(), force2.getNumInteractionGroups());
+    std::set<int> set1c, set2c;
+    force2.getInteractionGroupParameters(0, set1c, set2c);
+    ASSERT_EQUAL_CONTAINERS(set1, set1c);
+    ASSERT_EQUAL_CONTAINERS(set2, set2c);
 }
 
 int main() {
