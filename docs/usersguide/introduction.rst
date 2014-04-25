@@ -11,7 +11,7 @@ OpenMM consists of two parts:
    to run simulations
 
 
-This guide is devided into three sections:
+This guide is divided into three sections:
 
 * Part I (Chapters :ref:`the-openmm-application-layer-introduction`\ -\ :ref:`creating-force-fields`\ )
   describes the application layer.  It is relevant to all users, but especially relevant to people
