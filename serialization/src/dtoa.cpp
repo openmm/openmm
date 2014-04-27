@@ -222,6 +222,7 @@ extern void *MALLOC(size_t);
 static double private_mem[PRIVATE_mem], *pmem_next = private_mem;
 #endif
 
+#define IEEE_8087
 #undef IEEE_Arith
 #undef Avoid_Underflow
 #ifdef IEEE_MC68k
@@ -293,7 +294,7 @@ extern "C" {
 #endif
 
 #if defined(IEEE_8087) + defined(IEEE_MC68k) + defined(VAX) + defined(IBM) != 1
-Exactly one of IEEE_8087, IEEE_MC68k, VAX, or IBM should be defined.
+#error Exactly one of IEEE_8087, IEEE_MC68k, VAX, or IBM should be defined.
 #endif
 
 typedef union { double d; ULong L[2]; } U;
