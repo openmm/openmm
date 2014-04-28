@@ -30,7 +30,6 @@ distribution.
 #pragma warning( push )
 #pragma warning( disable : 4530 )
 #pragma warning( disable : 4786 )
-#define TIXML_USE_STL
 #endif
 
 #include <ctype.h>
