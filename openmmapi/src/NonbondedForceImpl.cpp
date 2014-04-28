@@ -39,6 +39,7 @@
 #include <cmath>
 #include <map>
 #include <sstream>
+#include <algorithm>
 
 using namespace OpenMM;
 using namespace std;
