@@ -222,6 +222,7 @@ extern void *MALLOC(size_t);
 static double private_mem[PRIVATE_mem], *pmem_next = private_mem;
 #endif
 
+#define IEEE_8087
 #undef IEEE_Arith
 #undef Avoid_Underflow
 #ifdef IEEE_MC68k
