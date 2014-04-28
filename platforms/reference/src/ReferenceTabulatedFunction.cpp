@@ -33,7 +33,7 @@
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/SplineFitter.h"
 
-#if _MSC_VER
+#ifdef _MSC_VER
 
 #if _MSC_VER < 1800
 /**
