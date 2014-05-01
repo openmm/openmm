@@ -141,7 +141,8 @@ void DrudeForceImpl::initialize(ContextImpl& context) {
 }
 
 double DrudeForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
-    return kernel.getAs<CalcDrudeForceKernel>().execute(context, includeForces, includeEnergy);
+    if ((groups&(1<<owner.getForceGroup())) != 0)
+        return kernel.getAs<CalcDrudeForceKernel>().execute(context, includeForces, includeEnergy);
 }
 
 std::vector<std::string> DrudeForceImpl::getKernelNames() {
