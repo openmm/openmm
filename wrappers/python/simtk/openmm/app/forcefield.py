@@ -2939,7 +2939,7 @@ class AmoebaVdwGenerator:
             # dispersion correction
 
             if ('useDispersionCorrection' in args):
-                force.setUseDispersionCorrection(bool(args['useDispersionCorrection']))
+                force.setUseDispersionCorrection(int(args['useDispersionCorrection']))
 
             if (nonbondedMethod == PME):
                 force.setNonbondedMethod(mm.AmoebaVdwForce.CutoffPeriodic)
