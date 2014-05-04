@@ -385,7 +385,7 @@ ENDIF(OPENMM_BUILD_OPENCL_LIB)
 # Disable OpenCL for APPLE platforms.
 IF (OPENCL_FOUND AND APPLE)
     MESSAGE(STATUS "Disabling OpenCL because OS X OpenCL implementation is broken.")
-    SET(OPENMM_BUILD_OPENCL_LIB ON CACHE BOOL "Build OpenMMOpenCL library" FORCE) 
+    SET(OPENMM_BUILD_OPENCL_LIB OFF CACHE BOOL "Build OpenMMOpenCL library" FORCE) 
 ENDIF (OPENCL_FOUND AND APPLE)
 
 # Optimized CPU platform
