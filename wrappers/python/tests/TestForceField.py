@@ -150,8 +150,8 @@ class AmoebaTestForceField(unittest.TestCase):
     def test_NonbondedMethod(self):
         """Test all five options for the nonbondedMethod parameter."""
 
-        methodMap = {NoCutoff:mm.AmoebaMultipoleForce.NoCutoff,
-                     PME:mm.AmoebaMultipoleForce.PME}
+        methodMap = {NoCutoff:AmoebaMultipoleForce.NoCutoff,
+                     PME:AmoebaMultipoleForce.PME}
 
         for method in methodMap:
             system = self.forcefield1.createSystem(self.pdb1.topology,
@@ -163,29 +163,29 @@ class AmoebaTestForceField(unittest.TestCase):
     def test_Cutoff(self):
         """Test to make sure the nonbondedCutoff parameter is passed correctly."""
 
+        cutoff_distance = 0.7*nanometer
         for method in [NoCutoff, PME]:
             system = self.forcefield1.createSystem(self.pdb1.topology,
                                                    nonbondedMethod=method,
-                                                   nonbondedCutoff=7*angstroms,
+                                                   vdwCutoff=cutoff_distance,
                                                    constraints=None)
 
-            cutoff_distance = 0.0*nanometer
-            cutoff_check = 0.7*nanometer
             for force in system.getForces():
-                if isinstance(force, AmoebaNonbondedForce) or isinstance(force, AmoebaMultipoleForce):
-                    cutoff_distance = force.getCutoffDistance()
-                    self.assertEqual(cutoff_distance, cutoff_check)
+                if isinstance(force, AmoebaVdwForce):
+                    self.assertEqual(force.getCutoff(), cutoff_distance)
+                if isinstance(force, AmoebaMultipoleForce):
+                    self.assertEqual(force.getCutoffDistance(), cutoff_distance)
 
     def test_DispersionCorrection(self):
         """Test to make sure the nonbondedCutoff parameter is passed correctly."""
 
         for useDispersionCorrection in [True, False]:
             system = self.forcefield1.createSystem(self.pdb1.topology,
-                                                   nonbondedCutoff=7*angstroms,
+                                                   nonbondedMethod=PME,
                                                    useDispersionCorrection=useDispersionCorrection)
 
             for force in system.getForces():
-                if isinstance(force, AmoebaNonbondedForce):
+                if isinstance(force, AmoebaVdwForce):
                     self.assertEqual(useDispersionCorrection, force.getUseDispersionCorrection())
 
 
