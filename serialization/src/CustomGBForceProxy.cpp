@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -44,6 +44,7 @@ CustomGBForceProxy::CustomGBForceProxy() : SerializationProxy("CustomGBForce") {
 void CustomGBForceProxy::serialize(const void* object, SerializationNode& node) const {
     node.setIntProperty("version", 1);
     const CustomGBForce& force = *reinterpret_cast<const CustomGBForce*>(object);
+    node.setIntProperty("forceGroup", force.getForceGroup());
     node.setIntProperty("method", (int) force.getNonbondedMethod());
     node.setDoubleProperty("cutoff", force.getCutoffDistance());
     SerializationNode& perParticleParams = node.createChildNode("PerParticleParameters");
@@ -97,6 +98,7 @@ void* CustomGBForceProxy::deserialize(const SerializationNode& node) const {
     CustomGBForce* force = NULL;
     try {
         CustomGBForce* force = new CustomGBForce();
+        force->setForceGroup(node.getIntProperty("forceGroup", 0));
         force->setNonbondedMethod((CustomGBForce::NonbondedMethod) node.getIntProperty("method"));
         force->setCutoffDistance(node.getDoubleProperty("cutoff"));
         const SerializationNode& perParticleParams = node.getChildNode("PerParticleParameters");

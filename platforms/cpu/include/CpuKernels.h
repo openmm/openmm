@@ -33,6 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "CpuBondForce.h"
+#include "CpuCustomNonbondedForce.h"
 #include "CpuGBSAOBCForce.h"
 #include "CpuLangevinDynamics.h"
 #include "CpuNeighborList.h"
@@ -218,6 +219,52 @@ private:
 };
 
 /**
+ * This kernel is invoked by CustomNonbondedForce to calculate the forces acting on the system.
+ */
+class CpuCalcCustomNonbondedForceKernel : public CalcCustomNonbondedForceKernel {
+public:
+    CpuCalcCustomNonbondedForceKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data);
+    ~CpuCalcCustomNonbondedForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomNonbondedForce this kernel will be used for
+     */
+    void initialize(const System& system, const CustomNonbondedForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomNonbondedForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force);
+private:
+    CpuPlatform::PlatformData& data;
+    int numParticles;
+    double **particleParamArray;
+    double nonbondedCutoff, switchingDistance, periodicBoxSize[3], longRangeCoefficient;
+    bool useSwitchingFunction, hasInitializedLongRangeCorrection;
+    CustomNonbondedForce* forceCopy;
+    std::map<std::string, double> globalParamValues;
+    std::vector<std::set<int> > exclusions;
+    std::vector<std::string> parameterNames, globalParameterNames;
+    std::vector<std::pair<std::set<int>, std::set<int> > > interactionGroups;
+    NonbondedMethod nonbondedMethod;
+    CpuNeighborList* neighborList;
+    CpuCustomNonbondedForce* nonbonded;
+};
+
+/**
  * This kernel is invoked by GBSAOBCForce to calculate the forces acting on the system.
  */
 class CpuCalcGBSAOBCForceKernel : public CalcGBSAOBCForceKernel {
@@ -261,7 +308,7 @@ private:
 class CpuIntegrateLangevinStepKernel : public IntegrateLangevinStepKernel {
 public:
     CpuIntegrateLangevinStepKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data) : IntegrateLangevinStepKernel(name, platform),
-        data(data), dynamics(NULL) {
+            data(data), dynamics(NULL) {
     }
     ~CpuIntegrateLangevinStepKernel();
     /**

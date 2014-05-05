@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2012 Stanford University and the Authors.           *
+ * Portions copyright (c) 2012-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,6 +32,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include <openmm/Vec3.h>
 #include "internal/windowsExport.h"
 #include <vector>
 
@@ -164,6 +165,65 @@ public:
     double getWeightCross() const;
 private:
     double weight12, weight13, weightCross;
+};
+
+/**
+ * This is a VirtualSite that uses the locations of three other particles to compute a local
+ * coordinate system, then places the virtual site at a fixed location in that coordinate
+ * system.  The origin of the coordinate system and the directions of its x and y axes
+ * are each specified as a weighted sum of the locations of the three particles:
+ * 
+ * origin = w<sup>o</sup><sub>1</sub>r<sub>1</sub> +  w<sup>o</sup><sub>2</sub>r<sub>2</sub> +  w<sup>o</sup><sub>3</sub>r<sub>3</sub>
+ * 
+ * xdir = w<sup>x</sup><sub>1</sub>r<sub>1</sub> +  w<sup>x</sup><sub>2</sub>r<sub>2</sub> +  w<sup>x</sup><sub>3</sub>r<sub>3</sub>
+ * 
+ * ydir = w<sup>y</sup><sub>1</sub>r<sub>1</sub> +  w<sup>y</sup><sub>2</sub>r<sub>2</sub> +  w<sup>y</sup><sub>3</sub>r<sub>3</sub>
+ * 
+ * For the origin, the three weights must add to one.  For example if
+ * (w<sup>o</sup><sub>1</sub>, w<sup>o</sup><sub>2</sub>, w<sup>o</sup><sub>3</sub>) = (1.0, 0.0, 0.0),
+ * the origin of the local coordinate system is at the location of particle 1.  For xdir and ydir,
+ * the weights must add to zero.  For excample, if
+ * (w<sup>x</sup><sub>1</sub>, w<sup>x</sup><sub>2</sub>, w<sup>x</sup><sub>3</sub>) = (-1.0, 0.5, 0.5),
+ * the x axis points from particle 1 toward the midpoint between particles 2 and 3.
+ * 
+ * The z direction is computed as zdir = xdir x ydir.  To ensure the axes are all orthogonal,
+ * ydir is then recomputed as ydir = zdir x xdir.  All three axis vectors are then normalized, and
+ * the virtual site location is set to
+ * 
+ * origin + x*xdir + y*ydir + z*zdir
+ */
+class OPENMM_EXPORT LocalCoordinatesSite : public VirtualSite {
+public:
+    /**
+     * Create a new LocalCoordinatesSite virtual site.
+     * 
+     * @param particle1      the index of the first particle
+     * @param particle2      the index of the second particle
+     * @param particle3      the index of the third particle
+     * @param originWeights  the weight factors for the three particles when computing the origin location
+     * @param xWeights       the weight factors for the three particles when computing xdir
+     * @param yWeights       the weight factors for the three particles when computing ydir
+     * @param localPosition  the position of the virtual site in the local coordinate system
+     */
+    LocalCoordinatesSite(int particle1, int particle2, int particle3, const Vec3& originWeights, const Vec3& xWeights, const Vec3& yWeights, const Vec3& localPosition);
+    /**
+     * Get the weight factors for the three particles when computing the origin location.
+     */
+    const Vec3& getOriginWeights() const;
+    /**
+     * Get the weight factors for the three particles when computing xdir.
+     */
+    const Vec3& getXWeights() const;
+    /**
+     * Get the weight factors for the three particles when computing ydir.
+     */
+    const Vec3& getYWeights() const;
+    /**
+     * Get the position of the virtual site in the local coordinate system.
+     */
+    const Vec3& getLocalPosition() const;
+private:
+    Vec3 originWeights, xWeights, yWeights, localPosition;
 };
 
 } // namespace OpenMM

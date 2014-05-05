@@ -278,3 +278,7 @@ void Context::loadCheckpoint(istream& stream) {
 ContextImpl& Context::getImpl() {
     return *impl;
 }
+
+const vector<vector<int> >& Context::getMolecules() const {
+    return impl->getMolecules();
+}

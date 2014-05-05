@@ -34,7 +34,7 @@ __author__ = "Christopher M. Bruns"
 __version__ = "1.0"
 
 
-from simtk.unit import daltons
+from simtk.unit import daltons, is_quantity
 import copy_reg
 
 class Element(object):
@@ -42,22 +42,34 @@ class Element(object):
 
     The simtk.openmm.app.element module contains objects for all the standard chemical elements,
     such as element.hydrogen or element.carbon.  You can also call the static method Element.getBySymbol() to
-    look up the Element with a particular chemical symbol."""
+    look up the Element with a particular chemical symbol.
+
+    Element objects should be considered immutable
+    """
 
     _elements_by_symbol = {}
     _elements_by_atomic_number = {}
 
     def __init__(self, number, name, symbol, mass):
+        """Create a new element
+
+        Parameters:
+        number (int) The atomic number of the element
+        name (string) The name of the element
+        symbol (string) The chemical symbol of the element
+        mass (float) The atomic mass of the element
+        """
         ## The atomic number of the element
-        self.atomic_number = number
+        self._atomic_number = number
         ## The name of the element
-        self.name = name
+        self._name = name
         ## The chemical symbol of the element
-        self.symbol = symbol
+        self._symbol = symbol
         ## The atomic mass of the element
-        self.mass = mass
+        self._mass = mass
         # Index this element in a global table
         s = symbol.strip().upper()
+
         assert s not in Element._elements_by_symbol
         Element._elements_by_symbol[s] = self
         if number in Element._elements_by_atomic_number:
@@ -81,8 +93,52 @@ class Element(object):
     def getByAtomicNumber(atomic_number):
         return Element._elements_by_atomic_number[atomic_number]
 
+    @staticmethod
+    def getByMass(mass):
+        """
+        Get the element whose mass is CLOSEST to the requested mass. This method
+        should not be used for repartitioned masses
+        """
+        # Assume masses are in daltons if they are not units
+        if not is_quantity(mass):
+            mass = mass * daltons
+        diff = mass
+        best_guess = None
+
+        for key in Element._elements_by_atomic_number:
+            element = Element._elements_by_atomic_number[key]
+            massdiff = abs(element.mass - mass)
+            if massdiff < diff:
+                best_guess = element
+                diff = massdiff
+
+        return best_guess
+
+    @property
+    def atomic_number(self):
+        return self._atomic_number
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def symbol(self):
+        return self._symbol
+
+    @property
+    def mass(self):
+        return self._mass
+
+    def __str__(self):
+        return '<Element %s>' % self.name
+
+    def __repr__(self):
+        return '<Element %s>' % self.name
+
 # This is for backward compatibility.
 def get_by_symbol(symbol):
+    """ Get the element with a particular chemical symbol. """
     s = symbol.strip().upper()
     return Element._elements_by_symbol[s]
 

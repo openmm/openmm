@@ -191,6 +191,10 @@ UNITS = {
 ("*", "getWeight12") : (None, ()),
 ("*", "getWeight13") : (None, ()),
 ("*", "getWeightCross") : (None, ()),
+("LocalCoordinatesSite", "getOriginWeights") : (None, ()),
+("LocalCoordinatesSite", "getXWeights") : (None, ()),
+("LocalCoordinatesSite", "getYWeights") : (None, ()),
+("LocalCoordinatesSite", "getLocalPosition") : ("unit.nanometer", ()),
 ("SerializationNode", "getChildren") : (None, ()),
 ("SerializationNode", "getChildNode") : (None, ()),
 ("SerializationNode", "getProperties") : (None, ()),
@@ -297,6 +301,7 @@ UNITS = {
 ("AmoebaWcaDispersionForce",              "getShctd")                                      :  ( None, ()),
 
 ("Context", "getParameter") : (None, ()),
+("Context", "getMolecules") : (None, ()),
 ("CMAPTorsionForce", "getMapParameters") : (None, ()),
 ("CMAPTorsionForce", "getTorsionParameters") : (None, ()),
 ("CMMotionRemover", "getFrequency") : (None, ()),
@@ -398,6 +403,7 @@ UNITS = {
            'unit.kilojoule_per_mole/(unit.nanometer*unit.nanometer)')),
 ("MonteCarloBarostat", "getFrequency") : (None, ()),
 ("MonteCarloAnisotropicBarostat", "getFrequency") : (None, ()),
+("NonbondedForce", "getPMEParameters") : (None, ('1/unit.nanometer', None, None, None)),
 ("NonbondedForce", "getExceptionParameters")
  : (None, (None, None,
            'unit.elementary_charge*unit.elementary_charge',
@@ -424,5 +430,6 @@ UNITS = {
 ("DrudeLangevinIntegrator", "getDrudeFriction") : ("1/unit.picosecond", ()),
 ("DrudeSCFIntegrator", "getMinimizationErrorTolerance") : ("unit.kilojoules_per_mole/unit.nanometer", ()),
 ("RPMDIntegrator", "getContractions") : (None, ()),
+("RPMDIntegrator", "getTotalEnergy") : ("unit.kilojoules_per_mole", ()),
 }
 

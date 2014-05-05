@@ -13,10 +13,10 @@ See https://simtk.org/home/pyopenmm for details"
 
 %module (docstring=DOCSTRING) openmm
 
-%include "typemaps.i"
 %include "factory.i"
 %include "std_string.i"
 %include "std_iostream.i"
+%include "typemaps.i"
 
 %include "std_map.i"
 %include "std_pair.i"
@@ -64,7 +64,7 @@ using namespace OpenMM;
 
 %include OpenMM_docstring.i
 
-%include OpenMM_headers.i
+%include OpenMMSwigHeaders.i
 
 %pythoncode %{
   # when we import * from the python module, we only want to import the

@@ -267,9 +267,14 @@ class ForceField(object):
             elif self.type == 'outOfPlane':
                 self.atoms = [int(attrib['atom1']), int(attrib['atom2']), int(attrib['atom3'])]
                 self.weights = [float(attrib['weight12']), float(attrib['weight13']), float(attrib['weightCross'])]
+            elif self.type == 'localCoords':
+                self.atoms = [int(attrib['atom1']), int(attrib['atom2']), int(attrib['atom3'])]
+                self.originWeights = [float(attrib['wo1']), float(attrib['wo2']), float(attrib['wo3'])]
+                self.xWeights = [float(attrib['wx1']), float(attrib['wx2']), float(attrib['wx3'])]
+                self.yWeights = [float(attrib['wy1']), float(attrib['wy2']), float(attrib['wy3'])]
+                self.localPos = [float(attrib['p1']), float(attrib['p2']), float(attrib['p3'])]
             else:
                 raise ValueError('Unknown virtual site type: %s' % self.type)
-            self.atoms = [x-self.index for x in self.atoms]
 
     def createSystem(self, topology, nonbondedMethod=NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
                      constraints=None, rigidWater=True, removeCMMotion=True, hydrogenMass=None, **args):
@@ -326,11 +331,12 @@ class ForceField(object):
                             break
                 if matches is None:
                     raise ValueError('No template found for residue %d (%s).  %s' % (res.index+1, res.name, _findMatchErrors(self, res)))
+                matchAtoms = dict(zip(matches, res.atoms()))
                 for atom, match in zip(res.atoms(), matches):
                     data.atomType[atom] = template.atoms[match].type
                     for site in template.virtualSites:
                         if match == site.index:
-                            data.virtualSites[atom] = site
+                            data.virtualSites[atom] = (site, [matchAtoms[i].index for i in site.atoms])
 
         # Create the System and add atoms
 
@@ -445,14 +451,20 @@ class ForceField(object):
         # Add virtual sites
 
         for atom in data.virtualSites:
-            site = data.virtualSites[atom]
+            (site, atoms) = data.virtualSites[atom]
             index = atom.index
             if site.type == 'average2':
-                sys.setVirtualSite(index, mm.TwoParticleAverageSite(index+site.atoms[0], index+site.atoms[1], site.weights[0], site.weights[1]))
+                sys.setVirtualSite(index, mm.TwoParticleAverageSite(atoms[0], atoms[1], site.weights[0], site.weights[1]))
             elif site.type == 'average3':
-                sys.setVirtualSite(index, mm.ThreeParticleAverageSite(index+site.atoms[0], index+site.atoms[1], index+site.atoms[2], site.weights[0], site.weights[1], site.weights[2]))
+                sys.setVirtualSite(index, mm.ThreeParticleAverageSite(atoms[0], atoms[1], atoms[2], site.weights[0], site.weights[1], site.weights[2]))
             elif site.type == 'outOfPlane':
-                sys.setVirtualSite(index, mm.OutOfPlaneSite(index+site.atoms[0], index+site.atoms[1], index+site.atoms[2], site.weights[0], site.weights[1], site.weights[2]))
+                sys.setVirtualSite(index, mm.OutOfPlaneSite(atoms[0], atoms[1], atoms[2], site.weights[0], site.weights[1], site.weights[2]))
+            elif site.type == 'localCoords':
+                sys.setVirtualSite(index, mm.LocalCoordinatesSite(atoms[0], atoms[1], atoms[2],
+                                                                  mm.Vec3(site.originWeights[0], site.originWeights[1], site.originWeights[2]),
+                                                                  mm.Vec3(site.xWeights[0], site.xWeights[1], site.xWeights[2]),
+                                                                  mm.Vec3(site.yWeights[0], site.yWeights[1], site.yWeights[2]),
+                                                                  mm.Vec3(site.localPos[0], site.localPos[1], site.localPos[2])))
 
         # Add forces to the System
 
@@ -563,7 +575,7 @@ def _findAtomMatches(atoms, template, bondedTo, externalBonds, matches, hasMatch
     name = atoms[position].name
     for i in range(len(atoms)):
         atom = template.atoms[i]
-        if (atom.element == elem or (atom.element is None and atom.name == name)) and not hasMatch[i] and len(atom.bondedTo) == len(bondedTo[position]) and atom.externalBonds == externalBonds[position]:
+        if ((atom.element is not None and atom.element == elem) or (atom.element is None and atom.name == name)) and not hasMatch[i] and len(atom.bondedTo) == len(bondedTo[position]) and atom.externalBonds == externalBonds[position]:
             # See if the bonds for this identification are consistent
 
             allBondsMatch = all((bonded > position or matches[bonded] in atom.bondedTo for bonded in bondedTo[position]))

@@ -117,6 +117,14 @@
   Py_DECREF(args);
 }
 
+%typemap(out) const Vec3& {
+  PyObject* mm = PyImport_AddModule("simtk.openmm");
+  PyObject* vec3 = PyObject_GetAttrString(mm, "Vec3");
+  PyObject* args = Py_BuildValue("(d,d,d)", (*$1)[0], (*$1)[1], (*$1)[2]);
+  $result = PyObject_CallObject(vec3, args);
+  Py_DECREF(args);
+}
+
 /* Convert C++ (Vec3&, Vec3&, Vec3&) object to python tuple or tuples */
 %typemap(argout) (Vec3& a, Vec3& b, Vec3& c) {
   // %typemap(argout) (Vec3& a, Vec3& b, Vec3& c)
@@ -156,3 +164,36 @@
   $3 = &tempC;
 }
 
+%typemap(out) std::string OpenMM::Context::createCheckpoint{
+    // createCheckpoint returns a bytes object
+    $result = PyBytes_FromStringAndSize($1.c_str(), $1.length());
+}
+
+
+%typemap(in) std::string {
+    // if we have a C++ method that takes in a std::string, we're most happy to accept
+    // a python bytes object. But if the user passes in a unicode object we'll try
+    // to recover by encoding it to UTF-8 bytes
+    PyObject* temp = NULL;
+    char* c_str = NULL;
+    Py_ssize_t len = 0;
+
+    if (PyUnicode_Check($input)) {
+        temp = PyUnicode_AsUTF8String($input);
+        if (temp == NULL) {
+            SWIG_exception_fail(SWIG_TypeError, "'utf-8' codec can't decode byte");
+        }
+        PyBytes_AsStringAndSize(temp, &c_str, &len);
+        Py_XDECREF(temp);
+    } else if (PyBytes_Check($input)) {
+        PyBytes_AsStringAndSize($input, &c_str, &len);
+    } else {
+         SWIG_exception_fail(SWIG_TypeError, "argument must be str or bytes");
+    }
+
+    if (c_str == NULL) {
+        SWIG_exception_fail(SWIG_TypeError, "argument must be str or bytes");
+    }
+
+    $1 = std::string(c_str, len);
+}

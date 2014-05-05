@@ -380,7 +380,7 @@ private:
     int numMultipoles, maxInducedIterations;
     int fixedFieldThreads, inducedFieldThreads, electrostaticsThreads;
     double inducedEpsilon;
-    bool hasInitializedScaleFactors, hasInitializedFFT, multipolesAreValid;
+    bool hasQuadrupoles, hasInitializedScaleFactors, hasInitializedFFT, multipolesAreValid;
     CudaContext& cu;
     const System& system;
     std::vector<int3> covalentFlagValues;

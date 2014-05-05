@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -44,6 +44,7 @@ HarmonicAngleForceProxy::HarmonicAngleForceProxy() : SerializationProxy("Harmoni
 void HarmonicAngleForceProxy::serialize(const void* object, SerializationNode& node) const {
     node.setIntProperty("version", 1);
     const HarmonicAngleForce& force = *reinterpret_cast<const HarmonicAngleForce*>(object);
+    node.setIntProperty("forceGroup", force.getForceGroup());
     SerializationNode& bonds = node.createChildNode("Angles");
     for (int i = 0; i < force.getNumAngles(); i++) {
         int particle1, particle2, particle3;
@@ -58,6 +59,7 @@ void* HarmonicAngleForceProxy::deserialize(const SerializationNode& node) const 
         throw OpenMMException("Unsupported version number");
     HarmonicAngleForce* force = new HarmonicAngleForce();
     try {
+        force->setForceGroup(node.getIntProperty("forceGroup", 0));
         const SerializationNode& angles = node.getChildNode("Angles");
         for (int i = 0; i < (int) angles.getChildren().size(); i++) {
             const SerializationNode& angle = angles.getChildren()[i];

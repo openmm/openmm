@@ -48,6 +48,7 @@ public:
     }
     double getSpeed() const;
     bool supportsDoublePrecision() const;
+    static bool isPlatformSupported();
     const std::string& getPropertyValue(const Context& context, const std::string& property) const;
     void setPropertyValue(Context& context, const std::string& property, const std::string& value) const;
     void contextCreated(ContextImpl& context, const std::map<std::string, std::string>& properties) const;

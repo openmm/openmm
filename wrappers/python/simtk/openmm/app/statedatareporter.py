@@ -31,8 +31,16 @@ USE OR OTHER DEALINGS IN THE SOFTWARE.
 __author__ = "Peter Eastman"
 __version__ = "1.0"
 
-import bz2
-import gzip
+try:
+    import bz2
+    have_bz2 = True
+except: have_bz2 = False
+
+try:
+    import gzip
+    have_gzip = True
+except: have_gzip = False
+
 import simtk.openmm as mm
 import simtk.unit as unit
 import math
@@ -83,8 +91,12 @@ class StateDataReporter(object):
             # Detect the desired compression scheme from the filename extension
             # and open all files unbuffered
             if file.endswith('.gz'):
+                if not have_gzip:
+                    raise RuntimeError("Cannot write .gz file because Python could not import gzip library")
                 self._out = gzip.GzipFile(fileobj=open(file, 'wb', 0))
             elif file.endswith('.bz2'):
+                if not have_bz2:
+                    raise RuntimeError("Cannot write .bz2 file because Python could not import bz2 library")
                 self._out = bz2.BZ2File(file, 'w', 0)
             else:
                 self._out = open(file, 'w', 0)
@@ -189,9 +201,12 @@ class StateDataReporter(object):
         if self._density:
             values.append((self._totalMass/volume).value_in_unit(unit.gram/unit.item/unit.milliliter))
         if self._speed:
-            elapsedDays = (clockTime-self._initialClockTime)/86400
+            elapsedDays = (clockTime-self._initialClockTime)/86400.0
             elapsedNs = (state.getTime()-self._initialSimulationTime).value_in_unit(unit.nanosecond)
-            values.append('%.3g' % (elapsedNs/elapsedDays))
+            if elapsedDays > 0.0:
+                values.append('%.3g' % (elapsedNs/elapsedDays))
+            else:
+                values.append('--')
         if self._remainingTime:
             elapsedSeconds = clockTime-self._initialClockTime
             elapsedSteps = simulation.currentStep-self._initialSteps

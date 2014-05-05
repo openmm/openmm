@@ -50,6 +50,8 @@
 
 
 using namespace OpenMM;
+using namespace std;
+
 const double TOL = 1e-4;
 
 extern "C" void registerAmoebaCudaKernelFactories();
@@ -2893,6 +2895,75 @@ static void testMultipoleGridPotential( FILE* log ) {
 
 }
 
+/**
+ * Test whether the alternate kernels with no quadrupoles work correctly.
+ */
+static void testNoQuadrupoles(bool usePme) {
+
+    string testName      = "testNoQuadrupoles";
+
+    int inputPmeGridDimension = 10;
+    double cutoff             = 0.3;
+
+    System system;
+    AmoebaMultipoleForce* amoebaMultipoleForce = new AmoebaMultipoleForce();;
+    setupMultipoleAmmonia(system, amoebaMultipoleForce, usePme ? AmoebaMultipoleForce::PME : AmoebaMultipoleForce::NoCutoff, AmoebaMultipoleForce::Direct, 
+                                             cutoff, inputPmeGridDimension);
+    
+    // First compute forces with quadrupoles.  This ensures they will be included in the kernel.
+    
+    LangevinIntegrator integrator(0.0, 0.1, 0.01);
+    Context context(system, integrator, Platform::getPlatformByName("CUDA"));
+    vector<Vec3> forces1;
+    double energy1;
+    getForcesEnergyMultipoleAmmonia(context, forces1, energy1);
+    
+    // Now set all quadrupoles to zero and recalculate.
+    
+    for (int i = 0; i < system.getNumParticles(); i++) {
+        double charge, thole, damping, polarity;
+        int axisType, atomX, atomY, atomZ;
+        vector<double> dipole, quadrupole;
+        amoebaMultipoleForce->getMultipoleParameters(i, charge, dipole, quadrupole, axisType, atomZ, atomX, atomY, thole, damping, polarity);
+        for (int j = 0; j < (int) quadrupole.size(); j++)
+            quadrupole[j] = 0;
+        amoebaMultipoleForce->setMultipoleParameters(i, charge, dipole, quadrupole, axisType, atomZ, atomX, atomY, thole, damping, polarity);
+    }
+    amoebaMultipoleForce->updateParametersInContext(context);
+    vector<Vec3> forces2;
+    double energy2;
+    getForcesEnergyMultipoleAmmonia(context, forces2, energy2);
+    ASSERT(energy1 != energy2);
+    
+    // Create a new context with no quadrupoles from the beginning.
+    
+    LangevinIntegrator integrator2(0.0, 0.1, 0.01);
+    Context context2(system, integrator2, Platform::getPlatformByName("CUDA"));
+    vector<Vec3> forces3;
+    double energy3;
+    getForcesEnergyMultipoleAmmonia(context2, forces3, energy3);
+    double tolerance = 1e-5;
+    compareForcesEnergy(testName, energy2, energy3, forces2, forces3, tolerance, NULL);
+    
+    // If we try to set a quadrupole, that should produce and exception.
+    
+    double charge, thole, damping, polarity;
+    int axisType, atomX, atomY, atomZ;
+    vector<double> dipole, quadrupole;
+    amoebaMultipoleForce->getMultipoleParameters(0, charge, dipole, quadrupole, axisType, atomZ, atomX, atomY, thole, damping, polarity);
+    quadrupole[0] = 1.0;
+    amoebaMultipoleForce->setMultipoleParameters(0, charge, dipole, quadrupole, axisType, atomZ, atomX, atomY, thole, damping, polarity);
+    bool threwException = false;
+    try {
+        amoebaMultipoleForce->updateParametersInContext(context2);
+    }
+    catch (OpenMMException& ex) {
+        threwException = true;
+    }
+    ASSERT(threwException);
+}
+
+
 int main(int argc, char* argv[]) {
     try {
         std::cout << "TestCudaAmoebaMultipoleForce running test..." << std::endl;
@@ -2940,6 +3011,9 @@ int main(int argc, char* argv[]) {
 
         // large box of water
         testPMEMutualPolarizationLargeWater( log );
+        
+        testNoQuadrupoles(false);
+        testNoQuadrupoles(true);
 
     } catch(const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;

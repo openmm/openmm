@@ -57,6 +57,8 @@ foreach(SUBDIR ${SUBDIRS})
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.prmtop"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.dms"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.top"
+        "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*psf"
+        "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/charmm22.*"
     )
     foreach(file ${STAGING_INPUT_FILES1})
         set(STAGING_INPUT_FILES ${STAGING_INPUT_FILES} "${file}")
@@ -106,7 +108,7 @@ mark_as_advanced(CLEAR DOXYGEN_EXECUTABLE)
 set(SWIG_OPENMM_DIR "${OPENMM_PYTHON_STAGING_DIR}/src/swig_doxygen")
 file(MAKE_DIRECTORY ${SWIG_OPENMM_DIR}/swig_lib/python)
 
-### Create OpenMM_headers.xml ###
+### Create OpenMMSwigHeaders.i ###
 # Step 1 - Create Doxyfile to point to OpenMM headers
 configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/src/swig_doxygen/doxygen/Doxyfile.in
@@ -130,7 +132,7 @@ set(SWIG_INPUT_FILES_REF
     "${SWIG_OPENMM_DIR}/swig_lib/python/pythonprepend.i"
     "${SWIG_OPENMM_DIR}/swig_lib/python/pythonappend.i"
     "${SWIG_OPENMM_DIR}/OpenMM_docstring.i"
-    "${SWIG_OPENMM_DIR}/OpenMM_headers.i"
+    "${SWIG_OPENMM_DIR}/OpenMMSwigHeaders.i"
     # "${SWIG_OPENMM_DIR}/OpenMM.i"
 )
 
@@ -153,7 +155,7 @@ add_custom_command(
         -i "${CMAKE_CURRENT_BINARY_DIR}/src/swig_doxygen/doxygen/xml"
         -c swigInputConfig.py
         -d OpenMM_docstring.i
-        -o OpenMM_headers.i
+        -o OpenMMSwigHeaders.i
         -a swig_lib/python/pythonprepend.i
         -z swig_lib/python/pythonappend.i
     WORKING_DIRECTORY "${SWIG_OPENMM_DIR}"
@@ -163,6 +165,8 @@ add_custom_command(
         "${CMAKE_CURRENT_BINARY_DIR}/src/swig_doxygen/doxygen/xml/index.xml"
     COMMENT "Creating OpenMM Python swig input files..."
 )
+
+INSTALL_FILES(/include FILES "${SWIG_OPENMM_DIR}/OpenMMSwigHeaders.i")
 
 #~ swig -python -c++ \
 #~      -outdir $PYTHON_PACKAGE_DIR \
