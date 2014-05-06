@@ -1517,7 +1517,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
     else
         dispersionCoefficient = 0.0;
     alpha = 0;
-    if (force.getNonbondedMethod() == NonbondedForce::Ewald && cu.getContextIndex() == 0) {
+    if (force.getNonbondedMethod() == NonbondedForce::Ewald) {
         // Compute the Ewald parameters.
 
         int kmaxx, kmaxy, kmaxz;
@@ -1525,26 +1525,28 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
         defines["EWALD_ALPHA"] = cu.doubleToString(alpha);
         defines["TWO_OVER_SQRT_PI"] = cu.doubleToString(2.0/sqrt(M_PI));
         defines["USE_EWALD"] = "1";
-        ewaldSelfEnergy = -ONE_4PI_EPS0*alpha*sumSquaredCharges/sqrt(M_PI);
+        if (cu.getContextIndex() == 0) {
+            ewaldSelfEnergy = -ONE_4PI_EPS0*alpha*sumSquaredCharges/sqrt(M_PI);
 
-        // Create the reciprocal space kernels.
+            // Create the reciprocal space kernels.
 
-        map<string, string> replacements;
-        replacements["NUM_ATOMS"] = cu.intToString(numParticles);
-        replacements["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
-        replacements["KMAX_X"] = cu.intToString(kmaxx);
-        replacements["KMAX_Y"] = cu.intToString(kmaxy);
-        replacements["KMAX_Z"] = cu.intToString(kmaxz);
-        replacements["EXP_COEFFICIENT"] = cu.doubleToString(-1.0/(4.0*alpha*alpha));
-        replacements["ONE_4PI_EPS0"] = cu.doubleToString(ONE_4PI_EPS0);
-        replacements["M_PI"] = cu.doubleToString(M_PI);
-        CUmodule module = cu.createModule(CudaKernelSources::vectorOps+CudaKernelSources::ewald, replacements);
-        ewaldSumsKernel = cu.getKernel(module, "calculateEwaldCosSinSums");
-        ewaldForcesKernel = cu.getKernel(module, "calculateEwaldForces");
-        int elementSize = (cu.getUseDoublePrecision() ? sizeof(double2) : sizeof(float2));
-        cosSinSums = new CudaArray(cu, (2*kmaxx-1)*(2*kmaxy-1)*(2*kmaxz-1), elementSize, "cosSinSums");
+            map<string, string> replacements;
+            replacements["NUM_ATOMS"] = cu.intToString(numParticles);
+            replacements["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
+            replacements["KMAX_X"] = cu.intToString(kmaxx);
+            replacements["KMAX_Y"] = cu.intToString(kmaxy);
+            replacements["KMAX_Z"] = cu.intToString(kmaxz);
+            replacements["EXP_COEFFICIENT"] = cu.doubleToString(-1.0/(4.0*alpha*alpha));
+            replacements["ONE_4PI_EPS0"] = cu.doubleToString(ONE_4PI_EPS0);
+            replacements["M_PI"] = cu.doubleToString(M_PI);
+            CUmodule module = cu.createModule(CudaKernelSources::vectorOps+CudaKernelSources::ewald, replacements);
+            ewaldSumsKernel = cu.getKernel(module, "calculateEwaldCosSinSums");
+            ewaldForcesKernel = cu.getKernel(module, "calculateEwaldForces");
+            int elementSize = (cu.getUseDoublePrecision() ? sizeof(double2) : sizeof(float2));
+            cosSinSums = new CudaArray(cu, (2*kmaxx-1)*(2*kmaxy-1)*(2*kmaxz-1), elementSize, "cosSinSums");
+        }
     }
-    else if (force.getNonbondedMethod() == NonbondedForce::PME && cu.getContextIndex() == 0) {
+    else if (force.getNonbondedMethod() == NonbondedForce::PME) {
         // Compute the PME parameters.
 
         int gridSizeX, gridSizeY, gridSizeZ;
@@ -1557,140 +1559,142 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
         defines["EWALD_ALPHA"] = cu.doubleToString(alpha);
         defines["TWO_OVER_SQRT_PI"] = cu.doubleToString(2.0/sqrt(M_PI));
         defines["USE_EWALD"] = "1";
-        ewaldSelfEnergy = -ONE_4PI_EPS0*alpha*sumSquaredCharges/sqrt(M_PI);
-        pmeDefines["PME_ORDER"] = cu.intToString(PmeOrder);
-        pmeDefines["NUM_ATOMS"] = cu.intToString(numParticles);
-        pmeDefines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
-        pmeDefines["RECIP_EXP_FACTOR"] = cu.doubleToString(M_PI*M_PI/(alpha*alpha));
-        pmeDefines["GRID_SIZE_X"] = cu.intToString(gridSizeX);
-        pmeDefines["GRID_SIZE_Y"] = cu.intToString(gridSizeY);
-        pmeDefines["GRID_SIZE_Z"] = cu.intToString(gridSizeZ);
-        pmeDefines["EPSILON_FACTOR"] = cu.doubleToString(sqrt(ONE_4PI_EPS0));
-        pmeDefines["M_PI"] = cu.doubleToString(M_PI);
-        if (cu.getUseDoublePrecision())
-            pmeDefines["USE_DOUBLE_PRECISION"] = "1";
-        CUmodule module = cu.createModule(CudaKernelSources::vectorOps+CudaKernelSources::pme, pmeDefines);
-        if (cu.getPlatformData().useCpuPme) {
-            // Create the CPU PME kernel.
-            
-            try {
-                cpuPme = getPlatform().createKernel(CalcPmeReciprocalForceKernel::Name(), *cu.getPlatformData().context);
-                cpuPme.getAs<CalcPmeReciprocalForceKernel>().initialize(gridSizeX, gridSizeY, gridSizeZ, numParticles, alpha);
-                CUfunction addForcesKernel = cu.getKernel(module, "addForces");
-                pmeio = new PmeIO(cu, addForcesKernel);
-                cu.addPreComputation(new PmePreComputation(cu, cpuPme, *pmeio));
-                cu.addPostComputation(new PmePostComputation(cpuPme, *pmeio));
+        if (cu.getContextIndex() == 0) {
+            ewaldSelfEnergy = -ONE_4PI_EPS0*alpha*sumSquaredCharges/sqrt(M_PI);
+            pmeDefines["PME_ORDER"] = cu.intToString(PmeOrder);
+            pmeDefines["NUM_ATOMS"] = cu.intToString(numParticles);
+            pmeDefines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
+            pmeDefines["RECIP_EXP_FACTOR"] = cu.doubleToString(M_PI*M_PI/(alpha*alpha));
+            pmeDefines["GRID_SIZE_X"] = cu.intToString(gridSizeX);
+            pmeDefines["GRID_SIZE_Y"] = cu.intToString(gridSizeY);
+            pmeDefines["GRID_SIZE_Z"] = cu.intToString(gridSizeZ);
+            pmeDefines["EPSILON_FACTOR"] = cu.doubleToString(sqrt(ONE_4PI_EPS0));
+            pmeDefines["M_PI"] = cu.doubleToString(M_PI);
+            if (cu.getUseDoublePrecision())
+                pmeDefines["USE_DOUBLE_PRECISION"] = "1";
+            CUmodule module = cu.createModule(CudaKernelSources::vectorOps+CudaKernelSources::pme, pmeDefines);
+            if (cu.getPlatformData().useCpuPme) {
+                // Create the CPU PME kernel.
+
+                try {
+                    cpuPme = getPlatform().createKernel(CalcPmeReciprocalForceKernel::Name(), *cu.getPlatformData().context);
+                    cpuPme.getAs<CalcPmeReciprocalForceKernel>().initialize(gridSizeX, gridSizeY, gridSizeZ, numParticles, alpha);
+                    CUfunction addForcesKernel = cu.getKernel(module, "addForces");
+                    pmeio = new PmeIO(cu, addForcesKernel);
+                    cu.addPreComputation(new PmePreComputation(cu, cpuPme, *pmeio));
+                    cu.addPostComputation(new PmePostComputation(cpuPme, *pmeio));
+                }
+                catch (OpenMMException& ex) {
+                    // The CPU PME plugin isn't available.
+                }
             }
-            catch (OpenMMException& ex) {
-                // The CPU PME plugin isn't available.
-            }
-        }
-        if (pmeio == NULL) {
-            pmeGridIndexKernel = cu.getKernel(module, "findAtomGridIndex");
-            pmeSpreadChargeKernel = cu.getKernel(module, "gridSpreadCharge");
-            pmeConvolutionKernel = cu.getKernel(module, "reciprocalConvolution");
-            pmeInterpolateForceKernel = cu.getKernel(module, "gridInterpolateForce");
-            pmeEvalEnergyKernel = cu.getKernel(module, "gridEvaluateEnergy");
-            pmeFinishSpreadChargeKernel = cu.getKernel(module, "finishSpreadCharge");
-            cuFuncSetCacheConfig(pmeSpreadChargeKernel, CU_FUNC_CACHE_PREFER_L1);
-            cuFuncSetCacheConfig(pmeInterpolateForceKernel, CU_FUNC_CACHE_PREFER_L1);
+            if (pmeio == NULL) {
+                pmeGridIndexKernel = cu.getKernel(module, "findAtomGridIndex");
+                pmeSpreadChargeKernel = cu.getKernel(module, "gridSpreadCharge");
+                pmeConvolutionKernel = cu.getKernel(module, "reciprocalConvolution");
+                pmeInterpolateForceKernel = cu.getKernel(module, "gridInterpolateForce");
+                pmeEvalEnergyKernel = cu.getKernel(module, "gridEvaluateEnergy");
+                pmeFinishSpreadChargeKernel = cu.getKernel(module, "finishSpreadCharge");
+                cuFuncSetCacheConfig(pmeSpreadChargeKernel, CU_FUNC_CACHE_PREFER_L1);
+                cuFuncSetCacheConfig(pmeInterpolateForceKernel, CU_FUNC_CACHE_PREFER_L1);
 
-            // Create required data structures.
+                // Create required data structures.
 
-            int elementSize = (cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
+                int elementSize = (cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
 
-            directPmeGrid = new CudaArray(cu, gridSizeX*gridSizeY*gridSizeZ, cu.getComputeCapability() >= 2.0 ? elementSize : sizeof(long long), "originalPmeGrid");
-            reciprocalPmeGrid = new CudaArray(cu, gridSizeX*gridSizeY*(gridSizeZ/2+1), 2*elementSize, "reciprocalPmeGrid");
+                directPmeGrid = new CudaArray(cu, gridSizeX*gridSizeY*gridSizeZ, cu.getComputeCapability() >= 2.0 ? elementSize : sizeof(long long), "originalPmeGrid");
+                reciprocalPmeGrid = new CudaArray(cu, gridSizeX*gridSizeY*(gridSizeZ/2+1), 2*elementSize, "reciprocalPmeGrid");
 
-            cu.addAutoclearBuffer(*directPmeGrid);
+                cu.addAutoclearBuffer(*directPmeGrid);
 
-            pmeBsplineModuliX = new CudaArray(cu, gridSizeX, elementSize, "pmeBsplineModuliX");
-            pmeBsplineModuliY = new CudaArray(cu, gridSizeY, elementSize, "pmeBsplineModuliY");
-            pmeBsplineModuliZ = new CudaArray(cu, gridSizeZ, elementSize, "pmeBsplineModuliZ");
-            pmeAtomRange = CudaArray::create<int>(cu, gridSizeX*gridSizeY*gridSizeZ+1, "pmeAtomRange");
-            pmeAtomGridIndex = CudaArray::create<int2>(cu, numParticles, "pmeAtomGridIndex");
-            sort = new CudaSort(cu, new SortTrait(), cu.getNumAtoms());
+                pmeBsplineModuliX = new CudaArray(cu, gridSizeX, elementSize, "pmeBsplineModuliX");
+                pmeBsplineModuliY = new CudaArray(cu, gridSizeY, elementSize, "pmeBsplineModuliY");
+                pmeBsplineModuliZ = new CudaArray(cu, gridSizeZ, elementSize, "pmeBsplineModuliZ");
+                pmeAtomRange = CudaArray::create<int>(cu, gridSizeX*gridSizeY*gridSizeZ+1, "pmeAtomRange");
+                pmeAtomGridIndex = CudaArray::create<int2>(cu, numParticles, "pmeAtomGridIndex");
+                sort = new CudaSort(cu, new SortTrait(), cu.getNumAtoms());
 
-            cufftResult result = cufftPlan3d(&fftForward, gridSizeX, gridSizeY, gridSizeZ, cu.getUseDoublePrecision() ? CUFFT_D2Z : CUFFT_R2C);
-            if (result != CUFFT_SUCCESS)
-                throw OpenMMException("Error initializing FFT: "+cu.intToString(result));
-            result = cufftPlan3d(&fftBackward, gridSizeX, gridSizeY, gridSizeZ, cu.getUseDoublePrecision() ? CUFFT_Z2D : CUFFT_C2R);
-            if (result != CUFFT_SUCCESS)
-                throw OpenMMException("Error initializing FFT: "+cu.intToString(result));
+                cufftResult result = cufftPlan3d(&fftForward, gridSizeX, gridSizeY, gridSizeZ, cu.getUseDoublePrecision() ? CUFFT_D2Z : CUFFT_R2C);
+                if (result != CUFFT_SUCCESS)
+                    throw OpenMMException("Error initializing FFT: "+cu.intToString(result));
+                result = cufftPlan3d(&fftBackward, gridSizeX, gridSizeY, gridSizeZ, cu.getUseDoublePrecision() ? CUFFT_Z2D : CUFFT_C2R);
+                if (result != CUFFT_SUCCESS)
+                    throw OpenMMException("Error initializing FFT: "+cu.intToString(result));
 
-            cufftSetCompatibilityMode(fftForward, CUFFT_COMPATIBILITY_NATIVE);
-            cufftSetCompatibilityMode(fftBackward, CUFFT_COMPATIBILITY_NATIVE);
+                cufftSetCompatibilityMode(fftForward, CUFFT_COMPATIBILITY_NATIVE);
+                cufftSetCompatibilityMode(fftBackward, CUFFT_COMPATIBILITY_NATIVE);
 
-            hasInitializedFFT = true;
+                hasInitializedFFT = true;
 
-            // Initialize the b-spline moduli.
+                // Initialize the b-spline moduli.
 
-            int maxSize = max(max(gridSizeX, gridSizeY), gridSizeZ);
-            vector<double> data(PmeOrder);
-            vector<double> ddata(PmeOrder);
-            vector<double> bsplines_data(maxSize);
-            data[PmeOrder-1] = 0.0;
-            data[1] = 0.0;
-            data[0] = 1.0;
-            for (int i = 3; i < PmeOrder; i++) {
-                double div = 1.0/(i-1.0);
-                data[i-1] = 0.0;
-                for (int j = 1; j < (i-1); j++)
-                    data[i-j-1] = div*(j*data[i-j-2]+(i-j)*data[i-j-1]);
+                int maxSize = max(max(gridSizeX, gridSizeY), gridSizeZ);
+                vector<double> data(PmeOrder);
+                vector<double> ddata(PmeOrder);
+                vector<double> bsplines_data(maxSize);
+                data[PmeOrder-1] = 0.0;
+                data[1] = 0.0;
+                data[0] = 1.0;
+                for (int i = 3; i < PmeOrder; i++) {
+                    double div = 1.0/(i-1.0);
+                    data[i-1] = 0.0;
+                    for (int j = 1; j < (i-1); j++)
+                        data[i-j-1] = div*(j*data[i-j-2]+(i-j)*data[i-j-1]);
+                    data[0] = div*data[0];
+                }
+
+                // Differentiate.
+
+                ddata[0] = -data[0];
+                for (int i = 1; i < PmeOrder; i++)
+                    ddata[i] = data[i-1]-data[i];
+                double div = 1.0/(PmeOrder-1);
+                data[PmeOrder-1] = 0.0;
+                for (int i = 1; i < (PmeOrder-1); i++)
+                    data[PmeOrder-i-1] = div*(i*data[PmeOrder-i-2]+(PmeOrder-i)*data[PmeOrder-i-1]);
                 data[0] = div*data[0];
-            }
+                for (int i = 0; i < maxSize; i++)
+                    bsplines_data[i] = 0.0;
+                for (int i = 1; i <= PmeOrder; i++)
+                    bsplines_data[i] = data[i-1];
 
-            // Differentiate.
+                // Evaluate the actual bspline moduli for X/Y/Z.
 
-            ddata[0] = -data[0];
-            for (int i = 1; i < PmeOrder; i++)
-                ddata[i] = data[i-1]-data[i];
-            double div = 1.0/(PmeOrder-1);
-            data[PmeOrder-1] = 0.0;
-            for (int i = 1; i < (PmeOrder-1); i++)
-                data[PmeOrder-i-1] = div*(i*data[PmeOrder-i-2]+(PmeOrder-i)*data[PmeOrder-i-1]);
-            data[0] = div*data[0];
-            for (int i = 0; i < maxSize; i++)
-                bsplines_data[i] = 0.0;
-            for (int i = 1; i <= PmeOrder; i++)
-                bsplines_data[i] = data[i-1];
-
-            // Evaluate the actual bspline moduli for X/Y/Z.
-
-            for(int dim = 0; dim < 3; dim++) {
-                int ndata = (dim == 0 ? gridSizeX : dim == 1 ? gridSizeY : gridSizeZ);
-                vector<double> moduli(ndata);
-                for (int i = 0; i < ndata; i++) {
-                    double sc = 0.0;
-                    double ss = 0.0;
-                    for (int j = 0; j < ndata; j++) {
-                        double arg = (2.0*M_PI*i*j)/ndata;
-                        sc += bsplines_data[j]*cos(arg);
-                        ss += bsplines_data[j]*sin(arg);
+                for(int dim = 0; dim < 3; dim++) {
+                    int ndata = (dim == 0 ? gridSizeX : dim == 1 ? gridSizeY : gridSizeZ);
+                    vector<double> moduli(ndata);
+                    for (int i = 0; i < ndata; i++) {
+                        double sc = 0.0;
+                        double ss = 0.0;
+                        for (int j = 0; j < ndata; j++) {
+                            double arg = (2.0*M_PI*i*j)/ndata;
+                            sc += bsplines_data[j]*cos(arg);
+                            ss += bsplines_data[j]*sin(arg);
+                        }
+                        moduli[i] = sc*sc+ss*ss;
                     }
-                    moduli[i] = sc*sc+ss*ss;
-                }
-                for (int i = 0; i < ndata; i++)
-                    if (moduli[i] < 1.0e-7)
-                        moduli[i] = (moduli[i-1]+moduli[i+1])*0.5;
-                if (cu.getUseDoublePrecision()) {
-                    if (dim == 0)
-                        pmeBsplineModuliX->upload(moduli);
-                    else if (dim == 1)
-                        pmeBsplineModuliY->upload(moduli);
-                    else
-                        pmeBsplineModuliZ->upload(moduli);
-                }
-                else {
-                    vector<float> modulif(ndata);
                     for (int i = 0; i < ndata; i++)
-                        modulif[i] = (float) moduli[i];
-                    if (dim == 0)
-                        pmeBsplineModuliX->upload(modulif);
-                    else if (dim == 1)
-                        pmeBsplineModuliY->upload(modulif);
-                    else
-                        pmeBsplineModuliZ->upload(modulif);
+                        if (moduli[i] < 1.0e-7)
+                            moduli[i] = (moduli[i-1]+moduli[i+1])*0.5;
+                    if (cu.getUseDoublePrecision()) {
+                        if (dim == 0)
+                            pmeBsplineModuliX->upload(moduli);
+                        else if (dim == 1)
+                            pmeBsplineModuliY->upload(moduli);
+                        else
+                            pmeBsplineModuliZ->upload(moduli);
+                    }
+                    else {
+                        vector<float> modulif(ndata);
+                        for (int i = 0; i < ndata; i++)
+                            modulif[i] = (float) moduli[i];
+                        if (dim == 0)
+                            pmeBsplineModuliX->upload(modulif);
+                        else if (dim == 1)
+                            pmeBsplineModuliY->upload(modulif);
+                        else
+                            pmeBsplineModuliZ->upload(modulif);
+                    }
                 }
             }
         }
