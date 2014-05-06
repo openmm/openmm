@@ -748,7 +748,7 @@ void testChangingParameters() {
     ASSERT_EQUAL_TOL(cuState.getPotentialEnergy(), referenceState.getPotentialEnergy(), tol);
 }
 
-void testParallelComputation(bool useCutoff) {
+void testParallelComputation(NonbondedForce::NonbondedMethod method) {
     System system;
     const int numParticles = 200;
     for (int i = 0; i < numParticles; i++)
@@ -756,9 +756,9 @@ void testParallelComputation(bool useCutoff) {
     NonbondedForce* force = new NonbondedForce();
     for (int i = 0; i < numParticles; i++)
         force->addParticle(i%2-0.5, 0.5, 1.0);
-    if (useCutoff)
-        force->setNonbondedMethod(NonbondedForce::CutoffNonPeriodic);
+    force->setNonbondedMethod(method);
     system.addForce(force);
+    system.setDefaultPeriodicBoxVectors(Vec3(5,0,0), Vec3(0,5,0), Vec3(0,0,5));
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);
     vector<Vec3> positions(numParticles);
@@ -877,8 +877,9 @@ int main(int argc, char* argv[]) {
         //testBlockInteractions(true);
         testDispersionCorrection();
         testChangingParameters();
-        testParallelComputation(false);
-        testParallelComputation(true);
+        testParallelComputation(NonbondedForce::NoCutoff);
+        testParallelComputation(NonbondedForce::Ewald);
+        testParallelComputation(NonbondedForce::PME);
         testSwitchingFunction(NonbondedForce::CutoffNonPeriodic);
         testSwitchingFunction(NonbondedForce::PME);
     }
