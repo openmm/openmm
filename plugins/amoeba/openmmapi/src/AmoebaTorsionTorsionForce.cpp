@@ -86,42 +86,55 @@ ForceImpl* AmoebaTorsionTorsionForce::createImpl() const {
 }
 
 AmoebaTorsionTorsionForce::TorsionTorsionGridInfo::TorsionTorsionGridInfo(const TorsionTorsionGrid& grid) {
-    _grid = grid;
+    if (grid[0][0][0] != grid[1][0][0])
+        _grid = grid;
+    else {
+        // We need to transpose the grid.
+        
+        int xsize = grid[0].size();
+        int ysize = grid.size();
+        _grid.resize(xsize);
+        for (int i = 0; i < xsize; i++) {
+            _grid[i].resize(ysize);
+            for (int j = 0; j < ysize; j++)
+                _grid[i][j] = grid[j][i];
+        }
+    }
 
     _startValues[0] =  _grid[0][0][0];
     _startValues[1] =  _grid[0][0][1];
 
     _spacing[0]     = static_cast<double>(_grid.size()-1)/360.0;
-    _spacing[1]     = static_cast<double>(grid.size()-1)/360.0;
+    _spacing[1]     = static_cast<double>(_grid.size()-1)/360.0;
 
-    _size[0]        = static_cast<int>(grid.size());
-    _size[1]        = static_cast<int>(grid[0].size());
+    _size[0]        = static_cast<int>(_grid.size());
+    _size[1]        = static_cast<int>(_grid[0].size());
     
-    if (grid[0][0].size() == 3) {
+    if (_grid[0][0].size() == 3) {
         // We need to compute the derivatives ourselves.  First determine if the grid is periodic.
         
         int xsize = _size[0];
         int ysize = _size[1];
         bool periodic = true;
         for (int i = 0; i < xsize; i++)
-            if (grid[i][0][2] != grid[i][ysize-1][2])
+            if (_grid[i][0][2] != _grid[i][ysize-1][2])
                 periodic = false;
         for (int i = 0; i < ysize; i++)
-            if (grid[0][i][2] != grid[xsize-1][i][2])
+            if (_grid[0][i][2] != _grid[xsize-1][i][2])
                 periodic = false;
         
         // Compute derivatives with respect to the first angle.
 
         vector<double> x(xsize), y(ysize);
         for (int i = 0; i < xsize; i++)
-            x[i] = grid[i][0][0];
-        for (int i = 0; i < xsize; i++)
-            y[i] = grid[0][i][1];
+            x[i] = _grid[i][0][0];
+        for (int i = 0; i < ysize; i++)
+            y[i] = _grid[0][i][1];
         vector<double> d1(xsize*ysize), d2(xsize*ysize), d12(xsize*ysize);
         vector<double> t(xsize), deriv(xsize);
         for (int i = 0; i < ysize; i++) {
             for (int j = 0; j < xsize; j++)
-                t[j] = grid[j][i][2];
+                t[j] = _grid[j][i][2];
             if (periodic)
                 SplineFitter::createPeriodicSpline(x, t, deriv);
             else
@@ -136,7 +149,7 @@ AmoebaTorsionTorsionForce::TorsionTorsionGridInfo::TorsionTorsionGridInfo(const 
         deriv.resize(ysize);
         for (int i = 0; i < xsize; i++) {
             for (int j = 0; j < ysize; j++)
-                t[j] = grid[i][j][2];
+                t[j] = _grid[i][j][2];
             if (periodic)
                 SplineFitter::createPeriodicSpline(y, t, deriv);
             else
