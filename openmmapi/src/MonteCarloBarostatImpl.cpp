@@ -35,6 +35,7 @@
 #include "openmm/kernels.h"
 #include <cmath>
 #include <vector>
+#include <algorithm>
 
 using namespace OpenMM;
 using namespace OpenMM_SFMT;

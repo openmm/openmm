@@ -25,6 +25,7 @@
 #include <string.h>
 #include <sstream>
 #include <complex>
+#include <algorithm>
 
 #include "SimTKOpenMMCommon.h"
 #include "SimTKOpenMMLog.h"

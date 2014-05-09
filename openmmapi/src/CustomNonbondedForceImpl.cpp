@@ -43,6 +43,7 @@
 #include <cmath>
 #include <sstream>
 #include <utility>
+#include <algorithm>
 
 using namespace OpenMM;
 using namespace std;
