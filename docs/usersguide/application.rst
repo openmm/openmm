@@ -654,13 +654,15 @@ For the main force field, OpenMM provides the following options:
 =================  ================================================================================
 File               Force Field                                                                     
 =================  ================================================================================
-amber96.xml        AMBER96\ :cite:`Kollman1997`                                                  
+amber96.xml        AMBER96\ :cite:`Kollman1997`
 amber99sb.xml      AMBER99\ :cite:`Wang2000` with modified backbone torsions\ :cite:`Hornak2006`
-amber99sbildn.xml  AMBER99SB plus improved side chain torsions\ :cite:`Lindorff-Larsen2010`      
-amber99sbnmr.xml   AMBER99SB with modifications to fit NMR data\ :cite:`Li2010`                  
-amber03.xml        AMBER03\ :cite:`Duan2003`                                                     
-amber10.xml        AMBER10                                                                         
-amoeba2009.xml     AMOEBA\ :cite:`Ren2002`                                                       
+amber99sbildn.xml  AMBER99SB plus improved side chain torsions\ :cite:`Lindorff-Larsen2010`
+amber99sbnmr.xml   AMBER99SB with modifications to fit NMR data\ :cite:`Li2010`
+amber03.xml        AMBER03\ :cite:`Duan2003`
+amber10.xml        AMBER10
+amoeba2009.xml     AMOEBA 2009\ :cite:`Ren2002`.  This force field is deprecated.  It is 
+                   recommended to use AMOEBA 2013 instead.
+amoeba2013.xml     AMOEBA 2013\ :cite:`Shi2013`
 =================  ================================================================================
 
 
@@ -692,15 +694,16 @@ the following files:
 
 .. tabularcolumns:: |l|L|
 
-=================  ==============================================================================================
+=================  =================================================================================================
 File               Implicit Solvation Model                                                                      
-=================  ==============================================================================================
-amber96_obc.xml    GBSA-OBC solvation model\ :cite:`Onufriev2004` for use with AMBER96 force field             
-amber99_obc.xml    GBSA-OBC solvation model for use with AMBER99 force fields                                    
-amber03_obc.xml    GBSA-OBC solvation model for use with AMBER03 force field                                     
-amber10_obc.xml    GBSA-OBC solvation model for use with AMBER10 force field                                     
-amoeba2009_gk.xml  Generalized Kirkwood solvation model\ :cite:`Schnieders2007` for use with AMOEBA force field
-=================  ==============================================================================================
+=================  =================================================================================================
+amber96_obc.xml    GBSA-OBC solvation model\ :cite:`Onufriev2004` for use with AMBER96 force field
+amber99_obc.xml    GBSA-OBC solvation model for use with AMBER99 force fields
+amber03_obc.xml    GBSA-OBC solvation model for use with AMBER03 force field
+amber10_obc.xml    GBSA-OBC solvation model for use with AMBER10 force field
+amoeba2009_gk.xml  Generalized Kirkwood solvation model\ :cite:`Schnieders2007` for use with AMOEBA 2009 force field
+amoeba2013_gk.xml  Generalized Kirkwood solvation model for use with AMOEBA 2013 force field
+=================  =================================================================================================
 
 
 For example, to use the GBSA-OBC solvation model with the Amber99SB force field,

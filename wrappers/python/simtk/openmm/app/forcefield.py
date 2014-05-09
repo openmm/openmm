@@ -2505,9 +2505,10 @@ class AmoebaTorsionTorsionGenerator:
                 gridRow.append(float(gridEntry.attrib['angle1']))
                 gridRow.append(float(gridEntry.attrib['angle2']))
                 gridRow.append(float(gridEntry.attrib['f']))
-                gridRow.append(float(gridEntry.attrib['fx']))
-                gridRow.append(float(gridEntry.attrib['fy']))
-                gridRow.append(float(gridEntry.attrib['fxy']))
+                if 'fx' in gridEntry.attrib:
+                    gridRow.append(float(gridEntry.attrib['fx']))
+                    gridRow.append(float(gridEntry.attrib['fy']))
+                    gridRow.append(float(gridEntry.attrib['fxy']))
                 gridCol.append(gridRow)
 
                 gridColIndex  += 1
