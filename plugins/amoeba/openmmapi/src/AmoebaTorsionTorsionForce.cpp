@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2014 Stanford University and the Authors.      *
  * Authors:                                                                   *
  * Contributors:                                                              *
  *                                                                            *
@@ -33,8 +33,10 @@
 #include "openmm/OpenMMException.h"
 #include "openmm/AmoebaTorsionTorsionForce.h"
 #include "openmm/internal/AmoebaTorsionTorsionForceImpl.h"
+#include "openmm/internal/SplineFitter.h"
 
 using namespace OpenMM;
+using namespace std;
 
 AmoebaTorsionTorsionForce::AmoebaTorsionTorsionForce() {
 }
@@ -81,4 +83,103 @@ void AmoebaTorsionTorsionForce::setTorsionTorsionGrid(int index, const TorsionTo
 
 ForceImpl* AmoebaTorsionTorsionForce::createImpl() const {
     return new AmoebaTorsionTorsionForceImpl(*this);
+}
+
+AmoebaTorsionTorsionForce::TorsionTorsionGridInfo::TorsionTorsionGridInfo(const TorsionTorsionGrid& grid) {
+    if (grid[0][0][0] != grid[1][0][0])
+        _grid = grid;
+    else {
+        // We need to transpose the grid.
+        
+        int xsize = grid[0].size();
+        int ysize = grid.size();
+        _grid.resize(xsize);
+        for (int i = 0; i < xsize; i++) {
+            _grid[i].resize(ysize);
+            for (int j = 0; j < ysize; j++)
+                _grid[i][j] = grid[j][i];
+        }
+    }
+
+    _startValues[0] =  _grid[0][0][0];
+    _startValues[1] =  _grid[0][0][1];
+
+    _spacing[0]     = static_cast<double>(_grid.size()-1)/360.0;
+    _spacing[1]     = static_cast<double>(_grid.size()-1)/360.0;
+
+    _size[0]        = static_cast<int>(_grid.size());
+    _size[1]        = static_cast<int>(_grid[0].size());
+    
+    if (_grid[0][0].size() == 3) {
+        // We need to compute the derivatives ourselves.  First determine if the grid is periodic.
+        
+        int xsize = _size[0];
+        int ysize = _size[1];
+        bool periodic = true;
+        for (int i = 0; i < xsize; i++)
+            if (_grid[i][0][2] != _grid[i][ysize-1][2])
+                periodic = false;
+        for (int i = 0; i < ysize; i++)
+            if (_grid[0][i][2] != _grid[xsize-1][i][2])
+                periodic = false;
+        
+        // Compute derivatives with respect to the first angle.
+
+        vector<double> x(xsize), y(ysize);
+        for (int i = 0; i < xsize; i++)
+            x[i] = _grid[i][0][0];
+        for (int i = 0; i < ysize; i++)
+            y[i] = _grid[0][i][1];
+        vector<double> d1(xsize*ysize), d2(xsize*ysize), d12(xsize*ysize);
+        vector<double> t(xsize), deriv(xsize);
+        for (int i = 0; i < ysize; i++) {
+            for (int j = 0; j < xsize; j++)
+                t[j] = _grid[j][i][2];
+            if (periodic)
+                SplineFitter::createPeriodicSpline(x, t, deriv);
+            else
+                SplineFitter::createNaturalSpline(x, t, deriv);
+            for (int j = 0; j < xsize; j++)
+                d1[j+xsize*i] = SplineFitter::evaluateSplineDerivative(x, t, deriv, x[j]);
+        }
+
+        // Compute derivatives with respect to the second angle.
+
+        t.resize(ysize);
+        deriv.resize(ysize);
+        for (int i = 0; i < xsize; i++) {
+            for (int j = 0; j < ysize; j++)
+                t[j] = _grid[i][j][2];
+            if (periodic)
+                SplineFitter::createPeriodicSpline(y, t, deriv);
+            else
+                SplineFitter::createNaturalSpline(y, t, deriv);
+            for (int j = 0; j < ysize; j++)
+                d2[i+xsize*j] = SplineFitter::evaluateSplineDerivative(y, t, deriv, y[j]);
+        }
+
+        // Compute cross derivatives.
+
+        t.resize(xsize);
+        deriv.resize(xsize);
+        for (int i = 0; i < ysize; i++) {
+            for (int j = 0; j < xsize; j++)
+                t[j] = d2[j+xsize*i];
+            if (periodic)
+                SplineFitter::createPeriodicSpline(x, t, deriv);
+            else
+                SplineFitter::createNaturalSpline(x, t, deriv);
+            for (int j = 0; j < xsize; j++)
+                d12[j+xsize*i] = SplineFitter::evaluateSplineDerivative(x, t, deriv, x[j]);
+        }
+        
+        // Add the derivatives to the grid.
+        
+        for (int i = 0; i < xsize; i++)
+            for (int j = 0; j < ysize; j++) {
+                _grid[i][j].push_back(d1[i+xsize*j]);
+                _grid[i][j].push_back(d2[i+xsize*j]);
+                _grid[i][j].push_back(d12[i+xsize*j]);
+            }
+    }
 }

@@ -49,7 +49,7 @@ extern "C" OPENMM_EXPORT void registerAmoebaReferenceKernelFactories();
 
 const double TOL = 1e-4;
 
-TorsionTorsionGrid& getTorsionGrid( int gridIndex ) {
+TorsionTorsionGrid getTorsionGrid(int gridIndex, bool includeDerivs) {
 
 static double grid[4][625][6] = { 
     {
@@ -2557,35 +2557,32 @@ static double grid[4][625][6] = {
 {     165.0000,     180.0000, -0.182999000E+01,  0.377952854E-01,  0.233583295E-01, -0.109828932E-02 }, 
 {     180.0000,     180.0000, -0.146854000E+01,  0.491175487E-02,  0.195601580E-02, -0.163177030E-02 }  } };
 
-    // static std::vector< std::vector< std::vector<double> > > TorsionTorsionGrid
-    static std::vector<TorsionTorsionGrid> grids;
-    if( grids.size() == 0 ){
-        grids.resize(4);
-        for( int ii = 0; ii < 4; ii++ ){
-            grids[ii].resize( 25 );
-            for( int jj = 0; jj < 25; jj++ ){
-                grids[ii][jj].resize(25);
-                for( int kk = 0; kk < 25; kk++ ){
-                    grids[ii][jj][kk].resize(6);
-                }
+    int elementCount = (includeDerivs ? 6 : 3);
+    std::vector<TorsionTorsionGrid> grids(4);
+    for( int ii = 0; ii < 4; ii++ ){
+        grids[ii].resize( 25 );
+        for( int jj = 0; jj < 25; jj++ ){
+            grids[ii][jj].resize(25);
+            for( int kk = 0; kk < 25; kk++ ){
+                grids[ii][jj][kk].resize(elementCount);
             }
-            int index = 0;
-            for( int jj = 0; jj < 25; jj++ ){
-                for( int kk = 0; kk < 25; kk++ ){
-                    int jjIndex = static_cast<int>(((grid[ii][index][0] + 180.0)/15.0)+1.0e-05);
-                    int kkIndex = static_cast<int>(((grid[ii][index][1] + 180.0)/15.0)+1.0e-05);
-                    for( int ll = 0; ll < 6; ll++ ){
-                        grids[ii][kk][jj][ll] = grid[ii][index][ll];
-                    }
-                    index++;
+        }
+        int index = 0;
+        for( int jj = 0; jj < 25; jj++ ){
+            for( int kk = 0; kk < 25; kk++ ){
+                int jjIndex = static_cast<int>(((grid[ii][index][0] + 180.0)/15.0)+1.0e-05);
+                int kkIndex = static_cast<int>(((grid[ii][index][1] + 180.0)/15.0)+1.0e-05);
+                for( int ll = 0; ll < elementCount; ll++ ){
+                    grids[ii][kk][jj][ll] = grid[ii][index][ll];
                 }
+                index++;
             }
         }
     }
     return grids[gridIndex];
 }
 
-void testTorsionTorsion( FILE* log, int systemId ) {
+void testTorsionTorsion(int systemId, bool includeDerivs) {
 
     System system;
     int numberOfParticles = 6;
@@ -2645,11 +2642,11 @@ void testTorsionTorsion( FILE* log, int systemId ) {
 
         expectedEnergy        = -3.372536909E+00;
     }
-    amoebaTorsionTorsionForce->addTorsionTorsion( 0, 1, 2, 3, 4, chiralCheckAtomIndex, 0 );
-    amoebaTorsionTorsionForce->setTorsionTorsionGrid( 0, getTorsionGrid( gridIndex ) );
+    amoebaTorsionTorsionForce->addTorsionTorsion(0, 1, 2, 3, 4, chiralCheckAtomIndex, 0);
+    amoebaTorsionTorsionForce->setTorsionTorsionGrid(0, getTorsionGrid(gridIndex, includeDerivs));
     
     system.addForce(amoebaTorsionTorsionForce);
-    Context context(system, integrator, Platform::getPlatformByName( "Reference"));
+    Context context(system, integrator, Platform::getPlatformByName("Reference"));
 
     context.setPositions(positions);
     State state                      = context.getState(State::Forces | State::Energy);
@@ -2661,18 +2658,6 @@ void testTorsionTorsion( FILE* log, int systemId ) {
         forces[ii][1] *= conversion;
         forces[ii][2] *= conversion;
     }
-
-#ifdef AMOEBA_DEBUG
-    if( log ){
-        (void) fprintf( log, "computeAmoebaTorsionTorsionForces: expected energy=%14.7e %14.7e\n", expectedEnergy, state.getPotentialEnergy() );
-        for( unsigned int ii = 0; ii < forces.size(); ii++ ){
-            (void) fprintf( log, "%6u [%14.7e %14.7e %14.7e]   [%14.7e %14.7e %14.7e]\n", ii,
-                            expectedForces[ii][0], expectedForces[ii][1], expectedForces[ii][2],
-                            forces[ii][0], forces[ii][1], forces[ii][2] );
-        }
-        (void) fflush( log );
-    }
-#endif
 
     double tolerance = 1.0e-03;
     for( unsigned int ii = 0; ii < forces.size(); ii++ ){
@@ -2687,10 +2672,8 @@ int main( int numberOfArguments, char* argv[] ) {
     try {
         std::cout << "TestReferenceAmoebaTorsionTorsionForce running test..." << std::endl;
         registerAmoebaReferenceKernelFactories();
-        //registerAmoebaCudaKernelFactories();
-
-        FILE* log = NULL;
-        testTorsionTorsion( log, 1 );
+        testTorsionTorsion(1, true);
+        testTorsionTorsion(1, false);
     } catch(const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;
         std::cout << "FAIL - ERROR.  Test failed." << std::endl;
