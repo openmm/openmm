@@ -263,7 +263,7 @@ class Modeller(object):
          - positiveIon (string='Na+') the type of positive ion to add.  Allowed values are 'Cs+', 'K+', 'Li+', 'Na+', and 'Rb+'
          - negativeIon (string='Cl-') the type of negative ion to add.  Allowed values are 'Cl-', 'Br-', 'F-', and 'I-'. Be aware
            that not all force fields support all ion types.
-         - ionicString (concentration=0*molar) the total concentration of ions (both positive and negative) to add.  This
+         - ionicStrength (concentration=0*molar) the total concentration of ions (both positive and negative) to add.  This
            does not include ions that are added to neutralize the system.
         """
         # Pick a unit cell size.
