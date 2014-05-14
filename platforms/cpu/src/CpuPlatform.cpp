@@ -36,6 +36,7 @@
 #include "ReferenceConstraints.h"
 #include "openmm/internal/hardware.h"
 #include <sstream>
+#include <stdlib.h>
 
 using namespace OpenMM;
 using namespace std;
@@ -93,15 +94,20 @@ bool CpuPlatform::supportsDoublePrecision() const {
 }
 
 bool CpuPlatform::isProcessorSupported() {
-    // Make sure the CPU supports SSE 4.1.
-    
-    int cpuInfo[4];
-    cpuid(cpuInfo, 0);
-    if (cpuInfo[0] >= 1) {
-        cpuid(cpuInfo, 1);
-        return ((cpuInfo[2] & ((int) 1 << 19)) != 0);
-    }
-    return false;
+    // Make sure the CPU supports SSE 4.1 or NEON.
+        
+    #ifdef __ANDROID__
+        uint64_t features = android_getCpuFeatures();
+        return (features & ANDROID_CPU_ARM_FEATURE_NEON) != 0;
+    #else
+        int cpuInfo[4];
+        cpuid(cpuInfo, 0);
+        if (cpuInfo[0] >= 1) {
+            cpuid(cpuInfo, 1);
+            return ((cpuInfo[2] & ((int) 1 << 19)) != 0);
+        }
+        return false;
+    #endif
 }
 
 void CpuPlatform::contextCreated(ContextImpl& context, const map<string, string>& properties) const {
