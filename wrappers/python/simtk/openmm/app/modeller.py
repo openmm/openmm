@@ -240,7 +240,7 @@ class Modeller(object):
         self.topology = newTopology
         self.positions = newPositions
 
-    def addSolvent(self, forcefield, model='tip3p', boxSize=None, padding=None, positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*molar):
+    def addSolvent(self, forcefield, model='tip3p', boxSize=None, padding=None, positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*molar, maxWaters=None):
         """Add solvent (both water and ions) to the model to fill a rectangular box.
 
         The algorithm works as follows:
@@ -265,6 +265,7 @@ class Modeller(object):
            that not all force fields support all ion types.
          - ionicStrength (concentration=0*molar) the total concentration of ions (both positive and negative) to add.  This
            does not include ions that are added to neutralize the system.
+         - maxWaters The maximum number of waters to add.  Default (None) means no limit.
         """
         # Pick a unit cell size.
 
@@ -457,6 +458,8 @@ class Modeller(object):
             addIon(negativeElement)
 
         # Add the water molecules.
+        if maxWaters is not None:
+            addedWaters = addedWaters[0:maxWaters]
 
         for index, pos in addedWaters:
             newResidue = newTopology.addResidue(residue.name, newChain)
