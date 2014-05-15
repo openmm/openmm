@@ -215,39 +215,16 @@ inline ivec4::operator fvec4() const {
 
 // Functions that operate on fvec4s.
 
-static inline fvec4 floor(const fvec4& v) { // Tested: OK
-    fvec4 result = v + fvec4(0.5f);
-    result = (fvec4) ((ivec4) result);
-    return result;
-}
-
-static inline float roundToNearest(float num) {
-    return (num > 0.0f) ? std::floor(num + 0.5f) : std::ceil(num - 0.5f);
-}
-
-static inline fvec4 round(const fvec4& v) { // Tested: OK - Needs optimization
-    float aux[4];
-    vst1q_f32(aux, v);
-    return fvec4(roundToNearest(aux[0]), roundToNearest(aux[1]), roundToNearest(aux[2]), roundToNearest(aux[3]));
-}
-
 static inline fvec4 min(const fvec4& v1, const fvec4& v2) { // Tested OK
-    return fvec4(vminq_f32(v1.val, v2.val));
+    return vminq_f32(v1, v2);
 }
 
 static inline fvec4 max(const fvec4& v1, const fvec4& v2) { // Tested OK
-    return fvec4(vmaxq_f32(v1.val, v2.val));
+    return vmaxq_f32(v1, v2);
 }
 
-static inline fvec4 abs(const fvec4& v) { // Tested OK
-    return fvec4(vabdq_f32(v.val, fvec4(0.0)));
-}
-
-static inline fvec4 ceil(const fvec4& v) { // Tested OK
-    ivec4 intVersion = (ivec4) v;
-    fvec4 result = min((fvec4) (v > intVersion), fvec4(1.0f));
-    result += intVersion;
-    return result;
+static inline fvec4 abs(const fvec4& v) {
+    return vabsq_f32(v);
 }
 
 static inline fvec4 sqrt(const fvec4& v) {
@@ -330,8 +307,26 @@ static inline fvec4 operator/(float v1, const fvec4& v2) {
 
 // Operations for blending fvec4s based on an ivec4.
 
-static inline fvec4 blend(const fvec4& v1, const fvec4& v2, const ivec4& mask) { //  Tested OK
-    return fvec4(vbslq_f32(vreinterpretq_u32_s32(mask.val), v2, v1));
+static inline fvec4 blend(const fvec4& v1, const fvec4& v2, const ivec4& mask) {
+    return vbslq_f32(vreinterpretq_u32_s32(mask), v2, v1);
+}
+
+// These are at the end since they involve other functions defined above.
+
+static inline fvec4 round(const fvec4& v) {
+    fvec4 shift(0x1.0p23f);
+    fvec4 absResult = (abs(v)+shift)-shift;
+    return blend(v, absResult, ivec4(0x7FFFFFFF));
+}
+
+static inline fvec4 floor(const fvec4& v) {
+    fvec4 rounded = round(v);
+    return rounded + blend(0.0f, -1.0f, rounded>v);
+}
+
+static inline fvec4 ceil(const fvec4& v) {
+    fvec4 rounded = round(v);
+    return rounded + blend(0.0f, 1.0f, rounded<v);
 }
 
 #endif /*OPENMM_VECTORIZE_NEON_H_*/
