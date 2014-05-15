@@ -6,9 +6,9 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2013 Stanford University and the Authors.
-Authors: Peter Eastman
-Contributors: Robert McGibbon
+Portions copyright (c) 2014 Stanford University and the Authors.
+Authors: Robert T. McGibbon
+Contributors:
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -28,7 +28,7 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
-__author__ = "Robert McGibbon"
+__author__ = "Robert T. McGibbon"
 __version__ = "1.0"
 
 class ExponentiallyWeightedMovingAverage(object):
