@@ -45,6 +45,8 @@ import simtk.openmm as mm
 import simtk.unit as unit
 import math
 import time
+from simtk.openmm.app.internal.expaverage import ExponentiallyWeightedMovingAverage
+
 
 class StateDataReporter(object):
     """StateDataReporter outputs information about a simulation, such as energy and temperature, to a file.
@@ -121,6 +123,13 @@ class StateDataReporter(object):
         self._needsVelocities = False
         self._needsForces = False
         self._needEnergy = potentialEnergy or kineticEnergy or totalEnergy or temperature
+        # The convention with exponential weighted moving averages is to
+        # use the formula alpha=2/(N+1) to approximately concentrate the weight
+        # of the average over the last 'N' elements. Given a speed of ~100ns/day
+        # at a ~2fs timestep, you run 10,000 steps in ~15 seconds, which is
+        # our default smoothing.
+        self._expAverager = ExponentiallyWeightedMovingAverage(
+            alpha=2.0 / (1 + (max(1, 10000.0 / reportInterval))))
 
     def describeNextReport(self, simulation):
         """Get information about the next report this object will generate.
@@ -150,6 +159,8 @@ class StateDataReporter(object):
             except AttributeError:
                 pass
             self._initialClockTime = time.time()
+            self._lastReportClockTime = self._initialClockTime
+            self._lastReportNs = state.getTime()
             self._initialSimulationTime = state.getTime()
             self._initialSteps = simulation.currentStep
             self._hasInitialized = True
@@ -201,10 +212,11 @@ class StateDataReporter(object):
         if self._density:
             values.append((self._totalMass/volume).value_in_unit(unit.gram/unit.item/unit.milliliter))
         if self._speed:
-            elapsedDays = (clockTime-self._initialClockTime)/86400.0
-            elapsedNs = (state.getTime()-self._initialSimulationTime).value_in_unit(unit.nanosecond)
-            if elapsedDays > 0.0:
-                values.append('%.3g' % (elapsedNs/elapsedDays))
+            intervalDays = (clockTime - self._lastReportClockTime) / 86400.0
+            invervalNs = (state.getTime() - self._lastReportNs).value_in_unit(unit.nanosecond)
+            self._expAverager.push(invervalNs / intervalDays)
+            if intervalDays > 0.0:
+                values.append('%.3g' % self._expAverager.getState())
             else:
                 values.append('--')
         if self._remainingTime:
@@ -230,6 +242,8 @@ class StateDataReporter(object):
                 else:
                     value = "0:%02d" % remainingSeconds
             values.append(value)
+        self._lastReportClockTime = clockTime
+        self._lastReportNs = state.getTime()
         return values
 
     def _initializeConstants(self, simulation):
