@@ -450,7 +450,6 @@ class Modeller(object):
 
         # Add ions based on the desired ionic strength.
 
-        # Add the water molecules.
         if maxWaters is not None:
             random.shuffle(addedWaters)  # Need to permute waters first to avoid discarding entire clusters of waters
             addedWaters = addedWaters[0:maxWaters]        
@@ -462,6 +461,8 @@ class Modeller(object):
         for i in range(numPairs):
             addIon(negativeElement)
 
+        # Add the water molecules.
+        
         for index, pos in addedWaters:
             newResidue = newTopology.addResidue(residue.name, newChain)
             residue = pdbResidues[index]
