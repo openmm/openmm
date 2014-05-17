@@ -462,7 +462,7 @@ class Modeller(object):
             addIon(negativeElement)
 
         # Add the water molecules.
-        
+
         for index, pos in addedWaters:
             newResidue = newTopology.addResidue(residue.name, newChain)
             residue = pdbResidues[index]
