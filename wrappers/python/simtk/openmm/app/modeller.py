@@ -452,7 +452,7 @@ class Modeller(object):
 
         # Add the water molecules.
         if maxWaters is not None:
-            random.shuffle(addWaters)  # Need to permute waters first to avoid discarding entire clusters of waters
+            random.shuffle(addedWaters)  # Need to permute waters first to avoid discarding entire clusters of waters
             addedWaters = addedWaters[0:maxWaters]        
 
         numIons = len(addedWaters)*ionicStrength/(55.4*molar) # Pure water is about 55.4 molar (depending on temperature)
