@@ -1063,7 +1063,6 @@ class TrackedList(list):
     __delitem__ = _tracking(list.__delitem__)
     append = _tracking(list.append)
     extend = _tracking(list.extend)
-    __delslice__ = _tracking(list.__delslice__)
     __setitem__ = _tracking(list.__setitem__)
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
