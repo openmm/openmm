@@ -40,7 +40,7 @@
 #include <string>
 #include <vector>
 #include "internal/windowsExport.h"
-#include "internal/osrngseed.h"
+#include "internal/OSRngSeed.h"
 
 namespace OpenMM {
 

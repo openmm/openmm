@@ -31,7 +31,7 @@
 
 #include "openmm/MonteCarloAnisotropicBarostat.h"
 #include "openmm/internal/MonteCarloAnisotropicBarostatImpl.h"
-#include "openmm/internal/osrngseed.h"
+#include "openmm/internal/OSRngSeed.h"
 
 using namespace OpenMM;
 

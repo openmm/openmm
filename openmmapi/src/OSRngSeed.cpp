@@ -6,8 +6,8 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
- * Authors: Peter Eastman                                                     *
+ * Portions copyright (c) 2013 Stanford University and the Authors.           *
+ * Authors: Robert T. McGibbon                                                *
  * Contributors:                                                              *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
@@ -29,17 +29,39 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/AndersenThermostat.h"
-#include "openmm/internal/AndersenThermostatImpl.h"
-#include "openmm/internal/OSRngSeed.h"
+#include <stdexcept>
+#if defined(_WIN32) || defined(__CYGWIN__)
+#include <windows.h>
+static HCRYPTPROV hCryptProv = 0;
+#pragma comment(lib, "advapi32.lib")
+#else
+#include <fcntl.h>
+#include <unistd.h>
+#endif
+#include "internal/OSRngSeed.h"
 
-using namespace OpenMM;
-
-AndersenThermostat::AndersenThermostat(double defaultTemperature, double defaultCollisionFrequency) :
-        defaultTemp(defaultTemperature), defaultFreq(defaultCollisionFrequency) {
-    setRandomNumberSeed(osrngseed());
-}
-
-ForceImpl* AndersenThermostat::createImpl() const {
-    return new AndersenThermostatImpl(*this);
+int osrngseed(void) {
+    int value;
+#if defined(_WIN32) || defined(__CYGWIN__)
+    if (!::CryptAcquireContextW(&hCryptProv, 0, 0, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT | CRYPT_SILENT)) {
+        throw std::runtime_error("Failed to initialize Windows random API (CryptoGen)");
+    }
+    if (!CryptGenRandom(hCryptProv, sizeof(int), (BYTE*) &value)) {
+        ::CryptReleaseContext(hCryptProv, 0);
+        throw std::runtime_error("Failed to get random numbers");
+    }
+    if (!::CryptReleaseContext(hCryptProv, 0)) {
+        throw std::runtime_error("Failed to release Windows random API context");
+    }
+#else
+    int m_fd = open("/dev/urandom", O_RDONLY);
+    if (m_fd == -1) {
+        throw std::runtime_error("Failed to open /dev/urandom");
+    }
+    if (read(m_fd, &value, sizeof(int)) != sizeof(int)) {
+        throw std::runtime_error("Failed to read bytes from /dev/urandom");
+    }
+    close(m_fd);
+#endif
+    return value;
 }

@@ -31,7 +31,7 @@
 
 #include "openmm/MonteCarloBarostat.h"
 #include "openmm/internal/MonteCarloBarostatImpl.h"
-#include "openmm/internal/osrngseed.h"
+#include "openmm/internal/OSRngSeed.h"
 
 using namespace OpenMM;
 

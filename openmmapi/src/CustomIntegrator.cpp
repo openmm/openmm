@@ -34,7 +34,7 @@
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/AssertionUtilities.h"
 #include "openmm/internal/ContextImpl.h"
-#include "openmm/internal/osrngseed.h"
+#include "openmm/internal/OSRngSeed.h"
 #include "openmm/kernels.h"
 #include <string>
 
