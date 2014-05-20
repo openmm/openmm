@@ -1,3 +1,7 @@
+#ifndef OPENMM_OSRNGSEED_H_
+#define OPENMM_OSRNGSEED_H_
+
+
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -6,8 +10,8 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
- * Authors: Peter Eastman                                                     *
+ * Portions copyright (c) 2013 Stanford University and the Authors.           *
+ * Authors: Robert T. McGibbon                                                *
  * Contributors:                                                              *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
@@ -29,17 +33,47 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/MonteCarloAnisotropicBarostat.h"
-#include "openmm/internal/MonteCarloAnisotropicBarostatImpl.h"
-#include "openmm/internal/osrngseed.h"
+#include <stdexcept>
+#if defined(_WIN32) || defined(__CYGWIN__)
+#include <windows.h>
+static HCRYPTPROV hCryptProv = 0;
+#pragma comment(lib, "advapi32.lib")
+#else
+#include <fcntl.h>
+#include <unistd.h>
+#endif
 
-using namespace OpenMM;
-
-MonteCarloAnisotropicBarostat::MonteCarloAnisotropicBarostat(const Vec3& defaultPressure, double temperature, bool scaleX, bool scaleY, bool scaleZ, int frequency) :
-        defaultPressure(defaultPressure), temperature(temperature), scaleX(scaleX), scaleY(scaleY), scaleZ(scaleZ), frequency(frequency) {
-    setRandomNumberSeed(osrngseed());
+/**
+ * Return an integer int for use as a seed for a random number generator.
+ * 
+ * The behavior of this function is platform dependent. On Windows machines,
+ * this uses CryptGenRandom from the CryptoAPI to get a single int. On other
+ * platforms (*nix, apple), we read from /dev/urandom
+ */
+int osrngseed(void) {
+    int value;
+#if defined(_WIN32) || defined(__CYGWIN__)
+    if (!::CryptAcquireContextW(&hCryptProv, 0, 0, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT | CRYPT_SILENT)) {
+        throw std::runtime_error("Failed to initialize Windows random API (CryptoGen)");
+    }
+    if (!CryptGenRandom(hCryptProv, sizeof(int), (BYTE*) &value)) {
+        ::CryptReleaseContext(hCryptProv, 0);
+        throw std::runtime_error("Failed to get random numbers");
+    }
+    if (!::CryptReleaseContext(hCryptProv, 0)) {
+        throw std::runtime_error("Failed to release Windows random API context");
+    }
+#else
+    int m_fd = open("/dev/urandom", O_RDONLY);
+    if (m_fd == -1) {
+        throw std::runtime_error("Failed to open /dev/urandom");
+    }
+    if (read(m_fd, &value, sizeof(int)) != sizeof(int)) {
+        throw std::runtime_error("Failed to read bytes from /dev/urandom");
+    }
+    close(m_fd);
+#endif
+    return value;
 }
 
-ForceImpl* MonteCarloAnisotropicBarostat::createImpl() const {
-    return new MonteCarloAnisotropicBarostatImpl(*this);
-}
+#endif /* OPENMM_OSRNGSEED_H_ */
