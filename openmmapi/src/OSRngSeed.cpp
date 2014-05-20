@@ -38,7 +38,7 @@ static HCRYPTPROV hCryptProv = 0;
 #include <fcntl.h>
 #include <unistd.h>
 #endif
-#include "internal/OSRngSeed.h"
+#include "openmm/internal/OSRngSeed.h"
 
 int osrngseed(void) {
     int value;
