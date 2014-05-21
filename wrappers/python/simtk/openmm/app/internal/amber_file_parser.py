@@ -1173,6 +1173,7 @@ class AmberNetcdfRestart(object):
         # accidentally leaks the file handle, but that was 'fixed' in 0.13. This
         # fix taken from MDTraj
         with NetCDFFile(filename, 'r') as ncfile:
+            self.natom = ncfile.dimensions['atom']
             self.coordinates = np.array(ncfile.variables['coordinates'][:])
             if 'velocities' in ncfile.variables:
                 vels = ncfile.variables['velocities']
