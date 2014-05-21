@@ -742,10 +742,9 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
         _box_vectors_from_lengths_angles([boxX, boxY, boxZ],
                                          [boxBeta, boxBeta, boxBeta],
                                          tmp)
-        d0 = units.Quantity(0.0, units.angstroms)
-        xVec = units.Quantity(tmp[0], u.angstroms)
-        yVec = units.Quantity(tmp[1], u.angstroms)
-        zVec = units.Quantity(tmp[2], u.angstroms)
+        xVec = units.Quantity(tmp[0], units.angstroms)
+        yVec = units.Quantity(tmp[1], units.angstroms)
+        zVec = units.Quantity(tmp[2], units.angstroms)
         system.setDefaultPeriodicBoxVectors(xVec, yVec, zVec)
 
         # Set cutoff.
@@ -1234,6 +1233,12 @@ def _box_vectors_from_lengths_angles(lengths, angles, boxVectors):
     boxVectors[2][2] = sqrt(lengths[2]*lengths[2] - cx*cx - cy*cy)
 
     boxVectors[0][1] = boxVectors[0][2] = boxVectors[1][2] = 0.0
+
+    # Now make sure any vector close to zero is zero exactly
+    for i in range(3):
+        for j in range(3):
+            if abs(boxVectors[i][j]) < TINY:
+                boxVectors[i][j] = 0.0
 
 def readAmberCoordinates(filename, asNumpy=False):
     """
