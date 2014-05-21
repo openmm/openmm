@@ -550,10 +550,7 @@ class PrmtopLoader(object):
         x=float(self._raw_data["BOX_DIMENSIONS"][1])
         y=float(self._raw_data["BOX_DIMENSIONS"][2])
         z=float(self._raw_data["BOX_DIMENSIONS"][3])
-        return (units.Quantity(beta, units.degree),
-                units.Quantity(x, units.angstrom),
-                units.Quantity(y, units.angstrom),
-                units.Quantity(z, units.angstrom))
+        return (beta, x, y, z)
 
     @property
     def has_scee_scnb(self):
@@ -741,10 +738,14 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
         # System is periodic.
         # Set periodic box vectors for periodic system
         (boxBeta, boxX, boxY, boxZ) = prmtop.getBoxBetaAndDimensions()
+        tmp = [[0.0, 0.0, 0.0],[0.0, 0.0, 0.0],[0.0, 0.0, 0.0]]
+        _box_vectors_from_lengths_angles([boxX, boxY, boxZ],
+                                         [boxBeta, boxBeta, boxBeta],
+                                         tmp)
         d0 = units.Quantity(0.0, units.angstroms)
-        xVec = units.Quantity((boxX, d0,   d0))
-        yVec = units.Quantity((d0,   boxY, d0))
-        zVec = units.Quantity((d0,   d0,   boxZ))
+        xVec = units.Quantity(tmp[0], u.angstroms)
+        yVec = units.Quantity(tmp[1], u.angstroms)
+        zVec = units.Quantity(tmp[2], u.angstroms)
         system.setDefaultPeriodicBoxVectors(xVec, yVec, zVec)
 
         # Set cutoff.
@@ -1264,7 +1265,7 @@ def readAmberCoordinates(filename, asNumpy=False):
 
     >>> directory = os.path.join(os.getenv('YANK_INSTALL_DIR'), 'test', 'systems', 'alanine-dipeptide-explicit')
     >>> crd_filename = os.path.join(directory, 'alanine-dipeptide.inpcrd')
-    >>> [coordinates, box_vectors] = readAmberCoordinates(crd_filename, read_box=True)
+    >>> [coordinates, box_vectors] = readAmberCoordinates(crd_filename)
 
     """
 
