@@ -1280,13 +1280,6 @@ def readAmberCoordinates(filename, asNumpy=False):
         # See if it's an ASCII file.  If so, no need to complain
         try:
             crdfile = AmberAsciiRestart(filename)
-            """
-        `TypeError' if the format of the file is not recognized
-        `ValueError' if not all fields are numbers (for example, if a field is
-                     filled with ****'s)
-        `IndexError' if the file is empty
-        `ImportError' if numpy is requested but could not be imported
-        """
         except TypeError:
             raise TypeError('Problem parsing %s as an ASCII Amber restart file '
                             'and scipy could not be imported to try reading as '
