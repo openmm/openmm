@@ -34,8 +34,8 @@
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/AssertionUtilities.h"
 #include "openmm/internal/ContextImpl.h"
+#include "openmm/internal/OSRngSeed.h"
 #include "openmm/kernels.h"
-#include <ctime>
 #include <string>
 
 using namespace OpenMM;
@@ -45,7 +45,7 @@ using std::vector;
 CustomIntegrator::CustomIntegrator(double stepSize) : globalsAreCurrent(true), forcesAreValid(false) {
     setStepSize(stepSize);
     setConstraintTolerance(1e-5);
-    setRandomNumberSeed((int) time(NULL));
+    setRandomNumberSeed(osrngseed());
     kineticEnergy = "m*v*v/2";
 }
 
