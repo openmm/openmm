@@ -11,7 +11,7 @@ class TestAmberInpcrdFile(unittest.TestCase):
     def test_CrdVelBox(self):
         """ Test parsing ASCII restarts with crds, vels, and box """
         inpcrd = AmberInpcrdFile('systems/crds_vels_box.rst7')
-        self.assertEqual(inpcrd.natom, 2101)
+        self.assertEqual(len(inpcrd.coordinates), 2101)
         self.assertAlmostEqual(inpcrd.coordinates[-1].value_in_unit(angstroms),
                         [3.5958082, 8.4176792, -8.2954064])
         self.assertAlmostEqual(inpcrd.velocities[-1].value_in_unit(angstroms/picoseconds),
@@ -27,7 +27,7 @@ class TestAmberInpcrdFile(unittest.TestCase):
             print('Not testing NetCDF file parser... scipy cannot be found')
         else:
             inpcrd = AmberInpcrdFile('systems/amber.ncrst')
-            self.assertEqual(inpcrd.natom, 2101)
+            self.assertEqual(len(inpcrd.coordinates), 2101)
             self.assertAlmostEqual(inpcrd.coordinates[0].value_in_unit(angstroms),
                         [6.82122492718229, 6.6276250662042, -8.51668999892245])
             self.assertAlmostEqual(inpcrd.velocities[-1].value_in_unit(angstroms/picosecond),
@@ -39,7 +39,7 @@ class TestAmberInpcrdFile(unittest.TestCase):
     def test_CrdBox(self):
         """ Test parsing ASCII restarts with only crds and box """
         inpcrd = AmberInpcrdFile('systems/crds_box.rst7')
-        self.assertEqual(inpcrd.natom, 18660)
+        self.assertEqual(len(inpcrd.coordinates), 18660)
         self.assertTrue(inpcrd.velocities is None)
         self.assertTrue(inpcrd.boxVectors is not None)
 

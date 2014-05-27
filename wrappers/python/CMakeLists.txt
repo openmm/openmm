@@ -57,6 +57,7 @@ foreach(SUBDIR ${SUBDIRS})
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.prmtop"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.parm7"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.rst7"
+        "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.ncrst"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.dms"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.top"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.par"
