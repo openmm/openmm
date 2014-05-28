@@ -1179,7 +1179,8 @@ class AmberNetcdfRestart(object):
         # open. This is unnecessary in scipy v.0.12 and lower because NetCDFFile
         # accidentally leaks the file handle, but that was 'fixed' in 0.13. This
         # fix taken from MDTraj
-        with NetCDFFile(filename, 'r') as ncfile:
+        ncfile = NetCDFFile(filename, 'r')
+        try:
             self.natom = ncfile.dimensions['atom']
             self.coordinates = np.array(ncfile.variables['coordinates'][:])
             if 'velocities' in ncfile.variables:
@@ -1195,6 +1196,8 @@ class AmberNetcdfRestart(object):
                 )
             if 'time' in ncfile.variables:
                 self.time = ncfile.variables['time'].getValue()
+        finally:
+            ncfile.close()
 
         # They are already numpy -- convert to list if we don't want numpy
         if not asNumpy:
