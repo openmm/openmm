@@ -1,6 +1,6 @@
 <ForceField>
  <Info>
-  <Reference>Lee-Ping Wang, Todd J. Martinez and Vijay S. Pande. Building force fields - an automatic, systematic and reproducible approach.  Journal of Physical Chemistry Letters., 2014, 5, pp 1885-1891.  DOI:10.1021/jz500737m</Reference>
+  <Reference>Lee-Ping Wang, Todd J. Martinez and Vijay S. Pande. Building force fields - an automatic, systematic and reproducible approach.  Journal of Physical Chemistry Letters, 2014, 5, pp 1885-1891.  DOI:10.1021/jz500737m</Reference>
  </Info>
  <AtomTypes>
   <Type name="tip3p-fb-O" class="OW" element="O" mass="15.99943"/>
