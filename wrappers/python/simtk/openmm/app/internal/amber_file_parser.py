@@ -550,7 +550,10 @@ class PrmtopLoader(object):
         x=float(self._raw_data["BOX_DIMENSIONS"][1])
         y=float(self._raw_data["BOX_DIMENSIONS"][2])
         z=float(self._raw_data["BOX_DIMENSIONS"][3])
-        return (beta, x, y, z)
+        return (units.Quantity(beta, units.degree),
+                units.Quantity(x, units.angstrom),
+                units.Quantity(y, units.angstrom),
+                units.Quantity(z, units.angstrom))
 
     @property
     def has_scee_scnb(self):
@@ -738,6 +741,10 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
         # System is periodic.
         # Set periodic box vectors for periodic system
         (boxBeta, boxX, boxY, boxZ) = prmtop.getBoxBetaAndDimensions()
+        boxBeta = boxBeta.value_in_unit(units.degrees)
+        boxX = boxX.value_in_unit(units.angstroms)
+        boxY = boxY.value_in_unit(units.angstroms)
+        boxZ = boxZ.value_in_unit(units.angstroms)
         tmp = [[0.0, 0.0, 0.0],[0.0, 0.0, 0.0],[0.0, 0.0, 0.0]]
         _box_vectors_from_lengths_angles([boxX, boxY, boxZ],
                                          [boxBeta, boxBeta, boxBeta],
@@ -1264,14 +1271,13 @@ def readAmberCoordinates(filename, asNumpy=False):
 
     >>> directory = os.path.join(os.getenv('YANK_INSTALL_DIR'), 'test', 'systems', 'alanine-dipeptide-gbsa')
     >>> crd_filename = os.path.join(directory, 'alanine-dipeptide.inpcrd')
-    >>> coordinates = readAmberCoordinates(crd_filename)
+    >>> coordinates, velocities, box_vectors = readAmberCoordinates(crd_filename)
 
     Read coordinates in solvent.
 
     >>> directory = os.path.join(os.getenv('YANK_INSTALL_DIR'), 'test', 'systems', 'alanine-dipeptide-explicit')
     >>> crd_filename = os.path.join(directory, 'alanine-dipeptide.inpcrd')
-    >>> [coordinates, box_vectors] = readAmberCoordinates(crd_filename)
-
+    >>> coordinates, velocities, box_vectors = readAmberCoordinates(crd_filename)
     """
 
     try:
