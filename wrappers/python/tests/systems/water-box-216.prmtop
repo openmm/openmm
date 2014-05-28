@@ -1054,7 +1054,7 @@ BLA BLA BLA BLA BLA BLA BLA BLA
        3       3       3       3       3       3
 %FLAG BOX_DIMENSIONS                                                            
 %FORMAT(5E16.8)                                                                 
-  5.15661795E+03  1.87743490E+01  1.87743490E+01  1.87743490E+01
+  9.00000000E+01  1.87743490E+01  1.87743490E+01  1.87743490E+01
 %FLAG RADIUS_SET                                                                
 %FORMAT(1a80)                                                                   
 modified Bondi radii (mbondi)                                                   
