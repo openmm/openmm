@@ -677,7 +677,9 @@ files:
 File         Water Model                                 
 ===========  ============================================
 tip3p.xml    TIP3P water model\ :cite:`Jorgensen1983`  
+tip3pfb.xml  TIP3P-FB water model\ :cite:`Wang2014`    
 tip4pew.xml  TIP4P-Ew water model\ :cite:`Horn2004`    
+tip4pfb.xml  TIP4P-FB water model\ :cite:`Wang2014`    
 tip5p.xml    TIP5P water model\ :cite:`Mahoney2000`    
 spce.xml     SPC/E water model\ :cite:`Berendsen1987`  
 swm4ndp.xml  SWM4-NDP water model\ :cite:`Lamoureux2006`
@@ -1300,8 +1302,9 @@ water models:
 
     modeller.addSolvent(forcefield, model='tip5p')
 
-Allowed values for the :code:`model` option are 'tip3p', 'spce', 'tip4pew',
-and 'tip5p'.  Be sure to include the single quotes around the value.
+Allowed values for the :code:`model` option are 'tip3p', 'tip3pfb', 'spce', 
+'tip4pew', 'tip4pfb', and 'tip5p'.  Be sure to include the single quotes 
+around the value.
 
 Another option is to add extra ion pairs to give a desired total ionic strength.
 For example:
