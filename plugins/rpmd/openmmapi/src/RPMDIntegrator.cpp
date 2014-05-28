@@ -33,10 +33,10 @@
 #include "openmm/Context.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/ContextImpl.h"
+#include "openmm/internal/OSRngSeed.h"
 #include "openmm/RpmdKernels.h"
 #include "SimTKOpenMMRealType.h"
 #include <cmath>
-#include <ctime>
 #include <string>
 
 using namespace OpenMM;
@@ -48,7 +48,7 @@ RPMDIntegrator::RPMDIntegrator(int numCopies, double temperature, double frictio
     setFriction(frictionCoeff);
     setStepSize(stepSize);
     setConstraintTolerance(1e-5);
-    setRandomNumberSeed((int) time(NULL));
+    setRandomNumberSeed(osrngseed());
 }
 
 RPMDIntegrator::RPMDIntegrator(int numCopies, double temperature, double frictionCoeff, double stepSize) :
@@ -57,7 +57,7 @@ RPMDIntegrator::RPMDIntegrator(int numCopies, double temperature, double frictio
     setFriction(frictionCoeff);
     setStepSize(stepSize);
     setConstraintTolerance(1e-5);
-    setRandomNumberSeed((int) time(NULL));
+    setRandomNumberSeed(osrngseed());
 }
 
 void RPMDIntegrator::initialize(ContextImpl& contextRef) {
