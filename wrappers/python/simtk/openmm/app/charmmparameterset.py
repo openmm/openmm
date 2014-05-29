@@ -241,6 +241,10 @@ class CharmmParameterSet(object):
             if line.startswith('HBOND'):
                 section = None
                 continue
+            # It seems like files? sections? can be terminated with 'END'
+            if line.startswith('END'): # should this be case-insensitive?
+                section = None
+                continue
             # If we have no section, skip
             if section is None: continue
             # Now handle each section specifically
