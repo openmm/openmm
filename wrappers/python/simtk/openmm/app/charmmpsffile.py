@@ -90,6 +90,7 @@ class CharmmPsfFile(object):
         - bond_list
         - angle_list
         - dihedral_list
+        - dihedral_parameter_list
         - improper_list
         - cmap_list
         - donor_list    # hbonds donors?
@@ -349,6 +350,7 @@ class CharmmPsfFile(object):
         self.bond_list = bond_list
         self.angle_list = angle_list
         self.dihedral_list = dihedral_list
+        self.dihedral_parameter_list = TrackedList()
         self.improper_list = improper_list
         self.cmap_list = cmap_list
         self.donor_list = donor_list
@@ -599,9 +601,9 @@ class CharmmPsfFile(object):
               central atoms in impropers) and see if that matches.  Wild-cards
               will apply ONLY if specific parameters cannot be found.
 
-            - This method will expand the dihedral_list attribute by adding a
-              separate Dihedral object for each term for types that have a
-              multi-term expansion
+            - This method will expand the dihedral_parameter_list attribute by
+              adding a separate Dihedral object for each term for types that
+              have a multi-term expansion
         """
         # First load the atom types
         types_are_int = False
@@ -643,12 +645,9 @@ class CharmmPsfFile(object):
                     self.urey_bradley_list.append(ub)
             except KeyError:
                 raise MissingParameter('Missing angle type for %r' % ang)
-        # Next load all of the dihedrals. This is a little trickier since we
-        # need to back up the existing dihedral list and replace it with a
-        # longer one that has only one Fourier term per Dihedral instance.
-        dihedral_list = self.dihedral_list
-        self.dihedral_list = TrackedList()
-        for dih in dihedral_list:
+        # Next load all of the dihedrals.
+        self.dihedral_parameter_list = TrackedList()
+        for dih in self.dihedral_list:
             # Store the atoms
             a1, a2, a3, a4 = dih.atom1, dih.atom2, dih.atom3, dih.atom4
             at1, at2, at3, at4 = a1.attype, a2.attype, a3.attype, a4.attype
@@ -662,14 +661,14 @@ class CharmmPsfFile(object):
                                            '%r' % dih)
             dtlist = parmset.dihedral_types[key]
             for i, dt in enumerate(dtlist):
-                self.dihedral_list.append(Dihedral(a1, a2, a3, a4, dt))
+                self.dihedral_parameter_list.append(Dihedral(a1,a2,a3,a4,dt))
                 # See if we include the end-group interactions for this
                 # dihedral. We do IFF it is the last or only dihedral term and
                 # it is NOT in the angle/bond partners
                 if i != len(dtlist) - 1:
-                    self.dihedral_list[-1].end_groups_active = False
+                    self.dihedral_parameter_list[-1].end_groups_active = False
                 elif a1 in a4.bond_partners or a1 in a4.angle_partners:
-                    self.dihedral_list[-1].end_groups_active = False
+                    self.dihedral_parameter_list[-1].end_groups_active = False
         # Now do the impropers
         for imp in self.improper_list:
             # Store the atoms
@@ -958,8 +957,6 @@ class CharmmPsfFile(object):
          -  flexibleConstraints (bool=True) Are our constraints flexible or not?
          -  verbose (bool=False) Optionally prints out a running progress report
         """
-        # back up the dihedral list
-        dihedral_list = self.dihedral_list
         # Load the parameter set
         self.loadParameters(params.condense())
         hasbox = self.topology.getUnitCellDimensions() is not None
@@ -1109,7 +1106,7 @@ class CharmmPsfFile(object):
         if verbose: print('Adding torsions...')
         force = mm.PeriodicTorsionForce()
         force.setForceGroup(self.DIHEDRAL_FORCE_GROUP)
-        for tor in self.dihedral_list:
+        for tor in self.dihedral_parameter_list:
             force.addTorsion(tor.atom1.idx, tor.atom2.idx, tor.atom3.idx,
                              tor.atom4.idx, tor.dihedral_type.per,
                              tor.dihedral_type.phase*pi/180,
@@ -1241,7 +1238,7 @@ class CharmmPsfFile(object):
         # Add 1-4 interactions
         excluded_atom_pairs = set() # save these pairs so we don't zero them out
         sigma_scale = 2**(-1/6)
-        for tor in self.dihedral_list:
+        for tor in self.dihedral_parameter_list:
             # First check to see if atoms 1 and 4 are already excluded because
             # they are 1-2 or 1-3 pairs (would happen in 6-member rings or
             # fewer). Then check that they're not already added as exclusions
@@ -1360,9 +1357,6 @@ class CharmmPsfFile(object):
 
         # Cache our system for easy access
         self._system = system
-
-        # Restore the dihedral list to allow reparametrization later
-        self.dihedral_list = dihedral_list
 
         return system
 
