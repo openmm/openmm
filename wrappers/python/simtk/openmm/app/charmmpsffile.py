@@ -755,6 +755,12 @@ class CharmmPsfFile(object):
             - alpha, beta, gamma (floats, optional) : Angles between the
                 periodic cells.
         """
+        try:
+            # Since we are setting the box, delete the cached box lengths if we
+            # have them to make sure they are recomputed if desired.
+            del self._boxLengths
+        except AttributeError:
+            pass
         self.box_vectors = _box_vectors_from_lengths_angles(a, b, c,
                                                             alpha, beta, gamma)
         # If we already have a _topology instance, then we have possibly changed
@@ -1422,9 +1428,30 @@ class CharmmPsfFile(object):
     @property
     def boxLengths(self):
         """ Return tuple of 3 units """
+        try:
+            # See if we have a cached version
+            return self._boxLengths
+        except AttributeError:
+            pass
         if self.box_vectors is not None:
-            return (self.box_vectors[0][0], self.box_vectors[0][1],
-                    self.box_vectors[0][2])
+            # Get the lengths of each vector
+            if u.is_quantity(self.box_vectors):
+                # Unlikely -- each vector is like a quantity
+                vecs = self.box_vectors.value_in_unit(u.nanometers)
+            elif u.is_quantity(self.box_vectors[0]):
+                # Assume all box vectors are quantities
+                vecs = [x.value_in_unit(u.nanometers) for x in self.box_vectors]
+            else:
+                # Assume nanometers
+                vecs = self.box_vectors
+            a = sqrt(vecs[0][0]*vecs[0][0] + vecs[0][1]*vecs[0][1] +
+                     vecs[0][2]*vecs[0][2])
+            b = sqrt(vecs[1][0]*vecs[1][0] + vecs[1][1]*vecs[1][1] +
+                     vecs[1][2]*vecs[1][2])
+            c = sqrt(vecs[2][0]*vecs[2][0] + vecs[2][1]*vecs[2][1] +
+                     vecs[2][2]*vecs[2][2])
+            self._boxLengths = (a, b, c) * u.nanometers
+            return self._boxLengths
         return None
 
     @boxLengths.setter
@@ -1440,6 +1467,12 @@ class CharmmPsfFile(object):
     @boxVectors.setter
     def boxVectors(self, stuff):
         """ Sets the box vectors """
+        try:
+            # We may be changing the box, so delete the cached box lengths to
+            # make sure they are recomputed if desired
+            del self._boxLengths
+        except AttributeError:
+            pass
         self.box_vectors = stuff
 
     def deleteCmap(self):
