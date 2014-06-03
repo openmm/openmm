@@ -116,7 +116,7 @@ __kernel void computeVirtualSites(__global real4* restrict posq,
 
         #pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
 
-        void addForce(int index, float4 f,  __global long* longForce) {
+        void addForce(int index, real4 f,  __global long* longForce) {
             atom_add(&longForce[index], (long) (f.x*0x100000000));
             atom_add(&longForce[index+PADDED_NUM_ATOMS], (long) (f.y*0x100000000));
             atom_add(&longForce[index+2*PADDED_NUM_ATOMS], (long) (f.z*0x100000000));
