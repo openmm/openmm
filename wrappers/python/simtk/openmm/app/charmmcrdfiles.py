@@ -13,7 +13,7 @@ Copyright (c) 2014 the Authors
 
 Author: Jason Deckman
 Contributors: Jason M. Swails
-Date: April 19, 2014
+Date: June 6, 2014
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -105,7 +105,7 @@ class CharmmCrdFile(object):
                 self.resname.append(line[2])
                 self.attype.append(line[3])
                 pos = Vec3(float(line[4]), float(line[5]), float(line[6]))
-                self.positions.append(pos * u.angstroms)
+                self.positions.append(pos)
                 self.segid.append(line[7])
                 self.resid.append(int(line[8]))
                 self.weighting.append(float(line[9]))
@@ -119,6 +119,10 @@ class CharmmCrdFile(object):
 
         except (ValueError, IndexError), e:
             raise CharmmFileError('Error parsing CHARMM coordinate file')
+
+        # Apply units to the positions now. Do it this way to allow for
+        # (possible) numpy functionality in the future.
+        self.positions = u.Quantity(self.positions, u.angstroms)
 
 class CharmmRstFile(object):
     """
@@ -209,8 +213,9 @@ class CharmmRstFile(object):
         self.velocities = [v * ONE_TIMESCALE for v in self.velocities]
 
         # Add units to positions and velocities
-        self.positions *= u.angstroms
-        self.velocities *= u.angstroms / u.picoseconds
+        self.positions = u.Quantity(self.positions, u.angstroms)
+        self.positionsold = u.Quantity(self.positionsold, u.angstroms)
+        self.velocities = u.Quantity(self.velocities, u.angstroms/u.picoseconds)
 
     def _scan(self, handle, str, r=0): # read lines in file until str is found
         scanning = True
