@@ -64,7 +64,7 @@ class CharmmCrdFile(object):
         self.resname = []                  # Residue name
         self.resid = []                    # Residue ID
         self.attype = []                   # Atom type
-        self.positions = []                # 3N atomic coordinates
+        self.positions = []*u.angstroms    # 3N atomic coordinates
         self.title = []                    # .crd file title block
         self.segid = []                    # Segment ID
         self.weighting = []                # Atom weighting
