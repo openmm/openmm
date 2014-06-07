@@ -952,9 +952,9 @@ class Modeller(object):
                                     # This is a virtual site.  Compute its position by the correct rule.
 
                                     if site.type == 'average2':
-                                        position = site.weights[0]*templateAtomPositions[index+site.atoms[0]] + site.weights[1]*templateAtomPositions[index+site.atoms[1]]
+                                        position = site.weights[0]*templateAtomPositions[site.atoms[0]] + site.weights[1]*templateAtomPositions[site.atoms[1]]
                                     elif site.type == 'average3':
-                                        position = site.weights[0]*templateAtomPositions[index+site.atoms[0]] + site.weights[1]*templateAtomPositions[index+site.atoms[1]] + site.weights[2]*templateAtomPositions[index+site.atoms[2]]
+                                        position = site.weights[0]*templateAtomPositions[site.atoms[0]] + site.weights[1]*templateAtomPositions[site.atoms[1]] + site.weights[2]*templateAtomPositions[site.atoms[2]]
                                     elif site.type == 'outOfPlane':
                                         v1 = templateAtomPositions[index+site.atoms[1]] - templateAtomPositions[index+site.atoms[0]]
                                         v2 = templateAtomPositions[index+site.atoms[2]] - templateAtomPositions[index+site.atoms[0]]
