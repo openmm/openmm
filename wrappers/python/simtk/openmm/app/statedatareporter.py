@@ -99,7 +99,8 @@ class StateDataReporter(object):
                     raise RuntimeError("Cannot write .bz2 file because Python could not import bz2 library")
                 self._out = bz2.BZ2File(file, 'w', 0)
             else:
-                self._out = open(file, 'w', 0)
+                # 1 means Line buffering
+                self._out = open(file, 'w', 1)
         else:
             self._out = file
         self._step = step
