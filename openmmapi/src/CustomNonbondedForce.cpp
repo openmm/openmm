@@ -176,6 +176,8 @@ void CustomNonbondedForce::setExclusionParticles(int index, int particle1, int p
 }
 
 void CustomNonbondedForce::createExclusionsFromBonds(const vector<pair<int, int> >& bonds, int bondCutoff) {
+    if (bondCutoff < 1)
+        return;
     vector<set<int> > exclusions(particles.size());
     vector<set<int> > bonded12(exclusions.size());
     for (int i = 0; i < (int) bonds.size(); ++i) {
