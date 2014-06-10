@@ -952,14 +952,14 @@ class Modeller(object):
                                     # This is a virtual site.  Compute its position by the correct rule.
 
                                     if site.type == 'average2':
-                                        position = site.weights[0]*templateAtomPositions[index+site.atoms[0]] + site.weights[1]*templateAtomPositions[index+site.atoms[1]]
+                                        position = site.weights[0]*templateAtomPositions[site.atoms[0]] + site.weights[1]*templateAtomPositions[site.atoms[1]]
                                     elif site.type == 'average3':
-                                        position = site.weights[0]*templateAtomPositions[index+site.atoms[0]] + site.weights[1]*templateAtomPositions[index+site.atoms[1]] + site.weights[2]*templateAtomPositions[index+site.atoms[2]]
+                                        position = site.weights[0]*templateAtomPositions[site.atoms[0]] + site.weights[1]*templateAtomPositions[site.atoms[1]] + site.weights[2]*templateAtomPositions[site.atoms[2]]
                                     elif site.type == 'outOfPlane':
-                                        v1 = templateAtomPositions[index+site.atoms[1]] - templateAtomPositions[index+site.atoms[0]]
-                                        v2 = templateAtomPositions[index+site.atoms[2]] - templateAtomPositions[index+site.atoms[0]]
+                                        v1 = templateAtomPositions[site.atoms[1]] - templateAtomPositions[site.atoms[0]]
+                                        v2 = templateAtomPositions[site.atoms[2]] - templateAtomPositions[site.atoms[0]]
                                         cross = Vec3(v1[1]*v2[2]-v1[2]*v2[1], v1[2]*v2[0]-v1[0]*v2[2], v1[0]*v2[1]-v1[1]*v2[0])
-                                        position = templateAtomPositions[index+site.atoms[0]] + site.weights[0]*v1 + site.weights[1]*v2 + site.weights[2]*cross
+                                        position = templateAtomPositions[site.atoms[0]] + site.weights[0]*v1 + site.weights[1]*v2 + site.weights[2]*cross
                             if position is None and atom.type in drudeTypeMap:
                                 # This is a Drude particle.  Put it on top of its parent atom.
 
