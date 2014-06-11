@@ -343,6 +343,8 @@ public:
     void setParticleParameters(int index, const std::vector<double>& parameters);
     /**
      * Add a particle pair to the list of interactions that should be excluded.
+     * 
+     * In many cases, you can use createExclusionsFromBonds() rather than adding each exclusion explicitly.
      *
      * @param particle1  the index of the first particle in the pair
      * @param particle2  the index of the second particle in the pair
@@ -365,6 +367,15 @@ public:
      * @param particle2  the index of the second particle in the pair
      */
     void setExclusionParticles(int index, int particle1, int particle2);
+    /**
+     * Identify exclusions based on the molecular topology.  Particles which are separated by up to a specified number of
+     * bonds are added as exclusions.
+     *
+     * @param bonds       the set of bonds based on which to construct exclusions.  Each element specifies the indices of
+     *                    two particles that are bonded to each other.
+     * @param bondCutoff  pairs of particles that are separated by this many bonds or fewer are added to the list of exclusions
+     */
+    void createExclusionsFromBonds(const std::vector<std::pair<int, int> >& bonds, int bondCutoff);
     /**
      * Add a tabulated function that may appear in the energy expression.
      *

@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2013 Stanford University and the Authors.
+Portions copyright (c) 2012-2014 Stanford University and the Authors.
 Authors: Peter Eastman, Mark Friedrichs
 Contributors:
 
@@ -1486,6 +1486,104 @@ parsers["CustomTorsionForce"] = CustomTorsionGenerator.parseElement
 
 
 ## @private
+class CustomNonbondedGenerator:
+    """A CustomNonbondedGenerator constructs a CustomNonbondedForce."""
+
+    def __init__(self, energy, bondCutoff):
+        self.energy = energy
+        self.bondCutoff = bondCutoff
+        self.typeMap = {}
+        self.globalParams = {}
+        self.perParticleParams = []
+        self.functions = []
+
+    @staticmethod
+    def parseElement(element, ff):
+        generator = CustomNonbondedGenerator(element.attrib['energy'], int(element.attrib['bondCutoff']))
+        ff._forces.append(generator)
+        for param in element.findall('GlobalParameter'):
+            generator.globalParams[param.attrib['name']] = float(param.attrib['defaultValue'])
+        for param in element.findall('PerParticleParameter'):
+            generator.perParticleParams.append(param.attrib['name'])
+        for atom in element.findall('Atom'):
+            types = ff._findAtomTypes(atom, 1)
+            if None not in types:
+                values = [float(atom.attrib[param]) for param in generator.perParticleParams]
+                for t in types[0]:
+                    generator.typeMap[t] = values
+
+    def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
+        methodMap = {NoCutoff:mm.CustomNonbondedForce.NoCutoff,
+                     CutoffNonPeriodic:mm.CustomNonbondedForce.CutoffNonPeriodic,
+                     CutoffPeriodic:mm.CustomNonbondedForce.CutoffPeriodic}
+        if nonbondedMethod not in methodMap:
+            raise ValueError('Illegal nonbonded method for CustomNonbondedForce')
+        force = mm.CustomNonbondedForce(self.energy)
+        for param in self.globalParams:
+            force.addGlobalParameter(param, self.globalParams[param])
+        for param in self.perParticleParams:
+            force.addPerParticleParameter(param)
+        for (name, type, values, params) in self.functions:
+            if type == 'Continuous1D':
+                force.addTabulatedFunction(name, mm.Continuous1DFunction(values, params['min'], params['max']))
+            elif type == 'Continuous2D':
+                force.addTabulatedFunction(name, mm.Continuous2DFunction(params['xsize'], params['ysize'], values, params['xmin'], params['xmax'], params['ymin'], params['ymax']))
+            elif type == 'Continuous3D':
+                force.addTabulatedFunction(name, mm.Continuous2DFunction(params['xsize'], params['ysize'], params['zsize'], values, params['xmin'], params['xmax'], params['ymin'], params['ymax'], params['zmin'], params['zmax']))
+            elif type == 'Discrete1D':
+                force.addTabulatedFunction(name, mm.Discrete1DFunction(values))
+            elif type == 'Discrete2D':
+                force.addTabulatedFunction(name, mm.Discrete2DFunction(params['xsize'], params['ysize'], values))
+            elif type == 'Discrete3D':
+                force.addTabulatedFunction(name, mm.Discrete2DFunction(params['xsize'], params['ysize'], params['zsize'], values))
+        for atom in data.atoms:
+            t = data.atomType[atom]
+            if t in self.typeMap:
+                values = self.typeMap[t]
+                force.addParticle(self.typeMap[t])
+            else:
+                raise ValueError('No CustomNonbonded parameters defined for atom type '+t)
+        force.setNonbondedMethod(methodMap[nonbondedMethod])
+        force.setCutoffDistance(nonbondedCutoff)
+        sys.addForce(force)
+
+    def postprocessSystem(self, sys, data, args):
+        # Create exceptions based on bonds, virtual sites, and Drude particles.
+        if self.bondCutoff == 0:
+            return
+        bondIndices = []
+        for bond in data.bonds:
+            bondIndices.append((bond.atom1, bond.atom2))
+        for i in range(sys.getNumParticles()):
+            if sys.isVirtualSite(i):
+                site = sys.getVirtualSite(i)
+                for j in range(site.getNumParticles()):
+                    bondIndices.append((i, site.getParticle(j)))
+        drude = [f for f in sys.getForces() if isinstance(f, mm.DrudeForce)]
+        if len(drude) > 0:
+            drude = drude[0]
+            # For purposes of creating exceptions, a Drude particle is "bonded" to anything
+            # its parent atom is bonded to.
+            drudeMap = {}
+            for i in range(drude.getNumParticles()):
+                params = drude.getParticleParameters(i)
+                drudeMap[params[1]] = params[0]
+            for atom1, atom2 in bondIndices:
+                drude1 = drudeMap[atom1] if atom1 in drudeMap else None
+                drude2 = drudeMap[atom2] if atom2 in drudeMap else None
+                if drude1 is not None:
+                    bondIndices.append((drude1, atom2))
+                    if drude2 is not None:
+                        bondIndices.append((drude1, drude2))
+                if drude2 is not None:
+                    bondIndices.append((atom1, drude2))
+        nonbonded = [f for f in sys.getForces() if isinstance(f, mm.CustomNonbondedForce)][0]
+        nonbonded.createExclusionsFromBonds(bondIndices, self.bondCutoff)
+
+parsers["CustomNonbondedForce"] = CustomNonbondedGenerator.parseElement
+
+
+## @private
 class CustomGBGenerator:
     """A CustomGBGenerator constructs a CustomGBForce."""
 
@@ -1493,7 +1591,6 @@ class CustomGBGenerator:
         self.typeMap = {}
         self.globalParams = {}
         self.perParticleParams = []
-        self.paramValues = []
         self.computedValues = []
         self.energyTerms = []
         self.functions = []
