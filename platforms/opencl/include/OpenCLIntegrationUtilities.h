@@ -121,7 +121,7 @@ private:
     cl::Kernel ccmaPosForceKernel, ccmaVelForceKernel;
     cl::Kernel ccmaMultiplyKernel;
     cl::Kernel ccmaPosUpdateKernel, ccmaVelUpdateKernel;
-    cl::Kernel vsitePositionKernel, vsiteForceKernel;
+    cl::Kernel vsitePositionKernel, vsiteForceKernel, vsiteAddForcesKernel;
     cl::Kernel randomKernel, timeShiftKernel;
     OpenCLArray* posDelta;
     OpenCLArray* settleAtoms;
@@ -152,7 +152,7 @@ private:
     OpenCLArray* vsiteLocalCoordsParams;
     int randomPos;
     int lastSeed, numVsites;
-    bool hasInitializedPosConstraintKernels, hasInitializedVelConstraintKernels, ccmaUseDirectBuffer;
+    bool hasInitializedPosConstraintKernels, hasInitializedVelConstraintKernels, ccmaUseDirectBuffer, hasOverlappingVsites;
     struct ShakeCluster;
     struct ConstraintOrderer;
 };

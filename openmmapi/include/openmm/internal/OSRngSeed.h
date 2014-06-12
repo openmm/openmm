@@ -1,3 +1,7 @@
+#ifndef OPENMM_OSRNGSEED_H_
+#define OPENMM_OSRNGSEED_H_
+
+
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -6,8 +10,8 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
- * Authors: Peter Eastman                                                     *
+ * Portions copyright (c) 2013 Stanford University and the Authors.           *
+ * Authors: Robert T. McGibbon                                                *
  * Contributors:                                                              *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
@@ -29,17 +33,15 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/AndersenThermostat.h"
-#include "openmm/internal/AndersenThermostatImpl.h"
-#include "openmm/internal/OSRngSeed.h"
 
-using namespace OpenMM;
 
-AndersenThermostat::AndersenThermostat(double defaultTemperature, double defaultCollisionFrequency) :
-        defaultTemp(defaultTemperature), defaultFreq(defaultCollisionFrequency) {
-    setRandomNumberSeed(osrngseed());
-}
+/**
+ * Return an integer int for use as a seed for a random number generator.
+ * 
+ * The behavior of this function is platform dependent. On Windows machines,
+ * this uses CryptGenRandom from the CryptoAPI to get a single int. On other
+ * platforms (*nix, apple), we read from /dev/urandom
+ */
+int osrngseed(void);
 
-ForceImpl* AndersenThermostat::createImpl() const {
-    return new AndersenThermostatImpl(*this);
-}
+#endif /* OPENMM_OSRNGSEED_H_ */
