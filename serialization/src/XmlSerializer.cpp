@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -36,25 +36,32 @@ using namespace OpenMM;
 using namespace std;
 
 void XmlSerializer::serialize(const SerializationNode& node, std::ostream& stream) {
-    TiXmlDocument doc;
-    TiXmlDeclaration* decl = new TiXmlDeclaration( "1.0", "", "" );
-    doc.LinkEndChild(decl);
-    doc.LinkEndChild(encodeNode(node));
-    TiXmlPrinter printer;
-    printer.SetIndent("\t");
-    doc.Accept(&printer);
-    stream << printer.Str();
+    stream << "<?xml version=\"1.0\" ?>\n";
+    encodeNode(node, stream, 0);
 }
 
-TiXmlElement* XmlSerializer::encodeNode(const SerializationNode& node) {
-    TiXmlElement* element = new TiXmlElement(node.getName());
+void XmlSerializer::encodeNode(const SerializationNode& node, std::ostream& stream, int depth) {
+    for (int i = 0; i < depth; i++)
+        stream << '\t';
+    stream << '<' << node.getName();
     const map<string, string>& properties = node.getProperties();
-    for (map<string, string>::const_iterator iter = properties.begin(); iter != properties.end(); ++iter)
-        element->SetAttribute(iter->first.c_str(), iter->second.c_str());
+    for (map<string, string>::const_iterator iter = properties.begin(); iter != properties.end(); ++iter) {
+        string name, value;
+        TiXmlBase::EncodeString(iter->first, &name);
+        TiXmlBase::EncodeString(iter->second, &value);
+        stream << ' ' << name << "=\"" << value << '\"';
+    }
     const vector<SerializationNode>& children = node.getChildren();
-    for (int i = 0; i < (int) children.size(); i++)
-        element->LinkEndChild(encodeNode(children[i]));
-    return element;
+    if (children.size() == 0)
+        stream << "/>\n";
+    else {
+        stream << ">\n";
+        for (int i = 0; i < (int) children.size(); i++)
+            encodeNode(children[i], stream, depth+1);
+        for (int i = 0; i < depth; i++)
+            stream << '\t';
+        stream << "</" << node.getName() << ">\n";
+    }
 }
 
 void* XmlSerializer::deserializeStream(std::istream& stream) {
