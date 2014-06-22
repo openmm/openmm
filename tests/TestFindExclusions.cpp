@@ -30,6 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/internal/AssertionUtilities.h"
+#include "openmm/CustomNonbondedForce.h"
 #include "openmm/NonbondedForce.h"
 #include "openmm/OpenMMException.h"
 #include <iostream>
@@ -166,10 +167,62 @@ void testReplaceExceptions() {
     ASSERT(charge == 5.0);
 }
 
+/**
+ * This is the same as testFindExceptions(), except it tests adding exclusions to a CustomNonbondedForce.
+ */
+
+void testFindCustomExclusions() {
+    CustomNonbondedForce nonbonded("r");
+    vector<pair<int, int> > bonds;
+    vector<double> params;
+    for (int i = 0; i < NUM_ATOMS; i++)
+        nonbonded.addParticle(params);
+    // loop over all main-chain atoms (even numbered atoms)
+    for (int i = 0; i < NUM_ATOMS-1; i += 2)
+    {
+        // side-chain bonds
+        bonds.push_back(pair<int, int>(i, i+1));
+        // main-chain bonds
+        if (i < NUM_ATOMS-2) // penultimate atom (NUM_ATOMS-2) has no subsequent main-chain atom
+            bonds.push_back(pair<int, int>(i, i+2));
+    }
+    nonbonded.createExclusionsFromBonds(bonds, 3);
+
+    // Build lists of the expected exclusions.
+
+    vector<set<int> > expectedExclusions(NUM_ATOMS);
+    int totalExclusions = 0;
+    for (int i = 0; i < NUM_ATOMS; i += 2) {
+        addAtomsToExclusions(i, i+1, expectedExclusions, totalExclusions);
+        addAtomsToExclusions(i, i+2, expectedExclusions, totalExclusions);
+        addAtomsToExclusions(i, i+3, expectedExclusions, totalExclusions);
+        addAtomsToExclusions(i, i+4, expectedExclusions, totalExclusions);
+        addAtomsToExclusions(i+1, i+2, expectedExclusions, totalExclusions);
+        addAtomsToExclusions(i, i+5, expectedExclusions, totalExclusions);
+        addAtomsToExclusions(i, i+6, expectedExclusions, totalExclusions);
+        addAtomsToExclusions(i+1, i+3, expectedExclusions, totalExclusions);
+        addAtomsToExclusions(i+1, i+4, expectedExclusions, totalExclusions);
+    }
+    for (int i = 0; i < nonbonded.getNumExclusions(); i++) {
+        int particle1, particle2;
+        nonbonded.getExclusionParticles(i, particle1, particle2);
+    }
+
+    // Compare them to the exceptions that were generated.
+
+    ASSERT_EQUAL(totalExclusions, nonbonded.getNumExclusions());
+    for (int i = 0; i < nonbonded.getNumExclusions(); i++) {
+        int particle1, particle2;
+        nonbonded.getExclusionParticles(i, particle1, particle2);
+        ASSERT(expectedExclusions[particle1].find(particle2) != expectedExclusions[particle1].end());
+    }
+}
+
 int main() {
     try {
         testFindExceptions();
         testReplaceExceptions();
+        testFindCustomExclusions();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

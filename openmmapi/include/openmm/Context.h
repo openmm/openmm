@@ -35,12 +35,12 @@
 #include "Integrator.h"
 #include "State.h"
 #include "System.h"
-#include <ctime>
 #include <iosfwd>
 #include <map>
 #include <string>
 #include <vector>
 #include "internal/windowsExport.h"
+#include "internal/OSRngSeed.h"
 
 namespace OpenMM {
 
@@ -164,7 +164,7 @@ public:
      * @param temperature    the temperature for which to select the velocities (measured in Kelvin)
      * @param randomSeed     the random number seed to use when selecting velocities
      */
-    void setVelocitiesToTemperature(double temperature, int randomSeed=time(NULL));
+    void setVelocitiesToTemperature(double temperature, int randomSeed=osrngseed());
     /**
      * Get the value of an adjustable parameter defined by a Force object in the System.
      * 

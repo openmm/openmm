@@ -33,10 +33,11 @@
 #include "openmm/Context.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/ContextImpl.h"
+#include "openmm/internal/OSRngSeed.h"
 #include "openmm/kernels.h"
 #include <limits>
 #include <string>
-#include <ctime>
+
 
 using namespace OpenMM;
 using std::string;
@@ -47,7 +48,7 @@ VariableLangevinIntegrator::VariableLangevinIntegrator(double temperature, doubl
     setFriction(frictionCoeff);
     setErrorTolerance(errorTol);
     setConstraintTolerance(1e-5);
-    setRandomNumberSeed((int) time(NULL));
+    setRandomNumberSeed(osrngseed());
 }
 
 void VariableLangevinIntegrator::initialize(ContextImpl& contextRef) {

@@ -269,7 +269,15 @@ ExpressionTreeNode ParsedExpression::substituteSimplerExpression(const Expressio
                 return ExpressionTreeNode(new Operation::Constant(dynamic_cast<const Operation::MultiplyConstant*>(&node.getOperation())->getValue()*getConstantValue(children[0])));
             if (children[0].getOperation().getId() == Operation::NEGATE) // Combine a multiply and a negate into a single multiply
                 return ExpressionTreeNode(new Operation::MultiplyConstant(-dynamic_cast<const Operation::MultiplyConstant*>(&node.getOperation())->getValue()), children[0].getChildren()[0]);
+            break;
         }
+        default:
+        {
+            // If operation ID is not one of the above,
+            // we don't substitute a simpler expression.
+            break;
+        }
+
     }
     return ExpressionTreeNode(node.getOperation().clone(), children);
 }
