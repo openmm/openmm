@@ -421,8 +421,10 @@ class ResidueList(list):
         if self._last_residue is None:
             res = self._last_residue = Residue(resname, resnum)
             list.append(self, res)
-        elif self._last_residue != (resname, resnum):
-            if self._last_residue.idx == resnum:
+        elif (self._last_residue != (resname, resnum) or
+              system != self._last_residue.system):
+            if (self._last_residue.idx == resnum and
+                system == self._last_residue.system):
                 lresname = self._last_residue.resname
                 warnings.warn('Residue %d split into separate residues %s '
                               'and %s' % (resnum, lresname, resname),
@@ -1063,7 +1065,6 @@ class TrackedList(list):
     __delitem__ = _tracking(list.__delitem__)
     append = _tracking(list.append)
     extend = _tracking(list.extend)
-    __delslice__ = _tracking(list.__delslice__)
     __setitem__ = _tracking(list.__setitem__)
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

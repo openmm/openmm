@@ -108,10 +108,66 @@ __kernel void computeVirtualSites(__global real4* restrict posq,
     }
 }
 
+#ifdef HAS_OVERLAPPING_VSITES
+    #ifdef SUPPORTS_64_BIT_ATOMICS
+        // We will use 64 bit atomics for force redistribution.
+
+        #define ADD_FORCE(index, f) addForce(index, f, longForce);
+
+        #pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
+
+        void addForce(int index, real4 f,  __global long* longForce) {
+            atom_add(&longForce[index], (long) (f.x*0x100000000));
+            atom_add(&longForce[index+PADDED_NUM_ATOMS], (long) (f.y*0x100000000));
+            atom_add(&longForce[index+2*PADDED_NUM_ATOMS], (long) (f.z*0x100000000));
+        }
+
+        __kernel void addDistributedForces(__global const long* restrict longForces, __global real4* restrict forces) {
+            real scale = 1/(real) 0x100000000;
+            for (int index = get_global_id(0); index < NUM_ATOMS; index += get_global_size(0)) {
+                real4 f = (real4) (scale*longForces[index], scale*longForces[index+PADDED_NUM_ATOMS], scale*longForces[index+2*PADDED_NUM_ATOMS], 0);
+                forces[index] += f;
+            }
+        }
+    #else
+        // 64 bit atomics aren't supported, so we have to use atomic_cmpxchg() for force redistribution.
+        
+        #define ADD_FORCE(index, f) addForce(index, f, force);
+
+        void atomicAddFloat(__global float* p, float v) {
+            __global int* ip = (__global int*) p;
+            while (true) {
+                union {
+                    float f;
+                    int i;
+                } oldval, newval;
+                oldval.f = *p;
+                newval.f = oldval.f+v;
+                if (atomic_cmpxchg(ip, oldval.i, newval.i) == oldval.i)
+                    return;
+            }
+        }
+
+        void addForce(int index, float4 f, __global float4* force) {
+            __global float* components = (__global float*) force;
+            atomicAddFloat(&components[4*index], f.x);
+            atomicAddFloat(&components[4*index+1], f.y);
+            atomicAddFloat(&components[4*index+2], f.z);
+        }
+    #endif
+#else
+    // There are no overlapping virtual sites, so we can just store forces directly.
+
+    #define ADD_FORCE(index, f) force[index].xyz += (f).xyz;
+#endif
+
 /**
  * Distribute forces from virtual sites to the atoms they are based on.
  */
 __kernel void distributeForces(__global const real4* restrict posq, __global real4* restrict force,
+#ifdef SUPPORTS_64_BIT_ATOMICS
+        __global long* restrict longForce,
+#endif
 #ifdef USE_MIXED_PRECISION
         __global real4* restrict posqCorrection,
 #endif
@@ -129,12 +185,8 @@ __kernel void distributeForces(__global const real4* restrict posq, __global rea
         int4 atoms = avg2Atoms[index];
         real2 weights = avg2Weights[index];
         real4 f = force[atoms.x];
-        real4 f1 = force[atoms.y];
-        real4 f2 = force[atoms.z];
-        f1.xyz += f.xyz*weights.x;
-        f2.xyz += f.xyz*weights.y;
-        force[atoms.y] = f1;
-        force[atoms.z] = f2;
+        ADD_FORCE(atoms.y, f*weights.x);
+        ADD_FORCE(atoms.z, f*weights.y);
     }
     
     // Three particle average sites.
@@ -143,15 +195,9 @@ __kernel void distributeForces(__global const real4* restrict posq, __global rea
         int4 atoms = avg3Atoms[index];
         real4 weights = avg3Weights[index];
         real4 f = force[atoms.x];
-        real4 f1 = force[atoms.y];
-        real4 f2 = force[atoms.z];
-        real4 f3 = force[atoms.w];
-        f1.xyz += f.xyz*weights.x;
-        f2.xyz += f.xyz*weights.y;
-        f3.xyz += f.xyz*weights.z;
-        force[atoms.y] = f1;
-        force[atoms.z] = f2;
-        force[atoms.w] = f3;
+        ADD_FORCE(atoms.y, f*weights.x);
+        ADD_FORCE(atoms.z, f*weights.y);
+        ADD_FORCE(atoms.w, f*weights.z);
     }
     
     // Out of plane sites.
@@ -165,21 +211,15 @@ __kernel void distributeForces(__global const real4* restrict posq, __global rea
         mixed4 v12 = pos2-pos1;
         mixed4 v13 = pos3-pos1;
         real4 f = force[atoms.x];
-        real4 f1 = force[atoms.y];
-        real4 f2 = force[atoms.z];
-        real4 f3 = force[atoms.w];
         real4 fp2 = (real4) (weights.x*f.x - weights.z*v13.z*f.y + weights.z*v13.y*f.z,
                    weights.z*v13.z*f.x + weights.x*f.y - weights.z*v13.x*f.z,
                   -weights.z*v13.y*f.x + weights.z*v13.x*f.y + weights.x*f.z, 0.0f);
         real4 fp3 = (real4) (weights.y*f.x + weights.z*v12.z*f.y - weights.z*v12.y*f.z,
                   -weights.z*v12.z*f.x + weights.y*f.y + weights.z*v12.x*f.z,
                    weights.z*v12.y*f.x - weights.z*v12.x*f.y + weights.y*f.z, 0.0f);
-        f1.xyz += f.xyz-fp2.xyz-fp3.xyz;
-        f2.xyz += fp2.xyz;
-        f3.xyz += fp3.xyz;
-        force[atoms.y] = f1;
-        force[atoms.z] = f2;
-        force[atoms.w] = f3;
+        ADD_FORCE(atoms.y, f-fp2-fp3);
+        ADD_FORCE(atoms.z, fp2);
+        ADD_FORCE(atoms.w, fp3);
     }
     
     // Local coordinates sites.
@@ -230,9 +270,9 @@ __kernel void distributeForces(__global const real4* restrict posq, __global rea
         mixed sz3 = t32*dz.x-t31*dz.y;
         mixed4 wxScaled = wx*invNormXdir;
         real4 f = force[atoms.x];
-        real4 f1 = force[atoms.y];
-        real4 f2 = force[atoms.z];
-        real4 f3 = force[atoms.w];
+        real4 f1 = 0;
+        real4 f2 = 0;
+        real4 f3 = 0;
         mixed4 fp1 = localPosition*f.x;
         mixed4 fp2 = localPosition*f.y;
         mixed4 fp3 = localPosition*f.z;
@@ -263,8 +303,8 @@ __kernel void distributeForces(__global const real4* restrict posq, __global rea
         f3.x += fp3.x*wxScaled.z*( -dx.z*dx.x) + fp3.z*(dz.z*sx3+t32) + fp3.y*((-dx.x*dy.z-dz.y)*wxScaled.z + dy.z*sx3 + dx.x*t33);
         f3.y += fp3.x*wxScaled.z*( -dx.z*dx.y) + fp3.z*(dz.z*sy3-t31) + fp3.y*((-dx.y*dy.z+dz.x)*wxScaled.z + dy.z*sy3 + dx.y*t33);
         f3.z += fp3.x*wxScaled.z*(1-dx.z*dx.z) + fp3.z*(dz.z*sz3    ) + fp3.y*((-dx.z*dy.z     )*wxScaled.z + dy.z*sz3 - dx.x*t31 - dx.y*t32) + f.z*originWeights.z;
-        force[atoms.y] = f1;
-        force[atoms.z] = f2;
-        force[atoms.w] = f3;
+        ADD_FORCE(atoms.y, f1);
+        ADD_FORCE(atoms.z, f2);
+        ADD_FORCE(atoms.w, f3);
     }
 }

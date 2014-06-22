@@ -654,13 +654,15 @@ For the main force field, OpenMM provides the following options:
 =================  ================================================================================
 File               Force Field                                                                     
 =================  ================================================================================
-amber96.xml        AMBER96\ :cite:`Kollman1997`                                                  
+amber96.xml        AMBER96\ :cite:`Kollman1997`
 amber99sb.xml      AMBER99\ :cite:`Wang2000` with modified backbone torsions\ :cite:`Hornak2006`
-amber99sbildn.xml  AMBER99SB plus improved side chain torsions\ :cite:`Lindorff-Larsen2010`      
-amber99sbnmr.xml   AMBER99SB with modifications to fit NMR data\ :cite:`Li2010`                  
-amber03.xml        AMBER03\ :cite:`Duan2003`                                                     
-amber10.xml        AMBER10                                                                         
-amoeba2009.xml     AMOEBA\ :cite:`Ren2002`                                                       
+amber99sbildn.xml  AMBER99SB plus improved side chain torsions\ :cite:`Lindorff-Larsen2010`
+amber99sbnmr.xml   AMBER99SB with modifications to fit NMR data\ :cite:`Li2010`
+amber03.xml        AMBER03\ :cite:`Duan2003`
+amber10.xml        AMBER10
+amoeba2009.xml     AMOEBA 2009\ :cite:`Ren2002`.  This force field is deprecated.  It is 
+                   recommended to use AMOEBA 2013 instead.
+amoeba2013.xml     AMOEBA 2013\ :cite:`Shi2013`
 =================  ================================================================================
 
 
@@ -675,7 +677,9 @@ files:
 File         Water Model                                 
 ===========  ============================================
 tip3p.xml    TIP3P water model\ :cite:`Jorgensen1983`  
+tip3pfb.xml  TIP3P-FB water model\ :cite:`Wang2014`    
 tip4pew.xml  TIP4P-Ew water model\ :cite:`Horn2004`    
+tip4pfb.xml  TIP4P-FB water model\ :cite:`Wang2014`    
 tip5p.xml    TIP5P water model\ :cite:`Mahoney2000`    
 spce.xml     SPC/E water model\ :cite:`Berendsen1987`  
 swm4ndp.xml  SWM4-NDP water model\ :cite:`Lamoureux2006`
@@ -692,15 +696,16 @@ the following files:
 
 .. tabularcolumns:: |l|L|
 
-=================  ==============================================================================================
+=================  =================================================================================================
 File               Implicit Solvation Model                                                                      
-=================  ==============================================================================================
-amber96_obc.xml    GBSA-OBC solvation model\ :cite:`Onufriev2004` for use with AMBER96 force field             
-amber99_obc.xml    GBSA-OBC solvation model for use with AMBER99 force fields                                    
-amber03_obc.xml    GBSA-OBC solvation model for use with AMBER03 force field                                     
-amber10_obc.xml    GBSA-OBC solvation model for use with AMBER10 force field                                     
-amoeba2009_gk.xml  Generalized Kirkwood solvation model\ :cite:`Schnieders2007` for use with AMOEBA force field
-=================  ==============================================================================================
+=================  =================================================================================================
+amber96_obc.xml    GBSA-OBC solvation model\ :cite:`Onufriev2004` for use with AMBER96 force field
+amber99_obc.xml    GBSA-OBC solvation model for use with AMBER99 force fields
+amber03_obc.xml    GBSA-OBC solvation model for use with AMBER03 force field
+amber10_obc.xml    GBSA-OBC solvation model for use with AMBER10 force field
+amoeba2009_gk.xml  Generalized Kirkwood solvation model\ :cite:`Schnieders2007` for use with AMOEBA 2009 force field
+amoeba2013_gk.xml  Generalized Kirkwood solvation model for use with AMOEBA 2013 force field
+=================  =================================================================================================
 
 
 For example, to use the GBSA-OBC solvation model with the Amber99SB force field,
@@ -1297,8 +1302,9 @@ water models:
 
     modeller.addSolvent(forcefield, model='tip5p')
 
-Allowed values for the :code:`model` option are 'tip3p', 'spce', 'tip4pew',
-and 'tip5p'.  Be sure to include the single quotes around the value.
+Allowed values for the :code:`model` option are 'tip3p', 'tip3pfb', 'spce', 
+'tip4pew', 'tip4pfb', and 'tip5p'.  Be sure to include the single quotes 
+around the value.
 
 Another option is to add extra ion pairs to give a desired total ionic strength.
 For example:
@@ -2180,6 +2186,49 @@ second atom has class OS and the third has class P:
 
     <Proper class1="" class2="OS" class3="P" class4="" per="3" phase="0.0" k="0.66944"/>
 
+<CustomNonbondedForce>
+===============
+
+To add a CustomNonbondedForce to the System, include a tag that looks like this:
+
+.. code-block:: xml
+
+    <CustomNonbondedForce energy="scale*epsilon1*epsilon2*((sigma1+sigma2)/r)^12" bondCutoff="3">
+     <GlobalParameter name="scale" defaultValue="1"/>
+     <PerParticleParameter name="sigma"/>
+     <PerParticleParameter name="epsilon"/>
+     <Atom type="0" sigma="0.3249" epsilon="0.7112"/>
+     <Atom type="1" sigma="0.1069" epsilon="0.0656"/>
+     <Atom type="2" sigma="0.3399" epsilon="0.4577"/>
+     ...
+    </CustomNonbondedForce>
+
+The energy expression for the CustomNonbondedForce is specified by the
+:code:`energy` attribute.  This is a mathematical expression that gives the
+energy of each pairwise interaction as a function of the distance *r*\ .  It
+also may depend on an arbitrary list of global or per-particle parameters.  Use
+a :code:`<GlobalParameter>` tag to define a global parameter, and a
+:code:`<PerParticleParameter>` tag to define a per-particle parameter.
+
+Exclusions are created automatically based on the :code:`bondCutoff` attribute.
+After setting the nonbonded parameters for all atoms, the force field calls
+:code:`createExclusionsFromBonds()` on the CustomNonbondedForce, passing in this
+value as its argument.  To avoid creating exclusions, set :code:`bondCutoff` to 0.
+
+Each :code:`<Atom>` tag specifies the parameters for one atom type
+(specified with the :code:`type` attribute) or atom class (specified with
+the :code:`class` attribute).  It is fine to mix these two methods, having
+some tags specify a type and others specify a class.  However you do it, you
+must make sure that a unique set of parameters is defined for every atom type.
+The remaining attributes are the values to use for the per-atom parameters. All
+per-atom parameters must be specified for every :code:`<Atom>` tag, and the
+attribute name must match the name of the parameter.  For instance, if there is
+a per-atom parameter with the name “radius”, then every :code:`<Atom>` tag
+must include an attribute called :code:`radius`\ .
+
+CustomNonbondedForce also allows you to define tabulated functions.  See section
+:ref:`tabulated-functions` for details.
+
 <CustomGBForce>
 ===============
 
@@ -2237,30 +2286,8 @@ attribute name must match the name of the parameter.  For instance, if there is
 a per-atom parameter with the name “radius”, then every :code:`<Atom>` tag
 must include an attribute called :code:`radius`\ .
 
-CustomGBForce also allows you to define tabulated functions.  To define a
-function, include a :code:`<Function>` tag inside the
-:code:`<CustomGBForce>` tag:
-
-.. code-block:: xml
-
-    <Function name="myfn" min="-5" max="5">
-    0.983674857694 -0.980096396266 -0.975743130031 -0.970451936613 -0.964027580076
-    -0.956237458128 -0.946806012846 -0.935409070603 -0.921668554406 -0.905148253645
-    -0.885351648202 -0.861723159313 -0.833654607012 -0.800499021761 -0.761594155956
-    -0.716297870199 -0.664036770268 -0.604367777117 -0.537049566998 -0.46211715726
-    -0.379948962255 -0.291312612452 -0.197375320225 -0.099667994625 0.0
-    0.099667994625 0.197375320225 0.291312612452 0.379948962255 0.46211715726
-    0.537049566998 0.604367777117 0.664036770268 0.716297870199 0.761594155956
-    0.800499021761 0.833654607012 0.861723159313 0.885351648202 0.905148253645
-    0.921668554406 0.935409070603 0.946806012846 0.956237458128 0.964027580076
-    0.970451936613 0.975743130031 0.980096396266 0.983674857694 0.986614298151
-    0.989027402201
-    </Function>
-
-The tag’s attributes define the name of the function and the range of values for
-which it is defined.  The tabulated values are listed inside the body of the
-tag, with successive values separated by white space.  Again, see the API
-documentation for more details.
+CustomGBForce also allows you to define tabulated functions.  See section
+:ref:`tabulated-functions` for details.
 
 Writing Custom Expressions
 ==========================
@@ -2296,6 +2323,55 @@ is exactly equivalent to
 
 The definition of an intermediate value may itself involve other intermediate
 values.  All uses of a value must appear *before* that value’s definition.
+
+.. _tabulated-functions:
+
+TabulatedFunctions
+==================
+
+Some forces, such as CustomNonbondedForce and CustomGBForce, allow you to define
+tabulated functions.  To define a function, include a :code:`<Function>` tag inside the
+:code:`<CustomNonbondedForce>` or :code:`<CustomGBForce>` tag:
+
+.. code-block:: xml
+
+    <Function name="myfn" type="Continuous1D" min="-5" max="5">
+    0.983674857694 -0.980096396266 -0.975743130031 -0.970451936613 -0.964027580076
+    -0.956237458128 -0.946806012846 -0.935409070603 -0.921668554406 -0.905148253645
+    -0.885351648202 -0.861723159313 -0.833654607012 -0.800499021761 -0.761594155956
+    -0.716297870199 -0.664036770268 -0.604367777117 -0.537049566998 -0.46211715726
+    -0.379948962255 -0.291312612452 -0.197375320225 -0.099667994625 0.0
+    0.099667994625 0.197375320225 0.291312612452 0.379948962255 0.46211715726
+    0.537049566998 0.604367777117 0.664036770268 0.716297870199 0.761594155956
+    0.800499021761 0.833654607012 0.861723159313 0.885351648202 0.905148253645
+    0.921668554406 0.935409070603 0.946806012846 0.956237458128 0.964027580076
+    0.970451936613 0.975743130031 0.980096396266 0.983674857694 0.986614298151
+    0.989027402201
+    </Function>
+
+The tag’s attributes define the name of the function, the type of function, and
+the range of values for which it is defined.  The required set of attributed
+depends on the function type:
+
+.. tabularcolumns:: |l|L|
+
+============  =======================================================
+Type          Required Attributes
+============  =======================================================
+Continuous1D  min, max
+Continuous2D  xmin, ymin, xmax, ymax, xsize, ysize
+Continuous3D  xmin, ymin, zmin, xmax, ymax, zmax, xsize, ysize, zsize
+Discrete1D
+Discrete2D    xsize, ysize
+Discrete3D    xsize, ysize, zsize
+============  =======================================================
+
+
+The "min" and "max" attributes define the range of the independent variables for
+a continuous function.  The "size" attributes define the size of the table along
+each axis.  The tabulated values are listed inside the body of the tag, with
+successive values separated by white space.  See the API documentation for more
+details.
 
 
 Using Multiple Files

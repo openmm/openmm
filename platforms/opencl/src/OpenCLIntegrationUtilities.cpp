@@ -101,7 +101,7 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
         ccmaConstraintMatrixValue(NULL), ccmaDelta1(NULL), ccmaDelta2(NULL), ccmaConverged(NULL), ccmaConvergedHostBuffer(NULL),
         vsite2AvgAtoms(NULL), vsite2AvgWeights(NULL), vsite3AvgAtoms(NULL), vsite3AvgWeights(NULL),
         vsiteOutOfPlaneAtoms(NULL), vsiteOutOfPlaneWeights(NULL), vsiteLocalCoordsAtoms(NULL), vsiteLocalCoordsParams(NULL),
-        hasInitializedPosConstraintKernels(false), hasInitializedVelConstraintKernels(false) {
+        hasInitializedPosConstraintKernels(false), hasInitializedVelConstraintKernels(false), hasOverlappingVsites(false) {
     // Create workspace arrays.
 
     if (context.getUseDoublePrecision() || context.getUseMixedPrecision()) {
@@ -649,6 +649,7 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
     int num3Avg = vsite3AvgAtomVec.size();
     int numOutOfPlane = vsiteOutOfPlaneAtomVec.size();
     int numLocalCoords = vsiteLocalCoordsAtomVec.size();
+    numVsites = num2Avg+num3Avg+numOutOfPlane+numLocalCoords;
     vsite2AvgAtoms = OpenCLArray::create<mm_int4>(context, max(1, num2Avg), "vsite2AvgAtoms");
     vsite3AvgAtoms = OpenCLArray::create<mm_int4>(context, max(1, num3Avg), "vsite3AvgAtoms");
     vsiteOutOfPlaneAtoms = OpenCLArray::create<mm_int4>(context, max(1, numOutOfPlane), "vsiteOutOfPlaneAtoms");
@@ -706,6 +707,20 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
         }
     }
     
+    // If multiple virtual sites depend on the same particle, make sure the force distribution
+    // can be done safely.
+    
+    vector<int> atomCounts(numAtoms, 0);
+    for (int i = 0; i < numAtoms; i++)
+        if (system.isVirtualSite(i))
+            for (int j = 0; j < system.getVirtualSite(i).getNumParticles(); j++)
+                atomCounts[system.getVirtualSite(i).getParticle(j)]++;
+    for (int i = 0; i < numAtoms; i++)
+        if (atomCounts[i] > 1)
+            hasOverlappingVsites = true;
+    if (hasOverlappingVsites && context.getUseDoublePrecision() && !context.getSupports64BitGlobalAtomics())
+        throw OpenMMException("This device does not support 64 bit atomics.  Cannot use double precision when multiple virtual sites depend on the same atom.");
+    
     // Create the kernels for virtual sites.
 
     map<string, string> defines;
@@ -713,6 +728,10 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
     defines["NUM_3_AVERAGE"] = context.intToString(num3Avg);
     defines["NUM_OUT_OF_PLANE"] = context.intToString(numOutOfPlane);
     defines["NUM_LOCAL_COORDS"] = context.intToString(numLocalCoords);
+    defines["NUM_ATOMS"] = context.intToString(numAtoms);
+    defines["PADDED_NUM_ATOMS"] = context.intToString(context.getPaddedNumAtoms());
+    if (hasOverlappingVsites)
+        defines["HAS_OVERLAPPING_VSITES"] = "1";
     cl::Program vsiteProgram = context.createProgram(OpenCLKernelSources::virtualSites, defines);
     vsitePositionKernel = cl::Kernel(vsiteProgram, "computeVirtualSites");
     int index = 0;
@@ -731,6 +750,8 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
     index = 0;
     vsiteForceKernel.setArg<cl::Buffer>(index++, context.getPosq().getDeviceBuffer());
     index++; // Skip argument 1: the force array hasn't been created yet.
+    if (context.getSupports64BitGlobalAtomics())
+        index++; // Skip argument 2: the force array hasn't been created yet.
     if (context.getUseMixedPrecision())
         vsiteForceKernel.setArg<cl::Buffer>(index++, context.getPosqCorrection().getDeviceBuffer());
     vsiteForceKernel.setArg<cl::Buffer>(index++, vsite2AvgAtoms->getDeviceBuffer());
@@ -741,7 +762,8 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
     vsiteForceKernel.setArg<cl::Buffer>(index++, vsiteOutOfPlaneWeights->getDeviceBuffer());
     vsiteForceKernel.setArg<cl::Buffer>(index++, vsiteLocalCoordsAtoms->getDeviceBuffer());
     vsiteForceKernel.setArg<cl::Buffer>(index++, vsiteLocalCoordsParams->getDeviceBuffer());
-    numVsites = num2Avg+num3Avg+numOutOfPlane+numLocalCoords;
+    if (hasOverlappingVsites && context.getSupports64BitGlobalAtomics())
+        vsiteAddForcesKernel = cl::Kernel(vsiteProgram, "addDistributedForces");
 }
 
 OpenCLIntegrationUtilities::~OpenCLIntegrationUtilities() {
@@ -941,8 +963,25 @@ void OpenCLIntegrationUtilities::computeVirtualSites() {
 
 void OpenCLIntegrationUtilities::distributeForcesFromVirtualSites() {
     if (numVsites > 0) {
+        // Set arguments that didn't exist yet in the constructor.
+        
         vsiteForceKernel.setArg<cl::Buffer>(1, context.getForce().getDeviceBuffer());
+        if (context.getSupports64BitGlobalAtomics()) {
+            vsiteForceKernel.setArg<cl::Buffer>(2, context.getLongForceBuffer().getDeviceBuffer());
+            if (hasOverlappingVsites) {
+                // We'll be using 64 bit atomics for the force redistribution, so clear the buffer.
+                
+                context.clearBuffer(context.getLongForceBuffer());
+            }
+        }
         context.executeKernel(vsiteForceKernel, numVsites);
+        if (context.getSupports64BitGlobalAtomics() && hasOverlappingVsites) {
+            // Add the redistributed forces from the virtual sites to the main force array.
+            
+            vsiteAddForcesKernel.setArg<cl::Buffer>(0, context.getLongForceBuffer().getDeviceBuffer());
+            vsiteAddForcesKernel.setArg<cl::Buffer>(1, context.getForce().getDeviceBuffer());
+            context.executeKernel(vsiteAddForcesKernel, context.getNumAtoms());
+        }
     }
 }
 
