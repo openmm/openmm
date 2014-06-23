@@ -1,0 +1,27 @@
+RESIDUE   LEU     22
+CONECT      N      3 CA   H    H2  
+CONECT      CA     4 N    C    CB   HA  
+CONECT      C      3 CA   O    OXT 
+CONECT      O      1 C   
+CONECT      CB     4 CA   CG   HB2  HB3 
+CONECT      CG     4 CB   CD1  CD2  HG  
+CONECT      CD1    4 CG   HD11 HD12 HD13
+CONECT      CD2    4 CG   HD21 HD22 HD23
+CONECT      OXT    2 C    HXT 
+CONECT      H      1 N   
+CONECT      H2     1 N   
+CONECT      HA     1 CA  
+CONECT      HB2    1 CB  
+CONECT      HB3    1 CB  
+CONECT      HG     1 CG  
+CONECT      HD11   1 CD1 
+CONECT      HD12   1 CD1 
+CONECT      HD13   1 CD1 
+CONECT      HD21   1 CD2 
+CONECT      HD22   1 CD2 
+CONECT      HD23   1 CD2 
+CONECT      HXT    1 OXT 
+END   
+HET    LEU             22
+HETNAM     LEU LEUCINE
+FORMUL      LEU    C6 H13 N1 O2

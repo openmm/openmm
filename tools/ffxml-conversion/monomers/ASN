@@ -1,0 +1,22 @@
+RESIDUE   ASN     17
+CONECT      N      3 CA   H    H2  
+CONECT      CA     4 N    C    CB   HA  
+CONECT      C      3 CA   O    OXT 
+CONECT      O      1 C   
+CONECT      CB     4 CA   CG   HB2  HB3 
+CONECT      CG     3 CB   OD1  ND2 
+CONECT      OD1    1 CG  
+CONECT      ND2    3 CG   HD21 HD22
+CONECT      OXT    2 C    HXT 
+CONECT      H      1 N   
+CONECT      H2     1 N   
+CONECT      HA     1 CA  
+CONECT      HB2    1 CB  
+CONECT      HB3    1 CB  
+CONECT      HD21   1 ND2 
+CONECT      HD22   1 ND2 
+CONECT      HXT    1 OXT 
+END   
+HET    ASN             17
+HETNAM     ASN ASPARAGINE
+FORMUL      ASN    C4 H8 N2 O3

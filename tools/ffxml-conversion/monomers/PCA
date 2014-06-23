@@ -1,0 +1,21 @@
+RESIDUE   PCA     16
+CONECT      N      3 CA   CD   H   
+CONECT      CA     4 N    CB   C    HA  
+CONECT      CB     4 CA   CG   HB2  HB3 
+CONECT      CG     4 CB   CD   HG2  HG3 
+CONECT      CD     3 N    CG   OE  
+CONECT      OE     1 CD  
+CONECT      C      3 CA   O    OXT 
+CONECT      O      1 C   
+CONECT      OXT    2 C    HXT 
+CONECT      H      1 N   
+CONECT      HA     1 CA  
+CONECT      HB2    1 CB  
+CONECT      HB3    1 CB  
+CONECT      HG2    1 CG  
+CONECT      HG3    1 CG  
+CONECT      HXT    1 OXT 
+END   
+HET    PCA             16
+HETNAM     PCA PYROGLUTAMIC ACID
+FORMUL      PCA    C5 H7 N1 O3

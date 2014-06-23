@@ -1,0 +1,113 @@
+3'-Hydroxyl DNA	
+3'-Hydroxyl RNA	
+3'-Phosphate OP DNA	
+3'-Phosphate OP RNA	
+3'-Phosphate OS DNA	
+3'-Phosphate OS RNA	
+3'-Phosphate P DNA	
+3'-Phosphate P RNA	
+5'-Hydroxyl DNA	
+5'-Hydroxyl RNA	
+5'-Phosphate OP DNA	
+5'-Phosphate OP RNA	
+5'-Phosphate OS DNA	
+5'-Phosphate OS RNA	
+5'-Phosphate P DNA	
+5'-Phosphate P RNA	
+Acetyl N-Terminus	ACE
+Adenosine	A
+Alanine	ALA
+Amide C-Terminus	NH2
+Arginine	ARG
+Asparagine	ASN
+Aspartic Acid	ASP
+C-Terminal AIB	AIB
+C-Terminal ALA	ALA
+C-Terminal ARG	ARG
+C-Terminal ASN	ASN
+C-Terminal ASP	ASP
+C-Terminal CYS (SH)	CYS
+C-Terminal CYS (SS)	CYX
+C-Terminal GLN	GLN
+C-Terminal GLU	GLU
+C-Terminal GLY	GLY
+C-Terminal HIS (+)	HIS
+C-Terminal HIS (HD)	HID
+C-Terminal HIS (HE)	HIE
+C-Terminal ILE	ILE
+C-Terminal LEU	LEU
+C-Terminal LYS	LYS
+C-Terminal MET	MET
+C-Terminal ORN	ORN
+C-Terminal PHE	PHE
+C-Terminal PRO	PRO
+C-Terminal SER	SER
+C-Terminal THR	THR
+C-Terminal TRP	TRP
+C-Terminal TYR	TYR
+C-Terminal VAL	VAL
+Calcium Ion	CA
+Chloride Ion	CL
+Cysteine (SH)	CYS
+Cystine (SS)	CYX
+Cytidine	C
+Deoxyadenosine	DA
+Deoxycytidine	DC
+Deoxyguanosine	DG
+Deoxythymidine	DT
+Formyl N-Terminus	FOR
+Glutamic Acid	GLU
+Glutamine	GLN
+Glycine	GLY
+Guanosine	G
+Histidine (+)	HIS
+Histidine (HD)	HID
+Histidine (HE)	HIE
+Isoleucine	ILE
+Leucine	LEU
+Lysine	LYS
+Magnesium Ion	MG
+Methionine	MET
+MethylAlanine (AIB)	AIB
+N-MeAmide C-Terminus	NME
+N-Terminal AIB	AIB
+N-Terminal ALA	ALA
+N-Terminal ARG	ARG
+N-Terminal ASN	ASN
+N-Terminal ASP	ASP
+N-Terminal CYS (SH)	CYS
+N-Terminal CYS (SS)	CYX
+N-Terminal GLN	GLN
+N-Terminal GLU	GLU
+N-Terminal GLY	GLY
+N-Terminal HIS (+)	HIS
+N-Terminal HIS (HD)	HID
+N-Terminal HIS (HE)	HIE
+N-Terminal ILE	ILE
+N-Terminal LEU	LEU
+N-Terminal LYS	LYS
+N-Terminal MET	MET
+N-Terminal ORN	ORN
+N-Terminal PHE	PHE
+N-Terminal PRO	PRO
+N-Terminal SER	SER
+N-Terminal THR	THR
+N-Terminal TRP	TRP
+N-Terminal TYR	TYR
+N-Terminal VAL	VAL
+Ornithine	ORN
+Phenylalanine	PHE
+Phosphodiester DNA	DA	DC	DG	DT
+Phosphodiester RNA	A	C	G	U
+Potassium Ion	K
+Proline	PRO
+Pyroglutamic Acid	PCA
+Serine	SER
+Sodium Ion	NA
+Threonine	THR
+Tryptophan	TRP
+Tyrosine	TYR
+Uridine	U
+Valine	VAL
+Water	HOH
+

@@ -1,0 +1,26 @@
+RESIDUE   HIS     21
+CONECT      N      3 CA   H    H2  
+CONECT      CA     4 N    C    CB   HA  
+CONECT      C      3 CA   O    OXT 
+CONECT      O      1 C   
+CONECT      CB     4 CA   CG   HB2  HB3 
+CONECT      CG     3 CB   ND1  CD2 
+CONECT      ND1    3 CG   CE1  HD1 
+CONECT      CD2    3 CG   NE2  HD2 
+CONECT      CE1    3 ND1  NE2  HE1 
+CONECT      NE2    3 CD2  CE1  HE2 
+CONECT      OXT    2 C    HXT 
+CONECT      H      1 N   
+CONECT      H2     1 N   
+CONECT      HA     1 CA  
+CONECT      HB2    1 CB  
+CONECT      HB3    1 CB  
+CONECT      HD1    1 ND1 
+CONECT      HD2    1 CD2 
+CONECT      HE1    1 CE1 
+CONECT      HE2    1 NE2 
+CONECT      HXT    1 OXT 
+END   
+HET    HIS             21
+HETNAM     HIS HISTIDINE
+FORMUL      HIS    C6 H10 N3 O2 1+

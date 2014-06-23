@@ -1,0 +1,15 @@
+RESIDUE   GLY     10
+CONECT      N      3 CA   H    H2  
+CONECT      CA     4 N    C    HA2  HA3 
+CONECT      C      3 CA   O    OXT 
+CONECT      O      1 C   
+CONECT      OXT    2 C    HXT 
+CONECT      H      1 N   
+CONECT      H2     1 N   
+CONECT      HA2    1 CA  
+CONECT      HA3    1 CA  
+CONECT      HXT    1 OXT 
+END   
+HET    GLY             10
+HETNAM     GLY GLYCINE
+FORMUL      GLY    C2 H5 N1 O2

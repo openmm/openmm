@@ -1,0 +1,12 @@
+RESIDUE   ACE      7
+CONECT      C      3 O    CH3  H   
+CONECT      O      1 C   
+CONECT      CH3    4 C    H1   H2   H3  
+CONECT      H      1 C   
+CONECT      H1     1 CH3 
+CONECT      H2     1 CH3 
+CONECT      H3     1 CH3 
+END   
+HET    ACE              7
+HETNAM     ACE ACETYL GROUP
+FORMUL      ACE    C2 H4 O1

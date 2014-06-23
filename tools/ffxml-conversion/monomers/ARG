@@ -1,0 +1,32 @@
+RESIDUE   ARG     27
+CONECT      N      3 CA   H    H2  
+CONECT      CA     4 N    C    CB   HA  
+CONECT      C      3 CA   O    OXT 
+CONECT      O      1 C   
+CONECT      CB     4 CA   CG   HB2  HB3 
+CONECT      CG     4 CB   CD   HG2  HG3 
+CONECT      CD     4 CG   NE   HD2  HD3 
+CONECT      NE     3 CD   CZ   HE  
+CONECT      CZ     3 NE   NH1  NH2 
+CONECT      NH1    3 CZ   HH11 HH12
+CONECT      NH2    3 CZ   HH21 HH22
+CONECT      OXT    2 C    HXT 
+CONECT      H      1 N   
+CONECT      H2     1 N   
+CONECT      HA     1 CA  
+CONECT      HB2    1 CB  
+CONECT      HB3    1 CB  
+CONECT      HG2    1 CG  
+CONECT      HG3    1 CG  
+CONECT      HD2    1 CD  
+CONECT      HD3    1 CD  
+CONECT      HE     1 NE  
+CONECT      HH11   1 NH1 
+CONECT      HH12   1 NH1 
+CONECT      HH21   1 NH2 
+CONECT      HH22   1 NH2 
+CONECT      HXT    1 OXT 
+END   
+HET    ARG             27
+HETNAM     ARG ARGININE
+FORMUL      ARG    C6 H15 N4 O2 1+

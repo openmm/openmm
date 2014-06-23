@@ -1,0 +1,39 @@
+RESIDUE   U       34
+CONECT      OP3    2 P    HOP3
+CONECT      P      4 OP3  OP1  OP2  O5' 
+CONECT      OP1    1 P   
+CONECT      OP2    2 P    HOP2
+CONECT      O5'    2 P    C5' 
+CONECT      C5'    4 O5'  C4'  H5'  H5''
+CONECT      C4'    4 C5'  O4'  C3'  H4' 
+CONECT      O4'    2 C4'  C1' 
+CONECT      C3'    4 C4'  O3'  C2'  H3' 
+CONECT      O3'    2 C3'  HO3'
+CONECT      C2'    4 C3'  O2'  C1'  H2' 
+CONECT      O2'    2 C2'  HO2'
+CONECT      C1'    4 O4'  C2'  N1   H1' 
+CONECT      N1     3 C1'  C2   C6  
+CONECT      C2     3 N1   O2   N3  
+CONECT      O2     1 C2  
+CONECT      N3     3 C2   C4   H3  
+CONECT      C4     3 N3   O4   C5  
+CONECT      O4     1 C4  
+CONECT      C5     3 C4   C6   H5  
+CONECT      C6     3 N1   C5   H6  
+CONECT      HOP3   1 OP3 
+CONECT      HOP2   1 OP2 
+CONECT      H5'    1 C5' 
+CONECT      H5''   1 C5' 
+CONECT      H4'    1 C4' 
+CONECT      H3'    1 C3' 
+CONECT      HO3'   1 O3' 
+CONECT      H2'    1 C2' 
+CONECT      HO2'   1 O2' 
+CONECT      H1'    1 C1' 
+CONECT      H3     1 N3  
+CONECT      H5     1 C5  
+CONECT      H6     1 C6  
+END   
+HET    U               34
+HETNAM     U   URIDINE-5'-MONOPHOSPHATE
+FORMUL      U      C9 H13 N2 O9 P1

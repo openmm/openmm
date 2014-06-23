@@ -1,0 +1,43 @@
+RESIDUE   G       38
+CONECT      OP3    2 P    HOP3
+CONECT      P      4 OP3  OP1  OP2  O5' 
+CONECT      OP1    1 P   
+CONECT      OP2    2 P    HOP2
+CONECT      O5'    2 P    C5' 
+CONECT      C5'    4 O5'  C4'  H5'  H5''
+CONECT      C4'    4 C5'  O4'  C3'  H4' 
+CONECT      O4'    2 C4'  C1' 
+CONECT      C3'    4 C4'  O3'  C2'  H3' 
+CONECT      O3'    2 C3'  HO3'
+CONECT      C2'    4 C3'  O2'  C1'  H2' 
+CONECT      O2'    2 C2'  HO2'
+CONECT      C1'    4 O4'  C2'  N9   H1' 
+CONECT      N9     3 C1'  C8   C4  
+CONECT      C8     3 N9   N7   H8  
+CONECT      N7     2 C8   C5  
+CONECT      C5     3 N7   C6   C4  
+CONECT      C6     3 C5   O6   N1  
+CONECT      O6     1 C6  
+CONECT      N1     3 C6   C2   H1  
+CONECT      C2     3 N1   N2   N3  
+CONECT      N2     3 C2   H21  H22 
+CONECT      N3     2 C2   C4  
+CONECT      C4     3 N9   C5   N3  
+CONECT      HOP3   1 OP3 
+CONECT      HOP2   1 OP2 
+CONECT      H5'    1 C5' 
+CONECT      H5''   1 C5' 
+CONECT      H4'    1 C4' 
+CONECT      H3'    1 C3' 
+CONECT      HO3'   1 O3' 
+CONECT      H2'    1 C2' 
+CONECT      HO2'   1 O2' 
+CONECT      H1'    1 C1' 
+CONECT      H8     1 C8  
+CONECT      H1     1 N1  
+CONECT      H21    1 N2  
+CONECT      H22    1 N2  
+END   
+HET    G               38
+HETNAM     G   GUANOSINE-5'-MONOPHOSPHATE
+FORMUL      G      C10 H14 N5 O8 P1

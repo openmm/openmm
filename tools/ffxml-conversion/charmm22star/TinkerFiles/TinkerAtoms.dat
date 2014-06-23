@@ -1,0 +1,82 @@
+atom          1    1    HA    "Nonpolar Hydrogen"            1     1.008    1
+atom          2    2    HP    "Aromatic Hydrogen"            1     1.008    1
+atom          3    3    H     "Peptide Amide HN"             1     1.008    1
+atom          4    4    HB    "Peptide HCA"                  1     1.008    1
+atom          5    4    HB    "N-Terminal HCA"               1     1.008    1
+atom          6    5    HC    "N-Terminal Hydrogen"          1     1.008    1
+atom          7    5    HC    "N-Terminal PRO HN"            1     1.008    1
+atom          8    3    H     "Hydroxyl Hydrogen"            1     1.008    1
+atom          9    3    H     "TRP Indole HE1"               1     1.008    1
+atom         10    3    H     "HIS+ Ring NH"                 1     1.008    1
+atom         11    3    H     "HISDE Ring NH"                1     1.008    1
+atom         12    6    HR1   "HIS+ HD2/HISDE HE1"           1     1.008    1
+atom         13    7    HR2   "HIS+ HE1"                     1     1.008    1
+atom         14    8    HR3   "HISD HD2"                     1     1.008    1
+atom         15    8    HR3   "HISE HD2"                     1     1.008    1
+atom         16    9    HS    "Thiol Hydrogen"               1     1.008    1
+atom         17    1    HA    "LYS HCE/ORN HCD"              1     1.008    1
+atom         18    5    HC    "ARG HE Hydrogen"              1     1.008    1
+atom         19    5    HC    "ARG HZ Hydrogen"              1     1.008    1
+atom         20   10    C     "Peptide Carbonyl"             6    12.011    3
+atom         21   11    CA    "Aromatic Carbon"              6    12.011    3
+atom         22   12    CC    "C-Term Carboxylate"           6    12.011    3
+atom         23   13    CT1   "Peptide Alpha Carbon"         6    12.011    4
+atom         24   13    CT1   "N-Term Alpha Carbon"          6    12.011    4
+atom         25   13    CT1   "Methine Carbon"               6    12.011    4
+atom         26   14    CT2   "Methylene Carbon"             6    12.011    4
+atom         27   15    CT3   "Methyl Carbon"                6    12.011    4
+atom         28   14    CT2   "GLY Alpha Carbon"             6    12.011    4
+atom         29   14    CT2   "N-Terminal GLY CA"            6    12.011    4
+atom         30   16    CP1   "PRO CA Carbon"                6    12.011    4
+atom         31   17    CP2   "PRO CB and CG"                6    12.011    4
+atom         32   18    CP3   "PRO CD Carbon"                6    12.011    4
+atom         33   16    CP1   "N-Terminal PRO CA"            6    12.011    4
+atom         34   18    CP3   "N-Terminal PRO CD"            6    12.011    4
+atom         35   14    CT2   "SER CB Carbon"                6    12.011    4
+atom         36   13    CT1   "THR CB Carbon"                6    12.011    4
+atom         37   14    CT2   "Cysteine CB Carbon"           6    12.011    4
+atom         38   14    CT2   "Cystine CB Carbon"            6    12.011    4
+atom         39   14    CT2   "HIS+ CB Carbon"               6    12.011    4
+atom         40   14    CT2   "HISD CB Carbon"               6    12.011    4
+atom         41   14    CT2   "HISE CB Carbon"               6    12.011    4
+atom         42   19    CH1   "HIS+ CG and CD2"              6    12.011    3
+atom         43   19    CH1   "HISD CG/HISE CD2"             6    12.011    3
+atom         44   19    CH1   "HISE CG/HISD CD2"             6    12.011    3
+atom         45   20    CH2   "HIS+ CE1 Carbon"              6    12.011    3
+atom         46   20    CH2   "HISDE CE1 Carbon"             6    12.011    3
+atom         47   11    CA    "PHE/TYR CG Carbon"            6    12.011    3
+atom         48   11    CA    "TYR CZ Carbon"                6    12.011    3
+atom         49   12    CC    "ASN/GLN Carbonyl"             6    12.011    3
+atom         50   21    CY    "TRP CG Carbon"                6    12.011    3
+atom         51   11    CA    "TRP CD1 Carbon"               6    12.011    3
+atom         52   22    CPT   "TRP CD2 Carbon"               6    12.011    3
+atom         53   22    CPT   "TRP CE2 Carbon"               6    12.011    3
+atom         54   14    CT2   "ASP CB/GLU CG"                6    12.011    4
+atom         55   12    CC    "ASP/GLU Carboxylate"          6    12.011    3
+atom         56   14    CT2   "MET CG Carbon"                6    12.011    4
+atom         57   15    CT3   "MET CE Carbon"                6    12.011    4
+atom         58   14    CT2   "LYS CE/ORN CD"                6    12.011    4
+atom         59   14    CT2   "ARG CD Carbon"                6    12.011    4
+atom         60   10    C     "ARG CZ Carbon"                6    12.011    3
+atom         61   15    CT3   "N-Methyl Amide CH3"           6    12.011    4
+atom         62   23    CT    "AIB Alpha Carbon"             6    12.011    4
+atom         63   24    NH1   "Peptide Nitrogen"             7    14.007    3
+atom         64   25    NH2   "Amide Nitrogen"               7    14.007    3
+atom         65   26    NH3   "Ammonium Nitrogen"            7    14.007    4
+atom         66   27    N     "PRO Nitrogen"                 7    14.007    3
+atom         67   28    NP    "N-Terminal PRO N"             7    14.007    4
+atom         68   29    NR1   "HIS Ring NH"                  7    14.007    3
+atom         69   30    NR2   "HIS Ring N"                   7    14.007    2
+atom         70   31    NR3   "HIS+ Ring NH"                 7    14.007    3
+atom         71   32    NY    "TRP Pyrrole NE1"              7    14.007    3
+atom         72   33    NC2   "ARG NE Nitrogen"              7    14.007    3
+atom         73   33    NC2   "ARG NZ Nitrogen"              7    14.007    3
+atom         74   34    O     "Peptide Oxygen"               8    15.999    1
+atom         75   34    O     "ASN/GLN Carbonyl"             8    15.999    1
+atom         76   35    OH1   "Hydroxyl Oxygen"              8    15.999    2
+atom         77   35    OH1   "Phenol Oxygen"                8    15.999    2
+atom         78   36    OC    "ASP/GLU Carboxylate"          8    15.999    1
+atom         79   36    OC    "C-Term Carboxylate"           8    15.999    1
+atom         80   37    S     "Thiol Sulfur"                16    32.060    2
+atom         81   37    S     "Sulfide Sulfur"              16    32.060    2
+atom         82   38    SM    "Disulfide Sulfur"            16    32.060    2

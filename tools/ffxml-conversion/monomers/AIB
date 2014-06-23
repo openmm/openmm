@@ -1,0 +1,21 @@
+RESIDUE   AIB     16
+CONECT      N      3 CA   H    H2  
+CONECT      CA     4 N    C    CB1  CB2 
+CONECT      C      3 CA   O    OXT 
+CONECT      O      1 C   
+CONECT      OXT    2 C    HO2 
+CONECT      CB1    4 CA   HB11 HB12 HB13
+CONECT      CB2    4 CA   HB21 HB22 HB23
+CONECT      H      1 N   
+CONECT      H2     1 N   
+CONECT      HO2    1 OXT 
+CONECT      HB11   1 CB1 
+CONECT      HB12   1 CB1 
+CONECT      HB13   1 CB1 
+CONECT      HB21   1 CB2 
+CONECT      HB22   1 CB2 
+CONECT      HB23   1 CB2 
+END   
+HET    AIB             16
+HETNAM     AIB ALPHA-AMINOISOBUTYRIC ACID
+FORMUL      AIB    C4 H9 N1 O2

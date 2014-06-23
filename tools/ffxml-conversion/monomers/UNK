@@ -1,0 +1,21 @@
+RESIDUE   UNK     16
+CONECT      N      3 CA   H    H2  
+CONECT      CA     4 N    C    CB   HA  
+CONECT      C      3 CA   O    OXT 
+CONECT      O      1 C   
+CONECT      CB     4 CA   CG   HB1  HB2 
+CONECT      CG     4 CB   HG1  HG2  HG3 
+CONECT      OXT    2 C    HXT 
+CONECT      H      1 N   
+CONECT      H2     1 N   
+CONECT      HA     1 CA  
+CONECT      HB1    1 CB  
+CONECT      HB2    1 CB  
+CONECT      HG1    1 CG  
+CONECT      HG2    1 CG  
+CONECT      HG3    1 CG  
+CONECT      HXT    1 OXT 
+END   
+HET    UNK             16
+HETNAM     UNK UNKNOWN
+FORMUL      UNK    C4 H9 N1 O2
