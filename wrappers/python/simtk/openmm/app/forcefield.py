@@ -1107,6 +1107,8 @@ class NonbondedGenerator:
         force.setCutoffDistance(nonbondedCutoff)
         if 'ewaldErrorTolerance' in args:
             force.setEwaldErrorTolerance(args['ewaldErrorTolerance'])
+        if 'useDispersionCorrection' in args:
+            force.setUseDispersionCorrection(bool(args['useDispersionCorrection']))
         sys.addForce(force)
 
     def postprocessSystem(self, sys, data, args):
