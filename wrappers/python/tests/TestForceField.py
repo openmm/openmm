@@ -167,7 +167,7 @@ class AmoebaTestForceField(unittest.TestCase):
         for method in [NoCutoff, PME]:
             system = self.forcefield1.createSystem(self.pdb1.topology,
                                                    nonbondedMethod=method,
-                                                   vdwCutoff=cutoff_distance,
+                                                   nonbondedCutoff=cutoff_distance,
                                                    constraints=None)
 
             for force in system.getForces():
