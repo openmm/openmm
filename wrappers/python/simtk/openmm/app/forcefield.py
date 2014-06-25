@@ -1107,6 +1107,8 @@ class NonbondedGenerator:
         force.setCutoffDistance(nonbondedCutoff)
         if 'ewaldErrorTolerance' in args:
             force.setEwaldErrorTolerance(args['ewaldErrorTolerance'])
+        if 'useDispersionCorrection' in args:
+            force.setUseDispersionCorrection(bool(args['useDispersionCorrection']))
         sys.addForce(force)
 
     def postprocessSystem(self, sys, data, args):
@@ -3037,7 +3039,7 @@ class AmoebaVdwGenerator:
             # dispersion correction
 
             if ('useDispersionCorrection' in args):
-                force.setUseDispersionCorrection(int(args['useDispersionCorrection']))
+                force.setUseDispersionCorrection(bool(args['useDispersionCorrection']))
 
             if (nonbondedMethod == PME):
                 force.setNonbondedMethod(mm.AmoebaVdwForce.CutoffPeriodic)
