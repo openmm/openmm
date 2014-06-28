@@ -22,4 +22,4 @@ script:
   - if [ -s FailedTests.log ]; then ctest -V -I FailedTests.log; fi;
   - # run the python tests too
   - cd python/tests
-  - nosetests -vv
+  - nosetests -vv --processes=-1 --process-timeout=200
