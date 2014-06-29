@@ -111,7 +111,7 @@ class GromacsTopFile(object):
                 if len(fields) < 2:
                     raise ValueError('Illegal line in .top file: '+line)
                 name = fields[1]
-                valueStart = stripped.find(name, len(command))+len(name)
+                valueStart = stripped.find(name, len(command))+len(name)+1
                 value = line[valueStart:].strip()
                 self._defines[name] = value
             elif command == '#ifdef':
