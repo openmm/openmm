@@ -16,7 +16,7 @@ script:
   - make -j2 install
   - sudo make PythonInstall
   - # run all of the tests
-  - ctest -j2 -V
+  - ctest -j2 -V -E "[A-Za-z]+OpenCL[A-Za-z]+"
   - # get a list of all of the failed tests into this stupid ctest format
   - python -c 'fn = "Testing/Temporary/LastTestsFailed.log"; import os; os.path.exists(fn) or exit(0); l = [line.split(":")[0] for line in open(fn)]; triplets = zip(l, l, [","]*len(l)); print "".join(",".join(t) for t in triplets)' > FailedTests.log
   - # rerun all of the failed tests
