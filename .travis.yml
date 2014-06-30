@@ -8,13 +8,7 @@ before_install:
   - sudo apt-get install -qq swig doxygen llvm-3.3
   - sudo apt-get install -qq python-numpy python-scipy python-nose
   - export ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer-3.3
-  - wget http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1204/x86_64/cuda-repo-ubuntu1204_6.0-37_amd64.deb
-  - sudo dpkg -i cuda-repo-ubuntu1204_6.0-37_amd64.deb 
-  - sudo apt-get install cuda
-  - export CUDA_HOME=/usr/local/cuda-6.0
-  - export LD_LIBRARY_PATH=${CUDA_HOME}/lib64 
-  - PATH=${CUDA_HOME}/bin:${PATH}
-  - export PATH
+
 
 script:
   - cmake -DCMAKE_INSTALL_PREFIX=$HOME/OpenMM .
