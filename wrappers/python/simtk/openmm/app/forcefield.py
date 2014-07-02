@@ -120,13 +120,7 @@ class ForceField(object):
 
             if tree.getroot().find('AtomTypes') is not None:
                 for type in tree.getroot().find('AtomTypes').findall('Type'):
-                    element = None
-                    if 'element' in type.attrib:
-                        element = elem.get_by_symbol(type.attrib['element'])
-                    name = type.attrib['name']
-                    if name in self._atomTypes:
-                        raise ValueError('Found multiple definitions for atom type: '+name)
-                    self.registerAtomType(name, type.attrib['class'], _convertParameterToNumber(type.attrib['mass']), element)
+                    self.registerAtomType(type.attrib)
 
             # Load the residue templates.
 
@@ -165,16 +159,19 @@ class ForceField(object):
         """Register a new generator."""
         self._forces.append(generator)
     
-    def registerAtomType(self, name, atomClass, mass, element):
-        """Register a new atom type.
-        
-        Parameters:
-         - name (str) The name of the new atom type
-         - atomClass (str) The class of the new atom type
-         - mass (mass) The atomic mass of the new atom type
-         - element (element) The element of the new atom type
-        """
-        self._atomTypes[name] = (atomClass, _convertParameterToNumber(mass), element)
+    def registerAtomType(self, parameters):
+        """Register a new atom type."""
+        name = parameters['name']
+        if name in self._atomTypes:
+            raise ValueError('Found multiple definitions for atom type: '+name)
+        atomClass = parameters['class']
+        mass = _convertParameterToNumber(parameters['mass'])
+        element = None
+        if 'element' in parameters:
+            element = parameters['element']
+            if not isinstance(element, elem.Element):
+                element = elem.get_by_symbol(element)
+        self._atomTypes[name] = (atomClass, mass, element)
         if atomClass in self._atomClasses:
             typeSet = self._atomClasses[atomClass]
         else:

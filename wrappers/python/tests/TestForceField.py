@@ -156,8 +156,8 @@ class TestForceField(unittest.TestCase):
         
         # Build the ForceField for TIP3P programmatically.
         ff = ForceField()
-        ff.registerAtomType('tip3p-O', 'OW', 15.99943*daltons, elem.oxygen)
-        ff.registerAtomType('tip3p-H', 'HW', 1.007947*daltons, elem.hydrogen)
+        ff.registerAtomType({'name':'tip3p-O', 'class':'OW', 'mass':15.99943*daltons, 'element':elem.oxygen})
+        ff.registerAtomType({'name':'tip3p-H', 'class':'HW', 'mass':1.007947*daltons, 'element':elem.hydrogen})
         residue = ForceField._TemplateData('HOH')
         residue.atoms.append(ForceField._TemplateAtomData('O', 'tip3p-O', elem.oxygen))
         residue.atoms.append(ForceField._TemplateAtomData('H1', 'tip3p-H', elem.hydrogen))
