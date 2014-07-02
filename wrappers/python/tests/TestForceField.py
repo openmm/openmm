@@ -119,7 +119,19 @@ class TestForceField(unittest.TestCase):
         totalMass1 = sum([system1.getParticleMass(i) for i in range(system1.getNumParticles())]).value_in_unit(amu)
         totalMass2 = sum([system2.getParticleMass(i) for i in range(system2.getNumParticles())]).value_in_unit(amu)
         self.assertAlmostEqual(totalMass1, totalMass2)
-
+    
+    def test_Forces(self):
+        """Compute forces and compare them to ones generated with a previous version of OpenMM to ensure they haven't changed."""
+        
+        pdb = PDBFile('systems/lysozyme-implicit.pdb')
+        system = self.forcefield2.createSystem(pdb.topology)
+        integrator = VerletIntegrator(0.001)
+        context = Context(system, integrator)
+        context.setPositions(pdb.positions)
+        state1 = context.getState(getForces=True)
+        state2 = XmlSerializer.deserialize(open('systems/lysozyme-implicit-forces.xml').read())
+        for f1, f2, in zip(state1.getForces().value_in_unit(kilojoules_per_mole/nanometer), state2.getForces().value_in_unit(kilojoules_per_mole/nanometer)):
+            self.assertTrue(norm(f1-f2) < 0.1)
 
 if __name__ == '__main__':
     unittest.main()
