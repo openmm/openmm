@@ -18,7 +18,8 @@ class TestForceField(unittest.TestCase):
         self.forcefield1 = ForceField('amber99sb.xml', 'tip3p.xml')
         self.topology1 = self.pdb1.topology
         self.topology1.setUnitCellDimensions(Vec3(2, 2, 2))
-        
+
+        # alalnine dipeptide with implicit water
         self.pdb2 = PDBFile('systems/alanine-dipeptide-implicit.pdb')
         self.forcefield2 = ForceField('amber99sb.xml', 'amber99_obc.xml')
 
@@ -37,6 +38,18 @@ class TestForceField(unittest.TestCase):
             self.assertTrue(any(isinstance(f, NonbondedForce) and 
                                 f.getNonbondedMethod()==methodMap[method] 
                                 for f in forces))
+
+    def test_DispersionCorrection(self):
+        """Test to make sure the nonbondedCutoff parameter is passed correctly."""
+
+        for useDispersionCorrection in [True, False]:
+            system = self.forcefield1.createSystem(self.pdb1.topology,
+                                                   nonbondedCutoff=2*nanometer, 
+                                                   useDispersionCorrection=useDispersionCorrection)
+
+            for force in system.getForces():
+                if isinstance(force, NonbondedForce):
+                    self.assertEqual(useDispersionCorrection, force.getUseDispersionCorrection())
 
     def test_Cutoff(self):
         """Test to make sure the nonbondedCutoff parameter is passed correctly."""
@@ -132,6 +145,62 @@ class TestForceField(unittest.TestCase):
         state2 = XmlSerializer.deserialize(open('systems/lysozyme-implicit-forces.xml').read())
         for f1, f2, in zip(state1.getForces().value_in_unit(kilojoules_per_mole/nanometer), state2.getForces().value_in_unit(kilojoules_per_mole/nanometer)):
             self.assertTrue(norm(f1-f2) < 0.1)
+
+class AmoebaTestForceField(unittest.TestCase):
+    """Test the ForceField.createSystem() method with the AMOEBA forcefield."""
+ 
+    def setUp(self):
+        """Set up the tests by loading the input pdb files and force field 
+        xml files.
+
+        """
+
+        self.pdb1 = PDBFile('systems/amoeba-ion-in-water.pdb')
+        self.forcefield1 = ForceField('amoeba2009.xml')
+        self.topology1 = self.pdb1.topology
+
+
+    def test_NonbondedMethod(self):
+        """Test all five options for the nonbondedMethod parameter."""
+
+        methodMap = {NoCutoff:AmoebaMultipoleForce.NoCutoff,
+                     PME:AmoebaMultipoleForce.PME}
+
+        for method in methodMap:
+            system = self.forcefield1.createSystem(self.pdb1.topology,
+                                                  nonbondedMethod=method)
+            forces = system.getForces()
+            self.assertTrue(any(isinstance(f, AmoebaMultipoleForce) and
+                                f.getNonbondedMethod()==methodMap[method]
+                                for f in forces))
+    def test_Cutoff(self):
+        """Test to make sure the nonbondedCutoff parameter is passed correctly."""
+
+        cutoff_distance = 0.7*nanometer
+        for method in [NoCutoff, PME]:
+            system = self.forcefield1.createSystem(self.pdb1.topology,
+                                                   nonbondedMethod=method,
+                                                   nonbondedCutoff=cutoff_distance,
+                                                   constraints=None)
+
+            for force in system.getForces():
+                if isinstance(force, AmoebaVdwForce):
+                    self.assertEqual(force.getCutoff(), cutoff_distance)
+                if isinstance(force, AmoebaMultipoleForce):
+                    self.assertEqual(force.getCutoffDistance(), cutoff_distance)
+
+    def test_DispersionCorrection(self):
+        """Test to make sure the nonbondedCutoff parameter is passed correctly."""
+
+        for useDispersionCorrection in [True, False]:
+            system = self.forcefield1.createSystem(self.pdb1.topology,
+                                                   nonbondedMethod=PME,
+                                                   useDispersionCorrection=useDispersionCorrection)
+
+            for force in system.getForces():
+                if isinstance(force, AmoebaVdwForce):
+                    self.assertEqual(useDispersionCorrection, force.getUseDispersionCorrection())
+
 
 if __name__ == '__main__':
     unittest.main()

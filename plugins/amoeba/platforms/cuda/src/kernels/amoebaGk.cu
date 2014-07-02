@@ -97,11 +97,11 @@ extern "C" __global__ void computeBornSum(unsigned long long* __restrict__ bornS
         // Extract the coordinates of this tile
         const unsigned int tgx = threadIdx.x & (TILE_SIZE-1);
         const unsigned int tbx = threadIdx.x - tgx;
-        unsigned int x, y;
+        int x, y;
         AtomData1 data;
         data.bornSum = 0;
         if (pos < end) {
-            y = (unsigned int) floor(NUM_BLOCKS+0.5f-sqrt((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
+            y = (int) floor(NUM_BLOCKS+0.5f-sqrt((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
             x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
             if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
                 y += (x < y ? -1 : 1);
@@ -232,10 +232,10 @@ extern "C" __global__ void computeGKForces(
         // Extract the coordinates of this tile
         const unsigned int tgx = threadIdx.x & (TILE_SIZE-1);
         const unsigned int tbx = threadIdx.x - tgx;
-        unsigned int x, y;
+        int x, y;
         AtomData2 data;
         if (pos < end) {
-            y = (unsigned int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
+            y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
             x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
             if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
                 y += (x < y ? -1 : 1);
@@ -471,10 +471,10 @@ extern "C" __global__ void computeChainRuleForce(
         // Extract the coordinates of this tile
         const unsigned int tgx = threadIdx.x & (TILE_SIZE-1);
         const unsigned int tbx = threadIdx.x - tgx;
-        unsigned int x, y;
+        int x, y;
         AtomData3 data;
         if (pos < end) {
-            y = (unsigned int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
+            y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
             x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
             if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
                 y += (x < y ? -1 : 1);
@@ -766,8 +766,8 @@ extern "C" __global__ void computeEDiffForce(
     while (pos < end) {
         // Extract the coordinates of this tile.
 
-        unsigned int x, y;
-        y = (unsigned int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
+        int x, y;
+        y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
         x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
         if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
             y += (x < y ? -1 : 1);
