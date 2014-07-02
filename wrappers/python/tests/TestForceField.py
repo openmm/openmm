@@ -4,6 +4,7 @@ from simtk.openmm.app import *
 from simtk.openmm import *
 from simtk.unit import *
 import simtk.openmm.app.element as elem
+import simtk.openmm.app.forcefield as forcefield
 
 class TestForceField(unittest.TestCase):
     """Test the ForceField.createSystem() method."""
@@ -149,6 +150,41 @@ class TestForceField(unittest.TestCase):
             if diff > 0.1 and diff/norm(f1) > 1e-3:
                 numDifferences += 1
         self.assertTrue(numDifferences < system.getNumParticles()/20) # Tolerate occasional differences from numerical error
+    
+    def test_ProgrammaticForceField(self):
+        """Test building a ForceField programmatically."""
+        
+        # Build the ForceField for TIP3P programmatically.
+        ff = ForceField()
+        ff.registerAtomType('tip3p-O', 'OW', 15.99943*daltons, elem.oxygen)
+        ff.registerAtomType('tip3p-H', 'HW', 1.007947*daltons, elem.hydrogen)
+        residue = ForceField._TemplateData('HOH')
+        residue.atoms.append(ForceField._TemplateAtomData('O', 'tip3p-O', elem.oxygen))
+        residue.atoms.append(ForceField._TemplateAtomData('H1', 'tip3p-H', elem.hydrogen))
+        residue.atoms.append(ForceField._TemplateAtomData('H2', 'tip3p-H', elem.hydrogen))
+        residue.addBond(0, 1)
+        residue.addBond(0, 2)
+        ff.registerResidueTemplate(residue)
+        bonds = forcefield.HarmonicBondGenerator(ff)
+        bonds.registerBond({'class1':'OW', 'class2':'HW', 'length':0.09572*nanometers, 'k':462750.4*kilojoules_per_mole/nanometer})
+        ff.registerGenerator(bonds)
+        angles = forcefield.HarmonicAngleGenerator(ff)
+        angles.registerAngle({'class1':'HW', 'class2':'OW', 'class3':'HW', 'angle':1.82421813418*radians, 'k':836.8*kilojoules_per_mole/radian})
+        ff.registerGenerator(angles)
+        nonbonded = forcefield.NonbondedGenerator(ff, 0.833333, 0.5)
+        nonbonded.registerAtom({'type':'tip3p-O', 'charge':-0.834, 'sigma':0.31507524065751241*nanometers, 'epsilon':0.635968*kilojoules_per_mole})
+        nonbonded.registerAtom({'type':'tip3p-H', 'charge':0.417, 'sigma':1*nanometers, 'epsilon':0*kilojoules_per_mole})
+        ff.registerGenerator(nonbonded)
+        
+        # Build a water box.
+        modeller = Modeller(Topology(), [])
+        modeller.addSolvent(ff, boxSize=Vec3(3, 3, 3)*nanometers)
+        
+        # Create a system using the programmatic force field as well as one from an XML file.
+        system1 = ff.createSystem(modeller.topology)
+        ff2 = ForceField('tip3p.xml')
+        system2 = ff2.createSystem(modeller.topology)
+        self.assertEqual(XmlSerializer.serialize(system1), XmlSerializer.serialize(system2))
 
 class AmoebaTestForceField(unittest.TestCase):
     """Test the ForceField.createSystem() method with the AMOEBA forcefield."""
