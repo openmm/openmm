@@ -158,10 +158,13 @@ class CharmmPsfFile(object):
         title = list()
         for i in range(ntitle):
             title.append(psf.readline().rstrip())
-        # Skip the blank line
-        psf.readline()
+        # Skip all blank lines. Most of the time there is only 1, but I've seen
+        # a file that has 2
+        line = psf.readline().strip()
+        while not line:
+            line = psf.readline().strip()
         # Next is the number of atoms
-        natom = conv(psf.readline().strip(), int, 'natom')
+        natom = conv(line, int, 'natom')
         # Parse all of the atoms
         residue_list = ResidueList()
         atom_list = AtomList()
