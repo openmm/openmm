@@ -2,15 +2,6 @@ package:
   name: openmm
   version: !!str dev
 
-source:
-  url: https://github.com/SimTk/openmm/archive/6.0.tar.gz
-  fn: 6.0.tar.gz
-  patches:
-    - plugin-dir.patch
-
-build:
-  number: 3
-
 requirements:
   build:
     - cmake
