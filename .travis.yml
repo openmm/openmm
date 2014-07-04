@@ -13,8 +13,10 @@ script:
   - conda install $HOME/miniconda/conda-bld/linux-64/openmm-dev-*
   - conda list -e
   - # run the python tests too
+  - pushd .
   - cd wrappers/python/tests
   - nosetests -vv --processes=-1 --process-timeout=200
+  - popd
 
 env:
   matrix:
