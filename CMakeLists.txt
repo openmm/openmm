@@ -109,9 +109,16 @@ ELSE( CMAKE_SIZEOF_VOID_P EQUAL 8 )
 ENDIF( CMAKE_SIZEOF_VOID_P EQUAL 8 )
 
 IF (APPLE)
-    # Build universal binaries compatible with OS X 10.7
+    # Get OS X version.
+    EXEC_PROGRAM(/usr/bin/sw_vers OUTPUT_VARIABLE OSX_SW_VERS)
+    STRING(REGEX REPLACE ".*(1[0-9]+)\\.[0-9]+\\.[0-9]+.*" "\\1" OSX_VERSION_MAJOR "${OSX_SW_VERS}")
+    STRING(REGEX REPLACE ".*1[0-9]+\\.([0-9])+\\.[0-9]+.*" "\\1" OSX_VERSION_MINOR "${OSX_SW_VERS}")
+    STRING(REGEX REPLACE ".*1[0-9]+\\.[0-9]+\\.([0-9]+).*" "\\1" OSX_VERSION_PATCH "${OSX_SW_VERS}")
+
+    # Build universal binaries for current system.
     IF (NOT CMAKE_OSX_DEPLOYMENT_TARGET)
-        SET (CMAKE_OSX_DEPLOYMENT_TARGET "10.7" CACHE STRING "The minimum version of OS X to support" FORCE)
+        SET (CMAKE_OSX_DEPLOYMENT_TARGET "10.${OSX_VERSION_MINOR}" CACHE STRING "The minimum version of OS X to support" FORCE)
+        SET (CMAKE_OSX_SYSROOT "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.${OSX_VERSION_MINOR}.sdk" CACHE STRING "OS X SDK" FORCE)
     ENDIF (NOT CMAKE_OSX_DEPLOYMENT_TARGET)
     IF (NOT CMAKE_OSX_ARCHITECTURES)
         SET (CMAKE_OSX_ARCHITECTURES "i386;x86_64" CACHE STRING "The processor architectures to build for" FORCE)
@@ -365,6 +372,12 @@ ENDIF(OPENCL_FOUND)
 IF(OPENMM_BUILD_OPENCL_LIB)
     ADD_SUBDIRECTORY(platforms/opencl)
 ENDIF(OPENMM_BUILD_OPENCL_LIB)
+
+# Disable OpenCL for APPLE platforms.
+IF (OPENCL_FOUND AND APPLE)
+    MESSAGE(STATUS "Disabling OpenCL because OS X OpenCL implementation is broken.")
+    SET(OPENMM_BUILD_OPENCL_LIB OFF CACHE BOOL "Build OpenMMOpenCL library" FORCE) 
+ENDIF (OPENCL_FOUND AND APPLE)
 
 # Optimized CPU platform
 
