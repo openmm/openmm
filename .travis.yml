@@ -12,7 +12,7 @@ script:
   - source activate $python
   - conda install $HOME/miniconda/conda-bld/linux-64/openmm-dev-*
   - conda list -e
-  - nosetests tests-nose/test_testsystems.py
+  - nosetests -vv --processes=-1 --process-timeout=200
 
 env:
   matrix:
