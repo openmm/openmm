@@ -23,7 +23,10 @@ elif [[ "$OSTYPE" == "darwin"* ]]; then
     CMAKE_FLAGS+=" -DFFTW_THREADS_LIBRARY=$PREFIX/lib/libfftw3f_threads.dylib"
 fi
 
-cd $SRC_DIR
+# Copy source to current directory.
+cp -r $RECIPE_DIR/../.. .
+
+# Build in subdirectory.
 mkdir build
 cd build
 cmake .. $CMAKE_FLAGS
