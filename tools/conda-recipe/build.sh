@@ -30,7 +30,8 @@ cp -r $RECIPE_DIR/../.. .
 mkdir build
 cd build
 cmake .. $CMAKE_FLAGS
-make -j4
+#make -j4 # faster
+make # simpler to debug
 make install
 
 export OPENMM_INCLUDE_PATH=$PREFIX/include
