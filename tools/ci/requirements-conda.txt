@@ -1,0 +1,4 @@
+numpy
+cython
+pip
+nose
