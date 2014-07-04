@@ -12,6 +12,8 @@ script:
   - source activate $python
   - conda install $HOME/miniconda/conda-bld/linux-64/openmm-dev-*
   - conda list -e
+  - # run the python tests too
+  - cd wrappers/python/tests
   - nosetests -vv --processes=-1 --process-timeout=200
 
 env:
@@ -21,8 +23,7 @@ env:
 
   global:
     # encrypted BINSTAR_TOKEN for push of dev package to binstar
-    # TODO: Update this BINSTAR TOKEN
-    - secure: "cBG2Qer5VwjtZ3KbzkeZwoaKIuPXfUoEwTDyL9GtEfgInloVPFKCZYzXbl5uMWiehsKBBaCUIT+Gyo7h1sVnPggw8YrEmbfSBzsu4ZjcEqXZUtQC5f6sDc8qWfLXo7TYAGqP1B6Pk0bzm0UbHhjFNIwKFOGBKj3jDyrQDRvs4JI="
+    - secure: "ClGfqug2783GRJQERxzlVtY2gLwaaVlviznEB3LQ1rJ7Z2c+rQsQZy2LqtqioAYG/SlBw8hurKZXAJ92hczzzRf98zkCzIP1EcxzHvPgpddoJAEZkwdHFfYFqjElviCu2r55WfU/J8hLGpaELeeR0rgYRpqmHjDqoEUCih5Dqf4="
 
 after_success:
   - echo "after_success"
