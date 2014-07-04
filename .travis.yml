@@ -12,6 +12,11 @@ script:
   - source activate $python
   - conda install $HOME/miniconda/conda-bld/linux-64/openmm-dev-*
   - conda list -e
+  - # run C tests
+  - pushd .
+  - cd tools/conda-recipe/build
+  - ctest -j2 -V -E "[A-Za-z]+OpenCL[A-Za-z]+"
+  - popd
   - # run the python tests too
   - pushd .
   - cd wrappers/python/tests
