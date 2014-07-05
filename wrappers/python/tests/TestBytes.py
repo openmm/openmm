@@ -24,12 +24,6 @@ class TestBytes(unittest.TestCase):
         assert newPositions == refPositions
 
         # try encoding the checkpoint in utf-8. OpenMM should be able to handle this too
-        # JDC: TRAVIS DEBUG BEGIN
-        print "chk = "
-        print chk
-        print "chk.decode('utf-8') = "
-        print chk.decode('utf-8')
-        # JDC: TRAVIS DEBUG END
         context.setPositions([(12345, 12345, 123451)])
         context.loadCheckpoint(chk.decode('utf-8'))
         newPositions = context.getState(getPositions=True).getPositions()._value
