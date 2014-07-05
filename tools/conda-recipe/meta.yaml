@@ -7,11 +7,14 @@ requirements:
     - cmake
     - python
     - fftw3f
+    # required for testing python install:
     - nose
+    - numpy
 
   run:
     - python
     - fftw3f
+    - numpy
 
 about:
   home: https://simtk.org/home/openmm

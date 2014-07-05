@@ -43,6 +43,7 @@ cd python
 $PYTHON setup.py install
 
 # Run Python tests.
+export OPENMM_PLUGIN_DIR=$OPENMM_LIB_PATH/plugins
 nosetests -vv --processes=-1 --process-timeout=200
 
 # Remove one random file
