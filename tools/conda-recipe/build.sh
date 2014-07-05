@@ -34,7 +34,7 @@ make -j4
 make install
 
 # Copy all tests to bin directory so they will be distributed with install package.
-cp Test* $PREFIX/bin
+#cp Test* $PREFIX/bin
 
 # Install Python wrappers.
 export OPENMM_INCLUDE_PATH=$PREFIX/include
