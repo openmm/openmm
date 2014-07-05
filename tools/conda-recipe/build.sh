@@ -46,5 +46,5 @@ $PYTHON setup.py install
 #rm $PREFIX/bin/TestReferenceHarmonicBondForce
 
 # Copy all tests to bin directory so they will be distributed with install package.
-cp Test* $PREFIX/bin
+cp -f Test* $PREFIX/bin
 
