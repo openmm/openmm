@@ -7,8 +7,6 @@ requirements:
     - cmake
     - python
     - fftw3f
-    #- nose
-    #- numpy
 
   run:
     - python
