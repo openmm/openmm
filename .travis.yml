@@ -8,21 +8,16 @@ script:
   - export CC="gcc -std=c89"
   - source deactivate
   - conda install --yes conda-build
+  - # Build the conda package, testing build before packaging.
   - conda build tools/conda-recipe
+  - # Install the conda package locally.
   - source activate $python
   - conda install $HOME/miniconda/conda-bld/linux-64/openmm-dev-*
   - conda list -e
-  - # run C tests
-  - pushd .
-  - cd /home/travis/build/SimTk/openmm/tools/conda-recipe/build
-  - pwd
-  - ls -1
-  - ctest -j2 -V -E "[A-Za-z]+OpenCL[A-Za-z]+"
-  - popd
-  - # DEBUG
-  - ls -1 $python
-  - ls -1 $python/bin/
-  - # run the python tests too
+  - # Run additional tests to make sure everything installed OK.
+  #- # run C tests (this doesn't work yet)
+  #- ctest -j2 -V -E "[A-Za-z]+OpenCL[A-Za-z]+"
+  - # Run the Python tests (a second time)
   - pushd .
   - cd wrappers/python/tests
   - nosetests -vv --processes=-1 --process-timeout=200
