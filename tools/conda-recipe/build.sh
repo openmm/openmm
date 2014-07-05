@@ -41,6 +41,7 @@ export OPENMM_INCLUDE_PATH=$PREFIX/include
 export OPENMM_LIB_PATH=$PREFIX/lib
 cd python
 $PYTHON setup.py install
+cd ..
 
 # Remove one random file
 #rm $PREFIX/bin/TestReferenceHarmonicBondForce
