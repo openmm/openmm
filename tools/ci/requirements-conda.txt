@@ -2,4 +2,4 @@ numpy
 cython
 pip
 nose
-jinja2
+
