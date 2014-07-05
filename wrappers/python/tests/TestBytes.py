@@ -8,7 +8,8 @@ class TestBytes(unittest.TestCase):
         system.addParticle(1.0)
         refPositions = [(0,0,0)]
 
-        context = mm.Context(system, mm.VerletIntegrator(0))
+        platform = mm.Platform.getPlatformByName('Reference')
+        context = mm.Context(system, mm.VerletIntegrator(0), platform)
         context.setPositions(refPositions)
         chk = context.createCheckpoint()
         # check that the return value of createCheckpoint is of type bytes (non-unicode)
@@ -23,14 +24,15 @@ class TestBytes(unittest.TestCase):
         assert newPositions == refPositions
 
         # try encoding the checkpoint in utf-8. OpenMM should be able to handle this too
-        # JDC: TRAVIS DEBUG
+        # JDC: TRAVIS DEBUG BEGIN
         print "chk = "
         print chk
         print "chk.decode('utf-8') = "
         print chk.decode('utf-8')
-        #context.setPositions([(12345, 12345, 123451)])
-        #context.loadCheckpoint(chk.decode('utf-8'))
-        #newPositions = context.getState(getPositions=True).getPositions()._value
+        # JDC: TRAVIS DEBUG END
+        context.setPositions([(12345, 12345, 123451)])
+        context.loadCheckpoint(chk.decode('utf-8'))
+        newPositions = context.getState(getPositions=True).getPositions()._value
 
         assert newPositions == refPositions
 
