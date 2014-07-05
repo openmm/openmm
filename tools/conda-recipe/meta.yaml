@@ -7,9 +7,8 @@ requirements:
     - cmake
     - python
     - fftw3f
-    # required for testing python install:
-    - nose
-    - numpy
+    #- nose
+    #- numpy
 
   run:
     - python

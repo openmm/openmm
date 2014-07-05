@@ -14,10 +14,7 @@ script:
   - source activate $python
   - conda install $HOME/miniconda/conda-bld/linux-64/openmm-dev-*
   - conda list -e
-  - # Run additional tests to make sure everything installed OK.
-  #- # run C tests (this doesn't work yet)
-  #- ctest -j2 -V -E "[A-Za-z]+OpenCL[A-Za-z]+"
-  - # Run the Python tests (a second time)
+  - # Run the Python tests.
   - pushd .
   - cd wrappers/python/tests
   - nosetests -vv --processes=-1 --process-timeout=200
