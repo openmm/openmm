@@ -33,8 +33,8 @@ cmake .. $CMAKE_FLAGS
 make -j4
 make install
 
-# Copy all tests to bin directory so they will be distributed with install package.
-#cp Test* $PREFIX/bin
+# Run C tests.
+ctest -j2 -V -E "[A-Za-z]+OpenCL[A-Za-z]+"
 
 # Install Python wrappers.
 export OPENMM_INCLUDE_PATH=$PREFIX/include
@@ -42,7 +42,12 @@ export OPENMM_LIB_PATH=$PREFIX/lib
 cd python
 $PYTHON setup.py install
 
+# Run Python tests.
+nosetests -vv --processes=-1 --process-timeout=200
+
 # Remove one random file
 #rm $PREFIX/bin/TestReferenceHarmonicBondForce
 
+# Copy all tests to bin directory so they will be distributed with install package.
+#cp Test* $PREFIX/bin
 
