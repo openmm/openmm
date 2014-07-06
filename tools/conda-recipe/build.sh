@@ -47,5 +47,5 @@ cd ..
 #rm $PREFIX/bin/TestReferenceHarmonicBondForce
 
 # Copy all tests to bin directory so they will be distributed with install package.
-cp -f Test* $PREFIX/bin
+cp `find . -name "Test*" -type f -maxdepth 1` $PREFIX/bin
 
