@@ -5,7 +5,7 @@ install:
   - export PYTHONUNBUFFERED=true
 
 script:
-  - export CC="gcc -std=c89"
+  - export CC="clang++"
   - source deactivate
   - conda install --yes conda-build
   - # Build the conda package, testing build before packaging.
