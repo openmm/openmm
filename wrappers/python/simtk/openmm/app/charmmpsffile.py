@@ -1185,8 +1185,11 @@ class CharmmPsfFile(object):
                 if switchDistance >= nonbondedCutoff:
                     raise ValueError('switchDistance is too large compared '
                                      'to the cutoff!')
-                    force.setUseSwitchingFunction(True)
-                    force.setSwitchingDistance(switchDistance)
+                if abs(switchDistance) != switchDistance:
+                    # Detects negatives for both Quantity and float
+                    raise ValueError('switchDistance must be non-negative!')
+                force.setUseSwitchingFunction(True)
+                force.setSwitchingDistance(switchDistance)
 
         else: # periodic
             # Set up box vectors (from inpcrd if available, or fall back to
@@ -1226,8 +1229,11 @@ class CharmmPsfFile(object):
                 if switchDistance >= nonbondedCutoff:
                     raise ValueError('switchDistance is too large compared '
                                      'to the cutoff!')
-                    force.setUseSwitchingFunction(True)
-                    force.setSwitchingDistance(switchDistance)
+                if abs(switchDistance) != switchDistance:
+                    # Detects negatives for both Quantity and float
+                    raise ValueError('switchDistance must be non-negative!')
+                force.setUseSwitchingFunction(True)
+                force.setSwitchingDistance(switchDistance)
 
             if ewaldErrorTolerance is not None:
                 force.setEwaldErrorTolerance(ewaldErrorTolerance)
