@@ -34,6 +34,8 @@ make -j4
 make install
 
 # Run C tests.
+# Exclude OpenCL tests because @peastman suspects mesa on travis implementation is broken.
+# @jchodera and @pgrinaway suspect travis is working, but AMD OpenCL tests are actually failing due to a bug.
 ctest -j2 -V -E "[A-Za-z]+OpenCL[A-Za-z]+"
 
 # Install Python wrappers.
