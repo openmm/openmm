@@ -1,26 +1,36 @@
-language: cpp
-compiler:
-  - clang
+language: c
 
-before_install:
-  - sudo apt-get update -qq
-  - sudo apt-get install -qq libpcre3 libpcre3-dev gromacs
-  - sudo apt-get install -qq swig doxygen llvm-3.3
-  - sudo apt-get install -qq python-numpy python-scipy python-pip
-  - sudo pip install nose
-  - export ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer-3.3
+install:
+  - source tools/ci/install.sh
+  - export PYTHONUNBUFFERED=true
 
 script:
-  - cmake -DCMAKE_INSTALL_PREFIX=$HOME/OpenMM .
-  - make -j2
-  - make -j2 install
-  - sudo make PythonInstall
-  - # run all of the tests
-  - ctest -j2 -V
-  - # get a list of all of the failed tests into this stupid ctest format
-  - python -c 'fn = "Testing/Temporary/LastTestsFailed.log"; import os; os.path.exists(fn) or exit(0); l = [line.split(":")[0] for line in open(fn)]; triplets = zip(l, l, [","]*len(l)); print "".join(",".join(t) for t in triplets)' > FailedTests.log
-  - # rerun all of the failed tests
-  - if [ -s FailedTests.log ]; then ctest -V -I FailedTests.log; fi;
-  - # run the python tests too
-  - cd python/tests
+  - export CC="clang++"
+  - source deactivate
+  - conda install --yes conda-build
+  - # Build the conda package, testing build before packaging.
+  - conda build tools/conda-recipe
+  - # Install the conda package locally.
+  - source activate $python
+  - conda install $HOME/miniconda/conda-bld/linux-64/openmm-dev-*
+  - conda list -e
+  - # Run the Python tests.
+  - pushd .
+  - cd wrappers/python/tests
   - nosetests -vv --processes=-1 --process-timeout=200
+  - popd
+
+env:
+  global:
+    # encrypted BINSTAR_TOKEN for push of dev package to binstar
+    - secure: Qz3pEYXXFnNQ/WK+15ad4cdbLJvzgCIZRwKD9fLiS3CDO2ldAQWxzaz8RQOwqbFtZUWu7lQpr+GukNJz5p0w18QEto+BxLYG9aW5mjoc+F2vCjyWFjkwnJ/Z/3uBKTcr5x9Y7HKaPGivaJ4BNACifjt7cCpeVJzV6u2+bBgSoHc=
+
+  matrix:
+    - python=2.7  CONDA_PY=27
+    #- python=3.3  CONDA_PY=33
+
+after_success:
+  - echo "after_success"
+  - source tools/ci/after_success.sh
+
+
