@@ -6,7 +6,7 @@ if [[ "$OSTYPE" == "linux-gnu" ]]; then
     # setting the rpath so that libOpenMMPME.so finds the right libfftw3
     CMAKE_FLAGS+=" -DCMAKE_INSTALL_RPATH=.."
     CMAKE_FLAGS+=" -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++"
-    #CMAKE_FLAGS+=" -DOPENCL_LIBRARY=/opt/AMDAPP/lib/x86_64/libOpenCL.so" # TEST
+    CMAKE_FLAGS+=" -DOPENCL_LIBRARY=/opt/AMDAPP/lib/x86_64/libOpenCL.so" # TEST
 
 elif [[ "$OSTYPE" == "darwin"* ]]; then
     export MACOSX_DEPLOYMENT_TARGET="10.7"
