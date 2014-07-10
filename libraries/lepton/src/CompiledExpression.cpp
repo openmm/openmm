@@ -84,13 +84,13 @@ void CompiledExpression::compileExpression(const ExpressionTreeNode& node, vecto
     // Process this node.
     
     if (node.getOperation().getId() == Operation::VARIABLE) {
-        variableIndices[node.getOperation().getName()] = workspace.size();
+        variableIndices[node.getOperation().getName()] = (int) workspace.size();
         variableNames.insert(node.getOperation().getName());
     }
     else {
-        int stepIndex = arguments.size();
+        int stepIndex = (int) arguments.size();
         arguments.push_back(vector<int>());
-        target.push_back(workspace.size());
+        target.push_back((int) workspace.size());
         operation.push_back(node.getOperation().clone());
         if (args.size() == 0)
             arguments[stepIndex].push_back(0); // The value won't actually be used.  We just need something there.
