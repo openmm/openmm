@@ -158,10 +158,13 @@ class CharmmPsfFile(object):
         title = list()
         for i in range(ntitle):
             title.append(psf.readline().rstrip())
-        # Skip the blank line
-        psf.readline()
+        # Skip all blank lines. Most of the time there is only 1, but I've seen
+        # a file that has 2
+        line = psf.readline().strip()
+        while not line:
+            line = psf.readline().strip()
         # Next is the number of atoms
-        natom = conv(psf.readline().strip(), int, 'natom')
+        natom = conv(line, int, 'natom')
         # Parse all of the atoms
         residue_list = ResidueList()
         atom_list = AtomList()
@@ -1182,8 +1185,11 @@ class CharmmPsfFile(object):
                 if switchDistance >= nonbondedCutoff:
                     raise ValueError('switchDistance is too large compared '
                                      'to the cutoff!')
-                    force.setUseSwitchingFunction(True)
-                    force.setSwitchingDistance(switchDistance)
+                if abs(switchDistance) != switchDistance:
+                    # Detects negatives for both Quantity and float
+                    raise ValueError('switchDistance must be non-negative!')
+                force.setUseSwitchingFunction(True)
+                force.setSwitchingDistance(switchDistance)
 
         else: # periodic
             # Set up box vectors (from inpcrd if available, or fall back to
@@ -1223,8 +1229,11 @@ class CharmmPsfFile(object):
                 if switchDistance >= nonbondedCutoff:
                     raise ValueError('switchDistance is too large compared '
                                      'to the cutoff!')
-                    force.setUseSwitchingFunction(True)
-                    force.setSwitchingDistance(switchDistance)
+                if abs(switchDistance) != switchDistance:
+                    # Detects negatives for both Quantity and float
+                    raise ValueError('switchDistance must be non-negative!')
+                force.setUseSwitchingFunction(True)
+                force.setSwitchingDistance(switchDistance)
 
             if ewaldErrorTolerance is not None:
                 force.setEwaldErrorTolerance(ewaldErrorTolerance)

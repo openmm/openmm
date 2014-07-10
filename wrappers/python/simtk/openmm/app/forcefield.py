@@ -40,6 +40,11 @@ import simtk.unit as unit
 import element as elem
 from simtk.openmm.app import Topology
 
+def _convertParameterToNumber(param):
+    if unit.is_quantity(param):
+        return mm.stripUnits((param,))[0]
+    return float(param)
+
 # Enumerated values for nonbonded method
 
 class NoCutoff(object):
@@ -115,13 +120,7 @@ class ForceField(object):
 
             if tree.getroot().find('AtomTypes') is not None:
                 for type in tree.getroot().find('AtomTypes').findall('Type'):
-                    element = None
-                    if 'element' in type.attrib:
-                        element = elem.get_by_symbol(type.attrib['element'])
-                    name = type.attrib['name']
-                    if name in self._atomTypes:
-                        raise ValueError('Found multiple definitions for atom type: '+name)
-                    self._atomTypes[name] = (type.attrib['class'], float(type.attrib['mass']), element)
+                    self.registerAtomType(type.attrib)
 
             # Load the residue templates.
 
@@ -129,38 +128,17 @@ class ForceField(object):
                 for residue in root.find('Residues').findall('Residue'):
                     resName = residue.attrib['name']
                     template = ForceField._TemplateData(resName)
-                    self._templates[resName] = template
                     for atom in residue.findall('Atom'):
                         template.atoms.append(ForceField._TemplateAtomData(atom.attrib['name'], atom.attrib['type'], self._atomTypes[atom.attrib['type']][2]))
                     for site in residue.findall('VirtualSite'):
                         template.virtualSites.append(ForceField._VirtualSiteData(site))
                     for bond in residue.findall('Bond'):
-                        b = (int(bond.attrib['from']), int(bond.attrib['to']))
-                        template.bonds.append(b)
-                        template.atoms[b[0]].bondedTo.append(b[1])
-                        template.atoms[b[1]].bondedTo.append(b[0])
+                        template.addBond(int(bond.attrib['from']), int(bond.attrib['to']))
                     for bond in residue.findall('ExternalBond'):
                         b = int(bond.attrib['from'])
                         template.externalBonds.append(b)
                         template.atoms[b].externalBonds += 1
-            for template in self._templates.values():
-                signature = _createResidueSignature([atom.element for atom in template.atoms])
-                if signature in self._templateSignatures:
-                    self._templateSignatures[signature].append(template)
-                else:
-                    self._templateSignatures[signature] = [template]
-
-            # Build sets of every atom type belonging to each class
-
-            for type in self._atomTypes:
-                atomClass = self._atomTypes[type][0]
-                if atomClass in self._atomClasses:
-                    typeSet = self._atomClasses[atomClass]
-                else:
-                    typeSet = set()
-                    self._atomClasses[atomClass] = typeSet
-                typeSet.add(type)
-                self._atomClasses[''].add(type)
+                    self.registerResidueTemplate(template)
 
             # Load force definitions
 
@@ -171,12 +149,53 @@ class ForceField(object):
             # Load scripts
 
             for node in tree.getroot().findall('Script'):
-                self._scripts.append(node.text)
+                self.registerScript(node.text)
 
-    def _findAtomTypes(self, node, num):
+    def getGenerators(self):
+        """Get the list of all registered generators."""
+        return self._forces
+    
+    def registerGenerator(self, generator):
+        """Register a new generator."""
+        self._forces.append(generator)
+    
+    def registerAtomType(self, parameters):
+        """Register a new atom type."""
+        name = parameters['name']
+        if name in self._atomTypes:
+            raise ValueError('Found multiple definitions for atom type: '+name)
+        atomClass = parameters['class']
+        mass = _convertParameterToNumber(parameters['mass'])
+        element = None
+        if 'element' in parameters:
+            element = parameters['element']
+            if not isinstance(element, elem.Element):
+                element = elem.get_by_symbol(element)
+        self._atomTypes[name] = (atomClass, mass, element)
+        if atomClass in self._atomClasses:
+            typeSet = self._atomClasses[atomClass]
+        else:
+            typeSet = set()
+            self._atomClasses[atomClass] = typeSet
+        typeSet.add(name)
+        self._atomClasses[''].add(name)
+    
+    def registerResidueTemplate(self, template):
+        """Register a new residue template."""
+        self._templates[template.name] = template
+        signature = _createResidueSignature([atom.element for atom in template.atoms])
+        if signature in self._templateSignatures:
+            self._templateSignatures[signature].append(template)
+        else:
+            self._templateSignatures[signature] = [template]
+    
+    def registerScript(self, script):
+        """Register a new script to be executed after building the System."""
+        self._scripts.append(script)
+
+    def _findAtomTypes(self, attrib, num):
         """Parse the attributes on an XML tag to find the set of atom types for each atom it involves."""
         types = []
-        attrib = node.attrib
         for i in range(num):
             if num == 1:
                 suffix = ''
@@ -186,7 +205,7 @@ class ForceField(object):
             typeAttrib = 'type'+suffix
             if classAttrib in attrib:
                 if typeAttrib in attrib:
-                    raise ValueError('Tag specifies both a type and a class for the same atom: '+etree.tostring(node))
+                    raise ValueError('Specified both a type and a class for the same atom: '+str(attrib))
                 if attrib[classAttrib] not in self._atomClasses:
                     types.append(None) # Unknown atom class
                 else:
@@ -198,18 +217,17 @@ class ForceField(object):
                     types.append([attrib[typeAttrib]])
         return types
 
-    def _parseTorsion(self, node):
+    def _parseTorsion(self, attrib):
         """Parse the node defining a torsion."""
-        types = self._findAtomTypes(node, 4)
+        types = self._findAtomTypes(attrib, 4)
         if None in types:
             return None
         torsion = PeriodicTorsion(types)
-        attrib = node.attrib
         index = 1
         while 'phase%d'%index in attrib:
             torsion.periodicity.append(int(attrib['periodicity%d'%index]))
-            torsion.phase.append(float(attrib['phase%d'%index]))
-            torsion.k.append(float(attrib['k%d'%index]))
+            torsion.phase.append(_convertParameterToNumber(attrib['phase%d'%index]))
+            torsion.k.append(_convertParameterToNumber(attrib['k%d'%index]))
             index += 1
         return torsion
 
@@ -234,6 +252,11 @@ class ForceField(object):
             self.virtualSites = []
             self.bonds = []
             self.externalBonds = []
+        
+        def addBond(self, atom1, atom2):
+            self.bonds.append((atom1, atom2))
+            self.atoms[atom1].bondedTo.append(atom2)
+            self.atoms[atom2].bondedTo.append(atom1)
 
     class _TemplateAtomData:
         """Inner class used to encapsulate data about an atom in a residue template definition."""
@@ -660,23 +683,27 @@ def _findMatchErrors(forcefield, res):
 class HarmonicBondGenerator:
     """A HarmonicBondGenerator constructs a HarmonicBondForce."""
 
-    def __init__(self):
+    def __init__(self, forcefield):
+        self.ff = forcefield
         self.types1 = []
         self.types2 = []
         self.length = []
         self.k = []
+    
+    def registerBond(self, parameters):
+        types = self.ff._findAtomTypes(parameters, 2)
+        if None not in types:
+            self.types1.append(types[0])
+            self.types2.append(types[1])
+            self.length.append(_convertParameterToNumber(parameters['length']))
+            self.k.append(_convertParameterToNumber(parameters['k']))
 
     @staticmethod
     def parseElement(element, ff):
-        generator = HarmonicBondGenerator()
-        ff._forces.append(generator)
+        generator = HarmonicBondGenerator(ff)
+        ff.registerGenerator(generator)
         for bond in element.findall('Bond'):
-            types = ff._findAtomTypes(bond, 2)
-            if None not in types:
-                generator.types1.append(types[0])
-                generator.types2.append(types[1])
-                generator.length.append(float(bond.attrib['length']))
-                generator.k.append(float(bond.attrib['k']))
+            generator.registerBond(bond.attrib)
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         existing = [sys.getForce(i) for i in range(sys.getNumForces())]
@@ -707,25 +734,29 @@ parsers["HarmonicBondForce"] = HarmonicBondGenerator.parseElement
 class HarmonicAngleGenerator:
     """A HarmonicAngleGenerator constructs a HarmonicAngleForce."""
 
-    def __init__(self):
+    def __init__(self, forcefield):
+        self.ff = forcefield
         self.types1 = []
         self.types2 = []
         self.types3 = []
         self.angle = []
         self.k = []
 
+    def registerAngle(self, parameters):
+        types = self.ff._findAtomTypes(parameters, 3)
+        if None not in types:
+            self.types1.append(types[0])
+            self.types2.append(types[1])
+            self.types3.append(types[2])
+            self.angle.append(_convertParameterToNumber(parameters['angle']))
+            self.k.append(_convertParameterToNumber(parameters['k']))
+
     @staticmethod
     def parseElement(element, ff):
-        generator = HarmonicAngleGenerator()
-        ff._forces.append(generator)
+        generator = HarmonicAngleGenerator(ff)
+        ff.registerGenerator(generator)
         for angle in element.findall('Angle'):
-            types = ff._findAtomTypes(angle, 3)
-            if None not in types:
-                generator.types1.append(types[0])
-                generator.types2.append(types[1])
-                generator.types3.append(types[2])
-                generator.angle.append(float(angle.attrib['angle']))
-                generator.k.append(float(angle.attrib['k']))
+            generator.registerAngle(angle.attrib)
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         existing = [sys.getForce(i) for i in range(sys.getNumForces())]
@@ -789,23 +820,29 @@ class PeriodicTorsion:
 class PeriodicTorsionGenerator:
     """A PeriodicTorsionGenerator constructs a PeriodicTorsionForce."""
 
-    def __init__(self):
+    def __init__(self, forcefield):
+        self.ff = forcefield
         self.proper = []
         self.improper = []
 
+    def registerProperTorsion(self, parameters):
+        torsion = self.ff._parseTorsion(parameters)
+        if torsion is not None:
+            self.proper.append(torsion)
+
+    def registerImproperTorsion(self, parameters):
+        torsion = self.ff._parseTorsion(parameters)
+        if torsion is not None:
+            self.improper.append(torsion)
+
     @staticmethod
     def parseElement(element, ff):
-        generator = PeriodicTorsionGenerator()
-        generator.ff = ff
-        ff._forces.append(generator)
+        generator = PeriodicTorsionGenerator(ff)
+        ff.registerGenerator(generator)
         for torsion in element.findall('Proper'):
-            torsion = ff._parseTorsion(torsion)
-            if torsion is not None:
-                generator.proper.append(torsion)
+            generator.registerProperTorsion(torsion.attrib)
         for torsion in element.findall('Improper'):
-            torsion = ff._parseTorsion(torsion)
-            if torsion is not None:
-                generator.improper.append(torsion)
+            generator.registerImproperTorsion(torsion.attrib)
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         existing = [sys.getForce(i) for i in range(sys.getNumForces())]
@@ -888,21 +925,21 @@ class RBTorsion:
 class RBTorsionGenerator:
     """An RBTorsionGenerator constructs an RBTorsionForce."""
 
-    def __init__(self):
+    def __init__(self, forcefield):
+        self.ff = forcefield
         self.proper = []
         self.improper = []
 
     @staticmethod
     def parseElement(element, ff):
-        generator = RBTorsionGenerator()
-        generator.ff = ff
-        ff._forces.append(generator)
+        generator = RBTorsionGenerator(ff)
+        ff.registerGenerator(generator)
         for torsion in element.findall('Proper'):
-            types = ff._findAtomTypes(torsion, 4)
+            types = ff._findAtomTypes(torsion.attrib, 4)
             if None not in types:
                 generator.proper.append(RBTorsion(types, [float(torsion.attrib['c'+str(i)]) for i in range(6)]))
         for torsion in element.findall('Improper'):
-            types = ff._findAtomTypes(torsion, 4)
+            types = ff._findAtomTypes(torsion.attrib, 4)
             if None not in types:
                 generator.improper.append(RBTorsion(types, [float(torsion.attrib['c'+str(i)]) for i in range(6)]))
 
@@ -984,15 +1021,15 @@ class CMAPTorsion:
 class CMAPTorsionGenerator:
     """A CMAPTorsionGenerator constructs a CMAPTorsionForce."""
 
-    def __init__(self):
+    def __init__(self, forcefield):
+        self.ff = forcefield
         self.torsions = []
         self.maps = []
 
     @staticmethod
     def parseElement(element, ff):
-        generator = CMAPTorsionGenerator()
-        generator.ff = ff
-        ff._forces.append(generator)
+        generator = CMAPTorsionGenerator(ff)
+        ff.registerGenerator(generator)
         for map in element.findall('Map'):
             values = [float(x) for x in map.text.split()]
             size = sqrt(len(values))
@@ -1000,7 +1037,7 @@ class CMAPTorsionGenerator:
                 raise ValueError('CMAP must have the same number of elements along each dimension')
             generator.maps.append(values)
         for torsion in element.findall('Torsion'):
-            types = ff._findAtomTypes(torsion, 5)
+            types = ff._findAtomTypes(torsion.attrib, 5)
             if None not in types:
                 generator.torsions.append(CMAPTorsion(types, int(torsion.attrib['map'])))
 
@@ -1064,28 +1101,32 @@ parsers["CMAPTorsionForce"] = CMAPTorsionGenerator.parseElement
 class NonbondedGenerator:
     """A NonbondedGenerator constructs a NonbondedForce."""
 
-    def __init__(self, coulomb14scale, lj14scale):
+    def __init__(self, forcefield, coulomb14scale, lj14scale):
+        self.ff = forcefield
         self.coulomb14scale = coulomb14scale
         self.lj14scale = lj14scale
         self.typeMap = {}
+
+    def registerAtom(self, parameters):
+        types = self.ff._findAtomTypes(parameters, 1)
+        if None not in types:
+            values = (_convertParameterToNumber(parameters['charge']), _convertParameterToNumber(parameters['sigma']), _convertParameterToNumber(parameters['epsilon']))
+            for t in types[0]:
+                self.typeMap[t] = values
 
     @staticmethod
     def parseElement(element, ff):
         existing = [f for f in ff._forces if isinstance(f, NonbondedGenerator)]
         if len(existing) == 0:
-            generator = NonbondedGenerator(float(element.attrib['coulomb14scale']), float(element.attrib['lj14scale']))
-            ff._forces.append(generator)
+            generator = NonbondedGenerator(ff, float(element.attrib['coulomb14scale']), float(element.attrib['lj14scale']))
+            ff.registerGenerator(generator)
         else:
             # Multiple <NonbondedForce> tags were found, probably in different files.  Simply add more types to the existing one.
             generator = existing[0]
             if generator.coulomb14scale != float(element.attrib['coulomb14scale']) or generator.lj14scale != float(element.attrib['lj14scale']):
                 raise ValueError('Found multiple NonbondedForce tags with different 1-4 scales')
         for atom in element.findall('Atom'):
-            types = ff._findAtomTypes(atom, 1)
-            if None not in types:
-                values = (float(atom.attrib['charge']), float(atom.attrib['sigma']), float(atom.attrib['epsilon']))
-                for t in types[0]:
-                    generator.typeMap[t] = values
+            generator.registerAtom(atom.attrib)
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         methodMap = {NoCutoff:mm.NonbondedForce.NoCutoff,
@@ -1107,6 +1148,8 @@ class NonbondedGenerator:
         force.setCutoffDistance(nonbondedCutoff)
         if 'ewaldErrorTolerance' in args:
             force.setEwaldErrorTolerance(args['ewaldErrorTolerance'])
+        if 'useDispersionCorrection' in args:
+            force.setUseDispersionCorrection(bool(args['useDispersionCorrection']))
         sys.addForce(force)
 
     def postprocessSystem(self, sys, data, args):
@@ -1147,24 +1190,28 @@ parsers["NonbondedForce"] = NonbondedGenerator.parseElement
 class GBSAOBCGenerator:
     """A GBSAOBCGenerator constructs a GBSAOBCForce."""
 
-    def __init__(self):
+    def __init__(self, forcefield):
+        self.ff = forcefield
         self.typeMap = {}
+
+    def registerAtom(self, parameters):
+        types = self.ff._findAtomTypes(parameters, 1)
+        if None not in types:
+            values = (_convertParameterToNumber(parameters['charge']), _convertParameterToNumber(parameters['radius']), _convertParameterToNumber(parameters['scale']))
+            for t in types[0]:
+                self.typeMap[t] = values
 
     @staticmethod
     def parseElement(element, ff):
         existing = [f for f in ff._forces if isinstance(f, GBSAOBCGenerator)]
         if len(existing) == 0:
-            generator = GBSAOBCGenerator()
-            ff._forces.append(generator)
+            generator = GBSAOBCGenerator(ff)
+            ff.registerGenerator(generator)
         else:
             # Multiple <GBSAOBCForce> tags were found, probably in different files.  Simply add more types to the existing one.
             generator = existing[0]
         for atom in element.findall('Atom'):
-            types = ff._findAtomTypes(atom, 1)
-            if None not in types:
-                values = (float(atom.attrib['charge']), float(atom.attrib['radius']), float(atom.attrib['scale']))
-                for t in types[0]:
-                    generator.typeMap[t] = values
+            generator.registerAtom(atom.attrib)
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         methodMap = {NoCutoff:mm.NonbondedForce.NoCutoff,
@@ -1204,7 +1251,6 @@ class GBVIGenerator:
     """A GBVIGenerator constructs a GBVIForce."""
 
     def __init__(self,ff):
-
         self.ff = ff
         self.fixedParameters = {}
         self.fixedParameters['soluteDielectric'] = 1.0
@@ -1222,9 +1268,9 @@ class GBVIGenerator:
             if (key in element.attrib):
                 generator.fixedParameters[key] = float(element.attrib[key])
 
-        ff._forces.append(generator)
+        ff.registerGenerator(generator)
         for atom in element.findall('Atom'):
-            types = ff._findAtomTypes(atom, 1)
+            types = ff._findAtomTypes(atom.attrib, 1)
             if None not in types:
                 values = (float(atom.attrib['charge']), float(atom.attrib['radius']), float(atom.attrib['gamma']))
                 for t in types[0]:
@@ -1290,7 +1336,8 @@ parsers["GBVIForce"] = GBVIGenerator.parseElement
 class CustomBondGenerator:
     """A CustomBondGenerator constructs a CustomBondForce."""
 
-    def __init__(self):
+    def __init__(self, forcefield):
+        self.ff = forcefield
         self.types1 = []
         self.types2 = []
         self.globalParams = {}
@@ -1299,15 +1346,15 @@ class CustomBondGenerator:
 
     @staticmethod
     def parseElement(element, ff):
-        generator = CustomBondGenerator()
-        ff._forces.append(generator)
+        generator = CustomBondGenerator(ff)
+        ff.registerGenerator(generator)
         generator.energy = element.attrib['energy']
         for param in element.findall('GlobalParameter'):
             generator.globalParams[param.attrib['name']] = float(param.attrib['defaultValue'])
         for param in element.findall('PerBondParameter'):
             generator.perBondParams.append(param.attrib['name'])
         for bond in element.findall('Bond'):
-            types = ff._findAtomTypes(bond, 2)
+            types = ff._findAtomTypes(bond.attrib, 2)
             if None not in types:
                 generator.types1.append(types[0])
                 generator.types2.append(types[1])
@@ -1337,7 +1384,8 @@ parsers["CustomBondForce"] = CustomBondGenerator.parseElement
 class CustomAngleGenerator:
     """A CustomAngleGenerator constructs a CustomAngleForce."""
 
-    def __init__(self):
+    def __init__(self, forcefield):
+        self.ff = forcefield
         self.types1 = []
         self.types2 = []
         self.types3 = []
@@ -1347,15 +1395,15 @@ class CustomAngleGenerator:
 
     @staticmethod
     def parseElement(element, ff):
-        generator = CustomAngleGenerator()
-        ff._forces.append(generator)
+        generator = CustomAngleGenerator(ff)
+        ff.registerGenerator(generator)
         generator.energy = element.attrib['energy']
         for param in element.findall('GlobalParameter'):
             generator.globalParams[param.attrib['name']] = float(param.attrib['defaultValue'])
         for param in element.findall('PerAngleParameter'):
             generator.perAngleParams.append(param.attrib['name'])
         for angle in element.findall('Angle'):
-            types = ff._findAtomTypes(angle, 3)
+            types = ff._findAtomTypes(angle.attrib, 3)
             if None not in types:
                 generator.types1.append(types[0])
                 generator.types2.append(types[1])
@@ -1399,7 +1447,8 @@ class CustomTorsion:
 class CustomTorsionGenerator:
     """A CustomTorsionGenerator constructs a CustomTorsionForce."""
 
-    def __init__(self):
+    def __init__(self, forcefield):
+        self.ff = forcefield
         self.proper = []
         self.improper = []
         self.globalParams = {}
@@ -1407,20 +1456,19 @@ class CustomTorsionGenerator:
 
     @staticmethod
     def parseElement(element, ff):
-        generator = CustomTorsionGenerator()
-        generator.ff = ff
-        ff._forces.append(generator)
+        generator = CustomTorsionGenerator(ff)
+        ff.registerGenerator(generator)
         generator.energy = element.attrib['energy']
         for param in element.findall('GlobalParameter'):
             generator.globalParams[param.attrib['name']] = float(param.attrib['defaultValue'])
         for param in element.findall('PerTorsionParameter'):
             generator.perTorsionParams.append(param.attrib['name'])
         for torsion in element.findall('Proper'):
-            types = ff._findAtomTypes(torsion, 4)
+            types = ff._findAtomTypes(torsion.attrib, 4)
             if None not in types:
                 generator.proper.append(CustomTorsion(types, [float(torsion.attrib[param]) for param in generator.perTorsionParams]))
         for torsion in element.findall('Improper'):
-            types = ff._findAtomTypes(torsion, 4)
+            types = ff._findAtomTypes(torsion.attrib, 4)
             if None not in types:
                 generator.improper.append(CustomTorsion(types, [float(torsion.attrib[param]) for param in generator.perTorsionParams]))
 
@@ -1489,7 +1537,8 @@ parsers["CustomTorsionForce"] = CustomTorsionGenerator.parseElement
 class CustomNonbondedGenerator:
     """A CustomNonbondedGenerator constructs a CustomNonbondedForce."""
 
-    def __init__(self, energy, bondCutoff):
+    def __init__(self, forcefield, energy, bondCutoff):
+        self.ff = forcefield
         self.energy = energy
         self.bondCutoff = bondCutoff
         self.typeMap = {}
@@ -1499,14 +1548,14 @@ class CustomNonbondedGenerator:
 
     @staticmethod
     def parseElement(element, ff):
-        generator = CustomNonbondedGenerator(element.attrib['energy'], int(element.attrib['bondCutoff']))
-        ff._forces.append(generator)
+        generator = CustomNonbondedGenerator(ff, element.attrib['energy'], int(element.attrib['bondCutoff']))
+        ff.registerGenerator(generator)
         for param in element.findall('GlobalParameter'):
             generator.globalParams[param.attrib['name']] = float(param.attrib['defaultValue'])
         for param in element.findall('PerParticleParameter'):
             generator.perParticleParams.append(param.attrib['name'])
         for atom in element.findall('Atom'):
-            types = ff._findAtomTypes(atom, 1)
+            types = ff._findAtomTypes(atom.attrib, 1)
             if None not in types:
                 values = [float(atom.attrib[param]) for param in generator.perParticleParams]
                 for t in types[0]:
@@ -1587,7 +1636,8 @@ parsers["CustomNonbondedForce"] = CustomNonbondedGenerator.parseElement
 class CustomGBGenerator:
     """A CustomGBGenerator constructs a CustomGBForce."""
 
-    def __init__(self):
+    def __init__(self, forcefield):
+        self.ff = forcefield
         self.typeMap = {}
         self.globalParams = {}
         self.perParticleParams = []
@@ -1597,14 +1647,14 @@ class CustomGBGenerator:
 
     @staticmethod
     def parseElement(element, ff):
-        generator = CustomGBGenerator()
-        ff._forces.append(generator)
+        generator = CustomGBGenerator(ff)
+        ff.registerGenerator(generator)
         for param in element.findall('GlobalParameter'):
             generator.globalParams[param.attrib['name']] = float(param.attrib['defaultValue'])
         for param in element.findall('PerParticleParameter'):
             generator.perParticleParams.append(param.attrib['name'])
         for atom in element.findall('Atom'):
-            types = ff._findAtomTypes(atom, 1)
+            types = ff._findAtomTypes(atom.attrib, 1)
             if None not in types:
                 values = [float(atom.attrib[param]) for param in generator.perParticleParams]
                 for t in types[0]:
@@ -1727,7 +1777,7 @@ class AmoebaBondGenerator:
         generator = AmoebaBondGenerator(float(element.attrib['bond-cubic']), float(element.attrib['bond-quartic']))
         forceField._forces.append(generator)
         for bond in element.findall('Bond'):
-            types = forceField._findAtomTypes(bond, 2)
+            types = forceField._findAtomTypes(bond.attrib, 2)
             if None not in types:
                 generator.types1.append(types[0])
                 generator.types2.append(types[1])
@@ -1840,7 +1890,7 @@ class AmoebaAngleGenerator:
         generator = AmoebaAngleGenerator(forceField, float(element.attrib['angle-cubic']), float(element.attrib['angle-quartic']),  float(element.attrib['angle-pentic']), float(element.attrib['angle-sextic']))
         forceField._forces.append(generator)
         for angle in element.findall('Angle'):
-            types = forceField._findAtomTypes(angle, 3)
+            types = forceField._findAtomTypes(angle.attrib, 3)
             if None not in types:
 
                 generator.types1.append(types[0])
@@ -2325,7 +2375,7 @@ class AmoebaTorsionGenerator:
         # where ti=[amplitude_i,angle_i]
 
         for torsion in element.findall('Torsion'):
-            types = forceField._findAtomTypes(torsion, 4)
+            types = forceField._findAtomTypes(torsion.attrib, 4)
             if None not in types:
 
                 generator.types1.append(types[0])
@@ -2436,7 +2486,7 @@ class AmoebaPiTorsionGenerator:
         forceField._forces.append(generator)
 
         for piTorsion in element.findall('PiTorsion'):
-            types = forceField._findAtomTypes(piTorsion, 2)
+            types = forceField._findAtomTypes(piTorsion.attrib, 2)
             if None not in types:
                 generator.types1.append(types[0])
                 generator.types2.append(types[1])
@@ -2555,7 +2605,7 @@ class AmoebaTorsionTorsionGenerator:
         # <TorsionTorsion class1="3" class2="1" class3="2" class4="3" class5="1" grid="0" nx="25" ny="25" />
 
         for torsionTorsion in element.findall('TorsionTorsion'):
-            types = forceField._findAtomTypes(torsionTorsion, 5)
+            types = forceField._findAtomTypes(torsionTorsion.attrib, 5)
             if None not in types:
 
                 generator.types1.append(types[0])
@@ -2793,7 +2843,7 @@ class AmoebaStretchBendGenerator:
         # <StretchBend class1="2" class2="1" class3="4" k1="3.14005676385" k2="3.14005676385" />
 
         for stretchBend in element.findall('StretchBend'):
-            types = forceField._findAtomTypes(stretchBend, 3)
+            types = forceField._findAtomTypes(stretchBend.attrib, 3)
             if None not in types:
 
                 generator.types1.append(types[0])
@@ -2950,7 +3000,7 @@ class AmoebaVdwGenerator:
         # sigma is modified based on radiustype and radiussize
 
         for atom in element.findall('Vdw'):
-            types = forceField._findAtomTypes(atom, 1)
+            types = forceField._findAtomTypes(atom.attrib, 1)
             if None not in types:
 
                 values = [float(atom.attrib['sigma']), float(atom.attrib['epsilon']), float(atom.attrib['reduction'])]
@@ -3037,7 +3087,7 @@ class AmoebaVdwGenerator:
             # dispersion correction
 
             if ('useDispersionCorrection' in args):
-                force.setUseDispersionCorrection(int(args['useDispersionCorrection']))
+                force.setUseDispersionCorrection(bool(args['useDispersionCorrection']))
 
             if (nonbondedMethod == PME):
                 force.setNonbondedMethod(mm.AmoebaVdwForce.CutoffPeriodic)
@@ -3223,7 +3273,7 @@ class AmoebaMultipoleGenerator:
         # set type map: [ kIndices, multipoles, AMOEBA/OpenMM axis type]
 
         for atom in element.findall('Multipole'):
-            types = forceField._findAtomTypes(atom, 1)
+            types = forceField._findAtomTypes(atom.attrib, 1)
             if None not in types:
 
                 # k-indices not provided default to 0
@@ -3280,7 +3330,7 @@ class AmoebaMultipoleGenerator:
         # polarization parameters
 
         for atom in element.findall('Polarize'):
-            types = forceField._findAtomTypes(atom, 1)
+            types = forceField._findAtomTypes(atom.attrib, 1)
             if None not in types:
 
                 classIndex = atom.attrib['type']
@@ -3808,7 +3858,7 @@ class AmoebaWcaDispersionGenerator:
         # typeMap[] = [ radius, epsilon ]
 
         for atom in element.findall('WcaDispersion'):
-            types = forceField._findAtomTypes(atom, 1)
+            types = forceField._findAtomTypes(atom.attrib, 1)
             if None not in types:
 
                 values = [float(atom.attrib['radius']), float(atom.attrib['epsilon'])]
@@ -4152,7 +4202,7 @@ class AmoebaUreyBradleyGenerator:
         generator = AmoebaUreyBradleyGenerator()
         forceField._forces.append(generator)
         for bond in element.findall('UreyBradley'):
-            types = forceField._findAtomTypes(bond, 3)
+            types = forceField._findAtomTypes(bond.attrib, 3)
             if None not in types:
 
                 generator.types1.append(types[0])
@@ -4203,20 +4253,21 @@ parsers["AmoebaUreyBradleyForce"] = AmoebaUreyBradleyGenerator.parseElement
 class DrudeGenerator:
     """A DrudeGenerator constructs a DrudeForce."""
 
-    def __init__(self):
+    def __init__(self, forcefield):
+        self.ff = forcefield
         self.typeMap = {}
 
     @staticmethod
     def parseElement(element, ff):
         existing = [f for f in ff._forces if isinstance(f, DrudeGenerator)]
         if len(existing) == 0:
-            generator = DrudeGenerator()
-            ff._forces.append(generator)
+            generator = DrudeGenerator(ff)
+            ff.registerGenerator(generator)
         else:
             # Multiple <DrudeForce> tags were found, probably in different files.  Simply add more types to the existing one.
             generator = existing[0]
         for particle in element.findall('Particle'):
-            types = ff._findAtomTypes(particle, 5)
+            types = ff._findAtomTypes(particle.attrib, 5)
             if None not in types[:2]:
                 aniso12 = 0.0
                 aniso34 = 0.0

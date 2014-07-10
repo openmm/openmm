@@ -191,7 +191,7 @@ public:
     /**
      * Get the cutoff distance.
      */
-    double getCutoff(void) const;
+    double getCutoff() const;
 
     /**
      * Get the method used for handling long range nonbonded interactions.

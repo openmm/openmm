@@ -184,7 +184,7 @@ __kernel void computeN2Value(__global const real4* restrict posq, __local real4*
         
         // Extract the coordinates of this tile.
         
-        unsigned int x, y;
+        int x, y;
         bool singlePeriodicCopy = false;
 #ifdef USE_CUTOFF
         if (numTiles <= maxTiles) {
@@ -197,7 +197,7 @@ __kernel void computeN2Value(__global const real4* restrict posq, __local real4*
         else
 #endif
         {
-            y = (unsigned int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
+            y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
             x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
             if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
                 y += (x < y ? -1 : 1);
