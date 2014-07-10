@@ -36,6 +36,7 @@
 #include "windowsIncludes.h"
 #include <map>
 #include <string>
+#include <stdint.h>
 
 namespace Lepton {
 
