@@ -29,7 +29,6 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include <stdexcept>
 #if defined(_WIN32) || defined(__CYGWIN__)
 #include <windows.h>
 static HCRYPTPROV hCryptProv = 0;
@@ -38,28 +37,31 @@ static HCRYPTPROV hCryptProv = 0;
 #include <fcntl.h>
 #include <unistd.h>
 #endif
+#include "openmm/OpenMMException.h"
 #include "openmm/internal/OSRngSeed.h"
+
+using OpenMM::OpenMMException;
 
 int osrngseed(void) {
     int value;
 #if defined(_WIN32) || defined(__CYGWIN__)
     if (!::CryptAcquireContextW(&hCryptProv, 0, 0, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT | CRYPT_SILENT)) {
-        throw std::runtime_error("Failed to initialize Windows random API (CryptoGen)");
+        throw OpenMMException("Failed to initialize Windows random API (CryptoGen)");
     }
     if (!CryptGenRandom(hCryptProv, sizeof(int), (BYTE*) &value)) {
         ::CryptReleaseContext(hCryptProv, 0);
-        throw std::runtime_error("Failed to get random numbers");
+        throw OpenMMException("Failed to get random numbers");
     }
     if (!::CryptReleaseContext(hCryptProv, 0)) {
-        throw std::runtime_error("Failed to release Windows random API context");
+        throw OpenMMException("Failed to release Windows random API context");
     }
 #else
     int m_fd = open("/dev/urandom", O_RDONLY);
     if (m_fd == -1) {
-        throw std::runtime_error("Failed to open /dev/urandom");
+        throw OpenMMException("Failed to open /dev/urandom");
     }
     if (read(m_fd, &value, sizeof(int)) != sizeof(int)) {
-        throw std::runtime_error("Failed to read bytes from /dev/urandom");
+        throw OpenMMException("Failed to read bytes from /dev/urandom");
     }
     close(m_fd);
 #endif

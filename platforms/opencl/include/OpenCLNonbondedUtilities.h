@@ -284,7 +284,8 @@ private:
     std::map<std::string, std::string> kernelDefines;
     double cutoff;
     bool useCutoff, usePeriodic, deviceIsCpu, anyExclusions, usePadding;
-    int numForceBuffers, startTileIndex, numTiles, startBlockIndex, numBlocks, numForceThreadBlocks, forceThreadBlockSize, nonbondedForceGroup;
+    int numForceBuffers, startTileIndex, numTiles, startBlockIndex, numBlocks, numForceThreadBlocks;
+    int forceThreadBlockSize, interactingBlocksThreadBlockSize, nonbondedForceGroup;
 };
 
 /**
