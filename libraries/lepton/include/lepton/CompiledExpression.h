@@ -38,6 +38,7 @@
 #include <set>
 #include <string>
 #include <vector>
+#include <stdint.h>
 
 namespace Lepton {
 
@@ -80,9 +81,9 @@ private:
     void compileExpression(const ExpressionTreeNode& node, std::vector<std::pair<ExpressionTreeNode, int> >& temps);
     int findTempIndex(const ExpressionTreeNode& node, std::vector<std::pair<ExpressionTreeNode, int> >& temps);
     std::vector<std::vector<int> > arguments;
-    std::vector<int> target;
+    std::vector<size_t> target;
     std::vector<Operation*> operation;
-    std::map<std::string, int> variableIndices;
+    std::map<std::string, size_t> variableIndices;
     std::set<std::string> variableNames;
     mutable std::vector<double> workspace;
     mutable std::vector<double> argValues;

@@ -60,8 +60,8 @@ double ParsedExpression::evaluate(const map<string, double>& variables) const {
 }
 
 double ParsedExpression::evaluate(const ExpressionTreeNode& node, const map<string, double>& variables) {
-    int numArgs = node.getChildren().size();
-    vector<double> args(max(numArgs, 1));
+    size_t numArgs = node.getChildren().size();
+    vector<double> args(max(numArgs, (size_t)1));
     for (int i = 0; i < numArgs; i++)
         args[i] = evaluate(node.getChildren()[i], variables);
     return node.getOperation().evaluate(&args[0], variables);

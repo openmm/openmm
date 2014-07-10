@@ -37,6 +37,7 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <stdint.h>
 
 namespace Lepton {
 
@@ -60,7 +61,7 @@ public:
     /**
      * Get the number of Operations that make up this program.
      */
-    int getNumOperations() const;
+    size_t getNumOperations() const;
     /**
      * Get an Operation in this program.
      */

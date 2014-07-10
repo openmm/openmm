@@ -88,7 +88,7 @@ void CompiledExpression::compileExpression(const ExpressionTreeNode& node, vecto
         variableNames.insert(node.getOperation().getName());
     }
     else {
-        int stepIndex = arguments.size();
+        size_t stepIndex = arguments.size();
         arguments.push_back(vector<int>());
         target.push_back(workspace.size());
         operation.push_back(node.getOperation().clone());
@@ -126,7 +126,7 @@ const set<string>& CompiledExpression::getVariables() const {
 }
 
 double& CompiledExpression::getVariableReference(const string& name) {
-    map<string, int>::iterator index = variableIndices.find(name);
+    map<string, size_t>::iterator index = variableIndices.find(name);
     if (index == variableIndices.end())
         throw Exception("getVariableReference: Unknown variable '"+name+"'");
     return workspace[index->second];
