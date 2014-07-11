@@ -5,17 +5,14 @@ from simtk.openmm import *
 from simtk.unit import *
 import simtk.openmm.app.element as elem
 
+prmtop1 = AmberPrmtopFile('systems/alanine-dipeptide-explicit.prmtop')
+prmtop2 = AmberPrmtopFile('systems/alanine-dipeptide-implicit.prmtop')
+prmtop3 = AmberPrmtopFile('systems/ff14ipq.parm7')
+inpcrd3 = AmberInpcrdFile('systems/ff14ipq.rst7')
+
 class TestAmberPrmtopFile(unittest.TestCase):
 
     """Test the AmberPrmtopFile.createSystem() method."""
- 
-    def setUp(self):
-        """Set up the tests by loading the input files."""
-
-        # alanine dipeptide with explicit water
-        self.prmtop1 = AmberPrmtopFile('systems/alanine-dipeptide-explicit.prmtop')
-        # alanine dipeptide with implicit water
-        self.prmtop2 = AmberPrmtopFile('systems/alanine-dipeptide-implicit.prmtop')
 
     def test_NonbondedMethod(self):
         """Test all five options for the nonbondedMethod parameter."""
@@ -25,7 +22,7 @@ class TestAmberPrmtopFile(unittest.TestCase):
                      CutoffPeriodic:NonbondedForce.CutoffPeriodic, 
                      Ewald:NonbondedForce.Ewald, PME: NonbondedForce.PME}
         for method in methodMap:
-            system = self.prmtop1.createSystem(nonbondedMethod=method)
+            system = prmtop1.createSystem(nonbondedMethod=method)
             forces = system.getForces()
             self.assertTrue(any(isinstance(f, NonbondedForce) and 
                                 f.getNonbondedMethod()==methodMap[method] 
@@ -35,9 +32,9 @@ class TestAmberPrmtopFile(unittest.TestCase):
         """Test to make sure the nonbondedCutoff parameter is passed correctly."""
 
         for method in [CutoffNonPeriodic, CutoffPeriodic, Ewald, PME]:
-            system = self.prmtop1.createSystem(nonbondedMethod=method, 
-                                               nonbondedCutoff=2*nanometer, 
-                                               constraints=HBonds)
+            system = prmtop1.createSystem(nonbondedMethod=method, 
+                                          nonbondedCutoff=2*nanometer, 
+                                          constraints=HBonds)
             cutoff_distance = 0.0*nanometer
             cutoff_check = 2.0*nanometer
             for force in system.getForces():
@@ -49,9 +46,9 @@ class TestAmberPrmtopFile(unittest.TestCase):
         """Test to make sure the ewaldErrorTolerance parameter is passed correctly."""
 
         for method in [Ewald, PME]:
-            system = self.prmtop1.createSystem(nonbondedMethod=method, 
-                                               ewaldErrorTolerance=1e-6, 
-                                               constraints=HBonds)
+            system = prmtop1.createSystem(nonbondedMethod=method, 
+                                          ewaldErrorTolerance=1e-6, 
+                                          constraints=HBonds)
             tolerance = 0
             tolerance_check = 1e-6
             for force in system.getForces():
@@ -63,18 +60,18 @@ class TestAmberPrmtopFile(unittest.TestCase):
         """Test both options (True and False) for the removeCMMotion parameter."""
 
         for b in [True, False]:
-            system = self.prmtop1.createSystem(removeCMMotion=b)
+            system = prmtop1.createSystem(removeCMMotion=b)
             forces = system.getForces()
             self.assertEqual(any(isinstance(f, CMMotionRemover) for f in forces), b)
 
     def test_RigidWaterAndConstraints(self):
         """Test all eight options for the constraints and rigidWater parameters."""
 
-        topology = self.prmtop1.topology
+        topology = prmtop1.topology
         for constraints_value in [None, HBonds, AllBonds, HAngles]:
             for rigidWater_value in [True, False]:
-                system = self.prmtop1.createSystem(constraints=constraints_value, 
-                                                   rigidWater=rigidWater_value)
+                system = prmtop1.createSystem(constraints=constraints_value, 
+                                              rigidWater=rigidWater_value)
                 validateConstraints(self, topology, system, 
                                     constraints_value, rigidWater_value)
 
@@ -84,7 +81,7 @@ class TestAmberPrmtopFile(unittest.TestCase):
 
         """
         for implicitSolvent_value in [HCT, OBC1, OBC2, GBn]:
-            system = self.prmtop2.createSystem(implicitSolvent=implicitSolvent_value)
+            system = prmtop2.createSystem(implicitSolvent=implicitSolvent_value)
             forces = system.getForces()
             if implicitSolvent_value in set([HCT, OBC1, GBn]):
                 force_type = CustomGBForce
@@ -99,7 +96,7 @@ class TestAmberPrmtopFile(unittest.TestCase):
                      CutoffNonPeriodic:NonbondedForce.CutoffNonPeriodic}
         for implicitSolvent_value in [HCT, OBC1, OBC2, GBn]:
             for method in methodMap:
-                system = self.prmtop2.createSystem(implicitSolvent=implicitSolvent_value, 
+                system = prmtop2.createSystem(implicitSolvent=implicitSolvent_value, 
                                     solventDielectric=50.0, soluteDielectric=0.9, nonbondedMethod=method)
                 found_matching_solvent_dielectric=False
                 found_matching_solute_dielectric=False
@@ -136,10 +133,10 @@ class TestAmberPrmtopFile(unittest.TestCase):
     def test_HydrogenMass(self):
         """Test that altering the mass of hydrogens works correctly."""
         
-        topology = self.prmtop1.topology
+        topology = prmtop1.topology
         hydrogenMass = 4*amu
-        system1 = self.prmtop1.createSystem()
-        system2 = self.prmtop1.createSystem(hydrogenMass=hydrogenMass)
+        system1 = prmtop1.createSystem()
+        system2 = prmtop1.createSystem(hydrogenMass=hydrogenMass)
         for atom in topology.atoms():
             if atom.element == elem.hydrogen:
                 self.assertNotEqual(hydrogenMass, system1.getParticleMass(atom.index))
@@ -147,6 +144,36 @@ class TestAmberPrmtopFile(unittest.TestCase):
         totalMass1 = sum([system1.getParticleMass(i) for i in range(system1.getNumParticles())]).value_in_unit(amu)
         totalMass2 = sum([system2.getParticleMass(i) for i in range(system2.getNumParticles())]).value_in_unit(amu)
         self.assertAlmostEqual(totalMass1, totalMass2)
+
+    def test_NBFIX(self):
+        """Test that prmtop files with modified off-diagonal LJ elements are treated properly"""
+        system = prmtop3.createSystem(nonbondedMethod=PME,
+                                      nonbondedCutoff=8*angstroms)
+        # Check the forces
+        has_nonbond_force = has_custom_nonbond_force = False
+        nonbond_exceptions = custom_nonbond_exclusions = 0
+        for force in system.getForces():
+            if isinstance(force, NonbondedForce):
+                has_nonbond_force = True
+                nonbond_exceptions = force.getNumExceptions()
+            elif isinstance(force, CustomNonbondedForce):
+                has_custom_nonbond_force = True
+                custom_nonbond_exceptions = force.getNumExclusions()
+        self.assertTrue(has_nonbond_force)
+        self.assertTrue(has_custom_nonbond_force)
+        self.assertEqual(nonbond_exceptions, custom_nonbond_exceptions)
+        integrator = VerletIntegrator(1.0*femtoseconds)
+        # Use reference platform, since it should always be present and
+        # 'working', and the system is plenty small so this won't be too slow
+        sim = Simulation(prmtop3.topology, system, integrator, Platform.getPlatformByName('Reference'))
+        # Check that the energy is about what we expect it to be
+        sim.context.setPeriodicBoxVectors(*inpcrd3.boxVectors)
+        sim.context.setPositions(inpcrd3.positions)
+        ene = sim.context.getState(getEnergy=True, enforcePeriodicBox=True).getPotentialEnergy()
+        ene = ene.value_in_unit(kilocalories_per_mole)
+        # Make sure the energy is relatively close to the value we get with
+        # Amber using this force field.
+        self.assertAlmostEqual(-7042.3903307/ene, 1, places=3)
 
 if __name__ == '__main__':
     unittest.main()

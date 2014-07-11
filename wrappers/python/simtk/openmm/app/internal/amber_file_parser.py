@@ -12,9 +12,9 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2013 Stanford University and the Authors.
+Portions copyright (c) 2012-2014 Stanford University and the Authors.
 Authors: Randall J. Radmer, John D. Chodera, Peter Eastman
-Contributors: Christoph Klein, Michael R. Shirts
+Contributors: Christoph Klein, Michael R. Shirts, Jason Swails
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -75,6 +75,10 @@ POINTER_LABEL_LIST = POINTER_LABELS.replace(',', '').split()
 
 VELSCALE = 20.455 # velocity conversion factor to angstroms/picosecond
 TINY = 1.0e-8
+
+class NbfixPresent(Exception):
+    """ Exception raised when NBFIX is used for the Lennard-Jones terms """
+    pass
 
 class PrmtopLoader(object):
     """Parsed AMBER prmtop file.
@@ -297,7 +301,11 @@ class PrmtopLoader(object):
         return self.residuePointerDict[iAtom]
 
     def getNonbondTerms(self):
-        """Return list of all rVdw, epsilon pairs for each atom"""
+        """
+        Return list of all rVdw, epsilon pairs for each atom. If off-diagonal
+        elements of the Lennard-Jones A and B coefficient matrices are found,
+        NbfixPresent exception is raised
+        """
         try:
             return self._nonbondTerms
         except AttributeError:
@@ -305,9 +313,10 @@ class PrmtopLoader(object):
         self._nonbondTerms=[]
         lengthConversionFactor = units.angstrom.conversion_factor_to(units.nanometer)
         energyConversionFactor = units.kilocalorie_per_mole.conversion_factor_to(units.kilojoule_per_mole)
+        numTypes = self.getNumTypes()
+        atomTypeIndexes=self._getAtomTypeIndexes()
+        type_parameters = [(0, 0) for i in range(numTypes)]
         for iAtom in range(self.getNumAtoms()):
-            numTypes=self.getNumTypes()
-            atomTypeIndexes=self._getAtomTypeIndexes()
             index=(numTypes+1)*(atomTypeIndexes[iAtom]-1)
             nbIndex=int(self._raw_data['NONBONDED_PARM_INDEX'][index])-1
             if nbIndex<0:
@@ -320,9 +329,31 @@ class PrmtopLoader(object):
             except ZeroDivisionError:
                 rMin = 1.0
                 epsilon = 0.0
+            type_parameters[atomTypeIndexes[iAtom]-1] = (rMin/2.0, epsilon)
             rVdw = rMin/2.0*lengthConversionFactor
             epsilon = epsilon*energyConversionFactor
             self._nonbondTerms.append( (rVdw, epsilon) )
+        # Check if we have any off-diagonal modified LJ terms that would require
+        # an NBFIX-like solution
+        for i in range(numTypes):
+            for j in range(numTypes):
+                index = int(self._raw_data['NONBONDED_PARM_INDEX'][numTypes*i+j]) - 1
+                rij = type_parameters[i][0] + type_parameters[j][0]
+                wdij = sqrt(type_parameters[i][1] * type_parameters[j][1])
+                a = float(self._raw_data['LENNARD_JONES_ACOEF'][index])
+                b = float(self._raw_data['LENNARD_JONES_BCOEF'][index])
+                if a == 0 or b == 0:
+                    if a != 0 or b != 0 or (wdij != 0 and rij != 0):
+                        del self._nonbondTerms
+                        raise NbfixPresent('Off-diagonal Lennard-Jones elements'
+                                           ' found. Cannot determine LJ '
+                                           'parameters for individual atoms.')
+                elif (abs((a - (wdij * rij ** 12)) / a) > 1e-6 or
+                      abs((b - (2 * wdij * rij**6)) / b) > 1e-6):
+                    del self._nonbondTerms
+                    raise NbfixPresent('Off-diagonal Lennard-Jones elements '
+                                       'found. Cannot determine LJ parameters '
+                                       'for individual atoms.')
         return self._nonbondTerms
 
     def _getBonds(self, bondPointers):
@@ -429,27 +460,67 @@ class PrmtopLoader(object):
                           +self._raw_data["DIHEDRALS_WITHOUT_HYDROGEN"]
         returnList=[]
         charges=self.getCharges()
-        nonbondTerms = self.getNonbondTerms()
-        for ii in range(0,len(dihedralPointers),5):
-            if int(dihedralPointers[ii+2])>0 and int(dihedralPointers[ii+3])>0:
-                iAtom = int(dihedralPointers[ii])//3
-                lAtom = int(dihedralPointers[ii+3])//3
-                iidx = int(dihedralPointers[ii+4]) - 1
-                chargeProd = charges[iAtom]*charges[lAtom]
-                (rVdwI, epsilonI) = nonbondTerms[iAtom]
-                (rVdwL, epsilonL) = nonbondTerms[lAtom]
-                rMin = (rVdwI+rVdwL)
-                epsilon = sqrt(epsilonI*epsilonL)
-                try:
-                    iScee = float(self._raw_data["SCEE_SCALE_FACTOR"][iidx])
-                except KeyError:
-                    iScee = 1.2
-                try:
-                    iScnb = float(self._raw_data["SCNB_SCALE_FACTOR"][iidx])
-                except KeyError:
-                    iScnb = 2.0
-
-                returnList.append((iAtom, lAtom, chargeProd, rMin, epsilon, iScee, iScnb))
+        try:
+            nonbondTerms = self.getNonbondTerms()
+        except NbfixPresent:
+            # We need to do the unit conversions here, since getNonbondTerms
+            # never finished and it has unit conversions in there
+            length_conv = units.angstrom.conversion_factor_to(units.nanometers)
+            ene_conv = units.kilocalories_per_mole.conversion_factor_to(
+                                units.kilojoules_per_mole)
+            parm_acoef = [float(x) for x in self._raw_data['LENNARD_JONES_ACOEF']]
+            parm_bcoef = [float(x) for x in self._raw_data['LENNARD_JONES_BCOEF']]
+            nbidx = [int(x) for x in self._raw_data['NONBONDED_PARM_INDEX']]
+            numTypes = self.getNumTypes()
+            atomTypeIndexes=self._getAtomTypeIndexes()
+            for ii in range(0, len(dihedralPointers), 5):
+                if int(dihedralPointers[ii+2])>0 and int(dihedralPointers[ii+3])>0:
+                    iAtom = int(dihedralPointers[ii])//3
+                    lAtom = int(dihedralPointers[ii+3])//3
+                    iidx = int(dihedralPointers[ii+4]) - 1
+                    chargeProd = charges[iAtom]*charges[lAtom]
+                    typ1 = atomTypeIndexes[iAtom] - 1
+                    typ2 = atomTypeIndexes[lAtom] - 1
+                    idx = nbidx[numTypes*typ1+typ2] - 1
+                    a = parm_acoef[idx]
+                    b = parm_bcoef[idx]
+                    try:
+                        epsilon = b * b / (4 * a) * ene_conv
+                        rMin = (2 * a / b) ** (1/6.0) * length_conv
+                    except ZeroDivisionError:
+                        rMin = 1
+                        epsilon = 0
+                    try:
+                        iScee = float(self._raw_data['SCEE_SCALE_FACTOR'][iidx])
+                    except KeyError:
+                        iScee = 1.2
+                    try:
+                        iScnb = float(self._raw_data['SCNB_SCALE_FACTOR'][iidx])
+                    except KeyError:
+                        iScnb = 2.0
+                    returnList.append((iAtom, lAtom, chargeProd, rMin, epsilon, iScee, iScnb))
+        else:
+            # This block gets hit if NbfixPresent is _not_ caught
+            for ii in range(0,len(dihedralPointers),5):
+                if int(dihedralPointers[ii+2])>0 and int(dihedralPointers[ii+3])>0:
+                    iAtom = int(dihedralPointers[ii])//3
+                    lAtom = int(dihedralPointers[ii+3])//3
+                    iidx = int(dihedralPointers[ii+4]) - 1
+                    chargeProd = charges[iAtom]*charges[lAtom]
+                    (rVdwI, epsilonI) = nonbondTerms[iAtom]
+                    (rVdwL, epsilonL) = nonbondTerms[lAtom]
+                    rMin = (rVdwI+rVdwL)
+                    epsilon = sqrt(epsilonI*epsilonL)
+                    try:
+                        iScee = float(self._raw_data["SCEE_SCALE_FACTOR"][iidx])
+                    except KeyError:
+                        iScee = 1.2
+                    try:
+                        iScnb = float(self._raw_data["SCNB_SCALE_FACTOR"][iidx])
+                    except KeyError:
+                        iScnb = 2.0
+    
+                    returnList.append((iAtom, lAtom, chargeProd, rMin, epsilon, iScee, iScnb))
         return returnList
 
     def getExcludedAtoms(self):
@@ -782,9 +853,54 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
 
     # Add per-particle nonbonded parameters.
     sigmaScale = 2**(-1./6.) * 2.0
-    for (charge, (rVdw, epsilon)) in zip(prmtop.getCharges(), prmtop.getNonbondTerms()):
-        sigma = rVdw * sigmaScale
-        force.addParticle(charge, sigma, epsilon)
+    nbfix = False
+    try:
+        nonbondTerms = prmtop.getNonbondTerms()
+    except NbfixPresent:
+        nbfix = True
+        for charge in prmtop.getCharges():
+            force.addParticle(charge, 1.0, 0.0)
+        numTypes = prmtop.getNumTypes()
+        parm_acoef = [float(x) for x in prmtop._raw_data['LENNARD_JONES_ACOEF']]
+        parm_bcoef = [float(x) for x in prmtop._raw_data['LENNARD_JONES_BCOEF']]
+        nbidx = [int(x) for x in prmtop._raw_data['NONBONDED_PARM_INDEX']]
+        acoef = [0 for i in range(numTypes*numTypes)]
+        bcoef = acoef[:] # copy
+        ene_conv = units.kilocalories_per_mole.conversion_factor_to(units.kilojoules_per_mole)
+        length_conv = units.angstroms.conversion_factor_to(units.nanometers)
+        afac = sqrt(ene_conv) * length_conv**6
+        bfac = ene_conv * length_conv**6
+        for i in range(numTypes):
+            for j in range(numTypes):
+                idx = nbidx[numTypes*i+j] - 1
+                acoef[i+numTypes*j] = sqrt(parm_acoef[idx]) * afac
+                bcoef[i+numTypes*j] = parm_bcoef[idx] * bfac
+        cforce = mm.CustomNonbondedForce('(a/r6)^2-b/r6; r6=r^6;'
+                                         'a=acoef(type1, type2);'
+                                         'b=bcoef(type1, type2);')
+        cforce.addTabulatedFunction('acoef',
+                    mm.Discrete2DFunction(numTypes, numTypes, acoef))
+        cforce.addTabulatedFunction('bcoef',
+                    mm.Discrete2DFunction(numTypes, numTypes, bcoef))
+        cforce.addPerParticleParameter('type')
+        for atom in prmtop._getAtomTypeIndexes():
+            cforce.addParticle((atom-1,))
+        # Now set the various properties based on the NonbondedForce object
+        if nonbondedMethod in ('PME', 'Ewald', 'CutoffPeriodic'):
+            cforce.setNonbondedMethod(cforce.CutoffPeriodic)
+            cforce.setCutoffDistance(nonbondedCutoff)
+        elif nonbondedMethod == 'CutoffNonPeriodic':
+            cforce.setNonbondedMethod(cforce.CutoffNonPeriodic)
+            cforce.setCutoffDistance(nonbondedCutoff)
+        elif nonbondedMethod == 'NoCutoff':
+            cforce.setNonbondedMethod(cforce.NoCutoff)
+        else:
+            raise ValueError('Unrecognized cutoff option %s' % nonbondedMethod)
+    else:
+        for (charge, (rVdw, epsilon)) in zip(prmtop.getCharges(), nonbondTerms):
+            sigma = rVdw * sigmaScale
+            force.addParticle(charge, sigma, epsilon)
+
 
     # Add 1-4 Interactions
     excludedAtomPairs = set()
@@ -807,6 +923,13 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
             if min((iAtom, jAtom), (jAtom, iAtom)) in excludedAtomPairs: continue
             force.addException(iAtom, jAtom, excludeParams[0], excludeParams[1], excludeParams[2])
 
+    # Copy the exceptions as exclusions to the CustomNonbondedForce if we have
+    # NBFIX terms
+    if nbfix:
+        for i in range(force.getNumExceptions()):
+            ii, jj, chg, sig, eps = force.getExceptionParameters(i)
+            cforce.addExclusion(ii, jj)
+        system.addForce(cforce)
     system.addForce(force)
 
     # Add virtual sites for water.
