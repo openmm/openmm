@@ -163,7 +163,9 @@ class TestAmberPrmtopFile(unittest.TestCase):
         self.assertTrue(has_custom_nonbond_force)
         self.assertEqual(nonbond_exceptions, custom_nonbond_exceptions)
         integrator = VerletIntegrator(1.0*femtoseconds)
-        sim = Simulation(prmtop3.topology, system, integrator)
+        # Use reference platform, since it should always be present and
+        # 'working', and the system is plenty small so this won't be too slow
+        sim = Simulation(prmtop3.topology, system, integrator, Platform.getPlatformByName('Reference'))
         # Check that the energy is about what we expect it to be
         sim.context.setPeriodicBoxVectors(*inpcrd3.boxVectors)
         sim.context.setPositions(inpcrd3.positions)
