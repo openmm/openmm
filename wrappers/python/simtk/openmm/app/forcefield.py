@@ -218,6 +218,7 @@ class ForceField(object):
         def __init__(self):
             self.atomType = {}
             self.atoms = []
+            self.excludeAtomWith = []
             self.virtualSites = {}
             self.bonds = []
             self.angles = []
@@ -275,6 +276,10 @@ class ForceField(object):
                 self.localPos = [float(attrib['p1']), float(attrib['p2']), float(attrib['p3'])]
             else:
                 raise ValueError('Unknown virtual site type: %s' % self.type)
+            if 'excludeWith' in attrib:
+                self.excludeWith = int(attrib['excludeWith'])
+            else:
+                self.excludeWith = self.atoms[0]
 
     def createSystem(self, topology, nonbondedMethod=NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
                      constraints=None, rigidWater=True, removeCMMotion=True, hydrogenMass=None, **args):
@@ -297,6 +302,8 @@ class ForceField(object):
         """
         data = ForceField._SystemData()
         data.atoms = list(topology.atoms())
+        for atom in data.atoms:
+            data.excludeAtomWith.append([])
 
         # Make a list of all bonds
 
@@ -336,7 +343,7 @@ class ForceField(object):
                     data.atomType[atom] = template.atoms[match].type
                     for site in template.virtualSites:
                         if match == site.index:
-                            data.virtualSites[atom] = (site, [matchAtoms[i].index for i in site.atoms])
+                            data.virtualSites[atom] = (site, [matchAtoms[i].index for i in site.atoms], matchAtoms[site.excludeWith].index)
 
         # Create the System and add atoms
 
@@ -451,8 +458,9 @@ class ForceField(object):
         # Add virtual sites
 
         for atom in data.virtualSites:
-            (site, atoms) = data.virtualSites[atom]
+            (site, atoms, excludeWith) = data.virtualSites[atom]
             index = atom.index
+            data.excludeAtomWith[excludeWith].append(index)
             if site.type == 'average2':
                 sys.setVirtualSite(index, mm.TwoParticleAverageSite(atoms[0], atoms[1], site.weights[0], site.weights[1]))
             elif site.type == 'average3':
@@ -1120,33 +1128,33 @@ class NonbondedGenerator:
         sys.addForce(force)
 
     def postprocessSystem(self, sys, data, args):
-        # Create exceptions based on bonds, virtual sites, and Drude particles.
+        # Create exceptions based on bonds.
+        
         bondIndices = []
         for bond in data.bonds:
             bondIndices.append((bond.atom1, bond.atom2))
+
+        # If a virtual site does *not* share exclusions with another atom, add a bond between it and its first parent atom.
+
         for i in range(sys.getNumParticles()):
             if sys.isVirtualSite(i):
-                site = sys.getVirtualSite(i)
-                for j in range(site.getNumParticles()):
-                    bondIndices.append((i, site.getParticle(j)))
-        drude = [f for f in sys.getForces() if isinstance(f, mm.DrudeForce)]
-        if len(drude) > 0:
-            drude = drude[0]
-            # For purposes of creating exceptions, a Drude particle is "bonded" to anything
-            # its parent atom is bonded to.
-            drudeMap = {}
-            for i in range(drude.getNumParticles()):
-                params = drude.getParticleParameters(i)
-                drudeMap[params[1]] = params[0]
-            for atom1, atom2 in bondIndices:
-                drude1 = drudeMap[atom1] if atom1 in drudeMap else None
-                drude2 = drudeMap[atom2] if atom2 in drudeMap else None
-                if drude1 is not None:
-                    bondIndices.append((drude1, atom2))
-                    if drude2 is not None:
-                        bondIndices.append((drude1, drude2))
-                if drude2 is not None:
-                    bondIndices.append((atom1, drude2))
+                (site, atoms, excludeWith) = data.virtualSites[data.atoms[i]]
+                if excludeWith is None:
+                    bondIndices.append((i, site.getParticle(0)))
+        
+        # Certain particles, such as lone pairs and Drude particles, share exclusions with a parent atom.
+        # If the parent atom does not interact with an atom, the child particle does not either.
+        
+        for atom1, atom2 in bondIndices:
+            for child1 in data.excludeAtomWith[atom1]:
+                bondIndices.append((child1, atom2))
+                for child2 in data.excludeAtomWith[atom2]:
+                    bondIndices.append((child1, child2))
+            for child2 in data.excludeAtomWith[atom2]:
+                bondIndices.append((atom1, child2))
+
+        # Create the exceptions.
+
         nonbonded = [f for f in sys.getForces() if isinstance(f, mm.NonbondedForce)][0]
         nonbonded.createExceptionsFromBonds(bondIndices, self.coulomb14scale, self.lj14scale)
 
@@ -4153,8 +4161,6 @@ class DrudeGenerator:
 
         # Add Drude particles.
 
-        drudeMap = {}
-        parentMap = {}
         for atom in data.atoms:
             t = data.atomType[atom]
             if t in self.typeMap:
@@ -4171,9 +4177,8 @@ class DrudeGenerator:
                         p[2] = atom2.index
                     elif values[3] is not None and type2 in values[3]:
                         p[3] = atom2.index
-                drudeIndex = force.addParticle(atom.index, p[0], p[1], p[2], p[3], values[4], values[5], values[6], values[7])
-                drudeMap[atom.index] = p[0]
-                parentMap[p[0]] = (atom.index, drudeIndex)
+                force.addParticle(atom.index, p[0], p[1], p[2], p[3], values[4], values[5], values[6], values[7])
+                data.excludeAtomWith[p[0]].append(atom.index)
         sys.addForce(force)
 
     def postprocessSystem(self, sys, data, args):
