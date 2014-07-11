@@ -21,6 +21,7 @@ sudo yum install clang-3.4 cmake28 graphviz perl flex bison rpm-build texlive te
 wget http://ftp.stack.nl/pub/users/dimitri/doxygen-1.8.7.src.tar.gz
 rpmbuild -ta doxygen-1.8.7.src.tar.gz
 sudo rpm -i ~/rpmbuild/RPMS/x86_64/doxygen-1.8.7-1.x86_64.rpm
+rm ~/rpmbuild -r
 
 
 sudo yum clean headers
@@ -32,9 +33,11 @@ wget http://developer.download.nvidia.com/compute/cuda/repos/rhel6/x86_64/cuda-r
 sudo rpm -i  cuda-repo-rhel6-6.0-37.x86_64.rpm
 sudo yum clean expire-cache
 sudo yum install cuda -y
+rm cuda-repo-rhel6-6.0-37.x86_64.rpm
 
 
 # Download AMD APP SDK from here, requires click agreement: http://developer.amd.com/amd-license-agreement-appsdk/
+# Ideally we could cache this on AWS or something...
 mkdir ~/AMD
 cd ~/AMD
 # Copy the tarball to this directory from wherever you got it.
