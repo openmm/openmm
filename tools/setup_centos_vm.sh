@@ -12,7 +12,7 @@ sudo yum install wget -y
 wget http://mirror.umd.edu/fedora/epel/6/i386/epel-release-6-8.noarch.rpm
 sudo rpm -i epel-release-6-8.noarch.rpm
 
-sudo yum update
+sudo yum update -y
 
 # Several of these come from the EPEL repo
 sudo yum install clang-3.4 cmake28 graphviz perl flex bison rpm-build texlive texlive-latex ghostscript gcc gcc-c++ git vim -y
@@ -21,6 +21,10 @@ sudo yum install clang-3.4 cmake28 graphviz perl flex bison rpm-build texlive te
 wget http://ftp.stack.nl/pub/users/dimitri/doxygen-1.8.7.src.tar.gz
 rpmbuild -ta doxygen-1.8.7.src.tar.gz
 sudo rpm -i ~/rpmbuild/RPMS/x86_64/doxygen-1.8.7-1.x86_64.rpm
+
+
+sudo yum clean headers
+sudo yum clean packages
 
 # Install CUDA6 for RHEL6
 cd ~/Software
@@ -36,6 +40,7 @@ cd ~/AMD
 # Copy the tarball to this directory from wherever you got it.
 cp /vagrant/AMD-APP-SDK-v2.9-lnx64.tgz  ./
 tar -zxvf  /vagrant/AMD-APP-SDK-v2.9-lnx64.tgz
+sudo ./Install-AMD-APP.sh
 
 cd ~/Software
 wget http://repo.continuum.io/miniconda/Miniconda-3.0.5-Linux-x86_64.sh
