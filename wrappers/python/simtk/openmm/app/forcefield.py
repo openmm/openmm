@@ -100,8 +100,11 @@ class ForceField(object):
         """Load one or more XML files and create a ForceField object based on them.
 
         Parameters:
-         - files A list of XML files defining the force field.  Each entry may be an absolute file path, a path relative to the
-           current working directory, or a path relative to this module's data subdirectory (for built in force fields).
+         - files A list of XML files defining the force field.  Each entry may
+           be an absolute file path, a path relative to the current working
+           directory, a path relative to this module's data subdirectory
+           (for built in force fields), or an open file-like object with a
+           read() method from which the forcefield XML data can be loaded.
         """
         self._atomTypes = {}
         self._templates = {}
@@ -111,6 +114,7 @@ class ForceField(object):
         self._scripts = []
         for file in files:
             try:
+                # this handles either filenames or open file-like objects
                 tree = etree.parse(file)
             except IOError:
                 tree = etree.parse(os.path.join(os.path.dirname(__file__), 'data', file))
