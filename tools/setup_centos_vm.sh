@@ -6,7 +6,7 @@
 
 
 # Download and enable the EPEL RedHat EL extras repository
-mkdir Software
+mkdir ~/Software
 cd Software
 sudo yum install wget -y
 wget http://mirror.umd.edu/fedora/epel/6/i386/epel-release-6-8.noarch.rpm
@@ -36,33 +36,25 @@ sudo yum install cuda -y
 rm cuda-repo-rhel6-6.0-37.x86_64.rpm
 
 
+# Install Conda
+cd ~/Software
+wget http://repo.continuum.io/miniconda/Miniconda-3.0.5-Linux-x86_64.sh
+bash Miniconda-3.0.5-Linux-x86_64.sh -b
+
+# So there is a bug in some versions of anaconda where the path to swig files is HARDCODED.  Below is workaround.  See https://github.com/ContinuumIO/anaconda-issues/issues/48
+sudo ln -s  ~/miniconda/ /opt/anaconda1anaconda2anaconda3
+
+export PATH=$HOME/miniconda/bin:$PATH
+conda config --add channels http://conda.binstar.org/omnia
+conda install --yes fftw3f jinja2 swig sphinx conda-build cmake
+
+
 # Download AMD APP SDK from here, requires click agreement: http://developer.amd.com/amd-license-agreement-appsdk/
 # Ideally we could cache this on AWS or something...
-mkdir ~/AMD
-cd ~/AMD
+mkdir ~/Software/AMD
+cd ~/Software/AMD
 # Copy the tarball to this directory from wherever you got it.
 cp /vagrant/AMD-APP-SDK-v2.9-lnx64.tgz  ./
 tar -zxvf  /vagrant/AMD-APP-SDK-v2.9-lnx64.tgz
 sudo ./Install-AMD-APP.sh
 
-cd ~/Software
-wget http://repo.continuum.io/miniconda/Miniconda-3.0.5-Linux-x86_64.sh
-bash Miniconda-3.0.5-Linux-x86_64.sh -b
-
-export PATH=$HOME/miniconda/bin:$PATH
-
-
-
-# MANUAL installation below this point###
-# MANUAL installation below this point###
-# MANUAL installation below this point###
-
-conda config --add channels http://conda.binstar.org/omnia
-conda install --yes fftw3f jinja2 swig sphinx conda-build
-
-#git clone https://github.com/SimTk/openmm.git
-git clone -b vagrant https://github.com/kyleabeauchamp/openmm.git
-cd openmm
-conda install --file tools/ci/requirements-conda.txt --yes
-export CC="clang++"
-conda build tools/conda-recipe
