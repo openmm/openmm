@@ -2405,10 +2405,10 @@ class AmoebaTorsionGenerator:
 
             else:
                 outputString = "AmoebaTorsionGenerator: error getting types: %s %s %s %s" % (
-                                    stretchBend.attrib['class1'],
-                                    stretchBend.attrib['class2'],
-                                    stretchBend.attrib['class3'],
-                                    stretchBend.attrib['class4'])
+                                    torsion.attrib['class1'],
+                                    torsion.attrib['class2'],
+                                    torsion.attrib['class3'],
+                                    torsion.attrib['class4'])
                 raise ValueError(outputString)
 
     #=============================================================================================
