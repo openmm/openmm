@@ -7,6 +7,8 @@ import simtk.openmm.app.element as elem
 
 prmtop1 = AmberPrmtopFile('systems/alanine-dipeptide-explicit.prmtop')
 prmtop2 = AmberPrmtopFile('systems/alanine-dipeptide-implicit.prmtop')
+prmtop3 = AmberPrmtopFile('systems/ff14ipq.parm7')
+inpcrd3 = AmberInpcrdFile('systems/ff14ipq.rst7')
 
 class TestAmberPrmtopFile(unittest.TestCase):
 
@@ -142,6 +144,34 @@ class TestAmberPrmtopFile(unittest.TestCase):
         totalMass1 = sum([system1.getParticleMass(i) for i in range(system1.getNumParticles())]).value_in_unit(amu)
         totalMass2 = sum([system2.getParticleMass(i) for i in range(system2.getNumParticles())]).value_in_unit(amu)
         self.assertAlmostEqual(totalMass1, totalMass2)
+
+    def test_NBFIX(self):
+        """Test that prmtop files with modified off-diagonal LJ elements are treated properly"""
+        system = prmtop3.createSystem(nonbondedMethod=PME,
+                                      nonbondedCutoff=8*angstroms)
+        # Check the forces
+        has_nonbond_force = has_custom_nonbond_force = False
+        nonbond_exceptions = custom_nonbond_exclusions = 0
+        for force in system.getForces():
+            if isinstance(force, NonbondedForce):
+                has_nonbond_force = True
+                nonbond_exceptions = force.getNumExceptions()
+            elif isinstance(force, CustomNonbondedForce):
+                has_custom_nonbond_force = True
+                custom_nonbond_exceptions = force.getNumExclusions()
+        self.assertTrue(has_nonbond_force)
+        self.assertTrue(has_custom_nonbond_force)
+        self.assertEqual(nonbond_exceptions, custom_nonbond_exceptions)
+        integrator = VerletIntegrator(1.0*femtoseconds)
+        sim = Simulation(prmtop3.topology, system, integrator)
+        # Check that the energy is about what we expect it to be
+        sim.context.setPeriodicBoxVectors(*inpcrd3.boxVectors)
+        sim.context.setPositions(inpcrd3.positions)
+        ene = sim.context.getState(getEnergy=True, enforcePeriodicBox=True).getPotentialEnergy()
+        ene = ene.value_in_unit(kilocalories_per_mole)
+        # Make sure the energy is relatively close to the value we get with
+        # Amber using this force field.
+        self.assertAlmostEqual(-7042.3903307/ene, 1, places=3)
 
 if __name__ == '__main__':
     unittest.main()
