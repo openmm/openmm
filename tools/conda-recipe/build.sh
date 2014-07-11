@@ -36,7 +36,17 @@ make install
 # Run C tests.
 # Exclude OpenCL tests because @peastman suspects mesa on travis implementation is broken.
 # @jchodera and @pgrinaway suspect travis is working, but AMD OpenCL tests are actually failing due to a bug.
-ctest -j2 -V -E "[A-Za-z]+OpenCL[A-Za-z]+"
+export CTEST_EXCLUDE="[A-Za-z]+OpenCL[A-Za-z]+"
+# run all of the tests
+ctest -j2 -V -E $CTEST_EXCLUDE
+# get a list of all of the failed tests into this stupid ctest format
+python -c 'fn = "Testing/Temporary/LastTestsFailed.log"; import os; os.path.exists(fn) or exit(0); l = [line.split(":")[0] for line in open(fn)]; triplets = zip(l, l, [","]*len(l)); print "".join(",".join(t) for t in triplets)' > FailedTests.log
+# rerun all of the failed tests
+if [ -s FailedTests.log ]; then ctest -V -I FailedTests.log; fi;
+# run the python tests too
+cd python/tests
+nosetests -vv --processes=-1 --process-timeout=200
+cd ../..
 
 # Install Python wrappers.
 export OPENMM_INCLUDE_PATH=$PREFIX/include
