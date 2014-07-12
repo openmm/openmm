@@ -37,7 +37,6 @@
 #include <set>
 #include <map>
 #include <cmath>
-#include <smmintrin.h>
 
 using namespace std;
 

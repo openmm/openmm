@@ -47,8 +47,12 @@
       #define NOMINMAX
       #include <windows.h>
    #else
-      #include <dlfcn.h>
-      #include <unistd.h>
+      #ifdef __ANDROID__
+        #include <cpu-features.h>
+      #else
+        #include <dlfcn.h>
+        #include <unistd.h>
+      #endif
    #endif
 #endif
 
@@ -70,11 +74,15 @@ static int getNumProcessors() {
         ncpu = 1;
     return ncpu;
 #else
-    long nProcessorsOnline = sysconf(_SC_NPROCESSORS_ONLN);
-    if (nProcessorsOnline == -1)
-        return 1;
-    else
-        return (int) nProcessorsOnline;
+    #ifdef __ANDROID__
+        return android_getCpuCount();
+    #else
+      long nProcessorsOnline = sysconf(_SC_NPROCESSORS_ONLN);
+      if (nProcessorsOnline == -1)
+          return 1;
+      else
+          return (int) nProcessorsOnline;
+    #endif
 #endif
 #endif
 }
@@ -85,30 +93,32 @@ static int getNumProcessors() {
 #ifdef _WIN32
 #define cpuid __cpuid
 #else
-static void cpuid(int cpuInfo[4], int infoType){
-#ifdef __LP64__
-    __asm__ __volatile__ (
-        "cpuid":
-        "=a" (cpuInfo[0]),
-        "=b" (cpuInfo[1]),
-        "=c" (cpuInfo[2]),
-        "=d" (cpuInfo[3]) :
-        "a" (infoType)
-    );
-#else
-    __asm__ __volatile__ (
-        "pushl %%ebx\n"
-        "cpuid\n"
-        "movl %%ebx, %1\n"
-        "popl %%ebx\n" :
-        "=a" (cpuInfo[0]),
-        "=r" (cpuInfo[1]),
-        "=c" (cpuInfo[2]),
-        "=d" (cpuInfo[3]) :
-        "a" (infoType)
-    );
-#endif
-}
+#ifndef __ANDROID__
+    static void cpuid(int cpuInfo[4], int infoType){
+    #ifdef __LP64__
+        __asm__ __volatile__ (
+            "cpuid":
+            "=a" (cpuInfo[0]),
+            "=b" (cpuInfo[1]),
+            "=c" (cpuInfo[2]),
+            "=d" (cpuInfo[3]) :
+            "a" (infoType)
+        );
+    #else
+        __asm__ __volatile__ (
+            "pushl %%ebx\n"
+            "cpuid\n"
+            "movl %%ebx, %1\n"
+            "popl %%ebx\n" :
+            "=a" (cpuInfo[0]),
+            "=r" (cpuInfo[1]),
+            "=c" (cpuInfo[2]),
+            "=d" (cpuInfo[3]) :
+            "a" (infoType)
+        );
+    #endif
+    }
+    #endif
 #endif
 
 #endif // OPENMM_HARDWARE_H_
