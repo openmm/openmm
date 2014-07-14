@@ -889,6 +889,7 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
         if nonbondedMethod in ('PME', 'Ewald', 'CutoffPeriodic'):
             cforce.setNonbondedMethod(cforce.CutoffPeriodic)
             cforce.setCutoffDistance(nonbondedCutoff)
+            cforce.setUseLongRangeCorrection(True)
         elif nonbondedMethod == 'CutoffNonPeriodic':
             cforce.setNonbondedMethod(cforce.CutoffNonPeriodic)
             cforce.setCutoffDistance(nonbondedCutoff)
