@@ -173,7 +173,7 @@ class TestAmberPrmtopFile(unittest.TestCase):
 #       ene = ene.value_in_unit(kilocalories_per_mole)
 #       # Make sure the energy is relatively close to the value we get with
 #       # Amber using this force field.
-#       self.assertAlmostEqual(-7042.3903307/ene, 1, places=3)
+#       self.assertAlmostEqual(-7099.44989739/ene, 1, places=3)
 
     def test_NBFIX_noLongRange(self):
         """Test prmtop files with NBFIX LJ modifications w/out long-range correction"""
