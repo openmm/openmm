@@ -136,9 +136,9 @@ double ReferenceCalcDrudeForceKernel::execute(ContextImpl& context, bool include
         RealOpenMM a1 = (p2 == -1 ? 1 : aniso12[i]);
         RealOpenMM a2 = (p3 == -1 || p4 == -1 ? 1 : aniso34[i]);
         RealOpenMM a3 = 3-a1-a2;
-        RealOpenMM k3 = charge[i]*charge[i]/(polarizability[i]*a3);
-        RealOpenMM k1 = charge[i]*charge[i]/(polarizability[i]*a1) - k3;
-        RealOpenMM k2 = charge[i]*charge[i]/(polarizability[i]*a2) - k3;
+        RealOpenMM k3 = ONE_4PI_EPS0*charge[i]*charge[i]/(polarizability[i]*a3);
+        RealOpenMM k1 = ONE_4PI_EPS0*charge[i]*charge[i]/(polarizability[i]*a1) - k3;
+        RealOpenMM k2 = ONE_4PI_EPS0*charge[i]*charge[i]/(polarizability[i]*a2) - k3;
         
         // Compute the isotropic force.
         
