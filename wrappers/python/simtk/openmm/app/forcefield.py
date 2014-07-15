@@ -902,26 +902,20 @@ class PeriodicTorsionGenerator:
                 if type1 in types1:
                     for (t2, t3, t4) in itertools.permutations(((type2, 1), (type3, 2), (type4, 3))):
                         if t2[0] in types2 and t3[0] in types3 and t4[0] in types4:
-                            if wildcard in (types1, types2, types3, types4):
-                                # Workaround to be more consistent with AMBER.  It uses wildcards to define most of its
-                                # impropers, which leaves the ordering ambiguous.  It then follows some bizarre rules
-                                # to pick the order.
-                                a1 = torsion[t2[1]]
-                                a2 = torsion[t3[1]]
-                                e1 = data.atoms[a1].element
-                                e2 = data.atoms[a2].element
-                                if e1 == e2 and a1 > a2:
-                                    (a1, a2) = (a2, a1)
-                                elif e1 != elem.carbon and (e2 == elem.carbon or e1.mass < e2.mass):
-                                    (a1, a2) = (a2, a1)
-                                for i in range(len(tordef.phase)):
-                                    if tordef.k[i] != 0:
-                                        force.addTorsion(a1, a2, torsion[0], torsion[t4[1]], tordef.periodicity[i], tordef.phase[i], tordef.k[i])
-                            else:
-                                # There are no wildcards, so the order is unambiguous.
-                                for i in range(len(tordef.phase)):
-                                    if tordef.k[i] != 0:
-                                        force.addTorsion(torsion[0], torsion[t2[1]], torsion[t3[1]], torsion[t4[1]], tordef.periodicity[i], tordef.phase[i], tordef.k[i])
+                            # Workaround to be more consistent with AMBER.  It uses wildcards to define most of its
+                            # impropers, which leaves the ordering ambiguous.  It then follows some bizarre rules
+                            # to pick the order.
+                            a1 = torsion[t2[1]]
+                            a2 = torsion[t3[1]]
+                            e1 = data.atoms[a1].element
+                            e2 = data.atoms[a2].element
+                            if e1 == e2 and a1 > a2:
+                                (a1, a2) = (a2, a1)
+                            elif e1 != elem.carbon and (e2 == elem.carbon or e1.mass < e2.mass):
+                                (a1, a2) = (a2, a1)
+                            for i in range(len(tordef.phase)):
+                                if tordef.k[i] != 0:
+                                    force.addTorsion(a1, a2, torsion[0], torsion[t4[1]], tordef.periodicity[i], tordef.phase[i], tordef.k[i])
                             done = True
                             break
 
@@ -1549,7 +1543,6 @@ class CustomTorsionGenerator:
                                     (a1, a2) = (a2, a1)
                                 elif e1 != elem.carbon and (e2 == elem.carbon or e1.mass < e2.mass):
                                     (a1, a2) = (a2, a1)
-                                print a1, a2, torsion[0], torsion[t4[1]]
                                 force.addTorsion(a1, a2, torsion[0], torsion[t4[1]], tordef.paramValues)
                             else:
                                 # There are no wildcards, so the order is unambiguous.
