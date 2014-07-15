@@ -8,7 +8,9 @@ import simtk.openmm.app.element as elem
 prmtop1 = AmberPrmtopFile('systems/alanine-dipeptide-explicit.prmtop')
 prmtop2 = AmberPrmtopFile('systems/alanine-dipeptide-implicit.prmtop')
 prmtop3 = AmberPrmtopFile('systems/ff14ipq.parm7')
+prmtop4 = AmberPrmtopFile('systems/Mg_water.prmtop')
 inpcrd3 = AmberInpcrdFile('systems/ff14ipq.rst7')
+inpcrd4 = AmberInpcrdFile('systems/Mg_water.inpcrd')
 
 class TestAmberPrmtopFile(unittest.TestCase):
 
@@ -205,6 +207,39 @@ class TestAmberPrmtopFile(unittest.TestCase):
         # Make sure the energy is relatively close to the value we get with
         # Amber using this force field.
         self.assertAlmostEqual(-7042.3903307/ene, 1, places=3)
+
+    def test_LJ1264(self):
+        """Test prmtop with 12-6-4 vdW potential implemented"""
+        system = prmtop4.createSystem(nonbondedMethod=PME,
+                                      nonbondedCutoff=8*angstroms)
+        # Check the forces
+        has_nonbond_force = has_custom_nonbond_force = False
+        nonbond_exceptions = custom_nonbond_exclusions = 0
+        for force in system.getForces():
+            if isinstance(force, NonbondedForce):
+                has_nonbond_force = True
+                nonbond_exceptions = force.getNumExceptions()
+                force.setUseDispersionCorrection(False)
+            elif isinstance(force, CustomNonbondedForce):
+                self.assertTrue(force.getUseLongRangeCorrection())
+                has_custom_nonbond_force = True
+                custom_nonbond_exceptions = force.getNumExclusions()
+                force.setUseLongRangeCorrection(False)
+        self.assertTrue(has_nonbond_force)
+        self.assertTrue(has_custom_nonbond_force)
+        self.assertEqual(nonbond_exceptions, custom_nonbond_exceptions)
+        integrator = VerletIntegrator(1.0*femtoseconds)
+        # Use reference platform, since it should always be present and
+        # 'working', and the system is plenty small so this won't be too slow
+        sim = Simulation(prmtop4.topology, system, integrator, Platform.getPlatformByName('Reference'))
+        # Check that the energy is about what we expect it to be
+        sim.context.setPeriodicBoxVectors(*inpcrd4.boxVectors)
+        sim.context.setPositions(inpcrd4.positions)
+        ene = sim.context.getState(getEnergy=True, enforcePeriodicBox=True).getPotentialEnergy()
+        ene = ene.value_in_unit(kilocalories_per_mole)
+        # Make sure the energy is relatively close to the value we get with
+        # Amber using this force field.
+        self.assertAlmostEqual(-7307.2735621/ene, 1, places=3)
 
 if __name__ == '__main__':
     unittest.main()
