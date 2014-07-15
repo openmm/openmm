@@ -651,19 +651,20 @@ For the main force field, OpenMM provides the following options:
 
 .. tabularcolumns:: |l|L|
 
-=================  ================================================================================
-File               Force Field                                                                     
-=================  ================================================================================
-amber96.xml        AMBER96\ :cite:`Kollman1997`
-amber99sb.xml      AMBER99\ :cite:`Wang2000` with modified backbone torsions\ :cite:`Hornak2006`
-amber99sbildn.xml  AMBER99SB plus improved side chain torsions\ :cite:`Lindorff-Larsen2010`
-amber99sbnmr.xml   AMBER99SB with modifications to fit NMR data\ :cite:`Li2010`
-amber03.xml        AMBER03\ :cite:`Duan2003`
-amber10.xml        AMBER10
-amoeba2009.xml     AMOEBA 2009\ :cite:`Ren2002`.  This force field is deprecated.  It is 
-                   recommended to use AMOEBA 2013 instead.
-amoeba2013.xml     AMOEBA 2013\ :cite:`Shi2013`
-=================  ================================================================================
+=====================  ================================================================================
+File                   Force Field                                                                     
+=====================  ================================================================================
+amber96.xml            AMBER96\ :cite:`Kollman1997`
+amber99sb.xml          AMBER99\ :cite:`Wang2000` with modified backbone torsions\ :cite:`Hornak2006`
+amber99sbildn.xml      AMBER99SB plus improved side chain torsions\ :cite:`Lindorff-Larsen2010`
+amber99sbnmr.xml       AMBER99SB with modifications to fit NMR data\ :cite:`Li2010`
+amber03.xml            AMBER03\ :cite:`Duan2003`
+amber10.xml            AMBER10
+amoeba2009.xml         AMOEBA 2009\ :cite:`Ren2002`.  This force field is deprecated.  It is 
+                       recommended to use AMOEBA 2013 instead.
+amoeba2013.xml         AMOEBA 2013\ :cite:`Shi2013`
+charmm_polar_2013.xml  CHARMM 2013 polarizable force field\ :cite:`Lopes2013`
+=====================  ================================================================================
 
 
 The AMBER files do not include parameters for water molecules.  This allows you
@@ -686,10 +687,10 @@ swm4ndp.xml  SWM4-NDP water model\ :cite:`Lamoureux2006`
 ===========  ============================================
 
 
-For the AMOEBA force field, only one explicit water model is currently available
-and the water parameters are included in the file :code:`amoeba2009.xml`\ .
-Also the AMOEBA force field file only includes the parameters for amino acids
-and ions; nucleic acids will be included in a future release.
+For the polarizable force fields (AMOEBA and CHARMM), only one explicit water model
+is currently available and the water parameters are included in the same file as
+the macromolecule parameters.  Also, the polarizable force fields only include
+parameters for amino acids and ions, not for nucleic acids.
 
 If you want to include an implicit solvation model, you can also specify one of
 the following files:

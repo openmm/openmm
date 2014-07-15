@@ -53,9 +53,9 @@ extern "C" OPENMM_EXPORT void registerDrudeCudaKernelFactories();
 void testSinglePair() {
     const double temperature = 300.0;
     const double temperatureDrude = 10.0;
-    const double k = 1.5;
+    const double k = ONE_4PI_EPS0*1.5;
     const double charge = 0.1;
-    const double alpha = charge*charge/k;
+    const double alpha = ONE_4PI_EPS0*charge*charge/k;
     const double mass1 = 1.0;
     const double mass2 = 0.1;
     const double totalMass = mass1+mass2;
@@ -132,7 +132,7 @@ void testWater() {
         system.addConstraint(startIndex, startIndex+3, 0.09572);
         system.addConstraint(startIndex+2, startIndex+3, 0.15139);
         system.setVirtualSite(startIndex+4, new ThreeParticleAverageSite(startIndex, startIndex+2, startIndex+3, 0.786646558, 0.106676721, 0.106676721));
-        drude->addParticle(startIndex+1, startIndex, -1, -1, -1, -1.71636, 1.71636*1.71636/(100000*4.184), 1, 1);
+        drude->addParticle(startIndex+1, startIndex, -1, -1, -1, -1.71636, ONE_4PI_EPS0*1.71636*1.71636/(100000*4.184), 1, 1);
     }
     vector<Vec3> positions;
     for (int i = 0; i < gridSize; i++)
