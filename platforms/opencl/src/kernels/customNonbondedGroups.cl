@@ -2,8 +2,6 @@
 #pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
 #endif
 
-#define WARPS_PER_GROUP (THREAD_BLOCK_SIZE/TILE_SIZE)
-
 typedef struct {
     real x, y, z;
     real q;
@@ -52,7 +50,7 @@ __kernel void computeInteractionGroups(
     const unsigned int tgx = get_local_id(0) & (TILE_SIZE-1); // index within the warp
     const unsigned int tbx = get_local_id(0) - tgx;           // block warpIndex
     real energy = 0.0f;
-    __local AtomData localData[THREAD_BLOCK_SIZE];
+    __local AtomData localData[LOCAL_MEMORY_SIZE];
 
     const unsigned int startTile = FIRST_TILE+warp*(LAST_TILE-FIRST_TILE)/totalWarps;
     const unsigned int endTile = FIRST_TILE+(warp+1)*(LAST_TILE-FIRST_TILE)/totalWarps;
