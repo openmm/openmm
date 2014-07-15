@@ -702,6 +702,10 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
         warnings.warn("1-4 scaling parameters in topology file are being ignored. "
             "This is not recommended unless you know what you are doing.")
 
+    has_1264 = 'LENNARD_JONES_CCOEF' in prmtop._raw_data.keys()
+    if has_1264:
+        parm_ccoef = [float(x) for x in prmtop._raw_data['LENNARD_JONES_CCOEF']]
+
     # Use pyopenmm implementation of OpenMM by default.
     if mm is None:
         mm = simtk.openmm
@@ -865,32 +869,52 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
                 idx = nbidx[numTypes*i+j] - 1
                 acoef[i+numTypes*j] = sqrt(parm_acoef[idx]) * afac
                 bcoef[i+numTypes*j] = parm_bcoef[idx] * bfac
-        cforce = mm.CustomNonbondedForce('(a/r6)^2-b/r6; r6=r^6;'
-                                         'a=acoef(type1, type2);'
-                                         'b=bcoef(type1, type2);')
+        if has_1264:
+            cfac = ene_conv * length_conv**4
+            ccoef = [0 for i in range(numTypes*numTypes)]
+            for i in range(numTypes):
+                for j in range(numTypes):
+                    idx = nbidx[numTypes*i+j] - 1
+                    ccoef[i+numTypes*j] = parm_ccoef[idx] * cfac
+            cforce = mm.CustomNonbondedForce('(a/r6)^2-b/r6-c/r^4; r6=r^6;'
+                                             'a=acoef(type1, type2);'
+                                             'b=bcoef(type1, type2);'
+                                             'c=ccoef(type1, type2);')
+        else:
+            cforce = mm.CustomNonbondedForce('(a/r6)^2-b/r6; r6=r^6;'
+                                             'a=acoef(type1, type2);'
+                                             'b=bcoef(type1, type2);')
         cforce.addTabulatedFunction('acoef',
                     mm.Discrete2DFunction(numTypes, numTypes, acoef))
         cforce.addTabulatedFunction('bcoef',
                     mm.Discrete2DFunction(numTypes, numTypes, bcoef))
+        if has_1264:
+            cforce.addTabulatedFunction('ccoef',
+                        mm.Discrete2DFunction(numTypes, numTypes, ccoef))
         cforce.addPerParticleParameter('type')
         for atom in prmtop._getAtomTypeIndexes():
             cforce.addParticle((atom-1,))
-        # Now set the various properties based on the NonbondedForce object
-        if nonbondedMethod in ('PME', 'Ewald', 'CutoffPeriodic'):
-            cforce.setNonbondedMethod(cforce.CutoffPeriodic)
-            cforce.setCutoffDistance(nonbondedCutoff)
-            cforce.setUseLongRangeCorrection(True)
-        elif nonbondedMethod == 'CutoffNonPeriodic':
-            cforce.setNonbondedMethod(cforce.CutoffNonPeriodic)
-            cforce.setCutoffDistance(nonbondedCutoff)
-        elif nonbondedMethod == 'NoCutoff':
-            cforce.setNonbondedMethod(cforce.NoCutoff)
-        else:
-            raise ValueError('Unrecognized cutoff option %s' % nonbondedMethod)
     else:
         for (charge, (rVdw, epsilon)) in zip(prmtop.getCharges(), nonbondTerms):
             sigma = rVdw * sigmaScale
             force.addParticle(charge, sigma, epsilon)
+        if has_1264:
+            numTypes = prmtop.getNumTypes()
+            nbidx = [int(x) for x in prmtop._raw_data['NONBONDED_PARM_INDEX']]
+            ccoef = [0 for i in range(numTypes*numTypes)]
+            ene_conv = units.kilocalories_per_mole.conversion_factor_to(units.kilojoules_per_mole)
+            length_conv = units.angstroms.conversion_factor_to(units.nanometers)
+            cfac = ene_conv * length_conv**4
+            for i in range(numTypes):
+                for j in range(numTypes):
+                    idx = nbidx[numTypes*i+j] - 1
+                    ccoef[i+numTypes*j] = parm_ccoef[idx] * cfac
+            cforce = mm.CustomNonbondedForce('-c/r^4; c=ccoef(type1, type2)')
+            cforce.addTabulatedFunction('ccoef',
+                        mm.Discrete2DFunction(numTypes, numTypes, ccoef))
+            cforce.addPerParticleParameter('type')
+            for atom in prmtop._getAtomTypeIndexes():
+                cforce.addParticle((atom-1,))
 
 
     # Add 1-4 Interactions
@@ -916,10 +940,23 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
 
     # Copy the exceptions as exclusions to the CustomNonbondedForce if we have
     # NBFIX terms
-    if nbfix:
+    if nbfix or has_1264:
         for i in range(force.getNumExceptions()):
             ii, jj, chg, sig, eps = force.getExceptionParameters(i)
             cforce.addExclusion(ii, jj)
+        # Now set the various properties based on the NonbondedForce object
+        if nonbondedMethod in ('PME', 'Ewald', 'CutoffPeriodic'):
+            cforce.setNonbondedMethod(cforce.CutoffPeriodic)
+            cforce.setCutoffDistance(nonbondedCutoff)
+            cforce.setUseLongRangeCorrection(True)
+        elif nonbondedMethod == 'CutoffNonPeriodic':
+            cforce.setNonbondedMethod(cforce.CutoffNonPeriodic)
+            cforce.setCutoffDistance(nonbondedCutoff)
+        elif nonbondedMethod == 'NoCutoff':
+            cforce.setNonbondedMethod(cforce.NoCutoff)
+        else:
+            raise ValueError('Unrecognized cutoff option %s' % nonbondedMethod)
+        # Add this force to the system
         system.addForce(cforce)
     system.addForce(force)
 
