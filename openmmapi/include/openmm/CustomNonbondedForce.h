@@ -157,6 +157,7 @@ public:
      *                  of r, the distance between them, as well as any global and per-particle parameters
      */
     explicit CustomNonbondedForce(const std::string& energy);
+    CustomNonbondedForce(const CustomNonbondedForce& rhs); // copy constructor
     ~CustomNonbondedForce();
     /**
      * Get the number of particles for which force field parameters have been defined.
@@ -474,7 +475,7 @@ private:
     class InteractionGroupInfo;
     NonbondedMethod nonbondedMethod;
     double cutoffDistance, switchingDistance;
-    bool useSwitchingFunction, useLongRangeCorrection;
+    bool useSwitchingFunction, useLongRangeCorrection, iOwnTabulatedFunctions;
     std::string energyExpression;
     std::vector<PerParticleParameterInfo> parameters;
     std::vector<GlobalParameterInfo> globalParameters;
