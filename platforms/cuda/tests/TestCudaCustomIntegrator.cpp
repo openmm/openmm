@@ -292,6 +292,7 @@ void testWithThermostat() {
     system.addForce(forceField);
     AndersenThermostat* thermostat = new AndersenThermostat(temp, collisionFreq);
     system.addForce(thermostat);
+    integrator.setRandomNumberSeed(thermostat->getRandomNumberSeed());
     Context context(system, integrator, platform);
     vector<Vec3> positions(numParticles);
     for (int i = 0; i < numParticles; ++i)
@@ -424,6 +425,7 @@ void testParameter() {
     integrator.addGlobalVariable("temp", 0);
     integrator.addComputeGlobal("temp", "AndersenTemperature");
     integrator.addComputeGlobal("AndersenTemperature", "temp*2");
+    integrator.setRandomNumberSeed(thermostat->getRandomNumberSeed());
     Context context(system, integrator, platform);
     
     // See if the parameter is being used correctly.

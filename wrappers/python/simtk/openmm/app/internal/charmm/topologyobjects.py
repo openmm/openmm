@@ -12,7 +12,7 @@ Copyright (c) 2014 the Authors
 
 Author: Jason M. Swails
 Contributors:
-Date: April 18, 2014
+Date: July 3, 2014
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -421,8 +421,10 @@ class ResidueList(list):
         if self._last_residue is None:
             res = self._last_residue = Residue(resname, resnum)
             list.append(self, res)
-        elif self._last_residue != (resname, resnum):
-            if self._last_residue.idx == resnum:
+        elif (self._last_residue != (resname, resnum) or
+              system != self._last_residue.system):
+            if (self._last_residue.idx == resnum and
+                system == self._last_residue.system):
                 lresname = self._last_residue.resname
                 warnings.warn('Residue %d split into separate residues %s '
                               'and %s' % (resnum, lresname, resname),
@@ -499,7 +501,7 @@ class Angle(object):
         """ See if a bond or an atom is in this angle """
         if isinstance(thing, Bond):
             return self.atom2 in thing and (self.atom1 in thing or
-                                            self.atom2 in thing)
+                                            self.atom3 in thing)
         # Otherwise assume it's an atom
         return self.atom1 is thing or self.atom2 is thing or self.atom3 is thing
 

@@ -32,6 +32,7 @@
 #include "openmm/Context.h"
 #include "openmm/System.h"
 #include <algorithm>
+#include <cctype>
 #include <sstream>
 #ifdef __APPLE__
 #include "sys/sysctl.h"
@@ -39,10 +40,7 @@
 
 
 using namespace OpenMM;
-using std::map;
-using std::string;
-using std::stringstream;
-using std::vector;
+using namespace std;
 
 #ifdef OPENMM_OPENCL_BUILDING_STATIC_LIBRARY
 extern "C" void registerOpenCLPlatform() {

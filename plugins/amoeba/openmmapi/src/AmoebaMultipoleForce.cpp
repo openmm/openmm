@@ -61,7 +61,7 @@ void AmoebaMultipoleForce::setPolarizationType( AmoebaMultipoleForce::Polarizati
     polarizationType = type;
 }
 
-double AmoebaMultipoleForce::getCutoffDistance( void ) const {
+double AmoebaMultipoleForce::getCutoffDistance() const {
     return cutoffDistance;
 }
 

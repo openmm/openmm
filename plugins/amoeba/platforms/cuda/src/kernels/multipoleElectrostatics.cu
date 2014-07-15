@@ -234,14 +234,14 @@ extern "C" __global__ void computeElectrostatics(
 
         // Extract the coordinates of this tile.
         
-        unsigned int x, y;
+        int x, y;
 #ifdef USE_CUTOFF
         if (numTiles <= maxTiles)
             x = tiles[pos];
         else
 #endif
         {
-            y = (unsigned int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
+            y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
             x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
             if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
                 y += (x < y ? -1 : 1);

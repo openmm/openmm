@@ -1,5 +1,3 @@
-#!/bin/env python
-
 """
 element.py: Used for managing elements.
 

@@ -126,7 +126,7 @@ public:
      *
      * @return the cutoff distance, measured in nm
      */
-    double getCutoffDistance(void) const;
+    double getCutoffDistance() const;
 
     /**
      * Set the cutoff distance (in nm) being used for nonbonded interactions.  If the NonbondedMethod in use

@@ -389,7 +389,7 @@ int main(int argc, char* argv[]) {
         testIdealGasAxis(1);
         testIdealGasAxis(2);
         testRandomSeed();
-        testEinsteinCrystal();
+        //testEinsteinCrystal();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

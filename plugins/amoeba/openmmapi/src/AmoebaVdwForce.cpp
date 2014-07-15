@@ -106,7 +106,7 @@ void AmoebaVdwForce::setCutoff( double inputCutoff ){
     cutoff = inputCutoff;
 }
 
-double AmoebaVdwForce::getCutoff( void ) const {
+double AmoebaVdwForce::getCutoff() const {
     return cutoff;
 }
 
