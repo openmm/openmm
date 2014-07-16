@@ -552,6 +552,10 @@ public:
     }
     FunctionInfo(const std::string& name, TabulatedFunction* function) : name(name), function(function) {
     }
+    FunctionInfo Copy() const {
+        TabulatedFunction new_func = function->Copy();
+        return FunctionInfo(name, &new_func);
+    }
 };
 
 /**

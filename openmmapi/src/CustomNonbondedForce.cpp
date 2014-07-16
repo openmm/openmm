@@ -48,30 +48,29 @@ using std::stringstream;
 using std::vector;
 
 CustomNonbondedForce::CustomNonbondedForce(const string& energy) : energyExpression(energy), nonbondedMethod(NoCutoff), cutoffDistance(1.0),
-    switchingDistance(-1.0), useSwitchingFunction(false), useLongRangeCorrection(false), iOwnTabulatedFunctions(true) {
+    switchingDistance(-1.0), useSwitchingFunction(false), useLongRangeCorrection(false) {
 }
 
 CustomNonbondedForce::CustomNonbondedForce(const CustomNonbondedForce& rhs) {
-    // Copy everything, but the copy does *not* own the tabulated functions
+    // Copy everything and deep copy the tabulated functions
     energyExpression = rhs.energyExpression;
     nonbondedMethod = rhs.nonbondedMethod;
     cutoffDistance = rhs.cutoffDistance;
     switchingDistance = rhs.switchingDistance;
     useSwitchingFunction = rhs.useSwitchingFunction;
     useLongRangeCorrection = rhs.useLongRangeCorrection;
-    iOwnTabulatedFunctions = false;
     parameters = rhs.parameters;
     globalParameters = rhs.globalParameters;
     particles = rhs.particles;
     exclusions = rhs.exclusions;
-    functions = rhs.functions;
     interactionGroups = rhs.interactionGroups;
+    for (vector<FunctionInfo>::const_iterator it = rhs.functions.begin(); it != rhs.functions.end(); it++)
+        functions.push_back(it->Copy());
 }
 
 CustomNonbondedForce::~CustomNonbondedForce() {
-    if (iOwnTabulatedFunctions)
-        for (int i = 0; i < (int) functions.size(); i++)
-            delete functions[i].function;
+    for (int i = 0; i < (int) functions.size(); i++)
+        delete functions[i].function;
 }
 
 const string& CustomNonbondedForce::getEnergyFunction() const {
