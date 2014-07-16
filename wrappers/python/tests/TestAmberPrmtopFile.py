@@ -198,8 +198,8 @@ class TestAmberPrmtopFile(unittest.TestCase):
         # 'working', and the system is plenty small so this won't be too slow
         sim = Simulation(prmtop3.topology, system, integrator, Platform.getPlatformByName('Reference'))
         # Check that the energy is about what we expect it to be
-        sim.context.setPeriodicBoxVectors(*inpcrd3.boxVectors)
-        sim.context.setPositions(inpcrd3.positions)
+        sim.context.setPeriodicBoxVectors(*inpcrd3.getBoxVectors())
+        sim.context.setPositions(inpcrd3.getPositions())
         ene = sim.context.getState(getEnergy=True, enforcePeriodicBox=True).getPotentialEnergy()
         ene = ene.value_in_unit(kilocalories_per_mole)
         # Make sure the energy is relatively close to the value we get with
