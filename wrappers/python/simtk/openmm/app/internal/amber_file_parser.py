@@ -52,6 +52,7 @@ except:
 import simtk.unit as units
 import simtk.openmm
 from simtk.openmm.app import element as elem
+from simtk.openmm.vec3 import Vec3
 import customgbforces as customgb
 
 #=============================================================================================
@@ -116,6 +117,7 @@ class PrmtopLoader(object):
         self._flags=[]
         self._raw_format={}
         self._raw_data={}
+        self._has_nbfix_terms = False
 
         fIn=open(inFilename)
         for line in fIn:
@@ -218,28 +220,16 @@ class PrmtopLoader(object):
         try:
             return self._massList
         except AttributeError:
-            pass
-
-        self._massList=[]
-        raw_masses=self._raw_data['MASS']
-        for ii in range(self.getNumAtoms()):
-            self._massList.append(float(raw_masses[ii]))
-        self._massList = self._massList
-        return self._massList
+            self._massList = [float(x) for x in self._raw_data['MASS']]
+            return self._massList
 
     def getCharges(self):
         """Return a list of atomic charges in the system"""
         try:
             return self._chargeList
         except AttributeError:
-            pass
-
-        self._chargeList=[]
-        raw_charges=self._raw_data['CHARGE']
-        for ii in range(self.getNumAtoms()):
-            self._chargeList.append(float(raw_charges[ii])/18.2223)
-        self._chargeList = self._chargeList
-        return self._chargeList
+            self._chargeList = [float(x)/18.2223 for x in self._raw_data['CHARGE']]
+            return self._chargeList
 
     def getAtomName(self, iAtom):
         """Return the atom name for iAtom"""
@@ -254,11 +244,8 @@ class PrmtopLoader(object):
         try:
             return self._atomTypeIndexes
         except AttributeError:
-            pass
-        self._atomTypeIndexes=[]
-        for atomTypeIndex in  self._raw_data['ATOM_TYPE_INDEX']:
-            self._atomTypeIndexes.append(int(atomTypeIndex))
-        return self._atomTypeIndexes
+            self._atomTypeIndexes = [int(x) for x in self._raw_data['ATOM_TYPE_INDEX']]
+            return self._atomTypeIndexes
 
     def getAtomType(self, iAtom):
         """Return the AMBER atom type for iAtom"""
@@ -275,11 +262,11 @@ class PrmtopLoader(object):
 
     def getResidueLabel(self, iAtom=None, iRes=None):
         """Return residue label for iAtom OR iRes"""
-        if iRes==None and iAtom==None:
+        if iRes is None and iAtom is None:
             raise Exception("only specify iRes or iAtom, not both")
-        if iRes!=None and iAtom!=None:
+        if iRes is not None and iAtom is not None:
             raise Exception("iRes or iAtom must be set")
-        if iRes!=None:
+        if iRes is not None:
             return self._raw_data['RESIDUE_LABEL'][iRes]
         else:
             return self.getResidueLabel(iRes=self._getResiduePointer(iAtom))
@@ -306,6 +293,9 @@ class PrmtopLoader(object):
         elements of the Lennard-Jones A and B coefficient matrices are found,
         NbfixPresent exception is raised
         """
+        if self._has_nbfix_terms:
+            raise NbfixPresent('Off-diagonal Lennard-Jones elements found. '
+                        'Cannot determine LJ parameters for individual atoms.')
         try:
             return self._nonbondTerms
         except AttributeError:
@@ -344,13 +334,13 @@ class PrmtopLoader(object):
                 b = float(self._raw_data['LENNARD_JONES_BCOEF'][index])
                 if a == 0 or b == 0:
                     if a != 0 or b != 0 or (wdij != 0 and rij != 0):
-                        del self._nonbondTerms
+                        self._has_nbfix_terms = True
                         raise NbfixPresent('Off-diagonal Lennard-Jones elements'
                                            ' found. Cannot determine LJ '
                                            'parameters for individual atoms.')
                 elif (abs((a - (wdij * rij ** 12)) / a) > 1e-6 or
                       abs((b - (2 * wdij * rij**6)) / b) > 1e-6):
-                    del self._nonbondTerms
+                    self._has_nbfix_terms = True
                     raise NbfixPresent('Off-diagonal Lennard-Jones elements '
                                        'found. Cannot determine LJ parameters '
                                        'for individual atoms.')
@@ -1191,9 +1181,9 @@ class AmberAsciiRestart(object):
             if hasbox:
                 boxVectors = np.zeros((3, 3), np.float32)
         else:
-            coordinates = [[0.0, 0.0, 0.0] for i in range(self.natom)]
+            coordinates = [Vec3(0.0, 0.0, 0.0) for i in range(self.natom)]
             if hasvels:
-                velocities = [[0.0, 0.0, 0.0] for i in range(self.natom)]
+                velocities = [Vec3(0.0, 0.0, 0.0) for i in range(self.natom)]
             if hasbox:
                 boxVectors = [[0.0, 0.0, 0.0] for i in range(3)]
 
@@ -1203,14 +1193,16 @@ class AmberAsciiRestart(object):
         idx = 0
         for i in range(startline, endline):
             line = lines[i]
-            coordinates[idx][0] = float(line[ 0:12])
-            coordinates[idx][1] = float(line[12:24])
-            coordinates[idx][2] = float(line[24:36])
+            x = float(line[ 0:12])
+            y = float(line[12:24])
+            z = float(line[24:36])
+            coordinates[idx] = Vec3(x, y, z)
             idx += 1
             if idx < self.natom:
-                coordinates[idx][0] = float(line[36:48])
-                coordinates[idx][1] = float(line[48:60])
-                coordinates[idx][2] = float(line[60:72])
+                x = float(line[36:48])
+                y = float(line[48:60])
+                z = float(line[60:72])
+                coordinates[idx] = Vec3(x, y, z)
                 idx += 1
         self.coordinates = units.Quantity(coordinates, units.angstroms)
         startline = endline
@@ -1220,14 +1212,16 @@ class AmberAsciiRestart(object):
             idx = 0
             for i in range(startline, endline):
                 line = lines[i]
-                velocities[idx][0] = float(line[ 0:12]) * VELSCALE
-                velocities[idx][1] = float(line[12:24]) * VELSCALE
-                velocities[idx][2] = float(line[24:36]) * VELSCALE
+                x = float(line[ 0:12]) * VELSCALE
+                y = float(line[12:24]) * VELSCALE
+                z = float(line[24:36]) * VELSCALE
+                velocities[idx] = Vec3(x, y, z)
                 idx += 1
                 if idx < self.natom:
-                    velocities[idx][0] = float(line[36:48]) * VELSCALE
-                    velocities[idx][1] = float(line[48:60]) * VELSCALE
-                    velocities[idx][2] = float(line[60:72]) * VELSCALE
+                    x = float(line[36:48]) * VELSCALE
+                    y = float(line[48:60]) * VELSCALE
+                    z = float(line[60:72]) * VELSCALE
+                    velocities[idx] = Vec3(x, y, z)
                     idx += 1
             startline = endline
             self.velocities = units.Quantity(velocities,
@@ -1242,7 +1236,7 @@ class AmberAsciiRestart(object):
             lengths = tmp[:3]
             angles = tmp[3:]
             _box_vectors_from_lengths_angles(lengths, angles, boxVectors)
-            self.boxVectors = units.Quantity(boxVectors, units.angstroms)
+            self.boxVectors = [units.Quantity(Vec3(*x), units.angstrom) for x in boxVectors]
 
 class AmberNetcdfRestart(object):
     """
@@ -1325,11 +1319,11 @@ class AmberNetcdfRestart(object):
 
         # They are already numpy -- convert to list if we don't want numpy
         if not asNumpy:
-            self.coordinates = self.coordinates.tolist()
+            self.coordinates = [Vec3(*x) for x in self.coordinates]
             if self.velocities is not None:
-                self.velocities = self.velocities.tolist()
+                self.velocities = [Vec3(*x) for x in self.velocities]
             if self.boxVectors is not None:
-                self.boxVectors = self.boxVectors.tolist()
+                self.boxVectors = [Vec3(*x) for x in self.boxVectors]
 
         # Now add the units
         self.coordinates = units.Quantity(self.coordinates, units.angstroms)
@@ -1337,7 +1331,7 @@ class AmberNetcdfRestart(object):
             self.velocities = units.Quantity(self.velocities,
                                              units.angstroms/units.picoseconds)
         if self.boxVectors is not None:
-            self.boxVectors = units.Quantity(self.boxVectors, units.angstroms)
+            self.boxVectors = [units.Quantity(x, units.angstroms) for x in self.boxVectors]
         self.time = units.Quantity(self.time, units.picosecond)
 
 def _box_vectors_from_lengths_angles(lengths, angles, boxVectors):
@@ -1427,6 +1421,7 @@ def readAmberCoordinates(filename, asNumpy=False):
         try:
             crdfile = AmberAsciiRestart(filename)
         except TypeError:
+            raise
             raise TypeError('Problem parsing %s as an ASCII Amber restart file'
                             % filename)
         except (IndexError, ValueError):
