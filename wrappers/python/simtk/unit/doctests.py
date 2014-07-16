@@ -41,12 +41,12 @@ Quantity(value=1.0, unit=calorie)
 >>> print(joule.conversion_factor_to(calorie))
 0.239005736138
 >>> c.in_units_of(joules)
-Quantity(value=4.1840000000000002, unit=joule)
+Quantity(value=4.184, unit=joule)
 >>> j = 1.0*joules
 >>> j
 Quantity(value=1.0, unit=joule)
 >>> j.in_units_of(calories)
-Quantity(value=0.23900573613766729, unit=calorie)
+Quantity(value=0.2390057361376673, unit=calorie)
 >>> j/joules
 1.0
 >>> print(j/calories)
@@ -58,7 +58,7 @@ Quantity(value=0.23900573613766729, unit=calorie)
 >>> c**2
 Quantity(value=1.0, unit=calorie**2)
 >>> (c**2).in_units_of(joule*joule)
-Quantity(value=17.505856000000001, unit=joule**2)
+Quantity(value=17.505856, unit=joule**2)
 
 >>> ScaledUnit(1000.0, kelvin, "kilokelvin", "kK")
 ScaledUnit(factor=1000.0, master=kelvin, name='kilokelvin', symbol='kK')
@@ -252,12 +252,12 @@ Collections of numbers can also be used as values.
 >>> print(s4)
 ((1, 2, 3), (4, 5, 6)) cm
 >>> print(s4 / millimeters)
-[(10.0, 20.0, 30.0), (40.0, 50.0, 60.0)]
+((10.0, 20.0, 30.0), (40.0, 50.0, 60.0))
 >>> t = (1,2,3) * centimeters
 >>> print(t)
 (1, 2, 3) cm
 >>> print(t / millimeters)
-[10.0, 20.0, 30.0]
+(10.0, 20.0, 30.0)
 
 Numpy examples are commented out because not all systems have numpy installed
 # >>> import numpy
@@ -772,7 +772,7 @@ Examples
         Creating a new ScaledUnit:
         >>> mC = milli * ScaledUnit(4.184, joule, "calorie", "cal")
         >>> mC
-        ScaledUnit(factor=0.0041840000000000002, master=joule, name='millicalorie', symbol='mcal')
+        ScaledUnit(factor=0.004184, master=joule, name='millicalorie', symbol='mcal')
 
         Creating a new Unit:
         >>> ms = milli * second
@@ -795,7 +795,7 @@ Examples
     Formatting of Quantities
     >>> x = 5.439999999 * picosecond
     >>> x
-    Quantity(value=5.4399999990000003, unit=picosecond)
+    Quantity(value=5.439999999, unit=picosecond)
     >>> x.format("%.3f")
     '5.440 ps'
 
