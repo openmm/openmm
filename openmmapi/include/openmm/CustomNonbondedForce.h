@@ -475,7 +475,7 @@ private:
     class InteractionGroupInfo;
     NonbondedMethod nonbondedMethod;
     double cutoffDistance, switchingDistance;
-    bool useSwitchingFunction, useLongRangeCorrection, iOwnTabulatedFunctions;
+    bool useSwitchingFunction, useLongRangeCorrection;
     std::string energyExpression;
     std::vector<PerParticleParameterInfo> parameters;
     std::vector<GlobalParameterInfo> globalParameters;
