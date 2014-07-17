@@ -467,6 +467,7 @@ public:
 protected:
     ForceImpl* createImpl() const;
 private:
+    // REMEMBER TO UPDATE THE COPY CONSTRUCTOR IF YOU ADD ANY NEW FIELDS !!
     class ParticleInfo;
     class PerParticleParameterInfo;
     class GlobalParameterInfo;
