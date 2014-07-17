@@ -157,6 +157,7 @@ public:
      *                  of r, the distance between them, as well as any global and per-particle parameters
      */
     explicit CustomNonbondedForce(const std::string& energy);
+    CustomNonbondedForce(const CustomNonbondedForce& rhs); // copy constructor
     ~CustomNonbondedForce();
     /**
      * Get the number of particles for which force field parameters have been defined.
@@ -466,6 +467,7 @@ public:
 protected:
     ForceImpl* createImpl() const;
 private:
+    // REMEMBER TO UPDATE THE COPY CONSTRUCTOR IF YOU ADD ANY NEW FIELDS !!
     class ParticleInfo;
     class PerParticleParameterInfo;
     class GlobalParameterInfo;
