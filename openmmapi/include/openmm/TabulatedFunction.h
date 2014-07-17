@@ -59,9 +59,7 @@ class OPENMM_EXPORT TabulatedFunction {
 public:
     virtual ~TabulatedFunction() {
     }
-    TabulatedFunction Copy() const {
-        return TabulatedFunction();
-    }
+    virtual TabulatedFunction* Copy() const = 0;
 };
 
 /**
@@ -102,7 +100,7 @@ public:
     /**
      * Create a deep copy of the tabulated function.
      */
-    Continuous1DFunction Copy() const;
+    Continuous1DFunction* Copy() const;
 private:
     std::vector<double> values;
     double min, max;
@@ -161,7 +159,7 @@ public:
     /**
      * Create a deep copy of the tabulated function
      */
-    Continuous2DFunction Copy() const;
+    Continuous2DFunction* Copy() const;
 private:
     std::vector<double> values;
     int xsize, ysize;
@@ -236,7 +234,7 @@ public:
     /**
      * Create a deep copy of the tabulated function
      */
-    Continuous3DFunction Copy() const;
+    Continuous3DFunction* Copy() const;
 private:
     std::vector<double> values;
     int xsize, ysize, zsize;
@@ -271,7 +269,7 @@ public:
     /**
      * Create a deep copy of the tabulated function
      */
-    Discrete1DFunction Copy() const;
+    Discrete1DFunction* Copy() const;
 private:
     std::vector<double> values;
 };
@@ -313,7 +311,7 @@ public:
     /**
      * Create a deep copy of the tabulated function
      */
-    Discrete2DFunction Copy() const;
+    Discrete2DFunction* Copy() const;
 private:
     int xsize, ysize;
     std::vector<double> values;
@@ -359,7 +357,7 @@ public:
     /**
      * Create a deep copy of the tabulated function
      */
-    Discrete3DFunction Copy() const;
+    Discrete3DFunction* Copy() const;
 private:
     int xsize, ysize, zsize;
     std::vector<double> values;

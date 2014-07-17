@@ -61,11 +61,11 @@ void Continuous1DFunction::setFunctionParameters(const vector<double>& values, d
     this->max = max;
 }
 
-Continuous1DFunction Continuous1DFunction::Copy() const {
+Continuous1DFunction* Continuous1DFunction::Copy() const {
     vector<double> new_vec(values.size());
     for (size_t i = 0; i < values.size(); i++)
         new_vec[i] = values[i];
-    return Continuous1DFunction(new_vec, min, max);
+    return new Continuous1DFunction(new_vec, min, max);
 }
 
 Continuous2DFunction::Continuous2DFunction(int xsize, int ysize, const vector<double>& values, double xmin, double xmax, double ymin, double ymax) {
@@ -114,11 +114,11 @@ void Continuous2DFunction::setFunctionParameters(int xsize, int ysize, const vec
     this->ymax = ymax;
 }
 
-Continuous2DFunction Continuous2DFunction::Copy() const {
+Continuous2DFunction* Continuous2DFunction::Copy() const {
     vector<double> new_vec(values.size());
     for (size_t i = 0; i < values.size(); i++)
         new_vec[i] = values[i];
-    return Continuous2DFunction(xsize, ysize, new_vec, xmin, xmax, ymin, ymax);
+    return new Continuous2DFunction(xsize, ysize, new_vec, xmin, xmax, ymin, ymax);
 }
 
 Continuous3DFunction::Continuous3DFunction(int xsize, int ysize, int zsize, const vector<double>& values, double xmin, double xmax, double ymin, double ymax, double zmin, double zmax) {
@@ -180,11 +180,11 @@ void Continuous3DFunction::setFunctionParameters(int xsize, int ysize, int zsize
     this->zmax = zmax;
 }
 
-Continuous3DFunction Continuous3DFunction::Copy() const {
+Continuous3DFunction* Continuous3DFunction::Copy() const {
     vector<double> new_vec(values.size());
     for (size_t i = 0; i < values.size(); i++)
         new_vec[i] = values[i];
-    return Continuous3DFunction(xsize, ysize, zsize, new_vec, xmin, xmax, ymin, ymax, zmin, zmax);
+    return new Continuous3DFunction(xsize, ysize, zsize, new_vec, xmin, xmax, ymin, ymax, zmin, zmax);
 }
 
 
@@ -200,11 +200,11 @@ void Discrete1DFunction::setFunctionParameters(const vector<double>& values) {
     this->values = values;
 }
 
-Discrete1DFunction Discrete1DFunction::Copy() const {
+Discrete1DFunction* Discrete1DFunction::Copy() const {
     vector<double> new_vec(values.size());
     for (size_t i = 0; i < values.size(); i++)
         new_vec[i] = values[i];
-    return Discrete1DFunction(new_vec);
+    return new Discrete1DFunction(new_vec);
 }
 
 Discrete2DFunction::Discrete2DFunction(int xsize, int ysize, const vector<double>& values) {
@@ -229,11 +229,11 @@ void Discrete2DFunction::setFunctionParameters(int xsize, int ysize, const vecto
     this->values = values;
 }
 
-Discrete2DFunction Discrete2DFunction::Copy() const {
+Discrete2DFunction* Discrete2DFunction::Copy() const {
     vector<double> new_vec(values.size());
     for (size_t i = 0; i < values.size(); i++)
         new_vec[i] = values[i];
-    return Discrete2DFunction(xsize, ysize, new_vec);
+    return new Discrete2DFunction(xsize, ysize, new_vec);
 }
 
 Discrete3DFunction::Discrete3DFunction(int xsize, int ysize, int zsize, const vector<double>& values) {
@@ -261,9 +261,9 @@ void Discrete3DFunction::setFunctionParameters(int xsize, int ysize, int zsize, 
     this->values = values;
 }
 
-Discrete3DFunction Discrete3DFunction::Copy() const {
+Discrete3DFunction* Discrete3DFunction::Copy() const {
     vector<double> new_vec(values.size());
     for (size_t i = 0; i < values.size(); i++)
         new_vec[i] = values[i];
-    return Discrete3DFunction(xsize, ysize, zsize, new_vec);
+    return new Discrete3DFunction(xsize, ysize, zsize, new_vec);
 }

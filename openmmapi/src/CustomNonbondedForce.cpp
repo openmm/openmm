@@ -65,7 +65,7 @@ CustomNonbondedForce::CustomNonbondedForce(const CustomNonbondedForce& rhs) {
     exclusions = rhs.exclusions;
     interactionGroups = rhs.interactionGroups;
     for (vector<FunctionInfo>::const_iterator it = rhs.functions.begin(); it != rhs.functions.end(); it++)
-        functions.push_back(it->Copy());
+        functions.push_back(FunctionInfo(it->name, it->function->Copy()));
 }
 
 CustomNonbondedForce::~CustomNonbondedForce() {
