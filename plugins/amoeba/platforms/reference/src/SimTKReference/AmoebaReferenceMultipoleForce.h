@@ -597,8 +597,8 @@ protected:
      */
     struct UpdateInducedDipoleFieldStruct {
             UpdateInducedDipoleFieldStruct(std::vector<OpenMM::RealVec>& inputFixed_E_Field, std::vector<OpenMM::RealVec>& inputInducedDipoles);
-            std::vector<OpenMM::RealVec>& fixedMultipoleField;
-            std::vector<OpenMM::RealVec>& inducedDipoles;
+            std::vector<OpenMM::RealVec>* fixedMultipoleField;
+            std::vector<OpenMM::RealVec>* inducedDipoles;
             std::vector<OpenMM::RealVec> inducedDipoleField;
     };
 

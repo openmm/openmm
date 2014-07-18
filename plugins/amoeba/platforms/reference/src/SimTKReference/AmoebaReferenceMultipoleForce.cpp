@@ -716,7 +716,7 @@ void AmoebaReferenceMultipoleForce::calculateInducedDipolePairIxns(const Multipo
  
     for (unsigned int ii = 0; ii < updateInducedDipoleFields.size(); ii++) {
         calculateInducedDipolePairIxn(particleI.particleIndex, particleJ.particleIndex, rr3, rr5, deltaR,
-                                       updateInducedDipoleFields[ii].inducedDipoles, updateInducedDipoleFields[ii].inducedDipoleField);
+                                       *updateInducedDipoleFields[ii].inducedDipoles, updateInducedDipoleFields[ii].inducedDipoleField);
     }
     return;
 
@@ -749,9 +749,9 @@ RealOpenMM AmoebaReferenceMultipoleForce::updateInducedDipoleFields(const vector
     RealOpenMM maxEpsilon = 0.0;
     for (unsigned int kk = 0; kk < updateInducedDipoleFields.size(); kk++) {
         RealOpenMM epsilon = updateInducedDipole(particleData,
-                                                 updateInducedDipoleFields[kk].fixedMultipoleField,
+                                                 *updateInducedDipoleFields[kk].fixedMultipoleField,
                                                  updateInducedDipoleFields[kk].inducedDipoleField,
-                                                 updateInducedDipoleFields[kk].inducedDipoles);
+                                                 *updateInducedDipoleFields[kk].inducedDipoles);
    
         maxEpsilon = epsilon > maxEpsilon ? epsilon : maxEpsilon;
     }
@@ -832,9 +832,9 @@ void AmoebaReferenceMultipoleForce::convergeInduceDipolesByDIIS(const vector<Mul
             prevDipoles[k].back().resize(_numParticles);
             RealOpenMM epsilon = 0;
             for (int i = 0; i < _numParticles; i++) {
-                prevDipoles[k].back()[i] = field.inducedDipoles[i];
-                RealVec newDipole = field.fixedMultipoleField[i] + field.inducedDipoleField[i]*particleData[i].polarity;
-                RealVec error = newDipole-field.inducedDipoles[i];
+                prevDipoles[k].back()[i] = (*field.inducedDipoles)[i];
+                RealVec newDipole = (*field.fixedMultipoleField)[i] + field.inducedDipoleField[i]*particleData[i].polarity;
+                RealVec error = newDipole-(*field.inducedDipoles)[i];
                 prevDipoles[k].back()[i] = newDipole;
                 if (k == 0)
                     prevErrors.back()[i] = error;
@@ -871,7 +871,7 @@ void AmoebaReferenceMultipoleForce::convergeInduceDipolesByDIIS(const vector<Mul
                 RealVec dipole(0.0, 0.0, 0.0);
                 for (int j = 0; j < numPrevious; j++)
                     dipole += prevDipoles[k][j][i]*coefficients[j];
-                field.inducedDipoles[i] = dipole;
+                (*field.inducedDipoles)[i] = dipole;
             }
         }
     }
@@ -1881,8 +1881,8 @@ void AmoebaReferenceMultipoleForce::calculateElectrostaticPotential(const vector
 }
 
 AmoebaReferenceMultipoleForce::UpdateInducedDipoleFieldStruct::UpdateInducedDipoleFieldStruct(vector<OpenMM::RealVec>& inputFixed_E_Field, vector<OpenMM::RealVec>& inputInducedDipoles) :
-        fixedMultipoleField(inputFixed_E_Field), inducedDipoles(inputInducedDipoles) { 
-    inducedDipoleField.resize(fixedMultipoleField.size());
+        fixedMultipoleField(&inputFixed_E_Field), inducedDipoles(&inputInducedDipoles) { 
+    inducedDipoleField.resize(fixedMultipoleField->size());
 }   
 
 AmoebaReferenceGeneralizedKirkwoodMultipoleForce::AmoebaReferenceGeneralizedKirkwoodMultipoleForce(AmoebaReferenceGeneralizedKirkwoodForce* amoebaReferenceGeneralizedKirkwoodForce) :
@@ -2261,7 +2261,7 @@ void AmoebaReferenceGeneralizedKirkwoodMultipoleForce::calculateInducedDipolePai
     // include GK contribution
 
     for (unsigned int ii = 2; ii < updateInducedDipoleFields.size(); ii++) {
-        calculateInducedDipolePairGkIxn(particleI, particleJ, updateInducedDipoleFields[ii].inducedDipoles, updateInducedDipoleFields[ii].inducedDipoleField);
+        calculateInducedDipolePairGkIxn(particleI, particleJ, *updateInducedDipoleFields[ii].inducedDipoles, updateInducedDipoleFields[ii].inducedDipoleField);
     }
 
     return;
@@ -5865,7 +5865,7 @@ void AmoebaReferencePmeMultipoleForce::calculateReciprocalSpaceInducedDipoleFiel
     // Perform PME for the induced dipoles.
 
     initializePmeGrid();
-    spreadInducedDipolesOnGrid(updateInducedDipoleFields[0].inducedDipoles, updateInducedDipoleFields[1].inducedDipoles);
+    spreadInducedDipolesOnGrid(*updateInducedDipoleFields[0].inducedDipoles, *updateInducedDipoleFields[1].inducedDipoles);
     fftpack_exec_3d(_fftplan, FFTPACK_FORWARD, _pmeGrid, _pmeGrid);
     performAmoebaReciprocalConvolution();
     fftpack_exec_3d(_fftplan, FFTPACK_BACKWARD, _pmeGrid, _pmeGrid);
@@ -5898,7 +5898,7 @@ void AmoebaReferencePmeMultipoleForce::calculateInducedDipoleFields(const vector
 
     RealOpenMM term = (4.0/3.0)*(_alphaEwald*_alphaEwald*_alphaEwald)/SQRT_PI;
     for (unsigned int ii = 0; ii < updateInducedDipoleFields.size(); ii++) {
-        vector<RealVec>& inducedDipoles = updateInducedDipoleFields[ii].inducedDipoles;
+        vector<RealVec>& inducedDipoles = *updateInducedDipoleFields[ii].inducedDipoles;
         vector<RealVec>& field          = updateInducedDipoleFields[ii].inducedDipoleField;
         for (unsigned int jj = 0; jj < particleData.size(); jj++) {
             field[jj] += inducedDipoles[jj]*term;
@@ -5992,7 +5992,7 @@ void AmoebaReferencePmeMultipoleForce::calculateDirectInducedDipolePairIxns(cons
 
     for (unsigned int ii = 0; ii < updateInducedDipoleFields.size(); ii++) {
         calculateDirectInducedDipolePairIxn(particleI.particleIndex, particleJ.particleIndex, preFactor1, preFactor2, deltaR,
-                                            updateInducedDipoleFields[ii].inducedDipoles,
+                                            *updateInducedDipoleFields[ii].inducedDipoles,
                                             updateInducedDipoleFields[ii].inducedDipoleField);
     }    
 
