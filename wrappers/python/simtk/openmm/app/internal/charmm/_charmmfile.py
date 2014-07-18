@@ -47,7 +47,6 @@ class CharmmFile(object):
     """
 
     def __init__(self, fname, mode='r'):
-        self.closed = False
         if mode not in ('r', 'w'):
             raise ValueError('Cannot open CharmmFile with mode "%s"' % mode)
         if mode == 'r':
@@ -58,6 +57,7 @@ class CharmmFile(object):
             self._handle = open(fname, mode)
         except IOError, e:
             raise CharmmFileError(str(e))
+        self.closed = False
         self.line_number = 0
 
     def write(self, *args, **kwargs):

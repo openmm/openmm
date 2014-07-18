@@ -995,11 +995,25 @@ class CharmmPsfFile(object):
                             u.kilojoule_per_mole)
         ene_conv = dihe_frc_conv
       
-        # Create the system
+        # Create the system and determine if any of our atoms have NBFIX (and
+        # therefore requires a CustomNonbondedForce instead)
+        typenames = set()
         system = mm.System()
         if verbose: print('Adding particles...')
         for atom in self.atom_list:
+            typenames.add(atom.type.name)
             system.addParticle(atom.mass)
+        has_nbfix_terms = False
+        typenames = list(typenames)
+        try:
+            for i, typename in enumerate(typenames):
+                typ = params.atom_types_str[typename]
+                for j in range(i, len(typenames)):
+                    if typenames[j] in typ.nbfix:
+                        has_nbfix_terms = True
+                        raise StopIteration
+        except StopIteration:
+            pass
         # Set up the constraints
         if verbose and (constraints is not None and not rigidWater):
             print('Adding constraints...')
@@ -1240,9 +1254,85 @@ class CharmmPsfFile(object):
 
         # Add per-particle nonbonded parameters (LJ params)
         sigma_scale = 2**(-1/6) * 2
-        for i, atm in enumerate(self.atom_list):
-            force.addParticle(atm.charge, sigma_scale*atm.type.rmin*length_conv,
-                              abs(atm.type.epsilon*ene_conv))
+        if not has_nbfix_terms:
+            for atm in self.atom_list:
+                force.addParticle(atm.charge, sigma_scale*atm.type.rmin*length_conv,
+                                  abs(atm.type.epsilon*ene_conv))
+        else:
+            for atm in self.atom_list:
+                force.addParticle(atm.charge, 1.0, 0.0)
+            # Now add the custom nonbonded force that implements NBFIX. First
+            # thing we need to do is condense our number of types
+            lj_idx_list = [0 for atom in self.atom_list]
+            lj_radii, lj_depths = [], []
+            num_lj_types = 0
+            lj_type_list = []
+            for i, atom in enumerate(self.atom_list):
+                atom = atom.type
+                if lj_idx_list[i]: continue # already assigned
+                num_lj_types += 1
+                lj_idx_list[i] = num_lj_types
+                ljtype = (atom.rmin, atom.epsilon)
+                lj_type_list.append(atom)
+                lj_radii.append(atom.rmin)
+                lj_depths.append(atom.epsilon)
+                for j in range(i+1, len(self.atom_list)):
+                    atom2 = self.atom_list[j].type
+                    if lj_idx_list[j] > 0: continue # already assigned
+                    if atom2 is atom:
+                        lj_idx_list[j] = num_lj_types
+                    elif not atom.nbfix:
+                        # Only non-NBFIXed atom types can be compressed
+                        ljtype2 = (atom2.rmin, atom2.epsilon)
+                        if ljtype == ljtype2:
+                            lj_idx_list[j] = num_lj_types
+            # Now everything is assigned. Create the A-coefficient and
+            # B-coefficient arrays
+            acoef = [0 for i in range(num_lj_types*num_lj_types)]
+            bcoef = acoef[:]
+            for i in range(num_lj_types):
+                for j in range(num_lj_types):
+                    namej = lj_type_list[j].name
+                    try:
+                        wdij, rij, wdij14, rij14 = lj_type_list[i].nbfix[namej]
+                    except KeyError:
+                        rij = (lj_radii[i] + lj_radii[j]) * length_conv
+                        wdij = sqrt(lj_depths[i] * lj_depths[j]) * ene_conv
+                    else:
+                        rij *= length_conv
+                        wdij *= ene_conv
+                    acoef[i+num_lj_types*j] = sqrt(wdij) * rij**6
+                    bcoef[i+num_lj_types*j] = 2 * wdij * rij**6
+            cforce = mm.CustomNonbondedForce('(a/r6)^2-b/r6; r6=r^6;'
+                                             'a=acoef(type1, type2);'
+                                             'b=bcoef(type1, type2)')
+            cforce.addTabulatedFunction('acoef',
+                    mm.Discrete2DFunction(num_lj_types, num_lj_types, acoef))
+            cforce.addTabulatedFunction('bcoef',
+                    mm.Discrete2DFunction(num_lj_types, num_lj_types, bcoef))
+            cforce.addPerParticleParameter('type')
+            cforce.setForceGroup(self.NONBONDED_FORCE_GROUP)
+            if (nonbondedMethod is ff.PME or nonbondedMethod is ff.Ewald or
+                        nonbondedMethod is ff.CutoffPeriodic):
+                cforce.setNonbondedMethod(cforce.CutoffPeriodic)
+                cforce.setCutoffDistance(nonbondedCutoff)
+                cforce.setLongRangeCorrection(True)
+            elif nonbondedMethod is ff.NoCutoff:
+                cforce.setNonbondedMethod(cforce.NoCutoff)
+            elif nonbondedMethod is ff.CutoffNonPeriodic:
+                cforce.setNonbondedMethod(cforce.CutoffNonPeriodic)
+                cforce.setCutoffDistance(nonbondedCutoff)
+            else:
+                raise ValueError('Unrecognized nonbonded method')
+            if switchDistance and nonbondedMethod is not ff.NoCutoff:
+                # make sure it's legal
+                if switchDistance >= nonbondedCutoff:
+                    raise ValueError('switchDistance is too large compared '
+                                     'to the cutoff!')
+                    cforce.setUseSwitchingFunction(True)
+                    cforce.setSwitchingDistance(switchDistance)
+            for i in lj_idx_list:
+                cforce.addParticle(i - 1) # adjust for indexing from 0
 
         # Add 1-4 interactions
         excluded_atom_pairs = set() # save these pairs so we don't zero them out
@@ -1283,6 +1373,13 @@ class CharmmPsfFile(object):
                     continue
                 force.addException(atom.idx, atom2.idx, 0.0, 0.1, 0.0)
         system.addForce(force)
+        # If we needed a CustomNonbondedForce, map all of the exceptions from
+        # the NonbondedForce to the CustomNonbondedForce
+        if has_nbfix_terms:
+            for i in range(force.getNumExceptions()):
+                ii, jj, q, eps, sig = force.getExceptionParameters(i)
+                cforce.addExclusion(ii, jj)
+            system.addForce(cforce)
 
         # Add GB model if we're doing one
         if implicitSolvent is not None:
