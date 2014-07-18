@@ -1332,7 +1332,7 @@ class CharmmPsfFile(object):
                     cforce.setUseSwitchingFunction(True)
                     cforce.setSwitchingDistance(switchDistance)
             for i in lj_idx_list:
-                cforce.addParticle(i - 1) # adjust for indexing from 0
+                cforce.addParticle((i - 1,)) # adjust for indexing from 0
 
         # Add 1-4 interactions
         excluded_atom_pairs = set() # save these pairs so we don't zero them out
