@@ -61,7 +61,7 @@ void validateForce(System& system, vector<Vec3>& positions, double expectedEnerg
     
     // Try moving each particle along each axis, and see if the energy changes by the correct amount.
     
-    double offset = 1e-3;
+    double offset = 1e-2;
     for (int i = 0; i < system.getNumParticles(); i++)
         for (int j = 0; j < 3; j++) {
             vector<Vec3> offsetPos = positions;
