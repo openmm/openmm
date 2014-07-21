@@ -485,7 +485,7 @@ extern "C" __global__ void updateInducedFieldBySOR(const long long* __restrict__
     
     buffer[threadIdx.x] = make_real2(sumErrors, sumPolarErrors);
     __syncthreads();
-    for (int offset = 1; offset < blockDim.x; offset *= 2) {   
+    for (int offset = 1; offset < blockDim.x; offset *= 2) {
         if (threadIdx.x+offset < blockDim.x && (threadIdx.x&(2*offset-1)) == 0) {
             buffer[threadIdx.x].x += buffer[threadIdx.x+offset].x;
             buffer[threadIdx.x].y += buffer[threadIdx.x+offset].y;
@@ -494,4 +494,115 @@ extern "C" __global__ void updateInducedFieldBySOR(const long long* __restrict__
     }
     if (threadIdx.x == 0)
         errors[blockIdx.x] = make_float2((float) buffer[0].x, (float) buffer[0].y);
+}
+
+extern "C" __global__ void recordInducedDipolesForDIIS(const long long* __restrict__ fixedField, const long long* __restrict__ fixedFieldPolar,
+        const long long* __restrict__ fixedFieldS, const long long* __restrict__ inducedField, const long long* __restrict__ inducedFieldPolar,
+        const real* __restrict__ inducedDipole, const real* __restrict__ inducedDipolePolar, const float* __restrict__ polarizability, float2* __restrict__ errors,
+        real* __restrict__ prevDipoles, real* __restrict__ prevDipolesPolar, real* __restrict__ prevErrors, int iteration, bool recordPrevErrors, real* __restrict__ matrix) {
+    extern __shared__ real2 buffer[];
+#ifdef USE_EWALD
+    const real ewaldScale = (4/(real) 3)*(EWALD_ALPHA*EWALD_ALPHA*EWALD_ALPHA)/SQRT_PI;
+#else
+    const real ewaldScale = 0;
+#endif
+    const real fieldScale = 1/(real) 0x100000000;
+    real sumErrors = 0;
+    real sumPolarErrors = 0;
+    for (int atom = blockIdx.x*blockDim.x + threadIdx.x; atom < NUM_ATOMS; atom += blockDim.x*gridDim.x) {
+        real scale = polarizability[atom];
+        for (int component = 0; component < 3; component++) {
+            int dipoleIndex = 3*atom+component;
+            int fieldIndex = atom+component*PADDED_NUM_ATOMS;
+            if (iteration >= MAX_PREV_DIIS_DIPOLES) {
+                // We have filled up the buffer for previous dipoles, so shift them all over by one.
+                
+                for (int i = 1; i < MAX_PREV_DIIS_DIPOLES; i++) {
+                    int index1 = dipoleIndex+(i-1)*NUM_ATOMS*3;
+                    int index2 = dipoleIndex+i*NUM_ATOMS*3;
+                    prevDipoles[index1] = prevDipoles[index2];
+                    prevDipolesPolar[index1] = prevDipolesPolar[index2];
+                    if (recordPrevErrors)
+                        prevErrors[index1] = prevErrors[index2];
+                }
+            }
+            
+            // Compute the new dipole, and record it along with the error.
+            
+            real oldDipole = inducedDipole[dipoleIndex];
+            real oldDipolePolar = inducedDipolePolar[dipoleIndex];
+            long long fixedS = (fixedFieldS == NULL ? (long long) 0 : fixedFieldS[fieldIndex]);
+            real newDipole = scale*((fixedField[fieldIndex]+fixedS+inducedField[fieldIndex])*fieldScale+ewaldScale*oldDipole);
+            real newDipolePolar = scale*((fixedFieldPolar[fieldIndex]+fixedS+inducedFieldPolar[fieldIndex])*fieldScale+ewaldScale*oldDipolePolar);
+            int storePrevIndex = dipoleIndex+min(iteration, MAX_PREV_DIIS_DIPOLES-1)*NUM_ATOMS*3;
+            prevDipoles[storePrevIndex] = newDipole;
+            prevDipolesPolar[storePrevIndex] = newDipolePolar;
+            if (recordPrevErrors)
+                prevErrors[storePrevIndex] = newDipole-oldDipole;
+            sumErrors += (newDipole-oldDipole)*(newDipole-oldDipole);
+            sumPolarErrors += (newDipolePolar-oldDipolePolar)*(newDipolePolar-oldDipolePolar);
+        }
+    }
+    
+    // Sum the errors over threads and store the total for this block.
+    
+    buffer[threadIdx.x] = make_real2(sumErrors, sumPolarErrors);
+    __syncthreads();
+    for (int offset = 1; offset < blockDim.x; offset *= 2) {
+        if (threadIdx.x+offset < blockDim.x && (threadIdx.x&(2*offset-1)) == 0) {
+            buffer[threadIdx.x].x += buffer[threadIdx.x+offset].x;
+            buffer[threadIdx.x].y += buffer[threadIdx.x+offset].y;
+        }
+        __syncthreads();
+    }
+    if (threadIdx.x == 0)
+        errors[blockIdx.x] = make_float2((float) buffer[0].x, (float) buffer[0].y);
+    
+    if (iteration >= MAX_PREV_DIIS_DIPOLES && recordPrevErrors && blockIdx.x == 0) {
+        // Shift over the existing matrix elements.
+        
+        for (int i = 0; i < MAX_PREV_DIIS_DIPOLES-1; i++) {
+            if (threadIdx.x < MAX_PREV_DIIS_DIPOLES-1)
+                matrix[threadIdx.x+i*MAX_PREV_DIIS_DIPOLES] = matrix[(threadIdx.x+1)+(i+1)*MAX_PREV_DIIS_DIPOLES];
+            __syncthreads();
+        }
+    }
+}
+
+extern "C" __global__ void computeDIISMatrix(real* __restrict__ prevErrors, int iteration, real* __restrict__ matrix) {
+    extern __shared__ real sumBuffer[];
+    int j = min(iteration, MAX_PREV_DIIS_DIPOLES-1);
+    for (int i = blockIdx.x; i <= j; i += gridDim.x) {
+        // All the threads in this thread block work together to compute a single matrix element.
+
+        real sum = 0;
+        for (int index = threadIdx.x; index < NUM_ATOMS*3; index += blockDim.x)
+            sum += prevErrors[index+i*NUM_ATOMS*3]*prevErrors[index+j*NUM_ATOMS*3];
+        sumBuffer[threadIdx.x] = sum;
+        __syncthreads();
+        for (int offset = 1; offset < blockDim.x; offset *= 2) { 
+            if (threadIdx.x+offset < blockDim.x && (threadIdx.x&(2*offset-1)) == 0)
+                sumBuffer[threadIdx.x] += sumBuffer[threadIdx.x+offset];
+            __syncthreads();
+        }
+        if (threadIdx.x == 0) {
+            matrix[i+MAX_PREV_DIIS_DIPOLES*j] = sumBuffer[0];
+            if (i != j)
+                matrix[j+MAX_PREV_DIIS_DIPOLES*i] = sumBuffer[0];
+        }
+    }
+}
+
+extern "C" __global__ void updateInducedFieldByDIIS(real* __restrict__ inducedDipole, real* __restrict__ inducedDipolePolar, 
+        const real* __restrict__ prevDipoles, const real* __restrict__ prevDipolesPolar, const float* __restrict__ coefficients, int numPrev) {
+    for (int index = blockIdx.x*blockDim.x + threadIdx.x; index < 3*NUM_ATOMS; index += blockDim.x*gridDim.x) {
+        real sum = 0;
+        real sumPolar = 0;
+        for (int i = 0; i < numPrev; i++) {
+            sum += coefficients[i]*prevDipoles[i*3*NUM_ATOMS+index];
+            sumPolar += coefficients[i]*prevDipolesPolar[i*3*NUM_ATOMS+index];
+        }
+        inducedDipole[index] = sum;
+        inducedDipolePolar[index] = sumPolar;
+    }
 }
