@@ -100,7 +100,7 @@ class ForceField(object):
         """Load one or more XML files and create a ForceField object based on them.
 
         Parameters:
-         - files A list of XML files defining the force field.  Each entry may
+         - files (list) A list of XML files defining the force field.  Each entry may
            be an absolute file path, a path relative to the current working
            directory, a path relative to this module's data subdirectory
            (for built in force fields), or an open file-like object with a
@@ -113,47 +113,59 @@ class ForceField(object):
         self._forces = []
         self._scripts = []
         for file in files:
-            try:
-                # this handles either filenames or open file-like objects
-                tree = etree.parse(file)
-            except IOError:
-                tree = etree.parse(os.path.join(os.path.dirname(__file__), 'data', file))
-            root = tree.getroot()
+            self.loadFile(file)
+    
+    def loadFile(self, file):
+        """Load an XML file and add the definitions from it to this FieldField.
+        
+        Parameters:
+         - file (string or file) An XML file containing force field definitions.  It may
+           be either an absolute file path, a path relative to the current working
+           directory, a path relative to this module's data subdirectory
+           (for built in force fields), or an open file-like object with a
+           read() method from which the forcefield XML data can be loaded.
+        """
+        try:
+            # this handles either filenames or open file-like objects
+            tree = etree.parse(file)
+        except IOError:
+            tree = etree.parse(os.path.join(os.path.dirname(__file__), 'data', file))
+        root = tree.getroot()
 
-            # Load the atom types.
+        # Load the atom types.
 
-            if tree.getroot().find('AtomTypes') is not None:
-                for type in tree.getroot().find('AtomTypes').findall('Type'):
-                    self.registerAtomType(type.attrib)
+        if tree.getroot().find('AtomTypes') is not None:
+            for type in tree.getroot().find('AtomTypes').findall('Type'):
+                self.registerAtomType(type.attrib)
 
-            # Load the residue templates.
+        # Load the residue templates.
 
-            if tree.getroot().find('Residues') is not None:
-                for residue in root.find('Residues').findall('Residue'):
-                    resName = residue.attrib['name']
-                    template = ForceField._TemplateData(resName)
-                    for atom in residue.findall('Atom'):
-                        template.atoms.append(ForceField._TemplateAtomData(atom.attrib['name'], atom.attrib['type'], self._atomTypes[atom.attrib['type']][2]))
-                    for site in residue.findall('VirtualSite'):
-                        template.virtualSites.append(ForceField._VirtualSiteData(site))
-                    for bond in residue.findall('Bond'):
-                        template.addBond(int(bond.attrib['from']), int(bond.attrib['to']))
-                    for bond in residue.findall('ExternalBond'):
-                        b = int(bond.attrib['from'])
-                        template.externalBonds.append(b)
-                        template.atoms[b].externalBonds += 1
-                    self.registerResidueTemplate(template)
+        if tree.getroot().find('Residues') is not None:
+            for residue in root.find('Residues').findall('Residue'):
+                resName = residue.attrib['name']
+                template = ForceField._TemplateData(resName)
+                for atom in residue.findall('Atom'):
+                    template.atoms.append(ForceField._TemplateAtomData(atom.attrib['name'], atom.attrib['type'], self._atomTypes[atom.attrib['type']][2]))
+                for site in residue.findall('VirtualSite'):
+                    template.virtualSites.append(ForceField._VirtualSiteData(site))
+                for bond in residue.findall('Bond'):
+                    template.addBond(int(bond.attrib['from']), int(bond.attrib['to']))
+                for bond in residue.findall('ExternalBond'):
+                    b = int(bond.attrib['from'])
+                    template.externalBonds.append(b)
+                    template.atoms[b].externalBonds += 1
+                self.registerResidueTemplate(template)
 
-            # Load force definitions
+        # Load force definitions
 
-            for child in root:
-                if child.tag in parsers:
-                    parsers[child.tag](child, self)
+        for child in root:
+            if child.tag in parsers:
+                parsers[child.tag](child, self)
 
-            # Load scripts
+        # Load scripts
 
-            for node in tree.getroot().findall('Script'):
-                self.registerScript(node.text)
+        for node in tree.getroot().findall('Script'):
+            self.registerScript(node.text)
 
     def getGenerators(self):
         """Get the list of all registered generators."""
