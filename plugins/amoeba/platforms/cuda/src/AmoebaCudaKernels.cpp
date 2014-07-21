@@ -978,7 +978,7 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
     prevDipoles = new CudaArray(cu, 3*numMultipoles*MaxPrevDIISDipoles, elementSize, "prevDipoles");
     prevDipolesPolar = new CudaArray(cu, 3*numMultipoles*MaxPrevDIISDipoles, elementSize, "prevDipolesPolar");
     prevErrors = new CudaArray(cu, 3*numMultipoles*MaxPrevDIISDipoles, elementSize, "prevErrors");
-    diisMatrix = new CudaArray(cu, (MaxPrevDIISDipoles+1)*(MaxPrevDIISDipoles+1), elementSize, "diisMatrix");
+    diisMatrix = new CudaArray(cu, MaxPrevDIISDipoles*MaxPrevDIISDipoles, elementSize, "diisMatrix");
     diisCoefficients = new CudaArray(cu, MaxPrevDIISDipoles+1, sizeof(float), "diisMatrix");
     cu.addAutoclearBuffer(*field);
     cu.addAutoclearBuffer(*fieldPolar);
@@ -1625,33 +1625,37 @@ double CudaCalcAmoebaMultipoleForceKernel::iterateDipolesByDIIS(int iteration) {
         void* recordDIISDipolesGkArgs[] = {&field->getDevicePointer(), &fieldPolar->getDevicePointer(), &gkKernel->getField()->getDevicePointer(), &gkKernel->getInducedField()->getDevicePointer(),
             &gkKernel->getInducedFieldPolar()->getDevicePointer(), &gkKernel->getInducedDipoles()->getDevicePointer(), &gkKernel->getInducedDipolesPolar()->getDevicePointer(), 
             &polarizability->getDevicePointer(), &inducedDipoleErrors->getDevicePointer(), &prevDipolesGk->getDevicePointer(),
-            &prevDipolesGkPolar->getDevicePointer(), &prevErrors->getDevicePointer(), &iteration, &falseValue};
+            &prevDipolesGkPolar->getDevicePointer(), &prevErrors->getDevicePointer(), &iteration, &falseValue, &diisMatrix->getDevicePointer()};
         cu.executeKernel(recordDIISDipolesKernel, recordDIISDipolesGkArgs, cu.getNumThreadBlocks()*cu.ThreadBlockSize, cu.ThreadBlockSize, cu.ThreadBlockSize*elementSize*2);
     }
     void* recordDIISDipolesArgs[] = {&field->getDevicePointer(), &fieldPolar->getDevicePointer(), &npt, &inducedField->getDevicePointer(),
         &inducedFieldPolar->getDevicePointer(), &inducedDipole->getDevicePointer(), &inducedDipolePolar->getDevicePointer(),
         &polarizability->getDevicePointer(), &inducedDipoleErrors->getDevicePointer(), &prevDipoles->getDevicePointer(),
-        &prevDipolesPolar->getDevicePointer(), &prevErrors->getDevicePointer(), &iteration, &trueValue};
+        &prevDipolesPolar->getDevicePointer(), &prevErrors->getDevicePointer(), &iteration, &trueValue, &diisMatrix->getDevicePointer()};
     cu.executeKernel(recordDIISDipolesKernel, recordDIISDipolesArgs, cu.getNumThreadBlocks()*cu.ThreadBlockSize, cu.ThreadBlockSize, cu.ThreadBlockSize*elementSize*2);
     float2* errors = (float2*) cu.getPinnedBuffer();
     inducedDipoleErrors->download(errors, false);
     
     // Determine the coefficients for selecting the new dipoles.
     
-    vector<float> coefficients(MaxPrevDIISDipoles);
     int numPrev = (iteration+1 < MaxPrevDIISDipoles ? iteration+1 : MaxPrevDIISDipoles);
+    void* buildMatrixArgs[] = {&prevErrors->getDevicePointer(), &iteration, &diisMatrix->getDevicePointer()};
+    int threadBlocks = min(numPrev, cu.getNumThreadBlocks());
+    cu.executeKernel(buildMatrixKernel, buildMatrixArgs, threadBlocks*128, 128, 128*elementSize);
+    vector<float> coefficients(MaxPrevDIISDipoles);
     if (iteration == 0)
         coefficients[0] = 1;
     else {
-        void* buildMatrixArgs[] = {&prevErrors->getDevicePointer(), &iteration, &diisMatrix->getDevicePointer()};
-        cu.executeKernel(buildMatrixKernel, buildMatrixArgs, cu.getNumThreadBlocks()*128, 128, 128*elementSize);
         vector<float> matrix;
         diisMatrix->download(matrix);
         int rank = numPrev+1;
         Array2D<double> b(rank, rank);
-        for (int i = 0; i < rank; i++)
-            for (int j = 0; j < rank; j++)
-                b[i][j] = matrix[i*rank+j];
+        b[0][0] = 0;
+        for (int i = 1; i < rank; i++)
+            b[i][0] = b[0][i] = -1;
+        for (int i = 0; i < numPrev; i++)
+            for (int j = 0; j < numPrev; j++)
+                b[i+1][j+1] = matrix[i*MaxPrevDIISDipoles+j];
 
         // Solve using SVD.  Since the right hand side is (-1, 0, 0, 0, ...), this is simpler than the general case.
 
