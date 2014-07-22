@@ -2188,7 +2188,7 @@ second atom has class OS and the third has class P:
     <Proper class1="" class2="OS" class3="P" class4="" per="3" phase="0.0" k="0.66944"/>
 
 <CustomNonbondedForce>
-===============
+======================
 
 To add a CustomNonbondedForce to the System, include a tag that looks like this:
 
