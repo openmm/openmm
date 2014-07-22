@@ -117,7 +117,7 @@ ADD_CUSTOM_TARGET(sphinxhtml
 )
 
 install(FILES "${SPHINX_BUILD_DIR}/userguide/latex/OpenMMUsersGuide.pdf" "${SPHINX_BUILD_DIR}developerguide/latex/OpenMMDeveloperGuide.pdf"
-    DESTINATION docs/)
+    DESTINATION docs/ OPTIONAL)
 
 FILE(GLOB LICENSE_FILES "licenses/*.txt")
 install(FILES ${LICENSE_FILES}
