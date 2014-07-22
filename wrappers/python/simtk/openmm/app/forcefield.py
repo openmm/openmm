@@ -100,7 +100,7 @@ class ForceField(object):
         """Load one or more XML files and create a ForceField object based on them.
 
         Parameters:
-         - files A list of XML files defining the force field.  Each entry may
+         - files (list) A list of XML files defining the force field.  Each entry may
            be an absolute file path, a path relative to the current working
            directory, a path relative to this module's data subdirectory
            (for built in force fields), or an open file-like object with a
@@ -113,47 +113,59 @@ class ForceField(object):
         self._forces = []
         self._scripts = []
         for file in files:
-            try:
-                # this handles either filenames or open file-like objects
-                tree = etree.parse(file)
-            except IOError:
-                tree = etree.parse(os.path.join(os.path.dirname(__file__), 'data', file))
-            root = tree.getroot()
+            self.loadFile(file)
+    
+    def loadFile(self, file):
+        """Load an XML file and add the definitions from it to this FieldField.
+        
+        Parameters:
+         - file (string or file) An XML file containing force field definitions.  It may
+           be either an absolute file path, a path relative to the current working
+           directory, a path relative to this module's data subdirectory
+           (for built in force fields), or an open file-like object with a
+           read() method from which the forcefield XML data can be loaded.
+        """
+        try:
+            # this handles either filenames or open file-like objects
+            tree = etree.parse(file)
+        except IOError:
+            tree = etree.parse(os.path.join(os.path.dirname(__file__), 'data', file))
+        root = tree.getroot()
 
-            # Load the atom types.
+        # Load the atom types.
 
-            if tree.getroot().find('AtomTypes') is not None:
-                for type in tree.getroot().find('AtomTypes').findall('Type'):
-                    self.registerAtomType(type.attrib)
+        if tree.getroot().find('AtomTypes') is not None:
+            for type in tree.getroot().find('AtomTypes').findall('Type'):
+                self.registerAtomType(type.attrib)
 
-            # Load the residue templates.
+        # Load the residue templates.
 
-            if tree.getroot().find('Residues') is not None:
-                for residue in root.find('Residues').findall('Residue'):
-                    resName = residue.attrib['name']
-                    template = ForceField._TemplateData(resName)
-                    for atom in residue.findall('Atom'):
-                        template.atoms.append(ForceField._TemplateAtomData(atom.attrib['name'], atom.attrib['type'], self._atomTypes[atom.attrib['type']][2]))
-                    for site in residue.findall('VirtualSite'):
-                        template.virtualSites.append(ForceField._VirtualSiteData(site))
-                    for bond in residue.findall('Bond'):
-                        template.addBond(int(bond.attrib['from']), int(bond.attrib['to']))
-                    for bond in residue.findall('ExternalBond'):
-                        b = int(bond.attrib['from'])
-                        template.externalBonds.append(b)
-                        template.atoms[b].externalBonds += 1
-                    self.registerResidueTemplate(template)
+        if tree.getroot().find('Residues') is not None:
+            for residue in root.find('Residues').findall('Residue'):
+                resName = residue.attrib['name']
+                template = ForceField._TemplateData(resName)
+                for atom in residue.findall('Atom'):
+                    template.atoms.append(ForceField._TemplateAtomData(atom.attrib['name'], atom.attrib['type'], self._atomTypes[atom.attrib['type']][2]))
+                for site in residue.findall('VirtualSite'):
+                    template.virtualSites.append(ForceField._VirtualSiteData(site))
+                for bond in residue.findall('Bond'):
+                    template.addBond(int(bond.attrib['from']), int(bond.attrib['to']))
+                for bond in residue.findall('ExternalBond'):
+                    b = int(bond.attrib['from'])
+                    template.externalBonds.append(b)
+                    template.atoms[b].externalBonds += 1
+                self.registerResidueTemplate(template)
 
-            # Load force definitions
+        # Load force definitions
 
-            for child in root:
-                if child.tag in parsers:
-                    parsers[child.tag](child, self)
+        for child in root:
+            if child.tag in parsers:
+                parsers[child.tag](child, self)
 
-            # Load scripts
+        # Load scripts
 
-            for node in tree.getroot().findall('Script'):
-                self.registerScript(node.text)
+        for node in tree.getroot().findall('Script'):
+            self.registerScript(node.text)
 
     def getGenerators(self):
         """Get the list of all registered generators."""
@@ -240,6 +252,7 @@ class ForceField(object):
         def __init__(self):
             self.atomType = {}
             self.atoms = []
+            self.excludeAtomWith = []
             self.virtualSites = {}
             self.bonds = []
             self.angles = []
@@ -302,6 +315,10 @@ class ForceField(object):
                 self.localPos = [float(attrib['p1']), float(attrib['p2']), float(attrib['p3'])]
             else:
                 raise ValueError('Unknown virtual site type: %s' % self.type)
+            if 'excludeWith' in attrib:
+                self.excludeWith = int(attrib['excludeWith'])
+            else:
+                self.excludeWith = self.atoms[0]
 
     def createSystem(self, topology, nonbondedMethod=NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
                      constraints=None, rigidWater=True, removeCMMotion=True, hydrogenMass=None, **args):
@@ -324,6 +341,8 @@ class ForceField(object):
         """
         data = ForceField._SystemData()
         data.atoms = list(topology.atoms())
+        for atom in data.atoms:
+            data.excludeAtomWith.append([])
 
         # Make a list of all bonds
 
@@ -363,7 +382,7 @@ class ForceField(object):
                     data.atomType[atom] = template.atoms[match].type
                     for site in template.virtualSites:
                         if match == site.index:
-                            data.virtualSites[atom] = (site, [matchAtoms[i].index for i in site.atoms])
+                            data.virtualSites[atom] = (site, [matchAtoms[i].index for i in site.atoms], matchAtoms[site.excludeWith].index)
 
         # Create the System and add atoms
 
@@ -478,8 +497,9 @@ class ForceField(object):
         # Add virtual sites
 
         for atom in data.virtualSites:
-            (site, atoms) = data.virtualSites[atom]
+            (site, atoms, excludeWith) = data.virtualSites[atom]
             index = atom.index
+            data.excludeAtomWith[excludeWith].append(index)
             if site.type == 'average2':
                 sys.setVirtualSite(index, mm.TwoParticleAverageSite(atoms[0], atoms[1], site.weights[0], site.weights[1]))
             elif site.type == 'average3':
@@ -895,7 +915,7 @@ class PeriodicTorsionGenerator:
                     for (t2, t3, t4) in itertools.permutations(((type2, 1), (type3, 2), (type4, 3))):
                         if t2[0] in types2 and t3[0] in types3 and t4[0] in types4:
                             # Workaround to be more consistent with AMBER.  It uses wildcards to define most of its
-                            # impropers, which leaves the ordering ambigous.  It then follows some bizarre rules
+                            # impropers, which leaves the ordering ambiguous.  It then follows some bizarre rules
                             # to pick the order.
                             a1 = torsion[t2[1]]
                             a2 = torsion[t3[1]]
@@ -991,18 +1011,22 @@ class RBTorsionGenerator:
                 if type1 in types1:
                     for (t2, t3, t4) in itertools.permutations(((type2, 1), (type3, 2), (type4, 3))):
                         if t2[0] in types2 and t3[0] in types3 and t4[0] in types4:
-                            # Workaround to be more consistent with AMBER.  It uses wildcards to define most of its
-                            # impropers, which leaves the ordering ambigous.  It then follows some bizarre rules
-                            # to pick the order.
-                            a1 = torsion[t2[1]]
-                            a2 = torsion[t3[1]]
-                            e1 = data.atoms[a1].element
-                            e2 = data.atoms[a2].element
-                            if e1 == e2 and a1 > a2:
-                                (a1, a2) = (a2, a1)
-                            elif e1 != elem.carbon and (e2 == elem.carbon or e1.mass < e2.mass):
-                                (a1, a2) = (a2, a1)
-                            force.addTorsion(a1, a2, torsion[0], torsion[t4[1]], tordef.c[0], tordef.c[1], tordef.c[2], tordef.c[3], tordef.c[4], tordef.c[5])
+                            if wildcard in (types1, types2, types3, types4):
+                                # Workaround to be more consistent with AMBER.  It uses wildcards to define most of its
+                                # impropers, which leaves the ordering ambiguous.  It then follows some bizarre rules
+                                # to pick the order.
+                                a1 = torsion[t2[1]]
+                                a2 = torsion[t3[1]]
+                                e1 = data.atoms[a1].element
+                                e2 = data.atoms[a2].element
+                                if e1 == e2 and a1 > a2:
+                                    (a1, a2) = (a2, a1)
+                                elif e1 != elem.carbon and (e2 == elem.carbon or e1.mass < e2.mass):
+                                    (a1, a2) = (a2, a1)
+                                force.addTorsion(a1, a2, torsion[0], torsion[t4[1]], tordef.c[0], tordef.c[1], tordef.c[2], tordef.c[3], tordef.c[4], tordef.c[5])
+                            else:
+                                # There are no wildcards, so the order is unambiguous.
+                                force.addTorsion(torsion[0], torsion[t2[1]], torsion[t3[1]], torsion[t4[1]], tordef.c[0], tordef.c[1], tordef.c[2], tordef.c[3], tordef.c[4], tordef.c[5])
                             done = True
                             break
 
@@ -1157,33 +1181,33 @@ class NonbondedGenerator:
         sys.addForce(force)
 
     def postprocessSystem(self, sys, data, args):
-        # Create exceptions based on bonds, virtual sites, and Drude particles.
+        # Create exceptions based on bonds.
+        
         bondIndices = []
         for bond in data.bonds:
             bondIndices.append((bond.atom1, bond.atom2))
+
+        # If a virtual site does *not* share exclusions with another atom, add a bond between it and its first parent atom.
+
         for i in range(sys.getNumParticles()):
             if sys.isVirtualSite(i):
-                site = sys.getVirtualSite(i)
-                for j in range(site.getNumParticles()):
-                    bondIndices.append((i, site.getParticle(j)))
-        drude = [f for f in sys.getForces() if isinstance(f, mm.DrudeForce)]
-        if len(drude) > 0:
-            drude = drude[0]
-            # For purposes of creating exceptions, a Drude particle is "bonded" to anything
-            # its parent atom is bonded to.
-            drudeMap = {}
-            for i in range(drude.getNumParticles()):
-                params = drude.getParticleParameters(i)
-                drudeMap[params[1]] = params[0]
-            for atom1, atom2 in bondIndices:
-                drude1 = drudeMap[atom1] if atom1 in drudeMap else None
-                drude2 = drudeMap[atom2] if atom2 in drudeMap else None
-                if drude1 is not None:
-                    bondIndices.append((drude1, atom2))
-                    if drude2 is not None:
-                        bondIndices.append((drude1, drude2))
-                if drude2 is not None:
-                    bondIndices.append((atom1, drude2))
+                (site, atoms, excludeWith) = data.virtualSites[data.atoms[i]]
+                if excludeWith is None:
+                    bondIndices.append((i, site.getParticle(0)))
+        
+        # Certain particles, such as lone pairs and Drude particles, share exclusions with a parent atom.
+        # If the parent atom does not interact with an atom, the child particle does not either.
+        
+        for atom1, atom2 in bondIndices:
+            for child1 in data.excludeAtomWith[atom1]:
+                bondIndices.append((child1, atom2))
+                for child2 in data.excludeAtomWith[atom2]:
+                    bondIndices.append((child1, child2))
+            for child2 in data.excludeAtomWith[atom2]:
+                bondIndices.append((atom1, child2))
+
+        # Create the exceptions.
+
         nonbonded = [f for f in sys.getForces() if isinstance(f, mm.NonbondedForce)][0]
         nonbonded.createExceptionsFromBonds(bondIndices, self.coulomb14scale, self.lj14scale)
 
@@ -1519,18 +1543,22 @@ class CustomTorsionGenerator:
                 if type1 in types1:
                     for (t2, t3, t4) in itertools.permutations(((type2, 1), (type3, 2), (type4, 3))):
                         if t2[0] in types2 and t3[0] in types3 and t4[0] in types4:
-                            # Workaround to be more consistent with AMBER.  It uses wildcards to define most of its
-                            # impropers, which leaves the ordering ambigous.  It then follows some bizarre rules
-                            # to pick the order.
-                            a1 = torsion[t2[1]]
-                            a2 = torsion[t3[1]]
-                            e1 = data.atoms[a1].element
-                            e2 = data.atoms[a2].element
-                            if e1 == e2 and a1 > a2:
-                                (a1, a2) = (a2, a1)
-                            elif e1 != elem.carbon and (e2 == elem.carbon or e1.mass < e2.mass):
-                                (a1, a2) = (a2, a1)
-                            force.addTorsion(a1, a2, torsion[0], torsion[t4[1]], tordef.paramValues)
+                            if wildcard in (types1, types2, types3, types4):
+                                # Workaround to be more consistent with AMBER.  It uses wildcards to define most of its
+                                # impropers, which leaves the ordering ambiguous.  It then follows some bizarre rules
+                                # to pick the order.
+                                a1 = torsion[t2[1]]
+                                a2 = torsion[t3[1]]
+                                e1 = data.atoms[a1].element
+                                e2 = data.atoms[a2].element
+                                if e1 == e2 and a1 > a2:
+                                    (a1, a2) = (a2, a1)
+                                elif e1 != elem.carbon and (e2 == elem.carbon or e1.mass < e2.mass):
+                                    (a1, a2) = (a2, a1)
+                                force.addTorsion(a1, a2, torsion[0], torsion[t4[1]], tordef.paramValues)
+                            else:
+                                # There are no wildcards, so the order is unambiguous.
+                                force.addTorsion(torsion[0], torsion[t2[1]], torsion[t3[1]], torsion[t4[1]], tordef.paramValues)
                             done = True
                             break
 
@@ -4290,8 +4318,6 @@ class DrudeGenerator:
 
         # Add Drude particles.
 
-        drudeMap = {}
-        parentMap = {}
         for atom in data.atoms:
             t = data.atomType[atom]
             if t in self.typeMap:
@@ -4308,9 +4334,8 @@ class DrudeGenerator:
                         p[2] = atom2.index
                     elif values[3] is not None and type2 in values[3]:
                         p[3] = atom2.index
-                drudeIndex = force.addParticle(atom.index, p[0], p[1], p[2], p[3], values[4], values[5], values[6], values[7])
-                drudeMap[atom.index] = p[0]
-                parentMap[p[0]] = (atom.index, drudeIndex)
+                force.addParticle(atom.index, p[0], p[1], p[2], p[3], values[4], values[5], values[6], values[7])
+                data.excludeAtomWith[p[0]].append(atom.index)
         sys.addForce(force)
 
     def postprocessSystem(self, sys, data, args):
@@ -4323,14 +4348,14 @@ class DrudeGenerator:
             particleMap[drude.getParticleParameters(i)[0]] = i
         for i in range(nonbonded.getNumExceptions()):
             (particle1, particle2, charge, sigma, epsilon) = nonbonded.getExceptionParameters(i)
-            if charge == 0 and epsilon == 0:
+            if charge._value == 0 and epsilon._value == 0:
                 # This is an exclusion.
                 if particle1 in particleMap and particle2 in particleMap:
                     # It connects two Drude particles, so add a screened pair.
                     drude1 = particleMap[particle1]
                     drude2 = particleMap[particle2]
-                    type1 = data.atomType[data.atoms[drude1]]
-                    type2 = data.atomType[data.atoms[drude2]]
+                    type1 = data.atomType[data.atoms[particle1]]
+                    type2 = data.atomType[data.atoms[particle2]]
                     thole1 = self.typeMap[type1][8]
                     thole2 = self.typeMap[type2][8]
                     drude.addScreenedPair(drude1, drude2, thole1+thole2)

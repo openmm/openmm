@@ -2289,7 +2289,7 @@ void OpenCLCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
         defines["USE_CUTOFF"] = "1";
     if (force.getNonbondedMethod() == CustomNonbondedForce::CutoffPeriodic)
         defines["USE_PERIODIC"] = "1";
-    defines["THREAD_BLOCK_SIZE"] = cl.intToString(cl.getNonbondedUtilities().getForceThreadBlockSize());
+    defines["LOCAL_MEMORY_SIZE"] = cl.intToString(max(32, cl.getNonbondedUtilities().getForceThreadBlockSize()));
     double cutoff = force.getCutoffDistance();
     defines["CUTOFF_SQUARED"] = cl.doubleToString(cutoff*cutoff);
     defines["PADDED_NUM_ATOMS"] = cl.intToString(cl.getPaddedNumAtoms());

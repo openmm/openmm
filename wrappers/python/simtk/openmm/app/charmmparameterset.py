@@ -13,7 +13,7 @@ Copyright (c) 2014 the Authors
 
 Author: Jason M. Swails
 Contributors:
-Date: April 18, 2014
+Date: July 17, 2014
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -123,6 +123,8 @@ class CharmmParameterSet(object):
             elif arg.endswith('.str'):
                 strs.append(arg)
             elif arg.endswith('.inp'):
+                # Only consider the file name (since the directory is likely
+                # "toppar" and will screw up file type detection)
                 fname = os.path.split(arg)[1]
                 if 'par' in fname:
                     pars.append(arg)
@@ -436,11 +438,29 @@ class CharmmParameterSet(object):
                 try:
                     at1 = words[0]
                     at2 = words[1]
-                    emin = conv(words[2], float, 'NBFIX Emin')
+                    emin = abs(conv(words[2], float, 'NBFIX Emin'))
                     rmin = conv(words[3], float, 'NBFIX Rmin')
+                    try:
+                        emin14 = abs(conv(words[4], float, 'NBFIX Emin 1-4'))
+                        rmin14 = conv(words[5], float, 'NBFIX Rmin 1-4')
+                    except IndexError:
+                        emin14 = rmin14 = None
+                    try:
+                        self.atom_types_str[at1].add_nbfix(at2, rmin, emin,
+                                                           rmin14, emin14)
+                        self.atom_types_str[at2].add_nbfix(at1, rmin, emin,
+                                                           rmin14, emin14)
+                    except KeyError:
+                        # Some stream files define NBFIX terms with an atom that
+                        # is defined in another toppar file that does not
+                        # necessarily have to be loaded. As a result, not every
+                        # NBFIX found here will necessarily need to be applied.
+                        # If we can't find a particular atom type, don't bother
+                        # adding that nbfix and press on
+                        pass
                 except IndexError:
                     raise CharmmFileError('Could not parse NBFIX terms.')
-                self.nbfix_types[(min(at1, at2), max(at1, at2))] = (emin, rmin)
+                self.nbfix_types[(min(at1, at2), max(at1, at2))] = (rmin, emin)
         # Now we're done. Load the nonbonded types into the relevant AtomType
         # instances. In order for this to work, all keys in nonbonded_types
         # must be in the self.atom_types_str dict. Raise a RuntimeError if this
