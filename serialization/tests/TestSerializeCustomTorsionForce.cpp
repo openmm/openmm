@@ -84,7 +84,7 @@ void testSerialization() {
         ASSERT_EQUAL(c2, c2);
         ASSERT_EQUAL(d2, d2);
         ASSERT_EQUAL(params1.size(), params2.size());
-        for (int j = 0; j < params1.size(); j++)
+        for (int j = 0; j < (int) params1.size(); j++)
             ASSERT_EQUAL(params1[j], params2[j]);
     }
 }

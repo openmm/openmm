@@ -50,7 +50,6 @@
       #ifdef __ANDROID__
         #include <cpu-features.h>
       #else
-        #include <dlfcn.h>
         #include <unistd.h>
       #endif
    #endif
@@ -93,7 +92,7 @@ static int getNumProcessors() {
 #ifdef _WIN32
 #define cpuid __cpuid
 #else
-#ifndef __ANDROID__
+#if !defined(__ANDROID__) && !defined(__PNACL__)
     static void cpuid(int cpuInfo[4], int infoType){
     #ifdef __LP64__
         __asm__ __volatile__ (
