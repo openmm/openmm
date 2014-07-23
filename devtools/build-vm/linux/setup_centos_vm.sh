@@ -49,7 +49,9 @@ conda config --add channels http://conda.binstar.org/omnia
 conda install --yes fftw3f jinja2 swig sphinx conda-build cmake
 
 
-# Download AMD APP SDK from here, requires click agreement: http://developer.amd.com/amd-license-agreement-appsdk/
+# Download AMD APP SDK from here, requires click agreement:
+# http://developer.amd.com/tools-and-sdks/opencl-zone/opencl-tools-sdks/amd-accelerated-parallel-processing-app-sdk/
+# Select AMD-APP-SDK-v2.9-lnx64.tgz
 # Ideally we could cache this on AWS or something...
 mkdir ~/Software/AMD
 cd ~/Software/AMD
