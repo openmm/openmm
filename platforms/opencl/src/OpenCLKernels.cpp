@@ -5885,7 +5885,7 @@ OpenCLApplyMonteCarloBarostatKernel::~OpenCLApplyMonteCarloBarostatKernel() {
 }
 
 void OpenCLApplyMonteCarloBarostatKernel::initialize(const System& system, const Force& thermostat) {
-    savedPositions = OpenCLArray::create<mm_float4>(cl, cl.getPaddedNumAtoms(), "savedPositions");
+    savedPositions = new OpenCLArray(cl, cl.getPaddedNumAtoms(), cl.getUseDoublePrecision() ? sizeof(mm_double4) : sizeof(mm_float4), "savedPositions");
     cl::Program program = cl.createProgram(OpenCLKernelSources::monteCarloBarostat);
     kernel = cl::Kernel(program, "scalePositions");
 }
@@ -5919,7 +5919,8 @@ void OpenCLApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context,
         kernel.setArg<cl::Buffer>(7, moleculeAtoms->getDeviceBuffer());
         kernel.setArg<cl::Buffer>(8, moleculeStartIndex->getDeviceBuffer());
     }
-    cl.getQueue().enqueueCopyBuffer(cl.getPosq().getDeviceBuffer(), savedPositions->getDeviceBuffer(), 0, 0, cl.getPosq().getSize()*sizeof(mm_float4));
+    int bytesToCopy = cl.getPosq().getSize()*(cl.getUseDoublePrecision() ? sizeof(mm_double4) : sizeof(mm_float4));
+    cl.getQueue().enqueueCopyBuffer(cl.getPosq().getDeviceBuffer(), savedPositions->getDeviceBuffer(), 0, 0, bytesToCopy);
     kernel.setArg<cl_float>(0, (cl_float) scaleX);
     kernel.setArg<cl_float>(1, (cl_float) scaleY);
     kernel.setArg<cl_float>(2, (cl_float) scaleZ);
@@ -5932,7 +5933,8 @@ void OpenCLApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context,
 }
 
 void OpenCLApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& context) {
-    cl.getQueue().enqueueCopyBuffer(savedPositions->getDeviceBuffer(), cl.getPosq().getDeviceBuffer(), 0, 0, cl.getPosq().getSize()*sizeof(mm_float4));
+    int bytesToCopy = cl.getPosq().getSize()*(cl.getUseDoublePrecision() ? sizeof(mm_double4) : sizeof(mm_float4));
+    cl.getQueue().enqueueCopyBuffer(savedPositions->getDeviceBuffer(), cl.getPosq().getDeviceBuffer(), 0, 0, bytesToCopy);
 }
 
 OpenCLRemoveCMMotionKernel::~OpenCLRemoveCMMotionKernel() {
