@@ -51,6 +51,23 @@ CustomNonbondedForce::CustomNonbondedForce(const string& energy) : energyExpress
     switchingDistance(-1.0), useSwitchingFunction(false), useLongRangeCorrection(false) {
 }
 
+CustomNonbondedForce::CustomNonbondedForce(const CustomNonbondedForce& rhs) {
+    // Copy everything and deep copy the tabulated functions
+    energyExpression = rhs.energyExpression;
+    nonbondedMethod = rhs.nonbondedMethod;
+    cutoffDistance = rhs.cutoffDistance;
+    switchingDistance = rhs.switchingDistance;
+    useSwitchingFunction = rhs.useSwitchingFunction;
+    useLongRangeCorrection = rhs.useLongRangeCorrection;
+    parameters = rhs.parameters;
+    globalParameters = rhs.globalParameters;
+    particles = rhs.particles;
+    exclusions = rhs.exclusions;
+    interactionGroups = rhs.interactionGroups;
+    for (vector<FunctionInfo>::const_iterator it = rhs.functions.begin(); it != rhs.functions.end(); it++)
+        functions.push_back(FunctionInfo(it->name, it->function->Copy()));
+}
+
 CustomNonbondedForce::~CustomNonbondedForce() {
     for (int i = 0; i < (int) functions.size(); i++)
         delete functions[i].function;

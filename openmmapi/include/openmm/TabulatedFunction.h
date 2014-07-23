@@ -59,6 +59,7 @@ class OPENMM_EXPORT TabulatedFunction {
 public:
     virtual ~TabulatedFunction() {
     }
+    virtual TabulatedFunction* Copy() const = 0;
 };
 
 /**
@@ -96,6 +97,10 @@ public:
      * @param max            the value of x corresponding to the last element of values
      */
     void setFunctionParameters(const std::vector<double>& values, double min, double max);
+    /**
+     * Create a deep copy of the tabulated function.
+     */
+    Continuous1DFunction* Copy() const;
 private:
     std::vector<double> values;
     double min, max;
@@ -151,6 +156,10 @@ public:
      * @param ymax       the value of y corresponding to the last element of values
      */
     void setFunctionParameters(int xsize, int ysize, const std::vector<double>& values, double xmin, double xmax, double ymin, double ymax);
+    /**
+     * Create a deep copy of the tabulated function
+     */
+    Continuous2DFunction* Copy() const;
 private:
     std::vector<double> values;
     int xsize, ysize;
@@ -222,6 +231,10 @@ public:
      * @param zmax       the value of z corresponding to the last element of values
      */
     void setFunctionParameters(int xsize, int ysize, int zsize, const std::vector<double>& values, double xmin, double xmax, double ymin, double ymax, double zmin, double zmax);
+    /**
+     * Create a deep copy of the tabulated function
+     */
+    Continuous3DFunction* Copy() const;
 private:
     std::vector<double> values;
     int xsize, ysize, zsize;
@@ -253,6 +266,10 @@ public:
      * @param values         the tabulated values of the function f(x)
      */
     void setFunctionParameters(const std::vector<double>& values);
+    /**
+     * Create a deep copy of the tabulated function
+     */
+    Discrete1DFunction* Copy() const;
 private:
     std::vector<double> values;
 };
@@ -291,6 +308,10 @@ public:
      *                  values[i+xsize*j] = f(i,j).  This must be of length xsize*ysize.
      */
     void setFunctionParameters(int xsize, int ysize, const std::vector<double>& values);
+    /**
+     * Create a deep copy of the tabulated function
+     */
+    Discrete2DFunction* Copy() const;
 private:
     int xsize, ysize;
     std::vector<double> values;
@@ -333,6 +354,10 @@ public:
      *                  values[i+xsize*j+xsize*ysize*k] = f(i,j,k).  This must be of length xsize*ysize*zsize.
      */
     void setFunctionParameters(int xsize, int ysize, int zsize, const std::vector<double>& values);
+    /**
+     * Create a deep copy of the tabulated function
+     */
+    Discrete3DFunction* Copy() const;
 private:
     int xsize, ysize, zsize;
     std::vector<double> values;
