@@ -1,0 +1,1366 @@
+.. include:: header.rst
+
+.. _the-theory-behind-openmm-introduction:
+
+The Theory Behind OpenMM: Introduction
+######################################
+
+
+Overview
+********
+
+This guide describes the mathematical theory behind OpenMM.  For each
+computational class, it describes what computations the class performs and how
+it should be used.  This serves two purposes.  If you are using OpenMM within an
+application, this guide teaches you how to use it correctly.  If you are
+implementing the OpenMM API for a new Platform, it teaches you how to correctly
+implement the required kernels.
+
+On the other hand, many details are intentionally left unspecified.  Any
+behavior that is not specified either in this guide or in the API documentation
+is left up to the Platform, and may be implemented in different ways by
+different Platforms.  For example, an Integrator is required to produce a
+trajectory that satisfies constraints to within the user specified tolerance,
+but the algorithm used to enforce those constraints is left up to the Platform.
+Similarly, this guide provides the functional form of each Force, but does not
+specify what level of numerical precision it must be calculated to.
+
+This is an essential feature of the design of OpenMM, because it allows the API
+to be implemented efficiently on a wide variety of hardware and software
+platforms, using whatever methods are most appropriate for each platform.  On
+the other hand, it means that a single program may produce meaningfully
+different results depending on which Platform it uses.  For example, different
+constraint algorithms may have different regions of convergence, and thus a time
+step that is stable on one platform may be unstable on a different one.  It is
+essential that you validate your simulation methodology on each Platform you
+intend to use, and do not assume that good results on one Platform will
+guarantee good results on another Platform when using identical parameters.
+
+
+.. _units:
+
+Units
+*****
+
+There are several different sets of units widely used in molecular simulations.
+For example, energies may be measured in kcal/mol or kJ/mol, distances may be in
+Angstroms or nm, and angles may be in degrees or radians.  OpenMM uses the
+following units everywhere.
+
+===========  =================
+Quantity     Units            
+===========  =================
+distance     nm               
+time         ps               
+mass         atomic mass units
+charge       proton charge    
+temperature  Kelvin           
+angle        radians          
+energy       kJ/mol           
+===========  =================
+
+These units have the important feature that they form an internally consistent
+set.  For example, a force always has the same units (kJ/mol/nm) whether it is
+calculated as the gradient of an energy or as the product of a mass and an
+acceleration.  This is not true in some other widely used unit systems, such as
+those that express energy in kcal/mol.
+
+The header file Units.h contains predefined constants for converting between the
+OpenMM units and some other common units.  For example, if your application
+expresses distances in Angstroms, you should multiply them by
+OpenMM::NmPerAngstrom before passing them to OpenMM, and positions calculated by
+OpenMM should be multiplied by OpenMM::AngstromsPerNm before passing them back
+to your application.
+
+
+
+Standard Forces
+###############
+
+The following classes implement standard force field terms that are widely used
+in molecular simulations.
+
+HarmonicBondForce
+*****************
+
+Each harmonic bond is represented by an energy term of the form
+
+
+
+.. math::
+   E=\frac{1}{2}k{\left(x-{x}_{0}\right)}^{2}
+
+
+where *x* is the distance between the two particles, *x*\ :sub:`0` is
+the equilibrium distance, and *k* is the force constant.  This produces a
+force of magnitude *k*\ (\ *x*\ -\ *x*\ :sub:`0`\ ).
+
+Be aware that some force fields define their harmonic bond parameters in a
+slightly different way: *E* = *k*\ ´(\ *x*\ -\ *x*\ :sub:`0`\ )\
+:sup:`2`\ , leading to a force of magnitude 2\ *k*\ ´(\ *x*\ -\ *x*\ :sub:`0`\ ).
+Comparing these two forms, you can see that *k* = 2\ *k*\ ´.  Be sure to
+check which form a particular force field uses, and if necessary multiply the
+force constant by 2.
+
+HarmonicAngleForce
+******************
+
+Each harmonic angle is represented by an energy term of the form
+
+
+.. math::
+   E=\frac{1}{2}k{\left(q-{q}_{0}\right)}^{2}
+
+
+where :math:`\theta` is the angle formed by the three particles, :math:`\theta` :sub:`0` is
+the equilibrium angle, and *k* is the force constant.
+
+As with HarmonicBondForce, be aware that some force fields define their harmonic
+angle parameters as *E* = *k*\ ´(\ :math:`\theta`\ -\ :math:`\theta`\ :sub:`0`\ )\ :sup:`2`\ .
+Be sure to check which form a particular force field uses, and if necessary
+multiply the force constant by 2.
+
+PeriodicTorsionForce
+********************
+
+Each torsion is represented by an energy term of the form
+
+
+.. math::
+   E=k\left(1+\text{cos}\left(\mathit{nq}-{q}_{0}\right)\right)
+
+
+where :math:`\theta` is the dihedral angle formed by the four particles, :math:`\theta_0`
+is the equilibrium angle, *n* is the periodicity, and *k* is
+the force constant.
+
+RBTorsionForce
+**************
+
+Each torsion is represented by an energy term of the form
+
+
+.. math::
+   E=\sum _{i=0}^{5}{C}_{i}{\left(\text{cos}f\right)}^{i}
+
+
+where :math:`\phi` is the dihedral angle formed by the four particles and
+*C*\ :sub:`0` through *C*\ :sub:`5` are constant coefficients.
+
+For reason of convention, PeriodicTorsionForce and RBTorsonForce define the
+torsion angle differently. :math:`\theta` is zero when the first and last particles are
+on the *same* side of the bond formed by the middle two particles (the
+*cis* configuration), whereas :math:`\phi` is zero when they are on *opposite*
+sides (the *trans* configuration).  This means that :math:`\theta` = :math:`\phi` - :math:`\pi`.
+
+CMAPTorsionForce
+****************
+
+Each torsion pair is represented by an energy term of the form
+
+
+.. math::
+   E=f\left({q}_{1},{q}_{2}\right)
+
+
+where :math:`\theta_1` and :math:`\theta_2` are the two dihedral angles
+coupled by the term, and *f*\ (\ *x*\ ,\ *y*\ ) is defined by a user supplied
+grid of tabulated values.  A natural cubic spline surface is fit through the
+tabulated values, then evaluated to determine the energy for arbitrary (\ :math:`\theta_1`\ ,
+:math:`\theta_2`\ ) pairs.
+
+NonbondedForce
+**************
+
+.. _lennard-jones-interaction:
+
+Lennard-Jones Interaction
+=========================
+
+The Lennard-Jones interaction between each pair of particles is represented by
+an energy term of the form
+
+
+.. math::
+   E=4e\left({\left(\frac{s}{r}\right)}^{\text{12}}-{\left(\frac{s}{r}\right)}^{6}\right)
+
+
+where *r* is the distance between the two particles, :math:`\sigma` is the distance
+at which the energy equals zero, and :math:`\epsilon` sets the strength of the
+interaction.  If the NonbondedMethod in use is anything other than NoCutoff and
+\ *r* is greater than the cutoff distance, the energy and force are both set
+to zero.  Because the interaction decreases very quickly with distance, the
+cutoff usually has little effect on the accuracy of simulations.
+
+Optionally you can use a switching function to make the energy go smoothly to 0
+at the cutoff distance.  When :math:`r_{switch} < r < r_{cutoff}`\ , the energy is multiplied by
+
+.. math::
+   S=1-{6x}^{5}+15{x}^{4}-10{x}^{3}
+
+
+where :math:`x = (r-r_{switch})/(r_{cutoff}-r_{switch})`. This function decreases smoothly from 1 at
+:math:`r = r_{switch}` to 0 at :math:`r = r_{cutoff}`, and has continuous first and
+second derivatives at both ends
+
+When an exception has been added for a pair of particles, :math:`\sigma` and :math:`\epsilon`
+are the parameters specified by the exception.  Otherwise they are determined
+from the parameters of the individual particles using the Lorentz-Bertelot
+combining rule:
+
+.. math::
+   s=\frac{{s}_{1}+{s}_{2}}{2}
+
+.. math::
+   e=\sqrt{{e}_{1}{e}_{2}}
+
+When using periodic boundary conditions, NonbondedForce can optionally add a
+term (known as a *long range dispersion correction*\ ) to the energy that
+approximately represents the contribution from all interactions beyond the
+cutoff distance:\ :cite:`Shirts2007`\
+
+.. math::
+   {E}_{\text{cor}}=\frac{{8pN}^{2}}{V}\left(\frac{\langle e_{ij}\sigma_{ij}^{12}\rangle}{{9r}_{{c}^{9}}}-\frac{\langle e_{ij}{s}_{ij}^{6}\rangle}{{3r}_{{c}^{3}}}\right)
+
+where *N* is the number of particles in the system, *V* is the volume of
+the periodic box, *r*\ *c* is the cutoff distance, :math:`\sigma`\ *ij* and
+:math:`\epsilon`\ *ij* are the interaction parameters between particle *i* and
+particle *j*\ , and :math:`\langle \text{...} \rangle` represents an average over all pairs of particles in
+the system.  When a switching function is in use, there is also a contribution
+to the correction that depends on the integral of *E*\ ·(1-\ *S*\ ) over the
+switching interval.  The long range dispersion correction is primarily useful
+when running simulations at constant pressure, since it produces a more accurate
+variation in system energy with respect to volume.
+
+The Lennard-Jones interaction is often parameterized in two other equivalent
+ways.  One is
+
+
+
+.. math::
+   E=e\left({\left(\frac{{r}_{\text{min}}}{r}\right)}^{\text{12}}-2{\left(\frac{{r}_{\text{min}}}{r}\right)}^{6}\right)
+
+
+where :math:`r_{min}` (sometimes known as :math:`d_{min}`; this is not a
+radius) is the center-to-center distance at which the energy is minimum.  It is
+related to :math:`\sigma` by
+
+
+
+.. math::
+   s=\frac{{r}_{\text{min}}}{{2}^{1/6}}
+
+
+In turn, :math:`r_{min}` is related to the van der Waals radius by :math:`r_{min} = 2r_{vdw}`\ .
+
+Another common form is
+
+
+
+.. math::
+   E=\frac{A}{{r}^{\text{12}}}-\frac{B}{{r}^{6}}
+
+
+The coefficients A and B are related to :math:`\sigma` and :math:`\epsilon` by
+
+
+
+.. math::
+   s={\left(\frac{A}{B}\right)}^{1/6}
+
+
+
+.. math::
+   e=\frac{{B}^{2}}{4A}
+
+
+Coulomb Interaction Without Cutoff
+==================================
+
+The form of the Coulomb interaction between each pair of particles depends on
+the NonbondedMethod in use.  For NoCutoff, it is given by
+
+
+.. math::
+   E=\frac{1}{4{\pi}{\epsilon}_{0}}\frac{{q}_{1}{q}_{2}}{r}
+
+
+where *q*\ :sub:`1` and *q*\ :sub:`2` are the charges of the two
+particles, and *r* is the distance between them.
+
+Coulomb Interaction With Cutoff
+===============================
+
+For CutoffNonPeriodic or CutoffPeriodic, it is modified using the reaction field
+approximation.  This is derived by assuming everything beyond the cutoff
+distance is a solvent with a uniform dielectric constant.\ :cite:`Tironi1995`
+
+
+.. math::
+   E=\frac{{q}_{1}{q}_{2}}{4{\text{pe}}_{0}}\left(\frac{1}{r}+{k}_{\text{rf}}{r}^{2}-{c}_{\text{rf}}\right)
+
+
+.. math::
+   {k}_{\text{rf}}=\left(\frac{1}{{r}_{{\text{cutoff}}^{3}}}\right)\left(\frac{{\epsilon}_{\text{solvent}}-1}{2{\epsilon}_{\text{solvent}}+1}\right)
+
+
+.. math::
+   {c}_{\text{rf}}=\left(\frac{1}{{r}_{\text{cutoff}}}\right)\left(\frac{3{\epsilon}_{\text{solvent}}}{2{\epsilon}_{\text{solvent}}+1}\right)
+
+
+where *r*\ *cutoff* is the cutoff distance and :math:`\epsilon_{solvent}` is
+the dielectric constant of the solvent.  In the limit :math:`\epsilon_{solvent}` >> 1,
+this causes the force to go to zero at the cutoff.
+
+Coulomb Interaction With Ewald Summation
+========================================
+
+For Ewald, the total Coulomb energy is the sum of three terms: the *direct
+space sum*\ , the *reciprocal space sum*\ , and the *self-energy term*\ .\
+:cite:`Toukmaji1996`
+
+
+.. math::
+   E=E_{\text{dir}}+{E}_{\text{rec}}+{E}_{\text{self}}
+
+
+.. math::
+   E_{\text{dir}}=\frac{1}{2}\sum _{i,j}\sum _{n}{q}_{i}{q}_{j}\frac{\text{erfc}\left({\mathit{\alpha r}}_{ij,n}\right)}{{r}_{ij,n}}
+
+
+.. math::
+   E_{\text{rec}}=\frac{1}{2{\pi}V}\sum _{i,j}q_i q_j\sum _{\mathbf{k}{\neq}0}\frac{\text{exp}(-(\pi \mathbf{k}/\alpha)^2+2\pi i \mathbf{k} \cdot (\mathbf{r}_{i}-\mathbf{r}_{j}))}{\mathbf{m}^2}
+
+
+.. math::
+   E_{\text{self}}=-\frac{\alpha}{\sqrt{p}}\sum _{i}{q}_{{i}^{2}}
+
+
+In the above expressions, the indices *i* and *j* run over all
+particles, **n** = (n\ :sub:`1`\ , n\ :sub:`2`\ , n\ :sub:`3`\ ) runs over
+all copies of the periodic cell, and **k** = (k\ :sub:`1`\ , k\ :sub:`2`\ ,
+k\ :sub:`3`\ ) runs over all integer wave vectors from (-k\ :sub:`max`\ ,
+-k\ :sub:`max`\ , -k\ :sub:`max`\ ) to (k\ :sub:`max`\ , k\ :sub:`max`\ ,
+k\ :sub:`max`\ ) excluding (0, 0, 0).  :math:`\mathbf{r}_i` is the position of
+particle i , while :math:`r_{ij}` is the distance between particles *i* and *j*\ .
+*V* is the volume of the periodic cell, and :math:`\alpha` is an internal parameter.
+
+In the direct space sum, all pairs that are further apart than the cutoff
+distance are ignored.  Because the cutoff is required to be less than half the
+width of the periodic cell, the number of terms in this sum is never greater
+than the square of the number of particles.
+
+The error made by applying the direct space cutoff depends on the magnitude of
+:math:`\text{erfc}({\alpha}r_{cutoff})`\ .  Similarly, the error made in the reciprocal space
+sum by ignoring wave numbers beyond k\ :sub:`max` depends on the magnitude
+of :math:`\text{exp}(-({\pi}k_{max}/{\alpha})^2`\ ).  By changing :math:`\alpha`, one can decrease the
+error in either term while increasing the error in the other one.
+
+Instead of having the user specify :math:`\alpha` and -k\ :sub:`max`\ , NonbondedForce
+instead asks the user to choose an error tolerance :math:`\delta`.  It then calculates :math:`\alpha` as
+
+
+.. math::
+   \alpha =\sqrt{-\text{log}\left(2{\delta}\right)}/{r}_{\text{cutoff}}
+
+
+Finally, it estimates the error in the reciprocal space sum as
+
+
+.. math::
+   \text{error}=\frac{k_{\text{max}}\sqrt{d\alpha}}{20}\text{exp}(-(\pi k_\text{max}/d\alpha)^2)
+
+
+where *d* is the width of the periodic box, and selects the smallest value
+for k\ :sub:`max` which gives *error* < :math:`\delta`\ .  (If the box is not square,
+k\ :sub:`max` will have a different value along each axis.)
+
+This means that the accuracy of the calculation is determined by :math:`\delta`\ . 
+:math:`r_{cutoff}` does not affect the accuracy of the result, but does affect the speed
+of the calculation by changing the relative costs of the direct space and
+reciprocal space sums.  You therefore should test different cutoffs to find the
+value that gives best performance; this will in general vary both with the size
+of the system and with the Platform being used for the calculation.  When the
+optimal cutoff is used for every simulation, the overall cost of evaluating the
+nonbonded forces scales as O(N\ :sup:`3/2`\ ) in the number of particles.
+
+Be aware that the error tolerance :math:`\delta` is not a rigorous upper bound on the errors.
+The formulas given above are empirically found to produce average relative
+errors in the forces that are less than or similar to :math:`\delta` across a variety of
+systems and parameter values, but no guarantees are made.  It is important to
+validate your own simulations, and identify parameter values that produce
+acceptable accuracy for each system.
+
+Coulomb Interaction With Particle Mesh Ewald
+============================================
+
+The Particle Mesh Ewald (PME) algorithm\ :cite:`Essmann1995` is similar to
+Ewald summation, but instead of calculating the reciprocal space sum directly,
+it first distributes the particle charges onto nodes of a rectangular mesh using
+5th order B-splines.  By using a Fast Fourier Transform, the sum can then be
+computed very quickly, giving performance that scales as O(N log N) in the
+number of particles (assuming the volume of the periodic box is proportional to
+the number of particles).
+
+As with Ewald summation, the user specifies the direct space cutoff :math:`r_{cutoff}`
+and error tolerance :math:`\delta`\ .  NonbondedForce then selects :math:`\alpha` as
+
+
+.. math::
+   \alpha =\sqrt{-\text{log}\left(2d\right)}/{r}_{cutoff}
+
+
+and the number of nodes in the mesh along each dimension as
+
+
+.. math::
+   {n}_{\text{mesh}}=\frac{2\alpha d}{{3d}^{1/5}}
+
+
+where *d* is the width of the periodic box along that dimension.  Alternatively,
+the user may choose to explicitly set values for these parameters.  (Note that
+some Platforms may choose to use a larger value of :math:`n_\text{mesh}` than that
+given by this equation.  For example, some FFT implementations require the mesh
+size to be a multiple of certain small prime numbers, so a Platform might round
+it up to the nearest permitted value.  It is guaranteed that :math:`n_\text{mesh}`
+will never be smaller than the value given above.)
+
+The comments in the previous section regarding the interpretation of :math:`\delta` for Ewald
+summation also apply to PME, but even more so.  The behavior of the error for
+PME is more complicated than for simple Ewald summation, and while the above
+formulas will usually produce an average relative error in the forces less than
+or similar to :math:`\delta`\ , this is not a rigorous guarantee.  PME is also more sensitive
+to numerical round-off error than Ewald summation.  For Platforms that do
+calculations in single precision, making :math:`\delta` too small (typically below about
+5·10\ :sup:`-5`\ ) can actually cause the error to increase.
+
+.. _gbsaobcforce:
+
+GBSAOBCForce
+************
+
+
+Generalized Born Term
+=====================
+
+GBSAOBCForce consists of two energy terms: a Generalized Born Approximation term
+to represent the electrostatic interaction between the solute and solvent, and a
+surface area term to represent the free energy cost of solvating a neutral
+molecule.  The Generalized Born energy is given by\ :cite:`Onufriev2004`
+
+
+.. math::
+   E\text{=-}\frac{1}{2}\left(\frac{1}{\epsilon_{\text{solute}}}-\frac{1}{\epsilon_{\text{solvent}}}\right)\sum _{i,j}\frac{{q}_{i}{q}_{j}}{{f}_{\text{GB}}\left({d}_{ij},{R}_{i},{R}_{j}\right)}
+
+
+where the indices *i* and *j* run over all particles, :math:`\epsilon_\text{solute}`
+and :math:`\epsilon_\text{solvent}` are the dielectric constants of the solute and solvent
+respectively, :math:`q_i` is the charge of particle *i*\ , and :math:`d_{ij}` is the distance
+between particles *i* and *j*\ .  :math:`f_\text{GB}(d_{ij}, R_i, R_j)` is defined as
+
+
+.. math::
+   {f}_{\text{GB}}\left({d}_{ij},{R}_{i},{R}_{j}\right)={\left[{d}_{{ij}^{2}}+{R}_{i}{R}_{j}\text{exp}\left(\frac{-{d}_{ij}}{{4R}_{i}{R}_{j}}\right)\right]}^{1/2}
+
+
+:math:`R_i` is the Born radius of particle *i*\ , which calculated as
+
+
+.. math::
+   {R}_{i}=\frac{1}{{\rho}_{{i}^{-1}}-{\rho}_{{i}^{-1}}\text{tanh}\left(\alpha \Psi_{i}-{\beta \Psi}_{{i}^{2}}+{\gamma \Psi}_{{i}^{3}}\right)}
+
+
+where :math:`\alpha`, :math:`\beta`, and :math:`\gamma` are the GB\ :sup:`OBC`\ II parameters :math:`\alpha` = 1, :math:`\beta` = 0.8, and :math:`\gamma` =
+4.85.  :math:`\rho_i` is the adjusted atomic radius of particle *i*\ , which
+is calculated from the atomic radius :math:`r_i` as :math:`\rho_i = r_i-0.009` nm.
+:math:`\Psi_i` is calculated as an integral over the van der Waals
+spheres of all particles outside particle *i*\ :
+
+
+.. math::
+   \Psi_{i}=\frac{{\rho }_{i}}{4p}{\int }_{\text{VDW}}q\left(\mid r\mid -{\rho }_{i}\right)\frac{1}{{\mid r\mid }^{4}}{d}^{3}r
+
+
+where :math:`\theta`\ (\ *r*\ ) is a step function that excludes the interior of particle
+\ *i* from the integral.
+
+Surface Area Term
+=================
+
+The surface area term is given by\ :cite:`Schaefer1998`\ :cite:`Ponder`
+
+
+.. math::
+   E=4\pi \cdot 2\text{.}\text{26}\sum _{i}{\left({r}_{i}+{r}_{\text{solvent}}\right)}^{2}{\left(\frac{{r}_{i}}{{R}_{i}}\right)}^{6}
+
+
+where :math:`r_i` is the atomic radius of particle *i*\ , :math:`r_i` is
+its Born radius, and :math:`r_\text{solvent}` is the solvent radius, which is taken
+to be 0.14 nm.
+
+
+
+GBVIForce
+*********
+
+The GBVI force is an implicit solvent force based on an algorithm developed by
+Paul Labute.\ :cite:`Labute2008` The GBVI force is currently undergoing
+testing to validate that it is correctly implementing the algorithm. The GBVI
+energy is given by Equation 2 of the referenced paper:
+
+
+.. math::
+   E=-\frac{1}{2}\left(\frac{1}{{\epsilon }_{\text{solute}}}-\frac{1}{{\epsilon }_{\text{solvent}}}\right)\sum _{i,j}\frac{{q}_{i}{q}_{j}}{{f}_{\text{GB}}\left({d}_{ij},{R}_{i},{R}_{j}\right)}+\sum _{i}^{n}{\gamma }_{i}{\left(\frac{{r}_{i}}{{R}_{i}}\right)}^{3}
+
+
+where the indices *i* and *j* run over all n particles, :math:`\epsilon_\text{solute}`
+and :math:`\epsilon_\text{solvent}` are the dielectric constants of the solute
+and solvent respectively, :math:`q_i` is the charge of particle *i*\ ,
+:math:`d_{ij}` is the distance between particles *i* and *j*\ , :math:`r_i`
+are the input particle radii, and the :math:`\gamma_i` are adjustable
+parameters. :math:`f_\text{GB}(d_{ij}, R_i, R_j)` is
+defined as above (Section :ref:`gbsaobcforce`) for the GBSAOBCForce. The Born radii, :math:`R_i`, are defined by the equation
+
+
+.. math::
+   {R}_{i}={\left[{r}_{i}^{-3}-\sum _{j}^{n}V\left({d}_{ij},{r}_{i},{S}_{j}\right)\right]}^{-\frac{1}{3}}
+
+
+where V(d,r,S) is given by
+
+
+.. math::
+   V\left(d,r,S\right)=\left\{\begin{array}{ccc}L\left(d,x,S\right){\mid }_{x=\text{max}\left(r,d-S\right)}^{x=d+S}& \mid r-S\mid <d& \\ 0& 0\le d\le r-S& \\ L\left(d,x,S\right){\mid }_{x=d-S}^{x=d+S}& 0\le d\le S-r& \end{array}\right\}
+
+
+and
+
+
+.. math::
+   L\left(d,x,S\right)=\frac{3}{2}\left[\frac{1}{4{dx}^{2}}-\frac{1}{{3x}^{3}}+\frac{{d}^{2}-{S}^{2}}{8{dx}^{4}}\right]
+
+
+The S\ :sub:`i` are derived from the covalent topology of the solute:
+
+
+.. math::
+   {S}_{i}=0\text{.}\text{95}\cdot\text{max}\left\{0,{\nu }_{i}^{}\right\}
+
+
+
+.. math::
+   {\nu}_{i}={r}_{i}^{3}-\frac{1}{8}\sum _{j}{a}_{ij}^{2}\left({3r}_{i}-{a}_{ij}\right)+{a}_{ji}^{2}\left({3r}_{j}-{a}_{ji}\right)
+
+
+and
+
+
+.. math::
+   {a}_{ij}=\frac{{r}_{j}^{2}-({r}_{i}-{d}_{ij}{)}^{2}}{{2d}_{ij}}
+
+
+where :math:`d_{ij}` is the fixed covalent bond length between particles *i* and
+*j*\ , and the sum in the calculation of the :math:`\nu_i` is over the particles *j*
+covalently bonded to particle *i*.
+
+AndersenThermostat
+******************
+
+AndersenThermostat couples the system to a heat bath by randomly selecting a
+subset of particles at the start of each time step, then setting their
+velocities to new values chosen from a Boltzmann distribution.  This represents
+the effect of random collisions between particles in the system and particles in
+the heat bath.\ :cite:`Andersen1980`
+
+The probability that a given particle will experience a collision in a given
+time step is
+
+
+.. math::
+   P=1-{e}^{-f\Delta t}
+
+
+where *f* is the collision frequency and :math:`\Delta t` is the step size.
+Each component of its velocity is then set to
+
+
+.. math::
+   {v}_{i}=\sqrt{\frac{{k}_{B}T}{m}}R
+
+
+where *T* is the thermostat temperature, *m* is the particle mass, and
+*R* is a random number chosen from a normal distribution with mean of zero and
+variance of one.
+
+MonteCarloBarostat
+******************
+
+MonteCarloBarostat models the effect of constant pressure by allowing the size
+of the periodic box to vary with time.\ :cite:`Chow1995`\ :cite:`Aqvist2004`
+At regular intervals, it attempts a Monte Carlo step by scaling the box vectors
+and the coordinates of each molecule’s center by a factor *s*\ .  The scale
+factor *s* is chosen to change the volume of the periodic box from *V*
+to *V*\ +\ :math:`\delta`\ *V*\ :
+
+
+.. math::
+   s={\left(\frac{V+\delta V}{V}\right)}^{1/3}
+
+
+The change in volume is chosen randomly as
+
+
+.. math::
+   \delta V=A\cdot r
+
+
+where *A* is a scale factor and *r* is a random number uniformly
+distributed between -1 and 1.  The step is accepted or rejected based on the
+weight function
+
+
+.. math::
+   \Delta W=\Delta E+P\delta V-Nk_{B}T \text{ln}\left(\frac{V+\delta V}{V}\right)
+
+
+where :math:`\Delta E` is the change in potential energy resulting from the step,
+\ *P* is the system pressure, *N* is the number of molecules in the
+system, :math:`k_B` is Boltzmann’s constant, and *T* is the system
+temperature.  In particular, if :math:`\Delta W\le 0` the step is always accepted.
+If :math:`\Delta W > 0`\ , the step is accepted with probability
+:math:`\text{exp}(-\Delta W/k_B T)`\ .
+
+This algorithm tends to be more efficient than deterministic barostats such as
+the Berendsen or Parrinello-Rahman algorithms, since it does not require an
+expensive virial calculation at every time step.  Each Monte Carlo step involves
+two energy evaluations, but this can be done much less often than every time
+step.  It also does not require you to specify the compressibility of the
+system, which usually is not known in advance.
+
+The scale factor *A* that determines the size of the steps is chosen
+automatically to produce an acceptance rate of approximately 50%.  It is
+initially set to 1% of the periodic box volume.  The acceptance rate is then
+monitored, and if it varies too much from 50% then *A* is modified
+accordingly.
+
+Each Monte Carlo step modifies particle positions by scaling the centroid of
+each molecule, then applying the resulting displacement to each particle in the
+molecule.  This ensures that each molecule is translated as a unit, so bond
+lengths and constrained distances are unaffected.
+
+MonteCarloBarostat assumes the simulation is being run at constant temperature
+as well as pressure, and the simulation temperature affects the step acceptance
+probability.  It does not itself perform temperature regulation, however.  You
+must use another mechanism along with it to maintain the temperature, such as
+LangevinIntegrator or AndersenThermostat.
+
+MonteCarloAnisotropicBarostat
+*****************************
+
+MonteCarloAnisotropicBarostat is very similar to MonteCarloBarostat, but instead
+of scaling the entire periodic box uniformly, each Monte Carlo step scales only
+one axis of the box.  This allows the box to change shape, and is useful for
+simulating anisotropic systems whose compressibility is different along
+different directions.  It also allows a different pressure to be specified for
+each axis.
+
+You can specify that the barostat should only be applied to certain axes of the
+box, keeping the other axes fixed.  This is useful, for example, when doing
+constant surface area simulations of membranes.
+
+CMMotionRemover
+***************
+
+CMMotionRemover prevents the system from drifting in space by periodically
+removing all center of mass motion.  At the start of every *n*\ ’th time step
+(where *n* is set by the user), it calculates the total center of mass
+velocity of the system:
+
+
+.. math::
+   \mathbf{v}_\text{CM}=\frac{\sum _{i}{m}_{i}\mathbf{v}_{i}}{\sum _{i}{m}_{i}}
+
+
+where :math:`m_i` and :math:`\mathbf{v}_i` are the mass and velocity of particle
+\ *i*\ .  It then subtracts :math:`\mathbf{v}_\text{CM}` from the velocity of every
+particle.
+
+Custom Forces
+#############
+
+In addition to the standard forces described in the previous chapter, OpenMM
+provides a number of “custom” force classes.   These classes provide detailed
+control over the mathematical form of the force by allowing the user to specify
+one or more arbitrary algebraic expressions.  The details of how to write these
+custom expressions are described in section :ref:`writing-custom-expressions`\ .
+
+CustomBondForce
+***************
+
+CustomBondForce is similar to HarmonicBondForce in that it represents an
+interaction between certain pairs of particles as a function of the distance
+between them, but it allows the precise form of the interaction to be specified
+by the user.  That is, the interaction energy of each bond is given by
+
+
+.. math::
+   E=f\left(r\right)
+
+
+where *f*\ (\ *r*\ ) is a user defined mathematical expression.
+
+In addition to depending on the inter-particle distance *r*\ , the energy may
+also depend on an arbitrary set of user defined parameters.  Parameters may be
+specified in two ways:
+
+* Global parameters have a single, fixed value.
+* Per-bond parameters are defined by specifying a value for each bond.
+
+
+CustomAngleForce
+****************
+
+CustomAngleForce is similar to HarmonicAngleForce in that it represents an
+interaction between sets of three particles as a function of the angle between
+them, but it allows the precise form of the interaction to be specified by the
+user.  That is, the interaction energy of each angle is given by
+
+
+.. math::
+   E=f\left(q\right)
+
+
+where *f*\ (\ :math:`\theta`\ ) is a user defined mathematical expression.
+
+In addition to depending on the angle :math:`\theta`\ , the energy may also depend on an
+arbitrary set of user defined parameters.  Parameters may be specified in two
+ways:
+
+* Global parameters have a single, fixed value.
+* Per-angle parameters are defined by specifying a value for each angle.
+
+
+CustomTorsionForce
+******************
+
+CustomTorsionForce is similar to PeriodicTorsionForce in that it represents an
+interaction between sets of four particles as a function of the dihedral angle
+between them, but it allows the precise form of the interaction to be specified
+by the user.  That is, the interaction energy of each angle is given by
+
+
+.. math::
+   E=f\left(q\right)
+
+
+where *f*\ (\ :math:`\theta`\ ) is a user defined mathematical expression.  The angle
+:math:`\theta` is guaranteed to be in the range [-π, π].  Like PeriodicTorsionForce, it
+is defined to be zero when the first and last particles are on the same side of
+the bond formed by the middle two particles (the *cis* configuration).
+
+In addition to depending on the angle :math:`\theta`\ , the energy may also depend on an
+arbitrary set of user defined parameters.  Parameters may be specified in two
+ways:
+
+* Global parameters have a single, fixed value.
+* Per-torsion parameters are defined by specifying a value for each torsion.
+
+
+.. _customnonbondedforce:
+
+CustomNonbondedForce
+********************
+
+CustomNonbondedForce is similar to NonbondedForce in that it represents a
+pairwise interaction between all particles in the System, but it allows the
+precise form of the interaction to be specified by the user.  That is, the
+interaction energy between each pair of particles is given by
+
+
+.. math::
+   E=f\left(r\right)
+
+
+where *f*\ (\ *r*\ ) is a user defined mathematical expression.
+
+In addition to depending on the inter-particle distance *r*\ , the energy may
+also depend on an arbitrary set of user defined parameters.  Parameters may be
+specified in two ways:
+
+* Global parameters have a single, fixed value.
+* Per-particle parameters are defined by specifying a value for each particle.
+
+
+A CustomNonbondedForce can optionally be restricted to only a subset of particle
+pairs in the System.  This is done by defining “interaction groups”.  See the
+API documentation for details.
+
+When using a cutoff, a switching function can optionally be applied to make the
+energy go smoothly to 0 at the cutoff distance.  When
+:math:`r_{switch} < r < r_{cutoff}`\ , the energy is multiplied by
+
+
+
+.. math::
+   S=1-{6x}^{5}+15{x}^{4}-10{x}^{3}
+
+
+where :math:`x=(r-r_{switch})/(r_{cutoff}-r_{switch})`\ .
+This function decreases smoothly from 1 at :math:`r=r_{switch}`
+to 0 at :math:`r=r_{cutoff}`\ , and has continuous first and
+second derivatives at both ends.
+
+When using periodic boundary conditions, CustomNonbondedForce can optionally add
+a term (known as a *long range truncation correction*\ ) to the energy that
+approximately represents the contribution from all interactions beyond the
+cutoff distance:\ :cite:`Shirts2007`
+
+
+.. math::
+   {E}_{cor}=\frac{2\pi N^2}{V}\langle\underset{{r}_{cutoff}}{\overset{\infty}{\int }}E\left(r\right)r^{2}dr\rangle
+
+
+where *N* is the number of particles in the system, *V* is the volume of
+the periodic box, and :math:`\langle \text{...} \rangle` represents an average over all pairs of particles in
+the system.  When a switching function is in use, there is an additional
+contribution to the correction given by
+
+
+.. math::
+   E_{cor}^\prime=\frac{2\pi N^2}{V}\langle\underset{{r}_{switch}}{\overset{{r}_{cutoff}}{\int }}E\left(r\right)\left(1-S\left(r\right)\right)r^{2}dr\rangle
+
+
+The long range dispersion correction is primarily useful when running
+simulations at constant pressure, since it produces a more accurate variation in
+system energy with respect to volume.
+
+CustomExternalForce
+*******************
+
+CustomExternalForce represents a force that is applied independently to each
+particle as a function of its position.   That is, the energy of each particle
+is given by
+
+
+.. math::
+   E=f\left(x,y,z\right)
+
+
+where *f*\ (\ *x*\ , *y*\ , *z*\ ) is a user defined mathematical
+expression.
+
+In addition to depending on the particle’s (\ *x*\ , *y*\ , *z*\ )
+coordinates, the energy may also depend on an arbitrary set of user defined
+parameters.  Parameters may be specified in two ways:
+
+* Global parameters have a single, fixed value.
+* Per-particle parameters are defined by specifying a value for each particle.
+
+
+CustomCompoundBondForce
+***********************
+
+CustomCompoundBondForce supports a wide variety of bonded interactions.  It
+defines a “bond” as a single energy term that depends on the positions of a
+fixed set of particles.  The number of particles involved in a bond, and how the
+energy depends on their positions, is configurable.  It may depend on the
+positions of individual particles, the distances between pairs of particles, the
+angles formed by sets of three particles, and the dihedral angles formed by sets
+of four particles.  That is, the interaction energy of each bond is given by
+
+
+.. math::
+   E=f\left(\left\{{x}_{i}\right\},\left\{{r}_{i}\right\},\left\{{q}_{i}\right\},\left\{{f}_{i}\right\}\right)
+
+
+where *f*\ (\ *...*\ ) is a user defined mathematical expression.  It may
+depend on an arbitrary set of positions {\ :math:`x_i`\ }, distances {\ :math:`r_i`\ },
+angles {\ :math:`\theta_i`\ }, and dihedral angles {\ :math:`\phi_i`\ }.
+
+Each distance, angle, or dihedral is defined by specifying a sequence of
+particles chosen from among the particles that make up the bond.  A distance
+variable is defined by two particles, and equals the distance between them.  An
+angle variable is defined by three particles, and equals the angle between them.
+A dihedral variable is defined by four particles, and equals the angle between
+the first and last particles about the axis formed by the middle two particles.
+It is equal to zero when the first and last particles are on the same side of
+the axis.
+
+In addition to depending on positions, distances, angles, and dihedrals, the
+energy may also depend on an arbitrary set of user defined parameters.
+Parameters may be specified in two ways:
+
+* Global parameters have a single, fixed value.
+* Per-bond parameters are defined by specifying a value for each bond.
+
+
+CustomGBForce
+*************
+
+CustomGBForce implements complex, multiple stage nonbonded interactions between
+particles.  It is designed primarily for implementing Generalized Born implicit
+solvation models, although it is not strictly limited to that purpose.
+
+The interaction is specified as a series of computations, each defined by an
+arbitrary algebraic expression.  These computations consist of some number of
+per-particle *computed values*\ , followed by one or more *energy terms*\ .
+A computed value is a scalar value that is computed for each particle in the
+system.  It may depend on an arbitrary set of global and per-particle
+parameters, and well as on other computed values that have been calculated
+before it.  Once all computed values have been calculated, the energy terms and
+their derivatives are evaluated to determine the system energy and particle
+forces.  The energy terms may depend on global parameters, per-particle
+parameters, and per-particle computed values.
+
+Computed values can be calculated in two different ways:
+
+* *Single particle* values are calculated by evaluating a user defined
+  expression for each particle:
+
+.. math::
+  {value}_{i}=f\left(\text{.}\text{.}\text{.}\right)
+..
+
+  where *f*\ (...) may depend only on properties of particle *i* (its
+  coordinates and parameters, as well as other computed values that have already
+  been calculated).
+
+* *Particle pair* values are calculated as a sum over pairs of particles:
+
+.. math::
+  {value}_{i}=\sum _{j\ne i}f\left(r,\text{...}\right)
+..
+
+  where the sum is over all other particles in the System, and *f*\ (\ *r*\ ,
+  ...) is a function of the distance *r* between particles *i* and *j*\,
+  as well as their parameters and computed values.
+
+Energy terms may similarly be calculated per-particle or per-particle-pair.
+
+* *Single particle* energy terms are calculated by evaluating a user
+  defined expression for each particle:
+
+.. math::
+  E=f\left(\text{.}\text{.}\text{.}\right)
+..
+
+  where *f*\ (...) may depend only on properties of that particle (its
+  coordinates, parameters, and computed values).
+
+* *Particle pair* energy terms are calculated by evaluating a user defined
+  expression once for every pair of particles in the System:
+
+.. math::
+  E=\sum _{i,j}f\left(r,\text{.}\text{.}\text{.}\right)
+..
+
+  where the sum is over all particle pairs *i* *< j*\ , and *f*\ (\ *r*\ ,
+  ...) is a function of the distance *r* between particles *i* and *j*\,
+  as well as their parameters and computed values.
+
+Note that energy terms are assumed to be symmetric with respect to the two
+interacting particles, and therefore are evaluated only once per pair.  In
+contrast, expressions for computed values need not be symmetric and therefore
+are calculated twice for each pair: once when calculating the value for the
+first particle, and again when calculating the value for the second particle.
+
+Be aware that, although this class is extremely general in the computations it
+can define, particular Platforms may only support more restricted types of
+computations.  In particular, all currently existing Platforms require that the
+first computed value *must* be a particle pair computation, and all computed
+values after the first *must* be single particle computations. This is
+sufficient for most Generalized Born models, but might not permit some other
+types of calculations to be implemented.
+
+CustomHbondForce
+****************
+
+CustomHbondForce supports a wide variety of energy functions used to represent
+hydrogen bonding.  It computes interactions between "donor" particle groups and
+"acceptor" particle groups, where each group may include up to three particles.
+Typically a donor group consists of a hydrogen atom and the atoms it is bonded
+to, and an acceptor group consists of a negatively charged atom and the atoms it
+is bonded to.  The interaction energy between each donor group and each acceptor
+group is given by
+
+
+.. math::
+   E=f\left(\left\{{r}_{i}\right\},\left\{{q}_{i}\right\},\left\{{f}_{i}\right\}\right)
+
+
+where *f*\ (\ *...*\ ) is a user defined mathematical expression.  It may
+depend on an arbitrary set of distances {\ :math:`r_i`\ }, angles {\ :math:`\theta_i`\ },
+and dihedral angles {\ :math:`\phi_i`\ }.
+
+Each distance, angle, or dihedral is defined by specifying a sequence of
+particles chosen from the interacting donor and acceptor groups (up to six atoms
+to choose from, since each group may contain up to three atoms).  A distance
+variable is defined by two particles, and equals the distance between them.  An
+angle variable is defined by three particles, and equals the angle between them.
+A dihedral variable is defined by four particles, and equals the angle between
+the first and last particles about the axis formed by the middle two particles.
+It is equal to zero when the first and last particles are on the same side of
+the axis.
+
+In addition to depending on distances, angles, and dihedrals, the energy may
+also depend on an arbitrary set of user defined parameters.  Parameters may be
+specified in three ways:
+
+* Global parameters have a single, fixed value.
+* Per-donor parameters are defined by specifying a value for each donor group.
+* Per-acceptor parameters are defined by specifying a value for each acceptor group.
+
+
+.. _writing-custom-expressions:
+
+Writing Custom Expressions
+**************************
+
+The custom forces described in this chapter involve user defined algebraic
+expressions.  These expressions are specified as character strings, and may
+involve a variety of standard operators and mathematical functions.
+
+The following operators are supported: + (add), - (subtract), * (multiply), /
+(divide), and ^ (power).  Parentheses “(“and “)” may be used for grouping.
+
+The following standard functions are supported: sqrt, exp, log, sin, cos, sec,
+csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, erf, erfc, min, max, abs,
+step, delta. step(x) = 0 if x < 0, 1 otherwise.  delta(x) = 1 if x is 0, 0
+otherwise.  Some custom forces allow additional functions to be defined from
+tabulated values.
+
+Numbers may be given in either decimal or exponential form.  All of the
+following are valid numbers: 5, -3.1, 1e6, and 3.12e-2.
+
+The variables that may appear in expressions are specified in the API
+documentation for each force class.  In addition, an expression may be followed
+by definitions for intermediate values that appear in the expression.  A
+semicolon “;” is used as a delimiter between value definitions.  For example,
+the expression
+::
+
+    a^2+a*b+b^2; a=a1+a2; b=b1+b2
+
+is exactly equivalent to
+::
+
+    (a1+a2)^2+(a1+a2)*(b1+b2)+(b1+b2)^2
+
+The definition of an intermediate value may itself involve other intermediate
+values.  All uses of a value must appear *before* that value’s definition.
+
+Integrators
+###########
+
+
+VerletIntegrator
+****************
+
+VerletIntegrator implements the leap-frog Verlet integration method.  The
+positions and velocities stored in the context are offset from each other by
+half a time step.  In each step, they are updated as follows:
+
+
+.. math::
+   \mathbf{v}_{i}(t+\Delta t/2)=\mathbf{v}_{i}(t-\Delta t/2)+\mathbf{f}_{i}(t)\Delta t/{m}_{i}
+
+
+.. math::
+   \mathbf{r}_{i}(t+\Delta t)=\mathbf{r}_{i}(t)+\mathbf{v}_{i}(t+\Delta t/2)\Delta t
+
+
+where :math:`\mathbf{v}_i` is the velocity of particle *i*\ , :math:`\mathbf{r}_i` is
+its position, :math:`\mathbf{f}_i` is the force acting on it, :math:`m_i` is its
+mass, and :math:`\Delta t` is the time step.
+
+Because the positions are always half a time step later than the velocities,
+care must be used when calculating the energy of the system.  In particular, the
+potential energy and kinetic energy in a State correspond to different times,
+and you cannot simply add them to get the total energy of the system.  Instead,
+it is better to retrieve States after two successive time steps, calculate the
+on-step velocities as
+
+
+.. math::
+   \mathbf{v}_{i}(t)=\frac{\mathbf{v}_{i}\left(t-\Delta t/2\right)+\mathbf{v}_{i}\left(t+\Delta t/2\right)}{2}
+
+
+then use those velocities to calculate the kinetic energy at time *t*\ .
+
+LangevinIntegator
+*****************
+
+LangevinIntegator simulates a system in contact with a heat bath by integrating
+the Langevin equation of motion:
+
+
+.. math::
+   m_i\frac{d\mathbf{v}_i}{dt}=\mathbf{f}_i-\gamma m_i \mathbf{v}_i+\mathbf{R}_i
+
+
+where :math:`\mathbf{v}_i` is the velocity of particle *i*\ , :math:`\mathbf{f}_i` is
+the force acting on it, :math:`m_i` is its mass, :math:`\gamma` is the friction
+coefficient, and :math:`\mathbf{R}_i` is an uncorrelated random force whose
+components are chosen from a normal distribution with mean zero and variance
+:math:`2m_i \gamma k_B T`\ , where *T* is the temperature of
+the heat bath.
+
+The integration is done using a leap-frog method similar to VerletIntegrator.
+:cite:`Izaguirre2010` The same comments about the offset between positions and
+velocities apply to this integrator as to that one.
+
+BrownianIntegrator
+******************
+
+BrownianIntegrator simulates a system in contact with a heat bath by integrating
+the Brownian equation of motion:
+
+
+.. math::
+   \frac{d\mathbf{r}_i}{dt}=\frac{1}{\gamma m_i}\mathbf{f}_i+\mathbf{R}_i
+
+
+where :math:`\mathbf{r}_i` is the position of particle *i*\ , :math:`\mathbf{f}_i` is
+the force acting on it, :math:`\gamma` is the friction coefficient, and :math:`\mathbf{R}_i`
+is an uncorrelated random force whose components are chosen from a normal
+distribution with mean zero and variance :math:`2 k_B T/m_i  \gamma`,
+where *T* is the temperature of the heat bath.
+
+The Brownian equation of motion is derived from the Langevin equation of motion
+in the limit of large :math:`\gamma`\ .  In that case, the velocity of a particle is
+determined entirely by the instantaneous force acting on it, and kinetic energy
+ceases to have much meaning, since it disappears as soon as the applied force is
+removed.
+
+
+VariableVerletIntegrator
+************************
+
+This is very similar to VerletIntegrator, but instead of using the same step
+size for every time step, it continuously adjusts the step size to keep the
+integration error below a user specified tolerance.  It compares the positions
+generated by Verlet integration with those that would be generated by an
+explicit Euler integrator, and takes the difference between them as an estimate
+of the integration error:
+
+
+.. math::
+   error={\left(\Delta t\right)}^{2}\sum _{i}\frac{\mid \mathbf{f}_{i}\mid}{m_i}
+
+
+where :math:`\mathbf{f}_i` is the force acting on particle *i* and :math:`m_i`
+is its mass.  (In practice, the error made by the Euler integrator is usually
+larger than that made by the Verlet integrator, so this tends to overestimate
+the true error.  Even so, it can provide a useful mechanism for step size
+control.)
+
+It then selects the value of :math:`\Delta t` that makes the error exactly equal the
+specified error tolerance:
+
+
+.. math::
+   \Delta t=\sqrt{\frac{\delta}{\sum _{i}\frac{\mid \mathbf{f}_i\mid}{m_i}}}
+
+
+where :math:`\delta` is the error tolerance.  This is the largest step that may be
+taken consistent with the user specified accuracy requirement.
+
+(Note that the integrator may sometimes choose to use a smaller value for :math:`\Delta t`
+than given above.  For example, it might restrict how much the step size
+can grow from one step to the next, or keep the step size constant rather than
+increasing it by a very small amount.  This behavior is not specified and may
+vary between Platforms.  It is required, however, that :math:`\Delta t` never be larger
+than the value given above.)
+
+A variable time step integrator is generally superior to a fixed time step one
+in both stability and efficiency.  It can take larger steps on average, but will
+automatically reduce the step size to preserve accuracy and avoid instability
+when unusually large forces occur.  Conversely, when each uses the same step
+size on average, the variable time step one will usually be more accurate since
+the time steps are concentrated in the most difficult areas of the trajectory.
+
+Unlike a fixed step size Verlet integrator, variable step size Verlet is not
+symplectic.  This means that for a given average step size, it will not conserve
+energy as precisely over long time periods, even though each local region of the
+trajectory is more accurate.  For this reason, it is most appropriate when
+precise energy conservation is not important, such as when simulating a system
+at constant temperature.  For constant energy simulations that must maintain the
+energy accurately over long time periods, the fixed step size Verlet may be more
+appropriate.
+
+VariableLangevinIntegrator
+**************************
+
+This is similar to LangevinIntegrator, but it continuously adjusts the step size
+using the same method as VariableVerletIntegrator.  It is usually preferred over
+the fixed step size Langevin integrator for the reasons given above.
+Furthermore, because Langevin dynamics involves a random force, it can never be
+symplectic and therefore the fixed step size Verlet integrator’s advantages do
+not apply to the Langevin integrator.
+
+CustomIntegrator
+****************
+
+CustomIntegrator is a very flexible class that can be used to implement a wide
+range of integration methods.  This includes both deterministic and stochastic
+integrators; Metropolized integrators; multiple time step integrators; and
+algorithms that must integrate additional quantities along with the particle
+positions and momenta.
+
+The algorithm is specified as a series of computations that are executed in
+order to perform a single time step.  Each computation computes the value (or
+values) of a *variable*\ .  There are two types of variables: *global
+variables* have a single value, while *per-DOF variables* have a separate
+value for every degree of freedom (that is, every *x*\ , *y*\ , or *z*
+component of a particle).  CustomIntegrator defines lots of variables you can
+compute and/or use in computing other variables.  Some examples include the step
+size (global), the particle positions (per-DOF), and the force acting on each
+particle (per-DOF).  In addition, you can define as many variables as you want
+for your own use.
+
+The actual computations are defined by mathematical expressions as described in
+section :ref:`writing-custom-expressions`\ .  Several types of computations are supported:
+
+* *Global*\ : the expression is evaluated once, and the result is stored into
+  a global variable.
+* *Per-DOF*\ : the expression is evaluated once for every degree of freedom,
+  and the results are stored into a per-DOF variable.
+* *Sum*\ : the expression is evaluated once for every degree of freedom.  The
+  results for all degrees of freedom are added together, and the sum is stored
+  into a global variable.
+
+
+There also are other, more specialized types of computations that do not involve
+mathematical expressions.  For example, there are computations that apply
+distance constraints, modifying the particle positions or velocities
+accordingly.
+
+CustomIntegrator is a very powerful tool, and this description only gives a
+vague idea of the scope of its capabilities.  For full details and examples,
+consult the API documentation.
+
+
+.. _other-features:
+
+Other Features
+##############
+
+
+LocalEnergyMinimizer
+********************
+
+This provides an implementation of the L-BFGS optimization algorithm.
+:cite:`Liu1989`  Given a Context specifying initial particle positions, it
+searches for a nearby set of positions that represent a local minimum of the
+potential energy.  Distance constraints are enforced during minimization by
+adding a harmonic restraining force to the potential function.  The strength of
+the restraining force is steadily increased until the minimum energy
+configuration satisfies all constraints to within the tolerance specified by the
+Context's Integrator.
+
+XMLSerializer
+*************
+
+This provides the ability to “serialize” a System, Force, Integrator, or State
+object to a portable XML format, then reconstruct it again later.  When
+serializing a System, the XML data contains a complete copy of the entire system
+definition, including all Forces that have been added to it.
+
+Here are some examples of uses for this class:
+
+#. A model building utility could generate a System in memory, then serialize it
+   to a file on disk.  Other programs that perform simulation or analysis could
+   then reconstruct the model by simply loading the XML file.
+#. When running simulations on a cluster, all model construction could be done
+   on a single node.  The Systems and Integrators could then be encoded as XML,
+   allowing them to be easily transmitted to other nodes.
+
+
+XMLSerializer is a templatized class that, in principle, can be used to
+serialize any type of object.  At present, however, only System, Force,
+Integrator, and State are supported.
+
+Force Groups
+************
+
+It is possible to split the Force objects in a System into groups.  Those groups
+can then be evaluated independently of each other.  Some Force classes also
+provide finer grained control over grouping.  For example, NonbondedForce allows
+direct space computations to be in one group and reciprocal space computations
+in a different group.
+
+The most important use of force groups is for implementing multiple time step
+algorithms with CustomIntegrator.  For example, you might evaluate the slowly
+changing nonbonded interactions less frequently than the quickly changing bonded
+ones.  It also is useful if you want the ability to query a subset of the forces
+acting on the system.
+
+Virtual Sites
+*************
+
+A virtual site is a particle whose position is computed directly from the
+positions of other particles, not by integrating the equations of motion.  An
+important example is the “extra sites” present in 4 and 5 site water models.
+These particles are massless, and therefore cannot be integrated.  Instead,
+their positions are computed from the positions of the massive particles in the
+water molecule.
+
+Virtual sites are specified by creating a VirtualSite object, then telling the
+System to use it for a particular particle.  The VirtualSite defines the rules
+for computing its position.  It is an abstract class with subclasses for
+specific types of rules.  They are:
+
+* TwoParticleAverageSite: The virtual site location is computed as a weighted
+  average of the positions of two particles:
+
+.. math::
+   \mathbf{r}={w}_{1}\mathbf{r}_{1}+{w}_{2}\mathbf{r}_{2}
+
+* ThreeParticleAverageSite: The virtual site location is computed as a weighted
+  average of the positions of three particles:
+
+.. math::
+   \mathbf{r}={w}_{1}\mathbf{r}_{1}+{w}_{2}\mathbf{r}_{{2}_{1}}+{w}_{3}\mathbf{r}_{3}
+
+* OutOfPlaneSite: The virtual site location is computed as a weighted average
+  of the positions of three particles and the cross product of their relative
+  displacements:
+
+.. math::
+   \mathbf{r}={r}_{1}+{w}_{12}\mathbf{r}_{12}+{w}_{13}\mathbf{r}_{13}+{w}_{cross}\left(\mathbf{r}_{12}\times \mathbf{r}_{13}\right)
+..
+
+  where :math:`\mathbf{r}_{12} = \mathbf{r}_{2}-\mathbf{r}_{1}` and
+  :math:`\mathbf{r}_{13} = \mathbf{r}_{3}-\mathbf{r}_{1}`\ .  This allows
+  the virtual site to be located outside the plane of the three particles.
+
+* LocalCoordinatesSite: The locations of three other particles are used to compute a local
+  coordinate system, and the virtual site is placed at a fixed location in that coordinate
+  system.  The origin of the coordinate system and the directions of its x and y axes
+  are each specified as a weighted sum of the locations of the three particles:
+
+.. math::
+   \mathbf{o}={w}^{o}_{1}\mathbf{r}_{1} + {w}^{o}_{2}\mathbf{r}_{2} + {w}^{o}_{3}\mathbf{r}_{3}
+
+   \mathbf{dx}={w}^{x}_{1}\mathbf{r}_{1} + {w}^{x}_{2}\mathbf{r}_{2} + {w}^{x}_{3}\mathbf{r}_{3}
+
+   \mathbf{dy}={w}^{y}_{1}\mathbf{r}_{1} + {w}^{y}_{2}\mathbf{r}_{2} + {w}^{y}_{3}\mathbf{r}_{3}
+
+   \mathbf{dz}=\mathbf{dx}\times \mathbf{dy}
+..
+
+   These vectors are then used to construct a set of orthonormal coordinate axes as follows:
+
+.. math::
+   \mathbf{\hat{x}}=\mathbf{dx}/|\mathbf{dx}|
+
+   \mathbf{\hat{z}}=\mathbf{dz}/|\mathbf{dz}|
+
+   \mathbf{\hat{y}}=\mathbf{\hat{z}}\times \mathbf{\hat{x}}
+..
+
+   Finally, the position of the virtual site is set to
+
+.. math::
+   \mathbf{r}=\mathbf{o}+p_1\mathbf{\hat{x}}+p_2\mathbf{\hat{y}}+p_3\mathbf{\hat{z}}
+..
