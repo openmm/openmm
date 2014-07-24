@@ -34,6 +34,7 @@
 #include "CpuKernels.h"
 #include "CpuSETTLE.h"
 #include "ReferenceConstraints.h"
+#include "openmm/internal/hardware.h"
 #include "openmm/internal/vectorize.h"
 #include <sstream>
 #include <stdlib.h>
