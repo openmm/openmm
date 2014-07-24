@@ -40,6 +40,14 @@ typedef int int32_t;
 
 // This file defines classes and functions to simplify vectorizing code with NEON.
 
+/**
+ * Determine whether ivec4 and fvec4 are supported on this processor.
+ */
+static bool isVec4Supported() {
+    uint64_t features = android_getCpuFeatures();
+    return (features & ANDROID_CPU_ARM_FEATURE_NEON) != 0;
+}
+
 class ivec4;
 
 /**
