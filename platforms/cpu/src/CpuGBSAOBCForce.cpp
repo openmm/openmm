@@ -213,7 +213,7 @@ void CpuGBSAOBCForce::threadComputeForce(ThreadPool& threads, int threadIndex) {
     const float probeRadius = 0.14f;
     const float surfaceAreaFactor = 28.3919551;
     double energy = 0.0;
-    vector<float>& bornForces = threadBornForces[threadIndex];
+    AlignedArray<float>& bornForces = threadBornForces[threadIndex];
     for (int i = 0; i < numParticles; i++)
         bornForces[i] = 0.0f;
     while (true) {
@@ -410,10 +410,18 @@ fvec4 CpuGBSAOBCForce::fastLog(const fvec4& x) {
         return fvec4(logf(x[0]), logf(x[1]), logf(x[2]), logf(x[3]));
     fvec4 coeff2 = x1-index;
     fvec4 coeff1 = 1.0f-coeff2;
+#ifdef __PNACL__
+    // PNaCl crashes on unaligned loads.
+    fvec4 t1(logTable[index[0]], logTable[index[0]+1], logTable[index[0]+2], logTable[index[0]+3]);
+    fvec4 t2(logTable[index[1]], logTable[index[1]+1], logTable[index[1]+2], logTable[index[1]+3]);
+    fvec4 t3(logTable[index[2]], logTable[index[2]+1], logTable[index[2]+2], logTable[index[2]+3]);
+    fvec4 t4(logTable[index[3]], logTable[index[3]+1], logTable[index[3]+2], logTable[index[3]+3]);
+#else
     fvec4 t1(&logTable[index[0]]);
     fvec4 t2(&logTable[index[1]]);
     fvec4 t3(&logTable[index[2]]);
     fvec4 t4(&logTable[index[3]]);
+#endif
     transpose(t1, t2, t3, t4);
     return coeff1*t1 + coeff2*t2;
 }

@@ -33,6 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include <cmath>
+#include <cstdlib>
 
 // This file defines classes and functions to simplify vectorizing code with portable SIMD vectors.
 
@@ -276,7 +277,7 @@ static inline ivec4 max(const ivec4& v1, const ivec4& v2) {
 }
 
 static inline ivec4 abs(const ivec4& v) {
-    return ivec4(std::abs(v[0]), std::abs(v[1]), std::abs(v[2]), std::abs(v[3]));
+    return ivec4(abs(v[0]), abs(v[1]), abs(v[2]), abs(v[3]));
 }
 
 static inline bool any(const ivec4& v) {

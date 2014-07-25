@@ -98,9 +98,9 @@ private:
     float periodicBoxSize[3];
     float cutoffDistance, soluteDielectric, solventDielectric;
     std::vector<std::pair<float, float> > particleParams;        
-    std::vector<float> bornRadii;
-    std::vector<std::vector<float> > threadBornForces;
-    std::vector<float> obcChain;
+    AlignedArray<float> bornRadii;
+    std::vector<AlignedArray<float> > threadBornForces;
+    AlignedArray<float> obcChain;
     std::vector<double> threadEnergy;
     std::vector<float> logTable;
     float logDX, logDXInv;

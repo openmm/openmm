@@ -292,10 +292,18 @@ fvec4 CpuNonbondedForceVec4::ewaldScaleFunction(const fvec4& x) {
     ivec4 index = min(floor(x1), NUM_TABLE_POINTS);
     fvec4 coeff2 = x1-index;
     fvec4 coeff1 = 1.0f-coeff2;
+#ifdef __PNACL__
+    // PNaCl crashes on unaligned loads.
+    fvec4 t1(ewaldScaleTable[index[0]], ewaldScaleTable[index[0]+1], ewaldScaleTable[index[0]+2], ewaldScaleTable[index[0]+3]);
+    fvec4 t2(ewaldScaleTable[index[1]], ewaldScaleTable[index[1]+1], ewaldScaleTable[index[1]+2], ewaldScaleTable[index[1]+3]);
+    fvec4 t3(ewaldScaleTable[index[2]], ewaldScaleTable[index[2]+1], ewaldScaleTable[index[2]+2], ewaldScaleTable[index[2]+3]);
+    fvec4 t4(ewaldScaleTable[index[3]], ewaldScaleTable[index[3]+1], ewaldScaleTable[index[3]+2], ewaldScaleTable[index[3]+3]);
+#else
     fvec4 t1(&ewaldScaleTable[index[0]]);
     fvec4 t2(&ewaldScaleTable[index[1]]);
     fvec4 t3(&ewaldScaleTable[index[2]]);
     fvec4 t4(&ewaldScaleTable[index[3]]);
+#endif
     transpose(t1, t2, t3, t4);
     return coeff1*t1 + coeff2*t2;
 }
