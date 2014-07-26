@@ -84,5 +84,5 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
   config.vm.provision "shell",
       inline: "su -c 'source /vagrant/setup_centos_vm.sh' vagrant"
-  
+
 end

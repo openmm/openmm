@@ -4,6 +4,8 @@
 #vagrant up
 #vagrant ssh
 
+# Add virtualbox extensions.
+sudo /etc/init.d/vboxadd setup
 
 # Download and enable the EPEL RedHat EL extras repository
 mkdir ~/Software
