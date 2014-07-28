@@ -8594,14 +8594,14 @@
   <Particle type1="1000" type2="552" charge="-1.7003" polarizability="0.00096" thole="1.078"/>
   <Particle type1="1285" type2="437" charge="-2.20943" polarizability="0.001621" thole="1.3"/>
   <Particle type1="871" type2="113" charge="-1.7003" polarizability="0.00096" thole="1.078"/>
-  <Particle type1="992" type2="489" charge="-1.40017" polarizability="0.000651" thole="0.31"/>
+  <Particle type1="992" type2="489" type3="488" type4="490" type5="491" charge="-1.40017" polarizability="0.000651" thole="0.31" aniso12="0.82322" aniso34="1.14332"/>
   <Particle type1="1299" type2="437" charge="-2.20943" polarizability="0.001621" thole="1.3"/>
   <Particle type1="1061" type2="550" charge="-2.41832" polarizability="0.001942" thole="0.25"/>
   <Particle type1="1318" type2="444" type3="443" type4="445" type5="446" charge="-1.40017" polarizability="0.000651" thole="0.31" aniso12="0.82322" aniso34="1.14332"/>
   <Particle type1="1235" type2="388" charge="-1.73536" polarizability="0.001" thole="1.3"/>
   <Particle type1="811" type2="67" charge="-2.41832" polarizability="0.001942" thole="0.25"/>
   <Particle type1="1117" type2="556" type3="554" type4="559" type5="560" charge="-1.45087" polarizability="0.000699" thole="2.399" aniso12="0.7229" aniso34="1.265"/>
-  <Particle type1="803" type2="489" charge="-1.40017" polarizability="0.000651" thole="0.31"/>
+  <Particle type1="803" type2="489" type3="488" type4="490" type5="491" charge="-1.40017" polarizability="0.000651" thole="0.31" aniso12="0.82322" aniso34="1.14332"/>
   <Particle type1="794" type2="51" charge="-2.22167" polarizability="0.001639" thole="2.122"/>
   <Particle type1="1234" type2="385" type3="384" type4="386" type5="387" charge="-1.40017" polarizability="0.000651" thole="0.31" aniso12="0.82322" aniso34="1.14332"/>
   <Particle type1="1268" type2="556" type3="554" type4="559" type5="560" charge="-1.45087" polarizability="0.000699" thole="2.399" aniso12="0.7229" aniso34="1.265"/>
@@ -8623,7 +8623,7 @@
   <Particle type1="752" type2="15" charge="-2.31916" polarizability="0.001786" thole="1.3"/>
   <Particle type1="1275" type2="418" type3="417" type4="419" type5="420" charge="-1.40017" polarizability="0.000651" thole="0.31" aniso12="0.82322" aniso34="1.14332"/>
   <Particle type1="1343" type2="556" type3="554" type4="559" type5="560" charge="-1.45087" polarizability="0.000699" thole="2.399" aniso12="0.7229" aniso34="1.265"/>
-  <Particle type1="777" type2="489" charge="-1.40017" polarizability="0.000651" thole="0.31"/>
+  <Particle type1="777" type2="489" type3="488" type4="490" type5="491" charge="-1.40017" polarizability="0.000651" thole="0.31" aniso12="0.82322" aniso34="1.14332"/>
   <Particle type1="1337" type2="459" charge="-1.88028" polarizability="0.001174" thole="1.27"/>
   <Particle type1="902" type2="486" charge="-1.7003" polarizability="0.00096" thole="1.078"/>
   <Particle type1="834" type2="552" charge="-1.7003" polarizability="0.00096" thole="1.078"/>
@@ -8687,7 +8687,7 @@
   <Particle type1="1215" type2="377" type3="376" type4="378" type5="379" charge="-1.27522" polarizability="0.00054" thole="1.282" aniso12="0.82322" aniso34="1.14332"/>
   <Particle type1="1022" type2="488" charge="-1.42574" polarizability="0.000675" thole="0.295"/>
   <Particle type1="1071" type2="253" charge="-2.1409" polarizability="0.001522" thole="1.196"/>
-  <Particle type1="1134" type2="489" charge="-1.40017" polarizability="0.000651" thole="0.31"/>
+  <Particle type1="1134" type2="489" type3="488" type4="490" type5="491" charge="-1.40017" polarizability="0.000651" thole="0.31" aniso12="0.82322" aniso34="1.14332"/>
   <Particle type1="1184" type2="360" charge="-2.19919" polarizability="0.001606" thole="1.262"/>
   <Particle type1="924" type2="486" charge="-1.7003" polarizability="0.00096" thole="1.078"/>
   <Particle type1="1203" type2="353" charge="-2.1605" polarizability="0.00155" thole="1.262"/>
@@ -8723,8 +8723,8 @@
   <Particle type1="1002" type2="555" type3="554" type4="557" type5="558" charge="-1.45087" polarizability="0.000699" thole="2.399" aniso12="0.7229" aniso34="1.265"/>
   <Particle type1="1004" type2="203" charge="-2.28844" polarizability="0.001739" thole="0.399"/>
   <Particle type1="1371" type2="472" charge="-2.40082" polarizability="0.001914" thole="0.593"/>
-  <Particle type1="1054" type2="489" charge="-1.40017" polarizability="0.000651" thole="0.31"/>
-  <Particle type1="954" type2="489" charge="-1.40017" polarizability="0.000651" thole="0.31"/>
+  <Particle type1="1054" type2="489" type3="488" type4="490" type5="491" charge="-1.40017" polarizability="0.000651" thole="0.31" aniso12="0.82322" aniso34="1.14332"/>
+  <Particle type1="954" type2="489" type3="488" type4="490" type5="491" charge="-1.40017" polarizability="0.000651" thole="0.31" aniso12="0.82322" aniso34="1.14332"/>
   <Particle type1="1213" type2="373" charge="-2.49433" polarizability="0.002066" thole="0.644"/>
   <Particle type1="995" type2="208" charge="-1.95719" polarizability="0.001272" thole="1.19"/>
   <Particle type1="785" type2="552" charge="-1.7003" polarizability="0.00096" thole="1.078"/>
@@ -8817,8 +8817,8 @@
   <Particle type1="1039" type2="231" charge="-2.12041" polarizability="0.001493" thole="1.297"/>
   <Particle type1="913" type2="140" type3="137" type4="142" type5="143" charge="-2.56223" polarizability="0.00218" thole="1.612" aniso12="0.88" aniso34="1.32"/>
   <Particle type1="1098" type2="278" charge="-1.7003" polarizability="0.00096" thole="1.078"/>
-  <Particle type1="856" type2="489" charge="-1.40017" polarizability="0.000651" thole="0.31"/>
-  <Particle type1="1189" type2="489" charge="-1.40017" polarizability="0.000651" thole="0.31"/>
+  <Particle type1="856" type2="489" type3="488" type4="490" type5="491" charge="-1.40017" polarizability="0.000651" thole="0.31" aniso12="0.82322" aniso34="1.14332"/>
+  <Particle type1="1189" type2="489" type3="488" type4="490" type5="491" charge="-1.40017" polarizability="0.000651" thole="0.31" aniso12="0.82322" aniso34="1.14332"/>
   <Particle type1="1265" type2="552" charge="-1.7003" polarizability="0.00096" thole="1.078"/>
   <Particle type1="1284" type2="435" charge="-2.20261" polarizability="0.001611" thole="1.3"/>
   <Particle type1="883" type2="122" charge="-1.74919" polarizability="0.001016" thole="0.899"/>
@@ -8856,7 +8856,7 @@
   <Particle type1="1294" type2="429" charge="-1.95334" polarizability="0.001267" thole="1.009"/>
   <Particle type1="807" type2="554" charge="-1.74919" polarizability="0.001016" thole="0.899"/>
   <Particle type1="1084" type2="263" charge="-1.98013" polarizability="0.001302" thole="1.3"/>
-  <Particle type1="825" type2="489" charge="-1.40017" polarizability="0.000651" thole="0.31"/>
+  <Particle type1="825" type2="489" type3="488" type4="490" type5="491" charge="-1.40017" polarizability="0.000651" thole="0.31" aniso12="0.82322" aniso34="1.14332"/>
   <Particle type1="824" type2="488" charge="-1.42574" polarizability="0.000675" thole="0.295"/>
   <Particle type1="1323" type2="455" charge="-2.08532" polarizability="0.001444" thole="1.27"/>
   <Particle type1="1351" type2="460" type3="459" type4="462" type5="463" charge="-1.43417" polarizability="0.000683" thole="0.601" aniso12="0.8108" aniso34="1.2162"/>
@@ -8867,16 +8867,16 @@
   <Particle type1="1051" type2="482" charge="-1.97709" polarizability="0.001298" thole="0.895"/>
   <Particle type1="1208" type2="362" charge="-2.20192" polarizability="0.00161" thole="1.262"/>
   <Particle type1="786" type2="554" charge="-1.74919" polarizability="0.001016" thole="0.899"/>
-  <Particle type1="1362" type2="489" charge="-1.40017" polarizability="0.000651" thole="0.31"/>
+  <Particle type1="1362" type2="489" type3="488" type4="490" type5="491" charge="-1.40017" polarizability="0.000651" thole="0.31" aniso12="0.82322" aniso34="1.14332"/>
   <Particle type1="889" type2="555" type3="554" type4="557" type5="558" charge="-1.45087" polarizability="0.000699" thole="2.399" aniso12="0.7229" aniso34="1.265"/>
   <Particle type1="1253" type2="400" type3="399" type4="401" type5="402" charge="-1.40017" polarizability="0.000651" thole="0.31" aniso12="0.82322" aniso34="1.14332"/>
   <Particle type1="944" type2="169" charge="-1.42574" polarizability="0.000675" thole="0.295"/>
   <Particle type1="1159" type2="486" charge="-1.7003" polarizability="0.00096" thole="1.078"/>
   <Particle type1="887" type2="552" charge="-1.7003" polarizability="0.00096" thole="1.078"/>
   <Particle type1="1225" type2="576" charge="-2.12537" polarizability="0.0015" thole="1.1"/>
-  <Particle type1="1108" type2="489" charge="-1.40017" polarizability="0.000651" thole="0.31"/>
+  <Particle type1="1108" type2="489" type3="488" type4="490" type5="491" charge="-1.40017" polarizability="0.000651" thole="0.31" aniso12="0.82322" aniso34="1.14332"/>
   <Particle type1="1355" type2="469" type3="468" type4="470" type5="471" charge="-1.40017" polarizability="0.000651" thole="0.31" aniso12="0.82322" aniso34="1.14332"/>
-  <Particle type1="1083" type2="489" charge="-1.40017" polarizability="0.000651" thole="0.31"/>
+  <Particle type1="1083" type2="489" type3="488" type4="490" type5="491" charge="-1.40017" polarizability="0.000651" thole="0.31" aniso12="0.82322" aniso34="1.14332"/>
   <Particle type1="799" type2="63" charge="-2.33081" polarizability="0.001804" thole="2.08"/>
   <Particle type1="1135" type2="305" charge="-2.33081" polarizability="0.001804" thole="2.08"/>
   <Particle type1="1030" type2="550" charge="-2.41832" polarizability="0.001942" thole="0.25"/>
@@ -8902,7 +8902,7 @@
   <Particle type1="849" type2="101" charge="-2.06573" polarizability="0.001417" thole="1.13"/>
   <Particle type1="1173" type2="335" type3="336" type4="340" type5="341" charge="-2.48526" polarizability="0.002051" thole="1.543" aniso12="0.7808" aniso34="1.3662"/>
   <Particle type1="869" type2="106" charge="-2.27392" polarizability="0.001717" thole="1.132"/>
-  <Particle type1="881" type2="489" charge="-1.40017" polarizability="0.000651" thole="0.31"/>
+  <Particle type1="881" type2="489" type3="488" type4="490" type5="491" charge="-1.40017" polarizability="0.000651" thole="0.31" aniso12="0.82322" aniso34="1.14332"/>
   <Particle type1="1310" type2="430" charge="-1.95257" polarizability="0.001266" thole="1.344"/>
   <Particle type1="1075" type2="260" type3="259" type4="261" type5="262" charge="-1.40017" polarizability="0.000651" thole="0.31" aniso12="0.82322" aniso34="1.14332"/>
   <Particle type1="1311" type2="431" charge="-2.21011" polarizability="0.001622" thole="1.3"/>
@@ -8915,7 +8915,7 @@
   <Particle type1="1128" type2="311" charge="-2.23585" polarizability="0.00166" thole="1.3"/>
   <Particle type1="808" type2="555" type3="554" type4="557" type5="558" charge="-1.45087" polarizability="0.000699" thole="2.399" aniso12="0.7229" aniso34="1.265"/>
   <Particle type1="1041" type2="235" charge="-2.41832" polarizability="0.001942" thole="0.25"/>
-  <Particle type1="1161" type2="489" charge="-1.40017" polarizability="0.000651" thole="0.31"/>
+  <Particle type1="1161" type2="489" type3="488" type4="490" type5="491" charge="-1.40017" polarizability="0.000651" thole="0.31" aniso12="0.82322" aniso34="1.14332"/>
   <Particle type1="1334" type2="453" charge="-2.07301" polarizability="0.001427" thole="1.27"/>
   <Particle type1="1304" type2="556" type3="554" type4="559" type5="560" charge="-1.45087" polarizability="0.000699" thole="2.399" aniso12="0.7229" aniso34="1.265"/>
   <Particle type1="1267" type2="555" type3="554" type4="557" type5="558" charge="-1.45087" polarizability="0.000699" thole="2.399" aniso12="0.7229" aniso34="1.265"/>
@@ -8926,7 +8926,7 @@
   <Particle type1="1305" type2="421" charge="-2.48102" polarizability="0.002044" thole="1.346"/>
   <Particle type1="1324" type2="457" charge="-2.08532" polarizability="0.001444" thole="1.27"/>
   <Particle type1="1007" type2="209" charge="-2.12041" polarizability="0.001493" thole="1.297"/>
-  <Particle type1="1240" type2="489" charge="-1.40017" polarizability="0.000651" thole="0.31"/>
+  <Particle type1="1240" type2="489" type3="488" type4="490" type5="491" charge="-1.40017" polarizability="0.000651" thole="0.31" aniso12="0.82322" aniso34="1.14332"/>
   <Particle type1="1348" type2="455" charge="-2.08532" polarizability="0.001444" thole="1.27"/>
   <Particle type1="1100" type2="281" type3="280" type4="282" type5="283" charge="-1.40017" polarizability="0.000651" thole="0.31" aniso12="0.82322" aniso34="1.14332"/>
   <Particle type1="1089" type2="552" charge="-1.7003" polarizability="0.00096" thole="1.078"/>
@@ -8947,14 +8947,14 @@
   <Particle type1="841" type2="84" charge="-2.1605" polarizability="0.00155" thole="1.538"/>
   <Particle type1="1191" type2="353" charge="-2.1605" polarizability="0.00155" thole="1.262"/>
   <Particle type1="1032" type2="554" charge="-1.74919" polarizability="0.001016" thole="0.899"/>
-  <Particle type1="1289" type2="489" charge="-1.40017" polarizability="0.000651" thole="0.31"/>
+  <Particle type1="1289" type2="489" type3="488" type4="490" type5="491" charge="-1.40017" polarizability="0.000651" thole="0.31" aniso12="0.82322" aniso34="1.14332"/>
   <Particle type1="1080" type2="482" charge="-1.97709" polarizability="0.001298" thole="0.895"/>
   <Particle type1="1262" type2="405" type3="403" type4="407" type5="408" charge="-1.75949" polarizability="0.001028" thole="1.3" aniso12="0.8108" aniso34="1.2162"/>
   <Particle type1="1340" type2="552" charge="-1.7003" polarizability="0.00096" thole="1.078"/>
   <Particle type1="1293" type2="427" charge="-2.03859" polarizability="0.00138" thole="1.146"/>
   <Particle type1="1042" type2="237" charge="-1.7003" polarizability="0.00096" thole="1.078"/>
   <Particle type1="1327" type2="482" charge="-1.97709" polarizability="0.001298" thole="0.895"/>
-  <Particle type1="1220" type2="525" charge="-1.43312" polarizability="0.000682" thole="1.905"/>
+  <Particle type1="1220" type2="525" type3="524" type4="526" type5="527" charge="-1.43312" polarizability="0.000682" thole="1.905" aniso12="0.82322" aniso34="1.14332"/>
   <Particle type1="1288" type2="488" charge="-1.42574" polarizability="0.000675" thole="0.295"/>
   <Particle type1="826" type2="75" charge="-2.33081" polarizability="0.001804" thole="2.08"/>
   <Particle type1="970" type2="186" charge="-2.41832" polarizability="0.001942" thole="0.25"/>
@@ -8981,10 +8981,10 @@
   <Particle type1="1292" type2="425" charge="-2.20329" polarizability="0.001612" thole="1.265"/>
   <Particle type1="884" type2="123" type3="122" type4="125" type5="126" charge="-1.45087" polarizability="0.000699" thole="2.399" aniso12="0.7229" aniso34="1.265"/>
   <Particle type1="1024" type2="223" charge="-2.28844" polarizability="0.001739" thole="0.399"/>
-  <Particle type1="1023" type2="489" charge="-1.40017" polarizability="0.000651" thole="0.31"/>
+  <Particle type1="1023" type2="489" type3="488" type4="490" type5="491" charge="-1.40017" polarizability="0.000651" thole="0.31" aniso12="0.82322" aniso34="1.14332"/>
   <Particle type1="805" type2="550" charge="-2.41832" polarizability="0.001942" thole="0.25"/>
   <Particle type1="1332" type2="450" charge="-2.06646" polarizability="0.001418" thole="1.27"/>
-  <Particle type1="926" type2="489" charge="-1.40017" polarizability="0.000651" thole="0.31"/>
+  <Particle type1="926" type2="489" type3="488" type4="490" type5="491" charge="-1.40017" polarizability="0.000651" thole="0.31" aniso12="0.82322" aniso34="1.14332"/>
   <Particle type1="1301" type2="552" charge="-1.7003" polarizability="0.00096" thole="1.078"/>
   <Particle type1="899" type2="137" charge="-1.95796" polarizability="0.001273" thole="0.716"/>
   <Particle type1="892" type2="122" charge="-1.74919" polarizability="0.001016" thole="0.899"/>
@@ -9040,7 +9040,7 @@
   <Particle type1="912" type2="137" charge="-1.95796" polarizability="0.001273" thole="0.716"/>
   <Particle type1="745" type2="0" charge="-1.71639" polarizability="0.000978253" thole="1.3"/>
   <Particle type1="1152" type2="325" charge="-1.42574" polarizability="0.000675" thole="0.295"/>
-  <Particle type1="1260" type2="489" charge="-1.40017" polarizability="0.000651" thole="0.31"/>
+  <Particle type1="1260" type2="489" type3="488" type4="490" type5="491" charge="-1.40017" polarizability="0.000651" thole="0.31" aniso12="0.82322" aniso34="1.14332"/>
   <Particle type1="804" type2="63" charge="-2.33081" polarizability="0.001804" thole="2.08"/>
   <Particle type1="1192" type2="354" charge="-2.19782" polarizability="0.001604" thole="1.262"/>
   <Particle type1="914" type2="144" charge="-2.41832" polarizability="0.001942" thole="0.25"/>
@@ -9050,7 +9050,7 @@
   <Particle type1="855" type2="488" charge="-1.42574" polarizability="0.000675" thole="0.295"/>
   <Particle type1="754" type2="17" charge="-3.98075" polarizability="0.005262" thole="1.3"/>
   <Particle type1="879" type2="486" charge="-1.7003" polarizability="0.00096" thole="1.078"/>
-  <Particle type1="1330" type2="489" charge="-1.40017" polarizability="0.000651" thole="0.31"/>
+  <Particle type1="1330" type2="489" type3="488" type4="490" type5="491" charge="-1.40017" polarizability="0.000651" thole="0.31" aniso12="0.82322" aniso34="1.14332"/>
   <Particle type1="1137" type2="311" charge="-2.23585" polarizability="0.00166" thole="1.3"/>
   <Particle type1="975" type2="563" charge="-1.7003" polarizability="0.00096" thole="1.078"/>
   <Particle type1="1254" type2="403" charge="-1.73536" polarizability="0.001" thole="1.3"/>
@@ -9201,7 +9201,7 @@
   <Particle type1="1361" type2="488" charge="-1.42574" polarizability="0.000675" thole="0.295"/>
   <Particle type1="1145" type2="305" charge="-2.33081" polarizability="0.001804" thole="2.08"/>
   <Particle type1="764" type2="29" charge="-2.38825" polarizability="0.001894" thole="2.122"/>
-  <Particle type1="904" type2="489" charge="-1.40017" polarizability="0.000651" thole="0.31"/>
+  <Particle type1="904" type2="489" type3="488" type4="490" type5="491" charge="-1.40017" polarizability="0.000651" thole="0.31" aniso12="0.82322" aniso34="1.14332"/>
   <Particle type1="1162" type2="329" charge="-2.33081" polarizability="0.001804" thole="2.08"/>
   <Particle type1="1204" type2="354" charge="-2.19782" polarizability="0.001604" thole="1.262"/>
   <Particle type1="1335" type2="455" charge="-2.08532" polarizability="0.001444" thole="1.27"/>
