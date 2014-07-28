@@ -44,8 +44,8 @@ static bool isVec4Supported() {
     return true;
 }
 
-typedef float __m128 __attribute__((vector_size(16)));
-typedef int __m128i __attribute__((vector_size(16)));
+typedef float __m128 __attribute__((vector_size(16), aligned(4)));
+typedef int __m128i __attribute__((vector_size(16), aligned(4)));
 
 class ivec4;
 
@@ -280,7 +280,7 @@ static inline ivec4 abs(const ivec4& v) {
     return ivec4(abs(v[0]), abs(v[1]), abs(v[2]), abs(v[3]));
 }
 
-static inline bool any(const ivec4& v) {
+static inline bool any(const __m128i& v) {
     return (v[0] || v[1] || v[2] || v[3]);
 }
 
@@ -304,7 +304,7 @@ static inline fvec4 operator/(float v1, const fvec4& v2) {
 
 // Operations for blending fvec4s based on an ivec4.
 
-static inline fvec4 blend(const fvec4& v1, const fvec4& v2, const ivec4& mask) {
+static inline fvec4 blend(const fvec4& v1, const fvec4& v2, const __m128i& mask) {
     return fvec4(mask[0] ? v2[0] : v1[0], mask[1] ? v2[1] : v1[1], mask[2] ? v2[2] : v1[2], mask[3] ? v2[3] : v1[3]);
 }
 
