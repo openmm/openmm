@@ -1642,8 +1642,12 @@ bool CudaCalcAmoebaMultipoleForceKernel::iterateDipolesByDIIS(int iteration) {
     void* buildMatrixArgs[] = {&prevErrors->getDevicePointer(), &iteration, &diisMatrix->getDevicePointer()};
     int threadBlocks = min(numPrev, cu.getNumThreadBlocks());
     cu.executeKernel(buildMatrixKernel, buildMatrixArgs, threadBlocks*128, 128, 128*elementSize);
-    vector<float> matrix;
-    diisMatrix->download(matrix);
+    vector<float> matrixf;
+    vector<double> matrix;
+    if (cu.getUseDoublePrecision())
+        diisMatrix->download(matrix);
+    else
+        diisMatrix->download(matrixf);
     
     // Determine whether the iteration has converged.
     
@@ -1666,9 +1670,16 @@ bool CudaCalcAmoebaMultipoleForceKernel::iterateDipolesByDIIS(int iteration) {
         b[0][0] = 0;
         for (int i = 1; i < rank; i++)
             b[i][0] = b[0][i] = -1;
-        for (int i = 0; i < numPrev; i++)
-            for (int j = 0; j < numPrev; j++)
-                b[i+1][j+1] = matrix[i*MaxPrevDIISDipoles+j];
+        if (cu.getUseDoublePrecision()) {
+            for (int i = 0; i < numPrev; i++)
+                for (int j = 0; j < numPrev; j++)
+                    b[i+1][j+1] = matrix[i*MaxPrevDIISDipoles+j];
+        }
+        else {
+            for (int i = 0; i < numPrev; i++)
+                for (int j = 0; j < numPrev; j++)
+                    b[i+1][j+1] = matrixf[i*MaxPrevDIISDipoles+j];
+        }
 
         // Solve using SVD.  Since the right hand side is (-1, 0, 0, 0, ...), this is simpler than the general case.
 
