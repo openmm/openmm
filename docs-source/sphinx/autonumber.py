@@ -43,6 +43,7 @@ def doctree_resolved(app, doctree, docname):
             chapter = sectionNumbers[chapter.attributes['ids'][0]][0]
             if chapter != lastChapter:
                 index = {}
+                nextNumber = 1
             newNode = Text('%s %d-%d' % (category, chapter, nextNumber))
             lastChapter = chapter
         else:

@@ -20,11 +20,11 @@ high level interface for running simulations.  This layer is targeted at
 computational biologists or other people who want to run simulations, and who
 may or may not be programmers.
 
-Part I of this guide focused on the application layer and described how to run
+The first part of this guide focused on the application layer and described how to run
 simulations with it.  We now turn to the lower level libraries.  We will assume
 you are a programmer, that you are writing your own applications, and that you
-want to add simulation features to those applications.  Part II of this guide
-describes how to do that with OpenMM.
+want to add simulation features to those applications.  The following chapters
+describe how to do that with OpenMM.
 
 How to get started
 ==================
@@ -42,7 +42,8 @@ License
 ========
 
 Two different licenses are used for different parts of OpenMM.  The public API,
-the low level API, and the reference platform are all distributed under the MIT
+the low level API, the reference platform, the CPU platform, and the application
+layer are all distributed under the MIT
 license.  This is a very permissive license which allows them to be used in
 almost any way, requiring only that you retain the copyright notice and
 disclaimer when distributing them.
@@ -425,12 +426,18 @@ Get the OpenMM source code
 You will also need the OpenMM source code before building OpenMM from source.
 To download and unpack OpenMM source code:
 
-#. Browse to https://simtk.org/home/openmm/.
+#. Browse to https://simtk.org/home/openmm.
 #. Click the "Downloads" link in the navigation bar on the left side.
 #. Download OpenMM<Version>-Source.zip, choosing the latest version.
 #. Unpack the zip file.  Note the location where you unpacked the OpenMM source
    code.
 
+Alternatively, if you want the most recent development version of the code rather
+than the version corresponding to a particular release, you can get it from
+https://github.com/SimTk/openmm.  Be aware that the development code is constantly
+changing, may contain bugs, and should never be used for production work.  If
+you want a stable, well tested version of OpenMM, you should download the source
+code for the latest release as described above.
 
 Other Required Software
 =======================
@@ -540,10 +547,10 @@ There are several variables that can be adjusted in the CMake interface:
   install OpenMM.
 
 
-Configure (press “\ :code:`c`\ ”) again.  Adjust any variables that cause an
+Configure (press “c”) again.  Adjust any variables that cause an
 error.
 
-Continue to configure (press “\ :code:`c`\ ”) until no starred/red CMake
+Continue to configure (press “c”) until no starred/red CMake
 variables are displayed.  Congratulations, you have completed the configuration
 step.
 
@@ -566,7 +573,7 @@ Windows
 Mac and Linux
 =============
 
-* Press :code:`g` to generate the Makefile.
+* Press “g” to generate the Makefile.
 * If CMake does not exit automatically, press “q” to exit.
 
 
@@ -1321,9 +1328,11 @@ to change the build environment.
                                             double stepSizeInFs, 
                                             std::string& platformName);
     static void          myStepWithOpenMM(MyOpenMMData*, int numSteps);
-    static void          myGetOpenMMState(MyOpenMMData*, bool 
-    wantEnergy,double& time, double& energy, 
-                               MyAtomInfo atoms[]);
+    static void          myGetOpenMMState(MyOpenMMData*,
+                                          bool wantEnergy,
+                                          double& time,
+                                          double& energy, 
+                                          MyAtomInfo atoms[]);
     static void          myTerminateOpenMM(MyOpenMMData*);
     
     
