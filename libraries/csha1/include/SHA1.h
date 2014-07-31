@@ -116,7 +116,6 @@
 #endif
 #endif
 
-#include <memory.h>
 #include <limits.h>
 
 #ifdef SHA1_UTILITY_FUNCTIONS

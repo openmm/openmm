@@ -35,7 +35,11 @@
 #if defined(__ANDROID__)
     #include "vectorize_neon.h"
 #else
-    #include "vectorize_sse.h"
+    #if defined(__PNACL__)
+        #include "vectorize_pnacl.h"
+    #else
+        #include "vectorize_sse.h"
+    #endif
 #endif
 
 #endif /*OPENMM_VECTORIZE_H_*/

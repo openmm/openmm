@@ -33,9 +33,22 @@
  * -------------------------------------------------------------------------- */
 
 #include <smmintrin.h>
-
+#include "hardware.h"
 
 // This file defines classes and functions to simplify vectorizing code with SSE.
+
+/**
+ * Determine whether ivec4 and fvec4 are supported on this processor.
+ */
+static bool isVec4Supported() {
+    int cpuInfo[4];
+    cpuid(cpuInfo, 0);
+    if (cpuInfo[0] >= 1) {
+        cpuid(cpuInfo, 1);
+        return ((cpuInfo[2] & ((int) 1 << 19)) != 0);
+    }
+    return false;
+}
 
 class ivec4;
 
@@ -146,7 +159,7 @@ public:
         return _mm_sub_epi32(val, other);
     }
     ivec4 operator*(const ivec4& other) const {
-        return _mm_mul_epi32(val, other);
+        return _mm_mullo_epi32(val, other);
     }
     void operator+=(const ivec4& other) {
         val = _mm_add_epi32(val, other);
@@ -155,7 +168,7 @@ public:
         val = _mm_sub_epi32(val, other);
     }
     void operator*=(const ivec4& other) {
-        val = _mm_mul_epi32(val, other);
+        val = _mm_mullo_epi32(val, other);
     }
     ivec4 operator-() const {
         return _mm_sub_epi32(_mm_set1_epi32(0), val);

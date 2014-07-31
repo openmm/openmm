@@ -71,11 +71,11 @@ void testSerialization() {
 	
 	// Set positions, velocities, forces
 	vector<Vec3> positions;
-	for(int i=0;i<numParticles;i++) {
+	for (int i = 0; i < numParticles; i++) {
 		positions.push_back(Vec3( ((float) rand()/(float) RAND_MAX)*6.2, ((float) rand()/(float) RAND_MAX)*6.2, ((float) rand()/(float) RAND_MAX)*6.2));
 	}
 	vector<Vec3> velocities;
-	for(int i=0;i<numParticles;i++) {
+	for (int i = 0; i < numParticles; i++) {
 		velocities.push_back(Vec3( ((float) rand()/(float) RAND_MAX)*6.2, ((float) rand()/(float) RAND_MAX)*6.2, ((float) rand()/(float) RAND_MAX)*6.2));
 	}
 
@@ -95,19 +95,19 @@ void testSerialization() {
 	vector<Vec3> pos2 = s2.getPositions();
 	ASSERT_EQUAL(pos1.size(), pos2.size());
 	ASSERT_EQUAL(pos1.size(), positions.size());
-	for(int i=0; i<pos1.size(); i++) {
+	for (int i = 0; i < (int) pos1.size(); i++) {
 		ASSERT_EQUAL_VEC(pos1[i],pos2[i],0);
 	}
 	vector<Vec3> vel1 = s1.getVelocities();
 	vector<Vec3> vel2 = s2.getVelocities();
 	ASSERT_EQUAL(vel1.size(), vel2.size());
-	for(int i=0; i<pos1.size(); i++) {
+	for (int i = 0; i < (int) pos1.size(); i++) {
 		ASSERT_EQUAL_VEC(vel1[i],vel2[i],0);
 	}
 	vector<Vec3> forces1 = s1.getForces();
 	vector<Vec3> forces2 = s2.getForces();
 	ASSERT_EQUAL(forces1.size(), forces2.size());
-	for(int i=0; i<pos1.size(); i++) {
+	for (int i = 0; i < (int) pos1.size(); i++) {
 		ASSERT_EQUAL_VEC(forces1[i],forces2[i],0);
 	}
 	Vec3 a1,a2,a3,b1,b2,b3;
@@ -128,7 +128,7 @@ void testSerialization() {
 	map<string, double>::const_iterator it1=p1.begin();
 	map<string, double>::const_iterator it2=p2.begin();
 	//maps are ordered, so iterators should be in the same order. 
-	for(it1=p1.begin(); it1!=p1.end(); it1++, it2++) {
+	for (it1 = p1.begin(); it1 != p1.end(); it1++, it2++) {
 		assert((it1->first).compare(it2->first) == 0);
 		ASSERT_EQUAL(it1->second, it2->second);
 	}

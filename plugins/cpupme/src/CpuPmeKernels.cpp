@@ -569,20 +569,7 @@ double CpuCalcPmeReciprocalForceKernel::finishComputation(IO& io) {
 }
 
 bool CpuCalcPmeReciprocalForceKernel::isProcessorSupported() {
-    // Make sure the CPU supports SSE 4.1 or NEON.
-        
-    #ifdef __ANDROID__
-        uint64_t features = android_getCpuFeatures();
-        return (features & ANDROID_CPU_ARM_FEATURE_NEON) != 0;
-    #else
-        int cpuInfo[4];
-        cpuid(cpuInfo, 0);
-        if (cpuInfo[0] >= 1) {
-            cpuid(cpuInfo, 1);
-            return ((cpuInfo[2] & ((int) 1 << 19)) != 0);
-        }
-        return false;
-    #endif
+    return isVec4Supported();
 }
 
 int CpuCalcPmeReciprocalForceKernel::findFFTDimension(int minimum) {

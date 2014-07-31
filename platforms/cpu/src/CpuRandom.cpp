@@ -33,7 +33,7 @@ CpuRandom::CpuRandom() : hasInitialized(false) {
 }
 
 CpuRandom::~CpuRandom() {
-    for (int i = 0; i < threadRandom.size(); i++)
+    for (int i = 0; i < (int) threadRandom.size(); i++)
         delete threadRandom[i];
 }
 

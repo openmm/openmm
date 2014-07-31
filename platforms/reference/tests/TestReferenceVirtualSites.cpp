@@ -79,8 +79,8 @@ void testMasslessParticle() {
     for (int i = 0; i < 1000; ++i) {
         State state = context.getState(State::Positions | State::Velocities | State::Forces);
         double time = state.getTime();
-        ASSERT_EQUAL_VEC(Vec3(), state.getPositions()[0], 0.0);
-        ASSERT_EQUAL_VEC(Vec3(), state.getVelocities()[0], 0.0);
+        ASSERT_EQUAL_VEC(Vec3(0, 0, 0), state.getPositions()[0], 0.0);
+        ASSERT_EQUAL_VEC(Vec3(0, 0, 0), state.getVelocities()[0], 0.0);
         ASSERT_EQUAL_VEC(Vec3(cos(time), sin(time), 0), state.getPositions()[1], 0.01);
         ASSERT_EQUAL_VEC(Vec3(-sin(time), cos(time), 0), state.getVelocities()[1], 0.01);
         integrator.step(1);

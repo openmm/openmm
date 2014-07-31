@@ -213,7 +213,7 @@ void CpuGBSAOBCForce::threadComputeForce(ThreadPool& threads, int threadIndex) {
     const float probeRadius = 0.14f;
     const float surfaceAreaFactor = 28.3919551;
     double energy = 0.0;
-    vector<float>& bornForces = threadBornForces[threadIndex];
+    AlignedArray<float>& bornForces = threadBornForces[threadIndex];
     for (int i = 0; i < numParticles; i++)
         bornForces[i] = 0.0f;
     while (true) {
