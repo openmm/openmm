@@ -3553,7 +3553,7 @@ Hamiltonian is given by
 
 
 .. math::
-   H=\sum _{k=1}^{n}\left(\frac{{p}_{{k}^{2}}}{2m}+E({q}_{k})+\frac{m({k}_{B}Tn)^{2}}{2h^{2}}({q}_{k}-{q}_{k-1})^{2}\right)
+   H=\sum _{k=1}^{n}\left(\frac{{p}_{{k}^{2}}}{2m}+E({q}_{k})+\frac{m({k}_{B}Tn)^{2}}{2\hbar^{2}}({q}_{k}-{q}_{k-1})^{2}\right)
 
 
 This Hamiltonian resembles that of a system of classical ring polymers where
@@ -3569,7 +3569,7 @@ needed to converge a calculation can be estimated using\ :cite:`Markland2008`\
 
 
 .. math::
-   n>\frac{h\omega_{max}}{{k}_{B}T}
+   n>\frac{\hbar\omega_{max}}{{k}_{B}T}
 
 
 where :math:`\omega_{max}` is the highest frequency in the problem.  For example, for

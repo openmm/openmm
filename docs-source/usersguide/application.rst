@@ -723,6 +723,12 @@ produce an error since no water parameters are defined:
 
     forcefield = ForceField('amber10.xml')
 
+Be aware that some force fields and water models include "extra particles", such
+as lone pairs or Drude particles.  Examples include the CHARMM polarizable force
+field and all of the 4 and 5 site water models.  To use these force fields, you
+must first add the extra particles to the Topology.  See section
+:ref:`adding-or-removing-extra-particles` for details.
+
 AMBER Implicit Solvent
 ======================
 
@@ -1330,6 +1336,8 @@ Allowed values for :code:`positiveIon` are 'Cs+', 'K+', 'Li+', 'Na+', and
 'I-'.  Be sure to include the single quotes around the value.  Also be aware
 some force fields do not include parameters for all of these ion types, so you
 need to use types that are supported by your chosen force field.
+
+.. _adding-or-removing-extra-particles:
 
 Adding or Removing Extra Particles
 **********************************
