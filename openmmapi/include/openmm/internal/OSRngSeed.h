@@ -1,4 +1,4 @@
-#ifndef OPENMM_OSRNGSEED_H_
+﻿#ifndef OPENMM_OSRNGSEED_H_
 #define OPENMM_OSRNGSEED_H_
 
 
@@ -33,7 +33,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-
+#include "windowsExport.h"
 
 /**
  * Return an integer int for use as a seed for a random number generator.
@@ -42,6 +42,6 @@
  * this uses CryptGenRandom from the CryptoAPI to get a single int. On other
  * platforms (*nix, apple), we read from /dev/urandom
  */
-int osrngseed(void);
+int OPENMM_EXPORT osrngseed(void);
 
 #endif /* OPENMM_OSRNGSEED_H_ */

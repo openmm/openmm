@@ -46,6 +46,7 @@
    #ifdef WIN32
       #define NOMINMAX
       #include <windows.h>
+      #include <intrin.h>
    #else
       #ifdef __ANDROID__
         #include <cpu-features.h>
@@ -89,7 +90,7 @@ static int getNumProcessors() {
 /**
  * Get a description of the CPU's capabilities.
  */
-#ifdef _WIN32
+#ifdef WIN32
 #define cpuid __cpuid
 #else
 #if !defined(__ANDROID__) && !defined(__PNACL__)
