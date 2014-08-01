@@ -109,10 +109,10 @@ Each harmonic angle is represented by an energy term of the form
 
 
 .. math::
-   E=\frac{1}{2}k{\left(q-{q}_{0}\right)}^{2}
+   E=\frac{1}{2}k{\left(\theta-\theta_0\right)}^{2}
 
 
-where :math:`\theta` is the angle formed by the three particles, :math:`\theta` :sub:`0` is
+where :math:`\theta` is the angle formed by the three particles, :math:`\theta_0` is
 the equilibrium angle, and *k* is the force constant.
 
 As with HarmonicBondForce, be aware that some force fields define their harmonic
@@ -127,7 +127,7 @@ Each torsion is represented by an energy term of the form
 
 
 .. math::
-   E=k\left(1+\text{cos}\left(\mathit{nq}-{q}_{0}\right)\right)
+   E=k\left(1+\text{cos}\left(n\theta-\theta_0\right)\right)
 
 
 where :math:`\theta` is the dihedral angle formed by the four particles, :math:`\theta_0`
@@ -141,7 +141,7 @@ Each torsion is represented by an energy term of the form
 
 
 .. math::
-   E=\sum _{i=0}^{5}{C}_{i}{\left(\text{cos}f\right)}^{i}
+   E=\sum _{i=0}^{5}{C}_{i}{\left(\text{cos}\phi\right)}^{i}
 
 
 where :math:`\phi` is the dihedral angle formed by the four particles and
@@ -160,7 +160,7 @@ Each torsion pair is represented by an energy term of the form
 
 
 .. math::
-   E=f\left({q}_{1},{q}_{2}\right)
+   E=f\left(\theta_1,\theta_2\right)
 
 
 where :math:`\theta_1` and :math:`\theta_2` are the two dihedral angles
@@ -182,7 +182,7 @@ an energy term of the form
 
 
 .. math::
-   E=4e\left({\left(\frac{s}{r}\right)}^{\text{12}}-{\left(\frac{s}{r}\right)}^{6}\right)
+   E=4\epsilon\left({\left(\frac{\sigma}{r}\right)}^{\text{12}}-{\left(\frac{\sigma}{r}\right)}^{6}\right)
 
 
 where *r* is the distance between the two particles, :math:`\sigma` is the distance
@@ -193,14 +193,14 @@ to zero.  Because the interaction decreases very quickly with distance, the
 cutoff usually has little effect on the accuracy of simulations.
 
 Optionally you can use a switching function to make the energy go smoothly to 0
-at the cutoff distance.  When :math:`r_{switch} < r < r_{cutoff}`\ , the energy is multiplied by
+at the cutoff distance.  When :math:`r_\mathit{switch} < r < r_\mathit{cutoff}`\ , the energy is multiplied by
 
 .. math::
    S=1-{6x}^{5}+15{x}^{4}-10{x}^{3}
 
 
-where :math:`x = (r-r_{switch})/(r_{cutoff}-r_{switch})`. This function decreases smoothly from 1 at
-:math:`r = r_{switch}` to 0 at :math:`r = r_{cutoff}`, and has continuous first and
+where :math:`x = (r-r_\mathit{switch})/(r_\mathit{cutoff}-r_\mathit{switch})`. This function decreases smoothly from 1 at
+:math:`r = r_\mathit{switch}` to 0 at :math:`r = r_\mathit{cutoff}`, and has continuous first and
 second derivatives at both ends
 
 When an exception has been added for a pair of particles, :math:`\sigma` and :math:`\epsilon`
@@ -209,10 +209,10 @@ from the parameters of the individual particles using the Lorentz-Bertelot
 combining rule:
 
 .. math::
-   s=\frac{{s}_{1}+{s}_{2}}{2}
+   \sigma=\frac{\sigma_1+\sigma_2}{2}
 
 .. math::
-   e=\sqrt{{e}_{1}{e}_{2}}
+   \epsilon=\sqrt{\epsilon_1 \epsilon_2}
 
 When using periodic boundary conditions, NonbondedForce can optionally add a
 term (known as a *long range dispersion correction*\ ) to the energy that
@@ -220,11 +220,11 @@ approximately represents the contribution from all interactions beyond the
 cutoff distance:\ :cite:`Shirts2007`\
 
 .. math::
-   {E}_{\text{cor}}=\frac{{8pN}^{2}}{V}\left(\frac{\langle e_{ij}\sigma_{ij}^{12}\rangle}{{9r}_{{c}^{9}}}-\frac{\langle e_{ij}{s}_{ij}^{6}\rangle}{{3r}_{{c}^{3}}}\right)
+   {E}_{\text{cor}}=\frac{{8\pi N}^{2}}{V}\left(\frac{\langle \epsilon_{ij}\sigma_{ij}^{12}\rangle}{{9r_c}^9}-\frac{\langle \epsilon_{ij}\sigma_{ij}^{6}\rangle}{{3r_c}^3}\right)
 
 where *N* is the number of particles in the system, *V* is the volume of
-the periodic box, *r*\ *c* is the cutoff distance, :math:`\sigma`\ *ij* and
-:math:`\epsilon`\ *ij* are the interaction parameters between particle *i* and
+the periodic box, :math:`r_c` is the cutoff distance, :math:`\sigma_{ij}` and
+:math:`\epsilon_{ij}` are the interaction parameters between particle *i* and
 particle *j*\ , and :math:`\langle \text{...} \rangle` represents an average over all pairs of particles in
 the system.  When a switching function is in use, there is also a contribution
 to the correction that depends on the integral of *E*\ ·(1-\ *S*\ ) over the
@@ -236,22 +236,20 @@ The Lennard-Jones interaction is often parameterized in two other equivalent
 ways.  One is
 
 
-
 .. math::
-   E=e\left({\left(\frac{{r}_{\text{min}}}{r}\right)}^{\text{12}}-2{\left(\frac{{r}_{\text{min}}}{r}\right)}^{6}\right)
+   E=\epsilon\left({\left(\frac{{r}_{\mathit{min}}}{r}\right)}^{\text{12}}-2{\left(\frac{{r}_{\mathit{min}}}{r}\right)}^{6}\right)
 
 
-where :math:`r_{min}` (sometimes known as :math:`d_{min}`; this is not a
+where :math:`r_\mathit{min}` (sometimes known as :math:`d_\mathit{min}`; this is not a
 radius) is the center-to-center distance at which the energy is minimum.  It is
 related to :math:`\sigma` by
 
 
-
 .. math::
-   s=\frac{{r}_{\text{min}}}{{2}^{1/6}}
+   \sigma=\frac{{r}_{\mathit{min}}}{{2}^{1/6}}
 
 
-In turn, :math:`r_{min}` is related to the van der Waals radius by :math:`r_{min} = 2r_{vdw}`\ .
+In turn, :math:`r_\mathit{min}` is related to the van der Waals radius by :math:`r_\mathit{min} = 2r_\mathit{vdw}`\ .
 
 Another common form is
 
@@ -266,12 +264,12 @@ The coefficients A and B are related to :math:`\sigma` and :math:`\epsilon` by
 
 
 .. math::
-   s={\left(\frac{A}{B}\right)}^{1/6}
+   \sigma={\left(\frac{A}{B}\right)}^{1/6}
 
 
 
 .. math::
-   e=\frac{{B}^{2}}{4A}
+   \epsilon=\frac{{B}^{2}}{4A}
 
 
 Coulomb Interaction Without Cutoff
@@ -297,19 +295,19 @@ distance is a solvent with a uniform dielectric constant.\ :cite:`Tironi1995`
 
 
 .. math::
-   E=\frac{{q}_{1}{q}_{2}}{4{\text{pe}}_{0}}\left(\frac{1}{r}+{k}_{\text{rf}}{r}^{2}-{c}_{\text{rf}}\right)
+   E=\frac{{q}_{1}{q}_{2}}{4\pi\epsilon_0}\left(\frac{1}{r}+{k}_{\mathit{rf}}{r}^{2}-{c}_{\mathit{rf}}\right)
 
 
 .. math::
-   {k}_{\text{rf}}=\left(\frac{1}{{r}_{{\text{cutoff}}^{3}}}\right)\left(\frac{{\epsilon}_{\text{solvent}}-1}{2{\epsilon}_{\text{solvent}}+1}\right)
+   {k}_{\mathit{rf}}=\left(\frac{1}{{r_\mathit{cutoff}}^3}\right)\left(\frac{{\epsilon}_{\mathit{solvent}}-1}{2{\epsilon}_{\mathit{solvent}}+1}\right)
 
 
 .. math::
-   {c}_{\text{rf}}=\left(\frac{1}{{r}_{\text{cutoff}}}\right)\left(\frac{3{\epsilon}_{\text{solvent}}}{2{\epsilon}_{\text{solvent}}+1}\right)
+   {c}_{\mathit{rf}}=\left(\frac{1}{{r}_{\mathit{cutoff}}}\right)\left(\frac{3{\epsilon}_{\mathit{solvent}}}{2{\epsilon}_{\mathit{solvent}}+1}\right)
 
 
-where *r*\ *cutoff* is the cutoff distance and :math:`\epsilon_{solvent}` is
-the dielectric constant of the solvent.  In the limit :math:`\epsilon_{solvent}` >> 1,
+where :math:`r_\mathit{cutoff}` is the cutoff distance and :math:`\epsilon_\mathit{solvent}` is
+the dielectric constant of the solvent.  In the limit :math:`\epsilon_\mathit{solvent}` >> 1,
 this causes the force to go to zero at the cutoff.
 
 Coulomb Interaction With Ewald Summation
@@ -321,19 +319,19 @@ space sum*\ , the *reciprocal space sum*\ , and the *self-energy term*\ .\
 
 
 .. math::
-   E=E_{\text{dir}}+{E}_{\text{rec}}+{E}_{\text{self}}
+   E=E_{\mathit{dir}}+{E}_{\mathit{rec}}+{E}_{\mathit{self}}
 
 
 .. math::
-   E_{\text{dir}}=\frac{1}{2}\sum _{i,j}\sum _{n}{q}_{i}{q}_{j}\frac{\text{erfc}\left({\mathit{\alpha r}}_{ij,n}\right)}{{r}_{ij,n}}
+   E_{\mathit{dir}}=\frac{1}{2}\sum _{i,j}\sum_\mathbf{n}{q}_{i}{q}_{j}\frac{\text{erfc}\left({\mathit{\alpha r}}_{ij,\mathbf{n}}\right)}{r_{ij,\mathbf{n}}}
 
 
 .. math::
-   E_{\text{rec}}=\frac{1}{2{\pi}V}\sum _{i,j}q_i q_j\sum _{\mathbf{k}{\neq}0}\frac{\text{exp}(-(\pi \mathbf{k}/\alpha)^2+2\pi i \mathbf{k} \cdot (\mathbf{r}_{i}-\mathbf{r}_{j}))}{\mathbf{m}^2}
+   E_{\mathit{rec}}=\frac{1}{2{\pi}V}\sum _{i,j}q_i q_j\sum _{\mathbf{k}{\neq}0}\frac{\text{exp}(-(\pi \mathbf{k}/\alpha)^2+2\pi i \mathbf{k} \cdot (\mathbf{r}_{i}-\mathbf{r}_{j}))}{\mathbf{m}^2}
 
 
 .. math::
-   E_{\text{self}}=-\frac{\alpha}{\sqrt{p}}\sum _{i}{q}_{{i}^{2}}
+   E_{\mathit{self}}=-\frac{\alpha}{\sqrt{\pi}}\sum _{i}{q}_{{i}^{2}}
 
 
 In the above expressions, the indices *i* and *j* run over all
@@ -351,7 +349,7 @@ width of the periodic cell, the number of terms in this sum is never greater
 than the square of the number of particles.
 
 The error made by applying the direct space cutoff depends on the magnitude of
-:math:`\text{erfc}({\alpha}r_{cutoff})`\ .  Similarly, the error made in the reciprocal space
+:math:`\text{erfc}({\alpha}r_\mathit{cutoff})`\ .  Similarly, the error made in the reciprocal space
 sum by ignoring wave numbers beyond k\ :sub:`max` depends on the magnitude
 of :math:`\text{exp}(-({\pi}k_{max}/{\alpha})^2`\ ).  By changing :math:`\alpha`, one can decrease the
 error in either term while increasing the error in the other one.
@@ -361,14 +359,14 @@ instead asks the user to choose an error tolerance :math:`\delta`.  It then calc
 
 
 .. math::
-   \alpha =\sqrt{-\text{log}\left(2{\delta}\right)}/{r}_{\text{cutoff}}
+   \alpha =\sqrt{-\text{log}\left(2{\delta}\right)}/{r}_{\mathit{cutoff}}
 
 
 Finally, it estimates the error in the reciprocal space sum as
 
 
 .. math::
-   \text{error}=\frac{k_{\text{max}}\sqrt{d\alpha}}{20}\text{exp}(-(\pi k_\text{max}/d\alpha)^2)
+   \mathit{error}=\frac{k_{\mathit{max}}\sqrt{d\alpha}}{20}\text{exp}(-(\pi k_\mathit{max}/d\alpha)^2)
 
 
 where *d* is the width of the periodic box, and selects the smallest value
@@ -376,7 +374,7 @@ for k\ :sub:`max` which gives *error* < :math:`\delta`\ .  (If the box is not sq
 k\ :sub:`max` will have a different value along each axis.)
 
 This means that the accuracy of the calculation is determined by :math:`\delta`\ . 
-:math:`r_{cutoff}` does not affect the accuracy of the result, but does affect the speed
+:math:`r_\mathit{cutoff}` does not affect the accuracy of the result, but does affect the speed
 of the calculation by changing the relative costs of the direct space and
 reciprocal space sums.  You therefore should test different cutoffs to find the
 value that gives best performance; this will in general vary both with the size
@@ -402,27 +400,27 @@ computed very quickly, giving performance that scales as O(N log N) in the
 number of particles (assuming the volume of the periodic box is proportional to
 the number of particles).
 
-As with Ewald summation, the user specifies the direct space cutoff :math:`r_{cutoff}`
+As with Ewald summation, the user specifies the direct space cutoff :math:`r_\mathit{cutoff}`
 and error tolerance :math:`\delta`\ .  NonbondedForce then selects :math:`\alpha` as
 
 
 .. math::
-   \alpha =\sqrt{-\text{log}\left(2d\right)}/{r}_{cutoff}
+   \alpha =\sqrt{-\text{log}\left(2\delta\right)}/{r}_\mathit{cutoff}
 
 
 and the number of nodes in the mesh along each dimension as
 
 
 .. math::
-   {n}_{\text{mesh}}=\frac{2\alpha d}{{3d}^{1/5}}
+   n_\mathit{mesh}=\frac{2\alpha d}{{3d}^{1/5}}
 
 
 where *d* is the width of the periodic box along that dimension.  Alternatively,
 the user may choose to explicitly set values for these parameters.  (Note that
-some Platforms may choose to use a larger value of :math:`n_\text{mesh}` than that
+some Platforms may choose to use a larger value of :math:`n_\mathit{mesh}` than that
 given by this equation.  For example, some FFT implementations require the mesh
 size to be a multiple of certain small prime numbers, so a Platform might round
-it up to the nearest permitted value.  It is guaranteed that :math:`n_\text{mesh}`
+it up to the nearest permitted value.  It is guaranteed that :math:`n_\mathit{mesh}`
 will never be smaller than the value given above.)
 
 The comments in the previous section regarding the interpretation of :math:`\delta` for Ewald
@@ -450,11 +448,11 @@ molecule.  The Generalized Born energy is given by\ :cite:`Onufriev2004`
 
 
 .. math::
-   E\text{=-}\frac{1}{2}\left(\frac{1}{\epsilon_{\text{solute}}}-\frac{1}{\epsilon_{\text{solvent}}}\right)\sum _{i,j}\frac{{q}_{i}{q}_{j}}{{f}_{\text{GB}}\left({d}_{ij},{R}_{i},{R}_{j}\right)}
+   E\text{=-}\frac{1}{2}\left(\frac{1}{\epsilon_{\mathit{solute}}}-\frac{1}{\epsilon_{\mathit{solvent}}}\right)\sum _{i,j}\frac{{q}_{i}{q}_{j}}{{f}_{\text{GB}}\left({d}_{ij},{R}_{i},{R}_{j}\right)}
 
 
-where the indices *i* and *j* run over all particles, :math:`\epsilon_\text{solute}`
-and :math:`\epsilon_\text{solvent}` are the dielectric constants of the solute and solvent
+where the indices *i* and *j* run over all particles, :math:`\epsilon_\mathit{solute}`
+and :math:`\epsilon_\mathit{solvent}` are the dielectric constants of the solute and solvent
 respectively, :math:`q_i` is the charge of particle *i*\ , and :math:`d_{ij}` is the distance
 between particles *i* and *j*\ .  :math:`f_\text{GB}(d_{ij}, R_i, R_j)` is defined as
 
@@ -467,7 +465,7 @@ between particles *i* and *j*\ .  :math:`f_\text{GB}(d_{ij}, R_i, R_j)` is defin
 
 
 .. math::
-   {R}_{i}=\frac{1}{{\rho}_{{i}^{-1}}-{\rho}_{{i}^{-1}}\text{tanh}\left(\alpha \Psi_{i}-{\beta \Psi}_{{i}^{2}}+{\gamma \Psi}_{{i}^{3}}\right)}
+   R_i=\frac{1}{\rho_i^{-1}-r_i^{-1}\text{tanh}\left(\alpha \Psi_{i}-{\beta \Psi}_{{i}^{2}}+{\gamma \Psi}_{{i}^{3}}\right)}
 
 
 where :math:`\alpha`, :math:`\beta`, and :math:`\gamma` are the GB\ :sup:`OBC`\ II parameters :math:`\alpha` = 1, :math:`\beta` = 0.8, and :math:`\gamma` =
@@ -478,7 +476,7 @@ spheres of all particles outside particle *i*\ :
 
 
 .. math::
-   \Psi_{i}=\frac{{\rho }_{i}}{4p}{\int }_{\text{VDW}}q\left(\mid r\mid -{\rho }_{i}\right)\frac{1}{{\mid r\mid }^{4}}{d}^{3}r
+   \Psi_i=\frac{\rho_i}{4\pi}\int_{\text{VDW}}\theta\left(|\mathbf{r}|-{\rho }_{i}\right)\frac{1}{{|\mathbf{r}|}^{4}}{d}^{3}\mathbf{r}
 
 
 where :math:`\theta`\ (\ *r*\ ) is a step function that excludes the interior of particle
@@ -491,11 +489,11 @@ The surface area term is given by\ :cite:`Schaefer1998`\ :cite:`Ponder`
 
 
 .. math::
-   E=4\pi \cdot 2\text{.}\text{26}\sum _{i}{\left({r}_{i}+{r}_{\text{solvent}}\right)}^{2}{\left(\frac{{r}_{i}}{{R}_{i}}\right)}^{6}
+   E=4\pi \cdot 2\text{.}\text{26}\sum _{i}{\left({r}_{i}+{r}_{\mathit{solvent}}\right)}^{2}{\left(\frac{{r}_{i}}{{R}_{i}}\right)}^{6}
 
 
 where :math:`r_i` is the atomic radius of particle *i*\ , :math:`r_i` is
-its Born radius, and :math:`r_\text{solvent}` is the solvent radius, which is taken
+its Born radius, and :math:`r_\mathit{solvent}` is the solvent radius, which is taken
 to be 0.14 nm.
 
 
@@ -510,11 +508,11 @@ energy is given by Equation 2 of the referenced paper:
 
 
 .. math::
-   E=-\frac{1}{2}\left(\frac{1}{{\epsilon }_{\text{solute}}}-\frac{1}{{\epsilon }_{\text{solvent}}}\right)\sum _{i,j}\frac{{q}_{i}{q}_{j}}{{f}_{\text{GB}}\left({d}_{ij},{R}_{i},{R}_{j}\right)}+\sum _{i}^{n}{\gamma }_{i}{\left(\frac{{r}_{i}}{{R}_{i}}\right)}^{3}
+   E=-\frac{1}{2}\left(\frac{1}{{\epsilon }_{\mathit{solute}}}-\frac{1}{{\epsilon }_{\mathit{solvent}}}\right)\sum _{i,j}\frac{{q}_{i}{q}_{j}}{{f}_{\text{GB}}\left({d}_{ij},{R}_{i},{R}_{j}\right)}+\sum _{i}^{n}{\gamma }_{i}{\left(\frac{{r}_{i}}{{R}_{i}}\right)}^{3}
 
 
-where the indices *i* and *j* run over all n particles, :math:`\epsilon_\text{solute}`
-and :math:`\epsilon_\text{solvent}` are the dielectric constants of the solute
+where the indices *i* and *j* run over all n particles, :math:`\epsilon_\mathit{solute}`
+and :math:`\epsilon_\mathit{solvent}` are the dielectric constants of the solute
 and solvent respectively, :math:`q_i` is the charge of particle *i*\ ,
 :math:`d_{ij}` is the distance between particles *i* and *j*\ , :math:`r_i`
 are the input particle radii, and the :math:`\gamma_i` are adjustable
@@ -530,7 +528,7 @@ where V(d,r,S) is given by
 
 
 .. math::
-   V\left(d,r,S\right)=\left\{\begin{array}{ccc}L\left(d,x,S\right){\mid }_{x=\text{max}\left(r,d-S\right)}^{x=d+S}& \mid r-S\mid <d& \\ 0& 0\le d\le r-S& \\ L\left(d,x,S\right){\mid }_{x=d-S}^{x=d+S}& 0\le d\le S-r& \end{array}\right\}
+   V\left(d,r,S\right)=\left\{\begin{array}{ccc}L\left(d,x,S\right){\mid }_{x=\mathrm{max}\left(r,d-S\right)}^{x=d+S}& \mid r-S\mid <d& \\ 0& 0\le d\le r-S& \\ L\left(d,x,S\right){\mid }_{x=d-S}^{x=d+S}& 0\le d\le S-r& \end{array}\right\}
 
 
 and
@@ -544,7 +542,7 @@ The S\ :sub:`i` are derived from the covalent topology of the solute:
 
 
 .. math::
-   {S}_{i}=0\text{.}\text{95}\cdot\text{max}\left\{0,{\nu }_{i}^{}\right\}
+   {S}_{i}=0\text{.}\text{95}\cdot\mathrm{max}\left(0,\nu_i^{1/3}\right)
 
 
 
@@ -727,10 +725,10 @@ user.  That is, the interaction energy of each angle is given by
 
 
 .. math::
-   E=f\left(q\right)
+   E=f\left(\theta\right)
 
 
-where *f*\ (\ :math:`\theta`\ ) is a user defined mathematical expression.
+where :math:`f(\theta)` is a user defined mathematical expression.
 
 In addition to depending on the angle :math:`\theta`\ , the energy may also depend on an
 arbitrary set of user defined parameters.  Parameters may be specified in two
@@ -750,10 +748,10 @@ by the user.  That is, the interaction energy of each angle is given by
 
 
 .. math::
-   E=f\left(q\right)
+   E=f(\theta)
 
 
-where *f*\ (\ :math:`\theta`\ ) is a user defined mathematical expression.  The angle
+where :math:`f(\theta)` is a user defined mathematical expression.  The angle
 :math:`\theta` is guaranteed to be in the range [-π, π].  Like PeriodicTorsionForce, it
 is defined to be zero when the first and last particles are on the same side of
 the bond formed by the middle two particles (the *cis* configuration).
@@ -778,7 +776,7 @@ interaction energy between each pair of particles is given by
 
 
 .. math::
-   E=f\left(r\right)
+   E=f(r)
 
 
 where *f*\ (\ *r*\ ) is a user defined mathematical expression.
@@ -797,7 +795,7 @@ API documentation for details.
 
 When using a cutoff, a switching function can optionally be applied to make the
 energy go smoothly to 0 at the cutoff distance.  When
-:math:`r_{switch} < r < r_{cutoff}`\ , the energy is multiplied by
+:math:`r_\mathit{switch} < r < r_\mathit{cutoff}`\ , the energy is multiplied by
 
 
 
@@ -805,9 +803,9 @@ energy go smoothly to 0 at the cutoff distance.  When
    S=1-{6x}^{5}+15{x}^{4}-10{x}^{3}
 
 
-where :math:`x=(r-r_{switch})/(r_{cutoff}-r_{switch})`\ .
-This function decreases smoothly from 1 at :math:`r=r_{switch}`
-to 0 at :math:`r=r_{cutoff}`\ , and has continuous first and
+where :math:`x=(r-r_\mathit{switch})/(r_\mathit{cutoff}-r_\mathit{switch})`\ .
+This function decreases smoothly from 1 at :math:`r=r_\mathit{switch}`
+to 0 at :math:`r=r_\mathit{cutoff}`\ , and has continuous first and
 second derivatives at both ends.
 
 When using periodic boundary conditions, CustomNonbondedForce can optionally add
@@ -817,7 +815,7 @@ cutoff distance:\ :cite:`Shirts2007`
 
 
 .. math::
-   {E}_{cor}=\frac{2\pi N^2}{V}\langle\underset{{r}_{cutoff}}{\overset{\infty}{\int }}E\left(r\right)r^{2}dr\rangle
+   {E}_{cor}=\frac{2\pi N^2}{V}\left\langle\underset{{r}_\mathit{cutoff}}{\overset{\infty}{\int}}E(r)r^{2}dr\right\rangle
 
 
 where *N* is the number of particles in the system, *V* is the volume of
@@ -827,7 +825,7 @@ contribution to the correction given by
 
 
 .. math::
-   E_{cor}^\prime=\frac{2\pi N^2}{V}\langle\underset{{r}_{switch}}{\overset{{r}_{cutoff}}{\int }}E\left(r\right)\left(1-S\left(r\right)\right)r^{2}dr\rangle
+   E_{cor}^\prime=\frac{2\pi N^2}{V}\left\langle\underset{{r}_\mathit{switch}}{\overset{{r}_\mathit{cutoff}}{\int }}E(r)(1-S(r))r^{2}dr\right\rangle
 
 
 The long range dispersion correction is primarily useful when running
@@ -843,7 +841,7 @@ is given by
 
 
 .. math::
-   E=f\left(x,y,z\right)
+   E=f(x,y,z)
 
 
 where *f*\ (\ *x*\ , *y*\ , *z*\ ) is a user defined mathematical
@@ -870,7 +868,7 @@ of four particles.  That is, the interaction energy of each bond is given by
 
 
 .. math::
-   E=f\left(\left\{{x}_{i}\right\},\left\{{r}_{i}\right\},\left\{{q}_{i}\right\},\left\{{f}_{i}\right\}\right)
+   E=f(\{x_i\},\{r_i\},\{\theta_i\},\{\phi_i\})
 
 
 where *f*\ (\ *...*\ ) is a user defined mathematical expression.  It may
@@ -985,7 +983,7 @@ group is given by
 
 
 .. math::
-   E=f\left(\left\{{r}_{i}\right\},\left\{{q}_{i}\right\},\left\{{f}_{i}\right\}\right)
+   E=f(\{r_i\},\{\theta_i\},\{\phi_i\})
 
 
 where *f*\ (\ *...*\ ) is a user defined mathematical expression.  It may
@@ -1021,7 +1019,7 @@ expressions.  These expressions are specified as character strings, and may
 involve a variety of standard operators and mathematical functions.
 
 The following operators are supported: + (add), - (subtract), * (multiply), /
-(divide), and ^ (power).  Parentheses “(“and “)” may be used for grouping.
+(divide), and ^ (power).  Parentheses “(“ and “)” may be used for grouping.
 
 The following standard functions are supported: sqrt, exp, log, sin, cos, sec,
 csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, erf, erfc, min, max, abs,
@@ -1145,7 +1143,7 @@ of the integration error:
 
 
 .. math::
-   error={\left(\Delta t\right)}^{2}\sum _{i}\frac{\mid \mathbf{f}_{i}\mid}{m_i}
+   error={\left(\Delta t\right)}^{2}\sum _{i}\frac{|\mathbf{f}_{i}|}{m_i}
 
 
 where :math:`\mathbf{f}_i` is the force acting on particle *i* and :math:`m_i`
@@ -1159,7 +1157,7 @@ specified error tolerance:
 
 
 .. math::
-   \Delta t=\sqrt{\frac{\delta}{\sum _{i}\frac{\mid \mathbf{f}_i\mid}{m_i}}}
+   \Delta t=\sqrt{\frac{\delta}{\sum _{i}\frac{|\mathbf{f}_i|}{m_i}}}
 
 
 where :math:`\delta` is the error tolerance.  This is the largest step that may be
@@ -1320,14 +1318,14 @@ specific types of rules.  They are:
   average of the positions of three particles:
 
 .. math::
-   \mathbf{r}={w}_{1}\mathbf{r}_{1}+{w}_{2}\mathbf{r}_{{2}_{1}}+{w}_{3}\mathbf{r}_{3}
+   \mathbf{r}={w}_{1}\mathbf{r}_{1}+{w}_{2}\mathbf{r}_{2}+{w}_{3}\mathbf{r}_{3}
 
 * OutOfPlaneSite: The virtual site location is computed as a weighted average
   of the positions of three particles and the cross product of their relative
   displacements:
 
 .. math::
-   \mathbf{r}={r}_{1}+{w}_{12}\mathbf{r}_{12}+{w}_{13}\mathbf{r}_{13}+{w}_{cross}\left(\mathbf{r}_{12}\times \mathbf{r}_{13}\right)
+   \mathbf{r}=\mathbf{r}_{1}+{w}_{12}\mathbf{r}_{12}+{w}_{13}\mathbf{r}_{13}+{w}_\mathit{cross}\left(\mathbf{r}_{12}\times \mathbf{r}_{13}\right)
 ..
 
   where :math:`\mathbf{r}_{12} = \mathbf{r}_{2}-\mathbf{r}_{1}` and

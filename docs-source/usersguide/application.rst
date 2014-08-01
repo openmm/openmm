@@ -58,7 +58,7 @@ and tell it to install the command line tools.  With Xcode 4.2 and earlier, the
 command line tools are automatically installed when you install Xcode.)
 
 3. (Optional) If you have an Nvidia GPU and want to use the CUDA platform,
-download CUDA 5.5 from https://developer.nvidia.com/cuda-downloads.  Be sure to
+download CUDA 6.0 from https://developer.nvidia.com/cuda-downloads.  Be sure to
 install both the drivers and toolkit.
 
 4. (Optional) If you plan to use the CPU platform, it is recommended that you
@@ -100,7 +100,7 @@ location, you can set OPENMM_CUDA_COMPILER to tell OpenMM where to find it.  For
 example,
 ::
 
-    export OPENMM_CUDA_COMPILER=/opt/CUDA/cuda-5.5/bin/nvcc
+    export OPENMM_CUDA_COMPILER=/opt/CUDA/cuda-6.0/bin/nvcc
 
 7. Verify your installation by running the “testInstallation.py” script found in
 the “examples” folder of your OpenMM installation.  To run it, cd to the
@@ -132,7 +132,7 @@ into a console window.
 
 3. (Optional) If you want to run OpenMM on a GPU, install CUDA and/or OpenCL.
 
-  * If you have an Nvidia GPU, download CUDA 5.5 from
+  * If you have an Nvidia GPU, download CUDA 6.0 from
     https://developer.nvidia.com/cuda-downloads.  Be sure to install both the
     drivers and toolkit.  OpenCL is included with the CUDA drivers.
   * If you have an AMD GPU, download the latest version of the Catalyst driver
@@ -179,7 +179,7 @@ location, you can set OPENMM_CUDA_COMPILER to tell OpenMM where to find it.  For
 example,
 ::
 
-    export OPENMM_CUDA_COMPILER=/opt/CUDA/cuda-5.5/bin/nvcc
+    export OPENMM_CUDA_COMPILER=/opt/CUDA/cuda-6.0/bin/nvcc
 
 7. Verify your installation by running the “testInstallation.py” script found in
 the “examples” folder of your OpenMM installation.  To run it, cd to the
@@ -214,7 +214,7 @@ and ignore it.)
 
 4. (Optional) If you want to run OpenMM on a GPU, install CUDA and/or OpenCL.
 
-  * If you have an Nvidia GPU, download CUDA 5.5 from
+  * If you have an Nvidia GPU, download CUDA 6.0 from
     https://developer.nvidia.com/cuda-downloads.  Be sure to install both the
     drivers and toolkit. For 64-bit machines, you should install the 64-bit driver,
     but download the 32-bit version of the toolkit since the OpenMM binary is
@@ -651,20 +651,20 @@ For the main force field, OpenMM provides the following options:
 
 .. tabularcolumns:: |l|L|
 
-=====================  ================================================================================
-File                   Force Field                                                                     
-=====================  ================================================================================
-amber96.xml            AMBER96\ :cite:`Kollman1997`
-amber99sb.xml          AMBER99\ :cite:`Wang2000` with modified backbone torsions\ :cite:`Hornak2006`
-amber99sbildn.xml      AMBER99SB plus improved side chain torsions\ :cite:`Lindorff-Larsen2010`
-amber99sbnmr.xml       AMBER99SB with modifications to fit NMR data\ :cite:`Li2010`
-amber03.xml            AMBER03\ :cite:`Duan2003`
-amber10.xml            AMBER10
-amoeba2009.xml         AMOEBA 2009\ :cite:`Ren2002`.  This force field is deprecated.  It is 
-                       recommended to use AMOEBA 2013 instead.
-amoeba2013.xml         AMOEBA 2013\ :cite:`Shi2013`
-charmm_polar_2013.xml  CHARMM 2013 polarizable force field\ :cite:`Lopes2013`
-=====================  ================================================================================
+=============================  ================================================================================
+File                           Force Field                                                                     
+=============================  ================================================================================
+:code:`amber96.xml`            AMBER96\ :cite:`Kollman1997`
+:code:`amber99sb.xml`          AMBER99\ :cite:`Wang2000` with modified backbone torsions\ :cite:`Hornak2006`
+:code:`amber99sbildn.xml`      AMBER99SB plus improved side chain torsions\ :cite:`Lindorff-Larsen2010`
+:code:`amber99sbnmr.xml`       AMBER99SB with modifications to fit NMR data\ :cite:`Li2010`
+:code:`amber03.xml`            AMBER03\ :cite:`Duan2003`
+:code:`amber10.xml`            AMBER10
+:code:`amoeba2009.xml`         AMOEBA 2009\ :cite:`Ren2002`.  This force field is deprecated.  It is 
+                               recommended to use AMOEBA 2013 instead.
+:code:`amoeba2013.xml`         AMOEBA 2013\ :cite:`Shi2013`
+:code:`charmm_polar_2013.xml`  CHARMM 2013 polarizable force field\ :cite:`Lopes2013`
+=============================  ================================================================================
 
 
 The AMBER files do not include parameters for water molecules.  This allows you
@@ -674,17 +674,17 @@ files:
 
 .. tabularcolumns:: |l|L|
 
-===========  ============================================
-File         Water Model                                 
-===========  ============================================
-tip3p.xml    TIP3P water model\ :cite:`Jorgensen1983`  
-tip3pfb.xml  TIP3P-FB water model\ :cite:`Wang2014`    
-tip4pew.xml  TIP4P-Ew water model\ :cite:`Horn2004`    
-tip4pfb.xml  TIP4P-FB water model\ :cite:`Wang2014`    
-tip5p.xml    TIP5P water model\ :cite:`Mahoney2000`    
-spce.xml     SPC/E water model\ :cite:`Berendsen1987`  
-swm4ndp.xml  SWM4-NDP water model\ :cite:`Lamoureux2006`
-===========  ============================================
+===================  ============================================
+File                 Water Model                                 
+===================  ============================================
+:code:`tip3p.xml`    TIP3P water model\ :cite:`Jorgensen1983`  
+:code:`tip3pfb.xml`  TIP3P-FB water model\ :cite:`Wang2014`    
+:code:`tip4pew.xml`  TIP4P-Ew water model\ :cite:`Horn2004`    
+:code:`tip4pfb.xml`  TIP4P-FB water model\ :cite:`Wang2014`    
+:code:`tip5p.xml`    TIP5P water model\ :cite:`Mahoney2000`    
+:code:`spce.xml`     SPC/E water model\ :cite:`Berendsen1987`  
+:code:`swm4ndp.xml`  SWM4-NDP water model\ :cite:`Lamoureux2006`
+===================  ============================================
 
 
 For the polarizable force fields (AMOEBA and CHARMM), only one explicit water model
@@ -697,16 +697,16 @@ the following files:
 
 .. tabularcolumns:: |l|L|
 
-=================  =================================================================================================
-File               Implicit Solvation Model                                                                      
-=================  =================================================================================================
-amber96_obc.xml    GBSA-OBC solvation model\ :cite:`Onufriev2004` for use with AMBER96 force field
-amber99_obc.xml    GBSA-OBC solvation model for use with AMBER99 force fields
-amber03_obc.xml    GBSA-OBC solvation model for use with AMBER03 force field
-amber10_obc.xml    GBSA-OBC solvation model for use with AMBER10 force field
-amoeba2009_gk.xml  Generalized Kirkwood solvation model\ :cite:`Schnieders2007` for use with AMOEBA 2009 force field
-amoeba2013_gk.xml  Generalized Kirkwood solvation model for use with AMOEBA 2013 force field
-=================  =================================================================================================
+=========================  =================================================================================================
+File                       Implicit Solvation Model                                                                      
+=========================  =================================================================================================
+:code:`amber96_obc.xml`    GBSA-OBC solvation model\ :cite:`Onufriev2004` for use with AMBER96 force field
+:code:`amber99_obc.xml`    GBSA-OBC solvation model for use with AMBER99 force fields
+:code:`amber03_obc.xml`    GBSA-OBC solvation model for use with AMBER03 force field
+:code:`amber10_obc.xml`    GBSA-OBC solvation model for use with AMBER10 force field
+:code:`amoeba2009_gk.xml`  Generalized Kirkwood solvation model\ :cite:`Schnieders2007` for use with AMOEBA 2009 force field
+:code:`amoeba2013_gk.xml`  Generalized Kirkwood solvation model for use with AMOEBA 2013 force field
+=========================  =================================================================================================
 
 
 For example, to use the GBSA-OBC solvation model with the Amber99SB force field,
@@ -722,6 +722,12 @@ produce an error since no water parameters are defined:
 ::
 
     forcefield = ForceField('amber10.xml')
+
+Be aware that some force fields and water models include "extra particles", such
+as lone pairs or Drude particles.  Examples include the CHARMM polarizable force
+field and all of the 4 and 5 site water models.  To use these force fields, you
+must first add the extra particles to the Topology.  See section
+:ref:`adding-or-removing-extra-particles` for details.
 
 AMBER Implicit Solvent
 ======================
@@ -739,17 +745,17 @@ allowed values for :code:`implicitSolvent`\ :
 
 .. tabularcolumns:: |l|L|
 
-=====  ==================================================================================================================================
-Value  Meaning                                                                                                                                                                                                          
-=====  ==================================================================================================================================
-None   No implicit solvent is used.                                                                                                                                                                                     
-HCT    Hawkins-Cramer-Truhlar GBSA model\ :cite:`Hawkins1995` (corresponds to igb=1 in AMBER)                                                                                                                         
-OBC1   Onufriev-Bashford-Case GBSA model\ :cite:`Onufriev2004` using the GB\ :sup:`OBC`\ I parameters (corresponds to igb=2 in AMBER).                                                                                
-OBC2   Onufriev-Bashford-Case GBSA model\ :cite:`Onufriev2004` using the GB\ :sup:`OBC`\ II parameters (corresponds to igb=5 in AMBER).
-       This is the same model used by the GBSA-OBC files described in section :ref:`force-fields`.
-GBn    GBn solvation model\ :cite:`Mongan2007` (corresponds to igb=7 in AMBER).                                                                                                                                       
-GBn2   GBn2 solvation model\ :cite:`Nguyen2013` (corresponds to igb=8 in AMBER).                                                                                                                                      
-=====  ==================================================================================================================================
+=============  ==================================================================================================================================
+Value          Meaning                                                                                                                                                                                                          
+=============  ==================================================================================================================================
+:code:`None`   No implicit solvent is used.                                                                                                                                                                                     
+:code:`HCT`    Hawkins-Cramer-Truhlar GBSA model\ :cite:`Hawkins1995` (corresponds to igb=1 in AMBER)                                                                                                                         
+:code:`OBC1`   Onufriev-Bashford-Case GBSA model\ :cite:`Onufriev2004` using the GB\ :sup:`OBC`\ I parameters (corresponds to igb=2 in AMBER).                                                                                
+:code:`OBC2`   Onufriev-Bashford-Case GBSA model\ :cite:`Onufriev2004` using the GB\ :sup:`OBC`\ II parameters (corresponds to igb=5 in AMBER).
+               This is the same model used by the GBSA-OBC files described in section :ref:`force-fields`.
+:code:`GBn`    GBn solvation model\ :cite:`Mongan2007` (corresponds to igb=7 in AMBER).                                                                                                                                       
+:code:`GBn2`   GBn2 solvation model\ :cite:`Nguyen2013` (corresponds to igb=8 in AMBER).                                                                                                                                      
+=============  ==================================================================================================================================
 
 
 You can further control the solvation model in a few ways.  First, you can
@@ -785,15 +791,15 @@ The :code:`nonbondedMethod` parameter can have any of the following values:
 
 .. tabularcolumns:: |l|L|
 
-=================  ===========================================================================================================================================================================================================================================
-Value              Meaning                                                                                                                                                                                                                                    
-=================  ===========================================================================================================================================================================================================================================
-NoCutoff           No cutoff is applied.                                                                                                                                                                                                                      
-CutoffNonPeriodic  The reaction field method is used to eliminate all interactions beyond a cutoff distance.  Not valid for AMOEBA.                                                                                                                           
-CutoffPeriodic     The reaction field method is used to eliminate all interactions beyond a cutoff distance.  Periodic boundary conditions are applied, so each atom interacts only with the nearest periodic copy of every other atom.  Not valid for AMOEBA.
-Ewald              Periodic boundary conditions are applied.  Ewald summation is used to compute long range interactions.  (This option is rarely used, since PME is much faster for all but the smallest systems.)  Not valid for AMOEBA.                    
-PME                Periodic boundary conditions are applied.  The Particle Mesh Ewald method is used to compute long range interactions.                                                                                                                      
-=================  ===========================================================================================================================================================================================================================================
+=========================  ===========================================================================================================================================================================================================================================
+Value                      Meaning                                                                                                                                                                                                                                    
+=========================  ===========================================================================================================================================================================================================================================
+:code:`NoCutoff`           No cutoff is applied.                                                                                                                                                                                                                      
+:code:`CutoffNonPeriodic`  The reaction field method is used to eliminate all interactions beyond a cutoff distance.  Not valid for AMOEBA.                                                                                                                           
+:code:`CutoffPeriodic`     The reaction field method is used to eliminate all interactions beyond a cutoff distance.  Periodic boundary conditions are applied, so each atom interacts only with the nearest periodic copy of every other atom.  Not valid for AMOEBA.
+:code:`Ewald`              Periodic boundary conditions are applied.  Ewald summation is used to compute long range interactions.  (This option is rarely used, since PME is much faster for all but the smallest systems.)  Not valid for AMOEBA.                    
+:code:`PME`                Periodic boundary conditions are applied.  The Particle Mesh Ewald method is used to compute long range interactions.                                                                                                                      
+=========================  ===========================================================================================================================================================================================================================================
 
 
 When using any method other than :code:`NoCutoff`\ , you should also specify a
@@ -902,14 +908,14 @@ The :code:`constraints` parameter can have any of the following values:
 
 .. tabularcolumns:: |l|L|
 
-========  =============================================================================================================================================
-Value     Meaning                                                                                                                                      
-========  =============================================================================================================================================
-None      No constraints are applied.  This is the default value.                                                                                      
-HBonds    The lengths of all bonds that involve a hydrogen atom are constrained.                                                                       
-AllBonds  The lengths of all bonds are constrained.                                                                                                    
-HAngles   The lengths of all bonds are constrained.  In addition, all angles of the form H-X-H or H-O-X (where X is an arbitrary atom) are constrained.
-========  =============================================================================================================================================
+================  =============================================================================================================================================
+Value             Meaning                                                                                                                                      
+================  =============================================================================================================================================
+:code:`None`      No constraints are applied.  This is the default value.                                                                                      
+:code:`HBonds`    The lengths of all bonds that involve a hydrogen atom are constrained.                                                                       
+:code:`AllBonds`  The lengths of all bonds are constrained.                                                                                                    
+:code:`HAngles`   The lengths of all bonds are constrained.  In addition, all angles of the form H-X-H or H-O-X (where X is an arbitrary atom) are constrained.
+================  =============================================================================================================================================
 
 
 The main reason to use constraints is that it allows one to use a larger
@@ -1330,6 +1336,8 @@ Allowed values for :code:`positiveIon` are 'Cs+', 'K+', 'Li+', 'Na+', and
 'I-'.  Be sure to include the single quotes around the value.  Also be aware
 some force fields do not include parameters for all of these ion types, so you
 need to use types that are supported by your chosen force field.
+
+.. _adding-or-removing-extra-particles:
 
 Adding or Removing Extra Particles
 **********************************
@@ -2426,9 +2434,10 @@ with the following signature to parse the XML tag and create the generator:
 :code:`element` is the XML tag (an xml.etree.ElementTree.Element object) and
 :code:`forcefield` is the ForceField being created.  This method should
 create a generator and add it to the ForceField:
+::
 
-generator = MyForceGenerator()
-forcefield._forces.append(generator)
+    generator = MyForceGenerator()
+    forcefield._forces.append(generator)
 
 It then should parse the information contained in the XML tag and configure the
 generator based on it.
