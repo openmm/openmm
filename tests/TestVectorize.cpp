@@ -41,16 +41,17 @@ using namespace OpenMM;
 using namespace std;
 
 #define ASSERT_VEC4_EQUAL(found, expected0, expected1, expected2, expected3) {if (std::abs((found)[0]-(expected0))>1e-6 || std::abs((found)[1]-(expected1))>1e-6 || std::abs((found)[2]-(expected2))>1e-6 || std::abs((found)[3]-(expected3))>1e-6) {std::stringstream details; details << " Expected ("<<(expected0)<<","<<(expected1)<<","<<(expected2)<<","<<(expected3)<<"), found ("<<(found)[0]<<","<<(found)[1]<<","<<(found)[2]<<","<<(found)[3]<<")"; throwException(__FILE__, __LINE__, details.str());}};
+#define ASSERT_VEC4_EQUAL_INT(found, expected0, expected1, expected2, expected3) {if ((found)[0] != (expected0) || (found)[1] != (expected1) || (found)[2] != (expected2) || (found)[3] != (expected3)) {std::stringstream details; details << " Expected ("<<(expected0)<<","<<(expected1)<<","<<(expected2)<<","<<(expected3)<<"), found ("<<(found)[0]<<","<<(found)[1]<<","<<(found)[2]<<","<<(found)[3]<<")"; throwException(__FILE__, __LINE__, details.str());}};
 
 void testLoadStore() {
     fvec4 f1(2.0);
     ivec4 i1(3);
     ASSERT_VEC4_EQUAL(f1, 2.0, 2.0, 2.0, 2.0);
-    ASSERT_VEC4_EQUAL(i1, 3, 3, 3, 3);
+    ASSERT_VEC4_EQUAL_INT(i1, 3, 3, 3, 3);
     fvec4 f2(2.5, 3.0, 3.5, 4.0);
     ivec4 i2(2, 3, 4, 5);
     ASSERT_VEC4_EQUAL(f2, 2.5, 3.0, 3.5, 4.0);
-    ASSERT_VEC4_EQUAL(i2, 2, 3, 4, 5);
+    ASSERT_VEC4_EQUAL_INT(i2, 2, 3, 4, 5);
     float farray[4];
     int iarray[4];
     f2.store(farray);
@@ -58,7 +59,7 @@ void testLoadStore() {
     fvec4 f3(farray);
     ivec4 i3(iarray);
     ASSERT_VEC4_EQUAL(f3, 2.5, 3.0, 3.5, 4.0);
-    ASSERT_VEC4_EQUAL(i3, 2, 3, 4, 5);
+    ASSERT_VEC4_EQUAL_INT(i3, 2, 3, 4, 5);
     ASSERT_EQUAL(f3[0], 2.5);
     ASSERT_EQUAL(f3[1], 3.0);
     ASSERT_EQUAL(f3[2], 3.5);
@@ -76,9 +77,9 @@ void testArithmetic() {
     ASSERT_VEC4_EQUAL(f1*fvec4(1, 2, 3, 4), 0.5, 2.0, 4.5, 8.0);
     ASSERT_VEC4_EQUAL(f1/fvec4(1, 2, 3, 4), 0.5, 0.5, 0.5, 0.5);
     ivec4 i1(1, 2, 3, 4);
-    ASSERT_VEC4_EQUAL(i1+ivec4(5, 2, 1, 3), 6, 4, 4, 7);
-    ASSERT_VEC4_EQUAL(i1-ivec4(5, 2, 1, 3), -4, 0, 2, 1);
-    ASSERT_VEC4_EQUAL(i1*ivec4(5, 2, 1, 3), 5, 4, 3, 12);
+    ASSERT_VEC4_EQUAL_INT(i1+ivec4(5, 2, 1, 3), 6, 4, 4, 7);
+    ASSERT_VEC4_EQUAL_INT(i1-ivec4(5, 2, 1, 3), -4, 0, 2, 1);
+    ASSERT_VEC4_EQUAL_INT(i1*ivec4(5, 2, 1, 3), 5, 4, 3, 12);
     f1 = fvec4(0.5, 1.0, 1.5, 2.0);
     f1 += fvec4(1, 2, 3, 4);
     ASSERT_VEC4_EQUAL(f1, 1.5, 3, 4.5, 6);
@@ -93,13 +94,13 @@ void testArithmetic() {
     ASSERT_VEC4_EQUAL(f1, 0.5, 0.5, 0.5, 0.5);
     i1 = ivec4(1, 2, 3, 4);
     i1 += ivec4(5, 2, 1, 3);
-    ASSERT_VEC4_EQUAL(i1, 6, 4, 4, 7);
+    ASSERT_VEC4_EQUAL_INT(i1, 6, 4, 4, 7);
     i1 = ivec4(1, 2, 3, 4);
     i1 -= ivec4(5, 2, 1, 3);
-    ASSERT_VEC4_EQUAL(i1, -4, 0, 2, 1);
+    ASSERT_VEC4_EQUAL_INT(i1, -4, 0, 2, 1);
     i1 = ivec4(1, 2, 3, 4);
     i1 *= ivec4(5, 2, 1, 3);
-    ASSERT_VEC4_EQUAL(i1, 5, 4, 3, 12);
+    ASSERT_VEC4_EQUAL_INT(i1, 5, 4, 3, 12);
 }
 
 void testLogic() {
@@ -115,8 +116,8 @@ void testLogic() {
     ASSERT(temp[1] != temp[1]); // All bits set, which is nan
     ASSERT(temp[2] != temp[2]); // All bits set, which is nan
     ASSERT_EQUAL(2.0, temp[3]);
-    ASSERT_VEC4_EQUAL(i1&mask, 0, 2, 3, 0);
-    ASSERT_VEC4_EQUAL(i1|mask, 1, allBits, allBits, 4);
+    ASSERT_VEC4_EQUAL_INT(i1&mask, 0, 2, 3, 0);
+    ASSERT_VEC4_EQUAL_INT(i1|mask, 1, allBits, allBits, 4);
 }
 
 void testComparisons() {
@@ -129,12 +130,12 @@ void testComparisons() {
     ASSERT_VEC4_EQUAL(blend(v1, v2, fvec4(1.0, 1.5, 3.0, 2.2)<=fvec4(1.1, 1.5, 3.0, 2.1)), 1.5, 1.5, 1.5, 0.0);
     ASSERT_VEC4_EQUAL(blend(v1, v2, fvec4(1.0, 1.5, 3.0, 2.2)>=fvec4(1.1, 1.5, 3.0, 2.1)), 0.0, 1.5, 1.5, 1.5);
     fvec4 imask(3, 3, 3, 3);
-    ASSERT_VEC4_EQUAL((ivec4(1, 3, 7, 5)==ivec4(2, 3, 7, 4))&imask, 0, 3, 3, 0);
-    ASSERT_VEC4_EQUAL((ivec4(1, 3, 7, 5)!=ivec4(2, 3, 7, 4))&imask, 3, 0, 0, 3);
-    ASSERT_VEC4_EQUAL((ivec4(1, 3, 7, 5)<ivec4(2, 3, 7, 4))&imask, 3, 0, 0, 0);
-    ASSERT_VEC4_EQUAL((ivec4(1, 3, 7, 5)>ivec4(2, 3, 7, 4))&imask, 0, 0, 0, 3);
-    ASSERT_VEC4_EQUAL((ivec4(1, 3, 7, 5)<=ivec4(2, 3, 7, 4))&imask, 3, 3, 3, 0);
-    ASSERT_VEC4_EQUAL((ivec4(1, 3, 7, 5)>=ivec4(2, 3, 7, 4))&imask, 0, 3, 3, 3);
+    ASSERT_VEC4_EQUAL_INT((ivec4(1, 3, 7, 5)==ivec4(2, 3, 7, 4))&imask, 0, 3, 3, 0);
+    ASSERT_VEC4_EQUAL_INT((ivec4(1, 3, 7, 5)!=ivec4(2, 3, 7, 4))&imask, 3, 0, 0, 3);
+    ASSERT_VEC4_EQUAL_INT((ivec4(1, 3, 7, 5)<ivec4(2, 3, 7, 4))&imask, 3, 0, 0, 0);
+    ASSERT_VEC4_EQUAL_INT((ivec4(1, 3, 7, 5)>ivec4(2, 3, 7, 4))&imask, 0, 0, 0, 3);
+    ASSERT_VEC4_EQUAL_INT((ivec4(1, 3, 7, 5)<=ivec4(2, 3, 7, 4))&imask, 3, 3, 3, 0);
+    ASSERT_VEC4_EQUAL_INT((ivec4(1, 3, 7, 5)>=ivec4(2, 3, 7, 4))&imask, 0, 3, 3, 3);
 }
 
 void testMathFunctions() {
