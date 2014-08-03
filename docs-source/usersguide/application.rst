@@ -42,11 +42,12 @@ Installing on Mac OS X
 OpenMM works on Mac OS X 10.7 or later.  GPU acceleration is currently only
 supported on Nvidia GPUs, not on AMD or Intel GPUs.
 
-\ **Important:** A serious bug was introduced in Mac OS X 10.7.5 that prevents
-OpenMM’s OpenCL platform from working correctly.  At the time of this writing,
-the bug is present in all versions from 10.7.5 onward.  The CUDA platform (see
-below) is not affected by the bug, so if you have an affected version of OS X,
-you should use it instead of the OpenCL platform.
+.. warning::
+   A serious bug was introduced in Mac OS X 10.7.5 that prevents
+   OpenMM’s OpenCL platform from working correctly.  At the time of this writing,
+   the bug is present in all versions from 10.7.5 onward.  The CUDA platform (see
+   below) is not affected by the bug, so if you have an affected version of OS X,
+   you should use it instead of the OpenCL platform.
 
 1. Download the pre-compiled binary of OpenMM for Mac OS X, then double click
 the .zip file to expand it.
