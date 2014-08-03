@@ -95,16 +95,16 @@ want to run OpenMM in another Terminal window, you must type the above command
 in the new window.
 
 If you plan to use the CUDA platform, OpenMM also needs to locate the CUDA
-kernel compiler (nvcc).  By default it looks for it in the location
+kernel compiler (:file:`nvcc`).  By default it looks for it in the location
 :file:`/usr/local/cuda/bin/nvcc`.  If you have installed the CUDA toolkit in a different
-location, you can set OPENMM_CUDA_COMPILER to tell OpenMM where to find it.  For
+location, you can set :envvar:`OPENMM_CUDA_COMPILER` to tell OpenMM where to find it.  For
 example,
 ::
 
     export OPENMM_CUDA_COMPILER=/opt/CUDA/cuda-6.0/bin/nvcc
 
-7. Verify your installation by running the “testInstallation.py” script found in
-the “examples” folder of your OpenMM installation.  To run it, cd to the
+7. Verify your installation by running the :file:`testInstallation.py` script found in
+the :file:`examples` folder of your OpenMM installation.  To run it, cd to the
 examples folder and type
 ::
 
@@ -176,15 +176,15 @@ the new window.
 If you plan to use the CUDA platform, OpenMM also needs to locate the CUDA
 kernel compiler (nvcc).  By default it looks for it in the location
 :file:`/usr/local/cuda/bin/nvcc`.  If you have installed the CUDA toolkit in a different
-location, you can set OPENMM_CUDA_COMPILER to tell OpenMM where to find it.  For
+location, you can set :envvar:`OPENMM_CUDA_COMPILER` to tell OpenMM where to find it.  For
 example,
 ::
 
     export OPENMM_CUDA_COMPILER=/opt/CUDA/cuda-6.0/bin/nvcc
 
-7. Verify your installation by running the “testInstallation.py” script found in
-the “examples” folder of your OpenMM installation.  To run it, cd to the
-examples folder and type
+7. Verify your installation by running the :file:`testInstallation.py` script found in
+the :file:`examples` folder of your OpenMM installation.  To run it, :command:`cd` to the
+:file:`examples` folder and type
 ::
 
     python testInstallation.py
@@ -235,11 +235,11 @@ PATH environment variable.  You may also need to add the Python executable to
 your PATH.
 
   * To find out if the Python executable is already in your PATH, open a command
-    prompt window by clicking on Start -> Programs -> Accessories -> Command Prompt.
-    (On Windows 7, select Start -> All Programs -> Accessories -> Command Prompt).
+    prompt window by clicking on :menuselection:`Start --> Programs --> Accessories --> Command Prompt`.
+    (On Windows 7, select :menuselection:`Start --> All Programs --> Accessories --> Command Prompt`).
     Type
     ::
-    
+
         python
 
     If you get an error message, such as "‘python’ is not recognized as an
@@ -253,11 +253,11 @@ your PATH.
     location.  You will need to enter it, along with the location of the OpenMM
     libraries, later in this process.
 
-  * Click on Start -> Control Panel -> System (On Windows 7, select Start ->
-    Control Panel -> System and Security -> System)
-  * Click on the “Advanced” tab or the “Advanced system settings” link
-  * Click “Environment Variables”
-  * Under “System variables,” select the line for “Path” and click “Edit…”
+  * Click on :menuselection:`Start --> Control Panel --> System` (On Windows 7, select :menuselection:`Start -->
+    Control Panel --> System and Security --> System`)
+  * Click on the :menuselection:`Advanced` tab or the :menuselection:`Advanced system settings` link
+  * Click :menuselection:`Environment Variables`
+  * Under :menuselection:`System variables`, select the line for :menuselection:`Path` and click :menuselection:`Edit…`
   * Add :file:`C:\\Program Files\\OpenMM\\lib` and :file:`C:\\Program Files\\OpenMM\\lib\\plugins`
     to the “Variable value”.  If you also need to add Python or FFTW to your
     PATH, enter their directory locations here.  Directory locations need to be
@@ -265,13 +265,13 @@ your PATH.
 
 
     If you installed OpenMM somewhere other than the default location, you must also
-    set OPENMM_PLUGIN_DIR to point to the plugins directory.  If this variable is
+    set :envvar:`OPENMM_PLUGIN_DIR` to point to the plugins directory.  If this variable is
     not set, it will assume plugins are in the default location (:file:`C:\\Program
     Files\\OpenMM\\lib\\plugins` or :file:`C:\\Program Files (x86)\\OpenMM\\lib\\plugins`).
 
-7. Verify your installation by running the “testInstallation.py” script found in
-the “examples” folder of your OpenMM installation.  To run it, open a command
-window, cd to the examples folder, and type
+7. Verify your installation by running the :file:`testInstallation.py` script found in
+the :file:`examples` folder of your OpenMM installation.  To run it, open a command
+window, :command:`cd` to the :file:`examples` folder, and type
 ::
 
     python testInstallation.py
@@ -290,41 +290,55 @@ Running Simulations
 A First Example
 ***************
 
-Let’s begin with our first example of an OpenMM script. It loads a PDB file
-called “input.pdb”, models it using the AMBER99SB force field and TIP3P water
+Let’s begin with our first example of an OpenMM script. It loads a specially-prepared PDB file
+called :file:`input.pdb` that defines positions for all of the atoms in a biomolecular system, parameterizes it using the AMBER99SB force field and TIP3P water
 model, energy minimizes it, simulates it for 10,000 steps with a Langevin
-integrator, and saves a frame to a PDB file called “output.pdb” every 1000 time
+integrator, and saves a snapshot frame to a PDB file called :file:`output.pdb` every 1,000 time
 steps.
 
 .. samepage::
     ::
 
+        # Import OpenMM modules.
         from simtk.openmm.app import *
         from simtk.openmm import *
         from simtk.unit import *
         from sys import stdout
-        
+
+        # Load topology and positions from the PDB file.
         pdb = PDBFile('input.pdb')
+        # Load the forcefield parameters for AMBER99SB and TIP3P water.
         forcefield = ForceField('amber99sb.xml', 'tip3p.xml')
+        # Create a System object from the topology defined in the PDB file.
         system = forcefield.createSystem(pdb.topology, nonbondedMethod=PME,
                 nonbondedCutoff=1*nanometer, constraints=HBonds)
-        integrator = LangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
+        # Create a Langevin integrator with specified temperature, collision rate, and timestep.
+        temperature = 300*kelvin
+        collision_rate = 1/picosecond
+        timestep = 0.002*picoseconds
+        integrator = LangevinIntegrator(temperature, collision_rate, timestep)
+        # Create a Simulation from the topology, system, and integrator.
         simulation = Simulation(pdb.topology, system, integrator)
+        # Set the initial atomic positions for the simulation from the PDB file.
         simulation.context.setPositions(pdb.positions)
+        # Minimize the energy prior to simulation.
         simulation.minimizeEnergy()
-        simulation.reporters.append(PDBReporter('output.pdb', 1000))
-        simulation.reporters.append(StateDataReporter(stdout, 1000, step=True,
+        # Add a few reporters to generate output during the simulation.
+        report_interval = 1000
+        simulation.reporters.append(PDBReporter('output.pdb', report_interval))
+        simulation.reporters.append(StateDataReporter(stdout, report_interval, step=True,
                 potentialEnergy=True, temperature=True))
+        # Run the simulation for a specified number of timesteps.
         simulation.step(10000)
 
     .. caption::
 
         :autonumber:`Example,PDB example`
 
-You can find this script in the “examples” folder of your OpenMM installation.
-It is called “simulatePdb.py”.  To execute it from a command line, go to your
+You can find this script in the :file:`examples` folder of your OpenMM installation.
+It is called :file:`simulatePdb.py`.  To execute it from a command line, go to your
 terminal/console/command prompt window (see Chapter :ref:`installing-openmm`
-on setting up the window to use OpenMM).  Navigate to the “examples” folder by typing
+on setting up the window to use OpenMM).  Navigate to the :examples:`examples` folder by typing
 ::
 
     cd <examples_directory>
@@ -339,7 +353,7 @@ Then type
     python simulatePdb.py
 
 You can name your own scripts whatever you want, but their names should end with
-“.py”. Let’s go through the script line by line and see how it works.
+``.py``. Let’s go through the script line by line and see how it works.
 ::
 
     from simtk.openmm.app import *
@@ -354,25 +368,27 @@ start of your scripts.
 
     pdb = PDBFile('input.pdb')
 
-This line loads the PDB file from disk.  (The input.pdb file in the examples
+This line loads the PDB file from disk.  (The :file:`input.pdb` file in the :file:`examples`
 directory contains the villin headpiece in explicit solvent.)  More precisely,
-it creates a PDBFile object, passes the file name input.pdb to it as an
+it creates a :py:class:`PDBFile` object, passes the file name :file:`input.pdb` to it as an
 argument, and assigns the object to a variable called :code:`pdb`\ .  The
-PDBFile object contains the information that was read from the file: the
+:py:class:`PDBFile` object contains the information that was read from the file: the
 molecular topology and atom positions.  Your file need not be called
-“input.pdb”.  Feel free to change this line to specify any file you want.  Make
-sure you include the single quotes around the file name.
+:file:`input.pdb`.  Feel free to change this line to specify any file you want,
+though it must contain all of the atoms needed by the force field.
+(More information on how to add missing atoms and residues using OpenMM tools can be found in section :ref:`model_building`.)
+Make sure you include the single quotes around the file name.
 ::
 
     forcefield = ForceField('amber99sb.xml', 'tip3p.xml')
 
 This line specifies the force field to use for the simulation.  Force fields are
-defined by XML files.  Chapter :ref:`creating-force-fields` describes how to write these files,
-if you are interested in that sort of thing, but you probably won’t need to.  OpenMM
-includes XML files defining lots of standard force fields (see section :ref:`force-fields`).
-In this case we load two of those files: amber99sb.xml, which contains the
-AMBER99SB force field, and tip3p.xml, which contains the TIP3P water model.  The
-ForceField object is assigned to a variable called :code:`forcefield`\ .
+defined by XML files.  OpenMM includes XML files defining lots of standard force fields (see section :ref:`force-fields`).
+If you find you need to extend the repertoire of force fields available,
+you can find more information on how to create these XML files in section :ref:`creating-force-fields`.
+In this case we load two of those files: :file:`amber99sb.xml`, which contains the
+AMBER99SB force field, and :file:`tip3p.xml`, which contains the TIP3P water model.  The
+:py:class:`ForceField` object is assigned to a variable called :code:`forcefield`\ .
 ::
 
     system = forcefield.createSystem(pdb.topology, nonbondedMethod=PME,
@@ -380,8 +396,8 @@ ForceField object is assigned to a variable called :code:`forcefield`\ .
 
 This line combines the force field with the molecular topology loaded from the
 PDB file to create a complete mathematical description of the system we want to
-simulate.  (More precisely, we invoke the ForceField object’s “createSystem”
-function.  It creates a System object, which we assign to the variable
+simulate.  (More precisely, we invoke the :py:class:`ForceField` object’s :py:meth:`.createSystem`
+function.  It creates a :py:class:`System` object, which we assign to the variable
 :code:`system`\ .)  It specifies some additional options about how to do that:
 use particle mesh Ewald for the long range electrostatic interactions
 (:code:`nonbondedMethod=PME`\ ), use a 1 nm cutoff for the direct space
@@ -389,21 +405,24 @@ interactions (\ :code:`nonbondedCutoff=1*nanometer`\ ), and constrain the length
 of all bonds that involve a hydrogen atom (\ :code:`constraints=HBonds`\ ).
 ::
 
-    integrator = LangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
+    temperature = 300*kelvin
+    collision_rate = 1/picosecond
+    timestep = 0.002*picoseconds
+    integrator = LangevinIntegrator(temperature, collision_rate, timestep)
 
-This line creates the integrator to use for advancing the equations of motion.
-It specifies a LangevinIntegrator, which (surprise!) performs Langevin dynamics,
+This code creates the integrator to use for advancing the equations of motion.
+It specifies a :py:class:`LangevinIntegrator`, which performs Langevin dynamics,
 and assigns it to a variable called :code:`integrator`\ .  It also specifies
 the values of three parameters that are specific to Langevin dynamics: the
-simulation temperature (300K), the friction coefficient (1 ps\ :sup:`-1`\ ), and
+simulation temperature (300 K), the friction coefficient (1 ps\ :sup:`-1`\ ), and
 the step size (0.002 ps).
 ::
 
     simulation = Simulation(pdb.topology, system, integrator)
 
 This line combines the molecular topology, system, and integrator to begin a new
-simulation.  It creates a Simulation object and assigns it to a variable called
-\ :code:`simulation`\ .  A Simulation object coordinates all the processes
+simulation.  It creates a :py:class:`Simulation` object and assigns it to a variable called
+\ :code:`simulation`\ .  A :py:class:`Simulation` object coordinates all the processes
 involved in running a simulation, such as advancing time and writing output.
 ::
 
@@ -420,15 +439,16 @@ good idea to do this at the start of a simulation, since the coordinates in the
 PDB file might produce very large forces.
 ::
 
-    simulation.reporters.append(PDBReporter('output.pdb', 1000))
+    report_interval = 1000
+    simulation.reporters.append(PDBReporter('output.pdb', report_interval))
 
 This line creates a “reporter” to generate output during the simulation, and
-adds it to the Simulation object’s list of reporters.  A PDBReporter writes
+adds it to the :py:class:`Simulation` object’s list of reporters.  A :py:class:`PDBReporter` writes
 structures to a PDB file.  We specify that the output file should be called
-“output.pdb”, and that a structure should be written every 1000 time steps.
+:file:`output.pdb`, and that a structure should be written every 1000 time steps.
 ::
 
-    simulation.reporters.append(StateDataReporter(stdout, 1000, step=True,
+    simulation.reporters.append(StateDataReporter(stdout, report_interval, step=True,
             potentialEnergy=True, temperature=True))
 
 It can be useful to get regular status reports as a simulation runs so you can
@@ -437,14 +457,19 @@ information every 1000 time steps: the current step index, the potential energy
 of the system, and the temperature.  We specify :code:`stdout` (not in
 quotes) as the output file, which means to write the results to the console.  We
 also could have given a file name (in quotes), just as we did for the
-PDBReporter, to write the information to a file.
+:py:class:`PDBReporter`, to write the information to a file.
 ::
 
-    simulation.step(10000)
+    nsteps = 10000
+    simulation.step(nsteps)
 
 Finally, we run the simulation, integrating the equations of motion for 10,000
 time steps.  Once it is finished, you can load the PDB file into any program you
-want for analysis and visualization (VMD, PyMol, AmberTools, etc.).
+want for analysis and visualization (VMD_, PyMol_, AmberTools_, etc.).
+
+.. _VMD: http://www.ks.uiuc.edu/Research/vmd/
+.. _PyMol: http://www.pymol.org
+.. _AmberTools: http://ambermd.org
 
 .. _using_amber_files:
 
@@ -465,17 +490,21 @@ found in OpenMM’s “examples” folder with the name “simulateAmber.py”.
         from simtk.openmm import *
         from simtk.unit import *
         from sys import stdout
-        
+
         prmtop = AmberPrmtopFile('input.prmtop')
         inpcrd = AmberInpcrdFile('input.inpcrd')
         system = prmtop.createSystem(nonbondedMethod=PME, nonbondedCutoff=1*nanometer,
                 constraints=HBonds)
-        integrator = LangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
+        temperature = 300*kelvin
+        collision_rate = 1/picosecond
+        timestep = 0.002*picoseconds
+        integrator = LangevinIntegrator(temperature, collision_rate, timestep)
         simulation = Simulation(prmtop.topology, system, integrator)
         simulation.context.setPositions(inpcrd.positions)
         simulation.minimizeEnergy()
-        simulation.reporters.append(PDBReporter('output.pdb', 1000))
-        simulation.reporters.append(StateDataReporter(stdout, 1000, step=True,
+        report_interval = 1000
+        simulation.reporters.append(PDBReporter('output.pdb', report_interval))
+        simulation.reporters.append(StateDataReporter(stdout, report_interval, step=True,
                 potentialEnergy=True, temperature=True))
         simulation.step(10000)
 
@@ -1206,6 +1235,7 @@ separated by spaces instead of commas:
     simulation.reporters.append(StateDataReporter('data.txt', 1000, progress=True,
             temperature=True, totalSteps=10000, separator=' '))
 
+.. _model_building:
 
 Model Building and Editing
 ##########################
