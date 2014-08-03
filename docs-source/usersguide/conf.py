@@ -183,6 +183,7 @@ latex_elements = {
     \\usepackage{xstring}
     \\usepackage{color}
     \\usepackage{caption}
+    \\usepackage{amsmath}
     \\setcounter{tocdepth}{3}
     \\captionsetup[figure]{labelformat=empty}
     \\renewcommand{\DUspan}[2]{%
