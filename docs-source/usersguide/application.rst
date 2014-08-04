@@ -1,5 +1,7 @@
 .. include:: header.rst
 
+.. default-domain:: py
+
 .. _the-openmm-application-layer-introduction:
 
 The OpenMM Application Layer: Introduction
@@ -16,7 +18,7 @@ Nearly all molecular simulation applications ask you to write some sort of
 script happens to be written in Python.  But it is no harder to write than those
 for most other applications, and this guide will teach you everything you need
 to know.  There is even a graphical interface that can write the script for you
-based on a simple set of options (see section :ref:`the-script-builder-application`),
+based on a simple set of options (see Section :ref:`the-script-builder-application`),
 so you never need to type a single line of code!
 
 On the other hand, if you don’t mind doing a little programming, this approach
@@ -36,17 +38,20 @@ Follow these instructions to install OpenMM.  There also is an online
 troubleshooting guide that describes common problems and how to fix them
 (http://wiki.simtk.org/openmm/FAQApp).
 
+.. _installing-on-mac-os-x:
+
 Installing on Mac OS X
 **********************
 
 OpenMM works on Mac OS X 10.7 or later.  GPU acceleration is currently only
 supported on Nvidia GPUs, not on AMD or Intel GPUs.
 
-\ **Important:** A serious bug was introduced in Mac OS X 10.7.5 that prevents
-OpenMM’s OpenCL platform from working correctly.  At the time of this writing,
-the bug is present in all versions from 10.7.5 onward.  The CUDA platform (see
-below) is not affected by the bug, so if you have an affected version of OS X,
-you should use it instead of the OpenCL platform.
+.. warning::
+   A serious bug was introduced in Mac OS X 10.7.5 that prevents
+   OpenMM’s OpenCL platform from working correctly.  At the time of this writing,
+   the bug is present in all versions from 10.7.5 onward.  The CUDA platform (see
+   below) is not affected by the bug, so if you have an affected version of OS X,
+   you should use it instead of the OpenCL platform.
 
 1. Download the pre-compiled binary of OpenMM for Mac OS X, then double click
 the .zip file to expand it.
@@ -71,7 +76,7 @@ but the performance of particle mesh Ewald (PME) will be much worse.
 ::
 
     cd <openmm_directory>
-    
+
 where :code:`<openmm_directory>` is the path to the OpenMM folder.  Then run
 the install script by typing
 ::
@@ -94,16 +99,16 @@ want to run OpenMM in another Terminal window, you must type the above command
 in the new window.
 
 If you plan to use the CUDA platform, OpenMM also needs to locate the CUDA
-kernel compiler (nvcc).  By default it looks for it in the location
+kernel compiler (:program:`nvcc`).  By default it looks for it in the location
 :file:`/usr/local/cuda/bin/nvcc`.  If you have installed the CUDA toolkit in a different
-location, you can set OPENMM_CUDA_COMPILER to tell OpenMM where to find it.  For
+location, you can set :envvar:`OPENMM_CUDA_COMPILER` to tell OpenMM where to find it.  For
 example,
 ::
 
     export OPENMM_CUDA_COMPILER=/opt/CUDA/cuda-6.0/bin/nvcc
 
-7. Verify your installation by running the “testInstallation.py” script found in
-the “examples” folder of your OpenMM installation.  To run it, cd to the
+7. Verify your installation by running the :file:`testInstallation.py` script found in
+the :file:`examples` folder of your OpenMM installation.  To run it, cd to the
 examples folder and type
 ::
 
@@ -119,6 +124,8 @@ the Energy Saver panel.  There will be a checkbox labeled “Automatic graphics
 switching”, which should be disabled.  Otherwise, trying to run OpenMM may
 produce an error.  You will only see this option if your laptop has two GPUs
 
+.. _installing-on-linux:
+
 Installing on Linux
 *******************
 
@@ -126,7 +133,7 @@ Installing on Linux
 .zip file to expand it.
 
 2. Make sure you have Python 2.6 or higher (earlier versions will not work) and
-a C++ compiler (typically gcc or clang) installed on your computer.  You can
+a C++ compiler (typically :program:`gcc` or :program:`clang`) installed on your computer.  You can
 check what version of Python is installed by typing :code:`python` |--|\ :code:`version`
 into a console window.
 
@@ -140,7 +147,7 @@ into a console window.
 
 4. (Optional) If you plan to use the CPU platform, it is recommended that you
 install FFTW.  It is probably available through your system’s package manager
-such as :code:`yum` or :code:`apt-get`\ .  Alternatively, you can download
+such as :program:`yum` or :program:`apt-get`\ .  Alternatively, you can download
 it from http://www.fftw.org.  When configuring it, be sure to specify single
 precision and multiple threads (the |--|\ :code:`enable-float` and
 |--|\ :code:`enable-threads` options).  OpenMM will still work without FFTW, but the
@@ -150,7 +157,7 @@ performance of particle mesh Ewald (PME) will be much worse.
 ::
 
     cd <openmm_directory>
-    
+
 where :code:`<openmm_directory>` is the path to the OpenMM folder.  Then run
 the install script by typing
 ::
@@ -173,17 +180,17 @@ want to run OpenMM in another console window, you must type the above command in
 the new window.
 
 If you plan to use the CUDA platform, OpenMM also needs to locate the CUDA
-kernel compiler (nvcc).  By default it looks for it in the location
+kernel compiler (:program:`nvcc`).  By default it looks for it in the location
 :file:`/usr/local/cuda/bin/nvcc`.  If you have installed the CUDA toolkit in a different
-location, you can set OPENMM_CUDA_COMPILER to tell OpenMM where to find it.  For
+location, you can set :envvar:`OPENMM_CUDA_COMPILER` to tell OpenMM where to find it.  For
 example,
 ::
 
     export OPENMM_CUDA_COMPILER=/opt/CUDA/cuda-6.0/bin/nvcc
 
-7. Verify your installation by running the “testInstallation.py” script found in
-the “examples” folder of your OpenMM installation.  To run it, cd to the
-examples folder and type
+7. Verify your installation by running the :file:`testInstallation.py` script found in
+the :file:`examples` folder of your OpenMM installation.  To run it, :command:`cd` to the
+:file:`examples` folder and type
 ::
 
     python testInstallation.py
@@ -192,6 +199,7 @@ This script confirms that OpenMM is installed, checks whether GPU acceleration
 is available (via that OpenCL and/or CUDA platforms), and verifies that all
 platforms produce consistent results.
 
+.. _installing-on-windows:
 
 Installing on Windows
 *********************
@@ -234,11 +242,11 @@ PATH environment variable.  You may also need to add the Python executable to
 your PATH.
 
   * To find out if the Python executable is already in your PATH, open a command
-    prompt window by clicking on Start -> Programs -> Accessories -> Command Prompt.
-    (On Windows 7, select Start -> All Programs -> Accessories -> Command Prompt).
+    prompt window by clicking on :menuselection:`Start --> Programs --> Accessories --> Command Prompt`.
+    (On Windows 7, select :menuselection:`Start --> All Programs --> Accessories --> Command Prompt`).
     Type
     ::
-    
+
         python
 
     If you get an error message, such as "‘python’ is not recognized as an
@@ -252,11 +260,11 @@ your PATH.
     location.  You will need to enter it, along with the location of the OpenMM
     libraries, later in this process.
 
-  * Click on Start -> Control Panel -> System (On Windows 7, select Start ->
-    Control Panel -> System and Security -> System)
-  * Click on the “Advanced” tab or the “Advanced system settings” link
-  * Click “Environment Variables”
-  * Under “System variables,” select the line for “Path” and click “Edit…”
+  * Click on :menuselection:`Start --> Control Panel --> System` (On Windows 7, select :menuselection:`Start -->
+    Control Panel --> System and Security --> System`)
+  * Click on the :menuselection:`Advanced` tab or the :menuselection:`Advanced system settings` link
+  * Click :menuselection:`Environment Variables`
+  * Under :menuselection:`System variables`, select the line for :menuselection:`Path` and click :menuselection:`Edit…`
   * Add :file:`C:\\Program Files\\OpenMM\\lib` and :file:`C:\\Program Files\\OpenMM\\lib\\plugins`
     to the “Variable value”.  If you also need to add Python or FFTW to your
     PATH, enter their directory locations here.  Directory locations need to be
@@ -264,13 +272,13 @@ your PATH.
 
 
     If you installed OpenMM somewhere other than the default location, you must also
-    set OPENMM_PLUGIN_DIR to point to the plugins directory.  If this variable is
+    set :envvar:`OPENMM_PLUGIN_DIR` to point to the plugins directory.  If this variable is
     not set, it will assume plugins are in the default location (:file:`C:\\Program
     Files\\OpenMM\\lib\\plugins` or :file:`C:\\Program Files (x86)\\OpenMM\\lib\\plugins`).
 
-7. Verify your installation by running the “testInstallation.py” script found in
-the “examples” folder of your OpenMM installation.  To run it, open a command
-window, cd to the examples folder, and type
+7. Verify your installation by running the :file:`testInstallation.py` script found in
+the :file:`examples` folder of your OpenMM installation.  To run it, open a command
+window, :command:`cd` to the :file:`examples` folder, and type
 ::
 
     python testInstallation.py
@@ -279,7 +287,7 @@ This script confirms that OpenMM is installed, checks whether GPU acceleration
 is available (via that OpenCL and/or CUDA platforms), and verifies that all
 platforms produce consistent results.
 
-
+.. _running-simulations:
 
 Running Simulations
 ###################
@@ -290,9 +298,9 @@ A First Example
 ***************
 
 Let’s begin with our first example of an OpenMM script. It loads a PDB file
-called “input.pdb”, models it using the AMBER99SB force field and TIP3P water
+called :file:`input.pdb` that defines a biomolecular system, parameterizes it using the AMBER99SB force field and TIP3P water
 model, energy minimizes it, simulates it for 10,000 steps with a Langevin
-integrator, and saves a frame to a PDB file called “output.pdb” every 1000 time
+integrator, and saves a snapshot frame to a PDB file called :file:`output.pdb` every 1000 time
 steps.
 
 .. samepage::
@@ -302,7 +310,7 @@ steps.
         from simtk.openmm import *
         from simtk.unit import *
         from sys import stdout
-        
+
         pdb = PDBFile('input.pdb')
         forcefield = ForceField('amber99sb.xml', 'tip3p.xml')
         system = forcefield.createSystem(pdb.topology, nonbondedMethod=PME,
@@ -320,10 +328,10 @@ steps.
 
         :autonumber:`Example,PDB example`
 
-You can find this script in the “examples” folder of your OpenMM installation.
-It is called “simulatePdb.py”.  To execute it from a command line, go to your
-terminal/console/command prompt window (see Chapter :ref:`installing-openmm`
-on setting up the window to use OpenMM).  Navigate to the “examples” folder by typing
+You can find this script in the :file:`examples` folder of your OpenMM installation.
+It is called :file:`simulatePdb.py`.  To execute it from a command line, go to your
+terminal/console/command prompt window (see Section :ref:`installing-openmm`
+on setting up the window to use OpenMM).  Navigate to the :file:`examples` folder by typing
 ::
 
     cd <examples_directory>
@@ -338,7 +346,7 @@ Then type
     python simulatePdb.py
 
 You can name your own scripts whatever you want, but their names should end with
-“.py”. Let’s go through the script line by line and see how it works.
+``.py``. Let’s go through the script line by line and see how it works.
 ::
 
     from simtk.openmm.app import *
@@ -353,25 +361,27 @@ start of your scripts.
 
     pdb = PDBFile('input.pdb')
 
-This line loads the PDB file from disk.  (The input.pdb file in the examples
+This line loads the PDB file from disk.  (The :file:`input.pdb` file in the :file:`examples`
 directory contains the villin headpiece in explicit solvent.)  More precisely,
-it creates a PDBFile object, passes the file name input.pdb to it as an
+it creates a :class:`PDBFile` object, passes the file name :file:`input.pdb` to it as an
 argument, and assigns the object to a variable called :code:`pdb`\ .  The
-PDBFile object contains the information that was read from the file: the
+:class:`PDBFile` object contains the information that was read from the file: the
 molecular topology and atom positions.  Your file need not be called
-“input.pdb”.  Feel free to change this line to specify any file you want.  Make
-sure you include the single quotes around the file name.
+:file:`input.pdb`.  Feel free to change this line to specify any file you want,
+though it must contain all of the atoms needed by the force field.
+(More information on how to add missing atoms and residues using OpenMM tools can be found in Chapter :ref:`model-building-and-editing`.)
+Make sure you include the single quotes around the file name.
 ::
 
     forcefield = ForceField('amber99sb.xml', 'tip3p.xml')
 
 This line specifies the force field to use for the simulation.  Force fields are
-defined by XML files.  Chapter :ref:`creating-force-fields` describes how to write these files,
-if you are interested in that sort of thing, but you probably won’t need to.  OpenMM
-includes XML files defining lots of standard force fields (see section :ref:`force-fields`).
-In this case we load two of those files: amber99sb.xml, which contains the
-AMBER99SB force field, and tip3p.xml, which contains the TIP3P water model.  The
-ForceField object is assigned to a variable called :code:`forcefield`\ .
+defined by XML files.  OpenMM includes XML files defining lots of standard force fields (see Section :ref:`force-fields`).
+If you find you need to extend the repertoire of force fields available,
+you can find more information on how to create these XML files in Section :ref:`creating-force-fields`.
+In this case we load two of those files: :file:`amber99sb.xml`, which contains the
+AMBER99SB force field, and :file:`tip3p.xml`, which contains the TIP3P water model.  The
+:class:`ForceField` object is assigned to a variable called :code:`forcefield`\ .
 ::
 
     system = forcefield.createSystem(pdb.topology, nonbondedMethod=PME,
@@ -379,30 +389,38 @@ ForceField object is assigned to a variable called :code:`forcefield`\ .
 
 This line combines the force field with the molecular topology loaded from the
 PDB file to create a complete mathematical description of the system we want to
-simulate.  (More precisely, we invoke the ForceField object’s “createSystem”
-function.  It creates a System object, which we assign to the variable
+simulate.  (More precisely, we invoke the :class:`ForceField` object’s :meth:`.createSystem`
+function.  It creates a :class:`System` object, which we assign to the variable
 :code:`system`\ .)  It specifies some additional options about how to do that:
 use particle mesh Ewald for the long range electrostatic interactions
 (:code:`nonbondedMethod=PME`\ ), use a 1 nm cutoff for the direct space
 interactions (\ :code:`nonbondedCutoff=1*nanometer`\ ), and constrain the length
 of all bonds that involve a hydrogen atom (\ :code:`constraints=HBonds`\ ).
+Note the way we specified the cutoff distance 1 nm using :code:`1*nanometer`:
+This is an example of the powerful units tracking and automatic conversion facility
+built into the OpenMM Python API that makes specifying unit-bearing quantities
+convenient and less error-prone.  We could have equivalently specified
+:code:`10*angstrom` instead of :code:`1*nanometer` and achieved the same result,
+but had we specified the wrong dimensions, such as :code:`1*(nanometer**2)` or
+:code:`1*picoseconds`, OpenMM would have thrown an exception. The units system
+will be described in more detail later, in Section :ref:`units-and-dimensional-analysis`.
 ::
 
     integrator = LangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
 
 This line creates the integrator to use for advancing the equations of motion.
-It specifies a LangevinIntegrator, which (surprise!) performs Langevin dynamics,
+It specifies a :class:`LangevinIntegrator`, which performs Langevin dynamics,
 and assigns it to a variable called :code:`integrator`\ .  It also specifies
 the values of three parameters that are specific to Langevin dynamics: the
-simulation temperature (300K), the friction coefficient (1 ps\ :sup:`-1`\ ), and
+simulation temperature (300 K), the friction coefficient (1 ps\ :sup:`-1`\ ), and
 the step size (0.002 ps).
 ::
 
     simulation = Simulation(pdb.topology, system, integrator)
 
 This line combines the molecular topology, system, and integrator to begin a new
-simulation.  It creates a Simulation object and assigns it to a variable called
-\ :code:`simulation`\ .  A Simulation object coordinates all the processes
+simulation.  It creates a :class:`Simulation` object and assigns it to a variable called
+\ :code:`simulation`\ .  A :class:`Simulation` object coordinates all the processes
 involved in running a simulation, such as advancing time and writing output.
 ::
 
@@ -422,9 +440,9 @@ PDB file might produce very large forces.
     simulation.reporters.append(PDBReporter('output.pdb', 1000))
 
 This line creates a “reporter” to generate output during the simulation, and
-adds it to the Simulation object’s list of reporters.  A PDBReporter writes
+adds it to the :class:`Simulation` object’s list of reporters.  A :class:`PDBReporter` writes
 structures to a PDB file.  We specify that the output file should be called
-“output.pdb”, and that a structure should be written every 1000 time steps.
+:file:`output.pdb`, and that a structure should be written every 1000 time steps.
 ::
 
     simulation.reporters.append(StateDataReporter(stdout, 1000, step=True,
@@ -436,14 +454,18 @@ information every 1000 time steps: the current step index, the potential energy
 of the system, and the temperature.  We specify :code:`stdout` (not in
 quotes) as the output file, which means to write the results to the console.  We
 also could have given a file name (in quotes), just as we did for the
-PDBReporter, to write the information to a file.
+:class:`PDBReporter`, to write the information to a file.
 ::
 
     simulation.step(10000)
 
 Finally, we run the simulation, integrating the equations of motion for 10,000
 time steps.  Once it is finished, you can load the PDB file into any program you
-want for analysis and visualization (VMD, PyMol, AmberTools, etc.).
+want for analysis and visualization (VMD_, PyMol_, AmberTools_, etc.).
+
+.. _VMD: http://www.ks.uiuc.edu/Research/vmd/
+.. _PyMol: http://www.pymol.org
+.. _AmberTools: http://ambermd.org
 
 .. _using_amber_files:
 
@@ -452,10 +474,10 @@ Using AMBER Files
 
 OpenMM can build a system in several different ways.  One option, as shown
 above, is to start with a PDB file and then select a force field with which to
-model it.  Alternatively, you can use AmberTools to model your system.  In that
-case, you provide a prmtop file and an inpcrd file.  OpenMM loads the files and
-creates a system from them.  This is shown in the following script.  It can be
-found in OpenMM’s “examples” folder with the name “simulateAmber.py”.
+model it.  Alternatively, you can use AmberTools_ to model your system.  In that
+case, you provide a :class:`prmtop` file and an :class:`inpcrd` file.  OpenMM loads the files and
+creates a :class:`System` from them.  This is illustrated in the following script.  It can be
+found in OpenMM’s :file:`examples` folder with the name :file:`simulateAmber.py`.
 
 .. samepage::
     ::
@@ -464,7 +486,7 @@ found in OpenMM’s “examples” folder with the name “simulateAmber.py”.
         from simtk.openmm import *
         from simtk.unit import *
         from sys import stdout
-        
+
         prmtop = AmberPrmtopFile('input.prmtop')
         inpcrd = AmberInpcrdFile('input.inpcrd')
         system = prmtop.createSystem(nonbondedMethod=PME, nonbondedCutoff=1*nanometer,
@@ -494,14 +516,23 @@ create AmberPrmtopFile and AmberInpcrdFile objects and assign them to the
 variables :code:`prmtop` and :code:`inpcrd`\ , respectively.  As before,
 you can change these lines to specify any files you want.  Be sure to include
 the single quotes around the file names.
+
+.. note::
+
+    The :class:`AmberPrmtopFile` reader provided by OpenMM only supports "new-style"
+    :file:`prmtop` files introduced in AMBER 6. The AMBER distribution still contains a number of
+    example files that are in the "old-style" :file:`prmtop` format. These "old-style" files will
+    not run in OpenMM.
+
+Next, the :class:`System` object is created in a different way:
 ::
 
     system = prmtop.createSystem(nonbondedMethod=PME, nonbondedCutoff=1*nanometer,
             constraints=HBonds)
 
-This line creates the system.  In the previous section, we loaded the topology
+In the previous section, we loaded the topology
 from a PDB file and then had the force field create a system based on it.  In
-this case, we don’t need a force field; the prmtop file already contains the
+this case, we don’t need a force field; the :file:`prmtop` file already contains the
 force field parameters, so it can create the system
 directly.
 ::
@@ -509,8 +540,8 @@ directly.
     simulation = Simulation(prmtop.topology, system, integrator)
     simulation.context.setPositions(inpcrd.positions)
 
-Notice that we now get the topology from the prmtop file and the atom positions
-from the inpcrd file.  In the previous section, both of these came from a PDB
+Notice that we now get the topology from the :file:`prmtop` file and the atom positions
+from the :file:`inpcrd` file.  In the previous section, both of these came from a PDB
 file, but AMBER puts the topology and positions in separate files.
 
 .. _using_gromacs_files:
@@ -519,10 +550,10 @@ Using Gromacs Files
 *******************
 
 A third option for creating your system is to use the Gromacs setup tools.  They
-produce a gro file containing the coordinates and a top file containing the
+produce a :file:`gro` file containing the coordinates and a :file:`top` file containing the
 topology.  OpenMM can load these exactly as it did the AMBER files.  This is
-shown in the following script.  It can be found in OpenMM’s “examples” folder
-with the name “simulateGromacs.py”.
+shown in the following script.  It can be found in OpenMM’s :file:`examples` folder
+with the name :file:`simulateGromacs.py`.
 
 .. samepage::
     ::
@@ -531,7 +562,7 @@ with the name “simulateGromacs.py”.
         from simtk.openmm import *
         from simtk.unit import *
         from sys import stdout
-        
+
         gro = GromacsGroFile('input.gro')
         top = GromacsTopFile('input.top', unitCellDimensions=gro.getUnitCellDimensions(),
                 includeDir='/usr/local/gromacs/share/gromacs/top')
@@ -551,22 +582,22 @@ with the name “simulateGromacs.py”.
         :autonumber:`Example,Gromacs example`
 
 This script is nearly identical to the previous one, just replacing
-AmberInpcrdFile and AmberPrmtopFile with GromacsGroFile and GromacsTopFile.
-Note that when we create the GromacsTopFile, we specify values for two extra
+:class:`AmberInpcrdFile` and :class:`AmberPrmtopFile` with :class:`GromacsGroFile` and :class:`GromacsTopFile`.
+Note that when we create the :class:`GromacsTopFile`, we specify values for two extra
 options.  First, we specify
 :code:`unitCellDimensions=gro.getUnitCellDimensions()`\ .  Unlike OpenMM and
-AMBER, which store the periodic unit cell dimensions with the topology, Gromacs
-stores them with the coordinates.  To let GromacsTopFile create a Topology
+AMBER, which can store periodic unit cell dimensions with the topology, Gromacs
+only stores them with the coordinates.  To let :class:`GromacsTopFile` create a :class:`Topology`
 object, we therefore need to tell it the unit cell dimensions that were loaded
-from the gro file.  You only need to do this if you are simulating a periodic
+from the :file:`gro` file.  You only need to do this if you are simulating a periodic
 system.  For implicit solvent simulations, it usually can be omitted.
 
 Second, we specify :code:`includeDir='/usr/local/gromacs/share/gromacs/top'`\ .  Unlike AMBER,
-which stores all the force field parameters directly in a prmtop file, Gromacs just stores
+which stores all the force field parameters directly in a :file:`prmtop` file, Gromacs just stores
 references to force field definition files that are installed with the Gromacs
 application.  OpenMM needs to know where to find these files, so the
 :code:`includeDir` parameter specifies the directory containing them.  If you
-omit this parameter, OpenMM will assume the default location :file:`/usr/local/gromacs/share/gromacs/top`, 
+omit this parameter, OpenMM will assume the default location :file:`/usr/local/gromacs/share/gromacs/top`,
 which is often where they are installed on
 Unix-like operating systems.  So in :numref:`Example,Gromacs example` we actually could have omitted
 this parameter, but if the Gromacs files were installed in any other location,
@@ -578,10 +609,10 @@ The Script Builder Application
 ******************************
 
 One option for writing your own scripts is to start with one of the examples
-given above (the one in section :ref:`a-first-example` if you are starting from a PDB file, section
-:ref:`using_amber_files` if you are starting from AMBER prmtop and inpcrd files, or section
+given above (the one in Section :ref:`a-first-example` if you are starting from a PDB file, section
+:ref:`using_amber_files` if you are starting from AMBER :file:`prmtop` and :file:`inpcrd` files, or section
 :ref:`using_gromacs_files` if you are starting from Gromacs gro and top files), then customize it
-to suit your needs.  Another option is to use the OpenMM Script Builder application.
+to suit your needs.  Another option is to use the `OpenMM Script Builder`_ application.
 
 
 .. figure:: ../images/ScriptBuilder.png
@@ -594,8 +625,10 @@ This is a web application available at https://builder.openmm.org.  It provides
 a graphical interface with simple choices for all the most common simulation
 options, then automatically generates a script based on them.  As you change the
 settings, the script is instantly updated to reflect them.  Once everything is
-set the way you want, click the “Save Script” button to save it to disk, or
+set the way you want, click the :menuselection:`Save Script` button to save it to disk, or
 simply copy and paste it into a text editor.
+
+.. _`OpenMM Script Builder`: https://builder.openmm.org
 
 .. _simulation-parameters:
 
@@ -607,23 +640,22 @@ Now let’s consider lots of ways you might want to customize your script.
 Platforms
 =========
 
-
-When creating a Simulation, you can optionally tell it what Platform to use.
-OpenMM includes four platforms: Reference, CPU, CUDA, and OpenCL.  For a
+When creating a :class:`Simulation`, you can optionally tell it what :class:`Platform` to use.
+OpenMM includes four platforms: :class:`Reference`, :class:`CPU`, :class:`CUDA`, and :class:`OpenCL`.  For a
 description of the differences between them, see Section :ref:`platforms`.  If you do not
-specify a Platform, it will select one automatically.  Usually its choice will
+specify a :class:`Platform`, it will select one automatically.  Usually its choice will
 be reasonable, but you may want to change it.
 
-The following lines specify to use the CUDA Platform:
+The following lines specify to use the :class:`CUDA` platform:
 ::
 
     platform = Platform.getPlatformByName('CUDA')
     simulation = Simulation(prmtop.topology, system, integrator, platform)
 
-The Platform name should be :code:`OpenCL`\ , :code:`CUDA`\ , :code:`CPU`\, or
-:code:`Reference`\ .
+The platform name should be one of :code:`OpenCL`, :code:`CUDA`, :code:`CPU`, or
+:code:`Reference`.
 
-You also can specify Platform-specific properties that customize how
+You also can specify platform-specific properties that customize how
 calculations should be done.  See Chapter :ref:`platform-specific-properties` for details of the
 properties that each Platform supports.  For example, the following lines specify to parallelize
 work across two different GPUs (CUDA devices 0 and 1), doing all computations in
@@ -659,7 +691,7 @@ File                           Force Field
 :code:`amber99sbildn.xml`      AMBER99SB plus improved side chain torsions\ :cite:`Lindorff-Larsen2010`
 :code:`amber99sbnmr.xml`       AMBER99SB with modifications to fit NMR data\ :cite:`Li2010`
 :code:`amber03.xml`            AMBER03\ :cite:`Duan2003`
-:code:`amber10.xml`            AMBER10
+:code:`amber10.xml`            AMBER10 (documented in the AmberTools_ manual as `ff10`)
 :code:`amoeba2009.xml`         AMOEBA 2009\ :cite:`Ren2002`.  This force field is deprecated.  It is 
                                recommended to use AMOEBA 2013 instead.
 :code:`amoeba2013.xml`         AMOEBA 2013\ :cite:`Shi2013`
@@ -709,7 +741,7 @@ File                       Implicit Solvation Model
 =========================  =================================================================================================
 
 
-For example, to use the GBSA-OBC solvation model with the Amber99SB force field,
+For example, to use the GBSA-OBC solvation model with the AMBER99SB force field,
 you would type:
 ::
 
@@ -726,7 +758,7 @@ produce an error since no water parameters are defined:
 Be aware that some force fields and water models include "extra particles", such
 as lone pairs or Drude particles.  Examples include the CHARMM polarizable force
 field and all of the 4 and 5 site water models.  To use these force fields, you
-must first add the extra particles to the Topology.  See section
+must first add the extra particles to the :class:`Topology`.  See section
 :ref:`adding-or-removing-extra-particles` for details.
 
 AMBER Implicit Solvent
@@ -752,7 +784,7 @@ Value          Meaning
 :code:`HCT`    Hawkins-Cramer-Truhlar GBSA model\ :cite:`Hawkins1995` (corresponds to igb=1 in AMBER)                                                                                                                         
 :code:`OBC1`   Onufriev-Bashford-Case GBSA model\ :cite:`Onufriev2004` using the GB\ :sup:`OBC`\ I parameters (corresponds to igb=2 in AMBER).                                                                                
 :code:`OBC2`   Onufriev-Bashford-Case GBSA model\ :cite:`Onufriev2004` using the GB\ :sup:`OBC`\ II parameters (corresponds to igb=5 in AMBER).
-               This is the same model used by the GBSA-OBC files described in section :ref:`force-fields`.
+               This is the same model used by the GBSA-OBC files described in Section :ref:`force-fields`.
 :code:`GBn`    GBn solvation model\ :cite:`Mongan2007` (corresponds to igb=7 in AMBER).                                                                                                                                       
 :code:`GBn2`   GBn2 solvation model\ :cite:`Nguyen2013` (corresponds to igb=8 in AMBER).                                                                                                                                      
 =============  ==================================================================================================================================
@@ -771,7 +803,7 @@ are slightly different from those used elsewhere in OpenMM: when building a
 system from a force field, the solvent dielectric defaults to 78.3.
 
 You also can model the effect of a non-zero salt concentration by specifying the
-Debye screening parameter:
+Debye-Huckel screening parameter\ :cite:`Srinivasan1999`:
 ::
 
     system = prmtop.createSystem(implicitSolvent=OBC2, implicitSolventKappa=1.0/nanometer)
@@ -850,7 +882,7 @@ Specifying the Polarization Method
 OpenMM allows the setting of several other parameters particular to the AMOEBA
 force field.  The :code:`mutualInducedTargetEpsilon` option allows you to
 specify the accuracy to which the induced dipoles are calculated at each time
-step; the default value is 0.00001.  The :code:`polarization` setting
+step; the default value is 0.01.  The :code:`polarization` setting
 determines whether the calculation of the induced dipoles is continued until the
 dipoles are self-consistent to within the tolerance specified by
 :code:`mutualInducedTargetEpsilon` or whether a quick estimate of the induced
@@ -876,7 +908,7 @@ Implicit Solvent and Solute Dielectrics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 For implicit solvent simulations using the AMOEBA force field, the
-'amoeba2009_gk.xml' file should be included in the initialization of the force
+:file:`amoeba2013_gk.xml` file should be included in the initialization of the force
 field:
 ::
 
@@ -897,7 +929,7 @@ Constraints
 ===========
 
 
-When creating the system (either from a force field or a prmtop file), you can
+When creating the system (either from a force field or an AMBER :file:`prmtop` file), you can
 optionally tell OpenMM to constrain certain bond lengths and angles.  For
 example,
 ::
@@ -920,7 +952,7 @@ Value             Meaning
 
 The main reason to use constraints is that it allows one to use a larger
 integration time step.  With no constraints, one is typically limited to a time
-step of about 1 fs.  With :code:`HBonds` constraints, this can be increased
+step of about 1 fs for typical biomolecular force fields like AMBER or CHARMM.  With :code:`HBonds` constraints, this can be increased
 to about 2 fs.  With :code:`HAngles`\ , it can be further increased to 3.5 or
 4 fs.
 
@@ -934,11 +966,15 @@ disable this behavior with the :code:`rigidWater` parameter:
 Be aware that flexible water may require you to further reduce the integration
 step size, typically to about 0.5 fs.
 
+.. note::
+
+   The AMOEBA forcefield is intended to be used without constraints.
+
 Heavy Hydrogens
 ===============
 
 
-When creating the system (either from a force field or a prmtop file), you can
+When creating the system (either from a force field or an AMBER :file:`prmtop` file), you can
 optionally tell OpenMM to increase the mass of hydrogen atoms.  For example,
 ::
 
@@ -965,7 +1001,7 @@ In the examples of the previous sections, we used Langevin integration:
 
     integrator = LangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
 
-The three parameter values in this line are the simulation temperature (300K),
+The three parameter values in this line are the simulation temperature (300 K),
 the friction coefficient (1 ps\ :sup:`-1`\ ), and the step size (0.002 ps).  You
 are free to change these to whatever values you want.  Be sure to specify units
 on all values.  For example, the step size could be written either as
@@ -991,7 +1027,7 @@ Brownian (diffusive) dynamics can be used by specifying the following:
 
     integrator = BrownianIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
 
-The parameters are the same as for Langevin dynamics: temperature (300K),
+The parameters are the same as for Langevin dynamics: temperature (300 K),
 friction coefficient (1 ps\ :sup:`-1`\ ), and step size (0.002 ps).
 
 Variable Time Step Langevin Integrator
@@ -1037,8 +1073,7 @@ integrator (as shown in the examples above) is usually the best way to do it.
 OpenMM does provide an alternative, however: you can use a Verlet integrator,
 then add an Andersen thermostat to your system to provide temperature coupling.
 
-To do this, add a single line to the script as shown below.  (The lines in grey
-are just for context.)
+To do this, we can add an :class:`AndersenThermostat` object to the :class:`System` as shown below.
 ::
 
     ...
@@ -1048,7 +1083,7 @@ are just for context.)
     integrator = VerletIntegrator(0.002*picoseconds)
     ...
 
-The two parameters of the Andersen thermostat are the temperature (300K) and
+The two parameters of the Andersen thermostat are the temperature (300 K) and
 collision frequency (1 ps\ :sup:`-1`\ ).
 
 Pressure Coupling
@@ -1069,7 +1104,7 @@ previous section:
     ...
 
 The parameters of the Monte Carlo barostat are the pressure (1 bar) and
-temperature (300K).  The barostat assumes the simulation is being run at
+temperature (300 K).  The barostat assumes the simulation is being run at
 constant temperature, but it does not itself do anything to regulate the
 temperature.
 
@@ -1137,7 +1172,8 @@ Removing Center of Mass Motion
 ==============================
 
 
-By default, OpenMM removes all center of mass motion at every time step so the
+By default, :class:`System` objects created with the OpenMM application tools add
+a :class:`CMMotionRemover` that removes all center of mass motion at every time step so the
 system as a whole does not drift with time.  This is almost always what you
 want.  In rare situations, you may want to allow the system to drift with time.
 You can do this by specifying the :code:`removeCMMotion` parameter when you
@@ -1151,9 +1187,12 @@ Writing Trajectories
 ====================
 
 
-OpenMM can save simulation trajectories to disk in two formats: PDB and DCD.
+OpenMM can save simulation trajectories to disk in two formats: PDB_ and DCD_.
 Both of these are widely supported formats, so you should be able to read them
 into most analysis and visualization programs.
+
+.. _PDB: http://www.wwpdb.org/documentation/format33/v3.3.html
+.. _DCD: http://www.ks.uiuc.edu/Research/vmd/plugins/molfile/dcdplugin.html
 
 To save a trajectory, just add a “reporter” to the simulation, as shown in the
 example scripts above:
@@ -1161,9 +1200,9 @@ example scripts above:
 
     simulation.reporters.append(PDBReporter('output.pdb', 1000))
 
-The two parameters of the PDBReporter are the output filename and how often (in
+The two parameters of the :class:`PDBReporter` are the output filename and how often (in
 number of time steps) output structures should be written.  To use DCD format,
-just replace “PDBReporter” with “DCDReporter”.  The parameters represent the
+just replace :class:`PDBReporter` with :class:`DCDReporter`.  The parameters represent the
 same values:
 ::
 
@@ -1175,7 +1214,7 @@ Recording Other Data
 
 In addition to saving a trajectory, you may want to record other information
 over the course of a simulation, such as the potential energy or temperature.
-OpenMM provides a reporter for this purpose also.  Create a StateDataReporter
+OpenMM provides a reporter for this purpose also.  Create a :class:`StateDataReporter`
 and add it to the simulation:
 ::
 
@@ -1205,22 +1244,23 @@ separated by spaces instead of commas:
     simulation.reporters.append(StateDataReporter('data.txt', 1000, progress=True,
             temperature=True, totalSteps=10000, separator=' '))
 
+.. _model-building-and-editing:
 
 Model Building and Editing
 ##########################
 
 Sometimes you have a PDB file that needs some work before you can simulate it.
 Maybe it doesn’t contain hydrogen atoms (which is common for structures
-determined by x-ray crystallography), so you need to add them.  Or perhaps you
+determined by X-ray crystallography), so you need to add them.  Or perhaps you
 want to simulate the system in explicit water, but the PDB file doesn’t contain
 water molecules.  Or maybe it does contain water molecules, but they contain the
 wrong number of interaction sites for the water model you want to use.  OpenMM’s
 Modeller class can fix problems such as these.
 
-To use it, create a Modeller object, providing the initial Topology and atom
+To use it, create a :class:`Modeller` object, providing the initial :class:`Topology` and atom
 positions.  You then can invoke various modelling functions on it.  Each one
-modifies the system in some way, creating a new Topology and list of positions.
-When you are all done, you can retrieve them from the Modeller and use them as
+modifies the system in some way, creating a new :class:`Topology` and list of positions.
+When you are all done, you can retrieve them from the :class:`Modeller` and use them as
 the starting point for your simulation:
 
 .. samepage::
@@ -1243,7 +1283,7 @@ Now let’s consider the particular functions you can call.
 Adding Hydrogens
 ****************
 
-Call the addHydrogens function to add missing hydrogen atoms:
+Call the :meth:`addHydrogens` function to add missing hydrogen atoms:
 ::
 
     modeller.addHydrogens(forcefield)
@@ -1274,7 +1314,7 @@ documentation for the Modeller class.
 Adding Solvent
 **************
 
-Call addSolvent to create a box of solvent (water and ions) around the model:
+Call :meth:`addSolvent` to create a box of solvent (water and ions) around the model:
 ::
 
     modeller.addSolvent(forcefield)
@@ -1284,7 +1324,7 @@ molecule comes closer to any solute atom than the sum of their van der Waals
 radii.  It also determines the charge of the solute, and adds enough positive or
 negative ions to make the system neutral.
 
-When called as shown above, addSolvent expects that periodic box dimensions were
+When called as shown above, :meth:`addSolvent` expects that periodic box dimensions were
 specified in the PDB file, and it uses them as the size for the water box.  If
 your PDB file does not specify a box size, or if you want to use a different
 size, you can specify one:
@@ -1303,14 +1343,14 @@ then creates a cubic box of width (solute size)+2*(padding).  The above line
 guarantees that no part of the solute comes closer than 1 nm to any edge of the
 box.
 
-By default, addSolvent creates TIP3P water molecules, but it also supports other
+By default, :meth:`addSolvent` creates TIP3P water molecules, but it also supports other
 water models:
 ::
 
     modeller.addSolvent(forcefield, model='tip5p')
 
-Allowed values for the :code:`model` option are 'tip3p', 'tip3pfb', 'spce', 
-'tip4pew', 'tip4pfb', and 'tip5p'.  Be sure to include the single quotes 
+Allowed values for the :code:`model` option are ``'tip3p'``, ``'tip3pfb'``, ``'spce'``,
+``'tip4pew'``, ``'tip4pfb'``, and ``'tip5p'``.  Be sure to include the single quotes
 around the value.
 
 Another option is to add extra ion pairs to give a desired total ionic strength.
@@ -1331,9 +1371,9 @@ options.  For example, this creates a potassium chloride solution:
 
     modeller.addSolvent(forcefield, ionicStrength=0.1*molar, positiveIon='K+')
 
-Allowed values for :code:`positiveIon` are 'Cs+', 'K+', 'Li+', 'Na+', and
-'Rb+'.  Allowed values for :code:`negativeIon` are 'Cl-', 'Br-', 'F-', and
-'I-'.  Be sure to include the single quotes around the value.  Also be aware
+Allowed values for :code:`positiveIon` are ``'Cs+'``, ``'K+'``, ``'Li+'``, ``'Na+'``, and
+``'Rb+'``.  Allowed values for :code:`negativeIon` are ``'Cl-'``, ``'Br-'``, ``'F-'``, and
+``'I-'``.  Be sure to include the single quotes around the value.  Also be aware
 some force fields do not include parameters for all of these ion types, so you
 need to use types that are supported by your chosen force field.
 
@@ -1345,7 +1385,7 @@ Adding or Removing Extra Particles
 “Extra particles” are particles that do not represent ordinary atoms.  This
 includes the virtual interaction sites used in many water models, Drude
 particles, etc.  If you are using a force field that involves extra particles,
-you must add them to the Topology.  To do this, call:
+you must add them to the :class:`Topology`.  To do this, call:
 ::
 
     modeller.addExtraParticles(forcefield)
@@ -1370,7 +1410,7 @@ Saving The Results
 ******************
 
 Once you have finished editing your model, you can immediately use the resulting
-Topology and atom positions as the input to a Simulation.  If you plan to
+:class:`Topology` object and atom positions as the input to a :class:`Simulation`.  If you plan to
 simulate it many times, though, it is usually better to save the result to a new
 PDB file, then use that as the input for the simulations.  This avoids the cost
 of repeating the modeling operations at the start of every simulation, and also
@@ -1387,7 +1427,7 @@ PDB file.
         from simtk.openmm.app import *
         from simtk.openmm import *
         from simtk.unit import *
-        
+
         print('Loading...')
         pdb = PDBFile('input.pdb')
         forcefield = ForceField('amber99sb.xml', 'tip3p.xml')
@@ -1419,7 +1459,7 @@ In the previous chapter, we looked at some basic scripts for running simulations
 and saw lots of ways to customize them.  If that is all you want to do—run
 straightforward molecular simulations—you already know everything you need to
 know.  Just use the example scripts and customize them in the ways described in
-section :ref:`simulation-parameters`.
+Section :ref:`simulation-parameters`.
 
 OpenMM can do far more than that.  Your script has the full OpenMM API at its
 disposal, along with all the power of the Python language and libraries.  In
@@ -1432,18 +1472,18 @@ your own.
 Starting in this section, we will assume some knowledge of programming, as well
 as familiarity with the OpenMM API.  Consult the OpenMM Users Guide and API
 documentation if you are uncertain about how something works.   You can also use
-the Python “help” command.  For example,
+the Python :code:`help` command.  For example,
 ::
 
     help(Simulation)
 
-will print detailed documentation on the Simulation class.
+will print detailed documentation on the :class:`Simulation` class.
 
 Simulated Annealing
 *******************
 
 Here is a very simple example of how to do simulated annealing.  The following
-lines linearly reduce the temperature from 300K to 0K in 100 increments,
+lines linearly reduce the temperature from 300 K to 0 K in 100 increments,
 executing 1000 time steps at each temperature:
 
 .. samepage::
@@ -1461,7 +1501,7 @@ executing 1000 time steps at each temperature:
         :autonumber:`Example,simulated annealing`
 
 This code needs very little explanation.  The loop is executed 100 times.  Each
-time through, it adjusts the temperature of the LangevinIntegrator and then
+time through, it adjusts the temperature of the :class:`LangevinIntegrator` and then
 calls :code:`step(1000)` to take 1000 time steps.
 
 Applying an External Force to Particles: a Spherical Container
@@ -1472,13 +1512,13 @@ spherical container with radius 2 nm.  We implement the container by applying a
 harmonic potential to every particle:
 
 .. math::
-    \begin{array}{lll}
-    E(r) = & 0          & r\le2\\
-           & 100(r-2)^2 & r>2
-    \end{array}
+    E(r) = \begin{cases}
+           0          & r\le2\\
+           100(r-2)^2 & r>2
+           \end{cases}
 
 where *r* is the distance of the particle from the origin, measured in nm.
-We can easily do this using OpenMM’s CustomExternalForce class.  This class
+We can easily do this using OpenMM’s :class:`CustomExternalForce` class.  This class
 applies a force to some or all of the particles in the system, where the energy
 is an arbitrary function of each particle’s (\ *x*\ , *y*\ , *z*\ )
 coordinates.  Here is the code to do it:
@@ -1500,39 +1540,39 @@ coordinates.  Here is the code to do it:
 
         :autonumber:`Example,spherical container`
 
-The first thing it does is create a CustomExternalForce object and add it to the
-System.  The argument to CustomExternalForce is a mathematical expression
-specifying the energy of each particle.  This can be any function of *x*\ ,
+The first thing it does is create a :class:`CustomExternalForce` object and add it to the
+:class:`System`.  The argument to :class:`CustomExternalForce` is a mathematical expression
+specifying the potential energy of each particle.  This can be any function of *x*\ ,
 *y*\ , and *z* you want.  It also can depend on global or per-particle
 parameters.  A wide variety of restraints, steering forces, shearing forces,
 etc. can be implemented with this method.
 
 Next it must specify which particles to apply the force to.  In this case, we
 want it to affect every particle in the system, so we loop over them and call
-:code:`addParticle()` once for each one.  The two arguments are the index of
+:meth:`addParticle` once for each one.  The two arguments are the index of
 the particle to affect, and the list of per-particle parameter values (an empty
 list in this case).  If we had per-particle parameters, such as to make the
 force stronger for some particles than for others, this is where we would
 specify them.
 
-Notice that we do all of this immediately after creating the System.  That is
+Notice that we do all of this immediately after creating the :class:`System`.  That is
 not an arbitrary choice.
 
 .. warning::
 
-    If you add new forces to a System, you must do so before creating the Simulation.
-    Once you create a Simulation, modifying the System will have no effect on that Simulation.
+    If you add new forces to a :class:`System`, you must do so before creating the :class:`Simulation`.
+    Once you create a :class:`Simulation`, modifying the :class:`System` will have no effect on that :class:`Simulation`.
 
 Extracting and Reporting Forces (and other data)
 ************************************************
 
-OpenMM provides reporters for two output formats: PDB and DCD.  Both of those
+OpenMM provides reporters for two output formats: PDB_ and DCD_.  Both of those
 formats store only positions, not velocities, forces, or other data.  In this
 section, we create a new reporter that outputs forces.  This illustrates two
 important things: how to write a reporter, and how to query the simulation for
 forces or other data.
 
-Here is the definition of the ForceReporter class:
+Here is the definition of the :class:`ForceReporter` class:
 
 .. samepage::
     ::
@@ -1564,8 +1604,8 @@ should generate reports.  It opens the output file for writing and records the
 reporting interval.  The destructor closes the file.
 
 We then have two methods that every reporter must implement:
-:code:`describeNextReport()` and :code:`report()`\ .  A Simulation object
-periodically calls :code:`describeNextReport()` on each of its reporters to
+:meth:`describeNextReport()` and :meth:`report()`.  A Simulation object
+periodically calls :meth:`describeNextReport()` on each of its reporters to
 find out when that reporter will next generate a report, and what information
 will be needed to generate it.  The return value should be a five element tuple,
 whose elements are as follows:
@@ -1580,12 +1620,12 @@ whose elements are as follows:
 * Whether the next report will need energies.
 
 
-When the time comes for the next scheduled report, the Simulation calls
-:code:`report()` to generate the report.  The arguments are the Simulation
-object, and a State that is guaranteed to contain all the information that was
-requested by :code:`describeNextReport()`\ .  A State object contains a
+When the time comes for the next scheduled report, the :class:`Simulation` calls
+:meth:`report()` to generate the report.  The arguments are the :class:`Simulation`
+object, and a :class:`State` that is guaranteed to contain all the information that was
+requested by :meth:`describeNextReport()`\ .  A State object contains a
 snapshot of information about the simulation, such as forces or particle
-positions.  We call :code:`getForces()` to retrieve the forces and convert
+positions.  We call :meth:`getForces()` to retrieve the forces and convert
 them to the units we want to output (kJ/mole/nm).  Then we loop over each value
 and write it to the file.  To keep the example simple, we just print the values
 in text format, one line per particle.  In a real program, you might choose a
@@ -1606,8 +1646,8 @@ This example illustrates a different sort of analysis.  Instead of running a
 simulation, assume we have already identified a set of structures we are
 interested in.  These structures are saved in a set of PDB files.  We want to
 loop over all the files in a directory, load them in one at a time, and compute
-the potential energy of each one.  Assume we have already created our System and
-Simulation.  The following lines perform the analysis:
+the potential energy of each one.  Assume we have already created our :class:`System` and
+:class:`Simulation`.  The following lines perform the analysis:
 
 .. samepage::
     ::
@@ -1624,9 +1664,9 @@ Simulation.  The following lines perform the analysis:
         :autonumber:`Example,computing energies`
 
 We use Python’s :code:`listdir()` function to list all the files in the
-directory.  We create a PDBFile object for each one and call
-:code:`setPositions()` on the Context to specify the particle positions loaded
-from the PDB file.  We then compute the energy by calling :code:`getState()`
+directory.  We create a :class:`PDBFile` object for each one and call
+:meth:`setPositions()` on the Context to specify the particle positions loaded
+from the PDB file.  We then compute the energy by calling :meth:`getState()`
 with the option :code:`getEnergy=True`\ , and print it to the console along
 with the name of the file.
 
