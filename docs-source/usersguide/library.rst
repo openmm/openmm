@@ -2614,6 +2614,8 @@ nanometers.  We could just as easily specify it in different units:
 
 The use of units in OpenMM is discussed in the next section.
 
+.. _units-and-dimensional-analysis:
+
 Units and dimensional analysis
 ==============================
 

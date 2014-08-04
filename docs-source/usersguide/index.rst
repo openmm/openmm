@@ -33,7 +33,7 @@ DOCUMENT.
    :numbered:
    :maxdepth: 3
 
-   introduction   
+   introduction
    application
    library
    theory

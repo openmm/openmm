@@ -27,7 +27,7 @@ Online Resources
 ****************
 
 You can find more documentation and other material at our website
-http://simtk.org/home/openmm.   Among other things there is a discussion forum,
+http://openmm.org.   Among other things there is a discussion forum,
 a wiki, and videos of lectures on using OpenMM.
 
 
