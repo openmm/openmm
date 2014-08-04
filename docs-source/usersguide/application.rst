@@ -133,7 +133,7 @@ Installing on Linux
 .zip file to expand it.
 
 2. Make sure you have Python 2.6 or higher (earlier versions will not work) and
-a C++ compiler (typically gcc or clang) installed on your computer.  You can
+a C++ compiler (typically :program:`gcc` or :program:`clang`) installed on your computer.  You can
 check what version of Python is installed by typing :code:`python` |--|\ :code:`version`
 into a console window.
 
@@ -147,7 +147,7 @@ into a console window.
 
 4. (Optional) If you plan to use the CPU platform, it is recommended that you
 install FFTW.  It is probably available through your system’s package manager
-such as :code:`yum` or :code:`apt-get`\ .  Alternatively, you can download
+such as :program:`yum` or :program:`apt-get`\ .  Alternatively, you can download
 it from http://www.fftw.org.  When configuring it, be sure to specify single
 precision and multiple threads (the |--|\ :code:`enable-float` and
 |--|\ :code:`enable-threads` options).  OpenMM will still work without FFTW, but the
@@ -1571,7 +1571,7 @@ time through, it adjusts the temperature of the :class:`LangevinIntegrator` and 
 calls :code:`step(1000)` to take 1000 time steps.
 
 Applying an External Force to Particles: Example illustrating a Half-Harmonic, Spherically Symmetric Boundary Potential
-**************************************************************************************************
+***********************************************************************************************************************
 
 In this example, we will simulate a non-periodic system contained inside a
 spherical container with radius 2 nm.  We implement the container by applying a
