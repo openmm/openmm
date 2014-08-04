@@ -131,7 +131,7 @@ Each torsion is represented by an energy term of the form
 
 
 where :math:`\theta` is the dihedral angle formed by the four particles, :math:`\theta_0`
-is the equilibrium angle, *n* is the periodicity, and *k* is
+is the phase offset, *n* is the periodicity, and *k* is
 the force constant.
 
 RBTorsionForce
@@ -205,7 +205,7 @@ second derivatives at both ends
 
 When an exception has been added for a pair of particles, :math:`\sigma` and :math:`\epsilon`
 are the parameters specified by the exception.  Otherwise they are determined
-from the parameters of the individual particles using the Lorentz-Bertelot
+from the parameters of the individual particles using the Lorentz-Berthelot
 combining rule:
 
 .. math::
@@ -458,14 +458,14 @@ between particles *i* and *j*\ .  :math:`f_\text{GB}(d_{ij}, R_i, R_j)` is defin
 
 
 .. math::
-   {f}_{\text{GB}}\left({d}_{ij},{R}_{i},{R}_{j}\right)={\left[{d}_{{ij}^{2}}+{R}_{i}{R}_{j}\text{exp}\left(\frac{-{d}_{ij}}{{4R}_{i}{R}_{j}}\right)\right]}^{1/2}
+   {f}_{\text{GB}}\left({d}_{ij},{R}_{i},{R}_{j}\right)={\left[{d}_{ij}^2+{R}_{i}{R}_{j}\text{exp}\left(\frac{-{d}_{ij}^2}{{4R}_{i}{R}_{j}}\right)\right]}^{1/2}
 
 
 :math:`R_i` is the Born radius of particle *i*\ , which calculated as
 
 
 .. math::
-   R_i=\frac{1}{\rho_i^{-1}-r_i^{-1}\text{tanh}\left(\alpha \Psi_{i}-{\beta \Psi}_{{i}^{2}}+{\gamma \Psi}_{{i}^{3}}\right)}
+   R_i=\frac{1}{\rho_i^{-1}-r_i^{-1}\text{tanh}\left(\alpha \Psi_{i}-{\beta \Psi}_i^2+{\gamma \Psi}_i^3\right)}
 
 
 where :math:`\alpha`, :math:`\beta`, and :math:`\gamma` are the GB\ :sup:`OBC`\ II parameters :math:`\alpha` = 1, :math:`\beta` = 0.8, and :math:`\gamma` =
@@ -622,7 +622,7 @@ weight function
 
 
 where :math:`\Delta E` is the change in potential energy resulting from the step,
-\ *P* is the system pressure, *N* is the number of molecules in the
+\ *P* is the pressure being applied to the system, *N* is the number of molecules in the
 system, :math:`k_B` is Boltzmann’s constant, and *T* is the system
 temperature.  In particular, if :math:`\Delta W\le 0` the step is always accepted.
 If :math:`\Delta W > 0`\ , the step is accepted with probability
