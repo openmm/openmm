@@ -47,6 +47,7 @@
 #include "ReferenceCustomGBIxn.h"
 #include "ReferenceCustomHbondIxn.h"
 #include "ReferenceCustomNonbondedIxn.h"
+#include "ReferenceCustomManyParticleIxn.h"
 #include "ReferenceCustomTorsionIxn.h"
 #include "ReferenceHarmonicBondIxn.h"
 #include "ReferenceLJCoulomb14.h"
@@ -67,6 +68,7 @@
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/CustomCompoundBondForceImpl.h"
 #include "openmm/internal/CustomHbondForceImpl.h"
+#include "openmm/internal/CustomManyParticleForceImpl.h"
 #include "openmm/internal/CustomNonbondedForceImpl.h"
 #include "openmm/internal/CMAPTorsionForceImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
@@ -1612,6 +1614,91 @@ void ReferenceCalcCustomCompoundBondForceKernel::copyParametersToContext(Context
                 throw OpenMMException("updateParametersInContext: The set of particles in a bond has changed");
         for (int j = 0; j < numParameters; j++)
             bondParamArray[i][j] = (RealOpenMM) params[j];
+    }
+}
+
+ReferenceCalcCustomManyParticleForceKernel::~ReferenceCalcCustomManyParticleForceKernel() {
+    disposeRealArray(particleParamArray, numParticles);
+    if (ixn != NULL)
+        delete ixn;
+}
+
+void ReferenceCalcCustomManyParticleForceKernel::initialize(const System& system, const CustomManyParticleForce& force) {
+
+    // Build the arrays.
+
+    numParticles = system.getNumParticles();
+    int numParticleParameters = force.getNumPerParticleParameters();
+    particleParamArray = allocateRealArray(numParticles, numParticleParameters);
+    for (int i = 0; i < numParticles; ++i) {
+        vector<double> parameters;
+        int type;
+        force.getParticleParameters(i, parameters, type);
+        for (int j = 0; j < numParticleParameters; j++)
+            particleParamArray[i][j] = parameters[j];
+    }
+
+    // Create custom functions for the tabulated functions.
+
+    map<string, Lepton::CustomFunction*> functions;
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++)
+        functions[force.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
+
+    // Parse the expression and create the object used to calculate the interaction.
+
+    map<string, vector<int> > distances;
+    map<string, vector<int> > angles;
+    map<string, vector<int> > dihedrals;
+    Lepton::ParsedExpression energyExpression = CustomManyParticleForceImpl::prepareExpression(force, functions, distances, angles, dihedrals);
+    vector<string> particleParameterNames;
+    for (int i = 0; i < numParticleParameters; i++)
+        particleParameterNames.push_back(force.getPerParticleParameterName(i));
+    for (int i = 0; i < force.getNumGlobalParameters(); i++)
+        globalParameterNames.push_back(force.getGlobalParameterName(i));
+    ixn = new ReferenceCustomManyParticleIxn(force.getNumParticlesPerSet(), energyExpression, particleParameterNames, distances, angles, dihedrals);
+    nonbondedMethod = CalcCustomManyParticleForceKernel::NonbondedMethod(force.getNonbondedMethod());
+    cutoffDistance = force.getCutoffDistance();
+    if (nonbondedMethod != NoCutoff)
+        ixn->setUseCutoff(cutoffDistance);
+
+    // Delete the custom functions.
+
+    for (map<string, Lepton::CustomFunction*>::iterator iter = functions.begin(); iter != functions.end(); iter++)
+        delete iter->second;
+}
+
+double ReferenceCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    vector<RealVec>& posData = extractPositions(context);
+    vector<RealVec>& forceData = extractForces(context);
+    RealOpenMM energy = 0;
+    map<string, double> globalParameters;
+    for (int i = 0; i < (int) globalParameterNames.size(); i++)
+        globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
+    if (nonbondedMethod == CutoffPeriodic) {
+        RealVec& box = extractBoxSize(context);
+        double minAllowedSize = 2*cutoffDistance;
+        if (box[0] < minAllowedSize || box[1] < minAllowedSize || box[2] < minAllowedSize)
+            throw OpenMMException("The periodic box size has decreased to less than twice the nonbonded cutoff.");
+        ixn->setPeriodic(box);
+    }
+    ixn->calculateIxn(posData, particleParamArray, globalParameters, forceData, includeEnergy ? &energy : NULL);
+    return energy;
+}
+
+void ReferenceCalcCustomManyParticleForceKernel::copyParametersToContext(ContextImpl& context, const CustomManyParticleForce& force) {
+    if (numParticles != force.getNumParticles())
+        throw OpenMMException("updateParametersInContext: The number of particles has changed");
+
+    // Record the values.
+
+    int numParameters = force.getNumPerParticleParameters();
+    vector<double> params;
+    for (int i = 0; i < numParticles; ++i) {
+        vector<double> parameters;
+        int type;
+        force.getParticleParameters(i, parameters, type);
+        for (int j = 0; j < numParameters; j++)
+            particleParamArray[i][j] = static_cast<RealOpenMM>(parameters[j]);
     }
 }
 
