@@ -603,6 +603,46 @@ Unix-like operating systems.  So in :numref:`Example,Gromacs example` we actuall
 this parameter, but if the Gromacs files were installed in any other location,
 we would need to include it.
 
+.. _using-charmm-files:
+
+Using CHARMM Files
+******************
+
+Yet another option is to load files created by the CHARMM setup tools.  Those include a
+:file:`psf` file containing topology information, and an ordinary PDB file for the
+atomic coordinates.  In addition, you must provide a set of files containing the force
+field definition to use.  This can involve several different files with varying formats and
+filename extensions such as :file:`prm`, :file:`rtf`, and :file:`str`.  To do this, load
+all the definition files into a :class:`CharmmParameterSet`
+object, then include that object as the first parameter when you call :meth:`createSystem`
+on the :class:`CharmmPsfFile`.
+
+.. samepage::
+    ::
+
+        from simtk.openmm.app import *
+        from simtk.openmm import *
+        from simtk.unit import *
+        from sys import stdout, exit, stderr
+
+        psf = CharmmPsfFile('input.psf')
+        pdb = PDBFile('input.pdb')
+        params = CharmmParameterSet('charmm22.rtf', 'charmm22.prm')
+        system = psf.createSystem(params, nonbondedMethod=NoCutoff,
+                nonbondedCutoff=1*nanometer, constraints=HBonds)
+        integrator = LangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
+        simulation = Simulation(psf.topology, system, integrator)
+        simulation.context.setPositions(pdb.positions)
+        simulation.minimizeEnergy()
+        simulation.reporters.append(PDBReporter('output.pdb', 1000))
+        simulation.reporters.append(StateDataReporter(stdout, 1000, step=True,
+                potentialEnergy=True, temperature=True))
+        simulation.step(10000)
+
+    .. caption::
+
+        :autonumber:`Example,CHARMM example`
+
 .. _the-script-builder-application:
 
 The Script Builder Application
