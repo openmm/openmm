@@ -31,40 +31,72 @@
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceForce.h"
 #include "ReferenceCustomManyParticleIxn.h"
+#include "ReferenceTabulatedFunction.h"
+#include "openmm/internal/CustomManyParticleForceImpl.h"
+#include "lepton/CustomFunction.h"
 
-using std::map;
-using std::pair;
-using std::string;
-using std::stringstream;
-using std::vector;
-using OpenMM::RealVec;
+using namespace OpenMM;
+using namespace std;
 
-ReferenceCustomManyParticleIxn::ReferenceCustomManyParticleIxn(int numParticlesPerSet,
-            const Lepton::ParsedExpression& energyExpression, const vector<string>& particleParameterNames,
-            const map<string, vector<int> >& distances, const map<string, vector<int> >& angles, const map<string, vector<int> >& dihedrals) :
-            numParticlesPerSet(numParticlesPerSet), energyExpression(energyExpression.createProgram()), useCutoff(false), usePeriodic(false) {
+ReferenceCustomManyParticleIxn::ReferenceCustomManyParticleIxn(const CustomManyParticleForce& force) : useCutoff(false), usePeriodic(false) {
+    numParticlesPerSet = force.getNumParticlesPerSet();
+    numPerParticleParameters = force.getNumPerParticleParameters();
+    
+    // Create custom functions for the tabulated functions.
+
+    map<string, Lepton::CustomFunction*> functions;
+    for (int i = 0; i < (int) force.getNumTabulatedFunctions(); i++)
+        functions[force.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
+
+    // Parse the expression and create the object used to calculate the interaction.
+
+    map<string, vector<int> > distances;
+    map<string, vector<int> > angles;
+    map<string, vector<int> > dihedrals;
+    Lepton::ParsedExpression energyExpr = CustomManyParticleForceImpl::prepareExpression(force, functions, distances, angles, dihedrals);
+    energyExpression = energyExpr.createProgram();
+    vector<string> particleParameterNames;
+    if (force.getNonbondedMethod() != CustomManyParticleForce::NoCutoff)
+        setUseCutoff(force.getCutoffDistance());
+
+    // Delete the custom functions.
+
+    for (map<string, Lepton::CustomFunction*>::iterator iter = functions.begin(); iter != functions.end(); iter++)
+        delete iter->second;
+
+    // Differentiate the energy to get expressions for the force.
+
     particleParamNames.resize(numParticlesPerSet);
-    numPerParticleParameters = particleParameterNames.size();
     for (int i = 0; i < numParticlesPerSet; i++) {
         stringstream xname, yname, zname;
         xname << 'x' << (i+1);
         yname << 'y' << (i+1);
         zname << 'z' << (i+1);
-        particleTerms.push_back(ReferenceCustomManyParticleIxn::ParticleTermInfo(xname.str(), i, 0, energyExpression.differentiate(xname.str()).optimize().createProgram()));
-        particleTerms.push_back(ReferenceCustomManyParticleIxn::ParticleTermInfo(yname.str(), i, 1, energyExpression.differentiate(yname.str()).optimize().createProgram()));
-        particleTerms.push_back(ReferenceCustomManyParticleIxn::ParticleTermInfo(zname.str(), i, 2, energyExpression.differentiate(zname.str()).optimize().createProgram()));
+        particleTerms.push_back(ReferenceCustomManyParticleIxn::ParticleTermInfo(xname.str(), i, 0, energyExpr.differentiate(xname.str()).optimize().createProgram()));
+        particleTerms.push_back(ReferenceCustomManyParticleIxn::ParticleTermInfo(yname.str(), i, 1, energyExpr.differentiate(yname.str()).optimize().createProgram()));
+        particleTerms.push_back(ReferenceCustomManyParticleIxn::ParticleTermInfo(zname.str(), i, 2, energyExpr.differentiate(zname.str()).optimize().createProgram()));
         for (int j = 0; j < numPerParticleParameters; j++) {
             stringstream paramname;
-            paramname << particleParameterNames[j] << (i+1);
+            paramname << force.getPerParticleParameterName(j) << (i+1);
             particleParamNames[i].push_back(paramname.str());
         }
     }
     for (map<string, vector<int> >::const_iterator iter = distances.begin(); iter != distances.end(); ++iter)
-        distanceTerms.push_back(ReferenceCustomManyParticleIxn::DistanceTermInfo(iter->first, iter->second, energyExpression.differentiate(iter->first).optimize().createProgram()));
+        distanceTerms.push_back(ReferenceCustomManyParticleIxn::DistanceTermInfo(iter->first, iter->second, energyExpr.differentiate(iter->first).optimize().createProgram()));
     for (map<string, vector<int> >::const_iterator iter = angles.begin(); iter != angles.end(); ++iter)
-        angleTerms.push_back(ReferenceCustomManyParticleIxn::AngleTermInfo(iter->first, iter->second, energyExpression.differentiate(iter->first).optimize().createProgram()));
+        angleTerms.push_back(ReferenceCustomManyParticleIxn::AngleTermInfo(iter->first, iter->second, energyExpr.differentiate(iter->first).optimize().createProgram()));
     for (map<string, vector<int> >::const_iterator iter = dihedrals.begin(); iter != dihedrals.end(); ++iter)
-        dihedralTerms.push_back(ReferenceCustomManyParticleIxn::DihedralTermInfo(iter->first, iter->second, energyExpression.differentiate(iter->first).optimize().createProgram()));
+        dihedralTerms.push_back(ReferenceCustomManyParticleIxn::DihedralTermInfo(iter->first, iter->second, energyExpr.differentiate(iter->first).optimize().createProgram()));
+    
+    // Record exclusions.
+    
+    exclusions.resize(force.getNumParticles());
+    for (int i = 0; i < (int) force.getNumExclusions(); i++) {
+        int p1, p2;
+        force.getExclusionParticles(i, p1, p2);
+        exclusions[p1].insert(p2);
+        exclusions[p2].insert(p1);
+    }
 }
 
 ReferenceCustomManyParticleIxn::~ReferenceCustomManyParticleIxn( ){
@@ -84,7 +116,7 @@ void ReferenceCustomManyParticleIxn::setUseCutoff(RealOpenMM distance) {
 }
 
 void ReferenceCustomManyParticleIxn::setPeriodic(RealVec& boxSize) {
-    assert(cutoff);
+    assert(useCutoff);
     assert(boxSize[0] >= 2.0*cutoffDistance);
     assert(boxSize[1] >= 2.0*cutoffDistance);
     assert(boxSize[2] >= 2.0*cutoffDistance);
@@ -112,6 +144,23 @@ void ReferenceCustomManyParticleIxn::loopOverInteractions(vector<int>& particles
 
 void ReferenceCustomManyParticleIxn::calculateOneIxn(const vector<int>& particles, vector<RealVec>& atomCoordinates,
                         map<string, double>& variables, vector<RealVec>& forces, RealOpenMM* totalEnergy) const {
+    // Decide whether to include this interaction.
+    
+    for (int i = 0; i < (int) particles.size(); i++) {
+        int p1 = particles[i];
+        for (int j = i+1; j < (int) particles.size(); j++) {
+            int p2 = particles[j];
+            if (exclusions[p1].find(p2) != exclusions[p1].end())
+                return;
+            if (useCutoff) {
+                RealOpenMM delta[ReferenceForce::LastDeltaRIndex];
+                computeDelta(p1, p2, delta, atomCoordinates);
+                if (delta[ReferenceForce::RIndex] >= cutoffDistance)
+                    return;
+            }
+        }
+    }
+    
     // Compute all of the variables the energy can depend on.
 
     for (int i = 0; i < (int) particleTerms.size(); i++) {
@@ -122,8 +171,6 @@ void ReferenceCustomManyParticleIxn::calculateOneIxn(const vector<int>& particle
         const DistanceTermInfo& term = distanceTerms[i];
         computeDelta(particles[term.p1], particles[term.p2], term.delta, atomCoordinates);
         variables[term.name] = term.delta[ReferenceForce::RIndex];
-        if (useCutoff && term.delta[ReferenceForce::RIndex] > cutoffDistance)
-            return;
     }
     for (int i = 0; i < (int) angleTerms.size(); i++) {
         const AngleTermInfo& term = angleTerms[i];

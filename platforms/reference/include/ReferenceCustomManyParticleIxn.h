@@ -26,9 +26,11 @@
 #define __ReferenceCustomManyParticleIxn_H__
 
 #include "ReferenceBondIxn.h"
+#include "openmm/CustomManyParticleForce.h"
 #include "lepton/ExpressionProgram.h"
 #include "lepton/ParsedExpression.h"
 #include <map>
+#include <set>
 #include <vector>
 
 // ---------------------------------------------------------------------------------------
@@ -47,6 +49,7 @@ class ReferenceCustomManyParticleIxn {
       RealOpenMM periodicBoxSize[3];
       Lepton::ExpressionProgram energyExpression;
       std::vector<std::vector<std::string> > particleParamNames;
+      std::vector<std::set<int> > exclusions;
       std::vector<ParticleTermInfo> particleTerms;
       std::vector<DistanceTermInfo> distanceTerms;
       std::vector<AngleTermInfo> angleTerms;
@@ -85,9 +88,7 @@ class ReferenceCustomManyParticleIxn {
 
          --------------------------------------------------------------------------------------- */
 
-       ReferenceCustomManyParticleIxn(int numParticlesPerSet, const Lepton::ParsedExpression& energyExpression,
-                               const std::vector<std::string>& particleParameterNames, const std::map<std::string, std::vector<int> >& distances,
-                               const std::map<std::string, std::vector<int> >& angles, const std::map<std::string, std::vector<int> >& dihedrals);
+       ReferenceCustomManyParticleIxn(const OpenMM::CustomManyParticleForce& force);
 
       /**---------------------------------------------------------------------------------------
 

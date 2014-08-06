@@ -41,6 +41,7 @@
 #include "ReferencePlatform.h"
 #include "openmm/CustomManyParticleForce.h"
 #include "openmm/System.h"
+#include "openmm/TabulatedFunction.h"
 #include "openmm/VerletIntegrator.h"
 #include "sfmt/SFMT.h"
 #include <iostream>
@@ -191,6 +192,31 @@ void testPeriodic() {
     validateAxilrodTeller(force, positions, expectedSets, boxSize);
 }
 
+void testExclusions() {
+    CustomManyParticleForce* force = new CustomManyParticleForce(3,
+        "C*(1+3*cos(theta1)*cos(theta2)*cos(theta3))/(r12*r13*r23)^3;"
+        "theta1=angle(p1,p2,p3); theta2=angle(p2,p3,p1); theta3=angle(p3,p1,p2);"
+        "r12=distance(p1,p2); r13=distance(p1,p3); r23=distance(p2,p3)");
+    force->addGlobalParameter("C", 1.5);
+    vector<double> params;
+    force->addParticle(params);
+    force->addParticle(params);
+    force->addParticle(params);
+    force->addParticle(params);
+    force->addParticle(params);
+    vector<Vec3> positions;
+    positions.push_back(Vec3(0, 0, 0));
+    positions.push_back(Vec3(1, 0, 0));
+    positions.push_back(Vec3(0, 1.1, 0.3));
+    positions.push_back(Vec3(0.4, 0, -0.8));
+    positions.push_back(Vec3(0.2, 0.5, -0.1));
+    force->addExclusion(0, 2);
+    force->addExclusion(0, 3);
+    int sets[5][3] = {{0,1,4}, {1,2,3}, {1,2,4}, {1,3,4}, {2,3,4}};
+    vector<const int*> expectedSets(&sets[0], &sets[5]);
+    validateAxilrodTeller(force, positions, expectedSets, 2.0);
+}
+
 void testParameters() {
     // Create a system.
     
@@ -217,7 +243,7 @@ void testParameters() {
     
     // See if the energy is correct.
 
-    State state1 = context.getState(State::Energy);
+    State state = context.getState(State::Energy);
     double expectedEnergy = 0;
     for (int i = 0; i < numParticles; i++)
         for (int j = i+1; j < numParticles; j++)
@@ -230,7 +256,93 @@ void testParameters() {
                 double r23 = sqrt(d23.dot(d23));
                 expectedEnergy += 2.0*(i+1)*(j+1)*(k+1)*(r12+r13+r23);
             }
-    ASSERT_EQUAL_TOL(expectedEnergy, state1.getPotentialEnergy(), 1e-5);
+    ASSERT_EQUAL_TOL(expectedEnergy, state.getPotentialEnergy(), 1e-5);
+    
+    // Modify the parameters.
+    
+    context.setParameter("C", 3.5);
+    for (int i = 0; i < numParticles; i++) {
+        params[0] = 0.5*i-0.1;
+        force->setParticleParameters(i, params, 0);
+    }
+    force->updateParametersInContext(context);
+    
+    // See if the energy is still correct.
+    
+    state = context.getState(State::Energy);
+    expectedEnergy = 0;
+    for (int i = 0; i < numParticles; i++)
+        for (int j = i+1; j < numParticles; j++)
+            for (int k = j+1; k < numParticles; k++) {
+                Vec3 d12 = positions[j]-positions[i];
+                Vec3 d13 = positions[k]-positions[i];
+                Vec3 d23 = positions[k]-positions[j];
+                double r12 = sqrt(d12.dot(d12));
+                double r13 = sqrt(d13.dot(d13));
+                double r23 = sqrt(d23.dot(d23));
+                expectedEnergy += 3.5*(0.5*i-0.1)*(0.5*j-0.1)*(0.5*k-0.1)*(r12+r13+r23);
+            }
+    ASSERT_EQUAL_TOL(expectedEnergy, state.getPotentialEnergy(), 1e-5);
+}
+
+void testTabulatedFunctions() {
+    int numParticles = 5;
+    
+    // Create two tabulated functions.
+    
+    vector<double> values;
+    values.push_back(0.0);
+    values.push_back(50.0);
+    Continuous1DFunction* f1 = new Continuous1DFunction(values, 0, 100);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    vector<double> c(numParticles);
+    for (int i = 0; i < numParticles; i++)
+        c[i] = genrand_real2(sfmt);
+    values.resize(numParticles*numParticles*numParticles);
+    for (int i = 0; i < numParticles; i++)
+        for (int j = 0; j < numParticles; j++)
+            for (int k = 0; k < numParticles; k++)
+                values[i+numParticles*j+numParticles*numParticles*k] = c[i]+c[j]+c[k];
+    Discrete3DFunction* f2 = new Discrete3DFunction(numParticles, numParticles, numParticles, values);
+    
+    // Create a system.
+    
+    System system;
+    CustomManyParticleForce* force = new CustomManyParticleForce(3, "f1(distance(p1,p2)+distance(p2,p3)+distance(p1,p3))*f2(atom1, atom2, atom3)");
+    force->addPerParticleParameter("atom");
+    force->addTabulatedFunction("f1", f1);
+    force->addTabulatedFunction("f2", f2);
+    vector<double> params(1);
+    vector<Vec3> positions;
+    for (int i = 0; i < numParticles; i++) {
+        params[0] = i;
+        force->addParticle(params);
+        positions.push_back(Vec3(genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt)));
+        system.addParticle(1.0);
+    }
+    system.addForce(force);
+    VerletIntegrator integrator(0.001);
+    ReferencePlatform platform;
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    
+    // See if the energy is correct.
+
+    State state = context.getState(State::Energy);
+    double expectedEnergy = 0;
+    for (int i = 0; i < numParticles; i++)
+        for (int j = i+1; j < numParticles; j++)
+            for (int k = j+1; k < numParticles; k++) {
+                Vec3 d12 = positions[j]-positions[i];
+                Vec3 d13 = positions[k]-positions[i];
+                Vec3 d23 = positions[k]-positions[j];
+                double r12 = sqrt(d12.dot(d12));
+                double r13 = sqrt(d13.dot(d13));
+                double r23 = sqrt(d23.dot(d23));
+                expectedEnergy += 0.5*(r12+r13+r23)*(c[i]+c[j]+c[k]);
+            }
+    ASSERT_EQUAL_TOL(expectedEnergy, state.getPotentialEnergy(), 1e-5);
 }
 
 int main() {
@@ -238,7 +350,9 @@ int main() {
         testNoCutoff();
         testCutoff();
         testPeriodic();
+        testExclusions();
         testParameters();
+        testTabulatedFunctions();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

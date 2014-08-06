@@ -68,7 +68,6 @@
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/CustomCompoundBondForceImpl.h"
 #include "openmm/internal/CustomHbondForceImpl.h"
-#include "openmm/internal/CustomManyParticleForceImpl.h"
 #include "openmm/internal/CustomNonbondedForceImpl.h"
 #include "openmm/internal/CMAPTorsionForceImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
@@ -1637,34 +1636,11 @@ void ReferenceCalcCustomManyParticleForceKernel::initialize(const System& system
         for (int j = 0; j < numParticleParameters; j++)
             particleParamArray[i][j] = parameters[j];
     }
-
-    // Create custom functions for the tabulated functions.
-
-    map<string, Lepton::CustomFunction*> functions;
-    for (int i = 0; i < force.getNumTabulatedFunctions(); i++)
-        functions[force.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
-
-    // Parse the expression and create the object used to calculate the interaction.
-
-    map<string, vector<int> > distances;
-    map<string, vector<int> > angles;
-    map<string, vector<int> > dihedrals;
-    Lepton::ParsedExpression energyExpression = CustomManyParticleForceImpl::prepareExpression(force, functions, distances, angles, dihedrals);
-    vector<string> particleParameterNames;
-    for (int i = 0; i < numParticleParameters; i++)
-        particleParameterNames.push_back(force.getPerParticleParameterName(i));
     for (int i = 0; i < force.getNumGlobalParameters(); i++)
         globalParameterNames.push_back(force.getGlobalParameterName(i));
-    ixn = new ReferenceCustomManyParticleIxn(force.getNumParticlesPerSet(), energyExpression, particleParameterNames, distances, angles, dihedrals);
+    ixn = new ReferenceCustomManyParticleIxn(force);
     nonbondedMethod = CalcCustomManyParticleForceKernel::NonbondedMethod(force.getNonbondedMethod());
     cutoffDistance = force.getCutoffDistance();
-    if (nonbondedMethod != NoCutoff)
-        ixn->setUseCutoff(cutoffDistance);
-
-    // Delete the custom functions.
-
-    for (map<string, Lepton::CustomFunction*>::iterator iter = functions.begin(); iter != functions.end(); iter++)
-        delete iter->second;
 }
 
 double ReferenceCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
