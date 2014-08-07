@@ -44,6 +44,7 @@
 #include "openmm/CustomGBForce.h"
 #include "openmm/CustomHbondForce.h"
 #include "openmm/CustomIntegrator.h"
+#include "openmm/CustomManyParticleForce.h"
 #include "openmm/CustomNonbondedForce.h"
 #include "openmm/Force.h"
 #include "openmm/GBSAOBCForce.h"
