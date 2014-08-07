@@ -79,11 +79,27 @@ public:
      */
     static Lepton::ParsedExpression prepareExpression(const CustomManyParticleForce& force, const std::map<std::string, Lepton::CustomFunction*>& functions, std::map<std::string, std::vector<int> >& distances,
             std::map<std::string, std::vector<int> >& angles, std::map<std::string, std::vector<int> >& dihedrals);
+    /**
+     * Analyze the type filters for a force and build a set of arrays that can be used for reordering the
+     * particles in an interaction.
+     * 
+     * @param force          the CustomManyParticleForce to process
+     * @param numTypes       on exit, the number of unique particle types
+     * @param particleTypes  on exit, this contains a type code for each particle.  These codes are <i>not</i> necessarily the
+     *                       same as the types assigned by the force.  They are guaranteed to be successive integers starting from 0,
+     *                       whereas the force may have used arbitrary integers.
+     * @param orderIndex     on exit, this contains a lookup table for selecting the particle order for an interaction.
+     *                       orderIndex[t1+numTypes*t2+numTypes*numTypes*t3+...] is the index of the order to use, where t1, t2, etc. are the type codes
+     *                       of the particles involved in the interaction.  If this equals -1, the interaction should be omitted.
+     * @param particleOrder  on exit, particleOrder[i][j] tells which particle to use as the j'th particle, where i is the value found in orderIndex.
+     */
+    static void buildFilterArrays(const CustomManyParticleForce& force, int& numTypes, std::vector<int>& particleTypes, std::vector<int>& orderIndex, std::vector<std::vector<int> >& particleOrder);
 private:
     class FunctionPlaceholder;
     static Lepton::ExpressionTreeNode replaceFunctions(const Lepton::ExpressionTreeNode& node, std::map<std::string, int> atoms,
             std::map<std::string, std::vector<int> >& distances, std::map<std::string, std::vector<int> >& angles,
             std::map<std::string, std::vector<int> >& dihedrals);
+    static void generatePermutations(std::vector<int>& values, int numFixed, std::vector<std::vector<int> >& result);
     const CustomManyParticleForce& owner;
     Kernel kernel;
 };

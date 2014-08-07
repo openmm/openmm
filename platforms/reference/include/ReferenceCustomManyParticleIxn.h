@@ -43,13 +43,16 @@ class ReferenceCustomManyParticleIxn {
       class DistanceTermInfo;
       class AngleTermInfo;
       class DihedralTermInfo;
-      int numParticlesPerSet, numPerParticleParameters;
+      int numParticlesPerSet, numPerParticleParameters, numTypes;
       bool useCutoff, usePeriodic;
       RealOpenMM cutoffDistance;
       RealOpenMM periodicBoxSize[3];
       Lepton::ExpressionProgram energyExpression;
       std::vector<std::vector<std::string> > particleParamNames;
       std::vector<std::set<int> > exclusions;
+      std::vector<int> particleTypes;
+      std::vector<int> orderIndex;
+      std::vector<std::vector<int> > particleOrder;
       std::vector<ParticleTermInfo> particleTerms;
       std::vector<DistanceTermInfo> distanceTerms;
       std::vector<AngleTermInfo> angleTerms;

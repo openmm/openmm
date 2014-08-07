@@ -225,3 +225,109 @@ ExpressionTreeNode CustomManyParticleForceImpl::replaceFunctions(const Expressio
 void CustomManyParticleForceImpl::updateParametersInContext(ContextImpl& context) {
     kernel.getAs<CalcCustomManyParticleForceKernel>().copyParametersToContext(context, owner);
 }
+
+void CustomManyParticleForceImpl::buildFilterArrays(const CustomManyParticleForce& force, int& numTypes, vector<int>& particleTypes, vector<int>& orderIndex, vector<vector<int> >& particleOrder) {
+    // Build a canonical list of type codes.
+    
+    int numParticles = force.getNumParticles();
+    int numParticlesPerSet = force.getNumParticlesPerSet();
+    particleTypes.resize(numParticles);
+    map<int, int> typeMap;
+    for (int i = 0; i < numParticles; i++) {
+        vector<double> params;
+        int type;
+        force.getParticleParameters(i, params, type);
+        map<int, int>::const_iterator element = typeMap.find(type);
+        if (element == typeMap.end()) {
+            int newType = typeMap.size();
+            typeMap[type] = newType;
+            particleTypes[i] = newType;
+        }
+        else
+            particleTypes[i] = element->second;
+    }
+    numTypes = typeMap.size();
+    int numIndices = 1;
+    for (int i = 0; i < numParticlesPerSet; i++)
+        numIndices *= numTypes;
+    orderIndex.resize(numIndices, 0);
+    
+    // Find the allowed type codes for each particle in an interaction.
+    
+    vector<set<int> > allowedTypes(numParticlesPerSet);
+    bool anyFilters = false;
+    for (int i = 0; i < numParticlesPerSet; i++) {
+        set<int> types;
+        force.getTypeFilter(i, types);
+        if (types.size() == 0)
+            for (int j = 0; j < numTypes; j++)
+                allowedTypes[i].insert(j);
+        else {
+            for (set<int>::const_iterator iter = types.begin(); iter != types.end(); ++iter)
+                if (typeMap.find(*iter) != typeMap.end())
+                    allowedTypes[i].insert(typeMap[*iter]);
+            if (allowedTypes[i].size() < numTypes)
+                anyFilters = true;
+        }
+    }
+    
+    // If there are no filters, reordering is unnecessary.
+    
+    if (!anyFilters) {
+        particleOrder.resize(1);
+        particleOrder[0].resize(numParticlesPerSet);
+        for (int i = 0; i < numParticlesPerSet; i++)
+            particleOrder[0][i] = i;
+        return;
+    }
+    
+    // Build a list of every possible permutation of the particles.
+    
+    particleOrder.clear();
+    vector<int> values;
+    for (int i = 0; i < numParticlesPerSet; i++)
+        values.push_back(i);
+    generatePermutations(values, 0, particleOrder);
+    int numOrders = particleOrder.size();
+    
+    // Now we need to loop over every possible sequence of type codes, and for each one figure out which order to use.
+    
+    for (int i = 0; i < numIndices; i++) {
+        vector<int> types(numParticlesPerSet);
+        int temp = i;
+        for (int j = 0; j < numParticlesPerSet; j++) {
+            types[j] = temp%numTypes;
+            temp /= numTypes;
+        }
+        
+        // Loop over possible orders until we find one that matches the filters.
+        
+        int order = -1;
+        for (int j = 0; j < numOrders && order == -1; j++) {
+            bool matches = true;
+            for (int k = 0; k < numParticlesPerSet && matches; k++)
+                if (allowedTypes[k].find(types[particleOrder[j][k]]) == allowedTypes[k].end())
+                    matches = false;
+            if (matches)
+                order = j;
+        }
+        orderIndex[i] = order;
+    }
+}
+
+void CustomManyParticleForceImpl::generatePermutations(vector<int>& values, int numFixed, vector<vector<int> >& result) {
+    int numValues = values.size();
+    if (numFixed == numValues) {
+        result.push_back(values);
+        return;
+    }
+    for (int i = numFixed; i < numValues; i++) {
+        int v1 = values[numFixed];
+        int v2 = values[i];
+        values[numFixed] = v2;
+        values[i] = v1;
+        generatePermutations(values, numFixed+1, result);
+        values[numFixed] = v1;
+        values[i] = v2;
+    }
+}

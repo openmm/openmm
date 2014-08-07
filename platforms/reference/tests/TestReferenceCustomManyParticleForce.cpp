@@ -345,6 +345,57 @@ void testTabulatedFunctions() {
     ASSERT_EQUAL_TOL(expectedEnergy, state.getPotentialEnergy(), 1e-5);
 }
 
+void testTypeFilters() {
+    // Create a system.
+    
+    System system;
+    for (int i = 0; i < 5; i++)
+        system.addParticle(1.0);
+    CustomManyParticleForce* force = new CustomManyParticleForce(3, "distance(p1,p2)+distance(p1,p3)");
+    vector<double> params;
+    force->addParticle(params, 0);
+    force->addParticle(params, 1);
+    force->addParticle(params, 0);
+    force->addParticle(params, 1);
+    force->addParticle(params, 5);
+    vector<Vec3> positions;
+    positions.push_back(Vec3(0, 0, 0));
+    positions.push_back(Vec3(1, 0, 0));
+    positions.push_back(Vec3(0, 1.1, 0.3));
+    positions.push_back(Vec3(0.4, 0, -0.8));
+    positions.push_back(Vec3(0.2, 0.5, -0.1));
+    set<int> f1, f2;
+    f1.insert(0);
+    f2.insert(1);
+    f2.insert(5);
+    force->setTypeFilter(0, f1);
+    force->setTypeFilter(1, f2);
+    force->setTypeFilter(2, f2);
+    system.addForce(force);
+    VerletIntegrator integrator(0.001);
+    ReferencePlatform platform;
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    
+    // See if the energy is correct.
+
+    State state = context.getState(State::Energy);
+    double expectedEnergy = 0;
+    int sets[6][3] = {{0,1,3}, {0,1,4}, {0,3,4}, {2,1,3}, {2,1,4}, {2,3,4}};
+    for (int i = 0; i < 6; i++) {
+        int p1 = sets[i][0];
+        int p2 = sets[i][1];
+        int p3 = sets[i][2];
+            Vec3 d12 = positions[p2]-positions[p1];
+            Vec3 d13 = positions[p3]-positions[p1];
+            double r12 = sqrt(d12.dot(d12));
+            double r13 = sqrt(d13.dot(d13));
+            expectedEnergy += r12+r13;
+    }
+    ASSERT_EQUAL_TOL(expectedEnergy, state.getPotentialEnergy(), 1e-5);
+    
+}
+
 int main() {
     try {
         testNoCutoff();
@@ -353,6 +404,7 @@ int main() {
         testExclusions();
         testParameters();
         testTabulatedFunctions();
+        testTypeFilters();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

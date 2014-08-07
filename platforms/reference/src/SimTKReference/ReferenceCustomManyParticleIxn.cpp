@@ -97,6 +97,10 @@ ReferenceCustomManyParticleIxn::ReferenceCustomManyParticleIxn(const CustomManyP
         exclusions[p1].insert(p2);
         exclusions[p2].insert(p1);
     }
+    
+    // Record information about type filters.
+    
+    CustomManyParticleForceImpl::buildFilterArrays(force, numTypes, particleTypes, orderIndex, particleOrder);
 }
 
 ReferenceCustomManyParticleIxn::~ReferenceCustomManyParticleIxn( ){
@@ -144,12 +148,31 @@ void ReferenceCustomManyParticleIxn::loopOverInteractions(vector<int>& particles
 
 void ReferenceCustomManyParticleIxn::calculateOneIxn(const vector<int>& particles, vector<RealVec>& atomCoordinates,
                         map<string, double>& variables, vector<RealVec>& forces, RealOpenMM* totalEnergy) const {
+    // Select the ordering to use for the particles.
+    
+    vector<int> permutedParticles(numParticlesPerSet);
+    if (particleOrder.size() == 1) {
+        // There are no filters, so we don't need to worry about ordering.
+        
+        permutedParticles = particles;
+    }
+    else {
+        int index = 0;
+        for (int i = numParticlesPerSet-1; i >= 0; i--)
+            index = particleTypes[particles[i]]+numTypes*index;
+        int order = orderIndex[index];
+        if (order == -1)
+            return;
+        for (int i = 0; i < numParticlesPerSet; i++)
+            permutedParticles[i] = particles[particleOrder[order][i]];
+    }
+    
     // Decide whether to include this interaction.
     
-    for (int i = 0; i < (int) particles.size(); i++) {
-        int p1 = particles[i];
-        for (int j = i+1; j < (int) particles.size(); j++) {
-            int p2 = particles[j];
+    for (int i = 0; i < (int) permutedParticles.size(); i++) {
+        int p1 = permutedParticles[i];
+        for (int j = i+1; j < (int) permutedParticles.size(); j++) {
+            int p2 = permutedParticles[j];
             if (exclusions[p1].find(p2) != exclusions[p1].end())
                 return;
             if (useCutoff) {
@@ -169,20 +192,20 @@ void ReferenceCustomManyParticleIxn::calculateOneIxn(const vector<int>& particle
     }
     for (int i = 0; i < (int) distanceTerms.size(); i++) {
         const DistanceTermInfo& term = distanceTerms[i];
-        computeDelta(particles[term.p1], particles[term.p2], term.delta, atomCoordinates);
+        computeDelta(permutedParticles[term.p1], permutedParticles[term.p2], term.delta, atomCoordinates);
         variables[term.name] = term.delta[ReferenceForce::RIndex];
     }
     for (int i = 0; i < (int) angleTerms.size(); i++) {
         const AngleTermInfo& term = angleTerms[i];
-        computeDelta(particles[term.p1], particles[term.p2], term.delta1, atomCoordinates);
-        computeDelta(particles[term.p3], particles[term.p2], term.delta2, atomCoordinates);
+        computeDelta(permutedParticles[term.p1], permutedParticles[term.p2], term.delta1, atomCoordinates);
+        computeDelta(permutedParticles[term.p3], permutedParticles[term.p2], term.delta2, atomCoordinates);
         variables[term.name] = computeAngle(term.delta1, term.delta2);
     }
     for (int i = 0; i < (int) dihedralTerms.size(); i++) {
         const DihedralTermInfo& term = dihedralTerms[i];
-        computeDelta(particles[term.p2], particles[term.p1], term.delta1, atomCoordinates);
-        computeDelta(particles[term.p2], particles[term.p3], term.delta2, atomCoordinates);
-        computeDelta(particles[term.p4], particles[term.p3], term.delta3, atomCoordinates);
+        computeDelta(permutedParticles[term.p2], permutedParticles[term.p1], term.delta1, atomCoordinates);
+        computeDelta(permutedParticles[term.p2], permutedParticles[term.p3], term.delta2, atomCoordinates);
+        computeDelta(permutedParticles[term.p4], permutedParticles[term.p3], term.delta3, atomCoordinates);
         RealOpenMM dotDihedral, signOfDihedral;
         RealOpenMM* crossProduct[] = {term.cross1, term.cross2};
         variables[term.name] = ReferenceBondIxn::getDihedralAngleBetweenThreeVectors(term.delta1, term.delta2, term.delta3, crossProduct, &dotDihedral, term.delta1, &signOfDihedral, 1);
@@ -192,7 +215,7 @@ void ReferenceCustomManyParticleIxn::calculateOneIxn(const vector<int>& particle
     
     for (int i = 0; i < (int) particleTerms.size(); i++) {
         const ParticleTermInfo& term = particleTerms[i];
-        forces[particles[term.atom]][term.component] -= term.forceExpression.evaluate(variables);
+        forces[permutedParticles[term.atom]][term.component] -= term.forceExpression.evaluate(variables);
     }
 
     // Apply forces based on distances.
@@ -202,8 +225,8 @@ void ReferenceCustomManyParticleIxn::calculateOneIxn(const vector<int>& particle
         RealOpenMM dEdR = (RealOpenMM) (term.forceExpression.evaluate(variables)/(term.delta[ReferenceForce::RIndex]));
         for (int i = 0; i < 3; i++) {
            RealOpenMM force  = -dEdR*term.delta[i];
-           forces[particles[term.p1]][i] -= force;
-           forces[particles[term.p2]][i] += force;
+           forces[permutedParticles[term.p1]][i] -= force;
+           forces[permutedParticles[term.p2]][i] += force;
         }
     }
 
@@ -228,9 +251,9 @@ void ReferenceCustomManyParticleIxn::calculateOneIxn(const vector<int>& particle
             deltaCrossP[1][i] = -(deltaCrossP[0][i]+deltaCrossP[2][i]);
         }
         for (int i = 0; i < 3; i++) {
-            forces[particles[term.p1]][i] += deltaCrossP[0][i];
-            forces[particles[term.p2]][i] += deltaCrossP[1][i];
-            forces[particles[term.p3]][i] += deltaCrossP[2][i];
+            forces[permutedParticles[term.p1]][i] += deltaCrossP[0][i];
+            forces[permutedParticles[term.p2]][i] += deltaCrossP[1][i];
+            forces[permutedParticles[term.p3]][i] += deltaCrossP[2][i];
         }
     }
 
@@ -258,10 +281,10 @@ void ReferenceCustomManyParticleIxn::calculateOneIxn(const vector<int>& particle
             internalF[2][i] = internalF[3][i] + s;
         }
         for (int i = 0; i < 3; i++) {
-            forces[particles[term.p1]][i] += internalF[0][i];
-            forces[particles[term.p2]][i] -= internalF[1][i];
-            forces[particles[term.p3]][i] -= internalF[2][i];
-            forces[particles[term.p4]][i] += internalF[3][i];
+            forces[permutedParticles[term.p1]][i] += internalF[0][i];
+            forces[permutedParticles[term.p2]][i] -= internalF[1][i];
+            forces[permutedParticles[term.p3]][i] -= internalF[2][i];
+            forces[permutedParticles[term.p4]][i] += internalF[3][i];
         }
     }
 
