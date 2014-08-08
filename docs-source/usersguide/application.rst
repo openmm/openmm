@@ -298,7 +298,7 @@ A First Example
 ***************
 
 Let’s begin with our first example of an OpenMM script. It loads a PDB file
-called :file:`input.pdb` that defines a biomolecular system, parameterizes it using the AMBER99SB force field and TIP3P water
+called :file:`input.pdb` that defines a biomolecular system, parameterizes it using the Amber99SB force field and TIP3P water
 model, energy minimizes it, simulates it for 10,000 steps with a Langevin
 integrator, and saves a snapshot frame to a PDB file called :file:`output.pdb` every 1000 time
 steps.
@@ -345,8 +345,8 @@ Then type
 
     python simulatePdb.py
 
-You can name your own scripts whatever you want, but their names should end with
-``.py``. Let’s go through the script line by line and see how it works.
+You can name your own scripts whatever you want.  Let’s go through the script line
+by line and see how it works.
 ::
 
     from simtk.openmm.app import *
@@ -380,7 +380,7 @@ defined by XML files.  OpenMM includes XML files defining lots of standard force
 If you find you need to extend the repertoire of force fields available,
 you can find more information on how to create these XML files in Section :ref:`creating-force-fields`.
 In this case we load two of those files: :file:`amber99sb.xml`, which contains the
-AMBER99SB force field, and :file:`tip3p.xml`, which contains the TIP3P water model.  The
+Amber99SB force field, and :file:`tip3p.xml`, which contains the TIP3P water model.  The
 :class:`ForceField` object is assigned to a variable called :code:`forcefield`\ .
 ::
 
@@ -420,7 +420,7 @@ the step size (0.002 ps).
 
 This line combines the molecular topology, system, and integrator to begin a new
 simulation.  It creates a :class:`Simulation` object and assigns it to a variable called
-\ :code:`simulation`\ .  A :class:`Simulation` object coordinates all the processes
+\ :code:`simulation`\ .  A :class:`Simulation` object manages all the processes
 involved in running a simulation, such as advancing time and writing output.
 ::
 
@@ -520,7 +520,7 @@ the single quotes around the file names.
 .. note::
 
     The :class:`AmberPrmtopFile` reader provided by OpenMM only supports "new-style"
-    :file:`prmtop` files introduced in AMBER 6. The AMBER distribution still contains a number of
+    :file:`prmtop` files introduced in AMBER 7. The AMBER distribution still contains a number of
     example files that are in the "old-style" :file:`prmtop` format. These "old-style" files will
     not run in OpenMM.
 
@@ -608,12 +608,14 @@ we would need to include it.
 Using CHARMM Files
 ******************
 
-Yet another option is to load files created by the CHARMM setup tools.  Those include a
-:file:`psf` file containing topology information, and an ordinary PDB file for the
-atomic coordinates.  In addition, you must provide a set of files containing the force
+Yet another option is to load files created by the CHARMM setup tools, or other compatible
+tools such as VMD.  Those include a :file:`psf` file containing topology information, and an
+ordinary PDB file for the atomic coordinates.  (Coordinates can also be loaded from CHARMM
+coordinate or restart files using the CharmmCrdFile and CharmmRstFile classes).  In addition,
+you must provide a set of files containing the force
 field definition to use.  This can involve several different files with varying formats and
-filename extensions such as :file:`prm`, :file:`rtf`, and :file:`str`.  To do this, load
-all the definition files into a :class:`CharmmParameterSet`
+filename extensions such as :file:`par`, :file:`prm`, :file:`top`, :file:`rtf`, :file:`inp`,
+and :file:`str`.  To do this, load all the definition files into a :class:`CharmmParameterSet`
 object, then include that object as the first parameter when you call :meth:`createSystem`
 on the :class:`CharmmPsfFile`.
 
@@ -643,6 +645,8 @@ on the :class:`CharmmPsfFile`.
 
         :autonumber:`Example,CHARMM example`
 
+Note that both the CHARMM and XPLOR versions of the :file:`psf` file format are supported.
+
 .. _the-script-builder-application:
 
 The Script Builder Application
@@ -650,8 +654,9 @@ The Script Builder Application
 
 One option for writing your own scripts is to start with one of the examples
 given above (the one in Section :ref:`a-first-example` if you are starting from a PDB file, section
-:ref:`using_amber_files` if you are starting from AMBER :file:`prmtop` and :file:`inpcrd` files, or section
-:ref:`using_gromacs_files` if you are starting from Gromacs gro and top files), then customize it
+:ref:`using_amber_files` if you are starting from AMBER :file:`prmtop` and :file:`inpcrd` files, section
+:ref:`using_gromacs_files` if you are starting from Gromacs :file:`gro` and :file:`top` files, or section
+:ref:`using-charmm-files` if you are starting from CHARMM files), then customize it
 to suit your needs.  Another option is to use the `OpenMM Script Builder`_ application.
 
 
@@ -726,12 +731,12 @@ For the main force field, OpenMM provides the following options:
 =============================  ================================================================================
 File                           Force Field                                                                     
 =============================  ================================================================================
-:code:`amber96.xml`            AMBER96\ :cite:`Kollman1997`
-:code:`amber99sb.xml`          AMBER99\ :cite:`Wang2000` with modified backbone torsions\ :cite:`Hornak2006`
-:code:`amber99sbildn.xml`      AMBER99SB plus improved side chain torsions\ :cite:`Lindorff-Larsen2010`
-:code:`amber99sbnmr.xml`       AMBER99SB with modifications to fit NMR data\ :cite:`Li2010`
-:code:`amber03.xml`            AMBER03\ :cite:`Duan2003`
-:code:`amber10.xml`            AMBER10 (documented in the AmberTools_ manual as `ff10`)
+:code:`amber96.xml`            Amber96\ :cite:`Kollman1997`
+:code:`amber99sb.xml`          Amber99\ :cite:`Wang2000` with modified backbone torsions\ :cite:`Hornak2006`
+:code:`amber99sbildn.xml`      Amber99SB plus improved side chain torsions\ :cite:`Lindorff-Larsen2010`
+:code:`amber99sbnmr.xml`       Amber99SB with modifications to fit NMR data\ :cite:`Li2010`
+:code:`amber03.xml`            Amber03\ :cite:`Duan2003`
+:code:`amber10.xml`            Amber10 (documented in the AmberTools_ manual as `ff10`)
 :code:`amoeba2009.xml`         AMOEBA 2009\ :cite:`Ren2002`.  This force field is deprecated.  It is 
                                recommended to use AMOEBA 2013 instead.
 :code:`amoeba2013.xml`         AMOEBA 2013\ :cite:`Shi2013`
@@ -772,16 +777,16 @@ the following files:
 =========================  =================================================================================================
 File                       Implicit Solvation Model                                                                      
 =========================  =================================================================================================
-:code:`amber96_obc.xml`    GBSA-OBC solvation model\ :cite:`Onufriev2004` for use with AMBER96 force field
-:code:`amber99_obc.xml`    GBSA-OBC solvation model for use with AMBER99 force fields
-:code:`amber03_obc.xml`    GBSA-OBC solvation model for use with AMBER03 force field
-:code:`amber10_obc.xml`    GBSA-OBC solvation model for use with AMBER10 force field
+:code:`amber96_obc.xml`    GBSA-OBC solvation model\ :cite:`Onufriev2004` for use with Amber96 force field
+:code:`amber99_obc.xml`    GBSA-OBC solvation model for use with Amber99 force fields
+:code:`amber03_obc.xml`    GBSA-OBC solvation model for use with Amber03 force field
+:code:`amber10_obc.xml`    GBSA-OBC solvation model for use with Amber10 force field
 :code:`amoeba2009_gk.xml`  Generalized Kirkwood solvation model\ :cite:`Schnieders2007` for use with AMOEBA 2009 force field
 :code:`amoeba2013_gk.xml`  Generalized Kirkwood solvation model for use with AMOEBA 2013 force field
 =========================  =================================================================================================
 
 
-For example, to use the GBSA-OBC solvation model with the AMBER99SB force field,
+For example, to use the GBSA-OBC solvation model with the Amber99SB force field,
 you would type:
 ::
 
@@ -812,7 +817,7 @@ with the :code:`implicitSolvent` parameter:
 
     system = prmtop.createSystem(implicitSolvent=OBC2)
 
-OpenMM supports most of the implicit solvent models used by AMBER.  Here are the
+OpenMM supports all of the Generalized Born models used by AMBER.  Here are the
 allowed values for :code:`implicitSolvent`\ :
 
 .. tabularcolumns:: |l|L|
@@ -834,7 +839,7 @@ You can further control the solvation model in a few ways.  First, you can
 specify the dielectric constants to use for the solute and solvent:
 ::
 
-    system = prmtop.createSystem(implicitSolvent=OBC2, soluteDielectric=2.0,
+    system = prmtop.createSystem(implicitSolvent=OBC2, soluteDielectric=1.0,
             solventDielectric=80.0)
 
 If they are not specified, the solute and solvent dielectrics default to 1.0 and
@@ -1453,7 +1458,7 @@ Once you have finished editing your model, you can immediately use the resulting
 :class:`Topology` object and atom positions as the input to a :class:`Simulation`.  If you plan to
 simulate it many times, though, it is usually better to save the result to a new
 PDB file, then use that as the input for the simulations.  This avoids the cost
-of repeating the modeling operations at the start of every simulation, and also
+of repeating the modelling operations at the start of every simulation, and also
 ensures that all your simulations are really starting from exactly the same
 structure.
 
@@ -1632,7 +1637,7 @@ Here is the definition of the :class:`ForceReporter` class:
             def report(self, simulation, state):
                 forces = state.getForces().value_in_unit(kilojoules/mole/nanometer)
                 for f in forces:
-                    print >>self._out, f[0], f[1], f[2]
+                    self._out.write('%g %g %g\n' % (f[0], f[1], f[2]))
 
     .. caption::
 
