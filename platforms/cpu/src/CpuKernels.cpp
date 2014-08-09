@@ -835,6 +835,74 @@ void CpuCalcGBSAOBCForceKernel::copyParametersToContext(ContextImpl& context, co
     obc.setParticleParameters(particleParams);
 }
 
+CpuCalcCustomManyParticleForceKernel::~CpuCalcCustomManyParticleForceKernel() {
+    if (particleParamArray != NULL) {
+        for (int i = 0; i < numParticles; i++)
+            delete[] particleParamArray[i];
+        delete[] particleParamArray;
+    }
+    if (ixn != NULL)
+        delete ixn;
+}
+
+void CpuCalcCustomManyParticleForceKernel::initialize(const System& system, const CustomManyParticleForce& force) {
+
+    // Build the arrays.
+
+    numParticles = system.getNumParticles();
+    int numParticleParameters = force.getNumPerParticleParameters();
+    particleParamArray = new double*[numParticles];
+    for (int i = 0; i < numParticles; i++)
+        particleParamArray[i] = new double[numParticleParameters];
+    for (int i = 0; i < numParticles; ++i) {
+        vector<double> parameters;
+        int type;
+        force.getParticleParameters(i, parameters, type);
+        for (int j = 0; j < numParticleParameters; j++)
+            particleParamArray[i][j] = parameters[j];
+    }
+    for (int i = 0; i < force.getNumGlobalParameters(); i++)
+        globalParameterNames.push_back(force.getGlobalParameterName(i));
+    ixn = new CpuCustomManyParticleForce(force);
+    nonbondedMethod = CalcCustomManyParticleForceKernel::NonbondedMethod(force.getNonbondedMethod());
+    cutoffDistance = force.getCutoffDistance();
+}
+
+double CpuCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    vector<RealVec>& posData = extractPositions(context);
+    vector<RealVec>& forceData = extractForces(context);
+    RealOpenMM energy = 0;
+    map<string, double> globalParameters;
+    for (int i = 0; i < (int) globalParameterNames.size(); i++)
+        globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
+    if (nonbondedMethod == CutoffPeriodic) {
+        RealVec& box = extractBoxSize(context);
+        double minAllowedSize = 2*cutoffDistance;
+        if (box[0] < minAllowedSize || box[1] < minAllowedSize || box[2] < minAllowedSize)
+            throw OpenMMException("The periodic box size has decreased to less than twice the nonbonded cutoff.");
+        ixn->setPeriodic(box);
+    }
+    ixn->calculateIxn(&data.posq[0], posData, particleParamArray, globalParameters, forceData, includeEnergy ? &energy : NULL);
+    return energy;
+}
+
+void CpuCalcCustomManyParticleForceKernel::copyParametersToContext(ContextImpl& context, const CustomManyParticleForce& force) {
+    if (numParticles != force.getNumParticles())
+        throw OpenMMException("updateParametersInContext: The number of particles has changed");
+
+    // Record the values.
+
+    int numParameters = force.getNumPerParticleParameters();
+    vector<double> params;
+    for (int i = 0; i < numParticles; ++i) {
+        vector<double> parameters;
+        int type;
+        force.getParticleParameters(i, parameters, type);
+        for (int j = 0; j < numParameters; j++)
+            particleParamArray[i][j] = static_cast<RealOpenMM>(parameters[j]);
+    }
+}
+
 CpuIntegrateLangevinStepKernel::~CpuIntegrateLangevinStepKernel() {
     if (dynamics)
         delete dynamics;

@@ -36,6 +36,7 @@
 #include "TabulatedFunction.h"
 #include "internal/windowsExport.h"
 #include <set>
+#include <string>
 #include <vector>
 
 namespace OpenMM {

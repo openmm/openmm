@@ -1,3 +1,6 @@
+#ifndef OPENMM_COMPILEDEXPRESSIONSET_H_
+#define OPENMM_COMPILEDEXPRESSIONSET_H_
+
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -6,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013 Stanford University and the Authors.           *
+ * Portions copyright (c) 2014 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -29,31 +32,40 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "CpuKernelFactory.h"
-#include "CpuKernels.h"
-#include "CpuPlatform.h"
-#include "openmm/internal/ContextImpl.h"
-#include "openmm/OpenMMException.h"
+#include "lepton/CompiledExpression.h"
+#include "windowsExportCpu.h"
+#include <string>
+#include <vector>
 
-using namespace OpenMM;
+namespace OpenMM {
 
-KernelImpl* CpuKernelFactory::createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const {
-    CpuPlatform::PlatformData& data = CpuPlatform::getPlatformData(context);
-    if (name == CalcForcesAndEnergyKernel::Name())
-        return new CpuCalcForcesAndEnergyKernel(name, platform, data, context);
-    if (name == CalcPeriodicTorsionForceKernel::Name())
-        return new CpuCalcPeriodicTorsionForceKernel(name, platform, data);
-    if (name == CalcRBTorsionForceKernel::Name())
-        return new CpuCalcRBTorsionForceKernel(name, platform, data);
-    if (name == CalcNonbondedForceKernel::Name())
-        return new CpuCalcNonbondedForceKernel(name, platform, data);
-    if (name == CalcCustomNonbondedForceKernel::Name())
-        return new CpuCalcCustomNonbondedForceKernel(name, platform, data);
-    if (name == CalcCustomManyParticleForceKernel::Name())
-        return new CpuCalcCustomManyParticleForceKernel(name, platform, data);
-    if (name == CalcGBSAOBCForceKernel::Name())
-        return new CpuCalcGBSAOBCForceKernel(name, platform, data);
-    if (name == IntegrateLangevinStepKernel::Name())
-        return new CpuIntegrateLangevinStepKernel(name, platform, data);
-    throw OpenMMException((std::string("Tried to create kernel with illegal kernel name '") + name + "'").c_str());
-}
+/**
+ * This class simplifies the management of a set of related CompiledExpressions that share variables.
+ */
+class OPENMM_EXPORT_CPU CompiledExpressionSet {
+public:
+    CompiledExpressionSet();
+    /**
+     * Add a CompiledExpression to the set.
+     */
+    void registerExpression(Lepton::CompiledExpression& expression);
+    /**
+     * Get the index of a particular variable.
+     */
+    int getVariableIndex(const std::string& name);
+    /**
+     * Set the value of a variable on every CompiledExpression.
+     * 
+     * @param index    the index of the variable, as returned by getVariableIndex()
+     * @param value    the value to set it to
+     */
+    void setVariable(int index, double value);
+private:
+    std::vector<Lepton::CompiledExpression*> expressions;
+    std::vector<std::string> variables;
+    std::vector<std::vector<double*> > variableReferences;
+};
+
+} // namespace OpenMM
+
+#endif /*OPENMM_COMPILEDEXPRESSIONSET_H_*/

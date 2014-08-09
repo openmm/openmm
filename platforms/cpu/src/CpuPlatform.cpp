@@ -65,6 +65,7 @@ CpuPlatform::CpuPlatform() {
     registerKernelFactory(CalcRBTorsionForceKernel::Name(), factory);
     registerKernelFactory(CalcNonbondedForceKernel::Name(), factory);
     registerKernelFactory(CalcCustomNonbondedForceKernel::Name(), factory);
+    registerKernelFactory(CalcCustomManyParticleForceKernel::Name(), factory);
     registerKernelFactory(CalcGBSAOBCForceKernel::Name(), factory);
     registerKernelFactory(IntegrateLangevinStepKernel::Name(), factory);
     platformProperties.push_back(CpuThreads());

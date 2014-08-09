@@ -33,6 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "CpuBondForce.h"
+#include "CpuCustomManyParticleForce.h"
 #include "CpuCustomNonbondedForce.h"
 #include "CpuGBSAOBCForce.h"
 #include "CpuLangevinDynamics.h"
@@ -300,6 +301,48 @@ private:
     CpuPlatform::PlatformData& data;
     std::vector<std::pair<float, float> > particleParams;
     CpuGBSAOBCForce obc;
+};
+
+/**
+ * This kernel is invoked by CustomManyParticleForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CpuCalcCustomManyParticleForceKernel : public CalcCustomManyParticleForceKernel {
+public:
+    CpuCalcCustomManyParticleForceKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data) : CalcCustomManyParticleForceKernel(name, platform),
+            data(data), ixn(NULL) {
+    }
+    ~CpuCalcCustomManyParticleForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomManyParticleForce this kernel will be used for
+     */
+    void initialize(const System& system, const CustomManyParticleForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomManyParticleForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const CustomManyParticleForce& force);
+private:
+    CpuPlatform::PlatformData& data;
+    int numParticles;
+    RealOpenMM cutoffDistance;
+    RealOpenMM **particleParamArray;
+    CpuCustomManyParticleForce* ixn;
+    std::vector<std::string> globalParameterNames;
+    NonbondedMethod nonbondedMethod;
 };
 
 /**
