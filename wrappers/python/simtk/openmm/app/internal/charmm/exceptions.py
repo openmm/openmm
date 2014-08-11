@@ -42,6 +42,9 @@ class CharmmWarning(Warning):
 class CharmmPSFError(CharmmError):
     """ If there is a problem parsing CHARMM PSF files """
 
+class CharmmPsfEOF(CharmmError):
+    """ Raised when the end-of-file is reached on a CHARMM PSF file """
+
 class SplitResidueWarning(CharmmWarning):
     """ For if a residue with the same number but different names is split """
 
