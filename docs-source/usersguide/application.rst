@@ -494,6 +494,8 @@ found in OpenMM’s :file:`examples` folder with the name :file:`simulateAmber.p
         integrator = LangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
         simulation = Simulation(prmtop.topology, system, integrator)
         simulation.context.setPositions(inpcrd.positions)
+        if inpcrd.boxVectors is not None:
+            simulation.context.setPeriodicBoxVectors(*inpcrd.boxVectors)
         simulation.minimizeEnergy()
         simulation.reporters.append(PDBReporter('output.pdb', 1000))
         simulation.reporters.append(StateDataReporter(stdout, 1000, step=True,
@@ -512,7 +514,7 @@ significant differences:
     inpcrd = AmberInpcrdFile('input.inpcrd')
 
 In these lines, we load the prmtop file and inpcrd file.  More precisely, we
-create AmberPrmtopFile and AmberInpcrdFile objects and assign them to the
+create :class:`AmberPrmtopFile` and :class:`AmberInpcrdFile` objects and assign them to the
 variables :code:`prmtop` and :code:`inpcrd`\ , respectively.  As before,
 you can change these lines to specify any files you want.  Be sure to include
 the single quotes around the file names.
@@ -542,7 +544,22 @@ directly.
 
 Notice that we now get the topology from the :file:`prmtop` file and the atom positions
 from the :file:`inpcrd` file.  In the previous section, both of these came from a PDB
-file, but AMBER puts the topology and positions in separate files.
+file, but AMBER puts the topology and positions in separate files.  We also add the
+following lines:
+::
+
+    if inpcrd.boxVectors is not None:
+        simulation.context.setPeriodicBoxVectors(*inpcrd.boxVectors)
+
+For periodic systems, the :file:`prmtop` file specifies the periodic box vectors, just
+as a PDB file does.  When we call :meth:`createSystem`, it sets those as the default
+periodic box vectors, to be used automatically for all simulations.  However, the
+:file:`inpcrd` may *also* specify periodic box vectors,
+and if so we want to use those ones instead.  For example, if the system has been
+equilibrated with a barostat, the box vectors may have changed during equilibration.
+We therefore check to see if the :file:`inpcrd` file contained box vectors.  If so,
+we call :meth:`setPeriodicBoxVectors` to tell it to use those ones, overriding the
+default ones provided by the :class:`System`.
 
 .. _using_gromacs_files:
 
@@ -611,7 +628,7 @@ Using CHARMM Files
 Yet another option is to load files created by the CHARMM setup tools, or other compatible
 tools such as VMD.  Those include a :file:`psf` file containing topology information, and an
 ordinary PDB file for the atomic coordinates.  (Coordinates can also be loaded from CHARMM
-coordinate or restart files using the CharmmCrdFile and CharmmRstFile classes).  In addition,
+coordinate or restart files using the :class:`CharmmCrdFile` and :class:`CharmmRstFile` classes).  In addition,
 you must provide a set of files containing the force
 field definition to use.  This can involve several different files with varying formats and
 filename extensions such as :file:`par`, :file:`prm`, :file:`top`, :file:`rtf`, :file:`inp`,
