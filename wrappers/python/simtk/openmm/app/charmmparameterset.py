@@ -203,13 +203,12 @@ class CharmmParameterSet(object):
         current_cmap_data = []
         current_cmap_res = 0
         nonbonded_types = dict() # Holder
-        needs_blank = False
         parameterset = None
+        read_first_nonbonded = False
         for line in f:
             line = line.strip()
             if not line:
                 # This is a blank line
-                needs_blank = False
                 continue
             if parameterset is None and line.strip().startswith('*>>'):
                 parameterset = line.strip()[1:78]
@@ -234,8 +233,8 @@ class CharmmParameterSet(object):
                 section = 'CMAP'
                 continue
             if line.startswith('NONBONDED'):
+                read_first_nonbonded = False
                 section = 'NONBONDED'
-                needs_blank = True
                 continue
             if line.startswith('NBFIX'):
                 section = 'NBFIX'
@@ -414,7 +413,7 @@ class CharmmParameterSet(object):
                     current_cmap_res = res
                     current_cmap_data = []
                 continue
-            if section == 'NONBONDED' and not needs_blank:
+            if section == 'NONBONDED':
                 # Now get the nonbonded values
                 words = line.split()
                 try:
@@ -423,7 +422,17 @@ class CharmmParameterSet(object):
                     epsilon = conv(words[2], float, 'vdW epsilon term')
                     rmin = conv(words[3], float, 'vdW Rmin/2 term')
                 except IndexError:
+                    # If we haven't read our first nonbonded term yet, we may
+                    # just be parsing the settings that should be used. So
+                    # soldier on
+                    if not read_first_nonbonded: continue
                     raise CharmmFileError('Could not parse nonbonded terms.')
+                except CharmmFileError, e:
+                    if not read_first_nonbonded: continue
+                    raise CharmmFileError(str(e))
+                else:
+                    # OK, we've read our first nonbonded section for sure now
+                    read_first_nonbonded = True
                 # See if we have 1-4 parameters
                 try:
                     # 4th column is ignored
@@ -460,7 +469,7 @@ class CharmmParameterSet(object):
                         pass
                 except IndexError:
                     raise CharmmFileError('Could not parse NBFIX terms.')
-                self.nbfix_types[(min(at1, at2), max(at1, at2))] = (rmin, emin)
+                self.nbfix_types[(min(at1, at2), max(at1, at2))] = (emin, rmin)
         # Now we're done. Load the nonbonded types into the relevant AtomType
         # instances. In order for this to work, all keys in nonbonded_types
         # must be in the self.atom_types_str dict. Raise a RuntimeError if this
