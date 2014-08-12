@@ -89,8 +89,8 @@ extern "C" __global__ void computeBornSum(unsigned long long* __restrict__ bornS
         const float2* __restrict__ params, unsigned int numTiles) {
     unsigned int totalWarps = (blockDim.x*gridDim.x)/TILE_SIZE;
     unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/TILE_SIZE;
-    unsigned int pos = warp*numTiles/totalWarps;
-    unsigned int end = (warp+1)*numTiles/totalWarps;
+    unsigned int pos = (unsigned int) (warp*(long long)numTiles/totalWarps);
+    unsigned int end = (unsigned int) ((warp+1)*(long long)numTiles/totalWarps);
     unsigned int lasty = 0xFFFFFFFF;
     __shared__ AtomData1 localData[BORN_SUM_THREAD_BLOCK_SIZE];
     do {
@@ -223,8 +223,8 @@ extern "C" __global__ void computeGKForces(
     unsigned int totalWarps = (blockDim.x*gridDim.x)/TILE_SIZE;
     unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/TILE_SIZE;
     const unsigned int numTiles = numTileIndices;
-    unsigned int pos = startTileIndex+warp*numTiles/totalWarps;
-    unsigned int end = startTileIndex+(warp+1)*numTiles/totalWarps;
+    unsigned int pos = (unsigned int) (startTileIndex+warp*(long long)numTiles/totalWarps);
+    unsigned int end = (unsigned int) (startTileIndex+(warp+1)*(long long)numTiles/totalWarps);
     real energy = 0;
     __shared__ AtomData2 localData[GK_FORCE_THREAD_BLOCK_SIZE];
     
