@@ -213,12 +213,12 @@ __kernel void computeNonbonded(
 
 #ifdef USE_CUTOFF
     const unsigned int numTiles = interactionCount[0];
-    int pos = (numTiles > maxTiles ? startTileIndex+get_group_id(0)*numTileIndices/get_num_groups(0) : get_group_id(0)*numTiles/get_num_groups(0));
-    int end = (numTiles > maxTiles ? startTileIndex+(get_group_id(0)+1)*numTileIndices/get_num_groups(0) : (get_group_id(0)+1)*numTiles/get_num_groups(0));
+    int pos = (int) (numTiles > maxTiles ? (unsigned int) (startTileIndex+get_group_id(0)*(long)numTileIndices/get_num_groups(0)) : get_group_id(0)*(long)numTiles/get_num_groups(0));
+    int end = (int) (numTiles > maxTiles ? (unsigned int) (startTileIndex+(get_group_id(0)+1)*(long)numTileIndices/get_num_groups(0)) : (get_group_id(0)+1)*(long)numTiles/get_num_groups(0));
 #else
     const unsigned int numTiles = numTileIndices;
-    int pos = startTileIndex+get_group_id(0)*numTiles/get_num_groups(0);
-    int end = startTileIndex+(get_group_id(0)+1)*numTiles/get_num_groups(0);
+    int pos = (int) (startTileIndex+get_group_id(0)*(long)numTiles/get_num_groups(0));
+    int end = (int) (startTileIndex+(get_group_id(0)+1)*(long)numTiles/get_num_groups(0));
 #endif
     int nextToSkip = -1;
     int currentSkipIndex = 0;

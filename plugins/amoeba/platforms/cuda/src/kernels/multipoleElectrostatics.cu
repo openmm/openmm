@@ -216,12 +216,12 @@ extern "C" __global__ void computeElectrostatics(
 
 #ifdef USE_CUTOFF
     const unsigned int numTiles = interactionCount[0];
-    int pos = (numTiles > maxTiles ? startTileIndex+warp*numTileIndices/totalWarps : warp*numTiles/totalWarps);
-    int end = (numTiles > maxTiles ? startTileIndex+(warp+1)*numTileIndices/totalWarps : (warp+1)*numTiles/totalWarps);
+    int pos = (int) (numTiles > maxTiles ? startTileIndex+warp*(long long)numTileIndices/totalWarps : warp*(long long)numTiles/totalWarps);
+    int end = (int) (numTiles > maxTiles ? startTileIndex+(warp+1)*(long long)numTileIndices/totalWarps : (warp+1)*(long long)numTiles/totalWarps);
 #else
     const unsigned int numTiles = numTileIndices;
-    int pos = startTileIndex+warp*numTiles/totalWarps;
-    int end = startTileIndex+(warp+1)*numTiles/totalWarps;
+    int pos = (int) (startTileIndex+warp*(long long)numTiles/totalWarps);
+    int end = (int) (startTileIndex+(warp+1)*(long long)numTiles/totalWarps);
 #endif
     int skipBase = 0;
     int currentSkipIndex = tbx;
