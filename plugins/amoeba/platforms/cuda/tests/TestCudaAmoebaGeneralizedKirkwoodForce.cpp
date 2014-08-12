@@ -7156,7 +7156,7 @@ static void testGeneralizedKirkwoodAmmoniaMutualPolarization( FILE* log ) {
     expectedForces[6]         = Vec3(   4.8035662e+02,   4.9704902e-01,   1.3948083e+02 );
     expectedForces[7]         = Vec3(   5.3895456e+00,  -7.7131137e+01,   1.5826273e+02 );
 
-    double tolerance          = 1.0e-04;
+    double tolerance          = 2.0e-04;
     compareForcesEnergy( testName, expectedEnergy, energy, expectedForces, forces, tolerance, log );
 }
 
