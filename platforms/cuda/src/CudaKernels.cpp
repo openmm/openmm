@@ -1520,6 +1520,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
     else
         dispersionCoefficient = 0.0;
     alpha = 0;
+    ewaldSelfEnergy = 0.0;
     if (force.getNonbondedMethod() == NonbondedForce::Ewald) {
         // Compute the Ewald parameters.
 
@@ -1702,8 +1703,6 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
             }
         }
     }
-    else
-        ewaldSelfEnergy = 0.0;
 
     // Add the interaction to the default nonbonded kernel.
    
