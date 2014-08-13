@@ -351,13 +351,15 @@ void testTypeFilters() {
     System system;
     for (int i = 0; i < 5; i++)
         system.addParticle(1.0);
-    CustomManyParticleForce* force = new CustomManyParticleForce(3, "distance(p1,p2)+distance(p1,p3)");
-    vector<double> params;
-    force->addParticle(params, 0);
-    force->addParticle(params, 1);
-    force->addParticle(params, 0);
-    force->addParticle(params, 1);
-    force->addParticle(params, 5);
+    CustomManyParticleForce* force = new CustomManyParticleForce(3, "c1*(distance(p1,p2)+distance(p1,p3))");
+    force->addPerParticleParameter("c");
+    double c[] = {1.0, 2.0, 1.3, 1.5, -2.1};
+    int type[] = {0, 1, 0, 1, 5};
+    vector<double> params(1);
+    for (int i = 0; i < 5; i++) {
+        params[0] = c[i];
+        force->addParticle(params, type[i]);
+    }
     vector<Vec3> positions;
     positions.push_back(Vec3(0, 0, 0));
     positions.push_back(Vec3(1, 0, 0));
@@ -390,10 +392,9 @@ void testTypeFilters() {
             Vec3 d13 = positions[p3]-positions[p1];
             double r12 = sqrt(d12.dot(d12));
             double r13 = sqrt(d13.dot(d13));
-            expectedEnergy += r12+r13;
+            expectedEnergy += c[p1]*(r12+r13);
     }
     ASSERT_EQUAL_TOL(expectedEnergy, state.getPotentialEnergy(), 1e-5);
-    
 }
 
 int main() {

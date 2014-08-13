@@ -137,17 +137,15 @@ void ReferenceCustomManyParticleIxn::loopOverInteractions(vector<int>& particles
     int start = (loopIndex == 0 ? 0 : particles[loopIndex-1]+1);
     for (int i = start; i < numParticles; i++) {
         particles[loopIndex] = i;
-        for (int j = 0; j < numPerParticleParameters; j++)
-            variables[particleParamNames[loopIndex][j]] = particleParameters[i][j];
         if (loopIndex == numParticlesPerSet-1)
-            calculateOneIxn(particles, atomCoordinates, variables, forces, totalEnergy);
+            calculateOneIxn(particles, atomCoordinates, particleParameters, variables, forces, totalEnergy);
         else
             loopOverInteractions(particles, loopIndex+1, atomCoordinates, particleParameters, variables, forces, totalEnergy);
     }
 }
 
 void ReferenceCustomManyParticleIxn::calculateOneIxn(const vector<int>& particles, vector<RealVec>& atomCoordinates,
-                        map<string, double>& variables, vector<RealVec>& forces, RealOpenMM* totalEnergy) const {
+                        RealOpenMM** particleParameters, map<string, double>& variables, vector<RealVec>& forces, RealOpenMM* totalEnergy) const {
     // Select the ordering to use for the particles.
     
     vector<int> permutedParticles(numParticlesPerSet);
@@ -169,9 +167,9 @@ void ReferenceCustomManyParticleIxn::calculateOneIxn(const vector<int>& particle
     
     // Decide whether to include this interaction.
     
-    for (int i = 0; i < (int) permutedParticles.size(); i++) {
+    for (int i = 0; i < numParticlesPerSet; i++) {
         int p1 = permutedParticles[i];
-        for (int j = i+1; j < (int) permutedParticles.size(); j++) {
+        for (int j = i+1; j < numParticlesPerSet; j++) {
             int p2 = permutedParticles[j];
             if (exclusions[p1].find(p2) != exclusions[p1].end())
                 return;
@@ -183,6 +181,12 @@ void ReferenceCustomManyParticleIxn::calculateOneIxn(const vector<int>& particle
             }
         }
     }
+
+    // Record per-particle parameters.
+    
+    for (int i = 0; i < numParticlesPerSet; i++)
+        for (int j = 0; j < numPerParticleParameters; j++)
+            variables[particleParamNames[i][j]] = particleParameters[permutedParticles[i]][j];
     
     // Compute all of the variables the energy can depend on.
 

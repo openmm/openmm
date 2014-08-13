@@ -66,16 +66,17 @@ class ReferenceCustomManyParticleIxn {
 
          Calculate custom interaction for one set of particles
 
-         @param particles        the indices of the particles
-         @param atomCoordinates  atom coordinates
-         @param variables        the values of variables that may appear in expressions
-         @param forces           force array (forces added)
-         @param totalEnergy      total energy
+         @param particles          the indices of the particles
+         @param atomCoordinates    atom coordinates
+         @param particleParameters particle parameter values (particleParameters[particleIndex][parameterIndex])
+         @param variables          the values of variables that may appear in expressions
+         @param forces             force array (forces added)
+         @param totalEnergy        total energy
 
          --------------------------------------------------------------------------------------- */
 
       void calculateOneIxn(const std::vector<int>& particles, std::vector<OpenMM::RealVec>& atomCoordinates,
-                           std::map<std::string, double>& variables, std::vector<OpenMM::RealVec>& forces,
+                           RealOpenMM** particleParameters, std::map<std::string, double>& variables, std::vector<OpenMM::RealVec>& forces,
                            RealOpenMM* totalEnergy) const;
 
       void computeDelta(int atom1, int atom2, RealOpenMM* delta, std::vector<OpenMM::RealVec>& atomCoordinates) const;

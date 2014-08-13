@@ -863,7 +863,7 @@ void CpuCalcCustomManyParticleForceKernel::initialize(const System& system, cons
     }
     for (int i = 0; i < force.getNumGlobalParameters(); i++)
         globalParameterNames.push_back(force.getGlobalParameterName(i));
-    ixn = new CpuCustomManyParticleForce(force);
+    ixn = new CpuCustomManyParticleForce(force, data.threads);
     nonbondedMethod = CalcCustomManyParticleForceKernel::NonbondedMethod(force.getNonbondedMethod());
     cutoffDistance = force.getCutoffDistance();
 }
@@ -882,7 +882,7 @@ double CpuCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bool 
             throw OpenMMException("The periodic box size has decreased to less than twice the nonbonded cutoff.");
         ixn->setPeriodic(box);
     }
-    ixn->calculateIxn(&data.posq[0], posData, particleParamArray, globalParameters, forceData, includeEnergy ? &energy : NULL);
+    ixn->calculateIxn(data.posq, posData, particleParamArray, globalParameters, forceData, includeEnergy ? &energy : NULL);
     return energy;
 }
 

@@ -28,7 +28,9 @@
 #include "ReferenceForce.h"
 #include "ReferenceBondIxn.h"
 #include "CompiledExpressionSet.h"
+#include "CpuNeighborList.h"
 #include "openmm/CustomManyParticleForce.h"
+#include "openmm/internal/ThreadPool.h"
 #include "openmm/internal/vectorize.h"
 #include "lepton/CompiledExpression.h"
 #include "lepton/ParsedExpression.h"
@@ -49,6 +51,8 @@ private:
     bool useCutoff, usePeriodic;
     RealOpenMM cutoffDistance;
     RealOpenMM periodicBoxSize[3];
+    CpuNeighborList* neighborList;
+    ThreadPool& threads;
     CompiledExpressionSet expressionSet;
     Lepton::CompiledExpression energyExpression;
     std::vector<std::vector<int> > particleParamIndices;
@@ -61,23 +65,24 @@ private:
     std::vector<AngleTermInfo> angleTerms;
     std::vector<DihedralTermInfo> dihedralTerms;
 
-    void loopOverInteractions(std::vector<int>& particles, int loopIndex, float* posq, std::vector<OpenMM::RealVec>& atomCoordinates,
+    void loopOverInteractions(std::vector<int>& availableParticles, std::vector<int>& particleSet, int loopIndex, int startIndex, float* posq, std::vector<OpenMM::RealVec>& atomCoordinates,
                               RealOpenMM** particleParameters, std::vector<OpenMM::RealVec>& forces, RealOpenMM* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize);
 
     /**---------------------------------------------------------------------------------------
 
        Calculate custom interaction for one set of particles
 
-       @param particles        the indices of the particles
-       @param posq             atom coordinates in float format
-       @param atomCoordinates  atom coordinates
-       @param forces           force array (forces added)
-       @param totalEnergy      total energy
+       @param particleSet        the indices of the particles
+       @param posq               atom coordinates in float format
+       @param atomCoordinates    atom coordinates
+       @param particleParameters particle parameter values (particleParameters[particleIndex][parameterIndex])
+       @param forces             force array (forces added)
+       @param totalEnergy        total energy
 
        --------------------------------------------------------------------------------------- */
 
-    void calculateOneIxn(const std::vector<int>& particles, float* posq, std::vector<OpenMM::RealVec>& atomCoordinates,
-                         std::vector<OpenMM::RealVec>& forces, RealOpenMM* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize);
+    void calculateOneIxn(std::vector<int>& particleSet, float* posq, std::vector<OpenMM::RealVec>& atomCoordinates,
+                         RealOpenMM** particleParameters, std::vector<OpenMM::RealVec>& forces, RealOpenMM* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize);
 
     /**
      * Compute the displacement and squared distance between two points, optionally using
@@ -98,7 +103,7 @@ public:
 
        --------------------------------------------------------------------------------------- */
 
-    CpuCustomManyParticleForce(const OpenMM::CustomManyParticleForce& force);
+    CpuCustomManyParticleForce(const OpenMM::CustomManyParticleForce& force, ThreadPool& threads);
 
     /**---------------------------------------------------------------------------------------
 
@@ -143,7 +148,7 @@ public:
 
        --------------------------------------------------------------------------------------- */
 
-    void calculateIxn(float* posq, std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM** particleParameters,
+    void calculateIxn(AlignedArray<float>& posq, std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM** particleParameters,
                       const std::map<std::string, double>& globalParameters,
                       std::vector<OpenMM::RealVec>& forces, RealOpenMM* totalEnergy);
 

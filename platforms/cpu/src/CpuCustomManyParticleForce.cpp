@@ -38,7 +38,8 @@
 using namespace OpenMM;
 using namespace std;
 
-CpuCustomManyParticleForce::CpuCustomManyParticleForce(const CustomManyParticleForce& force) : useCutoff(false), usePeriodic(false) {
+CpuCustomManyParticleForce::CpuCustomManyParticleForce(const CustomManyParticleForce& force, ThreadPool& threads) :
+            threads(threads), useCutoff(false), usePeriodic(false), neighborList(NULL) {
     numParticlesPerSet = force.getNumParticlesPerSet();
     numPerParticleParameters = force.getNumPerParticleParameters();
     
@@ -112,23 +113,62 @@ CpuCustomManyParticleForce::CpuCustomManyParticleForce(const CustomManyParticleF
     CustomManyParticleForceImpl::buildFilterArrays(force, numTypes, particleTypes, orderIndex, particleOrder);
 }
 
-CpuCustomManyParticleForce::~CpuCustomManyParticleForce( ){
+CpuCustomManyParticleForce::~CpuCustomManyParticleForce() {
+    if (neighborList != NULL)
+        delete neighborList;
 }
 
-void CpuCustomManyParticleForce::calculateIxn(float* posq, vector<RealVec>& atomCoordinates, RealOpenMM** particleParameters,
+void CpuCustomManyParticleForce::calculateIxn(AlignedArray<float>& posq, vector<RealVec>& atomCoordinates, RealOpenMM** particleParameters,
                                                   const map<string, double>& globalParameters, vector<RealVec>& forces,
                                                   RealOpenMM* totalEnergy) {
     for (map<string, double>::const_iterator iter = globalParameters.begin(); iter != globalParameters.end(); ++iter)
         expressionSet.setVariable(expressionSet.getVariableIndex(iter->first), iter->second);
-    vector<int> particles(numParticlesPerSet);
+    int numParticles = atomCoordinates.size();
+    vector<int> particleIndices(numParticlesPerSet);
     fvec4 boxSize(periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2], 0);
     fvec4 invBoxSize((1/periodicBoxSize[0]), (1/periodicBoxSize[1]), (1/periodicBoxSize[2]), 0);
-    loopOverInteractions(particles, 0, posq, atomCoordinates, particleParameters, forces, totalEnergy, boxSize, invBoxSize);
+    if (useCutoff) {
+        // Construct a neighbor list.
+        
+        float boxSizeFloat[] = {(float) periodicBoxSize[0], (float) periodicBoxSize[1], (float) periodicBoxSize[2]};
+        neighborList->computeNeighborList(numParticles, posq, exclusions, boxSizeFloat, usePeriodic, cutoffDistance, threads);
+        for (int blockIndex = 0; blockIndex < neighborList->getNumBlocks(); blockIndex++) {
+            const vector<int>& neighbors = neighborList->getBlockNeighbors(blockIndex);
+            const vector<char>& exclusions = neighborList->getBlockExclusions(blockIndex);
+            int numNeighbors = neighbors.size();
+            for (int i = 0; i < 4; i++) {
+                particleIndices[0] = neighborList->getSortedAtoms()[4*blockIndex+i];
+                
+                // Build a filtered list of neighbors after removing exclusions.  We'll check for actual exclusions
+                // again later, but the neighbor list also includes padding atoms that it marks as exclusions, so
+                // we need to remove those now.
+                
+                vector<int> particles;
+                for (int j = 0; j < numNeighbors; j++)
+                    if ((exclusions[j] & (1<<i)) == 0)
+                        particles.push_back(neighbors[j]);
+                loopOverInteractions(particles, particleIndices, 1, 0, &posq[0], atomCoordinates, particleParameters, forces, totalEnergy, boxSize, invBoxSize);
+            }
+        }
+    }
+    else {
+        // Loop over all possible sets of particles.
+        
+        vector<int> particles(numParticles);
+        for (int i = 0; i < numParticles; i++)
+            particles[i] = i;
+        for (int i = 0; i < numParticles; i++) {
+            particleIndices[0] = i;
+            loopOverInteractions(particles, particleIndices, 1, i+1, &posq[0], atomCoordinates, particleParameters, forces, totalEnergy, boxSize, invBoxSize);
+        }
+    }
 }
 
 void CpuCustomManyParticleForce::setUseCutoff(RealOpenMM distance) {
     useCutoff = true;
     cutoffDistance = distance;
+    if (neighborList == NULL)
+        neighborList = new CpuNeighborList(4);
 }
 
 void CpuCustomManyParticleForce::setPeriodic(RealVec& boxSize) {
@@ -142,65 +182,68 @@ void CpuCustomManyParticleForce::setPeriodic(RealVec& boxSize) {
     periodicBoxSize[2] = boxSize[2];
 }
 
-void CpuCustomManyParticleForce::loopOverInteractions(vector<int>& particles, int loopIndex, float* posq, vector<OpenMM::RealVec>& atomCoordinates,
+void CpuCustomManyParticleForce::loopOverInteractions(vector<int>& availableParticles, vector<int>& particleSet, int loopIndex, int startIndex, float* posq, vector<OpenMM::RealVec>& atomCoordinates,
                                                           RealOpenMM** particleParameters, vector<OpenMM::RealVec>& forces, RealOpenMM* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize) {
-    int numParticles = atomCoordinates.size();
-    int start = (loopIndex == 0 ? 0 : particles[loopIndex-1]+1);
-    for (int i = start; i < numParticles; i++) {
-        particles[loopIndex] = i;
-        for (int j = 0; j < numPerParticleParameters; j++)
-            expressionSet.setVariable(particleParamIndices[loopIndex][j], particleParameters[i][j]);
-        if (loopIndex == numParticlesPerSet-1)
-            calculateOneIxn(particles, posq, atomCoordinates, forces, totalEnergy, boxSize, invBoxSize);
-        else
-            loopOverInteractions(particles, loopIndex+1, posq, atomCoordinates, particleParameters, forces, totalEnergy, boxSize, invBoxSize);
+    int numParticles = availableParticles.size();
+//    double cutoff2 = cutoffDistance*cutoffDistance;
+    for (int i = startIndex; i < numParticles; i++) {
+        int particle = availableParticles[i];
+        
+        // Check whether this particle can actually participate in interactions with the others found so far.
+        
+        bool include = true;
+        if (useCutoff) {
+//            fvec4 deltaR;
+//            fvec4 pos1(posq+4*particle);
+//            float r2;
+//            for (int j = 0; j < loopIndex && include; j++) {
+//                fvec4 pos2(posq+4*particleSet[j]);
+//                getDeltaR(pos1, pos2, deltaR, r2, boxSize, invBoxSize);
+//                include &= (r2 < cutoff2);
+//            }
+            RealOpenMM delta[ReferenceForce::LastDeltaRIndex];
+            for (int j = 0; j < loopIndex && include; j++) {
+                computeDelta(particle, particleSet[j], delta, atomCoordinates);
+                include &= (delta[ReferenceForce::RIndex] < cutoffDistance);
+            }
+        }
+        for (int j = 0; j < loopIndex && include; j++)
+            include &= (exclusions[particle].find(particleSet[j]) == exclusions[particle].end());
+        if (include) {
+            particleSet[loopIndex] = availableParticles[i];
+            if (loopIndex == numParticlesPerSet-1)
+                calculateOneIxn(particleSet, posq, atomCoordinates, particleParameters, forces, totalEnergy, boxSize, invBoxSize);
+            else
+                loopOverInteractions(availableParticles, particleSet, loopIndex+1, i+1, posq, atomCoordinates, particleParameters, forces, totalEnergy, boxSize, invBoxSize);
+        }
     }
 }
 
-void CpuCustomManyParticleForce::calculateOneIxn(const vector<int>& particles, float* posq, vector<RealVec>& atomCoordinates, vector<RealVec>& forces, RealOpenMM* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize) {
+void CpuCustomManyParticleForce::calculateOneIxn(vector<int>& particleSet, float* posq, vector<RealVec>& atomCoordinates, RealOpenMM** particleParameters, vector<RealVec>& forces, RealOpenMM* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize) {
     // Select the ordering to use for the particles.
     
     vector<int> permutedParticles(numParticlesPerSet);
     if (particleOrder.size() == 1) {
         // There are no filters, so we don't need to worry about ordering.
         
-        permutedParticles = particles;
+        permutedParticles = particleSet;
     }
     else {
         int index = 0;
         for (int i = numParticlesPerSet-1; i >= 0; i--)
-            index = particleTypes[particles[i]]+numTypes*index;
+            index = particleTypes[particleSet[i]]+numTypes*index;
         int order = orderIndex[index];
         if (order == -1)
             return;
         for (int i = 0; i < numParticlesPerSet; i++)
-            permutedParticles[i] = particles[particleOrder[order][i]];
+            permutedParticles[i] = particleSet[particleOrder[order][i]];
     }
+
+    // Record per-particle parameters.
     
-    // Decide whether to include this interaction.
-    
-    for (int i = 0; i < (int) permutedParticles.size(); i++) {
-        int p1 = permutedParticles[i];
-        for (int j = i+1; j < (int) permutedParticles.size(); j++) {
-            int p2 = permutedParticles[j];
-            if (exclusions[p1].find(p2) != exclusions[p1].end())
-                return;
-            if (useCutoff) {
-//                fvec4 deltaR;
-//                fvec4 posI(posq+4*p1);
-//                fvec4 posJ(posq+4*p2);
-//                float r2;
-//                getDeltaR(posI, posJ, deltaR, r2, boxSize, invBoxSize);
-//                if (r2 >= cutoffDistance*cutoffDistance)
-//                    return;
-//
-                RealOpenMM delta[ReferenceForce::LastDeltaRIndex];
-                computeDelta(p1, p2, delta, atomCoordinates);
-                if (delta[ReferenceForce::RIndex] >= cutoffDistance)
-                    return;
-            }
-        }
-    }
+    for (int i = 0; i < numParticlesPerSet; i++)
+        for (int j = 0; j < numPerParticleParameters; j++)
+            expressionSet.setVariable(particleParamIndices[i][j], particleParameters[permutedParticles[i]][j]);
     
     // Compute all of the variables the energy can depend on.
 
