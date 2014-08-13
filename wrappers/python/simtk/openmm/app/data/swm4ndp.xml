@@ -30,7 +30,7 @@
   <Atom type="swm4ndp-OD" charge="-1.71636" sigma="1" epsilon="0"/>
  </NonbondedForce>
  <DrudeForce>
-  <Particle type1="swm4ndp-OD" type2="swm4ndp-O" charge="-1.71636" polarizability="7.040850e-6" thole="1.3"/>
+  <Particle type1="swm4ndp-OD" type2="swm4ndp-O" charge="-1.71636" polarizability="0.000978253" thole="1.3"/>
  </DrudeForce>
 </ForceField>
 

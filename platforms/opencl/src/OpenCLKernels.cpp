@@ -1492,7 +1492,8 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     else
         dispersionCoefficient = 0.0;
     alpha = 0;
-    if (force.getNonbondedMethod() == NonbondedForce::Ewald && cl.getContextIndex() == 0) {
+    ewaldSelfEnergy = 0.0;
+    if (force.getNonbondedMethod() == NonbondedForce::Ewald) {
         // Compute the Ewald parameters.
 
         int kmaxx, kmaxy, kmaxz;
@@ -1500,23 +1501,25 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         defines["EWALD_ALPHA"] = cl.doubleToString(alpha);
         defines["TWO_OVER_SQRT_PI"] = cl.doubleToString(2.0/sqrt(M_PI));
         defines["USE_EWALD"] = "1";
-        ewaldSelfEnergy = -ONE_4PI_EPS0*alpha*sumSquaredCharges/sqrt(M_PI);
+        if (cl.getContextIndex() == 0) {
+            ewaldSelfEnergy = -ONE_4PI_EPS0*alpha*sumSquaredCharges/sqrt(M_PI);
 
-        // Create the reciprocal space kernels.
+            // Create the reciprocal space kernels.
 
-        map<string, string> replacements;
-        replacements["NUM_ATOMS"] = cl.intToString(numParticles);
-        replacements["KMAX_X"] = cl.intToString(kmaxx);
-        replacements["KMAX_Y"] = cl.intToString(kmaxy);
-        replacements["KMAX_Z"] = cl.intToString(kmaxz);
-        replacements["EXP_COEFFICIENT"] = cl.doubleToString(-1.0/(4.0*alpha*alpha));
-        cl::Program program = cl.createProgram(OpenCLKernelSources::ewald, replacements);
-        ewaldSumsKernel = cl::Kernel(program, "calculateEwaldCosSinSums");
-        ewaldForcesKernel = cl::Kernel(program, "calculateEwaldForces");
-        int elementSize = (cl.getUseDoublePrecision() ? sizeof(mm_double2) : sizeof(mm_float2));
-        cosSinSums = new OpenCLArray(cl, (2*kmaxx-1)*(2*kmaxy-1)*(2*kmaxz-1), elementSize, "cosSinSums");
+            map<string, string> replacements;
+            replacements["NUM_ATOMS"] = cl.intToString(numParticles);
+            replacements["KMAX_X"] = cl.intToString(kmaxx);
+            replacements["KMAX_Y"] = cl.intToString(kmaxy);
+            replacements["KMAX_Z"] = cl.intToString(kmaxz);
+            replacements["EXP_COEFFICIENT"] = cl.doubleToString(-1.0/(4.0*alpha*alpha));
+            cl::Program program = cl.createProgram(OpenCLKernelSources::ewald, replacements);
+            ewaldSumsKernel = cl::Kernel(program, "calculateEwaldCosSinSums");
+            ewaldForcesKernel = cl::Kernel(program, "calculateEwaldForces");
+            int elementSize = (cl.getUseDoublePrecision() ? sizeof(mm_double2) : sizeof(mm_float2));
+            cosSinSums = new OpenCLArray(cl, (2*kmaxx-1)*(2*kmaxy-1)*(2*kmaxz-1), elementSize, "cosSinSums");
+        }
     }
-    else if (force.getNonbondedMethod() == NonbondedForce::PME && cl.getContextIndex() == 0) {
+    else if (force.getNonbondedMethod() == NonbondedForce::PME) {
         // Compute the PME parameters.
 
         int gridSizeX, gridSizeY, gridSizeZ;
@@ -1527,125 +1530,125 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         defines["EWALD_ALPHA"] = cl.doubleToString(alpha);
         defines["TWO_OVER_SQRT_PI"] = cl.doubleToString(2.0/sqrt(M_PI));
         defines["USE_EWALD"] = "1";
-        ewaldSelfEnergy = -ONE_4PI_EPS0*alpha*sumSquaredCharges/sqrt(M_PI);
-        pmeDefines["PME_ORDER"] = cl.intToString(PmeOrder);
-        pmeDefines["NUM_ATOMS"] = cl.intToString(numParticles);
-        pmeDefines["RECIP_EXP_FACTOR"] = cl.doubleToString(M_PI*M_PI/(alpha*alpha));
-        pmeDefines["GRID_SIZE_X"] = cl.intToString(gridSizeX);
-        pmeDefines["GRID_SIZE_Y"] = cl.intToString(gridSizeY);
-        pmeDefines["GRID_SIZE_Z"] = cl.intToString(gridSizeZ);
-        pmeDefines["EPSILON_FACTOR"] = cl.doubleToString(sqrt(ONE_4PI_EPS0));
-        bool deviceIsCpu = (cl.getDevice().getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_CPU);
-        if (deviceIsCpu)
-            pmeDefines["DEVICE_IS_CPU"] = "1";
-        if (cl.getPlatformData().useCpuPme) {
-            // Create the CPU PME kernel.
-            
-            try {
-                cpuPme = getPlatform().createKernel(CalcPmeReciprocalForceKernel::Name(), *cl.getPlatformData().context);
-                cpuPme.getAs<CalcPmeReciprocalForceKernel>().initialize(gridSizeX, gridSizeY, gridSizeZ, numParticles, alpha);
-                cl::Program program = cl.createProgram(OpenCLKernelSources::pme, pmeDefines);
-                cl::Kernel addForcesKernel = cl::Kernel(program, "addForces");
-                pmeio = new PmeIO(cl, addForcesKernel);
-                cl.addPreComputation(new PmePreComputation(cl, cpuPme, *pmeio));
-                cl.addPostComputation(new PmePostComputation(cpuPme, *pmeio));
+        if (cl.getContextIndex() == 0) {
+            ewaldSelfEnergy = -ONE_4PI_EPS0*alpha*sumSquaredCharges/sqrt(M_PI);
+            pmeDefines["PME_ORDER"] = cl.intToString(PmeOrder);
+            pmeDefines["NUM_ATOMS"] = cl.intToString(numParticles);
+            pmeDefines["RECIP_EXP_FACTOR"] = cl.doubleToString(M_PI*M_PI/(alpha*alpha));
+            pmeDefines["GRID_SIZE_X"] = cl.intToString(gridSizeX);
+            pmeDefines["GRID_SIZE_Y"] = cl.intToString(gridSizeY);
+            pmeDefines["GRID_SIZE_Z"] = cl.intToString(gridSizeZ);
+            pmeDefines["EPSILON_FACTOR"] = cl.doubleToString(sqrt(ONE_4PI_EPS0));
+            bool deviceIsCpu = (cl.getDevice().getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_CPU);
+            if (deviceIsCpu)
+                pmeDefines["DEVICE_IS_CPU"] = "1";
+            if (cl.getPlatformData().useCpuPme) {
+                // Create the CPU PME kernel.
+
+                try {
+                    cpuPme = getPlatform().createKernel(CalcPmeReciprocalForceKernel::Name(), *cl.getPlatformData().context);
+                    cpuPme.getAs<CalcPmeReciprocalForceKernel>().initialize(gridSizeX, gridSizeY, gridSizeZ, numParticles, alpha);
+                    cl::Program program = cl.createProgram(OpenCLKernelSources::pme, pmeDefines);
+                    cl::Kernel addForcesKernel = cl::Kernel(program, "addForces");
+                    pmeio = new PmeIO(cl, addForcesKernel);
+                    cl.addPreComputation(new PmePreComputation(cl, cpuPme, *pmeio));
+                    cl.addPostComputation(new PmePostComputation(cpuPme, *pmeio));
+                }
+                catch (OpenMMException& ex) {
+                    // The CPU PME plugin isn't available.
+                }
             }
-            catch (OpenMMException& ex) {
-                // The CPU PME plugin isn't available.
-            }
-        }
-        if (pmeio == NULL) {
-            // Create required data structures.
+            if (pmeio == NULL) {
+                // Create required data structures.
 
-            int elementSize = (cl.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
-            pmeGrid = new OpenCLArray(cl, gridSizeX*gridSizeY*gridSizeZ, 2*elementSize, "pmeGrid");
-            cl.addAutoclearBuffer(*pmeGrid);
-            pmeGrid2 = new OpenCLArray(cl, gridSizeX*gridSizeY*gridSizeZ, 2*elementSize, "pmeGrid2");
-            pmeBsplineModuliX = new OpenCLArray(cl, gridSizeX, elementSize, "pmeBsplineModuliX");
-            pmeBsplineModuliY = new OpenCLArray(cl, gridSizeY, elementSize, "pmeBsplineModuliY");
-            pmeBsplineModuliZ = new OpenCLArray(cl, gridSizeZ, elementSize, "pmeBsplineModuliZ");
-            pmeBsplineTheta = new OpenCLArray(cl, PmeOrder*numParticles, 4*elementSize, "pmeBsplineTheta");
-            pmeAtomRange = OpenCLArray::create<cl_int>(cl, gridSizeX*gridSizeY*gridSizeZ+1, "pmeAtomRange");
-            pmeAtomGridIndex = OpenCLArray::create<mm_int2>(cl, numParticles, "pmeAtomGridIndex");
-            sort = new OpenCLSort(cl, new SortTrait(), cl.getNumAtoms());
-            fft = new OpenCLFFT3D(cl, gridSizeX, gridSizeY, gridSizeZ);
+                int elementSize = (cl.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
+                pmeGrid = new OpenCLArray(cl, gridSizeX*gridSizeY*gridSizeZ, 2*elementSize, "pmeGrid");
+                cl.addAutoclearBuffer(*pmeGrid);
+                pmeGrid2 = new OpenCLArray(cl, gridSizeX*gridSizeY*gridSizeZ, 2*elementSize, "pmeGrid2");
+                pmeBsplineModuliX = new OpenCLArray(cl, gridSizeX, elementSize, "pmeBsplineModuliX");
+                pmeBsplineModuliY = new OpenCLArray(cl, gridSizeY, elementSize, "pmeBsplineModuliY");
+                pmeBsplineModuliZ = new OpenCLArray(cl, gridSizeZ, elementSize, "pmeBsplineModuliZ");
+                pmeBsplineTheta = new OpenCLArray(cl, PmeOrder*numParticles, 4*elementSize, "pmeBsplineTheta");
+                pmeAtomRange = OpenCLArray::create<cl_int>(cl, gridSizeX*gridSizeY*gridSizeZ+1, "pmeAtomRange");
+                pmeAtomGridIndex = OpenCLArray::create<mm_int2>(cl, numParticles, "pmeAtomGridIndex");
+                sort = new OpenCLSort(cl, new SortTrait(), cl.getNumAtoms());
+                fft = new OpenCLFFT3D(cl, gridSizeX, gridSizeY, gridSizeZ);
 
-            // Initialize the b-spline moduli.
+                // Initialize the b-spline moduli.
 
-            int maxSize = max(max(gridSizeX, gridSizeY), gridSizeZ);
-            vector<double> data(PmeOrder);
-            vector<double> ddata(PmeOrder);
-            vector<double> bsplines_data(maxSize);
-            data[PmeOrder-1] = 0.0;
-            data[1] = 0.0;
-            data[0] = 1.0;
-            for (int i = 3; i < PmeOrder; i++) {
-                double div = 1.0/(i-1.0);
-                data[i-1] = 0.0;
-                for (int j = 1; j < (i-1); j++)
-                    data[i-j-1] = div*(j*data[i-j-2]+(i-j)*data[i-j-1]);
+                int maxSize = max(max(gridSizeX, gridSizeY), gridSizeZ);
+                vector<double> data(PmeOrder);
+                vector<double> ddata(PmeOrder);
+                vector<double> bsplines_data(maxSize);
+                data[PmeOrder-1] = 0.0;
+                data[1] = 0.0;
+                data[0] = 1.0;
+                for (int i = 3; i < PmeOrder; i++) {
+                    double div = 1.0/(i-1.0);
+                    data[i-1] = 0.0;
+                    for (int j = 1; j < (i-1); j++)
+                        data[i-j-1] = div*(j*data[i-j-2]+(i-j)*data[i-j-1]);
+                    data[0] = div*data[0];
+                }
+
+                // Differentiate.
+
+                ddata[0] = -data[0];
+                for (int i = 1; i < PmeOrder; i++)
+                    ddata[i] = data[i-1]-data[i];
+                double div = 1.0/(PmeOrder-1);
+                data[PmeOrder-1] = 0.0;
+                for (int i = 1; i < (PmeOrder-1); i++)
+                    data[PmeOrder-i-1] = div*(i*data[PmeOrder-i-2]+(PmeOrder-i)*data[PmeOrder-i-1]);
                 data[0] = div*data[0];
-            }
+                for (int i = 0; i < maxSize; i++)
+                    bsplines_data[i] = 0.0;
+                for (int i = 1; i <= PmeOrder; i++)
+                    bsplines_data[i] = data[i-1];
 
-            // Differentiate.
+                // Evaluate the actual bspline moduli for X/Y/Z.
 
-            ddata[0] = -data[0];
-            for (int i = 1; i < PmeOrder; i++)
-                ddata[i] = data[i-1]-data[i];
-            double div = 1.0/(PmeOrder-1);
-            data[PmeOrder-1] = 0.0;
-            for (int i = 1; i < (PmeOrder-1); i++)
-                data[PmeOrder-i-1] = div*(i*data[PmeOrder-i-2]+(PmeOrder-i)*data[PmeOrder-i-1]);
-            data[0] = div*data[0];
-            for (int i = 0; i < maxSize; i++)
-                bsplines_data[i] = 0.0;
-            for (int i = 1; i <= PmeOrder; i++)
-                bsplines_data[i] = data[i-1];
-
-            // Evaluate the actual bspline moduli for X/Y/Z.
-
-            for(int dim = 0; dim < 3; dim++) {
-                int ndata = (dim == 0 ? gridSizeX : dim == 1 ? gridSizeY : gridSizeZ);
-                vector<cl_double> moduli(ndata);
-                for (int i = 0; i < ndata; i++) {
-                    double sc = 0.0;
-                    double ss = 0.0;
-                    for (int j = 0; j < ndata; j++) {
-                        double arg = (2.0*M_PI*i*j)/ndata;
-                        sc += bsplines_data[j]*cos(arg);
-                        ss += bsplines_data[j]*sin(arg);
+                for(int dim = 0; dim < 3; dim++) {
+                    int ndata = (dim == 0 ? gridSizeX : dim == 1 ? gridSizeY : gridSizeZ);
+                    vector<cl_double> moduli(ndata);
+                    for (int i = 0; i < ndata; i++) {
+                        double sc = 0.0;
+                        double ss = 0.0;
+                        for (int j = 0; j < ndata; j++) {
+                            double arg = (2.0*M_PI*i*j)/ndata;
+                            sc += bsplines_data[j]*cos(arg);
+                            ss += bsplines_data[j]*sin(arg);
+                        }
+                        moduli[i] = (float) (sc*sc+ss*ss);
                     }
-                    moduli[i] = (float) (sc*sc+ss*ss);
-                }
-                for (int i = 0; i < ndata; i++)
-                {
-                    if (moduli[i] < 1.0e-7)
-                        moduli[i] = (moduli[i-1]+moduli[i+1])*0.5f;
-                }
-                if (cl.getUseDoublePrecision()) {
-                    if (dim == 0)
-                        pmeBsplineModuliX->upload(moduli);
-                    else if (dim == 1)
-                        pmeBsplineModuliY->upload(moduli);
-                    else
-                        pmeBsplineModuliZ->upload(moduli);
-                }
-                else {
-                    vector<float> modulif(ndata);
                     for (int i = 0; i < ndata; i++)
-                        modulif[i] = (float) moduli[i];
-                    if (dim == 0)
-                        pmeBsplineModuliX->upload(modulif);
-                    else if (dim == 1)
-                        pmeBsplineModuliY->upload(modulif);
-                    else
-                        pmeBsplineModuliZ->upload(modulif);
+                    {
+                        if (moduli[i] < 1.0e-7)
+                            moduli[i] = (moduli[i-1]+moduli[i+1])*0.5f;
+                    }
+                    if (cl.getUseDoublePrecision()) {
+                        if (dim == 0)
+                            pmeBsplineModuliX->upload(moduli);
+                        else if (dim == 1)
+                            pmeBsplineModuliY->upload(moduli);
+                        else
+                            pmeBsplineModuliZ->upload(moduli);
+                    }
+                    else {
+                        vector<float> modulif(ndata);
+                        for (int i = 0; i < ndata; i++)
+                            modulif[i] = (float) moduli[i];
+                        if (dim == 0)
+                            pmeBsplineModuliX->upload(modulif);
+                        else if (dim == 1)
+                            pmeBsplineModuliY->upload(modulif);
+                        else
+                            pmeBsplineModuliZ->upload(modulif);
+                    }
                 }
             }
         }
     }
-    else
-        ewaldSelfEnergy = 0.0;
 
     // Add the interaction to the default nonbonded kernel.
     
@@ -2078,6 +2081,8 @@ void OpenCLCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
         // Find how many tiles we will create for this group.
         
         int tileWidth = min(min(32, (int) atoms1.size()), (int) atoms2.size());
+        if (tileWidth == 0)
+            continue;
         int numBlocks1 = (atoms1.size()+tileWidth-1)/tileWidth;
         int numBlocks2 = (atoms2.size()+tileWidth-1)/tileWidth;
         
@@ -2285,7 +2290,7 @@ void OpenCLCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
         defines["USE_CUTOFF"] = "1";
     if (force.getNonbondedMethod() == CustomNonbondedForce::CutoffPeriodic)
         defines["USE_PERIODIC"] = "1";
-    defines["THREAD_BLOCK_SIZE"] = cl.intToString(cl.getNonbondedUtilities().getForceThreadBlockSize());
+    defines["LOCAL_MEMORY_SIZE"] = cl.intToString(max(32, cl.getNonbondedUtilities().getForceThreadBlockSize()));
     double cutoff = force.getCutoffDistance();
     defines["CUTOFF_SQUARED"] = cl.doubleToString(cutoff*cutoff);
     defines["PADDED_NUM_ATOMS"] = cl.intToString(cl.getPaddedNumAtoms());
@@ -4816,7 +4821,7 @@ void OpenCLIntegrateVariableVerletStepKernel::initialize(const System& system, c
     kernel1 = cl::Kernel(program, "integrateVerletPart1");
     kernel2 = cl::Kernel(program, "integrateVerletPart2");
     selectSizeKernel = cl::Kernel(program, "selectVerletStepSize");
-    blockSize = min(min(256, system.getNumParticles()), (int) cl.getDevice().getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>());
+    blockSize = min(min(256, system.getNumParticles()), (int) selectSizeKernel.getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(cl.getDevice()));
 }
 
 double OpenCLIntegrateVariableVerletStepKernel::execute(ContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime) {
@@ -4926,7 +4931,7 @@ void OpenCLIntegrateVariableLangevinStepKernel::initialize(const System& system,
     params = new OpenCLArray(cl, 3, cl.getUseDoublePrecision() || cl.getUseMixedPrecision() ? sizeof(cl_double) : sizeof(cl_float), "langevinParams");
     blockSize = min(256, system.getNumParticles());
     blockSize = max(blockSize, params->getSize());
-    blockSize = min(blockSize, (int) cl.getDevice().getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>());
+    blockSize = min(blockSize, (int) selectSizeKernel.getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(cl.getDevice()));
 }
 
 double OpenCLIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, const VariableLangevinIntegrator& integrator, double maxTime) {
@@ -5881,7 +5886,7 @@ OpenCLApplyMonteCarloBarostatKernel::~OpenCLApplyMonteCarloBarostatKernel() {
 }
 
 void OpenCLApplyMonteCarloBarostatKernel::initialize(const System& system, const Force& thermostat) {
-    savedPositions = OpenCLArray::create<mm_float4>(cl, cl.getPaddedNumAtoms(), "savedPositions");
+    savedPositions = new OpenCLArray(cl, cl.getPaddedNumAtoms(), cl.getUseDoublePrecision() ? sizeof(mm_double4) : sizeof(mm_float4), "savedPositions");
     cl::Program program = cl.createProgram(OpenCLKernelSources::monteCarloBarostat);
     kernel = cl::Kernel(program, "scalePositions");
 }
@@ -5915,7 +5920,8 @@ void OpenCLApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context,
         kernel.setArg<cl::Buffer>(7, moleculeAtoms->getDeviceBuffer());
         kernel.setArg<cl::Buffer>(8, moleculeStartIndex->getDeviceBuffer());
     }
-    cl.getQueue().enqueueCopyBuffer(cl.getPosq().getDeviceBuffer(), savedPositions->getDeviceBuffer(), 0, 0, cl.getPosq().getSize()*sizeof(mm_float4));
+    int bytesToCopy = cl.getPosq().getSize()*(cl.getUseDoublePrecision() ? sizeof(mm_double4) : sizeof(mm_float4));
+    cl.getQueue().enqueueCopyBuffer(cl.getPosq().getDeviceBuffer(), savedPositions->getDeviceBuffer(), 0, 0, bytesToCopy);
     kernel.setArg<cl_float>(0, (cl_float) scaleX);
     kernel.setArg<cl_float>(1, (cl_float) scaleY);
     kernel.setArg<cl_float>(2, (cl_float) scaleZ);
@@ -5928,7 +5934,8 @@ void OpenCLApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context,
 }
 
 void OpenCLApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& context) {
-    cl.getQueue().enqueueCopyBuffer(savedPositions->getDeviceBuffer(), cl.getPosq().getDeviceBuffer(), 0, 0, cl.getPosq().getSize()*sizeof(mm_float4));
+    int bytesToCopy = cl.getPosq().getSize()*(cl.getUseDoublePrecision() ? sizeof(mm_double4) : sizeof(mm_float4));
+    cl.getQueue().enqueueCopyBuffer(savedPositions->getDeviceBuffer(), cl.getPosq().getDeviceBuffer(), 0, 0, bytesToCopy);
 }
 
 OpenCLRemoveCMMotionKernel::~OpenCLRemoveCMMotionKernel() {

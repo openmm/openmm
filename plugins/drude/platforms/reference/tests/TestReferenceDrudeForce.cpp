@@ -71,14 +71,14 @@ void validateForce(System& system, vector<Vec3>& positions, double expectedEnerg
             offsetPos[i][j] = positions[i][j]+offset;
             context.setPositions(offsetPos);
             double e2 = context.getState(State::Energy | State::Forces).getPotentialEnergy();
-            ASSERT_EQUAL_TOL(state.getForces()[i][j], (e1-e2)/(2*offset), 1e-3);
+            ASSERT_EQUAL_TOL(state.getForces()[i][j], (e1-e2)/(2*offset), 1e-5);
         }
 }
 
 void testSingleParticle() {
-    const double k = 1.5;
+    const double k = ONE_4PI_EPS0*1.5;
     const double charge = 0.1;
-    const double alpha = charge*charge/k;
+    const double alpha = ONE_4PI_EPS0*charge*charge/k;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -92,9 +92,9 @@ void testSingleParticle() {
 }
 
 void testAnisotropicParticle() {
-    const double k = 1.5;
+    const double k = ONE_4PI_EPS0*1.5;
     const double charge = 0.1;
-    const double alpha = charge*charge/k;
+    const double alpha = ONE_4PI_EPS0*charge*charge/k;
     const double a1 = 0.8;
     const double a2 = 1.1;
     const double k1 = k/a1;
@@ -124,9 +124,9 @@ double computeScreening(double r, double thole, double alpha1, double alpha2) {
 }
 
 void testThole() {
-    const double k = 1.5;
+    const double k = ONE_4PI_EPS0*1.5;
     const double charge = 0.1;
-    const double alpha = charge*charge/k;
+    const double alpha = ONE_4PI_EPS0*charge*charge/k;
     const double thole = 2.5;
     System system;
     system.addParticle(1.0);
@@ -157,9 +157,9 @@ void testThole() {
 }
 
 void testChangingParameters() {
-    const double k = 1.5;
+    const double k = ONE_4PI_EPS0*1.5;
     const double charge = 0.1;
-    const double alpha = charge*charge/k;
+    const double alpha = ONE_4PI_EPS0*charge*charge/k;
     Platform& platform = Platform::getPlatformByName("Reference");
     
     // Create the system.
@@ -184,9 +184,9 @@ void testChangingParameters() {
     
     // Modify the parameters.
     
-    const double k2 = 2.2;
+    const double k2 = ONE_4PI_EPS0*2.2;
     const double charge2 = 0.3;
-    const double alpha2 = charge2*charge2/k2;
+    const double alpha2 = ONE_4PI_EPS0*charge2*charge2/k2;
     drude->setParticleParameters(0, 1, 0, -1, -1, -1, charge2, alpha2, 1, 1);
     drude->updateParametersInContext(context);
     state = context.getState(State::Energy);

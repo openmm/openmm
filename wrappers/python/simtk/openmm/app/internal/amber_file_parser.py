@@ -12,9 +12,9 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2013 Stanford University and the Authors.
+Portions copyright (c) 2012-2014 Stanford University and the Authors.
 Authors: Randall J. Radmer, John D. Chodera, Peter Eastman
-Contributors: Christoph Klein, Michael R. Shirts
+Contributors: Christoph Klein, Michael R. Shirts, Jason Swails
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -40,19 +40,19 @@ USE OR OTHER DEALINGS IN THE SOFTWARE.
 #=============================================================================================
 
 import os
-import os.path
 import re
-import math
+from math import ceil, cos, sin, asin, sqrt, pi
 import warnings
 
 try:
-    import numpy
+    import numpy as np
 except:
-    pass
+    np = None
 
 import simtk.unit as units
 import simtk.openmm
 from simtk.openmm.app import element as elem
+from simtk.openmm.vec3 import Vec3
 import customgbforces as customgb
 
 #=============================================================================================
@@ -74,6 +74,13 @@ POINTER_LABELS  = """
 # Pointer labels (above) as a list, not string.
 POINTER_LABEL_LIST = POINTER_LABELS.replace(',', '').split()
 
+VELSCALE = 20.455 # velocity conversion factor to angstroms/picosecond
+TINY = 1.0e-8
+
+class NbfixPresent(Exception):
+    """ Exception raised when NBFIX is used for the Lennard-Jones terms """
+    pass
+
 class PrmtopLoader(object):
     """Parsed AMBER prmtop file.
 
@@ -83,14 +90,14 @@ class PrmtopLoader(object):
 
     Parse a prmtop file of alanine dipeptide in implicit solvent.
 
-    >>> import os, os.path
+    >>> import os
     >>> directory = os.path.join(os.getenv('YANK_INSTALL_DIR'), 'test', 'systems', 'alanine-dipeptide-gbsa')
     >>> prmtop_filename = os.path.join(directory, 'alanine-dipeptide.prmtop')
     >>> prmtop = PrmtopLoader(prmtop_filename)
 
     Parse a prmtop file of alanine dipeptide in explicit solvent.
 
-    >>> import os, os.path
+    >>> import os
     >>> directory = os.path.join(os.getenv('YANK_INSTALL_DIR'), 'test', 'systems', 'alanine-dipeptide-explicit')
     >>> prmtop_filename = os.path.join(directory, 'alanine-dipeptide.prmtop')
     >>> prmtop = PrmtopLoader(prmtop_filename)
@@ -110,6 +117,7 @@ class PrmtopLoader(object):
         self._flags=[]
         self._raw_format={}
         self._raw_data={}
+        self._has_nbfix_terms = False
 
         fIn=open(inFilename)
         for line in fIn:
@@ -212,28 +220,16 @@ class PrmtopLoader(object):
         try:
             return self._massList
         except AttributeError:
-            pass
-
-        self._massList=[]
-        raw_masses=self._raw_data['MASS']
-        for ii in range(self.getNumAtoms()):
-            self._massList.append(float(raw_masses[ii]))
-        self._massList = self._massList
-        return self._massList
+            self._massList = [float(x) for x in self._raw_data['MASS']]
+            return self._massList
 
     def getCharges(self):
         """Return a list of atomic charges in the system"""
         try:
             return self._chargeList
         except AttributeError:
-            pass
-
-        self._chargeList=[]
-        raw_charges=self._raw_data['CHARGE']
-        for ii in range(self.getNumAtoms()):
-            self._chargeList.append(float(raw_charges[ii])/18.2223)
-        self._chargeList = self._chargeList
-        return self._chargeList
+            self._chargeList = [float(x)/18.2223 for x in self._raw_data['CHARGE']]
+            return self._chargeList
 
     def getAtomName(self, iAtom):
         """Return the atom name for iAtom"""
@@ -248,11 +244,8 @@ class PrmtopLoader(object):
         try:
             return self._atomTypeIndexes
         except AttributeError:
-            pass
-        self._atomTypeIndexes=[]
-        for atomTypeIndex in  self._raw_data['ATOM_TYPE_INDEX']:
-            self._atomTypeIndexes.append(int(atomTypeIndex))
-        return self._atomTypeIndexes
+            self._atomTypeIndexes = [int(x) for x in self._raw_data['ATOM_TYPE_INDEX']]
+            return self._atomTypeIndexes
 
     def getAtomType(self, iAtom):
         """Return the AMBER atom type for iAtom"""
@@ -269,11 +262,11 @@ class PrmtopLoader(object):
 
     def getResidueLabel(self, iAtom=None, iRes=None):
         """Return residue label for iAtom OR iRes"""
-        if iRes==None and iAtom==None:
+        if iRes is None and iAtom is None:
             raise Exception("only specify iRes or iAtom, not both")
-        if iRes!=None and iAtom!=None:
+        if iRes is not None and iAtom is not None:
             raise Exception("iRes or iAtom must be set")
-        if iRes!=None:
+        if iRes is not None:
             return self._raw_data['RESIDUE_LABEL'][iRes]
         else:
             return self.getResidueLabel(iRes=self._getResiduePointer(iAtom))
@@ -295,7 +288,14 @@ class PrmtopLoader(object):
         return self.residuePointerDict[iAtom]
 
     def getNonbondTerms(self):
-        """Return list of all rVdw, epsilon pairs for each atom"""
+        """
+        Return list of all rVdw, epsilon pairs for each atom. If off-diagonal
+        elements of the Lennard-Jones A and B coefficient matrices are found,
+        NbfixPresent exception is raised
+        """
+        if self._has_nbfix_terms:
+            raise NbfixPresent('Off-diagonal Lennard-Jones elements found. '
+                        'Cannot determine LJ parameters for individual atoms.')
         try:
             return self._nonbondTerms
         except AttributeError:
@@ -303,9 +303,10 @@ class PrmtopLoader(object):
         self._nonbondTerms=[]
         lengthConversionFactor = units.angstrom.conversion_factor_to(units.nanometer)
         energyConversionFactor = units.kilocalorie_per_mole.conversion_factor_to(units.kilojoule_per_mole)
+        numTypes = self.getNumTypes()
+        atomTypeIndexes=self._getAtomTypeIndexes()
+        type_parameters = [(0, 0) for i in range(numTypes)]
         for iAtom in range(self.getNumAtoms()):
-            numTypes=self.getNumTypes()
-            atomTypeIndexes=self._getAtomTypeIndexes()
             index=(numTypes+1)*(atomTypeIndexes[iAtom]-1)
             nbIndex=int(self._raw_data['NONBONDED_PARM_INDEX'][index])-1
             if nbIndex<0:
@@ -318,9 +319,31 @@ class PrmtopLoader(object):
             except ZeroDivisionError:
                 rMin = 1.0
                 epsilon = 0.0
+            type_parameters[atomTypeIndexes[iAtom]-1] = (rMin/2.0, epsilon)
             rVdw = rMin/2.0*lengthConversionFactor
             epsilon = epsilon*energyConversionFactor
             self._nonbondTerms.append( (rVdw, epsilon) )
+        # Check if we have any off-diagonal modified LJ terms that would require
+        # an NBFIX-like solution
+        for i in range(numTypes):
+            for j in range(numTypes):
+                index = int(self._raw_data['NONBONDED_PARM_INDEX'][numTypes*i+j]) - 1
+                rij = type_parameters[i][0] + type_parameters[j][0]
+                wdij = sqrt(type_parameters[i][1] * type_parameters[j][1])
+                a = float(self._raw_data['LENNARD_JONES_ACOEF'][index])
+                b = float(self._raw_data['LENNARD_JONES_BCOEF'][index])
+                if a == 0 or b == 0:
+                    if a != 0 or b != 0 or (wdij != 0 and rij != 0):
+                        self._has_nbfix_terms = True
+                        raise NbfixPresent('Off-diagonal Lennard-Jones elements'
+                                           ' found. Cannot determine LJ '
+                                           'parameters for individual atoms.')
+                elif (abs((a - (wdij * rij ** 12)) / a) > 1e-6 or
+                      abs((b - (2 * wdij * rij**6)) / b) > 1e-6):
+                    self._has_nbfix_terms = True
+                    raise NbfixPresent('Off-diagonal Lennard-Jones elements '
+                                       'found. Cannot determine LJ parameters '
+                                       'for individual atoms.')
         return self._nonbondTerms
 
     def _getBonds(self, bondPointers):
@@ -427,27 +450,67 @@ class PrmtopLoader(object):
                           +self._raw_data["DIHEDRALS_WITHOUT_HYDROGEN"]
         returnList=[]
         charges=self.getCharges()
-        nonbondTerms = self.getNonbondTerms()
-        for ii in range(0,len(dihedralPointers),5):
-            if int(dihedralPointers[ii+2])>0 and int(dihedralPointers[ii+3])>0:
-                iAtom = int(dihedralPointers[ii])//3
-                lAtom = int(dihedralPointers[ii+3])//3
-                iidx = int(dihedralPointers[ii+4]) - 1
-                chargeProd = charges[iAtom]*charges[lAtom]
-                (rVdwI, epsilonI) = nonbondTerms[iAtom]
-                (rVdwL, epsilonL) = nonbondTerms[lAtom]
-                rMin = (rVdwI+rVdwL)
-                epsilon = math.sqrt(epsilonI*epsilonL)
-                try:
-                    iScee = float(self._raw_data["SCEE_SCALE_FACTOR"][iidx])
-                except KeyError:
-                    iScee = 1.2
-                try:
-                    iScnb = float(self._raw_data["SCNB_SCALE_FACTOR"][iidx])
-                except KeyError:
-                    iScnb = 2.0
-
-                returnList.append((iAtom, lAtom, chargeProd, rMin, epsilon, iScee, iScnb))
+        try:
+            nonbondTerms = self.getNonbondTerms()
+        except NbfixPresent:
+            # We need to do the unit conversions here, since getNonbondTerms
+            # never finished and it has unit conversions in there
+            length_conv = units.angstrom.conversion_factor_to(units.nanometers)
+            ene_conv = units.kilocalories_per_mole.conversion_factor_to(
+                                units.kilojoules_per_mole)
+            parm_acoef = [float(x) for x in self._raw_data['LENNARD_JONES_ACOEF']]
+            parm_bcoef = [float(x) for x in self._raw_data['LENNARD_JONES_BCOEF']]
+            nbidx = [int(x) for x in self._raw_data['NONBONDED_PARM_INDEX']]
+            numTypes = self.getNumTypes()
+            atomTypeIndexes=self._getAtomTypeIndexes()
+            for ii in range(0, len(dihedralPointers), 5):
+                if int(dihedralPointers[ii+2])>0 and int(dihedralPointers[ii+3])>0:
+                    iAtom = int(dihedralPointers[ii])//3
+                    lAtom = int(dihedralPointers[ii+3])//3
+                    iidx = int(dihedralPointers[ii+4]) - 1
+                    chargeProd = charges[iAtom]*charges[lAtom]
+                    typ1 = atomTypeIndexes[iAtom] - 1
+                    typ2 = atomTypeIndexes[lAtom] - 1
+                    idx = nbidx[numTypes*typ1+typ2] - 1
+                    a = parm_acoef[idx]
+                    b = parm_bcoef[idx]
+                    try:
+                        epsilon = b * b / (4 * a) * ene_conv
+                        rMin = (2 * a / b) ** (1/6.0) * length_conv
+                    except ZeroDivisionError:
+                        rMin = 1
+                        epsilon = 0
+                    try:
+                        iScee = float(self._raw_data['SCEE_SCALE_FACTOR'][iidx])
+                    except KeyError:
+                        iScee = 1.2
+                    try:
+                        iScnb = float(self._raw_data['SCNB_SCALE_FACTOR'][iidx])
+                    except KeyError:
+                        iScnb = 2.0
+                    returnList.append((iAtom, lAtom, chargeProd, rMin, epsilon, iScee, iScnb))
+        else:
+            # This block gets hit if NbfixPresent is _not_ caught
+            for ii in range(0,len(dihedralPointers),5):
+                if int(dihedralPointers[ii+2])>0 and int(dihedralPointers[ii+3])>0:
+                    iAtom = int(dihedralPointers[ii])//3
+                    lAtom = int(dihedralPointers[ii+3])//3
+                    iidx = int(dihedralPointers[ii+4]) - 1
+                    chargeProd = charges[iAtom]*charges[lAtom]
+                    (rVdwI, epsilonI) = nonbondTerms[iAtom]
+                    (rVdwL, epsilonL) = nonbondTerms[lAtom]
+                    rMin = (rVdwI+rVdwL)
+                    epsilon = sqrt(epsilonI*epsilonL)
+                    try:
+                        iScee = float(self._raw_data["SCEE_SCALE_FACTOR"][iidx])
+                    except KeyError:
+                        iScee = 1.2
+                    try:
+                        iScnb = float(self._raw_data["SCNB_SCALE_FACTOR"][iidx])
+                    except KeyError:
+                        iScnb = 2.0
+    
+                    returnList.append((iAtom, lAtom, chargeProd, rMin, epsilon, iScee, iScnb))
         return returnList
 
     def getExcludedAtoms(self):
@@ -639,6 +702,10 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
         warnings.warn("1-4 scaling parameters in topology file are being ignored. "
             "This is not recommended unless you know what you are doing.")
 
+    has_1264 = 'LENNARD_JONES_CCOEF' in prmtop._raw_data.keys()
+    if has_1264:
+        parm_ccoef = [float(x) for x in prmtop._raw_data['LENNARD_JONES_CCOEF']]
+
     # Use pyopenmm implementation of OpenMM by default.
     if mm is None:
         mm = simtk.openmm
@@ -708,7 +775,7 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
                     l2 = bond[1]
 
             # Compute the distance between atoms and add a constraint
-            length = math.sqrt(l1*l1 + l2*l2 - 2*l1*l2*math.cos(aMin))
+            length = sqrt(l1*l1 + l2*l2 - 2*l1*l2*cos(aMin))
             system.addConstraint(iAtom, kAtom, length)
         if flexibleConstraints or not constrained:
             force.addAngle(iAtom, jAtom, kAtom, aMin, 2*k)
@@ -739,10 +806,17 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
         # System is periodic.
         # Set periodic box vectors for periodic system
         (boxBeta, boxX, boxY, boxZ) = prmtop.getBoxBetaAndDimensions()
-        d0 = units.Quantity(0.0, units.angstroms)
-        xVec = units.Quantity((boxX, d0,   d0))
-        yVec = units.Quantity((d0,   boxY, d0))
-        zVec = units.Quantity((d0,   d0,   boxZ))
+        boxBeta = boxBeta.value_in_unit(units.degrees)
+        boxX = boxX.value_in_unit(units.angstroms)
+        boxY = boxY.value_in_unit(units.angstroms)
+        boxZ = boxZ.value_in_unit(units.angstroms)
+        tmp = [[0.0, 0.0, 0.0],[0.0, 0.0, 0.0],[0.0, 0.0, 0.0]]
+        _box_vectors_from_lengths_angles([boxX, boxY, boxZ],
+                                         [boxBeta, boxBeta, boxBeta],
+                                         tmp)
+        xVec = units.Quantity(tmp[0], units.angstroms)
+        yVec = units.Quantity(tmp[1], units.angstroms)
+        zVec = units.Quantity(tmp[2], units.angstroms)
         system.setDefaultPeriodicBoxVectors(xVec, yVec, zVec)
 
         # Set cutoff.
@@ -773,9 +847,75 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
 
     # Add per-particle nonbonded parameters.
     sigmaScale = 2**(-1./6.) * 2.0
-    for (charge, (rVdw, epsilon)) in zip(prmtop.getCharges(), prmtop.getNonbondTerms()):
-        sigma = rVdw * sigmaScale
-        force.addParticle(charge, sigma, epsilon)
+    nbfix = False
+    try:
+        nonbondTerms = prmtop.getNonbondTerms()
+    except NbfixPresent:
+        nbfix = True
+        for charge in prmtop.getCharges():
+            force.addParticle(charge, 1.0, 0.0)
+        numTypes = prmtop.getNumTypes()
+        parm_acoef = [float(x) for x in prmtop._raw_data['LENNARD_JONES_ACOEF']]
+        parm_bcoef = [float(x) for x in prmtop._raw_data['LENNARD_JONES_BCOEF']]
+        nbidx = [int(x) for x in prmtop._raw_data['NONBONDED_PARM_INDEX']]
+        acoef = [0 for i in range(numTypes*numTypes)]
+        bcoef = acoef[:] # copy
+        ene_conv = units.kilocalories_per_mole.conversion_factor_to(units.kilojoules_per_mole)
+        length_conv = units.angstroms.conversion_factor_to(units.nanometers)
+        afac = sqrt(ene_conv) * length_conv**6
+        bfac = ene_conv * length_conv**6
+        for i in range(numTypes):
+            for j in range(numTypes):
+                idx = nbidx[numTypes*i+j] - 1
+                acoef[i+numTypes*j] = sqrt(parm_acoef[idx]) * afac
+                bcoef[i+numTypes*j] = parm_bcoef[idx] * bfac
+        if has_1264:
+            cfac = ene_conv * length_conv**4
+            ccoef = [0 for i in range(numTypes*numTypes)]
+            for i in range(numTypes):
+                for j in range(numTypes):
+                    idx = nbidx[numTypes*i+j] - 1
+                    ccoef[i+numTypes*j] = parm_ccoef[idx] * cfac
+            cforce = mm.CustomNonbondedForce('(a/r6)^2-b/r6-c/r^4; r6=r^6;'
+                                             'a=acoef(type1, type2);'
+                                             'b=bcoef(type1, type2);'
+                                             'c=ccoef(type1, type2);')
+        else:
+            cforce = mm.CustomNonbondedForce('(a/r6)^2-b/r6; r6=r^6;'
+                                             'a=acoef(type1, type2);'
+                                             'b=bcoef(type1, type2);')
+        cforce.addTabulatedFunction('acoef',
+                    mm.Discrete2DFunction(numTypes, numTypes, acoef))
+        cforce.addTabulatedFunction('bcoef',
+                    mm.Discrete2DFunction(numTypes, numTypes, bcoef))
+        if has_1264:
+            cforce.addTabulatedFunction('ccoef',
+                        mm.Discrete2DFunction(numTypes, numTypes, ccoef))
+        cforce.addPerParticleParameter('type')
+        for atom in prmtop._getAtomTypeIndexes():
+            cforce.addParticle((atom-1,))
+    else:
+        for (charge, (rVdw, epsilon)) in zip(prmtop.getCharges(), nonbondTerms):
+            sigma = rVdw * sigmaScale
+            force.addParticle(charge, sigma, epsilon)
+        if has_1264:
+            numTypes = prmtop.getNumTypes()
+            nbidx = [int(x) for x in prmtop._raw_data['NONBONDED_PARM_INDEX']]
+            ccoef = [0 for i in range(numTypes*numTypes)]
+            ene_conv = units.kilocalories_per_mole.conversion_factor_to(units.kilojoules_per_mole)
+            length_conv = units.angstroms.conversion_factor_to(units.nanometers)
+            cfac = ene_conv * length_conv**4
+            for i in range(numTypes):
+                for j in range(numTypes):
+                    idx = nbidx[numTypes*i+j] - 1
+                    ccoef[i+numTypes*j] = parm_ccoef[idx] * cfac
+            cforce = mm.CustomNonbondedForce('-c/r^4; c=ccoef(type1, type2)')
+            cforce.addTabulatedFunction('ccoef',
+                        mm.Discrete2DFunction(numTypes, numTypes, ccoef))
+            cforce.addPerParticleParameter('type')
+            for atom in prmtop._getAtomTypeIndexes():
+                cforce.addParticle((atom-1,))
+
 
     # Add 1-4 Interactions
     excludedAtomPairs = set()
@@ -798,6 +938,26 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
             if min((iAtom, jAtom), (jAtom, iAtom)) in excludedAtomPairs: continue
             force.addException(iAtom, jAtom, excludeParams[0], excludeParams[1], excludeParams[2])
 
+    # Copy the exceptions as exclusions to the CustomNonbondedForce if we have
+    # NBFIX terms
+    if nbfix or has_1264:
+        for i in range(force.getNumExceptions()):
+            ii, jj, chg, sig, eps = force.getExceptionParameters(i)
+            cforce.addExclusion(ii, jj)
+        # Now set the various properties based on the NonbondedForce object
+        if nonbondedMethod in ('PME', 'Ewald', 'CutoffPeriodic'):
+            cforce.setNonbondedMethod(cforce.CutoffPeriodic)
+            cforce.setCutoffDistance(nonbondedCutoff)
+            cforce.setUseLongRangeCorrection(True)
+        elif nonbondedMethod == 'CutoffNonPeriodic':
+            cforce.setNonbondedMethod(cforce.CutoffNonPeriodic)
+            cforce.setCutoffDistance(nonbondedCutoff)
+        elif nonbondedMethod == 'NoCutoff':
+            cforce.setNonbondedMethod(cforce.NoCutoff)
+        else:
+            raise ValueError('Unrecognized cutoff option %s' % nonbondedMethod)
+        # Add this force to the system
+        system.addForce(cforce)
     system.addForce(force)
 
     # Add virtual sites for water.
@@ -848,13 +1008,13 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
             if len(waterO[res]) == 1 and len(waterH[res]) == 2:
                 if len(waterEP[res]) == 1:
                     # Four point water
-                    weightH = distOE[res]/math.sqrt(distOH[res]**2-(0.5*distHH[res])**2)
+                    weightH = distOE[res]/sqrt(distOH[res]**2-(0.5*distHH[res])**2)
                     system.setVirtualSite(waterEP[res][0], mm.ThreeParticleAverageSite(waterO[res][0], waterH[res][0], waterH[res][1], 1-weightH, weightH/2, weightH/2))
                 elif len(waterEP[res]) == 2:
                     # Five point water
-                    weightH = cosOOP*distOE[res]/math.sqrt(distOH[res]**2-(0.5*distHH[res])**2)
-                    angleHOH = 2*math.asin(0.5*distHH[res]/distOH[res])
-                    lenCross = (distOH[res]**2)*math.sin(angleHOH)
+                    weightH = cosOOP*distOE[res]/sqrt(distOH[res]**2-(0.5*distHH[res])**2)
+                    angleHOH = 2*asin(0.5*distHH[res]/distOH[res])
+                    lenCross = (distOH[res]**2)*sin(angleHOH)
                     weightCross = sinOOP*distOE[res]/lenCross
                     system.setVirtualSite(waterEP[res][0], mm.OutOfPlaneSite(waterO[res][0], waterH[res][0], waterH[res][1], weightH/2, weightH/2, weightCross))
                     system.setVirtualSite(waterEP[res][1], mm.OutOfPlaneSite(waterO[res][0], waterH[res][0], waterH[res][1], weightH/2, weightH/2, -weightCross))
@@ -917,22 +1077,351 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
     return system
 
 #=============================================================================================
-# AMBER INPCRD loader
+# AMBER INPCRD loader classes
 #=============================================================================================
 
-def readAmberCoordinates(filename, read_box=False, read_velocities=False, verbose=False, asNumpy=False):
+class AmberAsciiRestart(object):
+    """
+    Class responsible for parsing Amber coordinates in the ASCII format.
+    Automatically detects the presence of velocities or box parameters in the
+    file.
+
+    Parameters
+    ----------
+    filename : str
+        Name of the restart file
+    asNumpy : bool (False)
+        Load the coordinates, velocities, and box as numpy ndarray objects
+
+    Attributes
+    ----------
+    coordinates : natom x 3 array, Quantity
+        Particle positions with units of length
+    velocities : natom x 3 array, Quantity
+        Particle velocities with units of length per time (None if velocities
+        are not present in the inpcrd file)
+    boxVectors : 3 x 3 array, Quantity
+        Box vectors with units of length (None if no box is present in the
+        inpcrd file)
+    time : float, Quantity
+        Simulation time (None if not present) with units of time
+    title : str
+        Title of the inpcrd file
+    filename : str
+        Name of the file we are parsing
+    natom : int
+        Number of atoms in the inpcrd file
+
+    Raises
+    ------
+        `IOError' if the file does not exist
+        `TypeError' if the format of the file is not recognized
+        `ValueError' if not all fields are numbers (for example, if a field is
+                     filled with ****'s)
+        `IndexError' if the file is empty
+        `ImportError' if numpy is requested but could not be imported
+    Example
+    -------
+    >>> f = AmberAsciiRestart('alanine-dipeptide.inpcrd')
+    >>> coordinates = f.coordinates
+    """
+
+    def __init__(self, filename, asNumpy=False):
+        # Make sure numpy is available if requested
+        if asNumpy and np is None:
+            raise ImportError('asNumpy=True: numpy is not available')
+        self._asNumpy = asNumpy
+        self.filename = filename
+        with open(filename, 'r') as f:
+            lines = f.readlines()
+            # Get rid of trailing blank lines
+            while lines and not lines[-1].strip():
+                lines.pop()
+            self._parse(lines)
+
+    def __str__(self):
+        return self.filename
+
+    def _parse(self, lines):
+        """ Parses through the inpcrd file """
+        global VELSCALE
+        self.title = lines[0].strip()
+        self.time = None
+
+        try:
+            words = lines[1].split()
+            self.natom = int(words[0])
+        except (IndexError, ValueError):
+            raise TypeError('Unrecognized file type [%s]' % self.filename)
+        
+        if len(words) >= 2:
+            self.time = float(words[1]) * units.picoseconds
+
+        if len(lines) == int(ceil(self.natom / 2.0) + 2):
+            hasbox = hasvels = False
+            self.boxVectors = self.velocities = None
+        elif self.natom in (1, 2) and len(lines) == 4:
+            # This is the _only_ case where line counting does not work -- there
+            # is either 1 or 2 atoms and there are 4 lines. The 1st 3 lines are
+            # the title, natom/time, and coordinates. The 4th are almost always
+            # velocities since Amber does not make it easy to make a periodic
+            # system with only 2 atoms. If natom is 1, the 4th line is either a
+            # velocity (3 #'s) or a box (6 #'s). If natom is 2, it is a bit
+            # ambiguous. However, velocities (which are scaled by 20.445) have a
+            # ~0% chance of being 60+, so we can pretty easily tell if the last
+            # line has box dimensions and angles or velocities. I cannot
+            # envision a _plausible_ scenario where the detection here will fail
+            # in real life.
+            line = lines[3]
+            if self.natom == 1:
+                tmp = [line[i:i+12] for i in range(0, 72, 12) if line[i:i+12]]
+                if len(tmp) == 3:
+                    hasvels = True
+                    hasbox = False
+                    self.boxVectors = False
+                elif len(tmp) == 6:
+                    hasbox = True
+                    hasvels = False
+                    self.velocities = None
+                else:
+                    raise TypeError('Unrecognized line in restart file %s' %
+                                    self.filename)
+            else:
+                # Ambiguous case
+                tmp = [float(line[i:i+12]) >= 60.0 for i in range(0, 72, 12)]
+                if any(tmp):
+                    hasbox = True
+                    hasvels = False
+                    self.velocities = False
+                else:
+                    hasvels = True
+                    hasbox = False
+                    self.boxVectors = False
+        elif len(lines) == int(ceil(self.natom / 2.0) + 3):
+            hasbox = True
+            hasvels = False
+            self.velocities = None
+        elif len(lines) == int(2 * ceil(self.natom / 2.0) + 2):
+            hasbox = False
+            self.boxVectors = None
+            hasvels = True
+        elif len(lines) == int(2 * ceil(self.natom / 2.0) + 3):
+            hasbox = hasvels = True
+        else:
+            raise TypeError('Badly formatted restart file. Has %d lines '
+                            'for %d atoms.' % (len(self.lines), self.natom))
+
+        if self._asNumpy:
+            coordinates = np.zeros((self.natom, 3), np.float32)
+            if hasvels:
+                velocities = np.zeros((self.natom, 3), np.float32)
+            if hasbox:
+                boxVectors = np.zeros((3, 3), np.float32)
+        else:
+            coordinates = [Vec3(0.0, 0.0, 0.0) for i in range(self.natom)]
+            if hasvels:
+                velocities = [Vec3(0.0, 0.0, 0.0) for i in range(self.natom)]
+            if hasbox:
+                boxVectors = [[0.0, 0.0, 0.0] for i in range(3)]
+
+        # Now it's time to parse.  Coordinates first
+        startline = 2
+        endline = startline + int(ceil(self.natom / 2.0))
+        idx = 0
+        for i in range(startline, endline):
+            line = lines[i]
+            x = float(line[ 0:12])
+            y = float(line[12:24])
+            z = float(line[24:36])
+            coordinates[idx] = Vec3(x, y, z)
+            idx += 1
+            if idx < self.natom:
+                x = float(line[36:48])
+                y = float(line[48:60])
+                z = float(line[60:72])
+                coordinates[idx] = Vec3(x, y, z)
+                idx += 1
+        self.coordinates = units.Quantity(coordinates, units.angstroms)
+        startline = endline
+        # Now it's time to parse velocities if we have them
+        if hasvels:
+            endline = startline + int(ceil(self.natom / 2.0))
+            idx = 0
+            for i in range(startline, endline):
+                line = lines[i]
+                x = float(line[ 0:12]) * VELSCALE
+                y = float(line[12:24]) * VELSCALE
+                z = float(line[24:36]) * VELSCALE
+                velocities[idx] = Vec3(x, y, z)
+                idx += 1
+                if idx < self.natom:
+                    x = float(line[36:48]) * VELSCALE
+                    y = float(line[48:60]) * VELSCALE
+                    z = float(line[60:72]) * VELSCALE
+                    velocities[idx] = Vec3(x, y, z)
+                    idx += 1
+            startline = endline
+            self.velocities = units.Quantity(velocities,
+                                             units.angstroms/units.picoseconds)
+        if hasbox:
+            line = lines[startline]
+            try:
+                tmp = [float(line[i:i+12]) for i in range(0, 72, 12)]
+            except (IndexError, ValueError):
+                raise ValueError('Could not parse box line in %s' %
+                                 self.filename)
+            lengths = tmp[:3]
+            angles = tmp[3:]
+            _box_vectors_from_lengths_angles(lengths, angles, boxVectors)
+            self.boxVectors = [units.Quantity(Vec3(*x), units.angstrom) for x in boxVectors]
+
+class AmberNetcdfRestart(object):
+    """
+    Amber restart/inpcrd file in the NetCDF format (full double-precision
+    coordinates, velocities, and unit cell parameters). Reads NetCDF restarts
+    written by LEaP and pmemd/sander. Requires scipy to parse NetCDF files.
+
+    Parameters
+    ----------
+    filename : str
+        Name of the restart file
+    asNumpy : bool (False)
+        Load the coordinates, velocities, and box as numpy ndarray objects
+
+    Attributes
+    ----------
+    coordinates : natom x 3 array, Quantity
+        Particle positions with units of length
+    velocities : natom x 3 array, Quantity
+        Particle velocities with units of length per time (None if velocities
+        are not present in the inpcrd file)
+    boxVectors : 3 x 3 array, Quantity
+        Box vectors with units of length (None if no box is present in the
+        inpcrd file)
+    time : float, Quantity
+        Simulation time (None if not present) with units of time
+    title : str
+        Title of the inpcrd file
+    filename : str
+        Name of the file we are parsing
+    natom : int
+        Number of atoms in the inpcrd file
+
+    Raises
+    ------
+        `IOError' if the file does not exist
+        `TypeError' if the file is not a NetCDF v3 file
+        `ImportError' if scipy is not available
+    Example
+    -------
+    >>> f = AmberNetcdfRestart('alanine-dipeptide.ncrst')
+    >>> coordinates = f.coordinates
+    """
+    def __init__(self, filename, asNumpy=False):
+        try:
+            from scipy.io.netcdf import NetCDFFile
+        except ImportError:
+            raise ImportError('scipy is necessary to parse NetCDF restarts')
+        
+        self.filename = filename
+        self.velocities = self.boxVectors = self.time = None
+
+        # Extract the information from the NetCDF file. We need to make copies
+        # here because the NetCDF variables are mem-mapped, but is only mapped
+        # to valid memory while the file handle is open. Since the context
+        # manager GCs the ncfile handle, the memory for the original variables
+        # is no longer valid. So copy those arrays while the handle is still
+        # open. This is unnecessary in scipy v.0.12 and lower because NetCDFFile
+        # accidentally leaks the file handle, but that was 'fixed' in 0.13. This
+        # fix taken from MDTraj
+        ncfile = NetCDFFile(filename, 'r')
+        try:
+            self.natom = ncfile.dimensions['atom']
+            self.coordinates = np.array(ncfile.variables['coordinates'][:])
+            if 'velocities' in ncfile.variables:
+                vels = ncfile.variables['velocities']
+                self.velocities = np.array(vels[:]) * vels.scale_factor
+            if ('cell_lengths' in ncfile.variables and
+                'cell_angles' in ncfile.variables):
+                self.boxVectors = np.zeros((3,3), np.float32)
+                _box_vectors_from_lengths_angles(
+                        ncfile.variables['cell_lengths'][:],
+                        ncfile.variables['cell_angles'][:],
+                        self.boxVectors,
+                )
+            if 'time' in ncfile.variables:
+                self.time = ncfile.variables['time'].getValue()
+        finally:
+            ncfile.close()
+
+        # They are already numpy -- convert to list if we don't want numpy
+        if not asNumpy:
+            self.coordinates = [Vec3(*x) for x in self.coordinates]
+            if self.velocities is not None:
+                self.velocities = [Vec3(*x) for x in self.velocities]
+            if self.boxVectors is not None:
+                self.boxVectors = [Vec3(*x) for x in self.boxVectors]
+
+        # Now add the units
+        self.coordinates = units.Quantity(self.coordinates, units.angstroms)
+        if self.velocities is not None:
+            self.velocities = units.Quantity(self.velocities,
+                                             units.angstroms/units.picoseconds)
+        if self.boxVectors is not None:
+            self.boxVectors = [units.Quantity(x, units.angstroms) for x in self.boxVectors]
+        self.time = units.Quantity(self.time, units.picosecond)
+
+def _box_vectors_from_lengths_angles(lengths, angles, boxVectors):
+    """
+    Converts lengths and angles into a series of box vectors and modifies
+    boxVectors in-place (it must be a mutable sequence)
+
+    Parameters
+    ----------
+    lengths : 3-element array of floats
+        Lengths of the 3 periodic box vectors
+    angles : 3-element array of floats
+        Angles (in degrees) between the 3 periodic box vectors
+    boxVectors : mutable 3x3 sequence
+    """
+    alpha = angles[0] * pi / 180.0
+    beta = angles[1] * pi / 180.0
+    gamma = angles[2] * pi / 180.0
+
+    boxVectors[0][0] = lengths[0]
+
+    boxVectors[1][0] = lengths[1] * cos(gamma)
+    boxVectors[1][1] = lengths[1] * sin(gamma)
+
+    boxVectors[2][0] = cx = lengths[2] * cos(beta)
+    boxVectors[2][1] = cy = lengths[2] * (cos(alpha) - cos(beta) * cos(gamma))
+    boxVectors[2][2] = sqrt(lengths[2]*lengths[2] - cx*cx - cy*cy)
+
+    boxVectors[0][1] = boxVectors[0][2] = boxVectors[1][2] = 0.0
+
+    # Now make sure any vector close to zero is zero exactly
+    for i in range(3):
+        for j in range(3):
+            if abs(boxVectors[i][j]) < TINY:
+                boxVectors[i][j] = 0.0
+
+def readAmberCoordinates(filename, asNumpy=False):
     """
     Read atomic coordinates (and optionally, box vectors) from Amber formatted coordinate file.
 
     ARGUMENTS
 
     filename (string) - name of Amber coordinates file to be read in
-    system (simtk.openmm.System) - System object for which coordinates are to be read
 
     OPTIONAL ARGUMENTS
 
-    verbose (boolean) - if True, will print out verbose information about the file being read
     asNumpy (boolean) - if True, results will be returned as Numpy arrays instead of lists of Vec3s
+
+    RETURNS
+
+    coordinates, velocities, boxVectors
+        The velocities and boxVectors will be None if they are not found in the
+        restart file
 
     EXAMPLES
 
@@ -940,111 +1429,48 @@ def readAmberCoordinates(filename, read_box=False, read_velocities=False, verbos
 
     >>> directory = os.path.join(os.getenv('YANK_INSTALL_DIR'), 'test', 'systems', 'alanine-dipeptide-gbsa')
     >>> crd_filename = os.path.join(directory, 'alanine-dipeptide.inpcrd')
-    >>> coordinates = readAmberCoordinates(crd_filename)
+    >>> coordinates, velocities, box_vectors = readAmberCoordinates(crd_filename)
 
     Read coordinates in solvent.
 
     >>> directory = os.path.join(os.getenv('YANK_INSTALL_DIR'), 'test', 'systems', 'alanine-dipeptide-explicit')
     >>> crd_filename = os.path.join(directory, 'alanine-dipeptide.inpcrd')
-    >>> [coordinates, box_vectors] = readAmberCoordinates(crd_filename, read_box=True)
-
+    >>> coordinates, velocities, box_vectors = readAmberCoordinates(crd_filename)
     """
 
-    # Open coordinate file for reading.
-    infile = open(filename, 'r')
+    try:
+        crdfile = AmberNetcdfRestart(filename)
+    except ImportError:
+        # See if it's an ASCII file.  If so, no need to complain
+        try:
+            crdfile = AmberAsciiRestart(filename)
+        except TypeError:
+            raise TypeError('Problem parsing %s as an ASCII Amber restart file '
+                            'and scipy could not be imported to try reading as '
+                            'a NetCDF restart file.' % filename)
+        except (IndexError, ValueError):
+            raise TypeError('Could not parse Amber ASCII restart file %s' %
+                            filename)
+        except ImportError:
+            raise ImportError('Could not find numpy; cannot use asNumpy=True')
+    except TypeError:
+        # We had scipy, but this is not a NetCDF v3 file. Try as ASCII now
+        try:
+            crdfile = AmberAsciiRestart(filename)
+        except TypeError:
+            raise
+            raise TypeError('Problem parsing %s as an ASCII Amber restart file'
+                            % filename)
+        except (IndexError, ValueError):
+            raise TypeError('Could not parse Amber ASCII restart file %s' %
+                            filename)
+        # Import error cannot happen, since we had scipy which has numpy as a
+        # prereq. Do not catch that exception (only catch what you intend to
+        # catch...)
 
-    # Read title
-    title = infile.readline().strip()
-    if verbose: print "title: '%s'" % title
-
-    # Read number of atoms
-    natoms = int(infile.readline().split()[0])
-    if verbose: print "%d atoms" % natoms
-
-    # Allocate storage for coordinates
-    coordinates = []
-
-    # Read coordinates
-    mm = simtk.openmm
-    natoms_read = 0
-    while (natoms_read < natoms):
-        line = infile.readline()
-        if len(line) == 0:
-            raise ValueError("Unexpected end of file while reading coordinates")
-        line = line.strip()
-        elements = line.split()
-        while (len(elements) > 0):
-            coordinates.append(mm.Vec3(float(elements.pop(0)), float(elements.pop(0)), float(elements.pop(0))))
-            natoms_read += 1
-    if asNumpy:
-        newcoords = numpy.zeros([natoms,3], numpy.float32)
-        for i in range(len(coordinates)):
-            for j in range(3):
-                newcoords[i,j] = coordinates[i][j]
-        coordinates = newcoords
-    # Assign units.
-    coordinates = units.Quantity(coordinates, units.angstroms)
-
-    # Read velocities if requested.
-    velocities = None
-    if (read_velocities):
-        # Read velocities
-        velocities = []
-        natoms_read = 0
-        while (natoms_read < natoms):
-            line = infile.readline()
-            if len(line) == 0:
-                raise ValueError("Unexpected end of file while reading velocities")
-            line = line.strip()
-            elements = line.split()
-            while (len(elements) > 0):
-                velocities.append(20.455*mm.Vec3(float(elements.pop(0)), float(elements.pop(0)), float(elements.pop(0))))
-                natoms_read += 1
-        if asNumpy:
-            newvel = numpy.zeros([natoms,3], numpy.float32)
-            for i in range(len(velocities)):
-                for j in range(3):
-                    newvel[i,j] = velocities[i][j]
-            velocities = newvel
-        # Assign units.
-        velocities = units.Quantity(velocities, units.angstroms/units.picoseconds)
-
-    # Read box size if present
-    box_vectors = None
-    if (read_box):
-        line = infile.readline()
-        if len(line) == 0:
-            raise ValueError("Unexpected end of file while reading box vectors")
-        line = line.strip()
-        elements = line.split()
-        nelements = len(elements)
-        box_dimensions = [0.0]*nelements
-        for i in range(nelements):
-            box_dimensions[i] = float(elements[i])
-        # TODO: Deal with non-standard box sizes.
-        if nelements == 6:
-            if asNumpy:
-                a = units.Quantity(numpy.array([box_dimensions[0], 0.0, 0.0]), units.angstroms)
-                b = units.Quantity(numpy.array([0.0, box_dimensions[1], 0.0]), units.angstroms)
-                c = units.Quantity(numpy.array([0.0, 0.0, box_dimensions[2]]), units.angstroms)
-            else:
-                a = units.Quantity(mm.Vec3(box_dimensions[0], 0.0, 0.0), units.angstroms)
-                b = units.Quantity(mm.Vec3(0.0, box_dimensions[1], 0.0), units.angstroms)
-                c = units.Quantity(mm.Vec3(0.0, 0.0, box_dimensions[2]), units.angstroms)
-            box_vectors = [a,b,c]
-        else:
-            raise Exception("Don't know what to do with box vectors: %s" % line)
-
-    # Close file
-    infile.close()
-
-    if box_vectors and velocities:
-        return (coordinates, box_vectors, velocities)
-    if box_vectors:
-        return (coordinates, box_vectors)
-    if velocities:
-        return (coordinates, velocities)
-    return coordinates
+    # We got here... one of the file types worked. Return the coordinates,
+    # velocities, and boxVectors
+    return crdfile.coordinates, crdfile.velocities, crdfile.boxVectors
 
 #=============================================================================================
 # MAIN AND TESTS

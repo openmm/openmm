@@ -35,12 +35,12 @@
 #include "Integrator.h"
 #include "State.h"
 #include "System.h"
-#include <ctime>
 #include <iosfwd>
 #include <map>
 #include <string>
 #include <vector>
 #include "internal/windowsExport.h"
+#include "internal/OSRngSeed.h"
 
 namespace OpenMM {
 
@@ -164,7 +164,7 @@ public:
      * @param temperature    the temperature for which to select the velocities (measured in Kelvin)
      * @param randomSeed     the random number seed to use when selecting velocities
      */
-    void setVelocitiesToTemperature(double temperature, int randomSeed=time(NULL));
+    void setVelocitiesToTemperature(double temperature, int randomSeed=osrngseed());
     /**
      * Get the value of an adjustable parameter defined by a Force object in the System.
      * 
@@ -247,6 +247,15 @@ public:
      * @param stream    an input stream the checkpoint data should be read from
      */
     void loadCheckpoint(std::istream& stream);
+    /**
+     * Get a description of how the particles in the system are grouped into molecules.  Two particles are in the
+     * same molecule if they are connected by constraints or bonds, where every Force object can define bonds
+     * in whatever way are appropriate to that force.
+     *
+     * Each element lists the indices of all particles in a single molecule.  Every particle is guaranteed to
+     * belong to exactly one molecule.
+     */
+    const std::vector<std::vector<int> >& getMolecules() const;
 private:
     friend class Force;
     friend class Platform;

@@ -552,7 +552,7 @@ ForceValidationResult* ValidateOpenMMForces::compareForce(Context& context, std:
         if( forceName.compare( "NA" ) == 0 ){
             std::stringstream message;
             message << "Force at index=" << ii << " not found -- aborting!";
-            std::cerr << message << std::endl;
+            std::cerr << message.str() << std::endl;
             throw OpenMM::OpenMMException(message.str());
         }
         systemForceNameMap[forceName] = ii;

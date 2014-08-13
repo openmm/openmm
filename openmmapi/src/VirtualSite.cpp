@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2012 Stanford University and the Authors.           *
+ * Portions copyright (c) 2012-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -31,6 +31,7 @@
 
 #include "openmm/VirtualSite.h"
 #include "openmm/OpenMMException.h"
+#include <cmath>
 #include <vector>
 
 using namespace OpenMM;
@@ -102,4 +103,35 @@ double OutOfPlaneSite::getWeight13() const {
 
 double OutOfPlaneSite::getWeightCross() const {
     return weightCross;
+}
+
+LocalCoordinatesSite::LocalCoordinatesSite(int particle1, int particle2, int particle3, const Vec3& originWeights, const Vec3& xWeights, const Vec3& yWeights, const Vec3& localPosition) :
+        originWeights(originWeights), xWeights(xWeights), yWeights(yWeights), localPosition(localPosition) {
+    if (fabs(originWeights[0]+originWeights[1]+originWeights[2]-1.0) > 1e-6)
+        throw OpenMMException("LocalCoordinatesSite: Weights for computing origin must add to 1");
+    if (fabs(xWeights[0]+xWeights[1]+xWeights[2]) > 1e-6)
+        throw OpenMMException("LocalCoordinatesSite: Weights for computing x axis must add to 0");
+    if (fabs(yWeights[0]+yWeights[1]+yWeights[2]) > 1e-6)
+        throw OpenMMException("LocalCoordinatesSite: Weights for computing y axis must add to 0");
+    vector<int> particles(3);
+    particles[0] = particle1;
+    particles[1] = particle2;
+    particles[2] = particle3;
+    setParticles(particles);
+}
+
+const Vec3& LocalCoordinatesSite::getOriginWeights() const {
+    return originWeights;
+}
+
+const Vec3& LocalCoordinatesSite::getXWeights() const {
+    return xWeights;
+}
+
+const Vec3& LocalCoordinatesSite::getYWeights() const {
+    return yWeights;
+}
+
+const Vec3& LocalCoordinatesSite::getLocalPosition() const {
+    return localPosition;
 }

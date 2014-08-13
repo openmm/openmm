@@ -685,7 +685,8 @@ extern "C" __global__ void updateCCMAAtomPositions(const int* __restrict__ numAt
  */
 extern "C" __global__ void computeVirtualSites(real4* __restrict__ posq, real4* __restrict__ posqCorrection, const int4* __restrict__ avg2Atoms, const real2* __restrict__ avg2Weights,
         const int4* __restrict__ avg3Atoms, const real4* __restrict__ avg3Weights,
-        const int4* __restrict__ outOfPlaneAtoms, const real4* __restrict__ outOfPlaneWeights) {
+        const int4* __restrict__ outOfPlaneAtoms, const real4* __restrict__ outOfPlaneWeights,
+        const int4* __restrict__ localCoordsAtoms, const real* __restrict__ localCoordsParams) {
     
     // Two particle average sites.
     
@@ -733,6 +734,35 @@ extern "C" __global__ void computeVirtualSites(real4* __restrict__ posq, real4* 
         pos.z = pos1.z + v12.z*weights.x + v13.z*weights.y + cr.z*weights.z;
         storePos(posq, posqCorrection, atoms.x, pos);
     }
+    
+    // Local coordinates sites.
+    
+    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_LOCAL_COORDS; index += blockDim.x*gridDim.x) {
+        int4 atoms = localCoordsAtoms[index];
+        const real* params = &localCoordsParams[12*index];
+        mixed4 pos = loadPos(posq, posqCorrection, atoms.x);
+        mixed4 pos1_4 = loadPos(posq, posqCorrection, atoms.y);
+        mixed4 pos2_4 = loadPos(posq, posqCorrection, atoms.z);
+        mixed4 pos3_4 = loadPos(posq, posqCorrection, atoms.w);
+        mixed3 pos1 = make_mixed3(pos1_4.x, pos1_4.y, pos1_4.z);
+        mixed3 pos2 = make_mixed3(pos2_4.x, pos2_4.y, pos2_4.z);
+        mixed3 pos3 = make_mixed3(pos3_4.x, pos3_4.y, pos3_4.z);
+        mixed3 originWeights = make_mixed3(params[0], params[1], params[2]);
+        mixed3 xWeights = make_mixed3(params[3], params[4], params[5]);
+        mixed3 yWeights = make_mixed3(params[6], params[7], params[8]);
+        mixed3 localPosition = make_mixed3(params[9], params[10], params[11]);
+        mixed3 origin = pos1*originWeights.x + pos2*originWeights.y + pos3*originWeights.z;
+        mixed3 xdir = pos1*xWeights.x + pos2*xWeights.y + pos3*xWeights.z;
+        mixed3 ydir = pos1*yWeights.x + pos2*yWeights.y + pos3*yWeights.z;
+        mixed3 zdir = cross(xdir, ydir);
+        xdir *= rsqrt(xdir.x*xdir.x+xdir.y*xdir.y+xdir.z*xdir.z);
+        zdir *= rsqrt(zdir.x*zdir.x+zdir.y*zdir.y+zdir.z*zdir.z);
+        ydir = cross(zdir, xdir);
+        pos.x = origin.x + xdir.x*localPosition.x + ydir.x*localPosition.y + zdir.x*localPosition.z;
+        pos.y = origin.y + xdir.y*localPosition.x + ydir.y*localPosition.y + zdir.y*localPosition.z;
+        pos.z = origin.z + xdir.z*localPosition.x + ydir.z*localPosition.y + zdir.z*localPosition.z;
+        storePos(posq, posqCorrection, atoms.x, pos);
+    }
 }
 
 inline __device__ real3 loadForce(int index, long long* __restrict__ force) {
@@ -753,7 +783,8 @@ inline __device__ void addForce(int index, long long* __restrict__ force, real3 
 extern "C" __global__ void distributeVirtualSiteForces(const real4* __restrict__ posq, const real4* __restrict__ posqCorrection, long long* __restrict__ force,
         const int4* __restrict__ avg2Atoms, const real2* __restrict__ avg2Weights,
         const int4* __restrict__ avg3Atoms, const real4* __restrict__ avg3Weights,
-        const int4* __restrict__ outOfPlaneAtoms, const real4* __restrict__ outOfPlaneWeights) {
+        const int4* __restrict__ outOfPlaneAtoms, const real4* __restrict__ outOfPlaneWeights,
+        const int4* __restrict__ localCoordsAtoms, const real* __restrict__ localCoordsParams) {
     
     // Two particle average sites.
     
@@ -796,6 +827,92 @@ extern "C" __global__ void distributeVirtualSiteForces(const real4* __restrict__
         addForce(atoms.y, force, f-fp2-fp3);
         addForce(atoms.z, force, fp2);
         addForce(atoms.w, force, fp3);
+    }
+    
+    // Local coordinates sites.
+    
+    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_LOCAL_COORDS; index += blockDim.x*gridDim.x) {
+        int4 atoms = localCoordsAtoms[index];
+        const real* params = &localCoordsParams[12*index];
+        mixed4 pos = loadPos(posq, posqCorrection, atoms.x);
+        mixed4 pos1_4 = loadPos(posq, posqCorrection, atoms.y);
+        mixed4 pos2_4 = loadPos(posq, posqCorrection, atoms.z);
+        mixed4 pos3_4 = loadPos(posq, posqCorrection, atoms.w);
+        mixed3 pos1 = make_mixed3(pos1_4.x, pos1_4.y, pos1_4.z);
+        mixed3 pos2 = make_mixed3(pos2_4.x, pos2_4.y, pos2_4.z);
+        mixed3 pos3 = make_mixed3(pos3_4.x, pos3_4.y, pos3_4.z);
+        mixed3 originWeights = make_mixed3(params[0], params[1], params[2]);
+        mixed3 wx = make_mixed3(params[3], params[4], params[5]);
+        mixed3 wy = make_mixed3(params[6], params[7], params[8]);
+        mixed3 localPosition = make_mixed3(params[9], params[10], params[11]);
+        mixed3 origin = pos1*originWeights.x + pos2*originWeights.y + pos3*originWeights.z;
+        mixed3 xdir = pos1*wx.x + pos2*wx.y + pos3*wx.z;
+        mixed3 ydir = pos1*wy.x + pos2*wy.y + pos3*wy.z;
+        mixed3 zdir = cross(xdir, ydir);
+        mixed invNormXdir = rsqrt(xdir.x*xdir.x+xdir.y*xdir.y+xdir.z*xdir.z);
+        mixed invNormZdir = rsqrt(zdir.x*zdir.x+zdir.y*zdir.y+zdir.z*zdir.z);
+        mixed3 dx = xdir*invNormXdir;
+        mixed3 dz = zdir*invNormZdir;
+        mixed3 dy = cross(dz, dx);
+
+        // The derivatives for this case are very complicated.  They were computed with SymPy then simplified by hand.
+
+        mixed t11 = (wx.x*ydir.x-wy.x*xdir.x)*invNormZdir;
+        mixed t12 = (wx.x*ydir.y-wy.x*xdir.y)*invNormZdir;
+        mixed t13 = (wx.x*ydir.z-wy.x*xdir.z)*invNormZdir;
+        mixed t21 = (wx.y*ydir.x-wy.y*xdir.x)*invNormZdir;
+        mixed t22 = (wx.y*ydir.y-wy.y*xdir.y)*invNormZdir;
+        mixed t23 = (wx.y*ydir.z-wy.y*xdir.z)*invNormZdir;
+        mixed t31 = (wx.z*ydir.x-wy.z*xdir.x)*invNormZdir;
+        mixed t32 = (wx.z*ydir.y-wy.z*xdir.y)*invNormZdir;
+        mixed t33 = (wx.z*ydir.z-wy.z*xdir.z)*invNormZdir;
+        mixed sx1 = t13*dz.y-t12*dz.z;
+        mixed sy1 = t11*dz.z-t13*dz.x;
+        mixed sz1 = t12*dz.x-t11*dz.y;
+        mixed sx2 = t23*dz.y-t22*dz.z;
+        mixed sy2 = t21*dz.z-t23*dz.x;
+        mixed sz2 = t22*dz.x-t21*dz.y;
+        mixed sx3 = t33*dz.y-t32*dz.z;
+        mixed sy3 = t31*dz.z-t33*dz.x;
+        mixed sz3 = t32*dz.x-t31*dz.y;
+        mixed3 wxScaled = wx*invNormXdir;
+        real3 f = loadForce(atoms.x, force);
+        mixed3 fp1 = localPosition*f.x;
+        mixed3 fp2 = localPosition*f.y;
+        mixed3 fp3 = localPosition*f.z;
+        real3 f1 = make_real3(0);
+        real3 f2 = make_real3(0);
+        real3 f3 = make_real3(0);
+        f1.x += fp1.x*wxScaled.x*(1-dx.x*dx.x) + fp1.z*(dz.x*sx1    ) + fp1.y*((-dx.x*dy.x     )*wxScaled.x + dy.x*sx1 - dx.y*t12 - dx.z*t13) + f.x*originWeights.x;
+        f1.y += fp1.x*wxScaled.x*( -dx.x*dx.y) + fp1.z*(dz.x*sy1+t13) + fp1.y*((-dx.y*dy.x-dz.z)*wxScaled.x + dy.x*sy1 + dx.y*t11);
+        f1.z += fp1.x*wxScaled.x*( -dx.x*dx.z) + fp1.z*(dz.x*sz1-t12) + fp1.y*((-dx.z*dy.x+dz.y)*wxScaled.x + dy.x*sz1 + dx.z*t11);
+        f2.x += fp1.x*wxScaled.y*(1-dx.x*dx.x) + fp1.z*(dz.x*sx2    ) + fp1.y*((-dx.x*dy.x     )*wxScaled.y + dy.x*sx2 - dx.y*t22 - dx.z*t23) + f.x*originWeights.y;
+        f2.y += fp1.x*wxScaled.y*( -dx.x*dx.y) + fp1.z*(dz.x*sy2+t23) + fp1.y*((-dx.y*dy.x-dz.z)*wxScaled.y + dy.x*sy2 + dx.y*t21);
+        f2.z += fp1.x*wxScaled.y*( -dx.x*dx.z) + fp1.z*(dz.x*sz2-t22) + fp1.y*((-dx.z*dy.x+dz.y)*wxScaled.y + dy.x*sz2 + dx.z*t21);
+        f3.x += fp1.x*wxScaled.z*(1-dx.x*dx.x) + fp1.z*(dz.x*sx3    ) + fp1.y*((-dx.x*dy.x     )*wxScaled.z + dy.x*sx3 - dx.y*t32 - dx.z*t33) + f.x*originWeights.z;
+        f3.y += fp1.x*wxScaled.z*( -dx.x*dx.y) + fp1.z*(dz.x*sy3+t33) + fp1.y*((-dx.y*dy.x-dz.z)*wxScaled.z + dy.x*sy3 + dx.y*t31);
+        f3.z += fp1.x*wxScaled.z*( -dx.x*dx.z) + fp1.z*(dz.x*sz3-t32) + fp1.y*((-dx.z*dy.x+dz.y)*wxScaled.z + dy.x*sz3 + dx.z*t31);
+        f1.x += fp2.x*wxScaled.x*( -dx.y*dx.x) + fp2.z*(dz.y*sx1-t13) - fp2.y*(( dx.x*dy.y-dz.z)*wxScaled.x - dy.y*sx1 - dx.x*t12);
+        f1.y += fp2.x*wxScaled.x*(1-dx.y*dx.y) + fp2.z*(dz.y*sy1    ) - fp2.y*(( dx.y*dy.y     )*wxScaled.x - dy.y*sy1 + dx.x*t11 + dx.z*t13) + f.y*originWeights.x;
+        f1.z += fp2.x*wxScaled.x*( -dx.y*dx.z) + fp2.z*(dz.y*sz1+t11) - fp2.y*(( dx.z*dy.y+dz.x)*wxScaled.x - dy.y*sz1 - dx.z*t12);
+        f2.x += fp2.x*wxScaled.y*( -dx.y*dx.x) + fp2.z*(dz.y*sx2-t23) - fp2.y*(( dx.x*dy.y-dz.z)*wxScaled.y - dy.y*sx2 - dx.x*t22);
+        f2.y += fp2.x*wxScaled.y*(1-dx.y*dx.y) + fp2.z*(dz.y*sy2    ) - fp2.y*(( dx.y*dy.y     )*wxScaled.y - dy.y*sy2 + dx.x*t21 + dx.z*t23) + f.y*originWeights.y;
+        f2.z += fp2.x*wxScaled.y*( -dx.y*dx.z) + fp2.z*(dz.y*sz2+t21) - fp2.y*(( dx.z*dy.y+dz.x)*wxScaled.y - dy.y*sz2 - dx.z*t22);
+        f3.x += fp2.x*wxScaled.z*( -dx.y*dx.x) + fp2.z*(dz.y*sx3-t33) - fp2.y*(( dx.x*dy.y-dz.z)*wxScaled.z - dy.y*sx3 - dx.x*t32);
+        f3.y += fp2.x*wxScaled.z*(1-dx.y*dx.y) + fp2.z*(dz.y*sy3    ) - fp2.y*(( dx.y*dy.y     )*wxScaled.z - dy.y*sy3 + dx.x*t31 + dx.z*t33) + f.y*originWeights.z;
+        f3.z += fp2.x*wxScaled.z*( -dx.y*dx.z) + fp2.z*(dz.y*sz3+t31) - fp2.y*(( dx.z*dy.y+dz.x)*wxScaled.z - dy.y*sz3 - dx.z*t32);
+        f1.x += fp3.x*wxScaled.x*( -dx.z*dx.x) + fp3.z*(dz.z*sx1+t12) + fp3.y*((-dx.x*dy.z-dz.y)*wxScaled.x + dy.z*sx1 + dx.x*t13);
+        f1.y += fp3.x*wxScaled.x*( -dx.z*dx.y) + fp3.z*(dz.z*sy1-t11) + fp3.y*((-dx.y*dy.z+dz.x)*wxScaled.x + dy.z*sy1 + dx.y*t13);
+        f1.z += fp3.x*wxScaled.x*(1-dx.z*dx.z) + fp3.z*(dz.z*sz1    ) + fp3.y*((-dx.z*dy.z     )*wxScaled.x + dy.z*sz1 - dx.x*t11 - dx.y*t12) + f.z*originWeights.x;
+        f2.x += fp3.x*wxScaled.y*( -dx.z*dx.x) + fp3.z*(dz.z*sx2+t22) + fp3.y*((-dx.x*dy.z-dz.y)*wxScaled.y + dy.z*sx2 + dx.x*t23);
+        f2.y += fp3.x*wxScaled.y*( -dx.z*dx.y) + fp3.z*(dz.z*sy2-t21) + fp3.y*((-dx.y*dy.z+dz.x)*wxScaled.y + dy.z*sy2 + dx.y*t23);
+        f2.z += fp3.x*wxScaled.y*(1-dx.z*dx.z) + fp3.z*(dz.z*sz2    ) + fp3.y*((-dx.z*dy.z     )*wxScaled.y + dy.z*sz2 - dx.x*t21 - dx.y*t22) + f.z*originWeights.y;
+        f3.x += fp3.x*wxScaled.z*( -dx.z*dx.x) + fp3.z*(dz.z*sx3+t32) + fp3.y*((-dx.x*dy.z-dz.y)*wxScaled.z + dy.z*sx3 + dx.x*t33);
+        f3.y += fp3.x*wxScaled.z*( -dx.z*dx.y) + fp3.z*(dz.z*sy3-t31) + fp3.y*((-dx.y*dy.z+dz.x)*wxScaled.z + dy.z*sy3 + dx.y*t33);
+        f3.z += fp3.x*wxScaled.z*(1-dx.z*dx.z) + fp3.z*(dz.z*sz3    ) + fp3.y*((-dx.z*dy.z     )*wxScaled.z + dy.z*sz3 - dx.x*t31 - dx.y*t32) + f.z*originWeights.z;
+        addForce(atoms.y, force, f1);
+        addForce(atoms.z, force, f2);
+        addForce(atoms.w, force, f3);
     }
 }
 

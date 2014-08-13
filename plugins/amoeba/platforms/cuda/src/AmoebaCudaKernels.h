@@ -375,6 +375,7 @@ private:
         const char* getSortKey() const {return "value.y";}
     };
     void initializeScaleFactors();
+    bool iterateDipolesByDIIS(int iteration);
     void ensureMultipolesValid(ContextImpl& context);
     template <class T, class T4, class M4> void computeSystemMultipoleMoments(ContextImpl& context, std::vector<double>& outputMultipoleMoments);
     int numMultipoles, maxInducedIterations;
@@ -399,6 +400,13 @@ private:
     CudaArray* inducedDipole;
     CudaArray* inducedDipolePolar;
     CudaArray* inducedDipoleErrors;
+    CudaArray* prevDipoles;
+    CudaArray* prevDipolesPolar;
+    CudaArray* prevDipolesGk;
+    CudaArray* prevDipolesGkPolar;
+    CudaArray* prevErrors;
+    CudaArray* diisMatrix;
+    CudaArray* diisCoefficients;
     CudaArray* polarizability;
     CudaArray* covalentFlags;
     CudaArray* polarizationGroupFlags;
@@ -419,8 +427,10 @@ private:
     CUfunction computeMomentsKernel, recordInducedDipolesKernel, computeFixedFieldKernel, computeInducedFieldKernel, updateInducedFieldKernel, electrostaticsKernel, mapTorqueKernel;
     CUfunction pmeGridIndexKernel, pmeSpreadFixedMultipolesKernel, pmeSpreadInducedDipolesKernel, pmeFinishSpreadChargeKernel, pmeConvolutionKernel;
     CUfunction pmeFixedPotentialKernel, pmeInducedPotentialKernel, pmeFixedForceKernel, pmeInducedForceKernel, pmeRecordInducedFieldDipolesKernel, computePotentialKernel;
+    CUfunction recordDIISDipolesKernel, buildMatrixKernel;
     CudaCalcAmoebaGeneralizedKirkwoodForceKernel* gkKernel;
     static const int PmeOrder = 5;
+    static const int MaxPrevDIISDipoles = 20;
 };
 
 /**

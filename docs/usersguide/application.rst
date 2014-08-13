@@ -95,7 +95,7 @@ in the new window.
 
 If you plan to use the CUDA platform, OpenMM also needs to locate the CUDA
 kernel compiler (nvcc).  By default it looks for it in the location
-/usr/local/cuda/bin/nvcc.  If you have installed the CUDA toolkit in a different
+:file:`/usr/local/cuda/bin/nvcc`.  If you have installed the CUDA toolkit in a different
 location, you can set OPENMM_CUDA_COMPILER to tell OpenMM where to find it.  For
 example,
 ::
@@ -174,7 +174,7 @@ the new window.
 
 If you plan to use the CUDA platform, OpenMM also needs to locate the CUDA
 kernel compiler (nvcc).  By default it looks for it in the location
-/usr/local/cuda/bin/nvcc.  If you have installed the CUDA toolkit in a different
+:file:`/usr/local/cuda/bin/nvcc`.  If you have installed the CUDA toolkit in a different
 location, you can set OPENMM_CUDA_COMPILER to tell OpenMM where to find it.  For
 example,
 ::
@@ -197,8 +197,8 @@ Installing on Windows
 *********************
 
 1. Download the pre-compiled binary of OpenMM for Windows, then double click the
-.zip file to expand it.  Move the files to C:\\Program Files\\OpenMM.  (On 64 bit
-Windows, use C:\\Program Files (x86)\\OpenMM).
+.zip file to expand it.  Move the files to :file:`C:\\Program Files\\OpenMM`.  (On 64 bit
+Windows, use :file:`C:\\Program Files (x86)\\OpenMM`).
 
 2. Make sure you have the 32-bit version of Python 3.3 (other versions will not
 work) installed on your computer.  To do this, launch the Python program (either
@@ -248,7 +248,7 @@ your PATH.
 
         dir C:\py*
 
-    The files are typically located in a directory like C:\\Python33.  Remember this
+    The files are typically located in a directory like :file:`C:\\Python33`.  Remember this
     location.  You will need to enter it, along with the location of the OpenMM
     libraries, later in this process.
 
@@ -257,7 +257,7 @@ your PATH.
   * Click on the “Advanced” tab or the “Advanced system settings” link
   * Click “Environment Variables”
   * Under “System variables,” select the line for “Path” and click “Edit…”
-  * Add C:\\Program Files\\OpenMM\\lib and C:\\Program Files\\OpenMM\\lib\\plugins
+  * Add :file:`C:\\Program Files\\OpenMM\\lib` and :file:`C:\\Program Files\\OpenMM\\lib\\plugins`
     to the “Variable value”.  If you also need to add Python or FFTW to your
     PATH, enter their directory locations here.  Directory locations need to be
     separated by semi-colons (;).
@@ -265,8 +265,8 @@ your PATH.
 
     If you installed OpenMM somewhere other than the default location, you must also
     set OPENMM_PLUGIN_DIR to point to the plugins directory.  If this variable is
-    not set, it will assume plugins are in the default location (C:\\Program
-    Files\\OpenMM\\lib\\plugins or C:\\Program Files (x86)\\OpenMM\\lib\\plugins).
+    not set, it will assume plugins are in the default location (:file:`C:\\Program
+    Files\\OpenMM\\lib\\plugins` or :file:`C:\\Program Files (x86)\\OpenMM\\lib\\plugins`).
 
 7. Verify your installation by running the “testInstallation.py” script found in
 the “examples” folder of your OpenMM installation.  To run it, open a command
@@ -328,8 +328,8 @@ on setting up the window to use OpenMM).  Navigate to the “examples” folder 
 
     cd <examples_directory>
 
-where the typical directory is :code:`/usr/local/openmm/examples` on Linux
-and Mac machines and  “\ :code:`C:\\Program Files\\OpenMM\\examples”` on Windows
+where the typical directory is :file:`/usr/local/openmm/examples` on Linux
+and Mac machines and  :file:`C:\\Program Files\\OpenMM\\examples` on Windows
 machines.
 
 Then type
@@ -566,8 +566,8 @@ which stores all the force field parameters directly in a prmtop file, Gromacs j
 references to force field definition files that are installed with the Gromacs
 application.  OpenMM needs to know where to find these files, so the
 :code:`includeDir` parameter specifies the directory containing them.  If you
-omit this parameter, OpenMM will assume the default location
-/usr/local/gromacs/share/gromacs/top, which is often where they are installed on
+omit this parameter, OpenMM will assume the default location :file:`/usr/local/gromacs/share/gromacs/top`, 
+which is often where they are installed on
 Unix-like operating systems.  So in :numref:`Example,Gromacs example` we actually could have omitted
 this parameter, but if the Gromacs files were installed in any other location,
 we would need to include it.
@@ -620,7 +620,7 @@ The following lines specify to use the CUDA Platform:
     platform = Platform.getPlatformByName('CUDA')
     simulation = Simulation(prmtop.topology, system, integrator, platform)
 
-The Platform name should be :code:`OpenCL`\ , :code:`CUDA`\ , or
+The Platform name should be :code:`OpenCL`\ , :code:`CUDA`\ , :code:`CPU`\, or
 :code:`Reference`\ .
 
 You also can specify Platform-specific properties that customize how
@@ -651,19 +651,20 @@ For the main force field, OpenMM provides the following options:
 
 .. tabularcolumns:: |l|L|
 
-=================  ================================================================================
-File               Force Field                                                                     
-=================  ================================================================================
-amber96.xml        AMBER96\ :cite:`Kollman1997`
-amber99sb.xml      AMBER99\ :cite:`Wang2000` with modified backbone torsions\ :cite:`Hornak2006`
-amber99sbildn.xml  AMBER99SB plus improved side chain torsions\ :cite:`Lindorff-Larsen2010`
-amber99sbnmr.xml   AMBER99SB with modifications to fit NMR data\ :cite:`Li2010`
-amber03.xml        AMBER03\ :cite:`Duan2003`
-amber10.xml        AMBER10
-amoeba2009.xml     AMOEBA 2009\ :cite:`Ren2002`.  This force field is deprecated.  It is 
-                   recommended to use AMOEBA 2013 instead.
-amoeba2013.xml     AMOEBA 2013\ :cite:`Shi2013`
-=================  ================================================================================
+=====================  ================================================================================
+File                   Force Field                                                                     
+=====================  ================================================================================
+amber96.xml            AMBER96\ :cite:`Kollman1997`
+amber99sb.xml          AMBER99\ :cite:`Wang2000` with modified backbone torsions\ :cite:`Hornak2006`
+amber99sbildn.xml      AMBER99SB plus improved side chain torsions\ :cite:`Lindorff-Larsen2010`
+amber99sbnmr.xml       AMBER99SB with modifications to fit NMR data\ :cite:`Li2010`
+amber03.xml            AMBER03\ :cite:`Duan2003`
+amber10.xml            AMBER10
+amoeba2009.xml         AMOEBA 2009\ :cite:`Ren2002`.  This force field is deprecated.  It is 
+                       recommended to use AMOEBA 2013 instead.
+amoeba2013.xml         AMOEBA 2013\ :cite:`Shi2013`
+charmm_polar_2013.xml  CHARMM 2013 polarizable force field\ :cite:`Lopes2013`
+=====================  ================================================================================
 
 
 The AMBER files do not include parameters for water molecules.  This allows you
@@ -677,17 +678,19 @@ files:
 File         Water Model                                 
 ===========  ============================================
 tip3p.xml    TIP3P water model\ :cite:`Jorgensen1983`  
+tip3pfb.xml  TIP3P-FB water model\ :cite:`Wang2014`    
 tip4pew.xml  TIP4P-Ew water model\ :cite:`Horn2004`    
+tip4pfb.xml  TIP4P-FB water model\ :cite:`Wang2014`    
 tip5p.xml    TIP5P water model\ :cite:`Mahoney2000`    
 spce.xml     SPC/E water model\ :cite:`Berendsen1987`  
 swm4ndp.xml  SWM4-NDP water model\ :cite:`Lamoureux2006`
 ===========  ============================================
 
 
-For the AMOEBA force field, only one explicit water model is currently available
-and the water parameters are included in the file :code:`amoeba2009.xml`\ .
-Also the AMOEBA force field file only includes the parameters for amino acids
-and ions; nucleic acids will be included in a future release.
+For the polarizable force fields (AMOEBA and CHARMM), only one explicit water model
+is currently available and the water parameters are included in the same file as
+the macromolecule parameters.  Also, the polarizable force fields only include
+parameters for amino acids and ions, not for nucleic acids.
 
 If you want to include an implicit solvation model, you can also specify one of
 the following files:
@@ -1300,8 +1303,9 @@ water models:
 
     modeller.addSolvent(forcefield, model='tip5p')
 
-Allowed values for the :code:`model` option are 'tip3p', 'spce', 'tip4pew',
-and 'tip5p'.  Be sure to include the single quotes around the value.
+Allowed values for the :code:`model` option are 'tip3p', 'tip3pfb', 'spce', 
+'tip4pew', 'tip4pfb', and 'tip5p'.  Be sure to include the single quotes 
+around the value.
 
 Another option is to add extra ion pairs to give a desired total ionic strength.
 For example:
@@ -2183,6 +2187,49 @@ second atom has class OS and the third has class P:
 
     <Proper class1="" class2="OS" class3="P" class4="" per="3" phase="0.0" k="0.66944"/>
 
+<CustomNonbondedForce>
+======================
+
+To add a CustomNonbondedForce to the System, include a tag that looks like this:
+
+.. code-block:: xml
+
+    <CustomNonbondedForce energy="scale*epsilon1*epsilon2*((sigma1+sigma2)/r)^12" bondCutoff="3">
+     <GlobalParameter name="scale" defaultValue="1"/>
+     <PerParticleParameter name="sigma"/>
+     <PerParticleParameter name="epsilon"/>
+     <Atom type="0" sigma="0.3249" epsilon="0.7112"/>
+     <Atom type="1" sigma="0.1069" epsilon="0.0656"/>
+     <Atom type="2" sigma="0.3399" epsilon="0.4577"/>
+     ...
+    </CustomNonbondedForce>
+
+The energy expression for the CustomNonbondedForce is specified by the
+:code:`energy` attribute.  This is a mathematical expression that gives the
+energy of each pairwise interaction as a function of the distance *r*\ .  It
+also may depend on an arbitrary list of global or per-particle parameters.  Use
+a :code:`<GlobalParameter>` tag to define a global parameter, and a
+:code:`<PerParticleParameter>` tag to define a per-particle parameter.
+
+Exclusions are created automatically based on the :code:`bondCutoff` attribute.
+After setting the nonbonded parameters for all atoms, the force field calls
+:code:`createExclusionsFromBonds()` on the CustomNonbondedForce, passing in this
+value as its argument.  To avoid creating exclusions, set :code:`bondCutoff` to 0.
+
+Each :code:`<Atom>` tag specifies the parameters for one atom type
+(specified with the :code:`type` attribute) or atom class (specified with
+the :code:`class` attribute).  It is fine to mix these two methods, having
+some tags specify a type and others specify a class.  However you do it, you
+must make sure that a unique set of parameters is defined for every atom type.
+The remaining attributes are the values to use for the per-atom parameters. All
+per-atom parameters must be specified for every :code:`<Atom>` tag, and the
+attribute name must match the name of the parameter.  For instance, if there is
+a per-atom parameter with the name “radius”, then every :code:`<Atom>` tag
+must include an attribute called :code:`radius`\ .
+
+CustomNonbondedForce also allows you to define tabulated functions.  See section
+:ref:`tabulated-functions` for details.
+
 <CustomGBForce>
 ===============
 
@@ -2240,30 +2287,8 @@ attribute name must match the name of the parameter.  For instance, if there is
 a per-atom parameter with the name “radius”, then every :code:`<Atom>` tag
 must include an attribute called :code:`radius`\ .
 
-CustomGBForce also allows you to define tabulated functions.  To define a
-function, include a :code:`<Function>` tag inside the
-:code:`<CustomGBForce>` tag:
-
-.. code-block:: xml
-
-    <Function name="myfn" min="-5" max="5">
-    0.983674857694 -0.980096396266 -0.975743130031 -0.970451936613 -0.964027580076
-    -0.956237458128 -0.946806012846 -0.935409070603 -0.921668554406 -0.905148253645
-    -0.885351648202 -0.861723159313 -0.833654607012 -0.800499021761 -0.761594155956
-    -0.716297870199 -0.664036770268 -0.604367777117 -0.537049566998 -0.46211715726
-    -0.379948962255 -0.291312612452 -0.197375320225 -0.099667994625 0.0
-    0.099667994625 0.197375320225 0.291312612452 0.379948962255 0.46211715726
-    0.537049566998 0.604367777117 0.664036770268 0.716297870199 0.761594155956
-    0.800499021761 0.833654607012 0.861723159313 0.885351648202 0.905148253645
-    0.921668554406 0.935409070603 0.946806012846 0.956237458128 0.964027580076
-    0.970451936613 0.975743130031 0.980096396266 0.983674857694 0.986614298151
-    0.989027402201
-    </Function>
-
-The tag’s attributes define the name of the function and the range of values for
-which it is defined.  The tabulated values are listed inside the body of the
-tag, with successive values separated by white space.  Again, see the API
-documentation for more details.
+CustomGBForce also allows you to define tabulated functions.  See section
+:ref:`tabulated-functions` for details.
 
 Writing Custom Expressions
 ==========================
@@ -2299,6 +2324,55 @@ is exactly equivalent to
 
 The definition of an intermediate value may itself involve other intermediate
 values.  All uses of a value must appear *before* that value’s definition.
+
+.. _tabulated-functions:
+
+TabulatedFunctions
+==================
+
+Some forces, such as CustomNonbondedForce and CustomGBForce, allow you to define
+tabulated functions.  To define a function, include a :code:`<Function>` tag inside the
+:code:`<CustomNonbondedForce>` or :code:`<CustomGBForce>` tag:
+
+.. code-block:: xml
+
+    <Function name="myfn" type="Continuous1D" min="-5" max="5">
+    0.983674857694 -0.980096396266 -0.975743130031 -0.970451936613 -0.964027580076
+    -0.956237458128 -0.946806012846 -0.935409070603 -0.921668554406 -0.905148253645
+    -0.885351648202 -0.861723159313 -0.833654607012 -0.800499021761 -0.761594155956
+    -0.716297870199 -0.664036770268 -0.604367777117 -0.537049566998 -0.46211715726
+    -0.379948962255 -0.291312612452 -0.197375320225 -0.099667994625 0.0
+    0.099667994625 0.197375320225 0.291312612452 0.379948962255 0.46211715726
+    0.537049566998 0.604367777117 0.664036770268 0.716297870199 0.761594155956
+    0.800499021761 0.833654607012 0.861723159313 0.885351648202 0.905148253645
+    0.921668554406 0.935409070603 0.946806012846 0.956237458128 0.964027580076
+    0.970451936613 0.975743130031 0.980096396266 0.983674857694 0.986614298151
+    0.989027402201
+    </Function>
+
+The tag’s attributes define the name of the function, the type of function, and
+the range of values for which it is defined.  The required set of attributed
+depends on the function type:
+
+.. tabularcolumns:: |l|L|
+
+============  =======================================================
+Type          Required Attributes
+============  =======================================================
+Continuous1D  min, max
+Continuous2D  xmin, ymin, xmax, ymax, xsize, ysize
+Continuous3D  xmin, ymin, zmin, xmax, ymax, zmax, xsize, ysize, zsize
+Discrete1D
+Discrete2D    xsize, ysize
+Discrete3D    xsize, ysize, zsize
+============  =======================================================
+
+
+The "min" and "max" attributes define the range of the independent variables for
+a continuous function.  The "size" attributes define the size of the table along
+each axis.  The tabulated values are listed inside the body of the tag, with
+successive values separated by white space.  See the API documentation for more
+details.
 
 
 Using Multiple Files

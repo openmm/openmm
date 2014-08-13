@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2013 Stanford University and the Authors.
+Portions copyright (c) 2012-2014 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors:
 
@@ -111,7 +111,7 @@ class GromacsTopFile(object):
                 if len(fields) < 2:
                     raise ValueError('Illegal line in .top file: '+line)
                 name = fields[1]
-                valueStart = stripped.find(name, len(command))+len(name)
+                valueStart = stripped.find(name, len(command))+len(name)+1
                 value = line[valueStart:].strip()
                 self._defines[name] = value
             elif command == '#ifdef':
@@ -745,6 +745,12 @@ class GromacsTopFile(object):
                     atom1params = nb.getParticleParameters(baseAtomIndex+atoms[0])
                     atom2params = nb.getParticleParameters(baseAtomIndex+atoms[1])
                     exceptions.append((baseAtomIndex+atoms[0], baseAtomIndex+atoms[1], atom1params[0]*atom2params[0]*fudgeQQ, params[0], params[1]))
+                for fields in moleculeType.exclusions:
+                    atoms = [int(x)-1 for x in fields]
+                    for atom in atoms[1:]:
+                        if atom > atoms[0]:
+                            exceptions.append((baseAtomIndex+atoms[0], baseAtomIndex+atom, 0, 0, 0))
+                    
 
         # Create nonbonded exceptions.
 

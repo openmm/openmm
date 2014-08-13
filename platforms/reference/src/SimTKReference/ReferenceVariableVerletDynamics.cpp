@@ -24,6 +24,7 @@
 
 #include <string.h>
 #include <sstream>
+#include <algorithm>
 
 #include "SimTKOpenMMCommon.h"
 #include "SimTKOpenMMLog.h"

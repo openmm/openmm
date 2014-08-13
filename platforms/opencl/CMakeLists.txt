@@ -1,17 +1,15 @@
 #---------------------------------------------------
 # OpenMM OpenCL Platform
 #
-# Creates OpenMM library, base name=OpenMMOpenCL.
-# Default libraries are shared & optimized. Variants
-# are created for static (_static) and debug (_d).
+# Creates OpenMMOpenCL library.
 #
 # Windows:
-#   OpenMMOpenCL[_d].dll
-#   OpenMMOpenCL[_d].lib
-#   OpenMMOpenCL_static[_d].lib
+#   OpenMMOpenCL.dll
+#   OpenMMOpenCL.lib
+#   OpenMMOpenCL_static.lib
 # Unix:
-#   libOpenMMOpenCL[_d].so
-#   libOpenMMOpenCL_static[_d].a
+#   libOpenMMOpenCL.so
+#   libOpenMMOpenCL_static.a
 #----------------------------------------------------
 
 set(OPENMM_BUILD_OPENCL_TESTS TRUE CACHE BOOL "Whether to build OpenCL test cases")
@@ -31,19 +29,6 @@ SET(OPENMMOPENCL_LIBRARY_NAME OpenMMOpenCL)
 
 SET(SHARED_TARGET ${OPENMMOPENCL_LIBRARY_NAME})
 SET(STATIC_TARGET ${OPENMMOPENCL_LIBRARY_NAME}_static)
-
-
-# Ensure that debug libraries have "_d" appended to their names.
-# CMake gets this right on Windows automatically with this definition.
-IF (MSVC)
-    SET(CMAKE_DEBUG_POSTFIX "_d" CACHE INTERNAL "" FORCE)
-ENDIF (MSVC)
-
-# But on Unix or Cygwin we have to add the suffix manually
-IF (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
-    SET(SHARED_TARGET ${SHARED_TARGET}_d)
-    SET(STATIC_TARGET ${STATIC_TARGET}_d)
-ENDIF (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
 
 
 # These are all the places to search for header files which are

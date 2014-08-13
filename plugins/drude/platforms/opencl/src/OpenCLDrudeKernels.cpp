@@ -131,9 +131,9 @@ void OpenCLCalcDrudeForceKernel::initialize(const System& system, const DrudeFor
             double a1 = (atoms[i][2] == -1 ? 1 : aniso12);
             double a2 = (atoms[i][3] == -1 || atoms[i][4] == -1 ? 1 : aniso34);
             double a3 = 3-a1-a2;
-            double k3 = charge*charge/(polarizability*a3);
-            double k1 = charge*charge/(polarizability*a1) - k3;
-            double k2 = charge*charge/(polarizability*a2) - k3;
+            double k3 = ONE_4PI_EPS0*charge*charge/(polarizability*a3);
+            double k1 = ONE_4PI_EPS0*charge*charge/(polarizability*a1) - k3;
+            double k2 = ONE_4PI_EPS0*charge*charge/(polarizability*a2) - k3;
             if (atoms[i][2] == -1) {
                 atoms[i][2] = 0;
                 k1 = 0;
@@ -202,9 +202,9 @@ void OpenCLCalcDrudeForceKernel::copyParametersToContext(ContextImpl& context, c
             double a1 = (p2 == -1 ? 1 : aniso12);
             double a2 = (p3 == -1 || p4 == -1 ? 1 : aniso34);
             double a3 = 3-a1-a2;
-            double k3 = charge*charge/(polarizability*a3);
-            double k1 = charge*charge/(polarizability*a1) - k3;
-            double k2 = charge*charge/(polarizability*a2) - k3;
+            double k3 = ONE_4PI_EPS0*charge*charge/(polarizability*a3);
+            double k1 = ONE_4PI_EPS0*charge*charge/(polarizability*a1) - k3;
+            double k2 = ONE_4PI_EPS0*charge*charge/(polarizability*a2) - k3;
             if (p2 == -1)
                 k1 = 0;
             if (p3 == -1 || p4 == -1)

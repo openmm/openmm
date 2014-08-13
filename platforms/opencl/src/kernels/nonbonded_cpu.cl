@@ -213,12 +213,12 @@ __kernel void computeNonbonded(
 
 #ifdef USE_CUTOFF
     const unsigned int numTiles = interactionCount[0];
-    int pos = (numTiles > maxTiles ? startTileIndex+get_group_id(0)*numTileIndices/get_num_groups(0) : get_group_id(0)*numTiles/get_num_groups(0));
-    int end = (numTiles > maxTiles ? startTileIndex+(get_group_id(0)+1)*numTileIndices/get_num_groups(0) : (get_group_id(0)+1)*numTiles/get_num_groups(0));
+    int pos = (int) (numTiles > maxTiles ? (unsigned int) (startTileIndex+get_group_id(0)*(long)numTileIndices/get_num_groups(0)) : get_group_id(0)*(long)numTiles/get_num_groups(0));
+    int end = (int) (numTiles > maxTiles ? (unsigned int) (startTileIndex+(get_group_id(0)+1)*(long)numTileIndices/get_num_groups(0)) : (get_group_id(0)+1)*(long)numTiles/get_num_groups(0));
 #else
     const unsigned int numTiles = numTileIndices;
-    int pos = startTileIndex+get_group_id(0)*numTiles/get_num_groups(0);
-    int end = startTileIndex+(get_group_id(0)+1)*numTiles/get_num_groups(0);
+    int pos = (int) (startTileIndex+get_group_id(0)*(long)numTiles/get_num_groups(0));
+    int end = (int) (startTileIndex+(get_group_id(0)+1)*(long)numTiles/get_num_groups(0));
 #endif
     int nextToSkip = -1;
     int currentSkipIndex = 0;
@@ -230,7 +230,7 @@ __kernel void computeNonbonded(
         
         // Extract the coordinates of this tile.
         
-        unsigned int x, y;
+        int x, y;
         bool singlePeriodicCopy = false;
 #ifdef USE_CUTOFF
         if (numTiles <= maxTiles) {
@@ -243,7 +243,7 @@ __kernel void computeNonbonded(
         else
 #endif
         {
-            y = (unsigned int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
+            y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
             x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
             if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
                 y += (x < y ? -1 : 1);

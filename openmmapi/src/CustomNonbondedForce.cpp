@@ -51,6 +51,23 @@ CustomNonbondedForce::CustomNonbondedForce(const string& energy) : energyExpress
     switchingDistance(-1.0), useSwitchingFunction(false), useLongRangeCorrection(false) {
 }
 
+CustomNonbondedForce::CustomNonbondedForce(const CustomNonbondedForce& rhs) {
+    // Copy everything and deep copy the tabulated functions
+    energyExpression = rhs.energyExpression;
+    nonbondedMethod = rhs.nonbondedMethod;
+    cutoffDistance = rhs.cutoffDistance;
+    switchingDistance = rhs.switchingDistance;
+    useSwitchingFunction = rhs.useSwitchingFunction;
+    useLongRangeCorrection = rhs.useLongRangeCorrection;
+    parameters = rhs.parameters;
+    globalParameters = rhs.globalParameters;
+    particles = rhs.particles;
+    exclusions = rhs.exclusions;
+    interactionGroups = rhs.interactionGroups;
+    for (vector<FunctionInfo>::const_iterator it = rhs.functions.begin(); it != rhs.functions.end(); it++)
+        functions.push_back(FunctionInfo(it->name, it->function->Copy()));
+}
+
 CustomNonbondedForce::~CustomNonbondedForce() {
     for (int i = 0; i < (int) functions.size(); i++)
         delete functions[i].function;
@@ -174,6 +191,33 @@ void CustomNonbondedForce::setExclusionParticles(int index, int particle1, int p
     exclusions[index].particle1 = particle1;
     exclusions[index].particle2 = particle2;
 }
+
+void CustomNonbondedForce::createExclusionsFromBonds(const vector<pair<int, int> >& bonds, int bondCutoff) {
+    if (bondCutoff < 1)
+        return;
+    vector<set<int> > exclusions(particles.size());
+    vector<set<int> > bonded12(exclusions.size());
+    for (int i = 0; i < (int) bonds.size(); ++i) {
+        int p1 = bonds[i].first;
+        int p2 = bonds[i].second;
+        exclusions[p1].insert(p2);
+        exclusions[p2].insert(p1);
+        bonded12[p1].insert(p2);
+        bonded12[p2].insert(p1);
+    }
+    for (int level = 0; level < bondCutoff-1; level++) {
+        vector<set<int> > currentExclusions = exclusions;
+        for (int i = 0; i < (int) particles.size(); i++) {
+            for (set<int>::const_iterator iter = currentExclusions[i].begin(); iter != currentExclusions[i].end(); ++iter)
+                exclusions[*iter].insert(bonded12[i].begin(), bonded12[i].end());
+        }
+    }
+    for (int i = 0; i < (int) exclusions.size(); ++i)
+        for (set<int>::const_iterator iter = exclusions[i].begin(); iter != exclusions[i].end(); ++iter)
+            if (*iter < i)
+                addExclusion(*iter, i);
+}
+
 int CustomNonbondedForce::addTabulatedFunction(const std::string& name, TabulatedFunction* function) {
     functions.push_back(FunctionInfo(name, function));
     return functions.size()-1;

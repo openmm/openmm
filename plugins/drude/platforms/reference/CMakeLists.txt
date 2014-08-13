@@ -1,15 +1,13 @@
 #---------------------------------------------------
 # OpenMM Reference Drude Integrator
 #
-# Creates OpenMM library, base name=OpenMMDrudeReference.
-# Default libraries are shared & optimized. Variants
-# are created for debug (_d).
+# Creates OpenMMDrudeReference library.
 #
 # Windows:
-#   OpenMMDrudeReference[_d].dll
-#   OpenMMDrudeReference[_d].lib
+#   OpenMMDrudeReference.dll
+#   OpenMMDrudeReference.lib
 # Unix:
-#   libOpenMMDrudeReference[_d].so
+#   libOpenMMDrudeReference.so
 #----------------------------------------------------
 
 # The source is organized into subdirectories, but we handle them all from
@@ -23,19 +21,6 @@ SET(OPENMM_SOURCE_SUBDIRS .)
 SET(OPENMMDRUDEREFERENCE_LIBRARY_NAME OpenMMDrudeReference)
 
 SET(SHARED_TARGET ${OPENMMDRUDEREFERENCE_LIBRARY_NAME})
-
-
-# Ensure that debug libraries have "_d" appended to their names.
-# CMake gets this right on Windows automatically with this definition.
-IF (MSVC)
-    SET(CMAKE_DEBUG_POSTFIX "_d" CACHE INTERNAL "" FORCE)
-ENDIF (MSVC)
-
-# But on Unix or Cygwin we have to add the suffix manually
-IF (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
-    SET(SHARED_TARGET ${SHARED_TARGET}_d)
-ENDIF (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
-
 
 # These are all the places to search for header files which are
 # to be part of the API.
@@ -84,12 +69,7 @@ INCLUDE_DIRECTORIES(${REFERENCE_INCLUDE_DIR})
 
 ADD_LIBRARY(${SHARED_TARGET} SHARED ${SOURCE_FILES} ${SOURCE_INCLUDE_FILES} ${API_ABS_INCLUDE_FILES})
 
-IF (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
-    SET(MAIN_OPENMM_LIB ${OPENMM_LIBRARY_NAME}_d)
-ELSE (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
-    SET(MAIN_OPENMM_LIB ${OPENMM_LIBRARY_NAME})
-ENDIF (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
-TARGET_LINK_LIBRARIES(${SHARED_TARGET} ${MAIN_OPENMM_LIB})
+TARGET_LINK_LIBRARIES(${SHARED_TARGET} ${OPENMM_LIBRARY_NAME})
 TARGET_LINK_LIBRARIES(${SHARED_TARGET} debug ${SHARED_DRUDE_TARGET} optimized ${SHARED_DRUDE_TARGET})
 SET_TARGET_PROPERTIES(${SHARED_TARGET} PROPERTIES LINK_FLAGS "${EXTRA_COMPILE_FLAGS}" COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS} -DOPENMM_BUILDING_SHARED_LIBRARY")
 

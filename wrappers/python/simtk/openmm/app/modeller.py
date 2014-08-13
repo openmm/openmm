@@ -39,6 +39,7 @@ from simtk.openmm.app.topology import Residue
 from simtk.openmm.vec3 import Vec3
 from simtk.openmm import System, Context, NonbondedForce, CustomNonbondedForce, HarmonicBondForce, HarmonicAngleForce, VerletIntegrator, LocalEnergyMinimizer
 from simtk.unit import nanometer, molar, elementary_charge, amu, gram, liter, degree, sqrt, acos, is_quantity, dot, norm
+import simtk.unit as unit
 import element as elem
 import os
 import random
@@ -262,7 +263,7 @@ class Modeller(object):
          - positiveIon (string='Na+') the type of positive ion to add.  Allowed values are 'Cs+', 'K+', 'Li+', 'Na+', and 'Rb+'
          - negativeIon (string='Cl-') the type of negative ion to add.  Allowed values are 'Cl-', 'Br-', 'F-', and 'I-'. Be aware
            that not all force fields support all ion types.
-         - ionicString (concentration=0*molar) the total concentration of ions (both positive and negative) to add.  This
+         - ionicStrength (concentration=0*molar) the total concentration of ions (both positive and negative) to add.  This
            does not include ions that are added to neutralize the system.
         """
         # Pick a unit cell size.
@@ -811,7 +812,7 @@ class Modeller(object):
         else:
             context = Context(system, VerletIntegrator(0.0), platform)
         context.setPositions(newPositions)
-        LocalEnergyMinimizer.minimize(context)
+        LocalEnergyMinimizer.minimize(context, 1.0, 50)
         self.topology = newTopology
         self.positions = context.getState(getPositions=True).getPositions()
         del context
@@ -843,7 +844,9 @@ class Modeller(object):
                     if atom.element is not None:
                         newIndex[i] = index
                         index += 1
-                        newTemplate.atoms.append(ForceField._TemplateAtomData(atom.name, atom.type, atom.element))
+                        newAtom = ForceField._TemplateAtomData(atom.name, atom.type, atom.element)
+                        newAtom.externalBonds = atom.externalBonds
+                        newTemplate.atoms.append(newAtom)
                 for b1, b2 in template.bonds:
                     if b1 in newIndex and b2 in newIndex:
                         newTemplate.bonds.append((newIndex[b1], newIndex[b2]))
@@ -949,14 +952,14 @@ class Modeller(object):
                                     # This is a virtual site.  Compute its position by the correct rule.
 
                                     if site.type == 'average2':
-                                        position = site.weights[0]*templateAtomPositions[index+site.atoms[0]] + site.weights[1]*templateAtomPositions[index+site.atoms[1]]
+                                        position = site.weights[0]*templateAtomPositions[site.atoms[0]] + site.weights[1]*templateAtomPositions[site.atoms[1]]
                                     elif site.type == 'average3':
-                                        position = site.weights[0]*templateAtomPositions[index+site.atoms[0]] + site.weights[1]*templateAtomPositions[index+site.atoms[1]] + site.weights[2]*templateAtomPositions[index+site.atoms[2]]
+                                        position = site.weights[0]*templateAtomPositions[site.atoms[0]] + site.weights[1]*templateAtomPositions[site.atoms[1]] + site.weights[2]*templateAtomPositions[site.atoms[2]]
                                     elif site.type == 'outOfPlane':
-                                        v1 = templateAtomPositions[index+site.atoms[1]] - templateAtomPositions[index+site.atoms[0]]
-                                        v2 = templateAtomPositions[index+site.atoms[2]] - templateAtomPositions[index+site.atoms[0]]
+                                        v1 = templateAtomPositions[site.atoms[1]] - templateAtomPositions[site.atoms[0]]
+                                        v2 = templateAtomPositions[site.atoms[2]] - templateAtomPositions[site.atoms[0]]
                                         cross = Vec3(v1[1]*v2[2]-v1[2]*v2[1], v1[2]*v2[0]-v1[0]*v2[2], v1[0]*v2[1]-v1[1]*v2[0])
-                                        position = templateAtomPositions[index+site.atoms[0]] + site.weights[0]*v1 + site.weights[1]*v2 + site.weights[2]*cross
+                                        position = templateAtomPositions[site.atoms[0]] + site.weights[0]*v1 + site.weights[1]*v2 + site.weights[2]*cross
                             if position is None and atom.type in drudeTypeMap:
                                 # This is a Drude particle.  Put it on top of its parent atom.
 
@@ -968,7 +971,7 @@ class Modeller(object):
                                 # and hope that energy minimization will fix it.
 
                                 knownPositions = [x for x in templateAtomPositions if x is not None]
-                                position = sum(knownPositions)/len(knownPositions)
+                                position = unit.sum(knownPositions)/len(knownPositions)
                             newPositions.append(position*nanometer)
         for bond in self.topology.bonds():
             if bond[0] in newAtoms and bond[1] in newAtoms:

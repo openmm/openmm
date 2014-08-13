@@ -151,16 +151,16 @@ void testSerializeCustomIntegrator() {
     XmlSerializer::serialize<Integrator>(intg, "CustomIntegrator", ss);
     CustomIntegrator *intg2 = dynamic_cast<CustomIntegrator*>(XmlSerializer::deserialize<Integrator>(ss));
     ASSERT_EQUAL(intg->getNumGlobalVariables(), intg->getNumGlobalVariables());
-    for(int i=0; i < intg->getNumGlobalVariables(); i++) {
+    for (int i = 0; i < intg->getNumGlobalVariables(); i++) {
         ASSERT_EQUAL(intg->getGlobalVariable(i), intg2->getGlobalVariable(i));
         ASSERT_EQUAL(intg->getGlobalVariableName(i), intg2->getGlobalVariableName(i));
     }
     ASSERT_EQUAL(intg->getNumPerDofVariables(), intg2->getNumPerDofVariables());
-    for(int i=0; i<intg->getNumPerDofVariables(); i++) {
+    for(int i = 0; i < intg->getNumPerDofVariables(); i++) {
         vector<Vec3> vars1; intg->getPerDofVariable(i, vars1);
         vector<Vec3> vars2; intg2->getPerDofVariable(i, vars2);
         ASSERT_EQUAL(vars1.size(),vars2.size());
-        for(int j=0; j<vars1.size(); j++) {
+        for (int j = 0; j < (int) vars1.size(); j++) {
             ASSERT_EQUAL(vars1[j][0], vars2[j][0]);
             ASSERT_EQUAL(vars1[j][1], vars2[j][1]);
             ASSERT_EQUAL(vars1[j][2], vars2[j][2]);

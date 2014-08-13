@@ -43,6 +43,7 @@
 #include <set>
 #include <utility>
 #include <vector>
+#include <algorithm>
 
 using namespace OpenMM;
 using namespace std;

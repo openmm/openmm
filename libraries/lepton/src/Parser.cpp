@@ -70,7 +70,7 @@ string Parser::trim(const string& expression) {
     int start, end;
     for (start = 0; start < (int) expression.size() && isspace(expression[start]); start++)
         ;
-    for (end = expression.size()-1; end > start && isspace(expression[end]); end--)
+    for (end = (int) expression.size()-1; end > start && isspace(expression[end]); end--)
         ;
     if (start == end && isspace(expression[end]))
         return "";
@@ -140,7 +140,7 @@ vector<ParseToken> Parser::tokenize(const string& expression) {
         ParseToken token = getNextToken(expression, pos);
         if (token.getType() != ParseToken::Whitespace)
             tokens.push_back(token);
-        pos += token.getText().size();
+        pos += (int) token.getText().size();
     }
     return tokens;
 }
@@ -257,7 +257,7 @@ ExpressionTreeNode Parser::parsePrecedence(const vector<ParseToken>& tokens, int
 
     while (pos < (int) tokens.size() && tokens[pos].getType() == ParseToken::Operator) {
         token = tokens[pos];
-        int opIndex = Operators.find(token.getText());
+        int opIndex = (int) Operators.find(token.getText());
         int opPrecedence = Precedence[opIndex];
         if (opPrecedence < precedence)
             return result;

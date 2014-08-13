@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -44,6 +44,7 @@ MonteCarloBarostatProxy::MonteCarloBarostatProxy() : SerializationProxy("MonteCa
 void MonteCarloBarostatProxy::serialize(const void* object, SerializationNode& node) const {
     node.setIntProperty("version", 1);
     const MonteCarloBarostat& force = *reinterpret_cast<const MonteCarloBarostat*>(object);
+    node.setIntProperty("forceGroup", force.getForceGroup());
     node.setDoubleProperty("pressure", force.getDefaultPressure());
     node.setDoubleProperty("temperature", force.getTemperature());
     node.setIntProperty("frequency", force.getFrequency());
@@ -56,6 +57,7 @@ void* MonteCarloBarostatProxy::deserialize(const SerializationNode& node) const 
     MonteCarloBarostat* force = NULL;
     try {
         MonteCarloBarostat* force = new MonteCarloBarostat(node.getDoubleProperty("pressure"), node.getDoubleProperty("temperature"), node.getIntProperty("frequency"));
+        force->setForceGroup(node.getIntProperty("forceGroup", 0));
         force->setRandomNumberSeed(node.getIntProperty("randomSeed"));
         return force;
     }

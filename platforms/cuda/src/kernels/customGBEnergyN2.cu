@@ -170,11 +170,11 @@ extern "C" __global__ void computeN2Energy(unsigned long long* __restrict__ forc
 
 #ifdef USE_CUTOFF
     unsigned int numTiles = interactionCount[0];
-    int pos = warp*(numTiles > maxTiles ? NUM_BLOCKS*(NUM_BLOCKS+1)/2 : numTiles)/totalWarps;
-    int end = (warp+1)*(numTiles > maxTiles ? NUM_BLOCKS*(NUM_BLOCKS+1)/2 : numTiles)/totalWarps;
+    int pos = (int) (warp*(numTiles > maxTiles ? NUM_BLOCKS*((long long)NUM_BLOCKS+1)/2 : (long)numTiles)/totalWarps);
+    int end = (int) ((warp+1)*(numTiles > maxTiles ? NUM_BLOCKS*((long long)NUM_BLOCKS+1)/2 : (long)numTiles)/totalWarps);
 #else
-    int pos = warp*numTiles/totalWarps;
-    int end = (warp+1)*numTiles/totalWarps;
+    int pos = (int) (warp*(long long)numTiles/totalWarps);
+    int end = (int) ((warp+1)*(long long)numTiles/totalWarps);
 #endif
     int skipBase = 0;
     int currentSkipIndex = tbx;
@@ -190,7 +190,7 @@ extern "C" __global__ void computeN2Energy(unsigned long long* __restrict__ forc
         
         // Extract the coordinates of this tile.
         
-        unsigned int x, y;
+        int x, y;
         bool singlePeriodicCopy = false;
 #ifdef USE_CUTOFF
         if (numTiles <= maxTiles) {
@@ -203,7 +203,7 @@ extern "C" __global__ void computeN2Energy(unsigned long long* __restrict__ forc
         else
 #endif
         {
-            y = (unsigned int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
+            y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
             x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
             if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
                 y += (x < y ? -1 : 1);

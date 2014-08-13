@@ -31,13 +31,13 @@
 
 #include "openmm/AndersenThermostat.h"
 #include "openmm/internal/AndersenThermostatImpl.h"
-#include <ctime>
+#include "openmm/internal/OSRngSeed.h"
 
 using namespace OpenMM;
 
 AndersenThermostat::AndersenThermostat(double defaultTemperature, double defaultCollisionFrequency) :
         defaultTemp(defaultTemperature), defaultFreq(defaultCollisionFrequency) {
-    setRandomNumberSeed((int) time(NULL));
+    setRandomNumberSeed(osrngseed());
 }
 
 ForceImpl* AndersenThermostat::createImpl() const {

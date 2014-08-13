@@ -49,6 +49,8 @@ void OPENMM_EXPORT throwException(const char* file, int line, const std::string&
 #define ASSERT(cond) {if (!(cond)) throwException(__FILE__, __LINE__, "");};
 
 #define ASSERT_EQUAL(expected, found) {if (!((expected) == (found))) {std::stringstream details; details << "Expected "<<(expected)<<", found "<<(found); throwException(__FILE__, __LINE__, details.str());}};
+
+#define ASSERT_EQUAL_CONTAINERS(expected, found) {if (!((expected) == (found))) {std::stringstream details; details << "Containers not equal"; throwException(__FILE__, __LINE__, details.str());}};
  
 #define ASSERT_EQUAL_TOL(expected, found, tol) {double _scale_ = std::abs(expected) > 1.0 ? std::abs(expected) : 1.0; if (!(std::abs((expected)-(found))/_scale_ <= (tol))) {std::stringstream details; details << "Expected "<<(expected)<<", found "<<(found); throwException(__FILE__, __LINE__, details.str());}};
 

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -44,6 +44,7 @@ CMMotionRemoverProxy::CMMotionRemoverProxy() : SerializationProxy("CMMotionRemov
 void CMMotionRemoverProxy::serialize(const void* object, SerializationNode& node) const {
     node.setIntProperty("version", 1);
     const CMMotionRemover& force = *reinterpret_cast<const CMMotionRemover*>(object);
+    node.setIntProperty("forceGroup", force.getForceGroup());
     node.setIntProperty("frequency", force.getFrequency());
 }
 
@@ -53,6 +54,7 @@ void* CMMotionRemoverProxy::deserialize(const SerializationNode& node) const {
     CMMotionRemover* force = NULL;
     try {
         CMMotionRemover* force = new CMMotionRemover(node.getIntProperty("frequency"));
+        force->setForceGroup(node.getIntProperty("forceGroup", 0));
         return force;
     }
     catch (...) {

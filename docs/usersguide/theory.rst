@@ -1334,3 +1334,33 @@ specific types of rules.  They are:
   :math:`\mathbf{r}_{13} = \mathbf{r}_{3}-\mathbf{r}_{1}`\ .  This allows
   the virtual site to be located outside the plane of the three particles.
 
+* LocalCoordinatesSite: The locations of three other particles are used to compute a local
+  coordinate system, and the virtual site is placed at a fixed location in that coordinate
+  system.  The origin of the coordinate system and the directions of its x and y axes
+  are each specified as a weighted sum of the locations of the three particles:
+
+.. math::
+   \mathbf{o}={w}^{o}_{1}\mathbf{r}_{1} + {w}^{o}_{2}\mathbf{r}_{2} + {w}^{o}_{3}\mathbf{r}_{3}
+
+   \mathbf{dx}={w}^{x}_{1}\mathbf{r}_{1} + {w}^{x}_{2}\mathbf{r}_{2} + {w}^{x}_{3}\mathbf{r}_{3}
+
+   \mathbf{dy}={w}^{y}_{1}\mathbf{r}_{1} + {w}^{y}_{2}\mathbf{r}_{2} + {w}^{y}_{3}\mathbf{r}_{3}
+
+   \mathbf{dz}=\mathbf{dx}\times \mathbf{dy}
+..
+
+   These vectors are then used to construct a set of orthonormal coordinate axes as follows:
+
+.. math::
+   \mathbf{\hat{x}}=\mathbf{dx}/|\mathbf{dx}|
+
+   \mathbf{\hat{z}}=\mathbf{dz}/|\mathbf{dz}|
+
+   \mathbf{\hat{y}}=\mathbf{\hat{z}}\times \mathbf{\hat{x}}
+..
+
+   Finally, the position of the virtual site is set to
+
+.. math::
+   \mathbf{r}=\mathbf{o}+p_1\mathbf{\hat{x}}+p_2\mathbf{\hat{y}}+p_3\mathbf{\hat{z}}
+..

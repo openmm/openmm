@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -44,6 +44,7 @@ CustomTorsionForceProxy::CustomTorsionForceProxy() : SerializationProxy("CustomT
 void CustomTorsionForceProxy::serialize(const void* object, SerializationNode& node) const {
     node.setIntProperty("version", 1);
     const CustomTorsionForce& force = *reinterpret_cast<const CustomTorsionForce*>(object);
+    node.setIntProperty("forceGroup", force.getForceGroup());
     node.setStringProperty("energy", force.getEnergyFunction());
     SerializationNode& perTorsionParams = node.createChildNode("PerTorsionParameters");
     for (int i = 0; i < force.getNumPerTorsionParameters(); i++) {
@@ -74,6 +75,7 @@ void* CustomTorsionForceProxy::deserialize(const SerializationNode& node) const 
     CustomTorsionForce* force = NULL;
     try {
         CustomTorsionForce* force = new CustomTorsionForce(node.getStringProperty("energy"));
+        force->setForceGroup(node.getIntProperty("forceGroup", 0));
         const SerializationNode& perTorsionParams = node.getChildNode("PerTorsionParameters");
         for (int i = 0; i < (int) perTorsionParams.getChildren().size(); i++) {
             const SerializationNode& parameter = perTorsionParams.getChildren()[i];

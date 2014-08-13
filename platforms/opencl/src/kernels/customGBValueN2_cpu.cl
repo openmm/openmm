@@ -169,11 +169,11 @@ __kernel void computeN2Value(__global const real4* restrict posq, __local real4*
 
 #ifdef USE_CUTOFF
     const unsigned int numTiles = interactionCount[0];
-    int pos = get_group_id(0)*(numTiles > maxTiles ? NUM_BLOCKS*(NUM_BLOCKS+1)/2 : numTiles)/get_num_groups(0);
-    int end = (get_group_id(0)+1)*(numTiles > maxTiles ? NUM_BLOCKS*(NUM_BLOCKS+1)/2 : numTiles)/get_num_groups(0);
+    int pos = (int) (get_group_id(0)*(numTiles > maxTiles ? NUM_BLOCKS*((long)NUM_BLOCKS+1)/2 : numTiles)/get_num_groups(0));
+    int end = (int) ((get_group_id(0)+1)*(numTiles > maxTiles ? NUM_BLOCKS*((long)NUM_BLOCKS+1)/2 : numTiles)/get_num_groups(0));
 #else
-    int pos = get_group_id(0)*numTiles/get_num_groups(0);
-    int end = (get_group_id(0)+1)*numTiles/get_num_groups(0);
+    int pos = (int) (get_group_id(0)*(long)numTiles/get_num_groups(0));
+    int end = (int) ((get_group_id(0)+1)*(long)numTiles/get_num_groups(0));
 #endif
     int nextToSkip = -1;
     int currentSkipIndex = 0;
@@ -184,7 +184,7 @@ __kernel void computeN2Value(__global const real4* restrict posq, __local real4*
         
         // Extract the coordinates of this tile.
         
-        unsigned int x, y;
+        int x, y;
         bool singlePeriodicCopy = false;
 #ifdef USE_CUTOFF
         if (numTiles <= maxTiles) {
@@ -197,7 +197,7 @@ __kernel void computeN2Value(__global const real4* restrict posq, __local real4*
         else
 #endif
         {
-            y = (unsigned int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
+            y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
             x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
             if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
                 y += (x < y ? -1 : 1);

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013 Stanford University and the Authors.           *
+ * Portions copyright (c) 2013-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -37,12 +37,18 @@
 #include "ReferenceLJCoulomb14.h"
 #include "ReferenceProperDihedralBond.h"
 #include "ReferenceRbDihedralBond.h"
+#include "ReferenceTabulatedFunction.h"
 #include "openmm/Context.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/ContextImpl.h"
+#include "openmm/internal/CustomNonbondedForceImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
 #include "openmm/internal/vectorize.h"
 #include "RealVec.h"
+#include "lepton/CompiledExpression.h"
+#include "lepton/CustomFunction.h"
+#include "lepton/Parser.h"
+#include "lepton/ParsedExpression.h"
 
 using namespace OpenMM;
 using namespace std;
@@ -616,6 +622,168 @@ void CpuCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, 
     NonbondedForce::NonbondedMethod method = force.getNonbondedMethod();
     if (force.getUseDispersionCorrection() && (method == NonbondedForce::CutoffPeriodic || method == NonbondedForce::Ewald || method == NonbondedForce::PME))
         dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(context.getSystem(), force);
+}
+
+CpuCalcCustomNonbondedForceKernel::CpuCalcCustomNonbondedForceKernel(string name, const Platform& platform, CpuPlatform::PlatformData& data) :
+            CalcCustomNonbondedForceKernel(name, platform), data(data), forceCopy(NULL), neighborList(NULL), nonbonded(NULL) {
+}
+
+CpuCalcCustomNonbondedForceKernel::~CpuCalcCustomNonbondedForceKernel() {
+    if (particleParamArray != NULL) {
+        for (int i = 0; i < numParticles; i++)
+            delete[] particleParamArray[i];
+        delete[] particleParamArray;
+    }
+    if (neighborList != NULL)
+        delete neighborList;
+    if (nonbonded != NULL)
+        delete nonbonded;
+    if (forceCopy != NULL)
+        delete forceCopy;
+}
+
+void CpuCalcCustomNonbondedForceKernel::initialize(const System& system, const CustomNonbondedForce& force) {
+
+    // Record the exclusions.
+
+    numParticles = force.getNumParticles();
+    exclusions.resize(numParticles);
+    for (int i = 0; i < force.getNumExclusions(); i++) {
+        int particle1, particle2;
+        force.getExclusionParticles(i, particle1, particle2);
+        exclusions[particle1].insert(particle2);
+        exclusions[particle2].insert(particle1);
+    }
+
+    // Build the arrays.
+
+    int numParameters = force.getNumPerParticleParameters();
+    particleParamArray = new double*[numParticles];
+    for (int i = 0; i < numParticles; i++)
+        particleParamArray[i] = new double[numParameters];
+    for (int i = 0; i < numParticles; ++i) {
+        vector<double> parameters;
+        force.getParticleParameters(i, parameters);
+        for (int j = 0; j < numParameters; j++)
+            particleParamArray[i][j] = parameters[j];
+    }
+    nonbondedMethod = CalcCustomNonbondedForceKernel::NonbondedMethod(force.getNonbondedMethod());
+    nonbondedCutoff = force.getCutoffDistance();
+    if (nonbondedMethod == NoCutoff)
+        useSwitchingFunction = false;
+    else {
+        neighborList = new CpuNeighborList(4);
+        useSwitchingFunction = force.getUseSwitchingFunction();
+        switchingDistance = force.getSwitchingDistance();
+    }
+
+    // Create custom functions for the tabulated functions.
+
+    map<string, Lepton::CustomFunction*> functions;
+    for (int i = 0; i < force.getNumFunctions(); i++)
+        functions[force.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
+
+    // Parse the various expressions used to calculate the force.
+
+    Lepton::ParsedExpression expression = Lepton::Parser::parse(force.getEnergyFunction(), functions).optimize();
+    Lepton::CompiledExpression energyExpression = expression.createCompiledExpression();
+    Lepton::CompiledExpression forceExpression = expression.differentiate("r").createCompiledExpression();
+    for (int i = 0; i < numParameters; i++)
+        parameterNames.push_back(force.getPerParticleParameterName(i));
+    for (int i = 0; i < force.getNumGlobalParameters(); i++) {
+        globalParameterNames.push_back(force.getGlobalParameterName(i));
+        globalParamValues[force.getGlobalParameterName(i)] = force.getGlobalParameterDefaultValue(i);
+    }
+
+    // Delete the custom functions.
+
+    for (map<string, Lepton::CustomFunction*>::iterator iter = functions.begin(); iter != functions.end(); iter++)
+        delete iter->second;
+    
+    // Record information for the long range correction.
+    
+    if (force.getNonbondedMethod() == CustomNonbondedForce::CutoffPeriodic && force.getUseLongRangeCorrection()) {
+        forceCopy = new CustomNonbondedForce(force);
+        hasInitializedLongRangeCorrection = false;
+    }
+    else {
+        longRangeCoefficient = 0.0;
+        hasInitializedLongRangeCorrection = true;
+    }
+    
+    // Record the interaction groups.
+    
+    for (int i = 0; i < force.getNumInteractionGroups(); i++) {
+        set<int> set1, set2;
+        force.getInteractionGroupParameters(i, set1, set2);
+        interactionGroups.push_back(make_pair(set1, set2));
+    }
+    data.isPeriodic = (nonbondedMethod == CutoffPeriodic);
+    nonbonded = new CpuCustomNonbondedForce(energyExpression, forceExpression, parameterNames, exclusions, data.threads);
+    if (interactionGroups.size() > 0)
+        nonbonded->setInteractionGroups(interactionGroups);
+}
+
+double CpuCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    vector<RealVec>& posData = extractPositions(context);
+    vector<RealVec>& forceData = extractForces(context);
+    RealVec& box = extractBoxSize(context);
+    float floatBoxSize[3] = {(float) box[0], (float) box[1], (float) box[2]};
+    double energy = 0;
+    bool periodic = (nonbondedMethod == CutoffPeriodic);
+    if (nonbondedMethod != NoCutoff) {
+        neighborList->computeNeighborList(numParticles, data.posq, exclusions, floatBoxSize, data.isPeriodic, nonbondedCutoff, data.threads);
+        nonbonded->setUseCutoff(nonbondedCutoff, *neighborList);
+    }
+    if (periodic) {
+        double minAllowedSize = 2*nonbondedCutoff;
+        if (box[0] < minAllowedSize || box[1] < minAllowedSize || box[2] < minAllowedSize)
+            throw OpenMMException("The periodic box size has decreased to less than twice the nonbonded cutoff.");
+        nonbonded->setPeriodic(box);
+    }
+    bool globalParamsChanged = false;
+    for (int i = 0; i < (int) globalParameterNames.size(); i++) {
+        double value = context.getParameter(globalParameterNames[i]);
+        if (globalParamValues[globalParameterNames[i]] != value)
+            globalParamsChanged = true;
+        globalParamValues[globalParameterNames[i]] = value;
+    }
+    if (useSwitchingFunction)
+        nonbonded->setUseSwitchingFunction(switchingDistance);
+    nonbonded->calculatePairIxn(numParticles, &data.posq[0], posData, particleParamArray, 0, globalParamValues, data.threadForce, includeForces, includeEnergy, energy);
+    
+    // Add in the long range correction.
+    
+    if (!hasInitializedLongRangeCorrection || (globalParamsChanged && forceCopy != NULL)) {
+        longRangeCoefficient = CustomNonbondedForceImpl::calcLongRangeCorrection(*forceCopy, context.getOwner());
+        hasInitializedLongRangeCorrection = true;
+    }
+    energy += longRangeCoefficient/(box[0]*box[1]*box[2]);
+    return energy;
+}
+
+void CpuCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force) {
+    if (numParticles != force.getNumParticles())
+        throw OpenMMException("updateParametersInContext: The number of particles has changed");
+
+    // Record the values.
+
+    int numParameters = force.getNumPerParticleParameters();
+    vector<double> params;
+    for (int i = 0; i < numParticles; ++i) {
+        vector<double> parameters;
+        force.getParticleParameters(i, parameters);
+        for (int j = 0; j < numParameters; j++)
+            particleParamArray[i][j] = parameters[j];
+    }
+    
+    // If necessary, recompute the long range correction.
+    
+    if (forceCopy != NULL) {
+        longRangeCoefficient = CustomNonbondedForceImpl::calcLongRangeCorrection(force, context.getOwner());
+        hasInitializedLongRangeCorrection = true;
+        *forceCopy = force;
+    }
 }
 
 CpuCalcGBSAOBCForceKernel::~CpuCalcGBSAOBCForceKernel() {

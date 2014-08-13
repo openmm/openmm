@@ -42,7 +42,7 @@ namespace OpenMM {
 /**
  * Given a TabulatedFunction, wrap it in an appropriate subclass of Lepton::CustomFunction.
  */
-extern "C" Lepton::CustomFunction* createReferenceTabulatedFunction(const TabulatedFunction& function);
+extern "C" OPENMM_EXPORT Lepton::CustomFunction* createReferenceTabulatedFunction(const TabulatedFunction& function);
 
 /**
  * This class adapts a Continuous1DFunction into a Lepton::CustomFunction.

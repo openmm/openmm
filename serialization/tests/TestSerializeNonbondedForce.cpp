@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -42,11 +42,17 @@ void testSerialization() {
     // Create a Force.
 
     NonbondedForce force;
+    force.setForceGroup(3);
     force.setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    force.setSwitchingDistance(1.5);
+    force.setUseSwitchingFunction(true);
     force.setCutoffDistance(2.0);
     force.setEwaldErrorTolerance(1e-3);
     force.setReactionFieldDielectric(50.0);
     force.setUseDispersionCorrection(false);
+    double alpha = 0.5;
+    int nx = 3, ny = 5, nz = 7;
+    force.setPMEParameters(alpha, nx, ny, nz);
     force.addParticle(1, 0.1, 0.01);
     force.addParticle(0.5, 0.2, 0.02);
     force.addParticle(-0.5, 0.3, 0.03);
@@ -62,12 +68,22 @@ void testSerialization() {
     // Compare the two forces to see if they are identical.
 
     NonbondedForce& force2 = *copy;
+    ASSERT_EQUAL(force.getForceGroup(), force2.getForceGroup());
     ASSERT_EQUAL(force.getNonbondedMethod(), force2.getNonbondedMethod());
+    ASSERT_EQUAL(force.getSwitchingDistance(), force2.getSwitchingDistance());
+    ASSERT_EQUAL(force.getUseSwitchingFunction(), force2.getUseSwitchingFunction());
     ASSERT_EQUAL(force.getCutoffDistance(), force2.getCutoffDistance());
     ASSERT_EQUAL(force.getEwaldErrorTolerance(), force2.getEwaldErrorTolerance());
     ASSERT_EQUAL(force.getReactionFieldDielectric(), force2.getReactionFieldDielectric());
     ASSERT_EQUAL(force.getUseDispersionCorrection(), force2.getUseDispersionCorrection());
     ASSERT_EQUAL(force.getNumParticles(), force2.getNumParticles());
+    double alpha2;
+    int nx2, ny2, nz2;
+    force2.getPMEParameters(alpha2, nx2, ny2, nz2);
+    ASSERT_EQUAL(alpha, alpha2);
+    ASSERT_EQUAL(nx, nx2);
+    ASSERT_EQUAL(ny, ny2);
+    ASSERT_EQUAL(nz, nz2);    
     for (int i = 0; i < force.getNumParticles(); i++) {
         double charge1, sigma1, epsilon1;
         double charge2, sigma2, epsilon2;

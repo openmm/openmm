@@ -35,7 +35,9 @@
 #include "CpuSETTLE.h"
 #include "ReferenceConstraints.h"
 #include "openmm/internal/hardware.h"
+#include "openmm/internal/vectorize.h"
 #include <sstream>
+#include <stdlib.h>
 
 using namespace OpenMM;
 using namespace std;
@@ -62,6 +64,7 @@ CpuPlatform::CpuPlatform() {
     registerKernelFactory(CalcPeriodicTorsionForceKernel::Name(), factory);
     registerKernelFactory(CalcRBTorsionForceKernel::Name(), factory);
     registerKernelFactory(CalcNonbondedForceKernel::Name(), factory);
+    registerKernelFactory(CalcCustomNonbondedForceKernel::Name(), factory);
     registerKernelFactory(CalcGBSAOBCForceKernel::Name(), factory);
     registerKernelFactory(IntegrateLangevinStepKernel::Name(), factory);
     platformProperties.push_back(CpuThreads());
@@ -92,15 +95,7 @@ bool CpuPlatform::supportsDoublePrecision() const {
 }
 
 bool CpuPlatform::isProcessorSupported() {
-    // Make sure the CPU supports SSE 4.1.
-    
-    int cpuInfo[4];
-    cpuid(cpuInfo, 0);
-    if (cpuInfo[0] >= 1) {
-        cpuid(cpuInfo, 1);
-        return ((cpuInfo[2] & ((int) 1 << 19)) != 0);
-    }
-    return false;
+    return isVec4Supported();
 }
 
 void CpuPlatform::contextCreated(ContextImpl& context, const map<string, string>& properties) const {

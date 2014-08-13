@@ -1,5 +1,3 @@
-#define WARPS_PER_GROUP (THREAD_BLOCK_SIZE/TILE_SIZE)
-
 typedef struct {
     real x, y, z;
     real q;
@@ -19,7 +17,7 @@ extern "C" __global__ void computeInteractionGroups(
     const unsigned int tgx = threadIdx.x & (TILE_SIZE-1); // index within the warp
     const unsigned int tbx = threadIdx.x - tgx;           // block warpIndex
     real energy = 0.0f;
-    __shared__ AtomData localData[THREAD_BLOCK_SIZE];
+    __shared__ AtomData localData[LOCAL_MEMORY_SIZE];
 
     const unsigned int startTile = FIRST_TILE+warp*(LAST_TILE-FIRST_TILE)/totalWarps;
     const unsigned int endTile = FIRST_TILE+(warp+1)*(LAST_TILE-FIRST_TILE)/totalWarps;

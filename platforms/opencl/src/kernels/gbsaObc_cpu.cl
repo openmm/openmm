@@ -177,11 +177,11 @@ __kernel void computeBornSum(
 
 #ifdef USE_CUTOFF
     unsigned int numTiles = interactionCount[0];
-    int pos = get_group_id(0)*(numTiles > maxTiles ? NUM_BLOCKS*(NUM_BLOCKS+1)/2 : numTiles)/get_num_groups(0);
-    int end = (get_group_id(0)+1)*(numTiles > maxTiles ? NUM_BLOCKS*(NUM_BLOCKS+1)/2 : numTiles)/get_num_groups(0);
+    int pos = (int) (get_group_id(0)*(numTiles > maxTiles ? NUM_BLOCKS*((long)NUM_BLOCKS+1)/2 : numTiles)/get_num_groups(0));
+    int end = (int) ((get_group_id(0)+1)*(numTiles > maxTiles ? NUM_BLOCKS*((long)NUM_BLOCKS+1)/2 : numTiles)/get_num_groups(0));
 #else
-    int pos = get_group_id(0)*numTiles/get_num_groups(0);
-    int end = (get_group_id(0)+1)*numTiles/get_num_groups(0);
+    int pos = (int) (get_group_id(0)*(long)numTiles/get_num_groups(0));
+    int end = (int) ((get_group_id(0)+1)*(long)numTiles/get_num_groups(0));
 #endif
     int nextToSkip = -1;
     int currentSkipIndex = 0;
@@ -192,7 +192,7 @@ __kernel void computeBornSum(
 
         // Extract the coordinates of this tile.
         
-        unsigned int x, y;
+        int x, y;
         bool singlePeriodicCopy = false;
 #ifdef USE_CUTOFF
         if (numTiles <= maxTiles) {
@@ -205,7 +205,7 @@ __kernel void computeBornSum(
         else
 #endif
         {
-            y = (unsigned int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
+            y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
             x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
             if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
                 y += (x < y ? -1 : 1);
@@ -468,11 +468,16 @@ __kernel void computeGBSAForce1(
                         real expTerm = EXP(-D_ij);
                         real denominator2 = r2 + alpha2_ij*expTerm;
                         real denominator = SQRT(denominator2);
-                        real tempEnergy = (PREFACTOR*posq1.w*posq2.w)*RECIP(denominator);
+                        real scaledChargeProduct = PREFACTOR*posq1.w*posq2.w;
+                        real tempEnergy = scaledChargeProduct*RECIP(denominator);
                         real Gpol = tempEnergy*RECIP(denominator2);
                         real dGpol_dalpha2_ij = -0.5f*Gpol*expTerm*(1.0f+D_ij);
                         real dEdR = Gpol*(1.0f - 0.25f*expTerm);
                         force.w += dGpol_dalpha2_ij*bornRadius2;
+#ifdef USE_CUTOFF
+                        if (atom1 != y*TILE_SIZE+j)
+                            tempEnergy -= scaledChargeProduct/CUTOFF;
+#endif
                         energy += 0.5f*tempEnergy;
                         delta.xyz *= dEdR;
                         force.xyz -= delta.xyz;
@@ -527,11 +532,15 @@ __kernel void computeGBSAForce1(
                         real expTerm = EXP(-D_ij);
                         real denominator2 = r2 + alpha2_ij*expTerm;
                         real denominator = SQRT(denominator2);
-                        real tempEnergy = (PREFACTOR*posq1.w*posq2.w)*RECIP(denominator);
+                        real scaledChargeProduct = PREFACTOR*posq1.w*posq2.w;
+                        real tempEnergy = scaledChargeProduct*RECIP(denominator);
                         real Gpol = tempEnergy*RECIP(denominator2);
                         real dGpol_dalpha2_ij = -0.5f*Gpol*expTerm*(1.0f+D_ij);
                         real dEdR = Gpol*(1.0f - 0.25f*expTerm);
                         force.w += dGpol_dalpha2_ij*bornRadius2;
+#ifdef USE_CUTOFF
+                        tempEnergy -= scaledChargeProduct/CUTOFF;
+#endif
                         energy += tempEnergy;
                         delta.xyz *= dEdR;
                         force.xyz -= delta.xyz;
@@ -583,11 +592,11 @@ __kernel void computeGBSAForce1(
 
 #ifdef USE_CUTOFF
     unsigned int numTiles = interactionCount[0];
-    int pos = get_group_id(0)*(numTiles > maxTiles ? NUM_BLOCKS*(NUM_BLOCKS+1)/2 : numTiles)/get_num_groups(0);
-    int end = (get_group_id(0)+1)*(numTiles > maxTiles ? NUM_BLOCKS*(NUM_BLOCKS+1)/2 : numTiles)/get_num_groups(0);
+    int pos = (int) (get_group_id(0)*(numTiles > maxTiles ? NUM_BLOCKS*((long)NUM_BLOCKS+1)/2 : numTiles)/get_num_groups(0));
+    int end = (int) ((get_group_id(0)+1)*(numTiles > maxTiles ? NUM_BLOCKS*((long)NUM_BLOCKS+1)/2 : numTiles)/get_num_groups(0));
 #else
-    int pos = get_group_id(0)*numTiles/get_num_groups(0);
-    int end = (get_group_id(0)+1)*numTiles/get_num_groups(0);
+    int pos = (int) (get_group_id(0)*(long)numTiles/get_num_groups(0));
+    int end = (int) ((get_group_id(0)+1)*(long)numTiles/get_num_groups(0));
 #endif
     int nextToSkip = -1;
     int currentSkipIndex = 0;
@@ -598,7 +607,7 @@ __kernel void computeGBSAForce1(
 
         // Extract the coordinates of this tile.
         
-        unsigned int x, y;
+        int x, y;
         bool singlePeriodicCopy = false;
 #ifdef USE_CUTOFF
         if (numTiles <= maxTiles) {
@@ -611,7 +620,7 @@ __kernel void computeGBSAForce1(
         else
 #endif
         {
-            y = (unsigned int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
+            y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
             x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
             if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
                 y += (x < y ? -1 : 1);
@@ -684,11 +693,15 @@ __kernel void computeGBSAForce1(
                             real expTerm = EXP(-D_ij);
                             real denominator2 = r2 + alpha2_ij*expTerm;
                             real denominator = SQRT(denominator2);
-                            real tempEnergy = (PREFACTOR*posq1.w*posq2.w)*RECIP(denominator);
+                            real scaledChargeProduct = PREFACTOR*posq1.w*posq2.w;
+                            real tempEnergy = scaledChargeProduct*RECIP(denominator);
                             real Gpol = tempEnergy*RECIP(denominator2);
                             real dGpol_dalpha2_ij = -0.5f*Gpol*expTerm*(1.0f+D_ij);
                             real dEdR = Gpol*(1.0f - 0.25f*expTerm);
                             force.w += dGpol_dalpha2_ij*bornRadius2;
+#ifdef USE_CUTOFF
+                            tempEnergy -= scaledChargeProduct/CUTOFF;
+#endif
                             energy += tempEnergy;
                             delta.xyz *= dEdR;
                             force.xyz -= delta.xyz;
@@ -744,11 +757,15 @@ __kernel void computeGBSAForce1(
                             real expTerm = EXP(-D_ij);
                             real denominator2 = r2 + alpha2_ij*expTerm;
                             real denominator = SQRT(denominator2);
-                            real tempEnergy = (PREFACTOR*posq1.w*posq2.w)*RECIP(denominator);
+                            real scaledChargeProduct = PREFACTOR*posq1.w*posq2.w;
+                            real tempEnergy = scaledChargeProduct*RECIP(denominator);
                             real Gpol = tempEnergy*RECIP(denominator2);
                             real dGpol_dalpha2_ij = -0.5f*Gpol*expTerm*(1.0f+D_ij);
                             real dEdR = Gpol*(1.0f - 0.25f*expTerm);
                             force.w += dGpol_dalpha2_ij*bornRadius2;
+#ifdef USE_CUTOFF
+                            tempEnergy -= scaledChargeProduct/CUTOFF;
+#endif
                             energy += tempEnergy;
                             delta.xyz *= dEdR;
                             force.xyz -= delta.xyz;
