@@ -1492,6 +1492,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     else
         dispersionCoefficient = 0.0;
     alpha = 0;
+    ewaldSelfEnergy = 0.0;
     if (force.getNonbondedMethod() == NonbondedForce::Ewald) {
         // Compute the Ewald parameters.
 
@@ -1648,8 +1649,6 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
             }
         }
     }
-    else
-        ewaldSelfEnergy = 0.0;
 
     // Add the interaction to the default nonbonded kernel.
     
