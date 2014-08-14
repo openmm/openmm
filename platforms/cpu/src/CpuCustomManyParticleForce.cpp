@@ -207,7 +207,7 @@ void CpuCustomManyParticleForce::setPeriodic(RealVec& boxSize) {
 void CpuCustomManyParticleForce::loopOverInteractions(vector<int>& availableParticles, vector<int>& particleSet, int loopIndex, int startIndex,
                                                           RealOpenMM** particleParameters, float* forces, ThreadData& data, const fvec4& boxSize, const fvec4& invBoxSize) {
     int numParticles = availableParticles.size();
-//    double cutoff2 = cutoffDistance*cutoffDistance;
+    double cutoff2 = cutoffDistance*cutoffDistance;
     for (int i = startIndex; i < numParticles; i++) {
         int particle = availableParticles[i];
         
@@ -215,18 +215,13 @@ void CpuCustomManyParticleForce::loopOverInteractions(vector<int>& availablePart
         
         bool include = true;
         if (useCutoff) {
-//            fvec4 deltaR;
-//            fvec4 pos1(posq+4*particle);
-//            float r2;
-//            for (int j = 0; j < loopIndex && include; j++) {
-//                fvec4 pos2(posq+4*particleSet[j]);
-//                getDeltaR(pos1, pos2, deltaR, r2, boxSize, invBoxSize);
-//                include &= (r2 < cutoff2);
-//            }
-            RealOpenMM delta[ReferenceForce::LastDeltaRIndex];
+            fvec4 deltaR;
+            fvec4 pos1(posq+4*particle);
+            float r2;
             for (int j = 0; j < loopIndex && include; j++) {
-                computeDelta(particle, particleSet[j], delta, atomCoordinates);
-                include &= (delta[ReferenceForce::RIndex] < cutoffDistance);
+                fvec4 pos2(posq+4*particleSet[j]);
+                getDeltaR(pos1, pos2, deltaR, r2, boxSize, invBoxSize);
+                include &= (r2 < cutoff2);
             }
         }
         for (int j = 0; j < loopIndex && include; j++)
@@ -299,10 +294,15 @@ void CpuCustomManyParticleForce::calculateOneIxn(vector<int>& particleSet, RealO
     if (includeForces) {
         // Apply forces based on individual particle coordinates.
 
-        vector<RealVec> f(numParticlesPerSet);
+        AlignedArray<fvec4> f(numParticlesPerSet);
+        for (int i = 0; i < numParticlesPerSet; i++)
+            f[i] = fvec4(0.0f);
         for (int i = 0; i < (int) data.particleTerms.size(); i++) {
             const ParticleTermInfo& term = data.particleTerms[i];
-            f[term.atom][term.component] -= term.forceExpression.evaluate();
+            float temp[4];
+            f[term.atom].store(temp);
+            temp[term.component] -= term.forceExpression.evaluate();
+            f[term.atom] = fvec4(temp);
         }
 
         // Apply forces based on distances.
@@ -310,11 +310,9 @@ void CpuCustomManyParticleForce::calculateOneIxn(vector<int>& particleSet, RealO
         for (int i = 0; i < (int) data.distanceTerms.size(); i++) {
             const DistanceTermInfo& term = data.distanceTerms[i];
             RealOpenMM dEdR = (RealOpenMM) (term.forceExpression.evaluate()*term.deltaSign/(delta[term.delta][ReferenceForce::RIndex]));
-            for (int i = 0; i < 3; i++) {
-               RealOpenMM force  = -dEdR*delta[term.delta][i];
-               f[term.p1][i] -= force;
-               f[term.p2][i] += force;
-            }
+            fvec4 force = -dEdR*fvec4((float) delta[term.delta][0], (float) delta[term.delta][1], (float) delta[term.delta][2], 0.0f);
+            f[term.p1] -= force;
+            f[term.p2] += force;
         }
 
         // Apply forces based on angles.
@@ -322,26 +320,22 @@ void CpuCustomManyParticleForce::calculateOneIxn(vector<int>& particleSet, RealO
         for (int i = 0; i < (int) data.angleTerms.size(); i++) {
             const AngleTermInfo& term = data.angleTerms[i];
             RealOpenMM dEdTheta = (RealOpenMM) term.forceExpression.evaluate();
-            RealOpenMM thetaCross[ReferenceForce::LastDeltaRIndex];
-            SimTKOpenMMUtilities::crossProductVector3(delta[term.delta1], delta[term.delta2], thetaCross);
-            RealOpenMM lengthThetaCross = SQRT(DOT3(thetaCross, thetaCross));
-            if (lengthThetaCross < 1.0e-06)
-                lengthThetaCross = (RealOpenMM) 1.0e-06;
+            fvec4 delta1((float) delta[term.delta1][0], (float) delta[term.delta1][1], (float) delta[term.delta1][2], 0.0f);
+            fvec4 delta2((float) delta[term.delta2][0], (float) delta[term.delta2][1], (float) delta[term.delta2][2], 0.0f);
+            fvec4 thetaCross = cross(delta1, delta2);
+            float lengthThetaCross = sqrtf(dot3(thetaCross, thetaCross));
+            if (lengthThetaCross < 1.0e-6f)
+                lengthThetaCross = 1.0e-6f;
             RealOpenMM termA = dEdTheta*term.delta2Sign/(delta[term.delta1][ReferenceForce::R2Index]*lengthThetaCross);
             RealOpenMM termC = -dEdTheta*term.delta1Sign/(delta[term.delta2][ReferenceForce::R2Index]*lengthThetaCross);
-            RealOpenMM deltaCrossP[3][3];
-            SimTKOpenMMUtilities::crossProductVector3(delta[term.delta1], thetaCross, deltaCrossP[0]);
-            SimTKOpenMMUtilities::crossProductVector3(delta[term.delta2], thetaCross, deltaCrossP[2]);
-            for (int i = 0; i < 3; i++) {
-                deltaCrossP[0][i] *= termA;
-                deltaCrossP[2][i] *= termC;
-                deltaCrossP[1][i] = -(deltaCrossP[0][i]+deltaCrossP[2][i]);
-            }
-            for (int i = 0; i < 3; i++) {
-                f[term.p1][i] += deltaCrossP[0][i];
-                f[term.p2][i] += deltaCrossP[1][i];
-                f[term.p3][i] += deltaCrossP[2][i];
-            }
+            fvec4 deltaCross1 = cross(delta1, thetaCross);
+            fvec4 deltaCross2 = cross(delta2, thetaCross);
+            fvec4 force1 = termA*deltaCross1;
+            fvec4 force3 = termC*deltaCross2;
+            fvec4 force2 = -(force1+force3);
+            f[term.p1] += force1;
+            f[term.p2] += force2;
+            f[term.p3] += force3;
         }
 
         // Apply forces based on dihedrals.
@@ -360,26 +354,20 @@ void CpuCustomManyParticleForce::calculateOneIxn(vector<int>& particleSet, RealO
             forceFactors[1] /= delta[term.delta2][ReferenceForce::R2Index];
             forceFactors[2] = DOT3(delta[term.delta3], delta[term.delta2]);
             forceFactors[2] /= delta[term.delta2][ReferenceForce::R2Index];
-            for (int i = 0; i < 3; i++) {
-                internalF[0][i] = forceFactors[0]*term.cross1[i];
-                internalF[3][i] = forceFactors[3]*term.cross2[i];
-                RealOpenMM s = forceFactors[1]*internalF[0][i] - forceFactors[2]*internalF[3][i];
-                internalF[1][i] = internalF[0][i] - s;
-                internalF[2][i] = internalF[3][i] + s;
-            }
-            for (int i = 0; i < 3; i++) {
-                f[term.p1][i] += internalF[0][i];
-                f[term.p2][i] -= internalF[1][i];
-                f[term.p3][i] -= internalF[2][i];
-                f[term.p4][i] += internalF[3][i];
-            }
+            fvec4 force1 = forceFactors[0]*fvec4((float) term.cross1[0], (float) term.cross1[1], (float) term.cross1[2], 0.0f);
+            fvec4 force4 = forceFactors[3]*fvec4((float) term.cross2[0], (float) term.cross2[1], (float) term.cross2[2], 0.0f);
+            fvec4 s = forceFactors[1]*force1 - forceFactors[2]*force4;
+            f[term.p1] += force1;
+            f[term.p2] -= force1-s;
+            f[term.p3] -= force4+s;
+            f[term.p4] += force4;
         }
 
         // Store the forces.
 
         for (int i = 0; i < numParticlesPerSet; i++) {
             int index = permutedParticles[i];
-            (fvec4(forces+4*index)+fvec4((float) f[i][0], (float) f[i][1], (float) f[i][2], 0.0f)).store(forces+4*index);
+            (fvec4(forces+4*index)+f[i]).store(forces+4*index);
         }
     }
 

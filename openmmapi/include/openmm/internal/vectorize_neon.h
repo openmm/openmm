@@ -268,6 +268,12 @@ static inline float dot4(const fvec4& v1, const fvec4& v2) {
     return vgetq_lane_f32(result, 0) + vgetq_lane_f32(result, 1) + vgetq_lane_f32(result, 2) + vgetq_lane_f32(result,3);
 }
 
+static inline fvec4 cross(const fvec4& v1, const fvec4& v2) {
+    return fvec4(v1[1]*v2[2] - v1[2]*v2[1],
+                 v1[2]*v2[0] - v1[0]*v2[2],
+                 v1[0]*v2[1] - v1[1]*v2[0], 0);
+}
+
 static inline void transpose(fvec4& v1, fvec4& v2, fvec4& v3, fvec4& v4) {
     float32x4x2_t t1 = vuzpq_f32(v1, v3);
     float32x4x2_t t2 = vuzpq_f32(v2, v4);

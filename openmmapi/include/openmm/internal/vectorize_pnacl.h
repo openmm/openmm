@@ -255,6 +255,12 @@ static inline float dot4(const fvec4& v1, const fvec4& v2) {
     return r[0]+r[1]+r[2]+r[3];
 }
 
+static inline fvec4 cross(const fvec4& v1, const fvec4& v2) {
+    __m128 temp = v2.val*__builtin_shufflevector(v1.val, v1.val, 2, 0, 1, 3) -
+                  v1.val*__builtin_shufflevector(v2.val, v2.val, 2, 0, 1, 3);
+    return __builtin_shufflevector(temp, temp, 2, 0, 1, 3);
+}
+
 static inline void transpose(fvec4& v1, fvec4& v2, fvec4& v3, fvec4& v4) {
     __m128 a1 = __builtin_shufflevector(v1.val, v2.val, 0, 4, 2, 6);
     __m128 a2 = __builtin_shufflevector(v1.val, v2.val, 1, 5, 3, 7);
