@@ -870,8 +870,6 @@ void CpuCalcCustomManyParticleForceKernel::initialize(const System& system, cons
 
 double CpuCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     vector<RealVec>& posData = extractPositions(context);
-    vector<RealVec>& forceData = extractForces(context);
-    RealOpenMM energy = 0;
     map<string, double> globalParameters;
     for (int i = 0; i < (int) globalParameterNames.size(); i++)
         globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
@@ -882,7 +880,8 @@ double CpuCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bool 
             throw OpenMMException("The periodic box size has decreased to less than twice the nonbonded cutoff.");
         ixn->setPeriodic(box);
     }
-    ixn->calculateIxn(data.posq, posData, particleParamArray, globalParameters, forceData, includeEnergy ? &energy : NULL);
+    double energy = 0;
+    ixn->calculateIxn(data.posq, posData, particleParamArray, globalParameters, data.threadForce, includeForces, includeEnergy, energy);
     return energy;
 }
 

@@ -34,9 +34,20 @@
 #include "ReferenceTabulatedFunction.h"
 #include "openmm/internal/CustomManyParticleForceImpl.h"
 #include "lepton/CustomFunction.h"
+#include "gmx_atomic.h"
 
 using namespace OpenMM;
 using namespace std;
+
+class CpuCustomManyParticleForce::ComputeForceTask : public ThreadPool::Task {
+public:
+    ComputeForceTask(CpuCustomManyParticleForce& owner) : owner(owner) {
+    }
+    void execute(ThreadPool& threads, int threadIndex) {
+        owner.threadComputeForce(threads, threadIndex);
+    }
+    CpuCustomManyParticleForce& owner;
+};
 
 CpuCustomManyParticleForce::CpuCustomManyParticleForce(const CustomManyParticleForce& force, ThreadPool& threads) :
             threads(threads), useCutoff(false), usePeriodic(false), neighborList(NULL) {
@@ -49,15 +60,14 @@ CpuCustomManyParticleForce::CpuCustomManyParticleForce(const CustomManyParticleF
     for (int i = 0; i < (int) force.getNumTabulatedFunctions(); i++)
         functions[force.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
 
-    // Parse the expression and create the object used to calculate the interaction.
+    // Parse the expression and create the objects used to calculate the interaction.
 
     map<string, vector<int> > distances;
     map<string, vector<int> > angles;
     map<string, vector<int> > dihedrals;
     Lepton::ParsedExpression energyExpr = CustomManyParticleForceImpl::prepareExpression(force, functions, distances, angles, dihedrals);
-    energyExpression = energyExpr.createCompiledExpression();
-    expressionSet.registerExpression(energyExpression);
-    vector<string> particleParameterNames;
+    for (int i = 0; i < threads.getNumThreads(); i++)
+        threadData.push_back(new ThreadData(force, energyExpr, distances, angles, dihedrals));
     if (force.getNonbondedMethod() != CustomManyParticleForce::NoCutoff)
         setUseCutoff(force.getCutoffDistance());
 
@@ -65,38 +75,6 @@ CpuCustomManyParticleForce::CpuCustomManyParticleForce(const CustomManyParticleF
 
     for (map<string, Lepton::CustomFunction*>::iterator iter = functions.begin(); iter != functions.end(); iter++)
         delete iter->second;
-    
-    // Differentiate the energy to get expressions for the force.
-
-    particleParamIndices.resize(numParticlesPerSet);
-    for (int i = 0; i < numParticlesPerSet; i++) {
-        stringstream xname, yname, zname;
-        xname << 'x' << (i+1);
-        yname << 'y' << (i+1);
-        zname << 'z' << (i+1);
-        particleTerms.push_back(CpuCustomManyParticleForce::ParticleTermInfo(xname.str(), i, 0, energyExpr.differentiate(xname.str()).optimize().createCompiledExpression(), expressionSet));
-        particleTerms.push_back(CpuCustomManyParticleForce::ParticleTermInfo(yname.str(), i, 1, energyExpr.differentiate(yname.str()).optimize().createCompiledExpression(), expressionSet));
-        particleTerms.push_back(CpuCustomManyParticleForce::ParticleTermInfo(zname.str(), i, 2, energyExpr.differentiate(zname.str()).optimize().createCompiledExpression(), expressionSet));
-        for (int j = 0; j < numPerParticleParameters; j++) {
-            stringstream paramname;
-            paramname << force.getPerParticleParameterName(j) << (i+1);
-            particleParamIndices[i].push_back(expressionSet.getVariableIndex(paramname.str()));
-        }
-    }
-    for (map<string, vector<int> >::const_iterator iter = distances.begin(); iter != distances.end(); ++iter)
-        distanceTerms.push_back(CpuCustomManyParticleForce::DistanceTermInfo(iter->first, iter->second, energyExpr.differentiate(iter->first).optimize().createCompiledExpression(), expressionSet));
-    for (map<string, vector<int> >::const_iterator iter = angles.begin(); iter != angles.end(); ++iter)
-        angleTerms.push_back(CpuCustomManyParticleForce::AngleTermInfo(iter->first, iter->second, energyExpr.differentiate(iter->first).optimize().createCompiledExpression(), expressionSet));
-    for (map<string, vector<int> >::const_iterator iter = dihedrals.begin(); iter != dihedrals.end(); ++iter)
-        dihedralTerms.push_back(CpuCustomManyParticleForce::DihedralTermInfo(iter->first, iter->second, energyExpr.differentiate(iter->first).optimize().createCompiledExpression(), expressionSet));
-    for (int i = 0; i < particleTerms.size(); i++)
-        expressionSet.registerExpression(particleTerms[i].forceExpression);
-    for (int i = 0; i < distanceTerms.size(); i++)
-        expressionSet.registerExpression(distanceTerms[i].forceExpression);
-    for (int i = 0; i < angleTerms.size(); i++)
-        expressionSet.registerExpression(angleTerms[i].forceExpression);
-    for (int i = 0; i < dihedralTerms.size(); i++)
-        expressionSet.registerExpression(dihedralTerms[i].forceExpression);
     
     // Record exclusions.
     
@@ -116,23 +94,64 @@ CpuCustomManyParticleForce::CpuCustomManyParticleForce(const CustomManyParticleF
 CpuCustomManyParticleForce::~CpuCustomManyParticleForce() {
     if (neighborList != NULL)
         delete neighborList;
+    for (int i = 0; i < (int) threadData.size(); i++)
+        delete threadData[i];
 }
 
 void CpuCustomManyParticleForce::calculateIxn(AlignedArray<float>& posq, vector<RealVec>& atomCoordinates, RealOpenMM** particleParameters,
-                                                  const map<string, double>& globalParameters, vector<RealVec>& forces,
-                                                  RealOpenMM* totalEnergy) {
-    for (map<string, double>::const_iterator iter = globalParameters.begin(); iter != globalParameters.end(); ++iter)
-        expressionSet.setVariable(expressionSet.getVariableIndex(iter->first), iter->second);
-    int numParticles = atomCoordinates.size();
-    vector<int> particleIndices(numParticlesPerSet);
-    fvec4 boxSize(periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2], 0);
-    fvec4 invBoxSize((1/periodicBoxSize[0]), (1/periodicBoxSize[1]), (1/periodicBoxSize[2]), 0);
+                                                  const map<string, double>& globalParameters, vector<AlignedArray<float> >& threadForce,
+                                                  bool includeForces, bool includeEnergy, double& energy) {
+    // Record the parameters for the threads.
+    
+    this->numParticles = atomCoordinates.size();
+    this->posq = &posq[0];
+    this->atomCoordinates = &atomCoordinates[0];
+    this->particleParameters = particleParameters;
+    this->globalParameters = &globalParameters;
+    this->threadForce = &threadForce;
+    this->includeForces = includeForces;
+    this->includeEnergy = includeEnergy;
+    gmx_atomic_t counter;
+    gmx_atomic_set(&counter, 0);
+    this->atomicCounter = &counter;
     if (useCutoff) {
         // Construct a neighbor list.
         
         float boxSizeFloat[] = {(float) periodicBoxSize[0], (float) periodicBoxSize[1], (float) periodicBoxSize[2]};
         neighborList->computeNeighborList(numParticles, posq, exclusions, boxSizeFloat, usePeriodic, cutoffDistance, threads);
-        for (int blockIndex = 0; blockIndex < neighborList->getNumBlocks(); blockIndex++) {
+    }
+    
+    // Signal the threads to start running and wait for them to finish.
+    
+    ComputeForceTask task(*this);
+    threads.execute(task);
+    threads.waitForThreads();
+    
+    // Combine the energies from all the threads.
+    
+    if (includeEnergy) {
+        int numThreads = threads.getNumThreads();
+        for (int i = 0; i < numThreads; i++)
+            energy += threadData[i]->energy;
+    }
+}
+
+void CpuCustomManyParticleForce::threadComputeForce(ThreadPool& threads, int threadIndex) {
+    vector<int> particleIndices(numParticlesPerSet);
+    fvec4 boxSize(periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2], 0);
+    fvec4 invBoxSize((1/periodicBoxSize[0]), (1/periodicBoxSize[1]), (1/periodicBoxSize[2]), 0);
+    float* forces = &(*threadForce)[threadIndex][0];
+    ThreadData& data = *threadData[threadIndex];
+    data.energy = 0;
+    for (map<string, double>::const_iterator iter = globalParameters->begin(); iter != globalParameters->end(); ++iter)
+        data.expressionSet.setVariable(data.expressionSet.getVariableIndex(iter->first), iter->second);
+    if (useCutoff) {
+        // Loop over interactions from the neighbor list.
+        
+        while (true) {
+            int blockIndex = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
+            if (blockIndex >= neighborList->getNumBlocks())
+                break;
             const vector<int>& neighbors = neighborList->getBlockNeighbors(blockIndex);
             const vector<char>& exclusions = neighborList->getBlockExclusions(blockIndex);
             int numNeighbors = neighbors.size();
@@ -147,7 +166,7 @@ void CpuCustomManyParticleForce::calculateIxn(AlignedArray<float>& posq, vector<
                 for (int j = 0; j < numNeighbors; j++)
                     if ((exclusions[j] & (1<<i)) == 0)
                         particles.push_back(neighbors[j]);
-                loopOverInteractions(particles, particleIndices, 1, 0, &posq[0], atomCoordinates, particleParameters, forces, totalEnergy, boxSize, invBoxSize);
+                loopOverInteractions(particles, particleIndices, 1, 0, particleParameters, forces, data, boxSize, invBoxSize);
             }
         }
     }
@@ -157,9 +176,12 @@ void CpuCustomManyParticleForce::calculateIxn(AlignedArray<float>& posq, vector<
         vector<int> particles(numParticles);
         for (int i = 0; i < numParticles; i++)
             particles[i] = i;
-        for (int i = 0; i < numParticles; i++) {
+        while (true) {
+            int i = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
+            if (i >= numParticles)
+                break;
             particleIndices[0] = i;
-            loopOverInteractions(particles, particleIndices, 1, i+1, &posq[0], atomCoordinates, particleParameters, forces, totalEnergy, boxSize, invBoxSize);
+            loopOverInteractions(particles, particleIndices, 1, i+1, particleParameters, forces, data, boxSize, invBoxSize);
         }
     }
 }
@@ -182,8 +204,8 @@ void CpuCustomManyParticleForce::setPeriodic(RealVec& boxSize) {
     periodicBoxSize[2] = boxSize[2];
 }
 
-void CpuCustomManyParticleForce::loopOverInteractions(vector<int>& availableParticles, vector<int>& particleSet, int loopIndex, int startIndex, float* posq, vector<OpenMM::RealVec>& atomCoordinates,
-                                                          RealOpenMM** particleParameters, vector<OpenMM::RealVec>& forces, RealOpenMM* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize) {
+void CpuCustomManyParticleForce::loopOverInteractions(vector<int>& availableParticles, vector<int>& particleSet, int loopIndex, int startIndex,
+                                                          RealOpenMM** particleParameters, float* forces, ThreadData& data, const fvec4& boxSize, const fvec4& invBoxSize) {
     int numParticles = availableParticles.size();
 //    double cutoff2 = cutoffDistance*cutoffDistance;
     for (int i = startIndex; i < numParticles; i++) {
@@ -212,14 +234,14 @@ void CpuCustomManyParticleForce::loopOverInteractions(vector<int>& availablePart
         if (include) {
             particleSet[loopIndex] = availableParticles[i];
             if (loopIndex == numParticlesPerSet-1)
-                calculateOneIxn(particleSet, posq, atomCoordinates, particleParameters, forces, totalEnergy, boxSize, invBoxSize);
+                calculateOneIxn(particleSet, particleParameters, forces, data, boxSize, invBoxSize);
             else
-                loopOverInteractions(availableParticles, particleSet, loopIndex+1, i+1, posq, atomCoordinates, particleParameters, forces, totalEnergy, boxSize, invBoxSize);
+                loopOverInteractions(availableParticles, particleSet, loopIndex+1, i+1, particleParameters, forces, data, boxSize, invBoxSize);
         }
     }
 }
 
-void CpuCustomManyParticleForce::calculateOneIxn(vector<int>& particleSet, float* posq, vector<RealVec>& atomCoordinates, RealOpenMM** particleParameters, vector<RealVec>& forces, RealOpenMM* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize) {
+void CpuCustomManyParticleForce::calculateOneIxn(vector<int>& particleSet, RealOpenMM** particleParameters, float* forces, ThreadData& data, const fvec4& boxSize, const fvec4& invBoxSize) {
     // Select the ordering to use for the particles.
     
     vector<int> permutedParticles(numParticlesPerSet);
@@ -241,129 +263,141 @@ void CpuCustomManyParticleForce::calculateOneIxn(vector<int>& particleSet, float
 
     // Record per-particle parameters.
     
+    CompiledExpressionSet& expressionSet = data.expressionSet;
     for (int i = 0; i < numParticlesPerSet; i++)
         for (int j = 0; j < numPerParticleParameters; j++)
-            expressionSet.setVariable(particleParamIndices[i][j], particleParameters[permutedParticles[i]][j]);
+            expressionSet.setVariable(data.particleParamIndices[i][j], particleParameters[permutedParticles[i]][j]);
+    
+    // Compute inter-particle deltas.
+    
+    int numDeltas = data.deltaPairs.size();
+    RealOpenMM delta[numDeltas][ReferenceForce::LastDeltaRIndex];
+    for (int i = 0; i < numDeltas; i++)
+        computeDelta(permutedParticles[data.deltaPairs[i].first], permutedParticles[data.deltaPairs[i].second], delta[i], atomCoordinates);
     
     // Compute all of the variables the energy can depend on.
 
-    for (int i = 0; i < (int) particleTerms.size(); i++) {
-        const ParticleTermInfo& term = particleTerms[i];
-        expressionSet.setVariable(term.variableIndex, atomCoordinates[term.atom][term.component]);
+    for (int i = 0; i < (int) data.particleTerms.size(); i++) {
+        const ParticleTermInfo& term = data.particleTerms[i];
+        expressionSet.setVariable(term.variableIndex, atomCoordinates[permutedParticles[term.atom]][term.component]);
     }
-    for (int i = 0; i < (int) distanceTerms.size(); i++) {
-        const DistanceTermInfo& term = distanceTerms[i];
-        computeDelta(permutedParticles[term.p1], permutedParticles[term.p2], term.delta, atomCoordinates);
-        expressionSet.setVariable(term.variableIndex, term.delta[ReferenceForce::RIndex]);
+    for (int i = 0; i < (int) data.distanceTerms.size(); i++) {
+        const DistanceTermInfo& term = data.distanceTerms[i];
+        expressionSet.setVariable(term.variableIndex, delta[term.delta][ReferenceForce::RIndex]);
     }
-    for (int i = 0; i < (int) angleTerms.size(); i++) {
-        const AngleTermInfo& term = angleTerms[i];
-        computeDelta(permutedParticles[term.p1], permutedParticles[term.p2], term.delta1, atomCoordinates);
-        computeDelta(permutedParticles[term.p3], permutedParticles[term.p2], term.delta2, atomCoordinates);
-        expressionSet.setVariable(term.variableIndex, computeAngle(term.delta1, term.delta2));
+    for (int i = 0; i < (int) data.angleTerms.size(); i++) {
+        const AngleTermInfo& term = data.angleTerms[i];
+        expressionSet.setVariable(term.variableIndex, computeAngle(delta[term.delta1], delta[term.delta2], term.delta1Sign*term.delta2Sign));
     }
-    for (int i = 0; i < (int) dihedralTerms.size(); i++) {
-        const DihedralTermInfo& term = dihedralTerms[i];
-        computeDelta(permutedParticles[term.p2], permutedParticles[term.p1], term.delta1, atomCoordinates);
-        computeDelta(permutedParticles[term.p2], permutedParticles[term.p3], term.delta2, atomCoordinates);
-        computeDelta(permutedParticles[term.p4], permutedParticles[term.p3], term.delta3, atomCoordinates);
+    for (int i = 0; i < (int) data.dihedralTerms.size(); i++) {
+        const DihedralTermInfo& term = data.dihedralTerms[i];
         RealOpenMM dotDihedral, signOfDihedral;
         RealOpenMM* crossProduct[] = {term.cross1, term.cross2};
-        expressionSet.setVariable(term.variableIndex, ReferenceBondIxn::getDihedralAngleBetweenThreeVectors(term.delta1, term.delta2, term.delta3, crossProduct, &dotDihedral, term.delta1, &signOfDihedral, 1));
+        expressionSet.setVariable(term.variableIndex, ReferenceBondIxn::getDihedralAngleBetweenThreeVectors(delta[term.delta1], delta[term.delta2], delta[term.delta3], crossProduct, &dotDihedral, delta[term.delta1], &signOfDihedral, 1));
     }
     
-    // Apply forces based on individual particle coordinates.
-    
-    for (int i = 0; i < (int) particleTerms.size(); i++) {
-        const ParticleTermInfo& term = particleTerms[i];
-        forces[permutedParticles[term.atom]][term.component] -= term.forceExpression.evaluate();
-    }
+    if (includeForces) {
+        // Apply forces based on individual particle coordinates.
 
-    // Apply forces based on distances.
-
-    for (int i = 0; i < (int) distanceTerms.size(); i++) {
-        const DistanceTermInfo& term = distanceTerms[i];
-        RealOpenMM dEdR = (RealOpenMM) (term.forceExpression.evaluate()/(term.delta[ReferenceForce::RIndex]));
-        for (int i = 0; i < 3; i++) {
-           RealOpenMM force  = -dEdR*term.delta[i];
-           forces[permutedParticles[term.p1]][i] -= force;
-           forces[permutedParticles[term.p2]][i] += force;
+        vector<RealVec> f(numParticlesPerSet);
+        for (int i = 0; i < (int) data.particleTerms.size(); i++) {
+            const ParticleTermInfo& term = data.particleTerms[i];
+            f[term.atom][term.component] -= term.forceExpression.evaluate();
         }
-    }
 
-    // Apply forces based on angles.
+        // Apply forces based on distances.
 
-    for (int i = 0; i < (int) angleTerms.size(); i++) {
-        const AngleTermInfo& term = angleTerms[i];
-        RealOpenMM dEdTheta = (RealOpenMM) term.forceExpression.evaluate();
-        RealOpenMM thetaCross[ReferenceForce::LastDeltaRIndex];
-        SimTKOpenMMUtilities::crossProductVector3(term.delta1, term.delta2, thetaCross);
-        RealOpenMM lengthThetaCross = SQRT(DOT3(thetaCross, thetaCross));
-        if (lengthThetaCross < 1.0e-06)
-            lengthThetaCross = (RealOpenMM) 1.0e-06;
-        RealOpenMM termA = dEdTheta/(term.delta1[ReferenceForce::R2Index]*lengthThetaCross);
-        RealOpenMM termC = -dEdTheta/(term.delta2[ReferenceForce::R2Index]*lengthThetaCross);
-        RealOpenMM deltaCrossP[3][3];
-        SimTKOpenMMUtilities::crossProductVector3(term.delta1, thetaCross, deltaCrossP[0]);
-        SimTKOpenMMUtilities::crossProductVector3(term.delta2, thetaCross, deltaCrossP[2]);
-        for (int i = 0; i < 3; i++) {
-            deltaCrossP[0][i] *= termA;
-            deltaCrossP[2][i] *= termC;
-            deltaCrossP[1][i] = -(deltaCrossP[0][i]+deltaCrossP[2][i]);
+        for (int i = 0; i < (int) data.distanceTerms.size(); i++) {
+            const DistanceTermInfo& term = data.distanceTerms[i];
+            RealOpenMM dEdR = (RealOpenMM) (term.forceExpression.evaluate()*term.deltaSign/(delta[term.delta][ReferenceForce::RIndex]));
+            for (int i = 0; i < 3; i++) {
+               RealOpenMM force  = -dEdR*delta[term.delta][i];
+               f[term.p1][i] -= force;
+               f[term.p2][i] += force;
+            }
         }
-        for (int i = 0; i < 3; i++) {
-            forces[permutedParticles[term.p1]][i] += deltaCrossP[0][i];
-            forces[permutedParticles[term.p2]][i] += deltaCrossP[1][i];
-            forces[permutedParticles[term.p3]][i] += deltaCrossP[2][i];
-        }
-    }
 
-    // Apply forces based on dihedrals.
+        // Apply forces based on angles.
 
-    for (int i = 0; i < (int) dihedralTerms.size(); i++) {
-        const DihedralTermInfo& term = dihedralTerms[i];
-        RealOpenMM dEdTheta = (RealOpenMM) term.forceExpression.evaluate();
-        RealOpenMM internalF[4][3];
-        RealOpenMM forceFactors[4];
-        RealOpenMM normCross1 = DOT3(term.cross1, term.cross1);
-        RealOpenMM normBC = term.delta2[ReferenceForce::RIndex];
-        forceFactors[0] = (-dEdTheta*normBC)/normCross1;
-        RealOpenMM normCross2 = DOT3(term.cross2, term.cross2);
-                   forceFactors[3] = (dEdTheta*normBC)/normCross2;
-                   forceFactors[1] = DOT3(term.delta1, term.delta2);
-                   forceFactors[1] /= term.delta2[ReferenceForce::R2Index];
-                   forceFactors[2] = DOT3(term.delta3, term.delta2);
-                   forceFactors[2] /= term.delta2[ReferenceForce::R2Index];
-        for (int i = 0; i < 3; i++) {
-            internalF[0][i] = forceFactors[0]*term.cross1[i];
-            internalF[3][i] = forceFactors[3]*term.cross2[i];
-            RealOpenMM s = forceFactors[1]*internalF[0][i] - forceFactors[2]*internalF[3][i];
-            internalF[1][i] = internalF[0][i] - s;
-            internalF[2][i] = internalF[3][i] + s;
+        for (int i = 0; i < (int) data.angleTerms.size(); i++) {
+            const AngleTermInfo& term = data.angleTerms[i];
+            RealOpenMM dEdTheta = (RealOpenMM) term.forceExpression.evaluate();
+            RealOpenMM thetaCross[ReferenceForce::LastDeltaRIndex];
+            SimTKOpenMMUtilities::crossProductVector3(delta[term.delta1], delta[term.delta2], thetaCross);
+            RealOpenMM lengthThetaCross = SQRT(DOT3(thetaCross, thetaCross));
+            if (lengthThetaCross < 1.0e-06)
+                lengthThetaCross = (RealOpenMM) 1.0e-06;
+            RealOpenMM termA = dEdTheta*term.delta2Sign/(delta[term.delta1][ReferenceForce::R2Index]*lengthThetaCross);
+            RealOpenMM termC = -dEdTheta*term.delta1Sign/(delta[term.delta2][ReferenceForce::R2Index]*lengthThetaCross);
+            RealOpenMM deltaCrossP[3][3];
+            SimTKOpenMMUtilities::crossProductVector3(delta[term.delta1], thetaCross, deltaCrossP[0]);
+            SimTKOpenMMUtilities::crossProductVector3(delta[term.delta2], thetaCross, deltaCrossP[2]);
+            for (int i = 0; i < 3; i++) {
+                deltaCrossP[0][i] *= termA;
+                deltaCrossP[2][i] *= termC;
+                deltaCrossP[1][i] = -(deltaCrossP[0][i]+deltaCrossP[2][i]);
+            }
+            for (int i = 0; i < 3; i++) {
+                f[term.p1][i] += deltaCrossP[0][i];
+                f[term.p2][i] += deltaCrossP[1][i];
+                f[term.p3][i] += deltaCrossP[2][i];
+            }
         }
-        for (int i = 0; i < 3; i++) {
-            forces[permutedParticles[term.p1]][i] += internalF[0][i];
-            forces[permutedParticles[term.p2]][i] -= internalF[1][i];
-            forces[permutedParticles[term.p3]][i] -= internalF[2][i];
-            forces[permutedParticles[term.p4]][i] += internalF[3][i];
+
+        // Apply forces based on dihedrals.
+
+        for (int i = 0; i < (int) data.dihedralTerms.size(); i++) {
+            const DihedralTermInfo& term = data.dihedralTerms[i];
+            RealOpenMM dEdTheta = (RealOpenMM) term.forceExpression.evaluate();
+            RealOpenMM internalF[4][3];
+            RealOpenMM forceFactors[4];
+            RealOpenMM normCross1 = DOT3(term.cross1, term.cross1);
+            RealOpenMM normBC = delta[term.delta2][ReferenceForce::RIndex];
+            forceFactors[0] = (-dEdTheta*normBC)/normCross1;
+            RealOpenMM normCross2 = DOT3(term.cross2, term.cross2);
+            forceFactors[3] = (dEdTheta*normBC)/normCross2;
+            forceFactors[1] = DOT3(delta[term.delta1], delta[term.delta2]);
+            forceFactors[1] /= delta[term.delta2][ReferenceForce::R2Index];
+            forceFactors[2] = DOT3(delta[term.delta3], delta[term.delta2]);
+            forceFactors[2] /= delta[term.delta2][ReferenceForce::R2Index];
+            for (int i = 0; i < 3; i++) {
+                internalF[0][i] = forceFactors[0]*term.cross1[i];
+                internalF[3][i] = forceFactors[3]*term.cross2[i];
+                RealOpenMM s = forceFactors[1]*internalF[0][i] - forceFactors[2]*internalF[3][i];
+                internalF[1][i] = internalF[0][i] - s;
+                internalF[2][i] = internalF[3][i] + s;
+            }
+            for (int i = 0; i < 3; i++) {
+                f[term.p1][i] += internalF[0][i];
+                f[term.p2][i] -= internalF[1][i];
+                f[term.p3][i] -= internalF[2][i];
+                f[term.p4][i] += internalF[3][i];
+            }
+        }
+
+        // Store the forces.
+
+        for (int i = 0; i < numParticlesPerSet; i++) {
+            int index = permutedParticles[i];
+            (fvec4(forces+4*index)+fvec4((float) f[i][0], (float) f[i][1], (float) f[i][2], 0.0f)).store(forces+4*index);
         }
     }
 
     // Add the energy
 
-    if (totalEnergy)
-        *totalEnergy += (RealOpenMM) energyExpression.evaluate();
+    if (includeEnergy)
+        data.energy += data.energyExpression.evaluate();
 }
 
-void CpuCustomManyParticleForce::computeDelta(int atom1, int atom2, RealOpenMM* delta, vector<RealVec>& atomCoordinates) const {
+void CpuCustomManyParticleForce::computeDelta(int atom1, int atom2, RealOpenMM* delta, const OpenMM::RealVec* atomCoordinates) const {
     if (usePeriodic)
         ReferenceForce::getDeltaRPeriodic(atomCoordinates[atom1], atomCoordinates[atom2], periodicBoxSize, delta);
     else
         ReferenceForce::getDeltaR(atomCoordinates[atom1], atomCoordinates[atom2], delta);
 }
 
-RealOpenMM CpuCustomManyParticleForce::computeAngle(RealOpenMM* vec1, RealOpenMM* vec2) {
-    RealOpenMM dot = DOT3(vec1, vec2);
+RealOpenMM CpuCustomManyParticleForce::computeAngle(RealOpenMM* vec1, RealOpenMM* vec2, float sign) {
+    RealOpenMM dot = DOT3(vec1, vec2)*sign;
     RealOpenMM cosine = dot/SQRT((vec1[ReferenceForce::R2Index]*vec2[ReferenceForce::R2Index]));
     RealOpenMM angle;
     if (cosine >= 1)
@@ -382,4 +416,89 @@ void CpuCustomManyParticleForce::getDeltaR(const fvec4& posI, const fvec4& posJ,
         deltaR = deltaR-base;
     }
     r2 = dot3(deltaR, deltaR);
+}
+
+CpuCustomManyParticleForce::ParticleTermInfo::ParticleTermInfo(const string& name, int atom, int component, const Lepton::CompiledExpression& forceExpression, ThreadData& data) :
+        name(name), atom(atom), component(component), forceExpression(forceExpression) {
+    variableIndex = data.expressionSet.getVariableIndex(name);
+}
+
+CpuCustomManyParticleForce::DistanceTermInfo::DistanceTermInfo(const string& name, const vector<int>& atoms, const Lepton::CompiledExpression& forceExpression, ThreadData& data) :
+        name(name), p1(atoms[0]), p2(atoms[1]), forceExpression(forceExpression) {
+    variableIndex = data.expressionSet.getVariableIndex(name);
+    data.requestDeltaPair(p1, p2, delta, deltaSign, true);
+}
+
+CpuCustomManyParticleForce::AngleTermInfo::AngleTermInfo(const string& name, const vector<int>& atoms, const Lepton::CompiledExpression& forceExpression, ThreadData& data) :
+        name(name), p1(atoms[0]), p2(atoms[1]), p3(atoms[2]), forceExpression(forceExpression) {
+    variableIndex = data.expressionSet.getVariableIndex(name);
+    data.requestDeltaPair(p1, p2,delta1, delta1Sign, true);
+    data.requestDeltaPair(p3, p2, delta2, delta2Sign, true);
+}
+
+CpuCustomManyParticleForce::DihedralTermInfo::DihedralTermInfo(const string& name, const vector<int>& atoms, const Lepton::CompiledExpression& forceExpression, ThreadData& data) :
+        name(name), p1(atoms[0]), p2(atoms[1]), p3(atoms[2]), p4(atoms[3]), forceExpression(forceExpression) {
+    variableIndex = data.expressionSet.getVariableIndex(name);
+    float sign;
+    data.requestDeltaPair(p2, p1, delta1, sign, false);
+    data.requestDeltaPair(p2, p3, delta2, sign, false);
+    data.requestDeltaPair(p4, p3, delta3, sign, false);
+}
+
+CpuCustomManyParticleForce::ThreadData::ThreadData(const CustomManyParticleForce& force, Lepton::ParsedExpression& energyExpr,
+            map<string, vector<int> >& distances, map<string, vector<int> >& angles, map<string, vector<int> >& dihedrals) {
+    int numParticlesPerSet = force.getNumParticlesPerSet();
+    int numPerParticleParameters = force.getNumPerParticleParameters();
+    particleParamIndices.resize(numParticlesPerSet);
+    energyExpression = energyExpr.createCompiledExpression();
+    expressionSet.registerExpression(energyExpression);
+
+    // Differentiate the energy to get expressions for the force.
+
+    for (int i = 0; i < numParticlesPerSet; i++) {
+        stringstream xname, yname, zname;
+        xname << 'x' << (i+1);
+        yname << 'y' << (i+1);
+        zname << 'z' << (i+1);
+        particleTerms.push_back(CpuCustomManyParticleForce::ParticleTermInfo(xname.str(), i, 0, energyExpr.differentiate(xname.str()).optimize().createCompiledExpression(), *this));
+        particleTerms.push_back(CpuCustomManyParticleForce::ParticleTermInfo(yname.str(), i, 1, energyExpr.differentiate(yname.str()).optimize().createCompiledExpression(), *this));
+        particleTerms.push_back(CpuCustomManyParticleForce::ParticleTermInfo(zname.str(), i, 2, energyExpr.differentiate(zname.str()).optimize().createCompiledExpression(), *this));
+        for (int j = 0; j < numPerParticleParameters; j++) {
+            stringstream paramname;
+            paramname << force.getPerParticleParameterName(j) << (i+1);
+            particleParamIndices[i].push_back(expressionSet.getVariableIndex(paramname.str()));
+        }
+    }
+    for (map<string, vector<int> >::const_iterator iter = dihedrals.begin(); iter != dihedrals.end(); ++iter)
+        dihedralTerms.push_back(CpuCustomManyParticleForce::DihedralTermInfo(iter->first, iter->second, energyExpr.differentiate(iter->first).optimize().createCompiledExpression(), *this));
+    for (map<string, vector<int> >::const_iterator iter = distances.begin(); iter != distances.end(); ++iter)
+        distanceTerms.push_back(CpuCustomManyParticleForce::DistanceTermInfo(iter->first, iter->second, energyExpr.differentiate(iter->first).optimize().createCompiledExpression(), *this));
+    for (map<string, vector<int> >::const_iterator iter = angles.begin(); iter != angles.end(); ++iter)
+        angleTerms.push_back(CpuCustomManyParticleForce::AngleTermInfo(iter->first, iter->second, energyExpr.differentiate(iter->first).optimize().createCompiledExpression(), *this));
+    for (int i = 0; i < particleTerms.size(); i++)
+        expressionSet.registerExpression(particleTerms[i].forceExpression);
+    for (int i = 0; i < distanceTerms.size(); i++)
+        expressionSet.registerExpression(distanceTerms[i].forceExpression);
+    for (int i = 0; i < angleTerms.size(); i++)
+        expressionSet.registerExpression(angleTerms[i].forceExpression);
+    for (int i = 0; i < dihedralTerms.size(); i++)
+        expressionSet.registerExpression(dihedralTerms[i].forceExpression);
+}
+
+void CpuCustomManyParticleForce::ThreadData::requestDeltaPair(int p1, int p2, int& pairIndex, float& pairSign, bool allowReversed) {
+    for (int i = 0; i < (int) deltaPairs.size(); i++) {
+        if (deltaPairs[i].first == p1 && deltaPairs[i].second == p2) {
+            pairIndex = i;
+            pairSign = 1;
+            return;
+        }
+        if (deltaPairs[i].first == p2 && deltaPairs[i].second == p1 && allowReversed) {
+            pairIndex = i;
+            pairSign = -1;
+            return;
+        }
+    }
+    pairIndex = deltaPairs.size();
+    pairSign = 1;
+    deltaPairs.push_back(make_pair(p1, p2));
 }

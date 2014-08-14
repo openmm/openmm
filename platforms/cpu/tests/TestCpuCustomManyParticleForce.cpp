@@ -30,7 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 /**
- * This tests the reference implementation of CustomManyParticleForce.
+ * This tests the CPU implementation of CustomManyParticleForce.
  */
 
 #ifdef WIN32
@@ -38,7 +38,7 @@
 #endif
 #include "openmm/internal/AssertionUtilities.h"
 #include "openmm/Context.h"
-#include "ReferencePlatform.h"
+#include "CpuPlatform.h"
 #include "openmm/CustomCompoundBondForce.h"
 #include "openmm/CustomManyParticleForce.h"
 #include "openmm/System.h"
@@ -64,7 +64,7 @@ void validateAxilrodTeller(CustomManyParticleForce* force, const vector<Vec3>& p
     system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
     system.addForce(force);
     VerletIntegrator integrator(0.001);
-    ReferencePlatform platform;
+    CpuPlatform platform;
     Context context(system, integrator, platform);
     context.setPositions(positions);
     State state1 = context.getState(State::Forces | State::Energy);
@@ -220,7 +220,7 @@ void testExclusions() {
 
 void testAllTerms() {
     int numParticles = 4;
-    ReferencePlatform platform;
+    CpuPlatform platform;
     
     // Create a system with a CustomManyParticleForce.
     
@@ -304,7 +304,7 @@ void testParameters() {
     }
     system.addForce(force);
     VerletIntegrator integrator(0.001);
-    ReferencePlatform platform;
+    CpuPlatform platform;
     Context context(system, integrator, platform);
     context.setPositions(positions);
     
@@ -390,7 +390,7 @@ void testTabulatedFunctions() {
     }
     system.addForce(force);
     VerletIntegrator integrator(0.001);
-    ReferencePlatform platform;
+    CpuPlatform platform;
     Context context(system, integrator, platform);
     context.setPositions(positions);
     
@@ -442,7 +442,7 @@ void testTypeFilters() {
     force->setTypeFilter(2, f2);
     system.addForce(force);
     VerletIntegrator integrator(0.001);
-    ReferencePlatform platform;
+    CpuPlatform platform;
     Context context(system, integrator, platform);
     context.setPositions(positions);
     
@@ -464,6 +464,40 @@ void testTypeFilters() {
     ASSERT_EQUAL_TOL(expectedEnergy, state.getPotentialEnergy(), 1e-5);
 }
 
+#include <sys/time.h>
+void benchmark() {
+    int numParticles = 5000;
+    double boxSize = 5.0;
+    CustomManyParticleForce* force = new CustomManyParticleForce(3,
+        "C*(1+3*cos(theta1)*cos(theta2)*cos(theta3))/(r12*r13*r23)^3;"
+        "theta1=angle(p1,p2,p3); theta2=angle(p2,p3,p1); theta3=angle(p3,p1,p2);"
+        "r12=distance(p1,p2); r13=distance(p1,p3); r23=distance(p2,p3)");
+    force->addGlobalParameter("C", 1.5);
+    force->setNonbondedMethod(CustomManyParticleForce::CutoffPeriodic);
+    force->setCutoffDistance(0.6);
+    vector<double> params;
+    vector<Vec3> positions;
+    System system;
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int i = 0; i < numParticles; i++) {
+        force->addParticle(params);
+        positions.push_back(Vec3(genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt))*boxSize);
+        system.addParticle(1.0);
+    }
+    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    system.addForce(force);
+    VerletIntegrator integrator(0.001);
+    CpuPlatform platform;
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    timeval t1, t2;
+    gettimeofday(&t1, NULL);
+    State state = context.getState(State::Forces | State::Energy);
+    gettimeofday(&t2, NULL);
+    printf("%g %g\n", state.getPotentialEnergy(), (t2.tv_sec-t1.tv_sec)+1e-6*(t2.tv_usec-t1.tv_usec));
+}
+
 int main() {
     try {
         testNoCutoff();
@@ -474,6 +508,7 @@ int main() {
         testParameters();
         testTabulatedFunctions();
         testTypeFilters();
+        benchmark();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

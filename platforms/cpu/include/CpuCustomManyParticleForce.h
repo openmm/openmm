@@ -36,6 +36,7 @@
 #include "lepton/ParsedExpression.h"
 #include <map>
 #include <set>
+#include <utility>
 #include <vector>
 
 namespace OpenMM {
@@ -47,26 +48,36 @@ private:
     class DistanceTermInfo;
     class AngleTermInfo;
     class DihedralTermInfo;
+    class ComputeForceTask;
+    class ThreadData;
     int numParticlesPerSet, numPerParticleParameters, numTypes;
     bool useCutoff, usePeriodic;
     RealOpenMM cutoffDistance;
     RealOpenMM periodicBoxSize[3];
     CpuNeighborList* neighborList;
     ThreadPool& threads;
-    CompiledExpressionSet expressionSet;
-    Lepton::CompiledExpression energyExpression;
-    std::vector<std::vector<int> > particleParamIndices;
     std::vector<std::set<int> > exclusions;
     std::vector<int> particleTypes;
     std::vector<int> orderIndex;
     std::vector<std::vector<int> > particleOrder;
-    std::vector<ParticleTermInfo> particleTerms;
-    std::vector<DistanceTermInfo> distanceTerms;
-    std::vector<AngleTermInfo> angleTerms;
-    std::vector<DihedralTermInfo> dihedralTerms;
+    std::vector<ThreadData*> threadData;
+    // The following variables are used to make information accessible to the individual threads.
+    int numParticles;
+    float* posq;
+    RealVec const* atomCoordinates;
+    RealOpenMM** particleParameters;        
+    const std::map<std::string, double>* globalParameters;
+    std::vector<AlignedArray<float> >* threadForce;
+    bool includeForces, includeEnergy;
+    void* atomicCounter;
 
-    void loopOverInteractions(std::vector<int>& availableParticles, std::vector<int>& particleSet, int loopIndex, int startIndex, float* posq, std::vector<OpenMM::RealVec>& atomCoordinates,
-                              RealOpenMM** particleParameters, std::vector<OpenMM::RealVec>& forces, RealOpenMM* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize);
+    /**
+     * This routine contains the code executed by each thread.
+     */
+    void threadComputeForce(ThreadPool& threads, int threadIndex);
+
+    void loopOverInteractions(std::vector<int>& availableParticles, std::vector<int>& particleSet, int loopIndex, int startIndex,
+                              RealOpenMM** particleParameters, float* forces, ThreadData& data, const fvec4& boxSize, const fvec4& invBoxSize);
 
     /**---------------------------------------------------------------------------------------
 
@@ -81,8 +92,8 @@ private:
 
        --------------------------------------------------------------------------------------- */
 
-    void calculateOneIxn(std::vector<int>& particleSet, float* posq, std::vector<OpenMM::RealVec>& atomCoordinates,
-                         RealOpenMM** particleParameters, std::vector<OpenMM::RealVec>& forces, RealOpenMM* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize);
+    void calculateOneIxn(std::vector<int>& particleSet,
+                         RealOpenMM** particleParameters, float* forces, ThreadData& data, const fvec4& boxSize, const fvec4& invBoxSize);
 
     /**
      * Compute the displacement and squared distance between two points, optionally using
@@ -90,9 +101,9 @@ private:
      */
     void getDeltaR(const fvec4& posI, const fvec4& posJ, fvec4& deltaR, float& r2, const fvec4& boxSize, const fvec4& invBoxSize) const;
 
-    void computeDelta(int atom1, int atom2, RealOpenMM* delta, std::vector<OpenMM::RealVec>& atomCoordinates) const;
+    void computeDelta(int atom1, int atom2, RealOpenMM* delta, const OpenMM::RealVec* atomCoordinates) const;
 
-    static RealOpenMM computeAngle(RealOpenMM* vec1, RealOpenMM* vec2);
+    static RealOpenMM computeAngle(RealOpenMM* vec1, RealOpenMM* vec2, float sign);
 
 
 public:
@@ -150,10 +161,7 @@ public:
 
     void calculateIxn(AlignedArray<float>& posq, std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM** particleParameters,
                       const std::map<std::string, double>& globalParameters,
-                      std::vector<OpenMM::RealVec>& forces, RealOpenMM* totalEnergy);
-
-// ---------------------------------------------------------------------------------------
-
+                      std::vector<AlignedArray<float> >& threadForce, bool includeForces, bool includeEnergy, double& energy);
 };
 
 class CpuCustomManyParticleForce::ParticleTermInfo {
@@ -161,10 +169,7 @@ public:
     std::string name;
     int atom, component, variableIndex;
     Lepton::CompiledExpression forceExpression;
-    ParticleTermInfo(const std::string& name, int atom, int component, const Lepton::CompiledExpression& forceExpression, CompiledExpressionSet& set) :
-            name(name), atom(atom), component(component), forceExpression(forceExpression) {
-        variableIndex = set.getVariableIndex(name);
-    }
+    ParticleTermInfo(const std::string& name, int atom, int component, const Lepton::CompiledExpression& forceExpression, ThreadData& data);
 };
 
 class CpuCustomManyParticleForce::DistanceTermInfo {
@@ -172,11 +177,9 @@ public:
     std::string name;
     int p1, p2, variableIndex;
     Lepton::CompiledExpression forceExpression;
-    mutable RealOpenMM delta[ReferenceForce::LastDeltaRIndex];
-    DistanceTermInfo(const std::string& name, const std::vector<int>& atoms, const Lepton::CompiledExpression& forceExpression, CompiledExpressionSet& set) :
-            name(name), p1(atoms[0]), p2(atoms[1]), forceExpression(forceExpression) {
-        variableIndex = set.getVariableIndex(name);
-    }
+    int delta;
+    float deltaSign;
+    DistanceTermInfo(const std::string& name, const std::vector<int>& atoms, const Lepton::CompiledExpression& forceExpression, ThreadData& data);
 };
 
 class CpuCustomManyParticleForce::AngleTermInfo {
@@ -184,12 +187,9 @@ public:
     std::string name;
     int p1, p2, p3, variableIndex;
     Lepton::CompiledExpression forceExpression;
-    mutable RealOpenMM delta1[ReferenceForce::LastDeltaRIndex];
-    mutable RealOpenMM delta2[ReferenceForce::LastDeltaRIndex];
-    AngleTermInfo(const std::string& name, const std::vector<int>& atoms, const Lepton::CompiledExpression& forceExpression, CompiledExpressionSet& set) :
-            name(name), p1(atoms[0]), p2(atoms[1]), p3(atoms[2]), forceExpression(forceExpression) {
-        variableIndex = set.getVariableIndex(name);
-    }
+    int delta1, delta2;
+    float delta1Sign, delta2Sign;
+    AngleTermInfo(const std::string& name, const std::vector<int>& atoms, const Lepton::CompiledExpression& forceExpression, ThreadData& data);
 };
 
 class CpuCustomManyParticleForce::DihedralTermInfo {
@@ -197,15 +197,29 @@ public:
     std::string name;
     int p1, p2, p3, p4, variableIndex;
     Lepton::CompiledExpression forceExpression;
-    mutable RealOpenMM delta1[ReferenceForce::LastDeltaRIndex];
-    mutable RealOpenMM delta2[ReferenceForce::LastDeltaRIndex];
-    mutable RealOpenMM delta3[ReferenceForce::LastDeltaRIndex];
+    int delta1, delta2, delta3;
     mutable RealOpenMM cross1[3];
     mutable RealOpenMM cross2[3];
-    DihedralTermInfo(const std::string& name, const std::vector<int>& atoms, const Lepton::CompiledExpression& forceExpression, CompiledExpressionSet& set) :
-            name(name), p1(atoms[0]), p2(atoms[1]), p3(atoms[2]), p4(atoms[3]), forceExpression(forceExpression) {
-        variableIndex = set.getVariableIndex(name);
-    }
+    DihedralTermInfo(const std::string& name, const std::vector<int>& atoms, const Lepton::CompiledExpression& forceExpression, ThreadData& data);
+};
+
+class CpuCustomManyParticleForce::ThreadData {
+public:
+    CompiledExpressionSet expressionSet;
+    Lepton::CompiledExpression energyExpression;
+    std::vector<std::vector<int> > particleParamIndices;
+    std::vector<std::pair<int, int> > deltaPairs;
+    std::vector<ParticleTermInfo> particleTerms;
+    std::vector<DistanceTermInfo> distanceTerms;
+    std::vector<AngleTermInfo> angleTerms;
+    std::vector<DihedralTermInfo> dihedralTerms;
+    double energy;
+    ThreadData(const CustomManyParticleForce& force, Lepton::ParsedExpression& energyExpr,
+            std::map<std::string, std::vector<int> >& distances, std::map<std::string, std::vector<int> >& angles, std::map<std::string, std::vector<int> >& dihedrals);
+    /**
+     * Request a pair of particles whose distance or displacement vector is needed in the computation.
+     */
+    void requestDeltaPair(int p1, int p2, int& pairIndex, float& pairSign, bool allowReversed);
 };
 
 } // namespace OpenMM

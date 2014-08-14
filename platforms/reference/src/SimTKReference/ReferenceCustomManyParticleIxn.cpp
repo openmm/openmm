@@ -192,7 +192,7 @@ void ReferenceCustomManyParticleIxn::calculateOneIxn(const vector<int>& particle
 
     for (int i = 0; i < (int) particleTerms.size(); i++) {
         const ParticleTermInfo& term = particleTerms[i];
-        variables[term.name] = atomCoordinates[term.atom][term.component];
+        variables[term.name] = atomCoordinates[permutedParticles[term.atom]][term.component];
     }
     for (int i = 0; i < (int) distanceTerms.size(); i++) {
         const DistanceTermInfo& term = distanceTerms[i];
