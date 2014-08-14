@@ -217,13 +217,13 @@ const std::map<std::string, double>& ContextImpl::getParameters() const {
 
 double ContextImpl::getParameter(std::string name) {
     if (parameters.find(name) == parameters.end())
-        throw OpenMMException("Called getParameter() with invalid parameter name");
+        throw OpenMMException("Called getParameter() with invalid parameter name: "+name);
     return parameters[name];
 }
 
 void ContextImpl::setParameter(std::string name, double value) {
     if (parameters.find(name) == parameters.end())
-        throw OpenMMException("Called setParameter() with invalid parameter name");
+        throw OpenMMException("Called setParameter() with invalid parameter name: "+name);
     parameters[name] = value;
     integrator.stateChanged(State::Parameters);
 }
