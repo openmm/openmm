@@ -869,7 +869,6 @@ void CpuCalcCustomManyParticleForceKernel::initialize(const System& system, cons
 }
 
 double CpuCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    vector<RealVec>& posData = extractPositions(context);
     map<string, double> globalParameters;
     for (int i = 0; i < (int) globalParameterNames.size(); i++)
         globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
@@ -881,7 +880,7 @@ double CpuCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bool 
         ixn->setPeriodic(box);
     }
     double energy = 0;
-    ixn->calculateIxn(data.posq, posData, particleParamArray, globalParameters, data.threadForce, includeForces, includeEnergy, energy);
+    ixn->calculateIxn(data.posq, particleParamArray, globalParameters, data.threadForce, includeForces, includeEnergy, energy);
     return energy;
 }
 

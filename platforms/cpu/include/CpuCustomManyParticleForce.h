@@ -50,7 +50,7 @@ private:
     class DihedralTermInfo;
     class ComputeForceTask;
     class ThreadData;
-    int numParticlesPerSet, numPerParticleParameters, numTypes;
+    int numParticles, numParticlesPerSet, numPerParticleParameters, numTypes;
     bool useCutoff, usePeriodic;
     RealOpenMM cutoffDistance;
     RealOpenMM periodicBoxSize[3];
@@ -62,9 +62,7 @@ private:
     std::vector<std::vector<int> > particleOrder;
     std::vector<ThreadData*> threadData;
     // The following variables are used to make information accessible to the individual threads.
-    int numParticles;
     float* posq;
-    RealVec const* atomCoordinates;
     RealOpenMM** particleParameters;        
     const std::map<std::string, double>* globalParameters;
     std::vector<AlignedArray<float> >* threadForce;
@@ -76,6 +74,10 @@ private:
      */
     void threadComputeForce(ThreadPool& threads, int threadIndex);
 
+    /**
+     * This is called recursively to loop over all possible combination of a set of particles and evaluate the
+     * interaction for each one.
+     */
     void loopOverInteractions(std::vector<int>& availableParticles, std::vector<int>& particleSet, int loopIndex, int startIndex,
                               RealOpenMM** particleParameters, float* forces, ThreadData& data, const fvec4& boxSize, const fvec4& invBoxSize);
 
@@ -85,82 +87,72 @@ private:
 
        @param particleSet        the indices of the particles
        @param posq               atom coordinates in float format
-       @param atomCoordinates    atom coordinates
        @param particleParameters particle parameter values (particleParameters[particleIndex][parameterIndex])
        @param forces             force array (forces added)
        @param totalEnergy        total energy
 
        --------------------------------------------------------------------------------------- */
 
-    void calculateOneIxn(std::vector<int>& particleSet,
-                         RealOpenMM** particleParameters, float* forces, ThreadData& data, const fvec4& boxSize, const fvec4& invBoxSize);
+    /**
+     * Calculate the interaction for one set of particles
+     * 
+     * @param particleSet        the indices of the particles
+     * @param particleParameters particle parameter values (particleParameters[particleIndex][parameterIndex])
+     * @param data               information and workspace for the current thread
+     * @param boxSize            the size of the periodic box
+     * @param invBoxSize         the inverse size of the periodic box
+     */
+    void calculateOneIxn(std::vector<int>& particleSet, RealOpenMM** particleParameters, float* forces, ThreadData& data, const fvec4& boxSize, const fvec4& invBoxSize);
 
     /**
      * Compute the displacement and squared distance between two points, optionally using
      * periodic boundary conditions.
      */
-    void getDeltaR(const fvec4& posI, const fvec4& posJ, fvec4& deltaR, float& r2, const fvec4& boxSize, const fvec4& invBoxSize) const;
-
-    void computeDelta(int atom1, int atom2, RealOpenMM* delta, const OpenMM::RealVec* atomCoordinates) const;
-
-    static RealOpenMM computeAngle(RealOpenMM* vec1, RealOpenMM* vec2, float sign);
-
+    void computeDelta(const fvec4& posI, const fvec4& posJ, fvec4& deltaR, float& r2, const fvec4& boxSize, const fvec4& invBoxSize) const;
+    
+    static float computeAngle(const fvec4& vi, const fvec4& vj, float v2i, float v2j, float sign);
+    
+    static float getDihedralAngleBetweenThreeVectors(const fvec4& v1, const fvec4& v2, const fvec4& v3, fvec4& cross1, fvec4& cross2, const fvec4& signVector);
 
 public:
-
-    /**---------------------------------------------------------------------------------------
-
-       Constructor
-
-       --------------------------------------------------------------------------------------- */
-
+    /**
+     * Create a new CpuCustomManyParticleForce.
+     *
+     * @param force      the CustomManyParticleForce to create it for
+     * @param threads    the thread pool to use
+     */
     CpuCustomManyParticleForce(const OpenMM::CustomManyParticleForce& force, ThreadPool& threads);
-
-    /**---------------------------------------------------------------------------------------
-
-       Destructor
-
-       --------------------------------------------------------------------------------------- */
 
     ~CpuCustomManyParticleForce();
 
-    /**---------------------------------------------------------------------------------------
-
-       Set the force to use a cutoff.
-
-       @param distance            the cutoff distance
-
-       --------------------------------------------------------------------------------------- */
-
+    /**
+     * Set the force to use a cutoff.
+     * 
+     * @param distance   the cutoff distance
+     */
     void setUseCutoff(RealOpenMM distance);
 
-    /**---------------------------------------------------------------------------------------
-
-       Set the force to use periodic boundary conditions.  This requires that a cutoff has
-       already been set, and the smallest side of the periodic box is at least twice the cutoff
-       distance.
-
-       @param boxSize             the X, Y, and Z widths of the periodic box
-
-       --------------------------------------------------------------------------------------- */
-
+    /**
+     * Set the force to use periodic boundary conditions.  This requires that a cutoff has
+     * already been set, and the smallest side of the periodic box is at least twice the cutoff
+     * distance.
+     * 
+     * @param boxSize    the X, Y, and Z widths of the periodic box
+     */
     void setPeriodic(OpenMM::RealVec& boxSize);
 
-    /**---------------------------------------------------------------------------------------
-
-       Calculate the interaction
-
-       @param posq               atom coordinates in float format
-       @param atomCoordinates    atom coordinates
-       @param particleParameters particle parameter values (particleParameters[particleIndex][parameterIndex])
-       @param globalParameters   the values of global parameters
-       @param forces             force array (forces added)
-       @param totalEnergy        total energy
-
-       --------------------------------------------------------------------------------------- */
-
-    void calculateIxn(AlignedArray<float>& posq, std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM** particleParameters,
-                      const std::map<std::string, double>& globalParameters,
+    /**
+     * Calculate the interaction.
+     * 
+     * @param posq               atom coordinates in float format
+     * @param particleParameters particle parameter values (particleParameters[particleIndex][parameterIndex])
+     * @param globalParameters   the values of global parameters
+     * @param threadForce        the collection of arrays for each thread to add forces to
+     * @param includeForce       whether to compute forces
+     * @param includeEnergy      whether to compute energy
+     * @param energy             the total energy is added to this
+     */
+    void calculateIxn(AlignedArray<float>& posq, RealOpenMM** particleParameters, const std::map<std::string, double>& globalParameters,
                       std::vector<AlignedArray<float> >& threadForce, bool includeForces, bool includeEnergy, double& energy);
 };
 
@@ -198,8 +190,7 @@ public:
     int p1, p2, p3, p4, variableIndex;
     Lepton::CompiledExpression forceExpression;
     int delta1, delta2, delta3;
-    mutable RealOpenMM cross1[3];
-    mutable RealOpenMM cross2[3];
+    mutable fvec4 cross1, cross2;
     DihedralTermInfo(const std::string& name, const std::vector<int>& atoms, const Lepton::CompiledExpression& forceExpression, ThreadData& data);
 };
 
@@ -213,6 +204,9 @@ public:
     std::vector<DistanceTermInfo> distanceTerms;
     std::vector<AngleTermInfo> angleTerms;
     std::vector<DihedralTermInfo> dihedralTerms;
+    AlignedArray<fvec4> delta;
+    std::vector<float> normDelta;
+    std::vector<float> norm2Delta;
     double energy;
     ThreadData(const CustomManyParticleForce& force, Lepton::ParsedExpression& energyExpr,
             std::map<std::string, std::vector<int> >& distances, std::map<std::string, std::vector<int> >& angles, std::map<std::string, std::vector<int> >& dihedrals);
