@@ -199,6 +199,7 @@ public:
     CompiledExpressionSet expressionSet;
     Lepton::CompiledExpression energyExpression;
     std::vector<std::vector<int> > particleParamIndices;
+    std::vector<int> permutedParticles;
     std::vector<std::pair<int, int> > deltaPairs;
     std::vector<ParticleTermInfo> particleTerms;
     std::vector<DistanceTermInfo> distanceTerms;
@@ -207,6 +208,7 @@ public:
     AlignedArray<fvec4> delta;
     std::vector<float> normDelta;
     std::vector<float> norm2Delta;
+    AlignedArray<fvec4> f;
     double energy;
     ThreadData(const CustomManyParticleForce& force, Lepton::ParsedExpression& energyExpr,
             std::map<std::string, std::vector<int> >& distances, std::map<std::string, std::vector<int> >& angles, std::map<std::string, std::vector<int> >& dihedrals);

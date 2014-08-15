@@ -147,6 +147,7 @@ void CpuCustomManyParticleForce::threadComputeForce(ThreadPool& threads, int thr
     if (useCutoff) {
         // Loop over interactions from the neighbor list.
         
+        vector<int> particles;
         while (true) {
             int blockIndex = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
             if (blockIndex >= neighborList->getNumBlocks())
@@ -161,7 +162,7 @@ void CpuCustomManyParticleForce::threadComputeForce(ThreadPool& threads, int thr
                 // again later, but the neighbor list also includes padding atoms that it marks as exclusions, so
                 // we need to remove those now.
                 
-                vector<int> particles;
+                particles.resize(0);
                 for (int j = 0; j < numNeighbors; j++)
                     if ((exclusions[j] & (1<<i)) == 0)
                         particles.push_back(neighbors[j]);
@@ -238,7 +239,7 @@ void CpuCustomManyParticleForce::loopOverInteractions(vector<int>& availablePart
 void CpuCustomManyParticleForce::calculateOneIxn(vector<int>& particleSet, RealOpenMM** particleParameters, float* forces, ThreadData& data, const fvec4& boxSize, const fvec4& invBoxSize) {
     // Select the ordering to use for the particles.
     
-    vector<int> permutedParticles(numParticlesPerSet);
+    vector<int>& permutedParticles = data.permutedParticles;
     if (particleOrder.size() == 1) {
         // There are no filters, so we don't need to worry about ordering.
         
@@ -297,7 +298,7 @@ void CpuCustomManyParticleForce::calculateOneIxn(vector<int>& particleSet, RealO
     if (includeForces) {
         // Apply forces based on individual particle coordinates.
 
-        AlignedArray<fvec4> f(numParticlesPerSet);
+        AlignedArray<fvec4>& f = data.f;
         for (int i = 0; i < numParticlesPerSet; i++)
             f[i] = fvec4(0.0f);
         for (int i = 0; i < (int) data.particleTerms.size(); i++) {
@@ -444,6 +445,8 @@ CpuCustomManyParticleForce::ThreadData::ThreadData(const CustomManyParticleForce
     int numParticlesPerSet = force.getNumParticlesPerSet();
     int numPerParticleParameters = force.getNumPerParticleParameters();
     particleParamIndices.resize(numParticlesPerSet);
+    permutedParticles.resize(numParticlesPerSet);
+    f.resize(numParticlesPerSet);
     energyExpression = energyExpr.createCompiledExpression();
     expressionSet.registerExpression(energyExpression);
 
