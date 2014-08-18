@@ -926,6 +926,54 @@ private:
 };
 
 /**
+ * This kernel is invoked by CustomManyParticleForce to calculate the forces acting on the system.
+ */
+class CudaCalcCustomManyParticleForceKernel : public CalcCustomManyParticleForceKernel {
+public:
+    CudaCalcCustomManyParticleForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcCustomManyParticleForceKernel(name, platform),
+            hasInitializedKernel(false), cu(cu), params(NULL), globals(NULL), particleTypes(NULL), system(system) {
+    }
+    ~CudaCalcCustomManyParticleForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomManyParticleForce this kernel will be used for
+     */
+    void initialize(const System& system, const CustomManyParticleForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomManyParticleForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const CustomManyParticleForce& force);
+
+private:
+    CudaContext& cu;
+    bool hasInitializedKernel;
+    NonbondedMethod nonbondedMethod;
+    CudaParameterSet* params;
+    CudaArray* globals;
+    CudaArray* particleTypes;
+    std::vector<std::string> globalParamNames;
+    std::vector<float> globalParamValues;
+    std::vector<CudaArray*> tabulatedFunctions;
+    std::vector<void*> forceArgs;
+    const System& system;
+    CUfunction forceKernel;
+};
+
+/**
  * This kernel is invoked by VerletIntegrator to take one time step.
  */
 class CudaIntegrateVerletStepKernel : public IntegrateVerletStepKernel {

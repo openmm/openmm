@@ -33,6 +33,7 @@
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/CustomCompoundBondForceImpl.h"
 #include "openmm/internal/CustomHbondForceImpl.h"
+#include "openmm/internal/CustomManyParticleForceImpl.h"
 #include "openmm/internal/CustomNonbondedForceImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
 #include "CudaBondedUtilities.h"
@@ -1963,7 +1964,7 @@ void CudaCalcCustomNonbondedForceKernel::initialize(const System& system, const 
     map<string, Lepton::CustomFunction*> functions;
     vector<pair<string, string> > functionDefinitions;
     vector<const TabulatedFunction*> functionList;
-    for (int i = 0; i < force.getNumFunctions(); i++) {
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         functionList.push_back(&force.getTabulatedFunction(i));
         string name = force.getTabulatedFunctionName(i);
         string arrayName = prefix+"table"+cu.intToString(i);
@@ -3766,7 +3767,7 @@ void CudaCalcCustomHbondForceKernel::initialize(const System& system, const Cust
     vector<pair<string, string> > functionDefinitions;
     vector<const TabulatedFunction*> functionList;
     stringstream tableArgs;
-    for (int i = 0; i < force.getNumFunctions(); i++) {
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         functionList.push_back(&force.getTabulatedFunction(i));
         string name = force.getTabulatedFunctionName(i);
         string arrayName = "table"+cu.intToString(i);
@@ -4147,7 +4148,7 @@ void CudaCalcCustomCompoundBondForceKernel::initialize(const System& system, con
     vector<pair<string, string> > functionDefinitions;
     vector<const TabulatedFunction*> functionList;
     stringstream tableArgs;
-    for (int i = 0; i < force.getNumFunctions(); i++) {
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         functionList.push_back(&force.getTabulatedFunction(i));
         string name = force.getTabulatedFunctionName(i);
         functions[name] = cu.getExpressionUtilities().getFunctionPlaceholder(force.getTabulatedFunction(i));
@@ -4384,6 +4385,387 @@ void CudaCalcCustomCompoundBondForceKernel::copyParametersToContext(ContextImpl&
     vector<double> parameters;
     for (int i = 0; i < numBonds; i++) {
         force.getBondParameters(startIndex+i, particles, parameters);
+        paramVector[i].resize(parameters.size());
+        for (int j = 0; j < (int) parameters.size(); j++)
+            paramVector[i][j] = (float) parameters[j];
+    }
+    params->setParameterValues(paramVector);
+    
+    // Mark that the current reordering may be invalid.
+    
+    cu.invalidateMolecules();
+}
+
+class CudaCustomManyParticleForceInfo : public CudaForceInfo {
+public:
+    CudaCustomManyParticleForceInfo(const CustomManyParticleForce& force) : force(force) {
+    }
+    bool areParticlesIdentical(int particle1, int particle2) {
+        vector<double> params1, params2;
+        int type1, type2;
+        force.getParticleParameters(particle1, params1, type1);
+        force.getParticleParameters(particle2, params2, type2);
+        if (type1 != type2)
+            return false;
+        for (int i = 0; i < (int) params1.size(); i++)
+            if (params1[i] != params2[i])
+                return false;
+        return true;
+    }
+    int getNumParticleGroups() {
+        return 0;
+    }
+    void getParticlesInGroup(int index, vector<int>& particles) {
+    }
+    bool areGroupsIdentical(int group1, int group2) {
+        return true;
+    }
+private:
+    const CustomManyParticleForce& force;
+};
+
+CudaCalcCustomManyParticleForceKernel::~CudaCalcCustomManyParticleForceKernel() {
+    cu.setAsCurrent();
+    if (params != NULL)
+        delete params;
+    if (globals != NULL)
+        delete globals;
+    if (particleTypes != NULL)
+        delete particleTypes;
+    for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
+        delete tabulatedFunctions[i];
+}
+
+void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, const CustomManyParticleForce& force) {
+    cu.setAsCurrent();
+    int numParticles = force.getNumParticles();
+    int particlesPerSet = force.getNumParticlesPerSet();
+    nonbondedMethod = CalcCustomManyParticleForceKernel::NonbondedMethod(force.getNonbondedMethod());
+    
+    // Record parameter values.
+    
+    params = new CudaParameterSet(cu, force.getNumPerParticleParameters(), numParticles, "customManyParticleParameters");
+    if (force.getNumGlobalParameters() > 0)
+        globals = CudaArray::create<float>(cu, force.getNumGlobalParameters(), "customManyParticleGlobals");
+    vector<vector<float> > paramVector(numParticles);
+    for (int i = 0; i < numParticles; i++) {
+        vector<double> parameters;
+        int type;
+        force.getParticleParameters(i, parameters, type);
+        paramVector[i].resize(parameters.size());
+        for (int j = 0; j < (int) parameters.size(); j++)
+            paramVector[i][j] = (float) parameters[j];
+    }
+    params->setParameterValues(paramVector);
+    cu.addForce(new CudaCustomManyParticleForceInfo(force));
+
+    // Record the tabulated functions.
+
+    map<string, Lepton::CustomFunction*> functions;
+    vector<pair<string, string> > functionDefinitions;
+    vector<const TabulatedFunction*> functionList;
+    stringstream tableArgs;
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
+        functionList.push_back(&force.getTabulatedFunction(i));
+        string name = force.getTabulatedFunctionName(i);
+        functions[name] = cu.getExpressionUtilities().getFunctionPlaceholder(force.getTabulatedFunction(i));
+        int width;
+        vector<float> f = cu.getExpressionUtilities().computeFunctionCoefficients(force.getTabulatedFunction(i), width);
+        CudaArray* array = CudaArray::create<float>(cu, f.size(), "TabulatedFunction");
+        tabulatedFunctions.push_back(array);
+        array->upload(f);
+        string arrayName = cu.getBondedUtilities().addArgument(array->getDevicePointer(), width == 1 ? "float" : "float"+cu.intToString(width));
+        functionDefinitions.push_back(make_pair(name, arrayName));
+    }
+    
+    // Record information about parameters.
+
+    globalParamNames.resize(force.getNumGlobalParameters());
+    globalParamValues.resize(force.getNumGlobalParameters());
+    for (int i = 0; i < force.getNumGlobalParameters(); i++) {
+        globalParamNames[i] = force.getGlobalParameterName(i);
+        globalParamValues[i] = (float) force.getGlobalParameterDefaultValue(i);
+    }
+    map<string, string> variables;
+    for (int i = 0; i < particlesPerSet; i++) {
+        string index = cu.intToString(i+1);
+        variables["x"+index] = "pos"+index+".x";
+        variables["y"+index] = "pos"+index+".y";
+        variables["z"+index] = "pos"+index+".z";
+    }
+    for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
+        const string& name = force.getPerParticleParameterName(i);
+        variables[name] = "params"+params->getParameterSuffix(i);
+    }
+    if (force.getNumGlobalParameters() > 0) {
+        globals = CudaArray::create<float>(cu, force.getNumGlobalParameters(), "customManyParticleGlobals");
+        globals->upload(globalParamValues);
+        for (int i = 0; i < force.getNumGlobalParameters(); i++) {
+            const string& name = force.getGlobalParameterName(i);
+            string value = "globals["+cu.intToString(i)+"]";
+            variables[name] = value;
+        }
+    }
+
+    // Now to generate the kernel.  First, it needs to calculate all distances, angles,
+    // and dihedrals the expression depends on.
+
+    map<string, vector<int> > distances;
+    map<string, vector<int> > angles;
+    map<string, vector<int> > dihedrals;
+    Lepton::ParsedExpression energyExpression = CustomManyParticleForceImpl::prepareExpression(force, functions, distances, angles, dihedrals);
+    map<string, Lepton::ParsedExpression> forceExpressions;
+    set<string> computedDeltas;
+    vector<string> atomNames, posNames;
+    for (int i = 0; i < particlesPerSet; i++) {
+        string index = cu.intToString(i+1);
+        atomNames.push_back("P"+index);
+        posNames.push_back("pos"+index);
+    }
+    stringstream compute;
+    int index = 0;
+    for (map<string, vector<int> >::const_iterator iter = distances.begin(); iter != distances.end(); ++iter, ++index) {
+        const vector<int>& atoms = iter->second;
+        string deltaName = atomNames[atoms[0]]+atomNames[atoms[1]];
+        if (computedDeltas.count(deltaName) == 0) {
+            compute<<"real4 delta"<<deltaName<<" = delta("<<posNames[atoms[0]]<<", "<<posNames[atoms[1]]<<");\n";
+            computedDeltas.insert(deltaName);
+        }
+        compute<<"real r_"<<deltaName<<" = sqrt(delta"<<deltaName<<".w);\n";
+        variables[iter->first] = "r_"+deltaName;
+        forceExpressions["real dEdDistance"+cu.intToString(index)+" = "] = energyExpression.differentiate(iter->first).optimize();
+    }
+    index = 0;
+    for (map<string, vector<int> >::const_iterator iter = angles.begin(); iter != angles.end(); ++iter, ++index) {
+        const vector<int>& atoms = iter->second;
+        string deltaName1 = atomNames[atoms[1]]+atomNames[atoms[0]];
+        string deltaName2 = atomNames[atoms[1]]+atomNames[atoms[2]];
+        string angleName = "angle_"+atomNames[atoms[0]]+atomNames[atoms[1]]+atomNames[atoms[2]];
+        if (computedDeltas.count(deltaName1) == 0) {
+            compute<<"real4 delta"<<deltaName1<<" = delta("<<posNames[atoms[1]]<<", "<<posNames[atoms[0]]<<");\n";
+            computedDeltas.insert(deltaName1);
+        }
+        if (computedDeltas.count(deltaName2) == 0) {
+            compute<<"real4 delta"<<deltaName2<<" = delta("<<posNames[atoms[1]]<<", "<<posNames[atoms[2]]<<");\n";
+            computedDeltas.insert(deltaName2);
+        }
+        compute<<"real "<<angleName<<" = computeAngle(delta"<<deltaName1<<", delta"<<deltaName2<<");\n";
+        variables[iter->first] = angleName;
+        forceExpressions["real dEdAngle"+cu.intToString(index)+" = "] = energyExpression.differentiate(iter->first).optimize();
+    }
+    index = 0;
+    for (map<string, vector<int> >::const_iterator iter = dihedrals.begin(); iter != dihedrals.end(); ++iter, ++index) {
+        const vector<int>& atoms = iter->second;
+        string deltaName1 = atomNames[atoms[0]]+atomNames[atoms[1]];
+        string deltaName2 = atomNames[atoms[2]]+atomNames[atoms[1]];
+        string deltaName3 = atomNames[atoms[2]]+atomNames[atoms[3]];
+        string crossName1 = "cross_"+deltaName1+"_"+deltaName2;
+        string crossName2 = "cross_"+deltaName2+"_"+deltaName3;
+        string dihedralName = "dihedral_"+atomNames[atoms[0]]+atomNames[atoms[1]]+atomNames[atoms[2]]+atomNames[atoms[3]];
+        if (computedDeltas.count(deltaName1) == 0) {
+            compute<<"real4 delta"<<deltaName1<<" = delta("<<posNames[atoms[0]]<<", "<<posNames[atoms[1]]<<");\n";
+            computedDeltas.insert(deltaName1);
+        }
+        if (computedDeltas.count(deltaName2) == 0) {
+            compute<<"real4 delta"<<deltaName2<<" = delta("<<posNames[atoms[2]]<<", "<<posNames[atoms[1]]<<");\n";
+            computedDeltas.insert(deltaName2);
+        }
+        if (computedDeltas.count(deltaName3) == 0) {
+            compute<<"real4 delta"<<deltaName3<<" = delta("<<posNames[atoms[2]]<<", "<<posNames[atoms[3]]<<");\n";
+            computedDeltas.insert(deltaName3);
+        }
+        compute<<"real4 "<<crossName1<<" = computeCross(delta"<<deltaName1<<", delta"<<deltaName2<<");\n";
+        compute<<"real4 "<<crossName2<<" = computeCross(delta"<<deltaName2<<", delta"<<deltaName3<<");\n";
+        compute<<"real "<<dihedralName<<" = computeAngle("<<crossName1<<", "<<crossName2<<");\n";
+        compute<<dihedralName<<" *= (delta"<<deltaName1<<".x*"<<crossName2<<".x + delta"<<deltaName1<<".y*"<<crossName2<<".y + delta"<<deltaName1<<".z*"<<crossName2<<".z < 0 ? -1 : 1);\n";
+        variables[iter->first] = dihedralName;
+        forceExpressions["real dEdDihedral"+cu.intToString(index)+" = "] = energyExpression.differentiate(iter->first).optimize();
+    }
+
+    // Now evaluate the expressions.
+
+    for (int i = 0; i < (int) params->getBuffers().size(); i++) {
+        CudaNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
+        compute<<buffer.getType()<<" params"<<(i+1)<<" = global_params"<<(i+1)<<"[index];\n";
+    }
+    forceExpressions["energy += "] = energyExpression;
+    compute << cu.getExpressionUtilities().createExpressions(forceExpressions, variables, functionList, functionDefinitions, "temp");
+
+    // Apply forces to atoms.
+
+    vector<string> forceNames;
+    for (int i = 0; i < particlesPerSet; i++) {
+        string istr = cu.intToString(i+1);
+        string forceName = "force"+istr;
+        forceNames.push_back(forceName);
+        compute<<"real3 "<<forceName<<" = make_real3(0);\n";
+        compute<<"{\n";
+        Lepton::ParsedExpression forceExpressionX = energyExpression.differentiate("x"+istr).optimize();
+        Lepton::ParsedExpression forceExpressionY = energyExpression.differentiate("y"+istr).optimize();
+        Lepton::ParsedExpression forceExpressionZ = energyExpression.differentiate("z"+istr).optimize();
+        map<string, Lepton::ParsedExpression> expressions;
+        if (!isZeroExpression(forceExpressionX))
+            expressions[forceName+".x -= "] = forceExpressionX;
+        if (!isZeroExpression(forceExpressionY))
+            expressions[forceName+".y -= "] = forceExpressionY;
+        if (!isZeroExpression(forceExpressionZ))
+            expressions[forceName+".z -= "] = forceExpressionZ;
+        if (expressions.size() > 0)
+            compute<<cu.getExpressionUtilities().createExpressions(expressions, variables, functionList, functionDefinitions, "coordtemp");
+        compute<<"}\n";
+    }
+    index = 0;
+    for (map<string, vector<int> >::const_iterator iter = distances.begin(); iter != distances.end(); ++iter, ++index) {
+        const vector<int>& atoms = iter->second;
+        string deltaName = atomNames[atoms[0]]+atomNames[atoms[1]];
+        string value = "(dEdDistance"+cu.intToString(index)+"/r_"+deltaName+")*trim(delta"+deltaName+")";
+        compute<<forceNames[atoms[0]]<<" += "<<"-"<<value<<";\n";
+        compute<<forceNames[atoms[1]]<<" += "<<value<<";\n";
+    }
+    index = 0;
+    for (map<string, vector<int> >::const_iterator iter = angles.begin(); iter != angles.end(); ++iter, ++index) {
+        const vector<int>& atoms = iter->second;
+        string deltaName1 = atomNames[atoms[1]]+atomNames[atoms[0]];
+        string deltaName2 = atomNames[atoms[1]]+atomNames[atoms[2]];
+        compute<<"{\n";
+        compute<<"real3 crossProd = cross(delta"<<deltaName2<<", delta"<<deltaName1<<");\n";
+        compute<<"real lengthCross = max(SQRT(dot(crossProd, crossProd)), 1e-6f);\n";
+        compute<<"real3 deltaCross0 = -cross(trim(delta"<<deltaName1<<"), crossProd)*dEdAngle"<<cu.intToString(index)<<"/(delta"<<deltaName1<<".w*lengthCross);\n";
+        compute<<"real3 deltaCross2 = cross(trim(delta"<<deltaName2<<"), crossProd)*dEdAngle"<<cu.intToString(index)<<"/(delta"<<deltaName2<<".w*lengthCross);\n";
+        compute<<"real3 deltaCross1 = -(deltaCross0+deltaCross2);\n";
+        compute<<forceNames[atoms[0]]<<" += deltaCross0;\n";
+        compute<<forceNames[atoms[1]]<<" += deltaCross1;\n";
+        compute<<forceNames[atoms[2]]<<" += deltaCross2;\n";
+        compute<<"}\n";
+    }
+    index = 0;
+    for (map<string, vector<int> >::const_iterator iter = dihedrals.begin(); iter != dihedrals.end(); ++iter, ++index) {
+        const vector<int>& atoms = iter->second;
+        string deltaName1 = atomNames[atoms[0]]+atomNames[atoms[1]];
+        string deltaName2 = atomNames[atoms[2]]+atomNames[atoms[1]];
+        string deltaName3 = atomNames[atoms[2]]+atomNames[atoms[3]];
+        string crossName1 = "cross_"+deltaName1+"_"+deltaName2;
+        string crossName2 = "cross_"+deltaName2+"_"+deltaName3;
+        compute<<"{\n";
+        compute<<"real r = sqrt(delta"<<deltaName2<<".w);\n";
+        compute<<"real4 ff;\n";
+        compute<<"ff.x = (-dEdDihedral"<<cu.intToString(index)<<"*r)/"<<crossName1<<".w;\n";
+        compute<<"ff.y = (delta"<<deltaName1<<".x*delta"<<deltaName2<<".x + delta"<<deltaName1<<".y*delta"<<deltaName2<<".y + delta"<<deltaName1<<".z*delta"<<deltaName2<<".z)/delta"<<deltaName2<<".w;\n";
+        compute<<"ff.z = (delta"<<deltaName3<<".x*delta"<<deltaName2<<".x + delta"<<deltaName3<<".y*delta"<<deltaName2<<".y + delta"<<deltaName3<<".z*delta"<<deltaName2<<".z)/delta"<<deltaName2<<".w;\n";
+        compute<<"ff.w = (dEdDihedral"<<cu.intToString(index)<<"*r)/"<<crossName2<<".w;\n";
+        compute<<"real3 internalF0 = ff.x*trim("<<crossName1<<");\n";
+        compute<<"real3 internalF3 = ff.w*trim("<<crossName2<<");\n";
+        compute<<"real3 s = ff.y*internalF0 - ff.z*internalF3;\n";
+        compute<<forceNames[atoms[0]]<<" += internalF0;\n";
+        compute<<forceNames[atoms[1]]<<" += s-internalF0;\n";
+        compute<<forceNames[atoms[2]]<<" += -s-internalF3;\n";
+        compute<<forceNames[atoms[3]]<<" += internalF3;\n";
+        compute<<"}\n";
+    }
+    
+    // Store forces to global memory.
+    
+    for (int i = 0; i < particlesPerSet; i++)
+        compute<<"storeForce(atom"<<(i+1)<<", "<<forceNames[i]<<", forceBuffers);\n";
+    
+    // Create other replacements that depend on the number of particles per set.
+    
+    stringstream numCombinations, atomsForCombination, isValidCombination, permute, loadData;
+    for (int i = 0; i < particlesPerSet; i++) {
+        permute<<"int atom"<<(i+1)<<" = p"<<(i+1)<<";\n";
+        loadData<<"real4 pos"<<(i+1)<<" = posq[atom"<<(i+1)<<"];\n";
+    }
+    for (int i = 2; i < particlesPerSet; i++) {
+        if (i > 2)
+            isValidCombination<<" && ";
+        isValidCombination<<"p"<<(i+1)<<">p"<<i;
+    }
+    atomsForCombination<<"int tempIndex = index;\n";
+    for (int i = 1; i < particlesPerSet; i++) {
+        if (i > 1)
+            numCombinations<<"*";
+        numCombinations<<"numNeighbors";
+        atomsForCombination<<"int p"<<(i+1)<<" = p1+1+tempIndex%numNeighbors;\n";
+        atomsForCombination<<"tempIndex /= numNeighbors;\n";
+    }
+    
+    // Create replacements for extra arguments.
+    
+    stringstream extraArgs;
+    if (force.getNumGlobalParameters() > 0)
+        extraArgs<<", const float* __restrict__ globals";
+    for (int i = 0; i < (int) params->getBuffers().size(); i++) {
+        CudaNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
+        extraArgs<<", const "<<buffer.getType()<<"* __restrict__ global_params";
+    }
+
+    // Create the kernels.
+
+    map<string, string> replacements;
+    replacements["COMPUTE_INTERACTION"] = compute.str();
+    replacements["NUM_CANDIDATE_COMBINATIONS"] = numCombinations.str();
+    replacements["FIND_ATOMS_FOR_COMBINATION_INDEX"] = atomsForCombination.str();
+    replacements["IS_VALID_COMBINATION"] = isValidCombination.str();
+    replacements["PERMUTE_ATOMS"] = permute.str();
+    replacements["LOAD_PARTICLE_DATA"] = loadData.str();
+    replacements["PARAMETER_ARGUMENTS"] = extraArgs.str()+tableArgs.str();
+    map<string, string> defines;
+    defines["NUM_ATOMS"] = cu.intToString(cu.getNumAtoms());
+    defines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
+    defines["M_PI"] = cu.doubleToString(M_PI);
+    std::cout << cu.replaceStrings(CudaKernelSources::vectorOps+CudaKernelSources::customManyParticle, replacements)<< std::endl;
+    CUmodule module = cu.createModule(cu.replaceStrings(CudaKernelSources::vectorOps+CudaKernelSources::customManyParticle, replacements), defines);
+    forceKernel = cu.getKernel(module, "computeInteraction");
+}
+
+double CudaCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    if (!hasInitializedKernel) {
+        hasInitializedKernel = true;
+        int index = 0;
+        forceArgs.push_back(&cu.getForce().getDevicePointer());
+        forceArgs.push_back(&cu.getEnergyBuffer().getDevicePointer());
+        forceArgs.push_back(&cu.getPosq().getDevicePointer());
+        if (nonbondedMethod != NoCutoff) {
+            forceArgs.push_back(cu.getPeriodicBoxSizePointer());
+            forceArgs.push_back(cu.getInvPeriodicBoxSizePointer());
+        }
+        if (globals != NULL)
+            forceArgs.push_back(&globals->getDevicePointer());
+        for (int i = 0; i < (int) params->getBuffers().size(); i++) {
+            CudaNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
+            forceArgs.push_back(&buffer.getMemory());
+        }
+        for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
+            forceArgs.push_back(&tabulatedFunctions[i]->getDevicePointer());
+    }
+    if (globals != NULL) {
+        bool changed = false;
+        for (int i = 0; i < (int) globalParamNames.size(); i++) {
+            float value = (float) context.getParameter(globalParamNames[i]);
+            if (value != globalParamValues[i])
+                changed = true;
+            globalParamValues[i] = value;
+        }
+        if (changed)
+            globals->upload(globalParamValues);
+    }
+    cu.executeKernel(forceKernel, &forceArgs[0], cu.getNumAtoms()*CudaContext::ThreadBlockSize, CudaContext::ThreadBlockSize);
+    return 0.0;
+}
+
+void CudaCalcCustomManyParticleForceKernel::copyParametersToContext(ContextImpl& context, const CustomManyParticleForce& force) {
+    cu.setAsCurrent();
+    int numParticles = force.getNumParticles();
+    if (numParticles != cu.getNumAtoms())
+        throw OpenMMException("updateParametersInContext: The number of particles has changed");
+    
+    // Record the per-particle parameters.
+    
+    vector<vector<float> > paramVector(numParticles);
+    vector<double> parameters;
+    int type;
+    for (int i = 0; i < numParticles; i++) {
+        force.getParticleParameters(i, parameters, type);
         paramVector[i].resize(parameters.size());
         for (int j = 0; j < (int) parameters.size(); j++)
             paramVector[i][j] = (float) parameters[j];
