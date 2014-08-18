@@ -111,7 +111,7 @@ void OpenCLExpressionUtilities::processExpression(stringstream& out, const Expre
             if (dynamic_cast<const Continuous1DFunction*>(functions[i]) != NULL) {
                 out << "real x = " << getTempName(node.getChildren()[0], temps) << ";\n";
                 out << "if (x >= " << paramsFloat[0] << " && x <= " << paramsFloat[1] << ") {\n";
-                out << "x = (x-" << paramsFloat[0] << ")*" << paramsFloat[2] << ";\n";
+                out << "x = (x - " << paramsFloat[0] << ")*" << paramsFloat[2] << ";\n";
                 out << "int index = (int) (floor(x));\n";
                 out << "index = min(index, " << paramsInt[3] << ");\n";
                 out << "float4 coeff = " << functionNames[i].second << "[index];\n";
@@ -130,8 +130,8 @@ void OpenCLExpressionUtilities::processExpression(stringstream& out, const Expre
                 out << "real x = " << getTempName(node.getChildren()[0], temps) << ";\n";
                 out << "real y = " << getTempName(node.getChildren()[1], temps) << ";\n";
                 out << "if (x >= " << paramsFloat[2] << " && x <= " << paramsFloat[3] << " && y >= " << paramsFloat[4] << " && y <= " << paramsFloat[5] << ") {\n";
-                out << "x = (x-" << paramsFloat[2] << ")*" << paramsFloat[6] << ";\n";
-                out << "y = (y-" << paramsFloat[4] << ")*" << paramsFloat[7] << ";\n";
+                out << "x = (x - " << paramsFloat[2] << ")*" << paramsFloat[6] << ";\n";
+                out << "y = (y - " << paramsFloat[4] << ")*" << paramsFloat[7] << ";\n";
                 out << "int s = min((int) floor(x), " << paramsInt[0] << ");\n";
                 out << "int t = min((int) floor(y), " << paramsInt[1] << ");\n";
                 out << "int coeffIndex = 4*(s+" << paramsInt[0] << "*t);\n";
@@ -172,9 +172,9 @@ void OpenCLExpressionUtilities::processExpression(stringstream& out, const Expre
                 out << "real y = " << getTempName(node.getChildren()[1], temps) << ";\n";
                 out << "real z = " << getTempName(node.getChildren()[2], temps) << ";\n";
                 out << "if (x >= " << paramsFloat[3] << " && x <= " << paramsFloat[4] << " && y >= " << paramsFloat[5] << " && y <= " << paramsFloat[6] << " && z >= " << paramsFloat[7] << " && z <= " << paramsFloat[8] << ") {\n";
-                out << "x = (x-" << paramsFloat[3] << ")*" << paramsFloat[9] << ";\n";
-                out << "y = (y-" << paramsFloat[5] << ")*" << paramsFloat[10] << ";\n";
-                out << "z = (z-" << paramsFloat[7] << ")*" << paramsFloat[11] << ";\n";
+                out << "x = (x - " << paramsFloat[3] << ")*" << paramsFloat[9] << ";\n";
+                out << "y = (y - " << paramsFloat[5] << ")*" << paramsFloat[10] << ";\n";
+                out << "z = (z - " << paramsFloat[7] << ")*" << paramsFloat[11] << ";\n";
                 out << "int s = min((int) floor(x), " << paramsInt[0] << ");\n";
                 out << "int t = min((int) floor(y), " << paramsInt[1] << ");\n";
                 out << "int u = min((int) floor(z), " << paramsInt[2] << ");\n";
