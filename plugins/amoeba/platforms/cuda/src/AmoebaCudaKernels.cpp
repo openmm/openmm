@@ -1744,17 +1744,18 @@ void CudaCalcAmoebaMultipoleForceKernel::getInducedDipoles(ContextImpl& context,
     ensureMultipolesValid(context);
     int numParticles = cu.getNumAtoms();
     dipoles.resize(numParticles);
+    const vector<int>& order = cu.getAtomIndex();
     if (cu.getUseDoublePrecision()) {
         vector<double> d;
         inducedDipole->download(d);
         for (int i = 0; i < numParticles; i++)
-            dipoles[i] = Vec3(d[3*i], d[3*i+1], d[3*i+2]);
+            dipoles[order[i]] = Vec3(d[3*i], d[3*i+1], d[3*i+2]);
     }
     else {
         vector<float> d;
         inducedDipole->download(d);
         for (int i = 0; i < numParticles; i++)
-            dipoles[i] = Vec3(d[3*i], d[3*i+1], d[3*i+2]);
+            dipoles[order[i]] = Vec3(d[3*i], d[3*i+1], d[3*i+2]);
     }
 }
 
