@@ -15,10 +15,16 @@ inline __device__ real3 trim(real4 v) {
 }
 
 /**
- * Compute the difference between two vectors, setting the fourth component to the squared magnitude.
+ * Compute the difference between two vectors, taking periodic boundary conditions into account
+ * and setting the fourth component to the squared magnitude.
  */
-inline __device__ real4 delta(real4 vec1, real4 vec2) {
-    real4 result = make_real4(vec1.x-vec2.x, vec1.y-vec2.y, vec1.z-vec2.z, 0);
+inline __device__ real4 delta(real4 vec1, real4 vec2, real4 periodicBoxSize, real4 invPeriodicBoxSize) {
+    real4 result = make_real4(vec1.x-vec2.x, vec1.y-vec2.y, vec1.z-vec2.z, 0.0f);
+#ifdef USE_PERIODIC
+    result.x -= floor(result.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
+    result.y -= floor(result.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
+    result.z -= floor(result.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
+#endif
     result.w = result.x*result.x + result.y*result.y + result.z*result.z;
     return result;
 }
@@ -56,10 +62,8 @@ inline __device__ real4 computeCross(real4 vec1, real4 vec2) {
  * Compute the interaction.
  */
 extern "C" __global__ void computeInteraction(
-        unsigned long long* __restrict__ forceBuffers, real* __restrict__ energyBuffer, const real4* __restrict__ posq
-#ifdef USE_CUTOFF
-        , real4 periodicBoxSize, real4 invPeriodicBoxSize
-#endif
+        unsigned long long* __restrict__ forceBuffers, real* __restrict__ energyBuffer, const real4* __restrict__ posq,
+        real4 periodicBoxSize, real4 invPeriodicBoxSize
         PARAMETER_ARGUMENTS) {
     real energy = 0.0f;
     
@@ -71,6 +75,11 @@ extern "C" __global__ void computeInteraction(
         for (int index = threadIdx.x; index < numCombinations; index += blockDim.x) {
             FIND_ATOMS_FOR_COMBINATION_INDEX;
             bool includeInteraction = IS_VALID_COMBINATION;
+#ifdef USE_CUTOFF
+            if (includeInteraction) {
+                VERIFY_CUTOFF;
+            }
+#endif
             if (includeInteraction) {
                 PERMUTE_ATOMS;
                 LOAD_PARTICLE_DATA;

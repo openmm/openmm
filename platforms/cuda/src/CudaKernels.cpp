@@ -4468,14 +4468,17 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         functionList.push_back(&force.getTabulatedFunction(i));
         string name = force.getTabulatedFunctionName(i);
+        string arrayName = "table"+cu.intToString(i);
+        functionDefinitions.push_back(make_pair(name, arrayName));
         functions[name] = cu.getExpressionUtilities().getFunctionPlaceholder(force.getTabulatedFunction(i));
         int width;
         vector<float> f = cu.getExpressionUtilities().computeFunctionCoefficients(force.getTabulatedFunction(i), width);
-        CudaArray* array = CudaArray::create<float>(cu, f.size(), "TabulatedFunction");
-        tabulatedFunctions.push_back(array);
-        array->upload(f);
-        string arrayName = cu.getBondedUtilities().addArgument(array->getDevicePointer(), width == 1 ? "float" : "float"+cu.intToString(width));
-        functionDefinitions.push_back(make_pair(name, arrayName));
+        tabulatedFunctions.push_back(CudaArray::create<float>(cu, f.size(), "TabulatedFunction"));
+        tabulatedFunctions[tabulatedFunctions.size()-1]->upload(f);
+        tableArgs << ", const float";
+        if (width > 1)
+            tableArgs << width;
+        tableArgs << "* __restrict__ " << arrayName;
     }
     
     // Record information about parameters.
@@ -4486,16 +4489,19 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
         globalParamNames[i] = force.getGlobalParameterName(i);
         globalParamValues[i] = (float) force.getGlobalParameterDefaultValue(i);
     }
-    map<string, string> variables;
+    vector<pair<ExpressionTreeNode, string> > variables;
     for (int i = 0; i < particlesPerSet; i++) {
         string index = cu.intToString(i+1);
-        variables["x"+index] = "pos"+index+".x";
-        variables["y"+index] = "pos"+index+".y";
-        variables["z"+index] = "pos"+index+".z";
+        variables.push_back(makeVariable("x"+index, "pos"+index+".x"));
+        variables.push_back(makeVariable("y"+index, "pos"+index+".y"));
+        variables.push_back(makeVariable("z"+index, "pos"+index+".z"));
     }
     for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
         const string& name = force.getPerParticleParameterName(i);
-        variables[name] = "params"+params->getParameterSuffix(i);
+        for (int j = 0; j < particlesPerSet; j++) {
+            string index = cu.intToString(j+1);
+            variables.push_back(makeVariable(name+index, "params"+params->getParameterSuffix(i, index)));
+        }
     }
     if (force.getNumGlobalParameters() > 0) {
         globals = CudaArray::create<float>(cu, force.getNumGlobalParameters(), "customManyParticleGlobals");
@@ -4503,7 +4509,7 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
         for (int i = 0; i < force.getNumGlobalParameters(); i++) {
             const string& name = force.getGlobalParameterName(i);
             string value = "globals["+cu.intToString(i)+"]";
-            variables[name] = value;
+            variables.push_back(makeVariable(name, value));
         }
     }
 
@@ -4528,11 +4534,11 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
         const vector<int>& atoms = iter->second;
         string deltaName = atomNames[atoms[0]]+atomNames[atoms[1]];
         if (computedDeltas.count(deltaName) == 0) {
-            compute<<"real4 delta"<<deltaName<<" = delta("<<posNames[atoms[0]]<<", "<<posNames[atoms[1]]<<");\n";
+            compute<<"real4 delta"<<deltaName<<" = delta("<<posNames[atoms[0]]<<", "<<posNames[atoms[1]]<<", periodicBoxSize, invPeriodicBoxSize);\n";
             computedDeltas.insert(deltaName);
         }
         compute<<"real r_"<<deltaName<<" = sqrt(delta"<<deltaName<<".w);\n";
-        variables[iter->first] = "r_"+deltaName;
+        variables.push_back(makeVariable(iter->first, "r_"+deltaName));
         forceExpressions["real dEdDistance"+cu.intToString(index)+" = "] = energyExpression.differentiate(iter->first).optimize();
     }
     index = 0;
@@ -4542,15 +4548,15 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
         string deltaName2 = atomNames[atoms[1]]+atomNames[atoms[2]];
         string angleName = "angle_"+atomNames[atoms[0]]+atomNames[atoms[1]]+atomNames[atoms[2]];
         if (computedDeltas.count(deltaName1) == 0) {
-            compute<<"real4 delta"<<deltaName1<<" = delta("<<posNames[atoms[1]]<<", "<<posNames[atoms[0]]<<");\n";
+            compute<<"real4 delta"<<deltaName1<<" = delta("<<posNames[atoms[1]]<<", "<<posNames[atoms[0]]<<", periodicBoxSize, invPeriodicBoxSize);\n";
             computedDeltas.insert(deltaName1);
         }
         if (computedDeltas.count(deltaName2) == 0) {
-            compute<<"real4 delta"<<deltaName2<<" = delta("<<posNames[atoms[1]]<<", "<<posNames[atoms[2]]<<");\n";
+            compute<<"real4 delta"<<deltaName2<<" = delta("<<posNames[atoms[1]]<<", "<<posNames[atoms[2]]<<", periodicBoxSize, invPeriodicBoxSize);\n";
             computedDeltas.insert(deltaName2);
         }
         compute<<"real "<<angleName<<" = computeAngle(delta"<<deltaName1<<", delta"<<deltaName2<<");\n";
-        variables[iter->first] = angleName;
+        variables.push_back(makeVariable(iter->first, angleName));
         forceExpressions["real dEdAngle"+cu.intToString(index)+" = "] = energyExpression.differentiate(iter->first).optimize();
     }
     index = 0;
@@ -4563,22 +4569,22 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
         string crossName2 = "cross_"+deltaName2+"_"+deltaName3;
         string dihedralName = "dihedral_"+atomNames[atoms[0]]+atomNames[atoms[1]]+atomNames[atoms[2]]+atomNames[atoms[3]];
         if (computedDeltas.count(deltaName1) == 0) {
-            compute<<"real4 delta"<<deltaName1<<" = delta("<<posNames[atoms[0]]<<", "<<posNames[atoms[1]]<<");\n";
+            compute<<"real4 delta"<<deltaName1<<" = delta("<<posNames[atoms[0]]<<", "<<posNames[atoms[1]]<<", periodicBoxSize, invPeriodicBoxSize);\n";
             computedDeltas.insert(deltaName1);
         }
         if (computedDeltas.count(deltaName2) == 0) {
-            compute<<"real4 delta"<<deltaName2<<" = delta("<<posNames[atoms[2]]<<", "<<posNames[atoms[1]]<<");\n";
+            compute<<"real4 delta"<<deltaName2<<" = delta("<<posNames[atoms[2]]<<", "<<posNames[atoms[1]]<<", periodicBoxSize, invPeriodicBoxSize);\n";
             computedDeltas.insert(deltaName2);
         }
         if (computedDeltas.count(deltaName3) == 0) {
-            compute<<"real4 delta"<<deltaName3<<" = delta("<<posNames[atoms[2]]<<", "<<posNames[atoms[3]]<<");\n";
+            compute<<"real4 delta"<<deltaName3<<" = delta("<<posNames[atoms[2]]<<", "<<posNames[atoms[3]]<<", periodicBoxSize, invPeriodicBoxSize);\n";
             computedDeltas.insert(deltaName3);
         }
         compute<<"real4 "<<crossName1<<" = computeCross(delta"<<deltaName1<<", delta"<<deltaName2<<");\n";
         compute<<"real4 "<<crossName2<<" = computeCross(delta"<<deltaName2<<", delta"<<deltaName3<<");\n";
         compute<<"real "<<dihedralName<<" = computeAngle("<<crossName1<<", "<<crossName2<<");\n";
         compute<<dihedralName<<" *= (delta"<<deltaName1<<".x*"<<crossName2<<".x + delta"<<deltaName1<<".y*"<<crossName2<<".y + delta"<<deltaName1<<".z*"<<crossName2<<".z < 0 ? -1 : 1);\n";
-        variables[iter->first] = dihedralName;
+        variables.push_back(makeVariable(iter->first, dihedralName));
         forceExpressions["real dEdDihedral"+cu.intToString(index)+" = "] = energyExpression.differentiate(iter->first).optimize();
     }
 
@@ -4670,10 +4676,12 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
     
     // Create other replacements that depend on the number of particles per set.
     
-    stringstream numCombinations, atomsForCombination, isValidCombination, permute, loadData;
+    stringstream numCombinations, atomsForCombination, isValidCombination, permute, loadData, verifyCutoff;
     for (int i = 0; i < particlesPerSet; i++) {
         permute<<"int atom"<<(i+1)<<" = p"<<(i+1)<<";\n";
         loadData<<"real4 pos"<<(i+1)<<" = posq[atom"<<(i+1)<<"];\n";
+        for (int j = 0; j < (int) params->getBuffers().size(); j++)
+            loadData<<params->getBuffers()[j].getType()<<" params"<<(j+1)<<(i+1)<<" = global_params"<<(j+1)<<"[atom"<<(i+1)<<"];\n";
     }
     for (int i = 2; i < particlesPerSet; i++) {
         if (i > 2)
@@ -4688,6 +4696,14 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
         atomsForCombination<<"int p"<<(i+1)<<" = p1+1+tempIndex%numNeighbors;\n";
         atomsForCombination<<"tempIndex /= numNeighbors;\n";
     }
+    if (nonbondedMethod != NoCutoff) {
+        int startCheckFrom = 0;
+        for (int i = startCheckFrom; i < particlesPerSet; i++)
+            verifyCutoff<<"real4 pos"<<(i+1)<<" = posq[p"<<(i+1)<<"];\n";
+        for (int i = startCheckFrom; i < particlesPerSet; i++)
+            for (int j = i+1; j < particlesPerSet; j++)
+                verifyCutoff<<"includeInteraction &= (delta(pos"<<(i+1)<<", pos"<<(j+1)<<", periodicBoxSize, invPeriodicBoxSize).w < CUTOFF_SQUARED);\n";
+    }
     
     // Create replacements for extra arguments.
     
@@ -4696,7 +4712,7 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
         extraArgs<<", const float* __restrict__ globals";
     for (int i = 0; i < (int) params->getBuffers().size(); i++) {
         CudaNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
-        extraArgs<<", const "<<buffer.getType()<<"* __restrict__ global_params";
+        extraArgs<<", const "<<buffer.getType()<<"* __restrict__ global_params"<<(i+1);
     }
 
     // Create the kernels.
@@ -4706,13 +4722,19 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
     replacements["NUM_CANDIDATE_COMBINATIONS"] = numCombinations.str();
     replacements["FIND_ATOMS_FOR_COMBINATION_INDEX"] = atomsForCombination.str();
     replacements["IS_VALID_COMBINATION"] = isValidCombination.str();
+    replacements["VERIFY_CUTOFF"] = verifyCutoff.str();
     replacements["PERMUTE_ATOMS"] = permute.str();
     replacements["LOAD_PARTICLE_DATA"] = loadData.str();
     replacements["PARAMETER_ARGUMENTS"] = extraArgs.str()+tableArgs.str();
     map<string, string> defines;
+    if (nonbondedMethod != NoCutoff)
+        defines["USE_CUTOFF"] = "1";
+    if (nonbondedMethod == CutoffPeriodic)
+        defines["USE_PERIODIC"] = "1";
     defines["NUM_ATOMS"] = cu.intToString(cu.getNumAtoms());
     defines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
     defines["M_PI"] = cu.doubleToString(M_PI);
+    defines["CUTOFF_SQUARED"] = cu.doubleToString(force.getCutoffDistance()*force.getCutoffDistance());
     std::cout << cu.replaceStrings(CudaKernelSources::vectorOps+CudaKernelSources::customManyParticle, replacements)<< std::endl;
     CUmodule module = cu.createModule(cu.replaceStrings(CudaKernelSources::vectorOps+CudaKernelSources::customManyParticle, replacements), defines);
     forceKernel = cu.getKernel(module, "computeInteraction");
@@ -4725,10 +4747,8 @@ double CudaCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bool
         forceArgs.push_back(&cu.getForce().getDevicePointer());
         forceArgs.push_back(&cu.getEnergyBuffer().getDevicePointer());
         forceArgs.push_back(&cu.getPosq().getDevicePointer());
-        if (nonbondedMethod != NoCutoff) {
-            forceArgs.push_back(cu.getPeriodicBoxSizePointer());
-            forceArgs.push_back(cu.getInvPeriodicBoxSizePointer());
-        }
+        forceArgs.push_back(cu.getPeriodicBoxSizePointer());
+        forceArgs.push_back(cu.getInvPeriodicBoxSizePointer());
         if (globals != NULL)
             forceArgs.push_back(&globals->getDevicePointer());
         for (int i = 0; i < (int) params->getBuffers().size(); i++) {

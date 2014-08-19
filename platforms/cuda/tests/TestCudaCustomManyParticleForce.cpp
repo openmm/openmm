@@ -466,12 +466,12 @@ int main(int argc, char* argv[]) {
         if (argc > 1)
             platform.setPropertyDefaultValue("CudaPrecision", string(argv[1]));
         testNoCutoff();
-//        testCutoff();
-//        testPeriodic();
+        testCutoff();
+        testPeriodic();
 //        testExclusions();
 //        testAllTerms();
-//        testParameters();
-//        testTabulatedFunctions();
+        testParameters();
+        testTabulatedFunctions();
 //        testTypeFilters();
     }
     catch(const exception& e) {
