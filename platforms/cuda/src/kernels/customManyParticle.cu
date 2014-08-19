@@ -59,6 +59,22 @@ inline __device__ real4 computeCross(real4 vec1, real4 vec2) {
 }
 
 /**
+ * Determine whether a particular interaction is in the list of exclusions.
+ */
+inline __device__ bool isInteractionExcluded(int atom1, int atom2, int* __restrict__ exclusions, int* __restrict__ exclusionStartIndex) {
+    int first = exclusionStartIndex[atom1];
+    int last = exclusionStartIndex[atom1+1];
+    for (int i = last-1; i >= first; i--) {
+        int excluded = exclusions[i];
+        if (excluded == atom2)
+            return true;
+        if (excluded <= atom1)
+            return false;
+    }
+    return false;
+}
+
+/**
  * Compute the interaction.
  */
 extern "C" __global__ void computeInteraction(
@@ -66,6 +82,9 @@ extern "C" __global__ void computeInteraction(
         real4 periodicBoxSize, real4 invPeriodicBoxSize
 #ifdef USE_FILTERS
         , int* __restrict__ particleTypes, int* __restrict__ orderIndex, int* __restrict__ particleOrder
+#endif
+#ifdef USE_EXCLUSIONS
+        , int* __restrict__ exclusions, int* __restrict__ exclusionStartIndex
 #endif
         PARAMETER_ARGUMENTS) {
     real energy = 0.0f;
@@ -87,6 +106,11 @@ extern "C" __global__ void computeInteraction(
             int order = orderIndex[COMPUTE_TYPE_INDEX];
             if (order == -1)
                 includeInteraction = false;
+#endif
+#ifdef USE_EXCLUSIONS
+            if (includeInteraction) {
+                VERIFY_EXCLUSIONS;
+            }
 #endif
             if (includeInteraction) {
                 PERMUTE_ATOMS;

@@ -468,7 +468,7 @@ int main(int argc, char* argv[]) {
         testNoCutoff();
         testCutoff();
         testPeriodic();
-//        testExclusions();
+        testExclusions();
         testAllTerms();
         testParameters();
         testTabulatedFunctions();

@@ -4413,9 +4413,14 @@ public:
         return true;
     }
     int getNumParticleGroups() {
-        return 0;
+        return force.getNumExclusions();
     }
     void getParticlesInGroup(int index, vector<int>& particles) {
+        int particle1, particle2;
+        force.getExclusionParticles(index, particle1, particle2);
+        particles.resize(2);
+        particles[0] = particle1;
+        particles[1] = particle2;
     }
     bool areGroupsIdentical(int group1, int group2) {
         return true;
@@ -4436,6 +4441,10 @@ CudaCalcCustomManyParticleForceKernel::~CudaCalcCustomManyParticleForceKernel() 
         delete particleOrder;
     if (particleTypes != NULL)
         delete particleTypes;
+    if (exclusions != NULL)
+        delete exclusions;
+    if (exclusionStartIndex != NULL)
+        delete exclusionStartIndex;
     for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
         delete tabulatedFunctions[i];
 }
@@ -4536,6 +4545,30 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
             for (int j = 0; j < particlesPerSet; j++)
                 flattenedOrder[i*particlesPerSet+j] = particleOrderVec[i][j];
         particleOrder->upload(flattenedOrder);
+    }
+    
+    // Build data structures for exclusions.
+    
+    if (force.getNumExclusions() > 0) {
+        vector<vector<int> > particleExclusions(numParticles);
+        for (int i = 0; i < force.getNumExclusions(); i++) {
+            int p1, p2;
+            force.getExclusionParticles(i, p1, p2);
+            particleExclusions[p1].push_back(p2);
+            particleExclusions[p2].push_back(p1);
+        }
+        vector<int> exclusionsVec;
+        vector<int> exclusionStartIndexVec(numParticles+1);
+        exclusionStartIndexVec[0] = 0;
+        for (int i = 0; i < numParticles; i++) {
+            sort(particleExclusions[i].begin(), particleExclusions[i].end());
+            exclusionsVec.insert(exclusionsVec.end(), particleExclusions[i].begin(), particleExclusions[i].end());
+            exclusionStartIndexVec[i+1] = exclusionsVec.size();
+        }
+        exclusions = CudaArray::create<int>(cu, exclusionsVec.size(), "customManyParticleExclusions");
+        exclusionStartIndex = CudaArray::create<int>(cu, exclusionStartIndexVec.size(), "customManyParticleExclusionStart");
+        exclusions->upload(exclusionsVec);
+        exclusionStartIndex->upload(exclusionStartIndexVec);
     }
 
     // Now to generate the kernel.  First, it needs to calculate all distances, angles,
@@ -4701,7 +4734,7 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
     
     // Create other replacements that depend on the number of particles per set.
     
-    stringstream numCombinations, atomsForCombination, isValidCombination, permute, loadData, verifyCutoff;
+    stringstream numCombinations, atomsForCombination, isValidCombination, permute, loadData, verifyCutoff, verifyExclusions;
     if (hasTypeFilters) {
         permute<<"int particleSet[] = {";
         for (int i = 0; i < particlesPerSet; i++) {
@@ -4741,6 +4774,12 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
             for (int j = i+1; j < particlesPerSet; j++)
                 verifyCutoff<<"includeInteraction &= (delta(pos"<<(i+1)<<", pos"<<(j+1)<<", periodicBoxSize, invPeriodicBoxSize).w < CUTOFF_SQUARED);\n";
     }
+    if (force.getNumExclusions() > 0) {
+        int startCheckFrom = 0;
+        for (int i = startCheckFrom; i < particlesPerSet; i++)
+            for (int j = i+1; j < particlesPerSet; j++)
+                verifyExclusions<<"includeInteraction &= !isInteractionExcluded(p"<<(i+1)<<", p"<<(j+1)<<", exclusions, exclusionStartIndex);\n";
+    }
     string computeTypeIndex = "particleTypes[p"+cu.intToString(particlesPerSet)+"]";
     for (int i = particlesPerSet-2; i >= 0; i--)
         computeTypeIndex = "particleTypes[p"+cu.intToString(i+1)+"]+"+cu.intToString(numTypes)+"*("+computeTypeIndex+")";
@@ -4763,6 +4802,7 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
     replacements["FIND_ATOMS_FOR_COMBINATION_INDEX"] = atomsForCombination.str();
     replacements["IS_VALID_COMBINATION"] = isValidCombination.str();
     replacements["VERIFY_CUTOFF"] = verifyCutoff.str();
+    replacements["VERIFY_EXCLUSIONS"] = verifyExclusions.str();
     replacements["PERMUTE_ATOMS"] = permute.str();
     replacements["LOAD_PARTICLE_DATA"] = loadData.str();
     replacements["COMPUTE_TYPE_INDEX"] = computeTypeIndex;
@@ -4774,6 +4814,8 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
         defines["USE_PERIODIC"] = "1";
     if (hasTypeFilters)
         defines["USE_FILTERS"] = "1";
+    if (force.getNumExclusions() > 0)
+        defines["USE_EXCLUSIONS"] = "1";
     defines["NUM_ATOMS"] = cu.intToString(cu.getNumAtoms());
     defines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
     defines["M_PI"] = cu.doubleToString(M_PI);
@@ -4796,6 +4838,10 @@ double CudaCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bool
             forceArgs.push_back(&particleTypes->getDevicePointer());
             forceArgs.push_back(&orderIndex->getDevicePointer());
             forceArgs.push_back(&particleOrder->getDevicePointer());
+        }
+        if (exclusions != NULL) {
+            forceArgs.push_back(&exclusions->getDevicePointer());
+            forceArgs.push_back(&exclusionStartIndex->getDevicePointer());
         }
         if (globals != NULL)
             forceArgs.push_back(&globals->getDevicePointer());
