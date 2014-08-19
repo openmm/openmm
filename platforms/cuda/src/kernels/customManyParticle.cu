@@ -64,6 +64,9 @@ inline __device__ real4 computeCross(real4 vec1, real4 vec2) {
 extern "C" __global__ void computeInteraction(
         unsigned long long* __restrict__ forceBuffers, real* __restrict__ energyBuffer, const real4* __restrict__ posq,
         real4 periodicBoxSize, real4 invPeriodicBoxSize
+#ifdef USE_FILTERS
+        , int* __restrict__ particleTypes, int* __restrict__ orderIndex, int* __restrict__ particleOrder
+#endif
         PARAMETER_ARGUMENTS) {
     real energy = 0.0f;
     
@@ -79,6 +82,11 @@ extern "C" __global__ void computeInteraction(
             if (includeInteraction) {
                 VERIFY_CUTOFF;
             }
+#endif
+#ifdef USE_FILTERS
+            int order = orderIndex[COMPUTE_TYPE_INDEX];
+            if (order == -1)
+                includeInteraction = false;
 #endif
             if (includeInteraction) {
                 PERMUTE_ATOMS;

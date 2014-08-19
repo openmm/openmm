@@ -931,7 +931,7 @@ private:
 class CudaCalcCustomManyParticleForceKernel : public CalcCustomManyParticleForceKernel {
 public:
     CudaCalcCustomManyParticleForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcCustomManyParticleForceKernel(name, platform),
-            hasInitializedKernel(false), cu(cu), params(NULL), globals(NULL), particleTypes(NULL), system(system) {
+            hasInitializedKernel(false), cu(cu), params(NULL), globals(NULL), particleTypes(NULL), orderIndex(NULL), particleOrder(NULL), system(system) {
     }
     ~CudaCalcCustomManyParticleForceKernel();
     /**
@@ -965,6 +965,8 @@ private:
     CudaParameterSet* params;
     CudaArray* globals;
     CudaArray* particleTypes;
+    CudaArray* orderIndex;
+    CudaArray* particleOrder;
     std::vector<std::string> globalParamNames;
     std::vector<float> globalParamValues;
     std::vector<CudaArray*> tabulatedFunctions;

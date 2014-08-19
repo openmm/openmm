@@ -469,10 +469,10 @@ int main(int argc, char* argv[]) {
         testCutoff();
         testPeriodic();
 //        testExclusions();
-//        testAllTerms();
+        testAllTerms();
         testParameters();
         testTabulatedFunctions();
-//        testTypeFilters();
+        testTypeFilters();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

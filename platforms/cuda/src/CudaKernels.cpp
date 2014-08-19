@@ -4430,6 +4430,10 @@ CudaCalcCustomManyParticleForceKernel::~CudaCalcCustomManyParticleForceKernel() 
         delete params;
     if (globals != NULL)
         delete globals;
+    if (orderIndex != NULL)
+        delete orderIndex;
+    if (particleOrder != NULL)
+        delete particleOrder;
     if (particleTypes != NULL)
         delete particleTypes;
     for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
@@ -4511,6 +4515,27 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
             string value = "globals["+cu.intToString(i)+"]";
             variables.push_back(makeVariable(name, value));
         }
+    }
+    
+    // Build data structures for type filters.
+    
+    vector<int> particleTypesVec;
+    vector<int> orderIndexVec;
+    vector<std::vector<int> > particleOrderVec;
+    int numTypes;
+    CustomManyParticleForceImpl::buildFilterArrays(force, numTypes, particleTypesVec, orderIndexVec, particleOrderVec);
+    bool hasTypeFilters = (particleOrderVec.size() > 1);
+    if (hasTypeFilters) {
+        particleTypes = CudaArray::create<int>(cu, particleTypesVec.size(), "customManyParticleTypes");
+        orderIndex = CudaArray::create<int>(cu, orderIndexVec.size(), "customManyParticleOrderIndex");
+        particleOrder = CudaArray::create<int>(cu, particleOrderVec.size()*particlesPerSet, "customManyParticleOrder");
+        particleTypes->upload(particleTypesVec);
+        orderIndex->upload(orderIndexVec);
+        vector<int> flattenedOrder(particleOrder->getSize());
+        for (int i = 0; i < (int) particleOrderVec.size(); i++)
+            for (int j = 0; j < particlesPerSet; j++)
+                flattenedOrder[i*particlesPerSet+j] = particleOrderVec[i][j];
+        particleOrder->upload(flattenedOrder);
     }
 
     // Now to generate the kernel.  First, it needs to calculate all distances, angles,
@@ -4677,8 +4702,20 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
     // Create other replacements that depend on the number of particles per set.
     
     stringstream numCombinations, atomsForCombination, isValidCombination, permute, loadData, verifyCutoff;
+    if (hasTypeFilters) {
+        permute<<"int particleSet[] = {";
+        for (int i = 0; i < particlesPerSet; i++) {
+            permute<<"p"<<(i+1);
+            if (i < particlesPerSet-1)
+                permute<<", ";
+        }
+        permute<<"};\n";
+    }
     for (int i = 0; i < particlesPerSet; i++) {
-        permute<<"int atom"<<(i+1)<<" = p"<<(i+1)<<";\n";
+        if (hasTypeFilters)
+            permute<<"int atom"<<(i+1)<<" = particleSet[particleOrder["<<numTypes<<"*order+"<<i<<"]];\n";
+        else
+            permute<<"int atom"<<(i+1)<<" = p"<<(i+1)<<";\n";
         loadData<<"real4 pos"<<(i+1)<<" = posq[atom"<<(i+1)<<"];\n";
         for (int j = 0; j < (int) params->getBuffers().size(); j++)
             loadData<<params->getBuffers()[j].getType()<<" params"<<(j+1)<<(i+1)<<" = global_params"<<(j+1)<<"[atom"<<(i+1)<<"];\n";
@@ -4704,6 +4741,9 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
             for (int j = i+1; j < particlesPerSet; j++)
                 verifyCutoff<<"includeInteraction &= (delta(pos"<<(i+1)<<", pos"<<(j+1)<<", periodicBoxSize, invPeriodicBoxSize).w < CUTOFF_SQUARED);\n";
     }
+    string computeTypeIndex = "particleTypes[p"+cu.intToString(particlesPerSet)+"]";
+    for (int i = particlesPerSet-2; i >= 0; i--)
+        computeTypeIndex = "particleTypes[p"+cu.intToString(i+1)+"]+"+cu.intToString(numTypes)+"*("+computeTypeIndex+")";
     
     // Create replacements for extra arguments.
     
@@ -4725,12 +4765,15 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
     replacements["VERIFY_CUTOFF"] = verifyCutoff.str();
     replacements["PERMUTE_ATOMS"] = permute.str();
     replacements["LOAD_PARTICLE_DATA"] = loadData.str();
+    replacements["COMPUTE_TYPE_INDEX"] = computeTypeIndex;
     replacements["PARAMETER_ARGUMENTS"] = extraArgs.str()+tableArgs.str();
     map<string, string> defines;
     if (nonbondedMethod != NoCutoff)
         defines["USE_CUTOFF"] = "1";
     if (nonbondedMethod == CutoffPeriodic)
         defines["USE_PERIODIC"] = "1";
+    if (hasTypeFilters)
+        defines["USE_FILTERS"] = "1";
     defines["NUM_ATOMS"] = cu.intToString(cu.getNumAtoms());
     defines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
     defines["M_PI"] = cu.doubleToString(M_PI);
@@ -4749,6 +4792,11 @@ double CudaCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bool
         forceArgs.push_back(&cu.getPosq().getDevicePointer());
         forceArgs.push_back(cu.getPeriodicBoxSizePointer());
         forceArgs.push_back(cu.getInvPeriodicBoxSizePointer());
+        if (particleTypes != NULL) {
+            forceArgs.push_back(&particleTypes->getDevicePointer());
+            forceArgs.push_back(&orderIndex->getDevicePointer());
+            forceArgs.push_back(&particleOrder->getDevicePointer());
+        }
         if (globals != NULL)
             forceArgs.push_back(&globals->getDevicePointer());
         for (int i = 0; i < (int) params->getBuffers().size(); i++) {
