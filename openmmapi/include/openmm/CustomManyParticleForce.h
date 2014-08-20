@@ -85,11 +85,11 @@ namespace OpenMM {
  * As an example, the following code creates a CustomManyParticleForce that implements an Axilrod-Teller potential.  This
  * is an interaction between three particles that depends on all three distances and angles formed by the particles.
  *
- * <tt>CustomManyParticleForce* force = new CustomManyParticleForce(3,
+ * <tt><pre>CustomManyParticleForce* force = new CustomManyParticleForce(3,
  *     "C*(1+3*cos(theta1)*cos(theta2)*cos(theta3))/(r12*r13*r23)^3;"
  *     "theta1=angle(p1,p2,p3); theta2=angle(p2,p3,p1); theta3=angle(p3,p1,p2);"
  *     "r12=distance(p1,p2); r13=distance(p1,p3); r23=distance(p2,p3)");
- * </tt>
+ * <pre></tt>
  *
  * This force depends on one parameter, C.  The following code defines it as a global parameter:
  *

@@ -44,7 +44,7 @@ using namespace OpenMM;
 using namespace std;
 
 CustomManyParticleForce::CustomManyParticleForce(int particlesPerSet, const string& energy) :
-        particlesPerSet(particlesPerSet), energyExpression(energy), nonbondedMethod(NoCutoff), typeFilters(particlesPerSet) {
+        particlesPerSet(particlesPerSet), energyExpression(energy), nonbondedMethod(NoCutoff), cutoffDistance(1.0), typeFilters(particlesPerSet) {
 }
 
 CustomManyParticleForce::~CustomManyParticleForce() {

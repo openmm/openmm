@@ -932,7 +932,8 @@ class CudaCalcCustomManyParticleForceKernel : public CalcCustomManyParticleForce
 public:
     CudaCalcCustomManyParticleForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcCustomManyParticleForceKernel(name, platform),
             hasInitializedKernel(false), cu(cu), params(NULL), globals(NULL), particleTypes(NULL), orderIndex(NULL), particleOrder(NULL), exclusions(NULL),
-            exclusionStartIndex(NULL), system(system) {
+            exclusionStartIndex(NULL), blockCenter(NULL), blockBoundingBox(NULL), neighborPairs(NULL), numNeighborPairs(NULL), neighborStartIndex(NULL),
+            numNeighborsForAtom(NULL), neighbors(NULL), system(system) {
     }
     ~CudaCalcCustomManyParticleForceKernel();
     /**
@@ -963,6 +964,7 @@ private:
     CudaContext& cu;
     bool hasInitializedKernel;
     NonbondedMethod nonbondedMethod;
+    int maxNeighborPairs;
     CudaParameterSet* params;
     CudaArray* globals;
     CudaArray* particleTypes;
@@ -970,12 +972,20 @@ private:
     CudaArray* particleOrder;
     CudaArray* exclusions;
     CudaArray* exclusionStartIndex;
+    CudaArray* blockCenter;
+    CudaArray* blockBoundingBox;
+    CudaArray* neighborPairs;
+    CudaArray* numNeighborPairs;
+    CudaArray* neighborStartIndex;
+    CudaArray* numNeighborsForAtom;
+    CudaArray* neighbors;
     std::vector<std::string> globalParamNames;
     std::vector<float> globalParamValues;
     std::vector<CudaArray*> tabulatedFunctions;
-    std::vector<void*> forceArgs;
+    std::vector<void*> forceArgs, blockBoundsArgs, neighborsArgs, startIndicesArgs, copyPairsArgs;
     const System& system;
-    CUfunction forceKernel;
+    CUfunction forceKernel, blockBoundsKernel, neighborsKernel, startIndicesKernel, copyPairsKernel;
+    CUevent event;
 };
 
 /**

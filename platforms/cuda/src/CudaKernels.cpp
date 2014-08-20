@@ -56,6 +56,13 @@ using namespace std;
 using Lepton::ExpressionTreeNode;
 using Lepton::Operation;
 
+#define CHECK_RESULT(result, prefix) \
+    if (result != CUDA_SUCCESS) { \
+        std::stringstream m; \
+        m<<prefix<<": "<<CudaContext::getErrorString(result)<<" ("<<result<<")"<<" at "<<__FILE__<<":"<<__LINE__; \
+        throw OpenMMException(m.str());\
+    }
+
 static bool isZeroExpression(const Lepton::ParsedExpression& expression) {
     const Lepton::Operation& op = expression.getRootNode().getOperation();
     if (op.getId() != Lepton::Operation::CONSTANT)
@@ -4445,6 +4452,20 @@ CudaCalcCustomManyParticleForceKernel::~CudaCalcCustomManyParticleForceKernel() 
         delete exclusions;
     if (exclusionStartIndex != NULL)
         delete exclusionStartIndex;
+    if (blockCenter != NULL)
+        delete blockCenter;
+    if (blockBoundingBox != NULL)
+        delete blockBoundingBox;
+    if (neighborPairs != NULL)
+        delete neighborPairs;
+    if (numNeighborPairs != NULL)
+        delete numNeighborPairs;
+    if (neighborStartIndex != NULL)
+        delete neighborStartIndex;
+    if (neighbors != NULL)
+        delete neighbors;
+    if (numNeighborsForAtom != NULL)
+        delete numNeighborsForAtom;
     for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
         delete tabulatedFunctions[i];
 }
@@ -4569,6 +4590,26 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
         exclusionStartIndex = CudaArray::create<int>(cu, exclusionStartIndexVec.size(), "customManyParticleExclusionStart");
         exclusions->upload(exclusionsVec);
         exclusionStartIndex->upload(exclusionStartIndexVec);
+    }
+    
+    // Build data structures for the neighbor list.
+    
+    if (nonbondedMethod != NoCutoff) {
+        int numAtomBlocks = cu.getNumAtomBlocks();
+        int elementSize = (cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
+        blockCenter = new CudaArray(cu, numAtomBlocks, 4*elementSize, "blockCenter");
+        blockBoundingBox = new CudaArray(cu, numAtomBlocks, 4*elementSize, "blockBoundingBox");
+        numNeighborPairs = CudaArray::create<int>(cu, 1, "customManyParticleNumNeighborPairs");
+        neighborStartIndex = CudaArray::create<int>(cu, numParticles+1, "customManyParticleNeighborStartIndex");
+        numNeighborsForAtom = CudaArray::create<int>(cu, numParticles, "customManyParticleNumNeighborsForAtom");
+        CHECK_RESULT(cuEventCreate(&event, CU_EVENT_DISABLE_TIMING), "Error creating event for CustomManyParticleForce");
+
+        // Select a size for the array that holds the neighbor list.  We have to make a fairly
+        // arbitrary guess, but if this turns out to be too small we'll increase it later.
+
+        maxNeighborPairs = 150*numParticles;
+        neighborPairs = CudaArray::create<int2>(cu, maxNeighborPairs, "customManyParticleNeighborPairs");
+        neighbors = CudaArray::create<int>(cu, maxNeighborPairs, "customManyParticleNeighbors");
     }
 
     // Now to generate the kernel.  First, it needs to calculate all distances, angles,
@@ -4820,15 +4861,23 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
     defines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
     defines["M_PI"] = cu.doubleToString(M_PI);
     defines["CUTOFF_SQUARED"] = cu.doubleToString(force.getCutoffDistance()*force.getCutoffDistance());
-    std::cout << cu.replaceStrings(CudaKernelSources::vectorOps+CudaKernelSources::customManyParticle, replacements)<< std::endl;
+    defines["TILE_SIZE"] = cu.intToString(CudaContext::TileSize);
+    defines["NUM_BLOCKS"] = cu.intToString(cu.getNumAtomBlocks());
+//    std::cout << cu.replaceStrings(CudaKernelSources::vectorOps+CudaKernelSources::customManyParticle, replacements)<< std::endl;
     CUmodule module = cu.createModule(cu.replaceStrings(CudaKernelSources::vectorOps+CudaKernelSources::customManyParticle, replacements), defines);
     forceKernel = cu.getKernel(module, "computeInteraction");
+    blockBoundsKernel = cu.getKernel(module, "findBlockBounds");
+    neighborsKernel = cu.getKernel(module, "findNeighbors");
+    startIndicesKernel = cu.getKernel(module, "computeNeighborStartIndices");
+    copyPairsKernel = cu.getKernel(module, "copyPairsToNeighborList");
 }
 
 double CudaCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     if (!hasInitializedKernel) {
         hasInitializedKernel = true;
-        int index = 0;
+        
+        // Set arguments for the force kernel.
+        
         forceArgs.push_back(&cu.getForce().getDevicePointer());
         forceArgs.push_back(&cu.getEnergyBuffer().getDevicePointer());
         forceArgs.push_back(&cu.getPosq().getDevicePointer());
@@ -4851,6 +4900,47 @@ double CudaCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bool
         }
         for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
             forceArgs.push_back(&tabulatedFunctions[i]->getDevicePointer());
+        
+        if (nonbondedMethod != NoCutoff) {
+            // Set arguments for the block bounds kernel.
+
+            blockBoundsArgs.push_back(cu.getPeriodicBoxSizePointer());
+            blockBoundsArgs.push_back(cu.getInvPeriodicBoxSizePointer());
+            blockBoundsArgs.push_back(&cu.getPosq().getDevicePointer());
+            blockBoundsArgs.push_back(&blockCenter->getDevicePointer());
+            blockBoundsArgs.push_back(&blockBoundingBox->getDevicePointer());
+            blockBoundsArgs.push_back(&numNeighborPairs->getDevicePointer());
+
+            // Set arguments for the neighbor list kernel.
+
+            neighborsArgs.push_back(cu.getPeriodicBoxSizePointer());
+            neighborsArgs.push_back(cu.getInvPeriodicBoxSizePointer());
+            neighborsArgs.push_back(&cu.getPosq().getDevicePointer());
+            neighborsArgs.push_back(&blockCenter->getDevicePointer());
+            neighborsArgs.push_back(&blockBoundingBox->getDevicePointer());
+            neighborsArgs.push_back(&neighborPairs->getDevicePointer());
+            neighborsArgs.push_back(&numNeighborPairs->getDevicePointer());
+            neighborsArgs.push_back(&numNeighborsForAtom->getDevicePointer());
+            neighborsArgs.push_back(&maxNeighborPairs);
+            if (exclusions != NULL) {
+                neighborsArgs.push_back(&exclusions->getDevicePointer());
+                neighborsArgs.push_back(&exclusionStartIndex->getDevicePointer());
+            }
+            
+            // Set arguments for the kernel to find neighbor list start indices.
+            
+            startIndicesArgs.push_back(&numNeighborsForAtom->getDevicePointer());
+            startIndicesArgs.push_back(&neighborStartIndex->getDevicePointer());
+
+            // Set arguments for the kernel to assemble the final neighbor list.
+            
+            copyPairsArgs.push_back(&neighborPairs->getDevicePointer());
+            copyPairsArgs.push_back(&neighbors->getDevicePointer());
+            copyPairsArgs.push_back(&numNeighborPairs->getDevicePointer());
+            copyPairsArgs.push_back(&maxNeighborPairs);
+            copyPairsArgs.push_back(&numNeighborsForAtom->getDevicePointer());
+            copyPairsArgs.push_back(&neighborStartIndex->getDevicePointer());
+       }
     }
     if (globals != NULL) {
         bool changed = false;
@@ -4863,7 +4953,40 @@ double CudaCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bool
         if (changed)
             globals->upload(globalParamValues);
     }
-    cu.executeKernel(forceKernel, &forceArgs[0], cu.getNumAtoms()*CudaContext::ThreadBlockSize, CudaContext::ThreadBlockSize);
+    while (true) {
+        int* numPairs = (int*) cu.getPinnedBuffer();
+        if (nonbondedMethod != NoCutoff) {
+            cu.executeKernel(blockBoundsKernel, &blockBoundsArgs[0], cu.getNumAtomBlocks());
+            cu.executeKernel(neighborsKernel, &neighborsArgs[0], cu.getNumAtoms());
+
+            // We need to make sure there was enough memory for the neighbor list.  Download the
+            // information asynchronously so kernels can be running at the same time.
+
+            numNeighborPairs->download(numPairs, false);
+            CHECK_RESULT(cuEventRecord(event, 0), "Error recording event for CustomManyParticleForce");
+            cu.executeKernel(startIndicesKernel, &startIndicesArgs[0], 256, 256, 256*sizeof(int));
+            cu.executeKernel(copyPairsKernel, &copyPairsArgs[0], maxNeighborPairs);
+        }
+        cu.executeKernel(forceKernel, &forceArgs[0], cu.getNumAtoms()*CudaContext::ThreadBlockSize, CudaContext::ThreadBlockSize);
+        if (nonbondedMethod != NoCutoff) {
+            // Make sure there was enough memory for the neighbor list.
+
+            CHECK_RESULT(cuEventSynchronize(event), "Error synchronizing on event for CustomManyParticleForce");
+            if (*numPairs > maxNeighborPairs) {
+                // Resize the arrays and run the calculation again.
+
+                delete neighborPairs;
+                neighborPairs = NULL;
+                delete neighbors;
+                neighbors = NULL;
+                maxNeighborPairs = (int) (1.1*(*numPairs));
+                neighborPairs = CudaArray::create<int2>(cu, maxNeighborPairs, "customManyParticleNeighborPairs");
+                neighbors = CudaArray::create<int>(cu, maxNeighborPairs, "customManyParticleNeighbors");
+                continue;
+            }
+        }
+        break;
+    }
     return 0.0;
 }
 
