@@ -578,8 +578,8 @@ The following preprocessor macros will also have been defined:
 Finally, two output variables will have been defined:
 
 #. You should add the energy of the interaction to :code:`tempEnergy`\ .
-#. You should add the derivative of the energy with respect to the inter-
-   particle distance to :code:`dEdR`\ .
+#. You should add the derivative of the energy with respect to the inter-particle
+   distance to :code:`dEdR`\ .
 
 
 You can also define arbitrary per-particle parameters by calling 

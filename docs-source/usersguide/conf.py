@@ -190,6 +190,9 @@ latex_elements = {
             {code}{\\small{}\\texttt{#2}\\normalsize{}}%
         }[\\PackageError{DUspan}{Unrecognized option passed to DUspan: #1}{}]%
     }%""",
+
+# Omit the index.
+'printindex': '',
 }
 
 # Grouping the document tree into LaTeX files. List of tuples

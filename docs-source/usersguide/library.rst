@@ -1803,17 +1803,17 @@ The OpenCL Platform recognizes the following Platform-specific properties:
   “single”, nearly all calculations are done in single precision.  This is the
   fastest option but also the least accurate.  If it is set to “mixed”, forces are
   computed in single precision but integration is done in double precision.  This
-  gives much better energy conservation with only a slightly decrease in speed.
+  gives much better energy conservation with only a slight decrease in speed.
   If it is set to “double”, all calculations are done in double precision.  This
   is the most accurate option, but is usually much slower than the others.
-* OpenCLUseCpuPme: This selects whether to use the CPU based PME
+* OpenCLUseCpuPme: This selects whether to use the CPU-based PME
   implementation.  The allowed values are “true” or “false”.  Depending on your
   hardware, this might (or might not) improve performance.  To use this option,
   you must have FFTW (single precision, multithreaded) installed, and your CPU
   must support SSE 4.1.
 * OpenCLPlatformIndex: When multiple OpenCL implementations are installed on
-  your computer, this is used to select which one to use.  The value is the zero-
-  based index of the platform (in the OpenCL sense, not the OpenMM sense) to use,
+  your computer, this is used to select which one to use.  The value is the
+  zero-based index of the platform (in the OpenCL sense, not the OpenMM sense) to use,
   in the order they are returned by the OpenCL platform API.  This is useful, for
   example, in selecting whether to use a GPU or CPU based OpenCL implementation.
 * OpenCLDeviceIndex: When multiple OpenCL devices are available on your
@@ -1842,10 +1842,10 @@ The CUDA Platform recognizes the following Platform-specific properties:
   “single”, nearly all calculations are done in single precision.  This is the
   fastest option but also the least accurate.  If it is set to “mixed”, forces are
   computed in single precision but integration is done in double precision.  This
-  gives much better energy conservation with only a slightly decrease in speed.
+  gives much better energy conservation with only a slight decrease in speed.
   If it is set to “double”, all calculations are done in double precision.  This
   is the most accurate option, but is usually much slower than the others.
-* CudaUseCpuPme: This selects whether to use the CPU based PME implementation.
+* CudaUseCpuPme: This selects whether to use the CPU-based PME implementation.
   The allowed values are “true” or “false”.  Depending on your hardware, this
   might (or might not) improve performance.  To use this option, you must have
   FFTW (single precision, multithreaded) installed, and your CPU must support SSE
@@ -1873,7 +1873,7 @@ The CUDA Platform recognizes the following Platform-specific properties:
   synchronizes between the CPU and GPU.  If this is set to “true” (the default),
   CUDA will allow the calling thread to sleep while the GPU is performing a
   computation, allowing the CPU to do other work.  If it is set to “false”, CUDA
-  will spin-lock while the GPU is working.  This can improve performance slightly,
+  will spin-lock while the GPU is working.  Setting it to "false" can improve performance slightly,
   but also prevents the CPU from doing anything else while the GPU is working.
 
 
@@ -1978,7 +1978,7 @@ cases in which the C++ behavior cannot be directly mapped into C. These
 interface and helper functions are compiled in to the main OpenMM library so
 there is nothing special you have to do to get access to them.
 
-In the /\ :code:`include` subdirectory of your OpenMM installation directory,
+In the :code:`include` subdirectory of your OpenMM installation directory,
 there is a machine-generated header file :code:`OpenMMCWrapper.h` that
 should be #included in any C program that is to make calls to OpenMM functions.
 That header contains declarations for all the OpenMM C interface functions and
@@ -2008,7 +2008,7 @@ constructor                 new OpenMM::ClassName()                    | OpenMM_
 destructor                  | OpenMM::ClassName* thing;                | OpenMM_ClassName* thing;
                             | delete thing;                            | OpenMM_ClassName_destroy(thing);
 class method                | OpenMM::ClassName* thing;                | OpenMM_ClassName* thing;
-                            | thing->someName(args);                   | OpenMM_ClassName_someName(thing, args)
+                            | thing->method(args);                     | OpenMM_ClassName_method(thing, args)
 Boolean (type & constants)  | bool                                     | OpenMM_Boolean
                             | true, false                              | OpenMM_True(1), OpenMM_False(0)
 string                      std::string                                char*
@@ -2085,12 +2085,12 @@ conceptually since it differs slightly for each kind of object.
 =======================================================  =========================================================================================================================================================================================================
 Function                                                 Operation
 =======================================================  =========================================================================================================================================================================================================
-*Thing*\ Array\* create(int size)                        Create a heap-allocated array of *Things*\ , with space pre-allocated to hold :code:`size` of them. You can start at :code:`size`\ ==0 if you want since these arrays are dynamically resizeable.
+*Thing*\ Array\* create(int size)                        Create a heap-allocated array of *Things*\ , with space pre-allocated to hold :code:`size` of them. You can start at :code:`size==0` if you want since these arrays are dynamically resizeable.
 void destroy(\ *Thing*\ Array\*)                         Free the heap space that is currently in use for the passed-in array of *Things*\ .
-int getSize(\ *Thing*\ Array\*)                          Return the current number of *Things* in this array. This means you can :code:`get()` and :code:`set()` elements up to :code:`getSize()`\ -1.
+int getSize(\ *Thing*\ Array\*)                          Return the current number of *Things* in this array. This means you can :code:`get()` and :code:`set()` elements up to :code:`getSize()-1`\ .
 void resize(\ *Thing*\ Array\*, int size)                Change the size of this array to the indicated value which may be smaller or larger than the current size. Existing elements remain in their same locations as long as they still fit.
 void append(\ *Thing*\ Array\*, *Thing*\ )               Add a *Thing* to the end of the array, increasing the array size by one. The precise syntax depends on the actual type of *Thing*\ ; see below.
-void set(\ *Thing*\ Array\*, int index, *Thing*\ )       Store a copy of *Thing* in the indicated element of the array (indexed from 0). The array must be of length at least :code:`index`\ +1; you can’t grow the array with this function.
+void set(\ *Thing*\ Array\*, int index, *Thing*\ )       Store a copy of *Thing* in the indicated element of the array (indexed from 0). The array must be of length at least :code:`index+1`\ ; you can’t grow the array with this function.
 *Thing* get(\ *Thing*\ Array\*, int index)               Retrieve a particular element from the array (indexed from 0). (For some Things the value is returned in arguments rather than as the function return.)
 =======================================================  =========================================================================================================================================================================================================
 
@@ -2212,15 +2212,15 @@ special you have to do to get access to them.
 
 Because Fortran is case-insensitive, calls to Fortran subroutines (however
 capitalized) are mapped by the compiler into all-lowercase or all-uppercase
-names, and different compilers use different conventions. The automatically-
-generated OpenMM Fortran “wrapper” subroutines, which are generated in C and
+names, and different compilers use different conventions. The automatically-generated
+OpenMM Fortran “wrapper” subroutines, which are generated in C and
 thus case-sensitive, are provided in two forms for compatibility with the
 majority of Fortran compilers, including Intel Fortran and gfortran. The two
 forms are: (1) all-lowercase with a trailing underscore, and (2) all-uppercase
 without a trailing underscore. So regardless of the Fortran compiler you are
 using, it should find a suitable subroutine to call in the main OpenMM library.
 
-In the :code:`/include` subdirectory of your OpenMM installation directory,
+In the :code:`include` subdirectory of your OpenMM installation directory,
 there is a machine-generated module file :code:`OpenMMFortranModule.f90`
 that must be compiled along with any Fortran program that is to make calls to
 OpenMM functions. (You can look at the :code:`Makefile` or Visual Studio
@@ -2260,7 +2260,7 @@ constructor                 new OpenMM::ClassName()              | type (OpenMM_
 destructor                  | OpenMM::ClassName* thing;          | type (OpenMM_ClassName) thing
                             | delete thing;                      | call OpenMM_ClassName_destroy(thing)
 class method                | OpenMM::ClassName* thing;          | type (OpenMM_ClassName) thing
-                            | thing->someName(args*)             | call OpenMM_ClassName_someName(thing, args)
+                            | thing->method(args*)               | call OpenMM_ClassName_method(thing, args)
 Boolean (type & constants)  | bool                               | integer*4
                             | true                               | parameter (OpenMM_True=1)
                             | false                              | parameter (OpenMM_False=0)
@@ -2282,8 +2282,8 @@ OpenMM_Vec3 helper type
 =======================
 
 Unlike the other OpenMM objects which are opaque and manipulated via pointers,
-the Fortran API uses an ordinary :code:`real`\ :code:`*8(3)` array in
-place of the :code:`OpenMM::Vec3` type. The
+the Fortran API uses an ordinary :code:`real*8(3)` array in
+place of the :code:`OpenMM::Vec3` type.
 You can work directly with the individual elements of this type from your
 Fortran program if you want. For convenience, a :code:`scale()` function is
 provided that creates a new Vec3 from an old one and a scale factor:
@@ -2561,7 +2561,9 @@ notable differences:
 
     myContext.getState(getEnergy=True, getForce=False, …)
     
-#. Wherever the C++ API uses references to return multiple values from a method, the Python API returns a tuple.  For example, in C++ you would query a HarmonicBondForce for a bond’s parameters as follows:
+#. Wherever the C++ API uses references to return multiple values from a method,
+   the Python API returns a tuple.  For example, in C++ you would query a
+   HarmonicBondForce for a bond’s parameters as follows:
    ::
 
     int particle1, particle2;
@@ -2574,8 +2576,8 @@ notable differences:
     [particle1, particle2, length, k] = f.getBondParameters(i)
 
 #. Unlike C++, the Python API accepts and returns quantities with units attached
-   to most values (see the “Units and dimensional analysis” section below for
-   details).  In short, this means that while values in C++ have *implicit*\
+   to most values (see Section :ref:`units-and-dimensional-analysis` below for
+   details).  In short, this means that while values in C++ have *implicit*
    units, the Python API returns objects that have values and *explicit* units.
 
 
@@ -2613,6 +2615,9 @@ nanometers.  We could just as easily specify it in different units:
     nb.setCutoffDistance(12*unit.angstrom)
 
 The use of units in OpenMM is discussed in the next section.
+
+
+.. _units-and-dimensional-analysis:
 
 Units and dimensional analysis
 ==============================
@@ -2705,6 +2710,9 @@ multiply operator (‘*’) or the explicit Quantity constructor:
     bond_length = Quantity(1.53, nanometer)
     # or more verbosely
     bond_length = Quantity(value=1.53, unit=nanometer)
+
+When working with Numpy arrays you *must* use the explicit constructor.  You cannot
+multiply them by a unit, because the Numpy array class overloads the multiply operator.
 
 
 Arithmetic with units
@@ -2844,22 +2852,22 @@ in and out.
 ::
 
     >>> a = Vec3(1,2,3) * nanometers
-    >>> print a
+    >>> print(a)
     (1, 2, 3) nm
-    >>> print a.in_units_of(angstroms)
+    >>> print(a.in_units_of(angstroms))
     (10.0, 20.0, 30.0) A
 
     >>> s2 = [[1,2,3],[4,5,6]] * centimeter
-    >>> print s2
+    >>> print(s2)
     [[1, 2, 3], [4, 5, 6]] cm
-    >>> print s2 / millimeter
+    >>> print(s2/millimeter)
     [[10.0, 20.0, 30.0], [40.0, 50.0, 60.0]]
 
     >>> import numpy
     >>> a = Quantity(numpy.array([1,2,3]), centimeter)
-    >>> print a
+    >>> print(a)
     [1 2 3] cm
-    >>> print a / millimeter
+    >>> print(a/millimeter)
     [ 10.  20.  30.]
 
 Converting a whole list to different units at once is much faster than
@@ -2869,13 +2877,13 @@ Angstroms:
 ::
 
     for v in state.getPositions():
-        print v.value_in_unit(angstrom)
+        print(v.value_in_unit(angstrom))
 
 This can be rewritten as follows:
 ::
 
     for v in state.getPositions().value_in_unit(angstrom):
-        print v
+        print(v)
 
 The two versions produce identical results, but the second one will run faster,
 and therefore is preferred.
@@ -2893,8 +2901,8 @@ GROMACS is a large, complex application written primarily in C.  The
 considerations involved in adapting it to use OpenMM are likely to be similar to
 those faced by developers of other existing applications.
 
-The first principle we followed in adapting GROMACS was to keep all OpenMM-
-related code isolated to just a few files, while modifying as little of the
+The first principle we followed in adapting GROMACS was to keep all OpenMM-related
+code isolated to just a few files, while modifying as little of the
 existing GROMACS code as possible.  This minimized the risk of breaking existing
 parts of the code, while making the OpenMM-related parts as easy to work with as
 possible.  It also minimized the need for C code to invoke the C++ API.  (This
@@ -3563,9 +3571,9 @@ the ring polymer representing each particle is directly related to its De
 Broglie thermal wavelength (uncertainty in its position).
 
 RPMD calculations must be converged with respect to the number *n* of beads
-used.  Each bead is evolved at the effective temperature *nT*\ , where *T*\
+used.  Each bead is evolved at the effective temperature *nT*\ , where *T*
 is the temperature for which properties are required.  The number of beads
-needed to converge a calculation can be estimated using\ :cite:`Markland2008`\
+needed to converge a calculation can be estimated using\ :cite:`Markland2008`
 
 
 .. math::

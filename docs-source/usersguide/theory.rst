@@ -20,7 +20,7 @@ On the other hand, many details are intentionally left unspecified.  Any
 behavior that is not specified either in this guide or in the API documentation
 is left up to the Platform, and may be implemented in different ways by
 different Platforms.  For example, an Integrator is required to produce a
-trajectory that satisfies constraints to within the user specified tolerance,
+trajectory that satisfies constraints to within the user-specified tolerance,
 but the algorithm used to enforce those constraints is left up to the Platform.
 Similarly, this guide provides the functional form of each Force, but does not
 specify what level of numerical precision it must be calculated to.
@@ -131,7 +131,7 @@ Each torsion is represented by an energy term of the form
 
 
 where :math:`\theta` is the dihedral angle formed by the four particles, :math:`\theta_0`
-is the equilibrium angle, *n* is the periodicity, and *k* is
+is the phase offset, *n* is the periodicity, and *k* is
 the force constant.
 
 RBTorsionForce
@@ -164,7 +164,7 @@ Each torsion pair is represented by an energy term of the form
 
 
 where :math:`\theta_1` and :math:`\theta_2` are the two dihedral angles
-coupled by the term, and *f*\ (\ *x*\ ,\ *y*\ ) is defined by a user supplied
+coupled by the term, and *f*\ (\ *x*\ ,\ *y*\ ) is defined by a user-supplied
 grid of tabulated values.  A natural cubic spline surface is fit through the
 tabulated values, then evaluated to determine the energy for arbitrary (\ :math:`\theta_1`\ ,
 :math:`\theta_2`\ ) pairs.
@@ -205,7 +205,7 @@ second derivatives at both ends
 
 When an exception has been added for a pair of particles, :math:`\sigma` and :math:`\epsilon`
 are the parameters specified by the exception.  Otherwise they are determined
-from the parameters of the individual particles using the Lorentz-Bertelot
+from the parameters of the individual particles using the Lorentz-Berthelot
 combining rule:
 
 .. math::
@@ -458,14 +458,14 @@ between particles *i* and *j*\ .  :math:`f_\text{GB}(d_{ij}, R_i, R_j)` is defin
 
 
 .. math::
-   {f}_{\text{GB}}\left({d}_{ij},{R}_{i},{R}_{j}\right)={\left[{d}_{{ij}^{2}}+{R}_{i}{R}_{j}\text{exp}\left(\frac{-{d}_{ij}}{{4R}_{i}{R}_{j}}\right)\right]}^{1/2}
+   {f}_{\text{GB}}\left({d}_{ij},{R}_{i},{R}_{j}\right)={\left[{d}_{ij}^2+{R}_{i}{R}_{j}\text{exp}\left(\frac{-{d}_{ij}^2}{{4R}_{i}{R}_{j}}\right)\right]}^{1/2}
 
 
 :math:`R_i` is the Born radius of particle *i*\ , which calculated as
 
 
 .. math::
-   R_i=\frac{1}{\rho_i^{-1}-r_i^{-1}\text{tanh}\left(\alpha \Psi_{i}-{\beta \Psi}_{{i}^{2}}+{\gamma \Psi}_{{i}^{3}}\right)}
+   R_i=\frac{1}{\rho_i^{-1}-r_i^{-1}\text{tanh}\left(\alpha \Psi_{i}-{\beta \Psi}_i^2+{\gamma \Psi}_i^3\right)}
 
 
 where :math:`\alpha`, :math:`\beta`, and :math:`\gamma` are the GB\ :sup:`OBC`\ II parameters :math:`\alpha` = 1, :math:`\beta` = 0.8, and :math:`\gamma` =
@@ -496,70 +496,6 @@ where :math:`r_i` is the atomic radius of particle *i*\ , :math:`r_i` is
 its Born radius, and :math:`r_\mathit{solvent}` is the solvent radius, which is taken
 to be 0.14 nm.
 
-
-
-GBVIForce
-*********
-
-The GBVI force is an implicit solvent force based on an algorithm developed by
-Paul Labute.\ :cite:`Labute2008` The GBVI force is currently undergoing
-testing to validate that it is correctly implementing the algorithm. The GBVI
-energy is given by Equation 2 of the referenced paper:
-
-
-.. math::
-   E=-\frac{1}{2}\left(\frac{1}{{\epsilon }_{\mathit{solute}}}-\frac{1}{{\epsilon }_{\mathit{solvent}}}\right)\sum _{i,j}\frac{{q}_{i}{q}_{j}}{{f}_{\text{GB}}\left({d}_{ij},{R}_{i},{R}_{j}\right)}+\sum _{i}^{n}{\gamma }_{i}{\left(\frac{{r}_{i}}{{R}_{i}}\right)}^{3}
-
-
-where the indices *i* and *j* run over all n particles, :math:`\epsilon_\mathit{solute}`
-and :math:`\epsilon_\mathit{solvent}` are the dielectric constants of the solute
-and solvent respectively, :math:`q_i` is the charge of particle *i*\ ,
-:math:`d_{ij}` is the distance between particles *i* and *j*\ , :math:`r_i`
-are the input particle radii, and the :math:`\gamma_i` are adjustable
-parameters. :math:`f_\text{GB}(d_{ij}, R_i, R_j)` is
-defined as above (Section :ref:`gbsaobcforce`) for the GBSAOBCForce. The Born radii, :math:`R_i`, are defined by the equation
-
-
-.. math::
-   {R}_{i}={\left[{r}_{i}^{-3}-\sum _{j}^{n}V\left({d}_{ij},{r}_{i},{S}_{j}\right)\right]}^{-\frac{1}{3}}
-
-
-where V(d,r,S) is given by
-
-
-.. math::
-   V\left(d,r,S\right)=\left\{\begin{array}{ccc}L\left(d,x,S\right){\mid }_{x=\mathrm{max}\left(r,d-S\right)}^{x=d+S}& \mid r-S\mid <d& \\ 0& 0\le d\le r-S& \\ L\left(d,x,S\right){\mid }_{x=d-S}^{x=d+S}& 0\le d\le S-r& \end{array}\right\}
-
-
-and
-
-
-.. math::
-   L\left(d,x,S\right)=\frac{3}{2}\left[\frac{1}{4{dx}^{2}}-\frac{1}{{3x}^{3}}+\frac{{d}^{2}-{S}^{2}}{8{dx}^{4}}\right]
-
-
-The S\ :sub:`i` are derived from the covalent topology of the solute:
-
-
-.. math::
-   {S}_{i}=0\text{.}\text{95}\cdot\mathrm{max}\left(0,\nu_i^{1/3}\right)
-
-
-
-.. math::
-   {\nu}_{i}={r}_{i}^{3}-\frac{1}{8}\sum _{j}{a}_{ij}^{2}\left({3r}_{i}-{a}_{ij}\right)+{a}_{ji}^{2}\left({3r}_{j}-{a}_{ji}\right)
-
-
-and
-
-
-.. math::
-   {a}_{ij}=\frac{{r}_{j}^{2}-({r}_{i}-{d}_{ij}{)}^{2}}{{2d}_{ij}}
-
-
-where :math:`d_{ij}` is the fixed covalent bond length between particles *i* and
-*j*\ , and the sum in the calculation of the :math:`\nu_i` is over the particles *j*
-covalently bonded to particle *i*.
 
 AndersenThermostat
 ******************
@@ -622,7 +558,7 @@ weight function
 
 
 where :math:`\Delta E` is the change in potential energy resulting from the step,
-\ *P* is the system pressure, *N* is the number of molecules in the
+\ *P* is the pressure being applied to the system, *N* is the number of molecules in the
 system, :math:`k_B` is Boltzmann’s constant, and *T* is the system
 temperature.  In particular, if :math:`\Delta W\le 0` the step is always accepted.
 If :math:`\Delta W > 0`\ , the step is accepted with probability
@@ -1136,7 +1072,7 @@ VariableVerletIntegrator
 
 This is very similar to VerletIntegrator, but instead of using the same step
 size for every time step, it continuously adjusts the step size to keep the
-integration error below a user specified tolerance.  It compares the positions
+integration error below a user-specified tolerance.  It compares the positions
 generated by Verlet integration with those that would be generated by an
 explicit Euler integrator, and takes the difference between them as an estimate
 of the integration error:
@@ -1161,7 +1097,7 @@ specified error tolerance:
 
 
 where :math:`\delta` is the error tolerance.  This is the largest step that may be
-taken consistent with the user specified accuracy requirement.
+taken consistent with the user-specified accuracy requirement.
 
 (Note that the integrator may sometimes choose to use a smaller value for :math:`\Delta t`
 than given above.  For example, it might restrict how much the step size

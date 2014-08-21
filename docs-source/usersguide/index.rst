@@ -7,8 +7,9 @@ OpenMM Users Manual and Theory Guide
 
 Portions copyright (c) 2008-2014 Stanford University and the Authors
 
-Contributors:  Kyle Beauchamp, Christopher Bruns, Peter Eastman, Mark
-Friedrichs, Joy P. Ku, Vijay Pande, Randy Radmer, Michael Sherman, Tom Markland
+Contributors:  Kyle Beauchamp, Christopher Bruns, John Chodera, Peter Eastman, Mark
+Friedrichs, Joy P. Ku, Tom Markland, Vijay Pande, Randy Radmer, Michael Sherman,
+Jason Swails, Lee-Ping Wang
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this document (the "Document"), to deal in the Document without restriction,

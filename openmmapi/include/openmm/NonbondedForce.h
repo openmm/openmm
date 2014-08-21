@@ -46,7 +46,7 @@ namespace OpenMM {
  * This class implements nonbonded interactions between particles, including a Coulomb force to represent
  * electrostatics and a Lennard-Jones force to represent van der Waals interactions.  It optionally supports
  * periodic boundary conditions and cutoffs for long range interactions.  Lennard-Jones interactions are
- * calculated with the Lorentz-Bertelot combining rule: it uses the arithmetic mean of the sigmas and the
+ * calculated with the Lorentz-Berthelot combining rule: it uses the arithmetic mean of the sigmas and the
  * geometric mean of the epsilons for the two interacting particles.
  *
  * To use this class, create a NonbondedForce object, then call addParticle() once for each particle in the
@@ -221,7 +221,7 @@ public:
      * Add the nonbonded force parameters for a particle.  This should be called once for each particle
      * in the System.  When it is called for the i'th time, it specifies the parameters for the i'th particle.
      * For calculating the Lennard-Jones interaction between two particles, the arithmetic mean of the sigmas
-     * and the geometric mean of the epsilons for the two interacting particles is used (the Lorentz-Bertelot
+     * and the geometric mean of the epsilons for the two interacting particles is used (the Lorentz-Berthelot
      * combining rule).
      *
      * @param charge    the charge of the particle, measured in units of the proton charge
@@ -242,7 +242,7 @@ public:
     /**
      * Set the nonbonded force parameters for a particle.  When calculating the Lennard-Jones interaction between two particles,
      * it uses the arithmetic mean of the sigmas and the geometric mean of the epsilons for the two interacting particles
-     * (the Lorentz-Bertelot combining rule).
+     * (the Lorentz-Berthelot combining rule).
      *
      * @param index     the index of the particle for which to set parameters
      * @param charge    the charge of the particle, measured in units of the proton charge
