@@ -4475,6 +4475,7 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
     int numParticles = force.getNumParticles();
     int particlesPerSet = force.getNumParticlesPerSet();
     nonbondedMethod = CalcCustomManyParticleForceKernel::NonbondedMethod(force.getNonbondedMethod());
+    forceWorkgroupSize = 128;
     
     // Record parameter values.
     
@@ -4804,19 +4805,21 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
         if (i > 1)
             numCombinations<<"*";
         numCombinations<<"numNeighbors";
-        atomsForCombination<<"int p"<<(i+1)<<" = p1+1+tempIndex%numNeighbors;\n";
+        if (nonbondedMethod == NoCutoff)
+            atomsForCombination<<"int p"<<(i+1)<<" = p1+1+tempIndex%numNeighbors;\n";
+        else
+            atomsForCombination<<"int p"<<(i+1)<<" = neighbors[firstNeighbor+tempIndex%numNeighbors];\n";
         atomsForCombination<<"tempIndex /= numNeighbors;\n";
     }
     if (nonbondedMethod != NoCutoff) {
-        int startCheckFrom = 0;
-        for (int i = startCheckFrom; i < particlesPerSet; i++)
+        for (int i = 1; i < particlesPerSet; i++)
             verifyCutoff<<"real4 pos"<<(i+1)<<" = posq[p"<<(i+1)<<"];\n";
-        for (int i = startCheckFrom; i < particlesPerSet; i++)
+        for (int i = 1; i < particlesPerSet; i++)
             for (int j = i+1; j < particlesPerSet; j++)
                 verifyCutoff<<"includeInteraction &= (delta(pos"<<(i+1)<<", pos"<<(j+1)<<", periodicBoxSize, invPeriodicBoxSize).w < CUTOFF_SQUARED);\n";
     }
     if (force.getNumExclusions() > 0) {
-        int startCheckFrom = 0;
+        int startCheckFrom = (nonbondedMethod == NoCutoff ? 0 : 1);
         for (int i = startCheckFrom; i < particlesPerSet; i++)
             for (int j = i+1; j < particlesPerSet; j++)
                 verifyExclusions<<"includeInteraction &= !isInteractionExcluded(p"<<(i+1)<<", p"<<(j+1)<<", exclusions, exclusionStartIndex);\n";
@@ -4883,6 +4886,10 @@ double CudaCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bool
         forceArgs.push_back(&cu.getPosq().getDevicePointer());
         forceArgs.push_back(cu.getPeriodicBoxSizePointer());
         forceArgs.push_back(cu.getInvPeriodicBoxSizePointer());
+        if (nonbondedMethod != NoCutoff) {
+            forceArgs.push_back(&neighbors->getDevicePointer());
+            forceArgs.push_back(&neighborStartIndex->getDevicePointer());
+        }
         if (particleTypes != NULL) {
             forceArgs.push_back(&particleTypes->getDevicePointer());
             forceArgs.push_back(&orderIndex->getDevicePointer());
@@ -4967,7 +4974,7 @@ double CudaCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bool
             cu.executeKernel(startIndicesKernel, &startIndicesArgs[0], 256, 256, 256*sizeof(int));
             cu.executeKernel(copyPairsKernel, &copyPairsArgs[0], maxNeighborPairs);
         }
-        cu.executeKernel(forceKernel, &forceArgs[0], cu.getNumAtoms()*CudaContext::ThreadBlockSize, CudaContext::ThreadBlockSize);
+        cu.executeKernel(forceKernel, &forceArgs[0], cu.getNumAtoms()*forceWorkgroupSize, forceWorkgroupSize);
         if (nonbondedMethod != NoCutoff) {
             // Make sure there was enough memory for the neighbor list.
 

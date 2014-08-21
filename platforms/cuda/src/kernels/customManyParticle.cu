@@ -74,55 +74,15 @@ inline __device__ bool isInteractionExcluded(int atom1, int atom2, int* __restri
     return false;
 }
 
-#define WARP_SIZE 32
-
-/**
- * Perform a parallel prefix sum of boolean values over an array.  This is done as the first stage of compacting an array.
- */
-__device__ void prefixSum(bool value, short* sum, ushort2* temp) {
-#if __CUDA_ARCH__ >= 300
-    const int indexInWarp = threadIdx.x%WARP_SIZE;
-    const int warpMask = (2<<indexInWarp)-1;
-    temp[threadIdx.x].x = __popc(__ballot(value)&warpMask);
-    __syncthreads();
-    if (threadIdx.x < WARP_SIZE) {
-        int multiWarpSum = temp[(threadIdx.x+1)*WARP_SIZE-1].x;
-        for (int offset = 1; offset < blockDim.x/WARP_SIZE; offset *= 2) {
-            short n = __shfl_up(multiWarpSum, offset, WARP_SIZE);
-            if (indexInWarp >= offset)
-                multiWarpSum += n;
-        }
-        temp[threadIdx.x].y = multiWarpSum;
-    }
-    __syncthreads();
-    sum[threadIdx.x] = temp[threadIdx.x].x+(threadIdx.x < WARP_SIZE ? 0 : temp[threadIdx.x/WARP_SIZE-1].y);
-    __syncthreads();
-#else
-    temp[threadIdx.x].x = value;
-    __syncthreads();
-    int whichBuffer = 0;
-    for (int offset = 1; offset < blockDim.x; offset *= 2) {
-        if (whichBuffer == 0)
-            temp[threadIdx.x].y = (threadIdx.x < offset ? temp[threadIdx.x].x : temp[threadIdx.x].x+temp[threadIdx.x-offset].x);
-        else
-            temp[threadIdx.x].x = (threadIdx.x < offset ? temp[threadIdx.x].y : temp[threadIdx.x].y+temp[threadIdx.x-offset].y);
-        whichBuffer = 1-whichBuffer;
-        __syncthreads();
-    }
-    if (whichBuffer == 0)
-        sum[threadIdx.x] = temp[threadIdx.x].x;
-    else
-        sum[threadIdx.x] = temp[threadIdx.x].y;
-    __syncthreads();
-#endif
-}
-
 /**
  * Compute the interaction.
  */
 extern "C" __global__ void computeInteraction(
         unsigned long long* __restrict__ forceBuffers, real* __restrict__ energyBuffer, const real4* __restrict__ posq,
         real4 periodicBoxSize, real4 invPeriodicBoxSize
+#ifdef USE_CUTOFF
+        , const int* __restrict__ neighbors, const int* __restrict__ neighborStartIndex
+#endif
 #ifdef USE_FILTERS
         , int* __restrict__ particleTypes, int* __restrict__ orderIndex, int* __restrict__ particleOrder
 #endif
@@ -135,7 +95,12 @@ extern "C" __global__ void computeInteraction(
     // Loop over particles to be the first one in the set.
     
     for (int p1 = blockIdx.x; p1 < NUM_ATOMS; p1 += gridDim.x) {
+#ifdef USE_CUTOFF
+        int firstNeighbor = neighborStartIndex[p1];
+        int numNeighbors = neighborStartIndex[p1+1]-firstNeighbor;
+#else
         int numNeighbors = NUM_ATOMS-p1-1;
+#endif
         int numCombinations = NUM_CANDIDATE_COMBINATIONS;
         for (int index = threadIdx.x; index < numCombinations; index += blockDim.x) {
             FIND_ATOMS_FOR_COMBINATION_INDEX;

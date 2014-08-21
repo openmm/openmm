@@ -964,7 +964,7 @@ private:
     CudaContext& cu;
     bool hasInitializedKernel;
     NonbondedMethod nonbondedMethod;
-    int maxNeighborPairs;
+    int maxNeighborPairs, forceWorkgroupSize;
     CudaParameterSet* params;
     CudaArray* globals;
     CudaArray* particleTypes;
