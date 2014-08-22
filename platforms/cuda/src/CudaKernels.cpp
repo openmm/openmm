@@ -4476,6 +4476,7 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
     int particlesPerSet = force.getNumParticlesPerSet();
     nonbondedMethod = CalcCustomManyParticleForceKernel::NonbondedMethod(force.getNonbondedMethod());
     forceWorkgroupSize = 128;
+    findNeighborsWorkgroupSize = 128;
     
     // Record parameter values.
     
@@ -4791,29 +4792,35 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
             permute<<"int atom"<<(i+1)<<" = particleSet[particleOrder["<<numTypes<<"*order+"<<i<<"]];\n";
         else
             permute<<"int atom"<<(i+1)<<" = p"<<(i+1)<<";\n";
-        loadData<<"real4 pos"<<(i+1)<<" = posq[atom"<<(i+1)<<"];\n";
+        loadData<<"real3 pos"<<(i+1)<<" = trim(posq[atom"<<(i+1)<<"]);\n";
         for (int j = 0; j < (int) params->getBuffers().size(); j++)
             loadData<<params->getBuffers()[j].getType()<<" params"<<(j+1)<<(i+1)<<" = global_params"<<(j+1)<<"[atom"<<(i+1)<<"];\n";
     }
     for (int i = 2; i < particlesPerSet; i++) {
         if (i > 2)
             isValidCombination<<" && ";
-        isValidCombination<<"p"<<(i+1)<<">p"<<i;
+        isValidCombination<<"a"<<(i+1)<<">a"<<i;
     }
     atomsForCombination<<"int tempIndex = index;\n";
     for (int i = 1; i < particlesPerSet; i++) {
         if (i > 1)
             numCombinations<<"*";
         numCombinations<<"numNeighbors";
+        atomsForCombination<<"int a"<<(i+1)<<" = 1+tempIndex%numNeighbors;\n";
+        if (i < particlesPerSet-1)
+            atomsForCombination<<"tempIndex /= numNeighbors;\n";
+    }
+    if (particlesPerSet > 2)
+        atomsForCombination<<"a2 = (a3%2 == 0 ? a2 : numNeighbors-a2+1);\n";
+    for (int i = 1; i < particlesPerSet; i++) {
         if (nonbondedMethod == NoCutoff)
-            atomsForCombination<<"int p"<<(i+1)<<" = p1+1+tempIndex%numNeighbors;\n";
+            atomsForCombination<<"int p"<<(i+1)<<" = p1+a"<<(i+1)<<";\n";
         else
-            atomsForCombination<<"int p"<<(i+1)<<" = neighbors[firstNeighbor+tempIndex%numNeighbors];\n";
-        atomsForCombination<<"tempIndex /= numNeighbors;\n";
+            atomsForCombination<<"int p"<<(i+1)<<" = neighbors[firstNeighbor-1+a"<<(i+1)<<"];\n";
     }
     if (nonbondedMethod != NoCutoff) {
         for (int i = 1; i < particlesPerSet; i++)
-            verifyCutoff<<"real4 pos"<<(i+1)<<" = posq[p"<<(i+1)<<"];\n";
+            verifyCutoff<<"real3 pos"<<(i+1)<<" = trim(posq[p"<<(i+1)<<"]);\n";
         for (int i = 1; i < particlesPerSet; i++)
             for (int j = i+1; j < particlesPerSet; j++)
                 verifyCutoff<<"includeInteraction &= (delta(pos"<<(i+1)<<", pos"<<(j+1)<<", periodicBoxSize, invPeriodicBoxSize).w < CUTOFF_SQUARED);\n";
@@ -4866,13 +4873,15 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
     defines["CUTOFF_SQUARED"] = cu.doubleToString(force.getCutoffDistance()*force.getCutoffDistance());
     defines["TILE_SIZE"] = cu.intToString(CudaContext::TileSize);
     defines["NUM_BLOCKS"] = cu.intToString(cu.getNumAtomBlocks());
-//    std::cout << cu.replaceStrings(CudaKernelSources::vectorOps+CudaKernelSources::customManyParticle, replacements)<< std::endl;
+    defines["FIND_NEIGHBORS_WORKGROUP_SIZE"] = cu.intToString(findNeighborsWorkgroupSize);
     CUmodule module = cu.createModule(cu.replaceStrings(CudaKernelSources::vectorOps+CudaKernelSources::customManyParticle, replacements), defines);
     forceKernel = cu.getKernel(module, "computeInteraction");
     blockBoundsKernel = cu.getKernel(module, "findBlockBounds");
     neighborsKernel = cu.getKernel(module, "findNeighbors");
     startIndicesKernel = cu.getKernel(module, "computeNeighborStartIndices");
     copyPairsKernel = cu.getKernel(module, "copyPairsToNeighborList");
+    cuFuncSetCacheConfig(forceKernel, CU_FUNC_CACHE_PREFER_L1);
+    cuFuncSetCacheConfig(neighborsKernel, CU_FUNC_CACHE_PREFER_L1);
 }
 
 double CudaCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -4964,7 +4973,7 @@ double CudaCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bool
         int* numPairs = (int*) cu.getPinnedBuffer();
         if (nonbondedMethod != NoCutoff) {
             cu.executeKernel(blockBoundsKernel, &blockBoundsArgs[0], cu.getNumAtomBlocks());
-            cu.executeKernel(neighborsKernel, &neighborsArgs[0], cu.getNumAtoms());
+            cu.executeKernel(neighborsKernel, &neighborsArgs[0], cu.getNumAtoms(), findNeighborsWorkgroupSize);
 
             // We need to make sure there was enough memory for the neighbor list.  Download the
             // information asynchronously so kernels can be running at the same time.

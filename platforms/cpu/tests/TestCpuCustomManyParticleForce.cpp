@@ -464,6 +464,46 @@ void testTypeFilters() {
     ASSERT_EQUAL_TOL(expectedEnergy, state.getPotentialEnergy(), 1e-5);
 }
 
+void testLargeSystem() {
+    int gridSize = 8;
+    int numParticles = gridSize*gridSize*gridSize;
+    double boxSize = 3.0;
+    double spacing = boxSize/gridSize;
+    CpuPlatform platform;
+    CustomManyParticleForce* force = new CustomManyParticleForce(3,
+        "C*(1+3*cos(theta1)*cos(theta2)*cos(theta3))/(r12*r13*r23)^3;"
+        "theta1=angle(p1,p2,p3); theta2=angle(p2,p3,p1); theta3=angle(p3,p1,p2);"
+        "r12=distance(p1,p2); r13=distance(p1,p3); r23=distance(p2,p3)");
+    force->addGlobalParameter("C", 1.5);
+    force->setNonbondedMethod(CustomManyParticleForce::CutoffPeriodic);
+    force->setCutoffDistance(0.6);
+    vector<double> params;
+    vector<Vec3> positions;
+    System system;
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int i = 0; i < gridSize; i++)
+        for (int j = 0; j < gridSize; j++)
+            for (int k = 0; k < gridSize; k++) {
+                force->addParticle(params);
+                positions.push_back(Vec3((i+0.4*genrand_real2(sfmt))*spacing, (j+0.4*genrand_real2(sfmt))*spacing, (k+0.4*genrand_real2(sfmt))*spacing));
+                system.addParticle(1.0);
+            }
+    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    system.addForce(force);
+    VerletIntegrator integrator1(0.001);
+    VerletIntegrator integrator2(0.001);
+    Context context1(system, integrator1, Platform::getPlatformByName("Reference"));
+    Context context2(system, integrator2, platform);
+    context1.setPositions(positions);
+    context2.setPositions(positions);
+    State state1 = context1.getState(State::Forces | State::Energy);
+    State state2 = context2.getState(State::Forces | State::Energy);
+    ASSERT_EQUAL_TOL(state1.getPotentialEnergy(), state2.getPotentialEnergy(), 1e-4);
+    for (int i = 0; i < numParticles; i++)
+        ASSERT_EQUAL_VEC(state1.getForces()[i], state2.getForces()[i], 1e-4);
+}
+
 int main() {
     try {
         testNoCutoff();
@@ -474,6 +514,7 @@ int main() {
         testParameters();
         testTabulatedFunctions();
         testTypeFilters();
+        testLargeSystem();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

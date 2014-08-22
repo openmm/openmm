@@ -18,7 +18,7 @@ inline __device__ real3 trim(real4 v) {
  * Compute the difference between two vectors, taking periodic boundary conditions into account
  * and setting the fourth component to the squared magnitude.
  */
-inline __device__ real4 delta(real4 vec1, real4 vec2, real4 periodicBoxSize, real4 invPeriodicBoxSize) {
+inline __device__ real4 delta(real3 vec1, real3 vec2, real4 periodicBoxSize, real4 invPeriodicBoxSize) {
     real4 result = make_real4(vec1.x-vec2.x, vec1.y-vec2.y, vec1.z-vec2.z, 0.0f);
 #ifdef USE_PERIODIC
     result.x -= floor(result.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
@@ -95,6 +95,7 @@ extern "C" __global__ void computeInteraction(
     // Loop over particles to be the first one in the set.
     
     for (int p1 = blockIdx.x; p1 < NUM_ATOMS; p1 += gridDim.x) {
+        const int a1 = 0;
 #ifdef USE_CUTOFF
         int firstNeighbor = neighborStartIndex[p1];
         int numNeighbors = neighborStartIndex[p1+1]-firstNeighbor;
@@ -178,41 +179,58 @@ extern "C" __global__ void findNeighbors(real4 periodicBoxSize, real4 invPeriodi
         , int* __restrict__ exclusions, int* __restrict__ exclusionStartIndex
 #endif
         ) {
+    __shared__ real3 positionCache[FIND_NEIGHBORS_WORKGROUP_SIZE];
+    int indexInWarp = threadIdx.x%32;
     for (int atom1 = blockIdx.x*blockDim.x+threadIdx.x; atom1 < NUM_ATOMS; atom1 += blockDim.x*gridDim.x) {
-        // Load data for this atom.
+        // Load data for this atom.  Note that all threads in a warp are processing atoms from the same block.
         
-        real4 pos1 = posq[atom1];
+        real3 pos1 = trim(posq[atom1]);
         int block1 = atom1/TILE_SIZE;
         real4 blockCenter1 = blockCenter[block1];
         real4 blockSize1 = blockBoundingBox[block1];
         int totalNeighborsForAtom1 = 0;
         
-        // Loop over atom blocks to search for neighbors.
-        
-        for (int block2 = block1; block2 < NUM_BLOCKS; block2++) {
-            real4 blockCenter2 = blockCenter[block2];
-            real4 blockSize2 = blockBoundingBox[block2];
-            real4 blockDelta = blockCenter1-blockCenter2;
+        // Loop over atom blocks to search for neighbors.  The threads in a warp compare block1 against 32
+        // other blocks in parallel.
+
+        for (int block2Base = block1; block2Base < NUM_BLOCKS; block2Base += 32) {
+            int block2 = block2Base+indexInWarp;
+            bool includeBlock2 = (block2 < NUM_BLOCKS);
+            if (includeBlock2) {
+                real4 blockCenter2 = blockCenter[block2];
+                real4 blockSize2 = blockBoundingBox[block2];
+                real4 blockDelta = blockCenter1-blockCenter2;
 #ifdef USE_PERIODIC
-            blockDelta.x -= floor(blockDelta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-            blockDelta.y -= floor(blockDelta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-            blockDelta.z -= floor(blockDelta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
+                blockDelta.x -= floor(blockDelta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
+                blockDelta.y -= floor(blockDelta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
+                blockDelta.z -= floor(blockDelta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
-            blockDelta.x = max(0.0f, fabs(blockDelta.x)-blockSize1.x-blockSize2.x);
-            blockDelta.y = max(0.0f, fabs(blockDelta.y)-blockSize1.y-blockSize2.y);
-            blockDelta.z = max(0.0f, fabs(blockDelta.z)-blockSize1.z-blockSize2.z);
-            if (blockDelta.x*blockDelta.x+blockDelta.y*blockDelta.y+blockDelta.z*blockDelta.z < CUTOFF_SQUARED) {
+                blockDelta.x = max(0.0f, fabs(blockDelta.x)-blockSize1.x-blockSize2.x);
+                blockDelta.y = max(0.0f, fabs(blockDelta.y)-blockSize1.y-blockSize2.y);
+                blockDelta.z = max(0.0f, fabs(blockDelta.z)-blockSize1.z-blockSize2.z);
+                includeBlock2 &= (blockDelta.x*blockDelta.x+blockDelta.y*blockDelta.y+blockDelta.z*blockDelta.z < CUTOFF_SQUARED);
+            }
+            
+            // Loop over any blocks we identified as potentially containing neighbors.
+            
+            int includeBlockFlags = __ballot(includeBlock2);
+            while (includeBlockFlags != 0) {
+                int i = __ffs(includeBlockFlags)-1;
+                includeBlockFlags &= includeBlockFlags-1;
+                int block2 = block2Base+i;
+
                 // Loop over atoms in this block.
-                
+
                 int start = block2*TILE_SIZE;
-                int end = (block2+1)*TILE_SIZE;
                 int included[TILE_SIZE];
                 int numIncluded = 0;
-                for (int atom2 = start; atom2 < end; atom2++) {
-                    real4 pos2 = posq[atom2];
-                    
+                positionCache[threadIdx.x] = trim(posq[start+indexInWarp]);
+                for (int j = 0; j < 32; j++) {
+                    int atom2 = start+j;
+                    real3 pos2 = positionCache[threadIdx.x-indexInWarp+j];
+
                     // Decide whether to include this atom pair in the neighbor list.
-                    
+
                     real4 atomDelta = delta(pos1, pos2, periodicBoxSize, invPeriodicBoxSize);
                     bool includeAtom = (atom2 > atom1 && atom2 < NUM_ATOMS && atomDelta.w < CUTOFF_SQUARED);
 #ifdef USE_EXCLUSIONS
@@ -222,14 +240,14 @@ extern "C" __global__ void findNeighbors(real4 periodicBoxSize, real4 invPeriodi
                     if (includeAtom)
                         included[numIncluded++] = atom2;
                 }
-                
+
                 // If we found any neighbors, store them to the neighbor list.
-                
+
                 if (numIncluded > 0) {
                     int baseIndex = atomicAdd(numNeighborPairs, numIncluded);
                     if (baseIndex+numIncluded <= maxNeighborPairs)
-                        for (int i = 0; i < numIncluded; i++)
-                            neighborPairs[baseIndex+i] = make_int2(atom1, included[i]);
+                        for (int j = 0; j < numIncluded; j++)
+                            neighborPairs[baseIndex+j] = make_int2(atom1, included[j]);
                     totalNeighborsForAtom1 += numIncluded;
                 }
             }
