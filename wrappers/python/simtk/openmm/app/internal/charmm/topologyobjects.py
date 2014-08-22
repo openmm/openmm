@@ -926,6 +926,10 @@ class DihedralType(object):
         self.per = int(per)
         self.phase = float(phase)
 
+    def __repr__(self):
+        return "<DihedralType: k=%s; phase=%s; per=%s>" % (self.phi_k,
+                self.phase, self.per)
+
     def __eq__(self, other):
         return (self.phi_k == other.phi_k and self.per == other.per and
                 self.phase == other.phase)

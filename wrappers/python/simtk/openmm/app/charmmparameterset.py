@@ -341,9 +341,10 @@ class CharmmParameterSet(object):
                     replaced = False
                     for i, dtype in enumerate(self.dihedral_types[key]):
                         if dtype.per == dihedral.per:
-                            # Replace. Should we warn here?
-                            warnings.warn('Replacing dihedral %r with %r' % 
-                                          (dtype, dihedral))
+                            # Replace. Warn if they are different
+                            if dtype != dihedral:
+                                warnings.warn('Replacing dihedral %r with %r' % 
+                                              (dtype, dihedral))
                             self.dihedral_types[key]
                             replaced = True
                             break
