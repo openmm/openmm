@@ -140,6 +140,7 @@ STEAL_OWNERSHIP = {("Platform", "registerPlatform") : [0],
                    ("CustomGBForce", "addTabulatedFunction") : [1],
                    ("CustomHbondForce", "addTabulatedFunction") : [1],
                    ("CustomCompoundBondForce", "addTabulatedFunction") : [1],
+                   ("CustomManyParticleForce", "addTabulatedFunction") : [1],
 }
 
 # This is a list of units to attach to return values and method args.
