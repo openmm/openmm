@@ -8,8 +8,21 @@ hr.overfooter {
   border: 0;
 }
 
+.btn-xlarge {
+    padding: 18px 28px;
+    font-size: 22px;
+    line-height: normal;
+    -webkit-border-radius: 8px;
+       -moz-border-radius: 8px;
+            border-radius: 8px;
+}
+
 
 /* Space buttons in footer */
 iframe + iframe {
   margin-left: 10px;
+}
+
+.jumbtron-color {
+    background: #F5F5F5;
 }
