@@ -8,7 +8,7 @@
     <meta name="description" content="">
     <meta name="author" content="">
     
-    <link href="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="http://maxcdn.bootstrapcdn.com/bootswatch/3.2.0/paper/bootstrap.min.css" rel="stylesheet">
     <link href="css/style.css" rel="stylesheet">
 
     <!-- HTML5 shim, for IE6-8 support of HTML5 elements -->
@@ -18,7 +18,7 @@
 	<![endif]-->
 
     <!-- Fav and touch icons -->
-    <link rel="shortcut icon" href="img/favicon.ico">
+    <link rel="shortcut icon" href="favicon">
 
     <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
     <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
@@ -28,34 +28,37 @@
 
   <body>
 
-    <div class="container">
+    <div class="jumbotron jumbtron-color">
+      <div class="container">
       <div class="row clearfix">
-	<div class="col-md-12 column">
-	  <a href="https://github.com/simtk/openmm"><img style="float: right; border: 0; z-index: 1000" src="https://camo.githubusercontent.com/365986a132ccd6a44c23a9169022c0b5c890c387/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f72696768745f7265645f6161303030302e706e67" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_right_red_aa0000.png"></a>
-	  <div class="jumbotron">
-	    <h1>
-	      OpenMM
-	    </h1>
-	    <p>
-	      OpenMM is a high performance toolkit for molecular simulation. Use it as a library, or as an application. We include extensive language bindings for Python, C, C++, and even Fortran. The code is open source, licensed under BSD and LGPL licenses. The source code is actively maintained on Github.
-	    </p>
-	    <p>
-	      <a class="btn btn-primary btn-large" href="https://simtk.org/project/xml/downloads.xml?group_id=161">Download</a>
-	      <a class="btn btn-primary btn-large" href="https://github.com/simtk/openmm">Github</a>
-	      <a class="btn btn-primary btn-large" href="http://openmm.org">Learn more</a>
-	    </p>
-	  </div>
-	</div>
+      <div class="col-md-12 column">
+       <!--  <a href="https://github.com/simtk/openmm"><img style="float: right; border: 0; z-index: 1000" src="https://camo.githubusercontent.com/365986a132ccd6a44c23a9169022c0b5c890c387/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f72696768745f7265645f6161303030302e706e67" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_right_red_aa0000.png"></a>
+         -->
+          <h1>OpenMM</h1>
+          <p>
+            A high performance toolkit for molecular simulation. Use it as a library, or as an application. We include extensive language bindings for Python, C, C++, and even Fortran. The code is open source and actively maintained on Github, licensed under BSD and LGPL.
+          </p>
+          <p>
+            <a class="btn btn-primary btn-large" href="https://simtk.org/project/xml/downloads.xml?group_id=161">Download</a>
+            <a class="btn btn-primary btn-large" href="https://github.com/simtk/openmm">Github</a>
+            <a class="btn btn-primary btn-large" href="http://openmm.org">Learn more</a>
+          </p>
       </div>
+      </div>
+      </div>
+    </div>
+
+    <div class="container">
+
 
       <div class="row clearfix">
-	<div class="col-md-12 column">
+	<div class="col-md-12 column text-center">
 	  <h1 class="text-center">
 	    Extreme Flexibility. Extreme Speed.
 	  </h1>
 	  <p class="text-center lead">
-	    Extreme flexibility through custom forces and integrators. Extreme performance through GPU Acceleration. We support both AMD, NVIDIA, and Intel Integrated GPUs. Oh, we support the CPU too.
-	  </p>
+	    Extreme flexibility through custom forces and integrators. Extreme performance through GPU Acceleration, with code optimized for AMD, NVIDIA, and Intel Integrated GPUs. It's pretty fast on CPUs too. <a href="http://wiki.simtk.org/openmm/BenchmarkOpenMMDHFR"> Benchmarks</a>.
+    </p>
 	</div>
       </div>
 
@@ -72,7 +75,7 @@
 	</div>
 	<div class="col-md-3 column">
 	  <h2>
-	    <a href="6.1.0/developerguide/index.html">Developer Guide
+	    <a href="6.1.0/developerguide/index.html">Dev Guide
 	    </a>
 	  </h2>
 	  <p>
