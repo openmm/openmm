@@ -46,6 +46,8 @@ namespace OpenMM {
  * be exactly equal to the number of particles in the System, or else an exception will be thrown when you
  * try to create a Context.  After a particle has been added, you can modify its force field parameters
  * by calling setParticleParameters().
+ * 
+ * @deprecated This class is not supported by most platforms, and will eventually be removed.  You can implement the same force with CustomGBForce.
  */
 
 class OPENMM_EXPORT GBVIForce : public Force {
