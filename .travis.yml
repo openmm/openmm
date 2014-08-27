@@ -4,9 +4,9 @@ compiler:
 
 env:
   global:
-   # encrypted AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY to push docs to s3
-   - secure: "VVKz+yOMbKsskR+PfU1HfKBWdGYYrmIXNWQz4nqXCjtg2MRCQmjDulFZaPVDvsBzis9BUhnzAQrBYUrAtN8bZSTYRg7ADFVGdPFicg3Sv0owcghTQwokIvbw3G+HDz/WAnFmqEhqm3t5pNVWNinyHpMM3zYZOVKagyj53cwAM0M="
-  - secure: "W2iPU6ooMujfzJNw9ElaEB8Go1rlNFJ5zEldr3FaH7SDRwqtqNOEp9CegCeG/hHtjg1j8TMyytQtvW+OaMKFIbq7Qqu7nIfwIFTV45vBHW6uwT/jAq/J3EgZ8K7JGyysVVHk86D8jT+xu90YVH5Tx/w97luxHOQGfSK8alhCszw="
+    # encrypted AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY to push docs to s3
+    - secure: "VVKz+yOMbKsskR+PfU1HfKBWdGYYrmIXNWQz4nqXCjtg2MRCQmjDulFZaPVDvsBzis9BUhnzAQrBYUrAtN8bZSTYRg7ADFVGdPFicg3Sv0owcghTQwokIvbw3G+HDz/WAnFmqEhqm3t5pNVWNinyHpMM3zYZOVKagyj53cwAM0M="
+    - secure: "W2iPU6ooMujfzJNw9ElaEB8Go1rlNFJ5zEldr3FaH7SDRwqtqNOEp9CegCeG/hHtjg1j8TMyytQtvW+OaMKFIbq7Qqu7nIfwIFTV45vBHW6uwT/jAq/J3EgZ8K7JGyysVVHk86D8jT+xu90YVH5Tx/w97luxHOQGfSK8alhCszw="
 
 before_install:
   - sudo apt-get update -qq
