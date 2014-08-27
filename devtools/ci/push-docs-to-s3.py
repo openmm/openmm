@@ -15,18 +15,20 @@ conn = boto.connect_s3(AWS_ACCESS_KEY_ID,
             AWS_SECRET_ACCESS_KEY)
 bucket = conn.get_bucket(BUCKET_NAME)
 
-def upload(path, root=None, prefix=''):
+def upload(path, root=None, prefix='', versioned=True):
     if root is None:
         root = path
     for dirpath, dirnames, filenames in os.walk(path):
         for filename in filenames:
             fn = os.path.join(dirpath, filename)
             k = Key(bucket)
-            k.key = os.path.join(simtk.version.short_version, prefix,
-                                 os.path.relpath(fn, root))
+            k.key = os.path.join(prefix, os.path.relpath(fn, root))
+            if versioned:
+                k.key = os.path.join(simtk.version.short_version, k.key)
             print('Uploading', k.key, '...')
             k.set_contents_from_filename(fn)
 
+upload('devtools/landing-page', versioned=False)
 upload('api-c++/', 'build')
 upload('api-python/', 'build')
 upload('sphinx-docs/developerguide/html', prefix='developerguide')
