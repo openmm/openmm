@@ -1,6 +1,7 @@
 from __future__ import print_function
 import os
 import boto
+import simtk
 from boto.s3.key import Key
 
 # The secret key is available as a secure environment variable
@@ -21,7 +22,8 @@ def upload(path, root=None, prefix=''):
         for filename in filenames:
             fn = os.path.join(dirpath, filename)
             k = Key(bucket)
-            k.key = os.path.join(prefix, os.path.relpath(fn, root))
+            k.key = os.path.join(simtk.version.short_version, prefix,
+                                 os.path.relpath(fn, root))
             print('Uploading', k.key, '...')
             k.set_contents_from_filename(fn)
 
