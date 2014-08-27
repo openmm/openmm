@@ -35,4 +35,4 @@ after_sucess:
   - make DoxygenApiDocs
   - make sphinxhtml
   - sudo pip install boto
-  - devtools/ci/push-docs-to-s3.py
+  - python devtools/ci/push-docs-to-s3.py
