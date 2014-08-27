@@ -1,0 +1,15 @@
+
+hr.overfooter {
+  display: block;
+  width: 7rem;
+  height: 1px;
+  margin: 2.5rem auto;
+  background-color: #eee;
+  border: 0;
+}
+
+
+/* Space buttons in footer */
+iframe + iframe {
+  margin-left: 10px;
+}
