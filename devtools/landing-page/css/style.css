@@ -26,3 +26,16 @@ iframe + iframe {
 .jumbtron-color {
     background: #F5F5F5;
 }
+
+.table {
+  font-size: 14px 
+}
+
+.list-group-item-special {
+   border: 0px !important;
+   list-style: none;
+}
+
+p.enlarge {
+   font-size: 14px;
+}
