@@ -74,6 +74,8 @@ inline __device__ bool isInteractionExcluded(int atom1, int atom2, int* __restri
     return false;
 }
 
+__constant__ float globals[NUM_GLOBALS];
+
 /**
  * Compute the interaction.
  */

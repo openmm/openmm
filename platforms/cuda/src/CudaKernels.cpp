@@ -4440,8 +4440,6 @@ CudaCalcCustomManyParticleForceKernel::~CudaCalcCustomManyParticleForceKernel() 
     cu.setAsCurrent();
     if (params != NULL)
         delete params;
-    if (globals != NULL)
-        delete globals;
     if (orderIndex != NULL)
         delete orderIndex;
     if (particleOrder != NULL)
@@ -4481,8 +4479,6 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
     // Record parameter values.
     
     params = new CudaParameterSet(cu, force.getNumPerParticleParameters(), numParticles, "customManyParticleParameters");
-    if (force.getNumGlobalParameters() > 0)
-        globals = CudaArray::create<float>(cu, force.getNumGlobalParameters(), "customManyParticleGlobals");
     vector<vector<float> > paramVector(numParticles);
     for (int i = 0; i < numParticles; i++) {
         vector<double> parameters;
@@ -4540,8 +4536,6 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
         }
     }
     if (force.getNumGlobalParameters() > 0) {
-        globals = CudaArray::create<float>(cu, force.getNumGlobalParameters(), "customManyParticleGlobals");
-        globals->upload(globalParamValues);
         for (int i = 0; i < force.getNumGlobalParameters(); i++) {
             const string& name = force.getGlobalParameterName(i);
             string value = "globals["+cu.intToString(i)+"]";
@@ -4838,8 +4832,6 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
     // Create replacements for extra arguments.
     
     stringstream extraArgs;
-    if (force.getNumGlobalParameters() > 0)
-        extraArgs<<", const float* __restrict__ globals";
     for (int i = 0; i < (int) params->getBuffers().size(); i++) {
         CudaNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
         extraArgs<<", const "<<buffer.getType()<<"* __restrict__ global_params"<<(i+1);
@@ -4873,6 +4865,7 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
     defines["CUTOFF_SQUARED"] = cu.doubleToString(force.getCutoffDistance()*force.getCutoffDistance());
     defines["TILE_SIZE"] = cu.intToString(CudaContext::TileSize);
     defines["NUM_BLOCKS"] = cu.intToString(cu.getNumAtomBlocks());
+    defines["NUM_GLOBALS"] = cu.intToString(max(1, force.getNumGlobalParameters()));
     defines["FIND_NEIGHBORS_WORKGROUP_SIZE"] = cu.intToString(findNeighborsWorkgroupSize);
     CUmodule module = cu.createModule(cu.replaceStrings(CudaKernelSources::vectorOps+CudaKernelSources::customManyParticle, replacements), defines);
     forceKernel = cu.getKernel(module, "computeInteraction");
@@ -4882,6 +4875,9 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
     copyPairsKernel = cu.getKernel(module, "copyPairsToNeighborList");
     cuFuncSetCacheConfig(forceKernel, CU_FUNC_CACHE_PREFER_L1);
     cuFuncSetCacheConfig(neighborsKernel, CU_FUNC_CACHE_PREFER_L1);
+    size_t bytes;
+    CHECK_RESULT(cuModuleGetGlobal(&globalsPtr, &bytes, module, "globals"), "Error getting address for constant memory")
+    cuMemcpyHtoD(globalsPtr, &globalParamValues[0], globalParamValues.size()*sizeof(float));
 }
 
 double CudaCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -4908,8 +4904,6 @@ double CudaCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bool
             forceArgs.push_back(&exclusions->getDevicePointer());
             forceArgs.push_back(&exclusionStartIndex->getDevicePointer());
         }
-        if (globals != NULL)
-            forceArgs.push_back(&globals->getDevicePointer());
         for (int i = 0; i < (int) params->getBuffers().size(); i++) {
             CudaNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
             forceArgs.push_back(&buffer.getMemory());
@@ -4958,7 +4952,7 @@ double CudaCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bool
             copyPairsArgs.push_back(&neighborStartIndex->getDevicePointer());
        }
     }
-    if (globals != NULL) {
+    if (globalParamValues.size() > 0) {
         bool changed = false;
         for (int i = 0; i < (int) globalParamNames.size(); i++) {
             float value = (float) context.getParameter(globalParamNames[i]);
@@ -4967,7 +4961,7 @@ double CudaCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bool
             globalParamValues[i] = value;
         }
         if (changed)
-            globals->upload(globalParamValues);
+            cuMemcpyHtoD(globalsPtr, &globalParamValues[0], globalParamValues.size()*sizeof(float));
     }
     while (true) {
         int* numPairs = (int*) cu.getPinnedBuffer();

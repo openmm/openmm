@@ -931,7 +931,7 @@ private:
 class CudaCalcCustomManyParticleForceKernel : public CalcCustomManyParticleForceKernel {
 public:
     CudaCalcCustomManyParticleForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcCustomManyParticleForceKernel(name, platform),
-            hasInitializedKernel(false), cu(cu), params(NULL), globals(NULL), particleTypes(NULL), orderIndex(NULL), particleOrder(NULL), exclusions(NULL),
+            hasInitializedKernel(false), cu(cu), params(NULL), particleTypes(NULL), orderIndex(NULL), particleOrder(NULL), exclusions(NULL),
             exclusionStartIndex(NULL), blockCenter(NULL), blockBoundingBox(NULL), neighborPairs(NULL), numNeighborPairs(NULL), neighborStartIndex(NULL),
             numNeighborsForAtom(NULL), neighbors(NULL), system(system) {
     }
@@ -966,7 +966,6 @@ private:
     NonbondedMethod nonbondedMethod;
     int maxNeighborPairs, forceWorkgroupSize, findNeighborsWorkgroupSize;
     CudaParameterSet* params;
-    CudaArray* globals;
     CudaArray* particleTypes;
     CudaArray* orderIndex;
     CudaArray* particleOrder;
@@ -985,6 +984,7 @@ private:
     std::vector<void*> forceArgs, blockBoundsArgs, neighborsArgs, startIndicesArgs, copyPairsArgs;
     const System& system;
     CUfunction forceKernel, blockBoundsKernel, neighborsKernel, startIndicesKernel, copyPairsKernel;
+    CUdeviceptr globalsPtr;
     CUevent event;
 };
 
