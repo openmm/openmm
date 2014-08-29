@@ -30,7 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 /**
- * This tests the CPU implementation of CustomManyParticleForce.
+ * This tests the CUDA implementation of CustomManyParticleForce.
  */
 
 #ifdef WIN32
@@ -96,6 +96,76 @@ void validateAxilrodTeller(CustomManyParticleForce* force, const vector<Vec3>& p
         double ctheta3 = d13.dot(d23)/(r13*r23);
         double rprod = r12*r13*r23;
         expectedEnergy += c*(1+3*ctheta1*ctheta2*ctheta3)/(rprod*rprod*rprod);
+    }
+    ASSERT_EQUAL_TOL(expectedEnergy, state1.getPotentialEnergy(), 1e-5);
+
+    // Take a small step in the direction of the energy gradient and see whether the potential energy changes by the expected amount.
+
+    const vector<Vec3>& forces = state1.getForces();
+    double norm = 0.0;
+    for (int i = 0; i < (int) forces.size(); ++i)
+        norm += forces[i].dot(forces[i]);
+    norm = std::sqrt(norm);
+    const double stepSize = 1e-3;
+    double step = 0.5*stepSize/norm;
+    vector<Vec3> positions2(numParticles), positions3(numParticles);
+    for (int i = 0; i < (int) positions.size(); ++i) {
+        Vec3 p = positions[i];
+        Vec3 f = forces[i];
+        positions2[i] = Vec3(p[0]-f[0]*step, p[1]-f[1]*step, p[2]-f[2]*step);
+        positions3[i] = Vec3(p[0]+f[0]*step, p[1]+f[1]*step, p[2]+f[2]*step);
+    }
+    context.setPositions(positions2);
+    State state2 = context.getState(State::Energy);
+    context.setPositions(positions3);
+    State state3 = context.getState(State::Energy);
+    ASSERT_EQUAL_TOL(norm, (state2.getPotentialEnergy()-state3.getPotentialEnergy())/stepSize, 1e-4);
+}
+
+void validateStillingerWeber(CustomManyParticleForce* force, const vector<Vec3>& positions, const vector<const int*>& expectedSets, double boxSize) {
+    // Create a System and Context.
+    
+    int numParticles = force->getNumParticles();
+    CustomManyParticleForce::NonbondedMethod nonbondedMethod = force->getNonbondedMethod();
+    System system;
+    for (int i = 0; i < numParticles; i++)
+        system.addParticle(1.0);
+    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    system.addForce(force);
+    VerletIntegrator integrator(0.001);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    State state1 = context.getState(State::Forces | State::Energy);
+    double L = context.getParameter("L");
+    double eps = context.getParameter("eps");
+    double a = context.getParameter("a");
+    double gamma = context.getParameter("gamma");
+    double sigma = context.getParameter("sigma");
+    
+    // See if the energy matches the expected value.
+    
+    double expectedEnergy = 0;
+    for (int i = 0; i < (int) expectedSets.size(); i++) {
+        int p1 = expectedSets[i][0];
+        int p2 = expectedSets[i][1];
+        int p3 = expectedSets[i][2];
+        Vec3 d12 = positions[p2]-positions[p1];
+        Vec3 d13 = positions[p3]-positions[p1];
+        Vec3 d23 = positions[p3]-positions[p2];
+        if (nonbondedMethod == CustomManyParticleForce::CutoffPeriodic) {
+            for (int j = 0; j < 3; j++) {
+                d12[j] -= floor(d12[j]/boxSize+0.5f)*boxSize;
+                d13[j] -= floor(d13[j]/boxSize+0.5f)*boxSize;
+                d23[j] -= floor(d23[j]/boxSize+0.5f)*boxSize;
+            }
+        }
+        double r12 = sqrt(d12.dot(d12));
+        double r13 = sqrt(d13.dot(d13));
+        double r23 = sqrt(d23.dot(d23));
+        double ctheta1 = d12.dot(d13)/(r12*r13);
+        double ctheta2 = -d12.dot(d23)/(r12*r23);
+        double ctheta3 = d13.dot(d23)/(r13*r23);
+        expectedEnergy += L*eps*(ctheta1+1.0/3.0)*(ctheta1+1.0/3.0)*exp(sigma*gamma/(r12-a*sigma))*exp(sigma*gamma/(r13-a*sigma));
     }
     ASSERT_EQUAL_TOL(expectedEnergy, state1.getPotentialEnergy(), 1e-5);
 
@@ -500,6 +570,101 @@ void testLargeSystem() {
         ASSERT_EQUAL_VEC(state1.getForces()[i], state2.getForces()[i], 1e-4);
 }
 
+void testCentralParticleModeNoCutoff() {
+    CustomManyParticleForce* force = new CustomManyParticleForce(3,
+        "L*eps*(cos(theta1)+1/3)^2*exp(sigma*gamma/(r12-a*sigma))*exp(sigma*gamma/(r13-a*sigma));"
+        "r12 = distance(p1,p2); r13 = distance(p1,p3); theta1 = angle(p3,p1,p2)");
+    force->setPermutationMode(CustomManyParticleForce::UniqueCentralParticle);
+    force->addGlobalParameter("L", 23.13);
+    force->addGlobalParameter("eps", 25.894776);
+    force->addGlobalParameter("a", 1.8);
+    force->addGlobalParameter("sigma", 0.23925);
+    force->addGlobalParameter("gamma", 1.2);
+    vector<double> params;
+    force->addParticle(params);
+    force->addParticle(params);
+    force->addParticle(params);
+    force->addParticle(params);
+    vector<Vec3> positions;
+    positions.push_back(Vec3(0, 0, 0));
+    positions.push_back(Vec3(1, 0, 0));
+    positions.push_back(Vec3(0, 1.1, 0.3));
+    positions.push_back(Vec3(0.4, 0, -0.8));
+    int sets[12][3] = {{0,1,2}, {0,1,3}, {0,2,3}, {1,0,2}, {1,0,3}, {1, 2, 3}, {2,0,1}, {2,0,3}, {2, 1, 3}, {3,0,1}, {3,0,2}, {3,1,2}};
+    vector<const int*> expectedSets(&sets[0], &sets[12]);
+    validateStillingerWeber(force, positions, expectedSets, 2.0);
+}
+
+void testCentralParticleModeCutoff() {
+    CustomManyParticleForce* force = new CustomManyParticleForce(3,
+        "L*eps*(cos(theta1)+1/3)^2*exp(sigma*gamma/(r12-a*sigma))*exp(sigma*gamma/(r13-a*sigma));"
+        "r12 = distance(p1,p2); r13 = distance(p1,p3); theta1 = angle(p3,p1,p2)");
+    force->setPermutationMode(CustomManyParticleForce::UniqueCentralParticle);
+    force->addGlobalParameter("L", 23.13);
+    force->addGlobalParameter("eps", 25.894776);
+    force->addGlobalParameter("a", 1.8);
+    force->addGlobalParameter("sigma", 0.23925);
+    force->addGlobalParameter("gamma", 1.2);
+    force->setNonbondedMethod(CustomManyParticleForce::CutoffNonPeriodic);
+    force->setCutoffDistance(1.55);
+    vector<double> params;
+    force->addParticle(params);
+    force->addParticle(params);
+    force->addParticle(params);
+    force->addParticle(params);
+    vector<Vec3> positions;
+    positions.push_back(Vec3(0, 0, 0));
+    positions.push_back(Vec3(1, 0, 0));
+    positions.push_back(Vec3(0, 1.1, 0.3));
+    positions.push_back(Vec3(0.4, 0, -0.8));
+    int sets[8][3] = {{0,1,2}, {0,1,3}, {0,2,3}, {1,0,2}, {1,0,3}, {1, 2, 3}, {2,0,1}, {3,0,1}};
+    vector<const int*> expectedSets(&sets[0], &sets[8]);
+    validateStillingerWeber(force, positions, expectedSets, 2.0);
+}
+
+void testCentralParticleModeLargeSystem() {
+    int gridSize = 8;
+    int numParticles = gridSize*gridSize*gridSize;
+    double boxSize = 2.0;
+    double spacing = boxSize/gridSize;
+    CustomManyParticleForce* force = new CustomManyParticleForce(3,
+        "L*eps*(cos(theta1)+1/3)^2*exp(sigma*gamma/(r12-a*sigma))*exp(sigma*gamma/(r13-a*sigma));"
+        "r12 = distance(p1,p2); r13 = distance(p1,p3); theta1 = angle(p3,p1,p2)");
+    force->setPermutationMode(CustomManyParticleForce::UniqueCentralParticle);
+    force->addGlobalParameter("L", 23.13);
+    force->addGlobalParameter("eps", 25.894776);
+    force->addGlobalParameter("a", 1.8);
+    force->addGlobalParameter("sigma", 0.23925);
+    force->addGlobalParameter("gamma", 1.2);
+    force->setNonbondedMethod(CustomManyParticleForce::CutoffPeriodic);
+    force->setCutoffDistance(1.8*0.23925);
+    vector<double> params;
+    vector<Vec3> positions;
+    System system;
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int i = 0; i < gridSize; i++)
+        for (int j = 0; j < gridSize; j++)
+            for (int k = 0; k < gridSize; k++) {
+                force->addParticle(params);
+                positions.push_back(Vec3((i+0.4*genrand_real2(sfmt))*spacing, (j+0.4*genrand_real2(sfmt))*spacing, (k+0.4*genrand_real2(sfmt))*spacing));
+                system.addParticle(1.0);
+            }
+    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    system.addForce(force);
+    VerletIntegrator integrator1(0.001);
+    VerletIntegrator integrator2(0.001);
+    Context context1(system, integrator1, Platform::getPlatformByName("Reference"));
+    Context context2(system, integrator2, platform);
+    context1.setPositions(positions);
+    context2.setPositions(positions);
+    State state1 = context1.getState(State::Forces | State::Energy);
+    State state2 = context2.getState(State::Forces | State::Energy);
+    ASSERT_EQUAL_TOL(state1.getPotentialEnergy(), state2.getPotentialEnergy(), 1e-4);
+    for (int i = 0; i < numParticles; i++)
+        ASSERT_EQUAL_VEC(state1.getForces()[i], state2.getForces()[i], 1e-4);
+}
+
 int main(int argc, char* argv[]) {
     try {
         if (argc > 1)
@@ -513,6 +678,9 @@ int main(int argc, char* argv[]) {
         testTabulatedFunctions();
         testTypeFilters();
         testLargeSystem();
+        testCentralParticleModeNoCutoff();
+        testCentralParticleModeCutoff();
+        testCentralParticleModeLargeSystem();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

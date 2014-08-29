@@ -97,12 +97,20 @@ extern "C" __global__ void computeInteraction(
     // Loop over particles to be the first one in the set.
     
     for (int p1 = blockIdx.x; p1 < NUM_ATOMS; p1 += gridDim.x) {
+#ifdef USE_CENTRAL_PARTICLE
+        const int a1 = p1;
+#else
         const int a1 = 0;
+#endif
 #ifdef USE_CUTOFF
         int firstNeighbor = neighborStartIndex[p1];
         int numNeighbors = neighborStartIndex[p1+1]-firstNeighbor;
 #else
+  #ifdef USE_CENTRAL_PARTICLE
+        int numNeighbors = NUM_ATOMS;
+  #else
         int numNeighbors = NUM_ATOMS-p1-1;
+  #endif
 #endif
         int numCombinations = NUM_CANDIDATE_COMBINATIONS;
         for (int index = threadIdx.x; index < numCombinations; index += blockDim.x) {
@@ -195,7 +203,12 @@ extern "C" __global__ void findNeighbors(real4 periodicBoxSize, real4 invPeriodi
         // Loop over atom blocks to search for neighbors.  The threads in a warp compare block1 against 32
         // other blocks in parallel.
 
-        for (int block2Base = block1; block2Base < NUM_BLOCKS; block2Base += 32) {
+#ifdef USE_CENTRAL_PARTICLE
+        int startBlock = 0;
+#else
+        int startBlock = block1;
+#endif
+        for (int block2Base = startBlock; block2Base < NUM_BLOCKS; block2Base += 32) {
             int block2 = block2Base+indexInWarp;
             bool includeBlock2 = (block2 < NUM_BLOCKS);
             if (includeBlock2) {
@@ -234,7 +247,11 @@ extern "C" __global__ void findNeighbors(real4 periodicBoxSize, real4 invPeriodi
                     // Decide whether to include this atom pair in the neighbor list.
 
                     real4 atomDelta = delta(pos1, pos2, periodicBoxSize, invPeriodicBoxSize);
+#ifdef USE_CENTRAL_PARTICLE
+                    bool includeAtom = (atom2 != atom1 && atom2 < NUM_ATOMS && atomDelta.w < CUTOFF_SQUARED);
+#else
                     bool includeAtom = (atom2 > atom1 && atom2 < NUM_ATOMS && atomDelta.w < CUTOFF_SQUARED);
+#endif
 #ifdef USE_EXCLUSIONS
                     if (includeAtom)
                         includeAtom &= !isInteractionExcluded(atom1, atom2, exclusions, exclusionStartIndex);

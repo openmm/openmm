@@ -4472,6 +4472,7 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
     cu.setAsCurrent();
     int numParticles = force.getNumParticles();
     int particlesPerSet = force.getNumParticlesPerSet();
+    bool centralParticleMode = (force.getPermutationMode() == CustomManyParticleForce::UniqueCentralParticle);
     nonbondedMethod = CalcCustomManyParticleForceKernel::NonbondedMethod(force.getNonbondedMethod());
     forceWorkgroupSize = 128;
     findNeighborsWorkgroupSize = 128;
@@ -4790,34 +4791,61 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
         for (int j = 0; j < (int) params->getBuffers().size(); j++)
             loadData<<params->getBuffers()[j].getType()<<" params"<<(j+1)<<(i+1)<<" = global_params"<<(j+1)<<"[atom"<<(i+1)<<"];\n";
     }
-    for (int i = 2; i < particlesPerSet; i++) {
-        if (i > 2)
-            isValidCombination<<" && ";
-        isValidCombination<<"a"<<(i+1)<<">a"<<i;
+    if (centralParticleMode) {
+        for (int i = 1; i < particlesPerSet; i++) {
+            if (i > 1)
+                isValidCombination<<" && p"<<(i+1)<<">p"<<i<<" && ";
+            isValidCombination<<"p"<<(i+1)<<"!=p1";
+        }
+    }
+    else {
+        for (int i = 2; i < particlesPerSet; i++) {
+            if (i > 2)
+                isValidCombination<<" && ";
+            isValidCombination<<"a"<<(i+1)<<">a"<<i;
+        }
     }
     atomsForCombination<<"int tempIndex = index;\n";
     for (int i = 1; i < particlesPerSet; i++) {
         if (i > 1)
             numCombinations<<"*";
         numCombinations<<"numNeighbors";
-        atomsForCombination<<"int a"<<(i+1)<<" = 1+tempIndex%numNeighbors;\n";
+        if (centralParticleMode)
+            atomsForCombination<<"int a"<<(i+1)<<" = tempIndex%numNeighbors;\n";
+        else
+            atomsForCombination<<"int a"<<(i+1)<<" = 1+tempIndex%numNeighbors;\n";
         if (i < particlesPerSet-1)
             atomsForCombination<<"tempIndex /= numNeighbors;\n";
     }
-    if (particlesPerSet > 2)
-        atomsForCombination<<"a2 = (a3%2 == 0 ? a2 : numNeighbors-a2+1);\n";
-    for (int i = 1; i < particlesPerSet; i++) {
-        if (nonbondedMethod == NoCutoff)
-            atomsForCombination<<"int p"<<(i+1)<<" = p1+a"<<(i+1)<<";\n";
+    if (particlesPerSet > 2) {
+        if (centralParticleMode)
+            atomsForCombination<<"a2 = (a3%2 == 0 ? a2 : numNeighbors-a2-1);\n";
         else
-            atomsForCombination<<"int p"<<(i+1)<<" = neighbors[firstNeighbor-1+a"<<(i+1)<<"];\n";
+            atomsForCombination<<"a2 = (a3%2 == 0 ? a2 : numNeighbors-a2+1);\n";
+    }
+    for (int i = 1; i < particlesPerSet; i++) {
+        if (nonbondedMethod == NoCutoff) {
+            if (centralParticleMode)
+                atomsForCombination<<"int p"<<(i+1)<<" = a"<<(i+1)<<";\n";
+            else
+                atomsForCombination<<"int p"<<(i+1)<<" = p1+a"<<(i+1)<<";\n";
+        }
+        else {
+            if (centralParticleMode)
+                atomsForCombination<<"int p"<<(i+1)<<" = neighbors[firstNeighbor+a"<<(i+1)<<"];\n";
+            else
+                atomsForCombination<<"int p"<<(i+1)<<" = neighbors[firstNeighbor-1+a"<<(i+1)<<"];\n";
+        }
     }
     if (nonbondedMethod != NoCutoff) {
         for (int i = 1; i < particlesPerSet; i++)
             verifyCutoff<<"real3 pos"<<(i+1)<<" = trim(posq[p"<<(i+1)<<"]);\n";
-        for (int i = 1; i < particlesPerSet; i++)
-            for (int j = i+1; j < particlesPerSet; j++)
-                verifyCutoff<<"includeInteraction &= (delta(pos"<<(i+1)<<", pos"<<(j+1)<<", periodicBoxSize, invPeriodicBoxSize).w < CUTOFF_SQUARED);\n";
+        if (!centralParticleMode) {
+            for (int i = 1; i < particlesPerSet; i++) {
+                for (int j = i+1; j < particlesPerSet; j++)
+                    verifyCutoff<<"includeInteraction &= (delta(pos"<<(i+1)<<", pos"<<(j+1)<<", periodicBoxSize, invPeriodicBoxSize).w < CUTOFF_SQUARED);\n";
+            }
+        }
     }
     if (force.getNumExclusions() > 0) {
         int startCheckFrom = (nonbondedMethod == NoCutoff ? 0 : 1);
@@ -4855,6 +4883,8 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
         defines["USE_CUTOFF"] = "1";
     if (nonbondedMethod == CutoffPeriodic)
         defines["USE_PERIODIC"] = "1";
+    if (centralParticleMode)
+        defines["USE_CENTRAL_PARTICLE"] = "1";
     if (hasTypeFilters)
         defines["USE_FILTERS"] = "1";
     if (force.getNumExclusions() > 0)
