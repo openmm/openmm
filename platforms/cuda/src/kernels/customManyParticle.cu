@@ -191,7 +191,7 @@ extern "C" __global__ void findNeighbors(real4 periodicBoxSize, real4 invPeriodi
         ) {
     __shared__ real3 positionCache[FIND_NEIGHBORS_WORKGROUP_SIZE];
     int indexInWarp = threadIdx.x%32;
-    for (int atom1 = blockIdx.x*blockDim.x+threadIdx.x; atom1 < NUM_ATOMS; atom1 += blockDim.x*gridDim.x) {
+    for (int atom1 = blockIdx.x*blockDim.x+threadIdx.x; atom1 < PADDED_NUM_ATOMS; atom1 += blockDim.x*gridDim.x) {
         // Load data for this atom.  Note that all threads in a warp are processing atoms from the same block.
         
         real3 pos1 = trim(posq[atom1]);
@@ -240,24 +240,26 @@ extern "C" __global__ void findNeighbors(real4 periodicBoxSize, real4 invPeriodi
                 int included[TILE_SIZE];
                 int numIncluded = 0;
                 positionCache[threadIdx.x] = trim(posq[start+indexInWarp]);
-                for (int j = 0; j < 32; j++) {
-                    int atom2 = start+j;
-                    real3 pos2 = positionCache[threadIdx.x-indexInWarp+j];
+                if (atom1 < NUM_ATOMS) {
+                    for (int j = 0; j < 32; j++) {
+                        int atom2 = start+j;
+                        real3 pos2 = positionCache[threadIdx.x-indexInWarp+j];
 
-                    // Decide whether to include this atom pair in the neighbor list.
+                        // Decide whether to include this atom pair in the neighbor list.
 
-                    real4 atomDelta = delta(pos1, pos2, periodicBoxSize, invPeriodicBoxSize);
+                        real4 atomDelta = delta(pos1, pos2, periodicBoxSize, invPeriodicBoxSize);
 #ifdef USE_CENTRAL_PARTICLE
-                    bool includeAtom = (atom2 != atom1 && atom2 < NUM_ATOMS && atomDelta.w < CUTOFF_SQUARED);
+                        bool includeAtom = (atom2 != atom1 && atom2 < NUM_ATOMS && atomDelta.w < CUTOFF_SQUARED);
 #else
-                    bool includeAtom = (atom2 > atom1 && atom2 < NUM_ATOMS && atomDelta.w < CUTOFF_SQUARED);
+                        bool includeAtom = (atom2 > atom1 && atom2 < NUM_ATOMS && atomDelta.w < CUTOFF_SQUARED);
 #endif
 #ifdef USE_EXCLUSIONS
-                    if (includeAtom)
-                        includeAtom &= !isInteractionExcluded(atom1, atom2, exclusions, exclusionStartIndex);
+                        if (includeAtom)
+                            includeAtom &= !isInteractionExcluded(atom1, atom2, exclusions, exclusionStartIndex);
 #endif
-                    if (includeAtom)
-                        included[numIncluded++] = atom2;
+                        if (includeAtom)
+                            included[numIncluded++] = atom2;
+                    }
                 }
 
                 // If we found any neighbors, store them to the neighbor list.

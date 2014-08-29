@@ -194,6 +194,7 @@ UNITS = {
 ("*", "getWeightCross") : (None, ()),
 ("*", "getNonbondedMethod") : (None, ()),
 ("*", "getGlobalParameterDefaultValue") : (None, ()),
+("*", "getPermutationMode") : (None, ()),
 ("LocalCoordinatesSite", "getOriginWeights") : (None, ()),
 ("LocalCoordinatesSite", "getXWeights") : (None, ()),
 ("LocalCoordinatesSite", "getYWeights") : (None, ()),
