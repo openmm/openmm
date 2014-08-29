@@ -54,6 +54,7 @@ CpuCustomManyParticleForce::CpuCustomManyParticleForce(const CustomManyParticleF
     numParticles = force.getNumParticles();
     numParticlesPerSet = force.getNumParticlesPerSet();
     numPerParticleParameters = force.getNumPerParticleParameters();
+    centralParticleMode = (force.getPermutationMode() == CustomManyParticleForce::UniqueCentralParticle);
     
     // Create custom functions for the tabulated functions.
 
@@ -114,10 +115,31 @@ void CpuCustomManyParticleForce::calculateIxn(AlignedArray<float>& posq, RealOpe
     gmx_atomic_set(&counter, 0);
     this->atomicCounter = &counter;
     if (useCutoff) {
-        // Construct a neighbor list.
+        // Construct a neighbor list.  We use CpuNeighborList to do this, but then copy the result
+        // into a new data structure.  This is needed because in UniqueCentralParticle mode, the
+        // the neighbor list needs to include symmetric pairs.
         
+        particleNeighbors.resize(numParticles);
+        for (int i = 0; i < numParticles; i++)
+            particleNeighbors[i].clear();
         float boxSizeFloat[] = {(float) periodicBoxSize[0], (float) periodicBoxSize[1], (float) periodicBoxSize[2]};
         neighborList->computeNeighborList(numParticles, posq, exclusions, boxSizeFloat, usePeriodic, cutoffDistance, threads);
+        for (int blockIndex = 0; blockIndex < neighborList->getNumBlocks(); blockIndex++) {
+            const vector<int>& neighbors = neighborList->getBlockNeighbors(blockIndex);
+            const vector<char>& exclusions = neighborList->getBlockExclusions(blockIndex);
+            int numNeighbors = neighbors.size();
+            for (int i = 0; i < 4; i++) {
+                int p1 = neighborList->getSortedAtoms()[4*blockIndex+i];
+                for (int j = 0; j < numNeighbors; j++) {
+                    if ((exclusions[j] & (1<<i)) == 0) {
+                        int p2 = neighbors[j];
+                        particleNeighbors[p1].push_back(p2);
+                        if (centralParticleMode)
+                            particleNeighbors[p2].push_back(p1);
+                    }
+                }
+            }
+        }
     }
     
     // Signal the threads to start running and wait for them to finish.
@@ -147,27 +169,12 @@ void CpuCustomManyParticleForce::threadComputeForce(ThreadPool& threads, int thr
     if (useCutoff) {
         // Loop over interactions from the neighbor list.
         
-        vector<int> particles;
         while (true) {
-            int blockIndex = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
-            if (blockIndex >= neighborList->getNumBlocks())
+            int i = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
+            if (i >= numParticles)
                 break;
-            const vector<int>& neighbors = neighborList->getBlockNeighbors(blockIndex);
-            const vector<char>& exclusions = neighborList->getBlockExclusions(blockIndex);
-            int numNeighbors = neighbors.size();
-            for (int i = 0; i < 4; i++) {
-                particleIndices[0] = neighborList->getSortedAtoms()[4*blockIndex+i];
-                
-                // Build a filtered list of neighbors after removing exclusions.  We'll check for actual exclusions
-                // again later, but the neighbor list also includes padding atoms that it marks as exclusions, so
-                // we need to remove those now.
-                
-                particles.resize(0);
-                for (int j = 0; j < numNeighbors; j++)
-                    if ((exclusions[j] & (1<<i)) == 0)
-                        particles.push_back(neighbors[j]);
-                loopOverInteractions(particles, particleIndices, 1, 0, particleParameters, forces, data, boxSize, invBoxSize);
-            }
+            particleIndices[0] = i;
+            loopOverInteractions(particleNeighbors[i], particleIndices, 1, 0, particleParameters, forces, data, boxSize, invBoxSize);
         }
     }
     else {
@@ -181,7 +188,8 @@ void CpuCustomManyParticleForce::threadComputeForce(ThreadPool& threads, int thr
             if (i >= numParticles)
                 break;
             particleIndices[0] = i;
-            loopOverInteractions(particles, particleIndices, 1, i+1, particleParameters, forces, data, boxSize, invBoxSize);
+            int startIndex = (centralParticleMode ? 0 : i+1);
+            loopOverInteractions(particles, particleIndices, 1, startIndex, particleParameters, forces, data, boxSize, invBoxSize);
         }
     }
 }
@@ -208,6 +216,7 @@ void CpuCustomManyParticleForce::loopOverInteractions(vector<int>& availablePart
                                                           RealOpenMM** particleParameters, float* forces, ThreadData& data, const fvec4& boxSize, const fvec4& invBoxSize) {
     int numParticles = availableParticles.size();
     double cutoff2 = cutoffDistance*cutoffDistance;
+    int checkRange = (centralParticleMode ? 1 : loopIndex);
     for (int i = startIndex; i < numParticles; i++) {
         int particle = availableParticles[i];
         
@@ -218,7 +227,7 @@ void CpuCustomManyParticleForce::loopOverInteractions(vector<int>& availablePart
             fvec4 deltaR;
             fvec4 pos1(posq+4*particle);
             float r2;
-            for (int j = 0; j < loopIndex && include; j++) {
+            for (int j = 0; j < checkRange && include; j++) {
                 fvec4 pos2(posq+4*particleSet[j]);
                 computeDelta(pos1, pos2, deltaR, r2, boxSize, invBoxSize);
                 include &= (r2 < cutoff2);
@@ -227,6 +236,8 @@ void CpuCustomManyParticleForce::loopOverInteractions(vector<int>& availablePart
         for (int j = 0; j < loopIndex && include; j++)
             include &= (exclusions[particle].find(particleSet[j]) == exclusions[particle].end());
         if (include) {
+            if (loopIndex > 0 && availableParticles[i] == particleSet[0])
+                continue;
             particleSet[loopIndex] = availableParticles[i];
             if (loopIndex == numParticlesPerSet-1)
                 calculateOneIxn(particleSet, particleParameters, forces, data, boxSize, invBoxSize);

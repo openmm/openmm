@@ -75,8 +75,8 @@ namespace OpenMM {
  * you can modify its parameters by calling setParticleParameters().  This will have no effect on Contexts that already exist
  * unless you call updateParametersInContext().
  * 
- * Multi-particle interactions can be very expensive to evaluate, so they are usually used with a cutoff distance.  If two particles
- * are further apart than the cutoff, <i>all</i> sets that include those two particles will be omitted.
+ * Multi-particle interactions can be very expensive to evaluate, so they are usually used with a cutoff distance.  The exact
+ * interpretation of the cutoff depends on the permutation mode, as discussed below.
  * 
  * CustomManyParticleForce also lets you specify "exclusions", particular pairs of particles whose interactions should be
  * omitted from force and energy calculations.  This is most often used for particles that are bonded to each other.
@@ -89,7 +89,8 @@ namespace OpenMM {
  *     "C*(1+3*cos(theta1)*cos(theta2)*cos(theta3))/(r12*r13*r23)^3;"
  *     "theta1=angle(p1,p2,p3); theta2=angle(p2,p3,p1); theta3=angle(p3,p1,p2);"
  *     "r12=distance(p1,p2); r13=distance(p1,p3); r23=distance(p2,p3)");
- * <pre></tt>
+ * force->setPermutationMode(CustomManyParticleForce::SinglePermutation);
+ * </pre></tt>
  *
  * This force depends on one parameter, C.  The following code defines it as a global parameter:
  *
@@ -97,16 +98,38 @@ namespace OpenMM {
  * force->addGlobalParameter("C", 1.0);
  * </pre></tt>
  * 
- * The expression <i>must</i> be symmetric with respect to the particles.  It typically will only be evaluated once for
- * each set of particles, and no guarantee is made about which particle will be identified as "particle 1".  In the above
- * example, the energy only depends on the products cos(theta1)*cos(theta2)*cos(theta3) and r12*r13*r23, both of which are
- * unchanged if the labels p1, p2, and p3 are permuted.  If that were not true, the results would be undefined, because
+ * Notice that the expression is symmetric with respect to the particles.  It only depends on the products
+ * cos(theta1)*cos(theta2)*cos(theta3) and r12*r13*r23, both of which are unchanged if the labels p1, p2, and p3 are permuted.
+ * This is required because we specified SinglePermutation as the permutation mode.  (This is the default, so we did not
+ * really need to set it, but doing so makes the example clearer.)  In this mode, the expression is only evaluated once for
+ * each set of particles.  No guarantee is made about which particle will be identified as p1, p2, etc.  Therefore, the
+ * energy <i>must</i> be symmetric with respect to exchange of particles.  Otherwise, the results would be undefined because
  * permuting the labels would change the energy.
  * 
- * In some cases this requirement is overly restrictive.  When some particles are fundamentally different from others,
- * the expression may be inherently non-symmetric.  An example would be a water model that involves three particles,
- * two of which <i>must</i> be hydrogen and one of which <i>must</i> be oxygen.  Cases like this can be implemented
- * using particle types.
+ * Not all many-particle interactions work this way.  Another common pattern is for the expression to describe an interaction
+ * between one central particle and other nearby particles.  An example of this is the 3-particle piece of the Stillinger-Weber
+ * potential:
+ * 
+ * <tt><pre>CustomManyParticleForce* force = new CustomManyParticleForce(3,
+ *     "L*eps*(cos(theta1)+1/3)^2*exp(sigma*gamma/(r12-a*sigma))*exp(sigma*gamma/(r13-a*sigma));"
+       "r12 = distance(p1,p2); r13 = distance(p1,p3); theta1 = angle(p3,p1,p2)");
+ * force->setPermutationMode(CustomManyParticleForce::UniqueCentralParticle);
+ * </pre></tt>
+ * 
+ * When the permutation mode is set to UniqueCentralParticle, particle p1 is treated as the central particle.  For a set of
+ * N particles, the expression is evaluated N times, once with each particle as p1.  The expression can therefore treat
+ * p1 differently from the other particles.  Notice that it is still symmetric with respect to p2 and p3, however.  There
+ * is no guarantee about how those labels will be assigned to particles.
+ * 
+ * Distance cutoffs are applied in different ways depending on the permutation mode.  In SinglePermutation mode, every particle
+ * in the set must be within the cutoff distance of every other particle.  If <i>any</i> two particles are further apart than
+ * the cutoff distance, the interaction is skipped.  In UniqueCentralParticle mode, each particle must be within the cutoff
+ * distance of the central particle, but not necessarily of all the other particles.  The cutoff may therefore exclude a subset
+ * of the permutations of a set of particles.
+ * 
+ * Another common situation is that some particles are fundamentally different from others, causing the expression to be
+ * inherently non-symmetric.  An example would be a water model that involves three particles, two of which <i>must</i> be
+ * hydrogen and one of which <i>must</i> be oxygen.  Cases like this can be implemented using particle types.
  * 
  * A particle type is an integer that you specify when you call addParticle().  (If you omit the argument, it defaults
  * to 0.)  For the water model, you could specify 0 for all oxygen atoms and 1 for all hydrogen atoms.  You can then
@@ -156,6 +179,26 @@ public:
          * each other particle.  Interactions are ignored if any two particles are further apart than the cutoff distance.
          */
         CutoffPeriodic = 2,
+    };
+    /**
+     * This is an enumeration of the different modes for selecting which permutations of a set of particles to evaluate the
+     * interaction for.
+     */
+    enum PermutationMode {
+        /**
+         * For any set of particles, the interaction is evaluated only once for a single permutation of the particles.
+         * There is no guarantee about which permutation will be used (aside from the requirement to satisfy type filters),
+         * so the expression must be symmetric.  If cutoffs are used, then every particle in the set must be within the
+         * cutoff distance of every other particle.
+         */
+        SinglePermutation = 0,
+        /**
+         * The interaction is treated as an interaction between one central particle (p1) and various other nearby particles
+         * (p2, p3, ...).  For a set of N particles it will be evaluated N times, once with each particle as p1.  The expression
+         * must be symmetric with respect to the other particles, but may treat p1 differently.  If cutoffs are used, then
+         * every particle must be within the cutoff distance of p1.
+         */
+        UniqueCentralParticle = 1
     };
     /**
      * Create a CustomManyParticleForce.
@@ -218,6 +261,14 @@ public:
      * Set the method used for handling long range nonbonded interactions.
      */
     void setNonbondedMethod(NonbondedMethod method);
+    /**
+     * Get the mode that selects which permutations of a set of particles to evaluate the interaction for.
+     */
+    PermutationMode getPermutationMode() const;
+    /**
+     * Set the mode that selects which permutations of a set of particles to evaluate the interaction for.
+     */
+    void setPermutationMode(PermutationMode mode);
     /**
      * Get the cutoff distance (in nm) being used for nonbonded interactions.  If the NonbondedMethod in use
      * is NoCutoff, this value will have no effect.
@@ -420,6 +471,7 @@ private:
     class FunctionInfo;
     int particlesPerSet;
     NonbondedMethod nonbondedMethod;
+    PermutationMode permutationMode;
     double cutoffDistance;
     std::string energyExpression;
     std::vector<ParticleParameterInfo> particleParameters;

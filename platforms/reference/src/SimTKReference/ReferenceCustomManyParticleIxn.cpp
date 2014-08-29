@@ -41,6 +41,7 @@ using namespace std;
 ReferenceCustomManyParticleIxn::ReferenceCustomManyParticleIxn(const CustomManyParticleForce& force) : useCutoff(false), usePeriodic(false) {
     numParticlesPerSet = force.getNumParticlesPerSet();
     numPerParticleParameters = force.getNumPerParticleParameters();
+    centralParticleMode = (force.getPermutationMode() == CustomManyParticleForce::UniqueCentralParticle);
     
     // Create custom functions for the tabulated functions.
 
@@ -134,8 +135,11 @@ void ReferenceCustomManyParticleIxn::loopOverInteractions(vector<int>& particles
                                                           RealOpenMM** particleParameters, map<string, double>& variables, vector<OpenMM::RealVec>& forces,
                                                           RealOpenMM* totalEnergy) const {
     int numParticles = atomCoordinates.size();
-    int start = (loopIndex == 0 ? 0 : particles[loopIndex-1]+1);
+    int firstPartialLoop = (centralParticleMode ? 2 : 1);
+    int start = (loopIndex < firstPartialLoop ? 0 : particles[loopIndex-1]+1);
     for (int i = start; i < numParticles; i++) {
+        if (loopIndex > 0 && i == particles[0])
+            continue;
         particles[loopIndex] = i;
         if (loopIndex == numParticlesPerSet-1)
             calculateOneIxn(particles, atomCoordinates, particleParameters, variables, forces, totalEnergy);
@@ -173,7 +177,7 @@ void ReferenceCustomManyParticleIxn::calculateOneIxn(const vector<int>& particle
             int p2 = permutedParticles[j];
             if (exclusions[p1].find(p2) != exclusions[p1].end())
                 return;
-            if (useCutoff) {
+            if (useCutoff && (i == 0 || !centralParticleMode)) {
                 RealOpenMM delta[ReferenceForce::LastDeltaRIndex];
                 computeDelta(p1, p2, delta, atomCoordinates);
                 if (delta[ReferenceForce::RIndex] >= cutoffDistance)

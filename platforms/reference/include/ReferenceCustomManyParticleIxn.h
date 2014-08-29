@@ -44,7 +44,7 @@ class ReferenceCustomManyParticleIxn {
       class AngleTermInfo;
       class DihedralTermInfo;
       int numParticlesPerSet, numPerParticleParameters, numTypes;
-      bool useCutoff, usePeriodic;
+      bool useCutoff, usePeriodic, centralParticleMode;
       RealOpenMM cutoffDistance;
       RealOpenMM periodicBoxSize[3];
       Lepton::ExpressionProgram energyExpression;

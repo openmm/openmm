@@ -51,7 +51,7 @@ private:
     class ComputeForceTask;
     class ThreadData;
     int numParticles, numParticlesPerSet, numPerParticleParameters, numTypes;
-    bool useCutoff, usePeriodic;
+    bool useCutoff, usePeriodic, centralParticleMode;
     RealOpenMM cutoffDistance;
     RealOpenMM periodicBoxSize[3];
     CpuNeighborList* neighborList;
@@ -60,6 +60,7 @@ private:
     std::vector<int> particleTypes;
     std::vector<int> orderIndex;
     std::vector<std::vector<int> > particleOrder;
+    std::vector<std::vector<int> > particleNeighbors;
     std::vector<ThreadData*> threadData;
     // The following variables are used to make information accessible to the individual threads.
     float* posq;
