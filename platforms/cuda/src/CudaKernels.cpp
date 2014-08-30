@@ -4971,6 +4971,8 @@ double CudaCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bool
             
             startIndicesArgs.push_back(&numNeighborsForAtom->getDevicePointer());
             startIndicesArgs.push_back(&neighborStartIndex->getDevicePointer());
+            startIndicesArgs.push_back(&numNeighborPairs->getDevicePointer());
+            startIndicesArgs.push_back(&maxNeighborPairs);
 
             // Set arguments for the kernel to assemble the final neighbor list.
             

@@ -281,8 +281,17 @@ extern "C" __global__ void findNeighbors(real4 periodicBoxSize, real4 invPeriodi
  * Sum the neighbor counts to compute the start position of each atom.  This kernel
  * is executed as a single work group.
  */
-extern "C" __global__ void computeNeighborStartIndices(int* __restrict__ numNeighborsForAtom, int* __restrict__ neighborStartIndex) {
+extern "C" __global__ void computeNeighborStartIndices(int* __restrict__ numNeighborsForAtom, int* __restrict__ neighborStartIndex,
+            int* __restrict__ numNeighborPairs, int maxNeighborPairs) {
     extern __shared__ unsigned int posBuffer[];
+    if (*numNeighborPairs > maxNeighborPairs) {
+        // There wasn't enough memory for the neighbor list, so we'll need to rebuild it.  Set the neighbor start
+        // indices to indicate no neighbors for any atom.
+        
+        for (int i = threadIdx.x; i <= NUM_ATOMS; i += blockDim.x)
+            neighborStartIndex[i] = 0;
+        return;
+    }
     unsigned int globalOffset = 0;
     for (unsigned int startAtom = 0; startAtom < NUM_ATOMS; startAtom += blockDim.x) {
         // Load the neighbor counts into local memory.
@@ -302,9 +311,10 @@ extern "C" __global__ void computeNeighborStartIndices(int* __restrict__ numNeig
 
         // Write the results back to global memory.
 
-        if (globalIndex < NUM_ATOMS)
+        if (globalIndex < NUM_ATOMS) {
             neighborStartIndex[globalIndex+1] = posBuffer[threadIdx.x]+globalOffset;
-        numNeighborsForAtom[globalIndex] = 0; // Clear this so the next kernel can use it as a counter
+            numNeighborsForAtom[globalIndex] = 0; // Clear this so the next kernel can use it as a counter
+        }
         globalOffset += posBuffer[blockDim.x-1];
     }
     if (threadIdx.x == 0)
