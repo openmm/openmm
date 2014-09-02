@@ -78,7 +78,7 @@ class CheckpointReporter(object):
 
         self._reportInterval = reportInterval
         if isinstance(file, basestring):
-            self._own_handle = true
+            self._own_handle = True
             self._out = open(file, 'w+b', 0)
         else:
             self._out = file
