@@ -250,8 +250,8 @@ static inline float dot4(const fvec4& v1, const fvec4& v2) {
 }
 
 static inline fvec4 cross(const fvec4& v1, const fvec4& v2) {
-    fvec4 temp = _mm_mul_ps(v1, _mm_shuffle_ps(v2, v2, _MM_SHUFFLE(3, 0, 2, 1))) -
-                 _mm_mul_ps(v2, _mm_shuffle_ps(v1, v1, _MM_SHUFFLE(3, 0, 2, 1)));
+    fvec4 temp = fvec4(_mm_mul_ps(v1, _mm_shuffle_ps(v2, v2, _MM_SHUFFLE(3, 0, 2, 1)))) -
+                 fvec4(_mm_mul_ps(v2, _mm_shuffle_ps(v1, v1, _MM_SHUFFLE(3, 0, 2, 1))));
     return _mm_shuffle_ps(temp, temp, _MM_SHUFFLE(3, 0, 2, 1));
 }
 

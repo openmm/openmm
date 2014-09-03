@@ -191,7 +191,6 @@ public:
     int p1, p2, p3, p4, variableIndex;
     Lepton::CompiledExpression forceExpression;
     int delta1, delta2, delta3;
-    mutable fvec4 cross1, cross2;
     DihedralTermInfo(const std::string& name, const std::vector<int>& atoms, const Lepton::CompiledExpression& forceExpression, ThreadData& data);
 };
 
@@ -206,7 +205,7 @@ public:
     std::vector<DistanceTermInfo> distanceTerms;
     std::vector<AngleTermInfo> angleTerms;
     std::vector<DihedralTermInfo> dihedralTerms;
-    AlignedArray<fvec4> delta;
+    AlignedArray<fvec4> delta, cross1, cross2;
     std::vector<float> normDelta;
     std::vector<float> norm2Delta;
     AlignedArray<fvec4> f;
