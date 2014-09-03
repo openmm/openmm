@@ -59,7 +59,9 @@ public:
             inverseMasses(inverseMasses), tolerance(tolerance), threadSettle(threadSettle) {
     }
     void execute(ThreadPool& threads, int threadIndex) {
-        threadSettle[threadIndex]->applyToVelocities(atomCoordinates, velocities, inverseMasses, tolerance);
+        if (threadIndex < threadSettle.size()) {
+            threadSettle[threadIndex]->applyToVelocities(atomCoordinates, velocities, inverseMasses, tolerance);
+        }
     }
     vector<OpenMM::RealVec>& atomCoordinates;
     vector<OpenMM::RealVec>& velocities;
