@@ -4784,7 +4784,7 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
     }
     for (int i = 0; i < particlesPerSet; i++) {
         if (hasTypeFilters)
-            permute<<"int atom"<<(i+1)<<" = particleSet[particleOrder["<<numTypes<<"*order+"<<i<<"]];\n";
+            permute<<"int atom"<<(i+1)<<" = particleSet[particleOrder["<<particlesPerSet<<"*order+"<<i<<"]];\n";
         else
             permute<<"int atom"<<(i+1)<<" = p"<<(i+1)<<";\n";
         loadData<<"real3 pos"<<(i+1)<<" = trim(posq[atom"<<(i+1)<<"]);\n";

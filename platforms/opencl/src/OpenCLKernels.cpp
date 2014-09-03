@@ -4944,7 +4944,7 @@ void OpenCLCalcCustomManyParticleForceKernel::initialize(const System& system, c
     }
     for (int i = 0; i < particlesPerSet; i++) {
         if (hasTypeFilters)
-            permute<<"int atom"<<(i+1)<<" = particleSet[particleOrder["<<numTypes<<"*order+"<<i<<"]];\n";
+            permute<<"int atom"<<(i+1)<<" = particleSet[particleOrder["<<particlesPerSet<<"*order+"<<i<<"]];\n";
         else
             permute<<"int atom"<<(i+1)<<" = p"<<(i+1)<<";\n";
         loadData<<"real4 pos"<<(i+1)<<" = posq[atom"<<(i+1)<<"];\n";
