@@ -32,6 +32,7 @@
 #include <string>
 #include <pthread.h>
 #define __CL_ENABLE_EXCEPTIONS
+#define CL_USE_DEPRECATED_OPENCL_1_1_APIS
 #ifdef _MSC_VER
     // Prevent Windows from defining macros that interfere with other code.
     #define NOMINMAX
