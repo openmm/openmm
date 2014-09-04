@@ -216,9 +216,9 @@ __kernel void findNeighbors(real4 periodicBoxSize, real4 invPeriodicBoxSize, __g
                 blockDelta.y -= floor(blockDelta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
                 blockDelta.z -= floor(blockDelta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
-                blockDelta.x = max(0.0f, fabs(blockDelta.x)-blockSize1.x-blockSize2.x);
-                blockDelta.y = max(0.0f, fabs(blockDelta.y)-blockSize1.y-blockSize2.y);
-                blockDelta.z = max(0.0f, fabs(blockDelta.z)-blockSize1.z-blockSize2.z);
+                blockDelta.x = max((real) 0, fabs(blockDelta.x)-blockSize1.x-blockSize2.x);
+                blockDelta.y = max((real) 0, fabs(blockDelta.y)-blockSize1.y-blockSize2.y);
+                blockDelta.z = max((real) 0, fabs(blockDelta.z)-blockSize1.z-blockSize2.z);
                 includeBlock2 &= (blockDelta.x*blockDelta.x+blockDelta.y*blockDelta.y+blockDelta.z*blockDelta.z < CUTOFF_SQUARED);
             }
             
