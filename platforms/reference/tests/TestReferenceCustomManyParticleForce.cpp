@@ -552,9 +552,9 @@ void testCentralParticleModeNoCutoff() {
     force->addParticle(params);
     vector<Vec3> positions;
     positions.push_back(Vec3(0, 0, 0));
-    positions.push_back(Vec3(1, 0, 0));
-    positions.push_back(Vec3(0, 1.1, 0.3));
-    positions.push_back(Vec3(0.4, 0, -0.8));
+    positions.push_back(Vec3(0.1, 0, 0));
+    positions.push_back(Vec3(0, 0.11, 0.03));
+    positions.push_back(Vec3(0.04, 0, -0.08));
     int sets[12][3] = {{0,1,2}, {0,1,3}, {0,2,3}, {1,0,2}, {1,0,3}, {1, 2, 3}, {2,0,1}, {2,0,3}, {2, 1, 3}, {3,0,1}, {3,0,2}, {3,1,2}};
     vector<const int*> expectedSets(&sets[0], &sets[12]);
     validateStillingerWeber(force, positions, expectedSets, 2.0);
@@ -571,7 +571,7 @@ void testCentralParticleModeCutoff() {
     force->addGlobalParameter("sigma", 0.23925);
     force->addGlobalParameter("gamma", 1.2);
     force->setNonbondedMethod(CustomManyParticleForce::CutoffNonPeriodic);
-    force->setCutoffDistance(1.55);
+    force->setCutoffDistance(0.155);
     vector<double> params;
     force->addParticle(params);
     force->addParticle(params);
@@ -579,9 +579,9 @@ void testCentralParticleModeCutoff() {
     force->addParticle(params);
     vector<Vec3> positions;
     positions.push_back(Vec3(0, 0, 0));
-    positions.push_back(Vec3(1, 0, 0));
-    positions.push_back(Vec3(0, 1.1, 0.3));
-    positions.push_back(Vec3(0.4, 0, -0.8));
+    positions.push_back(Vec3(0.1, 0, 0));
+    positions.push_back(Vec3(0, 0.11, 0.03));
+    positions.push_back(Vec3(0.04, 0, -0.08));
     int sets[8][3] = {{0,1,2}, {0,1,3}, {0,2,3}, {1,0,2}, {1,0,3}, {1, 2, 3}, {2,0,1}, {3,0,1}};
     vector<const int*> expectedSets(&sets[0], &sets[8]);
     validateStillingerWeber(force, positions, expectedSets, 2.0);
