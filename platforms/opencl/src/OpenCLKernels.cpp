@@ -5073,7 +5073,7 @@ double OpenCLCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bo
         // Set arguments for the force kernel.
         
         int index = 0;
-        forceKernel.setArg<cl::Buffer>(index++, cl.getForce().getDeviceBuffer());
+        forceKernel.setArg<cl::Buffer>(index++, cl.getLongForceBuffer().getDeviceBuffer());
         forceKernel.setArg<cl::Buffer>(index++, cl.getEnergyBuffer().getDeviceBuffer());
         forceKernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
         setPeriodicBoxSizeArg(cl, forceKernel, index++);
@@ -5175,7 +5175,8 @@ double OpenCLCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bo
             cl.executeKernel(startIndicesKernel, 256, 256);
             cl.executeKernel(copyPairsKernel, maxNeighborPairs);
         }
-        cl.executeKernel(forceKernel, cl.getNumAtoms()*forceWorkgroupSize, forceWorkgroupSize);
+        int maxThreads = min(cl.getNumAtoms()*forceWorkgroupSize, cl.getEnergyBuffer().getSize());
+        cl.executeKernel(forceKernel, maxThreads, forceWorkgroupSize);
         if (nonbondedMethod != NoCutoff) {
             // Make sure there was enough memory for the neighbor list.
 

@@ -1,3 +1,4 @@
+#pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
 #pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
 
 /**
@@ -82,7 +83,7 @@ __kernel void computeInteraction(
         , __global int* restrict particleTypes, __global int* restrict orderIndex, __global int* restrict particleOrder
 #endif
 #ifdef USE_EXCLUSIONS
-        , int* __global restrict exclusions, __global int* restrict exclusionStartIndex
+        , __global int* restrict exclusions, __global int* restrict exclusionStartIndex
 #endif
         PARAMETER_ARGUMENTS) {
     real energy = 0.0f;

@@ -5009,7 +5009,8 @@ double CudaCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bool
             cu.executeKernel(startIndicesKernel, &startIndicesArgs[0], 256, 256, 256*sizeof(int));
             cu.executeKernel(copyPairsKernel, &copyPairsArgs[0], maxNeighborPairs);
         }
-        cu.executeKernel(forceKernel, &forceArgs[0], cu.getNumAtoms()*forceWorkgroupSize, forceWorkgroupSize);
+        int maxThreads = min(cu.getNumAtoms()*forceWorkgroupSize, cu.getEnergyBuffer().getSize());
+        cu.executeKernel(forceKernel, &forceArgs[0], maxThreads, forceWorkgroupSize);
         if (nonbondedMethod != NoCutoff) {
             // Make sure there was enough memory for the neighbor list.
 
