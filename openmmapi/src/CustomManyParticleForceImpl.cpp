@@ -287,7 +287,7 @@ void CustomManyParticleForceImpl::buildFilterArrays(const CustomManyParticleForc
     vector<int> values;
     for (int i = 0; i < numParticlesPerSet; i++)
         values.push_back(i);
-    generatePermutations(values, 0, particleOrder);
+    generatePermutations(values, force.getPermutationMode() == CustomManyParticleForce::SinglePermutation ? 0 : 1, particleOrder);
     int numOrders = particleOrder.size();
     
     // Now we need to loop over every possible sequence of type codes, and for each one figure out which order to use.
