@@ -105,7 +105,7 @@ ReferenceBondIxn::~ReferenceBondIxn( ){
    --------------------------------------------------------------------------------------- */
 
 RealOpenMM ReferenceBondIxn::getNormedDotProduct( RealOpenMM* vector1, RealOpenMM* vector2,
-                                                  int hasREntry = 0 ) const {
+                                                  int hasREntry = 0 ) {
 
    // ---------------------------------------------------------------------------------------
 
@@ -187,7 +187,7 @@ RealOpenMM ReferenceBondIxn::getNormedDotProduct( RealOpenMM* vector1, RealOpenM
 
 RealOpenMM ReferenceBondIxn::getAngleBetweenTwoVectors( RealOpenMM* vector1, RealOpenMM* vector2, 
                                                         RealOpenMM* outputDotProduct = NULL,
-                                                        int hasREntry = 0 ) const {
+                                                        int hasREntry = 0 ) {
 
    // ---------------------------------------------------------------------------------------
 
@@ -249,7 +249,7 @@ RealOpenMM ReferenceBondIxn::getDihedralAngleBetweenThreeVectors( RealOpenMM*  v
                                                                   RealOpenMM*  cosineOfAngle       = NULL, 
                                                                   RealOpenMM*  signVector          = NULL, 
                                                                   RealOpenMM*  signOfAngle         = NULL, 
-                                                                   int          hasREntry = 0 ) const {
+                                                                   int          hasREntry = 0 ) {
 
    // ---------------------------------------------------------------------------------------
 

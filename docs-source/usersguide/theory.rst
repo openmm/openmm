@@ -828,6 +828,54 @@ Parameters may be specified in two ways:
 * Per-bond parameters are defined by specifying a value for each bond.
 
 
+CustomManyParticleForce
+***********************
+
+CustomManyParticleForce is similar to CustomNonbondedForce in that it represents
+a custom nonbonded interaction between particles, but it allows the interaction
+to depend on more than two particles.  This allows it to represent a wide range
+of non-pairwise interactions.  It is defined by specifying the number of
+particles :math:`N` involved in the interaction and how the energy depends on
+their positions.  More specifically, it takes a user specified energy function
+
+.. math::
+   E=f(\{x_i\},\{r_i\},\{\theta_i\},\{\phi_i\})
+
+that may depend on an arbitrary set of positions {\ :math:`x_i`\ }, distances
+{\ :math:`r_i`\ }, angles {\ :math:`\theta_i`\ }, and dihedral angles
+{\ :math:`\phi_i`\ } from a particular set of :math:`N` particles.
+
+Each distance, angle, or dihedral is defined by specifying a sequence of
+particles chosen from among the particles in the set.  A distance
+variable is defined by two particles, and equals the distance between them.  An
+angle variable is defined by three particles, and equals the angle between them.
+A dihedral variable is defined by four particles, and equals the angle between
+the first and last particles about the axis formed by the middle two particles.
+It is equal to zero when the first and last particles are on the same side of
+the axis.
+
+In addition to depending on positions, distances, angles, and dihedrals, the
+energy may also depend on an arbitrary set of user defined parameters.
+Parameters may be specified in two ways:
+
+* Global parameters have a single, fixed value.
+* Per-particle parameters are defined by specifying a value for each particle.
+
+The energy function is evaluated one or more times for every unique set of
+:math:`N` particles in the system.  The exact number of times depends on the 
+*permutation mode*\ .  A set of :math:`N` particles has :math:`N!` possible
+permutations.  In :code:`SinglePermutation` mode, the function is evaluated
+for a single arbitrarily chosen one of those permutations.  In
+:code:`UniqueCentralParticle` mode, the function is evaluated for :math:`N` of
+those permutations, once with each particle as the "central particle".
+
+The number of times the energy function is evaluated can be further restricted
+by specifying *type filters*\ .  Each particle may have a "type" assigned to it,
+and then each of the :math:`N` particles involved in an interaction may be
+restricted to only a specified set of types.  This provides a great deal of
+flexibility in controlling which particles interact with each other.
+
+
 CustomGBForce
 *************
 

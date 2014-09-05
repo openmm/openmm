@@ -49,6 +49,8 @@ KernelImpl* CpuKernelFactory::createKernelImpl(std::string name, const Platform&
         return new CpuCalcNonbondedForceKernel(name, platform, data);
     if (name == CalcCustomNonbondedForceKernel::Name())
         return new CpuCalcCustomNonbondedForceKernel(name, platform, data);
+    if (name == CalcCustomManyParticleForceKernel::Name())
+        return new CpuCalcCustomManyParticleForceKernel(name, platform, data);
     if (name == CalcGBSAOBCForceKernel::Name())
         return new CpuCalcGBSAOBCForceKernel(name, platform, data);
     if (name == IntegrateLangevinStepKernel::Name())

@@ -249,6 +249,12 @@ static inline float dot4(const fvec4& v1, const fvec4& v2) {
     return _mm_cvtss_f32(_mm_dp_ps(v1, v2, 0xF1));
 }
 
+static inline fvec4 cross(const fvec4& v1, const fvec4& v2) {
+    fvec4 temp = fvec4(_mm_mul_ps(v1, _mm_shuffle_ps(v2, v2, _MM_SHUFFLE(3, 0, 2, 1)))) -
+                 fvec4(_mm_mul_ps(v2, _mm_shuffle_ps(v1, v1, _MM_SHUFFLE(3, 0, 2, 1))));
+    return _mm_shuffle_ps(temp, temp, _MM_SHUFFLE(3, 0, 2, 1));
+}
+
 static inline void transpose(fvec4& v1, fvec4& v2, fvec4& v3, fvec4& v4) {
     _MM_TRANSPOSE4_PS(v1, v2, v3, v4);
 }

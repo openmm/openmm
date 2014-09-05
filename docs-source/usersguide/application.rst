@@ -2400,6 +2400,61 @@ must include an attribute called :code:`radius`\ .
 CustomGBForce also allows you to define tabulated functions.  See section
 :ref:`tabulated-functions` for details.
 
+<CustomManyParticleForce>
+=========================
+
+To add a CustomManyParticleForce to the System, include a tag that looks like this:
+
+.. code-block:: xml
+
+    <CustomManyParticleForce particlesPerSet="3" permutationMode="UniqueCentralParticle"
+        bondCutoff="3" energy="scale*(distance(p1,p2)-r1)*(distance(p1,p3)-r1)">
+     <GlobalParameter name="scale" defaultValue="1"/>
+     <PerParticleParameter name="r"/>
+     <TypeFilter index="0" types="1,2"/>
+     <Atom type="0" r="0.31" filterType="0"/>
+     <Atom type="1" r="0.25" filterType="0"/>
+     <Atom type="2" r="0.33" filterType="1"/>
+     ...
+    </CustomManyParticleForce>
+
+The energy expression for the CustomManyParticleForce is specified by the
+:code:`energy` attribute.  This is a mathematical expression that gives the
+energy of each pairwise interaction as a function of various particle coordinates,
+distances, and angles.  See the API documentation for details.  :code:`particlesPerSet`
+specifies the number of particles involved in the interaction and
+:code:`permutationMode` specifies the permutation mode.
+
+The expression may depend on an arbitrary list of global or per-atom
+parameters.  Use a :code:`<GlobalParameter>` tag to define a global
+parameter, and a :code:`<PerAtomParameter>` tag to define a per-atom
+parameter.
+
+Exclusions are created automatically based on the :code:`bondCutoff` attribute.
+After setting the nonbonded parameters for all atoms, the force field calls
+:code:`createExclusionsFromBonds()` on the CustomManyParticleForce, passing in this
+value as its argument.  To avoid creating exclusions, set :code:`bondCutoff` to 0.
+
+Type filters may be specified with a :code:`<TypeFilter>` tag.  The :code:`index`
+attribute specifies the index of the particle to apply the filter to, and
+:code:`types` is a comma separated list of allowed types.
+
+Each :code:`<Atom>` tag specifies the parameters for one atom type
+(specified with the :code:`type` attribute) or atom class (specified with
+the :code:`class` attribute).  It is fine to mix these two methods, having
+some tags specify a type and others specify a class.  However you do it, you
+must make sure that a unique set of parameters is defined for every atom type.
+In addition, each :code:`<Atom>` tag must include the :code:`filterType`
+attribute, which specifies the atom type for use in type filters.
+The remaining attributes are the values to use for the per-atom parameters. All
+per-atom parameters must be specified for every :code:`<Atom>` tag, and the
+attribute name must match the name of the parameter.  For instance, if there is
+a per-atom parameter with the name “radius”, then every :code:`<Atom>` tag
+must include an attribute called :code:`radius`\ .
+
+CustomManyParticleForce also allows you to define tabulated functions.  See section
+:ref:`tabulated-functions` for details.
+
 Writing Custom Expressions
 ==========================
 

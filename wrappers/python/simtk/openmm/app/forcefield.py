@@ -1620,7 +1620,6 @@ class CustomNonbondedGenerator:
         for atom in data.atoms:
             t = data.atomType[atom]
             if t in self.typeMap:
-                values = self.typeMap[t]
                 force.addParticle(self.typeMap[t])
             else:
                 raise ValueError('No CustomNonbonded parameters defined for atom type '+t)
@@ -1629,35 +1628,33 @@ class CustomNonbondedGenerator:
         sys.addForce(force)
 
     def postprocessSystem(self, sys, data, args):
-        # Create exceptions based on bonds, virtual sites, and Drude particles.
-        if self.bondCutoff == 0:
-            return
+        # Create exclusions based on bonds.
+        
         bondIndices = []
         for bond in data.bonds:
             bondIndices.append((bond.atom1, bond.atom2))
+
+        # If a virtual site does *not* share exclusions with another atom, add a bond between it and its first parent atom.
+
         for i in range(sys.getNumParticles()):
             if sys.isVirtualSite(i):
-                site = sys.getVirtualSite(i)
-                for j in range(site.getNumParticles()):
-                    bondIndices.append((i, site.getParticle(j)))
-        drude = [f for f in sys.getForces() if isinstance(f, mm.DrudeForce)]
-        if len(drude) > 0:
-            drude = drude[0]
-            # For purposes of creating exceptions, a Drude particle is "bonded" to anything
-            # its parent atom is bonded to.
-            drudeMap = {}
-            for i in range(drude.getNumParticles()):
-                params = drude.getParticleParameters(i)
-                drudeMap[params[1]] = params[0]
-            for atom1, atom2 in bondIndices:
-                drude1 = drudeMap[atom1] if atom1 in drudeMap else None
-                drude2 = drudeMap[atom2] if atom2 in drudeMap else None
-                if drude1 is not None:
-                    bondIndices.append((drude1, atom2))
-                    if drude2 is not None:
-                        bondIndices.append((drude1, drude2))
-                if drude2 is not None:
-                    bondIndices.append((atom1, drude2))
+                (site, atoms, excludeWith) = data.virtualSites[data.atoms[i]]
+                if excludeWith is None:
+                    bondIndices.append((i, site.getParticle(0)))
+        
+        # Certain particles, such as lone pairs and Drude particles, share exclusions with a parent atom.
+        # If the parent atom does not interact with an atom, the child particle does not either.
+        
+        for atom1, atom2 in bondIndices:
+            for child1 in data.excludeAtomWith[atom1]:
+                bondIndices.append((child1, atom2))
+                for child2 in data.excludeAtomWith[atom2]:
+                    bondIndices.append((child1, child2))
+            for child2 in data.excludeAtomWith[atom2]:
+                bondIndices.append((atom1, child2))
+
+        # Create the exclusions.
+        
         nonbonded = [f for f in sys.getForces() if isinstance(f, mm.CustomNonbondedForce)][0]
         nonbonded.createExclusionsFromBonds(bondIndices, self.bondCutoff)
 
@@ -1743,7 +1740,6 @@ class CustomGBGenerator:
         for atom in data.atoms:
             t = data.atomType[atom]
             if t in self.typeMap:
-                values = self.typeMap[t]
                 force.addParticle(self.typeMap[t])
             else:
                 raise ValueError('No CustomGB parameters defined for atom type '+t)
@@ -1752,6 +1748,113 @@ class CustomGBGenerator:
         sys.addForce(force)
 
 parsers["CustomGBForce"] = CustomGBGenerator.parseElement
+
+
+## @private
+class CustomManyParticleGenerator:
+    """A CustomManyParticleGenerator constructs a CustomManyParticleForce."""
+
+    def __init__(self, forcefield, particlesPerSet, energy, permutationMode, bondCutoff):
+        self.ff = forcefield
+        self.particlesPerSet = particlesPerSet
+        self.energy = energy
+        self.permutationMode = permutationMode
+        self.bondCutoff = bondCutoff
+        self.typeMap = {}
+        self.globalParams = {}
+        self.perParticleParams = []
+        self.functions = []
+        self.typeFilters = []
+    
+    @staticmethod
+    def parseElement(element, ff):
+        permutationMap = {"SinglePermutation" : mm.CustomManyParticleForce.SinglePermutation,
+                          "UniqueCentralParticle" : mm.CustomManyParticleForce.UniqueCentralParticle}
+        generator = CustomManyParticleGenerator(ff, int(element.attrib['particlesPerSet']), element.attrib['energy'], permutationMap[element.attrib['permutationMode']], int(element.attrib['bondCutoff']))
+        ff.registerGenerator(generator)
+        for param in element.findall('GlobalParameter'):
+            generator.globalParams[param.attrib['name']] = float(param.attrib['defaultValue'])
+        for param in element.findall('PerParticleParameter'):
+            generator.perParticleParams.append(param.attrib['name'])
+        for param in element.findall('TypeFilter'):
+            generator.typeFilters.append((int(param.attrib['index']), [int(x) for x in param.attrib['types'].split(',')]))
+        for atom in element.findall('Atom'):
+            types = ff._findAtomTypes(atom.attrib, 1)
+            if None not in types:
+                values = [float(atom.attrib[param]) for param in generator.perParticleParams]
+                for t in types[0]:
+                    generator.typeMap[t] = (values, int(atom.attrib['filterType']))
+
+    def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
+        methodMap = {NoCutoff:mm.CustomManyParticleForce.NoCutoff,
+                     CutoffNonPeriodic:mm.CustomManyParticleForce.CutoffNonPeriodic,
+                     CutoffPeriodic:mm.CustomManyParticleForce.CutoffPeriodic}
+        if nonbondedMethod not in methodMap:
+            raise ValueError('Illegal nonbonded method for CustomManyParticleForce')
+        force = mm.CustomManyParticleForce(self.particlesPerSet, self.energy)
+        force.setPermutationMode(self.permutationMode)
+        for param in self.globalParams:
+            force.addGlobalParameter(param, self.globalParams[param])
+        for param in self.perParticleParams:
+            force.addPerParticleParameter(param)
+        for index, types in self.typeFilters:
+            force.setTypeFilter(index, types)
+        for (name, type, values, params) in self.functions:
+            if type == 'Continuous1D':
+                force.addTabulatedFunction(name, mm.Continuous1DFunction(values, params['min'], params['max']))
+            elif type == 'Continuous2D':
+                force.addTabulatedFunction(name, mm.Continuous2DFunction(params['xsize'], params['ysize'], values, params['xmin'], params['xmax'], params['ymin'], params['ymax']))
+            elif type == 'Continuous3D':
+                force.addTabulatedFunction(name, mm.Continuous2DFunction(params['xsize'], params['ysize'], params['zsize'], values, params['xmin'], params['xmax'], params['ymin'], params['ymax'], params['zmin'], params['zmax']))
+            elif type == 'Discrete1D':
+                force.addTabulatedFunction(name, mm.Discrete1DFunction(values))
+            elif type == 'Discrete2D':
+                force.addTabulatedFunction(name, mm.Discrete2DFunction(params['xsize'], params['ysize'], values))
+            elif type == 'Discrete3D':
+                force.addTabulatedFunction(name, mm.Discrete2DFunction(params['xsize'], params['ysize'], params['zsize'], values))
+        for atom in data.atoms:
+            t = data.atomType[atom]
+            if t in self.typeMap:
+                values = self.typeMap[t]
+                force.addParticle(values[0], values[1])
+            else:
+                raise ValueError('No CustomManyParticle parameters defined for atom type '+t)
+        force.setNonbondedMethod(methodMap[nonbondedMethod])
+        force.setCutoffDistance(nonbondedCutoff)
+        sys.addForce(force)
+
+    def postprocessSystem(self, sys, data, args):
+        # Create exclusions based on bonds.
+        
+        bondIndices = []
+        for bond in data.bonds:
+            bondIndices.append((bond.atom1, bond.atom2))
+
+        # If a virtual site does *not* share exclusions with another atom, add a bond between it and its first parent atom.
+
+        for i in range(sys.getNumParticles()):
+            if sys.isVirtualSite(i):
+                (site, atoms, excludeWith) = data.virtualSites[data.atoms[i]]
+                if excludeWith is None:
+                    bondIndices.append((i, site.getParticle(0)))
+        
+        # Certain particles, such as lone pairs and Drude particles, share exclusions with a parent atom.
+        # If the parent atom does not interact with an atom, the child particle does not either.
+        
+        for atom1, atom2 in bondIndices:
+            for child1 in data.excludeAtomWith[atom1]:
+                bondIndices.append((child1, atom2))
+                for child2 in data.excludeAtomWith[atom2]:
+                    bondIndices.append((child1, child2))
+            for child2 in data.excludeAtomWith[atom2]:
+                bondIndices.append((atom1, child2))
+
+        # Create the exclusions.
+        
+        nonbonded = [f for f in sys.getForces() if isinstance(f, mm.CustomManyParticleForce)][0]
+        nonbonded.createExclusionsFromBonds(bondIndices, self.bondCutoff)
+
+parsers["CustomManyParticleForce"] = CustomManyParticleGenerator.parseElement
 
 def getAtomPrint(data, atomIndex):
 

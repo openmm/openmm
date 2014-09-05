@@ -33,6 +33,7 @@
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/CustomCompoundBondForceImpl.h"
 #include "openmm/internal/CustomHbondForceImpl.h"
+#include "openmm/internal/CustomManyParticleForceImpl.h"
 #include "openmm/internal/CustomNonbondedForceImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
 #include "OpenCLBondedUtilities.h"
@@ -4550,6 +4551,668 @@ void OpenCLCalcCustomCompoundBondForceKernel::copyParametersToContext(ContextImp
         paramVector[i].resize(parameters.size());
         for (int j = 0; j < (int) parameters.size(); j++)
             paramVector[i][j] = (cl_float) parameters[j];
+    }
+    params->setParameterValues(paramVector);
+    
+    // Mark that the current reordering may be invalid.
+    
+    cl.invalidateMolecules();
+}
+
+class OpenCLCustomManyParticleForceInfo : public OpenCLForceInfo {
+public:
+    OpenCLCustomManyParticleForceInfo(const CustomManyParticleForce& force) : OpenCLForceInfo(0), force(force) {
+    }
+    bool areParticlesIdentical(int particle1, int particle2) {
+        vector<double> params1, params2;
+        int type1, type2;
+        force.getParticleParameters(particle1, params1, type1);
+        force.getParticleParameters(particle2, params2, type2);
+        if (type1 != type2)
+            return false;
+        for (int i = 0; i < (int) params1.size(); i++)
+            if (params1[i] != params2[i])
+                return false;
+        return true;
+    }
+    int getNumParticleGroups() {
+        return force.getNumExclusions();
+    }
+    void getParticlesInGroup(int index, vector<int>& particles) {
+        int particle1, particle2;
+        force.getExclusionParticles(index, particle1, particle2);
+        particles.resize(2);
+        particles[0] = particle1;
+        particles[1] = particle2;
+    }
+    bool areGroupsIdentical(int group1, int group2) {
+        return true;
+    }
+private:
+    const CustomManyParticleForce& force;
+};
+
+OpenCLCalcCustomManyParticleForceKernel::~OpenCLCalcCustomManyParticleForceKernel() {
+    if (params != NULL)
+        delete params;
+    if (globals != NULL)
+        delete globals;
+    if (orderIndex != NULL)
+        delete orderIndex;
+    if (particleOrder != NULL)
+        delete particleOrder;
+    if (particleTypes != NULL)
+        delete particleTypes;
+    if (exclusions != NULL)
+        delete exclusions;
+    if (exclusionStartIndex != NULL)
+        delete exclusionStartIndex;
+    if (blockCenter != NULL)
+        delete blockCenter;
+    if (blockBoundingBox != NULL)
+        delete blockBoundingBox;
+    if (neighborPairs != NULL)
+        delete neighborPairs;
+    if (numNeighborPairs != NULL)
+        delete numNeighborPairs;
+    if (neighborStartIndex != NULL)
+        delete neighborStartIndex;
+    if (neighbors != NULL)
+        delete neighbors;
+    if (numNeighborsForAtom != NULL)
+        delete numNeighborsForAtom;
+    for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
+        delete tabulatedFunctions[i];
+}
+
+void OpenCLCalcCustomManyParticleForceKernel::initialize(const System& system, const CustomManyParticleForce& force) {
+    if (!cl.getSupports64BitGlobalAtomics())
+        throw OpenMMException("CustomManyParticleForce requires a device that supports 64 bit atomic operations");
+    int numParticles = force.getNumParticles();
+    int particlesPerSet = force.getNumParticlesPerSet();
+    bool centralParticleMode = (force.getPermutationMode() == CustomManyParticleForce::UniqueCentralParticle);
+    nonbondedMethod = CalcCustomManyParticleForceKernel::NonbondedMethod(force.getNonbondedMethod());
+    forceWorkgroupSize = 128;
+    findNeighborsWorkgroupSize = (cl.getSIMDWidth() >= 32 ? 128 : 32);
+    
+    // Record parameter values.
+    
+    params = new OpenCLParameterSet(cl, force.getNumPerParticleParameters(), numParticles, "customManyParticleParameters");
+    vector<vector<float> > paramVector(numParticles);
+    for (int i = 0; i < numParticles; i++) {
+        vector<double> parameters;
+        int type;
+        force.getParticleParameters(i, parameters, type);
+        paramVector[i].resize(parameters.size());
+        for (int j = 0; j < (int) parameters.size(); j++)
+            paramVector[i][j] = (float) parameters[j];
+    }
+    params->setParameterValues(paramVector);
+    cl.addForce(new OpenCLCustomManyParticleForceInfo(force));
+
+    // Record the tabulated functions.
+
+    map<string, Lepton::CustomFunction*> functions;
+    vector<pair<string, string> > functionDefinitions;
+    vector<const TabulatedFunction*> functionList;
+    stringstream tableArgs;
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
+        functionList.push_back(&force.getTabulatedFunction(i));
+        string name = force.getTabulatedFunctionName(i);
+        string arrayName = "table"+cl.intToString(i);
+        functionDefinitions.push_back(make_pair(name, arrayName));
+        functions[name] = cl.getExpressionUtilities().getFunctionPlaceholder(force.getTabulatedFunction(i));
+        int width;
+        vector<float> f = cl.getExpressionUtilities().computeFunctionCoefficients(force.getTabulatedFunction(i), width);
+        tabulatedFunctions.push_back(OpenCLArray::create<float>(cl, f.size(), "TabulatedFunction"));
+        tabulatedFunctions[tabulatedFunctions.size()-1]->upload(f);
+        tableArgs << ", __global const float";
+        if (width > 1)
+            tableArgs << width;
+        tableArgs << "* restrict " << arrayName;
+    }
+    
+    // Record information about parameters.
+
+    globalParamNames.resize(force.getNumGlobalParameters());
+    globalParamValues.resize(force.getNumGlobalParameters());
+    for (int i = 0; i < force.getNumGlobalParameters(); i++) {
+        globalParamNames[i] = force.getGlobalParameterName(i);
+        globalParamValues[i] = (float) force.getGlobalParameterDefaultValue(i);
+    }
+    vector<pair<ExpressionTreeNode, string> > variables;
+    for (int i = 0; i < particlesPerSet; i++) {
+        string index = cl.intToString(i+1);
+        variables.push_back(makeVariable("x"+index, "pos"+index+".x"));
+        variables.push_back(makeVariable("y"+index, "pos"+index+".y"));
+        variables.push_back(makeVariable("z"+index, "pos"+index+".z"));
+    }
+    for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
+        const string& name = force.getPerParticleParameterName(i);
+        for (int j = 0; j < particlesPerSet; j++) {
+            string index = cl.intToString(j+1);
+            variables.push_back(makeVariable(name+index, "params"+params->getParameterSuffix(i, index)));
+        }
+    }
+    if (force.getNumGlobalParameters() > 0) {
+        globals = OpenCLArray::create<cl_float>(cl, force.getNumGlobalParameters(), "customManyParticleGlobals", CL_MEM_READ_ONLY);
+        globals->upload(globalParamValues);
+        for (int i = 0; i < force.getNumGlobalParameters(); i++) {
+            const string& name = force.getGlobalParameterName(i);
+            string value = "globals["+cl.intToString(i)+"]";
+            variables.push_back(makeVariable(name, value));
+        }
+    }
+    
+    // Build data structures for type filters.
+    
+    vector<int> particleTypesVec;
+    vector<int> orderIndexVec;
+    vector<std::vector<int> > particleOrderVec;
+    int numTypes;
+    CustomManyParticleForceImpl::buildFilterArrays(force, numTypes, particleTypesVec, orderIndexVec, particleOrderVec);
+    bool hasTypeFilters = (particleOrderVec.size() > 1);
+    if (hasTypeFilters) {
+        particleTypes = OpenCLArray::create<int>(cl, particleTypesVec.size(), "customManyParticleTypes");
+        orderIndex = OpenCLArray::create<int>(cl, orderIndexVec.size(), "customManyParticleOrderIndex");
+        particleOrder = OpenCLArray::create<int>(cl, particleOrderVec.size()*particlesPerSet, "customManyParticleOrder");
+        particleTypes->upload(particleTypesVec);
+        orderIndex->upload(orderIndexVec);
+        vector<int> flattenedOrder(particleOrder->getSize());
+        for (int i = 0; i < (int) particleOrderVec.size(); i++)
+            for (int j = 0; j < particlesPerSet; j++)
+                flattenedOrder[i*particlesPerSet+j] = particleOrderVec[i][j];
+        particleOrder->upload(flattenedOrder);
+    }
+    
+    // Build data structures for exclusions.
+    
+    if (force.getNumExclusions() > 0) {
+        vector<vector<int> > particleExclusions(numParticles);
+        for (int i = 0; i < force.getNumExclusions(); i++) {
+            int p1, p2;
+            force.getExclusionParticles(i, p1, p2);
+            particleExclusions[p1].push_back(p2);
+            particleExclusions[p2].push_back(p1);
+        }
+        vector<int> exclusionsVec;
+        vector<int> exclusionStartIndexVec(numParticles+1);
+        exclusionStartIndexVec[0] = 0;
+        for (int i = 0; i < numParticles; i++) {
+            sort(particleExclusions[i].begin(), particleExclusions[i].end());
+            exclusionsVec.insert(exclusionsVec.end(), particleExclusions[i].begin(), particleExclusions[i].end());
+            exclusionStartIndexVec[i+1] = exclusionsVec.size();
+        }
+        exclusions = OpenCLArray::create<int>(cl, exclusionsVec.size(), "customManyParticleExclusions");
+        exclusionStartIndex = OpenCLArray::create<int>(cl, exclusionStartIndexVec.size(), "customManyParticleExclusionStart");
+        exclusions->upload(exclusionsVec);
+        exclusionStartIndex->upload(exclusionStartIndexVec);
+    }
+    
+    // Build data structures for the neighbor list.
+    
+    if (nonbondedMethod != NoCutoff) {
+        int numAtomBlocks = cl.getNumAtomBlocks();
+        int elementSize = (cl.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
+        blockCenter = new OpenCLArray(cl, numAtomBlocks, 4*elementSize, "blockCenter");
+        blockBoundingBox = new OpenCLArray(cl, numAtomBlocks, 4*elementSize, "blockBoundingBox");
+        numNeighborPairs = OpenCLArray::create<int>(cl, 1, "customManyParticleNumNeighborPairs");
+        neighborStartIndex = OpenCLArray::create<int>(cl, numParticles+1, "customManyParticleNeighborStartIndex");
+        numNeighborsForAtom = OpenCLArray::create<int>(cl, numParticles, "customManyParticleNumNeighborsForAtom");
+
+        // Select a size for the array that holds the neighbor list.  We have to make a fairly
+        // arbitrary guess, but if this turns out to be too small we'll increase it later.
+
+        maxNeighborPairs = 150*numParticles;
+        neighborPairs = OpenCLArray::create<mm_int2>(cl, maxNeighborPairs, "customManyParticleNeighborPairs");
+        neighbors = OpenCLArray::create<int>(cl, maxNeighborPairs, "customManyParticleNeighbors");
+    }
+
+    // Now to generate the kernel.  First, it needs to calculate all distances, angles,
+    // and dihedrals the expression depends on.
+
+    map<string, vector<int> > distances;
+    map<string, vector<int> > angles;
+    map<string, vector<int> > dihedrals;
+    Lepton::ParsedExpression energyExpression = CustomManyParticleForceImpl::prepareExpression(force, functions, distances, angles, dihedrals);
+    map<string, Lepton::ParsedExpression> forceExpressions;
+    set<string> computedDeltas;
+    vector<string> atomNames, posNames;
+    for (int i = 0; i < particlesPerSet; i++) {
+        string index = cl.intToString(i+1);
+        atomNames.push_back("P"+index);
+        posNames.push_back("pos"+index);
+    }
+    stringstream compute;
+    int index = 0;
+    for (map<string, vector<int> >::const_iterator iter = distances.begin(); iter != distances.end(); ++iter, ++index) {
+        const vector<int>& atoms = iter->second;
+        string deltaName = atomNames[atoms[0]]+atomNames[atoms[1]];
+        if (computedDeltas.count(deltaName) == 0) {
+            compute<<"real4 delta"<<deltaName<<" = delta("<<posNames[atoms[0]]<<", "<<posNames[atoms[1]]<<", periodicBoxSize, invPeriodicBoxSize);\n";
+            computedDeltas.insert(deltaName);
+        }
+        compute<<"real r_"<<deltaName<<" = sqrt(delta"<<deltaName<<".w);\n";
+        variables.push_back(makeVariable(iter->first, "r_"+deltaName));
+        forceExpressions["real dEdDistance"+cl.intToString(index)+" = "] = energyExpression.differentiate(iter->first).optimize();
+    }
+    index = 0;
+    for (map<string, vector<int> >::const_iterator iter = angles.begin(); iter != angles.end(); ++iter, ++index) {
+        const vector<int>& atoms = iter->second;
+        string deltaName1 = atomNames[atoms[1]]+atomNames[atoms[0]];
+        string deltaName2 = atomNames[atoms[1]]+atomNames[atoms[2]];
+        string angleName = "angle_"+atomNames[atoms[0]]+atomNames[atoms[1]]+atomNames[atoms[2]];
+        if (computedDeltas.count(deltaName1) == 0) {
+            compute<<"real4 delta"<<deltaName1<<" = delta("<<posNames[atoms[1]]<<", "<<posNames[atoms[0]]<<", periodicBoxSize, invPeriodicBoxSize);\n";
+            computedDeltas.insert(deltaName1);
+        }
+        if (computedDeltas.count(deltaName2) == 0) {
+            compute<<"real4 delta"<<deltaName2<<" = delta("<<posNames[atoms[1]]<<", "<<posNames[atoms[2]]<<", periodicBoxSize, invPeriodicBoxSize);\n";
+            computedDeltas.insert(deltaName2);
+        }
+        compute<<"real "<<angleName<<" = computeAngle(delta"<<deltaName1<<", delta"<<deltaName2<<");\n";
+        variables.push_back(makeVariable(iter->first, angleName));
+        forceExpressions["real dEdAngle"+cl.intToString(index)+" = "] = energyExpression.differentiate(iter->first).optimize();
+    }
+    index = 0;
+    for (map<string, vector<int> >::const_iterator iter = dihedrals.begin(); iter != dihedrals.end(); ++iter, ++index) {
+        const vector<int>& atoms = iter->second;
+        string deltaName1 = atomNames[atoms[0]]+atomNames[atoms[1]];
+        string deltaName2 = atomNames[atoms[2]]+atomNames[atoms[1]];
+        string deltaName3 = atomNames[atoms[2]]+atomNames[atoms[3]];
+        string crossName1 = "cross_"+deltaName1+"_"+deltaName2;
+        string crossName2 = "cross_"+deltaName2+"_"+deltaName3;
+        string dihedralName = "dihedral_"+atomNames[atoms[0]]+atomNames[atoms[1]]+atomNames[atoms[2]]+atomNames[atoms[3]];
+        if (computedDeltas.count(deltaName1) == 0) {
+            compute<<"real4 delta"<<deltaName1<<" = delta("<<posNames[atoms[0]]<<", "<<posNames[atoms[1]]<<", periodicBoxSize, invPeriodicBoxSize);\n";
+            computedDeltas.insert(deltaName1);
+        }
+        if (computedDeltas.count(deltaName2) == 0) {
+            compute<<"real4 delta"<<deltaName2<<" = delta("<<posNames[atoms[2]]<<", "<<posNames[atoms[1]]<<", periodicBoxSize, invPeriodicBoxSize);\n";
+            computedDeltas.insert(deltaName2);
+        }
+        if (computedDeltas.count(deltaName3) == 0) {
+            compute<<"real4 delta"<<deltaName3<<" = delta("<<posNames[atoms[2]]<<", "<<posNames[atoms[3]]<<", periodicBoxSize, invPeriodicBoxSize);\n";
+            computedDeltas.insert(deltaName3);
+        }
+        compute<<"real4 "<<crossName1<<" = computeCross(delta"<<deltaName1<<", delta"<<deltaName2<<");\n";
+        compute<<"real4 "<<crossName2<<" = computeCross(delta"<<deltaName2<<", delta"<<deltaName3<<");\n";
+        compute<<"real "<<dihedralName<<" = computeAngle("<<crossName1<<", "<<crossName2<<");\n";
+        compute<<dihedralName<<" *= (delta"<<deltaName1<<".x*"<<crossName2<<".x + delta"<<deltaName1<<".y*"<<crossName2<<".y + delta"<<deltaName1<<".z*"<<crossName2<<".z < 0 ? -1 : 1);\n";
+        variables.push_back(makeVariable(iter->first, dihedralName));
+        forceExpressions["real dEdDihedral"+cl.intToString(index)+" = "] = energyExpression.differentiate(iter->first).optimize();
+    }
+
+    // Now evaluate the expressions.
+
+    for (int i = 0; i < (int) params->getBuffers().size(); i++) {
+        OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
+        compute<<buffer.getType()<<" params"<<(i+1)<<" = global_params"<<(i+1)<<"[index];\n";
+    }
+    forceExpressions["energy += "] = energyExpression;
+    compute << cl.getExpressionUtilities().createExpressions(forceExpressions, variables, functionList, functionDefinitions, "temp");
+
+    // Apply forces to atoms.
+
+    vector<string> forceNames;
+    for (int i = 0; i < particlesPerSet; i++) {
+        string istr = cl.intToString(i+1);
+        string forceName = "force"+istr;
+        forceNames.push_back(forceName);
+        compute<<"real4 "<<forceName<<" = (real4) 0;\n";
+        compute<<"{\n";
+        Lepton::ParsedExpression forceExpressionX = energyExpression.differentiate("x"+istr).optimize();
+        Lepton::ParsedExpression forceExpressionY = energyExpression.differentiate("y"+istr).optimize();
+        Lepton::ParsedExpression forceExpressionZ = energyExpression.differentiate("z"+istr).optimize();
+        map<string, Lepton::ParsedExpression> expressions;
+        if (!isZeroExpression(forceExpressionX))
+            expressions[forceName+".x -= "] = forceExpressionX;
+        if (!isZeroExpression(forceExpressionY))
+            expressions[forceName+".y -= "] = forceExpressionY;
+        if (!isZeroExpression(forceExpressionZ))
+            expressions[forceName+".z -= "] = forceExpressionZ;
+        if (expressions.size() > 0)
+            compute<<cl.getExpressionUtilities().createExpressions(expressions, variables, functionList, functionDefinitions, "coordtemp");
+        compute<<"}\n";
+    }
+    index = 0;
+    for (map<string, vector<int> >::const_iterator iter = distances.begin(); iter != distances.end(); ++iter, ++index) {
+        const vector<int>& atoms = iter->second;
+        string deltaName = atomNames[atoms[0]]+atomNames[atoms[1]];
+        string value = "(dEdDistance"+cl.intToString(index)+"/r_"+deltaName+")*delta"+deltaName+".xyz";
+        compute<<forceNames[atoms[0]]<<".xyz += "<<"-"<<value<<";\n";
+        compute<<forceNames[atoms[1]]<<".xyz += "<<value<<";\n";
+    }
+    index = 0;
+    for (map<string, vector<int> >::const_iterator iter = angles.begin(); iter != angles.end(); ++iter, ++index) {
+        const vector<int>& atoms = iter->second;
+        string deltaName1 = atomNames[atoms[1]]+atomNames[atoms[0]];
+        string deltaName2 = atomNames[atoms[1]]+atomNames[atoms[2]];
+        compute<<"{\n";
+        compute<<"real4 crossProd = cross(delta"<<deltaName2<<", delta"<<deltaName1<<");\n";
+        compute<<"real lengthCross = max(SQRT(dot(crossProd, crossProd)), (real) 1e-6f);\n";
+        compute<<"real4 deltaCross0 = -cross(delta"<<deltaName1<<", crossProd)*dEdAngle"<<cl.intToString(index)<<"/(delta"<<deltaName1<<".w*lengthCross);\n";
+        compute<<"real4 deltaCross2 = cross(delta"<<deltaName2<<", crossProd)*dEdAngle"<<cl.intToString(index)<<"/(delta"<<deltaName2<<".w*lengthCross);\n";
+        compute<<"real4 deltaCross1 = -(deltaCross0+deltaCross2);\n";
+        compute<<forceNames[atoms[0]]<<".xyz += deltaCross0.xyz;\n";
+        compute<<forceNames[atoms[1]]<<".xyz += deltaCross1.xyz;\n";
+        compute<<forceNames[atoms[2]]<<".xyz += deltaCross2.xyz;\n";
+        compute<<"}\n";
+    }
+    index = 0;
+    for (map<string, vector<int> >::const_iterator iter = dihedrals.begin(); iter != dihedrals.end(); ++iter, ++index) {
+        const vector<int>& atoms = iter->second;
+        string deltaName1 = atomNames[atoms[0]]+atomNames[atoms[1]];
+        string deltaName2 = atomNames[atoms[2]]+atomNames[atoms[1]];
+        string deltaName3 = atomNames[atoms[2]]+atomNames[atoms[3]];
+        string crossName1 = "cross_"+deltaName1+"_"+deltaName2;
+        string crossName2 = "cross_"+deltaName2+"_"+deltaName3;
+        compute<<"{\n";
+        compute<<"real r = sqrt(delta"<<deltaName2<<".w);\n";
+        compute<<"real4 ff;\n";
+        compute<<"ff.x = (-dEdDihedral"<<cl.intToString(index)<<"*r)/"<<crossName1<<".w;\n";
+        compute<<"ff.y = (delta"<<deltaName1<<".x*delta"<<deltaName2<<".x + delta"<<deltaName1<<".y*delta"<<deltaName2<<".y + delta"<<deltaName1<<".z*delta"<<deltaName2<<".z)/delta"<<deltaName2<<".w;\n";
+        compute<<"ff.z = (delta"<<deltaName3<<".x*delta"<<deltaName2<<".x + delta"<<deltaName3<<".y*delta"<<deltaName2<<".y + delta"<<deltaName3<<".z*delta"<<deltaName2<<".z)/delta"<<deltaName2<<".w;\n";
+        compute<<"ff.w = (dEdDihedral"<<cl.intToString(index)<<"*r)/"<<crossName2<<".w;\n";
+        compute<<"real4 internalF0 = ff.x*"<<crossName1<<";\n";
+        compute<<"real4 internalF3 = ff.w*"<<crossName2<<";\n";
+        compute<<"real4 s = ff.y*internalF0 - ff.z*internalF3;\n";
+        compute<<forceNames[atoms[0]]<<".xyz += internalF0.xyz;\n";
+        compute<<forceNames[atoms[1]]<<".xyz += s.xyz-internalF0.xyz;\n";
+        compute<<forceNames[atoms[2]]<<".xyz += -s.xyz-internalF3.xyz;\n";
+        compute<<forceNames[atoms[3]]<<".xyz += internalF3.xyz;\n";
+        compute<<"}\n";
+    }
+    
+    // Store forces to global memory.
+    
+    for (int i = 0; i < particlesPerSet; i++)
+        compute<<"storeForce(atom"<<(i+1)<<", "<<forceNames[i]<<", forceBuffers);\n";
+    
+    // Create other replacements that depend on the number of particles per set.
+    
+    stringstream numCombinations, atomsForCombination, isValidCombination, permute, loadData, verifyCutoff, verifyExclusions;
+    if (hasTypeFilters) {
+        permute<<"int particleSet[] = {";
+        for (int i = 0; i < particlesPerSet; i++) {
+            permute<<"p"<<(i+1);
+            if (i < particlesPerSet-1)
+                permute<<", ";
+        }
+        permute<<"};\n";
+    }
+    for (int i = 0; i < particlesPerSet; i++) {
+        if (hasTypeFilters)
+            permute<<"int atom"<<(i+1)<<" = particleSet[particleOrder["<<particlesPerSet<<"*order+"<<i<<"]];\n";
+        else
+            permute<<"int atom"<<(i+1)<<" = p"<<(i+1)<<";\n";
+        loadData<<"real4 pos"<<(i+1)<<" = posq[atom"<<(i+1)<<"];\n";
+        for (int j = 0; j < (int) params->getBuffers().size(); j++)
+            loadData<<params->getBuffers()[j].getType()<<" params"<<(j+1)<<(i+1)<<" = global_params"<<(j+1)<<"[atom"<<(i+1)<<"];\n";
+    }
+    if (centralParticleMode) {
+        for (int i = 1; i < particlesPerSet; i++) {
+            if (i > 1)
+                isValidCombination<<" && p"<<(i+1)<<">p"<<i<<" && ";
+            isValidCombination<<"p"<<(i+1)<<"!=p1";
+        }
+    }
+    else {
+        for (int i = 2; i < particlesPerSet; i++) {
+            if (i > 2)
+                isValidCombination<<" && ";
+            isValidCombination<<"a"<<(i+1)<<">a"<<i;
+        }
+    }
+    atomsForCombination<<"int tempIndex = index;\n";
+    for (int i = 1; i < particlesPerSet; i++) {
+        if (i > 1)
+            numCombinations<<"*";
+        numCombinations<<"numNeighbors";
+        if (centralParticleMode)
+            atomsForCombination<<"int a"<<(i+1)<<" = tempIndex%numNeighbors;\n";
+        else
+            atomsForCombination<<"int a"<<(i+1)<<" = 1+tempIndex%numNeighbors;\n";
+        if (i < particlesPerSet-1)
+            atomsForCombination<<"tempIndex /= numNeighbors;\n";
+    }
+    if (particlesPerSet > 2) {
+        if (centralParticleMode)
+            atomsForCombination<<"a2 = (a3%2 == 0 ? a2 : numNeighbors-a2-1);\n";
+        else
+            atomsForCombination<<"a2 = (a3%2 == 0 ? a2 : numNeighbors-a2+1);\n";
+    }
+    for (int i = 1; i < particlesPerSet; i++) {
+        if (nonbondedMethod == NoCutoff) {
+            if (centralParticleMode)
+                atomsForCombination<<"int p"<<(i+1)<<" = a"<<(i+1)<<";\n";
+            else
+                atomsForCombination<<"int p"<<(i+1)<<" = p1+a"<<(i+1)<<";\n";
+        }
+        else {
+            if (centralParticleMode)
+                atomsForCombination<<"int p"<<(i+1)<<" = neighbors[firstNeighbor+a"<<(i+1)<<"];\n";
+            else
+                atomsForCombination<<"int p"<<(i+1)<<" = neighbors[firstNeighbor-1+a"<<(i+1)<<"];\n";
+        }
+    }
+    if (nonbondedMethod != NoCutoff) {
+        for (int i = 1; i < particlesPerSet; i++)
+            verifyCutoff<<"real4 pos"<<(i+1)<<" = posq[p"<<(i+1)<<"];\n";
+        if (!centralParticleMode) {
+            for (int i = 1; i < particlesPerSet; i++) {
+                for (int j = i+1; j < particlesPerSet; j++)
+                    verifyCutoff<<"includeInteraction &= (delta(pos"<<(i+1)<<", pos"<<(j+1)<<", periodicBoxSize, invPeriodicBoxSize).w < CUTOFF_SQUARED);\n";
+            }
+        }
+    }
+    if (force.getNumExclusions() > 0) {
+        int startCheckFrom = (nonbondedMethod == NoCutoff ? 0 : 1);
+        for (int i = startCheckFrom; i < particlesPerSet; i++)
+            for (int j = i+1; j < particlesPerSet; j++)
+                verifyExclusions<<"includeInteraction &= !isInteractionExcluded(p"<<(i+1)<<", p"<<(j+1)<<", exclusions, exclusionStartIndex);\n";
+    }
+    string computeTypeIndex = "particleTypes[p"+cl.intToString(particlesPerSet)+"]";
+    for (int i = particlesPerSet-2; i >= 0; i--)
+        computeTypeIndex = "particleTypes[p"+cl.intToString(i+1)+"]+"+cl.intToString(numTypes)+"*("+computeTypeIndex+")";
+    
+    // Create replacements for extra arguments.
+    
+    stringstream extraArgs;
+    if (force.getNumGlobalParameters() > 0)
+        extraArgs << ", __global const float* globals";
+    for (int i = 0; i < (int) params->getBuffers().size(); i++) {
+        OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
+        extraArgs<<", __global const "<<buffer.getType()<<"* restrict global_params"<<(i+1);
+    }
+
+    // Create the kernels.
+
+    map<string, string> replacements;
+    replacements["COMPUTE_INTERACTION"] = compute.str();
+    replacements["NUM_CANDIDATE_COMBINATIONS"] = numCombinations.str();
+    replacements["FIND_ATOMS_FOR_COMBINATION_INDEX"] = atomsForCombination.str();
+    replacements["IS_VALID_COMBINATION"] = isValidCombination.str();
+    replacements["VERIFY_CUTOFF"] = verifyCutoff.str();
+    replacements["VERIFY_EXCLUSIONS"] = verifyExclusions.str();
+    replacements["PERMUTE_ATOMS"] = permute.str();
+    replacements["LOAD_PARTICLE_DATA"] = loadData.str();
+    replacements["COMPUTE_TYPE_INDEX"] = computeTypeIndex;
+    replacements["PARAMETER_ARGUMENTS"] = extraArgs.str()+tableArgs.str();
+    map<string, string> defines;
+    if (nonbondedMethod != NoCutoff)
+        defines["USE_CUTOFF"] = "1";
+    if (nonbondedMethod == CutoffPeriodic)
+        defines["USE_PERIODIC"] = "1";
+    if (centralParticleMode)
+        defines["USE_CENTRAL_PARTICLE"] = "1";
+    if (hasTypeFilters)
+        defines["USE_FILTERS"] = "1";
+    if (force.getNumExclusions() > 0)
+        defines["USE_EXCLUSIONS"] = "1";
+    defines["NUM_ATOMS"] = cl.intToString(cl.getNumAtoms());
+    defines["PADDED_NUM_ATOMS"] = cl.intToString(cl.getPaddedNumAtoms());
+    defines["M_PI"] = cl.doubleToString(M_PI);
+    defines["CUTOFF_SQUARED"] = cl.doubleToString(force.getCutoffDistance()*force.getCutoffDistance());
+    defines["TILE_SIZE"] = cl.intToString(OpenCLContext::TileSize);
+    defines["NUM_BLOCKS"] = cl.intToString(cl.getNumAtomBlocks());
+    defines["FIND_NEIGHBORS_WORKGROUP_SIZE"] = cl.intToString(findNeighborsWorkgroupSize);
+    cl::Program program = cl.createProgram(cl.replaceStrings(OpenCLKernelSources::customManyParticle, replacements), defines);
+    forceKernel = cl::Kernel(program, "computeInteraction");
+    blockBoundsKernel = cl::Kernel(program, "findBlockBounds");
+    neighborsKernel = cl::Kernel(program, "findNeighbors");
+    startIndicesKernel = cl::Kernel(program, "computeNeighborStartIndices");
+    copyPairsKernel = cl::Kernel(program, "copyPairsToNeighborList");
+}
+
+double OpenCLCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    if (!hasInitializedKernel) {
+        hasInitializedKernel = true;
+        
+        // Set arguments for the force kernel.
+        
+        int index = 0;
+        forceKernel.setArg<cl::Buffer>(index++, cl.getLongForceBuffer().getDeviceBuffer());
+        forceKernel.setArg<cl::Buffer>(index++, cl.getEnergyBuffer().getDeviceBuffer());
+        forceKernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
+        setPeriodicBoxSizeArg(cl, forceKernel, index++);
+        setInvPeriodicBoxSizeArg(cl, forceKernel, index++);
+        if (nonbondedMethod != NoCutoff) {
+            forceKernel.setArg<cl::Buffer>(index++, neighbors->getDeviceBuffer());
+            forceKernel.setArg<cl::Buffer>(index++, neighborStartIndex->getDeviceBuffer());
+        }
+        if (particleTypes != NULL) {
+            forceKernel.setArg<cl::Buffer>(index++, particleTypes->getDeviceBuffer());
+            forceKernel.setArg<cl::Buffer>(index++, orderIndex->getDeviceBuffer());
+            forceKernel.setArg<cl::Buffer>(index++, particleOrder->getDeviceBuffer());
+        }
+        if (exclusions != NULL) {
+            forceKernel.setArg<cl::Buffer>(index++, exclusions->getDeviceBuffer());
+            forceKernel.setArg<cl::Buffer>(index++, exclusionStartIndex->getDeviceBuffer());
+        }
+        if (globals != NULL)
+            forceKernel.setArg<cl::Buffer>(index++, globals->getDeviceBuffer());
+        for (int i = 0; i < (int) params->getBuffers().size(); i++) {
+            OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
+            forceKernel.setArg<cl::Memory>(index++, buffer.getMemory());
+        }
+        for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
+            forceKernel.setArg<cl::Buffer>(index++, tabulatedFunctions[i]->getDeviceBuffer());
+        
+        if (nonbondedMethod != NoCutoff) {
+            // Set arguments for the block bounds kernel.
+
+            index = 0;
+            setPeriodicBoxSizeArg(cl, blockBoundsKernel, index++);
+            setInvPeriodicBoxSizeArg(cl, blockBoundsKernel, index++);
+            blockBoundsKernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
+            blockBoundsKernel.setArg<cl::Buffer>(index++, blockCenter->getDeviceBuffer());
+            blockBoundsKernel.setArg<cl::Buffer>(index++, blockBoundingBox->getDeviceBuffer());
+            blockBoundsKernel.setArg<cl::Buffer>(index++, numNeighborPairs->getDeviceBuffer());
+
+            // Set arguments for the neighbor list kernel.
+
+            index = 0;
+            setPeriodicBoxSizeArg(cl, neighborsKernel, index++);
+            setInvPeriodicBoxSizeArg(cl, neighborsKernel, index++);
+            neighborsKernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
+            neighborsKernel.setArg<cl::Buffer>(index++, blockCenter->getDeviceBuffer());
+            neighborsKernel.setArg<cl::Buffer>(index++, blockBoundingBox->getDeviceBuffer());
+            neighborsKernel.setArg<cl::Buffer>(index++, neighborPairs->getDeviceBuffer());
+            neighborsKernel.setArg<cl::Buffer>(index++, numNeighborPairs->getDeviceBuffer());
+            neighborsKernel.setArg<cl::Buffer>(index++, numNeighborsForAtom->getDeviceBuffer());
+            index++;
+            if (exclusions != NULL) {
+                neighborsKernel.setArg<cl::Buffer>(index++, exclusions->getDeviceBuffer());
+                neighborsKernel.setArg<cl::Buffer>(index++, exclusionStartIndex->getDeviceBuffer());
+            }
+            
+            // Set arguments for the kernel to find neighbor list start indices.
+            
+            index = 0;
+            startIndicesKernel.setArg<cl::Buffer>(index++, numNeighborsForAtom->getDeviceBuffer());
+            startIndicesKernel.setArg<cl::Buffer>(index++, neighborStartIndex->getDeviceBuffer());
+            startIndicesKernel.setArg<cl::Buffer>(index++, numNeighborPairs->getDeviceBuffer());
+
+            // Set arguments for the kernel to assemble the final neighbor list.
+            
+            index = 0;
+            copyPairsKernel.setArg<cl::Buffer>(index++, neighborPairs->getDeviceBuffer());
+            copyPairsKernel.setArg<cl::Buffer>(index++, neighbors->getDeviceBuffer());
+            copyPairsKernel.setArg<cl::Buffer>(index++, numNeighborPairs->getDeviceBuffer());
+            index++;
+            copyPairsKernel.setArg<cl::Buffer>(index++, numNeighborsForAtom->getDeviceBuffer());
+            copyPairsKernel.setArg<cl::Buffer>(index++, neighborStartIndex->getDeviceBuffer());
+       }
+    }
+    if (globals != NULL) {
+        bool changed = false;
+        for (int i = 0; i < (int) globalParamNames.size(); i++) {
+            cl_float value = (cl_float) context.getParameter(globalParamNames[i]);
+            if (value != globalParamValues[i])
+                changed = true;
+            globalParamValues[i] = value;
+        }
+        if (changed)
+            globals->upload(globalParamValues);
+    }
+    while (true) {
+        int* numPairs = (int*) cl.getPinnedBuffer();
+        cl::Event event;
+        if (nonbondedMethod != NoCutoff) {
+            neighborsKernel.setArg<int>(8, maxNeighborPairs);
+            startIndicesKernel.setArg<int>(3, maxNeighborPairs);
+            copyPairsKernel.setArg<int>(3, maxNeighborPairs);
+            cl.executeKernel(blockBoundsKernel, cl.getNumAtomBlocks());
+            cl.executeKernel(neighborsKernel, cl.getNumAtoms(), findNeighborsWorkgroupSize);
+
+            // We need to make sure there was enough memory for the neighbor list.  Download the
+            // information asynchronously so kernels can be running at the same time.
+
+            numNeighborPairs->download(numPairs, false);
+            cl.getQueue().enqueueMarker(&event);
+            cl.executeKernel(startIndicesKernel, 256, 256);
+            cl.executeKernel(copyPairsKernel, maxNeighborPairs);
+        }
+        int maxThreads = min(cl.getNumAtoms()*forceWorkgroupSize, cl.getEnergyBuffer().getSize());
+        cl.executeKernel(forceKernel, maxThreads, forceWorkgroupSize);
+        if (nonbondedMethod != NoCutoff) {
+            // Make sure there was enough memory for the neighbor list.
+
+            event.wait();
+            if (*numPairs > maxNeighborPairs) {
+                // Resize the arrays and run the calculation again.
+
+                delete neighborPairs;
+                neighborPairs = NULL;
+                delete neighbors;
+                neighbors = NULL;
+                maxNeighborPairs = (int) (1.1*(*numPairs));
+                neighborPairs = OpenCLArray::create<mm_int2>(cl, maxNeighborPairs, "customManyParticleNeighborPairs");
+                neighbors = OpenCLArray::create<int>(cl, maxNeighborPairs, "customManyParticleNeighbors");
+                continue;
+            }
+        }
+        break;
+    }
+    return 0.0;
+}
+
+void OpenCLCalcCustomManyParticleForceKernel::copyParametersToContext(ContextImpl& context, const CustomManyParticleForce& force) {
+    int numParticles = force.getNumParticles();
+    if (numParticles != cl.getNumAtoms())
+        throw OpenMMException("updateParametersInContext: The number of particles has changed");
+    
+    // Record the per-particle parameters.
+    
+    vector<vector<float> > paramVector(numParticles);
+    vector<double> parameters;
+    int type;
+    for (int i = 0; i < numParticles; i++) {
+        force.getParticleParameters(i, parameters, type);
+        paramVector[i].resize(parameters.size());
+        for (int j = 0; j < (int) parameters.size(); j++)
+            paramVector[i][j] = (float) parameters[j];
     }
     params->setParameterValues(paramVector);
     
