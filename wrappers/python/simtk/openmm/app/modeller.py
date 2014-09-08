@@ -922,7 +922,7 @@ class Modeller(object):
                                     # Record the corresponding atoms.
                                     matchingAtoms = {}
                                     for atom, match in zip(residueNoEP.atoms(), matches):
-                                        templateAtomName = t.atoms[match].name
+                                        templateAtomName = templatesNoEP[t].atoms[match].name
                                         for templateAtom in template.atoms:
                                             if templateAtom.name == templateAtomName:
                                                 matchingAtoms[templateAtom] = atom
