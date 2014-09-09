@@ -5190,6 +5190,10 @@ double OpenCLCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bo
                 maxNeighborPairs = (int) (1.1*(*numPairs));
                 neighborPairs = OpenCLArray::create<mm_int2>(cl, maxNeighborPairs, "customManyParticleNeighborPairs");
                 neighbors = OpenCLArray::create<int>(cl, maxNeighborPairs, "customManyParticleNeighbors");
+                forceKernel.setArg<cl::Buffer>(5, neighbors->getDeviceBuffer());
+                neighborsKernel.setArg<cl::Buffer>(5, neighborPairs->getDeviceBuffer());
+                copyPairsKernel.setArg<cl::Buffer>(0, neighborPairs->getDeviceBuffer());
+                copyPairsKernel.setArg<cl::Buffer>(1, neighbors->getDeviceBuffer());
                 continue;
             }
         }
