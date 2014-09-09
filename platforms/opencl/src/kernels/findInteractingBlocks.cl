@@ -332,6 +332,8 @@ __kernel void findBlocksWithInteractions2(real4 periodicBoxSize, real4 invPeriod
         oldPositions[i] = posq[i];
 }
 
+#define BUFFER_SIZE 256
+
 __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodicBoxSize, __global unsigned int* restrict interactionCount,
         __global int* restrict interactingTiles, __global unsigned int* restrict interactingAtoms, __global const real4* restrict posq, unsigned int maxTiles, unsigned int startBlockIndex,
         unsigned int numBlocks, __global real2* restrict sortedBlocks, __global const real4* restrict sortedBlockCenter, __global const real4* restrict sortedBlockBoundingBox,
@@ -391,7 +393,6 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
             barrier(CLK_LOCAL_MEM_FENCE);
         else
             SYNC_WARPS;
-            
         
         // Loop over atom blocks to search for neighbors.  The threads in a warp compare block1 against 32
         // other blocks in parallel.
@@ -462,9 +463,9 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
                     int whichBuffer = 0;
                     for (int offset = 1; offset < TILE_SIZE; offset *= 2) {
                         if (whichBuffer == 0)
-                            atomCountBuffer[get_local_id(0)].y = (get_local_id(0) < offset ? atomCountBuffer[get_local_id(0)].x : atomCountBuffer[get_local_id(0)].x+atomCountBuffer[get_local_id(0)-offset].x);
+                            atomCountBuffer[get_local_id(0)].y = (indexInWarp < offset ? atomCountBuffer[get_local_id(0)].x : atomCountBuffer[get_local_id(0)].x+atomCountBuffer[get_local_id(0)-offset].x);
                         else
-                            atomCountBuffer[get_local_id(0)].x = (get_local_id(0) < offset ? atomCountBuffer[get_local_id(0)].y : atomCountBuffer[get_local_id(0)].y+atomCountBuffer[get_local_id(0)-offset].y);
+                            atomCountBuffer[get_local_id(0)].x = (indexInWarp < offset ? atomCountBuffer[get_local_id(0)].y : atomCountBuffer[get_local_id(0)].y+atomCountBuffer[get_local_id(0)-offset].y);
                         whichBuffer = 1-whichBuffer;
                         SYNC_WARPS;
                     }
@@ -472,8 +473,8 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
                     // Add any interacting atoms to the buffer.
 
                     if (interacts)
-                        buffer[neighborsInBuffer+atomCountBuffer[get_local_id(0)].x-1] = atom2;
-                    neighborsInBuffer += atomCountBuffer[warpStart+TILE_SIZE-1].x;
+                        buffer[neighborsInBuffer+atomCountBuffer[get_local_id(0)].y-1] = atom2;
+                    neighborsInBuffer += atomCountBuffer[warpStart+TILE_SIZE-1].y;
                     if (neighborsInBuffer > BUFFER_SIZE-TILE_SIZE) {
                         // Store the new tiles to memory.
 
@@ -489,7 +490,7 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
                         }
                         buffer[indexInWarp] = buffer[indexInWarp+TILE_SIZE*tilesToStore];
                         neighborsInBuffer -= TILE_SIZE*tilesToStore;
-                    }
+                   }
                 }
             }
         }
