@@ -5024,6 +5024,10 @@ double CudaCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bool
                 maxNeighborPairs = (int) (1.1*(*numPairs));
                 neighborPairs = CudaArray::create<int2>(cu, maxNeighborPairs, "customManyParticleNeighborPairs");
                 neighbors = CudaArray::create<int>(cu, maxNeighborPairs, "customManyParticleNeighbors");
+                forceArgs[5] = &neighbors->getDevicePointer();
+                neighborsArgs[5] = &neighborPairs->getDevicePointer();
+                copyPairsArgs[0] = &neighborPairs->getDevicePointer();
+                copyPairsArgs[1] = &neighbors->getDevicePointer();
                 continue;
             }
         }
