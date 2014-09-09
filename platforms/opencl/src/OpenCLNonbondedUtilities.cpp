@@ -319,7 +319,7 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
         defines["MAX_EXCLUSIONS"] = context.intToString(maxExclusions);
         defines["BUFFER_GROUPS"] = (deviceIsCpu ? "4" : "2");
         string file = (deviceIsCpu ? OpenCLKernelSources::findInteractingBlocks_cpu : OpenCLKernelSources::findInteractingBlocks);
-        int groupSize = (deviceIsCpu ? 32 : 128);
+        int groupSize = (deviceIsCpu || context.getSIMDWidth() < 32 ? 32 : 256);
         while (true) {
             defines["GROUP_SIZE"] = context.intToString(groupSize);
             cl::Program interactingBlocksProgram = context.createProgram(file, defines);
