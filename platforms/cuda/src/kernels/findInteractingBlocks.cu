@@ -1,6 +1,5 @@
 #define GROUP_SIZE 256
 #define BUFFER_SIZE 256
-#define WARP_SIZE 32
 
 /**
  * Find a bounding box for the atoms in each block.
