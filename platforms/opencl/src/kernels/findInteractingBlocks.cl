@@ -423,7 +423,9 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
             includeBlockFlags[get_local_id(0)] = includeBlock2;
             SYNC_WARPS;
             for (int i = 0; i < TILE_SIZE; i++) {
-                if (includeBlockFlags[warpStart+i]) {
+                while (i < TILE_SIZE && !includeBlockFlags[warpStart+i])
+                    i++;
+                if (i < TILE_SIZE) {
                     unsigned short y = (unsigned short) sortedBlocks[block2Base+i].y;
 
                     // Check each atom in block Y for interactions.
