@@ -471,21 +471,25 @@ cl::Program OpenCLContext::createProgram(const string source, const map<string, 
     if (useDoublePrecision) {
         src << "typedef double real;\n";
         src << "typedef double2 real2;\n";
+        src << "typedef double3 real3;\n";
         src << "typedef double4 real4;\n";
     }
     else {
         src << "typedef float real;\n";
         src << "typedef float2 real2;\n";
+        src << "typedef float3 real3;\n";
         src << "typedef float4 real4;\n";
     }
     if (useDoublePrecision || useMixedPrecision) {
         src << "typedef double mixed;\n";
         src << "typedef double2 mixed2;\n";
+        src << "typedef double3 mixed3;\n";
         src << "typedef double4 mixed4;\n";
     }
     else {
         src << "typedef float mixed;\n";
         src << "typedef float2 mixed2;\n";
+        src << "typedef float3 mixed3;\n";
         src << "typedef float4 mixed4;\n";
     }
     for (map<string, string>::const_iterator iter = defines.begin(); iter != defines.end(); ++iter) {

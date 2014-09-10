@@ -1,8 +1,5 @@
 #define GROUP_SIZE 256
-#define BUFFER_GROUPS 2
-#define BUFFER_SIZE BUFFER_GROUPS*GROUP_SIZE
-#define WARP_SIZE 32
-#define INVALID 0xFFFF
+#define BUFFER_SIZE 256
 
 /**
  * Find a bounding box for the atoms in each block.
@@ -71,219 +68,26 @@ extern "C" __global__ void sortBoxData(const real2* __restrict__ sortedBlock, co
 }
 
 /**
- * Perform a parallel prefix sum over an array.  The input values are all assumed to be 0 or 1.
- */
-__device__ void prefixSum(short* sum, ushort2* temp) {
-#if __CUDA_ARCH__ >= 300
-    const int indexInWarp = threadIdx.x%WARP_SIZE;
-    const int warpMask = (2<<indexInWarp)-1;
-    for (int base = 0; base < BUFFER_SIZE; base += blockDim.x)
-        temp[base+threadIdx.x].x = __popc(__ballot(sum[base+threadIdx.x])&warpMask);
-    __syncthreads();
-    if (threadIdx.x < BUFFER_SIZE/WARP_SIZE) {
-        int multiWarpSum = temp[(threadIdx.x+1)*WARP_SIZE-1].x;
-        for (int offset = 1; offset < BUFFER_SIZE/WARP_SIZE; offset *= 2) {
-            short n = __shfl_up(multiWarpSum, offset, WARP_SIZE);
-            if (indexInWarp >= offset)
-                multiWarpSum += n;
-        }
-        temp[threadIdx.x].y = multiWarpSum;
-    }
-    __syncthreads();
-    for (int i = threadIdx.x; i < BUFFER_SIZE; i += blockDim.x)
-        sum[i] = temp[i].x+(i < WARP_SIZE ? 0 : temp[i/WARP_SIZE-1].y);
-    __syncthreads();
-#else
-    for (int i = threadIdx.x; i < BUFFER_SIZE; i += blockDim.x)
-        temp[i].x = sum[i];
-    __syncthreads();
-    int whichBuffer = 0;
-    for (int offset = 1; offset < BUFFER_SIZE; offset *= 2) {
-        if (whichBuffer == 0)
-            for (int i = threadIdx.x; i < BUFFER_SIZE; i += blockDim.x)
-                temp[i].y = (i < offset ? temp[i].x : temp[i].x+temp[i-offset].x);
-        else
-            for (int i = threadIdx.x; i < BUFFER_SIZE; i += blockDim.x)
-                temp[i].x = (i < offset ? temp[i].y : temp[i].y+temp[i-offset].y);
-        whichBuffer = 1-whichBuffer;
-        __syncthreads();
-    }
-    if (whichBuffer == 0)
-        for (int i = threadIdx.x; i < BUFFER_SIZE; i += blockDim.x)
-            sum[i] = temp[i].x;
-    else
-        for (int i = threadIdx.x; i < BUFFER_SIZE; i += blockDim.x)
-            sum[i] = temp[i].y;
-    __syncthreads();
-#endif
-}
-
-/**
- * This is called by findBlocksWithInteractions(). It compacts the list of blocks, identifies interactions
- * in them, and writes the result to global memory.
- */
-__device__ void storeInteractionData(int x, unsigned short* buffer, short* sum, ushort2* temp, int* atoms, int& numAtoms,
-            int& baseIndex, unsigned int* interactionCount, int* interactingTiles, unsigned int* interactingAtoms, real4 periodicBoxSize,
-            real4 invPeriodicBoxSize, const real4* posq, real3* posBuffer, real4 blockCenterX, real4 blockSizeX, unsigned int maxTiles, bool finish) {
-    const bool singlePeriodicCopy = (0.5f*periodicBoxSize.x-blockSizeX.x >= PADDED_CUTOFF &&
-                                     0.5f*periodicBoxSize.y-blockSizeX.y >= PADDED_CUTOFF &&
-                                     0.5f*periodicBoxSize.z-blockSizeX.z >= PADDED_CUTOFF);
-    if (threadIdx.x < TILE_SIZE) {
-        real3 pos = trimTo3(posq[x*TILE_SIZE+threadIdx.x]);
-        posBuffer[threadIdx.x] = pos;
-#ifdef USE_PERIODIC
-        if (singlePeriodicCopy) {
-            // The box is small enough that we can just translate all the atoms into a single periodic
-            // box, then skip having to apply periodic boundary conditions later.
-            
-            pos.x -= floor((pos.x-blockCenterX.x)*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-            pos.y -= floor((pos.y-blockCenterX.y)*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-            pos.z -= floor((pos.z-blockCenterX.z)*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
-            posBuffer[threadIdx.x] = pos;
-        }
-#endif
-    }
-    
-    // The buffer is full, so we need to compact it and write out results.  Start by doing a parallel prefix sum.
-
-    for (int i = threadIdx.x; i < BUFFER_SIZE; i += blockDim.x)
-        sum[i] = (buffer[i] == INVALID ? 0 : 1);
-    __syncthreads();
-    prefixSum(sum, temp);
-    int numValid = sum[BUFFER_SIZE-1];
-
-    // Compact the buffer.
-
-    for (int i = threadIdx.x; i < BUFFER_SIZE; i += blockDim.x)
-        if (buffer[i] != INVALID)
-            temp[sum[i]-1].x = buffer[i];
-    __syncthreads();
-    for (int i = threadIdx.x; i < BUFFER_SIZE; i += blockDim.x)
-        buffer[i] = temp[i].x;
-    __syncthreads();
-
-    // Loop over the tiles and find specific interactions in them.
-
-    const int indexInWarp = threadIdx.x%WARP_SIZE;
-    for (int base = 0; base < numValid; base += BUFFER_SIZE/WARP_SIZE) {
-        for (int i = threadIdx.x/WARP_SIZE; i < BUFFER_SIZE/WARP_SIZE && base+i < numValid; i += GROUP_SIZE/WARP_SIZE) {
-            // Check each atom in block Y for interactions.
-            
-            real3 pos = trimTo3(posq[buffer[base+i]*TILE_SIZE+indexInWarp]);
-#ifdef USE_PERIODIC
-            if (singlePeriodicCopy) {
-                pos.x -= floor((pos.x-blockCenterX.x)*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-                pos.y -= floor((pos.y-blockCenterX.y)*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-                pos.z -= floor((pos.z-blockCenterX.z)*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
-            }
-#endif
-            bool interacts = false;
-#ifdef USE_PERIODIC
-            if (!singlePeriodicCopy) {
-                for (int j = 0; j < TILE_SIZE; j++) {
-                    real3 delta = pos-posBuffer[j];
-                    delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-                    delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-                    delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
-                    interacts |= (delta.x*delta.x+delta.y*delta.y+delta.z*delta.z < PADDED_CUTOFF_SQUARED);
-                }
-            }
-            else {
-#endif
-                for (int j = 0; j < TILE_SIZE; j++) {
-                    real3 delta = pos-posBuffer[j];
-                    interacts |= (delta.x*delta.x+delta.y*delta.y+delta.z*delta.z < PADDED_CUTOFF_SQUARED);
-                }
-#ifdef USE_PERIODIC
-            }
-#endif
-            sum[i*WARP_SIZE+indexInWarp] = (interacts ? 1 : 0);
-        }
-        for (int i = numValid-base+threadIdx.x/WARP_SIZE; i < BUFFER_SIZE/WARP_SIZE; i += GROUP_SIZE/WARP_SIZE)
-            sum[i*WARP_SIZE+indexInWarp] = 0;
-
-        // Compact the list of atoms.
-
-        __syncthreads();
-        prefixSum(sum, temp);
-        for (int i = threadIdx.x; i < BUFFER_SIZE; i += blockDim.x)
-            if (sum[i] != (i == 0 ? 0 : sum[i-1]))
-                atoms[numAtoms+sum[i]-1] = buffer[base+i/WARP_SIZE]*TILE_SIZE+indexInWarp;
-
-        // Store them to global memory.
-
-        int atomsToStore = numAtoms+sum[BUFFER_SIZE-1];
-        bool storePartialTile = (finish && base >= numValid-BUFFER_SIZE/WARP_SIZE);
-        int tilesToStore = (storePartialTile ? (atomsToStore+TILE_SIZE-1)/TILE_SIZE : atomsToStore/TILE_SIZE);
-        if (tilesToStore > 0) {
-            if (threadIdx.x == 0)
-                baseIndex = atomicAdd(interactionCount, tilesToStore);
-            __syncthreads();
-            if (threadIdx.x == 0)
-                numAtoms = atomsToStore-tilesToStore*TILE_SIZE;
-            if (baseIndex+tilesToStore <= maxTiles) {
-                if (threadIdx.x < tilesToStore)
-                    interactingTiles[baseIndex+threadIdx.x] = x;
-                for (int i = threadIdx.x; i < tilesToStore*TILE_SIZE; i += blockDim.x)
-                    interactingAtoms[baseIndex*TILE_SIZE+i] = (i < atomsToStore ? atoms[i] : NUM_ATOMS);
-            }
-        }
-        else {
-            __syncthreads();
-            if (threadIdx.x == 0)
-                numAtoms += sum[BUFFER_SIZE-1];
-        }
-        __syncthreads();
-        if (threadIdx.x < numAtoms && !storePartialTile)
-            atoms[threadIdx.x] = atoms[tilesToStore*TILE_SIZE+threadIdx.x];
-    }
-
-    if (numValid == 0 && numAtoms > 0 && finish) {
-        // We didn't have any more tiles to process, but there were some atoms left over from a
-        // previous call to this function.  Save them now.
-
-        if (threadIdx.x == 0)
-            baseIndex = atomicAdd(interactionCount, 1);
-        __syncthreads();
-        if (baseIndex < maxTiles) {
-            if (threadIdx.x == 0)
-                interactingTiles[baseIndex] = x;
-            if (threadIdx.x < TILE_SIZE)
-                interactingAtoms[baseIndex*TILE_SIZE+threadIdx.x] = (threadIdx.x < numAtoms ? atoms[threadIdx.x] : NUM_ATOMS);
-        }
-    }
-
-    // Reset the buffer for processing more tiles.
-
-    for (int i = threadIdx.x; i < BUFFER_SIZE; i += blockDim.x)
-        buffer[i] = INVALID;
-    __syncthreads();
-}
-
-/**
  * Compare the bounding boxes for each pair of atom blocks (comprised of 32 atoms each), forming a tile. If the two
  * atom blocks are sufficiently far apart, mark them as non-interacting. There are two stages in the algorithm.
  *
  * STAGE 1:
  *
- * A coarse grain atomblock against interacting atomblock neighbourlist is constructed. 
+ * A coarse grained atom block against interacting atom block neighbour list is constructed. 
  *
- * Each threadblock first loads in some block X of interest. Each thread within the threadblock then loads 
- * in a different atomblock Y. If Y has exclusions with X, then Y is not processed.  If the bounding boxes 
- * of the two atomblocks are within the cutoff distance, then the two atomblocks are considered to be
- * interacting and Y is added to the buffer for X. If during any given iteration an atomblock (or thread) 
- * finds BUFFER_GROUP interacting blocks, the entire buffer is sent for compaction by storeInteractionData().
+ * Each warp first loads in some block X of interest. Each thread within the warp then loads 
+ * in a different atom block Y. If Y has exclusions with X, then Y is not processed.  If the bounding boxes 
+ * of the two atom blocks are within the cutoff distance, then the two atom blocks are considered to be
+ * interacting and Y is added to the buffer for X.
  *
  * STAGE 2:
  *
- * A fine grain atomblock against interacting atoms neighbourlist is constructed.
+ * A fine grained atom block against interacting atoms neighbour list is constructed.
  *
- * The input is an atomblock list detailing the interactions with other atomblocks. The list of interacting 
- * atom blocks are initially stored in the buffer array in shared memory. buffer is then compacted using 
- * prefixSum. Afterwards, each threadblock processes one contiguous atomblock X. Each warp in a threadblock 
- * processes a block Y to find the atoms that interact with any given atom in X. Once BUFFER_SIZE/WARP_SIZE 
- * (eg. 16) atomblocks have been processed for a given X, the list of interacting atoms in these 16 blocks 
- * are subsequently compacted. The process repeats until all atomblocks that interact with X are computed.
+ * The warp loops over atom blocks Y that were found to (possibly) interact with atom block X.  Each thread
+ * in the warp loops over the 32 atoms in X and compares their positions to one particular atom from block Y.
+ * If it finds one closer than the cutoff distance, the atom is added to the list of atoms interacting with block X.
+ * This continues until the buffer fills up, at which point the results are written to global memory.
  *
  * [in] periodicBoxSize        - size of the rectangular periodic box
  * [in] invPeriodicBoxSize     - inverse of the periodic box
@@ -317,87 +121,167 @@ extern "C" __global__ void findBlocksWithInteractions(real4 periodicBoxSize, rea
         unsigned int numBlocks, real2* __restrict__ sortedBlocks, const real4* __restrict__ sortedBlockCenter, const real4* __restrict__ sortedBlockBoundingBox,
         const unsigned int* __restrict__ exclusionIndices, const unsigned int* __restrict__ exclusionRowIndices, real4* __restrict__ oldPositions,
         const int* __restrict__ rebuildNeighborList) {
-    __shared__ unsigned short buffer[BUFFER_SIZE];
-    __shared__ short sum[BUFFER_SIZE];
-    __shared__ ushort2 temp[BUFFER_SIZE];
-    __shared__ int atoms[BUFFER_SIZE+TILE_SIZE];
-    __shared__ real3 posBuffer[TILE_SIZE];
-    __shared__ int exclusionsForX[MAX_EXCLUSIONS];
-    __shared__ int bufferFull;
-    __shared__ int globalIndex;
-    __shared__ int numAtoms;
-    
+
     if (rebuildNeighborList[0] == 0)
         return; // The neighbor list doesn't need to be rebuilt.
+
+    const int indexInWarp = threadIdx.x%32;
+    const int warpStart = threadIdx.x-indexInWarp;
+    const int totalWarps = blockDim.x*gridDim.x/32;
+    const int warpIndex = (blockIdx.x*blockDim.x+threadIdx.x)/32;
+    const int warpMask = (1<<indexInWarp)-1;
+    __shared__ int workgroupBuffer[BUFFER_SIZE*(GROUP_SIZE/32)];
+    __shared__ int warpExclusions[MAX_EXCLUSIONS*(GROUP_SIZE/32)];
+    __shared__ real3 posBuffer[GROUP_SIZE];
+    __shared__ volatile int workgroupTileIndex[GROUP_SIZE/32];
+    int* buffer = workgroupBuffer+BUFFER_SIZE*(warpStart/32);
+    int* exclusionsForX = warpExclusions+MAX_EXCLUSIONS*(warpStart/32);
+    volatile int& tileStartIndex = workgroupTileIndex[warpStart/32];
+
+    // Loop over blocks.
     
-    int valuesInBuffer = 0;
-    if (threadIdx.x == 0)
-        bufferFull = false;
-    for (int i = 0; i < BUFFER_GROUPS; ++i)
-        buffer[i*GROUP_SIZE+threadIdx.x] = INVALID;
-    __syncthreads();
-    
-    // Loop over blocks sorted by size.
-    
-    for (int i = startBlockIndex+blockIdx.x; i < startBlockIndex+numBlocks; i += gridDim.x) {
-        if (threadIdx.x == blockDim.x-1)
-            numAtoms = 0;
-        real2 sortedKey = sortedBlocks[i];
+    for (int block1 = startBlockIndex+warpIndex; block1 < startBlockIndex+numBlocks; block1 += totalWarps) {
+        // Load data for this block.  Note that all threads in a warp are processing the same block.
+        
+        real2 sortedKey = sortedBlocks[block1];
         int x = (int) sortedKey.y;
-        real4 blockCenterX = sortedBlockCenter[i];
-        real4 blockSizeX = sortedBlockBoundingBox[i];
+        real4 blockCenterX = sortedBlockCenter[block1];
+        real4 blockSizeX = sortedBlockBoundingBox[block1];
+        int neighborsInBuffer = 0;
+        real3 pos1 = trimTo3(posq[x*TILE_SIZE+indexInWarp]);
+#ifdef USE_PERIODIC
+        const bool singlePeriodicCopy = (0.5f*periodicBoxSize.x-blockSizeX.x >= PADDED_CUTOFF &&
+                                         0.5f*periodicBoxSize.y-blockSizeX.y >= PADDED_CUTOFF &&
+                                         0.5f*periodicBoxSize.z-blockSizeX.z >= PADDED_CUTOFF);
+        if (singlePeriodicCopy) {
+            // The box is small enough that we can just translate all the atoms into a single periodic
+            // box, then skip having to apply periodic boundary conditions later.
+            
+            pos1.x -= floor((pos1.x-blockCenterX.x)*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
+            pos1.y -= floor((pos1.y-blockCenterX.y)*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
+            pos1.z -= floor((pos1.z-blockCenterX.z)*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
+        }
+#endif
+        posBuffer[threadIdx.x] = pos1;
 
         // Load exclusion data for block x.
         
         const int exclusionStart = exclusionRowIndices[x];
         const int exclusionEnd = exclusionRowIndices[x+1];
         const int numExclusions = exclusionEnd-exclusionStart;
-        for (int j = threadIdx.x; j < numExclusions; j += blockDim.x)
+        for (int j = indexInWarp; j < numExclusions; j += 32)
             exclusionsForX[j] = exclusionIndices[exclusionStart+j];
-        __syncthreads();
+        if (MAX_EXCLUSIONS > 32)
+            __syncthreads();
         
-        // Compare it to other blocks after this one in sorted order.
-        
-        for (int base = i+1; base < NUM_BLOCKS; base += blockDim.x) {
-            int j = base+threadIdx.x;
-            real2 sortedKey2 = (j < NUM_BLOCKS ? sortedBlocks[j] : make_real2(0));
-            real4 blockCenterY = (j < NUM_BLOCKS ? sortedBlockCenter[j] : make_real4(0));
-            real4 blockSizeY = (j < NUM_BLOCKS ? sortedBlockBoundingBox[j] : make_real4(0));
-            unsigned short y = (unsigned short) sortedKey2.y;
-            real4 delta = blockCenterX-blockCenterY;
+        // Loop over atom blocks to search for neighbors.  The threads in a warp compare block1 against 32
+        // other blocks in parallel.
+
+        for (int block2Base = block1+1; block2Base < NUM_BLOCKS; block2Base += 32) {
+            int block2 = block2Base+indexInWarp;
+            bool includeBlock2 = (block2 < NUM_BLOCKS);
+            if (includeBlock2) {
+                real4 blockCenterY = (block2 < NUM_BLOCKS ? sortedBlockCenter[block2] : make_real4(0));
+                real4 blockSizeY = (block2 < NUM_BLOCKS ? sortedBlockBoundingBox[block2] : make_real4(0));
+                real4 blockDelta = blockCenterX-blockCenterY;
 #ifdef USE_PERIODIC
-            delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-            delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-            delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
+                blockDelta.x -= floor(blockDelta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
+                blockDelta.y -= floor(blockDelta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
+                blockDelta.z -= floor(blockDelta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
-            delta.x = max(0.0f, fabs(delta.x)-blockSizeX.x-blockSizeY.x);
-            delta.y = max(0.0f, fabs(delta.y)-blockSizeX.y-blockSizeY.y);
-            delta.z = max(0.0f, fabs(delta.z)-blockSizeX.z-blockSizeY.z);
-            bool hasExclusions = false;
-            for (int k = 0; k < numExclusions; k++)
-                hasExclusions |= (exclusionsForX[k] == y);
-            if (j < NUM_BLOCKS && delta.x*delta.x+delta.y*delta.y+delta.z*delta.z < PADDED_CUTOFF_SQUARED && !hasExclusions) {
-                // Add this tile to the buffer.
-
-                int bufferIndex = valuesInBuffer*GROUP_SIZE+threadIdx.x;
-                buffer[bufferIndex] = y;
-                valuesInBuffer++;
-
-                // cuda-memcheck --tool racecheck will throw errors about this as 
-                // RAW/WAW/WAR race condition errors. But this is safe in all instances
-                if (!bufferFull && valuesInBuffer == BUFFER_GROUPS)
-                    bufferFull = true;
+                blockDelta.x = max(0.0f, fabs(blockDelta.x)-blockSizeX.x-blockSizeY.x);
+                blockDelta.y = max(0.0f, fabs(blockDelta.y)-blockSizeX.y-blockSizeY.y);
+                blockDelta.z = max(0.0f, fabs(blockDelta.z)-blockSizeX.z-blockSizeY.z);
+                includeBlock2 &= (blockDelta.x*blockDelta.x+blockDelta.y*blockDelta.y+blockDelta.z*blockDelta.z < PADDED_CUTOFF_SQUARED);
+                if (includeBlock2) {
+                    unsigned short y = (unsigned short) sortedBlocks[block2].y;
+                    for (int k = 0; k < numExclusions; k++)
+                        includeBlock2 &= (exclusionsForX[k] != y);
+                }
             }
-            __syncthreads();
-            if (bufferFull) {
-                storeInteractionData(x, buffer, sum, temp, atoms, numAtoms, globalIndex, interactionCount, interactingTiles, interactingAtoms, periodicBoxSize, invPeriodicBoxSize, posq, posBuffer, blockCenterX, blockSizeX, maxTiles, false);
-                valuesInBuffer = 0;
-                if (threadIdx.x == 0)
-                    bufferFull = false;
+            
+            // Loop over any blocks we identified as potentially containing neighbors.
+            
+            int includeBlockFlags = __ballot(includeBlock2);
+            while (includeBlockFlags != 0) {
+                int i = __ffs(includeBlockFlags)-1;
+                includeBlockFlags &= includeBlockFlags-1;
+                unsigned short y = (unsigned short) sortedBlocks[block2Base+i].y;
+
+                // Check each atom in block Y for interactions.
+
+                int start = y*TILE_SIZE;
+                int atom2 = start+indexInWarp;
+                real3 pos2 = trimTo3(posq[atom2]);
+#ifdef USE_PERIODIC
+                if (singlePeriodicCopy) {
+                    pos2.x -= floor((pos2.x-blockCenterX.x)*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
+                    pos2.y -= floor((pos2.y-blockCenterX.y)*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
+                    pos2.z -= floor((pos2.z-blockCenterX.z)*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
+                }
+#endif
+                bool interacts = false;
+                if (atom2 < NUM_ATOMS) {
+#ifdef USE_PERIODIC
+                    if (!singlePeriodicCopy) {
+                        for (int j = 0; j < TILE_SIZE; j++) {
+                            real3 delta = pos2-posBuffer[warpStart+j];
+                            delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
+                            delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
+                            delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
+                            interacts |= (delta.x*delta.x+delta.y*delta.y+delta.z*delta.z < PADDED_CUTOFF_SQUARED);
+                        }
+                    }
+                    else {
+#endif
+                        for (int j = 0; j < TILE_SIZE; j++) {
+                            real3 delta = pos2-posBuffer[warpStart+j];
+                            interacts |= (delta.x*delta.x+delta.y*delta.y+delta.z*delta.z < PADDED_CUTOFF_SQUARED);
+                        }
+#ifdef USE_PERIODIC
+                    }
+#endif
+                }
+                
+                // Add any interacting atoms to the buffer.
+                
+                int includeAtomFlags = __ballot(interacts);
+                if (interacts)
+                    buffer[neighborsInBuffer+__popc(includeAtomFlags&warpMask)] = atom2;
+                neighborsInBuffer += __popc(includeAtomFlags);
+                if (neighborsInBuffer > BUFFER_SIZE-TILE_SIZE) {
+                    // Store the new tiles to memory.
+                    
+                    int tilesToStore = neighborsInBuffer/TILE_SIZE;
+                    if (indexInWarp == 0)
+                        tileStartIndex = atomicAdd(interactionCount, tilesToStore);
+                    int newTileStartIndex = tileStartIndex;
+                    if (newTileStartIndex+tilesToStore < maxTiles) {
+                        if (indexInWarp < tilesToStore)
+                            interactingTiles[newTileStartIndex+indexInWarp] = x;
+                        for (int j = 0; j < tilesToStore; j++)
+                            interactingAtoms[(newTileStartIndex+j)*TILE_SIZE+indexInWarp] = buffer[indexInWarp+j*TILE_SIZE];
+                    }
+                    buffer[indexInWarp] = buffer[indexInWarp+TILE_SIZE*tilesToStore];
+                    neighborsInBuffer -= TILE_SIZE*tilesToStore;
+                }
             }
-            __syncthreads();
         }
-        storeInteractionData(x, buffer, sum, temp, atoms, numAtoms, globalIndex, interactionCount, interactingTiles, interactingAtoms, periodicBoxSize, invPeriodicBoxSize, posq, posBuffer, blockCenterX, blockSizeX, maxTiles, true);
+        
+        // If we have a partially filled buffer,  store it to memory.
+        
+        if (neighborsInBuffer > 0) {
+            int tilesToStore = (neighborsInBuffer+TILE_SIZE-1)/TILE_SIZE;
+            if (indexInWarp == 0)
+                tileStartIndex = atomicAdd(interactionCount, tilesToStore);
+            int newTileStartIndex = tileStartIndex;
+            if (newTileStartIndex+tilesToStore < maxTiles) {
+                if (indexInWarp < tilesToStore)
+                    interactingTiles[newTileStartIndex+indexInWarp] = x;
+                for (int j = 0; j < tilesToStore; j++)
+                    interactingAtoms[(newTileStartIndex+j)*TILE_SIZE+indexInWarp] = (indexInWarp+j*TILE_SIZE < neighborsInBuffer ? buffer[indexInWarp+j*TILE_SIZE] : NUM_ATOMS);
+            }
+        }
     }
     
     // Record the positions the neighbor list is based on.
