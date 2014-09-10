@@ -360,13 +360,15 @@ void CpuNonbondedForce::threadComputeDirect(ThreadPool& threads, int threadIndex
                     float chargeProd = ONE_4PI_EPS0*posq[4*i+3]*posq[4*j+3];
                     float alphaR = alphaEwald*r;
                     float erfcAlphaR = erfcApprox(alphaR);
-                    float dEdR = (float) (chargeProd * inverseR * inverseR * inverseR);
-                    dEdR = (float) (dEdR * (1.0f-erfcAlphaR-TWO_OVER_SQRT_PI*alphaR*exp(-alphaR*alphaR)));
-                    fvec4 result = deltaR*dEdR;
-                    (fvec4(forces+4*i)-result).store(forces+4*i);
-                    (fvec4(forces+4*j)+result).store(forces+4*j);
-                    if (includeEnergy)
-                        threadEnergy[threadIndex] -= chargeProd*inverseR*(1.0f-erfcAlphaR);
+                    if (1-erfcAlphaR > 1e-6f) {
+                        float dEdR = (float) (chargeProd * inverseR * inverseR * inverseR);
+                        dEdR = (float) (dEdR * (1.0f-erfcAlphaR-TWO_OVER_SQRT_PI*alphaR*exp(-alphaR*alphaR)));
+                        fvec4 result = deltaR*dEdR;
+                        (fvec4(forces+4*i)-result).store(forces+4*i);
+                        (fvec4(forces+4*j)+result).store(forces+4*j);
+                        if (includeEnergy)
+                            threadEnergy[threadIndex] -= chargeProd*inverseR*(1.0f-erfcAlphaR);
+                    }
                 }
             }
         }
