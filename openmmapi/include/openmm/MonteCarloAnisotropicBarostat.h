@@ -35,6 +35,7 @@
 #include "Force.h"
 #include "Vec3.h"
 #include <string>
+#include "OpenMMException.h"
 #include "internal/windowsExport.h"
 
 namespace OpenMM {
@@ -139,16 +140,43 @@ public:
         return coupleXY;
     }
     /**
+     * Sets whether to change the X- and Y-dimensions of the periodic box the same amount
+     * throws OpenMMException if two other axes are coupled already
+     */
+    void setCoupleXY(bool set) {
+        if (set && (coupleXZ || coupleYZ))
+            throw OpenMMException("MonteCarloAnisotropicBarostat: Can only couple one pair of axes.");
+        coupleXY = set;
+    }
+    /**
      * Get whether to change the X- and Z-dimensions of the periodic box the same amount
      */
     bool getCoupleXZ() const {
         return coupleXZ;
     }
     /**
+     * Sets whether to change the X- and Z-dimensions of the periodic box the same amount
+     * throws OpenMMException if two other axes are coupled already
+     */
+    void setCoupleXZ(bool set) {
+        if (set && (coupleXY || coupleYZ))
+            throw OpenMMException("MonteCarloAnisotropicBarostat: Can only couple one pair of axes.");
+        coupleXZ = set;
+    }
+    /**
      * Get whether to change the Y- and Z-dimensions of the periodic box the same amount
      */
     bool getCoupleYZ() const {
         return coupleYZ;
+    }
+    /**
+     * Sets whether to change the Y- and Z-dimensions of the periodic box the same amount
+     * throws OpenMMException if two other axes are coupled already
+     */
+    void setCoupleYZ(bool set) {
+        if (set && (coupleXY || coupleXZ))
+            throw OpenMMException("MonteCarloAnisotropicBarostat: Can only couple one pair of axes.");
+        coupleYZ = set;
     }
     /**
      * Get the frequency (in time steps) at which Monte Carlo pressure changes should be attempted.  If this is set to

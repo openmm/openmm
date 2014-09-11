@@ -134,22 +134,31 @@ void MonteCarloAnisotropicBarostatImpl::updateContextState(ContextImpl& context)
     double deltaVolume = volumeScale[axis]*2*(genrand_real2(random)-0.5);
     double newVolume = volume+deltaVolume;
     if (semiIsotropic) {
-        double area, newArea;
-        if (owner.getCoupleXY()) {
-            area = box[0][0]*box[1][1];
-            newArea = newVolume / box[2][2];
-            lengthScale[0] = sqrt(newArea/area);
-            lengthScale[1] = lengthScale[0];
-        } else if (owner.getCoupleXZ()) {
-            area = box[0][0]*box[2][2];
-            newArea = newVolume / box[1][1];
-            lengthScale[0] = sqrt(newArea/area);
-            lengthScale[2] = lengthScale[0];
-        } else { // owner.getCoupleYZ()
-            area = box[1][1]*box[2][2];
-            newArea = newVolume / box[0][0];
-            lengthScale[1] = sqrt(newArea/area);
-            lengthScale[2] = lengthScale[1];
+        if (axis == 0) {
+            double area, newArea;
+            if (owner.getCoupleXY()) {
+                area = box[0][0]*box[1][1];
+                newArea = newVolume / box[2][2];
+                lengthScale[0] = sqrt(newArea/area);
+                lengthScale[1] = lengthScale[0];
+            } else if (owner.getCoupleXZ()) {
+                area = box[0][0]*box[2][2];
+                newArea = newVolume / box[1][1];
+                lengthScale[0] = sqrt(newArea/area);
+                lengthScale[2] = lengthScale[0];
+            } else { // owner.getCoupleYZ()
+                area = box[1][1]*box[2][2];
+                newArea = newVolume / box[0][0];
+                lengthScale[1] = sqrt(newArea/area);
+                lengthScale[2] = lengthScale[1];
+            }
+        } else { // scale the indepenent axis
+            if (owner.getCoupleXY())
+                lengthScale[2] = newVolume/volume;
+            else if (owner.getCoupleXZ())
+                lengthScale[1] = newVolume/volume;
+            else // owner.getCoupleYZ()
+                lengthScale[0] = newVolume/volume;
         }
     } else {
         lengthScale[axis] = newVolume/volume;
