@@ -30,7 +30,6 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/MonteCarloAnisotropicBarostat.h"
-#include "openmm/OpenMMException.h"
 #include "openmm/internal/MonteCarloAnisotropicBarostatImpl.h"
 #include "openmm/internal/OSRngSeed.h"
 
