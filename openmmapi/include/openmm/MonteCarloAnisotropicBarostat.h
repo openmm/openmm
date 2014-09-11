@@ -146,6 +146,8 @@ public:
     void setCoupleXY(bool set) {
         if (set && (coupleXZ || coupleYZ))
             throw OpenMMException("MonteCarloAnisotropicBarostat: Can only couple one pair of axes.");
+        if (set && (!scaleX || !scaleY))
+            throw OpenMMException("MonteCarloAnisotropicBarostat: All coupled axes must be scalable.");
         coupleXY = set;
     }
     /**
@@ -161,6 +163,8 @@ public:
     void setCoupleXZ(bool set) {
         if (set && (coupleXY || coupleYZ))
             throw OpenMMException("MonteCarloAnisotropicBarostat: Can only couple one pair of axes.");
+        if (set && (!scaleX || !scaleZ))
+            throw OpenMMException("MonteCarloAnisotropicBarostat: All coupled axes must be scalable.");
         coupleXZ = set;
     }
     /**
@@ -176,6 +180,8 @@ public:
     void setCoupleYZ(bool set) {
         if (set && (coupleXY || coupleXZ))
             throw OpenMMException("MonteCarloAnisotropicBarostat: Can only couple one pair of axes.");
+        if (set && (!scaleY || !scaleZ))
+            throw OpenMMException("MonteCarloAnisotropicBarostat: All coupled axes must be scalable.");
         coupleYZ = set;
     }
     /**
