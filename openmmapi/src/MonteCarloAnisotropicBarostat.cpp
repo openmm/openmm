@@ -37,9 +37,9 @@
 using namespace OpenMM;
 
 MonteCarloAnisotropicBarostat::MonteCarloAnisotropicBarostat(const Vec3& defaultPressure, double temperature, bool scaleX, bool scaleY, bool scaleZ,
-                                                             bool coupleXY, bool coupleXZ, bool coupleYZ, int frequency) :
+                                                             int frequency, bool coupleXY, bool coupleXZ, bool coupleYZ) :
         defaultPressure(defaultPressure), temperature(temperature), scaleX(scaleX), scaleY(scaleY), scaleZ(scaleZ), 
-        coupleXY(coupleXY), coupleXZ(coupleXZ), coupleYZ(coupleYZ), frequency(frequency) {
+        frequency(frequency), coupleXY(coupleXY), coupleXZ(coupleXZ), coupleYZ(coupleYZ) {
     // Check for illegal choices
     if ((coupleXY && coupleXZ) || (coupleXY && coupleYZ) || (coupleXZ && coupleYZ))
         throw OpenMMException("MonteCarloAnisotropicBarostat: Cannot couple more than 2 sets of axes.");

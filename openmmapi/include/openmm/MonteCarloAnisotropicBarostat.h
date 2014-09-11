@@ -91,13 +91,13 @@ public:
      * @param scaleX            whether to allow the X dimension of the periodic box to change size
      * @param scaleY            whether to allow the Y dimension of the periodic box to change size
      * @param scaleZ            whether to allow the Z dimension of the periodic box to change size
+     * @param frequency         the frequency at which Monte Carlo pressure changes should be attempted (in time steps)
      * @param coupleXY          whether to change the X and Y dimensions of the periodic box together (semi-isotropic)
      * @param coupleXZ          whether to change the X and Z dimensions of the periodic box together (semi-isotropic)
      * @param coupleYZ          whether to change the Y and Z dimensions of the periodic box together (semi-isotropic)
-     * @param frequency         the frequency at which Monte Carlo pressure changes should be attempted (in time steps)
      */
     MonteCarloAnisotropicBarostat(const Vec3& defaultPressure, double temperature, bool scaleX = true, bool scaleY = true, bool scaleZ = true,
-                                  bool coupleXY = false, bool coupleXZ = false, bool coupleYZ = false, int frequency = 25);
+                                  int frequency = 25, bool coupleXY = false, bool coupleXZ = false, bool coupleYZ = false);
     /**
      * Get the default pressure (in bar).
      *
