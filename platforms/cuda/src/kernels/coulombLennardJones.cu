@@ -19,7 +19,7 @@ if ((!isExcluded && r2 < CUTOFF_SQUARED) || needCorrection) {
     if (needCorrection) {
         // Subtract off the part of this interaction that was included in the reciprocal space contribution.
 
-        if (1.0f-erfcAlphaR > 1e-6f) {
+        if (1-erfcAlphaR > 1e-6) {
             real erfAlphaR = ERF(alphaR); // Our erfc approximation is not accurate enough when r is very small, which happens with Drude particles.
             tempForce = -prefactor*(erfAlphaR-alphaR*expAlphaRSqr*TWO_OVER_SQRT_PI);
             tempEnergy += -prefactor*erfAlphaR;
