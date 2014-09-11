@@ -10,13 +10,10 @@ if ((!isExcluded && r2 < CUTOFF_SQUARED) || needCorrection) {
 #else
     // This approximation for erfc is from Abramowitz and Stegun (1964) p. 299.  They cite the following as
     // the original source: C. Hastings, Jr., Approximations for Digital Computers (1955).  It has a maximum
-    // error of 3e-7.
+    // error of 1.5e-7.
 
-    real t = 1.0f+(0.0705230784f+(0.0422820123f+(0.0092705272f+(0.0001520143f+(0.0002765672f+0.0000430638f*alphaR)*alphaR)*alphaR)*alphaR)*alphaR)*alphaR;
-    t *= t;
-    t *= t;
-    t *= t;
-    const real erfcAlphaR = RECIP(t*t);
+    const real t = RECIP(1.0f+0.3275911f*alphaR);
+    const real erfcAlphaR = (0.254829592f+(-0.284496736f+(1.421413741f+(-1.453152027f+1.061405429f*t)*t)*t)*t)*t*expAlphaRSqr;
 #endif
     real tempForce = 0.0f;
     if (needCorrection) {
