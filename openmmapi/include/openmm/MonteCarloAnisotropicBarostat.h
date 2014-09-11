@@ -82,16 +82,21 @@ public:
         return key;
     }
     /**
-     * Create a MonteCarloAnisotropicBarostat.
+     * Create a MonteCarloAnisotropicBarostat. You can only specify one of coupleXY, coupleXZ, or coupleYZ. And
+     * each of the dimensions coupled must be able to be scaled.
      *
      * @param defaultPressure   The default pressure acting on each axis (in bar)
      * @param temperature       the temperature at which the system is being maintained (in Kelvin)
      * @param scaleX            whether to allow the X dimension of the periodic box to change size
      * @param scaleY            whether to allow the Y dimension of the periodic box to change size
      * @param scaleZ            whether to allow the Z dimension of the periodic box to change size
+     * @param coupleXY          whether to change the X and Y dimensions of the periodic box together (semi-isotropic)
+     * @param coupleXZ          whether to change the X and Z dimensions of the periodic box together (semi-isotropic)
+     * @param coupleYZ          whether to change the Y and Z dimensions of the periodic box together (semi-isotropic)
      * @param frequency         the frequency at which Monte Carlo pressure changes should be attempted (in time steps)
      */
-    MonteCarloAnisotropicBarostat(const Vec3& defaultPressure, double temperature, bool scaleX = true, bool scaleY = true, bool scaleZ = true, int frequency = 25);
+    MonteCarloAnisotropicBarostat(const Vec3& defaultPressure, double temperature, bool scaleX = true, bool scaleY = true, bool scaleZ = true,
+                                  bool coupleXY = false, bool coupleXZ = false, bool coupleYZ = false, int frequency = 25);
     /**
      * Get the default pressure (in bar).
      *
@@ -126,6 +131,24 @@ public:
      */
     bool getScaleZ() const {
       return scaleZ;
+    }
+    /**
+     * Get whether to change the X- and Y-dimensions of the periodic box the same amount
+     */
+    bool getCoupleXY() const {
+        return coupleXY;
+    }
+    /**
+     * Get whether to change the X- and Z-dimensions of the periodic box the same amount
+     */
+    bool getCoupleXZ() const {
+        return coupleXZ;
+    }
+    /**
+     * Get whether to change the Y- and Z-dimensions of the periodic box the same amount
+     */
+    bool getCoupleYZ() const {
+        return coupleYZ;
     }
     /**
      * Get the frequency (in time steps) at which Monte Carlo pressure changes should be attempted.  If this is set to
@@ -177,6 +200,7 @@ private:
     Vec3 defaultPressure;
     double temperature;
     bool scaleX, scaleY, scaleZ;
+    bool coupleXY, coupleXZ, coupleYZ;
     int frequency, randomNumberSeed;
 };
 

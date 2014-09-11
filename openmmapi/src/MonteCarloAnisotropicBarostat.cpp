@@ -30,13 +30,21 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/MonteCarloAnisotropicBarostat.h"
+#include "openmm/OpenMMException.h"
 #include "openmm/internal/MonteCarloAnisotropicBarostatImpl.h"
 #include "openmm/internal/OSRngSeed.h"
 
 using namespace OpenMM;
 
-MonteCarloAnisotropicBarostat::MonteCarloAnisotropicBarostat(const Vec3& defaultPressure, double temperature, bool scaleX, bool scaleY, bool scaleZ, int frequency) :
-        defaultPressure(defaultPressure), temperature(temperature), scaleX(scaleX), scaleY(scaleY), scaleZ(scaleZ), frequency(frequency) {
+MonteCarloAnisotropicBarostat::MonteCarloAnisotropicBarostat(const Vec3& defaultPressure, double temperature, bool scaleX, bool scaleY, bool scaleZ,
+                                                             bool coupleXY, bool coupleXZ, bool coupleYZ, int frequency) :
+        defaultPressure(defaultPressure), temperature(temperature), scaleX(scaleX), scaleY(scaleY), scaleZ(scaleZ), 
+        coupleXY(coupleXY), coupleXZ(coupleXZ), coupleYZ(coupleYZ), frequency(frequency) {
+    // Check for illegal choices
+    if ((coupleXY && coupleXZ) || (coupleXY && coupleYZ) || (coupleXZ && coupleYZ))
+        throw OpenMMException("MonteCarloAnisotropicBarostat: Cannot couple more than 2 sets of axes.");
+    if ((coupleXY && (!scaleX || !scaleY)) || (coupleXZ && (!scaleX || !scaleZ)) || (coupleYZ && (!scaleY || !scaleZ)))
+        throw OpenMMException("All coupled axes must be scalable.");
     setRandomNumberSeed(osrngseed());
 }
 

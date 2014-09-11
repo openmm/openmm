@@ -47,6 +47,12 @@ const float RGAS = BOLTZMANN*AVOGADRO; // (J/(mol K))
 const float BOLTZ = RGAS/1000;         // (kJ/(mol K))
 
 MonteCarloAnisotropicBarostatImpl::MonteCarloAnisotropicBarostatImpl(const MonteCarloAnisotropicBarostat& owner) : owner(owner), step(0) {
+    semiIsotropic = owner.getCoupleXY() || owner.getCoupleXZ() || owner.getCoupleYZ();
+    if (semiIsotropic)
+        scaleIndependent = (owner.getCoupleXY() && owner.getScaleZ()) || (owner.getCoupleXZ() && owner.getScaleY()) ||
+                           (owner.getCoupleYZ() && owner.getScaleX());
+    else
+        scaleIndependent = false; // not used in this case, but still initialize
 }
 
 void MonteCarloAnisotropicBarostatImpl::initialize(ContextImpl& context) {
@@ -56,10 +62,13 @@ void MonteCarloAnisotropicBarostatImpl::initialize(ContextImpl& context) {
     context.getPeriodicBoxVectors(box[0], box[1], box[2]);
     double volume = box[0][0]*box[1][1]*box[2][2];
     for (int i=0; i<3; i++) {
+        // The third elements will be ignored for semi-isotropic scaling
         volumeScale[i] = 0.01*volume;
         numAttempted[i] = 0;
         numAccepted[i] = 0;
     }
+    if (semiIsotropic)
+        volumeScale[0] = 0.02*volume; // for coupled axes
     init_gen_rand(owner.getRandomNumberSeed(), random);
 }
 
@@ -79,34 +88,72 @@ void MonteCarloAnisotropicBarostatImpl::updateContextState(ContextImpl& context)
     int axis;
     while (true) {
         double rnd = genrand_real2(random)*3.0;
-        if (rnd < 1.0) {
-            if (owner.getScaleX()) {
+        if (semiIsotropic) {
+            if (rnd < 2.0) {
                 axis = 0;
-                pressure = context.getParameter(MonteCarloAnisotropicBarostat::PressureX())*(AVOGADRO*1e-25);
-                break;
-            }
-        } else if (rnd < 2.0) {
-            if (owner.getScaleY()) {
+                if (owner.getCoupleXY() || owner.getCoupleXZ()) {
+                    pressure = context.getParameter(MonteCarloAnisotropicBarostat::PressureX())*(AVOGADRO*1e-25);
+                } else { // if owner.getCoupleYZ()
+                    pressure = context.getParameter(MonteCarloAnisotropicBarostat::PressureY())*(AVOGADRO*1e-25);
+                }
+            } else if (scaleIndependent) {
                 axis = 1;
-                pressure = context.getParameter(MonteCarloAnisotropicBarostat::PressureY())*(AVOGADRO*1e-25);
+                if (owner.getCoupleXY())
+                    pressure = context.getParameter(MonteCarloAnisotropicBarostat::PressureZ())*(AVOGADRO*1e-25);
+                else if (owner.getCoupleXZ())
+                    pressure = context.getParameter(MonteCarloAnisotropicBarostat::PressureY())*(AVOGADRO*1e-25);
+                else // owner.getCoupleYZ()
+                    pressure = context.getParameter(MonteCarloAnisotropicBarostat::PressureX())*(AVOGADRO*1e-25);
+            }
+        } else {
+            if (rnd < 1.0) {
+                if (owner.getScaleX()) {
+                    axis = 0;
+                    pressure = context.getParameter(MonteCarloAnisotropicBarostat::PressureX())*(AVOGADRO*1e-25);
+                    break;
+                }
+            } else if (rnd < 2.0) {
+                if (owner.getScaleY()) {
+                    axis = 1;
+                    pressure = context.getParameter(MonteCarloAnisotropicBarostat::PressureY())*(AVOGADRO*1e-25);
+                    break;
+                }
+            } else if (owner.getScaleZ()) {
+                axis = 2;
+                pressure = context.getParameter(MonteCarloAnisotropicBarostat::PressureZ())*(AVOGADRO*1e-25);
                 break;
             }
-        } else if (owner.getScaleZ()) {
-            axis = 2;
-            pressure = context.getParameter(MonteCarloAnisotropicBarostat::PressureZ())*(AVOGADRO*1e-25);
-            break;
         }
     }
     
     // Modify the periodic box size.
     
-    Vec3 box[3];
+    Vec3 box[3], lengthScale(1.0, 1.0, 1.0);
     context.getPeriodicBoxVectors(box[0], box[1], box[2]);
     double volume = box[0][0]*box[1][1]*box[2][2];
     double deltaVolume = volumeScale[axis]*2*(genrand_real2(random)-0.5);
     double newVolume = volume+deltaVolume;
-    Vec3 lengthScale(1.0, 1.0, 1.0);
-    lengthScale[axis] = newVolume/volume;
+    if (semiIsotropic) {
+        double area, newArea;
+        if (owner.getCoupleXY()) {
+            area = box[0][0]*box[1][1];
+            newArea = newVolume / box[2][2];
+            lengthScale[0] = sqrt(newArea/area);
+            lengthScale[1] = lengthScale[0];
+        } else if (owner.getCoupleXZ()) {
+            area = box[0][0]*box[2][2];
+            newArea = newVolume / box[1][1];
+            lengthScale[0] = sqrt(newArea/area);
+            lengthScale[2] = lengthScale[0];
+        } else { // owner.getCoupleYZ()
+            area = box[1][1]*box[2][2];
+            newArea = newVolume / box[0][0];
+            lengthScale[1] = sqrt(newArea/area);
+            lengthScale[2] = lengthScale[1];
+        }
+    } else {
+        lengthScale[axis] = newVolume/volume;
+    }
     kernel.getAs<ApplyMonteCarloBarostatKernel>().scaleCoordinates(context, lengthScale[0], lengthScale[1], lengthScale[2]);
     context.getOwner().setPeriodicBoxVectors(box[0]*lengthScale[0], box[1]*lengthScale[1], box[2]*lengthScale[2]);
     

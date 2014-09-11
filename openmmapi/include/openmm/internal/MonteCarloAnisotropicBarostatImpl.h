@@ -64,6 +64,10 @@ private:
     double volumeScale[3];
     OpenMM_SFMT::SFMT random;
     Kernel kernel;
+
+    // For semi-isotropic scaling
+    bool semiIsotropic;
+    bool scaleIndependent;
 };
 
 } // namespace OpenMM
