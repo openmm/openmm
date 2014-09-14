@@ -12,7 +12,9 @@
 #   libOpenMMCPU_static.a
 #----------------------------------------------------
 
-SUBDIRS (tests)
+IF(BUILD_TESTING)
+    SUBDIRS(tests)
+ENDIF(BUILD_TESTING)
 
 # The source is organized into subdirectories, but we handle them all from
 # this CMakeLists file rather than letting CMake visit them as SUBDIRS.
@@ -82,4 +84,3 @@ ENDIF(OPENMM_BUILD_SHARED_LIB)
 IF(OPENMM_BUILD_STATIC_LIB)
     SUBDIRS (staticTarget)
 ENDIF(OPENMM_BUILD_STATIC_LIB)
-
