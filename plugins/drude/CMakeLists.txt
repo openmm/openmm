@@ -145,4 +145,6 @@ ENDIF (EXECUTABLE_OUTPUT_PATH)
 
 #INCLUDE(ApiDoxygen.cmake)
 
-ADD_SUBDIRECTORY(serialization/tests)
+IF(BUILD_TESTING)
+    ADD_SUBDIRECTORY(serialization/tests)
+ENDIF(BUILD_TESTING)
