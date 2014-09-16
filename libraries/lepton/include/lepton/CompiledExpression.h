@@ -89,6 +89,7 @@ private:
     mutable std::vector<double> workspace;
     mutable std::vector<double> argValues;
     std::map<std::string, double> dummyVariables;
+    std::vector<double> constants;
     asmjit::JitRuntime runtime;
     void* jitCode;
 };
