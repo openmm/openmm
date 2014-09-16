@@ -36,7 +36,9 @@
 
 using namespace Lepton;
 using namespace std;
-using namespace asmjit;
+#ifdef LEPTON_USE_JIT
+    using namespace asmjit;
+#endif
 
 CompiledExpression::CompiledExpression() : jitCode(NULL) {
 }
@@ -50,7 +52,9 @@ CompiledExpression::CompiledExpression(const ParsedExpression& expression) : jit
         if (operation[i]->getNumArguments() > maxArguments)
             maxArguments = operation[i]->getNumArguments();
     argValues.resize(maxArguments);
+#ifdef LEPTON_USE_JIT
     generateJitCode();
+#endif
 }
 
 CompiledExpression::~CompiledExpression() {
@@ -73,7 +77,9 @@ CompiledExpression& CompiledExpression::operator=(const CompiledExpression& expr
     operation.resize(expression.operation.size());
     for (int i = 0; i < (int) operation.size(); i++)
         operation[i] = expression.operation[i]->clone();
+#ifdef LEPTON_USE_JIT
     generateJitCode();
+#endif
     return *this;
 }
 
@@ -138,9 +144,9 @@ double& CompiledExpression::getVariableReference(const string& name) {
 }
 
 double CompiledExpression::evaluate() const {
-    if (jitCode != NULL)
-        return ((double (*)()) jitCode)();
-
+#ifdef LEPTON_USE_JIT
+    return ((double (*)()) jitCode)();
+#else
     // Loop over the operations and evaluate each one.
     
     for (int step = 0; step < operation.size(); step++) {
@@ -154,8 +160,10 @@ double CompiledExpression::evaluate() const {
         }
     }
     return workspace[workspace.size()-1];
+#endif
 }
 
+#ifdef LEPTON_USE_JIT
 static double evaluateOperation(Operation* op, double* args) {
     map<string, double>* dummyVariables = NULL;
     return op->evaluate(args, *dummyVariables);
@@ -358,3 +366,4 @@ void CompiledExpression::generateSingleArgCall(X86Compiler& c, X86XmmVar& dest, 
     call->setArg(0, arg);
     call->setRet(0, dest);
 }
+#endif
