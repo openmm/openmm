@@ -34,6 +34,7 @@
 
 #include "ExpressionTreeNode.h"
 #include "windowsIncludes.h"
+#include "asmjit.h"
 #include <map>
 #include <set>
 #include <string>
@@ -78,6 +79,7 @@ private:
     friend class ParsedExpression;
     CompiledExpression(const ParsedExpression& expression);
     void compileExpression(const ExpressionTreeNode& node, std::vector<std::pair<ExpressionTreeNode, int> >& temps);
+    void generateJitCode();
     int findTempIndex(const ExpressionTreeNode& node, std::vector<std::pair<ExpressionTreeNode, int> >& temps);
     std::vector<std::vector<int> > arguments;
     std::vector<int> target;
@@ -87,6 +89,8 @@ private:
     mutable std::vector<double> workspace;
     mutable std::vector<double> argValues;
     std::map<std::string, double> dummyVariables;
+    asmjit::JitRuntime runtime;
+    void* jitCode;
 };
 
 } // namespace Lepton

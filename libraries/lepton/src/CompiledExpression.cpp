@@ -36,14 +36,21 @@
 
 using namespace Lepton;
 using namespace std;
+using namespace asmjit;
 
-CompiledExpression::CompiledExpression() {
+CompiledExpression::CompiledExpression() : jitCode(NULL) {
 }
 
-CompiledExpression::CompiledExpression(const ParsedExpression& expression) {
+CompiledExpression::CompiledExpression(const ParsedExpression& expression) : jitCode(NULL) {
     ParsedExpression expr = expression.optimize(); // Just in case it wasn't already optimized.
     vector<pair<ExpressionTreeNode, int> > temps;
     compileExpression(expr.getRootNode(), temps);
+    int maxArguments = 1;
+    for (int i = 0; i < (int) operation.size(); i++)
+        if (operation[i]->getNumArguments() > maxArguments)
+            maxArguments = operation[i]->getNumArguments();
+    argValues.resize(maxArguments);
+    generateJitCode();
 }
 
 CompiledExpression::~CompiledExpression() {
@@ -52,7 +59,7 @@ CompiledExpression::~CompiledExpression() {
             delete operation[i];
 }
 
-CompiledExpression::CompiledExpression(const CompiledExpression& expression) {
+CompiledExpression::CompiledExpression(const CompiledExpression& expression) : jitCode(NULL) {
     *this = expression;
 }
 
@@ -66,6 +73,7 @@ CompiledExpression& CompiledExpression::operator=(const CompiledExpression& expr
     operation.resize(expression.operation.size());
     for (int i = 0; i < (int) operation.size(); i++)
         operation[i] = expression.operation[i]->clone();
+    generateJitCode();
     return *this;
 }
 
@@ -103,11 +111,8 @@ void CompiledExpression::compileExpression(const ExpressionTreeNode& node, vecto
                     sequential = false;
             if (sequential)
                 arguments[stepIndex].push_back(args[0]);
-            else {
+            else
                 arguments[stepIndex] = args;
-                if (args.size() > argValues.size())
-                    argValues.resize(args.size(), 0.0);
-            }
         }
     }
     temps.push_back(make_pair(node, workspace.size()));
@@ -133,6 +138,9 @@ double& CompiledExpression::getVariableReference(const string& name) {
 }
 
 double CompiledExpression::evaluate() const {
+    if (jitCode != NULL)
+        return ((double (*)()) jitCode)();
+
     // Loop over the operations and evaluate each one.
     
     for (int step = 0; step < operation.size(); step++) {
@@ -146,4 +154,55 @@ double CompiledExpression::evaluate() const {
         }
     }
     return workspace[workspace.size()-1];
+}
+
+static double evaluateOperation(Operation* op, double* args) {
+    map<string, double>* dummyVariables = NULL;
+    return op->evaluate(args, *dummyVariables);
+}
+
+void CompiledExpression::generateJitCode() {
+    X86Compiler c(&runtime);
+    c.addFunc(kFuncConvHost, FuncBuilder0<double>());
+    vector<X86XmmVar> workspaceVar(workspace.size());
+    for (int i = 0; i < (int) workspaceVar.size(); i++)
+        workspaceVar[i] = c.newXmmVar(kX86VarTypeXmmSd);
+    X86GpVar workspacePointer(c);
+    X86GpVar argsPointer(c);
+    c.mov(workspacePointer, imm_ptr(&workspace[0]));
+    c.mov(argsPointer, imm_ptr(&argValues[0]));
+    
+    // Load the variables.
+    
+    for (set<string>::const_iterator iter = variableNames.begin(); iter != variableNames.end(); ++iter) {
+        map<string, int>::iterator index = variableIndices.find(*iter);
+        c.movsd(workspaceVar[index->second], x86::ptr(workspacePointer, 8*index->second, 0));
+    }
+    
+    // Evaluate the operations.
+    
+    for (int step = 0; step < (int) operation.size(); step++) {
+        const vector<int>& args = arguments[step];
+        if (args.size() == 1) {
+            // One or more sequential arguments.
+            
+            for (int i = 0; i < operation[step]->getNumArguments(); i++)
+                c.movsd(x86::ptr(argsPointer, 8*i, 0), workspaceVar[args[0]+i]);
+        }
+        else {
+            // Two or more non-sequential arguments.
+            
+            for (int i = 0; i < (int) args.size(); i++)
+                c.movsd(x86::ptr(argsPointer, 8*i, 0), workspaceVar[args[i]]);
+        }
+        X86GpVar fn(c, kVarTypeIntPtr);
+        c.mov(fn, imm_ptr((void*) evaluateOperation));
+        X86CallNode* call = c.call(fn, kFuncConvHost, FuncBuilder2<double, Operation*, double*>());
+        call->setArg(0, imm_ptr(operation[step]));
+        call->setArg(1, imm_ptr(&argValues[0]));
+        call->setRet(0, workspaceVar[target[step]]);
+    }
+    c.ret(workspacePointer);
+    c.endFunc();
+    jitCode = c.make();
 }
