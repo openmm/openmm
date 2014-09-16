@@ -80,6 +80,7 @@ private:
     CompiledExpression(const ParsedExpression& expression);
     void compileExpression(const ExpressionTreeNode& node, std::vector<std::pair<ExpressionTreeNode, int> >& temps);
     void generateJitCode();
+    void generateSingleArgCall(asmjit::X86Compiler& c, asmjit::X86XmmVar& dest, asmjit::X86XmmVar& arg, double (*function)(double));
     int findTempIndex(const ExpressionTreeNode& node, std::vector<std::pair<ExpressionTreeNode, int> >& temps);
     std::vector<std::vector<int> > arguments;
     std::vector<int> target;
