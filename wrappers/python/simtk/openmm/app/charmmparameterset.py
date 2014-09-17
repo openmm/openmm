@@ -13,7 +13,7 @@ Copyright (c) 2014 the Authors
 
 Author: Jason M. Swails
 Contributors:
-Date: July 17, 2014
+Date: Sep. 17, 2014
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -471,6 +471,11 @@ class CharmmParameterSet(object):
                 except IndexError:
                     raise CharmmFileError('Could not parse NBFIX terms.')
                 self.nbfix_types[(min(at1, at2), max(at1, at2))] = (emin, rmin)
+        # If there were any CMAP terms stored in the parameter set, the last one
+        # defined will not have been added to the set. Add it now.
+        if current_cmap is not None:
+            ty = CmapType(current_cmap_res, current_cmap_data)
+            self.cmap_types[current_cmap] = ty
         # Now we're done. Load the nonbonded types into the relevant AtomType
         # instances. In order for this to work, all keys in nonbonded_types
         # must be in the self.atom_types_str dict. Raise a RuntimeError if this
