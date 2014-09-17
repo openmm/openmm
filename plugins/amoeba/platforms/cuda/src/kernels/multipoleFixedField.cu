@@ -40,10 +40,20 @@ __device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, real3 de
 
         real r = SQRT(r2);
         real ralpha = EWALD_ALPHA*r;
-        real bn0 = erfc(ralpha)/r;
+        real exp2a = EXP(-(ralpha*ralpha));
+#ifdef USE_DOUBLE_PRECISION
+        const real erfcAlphaR = erfc(ralpha);
+#else
+        // This approximation for erfc is from Abramowitz and Stegun (1964) p. 299.  They cite the following as
+        // the original source: C. Hastings, Jr., Approximations for Digital Computers (1955).  It has a maximum
+        // error of 1.5e-7.
+
+        const real t = RECIP(1.0f+0.3275911f*ralpha);
+        const real erfcAlphaR = (0.254829592f+(-0.284496736f+(1.421413741f+(-1.453152027f+1.061405429f*t)*t)*t)*t)*t*exp2a;
+#endif
+        real bn0 = erfcAlphaR/r;
         real alsq2 = 2*EWALD_ALPHA*EWALD_ALPHA;
         real alsq2n = RECIP(SQRT_PI*EWALD_ALPHA);
-        real exp2a = EXP(-(ralpha*ralpha));
         alsq2n *= alsq2;
         real bn1 = (bn0+alsq2n*exp2a)/r2;
         alsq2n *= alsq2;
