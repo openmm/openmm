@@ -330,7 +330,7 @@ public:
      * the quadrupole moment is still undefined and should be ignored.
      *
      * @param context      context
-     * @param outputMultipoleMonents (charge,
+     * @param outputMultipoleMoments (charge,
                                       dipole_x, dipole_y, dipole_z,
                                       quadrupole_xx, quadrupole_xy, quadrupole_xz,
                                       quadrupole_yx, quadrupole_yy, quadrupole_yz,
