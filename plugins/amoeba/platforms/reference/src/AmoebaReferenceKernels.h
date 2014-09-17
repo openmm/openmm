@@ -387,7 +387,7 @@ public:
      * Get the system multipole moments.
      *
      * @param context                context 
-     * @param outputMultipoleMonents vector of multipole moments:
+     * @param outputMultipoleMoments vector of multipole moments:
                                      (charge,
                                       dipole_x, dipole_y, dipole_z,
                                       quadrupole_xx, quadrupole_xy, quadrupole_xz,

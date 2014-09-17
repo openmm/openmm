@@ -353,7 +353,7 @@ public:
     virtual void getElectrostaticPotential( ContextImpl& context, const std::vector< Vec3 >& inputGrid,
                                             std::vector< double >& outputElectrostaticPotential ) = 0;
 
-    virtual void getSystemMultipoleMoments( ContextImpl& context, std::vector< double >& outputMultipoleMonents ) = 0;
+    virtual void getSystemMultipoleMoments( ContextImpl& context, std::vector< double >& outputMultipoleMoments ) = 0;
     /**
      * Copy changed parameters over to a context.
      *

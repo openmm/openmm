@@ -87,7 +87,7 @@ public:
     void getElectrostaticPotential( ContextImpl& context, const std::vector< Vec3 >& inputGrid,
                                     std::vector< double >& outputElectrostaticPotential );
 
-    void getSystemMultipoleMoments( ContextImpl& context, std::vector< double >& outputMultipoleMonents );
+    void getSystemMultipoleMoments( ContextImpl& context, std::vector< double >& outputMultipoleMoments );
     void updateParametersInContext(ContextImpl& context);
  
 

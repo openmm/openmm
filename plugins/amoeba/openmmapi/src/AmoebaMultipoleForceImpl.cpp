@@ -192,8 +192,8 @@ void AmoebaMultipoleForceImpl::getElectrostaticPotential( ContextImpl& context, 
     kernel.getAs<CalcAmoebaMultipoleForceKernel>().getElectrostaticPotential(context, inputGrid, outputElectrostaticPotential);
 }
 
-void AmoebaMultipoleForceImpl::getSystemMultipoleMoments( ContextImpl& context, std::vector< double >& outputMultipoleMonents ){
-    kernel.getAs<CalcAmoebaMultipoleForceKernel>().getSystemMultipoleMoments(context, outputMultipoleMonents);
+void AmoebaMultipoleForceImpl::getSystemMultipoleMoments( ContextImpl& context, std::vector< double >& outputMultipoleMoments ){
+    kernel.getAs<CalcAmoebaMultipoleForceKernel>().getSystemMultipoleMoments(context, outputMultipoleMoments);
 }
 
 void AmoebaMultipoleForceImpl::updateParametersInContext(ContextImpl& context) {
