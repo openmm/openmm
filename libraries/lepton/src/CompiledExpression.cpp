@@ -226,11 +226,13 @@ void CompiledExpression::generateJitCode() {
     // Load constants into variables.
     
     vector<X86XmmVar> constantVar(constants.size());
-    X86GpVar constantsPointer(c);
-    c.mov(constantsPointer, imm_ptr(&constants[0]));
-    for (int i = 0; i < (constants.size()); i++) {
-        constantVar[i] = c.newXmmVar(kX86VarTypeXmmSd);
-        c.movsd(constantVar[i], x86::ptr(constantsPointer, 8*i, 0));
+    if (constants.size() > 0) {
+        X86GpVar constantsPointer(c);
+        c.mov(constantsPointer, imm_ptr(&constants[0]));
+        for (int i = 0; i < (int) constants.size(); i++) {
+            constantVar[i] = c.newXmmVar(kX86VarTypeXmmSd);
+            c.movsd(constantVar[i], x86::ptr(constantsPointer, 8*i, 0));
+        }
     }
     
     // Evaluate the operations.
