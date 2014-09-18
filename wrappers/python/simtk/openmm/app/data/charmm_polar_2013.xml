@@ -11370,6 +11370,7 @@ sigma14 = [
 
 customNonbondedForce = mm.CustomNonbondedForce('4*eps*((sig/r)^12-(sig/r)^6); eps=epsilon(type1, type2); sig=sigma(type1, type2)')
 customNonbondedForce.setNonbondedMethod(min(nonbondedForce.getNonbondedMethod(), 2))
+customNonbondedForce.setCutoffDistance(nonbondedForce.getCutoffDistance())
 customNonbondedForce.addTabulatedFunction('epsilon', mm.Discrete2DFunction(numAtomClasses, numAtomClasses, epsilon))
 customNonbondedForce.addTabulatedFunction('sigma', mm.Discrete2DFunction(numAtomClasses, numAtomClasses, sigma))
 customNonbondedForce.addPerParticleParameter('type')
