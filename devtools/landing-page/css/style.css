@@ -1,0 +1,41 @@
+
+hr.overfooter {
+  display: block;
+  width: 7rem;
+  height: 1px;
+  margin: 2.5rem auto;
+  background-color: #eee;
+  border: 0;
+}
+
+.btn-xlarge {
+    padding: 18px 28px;
+    font-size: 22px;
+    line-height: normal;
+    -webkit-border-radius: 8px;
+       -moz-border-radius: 8px;
+            border-radius: 8px;
+}
+
+
+/* Space buttons in footer */
+iframe + iframe {
+  margin-left: 10px;
+}
+
+.jumbtron-color {
+    background: #F5F5F5;
+}
+
+.table {
+  font-size: 14px 
+}
+
+.list-group-item-special {
+   border: 0px !important;
+   list-style: none;
+}
+
+p.enlarge {
+   font-size: 14px;
+}
