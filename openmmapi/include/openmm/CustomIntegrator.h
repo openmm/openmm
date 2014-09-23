@@ -308,7 +308,7 @@ public:
      * @param name    the name of the variable to get
      * @return the current value of the parameter
      */
-    double getGlobalVariableByName(const std::string& name);
+    double getGlobalVariableByName(const std::string& name) const;
     /**
      * Set the value of a global variable.
      * 

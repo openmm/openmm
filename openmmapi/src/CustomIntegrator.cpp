@@ -125,7 +125,7 @@ double CustomIntegrator::getGlobalVariable(int index) const {
 }
 
 double CustomIntegrator::getGlobalVariableByName(const string& name) const {
-    for (int i = 0; i < (int) globalNames.size(); i++)
+    for (int i = 0; i < (int) globalNames.size(); i++) {
         if (name == globalNames[i]) {
             return getGlobalVariable(i);
         }
@@ -145,11 +145,12 @@ void CustomIntegrator::setGlobalVariable(int index, double value) {
 }
 
 void CustomIntegrator::setGlobalVariableByName(const string& name, double value) {
-    for (int i = 0; i < (int) globalNames.size(); i++)
+    for (int i = 0; i < (int) globalNames.size(); i++) {
         if (name == globalNames[i]) {
             setGlobalVariable(i, value);
             return;
         }
+    }
     throw OpenMMException("Illegal global variable name: "+name);
 }
 
@@ -162,7 +163,7 @@ void CustomIntegrator::getPerDofVariable(int index, vector<Vec3>& values) const 
 }
 
 void CustomIntegrator::getPerDofVariableByName(const string& name,  vector<Vec3>& values) const {
-    for (int i = 0; i < (int) perDofNames.size(); i++)
+    for (int i = 0; i < (int) perDofNames.size(); i++) {
         if (name == perDofNames[i]) {
             getPerDofVariable(i, values);
             return;
