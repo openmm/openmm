@@ -145,12 +145,11 @@ void CustomIntegrator::setGlobalVariable(int index, double value) {
 }
 
 void CustomIntegrator::setGlobalVariableByName(const string& name, double value) {
-    for (int i = 0; i < (int) globalNames.size(); i++) {
+    for (int i = 0; i < (int) globalNames.size(); i++)
         if (name == globalNames[i]) {
             setGlobalVariable(i, value);
             return;
         }
-    }
     throw OpenMMException("Illegal global variable name: "+name);
 }
 
