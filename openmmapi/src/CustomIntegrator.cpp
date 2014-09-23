@@ -124,6 +124,15 @@ double CustomIntegrator::getGlobalVariable(int index) const {
     return globalValues[index];
 }
 
+double CustomIntegrator::getGlobalVariableByName(const string& name) const {
+    for (int i = 0; i < (int) globalNames.size(); i++) {
+        if (name == globalNames[i]) {
+            return getGlobalVariable(i);
+        }
+    }
+    throw OpenMMException("Illegal global variable name: "+name);
+}
+
 void CustomIntegrator::setGlobalVariable(int index, double value) {
     ASSERT_VALID_INDEX(index, globalValues);
     if (owner != NULL && !globalsAreCurrent) {
@@ -150,6 +159,16 @@ void CustomIntegrator::getPerDofVariable(int index, vector<Vec3>& values) const 
         values = perDofValues[index];
     else
         kernel.getAs<const IntegrateCustomStepKernel>().getPerDofVariable(*context, index, values);
+}
+
+void CustomIntegrator::getPerDofVariableByName(const string& name,  vector<Vec3>& values) const {
+    for (int i = 0; i < (int) perDofNames.size(); i++) {
+        if (name == perDofNames[i]) {
+            getPerDofVariable(i, values);
+            return;
+        }
+    }
+    throw OpenMMException("Illegal per-DOF variable name: "+name);
 }
 
 void CustomIntegrator::setPerDofVariable(int index, const vector<Vec3>& values) {

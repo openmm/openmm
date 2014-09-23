@@ -303,6 +303,13 @@ public:
      */
     double getGlobalVariable(int index) const;
     /**
+     * Get the current value of a global variable, specified by name.
+     *
+     * @param name    the name of the variable to get
+     * @return the current value of the parameter
+     */
+    double getGlobalVariableByName(const std::string& name) const;
+    /**
      * Set the value of a global variable.
      * 
      * @param index   the index of the variable to set
@@ -324,6 +331,14 @@ public:
      *                are stored into this
      */
     void getPerDofVariable(int index, std::vector<Vec3>& values) const;
+    /**
+     * Get the value of a per-DOF variable, specified by name.
+     *
+     * @param name    the name of the variable to get
+     * @param values  the values of the variable for all degrees of freedom
+     *                are stored into this
+     */
+    void getPerDofVariableByName(const std::string& name, std::vector<Vec3>& values) const;
     /**
      * Set the value of a per-DOF variable.
      * 
