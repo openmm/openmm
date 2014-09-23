@@ -32,7 +32,10 @@ script:
   - nosetests -vv --processes=-1 --process-timeout=200
 
 after_success:
+  # Get libraries necessary for building docs and pushing
+  # them to S3
+  - sudo apt-get install python-sphinx python-yaml
+  - sudo pip install sphinxcontrib-bibtex boto
   - make DoxygenApiDocs
   - make sphinxhtml
-  - sudo pip install boto
   - python devtools/ci/push-docs-to-s3.py
