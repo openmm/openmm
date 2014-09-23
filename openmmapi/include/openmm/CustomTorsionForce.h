@@ -65,8 +65,9 @@ namespace OpenMM {
  * </pre></tt>
  *
  * Expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
- * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, erf, erfc, min, max, abs, step, delta.  All trigonometric functions
- * are defined in radians, and log is the natural logarithm.  step(x) = 0 if x is less than 0, 1 otherwise.  delta(x) = 1 if x is 0, 0 otherwise.
+ * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, erf, erfc, min, max, abs, step, delta, square, cube, recip.  All trigonometric functions
+ * are defined in radians, and log is the natural logarithm.  step(x) = 0 if x is less than 0, 1 otherwise.  delta(x) = 1 if x is 0, 0 otherwise.  square(x) = x*x.  cube(x) = x*x*x.  recip(x) = 1/x.  An expression
+ * may also involve intermediate quantities that are defined following the main expression, using ";" as a separator.
  */
 
 class OPENMM_EXPORT CustomTorsionForce : public Force {

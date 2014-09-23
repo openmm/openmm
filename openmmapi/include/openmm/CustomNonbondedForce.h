@@ -120,8 +120,8 @@ namespace OpenMM {
  * frequently, the long range correction can be very slow.  For this reason, it is disabled by default.
  * 
  * Expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
- * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, erf, erfc, min, max, abs, step, delta.  All trigonometric functions
- * are defined in radians, and log is the natural logarithm.  step(x) = 0 if x is less than 0, 1 otherwise.  delta(x) = 1 if x is 0, 0 otherwise.  The names of per-particle parameters
+ * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, erf, erfc, min, max, abs, step, delta, square, cube, recip.  All trigonometric functions
+ * are defined in radians, and log is the natural logarithm.  step(x) = 0 if x is less than 0, 1 otherwise.  delta(x) = 1 if x is 0, 0 otherwise.  square(x) = x*x.  cube(x) = x*x*x.  recip(x) = 1/x.  The names of per-particle parameters
  * have the suffix "1" or "2" appended to them to indicate the values for the two interacting particles.  As seen in the above example,
  * the expression may also involve intermediate quantities that are defined following the main expression, using ";" as a separator.
  *
