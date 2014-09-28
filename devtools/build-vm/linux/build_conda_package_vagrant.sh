@@ -4,5 +4,5 @@ export CC="clang++"
 
 git clone -b vagrant https://github.com/simtk/openmm.git
 cd openmm
-conda install --file tools/ci/requirements-conda.txt --yes
-conda build tools/conda-recipe
+conda install --file devtools/ci/requirements-conda.txt --yes
+conda build devtools/conda-recipe
