@@ -277,7 +277,7 @@ void CpuGBSAOBCForce::threadComputeForce(ThreadPool& threads, int threadIndex) {
             fvec4 alpha2_ij = radii*bornRadii[atomJ];
             fvec4 D_ij = r2/(4.0f*alpha2_ij);
             fvec4 expTerm(expf(-D_ij[0]), expf(-D_ij[1]), expf(-D_ij[2]), expf(-D_ij[3]));
-            fvec4 denominator2 = r2 + alpha2_ij*expTerm; 
+            fvec4 denominator2 = r2 + alpha2_ij*expTerm;
             fvec4 denominator = sqrt(denominator2);
             fvec4 Gpol = (partialChargeI*posJ[3])/denominator; 
             fvec4 dGpol_dr = -Gpol*(1.0f - 0.25f*expTerm)/denominator2;  
@@ -337,6 +337,11 @@ void CpuGBSAOBCForce::threadComputeForce(ThreadPool& threads, int threadIndex) {
             atomy[i] = posq[4*atomIndex+1];
             atomz[i] = posq[4*atomIndex+2];
             blockMask[i] = 0xFFFFFFFF;
+        }
+        for (int i = numInBlock; i < 4; i++) {
+            atomx[i] = 0.0f;
+            atomy[i] = 0.0f;
+            atomz[i] = 0.0f;
         }
         fvec4 offsetRadiusI(atomRadius);
         fvec4 x(atomx);
