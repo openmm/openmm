@@ -34,11 +34,12 @@ class TestSerialize(unittest.TestCase):
         context = Context(system, integrator)
         context.setPositions(self.pdb1.positions)
         state = context.getState(getPositions=True, getForces=True, getEnergy=True)
-        del context, integrator
 
         system2 = copy.deepcopy(system)
         integrator2 = copy.deepcopy(integrator)
         state2 = copy.deepcopy(state)
+
+        del context, integrator
 
 if __name__ == '__main__':
     unittest.main()
