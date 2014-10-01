@@ -454,3 +454,15 @@ Parameters:
         return self.__copy__()
   }
 }
+
+%extend OpenMM::Integrator {
+  %pythoncode {
+    def __getstate__(self):
+        serializationString = XmlSerializer.serialize(self)
+        return serializationString
+
+    def __setstate__(self, serializationString):
+        system = XmlSerializer.deserialize(serializationString)
+        self.this = system.this
+  }
+}
