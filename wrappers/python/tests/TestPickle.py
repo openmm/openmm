@@ -9,7 +9,7 @@ import copy
 import pickle
 
 class TestPickle(unittest.TestCase):
-    """Test serialization wrappers in Python."""
+    """Pickling / deepcopy of OpenMM state and integrator objects."""
 
     def setUp(self):
         """Set up the tests by loading the input pdb files and force field
