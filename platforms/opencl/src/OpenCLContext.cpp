@@ -106,9 +106,8 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
                 // if they supplied a valid deviceIndex, we only look through that one
                 if (i != deviceIndex && deviceIndex >= 0 && deviceIndex < (int) devices.size())
                     continue;
-
-                if (platformVendor == "Apple" && (devices[i].getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_CPU || devices[i].getInfo<CL_DEVICE_VENDOR>() == "AMD"))
-                    continue; // The CPU device on OS X won't work correctly, and there are serious bugs using AMD GPUs.
+                if (platformVendor == "Apple" && (devices[i].getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_CPU))
+                    continue; // The CPU device on OS X won't work correctly.
                 int maxSize = devices[i].getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>()[0];
                 int processingElementsPerComputeUnit = 8;
                 if (devices[i].getInfo<CL_DEVICE_TYPE>() != CL_DEVICE_TYPE_GPU) {
@@ -234,8 +233,6 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
         }
         else
             simdWidth = 1;
-        if (platformVendor == "Apple" && vendor == "AMD")
-            compilationDefines["MAC_AMD_WORKAROUND"] = "";
         if (supports64BitGlobalAtomics)
             compilationDefines["SUPPORTS_64_BIT_ATOMICS"] = "";
         if (supportsDoublePrecision)

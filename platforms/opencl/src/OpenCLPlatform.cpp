@@ -109,7 +109,7 @@ bool OpenCLPlatform::supportsDoublePrecision() const {
 
 bool OpenCLPlatform::isPlatformSupported() {
     // Return false for OpenCL implementations that are known
-    // to be buggy (Apple OSX since 10.7.5)
+    // to be buggy (Apple OS X prior to 10.10).
 
 #ifdef __APPLE__
     char str[256];
@@ -122,12 +122,10 @@ bool OpenCLPlatform::isPlatformSupported() {
     if (sscanf(str, "%d.%d.%d", &major, &minor, &micro) != 3)
         return false;
 
-    if ((major > 11) || (major == 11 && minor > 4) || (major == 11 && minor == 4 && micro >= 2))
-        // 11.4.2 is the darwin release corresponding to OSX 10.7.5, which is the
-        // point at which a number of serious bugs were introduced into the
-        // Apple OpenCL libraries, resulting in catistrophically incorrect MD simulations
-        // (see https://github.com/SimTk/openmm/issues/395 for example). Once a fix is released,
-        // this version check should be updated.
+    if (major < 14)
+        // 14.0.0 is the darwin release corresponding to OS X 10.10.0. Versions prior to that
+        // contained a number of serious bugs in the Apple OpenCL libraries.
+        // (See https://github.com/SimTk/openmm/issues/395 for example.)
         return false;
 #endif
 
