@@ -37,11 +37,11 @@ class TestPickle(unittest.TestCase):
         state = context.getState(getPositions=True, getForces=True, getEnergy=True)
 
         system2 = copy.deepcopy(system)
-        #integrator2 = copy.deepcopy(integrator)
+        integrator2 = copy.deepcopy(integrator)
         state2 = copy.deepcopy(state)
         
         str_state = pickle.dumps(state)
-        #str_integrator = pickle.dumps(integrator)
+        str_integrator = pickle.dumps(integrator)
         
         state3 = pickle.loads(str_state)
         context.setState(state3)
