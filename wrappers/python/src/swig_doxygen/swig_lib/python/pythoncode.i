@@ -75,12 +75,12 @@ class State(_object):
         self._paramMap=paramMap
 
     def __getstate__(self):
-        serializationString = XmlSerializer.serializeState(self)
+        serializationString = XmlSerializer.serialize(self)
         return serializationString
 
     def __setstate__(self, serializationString):
         print 'calling set state'
-        dState = XmlSerializer.deserializeState(serializationString)
+        dState = XmlSerializer.deserialize(serializationString)
         # Safe provided no __slots__ or other weird things are used
         self.__dict__.update(dState.__dict__)
 
