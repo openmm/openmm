@@ -32,6 +32,7 @@ class TestSerialize(unittest.TestCase):
         system = self.forcefield1.createSystem(self.pdb1.topology)
         integrator = VerletIntegrator(2*femtosecond)
         context = Context(system, integrator)
+        context.setPositions(self.pdb1.positions)
         state = context.getState(getPositions=True, getForces=True, getEnergy=True)
         del context, integrator
 
