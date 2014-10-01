@@ -293,7 +293,22 @@ Parameters:
       ss << inputString;
       return OpenMM::XmlSerializer::deserialize<OpenMM::System>(ss);
   }
-  
+
+  %feature(docstring, "This method exists only for backward compatibility. @deprecated Use serialize() instead.") serializeState;
+  static std::string serializeState(const OpenMM::State* object) {
+      std::stringstream ss;
+      OpenMM::XmlSerializer::serialize<OpenMM::State>(object, "State", ss);
+      return ss.str();
+  }
+
+  %feature(docstring, "This method exists only for backward compatibility. @deprecated Use deserialize() instead.") deserializeState;
+  %newobject deserializeState;
+  static OpenMM::State* deserializeState(const char* inputString) {
+      std::stringstream ss;
+      ss << inputString;
+      return OpenMM::XmlSerializer::deserialize<OpenMM::State>(ss);
+  }
+
   static std::string _serializeForce(const OpenMM::Force* object) {
       std::stringstream ss;
       OpenMM::XmlSerializer::serialize<OpenMM::Force>(object, "Force", ss);
