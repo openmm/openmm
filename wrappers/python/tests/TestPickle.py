@@ -8,7 +8,7 @@ import simtk.openmm.app.forcefield as forcefield
 import copy
 import pickle
 
-class TestSerialize(unittest.TestCase):
+class TestPickle(unittest.TestCase):
     """Test serialization wrappers in Python."""
 
     def setUp(self):
