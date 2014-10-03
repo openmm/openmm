@@ -30,11 +30,10 @@ sudo yum clean packages
 
 # Install CUDA6 for RHEL6
 cd ~/Software
-wget http://developer.download.nvidia.com/compute/cuda/repos/rhel6/x86_64/cuda-repo-rhel6-6.0-37.x86_64.rpm
-sudo rpm -i  cuda-repo-rhel6-6.0-37.x86_64.rpm
+wget http://developer.download.nvidia.com/compute/cuda/repos/rhel6/x86_64/cuda-repo-rhel6-6.5-14.x86_64.rpm
+sudo rpm -i  cuda-repo-rhel6-6.5-14.x86_64.rpm
 sudo yum clean expire-cache
 sudo yum install cuda -y
-rm cuda-repo-rhel6-6.0-37.x86_64.rpm
 
 sudo yum update -y  # Force a second update, in case CUDA has necessary patches.
 
