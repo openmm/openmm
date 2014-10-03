@@ -28,12 +28,14 @@ rm ~/rpmbuild -r
 sudo yum clean headers
 sudo yum clean packages
 
-# Install CUDA6 for RHEL6
+# Install CUDA6.5 for RHEL6
 cd ~/Software
 wget http://developer.download.nvidia.com/compute/cuda/repos/rhel6/x86_64/cuda-repo-rhel6-6.5-14.x86_64.rpm
 sudo rpm -i  cuda-repo-rhel6-6.5-14.x86_64.rpm
 sudo yum clean expire-cache
 sudo yum install cuda -y
+# NOTE: NVIDIA may push new MAJOR release versions of CUDA without warning.
+# This is even *before* doing the below update.  Beware.
 
 sudo yum update -y  # Force a second update, in case CUDA has necessary patches.
 
