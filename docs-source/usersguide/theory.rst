@@ -534,18 +534,18 @@ of the periodic box to vary with time.\ :cite:`Chow1995`\ :cite:`Aqvist2004`
 At regular intervals, it attempts a Monte Carlo step by scaling the box vectors
 and the coordinates of each molecule’s center by a factor *s*\ .  The scale
 factor *s* is chosen to change the volume of the periodic box from *V*
-to *V*\ +\ :math:`\delta`\ *V*\ :
+to *V*\ +\ :math:`\Delta`\ *V*\ :
 
 
 .. math::
-   s={\left(\frac{V+\delta V}{V}\right)}^{1/3}
+   s={\left(\frac{V+\Delta V}{V}\right)}^{1/3}
 
 
 The change in volume is chosen randomly as
 
 
 .. math::
-   \delta V=A\cdot r
+   \Delta V=A\cdot r
 
 
 where *A* is a scale factor and *r* is a random number uniformly
@@ -554,7 +554,7 @@ weight function
 
 
 .. math::
-   \Delta W=\Delta E+P\delta V-Nk_{B}T \text{ln}\left(\frac{V+\delta V}{V}\right)
+   \Delta W=\Delta E+P\Delta V-Nk_{B}T \text{ln}\left(\frac{V+\Delta V}{V}\right)
 
 
 where :math:`\Delta E` is the change in potential energy resulting from the step,
@@ -601,6 +601,39 @@ each axis.
 You can specify that the barostat should only be applied to certain axes of the
 box, keeping the other axes fixed.  This is useful, for example, when doing
 constant surface area simulations of membranes.
+
+MonteCarloMembraneBarostat
+**************************
+
+MonteCarloMembraneBarostat is very similar to MonteCarloBarostat, but it is
+specialized for simulations of membranes.  It assumes the membrane lies in the
+XY plane.  In addition to applying a uniform pressure to regulate the volume of
+the periodic box, it also applies a uniform surface tension to regulate the
+cross sectional area of the periodic box in the XY plane.  The weight function
+for deciding whether to accept a step is
+
+.. math::
+   \Delta W=\Delta E+P\Delta V-S\Delta A-Nk_{B}T \text{ln}\left(\frac{V+\Delta V}{V}\right)
+
+where *S* is the surface tension and :math:`\Delta`\ *A* is the change in cross
+sectional area.  Notice that pressure and surface tension are defined with
+opposite senses: a larger pressure tends to make the box smaller, but a larger
+surface tension tends to make the box larger.
+
+MonteCarloMembraneBarostat offers some additional options to customize the
+behavior of the periodic box:
+
+* The X and Y axes can be either
+
+  * isotropic (they are always scaled by the same amount, so their ratio remains fixed)
+  * anisotropic (they can change size independently)
+
+* The Z axis can be either
+
+  * free (its size changes independently of the X and Y axes)
+  * fixed (its size does not change)
+  * inversely varying with the X and Y axes (so the total box volume does not
+    change)
 
 CMMotionRemover
 ***************
