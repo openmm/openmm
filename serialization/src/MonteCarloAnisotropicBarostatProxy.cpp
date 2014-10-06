@@ -29,34 +29,42 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/serialization/MonteCarloBarostatProxy.h"
+#include "openmm/serialization/MonteCarloAnisotropicBarostatProxy.h"
 #include "openmm/serialization/SerializationNode.h"
 #include "openmm/Force.h"
-#include "openmm/MonteCarloBarostat.h"
+#include "openmm/MonteCarloAnisotropicBarostat.h"
 #include <sstream>
 
 using namespace OpenMM;
 using namespace std;
 
-MonteCarloBarostatProxy::MonteCarloBarostatProxy() : SerializationProxy("MonteCarloBarostat") {
+MonteCarloAnisotropicBarostatProxy::MonteCarloAnisotropicBarostatProxy() : SerializationProxy("MonteCarloAnisotropicBarostat") {
 }
 
-void MonteCarloBarostatProxy::serialize(const void* object, SerializationNode& node) const {
+void MonteCarloAnisotropicBarostatProxy::serialize(const void* object, SerializationNode& node) const {
     node.setIntProperty("version", 1);
-    const MonteCarloBarostat& force = *reinterpret_cast<const MonteCarloBarostat*>(object);
+    const MonteCarloAnisotropicBarostat& force = *reinterpret_cast<const MonteCarloAnisotropicBarostat*>(object);
     node.setIntProperty("forceGroup", force.getForceGroup());
-    node.setDoubleProperty("pressure", force.getDefaultPressure());
+    Vec3 pressure = force.getDefaultPressure();
+    node.setDoubleProperty("pressurex", pressure[0]);
+    node.setDoubleProperty("pressurey", pressure[1]);
+    node.setDoubleProperty("pressurez", pressure[2]);
+    node.setBoolProperty("scalex", force.getScaleX());
+    node.setBoolProperty("scaley", force.getScaleY());
+    node.setBoolProperty("scalez", force.getScaleZ());
     node.setDoubleProperty("temperature", force.getTemperature());
     node.setIntProperty("frequency", force.getFrequency());
     node.setIntProperty("randomSeed", force.getRandomNumberSeed());
 }
 
-void* MonteCarloBarostatProxy::deserialize(const SerializationNode& node) const {
+void* MonteCarloAnisotropicBarostatProxy::deserialize(const SerializationNode& node) const {
     if (node.getIntProperty("version") != 1)
         throw OpenMMException("Unsupported version number");
-    MonteCarloBarostat* force = NULL;
+    MonteCarloAnisotropicBarostat* force = NULL;
     try {
-        force = new MonteCarloBarostat(node.getDoubleProperty("pressure"), node.getDoubleProperty("temperature"), node.getIntProperty("frequency"));
+        Vec3 pressure(node.getDoubleProperty("pressurex"), node.getDoubleProperty("pressurey"), node.getDoubleProperty("pressurez"));
+        force = new MonteCarloAnisotropicBarostat(pressure, node.getDoubleProperty("temperature"), node.getBoolProperty("scalex"),
+                node.getBoolProperty("scaley"), node.getBoolProperty("scalez"), node.getIntProperty("frequency"));
         force->setForceGroup(node.getIntProperty("forceGroup", 0));
         force->setRandomNumberSeed(node.getIntProperty("randomSeed"));
         return force;

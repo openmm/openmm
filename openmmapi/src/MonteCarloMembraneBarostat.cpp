@@ -29,41 +29,18 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/serialization/MonteCarloBarostatProxy.h"
-#include "openmm/serialization/SerializationNode.h"
-#include "openmm/Force.h"
-#include "openmm/MonteCarloBarostat.h"
-#include <sstream>
+#include "openmm/MonteCarloMembraneBarostat.h"
+#include "openmm/internal/MonteCarloMembraneBarostatImpl.h"
+#include "openmm/internal/OSRngSeed.h"
 
 using namespace OpenMM;
-using namespace std;
 
-MonteCarloBarostatProxy::MonteCarloBarostatProxy() : SerializationProxy("MonteCarloBarostat") {
+MonteCarloMembraneBarostat::MonteCarloMembraneBarostat(double defaultPressure, double defaultSurfaceTension, double temperature, XYMode xymode, ZMode zmode, int frequency) :
+        defaultPressure(defaultPressure), defaultSurfaceTension(defaultSurfaceTension), temperature(temperature),
+        xymode(xymode), zmode(zmode), frequency(frequency) {
+    setRandomNumberSeed(osrngseed());
 }
 
-void MonteCarloBarostatProxy::serialize(const void* object, SerializationNode& node) const {
-    node.setIntProperty("version", 1);
-    const MonteCarloBarostat& force = *reinterpret_cast<const MonteCarloBarostat*>(object);
-    node.setIntProperty("forceGroup", force.getForceGroup());
-    node.setDoubleProperty("pressure", force.getDefaultPressure());
-    node.setDoubleProperty("temperature", force.getTemperature());
-    node.setIntProperty("frequency", force.getFrequency());
-    node.setIntProperty("randomSeed", force.getRandomNumberSeed());
-}
-
-void* MonteCarloBarostatProxy::deserialize(const SerializationNode& node) const {
-    if (node.getIntProperty("version") != 1)
-        throw OpenMMException("Unsupported version number");
-    MonteCarloBarostat* force = NULL;
-    try {
-        force = new MonteCarloBarostat(node.getDoubleProperty("pressure"), node.getDoubleProperty("temperature"), node.getIntProperty("frequency"));
-        force->setForceGroup(node.getIntProperty("forceGroup", 0));
-        force->setRandomNumberSeed(node.getIntProperty("randomSeed"));
-        return force;
-    }
-    catch (...) {
-        if (force != NULL)
-            delete force;
-        throw;
-    }
+ForceImpl* MonteCarloMembraneBarostat::createImpl() const {
+    return new MonteCarloMembraneBarostatImpl(*this);
 }

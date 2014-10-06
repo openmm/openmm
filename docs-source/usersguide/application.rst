@@ -1196,6 +1196,22 @@ change size.
     system.addForce(MonteCarloAnisotropicBarostat((1, 1, 1)*bar, 300*kelvin,
             False, True, False))
 
+There is a third barostat designed specifically for simulations of membranes.
+It assumes the membrane lies in the XY plane, and treats the X and Y axes of the
+box differently from the Z axis.  It also applies a uniform surface tension in
+the plane of the membrane.  The following line adds a membrane barostat that
+applies a pressure of 1 bar and a surface tension of 200 bar*nm.  It specifies
+that the X and Y axes are treated isotropically while the Z axis is free to
+change independently.
+::
+
+    system.addForce(MonteCarloMembraneBarostat(1*bar, 200*bar*nanometer,
+        MonteCarloMembraneBarostat.XYIsotropic, MonteCarloMembraneBarostat.ZFree, 300*kelvin))
+
+See the API documentation for details about the allowed parameter values and
+their meanings.
+
+
 Energy Minimization
 ===================
 

@@ -1,3 +1,6 @@
+#ifndef OPENMM_MONTECARLOANISOTROPICBAROSTAT_PROXY_H_
+#define OPENMM_MONTECARLOANISOTROPICBAROSTAT_PROXY_H_
+
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -6,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010=2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -29,41 +32,22 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/serialization/MonteCarloBarostatProxy.h"
-#include "openmm/serialization/SerializationNode.h"
-#include "openmm/Force.h"
-#include "openmm/MonteCarloBarostat.h"
-#include <sstream>
+#include "openmm/internal/windowsExport.h"
+#include "openmm/serialization/SerializationProxy.h"
 
-using namespace OpenMM;
-using namespace std;
+namespace OpenMM {
 
-MonteCarloBarostatProxy::MonteCarloBarostatProxy() : SerializationProxy("MonteCarloBarostat") {
-}
+/**
+ * This is a proxy for serializing MonteCarloAnisotropicBarostat objects.
+ */
 
-void MonteCarloBarostatProxy::serialize(const void* object, SerializationNode& node) const {
-    node.setIntProperty("version", 1);
-    const MonteCarloBarostat& force = *reinterpret_cast<const MonteCarloBarostat*>(object);
-    node.setIntProperty("forceGroup", force.getForceGroup());
-    node.setDoubleProperty("pressure", force.getDefaultPressure());
-    node.setDoubleProperty("temperature", force.getTemperature());
-    node.setIntProperty("frequency", force.getFrequency());
-    node.setIntProperty("randomSeed", force.getRandomNumberSeed());
-}
+class OPENMM_EXPORT MonteCarloAnisotropicBarostatProxy : public SerializationProxy {
+public:
+    MonteCarloAnisotropicBarostatProxy();
+    void serialize(const void* object, SerializationNode& node) const;
+    void* deserialize(const SerializationNode& node) const;
+};
 
-void* MonteCarloBarostatProxy::deserialize(const SerializationNode& node) const {
-    if (node.getIntProperty("version") != 1)
-        throw OpenMMException("Unsupported version number");
-    MonteCarloBarostat* force = NULL;
-    try {
-        force = new MonteCarloBarostat(node.getDoubleProperty("pressure"), node.getDoubleProperty("temperature"), node.getIntProperty("frequency"));
-        force->setForceGroup(node.getIntProperty("forceGroup", 0));
-        force->setRandomNumberSeed(node.getIntProperty("randomSeed"));
-        return force;
-    }
-    catch (...) {
-        if (force != NULL)
-            delete force;
-        throw;
-    }
-}
+} // namespace OpenMM
+
+#endif /*OPENMM_MONTECARLOANISOTROPICBAROSTAT_PROXY_H_*/

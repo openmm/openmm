@@ -29,41 +29,49 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/serialization/MonteCarloBarostatProxy.h"
-#include "openmm/serialization/SerializationNode.h"
-#include "openmm/Force.h"
-#include "openmm/MonteCarloBarostat.h"
+#include "openmm/internal/AssertionUtilities.h"
+#include "openmm/MonteCarloMembraneBarostat.h"
+#include "openmm/serialization/XmlSerializer.h"
+#include <iostream>
 #include <sstream>
 
 using namespace OpenMM;
 using namespace std;
 
-MonteCarloBarostatProxy::MonteCarloBarostatProxy() : SerializationProxy("MonteCarloBarostat") {
+void testSerialization() {
+    // Create a Force.
+
+    MonteCarloMembraneBarostat force(25.5, 11.2, 250.0, MonteCarloMembraneBarostat::XYAnisotropic, MonteCarloMembraneBarostat::ZFixed, 14);
+    force.setForceGroup(3);
+    force.setRandomNumberSeed(3);
+
+    // Serialize and then deserialize it.
+
+    stringstream buffer;
+    XmlSerializer::serialize<MonteCarloMembraneBarostat>(&force, "Force", buffer);
+    MonteCarloMembraneBarostat* copy = XmlSerializer::deserialize<MonteCarloMembraneBarostat>(buffer);
+
+    // Compare the two forces to see if they are identical.
+
+    MonteCarloMembraneBarostat& force2 = *copy;
+    ASSERT_EQUAL(force.getForceGroup(), force2.getForceGroup());
+    ASSERT_EQUAL(force.getDefaultPressure(), force2.getDefaultPressure());
+    ASSERT_EQUAL(force.getDefaultSurfaceTension(), force2.getDefaultSurfaceTension());
+    ASSERT_EQUAL(force.getTemperature(), force2.getTemperature());
+    ASSERT_EQUAL(force.getXYMode(), force2.getXYMode());
+    ASSERT_EQUAL(force.getZMode(), force2.getZMode());
+    ASSERT_EQUAL(force.getFrequency(), force2.getFrequency());
+    ASSERT_EQUAL(force.getRandomNumberSeed(), force2.getRandomNumberSeed());
 }
 
-void MonteCarloBarostatProxy::serialize(const void* object, SerializationNode& node) const {
-    node.setIntProperty("version", 1);
-    const MonteCarloBarostat& force = *reinterpret_cast<const MonteCarloBarostat*>(object);
-    node.setIntProperty("forceGroup", force.getForceGroup());
-    node.setDoubleProperty("pressure", force.getDefaultPressure());
-    node.setDoubleProperty("temperature", force.getTemperature());
-    node.setIntProperty("frequency", force.getFrequency());
-    node.setIntProperty("randomSeed", force.getRandomNumberSeed());
-}
-
-void* MonteCarloBarostatProxy::deserialize(const SerializationNode& node) const {
-    if (node.getIntProperty("version") != 1)
-        throw OpenMMException("Unsupported version number");
-    MonteCarloBarostat* force = NULL;
+int main() {
     try {
-        force = new MonteCarloBarostat(node.getDoubleProperty("pressure"), node.getDoubleProperty("temperature"), node.getIntProperty("frequency"));
-        force->setForceGroup(node.getIntProperty("forceGroup", 0));
-        force->setRandomNumberSeed(node.getIntProperty("randomSeed"));
-        return force;
+        testSerialization();
     }
-    catch (...) {
-        if (force != NULL)
-            delete force;
-        throw;
+    catch(const exception& e) {
+        cout << "exception: " << e.what() << endl;
+        return 1;
     }
+    cout << "Done" << endl;
+    return 0;
 }

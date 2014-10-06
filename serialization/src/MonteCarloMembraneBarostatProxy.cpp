@@ -29,34 +29,40 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/serialization/MonteCarloBarostatProxy.h"
+#include "openmm/serialization/MonteCarloMembraneBarostatProxy.h"
 #include "openmm/serialization/SerializationNode.h"
 #include "openmm/Force.h"
-#include "openmm/MonteCarloBarostat.h"
+#include "openmm/MonteCarloMembraneBarostat.h"
 #include <sstream>
 
 using namespace OpenMM;
 using namespace std;
 
-MonteCarloBarostatProxy::MonteCarloBarostatProxy() : SerializationProxy("MonteCarloBarostat") {
+MonteCarloMembraneBarostatProxy::MonteCarloMembraneBarostatProxy() : SerializationProxy("MonteCarloMembraneBarostat") {
 }
 
-void MonteCarloBarostatProxy::serialize(const void* object, SerializationNode& node) const {
+void MonteCarloMembraneBarostatProxy::serialize(const void* object, SerializationNode& node) const {
     node.setIntProperty("version", 1);
-    const MonteCarloBarostat& force = *reinterpret_cast<const MonteCarloBarostat*>(object);
+    const MonteCarloMembraneBarostat& force = *reinterpret_cast<const MonteCarloMembraneBarostat*>(object);
     node.setIntProperty("forceGroup", force.getForceGroup());
     node.setDoubleProperty("pressure", force.getDefaultPressure());
+    node.setDoubleProperty("surfaceTension", force.getDefaultSurfaceTension());
     node.setDoubleProperty("temperature", force.getTemperature());
+    node.setIntProperty("xymode", force.getXYMode());
+    node.setIntProperty("zmode", force.getZMode());
     node.setIntProperty("frequency", force.getFrequency());
     node.setIntProperty("randomSeed", force.getRandomNumberSeed());
 }
 
-void* MonteCarloBarostatProxy::deserialize(const SerializationNode& node) const {
+void* MonteCarloMembraneBarostatProxy::deserialize(const SerializationNode& node) const {
     if (node.getIntProperty("version") != 1)
         throw OpenMMException("Unsupported version number");
-    MonteCarloBarostat* force = NULL;
+    MonteCarloMembraneBarostat* force = NULL;
     try {
-        force = new MonteCarloBarostat(node.getDoubleProperty("pressure"), node.getDoubleProperty("temperature"), node.getIntProperty("frequency"));
+        MonteCarloMembraneBarostat::XYMode xymode = (MonteCarloMembraneBarostat::XYMode) node.getIntProperty("xymode");
+        MonteCarloMembraneBarostat::ZMode zmode = (MonteCarloMembraneBarostat::ZMode) node.getIntProperty("zmode");
+        force = new MonteCarloMembraneBarostat(node.getDoubleProperty("pressure"), node.getDoubleProperty("surfaceTension"),
+                node.getDoubleProperty("temperature"), xymode, zmode, node.getIntProperty("frequency"));
         force->setForceGroup(node.getIntProperty("forceGroup", 0));
         force->setRandomNumberSeed(node.getIntProperty("randomSeed"));
         return force;

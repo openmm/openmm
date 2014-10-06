@@ -1,3 +1,6 @@
+#ifndef OPENMM_MONTECARLOMEMBRANEBAROSTATIMPL_H_
+#define OPENMM_MONTECARLOMEMBRANEBAROSTATIMPL_H_
+
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -29,41 +32,40 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/serialization/MonteCarloBarostatProxy.h"
-#include "openmm/serialization/SerializationNode.h"
-#include "openmm/Force.h"
-#include "openmm/MonteCarloBarostat.h"
-#include <sstream>
+#include "ForceImpl.h"
+#include "openmm/MonteCarloMembraneBarostat.h"
+#include "openmm/Kernel.h"
+#include "sfmt/SFMT.h"
+#include <string>
 
-using namespace OpenMM;
-using namespace std;
+namespace OpenMM {
 
-MonteCarloBarostatProxy::MonteCarloBarostatProxy() : SerializationProxy("MonteCarloBarostat") {
-}
+/**
+ * This is the internal implementation of MonteCarloMembraneBarostat.
+ */
 
-void MonteCarloBarostatProxy::serialize(const void* object, SerializationNode& node) const {
-    node.setIntProperty("version", 1);
-    const MonteCarloBarostat& force = *reinterpret_cast<const MonteCarloBarostat*>(object);
-    node.setIntProperty("forceGroup", force.getForceGroup());
-    node.setDoubleProperty("pressure", force.getDefaultPressure());
-    node.setDoubleProperty("temperature", force.getTemperature());
-    node.setIntProperty("frequency", force.getFrequency());
-    node.setIntProperty("randomSeed", force.getRandomNumberSeed());
-}
-
-void* MonteCarloBarostatProxy::deserialize(const SerializationNode& node) const {
-    if (node.getIntProperty("version") != 1)
-        throw OpenMMException("Unsupported version number");
-    MonteCarloBarostat* force = NULL;
-    try {
-        force = new MonteCarloBarostat(node.getDoubleProperty("pressure"), node.getDoubleProperty("temperature"), node.getIntProperty("frequency"));
-        force->setForceGroup(node.getIntProperty("forceGroup", 0));
-        force->setRandomNumberSeed(node.getIntProperty("randomSeed"));
-        return force;
+class MonteCarloMembraneBarostatImpl : public ForceImpl {
+public:
+    MonteCarloMembraneBarostatImpl(const MonteCarloMembraneBarostat& owner);
+    void initialize(ContextImpl& context);
+    const MonteCarloMembraneBarostat& getOwner() const {
+        return owner;
     }
-    catch (...) {
-        if (force != NULL)
-            delete force;
-        throw;
+    void updateContextState(ContextImpl& context);
+    double calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
+        // This force doesn't apply forces to particles.
+        return 0.0;
     }
-}
+    std::map<std::string, double> getDefaultParameters();
+    std::vector<std::string> getKernelNames();
+private:
+    const MonteCarloMembraneBarostat& owner;
+    int step, numAttempted[3], numAccepted[3];
+    double volumeScale[3];
+    OpenMM_SFMT::SFMT random;
+    Kernel kernel;
+};
+
+} // namespace OpenMM
+
+#endif /*OPENMM_MONTECARLOMEMBRANEBAROSTATIMPL_H_*/
