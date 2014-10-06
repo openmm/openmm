@@ -495,15 +495,12 @@ class Quantity(object):
             # Faster for numpy arrays
             std = self._value.std()
         except AttributeError:
-            sum1 = sum2 = 0.0
+            mean = self.mean()
             for val in self._value:
-                sum1 += val
-                sum2 += val * val
-            nvals = len(self._value)
-            sum1 /= nvals
-            sum1 *= sum1
-            sum2 /= nvals
-            std = math.sqrt(abs(sum2 - sum1))
+                res = mean - val
+                var += res * res
+            var /= len(self._value)
+            std = math.sqrt(var)
         return Quantity(std, self.unit)
 
     def max(self):
