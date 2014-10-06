@@ -114,7 +114,7 @@ class Quantity(object):
          - unit: (Unit) the physical unit, e.g. simtk.unit.meters.
         """
         # When no unit is specified, bend over backwards to handle all one-argument possibilities
-        if unit == None: # one argument version, copied from UList
+        if unit is None: # one argument version, copied from UList
             if is_unit(value):
                 # Unit argument creates an empty list with that unit attached
                 unit = value
@@ -167,7 +167,7 @@ class Quantity(object):
             value = value * unit._value
             unit = unit.unit
         # Use empty list for unspecified values
-        if value == None:
+        if value is None:
             value = []
 
         self._value = value
@@ -306,7 +306,7 @@ class Quantity(object):
             value_factor = 1.0
             canonical_units = {} # dict of dimensionTuple: (Base/ScaledUnit, exponent)
             # Bias result toward guide units
-            if guide_unit != None:
+            if guide_unit is not None:
                 for u, exponent in guide_unit.iter_base_or_scaled_units():
                     d = u.get_dimension_tuple()
                     if d not in canonical_units:

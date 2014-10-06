@@ -60,7 +60,7 @@ def zeros(m, n=None):
      [0, 0, 0]
      [0, 0, 0]]
     """
-    if n == None:
+    if n is None:
         n = m
     result = []
     for row in range(0, m):
