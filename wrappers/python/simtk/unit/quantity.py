@@ -455,6 +455,85 @@ class Quantity(object):
             new_value *= math.sqrt(unit_factor)
         return Quantity(value=new_value, unit=new_unit)
 
+    def sum(self):
+        """
+        Computes the sum of a sequence, with the result having the same unit as
+        the current sequence.
+
+        If the value is not iterable, it raises a TypeError (same behavior as if
+        you tried to iterate over, for instance, an integer).
+        """
+        try:
+            # This will be much faster for numpy arrays
+            mysum = self._value.sum()
+        except AttributeError:
+            mysum = sum(self._value)
+        return Quantity(mysum, self.unit)
+
+    def mean(self):
+        """
+        Computes the mean of a sequence, with the result having the same unit as
+        the current sequence.
+
+        If the value is not iterable, it raises a TypeError
+        """
+        try:
+            # Faster for numpy arrays
+            mean = self._value.mean()
+        except AttributeError:
+            mean = self.sum() / len(self._value)
+        return Quantity(mean, self.unit)
+
+    def std(self):
+        """
+        Computes the square root of the variance of a sequence, with the result
+        having the same unit as the current sequence.
+
+        If the value is not iterable, it raises a TypeError
+        """
+        try:
+            # Faster for numpy arrays
+            std = self._value.std()
+        except AttributeError:
+            sum1 = sum2 = 0.0
+            for val in self._value:
+                sum1 += val
+                sum2 += val * val
+            nvals = len(self._value)
+            sum1 /= nvals
+            sum1 *= sum1
+            sum2 /= nvals
+            std = math.sqrt(abs(sum2 - sum1))
+        return Quantity(std, self.unit)
+
+    def max(self):
+        """
+        Computes the maximum value of the sequence, with the result having the
+        same unit as the current sequence.
+
+        If the value is not iterable, it raises a TypeError
+        """
+        try:
+            # Faster for numpy arrays
+            mymax = self._value.max()
+        except AttributeError:
+            mymax = max(self._value)
+        return Quantity(mymax, self.unit)
+
+    def min(self):
+        """
+        Computes the minimum value of the sequence, with the result having the
+        same unit as the current sequence.
+
+        If the value is not iterable, it raises a TypeError
+        """
+        try:
+            # Faster for numpy arrays
+            mymin = self._value.min()
+        except AttributeError:
+            mymin = min(self._value)
+        return Quantity(mymin, self.unit)
+
     def __abs__(self):
         """
         Return absolute value of a Quantity.
