@@ -342,18 +342,13 @@ private:
     bool isPeriodic;
     RealOpenMM **particleParamArray;
     RealOpenMM nonbondedCutoff;
+    CpuCustomGBForce* ixn;
     std::vector<std::set<int> > exclusions;
     std::vector<std::string> particleParameterNames, globalParameterNames, valueNames;
-    std::vector<Lepton::CompiledExpression> valueExpressions;
-    std::vector<std::vector<Lepton::CompiledExpression> > valueDerivExpressions;
-    std::vector<std::vector<Lepton::CompiledExpression> > valueGradientExpressions;
     std::vector<OpenMM::CustomGBForce::ComputationType> valueTypes;
-    std::vector<Lepton::CompiledExpression> energyExpressions;
-    std::vector<std::vector<Lepton::CompiledExpression> > energyDerivExpressions;
-    std::vector<std::vector<Lepton::CompiledExpression> > energyGradientExpressions;
     std::vector<OpenMM::CustomGBForce::ComputationType> energyTypes;
     NonbondedMethod nonbondedMethod;
-    NeighborList* neighborList;
+    CpuNeighborList* neighborList;
 };
 
 /**

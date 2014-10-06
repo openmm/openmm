@@ -31,22 +31,18 @@
 #include "ReferenceForce.h"
 #include "CpuCustomGBForce.h"
 
-using std::map;
-using std::set;
-using std::string;
-using std::stringstream;
-using std::vector;
-using OpenMM::RealVec;
+using namespace OpenMM;
+using namespace std;
 
 CpuCustomGBForce::CpuCustomGBForce(const vector<Lepton::CompiledExpression>& valueExpressions,
                      const vector<vector<Lepton::CompiledExpression> > valueDerivExpressions,
                      const vector<vector<Lepton::CompiledExpression> > valueGradientExpressions,
                      const vector<string>& valueNames,
-                     const vector<OpenMM::CustomGBForce::ComputationType>& valueTypes,
+                     const vector<CustomGBForce::ComputationType>& valueTypes,
                      const vector<Lepton::CompiledExpression>& energyExpressions,
                      const vector<vector<Lepton::CompiledExpression> > energyDerivExpressions,
                      const vector<vector<Lepton::CompiledExpression> > energyGradientExpressions,
-                     const vector<OpenMM::CustomGBForce::ComputationType>& energyTypes,
+                     const vector<CustomGBForce::ComputationType>& energyTypes,
                      const vector<string>& parameterNames) :
             cutoff(false), periodic(false), valueExpressions(valueExpressions), valueDerivExpressions(valueDerivExpressions), valueGradientExpressions(valueGradientExpressions),
             valueNames(valueNames), valueTypes(valueTypes), energyExpressions(energyExpressions), energyDerivExpressions(energyDerivExpressions), energyGradientExpressions(energyGradientExpressions),
@@ -76,7 +72,6 @@ CpuCustomGBForce::CpuCustomGBForce(const vector<Lepton::CompiledExpression>& val
         for (int j = 1; j < 3; j++) {
             stringstream name;
             name << paramNames[i] << j;
-            particleParamNames.push_back(name.str());
             particleParamIndex.push_back(expressionSet.getVariableIndex(name.str()));
         }
     }
@@ -85,7 +80,6 @@ CpuCustomGBForce::CpuCustomGBForce(const vector<Lepton::CompiledExpression>& val
         for (int j = 1; j < 3; j++) {
             stringstream name;
             name << valueNames[i] << j;
-            particleValueNames.push_back(name.str());
             particleValueIndex.push_back(expressionSet.getVariableIndex(name.str()));
         }
     }
@@ -94,11 +88,11 @@ CpuCustomGBForce::CpuCustomGBForce(const vector<Lepton::CompiledExpression>& val
 CpuCustomGBForce::~CpuCustomGBForce() {
 }
 
-void CpuCustomGBForce::setUseCutoff(RealOpenMM distance, const OpenMM::NeighborList& neighbors) {
+void CpuCustomGBForce::setUseCutoff(RealOpenMM distance, const CpuNeighborList& neighbors) {
     cutoff = true;
     cutoffDistance = distance;
     neighborList = &neighbors;
-}
+  }
 
 void CpuCustomGBForce::setPeriodic(RealVec& boxSize) {
 
@@ -124,33 +118,33 @@ void CpuCustomGBForce::calculateIxn(int numberOfAtoms, vector<RealVec>& atomCoor
     int numValues = valueTypes.size();
     vector<vector<RealOpenMM> > values(numValues);
     for (int valueIndex = 0; valueIndex < numValues; valueIndex++) {
-        if (valueTypes[valueIndex] == OpenMM::CustomGBForce::SingleParticle)
-            calculateSingleParticleValue(valueIndex, numberOfAtoms, atomCoordinates, values, globalParameters, atomParameters);
-        else if (valueTypes[valueIndex] == OpenMM::CustomGBForce::ParticlePair)
-            calculateParticlePairValue(valueIndex, numberOfAtoms, atomCoordinates, atomParameters, values, globalParameters, exclusions, true);
+        if (valueTypes[valueIndex] == CustomGBForce::SingleParticle)
+            calculateSingleParticleValue(valueIndex, numberOfAtoms, atomCoordinates, values, atomParameters);
+        else if (valueTypes[valueIndex] == CustomGBForce::ParticlePair)
+            calculateParticlePairValue(valueIndex, numberOfAtoms, atomCoordinates, atomParameters, values, exclusions, true);
         else
-            calculateParticlePairValue(valueIndex, numberOfAtoms, atomCoordinates, atomParameters, values, globalParameters, exclusions, false);
+            calculateParticlePairValue(valueIndex, numberOfAtoms, atomCoordinates, atomParameters, values, exclusions, false);
     }
 
     // Now calculate the energy and its derivatives.
 
     vector<vector<RealOpenMM> > dEdV(numValues, vector<RealOpenMM>(numberOfAtoms, (RealOpenMM) 0));
     for (int termIndex = 0; termIndex < (int) energyExpressions.size(); termIndex++) {
-        if (energyTypes[termIndex] == OpenMM::CustomGBForce::SingleParticle)
-            calculateSingleParticleEnergyTerm(termIndex, numberOfAtoms, atomCoordinates, values, globalParameters, atomParameters, forces, totalEnergy, dEdV);
-        else if (energyTypes[termIndex] == OpenMM::CustomGBForce::ParticlePair)
-            calculateParticlePairEnergyTerm(termIndex, numberOfAtoms, atomCoordinates, atomParameters, values, globalParameters, exclusions, true, forces, totalEnergy, dEdV);
+        if (energyTypes[termIndex] == CustomGBForce::SingleParticle)
+            calculateSingleParticleEnergyTerm(termIndex, numberOfAtoms, atomCoordinates, values, atomParameters, forces, totalEnergy, dEdV);
+        else if (energyTypes[termIndex] == CustomGBForce::ParticlePair)
+            calculateParticlePairEnergyTerm(termIndex, numberOfAtoms, atomCoordinates, atomParameters, values, exclusions, true, forces, totalEnergy, dEdV);
         else
-            calculateParticlePairEnergyTerm(termIndex, numberOfAtoms, atomCoordinates, atomParameters, values, globalParameters, exclusions, false, forces, totalEnergy, dEdV);
+            calculateParticlePairEnergyTerm(termIndex, numberOfAtoms, atomCoordinates, atomParameters, values, exclusions, false, forces, totalEnergy, dEdV);
     }
 
     // Apply the chain rule to evaluate forces.
 
-    calculateChainRuleForces(numberOfAtoms, atomCoordinates, atomParameters, values, globalParameters, exclusions, forces, dEdV);
+    calculateChainRuleForces(numberOfAtoms, atomCoordinates, atomParameters, values, exclusions, forces, dEdV);
 }
 
 void CpuCustomGBForce::calculateSingleParticleValue(int index, int numAtoms, vector<RealVec>& atomCoordinates, vector<vector<RealOpenMM> >& values,
-        const map<string, double>& globalParameters, RealOpenMM** atomParameters) {
+        RealOpenMM** atomParameters) {
     values[index].resize(numAtoms);
     for (int i = 0; i < numAtoms; i++) {
         expressionSet.setVariable(xindex, atomCoordinates[i][0]);
@@ -165,19 +159,29 @@ void CpuCustomGBForce::calculateSingleParticleValue(int index, int numAtoms, vec
 }
 
 void CpuCustomGBForce::calculateParticlePairValue(int index, int numAtoms, vector<RealVec>& atomCoordinates, RealOpenMM** atomParameters,
-        vector<vector<RealOpenMM> >& values, const map<string, double>& globalParameters, const vector<set<int> >& exclusions, bool useExclusions) {
+        vector<vector<RealOpenMM> >& values, const vector<set<int> >& exclusions, bool useExclusions) {
     values[index].resize(numAtoms);
     for (int i = 0; i < numAtoms; i++)
         values[index][i] = (RealOpenMM) 0.0;
     if (cutoff) {
         // Loop over all pairs in the neighbor list.
 
-        for (int i = 0; i < (int) neighborList->size(); i++) {
-            OpenMM::AtomPair pair = (*neighborList)[i];
-            if (useExclusions && exclusions[pair.first].find(pair.second) != exclusions[pair.first].end())
-                continue;
-            calculateOnePairValue(index, pair.first, pair.second, atomCoordinates, atomParameters, globalParameters, values);
-            calculateOnePairValue(index, pair.second, pair.first, atomCoordinates, atomParameters, globalParameters, values);
+        for (int blockIndex = 0; blockIndex < neighborList->getNumBlocks(); blockIndex++) {
+            const int* blockAtom = &neighborList->getSortedAtoms()[4*blockIndex];
+            const vector<int>& neighbors = neighborList->getBlockNeighbors(blockIndex);
+            const vector<char>& blockExclusions = neighborList->getBlockExclusions(blockIndex);
+            for (int i = 0; i < (int) neighbors.size(); i++) {
+                int first = neighbors[i];
+                for (int k = 0; k < 4; k++) {
+                    if ((blockExclusions[i] & (1<<k)) == 0) {
+                        int second = blockAtom[k];
+                        if (useExclusions && exclusions[first].find(second) != exclusions[first].end())
+                            continue;
+                        calculateOnePairValue(index, first, second, atomCoordinates, atomParameters, values);
+                        calculateOnePairValue(index, second, first, atomCoordinates, atomParameters, values);
+                    }
+                }
+            }
         }
     }
     else {
@@ -187,15 +191,15 @@ void CpuCustomGBForce::calculateParticlePairValue(int index, int numAtoms, vecto
             for (int j = i+1; j < numAtoms; j++) {
                 if (useExclusions && exclusions[i].find(j) != exclusions[i].end())
                     continue;
-                calculateOnePairValue(index, i, j, atomCoordinates, atomParameters, globalParameters, values);
-                calculateOnePairValue(index, j, i, atomCoordinates, atomParameters, globalParameters, values);
+                calculateOnePairValue(index, i, j, atomCoordinates, atomParameters, values);
+                calculateOnePairValue(index, j, i, atomCoordinates, atomParameters, values);
            }
         }
     }
 }
 
 void CpuCustomGBForce::calculateOnePairValue(int index, int atom1, int atom2, vector<RealVec>& atomCoordinates, RealOpenMM** atomParameters,
-        const map<string, double>& globalParameters, vector<vector<RealOpenMM> >& values) {
+        vector<vector<RealOpenMM> >& values) {
     RealOpenMM deltaR[ReferenceForce::LastDeltaRIndex];
     if (periodic)
         ReferenceForce::getDeltaRPeriodic(atomCoordinates[atom2], atomCoordinates[atom1], periodicBoxSize, deltaR);
@@ -217,7 +221,7 @@ void CpuCustomGBForce::calculateOnePairValue(int index, int atom1, int atom2, ve
 }
 
 void CpuCustomGBForce::calculateSingleParticleEnergyTerm(int index, int numAtoms, vector<RealVec>& atomCoordinates, const vector<vector<RealOpenMM> >& values,
-        const map<string, double>& globalParameters, RealOpenMM** atomParameters, vector<RealVec>& forces, RealOpenMM* totalEnergy,
+        RealOpenMM** atomParameters, vector<RealVec>& forces, RealOpenMM* totalEnergy,
         vector<vector<RealOpenMM> >& dEdV) {
     for (int i = 0; i < numAtoms; i++) {
         expressionSet.setVariable(xindex, atomCoordinates[i][0]);
@@ -238,16 +242,26 @@ void CpuCustomGBForce::calculateSingleParticleEnergyTerm(int index, int numAtoms
 }
 
 void CpuCustomGBForce::calculateParticlePairEnergyTerm(int index, int numAtoms, vector<RealVec>& atomCoordinates, RealOpenMM** atomParameters,
-        const vector<vector<RealOpenMM> >& values, const map<string, double>& globalParameters, const vector<set<int> >& exclusions, bool useExclusions,
+        const vector<vector<RealOpenMM> >& values, const vector<set<int> >& exclusions, bool useExclusions,
         vector<RealVec>& forces, RealOpenMM* totalEnergy, vector<vector<RealOpenMM> >& dEdV) {
     if (cutoff) {
         // Loop over all pairs in the neighbor list.
 
-        for (int i = 0; i < (int) neighborList->size(); i++) {
-            OpenMM::AtomPair pair = (*neighborList)[i];
-            if (useExclusions && exclusions[pair.first].find(pair.second) != exclusions[pair.first].end())
-                continue;
-            calculateOnePairEnergyTerm(index, pair.first, pair.second, atomCoordinates, atomParameters, globalParameters, values, forces, totalEnergy, dEdV);
+        for (int blockIndex = 0; blockIndex < neighborList->getNumBlocks(); blockIndex++) {
+            const int* blockAtom = &neighborList->getSortedAtoms()[4*blockIndex];
+            const vector<int>& neighbors = neighborList->getBlockNeighbors(blockIndex);
+            const vector<char>& blockExclusions = neighborList->getBlockExclusions(blockIndex);
+            for (int i = 0; i < (int) neighbors.size(); i++) {
+                int first = neighbors[i];
+                for (int k = 0; k < 4; k++) {
+                    if ((blockExclusions[i] & (1<<k)) == 0) {
+                        int second = blockAtom[k];
+                        if (useExclusions && exclusions[first].find(second) != exclusions[first].end())
+                            continue;
+                        calculateOnePairEnergyTerm(index, first, second, atomCoordinates, atomParameters, values, forces, totalEnergy, dEdV);
+                    }
+                }
+            }
         }
     }
     else {
@@ -257,14 +271,14 @@ void CpuCustomGBForce::calculateParticlePairEnergyTerm(int index, int numAtoms, 
             for (int j = i+1; j < numAtoms; j++) {
                 if (useExclusions && exclusions[i].find(j) != exclusions[i].end())
                     continue;
-                calculateOnePairEnergyTerm(index, i, j, atomCoordinates, atomParameters, globalParameters, values, forces, totalEnergy, dEdV);
+                calculateOnePairEnergyTerm(index, i, j, atomCoordinates, atomParameters, values, forces, totalEnergy, dEdV);
            }
         }
     }
 }
 
 void CpuCustomGBForce::calculateOnePairEnergyTerm(int index, int atom1, int atom2, vector<RealVec>& atomCoordinates, RealOpenMM** atomParameters,
-        const map<string, double>& globalParameters, const vector<vector<RealOpenMM> >& values, vector<RealVec>& forces, RealOpenMM* totalEnergy,
+        const vector<vector<RealOpenMM> >& values, vector<RealVec>& forces, RealOpenMM* totalEnergy,
         vector<vector<RealOpenMM> >& dEdV) {
     // Compute the displacement.
 
@@ -306,16 +320,25 @@ void CpuCustomGBForce::calculateOnePairEnergyTerm(int index, int atom1, int atom
 }
 
 void CpuCustomGBForce::calculateChainRuleForces(int numAtoms, vector<RealVec>& atomCoordinates, RealOpenMM** atomParameters,
-        const vector<vector<RealOpenMM> >& values, const map<string, double>& globalParameters,
-        const vector<set<int> >& exclusions, vector<RealVec>& forces, vector<vector<RealOpenMM> >& dEdV) {
+        const vector<vector<RealOpenMM> >& values, const vector<set<int> >& exclusions, vector<RealVec>& forces, vector<vector<RealOpenMM> >& dEdV) {
     if (cutoff) {
         // Loop over all pairs in the neighbor list.
 
-        for (int i = 0; i < (int) neighborList->size(); i++) {
-            OpenMM::AtomPair pair = (*neighborList)[i];
-            bool isExcluded = (exclusions[pair.first].find(pair.second) != exclusions[pair.first].end());
-            calculateOnePairChainRule(pair.first, pair.second, atomCoordinates, atomParameters, globalParameters, values, forces, dEdV, isExcluded);
-            calculateOnePairChainRule(pair.second, pair.first, atomCoordinates, atomParameters, globalParameters, values, forces, dEdV, isExcluded);
+        for (int blockIndex = 0; blockIndex < neighborList->getNumBlocks(); blockIndex++) {
+            const int* blockAtom = &neighborList->getSortedAtoms()[4*blockIndex];
+            const vector<int>& neighbors = neighborList->getBlockNeighbors(blockIndex);
+            const vector<char>& blockExclusions = neighborList->getBlockExclusions(blockIndex);
+            for (int i = 0; i < (int) neighbors.size(); i++) {
+                int first = neighbors[i];
+                for (int k = 0; k < 4; k++) {
+                    if ((blockExclusions[i] & (1<<k)) == 0) {
+                        int second = blockAtom[k];
+                        bool isExcluded = (exclusions[first].find(second) != exclusions[first].end());
+                        calculateOnePairChainRule(first, second, atomCoordinates, atomParameters, values, forces, dEdV, isExcluded);
+                        calculateOnePairChainRule(second, first, atomCoordinates, atomParameters, values, forces, dEdV, isExcluded);
+                    }
+                }
+            }
         }
     }
     else {
@@ -324,8 +347,8 @@ void CpuCustomGBForce::calculateChainRuleForces(int numAtoms, vector<RealVec>& a
         for (int i = 0; i < numAtoms; i++) {
             for (int j = i+1; j < numAtoms; j++) {
                 bool isExcluded = (exclusions[i].find(j) != exclusions[i].end());
-                calculateOnePairChainRule(i, j, atomCoordinates, atomParameters, globalParameters, values, forces, dEdV, isExcluded);
-                calculateOnePairChainRule(j, i, atomCoordinates, atomParameters, globalParameters, values, forces, dEdV, isExcluded);
+                calculateOnePairChainRule(i, j, atomCoordinates, atomParameters, values, forces, dEdV, isExcluded);
+                calculateOnePairChainRule(j, i, atomCoordinates, atomParameters, values, forces, dEdV, isExcluded);
            }
         }
     }
@@ -360,8 +383,7 @@ void CpuCustomGBForce::calculateChainRuleForces(int numAtoms, vector<RealVec>& a
 }
 
 void CpuCustomGBForce::calculateOnePairChainRule(int atom1, int atom2, vector<RealVec>& atomCoordinates, RealOpenMM** atomParameters,
-        const map<string, double>& globalParameters, const vector<vector<RealOpenMM> >& values, vector<RealVec>& forces,
-        vector<vector<RealOpenMM> >& dEdV, bool isExcluded) {
+        const vector<vector<RealOpenMM> >& values, vector<RealVec>& forces, vector<vector<RealOpenMM> >& dEdV, bool isExcluded) {
     // Compute the displacement.
 
     RealOpenMM deltaR[ReferenceForce::LastDeltaRIndex];
@@ -391,7 +413,7 @@ void CpuCustomGBForce::calculateOnePairChainRule(int atom1, int atom2, vector<Re
     deltaR[2] *= rinv;
     vector<RealOpenMM> dVdR1(valueDerivExpressions.size(), 0.0);
     vector<RealOpenMM> dVdR2(valueDerivExpressions.size(), 0.0);
-    if (!isExcluded || valueTypes[0] != OpenMM::CustomGBForce::ParticlePair) {
+    if (!isExcluded || valueTypes[0] != CustomGBForce::ParticlePair) {
         dVdR1[0] = (RealOpenMM) valueDerivExpressions[0][0].evaluate();
         dVdR2[0] = -dVdR1[0];
         for (int i = 0; i < 3; i++) {

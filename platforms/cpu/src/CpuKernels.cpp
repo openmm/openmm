@@ -843,6 +843,8 @@ CpuCalcCustomGBForceKernel::~CpuCalcCustomGBForceKernel() {
     }
     if (neighborList != NULL)
         delete neighborList;
+    if (ixn != NULL)
+        delete ixn;
 }
 
 void CpuCalcCustomGBForceKernel::initialize(const System& system, const CustomGBForce& force) {
@@ -891,7 +893,7 @@ void CpuCalcCustomGBForceKernel::initialize(const System& system, const CustomGB
     if (nonbondedMethod == NoCutoff)
         neighborList = NULL;
     else
-        neighborList = new NeighborList();
+        neighborList = new CpuNeighborList(4);
 
     // Create custom functions for the tabulated functions.
 
@@ -901,8 +903,10 @@ void CpuCalcCustomGBForceKernel::initialize(const System& system, const CustomGB
 
     // Parse the expressions for computed values.
 
-    valueDerivExpressions.resize(force.getNumComputedValues());
-    valueGradientExpressions.resize(force.getNumComputedValues());
+    vector<vector<Lepton::CompiledExpression> > valueDerivExpressions(force.getNumComputedValues());
+    vector<vector<Lepton::CompiledExpression> > valueGradientExpressions(force.getNumComputedValues());
+    vector<Lepton::CompiledExpression> valueExpressions;
+    vector<Lepton::CompiledExpression> energyExpressions;
     for (int i = 0; i < force.getNumComputedValues(); i++) {
         string name, expression;
         CustomGBForce::ComputationType type;
@@ -924,8 +928,8 @@ void CpuCalcCustomGBForceKernel::initialize(const System& system, const CustomGB
 
     // Parse the expressions for energy terms.
 
-    energyDerivExpressions.resize(force.getNumEnergyTerms());
-    energyGradientExpressions.resize(force.getNumEnergyTerms());
+    vector<vector<Lepton::CompiledExpression> > energyDerivExpressions(force.getNumEnergyTerms());
+    vector<vector<Lepton::CompiledExpression> > energyGradientExpressions(force.getNumEnergyTerms());
     for (int i = 0; i < force.getNumEnergyTerms(); i++) {
         string expression;
         CustomGBForce::ComputationType type;
@@ -953,25 +957,28 @@ void CpuCalcCustomGBForceKernel::initialize(const System& system, const CustomGB
 
     for (map<string, Lepton::CustomFunction*>::iterator iter = functions.begin(); iter != functions.end(); iter++)
         delete iter->second;
+    ixn = new CpuCustomGBForce(valueExpressions, valueDerivExpressions, valueGradientExpressions, valueNames, valueTypes, energyExpressions,
+        energyDerivExpressions, energyGradientExpressions, energyTypes, particleParameterNames);
+    data.isPeriodic = (force.getNonbondedMethod() == CustomGBForce::CutoffPeriodic);
 }
 
 double CpuCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     vector<RealVec>& posData = extractPositions(context);
     vector<RealVec>& forceData = extractForces(context);
     RealOpenMM energy = 0;
-    CpuCustomGBForce ixn(valueExpressions, valueDerivExpressions, valueGradientExpressions, valueNames, valueTypes, energyExpressions,
-        energyDerivExpressions, energyGradientExpressions, energyTypes, particleParameterNames);
-    bool periodic = (nonbondedMethod == CutoffPeriodic);
-    if (periodic)
-        ixn.setPeriodic(extractBoxSize(context));
+    RealVec& box = extractBoxSize(context);
+    float floatBoxSize[3] = {(float) box[0], (float) box[1], (float) box[2]};
+    if (data.isPeriodic)
+        ixn->setPeriodic(extractBoxSize(context));
     if (nonbondedMethod != NoCutoff) {
-        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, extractBoxSize(context), periodic, nonbondedCutoff, 0.0);
-        ixn.setUseCutoff(nonbondedCutoff, *neighborList);
+        vector<set<int> > noExclusions(numParticles);
+        neighborList->computeNeighborList(numParticles, data.posq, exclusions, floatBoxSize, data.isPeriodic, nonbondedCutoff, data.threads);
+        ixn->setUseCutoff(nonbondedCutoff, *neighborList);
     }
     map<string, double> globalParameters;
     for (int i = 0; i < (int) globalParameterNames.size(); i++)
         globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
-    ixn.calculateIxn(numParticles, posData, particleParamArray, exclusions, globalParameters, forceData, includeEnergy ? &energy : NULL);
+    ixn->calculateIxn(numParticles, posData, particleParamArray, exclusions, globalParameters, forceData, includeEnergy ? &energy : NULL);
     return energy;
 }
 
