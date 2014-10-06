@@ -835,6 +835,162 @@ void CpuCalcGBSAOBCForceKernel::copyParametersToContext(ContextImpl& context, co
     obc.setParticleParameters(particleParams);
 }
 
+CpuCalcCustomGBForceKernel::~CpuCalcCustomGBForceKernel() {
+    if (particleParamArray != NULL) {
+        for (int i = 0; i < numParticles; i++)
+            delete[] particleParamArray[i];
+        delete[] particleParamArray;
+    }
+    if (neighborList != NULL)
+        delete neighborList;
+}
+
+void CpuCalcCustomGBForceKernel::initialize(const System& system, const CustomGBForce& force) {
+    if (force.getNumComputedValues() > 0) {
+        string name, expression;
+        CustomGBForce::ComputationType type;
+        force.getComputedValueParameters(0, name, expression, type);
+        if (type == CustomGBForce::SingleParticle)
+            throw OpenMMException("CpuPlatform requires that the first computed value for a CustomGBForce be of type ParticlePair or ParticlePairNoExclusions.");
+        for (int i = 1; i < force.getNumComputedValues(); i++) {
+            force.getComputedValueParameters(i, name, expression, type);
+            if (type != CustomGBForce::SingleParticle)
+                throw OpenMMException("CpuPlatform requires that a CustomGBForce only have one computed value of type ParticlePair or ParticlePairNoExclusions.");
+        }
+    }
+
+    // Record the exclusions.
+
+    numParticles = force.getNumParticles();
+    exclusions.resize(numParticles);
+    for (int i = 0; i < force.getNumExclusions(); i++) {
+        int particle1, particle2;
+        force.getExclusionParticles(i, particle1, particle2);
+        exclusions[particle1].insert(particle2);
+        exclusions[particle2].insert(particle1);
+    }
+
+    // Build the arrays.
+
+    int numPerParticleParameters = force.getNumPerParticleParameters();
+    particleParamArray = new double*[numParticles];
+    for (int i = 0; i < numParticles; i++)
+        particleParamArray[i] = new double[numPerParticleParameters];
+    for (int i = 0; i < numParticles; ++i) {
+        vector<double> parameters;
+        force.getParticleParameters(i, parameters);
+        for (int j = 0; j < numPerParticleParameters; j++)
+            particleParamArray[i][j] = static_cast<RealOpenMM>(parameters[j]);
+    }
+    for (int i = 0; i < numPerParticleParameters; i++)
+        particleParameterNames.push_back(force.getPerParticleParameterName(i));
+    for (int i = 0; i < force.getNumGlobalParameters(); i++)
+        globalParameterNames.push_back(force.getGlobalParameterName(i));
+    nonbondedMethod = CalcCustomGBForceKernel::NonbondedMethod(force.getNonbondedMethod());
+    nonbondedCutoff = (RealOpenMM) force.getCutoffDistance();
+    if (nonbondedMethod == NoCutoff)
+        neighborList = NULL;
+    else
+        neighborList = new NeighborList();
+
+    // Create custom functions for the tabulated functions.
+
+    map<string, Lepton::CustomFunction*> functions;
+    for (int i = 0; i < force.getNumFunctions(); i++)
+        functions[force.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
+
+    // Parse the expressions for computed values.
+
+    valueDerivExpressions.resize(force.getNumComputedValues());
+    valueGradientExpressions.resize(force.getNumComputedValues());
+    for (int i = 0; i < force.getNumComputedValues(); i++) {
+        string name, expression;
+        CustomGBForce::ComputationType type;
+        force.getComputedValueParameters(i, name, expression, type);
+        Lepton::ParsedExpression ex = Lepton::Parser::parse(expression, functions).optimize();
+        valueExpressions.push_back(ex.createCompiledExpression());
+        valueTypes.push_back(type);
+        valueNames.push_back(name);
+        if (i == 0)
+            valueDerivExpressions[i].push_back(ex.differentiate("r").createCompiledExpression());
+        else {
+            valueGradientExpressions[i].push_back(ex.differentiate("x").createCompiledExpression());
+            valueGradientExpressions[i].push_back(ex.differentiate("y").createCompiledExpression());
+            valueGradientExpressions[i].push_back(ex.differentiate("z").createCompiledExpression());
+            for (int j = 0; j < i; j++)
+                valueDerivExpressions[i].push_back(ex.differentiate(valueNames[j]).createCompiledExpression());
+        }
+    }
+
+    // Parse the expressions for energy terms.
+
+    energyDerivExpressions.resize(force.getNumEnergyTerms());
+    energyGradientExpressions.resize(force.getNumEnergyTerms());
+    for (int i = 0; i < force.getNumEnergyTerms(); i++) {
+        string expression;
+        CustomGBForce::ComputationType type;
+        force.getEnergyTermParameters(i, expression, type);
+        Lepton::ParsedExpression ex = Lepton::Parser::parse(expression, functions).optimize();
+        energyExpressions.push_back(ex.createCompiledExpression());
+        energyTypes.push_back(type);
+        if (type != CustomGBForce::SingleParticle)
+            energyDerivExpressions[i].push_back(ex.differentiate("r").createCompiledExpression());
+        for (int j = 0; j < force.getNumComputedValues(); j++) {
+            if (type == CustomGBForce::SingleParticle) {
+                energyDerivExpressions[i].push_back(ex.differentiate(valueNames[j]).createCompiledExpression());
+                energyGradientExpressions[i].push_back(ex.differentiate("x").createCompiledExpression());
+                energyGradientExpressions[i].push_back(ex.differentiate("y").createCompiledExpression());
+                energyGradientExpressions[i].push_back(ex.differentiate("z").createCompiledExpression());
+            }
+            else {
+                energyDerivExpressions[i].push_back(ex.differentiate(valueNames[j]+"1").createCompiledExpression());
+                energyDerivExpressions[i].push_back(ex.differentiate(valueNames[j]+"2").createCompiledExpression());
+            }
+        }
+    }
+
+    // Delete the custom functions.
+
+    for (map<string, Lepton::CustomFunction*>::iterator iter = functions.begin(); iter != functions.end(); iter++)
+        delete iter->second;
+}
+
+double CpuCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    vector<RealVec>& posData = extractPositions(context);
+    vector<RealVec>& forceData = extractForces(context);
+    RealOpenMM energy = 0;
+    CpuCustomGBForce ixn(valueExpressions, valueDerivExpressions, valueGradientExpressions, valueNames, valueTypes, energyExpressions,
+        energyDerivExpressions, energyGradientExpressions, energyTypes, particleParameterNames);
+    bool periodic = (nonbondedMethod == CutoffPeriodic);
+    if (periodic)
+        ixn.setPeriodic(extractBoxSize(context));
+    if (nonbondedMethod != NoCutoff) {
+        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, extractBoxSize(context), periodic, nonbondedCutoff, 0.0);
+        ixn.setUseCutoff(nonbondedCutoff, *neighborList);
+    }
+    map<string, double> globalParameters;
+    for (int i = 0; i < (int) globalParameterNames.size(); i++)
+        globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
+    ixn.calculateIxn(numParticles, posData, particleParamArray, exclusions, globalParameters, forceData, includeEnergy ? &energy : NULL);
+    return energy;
+}
+
+void CpuCalcCustomGBForceKernel::copyParametersToContext(ContextImpl& context, const CustomGBForce& force) {
+    if (numParticles != force.getNumParticles())
+        throw OpenMMException("updateParametersInContext: The number of particles has changed");
+
+    // Record the values.
+
+    int numParameters = force.getNumPerParticleParameters();
+    vector<double> params;
+    for (int i = 0; i < numParticles; ++i) {
+        vector<double> parameters;
+        force.getParticleParameters(i, parameters);
+        for (int j = 0; j < numParameters; j++)
+            particleParamArray[i][j] = static_cast<RealOpenMM>(parameters[j]);
+    }
+}
+
 CpuCalcCustomManyParticleForceKernel::~CpuCalcCustomManyParticleForceKernel() {
     if (particleParamArray != NULL) {
         for (int i = 0; i < numParticles; i++)
