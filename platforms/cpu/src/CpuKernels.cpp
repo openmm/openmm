@@ -957,8 +957,8 @@ void CpuCalcCustomGBForceKernel::initialize(const System& system, const CustomGB
 
     for (map<string, Lepton::CustomFunction*>::iterator iter = functions.begin(); iter != functions.end(); iter++)
         delete iter->second;
-    ixn = new CpuCustomGBForce(numParticles, valueExpressions, valueDerivExpressions, valueGradientExpressions, valueNames, valueTypes, energyExpressions,
-        energyDerivExpressions, energyGradientExpressions, energyTypes, particleParameterNames);
+    ixn = new CpuCustomGBForce(numParticles, exclusions, valueExpressions, valueDerivExpressions, valueGradientExpressions, valueNames, valueTypes, energyExpressions,
+        energyDerivExpressions, energyGradientExpressions, energyTypes, particleParameterNames, data.threads);
     data.isPeriodic = (force.getNonbondedMethod() == CustomGBForce::CutoffPeriodic);
 }
 
@@ -977,7 +977,7 @@ double CpuCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeFor
     map<string, double> globalParameters;
     for (int i = 0; i < (int) globalParameterNames.size(); i++)
         globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
-    ixn->calculateIxn(numParticles, &data.posq[0], particleParamArray, exclusions, globalParameters, &data.threadForce[0][0], includeEnergy ? &energy : NULL);
+    ixn->calculateIxn(numParticles, &data.posq[0], particleParamArray, globalParameters, data.threadForce, includeForces, includeEnergy, energy);
     return energy;
 }
 

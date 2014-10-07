@@ -30,23 +30,34 @@
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceForce.h"
 #include "CpuCustomGBForce.h"
+#include "gmx_atomic.h"
 
 using namespace OpenMM;
 using namespace std;
 
-CpuCustomGBForce::CpuCustomGBForce(int numAtoms, const vector<Lepton::CompiledExpression>& valueExpressions,
-                     const vector<vector<Lepton::CompiledExpression> >& valueDerivExpressions,
-                     const vector<vector<Lepton::CompiledExpression> >& valueGradientExpressions,
-                     const vector<string>& valueNames,
-                     const vector<CustomGBForce::ComputationType>& valueTypes,
-                     const vector<Lepton::CompiledExpression>& energyExpressions,
-                     const vector<vector<Lepton::CompiledExpression> >& energyDerivExpressions,
-                     const vector<vector<Lepton::CompiledExpression> >& energyGradientExpressions,
-                     const vector<CustomGBForce::ComputationType>& energyTypes,
-                     const vector<string>& parameterNames) :
-            cutoff(false), periodic(false), valueExpressions(valueExpressions), valueDerivExpressions(valueDerivExpressions), valueGradientExpressions(valueGradientExpressions),
-            valueNames(valueNames), valueTypes(valueTypes), energyExpressions(energyExpressions), energyDerivExpressions(energyDerivExpressions), energyGradientExpressions(energyGradientExpressions),
-            energyTypes(energyTypes), paramNames(parameterNames) {
+class CpuCustomGBForce::ComputeForceTask : public ThreadPool::Task {
+public:
+    ComputeForceTask(CpuCustomGBForce& owner) : owner(owner) {
+    }
+    void execute(ThreadPool& threads, int threadIndex) {
+        owner.threadComputeForce(threads, threadIndex);
+    }
+    CpuCustomGBForce& owner;
+};
+
+CpuCustomGBForce::ThreadData::ThreadData(int numAtoms, int numThreads, int threadIndex,
+                      const vector<Lepton::CompiledExpression>& valueExpressions,
+                      const vector<vector<Lepton::CompiledExpression> >& valueDerivExpressions,
+                      const vector<vector<Lepton::CompiledExpression> >& valueGradientExpressions,
+                      const vector<string>& valueNames,
+                      const vector<Lepton::CompiledExpression>& energyExpressions,
+                      const vector<vector<Lepton::CompiledExpression> >& energyDerivExpressions,
+                      const vector<vector<Lepton::CompiledExpression> >& energyGradientExpressions,
+                      const vector<string>& parameterNames) :
+            valueExpressions(valueExpressions), valueDerivExpressions(valueDerivExpressions), valueGradientExpressions(valueGradientExpressions),
+            energyExpressions(energyExpressions), energyDerivExpressions(energyDerivExpressions), energyGradientExpressions(energyGradientExpressions) {
+    firstAtom = (threadIndex*(long long) numAtoms)/numThreads;
+    lastAtom = ((threadIndex+1)*(long long) numAtoms)/numThreads;
     for (int i = 0; i < (int) valueExpressions.size(); i++)
         expressionSet.registerExpression(this->valueExpressions[i]);
     for (int i = 0; i < (int) valueDerivExpressions.size(); i++)
@@ -67,11 +78,11 @@ CpuCustomGBForce::CpuCustomGBForce(int numAtoms, const vector<Lepton::CompiledEx
     yindex = expressionSet.getVariableIndex("y");
     zindex = expressionSet.getVariableIndex("z");
     rindex = expressionSet.getVariableIndex("r");
-    for (int i = 0; i < (int) paramNames.size(); i++) {
-        paramIndex.push_back(expressionSet.getVariableIndex(paramNames[i]));
+    for (int i = 0; i < (int) parameterNames.size(); i++) {
+        paramIndex.push_back(expressionSet.getVariableIndex(parameterNames[i]));
         for (int j = 1; j < 3; j++) {
             stringstream name;
-            name << paramNames[i] << j;
+            name << parameterNames[i] << j;
             particleParamIndex.push_back(expressionSet.getVariableIndex(name.str()));
         }
     }
@@ -83,12 +94,10 @@ CpuCustomGBForce::CpuCustomGBForce(int numAtoms, const vector<Lepton::CompiledEx
             particleValueIndex.push_back(expressionSet.getVariableIndex(name.str()));
         }
     }
-    values.resize(valueTypes.size());
-    dEdV.resize(valueTypes.size());
-    for (int i = 0; i < (int) values.size(); i++) {
-        values[i].resize(numAtoms);
+    value0.resize(numAtoms);
+    dEdV.resize(valueNames.size());
+    for (int i = 0; i < (int) dEdV.size(); i++)
         dEdV[i].resize(numAtoms);
-    }
     dVdX.resize(valueDerivExpressions.size());
     dVdY.resize(valueDerivExpressions.size());
     dVdZ.resize(valueDerivExpressions.size());
@@ -96,7 +105,33 @@ CpuCustomGBForce::CpuCustomGBForce(int numAtoms, const vector<Lepton::CompiledEx
     dVdR2.resize(valueDerivExpressions.size());
 }
 
+CpuCustomGBForce::CpuCustomGBForce(int numAtoms, const std::vector<std::set<int> >& exclusions,
+                     const vector<Lepton::CompiledExpression>& valueExpressions,
+                     const vector<vector<Lepton::CompiledExpression> >& valueDerivExpressions,
+                     const vector<vector<Lepton::CompiledExpression> >& valueGradientExpressions,
+                     const vector<string>& valueNames,
+                     const vector<CustomGBForce::ComputationType>& valueTypes,
+                     const vector<Lepton::CompiledExpression>& energyExpressions,
+                     const vector<vector<Lepton::CompiledExpression> >& energyDerivExpressions,
+                     const vector<vector<Lepton::CompiledExpression> >& energyGradientExpressions,
+                     const vector<CustomGBForce::ComputationType>& energyTypes,
+                     const vector<string>& parameterNames, ThreadPool& threads) :
+            exclusions(exclusions), cutoff(false), periodic(false), valueNames(valueNames), valueTypes(valueTypes),
+            energyTypes(energyTypes), paramNames(parameterNames), threads(threads) {
+    for (int i = 0; i < threads.getNumThreads(); i++)
+        threadData.push_back(new ThreadData(numAtoms, threads.getNumThreads(), i, valueExpressions, valueDerivExpressions, valueGradientExpressions, valueNames,
+                      energyExpressions, energyDerivExpressions, energyGradientExpressions, parameterNames));
+    values.resize(valueNames.size());
+    dEdV.resize(valueNames.size());
+    for (int i = 0; i < (int) values.size(); i++) {
+        values[i].resize(numAtoms);
+        dEdV[i].resize(numAtoms);
+    }
+}
+
 CpuCustomGBForce::~CpuCustomGBForce() {
+    for (int i = 0; i < (int) threadData.size(); i++)
+        delete threadData[i];
 }
 
 void CpuCustomGBForce::setUseCutoff(float distance, const CpuNeighborList& neighbors) {
@@ -106,7 +141,6 @@ void CpuCustomGBForce::setUseCutoff(float distance, const CpuNeighborList& neigh
   }
 
 void CpuCustomGBForce::setPeriodic(RealVec& boxSize) {
-
     if (cutoff) {
         assert(boxSize[0] >= 2.0*cutoffDistance);
         assert(boxSize[1] >= 2.0*cutoffDistance);
@@ -119,68 +153,157 @@ void CpuCustomGBForce::setPeriodic(RealVec& boxSize) {
   }
 
 void CpuCustomGBForce::calculateIxn(int numberOfAtoms, float* posq, RealOpenMM** atomParameters,
-                                           const vector<set<int> >& exclusions, map<string, double>& globalParameters, float* forces,
-                                           double* totalEnergy) {
+                                           map<string, double>& globalParameters, vector<AlignedArray<float> >& threadForce,
+                                           bool includeForce, bool includeEnergy, double& totalEnergy) {
+    // Record the parameters for the threads.
+    
+    this->numberOfAtoms = numberOfAtoms;
+    this->posq = posq;
+    this->atomParameters = atomParameters;
+    this->globalParameters = &globalParameters;
+    this->threadForce = &threadForce;
+    this->includeForce = includeForce;
+    this->includeEnergy = includeEnergy;
+    threadEnergy.resize(threads.getNumThreads());
+    gmx_atomic_t counter;
+    this->atomicCounter = &counter;
+
+    // Calculate the first computed value.
+
+    ComputeForceTask task(*this);
+    gmx_atomic_set(&counter, 0);
+    threads.execute(task);
+    threads.waitForThreads();
+    
+    // Calculate the remaining computed values.
+    
+    threads.resumeThreads();
+    threads.waitForThreads();
+
+    // Calculate the energy terms.
+
+    for (int i = 0; i < (int) threadData[0]->energyExpressions.size(); i++) {
+        gmx_atomic_set(&counter, 0);
+        threads.execute(task);
+        threads.waitForThreads();
+    }
+
+    // Sum the energy derivatives.
+
+    threads.resumeThreads();
+    threads.waitForThreads();
+    
+    // Apply the chain rule to evaluate forces.
+
+    gmx_atomic_set(&counter, 0);
+    threads.resumeThreads();
+    threads.waitForThreads();
+
+    // Combine the energies from all the threads.
+    
+    if (includeEnergy) {
+        int numThreads = threads.getNumThreads();
+        for (int i = 0; i < numThreads; i++)
+            totalEnergy += threadEnergy[i];
+    }
+}
+
+void CpuCustomGBForce::threadComputeForce(ThreadPool& threads, int threadIndex) {
+    // Compute this thread's subset of interactions.
+
+    int numThreads = threads.getNumThreads();
+    threadEnergy[threadIndex] = 0;
+    double& energy = threadEnergy[threadIndex];
+    float* forces = &(*threadForce)[threadIndex][0];
+    ThreadData& data = *threadData[threadIndex];
     fvec4 boxSize(periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2], 0);
     fvec4 invBoxSize((1/periodicBoxSize[0]), (1/periodicBoxSize[1]), (1/periodicBoxSize[2]), 0);
-    for (map<string, double>::const_iterator iter = globalParameters.begin(); iter != globalParameters.end(); ++iter)
-        expressionSet.setVariable(expressionSet.getVariableIndex(iter->first), iter->second);
+    for (map<string, double>::const_iterator iter = globalParameters->begin(); iter != globalParameters->end(); ++iter)
+        data.expressionSet.setVariable(data.expressionSet.getVariableIndex(iter->first), iter->second);
 
-    // First calculate the computed values.
+    // Calculate the first computed value.
+
+    for (int i = 0; i < (int) data.value0.size(); i++)
+        data.value0[i] = 0.0f;
+    if (valueTypes[0] == CustomGBForce::ParticlePair)
+        calculateParticlePairValue(0, data, numberOfAtoms, posq, atomParameters, true, boxSize, invBoxSize);
+    else
+        calculateParticlePairValue(0, data, numberOfAtoms, posq, atomParameters, false, boxSize, invBoxSize);
+    threads.syncThreads();
+
+    // Sum the first computed value.
+
+    for (int atom = data.firstAtom; atom < data.lastAtom; atom++) {
+        float sum = 0.0f;
+        for (int j = 0; j < (int) threadData.size(); j++)
+            sum += threadData[j]->value0[atom];
+        values[0][atom] = sum;
+    }
+
+    // Calculate the remaining computed values.
 
     int numValues = valueTypes.size();
-    for (int valueIndex = 0; valueIndex < numValues; valueIndex++) {
-        if (valueTypes[valueIndex] == CustomGBForce::SingleParticle)
-            calculateSingleParticleValue(valueIndex, numberOfAtoms, posq, values, atomParameters);
-        else if (valueTypes[valueIndex] == CustomGBForce::ParticlePair)
-            calculateParticlePairValue(valueIndex, numberOfAtoms, posq, atomParameters, values, exclusions, true, boxSize, invBoxSize);
-        else
-            calculateParticlePairValue(valueIndex, numberOfAtoms, posq, atomParameters, values, exclusions, false, boxSize, invBoxSize);
-    }
+    for (int i = 1; i < numValues; i++)
+        calculateSingleParticleValue(i, data, numberOfAtoms, posq, atomParameters);
+    threads.syncThreads();
 
     // Now calculate the energy and its derivatives.
 
-    for (int i = 0; i < (int) dEdV.size(); i++)
-        for (int j = 0; j < (int) dEdV[i].size(); j++)
-            dEdV[i][j] = 0.0;
-    for (int termIndex = 0; termIndex < (int) energyExpressions.size(); termIndex++) {
+    for (int i = 0; i < (int) data.dEdV.size(); i++)
+        for (int j = 0; j < (int) data.dEdV[i].size(); j++)
+            data.dEdV[i][j] = 0.0;
+    for (int termIndex = 0; termIndex < (int) data.energyExpressions.size(); termIndex++) {
         if (energyTypes[termIndex] == CustomGBForce::SingleParticle)
-            calculateSingleParticleEnergyTerm(termIndex, numberOfAtoms, posq, values, atomParameters, forces, totalEnergy, dEdV);
+            calculateSingleParticleEnergyTerm(termIndex, data, numberOfAtoms, posq, atomParameters, forces, energy);
         else if (energyTypes[termIndex] == CustomGBForce::ParticlePair)
-            calculateParticlePairEnergyTerm(termIndex, numberOfAtoms, posq, atomParameters, values, exclusions, true, forces, totalEnergy, dEdV, boxSize, invBoxSize);
+            calculateParticlePairEnergyTerm(termIndex, data, numberOfAtoms, posq, atomParameters, true, forces, energy, boxSize, invBoxSize);
         else
-            calculateParticlePairEnergyTerm(termIndex, numberOfAtoms, posq, atomParameters, values, exclusions, false, forces, totalEnergy, dEdV, boxSize, invBoxSize);
+            calculateParticlePairEnergyTerm(termIndex, data, numberOfAtoms, posq, atomParameters, false, forces, energy, boxSize, invBoxSize);
+        threads.syncThreads();
     }
+
+    // Sum the energy derivatives.
+
+    for (int atom = data.firstAtom; atom < data.lastAtom; atom++) {
+        for (int i = 0; i < (int) dEdV.size(); i++) {
+            float sum = 0.0f;
+            for (int j = 0; j < (int) threadData.size(); j++)
+                sum += threadData[j]->dEdV[i][atom];
+            dEdV[i][atom] = sum;
+        }
+    }
+    threads.syncThreads();
 
     // Apply the chain rule to evaluate forces.
 
-    calculateChainRuleForces(numberOfAtoms, posq, atomParameters, values, exclusions, forces, dEdV, boxSize, invBoxSize);
+    calculateChainRuleForces(data, numberOfAtoms, posq, atomParameters, forces, boxSize, invBoxSize);
 }
 
-void CpuCustomGBForce::calculateSingleParticleValue(int index, int numAtoms, float* posq, vector<vector<float> >& values,
-        RealOpenMM** atomParameters) {
-    values[index].resize(numAtoms);
-    for (int i = 0; i < numAtoms; i++) {
-        expressionSet.setVariable(xindex, posq[4*i]);
-        expressionSet.setVariable(yindex, posq[4*i+1]);
-        expressionSet.setVariable(zindex, posq[4*i+2]);
+void CpuCustomGBForce::calculateSingleParticleValue(int index, ThreadData& data, int numAtoms, float* posq, RealOpenMM** atomParameters) {
+    for (int i = data.firstAtom; i < data.lastAtom; i++) {
+        data.expressionSet.setVariable(data.xindex, posq[4*i]);
+        data.expressionSet.setVariable(data.yindex, posq[4*i+1]);
+        data.expressionSet.setVariable(data.zindex, posq[4*i+2]);
         for (int j = 0; j < (int) paramNames.size(); j++)
-            expressionSet.setVariable(paramIndex[j], atomParameters[i][j]);
+            data.expressionSet.setVariable(data.paramIndex[j], atomParameters[i][j]);
         for (int j = 0; j < index; j++)
-            expressionSet.setVariable(valueIndex[j], values[j][i]);
-        values[index][i] = (float) valueExpressions[index].evaluate();
+            data.expressionSet.setVariable(data.valueIndex[j], values[j][i]);
+        values[index][i] = (float) data.valueExpressions[index].evaluate();
     }
 }
 
-void CpuCustomGBForce::calculateParticlePairValue(int index, int numAtoms, float* posq, RealOpenMM** atomParameters,
-        vector<vector<float> >& values, const vector<set<int> >& exclusions, bool useExclusions, const fvec4& boxSize, const fvec4& invBoxSize) {
-    values[index].resize(numAtoms);
+void CpuCustomGBForce::calculateParticlePairValue(int index, ThreadData& data, int numAtoms, float* posq, RealOpenMM** atomParameters,
+        bool useExclusions, const fvec4& boxSize, const fvec4& invBoxSize) {
     for (int i = 0; i < numAtoms; i++)
         values[index][i] = 0.0f;
+    vector<float>& valueArray = (index == 0 ? data.value0 : values[index]);
     if (cutoff) {
         // Loop over all pairs in the neighbor list.
 
-        for (int blockIndex = 0; blockIndex < neighborList->getNumBlocks(); blockIndex++) {
+        while (true) {
+            int blockIndex = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
+            if (blockIndex >= neighborList->getNumBlocks())
+                break;
             const int* blockAtom = &neighborList->getSortedAtoms()[4*blockIndex];
             const vector<int>& neighbors = neighborList->getBlockNeighbors(blockIndex);
             const vector<char>& blockExclusions = neighborList->getBlockExclusions(blockIndex);
@@ -191,8 +314,8 @@ void CpuCustomGBForce::calculateParticlePairValue(int index, int numAtoms, float
                         int second = blockAtom[k];
                         if (useExclusions && exclusions[first].find(second) != exclusions[first].end())
                             continue;
-                        calculateOnePairValue(index, first, second, posq, atomParameters, values, boxSize, invBoxSize);
-                        calculateOnePairValue(index, second, first, posq, atomParameters, values, boxSize, invBoxSize);
+                        calculateOnePairValue(index, first, second, data, posq, atomParameters, valueArray, boxSize, invBoxSize);
+                        calculateOnePairValue(index, second, first, data, posq, atomParameters, valueArray, boxSize, invBoxSize);
                     }
                 }
             }
@@ -201,19 +324,22 @@ void CpuCustomGBForce::calculateParticlePairValue(int index, int numAtoms, float
     else {
         // Perform an O(N^2) loop over all atom pairs.
 
-        for (int i = 0; i < numAtoms; i++) {
+        while (true) {
+            int i = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
+            if (i >= numAtoms)
+                break;
             for (int j = i+1; j < numAtoms; j++) {
                 if (useExclusions && exclusions[i].find(j) != exclusions[i].end())
                     continue;
-                calculateOnePairValue(index, i, j, posq, atomParameters, values, boxSize, invBoxSize);
-                calculateOnePairValue(index, j, i, posq, atomParameters, values, boxSize, invBoxSize);
+                calculateOnePairValue(index, i, j, data, posq, atomParameters, valueArray, boxSize, invBoxSize);
+                calculateOnePairValue(index, j, i, data, posq, atomParameters, valueArray, boxSize, invBoxSize);
            }
         }
     }
 }
 
-void CpuCustomGBForce::calculateOnePairValue(int index, int atom1, int atom2, float* posq, RealOpenMM** atomParameters,
-        vector<vector<float> >& values, const fvec4& boxSize, const fvec4& invBoxSize) {
+void CpuCustomGBForce::calculateOnePairValue(int index, int atom1, int atom2, ThreadData& data, float* posq, RealOpenMM** atomParameters,
+        vector<float>& valueArray, const fvec4& boxSize, const fvec4& invBoxSize) {
     fvec4 deltaR;
     fvec4 pos1(posq+4*atom1);
     fvec4 pos2(posq+4*atom2);
@@ -223,45 +349,46 @@ void CpuCustomGBForce::calculateOnePairValue(int index, int atom1, int atom2, fl
     if (cutoff && r >= cutoffDistance)
         return;
     for (int i = 0; i < (int) paramNames.size(); i++) {
-        expressionSet.setVariable(particleParamIndex[i*2], atomParameters[atom1][i]);
-        expressionSet.setVariable(particleParamIndex[i*2+1], atomParameters[atom2][i]);
+        data.expressionSet.setVariable(data.particleParamIndex[i*2], atomParameters[atom1][i]);
+        data.expressionSet.setVariable(data.particleParamIndex[i*2+1], atomParameters[atom2][i]);
     }
-    expressionSet.setVariable(rindex, r);
+    data.expressionSet.setVariable(data.rindex, r);
     for (int i = 0; i < index; i++) {
-        expressionSet.setVariable(particleValueIndex[i*2], values[i][atom1]);
-        expressionSet.setVariable(particleValueIndex[i*2+1], values[i][atom2]);
+        data.expressionSet.setVariable(data.particleValueIndex[i*2], values[i][atom1]);
+        data.expressionSet.setVariable(data.particleValueIndex[i*2+1], values[i][atom2]);
     }
-    values[index][atom1] += (float) valueExpressions[index].evaluate();
+    valueArray[atom1] += (float) data.valueExpressions[index].evaluate();
 }
 
-void CpuCustomGBForce::calculateSingleParticleEnergyTerm(int index, int numAtoms, float* posq, const vector<vector<float> >& values,
-        RealOpenMM** atomParameters, float* forces, double* totalEnergy,
-        vector<vector<float> >& dEdV) {
-    for (int i = 0; i < numAtoms; i++) {
-        expressionSet.setVariable(xindex, posq[4*i]);
-        expressionSet.setVariable(yindex, posq[4*i+1]);
-        expressionSet.setVariable(zindex, posq[4*i+2]);
+void CpuCustomGBForce::calculateSingleParticleEnergyTerm(int index, ThreadData& data, int numAtoms, float* posq,
+        RealOpenMM** atomParameters, float* forces, double& totalEnergy) {
+    for (int i = data.firstAtom; i < data.lastAtom; i++) {
+        data.expressionSet.setVariable(data.xindex, posq[4*i]);
+        data.expressionSet.setVariable(data.yindex, posq[4*i+1]);
+        data.expressionSet.setVariable(data.zindex, posq[4*i+2]);
         for (int j = 0; j < (int) paramNames.size(); j++)
-            expressionSet.setVariable(paramIndex[j], atomParameters[i][j]);
+            data.expressionSet.setVariable(data.paramIndex[j], atomParameters[i][j]);
         for (int j = 0; j < (int) valueNames.size(); j++)
-            expressionSet.setVariable(valueIndex[j], values[j][i]);
-        if (totalEnergy != NULL)
-            *totalEnergy += (float) energyExpressions[index].evaluate();
+            data.expressionSet.setVariable(data.valueIndex[j], values[j][i]);
+        if (includeEnergy)
+            totalEnergy += (float) data.energyExpressions[index].evaluate();
         for (int j = 0; j < (int) valueNames.size(); j++)
-            dEdV[j][i] += (float) energyDerivExpressions[index][j].evaluate();
-        forces[4*i+0] -= (float) energyGradientExpressions[index][0].evaluate();
-        forces[4*i+1] -= (float) energyGradientExpressions[index][1].evaluate();
-        forces[4*i+2] -= (float) energyGradientExpressions[index][2].evaluate();
+            data.dEdV[j][i] += (float) data.energyDerivExpressions[index][j].evaluate();
+        forces[4*i+0] -= (float) data.energyGradientExpressions[index][0].evaluate();
+        forces[4*i+1] -= (float) data.energyGradientExpressions[index][1].evaluate();
+        forces[4*i+2] -= (float) data.energyGradientExpressions[index][2].evaluate();
     }
 }
 
-void CpuCustomGBForce::calculateParticlePairEnergyTerm(int index, int numAtoms, float* posq, RealOpenMM** atomParameters,
-        const vector<vector<float> >& values, const vector<set<int> >& exclusions, bool useExclusions,
-        float* forces, double* totalEnergy, vector<vector<float> >& dEdV, const fvec4& boxSize, const fvec4& invBoxSize) {
+void CpuCustomGBForce::calculateParticlePairEnergyTerm(int index, ThreadData& data, int numAtoms, float* posq, RealOpenMM** atomParameters,
+        bool useExclusions, float* forces, double& totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize) {
     if (cutoff) {
         // Loop over all pairs in the neighbor list.
 
-        for (int blockIndex = 0; blockIndex < neighborList->getNumBlocks(); blockIndex++) {
+        while (true) {
+            int blockIndex = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
+            if (blockIndex >= neighborList->getNumBlocks())
+                break;
             const int* blockAtom = &neighborList->getSortedAtoms()[4*blockIndex];
             const vector<int>& neighbors = neighborList->getBlockNeighbors(blockIndex);
             const vector<char>& blockExclusions = neighborList->getBlockExclusions(blockIndex);
@@ -272,7 +399,7 @@ void CpuCustomGBForce::calculateParticlePairEnergyTerm(int index, int numAtoms, 
                         int second = blockAtom[k];
                         if (useExclusions && exclusions[first].find(second) != exclusions[first].end())
                             continue;
-                        calculateOnePairEnergyTerm(index, first, second, posq, atomParameters, values, forces, totalEnergy, dEdV, boxSize, invBoxSize);
+                        calculateOnePairEnergyTerm(index, first, second, data, posq, atomParameters, forces, totalEnergy, boxSize, invBoxSize);
                     }
                 }
             }
@@ -281,19 +408,21 @@ void CpuCustomGBForce::calculateParticlePairEnergyTerm(int index, int numAtoms, 
     else {
         // Perform an O(N^2) loop over all atom pairs.
 
-        for (int i = 0; i < numAtoms; i++) {
+        while (true) {
+            int i = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
+            if (i >= numAtoms)
+                break;
             for (int j = i+1; j < numAtoms; j++) {
                 if (useExclusions && exclusions[i].find(j) != exclusions[i].end())
                     continue;
-                calculateOnePairEnergyTerm(index, i, j, posq, atomParameters, values, forces, totalEnergy, dEdV, boxSize, invBoxSize);
+                calculateOnePairEnergyTerm(index, i, j, data, posq, atomParameters, forces, totalEnergy, boxSize, invBoxSize);
            }
         }
     }
 }
 
-void CpuCustomGBForce::calculateOnePairEnergyTerm(int index, int atom1, int atom2, float* posq, RealOpenMM** atomParameters,
-        const vector<vector<float> >& values, float* forces, double* totalEnergy,
-        vector<vector<float> >& dEdV, const fvec4& boxSize, const fvec4& invBoxSize) {
+void CpuCustomGBForce::calculateOnePairEnergyTerm(int index, int atom1, int atom2, ThreadData& data, float* posq, RealOpenMM** atomParameters,
+        float* forces, double& totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize) {
     // Compute the displacement.
 
     fvec4 deltaR;
@@ -308,37 +437,39 @@ void CpuCustomGBForce::calculateOnePairEnergyTerm(int index, int atom1, int atom
     // Record variables for evaluating expressions.
 
     for (int i = 0; i < (int) paramNames.size(); i++) {
-        expressionSet.setVariable(particleParamIndex[i*2], atomParameters[atom1][i]);
-        expressionSet.setVariable(particleParamIndex[i*2+1], atomParameters[atom2][i]);
+        data.expressionSet.setVariable(data.particleParamIndex[i*2], atomParameters[atom1][i]);
+        data.expressionSet.setVariable(data.particleParamIndex[i*2+1], atomParameters[atom2][i]);
     }
-    expressionSet.setVariable(rindex, r);
+    data.expressionSet.setVariable(data.rindex, r);
     for (int i = 0; i < (int) valueNames.size(); i++) {
-        expressionSet.setVariable(particleValueIndex[i*2], values[i][atom1]);
-        expressionSet.setVariable(particleValueIndex[i*2+1], values[i][atom2]);
+        data.expressionSet.setVariable(data.particleValueIndex[i*2], values[i][atom1]);
+        data.expressionSet.setVariable(data.particleValueIndex[i*2+1], values[i][atom2]);
     }
 
     // Evaluate the energy and its derivatives.
 
-    if (totalEnergy != NULL)
-        *totalEnergy += (float) energyExpressions[index].evaluate();
-    float dEdR = (float) energyDerivExpressions[index][0].evaluate();
+    if (includeEnergy)
+        totalEnergy += (float) data.energyExpressions[index].evaluate();
+    float dEdR = (float) data.energyDerivExpressions[index][0].evaluate();
     dEdR *= 1/r;
     fvec4 result = deltaR*dEdR;
     (fvec4(forces+4*atom1)-result).store(forces+4*atom1);
     (fvec4(forces+4*atom2)+result).store(forces+4*atom2);
     for (int i = 0; i < (int) valueNames.size(); i++) {
-        dEdV[i][atom1] += (float) energyDerivExpressions[index][2*i+1].evaluate();
-        dEdV[i][atom2] += (float) energyDerivExpressions[index][2*i+2].evaluate();
+        data.dEdV[i][atom1] += (float) data.energyDerivExpressions[index][2*i+1].evaluate();
+        data.dEdV[i][atom2] += (float) data.energyDerivExpressions[index][2*i+2].evaluate();
     }
 }
 
-void CpuCustomGBForce::calculateChainRuleForces(int numAtoms, float* posq, RealOpenMM** atomParameters,
-        const vector<vector<float> >& values, const vector<set<int> >& exclusions, float* forces, vector<vector<float> >& dEdV,
-        const fvec4& boxSize, const fvec4& invBoxSize) {
+void CpuCustomGBForce::calculateChainRuleForces(ThreadData& data, int numAtoms, float* posq, RealOpenMM** atomParameters,
+        float* forces, const fvec4& boxSize, const fvec4& invBoxSize) {
     if (cutoff) {
         // Loop over all pairs in the neighbor list.
 
-        for (int blockIndex = 0; blockIndex < neighborList->getNumBlocks(); blockIndex++) {
+        while (true) {
+            int blockIndex = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
+            if (blockIndex >= neighborList->getNumBlocks())
+                break;
             const int* blockAtom = &neighborList->getSortedAtoms()[4*blockIndex];
             const vector<int>& neighbors = neighborList->getBlockNeighbors(blockIndex);
             const vector<char>& blockExclusions = neighborList->getBlockExclusions(blockIndex);
@@ -348,8 +479,8 @@ void CpuCustomGBForce::calculateChainRuleForces(int numAtoms, float* posq, RealO
                     if ((blockExclusions[i] & (1<<k)) == 0) {
                         int second = blockAtom[k];
                         bool isExcluded = (exclusions[first].find(second) != exclusions[first].end());
-                        calculateOnePairChainRule(first, second, posq, atomParameters, values, forces, dEdV, isExcluded, boxSize, invBoxSize);
-                        calculateOnePairChainRule(second, first, posq, atomParameters, values, forces, dEdV, isExcluded, boxSize, invBoxSize);
+                        calculateOnePairChainRule(first, second, data, posq, atomParameters, forces, isExcluded, boxSize, invBoxSize);
+                        calculateOnePairChainRule(second, first, data, posq, atomParameters, forces, isExcluded, boxSize, invBoxSize);
                     }
                 }
             }
@@ -358,46 +489,49 @@ void CpuCustomGBForce::calculateChainRuleForces(int numAtoms, float* posq, RealO
     else {
         // Perform an O(N^2) loop over all atom pairs.
 
-        for (int i = 0; i < numAtoms; i++) {
+        while (true) {
+            int i = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
+            if (i >= numAtoms)
+                break;
             for (int j = i+1; j < numAtoms; j++) {
                 bool isExcluded = (exclusions[i].find(j) != exclusions[i].end());
-                calculateOnePairChainRule(i, j, posq, atomParameters, values, forces, dEdV, isExcluded, boxSize, invBoxSize);
-                calculateOnePairChainRule(j, i, posq, atomParameters, values, forces, dEdV, isExcluded, boxSize, invBoxSize);
+                calculateOnePairChainRule(i, j, data, posq, atomParameters, forces, isExcluded, boxSize, invBoxSize);
+                calculateOnePairChainRule(j, i, data, posq, atomParameters, forces, isExcluded, boxSize, invBoxSize);
            }
         }
     }
 
     // Compute chain rule terms for computed values that depend explicitly on particle coordinates.
 
-    for (int i = 0; i < numAtoms; i++) {
-        expressionSet.setVariable(xindex, posq[4*i]);
-        expressionSet.setVariable(yindex, posq[4*i+1]);
-        expressionSet.setVariable(zindex, posq[4*i+2]);
+    for (int i = data.firstAtom; i < data.lastAtom; i++) {
+        data.expressionSet.setVariable(data.xindex, posq[4*i]);
+        data.expressionSet.setVariable(data.yindex, posq[4*i+1]);
+        data.expressionSet.setVariable(data.zindex, posq[4*i+2]);
         for (int j = 0; j < (int) paramNames.size(); j++)
-            expressionSet.setVariable(paramIndex[j], atomParameters[i][j]);
+            data.expressionSet.setVariable(data.paramIndex[j], atomParameters[i][j]);
         for (int j = 1; j < (int) valueNames.size(); j++) {
-            expressionSet.setVariable(valueIndex[j-1], values[j-1][i]);
-            dVdX[j] = 0.0;
-            dVdY[j] = 0.0;
-            dVdZ[j] = 0.0;
+            data.expressionSet.setVariable(data.valueIndex[j-1], values[j-1][i]);
+            data.dVdX[j] = 0.0;
+            data.dVdY[j] = 0.0;
+            data.dVdZ[j] = 0.0;
             for (int k = 1; k < j; k++) {
-                float dVdV = (float) valueDerivExpressions[j][k].evaluate();
-                dVdX[j] += dVdV*dVdX[k];
-                dVdY[j] += dVdV*dVdY[k];
-                dVdZ[j] += dVdV*dVdZ[k];
+                float dVdV = (float) data.valueDerivExpressions[j][k].evaluate();
+                data.dVdX[j] += dVdV*data.dVdX[k];
+                data.dVdY[j] += dVdV*data.dVdY[k];
+                data.dVdZ[j] += dVdV*data.dVdZ[k];
             }
-            dVdX[j] += (float) valueGradientExpressions[j][0].evaluate();
-            dVdY[j] += (float) valueGradientExpressions[j][1].evaluate();
-            dVdZ[j] += (float) valueGradientExpressions[j][2].evaluate();
-            forces[4*i+0] -= dEdV[j][i]*dVdX[j];
-            forces[4*i+1] -= dEdV[j][i]*dVdY[j];
-            forces[4*i+2] -= dEdV[j][i]*dVdZ[j];
+            data.dVdX[j] += (float) data.valueGradientExpressions[j][0].evaluate();
+            data.dVdY[j] += (float) data.valueGradientExpressions[j][1].evaluate();
+            data.dVdZ[j] += (float) data.valueGradientExpressions[j][2].evaluate();
+            forces[4*i+0] -= dEdV[j][i]*data.dVdX[j];
+            forces[4*i+1] -= dEdV[j][i]*data.dVdY[j];
+            forces[4*i+2] -= dEdV[j][i]*data.dVdZ[j];
         }
     }
 }
 
-void CpuCustomGBForce::calculateOnePairChainRule(int atom1, int atom2, float* posq, RealOpenMM** atomParameters,
-        const vector<vector<float> >& values, float* forces, vector<vector<float> >& dEdV, bool isExcluded, const fvec4& boxSize, const fvec4& invBoxSize) {
+void CpuCustomGBForce::calculateOnePairChainRule(int atom1, int atom2, ThreadData& data, float* posq, RealOpenMM** atomParameters,
+        float* forces, bool isExcluded, const fvec4& boxSize, const fvec4& invBoxSize) {
     // Compute the displacement.
 
     fvec4 deltaR;
@@ -412,40 +546,40 @@ void CpuCustomGBForce::calculateOnePairChainRule(int atom1, int atom2, float* po
     // Record variables for evaluating expressions.
 
     for (int i = 0; i < (int) paramNames.size(); i++) {
-        expressionSet.setVariable(particleParamIndex[i*2], atomParameters[atom1][i]);
-        expressionSet.setVariable(particleParamIndex[i*2+1], atomParameters[atom2][i]);
+        data.expressionSet.setVariable(data.particleParamIndex[i*2], atomParameters[atom1][i]);
+        data.expressionSet.setVariable(data.particleParamIndex[i*2+1], atomParameters[atom2][i]);
     }
-    expressionSet.setVariable(rindex, r);
-    expressionSet.setVariable(particleValueIndex[0], values[0][atom1]);
-    expressionSet.setVariable(particleValueIndex[1], values[0][atom2]);
+    data.expressionSet.setVariable(data.rindex, r);
+    data.expressionSet.setVariable(data.particleValueIndex[0], values[0][atom1]);
+    data.expressionSet.setVariable(data.particleValueIndex[1], values[0][atom2]);
 
     // Evaluate the derivative of each parameter with respect to position and apply forces.
 
     float rinv = 1/r;
     deltaR *= rinv;
     if (!isExcluded || valueTypes[0] != CustomGBForce::ParticlePair) {
-        dVdR1[0] = (float) valueDerivExpressions[0][0].evaluate();
-        dVdR2[0] = -dVdR1[0];
-        (fvec4(forces+4*atom1)-deltaR*(dEdV[0][atom1]*dVdR1[0])).store(forces+4*atom1);
-        (fvec4(forces+4*atom2)-deltaR*(dEdV[0][atom1]*dVdR2[0])).store(forces+4*atom2);
+        data.dVdR1[0] = (float) data.valueDerivExpressions[0][0].evaluate();
+        data.dVdR2[0] = -data.dVdR1[0];
+        (fvec4(forces+4*atom1)-deltaR*(dEdV[0][atom1]*data.dVdR1[0])).store(forces+4*atom1);
+        (fvec4(forces+4*atom2)-deltaR*(dEdV[0][atom1]*data.dVdR2[0])).store(forces+4*atom2);
     }
     for (int i = 0; i < (int) paramNames.size(); i++)
-        expressionSet.setVariable(paramIndex[i], atomParameters[atom1][i]);
-    expressionSet.setVariable(valueIndex[0], values[0][atom1]);
+        data.expressionSet.setVariable(data.paramIndex[i], atomParameters[atom1][i]);
+    data.expressionSet.setVariable(data.valueIndex[0], values[0][atom1]);
     for (int i = 1; i < (int) valueNames.size(); i++) {
-        expressionSet.setVariable(valueIndex[i], values[i][atom1]);
-        expressionSet.setVariable(xindex, posq[4*atom1]);
-        expressionSet.setVariable(yindex, posq[4*atom1+1]);
-        expressionSet.setVariable(zindex, posq[4*atom1+2]);
-        dVdR1[i] = 0.0;
-        dVdR2[i] = 0.0;
+        data.expressionSet.setVariable(data.valueIndex[i], values[i][atom1]);
+        data.expressionSet.setVariable(data.xindex, posq[4*atom1]);
+        data.expressionSet.setVariable(data.yindex, posq[4*atom1+1]);
+        data.expressionSet.setVariable(data.zindex, posq[4*atom1+2]);
+        data.dVdR1[i] = 0.0;
+        data.dVdR2[i] = 0.0;
         for (int j = 0; j < i; j++) {
-            float dVdV = (float) valueDerivExpressions[i][j].evaluate();
-            dVdR1[i] += dVdV*dVdR1[j];
-            dVdR2[i] += dVdV*dVdR2[j];
+            float dVdV = (float) data.valueDerivExpressions[i][j].evaluate();
+            data.dVdR1[i] += dVdV*data.dVdR1[j];
+            data.dVdR2[i] += dVdV*data.dVdR2[j];
         }
-        (fvec4(forces+4*atom1)-deltaR*(dEdV[i][atom1]*dVdR1[i])).store(forces+4*atom1);
-        (fvec4(forces+4*atom2)-deltaR*(dEdV[i][atom1]*dVdR2[i])).store(forces+4*atom2);
+        (fvec4(forces+4*atom1)-deltaR*(dEdV[i][atom1]*data.dVdR1[i])).store(forces+4*atom1);
+        (fvec4(forces+4*atom2)-deltaR*(dEdV[i][atom1]*data.dVdR2[i])).store(forces+4*atom2);
     }
 }
 
