@@ -137,6 +137,7 @@ CpuCustomGBForce::~CpuCustomGBForce() {
 void CpuCustomGBForce::setUseCutoff(float distance, const CpuNeighborList& neighbors) {
     cutoff = true;
     cutoffDistance = distance;
+    cutoffDistance2 = distance*distance;
     neighborList = &neighbors;
   }
 
@@ -336,9 +337,9 @@ void CpuCustomGBForce::calculateOnePairValue(int index, int atom1, int atom2, Th
     fvec4 pos2(posq+4*atom2);
     float r2;
     getDeltaR(pos2, pos1, deltaR, r2, periodic, boxSize, invBoxSize);
-    float r = sqrtf(r2);
-    if (cutoff && r >= cutoffDistance)
+    if (cutoff && r2 >= cutoffDistance2)
         return;
+    float r = sqrtf(r2);
     for (int i = 0; i < (int) paramNames.size(); i++) {
         data.expressionSet.setVariable(data.particleParamIndex[i*2], atomParameters[atom1][i]);
         data.expressionSet.setVariable(data.particleParamIndex[i*2+1], atomParameters[atom2][i]);
@@ -421,9 +422,9 @@ void CpuCustomGBForce::calculateOnePairEnergyTerm(int index, int atom1, int atom
     fvec4 pos2(posq+4*atom2);
     float r2;
     getDeltaR(pos2, pos1, deltaR, r2, periodic, boxSize, invBoxSize);
-    float r = sqrtf(r2);
-    if (cutoff && r >= cutoffDistance)
+    if (cutoff && r2 >= cutoffDistance2)
         return;
+    float r = sqrtf(r2);
 
     // Record variables for evaluating expressions.
 
@@ -530,16 +531,21 @@ void CpuCustomGBForce::calculateOnePairChainRule(int atom1, int atom2, ThreadDat
     fvec4 pos2(posq+4*atom2);
     float r2;
     getDeltaR(pos2, pos1, deltaR, r2, periodic, boxSize, invBoxSize);
-    float r = sqrtf(r2);
-    if (cutoff && r >= cutoffDistance)
+    if (cutoff && r2 >= cutoffDistance2)
         return;
+    float r = sqrtf(r2);
 
     // Record variables for evaluating expressions.
 
     for (int i = 0; i < (int) paramNames.size(); i++) {
         data.expressionSet.setVariable(data.particleParamIndex[i*2], atomParameters[atom1][i]);
         data.expressionSet.setVariable(data.particleParamIndex[i*2+1], atomParameters[atom2][i]);
+        data.expressionSet.setVariable(data.paramIndex[i], atomParameters[atom1][i]);
     }
+    data.expressionSet.setVariable(data.valueIndex[0], values[0][atom1]);
+    data.expressionSet.setVariable(data.xindex, posq[4*atom1]);
+    data.expressionSet.setVariable(data.yindex, posq[4*atom1+1]);
+    data.expressionSet.setVariable(data.zindex, posq[4*atom1+2]);
     data.expressionSet.setVariable(data.rindex, r);
     data.expressionSet.setVariable(data.particleValueIndex[0], values[0][atom1]);
     data.expressionSet.setVariable(data.particleValueIndex[1], values[0][atom2]);
@@ -548,20 +554,15 @@ void CpuCustomGBForce::calculateOnePairChainRule(int atom1, int atom2, ThreadDat
 
     float rinv = 1/r;
     deltaR *= rinv;
+    fvec4 f1(0.0f), f2(0.0f);
     if (!isExcluded || valueTypes[0] != CustomGBForce::ParticlePair) {
         data.dVdR1[0] = (float) data.valueDerivExpressions[0][0].evaluate();
         data.dVdR2[0] = -data.dVdR1[0];
-        (fvec4(forces+4*atom1)-deltaR*(dEdV[0][atom1]*data.dVdR1[0])).store(forces+4*atom1);
-        (fvec4(forces+4*atom2)-deltaR*(dEdV[0][atom1]*data.dVdR2[0])).store(forces+4*atom2);
+        f1 -= deltaR*(dEdV[0][atom1]*data.dVdR1[0]);
+        f2 -= deltaR*(dEdV[0][atom1]*data.dVdR2[0]);
     }
-    for (int i = 0; i < (int) paramNames.size(); i++)
-        data.expressionSet.setVariable(data.paramIndex[i], atomParameters[atom1][i]);
-    data.expressionSet.setVariable(data.valueIndex[0], values[0][atom1]);
     for (int i = 1; i < (int) valueNames.size(); i++) {
         data.expressionSet.setVariable(data.valueIndex[i], values[i][atom1]);
-        data.expressionSet.setVariable(data.xindex, posq[4*atom1]);
-        data.expressionSet.setVariable(data.yindex, posq[4*atom1+1]);
-        data.expressionSet.setVariable(data.zindex, posq[4*atom1+2]);
         data.dVdR1[i] = 0.0;
         data.dVdR2[i] = 0.0;
         for (int j = 0; j < i; j++) {
@@ -569,9 +570,11 @@ void CpuCustomGBForce::calculateOnePairChainRule(int atom1, int atom2, ThreadDat
             data.dVdR1[i] += dVdV*data.dVdR1[j];
             data.dVdR2[i] += dVdV*data.dVdR2[j];
         }
-        (fvec4(forces+4*atom1)-deltaR*(dEdV[i][atom1]*data.dVdR1[i])).store(forces+4*atom1);
-        (fvec4(forces+4*atom2)-deltaR*(dEdV[i][atom1]*data.dVdR2[i])).store(forces+4*atom2);
+        f1 -= deltaR*(dEdV[i][atom1]*data.dVdR1[i]);
+        f2 -= deltaR*(dEdV[i][atom1]*data.dVdR2[i]);
     }
+    (fvec4(forces+4*atom1)+f1).store(forces+4*atom1);
+    (fvec4(forces+4*atom2)+f2).store(forces+4*atom2);
 }
 
 void CpuCustomGBForce::getDeltaR(const fvec4& posI, const fvec4& posJ, fvec4& deltaR, float& r2, bool periodic, const fvec4& boxSize, const fvec4& invBoxSize) const {

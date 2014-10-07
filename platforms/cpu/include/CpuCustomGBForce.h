@@ -46,7 +46,7 @@ private:
     bool periodic;
     const CpuNeighborList* neighborList;
     float periodicBoxSize[3];
-    float cutoffDistance;
+    float cutoffDistance, cutoffDistance2;
     const std::vector<std::set<int> > exclusions;
     std::vector<std::string> valueNames;
     std::vector<CustomGBForce::ComputationType> valueTypes;
