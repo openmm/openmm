@@ -114,7 +114,7 @@ class Quantity(object):
          - unit: (Unit) the physical unit, e.g. simtk.unit.meters.
         """
         # When no unit is specified, bend over backwards to handle all one-argument possibilities
-        if unit == None: # one argument version, copied from UList
+        if unit is None: # one argument version, copied from UList
             if is_unit(value):
                 # Unit argument creates an empty list with that unit attached
                 unit = value
@@ -167,7 +167,7 @@ class Quantity(object):
             value = value * unit._value
             unit = unit.unit
         # Use empty list for unspecified values
-        if value == None:
+        if value is None:
             value = []
 
         self._value = value
@@ -306,7 +306,7 @@ class Quantity(object):
             value_factor = 1.0
             canonical_units = {} # dict of dimensionTuple: (Base/ScaledUnit, exponent)
             # Bias result toward guide units
-            if guide_unit != None:
+            if guide_unit is not None:
                 for u, exponent in guide_unit.iter_base_or_scaled_units():
                     d = u.get_dimension_tuple()
                     if d not in canonical_units:
@@ -454,6 +454,82 @@ class Quantity(object):
         if unit_factor != 1.0:
             new_value *= math.sqrt(unit_factor)
         return Quantity(value=new_value, unit=new_unit)
+
+    def sum(self):
+        """
+        Computes the sum of a sequence, with the result having the same unit as
+        the current sequence.
+
+        If the value is not iterable, it raises a TypeError (same behavior as if
+        you tried to iterate over, for instance, an integer).
+        """
+        try:
+            # This will be much faster for numpy arrays
+            mysum = self._value.sum()
+        except AttributeError:
+            mysum = sum(self._value)
+        return Quantity(mysum, self.unit)
+
+    def mean(self):
+        """
+        Computes the mean of a sequence, with the result having the same unit as
+        the current sequence.
+
+        If the value is not iterable, it raises a TypeError
+        """
+        try:
+            # Faster for numpy arrays
+            mean = self._value.mean()
+        except AttributeError:
+            mean = self.sum() / len(self._value)
+        return Quantity(mean, self.unit)
+
+    def std(self):
+        """
+        Computes the square root of the variance of a sequence, with the result
+        having the same unit as the current sequence.
+
+        If the value is not iterable, it raises a TypeError
+        """
+        try:
+            # Faster for numpy arrays
+            std = self._value.std()
+        except AttributeError:
+            mean = self.mean()
+            for val in self._value:
+                res = mean - val
+                var += res * res
+            var /= len(self._value)
+            std = math.sqrt(var)
+        return Quantity(std, self.unit)
+
+    def max(self):
+        """
+        Computes the maximum value of the sequence, with the result having the
+        same unit as the current sequence.
+
+        If the value is not iterable, it raises a TypeError
+        """
+        try:
+            # Faster for numpy arrays
+            mymax = self._value.max()
+        except AttributeError:
+            mymax = max(self._value)
+        return Quantity(mymax, self.unit)
+
+    def min(self):
+        """
+        Computes the minimum value of the sequence, with the result having the
+        same unit as the current sequence.
+
+        If the value is not iterable, it raises a TypeError
+        """
+        try:
+            # Faster for numpy arrays
+            mymin = self._value.min()
+        except AttributeError:
+            mymin = min(self._value)
+        return Quantity(mymin, self.unit)
 
     def __abs__(self):
         """
