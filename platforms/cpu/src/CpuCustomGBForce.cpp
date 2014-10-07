@@ -231,20 +231,24 @@ void CpuCustomGBForce::threadComputeForce(ThreadPool& threads, int threadIndex) 
         calculateParticlePairValue(0, data, numberOfAtoms, posq, atomParameters, false, boxSize, invBoxSize);
     threads.syncThreads();
 
-    // Sum the first computed value.
+    // Sum the first computed value and calculate the remaining ones.
 
+    int numValues = valueTypes.size();
     for (int atom = data.firstAtom; atom < data.lastAtom; atom++) {
         float sum = 0.0f;
         for (int j = 0; j < (int) threadData.size(); j++)
             sum += threadData[j]->value0[atom];
         values[0][atom] = sum;
+        data.expressionSet.setVariable(data.xindex, posq[4*atom]);
+        data.expressionSet.setVariable(data.yindex, posq[4*atom+1]);
+        data.expressionSet.setVariable(data.zindex, posq[4*atom+2]);
+        for (int j = 0; j < (int) paramNames.size(); j++)
+            data.expressionSet.setVariable(data.paramIndex[j], atomParameters[atom][j]);
+        for (int i = 1; i < numValues; i++) {
+            data.expressionSet.setVariable(data.valueIndex[i-1], values[i-1][atom]);
+            values[i][atom] = (float) data.valueExpressions[i].evaluate();
+        }
     }
-
-    // Calculate the remaining computed values.
-
-    int numValues = valueTypes.size();
-    for (int i = 1; i < numValues; i++)
-        calculateSingleParticleValue(i, data, numberOfAtoms, posq, atomParameters);
     threads.syncThreads();
 
     // Now calculate the energy and its derivatives.
@@ -277,19 +281,6 @@ void CpuCustomGBForce::threadComputeForce(ThreadPool& threads, int threadIndex) 
     // Apply the chain rule to evaluate forces.
 
     calculateChainRuleForces(data, numberOfAtoms, posq, atomParameters, forces, boxSize, invBoxSize);
-}
-
-void CpuCustomGBForce::calculateSingleParticleValue(int index, ThreadData& data, int numAtoms, float* posq, RealOpenMM** atomParameters) {
-    for (int i = data.firstAtom; i < data.lastAtom; i++) {
-        data.expressionSet.setVariable(data.xindex, posq[4*i]);
-        data.expressionSet.setVariable(data.yindex, posq[4*i+1]);
-        data.expressionSet.setVariable(data.zindex, posq[4*i+2]);
-        for (int j = 0; j < (int) paramNames.size(); j++)
-            data.expressionSet.setVariable(data.paramIndex[j], atomParameters[i][j]);
-        for (int j = 0; j < index; j++)
-            data.expressionSet.setVariable(data.valueIndex[j], values[j][i]);
-        values[index][i] = (float) data.valueExpressions[index].evaluate();
-    }
 }
 
 void CpuCustomGBForce::calculateParticlePairValue(int index, ThreadData& data, int numAtoms, float* posq, RealOpenMM** atomParameters,

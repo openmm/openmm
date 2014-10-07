@@ -70,18 +70,6 @@ private:
      * This routine contains the code executed by each thread.
      */
     void threadComputeForce(ThreadPool& threads, int threadIndex);
-    
-    /**
-     * Calculate a computed value of type SingleParticle
-     * 
-     * @param index            the index of the value to compute
-     * @param data             workspace for the current thread
-     * @param numAtoms         number of atoms
-     * @param posq             atom coordinates
-     * @param atomParameters   atomParameters[atomIndex][paramterIndex]
-     */
-
-    void calculateSingleParticleValue(int index, ThreadData& data, int numAtoms, float* posq, RealOpenMM** atomParameters);
 
     /**
      * Calculate a computed value that is based on particle pairs
