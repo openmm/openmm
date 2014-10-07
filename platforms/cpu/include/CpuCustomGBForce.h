@@ -58,6 +58,9 @@ private:
     std::vector<int> particleParamIndex;
     std::vector<int> particleValueIndex;
     int xindex, yindex, zindex, rindex;
+    // Workspace vectors
+    std::vector<std::vector<RealOpenMM> > values, dEdV;
+    std::vector<RealOpenMM> dVdR1, dVdR2, dVdX, dVdY, dVdZ;
 
     /**
      * Calculate a computed value of type SingleParticle
@@ -198,14 +201,14 @@ public:
      * Construct a new CpuCustomGBForce.
      */
 
-     CpuCustomGBForce(const std::vector<Lepton::CompiledExpression>& valueExpressions,
-                          const std::vector<std::vector<Lepton::CompiledExpression> > valueDerivExpressions,
-                          const std::vector<std::vector<Lepton::CompiledExpression> > valueGradientExpressions,
+     CpuCustomGBForce(int numAtoms, const std::vector<Lepton::CompiledExpression>& valueExpressions,
+                          const std::vector<std::vector<Lepton::CompiledExpression> >& valueDerivExpressions,
+                          const std::vector<std::vector<Lepton::CompiledExpression> >& valueGradientExpressions,
                           const std::vector<std::string>& valueNames,
                           const std::vector<CustomGBForce::ComputationType>& valueTypes,
                           const std::vector<Lepton::CompiledExpression>& energyExpressions,
-                          const std::vector<std::vector<Lepton::CompiledExpression> > energyDerivExpressions,
-                          const std::vector<std::vector<Lepton::CompiledExpression> > energyGradientExpressions,
+                          const std::vector<std::vector<Lepton::CompiledExpression> >& energyDerivExpressions,
+                          const std::vector<std::vector<Lepton::CompiledExpression> >& energyGradientExpressions,
                           const std::vector<CustomGBForce::ComputationType>& energyTypes,
                           const std::vector<std::string>& parameterNames);
 

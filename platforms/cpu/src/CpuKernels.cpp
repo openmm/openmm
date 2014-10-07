@@ -957,7 +957,7 @@ void CpuCalcCustomGBForceKernel::initialize(const System& system, const CustomGB
 
     for (map<string, Lepton::CustomFunction*>::iterator iter = functions.begin(); iter != functions.end(); iter++)
         delete iter->second;
-    ixn = new CpuCustomGBForce(valueExpressions, valueDerivExpressions, valueGradientExpressions, valueNames, valueTypes, energyExpressions,
+    ixn = new CpuCustomGBForce(numParticles, valueExpressions, valueDerivExpressions, valueGradientExpressions, valueNames, valueTypes, energyExpressions,
         energyDerivExpressions, energyGradientExpressions, energyTypes, particleParameterNames);
     data.isPeriodic = (force.getNonbondedMethod() == CustomGBForce::CutoffPeriodic);
 }

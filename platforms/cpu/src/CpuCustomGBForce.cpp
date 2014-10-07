@@ -34,14 +34,14 @@
 using namespace OpenMM;
 using namespace std;
 
-CpuCustomGBForce::CpuCustomGBForce(const vector<Lepton::CompiledExpression>& valueExpressions,
-                     const vector<vector<Lepton::CompiledExpression> > valueDerivExpressions,
-                     const vector<vector<Lepton::CompiledExpression> > valueGradientExpressions,
+CpuCustomGBForce::CpuCustomGBForce(int numAtoms, const vector<Lepton::CompiledExpression>& valueExpressions,
+                     const vector<vector<Lepton::CompiledExpression> >& valueDerivExpressions,
+                     const vector<vector<Lepton::CompiledExpression> >& valueGradientExpressions,
                      const vector<string>& valueNames,
                      const vector<CustomGBForce::ComputationType>& valueTypes,
                      const vector<Lepton::CompiledExpression>& energyExpressions,
-                     const vector<vector<Lepton::CompiledExpression> > energyDerivExpressions,
-                     const vector<vector<Lepton::CompiledExpression> > energyGradientExpressions,
+                     const vector<vector<Lepton::CompiledExpression> >& energyDerivExpressions,
+                     const vector<vector<Lepton::CompiledExpression> >& energyGradientExpressions,
                      const vector<CustomGBForce::ComputationType>& energyTypes,
                      const vector<string>& parameterNames) :
             cutoff(false), periodic(false), valueExpressions(valueExpressions), valueDerivExpressions(valueDerivExpressions), valueGradientExpressions(valueGradientExpressions),
@@ -83,6 +83,17 @@ CpuCustomGBForce::CpuCustomGBForce(const vector<Lepton::CompiledExpression>& val
             particleValueIndex.push_back(expressionSet.getVariableIndex(name.str()));
         }
     }
+    values.resize(valueTypes.size());
+    dEdV.resize(valueTypes.size());
+    for (int i = 0; i < (int) values.size(); i++) {
+        values[i].resize(numAtoms);
+        dEdV[i].resize(numAtoms);
+    }
+    dVdX.resize(valueDerivExpressions.size());
+    dVdY.resize(valueDerivExpressions.size());
+    dVdZ.resize(valueDerivExpressions.size());
+    dVdR1.resize(valueDerivExpressions.size());
+    dVdR2.resize(valueDerivExpressions.size());
 }
 
 CpuCustomGBForce::~CpuCustomGBForce() {
@@ -116,7 +127,6 @@ void CpuCustomGBForce::calculateIxn(int numberOfAtoms, vector<RealVec>& atomCoor
     // First calculate the computed values.
 
     int numValues = valueTypes.size();
-    vector<vector<RealOpenMM> > values(numValues);
     for (int valueIndex = 0; valueIndex < numValues; valueIndex++) {
         if (valueTypes[valueIndex] == CustomGBForce::SingleParticle)
             calculateSingleParticleValue(valueIndex, numberOfAtoms, atomCoordinates, values, atomParameters);
@@ -128,7 +138,9 @@ void CpuCustomGBForce::calculateIxn(int numberOfAtoms, vector<RealVec>& atomCoor
 
     // Now calculate the energy and its derivatives.
 
-    vector<vector<RealOpenMM> > dEdV(numValues, vector<RealOpenMM>(numberOfAtoms, (RealOpenMM) 0));
+    for (int i = 0; i < (int) dEdV.size(); i++)
+        for (int j = 0; j < (int) dEdV[i].size(); j++)
+            dEdV[i][j] = 0.0;
     for (int termIndex = 0; termIndex < (int) energyExpressions.size(); termIndex++) {
         if (energyTypes[termIndex] == CustomGBForce::SingleParticle)
             calculateSingleParticleEnergyTerm(termIndex, numberOfAtoms, atomCoordinates, values, atomParameters, forces, totalEnergy, dEdV);
@@ -359,13 +371,13 @@ void CpuCustomGBForce::calculateChainRuleForces(int numAtoms, vector<RealVec>& a
         expressionSet.setVariable(xindex, atomCoordinates[i][0]);
         expressionSet.setVariable(yindex, atomCoordinates[i][1]);
         expressionSet.setVariable(zindex, atomCoordinates[i][2]);
-        vector<RealOpenMM> dVdX(valueDerivExpressions.size(), 0.0);
-        vector<RealOpenMM> dVdY(valueDerivExpressions.size(), 0.0);
-        vector<RealOpenMM> dVdZ(valueDerivExpressions.size(), 0.0);
         for (int j = 0; j < (int) paramNames.size(); j++)
             expressionSet.setVariable(paramIndex[j], atomParameters[i][j]);
         for (int j = 1; j < (int) valueNames.size(); j++) {
             expressionSet.setVariable(valueIndex[j-1], values[j-1][i]);
+            dVdX[j] = 0.0;
+            dVdY[j] = 0.0;
+            dVdZ[j] = 0.0;
             for (int k = 1; k < j; k++) {
                 RealOpenMM dVdV = (RealOpenMM) valueDerivExpressions[j][k].evaluate();
                 dVdX[j] += dVdV*dVdX[k];
@@ -411,8 +423,6 @@ void CpuCustomGBForce::calculateOnePairChainRule(int atom1, int atom2, vector<Re
     deltaR[0] *= rinv;
     deltaR[1] *= rinv;
     deltaR[2] *= rinv;
-    vector<RealOpenMM> dVdR1(valueDerivExpressions.size(), 0.0);
-    vector<RealOpenMM> dVdR2(valueDerivExpressions.size(), 0.0);
     if (!isExcluded || valueTypes[0] != CustomGBForce::ParticlePair) {
         dVdR1[0] = (RealOpenMM) valueDerivExpressions[0][0].evaluate();
         dVdR2[0] = -dVdR1[0];
@@ -429,6 +439,8 @@ void CpuCustomGBForce::calculateOnePairChainRule(int atom1, int atom2, vector<Re
         expressionSet.setVariable(xindex, atomCoordinates[atom1][0]);
         expressionSet.setVariable(yindex, atomCoordinates[atom1][1]);
         expressionSet.setVariable(zindex, atomCoordinates[atom1][2]);
+        dVdR1[i] = 0.0;
+        dVdR2[i] = 0.0;
         for (int j = 0; j < i; j++) {
             RealOpenMM dVdV = (RealOpenMM) valueDerivExpressions[i][j].evaluate();
             dVdR1[i] += dVdV*dVdR1[j];
