@@ -963,7 +963,6 @@ void CpuCalcCustomGBForceKernel::initialize(const System& system, const CustomGB
 }
 
 double CpuCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    vector<RealVec>& posData = extractPositions(context);
     vector<RealVec>& forceData = extractForces(context);
     RealOpenMM energy = 0;
     RealVec& box = extractBoxSize(context);
@@ -978,7 +977,7 @@ double CpuCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeFor
     map<string, double> globalParameters;
     for (int i = 0; i < (int) globalParameterNames.size(); i++)
         globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
-    ixn->calculateIxn(numParticles, posData, particleParamArray, exclusions, globalParameters, forceData, includeEnergy ? &energy : NULL);
+    ixn->calculateIxn(numParticles, &data.posq[0], particleParamArray, exclusions, globalParameters, &data.threadForce[0][0], includeEnergy ? &energy : NULL);
     return energy;
 }
 
