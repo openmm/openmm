@@ -599,6 +599,8 @@ private:
     class PmeIO;
     class PmePreComputation;
     class PmePostComputation;
+    class SyncStreamPreComputation;
+    class SyncStreamPostComputation;
     CudaContext& cu;
     bool hasInitializedFFT;
     CudaArray* sigmaEpsilon;
@@ -614,6 +616,8 @@ private:
     CudaSort* sort;
     Kernel cpuPme;
     PmeIO* pmeio;
+    CUstream pmeStream;
+    CUevent pmeSyncEvent;
     cufftHandle fftForward;
     cufftHandle fftBackward;
     CUfunction ewaldSumsKernel;

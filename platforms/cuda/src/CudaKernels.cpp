@@ -1398,6 +1398,31 @@ private:
     CalcPmeReciprocalForceKernel::IO& io;
 };
 
+class CudaCalcNonbondedForceKernel::SyncStreamPreComputation : public CudaContext::ForcePreComputation {
+public:
+    SyncStreamPreComputation(CUstream stream, CUevent event) : stream(stream), event(event) {
+    }
+    void computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
+        cuEventRecord(event, 0);
+        cuStreamWaitEvent(stream, event, 0);
+    }
+private:
+    CUstream stream;
+    CUevent event;
+};
+
+class CudaCalcNonbondedForceKernel::SyncStreamPostComputation : public CudaContext::ForcePostComputation {
+public:
+    SyncStreamPostComputation(CUevent event) : event(event) {
+    }
+    double computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
+        cuStreamWaitEvent(0, event, 0);
+        return 0.0;
+    }
+private:
+    CUevent event;
+};
+
 CudaCalcNonbondedForceKernel::~CudaCalcNonbondedForceKernel() {
     cu.setAsCurrent();
     if (sigmaEpsilon != NULL)
@@ -1427,6 +1452,8 @@ CudaCalcNonbondedForceKernel::~CudaCalcNonbondedForceKernel() {
     if (hasInitializedFFT) {
         cufftDestroy(fftForward);
         cufftDestroy(fftBackward);
+        cuStreamDestroy(pmeStream);
+        cuEventDestroy(pmeSyncEvent);
     }
 }
 
@@ -1635,7 +1662,15 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
 
                 cufftSetCompatibilityMode(fftForward, CUFFT_COMPATIBILITY_NATIVE);
                 cufftSetCompatibilityMode(fftBackward, CUFFT_COMPATIBILITY_NATIVE);
-
+                
+                // Prepare for doing PME on its own stream.
+                
+                cuStreamCreate(&pmeStream, CU_STREAM_NON_BLOCKING);
+                cufftSetStream(fftForward, pmeStream);
+                cufftSetStream(fftBackward, pmeStream);
+                CHECK_RESULT(cuEventCreate(&pmeSyncEvent, CU_EVENT_DISABLE_TIMING), "Error creating event for NonbondedForce");
+                cu.addPreComputation(new SyncStreamPreComputation(pmeStream, pmeSyncEvent));
+                cu.addPostComputation(new SyncStreamPostComputation(pmeSyncEvent));
                 hasInitializedFFT = true;
 
                 // Initialize the b-spline moduli.
@@ -1752,6 +1787,7 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
         cu.executeKernel(ewaldForcesKernel, forcesArgs, cu.getNumAtoms());
     }
     if (directPmeGrid != NULL && includeReciprocal) {
+        cu.setCurrentStream(pmeStream);
         void* gridIndexArgs[] = {&cu.getPosq().getDevicePointer(), &pmeAtomGridIndex->getDevicePointer(), cu.getPeriodicBoxSizePointer(), cu.getInvPeriodicBoxSizePointer()};
         cu.executeKernel(pmeGridIndexKernel, gridIndexArgs, cu.getNumAtoms());
 
@@ -1788,7 +1824,8 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
         void* interpolateArgs[] = {&cu.getPosq().getDevicePointer(), &cu.getForce().getDevicePointer(), &directPmeGrid->getDevicePointer(),
                 cu.getPeriodicBoxSizePointer(), cu.getInvPeriodicBoxSizePointer(), &pmeAtomGridIndex->getDevicePointer()};
         cu.executeKernel(pmeInterpolateForceKernel, interpolateArgs, cu.getNumAtoms(), 128);
-
+        cuEventRecord(pmeSyncEvent, pmeStream);
+        cu.restoreDefaultStream();
     }
     double energy = (includeReciprocal ? ewaldSelfEnergy : 0.0);
     if (dispersionCoefficient != 0.0 && includeDirect) {
