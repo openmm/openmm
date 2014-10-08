@@ -211,11 +211,17 @@ public:
         return contextIndex;
     }
     /**
-     * Get the cl::CommandQueue associated with this object.
+     * Get the cl::CommandQueue currently being used for execution.
      */
-    cl::CommandQueue& getQueue() {
-        return queue;
-    }
+    cl::CommandQueue& getQueue();
+    /**
+     * Set the cl::ComandQueue to use for execution.
+     */
+    void setQueue(cl::CommandQueue& queue);
+    /**
+     * Reset the context to using the default queue for execution.
+     */
+    void restoreDefaultQueue();
     /**
      * Get the array which contains the position (the xyz components) and charge (the w component) of each atom.
      */
@@ -629,7 +635,7 @@ private:
     std::map<std::string, std::string> compilationDefines;
     cl::Context context;
     cl::Device device;
-    cl::CommandQueue queue;
+    cl::CommandQueue defaultQueue, currentQueue;
     cl::Kernel clearBufferKernel;
     cl::Kernel clearTwoBuffersKernel;
     cl::Kernel clearThreeBuffersKernel;

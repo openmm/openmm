@@ -1384,6 +1384,35 @@ private:
     CalcPmeReciprocalForceKernel::IO& io;
 };
 
+class OpenCLCalcNonbondedForceKernel::SyncQueuePreComputation : public OpenCLContext::ForcePreComputation {
+public:
+    SyncQueuePreComputation(OpenCLContext& cl, cl::CommandQueue queue) : cl(cl), queue(queue), events(1) {
+    }
+    void computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
+        cl.getQueue().enqueueMarker(&events[0]);
+        queue.enqueueWaitForEvents(events);
+    }
+private:
+    OpenCLContext& cl;
+    cl::CommandQueue queue;
+    vector<cl::Event> events;
+};
+
+class OpenCLCalcNonbondedForceKernel::SyncQueuePostComputation : public OpenCLContext::ForcePostComputation {
+public:
+    SyncQueuePostComputation(OpenCLContext& cl, cl::Event& event) : cl(cl), event(event), events(1) {
+    }
+    double computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
+        events[0] = event;
+        cl.getQueue().enqueueWaitForEvents(events);
+        return 0.0;
+    }
+private:
+    OpenCLContext& cl;
+    cl::Event& event;
+    vector<cl::Event> events;
+};
+
 OpenCLCalcNonbondedForceKernel::~OpenCLCalcNonbondedForceKernel() {
     if (sigmaEpsilon != NULL)
         delete sigmaEpsilon;
@@ -1574,6 +1603,9 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
                 pmeAtomGridIndex = OpenCLArray::create<mm_int2>(cl, numParticles, "pmeAtomGridIndex");
                 sort = new OpenCLSort(cl, new SortTrait(), cl.getNumAtoms());
                 fft = new OpenCLFFT3D(cl, gridSizeX, gridSizeY, gridSizeZ);
+                pmeQueue = cl::CommandQueue(cl.getContext(), cl.getDevice());
+                cl.addPreComputation(new SyncQueuePreComputation(cl, pmeQueue));
+                cl.addPostComputation(new SyncQueuePostComputation(cl, pmeSyncEvent));
 
                 // Initialize the b-spline moduli.
 
@@ -1753,6 +1785,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
         cl.executeKernel(ewaldForcesKernel, cl.getNumAtoms());
     }
     if (pmeGrid != NULL && includeReciprocal) {
+        cl.setQueue(pmeQueue);
         setPeriodicBoxSizeArg(cl, pmeUpdateBsplinesKernel, 4);
         setInvPeriodicBoxSizeArg(cl, pmeUpdateBsplinesKernel, 5);
         cl.executeKernel(pmeUpdateBsplinesKernel, cl.getNumAtoms());
@@ -1795,6 +1828,8 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             cl.executeKernel(pmeInterpolateForceKernel, 2*cl.getDevice().getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>(), 1);
         else
             cl.executeKernel(pmeInterpolateForceKernel, cl.getNumAtoms());
+        pmeQueue.enqueueMarker(&pmeSyncEvent);
+        cl.restoreDefaultQueue();
     }
     double energy = (includeReciprocal ? ewaldSelfEnergy : 0.0);
     if (dispersionCoefficient != 0.0 && includeDirect) {
