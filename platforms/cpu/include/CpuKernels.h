@@ -33,6 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "CpuBondForce.h"
+#include "CpuCustomGBForce.h"
 #include "CpuCustomManyParticleForce.h"
 #include "CpuCustomNonbondedForce.h"
 #include "CpuGBSAOBCForce.h"
@@ -301,6 +302,53 @@ private:
     CpuPlatform::PlatformData& data;
     std::vector<std::pair<float, float> > particleParams;
     CpuGBSAOBCForce obc;
+};
+
+/**
+ * This kernel is invoked by CustomGBForce to calculate the forces acting on the system.
+ */
+class CpuCalcCustomGBForceKernel : public CalcCustomGBForceKernel {
+public:
+    CpuCalcCustomGBForceKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data) :
+            CalcCustomGBForceKernel(name, platform), data(data) {
+    }
+    ~CpuCalcCustomGBForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomGBForce this kernel will be used for
+     */
+    void initialize(const System& system, const CustomGBForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomGBForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const CustomGBForce& force);
+private:
+    CpuPlatform::PlatformData& data;
+    int numParticles;
+    bool isPeriodic;
+    RealOpenMM **particleParamArray;
+    RealOpenMM nonbondedCutoff;
+    CpuCustomGBForce* ixn;
+    std::vector<std::set<int> > exclusions;
+    std::vector<std::string> particleParameterNames, globalParameterNames, valueNames;
+    std::vector<OpenMM::CustomGBForce::ComputationType> valueTypes;
+    std::vector<OpenMM::CustomGBForce::ComputationType> energyTypes;
+    NonbondedMethod nonbondedMethod;
+    CpuNeighborList* neighborList;
 };
 
 /**

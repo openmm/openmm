@@ -67,6 +67,7 @@ CpuPlatform::CpuPlatform() {
     registerKernelFactory(CalcCustomNonbondedForceKernel::Name(), factory);
     registerKernelFactory(CalcCustomManyParticleForceKernel::Name(), factory);
     registerKernelFactory(CalcGBSAOBCForceKernel::Name(), factory);
+    registerKernelFactory(CalcCustomGBForceKernel::Name(), factory);
     registerKernelFactory(IntegrateLangevinStepKernel::Name(), factory);
     platformProperties.push_back(CpuThreads());
     int threads = getNumProcessors();

@@ -48,13 +48,11 @@ CpuNonbondedForceVec4::CpuNonbondedForceVec4() {
 void CpuNonbondedForceVec4::calculateBlockIxn(int blockIndex, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize) {
     // Load the positions and parameters of the atoms in the block.
     
-    int blockAtom[4];
+    const int* blockAtom = &neighborList->getSortedAtoms()[4*blockIndex];
     fvec4 blockAtomPosq[4];
     fvec4 blockAtomForceX(0.0f), blockAtomForceY(0.0f), blockAtomForceZ(0.0f);
-    for (int i = 0; i < 4; i++) {
-        blockAtom[i] = neighborList->getSortedAtoms()[4*blockIndex+i];
+    for (int i = 0; i < 4; i++)
         blockAtomPosq[i] = fvec4(posq+4*blockAtom[i]);
-    }
     fvec4 blockAtomX = fvec4(blockAtomPosq[0][0], blockAtomPosq[1][0], blockAtomPosq[2][0], blockAtomPosq[3][0]);
     fvec4 blockAtomY = fvec4(blockAtomPosq[0][1], blockAtomPosq[1][1], blockAtomPosq[2][1], blockAtomPosq[3][1]);
     fvec4 blockAtomZ = fvec4(blockAtomPosq[0][2], blockAtomPosq[1][2], blockAtomPosq[2][2], blockAtomPosq[3][2]);
@@ -159,13 +157,11 @@ void CpuNonbondedForceVec4::calculateBlockIxn(int blockIndex, float* forces, dou
 void CpuNonbondedForceVec4::calculateBlockEwaldIxn(int blockIndex, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize) {
     // Load the positions and parameters of the atoms in the block.
     
-    int blockAtom[4];
+    const int* blockAtom = &neighborList->getSortedAtoms()[4*blockIndex];
     fvec4 blockAtomPosq[4];
     fvec4 blockAtomForceX(0.0f), blockAtomForceY(0.0f), blockAtomForceZ(0.0f);
-    for (int i = 0; i < 4; i++) {
-        blockAtom[i] = neighborList->getSortedAtoms()[4*blockIndex+i];
+    for (int i = 0; i < 4; i++)
         blockAtomPosq[i] = fvec4(posq+4*blockAtom[i]);
-    }
     fvec4 blockAtomX = fvec4(blockAtomPosq[0][0], blockAtomPosq[1][0], blockAtomPosq[2][0], blockAtomPosq[3][0]);
     fvec4 blockAtomY = fvec4(blockAtomPosq[0][1], blockAtomPosq[1][1], blockAtomPosq[2][1], blockAtomPosq[3][1]);
     fvec4 blockAtomZ = fvec4(blockAtomPosq[0][2], blockAtomPosq[1][2], blockAtomPosq[2][2], blockAtomPosq[3][2]);
