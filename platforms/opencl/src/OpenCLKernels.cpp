@@ -1386,31 +1386,37 @@ private:
 
 class OpenCLCalcNonbondedForceKernel::SyncQueuePreComputation : public OpenCLContext::ForcePreComputation {
 public:
-    SyncQueuePreComputation(OpenCLContext& cl, cl::CommandQueue queue) : cl(cl), queue(queue), events(1) {
+    SyncQueuePreComputation(OpenCLContext& cl, cl::CommandQueue queue, int forceGroup) : cl(cl), queue(queue), events(1), forceGroup(forceGroup) {
     }
     void computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
-        cl.getQueue().enqueueMarker(&events[0]);
-        queue.enqueueWaitForEvents(events);
+        if ((groups&(1<<forceGroup)) != 0) {
+            cl.getQueue().enqueueMarker(&events[0]);
+            queue.enqueueWaitForEvents(events);
+        }
     }
 private:
     OpenCLContext& cl;
     cl::CommandQueue queue;
     vector<cl::Event> events;
+    int forceGroup;
 };
 
 class OpenCLCalcNonbondedForceKernel::SyncQueuePostComputation : public OpenCLContext::ForcePostComputation {
 public:
-    SyncQueuePostComputation(OpenCLContext& cl, cl::Event& event) : cl(cl), event(event), events(1) {
+    SyncQueuePostComputation(OpenCLContext& cl, cl::Event& event, int forceGroup) : cl(cl), event(event), events(1), forceGroup(forceGroup) {
     }
     double computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
-        events[0] = event;
-        cl.getQueue().enqueueWaitForEvents(events);
+        if ((groups&(1<<forceGroup)) != 0) {
+            events[0] = event;
+            cl.getQueue().enqueueWaitForEvents(events);
+        }
         return 0.0;
     }
 private:
     OpenCLContext& cl;
     cl::Event& event;
     vector<cl::Event> events;
+    int forceGroup;
 };
 
 OpenCLCalcNonbondedForceKernel::~OpenCLCalcNonbondedForceKernel() {
@@ -1604,8 +1610,11 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
                 sort = new OpenCLSort(cl, new SortTrait(), cl.getNumAtoms());
                 fft = new OpenCLFFT3D(cl, gridSizeX, gridSizeY, gridSizeZ);
                 pmeQueue = cl::CommandQueue(cl.getContext(), cl.getDevice());
-                cl.addPreComputation(new SyncQueuePreComputation(cl, pmeQueue));
-                cl.addPostComputation(new SyncQueuePostComputation(cl, pmeSyncEvent));
+                int recipForceGroup = force.getReciprocalSpaceForceGroup();
+                if (recipForceGroup < 0)
+                    recipForceGroup = force.getForceGroup();
+                cl.addPreComputation(new SyncQueuePreComputation(cl, pmeQueue, recipForceGroup));
+                cl.addPostComputation(new SyncQueuePostComputation(cl, pmeSyncEvent, recipForceGroup));
 
                 // Initialize the b-spline moduli.
 

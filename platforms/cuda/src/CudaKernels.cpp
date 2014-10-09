@@ -1400,27 +1400,32 @@ private:
 
 class CudaCalcNonbondedForceKernel::SyncStreamPreComputation : public CudaContext::ForcePreComputation {
 public:
-    SyncStreamPreComputation(CUstream stream, CUevent event) : stream(stream), event(event) {
+    SyncStreamPreComputation(CUstream stream, CUevent event, int forceGroup) : stream(stream), event(event), forceGroup(forceGroup) {
     }
     void computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
-        cuEventRecord(event, 0);
-        cuStreamWaitEvent(stream, event, 0);
+        if ((groups&(1<<forceGroup)) != 0) {
+            cuEventRecord(event, 0);
+            cuStreamWaitEvent(stream, event, 0);
+        }
     }
 private:
     CUstream stream;
     CUevent event;
+    int forceGroup;
 };
 
 class CudaCalcNonbondedForceKernel::SyncStreamPostComputation : public CudaContext::ForcePostComputation {
 public:
-    SyncStreamPostComputation(CUevent event) : event(event) {
+    SyncStreamPostComputation(CUevent event, int forceGroup) : event(event), forceGroup(forceGroup) {
     }
     double computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
-        cuStreamWaitEvent(0, event, 0);
+        if ((groups&(1<<forceGroup)) != 0)
+            cuStreamWaitEvent(0, event, 0);
         return 0.0;
     }
 private:
     CUevent event;
+    int forceGroup;
 };
 
 CudaCalcNonbondedForceKernel::~CudaCalcNonbondedForceKernel() {
@@ -1669,8 +1674,11 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                 cufftSetStream(fftForward, pmeStream);
                 cufftSetStream(fftBackward, pmeStream);
                 CHECK_RESULT(cuEventCreate(&pmeSyncEvent, CU_EVENT_DISABLE_TIMING), "Error creating event for NonbondedForce");
-                cu.addPreComputation(new SyncStreamPreComputation(pmeStream, pmeSyncEvent));
-                cu.addPostComputation(new SyncStreamPostComputation(pmeSyncEvent));
+                int recipForceGroup = force.getReciprocalSpaceForceGroup();
+                if (recipForceGroup < 0)
+                    recipForceGroup = force.getForceGroup();
+                cu.addPreComputation(new SyncStreamPreComputation(pmeStream, pmeSyncEvent, recipForceGroup));
+                cu.addPostComputation(new SyncStreamPostComputation(pmeSyncEvent, recipForceGroup));
                 hasInitializedFFT = true;
 
                 // Initialize the b-spline moduli.
