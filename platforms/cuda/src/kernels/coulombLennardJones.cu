@@ -1,6 +1,7 @@
+{
 #if USE_EWALD
-bool needCorrection = hasExclusions && isExcluded && atom1 != atom2 && atom1 < NUM_ATOMS && atom2 < NUM_ATOMS;
-if ((!isExcluded && r2 < CUTOFF_SQUARED) || needCorrection) {
+    bool needCorrection = hasExclusions && isExcluded && atom1 != atom2 && atom1 < NUM_ATOMS && atom2 < NUM_ATOMS;
+    unsigned int includeInteraction = ((!isExcluded && r2 < CUTOFF_SQUARED) || needCorrection);
     const real alphaR = EWALD_ALPHA*r;
     const real expAlphaRSqr = EXP(-alphaR*alphaR);
     const real prefactor = 138.935456f*posq1.w*posq2.w*invR;
@@ -44,16 +45,14 @@ if ((!isExcluded && r2 < CUTOFF_SQUARED) || needCorrection) {
         }
         #endif
         tempForce += prefactor*(erfcAlphaR+alphaR*expAlphaRSqr*TWO_OVER_SQRT_PI);
-        tempEnergy += ljEnergy + prefactor*erfcAlphaR;
+        tempEnergy += includeInteraction ? ljEnergy + prefactor*erfcAlphaR : 0;
 #else
         tempForce = prefactor*(erfcAlphaR+alphaR*expAlphaRSqr*TWO_OVER_SQRT_PI);
-        tempEnergy += prefactor*erfcAlphaR;
+        tempEnergy += includeInteraction ? prefactor*erfcAlphaR : 0;
 #endif
     }
-    dEdR += tempForce*invR*invR;
-}
+    dEdR += includeInteraction ? tempForce*invR*invR : 0;
 #else
-{
 #ifdef USE_CUTOFF
     unsigned int includeInteraction = (!isExcluded && r2 < CUTOFF_SQUARED);
 #else
@@ -91,5 +90,5 @@ if ((!isExcluded && r2 < CUTOFF_SQUARED) || needCorrection) {
   #endif
 #endif
     dEdR += includeInteraction ? tempForce*invR*invR : 0;
-}
 #endif
+}

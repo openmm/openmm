@@ -633,7 +633,7 @@ private:
     std::map<std::string, std::string> pmeDefines;
     std::vector<std::pair<int, int> > exceptionAtoms;
     double ewaldSelfEnergy, dispersionCoefficient, alpha;
-    bool hasCoulomb, hasLJ;
+    bool hasCoulomb, hasLJ, usePmeQueue;
     static const int PmeOrder = 5;
 };
 
