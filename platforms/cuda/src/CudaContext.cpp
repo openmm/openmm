@@ -72,7 +72,7 @@ const int CudaContext::TileSize = sizeof(tileflags)*8;
 bool CudaContext::hasInitializedCuda = false;
 
 CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlockingSync, const string& precision, const string& compiler,
-        const string& tempDir, const std::string& hostCompiler, CudaPlatform::PlatformData& platformData) : system(system),
+        const string& tempDir, const std::string& hostCompiler, CudaPlatform::PlatformData& platformData) : system(system), currentStream(0),
         time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), stepsSinceReorder(99999), contextIsValid(false), atomsWereReordered(false), pinnedBuffer(NULL), posq(NULL),
         posqCorrection(NULL), velm(NULL), force(NULL), energyBuffer(NULL), integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL), thread(NULL) {
     this->compiler = "\""+compiler+"\"";
@@ -507,6 +507,18 @@ CUfunction CudaContext::getKernel(CUmodule& module, const string& name) {
     return function;
 }
 
+CUstream CudaContext::getCurrentStream() {
+    return currentStream;
+}
+
+void CudaContext::setCurrentStream(CUstream stream) {
+    currentStream = stream;
+}
+
+void CudaContext::restoreDefaultStream() {
+    setCurrentStream(0);
+}
+
 string CudaContext::doubleToString(double value) {
     stringstream s;
     s.precision(useDoublePrecision ? 16 : 8);
@@ -575,7 +587,7 @@ void CudaContext::executeKernel(CUfunction kernel, void** arguments, int threads
     if (blockSize == -1)
         blockSize = ThreadBlockSize;
     int gridSize = std::min((threads+blockSize-1)/blockSize, numThreadBlocks);
-    CUresult result = cuLaunchKernel(kernel, gridSize, 1, 1, blockSize, 1, 1, sharedSize, 0, arguments, NULL);
+    CUresult result = cuLaunchKernel(kernel, gridSize, 1, 1, blockSize, 1, 1, sharedSize, currentStream, arguments, NULL);
     if (result != CUDA_SUCCESS) {
         stringstream str;
         str<<"Error invoking kernel: "<<getErrorString(result)<<" ("<<result<<")";

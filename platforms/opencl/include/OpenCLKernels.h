@@ -599,6 +599,8 @@ private:
     class PmeIO;
     class PmePreComputation;
     class PmePostComputation;
+    class SyncQueuePreComputation;
+    class SyncQueuePostComputation;
     OpenCLContext& cl;
     bool hasInitializedKernel;
     OpenCLArray* sigmaEpsilon;
@@ -613,6 +615,8 @@ private:
     OpenCLArray* pmeAtomRange;
     OpenCLArray* pmeAtomGridIndex;
     OpenCLSort* sort;
+    cl::CommandQueue pmeQueue;
+    cl::Event pmeSyncEvent;
     OpenCLFFT3D* fft;
     Kernel cpuPme;
     PmeIO* pmeio;

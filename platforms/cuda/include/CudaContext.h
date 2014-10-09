@@ -134,6 +134,18 @@ public:
         return contextIndex;
     }
     /**
+     * Get the stream currently being used for execution.
+     */
+    CUstream getCurrentStream();
+    /**
+     * Set the stream to use for execution.
+     */
+    void setCurrentStream(CUstream stream);
+    /**
+     * Reset the context to using the default stream for execution.
+     */
+    void restoreDefaultStream();
+    /**
      * Get the array which contains the position (the xyz components) and charge (the w component) of each atom.
      */
     CudaArray& getPosq() {
@@ -521,6 +533,7 @@ private:
     std::map<std::string, std::string> compilationDefines;
     CUcontext context;
     CUdevice device;
+    CUstream currentStream;
     CUfunction clearBufferKernel;
     CUfunction clearTwoBuffersKernel;
     CUfunction clearThreeBuffersKernel;
