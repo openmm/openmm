@@ -573,6 +573,8 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
         defines["USE_EXCLUSIONS"] = "1";
     if (isSymmetric)
         defines["USE_SYMMETRIC"] = "1";
+    if (useCutoff && context.getSIMDWidth() < 32)
+        defines["PRUNE_BY_CUTOFF"] = "1";
     defines["FORCE_WORK_GROUP_SIZE"] = context.intToString(forceThreadBlockSize);
     defines["CUTOFF_SQUARED"] = context.doubleToString(cutoff*cutoff);
     defines["CUTOFF"] = context.doubleToString(cutoff);

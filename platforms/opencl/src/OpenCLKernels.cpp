@@ -1609,12 +1609,16 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
                 pmeAtomGridIndex = OpenCLArray::create<mm_int2>(cl, numParticles, "pmeAtomGridIndex");
                 sort = new OpenCLSort(cl, new SortTrait(), cl.getNumAtoms());
                 fft = new OpenCLFFT3D(cl, gridSizeX, gridSizeY, gridSizeZ);
-                pmeQueue = cl::CommandQueue(cl.getContext(), cl.getDevice());
-                int recipForceGroup = force.getReciprocalSpaceForceGroup();
-                if (recipForceGroup < 0)
-                    recipForceGroup = force.getForceGroup();
-                cl.addPreComputation(new SyncQueuePreComputation(cl, pmeQueue, recipForceGroup));
-                cl.addPostComputation(new SyncQueuePostComputation(cl, pmeSyncEvent, recipForceGroup));
+                string vendor = cl.getDevice().getInfo<CL_DEVICE_VENDOR>();
+                usePmeQueue = (vendor.size() >= 6 && vendor.substr(0, 6) == "NVIDIA");
+                if (usePmeQueue) {
+                    pmeQueue = cl::CommandQueue(cl.getContext(), cl.getDevice());
+                    int recipForceGroup = force.getReciprocalSpaceForceGroup();
+                    if (recipForceGroup < 0)
+                        recipForceGroup = force.getForceGroup();
+                    cl.addPreComputation(new SyncQueuePreComputation(cl, pmeQueue, recipForceGroup));
+                    cl.addPostComputation(new SyncQueuePostComputation(cl, pmeSyncEvent, recipForceGroup));
+                }
 
                 // Initialize the b-spline moduli.
 
@@ -1794,7 +1798,8 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
         cl.executeKernel(ewaldForcesKernel, cl.getNumAtoms());
     }
     if (pmeGrid != NULL && includeReciprocal) {
-        cl.setQueue(pmeQueue);
+        if (usePmeQueue)
+            cl.setQueue(pmeQueue);
         setPeriodicBoxSizeArg(cl, pmeUpdateBsplinesKernel, 4);
         setInvPeriodicBoxSizeArg(cl, pmeUpdateBsplinesKernel, 5);
         cl.executeKernel(pmeUpdateBsplinesKernel, cl.getNumAtoms());
@@ -1837,8 +1842,10 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             cl.executeKernel(pmeInterpolateForceKernel, 2*cl.getDevice().getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>(), 1);
         else
             cl.executeKernel(pmeInterpolateForceKernel, cl.getNumAtoms());
-        pmeQueue.enqueueMarker(&pmeSyncEvent);
-        cl.restoreDefaultQueue();
+        if (usePmeQueue) {
+            pmeQueue.enqueueMarker(&pmeSyncEvent);
+            cl.restoreDefaultQueue();
+        }
     }
     double energy = (includeReciprocal ? ewaldSelfEnergy : 0.0);
     if (dispersionCoefficient != 0.0 && includeDirect) {

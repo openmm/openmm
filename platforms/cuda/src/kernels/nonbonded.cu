@@ -228,57 +228,51 @@ extern "C" __global__ void computeNonbonded(
                 delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
                 real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
-#ifdef USE_CUTOFF
-                if (r2 < CUTOFF_SQUARED) {
-#endif
-                    real invR = RSQRT(r2);
-                    real r = r2*invR;
-                    LOAD_ATOM2_PARAMETERS
-                    atom2 = y*TILE_SIZE+tj;
+                real invR = RSQRT(r2);
+                real r = r2*invR;
+                LOAD_ATOM2_PARAMETERS
+                atom2 = y*TILE_SIZE+tj;
 #ifdef USE_SYMMETRIC
-                    real dEdR = 0.0f;
+                real dEdR = 0.0f;
 #else
-                    real3 dEdR1 = make_real3(0);
-                    real3 dEdR2 = make_real3(0);
+                real3 dEdR1 = make_real3(0);
+                real3 dEdR2 = make_real3(0);
 #endif
 #ifdef USE_EXCLUSIONS
-                    bool isExcluded = (atom1 >= NUM_ATOMS || atom2 >= NUM_ATOMS || !(excl & 0x1));
+                bool isExcluded = (atom1 >= NUM_ATOMS || atom2 >= NUM_ATOMS || !(excl & 0x1));
 #endif
-                    real tempEnergy = 0.0f;
-                    COMPUTE_INTERACTION
-                    energy += tempEnergy;
+                real tempEnergy = 0.0f;
+                COMPUTE_INTERACTION
+                energy += tempEnergy;
 #ifdef USE_SYMMETRIC
-                    delta *= dEdR;
-                    force.x -= delta.x;
-                    force.y -= delta.y;
-                    force.z -= delta.z;
+                delta *= dEdR;
+                force.x -= delta.x;
+                force.y -= delta.y;
+                force.z -= delta.z;
 #ifdef ENABLE_SHUFFLE
-                    shflForce.x += delta.x;
-                    shflForce.y += delta.y;
-                    shflForce.z += delta.z;
+                shflForce.x += delta.x;
+                shflForce.y += delta.y;
+                shflForce.z += delta.z;
 
 #else
-                    localData[tbx+tj].fx += delta.x;
-                    localData[tbx+tj].fy += delta.y;
-                    localData[tbx+tj].fz += delta.z;
+                localData[tbx+tj].fx += delta.x;
+                localData[tbx+tj].fy += delta.y;
+                localData[tbx+tj].fz += delta.z;
 #endif
 #else // !USE_SYMMETRIC
-                    force.x -= dEdR1.x;
-                    force.y -= dEdR1.y;
-                    force.z -= dEdR1.z;
+                force.x -= dEdR1.x;
+                force.y -= dEdR1.y;
+                force.z -= dEdR1.z;
 #ifdef ENABLE_SHUFFLE
-                    shflForce.x += dEdR2.x;
-                    shflForce.y += dEdR2.y;
-                    shflForce.z += dEdR2.z;
+                shflForce.x += dEdR2.x;
+                shflForce.y += dEdR2.y;
+                shflForce.z += dEdR2.z;
 #else
-                    localData[tbx+tj].fx += dEdR2.x;
-                    localData[tbx+tj].fy += dEdR2.y;
-                    localData[tbx+tj].fz += dEdR2.z;
+                localData[tbx+tj].fx += dEdR2.x;
+                localData[tbx+tj].fy += dEdR2.y;
+                localData[tbx+tj].fz += dEdR2.z;
 #endif 
 #endif // end USE_SYMMETRIC
-#ifdef USE_CUTOFF
-                }
-#endif
 #ifdef USE_EXCLUSIONS
                 excl >>= 1;
 #endif
@@ -431,53 +425,51 @@ extern "C" __global__ void computeNonbonded(
 #endif
                     real3 delta = make_real3(posq2.x-posq1.x, posq2.y-posq1.y, posq2.z-posq1.z);
                     real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
-                    if (r2 < CUTOFF_SQUARED) {
-                        real invR = RSQRT(r2);
-                        real r = r2*invR;
-                        LOAD_ATOM2_PARAMETERS
-                        atom2 = atomIndices[tbx+tj];
+                    real invR = RSQRT(r2);
+                    real r = r2*invR;
+                    LOAD_ATOM2_PARAMETERS
+                    atom2 = atomIndices[tbx+tj];
 #ifdef USE_SYMMETRIC
-                        real dEdR = 0.0f;
+                    real dEdR = 0.0f;
 #else
-                        real3 dEdR1 = make_real3(0);
-                        real3 dEdR2 = make_real3(0);
+                    real3 dEdR1 = make_real3(0);
+                    real3 dEdR2 = make_real3(0);
 #endif
 #ifdef USE_EXCLUSIONS
-                        bool isExcluded = (atom1 >= NUM_ATOMS || atom2 >= NUM_ATOMS);
+                    bool isExcluded = (atom1 >= NUM_ATOMS || atom2 >= NUM_ATOMS);
 #endif
-                        real tempEnergy = 0.0f;
-                        COMPUTE_INTERACTION
-                        energy += tempEnergy;
+                    real tempEnergy = 0.0f;
+                    COMPUTE_INTERACTION
+                    energy += tempEnergy;
 #ifdef USE_SYMMETRIC
-                        delta *= dEdR;
-                        force.x -= delta.x;
-                        force.y -= delta.y;
-                        force.z -= delta.z;
+                    delta *= dEdR;
+                    force.x -= delta.x;
+                    force.y -= delta.y;
+                    force.z -= delta.z;
 #ifdef ENABLE_SHUFFLE
-                        shflForce.x += delta.x;
-                        shflForce.y += delta.y;
-                        shflForce.z += delta.z;
+                    shflForce.x += delta.x;
+                    shflForce.y += delta.y;
+                    shflForce.z += delta.z;
 
 #else
-                        localData[tbx+tj].fx += delta.x;
-                        localData[tbx+tj].fy += delta.y;
-                        localData[tbx+tj].fz += delta.z;
+                    localData[tbx+tj].fx += delta.x;
+                    localData[tbx+tj].fy += delta.y;
+                    localData[tbx+tj].fz += delta.z;
 #endif
 #else // !USE_SYMMETRIC
-                        force.x -= dEdR1.x;
-                        force.y -= dEdR1.y;
-                        force.z -= dEdR1.z;
+                    force.x -= dEdR1.x;
+                    force.y -= dEdR1.y;
+                    force.z -= dEdR1.z;
 #ifdef ENABLE_SHUFFLE
-                        shflForce.x += dEdR2.x;
-                        shflForce.y += dEdR2.y;
-                        shflForce.z += dEdR2.z;
+                    shflForce.x += dEdR2.x;
+                    shflForce.y += dEdR2.y;
+                    shflForce.z += dEdR2.z;
 #else
-                        localData[tbx+tj].fx += dEdR2.x;
-                        localData[tbx+tj].fy += dEdR2.y;
-                        localData[tbx+tj].fz += dEdR2.z;
+                    localData[tbx+tj].fx += dEdR2.x;
+                    localData[tbx+tj].fy += dEdR2.y;
+                    localData[tbx+tj].fz += dEdR2.z;
 #endif 
 #endif // end USE_SYMMETRIC
-                    }
 #ifdef ENABLE_SHUFFLE
                     SHUFFLE_WARP_DATA
 #endif
@@ -503,57 +495,51 @@ extern "C" __global__ void computeNonbonded(
                     delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
                     real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
-#ifdef USE_CUTOFF
-                    if (r2 < CUTOFF_SQUARED) {
-#endif
-                        real invR = RSQRT(r2);
-                        real r = r2*invR;
-                        LOAD_ATOM2_PARAMETERS
-                        atom2 = atomIndices[tbx+tj];
+                    real invR = RSQRT(r2);
+                    real r = r2*invR;
+                    LOAD_ATOM2_PARAMETERS
+                    atom2 = atomIndices[tbx+tj];
 #ifdef USE_SYMMETRIC
-                        real dEdR = 0.0f;
+                    real dEdR = 0.0f;
 #else
-                        real3 dEdR1 = make_real3(0);
-                        real3 dEdR2 = make_real3(0);
+                    real3 dEdR1 = make_real3(0);
+                    real3 dEdR2 = make_real3(0);
 #endif
 #ifdef USE_EXCLUSIONS
-                        bool isExcluded = (atom1 >= NUM_ATOMS || atom2 >= NUM_ATOMS);
+                    bool isExcluded = (atom1 >= NUM_ATOMS || atom2 >= NUM_ATOMS);
 #endif
-                        real tempEnergy = 0.0f;
-                        COMPUTE_INTERACTION
-                        energy += tempEnergy;
+                    real tempEnergy = 0.0f;
+                    COMPUTE_INTERACTION
+                    energy += tempEnergy;
 #ifdef USE_SYMMETRIC
-                        delta *= dEdR;
-                        force.x -= delta.x;
-                        force.y -= delta.y;
-                        force.z -= delta.z;
+                    delta *= dEdR;
+                    force.x -= delta.x;
+                    force.y -= delta.y;
+                    force.z -= delta.z;
 #ifdef ENABLE_SHUFFLE
-                        shflForce.x += delta.x;
-                        shflForce.y += delta.y;
-                        shflForce.z += delta.z;
+                    shflForce.x += delta.x;
+                    shflForce.y += delta.y;
+                    shflForce.z += delta.z;
 
 #else
-                        localData[tbx+tj].fx += delta.x;
-                        localData[tbx+tj].fy += delta.y;
-                        localData[tbx+tj].fz += delta.z;
+                    localData[tbx+tj].fx += delta.x;
+                    localData[tbx+tj].fy += delta.y;
+                    localData[tbx+tj].fz += delta.z;
 #endif
 #else // !USE_SYMMETRIC
-                        force.x -= dEdR1.x;
-                        force.y -= dEdR1.y;
-                        force.z -= dEdR1.z;
+                    force.x -= dEdR1.x;
+                    force.y -= dEdR1.y;
+                    force.z -= dEdR1.z;
 #ifdef ENABLE_SHUFFLE
-                        shflForce.x += dEdR2.x;
-                        shflForce.y += dEdR2.y;
-                        shflForce.z += dEdR2.z;
+                    shflForce.x += dEdR2.x;
+                    shflForce.y += dEdR2.y;
+                    shflForce.z += dEdR2.z;
 #else
-                        localData[tbx+tj].fx += dEdR2.x;
-                        localData[tbx+tj].fy += dEdR2.y;
-                        localData[tbx+tj].fz += dEdR2.z;
+                    localData[tbx+tj].fx += dEdR2.x;
+                    localData[tbx+tj].fy += dEdR2.y;
+                    localData[tbx+tj].fz += dEdR2.z;
 #endif 
 #endif // end USE_SYMMETRIC
-#ifdef USE_CUTOFF
-                    }
-#endif
 #ifdef ENABLE_SHUFFLE
                     SHUFFLE_WARP_DATA
 #endif
