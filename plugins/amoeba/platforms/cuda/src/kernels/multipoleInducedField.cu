@@ -87,17 +87,13 @@ __device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, real3 de
         real scale3 = 1;
         real scale5 = 1;
         real damp = atom1.damp*atom2.damp;
-        if (damp != 0) {
-            real ratio = (r/damp);
-            ratio = ratio*ratio*ratio;
-            float pgamma = atom1.thole < atom2.thole ? atom1.thole : atom2.thole;
-            damp = -pgamma*ratio;
-            if (damp > -50) {
-                real expdamp = EXP(damp);
-                scale3 = 1 - expdamp;
-                scale5 = 1 - expdamp*(1-damp);
-            }
-        }
+        real ratio = (r/damp);
+        ratio = ratio*ratio*ratio;
+        float pgamma = atom1.thole < atom2.thole ? atom1.thole : atom2.thole;
+        damp = damp == 0 ? 0 : -pgamma*ratio;
+        real expdamp = EXP(damp);
+        scale3 = 1 - expdamp;
+        scale5 = 1 - expdamp*(1-damp);
         real dsc3 = scale3;
         real dsc5 = scale5;
         real r3 = (r*r2);
