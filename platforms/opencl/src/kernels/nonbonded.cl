@@ -277,6 +277,11 @@ __kernel void computeNonbonded(
                 localData[localAtomIndex].fy = 0;
                 localData[localAtomIndex].fz = 0;
             }
+            else {
+                localData[localAtomIndex].x = 0;
+                localData[localAtomIndex].y = 0;
+                localData[localAtomIndex].z = 0;
+            }
             SYNC_WARPS;
 #ifdef USE_PERIODIC
             if (singlePeriodicCopy) {

@@ -719,7 +719,7 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const GBSAOBCForce& force);
 private:
-    double prefactor;
+    double prefactor, surfaceAreaFactor;
     bool hasCreatedKernels;
     int maxTiles;
     CudaContext& cu;

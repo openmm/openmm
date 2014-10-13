@@ -47,6 +47,7 @@ void testSerialization() {
     force.setCutoffDistance(2.0);
     force.setSoluteDielectric(5.1);
     force.setSolventDielectric(50.0);
+    force.setSurfaceAreaEnergy(1.7);
     force.addParticle(1, 0.1, 0.01);
     force.addParticle(0.5, 0.2, 0.02);
     force.addParticle(-0.5, 0.3, 0.03);
@@ -65,6 +66,7 @@ void testSerialization() {
     ASSERT_EQUAL(force.getCutoffDistance(), force2.getCutoffDistance());
     ASSERT_EQUAL(force.getSoluteDielectric(), force2.getSoluteDielectric());
     ASSERT_EQUAL(force.getSolventDielectric(), force2.getSolventDielectric());
+    ASSERT_EQUAL(force.getSurfaceAreaEnergy(), force2.getSurfaceAreaEnergy());
     ASSERT_EQUAL(force.getNumParticles(), force2.getNumParticles());
     for (int i = 0; i < force.getNumParticles(); i++) {
         double charge1, radius1, scale1;

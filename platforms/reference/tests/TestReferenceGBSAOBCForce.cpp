@@ -67,7 +67,7 @@ void testSingleParticle() {
     double eps0 = EPSILON0;
     double bornEnergy = (-0.5*0.5/(8*PI_M*eps0))*(1.0/forceField->getSoluteDielectric()-1.0/forceField->getSolventDielectric())/bornRadius;
     double extendedRadius = 0.15+0.14; // probe radius
-    double nonpolarEnergy = CAL2JOULE*PI_M*0.0216*(10*extendedRadius)*(10*extendedRadius)*std::pow(0.15/bornRadius, 6.0); // Where did this formula come from?  Just copied it from CpuImplicitSolvent.cpp
+    double nonpolarEnergy = 4*PI_M*2.25936*extendedRadius*extendedRadius*std::pow(0.15/bornRadius, 6.0);
     ASSERT_EQUAL_TOL((bornEnergy+nonpolarEnergy), state.getPotentialEnergy(), 0.01);
     
     // Change the parameters and see if it is still correct.
@@ -77,8 +77,35 @@ void testSingleParticle() {
     state = context.getState(State::Energy);
     bornRadius = 0.25-0.009; // dielectric offset
     bornEnergy = (-0.4*0.4/(8*PI_M*eps0))*(1.0/forceField->getSoluteDielectric()-1.0/forceField->getSolventDielectric())/bornRadius;
-    extendedRadius = bornRadius+0.14;
-    nonpolarEnergy = CAL2JOULE*PI_M*0.0216*(10*extendedRadius)*(10*extendedRadius)*std::pow(0.25/bornRadius, 6.0);
+    extendedRadius = 0.25+0.14;
+    nonpolarEnergy = 4*PI_M*2.25936*extendedRadius*extendedRadius*std::pow(0.25/bornRadius, 6.0);
+    ASSERT_EQUAL_TOL((bornEnergy+nonpolarEnergy), state.getPotentialEnergy(), 0.01);
+}
+
+void testGlobalSettings() {
+    ReferencePlatform platform;
+    System system;
+    system.addParticle(2.0);
+    LangevinIntegrator integrator(0, 0.1, 0.01);
+    GBSAOBCForce* forceField = new GBSAOBCForce();
+    forceField->addParticle(0.5, 0.15, 1);
+    const double soluteDielectric = 2.1;
+    const double solventDielectric = 35.0;
+    const double surfaceAreaEnergy = 0.75;
+    forceField->setSoluteDielectric(soluteDielectric);
+    forceField->setSolventDielectric(solventDielectric);
+    forceField->setSurfaceAreaEnergy(surfaceAreaEnergy);
+    system.addForce(forceField);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(1);
+    positions[0] = Vec3(0, 0, 0);
+    context.setPositions(positions);
+    State state = context.getState(State::Energy);
+    double bornRadius = 0.15-0.009; // dielectric offset
+    double eps0 = EPSILON0;
+    double bornEnergy = (-0.5*0.5/(8*PI_M*eps0))*(1.0/soluteDielectric-1.0/solventDielectric)/bornRadius;
+    double extendedRadius = 0.15+0.14; // probe radius
+    double nonpolarEnergy = 4*PI_M*surfaceAreaEnergy*extendedRadius*extendedRadius*std::pow(0.15/bornRadius, 6.0);
     ASSERT_EQUAL_TOL((bornEnergy+nonpolarEnergy), state.getPotentialEnergy(), 0.01);
 }
 
@@ -190,6 +217,7 @@ void testForce() {
 int main() {
     try {
         testSingleParticle();
+        testGlobalSettings();
         testCutoffAndPeriodic();
         testForce();
     }

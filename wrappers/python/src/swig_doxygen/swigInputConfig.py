@@ -378,6 +378,7 @@ UNITS = {
 ("GBSAOBCForce", "getParticleParameters")
  : (None, ('unit.elementary_charge',
            'unit.nanometer', None)),
+("GBSAOBCForce", "getSurfaceAreaEnergy") : ('unit.kilojoule_per_mole/unit.nanometer/unit.nanometer', ()),
 ("GBVIForce", "getBornRadiusScalingMethod") : (None, ()),
 ("GBVIForce", "getQuinticLowerLimitFactor") : (None, ()),
 ("GBVIForce", "getQuinticUpperBornRadiusLimit") : ('unit.nanometer', ()),

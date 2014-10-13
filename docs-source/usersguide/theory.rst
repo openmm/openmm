@@ -489,12 +489,12 @@ The surface area term is given by\ :cite:`Schaefer1998`\ :cite:`Ponder`
 
 
 .. math::
-   E=4\pi \cdot 2\text{.}\text{26}\sum _{i}{\left({r}_{i}+{r}_{\mathit{solvent}}\right)}^{2}{\left(\frac{{r}_{i}}{{R}_{i}}\right)}^{6}
+   E=E_{SA} \cdot 4\pi \sum _{i}{\left({r}_{i}+{r}_{\mathit{solvent}}\right)}^{2}{\left(\frac{{r}_{i}}{{R}_{i}}\right)}^{6}
 
 
 where :math:`r_i` is the atomic radius of particle *i*\ , :math:`r_i` is
-its Born radius, and :math:`r_\mathit{solvent}` is the solvent radius, which is taken
-to be 0.14 nm.
+its atomic radius, and :math:`r_\mathit{solvent}` is the solvent radius, which is taken
+to be 0.14 nm.  The default value for the energy scale :math:`E_{SA}` is 2.25936 kJ/mol/nm\ :sup:`2`\ .
 
 
 AndersenThermostat

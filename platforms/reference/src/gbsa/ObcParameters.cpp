@@ -258,6 +258,9 @@ RealOpenMM ObcParameters::getPi4Asolv( void ) const {
     return _pi4Asolv;
 }
 
+void ObcParameters::setPi4Asolv(RealOpenMM pi4Asolv) {
+    _pi4Asolv = pi4Asolv;
+}
 
 /**---------------------------------------------------------------------------------------
 

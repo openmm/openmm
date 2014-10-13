@@ -2480,6 +2480,7 @@ void CudaCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOBCF
     posq.upload(&temp[0]);
     params->upload(paramsVector);
     prefactor = -ONE_4PI_EPS0*((1.0/force.getSoluteDielectric())-(1.0/force.getSolventDielectric()));
+    surfaceAreaFactor = -6.0*4*M_PI*force.getSurfaceAreaEnergy();
     bool useCutoff = (force.getNonbondedMethod() != GBSAOBCForce::NoCutoff);
     bool usePeriodic = (force.getNonbondedMethod() != GBSAOBCForce::NoCutoff && force.getNonbondedMethod() != GBSAOBCForce::CutoffNonPeriodic);
     string source = CudaKernelSources::gbsaObc2;
@@ -2506,6 +2507,7 @@ double CudaCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeFor
         defines["CUTOFF_SQUARED"] = cu.doubleToString(nb.getCutoffDistance()*nb.getCutoffDistance());
         defines["CUTOFF"] = cu.doubleToString(nb.getCutoffDistance());
         defines["PREFACTOR"] = cu.doubleToString(prefactor);
+        defines["SURFACE_AREA_FACTOR"] = cu.doubleToString(surfaceAreaFactor);
         defines["NUM_ATOMS"] = cu.intToString(cu.getNumAtoms());
         defines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
         defines["NUM_BLOCKS"] = cu.intToString(cu.getNumAtomBlocks());

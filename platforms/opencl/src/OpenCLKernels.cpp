@@ -2505,6 +2505,7 @@ void OpenCLCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOB
         cl.getPosq().upload(posqf);
     params->upload(paramsVector);
     prefactor = -ONE_4PI_EPS0*((1.0/force.getSoluteDielectric())-(1.0/force.getSolventDielectric()));
+    surfaceAreaFactor = -6.0*4*M_PI*force.getSurfaceAreaEnergy();
     bool useCutoff = (force.getNonbondedMethod() != GBSAOBCForce::NoCutoff);
     bool usePeriodic = (force.getNonbondedMethod() != GBSAOBCForce::NoCutoff && force.getNonbondedMethod() != GBSAOBCForce::CutoffNonPeriodic);
     string source = OpenCLKernelSources::gbsaObc2;
@@ -2530,6 +2531,7 @@ double OpenCLCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
         defines["CUTOFF_SQUARED"] = cl.doubleToString(nb.getCutoffDistance()*nb.getCutoffDistance());
         defines["CUTOFF"] = cl.doubleToString(nb.getCutoffDistance());
         defines["PREFACTOR"] = cl.doubleToString(prefactor);
+        defines["SURFACE_AREA_FACTOR"] = cl.doubleToString(surfaceAreaFactor);
         defines["NUM_ATOMS"] = cl.intToString(cl.getNumAtoms());
         defines["PADDED_NUM_ATOMS"] = cl.intToString(cl.getPaddedNumAtoms());
         defines["NUM_BLOCKS"] = cl.intToString(cl.getNumAtomBlocks());
