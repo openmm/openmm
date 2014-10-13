@@ -1098,6 +1098,7 @@ void ReferenceCalcGBSAOBCForceKernel::initialize(const System& system, const GBS
     obcParameters->setScaledRadiusFactors(scaleFactors);
     obcParameters->setSolventDielectric( static_cast<RealOpenMM>(force.getSolventDielectric()) );
     obcParameters->setSoluteDielectric( static_cast<RealOpenMM>(force.getSoluteDielectric()) );
+    obcParameters->setPi4Asolv(4*M_PI*force.getSurfaceAreaEnergy());
     if (force.getNonbondedMethod() != GBSAOBCForce::NoCutoff)
         obcParameters->setUseCutoff(static_cast<RealOpenMM>(force.getCutoffDistance()));
     isPeriodic = (force.getNonbondedMethod() == GBSAOBCForce::CutoffPeriodic);

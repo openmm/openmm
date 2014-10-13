@@ -802,6 +802,7 @@ void CpuCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOBCFo
     obc.setParticleParameters(particleParams);
     obc.setSolventDielectric((float) force.getSolventDielectric());
     obc.setSoluteDielectric((float) force.getSoluteDielectric());
+    obc.setSurfaceAreaEnergy((float) force.getSurfaceAreaEnergy());
     if (force.getNonbondedMethod() != GBSAOBCForce::NoCutoff)
         obc.setUseCutoff((float) force.getCutoffDistance());
     data.isPeriodic = (force.getNonbondedMethod() == GBSAOBCForce::CutoffPeriodic);

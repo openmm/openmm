@@ -398,6 +398,15 @@ extern "C" __global__ void computeNonbonded(
 #endif                
                 LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
             }
+            else {
+#ifdef ENABLE_SHUFFLE
+                shflPosq = make_real4(0, 0, 0, 0);
+#else
+                localData[threadIdx.x].x = 0;
+                localData[threadIdx.x].y = 0;
+                localData[threadIdx.x].z = 0;
+#endif
+            }
 #ifdef USE_PERIODIC
             if (singlePeriodicCopy) {
                 // The box is small enough that we can just translate all the atoms into a single periodic
