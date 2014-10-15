@@ -467,7 +467,12 @@ class Quantity(object):
             # This will be much faster for numpy arrays
             mysum = self._value.sum()
         except AttributeError:
-            mysum = sum(self._value)
+            if len(self._value) == 0:
+                mysum = 0
+            else:
+                mysum = self._value[0]
+                for i in range(1, len(self._value)):
+                    mysum += self._value[i]
         return Quantity(mysum, self.unit)
 
     def mean(self):
