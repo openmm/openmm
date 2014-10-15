@@ -136,6 +136,11 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     this->deviceIndex = deviceIndex;
     int major, minor;
     CHECK_RESULT(cuDeviceComputeCapability(&major, &minor, device));
+    // This is a workaround to support GTX 980 with CUDA 6.5.  It reports its compute capability
+    // as 5.2, but the compiler doesn't support anything beyond 5.0.  We can remove this once
+    // CUDA 7.0 is released.
+    if (major == 5)
+        minor = 0;
     gpuArchitecture = intToString(major)+intToString(minor);
     computeCapability = major+0.1*minor;
     if ((useDoublePrecision || useMixedPrecision) && computeCapability < 1.3)
