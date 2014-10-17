@@ -35,8 +35,15 @@
 
 using namespace OpenMM;
 
-MonteCarloAnisotropicBarostat::MonteCarloAnisotropicBarostat(const Vec3& defaultPressure, double temperature, bool scaleX, bool scaleY, bool scaleZ, int frequency) :
-        defaultPressure(defaultPressure), temperature(temperature), scaleX(scaleX), scaleY(scaleY), scaleZ(scaleZ), frequency(frequency) {
+MonteCarloAnisotropicBarostat::MonteCarloAnisotropicBarostat(const Vec3& defaultPressure, double temperature, bool scaleX, bool scaleY, bool scaleZ,
+                                                             int frequency, bool coupleXY, bool coupleXZ, bool coupleYZ) :
+        defaultPressure(defaultPressure), temperature(temperature), scaleX(scaleX), scaleY(scaleY), scaleZ(scaleZ), 
+        frequency(frequency), coupleXY(coupleXY), coupleXZ(coupleXZ), coupleYZ(coupleYZ) {
+    // Check for illegal choices
+    if ((coupleXY && coupleXZ) || (coupleXY && coupleYZ) || (coupleXZ && coupleYZ))
+        throw OpenMMException("MonteCarloAnisotropicBarostat: Cannot couple more than 2 sets of axes.");
+    if ((coupleXY && (!scaleX || !scaleY)) || (coupleXZ && (!scaleX || !scaleZ)) || (coupleYZ && (!scaleY || !scaleZ)))
+        throw OpenMMException("All coupled axes must be scalable.");
     setRandomNumberSeed(osrngseed());
 }
 
