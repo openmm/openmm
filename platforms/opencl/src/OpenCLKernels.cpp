@@ -1611,6 +1611,12 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
                 fft = new OpenCLFFT3D(cl, gridSizeX, gridSizeY, gridSizeZ);
                 string vendor = cl.getDevice().getInfo<CL_DEVICE_VENDOR>();
                 usePmeQueue = (vendor.size() >= 6 && vendor.substr(0, 6) == "NVIDIA");
+                if (cl.getDevice().getInfo<CL_DEVICE_EXTENSIONS>().find("cl_nv_device_attribute_query") != string::npos) {
+                    cl_uint computeCapabilityMajor;
+                    clGetDeviceInfo(cl.getDevice()(), 0x4000, sizeof(cl_uint), &computeCapabilityMajor, NULL); // CL_DEVICE_COMPUTE_CAPABILITY_MAJOR_NV
+                    if (computeCapabilityMajor == 5)
+                        usePmeQueue = false; // Workaround for driver bug that affects GTX 980.
+                }
                 if (usePmeQueue) {
                     pmeQueue = cl::CommandQueue(cl.getContext(), cl.getDevice());
                     int recipForceGroup = force.getReciprocalSpaceForceGroup();
