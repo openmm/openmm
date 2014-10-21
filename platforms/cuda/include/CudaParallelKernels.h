@@ -85,6 +85,7 @@ private:
     void* pinnedPositionBuffer;
     long long* pinnedForceBuffer;
     CUfunction sumKernel;
+    CUevent event;
 };
 
 /**
