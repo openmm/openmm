@@ -144,16 +144,20 @@ class PdbStructure(object):
         self._load(input_stream)
 
     def _load(self, input_stream):
+        self._reset_atom_numbers()
+        self._reset_residue_numbers()
         # Read one line at a time
         for pdb_line in input_stream:
             # Look for atoms
             if (pdb_line.find("ATOM  ") == 0) or (pdb_line.find("HETATM") == 0):
-                self._add_atom(Atom(pdb_line))
+                self._add_atom(Atom(pdb_line, self))
             # Notice MODEL punctuation, for the next level of detail
             # in the structure->model->chain->residue->atom->position hierarchy
             elif (pdb_line.find("MODEL") == 0):
                 model_number = int(pdb_line[10:14])
                 self._add_model(Model(model_number))
+                self._reset_atom_numbers()
+                self._reset_residue_numbers()
             elif (pdb_line.find("ENDMDL") == 0):
                 self._current_model._finalize()
                 if not self.load_all_models:
@@ -164,6 +168,7 @@ class PdbStructure(object):
                     break
             elif (pdb_line.find("TER") == 0 and pdb_line.split()[0] == "TER"):
                 self._current_model._current_chain._add_ter_record()
+                self._reset_residue_numbers()
             elif (pdb_line.find("CRYST1") == 0):
                 self._unit_cell_dimensions = Vec3(float(pdb_line[6:15]), float(pdb_line[15:24]), float(pdb_line[24:33]))*unit.angstroms
             elif (pdb_line.find("CONECT") == 0):
@@ -182,6 +187,14 @@ class PdbStructure(object):
             elif (pdb_line.find("MODRES") == 0):
                 self.modified_residues.append(ModifiedResidue(pdb_line[16], int(pdb_line[18:22]), pdb_line[12:15].strip(), pdb_line[24:27].strip()))
         self._finalize()
+    
+    def _reset_atom_numbers(self):
+        self._atom_numbers_are_hex = False
+        self._next_atom_number = 1
+    
+    def _reset_residue_numbers(self):
+        self._residue_numbers_are_hex = False
+        self._next_residue_number = 1
 
     def write(self, output_stream=sys.stdout):
         """Write out structure in PDB format"""
@@ -653,7 +666,7 @@ class Residue(object):
 class Atom(object):
     """Atom represents one atom in a PDB structure.
     """
-    def __init__(self, pdb_line):
+    def __init__(self, pdb_line, pdbstructure=None):
         """Create a new pdb.Atom from an ATOM or HETATM line.
 
         Example line:
@@ -688,13 +701,21 @@ class Atom(object):
         self.is_first_atom_in_chain = False
         self.is_final_atom_in_chain = False
         self.is_first_residue_in_chain = False
-        self.is_final_residue_in_chain = False
+        self.is_final_residue_in_chain = False 
         # Start parsing fields from pdb line
         self.record_name = pdb_line[0:6].strip()
-        try:
-            self.serial_number = int(pdb_line[6:11])
-        except:
-            self.serial_number = int(pdb_line[6:11], 16) # Try to parse it as hex
+        if pdbstructure is not None and pdbstructure._atom_numbers_are_hex:
+            self.serial_number = int(pdb_line[6:11], 16)
+        else:
+            try:
+                self.serial_number = int(pdb_line[6:11])
+            except:
+                try:
+                    self.serial_number = int(pdb_line[6:11], 16)
+                    pdbstructure._atom_numbers_are_hex = True
+                except:
+                    # Just give it the next number in sequence.
+                    self.serial_number = pdbstructure._next_atom_number
         self.name_with_spaces = pdb_line[12:16]
         alternate_location_indicator = pdb_line[16]
 
@@ -710,10 +731,18 @@ class Atom(object):
         self.residue_name = self.residue_name_with_spaces.strip()
 
         self.chain_id = pdb_line[21]
-        try:
-            self.residue_number = int(pdb_line[22:26])
-        except:
-            self.residue_number = int(pdb_line[22:26], 16) # Try to parse it as hex
+        if pdbstructure is not None and pdbstructure._residue_numbers_are_hex:
+            self.residue_number = int(pdb_line[22:26], 16)
+        else:
+            try:
+                self.residue_number = int(pdb_line[22:26])
+            except:
+                try:
+                    self.residue_number = int(pdb_line[22:26], 16)
+                    pdbstructure._residue_numbers_are_hex = True
+                except:
+                    # Just give it the next number in sequence.
+                    self.residue_number = pdbstructure._next_residue_number
         self.insertion_code = pdb_line[26]
         # coordinates, occupancy, and temperature factor belong in Atom.Location object
         x = float(pdb_line[30:38])
@@ -742,6 +771,9 @@ class Atom(object):
             self.element = element.get_by_symbol(self.element_symbol)
         except KeyError:
             self.element = None
+        if pdbstructure is not None:
+            pdbstructure._next_atom_number = self.serial_number+1
+            pdbstructure._next_residue_number = self.residue_number+1
 
     def iter_locations(self):
         """
