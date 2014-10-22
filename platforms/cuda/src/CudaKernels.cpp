@@ -1457,8 +1457,10 @@ CudaCalcNonbondedForceKernel::~CudaCalcNonbondedForceKernel() {
     if (hasInitializedFFT) {
         cufftDestroy(fftForward);
         cufftDestroy(fftBackward);
-        cuStreamDestroy(pmeStream);
-        cuEventDestroy(pmeSyncEvent);
+        if (usePmeStream) {
+            cuStreamDestroy(pmeStream);
+            cuEventDestroy(pmeSyncEvent);
+        }
     }
 }
 
@@ -1670,15 +1672,18 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                 
                 // Prepare for doing PME on its own stream.
                 
-                cuStreamCreate(&pmeStream, CU_STREAM_NON_BLOCKING);
-                cufftSetStream(fftForward, pmeStream);
-                cufftSetStream(fftBackward, pmeStream);
-                CHECK_RESULT(cuEventCreate(&pmeSyncEvent, CU_EVENT_DISABLE_TIMING), "Error creating event for NonbondedForce");
-                int recipForceGroup = force.getReciprocalSpaceForceGroup();
-                if (recipForceGroup < 0)
-                    recipForceGroup = force.getForceGroup();
-                cu.addPreComputation(new SyncStreamPreComputation(pmeStream, pmeSyncEvent, recipForceGroup));
-                cu.addPostComputation(new SyncStreamPostComputation(pmeSyncEvent, recipForceGroup));
+                usePmeStream = (cu.getComputeCapability() < 5.0); // A driver bug causes this to be very slow on GTX 980.
+                if (usePmeStream) {
+                    cuStreamCreate(&pmeStream, CU_STREAM_NON_BLOCKING);
+                    cufftSetStream(fftForward, pmeStream);
+                    cufftSetStream(fftBackward, pmeStream);
+                    CHECK_RESULT(cuEventCreate(&pmeSyncEvent, CU_EVENT_DISABLE_TIMING), "Error creating event for NonbondedForce");
+                    int recipForceGroup = force.getReciprocalSpaceForceGroup();
+                    if (recipForceGroup < 0)
+                        recipForceGroup = force.getForceGroup();
+                    cu.addPreComputation(new SyncStreamPreComputation(pmeStream, pmeSyncEvent, recipForceGroup));
+                    cu.addPostComputation(new SyncStreamPostComputation(pmeSyncEvent, recipForceGroup));
+                }
                 hasInitializedFFT = true;
 
                 // Initialize the b-spline moduli.
@@ -1795,7 +1800,8 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
         cu.executeKernel(ewaldForcesKernel, forcesArgs, cu.getNumAtoms());
     }
     if (directPmeGrid != NULL && includeReciprocal) {
-        cu.setCurrentStream(pmeStream);
+        if (usePmeStream)
+            cu.setCurrentStream(pmeStream);
         void* gridIndexArgs[] = {&cu.getPosq().getDevicePointer(), &pmeAtomGridIndex->getDevicePointer(), cu.getPeriodicBoxSizePointer(), cu.getInvPeriodicBoxSizePointer()};
         cu.executeKernel(pmeGridIndexKernel, gridIndexArgs, cu.getNumAtoms());
 
@@ -1832,8 +1838,10 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
         void* interpolateArgs[] = {&cu.getPosq().getDevicePointer(), &cu.getForce().getDevicePointer(), &directPmeGrid->getDevicePointer(),
                 cu.getPeriodicBoxSizePointer(), cu.getInvPeriodicBoxSizePointer(), &pmeAtomGridIndex->getDevicePointer()};
         cu.executeKernel(pmeInterpolateForceKernel, interpolateArgs, cu.getNumAtoms(), 128);
-        cuEventRecord(pmeSyncEvent, pmeStream);
-        cu.restoreDefaultStream();
+        if (usePmeStream) {
+            cuEventRecord(pmeSyncEvent, pmeStream);
+            cu.restoreDefaultStream();
+        }
     }
     double energy = (includeReciprocal ? ewaldSelfEnergy : 0.0);
     if (dispersionCoefficient != 0.0 && includeDirect) {
