@@ -162,10 +162,10 @@ __kernel void copyDataToBuckets(__global const DATA_TYPE* restrict data, __globa
  * Sort the data in each bucket.
  */
 __kernel void sortBuckets(__global DATA_TYPE* restrict data, __global const DATA_TYPE* restrict buckets, uint numBuckets, __global const uint* restrict bucketOffset, __local DATA_TYPE* restrict buffer) {
-    for (uint index = get_group_id(0); index < numBuckets; index += get_num_groups(0)) {
-        uint startIndex = (index == 0 ? 0 : bucketOffset[index-1]);
-        uint endIndex = bucketOffset[index];
-        uint length = endIndex-startIndex;
+    for (int index = get_group_id(0); index < numBuckets; index += get_num_groups(0)) {
+        int startIndex = (index == 0 ? 0 : bucketOffset[index-1]);
+        int endIndex = bucketOffset[index];
+        int length = endIndex-startIndex;
         if (length <= get_local_size(0)) {
             // Load the data into local memory.
 
@@ -177,8 +177,8 @@ __kernel void sortBuckets(__global DATA_TYPE* restrict data, __global const DATA
 
             // Perform a bitonic sort in local memory.
 
-            for (uint k = 2; k <= get_local_size(0); k *= 2) {
-                for (uint j = k/2; j > 0; j /= 2) {
+            for (int k = 2; k <= get_local_size(0); k *= 2) {
+                for (int j = k/2; j > 0; j /= 2) {
                     int ixj = get_local_id(0)^j;
                     if (ixj > get_local_id(0)) {
                         DATA_TYPE value1 = buffer[get_local_id(0)];
@@ -203,21 +203,21 @@ __kernel void sortBuckets(__global DATA_TYPE* restrict data, __global const DATA
         else {
             // Copy the bucket data over to the output array.
 
-            for (uint i = get_local_id(0); i < length; i += get_local_size(0))
+            for (int i = get_local_id(0); i < length; i += get_local_size(0))
                 data[startIndex+i] = buckets[startIndex+i];
             barrier(CLK_GLOBAL_MEM_FENCE);
 
             // Perform a bitonic sort in global memory.
 
-            for (uint k = 2; k < 2*length; k *= 2) {
-                for (uint j = k/2; j > 0; j /= 2) {
-                    for (uint i = get_local_id(0); i < length; i += get_local_size(0)) {
+            for (int k = 2; k < 2*length; k *= 2) {
+                for (int j = k/2; j > 0; j /= 2) {
+                    for (int i = get_local_id(0); i < length; i += get_local_size(0)) {
                         int ixj = i^j;
                         if (ixj > i && ixj < length) {
                             DATA_TYPE value1 = data[startIndex+i];
                             DATA_TYPE value2 = data[startIndex+ixj];
                             bool ascending = ((i&k) == 0);
-                            for (uint mask = k*2; mask < 2*length; mask *= 2)
+                            for (int mask = k*2; mask < 2*length; mask *= 2)
                                 ascending = ((i&mask) == 0 ? !ascending : ascending);
                             KEY_TYPE lowKey  = (ascending ? getValue(value1) : getValue(value2));
                             KEY_TYPE highKey = (ascending ? getValue(value2) : getValue(value1));
