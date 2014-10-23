@@ -100,24 +100,13 @@ class TestAmberPrmtopFile(unittest.TestCase):
             for method in methodMap:
                 system = prmtop2.createSystem(implicitSolvent=implicitSolvent_value, 
                                     solventDielectric=50.0, soluteDielectric=0.9, nonbondedMethod=method)
-                found_matching_solvent_dielectric=False
-                found_matching_solute_dielectric=False
                 if implicitSolvent_value in set([HCT, OBC1, GBn]):
                     for force in system.getForces():
                         if isinstance(force, CustomGBForce):
                             self.assertEqual(force.getNonbondedMethod(), methodMap[method])
-                            for j in range(force.getNumGlobalParameters()):
-                                if (force.getGlobalParameterName(j) == 'solventDielectric' and
-                                   force.getGlobalParameterDefaultValue(j) == 50.0):
-                                    found_matching_solvent_dielectric = True
-                                if (force.getGlobalParameterName(j) == 'soluteDielectric' and
-                                   force.getGlobalParameterDefaultValue(j) == 0.9):
-                                    found_matching_solute_dielectric = True
                         if isinstance(force, NonbondedForce):
                             self.assertEqual(force.getReactionFieldDielectric(), 1.0)
                             self.assertEqual(force.getNonbondedMethod(), methodMap[method])
-                    self.assertTrue(found_matching_solvent_dielectric and 
-                                    found_matching_solute_dielectric)
                 else:
                     for force in system.getForces():
                         if isinstance(force, GBSAOBCForce):
@@ -240,6 +229,25 @@ class TestAmberPrmtopFile(unittest.TestCase):
         # Make sure the energy is relatively close to the value we get with
         # Amber using this force field.
         self.assertAlmostEqual(-7307.2735621/ene, 1, places=3)
+    
+    def test_ImplicitSolventForces(self):
+        """Compute forces for different implicit solvent types, and compare them to ones generated with a previous version of OpenMM to ensure they haven't changed."""
+        
+        solventType = [HCT, OBC1, OBC2, GBn, GBn2]
+        nonbondedMethod = [NoCutoff, CutoffNonPeriodic, CutoffNonPeriodic, NoCutoff, NoCutoff]
+        salt = [0.0, 0.0, 0.5, 0.5, 0.0]*(moles/liter)
+        file = ['HCT_NoCutoff', 'OBC1_NonPeriodic', 'OBC2_NonPeriodic_Salt', 'GBn_NoCutoff_Salt', 'GBn2_NoCutoff']
+        pdb = PDBFile('systems/alanine-dipeptide-implicit.pdb')
+        for i in range(5):
+            system = prmtop2.createSystem(implicitSolvent=solventType[i], nonbondedMethod=nonbondedMethod[i], implicitSolventSaltConc=salt[i])
+            integrator = VerletIntegrator(0.001)
+            context = Context(system, integrator, Platform.getPlatformByName("CPU"))
+            context.setPositions(pdb.positions)
+            state1 = context.getState(getForces=True)
+            state2 = XmlSerializer.deserialize(open('systems/alanine-dipeptide-implicit-forces/'+file[i]+'.xml').read())
+            for f1, f2, in zip(state1.getForces().value_in_unit(kilojoules_per_mole/nanometer), state2.getForces().value_in_unit(kilojoules_per_mole/nanometer)):
+                diff = norm(f1-f2)
+                self.assertTrue(diff < 0.1 or diff/norm(f1) < 1e-4)
 
 if __name__ == '__main__':
     unittest.main()
