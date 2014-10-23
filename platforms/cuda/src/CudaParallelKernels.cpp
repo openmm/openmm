@@ -63,21 +63,23 @@ if (result != CUDA_SUCCESS) { \
 class CudaParallelCalcForcesAndEnergyKernel::BeginComputationTask : public CudaContext::WorkTask {
 public:
     BeginComputationTask(ContextImpl& context, CudaContext& cu, CudaCalcForcesAndEnergyKernel& kernel,
-            bool includeForce, bool includeEnergy, int groups, void* pinnedMemory) : context(context), cu(cu), kernel(kernel),
-            includeForce(includeForce), includeEnergy(includeEnergy), groups(groups), pinnedMemory(pinnedMemory) {
+            bool includeForce, bool includeEnergy, int groups, void* pinnedMemory, CUevent event) : context(context), cu(cu), kernel(kernel),
+            includeForce(includeForce), includeEnergy(includeEnergy), groups(groups), pinnedMemory(pinnedMemory), event(event) {
     }
     void execute() {
         // Copy coordinates over to this device and execute the kernel.
 
         cu.setAsCurrent();
         if (cu.getContextIndex() > 0) {
-            if (cu.getPlatformData().peerAccessSupported && cu.getPlatformData().contexts.size() < 3) {
+            if (cu.getPlatformData().peerAccessSupported && false) { // Why is the peer-to-peer copy slower???
                 CudaContext& context0 = *cu.getPlatformData().contexts[0];
                 int numBytes = cu.getPosq().getSize()*cu.getPosq().getElementSize();
-                CHECK_RESULT(cuMemcpyPeerAsync(cu.getPosq().getDevicePointer(), cu.getContext(), context0.getPosq().getDevicePointer(), context0.getContext(), numBytes, 0), "Error copying positions");
+                CHECK_RESULT(cuMemcpyAsync(cu.getPosq().getDevicePointer(), context0.getPosq().getDevicePointer(), numBytes, 0), "Error copying positions");
             }
-            else
+            else {
+                cuStreamWaitEvent(cu.getCurrentStream(), event, 0);
                 cu.getPosq().upload(pinnedMemory, false);
+            }
         }
         kernel.beginComputation(context, includeForce, includeEnergy, groups);
     }
@@ -88,6 +90,7 @@ private:
     bool includeForce, includeEnergy;
     int groups;
     void* pinnedMemory;
+    CUevent event;
 };
 
 class CudaParallelCalcForcesAndEnergyKernel::FinishComputationTask : public CudaContext::WorkTask {
@@ -108,7 +111,7 @@ public:
                     int numBytes = numAtoms*3*sizeof(long long);
                     int offset = (cu.getContextIndex()-1)*numBytes;
                     CudaContext& context0 = *cu.getPlatformData().contexts[0];
-                    CHECK_RESULT(cuMemcpyPeer(contextForces.getDevicePointer()+offset, context0.getContext(), cu.getForce().getDevicePointer(), cu.getContext(), numBytes), "Error copying forces");
+                    CHECK_RESULT(cuMemcpy(contextForces.getDevicePointer()+offset, cu.getForce().getDevicePointer(), numBytes), "Error copying forces");
                 }
                 else
                     cu.getForce().download(&pinnedMemory[(cu.getContextIndex()-1)*numAtoms*3]);
@@ -146,6 +149,7 @@ CudaParallelCalcForcesAndEnergyKernel::~CudaParallelCalcForcesAndEnergyKernel() 
         cuMemFreeHost(pinnedPositionBuffer);
     if (pinnedForceBuffer != NULL)
         cuMemFreeHost(pinnedForceBuffer);
+    cuEventDestroy(event);
 }
 
 void CudaParallelCalcForcesAndEnergyKernel::initialize(const System& system) {
@@ -157,6 +161,7 @@ void CudaParallelCalcForcesAndEnergyKernel::initialize(const System& system) {
         getKernel(i).initialize(system);
     for (int i = 0; i < (int) contextNonbondedFractions.size(); i++)
         contextNonbondedFractions[i] = 1/(double) contextNonbondedFractions.size();
+    CHECK_RESULT(cuEventCreate(&event, 0), "Error creating event");
 }
 
 void CudaParallelCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups) {
@@ -170,13 +175,15 @@ void CudaParallelCalcForcesAndEnergyKernel::beginComputation(ContextImpl& contex
 
     // Copy coordinates over to each device and execute the kernel.
     
-    if (!(cu.getPlatformData().peerAccessSupported && cu.getPlatformData().contexts.size() < 3))
-        cu.getPosq().download(pinnedPositionBuffer);
+    if (!(cu.getPlatformData().peerAccessSupported && false)) { // Why is this faster than a peer-to-peer copy???
+        cu.getPosq().download(pinnedPositionBuffer, false);
+        cuEventRecord(event, cu.getCurrentStream());
+    }
     for (int i = 0; i < (int) data.contexts.size(); i++) {
         data.contextEnergy[i] = 0.0;
         CudaContext& cu = *data.contexts[i];
         CudaContext::WorkThread& thread = cu.getWorkThread();
-        thread.addTask(new BeginComputationTask(context, cu, getKernel(i), includeForce, includeEnergy, groups, pinnedPositionBuffer));
+        thread.addTask(new BeginComputationTask(context, cu, getKernel(i), includeForce, includeEnergy, groups, pinnedPositionBuffer, event));
     }
 }
 
