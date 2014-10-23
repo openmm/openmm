@@ -741,8 +741,21 @@ class Atom(object):
                     self.residue_number = int(pdb_line[22:26], 16)
                     pdbstructure._residue_numbers_are_hex = True
                 except:
-                    # Just give it the next number in sequence.
-                    self.residue_number = pdbstructure._next_residue_number
+                    # When VMD runs out of hex values it starts filling the residue ID field with ****.
+                    # Look at the most recent atoms to figure out whether this is a new residue or not.
+                    if pdbstructure._current_model is None or pdbstructure._current_model._current_chain is None or pdbstructure._current_model._current_chain._current_residue is None:
+                        # This is the first residue in the model.
+                        self.residue_number = pdbstructure._next_residue_number
+                    else:
+                        currentRes = pdbstructure._current_model._current_chain._current_residue
+                        if currentRes.name_with_spaces != self.residue_name_with_spaces:
+                            # The residue name has changed.
+                            self.residue_number = pdbstructure._next_residue_number
+                        elif self.name_with_spaces in currentRes.atoms_by_name:
+                            # There is already an atom with this name.
+                            self.residue_number = pdbstructure._next_residue_number
+                        else:
+                            self.residue_number = currentRes.number
         self.insertion_code = pdb_line[26]
         # coordinates, occupancy, and temperature factor belong in Atom.Location object
         x = float(pdb_line[30:38])
