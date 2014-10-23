@@ -69,21 +69,9 @@ class TestCharmmFiles(unittest.TestCase):
         system = self.psf_x.createSystem(self.params, implicitSolvent=GBn,
                                          solventDielectric=50.0, 
                                          soluteDielectric = 0.9)
-        found_matching_solvent_dielectric=False
-        found_matching_solute_dielectric=False
         for force in system.getForces():
-            if isinstance(force, CustomGBForce):
-                for i in range(force.getNumGlobalParameters()):
-                    if force.getGlobalParameterName(i) == 'solventDielectric':
-                        if force.getGlobalParameterDefaultValue(i) == 50.0:
-                            found_matching_solvent_dielectric = True
-                    elif force.getGlobalParameterName(i) == 'soluteDielectric':
-                        if force.getGlobalParameterDefaultValue(i) == 0.9:
-                            found_matching_solute_dielectric = True
             if isinstance(force, NonbondedForce):
                 self.assertEqual(force.getReactionFieldDielectric(), 1.0)
-        self.assertTrue(found_matching_solvent_dielectric and 
-                        found_matching_solute_dielectric)
 
     def test_HydrogenMass(self):
         """Test that altering the mass of hydrogens works correctly."""
@@ -126,6 +114,26 @@ class TestCharmmFiles(unittest.TestCase):
         state = con.getState(getEnergy=True, enforcePeriodicBox=True)
         ene = state.getPotentialEnergy().value_in_unit(kilocalories_per_mole)
         self.assertAlmostEqual(ene, 15490.0033559, delta=0.05)
+
+    def test_ImplicitSolventForces(self):
+        """Compute forces for different implicit solvent types, and compare them to ones generated with a previous version of OpenMM to ensure they haven't changed."""
+        solventType = [HCT, OBC1, OBC2, GBn, GBn2]
+        nonbondedMethod = [NoCutoff, CutoffNonPeriodic, CutoffNonPeriodic, NoCutoff, NoCutoff]
+        salt = [0.0, 0.0, 0.5, 0.5, 0.0]*(moles/liter)
+        file = ['HCT_NoCutoff', 'OBC1_NonPeriodic', 'OBC2_NonPeriodic_Salt', 'GBn_NoCutoff_Salt', 'GBn2_NoCutoff']
+        for i in range(5):
+            system = self.psf_c.createSystem(self.params, implicitSolvent=solventType[i], nonbondedMethod=nonbondedMethod[i], implicitSolventSaltConc=salt[i])
+            integrator = VerletIntegrator(0.001)
+            context = Context(system, integrator, Platform.getPlatformByName("CPU"))
+            context.setPositions(self.pdb.positions)
+            state1 = context.getState(getForces=True)
+            #out = open('systems/ala-ala-ala-implicit-forces/'+file[i]+'.xml', 'w')
+            #out.write(XmlSerializer.serialize(state1))
+            #out.close()
+            state2 = XmlSerializer.deserialize(open('systems/ala-ala-ala-implicit-forces/'+file[i]+'.xml').read())
+            for f1, f2, in zip(state1.getForces().value_in_unit(kilojoules_per_mole/nanometer), state2.getForces().value_in_unit(kilojoules_per_mole/nanometer)):
+                diff = norm(f1-f2)
+                self.assertTrue(diff < 0.1 or diff/norm(f1) < 1e-4)
 
 if __name__ == '__main__':
     unittest.main()

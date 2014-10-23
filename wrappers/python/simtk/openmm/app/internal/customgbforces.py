@@ -189,36 +189,39 @@ for i in range (len(d0)):
     m0[i]=m0[i]*10
 
 
-def _createEnergyTerms(force, SA, cutoff, kappa):
+def _createEnergyTerms(force, solventDielectric, soluteDielectric, SA, cutoff, kappa, offset):
     # Add the energy terms to the CustomGBForce.  These are identical for all the GB models.
     
+    params = "; solventDielectric=%.16g; soluteDielectric=%.16g; kappa=%.16g; offset=%.16g" % (solventDielectric, soluteDielectric, kappa, offset)
+    if cutoff is not None:
+        params += "; cutoff=%.16g" % cutoff
     if kappa > 0:
-        force.addEnergyTerm("-0.5*138.935485*(1/soluteDielectric-exp(-kappa*B)/solventDielectric)*q^2/B",
+        force.addEnergyTerm("-0.5*138.935485*(1/soluteDielectric-exp(-kappa*B)/solventDielectric)*q^2/B"+params,
                 CustomGBForce.SingleParticle)
     elif kappa < 0:
         # Do kappa check here to avoid repeating code everywhere
         raise ValueError('kappa/ionic strength must be >= 0')
     else:
-        force.addEnergyTerm("-0.5*138.935485*(1/soluteDielectric-1/solventDielectric)*q^2/B",
+        force.addEnergyTerm("-0.5*138.935485*(1/soluteDielectric-1/solventDielectric)*q^2/B"+params,
                 CustomGBForce.SingleParticle)
     if SA=='ACE':
-        force.addEnergyTerm("28.3919551*(radius+0.14)^2*(radius/B)^6", CustomGBForce.SingleParticle)
+        force.addEnergyTerm("28.3919551*(radius+0.14)^2*(radius/B)^6; radius=or+offset"+params, CustomGBForce.SingleParticle)
     elif SA is not None:
         raise ValueError('Unknown surface area method: '+SA)
     if cutoff is None:
         if kappa > 0:
             force.addEnergyTerm("-138.935485*(1/soluteDielectric-exp(-kappa*f)/solventDielectric)*q1*q2/f;"
-                                "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))", CustomGBForce.ParticlePairNoExclusions)
+                                "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))"+params, CustomGBForce.ParticlePairNoExclusions)
         else:
             force.addEnergyTerm("-138.935485*(1/soluteDielectric-1/solventDielectric)*q1*q2/f;"
-                                "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))", CustomGBForce.ParticlePairNoExclusions)
+                                "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))"+params, CustomGBForce.ParticlePairNoExclusions)
     else:
         if kappa > 0:
             force.addEnergyTerm("-138.935485*(1/soluteDielectric-kappa/solventDielectric)*q1*q2*(1/f-"+str(1/cutoff)+");"
-                                "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))", CustomGBForce.ParticlePairNoExclusions)
+                                "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))"+params, CustomGBForce.ParticlePairNoExclusions)
         else:
             force.addEnergyTerm("-138.935485*(1/soluteDielectric-1/solventDielectric)*q1*q2*(1/f-"+str(1/cutoff)+");"
-                                "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))", CustomGBForce.ParticlePairNoExclusions)
+                                "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))"+params, CustomGBForce.ParticlePairNoExclusions)
 
 """
 Amber Equivalent: igb = 1
@@ -231,22 +234,15 @@ def GBSAHCTForce(solventDielectric=78.5, soluteDielectric=1, SA=None,
     custom = CustomGBForce()
 
     custom.addPerParticleParameter("q")
-    custom.addPerParticleParameter("radius")
-    custom.addPerParticleParameter("scale")
-    if kappa > 0: custom.addGlobalParameter('kappa', kappa)
-    custom.addGlobalParameter("solventDielectric", solventDielectric)
-    custom.addGlobalParameter("soluteDielectric", soluteDielectric)
-    custom.addGlobalParameter("offset", 0.009)
+    custom.addPerParticleParameter("or") # Offset radius
+    custom.addPerParticleParameter("sr") # Scaled offset radius
     custom.addComputedValue("I", "step(r+sr2-or1)*0.5*(1/L-1/U+0.25*(r-sr2^2/r)*(1/(U^2)-1/(L^2))+0.5*log(L/U)/r);"
                                   "U=r+sr2;"
                                   "L=max(or1, D);"
-                                  "D=abs(r-sr2);"
-                                  "sr2 = scale2*or2;"
-                                  "or1 = radius1-offset; or2 = radius2-offset", CustomGBForce.ParticlePairNoExclusions)
+                                  "D=abs(r-sr2)", CustomGBForce.ParticlePairNoExclusions)
 
-    custom.addComputedValue("B", "1/(1/or-I);"
-                                  "or=radius-offset", CustomGBForce.SingleParticle)
-    _createEnergyTerms(custom, SA, cutoff, kappa)
+    custom.addComputedValue("B", "1/(1/or-I)", CustomGBForce.SingleParticle)
+    _createEnergyTerms(custom, solventDielectric, soluteDielectric, SA, cutoff, kappa, 0.009)
     return custom
 
 """
@@ -258,22 +254,16 @@ def GBSAOBC1Force(solventDielectric=78.5, soluteDielectric=1, SA=None,
     custom = CustomGBForce()
 
     custom.addPerParticleParameter("q")
-    custom.addPerParticleParameter("radius")
-    custom.addPerParticleParameter("scale")
-    if kappa > 0: custom.addGlobalParameter('kappa', kappa)
-    custom.addGlobalParameter("solventDielectric", solventDielectric)
-    custom.addGlobalParameter("soluteDielectric", soluteDielectric)
-    custom.addGlobalParameter("offset", 0.009)
+    custom.addPerParticleParameter("or") # Offset radius
+    custom.addPerParticleParameter("sr") # Scaled offset radius
     custom.addComputedValue("I",  "step(r+sr2-or1)*0.5*(1/L-1/U+0.25*(r-sr2^2/r)*(1/(U^2)-1/(L^2))+0.5*log(L/U)/r);"
                                   "U=r+sr2;"
                                   "L=max(or1, D);"
-                                  "D=abs(r-sr2);"
-                                  "sr2 = scale2*or2;"
-                                  "or1 = radius1-offset; or2 = radius2-offset", CustomGBForce.ParticlePairNoExclusions)
+                                  "D=abs(r-sr2)", CustomGBForce.ParticlePairNoExclusions)
 
     custom.addComputedValue("B", "1/(1/or-tanh(0.8*psi+2.909125*psi^3)/radius);"
-                                  "psi=I*or; or=radius-offset", CustomGBForce.SingleParticle)
-    _createEnergyTerms(custom, SA, cutoff, kappa)
+                                 "psi=I*or; radius=or+offset; offset=0.009", CustomGBForce.SingleParticle)
+    _createEnergyTerms(custom, solventDielectric, soluteDielectric, SA, cutoff, kappa, 0.009)
     return custom
 
 """
@@ -285,22 +275,16 @@ def GBSAOBC2Force(solventDielectric=78.5, soluteDielectric=1, SA=None,
     custom = CustomGBForce()
 
     custom.addPerParticleParameter("q")
-    custom.addPerParticleParameter("radius")
-    custom.addPerParticleParameter("scale")
-    if kappa > 0: custom.addGlobalParameter('kappa', kappa)
-    custom.addGlobalParameter("solventDielectric", solventDielectric)
-    custom.addGlobalParameter("soluteDielectric", soluteDielectric)
-    custom.addGlobalParameter("offset", 0.009)
+    custom.addPerParticleParameter("or") # Offset radius
+    custom.addPerParticleParameter("sr") # Scaled offset radius
     custom.addComputedValue("I",  "step(r+sr2-or1)*0.5*(1/L-1/U+0.25*(r-sr2^2/r)*(1/(U^2)-1/(L^2))+0.5*log(L/U)/r);"
                                   "U=r+sr2;"
                                   "L=max(or1, D);"
-                                  "D=abs(r-sr2);"
-                                  "sr2 = scale2*or2;"
-                                  "or1 = radius1-offset; or2 = radius2-offset", CustomGBForce.ParticlePairNoExclusions)
+                                  "D=abs(r-sr2)", CustomGBForce.ParticlePairNoExclusions)
 
     custom.addComputedValue("B", "1/(1/or-tanh(psi-0.8*psi^2+4.85*psi^3)/radius);"
-                                  "psi=I*or; or=radius-offset", CustomGBForce.SingleParticle)
-    _createEnergyTerms(custom, SA, cutoff, kappa)
+                                 "psi=I*or; radius=or+offset; offset=0.009", CustomGBForce.SingleParticle)
+    _createEnergyTerms(custom, solventDielectric, soluteDielectric, SA, cutoff, kappa, 0.009)
     return custom
 
 """
@@ -321,15 +305,8 @@ def GBSAGBnForce(solventDielectric=78.5, soluteDielectric=1, SA=None,
     custom = CustomGBForce()
 
     custom.addPerParticleParameter("q")
-    custom.addPerParticleParameter("radius")
-    custom.addPerParticleParameter("scale")
-
-    if kappa > 0: custom.addGlobalParameter('kappa', kappa)
-    custom.addGlobalParameter("solventDielectric", solventDielectric)
-    custom.addGlobalParameter("soluteDielectric", soluteDielectric)
-    custom.addGlobalParameter("offset", 0.009)
-    custom.addGlobalParameter("neckScale", 0.361825)
-    custom.addGlobalParameter("neckCut", 0.68)
+    custom.addPerParticleParameter("or") # Offset radius
+    custom.addPerParticleParameter("sr") # Scaled offset radius
 
     custom.addTabulatedFunction("getd0", Discrete1DFunction(d0))
     custom.addTabulatedFunction("getm0", Discrete1DFunction(m0))
@@ -341,12 +318,12 @@ def GBSAGBnForce(solventDielectric=78.5, soluteDielectric=1, SA=None,
                                   "U=r+sr2;"
                                   "L=max(or1, D);"
                                   "D=abs(r-sr2);"
-                                  "sr2 = scale2*or2;"
-                                  "or1 = radius1-offset; or2 = radius2-offset", CustomGBForce.ParticlePairNoExclusions)
+                                  "radius1=or1+offset; radius2=or2+offset;"
+                                  "neckScale=0.361825; neckCut=0.68; offset=0.009", CustomGBForce.ParticlePairNoExclusions)
 
     custom.addComputedValue("B", "1/(1/or-tanh(1.09511284*psi-1.907992938*psi^2+2.50798245*psi^3)/radius);"
-                              "psi=I*or; or=radius-offset", CustomGBForce.SingleParticle)
-    _createEnergyTerms(custom, SA, cutoff, kappa)
+                              "psi=I*or; radius=or+offset; offset=0.009", CustomGBForce.SingleParticle)
+    _createEnergyTerms(custom, solventDielectric, soluteDielectric, SA, cutoff, kappa, 0.009)
     return custom
 
 """
@@ -367,18 +344,11 @@ def GBSAGBn2Force(solventDielectric=78.5, soluteDielectric=1, SA=None,
     custom = CustomGBForce()
 
     custom.addPerParticleParameter("q")
-    custom.addPerParticleParameter("radius")
-    custom.addPerParticleParameter("scale")
+    custom.addPerParticleParameter("or") # Offset radius
+    custom.addPerParticleParameter("sr") # Scaled offset radius
     custom.addPerParticleParameter("alpha")
     custom.addPerParticleParameter("beta")
     custom.addPerParticleParameter("gamma")
-
-    if kappa > 0: custom.addGlobalParameter('kappa', kappa)
-    custom.addGlobalParameter("solventDielectric", solventDielectric)
-    custom.addGlobalParameter("soluteDielectric", soluteDielectric)
-    custom.addGlobalParameter("offset", 0.0195141)
-    custom.addGlobalParameter("neckScale", 0.826836)
-    custom.addGlobalParameter("neckCut", 0.68)
 
     custom.addTabulatedFunction("getd0", Discrete1DFunction(d0))
     custom.addTabulatedFunction("getm0", Discrete1DFunction(m0))
@@ -390,10 +360,24 @@ def GBSAGBn2Force(solventDielectric=78.5, soluteDielectric=1, SA=None,
                                   "U=r+sr2;"
                                   "L=max(or1, D);"
                                   "D=abs(r-sr2);"
-                                  "sr2 = scale2*or2;"
-                                  "or1 = radius1-offset; or2 = radius2-offset", CustomGBForce.ParticlePairNoExclusions)
+                                  "radius1=or1+offset; radius2=or2+offset;"
+                                  "neckScale=0.826836; neckCut=0.68; offset=0.0195141", CustomGBForce.ParticlePairNoExclusions)
 
     custom.addComputedValue("B", "1/(1/or-tanh(alpha*psi-beta*psi^2+gamma*psi^3)/radius);"
-                              "psi=I*or; or=radius-offset", CustomGBForce.SingleParticle)
-    _createEnergyTerms(custom, SA, cutoff, kappa)
+                                 "psi=I*or; radius=or+offset; offset=0.0195141", CustomGBForce.SingleParticle)
+    _createEnergyTerms(custom, solventDielectric, soluteDielectric, SA, cutoff, kappa, 0.0195141)
     return custom
+
+
+def convertParameters(params, gbmodel):
+    """Convert the GB parameters from the file into the values expected by the appropriate CustomGBForce."""
+    newparams = [None]*len(params)
+    if gbmodel == 'GBn2':
+        offset = 0.0195141
+    else:
+        offset = 0.009
+    for i in range(len(params)):
+        newparams[i] = list(params[i])
+        newparams[i][0] -= offset
+        newparams[i][1] *= newparams[i][0]
+    return newparams
