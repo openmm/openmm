@@ -34,7 +34,7 @@
  */
 
 #include "openmm/internal/AssertionUtilities.h"
-#include "openmm/CustomExternalForce.h"
+#include "openmm/CustomBondForce.h"
 #include "openmm/MonteCarloBarostat.h"
 #include "openmm/MonteCarloAnisotropicBarostat.h"
 #include "openmm/Context.h"
@@ -54,12 +54,15 @@ using namespace std;
 void testIdealGas() {
     const int numParticles = 64;
     const int frequency = 10;
-    const int steps = 1000;
+    const int steps = 1000; // number of loops
     const double pressure = 1.5;
     const double pressureInMD = pressure*(AVOGADRO*1e-25); // pressure in kJ/mol/nm^3
     const double temp[] = {300.0, 600.0, 1000.0};
     const double initialVolume = numParticles*BOLTZ*temp[1]/pressureInMD;
     const double initialLength = std::pow(initialVolume, 1.0/3.0);
+    const double collision_rate = 0.1; // units of 1/picosecond
+    const double timestep = 0.01; // units of picosecond
+    const int nequil = 10000; // number of equilibration steps
     
     // Create a gas of noninteracting particles.
     
@@ -80,13 +83,12 @@ void testIdealGas() {
     
     for (int i = 0; i < 3; i++) {
         barostat->setTemperature(temp[i]);
-        LangevinIntegrator integrator(temp[i], 0.1, 0.01);
+        LangevinIntegrator integrator(temp[i], collision_rate, timestep);
         Context context(system, integrator, platform);
         context.setPositions(positions);
         
         // Let it equilibrate.
-        
-        integrator.step(10000);
+        integrator.step(nequil);
         
         // Now run it for a while and see if the volume is correct.
         
@@ -255,17 +257,21 @@ void testRandomSeed() {
  */
 void testEinsteinCrystal() {
     const int numParticles = 64;
-    const int frequency = 2;
-    const int equil = 10000;
-    const int steps = 5000;
-    const double pressure = 10.0;
+    const int frequency = 25;
+    const int equil = frequency*20;
+    const int steps = 1000;
+    const double pressure = 10.0; // atm
     const double pressureInMD = pressure*(AVOGADRO*1e-25); // pressure in kJ/mol/nm^3
     const double temp = 300.0; // Only test one temperature since we're looking at three pressures.
-    const double pres3[] = {2.0, 8.0, 15.0};
+    const double pres3[] = {2.0, 8.0, 15.0}; // atm
     const double initialVolume = numParticles*BOLTZ*temp/pressureInMD;
     const double initialLength = std::pow(initialVolume, 1.0/3.0);
+    const double springConstant = 126800.0; // equivalent to C-C bond, 303.1 kcal/mol/A^2, which is K = 126800 kJ/mol/nm^2. (cutoff = 25 fs)
+    const double collision_rate = 5.0; // units of 1/picosecond
+    const double timestep = 0.002; // units of picosecond
+    const double cutoff = initialLength / 10.0; // nm
     ReferencePlatform platform;
-    vector<double> initialPositions(3);
+    vector<double> parameters(1);
     vector<double> results;
     // Run four groups of anisotropic simulations; scaling just x, y, z, then all three.
     for (int a = 0; a < 4; a++) {
@@ -277,29 +283,24 @@ void testEinsteinCrystal() {
             vector<Vec3> positions(numParticles);
             OpenMM_SFMT::SFMT sfmt;
             init_gen_rand(0, sfmt);
-            // Anisotropic force constants.
-            CustomExternalForce* force = new CustomExternalForce("0.005*(x-x0)^2 + 0.01*(y-y0)^2 + 0.02*(z-z0)^2");
-            force->addPerParticleParameter("x0");
-            force->addPerParticleParameter("y0");
-            force->addPerParticleParameter("z0");
-            NonbondedForce* nb = new NonbondedForce();
-            nb->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+            // Particle array.
+	    CustomBondForce* force = new CustomBondForce("(K/2)*r^2;");
+	    force->addGlobalParameter("K", springConstant);
             for (int i = 0; i < numParticles; ++i) {
-                system.addParticle(1.0);
+                system.addParticle(0.0);
                 positions[i] = Vec3(((i/16)%4+0.5)*initialLength/4, ((i/4)%4+0.5)*initialLength/4, (i%4+0.5)*initialLength/4);
-                initialPositions[0] = positions[i][0];
-                initialPositions[1] = positions[i][1];
-                initialPositions[2] = positions[i][2];
-                force->addParticle(i, initialPositions);
-                nb->addParticle(0, initialLength/6, 0.1);
+            }
+            for (int i = numParticles; i < 2*numParticles; ++i) {
+                system.addParticle(12.0);
+                positions[i] = Vec3(((i/16)%4+0.5)*initialLength/4, ((i/4)%4+0.5)*initialLength/4, (i%4+0.5)*initialLength/4);
+                force->addBond(i-numParticles, i, parameters);
             }
             system.addForce(force);
-            system.addForce(nb);
             // Create the barostat.
             MonteCarloAnisotropicBarostat* barostat = new MonteCarloAnisotropicBarostat(Vec3(pres3[p], pres3[p], pres3[p]), temp, (a==0||a==3), (a==1||a==3), (a==2||a==3), frequency);
             system.addForce(barostat);
             barostat->setTemperature(temp);
-            LangevinIntegrator integrator(temp, 0.1, 0.01);
+            LangevinIntegrator integrator(temp, collision_rate, timestep);
             Context context(system, integrator, platform);
             context.setPositions(positions);
             // Let it equilibrate.
@@ -311,6 +312,7 @@ void testEinsteinCrystal() {
                 context.getState(0).getPeriodicBoxVectors(box[0], box[1], box[2]);
                 volume += box[0][0]*box[1][1]*box[2][2];
                 integrator.step(frequency);
+		if (j%10==0) printf("%8d %12.8f nm\n", j, box[0][0]); // DEBUG
             }
             volume /= steps;
             results.push_back(volume);
@@ -323,24 +325,19 @@ void testEinsteinCrystal() {
         vector<Vec3> positions(numParticles);
         OpenMM_SFMT::SFMT sfmt;
         init_gen_rand(0, sfmt);
-        // Anisotropic force constants.
-        CustomExternalForce* force = new CustomExternalForce("0.005*(x-x0)^2 + 0.01*(y-y0)^2 + 0.02*(z-z0)^2");
-        force->addPerParticleParameter("x0");
-        force->addPerParticleParameter("y0");
-        force->addPerParticleParameter("z0");
-        NonbondedForce* nb = new NonbondedForce();
-        nb->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
-        for (int i = 0; i < numParticles; ++i) {
-            system.addParticle(1.0);
-            positions[i] = Vec3(((i/16)%4+0.5)*initialLength/4, ((i/4)%4+0.5)*initialLength/4, (i%4+0.5)*initialLength/4);
-            initialPositions[0] = positions[i][0];
-            initialPositions[1] = positions[i][1];
-            initialPositions[2] = positions[i][2];
-            force->addParticle(i, initialPositions);
-            nb->addParticle(0, initialLength/6, 0.1);
-        }
-        system.addForce(force);
-        system.addForce(nb);
+	// Particle array.
+	CustomBondForce* force = new CustomBondForce("(K/2)*r^2;");
+	force->addGlobalParameter("K", springConstant);
+	for (int i = 0; i < numParticles; ++i) {
+	  system.addParticle(0.0);
+	  positions[i] = Vec3(((i/16)%4+0.5)*initialLength/4, ((i/4)%4+0.5)*initialLength/4, (i%4+0.5)*initialLength/4);
+	}
+	for (int i = numParticles; i < 2*numParticles; ++i) {
+	  system.addParticle(12.0);
+	  positions[i] = Vec3(((i/16)%4+0.5)*initialLength/4, ((i/4)%4+0.5)*initialLength/4, (i%4+0.5)*initialLength/4);
+	  force->addBond(i-numParticles, i, parameters);
+	}
+	system.addForce(force);
         // Create the barostat.
         MonteCarloBarostat* barostat = new MonteCarloBarostat(pres3[p], temp, frequency);
         system.addForce(barostat);
@@ -357,6 +354,7 @@ void testEinsteinCrystal() {
             context.getState(0).getPeriodicBoxVectors(box[0], box[1], box[2]);
             volume += box[0][0]*box[1][1]*box[2][2];
             integrator.step(frequency);
+	    if (j%10==0) printf("%8d %12.8f nm\n", j, box[0][0]); // DEBUG
         }
         volume /= steps;
         results.push_back(volume);
@@ -384,12 +382,12 @@ void testEinsteinCrystal() {
 
 int main() {
     try {
-        testIdealGas();
-        testIdealGasAxis(0);
-        testIdealGasAxis(1);
-        testIdealGasAxis(2);
-        testRandomSeed();
-        //testEinsteinCrystal();
+      testEinsteinCrystal();
+      testIdealGas();
+      testIdealGasAxis(0);
+      testIdealGasAxis(1);
+      testIdealGasAxis(2);
+      testRandomSeed();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;
