@@ -116,12 +116,12 @@ ELSE( CMAKE_SIZEOF_VOID_P EQUAL 8 )
 ENDIF( CMAKE_SIZEOF_VOID_P EQUAL 8 )
 
 IF (APPLE AND (NOT PNACL))
-    # Build universal binaries compatible with OS X 10.7
+    # Build 64 bit binaries compatible with OS X 10.7
     IF (NOT CMAKE_OSX_DEPLOYMENT_TARGET)
         SET (CMAKE_OSX_DEPLOYMENT_TARGET "10.7" CACHE STRING "The minimum version of OS X to support" FORCE)
     ENDIF (NOT CMAKE_OSX_DEPLOYMENT_TARGET)
     IF (NOT CMAKE_OSX_ARCHITECTURES)
-        SET (CMAKE_OSX_ARCHITECTURES "i386;x86_64" CACHE STRING "The processor architectures to build for" FORCE)
+        SET (CMAKE_OSX_ARCHITECTURES "x86_64" CACHE STRING "The processor architectures to build for" FORCE)
     ENDIF (NOT CMAKE_OSX_ARCHITECTURES)
 
     # Improve the linking behavior of Mac libraries
