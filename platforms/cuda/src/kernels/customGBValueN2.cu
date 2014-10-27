@@ -1,6 +1,6 @@
 typedef struct {
-    real4 posq;
-    real value, temp;
+    real3 pos;
+    real value;
     ATOM_PARAMETER_DATA
 #ifdef NEED_PADDING
     float padding;
@@ -35,7 +35,7 @@ extern "C" __global__ void computeN2Value(const real4* __restrict__ posq, const 
         const unsigned int y = tileIndices.y;
         real value = 0;
         unsigned int atom1 = x*TILE_SIZE + tgx;
-        real4 posq1 = posq[atom1];
+        real4 pos1 = posq[atom1];
         LOAD_ATOM1_PARAMETERS
 #ifdef USE_EXCLUSIONS
         unsigned int excl = exclusions[pos*TILE_SIZE+tgx];
@@ -44,12 +44,12 @@ extern "C" __global__ void computeN2Value(const real4* __restrict__ posq, const 
             // This tile is on the diagonal.
 
             const unsigned int localAtomIndex = threadIdx.x;
-            localData[localAtomIndex].posq = posq1;
+            localData[localAtomIndex].pos = make_real3(pos1.x, pos1.y, pos1.z);
             LOAD_LOCAL_PARAMETERS_FROM_1
             for (unsigned int j = 0; j < TILE_SIZE; j++) {
                 int atom2 = tbx+j;
-                real4 posq2 = localData[atom2].posq;
-                real3 delta = make_real3(posq2.x-posq1.x, posq2.y-posq1.y, posq2.z-posq1.z);
+                real3 pos2 = localData[atom2].pos;
+                real3 delta = make_real3(pos2.x-pos1.x, pos2.y-pos1.y, pos2.z-pos1.z);
 #ifdef USE_PERIODIC
                 delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
                 delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
@@ -87,7 +87,8 @@ extern "C" __global__ void computeN2Value(const real4* __restrict__ posq, const 
 
             const unsigned int localAtomIndex = threadIdx.x;
             unsigned int j = y*TILE_SIZE + tgx;
-            localData[localAtomIndex].posq = posq[j];
+            real4 tempPosq = posq[j];
+            localData[localAtomIndex].pos = make_real3(tempPosq.x, tempPosq.y, tempPosq.z);
             LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
             localData[localAtomIndex].value = 0;
 #ifdef USE_EXCLUSIONS
@@ -96,8 +97,8 @@ extern "C" __global__ void computeN2Value(const real4* __restrict__ posq, const 
             unsigned int tj = tgx;
             for (j = 0; j < TILE_SIZE; j++) {
                 int atom2 = tbx+tj;
-                real4 posq2 = localData[atom2].posq;
-                real3 delta = make_real3(posq2.x-posq1.x, posq2.y-posq1.y, posq2.z-posq1.z);
+                real3 pos2 = localData[atom2].pos;
+                real3 delta = make_real3(pos2.x-pos1.x, pos2.y-pos1.y, pos2.z-pos1.z);
 #ifdef USE_PERIODIC
                 delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
                 delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
@@ -207,7 +208,7 @@ extern "C" __global__ void computeN2Value(const real4* __restrict__ posq, const 
 
             // Load atom data for this tile.
             
-            real4 posq1 = posq[atom1];
+            real4 pos1 = posq[atom1];
             LOAD_ATOM1_PARAMETERS
             const unsigned int localAtomIndex = threadIdx.x;
 #ifdef USE_CUTOFF
@@ -217,7 +218,8 @@ extern "C" __global__ void computeN2Value(const real4* __restrict__ posq, const 
 #endif
             atomIndices[threadIdx.x] = j;
             if (j < PADDED_NUM_ATOMS) {
-                localData[localAtomIndex].posq = posq[j];
+                real4 tempPosq = posq[j];
+                localData[localAtomIndex].pos = make_real3(tempPosq.x, tempPosq.y, tempPosq.z);
                 LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
                 localData[localAtomIndex].value = 0;
             }
@@ -227,17 +229,17 @@ extern "C" __global__ void computeN2Value(const real4* __restrict__ posq, const 
                 // box, then skip having to apply periodic boundary conditions later.
 
                 real4 blockCenterX = blockCenter[x];
-                posq1.x -= floor((posq1.x-blockCenterX.x)*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-                posq1.y -= floor((posq1.y-blockCenterX.y)*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-                posq1.z -= floor((posq1.z-blockCenterX.z)*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
-                localData[threadIdx.x].posq.x -= floor((localData[threadIdx.x].posq.x-blockCenterX.x)*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-                localData[threadIdx.x].posq.y -= floor((localData[threadIdx.x].posq.y-blockCenterX.y)*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-                localData[threadIdx.x].posq.z -= floor((localData[threadIdx.x].posq.z-blockCenterX.z)*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
+                pos1.x -= floor((pos1.x-blockCenterX.x)*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
+                pos1.y -= floor((pos1.y-blockCenterX.y)*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
+                pos1.z -= floor((pos1.z-blockCenterX.z)*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
+                localData[threadIdx.x].pos.x -= floor((localData[threadIdx.x].pos.x-blockCenterX.x)*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
+                localData[threadIdx.x].pos.y -= floor((localData[threadIdx.x].pos.y-blockCenterX.y)*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
+                localData[threadIdx.x].pos.z -= floor((localData[threadIdx.x].pos.z-blockCenterX.z)*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
                 unsigned int tj = tgx;
                 for (unsigned int j = 0; j < TILE_SIZE; j++) {
                     int atom2 = tbx+tj;
-                    real4 posq2 = localData[atom2].posq;
-                    real3 delta = make_real3(posq2.x-posq1.x, posq2.y-posq1.y, posq2.z-posq1.z);
+                    real3 pos2 = localData[atom2].pos;
+                    real3 delta = make_real3(pos2.x-pos1.x, pos2.y-pos1.y, pos2.z-pos1.z);
                     real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
                     if (r2 < CUTOFF_SQUARED) {
                         real invR = RSQRT(r2);
@@ -263,8 +265,8 @@ extern "C" __global__ void computeN2Value(const real4* __restrict__ posq, const 
                 unsigned int tj = tgx;
                 for (unsigned int j = 0; j < TILE_SIZE; j++) {
                     int atom2 = tbx+tj;
-                    real4 posq2 = localData[atom2].posq;
-                    real3 delta = make_real3(posq2.x-posq1.x, posq2.y-posq1.y, posq2.z-posq1.z);
+                    real3 pos2 = localData[atom2].pos;
+                    real3 delta = make_real3(pos2.x-pos1.x, pos2.y-pos1.y, pos2.z-pos1.z);
 #ifdef USE_PERIODIC
                     delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
                     delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
