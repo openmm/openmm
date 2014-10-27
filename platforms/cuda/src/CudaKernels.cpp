@@ -3034,7 +3034,7 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
             pairEnergyDefines["USE_PERIODIC"] = "1";
         if (anyExclusions)
             pairEnergyDefines["USE_EXCLUSIONS"] = "1";
-        if (atomParamSize%2 == 0 && !cu.getUseDoublePrecision())
+        if (atomParamSize%2 != 0 && !cu.getUseDoublePrecision())
             pairEnergyDefines["NEED_PADDING"] = "1";
         pairEnergyDefines["THREAD_BLOCK_SIZE"] = cu.intToString(cu.getNonbondedUtilities().getForceThreadBlockSize());
         pairEnergyDefines["WARPS_PER_GROUP"] = cu.intToString(cu.getNonbondedUtilities().getForceThreadBlockSize()/CudaContext::TileSize);
