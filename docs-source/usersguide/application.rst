@@ -43,15 +43,13 @@ troubleshooting guide that describes common problems and how to fix them
 Installing on Mac OS X
 **********************
 
-OpenMM works on Mac OS X 10.7 or later.  GPU acceleration is currently only
-supported on Nvidia GPUs, not on AMD or Intel GPUs.
+OpenMM works on Mac OS X 10.7 or later.
 
-.. warning::
-   A serious bug was introduced in Mac OS X 10.7.5 that prevents
-   OpenMM’s OpenCL platform from working correctly.  At the time of this writing,
-   the bug is present in all versions from 10.7.5 onward.  The CUDA platform (see
-   below) is not affected by the bug, so if you have an affected version of OS X,
-   you should use it instead of the OpenCL platform.
+.. note::
+   The OpenCL implementations on all recent versions of Mac OS X contain serious
+   bugs that make them unsuitable for use with OpenMM.  GPU acceleration is
+   therefore only supported with the CUDA platform.  This limits it to only Nvidia
+   GPUs, not AMD or Intel GPUs.
 
 1. Download the pre-compiled binary of OpenMM for Mac OS X, then double click
 the .zip file to expand it.
@@ -63,7 +61,7 @@ and tell it to install the command line tools.  With Xcode 4.2 and earlier, the
 command line tools are automatically installed when you install Xcode.)
 
 3. (Optional) If you have an Nvidia GPU and want to use the CUDA platform,
-download CUDA 6.0 from https://developer.nvidia.com/cuda-downloads.  Be sure to
+download CUDA 6.5 from https://developer.nvidia.com/cuda-downloads.  Be sure to
 install both the drivers and toolkit.
 
 4. (Optional) If you plan to use the CPU platform, it is recommended that you
@@ -139,7 +137,7 @@ into a console window.
 
 3. (Optional) If you want to run OpenMM on a GPU, install CUDA and/or OpenCL.
 
-  * If you have an Nvidia GPU, download CUDA 6.0 from
+  * If you have an Nvidia GPU, download CUDA 6.5 from
     https://developer.nvidia.com/cuda-downloads.  Be sure to install both the
     drivers and toolkit.  OpenCL is included with the CUDA drivers.
   * If you have an AMD GPU, download the latest version of the Catalyst driver
@@ -222,11 +220,9 @@ and ignore it.)
 
 4. (Optional) If you want to run OpenMM on a GPU, install CUDA and/or OpenCL.
 
-  * If you have an Nvidia GPU, download CUDA 6.0 from
+  * If you have an Nvidia GPU, download CUDA 6.5 from
     https://developer.nvidia.com/cuda-downloads.  Be sure to install both the
-    drivers and toolkit. For 64-bit machines, you should install the 64-bit driver,
-    but download the 32-bit version of the toolkit since the OpenMM binary is
-    32-bit.  OpenCL is included with the CUDA drivers.
+    drivers and toolkit.  OpenCL is included with the CUDA drivers.
   * If you have an AMD GPU, download the latest version of the Catalyst driver
     from http://support.amd.com.
 
