@@ -561,8 +561,21 @@ class Quantity(object):
             # Faster for numpy arrays
             mymin = self._value.min(*args, **kwargs)
         except AttributeError:
+            if args or kwargs:
+                raise TypeError('Unsupported arguments for Quantity.min')
             mymin = min(self._value)
         return Quantity(mymin, self.unit)
+
+    def reshape(self, shape, order='C'):
+        """
+        Same as numpy.ndarray.reshape, except the result is a Quantity with the
+        same units as the current object rather than a plain numpy.ndarray
+        """
+        try:
+            return Quantity(self._value.reshape(shape, order=order))
+        except AttributeError:
+            raise AttributeError('Only numpy array Quantity objects can be '
+                                 'reshaped')
 
     def __abs__(self):
         """
