@@ -71,12 +71,7 @@ public:
 
         cu.setAsCurrent();
         if (cu.getContextIndex() > 0) {
-            if (cu.getPlatformData().peerAccessSupported && false) { // Why is the peer-to-peer copy slower???
-                CudaContext& context0 = *cu.getPlatformData().contexts[0];
-                int numBytes = cu.getPosq().getSize()*cu.getPosq().getElementSize();
-                CHECK_RESULT(cuMemcpyAsync(cu.getPosq().getDevicePointer(), context0.getPosq().getDevicePointer(), numBytes, 0), "Error copying positions");
-            }
-            else {
+            if (!cu.getPlatformData().peerAccessSupported) {
                 cuStreamWaitEvent(cu.getCurrentStream(), event, 0);
                 cu.getPosq().upload(pinnedMemory, false);
             }
@@ -117,7 +112,8 @@ public:
                     cu.getForce().download(&pinnedMemory[(cu.getContextIndex()-1)*numAtoms*3]);
             }
             else {
-                CHECK_RESULT(cuCtxSynchronize(), "Error synchronizing CUDA context");
+                // In principle this should make the load balancing more accurate, but in practice it just seems to make things slower.
+                //CHECK_RESULT(cuCtxSynchronize(), "Error synchronizing CUDA context");
             }
         }
         completionTime = getTime();
@@ -175,9 +171,17 @@ void CudaParallelCalcForcesAndEnergyKernel::beginComputation(ContextImpl& contex
 
     // Copy coordinates over to each device and execute the kernel.
     
-    if (!(cu.getPlatformData().peerAccessSupported && false)) { // Why is this faster than a peer-to-peer copy???
+    if (!cu.getPlatformData().peerAccessSupported) {
         cu.getPosq().download(pinnedPositionBuffer, false);
         cuEventRecord(event, cu.getCurrentStream());
+    }
+    else {
+        int numBytes = cu.getPosq().getSize()*cu.getPosq().getElementSize();
+        for (int i = 1; i < (int) data.contexts.size(); i++) {
+            data.contexts[i]->setAsCurrent();
+            CHECK_RESULT(cuMemcpyAsync(data.contexts[i]->getPosq().getDevicePointer(), cu.getPosq().getDevicePointer(), numBytes, 0), "Error copying positions");
+        }
+        cu.setAsCurrent();
     }
     for (int i = 0; i < (int) data.contexts.size(); i++) {
         data.contextEnergy[i] = 0.0;
