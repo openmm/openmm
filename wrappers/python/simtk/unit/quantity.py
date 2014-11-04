@@ -580,7 +580,7 @@ class Quantity(object):
         same units as the current object rather than a plain numpy.ndarray
         """
         try:
-            return Quantity(self._value.reshape(shape, order=order))
+            return Quantity(self._value.reshape(shape, order=order), self.unit)
         except AttributeError:
             raise AttributeError('Only numpy array Quantity objects can be '
                                  'reshaped')
