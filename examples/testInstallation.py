@@ -24,6 +24,7 @@ numPlatforms = Platform.getNumPlatforms()
 print("There are", numPlatforms, "Platforms available:")
 print()
 forces = [None]*numPlatforms
+platformErrors = {}
 for i in range(numPlatforms):
     platform = Platform.getPlatform(i)
     print(i+1, platform.getName(), end=" ")
@@ -36,6 +37,13 @@ for i in range(numPlatforms):
         print("- Successfully computed forces")
     except:
         print("- Error computing forces with", platform.getName(), "platform")
+        platformErrors[platform.getName()] = sys.exc_info()[1]
+
+# Give details of any errors.
+
+for platform in platformErrors:
+    print()
+    print("%s platform error: %s" % (platform, platformErrors[platform]))
 
 # See how well the platforms agree.
 
