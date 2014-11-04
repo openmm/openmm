@@ -139,7 +139,15 @@ class Quantity(object):
                         first_item = iter(value).next()
                         # Avoid infinite recursion for string, because a one-character
                         # string is its own first element
-                        if value == first_item:
+                        try:
+                            isstr = bool(value == first_item)
+                        except ValueError:
+                            # For numpy, value == first_item returns a numpy
+                            # array of booleans, which cannot be evaluated for
+                            # truthiness (a ValueError is raised). So in this
+                            # case, we don't have a string
+                            isstr = False
+                        if isstr:
                             unit = dimensionless
                         else:
                             unit = Quantity(first_item).unit

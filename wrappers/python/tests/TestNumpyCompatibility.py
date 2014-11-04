@@ -78,5 +78,24 @@ class TestNumpyCompatibility(unittest.TestCase):
         assert size == 10
         np.testing.assert_array_almost_equal(energy, np.asarray(energy_out))
 
+class TestNumpyUnits(unittest.TestCase):
+
+    def setUp(self):
+        self.data = unit.Quantity(np.arange(300), unit.nanometers)
+
+    def testNumpyAttributes(self):
+        d = self.data.reshape((100, 3))
+        self.assertTrue(unit.is_quantity(d))
+        self.assertTrue(unit.is_quantity(d.sum()))
+        self.assertTrue(unit.is_quantity(d.sum(axis=0)))
+        self.assertTrue(unit.is_quantity(d.std()))
+        self.assertTrue(unit.is_quantity(d.std(axis=0)))
+        self.assertTrue(unit.is_quantity(d.max()))
+        self.assertTrue(unit.is_quantity(d.max(axis=1)))
+        self.assertTrue(unit.is_quantity(d.min()))
+        self.assertTrue(unit.is_quantity(d.min(axis=0)))
+        self.assertTrue(unit.is_quantity(d.mean()))
+        self.assertTrue(unit.is_quantity(d.mean(axis=1)))
+
 if __name__ == '__main__':
     unittest.main()
