@@ -386,6 +386,8 @@ static void setInvPeriodicBoxSizeArg(OpenCLContext& cl, cl::Kernel& kernel, int 
 void OpenCLNonbondedUtilities::prepareInteractions() {
     if (!useCutoff)
         return;
+    if (numTiles == 0)
+        return;
     if (usePeriodic) {
         mm_float4 box = context.getPeriodicBoxSize();
         double minAllowedSize = 1.999999*cutoff;
