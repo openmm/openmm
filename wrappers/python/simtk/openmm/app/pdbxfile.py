@@ -44,11 +44,7 @@ except:
     pass
 
 class PDBxFile(object):
-    """PDBxFile parses a PDBx/mmCIF file and constructs a Topology and a set of atom positions from it.
-
-    This class also provides methods for creating PDBx/mmCIF files.  To write a file containing a single model, call
-    writeFile().  You also can create files that contain multiple models.  To do this, first call writeHeader(),
-    then writeModel() once for each model in the file, and finally writeFooter() to complete the file."""
+    """PDBxFile parses a PDBx/mmCIF file and constructs a Topology and a set of atom positions from it."""
 
     def __init__(self, file):
         """Load a PDBx/mmCIF file.
@@ -93,7 +89,8 @@ class PDBxFile(object):
         atomTable = {}
         models = []
         for row in atomData.getRowList():
-            atomKey = ((row[resIdCol], row[asymIdCol], row[atomNameCol]))
+            asymId = ('A' if asymIdCol == -1 else row[asymIdCol])
+            atomKey = ((row[resIdCol], asymId, row[atomNameCol]))
             model = ('1' if modelCol == -1 else row[modelCol])
             if model not in models:
                 models.append(model)
@@ -108,11 +105,11 @@ class PDBxFile(object):
                     lastChainId = row[chainIdCol]
                     lastResId = None
                     lastAsymId = None
-                if lastResId != row[resIdCol] or lastAsymId != row[asymIdCol]:
+                if lastResId != row[resIdCol] or lastAsymId != asymId:
                     # The start of a new residue.
                     res = top.addResidue(row[resNameCol], chain)
                     lastResId = row[resIdCol]
-                    lastAsymId = row[asymIdCol]
+                    lastAsymId = asymId
                 element = None
                 try:
                     element = elem.get_by_symbol(row[elementCol])
