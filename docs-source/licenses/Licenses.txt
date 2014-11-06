@@ -2,7 +2,7 @@ OpenMM was developed by Simbios, the NIH National Center for Physics-Based
 Simulation of Biological Structures at Stanford, funded under the NIH Roadmap
 for Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright © 2008-2014 Stanford University and the Authors.
+Portions copyright ï¿½ 2008-2014 Stanford University and the Authors.
 
 There are several licenses which cover different parts of OpenMM as described
 below.
@@ -119,3 +119,11 @@ freely, subject to the following restrictions:
 2. Altered source versions must be plainly marked as such, and must not be
    misrepresented as being the original software.
 3. This notice may not be removed or altered from any source distribution.
+
+
+6. PdbxReader
+
+OpenMM uses the PDBx/mmCIF parser written by John Westbrook.  It is distributed
+under the Creative Commons Attribution 3.0 Unported license.  For details, see
+https://creativecommons.org/licenses/by/3.0.  This library was modified to move
+it inside the simtk.openmm.app.internal module.
