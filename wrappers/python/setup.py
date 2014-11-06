@@ -146,6 +146,7 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
                                           "simtk.openmm.app",
                                           "simtk.openmm.app.internal",
                                           "simtk.openmm.app.internal.charmm",
+                                          "simtk.openmm.app.internal.pdbx",
                                           "simtk.openmm.app.internal.pdbx.reader",
                                           "simtk.openmm.app.internal.pdbx.writer"]
     setupKeywords["data_files"]        = []
