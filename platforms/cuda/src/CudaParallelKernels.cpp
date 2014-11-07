@@ -98,6 +98,12 @@ public:
         // Execute the kernel, then download forces.
         
         energy += kernel.finishComputation(context, includeForce, includeEnergy, groups);
+        if (cu.getComputeForceCount() < 200) {
+            // Record timing information for load balancing.  Since this takes time, only do it at the start of the simulation.
+
+            CHECK_RESULT(cuCtxSynchronize(), "Error synchronizing CUDA context");
+            completionTime = getTime();
+        }
         if (includeForce) {
             if (cu.getContextIndex() > 0) {
                 int numAtoms = cu.getPaddedNumAtoms();
@@ -110,12 +116,7 @@ public:
                 else
                     cu.getForce().download(&pinnedMemory[(cu.getContextIndex()-1)*numAtoms*3]);
             }
-            else {
-                // In principle this should make the load balancing more accurate, but in practice it just seems to make things slower.
-                //CHECK_RESULT(cuCtxSynchronize(), "Error synchronizing CUDA context");
-            }
         }
-        completionTime = getTime();
     }
 private:
     ContextImpl& context;
@@ -192,6 +193,7 @@ void CudaParallelCalcForcesAndEnergyKernel::beginComputation(ContextImpl& contex
     }
 }
 
+#include <cstdio>
 double CudaParallelCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups) {
     for (int i = 0; i < (int) data.contexts.size(); i++) {
         CudaContext& cu = *data.contexts[i];
@@ -216,24 +218,26 @@ double CudaParallelCalcForcesAndEnergyKernel::finishComputation(ContextImpl& con
         // Balance work between the contexts by transferring a little nonbonded work from the context that
         // finished last to the one that finished first.
         
-        int firstIndex = 0, lastIndex = 0;
-        for (int i = 0; i < (int) completionTimes.size(); i++) {
-            if (completionTimes[i] < completionTimes[firstIndex])
-                firstIndex = i;
-            if (completionTimes[i] > completionTimes[lastIndex])
-                lastIndex = i;
-        }
-        double fractionToTransfer = min(0.001, contextNonbondedFractions[lastIndex]);
-        contextNonbondedFractions[firstIndex] += fractionToTransfer;
-        contextNonbondedFractions[lastIndex] -= fractionToTransfer;
-        double startFraction = 0.0;
-        for (int i = 0; i < (int) contextNonbondedFractions.size(); i++) {
-            double endFraction = startFraction+contextNonbondedFractions[i];
-            if (i == contextNonbondedFractions.size()-1)
-                endFraction = 1.0; // Avoid roundoff error
-            data.contexts[i]->getNonbondedUtilities().setAtomBlockRange(startFraction, endFraction);
-            startFraction = endFraction;
-        }
+        if (cu.getComputeForceCount() < 200) {
+            int firstIndex = 0, lastIndex = 0;
+            for (int i = 0; i < (int) completionTimes.size(); i++) {
+                if (completionTimes[i] < completionTimes[firstIndex])
+                    firstIndex = i;
+                if (completionTimes[i] > completionTimes[lastIndex])
+                    lastIndex = i;
+            }
+            double fractionToTransfer = min(0.01, contextNonbondedFractions[lastIndex]);
+            contextNonbondedFractions[firstIndex] += fractionToTransfer;
+            contextNonbondedFractions[lastIndex] -= fractionToTransfer;
+            double startFraction = 0.0;
+            for (int i = 0; i < (int) contextNonbondedFractions.size(); i++) {
+                double endFraction = startFraction+contextNonbondedFractions[i];
+                if (i == contextNonbondedFractions.size()-1)
+                    endFraction = 1.0; // Avoid roundoff error
+                data.contexts[i]->getNonbondedUtilities().setAtomBlockRange(startFraction, endFraction);
+                startFraction = endFraction;
+            }
+	}
     }
     return energy;
 }
