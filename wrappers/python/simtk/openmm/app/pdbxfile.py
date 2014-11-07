@@ -79,6 +79,7 @@ class PDBxFile(object):
         asymIdCol = atomData.getAttributeIndex('label_asym_id')
         chainIdCol = atomData.getAttributeIndex('label_entity_id')
         elementCol = atomData.getAttributeIndex('type_symbol')
+        altIdCol = atomData.getAttributeIndex('label_alt_id')
         modelCol = atomData.getAttributeIndex('pdbx_PDB_model_num')
         xCol = atomData.getAttributeIndex('Cartn_x')
         yCol = atomData.getAttributeIndex('Cartn_y')
@@ -89,13 +90,16 @@ class PDBxFile(object):
         atomTable = {}
         models = []
         for row in atomData.getRowList():
-            asymId = ('A' if asymIdCol == -1 else row[asymIdCol])
-            atomKey = ((row[resIdCol], asymId, row[atomNameCol]))
+            atomKey = ((row[resIdCol], row[asymIdCol], row[atomNameCol]))
             model = ('1' if modelCol == -1 else row[modelCol])
             if model not in models:
                 models.append(model)
                 self._positions.append([])
             modelIndex = models.index(model)
+            if row[altIdCol] != '.' and atomKey in atomTable and len(self._positions[modelIndex]) > atomTable[atomKey].index:
+                # This row is an alternate position for an existing atom, so ignore it.
+
+                continue
             if modelIndex == 0:
                 # This row defines a new atom.
 
@@ -105,11 +109,13 @@ class PDBxFile(object):
                     lastChainId = row[chainIdCol]
                     lastResId = None
                     lastAsymId = None
-                if lastResId != row[resIdCol] or lastAsymId != asymId:
+                if lastResId != row[resIdCol] or lastAsymId != row[asymIdCol]:
                     # The start of a new residue.
                     res = top.addResidue(row[resNameCol], chain)
                     lastResId = row[resIdCol]
-                    lastAsymId = asymId
+                    if lastResId == '.':
+                        lastResId = None
+                    lastAsymId = row[asymIdCol]
                 element = None
                 try:
                     element = elem.get_by_symbol(row[elementCol])
@@ -132,7 +138,6 @@ class PDBxFile(object):
         ## The atom positions read from the PDBx/mmCIF file.  If the file contains multiple frames, these are the positions in the first frame.
         self.positions = self._positions[0]
         self.topology.createStandardBonds()
-        self.topology.createDisulfideBonds(self.positions)
         self._numpyPositions = None
 
         # Record unit cell information, if present.
