@@ -4,7 +4,7 @@
 # Note that this must be run from outside the checked-out openmm/ directory.
 
 # Add conda binaries to path.
-PATH=${HOME}/miniconda/bin:${PATH}
+PATH=$WORKSPACE/miniconda/bin:$PATH
 
 INSTALL=`pwd`/install
 CMAKE_FLAGS="-DCMAKE_INSTALL_PREFIX=$INSTALL"
@@ -21,7 +21,7 @@ CMAKE_FLAGS+=" -DOPENCL_INCLUDE_DIR=/usr/local/cuda-6.5/include"
 CMAKE_FLAGS+=" -DOPENCL_LIBRARY=/usr/local/cuda-6.5/lib64/libOpenCL.so"
 
 # Set location for FFTW3
-PREFIX="${HOME}/miniconda"
+PREFIX="$WORKSPACE/miniconda"
 CMAKE_FLAGS+=" -DFFTW_INCLUDES=$PREFIX/include"
 CMAKE_FLAGS+=" -DFFTW_LIBRARY=$PREFIX/lib/libfftw3f.so"
 CMAKE_FLAGS+=" -DFFTW_THREADS_LIBRARY=$PREFIX/lib/libfftw3f_threads.so"
@@ -41,7 +41,7 @@ OPENMM_INCLUDE_PATH=$INSTALL/include
 OPENMM_LIB_PATH=$INSTALL/lib
 cd python
 python setup.py install --prefix=$INSTALL
-cd ..
+cd ../..
 
 # Copy all tests to bin directory so they will be distributed with install package.
 #cp `find . -name "Test*" -type f -maxdepth 1` $PREFIX/bin

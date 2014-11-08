@@ -4,7 +4,7 @@
 # Note that this must be run from outside the checked-out openmm/ directory.
 
 # Add conda binaries to path.
-PATH=${HOME}/miniconda/bin:${PATH}
+PATH=$WORKSPACE/miniconda/bin:$PATH
 
 INSTALL=`pwd`/install
 CMAKE_FLAGS="-DCMAKE_INSTALL_PREFIX=$INSTALL"
@@ -22,7 +22,7 @@ CMAKE_FLAGS+=" -DOPENMM_BUILD_OPENCL_DOUBLE_PRECISION_TESTS=FALSE"
 
 # Build in subdirectory.
 # Set location for FFTW3
-PREFIX="${HOME}/miniconda"
+PREFIX="$WORKSPACE/miniconda"
 CMAKE_FLAGS+=" -DFFTW_INCLUDES=$PREFIX/include"
 CMAKE_FLAGS+=" -DFFTW_LIBRARY=$PREFIX/lib/libfftw3f.so"
 CMAKE_FLAGS+=" -DFFTW_THREADS_LIBRARY=$PREFIX/lib/libfftw3f_threads.so"
@@ -40,10 +40,9 @@ make install
 # Install Python wrappers.
 export OPENMM_INCLUDE_PATH=$INSTALL/include
 export OPENMM_LIB_PATH=$INSTALL/lib
-export PYTHON=$HOME/miniconda/bin/python
 cd python
 $PYTHON setup.py install --prefix=$INSTALL
-cd ..
+cd ../..
 
 # Copy all tests to bin directory so they will be distributed with install package.
 #cp `find . -name "Test*" -type f -maxdepth 1` $PREFIX/bin
