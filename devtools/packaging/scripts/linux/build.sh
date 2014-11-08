@@ -3,6 +3,9 @@
 # Build script for Linux distribution, for use in automated packaging.
 # Note that this must be run from outside the checked-out openmm/ directory.
 
+echo $PATH
+which cmake
+
 INSTALL=`pwd`/install
 CMAKE_FLAGS="-DCMAKE_INSTALL_PREFIX=$INSTALL"
 
@@ -24,6 +27,9 @@ CMAKE_FLAGS+=" -DFFTW_LIBRARY=$PREFIX/lib/libfftw3f.so"
 CMAKE_FLAGS+=" -DFFTW_THREADS_LIBRARY=$PREFIX/lib/libfftw3f_threads.so"
 
 # Build in subdirectory.
+if [ -e build ]; then
+    rm -rf build
+fi
 mkdir build
 cd build
 cmake ../openmm $CMAKE_FLAGS
