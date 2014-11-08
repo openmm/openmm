@@ -3,8 +3,8 @@
 # Build script for Linux distribution, for use in automated packaging.
 # Note that this must be run from outside the checked-out openmm/ directory.
 
-echo $PATH
-which cmake
+# Add conda binaries to path.
+PATH=${HOME}/miniconda/bin:${PATH}
 
 INSTALL=`pwd`/install
 CMAKE_FLAGS="-DCMAKE_INSTALL_PREFIX=$INSTALL"
@@ -33,15 +33,14 @@ fi
 mkdir build
 cd build
 cmake ../openmm $CMAKE_FLAGS
-make -j4
+make -j16
 make install
 
 # Install Python wrappers.
 OPENMM_INCLUDE_PATH=$INSTALL/include
 OPENMM_LIB_PATH=$INSTALL/lib
-PYTHON=${HOME}/miniconda/bin/python
 cd python
-$PYTHON setup.py install --prefix=$INSTALL
+python setup.py install --prefix=$INSTALL
 cd ..
 
 # Copy all tests to bin directory so they will be distributed with install package.
