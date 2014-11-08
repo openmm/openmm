@@ -5,7 +5,7 @@
 
 # CONFIGURE HERE
 export PACKAGE_DIR="packaging" # directory to stuff packaged source distribution
-export VERSION="6.2.0" # version string
+export VERSION=$(sed -nr "s/OPENMM_VERSION:STRING=(.*)/\1/p" build/CMakeCache.txt)
 export PACKAGE_SUBDIR="OpenMM-${VERSION}-Linux" # directory where distribution will be unpacked
 export DISTRO_PREFIX="OpenMM-${VERSION}-Linux" # prefix for source distribution (e.g. ${DISTRIBUTION_NAME}.zip)
 
