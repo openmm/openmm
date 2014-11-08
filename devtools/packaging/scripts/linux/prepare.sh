@@ -7,17 +7,20 @@ export VERSION="3.7.0"
 export PLATFORM="Linux"
 export ARCH="x86_64"
 export MINICONDA="Miniconda-$VERSION-$PLATFORM-$ARCH.sh"
-if [ -f $MINICONDA ];
+if [ -f miniconda ];
 then
-   echo "File $MINICONDA exists, not downloading."
-   export PATH=$WORKSPACE/miniconda/bin:$PATH
+   echo "miniconda already exists"
 else
    echo "Downloading miniconda..."
    wget http://repo.continuum.io/miniconda/${MINICONDA}
    bash ${MINICONDA} -b -p miniconda
    PIP_ARGS="-U"
-   export PATH=$WORKSPACE/miniconda/bin:$PATH
-   conda config --add channels http://conda.binstar.org/omnia
-   conda install --yes --quiet swig fftw3f pip
-   pip install sphinxcontrib-bibtex
 fi
+
+# Add to path.
+export PATH=$WORKSPACE/miniconda/bin:$PATH
+
+# Ensure configuration is up to date.
+conda config --add channels http://conda.binstar.org/omnia
+conda install --yes --quiet swig fftw3f pip
+pip install sphinxcontrib-bibtex
