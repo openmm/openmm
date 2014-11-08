@@ -39,8 +39,9 @@ make install
 # Install Python wrappers.
 OPENMM_INCLUDE_PATH=$INSTALL/include
 OPENMM_LIB_PATH=$INSTALL/lib
+PYTHON=${HOME}/miniconda/bin/python
 cd python
-python setup.py install --prefix=$INSTALL
+$PYTHON setup.py install --prefix=$INSTALL
 cd ..
 
 # Copy all tests to bin directory so they will be distributed with install package.
