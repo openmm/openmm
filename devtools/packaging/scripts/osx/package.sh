@@ -30,7 +30,7 @@ echo $CMD
 echo "Building Python source distribution..."
 cd build
 make PythonSdist
-cd python/dist 
+cd python/dist
 tar zxf OpenMM-${VERSION}.tar.gz
 mv OpenMM-${VERSION} python
 cd ../../..

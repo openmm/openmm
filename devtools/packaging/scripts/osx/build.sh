@@ -3,6 +3,8 @@
 # Build script for Mac OS X distribution, for use in automated packaging.
 # Note that this must be run from outside the checked-out openmm/ directory.
 
+PATH=$HOME/miniconda/bin:$PATH
+
 INSTALL=`pwd`/install
 CMAKE_FLAGS="-DCMAKE_INSTALL_PREFIX=$INSTALL"
 
@@ -33,6 +35,7 @@ make install
 # Install Python wrappers.
 export OPENMM_INCLUDE_PATH=$INSTALL/include
 export OPENMM_LIB_PATH=$INSTALL/lib
+export PYTHON=$HOME/miniconda/bin/python
 cd python
 $PYTHON setup.py install --prefix=$INSTALL
 cd ..
