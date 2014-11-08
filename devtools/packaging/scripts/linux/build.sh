@@ -33,7 +33,7 @@ fi
 mkdir build
 cd build
 cmake ../openmm $CMAKE_FLAGS
-make -j16
+make -j4 all DoxygenApiDocs sphinxpdf
 make install
 
 # Install Python wrappers.
