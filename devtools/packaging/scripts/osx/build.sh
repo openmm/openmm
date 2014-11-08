@@ -24,8 +24,8 @@ CMAKE_FLAGS+=" -DOPENMM_BUILD_OPENCL_DOUBLE_PRECISION_TESTS=FALSE"
 # Set location for FFTW3
 PREFIX="$WORKSPACE/miniconda"
 CMAKE_FLAGS+=" -DFFTW_INCLUDES=$PREFIX/include"
-CMAKE_FLAGS+=" -DFFTW_LIBRARY=$PREFIX/lib/libfftw3f.so"
-CMAKE_FLAGS+=" -DFFTW_THREADS_LIBRARY=$PREFIX/lib/libfftw3f_threads.so"
+CMAKE_FLAGS+=" -DFFTW_LIBRARY=$PREFIX/lib/libfftw3f.dylib"
+CMAKE_FLAGS+=" -DFFTW_THREADS_LIBRARY=$PREFIX/lib/libfftw3f_threads.dylib"
 
 # Build in subdirectory.
 if [ -e build ]; then
