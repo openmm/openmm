@@ -3,6 +3,9 @@
 # Build script for Mac OS X distribution, for use in automated packaging.
 # Note that this must be run from outside the checked-out openmm/ directory.
 
+# Set relative workspace path.
+export WORKSPACE=`pwd`
+
 # Add conda binaries to path.
 PATH=$WORKSPACE/miniconda/bin:$PATH
 
