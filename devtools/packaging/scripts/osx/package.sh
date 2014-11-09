@@ -5,7 +5,7 @@
 
 # CONFIGURE HERE
 export PACKAGE_DIR="packaging" # directory to stuff packaged source distribution
-export VERSION=$(sed -nr "s/OPENMM_VERSION:STRING=(.*)/\1/p" build/CMakeCache.txt)
+export VERSION=$(grep "OPENMM_VERSION:STRING" build/CMakeCache.txt | sed -E "s/OPENMM_VERSION:STRING=(.*)/\1/")
 export PACKAGE_SUBDIR="OpenMM-${VERSION}-Mac" # directory where distribution will be unpacked
 export DISTRO_PREFIX="OpenMM-${VERSION}-Mac" # prefix for source distribution (e.g. ${DISTRIBUTION_NAME}.zip)
 
