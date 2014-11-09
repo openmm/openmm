@@ -2,6 +2,9 @@
 
 # Prepare for build by ensuring necessary prerequisites are locally installed.
 
+# Set relative workspace path.
+export WORKSPACE=`pwd`
+
 # Install miniconda
 export VERSION="3.7.0"
 export PLATFORM="MacOSX"
