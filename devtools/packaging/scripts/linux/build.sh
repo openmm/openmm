@@ -40,8 +40,8 @@ make -j4 all DoxygenApiDocs sphinxpdf
 make install
 
 # Install Python wrappers.
-OPENMM_INCLUDE_PATH=$INSTALL/include
-OPENMM_LIB_PATH=$INSTALL/lib
+export OPENMM_INCLUDE_PATH=$INSTALL/include
+export OPENMM_LIB_PATH=$INSTALL/lib
 cd python
 python setup.py install --prefix=$INSTALL
 cd ../..
