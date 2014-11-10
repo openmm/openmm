@@ -216,7 +216,7 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
                             *tileStartIndex = atom_add(interactionCount, tilesToStore);
                         SYNC_WARPS;
                         int newTileStartIndex = *tileStartIndex;
-                        if (newTileStartIndex+tilesToStore < maxTiles) {
+                        if (newTileStartIndex+tilesToStore <= maxTiles) {
                             if (indexInWarp < tilesToStore)
                                 interactingTiles[newTileStartIndex+indexInWarp] = x;
                             for (int j = 0; j < tilesToStore; j++)
@@ -237,7 +237,7 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
                 *tileStartIndex = atom_add(interactionCount, tilesToStore);
             SYNC_WARPS;
             int newTileStartIndex = *tileStartIndex;
-            if (newTileStartIndex+tilesToStore < maxTiles) {
+            if (newTileStartIndex+tilesToStore <= maxTiles) {
                 if (indexInWarp < tilesToStore)
                     interactingTiles[newTileStartIndex+indexInWarp] = x;
                 for (int j = 0; j < tilesToStore; j++)

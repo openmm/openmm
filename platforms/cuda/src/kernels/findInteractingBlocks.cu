@@ -256,7 +256,7 @@ extern "C" __global__ void findBlocksWithInteractions(real4 periodicBoxSize, rea
                     if (indexInWarp == 0)
                         tileStartIndex = atomicAdd(interactionCount, tilesToStore);
                     int newTileStartIndex = tileStartIndex;
-                    if (newTileStartIndex+tilesToStore < maxTiles) {
+                    if (newTileStartIndex+tilesToStore <= maxTiles) {
                         if (indexInWarp < tilesToStore)
                             interactingTiles[newTileStartIndex+indexInWarp] = x;
                         for (int j = 0; j < tilesToStore; j++)
@@ -275,7 +275,7 @@ extern "C" __global__ void findBlocksWithInteractions(real4 periodicBoxSize, rea
             if (indexInWarp == 0)
                 tileStartIndex = atomicAdd(interactionCount, tilesToStore);
             int newTileStartIndex = tileStartIndex;
-            if (newTileStartIndex+tilesToStore < maxTiles) {
+            if (newTileStartIndex+tilesToStore <= maxTiles) {
                 if (indexInWarp < tilesToStore)
                     interactingTiles[newTileStartIndex+indexInWarp] = x;
                 for (int j = 0; j < tilesToStore; j++)
