@@ -366,7 +366,8 @@ molecular topology and atom positions.  Your file need not be called
 :file:`input.pdb`.  Feel free to change this line to specify any file you want,
 though it must contain all of the atoms needed by the force field.
 (More information on how to add missing atoms and residues using OpenMM tools can be found in Chapter :ref:`model-building-and-editing`.)
-Make sure you include the single quotes around the file name.
+Make sure you include the single quotes around the file name.  OpenMM also can load
+files in the newer PDBx/mmCIF format: just change :class:`PDBFile` to :class:`PDBxFile`.
 ::
 
     forcefield = ForceField('amber99sb.xml', 'tip3p.xml')
@@ -805,8 +806,12 @@ you would type:
 
     forcefield = ForceField('amber99sb.xml', 'amber99_obc.xml')
 
+Note that the GBSA-OBC parameters in these files are those used in TINKER.\ :cite:`Tinker`
+They are designed for use with Amber force fields, but they are different from
+the parameters found in the AMBER application.
+
 If you are running a vacuum simulation, you do not need to specify a water
-model.  The following line specifies the AMBER10 force field and no water model.
+model.  The following line specifies the Amber10 force field and no water model.
 If you try to use it with a PDB file that contains explicit water, it will
 produce an error since no water parameters are defined:
 ::
