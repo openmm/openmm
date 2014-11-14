@@ -12,7 +12,7 @@ class TestDCDFile(unittest.TestCase):
         fname = tempfile.mktemp(suffix='.dcd')
         pdbfile = app.PDBFile('systems/alanine-dipeptide-implicit.pdb')
         natom = len(list(pdbfile.topology.atoms()))
-        dcd = app.DCDFile(open(fname, 'w'), pdbfile.topology, 0.001)
+        dcd = app.DCDFile(open(fname, 'wb'), pdbfile.topology, 0.001)
         for i in range(5):
             dcd.writeModel([mm.Vec3(random(), random(), random()) for j in range(natom)]*unit.angstroms)
         dcd._file.close()
