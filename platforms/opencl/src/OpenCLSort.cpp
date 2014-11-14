@@ -116,16 +116,17 @@ void OpenCLSort::sort(OpenCLArray& data) {
     else {
         // Compute the range of data values.
 
+        unsigned int numBuckets = bucketOffset->getSize();
         computeRangeKernel.setArg<cl::Buffer>(0, data.getDeviceBuffer());
         computeRangeKernel.setArg<cl_uint>(1, data.getSize());
         computeRangeKernel.setArg<cl::Buffer>(2, dataRange->getDeviceBuffer());
         computeRangeKernel.setArg(3, rangeKernelSize*trait->getKeySize(), NULL);
+        computeRangeKernel.setArg<cl_int>(4, numBuckets);
+        computeRangeKernel.setArg<cl::Buffer>(5, bucketOffset->getDeviceBuffer());
         context.executeKernel(computeRangeKernel, rangeKernelSize, rangeKernelSize);
 
         // Assign array elements to buckets.
 
-        unsigned int numBuckets = bucketOffset->getSize();
-        context.clearBuffer(*bucketOffset);
         assignElementsKernel.setArg<cl::Buffer>(0, data.getDeviceBuffer());
         assignElementsKernel.setArg<cl_int>(1, data.getSize());
         assignElementsKernel.setArg<cl_int>(2, numBuckets);

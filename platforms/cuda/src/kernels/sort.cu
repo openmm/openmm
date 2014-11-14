@@ -50,7 +50,8 @@ __global__ void sortShortList(DATA_TYPE* __restrict__ data, unsigned int length)
  * Calculate the minimum and maximum value in the array to be sorted.  This kernel
  * is executed as a single work group.
  */
-__global__ void computeRange(const DATA_TYPE* __restrict__ data, unsigned int length, KEY_TYPE* __restrict__ range) {
+__global__ void computeRange(const DATA_TYPE* __restrict__ data, unsigned int length, KEY_TYPE* __restrict__ range,
+        unsigned int numBuckets, unsigned int* __restrict__ bucketOffset) {
     extern __shared__ KEY_TYPE rangeBuffer[];
     KEY_TYPE minimum = MAX_KEY;
     KEY_TYPE maximum = MIN_KEY;
@@ -86,6 +87,11 @@ __global__ void computeRange(const DATA_TYPE* __restrict__ data, unsigned int le
         range[0] = minimum;
         range[1] = maximum;
     }
+    
+    // Clear the bucket counters in preparation for the next kernel.
+
+    for (unsigned int index = threadIdx.x; index < numBuckets; index += blockDim.x)
+        bucketOffset[index] = 0;
 }
 
 /**

@@ -49,7 +49,8 @@ __kernel void sortShortList(__global DATA_TYPE* __restrict__ data, uint length, 
  * Calculate the minimum and maximum value in the array to be sorted.  This kernel
  * is executed as a single work group.
  */
-__kernel void computeRange(__global const DATA_TYPE* restrict data, uint length, __global KEY_TYPE* restrict range, __local KEY_TYPE* restrict buffer) {
+__kernel void computeRange(__global const DATA_TYPE* restrict data, uint length, __global KEY_TYPE* restrict range, __local KEY_TYPE* restrict buffer,
+        uint numBuckets, __global uint* restrict bucketOffset) {
     KEY_TYPE minimum = MAX_KEY;
     KEY_TYPE maximum = MIN_KEY;
 
@@ -84,6 +85,11 @@ __kernel void computeRange(__global const DATA_TYPE* restrict data, uint length,
         range[0] = minimum;
         range[1] = maximum;
     }
+    
+    // Clear the bucket counters in preparation for the next kernel.
+
+    for (uint index = get_local_id(0); index < numBuckets; index += get_local_size(0))
+        bucketOffset[index] = 0;
 }
 
 /**
