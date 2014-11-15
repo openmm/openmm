@@ -593,6 +593,7 @@ std::string CudaContext::getErrorString(CUresult result) {
         case CUDA_ERROR_PEER_ACCESS_NOT_ENABLED: return "CUDA_ERROR_PEER_ACCESS_NOT_ENABLED";
         case CUDA_ERROR_PRIMARY_CONTEXT_ACTIVE: return "CUDA_ERROR_PRIMARY_CONTEXT_ACTIVE";
         case CUDA_ERROR_CONTEXT_IS_DESTROYED: return "CUDA_ERROR_CONTEXT_IS_DESTROYED";
+        case CUDA_ERROR_ASSERT: return "CUDA_ERROR_ASSERT";
         case CUDA_ERROR_UNKNOWN: return "CUDA_ERROR_UNKNOWN";
     }
     return "Invalid error code";
