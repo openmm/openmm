@@ -79,7 +79,6 @@ class State(_object):
         return serializationString
 
     def __setstate__(self, serializationString):
-        print 'calling set state'
         dState = XmlSerializer.deserialize(serializationString)
         # Safe provided no __slots__ or other weird things are used
         self.__dict__.update(dState.__dict__)
