@@ -64,6 +64,7 @@ public:
     }
     std::vector<std::string> getKernelNames();
     void updateParametersInContext(ContextImpl& context);
+    std::vector<std::pair<int, int> > getBondedParticles() const;
 private:
     const DrudeForce& owner;
     Kernel kernel;
