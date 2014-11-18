@@ -720,7 +720,7 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
         system.addParticle(mass)
 
     # Add constraints.
-    isWater = [prmtop.getResidueLabel(i) == 'WAT' for i in range(prmtop.getNumAtoms())]
+    isWater = [prmtop.getResidueLabel(i) in ('WAT', 'TP4', 'TP5', 'T4E') for i in range(prmtop.getNumAtoms())]
     if shake in ('h-bonds', 'all-bonds', 'h-angles'):
         for (iAtom, jAtom, k, rMin) in prmtop.getBondsWithH():
             system.addConstraint(iAtom, jAtom, rMin)
