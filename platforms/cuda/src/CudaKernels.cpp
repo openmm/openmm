@@ -1400,15 +1400,16 @@ private:
 
 class CudaCalcNonbondedForceKernel::SyncStreamPreComputation : public CudaContext::ForcePreComputation {
 public:
-    SyncStreamPreComputation(CUstream stream, CUevent event, int forceGroup) : stream(stream), event(event), forceGroup(forceGroup) {
+    SyncStreamPreComputation(CudaContext& cu, CUstream stream, CUevent event, int forceGroup) : cu(cu), stream(stream), event(event), forceGroup(forceGroup) {
     }
     void computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
         if ((groups&(1<<forceGroup)) != 0) {
-            cuEventRecord(event, 0);
+            cuEventRecord(event, cu.getCurrentStream());
             cuStreamWaitEvent(stream, event, 0);
         }
     }
 private:
+    CudaContext& cu;
     CUstream stream;
     CUevent event;
     int forceGroup;
@@ -1416,14 +1417,15 @@ private:
 
 class CudaCalcNonbondedForceKernel::SyncStreamPostComputation : public CudaContext::ForcePostComputation {
 public:
-    SyncStreamPostComputation(CUevent event, int forceGroup) : event(event), forceGroup(forceGroup) {
+    SyncStreamPostComputation(CudaContext& cu, CUevent event, int forceGroup) : cu(cu), event(event), forceGroup(forceGroup) {
     }
     double computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
         if ((groups&(1<<forceGroup)) != 0)
-            cuStreamWaitEvent(0, event, 0);
+            cuStreamWaitEvent(cu.getCurrentStream(), event, 0);
         return 0.0;
     }
 private:
+    CudaContext& cu;
     CUevent event;
     int forceGroup;
 };
@@ -1672,7 +1674,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                 
                 // Prepare for doing PME on its own stream.
                 
-                usePmeStream = (cu.getComputeCapability() < 5.0); // A driver bug causes this to be very slow on GTX 980.
+                usePmeStream = (cu.getComputeCapability() < 5.0 && numParticles < 130000); // Workarounds for various CUDA bugs
                 if (usePmeStream) {
                     cuStreamCreate(&pmeStream, CU_STREAM_NON_BLOCKING);
                     cufftSetStream(fftForward, pmeStream);
@@ -1681,8 +1683,8 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                     int recipForceGroup = force.getReciprocalSpaceForceGroup();
                     if (recipForceGroup < 0)
                         recipForceGroup = force.getForceGroup();
-                    cu.addPreComputation(new SyncStreamPreComputation(pmeStream, pmeSyncEvent, recipForceGroup));
-                    cu.addPostComputation(new SyncStreamPostComputation(pmeSyncEvent, recipForceGroup));
+                    cu.addPreComputation(new SyncStreamPreComputation(cu, pmeStream, pmeSyncEvent, recipForceGroup));
+                    cu.addPostComputation(new SyncStreamPostComputation(cu, pmeSyncEvent, recipForceGroup));
                 }
                 hasInitializedFFT = true;
 
