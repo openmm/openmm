@@ -22,9 +22,9 @@ else:
 def run_tests():
 
     if simtk_import_failed:
-        raise TestingError('Failed to import OpenMM packages; Make sure OpenMM\n'
-                           'is installed and the library path is set correctly.\n'
-                           'Error message: %s' % simtk_import_error)
+        raise TestingError('Failed to import OpenMM packages; Make sure OpenMM'
+                           'is installed and the library path is set correctly.'
+                           '\n\tError message: %s' % simtk_import_error)
     # Create a System for the tests.
     data_dir = os.path.join(os.path.abspath(os.path.split(__file__)[0]), 'openmm', 'app', 'data')
     pdb = PDBFile(os.path.join(data_dir, 'test.pdb'))
