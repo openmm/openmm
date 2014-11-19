@@ -105,14 +105,12 @@ example,
 
     export OPENMM_CUDA_COMPILER=/opt/CUDA/cuda-6.0/bin/nvcc
 
-7. Verify your installation by running the :file:`testInstallation.py` script found in
-the :file:`examples` folder of your OpenMM installation.  To run it, cd to the
-examples folder and type
+7. Verify your installation by typing the following command:
 ::
 
-    python testInstallation.py
+    python -m simtk.testInstallation
 
-This script confirms that OpenMM is installed, checks whether GPU acceleration
+This command confirms that OpenMM is installed, checks whether GPU acceleration
 is available (via the OpenCL and/or CUDA platforms), and verifies that all
 platforms produce consistent results.
 
@@ -186,15 +184,13 @@ example,
 
     export OPENMM_CUDA_COMPILER=/opt/CUDA/cuda-6.0/bin/nvcc
 
-7. Verify your installation by running the :file:`testInstallation.py` script found in
-the :file:`examples` folder of your OpenMM installation.  To run it, :command:`cd` to the
-:file:`examples` folder and type
+7. Verify your installation by typing the following command:
 ::
 
-    python testInstallation.py
+    python -m simtk.testInstallation
 
-This script confirms that OpenMM is installed, checks whether GPU acceleration
-is available (via that OpenCL and/or CUDA platforms), and verifies that all
+This command confirms that OpenMM is installed, checks whether GPU acceleration
+is available (via the OpenCL and/or CUDA platforms), and verifies that all
 platforms produce consistent results.
 
 .. _installing-on-windows:
@@ -272,15 +268,13 @@ your PATH.
     not set, it will assume plugins are in the default location (:file:`C:\\Program
     Files\\OpenMM\\lib\\plugins` or :file:`C:\\Program Files (x86)\\OpenMM\\lib\\plugins`).
 
-7. Verify your installation by running the :file:`testInstallation.py` script found in
-the :file:`examples` folder of your OpenMM installation.  To run it, open a command
-window, :command:`cd` to the :file:`examples` folder, and type
+7. Verify your installation by typing the following command:
 ::
 
-    python testInstallation.py
+    python -m simtk.testInstallation
 
-This script confirms that OpenMM is installed, checks whether GPU acceleration
-is available (via that OpenCL and/or CUDA platforms), and verifies that all
+This command confirms that OpenMM is installed, checks whether GPU acceleration
+is available (via the OpenCL and/or CUDA platforms), and verifies that all
 platforms produce consistent results.
 
 .. _running-simulations:
