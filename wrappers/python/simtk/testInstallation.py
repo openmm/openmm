@@ -1,4 +1,5 @@
 from __future__ import print_function
+from functools import wraps
 import os
 import sys
 # First make sure OpenMM is installed.
@@ -19,11 +20,39 @@ except ImportError as err:
 else:
     simtk_import_failed = False
 
-def run_tests():
+def error_converter(error_type):
+    """ Converts all exceptions to the given Exception type """
+    def wrapper(func):
+        @wraps(func)
+        def new_func(*args, **kwargs):
+            try:
+                func(*args, **kwargs)
+            except error_type:
+                # Pass the existing error through
+                raise
+            except BaseException as err:
+                raise TestingError('Problem with OpenMM installation '
+                        'encountered. OpenMM will not work until the problem '
+                        'has been fixed.\n\nError message: %s' % err.message)
+        return new_func
+    return wrapper
 
+@error_converter(TestingError)
+def run_tests():
+    """
+    Runs a set of tests to determine which platforms are available and tests the
+    relative accuracy between them. This can be used to determine if the Python
+    API is installed and working properly, as well as the fidelity of the
+    underlying OpenMM libraries with respect to computing energies and forces on
+    the different platforms supported by your installation.
+
+    This test prints the available platforms and the relative force errors
+    between them for a test system. If a problem is detected, TestingError is
+    raised.
+    """
     if simtk_import_failed:
-        raise TestingError('Failed to import OpenMM packages; Make sure OpenMM '
-                           'is installed and the library path is set correctly.'
+        raise TestingError('Failed to import OpenMM packages; OpenMM will not work.\n'
+                           'Make sure OpenMM is installed and the library path is set correctly.'
                            '\n\nError message: %s' % simtk_import_error)
     # Create a System for the tests.
     data_dir = os.path.join(os.path.abspath(os.path.split(__file__)[0]), 'openmm', 'app', 'data')
@@ -81,10 +110,5 @@ if __name__ == '__main__':
     try:
         run_tests()
     except TestingError as err:
-        print('An error was encountered during testing:')
-        print(err)
-        sys.exit(1)
-    except BaseException as err:
-        print('An unexpected error was encountered during testing:')
-        print(err)
+        print(err.message)
         sys.exit(1)
