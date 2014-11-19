@@ -7,17 +7,24 @@ class TestingError(Exception):
     """
     An error is encountered when 
     """
+    pass
+
+try:
+    from simtk.openmm.app import *
+    from simtk.openmm import *
+    from simtk.unit import *
+except ImportError as err:
+    simtk_import_failed = True
+    simtk_import_error = err.message
+else:
+    simtk_import_failed = False
 
 def run_tests():
-    try:
-        from simtk.openmm.app import *
-        from simtk.openmm import *
-        from simtk.unit import *
-    except ImportError as err:
+
+    if simtk_import_failed:
         raise TestingError('Failed to import OpenMM packages; Make sure OpenMM\n'
                            'is installed and the library path is set correctly.\n'
-                           'Error message: %s' % err.message)
-    
+                           'Error message: %s' % simtk_import_error)
     # Create a System for the tests.
     data_dir = os.path.join(os.path.abspath(os.path.split(__file__)[0]), 'openmm', 'app', 'data')
     pdb = PDBFile(os.path.join(data_dir, 'test.pdb'))
