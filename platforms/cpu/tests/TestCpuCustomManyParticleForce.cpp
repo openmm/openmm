@@ -673,6 +673,10 @@ void testCentralParticleModeLargeSystem() {
 
 int main() {
     try {
+        if (!CpuPlatform::isProcessorSupported()) {
+            cout << "CPU is not supported.  Exiting." << endl;
+            return 0;
+        }
         testNoCutoff();
         testCutoff();
         testPeriodic();
