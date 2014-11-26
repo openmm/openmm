@@ -31,6 +31,12 @@
 using namespace std;
 using namespace OpenMM;
 
+#ifdef _MSC_VER
+    // Workaround for a compiler bug in Visual Studio 10. Hopefully we can remove this
+    // once we move to a later version.
+    #undef __AVX__
+#endif
+
 #ifndef __AVX__
 bool isVec8Supported() {
     return false;
