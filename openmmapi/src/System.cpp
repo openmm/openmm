@@ -34,6 +34,7 @@
 #include "openmm/System.h"
 #include "openmm/VirtualSite.h"
 #include "openmm/internal/AssertionUtilities.h"
+#include <cmath>
 
 using namespace OpenMM;
 
@@ -111,10 +112,10 @@ void System::getDefaultPeriodicBoxVectors(Vec3& a, Vec3& b, Vec3& c) const {
 void System::setDefaultPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Vec3& c) {
     if (a[1] != 0.0 || a[2] != 0.0)
         throw OpenMMException("First periodic box vector must be parallel to x.");
-    if (b[0] != 0.0 || b[2] != 0.0)
-        throw OpenMMException("Second periodic box vector must be parallel to y.");
-    if (c[0] != 0.0 || c[1] != 0.0)
-        throw OpenMMException("Third periodic box vector must be parallel to z.");
+    if (b[2] != 0.0)
+        throw OpenMMException("Second periodic box vector must be in the x-y plane.");
+    if (a[0] <= 0.0 || b[1] <= 0.0 || c[2] <= 0.0 || a[0] < 2*fabs(b[0]) || a[0] < 2*fabs(c[0]) || b[1] < 2*fabs(c[1]))
+        throw OpenMMException("Periodic box vectors must be in reduced form.");
     periodicBoxVectors[0] = a;
     periodicBoxVectors[1] = b;
     periodicBoxVectors[2] = c;

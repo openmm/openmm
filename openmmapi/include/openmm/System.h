@@ -203,9 +203,6 @@ public:
      * created Context will have its box vectors set to these.  They will affect
      * any Force added to the System that uses periodic boundary conditions.
      *
-     * Currently, only rectangular boxes are supported.  This means that a, b, and c must be aligned with the
-     * x, y, and z axes respectively.  Future releases may support arbitrary triclinic boxes.
-     *
      * @param a      on exit, this contains the vector defining the first edge of the periodic box
      * @param b      on exit, this contains the vector defining the second edge of the periodic box
      * @param c      on exit, this contains the vector defining the third edge of the periodic box
@@ -216,8 +213,9 @@ public:
      * created Context will have its box vectors set to these.  They will affect
      * any Force added to the System that uses periodic boundary conditions.
      *
-     * Currently, only rectangular boxes are supported.  This means that a, b, and c must be aligned with the
-     * x, y, and z axes respectively.  Future releases may support arbitrary triclinic boxes.
+     * Triclinic boxes are supported, but the vectors must satisfy certain requirements.  In particular,
+     * a must point in the x direction, b must point "mostly" in the y direction, and c must point "mostly"
+     * in the z direction.  See the documentation for details.
      *
      * @param a      the vector defining the first edge of the periodic box
      * @param b      the vector defining the second edge of the periodic box
