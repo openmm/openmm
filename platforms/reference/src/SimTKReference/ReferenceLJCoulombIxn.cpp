@@ -112,20 +112,20 @@ void ReferenceLJCoulombIxn::setUseSwitchingFunction( RealOpenMM distance ) {
      also been set, and the smallest side of the periodic box is at least twice the cutoff
      distance.
 
-     @param boxSize             the X, Y, and Z widths of the periodic box
+     @param vectors    the vectors defining the periodic box
 
      --------------------------------------------------------------------------------------- */
 
-  void ReferenceLJCoulombIxn::setPeriodic( RealVec& boxSize ) {
+  void ReferenceLJCoulombIxn::setPeriodic(OpenMM::RealVec* vectors) {
 
     assert(cutoff);
-    assert(boxSize[0] >= 2.0*cutoffDistance);
-    assert(boxSize[1] >= 2.0*cutoffDistance);
-    assert(boxSize[2] >= 2.0*cutoffDistance);
+    assert(vectors[0][0] >= 2.0*cutoffDistance);
+    assert(vectors[1][1] >= 2.0*cutoffDistance);
+    assert(vectors[2][2] >= 2.0*cutoffDistance);
     periodic = true;
-    periodicBoxSize[0] = boxSize[0];
-    periodicBoxSize[1] = boxSize[1];
-    periodicBoxSize[2] = boxSize[2];
+    periodicBoxVectors[0] = vectors[0];
+    periodicBoxVectors[1] = vectors[1];
+    periodicBoxVectors[2] = vectors[2];
   }
 
   /**---------------------------------------------------------------------------------------
@@ -197,7 +197,7 @@ void ReferenceLJCoulombIxn::calculateEwaldIxn(int numberOfAtoms, vector<RealVec>
     RealOpenMM  factorEwald             = -1 / (4*alphaEwald*alphaEwald);
     RealOpenMM SQRT_PI                  = sqrt(PI_M);
     RealOpenMM TWO_PI                   = 2.0 * PI_M;
-    RealOpenMM recipCoeff               = (RealOpenMM)(ONE_4PI_EPS0*4*PI_M/(periodicBoxSize[0] * periodicBoxSize[1] * periodicBoxSize[2]) /epsilon);
+    RealOpenMM recipCoeff               = (RealOpenMM)(ONE_4PI_EPS0*4*PI_M/(periodicBoxVectors[0][0] * periodicBoxVectors[1][1] * periodicBoxVectors[2][2]) /epsilon);
 
     RealOpenMM totalSelfEwaldEnergy     = 0.0;
     RealOpenMM realSpaceEwaldEnergy     = 0.0;
@@ -237,6 +237,7 @@ void ReferenceLJCoulombIxn::calculateEwaldIxn(int numberOfAtoms, vector<RealVec>
     vector<RealOpenMM> charges(numberOfAtoms);
     for (int i = 0; i < numberOfAtoms; i++)
         charges[i] = atomParameters[i][QIndex];
+    RealOpenMM periodicBoxSize[] = {periodicBoxVectors[0][0], periodicBoxVectors[1][1], periodicBoxVectors[2][2]};
     pme_exec(pmedata,atomCoordinates,forces,charges,periodicBoxSize,&recipEnergy,virial);
 
     if( totalEnergy )
@@ -255,7 +256,7 @@ void ReferenceLJCoulombIxn::calculateEwaldIxn(int numberOfAtoms, vector<RealVec>
 
     // setup reciprocal box
 
-           RealOpenMM recipBoxSize[3] = { TWO_PI / periodicBoxSize[0], TWO_PI / periodicBoxSize[1], TWO_PI / periodicBoxSize[2]};
+         RealOpenMM recipBoxSize[3] = { TWO_PI / periodicBoxVectors[0][0], TWO_PI / periodicBoxVectors[1][1], TWO_PI / periodicBoxVectors[2][2]};
 
 
     // setup K-vectors
@@ -370,7 +371,7 @@ void ReferenceLJCoulombIxn::calculateEwaldIxn(int numberOfAtoms, vector<RealVec>
        int jj = pair.second;
 
        RealOpenMM deltaR[2][ReferenceForce::LastDeltaRIndex];
-       ReferenceForce::getDeltaRPeriodic( atomCoordinates[jj], atomCoordinates[ii], periodicBoxSize, deltaR[0] );
+       ReferenceForce::getDeltaRPeriodic( atomCoordinates[jj], atomCoordinates[ii], periodicBoxVectors, deltaR[0] );
        RealOpenMM r         = deltaR[0][ReferenceForce::RIndex];
        RealOpenMM inverseR  = one/(deltaR[0][ReferenceForce::RIndex]);
        RealOpenMM switchValue = 1, switchDeriv = 0;
@@ -556,7 +557,7 @@ void ReferenceLJCoulombIxn::calculateOneIxn( int ii, int jj, vector<RealVec>& at
     // get deltaR, R2, and R between 2 atoms
 
     if (periodic)
-        ReferenceForce::getDeltaRPeriodic( atomCoordinates[jj], atomCoordinates[ii], periodicBoxSize, deltaR[0] );
+        ReferenceForce::getDeltaRPeriodic( atomCoordinates[jj], atomCoordinates[ii], periodicBoxVectors, deltaR[0] );
     else
         ReferenceForce::getDeltaR( atomCoordinates[jj], atomCoordinates[ii], deltaR[0] );
 

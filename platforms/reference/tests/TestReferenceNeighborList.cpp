@@ -48,17 +48,17 @@ void testNeighborList()
     
     NeighborList neighborList;
 
-    RealVec boxSize;
-    computeNeighborListNaive(neighborList, 2, particleList, exclusions, boxSize, false, 13.7, 0.01);
+    RealVec boxVectors[3];
+    computeNeighborListNaive(neighborList, 2, particleList, exclusions, boxVectors, false, 13.7, 0.01);
     assert(neighborList.size() == 1);
     
-    computeNeighborListNaive(neighborList, 2, particleList, exclusions, boxSize, false, 13.5, 0.01);
+    computeNeighborListNaive(neighborList, 2, particleList, exclusions, boxVectors, false, 13.5, 0.01);
     assert(neighborList.size() == 0);
     
-    computeNeighborListVoxelHash(neighborList, 2, particleList, exclusions, boxSize, false, 13.7, 0.01);
+    computeNeighborListVoxelHash(neighborList, 2, particleList, exclusions, boxVectors, false, 13.7, 0.01);
     assert(neighborList.size() == 1);
     
-    computeNeighborListVoxelHash(neighborList, 2, particleList, exclusions, boxSize, false, 13.5, 0.01);
+    computeNeighborListVoxelHash(neighborList, 2, particleList, exclusions, boxVectors, false, 13.5, 0.01);
     assert(neighborList.size() == 0);
 }
 
@@ -93,6 +93,10 @@ void testPeriodic() {
     const int numParticles = 100;
     const double cutoff = 3.0;
     const RealVec periodicBoxSize(20.0, 15.0, 22.0);
+    RealVec periodicBoxVectors[3];
+    periodicBoxVectors[0] = RealVec(20, 0, 0);
+    periodicBoxVectors[1] = RealVec(0, 15, 0);
+    periodicBoxVectors[2] = RealVec(0, 0, 22);
     vector<RealVec> particleList(numParticles);
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);
@@ -104,9 +108,9 @@ void testPeriodic() {
     }
     vector<set<int> > exclusions(numParticles);
     NeighborList neighborList;
-    computeNeighborListNaive(neighborList, numParticles, particleList, exclusions, periodicBoxSize, true, cutoff);
+    computeNeighborListNaive(neighborList, numParticles, particleList, exclusions, periodicBoxVectors, true, cutoff);
     verifyNeighborList(neighborList, numParticles, particleList, periodicBoxSize, cutoff);
-    computeNeighborListVoxelHash(neighborList, numParticles, particleList, exclusions, periodicBoxSize, true, cutoff);
+    computeNeighborListVoxelHash(neighborList, numParticles, particleList, exclusions, periodicBoxVectors, true, cutoff);
     verifyNeighborList(neighborList, numParticles, particleList, periodicBoxSize, cutoff);
 }
 
