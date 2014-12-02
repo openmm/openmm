@@ -39,13 +39,3 @@ cd build
 cmake ../openmm $CMAKE_FLAGS
 make -j4 all DoxygenApiDocs sphinxpdf
 make install
-
-# Install Python wrappers.
-export OPENMM_INCLUDE_PATH=$INSTALL/include
-export OPENMM_LIB_PATH=$INSTALL/lib
-cd python
-$PYTHON setup.py install --prefix=$INSTALL
-cd ../..
-
-# Copy all tests to bin directory so they will be distributed with install package.
-#cp `find . -name "Test*" -type f -maxdepth 1` $PREFIX/bin
