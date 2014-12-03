@@ -374,22 +374,22 @@ RealOpenMM ObcParameters::getCutoffDistance() const {
       also been set, and the smallest side of the periodic box is at least twice the cutoff
       distance.
 
-      @param boxSize             the X, Y, and Z widths of the periodic box
+      @param vectors    the vectors defining the periodic box
 
       --------------------------------------------------------------------------------------- */
 
-void ObcParameters::setPeriodic( const OpenMM::RealVec& boxSize ) {
+void ObcParameters::setPeriodic(OpenMM::RealVec* vectors) {
 
-     assert(_cutoff);
+    assert(_cutoff);
 
-     assert(boxSize[0] >= 2.0*_cutoffDistance);
-     assert(boxSize[1] >= 2.0*_cutoffDistance);
-     assert(boxSize[2] >= 2.0*_cutoffDistance);
+    assert(boxSize[0][0] >= 2.0*_cutoffDistance);
+    assert(boxSize[1][1] >= 2.0*_cutoffDistance);
+    assert(boxSize[2][2] >= 2.0*_cutoffDistance);
 
-     _periodic           = true;
-     _periodicBoxSize[0] = boxSize[0];
-     _periodicBoxSize[1] = boxSize[1];
-     _periodicBoxSize[2] = boxSize[2];
+    _periodic           = true;
+    _periodicBoxVectors[0] = vectors[0];
+    _periodicBoxVectors[1] = vectors[1];
+    _periodicBoxVectors[2] = vectors[2];
 }
 
 /**---------------------------------------------------------------------------------------
@@ -408,6 +408,6 @@ bool ObcParameters::getPeriodic() {
 
       --------------------------------------------------------------------------------------- */
 
-const RealOpenMM* ObcParameters::getPeriodicBox() {
-     return _periodicBoxSize;
+const OpenMM::RealVec* ObcParameters::getPeriodicBox() {
+     return _periodicBoxVectors;
 }

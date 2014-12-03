@@ -131,20 +131,20 @@ void ReferenceCustomNonbondedIxn::setUseSwitchingFunction( RealOpenMM distance )
      also been set, and the smallest side of the periodic box is at least twice the cutoff
      distance.
 
-     @param boxSize             the X, Y, and Z widths of the periodic box
+     @param vectors    the vectors defining the periodic box
 
      --------------------------------------------------------------------------------------- */
 
-  void ReferenceCustomNonbondedIxn::setPeriodic( RealVec& boxSize ) {
+  void ReferenceCustomNonbondedIxn::setPeriodic(OpenMM::RealVec* vectors) {
 
     assert(cutoff);
-    assert(boxSize[0] >= 2.0*cutoffDistance);
-    assert(boxSize[1] >= 2.0*cutoffDistance);
-    assert(boxSize[2] >= 2.0*cutoffDistance);
+    assert(vectors[0][0] >= 2.0*cutoffDistance);
+    assert(vectors[1][1] >= 2.0*cutoffDistance);
+    assert(vectors[2][2] >= 2.0*cutoffDistance);
     periodic = true;
-    periodicBoxSize[0] = boxSize[0];
-    periodicBoxSize[1] = boxSize[1];
-    periodicBoxSize[2] = boxSize[2];
+    periodicBoxVectors[0] = vectors[0];
+    periodicBoxVectors[1] = vectors[1];
+    periodicBoxVectors[2] = vectors[2];
 
   }
 
@@ -268,7 +268,7 @@ void ReferenceCustomNonbondedIxn::calculateOneIxn( int ii, int jj, vector<RealVe
 
     RealOpenMM deltaR[ReferenceForce::LastDeltaRIndex];
     if (periodic)
-        ReferenceForce::getDeltaRPeriodic( atomCoordinates[jj], atomCoordinates[ii], periodicBoxSize, deltaR );
+        ReferenceForce::getDeltaRPeriodic( atomCoordinates[jj], atomCoordinates[ii], periodicBoxVectors, deltaR );
     else
         ReferenceForce::getDeltaR( atomCoordinates[jj], atomCoordinates[ii], deltaR );
     RealOpenMM r = deltaR[ReferenceForce::RIndex];

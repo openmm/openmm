@@ -118,21 +118,21 @@ ReferenceCustomGBIxn::~ReferenceCustomGBIxn( ){
      also been set, and the smallest side of the periodic box is at least twice the cutoff
      distance.
 
-     @param boxSize             the X, Y, and Z widths of the periodic box
+     @param vectors    the vectors defining the periodic box
 
      --------------------------------------------------------------------------------------- */
 
-  void ReferenceCustomGBIxn::setPeriodic( RealVec& boxSize ) {
+  void ReferenceCustomGBIxn::setPeriodic(RealVec* vectors) {
 
     if (cutoff) {
-        assert(boxSize[0] >= 2.0*cutoffDistance);
-        assert(boxSize[1] >= 2.0*cutoffDistance);
-        assert(boxSize[2] >= 2.0*cutoffDistance);
+        assert(vectors[0][0] >= 2.0*cutoffDistance);
+        assert(vectors[1][1] >= 2.0*cutoffDistance);
+        assert(vectors[2][2] >= 2.0*cutoffDistance);
     }
     periodic = true;
-    periodicBoxSize[0] = boxSize[0];
-    periodicBoxSize[1] = boxSize[1];
-    periodicBoxSize[2] = boxSize[2];
+    periodicBoxVectors[0] = vectors[0];
+    periodicBoxVectors[1] = vectors[1];
+    periodicBoxVectors[2] = vectors[2];
   }
 
 void ReferenceCustomGBIxn::calculateIxn(int numberOfAtoms, vector<RealVec>& atomCoordinates, RealOpenMM** atomParameters,
@@ -218,7 +218,7 @@ void ReferenceCustomGBIxn::calculateOnePairValue(int index, int atom1, int atom2
         const map<string, double>& globalParameters, vector<vector<RealOpenMM> >& values) const {
     RealOpenMM deltaR[ReferenceForce::LastDeltaRIndex];
     if (periodic)
-        ReferenceForce::getDeltaRPeriodic(atomCoordinates[atom2], atomCoordinates[atom1], periodicBoxSize, deltaR);
+        ReferenceForce::getDeltaRPeriodic(atomCoordinates[atom2], atomCoordinates[atom1], periodicBoxVectors, deltaR);
     else
         ReferenceForce::getDeltaR(atomCoordinates[atom2], atomCoordinates[atom1], deltaR);
     RealOpenMM r = deltaR[ReferenceForce::RIndex];
@@ -292,7 +292,7 @@ void ReferenceCustomGBIxn::calculateOnePairEnergyTerm(int index, int atom1, int 
 
     RealOpenMM deltaR[ReferenceForce::LastDeltaRIndex];
     if (periodic)
-        ReferenceForce::getDeltaRPeriodic(atomCoordinates[atom2], atomCoordinates[atom1], periodicBoxSize, deltaR);
+        ReferenceForce::getDeltaRPeriodic(atomCoordinates[atom2], atomCoordinates[atom1], periodicBoxVectors, deltaR);
     else
         ReferenceForce::getDeltaR(atomCoordinates[atom2], atomCoordinates[atom1], deltaR);
     RealOpenMM r = deltaR[ReferenceForce::RIndex];
@@ -390,7 +390,7 @@ void ReferenceCustomGBIxn::calculateOnePairChainRule(int atom1, int atom2, vecto
 
     RealOpenMM deltaR[ReferenceForce::LastDeltaRIndex];
     if (periodic)
-        ReferenceForce::getDeltaRPeriodic(atomCoordinates[atom2], atomCoordinates[atom1], periodicBoxSize, deltaR);
+        ReferenceForce::getDeltaRPeriodic(atomCoordinates[atom2], atomCoordinates[atom1], periodicBoxVectors, deltaR);
     else
         ReferenceForce::getDeltaR(atomCoordinates[atom2], atomCoordinates[atom1], deltaR);
     RealOpenMM r = deltaR[ReferenceForce::RIndex];

@@ -109,7 +109,9 @@ void MonteCarloMembraneBarostatImpl::updateContextState(ContextImpl& context) {
     }
     double deltaArea = box[0][0]*lengthScale[0]*box[1][1]*lengthScale[1] - box[0][0]*box[1][1];
     kernel.getAs<ApplyMonteCarloBarostatKernel>().scaleCoordinates(context, lengthScale[0], lengthScale[1], lengthScale[2]);
-    context.getOwner().setPeriodicBoxVectors(box[0]*lengthScale[0], box[1]*lengthScale[1], box[2]*lengthScale[2]);
+    context.getOwner().setPeriodicBoxVectors(Vec3(box[0][0]*lengthScale[0], box[0][1]*lengthScale[1], box[0][2]*lengthScale[2]),
+                                             Vec3(box[1][0]*lengthScale[0], box[1][1]*lengthScale[1], box[1][2]*lengthScale[2]),
+                                             Vec3(box[2][0]*lengthScale[0], box[2][1]*lengthScale[1], box[2][2]*lengthScale[2]));
     
     // Compute the energy of the modified system.
     

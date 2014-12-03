@@ -227,6 +227,66 @@ void testPeriodic() {
     ASSERT_EQUAL_TOL(1.9+1+0.9, state.getPotentialEnergy(), TOL);
 }
 
+void testTriclinic() {
+    ReferencePlatform platform;
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    Vec3 a(3.1, 0, 0);
+    Vec3 b(0.4, 3.5, 0);
+    Vec3 c(-0.1, -0.5, 4.0);
+    system.setDefaultPeriodicBoxVectors(a, b, c);
+    VerletIntegrator integrator(0.01);
+    CustomNonbondedForce* nonbonded = new CustomNonbondedForce("r");
+    nonbonded->addParticle(vector<double>());
+    nonbonded->addParticle(vector<double>());
+    nonbonded->setNonbondedMethod(CustomNonbondedForce::CutoffPeriodic);
+    const double cutoff = 1.5;
+    nonbonded->setCutoffDistance(cutoff);
+    system.addForce(nonbonded);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(2);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int iteration = 0; iteration < 50; iteration++) {
+        // Generate random positions for the two particles.
+
+        positions[0] = a*genrand_real2(sfmt) + b*genrand_real2(sfmt) + c*genrand_real2(sfmt);
+        positions[1] = a*genrand_real2(sfmt) + b*genrand_real2(sfmt) + c*genrand_real2(sfmt);
+        context.setPositions(positions);
+
+        // Loop over all possible periodic copies and find the nearest one.
+
+        Vec3 delta;
+        double distance2 = 100.0;
+        for (int i = -1; i < 2; i++)
+            for (int j = -1; j < 2; j++)
+                for (int k = -1; k < 2; k++) {
+                    Vec3 d = positions[1]-positions[0]+a*i+b*j+c*k;
+                    if (d.dot(d) < distance2) {
+                        delta = d;
+                        distance2 = d.dot(d);
+                    }
+                }
+        double distance = sqrt(distance2);
+
+        // See if the force and energy are correct.
+
+        State state = context.getState(State::Forces | State::Energy);
+        if (distance >= cutoff) {
+            ASSERT_EQUAL(0.0, state.getPotentialEnergy());
+            ASSERT_EQUAL_VEC(Vec3(0, 0, 0), state.getForces()[0], 0);
+            ASSERT_EQUAL_VEC(Vec3(0, 0, 0), state.getForces()[1], 0);
+        }
+        else {
+            const Vec3 force = delta/sqrt(delta.dot(delta));
+            ASSERT_EQUAL_TOL(distance, state.getPotentialEnergy(), TOL);
+            ASSERT_EQUAL_VEC(force, state.getForces()[0], TOL);
+            ASSERT_EQUAL_VEC(-force, state.getForces()[1], TOL);
+        }
+    }
+}
+
 void testContinuous1DFunction() {
     ReferencePlatform platform;
     System system;
@@ -863,6 +923,7 @@ int main() {
         testExclusions();
         testCutoff();
         testPeriodic();
+        testTriclinic();
         testContinuous1DFunction();
         testContinuous2DFunction();
         testContinuous3DFunction();
