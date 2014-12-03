@@ -9,32 +9,16 @@ export VERSION=$(sed -nr "s/OPENMM_VERSION:STRING=(.*)/\1/p" build/CMakeCache.tx
 export PACKAGE_SUBDIR="OpenMM-${VERSION}-Linux" # directory where distribution will be unpacked
 export DISTRO_PREFIX="OpenMM-${VERSION}-Linux" # prefix for source distribution (e.g. ${DISTRIBUTION_NAME}.zip)
 
-# DEBUG
-echo "DEBUG 1"
-pwd
-ls -ltr .
-# END DEBUG
-
 # Perform all work in a work directory.
 cd work
-
-# DEBUG
-echo "DEBUG 1"
-pwd
-ls -ltr .
-# END DEBUG
 
 # Clean up.
 rm -rf $PACKAGE_DIR
 
 # Make a directory to contain packaged source distribution
-echo "DEBUG 3"
 mkdir $PACKAGE_DIR
 mkdir $PACKAGE_DIR/$PACKAGE_SUBDIR
 for filename in $( cat openmm/devtools/packaging/manifests/binary/manifest.txt ); do
-   # DEBUG: List contents of each directory.
-   ls -ltr install/$filename
-   # END DEBUG
    CMD="cp -r install/$filename $PACKAGE_DIR/$PACKAGE_SUBDIR"
    echo $CMD
    `$CMD`
