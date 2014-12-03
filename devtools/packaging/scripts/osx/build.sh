@@ -9,7 +9,12 @@ export WORKSPACE=`pwd`
 # Add conda binaries to path.
 PATH=$WORKSPACE/miniconda/bin:$PATH
 
+# Set install directory.
 INSTALL=`pwd`/install
+if [ -e $INSTALL ]; then
+    rm -rf $INSTALL
+fi
+
 CMAKE_FLAGS="-DCMAKE_INSTALL_PREFIX=$INSTALL"
 
 # setting the rpath so that libOpenMMPME.so finds the right libfftw3
@@ -38,14 +43,6 @@ mkdir build
 cd build
 cmake ../openmm $CMAKE_FLAGS
 make -j4 all DoxygenApiDocs sphinxpdf
+
+# Install.
 make install
-
-# Install Python wrappers.
-export OPENMM_INCLUDE_PATH=$INSTALL/include
-export OPENMM_LIB_PATH=$INSTALL/lib
-cd python
-$PYTHON setup.py install --prefix=$INSTALL
-cd ../..
-
-# Copy all tests to bin directory so they will be distributed with install package.
-#cp `find . -name "Test*" -type f -maxdepth 1` $PREFIX/bin

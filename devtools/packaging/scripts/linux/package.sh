@@ -31,12 +31,13 @@ echo $CMD
 
 # Make Python source distribution.
 echo "Building Python source distribution..."
+pushd .
 cd build
 make PythonSdist
 cd python/dist
 tar zxf OpenMM-${VERSION}.tar.gz
 mv OpenMM-${VERSION} python
-cd ../../..
+popd
 cp -r build/python/dist/python $PACKAGE_DIR/$PACKAGE_SUBDIR
 
 # Create archives.

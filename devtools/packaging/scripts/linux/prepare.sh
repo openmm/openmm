@@ -15,6 +15,7 @@ then
    echo "miniconda already exists"
 else
    echo "Downloading miniconda..."
+   rm -rf Miniconda-*
    wget --quiet http://repo.continuum.io/miniconda/${MINICONDA}
    bash ${MINICONDA} -b -p miniconda
    PIP_ARGS="-U"
