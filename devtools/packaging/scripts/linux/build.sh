@@ -10,6 +10,10 @@ export WORKSPACE=`pwd`
 PATH=$WORKSPACE/miniconda/bin:$PATH
 
 INSTALL=`pwd`/install
+if [ -e $INSTALL ]; then
+    rm -rf $INSTALL
+fi
+
 CMAKE_FLAGS="-DCMAKE_INSTALL_PREFIX=$INSTALL"
 
 # setting the rpath so that libOpenMMPME.so finds the right libfftw3
@@ -37,4 +41,6 @@ mkdir build
 cd build
 cmake ../openmm $CMAKE_FLAGS
 make -j4 all DoxygenApiDocs sphinxpdf
+
+# Install.
 make install
