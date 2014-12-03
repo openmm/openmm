@@ -49,6 +49,7 @@ VariableLangevinIntegrator::VariableLangevinIntegrator(double temperature, doubl
     setErrorTolerance(errorTol);
     setConstraintTolerance(1e-5);
     setRandomNumberSeed(osrngseed());
+    setStepSize(0.0);
 }
 
 void VariableLangevinIntegrator::initialize(ContextImpl& contextRef) {
