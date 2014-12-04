@@ -1674,7 +1674,9 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                 
                 // Prepare for doing PME on its own stream.
                 
-                usePmeStream = (cu.getComputeCapability() < 5.0 && numParticles < 130000); // Workarounds for various CUDA bugs
+                int cufftVersion;
+                cufftGetVersion(&cufftVersion);
+                usePmeStream = (cu.getComputeCapability() < 5.0 && numParticles < 130000 && cufftVersion >= 6000); // Workarounds for various CUDA bugs
                 if (usePmeStream) {
                     cuStreamCreate(&pmeStream, CU_STREAM_NON_BLOCKING);
                     cufftSetStream(fftForward, pmeStream);
