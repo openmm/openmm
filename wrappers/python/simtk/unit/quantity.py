@@ -356,7 +356,7 @@ class Quantity(object):
         if unit.is_dimensionless():
             assert unit is dimensionless # should have been set earlier in this method
             if is_quantity(result):
-                result = result._value
+                result = copy.deepcopy(result._value)
         return result
 
     def __mul__(self, other):
