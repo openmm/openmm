@@ -139,6 +139,18 @@ public:
         soluteDielectric = dielectric;
     }
     /**
+     * Get the energy scale for the surface energy term, measured in kJ/mol/nm^2.
+     */
+    double getSurfaceAreaEnergy() const {
+        return surfaceAreaEnergy;
+    }
+    /**
+     * Set the energy scale for the surface energy term, measured in kJ/mol/nm^2.
+     */
+    void setSurfaceAreaEnergy(double energy) {
+        surfaceAreaEnergy = energy;
+    }
+    /**
      * Get the method used for handling long range nonbonded interactions.
      */
     NonbondedMethod getNonbondedMethod() const;
@@ -177,7 +189,7 @@ protected:
 private:
     class ParticleInfo;
     NonbondedMethod nonbondedMethod;
-    double cutoffDistance, solventDielectric, soluteDielectric;
+    double cutoffDistance, solventDielectric, soluteDielectric, surfaceAreaEnergy;
     std::vector<ParticleInfo> particles;
 };
 

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -40,6 +40,7 @@
 #include "openmm/CustomGBForce.h"
 #include "openmm/CustomHbondForce.h"
 #include "openmm/CustomIntegrator.h"
+#include "openmm/CustomManyParticleForce.h"
 #include "openmm/CustomNonbondedForce.h"
 #include "openmm/CustomTorsionForce.h"
 #include "openmm/GBSAOBCForce.h"
@@ -47,7 +48,9 @@
 #include "openmm/HarmonicAngleForce.h"
 #include "openmm/HarmonicBondForce.h"
 #include "openmm/LangevinIntegrator.h"
+#include "openmm/MonteCarloAnisotropicBarostat.h"
 #include "openmm/MonteCarloBarostat.h"
+#include "openmm/MonteCarloMembraneBarostat.h"
 #include "openmm/NonbondedForce.h"
 #include "openmm/PeriodicTorsionForce.h"
 #include "openmm/RBTorsionForce.h"
@@ -69,6 +72,7 @@
 #include "openmm/serialization/CustomGBForceProxy.h"
 #include "openmm/serialization/CustomHbondForceProxy.h"
 #include "openmm/serialization/CustomIntegratorProxy.h"
+#include "openmm/serialization/CustomManyParticleForceProxy.h"
 #include "openmm/serialization/CustomNonbondedForceProxy.h"
 #include "openmm/serialization/CustomTorsionForceProxy.h"
 #include "openmm/serialization/GBSAOBCForceProxy.h"
@@ -76,7 +80,9 @@
 #include "openmm/serialization/HarmonicAngleForceProxy.h"
 #include "openmm/serialization/HarmonicBondForceProxy.h"
 #include "openmm/serialization/LangevinIntegratorProxy.h"
+#include "openmm/serialization/MonteCarloAnisotropicBarostatProxy.h"
 #include "openmm/serialization/MonteCarloBarostatProxy.h"
+#include "openmm/serialization/MonteCarloMembraneBarostatProxy.h"
 #include "openmm/serialization/NonbondedForceProxy.h"
 #include "openmm/serialization/PeriodicTorsionForceProxy.h"
 #include "openmm/serialization/RBTorsionForceProxy.h"
@@ -116,6 +122,7 @@ extern "C" void registerSerializationProxies() {
     SerializationProxy::registerProxy(typeid(CustomGBForce), new CustomGBForceProxy());
     SerializationProxy::registerProxy(typeid(CustomHbondForce), new CustomHbondForceProxy());
     SerializationProxy::registerProxy(typeid(CustomIntegrator), new CustomIntegratorProxy());
+    SerializationProxy::registerProxy(typeid(CustomManyParticleForce), new CustomManyParticleForceProxy());
     SerializationProxy::registerProxy(typeid(CustomNonbondedForce), new CustomNonbondedForceProxy());
     SerializationProxy::registerProxy(typeid(CustomTorsionForce), new CustomTorsionForceProxy());
     SerializationProxy::registerProxy(typeid(Discrete1DFunction), new Discrete1DFunctionProxy());
@@ -126,7 +133,9 @@ extern "C" void registerSerializationProxies() {
     SerializationProxy::registerProxy(typeid(HarmonicAngleForce), new HarmonicAngleForceProxy());
     SerializationProxy::registerProxy(typeid(HarmonicBondForce), new HarmonicBondForceProxy());
     SerializationProxy::registerProxy(typeid(LangevinIntegrator), new LangevinIntegratorProxy());
+    SerializationProxy::registerProxy(typeid(MonteCarloAnisotropicBarostat), new MonteCarloAnisotropicBarostatProxy());
     SerializationProxy::registerProxy(typeid(MonteCarloBarostat), new MonteCarloBarostatProxy());
+    SerializationProxy::registerProxy(typeid(MonteCarloMembraneBarostat), new MonteCarloMembraneBarostatProxy());
     SerializationProxy::registerProxy(typeid(NonbondedForce), new NonbondedForceProxy());
     SerializationProxy::registerProxy(typeid(PeriodicTorsionForce), new PeriodicTorsionForceProxy());
     SerializationProxy::registerProxy(typeid(RBTorsionForce), new RBTorsionForceProxy());

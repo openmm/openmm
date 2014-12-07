@@ -106,6 +106,8 @@ KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform
         return new CudaCalcCustomHbondForceKernel(name, platform, cu, context.getSystem());
     if (name == CalcCustomCompoundBondForceKernel::Name())
         return new CudaCalcCustomCompoundBondForceKernel(name, platform, cu, context.getSystem());
+    if (name == CalcCustomManyParticleForceKernel::Name())
+        return new CudaCalcCustomManyParticleForceKernel(name, platform, cu, context.getSystem());
     if (name == IntegrateVerletStepKernel::Name())
         return new CudaIntegrateVerletStepKernel(name, platform, cu);
     if (name == IntegrateLangevinStepKernel::Name())

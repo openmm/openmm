@@ -31,6 +31,12 @@
 using namespace std;
 using namespace OpenMM;
 
+#ifdef _MSC_VER
+    // Workaround for a compiler bug in Visual Studio 10. Hopefully we can remove this
+    // once we move to a later version.
+    #undef __AVX__
+#endif
+
 #ifndef __AVX__
 bool isVec8Supported() {
     return false;
@@ -74,14 +80,12 @@ CpuNonbondedForceVec8::CpuNonbondedForceVec8() {
 void CpuNonbondedForceVec8::calculateBlockIxn(int blockIndex, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize) {
     // Load the positions and parameters of the atoms in the block.
     
-    int blockAtom[8];
+    const int* blockAtom = &neighborList->getSortedAtoms()[8*blockIndex];
     fvec4 blockAtomPosq[8];
     fvec8 blockAtomForceX(0.0f), blockAtomForceY(0.0f), blockAtomForceZ(0.0f);
     fvec8 blockAtomX, blockAtomY, blockAtomZ, blockAtomCharge;
-    for (int i = 0; i < 8; i++) {
-        blockAtom[i] = neighborList->getSortedAtoms()[8*blockIndex+i];
+    for (int i = 0; i < 8; i++)
         blockAtomPosq[i] = fvec4(posq+4*blockAtom[i]);
-    }
     transpose(blockAtomPosq[0], blockAtomPosq[1], blockAtomPosq[2], blockAtomPosq[3], blockAtomPosq[4], blockAtomPosq[5], blockAtomPosq[6], blockAtomPosq[7], blockAtomX, blockAtomY, blockAtomZ, blockAtomCharge);
     blockAtomCharge *= ONE_4PI_EPS0;
     fvec8 blockAtomSigma(atomParameters[blockAtom[0]].first, atomParameters[blockAtom[1]].first, atomParameters[blockAtom[2]].first, atomParameters[blockAtom[3]].first, atomParameters[blockAtom[4]].first, atomParameters[blockAtom[5]].first, atomParameters[blockAtom[6]].first, atomParameters[blockAtom[7]].first);
@@ -184,14 +188,12 @@ void CpuNonbondedForceVec8::calculateBlockIxn(int blockIndex, float* forces, dou
 void CpuNonbondedForceVec8::calculateBlockEwaldIxn(int blockIndex, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize) {
     // Load the positions and parameters of the atoms in the block.
     
-    int blockAtom[8];
+    const int* blockAtom = &neighborList->getSortedAtoms()[8*blockIndex];
     fvec4 blockAtomPosq[8];
     fvec8 blockAtomForceX(0.0f), blockAtomForceY(0.0f), blockAtomForceZ(0.0f);
     fvec8 blockAtomX, blockAtomY, blockAtomZ, blockAtomCharge;
-    for (int i = 0; i < 8; i++) {
-        blockAtom[i] = neighborList->getSortedAtoms()[8*blockIndex+i];
+    for (int i = 0; i < 8; i++)
         blockAtomPosq[i] = fvec4(posq+4*blockAtom[i]);
-    }
     transpose(blockAtomPosq[0], blockAtomPosq[1], blockAtomPosq[2], blockAtomPosq[3], blockAtomPosq[4], blockAtomPosq[5], blockAtomPosq[6], blockAtomPosq[7], blockAtomX, blockAtomY, blockAtomZ, blockAtomCharge);
     blockAtomCharge *= ONE_4PI_EPS0;
     fvec8 blockAtomSigma(atomParameters[blockAtom[0]].first, atomParameters[blockAtom[1]].first, atomParameters[blockAtom[2]].first, atomParameters[blockAtom[3]].first, atomParameters[blockAtom[4]].first, atomParameters[blockAtom[5]].first, atomParameters[blockAtom[6]].first, atomParameters[blockAtom[7]].first);

@@ -720,7 +720,7 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
         system.addParticle(mass)
 
     # Add constraints.
-    isWater = [prmtop.getResidueLabel(i) == 'WAT' for i in range(prmtop.getNumAtoms())]
+    isWater = [prmtop.getResidueLabel(i) in ('WAT', 'TP4', 'TP5', 'T4E') for i in range(prmtop.getNumAtoms())]
     if shake in ('h-bonds', 'all-bonds', 'h-angles'):
         for (iAtom, jAtom, k, rMin) in prmtop.getBondsWithH():
             system.addConstraint(iAtom, jAtom, rMin)
@@ -1032,6 +1032,8 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
             if units.is_quantity(cutoff):
                 cutoff = cutoff.value_in_unit(units.nanometers)
         gb_parms = prmtop.getGBParms(gbmodel, elements)
+        if gbmodel != 'OBC2' or implicitSolventKappa != 0:
+            gb_parms = customgb.convertParameters(gb_parms, gbmodel)
         if gbmodel == 'HCT':
             gb = customgb.GBSAHCTForce(solventDielectric, soluteDielectric, 'ACE', cutoff, implicitSolventKappa)
         elif gbmodel == 'OBC1':

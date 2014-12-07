@@ -172,7 +172,7 @@ htmlhelp_basename = 'OpenMMUsersGuidedoc'
 
 latex_elements = {
 # The paper size ('letterpaper' or 'a4paper').
-#'papersize': 'letterpaper',
+'papersize': 'letterpaper,openany',
 
 # The font size ('10pt', '11pt' or '12pt').
 #'pointsize': '10pt',
@@ -190,6 +190,9 @@ latex_elements = {
             {code}{\\small{}\\texttt{#2}\\normalsize{}}%
         }[\\PackageError{DUspan}{Unrecognized option passed to DUspan: #1}{}]%
     }%""",
+
+# Omit the index.
+'printindex': '',
 }
 
 # Grouping the document tree into LaTeX files. List of tuples

@@ -56,7 +56,7 @@ void* MonteCarloBarostatProxy::deserialize(const SerializationNode& node) const 
         throw OpenMMException("Unsupported version number");
     MonteCarloBarostat* force = NULL;
     try {
-        MonteCarloBarostat* force = new MonteCarloBarostat(node.getDoubleProperty("pressure"), node.getDoubleProperty("temperature"), node.getIntProperty("frequency"));
+        force = new MonteCarloBarostat(node.getDoubleProperty("pressure"), node.getDoubleProperty("temperature"), node.getIntProperty("frequency"));
         force->setForceGroup(node.getIntProperty("forceGroup", 0));
         force->setRandomNumberSeed(node.getIntProperty("randomSeed"));
         return force;

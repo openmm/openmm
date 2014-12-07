@@ -12,7 +12,7 @@ Copyright (c) 2014 the Authors
 
 Author: Jason M. Swails
 Contributors:
-Date: July 3, 2014
+Date: August 15, 2014
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -346,6 +346,15 @@ class Atom(object):
         else:
             retstr += '; %s> ' % (self.name)
         return retstr
+
+    def __lt__(self, other):
+        return self.idx < other.idx
+    def __gt__(self, other):
+        return self.idx > other.idx
+    def __le__(self, other):
+        return not self > other
+    def __ge__(self, other):
+        return not self < other
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -916,6 +925,10 @@ class DihedralType(object):
         self.phi_k = float(phi_k)
         self.per = int(per)
         self.phase = float(phase)
+
+    def __repr__(self):
+        return "<DihedralType: k=%s; phase=%s; per=%s>" % (self.phi_k,
+                self.phase, self.per)
 
     def __eq__(self, other):
         return (self.phi_k == other.phi_k and self.per == other.per and

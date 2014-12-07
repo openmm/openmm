@@ -625,9 +625,9 @@ Examples
 
         >>> 1.2*meters < 72*centimeters
         False
-        >>> meter != None
+        >>> meter is not None
         True
-        >>> meter == None
+        >>> meter is None
         False
 
         Examples

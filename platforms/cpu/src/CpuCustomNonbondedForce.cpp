@@ -182,9 +182,7 @@ void CpuCustomNonbondedForce::threadComputeForce(ThreadPool& threads, int thread
             int blockIndex = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
             if (blockIndex >= neighborList->getNumBlocks())
                 break;
-            int blockAtom[4];
-            for (int i = 0; i < 4; i++)
-                blockAtom[i] = neighborList->getSortedAtoms()[4*blockIndex+i];
+            const int* blockAtom = &neighborList->getSortedAtoms()[4*blockIndex];
             const vector<int>& neighbors = neighborList->getBlockNeighbors(blockIndex);
             const vector<char>& exclusions = neighborList->getBlockExclusions(blockIndex);
             for (int i = 0; i < (int) neighbors.size(); i++) {

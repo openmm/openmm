@@ -44,6 +44,7 @@
 #include "openmm/CustomHbondForce.h"
 #include "openmm/CustomIntegrator.h"
 #include "openmm/CustomNonbondedForce.h"
+#include "openmm/CustomManyParticleForce.h"
 #include "openmm/CustomTorsionForce.h"
 #include "openmm/GBSAOBCForce.h"
 #include "openmm/GBVIForce.h"
@@ -824,6 +825,46 @@ public:
      * @param force      the CustomCompoundBondForce to copy the parameters from
      */
     virtual void copyParametersToContext(ContextImpl& context, const CustomCompoundBondForce& force) = 0;
+};
+
+/**
+ * This kernel is invoked by CustomManyParticleForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CalcCustomManyParticleForceKernel : public KernelImpl {
+public:
+    enum NonbondedMethod {
+        NoCutoff = 0,
+        CutoffNonPeriodic = 1,
+        CutoffPeriodic = 2
+    };
+    static std::string Name() {
+        return "CalcCustomManyParticleForce";
+    }
+    CalcCustomManyParticleForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomManyParticleForce this kernel will be used for
+     */
+    virtual void initialize(const System& system, const CustomManyParticleForce& force) = 0;
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomManyParticleForce to copy the parameters from
+     */
+    virtual void copyParametersToContext(ContextImpl& context, const CustomManyParticleForce& force) = 0;
 };
 
 /**

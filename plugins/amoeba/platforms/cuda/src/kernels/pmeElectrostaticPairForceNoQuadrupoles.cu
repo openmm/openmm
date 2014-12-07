@@ -129,7 +129,6 @@ computeOneInteractionF2NoScale(
         real pgamma = atom1.thole < atom2.thole ? atom1.thole : atom2.thole;
         real ratio = RECIP(rr1*damp);
         damp = -pgamma*ratio*ratio*ratio;
-        damp = damp < -50 ? 0 : damp;
     }
 
     real scale5 = (damp == 0) ? 1 : (1 - (1-damp)*EXP(damp));
@@ -232,8 +231,7 @@ computeOneInteractionF2NoScale(
     ftm22 += gfi1*yr;
     ftm23 += gfi1*zr;
 
-    if (damp != 0) {
-
+    {
         real expdamp = EXP(damp);
         real temp3 = -1.5f*damp*expdamp*rr1*rr1;
         real temp5 = -damp;
@@ -376,8 +374,7 @@ computeOneInteractionF2NoScale(
     ftm22 += gfi1*yr;
     ftm23 += gfi1*zr;
 
-    if (damp != 0) {
-
+    {
         real expdamp = EXP(damp);
         real temp3 = -1.5f*damp*expdamp*rr1*rr1;
         real temp5 = -damp;

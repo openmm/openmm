@@ -12,7 +12,7 @@ Copyright (c) 2014 the Authors
 
 Author: Jason M. Swails
 Contributors:
-Date: April 18, 2014
+Date: August 19, 2014
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -43,7 +43,7 @@ import simtk.unit as u
 from simtk.openmm.app import (forcefield as ff, Topology, element)
 from simtk.openmm.app.amberprmtopfile import HCT, OBC1, OBC2, GBn, GBn2
 from simtk.openmm.app.internal.customgbforces import (GBSAHCTForce,
-                GBSAOBC1Force, GBSAOBC2Force, GBSAGBnForce, GBSAGBn2Force)
+                GBSAOBC1Force, GBSAOBC2Force, GBSAGBnForce, GBSAGBn2Force, convertParameters)
 # CHARMM imports
 from simtk.openmm.app.internal.charmm.topologyobjects import (
                 ResidueList, AtomList, TrackedList, Bond, Angle, Dihedral,
@@ -736,41 +736,6 @@ class CharmmPsfFile(object):
         if types_are_int:
             for atom in self.atom_list: atom.type_to_int()
 
-    def setCoordinates(self, positions, velocities=None):
-        """
-        This method loads the coordinates and velocity information from an
-        external object or passed data.
-
-        Parameters:
-            - positions (list of floats) : A 3-N length iterable with all of the
-                coordinates in the order [x1, y1, z1, x2, y2, z2, ...].
-            - velocities (list of floats) : If not None, is the velocity
-                equivalent of the positions
-        """
-        if len(positions) / 3 != len(self.atom_list):
-            raise ValueError('Coordinates given for %s atoms, but %d atoms '
-                             'exist in this structure.' %
-                             (len(positions)/3, len(self.atom_list)))
-        # Now assign all of the atoms positions
-        for i, atom in enumerate(self.atom_list):
-            atom.xx = positions[3*i  ]
-            atom.xy = positions[3*i+1]
-            atom.xz = positions[3*i+2]
-
-        # Do velocities if given
-        if velocities is not None:
-            if len(velocities) / 3 != len(self.atom_list):
-                raise ValueError('Velocities given for %s atoms, but %d atoms '
-                                 'exist in this structure.' %
-                                 (len(velocities)/3, len(self.atom_list)))
-            for i, atom in enumerate(self.atom_list):
-                atom.vx = velocities[3*i  ]
-                atom.vy = velocities[3*i+1]
-                atom.vz = velocities[3*i+2]
-            self.velocities = velocities
-
-        self.positions = positions
-
     def setBox(self, a, b, c, alpha=90.0*u.degrees, beta=90.0*u.degrees,
                gamma=90.0*u.degrees):
         """
@@ -1409,6 +1374,7 @@ class CharmmPsfFile(object):
         if implicitSolvent is not None:
             if verbose: print('Adding GB parameters...')
             gb_parms = self._get_gb_params(implicitSolvent)
+            gb_parms = convertParameters(gb_parms, str(implicitSolvent))
 
             # If implicitSolventKappa is None, compute it from salt
             # concentration
@@ -1502,52 +1468,6 @@ class CharmmPsfFile(object):
             raise AttributeError('You must initialize the system with '
                                  'createSystem before accessing the cached '
                                  'object.')
-
-    @property
-    def positions(self):
-        """
-        Return the cached positions or create new ones from the atoms
-        """
-        try:
-            if len(self._positions) == len(self.atom_list):
-                return self._positions
-        except AttributeError:
-            pass
-
-        self._positions = tuple([Vec3(a.xx, a.xy, a.xz)
-                               for a in self.atom_list]) * u.angstroms
-        return self._positions
-
-    @positions.setter
-    def positions(self, stuff):
-        """
-        Replace the cached positions and the positions of each atom. If no units
-        are applied to "stuff", it is assumed to be Angstroms.
-        """
-        if not u.is_quantity(stuff):
-            # Assume this is Angstroms
-            stuff *= u.angstroms
-
-        # If we got a 1-D array, reshape it into an natom list of Vec3's
-        if len(stuff) == len(self.atom_list) * 3:
-            stuff = [Vec3(stuff[i*3], stuff[i*3+1], stuff[i*3+2])
-                     for i in range(len(self.atom_list))]
-        self._positions = stuff
-        for atom, pos in zip(self.atom_list, stuff):
-            atom.xx, atom.xy, atom.xz = pos.value_in_unit(u.angstrom)
-
-    @property
-    def velocities(self):
-        """ Same as for positions, but for velocities """
-        try:
-            if len(self._velocities) == len(self.atom_list):
-                return self._velocities
-        except AttributeError:
-            pass
-
-        self._velocities = tuple([Vec3(a.vx, a.vy, a.vz)
-                    for a in self.atom_list]) * (u.angstroms/u.picosecond) 
-        return self._velocities
 
     @property
     def boxLengths(self):

@@ -124,7 +124,7 @@ __kernel void computeNonbonded(
                 delta.xyz -= floor(delta.xyz*invPeriodicBoxSize.xyz+0.5f)*periodicBoxSize.xyz;
 #endif
                 real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
-#ifdef USE_CUTOFF
+#ifdef PRUNE_BY_CUTOFF
                 if (r2 < CUTOFF_SQUARED) {
 #endif
                     real invR = RSQRT(r2);
@@ -155,7 +155,7 @@ __kernel void computeNonbonded(
                     localData[tbx+tj].fy += dEdR2.y;
                     localData[tbx+tj].fz += dEdR2.z;
 #endif
-#ifdef USE_CUTOFF
+#ifdef PRUNE_BY_CUTOFF
                 }
 #endif
 #ifdef USE_EXCLUSIONS
@@ -277,6 +277,11 @@ __kernel void computeNonbonded(
                 localData[localAtomIndex].fy = 0;
                 localData[localAtomIndex].fz = 0;
             }
+            else {
+                localData[localAtomIndex].x = 0;
+                localData[localAtomIndex].y = 0;
+                localData[localAtomIndex].z = 0;
+            }
             SYNC_WARPS;
 #ifdef USE_PERIODIC
             if (singlePeriodicCopy) {
@@ -295,7 +300,9 @@ __kernel void computeNonbonded(
                     real4 posq2 = (real4) (localData[atom2].x, localData[atom2].y, localData[atom2].z, localData[atom2].q);
                     real4 delta = (real4) (posq2.xyz - posq1.xyz, 0);
                     real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
+#ifdef PRUNE_BY_CUTOFF
                     if (r2 < CUTOFF_SQUARED) {
+#endif
                         real invR = RSQRT(r2);
                         real r = r2*invR;
                         LOAD_ATOM2_PARAMETERS
@@ -324,7 +331,9 @@ __kernel void computeNonbonded(
                         localData[tbx+tj].fy += dEdR2.y;
                         localData[tbx+tj].fz += dEdR2.z;
 #endif
+#ifdef PRUNE_BY_CUTOFF
                     }
+#endif
                     tj = (tj + 1) & (TILE_SIZE - 1);
                     SYNC_WARPS;
                 }
@@ -343,7 +352,7 @@ __kernel void computeNonbonded(
                     delta.xyz -= floor(delta.xyz*invPeriodicBoxSize.xyz+0.5f)*periodicBoxSize.xyz;
 #endif
                     real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
-#ifdef USE_CUTOFF
+#ifdef PRUNE_BY_CUTOFF
                     if (r2 < CUTOFF_SQUARED) {
 #endif
                         real invR = RSQRT(r2);
@@ -374,7 +383,7 @@ __kernel void computeNonbonded(
                         localData[tbx+tj].fy += dEdR2.y;
                         localData[tbx+tj].fz += dEdR2.z;
 #endif
-#ifdef USE_CUTOFF
+#ifdef PRUNE_BY_CUTOFF
                     }
 #endif
                     tj = (tj + 1) & (TILE_SIZE - 1);

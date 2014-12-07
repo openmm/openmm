@@ -47,6 +47,7 @@
 #include "ReferenceCustomGBIxn.h"
 #include "ReferenceCustomHbondIxn.h"
 #include "ReferenceCustomNonbondedIxn.h"
+#include "ReferenceCustomManyParticleIxn.h"
 #include "ReferenceCustomTorsionIxn.h"
 #include "ReferenceHarmonicBondIxn.h"
 #include "ReferenceLJCoulomb14.h"
@@ -1097,6 +1098,7 @@ void ReferenceCalcGBSAOBCForceKernel::initialize(const System& system, const GBS
     obcParameters->setScaledRadiusFactors(scaleFactors);
     obcParameters->setSolventDielectric( static_cast<RealOpenMM>(force.getSolventDielectric()) );
     obcParameters->setSoluteDielectric( static_cast<RealOpenMM>(force.getSoluteDielectric()) );
+    obcParameters->setPi4Asolv(4*M_PI*force.getSurfaceAreaEnergy());
     if (force.getNonbondedMethod() != GBSAOBCForce::NoCutoff)
         obcParameters->setUseCutoff(static_cast<RealOpenMM>(force.getCutoffDistance()));
     isPeriodic = (force.getNonbondedMethod() == GBSAOBCForce::CutoffPeriodic);
@@ -1612,6 +1614,68 @@ void ReferenceCalcCustomCompoundBondForceKernel::copyParametersToContext(Context
                 throw OpenMMException("updateParametersInContext: The set of particles in a bond has changed");
         for (int j = 0; j < numParameters; j++)
             bondParamArray[i][j] = (RealOpenMM) params[j];
+    }
+}
+
+ReferenceCalcCustomManyParticleForceKernel::~ReferenceCalcCustomManyParticleForceKernel() {
+    disposeRealArray(particleParamArray, numParticles);
+    if (ixn != NULL)
+        delete ixn;
+}
+
+void ReferenceCalcCustomManyParticleForceKernel::initialize(const System& system, const CustomManyParticleForce& force) {
+
+    // Build the arrays.
+
+    numParticles = system.getNumParticles();
+    int numParticleParameters = force.getNumPerParticleParameters();
+    particleParamArray = allocateRealArray(numParticles, numParticleParameters);
+    for (int i = 0; i < numParticles; ++i) {
+        vector<double> parameters;
+        int type;
+        force.getParticleParameters(i, parameters, type);
+        for (int j = 0; j < numParticleParameters; j++)
+            particleParamArray[i][j] = parameters[j];
+    }
+    for (int i = 0; i < force.getNumGlobalParameters(); i++)
+        globalParameterNames.push_back(force.getGlobalParameterName(i));
+    ixn = new ReferenceCustomManyParticleIxn(force);
+    nonbondedMethod = CalcCustomManyParticleForceKernel::NonbondedMethod(force.getNonbondedMethod());
+    cutoffDistance = force.getCutoffDistance();
+}
+
+double ReferenceCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    vector<RealVec>& posData = extractPositions(context);
+    vector<RealVec>& forceData = extractForces(context);
+    RealOpenMM energy = 0;
+    map<string, double> globalParameters;
+    for (int i = 0; i < (int) globalParameterNames.size(); i++)
+        globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
+    if (nonbondedMethod == CutoffPeriodic) {
+        RealVec& box = extractBoxSize(context);
+        double minAllowedSize = 2*cutoffDistance;
+        if (box[0] < minAllowedSize || box[1] < minAllowedSize || box[2] < minAllowedSize)
+            throw OpenMMException("The periodic box size has decreased to less than twice the nonbonded cutoff.");
+        ixn->setPeriodic(box);
+    }
+    ixn->calculateIxn(posData, particleParamArray, globalParameters, forceData, includeEnergy ? &energy : NULL);
+    return energy;
+}
+
+void ReferenceCalcCustomManyParticleForceKernel::copyParametersToContext(ContextImpl& context, const CustomManyParticleForce& force) {
+    if (numParticles != force.getNumParticles())
+        throw OpenMMException("updateParametersInContext: The number of particles has changed");
+
+    // Record the values.
+
+    int numParameters = force.getNumPerParticleParameters();
+    vector<double> params;
+    for (int i = 0; i < numParticles; ++i) {
+        vector<double> parameters;
+        int type;
+        force.getParticleParameters(i, parameters, type);
+        for (int j = 0; j < numParameters; j++)
+            particleParamArray[i][j] = static_cast<RealOpenMM>(parameters[j]);
     }
 }
 

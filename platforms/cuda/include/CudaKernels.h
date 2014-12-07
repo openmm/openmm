@@ -599,6 +599,8 @@ private:
     class PmeIO;
     class PmePreComputation;
     class PmePostComputation;
+    class SyncStreamPreComputation;
+    class SyncStreamPostComputation;
     CudaContext& cu;
     bool hasInitializedFFT;
     CudaArray* sigmaEpsilon;
@@ -614,6 +616,8 @@ private:
     CudaSort* sort;
     Kernel cpuPme;
     PmeIO* pmeio;
+    CUstream pmeStream;
+    CUevent pmeSyncEvent;
     cufftHandle fftForward;
     cufftHandle fftBackward;
     CUfunction ewaldSumsKernel;
@@ -628,7 +632,7 @@ private:
     std::vector<std::pair<int, int> > exceptionAtoms;
     double ewaldSelfEnergy, dispersionCoefficient, alpha;
     int interpolateForceThreads;
-    bool hasCoulomb, hasLJ;
+    bool hasCoulomb, hasLJ, usePmeStream;
     static const int PmeOrder = 5;
 };
 
@@ -715,7 +719,7 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const GBSAOBCForce& force);
 private:
-    double prefactor;
+    double prefactor, surfaceAreaFactor;
     bool hasCreatedKernels;
     int maxTiles;
     CudaContext& cu;
@@ -923,6 +927,69 @@ private:
     std::vector<float> globalParamValues;
     std::vector<CudaArray*> tabulatedFunctions;
     const System& system;
+};
+
+/**
+ * This kernel is invoked by CustomManyParticleForce to calculate the forces acting on the system.
+ */
+class CudaCalcCustomManyParticleForceKernel : public CalcCustomManyParticleForceKernel {
+public:
+    CudaCalcCustomManyParticleForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcCustomManyParticleForceKernel(name, platform),
+            hasInitializedKernel(false), cu(cu), params(NULL), particleTypes(NULL), orderIndex(NULL), particleOrder(NULL), exclusions(NULL),
+            exclusionStartIndex(NULL), blockCenter(NULL), blockBoundingBox(NULL), neighborPairs(NULL), numNeighborPairs(NULL), neighborStartIndex(NULL),
+            numNeighborsForAtom(NULL), neighbors(NULL), system(system) {
+    }
+    ~CudaCalcCustomManyParticleForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomManyParticleForce this kernel will be used for
+     */
+    void initialize(const System& system, const CustomManyParticleForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomManyParticleForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const CustomManyParticleForce& force);
+
+private:
+    CudaContext& cu;
+    bool hasInitializedKernel;
+    NonbondedMethod nonbondedMethod;
+    int maxNeighborPairs, forceWorkgroupSize, findNeighborsWorkgroupSize;
+    CudaParameterSet* params;
+    CudaArray* particleTypes;
+    CudaArray* orderIndex;
+    CudaArray* particleOrder;
+    CudaArray* exclusions;
+    CudaArray* exclusionStartIndex;
+    CudaArray* blockCenter;
+    CudaArray* blockBoundingBox;
+    CudaArray* neighborPairs;
+    CudaArray* numNeighborPairs;
+    CudaArray* neighborStartIndex;
+    CudaArray* numNeighborsForAtom;
+    CudaArray* neighbors;
+    std::vector<std::string> globalParamNames;
+    std::vector<float> globalParamValues;
+    std::vector<CudaArray*> tabulatedFunctions;
+    std::vector<void*> forceArgs, blockBoundsArgs, neighborsArgs, startIndicesArgs, copyPairsArgs;
+    const System& system;
+    CUfunction forceKernel, blockBoundsKernel, neighborsKernel, startIndicesKernel, copyPairsKernel;
+    CUdeviceptr globalsPtr;
+    CUevent event;
 };
 
 /**

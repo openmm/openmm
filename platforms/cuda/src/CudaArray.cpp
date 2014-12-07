@@ -58,7 +58,7 @@ void CudaArray::upload(const void* data, bool blocking) {
     if (blocking)
         result = cuMemcpyHtoD(pointer, data, size*elementSize);
     else
-        result = cuMemcpyHtoDAsync(pointer, data, size*elementSize, 0);
+        result = cuMemcpyHtoDAsync(pointer, data, size*elementSize, context.getCurrentStream());
     if (result != CUDA_SUCCESS) {
         std::stringstream str;
         str<<"Error uploading array "<<name<<": "<<CudaContext::getErrorString(result)<<" ("<<result<<")";
@@ -71,7 +71,7 @@ void CudaArray::download(void* data, bool blocking) const {
     if (blocking)
         result = cuMemcpyDtoH(data, pointer, size*elementSize);
     else
-        result = cuMemcpyDtoHAsync(data, pointer, size*elementSize, 0);
+        result = cuMemcpyDtoHAsync(data, pointer, size*elementSize, context.getCurrentStream());
     if (result != CUDA_SUCCESS) {
         std::stringstream str;
         str<<"Error downloading array "<<name<<": "<<CudaContext::getErrorString(result)<<" ("<<result<<")";
@@ -82,7 +82,7 @@ void CudaArray::download(void* data, bool blocking) const {
 void CudaArray::copyTo(CudaArray& dest) const {
     if (dest.getSize() != size || dest.getElementSize() != elementSize)
         throw OpenMMException("Error copying array "+name+" to "+dest.getName()+": The destination array does not match the size of the array");
-    CUresult result = cuMemcpyDtoDAsync(dest.getDevicePointer(), pointer, size*elementSize, 0);
+    CUresult result = cuMemcpyDtoDAsync(dest.getDevicePointer(), pointer, size*elementSize, context.getCurrentStream());
     if (result != CUDA_SUCCESS) {
         std::stringstream str;
         str<<"Error copying array "<<name<<" to "<<dest.getName()<<": "<<CudaContext::getErrorString(result)<<" ("<<result<<")";

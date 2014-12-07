@@ -599,6 +599,8 @@ private:
     class PmeIO;
     class PmePreComputation;
     class PmePostComputation;
+    class SyncQueuePreComputation;
+    class SyncQueuePostComputation;
     OpenCLContext& cl;
     bool hasInitializedKernel;
     OpenCLArray* sigmaEpsilon;
@@ -613,6 +615,8 @@ private:
     OpenCLArray* pmeAtomRange;
     OpenCLArray* pmeAtomGridIndex;
     OpenCLSort* sort;
+    cl::CommandQueue pmeQueue;
+    cl::Event pmeSyncEvent;
     OpenCLFFT3D* fft;
     Kernel cpuPme;
     PmeIO* pmeio;
@@ -629,7 +633,7 @@ private:
     std::map<std::string, std::string> pmeDefines;
     std::vector<std::pair<int, int> > exceptionAtoms;
     double ewaldSelfEnergy, dispersionCoefficient, alpha;
-    bool hasCoulomb, hasLJ;
+    bool hasCoulomb, hasLJ, usePmeQueue;
     static const int PmeOrder = 5;
 };
 
@@ -717,7 +721,7 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const GBSAOBCForce& force);
 private:
-    double prefactor;
+    double prefactor, surfaceAreaFactor;
     bool hasCreatedKernels;
     int maxTiles;
     OpenCLContext& cl;
@@ -927,6 +931,67 @@ private:
     std::vector<cl_float> globalParamValues;
     std::vector<OpenCLArray*> tabulatedFunctions;
     const System& system;
+};
+
+/**
+ * This kernel is invoked by CustomManyParticleForce to calculate the forces acting on the system.
+ */
+class OpenCLCalcCustomManyParticleForceKernel : public CalcCustomManyParticleForceKernel {
+public:
+    OpenCLCalcCustomManyParticleForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcCustomManyParticleForceKernel(name, platform),
+            hasInitializedKernel(false), cl(cl), params(NULL), globals(NULL), particleTypes(NULL), orderIndex(NULL), particleOrder(NULL), exclusions(NULL),
+            exclusionStartIndex(NULL), blockCenter(NULL), blockBoundingBox(NULL), neighborPairs(NULL), numNeighborPairs(NULL), neighborStartIndex(NULL),
+            numNeighborsForAtom(NULL), neighbors(NULL), system(system) {
+    }
+    ~OpenCLCalcCustomManyParticleForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomManyParticleForce this kernel will be used for
+     */
+    void initialize(const System& system, const CustomManyParticleForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomManyParticleForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const CustomManyParticleForce& force);
+
+private:
+    OpenCLContext& cl;
+    bool hasInitializedKernel;
+    NonbondedMethod nonbondedMethod;
+    int maxNeighborPairs, forceWorkgroupSize, findNeighborsWorkgroupSize;
+    OpenCLParameterSet* params;
+    OpenCLArray* globals;
+    OpenCLArray* particleTypes;
+    OpenCLArray* orderIndex;
+    OpenCLArray* particleOrder;
+    OpenCLArray* exclusions;
+    OpenCLArray* exclusionStartIndex;
+    OpenCLArray* blockCenter;
+    OpenCLArray* blockBoundingBox;
+    OpenCLArray* neighborPairs;
+    OpenCLArray* numNeighborPairs;
+    OpenCLArray* neighborStartIndex;
+    OpenCLArray* numNeighborsForAtom;
+    OpenCLArray* neighbors;
+    std::vector<std::string> globalParamNames;
+    std::vector<float> globalParamValues;
+    std::vector<OpenCLArray*> tabulatedFunctions;
+    const System& system;
+    cl::Kernel forceKernel, blockBoundsKernel, neighborsKernel, startIndicesKernel, copyPairsKernel;
 };
 
 /**

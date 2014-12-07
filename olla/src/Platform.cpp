@@ -134,7 +134,10 @@ int Platform::getNumPlatforms() {
 }
 
 Platform& Platform::getPlatform(int index) {
-    return *getPlatforms()[index];
+    if (index >= 0 && index < getNumPlatforms()) {
+        return *getPlatforms()[index];
+    }
+    throw OpenMMException("Invalid platform index");
 }
 
 Platform& Platform::getPlatformByName(const string& name) {

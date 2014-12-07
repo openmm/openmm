@@ -49,8 +49,12 @@ KernelImpl* CpuKernelFactory::createKernelImpl(std::string name, const Platform&
         return new CpuCalcNonbondedForceKernel(name, platform, data);
     if (name == CalcCustomNonbondedForceKernel::Name())
         return new CpuCalcCustomNonbondedForceKernel(name, platform, data);
+    if (name == CalcCustomManyParticleForceKernel::Name())
+        return new CpuCalcCustomManyParticleForceKernel(name, platform, data);
     if (name == CalcGBSAOBCForceKernel::Name())
         return new CpuCalcGBSAOBCForceKernel(name, platform, data);
+    if (name == CalcCustomGBForceKernel::Name())
+        return new CpuCalcCustomGBForceKernel(name, platform, data);
     if (name == IntegrateLangevinStepKernel::Name())
         return new CpuIntegrateLangevinStepKernel(name, platform, data);
     throw OpenMMException((std::string("Tried to create kernel with illegal kernel name '") + name + "'").c_str());

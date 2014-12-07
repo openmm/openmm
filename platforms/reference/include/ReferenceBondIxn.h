@@ -82,7 +82,7 @@ class OPENMM_EXPORT ReferenceBondIxn {
       
          --------------------------------------------------------------------------------------- */
       
-      RealOpenMM getNormedDotProduct( RealOpenMM* vector1, RealOpenMM* vector2, int hasREntry ) const;
+      static RealOpenMM getNormedDotProduct( RealOpenMM* vector1, RealOpenMM* vector2, int hasREntry );
       
       /**---------------------------------------------------------------------------------------
       
@@ -98,8 +98,8 @@ class OPENMM_EXPORT ReferenceBondIxn {
       
          --------------------------------------------------------------------------------------- */
       
-      RealOpenMM getAngleBetweenTwoVectors( RealOpenMM* vector1, RealOpenMM* vector2, 
-                                            RealOpenMM* outputDotProduct, int hasREntry ) const;
+      static RealOpenMM getAngleBetweenTwoVectors( RealOpenMM* vector1, RealOpenMM* vector2, 
+                                                   RealOpenMM* outputDotProduct, int hasREntry );
       
       /**---------------------------------------------------------------------------------------
       
@@ -119,10 +119,10 @@ class OPENMM_EXPORT ReferenceBondIxn {
       
          --------------------------------------------------------------------------------------- */
       
-      RealOpenMM getDihedralAngleBetweenThreeVectors( RealOpenMM* vector1, RealOpenMM* vector2, 
-                                                      RealOpenMM* vector3, RealOpenMM** outputCrossProduct, 
-                                                      RealOpenMM* cosineOfAngle, RealOpenMM* signVector, 
-                                                      RealOpenMM* signOfAngle, int hasREntry ) const;
+      static RealOpenMM getDihedralAngleBetweenThreeVectors( RealOpenMM* vector1, RealOpenMM* vector2, 
+                                                             RealOpenMM* vector3, RealOpenMM** outputCrossProduct, 
+                                                             RealOpenMM* cosineOfAngle, RealOpenMM* signVector, 
+                                                             RealOpenMM* signOfAngle, int hasREntry );
       
 };
 

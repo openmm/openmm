@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -36,11 +36,11 @@
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/OSRngSeed.h"
 #include "openmm/kernels.h"
+#include <set>
 #include <string>
 
 using namespace OpenMM;
-using std::string;
-using std::vector;
+using namespace std;
 
 CustomIntegrator::CustomIntegrator(double stepSize) : globalsAreCurrent(true), forcesAreValid(false) {
     setStepSize(stepSize);
@@ -52,6 +52,18 @@ CustomIntegrator::CustomIntegrator(double stepSize) : globalsAreCurrent(true), f
 void CustomIntegrator::initialize(ContextImpl& contextRef) {
     if (owner != NULL && &contextRef.getOwner() != owner)
         throw OpenMMException("This Integrator is already bound to a context");
+    vector<std::string> variableList;
+    set<std::string> variableSet;
+    variableList.insert(variableList.end(), globalNames.begin(), globalNames.end());
+    variableList.insert(variableList.end(), perDofNames.begin(), perDofNames.end());
+    for (int i = 0; i < (int) variableList.size(); i++) {
+        string& name = variableList[i];
+        if (variableSet.find(name) != variableSet.end())
+            throw OpenMMException("The Integrator defines two variables with the same name: "+name);
+        variableSet.insert(name);
+        if (contextRef.getParameters().find(name) != contextRef.getParameters().end())
+            throw OpenMMException("The Integrator defines a variable with the same name as a Context parameter: "+name);
+    }
     context = &contextRef;
     owner = &contextRef.getOwner();
     kernel = context->getPlatform().createKernel(IntegrateCustomStepKernel::Name(), contextRef);
@@ -124,6 +136,15 @@ double CustomIntegrator::getGlobalVariable(int index) const {
     return globalValues[index];
 }
 
+double CustomIntegrator::getGlobalVariableByName(const string& name) const {
+    for (int i = 0; i < (int) globalNames.size(); i++) {
+        if (name == globalNames[i]) {
+            return getGlobalVariable(i);
+        }
+    }
+    throw OpenMMException("Illegal global variable name: "+name);
+}
+
 void CustomIntegrator::setGlobalVariable(int index, double value) {
     ASSERT_VALID_INDEX(index, globalValues);
     if (owner != NULL && !globalsAreCurrent) {
@@ -150,6 +171,16 @@ void CustomIntegrator::getPerDofVariable(int index, vector<Vec3>& values) const 
         values = perDofValues[index];
     else
         kernel.getAs<const IntegrateCustomStepKernel>().getPerDofVariable(*context, index, values);
+}
+
+void CustomIntegrator::getPerDofVariableByName(const string& name,  vector<Vec3>& values) const {
+    for (int i = 0; i < (int) perDofNames.size(); i++) {
+        if (name == perDofNames[i]) {
+            getPerDofVariable(i, values);
+            return;
+        }
+    }
+    throw OpenMMException("Illegal per-DOF variable name: "+name);
 }
 
 void CustomIntegrator::setPerDofVariable(int index, const vector<Vec3>& values) {

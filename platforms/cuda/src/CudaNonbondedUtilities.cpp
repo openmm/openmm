@@ -342,6 +342,8 @@ void CudaNonbondedUtilities::initialize(const System& system) {
 void CudaNonbondedUtilities::prepareInteractions() {
     if (!useCutoff)
         return;
+    if (numTiles == 0)
+        return;
     if (usePeriodic) {
         double4 box = context.getPeriodicBoxSize();
         double minAllowedSize = 1.999999*cutoff;

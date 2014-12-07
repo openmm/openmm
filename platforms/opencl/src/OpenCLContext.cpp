@@ -248,7 +248,8 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
         contextDevices.push_back(device);
         cl_context_properties cprops[] = {CL_CONTEXT_PLATFORM, (cl_context_properties) platforms[bestPlatform](), 0};
         context = cl::Context(contextDevices, cprops, errorCallback);
-        queue = cl::CommandQueue(context, device);
+        defaultQueue = cl::CommandQueue(context, device);
+        currentQueue = defaultQueue;
         numAtoms = system.getNumParticles();
         paddedNumAtoms = TileSize*((numAtoms+TileSize-1)/TileSize);
         numAtomBlocks = (paddedNumAtoms+(TileSize-1))/TileSize;
@@ -414,7 +415,7 @@ void OpenCLContext::initialize() {
     addAutoclearBuffer(*energyBuffer);
     int bufferBytes = max(velm->getSize()*velm->getElementSize(), energyBuffer->getSize()*energyBuffer->getElementSize());
     pinnedBuffer = new cl::Buffer(context, CL_MEM_ALLOC_HOST_PTR, bufferBytes);
-    pinnedMemory = queue.enqueueMapBuffer(*pinnedBuffer, CL_TRUE, CL_MAP_READ | CL_MAP_WRITE, 0, bufferBytes);
+    pinnedMemory = currentQueue.enqueueMapBuffer(*pinnedBuffer, CL_TRUE, CL_MAP_READ | CL_MAP_WRITE, 0, bufferBytes);
     for (int i = 0; i < numAtoms; i++) {
         double mass = system.getParticleMass(i);
         if (useDoublePrecision || useMixedPrecision)
@@ -471,21 +472,25 @@ cl::Program OpenCLContext::createProgram(const string source, const map<string, 
     if (useDoublePrecision) {
         src << "typedef double real;\n";
         src << "typedef double2 real2;\n";
+        src << "typedef double3 real3;\n";
         src << "typedef double4 real4;\n";
     }
     else {
         src << "typedef float real;\n";
         src << "typedef float2 real2;\n";
+        src << "typedef float3 real3;\n";
         src << "typedef float4 real4;\n";
     }
     if (useDoublePrecision || useMixedPrecision) {
         src << "typedef double mixed;\n";
         src << "typedef double2 mixed2;\n";
+        src << "typedef double3 mixed3;\n";
         src << "typedef double4 mixed4;\n";
     }
     else {
         src << "typedef float mixed;\n";
         src << "typedef float2 mixed2;\n";
+        src << "typedef float3 mixed3;\n";
         src << "typedef float4 mixed4;\n";
     }
     for (map<string, string>::const_iterator iter = defines.begin(); iter != defines.end(); ++iter) {
@@ -510,6 +515,18 @@ cl::Program OpenCLContext::createProgram(const string source, const map<string, 
     return program;
 }
 
+cl::CommandQueue& OpenCLContext::getQueue() {
+    return currentQueue;
+}
+
+void OpenCLContext::setQueue(cl::CommandQueue& queue) {
+    currentQueue = queue;
+}
+
+void OpenCLContext::restoreDefaultQueue() {
+    currentQueue = defaultQueue;
+}
+
 string OpenCLContext::doubleToString(double value) {
     stringstream s;
     s.precision(useDoublePrecision ? 16 : 8);
@@ -530,7 +547,7 @@ void OpenCLContext::executeKernel(cl::Kernel& kernel, int workUnits, int blockSi
         blockSize = ThreadBlockSize;
     int size = std::min((workUnits+blockSize-1)/blockSize, numThreadBlocks)*blockSize;
     try {
-        queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(size), cl::NDRange(blockSize));
+        currentQueue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(size), cl::NDRange(blockSize));
     }
     catch (cl::Error err) {
         stringstream str;

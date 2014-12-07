@@ -319,7 +319,7 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
         defines["MAX_EXCLUSIONS"] = context.intToString(maxExclusions);
         defines["BUFFER_GROUPS"] = (deviceIsCpu ? "4" : "2");
         string file = (deviceIsCpu ? OpenCLKernelSources::findInteractingBlocks_cpu : OpenCLKernelSources::findInteractingBlocks);
-        int groupSize = (deviceIsCpu ? 32 : 128);
+        int groupSize = (deviceIsCpu || context.getSIMDWidth() < 32 ? 32 : 256);
         while (true) {
             defines["GROUP_SIZE"] = context.intToString(groupSize);
             cl::Program interactingBlocksProgram = context.createProgram(file, defines);
@@ -385,6 +385,8 @@ static void setInvPeriodicBoxSizeArg(OpenCLContext& cl, cl::Kernel& kernel, int 
 
 void OpenCLNonbondedUtilities::prepareInteractions() {
     if (!useCutoff)
+        return;
+    if (numTiles == 0)
         return;
     if (usePeriodic) {
         mm_float4 box = context.getPeriodicBoxSize();
@@ -573,6 +575,8 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
         defines["USE_EXCLUSIONS"] = "1";
     if (isSymmetric)
         defines["USE_SYMMETRIC"] = "1";
+    if (useCutoff && context.getSIMDWidth() < 32)
+        defines["PRUNE_BY_CUTOFF"] = "1";
     defines["FORCE_WORK_GROUP_SIZE"] = context.intToString(forceThreadBlockSize);
     defines["CUTOFF_SQUARED"] = context.doubleToString(cutoff*cutoff);
     defines["CUTOFF"] = context.doubleToString(cutoff);

@@ -153,6 +153,7 @@ void testMathFunctions() {
     ASSERT(any(f1 > 0.5));
     ASSERT(!any(f1 > 2.0));
     ASSERT_VEC4_EQUAL(blend(f1, f2, ivec4(-1, 0, -1, 0)), 1.1, 1.9, 1.3, -3.8);
+    ASSERT_VEC4_EQUAL(cross(f1, f2), 3.91, -1.84, -1.61, 0.0);
 }
 
 void testTranspose() {

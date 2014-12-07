@@ -37,7 +37,7 @@
 
 using namespace OpenMM;
 
-GBSAOBCForce::GBSAOBCForce() : nonbondedMethod(NoCutoff), cutoffDistance(1.0), solventDielectric(78.3), soluteDielectric(1.0) {
+GBSAOBCForce::GBSAOBCForce() : nonbondedMethod(NoCutoff), cutoffDistance(1.0), solventDielectric(78.3), soluteDielectric(1.0), surfaceAreaEnergy(2.25936) {
 }
 
 int GBSAOBCForce::addParticle(double charge, double radius, double scalingFactor) {
