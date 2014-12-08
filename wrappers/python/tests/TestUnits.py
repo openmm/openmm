@@ -1,5 +1,5 @@
 """
-Tests the functionality in the chemistry.unit package.
+Tests the functionality in the simtk.unit package.
 """
 from __future__ import division
 
@@ -667,7 +667,7 @@ class TestNumpyUnits(QuantityTestCase):
 
     def testNumpyIsString(self):
         """ Tests the internal _is_string method with numpy Quantities """
-        from chemistry.unit.quantity import _is_string
+        from simtk.unit.quantity import _is_string
         a = np.array([[1, 2, 3], [4, 5, 6]])
         self.assertIsInstance("", str)
         self.assertTrue(_is_string(""))
