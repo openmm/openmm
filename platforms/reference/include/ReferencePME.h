@@ -72,16 +72,14 @@ pme_init(pme_t *       ppme,
  * charge      Array of charges (units of e)
  * box         Simulation cell dimensions (nm)
  * energy      Total energy (will be written in units of kJ/mol)
- * pme_virial  Long-range part of the virial, output.
  */
 int OPENMM_EXPORT
 pme_exec(pme_t       pme,
          const std::vector<OpenMM::RealVec>& atomCoordinates,
          std::vector<OpenMM::RealVec>& forces,
          const std::vector<RealOpenMM>& charges,
-         const RealOpenMM  periodicBoxSize[3],
-         RealOpenMM *    energy,
-         RealOpenMM      pme_virial[3][3]);
+         const OpenMM::RealVec  periodicBoxVectors[3],
+         RealOpenMM *    energy);
 
 
 

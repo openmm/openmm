@@ -192,11 +192,21 @@ pme_calculate_bsplines_moduli(pme_t pme)
 }
 
 
+static void invert_box_vectors(const RealVec boxVectors[3], RealVec recipBoxVectors[3])
+{
+    RealOpenMM determinant = boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2];
+    assert(determinant > 0);
+    RealOpenMM scale = 1.0/determinant;
+    recipBoxVectors[0] = RealVec(boxVectors[1][1]*boxVectors[2][2], 0, 0)*scale;
+    recipBoxVectors[1] = RealVec(-boxVectors[1][0]*boxVectors[2][2], boxVectors[0][0]*boxVectors[2][2], 0)*scale;
+    recipBoxVectors[2] = RealVec(boxVectors[1][0]*boxVectors[2][1]-boxVectors[1][1]*boxVectors[2][0], -boxVectors[0][0]*boxVectors[2][1], boxVectors[0][0]*boxVectors[1][1])*scale;
+}
 
 static void
 pme_update_grid_index_and_fraction(pme_t    pme,
                                    const vector<RealVec>& atomCoordinates,
-                                   const RealOpenMM   periodicBoxSize[3])
+                                   const RealVec periodicBoxVectors[3],
+                                   const RealVec recipBoxVectors[3])
 {
     int    i;
     int    d;
@@ -205,47 +215,48 @@ pme_update_grid_index_and_fraction(pme_t    pme,
 
     for(i=0;i<pme->natoms;i++)
     {
+        /* Index calculation (Look mom, no conditionals!):
+         *
+         * Both for Cuda and modern CPUs it is nice to avoid conditionals, but we still need to apply periodic boundary conditions.
+         * Instead of having loops to add/subtract the box dimension, we do it this way:
+         *
+         * 1. First add the box size, to make sure this atom coordinate isnt -0.1 or something.
+         *    After this we assume all fractional box positions are *positive*.
+         *    The reason for this is that we always want to round coordinates _down_ to get
+         *    their grid index, and when taking the integer part of -3.4 we would get -3, not -4 as we want.
+         *    Since we anyway need the grid indices to fall in the central box, it is more convenient
+         *    to first manipulate the coordinates to be positive.
+         * 2. Convert to integer grid index
+         *    Since we have added a whole box unit in step 1, this index might actually be larger than
+         *    the grid dimension. Examples, assuming 10*10*10nm box and grid dimension 100*100*100 (spacing 0.1 nm):
+         *
+         *    coordinate is { 0.543 , 6.235 , -0.73 }
+         *
+         *    x[i][d]/box[d]                      becomes   { 0.0543 , 0.6235 , -0.073 }
+         *    (x[i][d]/box[d] + 1.0)              becomes   { 1.0543 , 1.6235 , 0.927 }
+         *    (x[i][d]/box[d] + 1.0)*ngrid[d]     becomes   { 105.43 , 162.35 , 92.7 }
+         *
+         *    integer part is now { 105 , 162 , 92 }
+         *
+         *    The fraction is calculates as t-ti, which becomes { 0.43 , 0.35 , 0.7 }
+         *
+         * 3. Take the first integer index part (which can be larger than the grid) modulo the grid dimension
+         *
+         *    Now we get { 5 , 62 , 92 }
+         *
+         *    Voila, both index and fraction, entirely without conditionals. The one limitation here is that
+         *    we only add one box length, so if the particle had a coordinate <=-10.0, we would be screwed.
+         *    In principle we can of course add 100.0, but that just moves the problem, it doesnt solve it.
+         *    In practice, MD programs will apply PBC to reset particles inside the central box to avoid
+         *    numerical problems, so this shouldnt cause any problems.
+         *    (And, by adding 100.0 box lengths, we would lose a bit of numerical accuracy here!)
+         */
+        RealVec coord = atomCoordinates[i];
+        for(d=0;d<3;d++)
+            coord[d] -= floor(coord[d]*recipBoxVectors[d][d])*periodicBoxVectors[d][d];
         for(d=0;d<3;d++)
         {
-            /* Index calculation (Look mom, no conditionals!):
-             *
-             * Both for Cuda and modern CPUs it is nice to avoid conditionals, but we still need to apply periodic boundary conditions.
-             * Instead of having loops to add/subtract the box dimension, we do it this way:
-             *
-             * 1. First add the box size, to make sure this atom coordinate isnt -0.1 or something.
-             *    After this we assume all fractional box positions are *positive*.
-             *    The reason for this is that we always want to round coordinates _down_ to get
-             *    their grid index, and when taking the integer part of -3.4 we would get -3, not -4 as we want.
-             *    Since we anyway need the grid indices to fall in the central box, it is more convenient
-             *    to first manipulate the coordinates to be positive.
-             * 2. Convert to integer grid index
-             *    Since we have added a whole box unit in step 1, this index might actually be larger than
-             *    the grid dimension. Examples, assuming 10*10*10nm box and grid dimension 100*100*100 (spacing 0.1 nm):
-             *
-             *    coordinate is { 0.543 , 6.235 , -0.73 }
-             *
-             *    x[i][d]/box[d]                      becomes   { 0.0543 , 0.6235 , -0.073 }
-             *    (x[i][d]/box[d] + 1.0)              becomes   { 1.0543 , 1.6235 , 0.927 }
-             *    (x[i][d]/box[d] + 1.0)*ngrid[d]     becomes   { 105.43 , 162.35 , 92.7 }
-             *
-             *    integer part is now { 105 , 162 , 92 }
-             *
-             *    The fraction is calculates as t-ti, which becomes { 0.43 , 0.35 , 0.7 }
-             *
-             * 3. Take the first integer index part (which can be larger than the grid) modulo the grid dimension
-             *
-             *    Now we get { 5 , 62 , 92 }
-             *
-             *    Voila, both index and fraction, entirely without conditionals. The one limitation here is that
-             *    we only add one box length, so if the particle had a coordinate <=-10.0, we would be screwed.
-             *    In principle we can of course add 100.0, but that just moves the problem, it doesnt solve it.
-             *    In practice, MD programs will apply PBC to reset particles inside the central box to avoid
-             *    numerical problems, so this shouldnt cause any problems.
-             *    (And, by adding 100.0 box lengths, we would lose a bit of numerical accuracy here!)
-             */
-            RealOpenMM coord = atomCoordinates[i][d];
-            coord -= floor(coord/periodicBoxSize[d])*periodicBoxSize[d];
-            t  = (coord / periodicBoxSize[d])*pme->ngrid[d];
+            t  = (coord[0]*recipBoxVectors[0][d]+coord[1]*recipBoxVectors[1][d]+coord[2]*recipBoxVectors[2][d])*pme->ngrid[d];
             ti = (int) t;
 
             pme->particlefraction[i][d] = t - ti;
@@ -397,9 +408,9 @@ pme_grid_spread_charge(pme_t pme, const vector<RealOpenMM>& charges)
 
 static void
 pme_reciprocal_convolution(pme_t     pme,
-                           const RealOpenMM    periodicBoxSize[3],
-                           RealOpenMM *  energy,
-                           RealOpenMM    pme_virial[3][3])
+                           const RealVec periodicBoxVectors[3],
+                           const RealVec recipBoxVectors[3],
+                           RealOpenMM *  energy)
 {
     int kx,ky,kz;
     int nx,ny,nz;
@@ -424,7 +435,7 @@ pme_reciprocal_convolution(pme_t     pme,
 
     one_4pi_eps = (RealOpenMM) (ONE_4PI_EPS0/pme->epsilon_r);
     factor = (RealOpenMM) (M_PI*M_PI/(pme->ewaldcoeff*pme->ewaldcoeff));
-    boxfactor = (RealOpenMM) (M_PI*periodicBoxSize[0]*periodicBoxSize[1]*periodicBoxSize[2]);
+    boxfactor = (RealOpenMM) (M_PI*periodicBoxVectors[0][0]*periodicBoxVectors[1][1]*periodicBoxVectors[2][2]);
 
     esum = 0;
     virxx = 0;
@@ -442,14 +453,14 @@ pme_reciprocal_convolution(pme_t     pme,
     {
         /* Calculate frequency. Grid indices in the upper half correspond to negative frequencies! */
         mx  = (RealOpenMM) ((kx<maxkx) ? kx : (kx-nx));
-        mhx = mx/periodicBoxSize[0];
+        mhx = mx*recipBoxVectors[0][0];
         bx  = boxfactor*pme->bsplines_moduli[0][kx];
 
         for(ky=0;ky<ny;ky++)
         {
             /* Calculate frequency. Grid indices in the upper half correspond to negative frequencies! */
             my  = (RealOpenMM) ((ky<maxky) ? ky : (ky-ny));
-            mhy = my/periodicBoxSize[1];
+            mhy = mx*recipBoxVectors[1][0]+my*recipBoxVectors[1][1];
             by  = pme->bsplines_moduli[1][ky];
 
             for(kz=0;kz<nz;kz++)
@@ -469,7 +480,7 @@ pme_reciprocal_convolution(pme_t     pme,
 
                 /* Calculate frequency. Grid indices in the upper half correspond to negative frequencies! */
                 mz        = (RealOpenMM) ((kz<maxkz) ? kz : (kz-nz));
-                mhz       = mz/periodicBoxSize[2];
+                mhz       = mx*recipBoxVectors[2][0]+my*recipBoxVectors[2][1]+mz*recipBoxVectors[2][2];
 
                 /* Pointer to the grid cell in question */
                 ptr       = pme->grid + kx*ny*nz + ky*nz + kz;
@@ -494,24 +505,9 @@ pme_reciprocal_convolution(pme_t     pme,
                 /* Long-range PME contribution to the energy for this frequency */
                 ets2      = eterm*struct2;
                 esum     += ets2;
-
-                /* PME long-range contribution to atomic virial. Since it is symmetric, we only calculate half the matrix inside this loop. */
-                vfactor   = (factor*m2+1)*2/m2;
-                virxx    += ets2*(vfactor*mhx*mhx-1);
-                virxy    += ets2*vfactor*mhx*mhy;
-                virxz    += ets2*vfactor*mhx*mhz;
-                viryy    += ets2*(vfactor*mhy*mhy-1);
-                viryz    += ets2*vfactor*mhy*mhz;
-                virzz    += ets2*(vfactor*mhz*mhz-1);
             }
         }
     }
-    pme_virial[0][0] = (RealOpenMM) (0.25*virxx);
-    pme_virial[1][1] = (RealOpenMM) (0.25*viryy);
-    pme_virial[2][2] = (RealOpenMM) (0.25*virzz);
-    pme_virial[0][1] = pme_virial[1][0] = (RealOpenMM) (0.25*virxy);
-    pme_virial[0][2] = pme_virial[2][0] = (RealOpenMM) (0.25*virxz);
-    pme_virial[1][2] = pme_virial[2][1] = (RealOpenMM) (0.25*viryz);
 
     /* The factor 0.5 is nothing special, but it is better to have it here than inside the loop :-) */
     *energy = (RealOpenMM) (0.5*esum);
@@ -520,7 +516,7 @@ pme_reciprocal_convolution(pme_t     pme,
 
 static void
 pme_grid_interpolate_force(pme_t pme,
-                           const RealOpenMM periodicBoxSize[3],
+                           const RealVec recipBoxVectors[3],
                            const vector<RealOpenMM>& charges,
                            vector<RealVec>& forces)
 {
@@ -610,9 +606,9 @@ pme_grid_interpolate_force(pme_t pme,
             }
         }
         /* Update memory force, note that we multiply by charge and some box stuff */
-        forces[i][0] -= q*fx*nx/periodicBoxSize[0];
-        forces[i][1] -= q*fy*ny/periodicBoxSize[1];
-        forces[i][2] -= q*fz*nz/periodicBoxSize[2];
+        forces[i][0] -= q*(fx*nx*recipBoxVectors[0][0]);
+        forces[i][1] -= q*(fx*nx*recipBoxVectors[1][0]+fy*ny*recipBoxVectors[1][1]);
+        forces[i][2] -= q*(fx*nx*recipBoxVectors[2][0]+fy*ny*recipBoxVectors[2][1]+fz*nz*recipBoxVectors[2][2]);
     }
 }
 
@@ -669,12 +665,14 @@ int pme_exec(pme_t       pme,
              const vector<RealVec>& atomCoordinates,
              vector<RealVec>& forces,
              const vector<RealOpenMM>& charges,
-             const RealOpenMM periodicBoxSize[3],
-             RealOpenMM* energy,
-             RealOpenMM pme_virial[3][3])
+             const RealVec periodicBoxVectors[3],
+             RealOpenMM* energy)
 {
     /* Routine is called with coordinates in x, a box, and charges in q */
 
+    RealVec recipBoxVectors[3];
+    invert_box_vectors(periodicBoxVectors, recipBoxVectors);
+    
     /* Before we can do the actual interpolation, we need to recalculate and update
      * the indices for each particle in the charge grid (initialized in pme_init()),
      * and what its fractional offset in this grid cell is.
@@ -683,7 +681,7 @@ int pme_exec(pme_t       pme,
     /* Update charge grid indices and fractional offsets for each atom.
      * The indices/fractions are stored internally in the pme datatype
      */
-    pme_update_grid_index_and_fraction(pme,atomCoordinates,periodicBoxSize);
+    pme_update_grid_index_and_fraction(pme,atomCoordinates,periodicBoxVectors,recipBoxVectors);
 
     /* Calculate bsplines (and their differentials) from current fractional coordinates, store in pme structure */
     pme_update_bsplines(pme);
@@ -695,13 +693,13 @@ int pme_exec(pme_t       pme,
     fftpack_exec_3d(pme->fftplan,FFTPACK_FORWARD,pme->grid,pme->grid);
 
     /* solve in k-space */
-    pme_reciprocal_convolution(pme,periodicBoxSize,energy,pme_virial);
+    pme_reciprocal_convolution(pme,periodicBoxVectors,recipBoxVectors,energy);
 
     /* do 3d-invfft */
     fftpack_exec_3d(pme->fftplan,FFTPACK_BACKWARD,pme->grid,pme->grid);
 
     /* Get the particle forces from the grid and bsplines in the pme structure */
-    pme_grid_interpolate_force(pme,periodicBoxSize,charges,forces);
+    pme_grid_interpolate_force(pme,recipBoxVectors,charges,forces);
 
     return 0;
 }

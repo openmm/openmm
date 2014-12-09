@@ -302,6 +302,58 @@ void testWaterSystem() {
 
 }
 
+void testTriclinic() {
+    // Create a triclinic box containing eight particles.
+
+    ReferencePlatform platform;
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(2.5, 0, 0), Vec3(0.5, 3.0, 0), Vec3(0.7, 0.9, 3.5));
+    for (int i = 0; i < 8; i++)
+        system.addParticle(1.0);
+    NonbondedForce* force = new NonbondedForce();
+    system.addForce(force);
+    force->setNonbondedMethod(NonbondedForce::PME);
+    force->setCutoffDistance(1.0);
+    force->setPMEParameters(3.45891, 32, 40, 48);
+    for (int i = 0; i < 4; i++)
+        force->addParticle(-1, 0.440104, 0.4184); // Cl parameters
+    for (int i = 0; i < 4; i++)
+        force->addParticle(1, 0.332840, 0.0115897); // Na parameters
+    vector<Vec3> positions(8);
+    positions[0] = Vec3(1.744, 2.788, 3.162);
+    positions[1] = Vec3(1.048, 0.762, 2.340);
+    positions[2] = Vec3(2.489, 1.570, 2.817);
+    positions[3] = Vec3(1.027, 1.893, 3.271);
+    positions[4] = Vec3(0.937, 0.825, 0.009);
+    positions[5] = Vec3(2.290, 1.887, 3.352);
+    positions[6] = Vec3(1.266, 1.111, 2.894);
+    positions[7] = Vec3(0.933, 1.862, 3.490);
+
+    // Compute the forces and energy.
+
+    VerletIntegrator integ(0.001);
+    Context context(system, integ, platform);
+    context.setPositions(positions);
+    State state = context.getState(State::Forces | State::Energy);
+
+    // Compare them to values computed by Gromacs.
+
+    double expectedEnergy = -963.370;
+    vector<Vec3> expectedForce(8);
+    expectedForce[0] = Vec3(4.25253e+01, -1.23503e+02, 1.22139e+02);
+    expectedForce[1] = Vec3(9.74752e+01, 1.68213e+02, 1.93169e+02);
+    expectedForce[2] = Vec3(-1.50348e+02, 1.29165e+02, 3.70435e+02);
+    expectedForce[3] = Vec3(9.18644e+02, -3.52571e+00, -1.34772e+03);
+    expectedForce[4] = Vec3(-1.61193e+02, 9.01528e+01, -7.12904e+01);
+    expectedForce[5] = Vec3(2.82630e+02, 2.78029e+01, -3.72864e+02);
+    expectedForce[6] = Vec3(-1.47454e+02, -2.14448e+02, -3.55789e+02);
+    expectedForce[7] = Vec3(-8.82195e+02, -7.39132e+01, 1.46202e+03);
+    for (int i = 0; i < 8; i++) {
+        ASSERT_EQUAL_VEC(expectedForce[i], state.getForces()[i], 1e-4);
+    }
+    ASSERT_EQUAL_TOL(expectedEnergy, state.getPotentialEnergy(), 1e-4);
+}
+
 void testErrorTolerance(NonbondedForce::NonbondedMethod method) {
     // Create a cloud of random point charges.
 
@@ -409,6 +461,7 @@ int main() {
      testEwaldPME();
 //     testEwald2Ions();
 //     testWaterSystem();
+     testTriclinic();
      testErrorTolerance(NonbondedForce::Ewald);
      testErrorTolerance(NonbondedForce::PME);
      testPMEParameters();

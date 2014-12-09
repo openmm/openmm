@@ -230,15 +230,13 @@ void ReferenceLJCoulombIxn::calculateEwaldIxn(int numberOfAtoms, vector<RealVec>
 
   if (pme && includeReciprocal) {
     pme_t          pmedata; /* abstract handle for PME data */
-    RealOpenMM virial[3][3];
 
     pme_init(&pmedata,alphaEwald,numberOfAtoms,meshDim,5,1);
 
     vector<RealOpenMM> charges(numberOfAtoms);
     for (int i = 0; i < numberOfAtoms; i++)
         charges[i] = atomParameters[i][QIndex];
-    RealOpenMM periodicBoxSize[] = {periodicBoxVectors[0][0], periodicBoxVectors[1][1], periodicBoxVectors[2][2]};
-    pme_exec(pmedata,atomCoordinates,forces,charges,periodicBoxSize,&recipEnergy,virial);
+    pme_exec(pmedata,atomCoordinates,forces,charges,periodicBoxVectors,&recipEnergy);
 
     if( totalEnergy )
        *totalEnergy += recipEnergy;

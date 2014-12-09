@@ -190,14 +190,13 @@ void CpuNonbondedForce::calculateReciprocalIxn(int numberOfAtoms, float* posq, c
 
     if (pme) {
         pme_t pmedata;
-        RealOpenMM virial[3][3];
         pme_init(&pmedata, alphaEwald, numberOfAtoms, meshDim, 5, 1);
         vector<RealOpenMM> charges(numberOfAtoms);
         for (int i = 0; i < numberOfAtoms; i++)
             charges[i] = posq[4*i+3];
-        RealOpenMM boxSize[3] = {periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2]};
+        RealVec boxVectors[3] = {Vec3(periodicBoxSize[0], 0, 0), Vec3(0, periodicBoxSize[1], 0), Vec3(0, 0, periodicBoxSize[2])};
         RealOpenMM recipEnergy = 0.0;
-        pme_exec(pmedata, atomCoordinates, forces, charges, boxSize, &recipEnergy, virial);
+        pme_exec(pmedata, atomCoordinates, forces, charges, boxVectors, &recipEnergy);
         if (totalEnergy)
             *totalEnergy += recipEnergy;
         pme_destroy(pmedata);
