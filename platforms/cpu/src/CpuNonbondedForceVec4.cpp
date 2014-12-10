@@ -262,9 +262,22 @@ void CpuNonbondedForceVec4::getDeltaR(const float* posI, const fvec4& x, const f
     dy = y-posI[1];
     dz = z-posI[2];
     if (periodic) {
-        dx -= round(dx*invBoxSize[0])*boxSize[0];
-        dy -= round(dy*invBoxSize[1])*boxSize[1];
-        dz -= round(dz*invBoxSize[2])*boxSize[2];
+        if (triclinic) {
+            fvec4 scale3 = floor(dz*recipBoxSize[2]+0.5f);
+            dx -= scale3*periodicBoxVectors[2][0];
+            dy -= scale3*periodicBoxVectors[2][1];
+            dz -= scale3*periodicBoxVectors[2][2];
+            fvec4 scale2 = floor(dy*recipBoxSize[1]+0.5f);
+            dx -= scale2*periodicBoxVectors[1][0];
+            dy -= scale2*periodicBoxVectors[1][1];
+            fvec4 scale1 = floor(dx*recipBoxSize[0]+0.5f);
+            dx -= scale1*periodicBoxVectors[0][0];
+        }
+        else {
+            dx -= round(dx*invBoxSize[0])*boxSize[0];
+            dy -= round(dy*invBoxSize[1])*boxSize[1];
+            dz -= round(dz*invBoxSize[2])*boxSize[2];
+        }
     }
     r2 = dx*dx + dy*dy + dz*dz;
 }

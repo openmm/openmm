@@ -83,11 +83,11 @@ class CpuNonbondedForce {
          already been set, and the smallest side of the periodic box is at least twice the cutoff
          distance.
       
-         @param boxSize             the X, Y, and Z widths of the periodic box
+         @param periodicBoxVectors    the vectors defining the periodic box
       
          --------------------------------------------------------------------------------------- */
       
-      void setPeriodic(float* periodicBoxSize);
+      void setPeriodic(RealVec* periodicBoxVectors);
        
       /**---------------------------------------------------------------------------------------
       
@@ -161,11 +161,14 @@ protected:
         bool cutoff;
         bool useSwitch;
         bool periodic;
+        bool triclinic;
         bool ewald;
         bool pme;
         bool tableIsValid;
         const CpuNeighborList* neighborList;
-        float periodicBoxSize[3];
+        float recipBoxSize[3];
+        RealVec periodicBoxVectors[3];
+        AlignedArray<fvec4> periodicBoxVec4;
         float cutoffDistance, switchingDistance;
         float krf, crf;
         float alphaEwald;
