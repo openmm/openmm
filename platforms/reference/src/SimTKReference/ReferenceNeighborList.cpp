@@ -116,7 +116,7 @@ public:
         int x = int(floor(r[0]/voxelSizeX));
         int y = int(floor(r[1]/voxelSizeY));
         int z = int(floor(r[2]/voxelSizeZ));
-        
+
         return VoxelIndex(x, y, z);
     }
 
@@ -147,19 +147,33 @@ public:
         int dIndexY = int(maxDistance / voxelSizeY) + 1;
         int dIndexZ = int(maxDistance / voxelSizeZ) + 1;
         VoxelIndex centerVoxelIndex = getVoxelIndex(locationI);
-        int lastx = centerVoxelIndex.x+dIndexX;
-        int lasty = centerVoxelIndex.y+dIndexY;
-        int lastz = centerVoxelIndex.z+dIndexZ;
-        if (usePeriodic) {
-            lastx = min(lastx, centerVoxelIndex.x-dIndexX+nx-1);
-            lasty = min(lasty, centerVoxelIndex.y-dIndexY+ny-1);
-            lastz = min(lastz, centerVoxelIndex.z-dIndexZ+nz-1);
-        }
-        for (int x = centerVoxelIndex.x - dIndexX; x <= lastx; ++x)
+        int minz = centerVoxelIndex.z-dIndexZ;
+        int maxz = centerVoxelIndex.z+dIndexZ;
+        if (usePeriodic)
+            maxz = min(maxz, minz+nz-1);
+        for (int z = minz; z <= maxz; ++z)
         {
-            for (int y = centerVoxelIndex.y - dIndexY; y <= lasty; ++y)
+            int boxz = (int) floor((float) z/nz);
+            int miny = centerVoxelIndex.y-dIndexY;
+            int maxy = centerVoxelIndex.y+dIndexY;
+            if (usePeriodic) {
+                int yoffset = (int) ceil(boxz*periodicBoxVectors[2][1]/voxelSizeY);
+                miny -= yoffset;
+                maxy -= yoffset-1;
+                maxy = min(maxy, miny+ny-1);
+            }
+            for (int y = miny; y <= maxy; ++y)
             {
-                for (int z = centerVoxelIndex.z - dIndexZ; z <= lastz; ++z)
+                int boxy = (int) floor((float) y/ny);
+                int minx = centerVoxelIndex.x-dIndexX;
+                int maxx = centerVoxelIndex.x+dIndexX;
+                if (usePeriodic) {
+                    int xoffset = (int) ceil((boxy*periodicBoxVectors[1][0]+boxz*periodicBoxVectors[2][0])/voxelSizeX);
+                    minx -= xoffset;
+                    maxx -= xoffset-1;
+                    maxx = min(maxx, minx+nx-1);
+                }
+                for (int x = minx; x <= maxx; ++x)
                 {
                     VoxelIndex voxelIndex(x, y, z);
                     if (usePeriodic) {
