@@ -10,7 +10,8 @@ __kernel void calculateEwaldCosSinSums(__global real* restrict energyBuffer, __g
     const unsigned int ksizex = 2*KMAX_X-1;
     const unsigned int ksizey = 2*KMAX_Y-1;
     const unsigned int ksizez = 2*KMAX_Z-1;
-    const unsigned int totalK = ksizex*ksizey*ksizez;
+    const unsigned int ksizeyz = ksizey*ksizez;
+    const unsigned int totalK = ksizex*ksizeyz;
     unsigned int index = get_global_id(0);
     real energy = 0.0f;
     while (index < (KMAX_Y-1)*ksizez+KMAX_Z)
@@ -18,8 +19,8 @@ __kernel void calculateEwaldCosSinSums(__global real* restrict energyBuffer, __g
     while (index < totalK) {
         // Find the wave vector (kx, ky, kz) this index corresponds to.
 
-        int rx = index/(ksizey*ksizez);
-        int remainder = index - rx*ksizey*ksizez;
+        int rx = index/ksizeyz;
+        int remainder = index - rx*ksizeyz;
         int ry = remainder/ksizez;
         int rz = remainder - ry*ksizez - KMAX_Z + 1;
         ry += -KMAX_Y + 1;
