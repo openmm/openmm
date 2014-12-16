@@ -170,7 +170,7 @@
   <Type name="163" class="32" element="C" mass="12.011"/>
   <Type name="164" class="33" element="O" mass="15.999"/>
   <Type name="165" class="34" element="O" mass="15.999"/>
-  <Type name="166" class="35" element="H" mass="15.999"/>
+  <Type name="166" class="35" element="H" mass="1.008"/>
   <Type name="167" class="8" element="C" mass="12.011"/>
   <Type name="168" class="9" element="H" mass="1.008"/>
   <Type name="169" class="8" element="C" mass="12.011"/>
