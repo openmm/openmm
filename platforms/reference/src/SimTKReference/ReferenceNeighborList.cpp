@@ -157,9 +157,9 @@ public:
             int miny = centerVoxelIndex.y-dIndexY;
             int maxy = centerVoxelIndex.y+dIndexY;
             if (usePeriodic) {
-                int yoffset = (int) ceil(boxz*periodicBoxVectors[2][1]/voxelSizeY);
-                miny -= yoffset;
-                maxy -= yoffset-1;
+                double yoffset = boxz*periodicBoxVectors[2][1]/voxelSizeY;
+                miny -= (int) ceil(yoffset);
+                maxy -= (int) floor(yoffset);
                 maxy = min(maxy, miny+ny-1);
             }
             for (int y = miny; y <= maxy; ++y)
@@ -168,9 +168,9 @@ public:
                 int minx = centerVoxelIndex.x-dIndexX;
                 int maxx = centerVoxelIndex.x+dIndexX;
                 if (usePeriodic) {
-                    int xoffset = (int) ceil((boxy*periodicBoxVectors[1][0]+boxz*periodicBoxVectors[2][0])/voxelSizeX);
-                    minx -= xoffset;
-                    maxx -= xoffset-1;
+                    double xoffset = (boxy*periodicBoxVectors[1][0]+boxz*periodicBoxVectors[2][0])/voxelSizeX;
+                    minx -= (int) ceil(xoffset);
+                    maxx -= (int) floor(xoffset);
                     maxx = min(maxx, minx+nx-1);
                 }
                 for (int x = minx; x <= maxx; ++x)

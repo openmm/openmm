@@ -463,9 +463,9 @@ void CpuNonbondedForce::getDeltaR(const fvec4& posI, const fvec4& posJ, fvec4& d
     deltaR = posJ-posI;
     if (periodic) {
         if (triclinic) {
-            deltaR -= periodicBoxVec4[2]*floor(deltaR[2]*recipBoxSize[2]+0.5f);
-            deltaR -= periodicBoxVec4[1]*floor(deltaR[1]*recipBoxSize[1]+0.5f);
-            deltaR -= periodicBoxVec4[0]*floor(deltaR[0]*recipBoxSize[0]+0.5f);
+            deltaR -= periodicBoxVec4[2]*floorf(deltaR[2]*recipBoxSize[2]+0.5f);
+            deltaR -= periodicBoxVec4[1]*floorf(deltaR[1]*recipBoxSize[1]+0.5f);
+            deltaR -= periodicBoxVec4[0]*floorf(deltaR[0]*recipBoxSize[0]+0.5f);
         }
         else {
             fvec4 base = round(deltaR*invBoxSize)*boxSize;

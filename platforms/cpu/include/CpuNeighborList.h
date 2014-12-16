@@ -33,6 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "AlignedArray.h"
+#include "RealVec.h"
 #include "windowsExportCpu.h"
 #include "openmm/internal/ThreadPool.h"
 #include <set>
@@ -40,12 +41,14 @@
 #include <vector>
 
 namespace OpenMM {
-    
+
 class OPENMM_EXPORT_CPU CpuNeighborList {
 public:
     class ThreadTask;
     class Voxels;
     CpuNeighborList(int blockSize);
+    void computeNeighborList(int numAtoms, const AlignedArray<float>& atomLocations, const std::vector<std::set<int> >& exclusions,
+            const RealVec* periodicBoxVectors, bool usePeriodic, float maxDistance, ThreadPool& threads);
     void computeNeighborList(int numAtoms, const AlignedArray<float>& atomLocations, const std::vector<std::set<int> >& exclusions,
             const float* periodicBoxSize, bool usePeriodic, float maxDistance, ThreadPool& threads);
     int getNumBlocks() const;
@@ -68,7 +71,7 @@ private:
     Voxels* voxels;
     const std::vector<std::set<int> >* exclusions;
     const float* atomLocations;
-    const float* periodicBoxSize;
+    RealVec periodicBoxVectors[3];
     int numAtoms;
     bool usePeriodic;
     float maxDistance;
