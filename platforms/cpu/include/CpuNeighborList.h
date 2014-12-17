@@ -49,8 +49,6 @@ public:
     CpuNeighborList(int blockSize);
     void computeNeighborList(int numAtoms, const AlignedArray<float>& atomLocations, const std::vector<std::set<int> >& exclusions,
             const RealVec* periodicBoxVectors, bool usePeriodic, float maxDistance, ThreadPool& threads);
-    void computeNeighborList(int numAtoms, const AlignedArray<float>& atomLocations, const std::vector<std::set<int> >& exclusions,
-            const float* periodicBoxSize, bool usePeriodic, float maxDistance, ThreadPool& threads);
     int getNumBlocks() const;
     const std::vector<int>& getSortedAtoms() const;
     const std::vector<int>& getBlockNeighbors(int blockIndex) const;

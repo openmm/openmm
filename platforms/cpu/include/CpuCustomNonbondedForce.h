@@ -95,11 +95,11 @@ class CpuCustomNonbondedForce {
          already been set, and the smallest side of the periodic box is at least twice the cutoff
          distance.
 
-         @param boxSize             the X, Y, and Z widths of the periodic box
+         @param periodicBoxVectors    the vectors defining the periodic box
 
          --------------------------------------------------------------------------------------- */
 
-      void setPeriodic(OpenMM::RealVec& boxSize);
+      void setPeriodic(RealVec* periodicBoxVectors);
 
       /**---------------------------------------------------------------------------------------
 
@@ -127,8 +127,11 @@ private:
     bool cutoff;
     bool useSwitch;
     bool periodic;
+    bool triclinic;
     const CpuNeighborList* neighborList;
-    RealOpenMM periodicBoxSize[3];
+    float recipBoxSize[3];
+    RealVec periodicBoxVectors[3];
+    AlignedArray<fvec4> periodicBoxVec4;
     RealOpenMM cutoffDistance, switchingDistance;
     ThreadPool& threads;
     const std::vector<std::set<int> > exclusions;

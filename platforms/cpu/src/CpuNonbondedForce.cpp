@@ -352,8 +352,6 @@ void CpuNonbondedForce::threadComputeDirect(ThreadPool& threads, int threadIndex
 
         // Now subtract off the exclusions, since they were implicitly included in the reciprocal space sum.
 
-        fvec4 boxSize(periodicBoxVectors[0][0], periodicBoxVectors[1][1], periodicBoxVectors[2][2], 0);
-        fvec4 invBoxSize(recipBoxSize[0], recipBoxSize[1], recipBoxSize[2], 0);
         for (int i = threadIndex; i < numberOfAtoms; i += numThreads) {
             fvec4 posI((float) atomCoordinates[i][0], (float) atomCoordinates[i][1], (float) atomCoordinates[i][2], 0.0f);
             for (set<int>::const_iterator iter = exclusions[i].begin(); iter != exclusions[i].end(); ++iter) {

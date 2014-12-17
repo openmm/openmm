@@ -374,15 +374,6 @@ CpuNeighborList::CpuNeighborList(int blockSize) : blockSize(blockSize) {
 }
 
 void CpuNeighborList::computeNeighborList(int numAtoms, const AlignedArray<float>& atomLocations, const vector<set<int> >& exclusions,
-            const float* periodicBoxSize, bool usePeriodic, float maxDistance, ThreadPool& threads) {
-    RealVec vectors[3];
-    vectors[0] = RealVec(periodicBoxSize[0], 0, 0);
-    vectors[1] = RealVec(0, periodicBoxSize[1], 0);
-    vectors[2] = RealVec(0, 0, periodicBoxSize[2]);
-    computeNeighborList(numAtoms, atomLocations, exclusions, vectors, usePeriodic, maxDistance, threads);
-}
-
-void CpuNeighborList::computeNeighborList(int numAtoms, const AlignedArray<float>& atomLocations, const vector<set<int> >& exclusions,
             const RealVec* periodicBoxVectors, bool usePeriodic, float maxDistance, ThreadPool& threads) {
     int numBlocks = (numAtoms+blockSize-1)/blockSize;
     blockNeighbors.resize(numBlocks);
@@ -425,7 +416,7 @@ void CpuNeighborList::computeNeighborList(int numAtoms, const AlignedArray<float
     sort(atomBins.begin(), atomBins.end());
 
     // Build the voxel hash.
-    
+
     float edgeSizeY, edgeSizeZ;
     if (!usePeriodic)
         edgeSizeY = edgeSizeZ = maxDistance; // TODO - adjust this as needed

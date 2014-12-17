@@ -51,9 +51,11 @@ private:
     class ComputeForceTask;
     class ThreadData;
     int numParticles, numParticlesPerSet, numPerParticleParameters, numTypes;
-    bool useCutoff, usePeriodic, centralParticleMode;
+    bool useCutoff, usePeriodic, triclinic, centralParticleMode;
     RealOpenMM cutoffDistance;
-    RealOpenMM periodicBoxSize[3];
+    float recipBoxSize[3];
+    RealVec periodicBoxVectors[3];
+    AlignedArray<fvec4> periodicBoxVec4;
     CpuNeighborList* neighborList;
     ThreadPool& threads;
     std::vector<std::set<int> > exclusions;
@@ -138,9 +140,9 @@ public:
      * already been set, and the smallest side of the periodic box is at least twice the cutoff
      * distance.
      * 
-     * @param boxSize    the X, Y, and Z widths of the periodic box
+     * @param periodicBoxVectors    the vectors defining the periodic box
      */
-    void setPeriodic(OpenMM::RealVec& boxSize);
+    void setPeriodic(RealVec* periodicBoxVectors);
 
     /**
      * Calculate the interaction.
