@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013 Stanford University and the Authors.           *
+ * Portions copyright (c) 2013-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -350,9 +350,9 @@ void CpuCalcPmeReciprocalForceKernel::initialize(int xsize, int ysize, int zsize
         fftwf_init_threads();
         hasInitializedThreads = true;
     }
-    gridx = findFFTDimension(xsize);
-    gridy = findFFTDimension(ysize);
-    gridz = findFFTDimension(zsize);
+    gridx = findFFTDimension(xsize, false);
+    gridy = findFFTDimension(ysize, false);
+    gridz = findFFTDimension(zsize, true);
     this->numParticles = numParticles;
     this->alpha = alpha;
     force.resize(4*numParticles);
@@ -572,12 +572,18 @@ bool CpuCalcPmeReciprocalForceKernel::isProcessorSupported() {
     return isVec4Supported();
 }
 
-int CpuCalcPmeReciprocalForceKernel::findFFTDimension(int minimum) {
+int CpuCalcPmeReciprocalForceKernel::findFFTDimension(int minimum, bool isZ) {
     if (minimum < 1)
         return 1;
     while (true) {
         // Attempt to factor the current value.
 
+        if (isZ && minimum%2 == 1) {
+            // Force the last dimension to be even, since this produces better performance in FFTW.
+
+            minimum++;
+            continue;
+        }
         int unfactored = minimum;
         for (int factor = 2; factor < 8; factor++) {
             while (unfactored > 1 && unfactored%factor == 0)

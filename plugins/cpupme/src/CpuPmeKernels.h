@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013 Stanford University and the Authors.           *
+ * Portions copyright (c) 2013-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -98,7 +98,7 @@ private:
     /**
      * Select a size for one grid dimension that FFTW can handle efficiently.
      */
-    int findFFTDimension(int minimum);
+    int findFFTDimension(int minimum, bool isZ);
     static bool hasInitializedThreads;
     static int numThreads;
     int gridx, gridy, gridz, numParticles;
