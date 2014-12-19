@@ -1377,8 +1377,8 @@ public:
     PmePreComputation(CudaContext& cu, Kernel& pme, CalcPmeReciprocalForceKernel::IO& io) : cu(cu), pme(pme), io(io) {
     }
     void computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
-        Vec3 boxSize(cu.getPeriodicBoxSize().x, cu.getPeriodicBoxSize().y, cu.getPeriodicBoxSize().z);
-        pme.getAs<CalcPmeReciprocalForceKernel>().beginComputation(io, boxSize, includeEnergy);
+        Vec3 boxVectors[3] = {Vec3(cu.getPeriodicBoxSize().x, 0, 0), Vec3(0, cu.getPeriodicBoxSize().y, 0), Vec3(0, 0, cu.getPeriodicBoxSize().z)};
+        pme.getAs<CalcPmeReciprocalForceKernel>().beginComputation(io, boxVectors, includeEnergy);
     }
 private:
     CudaContext& cu;

@@ -1363,8 +1363,8 @@ public:
     PmePreComputation(OpenCLContext& cl, Kernel& pme, CalcPmeReciprocalForceKernel::IO& io) : cl(cl), pme(pme), io(io) {
     }
     void computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
-        Vec3 boxSize(cl.getPeriodicBoxSize().x, cl.getPeriodicBoxSize().y, cl.getPeriodicBoxSize().z);
-        pme.getAs<CalcPmeReciprocalForceKernel>().beginComputation(io, boxSize, includeEnergy);
+        Vec3 boxVectors[3] = {Vec3(cl.getPeriodicBoxSize().x, 0, 0), Vec3(0, cl.getPeriodicBoxSize().y, 0), Vec3(0, 0, cl.getPeriodicBoxSize().z)};
+        pme.getAs<CalcPmeReciprocalForceKernel>().beginComputation(io, boxVectors, includeEnergy);
     }
 private:
     OpenCLContext& cl;

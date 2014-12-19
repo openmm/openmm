@@ -256,7 +256,8 @@ pme_update_grid_index_and_fraction(pme_t    pme,
             coord[d] -= floor(coord[d]*recipBoxVectors[d][d])*periodicBoxVectors[d][d];
         for(d=0;d<3;d++)
         {
-            t  = (coord[0]*recipBoxVectors[0][d]+coord[1]*recipBoxVectors[1][d]+coord[2]*recipBoxVectors[2][d])*pme->ngrid[d];
+            t = coord[0]*recipBoxVectors[0][d]+coord[1]*recipBoxVectors[1][d]+coord[2]*recipBoxVectors[2][d];
+            t = (t-floor(t))*pme->ngrid[d];
             ti = (int) t;
 
             pme->particlefraction[i][d] = t - ti;
