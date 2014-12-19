@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2013 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2014 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -46,6 +46,14 @@ CpuNonbondedForceVec4::CpuNonbondedForceVec4() {
 }
 
 void CpuNonbondedForceVec4::calculateBlockIxn(int blockIndex, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize) {
+    if (triclinic)
+        calculateBlockIxnImpl<true>(blockIndex, forces, totalEnergy, boxSize, invBoxSize);
+    else
+        calculateBlockIxnImpl<false>(blockIndex, forces, totalEnergy, boxSize, invBoxSize);
+}
+
+template <bool TRICLINIC>
+void CpuNonbondedForceVec4::calculateBlockIxnImpl(int blockIndex, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize) {
     // Load the positions and parameters of the atoms in the block.
     
     const int* blockAtom = &neighborList->getSortedAtoms()[4*blockIndex];
@@ -75,7 +83,7 @@ void CpuNonbondedForceVec4::calculateBlockIxn(int blockIndex, float* forces, dou
         // Compute the distances to the block atoms.
         
         fvec4 dx, dy, dz, r2;
-        getDeltaR(posq+4*atom, blockAtomX, blockAtomY, blockAtomZ, dx, dy, dz, r2, needPeriodic, boxSize, invBoxSize);
+        getDeltaR<TRICLINIC>(posq+4*atom, blockAtomX, blockAtomY, blockAtomZ, dx, dy, dz, r2, needPeriodic, boxSize, invBoxSize);
         ivec4 include;
         char excl = exclusions[i];
         if (excl == 0)
@@ -155,6 +163,14 @@ void CpuNonbondedForceVec4::calculateBlockIxn(int blockIndex, float* forces, dou
   }
 
 void CpuNonbondedForceVec4::calculateBlockEwaldIxn(int blockIndex, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize) {
+    if (triclinic)
+        calculateBlockEwaldIxnImpl<true>(blockIndex, forces, totalEnergy, boxSize, invBoxSize);
+    else
+        calculateBlockEwaldIxnImpl<false>(blockIndex, forces, totalEnergy, boxSize, invBoxSize);
+}
+
+template <bool TRICLINIC>
+void CpuNonbondedForceVec4::calculateBlockEwaldIxnImpl(int blockIndex, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize) {
     // Load the positions and parameters of the atoms in the block.
     
     const int* blockAtom = &neighborList->getSortedAtoms()[4*blockIndex];
@@ -184,7 +200,7 @@ void CpuNonbondedForceVec4::calculateBlockEwaldIxn(int blockIndex, float* forces
         // Compute the distances to the block atoms.
         
         fvec4 dx, dy, dz, r2;
-        getDeltaR(posq+4*atom, blockAtomX, blockAtomY, blockAtomZ, dx, dy, dz, r2, needPeriodic, boxSize, invBoxSize);
+        getDeltaR<TRICLINIC>(posq+4*atom, blockAtomX, blockAtomY, blockAtomZ, dx, dy, dz, r2, needPeriodic, boxSize, invBoxSize);
         ivec4 include;
         char excl = exclusions[i];
         if (excl == 0)
@@ -257,12 +273,13 @@ void CpuNonbondedForceVec4::calculateBlockEwaldIxn(int blockIndex, float* forces
         (fvec4(forces+4*blockAtom[j])+f[j]).store(forces+4*blockAtom[j]);
 }
 
+template <bool TRICLINIC>
 void CpuNonbondedForceVec4::getDeltaR(const float* posI, const fvec4& x, const fvec4& y, const fvec4& z, fvec4& dx, fvec4& dy, fvec4& dz, fvec4& r2, bool periodic, const fvec4& boxSize, const fvec4& invBoxSize) const {
     dx = x-posI[0];
     dy = y-posI[1];
     dz = z-posI[2];
     if (periodic) {
-        if (triclinic) {
+        if (TRICLINIC) {
             fvec4 scale3 = floor(dz*recipBoxSize[2]+0.5f);
             dx -= scale3*periodicBoxVectors[2][0];
             dy -= scale3*periodicBoxVectors[2][1];
