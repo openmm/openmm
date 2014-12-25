@@ -356,7 +356,7 @@ class Quantity(object):
         if unit.is_dimensionless():
             assert unit is dimensionless # should have been set earlier in this method
             if is_quantity(result):
-                result = result._value
+                result = copy.deepcopy(result._value)
         return result
 
     def __mul__(self, other):
@@ -506,7 +506,7 @@ class Quantity(object):
         except AttributeError:
             if args or kwargs:
                 raise TypeError('Unsupported arguments for Quantity.mean')
-            mean = self.sum() / len(self._value)
+            mean = (self.sum() / len(self._value))._value
         return Quantity(mean, self.unit)
 
     def std(self, *args, **kwargs):
@@ -526,7 +526,8 @@ class Quantity(object):
         except AttributeError:
             if args or kwargs:
                 raise TypeError('Unsupported arguments for Quantity.std')
-            mean = self.mean()
+            mean = self.mean()._value
+            var = 0
             for val in self._value:
                 res = mean - val
                 var += res * res
