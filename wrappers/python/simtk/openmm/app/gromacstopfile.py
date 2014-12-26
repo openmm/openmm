@@ -280,7 +280,7 @@ class GromacsTopFile(object):
             raise ValueError('Found [ cmap ] section before [ moleculetype ]')
         fields = line.split()
         if len(fields) < 6:
-            raise ValueError('Too few fields in [ pairs ] line: '+line);
+            raise ValueError('Too few fields in [ cmap ] line: '+line);
         self._currentMoleculeType.cmaps.append(fields)
 
     def _processAtomType(self, line):
