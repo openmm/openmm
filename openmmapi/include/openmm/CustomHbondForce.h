@@ -474,7 +474,7 @@ public:
     GroupInfo() : p1(-1), p2(-1), p3(-1) {
     }
     GroupInfo(int p1, int p2, int p3, const std::vector<double>& parameters) :
-        p1(p1), p2(p2), p3(p3), parameters(parameters) {
+        parameters(parameters), p1(p1), p2(p2), p3(p3) {
     }
 };
 
