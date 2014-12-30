@@ -81,7 +81,7 @@ public:
     /**
      * Returns whether or not this force makes use of periodic boundary
      * conditions. This method should be overridden for all Force subclasses, or
-     * a OpenMM::NotImplementedError will be thrown
+     * a OpenMM::OpenMMException will be thrown
      *
      * @return true if Force uses periodic boundaries or false if it does not
      */

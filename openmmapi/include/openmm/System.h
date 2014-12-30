@@ -228,7 +228,7 @@ public:
      * Returns whether or not any forces in this System use periodic boundaries.
      *
      * If a force in this System does not implement usesPeriodicBoundaryConditions
-     * a NotImplementedError is thrown
+     * a OpenMM::OpenMMException is thrown
      *
      * @return true of at least one force uses PBC and false otherwise
      */

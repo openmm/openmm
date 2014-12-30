@@ -50,7 +50,7 @@ void Force::setForceGroup(int group) {
 }
 
 bool Force::usesPeriodicBoundaryConditions() const {
-    throw NotImplementedError("usesPeriodicBoundaryConditions is not implemented");
+    throw OpenMMException("usesPeriodicBoundaryConditions is not implemented");
 }
 
 ForceImpl& Force::getImplInContext(Context& context) {
