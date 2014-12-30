@@ -163,7 +163,13 @@ public:
      * in a term cannot be changed, nor can new terms be added.
      */
     void updateParametersInContext(Context& context);
-
+    /**
+     * Returns whether or not this force makes use of periodic boundary
+     * conditions.
+     *
+     * @returns true if nonbondedMethod uses PBC and false otherwise
+     */
+    bool usesPeriodicBoundaryConditions() const {return false;}
 protected:
     ForceImpl* createImpl() const;
     double _globalCubicK, _globalQuarticK, _globalPenticK, _globalSexticK;

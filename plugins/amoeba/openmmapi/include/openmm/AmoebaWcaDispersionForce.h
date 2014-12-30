@@ -121,7 +121,13 @@ public:
     void setShctd(double inputValue);
     void setDispoff(double inputValue);
     void setSlevy(double inputValue);
-
+    /**
+     * Returns whether or not this force makes use of periodic boundary
+     * conditions.
+     *
+     * @returns true if nonbondedMethod uses PBC and false otherwise
+     */
+    bool usesPeriodicBoundaryConditions() const {return false;}
 protected:
     ForceImpl* createImpl() const;
 private:
