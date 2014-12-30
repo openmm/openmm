@@ -224,6 +224,12 @@ public:
      * @param c      the vector defining the third edge of the periodic box
      */
     void setDefaultPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Vec3& c);
+    /**
+     * Query whether any Force objects associated with this System use the periodic box vectors in computing interactions.
+     *
+     * @return       true if any Force objects use periodic box vectors, false otherwise.
+     */
+    bool usesPeriodicBoxVectors();
 private:
     class ConstraintInfo;
     Vec3 periodicBoxVectors[3];

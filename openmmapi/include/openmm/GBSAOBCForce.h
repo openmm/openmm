@@ -184,6 +184,14 @@ public:
      * change the parameters of existing ones.
      */
     void updateParametersInContext(Context& context);
+    /**
+     * Query whether this Force uses the System periodic box vectors in computing interactions.
+     *
+     * @return         true if this Force uses periodic box vectors, false otherwise.
+     */
+    virtual bool usesPeriodicBoxVectors() const {
+      return (nonbondedMethod == CutoffPeriodic);
+    }
 protected:
     ForceImpl* createImpl() const;
 private:

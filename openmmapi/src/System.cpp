@@ -119,3 +119,11 @@ void System::setDefaultPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Ve
     periodicBoxVectors[1] = b;
     periodicBoxVectors[2] = c;
 }
+
+bool System::usesPeriodicBoxVectors() {
+  if (forces.size() == 0) return false;
+  bool result = true;
+  for (int i; 0 < getNumForces(); i++)
+    result = result & getForce(i).usesPeriodicBoxVectors();
+  return result;
+}

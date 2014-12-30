@@ -138,6 +138,14 @@ public:
      * in a bond cannot be changed, nor can new bonds be added.
      */
     void updateParametersInContext(Context& context);
+    /**
+     * Query whether this Force uses the System periodic box vectors in computing interactions.
+     *
+     * @return         true if this Force uses periodic box vectors, false otherwise.
+     */
+    virtual bool usesPeriodicBoxVectors() const {
+      return false;
+    }
 
 protected:
     double _globalQuarticK, _globalCubicK;
