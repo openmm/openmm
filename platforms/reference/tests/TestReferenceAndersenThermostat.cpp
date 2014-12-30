@@ -62,8 +62,8 @@ void testTemperature() {
         forceField->addParticle((i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
     }
     system.addForce(forceField);
-    AndersenThermostat* thermstat = new AndersenThermostat(temp, collisionFreq);
-    system.addForce(thermstat);
+    AndersenThermostat* thermostat = new AndersenThermostat(temp, collisionFreq);
+    system.addForce(thermostat);
     ASSERT(!thermostat->usesPeriodicBoundaryConditions());
     Context context(system, integrator, platform);
     vector<Vec3> positions(numParticles);
@@ -111,8 +111,8 @@ void testConstraints() {
     system.addConstraint(5, 6, 1);
     system.addConstraint(6, 7, 1);
     system.addConstraint(7, 4, 1);
-    AndersenThermostat* thermstat = new AndersenThermostat(temp, collisionFreq);
-    system.addForce(thermstat);
+    AndersenThermostat* thermostat = new AndersenThermostat(temp, collisionFreq);
+    system.addForce(thermostat);
     Context context(system, integrator, platform);
     vector<Vec3> positions(numParticles);
     positions[0] = Vec3(0, 0, 0);
