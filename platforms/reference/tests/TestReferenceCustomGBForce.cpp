@@ -135,6 +135,17 @@ void testOBC(GBSAOBCForce::NonbondedMethod obcMethod, CustomGBForce::NonbondedMe
     custom->setNonbondedMethod(customMethod);
     standardSystem.addForce(obc);
     customSystem.addForce(custom);
+    if (customMethod == CustomGBForce::CutoffPeriodic) {
+        ASSERT(custom->usesPeriodicBoundaryConditions());
+        ASSERT(obc->usesPeriodicBoundaryConditions());
+        ASSERT(standardSystem.usesPeriodicBoundaryConditions());
+        ASSERT(customSystem.usesPeriodicBoundaryConditions());
+    } else {
+        ASSERT(!custom->usesPeriodicBoundaryConditions());
+        ASSERT(!obc->usesPeriodicBoundaryConditions());
+        ASSERT(!standardSystem.usesPeriodicBoundaryConditions());
+        ASSERT(!customSystem.usesPeriodicBoundaryConditions());
+    }
     VerletIntegrator integrator1(0.01);
     VerletIntegrator integrator2(0.01);
     Context context1(standardSystem, integrator1, platform);

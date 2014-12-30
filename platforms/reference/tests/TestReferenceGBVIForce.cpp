@@ -66,6 +66,8 @@ void testSingleParticle() {
     double gamma          =  1.0;
     forceField->addParticle(charge, radius, gamma);
     system.addForce(forceField);
+    ASSERT(!forceField->usesPeriodicBoundaryConditions());
+    ASSERT(!system.usesPeriodicBoundaryConditions());
 
     Context context(system, integrator, platform);
     vector<Vec3> positions(1);

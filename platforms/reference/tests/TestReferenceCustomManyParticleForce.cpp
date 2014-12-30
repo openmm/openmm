@@ -63,6 +63,13 @@ void validateAxilrodTeller(CustomManyParticleForce* force, const vector<Vec3>& p
         system.addParticle(1.0);
     system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
     system.addForce(force);
+    if (force->getNonbondedMethod() == CustomManyParticleForce::CutoffPeriodic) {
+        ASSERT(force->usesPeriodicBoundaryConditions());
+        ASSERT(system.usesPeriodicBoundaryConditions());
+    } else {
+        ASSERT(!force->usesPeriodicBoundaryConditions());
+        ASSERT(!system.usesPeriodicBoundaryConditions());
+    }
     VerletIntegrator integrator(0.001);
     ReferencePlatform platform;
     Context context(system, integrator, platform);

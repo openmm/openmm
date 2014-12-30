@@ -184,6 +184,8 @@ void testCutoff() {
     forceField->setNonbondedMethod(CustomNonbondedForce::CutoffNonPeriodic);
     forceField->setCutoffDistance(2.5);
     system.addForce(forceField);
+    ASSERT(!forceField->usesPeriodicBoundaryConditions());
+    ASSERT(!system.usesPeriodicBoundaryConditions());
     Context context(system, integrator, platform);
     vector<Vec3> positions(3);
     positions[0] = Vec3(0, 0, 0);
@@ -213,6 +215,8 @@ void testPeriodic() {
     forceField->setCutoffDistance(2.0);
     system.setDefaultPeriodicBoxVectors(Vec3(4, 0, 0), Vec3(0, 4, 0), Vec3(0, 0, 4));
     system.addForce(forceField);
+    ASSERT(forceField->usesPeriodicBoundaryConditions());
+    ASSERT(system.usesPeriodicBoundaryConditions());
     Context context(system, integrator, platform);
     vector<Vec3> positions(3);
     positions[0] = Vec3(0, 0, 0);
@@ -531,6 +535,8 @@ void testCoulombLennardJones() {
     customNonbonded->setNonbondedMethod(CustomNonbondedForce::NoCutoff);
     standardSystem.addForce(standardNonbonded);
     customSystem.addForce(customNonbonded);
+    ASSERT(!customNonbonded->usesPeriodicBoundaryConditions());
+    ASSERT(!customSystem.usesPeriodicBoundaryConditions());
     VerletIntegrator integrator1(0.01);
     VerletIntegrator integrator2(0.01);
     Context context1(standardSystem, integrator1, platform);
