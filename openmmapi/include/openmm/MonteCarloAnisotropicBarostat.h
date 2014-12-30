@@ -171,6 +171,13 @@ public:
     void setRandomNumberSeed(int seed) {
         randomNumberSeed = seed;
     }
+    /**
+     * Returns whether or not this force makes use of periodic boundary
+     * conditions.
+     *
+     * @returns true if force uses PBC and false otherwise
+     */
+    bool usesPeriodicBoundaryConditions() const {return true;}
 protected:
     ForceImpl* createImpl() const;
 private:
