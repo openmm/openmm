@@ -361,6 +361,8 @@ void testOneAngle( FILE* log ) {
     amoebaInPlaneAngleForce->setAmoebaGlobalInPlaneAngleSextic(sexticK);
 
     system.addForce(amoebaInPlaneAngleForce);
+    ASSERT(!amoebaInPlaneAngleForce->usesPeriodicBoundaryConditions());
+    ASSERT(!system.usesPeriodicBoundaryConditions());
     Context context(system, integrator, Platform::getPlatformByName( "Reference"));
 
     std::vector<Vec3> positions(numberOfParticles);

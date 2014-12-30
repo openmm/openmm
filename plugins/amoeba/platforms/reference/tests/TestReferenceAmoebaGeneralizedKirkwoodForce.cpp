@@ -7176,6 +7176,8 @@ static void testGeneralizedKirkwoodAmmoniaMutualPolarizationWithCavityTerm( FILE
     System system;
     AmoebaGeneralizedKirkwoodForce* amoebaGeneralizedKirkwoodForce  = new AmoebaGeneralizedKirkwoodForce();
     setupMultipoleAmmonia(system, amoebaGeneralizedKirkwoodForce, AmoebaMultipoleForce::Mutual, 1);
+    ASSERT(!amoebaGeneralizedKirkwoodForce->usesPeriodicBoundaryConditions());
+    ASSERT(!system.usesPeriodicBoundaryConditions());
     LangevinIntegrator integrator(0.0, 0.1, 0.01);
     Context context(system, integrator, Platform::getPlatformByName("Reference"));
     getForcesEnergyMultipoleAmmonia(context, forces, energy, log );

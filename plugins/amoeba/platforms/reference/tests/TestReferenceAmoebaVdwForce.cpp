@@ -328,6 +328,12 @@ void setupAndGetForcesEnergyVdwAmmonia( const std::string& sigmaCombiningRule, c
 
     system.addForce(amoebaVdwForce);
 
+    if( boxDimension > 0.0 ){
+        ASSERT(amoebaVdwForce->usesPeriodicBoundaryConditions());
+    } else {
+        ASSERT(!amoebaVdwForce->usesPeriodicBoundaryConditions());
+    }
+
     std::string platformName;
     platformName = "Reference";
     LangevinIntegrator integrator(0.0, 0.1, 0.01);

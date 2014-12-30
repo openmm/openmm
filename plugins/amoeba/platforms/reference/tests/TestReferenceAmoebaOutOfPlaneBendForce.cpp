@@ -321,6 +321,8 @@ void testOneOutOfPlaneBend( FILE* log ) {
     amoebaOutOfPlaneBendForce->addOutOfPlaneBend(0, 1, 2, 3, kOutOfPlaneBend );
 
     system.addForce(amoebaOutOfPlaneBendForce);
+    ASSERT(!amoebaOutOfPlaneBendForce->usesPeriodicBoundaryConditions());
+    ASSERT(!system.usesPeriodicBoundaryConditions());
     Context context(system, integrator, Platform::getPlatformByName( "Reference"));
 
     std::vector<Vec3> positions(numberOfParticles);

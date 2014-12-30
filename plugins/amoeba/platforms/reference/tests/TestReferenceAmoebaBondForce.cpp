@@ -193,6 +193,8 @@ void testTwoBond( FILE* log ) {
     amoebaBondForce->addBond(1, 2, bondLength, quadraticK);
 
     system.addForce(amoebaBondForce);
+    ASSERT(!amoebaBondForce->usesPeriodicBoundaryConditions());
+    ASSERT(!system.usesPeriodicBoundaryConditions());
     Context context(system, integrator, Platform::getPlatformByName( "Reference"));
     std::vector<Vec3> positions(3);
 

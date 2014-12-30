@@ -460,6 +460,8 @@ static void testMultipoleAmmoniaMutualPolarization( FILE* log ) {
     AmoebaMultipoleForce* amoebaMultipoleForce = new AmoebaMultipoleForce();;
     setupMultipoleAmmonia(system, amoebaMultipoleForce, AmoebaMultipoleForce::NoCutoff, AmoebaMultipoleForce::Mutual, 
                                              cutoff, inputPmeGridDimension);
+    ASSERT(!amoebaMultipoleForce->usesPeriodicBoundaryConditions());
+    ASSERT(!system.usesPeriodicBoundaryConditions());
     LangevinIntegrator integrator(0.0, 0.1, 0.01);
     Context context(system, integrator, Platform::getPlatformByName("Reference"));
     getForcesEnergyMultipoleAmmonia(context, forces, energy);
@@ -639,6 +641,8 @@ static void setupAndGetForcesEnergyMultipoleWater( AmoebaMultipoleForce::Nonbond
     positions[11]             = Vec3(   5.0590640e-01,   1.8880920e-01,   -6.8813470e-01 );
 
     system.addForce(amoebaMultipoleForce);
+    ASSERT(amoebaMultipoleForce->usesPeriodicBoundaryConditions());
+    ASSERT(system.usesPeriodicBoundaryConditions());
 
     std::string platformName;
     platformName = "Reference";

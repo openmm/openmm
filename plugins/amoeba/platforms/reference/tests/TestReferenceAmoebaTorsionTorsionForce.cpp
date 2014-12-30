@@ -2646,6 +2646,8 @@ void testTorsionTorsion(int systemId, bool includeDerivs) {
     amoebaTorsionTorsionForce->setTorsionTorsionGrid(0, getTorsionGrid(gridIndex, includeDerivs));
     
     system.addForce(amoebaTorsionTorsionForce);
+    ASSERT(!amoebaTorsionTorsionForce->usesPeriodicBoundaryConditions());
+    ASSERT(!system.usesPeriodicBoundaryConditions());
     Context context(system, integrator, Platform::getPlatformByName("Reference"));
 
     context.setPositions(positions);

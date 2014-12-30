@@ -285,6 +285,8 @@ void testOnePiTorsion( FILE* log ) {
     amoebaPiTorsionForce->addPiTorsion(0, 1, 2, 3, 4, 5, kTorsion );
 
     system.addForce(amoebaPiTorsionForce);
+    ASSERT(!amoebaPiTorsionForce->usesPeriodicBoundaryConditions());
+    ASSERT(!system.usesPeriodicBoundaryConditions());
     Context context(system, integrator, Platform::getPlatformByName( "Reference"));
 
     std::vector<Vec3> positions(numberOfParticles);

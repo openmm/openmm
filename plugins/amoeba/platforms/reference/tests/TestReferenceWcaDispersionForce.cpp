@@ -116,6 +116,8 @@ void testWcaDispersionAmmonia( FILE* log ) {
     positions[7]              = Vec3(  -2.0426290e-01,  -8.1231400e-02,    4.1033500e-02 );
 
     system.addForce(amoebaWcaDispersionForce);
+    ASSERT(!amoebaWcaDispersionForce->usesPeriodicBoundaryConditions());
+    ASSERT(!system.usesPeriodicBoundaryConditions());
 
     std::string platformName;
     platformName = "Reference";

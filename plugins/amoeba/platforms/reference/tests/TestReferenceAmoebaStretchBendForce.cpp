@@ -275,6 +275,8 @@ void testOneStretchBend( FILE* log ) {
     amoebaStretchBendForce->addStretchBend(0, 1, 2, abLength, cbLength, angleStretchBend, kStretchBend );
 
     system.addForce(amoebaStretchBendForce);
+    ASSERT(!amoebaStretchBendForce->usesPeriodicBoundaryConditions());
+    ASSERT(!system.usesPeriodicBoundaryConditions());
     Context context(system, integrator, Platform::getPlatformByName( "Reference"));
 
     std::vector<Vec3> positions(numberOfParticles);
