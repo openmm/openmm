@@ -199,6 +199,13 @@ public:
      * the Context.  Also, this method cannot be used to add new particles, only to change the parameters of existing ones.
      */
     void updateParametersInContext(Context& context);
+    /**
+     * Returns whether or not this force makes use of periodic boundary
+     * conditions.
+     *
+     * @returns false
+     */
+    bool usesPeriodicBoundaryConditions() const {return false;}
 protected:
     ForceImpl* createImpl() const;
 private:

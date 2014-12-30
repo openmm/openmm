@@ -184,6 +184,15 @@ public:
      * change the parameters of existing ones.
      */
     void updateParametersInContext(Context& context);
+    /**
+     * Returns whether or not this force makes use of periodic boundary
+     * conditions.
+     *
+     * @returns true if nonbondedMethod uses PBC and false otherwise
+     */
+    bool usesPeriodicBoundaryConditions() const {
+        return nonbondedMethod == GBSAOBCForce::CutoffPeriodic;
+    }
 protected:
     ForceImpl* createImpl() const;
 private:

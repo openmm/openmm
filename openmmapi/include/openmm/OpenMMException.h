@@ -54,6 +54,17 @@ private:
     std::string message;
 };
 
+class NotImplementedError : public std::exception {
+public:
+    explicit NotImplementedError(const std::string& message) : message(message) {
+    }
+    ~NotImplementedError() throw() {
+    }
+    const char* what() const throw() {
+        return message.c_str();
+    }
+};
+
 } // namespace OpenMM
 
 #endif /*OPENMM_OPENMMEXCEPTION_H_*/

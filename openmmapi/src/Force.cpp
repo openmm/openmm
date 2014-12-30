@@ -49,6 +49,10 @@ void Force::setForceGroup(int group) {
     forceGroup = group;
 }
 
+bool Force::usesPeriodicBoundaryConditions() const {
+    throw NotImplementedError("usesPeriodicBoundaryConditions is not implemented");
+}
+
 ForceImpl& Force::getImplInContext(Context& context) {
     const vector<ForceImpl*>& impls = context.getImpl().getForceImpls();
     for (int i = 0; i < (int) impls.size(); i++)

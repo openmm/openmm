@@ -148,6 +148,13 @@ public:
      * @param b4    the index of the fourth particle forming the second torsion
      */
     void setTorsionParameters(int index, int map, int a1, int a2, int a3, int a4, int b1, int b2, int b3, int b4);
+    /**
+     * Returns whether or not this force makes use of periodic boundary
+     * conditions.
+     *
+     * @returns false
+     */
+    bool usesPeriodicBoundaryConditions() const {return false;}
 protected:
     ForceImpl* createImpl() const;
 private:
