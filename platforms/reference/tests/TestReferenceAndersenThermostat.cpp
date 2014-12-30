@@ -64,6 +64,7 @@ void testTemperature() {
     system.addForce(forceField);
     AndersenThermostat* thermstat = new AndersenThermostat(temp, collisionFreq);
     system.addForce(thermstat);
+    ASSERT(!thermostat->usesPeriodicBoundaryConditions());
     Context context(system, integrator, platform);
     vector<Vec3> positions(numParticles);
     for (int i = 0; i < numParticles; ++i)
