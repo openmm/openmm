@@ -173,6 +173,10 @@ class AmberPrmtopFile(object):
          - ewaldErrorTolerance (float=0.0005) The error tolerance to use if nonbondedMethod is Ewald or PME.
         Returns: the newly created System
         """
+        if self._prmtop.chamber:
+            raise ValueError("CHAMBER-style topology file detected. CHAMBER "
+                             "topologies are not supported -- use the native "
+                             "CHARMM files directly.")
         methodMap = {ff.NoCutoff:'NoCutoff',
                      ff.CutoffNonPeriodic:'CutoffNonPeriodic',
                      ff.CutoffPeriodic:'CutoffPeriodic',
