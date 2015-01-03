@@ -119,36 +119,38 @@ class PrmtopLoader(object):
         self._raw_data={}
         self._has_nbfix_terms = False
 
-        fIn=open(inFilename)
-        for line in fIn:
-            if line.startswith('%VERSION'):
-                tag, self._prmtopVersion = line.rstrip().split(None, 1)
-            elif line.startswith('%FLAG'):
-                tag, flag = line.rstrip().split(None, 1)
-                self._flags.append(flag)
-                self._raw_data[flag] = []
-            elif line.startswith('%FORMAT'):
-                format = line.rstrip()
-                index0=format.index('(')
-                index1=format.index(')')
-                format = format[index0+1:index1]
-                m = FORMAT_RE_PATTERN.search(format)
-                self._raw_format[self._flags[-1]] = (format, m.group(1), m.group(2), m.group(3), m.group(4))
-            elif self._flags \
-                 and 'TITLE'==self._flags[-1] \
-                 and not self._raw_data['TITLE']:
-                self._raw_data['TITLE'] = line.rstrip()
-            else:
-                flag=self._flags[-1]
-                (format, numItems, itemType,
-                 itemLength, itemPrecision) = self._getFormat(flag)
-                iLength=int(itemLength)
-                line = line.rstrip()
-                for index in range(0, len(line), iLength):
-                    item = line[index:index+iLength]
-                    if item:
-                        self._raw_data[flag].append(item.strip())
-        fIn.close()
+        with open(inFilename, 'r') as fIn:
+            for line in fIn:
+                if line.startswith('%VERSION'):
+                    tag, self._prmtopVersion = line.rstrip().split(None, 1)
+                elif line.startswith('%FLAG'):
+                    tag, flag = line.rstrip().split(None, 1)
+                    self._flags.append(flag)
+                    self._raw_data[flag] = []
+                elif line.startswith('%FORMAT'):
+                    format = line.rstrip()
+                    index0=format.index('(')
+                    index1=format.index(')')
+                    format = format[index0+1:index1]
+                    m = FORMAT_RE_PATTERN.search(format)
+                    self._raw_format[self._flags[-1]] = (format, m.group(1), m.group(2), m.group(3), m.group(4))
+                elif self._flags \
+                     and 'TITLE'==self._flags[-1] \
+                     and not self._raw_data['TITLE']:
+                    self._raw_data['TITLE'] = line.rstrip()
+                else:
+                    flag=self._flags[-1]
+                    (format, numItems, itemType,
+                     itemLength, itemPrecision) = self._getFormat(flag)
+                    iLength=int(itemLength)
+                    line = line.rstrip()
+                    for index in range(0, len(line), iLength):
+                        item = line[index:index+iLength]
+                        if item:
+                            self._raw_data[flag].append(item.strip())
+        # See if this is a CHAMBER-style topology file, which is not supported
+        # for creating Systems
+        self.chamber = 'CTITLE' in self._flags
 
     def _getFormat(self, flag=None):
         if not flag:
