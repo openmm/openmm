@@ -218,7 +218,9 @@ public:
      *
      * @returns true if nonbondedMethod uses PBC and false otherwise
      */
-    bool usesPeriodicBoundaryConditions() const {return nonbondedMethod == AmoebaVdwForce::CutoffPeriodic;}
+    bool usesPeriodicBoundaryConditions() const {
+        return nonbondedMethod == AmoebaVdwForce::CutoffPeriodic;
+    }
 protected:
     ForceImpl* createImpl() const;
 private:

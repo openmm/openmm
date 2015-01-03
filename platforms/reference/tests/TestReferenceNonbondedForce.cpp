@@ -450,7 +450,8 @@ void testSwitchingFunction(NonbondedForce::NonbondedMethod method) {
     if (method == NonbondedForce::PME) {
         ASSERT(nonbonded->usesPeriodicBoundaryConditions());
         ASSERT(system.usesPeriodicBoundaryConditions());
-    } else {
+    }
+    else {
         ASSERT(!nonbonded->usesPeriodicBoundaryConditions());
         ASSERT(!system.usesPeriodicBoundaryConditions());
     }

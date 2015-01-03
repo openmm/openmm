@@ -355,7 +355,9 @@ public:
      *
      * @returns true if nonbondedMethod uses PBC and false otherwise
      */
-    bool usesPeriodicBoundaryConditions() const {return nonbondedMethod == AmoebaMultipoleForce::PME;}
+    bool usesPeriodicBoundaryConditions() const {
+        return nonbondedMethod == AmoebaMultipoleForce::PME;
+    }
 protected:
     ForceImpl* createImpl() const;
 private:

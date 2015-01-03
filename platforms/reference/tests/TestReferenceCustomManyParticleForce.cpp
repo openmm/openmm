@@ -66,7 +66,8 @@ void validateAxilrodTeller(CustomManyParticleForce* force, const vector<Vec3>& p
     if (force->getNonbondedMethod() == CustomManyParticleForce::CutoffPeriodic) {
         ASSERT(force->usesPeriodicBoundaryConditions());
         ASSERT(system.usesPeriodicBoundaryConditions());
-    } else {
+    }
+    else {
         ASSERT(!force->usesPeriodicBoundaryConditions());
         ASSERT(!system.usesPeriodicBoundaryConditions());
     }

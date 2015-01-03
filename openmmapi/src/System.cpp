@@ -129,7 +129,8 @@ bool System::usesPeriodicBoundaryConditions() {
         try {
             if ((*it)->usesPeriodicBoundaryConditions())
                 uses_pbc = true;
-        } catch (OpenMMException &e) {
+        }
+        catch (OpenMMException &e) {
             all_forces_implement = false;
         }
     }

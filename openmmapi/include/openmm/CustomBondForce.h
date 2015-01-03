@@ -205,7 +205,9 @@ public:
      *
      * @returns false
      */
-    bool usesPeriodicBoundaryConditions() const {return false;}
+    bool usesPeriodicBoundaryConditions() const {
+        return false;
+    }
 protected:
     ForceImpl* createImpl() const;
 private:

@@ -230,7 +230,7 @@ public:
      * If a force in this System does not implement usesPeriodicBoundaryConditions
      * a OpenMM::OpenMMException is thrown
      *
-     * @return true of at least one force uses PBC and false otherwise
+     * @return true if at least one force uses PBC and false otherwise
      */
     bool usesPeriodicBoundaryConditions();
 private:

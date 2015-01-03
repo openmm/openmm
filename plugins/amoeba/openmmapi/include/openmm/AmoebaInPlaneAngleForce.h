@@ -177,7 +177,9 @@ public:
      *
      * @returns true if nonbondedMethod uses PBC and false otherwise
      */
-    bool usesPeriodicBoundaryConditions() const {return false;}
+    bool usesPeriodicBoundaryConditions() const {
+        return false;
+    }
 protected:
     ForceImpl* createImpl() const;
     double _globalCubicK, _globalQuarticK, _globalPenticK, _globalSexticK;
