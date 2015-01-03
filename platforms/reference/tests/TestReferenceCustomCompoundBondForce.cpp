@@ -85,6 +85,8 @@ void testBond() {
     parameters[5] = 1.3;
     custom->addBond(particles, parameters);
     customSystem.addForce(custom);
+    ASSERT(!custom->usesPeriodicBoundaryConditions());
+    ASSERT(!customSystem.usesPeriodicBoundaryConditions());
 
     // Create an identical system using standard forces.
 

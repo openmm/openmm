@@ -135,6 +135,18 @@ void testOBC(GBSAOBCForce::NonbondedMethod obcMethod, CustomGBForce::NonbondedMe
     custom->setNonbondedMethod(customMethod);
     standardSystem.addForce(obc);
     customSystem.addForce(custom);
+    if (customMethod == CustomGBForce::CutoffPeriodic) {
+        ASSERT(custom->usesPeriodicBoundaryConditions());
+        ASSERT(obc->usesPeriodicBoundaryConditions());
+        ASSERT(standardSystem.usesPeriodicBoundaryConditions());
+        ASSERT(customSystem.usesPeriodicBoundaryConditions());
+    }
+    else {
+        ASSERT(!custom->usesPeriodicBoundaryConditions());
+        ASSERT(!obc->usesPeriodicBoundaryConditions());
+        ASSERT(!standardSystem.usesPeriodicBoundaryConditions());
+        ASSERT(!customSystem.usesPeriodicBoundaryConditions());
+    }
     VerletIntegrator integrator1(0.01);
     VerletIntegrator integrator2(0.01);
     Context context1(standardSystem, integrator1, platform);
@@ -528,7 +540,8 @@ static void buildEthane( GBVIForce* gbviForce, std::vector<Vec3>& positions ) {
        C_gamma  = -0.2863;
        H_radius =  0.125;
        H_gamma  =  0.2437;
-    } else {
+    }
+    else {
        C_radius =  0.215;
        C_gamma  = -1.1087;
        H_radius =  0.150;
@@ -606,7 +619,8 @@ static void buildDimer( GBVIForce* gbviForce, std::vector<Vec3>& positions ) {
        C_gamma  = -0.2863;
        H_radius =  0.125;
        H_gamma  =  0.2437;
-    } else {
+    }
+    else {
        C_radius =  0.215;
        C_gamma  = -1.1087;
        H_radius =  0.150;
@@ -733,7 +747,8 @@ static void findScaledRadii( GBVIForce& gbviForce, std::vector<double> & scaledR
             }
             scaledRadiusJ = radiusJ;
 //             errors++;
-        } else {
+        }
+        else {
 
             double rJ2    = radiusJ*radiusJ;
     
@@ -763,7 +778,8 @@ static void findScaledRadii( GBVIForce& gbviForce, std::vector<double> & scaledR
             scaledRadiusJ  = (radiusJ*radiusJ*radiusJ) - 0.125*scaledRadiusJ; 
             if( scaledRadiusJ > 0.0 ){
                 scaledRadiusJ  = 0.95*pow( scaledRadiusJ, (1.0/3.0) );
-            } else {
+            }
+            else {
                 scaledRadiusJ  = 0.0;
             }
         }
@@ -838,9 +854,11 @@ void testGBVI(GBVIForce::NonbondedMethod gbviMethod, CustomGBForce::NonbondedMet
 
     if( molecule == "Monomer" ){
         buildMonomer( gbvi, positions );
-    } else if( molecule == "Dimer" ){
+    }
+    else if( molecule == "Dimer" ){
         buildDimer( gbvi, positions );
-    } else {
+    }
+    else {
         buildEthane( gbvi, positions );
     }
 

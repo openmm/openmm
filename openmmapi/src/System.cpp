@@ -119,3 +119,25 @@ void System::setDefaultPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Ve
     periodicBoxVectors[1] = b;
     periodicBoxVectors[2] = c;
 }
+
+bool System::usesPeriodicBoundaryConditions() {
+
+    bool uses_pbc = false;
+    bool all_forces_implement = true;
+    for (std::vector<Force*>::const_iterator it = forces.begin();
+            it != forces.end(); it++) {
+        try {
+            if ((*it)->usesPeriodicBoundaryConditions())
+                uses_pbc = true;
+        }
+        catch (OpenMMException &e) {
+            all_forces_implement = false;
+        }
+    }
+
+    if (!all_forces_implement && !uses_pbc) {
+        throw OpenMMException("not all forces implement usesPeriodicBoundaryConditions");
+    }
+
+    return uses_pbc;
+}

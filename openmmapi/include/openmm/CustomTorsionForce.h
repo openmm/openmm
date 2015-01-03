@@ -205,6 +205,15 @@ public:
      * the Context.  The set of particles involved in a torsion cannot be changed, nor can new torsions be added.
      */
     void updateParametersInContext(Context& context);
+    /**
+     * Returns whether or not this force makes use of periodic boundary
+     * conditions.
+     *
+     * @returns true if force uses PBC and false otherwise
+     */
+    bool usesPeriodicBoundaryConditions() const {
+        return false;
+    }
 protected:
     ForceImpl* createImpl() const;
 private:

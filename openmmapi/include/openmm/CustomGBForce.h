@@ -523,6 +523,15 @@ public:
      * the Context.  Also, this method cannot be used to add new particles, only to change the parameters of existing ones.
      */
     void updateParametersInContext(Context& context);
+    /**
+     * Returns whether or not this force makes use of periodic boundary
+     * conditions.
+     *
+     * @returns true if force uses PBC and false otherwise
+     */
+    bool usesPeriodicBoundaryConditions() const {
+        return nonbondedMethod == CustomGBForce::CutoffPeriodic;
+    }
 protected:
     ForceImpl* createImpl() const;
 private:

@@ -461,6 +461,15 @@ public:
      * the parameters of existing ones.
      */
     void updateParametersInContext(Context& context);
+    /**
+     * Returns whether or not this force makes use of periodic boundary
+     * conditions.
+     *
+     * @returns true if force uses PBC and false otherwise
+     */
+    bool usesPeriodicBoundaryConditions() const {
+        return nonbondedMethod == CustomManyParticleForce::CutoffPeriodic;
+    }
 protected:
     ForceImpl* createImpl() const;
 private:

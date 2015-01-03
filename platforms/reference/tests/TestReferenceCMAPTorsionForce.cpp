@@ -64,6 +64,8 @@ void testCMAPTorsions() {
     periodic->addTorsion(0, 1, 2, 3, 2, M_PI/4, 1.5);
     periodic->addTorsion(1, 2, 3, 4, 3, M_PI/3, 2.0);
     system1.addForce(periodic);
+    ASSERT(!periodic->usesPeriodicBoundaryConditions());
+    ASSERT(!system1.usesPeriodicBoundaryConditions());
     System system2;
     for (int i = 0; i < 5; i++)
         system2.addParticle(1.0);
@@ -81,6 +83,8 @@ void testCMAPTorsions() {
     cmap->addMap(mapSize, mapEnergy);
     cmap->addTorsion(0, 0, 1, 2, 3, 1, 2, 3, 4);
     system2.addForce(cmap);
+    ASSERT(!cmap->usesPeriodicBoundaryConditions());
+    ASSERT(!system2.usesPeriodicBoundaryConditions());
 
     // Set the atoms in various positions, and verify that both systems give equal forces and energy.
 

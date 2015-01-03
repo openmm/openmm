@@ -2620,7 +2620,8 @@ void testTorsionTorsion(int systemId, bool includeDerivs) {
 
         expectedEnergy        = -2.699654759E+00;
 
-    } else if( systemId == 1 ){
+    }
+    else if( systemId == 1 ){
 
         // villin: 158    176    177    178    183     -1      0
         chiralCheckAtomIndex  = -1;
@@ -2646,6 +2647,8 @@ void testTorsionTorsion(int systemId, bool includeDerivs) {
     amoebaTorsionTorsionForce->setTorsionTorsionGrid(0, getTorsionGrid(gridIndex, includeDerivs));
     
     system.addForce(amoebaTorsionTorsionForce);
+    ASSERT(!amoebaTorsionTorsionForce->usesPeriodicBoundaryConditions());
+    ASSERT(!system.usesPeriodicBoundaryConditions());
     Context context(system, integrator, Platform::getPlatformByName("Reference"));
 
     context.setPositions(positions);
@@ -2674,7 +2677,8 @@ int main( int numberOfArguments, char* argv[] ) {
         registerAmoebaReferenceKernelFactories();
         testTorsionTorsion(1, true);
         testTorsionTorsion(1, false);
-    } catch(const std::exception& e) {
+    }
+    catch(const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;
         std::cout << "FAIL - ERROR.  Test failed." << std::endl;
         return 1;

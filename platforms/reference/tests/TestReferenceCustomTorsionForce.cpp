@@ -75,6 +75,8 @@ void testTorsions() {
     parameters[1] = 2;
     custom->addTorsion(1, 2, 3, 4, parameters);
     customSystem.addForce(custom);
+    ASSERT(!custom->usesPeriodicBoundaryConditions());
+    ASSERT(!customSystem.usesPeriodicBoundaryConditions());
 
     // Create an identical system using a PeriodicTorsionForce.
 

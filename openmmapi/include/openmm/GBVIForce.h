@@ -229,6 +229,15 @@ public:
      * Set the upper limit used in the quintic spline scaling method, measured in nm (~5.0)
      */
     void setQuinticUpperBornRadiusLimit(double quinticUpperBornRadiusLimit);
+    /**
+     * Returns whether or not this force makes use of periodic boundary
+     * conditions.
+     *
+     * @returns true if force uses PBC and false otherwise
+     */
+    bool usesPeriodicBoundaryConditions() const {
+        return nonbondedMethod == GBVIForce::CutoffPeriodic;
+    }
 protected:
     ForceImpl* createImpl() const;
 private:

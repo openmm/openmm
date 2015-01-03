@@ -83,6 +83,8 @@ void testHbond() {
     custom->addAcceptor(2, 3, 4, parameters);
     custom->setCutoffDistance(10.0);
     customSystem.addForce(custom);
+    ASSERT(!custom->usesPeriodicBoundaryConditions());
+    ASSERT(!customSystem.usesPeriodicBoundaryConditions());
 
     // Create an identical system using HarmonicBondForce, HarmonicAngleForce, and PeriodicTorsionForce.
 

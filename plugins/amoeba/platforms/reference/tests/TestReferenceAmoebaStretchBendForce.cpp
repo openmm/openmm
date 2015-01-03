@@ -129,9 +129,11 @@ static void computeAmoebaStretchBendForce(int bondIndex,  std::vector<Vec3>& pos
     double angle;
     if( cosine >= 1.0 ){
        angle = 0.0;
-    } else if( cosine <= -1.0 ){
+    }
+    else if( cosine <= -1.0 ){
        angle = PI_M;
-    } else {
+    }
+    else {
        angle = RADIAN*acos(cosine);
     }
  
@@ -275,6 +277,8 @@ void testOneStretchBend( FILE* log ) {
     amoebaStretchBendForce->addStretchBend(0, 1, 2, abLength, cbLength, angleStretchBend, kStretchBend );
 
     system.addForce(amoebaStretchBendForce);
+    ASSERT(!amoebaStretchBendForce->usesPeriodicBoundaryConditions());
+    ASSERT(!system.usesPeriodicBoundaryConditions());
     Context context(system, integrator, Platform::getPlatformByName( "Reference"));
 
     std::vector<Vec3> positions(numberOfParticles);

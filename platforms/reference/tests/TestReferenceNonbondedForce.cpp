@@ -59,6 +59,8 @@ void testCoulomb() {
     forceField->addParticle(0.5, 1, 0);
     forceField->addParticle(-1.5, 1, 0);
     system.addForce(forceField);
+    ASSERT(!forceField->usesPeriodicBoundaryConditions());
+    ASSERT(!system.usesPeriodicBoundaryConditions());
     Context context(system, integrator, platform);
     vector<Vec3> positions(2);
     positions[0] = Vec3(0, 0, 0);
@@ -82,6 +84,8 @@ void testLJ() {
     forceField->addParticle(0, 1.2, 1);
     forceField->addParticle(0, 1.4, 2);
     system.addForce(forceField);
+    ASSERT(!forceField->usesPeriodicBoundaryConditions());
+    ASSERT(!system.usesPeriodicBoundaryConditions());
     Context context(system, integrator, platform);
     vector<Vec3> positions(2);
     positions[0] = Vec3(0, 0, 0);
@@ -201,6 +205,8 @@ void testCutoff() {
     const double eps = 50.0;
     forceField->setReactionFieldDielectric(eps);
     system.addForce(forceField);
+    ASSERT(!forceField->usesPeriodicBoundaryConditions());
+    ASSERT(!system.usesPeriodicBoundaryConditions());
     Context context(system, integrator, platform);
     vector<Vec3> positions(3);
     positions[0] = Vec3(0, 0, 0);
@@ -252,6 +258,8 @@ void testCutoff14() {
             second14 = i;
     }
     system.addForce(nonbonded);
+    ASSERT(!nonbonded->usesPeriodicBoundaryConditions());
+    ASSERT(!system.usesPeriodicBoundaryConditions());
     Context context(system, integrator, platform);
     vector<Vec3> positions(5);
     positions[0] = Vec3(0, 0, 0);
@@ -333,6 +341,8 @@ void testPeriodic() {
     nonbonded->setCutoffDistance(cutoff);
     system.setDefaultPeriodicBoxVectors(Vec3(4, 0, 0), Vec3(0, 4, 0), Vec3(0, 0, 4));
     system.addForce(nonbonded);
+    ASSERT(nonbonded->usesPeriodicBoundaryConditions());
+    ASSERT(system.usesPeriodicBoundaryConditions());
     Context context(system, integrator, platform);
     vector<Vec3> positions(3);
     positions[0] = Vec3(0, 0, 0);
@@ -376,6 +386,8 @@ void testDispersionCorrection() {
     nonbonded->setCutoffDistance(cutoff);
     system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
     system.addForce(nonbonded);
+    ASSERT(nonbonded->usesPeriodicBoundaryConditions());
+    ASSERT(system.usesPeriodicBoundaryConditions());
 
     // See if the correction has the correct value.
 
@@ -435,6 +447,14 @@ void testSwitchingFunction(NonbondedForce::NonbondedMethod method) {
     nonbonded->setSwitchingDistance(1.5);
     nonbonded->setUseDispersionCorrection(false);
     system.addForce(nonbonded);
+    if (method == NonbondedForce::PME) {
+        ASSERT(nonbonded->usesPeriodicBoundaryConditions());
+        ASSERT(system.usesPeriodicBoundaryConditions());
+    }
+    else {
+        ASSERT(!nonbonded->usesPeriodicBoundaryConditions());
+        ASSERT(!system.usesPeriodicBoundaryConditions());
+    }
     Context context(system, integrator, platform);
     vector<Vec3> positions(2);
     positions[0] = Vec3(0, 0, 0);

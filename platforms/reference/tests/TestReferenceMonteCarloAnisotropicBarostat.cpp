@@ -75,6 +75,8 @@ void testIdealGas() {
     }
     MonteCarloAnisotropicBarostat* barostat = new MonteCarloAnisotropicBarostat(Vec3(pressure, pressure, pressure), temp[0], true, true, true, frequency);
     system.addForce(barostat);
+    ASSERT(barostat->usesPeriodicBoundaryConditions());
+    ASSERT(system.usesPeriodicBoundaryConditions());
     
     // Test it for three different temperatures.
     
@@ -134,6 +136,8 @@ void testIdealGasAxis(int axis) {
     }
     MonteCarloAnisotropicBarostat* barostat = new MonteCarloAnisotropicBarostat(Vec3(pressure, pressure, pressure), temp[0], scaleX, scaleY, scaleZ, frequency);
     system.addForce(barostat);
+    ASSERT(barostat->usesPeriodicBoundaryConditions());
+    ASSERT(system.usesPeriodicBoundaryConditions());
     
     // Test it for three different temperatures.
     
@@ -191,6 +195,8 @@ void testRandomSeed() {
     system.addForce(forceField);
     MonteCarloAnisotropicBarostat* barostat = new MonteCarloAnisotropicBarostat(Vec3(pressure, pressure, pressure), temp, true, true, true, 1);
     system.addForce(barostat);
+    ASSERT(barostat->usesPeriodicBoundaryConditions());
+    ASSERT(system.usesPeriodicBoundaryConditions());
     vector<Vec3> positions(numParticles);
     vector<Vec3> velocities(numParticles);
     for (int i = 0; i < numParticles; ++i) {

@@ -212,7 +212,15 @@ public:
      * (the nonbonded method, the cutoff distance, etc.) are unaffected and can only be changed by reinitializing the Context.
      */
     void updateParametersInContext(Context& context);
-
+    /**
+     * Returns whether or not this force makes use of periodic boundary
+     * conditions.
+     *
+     * @returns true if nonbondedMethod uses PBC and false otherwise
+     */
+    bool usesPeriodicBoundaryConditions() const {
+        return nonbondedMethod == AmoebaVdwForce::CutoffPeriodic;
+    }
 protected:
     ForceImpl* createImpl() const;
 private:

@@ -460,6 +460,8 @@ static void testMultipoleAmmoniaMutualPolarization( FILE* log ) {
     AmoebaMultipoleForce* amoebaMultipoleForce = new AmoebaMultipoleForce();;
     setupMultipoleAmmonia(system, amoebaMultipoleForce, AmoebaMultipoleForce::NoCutoff, AmoebaMultipoleForce::Mutual, 
                                              cutoff, inputPmeGridDimension);
+    ASSERT(!amoebaMultipoleForce->usesPeriodicBoundaryConditions());
+    ASSERT(!system.usesPeriodicBoundaryConditions());
     LangevinIntegrator integrator(0.0, 0.1, 0.01);
     Context context(system, integrator, Platform::getPlatformByName("Reference"));
     getForcesEnergyMultipoleAmmonia(context, forces, energy);
@@ -621,7 +623,7 @@ static void setupAndGetForcesEnergyMultipoleWater( AmoebaMultipoleForce::Nonbond
         covalentMap.push_back( jj+1 );
         amoebaMultipoleForce->setCovalentMap( jj+2, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(1), covalentMap );
     
-    } 
+    }
  
     std::vector<Vec3> positions(numberOfParticles);
 
@@ -639,6 +641,8 @@ static void setupAndGetForcesEnergyMultipoleWater( AmoebaMultipoleForce::Nonbond
     positions[11]             = Vec3(   5.0590640e-01,   1.8880920e-01,   -6.8813470e-01 );
 
     system.addForce(amoebaMultipoleForce);
+    ASSERT(amoebaMultipoleForce->usesPeriodicBoundaryConditions());
+    ASSERT(system.usesPeriodicBoundaryConditions());
 
     std::string platformName;
     platformName = "Reference";
@@ -837,7 +841,8 @@ static void testQuadrupoleValidation( FILE* log ){
         std::stringstream buffer;        
         buffer << "Exception not thrown for quadrupole tensor w/ nonzero trace.";
         throw OpenMMException(buffer.str());
-    } catch(const std::exception& e) {
+    }
+    catch(const std::exception& e) {
     }
     oxygenMolecularQuadrupole[4] -= 0.1;
 
@@ -853,7 +858,8 @@ static void testQuadrupoleValidation( FILE* log ){
         std::stringstream buffer;        
         buffer << "Exception not thrown for quadrupole tensor w/ nonzero trace.";
         throw OpenMMException(buffer.str());
-    } catch(const std::exception& e) {
+    }
+    catch(const std::exception& e) {
     }
     oxygenMolecularQuadrupole[1] -= 0.1;
 
@@ -867,7 +873,8 @@ static void testQuadrupoleValidation( FILE* log ){
         std::stringstream buffer;        
         buffer << "Exception not thrown for quadrupole tensor w/ nonzero trace.";
         throw OpenMMException(buffer.str());
-    } catch(const std::exception& e) {
+    }
+    catch(const std::exception& e) {
     }
     oxygenMolecularQuadrupole[2] -= 0.1;
 
@@ -881,7 +888,8 @@ static void testQuadrupoleValidation( FILE* log ){
         std::stringstream buffer;        
         buffer << "Exception not thrown for quadrupole tensor w/ nonzero trace.";
         throw OpenMMException(buffer.str());
-    } catch(const std::exception& e) {
+    }
+    catch(const std::exception& e) {
     }
     oxygenMolecularQuadrupole[5] -= 0.1;
 
@@ -1039,7 +1047,7 @@ static void setupAndGetForcesEnergyMultipoleIonsAndWater( AmoebaMultipoleForce::
         covalentMap.push_back( jj+1 );
         amoebaMultipoleForce->setCovalentMap( jj+2, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(1), covalentMap );
     
-    } 
+    }
  
     std::vector<Vec3> positions(numberOfParticles);
 
@@ -1255,7 +1263,7 @@ static void setupAndGetForcesEnergyMultipoleLargeWater( AmoebaMultipoleForce::No
         covalentMap.push_back( jj+1 );
         amoebaMultipoleForce->setCovalentMap( jj+2, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(1), covalentMap );
     
-    } 
+    }
     system.addForce(amoebaMultipoleForce);
  
     static std::vector<Vec3> positions; // Static to work around bug in Visual Studio that makes compilation very very slow.
@@ -1919,9 +1927,11 @@ static void setupAndGetForcesEnergyMultipoleLargeWater( AmoebaMultipoleForce::No
 
     if( testName == "testSystemMultipoleMoments" ){
         amoebaMultipoleForce->getSystemMultipoleMoments( context, outputMultipoleMoments );
-    } else if( testName == "testMultipoleGridPotential" ){
+    }
+    else if( testName == "testMultipoleGridPotential" ){
         amoebaMultipoleForce->getElectrostaticPotential( inputGrid, context, outputGridPotential );
-    } else {
+    }
+    else {
 
         State state               = context.getState(State::Forces | State::Energy);
         forces                    = state.getForces();
@@ -2686,7 +2696,8 @@ static void testSystemMultipoleMoments( FILE* log ) {
         double difference;
         if( fabs( tinkerMoments[ii] ) > 0.0 ){
             difference = fabs( outputMultipoleMoments[ii] - tinkerMoments[ii] )/fabs( tinkerMoments[ii] );
-        } else {
+        }
+        else {
             difference = fabs( outputMultipoleMoments[ii] - tinkerMoments[ii] );
         }
         if( log ){
@@ -2850,7 +2861,8 @@ int main( int numberOfArguments, char* argv[] ) {
 
         testPMEMutualPolarizationLargeWater( log );
 
-    } catch(const std::exception& e) {
+    }
+    catch(const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;
         std::cout << "FAIL - ERROR.  Test failed." << std::endl;
         return 1;

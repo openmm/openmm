@@ -66,6 +66,8 @@ void testSingleParticle() {
     double gamma          =  1.0;
     forceField->addParticle(charge, radius, gamma);
     system.addForce(forceField);
+    ASSERT(!forceField->usesPeriodicBoundaryConditions());
+    ASSERT(!system.usesPeriodicBoundaryConditions());
 
     Context context(system, integrator, platform);
     vector<Vec3> positions(1);
@@ -126,7 +128,8 @@ void testEnergyEthane( int applyBornRadiiScaling ) {
        C_gamma  = -0.2863;
        H_radius =  0.125;
        H_gamma  =  0.2437;
-    } else {
+    }
+    else {
        C_radius =  0.215;
        C_gamma  = -1.1087;
        H_radius =  0.150;
@@ -142,7 +145,8 @@ void testEnergyEthane( int applyBornRadiiScaling ) {
     GBVIForce* forceField = new GBVIForce();
     if( applyBornRadiiScaling ){
         forceField->setBornRadiusScalingMethod( GBVIForce::QuinticSpline );
-    } else {
+    }
+    else {
         forceField->setBornRadiusScalingMethod( GBVIForce::NoScaling );
     }
     for( int i = 0; i < numParticles; i++ ){
