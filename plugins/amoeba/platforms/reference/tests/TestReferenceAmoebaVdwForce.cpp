@@ -75,7 +75,8 @@ void testVdw( FILE* log ) {
             sigma       = 1.70250E+00;
             epsilon     = 1.10000E-01;
             reduction   = 0.0;
-        } else {
+        }
+        else {
             mass        = 1.0;
             indexIV     = ii < 3 ? 0 : 3;
             sigma       = 1.32750E+00;
@@ -89,7 +90,8 @@ void testVdw( FILE* log ) {
             exclusions.push_back ( 0 );
             exclusions.push_back ( 1 );
             exclusions.push_back ( 2 );
-        } else {
+        }
+        else {
             exclusions.push_back ( 3 );
             exclusions.push_back ( 4 );
             exclusions.push_back ( 5 );
@@ -155,7 +157,7 @@ void testVdw( FILE* log ) {
         forces[ii][0] *= conversion;
         forces[ii][1] *= conversion;
         forces[ii][2] *= conversion;
-    }    
+    }
     expectedEnergy *= CalToJoule;
 
 #ifdef AMOEBA_DEBUG
@@ -223,7 +225,8 @@ void setupAndGetForcesEnergyVdwAmmonia( const std::string& sigmaCombiningRule, c
         system.setDefaultPeriodicBoxVectors( a, b, c );
         amoebaVdwForce->setNonbondedMethod(AmoebaVdwForce::CutoffPeriodic);
         amoebaVdwForce->setUseDispersionCorrection( 1 );
-    } else {
+    }
+    else {
         amoebaVdwForce->setNonbondedMethod(AmoebaVdwForce::NoCutoff);
         amoebaVdwForce->setUseDispersionCorrection( 0 );
     }
@@ -330,7 +333,8 @@ void setupAndGetForcesEnergyVdwAmmonia( const std::string& sigmaCombiningRule, c
 
     if( boxDimension > 0.0 ){
         ASSERT(amoebaVdwForce->usesPeriodicBoundaryConditions());
-    } else {
+    }
+    else {
         ASSERT(!amoebaVdwForce->usesPeriodicBoundaryConditions());
     }
 
@@ -573,7 +577,8 @@ void setupAndGetForcesEnergyVdwWater( const std::string& sigmaCombiningRule, con
         system.setDefaultPeriodicBoxVectors( a, b, c );
         amoebaVdwForce->setNonbondedMethod(AmoebaVdwForce::CutoffPeriodic);
         amoebaVdwForce->setUseDispersionCorrection( includeVdwDispersionCorrection );
-    } else {
+    }
+    else {
         amoebaVdwForce->setNonbondedMethod(AmoebaVdwForce::NoCutoff);
         amoebaVdwForce->setUseDispersionCorrection( 0 );
     }
@@ -1281,7 +1286,8 @@ void testVdwWater( int includeVdwDispersionCorrection, FILE* log ) {
     std::string testName;
     if( includeVdwDispersionCorrection ){
         testName      = "testVdwWaterWithDispersionCorrection";
-    } else {
+    }
+    else {
         testName      = "testVdwWater";
     }
 
@@ -1299,7 +1305,8 @@ void testVdwWater( int includeVdwDispersionCorrection, FILE* log ) {
     double expectedEnergy;
     if( includeVdwDispersionCorrection ){
         expectedEnergy     = 4.0108819792e+03;
-    } else {
+    }
+    else {
         expectedEnergy     = 4.0349101e+03;
     }
 
@@ -2036,7 +2043,8 @@ int main( int numberOfArguments, char* argv[] ) {
         includeVdwDispersionCorrection     = 1;
         testVdwWater( includeVdwDispersionCorrection, log );
 
-    } catch(const std::exception& e) {
+    }
+    catch(const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;
         std::cout << "FAIL - ERROR.  Test failed." << std::endl;
         return 1;

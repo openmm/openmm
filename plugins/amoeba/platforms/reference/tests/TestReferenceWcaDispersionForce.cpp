@@ -185,7 +185,8 @@ int main( int numberOfArguments, char* argv[] ) {
         testWcaDispersionAmmonia( log );
 
 
-    } catch(const std::exception& e) {
+    }
+    catch(const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;
         std::cout << "FAIL - ERROR.  Test failed." << std::endl;
         return 1;

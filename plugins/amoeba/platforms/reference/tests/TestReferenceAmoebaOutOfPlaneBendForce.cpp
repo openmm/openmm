@@ -114,7 +114,7 @@ static void computeAmoebaOutOfPlaneBendForce(int bondIndex,  std::vector<Vec3>& 
          deltaR[DB][ii] = positions[particle4][ii] - positions[particle2][ii];
          deltaR[AD][ii] = positions[particle1][ii] - positions[particle4][ii];
          deltaR[CD][ii] = positions[particle3][ii] - positions[particle4][ii];
-    }   
+    }
 
     double rDB2  = dotVector3( deltaR[DB], deltaR[DB] );
     double rAD2  = dotVector3( deltaR[AD], deltaR[AD] );
@@ -134,9 +134,11 @@ static void computeAmoebaOutOfPlaneBendForce(int bondIndex,  std::vector<Vec3>& 
     double angle;
     if( cosine >= 1.0 ){
         angle = 0.0;
-    } else if( cosine <= -1.0 ){
+    }
+    else if( cosine <= -1.0 ){
         angle = PI_M;
-    } else {
+    }
+    else {
         angle = RADIAN*acos(cosine);
     }
 #ifdef AMOEBA_DEBUG 
@@ -405,37 +407,43 @@ void testOneOutOfPlaneBend2( FILE* log, int setId ) {
         particleIndices.push_back( 443 ); 
         particleIndices.push_back( 444 ); 
         kOutOfPlaneBend = 0.328682196E-01;
-    } else if( setId == 2 ){
+    }
+    else if( setId == 2 ){
         particleIndices.push_back( 441 ); 
         particleIndices.push_back( 442 ); 
         particleIndices.push_back( 444 ); 
         particleIndices.push_back( 443 ); 
         kOutOfPlaneBend = 0.164493407E-01;
-    } else if( setId == 3 ){
+    }
+    else if( setId == 3 ){
         particleIndices.push_back( 443 ); 
         particleIndices.push_back( 442 ); 
         particleIndices.push_back( 444 ); 
         particleIndices.push_back( 441 ); 
         kOutOfPlaneBend = 0.636650407E-02;
-    } else if( setId == 4 ){
+    }
+    else if( setId == 4 ){
         particleIndices.push_back( 442 ); 
         particleIndices.push_back( 444 ); 
         particleIndices.push_back( 447 ); 
         particleIndices.push_back( 448 ); 
         kOutOfPlaneBend = 0.392956472E-02;
-    } else if( setId == 5 ){
+    }
+    else if( setId == 5 ){
         particleIndices.push_back( 442 ); 
         particleIndices.push_back( 444 ); 
         particleIndices.push_back( 448 ); 
         particleIndices.push_back( 447 ); 
         kOutOfPlaneBend = 0.392956472E-02;
-    } else if( setId == 6 ){
+    }
+    else if( setId == 6 ){
         particleIndices.push_back( 447 ); 
         particleIndices.push_back( 444 ); 
         particleIndices.push_back( 448 ); 
         particleIndices.push_back( 442 ); 
         kOutOfPlaneBend = 0.214755281E-01;
-    } else {
+    }
+    else {
 #ifdef AMOEBA_DEBUG
         if( log ){
             (void) fprintf( log, "Set id %d not recognized.\n", setId );

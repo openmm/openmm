@@ -84,9 +84,11 @@ static void getPrefactorsGivenInPlaneAngleCosine( double cosine, double idealInP
     double angle;
     if( cosine >= 1.0 ){
         angle = 0.0f;
-    } else if( cosine <= -1.0 ){
+    }
+    else if( cosine <= -1.0 ){
         angle = RADIAN*PI_M;
-    } else {
+    }
+    else {
         angle = RADIAN*acos(cosine);
     }
 #ifdef AMOEBA_DEBUG
@@ -175,7 +177,7 @@ static void computeAmoebaInPlaneAngleForce(int bondIndex,  std::vector<Vec3>& po
        deltaR[P][ii]  = positions[particle2][ii] + deltaR[T][ii]*delta;
        deltaR[AP][ii] = positions[particle1][ii] - deltaR[P][ii];
        deltaR[CP][ii] = positions[particle3][ii] - deltaR[P][ii];
-    }   
+    }
  
     double rAp2 = dotVector3( deltaR[AP],  deltaR[AP] );
     double rCp2 = dotVector3( deltaR[CP],  deltaR[CP] );
@@ -245,7 +247,8 @@ static void computeAmoebaInPlaneAngleForce(int bondIndex,  std::vector<Vec3>& po
  
           forceTerm[dD][ii]  = -( forceTerm[dA][ii] + forceTerm[dB][ii] + forceTerm[dC][ii] );
        }
-    } else {
+    }
+    else {
        for( int ii = 0; ii < 3; ii++ ){
  
           forceTerm[dA][ii] += delta*deltaR[CDxdB][ii];

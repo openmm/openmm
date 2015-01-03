@@ -129,9 +129,11 @@ static void computeAmoebaStretchBendForce(int bondIndex,  std::vector<Vec3>& pos
     double angle;
     if( cosine >= 1.0 ){
        angle = 0.0;
-    } else if( cosine <= -1.0 ){
+    }
+    else if( cosine <= -1.0 ){
        angle = PI_M;
-    } else {
+    }
+    else {
        angle = RADIAN*acos(cosine);
     }
  

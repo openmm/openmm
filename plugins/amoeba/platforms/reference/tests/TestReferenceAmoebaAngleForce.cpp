@@ -82,9 +82,11 @@ static void getPrefactorsGivenAngleCosine( double cosine, double idealAngle, dou
     double angle;
     if( cosine >= 1.0 ){
         angle = 0.0f;
-    } else if( cosine <= -1.0 ){
+    }
+    else if( cosine <= -1.0 ){
         angle = RADIAN*PI_M;
-    } else {
+    }
+    else {
         angle = RADIAN*acos(cosine);
     }
 #ifdef AMOEBA_DEBUG
@@ -157,7 +159,7 @@ static void computeAmoebaAngleForce(int bondIndex,  std::vector<Vec3>& positions
     double rp      = sqrt( pVector[0]*pVector[0] + pVector[1]*pVector[1] + pVector[2]*pVector[2] );
     if( rp < 1.0e-06 ){
        rp = 1.0e-06;
-    }   
+    }
     double dot    = deltaR[0][0]*deltaR[1][0] + deltaR[0][1]*deltaR[1][1] + deltaR[0][2]*deltaR[1][2];
     double cosine = dot/sqrt(r2_0*r2_1);
 
