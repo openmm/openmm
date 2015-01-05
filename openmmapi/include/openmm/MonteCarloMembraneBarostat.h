@@ -35,7 +35,6 @@
 #include "Force.h"
 #include <string>
 #include "internal/windowsExport.h"
-#include "openmm/internal/OSRngSeed.h"
 
 namespace OpenMM {
 
@@ -213,8 +212,6 @@ public:
      * Get the random number seed.  See setRandomNumberSeed() for details.
      */
     int getRandomNumberSeed() const {
-        if (randomNumberSeed == 0)
-            return osrngseed();
         return randomNumberSeed;
     }
     /**
