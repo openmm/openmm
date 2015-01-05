@@ -115,8 +115,6 @@ public:
      * Get the random number seed.  See setRandomNumberSeed() for details.
      */
     int getRandomNumberSeed() const {
-        if (randomNumberSeed == 0)
-            return osrngseed();
         return randomNumberSeed;
     }
     /**
