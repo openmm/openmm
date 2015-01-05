@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -304,6 +304,9 @@ void CudaNonbondedUtilities::initialize(const System& system) {
         findBlockBoundsArgs.push_back(&numAtoms);
         findBlockBoundsArgs.push_back(context.getPeriodicBoxSizePointer());
         findBlockBoundsArgs.push_back(context.getInvPeriodicBoxSizePointer());
+        findBlockBoundsArgs.push_back(context.getPeriodicBoxVecXPointer());
+        findBlockBoundsArgs.push_back(context.getPeriodicBoxVecYPointer());
+        findBlockBoundsArgs.push_back(context.getPeriodicBoxVecZPointer());
         findBlockBoundsArgs.push_back(&context.getPosq().getDevicePointer());
         findBlockBoundsArgs.push_back(&blockCenter->getDevicePointer());
         findBlockBoundsArgs.push_back(&blockBoundingBox->getDevicePointer());
@@ -322,6 +325,9 @@ void CudaNonbondedUtilities::initialize(const System& system) {
         findInteractingBlocksKernel = context.getKernel(interactingBlocksProgram, "findBlocksWithInteractions");
         findInteractingBlocksArgs.push_back(context.getPeriodicBoxSizePointer());
         findInteractingBlocksArgs.push_back(context.getInvPeriodicBoxSizePointer());
+        findInteractingBlocksArgs.push_back(context.getPeriodicBoxVecXPointer());
+        findInteractingBlocksArgs.push_back(context.getPeriodicBoxVecYPointer());
+        findInteractingBlocksArgs.push_back(context.getPeriodicBoxVecZPointer());
         findInteractingBlocksArgs.push_back(&interactionCount->getDevicePointer());
         findInteractingBlocksArgs.push_back(&interactingTiles->getDevicePointer());
         findInteractingBlocksArgs.push_back(&interactingAtoms->getDevicePointer());
@@ -390,10 +396,10 @@ void CudaNonbondedUtilities::updateNeighborListSize() {
     interactingAtoms = CudaArray::create<int>(context, CudaContext::TileSize*maxTiles, "interactingAtoms");
     if (forceArgs.size() > 0)
         forceArgs[7] = &interactingTiles->getDevicePointer();
-    findInteractingBlocksArgs[3] = &interactingTiles->getDevicePointer();
+    findInteractingBlocksArgs[6] = &interactingTiles->getDevicePointer();
     if (forceArgs.size() > 0)
-        forceArgs[14] = &interactingAtoms->getDevicePointer();
-    findInteractingBlocksArgs[4] = &interactingAtoms->getDevicePointer();
+        forceArgs[17] = &interactingAtoms->getDevicePointer();
+    findInteractingBlocksArgs[7] = &interactingAtoms->getDevicePointer();
     if (context.getUseDoublePrecision()) {
         vector<double4> oldPositionsVec(numAtoms, make_double4(1e30, 1e30, 1e30, 0));
         oldPositions->upload(oldPositionsVec);
@@ -627,6 +633,9 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
         forceArgs.push_back(&interactionCount->getDevicePointer());
         forceArgs.push_back(context.getPeriodicBoxSizePointer());
         forceArgs.push_back(context.getInvPeriodicBoxSizePointer());
+        forceArgs.push_back(context.getPeriodicBoxVecXPointer());
+        forceArgs.push_back(context.getPeriodicBoxVecYPointer());
+        forceArgs.push_back(context.getPeriodicBoxVecZPointer());
         forceArgs.push_back(&maxTiles);
         forceArgs.push_back(&blockCenter->getDevicePointer());
         forceArgs.push_back(&blockBoundingBox->getDevicePointer());

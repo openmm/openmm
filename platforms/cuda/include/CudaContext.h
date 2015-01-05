@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -362,6 +362,12 @@ public:
         return useMixedPrecision;
     }
     /**
+     * Get whether the periodic box is triclinic.
+     */
+    bool getBoxIsTriclinic() {
+        return boxIsTriclinic;
+    }
+    /**
      * Convert a number to a string in a format suitable for including in a kernel.
      * This takes into account whether the context uses single or double precision.
      */
@@ -374,21 +380,34 @@ public:
      * Convert a CUDA result code to the corresponding string description.
      */
     static std::string getErrorString(CUresult result);
-    
+    /**
+     * Get the vectors defining the periodic box.
+     */
+    void getPeriodicBoxVectors(Vec3& a, Vec3& b, Vec3& c) const {
+        a = Vec3(periodicBoxVecX.x, periodicBoxVecX.y, periodicBoxVecX.z);
+        b = Vec3(periodicBoxVecY.x, periodicBoxVecY.y, periodicBoxVecY.z);
+        c = Vec3(periodicBoxVecZ.x, periodicBoxVecZ.y, periodicBoxVecZ.z);
+    }
+    /**
+     * Set the vectors defining the periodic box.
+     */
+    void setPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Vec3& c) {
+        periodicBoxVecX = make_double4(a[0], a[1], a[2], 0.0);
+        periodicBoxVecY = make_double4(b[0], b[1], b[2], 0.0);
+        periodicBoxVecZ = make_double4(c[0], c[1], c[2], 0.0);
+        periodicBoxVecXFloat = make_float4((float) a[0], (float) a[1], (float) a[2], 0.0f);
+        periodicBoxVecYFloat = make_float4((float) b[0], (float) b[1], (float) b[2], 0.0f);
+        periodicBoxVecZFloat = make_float4((float) c[0], (float) c[1], (float) c[2], 0.0f);
+        periodicBoxSize = make_double4(a[0], b[1], c[2], 0.0);
+        invPeriodicBoxSize = make_double4(1.0/a[0], 1.0/b[1], 1.0/c[2], 0.0);
+        periodicBoxSizeFloat = make_float4((float) a[0], (float) b[1], (float) c[2], 0.0f);
+        invPeriodicBoxSizeFloat = make_float4(1.0f/(float) a[0], 1.0f/(float) b[1], 1.0f/(float) c[2], 0.0f);
+    }
     /**
      * Get the size of the periodic box.
      */
     double4 getPeriodicBoxSize() const {
         return periodicBoxSize;
-    }
-    /**
-     * Set the size of the periodic box.
-     */
-    void setPeriodicBoxSize(double xsize, double ysize, double zsize) {
-        periodicBoxSize = make_double4(xsize, ysize, zsize, 0.0);
-        invPeriodicBoxSize = make_double4(1.0/xsize, 1.0/ysize, 1.0/zsize, 0.0);
-        periodicBoxSizeFloat = make_float4((float) xsize, (float) ysize, (float) zsize, 0.0f);
-        invPeriodicBoxSizeFloat = make_float4(1.0f/(float) xsize, 1.0f/(float) ysize, 1.0f/(float) zsize, 0.0f);
     }
     /**
      * Get the inverse of the size of the periodic box.
@@ -409,6 +428,27 @@ public:
      */
     void* getInvPeriodicBoxSizePointer() {
         return (useDoublePrecision ? reinterpret_cast<void*>(&invPeriodicBoxSize) : reinterpret_cast<void*>(&invPeriodicBoxSizeFloat));
+    }
+    /**
+     * Get a pointer to the first periodic box vector, represented as either a float4 or double4 depending on
+     * this context's precision.  This value is suitable for passing to kernels as an argument.
+     */
+    void* getPeriodicBoxVecXPointer() {
+        return (useDoublePrecision ? reinterpret_cast<void*>(&periodicBoxVecX) : reinterpret_cast<void*>(&periodicBoxVecXFloat));
+    }
+    /**
+     * Get a pointer to the second periodic box vector, represented as either a float4 or double4 depending on
+     * this context's precision.  This value is suitable for passing to kernels as an argument.
+     */
+    void* getPeriodicBoxVecYPointer() {
+        return (useDoublePrecision ? reinterpret_cast<void*>(&periodicBoxVecY) : reinterpret_cast<void*>(&periodicBoxVecYFloat));
+    }
+    /**
+     * Get a pointer to the third periodic box vector, represented as either a float4 or double4 depending on
+     * this context's precision.  This value is suitable for passing to kernels as an argument.
+     */
+    void* getPeriodicBoxVecZPointer() {
+        return (useDoublePrecision ? reinterpret_cast<void*>(&periodicBoxVecZ) : reinterpret_cast<void*>(&periodicBoxVecZFloat));
     }
     /**
      * Get the CudaIntegrationUtilities for this context.
@@ -525,10 +565,10 @@ private:
     int paddedNumAtoms;
     int numAtomBlocks;
     int numThreadBlocks;
-    bool useBlockingSync, useDoublePrecision, useMixedPrecision, contextIsValid, atomsWereReordered;
+    bool useBlockingSync, useDoublePrecision, useMixedPrecision, contextIsValid, atomsWereReordered, boxIsTriclinic;
     std::string compiler, tempDir, cacheDir, gpuArchitecture;
-    float4 periodicBoxSizeFloat, invPeriodicBoxSizeFloat;
-    double4 periodicBoxSize, invPeriodicBoxSize;
+    float4 periodicBoxVecXFloat, periodicBoxVecYFloat, periodicBoxVecZFloat, periodicBoxSizeFloat, invPeriodicBoxSizeFloat;
+    double4 periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ, periodicBoxSize, invPeriodicBoxSize;
     std::string defaultOptimizationOptions;
     std::map<std::string, std::string> compilationDefines;
     CUcontext context;

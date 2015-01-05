@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -233,6 +233,66 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     compilationDefines["ERF"] = useDoublePrecision ? "erf" : "erff";
     compilationDefines["ERFC"] = useDoublePrecision ? "erfc" : "erfcf";
     
+    // Set defines for applying periodic boundary conditions.
+    
+    Vec3 boxVectors[3];
+    system.getDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+    boxIsTriclinic = (boxVectors[0][1] != 0.0 || boxVectors[0][2] != 0.0 ||
+                      boxVectors[1][0] != 0.0 || boxVectors[1][2] != 0.0 ||
+                      boxVectors[2][0] != 0.0 || boxVectors[2][1] != 0.0);
+    if (boxIsTriclinic) {
+        compilationDefines["APPLY_PERIODIC_TO_DELTA(delta)"] =
+            "{"
+            "real scale3 = floor(delta.z*invPeriodicBoxSize.z+0.5f); \\\n"
+            "delta.x -= scale3*periodicBoxVecZ.x; \\\n"
+            "delta.y -= scale3*periodicBoxVecZ.y; \\\n"
+            "delta.z -= scale3*periodicBoxVecZ.z; \\\n"
+            "real scale2 = floor(delta.y*invPeriodicBoxSize.y+0.5f); \\\n"
+            "delta.x -= scale2*periodicBoxVecY.x; \\\n"
+            "delta.y -= scale2*periodicBoxVecY.y; \\\n"
+            "real scale1 = floor(delta.x*invPeriodicBoxSize.x+0.5f); \\\n"
+            "delta.x -= scale1*periodicBoxVecX.x;}";
+        compilationDefines["APPLY_PERIODIC_TO_POS(pos)"] =
+            "{"
+            "real scale3 = floor(pos.z*invPeriodicBoxSize.z); \\\n"
+            "pos.x -= scale3*periodicBoxVecZ.x; \\\n"
+            "pos.y -= scale3*periodicBoxVecZ.y; \\\n"
+            "pos.z -= scale3*periodicBoxVecZ.z; \\\n"
+            "real scale2 = floor(pos.y*invPeriodicBoxSize.y); \\\n"
+            "pos.x -= scale2*periodicBoxVecY.x; \\\n"
+            "pos.y -= scale2*periodicBoxVecY.y; \\\n"
+            "real scale1 = floor(pos.x*invPeriodicBoxSize.x); \\\n"
+            "pos.x -= scale1*periodicBoxVecX.x;}";
+        compilationDefines["APPLY_PERIODIC_TO_POS_WITH_CENTER(pos, center)"] =
+            "{"
+            "real scale3 = floor((pos.z-center.z)*invPeriodicBoxSize.z+0.5f); \\\n"
+            "pos.x -= scale3*periodicBoxVecZ.x; \\\n"
+            "pos.y -= scale3*periodicBoxVecZ.y; \\\n"
+            "pos.z -= scale3*periodicBoxVecZ.z; \\\n"
+            "real scale2 = floor((pos.y-center.y)*invPeriodicBoxSize.y+0.5f); \\\n"
+            "pos.x -= scale2*periodicBoxVecY.x; \\\n"
+            "pos.y -= scale2*periodicBoxVecY.y; \\\n"
+            "real scale1 = floor((pos.x-center.x)*invPeriodicBoxSize.x+0.5f); \\\n"
+            "pos.x -= scale1*periodicBoxVecX.x;}";
+    }
+    else {
+        compilationDefines["APPLY_PERIODIC_TO_DELTA(delta)"] =
+            "{"
+            "delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x; \\\n"
+            "delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y; \\\n"
+            "delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;}";
+        compilationDefines["APPLY_PERIODIC_TO_POS(pos)"] =
+            "{"
+            "pos.x -= floor(pos.x*invPeriodicBoxSize.x)*periodicBoxSize.x; \\\n"
+            "pos.y -= floor(pos.y*invPeriodicBoxSize.y)*periodicBoxSize.y; \\\n"
+            "pos.z -= floor(pos.z*invPeriodicBoxSize.z)*periodicBoxSize.z;}";
+        compilationDefines["APPLY_PERIODIC_TO_POS_WITH_CENTER(pos, center)"] =
+            "{"
+            "pos.x -= floor((pos.x-center.x)*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x; \\\n"
+            "pos.y -= floor((pos.y-center.y)*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y; \\\n"
+            "pos.z -= floor((pos.z-center.z)*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;}";
+    }
+
     // Create the work thread used for parallelization when running on multiple devices.
     
     thread = new WorkThread();

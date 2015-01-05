@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -304,21 +304,18 @@ void CudaUpdateStateDataKernel::getForces(ContextImpl& context, vector<Vec3>& fo
 }
 
 void CudaUpdateStateDataKernel::getPeriodicBoxVectors(ContextImpl& context, Vec3& a, Vec3& b, Vec3& c) const {
-    double4 box = cu.getPeriodicBoxSize();
-    a = Vec3(box.x, 0, 0);
-    b = Vec3(0, box.y, 0);
-    c = Vec3(0, 0, box.z);
+    cu.getPeriodicBoxVectors(a, b, c);
 }
 
 void CudaUpdateStateDataKernel::setPeriodicBoxVectors(ContextImpl& context, const Vec3& a, const Vec3& b, const Vec3& c) const {
     vector<CudaContext*>& contexts = cu.getPlatformData().contexts;
     for (int i = 0; i < (int) contexts.size(); i++)
-        contexts[i]->setPeriodicBoxSize(a[0], b[1], c[2]);
+        contexts[i]->setPeriodicBoxVectors(a, b, c);
 }
 
 void CudaUpdateStateDataKernel::createCheckpoint(ContextImpl& context, ostream& stream) {
     cu.setAsCurrent();
-    int version = 1;
+    int version = 2;
     stream.write((char*) &version, sizeof(int));
     int precision = (cu.getUseDoublePrecision() ? 2 : cu.getUseMixedPrecision() ? 1 : 0);
     stream.write((char*) &precision, sizeof(int));
@@ -339,8 +336,9 @@ void CudaUpdateStateDataKernel::createCheckpoint(ContextImpl& context, ostream& 
     stream.write(buffer, cu.getVelm().getSize()*cu.getVelm().getElementSize());
     stream.write((char*) &cu.getAtomIndex()[0], sizeof(int)*cu.getAtomIndex().size());
     stream.write((char*) &cu.getPosCellOffsets()[0], sizeof(int4)*cu.getPosCellOffsets().size());
-    double4 box = cu.getPeriodicBoxSize();
-    stream.write((char*) &box, sizeof(double4));
+    Vec3 boxVectors[3];
+    cu.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+    stream.write((char*) boxVectors, 3*sizeof(Vec3));
     cu.getIntegrationUtilities().createCheckpoint(stream);
     SimTKOpenMMUtilities::createCheckpoint(stream);
 }
@@ -349,7 +347,7 @@ void CudaUpdateStateDataKernel::loadCheckpoint(ContextImpl& context, istream& st
     cu.setAsCurrent();
     int version;
     stream.read((char*) &version, sizeof(int));
-    if (version != 1)
+    if (version != 2)
         throw OpenMMException("Checkpoint was created with a different version of OpenMM");
     int precision;
     stream.read((char*) &precision, sizeof(int));
@@ -379,10 +377,10 @@ void CudaUpdateStateDataKernel::loadCheckpoint(ContextImpl& context, istream& st
     stream.read((char*) &cu.getAtomIndex()[0], sizeof(int)*cu.getAtomIndex().size());
     cu.getAtomIndexArray().upload(cu.getAtomIndex());
     stream.read((char*) &cu.getPosCellOffsets()[0], sizeof(int4)*cu.getPosCellOffsets().size());
-    double4 box;
-    stream.read((char*) &box, sizeof(double4));
+    Vec3 boxVectors[3];
+    stream.read((char*) &boxVectors, 3*sizeof(Vec3));
     for (int i = 0; i < (int) contexts.size(); i++)
-        contexts[i]->setPeriodicBoxSize(box.x, box.y, box.z);
+        contexts[i]->setPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
     cu.getIntegrationUtilities().loadCheckpoint(stream);
     SimTKOpenMMUtilities::loadCheckpoint(stream);
     for (int i = 0; i < cu.getReorderListeners().size(); i++)
