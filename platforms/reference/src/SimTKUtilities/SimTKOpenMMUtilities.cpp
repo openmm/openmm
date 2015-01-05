@@ -24,6 +24,7 @@
 
 // class of shared, static utility methods
 
+#include "openmm/internal/OSRngSeed.h"
 #include "SimTKOpenMMUtilities.h"
 #include "SimTKOpenMMLog.h"
 #include "sfmt/SFMT.h"
@@ -361,7 +362,11 @@ void SimTKOpenMMUtilities::setRandomNumberSeed( uint32_t seed ) {
 
    // ---------------------------------------------------------------------------------------
 
-   _randomNumberSeed = seed;
+    // If the seed is 0, generate one from the clock
+    if (seed == 0)
+        _randomNumberSeed = (uint32_t) osrngseed();
+    else
+        _randomNumberSeed = seed;
    _randomInitialized = false;
 }
 

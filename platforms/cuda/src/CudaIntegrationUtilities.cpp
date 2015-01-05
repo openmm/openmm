@@ -27,6 +27,7 @@
 #include "CudaIntegrationUtilities.h"
 #include "CudaArray.h"
 #include "CudaKernelSources.h"
+#include "openmm/internal/OSRngSeed.h"
 #include "openmm/HarmonicAngleForce.h"
 #include "openmm/VirtualSite.h"
 #include "quern.h"
@@ -858,6 +859,7 @@ void CudaIntegrationUtilities::initRandomNumberGenerator(unsigned int randomNumb
 
     vector<int4> seed(randomSeed->getSize());
     unsigned int r = randomNumberSeed;
+    if (r == 0) r = (unsigned int) osrngseed();
     for (int i = 0; i < randomSeed->getSize(); i++) {
         seed[i].x = r = (1664525*r + 1013904223) & 0xFFFFFFFF;
         seed[i].y = r = (1664525*r + 1013904223) & 0xFFFFFFFF;

@@ -35,7 +35,6 @@
 #include "Force.h"
 #include <string>
 #include "internal/windowsExport.h"
-#include "openmm/internal/OSRngSeed.h"
 
 namespace OpenMM {
 
