@@ -2380,6 +2380,9 @@ double CudaCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool in
             interactionGroupArgs.push_back(&interactionGroupData->getDevicePointer());
             interactionGroupArgs.push_back(cu.getPeriodicBoxSizePointer());
             interactionGroupArgs.push_back(cu.getInvPeriodicBoxSizePointer());
+            interactionGroupArgs.push_back(cu.getPeriodicBoxVecXPointer());
+            interactionGroupArgs.push_back(cu.getPeriodicBoxVecYPointer());
+            interactionGroupArgs.push_back(cu.getPeriodicBoxVecZPointer());
             for (int i = 0; i < (int) params->getBuffers().size(); i++)
                 interactionGroupArgs.push_back(&params->getBuffers()[i].getMemory());
             if (globals != NULL)
@@ -2539,6 +2542,9 @@ double CudaCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeFor
             computeSumArgs.push_back(&nb.getInteractionCount().getDevicePointer());
             computeSumArgs.push_back(cu.getPeriodicBoxSizePointer());
             computeSumArgs.push_back(cu.getInvPeriodicBoxSizePointer());
+            computeSumArgs.push_back(cu.getPeriodicBoxVecXPointer());
+            computeSumArgs.push_back(cu.getPeriodicBoxVecYPointer());
+            computeSumArgs.push_back(cu.getPeriodicBoxVecZPointer());
             computeSumArgs.push_back(&maxTiles);
             computeSumArgs.push_back(&nb.getBlockCenters().getDevicePointer());
             computeSumArgs.push_back(&nb.getBlockBoundingBoxes().getDevicePointer());
@@ -2558,6 +2564,9 @@ double CudaCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeFor
             force1Args.push_back(&nb.getInteractionCount().getDevicePointer());
             force1Args.push_back(cu.getPeriodicBoxSizePointer());
             force1Args.push_back(cu.getInvPeriodicBoxSizePointer());
+            force1Args.push_back(cu.getPeriodicBoxVecXPointer());
+            force1Args.push_back(cu.getPeriodicBoxVecYPointer());
+            force1Args.push_back(cu.getPeriodicBoxVecZPointer());
             force1Args.push_back(&maxTiles);
             force1Args.push_back(&nb.getBlockCenters().getDevicePointer());
             force1Args.push_back(&nb.getBlockBoundingBoxes().getDevicePointer());
@@ -2574,8 +2583,8 @@ double CudaCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeFor
             maxTiles = nb.getInteractingTiles().getSize();
             computeSumArgs[3] = &nb.getInteractingTiles().getDevicePointer();
             force1Args[5] = &nb.getInteractingTiles().getDevicePointer();
-            computeSumArgs[10] = &nb.getInteractingAtoms().getDevicePointer();
-            force1Args[12] = &nb.getInteractingAtoms().getDevicePointer();
+            computeSumArgs[13] = &nb.getInteractingAtoms().getDevicePointer();
+            force1Args[15] = &nb.getInteractingAtoms().getDevicePointer();
         }
     }
     cu.executeKernel(computeBornSumKernel, &computeSumArgs[0], nb.getNumForceThreadBlocks()*nb.getForceThreadBlockSize(), nb.getForceThreadBlockSize());
@@ -3344,6 +3353,9 @@ double CudaCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeFo
             pairValueArgs.push_back(&nb.getInteractionCount().getDevicePointer());
             pairValueArgs.push_back(cu.getPeriodicBoxSizePointer());
             pairValueArgs.push_back(cu.getInvPeriodicBoxSizePointer());
+            pairValueArgs.push_back(cu.getPeriodicBoxVecXPointer());
+            pairValueArgs.push_back(cu.getPeriodicBoxVecYPointer());
+            pairValueArgs.push_back(cu.getPeriodicBoxVecZPointer());
             pairValueArgs.push_back(&maxTiles);
             pairValueArgs.push_back(&nb.getBlockCenters().getDevicePointer());
             pairValueArgs.push_back(&nb.getBlockBoundingBoxes().getDevicePointer());
@@ -3379,6 +3391,9 @@ double CudaCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeFo
             pairEnergyArgs.push_back(&nb.getInteractionCount().getDevicePointer());
             pairEnergyArgs.push_back(cu.getPeriodicBoxSizePointer());
             pairEnergyArgs.push_back(cu.getInvPeriodicBoxSizePointer());
+            pairEnergyArgs.push_back(cu.getPeriodicBoxVecXPointer());
+            pairEnergyArgs.push_back(cu.getPeriodicBoxVecYPointer());
+            pairEnergyArgs.push_back(cu.getPeriodicBoxVecZPointer());
             pairEnergyArgs.push_back(&maxTiles);
             pairEnergyArgs.push_back(&nb.getBlockCenters().getDevicePointer());
             pairEnergyArgs.push_back(&nb.getBlockBoundingBoxes().getDevicePointer());
@@ -3444,8 +3459,8 @@ double CudaCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeFo
             maxTiles = nb.getInteractingTiles().getSize();
             pairValueArgs[4] = &nb.getInteractingTiles().getDevicePointer();
             pairEnergyArgs[5] = &nb.getInteractingTiles().getDevicePointer();
-            pairValueArgs[11] = &nb.getInteractingAtoms().getDevicePointer();
-            pairEnergyArgs[12] = &nb.getInteractingAtoms().getDevicePointer();
+            pairValueArgs[14] = &nb.getInteractingAtoms().getDevicePointer();
+            pairEnergyArgs[15] = &nb.getInteractingAtoms().getDevicePointer();
         }
     }
     cu.executeKernel(pairValueKernel, &pairValueArgs[0], nb.getNumForceThreadBlocks()*nb.getForceThreadBlockSize(), nb.getForceThreadBlockSize());
@@ -4061,6 +4076,9 @@ double CudaCalcCustomHbondForceKernel::execute(ContextImpl& context, bool includ
         donorArgs.push_back(&acceptors->getDevicePointer());
         donorArgs.push_back(cu.getPeriodicBoxSizePointer());
         donorArgs.push_back(cu.getInvPeriodicBoxSizePointer());
+        donorArgs.push_back(cu.getPeriodicBoxVecXPointer());
+        donorArgs.push_back(cu.getPeriodicBoxVecYPointer());
+        donorArgs.push_back(cu.getPeriodicBoxVecZPointer());
         if (globals != NULL)
             donorArgs.push_back(&globals->getDevicePointer());
         for (int i = 0; i < (int) donorParams->getBuffers().size(); i++) {
@@ -4082,6 +4100,9 @@ double CudaCalcCustomHbondForceKernel::execute(ContextImpl& context, bool includ
         acceptorArgs.push_back(&acceptors->getDevicePointer());
         acceptorArgs.push_back(cu.getPeriodicBoxSizePointer());
         acceptorArgs.push_back(cu.getInvPeriodicBoxSizePointer());
+        acceptorArgs.push_back(cu.getPeriodicBoxVecXPointer());
+        acceptorArgs.push_back(cu.getPeriodicBoxVecYPointer());
+        acceptorArgs.push_back(cu.getPeriodicBoxVecZPointer());
         if (globals != NULL)
             acceptorArgs.push_back(&globals->getDevicePointer());
         for (int i = 0; i < (int) donorParams->getBuffers().size(); i++) {
@@ -4684,7 +4705,7 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
         const vector<int>& atoms = iter->second;
         string deltaName = atomNames[atoms[0]]+atomNames[atoms[1]];
         if (computedDeltas.count(deltaName) == 0) {
-            compute<<"real4 delta"<<deltaName<<" = delta("<<posNames[atoms[0]]<<", "<<posNames[atoms[1]]<<", periodicBoxSize, invPeriodicBoxSize);\n";
+            compute<<"real4 delta"<<deltaName<<" = delta("<<posNames[atoms[0]]<<", "<<posNames[atoms[1]]<<", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);\n";
             computedDeltas.insert(deltaName);
         }
         compute<<"real r_"<<deltaName<<" = sqrt(delta"<<deltaName<<".w);\n";
@@ -4698,11 +4719,11 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
         string deltaName2 = atomNames[atoms[1]]+atomNames[atoms[2]];
         string angleName = "angle_"+atomNames[atoms[0]]+atomNames[atoms[1]]+atomNames[atoms[2]];
         if (computedDeltas.count(deltaName1) == 0) {
-            compute<<"real4 delta"<<deltaName1<<" = delta("<<posNames[atoms[1]]<<", "<<posNames[atoms[0]]<<", periodicBoxSize, invPeriodicBoxSize);\n";
+            compute<<"real4 delta"<<deltaName1<<" = delta("<<posNames[atoms[1]]<<", "<<posNames[atoms[0]]<<", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);\n";
             computedDeltas.insert(deltaName1);
         }
         if (computedDeltas.count(deltaName2) == 0) {
-            compute<<"real4 delta"<<deltaName2<<" = delta("<<posNames[atoms[1]]<<", "<<posNames[atoms[2]]<<", periodicBoxSize, invPeriodicBoxSize);\n";
+            compute<<"real4 delta"<<deltaName2<<" = delta("<<posNames[atoms[1]]<<", "<<posNames[atoms[2]]<<", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);\n";
             computedDeltas.insert(deltaName2);
         }
         compute<<"real "<<angleName<<" = computeAngle(delta"<<deltaName1<<", delta"<<deltaName2<<");\n";
@@ -4719,15 +4740,15 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
         string crossName2 = "cross_"+deltaName2+"_"+deltaName3;
         string dihedralName = "dihedral_"+atomNames[atoms[0]]+atomNames[atoms[1]]+atomNames[atoms[2]]+atomNames[atoms[3]];
         if (computedDeltas.count(deltaName1) == 0) {
-            compute<<"real4 delta"<<deltaName1<<" = delta("<<posNames[atoms[0]]<<", "<<posNames[atoms[1]]<<", periodicBoxSize, invPeriodicBoxSize);\n";
+            compute<<"real4 delta"<<deltaName1<<" = delta("<<posNames[atoms[0]]<<", "<<posNames[atoms[1]]<<", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);\n";
             computedDeltas.insert(deltaName1);
         }
         if (computedDeltas.count(deltaName2) == 0) {
-            compute<<"real4 delta"<<deltaName2<<" = delta("<<posNames[atoms[2]]<<", "<<posNames[atoms[1]]<<", periodicBoxSize, invPeriodicBoxSize);\n";
+            compute<<"real4 delta"<<deltaName2<<" = delta("<<posNames[atoms[2]]<<", "<<posNames[atoms[1]]<<", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);\n";
             computedDeltas.insert(deltaName2);
         }
         if (computedDeltas.count(deltaName3) == 0) {
-            compute<<"real4 delta"<<deltaName3<<" = delta("<<posNames[atoms[2]]<<", "<<posNames[atoms[3]]<<", periodicBoxSize, invPeriodicBoxSize);\n";
+            compute<<"real4 delta"<<deltaName3<<" = delta("<<posNames[atoms[2]]<<", "<<posNames[atoms[3]]<<", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);\n";
             computedDeltas.insert(deltaName3);
         }
         compute<<"real4 "<<crossName1<<" = computeCross(delta"<<deltaName1<<", delta"<<deltaName2<<");\n";
@@ -4897,7 +4918,7 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
         if (!centralParticleMode) {
             for (int i = 1; i < particlesPerSet; i++) {
                 for (int j = i+1; j < particlesPerSet; j++)
-                    verifyCutoff<<"includeInteraction &= (delta(pos"<<(i+1)<<", pos"<<(j+1)<<", periodicBoxSize, invPeriodicBoxSize).w < CUTOFF_SQUARED);\n";
+                    verifyCutoff<<"includeInteraction &= (delta(pos"<<(i+1)<<", pos"<<(j+1)<<", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ).w < CUTOFF_SQUARED);\n";
             }
         }
     }
@@ -4975,6 +4996,9 @@ double CudaCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bool
         forceArgs.push_back(&cu.getPosq().getDevicePointer());
         forceArgs.push_back(cu.getPeriodicBoxSizePointer());
         forceArgs.push_back(cu.getInvPeriodicBoxSizePointer());
+        forceArgs.push_back(cu.getPeriodicBoxVecXPointer());
+        forceArgs.push_back(cu.getPeriodicBoxVecYPointer());
+        forceArgs.push_back(cu.getPeriodicBoxVecZPointer());
         if (nonbondedMethod != NoCutoff) {
             forceArgs.push_back(&neighbors->getDevicePointer());
             forceArgs.push_back(&neighborStartIndex->getDevicePointer());
@@ -5000,6 +5024,9 @@ double CudaCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bool
 
             blockBoundsArgs.push_back(cu.getPeriodicBoxSizePointer());
             blockBoundsArgs.push_back(cu.getInvPeriodicBoxSizePointer());
+            blockBoundsArgs.push_back(cu.getPeriodicBoxVecXPointer());
+            blockBoundsArgs.push_back(cu.getPeriodicBoxVecYPointer());
+            blockBoundsArgs.push_back(cu.getPeriodicBoxVecZPointer());
             blockBoundsArgs.push_back(&cu.getPosq().getDevicePointer());
             blockBoundsArgs.push_back(&blockCenter->getDevicePointer());
             blockBoundsArgs.push_back(&blockBoundingBox->getDevicePointer());
@@ -5009,6 +5036,9 @@ double CudaCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bool
 
             neighborsArgs.push_back(cu.getPeriodicBoxSizePointer());
             neighborsArgs.push_back(cu.getInvPeriodicBoxSizePointer());
+            neighborsArgs.push_back(cu.getPeriodicBoxVecXPointer());
+            neighborsArgs.push_back(cu.getPeriodicBoxVecYPointer());
+            neighborsArgs.push_back(cu.getPeriodicBoxVecZPointer());
             neighborsArgs.push_back(&cu.getPosq().getDevicePointer());
             neighborsArgs.push_back(&blockCenter->getDevicePointer());
             neighborsArgs.push_back(&blockBoundingBox->getDevicePointer());
@@ -6412,7 +6442,8 @@ void CudaApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, d
     float scalefX = (float) scaleX;
     float scalefY = (float) scaleY;
     float scalefZ = (float) scaleZ;
-    void* args[] = {&scalefX, &scalefY, &scalefZ, &numMolecules, cu.getPeriodicBoxSizePointer(), cu.getInvPeriodicBoxSizePointer(), 
+    void* args[] = {&scalefX, &scalefY, &scalefZ, &numMolecules, cu.getPeriodicBoxSizePointer(), cu.getInvPeriodicBoxSizePointer(),
+                    cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer(),
 		    &cu.getPosq().getDevicePointer(), &moleculeAtoms->getDevicePointer(), &moleculeStartIndex->getDevicePointer()};
     cu.executeKernel(kernel, args, cu.getNumAtoms());
     for (int i = 0; i < (int) cu.getPosCellOffsets().size(); i++)
