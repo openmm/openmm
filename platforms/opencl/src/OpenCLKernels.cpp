@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -75,6 +75,19 @@ static void setInvPeriodicBoxSizeArg(OpenCLContext& cl, cl::Kernel& kernel, int 
         kernel.setArg<mm_double4>(index, cl.getInvPeriodicBoxSizeDouble());
     else
         kernel.setArg<mm_float4>(index, cl.getInvPeriodicBoxSize());
+}
+
+static void setPeriodicBoxVecArgs(OpenCLContext& cl, cl::Kernel& kernel, int index) {
+    if (cl.getUseDoublePrecision()) {
+        kernel.setArg<mm_double4>(index++, cl.getPeriodicBoxVecXDouble());
+        kernel.setArg<mm_double4>(index++, cl.getPeriodicBoxVecYDouble());
+        kernel.setArg<mm_double4>(index, cl.getPeriodicBoxVecZDouble());
+    }
+    else {
+        kernel.setArg<mm_float4>(index++, cl.getPeriodicBoxVecX());
+        kernel.setArg<mm_float4>(index++, cl.getPeriodicBoxVecY());
+        kernel.setArg<mm_float4>(index, cl.getPeriodicBoxVecZ());
+    }
 }
 
 static bool isZeroExpression(const Lepton::ParsedExpression& expression) {
@@ -323,20 +336,17 @@ void OpenCLUpdateStateDataKernel::getForces(ContextImpl& context, vector<Vec3>& 
 }
 
 void OpenCLUpdateStateDataKernel::getPeriodicBoxVectors(ContextImpl& context, Vec3& a, Vec3& b, Vec3& c) const {
-    mm_double4 box = cl.getPeriodicBoxSizeDouble();
-    a = Vec3(box.x, 0, 0);
-    b = Vec3(0, box.y, 0);
-    c = Vec3(0, 0, box.z);
+    cl.getPeriodicBoxVectors(a, b, c);
 }
 
 void OpenCLUpdateStateDataKernel::setPeriodicBoxVectors(ContextImpl& context, const Vec3& a, const Vec3& b, const Vec3& c) const {
     vector<OpenCLContext*>& contexts = cl.getPlatformData().contexts;
     for (int i = 0; i < (int) contexts.size(); i++)
-        contexts[i]->setPeriodicBoxSize(a[0], b[1], c[2]);
+        contexts[i]->setPeriodicBoxVectors(a, b, c);
 }
 
 void OpenCLUpdateStateDataKernel::createCheckpoint(ContextImpl& context, ostream& stream) {
-    int version = 1;
+    int version = 2;
     stream.write((char*) &version, sizeof(int));
     int precision = (cl.getUseDoublePrecision() ? 2 : cl.getUseMixedPrecision() ? 1 : 0);
     stream.write((char*) &precision, sizeof(int));
@@ -357,8 +367,9 @@ void OpenCLUpdateStateDataKernel::createCheckpoint(ContextImpl& context, ostream
     stream.write(buffer, cl.getVelm().getSize()*cl.getVelm().getElementSize());
     stream.write((char*) &cl.getAtomIndex()[0], sizeof(cl_int)*cl.getAtomIndex().size());
     stream.write((char*) &cl.getPosCellOffsets()[0], sizeof(mm_int4)*cl.getPosCellOffsets().size());
-    mm_float4 box = cl.getPeriodicBoxSize();
-    stream.write((char*) &box, sizeof(mm_float4));
+    Vec3 boxVectors[3];
+    cl.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+    stream.write((char*) boxVectors, 3*sizeof(Vec3));
     cl.getIntegrationUtilities().createCheckpoint(stream);
     SimTKOpenMMUtilities::createCheckpoint(stream);
 }
@@ -366,7 +377,7 @@ void OpenCLUpdateStateDataKernel::createCheckpoint(ContextImpl& context, ostream
 void OpenCLUpdateStateDataKernel::loadCheckpoint(ContextImpl& context, istream& stream) {
     int version;
     stream.read((char*) &version, sizeof(int));
-    if (version != 1)
+    if (version != 2)
         throw OpenMMException("Checkpoint was created with a different version of OpenMM");
     int precision;
     stream.read((char*) &precision, sizeof(int));
@@ -396,10 +407,10 @@ void OpenCLUpdateStateDataKernel::loadCheckpoint(ContextImpl& context, istream& 
     stream.read((char*) &cl.getAtomIndex()[0], sizeof(cl_int)*cl.getAtomIndex().size());
     cl.getAtomIndexArray().upload(cl.getAtomIndex());
     stream.read((char*) &cl.getPosCellOffsets()[0], sizeof(mm_int4)*cl.getPosCellOffsets().size());
-    mm_float4 box;
-    stream.read((char*) &box, sizeof(mm_float4));
+    Vec3 boxVectors[3];
+    stream.read((char*) &boxVectors, 3*sizeof(Vec3));
     for (int i = 0; i < (int) contexts.size(); i++)
-        contexts[i]->setPeriodicBoxSize(box.x, box.y, box.z);
+        contexts[i]->setPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
     cl.getIntegrationUtilities().loadCheckpoint(stream);
     SimTKOpenMMUtilities::loadCheckpoint(stream);
     for (int i = 0; i < (int) cl.getReorderListeners().size(); i++)
@@ -6636,9 +6647,9 @@ void OpenCLApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context,
         // Initialize the kernel arguments.
         
         kernel.setArg<cl_int>(3, numMolecules);
-        kernel.setArg<cl::Buffer>(6, cl.getPosq().getDeviceBuffer());
-        kernel.setArg<cl::Buffer>(7, moleculeAtoms->getDeviceBuffer());
-        kernel.setArg<cl::Buffer>(8, moleculeStartIndex->getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(9, cl.getPosq().getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(10, moleculeAtoms->getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(11, moleculeStartIndex->getDeviceBuffer());
     }
     int bytesToCopy = cl.getPosq().getSize()*(cl.getUseDoublePrecision() ? sizeof(mm_double4) : sizeof(mm_float4));
     cl.getQueue().enqueueCopyBuffer(cl.getPosq().getDeviceBuffer(), savedPositions->getDeviceBuffer(), 0, 0, bytesToCopy);
@@ -6647,6 +6658,7 @@ void OpenCLApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context,
     kernel.setArg<cl_float>(2, (cl_float) scaleZ);
     setPeriodicBoxSizeArg(cl, kernel, 4);
     setInvPeriodicBoxSizeArg(cl, kernel, 5);
+    setPeriodicBoxVecArgs(cl, kernel, 6);
     cl.executeKernel(kernel, cl.getNumAtoms());
     for (int i = 0; i < (int) cl.getPosCellOffsets().size(); i++)
         cl.getPosCellOffsets()[i] = mm_int4(0, 0, 0, 0);
