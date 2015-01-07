@@ -42,8 +42,8 @@ __kernel void computeInteractionGroups(
 #else
         __global real4* restrict forceBuffers,
 #endif
-        __global real* restrict energyBuffer, __global const real4* restrict posq,
-        __global const int4* restrict groupData, real4 periodicBoxSize, real4 invPeriodicBoxSize
+        __global real* restrict energyBuffer, __global const real4* restrict posq, __global const int4* restrict groupData,
+        real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ
         PARAMETER_ARGUMENTS) {
     const unsigned int totalWarps = get_global_size(0)/TILE_SIZE;
     const unsigned int warp = get_global_id(0)/TILE_SIZE; // global warpIndex
@@ -82,7 +82,7 @@ __kernel void computeInteractionGroups(
                 posq2 = (real4) (localData[localIndex].x, localData[localIndex].y, localData[localIndex].z, localData[localIndex].q);
                 real4 delta = (real4) (posq2.xyz - posq1.xyz, 0);
 #ifdef USE_PERIODIC
-                delta.xyz -= floor(delta.xyz*invPeriodicBoxSize.xyz+0.5f)*periodicBoxSize.xyz;
+                APPLY_PERIODIC_TO_DELTA(delta)
 #endif
                 real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
 #ifdef USE_CUTOFF

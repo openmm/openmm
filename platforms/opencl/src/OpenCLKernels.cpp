@@ -77,13 +77,17 @@ static void setInvPeriodicBoxSizeArg(OpenCLContext& cl, cl::Kernel& kernel, int 
         kernel.setArg<mm_float4>(index, cl.getInvPeriodicBoxSize());
 }
 
-static void setPeriodicBoxVecArgs(OpenCLContext& cl, cl::Kernel& kernel, int index) {
+static void setPeriodicBoxArgs(OpenCLContext& cl, cl::Kernel& kernel, int index) {
     if (cl.getUseDoublePrecision()) {
+        kernel.setArg<mm_double4>(index++, cl.getPeriodicBoxSizeDouble());
+        kernel.setArg<mm_double4>(index++, cl.getInvPeriodicBoxSizeDouble());
         kernel.setArg<mm_double4>(index++, cl.getPeriodicBoxVecXDouble());
         kernel.setArg<mm_double4>(index++, cl.getPeriodicBoxVecYDouble());
         kernel.setArg<mm_double4>(index, cl.getPeriodicBoxVecZDouble());
     }
     else {
+        kernel.setArg<mm_float4>(index++, cl.getPeriodicBoxSize());
+        kernel.setArg<mm_float4>(index++, cl.getInvPeriodicBoxSize());
         kernel.setArg<mm_float4>(index++, cl.getPeriodicBoxVecX());
         kernel.setArg<mm_float4>(index++, cl.getPeriodicBoxVecY());
         kernel.setArg<mm_float4>(index, cl.getPeriodicBoxVecZ());
@@ -2400,8 +2404,8 @@ double OpenCLCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool 
             interactionGroupKernel.setArg<cl::Buffer>(index++, cl.getEnergyBuffer().getDeviceBuffer());
             interactionGroupKernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
             interactionGroupKernel.setArg<cl::Buffer>(index++, interactionGroupData->getDeviceBuffer());
-            setPeriodicBoxSizeArg(cl, interactionGroupKernel, index++);
-            setInvPeriodicBoxSizeArg(cl, interactionGroupKernel, index++);
+            setPeriodicBoxArgs(cl, interactionGroupKernel, index);
+            index += 5;
             for (int i = 0; i < (int) params->getBuffers().size(); i++)
                 interactionGroupKernel.setArg<cl::Memory>(index++, params->getBuffers()[i].getMemory());
             if (globals != NULL)
@@ -2573,7 +2577,7 @@ double OpenCLCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
         if (nb.getUseCutoff()) {
             computeBornSumKernel.setArg<cl::Buffer>(index++, nb.getInteractingTiles().getDeviceBuffer());
             computeBornSumKernel.setArg<cl::Buffer>(index++, nb.getInteractionCount().getDeviceBuffer());
-            index += 2; // The periodic box size arguments are set when the kernel is executed.
+            index += 5; // The periodic box size arguments are set when the kernel is executed.
             computeBornSumKernel.setArg<cl_uint>(index++, maxTiles);
             computeBornSumKernel.setArg<cl::Buffer>(index++, nb.getBlockCenters().getDeviceBuffer());
             computeBornSumKernel.setArg<cl::Buffer>(index++, nb.getBlockBoundingBoxes().getDeviceBuffer());
@@ -2592,7 +2596,7 @@ double OpenCLCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
         if (nb.getUseCutoff()) {
             force1Kernel.setArg<cl::Buffer>(index++, nb.getInteractingTiles().getDeviceBuffer());
             force1Kernel.setArg<cl::Buffer>(index++, nb.getInteractionCount().getDeviceBuffer());
-            index += 2; // The periodic box size arguments are set when the kernel is executed.
+            index += 5; // The periodic box size arguments are set when the kernel is executed.
             force1Kernel.setArg<cl_uint>(index++, maxTiles);
             force1Kernel.setArg<cl::Buffer>(index++, nb.getBlockCenters().getDeviceBuffer());
             force1Kernel.setArg<cl::Buffer>(index++, nb.getBlockBoundingBoxes().getDeviceBuffer());
@@ -2625,18 +2629,16 @@ double OpenCLCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
         reduceBornForceKernel.setArg<cl::Buffer>(index++, obcChain->getDeviceBuffer());
     }
     if (nb.getUseCutoff()) {
-        setPeriodicBoxSizeArg(cl, computeBornSumKernel, 5);
-        setInvPeriodicBoxSizeArg(cl, computeBornSumKernel, 6);
-        setPeriodicBoxSizeArg(cl, force1Kernel, 7);
-        setInvPeriodicBoxSizeArg(cl, force1Kernel, 8);
+        setPeriodicBoxArgs(cl, computeBornSumKernel, 5);
+        setPeriodicBoxArgs(cl, force1Kernel, 7);
         if (maxTiles < nb.getInteractingTiles().getSize()) {
             maxTiles = nb.getInteractingTiles().getSize();
             computeBornSumKernel.setArg<cl::Buffer>(3, nb.getInteractingTiles().getDeviceBuffer());
-            computeBornSumKernel.setArg<cl_uint>(7, maxTiles);
-            computeBornSumKernel.setArg<cl::Buffer>(10, nb.getInteractingAtoms().getDeviceBuffer());
+            computeBornSumKernel.setArg<cl_uint>(10, maxTiles);
+            computeBornSumKernel.setArg<cl::Buffer>(13, nb.getInteractingAtoms().getDeviceBuffer());
             force1Kernel.setArg<cl::Buffer>(5, nb.getInteractingTiles().getDeviceBuffer());
-            force1Kernel.setArg<cl_uint>(9, maxTiles);
-            force1Kernel.setArg<cl::Buffer>(12, nb.getInteractingAtoms().getDeviceBuffer());
+            force1Kernel.setArg<cl_uint>(12, maxTiles);
+            force1Kernel.setArg<cl::Buffer>(15, nb.getInteractingAtoms().getDeviceBuffer());
         }
     }
     cl.executeKernel(computeBornSumKernel, nb.getNumForceThreadBlocks()*nb.getForceThreadBlockSize(), nb.getForceThreadBlockSize());
@@ -3450,7 +3452,7 @@ double OpenCLCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
         if (nb.getUseCutoff()) {
             pairValueKernel.setArg<cl::Buffer>(index++, nb.getInteractingTiles().getDeviceBuffer());
             pairValueKernel.setArg<cl::Buffer>(index++, nb.getInteractionCount().getDeviceBuffer());
-            index += 2; // Periodic box size arguments are set when the kernel is executed.
+            index += 5; // Periodic box size arguments are set when the kernel is executed.
             pairValueKernel.setArg<cl_uint>(index++, maxTiles);
             pairValueKernel.setArg<cl::Buffer>(index++, nb.getBlockCenters().getDeviceBuffer());
             pairValueKernel.setArg<cl::Buffer>(index++, nb.getBlockBoundingBoxes().getDeviceBuffer());
@@ -3493,7 +3495,7 @@ double OpenCLCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
         if (nb.getUseCutoff()) {
             pairEnergyKernel.setArg<cl::Buffer>(index++, nb.getInteractingTiles().getDeviceBuffer());
             pairEnergyKernel.setArg<cl::Buffer>(index++, nb.getInteractionCount().getDeviceBuffer());
-            index += 2; // Periodic box size arguments are set when the kernel is executed.
+            index += 5; // Periodic box size arguments are set when the kernel is executed.
             pairEnergyKernel.setArg<cl_uint>(index++, maxTiles);
             pairEnergyKernel.setArg<cl::Buffer>(index++, nb.getBlockCenters().getDeviceBuffer());
             pairEnergyKernel.setArg<cl::Buffer>(index++, nb.getBlockBoundingBoxes().getDeviceBuffer());
@@ -3577,18 +3579,16 @@ double OpenCLCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
             globals->upload(globalParamValues);
     }
     if (nb.getUseCutoff()) {
-        setPeriodicBoxSizeArg(cl, pairValueKernel, 8);
-        setInvPeriodicBoxSizeArg(cl, pairValueKernel, 9);
-        setPeriodicBoxSizeArg(cl, pairEnergyKernel, 9);
-        setInvPeriodicBoxSizeArg(cl, pairEnergyKernel, 10);
+        setPeriodicBoxArgs(cl, pairValueKernel, 8);
+        setPeriodicBoxArgs(cl, pairEnergyKernel, 9);
         if (maxTiles < nb.getInteractingTiles().getSize()) {
             maxTiles = nb.getInteractingTiles().getSize();
             pairValueKernel.setArg<cl::Buffer>(6, nb.getInteractingTiles().getDeviceBuffer());
-            pairValueKernel.setArg<cl_uint>(10, maxTiles);
-            pairValueKernel.setArg<cl::Buffer>(13, nb.getInteractingAtoms().getDeviceBuffer());
+            pairValueKernel.setArg<cl_uint>(13, maxTiles);
+            pairValueKernel.setArg<cl::Buffer>(16, nb.getInteractingAtoms().getDeviceBuffer());
             pairEnergyKernel.setArg<cl::Buffer>(7, nb.getInteractingTiles().getDeviceBuffer());
-            pairEnergyKernel.setArg<cl_uint>(11, maxTiles);
-            pairEnergyKernel.setArg<cl::Buffer>(14, nb.getInteractingAtoms().getDeviceBuffer());
+            pairEnergyKernel.setArg<cl_uint>(14, maxTiles);
+            pairEnergyKernel.setArg<cl::Buffer>(17, nb.getInteractingAtoms().getDeviceBuffer());
         }
     }
     cl.executeKernel(pairValueKernel, nb.getNumForceThreadBlocks()*nb.getForceThreadBlockSize(), nb.getForceThreadBlockSize());
@@ -4226,7 +4226,7 @@ double OpenCLCalcCustomHbondForceKernel::execute(ContextImpl& context, bool incl
         donorKernel.setArg<cl::Buffer>(index++, acceptors->getDeviceBuffer());
         donorKernel.setArg<cl::Buffer>(index++, donorBufferIndices->getDeviceBuffer());
         donorKernel.setArg(index++, 3*OpenCLContext::ThreadBlockSize*sizeof(mm_float4), NULL);
-        index += 2; // Periodic box size arguments are set when the kernel is executed.
+        index += 5; // Periodic box size arguments are set when the kernel is executed.
         if (globals != NULL)
             donorKernel.setArg<cl::Buffer>(index++, globals->getDeviceBuffer());
         for (int i = 0; i < (int) donorParams->getBuffers().size(); i++) {
@@ -4248,7 +4248,7 @@ double OpenCLCalcCustomHbondForceKernel::execute(ContextImpl& context, bool incl
         acceptorKernel.setArg<cl::Buffer>(index++, acceptors->getDeviceBuffer());
         acceptorKernel.setArg<cl::Buffer>(index++, acceptorBufferIndices->getDeviceBuffer());
         acceptorKernel.setArg(index++, 3*OpenCLContext::ThreadBlockSize*sizeof(mm_float4), NULL);
-        index += 2; // Periodic box size arguments are set when the kernel is executed.
+        index += 5; // Periodic box size arguments are set when the kernel is executed.
         if (globals != NULL)
             acceptorKernel.setArg<cl::Buffer>(index++, globals->getDeviceBuffer());
         for (int i = 0; i < (int) donorParams->getBuffers().size(); i++) {
@@ -4262,11 +4262,9 @@ double OpenCLCalcCustomHbondForceKernel::execute(ContextImpl& context, bool incl
         for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
             acceptorKernel.setArg<cl::Buffer>(index++, tabulatedFunctions[i]->getDeviceBuffer());
     }
-    setPeriodicBoxSizeArg(cl, donorKernel, 8);
-    setInvPeriodicBoxSizeArg(cl, donorKernel, 9);
+    setPeriodicBoxArgs(cl, donorKernel, 8);
     cl.executeKernel(donorKernel, max(numDonors, numAcceptors));
-    setPeriodicBoxSizeArg(cl, acceptorKernel, 8);
-    setInvPeriodicBoxSizeArg(cl, acceptorKernel, 9);
+    setPeriodicBoxArgs(cl, acceptorKernel, 8);
     cl.executeKernel(acceptorKernel, max(numDonors, numAcceptors));
     return 0.0;
 }
@@ -4853,7 +4851,7 @@ void OpenCLCalcCustomManyParticleForceKernel::initialize(const System& system, c
         const vector<int>& atoms = iter->second;
         string deltaName = atomNames[atoms[0]]+atomNames[atoms[1]];
         if (computedDeltas.count(deltaName) == 0) {
-            compute<<"real4 delta"<<deltaName<<" = delta("<<posNames[atoms[0]]<<", "<<posNames[atoms[1]]<<", periodicBoxSize, invPeriodicBoxSize);\n";
+            compute<<"real4 delta"<<deltaName<<" = delta("<<posNames[atoms[0]]<<", "<<posNames[atoms[1]]<<", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);\n";
             computedDeltas.insert(deltaName);
         }
         compute<<"real r_"<<deltaName<<" = sqrt(delta"<<deltaName<<".w);\n";
@@ -4867,11 +4865,11 @@ void OpenCLCalcCustomManyParticleForceKernel::initialize(const System& system, c
         string deltaName2 = atomNames[atoms[1]]+atomNames[atoms[2]];
         string angleName = "angle_"+atomNames[atoms[0]]+atomNames[atoms[1]]+atomNames[atoms[2]];
         if (computedDeltas.count(deltaName1) == 0) {
-            compute<<"real4 delta"<<deltaName1<<" = delta("<<posNames[atoms[1]]<<", "<<posNames[atoms[0]]<<", periodicBoxSize, invPeriodicBoxSize);\n";
+            compute<<"real4 delta"<<deltaName1<<" = delta("<<posNames[atoms[1]]<<", "<<posNames[atoms[0]]<<", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);\n";
             computedDeltas.insert(deltaName1);
         }
         if (computedDeltas.count(deltaName2) == 0) {
-            compute<<"real4 delta"<<deltaName2<<" = delta("<<posNames[atoms[1]]<<", "<<posNames[atoms[2]]<<", periodicBoxSize, invPeriodicBoxSize);\n";
+            compute<<"real4 delta"<<deltaName2<<" = delta("<<posNames[atoms[1]]<<", "<<posNames[atoms[2]]<<", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);\n";
             computedDeltas.insert(deltaName2);
         }
         compute<<"real "<<angleName<<" = computeAngle(delta"<<deltaName1<<", delta"<<deltaName2<<");\n";
@@ -4888,15 +4886,15 @@ void OpenCLCalcCustomManyParticleForceKernel::initialize(const System& system, c
         string crossName2 = "cross_"+deltaName2+"_"+deltaName3;
         string dihedralName = "dihedral_"+atomNames[atoms[0]]+atomNames[atoms[1]]+atomNames[atoms[2]]+atomNames[atoms[3]];
         if (computedDeltas.count(deltaName1) == 0) {
-            compute<<"real4 delta"<<deltaName1<<" = delta("<<posNames[atoms[0]]<<", "<<posNames[atoms[1]]<<", periodicBoxSize, invPeriodicBoxSize);\n";
+            compute<<"real4 delta"<<deltaName1<<" = delta("<<posNames[atoms[0]]<<", "<<posNames[atoms[1]]<<", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);\n";
             computedDeltas.insert(deltaName1);
         }
         if (computedDeltas.count(deltaName2) == 0) {
-            compute<<"real4 delta"<<deltaName2<<" = delta("<<posNames[atoms[2]]<<", "<<posNames[atoms[1]]<<", periodicBoxSize, invPeriodicBoxSize);\n";
+            compute<<"real4 delta"<<deltaName2<<" = delta("<<posNames[atoms[2]]<<", "<<posNames[atoms[1]]<<", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);\n";
             computedDeltas.insert(deltaName2);
         }
         if (computedDeltas.count(deltaName3) == 0) {
-            compute<<"real4 delta"<<deltaName3<<" = delta("<<posNames[atoms[2]]<<", "<<posNames[atoms[3]]<<", periodicBoxSize, invPeriodicBoxSize);\n";
+            compute<<"real4 delta"<<deltaName3<<" = delta("<<posNames[atoms[2]]<<", "<<posNames[atoms[3]]<<", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);\n";
             computedDeltas.insert(deltaName3);
         }
         compute<<"real4 "<<crossName1<<" = computeCross(delta"<<deltaName1<<", delta"<<deltaName2<<");\n";
@@ -5066,7 +5064,7 @@ void OpenCLCalcCustomManyParticleForceKernel::initialize(const System& system, c
         if (!centralParticleMode) {
             for (int i = 1; i < particlesPerSet; i++) {
                 for (int j = i+1; j < particlesPerSet; j++)
-                    verifyCutoff<<"includeInteraction &= (delta(pos"<<(i+1)<<", pos"<<(j+1)<<", periodicBoxSize, invPeriodicBoxSize).w < CUTOFF_SQUARED);\n";
+                    verifyCutoff<<"includeInteraction &= (delta(pos"<<(i+1)<<", pos"<<(j+1)<<", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ).w < CUTOFF_SQUARED);\n";
             }
         }
     }
@@ -5139,8 +5137,8 @@ double OpenCLCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bo
         forceKernel.setArg<cl::Buffer>(index++, cl.getLongForceBuffer().getDeviceBuffer());
         forceKernel.setArg<cl::Buffer>(index++, cl.getEnergyBuffer().getDeviceBuffer());
         forceKernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
-        setPeriodicBoxSizeArg(cl, forceKernel, index++);
-        setInvPeriodicBoxSizeArg(cl, forceKernel, index++);
+        setPeriodicBoxArgs(cl, forceKernel, index);
+        index += 5;
         if (nonbondedMethod != NoCutoff) {
             forceKernel.setArg<cl::Buffer>(index++, neighbors->getDeviceBuffer());
             forceKernel.setArg<cl::Buffer>(index++, neighborStartIndex->getDeviceBuffer());
@@ -5167,8 +5165,8 @@ double OpenCLCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bo
             // Set arguments for the block bounds kernel.
 
             index = 0;
-            setPeriodicBoxSizeArg(cl, blockBoundsKernel, index++);
-            setInvPeriodicBoxSizeArg(cl, blockBoundsKernel, index++);
+            setPeriodicBoxArgs(cl, blockBoundsKernel, index);
+            index += 5;
             blockBoundsKernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
             blockBoundsKernel.setArg<cl::Buffer>(index++, blockCenter->getDeviceBuffer());
             blockBoundsKernel.setArg<cl::Buffer>(index++, blockBoundingBox->getDeviceBuffer());
@@ -5177,8 +5175,8 @@ double OpenCLCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bo
             // Set arguments for the neighbor list kernel.
 
             index = 0;
-            setPeriodicBoxSizeArg(cl, neighborsKernel, index++);
-            setInvPeriodicBoxSizeArg(cl, neighborsKernel, index++);
+            setPeriodicBoxArgs(cl, neighborsKernel, index);
+            index += 5;
             neighborsKernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
             neighborsKernel.setArg<cl::Buffer>(index++, blockCenter->getDeviceBuffer());
             neighborsKernel.setArg<cl::Buffer>(index++, blockBoundingBox->getDeviceBuffer());
@@ -5224,7 +5222,7 @@ double OpenCLCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bo
         int* numPairs = (int*) cl.getPinnedBuffer();
         cl::Event event;
         if (nonbondedMethod != NoCutoff) {
-            neighborsKernel.setArg<int>(8, maxNeighborPairs);
+            neighborsKernel.setArg<int>(11, maxNeighborPairs);
             startIndicesKernel.setArg<int>(3, maxNeighborPairs);
             copyPairsKernel.setArg<int>(3, maxNeighborPairs);
             cl.executeKernel(blockBoundsKernel, cl.getNumAtomBlocks());
@@ -5254,8 +5252,8 @@ double OpenCLCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bo
                 maxNeighborPairs = (int) (1.1*(*numPairs));
                 neighborPairs = OpenCLArray::create<mm_int2>(cl, maxNeighborPairs, "customManyParticleNeighborPairs");
                 neighbors = OpenCLArray::create<int>(cl, maxNeighborPairs, "customManyParticleNeighbors");
-                forceKernel.setArg<cl::Buffer>(5, neighbors->getDeviceBuffer());
-                neighborsKernel.setArg<cl::Buffer>(5, neighborPairs->getDeviceBuffer());
+                forceKernel.setArg<cl::Buffer>(8, neighbors->getDeviceBuffer());
+                neighborsKernel.setArg<cl::Buffer>(8, neighborPairs->getDeviceBuffer());
                 copyPairsKernel.setArg<cl::Buffer>(0, neighborPairs->getDeviceBuffer());
                 copyPairsKernel.setArg<cl::Buffer>(1, neighbors->getDeviceBuffer());
                 continue;
@@ -6656,9 +6654,7 @@ void OpenCLApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context,
     kernel.setArg<cl_float>(0, (cl_float) scaleX);
     kernel.setArg<cl_float>(1, (cl_float) scaleY);
     kernel.setArg<cl_float>(2, (cl_float) scaleZ);
-    setPeriodicBoxSizeArg(cl, kernel, 4);
-    setInvPeriodicBoxSizeArg(cl, kernel, 5);
-    setPeriodicBoxVecArgs(cl, kernel, 6);
+    setPeriodicBoxArgs(cl, kernel, 4);
     cl.executeKernel(kernel, cl.getNumAtoms());
     for (int i = 0; i < (int) cl.getPosCellOffsets().size(); i++)
         cl.getPosCellOffsets()[i] = mm_int4(0, 0, 0, 0);
