@@ -594,7 +594,7 @@ void CudaContext::restoreDefaultStream() {
     setCurrentStream(0);
 }
 
-string CudaContext::doubleToString(double value) {
+string CudaContext::doubleToString(double value) const {
     stringstream s;
     s.precision(useDoublePrecision ? 16 : 8);
     s << scientific << value;
@@ -603,7 +603,7 @@ string CudaContext::doubleToString(double value) {
     return s.str();
 }
 
-string CudaContext::intToString(int value) {
+string CudaContext::intToString(int value) const {
     stringstream s;
     s << value;
     return s.str();

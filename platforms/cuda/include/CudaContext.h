@@ -352,30 +352,30 @@ public:
     /**
      * Get whether double precision is being used.
      */
-    bool getUseDoublePrecision() {
+    bool getUseDoublePrecision() const {
         return useDoublePrecision;
     }
     /**
      * Get whether mixed precision is being used.
      */
-    bool getUseMixedPrecision() {
+    bool getUseMixedPrecision() const {
         return useMixedPrecision;
     }
     /**
      * Get whether the periodic box is triclinic.
      */
-    bool getBoxIsTriclinic() {
+    bool getBoxIsTriclinic() const {
         return boxIsTriclinic;
     }
     /**
      * Convert a number to a string in a format suitable for including in a kernel.
      * This takes into account whether the context uses single or double precision.
      */
-    std::string doubleToString(double value);
+    std::string doubleToString(double value) const;
     /**
      * Convert a number to a string in a format suitable for including in a kernel.
      */
-    std::string intToString(int value);
+    std::string intToString(int value) const;
     /**
      * Convert a CUDA result code to the corresponding string description.
      */
