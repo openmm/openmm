@@ -149,8 +149,8 @@ namespace OpenMM {
  * still only be evaluated once for each triplet, so it must still be symmetric with respect to p2 and p3.
  * 
  * Expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
- * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, erf, erfc, min, max, abs, step, delta.  All trigonometric functions
- * are defined in radians, and log is the natural logarithm.  step(x) = 0 if x is less than 0, 1 otherwise.  delta(x) = 1 if x is 0, 0 otherwise.
+ * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, erf, erfc, min, max, abs, step, delta, square, cube, recip.  All trigonometric functions
+ * are defined in radians, and log is the natural logarithm.  step(x) = 0 if x is less than 0, 1 otherwise.  delta(x) = 1 if x is 0, 0 otherwise.  square(x) = x*x.  cube(x) = x*x*x.  recip(x) = 1/x.
  * The names of per-particle parameters have the suffix "1", "2", etc. appended to them to indicate the values for the multiple interacting particles.
  * For example, if you define a per-particle parameter called "charge", then the variable "charge2" is the charge of particle p2.
  * As seen above, the expression may also involve intermediate quantities that are defined following the main expression, using ";" as a separator.

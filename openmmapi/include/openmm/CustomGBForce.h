@@ -129,11 +129,11 @@ namespace OpenMM {
  * particular piece of the computation.
  *
  * Expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
- * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, erf, erfc, min, max, abs, step, delta.  All trigonometric functions
- * are defined in radians, and log is the natural logarithm.  step(x) = 0 if x is less than 0, 1 otherwise.  delta(x) = 1 if x is 0, 0 otherwise.  In expressions for
- * particle pair calculations, the names of per-particle parameters and computed values
- * have the suffix "1" or "2" appended to them to indicate the values for the two interacting particles.  As seen in the above example,
- * an expression may also involve intermediate quantities that are defined following the main expression, using ";" as a separator.
+ * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, erf, erfc, min, max, abs, step, delta, square, cube, recip.  All trigonometric functions
+ * are defined in radians, and log is the natural logarithm.  step(x) = 0 if x is less than 0, 1 otherwise.  delta(x) = 1 if x is 0, 0 otherwise.  square(x) = x*x.  cube(x) = x*x*x.  recip(x) = 1/x.  An expression
+ * may also involve intermediate quantities that are defined following the main expression, using ";" as a separator.
+ * In expressions for particle pair calculations, the names of per-particle parameters and computed values
+ * have the suffix "1" or "2" appended to them to indicate the values for the two interacting particles.
  *
  * In addition, you can call addTabulatedFunction() to define a new function based on tabulated values.  You specify the function by
  * creating a TabulatedFunction object.  That function can then appear in expressions.
