@@ -39,6 +39,7 @@
 #include "openmm/System.h"
 #include "openmm/AmoebaVdwForce.h"
 #include "openmm/LangevinIntegrator.h"
+#include "sfmt/SFMT.h"
 #include <iostream>
 #include <vector>
 #include <stdlib.h>
@@ -50,6 +51,7 @@
 
 
 using namespace OpenMM;
+using namespace std;
 
 extern "C" OPENMM_EXPORT void registerAmoebaReferenceKernelFactories();
 
@@ -1981,6 +1983,62 @@ void testVdwWater( int includeVdwDispersionCorrection, FILE* log ) {
     }
 }
 
+void testTriclinic() {
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    Vec3 a(3.1, 0, 0);
+    Vec3 b(0.4, 3.5, 0);
+    Vec3 c(-0.1, -0.5, 4.0);
+    system.setDefaultPeriodicBoxVectors(a, b, c);
+    LangevinIntegrator integrator(0.0, 0.1, 0.01);
+    AmoebaVdwForce* vdw = new AmoebaVdwForce();
+    vdw->setUseDispersionCorrection(false);
+    vdw->addParticle(0, 0.5, 1.0, 0.0);
+    vdw->addParticle(1, 0.5, 1.0, 0.0);
+    vdw->setNonbondedMethod(AmoebaVdwForce::CutoffPeriodic);
+    const double cutoff = 1.5;
+    vdw->setCutoff(cutoff);
+    system.addForce(vdw);
+    Context context(system, integrator, Platform::getPlatformByName("Reference"));
+    vector<Vec3> positions(2);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int iteration = 0; iteration < 50; iteration++) {
+        // Generate random positions for the two particles.
+
+        positions[0] = a*genrand_real2(sfmt) + b*genrand_real2(sfmt) + c*genrand_real2(sfmt);
+        positions[1] = a*genrand_real2(sfmt) + b*genrand_real2(sfmt) + c*genrand_real2(sfmt);
+        context.setPositions(positions);
+
+        // Loop over all possible periodic copies and find the nearest one.
+
+        Vec3 delta;
+        double distance2 = 100.0;
+        for (int i = -1; i < 2; i++)
+            for (int j = -1; j < 2; j++)
+                for (int k = -1; k < 2; k++) {
+                    Vec3 d = positions[1]-positions[0]+a*i+b*j+c*k;
+                    if (d.dot(d) < distance2) {
+                        delta = d;
+                        distance2 = d.dot(d);
+                    }
+                }
+        double distance = sqrt(distance2);
+
+        // See if the energy is correct.
+
+        State state = context.getState(State::Energy);
+        if (distance >= cutoff) {
+            ASSERT_EQUAL(0.0, state.getPotentialEnergy());
+        }
+        else if (distance < 0.9*cutoff) {
+            const double energy = pow(1.07/(distance+0.07), 7.0)*(1.12/(pow(distance, 7.0)+0.12)-2);
+            ASSERT_EQUAL_TOL(energy, state.getPotentialEnergy(), TOL);
+        }
+    }
+}
+
 int main( int numberOfArguments, char* argv[] ) {
 
     try {
@@ -2029,6 +2087,10 @@ int main( int numberOfArguments, char* argv[] ) {
  
         includeVdwDispersionCorrection     = 1;
         testVdwWater( includeVdwDispersionCorrection, log );
+        
+        // test triclinic boxes
+        
+        testTriclinic();
 
     } catch(const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;

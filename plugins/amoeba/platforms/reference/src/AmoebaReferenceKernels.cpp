@@ -976,14 +976,14 @@ double ReferenceCalcAmoebaVdwForceKernel::execute(ContextImpl& context, bool inc
         computeNeighborListVoxelHash( *neighborList, numParticles, posData, allExclusions, extractBoxVectors(context), usePBC, cutoff, 0.0);
         if( usePBC ){
             vdwForce.setNonbondedMethod( AmoebaReferenceVdwForce::CutoffPeriodic);
-            RealVec& box = extractBoxSize(context);
+            RealVec* boxVectors = extractBoxVectors(context);
             double minAllowedSize = 1.999999*cutoff;
-            if (box[0] < minAllowedSize || box[1] < minAllowedSize || box[2] < minAllowedSize){
+            if (boxVectors[0][0] < minAllowedSize || boxVectors[1][1] < minAllowedSize || boxVectors[2][2] < minAllowedSize){
                 throw OpenMMException("The periodic box size has decreased to less than twice the cutoff.");
             }
-            vdwForce.setPeriodicBox(box);
+            vdwForce.setPeriodicBox(boxVectors);
             energy  = vdwForce.calculateForceAndEnergy( numParticles, posData, indexIVs, sigmas, epsilons, reductions, *neighborList, forceData);
-            energy += dispersionCoefficient/(box[0]*box[1]*box[2]);
+            energy += dispersionCoefficient/(boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2]);
         } else {
             vdwForce.setNonbondedMethod( AmoebaReferenceVdwForce::CutoffNonPeriodic);
         }
