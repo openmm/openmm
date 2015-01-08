@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -409,8 +409,8 @@ void testTriclinic() {
         else {
             const Vec3 force = delta*ONE_4PI_EPS0*(-1.0/(distance*distance*distance)+2.0*krf);
             ASSERT_EQUAL_TOL(ONE_4PI_EPS0*(1.0/distance+krf*distance*distance-crf), state.getPotentialEnergy(), 1e-4);
-            ASSERT_EQUAL_VEC(force, state.getForces()[0], TOL);
-            ASSERT_EQUAL_VEC(-force, state.getForces()[1], TOL);
+            ASSERT_EQUAL_VEC(force, state.getForces()[0], 2e-5);
+            ASSERT_EQUAL_VEC(-force, state.getForces()[1], 2e-5);
         }
     }
 }
