@@ -36,6 +36,7 @@
 #include "openmm/internal/CustomManyParticleForceImpl.h"
 #include "openmm/internal/CustomNonbondedForceImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
+#include "openmm/internal/OSRngSeed.h"
 #include "CudaBondedUtilities.h"
 #include "CudaExpressionUtilities.h"
 #include "CudaIntegrationUtilities.h"
@@ -5967,7 +5968,11 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
         uniformRandoms = CudaArray::create<float4>(cu, maxUniformRandoms, "uniformRandoms");
         randomSeed = CudaArray::create<int4>(cu, cu.getNumThreadBlocks()*CudaContext::ThreadBlockSize, "randomSeed");
         vector<int4> seed(randomSeed->getSize());
-        unsigned int r = integrator.getRandomNumberSeed()+1;
+        int rseed = integrator.getRandomNumberSeed();
+        // A random seed of 0 means generate a new one from the wall clock
+        if (rseed == 0)
+            rseed = osrngseed();
+        unsigned int r = (unsigned int) (rseed+1);
         for (int i = 0; i < randomSeed->getSize(); i++) {
             seed[i].x = r = (1664525*r + 1013904223) & 0xFFFFFFFF;
             seed[i].y = r = (1664525*r + 1013904223) & 0xFFFFFFFF;
