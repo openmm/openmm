@@ -169,7 +169,8 @@ public:
      * results on successive runs, even if those runs were initialized identically.
      *
      * If seed is set to 0 (which is the default value assigned), a new seed is generated from the system
-     * clock when a Context is created from this Force.
+     * clock when a Context is created from this Force. This is done to ensure that each Context receives
+     * unique random seeds without you needing to set them explicitly.
      */
     void setRandomNumberSeed(int seed) {
         randomNumberSeed = seed;
