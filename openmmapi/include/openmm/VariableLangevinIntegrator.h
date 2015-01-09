@@ -121,6 +121,9 @@ public:
      * the other hand, no guarantees are made about the behavior of simulations that use the same seed.
      * In particular, Platforms are permitted to use non-deterministic algorithms which produce different
      * results on successive runs, even if those runs were initialized identically.
+     *
+     * If seed is set to 0 (which is the default value assigned), a new seed is generated from the system
+     * clock when a Context is created from this Force.
      */
     void setRandomNumberSeed(int seed) {
         randomNumberSeed = seed;
