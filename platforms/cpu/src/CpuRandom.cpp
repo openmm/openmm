@@ -23,8 +23,8 @@
  */
 
 #include "CpuRandom.h"
+#include "openmm/internal/OSRngSeed.h"
 #include "openmm/OpenMMException.h"
-#include "openmm/OSRngSeed.h"
 #include <cmath>
 
 using namespace std;
