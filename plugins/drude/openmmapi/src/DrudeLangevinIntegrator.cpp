@@ -33,7 +33,6 @@
 #include "openmm/Context.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/ContextImpl.h"
-#include "openmm/internal/OSRngSeed.h"
 #include "openmm/DrudeKernels.h"
 #include <ctime>
 #include <string>
@@ -49,7 +48,7 @@ DrudeLangevinIntegrator::DrudeLangevinIntegrator(double temperature, double fric
     setDrudeFriction(drudeFrictionCoeff);
     setStepSize(stepSize);
     setConstraintTolerance(1e-5);
-    setRandomNumberSeed(osrngseed());
+    setRandomNumberSeed(0);
 }
 
 void DrudeLangevinIntegrator::initialize(ContextImpl& contextRef) {
