@@ -5969,7 +5969,7 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
         randomSeed = CudaArray::create<int4>(cu, cu.getNumThreadBlocks()*CudaContext::ThreadBlockSize, "randomSeed");
         vector<int4> seed(randomSeed->getSize());
         int rseed = integrator.getRandomNumberSeed();
-        // A random seed of 0 means generate a new one from the wall clock
+        // A random seed of 0 means use a unique one
         if (rseed == 0)
             rseed = osrngseed();
         unsigned int r = (unsigned int) (rseed+1);

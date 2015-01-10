@@ -51,7 +51,7 @@ void CpuRandom::initialize(int seed, int numThreads) {
     nextGaussianIsValid.resize(numThreads, false);
 
     /* Use a quick and dirty RNG to pick seeds for the real random number generator.
-     * A random seed of 0 means pick a new random seed based on wall clock
+     * A random seed of 0 means pick a unique seed
      */
 
     unsigned int r = (unsigned int) seed;

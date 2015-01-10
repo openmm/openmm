@@ -1004,7 +1004,7 @@ void OpenCLIntegrationUtilities::initRandomNumberGenerator(unsigned int randomNu
 
     vector<mm_int4> seed(randomSeed->getSize());
     unsigned int r = randomNumberSeed;
-    // A seed of 0 means pull one from the clock
+    // A seed of 0 means use a unique one
     if (r == 0) r = (unsigned int) osrngseed();
     for (int i = 0; i < randomSeed->getSize(); i++) {
         seed[i].x = r = (1664525*r + 1013904223) & 0xFFFFFFFF;

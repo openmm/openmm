@@ -6202,7 +6202,7 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
         randomSeed = OpenCLArray::create<mm_int4>(cl, cl.getNumThreadBlocks()*OpenCLContext::ThreadBlockSize, "randomSeed");
         vector<mm_int4> seed(randomSeed->getSize());
         int rseed = integrator.getRandomNumberSeed();
-        // A random seed of 0 means generate a new one from the wall clock
+        // A random seed of 0 means use a unique one
         if (rseed == 0)
             rseed = osrngseed();
         unsigned int r = (unsigned int) (rseed+1);

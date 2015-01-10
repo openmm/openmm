@@ -362,7 +362,7 @@ void SimTKOpenMMUtilities::setRandomNumberSeed( uint32_t seed ) {
 
    // ---------------------------------------------------------------------------------------
 
-    // If the seed is 0, generate one from the clock
+    // If the seed is 0, use a unique seed
     if (seed == 0)
         _randomNumberSeed = (uint32_t) osrngseed();
     else

@@ -60,7 +60,7 @@ void MonteCarloBarostatImpl::initialize(ContextImpl& context) {
     numAttempted = 0;
     numAccepted = 0;
     int randSeed = owner.getRandomNumberSeed();
-    // A random seed of 0 means pull a new one from the clock
+    // A random seed of 0 means use a unique one
     if (randSeed == 0) randSeed = osrngseed();
     init_gen_rand(randSeed, random);
 }
