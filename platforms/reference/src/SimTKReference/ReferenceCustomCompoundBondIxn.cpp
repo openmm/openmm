@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009-2010 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2015 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -127,7 +127,7 @@ void ReferenceCustomCompoundBondIxn::calculateOneIxn(int bond, vector<RealVec>& 
     const vector<int>& atoms = bondAtoms[bond];
     for (int i = 0; i < (int) particleTerms.size(); i++) {
         const ParticleTermInfo& term = particleTerms[i];
-        variables[term.name] = atomCoordinates[term.atom][term.component];
+        variables[term.name] = atomCoordinates[atoms[term.atom]][term.component];
     }
     for (int i = 0; i < (int) distanceTerms.size(); i++) {
         const DistanceTermInfo& term = distanceTerms[i];
