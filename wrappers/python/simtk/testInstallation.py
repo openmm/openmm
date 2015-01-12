@@ -6,7 +6,7 @@ import sys
 
 class TestingError(Exception):
     """
-    An error is encountered when 
+    An error is encountered when
     """
     pass
 
@@ -16,7 +16,7 @@ try:
     from simtk.unit import *
 except ImportError as err:
     simtk_import_failed = True
-    simtk_import_error = err.message
+    simtk_import_error = str(err)
 else:
     simtk_import_failed = False
 
@@ -59,9 +59,9 @@ def run_tests():
     pdb = PDBFile(os.path.join(data_dir, 'test.pdb'))
     forcefield = ForceField('amber99sb.xml', 'tip3p.xml')
     system = forcefield.createSystem(pdb.topology, nonbondedMethod=PME, nonbondedCutoff=1*nanometer, constraints=HBonds)
-    
+
     # List all installed platforms and compute forces with each one.
-    
+
     numPlatforms = Platform.getNumPlatforms()
     print("There are", numPlatforms, "Platforms available:")
     print()
@@ -80,15 +80,15 @@ def run_tests():
         except:
             print("- Error computing forces with", platform.getName(), "platform")
             platformErrors[platform.getName()] = sys.exc_info()[1]
-    
+
     # Give details of any errors.
-    
+
     for platform in platformErrors:
         print()
         print("%s platform error: %s" % (platform, platformErrors[platform]))
-    
+
     # See how well the platforms agree.
-    
+
     if numPlatforms > 1:
         print()
         print("Median difference in forces between platforms:")
