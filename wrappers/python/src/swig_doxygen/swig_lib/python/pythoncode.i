@@ -275,7 +275,6 @@ def stripUnits(args):
             arg = dict(zip(newKeys, newValues))
         elif not isinstance(arg, _string_types):
             try:
-                iter(arg)
                 # Reclusively strip units from all quantities
                 arg=stripUnits(arg)
             except TypeError:
