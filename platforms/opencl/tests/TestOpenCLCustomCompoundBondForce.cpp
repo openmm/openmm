@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2012 Stanford University and the Authors.           *
+ * Portions copyright (c) 2012-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -152,21 +152,21 @@ void testPositionDependence() {
     custom->addGlobalParameter("scale1", 0.3);
     custom->addGlobalParameter("scale2", 0.2);
     vector<int> particles(2);
-    particles[0] = 0;
-    particles[1] = 1;
+    particles[0] = 1;
+    particles[1] = 0;
     vector<double> parameters;
     custom->addBond(particles, parameters);
     customSystem.addForce(custom);
     vector<Vec3> positions(2);
-    positions[0] = Vec3(0.5, 1, 0);
-    positions[1] = Vec3(1.5, 1, 0);
+    positions[0] = Vec3(1.5, 1, 0);
+    positions[1] = Vec3(0.5, 1, 0);
     VerletIntegrator integrator(0.01);
     Context context(customSystem, integrator, platform);
     context.setPositions(positions);
     State state = context.getState(State::Forces | State::Energy);
     ASSERT_EQUAL_TOL(0.3*1.0+0.2*0.5+2*1, state.getPotentialEnergy(), 1e-5);
-    ASSERT_EQUAL_VEC(Vec3(0.3-0.2, 0, 0), state.getForces()[0], 1e-5);
-    ASSERT_EQUAL_VEC(Vec3(-0.3, -2, 0), state.getForces()[1], 1e-5);
+    ASSERT_EQUAL_VEC(Vec3(-0.3, -2, 0), state.getForces()[0], 1e-5);
+    ASSERT_EQUAL_VEC(Vec3(0.3-0.2, 0, 0), state.getForces()[1], 1e-5);
 }
 
 void testParallelComputation() {
