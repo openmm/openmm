@@ -134,7 +134,8 @@ class AmberPrmtopFile(object):
 
         atoms = list(top.atoms())
         for bond in prmtop.getBondsWithH():
-            top.addBond(atoms[bond[0]], atoms[bond[1]])
+	        if bond[0] < len(list(top.atoms())):
+				top.addBond(atoms[bond[0]], atoms[bond[1]])
         for bond in prmtop.getBondsNoH():
             top.addBond(atoms[bond[0]], atoms[bond[1]])
 
