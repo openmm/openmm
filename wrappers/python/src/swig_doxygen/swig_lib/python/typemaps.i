@@ -169,7 +169,7 @@
     $result = PyBytes_FromStringAndSize($1.c_str(), $1.length());
 }
 
-%typemap(in) const std::string & {
+%typemap(in) const std::string & (std::string temp2) {
     // if we have a C++ method that takes in a std::string, we're most happy to
     // accept a python bytes object. But if the user passes in a unicode object
     // we'll try to recover by encoding it to UTF-8 bytes
@@ -194,10 +194,10 @@
         SWIG_exception_fail(SWIG_TypeError, "$symname: argument must be str or bytes");
     }
 
-    std::string temp2(c_str, len);
+    temp2 = std::string(c_str, len);
     $1 = &temp2;
 }
 
 %typemap(freearg) const std::string & {
-    // Don't delete me
+  // pass
 }
