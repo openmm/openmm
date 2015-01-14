@@ -15,7 +15,7 @@ from simtk.openmm import version
 
 if sys.platform == 'win32':
     _path = os.environ['PATH']
-    os.environ['PATH'] = '%(lib)s;%(lib)s\plugins' % {'lib': version.openmm_library_path}
+    os.environ['PATH'] += '%(lib)s;%(lib)s\plugins' % {'lib': version.openmm_library_path}
 
 from simtk.openmm.openmm import *
 from simtk.openmm.vec3 import Vec3
