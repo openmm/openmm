@@ -253,8 +253,6 @@ pme_update_grid_index_and_fraction(pme_t    pme,
          */
         RealVec coord = atomCoordinates[i];
         for(d=0;d<3;d++)
-            coord[d] -= floor(coord[d]*recipBoxVectors[d][d])*periodicBoxVectors[d][d];
-        for(d=0;d<3;d++)
         {
             t = coord[0]*recipBoxVectors[0][d]+coord[1]*recipBoxVectors[1][d]+coord[2]*recipBoxVectors[2][d];
             t = (t-floor(t))*pme->ngrid[d];

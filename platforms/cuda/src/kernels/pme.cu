@@ -4,9 +4,6 @@ extern "C" __global__ void findAtomGridIndex(const real4* __restrict__ posq, int
     
     for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < NUM_ATOMS; i += blockDim.x*gridDim.x) {
         real4 pos = posq[i];
-        pos.x -= floor(pos.x*recipBoxVecX.x)*periodicBoxSize.x;
-        pos.y -= floor(pos.y*recipBoxVecY.y)*periodicBoxSize.y;
-        pos.z -= floor(pos.z*recipBoxVecZ.z)*periodicBoxSize.z;
         real3 t = make_real3(pos.x*recipBoxVecX.x+pos.y*recipBoxVecY.x+pos.z*recipBoxVecZ.x,
                              pos.y*recipBoxVecY.y+pos.z*recipBoxVecZ.y,
                              pos.z*recipBoxVecZ.z);
@@ -30,8 +27,6 @@ extern "C" __global__ void gridSpreadCharge(const real4* __restrict__ posq, real
     
     for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < NUM_ATOMS; i += blockDim.x*gridDim.x) {
         int atom = pmeAtomGridIndex[i].x;
-        real charge = posq[atom].w;
-        real3 force = make_real3(0);
         real4 pos = posq[atom];
         pos.x -= floor(pos.x*recipBoxVecX.x)*periodicBoxSize.x;
         pos.y -= floor(pos.y*recipBoxVecY.y)*periodicBoxSize.y;
@@ -84,7 +79,7 @@ extern "C" __global__ void gridSpreadCharge(const real4* __restrict__ posq, real
                     zindex -= (zindex >= GRID_SIZE_Z ? GRID_SIZE_Z : 0);
                     int index = ybase + zindex;
 
-                    real add = charge*dx*dy*data[iz].z;
+                    real add = pos.w*dx*dy*data[iz].z;
 #ifdef USE_DOUBLE_PRECISION
                     unsigned long long * ulonglong_p = (unsigned long long *) originalPmeGrid;
                     atomicAdd(&ulonglong_p[index],  static_cast<unsigned long long>((long long) (add*0x100000000)));

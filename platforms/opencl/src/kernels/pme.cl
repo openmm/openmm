@@ -4,9 +4,6 @@ __kernel void updateBsplines(__global const real4* restrict posq, __global real4
     for (int i = get_global_id(0); i < NUM_ATOMS; i += get_global_size(0)) {
         __local real4* data = &bsplinesCache[get_local_id(0)*PME_ORDER];
         real4 pos = posq[i];
-        pos.x -= floor(pos.x*recipBoxVecX.x)*periodicBoxSize.x;
-        pos.y -= floor(pos.y*recipBoxVecY.y)*periodicBoxSize.y;
-        pos.z -= floor(pos.z*recipBoxVecZ.z)*periodicBoxSize.z;
         real3 t = (real3) (pos.x*recipBoxVecX.x+pos.y*recipBoxVecY.x+pos.z*recipBoxVecZ.x,
                            pos.y*recipBoxVecY.y+pos.z*recipBoxVecZ.y,
                            pos.z*recipBoxVecZ.z);
