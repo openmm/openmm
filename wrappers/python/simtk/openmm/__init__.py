@@ -10,11 +10,22 @@ It also tries to load any plugin modules it can find.
 __author__ = "Randall J. Radmer"
 
 import os, os.path
+import sys
+from simtk.openmm import version
+
+if sys.platform == 'win32':
+    _path = os.environ['PATH']
+    os.environ['PATH'] += '%(lib)s;%(lib)s\plugins' % {'lib': version.openmm_library_path}
+
 from simtk.openmm.openmm import *
 from simtk.openmm.vec3 import Vec3
-from simtk.openmm import version
+
 if os.getenv('OPENMM_PLUGIN_DIR') is None and os.path.isdir(version.openmm_library_path):
     pluginLoadedLibNames = Platform.loadPluginsFromDirectory(os.path.join(version.openmm_library_path, 'plugins'))
 else:
     pluginLoadedLibNames = Platform.loadPluginsFromDirectory(Platform.getDefaultPluginsDirectory())
+
+if sys.platform == 'win32':
+    os.environ['PATH'] = _path
+    del _path
 __version__ = Platform.getOpenMMVersion()
