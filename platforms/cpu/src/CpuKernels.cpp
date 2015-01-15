@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -140,7 +140,7 @@ public:
 
 class CpuCalcForcesAndEnergyKernel::InitForceTask : public ThreadPool::Task {
 public:
-    InitForceTask(int numParticles, ContextImpl& context, CpuPlatform::PlatformData& data) : numParticles(numParticles), context(context), data(data) {
+    InitForceTask(int numParticles, ContextImpl& context, CpuPlatform::PlatformData& data) : numParticles(numParticles), positionsValid(true), context(context), data(data) {
     }
     void execute(ThreadPool& threads, int threadIndex) {
         // Convert the positions to single precision and apply periodic boundary conditions
@@ -166,6 +166,12 @@ public:
                 posq[4*i+1] = (float) posData[i][1];
                 posq[4*i+2] = (float) posData[i][2];
             }
+        
+        // Check for invalid positions.
+        
+        for (int i = 4*start; i < 4*end; i++)
+            if (posq[i] != posq[i])
+                positionsValid = false;
 
         // Clear the forces.
 
@@ -174,6 +180,7 @@ public:
             zero.store(&data.threadForce[threadIndex][j*4]);
     }
     int numParticles;
+    bool positionsValid;
     ContextImpl& context;
     CpuPlatform::PlatformData& data;
 };
@@ -198,6 +205,8 @@ void CpuCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool i
     InitForceTask task(context.getSystem().getNumParticles(), context, data);
     data.threads.execute(task);
     data.threads.waitForThreads();
+    if (!task.positionsValid)
+        throw OpenMMException("Particle coordinate is nan");
 }
 
 double CpuCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups) {
