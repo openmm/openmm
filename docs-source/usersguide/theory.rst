@@ -1400,8 +1400,9 @@ normal distribution).
 What this means is that the random numbers used by integrators and forces within
 OpenMM cannot have any discernible pattern to them.  Patterns can be induced in
 PRNGs in two principal ways:
-    1. The PRNG uses a bad algorithm with a short period.
-    2. Two PRNGs are started using the same seed
+
+1. The PRNG uses a bad algorithm with a short period.
+2. Two PRNGs are started using the same seed
 
 All PRNG algorithms in common use are periodic---that is their sequence of
 random numbers repeats after a given *period*, defined by the number of "unique"
