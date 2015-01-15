@@ -33,7 +33,6 @@
 #include "openmm/Context.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/ContextImpl.h"
-#include "openmm/internal/OSRngSeed.h"
 #include "openmm/kernels.h"
 #include <string>
 
@@ -46,7 +45,7 @@ LangevinIntegrator::LangevinIntegrator(double temperature, double frictionCoeff,
     setFriction(frictionCoeff);
     setStepSize(stepSize);
     setConstraintTolerance(1e-5);
-    setRandomNumberSeed(osrngseed());
+    setRandomNumberSeed(0);
 }
 
 void LangevinIntegrator::initialize(ContextImpl& contextRef) {

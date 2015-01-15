@@ -31,6 +31,7 @@
 
 #include "openmm/internal/MonteCarloBarostatImpl.h"
 #include "openmm/internal/ContextImpl.h"
+#include "openmm/internal/OSRngSeed.h"
 #include "openmm/Context.h"
 #include "openmm/kernels.h"
 #include <cmath>
@@ -58,7 +59,10 @@ void MonteCarloBarostatImpl::initialize(ContextImpl& context) {
     volumeScale = 0.01*volume;
     numAttempted = 0;
     numAccepted = 0;
-    init_gen_rand(owner.getRandomNumberSeed(), random);
+    int randSeed = owner.getRandomNumberSeed();
+    // A random seed of 0 means use a unique one
+    if (randSeed == 0) randSeed = osrngseed();
+    init_gen_rand(randSeed, random);
 }
 
 void MonteCarloBarostatImpl::updateContextState(ContextImpl& context) {

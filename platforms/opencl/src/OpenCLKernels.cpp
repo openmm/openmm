@@ -36,6 +36,7 @@
 #include "openmm/internal/CustomManyParticleForceImpl.h"
 #include "openmm/internal/CustomNonbondedForceImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
+#include "openmm/internal/OSRngSeed.h"
 #include "OpenCLBondedUtilities.h"
 #include "OpenCLExpressionUtilities.h"
 #include "OpenCLIntegrationUtilities.h"
@@ -6200,7 +6201,11 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
         uniformRandoms = OpenCLArray::create<mm_float4>(cl, maxUniformRandoms, "uniformRandoms");
         randomSeed = OpenCLArray::create<mm_int4>(cl, cl.getNumThreadBlocks()*OpenCLContext::ThreadBlockSize, "randomSeed");
         vector<mm_int4> seed(randomSeed->getSize());
-        unsigned int r = integrator.getRandomNumberSeed()+1;
+        int rseed = integrator.getRandomNumberSeed();
+        // A random seed of 0 means use a unique one
+        if (rseed == 0)
+            rseed = osrngseed();
+        unsigned int r = (unsigned int) (rseed+1);
         for (int i = 0; i < randomSeed->getSize(); i++) {
             seed[i].x = r = (1664525*r + 1013904223) & 0xFFFFFFFF;
             seed[i].y = r = (1664525*r + 1013904223) & 0xFFFFFFFF;
