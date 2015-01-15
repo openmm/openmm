@@ -1421,8 +1421,8 @@ only within a single simulation, but between two different simulations of the
 same system as well (including any restarts of previous simulations).
 
 Every stochastic force and integrator that does (or could) make use of random
-numbers has two instance methods attached to it: :class:`getRandomNumberSeed()`
-and :class:`setRandomNumberSeed(int seed)`. If you set a unique random seed for
+numbers has two instance methods attached to it: :meth:`getRandomNumberSeed()`
+and :meth:`setRandomNumberSeed(int seed)`. If you set a unique random seed for
 two different simulations (or different forces/integrators if applicable),
 OpenMM guarantees that the generated sequences of random numbers will be
 different (by contrast, no guarantee is made that the same seed will result in
