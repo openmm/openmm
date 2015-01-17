@@ -85,7 +85,7 @@ __kernel void selectVerletStepSize(int numAtoms, mixed maxStepSize, mixed errorT
     while (index < numAtoms) {
         real4 f = force[index];
         mixed invMass = velm[index].w;
-        err += (f.x*f.x + f.y*f.y + f.z*f.z)*invMass;
+        err += (f.x*f.x + f.y*f.y + f.z*f.z)*invMass*invMass;
         index += get_global_size(0);
     }
     error[get_local_id(0)] = err;
