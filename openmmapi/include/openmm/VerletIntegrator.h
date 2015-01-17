@@ -47,7 +47,7 @@ public:
     /**
      * Create a VerletIntegrator.
      * 
-     * @param stepSize the step size with which to integrator the system (in picoseconds)
+     * @param stepSize the step size with which to integrate the system (in picoseconds)
      */
     explicit VerletIntegrator(double stepSize);
    /**

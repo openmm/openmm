@@ -49,7 +49,7 @@ public:
      * 
      * @param temperature    the temperature of the heat bath (in Kelvin)
      * @param frictionCoeff  the friction coefficient which couples the system to the heat bath (in inverse picoseconds)
-     * @param stepSize       the step size with which to integrator the system (in picoseconds)
+     * @param stepSize       the step size with which to integrate the system (in picoseconds)
      */
     LangevinIntegrator(double temperature, double frictionCoeff, double stepSize);
     /**
