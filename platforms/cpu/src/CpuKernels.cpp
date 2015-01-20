@@ -169,8 +169,8 @@ public:
         
         // Check for invalid positions.
         
-        for (int i = 4*start; i < 4*end; i++)
-            if (posq[i] != posq[i])
+        for (int i = 4*start; i < 4*end; i += 4)
+            if (posq[i] != posq[i] || posq[i+1] != posq[i+1] || posq[i+2] != posq[i+2])
                 positionsValid = false;
 
         // Clear the forces.
