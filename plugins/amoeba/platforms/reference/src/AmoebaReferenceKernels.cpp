@@ -640,17 +640,17 @@ AmoebaReferenceMultipoleForce* ReferenceCalcAmoebaMultipoleForceKernel::setupAmo
 
     } else if( usePme ) {
 
-         AmoebaReferencePmeMultipoleForce* amoebaReferencePmeMultipoleForce = new AmoebaReferencePmeMultipoleForce( );
-         amoebaReferencePmeMultipoleForce->setAlphaEwald( alphaEwald );
-         amoebaReferencePmeMultipoleForce->setCutoffDistance( cutoffDistance );
-         amoebaReferencePmeMultipoleForce->setPmeGridDimensions( pmeGridDimension );
-         RealVec& box = extractBoxSize(context);
-         double minAllowedSize = 1.999999*cutoffDistance;
-         if (box[0] < minAllowedSize || box[1] < minAllowedSize || box[2] < minAllowedSize){
+        AmoebaReferencePmeMultipoleForce* amoebaReferencePmeMultipoleForce = new AmoebaReferencePmeMultipoleForce( );
+        amoebaReferencePmeMultipoleForce->setAlphaEwald( alphaEwald );
+        amoebaReferencePmeMultipoleForce->setCutoffDistance( cutoffDistance );
+        amoebaReferencePmeMultipoleForce->setPmeGridDimensions( pmeGridDimension );
+        RealVec* boxVectors = extractBoxVectors(context);
+        double minAllowedSize = 1.999999*cutoffDistance;
+        if (boxVectors[0][0] < minAllowedSize || boxVectors[1][1] < minAllowedSize || boxVectors[2][2] < minAllowedSize){
             throw OpenMMException("The periodic box size has decreased to less than twice the nonbonded cutoff.");
-         }
-         amoebaReferencePmeMultipoleForce->setPeriodicBoxSize(box);
-         amoebaReferenceMultipoleForce = static_cast<AmoebaReferenceMultipoleForce*>(amoebaReferencePmeMultipoleForce);
+        }
+        amoebaReferencePmeMultipoleForce->setPeriodicBoxSize(boxVectors);
+        amoebaReferenceMultipoleForce = static_cast<AmoebaReferenceMultipoleForce*>(amoebaReferencePmeMultipoleForce);
 
     } else {
          amoebaReferenceMultipoleForce = new AmoebaReferenceMultipoleForce( AmoebaReferenceMultipoleForce::NoCutoff );

@@ -591,6 +591,16 @@ protected:
             RealOpenMM dampingFactor;
             RealOpenMM polarity;
     };
+    
+    /**
+     * Particle parameters transformed into fractional coordinates
+     */
+    class TransformedMultipole {
+    public:
+        RealOpenMM charge;
+        RealVec dipole;
+        RealOpenMM quadrupole[6];
+    };
 
     /* 
      * Helper class used in calculating induced dipoles
@@ -618,6 +628,7 @@ protected:
     RealOpenMM _mScale[5];
     RealOpenMM _uScale[5];
 
+    std::vector<TransformedMultipole> _transformed;
     std::vector<RealVec> _fixedMultipoleField;
     std::vector<RealVec> _fixedMultipoleFieldPolar;
     std::vector<RealVec> _inducedDipole;
@@ -1327,9 +1338,9 @@ public:
     /**
      * Set periodic box size.
      *
-     * @param boxSize box dimensions
+     * @param vectors    the vectors defining the periodic box
      */
-     void setPeriodicBoxSize(RealVec& boxSize);
+     void setPeriodicBoxSize(OpenMM::RealVec* vectors);
 
 private:
 
@@ -1340,8 +1351,8 @@ private:
     RealOpenMM _cutoffDistance;
     RealOpenMM _cutoffDistanceSquared;
 
-    RealVec _invPeriodicBoxSize;
-    RealVec _periodicBoxSize;
+    RealVec _recipBoxVectors[3];
+    RealVec _periodicBoxVectors[3];
 
     int _totalGridSize;
     IntVec _pmeGridDimensions;
@@ -1381,12 +1392,6 @@ private:
      *                                periodic boundary conditions
      */
     void getPeriodicDelta(RealVec& deltaR) const;
-
-    /**
-     * Get PME scale.
-     * 
-     */
-    void getPmeScale(RealVec& scale) const;
 
     /**
      * Calculate damped inverse distances.
@@ -1460,7 +1465,6 @@ private:
     /**
      * Compute induced dipole grid value.
      *
-     * @param particleData            vector of particle positions and parameters (charge, labFrame dipoles, quadrupoles, ...)
      * @param particleGridIndices     particle grid indices
      * @param scale                   integer grid dimension/box size for each dimension
      * @param ix                      x-dimension offset value
@@ -1469,8 +1473,17 @@ private:
      * @param inputInducedDipole      induced dipole value
      * @param inputInducedDipolePolar induced dipole value
      */
-     RealOpenMM computeFixedMultipolesGridValue(const vector<MultipoleParticleData>& particleData,
-                                                const int2& particleGridIndices, const RealVec& scale, int ix, int iy, const IntVec& gridPoint) const;
+     RealOpenMM computeFixedMultipolesGridValue(const int2& particleGridIndices, int ix, int iy, const IntVec& gridPoint) const;
+
+    /**
+     * Transform multipoles from cartesian coordinates to fractional coordinates.
+     */
+    void transformMultipolesToFractionalCoordinates(const vector<MultipoleParticleData>& particleData);
+
+    /**
+     * Transform potential from fractional coordinates to cartesian coordinates.
+     */
+    void transformPotentialToCartesianCoordinates(const std::vector<RealOpenMM>& fphi, std::vector<RealOpenMM>& cphi) const;
 
     /**
      * Spread fixed multipoles onto PME grid.
@@ -1568,7 +1581,7 @@ private:
      * @param inputInducedDipole      induced dipole value
      * @param inputInducedDipolePolar induced dipole polar value
      */
-    t_complex computeInducedDipoleGridValue(const int2& atomIndices, const RealVec& scale, int ix, int iy, const IntVec& gridPoint,
+    t_complex computeInducedDipoleGridValue(const int2& atomIndices, const RealVec* fracToCart, int ix, int iy, const IntVec& gridPoint,
                                             const std::vector<RealVec>& inputInducedDipole,
                                             const std::vector<RealVec>& inputInducedDipolePolar) const;
 
