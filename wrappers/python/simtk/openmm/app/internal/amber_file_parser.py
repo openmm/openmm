@@ -566,10 +566,10 @@ class PrmtopLoader(object):
                     screen[i] = 0.5
                 # radii is currently in Angstroms right now. GBn lookup tables
                 # only support radii between 1.0 and 2.0
-                if radii[r] < 1.0 or radii[r] > 2.0:
+                if radii[i] < 1.0 or radii[i] > 2.0:
                     raise ValueError('GBn requires intrinsic radii between 1 and '
                                      '2 Angstroms (%.3f found for atom %d)' %
-                                     (radii[r], i))
+                                     (radii[i], i))
         if gbmodel == 'GBn2':
             if elements is None:
                 raise Exception('GBn2 model requires element information')
@@ -606,10 +606,10 @@ class PrmtopLoader(object):
                     gamma[i] = 4.85
                 # radii is currently in Angstroms right now. GBn lookup tables
                 # only support radii between 1.0 and 2.0
-                if radii[r] < 1.0 or radii[r] > 2.0:
+                if radii[i] < 1.0 or radii[i] > 2.0:
                     raise ValueError('GBn2 requires intrinsic radii between 1 and '
                                      '2 Angstroms (%.3f found for atom %d)' %
-                                     (radii[r], i))
+                                     (radii[i], i))
         lengthConversionFactor = units.angstrom.conversion_factor_to(units.nanometer)
         if gbmodel == 'GBn2':
             for rad, scr, alp, bet, gam in zip(radii, screen, alpha, beta, gamma):
