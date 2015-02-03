@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2014 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2015 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -5036,7 +5036,7 @@ void AmoebaReferencePmeMultipoleForce::computeAmoebaBsplines(const vector<Multip
 
             RealOpenMM w  = position[0]*_recipBoxVectors[0][jj]+position[1]*_recipBoxVectors[1][jj]+position[2]*_recipBoxVectors[2][jj];
             RealOpenMM fr = _pmeGridDimensions[jj]*(w-(int)(w+0.5)+0.5);
-            int ifr       = static_cast<int>(fr);
+            int ifr       = static_cast<int>(floor(fr));
             w             = fr - ifr;
             igrid[jj]     = ifr - AMOEBA_PME_ORDER + 1;
             igrid[jj]    += igrid[jj] < 0 ? _pmeGridDimensions[jj] : 0;
@@ -5197,14 +5197,14 @@ void AmoebaReferencePmeMultipoleForce::transformPotentialToCartesianCoordinates(
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 6; j++) {
             b[i][j] = a[index1[i]][index1[j]]*a[index2[i]][index2[j]];
-            if (index1[i] != index2[i])
+            if (index1[j] != index2[j])
                 b[i][j] *= 2;
         }
     }
     for (int i = 3; i < 6; i++) {
         for (int j = 0; j < 6; j++) {
             b[i][j] = a[index1[i]][index1[j]]*a[index2[i]][index2[j]];
-            if (index1[i] != index2[i])
+            if (index1[j] != index2[j])
                 b[i][j] += a[index1[i]][index2[j]]*a[index2[i]][index1[j]];
         }
     }
@@ -5410,7 +5410,7 @@ void AmoebaReferencePmeMultipoleForce::computeFixedPotentialFromGrid()
     }
 }
 
-t_complex AmoebaReferencePmeMultipoleForce::computeInducedDipoleGridValue(const int2& particleGridIndices, const RealVec* fracToCart, int ix, int iy,
+t_complex AmoebaReferencePmeMultipoleForce::computeInducedDipoleGridValue(const int2& particleGridIndices, const RealVec* cartToFrac, int ix, int iy,
                                                                           const IntVec& gridPoint,
                                                                           const vector<RealVec>& inputInducedDipole,
                                                                           const vector<RealVec>& inputInducedDipolePolar) const 
@@ -5430,16 +5430,12 @@ t_complex AmoebaReferencePmeMultipoleForce::computeInducedDipoleGridValue(const 
         if (iz >= _pmeGridDimensions[2]) {
             iz -= _pmeGridDimensions[2];
         }
-        RealVec inducedDipole = RealVec(inputInducedDipole[atomIndex][0]*fracToCart[0][0] + inputInducedDipole[atomIndex][1]*fracToCart[0][1] + inputInducedDipole[atomIndex][2]*fracToCart[0][2],
-                                        inputInducedDipole[atomIndex][0]*fracToCart[1][0] + inputInducedDipole[atomIndex][1]*fracToCart[1][1] + inputInducedDipole[atomIndex][2]*fracToCart[1][2],
-                                        inputInducedDipole[atomIndex][0]*fracToCart[2][0] + inputInducedDipole[atomIndex][1]*fracToCart[2][1] + inputInducedDipole[atomIndex][2]*fracToCart[2][2]);
-        RealVec inducedDipolePolar = RealVec(inputInducedDipolePolar[atomIndex][0]*fracToCart[0][0] + inputInducedDipolePolar[atomIndex][1]*fracToCart[0][1] + inputInducedDipolePolar[atomIndex][2]*fracToCart[0][2],
-                                             inputInducedDipolePolar[atomIndex][0]*fracToCart[1][0] + inputInducedDipolePolar[atomIndex][1]*fracToCart[1][1] + inputInducedDipolePolar[atomIndex][2]*fracToCart[1][2],
-                                             inputInducedDipolePolar[atomIndex][0]*fracToCart[2][0] + inputInducedDipolePolar[atomIndex][1]*fracToCart[2][1] + inputInducedDipolePolar[atomIndex][2]*fracToCart[2][2]);
-
-//        RealVec inducedDipolePolar  = RealVec(scale[0]*inputInducedDipolePolar[atomIndex][0],
-//                                               scale[1]*inputInducedDipolePolar[atomIndex][1],
-//                                               scale[2]*inputInducedDipolePolar[atomIndex][2]);
+        RealVec inducedDipole = RealVec(inputInducedDipole[atomIndex][0]*cartToFrac[0][0] + inputInducedDipole[atomIndex][1]*cartToFrac[0][1] + inputInducedDipole[atomIndex][2]*cartToFrac[0][2],
+                                        inputInducedDipole[atomIndex][0]*cartToFrac[1][0] + inputInducedDipole[atomIndex][1]*cartToFrac[1][1] + inputInducedDipole[atomIndex][2]*cartToFrac[1][2],
+                                        inputInducedDipole[atomIndex][0]*cartToFrac[2][0] + inputInducedDipole[atomIndex][1]*cartToFrac[2][1] + inputInducedDipole[atomIndex][2]*cartToFrac[2][2]);
+        RealVec inducedDipolePolar = RealVec(inputInducedDipolePolar[atomIndex][0]*cartToFrac[0][0] + inputInducedDipolePolar[atomIndex][1]*cartToFrac[0][1] + inputInducedDipolePolar[atomIndex][2]*cartToFrac[0][2],
+                                             inputInducedDipolePolar[atomIndex][0]*cartToFrac[1][0] + inputInducedDipolePolar[atomIndex][1]*cartToFrac[1][1] + inputInducedDipolePolar[atomIndex][2]*cartToFrac[1][2],
+                                             inputInducedDipolePolar[atomIndex][0]*cartToFrac[2][0] + inputInducedDipolePolar[atomIndex][1]*cartToFrac[2][1] + inputInducedDipolePolar[atomIndex][2]*cartToFrac[2][2]);
 
         RealOpenMM4 t = _thetai[0][atomIndex*AMOEBA_PME_ORDER+ix];
         RealOpenMM4 u = _thetai[1][atomIndex*AMOEBA_PME_ORDER+iy];
@@ -5460,10 +5456,10 @@ t_complex AmoebaReferencePmeMultipoleForce::computeInducedDipoleGridValue(const 
 void AmoebaReferencePmeMultipoleForce::spreadInducedDipolesOnGrid(const vector<RealVec>& inputInducedDipole,
                                                                   const vector<RealVec>& inputInducedDipolePolar)
 {
-    RealVec fracToCart[3];
+    RealVec cartToFrac[3];
     for (int i = 0; i < 3; i++)
         for (int j = 0; j < 3; j++)
-            fracToCart[i][j] = _pmeGridDimensions[j]*_recipBoxVectors[i][j];
+            cartToFrac[j][i] = _pmeGridDimensions[j]*_recipBoxVectors[i][j];
 
     for (int gridIndex = 0; gridIndex < _totalGridSize; gridIndex++)
     {
@@ -5486,13 +5482,13 @@ void AmoebaReferencePmeMultipoleForce::spreadInducedDipolesOnGrid(const vector<R
                 int2 particleGridIndices;
                 particleGridIndices[0] = x*_pmeGridDimensions[1]*_pmeGridDimensions[2]+y*_pmeGridDimensions[2]+z1;
                 particleGridIndices[1] = x*_pmeGridDimensions[1]*_pmeGridDimensions[2]+y*_pmeGridDimensions[2]+z2;
-                gridValue             += computeInducedDipoleGridValue(particleGridIndices, fracToCart, ix, iy, gridPoint, inputInducedDipole, inputInducedDipolePolar);
+                gridValue             += computeInducedDipoleGridValue(particleGridIndices, cartToFrac, ix, iy, gridPoint, inputInducedDipole, inputInducedDipolePolar);
 
                 if (z1 > gridPoint[2])
                 {
                     particleGridIndices[0]  =  x*_pmeGridDimensions[1]*_pmeGridDimensions[2]+y*_pmeGridDimensions[2];
                     particleGridIndices[1]  =  x*_pmeGridDimensions[1]*_pmeGridDimensions[2]+y*_pmeGridDimensions[2]+gridPoint[2];
-                    gridValue              +=  computeInducedDipoleGridValue(particleGridIndices, fracToCart, ix, iy, gridPoint, inputInducedDipole, inputInducedDipolePolar);
+                    gridValue              +=  computeInducedDipoleGridValue(particleGridIndices, cartToFrac, ix, iy, gridPoint, inputInducedDipole, inputInducedDipolePolar);
                 }
             }
         }
@@ -5714,8 +5710,6 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::computeReciprocalSpaceFixedMultipol
     const int deriv3[] = {3, 8, 9, 6, 14, 16, 12, 19, 17, 18};
     vector<RealOpenMM> cphi(10*_numParticles);
     transformPotentialToCartesianCoordinates(_phi, cphi);
-//    RealVec scale;
-//    getPmeScale(scale);
     RealVec fracToCart[3];
     for (int i = 0; i < 3; i++)
         for (int j = 0; j < 3; j++)
@@ -5738,22 +5732,6 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::computeReciprocalSpaceFixedMultipol
         multipole[7] = particleData[i].quadrupole[QXY]*2.0;
         multipole[8] = particleData[i].quadrupole[QXZ]*2.0;
         multipole[9] = particleData[i].quadrupole[QYZ]*2.0;
-
-//        const RealOpenMM* phi = &_phi[20*i];
-//        torques[i][0] += _electric*(multipole[3]*scale[1]*phi[2] - multipole[2]*scale[2]*phi[3]
-//                      + 2.0*(multipole[6]-multipole[5])*scale[1]*scale[2]*phi[9]
-//                      + multipole[8]*scale[0]*scale[1]*phi[7] + multipole[9]*scale[1]*scale[1]*phi[5]
-//                      - multipole[7]*scale[0]*scale[2]*phi[8] - multipole[9]*scale[2]*scale[2]*phi[6]);
-//
-//        torques[i][1] += _electric*(multipole[1]*scale[2]*phi[3] - multipole[3]*scale[0]*phi[1]
-//                      + 2.0*(multipole[4]-multipole[6])*scale[0]*scale[2]*phi[8]
-//                      + multipole[7]*scale[1]*scale[2]*phi[9] + multipole[8]*scale[2]*scale[2]*phi[6]
-//                      - multipole[8]*scale[0]*scale[0]*phi[4] - multipole[9]*scale[0]*scale[1]*phi[7]);
-//
-//        torques[i][2] += _electric*(multipole[2]*scale[0]*phi[1] - multipole[1]*scale[1]*phi[2]
-//                      + 2.0*(multipole[5]-multipole[4])*scale[0]*scale[1]*phi[7]
-//                      + multipole[7]*scale[0]*scale[0]*phi[4] + multipole[9]*scale[0]*scale[2]*phi[8]
-//                      - multipole[7]*scale[1]*scale[1]*phi[5] - multipole[8]*scale[1]*scale[2]*phi[9]);
 
         const RealOpenMM* phi = &cphi[10*i];
         torques[i][0] += _electric*(multipole[3]*phi[2] - multipole[2]*phi[3]
@@ -5782,15 +5760,6 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::computeReciprocalSpaceFixedMultipol
         multipole[7] = _transformed[i].quadrupole[QXY];
         multipole[8] = _transformed[i].quadrupole[QXZ];
         multipole[9] = _transformed[i].quadrupole[QYZ];
-//        multipole[1] *= scale[0];
-//        multipole[2] *= scale[1];
-//        multipole[3] *= scale[2];
-//        multipole[4] *= scale[0]*scale[0];
-//        multipole[5] *= scale[1]*scale[1];
-//        multipole[6] *= scale[2]*scale[2];
-//        multipole[7] *= scale[0]*scale[1];
-//        multipole[8] *= scale[0]*scale[2];
-//        multipole[9] *= scale[1]*scale[2];
 
         RealVec f = RealVec(0.0, 0.0, 0.0);
         for (int k = 0; k < 10; k++) {
@@ -5799,9 +5768,6 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::computeReciprocalSpaceFixedMultipol
             f[1]   += multipole[k]*_phi[20*i+deriv2[k]];
             f[2]   += multipole[k]*_phi[20*i+deriv3[k]];
         }
-//        f[0]           *= scale[0];
-//        f[1]           *= scale[1];
-//        f[2]           *= scale[2];
         f              *= (_electric);
         forces[i]      -= RealVec(f[0]*fracToCart[0][0] + f[1]*fracToCart[0][1] + f[2]*fracToCart[0][2],
                                   f[0]*fracToCart[1][0] + f[1]*fracToCart[1][1] + f[2]*fracToCart[1][2],
@@ -5832,8 +5798,6 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::computeReciprocalSpaceInducedDipole
     for (int i = 0; i < 3; i++)
         for (int j = 0; j < 3; j++)
             cartToFrac[j][i] = fracToCart[i][j] = _pmeGridDimensions[j]*_recipBoxVectors[i][j];
-//    RealVec scale;
-//    getPmeScale(scale);
     RealOpenMM energy = 0.0;
     for (int i = 0; i < _numParticles; i++) {
 
@@ -5881,16 +5845,6 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::computeReciprocalSpaceInducedDipole
         multipole[7] = _transformed[i].quadrupole[QXY];
         multipole[8] = _transformed[i].quadrupole[QXZ];
         multipole[9] = _transformed[i].quadrupole[QYZ];
-//        multipole[1] *= scale[0];
-//        multipole[2] *= scale[1];
-//        multipole[3] *= scale[2];
-//
-//        multipole[4] *= scale[0]*scale[0];
-//        multipole[5] *= scale[1]*scale[1];
-//        multipole[6] *= scale[2]*scale[2];
-//        multipole[7] *= scale[0]*scale[1];
-//        multipole[8] *= scale[0]*scale[2];
-//        multipole[9] *= scale[1]*scale[2];
 
         inducedDipole[0] = _inducedDipole[i][0]*cartToFrac[0][0] + _inducedDipole[i][1]*cartToFrac[0][1] + _inducedDipole[i][2]*cartToFrac[0][2];
         inducedDipole[1] = _inducedDipole[i][0]*cartToFrac[1][0] + _inducedDipole[i][1]*cartToFrac[1][1] + _inducedDipole[i][2]*cartToFrac[1][2];
@@ -5930,9 +5884,6 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::computeReciprocalSpaceInducedDipole
             f[2] += multipole[k]*_phidp[20*i+deriv3[k]];
         }
 
-//        f[0]           *= scale[0];
-//        f[1]           *= scale[1];
-//        f[2]           *= scale[2];
         f              *= (0.5*_electric);
         forces[iIndex] -= RealVec(f[0]*fracToCart[0][0] + f[1]*fracToCart[0][1] + f[2]*fracToCart[0][2],
                                   f[0]*fracToCart[1][0] + f[1]*fracToCart[1][1] + f[2]*fracToCart[1][2],
@@ -5943,9 +5894,6 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::computeReciprocalSpaceInducedDipole
 
 void AmoebaReferencePmeMultipoleForce::recordFixedMultipoleField()
 {
-//    RealVec scale;
-//    getPmeScale(scale);
-//    scale *= -1.0;
     RealVec fracToCart[3];
     for (int i = 0; i < 3; i++)
         for (int j = 0; j < 3; j++)
@@ -5968,9 +5916,6 @@ void AmoebaReferencePmeMultipoleForce::initializeInducedDipoles(vector<UpdateInd
 
 void AmoebaReferencePmeMultipoleForce::recordInducedDipoleField(vector<RealVec>& field, vector<RealVec>& fieldPolar)
 {
-//    RealVec scale;
-//    getPmeScale(scale);
-//    scale *= -1.0;
     RealVec fracToCart[3];
     for (int i = 0; i < 3; i++)
         for (int j = 0; j < 3; j++)
@@ -6152,7 +6097,6 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::calculatePmeSelfEnergy(const vector
     RealOpenMM term      = 2.0*_alphaEwald*_alphaEwald;
     RealOpenMM energy    = (cii + term*(dii/3.0 + 2.0*term*qii/5.0));
                energy   *= -(_electric*_alphaEwald/(_dielectric*SQRT_PI));
-
     return energy;
 }
 
@@ -6898,7 +6842,7 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::calculateElectrostatic(const vector
         }
     }
 
-    calculatePmeSelfTorque(particleData, torques); 
+    calculatePmeSelfTorque(particleData, torques);
     energy += computeReciprocalSpaceInducedDipoleForceAndEnergy(getPolarizationType(), particleData, forces, torques);
     energy += computeReciprocalSpaceFixedMultipoleForceAndEnergy(particleData, forces, torques);
     energy += calculatePmeSelfEnergy(particleData);

@@ -1,4 +1,4 @@
-/* Portions copyright (c) 2006-2014 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2015 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -973,7 +973,7 @@ protected:
      * @param particleK         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle K
      * @param scalingFactors    scaling factors for interaction
      * @param forces            vector of particle forces to be updated
-     * @param torques           vector of particle torques to be updated
+     * @param torque            vector of particle torques to be updated
      */
     RealOpenMM calculateElectrostaticPairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleK,
                                              const std::vector<RealOpenMM>& scalingFactors, std::vector<OpenMM::RealVec>& forces, std::vector<RealVec>& torque) const;
@@ -987,6 +987,7 @@ protected:
      * @param particleW               particle3 of lab frame for particleI 
      * @param axisType                axis type (Bisector/Z-then-X, ...)
      * @param torque                  torque on particle I
+     * @param forces                  vector of particle forces to be updated
      */
     void mapTorqueToForceForParticle(const MultipoleParticleData& particleI,
                                      const MultipoleParticleData& particleU,
@@ -1004,8 +1005,6 @@ protected:
      * @param axisType                vector of axis types (Bisector/Z-then-X, ...) for particles
      * @param torques                 output torques
      * @param forces                  output forces 
-     *
-     * @return energy
      */
     void mapTorqueToForce(std::vector<MultipoleParticleData>& particleData, 
                           const std::vector<int>& multipoleAtomXs,
@@ -1388,7 +1387,7 @@ private:
     /**
      * Modify input vector of differences in particle positions for periodic boundary conditions.
      * 
-     * @param delta                   input vector of difference in particle positios; on output adjusted for
+     * @param delta                   input vector of difference in particle positions; on output adjusted for
      *                                periodic boundary conditions
      */
     void getPeriodicDelta(RealVec& deltaR) const;
@@ -1466,12 +1465,9 @@ private:
      * Compute induced dipole grid value.
      *
      * @param particleGridIndices     particle grid indices
-     * @param scale                   integer grid dimension/box size for each dimension
      * @param ix                      x-dimension offset value
      * @param iy                      y-dimension offset value
      * @param gridPoint               grid point for which value is to be computed
-     * @param inputInducedDipole      induced dipole value
-     * @param inputInducedDipolePolar induced dipole value
      */
      RealOpenMM computeFixedMultipolesGridValue(const int2& particleGridIndices, int ix, int iy, const IntVec& gridPoint) const;
 
@@ -1542,7 +1538,7 @@ private:
      * @param jIndex        particle J index
      * @param preFactor1    first factor used in calculating field
      * @param preFactor2    second factor used in calculating field
-     * @param deltaR        delta in particle positions after adjusting for periodic boundary conditions
+     * @param delta         delta in particle positions after adjusting for periodic boundary conditions
      * @param inducedDipole vector of induced dipoles
      * @param field         vector of field at each particle due induced dipole of other particles
      */
@@ -1574,14 +1570,14 @@ private:
      * Compute induced dipole grid value.
      *
      * @param atomIndices             indices of first and last atom contiputing to grid point value
-     * @param scale                   integer grid dimension/box size for each dimension
+     * @param cartToFrac              transformation matrix from Cartesian to fractional coordinates
      * @param ix                      x-dimension offset value
      * @param iy                      y-dimension offset value
      * @param gridPoint               grid point for which value is to be computed
      * @param inputInducedDipole      induced dipole value
      * @param inputInducedDipolePolar induced dipole polar value
      */
-    t_complex computeInducedDipoleGridValue(const int2& atomIndices, const RealVec* fracToCart, int ix, int iy, const IntVec& gridPoint,
+    t_complex computeInducedDipoleGridValue(const int2& atomIndices, const RealVec* cartToFrac, int ix, int iy, const IntVec& gridPoint,
                                             const std::vector<RealVec>& inputInducedDipole,
                                             const std::vector<RealVec>& inputInducedDipolePolar) const;
 
