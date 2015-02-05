@@ -2805,7 +2805,7 @@ static void testMultipoleGridPotential( FILE* log ) {
 }
 
 void testTriclinic() {
-    // Create a triclinic box containing eight particles.
+    // Create a triclinic box containing eight water molecules.
 
     System system;
     system.setDefaultPeriodicBoxVectors(Vec3(1.8643, 0, 0), Vec3(-0.16248445120445926, 1.8572057756524414, 0), Vec3(0.16248445120445906, -0.14832299817478897, 1.8512735025730875));

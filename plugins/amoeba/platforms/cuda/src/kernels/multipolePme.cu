@@ -188,7 +188,7 @@ extern "C" __global__ void transformPotentialToCartesianCoordinates(const real* 
         int i = threadIdx.x/6;
         int j = threadIdx.x-6*i;
         b[i][j] = a[index1[i]][index1[j]]*a[index2[i]][index2[j]];
-        if (index1[i] != index2[i])
+        if (index1[j] != index2[j])
             b[i][j] += (i < 3 ? b[i][j] : a[index1[i]][index2[j]]*a[index2[i]][index1[j]]);
     }
     __syncthreads();
@@ -446,7 +446,8 @@ extern "C" __global__ void reciprocalConvolution(real2* __restrict__ pmeGrid, co
 
 extern "C" __global__ void computeFixedPotentialFromGrid(const real2* __restrict__ pmeGrid, real* __restrict__ phi,
         long long* __restrict__ fieldBuffers, long long* __restrict__ fieldPolarBuffers,  const real4* __restrict__ posq,
-        const real* __restrict__ labFrameDipole, real4 periodicBoxSize, real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ, int2* __restrict__ pmeAtomGridIndex) {
+        const real* __restrict__ labFrameDipole, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
+        real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ, int2* __restrict__ pmeAtomGridIndex) {
     real array[PME_ORDER*PME_ORDER];
     real4 theta1[PME_ORDER];
     real4 theta2[PME_ORDER];
@@ -471,28 +472,28 @@ extern "C" __global__ void computeFixedPotentialFromGrid(const real2* __restrict
     for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < NUM_ATOMS; i += blockDim.x*gridDim.x) {
         int m = pmeAtomGridIndex[i].x;
         real4 pos = posq[m];
-        pos.x -= floor(pos.x*recipBoxVecX.x)*periodicBoxSize.x;
-        pos.y -= floor(pos.y*recipBoxVecY.y)*periodicBoxSize.y;
-        pos.z -= floor(pos.z*recipBoxVecZ.z)*periodicBoxSize.z;
+        pos -= periodicBoxVecZ*floor(pos.z*recipBoxVecZ.z+0.5f);
+        pos -= periodicBoxVecY*floor(pos.y*recipBoxVecY.z+0.5f);
+        pos -= periodicBoxVecX*floor(pos.x*recipBoxVecX.z+0.5f);
 
         // Since we need the full set of thetas, it's faster to compute them here than load them
         // from global memory.
 
         real w = pos.x*recipBoxVecX.x+pos.y*recipBoxVecY.x+pos.z*recipBoxVecZ.x;
         real fr = GRID_SIZE_X*(w-(int)(w+0.5f)+0.5f);
-        int ifr = (int) fr;
+        int ifr = (int) floor(fr);
         w = fr - ifr;
         int igrid1 = ifr-PME_ORDER+1;
         computeBSplinePoint(theta1, w, array);
         w = pos.y*recipBoxVecY.y+pos.z*recipBoxVecZ.y;
         fr = GRID_SIZE_Y*(w-(int)(w+0.5f)+0.5f);
-        ifr = (int) fr;
+        ifr = (int) floor(fr);
         w = fr - ifr;
         int igrid2 = ifr-PME_ORDER+1;
         computeBSplinePoint(theta2, w, array);
         w = pos.z*recipBoxVecZ.z;
         fr = GRID_SIZE_Z*(w-(int)(w+0.5f)+0.5f);
-        ifr = (int) fr;
+        ifr = (int) floor(fr);
         w = fr - ifr;
         int igrid3 = ifr-PME_ORDER+1;
         computeBSplinePoint(theta3, w, array);
@@ -616,7 +617,8 @@ extern "C" __global__ void computeFixedPotentialFromGrid(const real2* __restrict
 
 extern "C" __global__ void computeInducedPotentialFromGrid(const real2* __restrict__ pmeGrid, real* __restrict__ phid,
         real* __restrict__ phip, real* __restrict__ phidp, const real4* __restrict__ posq,
-        real4 periodicBoxSize, real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ, int2* __restrict__ pmeAtomGridIndex) {
+        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, real3 recipBoxVecX,
+        real3 recipBoxVecY, real3 recipBoxVecZ, int2* __restrict__ pmeAtomGridIndex) {
     real array[PME_ORDER*PME_ORDER];
     real4 theta1[PME_ORDER];
     real4 theta2[PME_ORDER];
@@ -628,28 +630,28 @@ extern "C" __global__ void computeInducedPotentialFromGrid(const real2* __restri
     for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < NUM_ATOMS; i += blockDim.x*gridDim.x) {
         int m = pmeAtomGridIndex[i].x;
         real4 pos = posq[m];
-        pos.x -= floor(pos.x*recipBoxVecX.x)*periodicBoxSize.x;
-        pos.y -= floor(pos.y*recipBoxVecY.y)*periodicBoxSize.y;
-        pos.z -= floor(pos.z*recipBoxVecZ.z)*periodicBoxSize.z;
+        pos -= periodicBoxVecZ*floor(pos.z*recipBoxVecZ.z+0.5f);
+        pos -= periodicBoxVecY*floor(pos.y*recipBoxVecY.z+0.5f);
+        pos -= periodicBoxVecX*floor(pos.x*recipBoxVecX.z+0.5f);
 
         // Since we need the full set of thetas, it's faster to compute them here than load them
         // from global memory.
 
         real w = pos.x*recipBoxVecX.x+pos.y*recipBoxVecY.x+pos.z*recipBoxVecZ.x;
         real fr = GRID_SIZE_X*(w-(int)(w+0.5f)+0.5f);
-        int ifr = (int) fr;
+        int ifr = (int) floor(fr);
         w = fr - ifr;
         int igrid1 = ifr-PME_ORDER+1;
         computeBSplinePoint(theta1, w, array);
         w = pos.y*recipBoxVecY.y+pos.z*recipBoxVecZ.y;
         fr = GRID_SIZE_Y*(w-(int)(w+0.5f)+0.5f);
-        ifr = (int) fr;
+        ifr = (int) floor(fr);
         w = fr - ifr;
         int igrid2 = ifr-PME_ORDER+1;
         computeBSplinePoint(theta2, w, array);
         w = pos.z*recipBoxVecZ.z;
         fr = GRID_SIZE_Z*(w-(int)(w+0.5f)+0.5f);
-        ifr = (int) fr;
+        ifr = (int) floor(fr);
         w = fr - ifr;
         int igrid3 = ifr-PME_ORDER+1;
         computeBSplinePoint(theta3, w, array);
