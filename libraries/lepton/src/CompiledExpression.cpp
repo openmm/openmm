@@ -121,7 +121,7 @@ void CompiledExpression::compileExpression(const ExpressionTreeNode& node, vecto
                 arguments[stepIndex] = args;
         }
     }
-    temps.push_back(make_pair(node, workspace.size()));
+    temps.push_back(make_pair(node, (int) workspace.size()));
     workspace.push_back(0.0);
 }
 
