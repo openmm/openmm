@@ -926,6 +926,33 @@ void testSwitchingFunction(NonbondedForce::NonbondedMethod method) {
     }
 }
 
+void testReordering() {
+    // Check that reordering of atoms doesn't alter their positions.
+    
+    const int numParticles = 200;
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(6, 0, 0), Vec3(2.1, 6, 0), Vec3(-1.5, -0.5, 6));
+    NonbondedForce *nonbonded = new NonbondedForce();
+    nonbonded->setNonbondedMethod(NonbondedForce::PME);
+    system.addForce(nonbonded);
+    vector<Vec3> positions;
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int i = 0; i < numParticles; i++) {
+        system.addParticle(1.0);
+        nonbonded->addParticle(0.0, 0.0, 0.0);
+        positions.push_back(Vec3(genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5)*20);
+    }
+    VerletIntegrator integrator(0.001);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    integrator.step(1);
+    State state = context.getState(State::Positions | State::Velocities);
+    for (int i = 0; i < numParticles; i++) {
+        ASSERT_EQUAL_VEC(positions[i], state.getPositions()[i], 1e-6);
+    }
+}
+
 int main(int argc, char* argv[]) {
     try {
         if (argc > 1)
@@ -947,6 +974,7 @@ int main(int argc, char* argv[]) {
         testParallelComputation(NonbondedForce::PME);
         testSwitchingFunction(NonbondedForce::CutoffNonPeriodic);
         testSwitchingFunction(NonbondedForce::PME);
+        testReordering();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

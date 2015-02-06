@@ -147,14 +147,15 @@ void CudaUpdateStateDataKernel::getPositions(ContextImpl& context, vector<Vec3>&
     const vector<int>& order = cu.getAtomIndex();
     int numParticles = context.getSystem().getNumParticles();
     positions.resize(numParticles);
-    double4 periodicBoxSize = cu.getPeriodicBoxSize();
+    Vec3 boxVectors[3];
+    cu.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
     if (cu.getUseDoublePrecision()) {
         double4* posq = (double4*) cu.getPinnedBuffer();
         cu.getPosq().download(posq);
         for (int i = 0; i < numParticles; ++i) {
             double4 pos = posq[i];
             int4 offset = cu.getPosCellOffsets()[i];
-            positions[order[i]] = Vec3(pos.x-offset.x*periodicBoxSize.x, pos.y-offset.y*periodicBoxSize.y, pos.z-offset.z*periodicBoxSize.z);
+            positions[order[i]] = Vec3(pos.x, pos.y, pos.z)-boxVectors[0]*offset.x-boxVectors[1]*offset.y-boxVectors[2]*offset.z;
         }
     }
     else if (cu.getUseMixedPrecision()) {
@@ -166,7 +167,7 @@ void CudaUpdateStateDataKernel::getPositions(ContextImpl& context, vector<Vec3>&
             float4 pos1 = posq[i];
             float4 pos2 = posCorrection[i];
             int4 offset = cu.getPosCellOffsets()[i];
-            positions[order[i]] = Vec3((double)pos1.x+(double)pos2.x-offset.x*periodicBoxSize.x, (double)pos1.y+(double)pos2.y-offset.y*periodicBoxSize.y, (double)pos1.z+(double)pos2.z-offset.z*periodicBoxSize.z);
+            positions[order[i]] = Vec3((double)pos1.x+(double)pos2.x, (double)pos1.y+(double)pos2.y, (double)pos1.z+(double)pos2.z)-boxVectors[0]*offset.x-boxVectors[1]*offset.y-boxVectors[2]*offset.z;
         }
     }
     else {
@@ -175,7 +176,7 @@ void CudaUpdateStateDataKernel::getPositions(ContextImpl& context, vector<Vec3>&
         for (int i = 0; i < numParticles; ++i) {
             float4 pos = posq[i];
             int4 offset = cu.getPosCellOffsets()[i];
-            positions[order[i]] = Vec3(pos.x-offset.x*periodicBoxSize.x, pos.y-offset.y*periodicBoxSize.y, pos.z-offset.z*periodicBoxSize.z);
+            positions[order[i]] = Vec3(pos.x, pos.y, pos.z)-boxVectors[0]*offset.x-boxVectors[1]*offset.y-boxVectors[2]*offset.z;
         }
     }
 }

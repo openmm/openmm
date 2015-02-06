@@ -1087,16 +1087,21 @@ void OpenCLContext::reorderAtomsImpl() {
             // Move each molecule position into the same box.
 
             for (int i = 0; i < numMolecules; i++) {
-                int xcell = (int) floor(molPos[i].x*invPeriodicBoxSizeDouble.x);
-                int ycell = (int) floor(molPos[i].y*invPeriodicBoxSizeDouble.y);
-                int zcell = (int) floor(molPos[i].z*invPeriodicBoxSizeDouble.z);
-                Real dx = xcell*periodicBoxSizeDouble.x;
-                Real dy = ycell*periodicBoxSizeDouble.y;
-                Real dz = zcell*periodicBoxSizeDouble.z;
-                if (dx != 0.0f || dy != 0.0f || dz != 0.0f) {
-                    molPos[i].x -= dx;
-                    molPos[i].y -= dy;
-                    molPos[i].z -= dz;
+                Real4 center = molPos[i];
+                int zcell = (int) floor(center.z*invPeriodicBoxSize.z);
+                center.x -= zcell*periodicBoxVecZ.x;
+                center.y -= zcell*periodicBoxVecZ.y;
+                center.z -= zcell*periodicBoxVecZ.z;
+                int ycell = (int) floor(center.y*invPeriodicBoxSize.y);
+                center.x -= ycell*periodicBoxVecY.x;
+                center.y -= ycell*periodicBoxVecY.y;
+                int xcell = (int) floor(center.x*invPeriodicBoxSize.x);
+                center.x -= xcell*periodicBoxVecX.x;
+                if (xcell != 0 || ycell != 0 || zcell != 0) {
+                    Real dx = molPos[i].x-center.x;
+                    Real dy = molPos[i].y-center.y;
+                    Real dz = molPos[i].z-center.z;
+                    molPos[i] = center;
                     for (int j = 0; j < (int) atoms.size(); j++) {
                         int atom = atoms[j]+mol.offsets[i];
                         Real4 p = oldPosq[atom];
