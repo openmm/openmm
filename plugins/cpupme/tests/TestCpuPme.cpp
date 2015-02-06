@@ -61,14 +61,25 @@ public:
     }
 };
 
-void testPME() {
+void testPME(bool triclinic) {
     // Create a cloud of random point charges.
 
     const int numParticles = 51;
     const double boxWidth = 5.0;
     const double cutoff = 1.0;
+    Vec3 boxVectors[3];
+    if (triclinic) {
+        boxVectors[0] = Vec3(boxWidth, 0, 0);
+        boxVectors[1] = Vec3(0.2*boxWidth, boxWidth, 0);
+        boxVectors[2] = Vec3(-0.3*boxWidth, -0.1*boxWidth, boxWidth);
+    }
+    else {
+        boxVectors[0] = Vec3(boxWidth, 0, 0);
+        boxVectors[1] = Vec3(0, boxWidth, 0);
+        boxVectors[2] = Vec3(0, 0, boxWidth);
+    }
     System system;
-    system.setDefaultPeriodicBoxVectors(Vec3(boxWidth, 0, 0), Vec3(0, boxWidth, 0), Vec3(0, 0, boxWidth));
+    system.setDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
     NonbondedForce* force = new NonbondedForce();
     system.addForce(force);
     vector<Vec3> positions(numParticles);
@@ -112,7 +123,7 @@ void testPME() {
     }
     double ewaldSelfEnergy = -ONE_4PI_EPS0*alpha*sumSquaredCharges/sqrt(M_PI);
     pme.initialize(gridx, gridy, gridz, numParticles, alpha);
-    pme.beginComputation(io, Vec3(boxWidth, boxWidth, boxWidth), true);
+    pme.beginComputation(io, boxVectors, true);
     double energy = pme.finishComputation(io);
     
     // See if they match.
@@ -128,7 +139,8 @@ int main(int argc, char* argv[]) {
             cout << "CPU is not supported.  Exiting." << endl;
             return 0;
         }
-        testPME();
+        testPME(false);
+        testPME(true);
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

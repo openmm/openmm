@@ -1223,12 +1223,12 @@ public:
     virtual void initialize(int gridx, int gridy, int gridz, int numParticles, double alpha) = 0;
     /**
      * Begin computing the force and energy.
-     * 
-     * @param io               an object that coordinates data transfer
-     * @param periodicBoxSize  the size of the periodic box (measured in nm)
-     * @param includeEnergy    true if potential energy should be computed
+     *
+     * @param io                  an object that coordinates data transfer
+     * @param periodicBoxVectors  the vectors defining the periodic box (measured in nm)
+     * @param includeEnergy       true if potential energy should be computed
      */
-    virtual void beginComputation(IO& io, Vec3 periodicBoxSize, bool includeEnergy) = 0;
+    virtual void beginComputation(IO& io, const Vec3* periodicBoxVectors, bool includeEnergy) = 0;
     /**
      * Finish computing the force and energy.
      * 

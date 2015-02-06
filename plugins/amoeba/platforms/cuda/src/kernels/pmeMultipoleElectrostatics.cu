@@ -65,7 +65,7 @@ __device__ float computePScaleFactor(uint2 covalent, unsigned int polarizationGr
 }
 
 __device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, bool hasExclusions, float dScale, float pScale, float mScale, float forceFactor,
-                                      real& energy, real4 periodicBoxSize, real4 invPeriodicBoxSize) {
+                                      real& energy, real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ) {
     real4 delta;
     delta.x = atom2.pos.x - atom1.pos.x;
     delta.y = atom2.pos.y - atom1.pos.y;
@@ -73,10 +73,7 @@ __device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, bool has
 
     // periodic box
 
-    delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-    delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-    delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
-
+    APPLY_PERIODIC_TO_DELTA(delta)
     delta.w = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
     if (delta.w > CUTOFF_SQUARED)
         return;
@@ -203,7 +200,9 @@ extern "C" __global__ void computeElectrostatics(
         const real4* __restrict__ posq, const uint2* __restrict__ covalentFlags, const unsigned int* __restrict__ polarizationGroupFlags,
         const ushort2* __restrict__ exclusionTiles, unsigned int startTileIndex, unsigned int numTileIndices,
 #ifdef USE_CUTOFF
-        const int* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, unsigned int maxTiles, const real4* __restrict__ blockCenter, const unsigned int* __restrict__ interactingAtoms,
+        const int* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
+        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, const real4* __restrict__ blockCenter,
+        const unsigned int* __restrict__ interactingAtoms,
 #endif
         const real* __restrict__ labFrameDipole, const real* __restrict__ labFrameQuadrupole, const real* __restrict__ inducedDipole,
         const real* __restrict__ inducedDipolePolar, const float2* __restrict__ dampingAndThole) {
@@ -255,7 +254,7 @@ extern "C" __global__ void computeElectrostatics(
                     float d = computeDScaleFactor(polarizationGroup, j);
                     float p = computePScaleFactor(covalent, polarizationGroup, j);
                     float m = computeMScaleFactor(covalent, j);
-                    computeOneInteraction(data, localData[tbx+j], true, d, p, m, 0.5f, energy, periodicBoxSize, invPeriodicBoxSize);
+                    computeOneInteraction(data, localData[tbx+j], true, d, p, m, 0.5f, energy, periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);
                 }
             }
             if (atom1 < NUM_ATOMS)
@@ -283,7 +282,7 @@ extern "C" __global__ void computeElectrostatics(
                     float d = computeDScaleFactor(polarizationGroup, tj);
                     float p = computePScaleFactor(covalent, polarizationGroup, tj);
                     float m = computeMScaleFactor(covalent, tj);
-                    computeOneInteraction(data, localData[tbx+tj], true, d, p, m, 1, energy, periodicBoxSize, invPeriodicBoxSize);
+                    computeOneInteraction(data, localData[tbx+tj], true, d, p, m, 1, energy, periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);
                 }
                 tj = (tj + 1) & (TILE_SIZE - 1);
             }
@@ -386,7 +385,7 @@ extern "C" __global__ void computeElectrostatics(
             for (j = 0; j < TILE_SIZE; j++) {
                 int atom2 = atomIndices[tbx+tj];
                 if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
-                    computeOneInteraction(data, localData[tbx+tj], false, 1, 1, 1, 1, energy, periodicBoxSize, invPeriodicBoxSize);
+                    computeOneInteraction(data, localData[tbx+tj], false, 1, 1, 1, 1, energy, periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);
                 }
                 tj = (tj + 1) & (TILE_SIZE - 1);
             }

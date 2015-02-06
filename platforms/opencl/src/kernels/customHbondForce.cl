@@ -11,12 +11,10 @@ real4 delta(real4 vec1, real4 vec2) {
  * Compute the difference between two vectors, taking periodic boundary conditions into account
  * and setting the fourth component to the squared magnitude.
  */
-real4 deltaPeriodic(real4 vec1, real4 vec2, real4 periodicBoxSize, real4 invPeriodicBoxSize) {
+real4 deltaPeriodic(real4 vec1, real4 vec2, real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ) {
     real4 result = (real4) (vec1.x-vec2.x, vec1.y-vec2.y, vec1.z-vec2.z, 0);
 #ifdef USE_PERIODIC
-    result.x -= floor(result.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-    result.y -= floor(result.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-    result.z -= floor(result.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
+    APPLY_PERIODIC_TO_DELTA(result)
 #endif
     result.w = result.x*result.x + result.y*result.y + result.z*result.z;
     return result;
@@ -56,7 +54,8 @@ real4 computeCross(real4 vec1, real4 vec2) {
  * Compute forces on donors.
  */
 __kernel void computeDonorForces(__global real4* restrict forceBuffers, __global real* restrict energyBuffer, __global const real4* restrict posq, __global const int4* restrict exclusions,
-        __global const int4* restrict donorAtoms, __global const int4* restrict acceptorAtoms, __global const int4* restrict donorBufferIndices, __local real4* posBuffer, real4 periodicBoxSize, real4 invPeriodicBoxSize
+        __global const int4* restrict donorAtoms, __global const int4* restrict acceptorAtoms, __global const int4* restrict donorBufferIndices, __local real4* posBuffer, real4 periodicBoxSize, real4 invPeriodicBoxSize,
+        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ
         PARAMETER_ARGUMENTS) {
     real energy = 0;
     real4 f1 = (real4) 0;
@@ -102,7 +101,7 @@ __kernel void computeDonorForces(__global real4* restrict forceBuffers, __global
                     real4 a1 = posBuffer[3*index];
                     real4 a2 = posBuffer[3*index+1];
                     real4 a3 = posBuffer[3*index+2];
-                    real4 deltaD1A1 = deltaPeriodic(d1, a1, periodicBoxSize, invPeriodicBoxSize);
+                    real4 deltaD1A1 = deltaPeriodic(d1, a1, periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);
 #ifdef USE_CUTOFF
                     if (deltaD1A1.w < CUTOFF_SQUARED) {
 #endif
@@ -144,7 +143,8 @@ __kernel void computeDonorForces(__global real4* restrict forceBuffers, __global
  * Compute forces on acceptors.
  */
 __kernel void computeAcceptorForces(__global real4* restrict forceBuffers, __global real* restrict energyBuffer, __global const real4* restrict posq, __global const int4* restrict exclusions,
-        __global const int4* restrict donorAtoms, __global const int4* restrict acceptorAtoms, __global const int4* restrict acceptorBufferIndices, __local real4* restrict posBuffer, real4 periodicBoxSize, real4 invPeriodicBoxSize
+        __global const int4* restrict donorAtoms, __global const int4* restrict acceptorAtoms, __global const int4* restrict acceptorBufferIndices, __local real4* restrict posBuffer, real4 periodicBoxSize, real4 invPeriodicBoxSize,
+        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ
         PARAMETER_ARGUMENTS) {
     real4 f1 = (real4) 0;
     real4 f2 = (real4) 0;
@@ -189,7 +189,7 @@ __kernel void computeAcceptorForces(__global real4* restrict forceBuffers, __glo
                     real4 d1 = posBuffer[3*index];
                     real4 d2 = posBuffer[3*index+1];
                     real4 d3 = posBuffer[3*index+2];
-                    real4 deltaD1A1 = deltaPeriodic(d1, a1, periodicBoxSize, invPeriodicBoxSize);
+                    real4 deltaD1A1 = deltaPeriodic(d1, a1, periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);
 #ifdef USE_CUTOFF
                     if (deltaD1A1.w < CUTOFF_SQUARED) {
 #endif

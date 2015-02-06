@@ -97,6 +97,7 @@ ReferencePlatform::PlatformData::PlatformData(const System& system) : time(0.0),
     velocities = new vector<RealVec>(numParticles);
     forces = new vector<RealVec>(numParticles);
     periodicBoxSize = new RealVec();
+    periodicBoxVectors = new RealVec[3];
     constraints = new ReferenceConstraints(system);
 }
 
@@ -105,5 +106,6 @@ ReferencePlatform::PlatformData::~PlatformData() {
     delete (vector<RealVec>*) velocities;
     delete (vector<RealVec>*) forces;
     delete (RealVec*) periodicBoxSize;
+    delete[] (RealVec*) periodicBoxVectors;
     delete (ReferenceConstraints*) constraints;
 }

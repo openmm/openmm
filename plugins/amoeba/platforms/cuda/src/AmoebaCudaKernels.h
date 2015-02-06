@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
  * Authors: Mark Friedrichs, Peter Eastman                                    *
  * Contributors:                                                              *
  *                                                                            *
@@ -391,6 +391,8 @@ private:
     CudaArray* molecularQuadrupoles;
     CudaArray* labFrameDipoles;
     CudaArray* labFrameQuadrupoles;
+    CudaArray* fracDipoles;
+    CudaArray* fracQuadrupoles;
     CudaArray* field;
     CudaArray* fieldPolar;
     CudaArray* inducedField;
@@ -419,6 +421,7 @@ private:
     CudaArray* pmePhid;
     CudaArray* pmePhip;
     CudaArray* pmePhidp;
+    CudaArray* pmeCphi;
     CudaArray* pmeAtomRange;
     CudaArray* pmeAtomGridIndex;
     CudaArray* lastPositions;
@@ -428,6 +431,7 @@ private:
     CUfunction pmeGridIndexKernel, pmeSpreadFixedMultipolesKernel, pmeSpreadInducedDipolesKernel, pmeFinishSpreadChargeKernel, pmeConvolutionKernel;
     CUfunction pmeFixedPotentialKernel, pmeInducedPotentialKernel, pmeFixedForceKernel, pmeInducedForceKernel, pmeRecordInducedFieldDipolesKernel, computePotentialKernel;
     CUfunction recordDIISDipolesKernel, buildMatrixKernel;
+    CUfunction pmeTransformMultipolesKernel, pmeTransformPotentialKernel;
     CudaCalcAmoebaGeneralizedKirkwoodForceKernel* gkKernel;
     static const int PmeOrder = 5;
     static const int MaxPrevDIISDipoles = 20;

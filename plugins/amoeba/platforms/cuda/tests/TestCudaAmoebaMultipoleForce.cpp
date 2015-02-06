@@ -2963,6 +2963,179 @@ static void testNoQuadrupoles(bool usePme) {
     ASSERT(threwException);
 }
 
+void testTriclinic() {
+    // Create a triclinic box containing eight water molecules.
+
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(1.8643, 0, 0), Vec3(-0.16248445120445926, 1.8572057756524414, 0), Vec3(0.16248445120445906, -0.14832299817478897, 1.8512735025730875));
+    for (int i = 0; i < 24; i++)
+        system.addParticle(1.0);
+    AmoebaMultipoleForce* force = new AmoebaMultipoleForce();
+    system.addForce(force);
+    force->setNonbondedMethod(AmoebaMultipoleForce::PME);
+    force->setCutoffDistance(0.7);
+    force->setMutualInducedTargetEpsilon(1e-6);
+    vector<int> grid(3);
+    grid[0] = grid[1] = grid[2] = 24;
+    force->setPmeGridDimensions(grid);
+    force->setAEwald(5.4459051633620055);
+    double o_charge = -0.42616, h_charge = 0.21308;
+    vector<double> o_dipole(3), h_dipole(3), o_quadrupole(9, 0.0), h_quadrupole(9, 0.0);
+    o_dipole[0] = 0;
+    o_dipole[1] = 0;
+    o_dipole[2] = 0.0033078867454609203;
+    h_dipole[0] = -0.0053536858428776405;
+    h_dipole[1] = 0;
+    h_dipole[2] = -0.014378273997907321;
+
+    o_quadrupole[0] = 0.00016405937591036892;
+    o_quadrupole[4] = -0.00021618201787005826;
+    o_quadrupole[8] = 5.212264195968935e-05;
+    h_quadrupole[0] = 0.00011465301060008312;
+    h_quadrupole[4] = 8.354184196619263e-05;
+    h_quadrupole[8] = -0.00019819485256627578;
+    h_quadrupole[2] = h_quadrupole[6] = -6.523731100577879e-05;
+
+    for (int i = 0; i < 8; i++) {
+        int atom1 = 3*i, atom2 = 3*i+1, atom3 = 3*i+2;
+        force->addMultipole(o_charge, o_dipole, o_quadrupole, 1, atom2, atom3, -1, 0.39, pow(0.001*0.92, 1.0/6.0), 0.001*0.92);
+        force->addMultipole(h_charge, h_dipole, h_quadrupole, 0, atom1, atom3, -1, 0.39, pow(0.001*0.539, 1.0/6.0), 0.001*0.539);
+        force->addMultipole(h_charge, h_dipole, h_quadrupole, 0, atom1, atom2, -1, 0.39, pow(0.001*0.539, 1.0/6.0), 0.001*0.539);
+        vector<int> coval1_12(2);
+        coval1_12[0] = atom2;
+        coval1_12[1] = atom3;
+        force->setCovalentMap(atom1, AmoebaMultipoleForce::Covalent12, coval1_12);
+        vector<int> coval2_12(1);
+        coval2_12[0] = atom1;
+        force->setCovalentMap(atom2, AmoebaMultipoleForce::Covalent12, coval2_12);
+        force->setCovalentMap(atom3, AmoebaMultipoleForce::Covalent12, coval2_12);
+        vector<int> coval2_13(1);
+        coval2_13[0] = atom3;
+        force->setCovalentMap(atom2, AmoebaMultipoleForce::Covalent13, coval2_13);
+        vector<int> coval3_13(1);
+        coval3_13[0] = atom2;
+        force->setCovalentMap(atom3, AmoebaMultipoleForce::Covalent13, coval3_13);
+        vector<int> polar(3);
+        polar[0] = atom1;
+        polar[1] = atom2;
+        polar[2] = atom3;
+        force->setCovalentMap(atom1, AmoebaMultipoleForce::PolarizationCovalent11, polar);
+        force->setCovalentMap(atom2, AmoebaMultipoleForce::PolarizationCovalent11, polar);
+        force->setCovalentMap(atom3, AmoebaMultipoleForce::PolarizationCovalent11, polar);
+    }
+    vector<Vec3> positions(24);
+    positions[0] = Vec3(0.867966, 0.708769, -0.0696862);
+    positions[1] = Vec3(0.780946, 0.675579, -0.0382259);
+    positions[2] = Vec3(0.872223, 0.681424, -0.161756);
+    positions[3] = Vec3(-0.0117313, 0.824445, 0.683762);
+    positions[4] = Vec3(0.0216892, 0.789544, 0.605003);
+    positions[5] = Vec3(0.0444268, 0.782601, 0.75302);
+    positions[6] = Vec3(0.837906, -0.0092611, 0.681463);
+    positions[7] = Vec3(0.934042, 0.0098069, 0.673406);
+    positions[8] = Vec3(0.793962, 0.0573676, 0.626984);
+    positions[9] = Vec3(0.658995, 0.184432, -0.692317);
+    positions[10] = Vec3(0.588543, 0.240231, -0.671793);
+    positions[11] = Vec3(0.618153, 0.106275, -0.727368);
+    positions[12] = Vec3(0.71466, 0.575358, 0.233152);
+    positions[13] = Vec3(0.636812, 0.612604, 0.286268);
+    positions[14] = Vec3(0.702502, 0.629465, 0.15182);
+    positions[15] = Vec3(-0.242658, -0.850419, -0.250483);
+    positions[16] = Vec3(-0.169206, -0.836825, -0.305829);
+    positions[17] = Vec3(-0.279321, -0.760247, -0.24031);
+    positions[18] = Vec3(-0.803838, -0.360559, 0.230369);
+    positions[19] = Vec3(-0.811375, -0.424813, 0.301849);
+    positions[20] = Vec3(-0.761939, -0.2863, 0.270962);
+    positions[21] = Vec3(-0.148063, 0.824409, -0.827221);
+    positions[22] = Vec3(-0.20902, 0.868798, -0.7677);
+    positions[23] = Vec3(-0.0700878, 0.882333, -0.832221);
+
+    // Compute the forces and energy.
+
+    LangevinIntegrator integrator(0.0, 0.1, 0.01);
+    Context context(system, integrator, Platform::getPlatformByName("CUDA"));
+    context.setPositions(positions);
+    State state = context.getState(State::Forces | State::Energy);
+
+    // Compare them to values computed by Gromacs.
+
+    double expectedEnergy = 6.8278696;
+    vector<Vec3> expectedForce(24);
+    expectedForce[0] = Vec3(-104.755, 14.0833, 34.359);
+    expectedForce[1] = Vec3(97.324, -1.41419, -142.976);
+    expectedForce[2] = Vec3(29.3968, -6.31784, -3.8702);
+    expectedForce[3] = Vec3(39.1915, 66.852, -28.5767);
+    expectedForce[4] = Vec3(-8.17554, -6.71532, 7.63162);
+    expectedForce[5] = Vec3(-87.3745, -91.8639, 35.4761);
+    expectedForce[6] = Vec3(-19.7568, -40.8693, 5.60238);
+    expectedForce[7] = Vec3(0.840984, 26.878, 10.7822);
+    expectedForce[8] = Vec3(14.3469, 12.0583, -12.075);
+    expectedForce[9] = Vec3(13.757, 16.9954, 46.9403);
+    expectedForce[10] = Vec3(-5.04172, -14.008, -15.3804);
+    expectedForce[11] = Vec3(-2.1715, 3.7405, -37.2209);
+    expectedForce[12] = Vec3(-70.2284, -9.10438, -40.1287);
+    expectedForce[13] = Vec3(4.46014, 3.89949, 4.64842);
+    expectedForce[14] = Vec3(43.045, -4.79905, 151.879);
+    expectedForce[15] = Vec3(20.2129, -0.895376, -27.2086);
+    expectedForce[16] = Vec3(-5.10448, 3.57732, 17.0498);
+    expectedForce[17] = Vec3(-13.7695, -1.03345, 12.3093);
+    expectedForce[18] = Vec3(2.94972, 0.338904, -10.9914);
+    expectedForce[19] = Vec3(0.69036, 1.22591, 4.50198);
+    expectedForce[20] = Vec3(-4.61495, -2.76981, 3.57732);
+    expectedForce[21] = Vec3(73.1489, 16.167, -99.5834);
+    expectedForce[22] = Vec3(-31.8235, 6.11282, -21.125);
+    expectedForce[23] = Vec3(13.167, 7.42242, 103.102);
+    for (int i = 0; i < 24; i++) {
+        ASSERT_EQUAL_VEC(expectedForce[i], state.getForces()[i], 1e-2);
+    }
+    ASSERT_EQUAL_TOL(expectedEnergy, state.getPotentialEnergy(), 1e-2);
+    
+    // Make sure that the induced dipoles match values that were computed with the reference platform.
+    
+    vector<Vec3> dipole, expectedDipole(24);
+    expectedDipole[0] = Vec3(0.001139674, 6.100086e-05, -9.047545e-05);
+    expectedDipole[1] = Vec3(0.001196926, 4.956102e-05, -0.001802801);
+    expectedDipole[2] = Vec3(0.0004220728, -0.0001239729, -0.0005876792);
+    expectedDipole[3] = Vec3(-8.251352e-05, -0.0004572975, 0.000231773);
+    expectedDipole[4] = Vec3(-9.605857e-05, -1.712989e-05, 0.0001950891);
+    expectedDipole[5] = Vec3(-0.000673353, -0.000748613, 0.0004138051);
+    expectedDipole[6] = Vec3(0.0001657927, 0.0003224215, -8.527183e-05);
+    expectedDipole[7] = Vec3(4.321082e-05, 0.0001842417, 0.0001044274);
+    expectedDipole[8] = Vec3(4.656055e-05, 0.0001173723, -0.000111185);
+    expectedDipole[9] = Vec3(-0.0001234674, -0.0002114879, -0.0003179444);
+    expectedDipole[10] = Vec3(3.941253e-05, -0.0001807048, -0.0001442925);
+    expectedDipole[11] = Vec3(-2.111804e-05, -0.0001092564, -0.0003528088);
+    expectedDipole[12] = Vec3(0.0006598309, -9.950432e-05, 0.0002676833);
+    expectedDipole[13] = Vec3(-0.0001790531, 6.770892e-05, 0.0003118193);
+    expectedDipole[14] = Vec3(4.071723e-05, -7.97693e-05, 0.001696929);
+    expectedDipole[15] = Vec3(-0.0002070313, 1.716257e-05, 0.0002235802);
+    expectedDipole[16] = Vec3(-0.0001630692, 6.042542e-05, 0.0002146744);
+    expectedDipole[17] = Vec3(-0.0001572073, 9.014017e-05, 0.0001155261);
+    expectedDipole[18] = Vec3(-1.415344e-05, -2.113717e-05, 8.32503e-05);
+    expectedDipole[19] = Vec3(-5.514418e-06, -1.676616e-05, 5.401816e-05);
+    expectedDipole[20] = Vec3(-3.962031e-05, -2.67952e-05, 2.322013e-05);
+    expectedDipole[21] = Vec3(-0.0007098042, -0.0003138399, 0.000827001);
+    expectedDipole[22] = Vec3(-0.0004787119, 0.0001518272, 2.344478e-05);
+    expectedDipole[23] = Vec3(-0.0001339792, -1.357387e-05, 0.0008341705);
+    force->getInducedDipoles(context, dipole);
+    for (int i = 0; i < 24; i++) {
+        ASSERT_EQUAL_VEC(expectedDipole[i], dipole[i], 1e-4);
+    }
+
+    // Make sure that the electrostatic potential matches values that were computed with the reference platform.
+
+    vector<Vec3> points;
+    for (int i = 0; i < 3; i++)
+        for (int j = 0; j < 3; j++)
+            for (int k = 0; k < 3; k++)
+                points.push_back(Vec3(0.5*i, 0.5*j, 0.5*k));
+    vector<double> potential;
+    force->getElectrostaticPotential(points, context, potential);
+    double expectedPotential[] = {15.79581, 11.61804, 7.143405, 15.55374, 20.84724, -117.8448, 10.65319, -23.70798,
+            30.26213, -0.008813862, 7.123444, 22.09409, 41.93532, 41.92756, 24.00818, 20.77822, 22.8576, 29.88276,
+            -16.35481, 44.62139, -64.10894, -64.28645, -26.05954, -1.25711, -54.76624, -6.754965, 10.83449};
+    for (int i = 0; i < 27; i++)
+        ASSERT_EQUAL_TOL(expectedPotential[i], potential[i], 1e-4);
+}
 
 int main(int argc, char* argv[]) {
     try {
@@ -3014,6 +3187,10 @@ int main(int argc, char* argv[]) {
         
         testNoQuadrupoles(false);
         testNoQuadrupoles(true);
+        
+        // triclinic box of water
+        
+        testTriclinic();
 
     } catch(const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;

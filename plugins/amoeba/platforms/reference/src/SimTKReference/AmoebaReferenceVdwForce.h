@@ -31,7 +31,7 @@
 #include <string>
 #include <vector>
 
-using namespace OpenMM;
+namespace OpenMM {
 
 class AmoebaReferenceVdwForce;
 typedef  RealOpenMM (AmoebaReferenceVdwForce::*CombiningFunction)( RealOpenMM x, RealOpenMM y) const;
@@ -174,21 +174,11 @@ public:
     
        Set box dimensions
     
-       @param box box dimensions
+       @param vectors    the vectors defining the periodic box
     
        --------------------------------------------------------------------------------------- */
     
-    void setPeriodicBox( const RealVec& box );
-
-    /**---------------------------------------------------------------------------------------
-    
-       Get box dimensions
-    
-       @return box dimensions
-    
-       --------------------------------------------------------------------------------------- */
-    
-    RealVec getPeriodicBox( void ) const;
+    void setPeriodicBox(OpenMM::RealVec* vectors);
 
     /**---------------------------------------------------------------------------------------
     
@@ -253,7 +243,7 @@ private:
     double _taperCutoffFactor;
     double _taperCutoff;
     RealOpenMM _taperCoefficients[3];
-    RealVec _periodicBoxDimensions;
+    RealVec _periodicBoxVectors[3];
     CombiningFunction _combineSigmas;
     RealOpenMM arithmeticSigmaCombiningRule( RealOpenMM sigmaI, RealOpenMM sigmaJ ) const;
     RealOpenMM  geometricSigmaCombiningRule( RealOpenMM sigmaI, RealOpenMM sigmaJ ) const;
@@ -333,6 +323,7 @@ private:
 
 };
 
+}
 // ---------------------------------------------------------------------------------------
 
 #endif // _AmoebaReferenceVdwForce___

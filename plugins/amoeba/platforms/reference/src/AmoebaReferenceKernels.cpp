@@ -74,6 +74,11 @@ static RealVec& extractBoxSize(ContextImpl& context) {
     return *(RealVec*) data->periodicBoxSize;
 }
 
+static RealVec* extractBoxVectors(ContextImpl& context) {
+    ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
+    return (RealVec*) data->periodicBoxVectors;
+}
+
 // ***************************************************************************
 
 ReferenceCalcAmoebaBondForceKernel::ReferenceCalcAmoebaBondForceKernel(std::string name, const Platform& platform, const System& system) : 
@@ -635,17 +640,17 @@ AmoebaReferenceMultipoleForce* ReferenceCalcAmoebaMultipoleForceKernel::setupAmo
 
     } else if( usePme ) {
 
-         AmoebaReferencePmeMultipoleForce* amoebaReferencePmeMultipoleForce = new AmoebaReferencePmeMultipoleForce( );
-         amoebaReferencePmeMultipoleForce->setAlphaEwald( alphaEwald );
-         amoebaReferencePmeMultipoleForce->setCutoffDistance( cutoffDistance );
-         amoebaReferencePmeMultipoleForce->setPmeGridDimensions( pmeGridDimension );
-         RealVec& box = extractBoxSize(context);
-         double minAllowedSize = 1.999999*cutoffDistance;
-         if (box[0] < minAllowedSize || box[1] < minAllowedSize || box[2] < minAllowedSize){
+        AmoebaReferencePmeMultipoleForce* amoebaReferencePmeMultipoleForce = new AmoebaReferencePmeMultipoleForce( );
+        amoebaReferencePmeMultipoleForce->setAlphaEwald( alphaEwald );
+        amoebaReferencePmeMultipoleForce->setCutoffDistance( cutoffDistance );
+        amoebaReferencePmeMultipoleForce->setPmeGridDimensions( pmeGridDimension );
+        RealVec* boxVectors = extractBoxVectors(context);
+        double minAllowedSize = 1.999999*cutoffDistance;
+        if (boxVectors[0][0] < minAllowedSize || boxVectors[1][1] < minAllowedSize || boxVectors[2][2] < minAllowedSize){
             throw OpenMMException("The periodic box size has decreased to less than twice the nonbonded cutoff.");
-         }
-         amoebaReferencePmeMultipoleForce->setPeriodicBoxSize(box);
-         amoebaReferenceMultipoleForce = static_cast<AmoebaReferenceMultipoleForce*>(amoebaReferencePmeMultipoleForce);
+        }
+        amoebaReferencePmeMultipoleForce->setPeriodicBoxSize(boxVectors);
+        amoebaReferenceMultipoleForce = static_cast<AmoebaReferenceMultipoleForce*>(amoebaReferencePmeMultipoleForce);
 
     } else {
          amoebaReferenceMultipoleForce = new AmoebaReferenceMultipoleForce( AmoebaReferenceMultipoleForce::NoCutoff );
@@ -968,17 +973,17 @@ double ReferenceCalcAmoebaVdwForceKernel::execute(ContextImpl& context, bool inc
     RealOpenMM energy;
     if( useCutoff ){
         vdwForce.setCutoff( cutoff );
-        computeNeighborListVoxelHash( *neighborList, numParticles, posData, allExclusions, extractBoxSize(context), usePBC, cutoff, 0.0);
+        computeNeighborListVoxelHash( *neighborList, numParticles, posData, allExclusions, extractBoxVectors(context), usePBC, cutoff, 0.0);
         if( usePBC ){
             vdwForce.setNonbondedMethod( AmoebaReferenceVdwForce::CutoffPeriodic);
-            RealVec& box = extractBoxSize(context);
+            RealVec* boxVectors = extractBoxVectors(context);
             double minAllowedSize = 1.999999*cutoff;
-            if (box[0] < minAllowedSize || box[1] < minAllowedSize || box[2] < minAllowedSize){
+            if (boxVectors[0][0] < minAllowedSize || boxVectors[1][1] < minAllowedSize || boxVectors[2][2] < minAllowedSize){
                 throw OpenMMException("The periodic box size has decreased to less than twice the cutoff.");
             }
-            vdwForce.setPeriodicBox(box);
+            vdwForce.setPeriodicBox(boxVectors);
             energy  = vdwForce.calculateForceAndEnergy( numParticles, posData, indexIVs, sigmas, epsilons, reductions, *neighborList, forceData);
-            energy += dispersionCoefficient/(box[0]*box[1]*box[2]);
+            energy += dispersionCoefficient/(boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2]);
         } else {
             vdwForce.setNonbondedMethod( AmoebaReferenceVdwForce::CutoffNonPeriodic);
         }

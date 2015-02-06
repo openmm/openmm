@@ -14,8 +14,9 @@ __kernel void computeN2Value(__global const real4* restrict posq, __local real4*
 #endif
         __local real* restrict local_value,
 #ifdef USE_CUTOFF
-        __global const int* restrict tiles, __global const unsigned int* restrict interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, 
-        unsigned int maxTiles, __global const real4* restrict blockCenter, __global const real4* restrict blockSize, __global const int* restrict interactingAtoms
+        __global const int* restrict tiles, __global const unsigned int* restrict interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
+        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, __global const real4* restrict blockCenter,
+        __global const real4* restrict blockSize, __global const int* restrict interactingAtoms
 #else
         unsigned int numTiles
 #endif
@@ -52,7 +53,7 @@ __kernel void computeN2Value(__global const real4* restrict posq, __local real4*
                     real4 posq2 = local_posq[j];
                     real4 delta = (real4) (posq2.xyz - posq1.xyz, 0);
 #ifdef USE_PERIODIC
-                    delta.xyz -= floor(delta.xyz*invPeriodicBoxSize.xyz+0.5f)*periodicBoxSize.xyz;
+                    APPLY_PERIODIC_TO_DELTA(delta)
 #endif
                     real r2 = dot(delta.xyz, delta.xyz);
 #ifdef USE_CUTOFF
@@ -109,7 +110,7 @@ __kernel void computeN2Value(__global const real4* restrict posq, __local real4*
                     real4 posq2 = local_posq[j];
                     real4 delta = (real4) (posq2.xyz - posq1.xyz, 0);
 #ifdef USE_PERIODIC
-                    delta.xyz -= floor(delta.xyz*invPeriodicBoxSize.xyz+0.5f)*periodicBoxSize.xyz;
+                    APPLY_PERIODIC_TO_DELTA(delta)
 #endif
                     real r2 = dot(delta.xyz, delta.xyz);
 #ifdef USE_CUTOFF
@@ -239,7 +240,7 @@ __kernel void computeN2Value(__global const real4* restrict posq, __local real4*
 
                 real4 blockCenterX = blockCenter[x];
                 for (unsigned int tgx = 0; tgx < TILE_SIZE; tgx++)
-                    local_posq[tgx].xyz -= floor((local_posq[tgx].xyz-blockCenterX.xyz)*invPeriodicBoxSize.xyz+0.5f)*periodicBoxSize.xyz;
+                    APPLY_PERIODIC_TO_POS_WITH_CENTER(local_posq[tgx], blockCenterX)
                 for (unsigned int tgx = 0; tgx < TILE_SIZE; tgx++) {
                     unsigned int atom1 = x*TILE_SIZE+tgx;
                     real value = 0;
@@ -287,7 +288,7 @@ __kernel void computeN2Value(__global const real4* restrict posq, __local real4*
                         real4 posq2 = local_posq[j];
                         real4 delta = (real4) (posq2.xyz - posq1.xyz, 0);
 #ifdef USE_PERIODIC
-                        delta.xyz -= floor(delta.xyz*invPeriodicBoxSize.xyz+0.5f)*periodicBoxSize.xyz;
+                        APPLY_PERIODIC_TO_DELTA(delta)
 #endif
                         real r2 = dot(delta.xyz, delta.xyz);
 #ifdef USE_CUTOFF

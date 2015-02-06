@@ -73,30 +73,30 @@ __device__ void computeBSplinePoint(real4* thetai, real w, real* array) {
  * Compute the index of the grid point each atom is associated with.
  */
 extern "C" __global__ void findAtomGridIndex(const real4* __restrict__ posq, int2* __restrict__ pmeAtomGridIndex,
-        real4 periodicBoxSize, real4 invPeriodicBoxSize) {
+        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ) {
     for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < NUM_ATOMS; i += blockDim.x*gridDim.x) {
         real4 pos = posq[i];
-        pos.x -= floor(pos.x*invPeriodicBoxSize.x)*periodicBoxSize.x;
-        pos.y -= floor(pos.y*invPeriodicBoxSize.y)*periodicBoxSize.y;
-        pos.z -= floor(pos.z*invPeriodicBoxSize.z)*periodicBoxSize.z;
+        pos -= periodicBoxVecZ*floor(pos.z*recipBoxVecZ.z+0.5f);
+        pos -= periodicBoxVecY*floor(pos.y*recipBoxVecY.z+0.5f);
+        pos -= periodicBoxVecX*floor(pos.x*recipBoxVecX.z+0.5f);
 
         // First axis.
 
-        real w = pos.x*invPeriodicBoxSize.x;
+        real w = pos.x*recipBoxVecX.x+pos.y*recipBoxVecY.x+pos.z*recipBoxVecZ.x;
         real fr = GRID_SIZE_X*(w-(int)(w+0.5f)+0.5f);
         int ifr = (int) fr;
         int igrid1 = ifr-PME_ORDER+1;
 
         // Second axis.
 
-        w = pos.y*invPeriodicBoxSize.y;
+        w = pos.y*recipBoxVecY.y+pos.z*recipBoxVecZ.y;
         fr = GRID_SIZE_Y*(w-(int)(w+0.5f)+0.5f);
         ifr = (int) fr;
         int igrid2 = ifr-PME_ORDER+1;
 
         // Third axis.
 
-        w = pos.z*invPeriodicBoxSize.z;
+        w = pos.z*recipBoxVecZ.z;
         fr = GRID_SIZE_Z*(w-(int)(w+0.5f)+0.5f);
         ifr = (int) fr;
         int igrid3 = ifr-PME_ORDER+1;
@@ -110,12 +110,107 @@ extern "C" __global__ void findAtomGridIndex(const real4* __restrict__ posq, int
     }
 }
 
-extern "C" __global__ void gridSpreadFixedMultipoles(const real4* __restrict__ posq, const real* __restrict__ labFrameDipole,
-        const real* __restrict__ labFrameQuadrupole, real2* __restrict__ pmeGrid, int2* __restrict__ pmeAtomGridIndex,
-        real4 periodicBoxSize, real4 invPeriodicBoxSize) {
-    const real xscale = GRID_SIZE_X*invPeriodicBoxSize.x;
-    const real yscale = GRID_SIZE_Y*invPeriodicBoxSize.y;
-    const real zscale = GRID_SIZE_Z*invPeriodicBoxSize.z;
+/**
+ * Convert the fixed multipoles from Cartesian to fractional coordinates.
+ */
+extern "C" __global__ void transformMultipolesToFractionalCoordinates(const real* __restrict__ labFrameDipole, const real* __restrict__ labFrameQuadrupole,
+        real* __restrict__ fracDipole, real* __restrict__ fracQuadrupole, real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ) {
+    // Build matrices for transforming the dipoles and quadrupoles.
+    
+    __shared__ real a[3][3];
+    if (threadIdx.x == 0) {
+        a[0][0] = GRID_SIZE_X*recipBoxVecX.x;
+        a[0][1] = GRID_SIZE_X*recipBoxVecY.x;
+        a[0][2] = GRID_SIZE_X*recipBoxVecZ.x;
+        a[1][0] = GRID_SIZE_Y*recipBoxVecX.y;
+        a[1][1] = GRID_SIZE_Y*recipBoxVecY.y;
+        a[1][2] = GRID_SIZE_Y*recipBoxVecZ.y;
+        a[2][0] = GRID_SIZE_Z*recipBoxVecX.z;
+        a[2][1] = GRID_SIZE_Z*recipBoxVecY.z;
+        a[2][2] = GRID_SIZE_Z*recipBoxVecZ.z;
+    }
+    __syncthreads();
+    int index1[] = {0, 0, 0, 1, 1, 2};
+    int index2[] = {0, 1, 2, 1, 2, 2};
+    __shared__ real b[6][6];
+    if (threadIdx.x < 36) {
+        int i = threadIdx.x/6;
+        int j = threadIdx.x-6*i;
+        b[i][j] = a[index1[i]][index1[j]]*a[index2[i]][index2[j]];
+        if (index1[i] != index2[i])
+            b[i][j] += a[index1[i]][index2[j]]*a[index2[i]][index1[j]];
+    }
+    __syncthreads();
+    
+    // Transform the multipoles.
+    
+    real quadScale[] = {1, 2, 2, 1, 2, 1};
+    for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < NUM_ATOMS; i += blockDim.x*gridDim.x) {
+        for (int j = 0; j < 3; j++) {
+            real dipole = 0;
+            for (int k = 0; k < 3; k++)
+                dipole += a[j][k]*labFrameDipole[3*i+k];
+            fracDipole[3*i+j] = dipole;
+        }
+        for (int j = 0; j < 6; j++) {
+            real quadrupole = 0;
+            for (int k = 0; k < 5; k++)
+                quadrupole += quadScale[k]*b[j][k]*labFrameQuadrupole[5*i+k];
+            quadrupole -= quadScale[5]*b[j][5]*(labFrameQuadrupole[5*i]+labFrameQuadrupole[5*i+3]);
+            fracQuadrupole[6*i+j] = quadrupole;
+        }
+    }
+}
+
+/**
+ * Convert the potential from fractional to Cartesian coordinates.
+ */
+extern "C" __global__ void transformPotentialToCartesianCoordinates(const real* __restrict__ fphi, real* __restrict__ cphi, real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ) {
+    // Build matrices for transforming the potential.
+
+    __shared__ real a[3][3];
+    if (threadIdx.x == 0) {
+        a[0][0] = GRID_SIZE_X*recipBoxVecX.x;
+        a[1][0] = GRID_SIZE_X*recipBoxVecY.x;
+        a[2][0] = GRID_SIZE_X*recipBoxVecZ.x;
+        a[0][1] = GRID_SIZE_Y*recipBoxVecX.y;
+        a[1][1] = GRID_SIZE_Y*recipBoxVecY.y;
+        a[2][1] = GRID_SIZE_Y*recipBoxVecZ.y;
+        a[0][2] = GRID_SIZE_Z*recipBoxVecX.z;
+        a[1][2] = GRID_SIZE_Z*recipBoxVecY.z;
+        a[2][2] = GRID_SIZE_Z*recipBoxVecZ.z;
+    }
+    __syncthreads();
+    int index1[] = {0, 1, 2, 0, 0, 1};
+    int index2[] = {0, 1, 2, 1, 2, 2};
+    __shared__ real b[6][6];
+    if (threadIdx.x < 36) {
+        int i = threadIdx.x/6;
+        int j = threadIdx.x-6*i;
+        b[i][j] = a[index1[i]][index1[j]]*a[index2[i]][index2[j]];
+        if (index1[j] != index2[j])
+            b[i][j] += (i < 3 ? b[i][j] : a[index1[i]][index2[j]]*a[index2[i]][index1[j]]);
+    }
+    __syncthreads();
+
+    // Transform the potential.
+    
+    for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < NUM_ATOMS; i += blockDim.x*gridDim.x) {
+        cphi[10*i] = fphi[20*i];
+        cphi[10*i+1] = a[0][0]*fphi[20*i+1] + a[0][1]*fphi[20*i+2] + a[0][2]*fphi[20*i+3];
+        cphi[10*i+2] = a[1][0]*fphi[20*i+1] + a[1][1]*fphi[20*i+2] + a[1][2]*fphi[20*i+3];
+        cphi[10*i+3] = a[2][0]*fphi[20*i+1] + a[2][1]*fphi[20*i+2] + a[2][2]*fphi[20*i+3];
+        for (int j = 0; j < 6; j++) {
+            cphi[10*i+4+j] = 0;
+            for (int k = 0; k < 6; k++)
+                cphi[10*i+4+j] += b[j][k]*fphi[20*i+4+k];
+        }
+    }
+}
+
+extern "C" __global__ void gridSpreadFixedMultipoles(const real4* __restrict__ posq, const real* __restrict__ fracDipole,
+        const real* __restrict__ fracQuadrupole, real2* __restrict__ pmeGrid, int2* __restrict__ pmeAtomGridIndex,
+        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ) {
     real array[PME_ORDER*PME_ORDER];
     real4 theta1[PME_ORDER];
     real4 theta2[PME_ORDER];
@@ -127,28 +222,28 @@ extern "C" __global__ void gridSpreadFixedMultipoles(const real4* __restrict__ p
     for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < NUM_ATOMS; i += blockDim.x*gridDim.x) {
         int m = pmeAtomGridIndex[i].x;
         real4 pos = posq[m];
-        pos.x -= floor(pos.x*invPeriodicBoxSize.x)*periodicBoxSize.x;
-        pos.y -= floor(pos.y*invPeriodicBoxSize.y)*periodicBoxSize.y;
-        pos.z -= floor(pos.z*invPeriodicBoxSize.z)*periodicBoxSize.z;
+        pos -= periodicBoxVecZ*floor(pos.z*recipBoxVecZ.z+0.5f);
+        pos -= periodicBoxVecY*floor(pos.y*recipBoxVecY.z+0.5f);
+        pos -= periodicBoxVecX*floor(pos.x*recipBoxVecX.z+0.5f);
 
         // Since we need the full set of thetas, it's faster to compute them here than load them
         // from global memory.
 
-        real w = pos.x*invPeriodicBoxSize.x;
+        real w = pos.x*recipBoxVecX.x+pos.y*recipBoxVecY.x+pos.z*recipBoxVecZ.x;
         real fr = GRID_SIZE_X*(w-(int)(w+0.5f)+0.5f);
-        int ifr = (int) fr;
+        int ifr = (int) floor(fr);
         w = fr - ifr;
         int igrid1 = ifr-PME_ORDER+1;
         computeBSplinePoint(theta1, w, array);
-        w = pos.y*invPeriodicBoxSize.y;
+        w = pos.y*recipBoxVecY.y+pos.z*recipBoxVecZ.y;
         fr = GRID_SIZE_Y*(w-(int)(w+0.5f)+0.5f);
-        ifr = (int) fr;
+        ifr = (int) floor(fr);
         w = fr - ifr;
         int igrid2 = ifr-PME_ORDER+1;
         computeBSplinePoint(theta2, w, array);
-        w = pos.z*invPeriodicBoxSize.z;
+        w = pos.z*recipBoxVecZ.z;
         fr = GRID_SIZE_Z*(w-(int)(w+0.5f)+0.5f);
-        ifr = (int) fr;
+        ifr = (int) floor(fr);
         w = fr - ifr;
         int igrid3 = ifr-PME_ORDER+1;
         computeBSplinePoint(theta3, w, array);
@@ -177,15 +272,15 @@ extern "C" __global__ void gridSpreadFixedMultipoles(const real4* __restrict__ p
                     real4 v = theta3[iz];
 
                     real atomCharge = pos.w;
-                    real atomDipoleX = xscale*labFrameDipole[m*3];
-                    real atomDipoleY = yscale*labFrameDipole[m*3+1];
-                    real atomDipoleZ = zscale*labFrameDipole[m*3+2];
-                    real atomQuadrupoleXX = xscale*xscale*labFrameQuadrupole[m*5];
-                    real atomQuadrupoleXY = 2*xscale*yscale*labFrameQuadrupole[m*5+1];
-                    real atomQuadrupoleXZ = 2*xscale*zscale*labFrameQuadrupole[m*5+2];
-                    real atomQuadrupoleYY = yscale*yscale*labFrameQuadrupole[m*5+3];
-                    real atomQuadrupoleYZ = 2*yscale*zscale*labFrameQuadrupole[m*5+4];
-                    real atomQuadrupoleZZ = -zscale*zscale*(labFrameQuadrupole[m*5]+labFrameQuadrupole[m*5+3]);
+                    real atomDipoleX = fracDipole[m*3];
+                    real atomDipoleY = fracDipole[m*3+1];
+                    real atomDipoleZ = fracDipole[m*3+2];
+                    real atomQuadrupoleXX = fracQuadrupole[m*6];
+                    real atomQuadrupoleXY = fracQuadrupole[m*6+1];
+                    real atomQuadrupoleXZ = fracQuadrupole[m*6+2];
+                    real atomQuadrupoleYY = fracQuadrupole[m*6+3];
+                    real atomQuadrupoleYZ = fracQuadrupole[m*6+4];
+                    real atomQuadrupoleZZ = fracQuadrupole[m*6+5];
                     real term0 = atomCharge*u.x*v.x + atomDipoleY*u.y*v.x + atomDipoleZ*u.x*v.y + atomQuadrupoleYY*u.z*v.x + atomQuadrupoleZZ*u.x*v.z + atomQuadrupoleYZ*u.y*v.y;
                     real term1 = atomDipoleX*u.x*v.x + atomQuadrupoleXY*u.y*v.x + atomQuadrupoleXZ*u.x*v.y;
                     real term2 = atomQuadrupoleXX * u.x * v.x;
@@ -204,14 +299,24 @@ extern "C" __global__ void gridSpreadFixedMultipoles(const real4* __restrict__ p
 
 extern "C" __global__ void gridSpreadInducedDipoles(const real4* __restrict__ posq, const real* __restrict__ inducedDipole,
         const real* __restrict__ inducedDipolePolar, real2* __restrict__ pmeGrid, int2* __restrict__ pmeAtomGridIndex,
-        real4 periodicBoxSize, real4 invPeriodicBoxSize) {
-    const real xscale = GRID_SIZE_X*invPeriodicBoxSize.x;
-    const real yscale = GRID_SIZE_Y*invPeriodicBoxSize.y;
-    const real zscale = GRID_SIZE_Z*invPeriodicBoxSize.z;
+        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ) {
     real array[PME_ORDER*PME_ORDER];
     real4 theta1[PME_ORDER];
     real4 theta2[PME_ORDER];
     real4 theta3[PME_ORDER];
+    __shared__ real cartToFrac[3][3];
+    if (threadIdx.x == 0) {
+        cartToFrac[0][0] = GRID_SIZE_X*recipBoxVecX.x;
+        cartToFrac[0][1] = GRID_SIZE_X*recipBoxVecY.x;
+        cartToFrac[0][2] = GRID_SIZE_X*recipBoxVecZ.x;
+        cartToFrac[1][0] = GRID_SIZE_Y*recipBoxVecX.y;
+        cartToFrac[1][1] = GRID_SIZE_Y*recipBoxVecY.y;
+        cartToFrac[1][2] = GRID_SIZE_Y*recipBoxVecZ.y;
+        cartToFrac[2][0] = GRID_SIZE_Z*recipBoxVecX.z;
+        cartToFrac[2][1] = GRID_SIZE_Z*recipBoxVecY.z;
+        cartToFrac[2][2] = GRID_SIZE_Z*recipBoxVecZ.z;
+    }
+    __syncthreads();
     
     // Process the atoms in spatially sorted order.  This improves cache performance when loading
     // the grid values.
@@ -219,28 +324,28 @@ extern "C" __global__ void gridSpreadInducedDipoles(const real4* __restrict__ po
     for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < NUM_ATOMS; i += blockDim.x*gridDim.x) {
         int m = pmeAtomGridIndex[i].x;
         real4 pos = posq[m];
-        pos.x -= floor(pos.x*invPeriodicBoxSize.x)*periodicBoxSize.x;
-        pos.y -= floor(pos.y*invPeriodicBoxSize.y)*periodicBoxSize.y;
-        pos.z -= floor(pos.z*invPeriodicBoxSize.z)*periodicBoxSize.z;
+        pos -= periodicBoxVecZ*floor(pos.z*recipBoxVecZ.z+0.5f);
+        pos -= periodicBoxVecY*floor(pos.y*recipBoxVecY.z+0.5f);
+        pos -= periodicBoxVecX*floor(pos.x*recipBoxVecX.z+0.5f);
 
         // Since we need the full set of thetas, it's faster to compute them here than load them
         // from global memory.
 
-        real w = pos.x*invPeriodicBoxSize.x;
+        real w = pos.x*recipBoxVecX.x+pos.y*recipBoxVecY.x+pos.z*recipBoxVecZ.x;
         real fr = GRID_SIZE_X*(w-(int)(w+0.5f)+0.5f);
-        int ifr = (int) fr;
+        int ifr = (int) floor(fr);
         w = fr - ifr;
         int igrid1 = ifr-PME_ORDER+1;
         computeBSplinePoint(theta1, w, array);
-        w = pos.y*invPeriodicBoxSize.y;
+        w = pos.y*recipBoxVecY.y+pos.z*recipBoxVecZ.y;
         fr = GRID_SIZE_Y*(w-(int)(w+0.5f)+0.5f);
-        ifr = (int) fr;
+        ifr = (int) floor(fr);
         w = fr - ifr;
         int igrid2 = ifr-PME_ORDER+1;
         computeBSplinePoint(theta2, w, array);
-        w = pos.z*invPeriodicBoxSize.z;
+        w = pos.z*recipBoxVecZ.z;
         fr = GRID_SIZE_Z*(w-(int)(w+0.5f)+0.5f);
-        ifr = (int) fr;
+        ifr = (int) floor(fr);
         w = fr - ifr;
         int igrid3 = ifr-PME_ORDER+1;
         computeBSplinePoint(theta3, w, array);
@@ -268,16 +373,18 @@ extern "C" __global__ void gridSpreadInducedDipoles(const real4* __restrict__ po
                     int index = ybase + zindex;
                     real4 v = theta3[iz];
 
-                    real inducedDipoleX = xscale*inducedDipole[m*3];
-                    real inducedDipoleY = yscale*inducedDipole[m*3+1];
-                    real inducedDipoleZ = zscale*inducedDipole[m*3+2];
-                    real inducedDipolePolarX = xscale*inducedDipolePolar[m*3];
-                    real inducedDipolePolarY = yscale*inducedDipolePolar[m*3+1];
-                    real inducedDipolePolarZ = zscale*inducedDipolePolar[m*3+2];
-                    real term01 = inducedDipoleY*u.y*v.x + inducedDipoleZ*u.x*v.y;
-                    real term11 = inducedDipoleX*u.x*v.x;
-                    real term02 = inducedDipolePolarY*u.y*v.x + inducedDipolePolarZ*u.x*v.y;
-                    real term12 = inducedDipolePolarX*u.x*v.x;
+                    real3 cinducedDipole = make_real3(inducedDipole[m*3], inducedDipole[m*3+1], inducedDipole[m*3+2]);
+                    real3 cinducedDipolePolar = make_real3(inducedDipolePolar[m*3], inducedDipolePolar[m*3+1], inducedDipolePolar[m*3+2]);
+                    real3 finducedDipole = make_real3(cinducedDipole.x*cartToFrac[0][0] + cinducedDipole.y*cartToFrac[0][1] + cinducedDipole.z*cartToFrac[0][2],
+                                                      cinducedDipole.x*cartToFrac[1][0] + cinducedDipole.y*cartToFrac[1][1] + cinducedDipole.z*cartToFrac[1][2],
+                                                      cinducedDipole.x*cartToFrac[2][0] + cinducedDipole.y*cartToFrac[2][1] + cinducedDipole.z*cartToFrac[2][2]);
+                    real3 finducedDipolePolar = make_real3(cinducedDipolePolar.x*cartToFrac[0][0] + cinducedDipolePolar.y*cartToFrac[0][1] + cinducedDipolePolar.z*cartToFrac[0][2],
+                                                           cinducedDipolePolar.x*cartToFrac[1][0] + cinducedDipolePolar.y*cartToFrac[1][1] + cinducedDipolePolar.z*cartToFrac[1][2],
+                                                           cinducedDipolePolar.x*cartToFrac[2][0] + cinducedDipolePolar.y*cartToFrac[2][1] + cinducedDipolePolar.z*cartToFrac[2][2]);
+                    real term01 = finducedDipole.y*u.y*v.x + finducedDipole.z*u.x*v.y;
+                    real term11 = finducedDipole.x*u.x*v.x;
+                    real term02 = finducedDipolePolar.y*u.y*v.x + finducedDipolePolar.z*u.x*v.y;
+                    real term12 = finducedDipolePolar.x*u.x*v.x;
                     real add1 = term01*t.x + term11*t.y;
                     real add2 = term02*t.x + term12*t.y;
 #ifdef USE_DOUBLE_PRECISION
@@ -306,7 +413,8 @@ extern "C" __global__ void finishSpreadCharge(long long* __restrict__ pmeGrid) {
 }
 
 extern "C" __global__ void reciprocalConvolution(real2* __restrict__ pmeGrid, const real* __restrict__ pmeBsplineModuliX,
-        const real* __restrict__ pmeBsplineModuliY, const real* __restrict__ pmeBsplineModuliZ, real4 periodicBoxSize, real4 invPeriodicBoxSize) {
+        const real* __restrict__ pmeBsplineModuliY, const real* __restrict__ pmeBsplineModuliZ, real4 periodicBoxSize,
+        real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ) {
     const unsigned int gridSize = GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z;
     real expFactor = M_PI*M_PI/(EWALD_ALPHA*EWALD_ALPHA);
     real scaleFactor = RECIP(M_PI*periodicBoxSize.x*periodicBoxSize.y*periodicBoxSize.z);
@@ -322,9 +430,9 @@ extern "C" __global__ void reciprocalConvolution(real2* __restrict__ pmeGrid, co
         int mx = (kx < (GRID_SIZE_X+1)/2) ? kx : (kx-GRID_SIZE_X);
         int my = (ky < (GRID_SIZE_Y+1)/2) ? ky : (ky-GRID_SIZE_Y);
         int mz = (kz < (GRID_SIZE_Z+1)/2) ? kz : (kz-GRID_SIZE_Z);
-        real mhx = mx*invPeriodicBoxSize.x;
-        real mhy = my*invPeriodicBoxSize.y;
-        real mhz = mz*invPeriodicBoxSize.z;
+        real mhx = mx*recipBoxVecX.x;
+        real mhy = mx*recipBoxVecY.x+my*recipBoxVecY.y;
+        real mhz = mx*recipBoxVecZ.x+my*recipBoxVecZ.y+mz*recipBoxVecZ.z;
         real bx = pmeBsplineModuliX[kx];
         real by = pmeBsplineModuliY[ky];
         real bz = pmeBsplineModuliZ[kz];
@@ -338,11 +446,25 @@ extern "C" __global__ void reciprocalConvolution(real2* __restrict__ pmeGrid, co
 
 extern "C" __global__ void computeFixedPotentialFromGrid(const real2* __restrict__ pmeGrid, real* __restrict__ phi,
         long long* __restrict__ fieldBuffers, long long* __restrict__ fieldPolarBuffers,  const real4* __restrict__ posq,
-        const real* __restrict__ labFrameDipole, real4 periodicBoxSize, real4 invPeriodicBoxSize, int2* __restrict__ pmeAtomGridIndex) {
+        const real* __restrict__ labFrameDipole, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
+        real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ, int2* __restrict__ pmeAtomGridIndex) {
     real array[PME_ORDER*PME_ORDER];
     real4 theta1[PME_ORDER];
     real4 theta2[PME_ORDER];
     real4 theta3[PME_ORDER];
+    __shared__ real fracToCart[3][3];
+    if (threadIdx.x == 0) {
+        fracToCart[0][0] = GRID_SIZE_X*recipBoxVecX.x;
+        fracToCart[1][0] = GRID_SIZE_X*recipBoxVecY.x;
+        fracToCart[2][0] = GRID_SIZE_X*recipBoxVecZ.x;
+        fracToCart[0][1] = GRID_SIZE_Y*recipBoxVecX.y;
+        fracToCart[1][1] = GRID_SIZE_Y*recipBoxVecY.y;
+        fracToCart[2][1] = GRID_SIZE_Y*recipBoxVecZ.y;
+        fracToCart[0][2] = GRID_SIZE_Z*recipBoxVecX.z;
+        fracToCart[1][2] = GRID_SIZE_Z*recipBoxVecY.z;
+        fracToCart[2][2] = GRID_SIZE_Z*recipBoxVecZ.z;
+    }
+    __syncthreads();
     
     // Process the atoms in spatially sorted order.  This improves cache performance when loading
     // the grid values.
@@ -350,28 +472,28 @@ extern "C" __global__ void computeFixedPotentialFromGrid(const real2* __restrict
     for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < NUM_ATOMS; i += blockDim.x*gridDim.x) {
         int m = pmeAtomGridIndex[i].x;
         real4 pos = posq[m];
-        pos.x -= floor(pos.x*invPeriodicBoxSize.x)*periodicBoxSize.x;
-        pos.y -= floor(pos.y*invPeriodicBoxSize.y)*periodicBoxSize.y;
-        pos.z -= floor(pos.z*invPeriodicBoxSize.z)*periodicBoxSize.z;
+        pos -= periodicBoxVecZ*floor(pos.z*recipBoxVecZ.z+0.5f);
+        pos -= periodicBoxVecY*floor(pos.y*recipBoxVecY.z+0.5f);
+        pos -= periodicBoxVecX*floor(pos.x*recipBoxVecX.z+0.5f);
 
         // Since we need the full set of thetas, it's faster to compute them here than load them
         // from global memory.
 
-        real w = pos.x*invPeriodicBoxSize.x;
+        real w = pos.x*recipBoxVecX.x+pos.y*recipBoxVecY.x+pos.z*recipBoxVecZ.x;
         real fr = GRID_SIZE_X*(w-(int)(w+0.5f)+0.5f);
-        int ifr = (int) fr;
+        int ifr = (int) floor(fr);
         w = fr - ifr;
         int igrid1 = ifr-PME_ORDER+1;
         computeBSplinePoint(theta1, w, array);
-        w = pos.y*invPeriodicBoxSize.y;
+        w = pos.y*recipBoxVecY.y+pos.z*recipBoxVecZ.y;
         fr = GRID_SIZE_Y*(w-(int)(w+0.5f)+0.5f);
-        ifr = (int) fr;
+        ifr = (int) floor(fr);
         w = fr - ifr;
         int igrid2 = ifr-PME_ORDER+1;
         computeBSplinePoint(theta2, w, array);
-        w = pos.z*invPeriodicBoxSize.z;
+        w = pos.z*recipBoxVecZ.z;
         fr = GRID_SIZE_Z*(w-(int)(w+0.5f)+0.5f);
-        ifr = (int) fr;
+        ifr = (int) floor(fr);
         w = fr - ifr;
         int igrid3 = ifr-PME_ORDER+1;
         computeBSplinePoint(theta3, w, array);
@@ -481,13 +603,13 @@ extern "C" __global__ void computeFixedPotentialFromGrid(const real2* __restrict
         phi[20*m+18] = tuv012;
         phi[20*m+19] = tuv111;
         real dipoleScale = (4/(real) 3)*(EWALD_ALPHA*EWALD_ALPHA*EWALD_ALPHA)/SQRT_PI;
-        long long fieldx = (long long) ((dipoleScale*labFrameDipole[m*3]-GRID_SIZE_X*invPeriodicBoxSize.x*tuv100)*0x100000000);
+        long long fieldx = (long long) ((dipoleScale*labFrameDipole[m*3]-tuv100*fracToCart[0][0]-tuv010*fracToCart[0][1]-tuv001*fracToCart[0][2])*0x100000000);
         fieldBuffers[m] = fieldx;
         fieldPolarBuffers[m] = fieldx;
-        long long fieldy = (long long) ((dipoleScale*labFrameDipole[m*3+1]-GRID_SIZE_Y*invPeriodicBoxSize.y*tuv010)*0x100000000);
+        long long fieldy = (long long) ((dipoleScale*labFrameDipole[m*3+1]-tuv100*fracToCart[1][0]-tuv010*fracToCart[1][1]-tuv001*fracToCart[1][2])*0x100000000);
         fieldBuffers[m+PADDED_NUM_ATOMS] = fieldy;
         fieldPolarBuffers[m+PADDED_NUM_ATOMS] = fieldy;
-        long long fieldz = (long long) ((dipoleScale*labFrameDipole[m*3+2]-GRID_SIZE_Z*invPeriodicBoxSize.z*tuv001)*0x100000000);
+        long long fieldz = (long long) ((dipoleScale*labFrameDipole[m*3+2]-tuv100*fracToCart[2][0]-tuv010*fracToCart[2][1]-tuv001*fracToCart[2][2])*0x100000000);
         fieldBuffers[m+2*PADDED_NUM_ATOMS] = fieldz;
         fieldPolarBuffers[m+2*PADDED_NUM_ATOMS] = fieldz;
     }
@@ -495,7 +617,8 @@ extern "C" __global__ void computeFixedPotentialFromGrid(const real2* __restrict
 
 extern "C" __global__ void computeInducedPotentialFromGrid(const real2* __restrict__ pmeGrid, real* __restrict__ phid,
         real* __restrict__ phip, real* __restrict__ phidp, const real4* __restrict__ posq,
-        real4 periodicBoxSize, real4 invPeriodicBoxSize, int2* __restrict__ pmeAtomGridIndex) {
+        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, real3 recipBoxVecX,
+        real3 recipBoxVecY, real3 recipBoxVecZ, int2* __restrict__ pmeAtomGridIndex) {
     real array[PME_ORDER*PME_ORDER];
     real4 theta1[PME_ORDER];
     real4 theta2[PME_ORDER];
@@ -507,28 +630,28 @@ extern "C" __global__ void computeInducedPotentialFromGrid(const real2* __restri
     for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < NUM_ATOMS; i += blockDim.x*gridDim.x) {
         int m = pmeAtomGridIndex[i].x;
         real4 pos = posq[m];
-        pos.x -= floor(pos.x*invPeriodicBoxSize.x)*periodicBoxSize.x;
-        pos.y -= floor(pos.y*invPeriodicBoxSize.y)*periodicBoxSize.y;
-        pos.z -= floor(pos.z*invPeriodicBoxSize.z)*periodicBoxSize.z;
+        pos -= periodicBoxVecZ*floor(pos.z*recipBoxVecZ.z+0.5f);
+        pos -= periodicBoxVecY*floor(pos.y*recipBoxVecY.z+0.5f);
+        pos -= periodicBoxVecX*floor(pos.x*recipBoxVecX.z+0.5f);
 
         // Since we need the full set of thetas, it's faster to compute them here than load them
         // from global memory.
 
-        real w = pos.x*invPeriodicBoxSize.x;
+        real w = pos.x*recipBoxVecX.x+pos.y*recipBoxVecY.x+pos.z*recipBoxVecZ.x;
         real fr = GRID_SIZE_X*(w-(int)(w+0.5f)+0.5f);
-        int ifr = (int) fr;
+        int ifr = (int) floor(fr);
         w = fr - ifr;
         int igrid1 = ifr-PME_ORDER+1;
         computeBSplinePoint(theta1, w, array);
-        w = pos.y*invPeriodicBoxSize.y;
+        w = pos.y*recipBoxVecY.y+pos.z*recipBoxVecZ.y;
         fr = GRID_SIZE_Y*(w-(int)(w+0.5f)+0.5f);
-        ifr = (int) fr;
+        ifr = (int) floor(fr);
         w = fr - ifr;
         int igrid2 = ifr-PME_ORDER+1;
         computeBSplinePoint(theta2, w, array);
-        w = pos.z*invPeriodicBoxSize.z;
+        w = pos.z*recipBoxVecZ.z;
         fr = GRID_SIZE_Z*(w-(int)(w+0.5f)+0.5f);
-        ifr = (int) fr;
+        ifr = (int) floor(fr);
         w = fr - ifr;
         int igrid3 = ifr-PME_ORDER+1;
         computeBSplinePoint(theta3, w, array);
@@ -736,15 +859,26 @@ extern "C" __global__ void computeInducedPotentialFromGrid(const real2* __restri
 
 extern "C" __global__ void computeFixedMultipoleForceAndEnergy(real4* __restrict__ posq, unsigned long long* __restrict__ forceBuffers,
         long long* __restrict__ torqueBuffers, real* __restrict__ energyBuffer, const real* __restrict__ labFrameDipole,
-        const real* __restrict__ labFrameQuadrupole, const real* __restrict__ phi_global, real4 invPeriodicBoxSize) {
+        const real* __restrict__ labFrameQuadrupole, const real* __restrict__ fracDipole, const real* __restrict__ fracQuadrupole,
+        const real* __restrict__ phi_global, const real* __restrict__ cphi_global, real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ) {
     real multipole[10];
     const int deriv1[] = {1, 4, 7, 8, 10, 15, 17, 13, 14, 19};
     const int deriv2[] = {2, 7, 5, 9, 13, 11, 18, 15, 19, 16};
     const int deriv3[] = {3, 8, 9, 6, 14, 16, 12, 19, 17, 18};
-    const real xscale = GRID_SIZE_X*invPeriodicBoxSize.x;
-    const real yscale = GRID_SIZE_Y*invPeriodicBoxSize.y;
-    const real zscale = GRID_SIZE_Z*invPeriodicBoxSize.z;
     real energy = 0;
+    __shared__ real fracToCart[3][3];
+    if (threadIdx.x == 0) {
+        fracToCart[0][0] = GRID_SIZE_X*recipBoxVecX.x;
+        fracToCart[1][0] = GRID_SIZE_X*recipBoxVecY.x;
+        fracToCart[2][0] = GRID_SIZE_X*recipBoxVecZ.x;
+        fracToCart[0][1] = GRID_SIZE_Y*recipBoxVecX.y;
+        fracToCart[1][1] = GRID_SIZE_Y*recipBoxVecY.y;
+        fracToCart[2][1] = GRID_SIZE_Y*recipBoxVecZ.y;
+        fracToCart[0][2] = GRID_SIZE_Z*recipBoxVecX.z;
+        fracToCart[1][2] = GRID_SIZE_Z*recipBoxVecY.z;
+        fracToCart[2][2] = GRID_SIZE_Z*recipBoxVecZ.z;
+    }
+    __syncthreads();
     for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < NUM_ATOMS; i += blockDim.x*gridDim.x) {
         // Compute the torque.
 
@@ -759,35 +893,36 @@ extern "C" __global__ void computeFixedMultipoleForceAndEnergy(real4* __restrict
         multipole[8] = 2*labFrameQuadrupole[i*5+2];
         multipole[9] = 2*labFrameQuadrupole[i*5+4];
 
-        const real* phi = &phi_global[20*i];
+        const real* cphi = &cphi_global[10*i];
 
-        torqueBuffers[i] = (long long) (EPSILON_FACTOR*(multipole[3]*yscale*phi[2] - multipole[2]*zscale*phi[3]
-                      + 2*(multipole[6]-multipole[5])*yscale*zscale*phi[9]
-                      + multipole[8]*xscale*yscale*phi[7] + multipole[9]*yscale*yscale*phi[5]
-                      - multipole[7]*xscale*zscale*phi[8] - multipole[9]*zscale*zscale*phi[6])*0x100000000);
+        torqueBuffers[i] = (long long) (EPSILON_FACTOR*(multipole[3]*cphi[2] - multipole[2]*cphi[3]
+                      + 2*(multipole[6]-multipole[5])*cphi[9]
+                      + multipole[8]*cphi[7] + multipole[9]*cphi[5]
+                      - multipole[7]*cphi[8] - multipole[9]*cphi[6])*0x100000000);
 
-        torqueBuffers[i+PADDED_NUM_ATOMS] = (long long) (EPSILON_FACTOR*(multipole[1]*zscale*phi[3] - multipole[3]*xscale*phi[1]
-                      + 2*(multipole[4]-multipole[6])*xscale*zscale*phi[8]
-                      + multipole[7]*yscale*zscale*phi[9] + multipole[8]*zscale*zscale*phi[6]
-                      - multipole[8]*xscale*xscale*phi[4] - multipole[9]*xscale*yscale*phi[7])*0x100000000);
+        torqueBuffers[i+PADDED_NUM_ATOMS] = (long long) (EPSILON_FACTOR*(multipole[1]*cphi[3] - multipole[3]*cphi[1]
+                      + 2*(multipole[4]-multipole[6])*cphi[8]
+                      + multipole[7]*cphi[9] + multipole[8]*cphi[6]
+                      - multipole[8]*cphi[4] - multipole[9]*cphi[7])*0x100000000);
 
-        torqueBuffers[i+PADDED_NUM_ATOMS*2] = (long long) (EPSILON_FACTOR*(multipole[2]*xscale*phi[1] - multipole[1]*yscale*phi[2]
-                      + 2*(multipole[5]-multipole[4])*xscale*yscale*phi[7]
-                      + multipole[7]*xscale*xscale*phi[4] + multipole[9]*xscale*zscale*phi[8]
-                      - multipole[7]*yscale*yscale*phi[5] - multipole[8]*yscale*zscale*phi[9])*0x100000000);
+        torqueBuffers[i+PADDED_NUM_ATOMS*2] = (long long) (EPSILON_FACTOR*(multipole[2]*cphi[1] - multipole[1]*cphi[2]
+                      + 2*(multipole[5]-multipole[4])*cphi[7]
+                      + multipole[7]*cphi[4] + multipole[9]*cphi[8]
+                      - multipole[7]*cphi[5] - multipole[8]*cphi[9])*0x100000000);
 
         // Compute the force and energy.
 
-        multipole[1] *= xscale;
-        multipole[2] *= yscale;
-        multipole[3] *= zscale;
-        multipole[4] *= xscale*xscale;
-        multipole[5] *= yscale*yscale;
-        multipole[6] *= zscale*zscale;
-        multipole[7] *= xscale*yscale;
-        multipole[8] *= xscale*zscale;
-        multipole[9] *= yscale*zscale;
+        multipole[1] = fracDipole[i*3];
+        multipole[2] = fracDipole[i*3+1];
+        multipole[3] = fracDipole[i*3+2];
+        multipole[4] = fracQuadrupole[i*6];
+        multipole[5] = fracQuadrupole[i*6+3];
+        multipole[6] = fracQuadrupole[i*6+5];
+        multipole[7] = fracQuadrupole[i*6+1];
+        multipole[8] = fracQuadrupole[i*6+2];
+        multipole[9] = fracQuadrupole[i*6+4];
 
+        const real* phi = &phi_global[20*i];
         real4 f = make_real4(0, 0, 0, 0);
         for (int k = 0; k < 10; k++) {
             energy += multipole[k]*phi[k];
@@ -795,9 +930,9 @@ extern "C" __global__ void computeFixedMultipoleForceAndEnergy(real4* __restrict
             f.y += multipole[k]*phi[deriv2[k]];
             f.z += multipole[k]*phi[deriv3[k]];
         }
-        f.x *= EPSILON_FACTOR*xscale;
-        f.y *= EPSILON_FACTOR*yscale;
-        f.z *= EPSILON_FACTOR*zscale;
+        f = make_real4(EPSILON_FACTOR*(f.x*fracToCart[0][0] + f.y*fracToCart[0][1] + f.z*fracToCart[0][2]),
+                       EPSILON_FACTOR*(f.x*fracToCart[1][0] + f.y*fracToCart[1][1] + f.z*fracToCart[1][2]),
+                       EPSILON_FACTOR*(f.x*fracToCart[2][0] + f.y*fracToCart[2][1] + f.z*fracToCart[2][2]), 0);
         forceBuffers[i] -= static_cast<unsigned long long>((long long) (f.x*0x100000000));
         forceBuffers[i+PADDED_NUM_ATOMS] -= static_cast<unsigned long long>((long long) (f.y*0x100000000));
         forceBuffers[i+PADDED_NUM_ATOMS*2] -= static_cast<unsigned long long>((long long) (f.z*0x100000000));
@@ -807,23 +942,30 @@ extern "C" __global__ void computeFixedMultipoleForceAndEnergy(real4* __restrict
 
 extern "C" __global__ void computeInducedDipoleForceAndEnergy(real4* __restrict__ posq, unsigned long long* __restrict__ forceBuffers,
         long long* __restrict__ torqueBuffers, real* __restrict__ energyBuffer, const real* __restrict__ labFrameDipole,
-        const real* __restrict__ labFrameQuadrupole, const real* __restrict__ inducedDipole_global, const real* __restrict__ inducedDipolePolar_global,
+        const real* __restrict__ labFrameQuadrupole, const real* __restrict__ fracDipole, const real* __restrict__ fracQuadrupole,
+        const real* __restrict__ inducedDipole_global, const real* __restrict__ inducedDipolePolar_global,
         const real* __restrict__ phi_global, const real* __restrict__ phid_global, const real* __restrict__ phip_global,
-        const real* __restrict__ phidp_global, real4 invPeriodicBoxSize) {
+        const real* __restrict__ phidp_global, const real* __restrict__ cphi_global, real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ) {
     real multipole[10];
-    real inducedDipole[3];
-    real inducedDipolePolar[3];
-    real scales[3];
+    real cinducedDipole[3], inducedDipole[3];
+    real cinducedDipolePolar[3], inducedDipolePolar[3];
     const int deriv1[] = {1, 4, 7, 8, 10, 15, 17, 13, 14, 19};
     const int deriv2[] = {2, 7, 5, 9, 13, 11, 18, 15, 19, 16};
     const int deriv3[] = {3, 8, 9, 6, 14, 16, 12, 19, 17, 18};
-    const real xscale = GRID_SIZE_X*invPeriodicBoxSize.x;
-    const real yscale = GRID_SIZE_Y*invPeriodicBoxSize.y;
-    const real zscale = GRID_SIZE_Z*invPeriodicBoxSize.z;
-    scales[0] = xscale;
-    scales[1] = yscale;
-    scales[2] = zscale;
     real energy = 0;
+    __shared__ real fracToCart[3][3];
+    if (threadIdx.x == 0) {
+        fracToCart[0][0] = GRID_SIZE_X*recipBoxVecX.x;
+        fracToCart[1][0] = GRID_SIZE_X*recipBoxVecY.x;
+        fracToCart[2][0] = GRID_SIZE_X*recipBoxVecZ.x;
+        fracToCart[0][1] = GRID_SIZE_Y*recipBoxVecX.y;
+        fracToCart[1][1] = GRID_SIZE_Y*recipBoxVecY.y;
+        fracToCart[2][1] = GRID_SIZE_Y*recipBoxVecZ.y;
+        fracToCart[0][2] = GRID_SIZE_Z*recipBoxVecX.z;
+        fracToCart[1][2] = GRID_SIZE_Z*recipBoxVecY.z;
+        fracToCart[2][2] = GRID_SIZE_Z*recipBoxVecZ.z;
+    }
+    __syncthreads();
     for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < NUM_ATOMS; i += blockDim.x*gridDim.x) {
         // Compute the torque.
 
@@ -837,75 +979,82 @@ extern "C" __global__ void computeInducedDipoleForceAndEnergy(real4* __restrict_
         multipole[7] = 2*labFrameQuadrupole[i*5+1];
         multipole[8] = 2*labFrameQuadrupole[i*5+2];
         multipole[9] = 2*labFrameQuadrupole[i*5+4];
-        const real* phidp = &phidp_global[20*i];
+        const real* cphi = &cphi_global[10*i];
  
-        torqueBuffers[i] += (long long) (0.5f*EPSILON_FACTOR*(multipole[3]*yscale*phidp[2] - multipole[2]*zscale*phidp[3]
-                      + 2*(multipole[6]-multipole[5])*yscale*zscale*phidp[9]
-                      + multipole[8]*xscale*yscale*phidp[7] + multipole[9]*yscale*yscale*phidp[5]
-                      - multipole[7]*xscale*zscale*phidp[8] - multipole[9]*zscale*zscale*phidp[6])*0x100000000);
+        torqueBuffers[i] += (long long) (0.5f*EPSILON_FACTOR*(multipole[3]*cphi[2] - multipole[2]*cphi[3]
+                      + 2*(multipole[6]-multipole[5])*cphi[9]
+                      + multipole[8]*cphi[7] + multipole[9]*cphi[5]
+                      - multipole[7]*cphi[8] - multipole[9]*cphi[6])*0x100000000);
 
-        torqueBuffers[i+PADDED_NUM_ATOMS] += (long long) (0.5f*EPSILON_FACTOR*(multipole[1]*zscale*phidp[3] - multipole[3]*xscale*phidp[1]
-                      + 2*(multipole[4]-multipole[6])*xscale*zscale*phidp[8]
-                      + multipole[7]*yscale*zscale*phidp[9] + multipole[8]*zscale*zscale*phidp[6]
-                      - multipole[8]*xscale*xscale*phidp[4] - multipole[9]*xscale*yscale*phidp[7])*0x100000000);
+        torqueBuffers[i+PADDED_NUM_ATOMS] += (long long) (0.5f*EPSILON_FACTOR*(multipole[1]*cphi[3] - multipole[3]*cphi[1]
+                      + 2*(multipole[4]-multipole[6])*cphi[8]
+                      + multipole[7]*cphi[9] + multipole[8]*cphi[6]
+                      - multipole[8]*cphi[4] - multipole[9]*cphi[7])*0x100000000);
 
-        torqueBuffers[i+PADDED_NUM_ATOMS*2] += (long long) (0.5f*EPSILON_FACTOR*(multipole[2]*xscale*phidp[1] - multipole[1]*yscale*phidp[2]
-                      + 2*(multipole[5]-multipole[4])*xscale*yscale*phidp[7]
-                      + multipole[7]*xscale*xscale*phidp[4] + multipole[9]*xscale*zscale*phidp[8]
-                      - multipole[7]*yscale*yscale*phidp[5] - multipole[8]*yscale*zscale*phidp[9])*0x100000000);
+        torqueBuffers[i+PADDED_NUM_ATOMS*2] += (long long) (0.5f*EPSILON_FACTOR*(multipole[2]*cphi[1] - multipole[1]*cphi[2]
+                      + 2*(multipole[5]-multipole[4])*cphi[7]
+                      + multipole[7]*cphi[4] + multipole[9]*cphi[8]
+                      - multipole[7]*cphi[5] - multipole[8]*cphi[9])*0x100000000);
 
         // Compute the force and energy.
 
-        multipole[1] *= xscale;
-        multipole[2] *= yscale;
-        multipole[3] *= zscale;
-        multipole[4] *= xscale*xscale;
-        multipole[5] *= yscale*yscale;
-        multipole[6] *= zscale*zscale;
-        multipole[7] *= xscale*yscale;
-        multipole[8] *= xscale*zscale;
-        multipole[9] *= yscale*zscale;
+        multipole[1] = fracDipole[i*3];
+        multipole[2] = fracDipole[i*3+1];
+        multipole[3] = fracDipole[i*3+2];
+        multipole[4] = fracQuadrupole[i*6];
+        multipole[5] = fracQuadrupole[i*6+3];
+        multipole[6] = fracQuadrupole[i*6+5];
+        multipole[7] = fracQuadrupole[i*6+1];
+        multipole[8] = fracQuadrupole[i*6+2];
+        multipole[9] = fracQuadrupole[i*6+4];
 
-        inducedDipole[0] = inducedDipole_global[i*3];
-        inducedDipole[1] = inducedDipole_global[i*3+1];
-        inducedDipole[2] = inducedDipole_global[i*3+2];
-        inducedDipolePolar[0] = inducedDipolePolar_global[i*3];
-        inducedDipolePolar[1] = inducedDipolePolar_global[i*3+1];
-        inducedDipolePolar[2] = inducedDipolePolar_global[i*3+2];
+        cinducedDipole[0] = inducedDipole_global[i*3];
+        cinducedDipole[1] = inducedDipole_global[i*3+1];
+        cinducedDipole[2] = inducedDipole_global[i*3+2];
+        cinducedDipolePolar[0] = inducedDipolePolar_global[i*3];
+        cinducedDipolePolar[1] = inducedDipolePolar_global[i*3+1];
+        cinducedDipolePolar[2] = inducedDipolePolar_global[i*3+2];
+        
+        // Multiply the dipoles by cartToFrac, which is just the transpose of fracToCart.
+        
+        inducedDipole[0] = cinducedDipole[0]*fracToCart[0][0] + cinducedDipole[1]*fracToCart[1][0] + cinducedDipole[2]*fracToCart[2][0];
+        inducedDipole[1] = cinducedDipole[0]*fracToCart[0][1] + cinducedDipole[1]*fracToCart[1][1] + cinducedDipole[2]*fracToCart[2][1];
+        inducedDipole[2] = cinducedDipole[0]*fracToCart[0][2] + cinducedDipole[1]*fracToCart[1][2] + cinducedDipole[2]*fracToCart[2][2];
+        inducedDipolePolar[0] = cinducedDipolePolar[0]*fracToCart[0][0] + cinducedDipolePolar[1]*fracToCart[1][0] + cinducedDipolePolar[2]*fracToCart[2][0];
+        inducedDipolePolar[1] = cinducedDipolePolar[0]*fracToCart[0][1] + cinducedDipolePolar[1]*fracToCart[1][1] + cinducedDipolePolar[2]*fracToCart[2][1];
+        inducedDipolePolar[2] = cinducedDipolePolar[0]*fracToCart[0][2] + cinducedDipolePolar[1]*fracToCart[1][2] + cinducedDipolePolar[2]*fracToCart[2][2];
         const real* phi = &phi_global[20*i];
         const real* phip = &phip_global[10*i];
         const real* phid = &phid_global[10*i];
         real4 f = make_real4(0, 0, 0, 0);
 
-        energy += GRID_SIZE_X*invPeriodicBoxSize.x*inducedDipole[0]*phi[1];
-        energy += GRID_SIZE_Y*invPeriodicBoxSize.y*inducedDipole[1]*phi[2];
-        energy += GRID_SIZE_Z*invPeriodicBoxSize.z*inducedDipole[2]*phi[3];
+        energy += inducedDipole[0]*phi[1];
+        energy += inducedDipole[1]*phi[2];
+        energy += inducedDipole[2]*phi[3];
 
         for (int k = 0; k < 3; k++) {
             int j1 = deriv1[k+1];
             int j2 = deriv2[k+1];
             int j3 = deriv3[k+1];
-            f.x += (inducedDipole[k]+inducedDipolePolar[k])*phi[j1]*(scales[k]/xscale);
-            f.y += (inducedDipole[k]+inducedDipolePolar[k])*phi[j2]*(scales[k]/yscale);
-            f.z += (inducedDipole[k]+inducedDipolePolar[k])*phi[j3]*(scales[k]/zscale);
+            f.x += (inducedDipole[k]+inducedDipolePolar[k])*phi[j1];
+            f.y += (inducedDipole[k]+inducedDipolePolar[k])*phi[j2];
+            f.z += (inducedDipole[k]+inducedDipolePolar[k])*phi[j3];
 #ifndef DIRECT_POLARIZATION
-            f.x += (inducedDipole[k]*phip[j1] + inducedDipolePolar[k]*phid[j1])*(scales[k]/xscale);
-            f.y += (inducedDipole[k]*phip[j2] + inducedDipolePolar[k]*phid[j2])*(scales[k]/yscale);
-            f.z += (inducedDipole[k]*phip[j3] + inducedDipolePolar[k]*phid[j3])*(scales[k]/zscale);
+            f.x += (inducedDipole[k]*phip[j1] + inducedDipolePolar[k]*phid[j1]);
+            f.y += (inducedDipole[k]*phip[j2] + inducedDipolePolar[k]*phid[j2]);
+            f.z += (inducedDipole[k]*phip[j3] + inducedDipolePolar[k]*phid[j3]);
 #endif
         }
 
-        f.x *= GRID_SIZE_X*invPeriodicBoxSize.x;
-        f.y *= GRID_SIZE_Y*invPeriodicBoxSize.y;
-        f.z *= GRID_SIZE_Z*invPeriodicBoxSize.z;
+        const real* phidp = &phidp_global[20*i];
         for (int k = 0; k < 10; k++) {
             f.x += multipole[k]*phidp[deriv1[k]];
             f.y += multipole[k]*phidp[deriv2[k]];
             f.z += multipole[k]*phidp[deriv3[k]];
         }
-        f.x *= 0.5f*EPSILON_FACTOR*xscale;
-        f.y *= 0.5f*EPSILON_FACTOR*yscale;
-        f.z *= 0.5f*EPSILON_FACTOR*zscale;
+        f = make_real4(0.5f*EPSILON_FACTOR*(f.x*fracToCart[0][0] + f.y*fracToCart[0][1] + f.z*fracToCart[0][2]),
+                       0.5f*EPSILON_FACTOR*(f.x*fracToCart[1][0] + f.y*fracToCart[1][1] + f.z*fracToCart[1][2]),
+                       0.5f*EPSILON_FACTOR*(f.x*fracToCart[2][0] + f.y*fracToCart[2][1] + f.z*fracToCart[2][2]), 0);
         forceBuffers[i] -= static_cast<unsigned long long>((long long) (f.x*0x100000000));
         forceBuffers[i+PADDED_NUM_ATOMS] -= static_cast<unsigned long long>((long long) (f.y*0x100000000));
         forceBuffers[i+PADDED_NUM_ATOMS*2] -= static_cast<unsigned long long>((long long) (f.z*0x100000000));
@@ -914,16 +1063,26 @@ extern "C" __global__ void computeInducedDipoleForceAndEnergy(real4* __restrict_
 }
 
 extern "C" __global__ void recordInducedFieldDipoles(const real* __restrict__ phid, real* const __restrict__ phip,
-        long long* __restrict__ inducedField, long long* __restrict__ inducedFieldPolar, real4 invPeriodicBoxSize) {
-    real xscale = GRID_SIZE_X*invPeriodicBoxSize.x*0x100000000;
-    real yscale = GRID_SIZE_Y*invPeriodicBoxSize.y*0x100000000;
-    real zscale = GRID_SIZE_Z*invPeriodicBoxSize.z*0x100000000;
+        long long* __restrict__ inducedField, long long* __restrict__ inducedFieldPolar, real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ) {
+    __shared__ real fracToCart[3][3];
+    if (threadIdx.x == 0) {
+        fracToCart[0][0] = GRID_SIZE_X*recipBoxVecX.x;
+        fracToCart[1][0] = GRID_SIZE_X*recipBoxVecY.x;
+        fracToCart[2][0] = GRID_SIZE_X*recipBoxVecZ.x;
+        fracToCart[0][1] = GRID_SIZE_Y*recipBoxVecX.y;
+        fracToCart[1][1] = GRID_SIZE_Y*recipBoxVecY.y;
+        fracToCart[2][1] = GRID_SIZE_Y*recipBoxVecZ.y;
+        fracToCart[0][2] = GRID_SIZE_Z*recipBoxVecX.z;
+        fracToCart[1][2] = GRID_SIZE_Z*recipBoxVecY.z;
+        fracToCart[2][2] = GRID_SIZE_Z*recipBoxVecZ.z;
+    }
+    __syncthreads();
     for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < NUM_ATOMS; i += blockDim.x*gridDim.x) {
-        inducedField[i] -= (long long) (xscale*phid[10*i+1]);
-        inducedField[i+PADDED_NUM_ATOMS] -= (long long) (yscale*phid[10*i+2]);
-        inducedField[i+PADDED_NUM_ATOMS*2] -= (long long) (zscale*phid[10*i+3]);
-        inducedFieldPolar[i] -= (long long) (xscale*phip[10*i+1]);
-        inducedFieldPolar[i+PADDED_NUM_ATOMS] -= (long long) (yscale*phip[10*i+2]);
-        inducedFieldPolar[i+PADDED_NUM_ATOMS*2] -= (long long) (zscale*phip[10*i+3]);
+        inducedField[i] -= (long long) (0x100000000*(phid[10*i+1]*fracToCart[0][0] + phid[10*i+2]*fracToCart[0][1] + phid[10*i+3]*fracToCart[0][2]));
+        inducedField[i+PADDED_NUM_ATOMS] -= (long long) (0x100000000*(phid[10*i+1]*fracToCart[1][0] + phid[10*i+2]*fracToCart[1][1] + phid[10*i+3]*fracToCart[1][2]));
+        inducedField[i+PADDED_NUM_ATOMS*2] -= (long long) (0x100000000*(phid[10*i+1]*fracToCart[2][0] + phid[10*i+2]*fracToCart[2][1] + phid[10*i+3]*fracToCart[2][2]));
+        inducedFieldPolar[i] -= (long long) (0x100000000*(phip[10*i+1]*fracToCart[0][0] + phip[10*i+2]*fracToCart[0][1] + phip[10*i+3]*fracToCart[0][2]));
+        inducedFieldPolar[i+PADDED_NUM_ATOMS] -= (long long) (0x100000000*(phip[10*i+1]*fracToCart[1][0] + phip[10*i+2]*fracToCart[1][1] + phip[10*i+3]*fracToCart[1][2]));
+        inducedFieldPolar[i+PADDED_NUM_ATOMS*2] -= (long long) (0x100000000*(phip[10*i+1]*fracToCart[2][0] + phip[10*i+2]*fracToCart[2][1] + phip[10*i+3]*fracToCart[2][2]));
     }
 }

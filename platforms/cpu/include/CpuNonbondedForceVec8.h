@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2013 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2014 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -51,6 +51,12 @@ protected:
          --------------------------------------------------------------------------------------- */
           
       void calculateBlockIxn(int blockIndex, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize);
+      
+      /**
+       * Templatized implementation of calculateBlockIxn.
+       */
+      template <bool TRICLINIC>
+      void calculateBlockIxnImpl(int blockIndex, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize);
             
       /**---------------------------------------------------------------------------------------
       
@@ -65,9 +71,16 @@ protected:
       void calculateBlockEwaldIxn(int blockIndex, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize);
 
       /**
+       * Templatized implementation of calculateBlockEwaldIxn.
+       */
+      template <bool TRICLINIC>
+      void calculateBlockEwaldIxnImpl(int blockIndex, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize);
+
+      /**
        * Compute the displacement and squared distance between a collection of points, optionally using
        * periodic boundary conditions.
        */
+      template <bool TRICLINIC>
       void getDeltaR(const float* posI, const fvec8& x, const fvec8& y, const fvec8& z, fvec8& dx, fvec8& dy, fvec8& dz, fvec8& r2, bool periodic, const fvec4& boxSize, const fvec4& invBoxSize) const;
 
       /**
