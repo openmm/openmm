@@ -24,6 +24,7 @@
 #ifndef __ReferenceForce_H__
 #define __ReferenceForce_H__
 
+#include "RealVec.h"
 #include "lepton/CompiledExpression.h"
 #include "openmm/internal/windowsExport.h"
 
@@ -97,18 +98,20 @@ class OPENMM_EXPORT  ReferenceForce {
       static void getDeltaRPeriodic( const OpenMM::RealVec& atomCoordinatesI, const OpenMM::RealVec& atomCoordinatesJ,
                                              const RealOpenMM* boxSize, RealOpenMM* deltaR );
 
-    /**---------------------------------------------------------------------------------------
-      
-         Get deltaR between atomI and atomJ (static method): deltaR: j - i
-      
+      /**---------------------------------------------------------------------------------------
+
+         Get deltaR and distance and distance**2 between atomI and atomJ, assuming periodic
+         boundary conditions (static method); deltaR: j - i
+
          @param atomCoordinatesI    atom i coordinates
          @param atomCoordinatesI    atom j coordinates
-         @param deltaR              deltaX, deltaY, deltaZ upon return
-      
+         @param boxVectors          the vectors defining the periodic box
+         @param deltaR              deltaX, deltaY, deltaZ, R2, R upon return
+
          --------------------------------------------------------------------------------------- */
-      
-      static void getDeltaROnly( const RealOpenMM* atomCoordinatesI, const RealOpenMM* atomCoordinatesJ,
-                                RealOpenMM* deltaR );
+
+      static void getDeltaRPeriodic( const OpenMM::RealVec& atomCoordinatesI, const OpenMM::RealVec& atomCoordinatesJ,
+                                             const OpenMM::RealVec* boxVectors, RealOpenMM* deltaR );
 
       /**
        * Get a pointer to the memory for setting a variable in a CompiledExpression.  If the expression

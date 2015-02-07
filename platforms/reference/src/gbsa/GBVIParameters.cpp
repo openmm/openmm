@@ -286,22 +286,20 @@ RealOpenMM GBVIParameters::getCutoffDistance() {
       also been set, and the smallest side of the periodic box is at least twice the cutoff
       distance.
 
-      @param boxSize             the X, Y, and Z widths of the periodic box
+      @param vectors    the vectors defining the periodic box
 
       --------------------------------------------------------------------------------------- */
 
-void GBVIParameters::setPeriodic( RealVec& boxSize ) {
+void GBVIParameters::setPeriodic(RealVec* vectors) {
 
-     assert(_cutoff);
-
-     assert(boxSize[0] >= 2.0*_cutoffDistance);
-     assert(boxSize[1] >= 2.0*_cutoffDistance);
-     assert(boxSize[2] >= 2.0*_cutoffDistance);
-
-     _periodic           = true;
-     _periodicBoxSize[0] = boxSize[0];
-     _periodicBoxSize[1] = boxSize[1];
-     _periodicBoxSize[2] = boxSize[2];
+    assert(_cutoff);
+    assert(vectors[0][0] >= 2.0*_cutoffDistance);
+    assert(vectors[1][1] >= 2.0*_cutoffDistance);
+    assert(vectors[2][2] >= 2.0*_cutoffDistance);
+    _periodic = true;
+    _periodicBoxVectors[0] = vectors[0];
+    _periodicBoxVectors[1] = vectors[1];
+    _periodicBoxVectors[2] = vectors[2];
 }
 
 /**---------------------------------------------------------------------------------------
@@ -320,8 +318,8 @@ bool GBVIParameters::getPeriodic() {
 
       --------------------------------------------------------------------------------------- */
 
-const RealOpenMM* GBVIParameters::getPeriodicBox() {
-     return _periodicBoxSize;
+const OpenMM::RealVec* GBVIParameters::getPeriodicBox() {
+     return _periodicBoxVectors;
 }
 
 /**---------------------------------------------------------------------------------------

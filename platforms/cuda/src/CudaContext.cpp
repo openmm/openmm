@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -233,6 +233,66 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     compilationDefines["ERF"] = useDoublePrecision ? "erf" : "erff";
     compilationDefines["ERFC"] = useDoublePrecision ? "erfc" : "erfcf";
     
+    // Set defines for applying periodic boundary conditions.
+    
+    Vec3 boxVectors[3];
+    system.getDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+    boxIsTriclinic = (boxVectors[0][1] != 0.0 || boxVectors[0][2] != 0.0 ||
+                      boxVectors[1][0] != 0.0 || boxVectors[1][2] != 0.0 ||
+                      boxVectors[2][0] != 0.0 || boxVectors[2][1] != 0.0);
+    if (boxIsTriclinic) {
+        compilationDefines["APPLY_PERIODIC_TO_DELTA(delta)"] =
+            "{"
+            "real scale3 = floor(delta.z*invPeriodicBoxSize.z+0.5f); \\\n"
+            "delta.x -= scale3*periodicBoxVecZ.x; \\\n"
+            "delta.y -= scale3*periodicBoxVecZ.y; \\\n"
+            "delta.z -= scale3*periodicBoxVecZ.z; \\\n"
+            "real scale2 = floor(delta.y*invPeriodicBoxSize.y+0.5f); \\\n"
+            "delta.x -= scale2*periodicBoxVecY.x; \\\n"
+            "delta.y -= scale2*periodicBoxVecY.y; \\\n"
+            "real scale1 = floor(delta.x*invPeriodicBoxSize.x+0.5f); \\\n"
+            "delta.x -= scale1*periodicBoxVecX.x;}";
+        compilationDefines["APPLY_PERIODIC_TO_POS(pos)"] =
+            "{"
+            "real scale3 = floor(pos.z*invPeriodicBoxSize.z); \\\n"
+            "pos.x -= scale3*periodicBoxVecZ.x; \\\n"
+            "pos.y -= scale3*periodicBoxVecZ.y; \\\n"
+            "pos.z -= scale3*periodicBoxVecZ.z; \\\n"
+            "real scale2 = floor(pos.y*invPeriodicBoxSize.y); \\\n"
+            "pos.x -= scale2*periodicBoxVecY.x; \\\n"
+            "pos.y -= scale2*periodicBoxVecY.y; \\\n"
+            "real scale1 = floor(pos.x*invPeriodicBoxSize.x); \\\n"
+            "pos.x -= scale1*periodicBoxVecX.x;}";
+        compilationDefines["APPLY_PERIODIC_TO_POS_WITH_CENTER(pos, center)"] =
+            "{"
+            "real scale3 = floor((pos.z-center.z)*invPeriodicBoxSize.z+0.5f); \\\n"
+            "pos.x -= scale3*periodicBoxVecZ.x; \\\n"
+            "pos.y -= scale3*periodicBoxVecZ.y; \\\n"
+            "pos.z -= scale3*periodicBoxVecZ.z; \\\n"
+            "real scale2 = floor((pos.y-center.y)*invPeriodicBoxSize.y+0.5f); \\\n"
+            "pos.x -= scale2*periodicBoxVecY.x; \\\n"
+            "pos.y -= scale2*periodicBoxVecY.y; \\\n"
+            "real scale1 = floor((pos.x-center.x)*invPeriodicBoxSize.x+0.5f); \\\n"
+            "pos.x -= scale1*periodicBoxVecX.x;}";
+    }
+    else {
+        compilationDefines["APPLY_PERIODIC_TO_DELTA(delta)"] =
+            "{"
+            "delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x; \\\n"
+            "delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y; \\\n"
+            "delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;}";
+        compilationDefines["APPLY_PERIODIC_TO_POS(pos)"] =
+            "{"
+            "pos.x -= floor(pos.x*invPeriodicBoxSize.x)*periodicBoxSize.x; \\\n"
+            "pos.y -= floor(pos.y*invPeriodicBoxSize.y)*periodicBoxSize.y; \\\n"
+            "pos.z -= floor(pos.z*invPeriodicBoxSize.z)*periodicBoxSize.z;}";
+        compilationDefines["APPLY_PERIODIC_TO_POS_WITH_CENTER(pos, center)"] =
+            "{"
+            "pos.x -= floor((pos.x-center.x)*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x; \\\n"
+            "pos.y -= floor((pos.y-center.y)*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y; \\\n"
+            "pos.z -= floor((pos.z-center.z)*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;}";
+    }
+
     // Create the work thread used for parallelization when running on multiple devices.
     
     thread = new WorkThread();
@@ -534,7 +594,7 @@ void CudaContext::restoreDefaultStream() {
     setCurrentStream(0);
 }
 
-string CudaContext::doubleToString(double value) {
+string CudaContext::doubleToString(double value) const {
     stringstream s;
     s.precision(useDoublePrecision ? 16 : 8);
     s << scientific << value;
@@ -543,7 +603,7 @@ string CudaContext::doubleToString(double value) {
     return s.str();
 }
 
-string CudaContext::intToString(int value) {
+string CudaContext::intToString(int value) const {
     stringstream s;
     s << value;
     return s.str();
@@ -1078,16 +1138,21 @@ void CudaContext::reorderAtomsImpl() {
             // Move each molecule position into the same box.
 
             for (int i = 0; i < numMolecules; i++) {
-                int xcell = (int) floor(molPos[i].x*invPeriodicBoxSize.x);
-                int ycell = (int) floor(molPos[i].y*invPeriodicBoxSize.y);
-                int zcell = (int) floor(molPos[i].z*invPeriodicBoxSize.z);
-                Real dx = xcell*periodicBoxSize.x;
-                Real dy = ycell*periodicBoxSize.y;
-                Real dz = zcell*periodicBoxSize.z;
-                if (dx != 0.0f || dy != 0.0f || dz != 0.0f) {
-                    molPos[i].x -= dx;
-                    molPos[i].y -= dy;
-                    molPos[i].z -= dz;
+                Real4 center = molPos[i];
+                int zcell = (int) floor(center.z*invPeriodicBoxSize.z);
+                center.x -= zcell*periodicBoxVecZ.x;
+                center.y -= zcell*periodicBoxVecZ.y;
+                center.z -= zcell*periodicBoxVecZ.z;
+                int ycell = (int) floor(center.y*invPeriodicBoxSize.y);
+                center.x -= ycell*periodicBoxVecY.x;
+                center.y -= ycell*periodicBoxVecY.y;
+                int xcell = (int) floor(center.x*invPeriodicBoxSize.x);
+                center.x -= xcell*periodicBoxVecX.x;
+                if (xcell != 0 || ycell != 0 || zcell != 0) {
+                    Real dx = molPos[i].x-center.x;
+                    Real dy = molPos[i].y-center.y;
+                    Real dz = molPos[i].z-center.z;
+                    molPos[i] = center;
                     for (int j = 0; j < (int) atoms.size(); j++) {
                         int atom = atoms[j]+mol.offsets[i];
                         Real4 p = oldPosq[atom];

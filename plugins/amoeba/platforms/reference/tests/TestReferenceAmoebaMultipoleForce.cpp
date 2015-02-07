@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -39,6 +39,7 @@
 #include "openmm/System.h"
 #include "openmm/AmoebaMultipoleForce.h"
 #include "openmm/LangevinIntegrator.h"
+#include "openmm/Vec3.h"
 #include <iostream>
 #include <vector>
 #include <stdlib.h>
@@ -50,6 +51,7 @@
 
 
 using namespace OpenMM;
+using namespace std;
 
 extern "C" OPENMM_EXPORT void registerAmoebaReferenceKernelFactories();
 
@@ -2813,6 +2815,133 @@ static void testMultipoleGridPotential( FILE* log ) {
 
 }
 
+void testTriclinic() {
+    // Create a triclinic box containing eight water molecules.
+
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(1.8643, 0, 0), Vec3(-0.16248445120445926, 1.8572057756524414, 0), Vec3(0.16248445120445906, -0.14832299817478897, 1.8512735025730875));
+    for (int i = 0; i < 24; i++)
+        system.addParticle(1.0);
+    AmoebaMultipoleForce* force = new AmoebaMultipoleForce();
+    system.addForce(force);
+    force->setNonbondedMethod(AmoebaMultipoleForce::PME);
+    force->setCutoffDistance(0.7);
+    force->setMutualInducedTargetEpsilon(1e-6);
+    vector<int> grid(3);
+    grid[0] = grid[1] = grid[2] = 24;
+    force->setPmeGridDimensions(grid);
+    force->setAEwald(5.4459051633620055);
+    double o_charge = -0.42616, h_charge = 0.21308;
+    vector<double> o_dipole(3), h_dipole(3), o_quadrupole(9, 0.0), h_quadrupole(9, 0.0);
+    o_dipole[0] = 0;
+    o_dipole[1] = 0;
+    o_dipole[2] = 0.0033078867454609203;
+    h_dipole[0] = -0.0053536858428776405;
+    h_dipole[1] = 0;
+    h_dipole[2] = -0.014378273997907321;
+
+    o_quadrupole[0] = 0.00016405937591036892;
+    o_quadrupole[4] = -0.00021618201787005826;
+    o_quadrupole[8] = 5.212264195968935e-05;
+    h_quadrupole[0] = 0.00011465301060008312;
+    h_quadrupole[4] = 8.354184196619263e-05;
+    h_quadrupole[8] = -0.00019819485256627578;
+    h_quadrupole[2] = h_quadrupole[6] = -6.523731100577879e-05;
+
+    for (int i = 0; i < 8; i++) {
+        int atom1 = 3*i, atom2 = 3*i+1, atom3 = 3*i+2;
+        force->addMultipole(o_charge, o_dipole, o_quadrupole, 1, atom2, atom3, -1, 0.39, pow(0.001*0.92, 1.0/6.0), 0.001*0.92);
+        force->addMultipole(h_charge, h_dipole, h_quadrupole, 0, atom1, atom3, -1, 0.39, pow(0.001*0.539, 1.0/6.0), 0.001*0.539);
+        force->addMultipole(h_charge, h_dipole, h_quadrupole, 0, atom1, atom2, -1, 0.39, pow(0.001*0.539, 1.0/6.0), 0.001*0.539);
+        vector<int> coval1_12(2);
+        coval1_12[0] = atom2;
+        coval1_12[1] = atom3;
+        force->setCovalentMap(atom1, AmoebaMultipoleForce::Covalent12, coval1_12);
+        vector<int> coval2_12(1);
+        coval2_12[0] = atom1;
+        force->setCovalentMap(atom2, AmoebaMultipoleForce::Covalent12, coval2_12);
+        force->setCovalentMap(atom3, AmoebaMultipoleForce::Covalent12, coval2_12);
+        vector<int> coval2_13(1);
+        coval2_13[0] = atom3;
+        force->setCovalentMap(atom2, AmoebaMultipoleForce::Covalent13, coval2_13);
+        vector<int> coval3_13(1);
+        coval3_13[0] = atom2;
+        force->setCovalentMap(atom3, AmoebaMultipoleForce::Covalent13, coval3_13);
+        vector<int> polar(3);
+        polar[0] = atom1;
+        polar[1] = atom2;
+        polar[2] = atom3;
+        force->setCovalentMap(atom1, AmoebaMultipoleForce::PolarizationCovalent11, polar);
+        force->setCovalentMap(atom2, AmoebaMultipoleForce::PolarizationCovalent11, polar);
+        force->setCovalentMap(atom3, AmoebaMultipoleForce::PolarizationCovalent11, polar);
+    }
+    vector<Vec3> positions(24);
+    positions[0] = Vec3(0.867966, 0.708769, -0.0696862);
+    positions[1] = Vec3(0.780946, 0.675579, -0.0382259);
+    positions[2] = Vec3(0.872223, 0.681424, -0.161756);
+    positions[3] = Vec3(-0.0117313, 0.824445, 0.683762);
+    positions[4] = Vec3(0.0216892, 0.789544, 0.605003);
+    positions[5] = Vec3(0.0444268, 0.782601, 0.75302);
+    positions[6] = Vec3(0.837906, -0.0092611, 0.681463);
+    positions[7] = Vec3(0.934042, 0.0098069, 0.673406);
+    positions[8] = Vec3(0.793962, 0.0573676, 0.626984);
+    positions[9] = Vec3(0.658995, 0.184432, -0.692317);
+    positions[10] = Vec3(0.588543, 0.240231, -0.671793);
+    positions[11] = Vec3(0.618153, 0.106275, -0.727368);
+    positions[12] = Vec3(0.71466, 0.575358, 0.233152);
+    positions[13] = Vec3(0.636812, 0.612604, 0.286268);
+    positions[14] = Vec3(0.702502, 0.629465, 0.15182);
+    positions[15] = Vec3(-0.242658, -0.850419, -0.250483);
+    positions[16] = Vec3(-0.169206, -0.836825, -0.305829);
+    positions[17] = Vec3(-0.279321, -0.760247, -0.24031);
+    positions[18] = Vec3(-0.803838, -0.360559, 0.230369);
+    positions[19] = Vec3(-0.811375, -0.424813, 0.301849);
+    positions[20] = Vec3(-0.761939, -0.2863, 0.270962);
+    positions[21] = Vec3(-0.148063, 0.824409, -0.827221);
+    positions[22] = Vec3(-0.20902, 0.868798, -0.7677);
+    positions[23] = Vec3(-0.0700878, 0.882333, -0.832221);
+
+    // Compute the forces and energy.
+
+    LangevinIntegrator integrator(0.0, 0.1, 0.01);
+    Context context(system, integrator, Platform::getPlatformByName("Reference"));
+    context.setPositions(positions);
+    State state = context.getState(State::Forces | State::Energy);
+
+    // Compare them to values computed by Gromacs.
+
+    double expectedEnergy = 6.8278696;
+    vector<Vec3> expectedForce(24);
+    expectedForce[0] = Vec3(-104.755, 14.0833, 34.359);
+    expectedForce[1] = Vec3(97.324, -1.41419, -142.976);
+    expectedForce[2] = Vec3(29.3968, -6.31784, -3.8702);
+    expectedForce[3] = Vec3(39.1915, 66.852, -28.5767);
+    expectedForce[4] = Vec3(-8.17554, -6.71532, 7.63162);
+    expectedForce[5] = Vec3(-87.3745, -91.8639, 35.4761);
+    expectedForce[6] = Vec3(-19.7568, -40.8693, 5.60238);
+    expectedForce[7] = Vec3(0.840984, 26.878, 10.7822);
+    expectedForce[8] = Vec3(14.3469, 12.0583, -12.075);
+    expectedForce[9] = Vec3(13.757, 16.9954, 46.9403);
+    expectedForce[10] = Vec3(-5.04172, -14.008, -15.3804);
+    expectedForce[11] = Vec3(-2.1715, 3.7405, -37.2209);
+    expectedForce[12] = Vec3(-70.2284, -9.10438, -40.1287);
+    expectedForce[13] = Vec3(4.46014, 3.89949, 4.64842);
+    expectedForce[14] = Vec3(43.045, -4.79905, 151.879);
+    expectedForce[15] = Vec3(20.2129, -0.895376, -27.2086);
+    expectedForce[16] = Vec3(-5.10448, 3.57732, 17.0498);
+    expectedForce[17] = Vec3(-13.7695, -1.03345, 12.3093);
+    expectedForce[18] = Vec3(2.94972, 0.338904, -10.9914);
+    expectedForce[19] = Vec3(0.69036, 1.22591, 4.50198);
+    expectedForce[20] = Vec3(-4.61495, -2.76981, 3.57732);
+    expectedForce[21] = Vec3(73.1489, 16.167, -99.5834);
+    expectedForce[22] = Vec3(-31.8235, 6.11282, -21.125);
+    expectedForce[23] = Vec3(13.167, 7.42242, 103.102);
+    for (int i = 0; i < 24; i++) {
+        ASSERT_EQUAL_VEC(expectedForce[i], state.getForces()[i], 1e-2);
+    }
+    ASSERT_EQUAL_TOL(expectedEnergy, state.getPotentialEnergy(), 1e-2);
+}
+
 int main( int numberOfArguments, char* argv[] ) {
 
     try {
@@ -2860,6 +2989,10 @@ int main( int numberOfArguments, char* argv[] ) {
         // large box of water
 
         testPMEMutualPolarizationLargeWater( log );
+        
+        // triclinic box of water
+        
+        testTriclinic();
 
     }
     catch(const std::exception& e) {

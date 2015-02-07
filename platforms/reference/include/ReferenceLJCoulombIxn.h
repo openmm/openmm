@@ -40,7 +40,7 @@ class ReferenceLJCoulombIxn {
       bool ewald;
       bool pme;
       const OpenMM::NeighborList* neighborList;
-      RealOpenMM periodicBoxSize[3];
+      OpenMM::RealVec periodicBoxVectors[3];
       RealOpenMM cutoffDistance, switchingDistance;
       RealOpenMM krf, crf;
       RealOpenMM alphaEwald;
@@ -118,11 +118,11 @@ class ReferenceLJCoulombIxn {
          already been set, and the smallest side of the periodic box is at least twice the cutoff
          distance.
       
-         @param boxSize             the X, Y, and Z widths of the periodic box
+         @param vectors    the vectors defining the periodic box
       
          --------------------------------------------------------------------------------------- */
       
-      void setPeriodic( OpenMM::RealVec& boxSize );
+      void setPeriodic(OpenMM::RealVec* vectors);
        
       /**---------------------------------------------------------------------------------------
       

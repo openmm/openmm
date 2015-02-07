@@ -440,7 +440,9 @@ extern "C" __global__ void computeFixedField(
         const uint2* __restrict__ covalentFlags, const unsigned int* __restrict__ polarizationGroupFlags, const ushort2* __restrict__ exclusionTiles,
         unsigned int startTileIndex, unsigned int numTileIndices,
 #ifdef USE_CUTOFF
-        const int* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, unsigned int maxTiles, const real4* __restrict__ blockCenter, const unsigned int* __restrict__ interactingAtoms,
+        const int* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
+        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, const real4* __restrict__ blockCenter,
+        const unsigned int* __restrict__ interactingAtoms,
 #elif defined USE_GK
         const real* __restrict__ bornRadii, unsigned long long* __restrict__ gkFieldBuffers,
 #endif
@@ -494,9 +496,7 @@ extern "C" __global__ void computeFixedField(
             for (unsigned int j = 0; j < TILE_SIZE; j++) {
                 real3 delta = trimTo3(localData[tbx+j].posq-data.posq);
 #ifdef USE_PERIODIC
-                delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-                delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-                delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
+                APPLY_PERIODIC_TO_DELTA(delta)
 #endif
                 int atom2 = y*TILE_SIZE+j;
                 if (atom1 != atom2 && atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
@@ -532,9 +532,7 @@ extern "C" __global__ void computeFixedField(
             for (j = 0; j < TILE_SIZE; j++) {
                 real3 delta = trimTo3(localData[tbx+tj].posq-data.posq);
 #ifdef USE_PERIODIC
-                delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-                delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-                delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
+                APPLY_PERIODIC_TO_DELTA(delta)
 #endif
                 int atom2 = y*TILE_SIZE+tj;
                 if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
@@ -675,9 +673,7 @@ extern "C" __global__ void computeFixedField(
             for (j = 0; j < TILE_SIZE; j++) {
                 real3 delta = trimTo3(localData[tbx+tj].posq-data.posq);
 #ifdef USE_PERIODIC
-                delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-                delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-                delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
+                APPLY_PERIODIC_TO_DELTA(delta)
 #endif
                 int atom2 = atomIndices[tbx+tj];
                 if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
