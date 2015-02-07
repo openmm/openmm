@@ -142,7 +142,7 @@ class PDBFile(object):
             self._positions.append(coords*nanometers)
         ## The atom positions read from the PDB file.  If the file contains multiple frames, these are the positions in the first frame.
         self.positions = self._positions[0]
-        self.topology.setUnitCellDimensions(pdb.get_unit_cell_dimensions())
+        self.topology.setPeriodicBoxVectors(pdb.get_periodic_box_vectors())
         self.topology.createStandardBonds()
         self.topology.createDisulfideBonds(self.positions)
         self._numpyPositions = None

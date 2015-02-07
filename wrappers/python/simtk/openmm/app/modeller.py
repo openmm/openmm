@@ -94,7 +94,7 @@ class Modeller(object):
         # Copy over the existing model.
 
         newTopology = Topology()
-        newTopology.setUnitCellDimensions(deepcopy(self.topology.getUnitCellDimensions()))
+        newTopology.setUnitCellDimensions(self.topology.getUnitCellDimensions())
         newAtoms = {}
         newPositions = []*nanometer
         for chain in self.topology.chains():
@@ -140,7 +140,7 @@ class Modeller(object):
          - toDelete (list) a list of Atoms, Residues, Chains, and bonds (specified as tuples of Atoms) to delete
         """
         newTopology = Topology()
-        newTopology.setUnitCellDimensions(deepcopy(self.topology.getUnitCellDimensions()))
+        newTopology.setUnitCellDimensions(self.topology.getUnitCellDimensions())
         newAtoms = {}
         newPositions = []*nanometer
         deleteSet = set(toDelete)
@@ -189,7 +189,7 @@ class Modeller(object):
         else:
             raise ValueError('Unknown water model: %s' % model)
         newTopology = Topology()
-        newTopology.setUnitCellDimensions(deepcopy(self.topology.getUnitCellDimensions()))
+        newTopology.setUnitCellDimensions(self.topology.getUnitCellDimensions())
         newAtoms = {}
         newPositions = []*nanometer
         for chain in self.topology.chains():
@@ -472,7 +472,7 @@ class Modeller(object):
                     for atom2 in molAtoms:
                         if atom2.element == elem.hydrogen:
                             newTopology.addBond(atom1, atom2)
-        newTopology.setUnitCellDimensions(deepcopy(box)*nanometer)
+        newTopology.setUnitCellDimensions(box*nanometer)
         self.topology = newTopology
         self.positions = newPositions
 
@@ -610,7 +610,7 @@ class Modeller(object):
         # Loop over residues.
 
         newTopology = Topology()
-        newTopology.setUnitCellDimensions(deepcopy(self.topology.getUnitCellDimensions()))
+        newTopology.setUnitCellDimensions(self.topology.getUnitCellDimensions())
         newAtoms = {}
         newPositions = []*nanometer
         newIndices = []
@@ -883,7 +883,7 @@ class Modeller(object):
         # Create the new Topology.
 
         newTopology = Topology()
-        newTopology.setUnitCellDimensions(deepcopy(self.topology.getUnitCellDimensions()))
+        newTopology.setUnitCellDimensions(self.topology.getUnitCellDimensions())
         newAtoms = {}
         newPositions = []*nanometer
         for chain in self.topology.chains():

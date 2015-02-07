@@ -33,6 +33,7 @@ __version__ = "1.0"
 
 import os
 import sys
+import math
 from simtk.openmm import Vec3
 from simtk.openmm.app.internal.pdbx.reader.PdbxReader import PdbxReader
 from simtk.openmm.app import Topology
@@ -145,8 +146,22 @@ class PDBxFile(object):
         cell = block.getObj('cell')
         if cell is not None and cell.getRowCount() > 0:
             row = cell.getRow(0)
-            cellSize = [float(row[cell.getAttributeIndex(attribute)]) for attribute in ('length_a', 'length_b', 'length_c')]*angstroms
-            self.topology.setUnitCellDimensions(cellSize)
+            (a, b, c) = [float(row[cell.getAttributeIndex(attribute)]) for attribute in ('length_a', 'length_b', 'length_c')]
+            (alpha, beta, gamma) = [float(row[cell.getAttributeIndex(attribute)]) for attribute in ('angle_alpha', 'angle_beta', 'angle_gamma')*math.pi/180.0]
+            a = [a_length, 0, 0]
+            b = [b_length*math.cos(gamma), b_length*math.sin(gamma), 0]
+            cx = c_length*math.cos(beta)
+            cy = c_length*(math.cos(alpha)-math.cos(beta)*math.cos(gamma))
+            cz = math.sqrt(c_length*c_length-cx*cx-cy*cy)
+            c = [cx, cy, cz]
+            for i in range(3):
+                if abs(a[i]) < 1e-6:
+                    a[i] = 0.0
+                if abs(b[i]) < 1e-6:
+                    b[i] = 0.0
+                if abs(c[i]) < 1e-6:
+                    c[i] = 0.0
+            self.topology.setPeriodicBoxVectors((Vec3(*a), Vec3(*b), Vec3(*c))*unit.angstroms)
 
         # Add bonds based on struct_conn records.
 
