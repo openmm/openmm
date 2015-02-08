@@ -346,7 +346,7 @@ void ReferenceCalcAmoebaStretchBendForceKernel::copyParametersToContext(ContextI
         lengthCBParameters[i] = (RealOpenMM) lengthCB;
         angleParameters[i] = (RealOpenMM) angle;
         k1Parameters[i] = (RealOpenMM) k1;
-        k1Parameters[i] = (RealOpenMM) k2;
+        k2Parameters[i] = (RealOpenMM) k2;
     }
 }
 

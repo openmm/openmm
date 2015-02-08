@@ -171,7 +171,7 @@ RealOpenMM AmoebaReferenceStretchBendForce::calculateForceAndEnergy( int numStre
         RealOpenMM angleK2      = k2Quadratic[ii];
         RealVec forces[3];
         energy                 += calculateStretchBendIxn( posData[particle1Index], posData[particle2Index], posData[particle3Index],
-                                                           abLength, cbLength, idealAngle, angleK1, anglek2, forces );
+                                                           abLength, cbLength, idealAngle, angleK1, angleK2, forces );
         // accumulate forces
     
         for( int jj = 0; jj < 3; jj++ ){
