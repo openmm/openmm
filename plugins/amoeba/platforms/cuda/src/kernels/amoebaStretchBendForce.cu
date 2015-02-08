@@ -64,6 +64,6 @@ real ddrdzic = termc * zcb;
 
 energy += dt*drkk;
 
-real3 force1 = make_real3(-frc1*dt*ddrdxia+ddtdxia*drkk, -frc1*dt*ddrdyia+ddtdyia*drkk, -frc1*dt*ddrdzia+ddtdzia*drkk);
-real3 force3 = make_real3(-frc2*dt*ddrdxic+ddtdxic*drkk, -frc2*dt*ddrdyic+ddtdyic*drkk, -frc2*dt*ddrdzic+ddtdzic*drkk);
+real3 force1 = make_real3(-frc1*dt*ddrdxia-ddtdxia*drkk, -frc1*dt*ddrdyia-ddtdyia*drkk, -frc1*dt*ddrdzia-ddtdzia*drkk);
+real3 force3 = make_real3(-frc2*dt*ddrdxic-ddtdxic*drkk, -frc2*dt*ddrdyic-ddtdyic*drkk, -frc2*dt*ddrdzic-ddtdzic*drkk);
 real3 force2 = make_real3(-force1.x-force3.x, -force1.y-force3.y, -force1.z-force3.z);
