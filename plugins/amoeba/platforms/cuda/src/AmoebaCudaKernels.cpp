@@ -483,7 +483,7 @@ private:
 };
 
 CudaCalcAmoebaStretchBendForceKernel::CudaCalcAmoebaStretchBendForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) :
-                   CalcAmoebaStretchBendForceKernel(name, platform), cu(cu), system(system), params(NULL) {
+                   CalcAmoebaStretchBendForceKernel(name, platform), cu(cu), system(system), params1(NULL), params2(NULL) {
 }
 
 CudaCalcAmoebaStretchBendForceKernel::~CudaCalcAmoebaStretchBendForceKernel() {
@@ -539,14 +539,17 @@ void CudaCalcAmoebaStretchBendForceKernel::copyParametersToContext(ContextImpl& 
     
     // Record the per-stretch-bend parameters.
     
-    vector<float4> paramVector(numStretchBends);
+    vector<float3> paramVector(numStretchBends);
+    vector<float2> paramVector1(numStretchBends);
     for (int i = 0; i < numStretchBends; i++) {
         int atom1, atom2, atom3;
-        double lengthAB, lengthCB, angle, k;
-        force.getStretchBendParameters(startIndex+i, atom1, atom2, atom3, lengthAB, lengthCB, angle, k);
-        paramVector[i] = make_float4((float) lengthAB, (float) lengthCB, (float) angle, (float) k);
+        double lengthAB, lengthCB, angle, k1, k2;
+        force.getStretchBendParameters(startIndex+i, atom1, atom2, atom3, lengthAB, lengthCB, angle, k1, k2);
+        paramVector[i] = make_float3((float) lengthAB, (float) lengthCB, (float) angle);
+        paramVector1[i] = make_flaot2((float) k1, (float) k2);
     }
-    params->upload(paramVector);
+    params1->upload(paramVector);
+    params2->upload(paramVector1);
     
     // Mark that the current reordering may be invalid.
     

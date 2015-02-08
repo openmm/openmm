@@ -52,7 +52,7 @@ using OpenMM::RealVec;
 RealOpenMM AmoebaReferenceStretchBendForce::calculateStretchBendIxn( const RealVec& positionAtomA, const RealVec& positionAtomB,
                                                                      const RealVec& positionAtomC,
                                                                      RealOpenMM lengthAB,      RealOpenMM lengthCB,
-                                                                     RealOpenMM idealAngle,    RealOpenMM kParameter,
+                                                                     RealOpenMM idealAngle,    RealOpenMM k1Parameter,
                                                                      RealOpenMM k2Parameter, RealVec* forces ) const {
 
    // ---------------------------------------------------------------------------------------
@@ -156,7 +156,8 @@ RealOpenMM AmoebaReferenceStretchBendForce::calculateForceAndEnergy( int numStre
                                                                        const std::vector<RealOpenMM>& lengthABParameters,
                                                                        const std::vector<RealOpenMM>& lengthCBParameters,
                                                                        const std::vector<RealOpenMM>&  angle,
-                                                                       const std::vector<RealOpenMM>&  kQuadratic,
+                                                                       const std::vector<RealOpenMM>&  k1Quadratic,
+                                                                       const std::vector<RealOpenMM>&  k2Quadratic,
                                                                        vector<RealVec>& forceData) const {
     RealOpenMM energy      = 0.0; 
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(numStretchBends); ii++) {
@@ -166,10 +167,11 @@ RealOpenMM AmoebaReferenceStretchBendForce::calculateForceAndEnergy( int numStre
         RealOpenMM abLength     = lengthABParameters[ii];
         RealOpenMM cbLength     = lengthCBParameters[ii];
         RealOpenMM idealAngle   = angle[ii];
-        RealOpenMM angleK       = kQuadratic[ii];
+        RealOpenMM angleK1      = k1Quadratic[ii];
+        RealOpenMM angleK2      = k2Quadratic[ii];
         RealVec forces[3];
         energy                 += calculateStretchBendIxn( posData[particle1Index], posData[particle2Index], posData[particle3Index],
-                                                           abLength, cbLength, idealAngle, angleK, forces );
+                                                           abLength, cbLength, idealAngle, angleK1, anglek2, forces );
         // accumulate forces
     
         for( int jj = 0; jj < 3; jj++ ){

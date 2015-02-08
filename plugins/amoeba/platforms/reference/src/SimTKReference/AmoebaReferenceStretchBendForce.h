@@ -77,7 +77,8 @@ public:
                                         const std::vector<RealOpenMM>& lengthABParameters,
                                         const std::vector<RealOpenMM>& lengthCBParameters,
                                         const std::vector<RealOpenMM>&  angle,
-                                        const std::vector<RealOpenMM>&  kQuadratic,
+                                        const std::vector<RealOpenMM>&  k1Quadratic,
+                                        const std::vector<RealOpenMM>&  k2Quadratic,
                                         std::vector<OpenMM::RealVec>& forceData ) const;
 
 

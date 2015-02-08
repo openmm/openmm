@@ -95,6 +95,24 @@ public:
                                   double& lengthCB, double& angle, double& k1, double& k2) const;
 
     /**
+     * Get the force field parameters for a stretch-bend term, provided for
+     * backwards-compatibility. Since the two force constants may be different,
+     * you are recommended to call the other version of getStretchBendParameters
+     * with both a k1 and k2
+     * 
+     * @param index         the index of the stretch-bend for which to get parameters
+     * @param particle1     the index of the first particle connected by the stretch-bend
+     * @param particle2     the index of the second particle connected by the stretch-bend
+     * @param particle3     the index of the third particle connected by the stretch-bend
+     * @param lengthAB      the equilibrium length of the stretch-bend in bond ab [particle1, particle2], measured in nm
+     * @param lengthCB      the equilibrium length of the stretch-bend in bond cb [particle3, particle2], measured in nm
+     * @param angle         the equilibrium angle in radians
+     * @param k1            the force constant
+     */
+    void getStretchBendParameters(int index, int& particle1, int& particle2, int& particle3, double& lengthAB,
+                                  double& lengthCB, double& angle, double& k1) const;
+
+    /**
      * Set the force field parameters for a stretch-bend term.
      * 
      * @param index         the index of the stretch-bend for which to set parameters
