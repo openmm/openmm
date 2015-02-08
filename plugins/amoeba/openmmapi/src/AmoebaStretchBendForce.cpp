@@ -41,7 +41,7 @@ AmoebaStretchBendForce::AmoebaStretchBendForce() {
 
 int AmoebaStretchBendForce::addStretchBend(int particle1, int particle2, int particle3,
                                            double lengthAB,  double lengthCB, double angle, double k1, double k2) {
-    if (k2 == -1.0) k2 = k1
+    if (k2 == -1.0) k2 = k1;
     stretchBends.push_back(StretchBendInfo(particle1, particle2, particle3, lengthAB,  lengthCB, angle, k1, k2));
     return stretchBends.size()-1;
 }
