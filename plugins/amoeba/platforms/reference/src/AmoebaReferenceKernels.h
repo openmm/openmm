@@ -248,7 +248,8 @@ private:
     std::vector<RealOpenMM> lengthABParameters;
     std::vector<RealOpenMM> lengthCBParameters;
     std::vector<RealOpenMM> angleParameters;
-    std::vector<RealOpenMM> kParameters;
+    std::vector<RealOpenMM> k1Parameters;
+    std::vector<RealOpenMM> k2Parameters;
     const System& system;
 };
 

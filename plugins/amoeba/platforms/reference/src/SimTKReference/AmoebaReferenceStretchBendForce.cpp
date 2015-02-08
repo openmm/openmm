@@ -53,7 +53,7 @@ RealOpenMM AmoebaReferenceStretchBendForce::calculateStretchBendIxn( const RealV
                                                                      const RealVec& positionAtomC,
                                                                      RealOpenMM lengthAB,      RealOpenMM lengthCB,
                                                                      RealOpenMM idealAngle,    RealOpenMM kParameter,
-                                                                     RealVec* forces ) const {
+                                                                     RealOpenMM k2Parameter, RealVec* forces ) const {
 
    // ---------------------------------------------------------------------------------------
 
@@ -112,7 +112,9 @@ RealOpenMM AmoebaReferenceStretchBendForce::calculateStretchBendIxn( const RealV
        deltaR[CBxP][ii] *= termC;
     }
  
-    RealOpenMM dr    = rAB - lengthAB + rCB - lengthCB;
+    RealOpenMM dr1   = rAB - lengthAB;
+    RealOpenMM dr2   = rCB - lengthCB;
+    RealOpenMM drkk  = dr1*k1Parameter + dr2*k2Parameter;
     termA            = one/rAB;
     termC            = one/rCB;
  
@@ -129,8 +131,8 @@ RealOpenMM AmoebaReferenceStretchBendForce::calculateStretchBendIxn( const RealV
     }
     RealOpenMM dt = angle - idealAngle*RADIAN;
     for( int jj = 0; jj < 3; jj++ ){
-       subForce[A][jj] = kParameter*(dt*termA*deltaR[AB][jj] + dr*deltaR[ABxP][jj] );
-       subForce[C][jj] = kParameter*(dt*termC*deltaR[CB][jj] + dr*deltaR[CBxP][jj] );
+       subForce[A][jj] = k1Parameter*dt*termA*deltaR[AB][jj] + drkk*deltaR[ABxP][jj];
+       subForce[C][jj] = k2Parameter*dt*termC*deltaR[CB][jj] + drkk*deltaR[CBxP][jj];
        subForce[B][jj] = -( subForce[A][jj] + subForce[C][jj] );
     }
  
@@ -144,7 +146,7 @@ RealOpenMM AmoebaReferenceStretchBendForce::calculateStretchBendIxn( const RealV
  
     // ---------------------------------------------------------------------------------------
  
-    return (kParameter*dt*dr);
+    return dt*drkk;
 }
 
 RealOpenMM AmoebaReferenceStretchBendForce::calculateForceAndEnergy( int numStretchBends, vector<RealVec>& posData,

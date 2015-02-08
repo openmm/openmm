@@ -464,8 +464,8 @@ public:
     }
     void getParticlesInGroup(int index, std::vector<int>& particles) {
         int particle1, particle2, particle3;
-        double lengthAB, lengthCB, angle, k;
-        force.getStretchBendParameters(index, particle1, particle2, particle3, lengthAB, lengthCB, angle, k);
+        double lengthAB, lengthCB, angle, k1, k2;
+        force.getStretchBendParameters(index, particle1, particle2, particle3, lengthAB, lengthCB, angle, k1, k2);
         particles.resize(3);
         particles[0] = particle1;
         particles[1] = particle2;
@@ -473,10 +473,10 @@ public:
     }
     bool areGroupsIdentical(int group1, int group2) {
         int particle1, particle2, particle3;
-        double lengthAB1, lengthAB2, lengthCB1, lengthCB2, angle1, angle2, k1, k2;
-        force.getStretchBendParameters(group1, particle1, particle2, particle3, lengthAB1, lengthCB1, angle1, k1);
-        force.getStretchBendParameters(group2, particle1, particle2, particle3, lengthAB2, lengthCB2, angle2, k2);
-        return (lengthAB1 == lengthAB2 && lengthCB1 == lengthCB2 && angle1 == angle2 && k1 == k2);
+        double lengthAB1, lengthAB2, lengthCB1, lengthCB2, angle1, angle2, k11, k12, k21, k22;
+        force.getStretchBendParameters(group1, particle1, particle2, particle3, lengthAB1, lengthCB1, angle1, k11, k12);
+        force.getStretchBendParameters(group2, particle1, particle2, particle3, lengthAB2, lengthCB2, angle2, k21, k22);
+        return (lengthAB1 == lengthAB2 && lengthCB1 == lengthCB2 && angle1 == angle2 && k11 == k21 && k12 == k22);
     }
 private:
     const AmoebaStretchBendForce& force;
@@ -488,8 +488,10 @@ CudaCalcAmoebaStretchBendForceKernel::CudaCalcAmoebaStretchBendForceKernel(std::
 
 CudaCalcAmoebaStretchBendForceKernel::~CudaCalcAmoebaStretchBendForceKernel() {
     cu.setAsCurrent();
-    if (params != NULL)
-        delete params;
+    if (params1 != NULL)
+        delete params1;
+    if (params2 != NULL)
+        delete params2;
 }
 
 void CudaCalcAmoebaStretchBendForceKernel::initialize(const System& system, const AmoebaStretchBendForce& force) {
@@ -501,16 +503,21 @@ void CudaCalcAmoebaStretchBendForceKernel::initialize(const System& system, cons
     if (numStretchBends == 0)
         return;
     vector<vector<int> > atoms(numStretchBends, vector<int>(3));
-    params = CudaArray::create<float4>(cu, numStretchBends, "stretchBendParams");
-    vector<float4> paramVector(numStretchBends);
+    params1 = CudaArray::create<float3>(cu, numStretchBends, "stretchBendParams");
+    params2 = CudaArray::create<float2>(cu, numStretchBends, "stretchBendForceConstants");
+    vector<float3> paramVector(numStretchBends);
+    vector<float2> paramVectorK(numStretchBends);
     for (int i = 0; i < numStretchBends; i++) {
-        double lengthAB, lengthCB, angle, k;
-        force.getStretchBendParameters(startIndex+i, atoms[i][0], atoms[i][1], atoms[i][2], lengthAB, lengthCB, angle, k);
-        paramVector[i] = make_float4((float) lengthAB, (float) lengthCB, (float) angle, (float) k);
+        double lengthAB, lengthCB, angle, k1, k2;
+        force.getStretchBendParameters(startIndex+i, atoms[i][0], atoms[i][1], atoms[i][2], lengthAB, lengthCB, angle, k1, k2);
+        paramVector[i] = make_float3((float) lengthAB, (float) lengthCB, (float) angle);
+        paramVectorK[i] = make_float2((float) k1, (float) k2);
     }
-    params->upload(paramVector);
+    params1->upload(paramVector);
+    params2->upload(paramVectorK);
     map<string, string> replacements;
-    replacements["PARAMS"] = cu.getBondedUtilities().addArgument(params->getDevicePointer(), "float4");
+    replacements["PARAMS"] = cu.getBondedUtilities().addArgument(params1->getDevicePointer(), "float3");
+    replacements["FORCE_CONSTANTS"] = cu.getBondedUtilities().addArgument(params2->getDevicePointer(), "float2");
     replacements["RAD_TO_DEG"] = cu.doubleToString(180/M_PI);
     cu.getBondedUtilities().addInteraction(atoms, cu.replaceStrings(CudaAmoebaKernelSources::amoebaStretchBendForce, replacements), force.getForceGroup());
     cu.addForce(new ForceInfo(force));

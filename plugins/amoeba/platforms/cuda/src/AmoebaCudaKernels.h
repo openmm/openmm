@@ -229,7 +229,8 @@ private:
     int numStretchBends;
     CudaContext& cu;
     const System& system;
-    CudaArray* params;
+    CudaArray* params1; // Equilibrium values
+    CudaArray* params2; // force constants
 };
 
 /**

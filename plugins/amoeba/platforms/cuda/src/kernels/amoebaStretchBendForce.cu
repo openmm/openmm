@@ -25,7 +25,8 @@ real angle = ACOS(cosine);
 
 // find chain rule terms for the bond angle deviation
 
-float4 parameters = PARAMS[index];
+float3 parameters = PARAMS[index];
+float2 force_constants = FORCE_CONSTANTS[index];
 
 real dt = RAD_TO_DEG*(angle - parameters.z);
 real terma = rab*rp != 0 ? (-RAD_TO_DEG/(rab*rab*rp)) : (real) 0;
@@ -41,11 +42,15 @@ real ddtdzic = termc * (xcb*yp-ycb*xp);
 
 // find chain rule terms for the bond length deviations
 
-real dr = (parameters.x > 0 ? (rab - parameters.x) : (real) 0);
+real dr1 = (parameters.x > 0 ? (rab - parameters.x) : (real) 0);
 terma = (parameters.x > 0 ? RECIP(rab) : (real) 0);
 
-dr += (parameters.y > 0 ? (rcb - parameters.y) : (real) 0);
+real dr2 = (parameters.y > 0 ? (rcb - parameters.y) : (real) 0);
 termc = (parameters.y > 0 ? RECIP(rcb) : (real) 0);
+real frc1 = ((rp != 0) ? force_constants.x : (real) 0);
+real frc2 = ((rp != 0) ? force_constants.y : (real) 0);
+
+real drkk = dr1*frc1 + dr2*frc2;
 
 real ddrdxia = terma * xab;
 real ddrdyia = terma * yab;
@@ -57,9 +62,8 @@ real ddrdzic = termc * zcb;
 
 // get the energy and master chain rule terms for derivatives
 
-real term = ((rp != 0) ? parameters.w : (real) 0);
-energy += term*dt*dr;
+energy += dt*drkk;
 
-real3 force1 = make_real3(-term*(dt*ddrdxia+ddtdxia*dr), -term*(dt*ddrdyia+ddtdyia*dr), -term*(dt*ddrdzia+ddtdzia*dr));
-real3 force3 = make_real3(-term*(dt*ddrdxic+ddtdxic*dr), -term*(dt*ddrdyic+ddtdyic*dr), -term*(dt*ddrdzic+ddtdzic*dr));
+real3 force1 = make_real3(-frc1*dt*ddrdxia+ddtdxia*drkk, -frc1*dt*ddrdyia+ddtdyia*drkk, -frc1*dt*ddrdzia+ddtdzia*drkk);
+real3 force3 = make_real3(-frc2*dt*ddrdxic+ddtdxic*drkk, -frc2*dt*ddrdyic+ddtdyic*drkk, -frc2*dt*ddrdzic+ddtdzic*drkk);
 real3 force2 = make_real3(-force1.x-force3.x, -force1.y-force3.y, -force1.z-force3.z);
