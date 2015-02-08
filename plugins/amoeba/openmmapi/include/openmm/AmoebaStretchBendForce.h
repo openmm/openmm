@@ -76,7 +76,7 @@ public:
      * @return the index of the stretch-bend that was added
      */
     int addStretchBend(int particle1, int particle2, int particle3, double lengthAB,  double lengthCB, double angle,
-                       double k1, double k2=-1.0);
+                       double k1, double k2);
 
     /**
      * Get the force field parameters for a stretch-bend term.
@@ -108,7 +108,7 @@ public:
      * @param k2            the force constant of the product of bond bc and angle a-b-c (optional, default is the same as k1)
      */
     void setStretchBendParameters(int index, int particle1, int particle2, int particle3, 
-                                  double lengthAB,  double lengthCB, double angle, double k1, double k2=-1.0 );
+                                  double lengthAB,  double lengthCB, double angle, double k1, double k2);
     /**
      * Update the per-stretch-bend term parameters in a Context to match those stored in this Force object.  This method provides
      * an efficient method to update certain parameters in an existing Context without needing to reinitialize it.

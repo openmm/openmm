@@ -276,7 +276,7 @@ void testOneStretchBend( FILE* log ) {
     //double kStretchBend     = 0.750491578E-01;
     double kStretchBend     = 1.0;
 
-    amoebaStretchBendForce->addStretchBend(0, 1, 2, abLength, cbLength, angleStretchBend, kStretchBend );
+    amoebaStretchBendForce->addStretchBend(0, 1, 2, abLength, cbLength, angleStretchBend, kStretchBend, kStretchBend );
 
     system.addForce(amoebaStretchBendForce);
     Context context(system, integrator, Platform::getPlatformByName( "CUDA"));
@@ -292,7 +292,7 @@ void testOneStretchBend( FILE* log ) {
     
     // Try changing the stretch-bend parameters and make sure it's still correct.
     
-    amoebaStretchBendForce->setStretchBendParameters(0, 0, 1, 2, 1.1*abLength, 1.2*cbLength, 1.3*angleStretchBend, 1.4*kStretchBend);
+    amoebaStretchBendForce->setStretchBendParameters(0, 0, 1, 2, 1.1*abLength, 1.2*cbLength, 1.3*angleStretchBend, 1.4*kStretchBend, 1.4*kStretchBend);
     bool exceptionThrown = false;
     try {
         // This should throw an exception.
