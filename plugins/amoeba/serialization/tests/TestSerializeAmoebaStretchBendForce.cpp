@@ -45,9 +45,9 @@ void testSerialization() {
     // Create a Force.
 
     AmoebaStretchBendForce force1;
-    force1.addStretchBend(0, 1, 3, 1.0, 1.2, 150.1, 83.2);
-    force1.addStretchBend(2, 4, 4, 1.1, 2.2, 180.1, 89.2);
-    force1.addStretchBend(5, 0, 1, 3.1, 8.2, 140.1, 98.2);
+    force1.addStretchBend(0, 1, 3, 1.0, 1.2, 150.1, 83.2, 100.);
+    force1.addStretchBend(2, 4, 4, 1.1, 2.2, 180.1, 89.2, 100.);
+    force1.addStretchBend(5, 0, 1, 3.1, 8.2, 140.1, 98.2, 100.);
 
     // Serialize and then deserialize it.
 
