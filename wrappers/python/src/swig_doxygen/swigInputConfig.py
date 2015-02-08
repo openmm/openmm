@@ -277,7 +277,7 @@ UNITS = {
 ("AmoebaPiTorsionForce",                  "getPiTorsionParameters")                        :  ( None, (None, None, None, None, None,  None, 'unit.kilojoule_per_mole')),
 
 ("AmoebaStretchBendForce",                "getNumStretchBends")                            :  ( None, ()),
-("AmoebaStretchBendForce",                "getStretchBendParameters")                      :  ( None, (None, None, None, 'unit.nanometer', 'unit.nanometer', 'unit.radian', 'unit.kilojoule_per_mole/unit.nanometer/unit.degree')),
+("AmoebaStretchBendForce",                "getStretchBendParameters")                      :  ( None, (None, None, None, 'unit.nanometer', 'unit.nanometer', 'unit.radian', 'unit.kilojoule_per_mole/unit.nanometer/unit.degree', 'unit.kilojoule_per_mole/unit.nanometer/unit.degree')),
 
 ("AmoebaTorsionTorsionForce",             "getNumTorsionTorsions")                         :  ( None, ()),
 ("AmoebaTorsionTorsionForce",             "getNumTorsionTorsionGrids")                     :  ( None, ()),
