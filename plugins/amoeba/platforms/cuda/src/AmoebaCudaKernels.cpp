@@ -546,7 +546,7 @@ void CudaCalcAmoebaStretchBendForceKernel::copyParametersToContext(ContextImpl& 
         double lengthAB, lengthCB, angle, k1, k2;
         force.getStretchBendParameters(startIndex+i, atom1, atom2, atom3, lengthAB, lengthCB, angle, k1, k2);
         paramVector[i] = make_float3((float) lengthAB, (float) lengthCB, (float) angle);
-        paramVector1[i] = make_flaot2((float) k1, (float) k2);
+        paramVector1[i] = make_float2((float) k1, (float) k2);
     }
     params1->upload(paramVector);
     params2->upload(paramVector1);
