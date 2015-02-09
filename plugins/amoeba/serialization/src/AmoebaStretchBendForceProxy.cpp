@@ -47,9 +47,9 @@ void AmoebaStretchBendForceProxy::serialize(const void* object, SerializationNod
     SerializationNode& bonds = node.createChildNode("StretchBendAngles");
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(force.getNumStretchBends()); ii++) {
         int particle1, particle2, particle3;
-        double distanceAB, distanceCB, angle, k;
-        force.getStretchBendParameters(ii, particle1, particle2, particle3, distanceAB, distanceCB, angle, k);
-        bonds.createChildNode("StretchBendAngle").setIntProperty("p1", particle1).setIntProperty("p2", particle2).setIntProperty("p3", particle3).setDoubleProperty("dAB", distanceAB).setDoubleProperty("dCB", distanceCB).setDoubleProperty("angle", angle).setDoubleProperty("k", k);
+        double distanceAB, distanceCB, angle, k1, k2;
+        force.getStretchBendParameters(ii, particle1, particle2, particle3, distanceAB, distanceCB, angle, k1, k2);
+        bonds.createChildNode("StretchBendAngle").setIntProperty("p1", particle1).setIntProperty("p2", particle2).setIntProperty("p3", particle3).setDoubleProperty("dAB", distanceAB).setDoubleProperty("dCB", distanceCB).setDoubleProperty("angle", angle).setDoubleProperty("k1", k1).setDoubleProperty("k2", k2);
     }
 
 }
@@ -62,7 +62,7 @@ void* AmoebaStretchBendForceProxy::deserialize(const SerializationNode& node) co
         const SerializationNode& bonds = node.getChildNode("StretchBendAngles");
         for ( unsigned int ii = 0; ii < (int) bonds.getChildren().size(); ii++) {
             const SerializationNode& bond = bonds.getChildren()[ii];
-            force->addStretchBend(bond.getIntProperty("p1"), bond.getIntProperty("p2"), bond.getIntProperty("p3"),  bond.getDoubleProperty("dAB"), bond.getDoubleProperty("dCB"), bond.getDoubleProperty("angle"), bond.getDoubleProperty("k"));
+            force->addStretchBend(bond.getIntProperty("p1"), bond.getIntProperty("p2"), bond.getIntProperty("p3"),  bond.getDoubleProperty("dAB"), bond.getDoubleProperty("dCB"), bond.getDoubleProperty("angle"), bond.getDoubleProperty("k1"), bond.getDoubleProperty("k2"));
 
         }
     }

@@ -307,15 +307,16 @@ void ReferenceCalcAmoebaStretchBendForceKernel::initialize(const System& system,
     numStretchBends = force.getNumStretchBends();
     for ( int ii = 0; ii < numStretchBends; ii++) {
         int particle1Index, particle2Index, particle3Index;
-        double lengthAB, lengthCB, angle, k;
-        force.getStretchBendParameters(ii, particle1Index, particle2Index, particle3Index, lengthAB, lengthCB, angle, k);
+        double lengthAB, lengthCB, angle, k1, k2;
+        force.getStretchBendParameters(ii, particle1Index, particle2Index, particle3Index, lengthAB, lengthCB, angle, k1, k2);
         particle1.push_back( particle1Index ); 
         particle2.push_back( particle2Index ); 
         particle3.push_back( particle3Index ); 
         lengthABParameters.push_back( static_cast<RealOpenMM>(lengthAB) );
         lengthCBParameters.push_back( static_cast<RealOpenMM>(lengthCB) );
         angleParameters.push_back(    static_cast<RealOpenMM>(angle) );
-        kParameters.push_back(        static_cast<RealOpenMM>(k) );
+        k1Parameters.push_back(       static_cast<RealOpenMM>(k1) );
+        k2Parameters.push_back(       static_cast<RealOpenMM>(k2) );
     }
 }
 
@@ -324,7 +325,8 @@ double ReferenceCalcAmoebaStretchBendForceKernel::execute(ContextImpl& context, 
     vector<RealVec>& forceData = extractForces(context);
     AmoebaReferenceStretchBendForce amoebaReferenceStretchBendForce;
     RealOpenMM energy      = amoebaReferenceStretchBendForce.calculateForceAndEnergy( numStretchBends, posData, particle1, particle2, particle3,
-                                                                                      lengthABParameters, lengthCBParameters, angleParameters, kParameters, forceData );
+                                                                                      lengthABParameters, lengthCBParameters, angleParameters, k1Parameters,
+                                                                                      k2Parameters, forceData );
     return static_cast<double>(energy);
 }
 
@@ -336,14 +338,15 @@ void ReferenceCalcAmoebaStretchBendForceKernel::copyParametersToContext(ContextI
 
     for (int i = 0; i < numStretchBends; ++i) {
         int particle1Index, particle2Index, particle3Index;
-        double lengthAB, lengthCB, angle, k;
-        force.getStretchBendParameters(i, particle1Index, particle2Index, particle3Index, lengthAB, lengthCB, angle, k);
+        double lengthAB, lengthCB, angle, k1, k2;
+        force.getStretchBendParameters(i, particle1Index, particle2Index, particle3Index, lengthAB, lengthCB, angle, k1, k2);
         if (particle1Index != particle1[i] || particle2Index != particle2[i] || particle3Index != particle3[i])
             throw OpenMMException("updateParametersInContext: The set of particles in a stretch-bend has changed");
         lengthABParameters[i] = (RealOpenMM) lengthAB;
         lengthCBParameters[i] = (RealOpenMM) lengthCB;
         angleParameters[i] = (RealOpenMM) angle;
-        kParameters[i] = (RealOpenMM) k;
+        k1Parameters[i] = (RealOpenMM) k1;
+        k2Parameters[i] = (RealOpenMM) k2;
     }
 }
 

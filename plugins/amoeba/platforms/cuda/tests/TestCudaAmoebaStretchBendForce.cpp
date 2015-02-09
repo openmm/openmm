@@ -82,14 +82,14 @@ static void computeAmoebaStretchBendForce(int bondIndex,  std::vector<Vec3>& pos
                                           std::vector<Vec3>& forces, double* energy, FILE* log ) {
 
     int particle1, particle2, particle3;
-    double abBondLength, cbBondLength, angleStretchBend, kStretchBend;
+    double abBondLength, cbBondLength, angleStretchBend, kStretchBend, k2StretchBend;
 
-    amoebaStretchBendForce.getStretchBendParameters(bondIndex, particle1, particle2, particle3, abBondLength, cbBondLength, angleStretchBend, kStretchBend);
+    amoebaStretchBendForce.getStretchBendParameters(bondIndex, particle1, particle2, particle3, abBondLength, cbBondLength, angleStretchBend, kStretchBend, k2StretchBend);
     angleStretchBend *= RADIAN;
 #ifdef AMOEBA_DEBUG
     if( log ){
-        (void) fprintf( log, "computeAmoebaStretchBendForce: bond %d [%d %d %d] ab=%10.3e cb=%10.3e angle=%10.3e k=%10.3e\n", 
-                             bondIndex, particle1, particle2, particle3, abBondLength, cbBondLength, angleStretchBend, kStretchBend );
+        (void) fprintf( log, "computeAmoebaStretchBendForce: bond %d [%d %d %d] ab=%10.3e cb=%10.3e angle=%10.3e k1=%10.3e k2=%10.3e\n",
+                             bondIndex, particle1, particle2, particle3, abBondLength, cbBondLength, angleStretchBend, kStretchBend, k2StretchBend );
         (void) fflush( log );
     }
 #endif
@@ -128,9 +128,11 @@ static void computeAmoebaStretchBendForce(int bondIndex,  std::vector<Vec3>& pos
     double angle;
     if( cosine >= 1.0 ){
        angle = 0.0;
-    } else if( cosine <= -1.0 ){
+    }
+    else if( cosine <= -1.0 ){
        angle = PI_M;
-    } else {
+    }
+    else {
        angle = RADIAN*acos(cosine);
     }
  
@@ -146,12 +148,13 @@ static void computeAmoebaStretchBendForce(int bondIndex,  std::vector<Vec3>& pos
        deltaR[CBxP][ii] *= termC;
     }
  
-    double dr    = rAB - abBondLength + rCB - cbBondLength;
+    double dr1   = rAB - abBondLength;
+    double dr2   = rCB - cbBondLength;
  
     termA        = 1.0/rAB;
     termC        = 1.0/rCB;
  
-    double term  = kStretchBend;
+    double drkk = dr1 * kStretchBend + dr2 * k2StretchBend;
  
     // ---------------------------------------------------------------------------------------
  
@@ -163,8 +166,8 @@ static void computeAmoebaStretchBendForce(int bondIndex,  std::vector<Vec3>& pos
     double subForce[LastAtomIndex][3];
     double dt = angle - angleStretchBend;
     for( int jj = 0; jj < 3; jj++ ){
-        subForce[A][jj] = term*(dt*termA*deltaR[AB][jj] + dr*deltaR[ABxP][jj] );
-        subForce[C][jj] = term*(dt*termC*deltaR[CB][jj] + dr*deltaR[CBxP][jj] );
+        subForce[A][jj] = kStretchBend*dt*termA*deltaR[AB][jj] + drkk*deltaR[ABxP][jj];
+        subForce[C][jj] = k2StretchBend*dt*termC*deltaR[CB][jj] + drkk*deltaR[CBxP][jj];
         subForce[B][jj] = -( subForce[A][jj] + subForce[C][jj] );
     }
  
@@ -184,8 +187,7 @@ static void computeAmoebaStretchBendForce(int bondIndex,  std::vector<Vec3>& pos
     forces[particle3][1]       -= subForce[2][1];
     forces[particle3][2]       -= subForce[2][2];
 
-    *energy                    += term*dt*dr;
-
+    *energy                    += dt*drkk;
 #ifdef AMOEBA_DEBUG
     if( log ){
         (void) fprintf( log, "computeAmoebaStretchBendForce: angle=%10.3e dt=%10.3e dr=%10.3e\n", angle, dt, dr ); 
@@ -274,7 +276,7 @@ void testOneStretchBend( FILE* log ) {
     //double kStretchBend     = 0.750491578E-01;
     double kStretchBend     = 1.0;
 
-    amoebaStretchBendForce->addStretchBend(0, 1, 2, abLength, cbLength, angleStretchBend, kStretchBend );
+    amoebaStretchBendForce->addStretchBend(0, 1, 2, abLength, cbLength, angleStretchBend, kStretchBend, kStretchBend );
 
     system.addForce(amoebaStretchBendForce);
     Context context(system, integrator, Platform::getPlatformByName( "CUDA"));
@@ -290,7 +292,7 @@ void testOneStretchBend( FILE* log ) {
     
     // Try changing the stretch-bend parameters and make sure it's still correct.
     
-    amoebaStretchBendForce->setStretchBendParameters(0, 0, 1, 2, 1.1*abLength, 1.2*cbLength, 1.3*angleStretchBend, 1.4*kStretchBend);
+    amoebaStretchBendForce->setStretchBendParameters(0, 0, 1, 2, 1.1*abLength, 1.2*cbLength, 1.3*angleStretchBend, 1.4*kStretchBend, 1.4*kStretchBend);
     bool exceptionThrown = false;
     try {
         // This should throw an exception.
