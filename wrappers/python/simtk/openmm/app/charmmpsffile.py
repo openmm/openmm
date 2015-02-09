@@ -8,7 +8,7 @@ Structures at Stanford, funded under the NIH Roadmap for Medical Research,
 grant U54 GM072970. See https://simtk.org.  This code was originally part of
 the ParmEd program and was ported for use with OpenMM.
 
-Copyright (c) 2014 the Authors
+Copyright (c) 2014-2015 the Authors
 
 Author: Jason M. Swails
 Contributors:
@@ -1560,7 +1560,7 @@ def _box_vectors_from_lengths_angles(a, b, c, alpha, beta, gamma):
     by = b * sin(gamma)
     bz = 0.0
     cx = c * cos(beta)
-    cy = c * (cos(alpha) - cos(beta) * cos(gamma))
+    cy = c * (cos(alpha) - cos(beta) * cos(gamma)) / sin(gamma)
     cz = sqrt(c * c - cx * cx - cy * cy)
    
     # Make sure any components that are close to zero are set to zero exactly
