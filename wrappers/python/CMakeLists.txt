@@ -54,6 +54,7 @@ foreach(SUBDIR ${SUBDIRS})
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.sh"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.xml"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.pdb"
+        "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.pdbx"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.prmtop"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.prm"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.inpcrd"

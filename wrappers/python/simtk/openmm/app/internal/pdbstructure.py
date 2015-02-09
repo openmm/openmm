@@ -8,7 +8,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2013 Stanford University and the Authors.
+Portions copyright (c) 2012-2015 Stanford University and the Authors.
 Authors: Christopher M. Bruns
 Contributors: Peter Eastman
 
@@ -40,6 +40,38 @@ from .. import element
 import warnings
 import sys
 import math
+
+def computePeriodicBoxVectors(a_length, b_length, c_length, alpha, beta, gamma):
+    """Convert lengths and angles from a CRYST1 record to periodic box vectors."""
+
+    # Compute the vectors.
+
+    a = [a_length, 0, 0]
+    b = [b_length*math.cos(gamma), b_length*math.sin(gamma), 0]
+    cx = c_length*math.cos(beta)
+    cy = c_length*(math.cos(alpha)-math.cos(beta)*math.cos(gamma))/math.sin(gamma)
+    cz = math.sqrt(c_length*c_length-cx*cx-cy*cy)
+    c = [cx, cy, cz]
+
+    # If any elements are very close to 0, set them to exactly 0.
+
+    for i in range(3):
+        if abs(a[i]) < 1e-6:
+            a[i] = 0.0
+        if abs(b[i]) < 1e-6:
+            b[i] = 0.0
+        if abs(c[i]) < 1e-6:
+            c[i] = 0.0
+    a = Vec3(*a)
+    b = Vec3(*b)
+    c = Vec3(*c)
+
+    # Make sure they're in the reduced form required by OpenMM.
+
+    c = c - b*round(c[1]/b[1])
+    c = c - a*round(c[0]/a[0])
+    b = b - a*round(b[0]/a[0])
+    return (a, b, c)*unit.angstroms
 
 class PdbStructure(object):
     """
@@ -171,7 +203,13 @@ class PdbStructure(object):
                 self._current_model._current_chain._add_ter_record()
                 self._reset_residue_numbers()
             elif (pdb_line.find("CRYST1") == 0):
-                self._compute_periodic_box_vectors(pdb_line)
+                a_length = float(pdb_line[6:15])
+                b_length = float(pdb_line[15:24])
+                c_length = float(pdb_line[24:33])
+                alpha = float(pdb_line[33:40])*math.pi/180.0
+                beta = float(pdb_line[40:47])*math.pi/180.0
+                gamma = float(pdb_line[47:54])*math.pi/180.0
+                self._periodic_box_vectors = computePeriodicBoxVectors(a_length, b_length, c_length, alpha, beta, gamma)
             elif (pdb_line.find("CONECT") == 0):
                 atoms = [int(pdb_line[6:11])]
                 for pos in (11,16,21,26):
@@ -188,29 +226,6 @@ class PdbStructure(object):
             elif (pdb_line.find("MODRES") == 0):
                 self.modified_residues.append(ModifiedResidue(pdb_line[16], int(pdb_line[18:22]), pdb_line[12:15].strip(), pdb_line[24:27].strip()))
         self._finalize()
-
-    def _compute_periodic_box_vectors(self, line):
-        """Parse a CRYST1 record to compute the periodic box vectors."""
-        a_length = float(line[6:15])
-        b_length = float(line[15:24])
-        c_length = float(line[24:33])
-        alpha = float(line[33:40])*math.pi/180.0
-        beta = float(line[40:47])*math.pi/180.0
-        gamma = float(line[47:54])*math.pi/180.0
-        a = [a_length, 0, 0]
-        b = [b_length*math.cos(gamma), b_length*math.sin(gamma), 0]
-        cx = c_length*math.cos(beta)
-        cy = c_length*(math.cos(alpha)-math.cos(beta)*math.cos(gamma))
-        cz = math.sqrt(c_length*c_length-cx*cx-cy*cy)
-        c = [cx, cy, cz]
-        for i in range(3):
-            if abs(a[i]) < 1e-6:
-                a[i] = 0.0
-            if abs(b[i]) < 1e-6:
-                b[i] = 0.0
-            if abs(c[i]) < 1e-6:
-                c[i] = 0.0
-        self._periodic_box_vectors = (Vec3(*a), Vec3(*b), Vec3(*c))*unit.angstroms
 
     def _reset_atom_numbers(self):
         self._atom_numbers_are_hex = False
