@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2013 Stanford University and the Authors.
+Portions copyright (c) 2012-2015 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors:
 
@@ -33,7 +33,9 @@ __version__ = "1.0"
 
 import os
 import xml.etree.ElementTree as etree
-from simtk.unit import nanometers, sqrt
+from simtk.openmm.vec3 import Vec3
+from simtk.unit import nanometers, sqrt, is_quantity
+from copy import deepcopy
 
 class Topology(object):
     """Topology stores the topological information about a system.
@@ -55,7 +57,7 @@ class Topology(object):
         self._numResidues = 0
         self._numAtoms = 0
         self._bonds = []
-        self._unitCellDimensions = None
+        self._periodicBoxVectors = None
 
     def addChain(self):
         """Create a new Chain and add it to the Topology.
@@ -123,16 +125,48 @@ class Topology(object):
         """Iterate over all bonds (each represented as a tuple of two Atoms) in the Topology."""
         return iter(self._bonds)
 
+    def getPeriodicBoxVectors(self):
+        """Get the vectors defining the periodic box.
+
+        The return value may be None if this Topology does not represent a periodic structure."""
+        return self._periodicBoxVectors
+
+    def setPeriodicBoxVectors(self, vectors):
+        """Set the vectors defining the periodic box."""
+        if vectors is not None:
+            if not is_quantity(vectors[0][0]):
+                vectors = vectors*nanometers
+            if vectors[0][1] != 0*nanometers or vectors[0][2] != 0*nanometers:
+                raise ValueError("First periodic box vector must be parallel to x.");
+            if vectors[1][2] != 0*nanometers:
+                raise ValueError("Second periodic box vector must be in the x-y plane.");
+            if vectors[0][0] <= 0*nanometers or vectors[1][1] <= 0*nanometers or vectors[2][2] <= 0*nanometers or vectors[0][0] < 2*abs(vectors[1][0]) or vectors[0][0] < 2*abs(vectors[2][0]) or vectors[1][1] < 2*abs(vectors[2][1]):
+                raise ValueError("Periodic box vectors must be in reduced form.");
+        self._periodicBoxVectors = deepcopy(vectors)
+
     def getUnitCellDimensions(self):
         """Get the dimensions of the crystallographic unit cell.
 
         The return value may be None if this Topology does not represent a periodic structure.
         """
-        return self._unitCellDimensions
+        if self._periodicBoxVectors is None:
+            return None
+        xsize = self._periodicBoxVectors[0][0].value_in_unit(nanometers)
+        ysize = self._periodicBoxVectors[1][1].value_in_unit(nanometers)
+        zsize = self._periodicBoxVectors[2][2].value_in_unit(nanometers)
+        return Vec3(xsize, ysize, zsize)*nanometers
 
     def setUnitCellDimensions(self, dimensions):
-        """Set the dimensions of the crystallographic unit cell."""
-        self._unitCellDimensions = dimensions
+        """Set the dimensions of the crystallographic unit cell.
+
+        This method is an alternative to setPeriodicBoxVectors() for the case of a rectangular box.  It sets
+        the box vectors to be orthogonal to each other and to have the specified lengths."""
+        if dimensions is None:
+            self._periodicBoxVectors = None
+        else:
+            if is_quantity(dimensions):
+                dimensions = dimensions.value_in_unit(nanometers)
+            self._periodicBoxVectors = (Vec3(dimensions[0], 0, 0), Vec3(0, dimensions[1], 0), Vec3(0, 0, dimensions[2]))*nanometers
 
     @staticmethod
     def loadBondDefinitions(file):

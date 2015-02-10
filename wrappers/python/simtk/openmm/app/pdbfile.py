@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012 Stanford University and the Authors.
+Portions copyright (c) 2012-2015 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors:
 
@@ -40,7 +40,7 @@ from datetime import date
 from simtk.openmm import Vec3, Platform
 from simtk.openmm.app.internal.pdbstructure import PdbStructure
 from simtk.openmm.app import Topology
-from simtk.unit import nanometers, angstroms, is_quantity, norm, Quantity
+from simtk.unit import nanometers, angstroms, is_quantity, norm, Quantity, dot
 import element as elem
 try:
     import numpy
@@ -142,7 +142,7 @@ class PDBFile(object):
             self._positions.append(coords*nanometers)
         ## The atom positions read from the PDB file.  If the file contains multiple frames, these are the positions in the first frame.
         self.positions = self._positions[0]
-        self.topology.setUnitCellDimensions(pdb.get_unit_cell_dimensions())
+        self.topology.setPeriodicBoxVectors(pdb.get_periodic_box_vectors())
         self.topology.createStandardBonds()
         self.topology.createDisulfideBonds(self.positions)
         self._numpyPositions = None
@@ -250,10 +250,16 @@ class PDBFile(object):
          - file (file=stdout) A file to write the file to
         """
         print >>file, "REMARK   1 CREATED WITH OPENMM %s, %s" % (Platform.getOpenMMVersion(), str(date.today()))
-        boxSize = topology.getUnitCellDimensions()
-        if boxSize is not None:
-            size = boxSize.value_in_unit(angstroms)
-            print >>file, "CRYST1%9.3f%9.3f%9.3f  90.00  90.00  90.00 P 1           1 " % size
+        vectors = topology.getPeriodicBoxVectors()
+        if vectors is not None:
+            (a, b, c) = vectors.value_in_unit(angstroms)
+            a_length = norm(a)
+            b_length = norm(b)
+            c_length = norm(c)
+            alpha = math.acos(dot(b, c)/(b_length*c_length))*180.0/math.pi
+            beta = math.acos(dot(c, a)/(c_length*a_length))*180.0/math.pi
+            gamma = math.acos(dot(a, b)/(a_length*b_length))*180.0/math.pi
+            print >>file, "CRYST1%9.3f%9.3f%9.3f%7.2f%7.2f%7.2f P 1           1 " % (a_length, b_length, c_length, alpha, beta, gamma)
 
     @staticmethod
     def writeModel(topology, positions, file=sys.stdout, modelIndex=None):
