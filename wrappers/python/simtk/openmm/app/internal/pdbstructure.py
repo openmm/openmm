@@ -37,41 +37,10 @@ __version__ = "1.0"
 from simtk.openmm.vec3 import Vec3
 import simtk.unit as unit
 from .. import element
+from unitcell import computePeriodicBoxVectors
 import warnings
 import sys
 import math
-
-def computePeriodicBoxVectors(a_length, b_length, c_length, alpha, beta, gamma):
-    """Convert lengths and angles from a CRYST1 record to periodic box vectors."""
-
-    # Compute the vectors.
-
-    a = [a_length, 0, 0]
-    b = [b_length*math.cos(gamma), b_length*math.sin(gamma), 0]
-    cx = c_length*math.cos(beta)
-    cy = c_length*(math.cos(alpha)-math.cos(beta)*math.cos(gamma))/math.sin(gamma)
-    cz = math.sqrt(c_length*c_length-cx*cx-cy*cy)
-    c = [cx, cy, cz]
-
-    # If any elements are very close to 0, set them to exactly 0.
-
-    for i in range(3):
-        if abs(a[i]) < 1e-6:
-            a[i] = 0.0
-        if abs(b[i]) < 1e-6:
-            b[i] = 0.0
-        if abs(c[i]) < 1e-6:
-            c[i] = 0.0
-    a = Vec3(*a)
-    b = Vec3(*b)
-    c = Vec3(*c)
-
-    # Make sure they're in the reduced form required by OpenMM.
-
-    c = c - b*round(c[1]/b[1])
-    c = c - a*round(c[0]/a[0])
-    b = b - a*round(b[0]/a[0])
-    return (a, b, c)*unit.angstroms
 
 class PdbStructure(object):
     """
@@ -203,9 +172,9 @@ class PdbStructure(object):
                 self._current_model._current_chain._add_ter_record()
                 self._reset_residue_numbers()
             elif (pdb_line.find("CRYST1") == 0):
-                a_length = float(pdb_line[6:15])
-                b_length = float(pdb_line[15:24])
-                c_length = float(pdb_line[24:33])
+                a_length = float(pdb_line[6:15])*0.1
+                b_length = float(pdb_line[15:24])*0.1
+                c_length = float(pdb_line[24:33])*0.1
                 alpha = float(pdb_line[33:40])*math.pi/180.0
                 beta = float(pdb_line[40:47])*math.pi/180.0
                 gamma = float(pdb_line[47:54])*math.pi/180.0

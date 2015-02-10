@@ -36,7 +36,7 @@ import sys
 import math
 from simtk.openmm import Vec3
 from simtk.openmm.app.internal.pdbx.reader.PdbxReader import PdbxReader
-from simtk.openmm.app.internal.pdbstructure import computePeriodicBoxVectors
+from simtk.openmm.app.internal.unitcell import computePeriodicBoxVectors
 from simtk.openmm.app import Topology
 from simtk.unit import nanometers, angstroms, is_quantity, norm, Quantity
 import element as elem
@@ -147,7 +147,7 @@ class PDBxFile(object):
         cell = block.getObj('cell')
         if cell is not None and cell.getRowCount() > 0:
             row = cell.getRow(0)
-            (a, b, c) = [float(row[cell.getAttributeIndex(attribute)]) for attribute in ('length_a', 'length_b', 'length_c')]
+            (a, b, c) = [float(row[cell.getAttributeIndex(attribute)])*0.1 for attribute in ('length_a', 'length_b', 'length_c')]
             (alpha, beta, gamma) = [float(row[cell.getAttributeIndex(attribute)])*math.pi/180.0 for attribute in ('angle_alpha', 'angle_beta', 'angle_gamma')]
             self.topology.setPeriodicBoxVectors(computePeriodicBoxVectors(a, b, c, alpha, beta, gamma))
 

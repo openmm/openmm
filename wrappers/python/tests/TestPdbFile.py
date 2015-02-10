@@ -3,6 +3,7 @@ from simtk.openmm.app import *
 from simtk.openmm import *
 from simtk.unit import *
 import simtk.openmm.app.element as elem
+import cStringIO
 
 class TestPdbFile(unittest.TestCase):
     """Test the PDB file parser"""
@@ -38,6 +39,26 @@ class TestPdbFile(unittest.TestCase):
                 self.assertEqual(elem.sodium, atom.element)
                 self.assertEqual('Na', atom.name)
                 self.assertEqual('Na', atom.residue.name)
+
+    def test_WriteFile(self):
+        """Write a file, read it back, and make sure it matches the original."""
+        pdb1 = PDBFile('systems/triclinic.pdb')
+        output = cStringIO.StringIO()
+        PDBFile.writeFile(pdb1.topology, pdb1.positions, output)
+        input = cStringIO.StringIO(output.getvalue())
+        pdb2 = PDBFile(input)
+        output.close();
+        input.close();
+        self.assertEqual(len(pdb2.positions), 8)
+        for (p1, p2) in zip(pdb1.positions, pdb2.positions):
+            self.assertVecAlmostEqual(p1, p2)
+        for (v1, v2) in zip(pdb1.topology.getPeriodicBoxVectors(), pdb2.topology.getPeriodicBoxVectors()):
+            self.assertVecAlmostEqual(v1, v2, 1e-4)
+        self.assertVecAlmostEqual(pdb1.topology.getUnitCellDimensions(), pdb2.topology.getUnitCellDimensions(), 1e-4)
+        for atom1, atom2 in zip(pdb1.topology.atoms(), pdb2.topology.atoms()):
+            self.assertEqual(atom1.element, atom2.element)
+            self.assertEqual(atom1.name, atom2.name)
+            self.assertEqual(atom1.residue.name, atom2.residue.name)
 
     def assertVecAlmostEqual(self, p1, p2, tol=1e-7):
         unit = p1.unit
