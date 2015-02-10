@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2013 Stanford University and the Authors.
+Portions copyright (c) 2012-2015 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors:
 
@@ -94,7 +94,7 @@ class Modeller(object):
         # Copy over the existing model.
 
         newTopology = Topology()
-        newTopology.setUnitCellDimensions(self.topology.getUnitCellDimensions())
+        newTopology.setPeriodicBoxVectors(self.topology.getPeriodicBoxVectors())
         newAtoms = {}
         newPositions = []*nanometer
         for chain in self.topology.chains():
@@ -140,7 +140,7 @@ class Modeller(object):
          - toDelete (list) a list of Atoms, Residues, Chains, and bonds (specified as tuples of Atoms) to delete
         """
         newTopology = Topology()
-        newTopology.setUnitCellDimensions(self.topology.getUnitCellDimensions())
+        newTopology.setPeriodicBoxVectors(self.topology.getPeriodicBoxVectors())
         newAtoms = {}
         newPositions = []*nanometer
         deleteSet = set(toDelete)
@@ -189,7 +189,7 @@ class Modeller(object):
         else:
             raise ValueError('Unknown water model: %s' % model)
         newTopology = Topology()
-        newTopology.setUnitCellDimensions(self.topology.getUnitCellDimensions())
+        newTopology.setPeriodicBoxVectors(self.topology.getPeriodicBoxVectors())
         newAtoms = {}
         newPositions = []*nanometer
         for chain in self.topology.chains():
@@ -240,7 +240,7 @@ class Modeller(object):
         self.topology = newTopology
         self.positions = newPositions
 
-    def addSolvent(self, forcefield, model='tip3p', boxSize=None, padding=None, positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*molar):
+    def addSolvent(self, forcefield, model='tip3p', boxSize=None, boxVectors=None, padding=None, positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*molar):
         """Add solvent (both water and ions) to the model to fill a rectangular box.
 
         The algorithm works as follows:
@@ -250,15 +250,17 @@ class Modeller(object):
            randomly selecting a water molecule and replacing it with the ion.
         4. Ion pairs are added to give the requested total ionic strength.
 
-        The box size can be specified in three ways.  First, you can explicitly give a box size to use.  Alternatively, you can
+        The box size can be specified in four ways.  First, you can explicitly give the vectors defining the periodic box to
+        use.  Alternatively, for a rectangular box you can simply give the dimensions of the unit cell.  Third, you can
         give a padding distance.  The largest dimension of the solute (along the x, y, or z axis) is determined, and a cubic
-        box of size (largest dimension)+2*padding is used.  Finally, if neither a box size nor a padding distance is specified,
-        the existing Topology's unit cell dimensions are used.
+        box of size (largest dimension)+2*padding is used.  Finally, if neither box vectors, box size, nor padding distance is specified,
+        the existing Topology's box vectors are used.
 
         Parameters:
          - forcefield (ForceField) the ForceField to use for determining van der Waals radii and atomic charges
          - model (string='tip3p') the water model to use.  Supported values are 'tip3p', 'spce', 'tip4pew', and 'tip5p'.
          - boxSize (Vec3=None) the size of the box to fill with water
+         - boxVectors (tuple of Vec3=None) the vectors defining the periodic box to fill with water
          - padding (distance=None) the padding distance to use
          - positiveIon (string='Na+') the type of positive ion to add.  Allowed values are 'Cs+', 'K+', 'Li+', 'Na+', and 'Rb+'
          - negativeIon (string='Cl-') the type of negative ion to add.  Allowed values are 'Cl-', 'Br-', 'F-', and 'I-'. Be aware
@@ -268,18 +270,28 @@ class Modeller(object):
         """
         # Pick a unit cell size.
 
-        if boxSize is not None:
+        if boxVectors is not None:
+            if is_quantity(boxVectors[0]):
+                boxVectors = (boxVectors[0].value_in_unit(nanometer), boxVectors[1].value_in_unit(nanometer), boxVectors[2].value_in_unit(nanometer))
+            box = Vec3(boxVectors[0][0], boxVectors[1][1], boxVectors[2][2])
+            vectors = boxVectors
+        elif boxSize is not None:
             if is_quantity(boxSize):
                 boxSize = boxSize.value_in_unit(nanometer)
-            box = Vec3(boxSize[0], boxSize[1], boxSize[2])*nanometer
+            box = Vec3(boxSize[0], boxSize[1], boxSize[2])
+            vectors = (Vec3(boxSize[0], 0, 0), Vec3(0, boxSize[1], 0), Vec3(0, 0, boxSize[2]))
         elif padding is not None:
+            if is_quantity(padding):
+                padding = padding.value_in_unit(nanometer)
             maxSize = max(max((pos[i] for pos in self.positions))-min((pos[i] for pos in self.positions)) for i in range(3))
+            maxSize = maxSize.value_in_unit(nanometer)
             box = (maxSize+2*padding)*Vec3(1, 1, 1)
+            vectors = (Vec3(maxSize+2*padding, 0, 0), Vec3(0, maxSize+2*padding, 0), Vec3(0, 0, maxSize+2*padding))
         else:
-            box = self.topology.getUnitCellDimensions()
+            box = self.topology.getUnitCellDimensions().value_in_unit(nanometer)
+            vectors = self.topology.getPeriodicBoxVectors().value_in_unit(nanometer)
             if box is None:
-                raise ValueError('Neither the box size nor padding was specified, and the Topology does not define unit cell dimensions')
-        box = box.value_in_unit(nanometer)
+                raise ValueError('Neither the box size, box vectors, nor padding was specified, and the Topology does not define unit cell dimensions')
         invBox = Vec3(1.0/box[0], 1.0/box[1], 1.0/box[2])
 
         # Identify the ion types.
@@ -331,7 +343,7 @@ class Modeller(object):
         # Copy the solute over.
 
         newTopology = Topology()
-        newTopology.setUnitCellDimensions(box)
+        newTopology.setPeriodicBoxVectors(vectors*nanometer)
         newAtoms = {}
         newPositions = []*nanometer
         for chain in self.topology.chains():
@@ -378,7 +390,9 @@ class Modeller(object):
 
         def periodicDistance(pos1, pos2):
             delta = pos1-pos2
-            delta = [delta[i]-floor(delta[i]*invBox[i]+0.5)*box[i] for i in range(3)]
+            delta -= vectors[2]*floor(delta[2]*invBox[2]+0.5)
+            delta -= vectors[1]*floor(delta[1]*invBox[1]+0.5)
+            delta -= vectors[0]*floor(delta[0]*invBox[0]+0.5)
             return norm(delta)
 
         # Find the list of water molecules to add.
@@ -472,7 +486,6 @@ class Modeller(object):
                     for atom2 in molAtoms:
                         if atom2.element == elem.hydrogen:
                             newTopology.addBond(atom1, atom2)
-        newTopology.setUnitCellDimensions(box*nanometer)
         self.topology = newTopology
         self.positions = newPositions
 
@@ -610,7 +623,7 @@ class Modeller(object):
         # Loop over residues.
 
         newTopology = Topology()
-        newTopology.setUnitCellDimensions(self.topology.getUnitCellDimensions())
+        newTopology.setPeriodicBoxVectors(self.topology.getPeriodicBoxVectors())
         newAtoms = {}
         newPositions = []*nanometer
         newIndices = []
@@ -883,7 +896,7 @@ class Modeller(object):
         # Create the new Topology.
 
         newTopology = Topology()
-        newTopology.setUnitCellDimensions(self.topology.getUnitCellDimensions())
+        newTopology.setPeriodicBoxVectors(self.topology.getPeriodicBoxVectors())
         newAtoms = {}
         newPositions = []*nanometer
         for chain in self.topology.chains():
