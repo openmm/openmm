@@ -572,7 +572,7 @@ with the name :file:`simulateGromacs.py`.
         from sys import stdout
 
         gro = GromacsGroFile('input.gro')
-        top = GromacsTopFile('input.top', unitCellDimensions=gro.getUnitCellDimensions(),
+        top = GromacsTopFile('input.top', periodicBoxVectors=gro.getPeriodicBoxVectors(),
                 includeDir='/usr/local/gromacs/share/gromacs/top')
         system = top.createSystem(nonbondedMethod=PME, nonbondedCutoff=1*nanometer,
                 constraints=HBonds)
@@ -593,10 +593,10 @@ This script is nearly identical to the previous one, just replacing
 :class:`AmberInpcrdFile` and :class:`AmberPrmtopFile` with :class:`GromacsGroFile` and :class:`GromacsTopFile`.
 Note that when we create the :class:`GromacsTopFile`, we specify values for two extra
 options.  First, we specify
-:code:`unitCellDimensions=gro.getUnitCellDimensions()`\ .  Unlike OpenMM and
-AMBER, which can store periodic unit cell dimensions with the topology, Gromacs
-only stores them with the coordinates.  To let :class:`GromacsTopFile` create a :class:`Topology`
-object, we therefore need to tell it the unit cell dimensions that were loaded
+:code:`periodicBoxVectors=gro.getPeriodicBoxVectors()`\ .  Unlike OpenMM and
+AMBER, which can store periodic unit cell information with the topology, Gromacs
+only stores it with the coordinates.  To let :class:`GromacsTopFile` create a :class:`Topology`
+object, we therefore need to tell it the periodic box vectors that were loaded
 from the :file:`gro` file.  You only need to do this if you are simulating a periodic
 system.  For implicit solvent simulations, it usually can be omitted.
 

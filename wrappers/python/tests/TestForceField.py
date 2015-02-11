@@ -20,7 +20,7 @@ class TestForceField(unittest.TestCase):
         self.topology1 = self.pdb1.topology
         self.topology1.setUnitCellDimensions(Vec3(2, 2, 2))
 
-        # alalnine dipeptide with implicit water
+        # alanine dipeptide with implicit water
         self.pdb2 = PDBFile('systems/alanine-dipeptide-implicit.pdb')
         self.forcefield2 = ForceField('amber99sb.xml', 'amber99_obc.xml')
 
@@ -185,6 +185,18 @@ class TestForceField(unittest.TestCase):
         ff2 = ForceField('tip3p.xml')
         system2 = ff2.createSystem(modeller.topology)
         self.assertEqual(XmlSerializer.serialize(system1), XmlSerializer.serialize(system2))
+
+    def test_PeriodicBoxVectors(self):
+        """Test setting the periodic box vectors."""
+
+        vectors = (Vec3(5, 0, 0), Vec3(-1.5, 4.5, 0), Vec3(0.4, 0.8, 7.5))*nanometers
+        self.pdb1.topology.setPeriodicBoxVectors(vectors)
+        self.assertEqual(Vec3(5, 4.5, 7.5)*nanometers, self.pdb1.topology.getUnitCellDimensions())
+        system = self.forcefield1.createSystem(self.pdb1.topology)
+        for i in range(3):
+            self.assertEqual(vectors[i], self.pdb1.topology.getPeriodicBoxVectors()[i])
+            self.assertEqual(vectors[i], system.getDefaultPeriodicBoxVectors()[i])
+        
 
 class AmoebaTestForceField(unittest.TestCase):
     """Test the ForceField.createSystem() method with the AMOEBA forcefield."""

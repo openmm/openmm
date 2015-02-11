@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -37,8 +37,6 @@
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/windowsExport.h"
 #include <iosfwd>
-
-class TiXmlElement;
 
 namespace OpenMM {
 
@@ -77,10 +75,10 @@ public:
         return reinterpret_cast<T*>(deserializeStream(stream));
     }
 private:
+    class StreamReader;
     static void serialize(const SerializationNode& node, std::ostream& stream);
     static void* deserializeStream(std::istream& stream);
     static void encodeNode(const SerializationNode& node, std::ostream& stream, int depth);
-    static void decodeNode(SerializationNode& node, const TiXmlElement& element);
 };
 
 } // namespace OpenMM
