@@ -820,17 +820,7 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
         # System is periodic.
         # Set periodic box vectors for periodic system
         (boxBeta, boxX, boxY, boxZ) = prmtop.getBoxBetaAndDimensions()
-        boxBeta = boxBeta.value_in_unit(units.degrees)
-        boxX = boxX.value_in_unit(units.angstroms)
-        boxY = boxY.value_in_unit(units.angstroms)
-        boxZ = boxZ.value_in_unit(units.angstroms)
-        tmp = [[0.0, 0.0, 0.0],[0.0, 0.0, 0.0],[0.0, 0.0, 0.0]]
-        _box_vectors_from_lengths_angles([boxX, boxY, boxZ],
-                                         [boxBeta, boxBeta, boxBeta],
-                                         tmp)
-        xVec = units.Quantity(tmp[0], units.angstroms)
-        yVec = units.Quantity(tmp[1], units.angstroms)
-        zVec = units.Quantity(tmp[2], units.angstroms)
+        xVec, yVec, zVec = computePeriodicBoxVectors(boxX, boxY, boxZ, boxBeta, boxBeta, boxBeta)
         system.setDefaultPeriodicBoxVectors(xVec, yVec, zVec)
 
         # Set cutoff.
@@ -1286,10 +1276,10 @@ class AmberAsciiRestart(object):
             except (IndexError, ValueError):
                 raise ValueError('Could not parse box line in %s' %
                                  self.filename)
-            lengths = tmp[:3]
-            angles = tmp[3:]
-            _box_vectors_from_lengths_angles(lengths, angles, boxVectors)
-            self.boxVectors = [units.Quantity(Vec3(*x), units.angstrom) for x in boxVectors]
+            lengths = tmp[:3] * units.angstroms
+            angles = tmp[3:] * units.degrees
+            self.boxVectors = computePeriodicBoxVectors(lengths[0], lengths[1],
+                    lengths[2], angles[0], angles[1], angles[2])
 
 class AmberNetcdfRestart(object):
     """
@@ -1360,11 +1350,12 @@ class AmberNetcdfRestart(object):
             if ('cell_lengths' in ncfile.variables and
                 'cell_angles' in ncfile.variables):
                 self.boxVectors = np.zeros((3,3), np.float32)
-                _box_vectors_from_lengths_angles(
-                        ncfile.variables['cell_lengths'][:],
-                        ncfile.variables['cell_angles'][:],
-                        self.boxVectors,
-                )
+                leng = units.Quantity(ncfile.variables['cell_lengths'][:],
+                        units.angstroms)
+                angl = units.Quantity(ncfile.variables['cell_angles'][:],
+                        units.degrees)
+                self.boxVectors = computePeriodicBoxVectors(leng[0], leng[1],
+                        leng[2], angl[0], angl[1], angl[2])
             if 'time' in ncfile.variables:
                 self.time = ncfile.variables['time'].getValue()
         finally:
@@ -1375,51 +1366,17 @@ class AmberNetcdfRestart(object):
             self.coordinates = [Vec3(*x) for x in self.coordinates]
             if self.velocities is not None:
                 self.velocities = [Vec3(*x) for x in self.velocities]
+        else:
             if self.boxVectors is not None:
-                self.boxVectors = [Vec3(*x) for x in self.boxVectors]
+                self.boxVectors = np.asarray(self.boxVectors.value_in_unit(units.nanometers))
+                self.boxVectors = units.Quantity(self.boxVectors, units.nanometers)
 
         # Now add the units
         self.coordinates = units.Quantity(self.coordinates, units.angstroms)
         if self.velocities is not None:
             self.velocities = units.Quantity(self.velocities,
                                              units.angstroms/units.picoseconds)
-        if self.boxVectors is not None:
-            self.boxVectors = [units.Quantity(x, units.angstroms) for x in self.boxVectors]
         self.time = units.Quantity(self.time, units.picosecond)
-
-def _box_vectors_from_lengths_angles(lengths, angles, boxVectors):
-    """
-    Converts lengths and angles into a series of box vectors and modifies
-    boxVectors in-place (it must be a mutable sequence)
-
-    Parameters
-    ----------
-    lengths : 3-element array of floats
-        Lengths of the 3 periodic box vectors
-    angles : 3-element array of floats
-        Angles (in degrees) between the 3 periodic box vectors
-    boxVectors : mutable 3x3 sequence
-    """
-    alpha = angles[0] * pi / 180.0
-    beta = angles[1] * pi / 180.0
-    gamma = angles[2] * pi / 180.0
-
-    boxVectors[0][0] = lengths[0]
-
-    boxVectors[1][0] = lengths[1] * cos(gamma)
-    boxVectors[1][1] = lengths[1] * sin(gamma)
-
-    boxVectors[2][0] = cx = lengths[2] * cos(beta)
-    boxVectors[2][1] = cy = lengths[2] * (cos(alpha) - cos(beta) * cos(gamma))
-    boxVectors[2][2] = sqrt(lengths[2]*lengths[2] - cx*cx - cy*cy)
-
-    boxVectors[0][1] = boxVectors[0][2] = boxVectors[1][2] = 0.0
-
-    # Now make sure any vector close to zero is zero exactly
-    for i in range(3):
-        for j in range(3):
-            if abs(boxVectors[i][j]) < TINY:
-                boxVectors[i][j] = 0.0
 
 def readAmberCoordinates(filename, asNumpy=False):
     """

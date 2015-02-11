@@ -39,8 +39,16 @@ import math
 def computePeriodicBoxVectors(a_length, b_length, c_length, alpha, beta, gamma):
     """Convert lengths and angles to periodic box vectors.
     
-    Lengths should be given in nanometers and angles in radians.
+    Lengths should be given in nanometers and angles in radians (or as Quantity
+    instances)
     """
+
+    if u.is_quantity(a_length): a_length = a_length.value_in_unit(u.nanometers)
+    if u.is_quantity(b_length): a_length = a_length.value_in_unit(u.nanometers)
+    if u.is_quantity(c_length): a_length = a_length.value_in_unit(u.nanometers)
+    if u.is_quantity(alpha): alpha = alpha.value_in_unit(u.radians)
+    if u.is_quantity(beta): beta = beta.value_in_unit(u.radians)
+    if u.is_quantity(gamma): gamma = gamma.value_in_unit(u.radians)
 
     # Compute the vectors.
 
