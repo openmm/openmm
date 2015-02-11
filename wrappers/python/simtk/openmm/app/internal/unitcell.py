@@ -32,15 +32,23 @@ __author__ = "Peter Eastman"
 __version__ = "1.0"
 
 from simtk.openmm import Vec3
-from simtk.unit import nanometers, is_quantity, norm, dot
+from simtk.unit import nanometers, is_quantity, norm, dot, radians
 import math
 
 
 def computePeriodicBoxVectors(a_length, b_length, c_length, alpha, beta, gamma):
     """Convert lengths and angles to periodic box vectors.
     
-    Lengths should be given in nanometers and angles in radians.
+    Lengths should be given in nanometers and angles in radians (or as Quantity
+    instances)
     """
+
+    if is_quantity(a_length): a_length = a_length.value_in_unit(nanometers)
+    if is_quantity(b_length): b_length = b_length.value_in_unit(nanometers)
+    if is_quantity(c_length): c_length = c_length.value_in_unit(nanometers)
+    if is_quantity(alpha): alpha = alpha.value_in_unit(radians)
+    if is_quantity(beta): beta = beta.value_in_unit(radians)
+    if is_quantity(gamma): gamma = gamma.value_in_unit(radians)
 
     # Compute the vectors.
 
@@ -76,8 +84,10 @@ def computeLengthsAndAngles(periodicBoxVectors):
 
     Lengths are returned in nanometers and angles in radians.
     """
-
-    (a, b, c) = vectors.value_in_unit(nanometers)
+    if is_quantity(periodicBoxVectors):
+        (a, b, c) = vectors.value_in_unit(nanometers)
+    else:
+        a, b, c = vectors
     a_length = norm(a)
     b_length = norm(b)
     c_length = norm(c)

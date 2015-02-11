@@ -8,7 +8,7 @@ Structures at Stanford, funded under the NIH Roadmap for Medical Research,
 grant U54 GM072970. See https://simtk.org.  This code was originally part of
 the ParmEd program and was ported for use with OpenMM.
 
-Copyright (c) 2014 the Authors
+Copyright (c) 2014-2015 the Authors
 
 Author: Jason M. Swails
 Contributors:
@@ -44,6 +44,7 @@ from simtk.openmm.app import (forcefield as ff, Topology, element)
 from simtk.openmm.app.amberprmtopfile import HCT, OBC1, OBC2, GBn, GBn2
 from simtk.openmm.app.internal.customgbforces import (GBSAHCTForce,
                 GBSAOBC1Force, GBSAOBC2Force, GBSAGBnForce, GBSAGBn2Force, convertParameters)
+from simtk.openmm.app.internal.unitcell import computePeriodicBoxVectors
 # CHARMM imports
 from simtk.openmm.app.internal.charmm.topologyobjects import (
                 ResidueList, AtomList, TrackedList, Bond, Angle, Dihedral,
@@ -744,7 +745,7 @@ class CharmmPsfFile(object):
         Parameters:
             - a, b, c (floats) : Lengths of the periodic cell
             - alpha, beta, gamma (floats, optional) : Angles between the
-                periodic cells.
+                periodic cell vectors.
         """
         try:
             # Since we are setting the box, delete the cached box lengths if we
@@ -752,8 +753,7 @@ class CharmmPsfFile(object):
             del self._boxLengths
         except AttributeError:
             pass
-        self.box_vectors = _box_vectors_from_lengths_angles(a, b, c,
-                                                            alpha, beta, gamma)
+        self.box_vectors = computePeriodicBoxVectors(a, b, c, alpha, beta, gamma)
         # If we already have a _topology instance, then we have possibly changed
         # the existence of box information (whether or not this is a periodic
         # system), so delete any cached reference to a topology so it's
@@ -1522,58 +1522,6 @@ class CharmmPsfFile(object):
     def deleteCmap(self):
         """ Deletes the CMAP terms from the CHARMM PSF """
         self.cmap_list = TrackedList()
-
-def _box_vectors_from_lengths_angles(a, b, c, alpha, beta, gamma):
-    """
-    This method takes the lengths and angles from a unit cell and creates unit
-    cell vectors.
-
-    Parameters:
-        - a (unit, dimension length): Length of the first vector
-        - b (unit, dimension length): Length of the second vector
-        - c (unit, dimension length): Length of the third vector
-        - alpha (float): Angle between b and c in degrees
-        - beta (float): Angle between a and c in degrees
-        - gamma (float): Angle between a and b in degrees
-
-    Returns:
-        Tuple of box vectors (as Vec3 instances)
-   """
-    if not (u.is_quantity(a) and u.is_quantity(b) and u.is_quantity(c)):
-        raise TypeError('a, b, and c must be units of dimension length')
-    if u.is_quantity(alpha): alpha = alpha.value_in_unit(u.degree)
-    if u.is_quantity(beta): beta = beta.value_in_unit(u.degree)
-    if u.is_quantity(gamma): gamma = gamma.value_in_unit(u.degree)
-    a = a.value_in_unit(u.angstrom)
-    b = b.value_in_unit(u.angstrom)
-    c = c.value_in_unit(u.angstrom)
-
-    if alpha <= 2 * pi and beta <= 2 * pi and gamma <= 2 * pi:
-        raise ValueError('box angles must be given in degrees')
-
-    alpha *= pi / 180
-    beta *= pi / 180
-    gamma *= pi / 180
-
-    av = Vec3(a, 0.0, 0.0) * u.angstrom
-    bx = b * cos(gamma)
-    by = b * sin(gamma)
-    bz = 0.0
-    cx = c * cos(beta)
-    cy = c * (cos(alpha) - cos(beta) * cos(gamma))
-    cz = sqrt(c * c - cx * cx - cy * cy)
-   
-    # Make sure any components that are close to zero are set to zero exactly
-    if abs(bx) < TINY: bx = 0.0
-    if abs(by) < TINY: by = 0.0
-    if abs(cx) < TINY: cx = 0.0
-    if abs(cy) < TINY: cy = 0.0
-    if abs(cz) < TINY: cz = 0.0
-
-    bv = Vec3(bx, by, bz) * u.angstrom
-    cv = Vec3(cx, cy, cz) * u.angstrom
-
-    return (av, bv, cv)
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 

@@ -39,6 +39,7 @@ import forcefield as ff
 import element as elem
 import simtk.unit as unit
 import simtk.openmm as mm
+from simtk.openmm.app.internal.unitcell import computePeriodicBoxVectors
 
 # Enumerated values for implicit solvent model
 
@@ -141,7 +142,8 @@ class AmberPrmtopFile(object):
         # Set the periodic box size.
 
         if prmtop.getIfBox():
-            top.setUnitCellDimensions(tuple(x.value_in_unit(unit.nanometer) for x in prmtop.getBoxBetaAndDimensions()[1:4])*unit.nanometer)
+            box = prmtop.getBoxBetaAndDimensions()
+            top.setPeriodicBoxVectors(computePeriodicBoxVectors(*(box[1:4] + box[0:1]*3)))
 
     def createSystem(self, nonbondedMethod=ff.NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
                      constraints=None, rigidWater=True, implicitSolvent=None,
