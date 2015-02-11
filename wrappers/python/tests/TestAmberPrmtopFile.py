@@ -9,6 +9,7 @@ prmtop1 = AmberPrmtopFile('systems/alanine-dipeptide-explicit.prmtop')
 prmtop2 = AmberPrmtopFile('systems/alanine-dipeptide-implicit.prmtop')
 prmtop3 = AmberPrmtopFile('systems/ff14ipq.parm7')
 prmtop4 = AmberPrmtopFile('systems/Mg_water.prmtop')
+prmtop5 = AmberPrmtopFile('systems/tz2.truncoct.parm7')
 inpcrd3 = AmberInpcrdFile('systems/ff14ipq.rst7')
 inpcrd4 = AmberInpcrdFile('systems/Mg_water.inpcrd')
 
@@ -229,7 +230,32 @@ class TestAmberPrmtopFile(unittest.TestCase):
         # Make sure the energy is relatively close to the value we get with
         # Amber using this force field.
         self.assertAlmostEqual(-7307.2735621/ene, 1, places=3)
-    
+
+    def test_triclinicParm(self):
+        """ Check that triclinic unit cells work correctly """
+        system = prmtop5.createSystem(nonbondedMethod=PME)
+        refa = Vec3(4.48903851, 0.0, 0.0) * nanometer
+        refb = Vec3(-1.4963460492639706, 4.232306137924705, 0.0) * nanometer
+        refc = Vec3(-1.4963460492639706, -2.116152812842565, 3.6652847799064165) * nanometer
+        a, b, c = system.getDefaultPeriodicBoxVectors()
+        la = norm(a)
+        lb = norm(b)
+        lc = norm(c)
+        diffa = a - refa
+        diffb = b - refb
+        diffc = c - refc
+        self.assertAlmostEqual(norm(diffa)/nanometers, 0)
+        self.assertAlmostEqual(norm(diffb)/nanometers, 0)
+        self.assertAlmostEqual(norm(diffc)/nanometers, 0)
+        self.assertAlmostEqual(dot(a, b)/la/lb, cos(109.4712190*degrees))
+        self.assertAlmostEqual(dot(a, c)/la/lc, cos(109.4712190*degrees))
+        self.assertAlmostEqual(dot(c, b)/lc/lb, cos(109.4712190*degrees))
+        self.assertAlmostEqual(la/nanometers, 4.48903851)
+        self.assertAlmostEqual(lb/nanometers, 4.48903851)
+        self.assertAlmostEqual(lc/nanometers, 4.48903851)
+        # Now make sure that the context builds correctly; then we can bail
+        self.assertTrue(Context(system, VerletIntegrator(1*femtoseconds)))
+
     def test_ImplicitSolventForces(self):
         """Compute forces for different implicit solvent types, and compare them to ones generated with a previous version of OpenMM to ensure they haven't changed."""
         

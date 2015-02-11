@@ -709,9 +709,6 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
     if prmtop.getIfPert()>0:
         raise Exception("perturbation not currently supported")
 
-    if prmtop.getIfBox()>1:
-        raise Exception("only standard periodic boxes are currently supported")
-
     if prmtop.has_scee_scnb and (scee is not None or scnb is not None):
         warnings.warn("1-4 scaling parameters in topology file are being ignored. "
             "This is not recommended unless you know what you are doing.")

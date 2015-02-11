@@ -60,5 +60,29 @@ class TestAmberInpcrdFile(unittest.TestCase):
         self.assertTrue(inpcrd.boxVectors is None)
         self.assertTrue(inpcrd.velocities is None)
 
+    def test_CrdBoxTruncoct(self):
+        # Check that the box vectors come out correct.
+        inpcrd = AmberInpcrdFile('systems/tz2.truncoct.rst7')
+        ac = Vec3(42.4388485, 0.0, 0.0) * angstroms
+        bc = Vec3(-14.146281691908937, 40.011730483685835, 0.0) * angstroms
+        cc = Vec3(-14.146281691908937, -20.0058628205162, 34.651176446201672) * angstroms
+        a, b, c = inpcrd.getBoxVectors()
+        diffa = ac - a
+        diffb = bc - b
+        diffc = cc - c
+        self.assertAlmostEqual(norm(diffa)/angstroms, 0)
+        self.assertAlmostEqual(norm(diffb)/angstroms, 0)
+        self.assertAlmostEqual(norm(diffc)/angstroms, 0)
+        # Make sure angles and lengths come out about right
+        la = norm(a).in_units_of(angstroms)
+        lb = norm(b).in_units_of(angstroms)
+        lc = norm(c).in_units_of(angstroms)
+        self.assertAlmostEqual(la/angstroms, 42.4388485, 6)
+        self.assertAlmostEqual(lb/angstroms, 42.4388485, 6)
+        self.assertAlmostEqual(lc/angstroms, 42.4388485, 6)
+        self.assertAlmostEqual(dot(a,b)/la/lb, cos(109.4712190*degrees), 6)
+        self.assertAlmostEqual(dot(a,c)/la/lc, cos(109.4712190*degrees), 6)
+        self.assertAlmostEqual(dot(b,c)/lc/lb, cos(109.4712190*degrees), 6)
+
 if __name__ == '__main__':
     unittest.main()
