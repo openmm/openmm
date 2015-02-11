@@ -52,6 +52,7 @@ except:
 import simtk.unit as units
 import simtk.openmm
 from simtk.openmm.app import element as elem
+from simtk.openmm.app.internal.unitcell import computePeriodicBoxVectors
 from simtk.openmm.vec3 import Vec3
 import customgbforces as customgb
 
@@ -691,7 +692,6 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
     >>> system = readAmberSystem(prmtop_filename)
 
     """
-
     if prmtop_filename is None and prmtop_loader is None:
         raise Exception("Must specify a filename or loader")
     if prmtop_filename is not None and prmtop_loader is not None:
