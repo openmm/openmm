@@ -26,8 +26,8 @@ namespace asmjit {
 
 Context::Context(Compiler* compiler) :
   _compiler(compiler),
-  _varMapToVaListOffset(0),
-  _baseZone(8192 - kZoneOverhead) {
+  _baseZone(8192 - kZoneOverhead),
+  _varMapToVaListOffset(0) {
 
   Context::reset();
 }
@@ -217,7 +217,7 @@ Error Context::resolveCellOffsets() {
   // Vars - Allocated according to alignment/width.
   while (varCell != NULL) {
     uint32_t size = varCell->getSize();
-    uint32_t offset;
+    uint32_t offset = 0;
 
     switch (size) {
       case  1: offset = pos1 ; pos1  += 1 ; break;
@@ -234,13 +234,13 @@ Error Context::resolveCellOffsets() {
     varCell = varCell->_next;
   }
 
-  // Stack - Allocated according to alignment and width.
+  // Stack - Allocated according to alignment/width.
   while (stackCell != NULL) {
     uint32_t size = stackCell->getSize();
     uint32_t alignment = stackCell->getAlignment();
     uint32_t offset;
 
-    // Try to fill the gap between variables / stack first.
+    // Try to fill the gap between variables/stack first.
     if (size <= gapSize && alignment <= gapAlignment) {
       offset = gapPos;
 

@@ -26,11 +26,11 @@ namespace asmjit {
 //! \{
 
 // ============================================================================
-// [asmjit::kLoggerOption]
+// [asmjit::LoggerOption]
 // ============================================================================
 
 //! Logger options.
-ASMJIT_ENUM(kLoggerOption) {
+ASMJIT_ENUM(LoggerOption) {
   //! Whether to output instructions also in binary form.
   kLoggerOptionBinaryForm = 0,
 
@@ -44,11 +44,11 @@ ASMJIT_ENUM(kLoggerOption) {
 };
 
 // ============================================================================
-// [asmjit::kLoggerStyle]
+// [asmjit::LoggerStyle]
 // ============================================================================
 
 //! Logger style.
-ASMJIT_ENUM(kLoggerStyle) {
+ASMJIT_ENUM(LoggerStyle) {
   kLoggerStyleDefault = 0,
   kLoggerStyleDirective = 1,
   kLoggerStyleLabel = 2,
@@ -133,7 +133,7 @@ struct ASMJIT_VCLASS Logger {
   // [Members]
   // --------------------------------------------------------------------------
 
-  //! Options, see `kLoggerOption`.
+  //! Options, see \ref LoggerOption.
   uint32_t _options;
 
   //! Indentation.
@@ -165,11 +165,15 @@ struct ASMJIT_VCLASS FileLogger : public Logger {
   //! Get `FILE*` stream.
   //!
   //! \note Return value can be `NULL`.
-  ASMJIT_INLINE FILE* getStream() const { return _stream; }
+  ASMJIT_INLINE FILE* getStream() const {
+    return _stream;
+  }
 
   //! Set `FILE*` stream, can be set to `NULL` to disable logging, although
   //! the `CodeGen` will still call `logString` even if there is no stream.
-  ASMJIT_API void setStream(FILE* stream);
+  ASMJIT_INLINE void setStream(FILE* stream) {
+    _stream = stream;
+  }
 
   // --------------------------------------------------------------------------
   // [Logging]
@@ -207,8 +211,7 @@ struct ASMJIT_VCLASS StringLogger : public Logger {
   // [Accessors]
   // --------------------------------------------------------------------------
 
-  //! Get <code>char*</code> pointer which represents the resulting
-  //! string.
+  //! Get `char*` pointer which represents the resulting string.
   //!
   //! The pointer is owned by `StringLogger`, it can't be modified or freed.
   ASMJIT_INLINE const char* getString() const {

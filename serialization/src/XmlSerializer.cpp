@@ -90,7 +90,7 @@ static void encodeString(const string& str, string* outString) {
             // Below 32 is symbolic.
             char buf[ 32 ];
 
-            snprintf(buf, sizeof(buf), "&#x%02X;", (unsigned) (c & 0xff));
+            sprintf(buf, "&#x%02X;", (unsigned) (c & 0xff));
 
             //*ME:	warning C4267: convert 'size_t' to 'int'
             //*ME:	Int-Cast to make compiler happy ...
