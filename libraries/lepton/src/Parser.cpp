@@ -321,6 +321,8 @@ Operation* Parser::getFunctionOperation(const std::string& name, const map<strin
         opMap["min"] = Operation::MIN;
         opMap["max"] = Operation::MAX;
         opMap["abs"] = Operation::ABS;
+        opMap["floor"] = Operation::FLOOR;
+        opMap["ceil"] = Operation::CEIL;
     }
     string trimmed = name.substr(0, name.size()-1);
 
@@ -386,6 +388,10 @@ Operation* Parser::getFunctionOperation(const std::string& name, const map<strin
             return new Operation::Max();
         case Operation::ABS:
             return new Operation::Abs();
+        case Operation::FLOOR:
+            return new Operation::Floor();
+        case Operation::CEIL:
+            return new Operation::Ceil();
         default:
             throw Exception("Parse error: unknown function");
     }

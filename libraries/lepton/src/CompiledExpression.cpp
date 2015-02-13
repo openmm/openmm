@@ -343,6 +343,12 @@ void CompiledExpression::generateJitCode() {
             case Operation::ABS:
                 generateSingleArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], fabs);
                 break;
+            case Operation::FLOOR:
+                generateSingleArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], floor);
+                break;
+            case Operation::CEIL:
+                generateSingleArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], ceil);
+                break;
             default:
                 // Just invoke evaluateOperation().
                 

@@ -64,7 +64,7 @@ public:
      */
     enum Id {CONSTANT, VARIABLE, CUSTOM, ADD, SUBTRACT, MULTIPLY, DIVIDE, POWER, NEGATE, SQRT, EXP, LOG,
              SIN, COS, SEC, CSC, TAN, COT, ASIN, ACOS, ATAN, SINH, COSH, TANH, ERF, ERFC, STEP, DELTA, SQUARE, CUBE, RECIPROCAL,
-             ADD_CONSTANT, MULTIPLY_CONSTANT, POWER_CONSTANT, MIN, MAX, ABS};
+             ADD_CONSTANT, MULTIPLY_CONSTANT, POWER_CONSTANT, MIN, MAX, ABS, FLOOR, CEIL};
     /**
      * Get the name of this Operation.
      */
@@ -153,6 +153,8 @@ public:
     class Min;
     class Max;
     class Abs;
+    class Floor;
+    class Ceil;
 };
 
 class LEPTON_EXPORT Operation::Constant : public Operation {
@@ -1086,6 +1088,51 @@ public:
     }
     double evaluate(double* args, const std::map<std::string, double>& variables) const {
         return std::abs(args[0]);
+    }
+    ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
+};
+
+class LEPTON_EXPORT Operation::Floor : public Operation {
+public:
+
+    Floor() {
+    }
+    std::string getName() const {
+        return "floor";
+    }
+    Id getId() const {
+        return FLOOR;
+    }
+    int getNumArguments() const {
+        return 1;
+    }
+    Operation* clone() const {
+        return new Floor();
+    }
+    double evaluate(double* args, const std::map<std::string, double>& variables) const {
+        return std::floor(args[0]);
+    }
+    ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
+};
+
+class LEPTON_EXPORT Operation::Ceil : public Operation {
+public:
+    Ceil() {
+    }
+    std::string getName() const {
+        return "ceil";
+    }
+    Id getId() const {
+        return CEIL;
+    }
+    int getNumArguments() const {
+        return 1;
+    }
+    Operation* clone() const {
+        return new Ceil();
+    }
+    double evaluate(double* args, const std::map<std::string, double>& variables) const {
+        return std::ceil(args[0]);
     }
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };

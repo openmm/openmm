@@ -317,3 +317,11 @@ ExpressionTreeNode Operation::Abs::differentiate(const std::vector<ExpressionTre
                               ExpressionTreeNode(new Operation::AddConstant(-1),
                                                  ExpressionTreeNode(new Operation::MultiplyConstant(2), step)));
 }
+
+ExpressionTreeNode Operation::Floor::differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const {
+    return ExpressionTreeNode(new Operation::Constant(0.0));
+}
+
+ExpressionTreeNode Operation::Ceil::differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const {
+    return ExpressionTreeNode(new Operation::Constant(0.0));
+}
