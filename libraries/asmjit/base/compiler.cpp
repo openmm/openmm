@@ -40,11 +40,11 @@ enum { kBaseCompilerDefaultLookAhead = 64 };
 
 Compiler::Compiler(Runtime* runtime) :
   CodeGen(runtime),
+  _assembler(NULL),
   _nodeFlowId(0),
   _nodeFlags(0),
   _maxLookAhead(kBaseCompilerDefaultLookAhead),
   _targetVarMapping(NULL),
-  _assembler(NULL),
   _firstNode(NULL),
   _lastNode(NULL),
   _cursor(NULL),
@@ -482,7 +482,7 @@ VarData* Compiler::_newVd(uint32_t type, uint32_t size, uint32_t c, const char* 
   vd->_flags = 0;
   vd->_priority = 10;
 
-  vd->_state = kVarStateUnused;
+  vd->_state = kVarStateNone;
   vd->_regIndex = kInvalidReg;
   vd->_isStack = false;
   vd->_isMemArg = false;

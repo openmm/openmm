@@ -11,8 +11,9 @@
 // [Dependencies - AsmJit]
 #include "../base/globals.h"
 
-#if defined(_MSC_VER)
-#pragma intrinsic(_BitScanForward)
+#if defined(_MSC_VER) && _MSC_VER >= 1400
+# include <intrin.h>
+# pragma intrinsic(_BitScanForward)
 #endif // ASMJIT_OS_WINDOWS
 
 // [Api-Begin]
@@ -42,6 +43,31 @@ struct IntTraits {
     kIsIntPtr = sizeof(T) == sizeof(intptr_t)
   };
 };
+
+// \internal
+template<size_t Size, int IsSigned>
+struct AsInt_ { typedef int64_t Int; };
+
+template<> struct AsInt_<1, 0> { typedef int Int; };
+template<> struct AsInt_<1, 1> { typedef int Int; };
+template<> struct AsInt_<2, 0> { typedef int Int; };
+template<> struct AsInt_<2, 1> { typedef int Int; };
+template<> struct AsInt_<4, 1> { typedef int Int; };
+
+// \internal
+//
+// Map an integer `T` to an `int` or `int64_t`, depending on the type. Used
+// internally by AsmJit to dispatch an argument of arbitrary integer type into
+// a function that accepts either `int` or `int64_t`.
+template<typename T>
+struct AsInt {
+  typedef typename AsInt_<sizeof(T), IntTraits<T>::kIsSigned>::Int Int;
+};
+
+template<typename T>
+ASMJIT_INLINE typename AsInt<T>::Int asInt(T value) {
+  return static_cast<typename AsInt<T>::Int>(value);
+}
 
 // ============================================================================
 // [asmjit::IntUtil]
@@ -82,29 +108,29 @@ struct IntUtil {
   //! Pack two 8-bit integer and one 16-bit integer into a 32-bit integer as it
   //! is an array of `{u0,u1,w2}`.
   static ASMJIT_INLINE uint32_t pack32_2x8_1x16(uint32_t u0, uint32_t u1, uint32_t w2) {
-#if defined(ASMJIT_HOST_LE)
+#if defined(ASMJIT_ARCH_LE)
     return u0 + (u1 << 8) + (w2 << 16);
 #else
     return (u0 << 24) + (u1 << 16) + (w2);
-#endif // ASMJIT_HOST
+#endif
   }
 
   //! Pack four 8-bit integer into a 32-bit integer as it is an array of `{u0,u1,u2,u3}`.
   static ASMJIT_INLINE uint32_t pack32_4x8(uint32_t u0, uint32_t u1, uint32_t u2, uint32_t u3) {
-#if defined(ASMJIT_HOST_LE)
+#if defined(ASMJIT_ARCH_LE)
     return u0 + (u1 << 8) + (u2 << 16) + (u3 << 24);
 #else
     return (u0 << 24) + (u1 << 16) + (u2 << 8) + u3;
-#endif // ASMJIT_HOST
+#endif
   }
 
   //! Pack two 32-bit integer into a 64-bit integer as it is an array of `{u0,u1}`.
   static ASMJIT_INLINE uint64_t pack64_2x32(uint32_t u0, uint32_t u1) {
-#if defined(ASMJIT_HOST_LE)
+#if defined(ASMJIT_ARCH_LE)
     return (static_cast<uint64_t>(u1) << 32) + u0;
 #else
     return (static_cast<uint64_t>(u0) << 32) + u1;
-#endif // ASMJIT_HOST
+#endif
   }
 
   // --------------------------------------------------------------------------
@@ -336,7 +362,7 @@ struct IntUtil {
 
   //! Find a first bit in `mask`.
   static ASMJIT_INLINE uint32_t findFirstBit(uint32_t mask) {
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) && _MSC_VER >= 1400
     DWORD i;
     if (_BitScanForward(&i, mask)) {
       ASMJIT_ASSERT(findFirstBitSlow(mask) == i);
@@ -567,6 +593,26 @@ union UInt64 {
   }
 
   // --------------------------------------------------------------------------
+  // [AndNot]
+  // --------------------------------------------------------------------------
+
+  ASMJIT_INLINE UInt64& andNot(uint64_t val) {
+    u64 &= ~val;
+    return *this;
+  }
+
+  ASMJIT_INLINE UInt64& andNot(const UInt64& val) {
+    if (kArchHost64Bit) {
+      u64 &= ~val.u64;
+    }
+    else {
+      u32[0] &= ~val.u32[0];
+      u32[1] &= ~val.u32[1];
+    }
+    return *this;
+  }
+
+  // --------------------------------------------------------------------------
   // [Or]
   // --------------------------------------------------------------------------
 
@@ -602,26 +648,6 @@ union UInt64 {
     else {
       u32[0] ^= val.u32[0];
       u32[1] ^= val.u32[1];
-    }
-    return *this;
-  }
-
-  // --------------------------------------------------------------------------
-  // [Del]
-  // --------------------------------------------------------------------------
-
-  ASMJIT_INLINE UInt64& del(uint64_t val) {
-    u64 &= ~val;
-    return *this;
-  }
-
-  ASMJIT_INLINE UInt64& del(const UInt64& val) {
-    if (kArchHost64Bit) {
-      u64 &= ~val.u64;
-    }
-    else {
-      u32[0] &= ~val.u32[0];
-      u32[1] &= ~val.u32[1];
     }
     return *this;
   }
@@ -694,11 +720,11 @@ union UInt64 {
   uint8_t u8[8];
 
   struct {
-#if defined(ASMJIT_HOST_LE)
+#if defined(ASMJIT_ARCH_LE)
     uint32_t lo, hi;
 #else
     uint32_t hi, lo;
-#endif // ASMJIT_HOST_LE
+#endif // ASMJIT_ARCH_LE
   };
 };
 
