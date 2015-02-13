@@ -1040,7 +1040,7 @@ The following operators are supported: + (add), - (subtract), * (multiply), /
 
 The following standard functions are supported: sqrt, exp, log, sin, cos, sec,
 csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, erf, erfc, min, max, abs,
-step, delta. step(x) = 0 if x < 0, 1 otherwise.  delta(x) = 1 if x is 0, 0
+floor, ceil, step, delta. step(x) = 0 if x < 0, 1 otherwise.  delta(x) = 1 if x is 0, 0
 otherwise.  Some custom forces allow additional functions to be defined from
 tabulated values.
 
