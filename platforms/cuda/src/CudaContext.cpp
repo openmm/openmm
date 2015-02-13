@@ -33,6 +33,7 @@
 #include "CudaBondedUtilities.h"
 #include "CudaForceInfo.h"
 #include "CudaIntegrationUtilities.h"
+#include "CudaKernels.h"
 #include "CudaKernelSources.h"
 #include "CudaNonbondedUtilities.h"
 #include "SHA1.h"
@@ -73,9 +74,16 @@ bool CudaContext::hasInitializedCuda = false;
 
 CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlockingSync, const string& precision, const string& compiler,
         const string& tempDir, const std::string& hostCompiler, CudaPlatform::PlatformData& platformData) : system(system), currentStream(0),
-        time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), stepsSinceReorder(99999), contextIsValid(false), atomsWereReordered(false), pinnedBuffer(NULL), posq(NULL),
-        posqCorrection(NULL), velm(NULL), force(NULL), energyBuffer(NULL), integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL), thread(NULL) {
+        time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), stepsSinceReorder(99999), contextIsValid(false), atomsWereReordered(false), hasCompilerKernel(false),
+        pinnedBuffer(NULL), posq(NULL), posqCorrection(NULL), velm(NULL), force(NULL), energyBuffer(NULL), integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL), thread(NULL) {
     this->compiler = "\""+compiler+"\"";
+    try {
+        compilerKernel = platformData.context->getPlatform().createKernel(CudaCompilerKernel::Name(), *platformData.context);
+        hasCompilerKernel = true;
+    }
+    catch (...) {
+        // The runtime compiler plugin isn't available.
+    }
     if (hostCompiler.size() > 0)
         this->compiler = compiler+" --compiler-bindir "+hostCompiler;
     if (!hasInitializedCuda) {
@@ -508,7 +516,7 @@ CUmodule CudaContext::createModule(const string source, const map<string, string
     if (cuModuleLoad(&module, cacheFile.str().c_str()) == CUDA_SUCCESS)
         return module;
     
-    // Write out the source to a temporary file.
+    // Select names for the various temporary files.
     
     stringstream tempFileName;
     tempFileName << "openmmTempKernel" << this; // Include a pointer to this context as part of the filename to avoid collisions.
@@ -520,20 +528,51 @@ CUmodule CudaContext::createModule(const string source, const map<string, string
     string inputFile = (tempDir+tempFileName.str()+".cu");
     string outputFile = (tempDir+tempFileName.str()+".ptx");
     string logFile = (tempDir+tempFileName.str()+".log");
-    ofstream out(inputFile.c_str());
-    out << src.str();
-    out.close();
+    int res = 0;
+
+    // If the runtime compiler plugin is available, use it.
+    
+    if (hasCompilerKernel) {
+        string ptx = compilerKernel.getAs<CudaCompilerKernel>().createModule(src.str(), "-arch=compute_"+gpuArchitecture+" "+options, *this);
+        
+        // If possible, write the PTX out to a temporary file so we can cache it for later use.
+        
+        bool wroteCache = false;
+        try {
+            ofstream out(outputFile.c_str());
+            out << ptx;
+            out.close();
+            if (!out.fail())
+                wroteCache = true;
+        }
+        catch (...) {
+            // Ignore.
+        }
+        if (!wroteCache) {
+            // An error occurred.  Possibly we don't have permission to write to the temp directory.  Just try to load the module directly.
+            
+            CHECK_RESULT2(cuModuleLoadDataEx(&module, &ptx[0], 0, NULL, NULL), "Error loading CUDA module");
+            return module;
+        }
+    }
+    else {
+        // Write out the source to a temporary file.
+
+        ofstream out(inputFile.c_str());
+        out << src.str();
+        out.close();
 #ifdef WIN32
 #ifdef _DEBUG
-    string command = compiler+" --ptx -G -g --machine "+bits+" -arch=sm_"+gpuArchitecture+" -o "+outputFile+" "+options+" "+inputFile+" 2> "+logFile;
+        string command = compiler+" --ptx -G -g --machine "+bits+" -arch=sm_"+gpuArchitecture+" -o "+outputFile+" "+options+" "+inputFile+" 2> "+logFile;
 #else
-    string command = compiler+" --ptx -lineinfo --machine "+bits+" -arch=sm_"+gpuArchitecture+" -o "+outputFile+" "+options+" "+inputFile+" 2> "+logFile;
+        string command = compiler+" --ptx -lineinfo --machine "+bits+" -arch=sm_"+gpuArchitecture+" -o "+outputFile+" "+options+" "+inputFile+" 2> "+logFile;
 #endif
-    int res = compileInWindows(command);
+        int res = compileInWindows(command);
 #else
-    string command = compiler+" --ptx --machine "+bits+" -arch=sm_"+gpuArchitecture+" -o \""+outputFile+"\" "+options+" \""+inputFile+"\" 2> \""+logFile+"\"";
-    int res = std::system(command.c_str());
+        string command = compiler+" --ptx --machine "+bits+" -arch=sm_"+gpuArchitecture+" -o \""+outputFile+"\" "+options+" \""+inputFile+"\" 2> \""+logFile+"\"";
+        res = std::system(command.c_str());
 #endif
+    }
     try {
         if (res != 0) {
             // Load the error log.
