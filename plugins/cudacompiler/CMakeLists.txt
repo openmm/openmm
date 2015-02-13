@@ -1,7 +1,7 @@
 #---------------------------------------------------
-# OpenMM CUDA RPMD Integrator
+# OpenMM CUDA runtime compiler
 #
-# Creates OpenMMCudaCompiler library,.
+# Creates OpenMMCudaCompiler library.
 #
 # Windows:
 #   OpenMMCudaCompiler.dll
@@ -62,8 +62,6 @@ ENDFOREACH(subdir)
 INCLUDE_DIRECTORIES(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 INCLUDE_DIRECTORIES(BEFORE ${CMAKE_SOURCE_DIR}/platforms/cuda/include)
 INCLUDE_DIRECTORIES(${CUDA_TOOLKIT_INCLUDE})
-GET_FILENAME_COMPONENT(CUDA_LIB_DIR "${CUDA_cufft_LIBRARY}" PATH)
-FIND_LIBRARY(CUDA_nvrtc_LIBRARY nvrtc "${CUDA_LIB_DIR}")
 
 # Build the shared plugin library.
 
@@ -102,8 +100,12 @@ ENDIF(OPENMM_BUILD_STATIC_LIB)
 INSTALL(TARGETS ${SHARED_TARGET} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/plugins)
 # Ensure that links to the main CUDA library will be resolved.
 IF (APPLE)
-    ENDIF (OPENMM_BUILD_SHARED_LIB)
+    IF (OPENMM_BUILD_SHARED_LIB)
         SET(CUDA_LIBRARY libOpenMMCUDA.dylib)
         INSTALL(CODE "EXECUTE_PROCESS(COMMAND install_name_tool -change ${CUDA_LIBRARY} @loader_path/${CUDA_LIBRARY} ${CMAKE_INSTALL_PREFIX}/lib/plugins/lib${SHARED_TARGET}.dylib)")
     ENDIF (OPENMM_BUILD_SHARED_LIB)
 ENDIF (APPLE)
+
+if(OPENMM_BUILD_CUDA_TESTS)
+    SUBDIRS (tests)
+endif(OPENMM_BUILD_CUDA_TESTS)

@@ -537,13 +537,19 @@ CUmodule CudaContext::createModule(const string source, const map<string, string
         
         // If possible, write the PTX out to a temporary file so we can cache it for later use.
         
+        bool wroteCache = false;
         try {
             ofstream out(outputFile.c_str());
             out << ptx;
             out.close();
+            if (!out.fail())
+                wroteCache = true;
         }
         catch (...) {
-            // An error occurred.  Possibly we don't have permission to write to the tmep directory.  Just try to load the module directly.
+            // Ignore.
+        }
+        if (!wroteCache) {
+            // An error occurred.  Possibly we don't have permission to write to the temp directory.  Just try to load the module directly.
             
             CHECK_RESULT2(cuModuleLoadDataEx(&module, &ptx[0], 0, NULL, NULL), "Error loading CUDA module");
             return module;

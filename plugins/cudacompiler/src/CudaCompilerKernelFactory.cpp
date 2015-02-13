@@ -29,14 +29,20 @@
 #include "internal/windowsExportCudaCompiler.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/OpenMMException.h"
-#include <cstdio>
+
 using namespace OpenMM;
 
 extern "C" OPENMM_EXPORT_CUDACOMPILER void registerKernelFactories() {
     try {
-        Platform& platform = Platform::getPlatformByName("CUDA");
-        CudaCompilerKernelFactory* factory = new CudaCompilerKernelFactory();
-        platform.registerKernelFactory(CudaCompilerKernel::Name(), factory);
+        // Make sure this is at least CUDA 7.0.
+        
+        int driverVersion;
+        cuDriverGetVersion(&driverVersion);
+        if (driverVersion >= 7000) {
+            Platform& platform = Platform::getPlatformByName("CUDA");
+            CudaCompilerKernelFactory* factory = new CudaCompilerKernelFactory();
+            platform.registerKernelFactory(CudaCompilerKernel::Name(), factory);
+        }
     }
     catch (std::exception ex) {
         // Ignore
