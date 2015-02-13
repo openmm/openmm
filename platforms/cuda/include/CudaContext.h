@@ -41,6 +41,7 @@
 #include <vector_functions.h>
 #include "windowsExportCuda.h"
 #include "CudaPlatform.h"
+#include "openmm/Kernel.h"
 
 typedef unsigned int tileflags;
 
@@ -565,7 +566,7 @@ private:
     int paddedNumAtoms;
     int numAtomBlocks;
     int numThreadBlocks;
-    bool useBlockingSync, useDoublePrecision, useMixedPrecision, contextIsValid, atomsWereReordered, boxIsTriclinic;
+    bool useBlockingSync, useDoublePrecision, useMixedPrecision, contextIsValid, atomsWereReordered, boxIsTriclinic, hasCompilerKernel;
     std::string compiler, tempDir, cacheDir, gpuArchitecture;
     float4 periodicBoxVecXFloat, periodicBoxVecYFloat, periodicBoxVecZFloat, periodicBoxSizeFloat, invPeriodicBoxSizeFloat;
     double4 periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ, periodicBoxSize, invPeriodicBoxSize;
@@ -602,6 +603,7 @@ private:
     CudaBondedUtilities* bonded;
     CudaNonbondedUtilities* nonbonded;
     WorkThread* thread;
+    Kernel compilerKernel;
 };
 
 struct CudaContext::Molecule {
