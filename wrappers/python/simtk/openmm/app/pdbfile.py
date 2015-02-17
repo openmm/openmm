@@ -88,12 +88,12 @@ class PDBFile(object):
 
         atomByNumber = {}
         for chain in pdb.iter_chains():
-            c = top.addChain()
+            c = top.addChain(chain.chain_id)
             for residue in chain.iter_residues():
                 resName = residue.get_name()
                 if resName in PDBFile._residueNameReplacements:
                     resName = PDBFile._residueNameReplacements[resName]
-                r = top.addResidue(resName, c)
+                r = top.addResidue(resName, c, str(residue.number))
                 if resName in PDBFile._atomNameReplacements:
                     atomReplacements = PDBFile._atomNameReplacements[resName]
                 else:
@@ -129,7 +129,7 @@ class PDBFile(object):
                                 element = elem.get_by_symbol(atomName[0])
                             except KeyError:
                                 pass
-                    newAtom = top.addAtom(atomName, element, r)
+                    newAtom = top.addAtom(atomName, element, r, str(atom.serial_number))
                     atomByNumber[atom.serial_number] = newAtom
         self._positions = []
         for model in pdb.iter_models(True):

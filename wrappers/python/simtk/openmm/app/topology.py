@@ -59,38 +59,51 @@ class Topology(object):
         self._bonds = []
         self._periodicBoxVectors = None
 
-    def addChain(self):
+    def addChain(self, id=None):
         """Create a new Chain and add it to the Topology.
 
+        Parameters:
+         - id (string=None) An optional identifier for the chain.  If this is omitted, an id
+           is generated based on the chain index.
         Returns: the newly created Chain
         """
-        chain = Chain(len(self._chains), self)
+        if id is None:
+            id = str(len(self._chains)+1)
+        chain = Chain(len(self._chains), self, id)
         self._chains.append(chain)
         return chain
 
-    def addResidue(self, name, chain):
+    def addResidue(self, name, chain, id=None):
         """Create a new Residue and add it to the Topology.
 
         Parameters:
          - name (string) The name of the residue to add
          - chain (Chain) The Chain to add it to
+         - id (string=None) An optional identifier for the residue.  If this is omitted, an id
+           is generated based on the residue index.
         Returns: the newly created Residue
         """
-        residue = Residue(name, self._numResidues, chain)
+        if id is None:
+            id = str(self._numResidues+1)
+        residue = Residue(name, self._numResidues, chain, id)
         self._numResidues += 1
         chain._residues.append(residue)
         return residue
 
-    def addAtom(self, name, element, residue):
+    def addAtom(self, name, element, residue, id=None):
         """Create a new Atom and add it to the Topology.
 
         Parameters:
          - name (string) The name of the atom to add
          - element (Element) The element of the atom to add
          - residue (Residue) The Residue to add it to
+         - id (string=None) An optional identifier for the atom.  If this is omitted, an id
+           is generated based on the atom index.
         Returns: the newly created Atom
         """
-        atom = Atom(name, element, self._numAtoms, residue)
+        if id is None:
+            id = str(self._numAtoms+1)
+        atom = Atom(name, element, self._numAtoms, residue, id)
         self._numAtoms += 1
         residue._atoms.append(atom)
         return atom
@@ -258,12 +271,14 @@ class Topology(object):
 
 class Chain(object):
     """A Chain object represents a chain within a Topology."""
-    def __init__(self, index, topology):
+    def __init__(self, index, topology, id):
         """Construct a new Chain.  You should call addChain() on the Topology instead of calling this directly."""
         ## The index of the Chain within its Topology
         self.index = index
         ## The Topology this Chain belongs to
         self.topology = topology
+        ## A user defined identifier for this Chain
+        self.id = id
         self._residues = []
 
     def residues(self):
@@ -278,7 +293,7 @@ class Chain(object):
 
 class Residue(object):
     """A Residue object represents a residue within a Topology."""
-    def __init__(self, name, index, chain):
+    def __init__(self, name, index, chain, id):
         """Construct a new Residue.  You should call addResidue() on the Topology instead of calling this directly."""
         ## The name of the Residue
         self.name = name
@@ -286,6 +301,8 @@ class Residue(object):
         self.index = index
         ## The Chain this Residue belongs to
         self.chain = chain
+        ## A user defined identifier for this Residue
+        self.id = id
         self._atoms = []
 
     def atoms(self):
@@ -295,7 +312,7 @@ class Residue(object):
 class Atom(object):
     """An Atom object represents a residue within a Topology."""
 
-    def __init__(self, name, element, index, residue):
+    def __init__(self, name, element, index, residue, id):
         """Construct a new Atom.  You should call addAtom() on the Topology instead of calling this directly."""
         ## The name of the Atom
         self.name = name
@@ -305,4 +322,6 @@ class Atom(object):
         self.index = index
         ## The Residue this Atom belongs to
         self.residue = residue
+        ## A user defined identifier for this Atom
+        self.id = id
 
