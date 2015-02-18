@@ -49,12 +49,12 @@ after_success:
   - export PYTHONUNBUFFERED=true
   - export CC="clang++"
   - source deactivate
-  - conda install --yes conda-build jinja2
+  - conda install --yes --quiet conda-build jinja2
   # Clean up old build.
   - make clean
   - rm -rf CMakeFiles
   - rm -rf CMakeCache.txt
   - rm -rf cmake_install.cmake
   # Build the conda package, testing build before packaging.
-  - conda build devtools/conda-recipe
+  - conda build --quiet devtools/conda-recipe
   - source devtools/ci/after_success.sh
