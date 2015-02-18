@@ -49,7 +49,7 @@ after_success:
   - export PYTHONUNBUFFERED=true
   - export CC="clang++"
   - source deactivate
-  - conda install --yes conda-build
+  - conda install --yes conda-build jinja2
   # Clean up old build.
   - make clean
   - find -iname '*cmake*' -not -name CMakeLists.txt -exec rm -rf {} \+
