@@ -7,6 +7,8 @@ env:
     # encrypted AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY to push docs to s3
     - secure: "VVKz+yOMbKsskR+PfU1HfKBWdGYYrmIXNWQz4nqXCjtg2MRCQmjDulFZaPVDvsBzis9BUhnzAQrBYUrAtN8bZSTYRg7ADFVGdPFicg3Sv0owcghTQwokIvbw3G+HDz/WAnFmqEhqm3t5pNVWNinyHpMM3zYZOVKagyj53cwAM0M="
     - secure: "W2iPU6ooMujfzJNw9ElaEB8Go1rlNFJ5zEldr3FaH7SDRwqtqNOEp9CegCeG/hHtjg1j8TMyytQtvW+OaMKFIbq7Qqu7nIfwIFTV45vBHW6uwT/jAq/J3EgZ8K7JGyysVVHk86D8jT+xu90YVH5Tx/w97luxHOQGfSK8alhCszw="
+    # encrypted BINSTAR_TOKEN for push of dev package to binstar
+    - secure: Qz3pEYXXFnNQ/WK+15ad4cdbLJvzgCIZRwKD9fLiS3CDO2ldAQWxzaz8RQOwqbFtZUWu7lQpr+GukNJz5p0w18QEto+BxLYG9aW5mjoc+F2vCjyWFjkwnJ/Z/3uBKTcr5x9Y7HKaPGivaJ4BNACifjt7cCpeVJzV6u2+bBgSoHc=
 
 before_install:
   - sudo apt-get update -qq
@@ -41,3 +43,12 @@ after_success:
   - make DoxygenApiDocs
   - make sphinxhtml
   - python devtools/ci/push-docs-to-s3.py
+  # Build conda dev package and push to binstar
+  - source tools/ci/install.sh
+  - export PYTHONUNBUFFERED=true
+  - export CC="clang++"
+  - source deactivate
+  - conda install --yes conda-build
+  - # Build the conda package, testing build before packaging.
+  - conda build devtools/conda-recipe
+  - source devtools/ci/after_success.sh
