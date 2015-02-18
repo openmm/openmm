@@ -38,11 +38,11 @@
 #include "openmm/Context.h"
 #include "openmm/CustomNonbondedForce.h"
 #include "openmm/HarmonicBondForce.h"
-#include "openmm/MonteCarloBarostat.h"
 #include "openmm/NonbondedForce.h"
 #include "openmm/Platform.h"
 #include "openmm/System.h"
 #include "openmm/RPMDIntegrator.h"
+#include "openmm/RPMDMonteCarloBarostat.h"
 #include "openmm/VirtualSite.h"
 #include "SimTKOpenMMUtilities.h"
 #include "sfmt/SFMT.h"
@@ -372,7 +372,7 @@ void testContractions() {
     system.addForce(bonds);
     NonbondedForce* nonbonded = new NonbondedForce();
     nonbonded->setCutoffDistance(cutoff);
-    nonbonded->setNonbondedMethod(NonbondedForce::PME);
+    nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
     nonbonded->setForceGroup(1);
     nonbonded->setReciprocalSpaceForceGroup(2);
     system.addForce(nonbonded);
@@ -492,11 +492,11 @@ void testWithBarostat() {
     system.addForce(bonds);
     NonbondedForce* nonbonded = new NonbondedForce();
     nonbonded->setCutoffDistance(cutoff);
-    nonbonded->setNonbondedMethod(NonbondedForce::PME);
+    nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
     nonbonded->setForceGroup(1);
     nonbonded->setReciprocalSpaceForceGroup(2);
     system.addForce(nonbonded);
-    system.addForce(new MonteCarloBarostat(0.5, temperature));
+    system.addForce(new RPMDMonteCarloBarostat(0.5, 10));
 
     // Create a cloud of molecules.
 
