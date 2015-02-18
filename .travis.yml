@@ -50,6 +50,9 @@ after_success:
   - export CC="clang++"
   - source deactivate
   - conda install --yes conda-build
-  - # Build the conda package, testing build before packaging.
+  # Clean up old build.
+  - make clean
+  - find -iname '*cmake*' -not -name CMakeLists.txt -exec rm -rf {} \+
+  # Build the conda package, testing build before packaging.
   - conda build devtools/conda-recipe
   - source devtools/ci/after_success.sh
