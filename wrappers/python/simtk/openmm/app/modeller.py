@@ -98,11 +98,11 @@ class Modeller(object):
         newAtoms = {}
         newPositions = []*nanometer
         for chain in self.topology.chains():
-            newChain = newTopology.addChain()
+            newChain = newTopology.addChain(chain.id)
             for residue in chain.residues():
-                newResidue = newTopology.addResidue(residue.name, newChain)
+                newResidue = newTopology.addResidue(residue.name, newChain, residue.id)
                 for atom in residue.atoms():
-                    newAtom = newTopology.addAtom(atom.name, atom.element, newResidue)
+                    newAtom = newTopology.addAtom(atom.name, atom.element, newResidue, atom.id)
                     newAtoms[atom] = newAtom
                     newPositions.append(deepcopy(self.positions[atom.index]))
         for bond in self.topology.bonds():
@@ -112,11 +112,11 @@ class Modeller(object):
 
         newAtoms = {}
         for chain in addTopology.chains():
-            newChain = newTopology.addChain()
+            newChain = newTopology.addChain(chain.id)
             for residue in chain.residues():
-                newResidue = newTopology.addResidue(residue.name, newChain)
+                newResidue = newTopology.addResidue(residue.name, newChain, residue.id)
                 for atom in residue.atoms():
-                    newAtom = newTopology.addAtom(atom.name, atom.element, newResidue)
+                    newAtom = newTopology.addAtom(atom.name, atom.element, newResidue, atom.id)
                     newAtoms[atom] = newAtom
                     newPositions.append(deepcopy(addPositions[atom.index]))
         for bond in addTopology.bonds():
@@ -153,12 +153,12 @@ class Modeller(object):
                         for atom in residue.atoms():
                             if atom not in deleteSet:
                                 if needNewChain:
-                                    newChain = newTopology.addChain()
+                                    newChain = newTopology.addChain(chain.id)
                                     needNewChain = False;
                                 if needNewResidue:
-                                    newResidue = newTopology.addResidue(residue.name, newChain)
+                                    newResidue = newTopology.addResidue(residue.name, newChain, residue.id)
                                     needNewResidue = False;
-                                newAtom = newTopology.addAtom(atom.name, atom.element, newResidue)
+                                newAtom = newTopology.addAtom(atom.name, atom.element, newResidue, atom.id)
                                 newAtoms[atom] = newAtom
                                 newPositions.append(deepcopy(self.positions[atom.index]))
         for bond in self.topology.bonds():
@@ -193,9 +193,9 @@ class Modeller(object):
         newAtoms = {}
         newPositions = []*nanometer
         for chain in self.topology.chains():
-            newChain = newTopology.addChain()
+            newChain = newTopology.addChain(chain.id)
             for residue in chain.residues():
-                newResidue = newTopology.addResidue(residue.name, newChain)
+                newResidue = newTopology.addResidue(residue.name, newChain, residue.id)
                 if residue.name == "HOH":
                     # Copy the oxygen and hydrogens
                     oatom = [atom for atom in residue.atoms() if atom.element == elem.oxygen]
@@ -231,7 +231,7 @@ class Modeller(object):
                 else:
                     # Just copy the residue over.
                     for atom in residue.atoms():
-                        newAtom = newTopology.addAtom(atom.name, atom.element, newResidue)
+                        newAtom = newTopology.addAtom(atom.name, atom.element, newResidue, atom.id)
                         newAtoms[atom] = newAtom
                         newPositions.append(deepcopy(self.positions[atom.index]))
         for bond in self.topology.bonds():
@@ -347,11 +347,11 @@ class Modeller(object):
         newAtoms = {}
         newPositions = []*nanometer
         for chain in self.topology.chains():
-            newChain = newTopology.addChain()
+            newChain = newTopology.addChain(chain.id)
             for residue in chain.residues():
-                newResidue = newTopology.addResidue(residue.name, newChain)
+                newResidue = newTopology.addResidue(residue.name, newChain, residue.id)
                 for atom in residue.atoms():
-                    newAtom = newTopology.addAtom(atom.name, atom.element, newResidue)
+                    newAtom = newTopology.addAtom(atom.name, atom.element, newResidue, atom.id)
                     newAtoms[atom] = newAtom
                     newPositions.append(deepcopy(self.positions[atom.index]))
         for bond in self.topology.bonds():
@@ -629,9 +629,9 @@ class Modeller(object):
         newIndices = []
         acceptors = [atom for atom in self.topology.atoms() if atom.element in (elem.oxygen, elem.nitrogen)]
         for chain in self.topology.chains():
-            newChain = newTopology.addChain()
+            newChain = newTopology.addChain(chain.id)
             for residue in chain.residues():
-                newResidue = newTopology.addResidue(residue.name, newChain)
+                newResidue = newTopology.addResidue(residue.name, newChain, residue.id)
                 isNTerminal = (residue == chain._residues[0])
                 isCTerminal = (residue == chain._residues[-1])
                 if residue.name in Modeller._residueHydrogens:
@@ -900,9 +900,9 @@ class Modeller(object):
         newAtoms = {}
         newPositions = []*nanometer
         for chain in self.topology.chains():
-            newChain = newTopology.addChain()
+            newChain = newTopology.addChain(chain.id)
             for residue in chain.residues():
-                newResidue = newTopology.addResidue(residue.name, newChain)
+                newResidue = newTopology.addResidue(residue.name, newChain, residue.id)
 
                 # Look for a matching template.
 
