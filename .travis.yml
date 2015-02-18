@@ -39,10 +39,10 @@ script:
 after_success:
   # Get libraries necessary for building docs and pushing
   # them to S3
-  - sudo apt-get install python-sphinx python-yaml
-  - sudo pip install sphinxcontrib-bibtex boto
-  - make DoxygenApiDocs
-  - make sphinxhtml
+  - sudo apt-get install -qq python-sphinx python-yaml
+  - sudo pip install --quiet sphinxcontrib-bibtex boto
+  - make --quiet DoxygenApiDocs
+  - make --quiet sphinxhtml
   - python devtools/ci/push-docs-to-s3.py
   # Build conda dev package and push to binstar
   - source devtools/ci/install.sh
