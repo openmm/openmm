@@ -44,7 +44,7 @@ after_success:
   - make sphinxhtml
   - python devtools/ci/push-docs-to-s3.py
   # Build conda dev package and push to binstar
-  - source tools/ci/install.sh
+  - source devtools/ci/install.sh
   - export PYTHONUNBUFFERED=true
   - export CC="clang++"
   - source deactivate
