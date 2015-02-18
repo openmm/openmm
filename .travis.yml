@@ -52,7 +52,9 @@ after_success:
   - conda install --yes conda-build jinja2
   # Clean up old build.
   - make clean
-  - find -iname '*cmake*' -not -name CMakeLists.txt -exec rm -rf {} \+
+  - rm -rf CMakeFiles
+  - rm -rf CMakeCache.txt
+  - rm -rf cmake_install.cmake
   # Build the conda package, testing build before packaging.
   - conda build devtools/conda-recipe
   - source devtools/ci/after_success.sh
