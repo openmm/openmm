@@ -11,7 +11,7 @@ fi
 
 
 if [[ "2.7 3.3" =~ "$python" ]]; then
-    conda install --yes binstar
+    conda install --yes binstar jinja2
     binstar -t $BINSTAR_TOKEN upload --force -u omnia -p openmm-dev $HOME/miniconda/conda-bld/linux-64/openmm-dev-*
 fi
 
