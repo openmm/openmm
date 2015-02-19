@@ -30,8 +30,8 @@ cp -r $RECIPE_DIR/../.. .
 mkdir build
 cd build
 cmake .. $CMAKE_FLAGS
-make -j4
-make install
+make --quiet -j4
+make --quiet install
 
 # Run C tests.
 # Exclude OpenCL tests because @peastman suspects mesa on travis implementation is broken.
