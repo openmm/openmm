@@ -54,7 +54,7 @@ void testWater() {
     // Create a box of SWM4-NDP water molecules.  This involves constraints, virtual sites,
     // and Drude particles.
     
-    const int gridSize = 4;
+    const int gridSize = 3;
     const int numMolecules = gridSize*gridSize*gridSize;
     const double spacing = 0.6;
     const double boxSize = spacing*(gridSize+1);

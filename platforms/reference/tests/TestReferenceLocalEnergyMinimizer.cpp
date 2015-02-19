@@ -76,10 +76,10 @@ void testHarmonicBonds() {
 }
 
 void testLargeSystem() {
-    const int numMolecules = 50;
+    const int numMolecules = 25;
     const int numParticles = numMolecules*2;
     const double cutoff = 2.0;
-    const double boxSize = 5.0;
+    const double boxSize = 4.0;
     const double tolerance = 5;
     System system;
     system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
@@ -134,10 +134,10 @@ void testLargeSystem() {
 }
 
 void testVirtualSites() {
-    const int numMolecules = 50;
+    const int numMolecules = 25;
     const int numParticles = numMolecules*3;
     const double cutoff = 2.0;
-    const double boxSize = 5.0;
+    const double boxSize = 4.0;
     const double tolerance = 5;
     System system;
     system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));

@@ -383,12 +383,12 @@ void testContinuous3DFunction() {
     const int xsize = 10;
     const int ysize = 11;
     const int zsize = 12;
-    const double xmin = 0.4;
+    const double xmin = 0.6;
     const double xmax = 1.1;
     const double ymin = 0.0;
-    const double ymax = 0.9;
+    const double ymax = 0.7;
     const double zmin = 0.2;
-    const double zmax = 1.3;
+    const double zmax = 0.9;
     ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
