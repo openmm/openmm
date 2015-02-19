@@ -1,5 +1,5 @@
 package:
-  name: openmm
+  name: openmm-dev
   version: !!str dev
 
 requirements:
