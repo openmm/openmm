@@ -77,12 +77,14 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
         time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), stepsSinceReorder(99999), contextIsValid(false), atomsWereReordered(false), hasCompilerKernel(false),
         pinnedBuffer(NULL), posq(NULL), posqCorrection(NULL), velm(NULL), force(NULL), energyBuffer(NULL), integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL), thread(NULL) {
     this->compiler = "\""+compiler+"\"";
-    try {
-        compilerKernel = platformData.context->getPlatform().createKernel(CudaCompilerKernel::Name(), *platformData.context);
-        hasCompilerKernel = true;
-    }
-    catch (...) {
-        // The runtime compiler plugin isn't available.
+    if (platformData.context != NULL) {
+        try {
+            compilerKernel = platformData.context->getPlatform().createKernel(CudaCompilerKernel::Name(), *platformData.context);
+            hasCompilerKernel = true;
+        }
+        catch (...) {
+            // The runtime compiler plugin isn't available.
+        }
     }
     if (hostCompiler.size() > 0)
         this->compiler = compiler+" --compiler-bindir "+hostCompiler;
