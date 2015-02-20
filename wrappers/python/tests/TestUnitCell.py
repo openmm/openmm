@@ -10,9 +10,9 @@ def strip_units(x):
     if is_quantity(x): return x.value_in_unit_system(md_unit_system)
     return x
 
-class TestAmberPrmtopFile(unittest.TestCase):
+class TestUnitCell(unittest.TestCase):
 
-    """Test the AmberPrmtopFile.createSystem() method."""
+    """ Test the unitcell.py module """
 
     def testReducePBCVectors(self):
         """ Checks that reducePeriodicBoxVectors properly reduces vectors """
