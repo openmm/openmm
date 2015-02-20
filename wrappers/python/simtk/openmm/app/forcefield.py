@@ -34,6 +34,7 @@ __version__ = "1.0"
 import os
 import itertools
 import xml.etree.ElementTree as etree
+import math
 from math import sqrt, cos
 import simtk.openmm as mm
 import simtk.unit as unit
@@ -2101,7 +2102,7 @@ class AmoebaAngleGenerator:
                     hit = 1
                     if isConstrained and self.k[i] != 0.0:
                         angleDict['idealAngle'] = self.angle[i][0]
-                        addAngleConstraint(angle, self.angle[i][0], data, sys)
+                        addAngleConstraint(angle, self.angle[i][0]*math.pi/180.0, data, sys)
                     elif self.k[i] != 0:
                         lenAngle = len(self.angle[i])
                         if (lenAngle > 1):
@@ -2179,7 +2180,7 @@ class AmoebaAngleGenerator:
                     hit = 1
                     angleDict['idealAngle'] = self.angle[i][0]
                     if (isConstrained and self.k[i] != 0.0):
-                        addAngleConstraint(angle, self.angle[i][0], data, sys)
+                        addAngleConstraint(angle, self.angle[i][0]*math.pi/180.0, data, sys)
                     else:
                         force.addAngle(angle[0], angle[1], angle[2], angle[3], self.angle[i][0], self.k[i])
                     break
