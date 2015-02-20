@@ -79,15 +79,33 @@ def computePeriodicBoxVectors(a_length, b_length, c_length, alpha, beta, gamma):
     b = b - a*round(b[0]/a[0])
     return (a, b, c)*nanometers
 
+def reducePeriodicBoxVectors(periodicBoxVectors):
+    """ Reduces the representation of the PBC. periodicBoxVectors is expected to
+    be an unpackable iterable of length-3 iterables
+    """
+    if is_quantity(periodicBoxVectors):
+        a, b, c = periodicBoxVectors.value_in_unit(nanometers)
+    else:
+        a, b, c = periodicBoxVectors
+    a = Vec3(*a)
+    b = Vec3(*b)
+    c = Vec3(*c)
+
+    c = c - b*round(c[1]/b[1])
+    c = c - a*round(c[0]/a[0])
+    b = b - a*round(b[0]/a[0])
+
+    return (a, b, c) * nanometers
+
 def computeLengthsAndAngles(periodicBoxVectors):
     """Convert periodic box vectors to lengths and angles.
 
     Lengths are returned in nanometers and angles in radians.
     """
     if is_quantity(periodicBoxVectors):
-        (a, b, c) = vectors.value_in_unit(nanometers)
+        (a, b, c) = periodicBoxVectors.value_in_unit(nanometers)
     else:
-        a, b, c = vectors
+        a, b, c = periodicBoxVectors
     a_length = norm(a)
     b_length = norm(b)
     c_length = norm(c)
