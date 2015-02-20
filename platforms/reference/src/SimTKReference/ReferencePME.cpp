@@ -37,10 +37,10 @@
 #include "fftpack.h"
 
 using std::vector;
-using OpenMM::RealVec;
 
 typedef int    ivec[3];
 
+namespace OpenMM {
 
 struct pme
 {
@@ -729,3 +729,5 @@ pme_destroy(pme_t    pme)
 
     return 0;
 }
+
+} // namespace OpenMM

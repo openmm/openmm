@@ -32,7 +32,7 @@
 
 #include <cstdio>
 
-using OpenMM::RealVec;
+using namespace OpenMM;
 
 /**---------------------------------------------------------------------------------------
 

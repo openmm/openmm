@@ -31,6 +31,7 @@
 #include "SimTKOpenMMCommon.h"
 
 using std::vector;
+using namespace OpenMM;
 
 /**---------------------------------------------------------------------------------------
 

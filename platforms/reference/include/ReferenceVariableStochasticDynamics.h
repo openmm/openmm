@@ -27,7 +27,7 @@
 
 #include "ReferenceDynamics.h"
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class ReferenceVariableStochasticDynamics : public ReferenceDynamics {
 
@@ -142,6 +142,6 @@ class ReferenceVariableStochasticDynamics : public ReferenceDynamics {
       
 };
 
-// ---------------------------------------------------------------------------------------
+} // namespace OpenMM
 
 #endif // __ReferenceVariableStochasticDynamics_H__

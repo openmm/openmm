@@ -28,7 +28,7 @@
 #include "ReferenceDynamics.h"
 #include "openmm/internal/windowsExport.h"
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class OPENMM_EXPORT ReferenceStochasticDynamics : public ReferenceDynamics {
 
@@ -120,6 +120,6 @@ class OPENMM_EXPORT ReferenceStochasticDynamics : public ReferenceDynamics {
       
 };
 
-// ---------------------------------------------------------------------------------------
+} // namespace OpenMM
 
 #endif // __ReferenceStochasticDynamics_H__

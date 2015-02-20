@@ -25,18 +25,11 @@
 #ifndef __SimTKOpenMMCommon_H__
 #define __SimTKOpenMMCommon_H__
 
-// include file containing entries commonly used
-
-// STL includes
-
 #include <vector>
 #include <string>
-
-// ---------------------------------------------------------------------------------------
-
 #include "RealVec.h"
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 typedef std::vector<RealOpenMM> RealOpenMMVector;
 typedef RealOpenMMVector::iterator RealOpenMMVectorI;
@@ -61,5 +54,7 @@ class SimTKOpenMMCommon {
       static const int DefaultReturn;
       static const int ErrorReturn;
 };
+
+} // namespace OpenMM
 
 #endif // __SimTKOpenMMCommon_H__

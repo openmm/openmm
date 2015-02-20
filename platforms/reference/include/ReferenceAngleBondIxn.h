@@ -27,7 +27,7 @@
 
 #include "ReferenceBondIxn.h"
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class ReferenceAngleBondIxn : public ReferenceBondIxn {
 
@@ -86,6 +86,6 @@ class ReferenceAngleBondIxn : public ReferenceBondIxn {
 
 };
 
-// ---------------------------------------------------------------------------------------
+} // namespace OpenMM
 
 #endif // __ReferenceAngleBondIxn_H__

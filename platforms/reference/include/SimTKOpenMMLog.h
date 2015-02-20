@@ -30,6 +30,8 @@
 #include "SimTKOpenMMCommon.h"
 #include "openmm/internal/windowsExport.h"
 
+namespace OpenMM {
+
 /** ---------------------------------------------------------------------------------------
 
    SimTKOpenMMLog class used for logging
@@ -181,5 +183,7 @@ class OPENMM_EXPORT SimTKOpenMMLog {
      static void printError( const std::stringstream& message );
 
 };
+
+} // namespace OpenMM
 
 #endif //__SimTKOpenMMLog_H__

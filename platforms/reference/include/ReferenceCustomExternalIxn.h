@@ -28,7 +28,7 @@
 #include "ReferenceCustomExternalIxn.h"
 #include "lepton/CompiledExpression.h"
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class ReferenceCustomExternalIxn {
 
@@ -85,6 +85,6 @@ class ReferenceCustomExternalIxn {
 
 };
 
-// ---------------------------------------------------------------------------------------
+} // namespace OpenMM
 
 #endif // _ReferenceCustomBondIxn___

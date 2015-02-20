@@ -33,7 +33,7 @@
 #include <utility>
 #include <vector>
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class ReferenceCustomNonbondedIxn {
 
@@ -160,5 +160,7 @@ class ReferenceCustomNonbondedIxn {
 // ---------------------------------------------------------------------------------------
 
 };
+
+} // namespace OpenMM
 
 #endif // __ReferenceCustomNonbondedxIxn_H__

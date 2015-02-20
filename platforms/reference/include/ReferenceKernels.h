@@ -39,6 +39,8 @@
 #include "lepton/CompiledExpression.h"
 #include "lepton/ExpressionProgram.h"
 
+namespace OpenMM {
+
 class CpuObc;
 class CpuGBVI;
 class ReferenceAndersenThermostat;
@@ -53,8 +55,6 @@ class ReferenceVariableStochasticDynamics;
 class ReferenceVariableVerletDynamics;
 class ReferenceVerletDynamics;
 class ReferenceCustomDynamics;
-
-namespace OpenMM {
 
 /**
  * This kernel is invoked at the beginning and end of force and energy computations.  It gives the

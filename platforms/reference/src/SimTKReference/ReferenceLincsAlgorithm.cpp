@@ -32,7 +32,7 @@
 #include "openmm/OpenMMException.h"
 
 using std::vector;
-using OpenMM::RealVec;
+using namespace OpenMM;
 
 /**---------------------------------------------------------------------------------------
 

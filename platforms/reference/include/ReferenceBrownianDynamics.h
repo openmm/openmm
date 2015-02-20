@@ -27,7 +27,7 @@
 
 #include "ReferenceDynamics.h"
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class ReferenceBrownianDynamics : public ReferenceDynamics {
 
@@ -88,6 +88,6 @@ class ReferenceBrownianDynamics : public ReferenceDynamics {
       
 };
 
-// ---------------------------------------------------------------------------------------
+} // namespace OpenMM
 
 #endif // __ReferenceBrownianDynamics_H__

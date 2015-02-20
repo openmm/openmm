@@ -31,6 +31,8 @@
 #include "ReferenceForce.h"
 #include "ReferencePairIxn.h"
 
+using namespace OpenMM;
+
 /**---------------------------------------------------------------------------------------
 
    ReferencePairIxn constructor

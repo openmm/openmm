@@ -27,7 +27,7 @@
 
 #include "SimTKOpenMMCommon.h"
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class ObcParameters {
 
@@ -352,7 +352,7 @@ class ObcParameters {
       const OpenMM::RealVec* getPeriodicBox();
 
 };
-   
-// ---------------------------------------------------------------------------------------
+
+} // namespace OpenMM
 
 #endif // __ObcParameters_H__

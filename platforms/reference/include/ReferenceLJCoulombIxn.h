@@ -28,7 +28,7 @@
 #include "ReferencePairIxn.h"
 #include "ReferenceNeighborList.h"
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class ReferenceLJCoulombIxn {
 
@@ -197,6 +197,6 @@ private:
                             RealOpenMM* energyByAtom, RealOpenMM* totalEnergy, bool includeDirect, bool includeReciprocal) const;
 };
 
-// ---------------------------------------------------------------------------------------
+} // namespace OpenMM
 
 #endif // __ReferenceLJCoulombIxn_H__

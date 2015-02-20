@@ -28,7 +28,7 @@
 #include "RealVec.h"
 #include "openmm/internal/windowsExport.h"
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class OPENMM_EXPORT ReferencePairIxn {
 
@@ -74,6 +74,6 @@ class OPENMM_EXPORT ReferencePairIxn {
       
 };
 
-// ---------------------------------------------------------------------------------------
+} // namespace OpenMM
 
 #endif // __ReferencePairIxn_H__

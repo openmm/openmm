@@ -30,7 +30,7 @@
 #include "ReferenceBondIxn.h"
 #include <vector>
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class ReferenceCMAPTorsionIxn : public ReferenceBondIxn {
 
@@ -91,5 +91,7 @@ public:
 // ---------------------------------------------------------------------------------------
 
 };
+
+} // namespace OpenMM
 
 #endif // __ReferenceCMAPTorsionIxn_H__

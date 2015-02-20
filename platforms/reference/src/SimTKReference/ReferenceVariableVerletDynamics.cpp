@@ -33,7 +33,7 @@
 #include "ReferenceVirtualSites.h"
 
 using std::vector;
-using OpenMM::RealVec;
+using namespace OpenMM;
 
 /**---------------------------------------------------------------------------------------
 

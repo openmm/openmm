@@ -30,7 +30,7 @@
 #include <vector>
 #include <set>
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class OPENMM_EXPORT ReferenceCCMAAlgorithm : public ReferenceConstraintAlgorithm {
 
@@ -120,6 +120,6 @@ public:
     }
 };
 
-// ---------------------------------------------------------------------------------------
+} // namespace OpenMM
 
 #endif // __ReferenceCCMAAlgorithm_H__

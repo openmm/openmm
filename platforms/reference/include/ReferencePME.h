@@ -29,9 +29,14 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef __ReferencePME_H__
+#define __ReferencePME_H__
+
 #include "SimTKOpenMMCommon.h"
 #include "openmm/internal/windowsExport.h"
 #include <vector>
+
+namespace OpenMM {
 
 typedef RealOpenMM rvec[3];
 
@@ -86,3 +91,7 @@ pme_exec(pme_t       pme,
 /* Release all memory in pme structure */
 int OPENMM_EXPORT
 pme_destroy(pme_t    pme);
+
+} // namespace OpenMM
+
+#endif // __ReferencePME_H__

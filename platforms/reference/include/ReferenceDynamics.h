@@ -31,7 +31,7 @@
 #include <cstddef>
 #include <vector>
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 /**---------------------------------------------------------------------------------------
 
@@ -173,6 +173,7 @@ class OPENMM_EXPORT ReferenceDynamics {
       void setReferenceConstraintAlgorithm( ReferenceConstraintAlgorithm* referenceConstraint );
 };
 
-// ---------------------------------------------------------------------------------------
+} // namespace OpenMM
+
 
 #endif // __ReferenceDynamics_H__

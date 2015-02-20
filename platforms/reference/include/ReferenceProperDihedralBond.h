@@ -27,7 +27,7 @@
 
 #include "ReferenceBondIxn.h"
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class OPENMM_EXPORT ReferenceProperDihedralBond : public ReferenceBondIxn {
 
@@ -71,6 +71,6 @@ class OPENMM_EXPORT ReferenceProperDihedralBond : public ReferenceBondIxn {
 
 };
 
-// ---------------------------------------------------------------------------------------
+} // namespace OpenMM
 
 #endif // __ReferenceProperDihedralBond_H__

@@ -24,6 +24,8 @@
 
 #include "SimTKOpenMMCommon.h"
 
+using namespace OpenMM;
+
 // static settings
 
 // initialization of static data members

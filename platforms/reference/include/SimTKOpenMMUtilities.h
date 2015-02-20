@@ -33,6 +33,8 @@
 
 #include <string>
 
+namespace OpenMM {
+
 /**---------------------------------------------------------------------------------------
 
    Class of static methods to be shared
@@ -219,7 +221,7 @@ class OPENMM_EXPORT SimTKOpenMMUtilities {
 
       static void loadCheckpoint(std::istream& stream);
 };
-   
-// ---------------------------------------------------------------------------------------
+
+} // namespace OpenMM
 
 #endif // __SimTKOpenMMUtilities_H__

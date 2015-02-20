@@ -36,6 +36,8 @@
 #include <string.h>
 #include <iostream>
 
+using namespace OpenMM;
+
 uint32_t SimTKOpenMMUtilities::_randomNumberSeed = 0;
 bool SimTKOpenMMUtilities::_randomInitialized = false;
 bool SimTKOpenMMUtilities::nextGaussianIsValid = false;

@@ -27,7 +27,7 @@
 
 #include "ReferenceBondIxn.h"
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class ReferenceHarmonicBondIxn : public ReferenceBondIxn {
 
@@ -70,6 +70,6 @@ class ReferenceHarmonicBondIxn : public ReferenceBondIxn {
 
 };
 
-// ---------------------------------------------------------------------------------------
+} // namespace OpenMM
 
 #endif // _ReferenceHarmonicBondIxn___

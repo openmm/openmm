@@ -27,7 +27,7 @@
 #include "ReferenceBondIxn.h"
 #include "lepton/CompiledExpression.h"
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class ReferenceCustomAngleIxn : public ReferenceBondIxn {
 
@@ -78,6 +78,6 @@ class ReferenceCustomAngleIxn : public ReferenceBondIxn {
 
 };
 
-// ---------------------------------------------------------------------------------------
+} // namespace OpenMM
 
 #endif // _ReferenceCustomAngleIxn___

@@ -28,7 +28,7 @@
 #include "SimTKOpenMMRealType.h"
 #include <vector>
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class ReferenceLincsAlgorithm : public ReferenceConstraintAlgorithm {
 
@@ -157,6 +157,6 @@ class ReferenceLincsAlgorithm : public ReferenceConstraintAlgorithm {
                      std::vector<OpenMM::RealVec>& velocities, std::vector<RealOpenMM>& inverseMasses);
 };
 
-// ---------------------------------------------------------------------------------------
+} // namespace OpenMM
 
 #endif // __ReferenceLincsAlgorithm_H__

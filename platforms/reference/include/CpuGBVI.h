@@ -30,7 +30,7 @@
 #include "RealVec.h"
 #include "GBVIParameters.h"
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class CpuGBVI {
 
@@ -311,6 +311,6 @@ class CpuGBVI {
 
 };
 
-// ---------------------------------------------------------------------------------------
+} // namespace OpenMM
 
 #endif // __CpuGBVI_H__

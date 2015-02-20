@@ -28,7 +28,7 @@
 #include "SimTKOpenMMCommon.h"
 #include <vector>
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class ReferenceAndersenThermostat {
 
@@ -70,6 +70,6 @@ class ReferenceAndersenThermostat {
       
 };
 
-// ---------------------------------------------------------------------------------------
+} // namespace OpenMM
 
 #endif // __ReferenceAndersenThermostat_H__

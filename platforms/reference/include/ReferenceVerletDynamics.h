@@ -27,7 +27,7 @@
 
 #include "ReferenceDynamics.h"
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class ReferenceVerletDynamics : public ReferenceDynamics {
 
@@ -77,6 +77,6 @@ class ReferenceVerletDynamics : public ReferenceDynamics {
       
 };
 
-// ---------------------------------------------------------------------------------------
+} // namespace OpenMM
 
 #endif // __ReferenceVerletDynamics_H__

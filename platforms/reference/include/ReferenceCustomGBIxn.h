@@ -32,7 +32,7 @@
 #include <set>
 #include <vector>
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class ReferenceCustomGBIxn {
 
@@ -289,5 +289,7 @@ class ReferenceCustomGBIxn {
 // ---------------------------------------------------------------------------------------
 
 };
+
+} // namespace OpenMM
 
 #endif // __ReferenceCustomGBIxn_H__

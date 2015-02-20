@@ -28,7 +28,7 @@
 #include "ReferenceForce.h"
 #include "ReferenceBondIxn.h"
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class OPENMM_EXPORT ReferenceBondForce : public ReferenceForce {
 
@@ -74,6 +74,6 @@ class OPENMM_EXPORT ReferenceBondForce : public ReferenceForce {
 
 };
 
-// ---------------------------------------------------------------------------------------
+} // namespace OpenMM
 
 #endif // __ReferenceBondForce_H__

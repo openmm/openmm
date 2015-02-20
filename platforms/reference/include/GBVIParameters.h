@@ -27,7 +27,7 @@
 
 #include "SimTKOpenMMCommon.h"
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class GBVIParameters {
 
@@ -337,5 +337,7 @@ class GBVIParameters {
     void setQuinticUpperBornRadiusLimit( RealOpenMM quinticUpperSplineLimit );
 
 };
-   
+
+} // namespace OpenMM
+
 #endif // __GBVIParameters_H__

@@ -28,6 +28,8 @@
 #include "SimTKOpenMMCommon.h"
 #include "openmm/internal/windowsExport.h"
 
+namespace OpenMM {
+
 /**
  * This abstract class defines the interface which constraint algorithms must implement.
  */
@@ -59,6 +61,6 @@ public:
                      std::vector<OpenMM::RealVec>& velocities, std::vector<RealOpenMM>& inverseMasses, RealOpenMM tolerance) = 0;
 };
 
-// ---------------------------------------------------------------------------------------
+} // namespace OpenMM
 
 #endif // __ReferenceConstraintAlgorithm_H__

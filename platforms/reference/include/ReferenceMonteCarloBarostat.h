@@ -29,7 +29,7 @@
 #include <utility>
 #include <vector>
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class ReferenceMonteCarloBarostat {
 
@@ -82,6 +82,6 @@ class ReferenceMonteCarloBarostat {
 
 };
 
-// ---------------------------------------------------------------------------------------
+} // namespace OpenMM
 
 #endif // __ReferenceMonteCarloBarostat_H__

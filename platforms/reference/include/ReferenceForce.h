@@ -28,7 +28,7 @@
 #include "lepton/CompiledExpression.h"
 #include "openmm/internal/windowsExport.h"
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class OPENMM_EXPORT  ReferenceForce {
 
@@ -126,6 +126,6 @@ class OPENMM_EXPORT  ReferenceForce {
 
 };
 
-// ---------------------------------------------------------------------------------------
+} // namespace OpenMM
 
 #endif // __ReferenceForce_H__

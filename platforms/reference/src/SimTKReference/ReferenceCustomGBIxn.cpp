@@ -36,7 +36,7 @@ using std::set;
 using std::string;
 using std::stringstream;
 using std::vector;
-using OpenMM::RealVec;
+using namespace OpenMM;
 
 /**---------------------------------------------------------------------------------------
 

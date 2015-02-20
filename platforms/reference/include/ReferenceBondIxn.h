@@ -29,7 +29,7 @@
 #include "openmm/internal/windowsExport.h"
 #include <vector>
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class OPENMM_EXPORT ReferenceBondIxn {
 
@@ -126,6 +126,6 @@ class OPENMM_EXPORT ReferenceBondIxn {
       
 };
 
-// ---------------------------------------------------------------------------------------
+} // namespace OpenMM
 
 #endif // __ReferenceBondIxn_H__
