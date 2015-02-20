@@ -25,7 +25,6 @@
 #ifndef __ReferenceMonteCarloBarostat_H__
 #define __ReferenceMonteCarloBarostat_H__
 
-#include "SimTKOpenMMCommon.h"
 #include <utility>
 #include <vector>
 

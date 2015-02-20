@@ -28,7 +28,6 @@
 
 #include "openmm/OpenMMException.h"
 #include "GBVIParameters.h"
-#include "SimTKOpenMMCommon.h"
 
 using std::vector;
 using namespace OpenMM;
@@ -146,7 +145,7 @@ void GBVIParameters::setSoluteDielectric(RealOpenMM soluteDielectric) {
 
     --------------------------------------------------------------------------------------- */
 
-const RealOpenMMVector& GBVIParameters::getAtomicRadii() const {
+const vector<RealOpenMM>& GBVIParameters::getAtomicRadii() const {
     return _atomicRadii;
 }
 
@@ -158,7 +157,7 @@ const RealOpenMMVector& GBVIParameters::getAtomicRadii() const {
 
     --------------------------------------------------------------------------------------- */
 
-void GBVIParameters::setAtomicRadii(const RealOpenMMVector& atomicRadii) {
+void GBVIParameters::setAtomicRadii(const vector<RealOpenMM>& atomicRadii) {
 
     if (atomicRadii.size() == _atomicRadii.size()) {
         for (unsigned int ii = 0; ii < atomicRadii.size(); ii++) {
@@ -170,7 +169,7 @@ void GBVIParameters::setAtomicRadii(const RealOpenMMVector& atomicRadii) {
         msg << atomicRadii.size();
         msg << " current size=" << _atomicRadii.size();
         throw OpenMM::OpenMMException(msg.str());
-    }   
+    }
 
 }
 
@@ -181,7 +180,7 @@ void GBVIParameters::setAtomicRadii(const RealOpenMMVector& atomicRadii) {
 
     --------------------------------------------------------------------------------------- */
 
-const RealOpenMMVector& GBVIParameters::getScaledRadii() const {
+const vector<RealOpenMM>& GBVIParameters::getScaledRadii() const {
     return _scaledRadii;
 }
 
@@ -193,7 +192,7 @@ const RealOpenMMVector& GBVIParameters::getScaledRadii() const {
 
     --------------------------------------------------------------------------------------- */
 
-void GBVIParameters::setScaledRadii(const RealOpenMMVector& scaledRadii) {
+void GBVIParameters::setScaledRadii(const vector<RealOpenMM>& scaledRadii) {
 
     if (scaledRadii.size() == _scaledRadii.size()) {
         for (unsigned int ii = 0; ii < scaledRadii.size(); ii++) {
@@ -218,7 +217,7 @@ void GBVIParameters::setScaledRadii(const RealOpenMMVector& scaledRadii) {
 
     --------------------------------------------------------------------------------------- */
 
-const RealOpenMMVector& GBVIParameters::getGammaParameters() const {
+const vector<RealOpenMM>& GBVIParameters::getGammaParameters() const {
     return _gammaParameters;
 }
 
@@ -230,7 +229,7 @@ const RealOpenMMVector& GBVIParameters::getGammaParameters() const {
 
     --------------------------------------------------------------------------------------- */
 
-void GBVIParameters::setGammaParameters(const RealOpenMMVector& gammas) {
+void GBVIParameters::setGammaParameters(const vector<RealOpenMM>& gammas) {
 
     if (gammas.size() == _gammaParameters.size()) {
         for (unsigned int ii = 0; ii < gammas.size(); ii++) {

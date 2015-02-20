@@ -26,7 +26,6 @@
 #include <sstream>
 #include <utility>
 
-#include "SimTKOpenMMCommon.h"
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceForce.h"
 #include "ReferenceCustomManyParticleIxn.h"

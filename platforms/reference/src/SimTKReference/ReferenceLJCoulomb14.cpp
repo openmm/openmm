@@ -25,7 +25,6 @@
 #include <string.h>
 #include <sstream>
 
-#include "SimTKOpenMMCommon.h"
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceLJCoulomb14.h"
 #include "ReferenceForce.h"

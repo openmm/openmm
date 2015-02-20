@@ -26,7 +26,6 @@
 #include <sstream>
 #include <stdio.h>
 
-#include "SimTKOpenMMCommon.h"
 #include "ReferenceForce.h"
 #include "CpuGBVI.h"
 
@@ -86,7 +85,7 @@ void CpuGBVI::setGBVIParameters(GBVIParameters* gbviParameters) {
 
     --------------------------------------------------------------------------------------- */
 
-RealOpenMMVector& CpuGBVI::getSwitchDeriviative() {
+vector<RealOpenMM>& CpuGBVI::getSwitchDeriviative() {
     return _switchDeriviative;
 }
 
@@ -203,7 +202,7 @@ void CpuGBVI::computeBornRadiiUsingQuinticSpline(RealOpenMM atomicRadius3, RealO
 
     --------------------------------------------------------------------------------------- */
 
-void CpuGBVI::computeBornRadii(const vector<RealVec>& atomCoordinates, RealOpenMMVector& bornRadii) {
+void CpuGBVI::computeBornRadii(const vector<RealVec>& atomCoordinates, vector<RealOpenMM>& bornRadii) {
 
     // ---------------------------------------------------------------------------------------
 
@@ -218,10 +217,10 @@ void CpuGBVI::computeBornRadii(const vector<RealVec>& atomCoordinates, RealOpenM
 
     GBVIParameters* gbviParameters        = getGBVIParameters();
     int numberOfAtoms                     = gbviParameters->getNumberOfAtoms();
-    const RealOpenMMVector& atomicRadii   = gbviParameters->getAtomicRadii();
-    const RealOpenMMVector& scaledRadii   = gbviParameters->getScaledRadii();
+    const vector<RealOpenMM>& atomicRadii   = gbviParameters->getAtomicRadii();
+    const vector<RealOpenMM>& scaledRadii   = gbviParameters->getScaledRadii();
 
-    RealOpenMMVector& switchDeriviatives  = getSwitchDeriviative();
+    vector<RealOpenMM>& switchDeriviatives  = getSwitchDeriviative();
 
     // ---------------------------------------------------------------------------------------
 
@@ -448,7 +447,7 @@ RealOpenMM CpuGBVI::Sgb(RealOpenMM t) {
 
     --------------------------------------------------------------------------------------- */
 
-RealOpenMM CpuGBVI::computeBornEnergy(const vector<RealVec>& atomCoordinates, const RealOpenMMVector& partialCharges) {
+RealOpenMM CpuGBVI::computeBornEnergy(const vector<RealVec>& atomCoordinates, const vector<RealOpenMM>& partialCharges) {
 
     // ---------------------------------------------------------------------------------------
 
@@ -466,12 +465,12 @@ RealOpenMM CpuGBVI::computeBornEnergy(const vector<RealVec>& atomCoordinates, co
     const GBVIParameters* gbviParameters       = getGBVIParameters();
     const RealOpenMM preFactor                 = gbviParameters->getElectricConstant();
     const int numberOfAtoms                    = gbviParameters->getNumberOfAtoms();
-    const RealOpenMMVector& atomicRadii        = gbviParameters->getAtomicRadii();
-    const RealOpenMMVector& gammaParameters    = gbviParameters->getGammaParameters();
+    const vector<RealOpenMM>& atomicRadii        = gbviParameters->getAtomicRadii();
+    const vector<RealOpenMM>& gammaParameters    = gbviParameters->getGammaParameters();
 
     // compute Born radii
 
-    RealOpenMMVector bornRadii(numberOfAtoms);
+    vector<RealOpenMM> bornRadii(numberOfAtoms);
     computeBornRadii(atomCoordinates, bornRadii);
 
     // ---------------------------------------------------------------------------------------
@@ -532,7 +531,7 @@ RealOpenMM CpuGBVI::computeBornEnergy(const vector<RealVec>& atomCoordinates, co
     --------------------------------------------------------------------------------------- */
 
 
-void CpuGBVI::computeBornForces(std::vector<RealVec>& atomCoordinates, const RealOpenMMVector& partialCharges,
+void CpuGBVI::computeBornForces(std::vector<RealVec>& atomCoordinates, const vector<RealOpenMM>& partialCharges,
                                  std::vector<OpenMM::RealVec>& inputForces) {
 
     // ---------------------------------------------------------------------------------------
@@ -551,8 +550,8 @@ void CpuGBVI::computeBornForces(std::vector<RealVec>& atomCoordinates, const Rea
 
     const GBVIParameters* gbviParameters       = getGBVIParameters();
     const int numberOfAtoms                    = gbviParameters->getNumberOfAtoms();
-    const RealOpenMMVector& atomicRadii        = gbviParameters->getAtomicRadii();
-    const RealOpenMMVector& gammaParameters    = gbviParameters->getGammaParameters();
+    const vector<RealOpenMM>& atomicRadii        = gbviParameters->getAtomicRadii();
+    const vector<RealOpenMM>& gammaParameters    = gbviParameters->getGammaParameters();
 
     // ---------------------------------------------------------------------------------------
 
@@ -564,7 +563,7 @@ void CpuGBVI::computeBornForces(std::vector<RealVec>& atomCoordinates, const Rea
 
     // compute Born radii
 
-    RealOpenMMVector bornRadii(numberOfAtoms);
+    vector<RealOpenMM> bornRadii(numberOfAtoms);
     computeBornRadii(atomCoordinates, bornRadii);
 
     // set energy/forces to zero
@@ -576,7 +575,7 @@ void CpuGBVI::computeBornForces(std::vector<RealVec>& atomCoordinates, const Rea
         forces[ii][2] = zero;
     }
 
-    RealOpenMMVector bornForces(numberOfAtoms, 0.0);
+    vector<RealOpenMM> bornForces(numberOfAtoms, 0.0);
 
     // ---------------------------------------------------------------------------------------
 
@@ -645,8 +644,8 @@ void CpuGBVI::computeBornForces(std::vector<RealVec>& atomCoordinates, const Rea
     // dGpol/dBornRadius) = bornForces[]
     // dBornRadius/dr     = (1/3)*(bR**4)*(dV/dr)
 
-    const RealOpenMMVector& scaledRadii           = gbviParameters->getScaledRadii();
-    const RealOpenMMVector& switchDeriviative     = getSwitchDeriviative();
+    const vector<RealOpenMM>& scaledRadii           = gbviParameters->getScaledRadii();
+    const vector<RealOpenMM>& switchDeriviative     = getSwitchDeriviative();
     for (int atomI = 0; atomI < numberOfAtoms; atomI++) {
  
         RealOpenMM R        = atomicRadii[atomI];
@@ -748,9 +747,9 @@ void CpuGBVI::computeBornForces(std::vector<RealVec>& atomCoordinates, const Rea
 
     --------------------------------------------------------------------------------------- */
 
-void CpuGBVI::printGbvi(const std::vector<OpenMM::RealVec>& atomCoordinates, const RealOpenMMVector& partialCharges,
-                        const RealOpenMMVector& bornRadii,
-                        const RealOpenMMVector& bornForces,
+void CpuGBVI::printGbvi(const std::vector<OpenMM::RealVec>& atomCoordinates, const vector<RealOpenMM>& partialCharges,
+                        const vector<RealOpenMM>& bornRadii,
+                        const vector<RealOpenMM>& bornForces,
                         const std::vector<OpenMM::RealVec>& forces,
                         const std::string& idString, FILE* log) {
 
@@ -758,8 +757,8 @@ void CpuGBVI::printGbvi(const std::vector<OpenMM::RealVec>& atomCoordinates, con
 
     const GBVIParameters* gbviParameters       = getGBVIParameters();
     const int numberOfAtoms                    = gbviParameters->getNumberOfAtoms();
-    const RealOpenMMVector& atomicRadii        = gbviParameters->getAtomicRadii();
-    const RealOpenMMVector& gammaParameters    = gbviParameters->getGammaParameters();
+    const vector<RealOpenMM>& atomicRadii        = gbviParameters->getAtomicRadii();
+    const vector<RealOpenMM>& gammaParameters    = gbviParameters->getGammaParameters();
 
     // ---------------------------------------------------------------------------------------
 
@@ -769,8 +768,8 @@ void CpuGBVI::printGbvi(const std::vector<OpenMM::RealVec>& atomCoordinates, con
 
     // ---------------------------------------------------------------------------------------
 
-    const RealOpenMMVector& scaledRadii       = gbviParameters->getScaledRadii();
-    const RealOpenMMVector& switchDeriviative = getSwitchDeriviative();
+    const vector<RealOpenMM>& scaledRadii       = gbviParameters->getScaledRadii();
+    const vector<RealOpenMM>& switchDeriviative = getSwitchDeriviative();
     RealOpenMM tau                            = static_cast<RealOpenMM>(gbviParameters->getTau());  
 
     int useComparisonFormat                   = 1;

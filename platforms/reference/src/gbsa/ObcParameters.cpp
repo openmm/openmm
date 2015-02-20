@@ -28,7 +28,6 @@
 
 #include "openmm/OpenMMException.h"
 #include "ObcParameters.h"
-#include "SimTKOpenMMCommon.h"
 
 using std::vector;
 using namespace OpenMM;
@@ -271,7 +270,7 @@ void ObcParameters::setPi4Asolv(RealOpenMM pi4Asolv) {
 
     --------------------------------------------------------------------------------------- */
 
-const RealOpenMMVector& ObcParameters::getAtomicRadii() const {
+const vector<RealOpenMM>& ObcParameters::getAtomicRadii() const {
     return _atomicRadii;
 }
 
@@ -283,7 +282,7 @@ const RealOpenMMVector& ObcParameters::getAtomicRadii() const {
 
     --------------------------------------------------------------------------------------- */
 
-void ObcParameters::setAtomicRadii(const RealOpenMMVector& atomicRadii) {
+void ObcParameters::setAtomicRadii(const vector<RealOpenMM>& atomicRadii) {
 
     if (atomicRadii.size() == _atomicRadii.size()) {
         for (unsigned int ii = 0; ii < atomicRadii.size(); ii++) {
@@ -307,7 +306,7 @@ void ObcParameters::setAtomicRadii(const RealOpenMMVector& atomicRadii) {
 
     --------------------------------------------------------------------------------------- */
 
-const RealOpenMMVector& ObcParameters::getScaledRadiusFactors() const {
+const vector<RealOpenMM>& ObcParameters::getScaledRadiusFactors() const {
     return _scaledRadiusFactors;
 }
 
@@ -319,7 +318,7 @@ const RealOpenMMVector& ObcParameters::getScaledRadiusFactors() const {
 
     --------------------------------------------------------------------------------------- */
 
-void ObcParameters::setScaledRadiusFactors(const RealOpenMMVector& scaledRadiusFactors) {
+void ObcParameters::setScaledRadiusFactors(const vector<RealOpenMM>& scaledRadiusFactors) {
 
     if (scaledRadiusFactors.size() == _scaledRadiusFactors.size()) {
         for (unsigned int ii = 0; ii < scaledRadiusFactors.size(); ii++) {

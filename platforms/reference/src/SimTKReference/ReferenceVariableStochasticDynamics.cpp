@@ -26,7 +26,6 @@
 #include <sstream>
 #include <algorithm>
 
-#include "SimTKOpenMMCommon.h"
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceVariableStochasticDynamics.h"
 #include "ReferenceVirtualSites.h"

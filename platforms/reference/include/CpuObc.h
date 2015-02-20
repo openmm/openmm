@@ -39,7 +39,7 @@ class CpuObc {
 
       // arrays containing OBC chain derivative 
 
-      RealOpenMMVector _obcChain;
+      std::vector<RealOpenMM> _obcChain;
 
       // flag to signal whether ACE approximation
       // is to be included
@@ -117,7 +117,7 @@ class CpuObc {
       
          --------------------------------------------------------------------------------------- */
       
-      RealOpenMMVector& getObcChain();
+      std::vector<RealOpenMM>& getObcChain();
       
       /**---------------------------------------------------------------------------------------
       
@@ -128,7 +128,7 @@ class CpuObc {
       
          --------------------------------------------------------------------------------------- */
       
-      void computeBornRadii(const std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMMVector& bornRadii);
+      void computeBornRadii(const std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<RealOpenMM>& bornRadii);
       
       /**---------------------------------------------------------------------------------------
         
@@ -142,8 +142,8 @@ class CpuObc {
         
             --------------------------------------------------------------------------------------- */
         
-      void computeAceNonPolarForce(const ObcParameters* obcParameters, const RealOpenMMVector& bornRadii, 
-                                   RealOpenMM* energy, RealOpenMMVector& forces) const;
+      void computeAceNonPolarForce(const ObcParameters* obcParameters, const std::vector<RealOpenMM>& bornRadii,
+                                   RealOpenMM* energy, std::vector<RealOpenMM>& forces) const;
         
       /**---------------------------------------------------------------------------------------
       
@@ -156,7 +156,7 @@ class CpuObc {
          --------------------------------------------------------------------------------------- */
       
       RealOpenMM computeBornEnergyForces(const std::vector<OpenMM::RealVec>& atomCoordinates,
-                                         const RealOpenMMVector& partialCharges, std::vector<OpenMM::RealVec>& forces);
+                                         const std::vector<RealOpenMM>& partialCharges, std::vector<OpenMM::RealVec>& forces);
       
     /**---------------------------------------------------------------------------------------
     
@@ -173,9 +173,9 @@ class CpuObc {
         --------------------------------------------------------------------------------------- */
     
     void printObc(const std::vector<OpenMM::RealVec>& atomCoordinates,
-                  const RealOpenMMVector& partialCharges,
-                  const RealOpenMMVector& bornRadii,
-                  const RealOpenMMVector& bornForces,
+                  const std::vector<RealOpenMM>& partialCharges,
+                  const std::vector<RealOpenMM>& bornRadii,
+                  const std::vector<RealOpenMM>& bornForces,
                   const std::vector<OpenMM::RealVec>& forces,
                   const std::string& idString, FILE* log);
     

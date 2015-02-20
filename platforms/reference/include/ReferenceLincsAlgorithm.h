@@ -131,12 +131,9 @@ class ReferenceLincsAlgorithm : public ReferenceConstraintAlgorithm {
          @param atomCoordinatesP atom coordinates prime
          @param inverseMasses    1/mass
 
-         @return SimTKOpenMMCommon::DefaultReturn if converge; else
-          return SimTKOpenMMCommon::ErrorReturn
-
          --------------------------------------------------------------------------------------- */
 
-      int apply(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
+      void apply(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
                        std::vector<OpenMM::RealVec>& atomCoordinatesP, std::vector<RealOpenMM>& inverseMasses);
 
       /**---------------------------------------------------------------------------------------
@@ -148,12 +145,9 @@ class ReferenceLincsAlgorithm : public ReferenceConstraintAlgorithm {
          @param velocities       atom velocities
          @param inverseMasses    1/mass
 
-         @return SimTKOpenMMCommon::DefaultReturn if converge; else
-          return SimTKOpenMMCommon::ErrorReturn
-
          --------------------------------------------------------------------------------------- */
 
-      int applyToVelocities(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
+      void applyToVelocities(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
                      std::vector<OpenMM::RealVec>& velocities, std::vector<RealOpenMM>& inverseMasses);
 };
 

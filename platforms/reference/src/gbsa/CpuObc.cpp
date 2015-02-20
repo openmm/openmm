@@ -28,7 +28,6 @@
 #include <cmath>
 #include <cstdio>
 
-#include "SimTKOpenMMCommon.h"
 #include "ReferenceForce.h"
 #include "CpuObc.h"
 
@@ -144,9 +143,9 @@ void CpuObc::computeBornRadii(const vector<RealVec>& atomCoordinates, vector<Rea
     ObcParameters* obcParameters                = getObcParameters();
 
     int numberOfAtoms                           = obcParameters->getNumberOfAtoms();
-    const RealOpenMMVector& atomicRadii         = obcParameters->getAtomicRadii();
-    const RealOpenMMVector& scaledRadiusFactor  = obcParameters->getScaledRadiusFactors();
-    RealOpenMMVector& obcChain                  = getObcChain();
+    const vector<RealOpenMM>& atomicRadii         = obcParameters->getAtomicRadii();
+    const vector<RealOpenMM>& scaledRadiusFactor  = obcParameters->getScaledRadiusFactors();
+    vector<RealOpenMM>& obcChain                  = getObcChain();
 
     RealOpenMM dielectricOffset                 = obcParameters->getDielectricOffset();
     RealOpenMM alphaObc                         = obcParameters->getAlphaObc();
@@ -237,9 +236,9 @@ void CpuObc::computeBornRadii(const vector<RealVec>& atomCoordinates, vector<Rea
     --------------------------------------------------------------------------------------- */
 
 void CpuObc::computeAceNonPolarForce(const ObcParameters* obcParameters,
-                                      const RealOpenMMVector& bornRadii, 
+                                      const vector<RealOpenMM>& bornRadii,
                                       RealOpenMM* energy,
-                                      RealOpenMMVector& forces) const {
+                                      vector<RealOpenMM>& forces) const {
 
     // ---------------------------------------------------------------------------------------
 
@@ -254,7 +253,7 @@ void CpuObc::computeAceNonPolarForce(const ObcParameters* obcParameters,
     const RealOpenMM probeRadius          = obcParameters->getProbeRadius();
     const RealOpenMM surfaceAreaFactor    = obcParameters->getPi4Asolv();
 
-    const RealOpenMMVector& atomicRadii   = obcParameters->getAtomicRadii();
+    const vector<RealOpenMM>& atomicRadii   = obcParameters->getAtomicRadii();
     int numberOfAtoms                     = obcParameters->getNumberOfAtoms();
 
     // the original ACE equation is based on Eq.2 of
@@ -295,7 +294,7 @@ void CpuObc::computeAceNonPolarForce(const ObcParameters* obcParameters,
     --------------------------------------------------------------------------------------- */
 
 RealOpenMM CpuObc::computeBornEnergyForces(const vector<RealVec>& atomCoordinates,
-                                           const RealOpenMMVector& partialCharges, vector<RealVec>& inputForces) {
+                                           const vector<RealOpenMM>& partialCharges, vector<RealVec>& inputForces) {
 
     // ---------------------------------------------------------------------------------------
 
@@ -325,13 +324,13 @@ RealOpenMM CpuObc::computeBornEnergyForces(const vector<RealVec>& atomCoordinate
 
     // compute Born radii
 
-    RealOpenMMVector bornRadii(numberOfAtoms);
+    vector<RealOpenMM> bornRadii(numberOfAtoms);
     computeBornRadii(atomCoordinates, bornRadii);
 
     // set energy/forces to zero
 
     RealOpenMM obcEnergy                 = zero;
-    RealOpenMMVector bornForces(numberOfAtoms, 0.0);
+    vector<RealOpenMM> bornForces(numberOfAtoms, 0.0);
 
     // ---------------------------------------------------------------------------------------
 
@@ -410,13 +409,13 @@ RealOpenMM CpuObc::computeBornEnergyForces(const vector<RealVec>& atomCoordinate
 
     // second main loop
 
-    const RealOpenMMVector& obcChain            = getObcChain();
-    const RealOpenMMVector& atomicRadii         = _obcParameters->getAtomicRadii();
+    const vector<RealOpenMM>& obcChain            = getObcChain();
+    const vector<RealOpenMM>& atomicRadii         = _obcParameters->getAtomicRadii();
 
     const RealOpenMM alphaObc                   = _obcParameters->getAlphaObc();
     const RealOpenMM betaObc                    = _obcParameters->getBetaObc();
     const RealOpenMM gammaObc                   = _obcParameters->getGammaObc();
-    const RealOpenMMVector& scaledRadiusFactor  = _obcParameters->getScaledRadiusFactors();
+    const vector<RealOpenMM>& scaledRadiusFactor  = _obcParameters->getScaledRadiusFactors();
 
     // compute factor that depends only on the outer loop index
 
@@ -515,9 +514,9 @@ RealOpenMM CpuObc::computeBornEnergyForces(const vector<RealVec>& atomCoordinate
     --------------------------------------------------------------------------------------- */
 
 void CpuObc::printObc(const std::vector<OpenMM::RealVec>& atomCoordinates,
-                      const RealOpenMMVector& partialCharges,
-                      const RealOpenMMVector& bornRadii,
-                      const RealOpenMMVector& bornForces,
+                      const vector<RealOpenMM>& partialCharges,
+                      const vector<RealOpenMM>& bornRadii,
+                      const vector<RealOpenMM>& bornForces,
                       const std::vector<OpenMM::RealVec>& forces,
                       const std::string& idString, FILE* log) {
 
@@ -525,10 +524,10 @@ void CpuObc::printObc(const std::vector<OpenMM::RealVec>& atomCoordinates,
 
     const ObcParameters* obcParameters          = getObcParameters();
     const int numberOfAtoms                     = obcParameters->getNumberOfAtoms();
-    const RealOpenMMVector& atomicRadii         = obcParameters->getAtomicRadii();
+    const vector<RealOpenMM>& atomicRadii         = obcParameters->getAtomicRadii();
     const RealOpenMM preFactor                  = 2.0*obcParameters->getElectricConstant();
-    const RealOpenMMVector& obcChain            = getObcChain();
-    const RealOpenMMVector& scaledRadiusFactor  = obcParameters->getScaledRadiusFactors();
+    const vector<RealOpenMM>& obcChain            = getObcChain();
+    const vector<RealOpenMM>& scaledRadiusFactor  = obcParameters->getScaledRadiusFactors();
 
     const RealOpenMM alphaObc                   = obcParameters->getAlphaObc();
     const RealOpenMM betaObc                    = obcParameters->getBetaObc();

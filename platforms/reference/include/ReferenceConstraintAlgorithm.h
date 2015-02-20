@@ -25,8 +25,9 @@
 #ifndef __ReferenceConstraintAlgorithm_H__
 #define __ReferenceConstraintAlgorithm_H__
 
-#include "SimTKOpenMMCommon.h"
+#include "RealVec.h"
 #include "openmm/internal/windowsExport.h"
+#include <vector>
 
 namespace OpenMM {
 

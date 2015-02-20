@@ -27,7 +27,6 @@
 #include <complex>
 #include <algorithm>
 
-#include "SimTKOpenMMCommon.h"
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceLJCoulombIxn.h"
 #include "ReferenceForce.h"

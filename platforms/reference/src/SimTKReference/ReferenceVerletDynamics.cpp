@@ -25,7 +25,6 @@
 #include <cstring>
 #include <sstream>
 
-#include "SimTKOpenMMCommon.h"
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceVerletDynamics.h"
 #include "ReferenceVirtualSites.h"

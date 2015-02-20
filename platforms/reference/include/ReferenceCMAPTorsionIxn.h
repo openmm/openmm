@@ -25,7 +25,6 @@
 #ifndef __ReferenceCMAPTorsionIxn_H__
 #define __ReferenceCMAPTorsionIxn_H__
 
-#include "SimTKOpenMMCommon.h"
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceBondIxn.h"
 #include <vector>

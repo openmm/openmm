@@ -24,7 +24,6 @@
 
 #include <complex>
 
-#include "SimTKOpenMMCommon.h"
 #include "SimTKOpenMMUtilities.h"
 #include "CpuNonbondedForce.h"
 #include "ReferenceForce.h"

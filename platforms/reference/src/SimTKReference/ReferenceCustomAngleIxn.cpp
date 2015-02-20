@@ -24,7 +24,6 @@
 #include <string.h>
 #include <sstream>
 
-#include "SimTKOpenMMCommon.h"
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceCustomAngleIxn.h"
 #include "ReferenceForce.h"

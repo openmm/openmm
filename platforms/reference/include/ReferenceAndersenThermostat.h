@@ -25,7 +25,6 @@
 #ifndef __ReferenceAndersenThermostat_H__
 #define __ReferenceAndersenThermostat_H__
 
-#include "SimTKOpenMMCommon.h"
 #include <vector>
 
 namespace OpenMM {

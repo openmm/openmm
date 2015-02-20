@@ -25,7 +25,8 @@
 #ifndef __ObcParameters_H__
 #define __ObcParameters_H__
 
-#include "SimTKOpenMMCommon.h"
+#include "RealVec.h"
+#include <vector>
 
 namespace OpenMM {
 
@@ -57,8 +58,8 @@ class ObcParameters {
 
       // scaled radius factors (S_kk in HCT paper)
 
-      RealOpenMMVector _atomicRadii;
-      RealOpenMMVector _scaledRadiusFactors;
+      std::vector<RealOpenMM> _atomicRadii;
+      std::vector<RealOpenMM> _scaledRadiusFactors;
 
       // cutoff and periodic boundary conditions
       
@@ -264,7 +265,7 @@ class ObcParameters {
       
          --------------------------------------------------------------------------------------- */
       
-      const RealOpenMMVector& getScaledRadiusFactors() const;
+      const std::vector<RealOpenMM>& getScaledRadiusFactors() const;
         
       /**---------------------------------------------------------------------------------------
       
@@ -274,7 +275,7 @@ class ObcParameters {
       
          --------------------------------------------------------------------------------------- */
       
-      void setScaledRadiusFactors(const RealOpenMMVector& scaledRadiusFactors);
+      void setScaledRadiusFactors(const std::vector<RealOpenMM>& scaledRadiusFactors);
         
       /**---------------------------------------------------------------------------------------
       
@@ -284,7 +285,7 @@ class ObcParameters {
       
          --------------------------------------------------------------------------------------- */
 
-      const RealOpenMMVector& getAtomicRadii() const;
+      const std::vector<RealOpenMM>& getAtomicRadii() const;
 
       /**---------------------------------------------------------------------------------------
       
@@ -294,7 +295,7 @@ class ObcParameters {
       
          --------------------------------------------------------------------------------------- */
 
-      void setAtomicRadii(const RealOpenMMVector& atomicRadii);
+      void setAtomicRadii(const std::vector<RealOpenMM>& atomicRadii);
 
 
       /**---------------------------------------------------------------------------------------

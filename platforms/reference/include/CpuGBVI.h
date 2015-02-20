@@ -39,7 +39,7 @@ class CpuGBVI {
       // GB/VI parameters
 
       GBVIParameters* _gbviParameters;
-      RealOpenMMVector _switchDeriviative;
+      std::vector<RealOpenMM> _switchDeriviative;
 
    public:
 
@@ -93,7 +93,7 @@ class CpuGBVI {
       
          --------------------------------------------------------------------------------------- */
       
-      void computeBornRadii(const std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMMVector& bornRadii);
+      void computeBornRadii(const std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<RealOpenMM>& bornRadii);
       
       /**---------------------------------------------------------------------------------------
       
@@ -174,7 +174,7 @@ class CpuGBVI {
       
          --------------------------------------------------------------------------------------- */
       
-      RealOpenMM computeBornEnergy(const std::vector<OpenMM::RealVec>& atomCoordinates, const RealOpenMMVector& partialCharges);
+      RealOpenMM computeBornEnergy(const std::vector<OpenMM::RealVec>& atomCoordinates, const std::vector<RealOpenMM>& partialCharges);
       
       /**---------------------------------------------------------------------------------------
       
@@ -187,7 +187,7 @@ class CpuGBVI {
          --------------------------------------------------------------------------------------- */
       
       void computeBornForces(std::vector<OpenMM::RealVec>& atomCoordinates,
-                             const RealOpenMMVector& partialCharges, std::vector<OpenMM::RealVec>& inputForces);
+                             const std::vector<RealOpenMM>& partialCharges, std::vector<OpenMM::RealVec>& inputForces);
       
       /**---------------------------------------------------------------------------------------
       
@@ -254,7 +254,7 @@ class CpuGBVI {
     
        --------------------------------------------------------------------------------------- */
     
-      RealOpenMMVector& getSwitchDeriviative();
+      std::vector<RealOpenMM>& getSwitchDeriviative();
     
     /**---------------------------------------------------------------------------------------
     
@@ -303,9 +303,9 @@ class CpuGBVI {
     
         --------------------------------------------------------------------------------------- */
     
-    void printGbvi(const std::vector<OpenMM::RealVec>& atomCoordinates, const RealOpenMMVector& partialCharges,
-                   const RealOpenMMVector& bornRadii,
-                   const RealOpenMMVector& bornForces,
+    void printGbvi(const std::vector<OpenMM::RealVec>& atomCoordinates, const std::vector<RealOpenMM>& partialCharges,
+                   const std::vector<RealOpenMM>& bornRadii,
+                   const std::vector<RealOpenMM>& bornForces,
                    const std::vector<OpenMM::RealVec>& forces,
                    const std::string& idString, FILE* log);
 

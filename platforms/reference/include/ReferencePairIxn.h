@@ -27,6 +27,7 @@
 
 #include "RealVec.h"
 #include "openmm/internal/windowsExport.h"
+#include <vector>
 
 namespace OpenMM {
 

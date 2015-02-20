@@ -27,7 +27,7 @@
 
 // class of shared, static utility methods
 
-#include "SimTKOpenMMCommon.h" 
+#include "RealVec.h"
 #include "sfmt/SFMT.h"
 #include "openmm/internal/windowsExport.h"
 

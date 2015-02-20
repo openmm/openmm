@@ -32,7 +32,7 @@
 #ifndef __ReferencePME_H__
 #define __ReferencePME_H__
 
-#include "SimTKOpenMMCommon.h"
+#include "RealVec.h"
 #include "openmm/internal/windowsExport.h"
 #include <vector>
 

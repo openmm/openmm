@@ -25,7 +25,8 @@
 #ifndef __GBVIParameters_H__
 #define __GBVIParameters_H__
 
-#include "SimTKOpenMMCommon.h"
+#include "RealVec.h"
+#include <vector>
 
 namespace OpenMM {
 
@@ -57,9 +58,9 @@ class GBVIParameters {
 
       // parameter vectors
 
-      RealOpenMMVector _atomicRadii;
-      RealOpenMMVector _scaledRadii;
-      RealOpenMMVector _gammaParameters;
+      std::vector<RealOpenMM> _atomicRadii;
+      std::vector<RealOpenMM> _scaledRadii;
+      std::vector<RealOpenMM> _gammaParameters;
 
       // cutoff and periodic boundary conditions
       
@@ -160,7 +161,7 @@ class GBVIParameters {
       
          --------------------------------------------------------------------------------------- */
       
-      const RealOpenMMVector& getScaledRadii() const;
+      const std::vector<RealOpenMM>& getScaledRadii() const;
         
       /**---------------------------------------------------------------------------------------
       
@@ -170,7 +171,7 @@ class GBVIParameters {
       
          --------------------------------------------------------------------------------------- */
       
-      void setScaledRadii(const RealOpenMMVector& scaledRadii);
+      void setScaledRadii(const std::vector<RealOpenMM>& scaledRadii);
         
       /**---------------------------------------------------------------------------------------
       
@@ -180,7 +181,7 @@ class GBVIParameters {
       
          --------------------------------------------------------------------------------------- */
 
-      const RealOpenMMVector& getAtomicRadii() const;
+      const std::vector<RealOpenMM>& getAtomicRadii() const;
 
       /**---------------------------------------------------------------------------------------
       
@@ -190,7 +191,7 @@ class GBVIParameters {
       
          --------------------------------------------------------------------------------------- */
 
-      void setAtomicRadii(const RealOpenMMVector& atomicRadii);
+      void setAtomicRadii(const std::vector<RealOpenMM>& atomicRadii);
 
       /**---------------------------------------------------------------------------------------
       
@@ -200,7 +201,7 @@ class GBVIParameters {
       
          --------------------------------------------------------------------------------------- */
 
-      const RealOpenMMVector& getGammaParameters() const;
+      const std::vector<RealOpenMM>& getGammaParameters() const;
 
       /**---------------------------------------------------------------------------------------
       
@@ -210,7 +211,7 @@ class GBVIParameters {
       
          --------------------------------------------------------------------------------------- */
 
-      void setGammaParameters(const RealOpenMMVector& gammaParameters);
+      void setGammaParameters(const std::vector<RealOpenMM>& gammaParameters);
 
       /**---------------------------------------------------------------------------------------
 
