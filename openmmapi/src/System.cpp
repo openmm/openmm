@@ -61,10 +61,11 @@ void System::setParticleMass(int index, double mass) {
     masses[index] = mass;
 }
 
-
 void System::setVirtualSite(int index, VirtualSite* virtualSite) {
     if (index >= (int) virtualSites.size())
         virtualSites.resize(getNumParticles(), NULL);
+    if (virtualSites[index] != NULL)
+        delete virtualSites[index];
     virtualSites[index] = virtualSite;
 }
 
@@ -93,6 +94,11 @@ void System::setConstraintParameters(int index, int particle1, int particle2, do
     constraints[index].distance = distance;
 }
 
+void System::removeConstraint(int index) {
+    ASSERT_VALID_INDEX(index, constraints);
+    constraints.erase(constraints.begin()+index);
+}
+
 const Force& System::getForce(int index) const {
     ASSERT_VALID_INDEX(index, forces);
     return *forces[index];
@@ -101,6 +107,12 @@ const Force& System::getForce(int index) const {
 Force& System::getForce(int index) {
     ASSERT_VALID_INDEX(index, forces);
     return *forces[index];
+}
+
+void System::removeForce(int index) {
+    ASSERT_VALID_INDEX(index, forces);
+    delete forces[index];
+    forces.erase(forces.begin()+index);
 }
 
 void System::getDefaultPeriodicBoxVectors(Vec3& a, Vec3& b, Vec3& c) const {
