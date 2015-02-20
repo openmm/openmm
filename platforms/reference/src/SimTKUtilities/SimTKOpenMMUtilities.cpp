@@ -26,7 +26,6 @@
 
 #include "openmm/internal/OSRngSeed.h"
 #include "SimTKOpenMMUtilities.h"
-#include "SimTKOpenMMLog.h"
 #include "sfmt/SFMT.h"
 
 // fabs(), ...

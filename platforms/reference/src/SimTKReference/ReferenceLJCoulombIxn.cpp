@@ -28,11 +28,11 @@
 #include <algorithm>
 
 #include "SimTKOpenMMCommon.h"
-#include "SimTKOpenMMLog.h"
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceLJCoulombIxn.h"
 #include "ReferenceForce.h"
 #include "ReferencePME.h"
+#include "openmm/OpenMMException.h"
 
 // In case we're using some primitive version of Visual Studio this will
 // make sure that erf() and erfc() are defined.
@@ -264,11 +264,8 @@ void ReferenceLJCoulombIxn::calculateEwaldIxn(int numberOfAtoms, vector<RealVec>
   vector<d_complex> tab_xy(numberOfAtoms);
   vector<d_complex> tab_qxyz(numberOfAtoms);
 
-  if (kmax < 1) {
-      std::stringstream message;
-      message << " kmax < 1 , Aborting" << std::endl;
-      SimTKOpenMMLog::printError( message );
-  }
+  if (kmax < 1)
+      throw OpenMMException("kmax for Ewald summation < 1");
 
   for(int i = 0; (i < numberOfAtoms); i++) {
     for(int m = 0; (m < 3); m++)

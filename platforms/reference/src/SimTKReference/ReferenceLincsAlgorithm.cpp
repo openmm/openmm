@@ -26,7 +26,6 @@
 
 #include "SimTKOpenMMCommon.h"
 #include "SimTKOpenMMUtilities.h"
-#include "SimTKOpenMMLog.h"
 #include "ReferenceLincsAlgorithm.h"
 #include "ReferenceDynamics.h"
 #include "openmm/OpenMMException.h"

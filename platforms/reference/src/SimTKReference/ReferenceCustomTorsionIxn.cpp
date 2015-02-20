@@ -25,7 +25,6 @@
 #include <sstream>
 
 #include "SimTKOpenMMCommon.h"
-#include "SimTKOpenMMLog.h"
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceCustomTorsionIxn.h"
 #include "ReferenceForce.h"

@@ -26,10 +26,10 @@
 #include <sstream>
 
 #include "SimTKOpenMMCommon.h"
-#include "SimTKOpenMMLog.h"
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceBrownianDynamics.h"
 #include "ReferenceVirtualSites.h"
+#include "openmm/OpenMMException.h"
 
 #include <cstdio>
 
@@ -52,24 +52,10 @@ ReferenceBrownianDynamics::ReferenceBrownianDynamics( int numberOfAtoms,
                                                           RealOpenMM temperature ) : 
            ReferenceDynamics( numberOfAtoms, deltaT, temperature ), friction( friction ) {
 
-   // ---------------------------------------------------------------------------------------
-
-   static const char* methodName      = "\nReferenceBrownianDynamics::ReferenceBrownianDynamics";
-
-   static const RealOpenMM zero       =  0.0;
-   static const RealOpenMM one        =  1.0;
-
-   // ---------------------------------------------------------------------------------------
-
-   if( friction <= zero ){
-
+   if (friction <= 0) {
       std::stringstream message;
-      message << methodName;
-      message << " input frction value=" << friction << " is invalid -- setting to 1.";
-      SimTKOpenMMLog::printError( message );
-
-      this->friction = one;
-     
+      message << "illegal friction value: " << friction;
+      throw OpenMMException(message.str());
    }
    xPrime.resize(numberOfAtoms);
    inverseMasses.resize(numberOfAtoms);

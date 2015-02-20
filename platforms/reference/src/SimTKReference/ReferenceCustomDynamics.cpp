@@ -23,7 +23,6 @@
  */
 
 #include "SimTKOpenMMCommon.h"
-#include "SimTKOpenMMLog.h"
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceVirtualSites.h"
 #include "ReferenceCustomDynamics.h"

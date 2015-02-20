@@ -26,7 +26,6 @@
 #include <sstream>
 
 #include "SimTKOpenMMCommon.h"
-#include "SimTKOpenMMLog.h"
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceRbDihedralBond.h"
 #include "ReferenceForce.h"

@@ -27,7 +27,6 @@
 #include <algorithm>
 
 #include "SimTKOpenMMCommon.h"
-#include "SimTKOpenMMLog.h"
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceVariableVerletDynamics.h"
 #include "ReferenceVirtualSites.h"

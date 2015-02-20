@@ -24,7 +24,6 @@
  */
 
 #include "SimTKOpenMMCommon.h"
-#include "SimTKOpenMMLog.h"
 #include "SimTKOpenMMUtilities.h"
 #include "CpuLangevinDynamics.h"
 

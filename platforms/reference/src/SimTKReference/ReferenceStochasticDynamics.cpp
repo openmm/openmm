@@ -26,10 +26,10 @@
 #include <sstream>
 
 #include "SimTKOpenMMCommon.h"
-#include "SimTKOpenMMLog.h"
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceStochasticDynamics.h"
 #include "ReferenceVirtualSites.h"
+#include "openmm/OpenMMException.h"
 
 #include <cstdio>
 
@@ -51,27 +51,10 @@ ReferenceStochasticDynamics::ReferenceStochasticDynamics( int numberOfAtoms,
                                                           RealOpenMM deltaT, RealOpenMM tau,
                                                           RealOpenMM temperature ) : 
            ReferenceDynamics( numberOfAtoms, deltaT, temperature ), _tau( tau ) {
-
-   // ---------------------------------------------------------------------------------------
-
-   static const char* methodName      = "\nReferenceStochasticDynamics::ReferenceStochasticDynamics";
-
-   static const RealOpenMM zero       =  0.0;
-   static const RealOpenMM one        =  1.0;
-
-   // ---------------------------------------------------------------------------------------
-
-   // ensure tau is not zero -- if it is print warning message
-
-   if( _tau == zero ){
-
+   if (tau <= 0) {
       std::stringstream message;
-      message << methodName;
-      message << " input tau value=" << tau << " is invalid -- setting to 1.";
-      SimTKOpenMMLog::printError( message );
-
-      _tau = one;
-     
+      message << "illegal tau value: " << tau;
+      throw OpenMMException(message.str());
    }
    xPrime.resize(numberOfAtoms);
    inverseMasses.resize(numberOfAtoms);
