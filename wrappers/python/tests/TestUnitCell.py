@@ -1,8 +1,10 @@
 import unittest
 import math
+from simtk.openmm import Vec3
 from simtk.unit import *
 from simtk.openmm.app.internal.unitcell import computePeriodicBoxVectors
 from simtk.openmm.app.internal.unitcell import computeLengthsAndAngles
+from simtk.openmm.app.internal.unitcell import reducePeriodicBoxVectors
 
 def strip_units(x):
     if is_quantity(x): return x.value_in_unit_system(md_unit_system)
@@ -11,6 +13,25 @@ def strip_units(x):
 class TestAmberPrmtopFile(unittest.TestCase):
 
     """Test the AmberPrmtopFile.createSystem() method."""
+
+    def testReducePBCVectors(self):
+        """ Checks that reducePeriodicBoxVectors properly reduces vectors """
+        a = Vec3(4.24388485, 0.0, 0.0)
+        b = Vec3(-1.4146281691908937, 4.001173048368583, 0.0)
+        c = Vec3(-1.4146281691908937, -2.0005862820516203, 3.4651176446201674)
+        vecs = reducePeriodicBoxVectors((a, b, c)*nanometers)
+        vecs2 = computePeriodicBoxVectors(4.24388485, 4.24388485, 4.24388485,
+                109.4712190*degrees, 109.4712190*degrees, 109.4712190*degrees)
+
+        # Check that the vectors are the same
+        a1, a2, a3 = vecs
+        b1, b2, b3 = vecs2
+        for x, y in zip(a1, b1):
+            self.assertAlmostEqual(strip_units(x), strip_units(y))
+        for x, y in zip(a2, b2):
+            self.assertAlmostEqual(strip_units(x), strip_units(y))
+        for x, y in zip(a3, b3):
+            self.assertAlmostEqual(strip_units(x), strip_units(y))
 
     def testComputePBCVectors(self):
         """ Tests computing periodic box vectors """
