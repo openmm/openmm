@@ -61,7 +61,7 @@ ReferenceCustomTorsionIxn::ReferenceCustomTorsionIxn(const Lepton::CompiledExpre
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceCustomTorsionIxn::~ReferenceCustomTorsionIxn( ){
+ReferenceCustomTorsionIxn::~ReferenceCustomTorsionIxn() {
 
    // ---------------------------------------------------------------------------------------
 
@@ -83,11 +83,11 @@ ReferenceCustomTorsionIxn::~ReferenceCustomTorsionIxn( ){
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceCustomTorsionIxn::calculateBondIxn( int* atomIndices,
+void ReferenceCustomTorsionIxn::calculateBondIxn(int* atomIndices,
                                                 vector<RealVec>& atomCoordinates,
                                                 RealOpenMM* parameters,
                                                 vector<RealVec>& forces,
-                                                RealOpenMM* totalEnergy ) const {
+                                                RealOpenMM* totalEnergy) const {
 
    static const std::string methodName = "\nReferenceCustomTorsionIxn::calculateTorsionIxn";
 
@@ -135,20 +135,20 @@ void ReferenceCustomTorsionIxn::calculateBondIxn( int* atomIndices,
 
    RealOpenMM internalF[4][3];
    RealOpenMM forceFactors[4];
-   RealOpenMM normCross1         = DOT3( crossProduct[0], crossProduct[0] );
+   RealOpenMM normCross1         = DOT3(crossProduct[0], crossProduct[0]);
    RealOpenMM normBC             = deltaR[1][ReferenceForce::RIndex];
               forceFactors[0]    = (-dEdAngle*normBC)/normCross1;
 
-   RealOpenMM normCross2         = DOT3( crossProduct[1], crossProduct[1] );
+   RealOpenMM normCross2         = DOT3(crossProduct[1], crossProduct[1]);
               forceFactors[3]    = (dEdAngle*normBC)/normCross2;
 
-              forceFactors[1]    = DOT3( deltaR[0], deltaR[1] );
+              forceFactors[1]    = DOT3(deltaR[0], deltaR[1]);
               forceFactors[1]   /= deltaR[1][ReferenceForce::R2Index];
 
-              forceFactors[2]    = DOT3( deltaR[2], deltaR[1] );
+              forceFactors[2]    = DOT3(deltaR[2], deltaR[1]);
               forceFactors[2]   /= deltaR[1][ReferenceForce::R2Index];
 
-   for( int ii = 0; ii < 3; ii++ ){
+   for (int ii = 0; ii < 3; ii++) {
 
       internalF[0][ii]  = forceFactors[0]*crossProduct[0][ii];
       internalF[3][ii]  = forceFactors[3]*crossProduct[1][ii];
@@ -161,7 +161,7 @@ void ReferenceCustomTorsionIxn::calculateBondIxn( int* atomIndices,
 
    // accumulate forces
 
-   for( int ii = 0; ii < 3; ii++ ){
+   for (int ii = 0; ii < 3; ii++) {
       forces[atomAIndex][ii] += internalF[0][ii];
       forces[atomBIndex][ii] -= internalF[1][ii];
       forces[atomCIndex][ii] -= internalF[2][ii];

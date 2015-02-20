@@ -44,8 +44,8 @@ using namespace OpenMM;
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceVariableVerletDynamics::ReferenceVariableVerletDynamics( int numberOfAtoms, RealOpenMM accuracy ) :
-           ReferenceDynamics( numberOfAtoms, 0.0f, 0.0f ), _accuracy(accuracy) {
+ReferenceVariableVerletDynamics::ReferenceVariableVerletDynamics(int numberOfAtoms, RealOpenMM accuracy) :
+           ReferenceDynamics(numberOfAtoms, 0.0f, 0.0f), _accuracy(accuracy) {
     xPrime.resize(numberOfAtoms);
     inverseMasses.resize(numberOfAtoms);
 }
@@ -56,7 +56,7 @@ ReferenceVariableVerletDynamics::ReferenceVariableVerletDynamics( int numberOfAt
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceVariableVerletDynamics::~ReferenceVariableVerletDynamics( ){
+ReferenceVariableVerletDynamics::~ReferenceVariableVerletDynamics() {
 
    // ---------------------------------------------------------------------------------------
 
@@ -74,7 +74,7 @@ ReferenceVariableVerletDynamics::~ReferenceVariableVerletDynamics( ){
 
  --------------------------------------------------------------------------------------- */
 
-RealOpenMM ReferenceVariableVerletDynamics::getAccuracy( void ) const {
+RealOpenMM ReferenceVariableVerletDynamics::getAccuracy() const {
     return _accuracy;
 }
 
@@ -84,7 +84,7 @@ RealOpenMM ReferenceVariableVerletDynamics::getAccuracy( void ) const {
 
  --------------------------------------------------------------------------------------- */
 
-void ReferenceVariableVerletDynamics::setAccuracy( RealOpenMM accuracy ) {
+void ReferenceVariableVerletDynamics::setAccuracy(RealOpenMM accuracy) {
     _accuracy = accuracy;
 }
 
@@ -118,10 +118,10 @@ void ReferenceVariableVerletDynamics::update(const OpenMM::System& system, vecto
     // first-time-through initialization
 
     int numberOfAtoms = system.getNumParticles();
-    if( getTimeStep() == 0 ){
+    if (getTimeStep() == 0) {
        // invert masses
 
-       for( int ii = 0; ii < numberOfAtoms; ii++ ){
+       for (int ii = 0; ii < numberOfAtoms; ii++) {
           if (masses[ii] == zero)
               inverseMasses[ii] = zero;
           else

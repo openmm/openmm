@@ -45,12 +45,12 @@ void OPENMM_EXPORT computeNeighborListNaive(
         for (AtomIndex atomJ = atomI + 1; atomJ < (AtomIndex) nAtoms; ++atomJ)
         {
             double pairDistanceSquared = compPairDistanceSquared(atomLocations[atomI], atomLocations[atomJ], periodicBoxVectors, usePeriodic);
-            if ( (pairDistanceSquared <= maxDistanceSquared)  && (pairDistanceSquared >= minDistanceSquared))
+            if ((pairDistanceSquared <= maxDistanceSquared)  && (pairDistanceSquared >= minDistanceSquared))
                 if (exclusions[atomI].find(atomJ) == exclusions[atomI].end())
                 {
-                    neighborList.push_back( AtomPair(atomI, atomJ) );
+                    neighborList.push_back(AtomPair(atomI, atomJ));
                     if (reportSymmetricPairs)
-                        neighborList.push_back( AtomPair(atomI, atomJ) );
+                        neighborList.push_back(AtomPair(atomI, atomJ));
                 }
         }
     }
@@ -199,9 +199,9 @@ public:
                         // Ignore exclusions.
                         if (exclusions[atomI].find(atomJ) != exclusions[atomI].end()) continue;
                         
-                        neighbors.push_back( AtomPair(atomI, atomJ) );
+                        neighbors.push_back(AtomPair(atomI, atomJ));
                         if (reportSymmetricPairs)
-                            neighbors.push_back( AtomPair(atomJ, atomI) );
+                            neighbors.push_back(AtomPair(atomJ, atomI));
                     }
                 }
             }
@@ -228,7 +228,7 @@ void OPENMM_EXPORT computeNeighborListVoxelHash(
                               double maxDistance,
                               double minDistance,
                               bool reportSymmetricPairs
-                             )
+                            )
 {
     neighborList.clear();
 
@@ -245,7 +245,7 @@ void OPENMM_EXPORT computeNeighborListVoxelHash(
     {
         // 1) Find other atoms that are close to this one
         const RealVec& location = atomLocations[atomJ];
-        voxelHash.getNeighbors( 
+        voxelHash.getNeighbors(
             neighborList, 
             VoxelItem(&location, atomJ),
             exclusions,

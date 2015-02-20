@@ -78,7 +78,7 @@ ReferenceCustomExternalIxn::ReferenceCustomExternalIxn(const Lepton::CompiledExp
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceCustomExternalIxn::~ReferenceCustomExternalIxn( ){
+ReferenceCustomExternalIxn::~ReferenceCustomExternalIxn() {
 
    // ---------------------------------------------------------------------------------------
 
@@ -100,11 +100,11 @@ ReferenceCustomExternalIxn::~ReferenceCustomExternalIxn( ){
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceCustomExternalIxn::calculateForce( int atomIndex,
+void ReferenceCustomExternalIxn::calculateForce(int atomIndex,
                                                 vector<RealVec>& atomCoordinates,
                                                 RealOpenMM* parameters,
                                                 vector<RealVec>& forces,
-                                                RealOpenMM* energy ) const {
+                                                RealOpenMM* energy) const {
 
    static const std::string methodName = "\nReferenceCustomExternalIxn::calculateBondIxn";
 

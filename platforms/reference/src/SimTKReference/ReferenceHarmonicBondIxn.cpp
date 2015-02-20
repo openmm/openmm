@@ -39,7 +39,7 @@ using namespace OpenMM;
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceHarmonicBondIxn::ReferenceHarmonicBondIxn( ){
+ReferenceHarmonicBondIxn::ReferenceHarmonicBondIxn() {
 
    // ---------------------------------------------------------------------------------------
 
@@ -55,7 +55,7 @@ ReferenceHarmonicBondIxn::ReferenceHarmonicBondIxn( ){
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceHarmonicBondIxn::~ReferenceHarmonicBondIxn( ){
+ReferenceHarmonicBondIxn::~ReferenceHarmonicBondIxn() {
 
    // ---------------------------------------------------------------------------------------
 
@@ -78,11 +78,11 @@ ReferenceHarmonicBondIxn::~ReferenceHarmonicBondIxn( ){
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceHarmonicBondIxn::calculateBondIxn( int* atomIndices,
+void ReferenceHarmonicBondIxn::calculateBondIxn(int* atomIndices,
                                                 vector<RealVec>& atomCoordinates,
                                                 RealOpenMM* parameters,
                                                 vector<RealVec>& forces,
-                                                RealOpenMM* totalEnergy ) const {
+                                                RealOpenMM* totalEnergy) const {
 
    static const std::string methodName = "\nReferenceHarmonicBondIxn::calculateBondIxn";
 
@@ -100,7 +100,7 @@ void ReferenceHarmonicBondIxn::calculateBondIxn( int* atomIndices,
 
    int atomAIndex = atomIndices[0];
    int atomBIndex = atomIndices[1];
-   ReferenceForce::getDeltaR( atomCoordinates[atomAIndex], atomCoordinates[atomBIndex], deltaR );  
+   ReferenceForce::getDeltaR(atomCoordinates[atomAIndex], atomCoordinates[atomBIndex], deltaR);  
 
    // deltaIdeal = r - r_0
 

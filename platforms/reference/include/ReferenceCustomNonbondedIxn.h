@@ -68,8 +68,8 @@ class ReferenceCustomNonbondedIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateOneIxn( int atom1, int atom2, std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& forces,
-                            RealOpenMM* energyByAtom, RealOpenMM* totalEnergy );
+      void calculateOneIxn(int atom1, int atom2, std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& forces,
+                           RealOpenMM* energyByAtom, RealOpenMM* totalEnergy);
 
 
    public:
@@ -89,7 +89,7 @@ class ReferenceCustomNonbondedIxn {
 
          --------------------------------------------------------------------------------------- */
 
-       ~ReferenceCustomNonbondedIxn( );
+       ~ReferenceCustomNonbondedIxn();
 
       /**---------------------------------------------------------------------------------------
 
@@ -100,7 +100,7 @@ class ReferenceCustomNonbondedIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void setUseCutoff( RealOpenMM distance, const OpenMM::NeighborList& neighbors );
+      void setUseCutoff(RealOpenMM distance, const OpenMM::NeighborList& neighbors);
 
       /**---------------------------------------------------------------------------------------
 
@@ -121,7 +121,7 @@ class ReferenceCustomNonbondedIxn {
       
          --------------------------------------------------------------------------------------- */
       
-      void setUseSwitchingFunction( RealOpenMM distance );
+      void setUseSwitchingFunction(RealOpenMM distance);
 
       /**---------------------------------------------------------------------------------------
 
@@ -152,10 +152,10 @@ class ReferenceCustomNonbondedIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculatePairIxn( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
+      void calculatePairIxn(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
                             RealOpenMM** atomParameters, std::vector<std::set<int> >& exclusions,
                             RealOpenMM* fixedParameters, const std::map<std::string, double>& globalParameters,
-                            std::vector<OpenMM::RealVec>& forces, RealOpenMM* energyByAtom, RealOpenMM* totalEnergy );
+                            std::vector<OpenMM::RealVec>& forces, RealOpenMM* energyByAtom, RealOpenMM* totalEnergy);
 
 // ---------------------------------------------------------------------------------------
 

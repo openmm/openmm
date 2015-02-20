@@ -59,7 +59,7 @@ class CpuObc {
       
          --------------------------------------------------------------------------------------- */
 
-       CpuObc( ObcParameters* obcParameters );
+       CpuObc(ObcParameters* obcParameters);
 
       /**---------------------------------------------------------------------------------------
       
@@ -67,7 +67,7 @@ class CpuObc {
       
          --------------------------------------------------------------------------------------- */
 
-       ~CpuObc( );
+       ~CpuObc();
 
       /**---------------------------------------------------------------------------------------
       
@@ -77,7 +77,7 @@ class CpuObc {
       
          --------------------------------------------------------------------------------------- */
 
-      ObcParameters* getObcParameters( void ) const;
+      ObcParameters* getObcParameters() const;
 
       /**---------------------------------------------------------------------------------------
       
@@ -87,7 +87,7 @@ class CpuObc {
       
          --------------------------------------------------------------------------------------- */
 
-      void setObcParameters( ObcParameters* obcParameters );
+      void setObcParameters(ObcParameters* obcParameters);
  
       /**---------------------------------------------------------------------------------------
       
@@ -97,7 +97,7 @@ class CpuObc {
       
          --------------------------------------------------------------------------------------- */
 
-      int includeAceApproximation( void ) const;
+      int includeAceApproximation() const;
 
       /**---------------------------------------------------------------------------------------
       
@@ -107,7 +107,7 @@ class CpuObc {
       
          --------------------------------------------------------------------------------------- */
 
-      void setIncludeAceApproximation( int includeAceApproximation );
+      void setIncludeAceApproximation(int includeAceApproximation);
 
       /**---------------------------------------------------------------------------------------
       
@@ -117,7 +117,7 @@ class CpuObc {
       
          --------------------------------------------------------------------------------------- */
       
-      RealOpenMMVector& getObcChain( void );
+      RealOpenMMVector& getObcChain();
       
       /**---------------------------------------------------------------------------------------
       
@@ -128,7 +128,7 @@ class CpuObc {
       
          --------------------------------------------------------------------------------------- */
       
-      void computeBornRadii( const std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMMVector& bornRadii );
+      void computeBornRadii(const std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMMVector& bornRadii);
       
       /**---------------------------------------------------------------------------------------
         
@@ -142,8 +142,8 @@ class CpuObc {
         
             --------------------------------------------------------------------------------------- */
         
-      void computeAceNonPolarForce( const ObcParameters* obcParameters, const RealOpenMMVector& bornRadii, 
-                                    RealOpenMM* energy, RealOpenMMVector& forces ) const;
+      void computeAceNonPolarForce(const ObcParameters* obcParameters, const RealOpenMMVector& bornRadii, 
+                                   RealOpenMM* energy, RealOpenMMVector& forces) const;
         
       /**---------------------------------------------------------------------------------------
       
@@ -155,8 +155,8 @@ class CpuObc {
       
          --------------------------------------------------------------------------------------- */
       
-      RealOpenMM computeBornEnergyForces( const std::vector<OpenMM::RealVec>& atomCoordinates,
-                                          const RealOpenMMVector& partialCharges, std::vector<OpenMM::RealVec>& forces );
+      RealOpenMM computeBornEnergyForces(const std::vector<OpenMM::RealVec>& atomCoordinates,
+                                         const RealOpenMMVector& partialCharges, std::vector<OpenMM::RealVec>& forces);
       
     /**---------------------------------------------------------------------------------------
     
@@ -172,12 +172,12 @@ class CpuObc {
     
         --------------------------------------------------------------------------------------- */
     
-    void printObc( const std::vector<OpenMM::RealVec>& atomCoordinates,
-                   const RealOpenMMVector& partialCharges,
-                   const RealOpenMMVector& bornRadii,
-                   const RealOpenMMVector& bornForces,
-                   const std::vector<OpenMM::RealVec>& forces,
-                   const std::string& idString, FILE* log );
+    void printObc(const std::vector<OpenMM::RealVec>& atomCoordinates,
+                  const RealOpenMMVector& partialCharges,
+                  const RealOpenMMVector& bornRadii,
+                  const RealOpenMMVector& bornForces,
+                  const std::vector<OpenMM::RealVec>& forces,
+                  const std::string& idString, FILE* log);
     
 };
 

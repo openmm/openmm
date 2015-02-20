@@ -43,7 +43,7 @@ using namespace std;
     
     --------------------------------------------------------------------------------------- */
 
-CpuObc::CpuObc( ObcParameters* obcParameters ) : _obcParameters(obcParameters), _includeAceApproximation(1) {
+CpuObc::CpuObc(ObcParameters* obcParameters) : _obcParameters(obcParameters), _includeAceApproximation(1) {
     _obcChain.resize(_obcParameters->getNumberOfAtoms());
 }
 
@@ -53,7 +53,7 @@ CpuObc::CpuObc( ObcParameters* obcParameters ) : _obcParameters(obcParameters), 
 
     --------------------------------------------------------------------------------------- */
 
-CpuObc::~CpuObc( ){
+CpuObc::~CpuObc() {
 }
 
 /**---------------------------------------------------------------------------------------
@@ -64,7 +64,7 @@ CpuObc::~CpuObc( ){
 
     --------------------------------------------------------------------------------------- */
 
-ObcParameters* CpuObc::getObcParameters( void ) const {
+ObcParameters* CpuObc::getObcParameters() const {
     return _obcParameters;
 }
 
@@ -76,7 +76,7 @@ ObcParameters* CpuObc::getObcParameters( void ) const {
 
     --------------------------------------------------------------------------------------- */
 
-void CpuObc::setObcParameters(  ObcParameters* obcParameters ){
+void CpuObc::setObcParameters( ObcParameters* obcParameters) {
     _obcParameters = obcParameters;
 }
 
@@ -88,7 +88,7 @@ void CpuObc::setObcParameters(  ObcParameters* obcParameters ){
 
    --------------------------------------------------------------------------------------- */
 
-int CpuObc::includeAceApproximation( void ) const {
+int CpuObc::includeAceApproximation() const {
     return _includeAceApproximation;
 }
 
@@ -100,7 +100,7 @@ int CpuObc::includeAceApproximation( void ) const {
 
    --------------------------------------------------------------------------------------- */
 
-void CpuObc::setIncludeAceApproximation( int includeAceApproximation ){
+void CpuObc::setIncludeAceApproximation(int includeAceApproximation) {
     _includeAceApproximation = includeAceApproximation;
 }
 
@@ -112,7 +112,7 @@ void CpuObc::setIncludeAceApproximation( int includeAceApproximation ){
 
     --------------------------------------------------------------------------------------- */
 
-vector<RealOpenMM>& CpuObc::getObcChain( void ){
+vector<RealOpenMM>& CpuObc::getObcChain() {
     return _obcChain;
 }
 
@@ -128,16 +128,16 @@ vector<RealOpenMM>& CpuObc::getObcChain( void ){
 
     --------------------------------------------------------------------------------------- */
 
-void CpuObc::computeBornRadii( const vector<RealVec>& atomCoordinates, vector<RealOpenMM>& bornRadii ){
+void CpuObc::computeBornRadii(const vector<RealVec>& atomCoordinates, vector<RealOpenMM>& bornRadii) {
 
     // ---------------------------------------------------------------------------------------
 
-    static const RealOpenMM zero    = static_cast<RealOpenMM>( 0.0 );
-    static const RealOpenMM one     = static_cast<RealOpenMM>( 1.0 );
-    static const RealOpenMM two     = static_cast<RealOpenMM>( 2.0 );
-    static const RealOpenMM three   = static_cast<RealOpenMM>( 3.0 );
-    static const RealOpenMM half    = static_cast<RealOpenMM>( 0.5 );
-    static const RealOpenMM fourth  = static_cast<RealOpenMM>( 0.25 );
+    static const RealOpenMM zero    = static_cast<RealOpenMM>(0.0);
+    static const RealOpenMM one     = static_cast<RealOpenMM>(1.0);
+    static const RealOpenMM two     = static_cast<RealOpenMM>(2.0);
+    static const RealOpenMM three   = static_cast<RealOpenMM>(3.0);
+    static const RealOpenMM half    = static_cast<RealOpenMM>(0.5);
+    static const RealOpenMM fourth  = static_cast<RealOpenMM>(0.25);
 
     // ---------------------------------------------------------------------------------------
 
@@ -157,7 +157,7 @@ void CpuObc::computeBornRadii( const vector<RealVec>& atomCoordinates, vector<Re
 
     // calculate Born radii
 
-    for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
+    for (int atomI = 0; atomI < numberOfAtoms; atomI++) {
       
        RealOpenMM radiusI         = atomicRadii[atomI];
        RealOpenMM offsetRadiusI   = radiusI - dielectricOffset;
@@ -167,15 +167,15 @@ void CpuObc::computeBornRadii( const vector<RealVec>& atomCoordinates, vector<Re
 
        // HCT code
 
-       for( int atomJ = 0; atomJ < numberOfAtoms; atomJ++ ){
+       for (int atomJ = 0; atomJ < numberOfAtoms; atomJ++) {
 
-          if( atomJ != atomI ){
+          if (atomJ != atomI) {
 
              RealOpenMM deltaR[ReferenceForce::LastDeltaRIndex];
              if (_obcParameters->getPeriodic())
-                 ReferenceForce::getDeltaRPeriodic( atomCoordinates[atomI], atomCoordinates[atomJ], _obcParameters->getPeriodicBox(), deltaR );
+                 ReferenceForce::getDeltaRPeriodic(atomCoordinates[atomI], atomCoordinates[atomJ], _obcParameters->getPeriodicBox(), deltaR);
              else
-                 ReferenceForce::getDeltaR( atomCoordinates[atomI], atomCoordinates[atomJ], deltaR );
+                 ReferenceForce::getDeltaR(atomCoordinates[atomI], atomCoordinates[atomJ], deltaR);
              RealOpenMM r               = deltaR[ReferenceForce::RIndex];
              if (_obcParameters->getUseCutoff() && r > _obcParameters->getCutoffDistance())
                  continue;
@@ -184,9 +184,9 @@ void CpuObc::computeBornRadii( const vector<RealVec>& atomCoordinates, vector<Re
              RealOpenMM scaledRadiusJ   = offsetRadiusJ*scaledRadiusFactor[atomJ];
              RealOpenMM rScaledRadiusJ  = r + scaledRadiusJ;
 
-             if( offsetRadiusI < rScaledRadiusJ ){
+             if (offsetRadiusI < rScaledRadiusJ) {
                 RealOpenMM rInverse = one/r;
-                RealOpenMM l_ij     = offsetRadiusI > FABS( r - scaledRadiusJ ) ? offsetRadiusI : FABS( r - scaledRadiusJ );
+                RealOpenMM l_ij     = offsetRadiusI > FABS(r - scaledRadiusJ) ? offsetRadiusI : FABS(r - scaledRadiusJ);
                            l_ij     = one/l_ij;
 
                 RealOpenMM u_ij     = one/rScaledRadiusJ;
@@ -194,15 +194,15 @@ void CpuObc::computeBornRadii( const vector<RealVec>& atomCoordinates, vector<Re
                 RealOpenMM l_ij2    = l_ij*l_ij;
                 RealOpenMM u_ij2    = u_ij*u_ij;
  
-                RealOpenMM ratio    = LN( (u_ij/l_ij) );
-                RealOpenMM term     = l_ij - u_ij + fourth*r*(u_ij2 - l_ij2)  + ( half*rInverse*ratio) + (fourth*scaledRadiusJ*scaledRadiusJ*rInverse)*(l_ij2 - u_ij2);
+                RealOpenMM ratio    = LN((u_ij/l_ij));
+                RealOpenMM term     = l_ij - u_ij + fourth*r*(u_ij2 - l_ij2)  + (half*rInverse*ratio) + (fourth*scaledRadiusJ*scaledRadiusJ*rInverse)*(l_ij2 - u_ij2);
 
                 // this case (atom i completely inside atom j) is not considered in the original paper
                 // Jay Ponder and the authors of Tinker recognized this and
                 // worked out the details
 
-                if( offsetRadiusI < (scaledRadiusJ - r) ){
-                   term += two*( radiusIInverse - l_ij);
+                if (offsetRadiusI < (scaledRadiusJ - r)) {
+                   term += two*(radiusIInverse - l_ij);
                 }
                 sum += term;
 
@@ -215,11 +215,11 @@ void CpuObc::computeBornRadii( const vector<RealVec>& atomCoordinates, vector<Re
        sum                  *= half*offsetRadiusI;
        RealOpenMM sum2       = sum*sum;
        RealOpenMM sum3       = sum*sum2;
-       RealOpenMM tanhSum    = TANH( alphaObc*sum - betaObc*sum2 + gammaObc*sum3 );
+       RealOpenMM tanhSum    = TANH(alphaObc*sum - betaObc*sum2 + gammaObc*sum3);
        
-       bornRadii[atomI]      = one/( one/offsetRadiusI - tanhSum/radiusI ); 
+       bornRadii[atomI]      = one/(one/offsetRadiusI - tanhSum/radiusI); 
  
-       obcChain[atomI]       = offsetRadiusI*( alphaObc - two*betaObc*sum + three*gammaObc*sum2 );
+       obcChain[atomI]       = offsetRadiusI*(alphaObc - two*betaObc*sum + three*gammaObc*sum2);
        obcChain[atomI]       = (one - tanhSum*tanhSum)*obcChain[atomI]/radiusI;
 
     }
@@ -236,16 +236,16 @@ void CpuObc::computeBornRadii( const vector<RealVec>& atomCoordinates, vector<Re
 
     --------------------------------------------------------------------------------------- */
 
-void CpuObc::computeAceNonPolarForce( const ObcParameters* obcParameters,
+void CpuObc::computeAceNonPolarForce(const ObcParameters* obcParameters,
                                       const RealOpenMMVector& bornRadii, 
                                       RealOpenMM* energy,
-                                      RealOpenMMVector& forces ) const {
+                                      RealOpenMMVector& forces) const {
 
     // ---------------------------------------------------------------------------------------
 
-    static const RealOpenMM zero     = static_cast<RealOpenMM>( 0.0 );
+    static const RealOpenMM zero     = static_cast<RealOpenMM>(0.0);
     static const RealOpenMM minusSix = -6.0;
-    static const RealOpenMM six      = static_cast<RealOpenMM>( 6.0 );
+    static const RealOpenMM six      = static_cast<RealOpenMM>(6.0);
 
     // ---------------------------------------------------------------------------------------
 
@@ -271,10 +271,10 @@ void CpuObc::computeAceNonPolarForce( const ObcParameters* obcParameters,
     // observed values. He did not think it was important enough to write up, so there is
     // no paper to cite.
 
-    for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
-        if( bornRadii[atomI] > zero ){
+    for (int atomI = 0; atomI < numberOfAtoms; atomI++) {
+        if (bornRadii[atomI] > zero) {
             RealOpenMM r            = atomicRadii[atomI] + probeRadius;
-            RealOpenMM ratio6       = POW( atomicRadii[atomI]/bornRadii[atomI], six );
+            RealOpenMM ratio6       = POW(atomicRadii[atomI]/bornRadii[atomI], six);
             RealOpenMM saTerm       = surfaceAreaFactor*r*r*ratio6;
             *energy                += saTerm;
             forces[atomI]          += minusSix*saTerm/bornRadii[atomI]; 
@@ -294,19 +294,19 @@ void CpuObc::computeAceNonPolarForce( const ObcParameters* obcParameters,
 
     --------------------------------------------------------------------------------------- */
 
-RealOpenMM CpuObc::computeBornEnergyForces( const vector<RealVec>& atomCoordinates,
-                                            const RealOpenMMVector& partialCharges, vector<RealVec>& inputForces ){
+RealOpenMM CpuObc::computeBornEnergyForces(const vector<RealVec>& atomCoordinates,
+                                           const RealOpenMMVector& partialCharges, vector<RealVec>& inputForces) {
 
     // ---------------------------------------------------------------------------------------
 
-    static const RealOpenMM zero    = static_cast<RealOpenMM>( 0.0 );
-    static const RealOpenMM one     = static_cast<RealOpenMM>( 1.0 );
-    static const RealOpenMM two     = static_cast<RealOpenMM>( 2.0 );
-    static const RealOpenMM three   = static_cast<RealOpenMM>( 3.0 );
-    static const RealOpenMM four    = static_cast<RealOpenMM>( 4.0 );
-    static const RealOpenMM half    = static_cast<RealOpenMM>( 0.5 );
-    static const RealOpenMM fourth  = static_cast<RealOpenMM>( 0.25 );
-    static const RealOpenMM eighth  = static_cast<RealOpenMM>( 0.125 );
+    static const RealOpenMM zero    = static_cast<RealOpenMM>(0.0);
+    static const RealOpenMM one     = static_cast<RealOpenMM>(1.0);
+    static const RealOpenMM two     = static_cast<RealOpenMM>(2.0);
+    static const RealOpenMM three   = static_cast<RealOpenMM>(3.0);
+    static const RealOpenMM four    = static_cast<RealOpenMM>(4.0);
+    static const RealOpenMM half    = static_cast<RealOpenMM>(0.5);
+    static const RealOpenMM fourth  = static_cast<RealOpenMM>(0.25);
+    static const RealOpenMM eighth  = static_cast<RealOpenMM>(0.125);
 
     // constants
 
@@ -325,36 +325,36 @@ RealOpenMM CpuObc::computeBornEnergyForces( const vector<RealVec>& atomCoordinat
 
     // compute Born radii
 
-    RealOpenMMVector bornRadii( numberOfAtoms );
-    computeBornRadii( atomCoordinates, bornRadii );
+    RealOpenMMVector bornRadii(numberOfAtoms);
+    computeBornRadii(atomCoordinates, bornRadii);
 
     // set energy/forces to zero
 
     RealOpenMM obcEnergy                 = zero;
-    RealOpenMMVector bornForces( numberOfAtoms, 0.0 );
+    RealOpenMMVector bornForces(numberOfAtoms, 0.0);
 
     // ---------------------------------------------------------------------------------------
 
     // compute the nonpolar solvation via ACE approximation
      
-    if( includeAceApproximation() ){
-       computeAceNonPolarForce( _obcParameters, bornRadii, &obcEnergy, bornForces );
+    if (includeAceApproximation()) {
+       computeAceNonPolarForce(_obcParameters, bornRadii, &obcEnergy, bornForces);
     }
  
     // ---------------------------------------------------------------------------------------
 
     // first main loop
 
-    for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
+    for (int atomI = 0; atomI < numberOfAtoms; atomI++) {
  
        RealOpenMM partialChargeI = preFactor*partialCharges[atomI];
-       for( int atomJ = atomI; atomJ < numberOfAtoms; atomJ++ ){
+       for (int atomJ = atomI; atomJ < numberOfAtoms; atomJ++) {
 
           RealOpenMM deltaR[ReferenceForce::LastDeltaRIndex];
           if (_obcParameters->getPeriodic())
-              ReferenceForce::getDeltaRPeriodic( atomCoordinates[atomI], atomCoordinates[atomJ], _obcParameters->getPeriodicBox(), deltaR );
+              ReferenceForce::getDeltaRPeriodic(atomCoordinates[atomI], atomCoordinates[atomJ], _obcParameters->getPeriodicBox(), deltaR);
           else
-              ReferenceForce::getDeltaR( atomCoordinates[atomI], atomCoordinates[atomJ], deltaR );
+              ReferenceForce::getDeltaR(atomCoordinates[atomI], atomCoordinates[atomJ], deltaR);
           if (_obcParameters->getUseCutoff() && deltaR[ReferenceForce::RIndex] > cutoffDistance)
               continue;
 
@@ -366,18 +366,18 @@ RealOpenMM CpuObc::computeBornEnergyForces( const vector<RealVec>& atomCoordinat
           RealOpenMM alpha2_ij          = bornRadii[atomI]*bornRadii[atomJ];
           RealOpenMM D_ij               = r2/(four*alpha2_ij);
 
-          RealOpenMM expTerm            = EXP( -D_ij );
+          RealOpenMM expTerm            = EXP(-D_ij);
           RealOpenMM denominator2       = r2 + alpha2_ij*expTerm; 
-          RealOpenMM denominator        = SQRT( denominator2 ); 
+          RealOpenMM denominator        = SQRT(denominator2); 
           
           RealOpenMM Gpol               = (partialChargeI*partialCharges[atomJ])/denominator; 
-          RealOpenMM dGpol_dr           = -Gpol*( one - fourth*expTerm )/denominator2;  
+          RealOpenMM dGpol_dr           = -Gpol*(one - fourth*expTerm)/denominator2;  
 
-          RealOpenMM dGpol_dalpha2_ij   = -half*Gpol*expTerm*( one + D_ij )/denominator2;
+          RealOpenMM dGpol_dalpha2_ij   = -half*Gpol*expTerm*(one + D_ij)/denominator2;
           
           RealOpenMM energy = Gpol;
 
-          if( atomI != atomJ ){
+          if (atomI != atomJ) {
 
               if (_obcParameters->getUseCutoff())
                   energy -= partialChargeI*partialCharges[atomJ]/cutoffDistance;
@@ -420,26 +420,26 @@ RealOpenMM CpuObc::computeBornEnergyForces( const vector<RealVec>& atomCoordinat
 
     // compute factor that depends only on the outer loop index
 
-    for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
+    for (int atomI = 0; atomI < numberOfAtoms; atomI++) {
        bornForces[atomI] *= bornRadii[atomI]*bornRadii[atomI]*obcChain[atomI];      
     }
 
-    for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
+    for (int atomI = 0; atomI < numberOfAtoms; atomI++) {
  
        // radius w/ dielectric offset applied
 
        RealOpenMM radiusI        = atomicRadii[atomI];
        RealOpenMM offsetRadiusI  = radiusI - dielectricOffset;
 
-       for( int atomJ = 0; atomJ < numberOfAtoms; atomJ++ ){
+       for (int atomJ = 0; atomJ < numberOfAtoms; atomJ++) {
 
-          if( atomJ != atomI ){
+          if (atomJ != atomI) {
 
              RealOpenMM deltaR[ReferenceForce::LastDeltaRIndex];
              if (_obcParameters->getPeriodic())
-                ReferenceForce::getDeltaRPeriodic( atomCoordinates[atomI], atomCoordinates[atomJ], _obcParameters->getPeriodicBox(), deltaR );
+                ReferenceForce::getDeltaRPeriodic(atomCoordinates[atomI], atomCoordinates[atomJ], _obcParameters->getPeriodicBox(), deltaR);
              else 
-                ReferenceForce::getDeltaR( atomCoordinates[atomI], atomCoordinates[atomJ], deltaR );
+                ReferenceForce::getDeltaR(atomCoordinates[atomI], atomCoordinates[atomJ], deltaR);
              if (_obcParameters->getUseCutoff() && deltaR[ReferenceForce::RIndex] > cutoffDistance)
                     continue;
     
@@ -459,9 +459,9 @@ RealOpenMM CpuObc::computeBornEnergyForces( const vector<RealVec>& atomCoordinat
              // dL/dr & dU/dr are zero (this can be shown analytically)
              // removed from calculation
 
-             if( offsetRadiusI < rScaledRadiusJ ){
+             if (offsetRadiusI < rScaledRadiusJ) {
 
-                RealOpenMM l_ij          = offsetRadiusI > FABS( r - scaledRadiusJ ) ? offsetRadiusI : FABS( r - scaledRadiusJ );
+                RealOpenMM l_ij          = offsetRadiusI > FABS(r - scaledRadiusJ) ? offsetRadiusI : FABS(r - scaledRadiusJ);
                      l_ij                = one/l_ij;
 
                 RealOpenMM u_ij          = one/rScaledRadiusJ;
@@ -473,7 +473,7 @@ RealOpenMM CpuObc::computeBornEnergyForces( const vector<RealVec>& atomCoordinat
                 RealOpenMM rInverse      = one/r;
                 RealOpenMM r2Inverse     = rInverse*rInverse;
 
-                RealOpenMM t3            = eighth*(one + scaledRadiusJ2*r2Inverse)*(l_ij2 - u_ij2) + fourth*LN( u_ij/l_ij )*r2Inverse;
+                RealOpenMM t3            = eighth*(one + scaledRadiusJ2*r2Inverse)*(l_ij2 - u_ij2) + fourth*LN(u_ij/l_ij)*r2Inverse;
 
                 RealOpenMM de            = bornForces[atomI]*t3*rInverse;
 
@@ -495,7 +495,7 @@ RealOpenMM CpuObc::computeBornEnergyForces( const vector<RealVec>& atomCoordinat
 
     }
 
-    //printObc( atomCoordinates, partialCharges, bornRadii, bornForces, inputForces, "Obc Post loop2", stderr );
+    //printObc(atomCoordinates, partialCharges, bornRadii, bornForces, inputForces, "Obc Post loop2", stderr);
 
     return obcEnergy;
 }
@@ -514,12 +514,12 @@ RealOpenMM CpuObc::computeBornEnergyForces( const vector<RealVec>& atomCoordinat
 
     --------------------------------------------------------------------------------------- */
 
-void CpuObc::printObc( const std::vector<OpenMM::RealVec>& atomCoordinates,
-                       const RealOpenMMVector& partialCharges,
-                       const RealOpenMMVector& bornRadii,
-                       const RealOpenMMVector& bornForces,
-                       const std::vector<OpenMM::RealVec>& forces,
-                       const std::string& idString, FILE* log ){
+void CpuObc::printObc(const std::vector<OpenMM::RealVec>& atomCoordinates,
+                      const RealOpenMMVector& partialCharges,
+                      const RealOpenMMVector& bornRadii,
+                      const RealOpenMMVector& bornForces,
+                      const std::vector<OpenMM::RealVec>& forces,
+                      const std::string& idString, FILE* log) {
 
     // ---------------------------------------------------------------------------------------
 
@@ -538,43 +538,43 @@ void CpuObc::printObc( const std::vector<OpenMM::RealVec>& atomCoordinates,
 
     // ---------------------------------------------------------------------------------------
 
-    (void) fprintf( log, "Reference Obc      %s atoms=%d\n", idString.c_str(), numberOfAtoms );
-    if( comparisonFormat ){    
-        (void) fprintf( log, "Reference Obc  %s atoms=%d Chain/Radii/Force\n", idString.c_str(), numberOfAtoms );
-        for( unsigned int atomI = 0; atomI < static_cast<unsigned int>(numberOfAtoms); atomI++ ){
-            (void) fprintf( log, "%6d ", atomI );
-            if( obcChain.size() > atomI ){
-                 (void) fprintf( log, " %15.7e", obcChain[atomI] );
+    (void) fprintf(log, "Reference Obc      %s atoms=%d\n", idString.c_str(), numberOfAtoms);
+    if (comparisonFormat) {    
+        (void) fprintf(log, "Reference Obc  %s atoms=%d Chain/Radii/Force\n", idString.c_str(), numberOfAtoms);
+        for (unsigned int atomI = 0; atomI < static_cast<unsigned int>(numberOfAtoms); atomI++) {
+            (void) fprintf(log, "%6d ", atomI);
+            if (obcChain.size() > atomI) {
+                 (void) fprintf(log, " %15.7e", obcChain[atomI]);
             }
-            if( bornRadii.size() > atomI ){
-                 (void) fprintf( log, " %15.7e", bornRadii[atomI] );
+            if (bornRadii.size() > atomI) {
+                 (void) fprintf(log, " %15.7e", bornRadii[atomI]);
             }
-            if( bornForces.size() > atomI ){
-                 (void) fprintf( log, " %15.7e", bornForces[atomI] );    
+            if (bornForces.size() > atomI) {
+                 (void) fprintf(log, " %15.7e", bornForces[atomI]);    
             }
-            (void) fprintf( log, " %15.7e %6.3f", atomicRadii[atomI], partialCharges[atomI] );
-            (void) fprintf( log, "\n" );
+            (void) fprintf(log, " %15.7e %6.3f", atomicRadii[atomI], partialCharges[atomI]);
+            (void) fprintf(log, "\n");
         }   
     } else { 
-        (void) fprintf( log, "Reference Obc      %s atoms=%d\n", idString.c_str(), numberOfAtoms );
-        (void) fprintf( log, "    preFactor      %15.7e\n", preFactor );
-        (void) fprintf( log, "    alpha          %15.7e\n", alphaObc);
-        (void) fprintf( log, "    beta           %15.7e\n", betaObc);
-        (void) fprintf( log, "    gamma          %15.7e\n", gammaObc );
+        (void) fprintf(log, "Reference Obc      %s atoms=%d\n", idString.c_str(), numberOfAtoms);
+        (void) fprintf(log, "    preFactor      %15.7e\n", preFactor);
+        (void) fprintf(log, "    alpha          %15.7e\n", alphaObc);
+        (void) fprintf(log, "    beta           %15.7e\n", betaObc);
+        (void) fprintf(log, "    gamma          %15.7e\n", gammaObc);
      
-        for( unsigned int atomI = 0; atomI < static_cast<unsigned int>(numberOfAtoms); atomI++ ){
-            (void) fprintf( log, "%6d r=%15.7e q=%6.3f", atomI,
-                            atomicRadii[atomI], partialCharges[atomI] );
-            if( obcChain.size() > atomI ){
-                 (void) fprintf( log, " bChn=%15.7e", obcChain[atomI] );
+        for (unsigned int atomI = 0; atomI < static_cast<unsigned int>(numberOfAtoms); atomI++) {
+            (void) fprintf(log, "%6d r=%15.7e q=%6.3f", atomI,
+                            atomicRadii[atomI], partialCharges[atomI]);
+            if (obcChain.size() > atomI) {
+                 (void) fprintf(log, " bChn=%15.7e", obcChain[atomI]);
             }
-            if( bornRadii.size() > atomI ){
-                 (void) fprintf( log, " bR=%15.7e", bornRadii[atomI] );
+            if (bornRadii.size() > atomI) {
+                 (void) fprintf(log, " bR=%15.7e", bornRadii[atomI]);
             }
-            if( bornForces.size() > atomI ){
-                 (void) fprintf( log, " bF=%15.7e", bornForces[atomI] );    
+            if (bornForces.size() > atomI) {
+                 (void) fprintf(log, " bF=%15.7e", bornForces[atomI]);    
             }
-            (void) fprintf( log, "\n" );
+            (void) fprintf(log, "\n");
         }   
     }   
     

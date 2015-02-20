@@ -67,9 +67,9 @@ class ReferenceLJCoulombIxn {
             
          --------------------------------------------------------------------------------------- */
           
-      void calculateOneIxn( int atom1, int atom2, std::vector<OpenMM::RealVec>& atomCoordinates,
-                            RealOpenMM** atomParameters, std::vector<OpenMM::RealVec>& forces,
-                            RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const;
+      void calculateOneIxn(int atom1, int atom2, std::vector<OpenMM::RealVec>& atomCoordinates,
+                           RealOpenMM** atomParameters, std::vector<OpenMM::RealVec>& forces,
+                           RealOpenMM* energyByAtom, RealOpenMM* totalEnergy) const;
 
 
    public:
@@ -80,7 +80,7 @@ class ReferenceLJCoulombIxn {
       
          --------------------------------------------------------------------------------------- */
 
-       ReferenceLJCoulombIxn( );
+       ReferenceLJCoulombIxn();
 
       /**---------------------------------------------------------------------------------------
       
@@ -88,7 +88,7 @@ class ReferenceLJCoulombIxn {
       
          --------------------------------------------------------------------------------------- */
 
-       ~ReferenceLJCoulombIxn( );
+       ~ReferenceLJCoulombIxn();
 
       /**---------------------------------------------------------------------------------------
       
@@ -100,7 +100,7 @@ class ReferenceLJCoulombIxn {
       
          --------------------------------------------------------------------------------------- */
       
-      void setUseCutoff( RealOpenMM distance, const OpenMM::NeighborList& neighbors, RealOpenMM solventDielectric );
+      void setUseCutoff(RealOpenMM distance, const OpenMM::NeighborList& neighbors, RealOpenMM solventDielectric);
 
       /**---------------------------------------------------------------------------------------
       
@@ -110,7 +110,7 @@ class ReferenceLJCoulombIxn {
       
          --------------------------------------------------------------------------------------- */
       
-      void setUseSwitchingFunction( RealOpenMM distance );
+      void setUseSwitchingFunction(RealOpenMM distance);
       
       /**---------------------------------------------------------------------------------------
       

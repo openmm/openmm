@@ -1105,8 +1105,8 @@ void ReferenceCalcGBSAOBCForceKernel::initialize(const System& system, const GBS
     ObcParameters* obcParameters = new ObcParameters(numParticles, ObcParameters::ObcTypeII);
     obcParameters->setAtomicRadii(atomicRadii);
     obcParameters->setScaledRadiusFactors(scaleFactors);
-    obcParameters->setSolventDielectric( static_cast<RealOpenMM>(force.getSolventDielectric()) );
-    obcParameters->setSoluteDielectric( static_cast<RealOpenMM>(force.getSoluteDielectric()) );
+    obcParameters->setSolventDielectric(static_cast<RealOpenMM>(force.getSolventDielectric()));
+    obcParameters->setSoluteDielectric(static_cast<RealOpenMM>(force.getSoluteDielectric()));
     obcParameters->setPi4Asolv(4*M_PI*force.getSurfaceAreaEnergy());
     if (force.getNonbondedMethod() != GBSAOBCForce::NoCutoff)
         obcParameters->setUseCutoff(static_cast<RealOpenMM>(force.getCutoffDistance()));
@@ -1152,7 +1152,7 @@ ReferenceCalcGBVIForceKernel::~ReferenceCalcGBVIForceKernel() {
     }
 }
 
-void ReferenceCalcGBVIForceKernel::initialize(const System& system, const GBVIForce& force, const std::vector<double> & inputScaledRadii ) {
+void ReferenceCalcGBVIForceKernel::initialize(const System& system, const GBVIForce& force, const std::vector<double> & inputScaledRadii) {
 
     int numParticles = system.getNumParticles();
 
@@ -1201,7 +1201,7 @@ double ReferenceCalcGBVIForceKernel::execute(ContextImpl& context, bool includeF
         gbvi->computeBornForces(posData, charges, forceData);
         energy = 0.0;
     }
-    if( includeEnergy ){
+    if (includeEnergy) {
         energy = gbvi->computeBornEnergy(posData, charges);
     }
     return static_cast<double>(energy);
@@ -1710,7 +1710,7 @@ void ReferenceIntegrateVerletStepKernel::execute(ContextImpl& context, const Ver
         
         if (dynamics)
             delete dynamics;
-        dynamics = new ReferenceVerletDynamics(context.getSystem().getNumParticles(), static_cast<RealOpenMM>(stepSize) );
+        dynamics = new ReferenceVerletDynamics(context.getSystem().getNumParticles(), static_cast<RealOpenMM>(stepSize));
         dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
         prevStepSize = stepSize;
     }
@@ -1748,12 +1748,12 @@ void ReferenceIntegrateLangevinStepKernel::execute(ContextImpl& context, const L
         
         if (dynamics)
             delete dynamics;
-        RealOpenMM tau = static_cast<RealOpenMM>( friction == 0.0 ? 0.0 : 1.0/friction );
+        RealOpenMM tau = static_cast<RealOpenMM>(friction == 0.0 ? 0.0 : 1.0/friction);
         dynamics = new ReferenceStochasticDynamics(
                 context.getSystem().getNumParticles(), 
                 static_cast<RealOpenMM>(stepSize), 
                 static_cast<RealOpenMM>(tau), 
-                static_cast<RealOpenMM>(temperature) );
+                static_cast<RealOpenMM>(temperature));
         dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
         prevTemp = temperature;
         prevFriction = friction;
@@ -1797,7 +1797,7 @@ void ReferenceIntegrateBrownianStepKernel::execute(ContextImpl& context, const B
                 context.getSystem().getNumParticles(), 
                 static_cast<RealOpenMM>(stepSize), 
                 static_cast<RealOpenMM>(friction), 
-                static_cast<RealOpenMM>(temperature) );
+                static_cast<RealOpenMM>(temperature));
         dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
         prevTemp = temperature;
         prevFriction = friction;
@@ -1837,7 +1837,7 @@ double ReferenceIntegrateVariableLangevinStepKernel::execute(ContextImpl& contex
 
         if (dynamics)
             delete dynamics;
-        RealOpenMM tau = static_cast<RealOpenMM>( friction == 0.0 ? 0.0 : 1.0/friction );
+        RealOpenMM tau = static_cast<RealOpenMM>(friction == 0.0 ? 0.0 : 1.0/friction);
         dynamics = new ReferenceVariableStochasticDynamics(context.getSystem().getNumParticles(), (RealOpenMM) tau, (RealOpenMM) temperature, (RealOpenMM) errorTol);
         dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
         prevTemp = temperature;

@@ -38,7 +38,7 @@ using namespace OpenMM;
 
    --------------------------------------------------------------------------------------- */
 
-ReferencePairIxn::ReferencePairIxn( ){
+ReferencePairIxn::ReferencePairIxn() {
 
    // ---------------------------------------------------------------------------------------
 
@@ -54,7 +54,7 @@ ReferencePairIxn::ReferencePairIxn( ){
 
    --------------------------------------------------------------------------------------- */
 
-ReferencePairIxn::~ReferencePairIxn( ){
+ReferencePairIxn::~ReferencePairIxn() {
 
    // ---------------------------------------------------------------------------------------
 

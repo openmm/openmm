@@ -61,7 +61,7 @@ ReferenceCustomBondIxn::ReferenceCustomBondIxn(const Lepton::CompiledExpression&
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceCustomBondIxn::~ReferenceCustomBondIxn( ){
+ReferenceCustomBondIxn::~ReferenceCustomBondIxn() {
 
    // ---------------------------------------------------------------------------------------
 
@@ -83,11 +83,11 @@ ReferenceCustomBondIxn::~ReferenceCustomBondIxn( ){
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceCustomBondIxn::calculateBondIxn( int* atomIndices,
-                                                vector<RealVec>& atomCoordinates,
-                                                RealOpenMM* parameters,
-                                                vector<RealVec>& forces,
-                                                RealOpenMM* totalEnergy ) const {
+void ReferenceCustomBondIxn::calculateBondIxn(int* atomIndices,
+                                              vector<RealVec>& atomCoordinates,
+                                              RealOpenMM* parameters,
+                                              vector<RealVec>& forces,
+                                              RealOpenMM* totalEnergy) const {
 
    static const std::string methodName = "\nReferenceCustomBondIxn::calculateBondIxn";
 
@@ -109,7 +109,7 @@ void ReferenceCustomBondIxn::calculateBondIxn( int* atomIndices,
 
    int atomAIndex = atomIndices[0];
    int atomBIndex = atomIndices[1];
-   ReferenceForce::getDeltaR( atomCoordinates[atomAIndex], atomCoordinates[atomBIndex], deltaR );
+   ReferenceForce::getDeltaR(atomCoordinates[atomAIndex], atomCoordinates[atomBIndex], deltaR);
    
    ReferenceForce::setVariable(energyR, deltaR[ReferenceForce::RIndex]);
    ReferenceForce::setVariable(forceR, deltaR[ReferenceForce::RIndex]);

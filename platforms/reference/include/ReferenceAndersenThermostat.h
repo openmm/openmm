@@ -42,7 +42,7 @@ class ReferenceAndersenThermostat {
       
          --------------------------------------------------------------------------------------- */
 
-       ReferenceAndersenThermostat( );
+       ReferenceAndersenThermostat();
 
       /**---------------------------------------------------------------------------------------
       
@@ -50,7 +50,7 @@ class ReferenceAndersenThermostat {
       
          --------------------------------------------------------------------------------------- */
 
-       ~ReferenceAndersenThermostat( );
+       ~ReferenceAndersenThermostat();
 
       /**---------------------------------------------------------------------------------------
       
@@ -65,8 +65,8 @@ class ReferenceAndersenThermostat {
                   
          --------------------------------------------------------------------------------------- */
           
-      void applyThermostat( const std::vector<std::vector<int> >& atomGroups, std::vector<OpenMM::RealVec>& atomVelocities, std::vector<RealOpenMM>& atomMasses,
-              RealOpenMM temperature, RealOpenMM collisionFrequency, RealOpenMM stepSize ) const;
+      void applyThermostat(const std::vector<std::vector<int> >& atomGroups, std::vector<OpenMM::RealVec>& atomVelocities, std::vector<RealOpenMM>& atomMasses,
+              RealOpenMM temperature, RealOpenMM collisionFrequency, RealOpenMM stepSize) const;
       
 };
 

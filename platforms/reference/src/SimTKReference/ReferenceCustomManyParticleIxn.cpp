@@ -103,7 +103,7 @@ ReferenceCustomManyParticleIxn::ReferenceCustomManyParticleIxn(const CustomManyP
     CustomManyParticleForceImpl::buildFilterArrays(force, numTypes, particleTypes, orderIndex, particleOrder);
 }
 
-ReferenceCustomManyParticleIxn::~ReferenceCustomManyParticleIxn( ){
+ReferenceCustomManyParticleIxn::~ReferenceCustomManyParticleIxn() {
 }
 
 void ReferenceCustomManyParticleIxn::calculateIxn(vector<RealVec>& atomCoordinates, RealOpenMM** particleParameters,

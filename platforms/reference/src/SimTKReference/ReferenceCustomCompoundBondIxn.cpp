@@ -71,7 +71,7 @@ ReferenceCustomCompoundBondIxn::ReferenceCustomCompoundBondIxn(int numParticlesP
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceCustomCompoundBondIxn::~ReferenceCustomCompoundBondIxn( ){
+ReferenceCustomCompoundBondIxn::~ReferenceCustomCompoundBondIxn() {
 }
 
 /**---------------------------------------------------------------------------------------
@@ -92,7 +92,7 @@ void ReferenceCustomCompoundBondIxn::calculatePairIxn(vector<RealVec>& atomCoord
 
     map<string, double> variables = globalParameters;
     int numBonds = bondAtoms.size();
-    for (int bond = 0; bond < numBonds; bond++){
+    for (int bond = 0; bond < numBonds; bond++) {
         for (int j = 0; j < (int) bondParamNames.size(); j++)
             variables[bondParamNames[j]] = bondParameters[bond][j];
         calculateOneIxn(bond, atomCoordinates, variables, forces, totalEnergy);

@@ -72,7 +72,7 @@ ReferenceCustomNonbondedIxn::ReferenceCustomNonbondedIxn(const Lepton::CompiledE
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceCustomNonbondedIxn::~ReferenceCustomNonbondedIxn( ){
+ReferenceCustomNonbondedIxn::~ReferenceCustomNonbondedIxn() {
 
    // ---------------------------------------------------------------------------------------
 
@@ -91,7 +91,7 @@ ReferenceCustomNonbondedIxn::~ReferenceCustomNonbondedIxn( ){
 
      --------------------------------------------------------------------------------------- */
 
-  void ReferenceCustomNonbondedIxn::setUseCutoff( RealOpenMM distance, const OpenMM::NeighborList& neighbors ) {
+  void ReferenceCustomNonbondedIxn::setUseCutoff(RealOpenMM distance, const OpenMM::NeighborList& neighbors) {
 
     cutoff = true;
     cutoffDistance = distance;
@@ -119,7 +119,7 @@ void ReferenceCustomNonbondedIxn::setInteractionGroups(const vector<pair<set<int
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceCustomNonbondedIxn::setUseSwitchingFunction( RealOpenMM distance ) {
+void ReferenceCustomNonbondedIxn::setUseSwitchingFunction(RealOpenMM distance) {
     useSwitch = true;
     switchingDistance = distance;
 }
@@ -165,10 +165,10 @@ void ReferenceCustomNonbondedIxn::setUseSwitchingFunction( RealOpenMM distance )
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceCustomNonbondedIxn::calculatePairIxn( int numberOfAtoms, vector<RealVec>& atomCoordinates,
+void ReferenceCustomNonbondedIxn::calculatePairIxn(int numberOfAtoms, vector<RealVec>& atomCoordinates,
                                              RealOpenMM** atomParameters, vector<set<int> >& exclusions,
                                              RealOpenMM* fixedParameters, const map<string, double>& globalParameters, vector<RealVec>& forces,
-                                             RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) {
+                                             RealOpenMM* energyByAtom, RealOpenMM* totalEnergy) {
 
     for (map<string, double>::const_iterator iter = globalParameters.begin(); iter != globalParameters.end(); ++iter) {
         ReferenceForce::setVariable(ReferenceForce::getVariablePointer(energyExpression, iter->first), iter->second);
@@ -244,8 +244,8 @@ void ReferenceCustomNonbondedIxn::calculatePairIxn( int numberOfAtoms, vector<Re
 
      --------------------------------------------------------------------------------------- */
 
-void ReferenceCustomNonbondedIxn::calculateOneIxn( int ii, int jj, vector<RealVec>& atomCoordinates, vector<RealVec>& forces,
-                        RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) {
+void ReferenceCustomNonbondedIxn::calculateOneIxn(int ii, int jj, vector<RealVec>& atomCoordinates, vector<RealVec>& forces,
+                        RealOpenMM* energyByAtom, RealOpenMM* totalEnergy) {
 
     // ---------------------------------------------------------------------------------------
 
@@ -267,9 +267,9 @@ void ReferenceCustomNonbondedIxn::calculateOneIxn( int ii, int jj, vector<RealVe
 
     RealOpenMM deltaR[ReferenceForce::LastDeltaRIndex];
     if (periodic)
-        ReferenceForce::getDeltaRPeriodic( atomCoordinates[jj], atomCoordinates[ii], periodicBoxVectors, deltaR );
+        ReferenceForce::getDeltaRPeriodic(atomCoordinates[jj], atomCoordinates[ii], periodicBoxVectors, deltaR);
     else
-        ReferenceForce::getDeltaR( atomCoordinates[jj], atomCoordinates[ii], deltaR );
+        ReferenceForce::getDeltaR(atomCoordinates[jj], atomCoordinates[ii], deltaR);
     RealOpenMM r = deltaR[ReferenceForce::RIndex];
     if (cutoff && r >= cutoffDistance)
         return;
@@ -289,7 +289,7 @@ void ReferenceCustomNonbondedIxn::calculateOneIxn( int ii, int jj, vector<RealVe
             energy *= switchValue;
         }
     }
-    for( int kk = 0; kk < 3; kk++ ){
+    for (int kk = 0; kk < 3; kk++) {
        RealOpenMM force  = -dEdR*deltaR[kk];
        forces[ii][kk]   += force;
        forces[jj][kk]   -= force;
@@ -297,10 +297,10 @@ void ReferenceCustomNonbondedIxn::calculateOneIxn( int ii, int jj, vector<RealVe
 
     // accumulate energies
 
-    if( totalEnergy || energyByAtom ) {
-        if( totalEnergy )
+    if (totalEnergy || energyByAtom) {
+        if (totalEnergy)
            *totalEnergy += energy;
-        if( energyByAtom ){
+        if (energyByAtom) {
            energyByAtom[ii] += energy;
            energyByAtom[jj] += energy;
         }

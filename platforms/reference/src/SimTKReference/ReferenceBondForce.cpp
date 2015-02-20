@@ -38,7 +38,7 @@ using namespace OpenMM;
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceBondForce::ReferenceBondForce( ){
+ReferenceBondForce::ReferenceBondForce() {
 
    // ---------------------------------------------------------------------------------------
 
@@ -54,7 +54,7 @@ ReferenceBondForce::ReferenceBondForce( ){
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceBondForce::~ReferenceBondForce( ){
+ReferenceBondForce::~ReferenceBondForce() {
 
    // ---------------------------------------------------------------------------------------
 
@@ -79,12 +79,12 @@ ReferenceBondForce::~ReferenceBondForce( ){
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceBondForce::calculateForce( int numberOfBonds, int** atomIndices,
+void ReferenceBondForce::calculateForce(int numberOfBonds, int** atomIndices,
                                         vector<RealVec>& atomCoordinates,
                                         RealOpenMM** parameters,
                                         vector<RealVec>& forces, 
                                         RealOpenMM *totalEnergy, 
-                                        ReferenceBondIxn& referenceBondIxn ){
+                                        ReferenceBondIxn& referenceBondIxn) {
 
 
    // ---------------------------------------------------------------------------------------
@@ -93,12 +93,12 @@ void ReferenceBondForce::calculateForce( int numberOfBonds, int** atomIndices,
 
    // ---------------------------------------------------------------------------------------
 
-   for( int ii = 0; ii < numberOfBonds; ii++ ){
+   for (int ii = 0; ii < numberOfBonds; ii++) {
 
       // calculate bond ixn
 
-      referenceBondIxn.calculateBondIxn( atomIndices[ii], atomCoordinates, parameters[ii], 
-                                         forces, totalEnergy );
+      referenceBondIxn.calculateBondIxn(atomIndices[ii], atomCoordinates, parameters[ii], 
+                                        forces, totalEnergy);
    }
 }
 

@@ -244,7 +244,7 @@ class ReferenceCustomGBIxn {
 
          --------------------------------------------------------------------------------------- */
 
-       ~ReferenceCustomGBIxn( );
+       ~ReferenceCustomGBIxn();
 
       /**---------------------------------------------------------------------------------------
 
@@ -255,7 +255,7 @@ class ReferenceCustomGBIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void setUseCutoff( RealOpenMM distance, const OpenMM::NeighborList& neighbors );
+      void setUseCutoff(RealOpenMM distance, const OpenMM::NeighborList& neighbors);
 
       /**---------------------------------------------------------------------------------------
 

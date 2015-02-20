@@ -41,19 +41,19 @@ using namespace OpenMM;
 
     --------------------------------------------------------------------------------------- */
 
-GBVIParameters::GBVIParameters( int numberOfAtoms ) : _numberOfAtoms(numberOfAtoms), 
-                                                      _soluteDielectric(1.0),
-                                                      _solventDielectric(78.3),
-                                                      _electricConstant(-0.5*ONE_4PI_EPS0),
-                                                      _cutoff(false),
-                                                      _periodic(false),
-                                                      _bornRadiusScalingMethod(0),
-                                                      _quinticLowerLimitFactor(0.8),
-                                                      _quinticUpperBornRadiusLimit(5.0) {
+GBVIParameters::GBVIParameters(int numberOfAtoms) : _numberOfAtoms(numberOfAtoms), 
+                                                    _soluteDielectric(1.0),
+                                                    _solventDielectric(78.3),
+                                                    _electricConstant(-0.5*ONE_4PI_EPS0),
+                                                    _cutoff(false),
+                                                    _periodic(false),
+                                                    _bornRadiusScalingMethod(0),
+                                                    _quinticLowerLimitFactor(0.8),
+                                                    _quinticUpperBornRadiusLimit(5.0) {
 
-    _atomicRadii.resize( numberOfAtoms );
-    _scaledRadii.resize( numberOfAtoms );
-    _gammaParameters.resize( numberOfAtoms ); 
+    _atomicRadii.resize(numberOfAtoms);
+    _scaledRadii.resize(numberOfAtoms);
+    _gammaParameters.resize(numberOfAtoms); 
 
 }
 
@@ -63,7 +63,7 @@ GBVIParameters::GBVIParameters( int numberOfAtoms ) : _numberOfAtoms(numberOfAto
 
     --------------------------------------------------------------------------------------- */
 
-GBVIParameters::~GBVIParameters( ){
+GBVIParameters::~GBVIParameters() {
 }
 
 /**---------------------------------------------------------------------------------------
@@ -74,7 +74,7 @@ GBVIParameters::~GBVIParameters( ){
 
    --------------------------------------------------------------------------------------- */
 
-int GBVIParameters::getNumberOfAtoms( void ) const {
+int GBVIParameters::getNumberOfAtoms() const {
     return _numberOfAtoms;
 }
 
@@ -86,7 +86,7 @@ int GBVIParameters::getNumberOfAtoms( void ) const {
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM GBVIParameters::getElectricConstant( void ) const {
+RealOpenMM GBVIParameters::getElectricConstant() const {
     return _electricConstant;
 }
 
@@ -98,7 +98,7 @@ RealOpenMM GBVIParameters::getElectricConstant( void ) const {
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM GBVIParameters::getSolventDielectric( void ) const {
+RealOpenMM GBVIParameters::getSolventDielectric() const {
     return _solventDielectric;
 }
 
@@ -110,7 +110,7 @@ RealOpenMM GBVIParameters::getSolventDielectric( void ) const {
 
    --------------------------------------------------------------------------------------- */
 
-void GBVIParameters::setSolventDielectric( RealOpenMM solventDielectric ){
+void GBVIParameters::setSolventDielectric(RealOpenMM solventDielectric) {
     _solventDielectric = solventDielectric;
 }
 
@@ -122,7 +122,7 @@ void GBVIParameters::setSolventDielectric( RealOpenMM solventDielectric ){
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM GBVIParameters::getSoluteDielectric( void ) const {
+RealOpenMM GBVIParameters::getSoluteDielectric() const {
     return _soluteDielectric;
 }
 
@@ -134,7 +134,7 @@ RealOpenMM GBVIParameters::getSoluteDielectric( void ) const {
 
    --------------------------------------------------------------------------------------- */
 
-void GBVIParameters::setSoluteDielectric( RealOpenMM soluteDielectric ){
+void GBVIParameters::setSoluteDielectric(RealOpenMM soluteDielectric) {
     _soluteDielectric = soluteDielectric;
 }
 
@@ -146,7 +146,7 @@ void GBVIParameters::setSoluteDielectric( RealOpenMM soluteDielectric ){
 
     --------------------------------------------------------------------------------------- */
 
-const RealOpenMMVector& GBVIParameters::getAtomicRadii( void ) const {
+const RealOpenMMVector& GBVIParameters::getAtomicRadii() const {
     return _atomicRadii;
 }
 
@@ -158,10 +158,10 @@ const RealOpenMMVector& GBVIParameters::getAtomicRadii( void ) const {
 
     --------------------------------------------------------------------------------------- */
 
-void GBVIParameters::setAtomicRadii( const RealOpenMMVector& atomicRadii ){
+void GBVIParameters::setAtomicRadii(const RealOpenMMVector& atomicRadii) {
 
-    if( atomicRadii.size() == _atomicRadii.size() ){
-        for( unsigned int ii = 0; ii < atomicRadii.size(); ii++ ){
+    if (atomicRadii.size() == _atomicRadii.size()) {
+        for (unsigned int ii = 0; ii < atomicRadii.size(); ii++) {
             _atomicRadii[ii] = atomicRadii[ii];
         }   
     } else {
@@ -181,7 +181,7 @@ void GBVIParameters::setAtomicRadii( const RealOpenMMVector& atomicRadii ){
 
     --------------------------------------------------------------------------------------- */
 
-const RealOpenMMVector& GBVIParameters::getScaledRadii( void ) const {
+const RealOpenMMVector& GBVIParameters::getScaledRadii() const {
     return _scaledRadii;
 }
 
@@ -193,10 +193,10 @@ const RealOpenMMVector& GBVIParameters::getScaledRadii( void ) const {
 
     --------------------------------------------------------------------------------------- */
 
-void GBVIParameters::setScaledRadii( const RealOpenMMVector& scaledRadii ){
+void GBVIParameters::setScaledRadii(const RealOpenMMVector& scaledRadii) {
 
-    if( scaledRadii.size() == _scaledRadii.size() ){
-        for( unsigned int ii = 0; ii < scaledRadii.size(); ii++ ){
+    if (scaledRadii.size() == _scaledRadii.size()) {
+        for (unsigned int ii = 0; ii < scaledRadii.size(); ii++) {
             _scaledRadii[ii] = scaledRadii[ii];
         }
     } else {
@@ -218,7 +218,7 @@ void GBVIParameters::setScaledRadii( const RealOpenMMVector& scaledRadii ){
 
     --------------------------------------------------------------------------------------- */
 
-const RealOpenMMVector& GBVIParameters::getGammaParameters( void ) const {
+const RealOpenMMVector& GBVIParameters::getGammaParameters() const {
     return _gammaParameters;
 }
 
@@ -230,10 +230,10 @@ const RealOpenMMVector& GBVIParameters::getGammaParameters( void ) const {
 
     --------------------------------------------------------------------------------------- */
 
-void GBVIParameters::setGammaParameters( const RealOpenMMVector& gammas ){
+void GBVIParameters::setGammaParameters(const RealOpenMMVector& gammas) {
 
-    if( gammas.size() == _gammaParameters.size() ){
-        for( unsigned int ii = 0; ii < gammas.size(); ii++ ){
+    if (gammas.size() == _gammaParameters.size()) {
+        for (unsigned int ii = 0; ii < gammas.size(); ii++) {
             _gammaParameters[ii] = gammas[ii];
         }
     } else {
@@ -254,7 +254,7 @@ void GBVIParameters::setGammaParameters( const RealOpenMMVector& gammas ){
 
       --------------------------------------------------------------------------------------- */
 
-void GBVIParameters::setUseCutoff( RealOpenMM distance ) {
+void GBVIParameters::setUseCutoff(RealOpenMM distance) {
 
      _cutoff          = true;
      _cutoffDistance = distance;
@@ -330,7 +330,7 @@ const OpenMM::RealVec* GBVIParameters::getPeriodicBox() {
 
     --------------------------------------------------------------------------------------- */
 
-RealOpenMM GBVIParameters::getTau( void ) const {
+RealOpenMM GBVIParameters::getTau() const {
 
     // ---------------------------------------------------------------------------------------
 
@@ -340,7 +340,7 @@ RealOpenMM GBVIParameters::getTau( void ) const {
     // ---------------------------------------------------------------------------------------
 
     RealOpenMM tau;
-    if( getSoluteDielectric() != zero && getSolventDielectric() != zero ){
+    if (getSoluteDielectric() != zero && getSolventDielectric() != zero) {
         tau = (one/getSoluteDielectric()) - (one/getSolventDielectric());
     } else {
         tau = zero;
@@ -357,7 +357,7 @@ RealOpenMM GBVIParameters::getTau( void ) const {
 
     --------------------------------------------------------------------------------------- */
 
-int GBVIParameters::getBornRadiusScalingMethod( void ) const {
+int GBVIParameters::getBornRadiusScalingMethod() const {
     return _bornRadiusScalingMethod;
 }
 
@@ -369,7 +369,7 @@ int GBVIParameters::getBornRadiusScalingMethod( void ) const {
 
     --------------------------------------------------------------------------------------- */
 
-void GBVIParameters::setBornRadiusScalingMethod( int bornRadiusScalingMethod ){
+void GBVIParameters::setBornRadiusScalingMethod(int bornRadiusScalingMethod) {
     _bornRadiusScalingMethod    = bornRadiusScalingMethod;
 }
 
@@ -381,7 +381,7 @@ void GBVIParameters::setBornRadiusScalingMethod( int bornRadiusScalingMethod ){
 
     --------------------------------------------------------------------------------------- */
 
-RealOpenMM GBVIParameters::getQuinticLowerLimitFactor( void ) const {
+RealOpenMM GBVIParameters::getQuinticLowerLimitFactor() const {
     return _quinticLowerLimitFactor;
 }
 
@@ -393,7 +393,7 @@ RealOpenMM GBVIParameters::getQuinticLowerLimitFactor( void ) const {
 
     --------------------------------------------------------------------------------------- */
 
-void GBVIParameters::setQuinticLowerLimitFactor( RealOpenMM quinticLowerLimitFactor ){
+void GBVIParameters::setQuinticLowerLimitFactor(RealOpenMM quinticLowerLimitFactor) {
     _quinticLowerLimitFactor    = quinticLowerLimitFactor;
 }
 
@@ -405,7 +405,7 @@ void GBVIParameters::setQuinticLowerLimitFactor( RealOpenMM quinticLowerLimitFac
 
     --------------------------------------------------------------------------------------- */
 
-RealOpenMM GBVIParameters::getQuinticUpperBornRadiusLimit( void ) const {
+RealOpenMM GBVIParameters::getQuinticUpperBornRadiusLimit() const {
     return _quinticUpperBornRadiusLimit;
 }
 
@@ -417,6 +417,6 @@ RealOpenMM GBVIParameters::getQuinticUpperBornRadiusLimit( void ) const {
 
     --------------------------------------------------------------------------------------- */
 
-void GBVIParameters::setQuinticUpperBornRadiusLimit( RealOpenMM quinticUpperBornRadiusLimit ){
+void GBVIParameters::setQuinticUpperBornRadiusLimit(RealOpenMM quinticUpperBornRadiusLimit) {
     _quinticUpperBornRadiusLimit    = quinticUpperBornRadiusLimit;
 }

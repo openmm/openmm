@@ -39,7 +39,7 @@ using namespace OpenMM;
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceForce::ReferenceForce( ){
+ReferenceForce::ReferenceForce() {
 }
 
 /**---------------------------------------------------------------------------------------
@@ -48,7 +48,7 @@ ReferenceForce::ReferenceForce( ){
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceForce::~ReferenceForce( ){
+ReferenceForce::~ReferenceForce() {
 }
 
 /**---------------------------------------------------------------------------------------
@@ -64,28 +64,28 @@ RealOpenMM ReferenceForce::periodicDifference(RealOpenMM val1, RealOpenMM val2, 
 
 }
 
-void ReferenceForce::getDeltaR( const RealVec& atomCoordinatesI, const RealVec& atomCoordinatesJ,
-                               RealOpenMM* deltaR ){
+void ReferenceForce::getDeltaR(const RealVec& atomCoordinatesI, const RealVec& atomCoordinatesJ,
+                               RealOpenMM* deltaR) {
    deltaR[XIndex]    = atomCoordinatesJ[0] - atomCoordinatesI[0];
    deltaR[YIndex]    = atomCoordinatesJ[1] - atomCoordinatesI[1];
    deltaR[ZIndex]    = atomCoordinatesJ[2] - atomCoordinatesI[2];
 
-   deltaR[R2Index]   = DOT3( deltaR, deltaR );
-   deltaR[RIndex]    = (RealOpenMM) SQRT( deltaR[R2Index] );
+   deltaR[R2Index]   = DOT3(deltaR, deltaR);
+   deltaR[RIndex]    = (RealOpenMM) SQRT(deltaR[R2Index]);
 }
 
-void ReferenceForce::getDeltaRPeriodic( const RealVec& atomCoordinatesI, const RealVec& atomCoordinatesJ,
-                               const RealOpenMM* boxSize, RealOpenMM* deltaR ){
+void ReferenceForce::getDeltaRPeriodic(const RealVec& atomCoordinatesI, const RealVec& atomCoordinatesJ,
+                               const RealOpenMM* boxSize, RealOpenMM* deltaR) {
    deltaR[XIndex]    = periodicDifference(atomCoordinatesJ[0], atomCoordinatesI[0], boxSize[0]);
    deltaR[YIndex]    = periodicDifference(atomCoordinatesJ[1], atomCoordinatesI[1], boxSize[1]);
    deltaR[ZIndex]    = periodicDifference(atomCoordinatesJ[2], atomCoordinatesI[2], boxSize[2]);
 
-   deltaR[R2Index]   = DOT3( deltaR, deltaR );
-   deltaR[RIndex]    = (RealOpenMM) SQRT( deltaR[R2Index] );
+   deltaR[R2Index]   = DOT3(deltaR, deltaR);
+   deltaR[RIndex]    = (RealOpenMM) SQRT(deltaR[R2Index]);
 }
 
-void ReferenceForce::getDeltaRPeriodic( const RealVec& atomCoordinatesI, const RealVec& atomCoordinatesJ,
-                               const RealVec* boxVectors, RealOpenMM* deltaR ){
+void ReferenceForce::getDeltaRPeriodic(const RealVec& atomCoordinatesI, const RealVec& atomCoordinatesJ,
+                               const RealVec* boxVectors, RealOpenMM* deltaR) {
     RealVec diff = atomCoordinatesJ-atomCoordinatesI;
     diff -= boxVectors[2]*floor(diff[2]/boxVectors[2][2]+0.5);
     diff -= boxVectors[1]*floor(diff[1]/boxVectors[1][1]+0.5);

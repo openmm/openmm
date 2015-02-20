@@ -53,7 +53,7 @@ class CpuGBVI {
       
          --------------------------------------------------------------------------------------- */
 
-       CpuGBVI( GBVIParameters* gbviParameters );
+       CpuGBVI(GBVIParameters* gbviParameters);
 
       /**---------------------------------------------------------------------------------------
       
@@ -61,7 +61,7 @@ class CpuGBVI {
       
          --------------------------------------------------------------------------------------- */
 
-       ~CpuGBVI( );
+       ~CpuGBVI();
 
       /**---------------------------------------------------------------------------------------
       
@@ -71,7 +71,7 @@ class CpuGBVI {
       
          --------------------------------------------------------------------------------------- */
 
-      GBVIParameters* getGBVIParameters( void ) const;
+      GBVIParameters* getGBVIParameters() const;
 
       /**---------------------------------------------------------------------------------------
       
@@ -81,7 +81,7 @@ class CpuGBVI {
       
          --------------------------------------------------------------------------------------- */
 
-      void setGBVIParameters( GBVIParameters* gbviParameters );
+      void setGBVIParameters(GBVIParameters* gbviParameters);
  
       /**---------------------------------------------------------------------------------------
       
@@ -93,7 +93,7 @@ class CpuGBVI {
       
          --------------------------------------------------------------------------------------- */
       
-      void computeBornRadii( const std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMMVector& bornRadii );
+      void computeBornRadii(const std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMMVector& bornRadii);
       
       /**---------------------------------------------------------------------------------------
       
@@ -107,7 +107,7 @@ class CpuGBVI {
       
          --------------------------------------------------------------------------------------- */
       
-      static RealOpenMM getVolume( RealOpenMM r, RealOpenMM R, RealOpenMM S );
+      static RealOpenMM getVolume(RealOpenMM r, RealOpenMM R, RealOpenMM S);
       
       /**---------------------------------------------------------------------------------------
       
@@ -121,7 +121,7 @@ class CpuGBVI {
       
          --------------------------------------------------------------------------------------- */
       
-      static RealOpenMM getL( RealOpenMM r, RealOpenMM x, RealOpenMM S );
+      static RealOpenMM getL(RealOpenMM r, RealOpenMM x, RealOpenMM S);
 
       /**---------------------------------------------------------------------------------------
       
@@ -135,7 +135,7 @@ class CpuGBVI {
       
          --------------------------------------------------------------------------------------- */
       
-      static RealOpenMM dL_dr( RealOpenMM r, RealOpenMM x, RealOpenMM S );
+      static RealOpenMM dL_dr(RealOpenMM r, RealOpenMM x, RealOpenMM S);
 
       /**---------------------------------------------------------------------------------------
       
@@ -149,7 +149,7 @@ class CpuGBVI {
       
          --------------------------------------------------------------------------------------- */
       
-      static RealOpenMM dL_dx( RealOpenMM r, RealOpenMM x, RealOpenMM S );
+      static RealOpenMM dL_dx(RealOpenMM r, RealOpenMM x, RealOpenMM S);
 
       /**---------------------------------------------------------------------------------------
       
@@ -161,7 +161,7 @@ class CpuGBVI {
       
          --------------------------------------------------------------------------------------- */
       
-      static RealOpenMM Sgb( RealOpenMM t );
+      static RealOpenMM Sgb(RealOpenMM t);
       
       /**---------------------------------------------------------------------------------------
       
@@ -174,7 +174,7 @@ class CpuGBVI {
       
          --------------------------------------------------------------------------------------- */
       
-      RealOpenMM computeBornEnergy( const std::vector<OpenMM::RealVec>& atomCoordinates, const RealOpenMMVector& partialCharges );
+      RealOpenMM computeBornEnergy(const std::vector<OpenMM::RealVec>& atomCoordinates, const RealOpenMMVector& partialCharges);
       
       /**---------------------------------------------------------------------------------------
       
@@ -186,8 +186,8 @@ class CpuGBVI {
       
          --------------------------------------------------------------------------------------- */
       
-      void computeBornForces( std::vector<OpenMM::RealVec>& atomCoordinates,
-                              const RealOpenMMVector& partialCharges, std::vector<OpenMM::RealVec>& inputForces );
+      void computeBornForces(std::vector<OpenMM::RealVec>& atomCoordinates,
+                             const RealOpenMMVector& partialCharges, std::vector<OpenMM::RealVec>& inputForces);
       
       /**---------------------------------------------------------------------------------------
       
@@ -201,7 +201,7 @@ class CpuGBVI {
       
          --------------------------------------------------------------------------------------- */
       
-      static double getVolumeD( double r, double R, double S );
+      static double getVolumeD(double r, double R, double S);
       
       /**---------------------------------------------------------------------------------------
       
@@ -215,7 +215,7 @@ class CpuGBVI {
       
          --------------------------------------------------------------------------------------- */
       
-      static double getLD( double r, double x, double S );
+      static double getLD(double r, double x, double S);
 
       /**---------------------------------------------------------------------------------------
       
@@ -229,7 +229,7 @@ class CpuGBVI {
       
          --------------------------------------------------------------------------------------- */
       
-      static double dL_drD( double r, double x, double S );
+      static double dL_drD(double r, double x, double S);
 
       /**---------------------------------------------------------------------------------------
       
@@ -243,7 +243,7 @@ class CpuGBVI {
       
          --------------------------------------------------------------------------------------- */
       
-      static double dL_dxD( double r, double x, double S );
+      static double dL_dxD(double r, double x, double S);
 
     /**---------------------------------------------------------------------------------------
     
@@ -254,7 +254,7 @@ class CpuGBVI {
     
        --------------------------------------------------------------------------------------- */
     
-      RealOpenMMVector& getSwitchDeriviative( void );
+      RealOpenMMVector& getSwitchDeriviative();
     
     /**---------------------------------------------------------------------------------------
     
@@ -268,8 +268,8 @@ class CpuGBVI {
     
        --------------------------------------------------------------------------------------- */
     
-    void quinticSpline( RealOpenMM x, RealOpenMM rl, RealOpenMM ru,
-                        RealOpenMM* outValue, RealOpenMM* outDerivative );
+    void quinticSpline(RealOpenMM x, RealOpenMM rl, RealOpenMM ru,
+                       RealOpenMM* outValue, RealOpenMM* outDerivative);
 
     /**---------------------------------------------------------------------------------------
     
@@ -285,9 +285,9 @@ class CpuGBVI {
     
        --------------------------------------------------------------------------------------- */
     
-    void computeBornRadiiUsingQuinticSpline( RealOpenMM atomicRadius3, RealOpenMM bornSum,
-                                             GBVIParameters* gbviParameters,
-                                             RealOpenMM* bornRadius, RealOpenMM* switchDeriviative );
+    void computeBornRadiiUsingQuinticSpline(RealOpenMM atomicRadius3, RealOpenMM bornSum,
+                                            GBVIParameters* gbviParameters,
+                                            RealOpenMM* bornRadius, RealOpenMM* switchDeriviative);
 
     /**---------------------------------------------------------------------------------------
     
@@ -303,11 +303,11 @@ class CpuGBVI {
     
         --------------------------------------------------------------------------------------- */
     
-    void printGbvi( const std::vector<OpenMM::RealVec>& atomCoordinates, const RealOpenMMVector& partialCharges,
-                    const RealOpenMMVector& bornRadii,
-                    const RealOpenMMVector& bornForces,
-                    const std::vector<OpenMM::RealVec>& forces,
-                    const std::string& idString, FILE* log );
+    void printGbvi(const std::vector<OpenMM::RealVec>& atomCoordinates, const RealOpenMMVector& partialCharges,
+                   const RealOpenMMVector& bornRadii,
+                   const RealOpenMMVector& bornForces,
+                   const std::vector<OpenMM::RealVec>& forces,
+                   const std::string& idString, FILE* log);
 
 };
 

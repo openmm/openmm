@@ -57,7 +57,7 @@ class ReferenceCustomAngleIxn : public ReferenceBondIxn {
 
          --------------------------------------------------------------------------------------- */
 
-       ~ReferenceCustomAngleIxn( );
+       ~ReferenceCustomAngleIxn();
 
       /**---------------------------------------------------------------------------------------
 
@@ -71,7 +71,7 @@ class ReferenceCustomAngleIxn : public ReferenceBondIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateBondIxn( int* atomIndices, std::vector<OpenMM::RealVec>& atomCoordinates,
+      void calculateBondIxn(int* atomIndices, std::vector<OpenMM::RealVec>& atomCoordinates,
                             RealOpenMM* parameters, std::vector<OpenMM::RealVec>& forces,
                             RealOpenMM* totalEnergy) const;
 

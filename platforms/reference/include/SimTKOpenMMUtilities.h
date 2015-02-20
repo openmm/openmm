@@ -56,8 +56,8 @@ class OPENMM_EXPORT SimTKOpenMMUtilities {
 
       // dummy constructor/destructor
 
-       SimTKOpenMMUtilities(){};
-      ~SimTKOpenMMUtilities(){};
+       SimTKOpenMMUtilities() {};
+      ~SimTKOpenMMUtilities() {};
       
       /**---------------------------------------------------------------------------------------
       
@@ -75,9 +75,9 @@ class OPENMM_EXPORT SimTKOpenMMUtilities {
       
          --------------------------------------------------------------------------------------- */
       
-      static RealOpenMM* allocateOneDRealOpenMMArray( int iSize, RealOpenMM* array1D, int initialize,
+      static RealOpenMM* allocateOneDRealOpenMMArray(int iSize, RealOpenMM* array1D, int initialize,
                                                       RealOpenMM initialValue,
-                                                      const std::string& idString = std::string( "1DArray" ) );
+                                                      const std::string& idString = std::string("1DArray"));
       
       /**---------------------------------------------------------------------------------------
       
@@ -96,10 +96,10 @@ class OPENMM_EXPORT SimTKOpenMMUtilities {
       
          --------------------------------------------------------------------------------------- */
       
-      static RealOpenMM** allocateTwoDRealOpenMMArray( int iSize, int jSize,
+      static RealOpenMM** allocateTwoDRealOpenMMArray(int iSize, int jSize,
                                                        RealOpenMM** array2D, int initialize,
                                                        RealOpenMM initialValue,
-                                                       const std::string& idString = std::string( "2DArray" ) );
+                                                       const std::string& idString = std::string("2DArray"));
       
       /* ---------------------------------------------------------------------------------------
       
@@ -112,8 +112,8 @@ class OPENMM_EXPORT SimTKOpenMMUtilities {
       
          --------------------------------------------------------------------------------------- */
       
-      static void freeOneDRealOpenMMArray( RealOpenMM* array1D,
-                                          const std::string& idString = std::string( "1DArray" ) );
+      static void freeOneDRealOpenMMArray(RealOpenMM* array1D,
+                                          const std::string& idString = std::string("1DArray"));
       
       /* ---------------------------------------------------------------------------------------
       
@@ -126,8 +126,8 @@ class OPENMM_EXPORT SimTKOpenMMUtilities {
       
          --------------------------------------------------------------------------------------- */
       
-      static void freeTwoDRealOpenMMArray( RealOpenMM** array2D,
-                                          const std::string& idString = std::string( "2DArray" ) );
+      static void freeTwoDRealOpenMMArray(RealOpenMM** array2D,
+                                          const std::string& idString = std::string("2DArray"));
       
       /**---------------------------------------------------------------------------------------
       
@@ -142,8 +142,8 @@ class OPENMM_EXPORT SimTKOpenMMUtilities {
       
          --------------------------------------------------------------------------------------- */
       
-      static void initialize2DRealOpenMMArray( int iSize, int jSize,
-                                              RealOpenMM** array2D, RealOpenMM initialValue );
+      static void initialize2DRealOpenMMArray(int iSize, int jSize,
+                                              RealOpenMM** array2D, RealOpenMM initialValue);
 
       /**---------------------------------------------------------------------------------------
       
@@ -159,7 +159,7 @@ class OPENMM_EXPORT SimTKOpenMMUtilities {
       
          --------------------------------------------------------------------------------------- */
       
-      static void crossProductVector3( RealOpenMM* vectorX, RealOpenMM* vectorY, RealOpenMM* vectorZ );
+      static void crossProductVector3(RealOpenMM* vectorX, RealOpenMM* vectorY, RealOpenMM* vectorZ);
       
       /**---------------------------------------------------------------------------------------
       
@@ -169,7 +169,7 @@ class OPENMM_EXPORT SimTKOpenMMUtilities {
       
          --------------------------------------------------------------------------------------- */
       
-      static RealOpenMM getNormallyDistributedRandomNumber( void );
+      static RealOpenMM getNormallyDistributedRandomNumber();
       
       /**---------------------------------------------------------------------------------------
       
@@ -179,7 +179,7 @@ class OPENMM_EXPORT SimTKOpenMMUtilities {
       
          --------------------------------------------------------------------------------------- */
       
-      static RealOpenMM getUniformlyDistributedRandomNumber( void );
+      static RealOpenMM getUniformlyDistributedRandomNumber();
 
       /**---------------------------------------------------------------------------------------
       
@@ -189,7 +189,7 @@ class OPENMM_EXPORT SimTKOpenMMUtilities {
       
          --------------------------------------------------------------------------------------- */
       
-      static uint32_t getRandomNumberSeed( void );
+      static uint32_t getRandomNumberSeed();
       
       /**---------------------------------------------------------------------------------------
       
@@ -199,7 +199,7 @@ class OPENMM_EXPORT SimTKOpenMMUtilities {
       
          --------------------------------------------------------------------------------------- */
       
-      static void setRandomNumberSeed( uint32_t seed );
+      static void setRandomNumberSeed(uint32_t seed);
       
       /**---------------------------------------------------------------------------------------
       

@@ -49,7 +49,7 @@ class ReferenceVerletDynamics : public ReferenceDynamics {
       
          --------------------------------------------------------------------------------------- */
 
-       ReferenceVerletDynamics( int numberOfAtoms, RealOpenMM deltaT );
+       ReferenceVerletDynamics(int numberOfAtoms, RealOpenMM deltaT);
 
       /**---------------------------------------------------------------------------------------
       
@@ -57,7 +57,7 @@ class ReferenceVerletDynamics : public ReferenceDynamics {
       
          --------------------------------------------------------------------------------------- */
 
-       ~ReferenceVerletDynamics( );
+       ~ReferenceVerletDynamics();
 
       /**---------------------------------------------------------------------------------------
       

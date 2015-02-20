@@ -39,7 +39,7 @@ using namespace OpenMM;
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceProperDihedralBond::ReferenceProperDihedralBond( ){
+ReferenceProperDihedralBond::ReferenceProperDihedralBond() {
 
    // ---------------------------------------------------------------------------------------
 
@@ -55,7 +55,7 @@ ReferenceProperDihedralBond::ReferenceProperDihedralBond( ){
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceProperDihedralBond::~ReferenceProperDihedralBond( ){
+ReferenceProperDihedralBond::~ReferenceProperDihedralBond() {
 
    // ---------------------------------------------------------------------------------------
 
@@ -79,11 +79,11 @@ ReferenceProperDihedralBond::~ReferenceProperDihedralBond( ){
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceProperDihedralBond::calculateBondIxn( int* atomIndices,
+void ReferenceProperDihedralBond::calculateBondIxn(int* atomIndices,
                                                    vector<RealVec>& atomCoordinates,
                                                    RealOpenMM* parameters,
                                                    vector<RealVec>& forces,
-                                                   RealOpenMM* totalEnergy ) const {
+                                                   RealOpenMM* totalEnergy) const {
 
    static const std::string methodName = "\nReferenceProperDihedralBond::calculateBondIxn";
 
@@ -111,9 +111,9 @@ void ReferenceProperDihedralBond::calculateBondIxn( int* atomIndices,
    int atomBIndex = atomIndices[1];
    int atomCIndex = atomIndices[2];
    int atomDIndex = atomIndices[3];
-   ReferenceForce::getDeltaR( atomCoordinates[atomBIndex], atomCoordinates[atomAIndex], deltaR[0] );  
-   ReferenceForce::getDeltaR( atomCoordinates[atomBIndex], atomCoordinates[atomCIndex], deltaR[1] );  
-   ReferenceForce::getDeltaR( atomCoordinates[atomDIndex], atomCoordinates[atomCIndex], deltaR[2] );  
+   ReferenceForce::getDeltaR(atomCoordinates[atomBIndex], atomCoordinates[atomAIndex], deltaR[0]);  
+   ReferenceForce::getDeltaR(atomCoordinates[atomBIndex], atomCoordinates[atomCIndex], deltaR[1]);  
+   ReferenceForce::getDeltaR(atomCoordinates[atomDIndex], atomCoordinates[atomCIndex], deltaR[2]);  
 
    RealOpenMM dotDihedral;
    RealOpenMM signOfAngle;
@@ -127,35 +127,35 @@ void ReferenceProperDihedralBond::calculateBondIxn( int* atomIndices,
 
    // get dihedral angle
 
-   RealOpenMM dihedralAngle  =  getDihedralAngleBetweenThreeVectors( deltaR[0], deltaR[1], deltaR[2],
-                                                                     crossProduct, &dotDihedral, deltaR[0], 
-                                                                     &signOfAngle, hasREntry );
+   RealOpenMM dihedralAngle  =  getDihedralAngleBetweenThreeVectors(deltaR[0], deltaR[1], deltaR[2],
+                                                                    crossProduct, &dotDihedral, deltaR[0], 
+                                                                    &signOfAngle, hasREntry);
 
    // evaluate delta angle, dE/d(angle) 
 
    RealOpenMM deltaAngle     = parameters[2]*dihedralAngle - parameters[1]; 
-   RealOpenMM sinDeltaAngle  = SIN( deltaAngle );
+   RealOpenMM sinDeltaAngle  = SIN(deltaAngle);
    RealOpenMM dEdAngle       = -parameters[0]*parameters[2]*sinDeltaAngle;
-   RealOpenMM energy         =  parameters[0]*(one + COS( deltaAngle ) );
+   RealOpenMM energy         =  parameters[0]*(one + COS(deltaAngle));
    
    // compute force
 
    RealOpenMM internalF[4][3];
    RealOpenMM forceFactors[4];
-   RealOpenMM normCross1         = DOT3( crossProduct[0], crossProduct[0] );
+   RealOpenMM normCross1         = DOT3(crossProduct[0], crossProduct[0]);
    RealOpenMM normBC             = deltaR[1][ReferenceForce::RIndex];
               forceFactors[0]    = (-dEdAngle*normBC)/normCross1;
 
-   RealOpenMM normCross2         = DOT3( crossProduct[1], crossProduct[1] );
+   RealOpenMM normCross2         = DOT3(crossProduct[1], crossProduct[1]);
               forceFactors[3]    = (dEdAngle*normBC)/normCross2;
   
-              forceFactors[1]    = DOT3( deltaR[0], deltaR[1] );
+              forceFactors[1]    = DOT3(deltaR[0], deltaR[1]);
               forceFactors[1]   /= deltaR[1][ReferenceForce::R2Index];
 
-              forceFactors[2]    = DOT3( deltaR[2], deltaR[1] );
+              forceFactors[2]    = DOT3(deltaR[2], deltaR[1]);
               forceFactors[2]   /= deltaR[1][ReferenceForce::R2Index];
 
-   for( int ii = 0; ii < 3; ii++ ){
+   for (int ii = 0; ii < 3; ii++) {
 
       internalF[0][ii]  = forceFactors[0]*crossProduct[0][ii];
       internalF[3][ii]  = forceFactors[3]*crossProduct[1][ii];
@@ -168,7 +168,7 @@ void ReferenceProperDihedralBond::calculateBondIxn( int* atomIndices,
   
    // accumulate forces
 
-   for( int ii = 0; ii < 3; ii++ ){
+   for (int ii = 0; ii < 3; ii++) {
       forces[atomAIndex][ii] += internalF[0][ii];
       forces[atomBIndex][ii] -= internalF[1][ii];
       forces[atomCIndex][ii] -= internalF[2][ii];

@@ -57,7 +57,7 @@ class ReferenceCustomTorsionIxn : public ReferenceBondIxn {
 
          --------------------------------------------------------------------------------------- */
 
-       ~ReferenceCustomTorsionIxn( );
+       ~ReferenceCustomTorsionIxn();
 
       /**---------------------------------------------------------------------------------------
 
@@ -71,9 +71,9 @@ class ReferenceCustomTorsionIxn : public ReferenceBondIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateBondIxn( int* atomIndices, std::vector<OpenMM::RealVec>& atomCoordinates,
+      void calculateBondIxn(int* atomIndices, std::vector<OpenMM::RealVec>& atomCoordinates,
                             RealOpenMM* parameters, std::vector<OpenMM::RealVec>& forces,
-                            RealOpenMM* totalEnergy ) const;
+                            RealOpenMM* totalEnergy) const;
 
 
 };

@@ -85,7 +85,7 @@ ReferenceCustomGBIxn::ReferenceCustomGBIxn(const vector<Lepton::ExpressionProgra
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceCustomGBIxn::~ReferenceCustomGBIxn( ){
+ReferenceCustomGBIxn::~ReferenceCustomGBIxn() {
 
    // ---------------------------------------------------------------------------------------
 
@@ -104,7 +104,7 @@ ReferenceCustomGBIxn::~ReferenceCustomGBIxn( ){
 
      --------------------------------------------------------------------------------------- */
 
-  void ReferenceCustomGBIxn::setUseCutoff( RealOpenMM distance, const OpenMM::NeighborList& neighbors ) {
+  void ReferenceCustomGBIxn::setUseCutoff(RealOpenMM distance, const OpenMM::NeighborList& neighbors) {
 
     cutoff = true;
     cutoffDistance = distance;
@@ -202,8 +202,8 @@ void ReferenceCustomGBIxn::calculateParticlePairValue(int index, int numAtoms, v
     else {
         // Perform an O(N^2) loop over all atom pairs.
 
-        for (int i = 0; i < numAtoms; i++){
-            for (int j = i+1; j < numAtoms; j++ ){
+        for (int i = 0; i < numAtoms; i++) {
+            for (int j = i+1; j < numAtoms; j++) {
                 if (useExclusions && exclusions[i].find(j) != exclusions[i].end())
                     continue;
                 calculateOnePairValue(index, i, j, atomCoordinates, atomParameters, globalParameters, values);
@@ -274,8 +274,8 @@ void ReferenceCustomGBIxn::calculateParticlePairEnergyTerm(int index, int numAto
     else {
         // Perform an O(N^2) loop over all atom pairs.
 
-        for (int i = 0; i < numAtoms; i++){
-            for (int j = i+1; j < numAtoms; j++ ){
+        for (int i = 0; i < numAtoms; i++) {
+            for (int j = i+1; j < numAtoms; j++) {
                 if (useExclusions && exclusions[i].find(j) != exclusions[i].end())
                     continue;
                 calculateOnePairEnergyTerm(index, i, j, atomCoordinates, atomParameters, globalParameters, values, forces, totalEnergy, dEdV);
@@ -343,8 +343,8 @@ void ReferenceCustomGBIxn::calculateChainRuleForces(int numAtoms, vector<RealVec
     else {
         // Perform an O(N^2) loop over all atom pairs.
 
-        for (int i = 0; i < numAtoms; i++){
-            for (int j = i+1; j < numAtoms; j++ ){
+        for (int i = 0; i < numAtoms; i++) {
+            for (int j = i+1; j < numAtoms; j++) {
                 bool isExcluded = (exclusions[i].find(j) != exclusions[i].end());
                 calculateOnePairChainRule(i, j, atomCoordinates, atomParameters, globalParameters, values, forces, dEdV, isExcluded);
                 calculateOnePairChainRule(j, i, atomCoordinates, atomParameters, globalParameters, values, forces, dEdV, isExcluded);

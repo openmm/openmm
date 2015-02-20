@@ -61,7 +61,7 @@ ReferenceCustomAngleIxn::ReferenceCustomAngleIxn(const Lepton::CompiledExpressio
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceCustomAngleIxn::~ReferenceCustomAngleIxn( ){
+ReferenceCustomAngleIxn::~ReferenceCustomAngleIxn() {
 
    // ---------------------------------------------------------------------------------------
 
@@ -83,11 +83,11 @@ ReferenceCustomAngleIxn::~ReferenceCustomAngleIxn( ){
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceCustomAngleIxn::calculateBondIxn( int* atomIndices,
-                                                vector<RealVec>& atomCoordinates,
-                                                RealOpenMM* parameters,
-                                                vector<RealVec>& forces,
-                                                RealOpenMM* totalEnergy ) const {
+void ReferenceCustomAngleIxn::calculateBondIxn(int* atomIndices,
+                                               vector<RealVec>& atomCoordinates,
+                                               RealOpenMM* parameters,
+                                               vector<RealVec>& forces,
+                                               RealOpenMM* totalEnergy) const {
 
    static const std::string methodName = "\nReferenceCustomAngleIxn::calculateAngleIxn";
 

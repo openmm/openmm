@@ -96,7 +96,7 @@ ReferenceCustomDynamics::~ReferenceCustomDynamics() {
 
 void ReferenceCustomDynamics::update(ContextImpl& context, int numberOfAtoms, vector<RealVec>& atomCoordinates,
                                      vector<RealVec>& velocities, vector<RealVec>& forces, vector<RealOpenMM>& masses,
-                                     map<string, RealOpenMM>& globals, vector<vector<RealVec> >& perDof, bool& forcesAreValid, RealOpenMM tolerance){
+                                     map<string, RealOpenMM>& globals, vector<vector<RealVec> >& perDof, bool& forcesAreValid, RealOpenMM tolerance) {
     int numSteps = stepType.size();
     globals.insert(context.getParameters().begin(), context.getParameters().end());
     oldPos = atomCoordinates;

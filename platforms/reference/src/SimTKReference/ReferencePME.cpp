@@ -77,7 +77,7 @@ struct pme
      * If particle i has coordinates { 0.543 , 6.235 , -0.73 }, we will get:
      *
      * particleindex[i]    = { 5 , 62 , 92 }         (-0.73 + 10 = 9.27, we always apply PBC for grid calculations!)
-     * particlefraction[i] = { 0.43 , 0.35 , 0.7 }   ( this is the fraction of the cell length where the atom is)
+     * particlefraction[i] = { 0.43 , 0.35 , 0.7 }   (this is the fraction of the cell length where the atom is)
      *
      * (The reason for precaculating / storing these is that it gets a bit more complex for triclinic cells :-)
      *
@@ -108,7 +108,7 @@ pme_calculate_bsplines_moduli(pme_t pme)
     RealOpenMM    sc,ss,arg;
 
     nmax = 0;
-    for(d=0;d<3;d++)
+    for (d=0;d<3;d++)
     {
         nmax = (pme->ngrid[d] > nmax) ? pme->ngrid[d] : nmax;
         pme->bsplines_moduli[d] = (RealOpenMM *) malloc(sizeof(RealOpenMM)*pme->ngrid[d]);
@@ -125,11 +125,11 @@ pme_calculate_bsplines_moduli(pme_t pme)
     data[1]=0;
     data[0]=1;
 
-    for(k=3;k<order;k++)
+    for (k=3;k<order;k++)
     {
         div=(RealOpenMM) (1.0/(k-1.0));
         data[k-1]=0;
-        for(l=1;l<(k-1);l++)
+        for (l=1;l<(k-1);l++)
         {
             data[k-l-1]=div*(l*data[k-l-2]+(k-l)*data[k-l-1]);
         }
@@ -138,7 +138,7 @@ pme_calculate_bsplines_moduli(pme_t pme)
 
     /* differentiate */
     ddata[0]=-data[0];
-    for(k=1;k<order;k++)
+    for (k=1;k<order;k++)
     {
         ddata[k]=data[k-1]-data[k];
     }
@@ -146,29 +146,29 @@ pme_calculate_bsplines_moduli(pme_t pme)
     div=(RealOpenMM) (1.0/(order-1));
     data[order-1]=0;
 
-    for(l=1;l<(order-1);l++)
+    for (l=1;l<(order-1);l++)
     {
         data[order-l-1]=div*(l*data[order-l-2]+(order-l)*data[order-l-1]);
     }
     data[0]=div*data[0];
 
-    for(i=0;i<nmax;i++)
+    for (i=0;i<nmax;i++)
     {
         bsplines_data[i]=0;
     }
-    for(i=1;i<=order;i++)
+    for (i=1;i<=order;i++)
     {
         bsplines_data[i]=data[i-1];
     }
 
     /* Evaluate the actual bspline moduli for X/Y/Z */
-    for(d=0;d<3;d++)
+    for (d=0;d<3;d++)
     {
         ndata = pme->ngrid[d];
-        for(i=0;i<ndata;i++)
+        for (i=0;i<ndata;i++)
         {
             sc=ss=0;
-            for(j=0;j<ndata;j++)
+            for (j=0;j<ndata;j++)
             {
                 arg=(RealOpenMM) ((2.0*M_PI*i*j)/ndata);
                 sc+=bsplines_data[j]*cos(arg);
@@ -176,9 +176,9 @@ pme_calculate_bsplines_moduli(pme_t pme)
             }
             pme->bsplines_moduli[d][i]=sc*sc+ss*ss;
         }
-        for(i=0;i<ndata;i++)
+        for (i=0;i<ndata;i++)
         {
-            if(pme->bsplines_moduli[d][i]<1.0e-7)
+            if (pme->bsplines_moduli[d][i]<1.0e-7)
             {
                 pme->bsplines_moduli[d][i]=(pme->bsplines_moduli[d][i-1]+pme->bsplines_moduli[d][i+1])/2;
             }
@@ -213,7 +213,7 @@ pme_update_grid_index_and_fraction(pme_t    pme,
     RealOpenMM t;
     int    ti;
 
-    for(i=0;i<pme->natoms;i++)
+    for (i=0;i<pme->natoms;i++)
     {
         /* Index calculation (Look mom, no conditionals!):
          *
@@ -252,7 +252,7 @@ pme_update_grid_index_and_fraction(pme_t    pme,
          *    (And, by adding 100.0 box lengths, we would lose a bit of numerical accuracy here!)
          */
         RealVec coord = atomCoordinates[i];
-        for(d=0;d<3;d++)
+        for (d=0;d<3;d++)
         {
             t = coord[0]*recipBoxVectors[0][d]+coord[1]*recipBoxVectors[1][d]+coord[2]*recipBoxVectors[2][d];
             t = (t-floor(t))*pme->ngrid[d];
@@ -281,9 +281,9 @@ pme_update_bsplines(pme_t    pme)
 
     order = pme->order;
 
-    for(i=0; (i<pme->natoms); i++)
+    for (i=0; (i<pme->natoms); i++)
     {
-        for(j=0; j<3; j++)
+        for (j=0; j<3; j++)
         {
             /* dr is relative offset from lower cell limit */
             dr = pme->particlefraction[i][j];
@@ -294,11 +294,11 @@ pme_update_bsplines(pme_t    pme)
             data[1]       = dr;
             data[0]       = 1-dr;
 
-            for(k=3; k<order; k++)
+            for (k=3; k<order; k++)
             {
                 div = (RealOpenMM) (1.0/(k-1.0));
                 data[k-1] = div*dr*data[k-2];
-                for(l=1; l<(k-1); l++)
+                for (l=1; l<(k-1); l++)
                 {
                     data[k-l-1] = div*((dr+l)*data[k-l-2]+(k-l-dr)*data[k-l-1]);
                 }
@@ -308,7 +308,7 @@ pme_update_bsplines(pme_t    pme)
             /* differentiate */
             ddata[0] = -data[0];
 
-            for(k=1; k<order; k++)
+            for (k=1; k<order; k++)
             {
                 ddata[k] = data[k-1]-data[k];
             }
@@ -316,7 +316,7 @@ pme_update_bsplines(pme_t    pme)
             div           = (RealOpenMM) (1.0/(order-1));
             data[order-1] = div*dr*data[order-2];
 
-            for(l=1; l<(order-1); l++)
+            for (l=1; l<(order-1); l++)
             {
                 data[order-l-1] = div*((dr+l)*data[order-l-2]+(order-l-dr)*data[order-l-1]);
             }
@@ -343,12 +343,12 @@ pme_grid_spread_charge(pme_t pme, const vector<RealOpenMM>& charges)
     order = pme->order;
 
     /* Reset the grid */
-    for(i=0;i<pme->ngrid[0]*pme->ngrid[1]*pme->ngrid[2];i++)
+    for (i=0;i<pme->ngrid[0]*pme->ngrid[1]*pme->ngrid[2];i++)
     {
         pme->grid[i].re = pme->grid[i].im = 0;
     }
 
-    for(i=0;i<pme->natoms;i++)
+    for (i=0;i<pme->natoms;i++)
     {
         q = charges[i];
 
@@ -380,16 +380,16 @@ pme_grid_spread_charge(pme_t pme, const vector<RealOpenMM>& charges)
          * 3) When we parallelize things, we only need to communicate in one direction instead of two!
          */
 
-        for(ix=0;ix<order;ix++)
+        for (ix=0;ix<order;ix++)
         {
             /* Calculate index, apply PBC so we spread to index 0/1/2 when a particle is close to the upper limit of the grid */
             xindex = (x0index + ix) % pme->ngrid[0];
 
-            for(iy=0;iy<order;iy++)
+            for (iy=0;iy<order;iy++)
             {
                 yindex = (y0index + iy) % pme->ngrid[1];
 
-                for(iz=0;iz<order;iz++)
+                for (iz=0;iz<order;iz++)
                 {
                     /* Can be optimized, but we keep it simple here */
                     zindex               = (z0index + iz) % pme->ngrid[2];
@@ -448,21 +448,21 @@ pme_reciprocal_convolution(pme_t     pme,
     maxky = (RealOpenMM) ((ny+1)/2);
     maxkz = (RealOpenMM) ((nz+1)/2);
 
-    for(kx=0;kx<nx;kx++)
+    for (kx=0;kx<nx;kx++)
     {
         /* Calculate frequency. Grid indices in the upper half correspond to negative frequencies! */
         mx  = (RealOpenMM) ((kx<maxkx) ? kx : (kx-nx));
         mhx = mx*recipBoxVectors[0][0];
         bx  = boxfactor*pme->bsplines_moduli[0][kx];
 
-        for(ky=0;ky<ny;ky++)
+        for (ky=0;ky<ny;ky++)
         {
             /* Calculate frequency. Grid indices in the upper half correspond to negative frequencies! */
             my  = (RealOpenMM) ((ky<maxky) ? ky : (ky-ny));
             mhy = mx*recipBoxVectors[1][0]+my*recipBoxVectors[1][1];
             by  = pme->bsplines_moduli[1][ky];
 
-            for(kz=0;kz<nz;kz++)
+            for (kz=0;kz<nz;kz++)
             {
                 /* If the net charge of the system is 0.0, there will not be any DC (direct current, zero frequency) component. However,
                  * we can still handle charged systems through a charge correction, in which case the DC
@@ -546,7 +546,7 @@ pme_grid_interpolate_force(pme_t pme,
 
     /* This is almost identical to the charge spreading routine! */
 
-    for(i=0;i<pme->natoms;i++)
+    for (i=0;i<pme->natoms;i++)
     {
         fx = fy = fz = 0;
 
@@ -570,21 +570,21 @@ pme_grid_interpolate_force(pme_t pme,
         /* Since we will add order^3 (typically 4*4*4=64) terms to the force on each particle, we use temporary fx/fy/fz
          * variables, and only add it to memory forces[] at the end.
          */
-        for(ix=0;ix<order;ix++)
+        for (ix=0;ix<order;ix++)
         {
             xindex = (x0index + ix) % pme->ngrid[0];
             /* Get both the bspline factor and its derivative with respect to the x coordinate! */
             tx     = thetax[ix];
             dtx    = dthetax[ix];
 
-            for(iy=0;iy<order;iy++)
+            for (iy=0;iy<order;iy++)
             {
                 yindex = (y0index + iy) % pme->ngrid[1];
                 /* bspline + derivative wrt y */
                 ty     = thetay[iy];
                 dty    = dthetay[iy];
 
-                for(iz=0;iz<order;iz++)
+                for (iz=0;iz<order;iz++)
                 {
                     /* Can be optimized, but we keep it simple here */
                     zindex               = (z0index + iz) % pme->ngrid[2];
@@ -633,7 +633,7 @@ pme_init(pme_t *       ppme,
     pme->ewaldcoeff  = ewaldcoeff;
     pme->natoms      = natoms;
 
-    for(d=0;d<3;d++)
+    for (d=0;d<3;d++)
     {
         pme->ngrid[d]            = ngrid[d];
         pme->bsplines_theta[d]   = (RealOpenMM *)malloc(sizeof(RealOpenMM)*pme_order*natoms);
@@ -712,7 +712,7 @@ pme_destroy(pme_t    pme)
 
     free(pme->grid);
 
-    for(d=0;d<3;d++)
+    for (d=0;d<3;d++)
     {
         free(pme->bsplines_moduli[d]);
         free(pme->bsplines_theta[d]);

@@ -64,7 +64,7 @@ ReferenceCustomHbondIxn::ReferenceCustomHbondIxn(const vector<vector<int> >& don
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceCustomHbondIxn::~ReferenceCustomHbondIxn( ){
+ReferenceCustomHbondIxn::~ReferenceCustomHbondIxn() {
 }
 
   /**---------------------------------------------------------------------------------------
@@ -128,7 +128,7 @@ void ReferenceCustomHbondIxn::calculatePairIxn(vector<RealVec>& atomCoordinates,
    int numDonors = donorAtoms.size();
    int numAcceptors = acceptorAtoms.size();
 
-   for( int donor = 0; donor < numDonors; donor++ ){
+   for (int donor = 0; donor < numDonors; donor++) {
       // Initialize per-donor parameters.
 
       for (int j = 0; j < (int) donorParamNames.size(); j++)
@@ -136,7 +136,7 @@ void ReferenceCustomHbondIxn::calculatePairIxn(vector<RealVec>& atomCoordinates,
 
       // loop over atom pairs
 
-      for( int acceptor = 0; acceptor < numAcceptors; acceptor++ ){
+      for (int acceptor = 0; acceptor < numAcceptors; acceptor++) {
          if (exclusions[donor].find(acceptor) == exclusions[donor].end()) {
              for (int j = 0; j < (int) acceptorParamNames.size(); j++)
                  variables[acceptorParamNames[j]] = acceptorParameters[acceptor][j];

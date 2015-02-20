@@ -30,9 +30,9 @@ using namespace OpenMM;
 
 // initialization of static data members
 
-const std::string SimTKOpenMMCommon::NotSet                  = std::string( "NotSet" );
-const std::string SimTKOpenMMCommon::Comment                 = std::string( "#" );
-const std::string SimTKOpenMMCommon::Tab                     = std::string( "\t" ); 
+const std::string SimTKOpenMMCommon::NotSet                  = std::string("NotSet");
+const std::string SimTKOpenMMCommon::Comment                 = std::string("#");
+const std::string SimTKOpenMMCommon::Tab                     = std::string("\t"); 
 
 const int SimTKOpenMMCommon::DefaultReturn                   = 0;
 const int SimTKOpenMMCommon::ErrorReturn                     = -1;

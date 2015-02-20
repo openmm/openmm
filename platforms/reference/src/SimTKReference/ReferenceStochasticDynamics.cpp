@@ -47,10 +47,10 @@ using namespace OpenMM;
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceStochasticDynamics::ReferenceStochasticDynamics( int numberOfAtoms,
-                                                          RealOpenMM deltaT, RealOpenMM tau,
-                                                          RealOpenMM temperature ) : 
-           ReferenceDynamics( numberOfAtoms, deltaT, temperature ), _tau( tau ) {
+ReferenceStochasticDynamics::ReferenceStochasticDynamics(int numberOfAtoms,
+                                                         RealOpenMM deltaT, RealOpenMM tau,
+                                                         RealOpenMM temperature) : 
+           ReferenceDynamics(numberOfAtoms, deltaT, temperature), _tau(tau) {
    if (tau <= 0) {
       std::stringstream message;
       message << "illegal tau value: " << tau;
@@ -66,7 +66,7 @@ ReferenceStochasticDynamics::ReferenceStochasticDynamics( int numberOfAtoms,
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceStochasticDynamics::~ReferenceStochasticDynamics( ){
+ReferenceStochasticDynamics::~ReferenceStochasticDynamics() {
 
    // ---------------------------------------------------------------------------------------
 
@@ -84,7 +84,7 @@ ReferenceStochasticDynamics::~ReferenceStochasticDynamics( ){
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM ReferenceStochasticDynamics::getTau( void ) const {
+RealOpenMM ReferenceStochasticDynamics::getTau() const {
 
    // ---------------------------------------------------------------------------------------
 
@@ -108,10 +108,10 @@ RealOpenMM ReferenceStochasticDynamics::getTau( void ) const {
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceStochasticDynamics::updatePart1( int numberOfAtoms, vector<RealVec>& atomCoordinates,
+void ReferenceStochasticDynamics::updatePart1(int numberOfAtoms, vector<RealVec>& atomCoordinates,
                                               vector<RealVec>& velocities,
                                               vector<RealVec>& forces, vector<RealOpenMM>& inverseMasses,
-                                              vector<RealVec>& xPrime ){
+                                              vector<RealVec>& xPrime) {
 
    // ---------------------------------------------------------------------------------------
 
@@ -149,10 +149,10 @@ void ReferenceStochasticDynamics::updatePart1( int numberOfAtoms, vector<RealVec
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceStochasticDynamics::updatePart2( int numberOfAtoms, vector<RealVec>& atomCoordinates,
+void ReferenceStochasticDynamics::updatePart2(int numberOfAtoms, vector<RealVec>& atomCoordinates,
                                               vector<RealVec>& velocities,
                                               vector<RealVec>& forces, vector<RealOpenMM>& inverseMasses,
-                                              vector<RealVec>& xPrime ){
+                                              vector<RealVec>& xPrime) {
 
    // ---------------------------------------------------------------------------------------
 
@@ -197,10 +197,10 @@ void ReferenceStochasticDynamics::update(const OpenMM::System& system, vector<Re
    // first-time-through initialization
 
    int numberOfAtoms = system.getNumParticles();
-   if( getTimeStep() == 0 ){
+   if (getTimeStep() == 0) {
       // invert masses
 
-      for( int ii = 0; ii < numberOfAtoms; ii++ ){
+      for (int ii = 0; ii < numberOfAtoms; ii++) {
          if (masses[ii] == zero)
              inverseMasses[ii] = zero;
          else
@@ -210,11 +210,11 @@ void ReferenceStochasticDynamics::update(const OpenMM::System& system, vector<Re
 
    // 1st update
 
-   updatePart1( numberOfAtoms, atomCoordinates, velocities, forces, inverseMasses, xPrime );
+   updatePart1(numberOfAtoms, atomCoordinates, velocities, forces, inverseMasses, xPrime);
 
    // 2nd update
 
-   updatePart2( numberOfAtoms, atomCoordinates, velocities, forces, inverseMasses, xPrime );
+   updatePart2(numberOfAtoms, atomCoordinates, velocities, forces, inverseMasses, xPrime);
 
    ReferenceConstraintAlgorithm* referenceConstraintAlgorithm = getReferenceConstraintAlgorithm();
    if (referenceConstraintAlgorithm)

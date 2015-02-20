@@ -51,7 +51,7 @@ class OPENMM_EXPORT ReferenceStochasticDynamics : public ReferenceDynamics {
       
          --------------------------------------------------------------------------------------- */
 
-       ReferenceStochasticDynamics( int numberOfAtoms, RealOpenMM deltaT, RealOpenMM tau, RealOpenMM temperature );
+       ReferenceStochasticDynamics(int numberOfAtoms, RealOpenMM deltaT, RealOpenMM tau, RealOpenMM temperature);
 
       /**---------------------------------------------------------------------------------------
       
@@ -59,7 +59,7 @@ class OPENMM_EXPORT ReferenceStochasticDynamics : public ReferenceDynamics {
       
          --------------------------------------------------------------------------------------- */
 
-       ~ReferenceStochasticDynamics( );
+       ~ReferenceStochasticDynamics();
 
       /**---------------------------------------------------------------------------------------
       
@@ -69,7 +69,7 @@ class OPENMM_EXPORT ReferenceStochasticDynamics : public ReferenceDynamics {
       
          --------------------------------------------------------------------------------------- */
       
-      RealOpenMM getTau( void ) const;
+      RealOpenMM getTau() const;
       
       /**---------------------------------------------------------------------------------------
       
@@ -100,8 +100,8 @@ class OPENMM_EXPORT ReferenceStochasticDynamics : public ReferenceDynamics {
       
          --------------------------------------------------------------------------------------- */
       
-      virtual void updatePart1( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& velocities,
-                       std::vector<OpenMM::RealVec>& forces, std::vector<RealOpenMM>& inverseMasses, std::vector<OpenMM::RealVec>& xPrime );
+      virtual void updatePart1(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& velocities,
+                       std::vector<OpenMM::RealVec>& forces, std::vector<RealOpenMM>& inverseMasses, std::vector<OpenMM::RealVec>& xPrime);
       
       /**---------------------------------------------------------------------------------------
       
@@ -115,8 +115,8 @@ class OPENMM_EXPORT ReferenceStochasticDynamics : public ReferenceDynamics {
       
          --------------------------------------------------------------------------------------- */
       
-      virtual void updatePart2( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& velocities,
-                       std::vector<OpenMM::RealVec>& forces, std::vector<RealOpenMM>& inverseMasses, std::vector<OpenMM::RealVec>& xPrime );
+      virtual void updatePart2(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& velocities,
+                       std::vector<OpenMM::RealVec>& forces, std::vector<RealOpenMM>& inverseMasses, std::vector<OpenMM::RealVec>& xPrime);
       
 };
 
