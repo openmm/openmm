@@ -85,9 +85,9 @@ def computeLengthsAndAngles(periodicBoxVectors):
     Lengths are returned in nanometers and angles in radians.
     """
     if is_quantity(periodicBoxVectors):
-        (a, b, c) = vectors.value_in_unit(nanometers)
+        (a, b, c) = periodicBoxVectors.value_in_unit(nanometers)
     else:
-        a, b, c = vectors
+        a, b, c = periodicBoxVectors
     a_length = norm(a)
     b_length = norm(b)
     c_length = norm(c)
