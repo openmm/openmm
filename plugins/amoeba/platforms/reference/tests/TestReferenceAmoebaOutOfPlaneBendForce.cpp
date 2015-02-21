@@ -79,7 +79,7 @@ static double dotVector3(double* vectorX, double* vectorY) {
 
 
 static void computeAmoebaOutOfPlaneBendForce(int bondIndex,  std::vector<Vec3>& positions, AmoebaOutOfPlaneBendForce& amoebaOutOfPlaneBendForce,
-                                             std::vector<Vec3>& forces, double* energy, FILE* log) {
+                                             std::vector<Vec3>& forces, double* energy) {
 
 
     double kAngleCubic     = amoebaOutOfPlaneBendForce.getAmoebaGlobalOutOfPlaneBendCubic();
@@ -90,14 +90,6 @@ static void computeAmoebaOutOfPlaneBendForce(int bondIndex,  std::vector<Vec3>& 
     int particle1, particle2, particle3, particle4;
     double kAngleQuadratic;
     amoebaOutOfPlaneBendForce.getOutOfPlaneBendParameters(bondIndex, particle1, particle2, particle3, particle4, kAngleQuadratic);
-#ifdef AMOEBA_DEBUG
-    if (log) {
-        (void) fprintf(log, "computeAmoebaOutOfPlaneBendForce: bond %d [%d %d %d %d] k=[%10.3e %10.3e %10.3e %10.3e %10.3e]\n", 
-                             bondIndex, particle1, particle2, particle3, particle4, kAngleQuadratic, kAngleCubic, kAngleQuartic, kAnglePentic, kAngleSextic);
-        (void) fflush(log);
-    }
-#endif
-
 
     enum { A, B, C, D, LastAtomIndex };
     enum { AB, CB, DB, AD, CD, LastDeltaIndex };
@@ -141,13 +133,6 @@ static void computeAmoebaOutOfPlaneBendForce(int bondIndex,  std::vector<Vec3>& 
     else {
         angle = RADIAN*acos(cosine);
     }
-#ifdef AMOEBA_DEBUG 
-    if (log) {
-        (void) fprintf(log, "computeAmoebaOutOfPlaneBendForce: bkk2=%14.7e rDB2=%14.7e cos=%14.7e dt=%14.7e]\n", 
-                             bkk2, rDB2, cosine, angle);
-        (void) fflush(log);
-    }
-#endif
 
     // chain rule
  
@@ -244,7 +229,7 @@ static void computeAmoebaOutOfPlaneBendForce(int bondIndex,  std::vector<Vec3>& 
 }
  
 static void computeAmoebaOutOfPlaneBendForces(Context& context, AmoebaOutOfPlaneBendForce& amoebaOutOfPlaneBendForce,
-                                              std::vector<Vec3>& expectedForces, double* expectedEnergy, FILE* log) {
+                                              std::vector<Vec3>& expectedForces, double* expectedEnergy) {
 
     // get positions and zero forces
 
@@ -260,41 +245,19 @@ static void computeAmoebaOutOfPlaneBendForces(Context& context, AmoebaOutOfPlane
 
     *expectedEnergy = 0.0;
     for (int ii = 0; ii < amoebaOutOfPlaneBendForce.getNumOutOfPlaneBends(); ii++) {
-        computeAmoebaOutOfPlaneBendForce(ii, positions, amoebaOutOfPlaneBendForce, expectedForces, expectedEnergy, log);
+        computeAmoebaOutOfPlaneBendForce(ii, positions, amoebaOutOfPlaneBendForce, expectedForces, expectedEnergy);
     }
-
-#ifdef AMOEBA_DEBUG
-    if (log) {
-        (void) fprintf(log, "computeAmoebaOutOfPlaneBendForces: expected energy=%14.7e\n", *expectedEnergy);
-        for (unsigned int ii = 0; ii < positions.size(); ii++) {
-            (void) fprintf(log, "%6u [%14.7e %14.7e %14.7e]\n", ii, expectedForces[ii][0], expectedForces[ii][1], expectedForces[ii][2]);
-        }
-        (void) fflush(log);
-    }
-#endif
-    return;
-
 }
 
 void compareWithExpectedForceAndEnergy(Context& context, AmoebaOutOfPlaneBendForce& amoebaOutOfPlaneBendForce,
-                                       double tolerance, const std::string& idString, FILE* log) {
+                                       double tolerance, const std::string& idString) {
 
     std::vector<Vec3> expectedForces;
     double expectedEnergy;
-    computeAmoebaOutOfPlaneBendForces(context, amoebaOutOfPlaneBendForce, expectedForces, &expectedEnergy, log);
+    computeAmoebaOutOfPlaneBendForces(context, amoebaOutOfPlaneBendForce, expectedForces, &expectedEnergy);
    
     State state                      = context.getState(State::Forces | State::Energy);
     const std::vector<Vec3> forces   = state.getForces();
-#ifdef AMOEBA_DEBUG
-    if (log) {
-        (void) fprintf(log, "computeAmoebaOutOfPlaneBendForces: expected energy=%14.7e %14.7e\n", expectedEnergy, state.getPotentialEnergy());
-        for (unsigned int ii = 0; ii < forces.size(); ii++) {
-            (void) fprintf(log, "%6u [%14.7e %14.7e %14.7e]   [%14.7e %14.7e %14.7e]\n", ii,
-                            expectedForces[ii][0], expectedForces[ii][1], expectedForces[ii][2], forces[ii][0], forces[ii][1], forces[ii][2]);
-        }
-        (void) fflush(log);
-    }
-#endif
 
     for (unsigned int ii = 0; ii < forces.size(); ii++) {
         ASSERT_EQUAL_VEC(expectedForces[ii], forces[ii], tolerance);
@@ -302,7 +265,7 @@ void compareWithExpectedForceAndEnergy(Context& context, AmoebaOutOfPlaneBendFor
     ASSERT_EQUAL_TOL(expectedEnergy, state.getPotentialEnergy(), tolerance);
 }
 
-void testOneOutOfPlaneBend(FILE* log) {
+void testOneOutOfPlaneBend() {
 
     System system;
     int numberOfParticles = 4;
@@ -336,7 +299,7 @@ void testOneOutOfPlaneBend(FILE* log) {
     positions[3] = Vec3(0.245568230E+02,  0.250215290E+02,  0.796852800E+01);
 
     context.setPositions(positions);
-    compareWithExpectedForceAndEnergy(context, *amoebaOutOfPlaneBendForce, TOL, "testOneOutOfPlaneBend", log);
+    compareWithExpectedForceAndEnergy(context, *amoebaOutOfPlaneBendForce, TOL, "testOneOutOfPlaneBend");
     
     // Try changing the bend parameters and make sure it's still correct.
     
@@ -344,17 +307,17 @@ void testOneOutOfPlaneBend(FILE* log) {
     bool exceptionThrown = false;
     try {
         // This should throw an exception.
-        compareWithExpectedForceAndEnergy(context, *amoebaOutOfPlaneBendForce, TOL, "testOneOutOfPlaneBend", log);
+        compareWithExpectedForceAndEnergy(context, *amoebaOutOfPlaneBendForce, TOL, "testOneOutOfPlaneBend");
     }
     catch (std::exception ex) {
         exceptionThrown = true;
     }
     ASSERT(exceptionThrown);
     amoebaOutOfPlaneBendForce->updateParametersInContext(context);
-    compareWithExpectedForceAndEnergy(context, *amoebaOutOfPlaneBendForce, TOL, "testOneOutOfPlaneBend", log);
+    compareWithExpectedForceAndEnergy(context, *amoebaOutOfPlaneBendForce, TOL, "testOneOutOfPlaneBend");
 }
 
-void testOneOutOfPlaneBend2(FILE* log, int setId) {
+void testOneOutOfPlaneBend2(int setId) {
 
     System system;
     int numberOfParticles = 4;
@@ -444,20 +407,10 @@ void testOneOutOfPlaneBend2(FILE* log, int setId) {
         kOutOfPlaneBend = 0.214755281E-01;
     }
     else {
-#ifdef AMOEBA_DEBUG
-        if (log) {
-            (void) fprintf(log, "Set id %d not recognized.\n", setId);
-        }
-#endif
         std::stringstream buffer;
         buffer << "Set id " << setId << " not recognized.";
         throw OpenMMException(buffer.str());
     }
-#ifdef AMOEBA_DEBUG
-    if (log) {
-        (void) fprintf(log, "Set id %d.\n", setId);
-    }
-#endif
 
     amoebaOutOfPlaneBendForce->addOutOfPlaneBend(0, 1, 2, 3, kOutOfPlaneBend);
 
@@ -467,11 +420,6 @@ void testOneOutOfPlaneBend2(FILE* log, int setId) {
 
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(numberOfParticles); ii++) {
         if (coordinates.find(particleIndices[ii]) == coordinates.end()) {
-#ifdef AMOEBA_DEBUG
-            if (log) {
-                (void) fprintf(log, "Coordinates %d not loaded.", particleIndices[ii]);
-            }
-#endif
             std::stringstream buffer;
             buffer << "Coordinates " << particleIndices[ii] << " not loaded.";
             throw OpenMMException(buffer.str());
@@ -480,7 +428,7 @@ void testOneOutOfPlaneBend2(FILE* log, int setId) {
     }
 
     context.setPositions(positions);
-    compareWithExpectedForceAndEnergy(context, *amoebaOutOfPlaneBendForce, TOL, "testOneOutOfPlaneBend", log);
+    compareWithExpectedForceAndEnergy(context, *amoebaOutOfPlaneBendForce, TOL, "testOneOutOfPlaneBend");
 
     static int iter = 0;
     static std::map<int,Vec3> totalForces;
@@ -503,7 +451,7 @@ void testOneOutOfPlaneBend2(FILE* log, int setId) {
     std::vector<Vec3> forces;
     forces.resize(numberOfParticles);
     double energy;
-    computeAmoebaOutOfPlaneBendForce(0, positions, *amoebaOutOfPlaneBendForce, forces, &energy, log);
+    computeAmoebaOutOfPlaneBendForce(0, positions, *amoebaOutOfPlaneBendForce, forces, &energy);
 
     totalEnergy += energy;
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(numberOfParticles); ii++) {
@@ -511,22 +459,6 @@ void testOneOutOfPlaneBend2(FILE* log, int setId) {
             totalForces[particleIndices[ii]][jj] += forces[ii][jj]; 
         }
     }
-
-    if (iter == 6) {
-#ifdef AMOEBA_DEBUG
-    if (log) {
-        (void) fprintf(log, "computeAmoebaOutOfPlaneBendForces: energy=%14.7e\n", totalEnergy);
-        for (std::map<int,Vec3>::iterator ii = totalForces.begin(); ii != totalForces.end(); ii++) {
-            int particleIndex =  ii->first;
-            Vec3 forces       =  ii->second;
-            (void) fprintf(log, "%6d [%14.7e %14.7e %14.7e] \n", particleIndex,
-                            forces[0], forces[1], forces[2]);
-        }
-        (void) fflush(log);
-    }
-#endif
-    }
-
 }
 
 int main(int numberOfArguments, char* argv[]) {
@@ -534,21 +466,11 @@ int main(int numberOfArguments, char* argv[]) {
     try {
         std::cout << "TestReferenceAmoebaOutOfPlaneBendForce running test..." << std::endl;
         registerAmoebaReferenceKernelFactories();
-
-        //FILE* log = stderr;
-        FILE* log = NULL;
-        //FILE* log = fopen("AmoebaOutOfPlaneBendForce.log", "w");;
-
-        testOneOutOfPlaneBend(log);
-        //testOneOutOfPlaneBend2(log, atoi(argv[1]));
+        testOneOutOfPlaneBend();
+        //testOneOutOfPlaneBend2(atoi(argv[1]));
         //for (int ii = 1; ii <= 6; ii++) {
-        //     testOneOutOfPlaneBend2(log, ii);
+        //     testOneOutOfPlaneBend2(ii);
         //}
-#ifdef AMOEBA_DEBUG
-        if (log && log != stderr)
-            (void) fclose(log);
-#endif
-
     }
     catch(const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;

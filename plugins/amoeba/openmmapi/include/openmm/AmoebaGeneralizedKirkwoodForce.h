@@ -127,7 +127,7 @@ public:
     /**
      * Get the flag signaling whether the cavity term should be included
      */
-    int getIncludeCavityTerm( ) const;
+    int getIncludeCavityTerm() const;
 
     /**
      * Set the flag signaling whether the cavity term should be included

@@ -157,7 +157,7 @@ public:
      * 
      * @return number of bonds
      */
-    int getNumBonds( void ) const;
+    int getNumBonds() const;
 
     /**
      * Get the dielectric constant for the solvent.
@@ -208,7 +208,7 @@ public:
     /** 
      * Get Born radius scaling method
      */
-    BornRadiusScalingMethod getBornRadiusScalingMethod( void ) const;
+    BornRadiusScalingMethod getBornRadiusScalingMethod() const;
     /** 
      * Set Born radius scaling method
      */
@@ -216,7 +216,7 @@ public:
     /** 
      * Get the lower limit factor used in the quintic spline scaling method (typically 0.5-0.8)
      */
-    double getQuinticLowerLimitFactor( void ) const;
+    double getQuinticLowerLimitFactor() const;
     /** 
      * Set the lower limit factor used in the quintic spline scaling method (typically 0.5-0.8)
      */
@@ -224,7 +224,7 @@ public:
     /** 
      * Get the upper limit  used in the quintic spline scaling method, measured in nm (~5.0)
      */
-    double getQuinticUpperBornRadiusLimit( void ) const;
+    double getQuinticUpperBornRadiusLimit() const;
     /** 
      * Set the upper limit used in the quintic spline scaling method, measured in nm (~5.0)
      */

@@ -33,8 +33,6 @@
 using std::vector;
 using namespace OpenMM;
 
-#undef AMOEBA_DEBUG
-
 AmoebaReferenceMultipoleForce::AmoebaReferenceMultipoleForce() :
                                                    _nonbondedMethod(NoCutoff),
                                                    _numParticles(0), 
@@ -233,33 +231,6 @@ void AmoebaReferenceMultipoleForce::setupScaleMaps(const vector< vector< vector<
             }
         }
     }
-
-    //showScaleMapForParticle(2, stderr);
-    //showScaleMapForParticle(10, stderr);
-
-    return;
-}
-
-void AmoebaReferenceMultipoleForce::showScaleMapForParticle(unsigned int particleI, FILE* log) const 
-{
-
-#ifdef AMOEBA_DEBUG
-    (void) fprintf(log, "Scale map particle %5u maxIndex=%u\n", particleI, _maxScaleIndex[particleI]);
-
-    std::string scaleNames[LAST_SCALE_TYPE_INDEX] = { "D", "P", "M" }; 
-    for (unsigned int ii = 0; ii < _scaleMaps[particleI].size(); ii++) {
-        MapIntRealOpenMM scaleMap = _scaleMaps[particleI][ii];
-        (void) fprintf(log, "  %s scale ", scaleNames[ii].c_str());
-        for (MapIntRealOpenMMCI jj = scaleMap.begin(); jj != scaleMap.end(); jj++) {
-            //if (jj->first > particleI && jj->second < 1.0)
-            if (jj->second < 1.0)
-            (void) fprintf(log, "%4d=%5.2f ", jj->first, jj->second);
-        }    
-        (void) fprintf(log, "\n");
-    }    
-    (void) fprintf(log, "\n");
-    (void) fflush(log);
-#endif
 }
 
 RealOpenMM AmoebaReferenceMultipoleForce::getMultipoleScaleFactor(unsigned int particleI, unsigned int particleJ, ScaleType scaleType) const 

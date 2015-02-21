@@ -295,44 +295,7 @@ static void getForcesEnergyMultipoleAmmonia(Context& context, std::vector<Vec3>&
 
 static void compareForcesEnergy(std::string& testName, double expectedEnergy, double energy,
                                 const std::vector<Vec3>& expectedForces,
-                                const std::vector<Vec3>& forces, double tolerance, FILE* log) {
-
-//#define AMOEBA_DEBUG
-#ifdef AMOEBA_DEBUG
-    if (log) {
-        double conversion = 1.0/4.184;
-        double energyAbsDiff = fabs(expectedEnergy - energy);   
-        double energyRelDiff =  2.0*energyAbsDiff/(fabs(expectedEnergy) + fabs(energy) + 1.0e-08);   
-        (void) fprintf(log, "%s: expected energy=%14.7e %14.7e  absDiff=%15.7e relDiff=%15.7e\n", testName.c_str(), conversion*expectedEnergy, conversion*energy,
-                        conversion*energyAbsDiff, conversion*energyRelDiff);
-        if (conversion != 1.0)conversion *= -0.1;
-        for (unsigned int ii = 0; ii < forces.size(); ii++) {
-
-            double expectedNorm = sqrt(expectedForces[ii][0]*expectedForces[ii][0] +
-                                        expectedForces[ii][1]*expectedForces[ii][1] +
-                                        expectedForces[ii][2]*expectedForces[ii][2]);
-
-            double norm         = sqrt(forces[ii][0]*forces[ii][0] + forces[ii][1]*forces[ii][1] + forces[ii][2]*forces[ii][2]);
-            double absDiff      = fabs(norm - expectedNorm);
-            double relDiff      = 2.0*absDiff/(fabs(norm) + fabs(expectedNorm) + 1.0e-08);
-
-            (void) fprintf(log, "%6u %15.7e %15.7e [%14.7e %14.7e %14.7e]   [%14.7e %14.7e %14.7e]\n", ii,
-                            conversion*absDiff, conversion*relDiff,
-                            conversion*expectedForces[ii][0], conversion*expectedForces[ii][1], conversion*expectedForces[ii][2],
-                            conversion*forces[ii][0], conversion*forces[ii][1], conversion*forces[ii][2], conversion*expectedNorm, conversion*norm);
-        }
-        (void) fflush(log);
-        conversion = 1.0;
-        (void) fprintf(log, "\n%s: expected energy=%14.7e %14.7e no conversion\n", testName.c_str(), conversion*expectedEnergy, conversion*energy);
-        if (conversion != 1.0)conversion = -1.0;
-        for (unsigned int ii = 0; ii < forces.size(); ii++) {
-            (void) fprintf(log, "%6u [%14.7e %14.7e %14.7e]   [%14.7e %14.7e %14.7e]\n", ii,
-                            conversion*expectedForces[ii][0], conversion*expectedForces[ii][1], conversion*expectedForces[ii][2],
-                            conversion*forces[ii][0], conversion*forces[ii][1], conversion*forces[ii][2]);
-        }
-        (void) fflush(log);
-    }
-#endif
+                                const std::vector<Vec3>& forces, double tolerance) {
 
     for (unsigned int ii = 0; ii < forces.size(); ii++) {
         ASSERT_EQUAL_VEC_MOD(expectedForces[ii], forces[ii], tolerance, testName);
@@ -344,46 +307,7 @@ static void compareForcesEnergy(std::string& testName, double expectedEnergy, do
 
 static void compareForceNormsEnergy(std::string& testName, double expectedEnergy, double energy,
                                     std::vector<Vec3>& expectedForces,
-                                    const std::vector<Vec3>& forces, double tolerance, FILE* log) {
-
-//#define AMOEBA_DEBUG
-#ifdef AMOEBA_DEBUG
-    if (log) {
-        double conversion = 1.0/4.184;
-        double energyAbsDiff = fabs(expectedEnergy - energy);   
-        double energyRelDiff =  2.0*energyAbsDiff/(fabs(expectedEnergy) + fabs(energy) + 1.0e-08);   
-        (void) fprintf(log, "%s: expected energy=%14.7e %14.7e  absDiff=%15.7e relDiff=%15.7e\n", testName.c_str(), conversion*expectedEnergy, conversion*energy,
-                        conversion*energyAbsDiff, conversion*energyRelDiff);
-        if (conversion != 1.0)conversion *= -0.1;
-        for (unsigned int ii = 0; ii < forces.size(); ii++) {
-
-            double expectedNorm = sqrt(expectedForces[ii][0]*expectedForces[ii][0] +
-                                       expectedForces[ii][1]*expectedForces[ii][1] +
-                                       expectedForces[ii][2]*expectedForces[ii][2]);
-
-            double norm         = sqrt(forces[ii][0]*forces[ii][0] + forces[ii][1]*forces[ii][1] + forces[ii][2]*forces[ii][2]);
-            double absDiff      = fabs((norm - expectedNorm));
-            double relDiff      = 2.0*absDiff/(fabs(norm) + fabs(expectedNorm) + 1.0e-08);
-
-            (void) fprintf(log, "%6u %15.7e %15.7e [%14.7e %14.7e %14.7e]   [%14.7e %14.7e %14.7e]  %15.7e %15.7e\n", ii,
-                            fabs(conversion)*absDiff, relDiff,
-                            conversion*expectedForces[ii][0], conversion*expectedForces[ii][1], conversion*expectedForces[ii][2],
-                            conversion*forces[ii][0], conversion*forces[ii][1], conversion*forces[ii][2], 
-                            fabs(conversion)*expectedNorm, fabs(conversion)*norm);
-        }
-        (void) fflush(log);
-        conversion = 1.0;
-        (void) fprintf(log, "\n%s: expected energy=%14.7e %14.7e no conversion\n", testName.c_str(), conversion*expectedEnergy, conversion*energy);
-        if (conversion != 1.0)conversion = -1.0;
-        for (unsigned int ii = 0; ii < forces.size(); ii++) {
-            (void) fprintf(log, "%6u [%14.7e %14.7e %14.7e]   [%14.7e %14.7e %14.7e]\n", ii,
-                            conversion*expectedForces[ii][0], conversion*expectedForces[ii][1], conversion*expectedForces[ii][2],
-                            conversion*forces[ii][0], conversion*forces[ii][1], conversion*forces[ii][2]);
-        }
-        (void) fflush(log);
-    }
-#endif
-
+                                    const std::vector<Vec3>& forces, double tolerance) {
     for (unsigned int ii = 0; ii < forces.size(); ii++) {
         double expectedNorm = sqrt(expectedForces[ii][0]*expectedForces[ii][0] +
                                    expectedForces[ii][1]*expectedForces[ii][1] +
@@ -412,7 +336,7 @@ static void compareForceNormsEnergy(std::string& testName, double expectedEnergy
 
 // test multipole direct polarization for system comprised of two ammonia molecules; no cutoff
 
-static void testMultipoleAmmoniaDirectPolarization(FILE* log) {
+static void testMultipoleAmmoniaDirectPolarization() {
 
     std::string testName      = "testMultipoleAmmoniaDirectPolarization";
 
@@ -443,12 +367,12 @@ static void testMultipoleAmmoniaDirectPolarization(FILE* log) {
     expectedForces[7]         = Vec3(  4.1453480e+01,  1.6842405e+01,  1.6409513e+00);
 
     double tolerance          = 1.0e-04;
-    compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance, log);
+    compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
 }
 
 // test multipole mutual polarization for system comprised of two ammonia molecules; no cutoff
 
-static void testMultipoleAmmoniaMutualPolarization(FILE* log) {
+static void testMultipoleAmmoniaMutualPolarization() {
 
     std::string testName      = "testMultipoleAmmoniaMutualPolarization";
 
@@ -481,7 +405,7 @@ static void testMultipoleAmmoniaMutualPolarization(FILE* log) {
     expectedForces[7]         = Vec3(  4.2293601e+01,   1.7186738e+01,   1.3017270e+00);
 
     double tolerance          = 1.0e-04;
-    compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance, log);
+    compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
     
     // Try changing the particle parameters and make sure it's still correct.
     
@@ -503,7 +427,7 @@ static void testMultipoleAmmoniaMutualPolarization(FILE* log) {
     bool exceptionThrown = false;
     try {
         // This should throw an exception.
-        compareForcesEnergy(testName, state2.getPotentialEnergy(), state1.getPotentialEnergy(), state2.getForces(), state1.getForces(), tolerance, log);
+        compareForcesEnergy(testName, state2.getPotentialEnergy(), state1.getPotentialEnergy(), state2.getForces(), state1.getForces(), tolerance);
     }
     catch (std::exception ex) {
         exceptionThrown = true;
@@ -511,7 +435,7 @@ static void testMultipoleAmmoniaMutualPolarization(FILE* log) {
     ASSERT(exceptionThrown);
     amoebaMultipoleForce->updateParametersInContext(context);
     state1 = context.getState(State::Forces | State::Energy);
-    compareForcesEnergy(testName, state2.getPotentialEnergy(), state1.getPotentialEnergy(), state2.getForces(), state1.getForces(), tolerance, log);
+    compareForcesEnergy(testName, state2.getPotentialEnergy(), state1.getPotentialEnergy(), state2.getForces(), state1.getForces(), tolerance);
 }
 
 // setup for box of 4 water molecules -- used to test PME
@@ -519,7 +443,7 @@ static void testMultipoleAmmoniaMutualPolarization(FILE* log) {
 static void setupAndGetForcesEnergyMultipoleWater(AmoebaMultipoleForce::NonbondedMethod nonbondedMethod,
                                                   AmoebaMultipoleForce::PolarizationType polarizationType,
                                                   double cutoff, int inputPmeGridDimension, std::vector<Vec3>& forces,
-                                                  double& energy, FILE* log) {
+                                                  double& energy) {
 
     // beginning of Multipole setup
 
@@ -659,7 +583,7 @@ static void setupAndGetForcesEnergyMultipoleWater(AmoebaMultipoleForce::Nonbonde
 
 // test multipole direct polarization using PME for box of water
 
-static void testMultipoleWaterPMEDirectPolarization(FILE* log) {
+static void testMultipoleWaterPMEDirectPolarization() {
 
     std::string testName      = "testMultipoleWaterDirectPolarization";
 
@@ -670,7 +594,7 @@ static void testMultipoleWaterPMEDirectPolarization(FILE* log) {
     double energy;
 
     setupAndGetForcesEnergyMultipoleWater(AmoebaMultipoleForce::PME, AmoebaMultipoleForce::Direct, 
-                                          cutoff, inputPmeGridDimension, forces, energy, log);
+                                          cutoff, inputPmeGridDimension, forces, energy);
     std::vector<Vec3> expectedForces(numberOfParticles);
 
     double expectedEnergy     = 6.4585115e-01;
@@ -689,12 +613,12 @@ static void testMultipoleWaterPMEDirectPolarization(FILE* log) {
     expectedForces[11]        = Vec3(  1.2523841e+00,  -1.9794292e+00,  -3.4670129e+00);
 
     double tolerance          = 1.0e-03;
-    compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance, log);
+    compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
 }
 
 // test multipole mutual polarization using PME for box of water
 
-static void testMultipoleWaterPMEMutualPolarization(FILE* log) {
+static void testMultipoleWaterPMEMutualPolarization() {
 
     std::string testName      = "testMultipoleWaterMutualPolarization";
 
@@ -705,7 +629,7 @@ static void testMultipoleWaterPMEMutualPolarization(FILE* log) {
     double energy;
 
     setupAndGetForcesEnergyMultipoleWater(AmoebaMultipoleForce::PME, AmoebaMultipoleForce::Mutual, 
-                                           cutoff, inputPmeGridDimension, forces, energy, log);
+                                           cutoff, inputPmeGridDimension, forces, energy);
     std::vector<Vec3> expectedForces(numberOfParticles);
 
     double expectedEnergy     =  6.5029855e-01;
@@ -724,12 +648,12 @@ static void testMultipoleWaterPMEMutualPolarization(FILE* log) {
     expectedForces[11]        = Vec3(  1.2467701e+00,  -1.9832979e+00,  -3.4684052e+00);
 
     double tolerance          = 1.0e-03;
-    compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance, log);
+    compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
 }
 
 // check validation of traceless/symmetric quadrupole tensor
 
-static void testQuadrupoleValidation(FILE* log) {
+static void testQuadrupoleValidation() {
 
     std::string testName      = "checkQuadrupoleValidation";
 
@@ -905,7 +829,7 @@ static void testQuadrupoleValidation(FILE* log) {
 static void setupAndGetForcesEnergyMultipoleIonsAndWater(AmoebaMultipoleForce::NonbondedMethod nonbondedMethod,
                                                          AmoebaMultipoleForce::PolarizationType polarizationType,
                                                          double cutoff, int inputPmeGridDimension, std::string testName,
-                                                         std::vector<Vec3>& forces, double& energy, FILE* log) {
+                                                         std::vector<Vec3>& forces, double& energy) {
 
     // beginning of Multipole setup
 
@@ -1081,7 +1005,7 @@ static void setupAndGetForcesEnergyMultipoleIonsAndWater(AmoebaMultipoleForce::N
 
 // test multipole mutual polarization using PME for system comprised of 2 ions and 2 waters
 
-static void testMultipoleIonsAndWaterPMEDirectPolarization(FILE* log) {
+static void testMultipoleIonsAndWaterPMEDirectPolarization() {
 
     std::string testName      = "testMultipoleIonsAndWaterDirectPolarization";
 
@@ -1093,7 +1017,7 @@ static void testMultipoleIonsAndWaterPMEDirectPolarization(FILE* log) {
     double energy;
 
     setupAndGetForcesEnergyMultipoleIonsAndWater(AmoebaMultipoleForce::PME, AmoebaMultipoleForce::Direct, 
-                                                 cutoff, inputPmeGridDimension, testName, forces, energy, log);
+                                                 cutoff, inputPmeGridDimension, testName, forces, energy);
 
     std::vector<Vec3> expectedForces(numberOfParticles);
 
@@ -1109,13 +1033,13 @@ static void testMultipoleIonsAndWaterPMEDirectPolarization(FILE* log) {
     expectedForces[7]         = Vec3(  4.0644209e+00,  -3.3666305e+00,  -1.7022384e+00);
 
     double tolerance          = 5.0e-04;
-    compareForceNormsEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance, log);
+    compareForceNormsEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
 
 }
 
 // test multipole mutual polarization using PME for system comprised of 2 ions and 2 waters
 
-static void testMultipoleIonsAndWaterPMEMutualPolarization(FILE* log) {
+static void testMultipoleIonsAndWaterPMEMutualPolarization() {
 
     std::string testName            = "testMultipoleIonsAndWaterMutualPolarization";
 
@@ -1129,7 +1053,7 @@ static void testMultipoleIonsAndWaterPMEMutualPolarization(FILE* log) {
     std::vector<Vec3> inputGrid;
 
     setupAndGetForcesEnergyMultipoleIonsAndWater(AmoebaMultipoleForce::PME, AmoebaMultipoleForce::Mutual, 
-                                                 cutoff, inputPmeGridDimension, testName, forces, energy, log);
+                                                 cutoff, inputPmeGridDimension, testName, forces, energy);
 
     std::vector<Vec3> expectedForces(numberOfParticles);
 
@@ -1145,9 +1069,9 @@ static void testMultipoleIonsAndWaterPMEMutualPolarization(FILE* log) {
     expectedForces[7]               = Vec3(  4.0622614e+00,  -3.3687594e+00,  -1.6986575e+00);
 
     //double tolerance                = 1.0e-03;
-    //compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance, log);
+    //compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
     double tolerance                = 5.0e-04;
-    compareForceNormsEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance, log);
+    compareForceNormsEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
 
 }
 
@@ -1159,7 +1083,7 @@ static void setupAndGetForcesEnergyMultipoleLargeWater(AmoebaMultipoleForce::Non
                                                        std::vector<Vec3>& forces, double& energy,
                                                        std::vector< double >& outputMultipoleMoments,
                                                        std::vector< Vec3 >& inputGrid,
-                                                       std::vector< double >& outputGridPotential, FILE* log) {
+                                                       std::vector< double >& outputGridPotential) {
 
     // beginning of Multipole setup
 
@@ -1945,7 +1869,7 @@ static void setupAndGetForcesEnergyMultipoleLargeWater(AmoebaMultipoleForce::Non
 
 // test multipole mutual polarization using PME for box of water
 
-static void testPMEMutualPolarizationLargeWater(FILE* log) {
+static void testPMEMutualPolarizationLargeWater() {
 
     std::string testName      = "testPMEMutualPolarizationLargeWater";
 
@@ -1960,7 +1884,7 @@ static void testPMEMutualPolarizationLargeWater(FILE* log) {
 
     setupAndGetForcesEnergyMultipoleLargeWater(AmoebaMultipoleForce::PME, AmoebaMultipoleForce::Mutual, 
                                                cutoff, inputPmeGridDimension, testName,
-                                               forces, energy, outputMultipoleMoments, inputGrid, outputGridPotential, log);
+                                               forces, energy, outputMultipoleMoments, inputGrid, outputGridPotential);
     static std::vector<Vec3> expectedForces; // Static to work around bug in Visual Studio that makes compilation very very slow.
     expectedForces.resize(numberOfParticles);
 
@@ -2616,7 +2540,7 @@ static void testPMEMutualPolarizationLargeWater(FILE* log) {
     expectedForces[647]       = Vec3( -4.7388806e+02,  -5.5561844e+02,  -8.5019295e+02);
 
     double tolerance          = 1.0e-03;
-    compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance, log);
+    compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
 
 }
 
@@ -2656,7 +2580,7 @@ static void testParticleInducedDipoles() {
 
 // test computation of system multipole moments
 
-static void testSystemMultipoleMoments(FILE* log) {
+static void testSystemMultipoleMoments() {
 
     std::string testName      = "testSystemMultipoleMoments";
     
@@ -2672,7 +2596,7 @@ static void testSystemMultipoleMoments(FILE* log) {
 
     setupAndGetForcesEnergyMultipoleLargeWater(AmoebaMultipoleForce::PME, AmoebaMultipoleForce::Mutual, 
                                                cutoff, inputPmeGridDimension, testName,
-                                               forces, energy, outputMultipoleMoments, inputGrid, outputGridPotential, log);
+                                               forces, energy, outputMultipoleMoments, inputGrid, outputGridPotential);
 
     std::vector<double> tinkerMoments(4);
 
@@ -2691,9 +2615,6 @@ static void testSystemMultipoleMoments(FILE* log) {
 //    tinkerMoments[12] =   4.3292490e-02;
 
     double tolerance = 1.0e-04;
-    if (log) {
-        (void) fprintf(log, "%s RelativeDifference Tinker OpenMM\n", testName.c_str());
-    }
     for (unsigned int ii = 0; ii < tinkerMoments.size(); ii++) {
         double difference;
         if (fabs(tinkerMoments[ii]) > 0.0) {
@@ -2702,10 +2623,6 @@ static void testSystemMultipoleMoments(FILE* log) {
         else {
             difference = fabs(outputMultipoleMoments[ii] - tinkerMoments[ii]);
         }
-        if (log) {
-            (void) fprintf(log, "%2d %15.7e %15.7e %15.7e\n", ii, difference, tinkerMoments[ii], outputMultipoleMoments[ii]);
-        }
-
         if (difference > tolerance) {
             std::stringstream details;
             details << testName << "Multipole moment " << ii << " does not agree w/ TINKER computed moments: OpenMM=" << outputMultipoleMoments[ii];
@@ -2719,7 +2636,7 @@ static void testSystemMultipoleMoments(FILE* log) {
 
 // test computation of multipole potential on a grid 
 
-static void testMultipoleGridPotential(FILE* log) {
+static void testMultipoleGridPotential() {
 
     std::string testName      = "testMultipoleGridPotential";
     
@@ -2768,7 +2685,7 @@ static void testMultipoleGridPotential(FILE* log) {
 
     setupAndGetForcesEnergyMultipoleLargeWater(AmoebaMultipoleForce::PME, AmoebaMultipoleForce::Mutual, 
                                                cutoff, inputPmeGridDimension, testName, forces, energy,
-                                               outputMultipoleMoments, inputGrid, outputGridPotential, log);
+                                               outputMultipoleMoments, inputGrid, outputGridPotential);
 
     // TINKER computed grid values
 
@@ -2948,13 +2865,11 @@ int main(int numberOfArguments, char* argv[]) {
         std::cout << "TestReferenceAmoebaMultipoleForce running test..." << std::endl;
         registerAmoebaReferenceKernelFactories();
 
-        FILE* log = NULL;
-
         // tests using two ammonia molecules
 
         // test direct polarization, no cutoff
 
-        testMultipoleAmmoniaDirectPolarization(log);
+        testMultipoleAmmoniaDirectPolarization();
 
         // test querying induced dipoles
         
@@ -2962,33 +2877,33 @@ int main(int numberOfArguments, char* argv[]) {
 
         // test mutual polarization, no cutoff
 
-        testMultipoleAmmoniaMutualPolarization(log);
+        testMultipoleAmmoniaMutualPolarization();
 
         // test multipole direct & mutual polarization using PME
 
-        testMultipoleWaterPMEDirectPolarization(log);
-        testMultipoleWaterPMEMutualPolarization(log);
+        testMultipoleWaterPMEDirectPolarization();
+        testMultipoleWaterPMEMutualPolarization();
 
         // check validation of traceless/symmetric quadrupole tensor
 
-        testQuadrupoleValidation(log);
+        testQuadrupoleValidation();
 
         // system w/ 2 ions and 2 water molecules
 
-        testMultipoleIonsAndWaterPMEMutualPolarization(log);
-        testMultipoleIonsAndWaterPMEDirectPolarization(log);
+        testMultipoleIonsAndWaterPMEMutualPolarization();
+        testMultipoleIonsAndWaterPMEDirectPolarization();
 
         // test computation of system multipole moments
 
-        testSystemMultipoleMoments(log);
+        testSystemMultipoleMoments();
 
         // test computation of grid potential
 
-        testMultipoleGridPotential(log);
+        testMultipoleGridPotential();
 
         // large box of water
 
-        testPMEMutualPolarizationLargeWater(log);
+        testPMEMutualPolarizationLargeWater();
         
         // triclinic box of water
         

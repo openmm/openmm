@@ -66,7 +66,7 @@ void AmoebaVdwForce::setSigmaCombiningRule( const std::string& inputSigmaCombini
     sigmaCombiningRule = inputSigmaCombiningRule;
 }
 
-const std::string& AmoebaVdwForce::getSigmaCombiningRule( void ) const {
+const std::string& AmoebaVdwForce::getSigmaCombiningRule() const {
     return sigmaCombiningRule;
 }
 
@@ -74,7 +74,7 @@ void AmoebaVdwForce::setEpsilonCombiningRule( const std::string& inputEpsilonCom
     epsilonCombiningRule = inputEpsilonCombiningRule;
 }
 
-const std::string& AmoebaVdwForce::getEpsilonCombiningRule( void ) const {
+const std::string& AmoebaVdwForce::getEpsilonCombiningRule() const {
     return epsilonCombiningRule;
 }
 

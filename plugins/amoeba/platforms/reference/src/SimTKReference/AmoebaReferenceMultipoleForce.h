@@ -713,15 +713,6 @@ protected:
     void setupScaleMaps(const std::vector< std::vector< std::vector<int> > >& multipoleAtomCovalentInfo);
 
     /**
-     * Show scaling factor map
-     *
-     * @param particleI index of particle whose scale map is to be shown
-     * @param log       output destination 
-     * 
-     */
-    void showScaleMapForParticle(unsigned int particleI, FILE* log) const;
-
-    /**
      * Get multipole scale factor for particleI & particleJ
      * 
      * @param  particleI           index of particleI whose scale factor is to be retrieved

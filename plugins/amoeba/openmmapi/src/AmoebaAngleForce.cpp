@@ -63,7 +63,7 @@ void AmoebaAngleForce::setAngleParameters(int index, int particle1, int particle
     angles[index].quadraticK = quadraticK;
 }
 
-double AmoebaAngleForce::getAmoebaGlobalAngleCubic( void ) const {
+double AmoebaAngleForce::getAmoebaGlobalAngleCubic() const {
     return _globalCubicK;
 }
 
@@ -71,7 +71,7 @@ void AmoebaAngleForce::setAmoebaGlobalAngleCubic(double cubicK ) {
     _globalCubicK           = cubicK;
 }
 
-double AmoebaAngleForce::getAmoebaGlobalAngleQuartic( void ) const {
+double AmoebaAngleForce::getAmoebaGlobalAngleQuartic() const {
     return _globalQuarticK;
 }
 
@@ -79,7 +79,7 @@ void AmoebaAngleForce::setAmoebaGlobalAngleQuartic(double quarticK ) {
     _globalQuarticK         = quarticK;
 }
 
-double AmoebaAngleForce::getAmoebaGlobalAnglePentic( void ) const {
+double AmoebaAngleForce::getAmoebaGlobalAnglePentic() const {
     return _globalPenticK;
 }
 
@@ -87,7 +87,7 @@ void AmoebaAngleForce::setAmoebaGlobalAnglePentic(double penticK ) {
     _globalPenticK           = penticK;
 }
 
-double AmoebaAngleForce::getAmoebaGlobalAngleSextic( void ) const {
+double AmoebaAngleForce::getAmoebaGlobalAngleSextic() const {
     return _globalSexticK;
 }
 

@@ -77,7 +77,7 @@ void GBVIForce::setCutoffDistance(double distance) {
     cutoffDistance = distance;
 }
 
-GBVIForce::BornRadiusScalingMethod GBVIForce::getBornRadiusScalingMethod( void ) const {
+GBVIForce::BornRadiusScalingMethod GBVIForce::getBornRadiusScalingMethod() const {
     return scalingMethod;
 }
 
@@ -85,7 +85,7 @@ void GBVIForce::setBornRadiusScalingMethod(BornRadiusScalingMethod method) {
     scalingMethod = method;
 }
 
-double GBVIForce::getQuinticLowerLimitFactor( void ) const {
+double GBVIForce::getQuinticLowerLimitFactor() const {
     return quinticLowerLimitFactor;
 }
 
@@ -93,7 +93,7 @@ void GBVIForce::setQuinticLowerLimitFactor(double inputQuinticLowerLimitFactor )
     quinticLowerLimitFactor = inputQuinticLowerLimitFactor;
 }
 
-double GBVIForce::getQuinticUpperBornRadiusLimit( void ) const {
+double GBVIForce::getQuinticUpperBornRadiusLimit() const {
     return quinticUpperBornRadiusLimit;
 }
 
@@ -113,7 +113,7 @@ void GBVIForce::setBondParameters( int index, int particle1, int particle2, doub
     bonds[index].bondLength = bondLength;
 }
 
-int GBVIForce::getNumBonds( void ) const {
+int GBVIForce::getNumBonds() const {
    return (int) bonds.size();
 }
 

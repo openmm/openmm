@@ -80,20 +80,13 @@ static double dotVector3(double* vectorX, double* vectorY) {
 
 
 static void computeAmoebaStretchBendForce(int bondIndex,  std::vector<Vec3>& positions, AmoebaStretchBendForce& amoebaStretchBendForce,
-                                          std::vector<Vec3>& forces, double* energy, FILE* log) {
+                                          std::vector<Vec3>& forces, double* energy) {
 
     int particle1, particle2, particle3;
     double abBondLength, cbBondLength, angleStretchBend, kStretchBend, k2StretchBend;
 
     amoebaStretchBendForce.getStretchBendParameters(bondIndex, particle1, particle2, particle3, abBondLength, cbBondLength, angleStretchBend, kStretchBend, k2StretchBend);
     angleStretchBend *= RADIAN;
-#ifdef AMOEBA_DEBUG
-    if (log) {
-        (void) fprintf(log, "computeAmoebaStretchBendForce: bond %d [%d %d %d] ab=%10.3e cb=%10.3e angle=%10.3e k1=%10.3e k2=%10.3e\n",
-                             bondIndex, particle1, particle2, particle3, abBondLength, cbBondLength, angleStretchBend, kStretchBend, k2StretchBend);
-        (void) fflush(log);
-    }
-#endif
 
     enum { A, B, C, LastAtomIndex };
     enum { AB, CB, CBxAB, ABxP, CBxP, LastDeltaIndex };
@@ -189,18 +182,10 @@ static void computeAmoebaStretchBendForce(int bondIndex,  std::vector<Vec3>& pos
     forces[particle3][2]       -= subForce[2][2];
 
     *energy                    += dt*drkk;
-#ifdef AMOEBA_DEBUG
-    if (log) {
-        (void) fprintf(log, "computeAmoebaStretchBendForce: angle=%10.3e dt=%10.3e dr=%10.3e\n", angle, dt, dr); 
-        (void) fflush(log);
-    }
-#endif
-
-    return;
 }
  
 static void computeAmoebaStretchBendForces(Context& context, AmoebaStretchBendForce& amoebaStretchBendForce,
-                                           std::vector<Vec3>& expectedForces, double* expectedEnergy, FILE* log) {
+                                           std::vector<Vec3>& expectedForces, double* expectedEnergy) {
 
     // get positions and zero forces
 
@@ -216,48 +201,26 @@ static void computeAmoebaStretchBendForces(Context& context, AmoebaStretchBendFo
 
     *expectedEnergy = 0.0;
     for (int ii = 0; ii < amoebaStretchBendForce.getNumStretchBends(); ii++) {
-        computeAmoebaStretchBendForce(ii, positions, amoebaStretchBendForce, expectedForces, expectedEnergy, log);
+        computeAmoebaStretchBendForce(ii, positions, amoebaStretchBendForce, expectedForces, expectedEnergy);
     }
-#ifdef AMOEBA_DEBUG
-    if (log) {
-        (void) fprintf(log, "computeAmoebaStretchBendForces: expected energy=%14.7e\n", *expectedEnergy);
-        for (unsigned int ii = 0; ii < positions.size(); ii++) {
-            (void) fprintf(log, "%6u [%14.7e %14.7e %14.7e]\n", ii, expectedForces[ii][0], expectedForces[ii][1], expectedForces[ii][2]);
-        }
-        (void) fflush(log);
-    }
-#endif
-    return;
-
 }
 
 void compareWithExpectedForceAndEnergy(Context& context, AmoebaStretchBendForce& amoebaStretchBendForce,
-                                       double tolerance, const std::string& idString, FILE* log) {
+                                       double tolerance, const std::string& idString) {
 
     std::vector<Vec3> expectedForces;
     double expectedEnergy;
-    computeAmoebaStretchBendForces(context, amoebaStretchBendForce, expectedForces, &expectedEnergy, log);
+    computeAmoebaStretchBendForces(context, amoebaStretchBendForce, expectedForces, &expectedEnergy);
    
     State state                      = context.getState(State::Forces | State::Energy);
     const std::vector<Vec3> forces   = state.getForces();
-#ifdef AMOEBA_DEBUG
-    if (log) {
-        (void) fprintf(log, "computeAmoebaStretchBendForces: expected energy=%14.7e %14.7e\n", expectedEnergy, state.getPotentialEnergy());
-        for (unsigned int ii = 0; ii < forces.size(); ii++) {
-            (void) fprintf(log, "%6u [%14.7e %14.7e %14.7e]   [%14.7e %14.7e %14.7e]\n", ii,
-                            expectedForces[ii][0], expectedForces[ii][1], expectedForces[ii][2], forces[ii][0], forces[ii][1], forces[ii][2]);
-        }
-        (void) fflush(log);
-    }
-#endif
-
     for (unsigned int ii = 0; ii < forces.size(); ii++) {
         ASSERT_EQUAL_VEC(expectedForces[ii], forces[ii], tolerance);
     }
     ASSERT_EQUAL_TOL(expectedEnergy, state.getPotentialEnergy(), tolerance);
 }
 
-void testOneStretchBend(FILE* log) {
+void testOneStretchBend() {
 
     System system;
     int numberOfParticles = 3;
@@ -289,7 +252,7 @@ void testOneStretchBend(FILE* log) {
     positions[2] = Vec3(0.269573220E+02,  0.236108860E+02,  0.216376800E+01);
 
     context.setPositions(positions);
-    compareWithExpectedForceAndEnergy(context, *amoebaStretchBendForce, TOL, "testOneStretchBend", log);
+    compareWithExpectedForceAndEnergy(context, *amoebaStretchBendForce, TOL, "testOneStretchBend");
     
     // Try changing the stretch-bend parameters and make sure it's still correct.
     
@@ -297,14 +260,14 @@ void testOneStretchBend(FILE* log) {
     bool exceptionThrown = false;
     try {
         // This should throw an exception.
-        compareWithExpectedForceAndEnergy(context, *amoebaStretchBendForce, TOL, "testOneStretchBend", log);
+        compareWithExpectedForceAndEnergy(context, *amoebaStretchBendForce, TOL, "testOneStretchBend");
     }
     catch (std::exception ex) {
         exceptionThrown = true;
     }
     ASSERT(exceptionThrown);
     amoebaStretchBendForce->updateParametersInContext(context);
-    compareWithExpectedForceAndEnergy(context, *amoebaStretchBendForce, TOL, "testOneStretchBend", log);
+    compareWithExpectedForceAndEnergy(context, *amoebaStretchBendForce, TOL, "testOneStretchBend");
 }
 
 int main(int numberOfArguments, char* argv[]) {
@@ -312,16 +275,7 @@ int main(int numberOfArguments, char* argv[]) {
     try {
         std::cout << "TestReferenceAmoebaStretchBendForce running test..." << std::endl;
         registerAmoebaReferenceKernelFactories();
-
-        FILE* log = NULL;
-        //FILE* log = stderr;
-        //FILE* log = fopen("AmoebaStretchBendForce1.log", "w");;
-        testOneStretchBend(log);
-#ifdef AMOEBA_DEBUG
-        if (log && log != stderr)
-            (void) fclose(log);
-#endif
-
+        testOneStretchBend();
     }
     catch(const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;

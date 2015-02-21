@@ -85,7 +85,7 @@ static void computeAmoebaBondForce(int bondIndex,  std::vector<Vec3>& positions,
 }
 
 static void computeAmoebaBondForces(Context& context, AmoebaBondForce& AmoebaBondForce,
-                                             std::vector<Vec3>& expectedForces, double* expectedEnergy, FILE* log) {
+                                             std::vector<Vec3>& expectedForces, double* expectedEnergy) {
 
     // get positions and zero forces
 
@@ -103,37 +103,16 @@ static void computeAmoebaBondForces(Context& context, AmoebaBondForce& AmoebaBon
     for (int ii = 0; ii < AmoebaBondForce.getNumBonds(); ii++) {
         computeAmoebaBondForce(ii, positions, AmoebaBondForce, expectedForces, expectedEnergy);
     }
-#ifdef AMOEBA_DEBUG
-    if (log) {
-        (void) fprintf(log, "computeAmoebaBondForces: expected energy=%15.7e\n", *expectedEnergy);
-        for (unsigned int ii = 0; ii < positions.size(); ii++) {
-            (void) fprintf(log, "%6u [%15.7e %15.7e %15.7e]\n", ii, expectedForces[ii][0], expectedForces[ii][1], expectedForces[ii][2]);
-        }
-        (void) fflush(log);
-    }
-#endif
-    return;
-
 }
 
-void compareWithExpectedForceAndEnergy(Context& context, AmoebaBondForce& AmoebaBondForce, double tolerance, const std::string& idString, FILE* log) {
+void compareWithExpectedForceAndEnergy(Context& context, AmoebaBondForce& AmoebaBondForce, double tolerance, const std::string& idString) {
 
     std::vector<Vec3> expectedForces;
     double expectedEnergy;
-    computeAmoebaBondForces(context, AmoebaBondForce, expectedForces, &expectedEnergy, NULL);
+    computeAmoebaBondForces(context, AmoebaBondForce, expectedForces, &expectedEnergy);
    
     State state                      = context.getState(State::Forces | State::Energy);
     const std::vector<Vec3> forces   = state.getForces();
-#ifdef AMOEBA_DEBUG
-    if (log) {
-        (void) fprintf(log, "computeAmoebaBondForces: expected energy=%15.7e %15.7e\n", expectedEnergy, state.getPotentialEnergy());
-        for (unsigned int ii = 0; ii < forces.size(); ii++) {
-            (void) fprintf(log, "%6u [%15.7e %15.7e %15.7e]   [%15.7e %15.7e %15.7e]\n", ii,
-                            expectedForces[ii][0], expectedForces[ii][1], expectedForces[ii][2], forces[ii][0], forces[ii][1], forces[ii][2]);
-        }
-        (void) fflush(log);
-    }
-#endif
 
     for (unsigned int ii = 0; ii < forces.size(); ii++) {
         ASSERT_EQUAL_VEC(expectedForces[ii], forces[ii], tolerance);
@@ -141,7 +120,7 @@ void compareWithExpectedForceAndEnergy(Context& context, AmoebaBondForce& Amoeba
     ASSERT_EQUAL_TOL(expectedEnergy, state.getPotentialEnergy(), tolerance);
 }
 
-void testOneBond(FILE* log) {
+void testOneBond() {
 
     System system;
 
@@ -168,10 +147,10 @@ void testOneBond(FILE* log) {
     positions[1] = Vec3(0, 0, 0);
 
     context.setPositions(positions);
-    compareWithExpectedForceAndEnergy(context, *amoebaBondForce, TOL, "testOneBond", log);
+    compareWithExpectedForceAndEnergy(context, *amoebaBondForce, TOL, "testOneBond");
 }
 
-void testTwoBond(FILE* log) {
+void testTwoBond() {
 
     System system;
 
@@ -203,7 +182,7 @@ void testTwoBond(FILE* log) {
     positions[2] = Vec3(1, 0, 1);
 
     context.setPositions(positions);
-    compareWithExpectedForceAndEnergy(context, *amoebaBondForce, TOL, "testTwoBond", log);
+    compareWithExpectedForceAndEnergy(context, *amoebaBondForce, TOL, "testTwoBond");
     
     // Try changing the bond parameters and make sure it's still correct.
     
@@ -212,14 +191,14 @@ void testTwoBond(FILE* log) {
     bool exceptionThrown = false;
     try {
         // This should throw an exception.
-        compareWithExpectedForceAndEnergy(context, *amoebaBondForce, TOL, "testTwoBond", log);
+        compareWithExpectedForceAndEnergy(context, *amoebaBondForce, TOL, "testTwoBond");
     }
     catch (std::exception ex) {
         exceptionThrown = true;
     }
     ASSERT(exceptionThrown);
     amoebaBondForce->updateParametersInContext(context);
-    compareWithExpectedForceAndEnergy(context, *amoebaBondForce, TOL, "testTwoBond", log);
+    compareWithExpectedForceAndEnergy(context, *amoebaBondForce, TOL, "testTwoBond");
 }
 
 int main(int numberOfArguments, char* argv[]) {
@@ -227,16 +206,8 @@ int main(int numberOfArguments, char* argv[]) {
     try {
         std::cout << "TestReferenceAmoebaBondForce running test..." << std::endl;
         registerAmoebaReferenceKernelFactories();
-        FILE* log = NULL;
-        //FILE* log = stderr;
-
-        //testOneBond(log);
-        testTwoBond(log);
-#ifdef AMOEBA_DEBUG
-        if (log && log != stderr)
-            (void) fclose(log);
-#endif
-
+        //testOneBond();
+        testTwoBond();
     }
     catch(const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;

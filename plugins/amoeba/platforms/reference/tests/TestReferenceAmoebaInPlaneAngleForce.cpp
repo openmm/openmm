@@ -79,7 +79,7 @@ static double dotVector3(double* vectorX, double* vectorY) {
 
 static void getPrefactorsGivenInPlaneAngleCosine(double cosine, double idealInPlaneAngle, double quadraticK, double cubicK,
                                                  double quarticK, double penticK, double sexticK,
-                                                 double* dEdR, double* energyTerm, FILE* log) {
+                                                 double* dEdR, double* energyTerm) {
 
     double angle;
     if (cosine >= 1.0) {
@@ -91,12 +91,6 @@ static void getPrefactorsGivenInPlaneAngleCosine(double cosine, double idealInPl
     else {
         angle = RADIAN*acos(cosine);
     }
-#ifdef AMOEBA_DEBUG
-    if (log) {
-        (void) fprintf(log, "getPrefactorsGivenInPlaneAngleCosine: cosine=%10.3e angle=%10.3e ideal=%10.3e\n", cosine, angle, idealInPlaneAngle); 
-        (void) fflush(log);
-    }
-#endif
 
     double deltaIdeal         = angle - idealInPlaneAngle;
     double deltaIdeal2        = deltaIdeal*deltaIdeal;
@@ -124,7 +118,7 @@ static void getPrefactorsGivenInPlaneAngleCosine(double cosine, double idealInPl
 }
 
 static void computeAmoebaInPlaneAngleForce(int bondIndex,  std::vector<Vec3>& positions, AmoebaInPlaneAngleForce& AmoebaInPlaneAngleForce,
-                                                   std::vector<Vec3>& forces, double* energy, FILE* log) {
+                                                   std::vector<Vec3>& forces, double* energy) {
 
     int particle1, particle2, particle3, particle4;
     double idealInPlaneAngle;
@@ -135,13 +129,6 @@ static void computeAmoebaInPlaneAngleForce(int bondIndex,  std::vector<Vec3>& po
     double quarticK       = AmoebaInPlaneAngleForce.getAmoebaGlobalInPlaneAngleQuartic();
     double penticK        = AmoebaInPlaneAngleForce.getAmoebaGlobalInPlaneAnglePentic();
     double sexticK        = AmoebaInPlaneAngleForce.getAmoebaGlobalInPlaneAngleSextic();
-#ifdef AMOEBA_DEBUG
-    if (log) {
-        (void) fprintf(log, "computeAmoebaInPlaneAngleForce: bond %d [%d %d %d %d] ang=%10.3f k=%10.3f [%10.3e %10.3e %10.3e %10.3e]\n", 
-                             bondIndex, particle1, particle2, particle3, particle4, idealInPlaneAngle, quadraticK, cubicK, quarticK, penticK, sexticK);
-        (void) fflush(log);
-    }
-#endif
 
     // T   = AD x CD
     // P   = B + T*delta
@@ -182,12 +169,6 @@ static void computeAmoebaInPlaneAngleForce(int bondIndex,  std::vector<Vec3>& po
     double rAp2 = dotVector3(deltaR[AP],  deltaR[AP]);
     double rCp2 = dotVector3(deltaR[CP],  deltaR[CP]);
     if (rAp2 <= 0.0 && rCp2 <= 0.0) {
-#ifdef AMOEBA_DEBUG
-        if (log) {
-            (void) fprintf(log, "computeAmoebaInPlaneAngleForce:  rAp2 or rCp2 <= 0.0\n");
-            (void) fflush(log);
-        }
-#endif
         return;
     }
 
@@ -205,7 +186,7 @@ static void computeAmoebaInPlaneAngleForce(int bondIndex,  std::vector<Vec3>& po
     double dEdR;
     double energyTerm;
     getPrefactorsGivenInPlaneAngleCosine(cosine, idealInPlaneAngle, quadraticK, cubicK,
-                                         quarticK, penticK, sexticK, &dEdR,  &energyTerm, log);
+                                         quarticK, penticK, sexticK, &dEdR,  &energyTerm);
  
     double termA   = -dEdR/(rAp2*rm);
     double termC   =  dEdR/(rCp2*rm);
@@ -281,7 +262,7 @@ static void computeAmoebaInPlaneAngleForce(int bondIndex,  std::vector<Vec3>& po
 }
 
 static void computeAmoebaInPlaneAngleForces(Context& context, AmoebaInPlaneAngleForce& AmoebaInPlaneAngleForce,
-                                                     std::vector<Vec3>& expectedForces, double* expectedEnergy, FILE* log) {
+                                                     std::vector<Vec3>& expectedForces, double* expectedEnergy) {
 
     // get positions and zero forces
 
@@ -297,40 +278,19 @@ static void computeAmoebaInPlaneAngleForces(Context& context, AmoebaInPlaneAngle
 
     *expectedEnergy = 0.0;
     for (int ii = 0; ii < AmoebaInPlaneAngleForce.getNumAngles(); ii++) {
-        computeAmoebaInPlaneAngleForce(ii, positions, AmoebaInPlaneAngleForce, expectedForces, expectedEnergy, log);
+        computeAmoebaInPlaneAngleForce(ii, positions, AmoebaInPlaneAngleForce, expectedForces, expectedEnergy);
     }
-#ifdef AMOEBA_DEBUG
-    if (log) {
-        (void) fprintf(log, "computeAmoebaInPlaneAngleForces: expected energy=%14.7e\n", *expectedEnergy);
-        for (unsigned int ii = 0; ii < positions.size(); ii++) {
-            (void) fprintf(log, "%6u [%14.7e %14.7e %14.7e]\n", ii, expectedForces[ii][0], expectedForces[ii][1], expectedForces[ii][2]);
-        }
-        (void) fflush(log);
-    }
-#endif
-    return;
-
 }
 
 void compareWithExpectedForceAndEnergy(Context& context, AmoebaInPlaneAngleForce& AmoebaInPlaneAngleForce,
-                                       double tolerance, const std::string& idString, FILE* log) {
+                                       double tolerance, const std::string& idString) {
 
     std::vector<Vec3> expectedForces;
     double expectedEnergy;
-    computeAmoebaInPlaneAngleForces(context, AmoebaInPlaneAngleForce, expectedForces, &expectedEnergy, log);
+    computeAmoebaInPlaneAngleForces(context, AmoebaInPlaneAngleForce, expectedForces, &expectedEnergy);
    
     State state                      = context.getState(State::Forces | State::Energy);
     const std::vector<Vec3> forces   = state.getForces();
-#ifdef AMOEBA_DEBUG
-    if (log) {
-        (void) fprintf(log, "computeAmoebaInPlaneAngleForces: expected energy=%14.7e %14.7e\n", expectedEnergy, state.getPotentialEnergy());
-        for (unsigned int ii = 0; ii < forces.size(); ii++) {
-            (void) fprintf(log, "%6u [%14.7e %14.7e %14.7e]   [%14.7e %14.7e %14.7e]\n", ii,
-                            expectedForces[ii][0], expectedForces[ii][1], expectedForces[ii][2], forces[ii][0], forces[ii][1], forces[ii][2]);
-        }
-        (void) fflush(log);
-    }
-#endif
 
     for (unsigned int ii = 0; ii < forces.size(); ii++) {
         ASSERT_EQUAL_VEC(expectedForces[ii], forces[ii], tolerance);
@@ -338,7 +298,7 @@ void compareWithExpectedForceAndEnergy(Context& context, AmoebaInPlaneAngleForce
     ASSERT_EQUAL_TOL(expectedEnergy, state.getPotentialEnergy(), tolerance);
 }
 
-void testOneAngle(FILE* log) {
+void testOneAngle() {
 
     System system;
     int numberOfParticles = 4;
@@ -376,7 +336,7 @@ void testOneAngle(FILE* log) {
     positions[3] = Vec3(1, 1, 1);
 
     context.setPositions(positions);
-    compareWithExpectedForceAndEnergy(context, *amoebaInPlaneAngleForce, TOL, "testOneInPlaneAngle", log);
+    compareWithExpectedForceAndEnergy(context, *amoebaInPlaneAngleForce, TOL, "testOneInPlaneAngle");
     
     // Try changing the angle parameters and make sure it's still correct.
     
@@ -384,14 +344,14 @@ void testOneAngle(FILE* log) {
     bool exceptionThrown = false;
     try {
         // This should throw an exception.
-        compareWithExpectedForceAndEnergy(context, *amoebaInPlaneAngleForce, TOL, "testOneInPlaneAngle", log);
+        compareWithExpectedForceAndEnergy(context, *amoebaInPlaneAngleForce, TOL, "testOneInPlaneAngle");
     }
     catch (std::exception ex) {
         exceptionThrown = true;
     }
     ASSERT(exceptionThrown);
     amoebaInPlaneAngleForce->updateParametersInContext(context);
-    compareWithExpectedForceAndEnergy(context, *amoebaInPlaneAngleForce, TOL, "testOneInPlaneAngle", log);
+    compareWithExpectedForceAndEnergy(context, *amoebaInPlaneAngleForce, TOL, "testOneInPlaneAngle");
 }
 
 int main(int numberOfArguments, char* argv[]) {
@@ -399,16 +359,7 @@ int main(int numberOfArguments, char* argv[]) {
     try {
         std::cout << "TestReferenceAmoebaInPlaneAngleForce running test..." << std::endl;
         registerAmoebaReferenceKernelFactories();
-        FILE* log = NULL;
-        //FILE* log = stderr;
-        //FILE* log = fopen("AmoebaInPlaneAngleForce.log", "w");;
-
-        testOneAngle(NULL);
-#ifdef AMOEBA_DEBUG
-        if (log && log != stderr)
-            (void) fclose(log);
-#endif
-
+        testOneAngle();
     }
     catch(const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;

@@ -275,7 +275,7 @@ static void setupMultipoleAmmonia(System& system, AmoebaGeneralizedKirkwoodForce
     system.addForce(amoebaGeneralizedKirkwoodForce);
 }
 
-static void getForcesEnergyMultipoleAmmonia(Context& context, std::vector<Vec3>& forces, double& energy, FILE* log) {
+static void getForcesEnergyMultipoleAmmonia(Context& context, std::vector<Vec3>& forces, double& energy) {
     std::vector<Vec3> positions(context.getSystem().getNumParticles());
 
     positions[0]              = Vec3(  1.5927280e-01,  1.7000000e-06,   1.6491000e-03);
@@ -296,7 +296,7 @@ static void getForcesEnergyMultipoleAmmonia(Context& context, std::vector<Vec3>&
 // setup for villin
 
 static void setupAndGetForcesEnergyMultipoleVillin(AmoebaMultipoleForce::PolarizationType polarizationType,
-                                                    int includeCavityTerm, std::vector<Vec3>& forces, double& energy, FILE* log) {
+                                                    int includeCavityTerm, std::vector<Vec3>& forces, double& energy) {
 
     // beginning of Multipole setup
 
@@ -6980,44 +6980,7 @@ static void setupAndGetForcesEnergyMultipoleVillin(AmoebaMultipoleForce::Polariz
 
 static void compareForcesEnergy(std::string& testName, double expectedEnergy, double energy,
                                 const std::vector<Vec3>& expectedForces,
-                                const std::vector<Vec3>& forces, double tolerance, FILE* log) {
-
-//#define AMOEBA_DEBUG
-#ifdef AMOEBA_DEBUG
-    if (log) {
-        double conversion = 1.0/4.184;
-        double energyAbsDiff = fabs(expectedEnergy - energy);   
-        double energyRelDiff =  2.0*energyAbsDiff/(fabs(expectedEnergy) + fabs(energy) + 1.0e-08);   
-        (void) fprintf(log, "%s: expected energy=%14.7e %14.7e  absDiff=%15.7e relDiff=%15.7e\n", testName.c_str(), conversion*expectedEnergy, conversion*energy,
-                        conversion*energyAbsDiff, conversion*energyRelDiff);
-        if (conversion != 1.0)conversion *= -0.1;
-        for (unsigned int ii = 0; ii < forces.size(); ii++) {
-
-            double expectedNorm = sqrt(expectedForces[ii][0]*expectedForces[ii][0] +
-                                       expectedForces[ii][1]*expectedForces[ii][1] +
-                                       expectedForces[ii][2]*expectedForces[ii][2]);
-
-            double norm         = sqrt(forces[ii][0]*forces[ii][0] + forces[ii][1]*forces[ii][1] + forces[ii][2]*forces[ii][2]);
-            double absDiff      = fabs(norm - expectedNorm);
-            double relDiff      = 2.0*absDiff/(fabs(norm) + fabs(expectedNorm) + 1.0e-08);
-
-            (void) fprintf(log, "%6u %15.7e %15.7e [%14.7e %14.7e %14.7e]   [%14.7e %14.7e %14.7e]\n", ii,
-                           conversion*absDiff, conversion*relDiff,
-                           conversion*expectedForces[ii][0], conversion*expectedForces[ii][1], conversion*expectedForces[ii][2],
-                           conversion*forces[ii][0], conversion*forces[ii][1], conversion*forces[ii][2], conversion*expectedNorm, conversion*norm);
-        }
-        (void) fflush(log);
-        conversion = 1.0;
-        (void) fprintf(log, "\n%s: expected energy=%14.7e %14.7e no conversion\n", testName.c_str(), conversion*expectedEnergy, conversion*energy);
-        if (conversion != 1.0)conversion = -1.0;
-        for (unsigned int ii = 0; ii < forces.size(); ii++) {
-            (void) fprintf(log, "%6u [%14.7e %14.7e %14.7e]   [%14.7e %14.7e %14.7e]\n", ii,
-                           conversion*expectedForces[ii][0], conversion*expectedForces[ii][1], conversion*expectedForces[ii][2],
-                           conversion*forces[ii][0], conversion*forces[ii][1], conversion*forces[ii][2]);
-        }
-        (void) fflush(log);
-    }
-#endif
+                                const std::vector<Vec3>& forces, double tolerance) {
 
     for (unsigned int ii = 0; ii < forces.size(); ii++) {
         ASSERT_EQUAL_VEC_MOD(expectedForces[ii], forces[ii], tolerance, testName);
@@ -7029,47 +6992,7 @@ static void compareForcesEnergy(std::string& testName, double expectedEnergy, do
 
 static void compareForceNormsEnergy(std::string& testName, double expectedEnergy, double energy,
                                     std::vector<Vec3>& expectedForces,
-                                    const std::vector<Vec3>& forces, double tolerance, FILE* log) {
-
-
-//#define AMOEBA_DEBUG
-#ifdef AMOEBA_DEBUG
-    if (log) {
-        double conversion = 1.0/4.184;
-        double energyAbsDiff = fabs(expectedEnergy - energy);   
-        double energyRelDiff =  2.0*energyAbsDiff/(fabs(expectedEnergy) + fabs(energy) + 1.0e-08);   
-        (void) fprintf(log, "%s: expected energy=%14.7e %14.7e  absDiff=%15.7e relDiff=%15.7e\n", testName.c_str(), conversion*expectedEnergy, conversion*energy,
-                        conversion*energyAbsDiff, conversion*energyRelDiff);
-        if (conversion != 1.0)conversion *= -0.1;
-        for (unsigned int ii = 0; ii < forces.size(); ii++) {
-
-            double expectedNorm = sqrt(expectedForces[ii][0]*expectedForces[ii][0] +
-                                       expectedForces[ii][1]*expectedForces[ii][1] +
-                                       expectedForces[ii][2]*expectedForces[ii][2]);
-
-            double norm         = sqrt(forces[ii][0]*forces[ii][0] + forces[ii][1]*forces[ii][1] + forces[ii][2]*forces[ii][2]);
-            double absDiff      = fabs((norm - expectedNorm));
-            double relDiff      = 2.0*absDiff/(fabs(norm) + fabs(expectedNorm) + 1.0e-08);
-
-            (void) fprintf(log, "%6u %15.7e %15.7e [%14.7e %14.7e %14.7e]   [%14.7e %14.7e %14.7e]  %15.7e %15.7e\n", ii,
-                            fabs(conversion)*absDiff, relDiff,
-                            conversion*expectedForces[ii][0], conversion*expectedForces[ii][1], conversion*expectedForces[ii][2],
-                            conversion*forces[ii][0], conversion*forces[ii][1], conversion*forces[ii][2], 
-                            fabs(conversion)*expectedNorm, fabs(conversion)*norm);
-        }
-        (void) fflush(log);
-        conversion = 1.0;
-        (void) fprintf(log, "\n%s: expected energy=%14.7e %14.7e no conversion\n", testName.c_str(), conversion*expectedEnergy, conversion*energy);
-        if (conversion != 1.0)conversion = -1.0;
-        for (unsigned int ii = 0; ii < forces.size(); ii++) {
-            (void) fprintf(log, "%6u [%14.7e %14.7e %14.7e]   [%14.7e %14.7e %14.7e]\n", ii,
-                            conversion*expectedForces[ii][0], conversion*expectedForces[ii][1], conversion*expectedForces[ii][2],
-                            conversion*forces[ii][0], conversion*forces[ii][1], conversion*forces[ii][2]);
-        }
-        (void) fflush(log);
-    }
-#endif
-
+                                    const std::vector<Vec3>& forces, double tolerance) {
     for (unsigned int ii = 0; ii < forces.size(); ii++) {
         double expectedNorm = sqrt(expectedForces[ii][0]*expectedForces[ii][0] +
                                    expectedForces[ii][1]*expectedForces[ii][1] +
@@ -7098,7 +7021,7 @@ static void compareForceNormsEnergy(std::string& testName, double expectedEnergy
 
 // test GK direct polarization for system comprised of two ammonia molecules
 
-static void testGeneralizedKirkwoodAmmoniaDirectPolarization(FILE* log) {
+static void testGeneralizedKirkwoodAmmoniaDirectPolarization() {
 
     std::string testName      = "testGeneralizedKirkwoodAmmoniaDirectPolarization";
 
@@ -7111,7 +7034,7 @@ static void testGeneralizedKirkwoodAmmoniaDirectPolarization(FILE* log) {
     setupMultipoleAmmonia(system, amoebaGeneralizedKirkwoodForce, AmoebaMultipoleForce::Direct, 0);
     LangevinIntegrator integrator(0.0, 0.1, 0.01);
     Context context(system, integrator, Platform::getPlatformByName("Reference"));
-    getForcesEnergyMultipoleAmmonia(context, forces, energy, log);
+    getForcesEnergyMultipoleAmmonia(context, forces, energy);
     std::vector<Vec3> expectedForces(numberOfParticles);
 
     double expectedEnergy     = -7.6636680e+01;
@@ -7126,12 +7049,12 @@ static void testGeneralizedKirkwoodAmmoniaDirectPolarization(FILE* log) {
     expectedForces[7]         = Vec3(  9.7274235e+00,  -6.3130458e+01,   1.4949024e+02);
 
     double tolerance          = 1.0e-04;
-    compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance, log);
+    compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
 }
 
 // test GK mutual polarization for system comprised of two ammonia molecules
 
-static void testGeneralizedKirkwoodAmmoniaMutualPolarization(FILE* log) {
+static void testGeneralizedKirkwoodAmmoniaMutualPolarization() {
 
     std::string testName      = "testGeneralizedKirkwoodAmmoniaMutualPolarization";
 
@@ -7144,7 +7067,7 @@ static void testGeneralizedKirkwoodAmmoniaMutualPolarization(FILE* log) {
     setupMultipoleAmmonia(system, amoebaGeneralizedKirkwoodForce, AmoebaMultipoleForce::Mutual, 0);
     LangevinIntegrator integrator(0.0, 0.1, 0.01);
     Context context(system, integrator, Platform::getPlatformByName("Reference"));
-    getForcesEnergyMultipoleAmmonia(context, forces, energy, log);
+    getForcesEnergyMultipoleAmmonia(context, forces, energy);
     std::vector<Vec3> expectedForces(numberOfParticles);
 
     double expectedEnergy     =  -7.8018875e+01;
@@ -7159,13 +7082,13 @@ static void testGeneralizedKirkwoodAmmoniaMutualPolarization(FILE* log) {
     expectedForces[7]         = Vec3(  5.3895456e+00,  -7.7131137e+01,   1.5826273e+02);
 
     double tolerance          = 1.0e-04;
-    compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance, log);
+    compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
 }
 
 // test GK mutual polarization for system comprised of two ammonia molecules
 // including cavity term
 
-static void testGeneralizedKirkwoodAmmoniaMutualPolarizationWithCavityTerm(FILE* log) {
+static void testGeneralizedKirkwoodAmmoniaMutualPolarizationWithCavityTerm() {
 
     std::string testName      = "testGeneralizedKirkwoodAmmoniaMutualPolarizationWithCavityTerm";
 
@@ -7180,7 +7103,7 @@ static void testGeneralizedKirkwoodAmmoniaMutualPolarizationWithCavityTerm(FILE*
     ASSERT(!system.usesPeriodicBoundaryConditions());
     LangevinIntegrator integrator(0.0, 0.1, 0.01);
     Context context(system, integrator, Platform::getPlatformByName("Reference"));
-    getForcesEnergyMultipoleAmmonia(context, forces, energy, log);
+    getForcesEnergyMultipoleAmmonia(context, forces, energy);
     std::vector<Vec3> expectedForces(numberOfParticles);
 
     double expectedEnergy     = -6.0434582e+01;
@@ -7195,7 +7118,7 @@ static void testGeneralizedKirkwoodAmmoniaMutualPolarizationWithCavityTerm(FILE*
     expectedForces[7]         = Vec3(  7.9205382e+00,  -7.3716473e+01,   1.5960993e+02);
 
     double tolerance          = 1.0e-04;
-    compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance, log);
+    compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
     
     // Try changing the particle parameters and make sure it's still correct.
     
@@ -7212,7 +7135,7 @@ static void testGeneralizedKirkwoodAmmoniaMutualPolarizationWithCavityTerm(FILE*
     bool exceptionThrown = false;
     try {
         // This should throw an exception.
-        compareForcesEnergy(testName, state2.getPotentialEnergy(), state1.getPotentialEnergy(), state2.getForces(), state1.getForces(), tolerance, log);
+        compareForcesEnergy(testName, state2.getPotentialEnergy(), state1.getPotentialEnergy(), state2.getForces(), state1.getForces(), tolerance);
     }
     catch (std::exception ex) {
         exceptionThrown = true;
@@ -7220,12 +7143,12 @@ static void testGeneralizedKirkwoodAmmoniaMutualPolarizationWithCavityTerm(FILE*
     ASSERT(exceptionThrown);
     amoebaGeneralizedKirkwoodForce->updateParametersInContext(context);
     state1 = context.getState(State::Forces | State::Energy);
-    compareForcesEnergy(testName, state2.getPotentialEnergy(), state1.getPotentialEnergy(), state2.getForces(), state1.getForces(), tolerance, log);
+    compareForcesEnergy(testName, state2.getPotentialEnergy(), state1.getPotentialEnergy(), state2.getForces(), state1.getForces(), tolerance);
 }
 
 // test GK direct polarization for villin system
 
-static void testGeneralizedKirkwoodVillinDirectPolarization(FILE* log) {
+static void testGeneralizedKirkwoodVillinDirectPolarization() {
 
     std::string testName      = "testGeneralizedKirkwoodVillinDirectPolarization";
 
@@ -7233,7 +7156,7 @@ static void testGeneralizedKirkwoodVillinDirectPolarization(FILE* log) {
     std::vector<Vec3> forces;
     double energy;
 
-    setupAndGetForcesEnergyMultipoleVillin(AmoebaMultipoleForce::Direct, 0, forces, energy, log);
+    setupAndGetForcesEnergyMultipoleVillin(AmoebaMultipoleForce::Direct, 0, forces, energy);
     std::vector<Vec3> expectedForces(numberOfParticles);
 
     double expectedEnergy            = -8.4281157e+03;
@@ -7844,12 +7767,12 @@ static void testGeneralizedKirkwoodVillinDirectPolarization(FILE* log) {
     }
 
     double tolerance          = 1.0e-05;
-    compareForceNormsEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance, log);
+    compareForceNormsEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
 }
 
 // test GK mutual polarization for villin system
 
-static void testGeneralizedKirkwoodVillinMutualPolarization(FILE* log) {
+static void testGeneralizedKirkwoodVillinMutualPolarization() {
 
     std::string testName      = "testGeneralizedKirkwoodVillinMutualPolarization";
 
@@ -7857,7 +7780,7 @@ static void testGeneralizedKirkwoodVillinMutualPolarization(FILE* log) {
     std::vector<Vec3> forces;
     double energy;
 
-    setupAndGetForcesEnergyMultipoleVillin(AmoebaMultipoleForce::Mutual, 0, forces, energy, log);
+    setupAndGetForcesEnergyMultipoleVillin(AmoebaMultipoleForce::Mutual, 0, forces, energy);
     std::vector<Vec3> expectedForces(numberOfParticles);
 
     double expectedEnergy            = -8.6477811e+03;
@@ -8468,7 +8391,7 @@ static void testGeneralizedKirkwoodVillinMutualPolarization(FILE* log) {
     }
 
     double tolerance          = 1.0e-05;
-    compareForceNormsEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance, log);
+    compareForceNormsEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
 }
 
 int main(int numberOfArguments, char* argv[]) {
@@ -8477,16 +8400,14 @@ int main(int numberOfArguments, char* argv[]) {
         std::cout << "TestReferenceAmoebaGeneralizedKirkwoodForce running test..." << std::endl;
         registerAmoebaReferenceKernelFactories();
 
-        FILE* log = NULL;
-
         // test direct and mutual polarization cases and
         // mutual polarization w/ the cavity term
 
-        testGeneralizedKirkwoodAmmoniaMutualPolarization(log);
-        testGeneralizedKirkwoodAmmoniaDirectPolarization(log);
-        testGeneralizedKirkwoodAmmoniaMutualPolarizationWithCavityTerm(log);
-        testGeneralizedKirkwoodVillinDirectPolarization(log);
-        testGeneralizedKirkwoodVillinMutualPolarization(log);
+        testGeneralizedKirkwoodAmmoniaMutualPolarization();
+        testGeneralizedKirkwoodAmmoniaDirectPolarization();
+        testGeneralizedKirkwoodAmmoniaMutualPolarizationWithCavityTerm();
+        testGeneralizedKirkwoodVillinDirectPolarization();
+        testGeneralizedKirkwoodVillinMutualPolarization();
 
     }
     catch(const std::exception& e) {
