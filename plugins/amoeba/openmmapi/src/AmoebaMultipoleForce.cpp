@@ -45,7 +45,7 @@ AmoebaMultipoleForce::AmoebaMultipoleForce() : nonbondedMethod(NoCutoff), polari
     pmeGridDimension[0] = pmeGridDimension[1] = pmeGridDimension[2];
 }
 
-AmoebaMultipoleForce::NonbondedMethod AmoebaMultipoleForce::getNonbondedMethod( void ) const {
+AmoebaMultipoleForce::NonbondedMethod AmoebaMultipoleForce::getNonbondedMethod() const {
     return nonbondedMethod;
 }
 
@@ -53,7 +53,7 @@ void AmoebaMultipoleForce::setNonbondedMethod( AmoebaMultipoleForce::NonbondedMe
     nonbondedMethod = method;
 }
 
-AmoebaMultipoleForce::PolarizationType AmoebaMultipoleForce::getPolarizationType( void ) const {
+AmoebaMultipoleForce::PolarizationType AmoebaMultipoleForce::getPolarizationType() const {
     return polarizationType;
 }
 
@@ -77,7 +77,7 @@ void AmoebaMultipoleForce::setAEwald(double inputAewald ) {
     aewald = inputAewald; 
 } 
  
-int AmoebaMultipoleForce::getPmeBSplineOrder( void ) const { 
+int AmoebaMultipoleForce::getPmeBSplineOrder() const { 
     return pmeBSplineOrder; 
 } 
  
@@ -103,7 +103,7 @@ void AmoebaMultipoleForce::setPmeGridDimensions( const std::vector<int>& gridDim
     return;
 } 
 
-int AmoebaMultipoleForce::getMutualInducedMaxIterations( void ) const {
+int AmoebaMultipoleForce::getMutualInducedMaxIterations() const {
     return mutualInducedMaxIterations;
 }
 
@@ -111,7 +111,7 @@ void AmoebaMultipoleForce::setMutualInducedMaxIterations( int inputMutualInduced
     mutualInducedMaxIterations = inputMutualInducedMaxIterations;
 }
 
-double AmoebaMultipoleForce::getMutualInducedTargetEpsilon( void ) const {
+double AmoebaMultipoleForce::getMutualInducedTargetEpsilon() const {
     return mutualInducedTargetEpsilon;
 }
 

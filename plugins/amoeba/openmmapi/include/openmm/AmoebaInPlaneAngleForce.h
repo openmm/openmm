@@ -77,7 +77,7 @@ public:
      * 
      * @return global cubicK term
      */
-    double getAmoebaGlobalInPlaneAngleCubic( void ) const;
+    double getAmoebaGlobalInPlaneAngleCubic() const;
 
     /**
      * Set the global quartic term
@@ -91,7 +91,7 @@ public:
      * 
      * @return global  quartic term
      */
-    double getAmoebaGlobalInPlaneAngleQuartic( void ) const;
+    double getAmoebaGlobalInPlaneAngleQuartic() const;
 
     /**
      * Set the global pentic term
@@ -105,7 +105,7 @@ public:
      * 
      * @return global penticK term
      */
-    double getAmoebaGlobalInPlaneAnglePentic( void ) const;
+    double getAmoebaGlobalInPlaneAnglePentic() const;
 
     /**
      * Set the global sextic term
@@ -119,7 +119,7 @@ public:
      * 
      * @return global  sextic term
      */
-    double getAmoebaGlobalInPlaneAngleSextic( void ) const;
+    double getAmoebaGlobalInPlaneAngleSextic() const;
 
     /**
      * Add an angle term to the force field.

@@ -97,7 +97,7 @@ private:
 
     static int CovalentDegrees[AmoebaMultipoleForce::CovalentEnd];
     static bool initializedCovalentDegrees;
-    static const int* getCovalentDegrees( void );
+    static const int* getCovalentDegrees();
 };
 
 } // namespace OpenMM

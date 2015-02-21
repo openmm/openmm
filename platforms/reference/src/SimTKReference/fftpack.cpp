@@ -672,16 +672,16 @@ fftpack_transpose_2d(t_complex *          in_data,
     t_complex *  src;
     int          i,j;
 
-    if(nx<2 || ny<2)
+    if (nx<2 || ny<2)
     {
-        if(in_data != out_data)
+        if (in_data != out_data)
         {
             memcpy(out_data,in_data,sizeof(t_complex)*nx*ny);
         }
         return 0;
     }
 
-    if(in_data == out_data)
+    if (in_data == out_data)
     {
         src = (t_complex *)malloc(sizeof(t_complex)*nx*ny);
         memcpy(src,in_data,sizeof(t_complex)*nx*ny);
@@ -691,16 +691,16 @@ fftpack_transpose_2d(t_complex *          in_data,
         src = in_data;
     }
 
-    for(i=0;i<nx;i++)
+    for (i=0;i<nx;i++)
     {
-        for(j=0;j<ny;j++)
+        for (j=0;j<ny;j++)
         {
             out_data[j*nx+i].re = src[i*ny+j].re;
             out_data[j*nx+i].im = src[i*ny+j].im;
         }
     }
 
-    if(src != in_data)
+    if (src != in_data)
     {
         free(src);
     }
@@ -722,16 +722,16 @@ fftpack_transpose_2d_nelem(t_complex *          in_data,
 
     ncopy = nelem*sizeof(t_complex);
 
-    if(nx<2 || ny<2)
+    if (nx<2 || ny<2)
     {
-        if(in_data != out_data)
+        if (in_data != out_data)
         {
             memcpy(out_data,in_data,nx*ny*ncopy);
         }
         return 0;
     }
 
-    if(in_data == out_data)
+    if (in_data == out_data)
     {
         src = (t_complex *)malloc(nx*ny*ncopy);
         memcpy(src,in_data,nx*ny*ncopy);
@@ -741,15 +741,15 @@ fftpack_transpose_2d_nelem(t_complex *          in_data,
         src = in_data;
     }
 
-    for(i=0;i<nx;i++)
+    for (i=0;i<nx;i++)
     {
-        for(j=0;j<ny;j++)
+        for (j=0;j<ny;j++)
         {
             memcpy(out_data + (j*nx+i)*nelem , src + (i*ny+j)*nelem , ncopy);
         }
     }
 
-    if(src != in_data)
+    if (src != in_data)
     {
         free(src);
     }
@@ -767,14 +767,14 @@ fftpack_init_1d(fftpack_t *        pfft,
 {
     fftpack_t    fft;
 
-    if(pfft==NULL)
+    if (pfft==NULL)
     {
         fprintf(stderr,"Fatal error - Invalid FFT opaque type pointer.");
         return EINVAL;
     }
     *pfft = NULL;
 
-    if( (fft = (struct fftpack *)malloc(sizeof(struct fftpack))) == NULL)
+    if ((fft = (struct fftpack *)malloc(sizeof(struct fftpack))) == NULL)
     {
         return ENOMEM;
     }
@@ -783,13 +783,13 @@ fftpack_init_1d(fftpack_t *        pfft,
     fft->n    = nx;
 
     /* Need 4*n storage for 1D complex FFT */
-    if( (fft->work = (RealOpenMM *)malloc(sizeof(RealOpenMM)*(4*nx))) == NULL)
+    if ((fft->work = (RealOpenMM *)malloc(sizeof(RealOpenMM)*(4*nx))) == NULL)
     {
         free(fft);
         return ENOMEM;
     }
 
-    if(fft->n>1)
+    if (fft->n>1)
         fftpack_cffti1(nx,fft->work,fft->ifac);
 
     *pfft = fft;
@@ -807,7 +807,7 @@ fftpack_init_2d(fftpack_t *        pfft,
     fftpack_t     fft;
     int           rc;
 
-    if(pfft==NULL)
+    if (pfft==NULL)
     {
         fprintf(stderr,"Fatal error - Invalid FFT opaque type pointer.");
         return EINVAL;
@@ -815,13 +815,13 @@ fftpack_init_2d(fftpack_t *        pfft,
     *pfft = NULL;
 
     /* Create the X transform */
-    if( (rc = fftpack_init_1d(&fft,nx)) != 0)
+    if ((rc = fftpack_init_1d(&fft,nx)) != 0)
     {
         return rc;
     }
 
     /* Create Y transform as a link from X */
-    if( (rc=fftpack_init_1d(&(fft->next),ny)) != 0)
+    if ((rc=fftpack_init_1d(&(fft->next),ny)) != 0)
     {
         free(fft);
         return rc;
@@ -842,7 +842,7 @@ fftpack_init_3d(fftpack_t *        pfft,
     fftpack_t     fft;
     int           rc;
 
-    if(pfft==NULL)
+    if (pfft==NULL)
     {
         fprintf(stderr,"Fatal error - Invalid FFT opaque type pointer.");
         return EINVAL;
@@ -851,7 +851,7 @@ fftpack_init_3d(fftpack_t *        pfft,
 
     /* Create the X transform */
 
-    if( (fft = (struct fftpack *)malloc(sizeof(struct fftpack))) == NULL)
+    if ((fft = (struct fftpack *)malloc(sizeof(struct fftpack))) == NULL)
     {
         return ENOMEM;
     }
@@ -860,7 +860,7 @@ fftpack_init_3d(fftpack_t *        pfft,
 
     /* Need 4*nx storage for 1D complex FFT.
      */
-    if( (fft->work = (RealOpenMM *)malloc(sizeof(RealOpenMM)*(4*nx))) == NULL)
+    if ((fft->work = (RealOpenMM *)malloc(sizeof(RealOpenMM)*(4*nx))) == NULL)
     {
         free(fft);
         return ENOMEM;
@@ -869,7 +869,7 @@ fftpack_init_3d(fftpack_t *        pfft,
     fftpack_cffti1(nx,fft->work,fft->ifac);
 
     /* Create 2D Y/Z transforms as a link from X */
-    if( (rc=fftpack_init_2d(&(fft->next),ny,nz)) != 0)
+    if ((rc=fftpack_init_2d(&(fft->next),ny,nz)) != 0)
     {
         free(fft);
         return rc;
@@ -893,7 +893,7 @@ fftpack_exec_1d          (fftpack_t                  fft,
 
     n=fft->n;
 
-    if(n==1)
+    if (n==1)
     {
         p1 = (RealOpenMM *)in_data;
         p2 = (RealOpenMM *)out_data;
@@ -904,13 +904,13 @@ fftpack_exec_1d          (fftpack_t                  fft,
     /* FFTPACK only does in-place transforms, so emulate out-of-place
      * by copying data to the output array first.
      */
-    if( in_data != out_data )
+    if (in_data != out_data)
     {
         p1 = (RealOpenMM *)in_data;
         p2 = (RealOpenMM *)out_data;
 
         /* n complex = 2*n RealOpenMM elements */
-        for(i=0;i<2*n;i++)
+        for (i=0;i<2*n;i++)
         {
             p2[i] = p1[i];
         }
@@ -920,11 +920,11 @@ fftpack_exec_1d          (fftpack_t                  fft,
      * Elements 2*n .. 4*n-1 are internal FFTPACK work space.
      */
 
-    if(dir == FFTPACK_FORWARD)
+    if (dir == FFTPACK_FORWARD)
     {
         fftpack_cfftf1(n,(RealOpenMM *)out_data,fft->work+2*n,fft->work,fft->ifac, -1);
     }
-    else if(dir == FFTPACK_BACKWARD)
+    else if (dir == FFTPACK_BACKWARD)
     {
         fftpack_cfftf1(n,(RealOpenMM *)out_data,fft->work+2*n,fft->work,fft->ifac, 1);
     }
@@ -957,7 +957,7 @@ fftpack_exec_2d          (fftpack_t                  fft,
      * by copying data to the output array first.
      * For 2D there is likely enough data to benefit from memcpy().
      */
-    if( in_data != out_data )
+    if (in_data != out_data)
     {
         memcpy(out_data,in_data,sizeof(t_complex)*nx*ny);
     }
@@ -966,7 +966,7 @@ fftpack_exec_2d          (fftpack_t                  fft,
     data = (t_complex *)out_data;
 
     /* y transforms */
-    for(i=0;i<nx;i++)
+    for (i=0;i<nx;i++)
     {
         fftpack_exec_1d(fft->next,dir,data+i*ny,data+i*ny);
     }
@@ -975,7 +975,7 @@ fftpack_exec_2d          (fftpack_t                  fft,
     fftpack_transpose_2d(data,data,nx,ny);
 
     /* x transforms */
-    for(i=0;i<ny;i++)
+    for (i=0;i<ny;i++)
     {
         fftpack_exec_1d(fft,dir,data+i*nx,data+i*nx);
     }
@@ -1007,7 +1007,7 @@ fftpack_exec_3d     (fftpack_t                  fft,
      * by copying data to the output array first.
      * For 3D there is likely enough data to benefit from memcpy().
      */
-    if( in_data != out_data )
+    if (in_data != out_data)
     {
         memcpy(out_data,in_data,sizeof(t_complex)*nx*ny*nz);
     }
@@ -1016,23 +1016,23 @@ fftpack_exec_3d     (fftpack_t                  fft,
     data = (t_complex *)out_data;
 
     /* Perform z transforms */
-    for(i=0;i<nx*ny;i++)
+    for (i=0;i<nx*ny;i++)
         fftpack_exec_1d(fft->next->next,dir,data+i*nz,data+i*nz);
 
     /* For each X slice, transpose the y & z dimensions inside the slice */
-    for(i=0;i<nx;i++)
+    for (i=0;i<nx;i++)
     {
         fftpack_transpose_2d(data+i*ny*nz,data+i*ny*nz,ny,nz);
     }
 
     /* Array is now (nx,nz,ny) - perform y transforms */
-    for(i=0;i<nx*nz;i++)
+    for (i=0;i<nx*nz;i++)
     {
         fftpack_exec_1d(fft->next,dir,data+i*ny,data+i*ny);
     }
 
     /* Transpose back to (nx,ny,nz) */
-    for(i=0;i<nx;i++)
+    for (i=0;i<nx;i++)
     {
         fftpack_transpose_2d(data+i*ny*nz,data+i*ny*nz,nz,ny);
     }
@@ -1041,26 +1041,26 @@ fftpack_exec_3d     (fftpack_t                  fft,
      * (nx,ny,nz) to (ny,nx,nz).
      */
     rc=fftpack_transpose_2d_nelem(data,data,nx,ny,nz);
-    if( rc != 0)
+    if (rc != 0)
     {
         fprintf(stderr,"Fatal error - cannot transpose X & Y/Z in fftpack_exec_3d().");
         return rc;
     }
 
     /* Then go from (ny,nx,nz) to (ny,nz,nx) */
-    for(i=0;i<ny;i++)
+    for (i=0;i<ny;i++)
     {
         fftpack_transpose_2d(data+i*nx*nz,data+i*nx*nz,nx,nz);
     }
 
     /* Perform x transforms */
-    for(i=0;i<ny*nz;i++)
+    for (i=0;i<ny*nz;i++)
     {
         fftpack_exec_1d(fft,dir,data+i*nx,data+i*nx);
     }
 
     /* Transpose back from (ny,nz,nx) to (ny,nx,nz) */
-    for(i=0;i<ny;i++)
+    for (i=0;i<ny;i++)
     {
         fftpack_transpose_2d(data+i*nz*nx,data+i*nz*nx,nz,nx);
     }
@@ -1068,7 +1068,7 @@ fftpack_exec_3d     (fftpack_t                  fft,
     /* Transpose from (ny,nx,nz) to (nx,ny,nz).
      */
     rc = fftpack_transpose_2d_nelem(data,data,ny,nx,nz);
-    if( rc != 0)
+    if (rc != 0)
     {
         fprintf(stderr,"Fatal error - cannot transpose Y/Z & X in fftpack_exec_3d().");
         return rc;
@@ -1082,10 +1082,10 @@ fftpack_exec_3d     (fftpack_t                  fft,
 void
 fftpack_destroy(fftpack_t      fft)
 {
-    if(fft != NULL)
+    if (fft != NULL)
     {
         free(fft->work);
-        if(fft->next != NULL)
+        if (fft->next != NULL)
             fftpack_destroy(fft->next);
         free(fft);
     }

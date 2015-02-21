@@ -25,10 +25,9 @@
 #ifndef __ReferenceAndersenThermostat_H__
 #define __ReferenceAndersenThermostat_H__
 
-#include "SimTKOpenMMCommon.h"
 #include <vector>
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class ReferenceAndersenThermostat {
 
@@ -42,7 +41,7 @@ class ReferenceAndersenThermostat {
       
          --------------------------------------------------------------------------------------- */
 
-       ReferenceAndersenThermostat( );
+       ReferenceAndersenThermostat();
 
       /**---------------------------------------------------------------------------------------
       
@@ -50,7 +49,7 @@ class ReferenceAndersenThermostat {
       
          --------------------------------------------------------------------------------------- */
 
-       ~ReferenceAndersenThermostat( );
+       ~ReferenceAndersenThermostat();
 
       /**---------------------------------------------------------------------------------------
       
@@ -65,11 +64,11 @@ class ReferenceAndersenThermostat {
                   
          --------------------------------------------------------------------------------------- */
           
-      void applyThermostat( const std::vector<std::vector<int> >& atomGroups, std::vector<OpenMM::RealVec>& atomVelocities, std::vector<RealOpenMM>& atomMasses,
-              RealOpenMM temperature, RealOpenMM collisionFrequency, RealOpenMM stepSize ) const;
+      void applyThermostat(const std::vector<std::vector<int> >& atomGroups, std::vector<OpenMM::RealVec>& atomVelocities, std::vector<RealOpenMM>& atomMasses,
+              RealOpenMM temperature, RealOpenMM collisionFrequency, RealOpenMM stepSize) const;
       
 };
 
-// ---------------------------------------------------------------------------------------
+} // namespace OpenMM
 
 #endif // __ReferenceAndersenThermostat_H__

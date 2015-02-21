@@ -63,35 +63,35 @@ void AmoebaWcaDispersionForce::setParticleParameters(int particleIndex, double r
     parameters[particleIndex].epsilon         = epsilon;
 }
 
-double AmoebaWcaDispersionForce::getEpso( void ) const {
+double AmoebaWcaDispersionForce::getEpso() const {
     return epso;
 }
 
-double AmoebaWcaDispersionForce::getEpsh( void ) const {
+double AmoebaWcaDispersionForce::getEpsh() const {
     return epsh;
 }
 
-double AmoebaWcaDispersionForce::getRmino( void ) const {
+double AmoebaWcaDispersionForce::getRmino() const {
     return rmino;
 }
 
-double AmoebaWcaDispersionForce::getRminh( void ) const {
+double AmoebaWcaDispersionForce::getRminh() const {
     return rminh;
 }
 
-double AmoebaWcaDispersionForce::getAwater( void ) const {
+double AmoebaWcaDispersionForce::getAwater() const {
     return awater;
 }
 
-double AmoebaWcaDispersionForce::getShctd( void ) const {
+double AmoebaWcaDispersionForce::getShctd() const {
     return shctd;
 }
 
-double AmoebaWcaDispersionForce::getDispoff( void ) const {
+double AmoebaWcaDispersionForce::getDispoff() const {
     return dispoff;
 }
 
-double AmoebaWcaDispersionForce::getSlevy( void ) const {
+double AmoebaWcaDispersionForce::getSlevy() const {
     return slevy;
 }
 

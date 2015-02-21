@@ -26,8 +26,6 @@
 #include <sstream>
 #include <utility>
 
-#include "SimTKOpenMMCommon.h"
-#include "SimTKOpenMMLog.h"
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceForce.h"
 #include "ReferenceCustomCompoundBondIxn.h"
@@ -37,7 +35,7 @@ using std::pair;
 using std::string;
 using std::stringstream;
 using std::vector;
-using OpenMM::RealVec;
+using namespace OpenMM;
 
 /**---------------------------------------------------------------------------------------
 
@@ -72,7 +70,7 @@ ReferenceCustomCompoundBondIxn::ReferenceCustomCompoundBondIxn(int numParticlesP
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceCustomCompoundBondIxn::~ReferenceCustomCompoundBondIxn( ){
+ReferenceCustomCompoundBondIxn::~ReferenceCustomCompoundBondIxn() {
 }
 
 /**---------------------------------------------------------------------------------------
@@ -93,7 +91,7 @@ void ReferenceCustomCompoundBondIxn::calculatePairIxn(vector<RealVec>& atomCoord
 
     map<string, double> variables = globalParameters;
     int numBonds = bondAtoms.size();
-    for (int bond = 0; bond < numBonds; bond++){
+    for (int bond = 0; bond < numBonds; bond++) {
         for (int j = 0; j < (int) bondParamNames.size(); j++)
             variables[bondParamNames[j]] = bondParameters[bond][j];
         calculateOneIxn(bond, atomCoordinates, variables, forces, totalEnergy);

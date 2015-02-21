@@ -138,7 +138,7 @@ std::vector<std::string> AmoebaMultipoleForceImpl::getKernelNames() {
     return names;
 }
 
-const int* AmoebaMultipoleForceImpl::getCovalentDegrees( void ) {
+const int* AmoebaMultipoleForceImpl::getCovalentDegrees() {
     if( !initializedCovalentDegrees ){
         initializedCovalentDegrees                                      = true;
         CovalentDegrees[AmoebaMultipoleForce::Covalent12]               = 1;

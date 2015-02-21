@@ -78,7 +78,7 @@ public:
      * 
      * @return global cubicK term
      */
-    double getAmoebaGlobalBondCubic( void ) const;
+    double getAmoebaGlobalBondCubic() const;
 
     /**
      * Set the global quartic term
@@ -92,7 +92,7 @@ public:
      * 
      * @return global  quartic term
      */
-    double getAmoebaGlobalBondQuartic( void ) const;
+    double getAmoebaGlobalBondQuartic() const;
 
     /**
      * Add a bond term to the force field.

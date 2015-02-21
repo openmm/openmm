@@ -31,9 +31,7 @@
 #include "openmm/internal/MSVC_erfc.h"
 
 using std::vector;
-using OpenMM::RealVec;
-
-#undef AMOEBA_DEBUG
+using namespace OpenMM;
 
 AmoebaReferenceMultipoleForce::AmoebaReferenceMultipoleForce() :
                                                    _nonbondedMethod(NoCutoff),
@@ -233,33 +231,6 @@ void AmoebaReferenceMultipoleForce::setupScaleMaps(const vector< vector< vector<
             }
         }
     }
-
-    //showScaleMapForParticle(2, stderr);
-    //showScaleMapForParticle(10, stderr);
-
-    return;
-}
-
-void AmoebaReferenceMultipoleForce::showScaleMapForParticle(unsigned int particleI, FILE* log) const 
-{
-
-#ifdef AMOEBA_DEBUG
-    (void) fprintf(log, "Scale map particle %5u maxIndex=%u\n", particleI, _maxScaleIndex[particleI]);
-
-    std::string scaleNames[LAST_SCALE_TYPE_INDEX] = { "D", "P", "M" }; 
-    for (unsigned int ii = 0; ii < _scaleMaps[particleI].size(); ii++) {
-        MapIntRealOpenMM scaleMap = _scaleMaps[particleI][ii];
-        (void) fprintf(log, "  %s scale ", scaleNames[ii].c_str());
-        for (MapIntRealOpenMMCI jj = scaleMap.begin(); jj != scaleMap.end(); jj++) {
-            //if (jj->first > particleI && jj->second < 1.0)
-            if (jj->second < 1.0)
-            (void) fprintf(log, "%4d=%5.2f ", jj->first, jj->second);
-        }    
-        (void) fprintf(log, "\n");
-    }    
-    (void) fprintf(log, "\n");
-    (void) fflush(log);
-#endif
 }
 
 RealOpenMM AmoebaReferenceMultipoleForce::getMultipoleScaleFactor(unsigned int particleI, unsigned int particleJ, ScaleType scaleType) const 
@@ -789,7 +760,7 @@ void AmoebaReferenceMultipoleForce::convergeInduceDipolesBySOR(const vector<Mult
     //            (2) iterations == max iterations or
     //            (3) convergence factor (spsilon) increases 
 
-    while(!done) {
+    while (!done) {
 
         RealOpenMM epsilon = updateInducedDipoleFields(particleData, updateInducedDipoleField);   
                    epsilon = _polarSOR*_debye*SQRT(epsilon/(static_cast<RealOpenMM>(_numParticles)));
@@ -1868,7 +1839,7 @@ void AmoebaReferenceMultipoleForce::calculateElectrostaticPotential(const vector
 
     for (unsigned int ii = 0; ii < _numParticles; ii++) {
         for (unsigned int jj = 0; jj < grid.size(); jj++) {
-            potential[jj] += calculateElectrostaticPotentialForParticleGridPoint(particleData[ii], grid[jj] );
+            potential[jj] += calculateElectrostaticPotentialForParticleGridPoint(particleData[ii], grid[jj]);
         }
     }
 
@@ -4947,7 +4918,7 @@ void AmoebaReferencePmeMultipoleForce::calculateFixedMultipoleField(const vector
 /**
  * This is called from computeBsplines().  It calculates the spline coefficients for a single atom along a single axis.
  */
-void AmoebaReferencePmeMultipoleForce::computeBSplinePoint(vector<RealOpenMM4>& thetai, RealOpenMM w )
+void AmoebaReferencePmeMultipoleForce::computeBSplinePoint(vector<RealOpenMM4>& thetai, RealOpenMM w)
 {
 
     RealOpenMM array[AMOEBA_PME_ORDER*AMOEBA_PME_ORDER];

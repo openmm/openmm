@@ -67,11 +67,11 @@ void AmoebaBondForce::setAmoebaGlobalBondQuartic(double quarticK ) {
     _globalQuarticK         = quarticK;
 }
 
-double AmoebaBondForce::getAmoebaGlobalBondCubic( void ) const {
+double AmoebaBondForce::getAmoebaGlobalBondCubic() const {
     return _globalCubicK;
 }
 
-double AmoebaBondForce::getAmoebaGlobalBondQuartic( void ) const {
+double AmoebaBondForce::getAmoebaGlobalBondQuartic() const {
     return _globalQuarticK;
 }
 

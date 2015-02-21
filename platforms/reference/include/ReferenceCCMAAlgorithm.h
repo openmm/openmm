@@ -30,7 +30,7 @@
 #include <vector>
 #include <set>
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class OPENMM_EXPORT ReferenceCCMAAlgorithm : public ReferenceConstraintAlgorithm {
 
@@ -69,22 +69,22 @@ public:
      */
     ReferenceCCMAAlgorithm(int numberOfAtoms, int numberOfConstraints, const std::vector<std::pair<int, int> >& atomIndices, const std::vector<RealOpenMM>& distance, std::vector<RealOpenMM>& masses, std::vector<AngleInfo>& angles);
 
-    ~ReferenceCCMAAlgorithm( );
+    ~ReferenceCCMAAlgorithm();
 
     /**
      * Get the number of constraints.
      */
-    int getNumberOfConstraints( void ) const;
+    int getNumberOfConstraints() const;
 
     /**
      * Get the maximum number of iterations to perform.
      */
-    int getMaximumNumberOfIterations( void ) const;
+    int getMaximumNumberOfIterations() const;
 
     /**
      * Set the maximum number of iterations to perform.
      */
-    void setMaximumNumberOfIterations( int maximumNumberOfIterations );
+    void setMaximumNumberOfIterations(int maximumNumberOfIterations);
 
     /**
      * Apply the constraint algorithm.
@@ -120,6 +120,6 @@ public:
     }
 };
 
-// ---------------------------------------------------------------------------------------
+} // namespace OpenMM
 
 #endif // __ReferenceCCMAAlgorithm_H__

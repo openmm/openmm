@@ -31,7 +31,7 @@
 #include "openmm/internal/ThreadPool.h"
 #include "sfmt/SFMT.h"
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class CpuLangevinDynamics : public ReferenceStochasticDynamics {
 public:
@@ -95,6 +95,6 @@ private:
     OpenMM::RealVec* xPrime;
 };
 
-// ---------------------------------------------------------------------------------------
+} // namespace OpenMM
 
 #endif // __CPU_LANGEVIN_DYNAMICS_H__

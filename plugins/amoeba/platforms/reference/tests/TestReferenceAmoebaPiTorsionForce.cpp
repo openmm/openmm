@@ -63,7 +63,7 @@ const double TOL = 1e-5;
 
    --------------------------------------------------------------------------------------- */
      
-static void crossProductVector3( double* vectorX, double* vectorY, double* vectorZ ){
+static void crossProductVector3(double* vectorX, double* vectorY, double* vectorZ) {
 
     vectorZ[0]  = vectorX[1]*vectorY[2] - vectorX[2]*vectorY[1];
     vectorZ[1]  = vectorX[2]*vectorY[0] - vectorX[0]*vectorY[2];
@@ -72,25 +72,18 @@ static void crossProductVector3( double* vectorX, double* vectorY, double* vecto
     return;
 }
 
-static double dotVector3( double* vectorX, double* vectorY ){
+static double dotVector3(double* vectorX, double* vectorY) {
     return vectorX[0]*vectorY[0] + vectorX[1]*vectorY[1] + vectorX[2]*vectorY[2];
 }
 
 
 static void computeAmoebaPiTorsionForce(int bondIndex,  std::vector<Vec3>& positions, AmoebaPiTorsionForce& amoebaPiTorsionForce,
-                                        std::vector<Vec3>& forces, double* energy, FILE* log ) {
+                                        std::vector<Vec3>& forces, double* energy) {
 
     int particle1, particle2, particle3, particle4, particle5, particle6;
     double kTorsion;
 
     amoebaPiTorsionForce.getPiTorsionParameters(bondIndex, particle1, particle2, particle3, particle4,  particle5, particle6, kTorsion);
-#ifdef AMOEBA_DEBUG
-    if( log ){
-        (void) fprintf( log, "computeAmoebaPiTorsionForce: bond %d [%d %d %d %d %d %d] k=%10.3e\n", 
-                             bondIndex, particle1, particle2, particle3, particle4, particle5, particle6, kTorsion );
-        (void) fflush( log );
-    }
-#endif
 
     enum { AD, BD, EC, FC, P, Q, CP, DC, QD, T, U, TU, DP, QC, dT, dU, dP, dQ, dC1, dC2, dD1, dD2, LastDeltaIndex };
     double deltaR[LastDeltaIndex][3];
@@ -98,16 +91,16 @@ static void computeAmoebaPiTorsionForce(int bondIndex,  std::vector<Vec3>& posit
     enum { A, B, C, D, E, F, LastAtomIndex };
     double d[LastAtomIndex][3];
  
-    for( int ii = 0; ii < 3; ii++ ){
+    for (int ii = 0; ii < 3; ii++) {
          deltaR[AD][ii] = positions[particle1][ii] - positions[particle4][ii];
          deltaR[BD][ii] = positions[particle2][ii] - positions[particle4][ii];
          deltaR[EC][ii] = positions[particle5][ii] - positions[particle3][ii];
          deltaR[FC][ii] = positions[particle6][ii] - positions[particle3][ii];
     }
  
-    crossProductVector3( deltaR[AD], deltaR[BD], deltaR[P] );
-    crossProductVector3( deltaR[EC], deltaR[FC], deltaR[Q] );
-    for( int ii = 0; ii < 3; ii++ ){
+    crossProductVector3(deltaR[AD], deltaR[BD], deltaR[P]);
+    crossProductVector3(deltaR[EC], deltaR[FC], deltaR[Q]);
+    for (int ii = 0; ii < 3; ii++) {
         deltaR[CP][ii]  = -deltaR[P][ii];
         deltaR[DC][ii]  =  positions[particle4][ii] - positions[particle3][ii];
         deltaR[QD][ii]  =  deltaR[Q][ii];
@@ -115,25 +108,25 @@ static void computeAmoebaPiTorsionForce(int bondIndex,  std::vector<Vec3>& posit
         deltaR[P][ii]  += positions[particle3][ii];
         deltaR[Q][ii]  += positions[particle4][ii];
     }
-    crossProductVector3( deltaR[CP], deltaR[DC], deltaR[T]  );
-    crossProductVector3( deltaR[DC], deltaR[QD], deltaR[U]  );
-    crossProductVector3( deltaR[T],  deltaR[U],  deltaR[TU] );
+    crossProductVector3(deltaR[CP], deltaR[DC], deltaR[T] );
+    crossProductVector3(deltaR[DC], deltaR[QD], deltaR[U] );
+    crossProductVector3(deltaR[T],  deltaR[U],  deltaR[TU]);
  
-    double rT2  = dotVector3( deltaR[T], deltaR[T] );
-    double rU2  = dotVector3( deltaR[U], deltaR[U] );
-    double rTrU = sqrt( rT2*rU2 );
-    if( rTrU <= 0.0 ){
+    double rT2  = dotVector3(deltaR[T], deltaR[T]);
+    double rU2  = dotVector3(deltaR[U], deltaR[U]);
+    double rTrU = sqrt(rT2*rU2);
+    if (rTrU <= 0.0) {
         return;
     }
  
-    double rDC     = dotVector3( deltaR[DC], deltaR[DC] );
-         rDC       = sqrt( rDC );
+    double rDC     = dotVector3(deltaR[DC], deltaR[DC]);
+         rDC       = sqrt(rDC);
   
-    double cosine  = dotVector3( deltaR[T], deltaR[U] );
+    double cosine  = dotVector3(deltaR[T], deltaR[U]);
          cosine   /= rTrU;
  
-    double sine   = dotVector3( deltaR[DC], deltaR[TU] );
-         sine    /= ( rDC*rTrU );
+    double sine   = dotVector3(deltaR[DC], deltaR[TU]);
+         sine    /= (rDC*rTrU);
  
     double cosine2 = cosine*cosine - sine*sine;
     double sine2   = 2.0*cosine*sine;
@@ -143,37 +136,37 @@ static void computeAmoebaPiTorsionForce(int bondIndex,  std::vector<Vec3>& posit
  
     double dedphi = kTorsion*dphi2; 
  
-    for( int ii = 0; ii < 3; ii++ ){
+    for (int ii = 0; ii < 3; ii++) {
         deltaR[DP][ii] = positions[particle4][ii] -    deltaR[P][ii];
         deltaR[QC][ii] = deltaR[Q][ii]    - positions[particle3][ii];
     }
  
-    double factorT =  dedphi/( rDC*rT2 );
-    double factorU = -dedphi/( rDC*rU2 );
+    double factorT =  dedphi/(rDC*rT2);
+    double factorU = -dedphi/(rDC*rU2);
  
-    crossProductVector3( deltaR[T], deltaR[DC], deltaR[dT]  );
-    crossProductVector3( deltaR[U], deltaR[DC], deltaR[dU]  );
-    for( int ii = 0; ii < 3; ii++ ){
+    crossProductVector3(deltaR[T], deltaR[DC], deltaR[dT] );
+    crossProductVector3(deltaR[U], deltaR[DC], deltaR[dU] );
+    for (int ii = 0; ii < 3; ii++) {
         deltaR[dT][ii] *= factorT;
         deltaR[dU][ii] *= factorU;
     }
  
-    crossProductVector3( deltaR[dT], deltaR[DC], deltaR[dP]   );
-    crossProductVector3( deltaR[dU], deltaR[DC], deltaR[dQ]   );
+    crossProductVector3(deltaR[dT], deltaR[DC], deltaR[dP]  );
+    crossProductVector3(deltaR[dU], deltaR[DC], deltaR[dQ]  );
  
-    crossProductVector3( deltaR[DP], deltaR[dT], deltaR[dC1]  );
-    crossProductVector3( deltaR[dU], deltaR[QD], deltaR[dC2]  );
+    crossProductVector3(deltaR[DP], deltaR[dT], deltaR[dC1] );
+    crossProductVector3(deltaR[dU], deltaR[QD], deltaR[dC2] );
  
-    crossProductVector3( deltaR[dT], deltaR[CP], deltaR[dD1]  );
-    crossProductVector3( deltaR[QC], deltaR[dU], deltaR[dD2]  );
+    crossProductVector3(deltaR[dT], deltaR[CP], deltaR[dD1] );
+    crossProductVector3(deltaR[QC], deltaR[dU], deltaR[dD2] );
  
-    crossProductVector3( deltaR[BD], deltaR[dP], d[A]         );
-    crossProductVector3( deltaR[dP], deltaR[AD], d[B]         );
+    crossProductVector3(deltaR[BD], deltaR[dP], d[A]        );
+    crossProductVector3(deltaR[dP], deltaR[AD], d[B]        );
  
-    crossProductVector3( deltaR[FC], deltaR[dQ], d[E]         );
-    crossProductVector3( deltaR[dQ], deltaR[EC], d[F]         );
+    crossProductVector3(deltaR[FC], deltaR[dQ], d[E]        );
+    crossProductVector3(deltaR[dQ], deltaR[EC], d[F]        );
  
-    for( int ii = 0; ii < 3; ii++ ){
+    for (int ii = 0; ii < 3; ii++) {
         d[C][ii] = deltaR[dC1][ii] + deltaR[dC2][ii] + deltaR[dP][ii] - d[E][ii] - d[F][ii];
         d[D][ii] = deltaR[dD1][ii] + deltaR[dD2][ii] + deltaR[dQ][ii] - d[A][ii] - d[B][ii];
     }
@@ -211,69 +204,48 @@ static void computeAmoebaPiTorsionForce(int bondIndex,  std::vector<Vec3>& posit
     return;
 }
  
-static void computeAmoebaPiTorsionForces( Context& context, AmoebaPiTorsionForce& amoebaPiTorsionForce,
-                                          std::vector<Vec3>& expectedForces, double* expectedEnergy, FILE* log ) {
+static void computeAmoebaPiTorsionForces(Context& context, AmoebaPiTorsionForce& amoebaPiTorsionForce,
+                                         std::vector<Vec3>& expectedForces, double* expectedEnergy) {
 
     // get positions and zero forces
 
     State state                 = context.getState(State::Positions);
     std::vector<Vec3> positions = state.getPositions();
-    expectedForces.resize( positions.size() );
+    expectedForces.resize(positions.size());
     
-    for( unsigned int ii = 0; ii < expectedForces.size(); ii++ ){
+    for (unsigned int ii = 0; ii < expectedForces.size(); ii++) {
         expectedForces[ii][0] = expectedForces[ii][1] = expectedForces[ii][2] = 0.0;
     }
 
     // calculates forces/energy
 
     *expectedEnergy = 0.0;
-    for( int ii = 0; ii < amoebaPiTorsionForce.getNumPiTorsions(); ii++ ){
-        computeAmoebaPiTorsionForce(ii, positions, amoebaPiTorsionForce, expectedForces, expectedEnergy, log );
+    for (int ii = 0; ii < amoebaPiTorsionForce.getNumPiTorsions(); ii++) {
+        computeAmoebaPiTorsionForce(ii, positions, amoebaPiTorsionForce, expectedForces, expectedEnergy);
     }
-#ifdef AMOEBA_DEBUG
-    if( log ){
-        (void) fprintf( log, "computeAmoebaPiTorsionForces: expected energy=%14.7e\n", *expectedEnergy );
-        for( unsigned int ii = 0; ii < positions.size(); ii++ ){
-            (void) fprintf( log, "%6u [%14.7e %14.7e %14.7e]\n", ii, expectedForces[ii][0], expectedForces[ii][1], expectedForces[ii][2] );
-        }
-        (void) fflush( log );
-    }
-#endif
-    return;
-
 }
 
-void compareWithExpectedForceAndEnergy( Context& context, AmoebaPiTorsionForce& amoebaPiTorsionForce,
-                                        double tolerance, const std::string& idString, FILE* log) {
+void compareWithExpectedForceAndEnergy(Context& context, AmoebaPiTorsionForce& amoebaPiTorsionForce,
+                                       double tolerance, const std::string& idString) {
 
     std::vector<Vec3> expectedForces;
     double expectedEnergy;
-    computeAmoebaPiTorsionForces( context, amoebaPiTorsionForce, expectedForces, &expectedEnergy, log );
+    computeAmoebaPiTorsionForces(context, amoebaPiTorsionForce, expectedForces, &expectedEnergy);
    
     State state                      = context.getState(State::Forces | State::Energy);
     const std::vector<Vec3> forces   = state.getForces();
-#ifdef AMOEBA_DEBUG
-    if( log ){
-        (void) fprintf( log, "computeAmoebaPiTorsionForces: expected energy=%14.7e %14.7e\n", expectedEnergy, state.getPotentialEnergy() );
-        for( unsigned int ii = 0; ii < forces.size(); ii++ ){
-            (void) fprintf( log, "%6u [%14.7e %14.7e %14.7e]   [%14.7e %14.7e %14.7e]\n", ii,
-                            expectedForces[ii][0], expectedForces[ii][1], expectedForces[ii][2], forces[ii][0], forces[ii][1], forces[ii][2] );
-        }
-        (void) fflush( log );
-    }
-#endif
 
-    for( unsigned int ii = 0; ii < forces.size(); ii++ ){
-        ASSERT_EQUAL_VEC( expectedForces[ii], forces[ii], tolerance );
+    for (unsigned int ii = 0; ii < forces.size(); ii++) {
+        ASSERT_EQUAL_VEC(expectedForces[ii], forces[ii], tolerance);
     }
-    ASSERT_EQUAL_TOL( expectedEnergy, state.getPotentialEnergy(), tolerance );
+    ASSERT_EQUAL_TOL(expectedEnergy, state.getPotentialEnergy(), tolerance);
 }
 
-void testOnePiTorsion( FILE* log ) {
+void testOnePiTorsion() {
 
     System system;
     int numberOfParticles = 6;
-    for( int ii = 0; ii < numberOfParticles; ii++ ){
+    for (int ii = 0; ii < numberOfParticles; ii++) {
         system.addParticle(1.0);
     }
 
@@ -282,25 +254,25 @@ void testOnePiTorsion( FILE* log ) {
     AmoebaPiTorsionForce* amoebaPiTorsionForce = new AmoebaPiTorsionForce();
 
     double kTorsion = 6.85;
-    amoebaPiTorsionForce->addPiTorsion(0, 1, 2, 3, 4, 5, kTorsion );
+    amoebaPiTorsionForce->addPiTorsion(0, 1, 2, 3, 4, 5, kTorsion);
 
     system.addForce(amoebaPiTorsionForce);
     ASSERT(!amoebaPiTorsionForce->usesPeriodicBoundaryConditions());
     ASSERT(!system.usesPeriodicBoundaryConditions());
-    Context context(system, integrator, Platform::getPlatformByName( "Reference"));
+    Context context(system, integrator, Platform::getPlatformByName("Reference"));
 
     std::vector<Vec3> positions(numberOfParticles);
 
-    positions[0] = Vec3( 0.262660000E+02,  0.254130000E+02,  0.284200000E+01 );
-    positions[1] = Vec3( 0.278860000E+02,  0.264630000E+02,  0.426300000E+01 );
-    positions[2] = Vec3( 0.269130000E+02,  0.266390000E+02,  0.353100000E+01 );
+    positions[0] = Vec3(0.262660000E+02,  0.254130000E+02,  0.284200000E+01);
+    positions[1] = Vec3(0.278860000E+02,  0.264630000E+02,  0.426300000E+01);
+    positions[2] = Vec3(0.269130000E+02,  0.266390000E+02,  0.353100000E+01);
 
-    positions[3] = Vec3( 0.245568230E+02,  0.250215290E+02,  0.796852800E+01 );
-    positions[4] = Vec3( 0.261000000E+02,  0.292530000E+02,  0.520200000E+01 );
-    positions[5] = Vec3( 0.254124630E+02,  0.234691880E+02,  0.773335400E+01 );
+    positions[3] = Vec3(0.245568230E+02,  0.250215290E+02,  0.796852800E+01);
+    positions[4] = Vec3(0.261000000E+02,  0.292530000E+02,  0.520200000E+01);
+    positions[5] = Vec3(0.254124630E+02,  0.234691880E+02,  0.773335400E+01);
 
     context.setPositions(positions);
-    compareWithExpectedForceAndEnergy( context, *amoebaPiTorsionForce, TOL, "testOnePiTorsion", log );
+    compareWithExpectedForceAndEnergy(context, *amoebaPiTorsionForce, TOL, "testOnePiTorsion");
     
     // Try changing the torsion parameters and make sure it's still correct.
     
@@ -308,31 +280,22 @@ void testOnePiTorsion( FILE* log ) {
     bool exceptionThrown = false;
     try {
         // This should throw an exception.
-        compareWithExpectedForceAndEnergy( context, *amoebaPiTorsionForce, TOL, "testOnePiTorsion", log );
+        compareWithExpectedForceAndEnergy(context, *amoebaPiTorsionForce, TOL, "testOnePiTorsion");
     }
     catch (std::exception ex) {
         exceptionThrown = true;
     }
     ASSERT(exceptionThrown);
     amoebaPiTorsionForce->updateParametersInContext(context);
-    compareWithExpectedForceAndEnergy( context, *amoebaPiTorsionForce, TOL, "testOnePiTorsion", log );
+    compareWithExpectedForceAndEnergy(context, *amoebaPiTorsionForce, TOL, "testOnePiTorsion");
 }
 
-int main( int numberOfArguments, char* argv[] ) {
+int main(int numberOfArguments, char* argv[]) {
 
     try {
         std::cout << "TestReferenceAmoebaPiTorsionForce running test..." << std::endl;
         registerAmoebaReferenceKernelFactories();
-        FILE* log = NULL;
-        //FILE* log = stderr;
-        //FILE* log = fopen( "AmoebaPiTorsionForce1.log", "w" );;
-
-        testOnePiTorsion( log );
-#ifdef AMOEBA_DEBUG
-        if( log && log != stderr )
-            (void) fclose( log );
-#endif
-
+        testOnePiTorsion();
     }
     catch(const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;

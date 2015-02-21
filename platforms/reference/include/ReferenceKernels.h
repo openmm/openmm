@@ -39,8 +39,10 @@
 #include "lepton/CompiledExpression.h"
 #include "lepton/ExpressionProgram.h"
 
-class CpuObc;
-class CpuGBVI;
+namespace OpenMM {
+
+class ReferenceObc;
+class ReferenceGBVI;
 class ReferenceAndersenThermostat;
 class ReferenceCustomCompoundBondIxn;
 class ReferenceCustomHbondIxn;
@@ -53,8 +55,6 @@ class ReferenceVariableStochasticDynamics;
 class ReferenceVariableVerletDynamics;
 class ReferenceVerletDynamics;
 class ReferenceCustomDynamics;
-
-namespace OpenMM {
 
 /**
  * This kernel is invoked at the beginning and end of force and energy computations.  It gives the
@@ -658,7 +658,7 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const GBSAOBCForce& force);
 private:
-    CpuObc* obc;
+    ReferenceObc* obc;
     std::vector<RealOpenMM> charges;
     bool isPeriodic;
 };
@@ -689,7 +689,7 @@ public:
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
-    CpuGBVI * gbvi;
+    ReferenceGBVI * gbvi;
     std::vector<RealOpenMM> charges;
     bool isPeriodic;
 };

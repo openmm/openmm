@@ -25,9 +25,7 @@
 #include <string.h>
 #include <sstream>
 
-#include "SimTKOpenMMCommon.h"
 #include "SimTKOpenMMUtilities.h"
-#include "SimTKOpenMMLog.h"
 #include "ReferenceCCMAAlgorithm.h"
 #include "ReferenceDynamics.h"
 #include "quern.h"
@@ -39,9 +37,7 @@ using std::map;
 using std::pair;
 using std::vector;
 using std::set;
-using OpenMM::OpenMMException;
-using OpenMM::Vec3;
-using OpenMM::RealVec;
+using namespace OpenMM;
 
 ReferenceCCMAAlgorithm::ReferenceCCMAAlgorithm(int numberOfAtoms,
                                                   int numberOfConstraints,

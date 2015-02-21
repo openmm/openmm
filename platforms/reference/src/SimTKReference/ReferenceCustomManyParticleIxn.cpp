@@ -26,8 +26,6 @@
 #include <sstream>
 #include <utility>
 
-#include "SimTKOpenMMCommon.h"
-#include "SimTKOpenMMLog.h"
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceForce.h"
 #include "ReferenceCustomManyParticleIxn.h"
@@ -104,7 +102,7 @@ ReferenceCustomManyParticleIxn::ReferenceCustomManyParticleIxn(const CustomManyP
     CustomManyParticleForceImpl::buildFilterArrays(force, numTypes, particleTypes, orderIndex, particleOrder);
 }
 
-ReferenceCustomManyParticleIxn::~ReferenceCustomManyParticleIxn( ){
+ReferenceCustomManyParticleIxn::~ReferenceCustomManyParticleIxn() {
 }
 
 void ReferenceCustomManyParticleIxn::calculateIxn(vector<RealVec>& atomCoordinates, RealOpenMM** particleParameters,

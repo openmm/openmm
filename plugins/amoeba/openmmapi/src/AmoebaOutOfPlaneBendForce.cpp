@@ -44,7 +44,7 @@ AmoebaOutOfPlaneBendForce::AmoebaOutOfPlaneBendForce() {
 
 }
 
-double AmoebaOutOfPlaneBendForce::getAmoebaGlobalOutOfPlaneBendCubic( void ) const {
+double AmoebaOutOfPlaneBendForce::getAmoebaGlobalOutOfPlaneBendCubic() const {
     return _globalCubicK;
 }
 
@@ -52,7 +52,7 @@ void AmoebaOutOfPlaneBendForce::setAmoebaGlobalOutOfPlaneBendCubic(double cubicK
     _globalCubicK           = cubicK;
 }
 
-double AmoebaOutOfPlaneBendForce::getAmoebaGlobalOutOfPlaneBendQuartic( void ) const {
+double AmoebaOutOfPlaneBendForce::getAmoebaGlobalOutOfPlaneBendQuartic() const {
     return _globalQuarticK;
 }
 
@@ -60,7 +60,7 @@ void AmoebaOutOfPlaneBendForce::setAmoebaGlobalOutOfPlaneBendQuartic(double quar
     _globalQuarticK         = quarticK;
 }
 
-double AmoebaOutOfPlaneBendForce::getAmoebaGlobalOutOfPlaneBendPentic( void ) const {
+double AmoebaOutOfPlaneBendForce::getAmoebaGlobalOutOfPlaneBendPentic() const {
     return _globalPenticK;
 }
 
@@ -68,7 +68,7 @@ void AmoebaOutOfPlaneBendForce::setAmoebaGlobalOutOfPlaneBendPentic(double penti
     _globalPenticK           = penticK;
 }
 
-double AmoebaOutOfPlaneBendForce::getAmoebaGlobalOutOfPlaneBendSextic( void ) const {
+double AmoebaOutOfPlaneBendForce::getAmoebaGlobalOutOfPlaneBendSextic() const {
     return _globalSexticK;
 }
 

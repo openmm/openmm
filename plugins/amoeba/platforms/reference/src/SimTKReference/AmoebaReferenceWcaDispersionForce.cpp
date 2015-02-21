@@ -26,19 +26,19 @@
 #include "AmoebaReferenceWcaDispersionForce.h"
 
 using std::vector;
-using OpenMM::RealVec;
+using namespace OpenMM;
 
-AmoebaReferenceWcaDispersionForce::AmoebaReferenceWcaDispersionForce( RealOpenMM epso, RealOpenMM epsh, RealOpenMM rmino, RealOpenMM rminh, 
-                                                                      RealOpenMM awater, RealOpenMM shctd, RealOpenMM dispoff, RealOpenMM slevy ) :
+AmoebaReferenceWcaDispersionForce::AmoebaReferenceWcaDispersionForce(RealOpenMM epso, RealOpenMM epsh, RealOpenMM rmino, RealOpenMM rminh, 
+                                                                     RealOpenMM awater, RealOpenMM shctd, RealOpenMM dispoff, RealOpenMM slevy) :
                                _epso(epso), _epsh(epsh), _rmino(rmino), _rminh(rminh), _awater(awater), _shctd(shctd), _dispoff(dispoff), _slevy(slevy) {
 }   
 
 
-RealOpenMM AmoebaReferenceWcaDispersionForce::calculatePairIxn( RealOpenMM radiusI, RealOpenMM radiusK, 
-                                                                const RealVec& particleIPosition,
-                                                                const RealVec& particleJPosition,
-                                                                const RealOpenMM* const intermediateValues,
-                                                                Vec3& force ) const {
+RealOpenMM AmoebaReferenceWcaDispersionForce::calculatePairIxn(RealOpenMM radiusI, RealOpenMM radiusK, 
+                                                               const RealVec& particleIPosition,
+                                                               const RealVec& particleJPosition,
+                                                               const RealOpenMM* const intermediateValues,
+                                                               Vec3& force) const {
 
    // ---------------------------------------------------------------------------------------
 
@@ -62,7 +62,7 @@ RealOpenMM AmoebaReferenceWcaDispersionForce::calculatePairIxn( RealOpenMM radiu
     RealOpenMM zr           = particleIPosition[2] - particleJPosition[2];
 
     RealOpenMM r2           = xr*xr + yr*yr + zr*zr;
-    RealOpenMM r            = SQRT( r2 );
+    RealOpenMM r            = SQRT(r2);
     RealOpenMM r3           = r2*r;
 
     RealOpenMM sK           = radiusK*_shctd;
@@ -84,7 +84,7 @@ RealOpenMM AmoebaReferenceWcaDispersionForce::calculatePairIxn( RealOpenMM radiu
     RealOpenMM sum          = zero;
     RealOpenMM de           = zero;
 
-    if( radiusI < (r + sK) ){
+    if (radiusI < (r + sK)) {
 
         RealOpenMM rmax     = (radiusI > (r - sK)) ? radiusI : (r - sK);
 
@@ -93,7 +93,7 @@ RealOpenMM AmoebaReferenceWcaDispersionForce::calculatePairIxn( RealOpenMM radiu
         RealOpenMM lik3     = lik2*lik;
         RealOpenMM lik4     = lik2*lik2;
 
-        if( lik < rmixo ){ 
+        if (lik < rmixo) { 
 
             RealOpenMM uik  = (r + sK) < rmixo ? (r + sK) : rmixo;
             RealOpenMM uik2 = uik*uik;
@@ -103,7 +103,7 @@ RealOpenMM AmoebaReferenceWcaDispersionForce::calculatePairIxn( RealOpenMM radiu
             RealOpenMM term = four*PI/(fortyEight*r)* (three*(lik4-uik4) - eight*r*(lik3-uik3) + six*(r2-sK2)*(lik2-uik2));
 
             RealOpenMM dl;
-            if( radiusI >  (r - sK) ){
+            if (radiusI >  (r - sK)) {
                 dl  = -lik2 + two*(r2 + sK2);
                 dl *= lik2;
             } else {
@@ -112,7 +112,7 @@ RealOpenMM AmoebaReferenceWcaDispersionForce::calculatePairIxn( RealOpenMM radiu
             }
 
             RealOpenMM du;
-            if( (r+sK) > rmixo ){
+            if ((r+sK) > rmixo) {
                 du  = -uik2 + two*(r2 + sK2);
                 du *= -uik2;
             } else {
@@ -123,7 +123,7 @@ RealOpenMM AmoebaReferenceWcaDispersionForce::calculatePairIxn( RealOpenMM radiu
             sum   += -emixo*term;
         }
 
-        if( lik < rmixh ){
+        if (lik < rmixh) {
 
             RealOpenMM uik  = (r + sK) < rmixh ? (r + sK) : rmixh;
             RealOpenMM uik2 = uik*uik;
@@ -131,7 +131,7 @@ RealOpenMM AmoebaReferenceWcaDispersionForce::calculatePairIxn( RealOpenMM radiu
             RealOpenMM uik4 = uik2*uik2;
             RealOpenMM term = four*PI / (fortyEight*r)*(three*(lik4-uik4) - eight*r*(lik3-uik3) + six*(r2-sK2)*(lik2-uik2));
             RealOpenMM dl;
-            if( radiusI > (r-sK) ){
+            if (radiusI > (r-sK)) {
                 dl  = -lik2 + two*(r2 + sK2);
                 dl *= lik2;
             } else {
@@ -140,7 +140,7 @@ RealOpenMM AmoebaReferenceWcaDispersionForce::calculatePairIxn( RealOpenMM radiu
             }
       
             RealOpenMM du;
-            if (r+sK > rmixh){
+            if (r+sK > rmixh) {
                 du  = -uik2 + two*(r2 + sK2);
                 du *= -uik2;
             } else {
@@ -162,7 +162,7 @@ RealOpenMM AmoebaReferenceWcaDispersionForce::calculatePairIxn( RealOpenMM radiu
         RealOpenMM uik12 = uik6  * uik6;
         RealOpenMM uik13 = uik10 * uik3;
 
-        if( uik > rmixo ){
+        if (uik > rmixo) {
 
             RealOpenMM lik   = rmax > rmixo ? rmax : rmixo;
             RealOpenMM lik2  = lik   * lik;
@@ -177,7 +177,7 @@ RealOpenMM AmoebaReferenceWcaDispersionForce::calculatePairIxn( RealOpenMM radiu
 
             RealOpenMM term  = four*PI/(120.0*r*lik5*uik5)*(15.0*uik*lik*r*(uik4-lik4) - ten*uik2*lik2*(uik3-lik3) + six*(sK2-r2)*(uik5-lik5));
             RealOpenMM dl;
-            if( radiusI > (r-sK) || rmax < rmixo ){
+            if (radiusI > (r-sK) || rmax < rmixo) {
                 dl  = -five*lik2 + three*(r2 + sK2);
                 dl /= -lik5;
             } else {
@@ -189,7 +189,7 @@ RealOpenMM AmoebaReferenceWcaDispersionForce::calculatePairIxn( RealOpenMM radiu
             RealOpenMM idisp  = -two*ao*term;
                        de    -= two*ao*PI*(dl + du)/(15.0*r2);
                        term   = four*PI/(2640.0*r*lik12*uik12) * (120.0*uik*lik*r*(uik11-lik11) - 66.0*uik2*lik2*(uik10-lik10) + 55.0*(sK2-r2)*(uik12-lik12));
-            if( radiusI > (r-sK) || rmax < rmixo ){
+            if (radiusI > (r-sK) || rmax < rmixo) {
                 dl  = -six*lik2 + five*r2 + five*sK2;
                 dl /= -lik12;
             } else {
@@ -201,7 +201,7 @@ RealOpenMM AmoebaReferenceWcaDispersionForce::calculatePairIxn( RealOpenMM radiu
             de              += ao*rmixo7*PI*(dl + du)/(60.0*r2);
             sum             += ao*rmixo7*term + idisp;
         }
-        if (uik > rmixh){
+        if (uik > rmixh) {
                        lik   = rmax > rmixh ? rmax : rmixh;
                        lik2  = lik  * lik;
                        lik3  = lik2 * lik;
@@ -215,7 +215,7 @@ RealOpenMM AmoebaReferenceWcaDispersionForce::calculatePairIxn( RealOpenMM radiu
 
             RealOpenMM term  = four*PI / (120.0*r*lik5*uik5)*(15.0*uik*lik*r*(uik4-lik4) - ten*uik2*lik2*(uik3-lik3) + six*(sK2-r2)*(uik5-lik5));
             RealOpenMM dl;
-            if( radiusI > (r-sK) || rmax < rmixh ){
+            if (radiusI > (r-sK) || rmax < rmixh) {
                 dl  = -five*lik2 + three*(r2 + sK2);
                 dl /= -lik5;
             } else {
@@ -227,7 +227,7 @@ RealOpenMM AmoebaReferenceWcaDispersionForce::calculatePairIxn( RealOpenMM radiu
             RealOpenMM idisp  = -four*ah*term;
             de                = de - four*ah*PI*(dl + du)/(15.0*r2);
             term              = four*PI / (2640.0*r*lik12*uik12)* (120.0*uik*lik*r*(uik11-lik11)- 66.0*uik2*lik2*(uik10-lik10)+ 55.0*(sK2-r2)*(uik12-lik12));
-            if( radiusI > (r-sK) || rmax < rmixh){
+            if (radiusI > (r-sK) || rmax < rmixh) {
                 dl = -six*lik2 + five*r2 + five*sK2;
                 dl = -dl / lik12;
             } else {;
@@ -254,12 +254,12 @@ RealOpenMM AmoebaReferenceWcaDispersionForce::calculatePairIxn( RealOpenMM radiu
 
 }
 
-RealOpenMM AmoebaReferenceWcaDispersionForce::calculateForceAndEnergy( int numParticles,
-                                                                       const vector<RealVec>& particlePositions,
-                                                                       const std::vector<RealOpenMM>& radii,
-                                                                       const std::vector<RealOpenMM>& epsilons,
-                                                                       RealOpenMM totalMaximumDispersionEnergy,
-                                                                       vector<RealVec>& forces ) const {
+RealOpenMM AmoebaReferenceWcaDispersionForce::calculateForceAndEnergy(int numParticles,
+                                                                      const vector<RealVec>& particlePositions,
+                                                                      const std::vector<RealOpenMM>& radii,
+                                                                      const std::vector<RealOpenMM>& epsilons,
+                                                                      RealOpenMM totalMaximumDispersionEnergy,
+                                                                      vector<RealVec>& forces) const {
 
     // ---------------------------------------------------------------------------------------
 
@@ -284,7 +284,7 @@ RealOpenMM AmoebaReferenceWcaDispersionForce::calculateForceAndEnergy( int numPa
 
     RealOpenMM intermediateValues[LastIntermediateValueIndex];
 
-    for( unsigned int ii = 0; ii < static_cast<unsigned int>(numParticles); ii++ ){
+    for (unsigned int ii = 0; ii < static_cast<unsigned int>(numParticles); ii++) {
  
         RealOpenMM epsi              = epsilons[ii];
         RealOpenMM rmini             = radii[ii];
@@ -296,7 +296,7 @@ RealOpenMM AmoebaReferenceWcaDispersionForce::calculateForceAndEnergy( int numPa
         RealOpenMM rminI2            = rmini*rmini;
         RealOpenMM rminI3            = rminI2*rmini;
  
-        RealOpenMM rmixo             = two*(rmino3 + rminI3 ) / (rmino2 + rminI2);
+        RealOpenMM rmixo             = two*(rmino3 + rminI3) / (rmino2 + rminI2);
         intermediateValues[RMIXO]    = rmixo;
 
         RealOpenMM rmixo7            = rmixo*rmixo*rmixo;
@@ -319,14 +319,14 @@ RealOpenMM AmoebaReferenceWcaDispersionForce::calculateForceAndEnergy( int numPa
 
         intermediateValues[AH]       = emixh*rmixh7;
 
-        for( unsigned int jj = 0; jj < static_cast<unsigned int>(numParticles); jj++ ){
+        for (unsigned int jj = 0; jj < static_cast<unsigned int>(numParticles); jj++) {
 
-            if( ii == jj )continue;
+            if (ii == jj)continue;
 
             Vec3 force;
-            energy += calculatePairIxn( rmini, radii[jj],
-                                        particlePositions[ii], particlePositions[jj],
-                                        intermediateValues, force );
+            energy += calculatePairIxn(rmini, radii[jj],
+                                       particlePositions[ii], particlePositions[jj],
+                                       intermediateValues, force);
             
             forces[ii][0] += force[0];
             forces[ii][1] += force[1];

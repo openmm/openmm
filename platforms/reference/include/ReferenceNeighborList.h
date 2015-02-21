@@ -27,7 +27,7 @@ void OPENMM_EXPORT computeNeighborListNaive(
                               double maxDistance,
                               double minDistance = 0.0,
                               bool reportSymmetricPairs = false
-                             );
+                            );
 
 // O(n) neighbor list method using voxel hash data structure
 // parameter neighborList is automatically clear()ed before 
@@ -42,7 +42,7 @@ void OPENMM_EXPORT computeNeighborListVoxelHash(
                               double maxDistance,
                               double minDistance = 0.0,
                               bool reportSymmetricPairs = false
-                             );
+                            );
 
 } // namespace OpenMM
 

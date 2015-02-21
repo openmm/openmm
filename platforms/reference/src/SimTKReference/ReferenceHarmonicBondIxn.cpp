@@ -25,14 +25,12 @@
 #include <string.h>
 #include <sstream>
 
-#include "SimTKOpenMMCommon.h"
-#include "SimTKOpenMMLog.h"
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceHarmonicBondIxn.h"
 #include "ReferenceForce.h"
 
 using std::vector;
-using OpenMM::RealVec;
+using namespace OpenMM;
 
 /**---------------------------------------------------------------------------------------
 
@@ -40,7 +38,7 @@ using OpenMM::RealVec;
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceHarmonicBondIxn::ReferenceHarmonicBondIxn( ){
+ReferenceHarmonicBondIxn::ReferenceHarmonicBondIxn() {
 
    // ---------------------------------------------------------------------------------------
 
@@ -56,7 +54,7 @@ ReferenceHarmonicBondIxn::ReferenceHarmonicBondIxn( ){
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceHarmonicBondIxn::~ReferenceHarmonicBondIxn( ){
+ReferenceHarmonicBondIxn::~ReferenceHarmonicBondIxn() {
 
    // ---------------------------------------------------------------------------------------
 
@@ -79,11 +77,11 @@ ReferenceHarmonicBondIxn::~ReferenceHarmonicBondIxn( ){
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceHarmonicBondIxn::calculateBondIxn( int* atomIndices,
+void ReferenceHarmonicBondIxn::calculateBondIxn(int* atomIndices,
                                                 vector<RealVec>& atomCoordinates,
                                                 RealOpenMM* parameters,
                                                 vector<RealVec>& forces,
-                                                RealOpenMM* totalEnergy ) const {
+                                                RealOpenMM* totalEnergy) const {
 
    static const std::string methodName = "\nReferenceHarmonicBondIxn::calculateBondIxn";
 
@@ -101,7 +99,7 @@ void ReferenceHarmonicBondIxn::calculateBondIxn( int* atomIndices,
 
    int atomAIndex = atomIndices[0];
    int atomBIndex = atomIndices[1];
-   ReferenceForce::getDeltaR( atomCoordinates[atomAIndex], atomCoordinates[atomBIndex], deltaR );  
+   ReferenceForce::getDeltaR(atomCoordinates[atomAIndex], atomCoordinates[atomBIndex], deltaR);  
 
    // deltaIdeal = r - r_0
 

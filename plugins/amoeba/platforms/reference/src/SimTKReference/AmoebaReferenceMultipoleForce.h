@@ -31,6 +31,8 @@
 #include "fftpack.h"
 #include <complex>
 
+namespace OpenMM {
+
 typedef std::map< unsigned int, RealOpenMM> MapIntRealOpenMM;
 typedef MapIntRealOpenMM::iterator MapIntRealOpenMMI;
 typedef MapIntRealOpenMM::const_iterator MapIntRealOpenMMCI;
@@ -352,7 +354,7 @@ public:
      * Destructor
      * 
      */
-    virtual ~AmoebaReferenceMultipoleForce(){};
+    virtual ~AmoebaReferenceMultipoleForce() {};
  
     /**
      * Get nonbonded method.
@@ -709,15 +711,6 @@ protected:
      *
      */
     void setupScaleMaps(const std::vector< std::vector< std::vector<int> > >& multipoleAtomCovalentInfo);
-
-    /**
-     * Show scaling factor map
-     *
-     * @param particleI index of particle whose scale map is to be shown
-     * @param log       output destination 
-     * 
-     */
-    void showScaleMapForParticle(unsigned int particleI, FILE* log) const;
 
     /**
      * Get multipole scale factor for particleI & particleJ
@@ -1663,5 +1656,7 @@ private:
                                       std::vector<OpenMM::RealVec>& forces);
 
 };
+
+} // namespace OpenMM
 
 #endif // _AmoebaReferenceMultipoleForce___

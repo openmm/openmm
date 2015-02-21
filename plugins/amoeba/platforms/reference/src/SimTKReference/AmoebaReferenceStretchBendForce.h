@@ -28,7 +28,7 @@
 #include "RealVec.h"
 #include <vector>
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class AmoebaReferenceStretchBendForce {
 
@@ -40,7 +40,7 @@ public:
        
        --------------------------------------------------------------------------------------- */
  
-    AmoebaReferenceStretchBendForce( ){};
+    AmoebaReferenceStretchBendForce() {};
  
     /**---------------------------------------------------------------------------------------
        
@@ -48,7 +48,7 @@ public:
        
           --------------------------------------------------------------------------------------- */
  
-    ~AmoebaReferenceStretchBendForce( ){};
+    ~AmoebaReferenceStretchBendForce() {};
 
      /**---------------------------------------------------------------------------------------
      
@@ -70,16 +70,16 @@ public:
      
         --------------------------------------------------------------------------------------- */
 
-    RealOpenMM calculateForceAndEnergy( int numAngles, std::vector<OpenMM::RealVec>& posData,
-                                        const std::vector<int>& particle1,
-                                        const std::vector<int>&  particle2,
-                                        const std::vector<int>&  particle3,
-                                        const std::vector<RealOpenMM>& lengthABParameters,
-                                        const std::vector<RealOpenMM>& lengthCBParameters,
-                                        const std::vector<RealOpenMM>&  angle,
-                                        const std::vector<RealOpenMM>&  k1Quadratic,
-                                        const std::vector<RealOpenMM>&  k2Quadratic,
-                                        std::vector<OpenMM::RealVec>& forceData ) const;
+    RealOpenMM calculateForceAndEnergy(int numAngles, std::vector<OpenMM::RealVec>& posData,
+                                       const std::vector<int>& particle1,
+                                       const std::vector<int>&  particle2,
+                                       const std::vector<int>&  particle3,
+                                       const std::vector<RealOpenMM>& lengthABParameters,
+                                       const std::vector<RealOpenMM>& lengthCBParameters,
+                                       const std::vector<RealOpenMM>&  angle,
+                                       const std::vector<RealOpenMM>&  k1Quadratic,
+                                       const std::vector<RealOpenMM>&  k2Quadratic,
+                                       std::vector<OpenMM::RealVec>& forceData) const;
 
 
 private:
@@ -102,14 +102,14 @@ private:
     
        --------------------------------------------------------------------------------------- */
 
-    RealOpenMM calculateStretchBendIxn( const OpenMM::RealVec& positionAtomA, const OpenMM::RealVec& positionAtomB,
-                                        const OpenMM::RealVec& positionAtomC,
-                                        RealOpenMM lengthAB,      RealOpenMM lengthCB,
-                                        RealOpenMM idealAngle,    RealOpenMM k1Parameter,
-                                        RealOpenMM k2Parameter,   OpenMM::RealVec* forces ) const;
+    RealOpenMM calculateStretchBendIxn(const OpenMM::RealVec& positionAtomA, const OpenMM::RealVec& positionAtomB,
+                                       const OpenMM::RealVec& positionAtomC,
+                                       RealOpenMM lengthAB,      RealOpenMM lengthCB,
+                                       RealOpenMM idealAngle,    RealOpenMM k1Parameter,
+                                       RealOpenMM k2Parameter,   OpenMM::RealVec* forces) const;
  
 };
 
-// ---------------------------------------------------------------------------------------
+} // namespace OpenMM
 
 #endif // _AmoebaReferenceStretchBendForce___

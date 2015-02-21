@@ -28,7 +28,7 @@
 #include "ReferenceBondIxn.h"
 #include "lepton/CompiledExpression.h"
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class ReferenceCustomBondIxn : public ReferenceBondIxn {
 
@@ -58,7 +58,7 @@ class ReferenceCustomBondIxn : public ReferenceBondIxn {
 
          --------------------------------------------------------------------------------------- */
 
-       ~ReferenceCustomBondIxn( );
+       ~ReferenceCustomBondIxn();
 
       /**---------------------------------------------------------------------------------------
 
@@ -72,13 +72,13 @@ class ReferenceCustomBondIxn : public ReferenceBondIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateBondIxn( int* atomIndices, std::vector<OpenMM::RealVec>& atomCoordinates,
+      void calculateBondIxn(int* atomIndices, std::vector<OpenMM::RealVec>& atomCoordinates,
                             RealOpenMM* parameters, std::vector<OpenMM::RealVec>& forces,
-                            RealOpenMM* totalEnergy ) const;
+                            RealOpenMM* totalEnergy) const;
 
 
 };
 
-// ---------------------------------------------------------------------------------------
+} // namespace OpenMM
 
 #endif // _ReferenceCustomBondIxn___

@@ -73,11 +73,11 @@ void AmoebaInPlaneAngleForce::setAmoebaGlobalInPlaneAngleQuartic(double quarticK
     _globalQuarticK         = quarticK;
 }
 
-double AmoebaInPlaneAngleForce::getAmoebaGlobalInPlaneAngleCubic( void ) const {
+double AmoebaInPlaneAngleForce::getAmoebaGlobalInPlaneAngleCubic() const {
     return _globalCubicK;
 }
 
-double AmoebaInPlaneAngleForce::getAmoebaGlobalInPlaneAngleQuartic( void ) const {
+double AmoebaInPlaneAngleForce::getAmoebaGlobalInPlaneAngleQuartic() const {
     return _globalQuarticK;
 }
 
@@ -89,11 +89,11 @@ void AmoebaInPlaneAngleForce::setAmoebaGlobalInPlaneAngleSextic(double quarticK 
     _globalSexticK         = quarticK;
 }
 
-double AmoebaInPlaneAngleForce::getAmoebaGlobalInPlaneAnglePentic( void ) const {
+double AmoebaInPlaneAngleForce::getAmoebaGlobalInPlaneAnglePentic() const {
     return _globalPenticK;
 }
 
-double AmoebaInPlaneAngleForce::getAmoebaGlobalInPlaneAngleSextic( void ) const {
+double AmoebaInPlaneAngleForce::getAmoebaGlobalInPlaneAngleSextic() const {
     return _globalSexticK;
 }
 
