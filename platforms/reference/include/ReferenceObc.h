@@ -22,14 +22,14 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __CpuObc_H__
-#define __CpuObc_H__
+#ifndef __ReferenceObc_H__
+#define __ReferenceObc_H__
 
 #include "ObcParameters.h"
 
 namespace OpenMM {
 
-class CpuObc {
+class ReferenceObc {
 
    private:
 
@@ -59,7 +59,7 @@ class CpuObc {
       
          --------------------------------------------------------------------------------------- */
 
-       CpuObc(ObcParameters* obcParameters);
+       ReferenceObc(ObcParameters* obcParameters);
 
       /**---------------------------------------------------------------------------------------
       
@@ -67,7 +67,7 @@ class CpuObc {
       
          --------------------------------------------------------------------------------------- */
 
-       ~CpuObc();
+       ~ReferenceObc();
 
       /**---------------------------------------------------------------------------------------
       
@@ -183,4 +183,4 @@ class CpuObc {
 
 } // namespace OpenMM
 
-#endif // __CpuObc_H__
+#endif // __ReferenceObc_H__

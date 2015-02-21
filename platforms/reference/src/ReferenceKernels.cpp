@@ -30,8 +30,8 @@
  * -------------------------------------------------------------------------- */
 
 #include "ReferenceKernels.h"
-#include "CpuObc.h"
-#include "CpuGBVI.h"
+#include "ReferenceObc.h"
+#include "ReferenceGBVI.h"
 #include "ReferenceAndersenThermostat.h"
 #include "ReferenceAngleBondIxn.h"
 #include "ReferenceBondForce.h"
@@ -1111,7 +1111,7 @@ void ReferenceCalcGBSAOBCForceKernel::initialize(const System& system, const GBS
     if (force.getNonbondedMethod() != GBSAOBCForce::NoCutoff)
         obcParameters->setUseCutoff(static_cast<RealOpenMM>(force.getCutoffDistance()));
     isPeriodic = (force.getNonbondedMethod() == GBSAOBCForce::CutoffPeriodic);
-    obc = new CpuObc(obcParameters);
+    obc = new ReferenceObc(obcParameters);
     obc->setIncludeAceApproximation(true);
 }
 
@@ -1185,7 +1185,7 @@ void ReferenceCalcGBVIForceKernel::initialize(const System& system, const GBVIFo
     if (force.getNonbondedMethod() != GBVIForce::NoCutoff)
         gBVIParameters->setUseCutoff(static_cast<RealOpenMM>(force.getCutoffDistance()));
     isPeriodic = (force.getNonbondedMethod() == GBVIForce::CutoffPeriodic);
-    gbvi = new CpuGBVI(gBVIParameters);
+    gbvi = new ReferenceGBVI(gBVIParameters);
 }
 
 double ReferenceCalcGBVIForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {

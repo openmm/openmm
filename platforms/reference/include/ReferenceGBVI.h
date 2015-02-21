@@ -22,8 +22,8 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __CpuGBVI_H__
-#define __CpuGBVI_H__
+#ifndef __ReferenceGBVI_H__
+#define __ReferenceGBVI_H__
 
 #include <vector>
 
@@ -32,7 +32,7 @@
 
 namespace OpenMM {
 
-class CpuGBVI {
+class ReferenceGBVI {
 
    private:
 
@@ -53,7 +53,7 @@ class CpuGBVI {
       
          --------------------------------------------------------------------------------------- */
 
-       CpuGBVI(GBVIParameters* gbviParameters);
+       ReferenceGBVI(GBVIParameters* gbviParameters);
 
       /**---------------------------------------------------------------------------------------
       
@@ -61,7 +61,7 @@ class CpuGBVI {
       
          --------------------------------------------------------------------------------------- */
 
-       ~CpuGBVI();
+       ~ReferenceGBVI();
 
       /**---------------------------------------------------------------------------------------
       
@@ -313,4 +313,4 @@ class CpuGBVI {
 
 } // namespace OpenMM
 
-#endif // __CpuGBVI_H__
+#endif // __ReferenceGBVI_H__

@@ -41,8 +41,8 @@
 
 namespace OpenMM {
 
-class CpuObc;
-class CpuGBVI;
+class ReferenceObc;
+class ReferenceGBVI;
 class ReferenceAndersenThermostat;
 class ReferenceCustomCompoundBondIxn;
 class ReferenceCustomHbondIxn;
@@ -658,7 +658,7 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const GBSAOBCForce& force);
 private:
-    CpuObc* obc;
+    ReferenceObc* obc;
     std::vector<RealOpenMM> charges;
     bool isPeriodic;
 };
@@ -689,7 +689,7 @@ public:
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
-    CpuGBVI * gbvi;
+    ReferenceGBVI * gbvi;
     std::vector<RealOpenMM> charges;
     bool isPeriodic;
 };

@@ -29,30 +29,30 @@
 #include <cstdio>
 
 #include "ReferenceForce.h"
-#include "CpuObc.h"
+#include "ReferenceObc.h"
 
 using namespace OpenMM;
 using namespace std;
 
 /**---------------------------------------------------------------------------------------
 
-    CpuObc constructor
+    ReferenceObc constructor
 
     obcParameters      obcParameters object
     
     --------------------------------------------------------------------------------------- */
 
-CpuObc::CpuObc(ObcParameters* obcParameters) : _obcParameters(obcParameters), _includeAceApproximation(1) {
+ReferenceObc::ReferenceObc(ObcParameters* obcParameters) : _obcParameters(obcParameters), _includeAceApproximation(1) {
     _obcChain.resize(_obcParameters->getNumberOfAtoms());
 }
 
 /**---------------------------------------------------------------------------------------
 
-    CpuObc destructor
+    ReferenceObc destructor
 
     --------------------------------------------------------------------------------------- */
 
-CpuObc::~CpuObc() {
+ReferenceObc::~ReferenceObc() {
 }
 
 /**---------------------------------------------------------------------------------------
@@ -63,7 +63,7 @@ CpuObc::~CpuObc() {
 
     --------------------------------------------------------------------------------------- */
 
-ObcParameters* CpuObc::getObcParameters() const {
+ObcParameters* ReferenceObc::getObcParameters() const {
     return _obcParameters;
 }
 
@@ -75,7 +75,7 @@ ObcParameters* CpuObc::getObcParameters() const {
 
     --------------------------------------------------------------------------------------- */
 
-void CpuObc::setObcParameters( ObcParameters* obcParameters) {
+void ReferenceObc::setObcParameters( ObcParameters* obcParameters) {
     _obcParameters = obcParameters;
 }
 
@@ -87,7 +87,7 @@ void CpuObc::setObcParameters( ObcParameters* obcParameters) {
 
    --------------------------------------------------------------------------------------- */
 
-int CpuObc::includeAceApproximation() const {
+int ReferenceObc::includeAceApproximation() const {
     return _includeAceApproximation;
 }
 
@@ -99,7 +99,7 @@ int CpuObc::includeAceApproximation() const {
 
    --------------------------------------------------------------------------------------- */
 
-void CpuObc::setIncludeAceApproximation(int includeAceApproximation) {
+void ReferenceObc::setIncludeAceApproximation(int includeAceApproximation) {
     _includeAceApproximation = includeAceApproximation;
 }
 
@@ -111,7 +111,7 @@ void CpuObc::setIncludeAceApproximation(int includeAceApproximation) {
 
     --------------------------------------------------------------------------------------- */
 
-vector<RealOpenMM>& CpuObc::getObcChain() {
+vector<RealOpenMM>& ReferenceObc::getObcChain() {
     return _obcChain;
 }
 
@@ -127,7 +127,7 @@ vector<RealOpenMM>& CpuObc::getObcChain() {
 
     --------------------------------------------------------------------------------------- */
 
-void CpuObc::computeBornRadii(const vector<RealVec>& atomCoordinates, vector<RealOpenMM>& bornRadii) {
+void ReferenceObc::computeBornRadii(const vector<RealVec>& atomCoordinates, vector<RealOpenMM>& bornRadii) {
 
     // ---------------------------------------------------------------------------------------
 
@@ -235,7 +235,7 @@ void CpuObc::computeBornRadii(const vector<RealVec>& atomCoordinates, vector<Rea
 
     --------------------------------------------------------------------------------------- */
 
-void CpuObc::computeAceNonPolarForce(const ObcParameters* obcParameters,
+void ReferenceObc::computeAceNonPolarForce(const ObcParameters* obcParameters,
                                       const vector<RealOpenMM>& bornRadii,
                                       RealOpenMM* energy,
                                       vector<RealOpenMM>& forces) const {
@@ -293,7 +293,7 @@ void CpuObc::computeAceNonPolarForce(const ObcParameters* obcParameters,
 
     --------------------------------------------------------------------------------------- */
 
-RealOpenMM CpuObc::computeBornEnergyForces(const vector<RealVec>& atomCoordinates,
+RealOpenMM ReferenceObc::computeBornEnergyForces(const vector<RealVec>& atomCoordinates,
                                            const vector<RealOpenMM>& partialCharges, vector<RealVec>& inputForces) {
 
     // ---------------------------------------------------------------------------------------
@@ -513,7 +513,7 @@ RealOpenMM CpuObc::computeBornEnergyForces(const vector<RealVec>& atomCoordinate
 
     --------------------------------------------------------------------------------------- */
 
-void CpuObc::printObc(const std::vector<OpenMM::RealVec>& atomCoordinates,
+void ReferenceObc::printObc(const std::vector<OpenMM::RealVec>& atomCoordinates,
                       const vector<RealOpenMM>& partialCharges,
                       const vector<RealOpenMM>& bornRadii,
                       const vector<RealOpenMM>& bornForces,
