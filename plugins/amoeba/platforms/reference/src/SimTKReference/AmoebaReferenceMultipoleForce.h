@@ -354,7 +354,7 @@ public:
      * Destructor
      * 
      */
-    virtual ~AmoebaReferenceMultipoleForce(){};
+    virtual ~AmoebaReferenceMultipoleForce() {};
  
     /**
      * Get nonbonded method.

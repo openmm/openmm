@@ -357,7 +357,7 @@ public:
      *
      * @return pointer to initialized instance of AmoebaReferenceMultipoleForce
      */
-    AmoebaReferenceMultipoleForce* setupAmoebaReferenceMultipoleForce(ContextImpl& context );
+    AmoebaReferenceMultipoleForce* setupAmoebaReferenceMultipoleForce(ContextImpl& context);
     /**
      * Execute the kernel to calculate the forces and/or energy.
      *
@@ -382,7 +382,7 @@ public:
      * @param outputElectrostaticPotential output potential 
      */
     void getElectrostaticPotential(ContextImpl& context, const std::vector< Vec3 >& inputGrid,
-                                   std::vector< double >& outputElectrostaticPotential );
+                                   std::vector< double >& outputElectrostaticPotential);
 
     /**
      * Get the system multipole moments.
@@ -393,7 +393,7 @@ public:
                                       dipole_x, dipole_y, dipole_z,
                                       quadrupole_xx, quadrupole_xy, quadrupole_xz,
                                       quadrupole_yx, quadrupole_yy, quadrupole_yz,
-                                      quadrupole_zx, quadrupole_zy, quadrupole_zz )
+                                      quadrupole_zx, quadrupole_zy, quadrupole_zz)
      */
     void getSystemMultipoleMoments(ContextImpl& context, std::vector< double >& outputMultipoleMoments);
     /**
@@ -555,14 +555,14 @@ public:
      *
      *  @return includeCavityTerm
      */
-    int getIncludeCavityTerm( void ) const;
+    int getIncludeCavityTerm() const;
 
     /**
      *  Get the number of particles.
      *
      *  @return number of particles
      */
-    int getNumParticles( void ) const;
+    int getNumParticles() const;
 
     /**
      *  Get Direct Polarization flag.
@@ -570,7 +570,7 @@ public:
      *  @return directPolarization
      *
      */
-    int getDirectPolarization( void ) const;
+    int getDirectPolarization() const;
 
     /**
      *  Get the solute dielectric.
@@ -578,7 +578,7 @@ public:
      *  @return soluteDielectric
      *
      */
-    RealOpenMM getSoluteDielectric( void ) const;
+    RealOpenMM getSoluteDielectric() const;
 
     /**
      *  Get the solvent dielectric.
@@ -586,7 +586,7 @@ public:
      *  @return solventDielectric
      *
      */
-    RealOpenMM getSolventDielectric( void ) const;
+    RealOpenMM getSolventDielectric() const;
 
     /**
      *  Get the dielectric offset.
@@ -594,7 +594,7 @@ public:
      *  @return dielectricOffset
      *
      */
-    RealOpenMM getDielectricOffset( void ) const;
+    RealOpenMM getDielectricOffset() const;
 
     /**
      *  Get the probe radius.
@@ -602,7 +602,7 @@ public:
      *  @return probeRadius
      *
      */
-    RealOpenMM getProbeRadius( void ) const;
+    RealOpenMM getProbeRadius() const;
 
     /**
      *  Get the surface area factor.
@@ -610,7 +610,7 @@ public:
      *  @return surfaceAreaFactor
      *
      */
-    RealOpenMM getSurfaceAreaFactor( void ) const;
+    RealOpenMM getSurfaceAreaFactor() const;
 
     /**
      *  Get the vector of particle radii.
@@ -618,7 +618,7 @@ public:
      *  @param atomicRadii vector of atomic radii
      *
      */
-    void getAtomicRadii( std::vector<RealOpenMM>& atomicRadii ) const;
+    void getAtomicRadii(std::vector<RealOpenMM>& atomicRadii) const;
 
     /**
      *  Get the vector of scale factors.
@@ -626,7 +626,7 @@ public:
      *  @param scaleFactors vector of scale factors
      *
      */
-    void getScaleFactors( std::vector<RealOpenMM>& scaleFactors ) const;
+    void getScaleFactors(std::vector<RealOpenMM>& scaleFactors) const;
 
     /**
      *  Get the vector of charges.
@@ -634,7 +634,7 @@ public:
      *  @param charges vector of charges
      *
      */
-    void getCharges( std::vector<RealOpenMM>& charges ) const;
+    void getCharges(std::vector<RealOpenMM>& charges) const;
 
     /**
      * Copy changed parameters over to a context.

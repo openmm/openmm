@@ -51,8 +51,8 @@ public:
 
        --------------------------------------------------------------------------------------- */
  
-    AmoebaReferenceWcaDispersionForce( RealOpenMM epso, RealOpenMM epsh, RealOpenMM rmino, RealOpenMM rminh, 
-                                       RealOpenMM awater, RealOpenMM shctd, RealOpenMM dispoff, RealOpenMM slevy );
+    AmoebaReferenceWcaDispersionForce(RealOpenMM epso, RealOpenMM epsh, RealOpenMM rmino, RealOpenMM rminh, 
+                                      RealOpenMM awater, RealOpenMM shctd, RealOpenMM dispoff, RealOpenMM slevy);
  
     /**---------------------------------------------------------------------------------------
        
@@ -60,7 +60,7 @@ public:
        
        --------------------------------------------------------------------------------------- */
  
-    ~AmoebaReferenceWcaDispersionForce( ){};
+    ~AmoebaReferenceWcaDispersionForce() {};
  
     /**---------------------------------------------------------------------------------------
     
@@ -77,10 +77,10 @@ public:
     
        --------------------------------------------------------------------------------------- */
     
-    RealOpenMM calculateForceAndEnergy( int numParticles, const std::vector<OpenMM::RealVec>& particlePositions, 
-                                        const std::vector<RealOpenMM>& radii, 
-                                        const std::vector<RealOpenMM>& epsilons,
-                                        RealOpenMM totalMaximumDispersionEnergy, std::vector<OpenMM::RealVec>& forces ) const;
+    RealOpenMM calculateForceAndEnergy(int numParticles, const std::vector<OpenMM::RealVec>& particlePositions, 
+                                       const std::vector<RealOpenMM>& radii, 
+                                       const std::vector<RealOpenMM>& epsilons,
+                                       RealOpenMM totalMaximumDispersionEnergy, std::vector<OpenMM::RealVec>& forces) const;
 private:
 
     RealOpenMM _epso; 
@@ -109,10 +109,10 @@ private:
 
        --------------------------------------------------------------------------------------- */
     
-    RealOpenMM calculatePairIxn( RealOpenMM radiusI, RealOpenMM radiusJ,
-                                 const OpenMM::RealVec& particleIPosition, const OpenMM::RealVec& particleJPosition,
-                                 const RealOpenMM* const intermediateValues,
-                                 Vec3& force ) const;
+    RealOpenMM calculatePairIxn(RealOpenMM radiusI, RealOpenMM radiusJ,
+                                const OpenMM::RealVec& particleIPosition, const OpenMM::RealVec& particleJPosition,
+                                const RealOpenMM* const intermediateValues,
+                                Vec3& force) const;
 
 };
 

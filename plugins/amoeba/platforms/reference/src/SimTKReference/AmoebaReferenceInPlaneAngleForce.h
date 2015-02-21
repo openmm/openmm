@@ -40,7 +40,7 @@ public:
        
        --------------------------------------------------------------------------------------- */
  
-    AmoebaReferenceInPlaneAngleForce( ){};
+    AmoebaReferenceInPlaneAngleForce() {};
  
     /**---------------------------------------------------------------------------------------
        
@@ -48,7 +48,7 @@ public:
        
           --------------------------------------------------------------------------------------- */
  
-    ~AmoebaReferenceInPlaneAngleForce( ){};
+    ~AmoebaReferenceInPlaneAngleForce() {};
  
      /**---------------------------------------------------------------------------------------
      
@@ -73,18 +73,18 @@ public:
      
         --------------------------------------------------------------------------------------- */
 
-    RealOpenMM calculateForceAndEnergy( int numAngles, std::vector<OpenMM::RealVec>& posData,
-                                        const std::vector<int>& particle1,
-                                        const std::vector<int>&  particle2,
-                                        const std::vector<int>&  particle3,
-                                        const std::vector<int>&  particle4,
-                                        const std::vector<RealOpenMM>& angle,
-                                        const std::vector<RealOpenMM>& kQuadratic,
-                                        RealOpenMM globalAngleCubic,
-                                        RealOpenMM globalAngleQuartic,
-                                        RealOpenMM globalAnglePentic,
-                                        RealOpenMM globalAngleSextic,
-                                        std::vector<OpenMM::RealVec>& forceData ) const;
+    RealOpenMM calculateForceAndEnergy(int numAngles, std::vector<OpenMM::RealVec>& posData,
+                                       const std::vector<int>& particle1,
+                                       const std::vector<int>&  particle2,
+                                       const std::vector<int>&  particle3,
+                                       const std::vector<int>&  particle4,
+                                       const std::vector<RealOpenMM>& angle,
+                                       const std::vector<RealOpenMM>& kQuadratic,
+                                       RealOpenMM globalAngleCubic,
+                                       RealOpenMM globalAngleQuartic,
+                                       RealOpenMM globalAnglePentic,
+                                       RealOpenMM globalAngleSextic,
+                                       std::vector<OpenMM::RealVec>& forceData) const;
 
 private:
 
@@ -106,10 +106,10 @@ private:
     
        --------------------------------------------------------------------------------------- */
     
-    RealOpenMM getPrefactorsGivenAngleCosine( RealOpenMM cosine, RealOpenMM idealAngle, RealOpenMM angleK,
-                                              RealOpenMM angleCubic,     RealOpenMM angleQuartic,
-                                              RealOpenMM anglePentic,    RealOpenMM angleSextic,
-                                              RealOpenMM* dEdR ) const;
+    RealOpenMM getPrefactorsGivenAngleCosine(RealOpenMM cosine, RealOpenMM idealAngle, RealOpenMM angleK,
+                                             RealOpenMM angleCubic,     RealOpenMM angleQuartic,
+                                             RealOpenMM anglePentic,    RealOpenMM angleSextic,
+                                             RealOpenMM* dEdR) const;
     
     /**---------------------------------------------------------------------------------------
     
@@ -131,12 +131,12 @@ private:
     
        --------------------------------------------------------------------------------------- */
     
-    RealOpenMM calculateAngleIxn( const OpenMM::RealVec& positionAtomA, const OpenMM::RealVec& positionAtomB,
-                                  const OpenMM::RealVec& positionAtomC, const OpenMM::RealVec& positionAtomD,
-                                  RealOpenMM angle,          RealOpenMM angleK,
-                                  RealOpenMM angleCubic,     RealOpenMM angleQuartic,
-                                  RealOpenMM anglePentic,    RealOpenMM angleSextic,
-                                  OpenMM::RealVec* forces ) const;
+    RealOpenMM calculateAngleIxn(const OpenMM::RealVec& positionAtomA, const OpenMM::RealVec& positionAtomB,
+                                 const OpenMM::RealVec& positionAtomC, const OpenMM::RealVec& positionAtomD,
+                                 RealOpenMM angle,          RealOpenMM angleK,
+                                 RealOpenMM angleCubic,     RealOpenMM angleQuartic,
+                                 RealOpenMM anglePentic,    RealOpenMM angleSextic,
+                                 OpenMM::RealVec* forces) const;
          
 };
 

@@ -789,7 +789,7 @@ void AmoebaReferenceMultipoleForce::convergeInduceDipolesBySOR(const vector<Mult
     //            (2) iterations == max iterations or
     //            (3) convergence factor (spsilon) increases 
 
-    while(!done) {
+    while (!done) {
 
         RealOpenMM epsilon = updateInducedDipoleFields(particleData, updateInducedDipoleField);   
                    epsilon = _polarSOR*_debye*SQRT(epsilon/(static_cast<RealOpenMM>(_numParticles)));
@@ -1868,7 +1868,7 @@ void AmoebaReferenceMultipoleForce::calculateElectrostaticPotential(const vector
 
     for (unsigned int ii = 0; ii < _numParticles; ii++) {
         for (unsigned int jj = 0; jj < grid.size(); jj++) {
-            potential[jj] += calculateElectrostaticPotentialForParticleGridPoint(particleData[ii], grid[jj] );
+            potential[jj] += calculateElectrostaticPotentialForParticleGridPoint(particleData[ii], grid[jj]);
         }
     }
 
@@ -4947,7 +4947,7 @@ void AmoebaReferencePmeMultipoleForce::calculateFixedMultipoleField(const vector
 /**
  * This is called from computeBsplines().  It calculates the spline coefficients for a single atom along a single axis.
  */
-void AmoebaReferencePmeMultipoleForce::computeBSplinePoint(vector<RealOpenMM4>& thetai, RealOpenMM w )
+void AmoebaReferencePmeMultipoleForce::computeBSplinePoint(vector<RealOpenMM4>& thetai, RealOpenMM w)
 {
 
     RealOpenMM array[AMOEBA_PME_ORDER*AMOEBA_PME_ORDER];

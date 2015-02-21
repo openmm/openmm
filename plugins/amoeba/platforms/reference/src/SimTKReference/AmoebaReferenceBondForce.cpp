@@ -44,10 +44,10 @@ using namespace OpenMM;
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM AmoebaReferenceBondForce::calculateBondIxn( const RealVec& positionAtomA, const RealVec& positionAtomB,
+RealOpenMM AmoebaReferenceBondForce::calculateBondIxn(const RealVec& positionAtomA, const RealVec& positionAtomB,
                                                                RealOpenMM bondLength, RealOpenMM bondK,
                                                                RealOpenMM bondCubic, RealOpenMM bondQuartic,
-                                                               RealVec* forces ) const {
+                                                               RealVec* forces) const {
 
    // ---------------------------------------------------------------------------------------
 
@@ -63,8 +63,8 @@ RealOpenMM AmoebaReferenceBondForce::calculateBondIxn( const RealVec& positionAt
    // get deltaR, R2, and R between 2 atoms
 
    std::vector<RealOpenMM> deltaR;
-   AmoebaReferenceForce::loadDeltaR( positionAtomA, positionAtomB, deltaR );
-   RealOpenMM r               = AmoebaReferenceForce::getNorm3( deltaR );
+   AmoebaReferenceForce::loadDeltaR(positionAtomA, positionAtomB, deltaR);
+   RealOpenMM r               = AmoebaReferenceForce::getNorm3(deltaR);
 
    // deltaIdeal = r - r_0
 
@@ -84,11 +84,11 @@ RealOpenMM AmoebaReferenceBondForce::calculateBondIxn( const RealVec& positionAt
    forces[1][1]               = dEdR*deltaR[1];
    forces[1][2]               = dEdR*deltaR[2];
 
-   RealOpenMM energy          = bondK*deltaIdeal2*( one + bondCubic*deltaIdeal + bondQuartic*deltaIdeal2 );
+   RealOpenMM energy          = bondK*deltaIdeal2*(one + bondCubic*deltaIdeal + bondQuartic*deltaIdeal2);
    return energy;
 }
 
-RealOpenMM AmoebaReferenceBondForce::calculateForceAndEnergy( int numBonds,
+RealOpenMM AmoebaReferenceBondForce::calculateForceAndEnergy(int numBonds,
                                                                       vector<RealVec>& particlePositions,
                                                                       const std::vector<int>&   particle1,
                                                                       const std::vector<int>&   particle2,
@@ -96,20 +96,20 @@ RealOpenMM AmoebaReferenceBondForce::calculateForceAndEnergy( int numBonds,
                                                                       const std::vector<RealOpenMM>& kQuadratic,
                                                                       RealOpenMM globalBondCubic,
                                                                       RealOpenMM globalBondQuartic,
-                                                                      vector<RealVec>& forceData ) const {
+                                                                      vector<RealVec>& forceData) const {
     RealOpenMM energy      = 0.0; 
-    for( int ii = 0; ii < numBonds; ii++ ){
+    for (int ii = 0; ii < numBonds; ii++) {
         int particle1Index      = particle1[ii];
         int particle2Index      = particle2[ii];
         RealOpenMM bondLength   = length[ii];
         RealOpenMM bondK        = kQuadratic[ii];
         RealVec forces[2];
 
-        energy                 += calculateBondIxn( particlePositions[particle1Index], particlePositions[particle2Index],
+        energy                 += calculateBondIxn(particlePositions[particle1Index], particlePositions[particle2Index],
                                                     bondLength, bondK, globalBondCubic, globalBondQuartic,
-                                                    forces );
+                                                    forces);
 
-        for( int jj = 0; jj < 3; jj++ ){
+        for (int jj = 0; jj < 3; jj++) {
             forceData[particle1Index][jj] += forces[0][jj];
             forceData[particle2Index][jj] += forces[1][jj];
         }

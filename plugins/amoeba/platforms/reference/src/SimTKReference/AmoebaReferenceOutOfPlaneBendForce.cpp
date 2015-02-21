@@ -48,12 +48,12 @@ using namespace OpenMM;
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM AmoebaReferenceOutOfPlaneBendForce::calculateOutOfPlaneBendIxn( const RealVec& positionAtomA, const RealVec& positionAtomB,
-                                                                           const RealVec& positionAtomC, const RealVec& positionAtomD,
-                                                                           RealOpenMM angleK,
-                                                                           RealOpenMM angleCubic,                 RealOpenMM angleQuartic,
-                                                                           RealOpenMM anglePentic,                RealOpenMM angleSextic,
-                                                                           RealVec* forces ) const {
+RealOpenMM AmoebaReferenceOutOfPlaneBendForce::calculateOutOfPlaneBendIxn(const RealVec& positionAtomA, const RealVec& positionAtomB,
+                                                                          const RealVec& positionAtomC, const RealVec& positionAtomD,
+                                                                          RealOpenMM angleK,
+                                                                          RealOpenMM angleCubic,                 RealOpenMM angleQuartic,
+                                                                          RealOpenMM anglePentic,                RealOpenMM angleSextic,
+                                                                          RealVec* forces) const {
 
    // ---------------------------------------------------------------------------------------
 
@@ -76,34 +76,34 @@ RealOpenMM AmoebaReferenceOutOfPlaneBendForce::calculateOutOfPlaneBendIxn( const
     // and various intermediate terms
  
     std::vector<RealOpenMM> deltaR[LastDeltaIndex];
-    for( int ii = 0; ii < LastDeltaIndex; ii++ ){
+    for (int ii = 0; ii < LastDeltaIndex; ii++) {
         deltaR[ii].resize(3);
     }   
-    AmoebaReferenceForce::loadDeltaR( positionAtomB, positionAtomA, deltaR[AB] );
-    AmoebaReferenceForce::loadDeltaR( positionAtomB, positionAtomC, deltaR[CB] );
-    AmoebaReferenceForce::loadDeltaR( positionAtomB, positionAtomD, deltaR[DB] );
-    AmoebaReferenceForce::loadDeltaR( positionAtomD, positionAtomA, deltaR[AD] );
-    AmoebaReferenceForce::loadDeltaR( positionAtomD, positionAtomC, deltaR[CD] );
+    AmoebaReferenceForce::loadDeltaR(positionAtomB, positionAtomA, deltaR[AB]);
+    AmoebaReferenceForce::loadDeltaR(positionAtomB, positionAtomC, deltaR[CB]);
+    AmoebaReferenceForce::loadDeltaR(positionAtomB, positionAtomD, deltaR[DB]);
+    AmoebaReferenceForce::loadDeltaR(positionAtomD, positionAtomA, deltaR[AD]);
+    AmoebaReferenceForce::loadDeltaR(positionAtomD, positionAtomC, deltaR[CD]);
 
-    RealOpenMM rDB2  = AmoebaReferenceForce::getNormSquared3( deltaR[DB] );
-    RealOpenMM rAD2  = AmoebaReferenceForce::getNormSquared3( deltaR[AD] );
-    RealOpenMM rCD2  = AmoebaReferenceForce::getNormSquared3( deltaR[CD] );
+    RealOpenMM rDB2  = AmoebaReferenceForce::getNormSquared3(deltaR[DB]);
+    RealOpenMM rAD2  = AmoebaReferenceForce::getNormSquared3(deltaR[AD]);
+    RealOpenMM rCD2  = AmoebaReferenceForce::getNormSquared3(deltaR[CD]);
  
     std::vector<RealOpenMM> tempVector(3);
-    AmoebaReferenceForce::getCrossProduct( deltaR[CB], deltaR[DB], tempVector );
-    RealOpenMM   eE  = AmoebaReferenceForce::getDotProduct3( deltaR[AB], tempVector  );
-    RealOpenMM  dot  = AmoebaReferenceForce::getDotProduct3( deltaR[AD],  deltaR[CD] );
+    AmoebaReferenceForce::getCrossProduct(deltaR[CB], deltaR[DB], tempVector);
+    RealOpenMM   eE  = AmoebaReferenceForce::getDotProduct3(deltaR[AB], tempVector );
+    RealOpenMM  dot  = AmoebaReferenceForce::getDotProduct3(deltaR[AD],  deltaR[CD]);
     RealOpenMM   cc  = rAD2*rCD2 - dot*dot;
  
-    if( rDB2 <= zero || cc == zero ){
+    if (rDB2 <= zero || cc == zero) {
        return zero;
     }
     RealOpenMM bkk2   = rDB2 - eE*eE/cc;
     RealOpenMM cosine = SQRT(bkk2/rDB2);
     RealOpenMM angle;
-    if( cosine >= one ){
+    if (cosine >= one) {
        angle = zero;
-    } else if( cosine <= -one ){
+    } else if (cosine <= -one) {
        angle = PI_M;
     } else {
        angle = RADIAN*ACOS(cosine);
@@ -122,7 +122,7 @@ RealOpenMM AmoebaReferenceOutOfPlaneBendForce::calculateOutOfPlaneBendIxn( const
           dEdDt     *= angleK*dt*RADIAN;
  
     RealOpenMM dEdCos  = dEdDt/SQRT(cc*bkk2);
-    if( eE > zero ){
+    if (eE > zero) {
        dEdCos *= -one;
     }
  
@@ -131,20 +131,20 @@ RealOpenMM AmoebaReferenceOutOfPlaneBendForce::calculateOutOfPlaneBendIxn( const
     std::vector<RealOpenMM> dccd[LastAtomIndex];
     std::vector<RealOpenMM> deed[LastAtomIndex];
     std::vector<RealOpenMM> subForce[LastAtomIndex];
-    for( int ii = 0; ii < LastAtomIndex; ii++ ){
+    for (int ii = 0; ii < LastAtomIndex; ii++) {
         dccd[ii].resize(3);
         deed[ii].resize(3);
         subForce[ii].resize(3);
     }   
-    for( int ii = 0; ii < 3; ii++ ){
+    for (int ii = 0; ii < 3; ii++) {
        dccd[A][ii] = (deltaR[AD][ii]*rCD2 - deltaR[CD][ii]*dot)*term;
        dccd[C][ii] = (deltaR[CD][ii]*rAD2 - deltaR[AD][ii]*dot)*term;
        dccd[D][ii] = -one*(dccd[A][ii] + dccd[C][ii]);
     }
  
-    AmoebaReferenceForce::getCrossProduct( deltaR[DB], deltaR[CB], deed[A] );
-    AmoebaReferenceForce::getCrossProduct( deltaR[AB], deltaR[DB], deed[C] );
-    AmoebaReferenceForce::getCrossProduct( deltaR[CB], deltaR[AB], deed[D] );
+    AmoebaReferenceForce::getCrossProduct(deltaR[DB], deltaR[CB], deed[A]);
+    AmoebaReferenceForce::getCrossProduct(deltaR[AB], deltaR[DB], deed[C]);
+    AmoebaReferenceForce::getCrossProduct(deltaR[CB], deltaR[AB], deed[D]);
  
     term        = eE/rDB2;
     deed[D][0] += deltaR[DB][0]*term;
@@ -156,23 +156,23 @@ RealOpenMM AmoebaReferenceOutOfPlaneBendForce::calculateOutOfPlaneBendIxn( const
     // forces
  
     // calculate forces for atoms a, c, d
-    // the force for b is then -( a+ c + d)
+    // the force for b is then -(a+ c + d)
  
  
-    for( int jj = 0; jj < LastAtomIndex; jj++ ){
+    for (int jj = 0; jj < LastAtomIndex; jj++) {
  
        // A, C, D
  
-       for( int ii = 0; ii < 3; ii++ ){
-          subForce[jj][ii] = dEdCos*( dccd[jj][ii] + deed[jj][ii] );
+       for (int ii = 0; ii < 3; ii++) {
+          subForce[jj][ii] = dEdCos*(dccd[jj][ii] + deed[jj][ii]);
        }
  
-       if( jj == 0 )jj++; // skip B
+       if (jj == 0)jj++; // skip B
  
        // now compute B
  
-       if( jj == 3 ){
-          for( int ii = 0; ii < 3; ii++ ){
+       if (jj == 3) {
+          for (int ii = 0; ii < 3; ii++) {
              subForce[1][ii] = -one*(subForce[0][ii] + subForce[2][ii] + subForce[3][ii]);
           }
        }
@@ -180,8 +180,8 @@ RealOpenMM AmoebaReferenceOutOfPlaneBendForce::calculateOutOfPlaneBendIxn( const
  
     // add in forces
  
-    for( int jj = 0; jj < LastAtomIndex; jj++ ){
-       for( int ii = 0; ii < 3; ii++ ){
+    for (int jj = 0; jj < LastAtomIndex; jj++) {
+       for (int ii = 0; ii < 3; ii++) {
           forces[jj][ii] = subForce[jj][ii];
        }
     }
@@ -196,7 +196,7 @@ RealOpenMM AmoebaReferenceOutOfPlaneBendForce::calculateOutOfPlaneBendIxn( const
     return energy;
 }
 
-RealOpenMM AmoebaReferenceOutOfPlaneBendForce::calculateForceAndEnergy( int numOutOfPlaneBends, vector<RealVec>& posData,
+RealOpenMM AmoebaReferenceOutOfPlaneBendForce::calculateForceAndEnergy(int numOutOfPlaneBends, vector<RealVec>& posData,
                                                                        const std::vector<int>&  particle1,
                                                                        const std::vector<int>&  particle2,
                                                                        const std::vector<int>&  particle3,
@@ -215,9 +215,9 @@ RealOpenMM AmoebaReferenceOutOfPlaneBendForce::calculateForceAndEnergy( int numO
         int particle4Index      = particle4[ii];
         RealOpenMM kAngle       = kQuadratic[ii];
         RealVec forces[4];
-        energy                 += calculateOutOfPlaneBendIxn( posData[particle1Index], posData[particle2Index], posData[particle3Index], posData[particle4Index],
-                                                              kAngle, angleCubic, angleQuartic, anglePentic, angleSextic, forces );
-        for( int jj = 0; jj < 3; jj++ ){
+        energy                 += calculateOutOfPlaneBendIxn(posData[particle1Index], posData[particle2Index], posData[particle3Index], posData[particle4Index],
+                                                              kAngle, angleCubic, angleQuartic, anglePentic, angleSextic, forces);
+        for (int jj = 0; jj < 3; jj++) {
             forceData[particle1Index][jj] -= forces[0][jj];
             forceData[particle2Index][jj] -= forces[1][jj];
             forceData[particle3Index][jj] -= forces[2][jj];

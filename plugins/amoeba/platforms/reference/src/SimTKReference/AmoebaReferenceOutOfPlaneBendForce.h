@@ -40,7 +40,7 @@ public:
        
        --------------------------------------------------------------------------------------- */
  
-    AmoebaReferenceOutOfPlaneBendForce( ){};
+    AmoebaReferenceOutOfPlaneBendForce() {};
  
     /**---------------------------------------------------------------------------------------
        
@@ -48,7 +48,7 @@ public:
        
           --------------------------------------------------------------------------------------- */
  
-    ~AmoebaReferenceOutOfPlaneBendForce( ){};
+    ~AmoebaReferenceOutOfPlaneBendForce() {};
  
     /**---------------------------------------------------------------------------------------
      
@@ -72,17 +72,17 @@ public:
      
         --------------------------------------------------------------------------------------- */
 
-    RealOpenMM calculateForceAndEnergy( int numOutOfPlaneBends, std::vector<OpenMM::RealVec>& posData,
-                                        const std::vector<int>&  particle1,
-                                        const std::vector<int>&  particle2,
-                                        const std::vector<int>&  particle3,
-                                        const std::vector<int>&  particle4,
-                                        const std::vector<RealOpenMM>&  kAngle,
-                                        RealOpenMM angleCubic,
-                                        RealOpenMM angleQuartic,
-                                        RealOpenMM anglePentic,
-                                        RealOpenMM angleSextic,
-                                        std::vector<OpenMM::RealVec>& forceData) const;
+    RealOpenMM calculateForceAndEnergy(int numOutOfPlaneBends, std::vector<OpenMM::RealVec>& posData,
+                                       const std::vector<int>&  particle1,
+                                       const std::vector<int>&  particle2,
+                                       const std::vector<int>&  particle3,
+                                       const std::vector<int>&  particle4,
+                                       const std::vector<RealOpenMM>&  kAngle,
+                                       RealOpenMM angleCubic,
+                                       RealOpenMM angleQuartic,
+                                       RealOpenMM anglePentic,
+                                       RealOpenMM angleSextic,
+                                       std::vector<OpenMM::RealVec>& forceData) const;
 
 private:
 
@@ -105,12 +105,12 @@ private:
     
        --------------------------------------------------------------------------------------- */
     
-    RealOpenMM calculateOutOfPlaneBendIxn( const OpenMM::RealVec& positionAtomA, const OpenMM::RealVec& positionAtomB,
-                                           const OpenMM::RealVec& positionAtomC, const OpenMM::RealVec& positionAtomD,
-                                           RealOpenMM angleK,
-                                           RealOpenMM angleCubic,     RealOpenMM angleQuartic,
-                                           RealOpenMM anglePentic,    RealOpenMM angleSextic,
-                                           OpenMM::RealVec* forces ) const;
+    RealOpenMM calculateOutOfPlaneBendIxn(const OpenMM::RealVec& positionAtomA, const OpenMM::RealVec& positionAtomB,
+                                          const OpenMM::RealVec& positionAtomC, const OpenMM::RealVec& positionAtomD,
+                                          RealOpenMM angleK,
+                                          RealOpenMM angleCubic,     RealOpenMM angleQuartic,
+                                          RealOpenMM anglePentic,    RealOpenMM angleSextic,
+                                          OpenMM::RealVec* forces) const;
          
 };
 
