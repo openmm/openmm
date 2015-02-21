@@ -31,6 +31,8 @@
 #include "fftpack.h"
 #include <complex>
 
+namespace OpenMM {
+
 typedef std::map< unsigned int, RealOpenMM> MapIntRealOpenMM;
 typedef MapIntRealOpenMM::iterator MapIntRealOpenMMI;
 typedef MapIntRealOpenMM::const_iterator MapIntRealOpenMMCI;
@@ -1663,5 +1665,7 @@ private:
                                       std::vector<OpenMM::RealVec>& forces);
 
 };
+
+} // namespace OpenMM
 
 #endif // _AmoebaReferenceMultipoleForce___

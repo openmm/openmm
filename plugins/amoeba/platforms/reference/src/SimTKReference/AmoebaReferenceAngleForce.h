@@ -28,7 +28,7 @@
 #include "RealVec.h"
 #include <vector>
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class AmoebaReferenceAngleForce {
 
@@ -137,6 +137,6 @@ private:
          
 };
 
-// ---------------------------------------------------------------------------------------
+} // namespace OpenMM
 
 #endif // _AmoebaReferenceAngleForce___

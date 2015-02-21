@@ -24,7 +24,7 @@
 #include "AmoebaReferenceGeneralizedKirkwoodForce.h"
 
 using std::vector;
-using OpenMM::RealVec;
+using namespace OpenMM;
 
 AmoebaReferenceGeneralizedKirkwoodForce::AmoebaReferenceGeneralizedKirkwoodForce( ) : _numParticles(0),
                                                                                       _includeCavityTerm(1),

@@ -31,7 +31,7 @@
 using namespace OpenMM;
 using namespace std;
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class AmoebaReferenceGeneralizedKirkwoodForce {
 
@@ -250,5 +250,7 @@ private:
     std::vector<RealOpenMM> _bornRadii;
 
 };
+
+} // namespace OpenMM
 
 #endif // _AmoebaReferenceGeneralizedKirkwoodForce___

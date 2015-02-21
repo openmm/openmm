@@ -26,7 +26,7 @@
 #include "AmoebaReferenceWcaDispersionForce.h"
 
 using std::vector;
-using OpenMM::RealVec;
+using namespace OpenMM;
 
 AmoebaReferenceWcaDispersionForce::AmoebaReferenceWcaDispersionForce( RealOpenMM epso, RealOpenMM epsh, RealOpenMM rmino, RealOpenMM rminh, 
                                                                       RealOpenMM awater, RealOpenMM shctd, RealOpenMM dispoff, RealOpenMM slevy ) :

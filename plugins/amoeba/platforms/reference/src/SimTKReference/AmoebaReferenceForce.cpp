@@ -25,7 +25,7 @@
 #include "AmoebaReferenceForce.h"
 #include <vector>
 
-using OpenMM::RealVec;
+using namespace OpenMM;
 
 /**---------------------------------------------------------------------------------------
 

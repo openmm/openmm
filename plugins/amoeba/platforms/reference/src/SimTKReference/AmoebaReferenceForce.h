@@ -29,7 +29,7 @@
 #include "openmm/Vec3.h"
 #include <vector>
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class AmoebaReferenceForce {
 
@@ -137,6 +137,6 @@ public:
 
 };
 
-// ---------------------------------------------------------------------------------------
+} // namespace OpenMM
 
 #endif // _AmoebaReferenceForce___

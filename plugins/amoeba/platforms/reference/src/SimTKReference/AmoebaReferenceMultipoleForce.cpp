@@ -31,7 +31,7 @@
 #include "openmm/internal/MSVC_erfc.h"
 
 using std::vector;
-using OpenMM::RealVec;
+using namespace OpenMM;
 
 #undef AMOEBA_DEBUG
 

@@ -30,9 +30,7 @@
 #include <string>
 #include <vector>
 
-using namespace OpenMM;
-
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class AmoebaReferenceWcaDispersionForce {
 
@@ -118,6 +116,6 @@ private:
 
 };
 
-// ---------------------------------------------------------------------------------------
+} // namespace OpenMM
 
 #endif // _AmoebaReferenceWcaDispersionForce___
