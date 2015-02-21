@@ -674,10 +674,6 @@ static void findScaledRadii(GBVIForce& gbviForce, std::vector<double> & scaledRa
     // load 1-2 atom pairs along w/ bond distance using HarmonicBondForce & constraints
     // numberOfBonds < 1, indicating they were not set by the user
     
-    if (numberOfBonds < 1 && numberOfParticles > 1) {
-        (void) fprintf(stderr, "Warning: no covalent bonds set for GB/VI force!\n");
-    }
-    
     std::vector< std::vector<int> > bondIndices;
     bondIndices.resize(numberOfBonds);
     
@@ -742,9 +738,6 @@ static void findScaledRadii(GBVIForce& gbviForce, std::vector<double> & scaledRa
         gbviForce.getParticleParameters(j, charge, radiusJ, gamma); 
 
         if ( bonded12[j].size() == 0) {
-            if (numberOfParticles > 1) {
-                (void) fprintf(stderr, "Warning GBVIForceImpl::findScaledRadii atom %d has no covalent bonds; using atomic radius=%.3f.\n", j, radiusJ);
-            }
             scaledRadiusJ = radiusJ;
 //             errors++;
         }
@@ -783,7 +776,6 @@ static void findScaledRadii(GBVIForce& gbviForce, std::vector<double> & scaledRa
                 scaledRadiusJ  = 0.0;
             }
         }
-        //(void) fprintf(stderr, "scaledRadii %d %12.4f\n", j, scaledRadiusJ);
         scaledRadii[j] = scaledRadiusJ;
 
     }
@@ -793,26 +785,6 @@ static void findScaledRadii(GBVIForce& gbviForce, std::vector<double> & scaledRa
     if (errors) {
         throw OpenMMException("GBVIForceImpl::findScaledRadii errors -- aborting");
     }
-
-#if GBVIDebug
-    (void) fprintf(stderr, "                  R              q          gamma   scaled radii no. bnds\n");
-    double totalQ = 0.0;
-    for (int i = 0; i < (int) scaledRadii.size(); i++) {
-
-        double charge;
-        double gamma;
-        double radiusI;
-     
-        gbviForce.getParticleParameters(i, charge, radiusI, gamma); 
-        totalQ += charge;
-        (void) fprintf(stderr, "%4d %14.5e %14.5e %14.5e %14.5e %d\n", i, radiusI, charge, gamma, scaledRadii[i], (int) bonded12[i].size());
-    }
-    (void) fprintf(stderr, "Total charge=%e\n", totalQ);
-    (void) fflush(stderr);
-#endif
-
-#undef GBVIDebug
-
 }
 
 // load parameters from gbviForce to customGbviForce

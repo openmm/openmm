@@ -53,7 +53,6 @@ using namespace std;
 const double TOL = 1e-5;
 
 void testSingleParticle() {
-    const int log          = 0;
     ReferencePlatform platform;
     System system;
     system.addParticle(2.0);
@@ -85,10 +84,6 @@ void testSingleParticle() {
     double expectedE      = (bornEnergy+nonpolarEnergy); 
     double obtainedE      = state.getPotentialEnergy(); 
     double diff           = fabs((obtainedE - expectedE)/expectedE);
-    if (log) {
-        (void) fprintf(stderr, "testSingleParticle expected=%14.6e obtained=%14.6e diff=%14.6e breakdown:[%14.6e %14.6e]\n",
-                        expectedE, obtainedE, diff, bornEnergy, nonpolarEnergy);
-    }
 
     ASSERT_EQUAL_TOL((bornEnergy+nonpolarEnergy), state.getPotentialEnergy(), 0.01);
 }
@@ -97,7 +92,6 @@ void testEnergyEthane(int applyBornRadiiScaling) {
 
     ReferencePlatform platform;
     const int numParticles = 8;
-    const int log          = 0;
     System system;
     LangevinIntegrator integrator(0, 0.1, 0.01);
 
@@ -139,9 +133,6 @@ void testEnergyEthane(int applyBornRadiiScaling) {
     NonbondedForce* nonbonded = new NonbondedForce();
     nonbonded->setNonbondedMethod(NonbondedForce::NoCutoff);
 
-    if (log) {
-       (void) fprintf(stderr, "Applying GB/VI\n");
-    }
     GBVIForce* forceField = new GBVIForce();
     if (applyBornRadiiScaling) {
         forceField->setBornRadiusScalingMethod(GBVIForce::QuinticSpline);
@@ -212,9 +203,6 @@ void testEnergyEthane(int applyBornRadiiScaling) {
     context.setPositions(positions);
 
     State state = context.getState(State::Forces | State::Energy);
-    if (log) {
-        (void) fprintf(stderr, "Energy %.4e\n", state.getPotentialEnergy());
-    }
     
     // Take a small step in the direction of the energy gradient.
     
@@ -222,18 +210,12 @@ void testEnergyEthane(int applyBornRadiiScaling) {
     double forceSum[3] = { 0.0, 0.0, 0.0 };
     for (int i = 0; i < numParticles; ++i) {
         Vec3 f  = state.getForces()[i];
-        if (log) {
-            (void) fprintf(stderr, "F %d [%14.6e %14.6e %14.6e]\n", i, f[0], f[1], f[2]);
-        }
         norm        += f[0]*f[0] + f[1]*f[1] + f[2]*f[2];
         forceSum[0] += f[0];
         forceSum[1] += f[1];
         forceSum[2] += f[2];
     }
     norm               = std::sqrt(norm);
-    if (log) {
-        (void) fprintf(stderr, "Fsum [%14.6e %14.6e %14.6e] norm=%14.6e\n", forceSum[0], forceSum[1], forceSum[2], norm);
-    }
 
     const double delta = 1e-4;
     double step = delta/norm;
@@ -245,12 +227,6 @@ void testEnergyEthane(int applyBornRadiiScaling) {
     context.setPositions(positions);
     
     State state2 = context.getState(State::Energy);
-
-    if (log) {
-        double deltaE = fabs(state.getPotentialEnergy() - state2.getPotentialEnergy())/delta;
-        double diff   = (deltaE - norm)/norm;
-        (void) fprintf(stderr, "Energies %.8e %.8e deltaE=%14.7e %14.7e diff=%14.7e\n", state.getPotentialEnergy(), state2.getPotentialEnergy(), deltaE, norm, diff);
-    }
 
     // See whether the potential energy changed by the expected amount.
     
