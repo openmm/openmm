@@ -99,18 +99,18 @@ static void getPrefactorsGivenInPlaneAngleCosine(double cosine, double idealInPl
  
     // deltaIdeal = r - r_0
  
-    *dEdR        = (2.0                        +
+    *dEdR        =  (2.0                        +
                      3.0*cubicK*  deltaIdeal    +
                      4.0*quarticK*deltaIdeal2   +
                      5.0*penticK* deltaIdeal3   +
-                     6.0*sexticK* deltaIdeal4    );
+                     6.0*sexticK* deltaIdeal4   );
  
     *dEdR       *= RADIAN*quadraticK*deltaIdeal;
  
 
-    *energyTerm  = 1.0f + cubicK* deltaIdeal    +
-                          quarticK*deltaIdeal2   +
-                          penticK* deltaIdeal3   +
+    *energyTerm  = 1.0f + cubicK* deltaIdeal   +
+                          quarticK*deltaIdeal2 +
+                          penticK* deltaIdeal3 +
                           sexticK* deltaIdeal4;
     *energyTerm *= quadraticK*deltaIdeal2;
 
@@ -215,9 +215,9 @@ static void computeAmoebaInPlaneAngleForce(int bondIndex,  std::vector<Vec3>& po
        double delta2 = delta*2.0;
  
        crossProductVector3(deltaR[BD], deltaR[CD], deltaR[BDxCD]);
-       crossProductVector3(deltaR[T],  deltaR[CD], deltaR[TxCD] );
+       crossProductVector3(deltaR[T],  deltaR[CD], deltaR[TxCD]);
        crossProductVector3(deltaR[AD], deltaR[BD], deltaR[ADxBD]);
-       crossProductVector3(deltaR[AD], deltaR[T],  deltaR[ADxT] );
+       crossProductVector3(deltaR[AD], deltaR[T],  deltaR[ADxT]);
        for (int ii = 0; ii < 3; ii++) {
  
           double term           = deltaR[BDxCD][ii] + delta2*deltaR[TxCD][ii];

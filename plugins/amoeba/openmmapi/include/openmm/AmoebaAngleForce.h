@@ -70,7 +70,7 @@ public:
      * 
      * @param cubicK        the cubic force constant for the angle
      */
-    void setAmoebaGlobalAngleCubic( double cubicK );
+    void setAmoebaGlobalAngleCubic(double cubicK);
 
     /**
      * Get the global cubic term
@@ -84,7 +84,7 @@ public:
      * 
      * @param quarticK       the quartic force constant for the angle
      */
-    void setAmoebaGlobalAngleQuartic( double quarticK );
+    void setAmoebaGlobalAngleQuartic(double quarticK);
 
     /**
      * Get the global quartic term
@@ -98,7 +98,7 @@ public:
      * 
      * @param penticK the pentic force constant for the angle
      */
-    void setAmoebaGlobalAnglePentic( double penticK );
+    void setAmoebaGlobalAnglePentic(double penticK);
 
     /**
      * Get the global pentic term
@@ -112,7 +112,7 @@ public:
      * 
      * @param sexticK       the sextic force constant for the angle
      */
-    void setAmoebaGlobalAngleSextic( double sexticK );
+    void setAmoebaGlobalAngleSextic(double sexticK);
 
     /**
      * Get the global sextic term
@@ -131,7 +131,7 @@ public:
      * @param quadratic k   the quadratic force constant for the angle, measured in kJ/mol/radian^2
      * @return the index of the angle that was added
      */
-    int addAngle(int particle1, int particle2, int particle3, double length, double quadraticK );
+    int addAngle(int particle1, int particle2, int particle3, double length, double quadraticK);
 
     /**
      * Get the force field parameters for an angle term.
@@ -143,7 +143,7 @@ public:
      * @param length        the equilibrium angle, measured in degress
      * @param quadratic k   the quadratic force constant for the angle, measured in kJ/mol/radian^2
      */
-    void getAngleParameters(int index, int& particle1, int& particle2, int& particle3, double& length, double& quadraticK ) const;
+    void getAngleParameters(int index, int& particle1, int& particle2, int& particle3, double& length, double& quadraticK) const;
 
     /**
      * Set the force field parameters for an angle term.
@@ -155,7 +155,7 @@ public:
      * @param length        the equilibrium angle, measured in degrees
      * @param quadratic k   the quadratic force constant for the angle, measured in kJ/mol/radian^2
      */
-    void setAngleParameters(int index, int particle1, int particle2, int particle3, double length, double quadraticK );
+    void setAngleParameters(int index, int particle1, int particle2, int particle3, double length, double quadraticK);
     /**
      * Update the per-angle parameters in a Context to match those stored in this Force object.  This method provides
      * an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
@@ -195,7 +195,7 @@ public:
         particle1 = particle2  = particle3 = -1;
         length    = quadraticK = 0.0;
     }
-    AngleInfo(int particle1, int particle2, int particle3, double length, double  quadraticK ) :
+    AngleInfo(int particle1, int particle2, int particle3, double length, double  quadraticK) :
         particle1(particle1), particle2(particle2), particle3(particle3), length(length), quadraticK(quadraticK)  {
     }
 };

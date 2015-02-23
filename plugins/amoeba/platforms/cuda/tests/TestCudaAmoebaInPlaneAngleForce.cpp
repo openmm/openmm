@@ -63,7 +63,7 @@ const double TOL = 1e-5;
 
    --------------------------------------------------------------------------------------- */
      
-static void crossProductVector3( double* vectorX, double* vectorY, double* vectorZ ){
+static void crossProductVector3(double* vectorX, double* vectorY, double* vectorZ) {
 
     vectorZ[0]  = vectorX[1]*vectorY[2] - vectorX[2]*vectorY[1];
     vectorZ[1]  = vectorX[2]*vectorY[0] - vectorX[0]*vectorY[2];
@@ -72,18 +72,18 @@ static void crossProductVector3( double* vectorX, double* vectorY, double* vecto
     return;
 }
 
-static double dotVector3( double* vectorX, double* vectorY ){
+static double dotVector3(double* vectorX, double* vectorY) {
     return vectorX[0]*vectorY[0] + vectorX[1]*vectorY[1] + vectorX[2]*vectorY[2];
 }
 
-static void getPrefactorsGivenInPlaneAngleCosine( double cosine, double idealInPlaneAngle, double quadraticK, double cubicK,
-                                                  double quarticK, double penticK, double sexticK,
-                                                  double* dEdR, double* energyTerm ) {
+static void getPrefactorsGivenInPlaneAngleCosine(double cosine, double idealInPlaneAngle, double quadraticK, double cubicK,
+                                                 double quarticK, double penticK, double sexticK,
+                                                 double* dEdR, double* energyTerm) {
 
     double angle;
-    if( cosine >= 1.0 ){
+    if (cosine >= 1.0) {
         angle = 0.0f;
-    } else if( cosine <= -1.0 ){
+    } else if (cosine <= -1.0) {
         angle = RADIAN*PI_M;
     } else {
         angle = RADIAN*acos(cosine);
@@ -96,11 +96,11 @@ static void getPrefactorsGivenInPlaneAngleCosine( double cosine, double idealInP
  
     // deltaIdeal = r - r_0
  
-    *dEdR        = ( 2.0                        +
-                     3.0*cubicK*  deltaIdeal    +
-                     4.0*quarticK*deltaIdeal2   +
-                     5.0*penticK* deltaIdeal3   +
-                     6.0*sexticK* deltaIdeal4     );
+    *dEdR        = (2.0                        +
+                    3.0*cubicK*  deltaIdeal    +
+                    4.0*quarticK*deltaIdeal2   +
+                    5.0*penticK* deltaIdeal3   +
+                    6.0*sexticK* deltaIdeal4    );
  
     *dEdR       *= RADIAN*quadraticK*deltaIdeal;
  
@@ -115,12 +115,12 @@ static void getPrefactorsGivenInPlaneAngleCosine( double cosine, double idealInP
 }
 
 static void computeAmoebaInPlaneAngleForce(int bondIndex,  std::vector<Vec3>& positions, AmoebaInPlaneAngleForce& amoebaInPlaneAngleForce,
-                                                   std::vector<Vec3>& forces, double* energy ) {
+                                                   std::vector<Vec3>& forces, double* energy) {
 
     int particle1, particle2, particle3, particle4;
     double idealInPlaneAngle;
     double quadraticK;
-    amoebaInPlaneAngleForce.getAngleParameters(bondIndex, particle1, particle2, particle3, particle4, idealInPlaneAngle, quadraticK );
+    amoebaInPlaneAngleForce.getAngleParameters(bondIndex, particle1, particle2, particle3, particle4, idealInPlaneAngle, quadraticK);
 
     double cubicK         = amoebaInPlaneAngleForce.getAmoebaGlobalInPlaneAngleCubic();
     double quarticK       = amoebaInPlaneAngleForce.getAmoebaGlobalInPlaneAngleQuartic();
@@ -146,75 +146,75 @@ static void computeAmoebaInPlaneAngleForce(int bondIndex,  std::vector<Vec3>& po
     // APxM, CPxM, ADxBD, BDxCD, TxCD, ADxT, dBxAD, CDxdB, LastDeltaAtomIndex
 
     double deltaR[LastDeltaAtomIndex][3];
-    for( int ii = 0; ii < 3; ii++ ){
+    for (int ii = 0; ii < 3; ii++) {
         deltaR[AD][ii] = positions[particle1][ii] - positions[particle4][ii];
         deltaR[BD][ii] = positions[particle2][ii] - positions[particle4][ii];
         deltaR[CD][ii] = positions[particle3][ii] - positions[particle4][ii];
     }
-    crossProductVector3( deltaR[AD], deltaR[CD], deltaR[T] );
+    crossProductVector3(deltaR[AD], deltaR[CD], deltaR[T]);
  
-    double rT2     = dotVector3( deltaR[T], deltaR[T] );
-    double delta   = dotVector3( deltaR[T], deltaR[BD] );
+    double rT2     = dotVector3(deltaR[T], deltaR[T]);
+    double delta   = dotVector3(deltaR[T], deltaR[BD]);
          delta    *= -1.0/rT2;
  
-    for( int ii = 0; ii < 3; ii++ ){
+    for (int ii = 0; ii < 3; ii++) {
        deltaR[P][ii]  = positions[particle2][ii] + deltaR[T][ii]*delta;
        deltaR[AP][ii] = positions[particle1][ii] - deltaR[P][ii];
        deltaR[CP][ii] = positions[particle3][ii] - deltaR[P][ii];
     }   
  
-    double rAp2 = dotVector3( deltaR[AP],  deltaR[AP] );
-    double rCp2 = dotVector3( deltaR[CP],  deltaR[CP] );
-    if( rAp2 <= 0.0 && rCp2 <= 0.0 ){
+    double rAp2 = dotVector3(deltaR[AP],  deltaR[AP]);
+    double rCp2 = dotVector3(deltaR[CP],  deltaR[CP]);
+    if (rAp2 <= 0.0 && rCp2 <= 0.0) {
     }
 
-    crossProductVector3( deltaR[CP], deltaR[AP], deltaR[M] );
+    crossProductVector3(deltaR[CP], deltaR[AP], deltaR[M]);
  
-    double rm = dotVector3( deltaR[M], deltaR[M] );
-         rm   = sqrt( rm );
-    if( rm < 0.000001 ){
+    double rm = dotVector3(deltaR[M], deltaR[M]);
+         rm   = sqrt(rm);
+    if (rm < 0.000001) {
        rm = 0.000001;
     }
  
-    double dot     = dotVector3( deltaR[AP], deltaR[CP] );
-    double cosine  = dot/sqrt( rAp2*rCp2 );
+    double dot     = dotVector3(deltaR[AP], deltaR[CP]);
+    double cosine  = dot/sqrt(rAp2*rCp2);
  
     double dEdR;
     double energyTerm;
-    getPrefactorsGivenInPlaneAngleCosine( cosine, idealInPlaneAngle, quadraticK, cubicK,
-                                          quarticK, penticK, sexticK, &dEdR,  &energyTerm );
+    getPrefactorsGivenInPlaneAngleCosine(cosine, idealInPlaneAngle, quadraticK, cubicK,
+                                         quarticK, penticK, sexticK, &dEdR,  &energyTerm);
  
     double termA   = -dEdR/(rAp2*rm);
     double termC   =  dEdR/(rCp2*rm);
  
-    crossProductVector3( deltaR[AP], deltaR[M], deltaR[APxM] );
-    crossProductVector3( deltaR[CP], deltaR[M], deltaR[CPxM] );
+    crossProductVector3(deltaR[AP], deltaR[M], deltaR[APxM]);
+    crossProductVector3(deltaR[CP], deltaR[M], deltaR[CPxM]);
  
     // forces will be gathered here
  
     enum { dA, dB, dC, dD, LastDIndex };
     double forceTerm[LastDIndex][3];
  
-    for( int ii = 0; ii < 3; ii++ ){
+    for (int ii = 0; ii < 3; ii++) {
        forceTerm[dA][ii] = deltaR[APxM][ii]*termA;
        forceTerm[dC][ii] = deltaR[CPxM][ii]*termC;
-       forceTerm[dB][ii] = -1.0*( forceTerm[dA][ii] + forceTerm[dC][ii] );
+       forceTerm[dB][ii] = -1.0*(forceTerm[dA][ii] + forceTerm[dC][ii]);
     }
  
-    double pTrT2  = dotVector3( forceTerm[dB], deltaR[T] );
+    double pTrT2  = dotVector3(forceTerm[dB], deltaR[T]);
          pTrT2   /= rT2;
  
-    crossProductVector3( deltaR[CD], forceTerm[dB], deltaR[CDxdB] );
-    crossProductVector3( forceTerm[dB], deltaR[AD], deltaR[dBxAD] );
+    crossProductVector3(deltaR[CD], forceTerm[dB], deltaR[CDxdB]);
+    crossProductVector3(forceTerm[dB], deltaR[AD], deltaR[dBxAD]);
  
-    if( fabs( pTrT2 ) > 1.0e-08 ){
+    if (fabs(pTrT2) > 1.0e-08) {
        double delta2 = delta*2.0;
  
-       crossProductVector3( deltaR[BD], deltaR[CD], deltaR[BDxCD] );
-       crossProductVector3( deltaR[T],  deltaR[CD], deltaR[TxCD]  );
-       crossProductVector3( deltaR[AD], deltaR[BD], deltaR[ADxBD] );
-       crossProductVector3( deltaR[AD], deltaR[T],  deltaR[ADxT]  );
-       for( int ii = 0; ii < 3; ii++ ){
+       crossProductVector3(deltaR[BD], deltaR[CD], deltaR[BDxCD]);
+       crossProductVector3(deltaR[T],  deltaR[CD], deltaR[TxCD] );
+       crossProductVector3(deltaR[AD], deltaR[BD], deltaR[ADxBD]);
+       crossProductVector3(deltaR[AD], deltaR[T],  deltaR[ADxT] );
+       for (int ii = 0; ii < 3; ii++) {
  
           double term           = deltaR[BDxCD][ii] + delta2*deltaR[TxCD][ii];
           forceTerm[dA][ii]  += delta*deltaR[CDxdB][ii] + term*pTrT2;
@@ -222,15 +222,15 @@ static void computeAmoebaInPlaneAngleForce(int bondIndex,  std::vector<Vec3>& po
                term           = deltaR[ADxBD][ii] + delta2*deltaR[ADxT][ii];
           forceTerm[dC][ii]  += delta*deltaR[dBxAD][ii] + term*pTrT2;
  
-          forceTerm[dD][ii]  = -( forceTerm[dA][ii] + forceTerm[dB][ii] + forceTerm[dC][ii] );
+          forceTerm[dD][ii]  = -(forceTerm[dA][ii] + forceTerm[dB][ii] + forceTerm[dC][ii]);
        }
     } else {
-       for( int ii = 0; ii < 3; ii++ ){
+       for (int ii = 0; ii < 3; ii++) {
  
           forceTerm[dA][ii] += delta*deltaR[CDxdB][ii];
           forceTerm[dC][ii] += delta*deltaR[dBxAD][ii];
  
-          forceTerm[dD][ii]  = -( forceTerm[dA][ii] + forceTerm[dB][ii] + forceTerm[dC][ii] );
+          forceTerm[dD][ii]  = -(forceTerm[dA][ii] + forceTerm[dB][ii] + forceTerm[dC][ii]);
        }
     }
  
@@ -256,47 +256,47 @@ static void computeAmoebaInPlaneAngleForce(int bondIndex,  std::vector<Vec3>& po
 
 }
 
-static void computeAmoebaInPlaneAngleForces( Context& context, AmoebaInPlaneAngleForce& amoebaInPlaneAngleForce,
-                                                     std::vector<Vec3>& expectedForces, double* expectedEnergy ) {
+static void computeAmoebaInPlaneAngleForces(Context& context, AmoebaInPlaneAngleForce& amoebaInPlaneAngleForce,
+                                                     std::vector<Vec3>& expectedForces, double* expectedEnergy) {
 
     // get positions and zero forces
 
     State state                 = context.getState(State::Positions);
     std::vector<Vec3> positions = state.getPositions();
-    expectedForces.resize( positions.size() );
+    expectedForces.resize(positions.size());
     
-    for( unsigned int ii = 0; ii < expectedForces.size(); ii++ ){
+    for (unsigned int ii = 0; ii < expectedForces.size(); ii++) {
         expectedForces[ii][0] = expectedForces[ii][1] = expectedForces[ii][2] = 0.0;
     }
 
     // calculates forces/energy
 
     *expectedEnergy = 0.0;
-    for( int ii = 0; ii < amoebaInPlaneAngleForce.getNumAngles(); ii++ ){
+    for (int ii = 0; ii < amoebaInPlaneAngleForce.getNumAngles(); ii++) {
         computeAmoebaInPlaneAngleForce(ii, positions, amoebaInPlaneAngleForce, expectedForces, expectedEnergy);
     }
 }
 
-void compareWithExpectedForceAndEnergy( Context& context, AmoebaInPlaneAngleForce& amoebaInPlaneAngleForce,
-                                        double tolerance, const std::string& idString) {
+void compareWithExpectedForceAndEnergy(Context& context, AmoebaInPlaneAngleForce& amoebaInPlaneAngleForce,
+                                       double tolerance, const std::string& idString) {
 
     std::vector<Vec3> expectedForces;
     double expectedEnergy;
-    computeAmoebaInPlaneAngleForces( context, amoebaInPlaneAngleForce, expectedForces, &expectedEnergy );
+    computeAmoebaInPlaneAngleForces(context, amoebaInPlaneAngleForce, expectedForces, &expectedEnergy);
    
     State state                      = context.getState(State::Forces | State::Energy);
     const std::vector<Vec3> forces   = state.getForces();
-    for( unsigned int ii = 0; ii < forces.size(); ii++ ){
-        ASSERT_EQUAL_VEC( expectedForces[ii], forces[ii], tolerance );
+    for (unsigned int ii = 0; ii < forces.size(); ii++) {
+        ASSERT_EQUAL_VEC(expectedForces[ii], forces[ii], tolerance);
     }
-    ASSERT_EQUAL_TOL( expectedEnergy, state.getPotentialEnergy(), tolerance );
+    ASSERT_EQUAL_TOL(expectedEnergy, state.getPotentialEnergy(), tolerance);
 }
 
 void testOneAngle() {
 
     System system;
     int numberOfParticles = 4;
-    for( int ii = 0; ii < numberOfParticles; ii++ ){
+    for (int ii = 0; ii < numberOfParticles; ii++) {
         system.addParticle(1.0);
     }
 
@@ -318,7 +318,7 @@ void testOneAngle() {
     amoebaInPlaneAngleForce->setAmoebaGlobalInPlaneAngleSextic(sexticK);
 
     system.addForce(amoebaInPlaneAngleForce);
-    Context context(system, integrator, Platform::getPlatformByName( "CUDA"));
+    Context context(system, integrator, Platform::getPlatformByName("CUDA"));
 
     std::vector<Vec3> positions(numberOfParticles);
 
@@ -328,7 +328,7 @@ void testOneAngle() {
     positions[3] = Vec3(1, 1, 1);
 
     context.setPositions(positions);
-    compareWithExpectedForceAndEnergy( context, *amoebaInPlaneAngleForce, TOL, "testOneInPlaneAngle" );
+    compareWithExpectedForceAndEnergy(context, *amoebaInPlaneAngleForce, TOL, "testOneInPlaneAngle");
     
     // Try changing the angle parameters and make sure it's still correct.
     
@@ -336,14 +336,14 @@ void testOneAngle() {
     bool exceptionThrown = false;
     try {
         // This should throw an exception.
-        compareWithExpectedForceAndEnergy( context, *amoebaInPlaneAngleForce, TOL, "testOneInPlaneAngle" );
+        compareWithExpectedForceAndEnergy(context, *amoebaInPlaneAngleForce, TOL, "testOneInPlaneAngle");
     }
     catch (std::exception ex) {
         exceptionThrown = true;
     }
     ASSERT(exceptionThrown);
     amoebaInPlaneAngleForce->updateParametersInContext(context);
-    compareWithExpectedForceAndEnergy( context, *amoebaInPlaneAngleForce, TOL, "testOneInPlaneAngle" );
+    compareWithExpectedForceAndEnergy(context, *amoebaInPlaneAngleForce, TOL, "testOneInPlaneAngle");
 }
 
 int main(int argc, char* argv[]) {

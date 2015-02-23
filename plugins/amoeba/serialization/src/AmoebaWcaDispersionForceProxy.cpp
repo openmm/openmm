@@ -56,7 +56,7 @@ void AmoebaWcaDispersionForceProxy::serialize(const void* object, SerializationN
     SerializationNode& particles = node.createChildNode("WcaDispersionParticles");
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(force.getNumParticles()); ii++) {
         double radius, epsilon;
-        force.getParticleParameters( ii,  radius, epsilon );
+        force.getParticleParameters(ii,  radius, epsilon);
         particles.createChildNode("Particle").setDoubleProperty("radius", radius).setDoubleProperty("epsilon", epsilon);
     }
 
@@ -69,21 +69,21 @@ void* AmoebaWcaDispersionForceProxy::deserialize(const SerializationNode& node) 
 
     try {
 
-        force->setEpso(    node.getDoubleProperty( "Epso" ) );
-        force->setEpsh(    node.getDoubleProperty( "Epsh" ) );
-        force->setRmino(   node.getDoubleProperty( "Rmino" ) );
-        force->setRminh(   node.getDoubleProperty( "Rminh" ) );
+        force->setEpso(   node.getDoubleProperty("Epso"));
+        force->setEpsh(   node.getDoubleProperty("Epsh"));
+        force->setRmino(  node.getDoubleProperty("Rmino"));
+        force->setRminh(  node.getDoubleProperty("Rminh"));
 
 
-        force->setAwater(  node.getDoubleProperty( "Awater" ) );
-        force->setShctd(   node.getDoubleProperty( "Shctd" ) );
-        force->setDispoff( node.getDoubleProperty( "Dispoff" ) );
-        force->setSlevy(   node.getDoubleProperty( "Slevy" ) );
+        force->setAwater( node.getDoubleProperty("Awater"));
+        force->setShctd(  node.getDoubleProperty("Shctd"));
+        force->setDispoff(node.getDoubleProperty("Dispoff"));
+        force->setSlevy(  node.getDoubleProperty("Slevy"));
 
         const SerializationNode& particles = node.getChildNode("WcaDispersionParticles");
         for (unsigned int ii = 0; ii < particles.getChildren().size(); ii++) {
             const SerializationNode& particle = particles.getChildren()[ii];
-            force->addParticle( particle.getDoubleProperty("radius"), particle.getDoubleProperty("epsilon"));
+            force->addParticle(particle.getDoubleProperty("radius"), particle.getDoubleProperty("epsilon"));
         }
 
     }

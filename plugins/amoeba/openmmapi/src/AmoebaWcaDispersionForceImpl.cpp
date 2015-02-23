@@ -61,15 +61,15 @@ double AmoebaWcaDispersionForceImpl::calcForcesAndEnergy(ContextImpl& context, b
         return kernel.getAs<CalcAmoebaWcaDispersionForceKernel>().execute(context, includeForces, includeEnergy);
     return 0.0;
 }
-void AmoebaWcaDispersionForceImpl::getMaximumDispersionEnergy( const AmoebaWcaDispersionForce& force, int particleIndex, double& maxDispersionEnergy ) {
+void AmoebaWcaDispersionForceImpl::getMaximumDispersionEnergy(const AmoebaWcaDispersionForce& force, int particleIndex, double& maxDispersionEnergy) {
 
     const double pi  = 3.1415926535897;
 
     // from last loop in subroutine knp in ksolv.f
 
     double rdisp, epsi;
-    force.getParticleParameters( particleIndex, rdisp, epsi );
-    if( epsi <= 0.0 || rdisp <= 0.0 ){
+    force.getParticleParameters(particleIndex, rdisp, epsi);
+    if (epsi <= 0.0 || rdisp <= 0.0) {
         maxDispersionEnergy = 0.0;
         return;
     }
@@ -104,32 +104,27 @@ void AmoebaWcaDispersionForceImpl::getMaximumDispersionEnergy( const AmoebaWcaDi
     double rdisp11   = rdisp7*rdisp3*rdisp;
 
     double cdisp;
-    if( rdisp < rmixh) {
+    if (rdisp < rmixh) {
         cdisp = -4.0*pi*emixh*(rmixh3-rdisp3)/3.0 - emixh*18.0/11.0*rmixh3*pi;
     } else {
         cdisp = 2.0*pi*(2.0*rmixh7-11.0*rdisp7)*ah/ (11.0*rdisp11);
     }
     cdisp *= 2.0;
-    if (rdisp < rmixo ) {
+    if (rdisp < rmixo) {
         cdisp -= 4.0*pi*emixo*(rmixo3-rdisp3)/3.0;
         cdisp -= emixo*18.0/11.0*rmixo3*pi;
     } else {
         cdisp += 2.0*pi*(2.0*rmixo7-11.0*rdisp7) * ao/(11.0*rdisp11);
     }
     maxDispersionEnergy = force.getSlevy()*force.getAwater()*cdisp;
-
-//    (void) fprintf( stderr,"Wca %5d %14.7e %14.7e %14.7e %14.7e %14.7e %14.7e %14.7e %14.7e\n",
-//                    particleIndex, rdisp,rmini,epsi, emixh,rmixh,emixo,rmixo,cdisp );
-
-    return;
 }
 
-double AmoebaWcaDispersionForceImpl::getTotalMaximumDispersionEnergy( const AmoebaWcaDispersionForce& force ){
+double AmoebaWcaDispersionForceImpl::getTotalMaximumDispersionEnergy(const AmoebaWcaDispersionForce& force) {
 
     double totalMaximumDispersionEnergy = 0.0;
-    for( int ii = 0; ii < force.getNumParticles(); ii++ ){
+    for (int ii = 0; ii < force.getNumParticles(); ii++) {
         double maximumDispersionEnergy;
-        getMaximumDispersionEnergy( force, ii, maximumDispersionEnergy );
+        getMaximumDispersionEnergy(force, ii, maximumDispersionEnergy);
         totalMaximumDispersionEnergy += maximumDispersionEnergy;
     }
     return totalMaximumDispersionEnergy;

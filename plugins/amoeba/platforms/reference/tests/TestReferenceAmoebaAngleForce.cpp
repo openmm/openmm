@@ -101,7 +101,7 @@ static void getPrefactorsGivenAngleCosine(double cosine, double idealAngle, doub
                     3.0*cubicK*  deltaIdeal    +
                     4.0*quarticK*deltaIdeal2   +
                     5.0*penticK* deltaIdeal3   +
-                    6.0*sexticK* deltaIdeal4    );
+                    6.0*sexticK* deltaIdeal4   );
  
     *dEdR       *= RADIAN*quadraticK*deltaIdeal;
  

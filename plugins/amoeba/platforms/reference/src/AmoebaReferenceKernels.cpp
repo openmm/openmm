@@ -99,7 +99,7 @@ void ReferenceCalcAmoebaBondForceKernel::initialize(const System& system, const 
 
         particle1.push_back(particle1Index); 
         particle2.push_back(particle2Index); 
-        length.push_back(   static_cast<RealOpenMM>(lengthValue));
+        length.push_back(static_cast<RealOpenMM>(lengthValue));
         kQuadratic.push_back(static_cast<RealOpenMM>(kValue));
     } 
     globalBondCubic   = static_cast<RealOpenMM>(force.getAmoebaGlobalBondCubic());
@@ -153,7 +153,7 @@ void ReferenceCalcAmoebaAngleForceKernel::initialize(const System& system, const
         particle1.push_back(particle1Index); 
         particle2.push_back(particle2Index); 
         particle3.push_back(particle3Index); 
-        angle.push_back( static_cast<RealOpenMM>(angleValue));
+        angle.push_back(static_cast<RealOpenMM>(angleValue));
         kQuadratic.push_back(static_cast<RealOpenMM>(k));
     }
     globalAngleCubic    = static_cast<RealOpenMM>(force.getAmoebaGlobalAngleCubic());
@@ -206,8 +206,8 @@ void ReferenceCalcAmoebaInPlaneAngleForceKernel::initialize(const System& system
         particle2.push_back(particle2Index); 
         particle3.push_back(particle3Index); 
         particle4.push_back(particle4Index); 
-        angle.push_back(      static_cast<RealOpenMM>(angleValue));
-        kQuadratic.push_back( static_cast<RealOpenMM>(k));
+        angle.push_back(static_cast<RealOpenMM>(angleValue));
+        kQuadratic.push_back(static_cast<RealOpenMM>(k));
     }
     globalInPlaneAngleCubic    = static_cast<RealOpenMM>(force.getAmoebaGlobalInPlaneAngleCubic());
     globalInPlaneAngleQuartic  = static_cast<RealOpenMM>(force.getAmoebaGlobalInPlaneAngleQuartic());
@@ -314,9 +314,9 @@ void ReferenceCalcAmoebaStretchBendForceKernel::initialize(const System& system,
         particle3.push_back(particle3Index); 
         lengthABParameters.push_back(static_cast<RealOpenMM>(lengthAB));
         lengthCBParameters.push_back(static_cast<RealOpenMM>(lengthCB));
-        angleParameters.push_back(   static_cast<RealOpenMM>(angle));
-        k1Parameters.push_back(      static_cast<RealOpenMM>(k1));
-        k2Parameters.push_back(      static_cast<RealOpenMM>(k2));
+        angleParameters.push_back(static_cast<RealOpenMM>(angle));
+        k1Parameters.push_back(static_cast<RealOpenMM>(k1));
+        k2Parameters.push_back(static_cast<RealOpenMM>(k2));
     }
 }
 
@@ -1043,14 +1043,14 @@ void ReferenceCalcAmoebaWcaDispersionForceKernel::initialize(const System& syste
 
     totalMaximumDispersionEnergy = static_cast<RealOpenMM>(AmoebaWcaDispersionForceImpl::getTotalMaximumDispersionEnergy(force));
 
-    epso                         = static_cast<RealOpenMM>(force.getEpso()  );
-    epsh                         = static_cast<RealOpenMM>(force.getEpsh()  );
-    rmino                        = static_cast<RealOpenMM>(force.getRmino() );
-    rminh                        = static_cast<RealOpenMM>(force.getRminh() );
+    epso                         = static_cast<RealOpenMM>(force.getEpso());
+    epsh                         = static_cast<RealOpenMM>(force.getEpsh());
+    rmino                        = static_cast<RealOpenMM>(force.getRmino());
+    rminh                        = static_cast<RealOpenMM>(force.getRminh());
     awater                       = static_cast<RealOpenMM>(force.getAwater());
-    shctd                        = static_cast<RealOpenMM>(force.getShctd() );
+    shctd                        = static_cast<RealOpenMM>(force.getShctd());
     dispoff                      = static_cast<RealOpenMM>(force.getDispoff());
-    slevy                        = static_cast<RealOpenMM>(force.getSlevy() );
+    slevy                        = static_cast<RealOpenMM>(force.getSlevy());
 }
 
 double ReferenceCalcAmoebaWcaDispersionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {

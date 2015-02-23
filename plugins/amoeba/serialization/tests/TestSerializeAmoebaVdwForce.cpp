@@ -45,20 +45,20 @@ void testSerialization() {
     // Create a Force.
 
     AmoebaVdwForce force1;
-    force1.setSigmaCombiningRule(   "GEOMETRIC" );
-    force1.setEpsilonCombiningRule( "GEOMETRIC" );
-    force1.setCutoff( 0.9 );
+    force1.setSigmaCombiningRule("GEOMETRIC");
+    force1.setEpsilonCombiningRule("GEOMETRIC");
+    force1.setCutoff(0.9);
     force1.setNonbondedMethod(AmoebaVdwForce::CutoffPeriodic);
 
     force1.addParticle(0, 1.0, 2.0, 0.9);
     force1.addParticle(1, 1.1, 2.1, 0.9);
     force1.addParticle(2, 1.3, 4.1, 0.9);
-    for( unsigned int ii = 0; ii < 3; ii++ ){
+    for (unsigned int ii = 0; ii < 3; ii++) {
         std::vector< int > exclusions;
-        exclusions.push_back( ii );
-        exclusions.push_back( ii + 1 );
-        exclusions.push_back( ii + 10 );
-        force1.setParticleExclusions( ii, exclusions );
+        exclusions.push_back(ii);
+        exclusions.push_back(ii + 1);
+        exclusions.push_back(ii + 10);
+        force1.setParticleExclusions(ii, exclusions);
     }
 
     // Serialize and then deserialize it.
@@ -85,10 +85,10 @@ void testSerialization() {
         double sigma1, epsilon1, reductionFactor1;
         double sigma2, epsilon2, reductionFactor2;
 
-        force1.getParticleParameters( ii, ivIndex1, sigma1, epsilon1, reductionFactor1 );
-        force2.getParticleParameters( ii, ivIndex2, sigma2, epsilon2, reductionFactor2 );
+        force1.getParticleParameters(ii, ivIndex1, sigma1, epsilon1, reductionFactor1);
+        force2.getParticleParameters(ii, ivIndex2, sigma2, epsilon2, reductionFactor2);
 
-        ASSERT_EQUAL(ivIndex1,          ivIndex2 );
+        ASSERT_EQUAL(ivIndex1,          ivIndex2);
         ASSERT_EQUAL(sigma1,            sigma2);
         ASSERT_EQUAL(epsilon1,          epsilon2);
         ASSERT_EQUAL(reductionFactor1,  reductionFactor2);
@@ -98,14 +98,14 @@ void testSerialization() {
         std::vector< int > exclusions1;
         std::vector< int > exclusions2;
 
-        force1.getParticleExclusions( ii, exclusions1 );
-        force2.getParticleExclusions( ii, exclusions2 );
+        force1.getParticleExclusions(ii, exclusions1);
+        force2.getParticleExclusions(ii, exclusions2);
 
         ASSERT_EQUAL(exclusions1.size(), exclusions2.size());
         for (unsigned int jj = 0; jj < exclusions1.size(); jj++) {
             int hit = 0;
             for (unsigned int kk = 0; kk < exclusions2.size(); kk++) {
-                if( exclusions2[jj] == exclusions1[kk] )hit++;
+                if (exclusions2[jj] == exclusions1[kk])hit++;
             }
             ASSERT_EQUAL(hit, 1);
         }

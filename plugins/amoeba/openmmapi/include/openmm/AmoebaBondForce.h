@@ -71,7 +71,7 @@ public:
      * 
      * @param cubicK        the cubic force constant for the bond
      */
-    void setAmoebaGlobalBondCubic( double cubicK );
+    void setAmoebaGlobalBondCubic(double cubicK);
 
     /**
      * Get the global cubic term
@@ -85,7 +85,7 @@ public:
      * 
      * @param quarticK       the quartic force constant for the bond
      */
-    void setAmoebaGlobalBondQuartic( double quarticK );
+    void setAmoebaGlobalBondQuartic(double quarticK);
 
     /**
      * Get the global quartic term
@@ -104,7 +104,7 @@ public:
      * @return the index of the bond that was added
      */
 
-    int addBond(int particle1, int particle2, double length, double quadraticK );
+    int addBond(int particle1, int particle2, double length, double quadraticK);
 
     /**
      * Get the force field parameters for a bond term.
@@ -116,7 +116,7 @@ public:
      * @param quadratic k   the quadratic force constant for the bond
      */
 
-    void getBondParameters(int index, int& particle1, int& particle2, double& length, double& quadraticK ) const;
+    void getBondParameters(int index, int& particle1, int& particle2, double& length, double& quadraticK) const;
 
     /**
      * Set the force field parameters for a bond term.
@@ -127,7 +127,7 @@ public:
      * @param length    the equilibrium length of the bond, measured in nm
      * @param k         the quadratic force constant for the bond
      */
-    void setBondParameters(int index, int particle1, int particle2, double length, double quadraticK );
+    void setBondParameters(int index, int particle1, int particle2, double length, double quadraticK);
     /**
      * Update the per-bond parameters in a Context to match those stored in this Force object.  This method provides
      * an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
@@ -167,7 +167,7 @@ public:
         particle1 = particle2    = -1;
         length    = quadraticK   = 0.0;
     }
-    BondInfo(int particle1, int particle2, double length, double  quadraticK ) :
+    BondInfo(int particle1, int particle2, double length, double  quadraticK) :
         particle1(particle1), particle2(particle2), length(length), quadraticK(quadraticK) {
     }
 };

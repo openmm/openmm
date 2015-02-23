@@ -48,7 +48,7 @@ extern "C" void registerAmoebaCudaKernelFactories();
 
 const double TOL = 1e-4;
 
-TorsionTorsionGrid& getTorsionGrid( int gridIndex ) {
+TorsionTorsionGrid& getTorsionGrid(int gridIndex) {
 
     static double grid[4][625][6] = { 
     {
@@ -2558,22 +2558,22 @@ TorsionTorsionGrid& getTorsionGrid( int gridIndex ) {
 
     // static std::vector< std::vector< std::vector<double> > > TorsionTorsionGrid
     static std::vector<TorsionTorsionGrid> grids;
-    if( grids.size() == 0 ){
+    if (grids.size() == 0) {
         grids.resize(4);
-        for( int ii = 0; ii < 4; ii++ ){
-            grids[ii].resize( 25 );
-            for( int jj = 0; jj < 25; jj++ ){
+        for (int ii = 0; ii < 4; ii++) {
+            grids[ii].resize(25);
+            for (int jj = 0; jj < 25; jj++) {
                 grids[ii][jj].resize(25);
-                for( int kk = 0; kk < 25; kk++ ){
+                for (int kk = 0; kk < 25; kk++) {
                     grids[ii][jj][kk].resize(6);
                 }
             }
             int index = 0;
-            for( int jj = 0; jj < 25; jj++ ){
-                for( int kk = 0; kk < 25; kk++ ){
+            for (int jj = 0; jj < 25; jj++) {
+                for (int kk = 0; kk < 25; kk++) {
                     int jjIndex = static_cast<int>(((grid[ii][index][0] + 180.0)/15.0)+1.0e-05);
                     int kkIndex = static_cast<int>(((grid[ii][index][1] + 180.0)/15.0)+1.0e-05);
-                    for( int ll = 0; ll < 6; ll++ ){
+                    for (int ll = 0; ll < 6; ll++) {
                         grids[ii][kk][jj][ll] = grid[ii][index][ll];
                     }
                     index++;
@@ -2588,7 +2588,7 @@ void testTorsionTorsion(int systemId) {
 
     System system;
     int numberOfParticles = 6;
-    for( int ii = 0; ii < numberOfParticles; ii++ ){
+    for (int ii = 0; ii < numberOfParticles; ii++) {
         system.addParticle(1.0);
     }
     LangevinIntegrator integrator(0.0, 0.1, 0.01);
@@ -2600,71 +2600,71 @@ void testTorsionTorsion(int systemId) {
     std::vector<Vec3> positions(numberOfParticles);
     std::vector<Vec3> expectedForces(numberOfParticles);
     double expectedEnergy;
-    if( systemId == 0 ){
+    if (systemId == 0) {
 
         // villin: 2     19     20     21     38     25    grid=2
         chiralCheckAtomIndex  = 5;
         gridIndex             = 2;
 
-        positions[0]          = Vec3( -0.422792800E+01, -0.110605910E+02, -0.508156700E+01 );
-        positions[1]          = Vec3( -0.447153100E+01, -0.978627900E+01, -0.466405800E+01 );
-        positions[2]          = Vec3( -0.531878400E+01, -0.940508600E+01, -0.352283100E+01 );
-        positions[3]          = Vec3( -0.679606000E+01, -0.974353100E+01, -0.382975700E+01 );
-        positions[4]          = Vec3( -0.760612300E+01, -0.992590200E+01, -0.275088400E+01 );
-        positions[5]          = Vec3( -0.516893900E+01, -0.788347000E+01, -0.316943000E+01 );
+        positions[0]          = Vec3(-0.422792800E+01, -0.110605910E+02, -0.508156700E+01);
+        positions[1]          = Vec3(-0.447153100E+01, -0.978627900E+01, -0.466405800E+01);
+        positions[2]          = Vec3(-0.531878400E+01, -0.940508600E+01, -0.352283100E+01);
+        positions[3]          = Vec3(-0.679606000E+01, -0.974353100E+01, -0.382975700E+01);
+        positions[4]          = Vec3(-0.760612300E+01, -0.992590200E+01, -0.275088400E+01);
+        positions[5]          = Vec3(-0.516893900E+01, -0.788347000E+01, -0.316943000E+01);
 
-        expectedForces[0]     = Vec3(  0.906091624E+00, -0.529814945E-01,  0.690384140E+00 );
-        expectedForces[1]     = Vec3( -0.124550232E+01, -0.999341692E+00, -0.590867130E+00 );
-        expectedForces[2]     = Vec3(  0.534419689E+00,  0.612404926E-01,  0.547380310E-01 );
-        expectedForces[3]     = Vec3( -5.732010432E-01,  2.645718463E+00, -1.585204274E-01 );
-        expectedForces[4]     = Vec3(  3.781920539E-01, -1.654635768E+00,  4.265386268E-03 );
-        expectedForces[5]     = Vec3(  0.0, 0.0, 0.0 );
+        expectedForces[0]     = Vec3( 0.906091624E+00, -0.529814945E-01,  0.690384140E+00);
+        expectedForces[1]     = Vec3(-0.124550232E+01, -0.999341692E+00, -0.590867130E+00);
+        expectedForces[2]     = Vec3( 0.534419689E+00,  0.612404926E-01,  0.547380310E-01);
+        expectedForces[3]     = Vec3(-5.732010432E-01,  2.645718463E+00, -1.585204274E-01);
+        expectedForces[4]     = Vec3( 3.781920539E-01, -1.654635768E+00,  4.265386268E-03);
+        expectedForces[5]     = Vec3( 0.0, 0.0, 0.0);
 
         expectedEnergy        = -2.699654759E+00;
 
-    } else if( systemId == 1 ){
+    } else if (systemId == 1) {
 
         // villin: 158    176    177    178    183     -1      0
         chiralCheckAtomIndex  = -1;
         gridIndex             = 0;
 
-        positions[0]          = Vec3( -0.105946640E+02, -0.917797000E+00,  0.105486310E+02 );
-        positions[1]          = Vec3( -0.115059090E+02, -0.141876700E+01,  0.966933200E+01 );
-        positions[2]          = Vec3( -0.128314660E+02, -0.876338000E+00,  0.942959800E+01 );
-        positions[3]          = Vec3( -0.130879850E+02, -0.760280000E-01,  0.814732200E+01 );
-        positions[4]          = Vec3( -0.120888080E+02,  0.112050000E-01,  0.722704500E+01 );
-        positions[5]          = Vec3(  0.0, 0.0, 0.0 );
+        positions[0]          = Vec3(-0.105946640E+02, -0.917797000E+00,  0.105486310E+02);
+        positions[1]          = Vec3(-0.115059090E+02, -0.141876700E+01,  0.966933200E+01);
+        positions[2]          = Vec3(-0.128314660E+02, -0.876338000E+00,  0.942959800E+01);
+        positions[3]          = Vec3(-0.130879850E+02, -0.760280000E-01,  0.814732200E+01);
+        positions[4]          = Vec3(-0.120888080E+02,  0.112050000E-01,  0.722704500E+01);
+        positions[5]          = Vec3( 0.0, 0.0, 0.0);
 
-        expectedForces[0]     = Vec3(  4.165851130E-01,  6.608242922E-01, -8.082168261E-01 );
-        expectedForces[1]     = Vec3( -6.024659721E-01, -8.878744406E-01,  1.322274444E+00 );
-        expectedForces[2]     = Vec3(  3.196925118E-02, -3.137497848E-01, -8.207984001E-01 );
-        expectedForces[3]     = Vec3(  3.842205941E-02,  2.602732089E-01,  1.547586195E-01 );
-        expectedForces[4]     = Vec3(  1.154895485E-01,  2.805267242E-01,  1.519821623E-01 );
-        expectedForces[5]     = Vec3(  0.0, 0.0, 0.0 );
+        expectedForces[0]     = Vec3( 4.165851130E-01,  6.608242922E-01, -8.082168261E-01);
+        expectedForces[1]     = Vec3(-6.024659721E-01, -8.878744406E-01,  1.322274444E+00);
+        expectedForces[2]     = Vec3( 3.196925118E-02, -3.137497848E-01, -8.207984001E-01);
+        expectedForces[3]     = Vec3( 3.842205941E-02,  2.602732089E-01,  1.547586195E-01);
+        expectedForces[4]     = Vec3( 1.154895485E-01,  2.805267242E-01,  1.519821623E-01);
+        expectedForces[5]     = Vec3( 0.0, 0.0, 0.0);
 
         expectedEnergy        = -3.372536909E+00;
     }
-    amoebaTorsionTorsionForce->addTorsionTorsion( 0, 1, 2, 3, 4, chiralCheckAtomIndex, 0 );
-    amoebaTorsionTorsionForce->setTorsionTorsionGrid( 0, getTorsionGrid( gridIndex ) );
+    amoebaTorsionTorsionForce->addTorsionTorsion(0, 1, 2, 3, 4, chiralCheckAtomIndex, 0);
+    amoebaTorsionTorsionForce->setTorsionTorsionGrid(0, getTorsionGrid(gridIndex));
     
     system.addForce(amoebaTorsionTorsionForce);
-    Context context(system, integrator, Platform::getPlatformByName( "CUDA"));
+    Context context(system, integrator, Platform::getPlatformByName("CUDA"));
 
     context.setPositions(positions);
     State state                      = context.getState(State::Forces | State::Energy);
     std::vector<Vec3> forces         = state.getForces();
     const double conversion          = -1.0;
 
-    for( unsigned int ii = 0; ii < forces.size(); ii++ ){
+    for (unsigned int ii = 0; ii < forces.size(); ii++) {
         forces[ii][0] *= conversion;
         forces[ii][1] *= conversion;
         forces[ii][2] *= conversion;
     }
     double tolerance = 1.0e-03;
-    for( unsigned int ii = 0; ii < forces.size(); ii++ ){
-        ASSERT_EQUAL_VEC( expectedForces[ii], forces[ii], tolerance );
+    for (unsigned int ii = 0; ii < forces.size(); ii++) {
+        ASSERT_EQUAL_VEC(expectedForces[ii], forces[ii], tolerance);
     }
-    ASSERT_EQUAL_TOL( expectedEnergy, state.getPotentialEnergy(), tolerance );
+    ASSERT_EQUAL_TOL(expectedEnergy, state.getPotentialEnergy(), tolerance);
 }
 
 

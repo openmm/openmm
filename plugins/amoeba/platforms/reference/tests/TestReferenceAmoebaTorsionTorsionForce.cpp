@@ -2611,12 +2611,12 @@ void testTorsionTorsion(int systemId, bool includeDerivs) {
         positions[4]          = Vec3(-0.760612300E+01, -0.992590200E+01, -0.275088400E+01);
         positions[5]          = Vec3(-0.516893900E+01, -0.788347000E+01, -0.316943000E+01);
 
-        expectedForces[0]     = Vec3( 0.906091624E+00, -0.529814945E-01,  0.690384140E+00);
+        expectedForces[0]     = Vec3(0.906091624E+00, -0.529814945E-01,  0.690384140E+00);
         expectedForces[1]     = Vec3(-0.124550232E+01, -0.999341692E+00, -0.590867130E+00);
-        expectedForces[2]     = Vec3( 0.534419689E+00,  0.612404926E-01,  0.547380310E-01);
+        expectedForces[2]     = Vec3(0.534419689E+00,  0.612404926E-01,  0.547380310E-01);
         expectedForces[3]     = Vec3(-5.732010432E-01,  2.645718463E+00, -1.585204274E-01);
-        expectedForces[4]     = Vec3( 3.781920539E-01, -1.654635768E+00,  4.265386268E-03);
-        expectedForces[5]     = Vec3( 0.0, 0.0, 0.0);
+        expectedForces[4]     = Vec3(3.781920539E-01, -1.654635768E+00,  4.265386268E-03);
+        expectedForces[5]     = Vec3(0.0, 0.0, 0.0);
 
         expectedEnergy        = -2.699654759E+00;
 
@@ -2632,14 +2632,14 @@ void testTorsionTorsion(int systemId, bool includeDerivs) {
         positions[2]          = Vec3(-0.128314660E+02, -0.876338000E+00,  0.942959800E+01);
         positions[3]          = Vec3(-0.130879850E+02, -0.760280000E-01,  0.814732200E+01);
         positions[4]          = Vec3(-0.120888080E+02,  0.112050000E-01,  0.722704500E+01);
-        positions[5]          = Vec3( 0.0, 0.0, 0.0);
+        positions[5]          = Vec3(0.0, 0.0, 0.0);
 
-        expectedForces[0]     = Vec3( 4.165851130E-01,  6.608242922E-01, -8.082168261E-01);
+        expectedForces[0]     = Vec3(4.165851130E-01,  6.608242922E-01, -8.082168261E-01);
         expectedForces[1]     = Vec3(-6.024659721E-01, -8.878744406E-01,  1.322274444E+00);
-        expectedForces[2]     = Vec3( 3.196925118E-02, -3.137497848E-01, -8.207984001E-01);
-        expectedForces[3]     = Vec3( 3.842205941E-02,  2.602732089E-01,  1.547586195E-01);
-        expectedForces[4]     = Vec3( 1.154895485E-01,  2.805267242E-01,  1.519821623E-01);
-        expectedForces[5]     = Vec3( 0.0, 0.0, 0.0);
+        expectedForces[2]     = Vec3(3.196925118E-02, -3.137497848E-01, -8.207984001E-01);
+        expectedForces[3]     = Vec3(3.842205941E-02,  2.602732089E-01,  1.547586195E-01);
+        expectedForces[4]     = Vec3(1.154895485E-01,  2.805267242E-01,  1.519821623E-01);
+        expectedForces[5]     = Vec3(0.0, 0.0, 0.0);
 
         expectedEnergy        = -3.372536909E+00;
     }

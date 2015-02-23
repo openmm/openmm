@@ -210,9 +210,9 @@ RealOpenMM AmoebaReferenceInPlaneAngleForce::calculateAngleIxn(const RealVec& po
        RealOpenMM delta2 = delta*two;
  
        AmoebaReferenceForce::getCrossProduct(deltaR[BD], deltaR[CD], deltaR[BDxCD]);
-       AmoebaReferenceForce::getCrossProduct(deltaR[T],  deltaR[CD], deltaR[TxCD] );
+       AmoebaReferenceForce::getCrossProduct(deltaR[T],  deltaR[CD], deltaR[TxCD]);
        AmoebaReferenceForce::getCrossProduct(deltaR[AD], deltaR[BD], deltaR[ADxBD]);
-       AmoebaReferenceForce::getCrossProduct(deltaR[AD], deltaR[T],  deltaR[ADxT] );
+       AmoebaReferenceForce::getCrossProduct(deltaR[AD], deltaR[T],  deltaR[ADxT]);
        for (int ii = 0; ii < 3; ii++) {
     
           RealOpenMM term     = deltaR[BDxCD][ii] + delta2*deltaR[TxCD][ii];

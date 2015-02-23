@@ -48,22 +48,22 @@ extern "C" void registerAmoebaCudaKernelFactories();
 
 const double TOL = 1e-5;
 static void computeAmoebaBondForce(int bondIndex,  std::vector<Vec3>& positions, AmoebaBondForce& amoebaBondForce,
-                                           std::vector<Vec3>& forces, double* energy ) {
+                                           std::vector<Vec3>& forces, double* energy) {
 
     int particle1, particle2;
     double bondLength;
     double quadraticK;
     double cubicK    = amoebaBondForce.getAmoebaGlobalBondCubic();
     double quarticK  = amoebaBondForce.getAmoebaGlobalBondQuartic();
-    amoebaBondForce.getBondParameters(bondIndex, particle1, particle2,  bondLength,  quadraticK );
+    amoebaBondForce.getBondParameters(bondIndex, particle1, particle2,  bondLength,  quadraticK);
 
     double deltaR[3];
     double r2 = 0.0;
-    for( int ii = 0; ii < 3; ii++ ){
+    for (int ii = 0; ii < 3; ii++) {
            deltaR[ii]    = positions[particle2][ii] - positions[particle1][ii];
            r2           += deltaR[ii]*deltaR[ii];
     }
-    double r                   = sqrt( r2 );
+    double r                   = sqrt(r2);
 
     double bondDelta           = (r - bondLength);
     double bondDelta2          = bondDelta*bondDelta;
@@ -83,40 +83,40 @@ static void computeAmoebaBondForce(int bondIndex,  std::vector<Vec3>& positions,
 
 }
 
-static void computeAmoebaBondForces( Context& context, AmoebaBondForce& amoebaBondForce,
-                                             std::vector<Vec3>& expectedForces, double* expectedEnergy ) {
+static void computeAmoebaBondForces(Context& context, AmoebaBondForce& amoebaBondForce,
+                                             std::vector<Vec3>& expectedForces, double* expectedEnergy) {
 
     // get positions and zero forces
 
     State state = context.getState(State::Positions);
     std::vector<Vec3> positions = state.getPositions();
-    expectedForces.resize( positions.size() );
+    expectedForces.resize(positions.size());
     
-    for( unsigned int ii = 0; ii < expectedForces.size(); ii++ ){
+    for (unsigned int ii = 0; ii < expectedForces.size(); ii++) {
         expectedForces[ii][0] = expectedForces[ii][1] = expectedForces[ii][2] = 0.0;
     }
 
     // calculates forces/energy
 
     *expectedEnergy = 0.0;
-    for( int ii = 0; ii < amoebaBondForce.getNumBonds(); ii++ ){
-        computeAmoebaBondForce(ii, positions, amoebaBondForce, expectedForces, expectedEnergy );
+    for (int ii = 0; ii < amoebaBondForce.getNumBonds(); ii++) {
+        computeAmoebaBondForce(ii, positions, amoebaBondForce, expectedForces, expectedEnergy);
     }
 }
 
-void compareWithExpectedForceAndEnergy( Context& context, AmoebaBondForce& amoebaBondForce, double tolerance, const std::string& idString) {
+void compareWithExpectedForceAndEnergy(Context& context, AmoebaBondForce& amoebaBondForce, double tolerance, const std::string& idString) {
 
     std::vector<Vec3> expectedForces;
     double expectedEnergy;
-    computeAmoebaBondForces( context, amoebaBondForce, expectedForces, &expectedEnergy );
+    computeAmoebaBondForces(context, amoebaBondForce, expectedForces, &expectedEnergy);
    
     State state                      = context.getState(State::Forces | State::Energy);
     const std::vector<Vec3> forces   = state.getForces();
 
-    for( unsigned int ii = 0; ii < forces.size(); ii++ ){
-        ASSERT_EQUAL_VEC( expectedForces[ii], forces[ii], tolerance );
+    for (unsigned int ii = 0; ii < forces.size(); ii++) {
+        ASSERT_EQUAL_VEC(expectedForces[ii], forces[ii], tolerance);
     }
-    ASSERT_EQUAL_TOL( expectedEnergy, state.getPotentialEnergy(), tolerance );
+    ASSERT_EQUAL_TOL(expectedEnergy, state.getPotentialEnergy(), tolerance);
 }
 
 void testOneBond() {
@@ -134,22 +134,22 @@ void testOneBond() {
     double quadraticK = 1.0;
     double cubicK     = 2.0;
     double quarticicK = 3.0;
-    amoebaBondForce->setAmoebaGlobalBondCubic( cubicK );
-    amoebaBondForce->setAmoebaGlobalBondQuartic( quarticicK );
+    amoebaBondForce->setAmoebaGlobalBondCubic(cubicK);
+    amoebaBondForce->setAmoebaGlobalBondQuartic(quarticicK);
     amoebaBondForce->addBond(0, 1, bondLength, quadraticK);
 
     system.addForce(amoebaBondForce);
-    Context context(system, integrator, Platform::getPlatformByName( "CUDA"));
+    Context context(system, integrator, Platform::getPlatformByName("CUDA"));
     std::vector<Vec3> positions(2);
 
     positions[0] = Vec3(0, 1, 0);
     positions[1] = Vec3(0, 0, 0);
 
     context.setPositions(positions);
-    compareWithExpectedForceAndEnergy( context, *amoebaBondForce, TOL, "testOneBond" );
+    compareWithExpectedForceAndEnergy(context, *amoebaBondForce, TOL, "testOneBond");
 }
 
-void testTwoBond(  ) {
+void testTwoBond() {
 
     System system;
 
@@ -165,14 +165,14 @@ void testTwoBond(  ) {
     double quadraticK = 1.0;
     double cubicK     = 2.0;
     double quarticicK = 3.0;
-    amoebaBondForce->setAmoebaGlobalBondCubic( cubicK );
-    amoebaBondForce->setAmoebaGlobalBondQuartic( quarticicK );
+    amoebaBondForce->setAmoebaGlobalBondCubic(cubicK);
+    amoebaBondForce->setAmoebaGlobalBondQuartic(quarticicK);
     amoebaBondForce->addBond(0, 1, bondLength, quadraticK);
     amoebaBondForce->addBond(1, 2, bondLength, quadraticK);
 
     system.addForce(amoebaBondForce);
-    Context context(system, integrator, Platform::getPlatformByName( "CUDA"));
-    //Context context(system, integrator, platform );
+    Context context(system, integrator, Platform::getPlatformByName("CUDA"));
+    //Context context(system, integrator, platform);
     std::vector<Vec3> positions(3);
 
     positions[0] = Vec3(0, 1, 0);
@@ -180,7 +180,7 @@ void testTwoBond(  ) {
     positions[2] = Vec3(1, 0, 1);
 
     context.setPositions(positions);
-    compareWithExpectedForceAndEnergy( context, *amoebaBondForce, TOL, "testTwoBond" );
+    compareWithExpectedForceAndEnergy(context, *amoebaBondForce, TOL, "testTwoBond");
     
     // Try changing the bond parameters and make sure it's still correct.
     
@@ -189,14 +189,14 @@ void testTwoBond(  ) {
     bool exceptionThrown = false;
     try {
         // This should throw an exception.
-        compareWithExpectedForceAndEnergy( context, *amoebaBondForce, TOL, "testTwoBond" );
+        compareWithExpectedForceAndEnergy(context, *amoebaBondForce, TOL, "testTwoBond");
     }
     catch (std::exception ex) {
         exceptionThrown = true;
     }
     ASSERT(exceptionThrown);
     amoebaBondForce->updateParametersInContext(context);
-    compareWithExpectedForceAndEnergy( context, *amoebaBondForce, TOL, "testTwoBond" );
+    compareWithExpectedForceAndEnergy(context, *amoebaBondForce, TOL, "testTwoBond");
 }
 
 int main(int argc, char* argv[]) {

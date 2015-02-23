@@ -26,13 +26,13 @@ __device__ void bicubic(real4 y, real4 y1i, real4 y2i, real4 y12i, real x1, real
                                              -2.0f*y12.x  -       y12.y  -       y12.z  -  2.0f*y12.w;
     c[3][0] = 2.0f*(y.x - y.y) + y1.x + y1.y;
     c[3][1] = 2.0f*(y2.x - y2.y) + y12.x + y12.y;
-    c[3][2] = 6.0f*( y.y -  y.x +  y.w -  y.z) +
+    c[3][2] = 6.0f*(y.y -  y.x +  y.w -  y.z) +
               3.0f*(y1.z + y1.w - y1.x - y1.y) +
-              2.0f*( 2.0f*(y2.y - y2.x) + y2.z - y2.w) +
+              2.0f*(2.0f*(y2.y - y2.x) + y2.z - y2.w) +
              -2.0f*(y12.x + y12.y) - y12.z - y12.w;
-    c[3][3] = 4.0f*(  y.x -    y.y  +   y.z -  y.w)  +
-              2.0f*( y1.x +   y1.y  -  y1.z -  y1.w) +
-              2.0f*( y2.x -   y2.y  -  y2.z +  y2.w) +
+    c[3][3] = 4.0f*( y.x -    y.y  +   y.z -  y.w)  +
+              2.0f*(y1.x +   y1.y  -  y1.z -  y1.w) +
+              2.0f*(y2.x -   y2.y  -  y2.z +  y2.w) +
                     y12.x +  y12.y  + y12.z + y12.w;
 
     real t = (x1-x1l) / (x1u-x1l);

@@ -114,7 +114,7 @@ static void computeAmoebaOutOfPlaneBendForce(int bondIndex,  std::vector<Vec3>& 
  
     double tempVector[3];
     crossProductVector3(deltaR[CB], deltaR[DB], tempVector);
-    double   eE  = dotVector3(deltaR[AB], tempVector );
+    double   eE  = dotVector3(deltaR[AB], tempVector);
     double  dot  = dotVector3(deltaR[AD],  deltaR[CD]);
     double   cc  = rAD2*rCD2 - dot*dot;
  
@@ -277,10 +277,10 @@ void testOneOutOfPlaneBend() {
 
     AmoebaOutOfPlaneBendForce* amoebaOutOfPlaneBendForce = new AmoebaOutOfPlaneBendForce();
 
-    amoebaOutOfPlaneBendForce->setAmoebaGlobalOutOfPlaneBendCubic(  -0.1400000E-01);
-    amoebaOutOfPlaneBendForce->setAmoebaGlobalOutOfPlaneBendQuartic( 0.5600000E-04);
-    amoebaOutOfPlaneBendForce->setAmoebaGlobalOutOfPlaneBendPentic( -0.7000000E-06);
-    amoebaOutOfPlaneBendForce->setAmoebaGlobalOutOfPlaneBendSextic(  0.2200000E-07);
+    amoebaOutOfPlaneBendForce->setAmoebaGlobalOutOfPlaneBendCubic( -0.1400000E-01);
+    amoebaOutOfPlaneBendForce->setAmoebaGlobalOutOfPlaneBendQuartic(0.5600000E-04);
+    amoebaOutOfPlaneBendForce->setAmoebaGlobalOutOfPlaneBendPentic(-0.7000000E-06);
+    amoebaOutOfPlaneBendForce->setAmoebaGlobalOutOfPlaneBendSextic( 0.2200000E-07);
 
     double kOutOfPlaneBend = 0.328682196E-01;
     amoebaOutOfPlaneBendForce->addOutOfPlaneBend(0, 1, 2, 3, kOutOfPlaneBend);
@@ -329,10 +329,10 @@ void testOneOutOfPlaneBend2(int setId) {
 
     AmoebaOutOfPlaneBendForce* amoebaOutOfPlaneBendForce = new AmoebaOutOfPlaneBendForce();
 
-    amoebaOutOfPlaneBendForce->setAmoebaGlobalOutOfPlaneBendCubic(  -0.1400000E-01);
-    amoebaOutOfPlaneBendForce->setAmoebaGlobalOutOfPlaneBendQuartic( 0.5600000E-04);
-    amoebaOutOfPlaneBendForce->setAmoebaGlobalOutOfPlaneBendPentic( -0.7000000E-06);
-    amoebaOutOfPlaneBendForce->setAmoebaGlobalOutOfPlaneBendSextic(  0.2200000E-07);
+    amoebaOutOfPlaneBendForce->setAmoebaGlobalOutOfPlaneBendCubic( -0.1400000E-01);
+    amoebaOutOfPlaneBendForce->setAmoebaGlobalOutOfPlaneBendQuartic(0.5600000E-04);
+    amoebaOutOfPlaneBendForce->setAmoebaGlobalOutOfPlaneBendPentic(-0.7000000E-06);
+    amoebaOutOfPlaneBendForce->setAmoebaGlobalOutOfPlaneBendSextic( 0.2200000E-07);
 /*
    285    441    442    443    444  0.328682196E-01
    286    441    442    444    443  0.164493407E-01
@@ -352,15 +352,15 @@ void testOneOutOfPlaneBend2(int setId) {
 */
 
     std::map<int,Vec3> coordinates;
-    coordinates[440] = Vec3( 0.893800000E+01,  0.439800000E+01,  0.343100000E+01);
-    coordinates[441] = Vec3( 0.779100000E+01,  0.614600000E+01,  0.390100000E+01);
-    coordinates[442] = Vec3( 0.915400000E+01,  0.683900000E+01,  0.389400000E+01);
-    coordinates[443] = Vec3( 0.101770000E+02,  0.619000000E+01,  0.379900000E+01);
-    coordinates[444] = Vec3( 0.921000000E+01,  0.813800000E+01,  0.398600000E+01);
-    coordinates[445] = Vec3( 0.708500000E+01,  0.672900000E+01,  0.332700000E+01);
-    coordinates[446] = Vec3( 0.744300000E+01,  0.605200000E+01,  0.491900000E+01);
-    coordinates[447] = Vec3( 0.100820000E+02,  0.859300000E+01,  0.398200000E+01);
-    coordinates[448] = Vec3( 0.838000000E+01,  0.866100000E+01,  0.406000000E+01);
+    coordinates[440] = Vec3(0.893800000E+01,  0.439800000E+01,  0.343100000E+01);
+    coordinates[441] = Vec3(0.779100000E+01,  0.614600000E+01,  0.390100000E+01);
+    coordinates[442] = Vec3(0.915400000E+01,  0.683900000E+01,  0.389400000E+01);
+    coordinates[443] = Vec3(0.101770000E+02,  0.619000000E+01,  0.379900000E+01);
+    coordinates[444] = Vec3(0.921000000E+01,  0.813800000E+01,  0.398600000E+01);
+    coordinates[445] = Vec3(0.708500000E+01,  0.672900000E+01,  0.332700000E+01);
+    coordinates[446] = Vec3(0.744300000E+01,  0.605200000E+01,  0.491900000E+01);
+    coordinates[447] = Vec3(0.100820000E+02,  0.859300000E+01,  0.398200000E+01);
+    coordinates[448] = Vec3(0.838000000E+01,  0.866100000E+01,  0.406000000E+01);
     
     double kOutOfPlaneBend = 0.328682196E-01;
     std::vector<int> particleIndices;
@@ -435,15 +435,15 @@ void testOneOutOfPlaneBend2(int setId) {
     static double totalEnergy;
     if (iter == 0) {
 
-        totalForces[441] = Vec3( 0.0, 0.0, 0.0);
-        totalForces[442] = Vec3( 0.0, 0.0, 0.0);
-        totalForces[443] = Vec3( 0.0, 0.0, 0.0);
-        totalForces[444] = Vec3( 0.0, 0.0, 0.0);
-        totalForces[445] = Vec3( 0.0, 0.0, 0.0);
-        totalForces[446] = Vec3( 0.0, 0.0, 0.0);
-        totalForces[447] = Vec3( 0.0, 0.0, 0.0);
-        totalForces[448] = Vec3( 0.0, 0.0, 0.0);
-        totalForces[449] = Vec3( 0.0, 0.0, 0.0);
+        totalForces[441] = Vec3(0.0, 0.0, 0.0);
+        totalForces[442] = Vec3(0.0, 0.0, 0.0);
+        totalForces[443] = Vec3(0.0, 0.0, 0.0);
+        totalForces[444] = Vec3(0.0, 0.0, 0.0);
+        totalForces[445] = Vec3(0.0, 0.0, 0.0);
+        totalForces[446] = Vec3(0.0, 0.0, 0.0);
+        totalForces[447] = Vec3(0.0, 0.0, 0.0);
+        totalForces[448] = Vec3(0.0, 0.0, 0.0);
+        totalForces[449] = Vec3(0.0, 0.0, 0.0);
         totalEnergy      = 0.0;
     }
     iter++;

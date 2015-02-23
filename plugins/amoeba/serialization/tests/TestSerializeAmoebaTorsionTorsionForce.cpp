@@ -42,27 +42,27 @@ using namespace std;
 
 extern "C" void registerAmoebaSerializationProxies();
 
-static void loadTorsionTorsionGrid( std::vector< std::vector< std::vector<double> > >& gridVector ){
+static void loadTorsionTorsionGrid(std::vector< std::vector< std::vector<double> > >& gridVector) {
  
     static const int gridSize = 25;
-    gridVector.resize( gridSize );
-    for( unsigned int ii = 0; ii < gridSize; ii++ ){
-        gridVector[ii].resize( gridSize );
-        for( unsigned int jj = 0; jj < gridSize; jj++ ){
-            gridVector[ii][jj].resize( 6 );
-            for( unsigned int kk = 0; kk < 6; kk++ ){
+    gridVector.resize(gridSize);
+    for (unsigned int ii = 0; ii < gridSize; ii++) {
+        gridVector[ii].resize(gridSize);
+        for (unsigned int jj = 0; jj < gridSize; jj++) {
+            gridVector[ii][jj].resize(6);
+            for (unsigned int kk = 0; kk < 6; kk++) {
                 gridVector[ii][jj][0] = -180.0 + 15.0*static_cast<double>(ii);
                 gridVector[ii][jj][1] = -180.0 + 15.0*static_cast<double>(jj);
-                gridVector[ii][jj][2] = static_cast<double>( rand());
-                gridVector[ii][jj][3] = static_cast<double>( rand());
-                gridVector[ii][jj][4] = static_cast<double>( rand());
-                gridVector[ii][jj][5] = static_cast<double>( rand());
+                gridVector[ii][jj][2] = static_cast<double>(rand());
+                gridVector[ii][jj][3] = static_cast<double>(rand());
+                gridVector[ii][jj][4] = static_cast<double>(rand());
+                gridVector[ii][jj][5] = static_cast<double>(rand());
             }
         }
      }
 }
 
-static void compareGrids( const std::vector< std::vector< std::vector<double> > >& grid1, const std::vector< std::vector< std::vector<double> > >& grid2 ) {
+static void compareGrids(const std::vector< std::vector< std::vector<double> > >& grid1, const std::vector< std::vector< std::vector<double> > >& grid2) {
 
     ASSERT_EQUAL(grid1.size(), grid2.size());
     for (unsigned int ii = 0; ii < grid1.size(); ii++) {
@@ -81,13 +81,13 @@ void testSerialization() {
 
     AmoebaTorsionTorsionForce force1;
 
-    for( unsigned int ii = 0; ii < 5; ii++ ){
+    for (unsigned int ii = 0; ii < 5; ii++) {
         std::vector< std::vector< std::vector<double> > > gridVector;
-        loadTorsionTorsionGrid( gridVector );
-        force1.setTorsionTorsionGrid( ii, gridVector );
+        loadTorsionTorsionGrid(gridVector);
+        force1.setTorsionTorsionGrid(ii, gridVector);
     }
-    for( unsigned int ii = 0; ii < 5; ii++ ){
-        force1.addTorsionTorsion( ii, ii+1,ii+3, ii+4, ii+5, ( (ii % 2 ) ? 1 : 0), (ii % 4) );
+    for (unsigned int ii = 0; ii < 5; ii++) {
+        force1.addTorsionTorsion(ii, ii+1,ii+3, ii+4, ii+5, ((ii % 2) ? 1 : 0), (ii % 4));
     }
 
     // Serialize and then deserialize it.
@@ -104,8 +104,8 @@ void testSerialization() {
 
         int a1, a2, a3, a4, a5, aChiral, aGridIndex, b1, b2, b3, b4, b5, bChiral, bGridIndex;
 
-        force1.getTorsionTorsionParameters( ii, a1, a2, a3, a4, a5, aChiral, aGridIndex);
-        force2.getTorsionTorsionParameters( ii, b1, b2, b3, b4, b5, bChiral, bGridIndex);
+        force1.getTorsionTorsionParameters(ii, a1, a2, a3, a4, a5, aChiral, aGridIndex);
+        force2.getTorsionTorsionParameters(ii, b1, b2, b3, b4, b5, bChiral, bGridIndex);
 
         ASSERT_EQUAL(a1, b1);
         ASSERT_EQUAL(a2, b2);
@@ -113,14 +113,14 @@ void testSerialization() {
         ASSERT_EQUAL(a4, b4);
         ASSERT_EQUAL(a5, b5);
         ASSERT_EQUAL(aChiral, bChiral);
-        ASSERT_EQUAL(aGridIndex, bGridIndex );
+        ASSERT_EQUAL(aGridIndex, bGridIndex);
     }
 
     ASSERT_EQUAL(force1.getNumTorsionTorsionGrids(), force2.getNumTorsionTorsionGrids());
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(force1.getNumTorsionTorsionGrids()); ii++) {
-        const std::vector< std::vector< std::vector<double> > >& grid1 = force1.getTorsionTorsionGrid( ii );
-        const std::vector< std::vector< std::vector<double> > >& grid2 = force2.getTorsionTorsionGrid( ii );
-        compareGrids(grid1, grid2 );
+        const std::vector< std::vector< std::vector<double> > >& grid1 = force1.getTorsionTorsionGrid(ii);
+        const std::vector< std::vector< std::vector<double> > >& grid2 = force2.getTorsionTorsionGrid(ii);
+        compareGrids(grid1, grid2);
     }
 
 }

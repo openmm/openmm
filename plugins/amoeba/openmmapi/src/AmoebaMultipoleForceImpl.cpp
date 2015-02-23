@@ -64,26 +64,26 @@ void AmoebaMultipoleForceImpl::initialize(ContextImpl& context) {
     }   
 
     double quadrupoleValidationTolerance = 1.0e-05;
-    for( int ii = 0; ii < system.getNumParticles(); ii++ ){
+    for (int ii = 0; ii < system.getNumParticles(); ii++) {
 
         int axisType, multipoleAtomZ, multipoleAtomX, multipoleAtomY;
         double charge, thole, dampingFactor, polarity ;
         std::vector<double> molecularDipole;
         std::vector<double> molecularQuadrupole;
 
-        owner.getMultipoleParameters( ii, charge, molecularDipole, molecularQuadrupole, axisType, multipoleAtomZ, multipoleAtomX, multipoleAtomY,
-                                      thole, dampingFactor, polarity );
+        owner.getMultipoleParameters(ii, charge, molecularDipole, molecularQuadrupole, axisType, multipoleAtomZ, multipoleAtomX, multipoleAtomY,
+                                     thole, dampingFactor, polarity);
 
        // check quadrupole is traceless and symmetric
 
-       double trace = fabs( molecularQuadrupole[0] + molecularQuadrupole[4] + molecularQuadrupole[8] );
-       if( trace > quadrupoleValidationTolerance ){
+       double trace = fabs(molecularQuadrupole[0] + molecularQuadrupole[4] + molecularQuadrupole[8]);
+       if (trace > quadrupoleValidationTolerance) {
              std::stringstream buffer;
              buffer << "AmoebaMultipoleForce: qudarupole for particle=" << ii;
              buffer << " has nonzero trace: " << trace << "; AMOEBA plugin assumes traceless quadrupole.";
              throw OpenMMException(buffer.str());
        }
-       if( fabs( molecularQuadrupole[1] - molecularQuadrupole[3] ) > quadrupoleValidationTolerance  ){
+       if (fabs(molecularQuadrupole[1] - molecularQuadrupole[3]) > quadrupoleValidationTolerance ) {
              std::stringstream buffer;
              buffer << "AmoebaMultipoleForce: XY and YX components of quadrupole for particle=" << ii;
              buffer << "  are not equal: [" << molecularQuadrupole[1] << " " << molecularQuadrupole[3] << "];";
@@ -91,7 +91,7 @@ void AmoebaMultipoleForceImpl::initialize(ContextImpl& context) {
              throw OpenMMException(buffer.str());
        }
 
-       if( fabs( molecularQuadrupole[2] - molecularQuadrupole[6] ) > quadrupoleValidationTolerance  ){
+       if (fabs(molecularQuadrupole[2] - molecularQuadrupole[6]) > quadrupoleValidationTolerance ) {
              std::stringstream buffer;
              buffer << "AmoebaMultipoleForce: XZ and ZX components of quadrupole for particle=" << ii;
              buffer << "  are not equal: [" << molecularQuadrupole[2] << " " << molecularQuadrupole[6] << "];";
@@ -99,7 +99,7 @@ void AmoebaMultipoleForceImpl::initialize(ContextImpl& context) {
              throw OpenMMException(buffer.str());
        }
 
-       if( fabs( molecularQuadrupole[5] - molecularQuadrupole[7] ) > quadrupoleValidationTolerance  ){
+       if (fabs(molecularQuadrupole[5] - molecularQuadrupole[7]) > quadrupoleValidationTolerance ) {
              std::stringstream buffer;
              buffer << "AmoebaMultipoleForce: YZ and ZY components of quadrupole for particle=" << ii;
              buffer << "  are not equal: [" << molecularQuadrupole[5] << " " << molecularQuadrupole[7] << "];";
@@ -109,9 +109,9 @@ void AmoebaMultipoleForceImpl::initialize(ContextImpl& context) {
 
        // only 'Z-then-X', 'Bisector', Z-Bisect, ThreeFold  currently handled
 
-        if( axisType != AmoebaMultipoleForce::ZThenX     && axisType != AmoebaMultipoleForce::Bisector &&
+        if (axisType != AmoebaMultipoleForce::ZThenX     && axisType != AmoebaMultipoleForce::Bisector &&
             axisType != AmoebaMultipoleForce::ZBisect    && axisType != AmoebaMultipoleForce::ThreeFold &&
-            axisType != AmoebaMultipoleForce::ZOnly      && axisType != AmoebaMultipoleForce::NoAxisType ) {
+            axisType != AmoebaMultipoleForce::ZOnly      && axisType != AmoebaMultipoleForce::NoAxisType) {
              std::stringstream buffer;
              buffer << "AmoebaMultipoleForce: axis type=" << axisType;
              buffer << " not currently handled - only axisTypes[ ";
@@ -139,7 +139,7 @@ std::vector<std::string> AmoebaMultipoleForceImpl::getKernelNames() {
 }
 
 const int* AmoebaMultipoleForceImpl::getCovalentDegrees() {
-    if( !initializedCovalentDegrees ){
+    if (!initializedCovalentDegrees) {
         initializedCovalentDegrees                                      = true;
         CovalentDegrees[AmoebaMultipoleForce::Covalent12]               = 1;
         CovalentDegrees[AmoebaMultipoleForce::Covalent13]               = 2;
@@ -153,20 +153,20 @@ const int* AmoebaMultipoleForceImpl::getCovalentDegrees() {
     return CovalentDegrees;
 }
 
-void AmoebaMultipoleForceImpl::getCovalentRange( const AmoebaMultipoleForce& force, int atomIndex, const std::vector<AmoebaMultipoleForce::CovalentType>& lists,
-                                                 int* minCovalentIndex, int* maxCovalentIndex ){
+void AmoebaMultipoleForceImpl::getCovalentRange(const AmoebaMultipoleForce& force, int atomIndex, const std::vector<AmoebaMultipoleForce::CovalentType>& lists,
+                                                int* minCovalentIndex, int* maxCovalentIndex) {
 
     *minCovalentIndex =  999999999;
     *maxCovalentIndex = -999999999;
-    for( unsigned int kk = 0; kk < lists.size(); kk++ ){
+    for (unsigned int kk = 0; kk < lists.size(); kk++) {
         AmoebaMultipoleForce::CovalentType jj = lists[kk];
         std::vector<int> covalentList;
-        force.getCovalentMap( atomIndex, jj, covalentList );
-        for( unsigned int ii = 0; ii < covalentList.size(); ii++ ){
-            if( *minCovalentIndex > covalentList[ii] ){
+        force.getCovalentMap(atomIndex, jj, covalentList);
+        for (unsigned int ii = 0; ii < covalentList.size(); ii++) {
+            if (*minCovalentIndex > covalentList[ii]) {
                *minCovalentIndex = covalentList[ii];
             }
-            if( *maxCovalentIndex < covalentList[ii] ){
+            if (*maxCovalentIndex < covalentList[ii]) {
                *maxCovalentIndex = covalentList[ii];
             }
         }
@@ -174,10 +174,10 @@ void AmoebaMultipoleForceImpl::getCovalentRange( const AmoebaMultipoleForce& for
     return;
 }
 
-void AmoebaMultipoleForceImpl::getCovalentDegree( const AmoebaMultipoleForce& force, std::vector<int>& covalentDegree ){
-    covalentDegree.resize( AmoebaMultipoleForce::CovalentEnd );
+void AmoebaMultipoleForceImpl::getCovalentDegree(const AmoebaMultipoleForce& force, std::vector<int>& covalentDegree) {
+    covalentDegree.resize(AmoebaMultipoleForce::CovalentEnd);
     const int* CovalentDegrees = AmoebaMultipoleForceImpl::getCovalentDegrees();
-    for( unsigned int kk = 0; kk < AmoebaMultipoleForce::CovalentEnd; kk++ ){
+    for (unsigned int kk = 0; kk < AmoebaMultipoleForce::CovalentEnd; kk++) {
         covalentDegree[kk] = CovalentDegrees[kk];
     }   
     return;
@@ -187,12 +187,12 @@ void AmoebaMultipoleForceImpl::getInducedDipoles(ContextImpl& context, vector<Ve
     kernel.getAs<CalcAmoebaMultipoleForceKernel>().getInducedDipoles(context, dipoles);
 }
 
-void AmoebaMultipoleForceImpl::getElectrostaticPotential( ContextImpl& context, const std::vector< Vec3 >& inputGrid,
-                                                          std::vector< double >& outputElectrostaticPotential ){
+void AmoebaMultipoleForceImpl::getElectrostaticPotential(ContextImpl& context, const std::vector< Vec3 >& inputGrid,
+                                                         std::vector< double >& outputElectrostaticPotential) {
     kernel.getAs<CalcAmoebaMultipoleForceKernel>().getElectrostaticPotential(context, inputGrid, outputElectrostaticPotential);
 }
 
-void AmoebaMultipoleForceImpl::getSystemMultipoleMoments( ContextImpl& context, std::vector< double >& outputMultipoleMoments ){
+void AmoebaMultipoleForceImpl::getSystemMultipoleMoments(ContextImpl& context, std::vector< double >& outputMultipoleMoments) {
     kernel.getAs<CalcAmoebaMultipoleForceKernel>().getSystemMultipoleMoments(context, outputMultipoleMoments);
 }
 

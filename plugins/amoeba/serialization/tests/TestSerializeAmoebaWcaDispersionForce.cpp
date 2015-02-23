@@ -45,14 +45,14 @@ void testSerialization() {
     // Create a Force.
 
     AmoebaWcaDispersionForce force1;
-    force1.setEpso(    1.0 );
-    force1.setEpsh(    1.1 );
-    force1.setRmino(   1.2 );
-    force1.setRminh(   1.3 );
-    force1.setAwater(  1.4 );
-    force1.setShctd(   1.5 );
-    force1.setDispoff( 1.6 );
-    force1.setSlevy(   1.7 );
+    force1.setEpso(   1.0);
+    force1.setEpsh(   1.1);
+    force1.setRmino(  1.2);
+    force1.setRminh(  1.3);
+    force1.setAwater( 1.4);
+    force1.setShctd(  1.5);
+    force1.setDispoff(1.6);
+    force1.setSlevy(  1.7);
 
     force1.addParticle(1.0, 2.0);
     force1.addParticle(1.1, 2.1);
@@ -83,8 +83,8 @@ void testSerialization() {
         double radius1, epsilon1;
         double radius2, epsilon2;
 
-        force1.getParticleParameters( ii, radius1, epsilon1 );
-        force2.getParticleParameters( ii, radius2, epsilon2 );
+        force1.getParticleParameters(ii, radius1, epsilon1);
+        force2.getParticleParameters(ii, radius2, epsilon2);
 
         ASSERT_EQUAL(radius1,  radius2);
         ASSERT_EQUAL(epsilon1, epsilon2);

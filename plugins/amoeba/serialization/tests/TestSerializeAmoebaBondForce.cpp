@@ -45,8 +45,8 @@ void testSerialization() {
     // Create a Force.
 
     AmoebaBondForce force1;
-    force1.setAmoebaGlobalBondCubic( 12.3 );
-    force1.setAmoebaGlobalBondQuartic( 98.7 );
+    force1.setAmoebaGlobalBondCubic(12.3);
+    force1.setAmoebaGlobalBondQuartic(98.7);
     force1.addBond(0, 1, 1.0, 2.0);
     force1.addBond(0, 2, 2.0, 2.1);
     force1.addBond(2, 3, 3.0, 2.2);

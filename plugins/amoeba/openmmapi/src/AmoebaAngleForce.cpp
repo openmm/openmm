@@ -46,7 +46,7 @@ int AmoebaAngleForce::addAngle(int particle1, int particle2, int particle3,  dou
 }
 
 void AmoebaAngleForce::getAngleParameters(int index, int& particle1, int& particle2, int& particle3,
-                                                  double& length, double&  quadraticK ) const {
+                                                  double& length, double&  quadraticK) const {
     particle1       = angles[index].particle1;
     particle2       = angles[index].particle2;
     particle3       = angles[index].particle3;
@@ -55,7 +55,7 @@ void AmoebaAngleForce::getAngleParameters(int index, int& particle1, int& partic
 }
 
 void AmoebaAngleForce::setAngleParameters(int index, int particle1, int particle2, int particle3, 
-                                                  double length, double quadraticK ) {
+                                                  double length, double quadraticK) {
     angles[index].particle1  = particle1;
     angles[index].particle2  = particle2;
     angles[index].particle3  = particle3;
@@ -67,7 +67,7 @@ double AmoebaAngleForce::getAmoebaGlobalAngleCubic() const {
     return _globalCubicK;
 }
 
-void AmoebaAngleForce::setAmoebaGlobalAngleCubic(double cubicK ) {
+void AmoebaAngleForce::setAmoebaGlobalAngleCubic(double cubicK) {
     _globalCubicK           = cubicK;
 }
 
@@ -75,7 +75,7 @@ double AmoebaAngleForce::getAmoebaGlobalAngleQuartic() const {
     return _globalQuarticK;
 }
 
-void AmoebaAngleForce::setAmoebaGlobalAngleQuartic(double quarticK ) {
+void AmoebaAngleForce::setAmoebaGlobalAngleQuartic(double quarticK) {
     _globalQuarticK         = quarticK;
 }
 
@@ -83,7 +83,7 @@ double AmoebaAngleForce::getAmoebaGlobalAnglePentic() const {
     return _globalPenticK;
 }
 
-void AmoebaAngleForce::setAmoebaGlobalAnglePentic(double penticK ) {
+void AmoebaAngleForce::setAmoebaGlobalAnglePentic(double penticK) {
     _globalPenticK           = penticK;
 }
 
@@ -91,7 +91,7 @@ double AmoebaAngleForce::getAmoebaGlobalAngleSextic() const {
     return _globalSexticK;
 }
 
-void AmoebaAngleForce::setAmoebaGlobalAngleSextic(double sexticK ) {
+void AmoebaAngleForce::setAmoebaGlobalAngleSextic(double sexticK) {
     _globalSexticK         = sexticK;
 }
 

@@ -64,10 +64,10 @@ void* AmoebaOutOfPlaneBendForceProxy::deserialize(const SerializationNode& node)
     AmoebaOutOfPlaneBendForce* force = new AmoebaOutOfPlaneBendForce();
     try {
 
-        force->setAmoebaGlobalOutOfPlaneBendCubic(node.getDoubleProperty(  "cubic"));
+        force->setAmoebaGlobalOutOfPlaneBendCubic(node.getDoubleProperty("cubic"));
         force->setAmoebaGlobalOutOfPlaneBendQuartic(node.getDoubleProperty("quartic"));
-        force->setAmoebaGlobalOutOfPlaneBendPentic(node.getDoubleProperty( "pentic"));
-        force->setAmoebaGlobalOutOfPlaneBendSextic(node.getDoubleProperty( "sextic"));
+        force->setAmoebaGlobalOutOfPlaneBendPentic(node.getDoubleProperty("pentic"));
+        force->setAmoebaGlobalOutOfPlaneBendSextic(node.getDoubleProperty("sextic"));
 
         const SerializationNode& bonds = node.getChildNode("OutOfPlaneBend");
         for (unsigned int ii = 0; ii < bonds.getChildren().size(); ii++) {
