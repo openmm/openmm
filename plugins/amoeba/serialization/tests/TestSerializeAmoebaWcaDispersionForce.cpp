@@ -62,14 +62,6 @@ void testSerialization() {
 
     stringstream buffer;
     XmlSerializer::serialize<AmoebaWcaDispersionForce>(&force1, "Force", buffer);
-#ifdef AMOEBA_DEBUG
-    if( 0 ){
-        FILE* filePtr = fopen("WcaDispersion.xml", "w" );
-        (void) fprintf( filePtr, "%s", buffer.str().c_str() );
-        (void) fclose( filePtr );
-    }
-#endif
-
     AmoebaWcaDispersionForce* copy = XmlSerializer::deserialize<AmoebaWcaDispersionForce>(buffer);
 
     // Compare the two forces to see if they are identical.  

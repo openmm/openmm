@@ -78,20 +78,12 @@ static double dotVector3( double* vectorX, double* vectorY ){
 
 
 static void computeAmoebaPiTorsionForce(int bondIndex,  std::vector<Vec3>& positions, AmoebaPiTorsionForce& amoebaPiTorsionForce,
-                                        std::vector<Vec3>& forces, double* energy, FILE* log ) {
+                                        std::vector<Vec3>& forces, double* energy) {
 
     int particle1, particle2, particle3, particle4, particle5, particle6;
     double kTorsion;
 
     amoebaPiTorsionForce.getPiTorsionParameters(bondIndex, particle1, particle2, particle3, particle4,  particle5, particle6, kTorsion);
-
-#ifdef AMOEBA_DEBUG
-    if( log ){
-        (void) fprintf( log, "computeAmoebaPiTorsionForce: bond %d [%d %d %d %d %d %d] k=%10.3e\n", 
-                             bondIndex, particle1, particle2, particle3, particle4, particle5, particle6, kTorsion );
-        (void) fflush( log );
-    }
-#endif
 
     enum { AD, BD, EC, FC, P, Q, CP, DC, QD, T, U, TU, DP, QC, dT, dU, dP, dQ, dC1, dC2, dD1, dD2, LastDeltaIndex };
     double deltaR[LastDeltaIndex][3];
@@ -213,7 +205,7 @@ static void computeAmoebaPiTorsionForce(int bondIndex,  std::vector<Vec3>& posit
 }
  
 static void computeAmoebaPiTorsionForces( Context& context, AmoebaPiTorsionForce& amoebaPiTorsionForce,
-                                          std::vector<Vec3>& expectedForces, double* expectedEnergy, FILE* log ) {
+                                          std::vector<Vec3>& expectedForces, double* expectedEnergy ) {
 
     // get positions and zero forces
 
@@ -229,42 +221,19 @@ static void computeAmoebaPiTorsionForces( Context& context, AmoebaPiTorsionForce
 
     *expectedEnergy = 0.0;
     for( int ii = 0; ii < amoebaPiTorsionForce.getNumPiTorsions(); ii++ ){
-        computeAmoebaPiTorsionForce(ii, positions, amoebaPiTorsionForce, expectedForces, expectedEnergy, log );
+        computeAmoebaPiTorsionForce(ii, positions, amoebaPiTorsionForce, expectedForces, expectedEnergy);
     }
-
-#ifdef AMOEBA_DEBUG
-    if( log ){
-        (void) fprintf( log, "computeAmoebaPiTorsionForces: expected energy=%14.7e\n", *expectedEnergy );
-        for( unsigned int ii = 0; ii < positions.size(); ii++ ){
-            (void) fprintf( log, "%6u [%14.7e %14.7e %14.7e]\n", ii, expectedForces[ii][0], expectedForces[ii][1], expectedForces[ii][2] );
-        }
-        (void) fflush( log );
-    }
-#endif
-    return;
-
 }
 
 void compareWithExpectedForceAndEnergy( Context& context, AmoebaPiTorsionForce& amoebaPiTorsionForce,
-                                        double tolerance, const std::string& idString, FILE* log) {
+                                        double tolerance, const std::string& idString) {
 
     std::vector<Vec3> expectedForces;
     double expectedEnergy;
-    computeAmoebaPiTorsionForces( context, amoebaPiTorsionForce, expectedForces, &expectedEnergy, log );
+    computeAmoebaPiTorsionForces( context, amoebaPiTorsionForce, expectedForces, &expectedEnergy );
    
     State state                      = context.getState(State::Forces | State::Energy);
     const std::vector<Vec3> forces   = state.getForces();
-
-#ifdef AMOEBA_DEBUG
-    if( log ){
-        (void) fprintf( log, "computeAmoebaPiTorsionForces: expected energy=%14.7e %14.7e\n", expectedEnergy, state.getPotentialEnergy() );
-        for( unsigned int ii = 0; ii < forces.size(); ii++ ){
-            (void) fprintf( log, "%6u [%14.7e %14.7e %14.7e]   [%14.7e %14.7e %14.7e]\n", ii,
-                            expectedForces[ii][0], expectedForces[ii][1], expectedForces[ii][2], forces[ii][0], forces[ii][1], forces[ii][2] );
-        }
-        (void) fflush( log );
-    }
-#endif
 
     for( unsigned int ii = 0; ii < forces.size(); ii++ ){
         ASSERT_EQUAL_VEC( expectedForces[ii], forces[ii], tolerance );
@@ -272,7 +241,7 @@ void compareWithExpectedForceAndEnergy( Context& context, AmoebaPiTorsionForce& 
     ASSERT_EQUAL_TOL( expectedEnergy, state.getPotentialEnergy(), tolerance );
 }
 
-void testOnePiTorsion( FILE* log ) {
+void testOnePiTorsion() {
 
     System system;
     int numberOfParticles = 6;
@@ -301,7 +270,7 @@ void testOnePiTorsion( FILE* log ) {
     positions[5] = Vec3( 0.254124630E+02,  0.234691880E+02,  0.773335400E+01 );
 
     context.setPositions(positions);
-    compareWithExpectedForceAndEnergy( context, *amoebaPiTorsionForce, TOL, "testOnePiTorsion", log );
+    compareWithExpectedForceAndEnergy( context, *amoebaPiTorsionForce, TOL, "testOnePiTorsion");
     
     // Try changing the torsion parameters and make sure it's still correct.
     
@@ -309,14 +278,14 @@ void testOnePiTorsion( FILE* log ) {
     bool exceptionThrown = false;
     try {
         // This should throw an exception.
-        compareWithExpectedForceAndEnergy( context, *amoebaPiTorsionForce, TOL, "testOnePiTorsion", log );
+        compareWithExpectedForceAndEnergy( context, *amoebaPiTorsionForce, TOL, "testOnePiTorsion");
     }
     catch (std::exception ex) {
         exceptionThrown = true;
     }
     ASSERT(exceptionThrown);
     amoebaPiTorsionForce->updateParametersInContext(context);
-    compareWithExpectedForceAndEnergy( context, *amoebaPiTorsionForce, TOL, "testOnePiTorsion", log );
+    compareWithExpectedForceAndEnergy( context, *amoebaPiTorsionForce, TOL, "testOnePiTorsion" );
 }
 
 int main(int argc, char* argv[]) {
@@ -325,8 +294,7 @@ int main(int argc, char* argv[]) {
         registerAmoebaCudaKernelFactories();
         if (argc > 1)
             Platform::getPlatformByName("CUDA").setPropertyDefaultValue("CudaPrecision", std::string(argv[1]));
-        FILE* log = NULL;
-        testOnePiTorsion( log );
+        testOnePiTorsion();
     } catch(const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;
         std::cout << "FAIL - ERROR.  Test failed." << std::endl;

@@ -65,14 +65,6 @@ void testSerialization() {
 
     stringstream buffer;
     XmlSerializer::serialize<AmoebaVdwForce>(&force1, "Force", buffer);
-#ifdef AMOEBA_DEBUG
-    if( 0 ){
-        FILE* filePtr = fopen("Vdw.xml", "w" );
-        (void) fprintf( filePtr, "%s", buffer.str().c_str() );
-        (void) fclose( filePtr );
-    }
-#endif
-
     AmoebaVdwForce* copy = XmlSerializer::deserialize<AmoebaVdwForce>(buffer);
 
     // Compare the two forces to see if they are identical.  

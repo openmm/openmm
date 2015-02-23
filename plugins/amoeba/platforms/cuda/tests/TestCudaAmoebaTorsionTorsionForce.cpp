@@ -2584,7 +2584,7 @@ TorsionTorsionGrid& getTorsionGrid( int gridIndex ) {
     return grids[gridIndex];
 }
 
-void testTorsionTorsion( FILE* log, int systemId ) {
+void testTorsionTorsion(int systemId) {
 
     System system;
     int numberOfParticles = 6;
@@ -2660,19 +2660,6 @@ void testTorsionTorsion( FILE* log, int systemId ) {
         forces[ii][1] *= conversion;
         forces[ii][2] *= conversion;
     }
-
-#ifdef AMOEBA_DEBUG
-    if( log ){
-        (void) fprintf( log, "computeAmoebaTorsionTorsionForces: expected energy=%14.7e %14.7e\n", expectedEnergy, state.getPotentialEnergy() );
-        for( unsigned int ii = 0; ii < forces.size(); ii++ ){
-            (void) fprintf( log, "%6u [%14.7e %14.7e %14.7e]   [%14.7e %14.7e %14.7e]\n", ii,
-                            expectedForces[ii][0], expectedForces[ii][1], expectedForces[ii][2],
-                            forces[ii][0], forces[ii][1], forces[ii][2] );
-        }
-        (void) fflush( log );
-    }
-#endif
-
     double tolerance = 1.0e-03;
     for( unsigned int ii = 0; ii < forces.size(); ii++ ){
         ASSERT_EQUAL_VEC( expectedForces[ii], forces[ii], tolerance );
@@ -2687,8 +2674,7 @@ int main(int argc, char* argv[]) {
         registerAmoebaCudaKernelFactories();
         if (argc > 1)
             Platform::getPlatformByName("CUDA").setPropertyDefaultValue("CudaPrecision", std::string(argv[1]));
-        FILE* log = NULL;
-        testTorsionTorsion( log, 1 );
+        testTorsionTorsion(1);
     } catch(const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;
         std::cout << "FAIL - ERROR.  Test failed." << std::endl;

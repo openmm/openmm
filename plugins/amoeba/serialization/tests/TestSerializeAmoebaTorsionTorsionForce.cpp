@@ -94,14 +94,6 @@ void testSerialization() {
 
     stringstream buffer;
     XmlSerializer::serialize<AmoebaTorsionTorsionForce>(&force1, "Force", buffer);
-#ifdef AMOEBA_DEBUG
-    if( 0 ){
-        FILE* filePtr = fopen("TorsionTorsion.xml", "w" );
-        (void) fprintf( filePtr, "%s", buffer.str().c_str() );
-        (void) fclose( filePtr );
-    }
-#endif
-
     AmoebaTorsionTorsionForce* copy = XmlSerializer::deserialize<AmoebaTorsionTorsionForce>(buffer);
 
     // Compare the two force1s to see if they are identical.  

@@ -57,7 +57,7 @@ extern "C" void registerAmoebaCudaKernelFactories();
 
 const double TOL = 1e-4;
 
-void testVdw( FILE* log ) {
+void testVdw() {
 
     System system;
     int numberOfParticles          = 6;
@@ -159,18 +159,6 @@ void testVdw( FILE* log ) {
         forces[ii][2] *= conversion;
     }    
     expectedEnergy *= CalToJoule;
-
-#ifdef AMOEBA_DEBUG
-    if( log ){
-        (void) fprintf( log, "computeAmoebaVdwForces: expected energy=%14.7e %14.7e\n", expectedEnergy, state.getPotentialEnergy() );
-        for( unsigned int ii = 0; ii < forces.size(); ii++ ){
-            (void) fprintf( log, "%6u [%14.7e %14.7e %14.7e]   [%14.7e %14.7e %14.7e]\n", ii,
-                            expectedForces[ii][0], expectedForces[ii][1], expectedForces[ii][2], forces[ii][0], forces[ii][1], forces[ii][2] );
-        }
-        (void) fflush( log );
-    }
-#endif
-
     double tolerance = 1.0e-03;
     for( unsigned int ii = 0; ii < forces.size(); ii++ ){
         ASSERT_EQUAL_VEC( expectedForces[ii], forces[ii], tolerance );
@@ -208,7 +196,7 @@ void testVdw( FILE* log ) {
 }
 
 void setupAndGetForcesEnergyVdwAmmonia( const std::string& sigmaCombiningRule, const std::string& epsilonCombiningRule, double cutoff,
-                                        double boxDimension, std::vector<Vec3>& forces, double& energy, FILE* log ){
+                                        double boxDimension, std::vector<Vec3>& forces, double& energy){
 
     // beginning of Vdw setup
 
@@ -343,24 +331,7 @@ void setupAndGetForcesEnergyVdwAmmonia( const std::string& sigmaCombiningRule, c
 
 void compareForcesEnergy( std::string& testName, double expectedEnergy, double energy,
                           std::vector<Vec3>& expectedForces,
-                          std::vector<Vec3>& forces, double tolerance, FILE* log ) {
-
-
-#define AMOEBA_DEBUG
-#ifdef AMOEBA_DEBUG
-    if( log ){
-        double conversion = 1.0/4.184;
-        (void) fprintf( log, "%s: expected energy=%14.7e %14.7e\n", testName.c_str(), conversion*expectedEnergy, conversion*energy );
-        conversion *= -0.1;
-        for( unsigned int ii = 0; ii < forces.size(); ii++ ){
-            (void) fprintf( log, "%6u [%14.7e %14.7e %14.7e]   [%14.7e %14.7e %14.7e]\n", ii,
-                            conversion*expectedForces[ii][0], conversion*expectedForces[ii][1], conversion*expectedForces[ii][2],
-                            conversion*forces[ii][0], conversion*forces[ii][1], conversion*forces[ii][2] );
-        }
-        (void) fflush( log );
-    }
-#endif
-
+                          std::vector<Vec3>& forces, double tolerance) {
     for( unsigned int ii = 0; ii < forces.size(); ii++ ){
         ASSERT_EQUAL_VEC_MOD( expectedForces[ii], forces[ii], tolerance, testName );
     }
@@ -369,7 +340,7 @@ void compareForcesEnergy( std::string& testName, double expectedEnergy, double e
 
 // test VDW w/ sigmaRule=CubicMean and epsilonRule=HHG
 
-void testVdwAmmoniaCubicMeanHhg( FILE* log ) {
+void testVdwAmmoniaCubicMeanHhg() {
 
     std::string testName      = "testVdwAmmoniaCubicMeanHhg";
 
@@ -379,7 +350,7 @@ void testVdwAmmoniaCubicMeanHhg( FILE* log ) {
     std::vector<Vec3> forces;
     double energy;
 
-    setupAndGetForcesEnergyVdwAmmonia( "CUBIC-MEAN", "HHG", cutoff, boxDimension, forces, energy, log );
+    setupAndGetForcesEnergyVdwAmmonia( "CUBIC-MEAN", "HHG", cutoff, boxDimension, forces, energy );
     std::vector<Vec3> expectedForces(numberOfParticles);
 
     double expectedEnergy     =  4.8012258e+00;
@@ -394,12 +365,12 @@ void testVdwAmmoniaCubicMeanHhg( FILE* log ) {
     expectedForces[7]         = Vec3(   1.6756544e+00,   3.2497316e-01,  -1.7906832e-01 );
 
     double tolerance          = 1.0e-04;
-    compareForcesEnergy( testName, expectedEnergy, energy, expectedForces, forces, tolerance, log );
+    compareForcesEnergy( testName, expectedEnergy, energy, expectedForces, forces, tolerance );
 }
 
 // test VDW w/ sigmaRule=Arithmetic and epsilonRule=Arithmetic
 
-void testVdwAmmoniaArithmeticArithmetic( FILE* log ) {
+void testVdwAmmoniaArithmeticArithmetic() {
 
     std::string testName      = "testVdwAmmoniaArithmeticArithmetic";
 
@@ -409,7 +380,7 @@ void testVdwAmmoniaArithmeticArithmetic( FILE* log ) {
 
     std::vector<Vec3> forces;
     double energy;
-    setupAndGetForcesEnergyVdwAmmonia( "ARITHMETIC", "ARITHMETIC", cutoff, boxDimension, forces, energy, log );
+    setupAndGetForcesEnergyVdwAmmonia( "ARITHMETIC", "ARITHMETIC", cutoff, boxDimension, forces, energy );
     std::vector<Vec3> expectedForces(numberOfParticles);
 
     double expectedEnergy     =  4.2252403e+00;
@@ -424,12 +395,12 @@ void testVdwAmmoniaArithmeticArithmetic( FILE* log ) {
     expectedForces[7]         = Vec3(   2.3761408e+00,   4.6871961e-01,  -2.4731607e-01 );
 
     double tolerance          = 1.0e-04;
-    compareForcesEnergy( testName, expectedEnergy, energy, expectedForces, forces, tolerance, log );
+    compareForcesEnergy( testName, expectedEnergy, energy, expectedForces, forces, tolerance );
 }
 
 // test VDW w/ sigmaRule=Geometric and epsilonRule=Geometric
 
-void testVdwAmmoniaGeometricGeometric( FILE* log ) {
+void testVdwAmmoniaGeometricGeometric( ) {
 
     std::string testName      = "testVdwAmmoniaGeometricGeometric";
 
@@ -438,7 +409,7 @@ void testVdwAmmoniaGeometricGeometric( FILE* log ) {
     double cutoff             = 9000000.0;
     std::vector<Vec3> forces;
     double energy;
-    setupAndGetForcesEnergyVdwAmmonia( "GEOMETRIC", "GEOMETRIC", cutoff, boxDimension, forces, energy, log );
+    setupAndGetForcesEnergyVdwAmmonia( "GEOMETRIC", "GEOMETRIC", cutoff, boxDimension, forces, energy );
     std::vector<Vec3> expectedForces(numberOfParticles);
 
     double expectedEnergy     =  2.5249914e+00;
@@ -453,10 +424,10 @@ void testVdwAmmoniaGeometricGeometric( FILE* log ) {
     expectedForces[7]         = Vec3(   1.8109211e+00,   3.5273117e-01,  -1.9224723e-01 );
 
     double tolerance          = 1.0e-04;
-    compareForcesEnergy( testName, expectedEnergy, energy, expectedForces, forces, tolerance, log );
+    compareForcesEnergy( testName, expectedEnergy, energy, expectedForces, forces, tolerance );
 }
 
-void testVdwAmmoniaCubicMeanHarmonic( FILE* log ) {
+void testVdwAmmoniaCubicMeanHarmonic( ) {
 
     std::string testName      = "testVdwAmmoniaCubicMeanHarmonic";
 
@@ -465,7 +436,7 @@ void testVdwAmmoniaCubicMeanHarmonic( FILE* log ) {
     double cutoff             = 9000000.0;
     std::vector<Vec3> forces;
     double energy;
-    setupAndGetForcesEnergyVdwAmmonia( "CUBIC-MEAN", "HARMONIC", cutoff, boxDimension, forces, energy, log );
+    setupAndGetForcesEnergyVdwAmmonia( "CUBIC-MEAN", "HARMONIC", cutoff, boxDimension, forces, energy );
     std::vector<Vec3> expectedForces(numberOfParticles);
 
     double expectedEnergy     =  4.1369069e+00;
@@ -480,14 +451,14 @@ void testVdwAmmoniaCubicMeanHarmonic( FILE* log ) {
     expectedForces[7]         = Vec3(   1.5080748e+00,   2.9058422e-01,  -1.6274118e-01 );
 
     double tolerance          = 1.0e-04;
-    compareForcesEnergy( testName, expectedEnergy, energy, expectedForces, forces, tolerance, log );
+    compareForcesEnergy( testName, expectedEnergy, energy, expectedForces, forces, tolerance );
 }
 
 // test w/ cutoff=0.25 nm; single ixn between two particles (0 and 6); force nonzero on
 // particle 4 due to reduction applied to NH
 // the distance between 0 and 6 is ~ 0.235 so the ixn is in the tapered region
 
-void testVdwTaper( FILE* log ) {
+void testVdwTaper( ) {
 
     std::string testName      = "testVdwTaper";
 
@@ -497,7 +468,7 @@ void testVdwTaper( FILE* log ) {
 
     std::vector<Vec3> forces;
     double energy;
-    setupAndGetForcesEnergyVdwAmmonia( "CUBIC-MEAN", "HHG", cutoff, boxDimension, forces, energy, log );
+    setupAndGetForcesEnergyVdwAmmonia( "CUBIC-MEAN", "HHG", cutoff, boxDimension, forces, energy );
     std::vector<Vec3> expectedForces(numberOfParticles);
 
     double expectedEnergy     =  3.5478444e+00;
@@ -512,12 +483,12 @@ void testVdwTaper( FILE* log ) {
     expectedForces[7]         = Vec3(  -0.0000000e+00,  -0.0000000e+00,  -0.0000000e+00 );
 
     double tolerance          = 1.0e-04;
-    compareForcesEnergy( testName, expectedEnergy, energy, expectedForces, forces, tolerance, log );
+    compareForcesEnergy( testName, expectedEnergy, energy, expectedForces, forces, tolerance );
 }
 
 // test PBC
 
-void testVdwPBC( FILE* log ) {
+void testVdwPBC( ) {
 
     std::string testName      = "testVdwPBC";
 
@@ -527,7 +498,7 @@ void testVdwPBC( FILE* log ) {
 
     std::vector<Vec3> forces;
     double energy;
-    setupAndGetForcesEnergyVdwAmmonia( "CUBIC-MEAN", "HHG", cutoff, boxDimension, forces, energy, log );
+    setupAndGetForcesEnergyVdwAmmonia( "CUBIC-MEAN", "HHG", cutoff, boxDimension, forces, energy );
     std::vector<Vec3> expectedForces(numberOfParticles);
 
     double expectedEnergy     =  1.4949141e+01;
@@ -545,14 +516,14 @@ void testVdwPBC( FILE* log ) {
     // if tapering turned off, then absolute difference < 2.0e-05
 
     double tolerance          = 5.0e-04;
-    compareForcesEnergy( testName, expectedEnergy, energy, expectedForces, forces, tolerance, log );
+    compareForcesEnergy( testName, expectedEnergy, energy, expectedForces, forces, tolerance );
 }
 
 // create box of 216 water molecules
 
 void setupAndGetForcesEnergyVdwWater( const std::string& sigmaCombiningRule, const std::string& epsilonCombiningRule, double cutoff,
                                       double boxDimension, int includeVdwDispersionCorrection,
-                                      std::vector<Vec3>& forces, double& energy, FILE* log ){
+                                      std::vector<Vec3>& forces, double& energy ){
 
     // beginning of Vdw setup
 
@@ -1271,7 +1242,7 @@ void setupAndGetForcesEnergyVdwWater( const std::string& sigmaCombiningRule, con
 
 // test employing box of 216 water molecules w/ and w/o dispersion correction
 
-void testVdwWater( int includeVdwDispersionCorrection, FILE* log ) {
+void testVdwWater( int includeVdwDispersionCorrection ) {
 
 
     std::string testName;
@@ -1287,7 +1258,7 @@ void testVdwWater( int includeVdwDispersionCorrection, FILE* log ) {
 
     std::vector<Vec3> forces;
     double energy;
-    setupAndGetForcesEnergyVdwWater( "CUBIC-MEAN", "HHG", cutoff, boxDimension, includeVdwDispersionCorrection, forces, energy, log );
+    setupAndGetForcesEnergyVdwWater( "CUBIC-MEAN", "HHG", cutoff, boxDimension, includeVdwDispersionCorrection, forces, energy );
     std::vector<Vec3> expectedForces(numberOfParticles);
 
     // initialize expected energy and forces
@@ -1952,7 +1923,7 @@ void testVdwWater( int includeVdwDispersionCorrection, FILE* log ) {
     // if tapering turned off, then absolute difference < 2.0e-05
 
     double tolerance          = 5.0e-04;
-    compareForcesEnergy( testName, expectedEnergy, energy, expectedForces, forces, tolerance, log );
+    compareForcesEnergy( testName, expectedEnergy, energy, expectedForces, forces, tolerance );
 
     // test sigma/epsilon rules for dispersion correction
 
@@ -1975,7 +1946,7 @@ void testVdwWater( int includeVdwDispersionCorrection, FILE* log ) {
          expectedEnergies.push_back( 3.2774624e+03 );
 
          for( unsigned int ii = 0; ii < sigmaRules.size(); ii++ ){
-             setupAndGetForcesEnergyVdwWater( sigmaRules[ii], epsilonRules[ii], cutoff, boxDimension, includeVdwDispersionCorrection, forces, energy, log );
+             setupAndGetForcesEnergyVdwWater( sigmaRules[ii], epsilonRules[ii], cutoff, boxDimension, includeVdwDispersionCorrection, forces, energy );
              testName    = "testVdwWaterWithDispersionCorrection_" + sigmaRules[ii] + '_' + epsilonRules[ii];
              ASSERT_EQUAL_TOL_MOD( expectedEnergies[ii], energy, tolerance, testName );
          }
@@ -2045,48 +2016,47 @@ int main(int argc, char* argv[]) {
         registerAmoebaCudaKernelFactories();
         if (argc > 1)
             Platform::getPlatformByName("CUDA").setPropertyDefaultValue("CudaPrecision", std::string(argv[1]));
-        FILE* log = NULL;
 
-        testVdw( log );
+        testVdw();
 
         // tests using two ammonia molecules
 
         // test VDW w/ sigmaRule=CubicMean and epsilonRule=HHG
 
-        testVdwAmmoniaCubicMeanHhg( log );
+        testVdwAmmoniaCubicMeanHhg();
 
         // test VDW w/ sigmaRule=Arithmetic and epsilonRule=Arithmetic
 
-        testVdwAmmoniaArithmeticArithmetic( log );
+        testVdwAmmoniaArithmeticArithmetic();
 
         // test VDW w/ sigmaRule=Geometric and epsilonRule=Geometric
 
-        testVdwAmmoniaGeometricGeometric( log );
+        testVdwAmmoniaGeometricGeometric();
 
         // test VDW w/ sigmaRule=CubicMean and epsilonRule=Harmonic
 
-        testVdwAmmoniaCubicMeanHarmonic( log );
+        testVdwAmmoniaCubicMeanHarmonic();
 
         // test w/ cutoff=0.25 nm; single ixn between two particles (0 and 6); force nonzero on
         // particle 4 due to reduction applied to NH
         // the distance between 0 and 6 is ~ 0.235 so the ixn is in the tapered region
 
-        testVdwTaper( log );
+        testVdwTaper();
 
         // test PBC
 
-        testVdwPBC( log );
+        testVdwPBC();
 
         // tests based on box of water
 
         int includeVdwDispersionCorrection = 0;
-        testVdwWater( includeVdwDispersionCorrection, log );
+        testVdwWater( includeVdwDispersionCorrection);
 
         // includes tests for various combinations of sigma/epsilon rules
         // when computing vdw dispersion correction
  
         includeVdwDispersionCorrection     = 1;
-        testVdwWater( includeVdwDispersionCorrection, log );
+        testVdwWater( includeVdwDispersionCorrection);
         
         // test triclinic boxes
 

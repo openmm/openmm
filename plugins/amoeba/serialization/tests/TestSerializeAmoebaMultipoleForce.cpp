@@ -99,13 +99,6 @@ void testSerialization() {
 
     stringstream buffer;
     XmlSerializer::serialize<AmoebaMultipoleForce>(&force1, "Force", buffer);
-#ifdef AMOEBA_DEBUG
-    if( 0 ){
-        FILE* filePtr = fopen("Multipole.xml", "w" );
-        (void) fprintf( filePtr, "%s", buffer.str().c_str() );
-        (void) fclose( filePtr );
-    }
-#endif
 
     AmoebaMultipoleForce* copy = XmlSerializer::deserialize<AmoebaMultipoleForce>(buffer);
 

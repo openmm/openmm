@@ -56,19 +56,7 @@ extern "C" void registerAmoebaCudaKernelFactories();
 
 void compareForcesEnergy( std::string& testName, double expectedEnergy, double energy,
                           const std::vector<Vec3>& expectedForces,
-                          const std::vector<Vec3>& forces, double tolerance, FILE* log ) {
-
-#ifdef AMOEBA_DEBUG
-    if( log ){
-        (void) fprintf( log, "%s: expected energy=%14.7e %14.7e\n", testName.c_str(), expectedEnergy, energy );
-        for( unsigned int ii = 0; ii < forces.size(); ii++ ){
-            (void) fprintf( log, "%6u [%14.7e %14.7e %14.7e]   [%14.7e %14.7e %14.7e]\n", ii,
-                            expectedForces[ii][0], expectedForces[ii][1], expectedForces[ii][2], forces[ii][0], forces[ii][1], forces[ii][2] );
-        }
-        (void) fflush( log );
-    }
-#endif
-
+                          const std::vector<Vec3>& forces, double tolerance) {
     for( unsigned int ii = 0; ii < forces.size(); ii++ ){
         ASSERT_EQUAL_VEC_MOD( expectedForces[ii], forces[ii], tolerance, testName );
     }
@@ -77,7 +65,7 @@ void compareForcesEnergy( std::string& testName, double expectedEnergy, double e
 
 // test Wca dispersion
 
-void testWcaDispersionAmmonia( FILE* log ) {
+void testWcaDispersionAmmonia() {
 
     std::string testName      = "testWcaDispersionAmmonia";
 
@@ -151,7 +139,7 @@ void testWcaDispersionAmmonia( FILE* log ) {
     expectedForces[7]         = Vec3(  -1.1888087e+00,   1.2889802e+00,  -3.8615387e-01 );
 
     double tolerance          = 1.0e-04;
-    compareForcesEnergy( testName, expectedEnergy, energy, expectedForces, forces, tolerance, log );
+    compareForcesEnergy( testName, expectedEnergy, energy, expectedForces, forces, tolerance );
     
     // Try changing the particle parameters and make sure it's still correct.
     
@@ -168,7 +156,7 @@ void testWcaDispersionAmmonia( FILE* log ) {
     bool exceptionThrown = false;
     try {
         // This should throw an exception.
-        compareForcesEnergy(testName, state1.getPotentialEnergy(), state2.getPotentialEnergy(), state1.getForces(), state2.getForces(), tolerance, log);
+        compareForcesEnergy(testName, state1.getPotentialEnergy(), state2.getPotentialEnergy(), state1.getForces(), state2.getForces(), tolerance);
     }
     catch (std::exception ex) {
         exceptionThrown = true;
@@ -176,7 +164,7 @@ void testWcaDispersionAmmonia( FILE* log ) {
     ASSERT(exceptionThrown);
     amoebaWcaDispersionForce->updateParametersInContext(context);
     state1 = context.getState(State::Forces | State::Energy);
-    compareForcesEnergy(testName, state1.getPotentialEnergy(), state2.getPotentialEnergy(), state1.getForces(), state2.getForces(), tolerance, log);
+    compareForcesEnergy(testName, state1.getPotentialEnergy(), state2.getPotentialEnergy(), state1.getForces(), state2.getForces(), tolerance);
 }
 
 int main(int argc, char* argv[]) {
@@ -185,11 +173,10 @@ int main(int argc, char* argv[]) {
         registerAmoebaCudaKernelFactories();
         if (argc > 1)
             Platform::getPlatformByName("CUDA").setPropertyDefaultValue("CudaPrecision", std::string(argv[1]));
-        FILE* log = NULL;
 
         // test Wca dispersion force using two ammonia molecules
 
-        testWcaDispersionAmmonia( log );
+        testWcaDispersionAmmonia();
 
 
     } catch(const std::exception& e) {

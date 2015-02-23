@@ -60,14 +60,6 @@ void testSerialization() {
 
     stringstream buffer;
     XmlSerializer::serialize<AmoebaGeneralizedKirkwoodForce>(&force1, "Force", buffer);
-#ifdef AMOEBA_DEBUG
-    if( 0 ){
-        FILE* filePtr = fopen("GeneralizedKirkwood.xml", "w" );
-        (void) fprintf( filePtr, "%s", buffer.str().c_str() );
-        (void) fclose( filePtr );
-    }
-#endif
-
     AmoebaGeneralizedKirkwoodForce* copy = XmlSerializer::deserialize<AmoebaGeneralizedKirkwoodForce>(buffer);
 
     // Compare the two forces to see if they are identical.  
