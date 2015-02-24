@@ -216,7 +216,7 @@ void CpuNonbondedForce::calculateReciprocalIxn(int numberOfAtoms, float* posq, c
 
         // setup reciprocal box
 
-        float recipBoxSize[3] = { TWO_PI / periodicBoxVectors[0][0], TWO_PI / periodicBoxVectors[1][1], TWO_PI / periodicBoxVectors[2][2]};
+        float recipBoxSize[3] = {(float) (TWO_PI/periodicBoxVectors[0][0]), (float) (TWO_PI/periodicBoxVectors[1][1]), (float) (TWO_PI/periodicBoxVectors[2][2])};
 
 
         // setup K-vectors
