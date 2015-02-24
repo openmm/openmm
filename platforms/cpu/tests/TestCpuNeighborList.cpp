@@ -62,7 +62,7 @@ void testNeighborList(bool periodic, bool triclinic) {
         boxVectors[1] = RealVec(0, 15, 0);
         boxVectors[2] = RealVec(0, 0, 22);
     }
-    const float boxSize[3] = {boxVectors[0][0], boxVectors[1][1], boxVectors[2][2]};
+    const float boxSize[3] = {(float) boxVectors[0][0], (float) boxVectors[1][1], (float) boxVectors[2][2]};
     const int blockSize = 8;
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);

@@ -508,13 +508,12 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
         if (nonbondedMethod == PME) {
             // If available, use the optimized PME implementation.
 
-            try {
+            vector<string> kernelNames;
+            kernelNames.push_back("CalcPmeReciprocalForce");
+            useOptimizedPme = getPlatform().supportsKernels(kernelNames);
+            if (useOptimizedPme) {
                 optimizedPme = getPlatform().createKernel(CalcPmeReciprocalForceKernel::Name(), context);
                 optimizedPme.getAs<CalcPmeReciprocalForceKernel>().initialize(gridSize[0], gridSize[1], gridSize[2], numParticles, ewaldAlpha);
-                useOptimizedPme = true;
-            }
-            catch (OpenMMException& ex) {
-                // The CPU PME plugin isn't available.
             }
         }
     }
