@@ -76,6 +76,9 @@ const map<string, double>& State::getParameters() const {
         throw OpenMMException("Invoked getParameters() on a State which does not contain parameters.");
     return parameters;
 }
+int State::getDataTypes() const {
+    return types;
+}
 State::State(double time) : types(0), time(time), ke(0), pe(0) {
 }
 State::State() : types(0), time(0.0), ke(0), pe(0) {
