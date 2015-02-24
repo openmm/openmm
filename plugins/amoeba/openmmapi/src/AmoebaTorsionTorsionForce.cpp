@@ -70,13 +70,13 @@ void AmoebaTorsionTorsionForce::setTorsionTorsionParameters(int index, int parti
     torsionTorsions[index].gridIndex              = gridIndex;
 }
 
-const TorsionTorsionGrid& AmoebaTorsionTorsionForce::getTorsionTorsionGrid(int index ) const {
+const TorsionTorsionGrid& AmoebaTorsionTorsionForce::getTorsionTorsionGrid(int index) const {
    return torsionTorsionGrids[index].getTorsionTorsionGrid();
 }
 
-void AmoebaTorsionTorsionForce::setTorsionTorsionGrid(int index, const TorsionTorsionGrid& grid ) {
-   if( index >= static_cast<int>(torsionTorsionGrids.size()) ){
-      torsionTorsionGrids.resize( index + 1);
+void AmoebaTorsionTorsionForce::setTorsionTorsionGrid(int index, const TorsionTorsionGrid& grid) {
+   if (index >= static_cast<int>(torsionTorsionGrids.size())) {
+      torsionTorsionGrids.resize(index + 1);
    }
    torsionTorsionGrids[index] = grid;
 }

@@ -88,8 +88,8 @@ RealOpenMM AmoebaReferencePiTorsionForce::calculatePiTorsionIxn(const RealVec& p
        deltaR[P][ii]  += positionAtomC[ii];
        deltaR[Q][ii]  += positionAtomD[ii];
     }
-    AmoebaReferenceForce::getCrossProduct(deltaR[CP], deltaR[DC], deltaR[T] );
-    AmoebaReferenceForce::getCrossProduct(deltaR[DC], deltaR[QD], deltaR[U] );
+    AmoebaReferenceForce::getCrossProduct(deltaR[CP], deltaR[DC], deltaR[T]);
+    AmoebaReferenceForce::getCrossProduct(deltaR[DC], deltaR[QD], deltaR[U]);
     AmoebaReferenceForce::getCrossProduct(deltaR[T],  deltaR[U],  deltaR[TU]);
  
     RealOpenMM rT2  = AmoebaReferenceForce::getNormSquared3(deltaR[T]);
@@ -123,27 +123,27 @@ RealOpenMM AmoebaReferencePiTorsionForce::calculatePiTorsionIxn(const RealVec& p
     RealOpenMM factorT =  dedphi/(rDC*rT2);
     RealOpenMM factorU = -dedphi/(rDC*rU2);
  
-    AmoebaReferenceForce::getCrossProduct(deltaR[T], deltaR[DC], deltaR[dT] );
-    AmoebaReferenceForce::getCrossProduct(deltaR[U], deltaR[DC], deltaR[dU] );
+    AmoebaReferenceForce::getCrossProduct(deltaR[T], deltaR[DC], deltaR[dT]);
+    AmoebaReferenceForce::getCrossProduct(deltaR[U], deltaR[DC], deltaR[dU]);
     for (int ii = 0; ii < 3; ii++) {
        deltaR[dT][ii] *= factorT;
        deltaR[dU][ii] *= factorU;
     }
  
-    AmoebaReferenceForce::getCrossProduct(deltaR[dT], deltaR[DC], deltaR[dP]  );
-    AmoebaReferenceForce::getCrossProduct(deltaR[dU], deltaR[DC], deltaR[dQ]  );
+    AmoebaReferenceForce::getCrossProduct(deltaR[dT], deltaR[DC], deltaR[dP] );
+    AmoebaReferenceForce::getCrossProduct(deltaR[dU], deltaR[DC], deltaR[dQ] );
  
-    AmoebaReferenceForce::getCrossProduct(deltaR[DP], deltaR[dT], deltaR[dC1] );
-    AmoebaReferenceForce::getCrossProduct(deltaR[dU], deltaR[QD], deltaR[dC2] );
+    AmoebaReferenceForce::getCrossProduct(deltaR[DP], deltaR[dT], deltaR[dC1]);
+    AmoebaReferenceForce::getCrossProduct(deltaR[dU], deltaR[QD], deltaR[dC2]);
  
-    AmoebaReferenceForce::getCrossProduct(deltaR[dT], deltaR[CP], deltaR[dD1] );
-    AmoebaReferenceForce::getCrossProduct(deltaR[QC], deltaR[dU], deltaR[dD2] );
+    AmoebaReferenceForce::getCrossProduct(deltaR[dT], deltaR[CP], deltaR[dD1]);
+    AmoebaReferenceForce::getCrossProduct(deltaR[QC], deltaR[dU], deltaR[dD2]);
  
-    AmoebaReferenceForce::getCrossProduct(deltaR[BD], deltaR[dP], d[A]        );
-    AmoebaReferenceForce::getCrossProduct(deltaR[dP], deltaR[AD], d[B]        );
+    AmoebaReferenceForce::getCrossProduct(deltaR[BD], deltaR[dP], d[A]       );
+    AmoebaReferenceForce::getCrossProduct(deltaR[dP], deltaR[AD], d[B]       );
  
-    AmoebaReferenceForce::getCrossProduct(deltaR[FC], deltaR[dQ], d[E]        );
-    AmoebaReferenceForce::getCrossProduct(deltaR[dQ], deltaR[EC], d[F]        );
+    AmoebaReferenceForce::getCrossProduct(deltaR[FC], deltaR[dQ], d[E]       );
+    AmoebaReferenceForce::getCrossProduct(deltaR[dQ], deltaR[EC], d[F]       );
  
     for (int ii = 0; ii < 3; ii++) {
        d[C][ii] = deltaR[dC1][ii] + deltaR[dC2][ii] + deltaR[dP][ii] - d[E][ii] - d[F][ii];

@@ -478,7 +478,7 @@ RealOpenMM AmoebaReferenceTorsionTorsionForce::calculateTorsionTorsionIxn(const 
     AmoebaReferenceForce::getCrossProduct(deltaR[CA], deltaR[dT], d[B]);
     AmoebaReferenceForce::getCrossProduct(deltaR[dU], deltaR[DC], tmp[0]);
  
-    AmoebaReferenceForce::getCrossProduct(deltaR[dT], deltaR[BA], d[C]  );
+    AmoebaReferenceForce::getCrossProduct(deltaR[dT], deltaR[BA], d[C]);
     AmoebaReferenceForce::getCrossProduct(deltaR[DB], deltaR[dU], tmp[1]);
 
     d[B][0] += tmp[0][0];
@@ -507,12 +507,12 @@ RealOpenMM AmoebaReferenceTorsionTorsionForce::calculateTorsionTorsionIxn(const 
  
     // dB2
   
-    AmoebaReferenceForce::getCrossProduct(deltaR[dU2], deltaR[DC],  tmp[0]  );
+    AmoebaReferenceForce::getCrossProduct(deltaR[dU2], deltaR[DC],  tmp[0]);
  
     // dC2
   
-    AmoebaReferenceForce::getCrossProduct(deltaR[DB],  deltaR[dU2], tmp[1]  );
-    AmoebaReferenceForce::getCrossProduct(deltaR[dV2], deltaR[ED],  tmp[2]  );
+    AmoebaReferenceForce::getCrossProduct(deltaR[DB],  deltaR[dU2], tmp[1]);
+    AmoebaReferenceForce::getCrossProduct(deltaR[dV2], deltaR[ED],  tmp[2]);
 
     d[B][0] += tmp[0][0];
     d[B][1] += tmp[0][1];
@@ -524,8 +524,8 @@ RealOpenMM AmoebaReferenceTorsionTorsionForce::calculateTorsionTorsionIxn(const 
  
     // dD2
   
-    AmoebaReferenceForce::getCrossProduct(deltaR[dU2],  deltaR[CB], tmp[0]  );
-    AmoebaReferenceForce::getCrossProduct(deltaR[EC], deltaR[dV2],  tmp[1]  );
+    AmoebaReferenceForce::getCrossProduct(deltaR[dU2],  deltaR[CB], tmp[0]);
+    AmoebaReferenceForce::getCrossProduct(deltaR[EC], deltaR[dV2],  tmp[1]);
 
     d[D][0] += tmp[0][0] + tmp[1][0];
     d[D][1] += tmp[0][1] + tmp[1][1];
@@ -533,7 +533,7 @@ RealOpenMM AmoebaReferenceTorsionTorsionForce::calculateTorsionTorsionIxn(const 
  
     // dE
   
-    AmoebaReferenceForce::getCrossProduct(deltaR[dV2], deltaR[DC],  d[E]  );
+    AmoebaReferenceForce::getCrossProduct(deltaR[dV2], deltaR[DC],  d[E]);
  
     // ---------------------------------------------------------------------------------------
  

@@ -41,29 +41,29 @@ AmoebaBondForce::AmoebaBondForce() {
 }
 
 int AmoebaBondForce::addBond(int particle1, int particle2, double length, double quadraticK) {
-    bonds.push_back(BondInfo(particle1, particle2, length, quadraticK ));
+    bonds.push_back(BondInfo(particle1, particle2, length, quadraticK));
     return bonds.size()-1;
 }
 
-void AmoebaBondForce::getBondParameters(int index, int& particle1, int& particle2, double& length, double&  quadraticK ) const {
+void AmoebaBondForce::getBondParameters(int index, int& particle1, int& particle2, double& length, double&  quadraticK) const {
     particle1       = bonds[index].particle1;
     particle2       = bonds[index].particle2;
     length          = bonds[index].length;
     quadraticK      = bonds[index].quadraticK;
 }
 
-void AmoebaBondForce::setBondParameters(int index, int particle1, int particle2, double length, double quadraticK ) {
+void AmoebaBondForce::setBondParameters(int index, int particle1, int particle2, double length, double quadraticK) {
     bonds[index].particle1  = particle1;
     bonds[index].particle2  = particle2;
     bonds[index].length     = length;
     bonds[index].quadraticK = quadraticK;
 }
 
-void AmoebaBondForce::setAmoebaGlobalBondCubic(double cubicK ) {
+void AmoebaBondForce::setAmoebaGlobalBondCubic(double cubicK) {
     _globalCubicK           = cubicK;
 }
 
-void AmoebaBondForce::setAmoebaGlobalBondQuartic(double quarticK ) {
+void AmoebaBondForce::setAmoebaGlobalBondQuartic(double quarticK) {
     _globalQuarticK         = quarticK;
 }
 

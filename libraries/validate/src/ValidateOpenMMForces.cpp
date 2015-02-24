@@ -68,7 +68,7 @@ ForceValidationResult::ForceValidationResult( const Context& context1, const Con
 ForceValidationResult::~ForceValidationResult(  ){
 }
 
-void ForceValidationResult::_calculateNorms( void ){
+void ForceValidationResult::_calculateNorms(){
 
 // ---------------------------------------------------------------------------------------
 
@@ -195,7 +195,7 @@ std::vector<double> ForceValidationResult::getForceNorms( int forceIndex  ) cons
    }
 }
 
-int ForceValidationResult::nansDetected( void ) const {
+int ForceValidationResult::nansDetected() const {
     return _nansDetected;
 }
 
@@ -203,7 +203,7 @@ void ForceValidationResult::registerInconsistentForceIndex( int index, int value
     _inconsistentForceIndicies[index] = value;
 }
 
-void ForceValidationResult::clearInconsistentForceIndexList( void ){
+void ForceValidationResult::clearInconsistentForceIndexList(){
     _inconsistentForceIndicies.clear();
 }
 
@@ -213,7 +213,7 @@ void ForceValidationResult::getInconsistentForceIndexList( std::vector<int>& inc
     }
 }
 
-int ForceValidationResult::getNumberOfInconsistentForceEntries( void ) const {
+int ForceValidationResult::getNumberOfInconsistentForceEntries() const {
     return  static_cast<int>(_inconsistentForceIndicies.size() );
 }
 
@@ -329,7 +329,7 @@ double ForceValidationResult::getMaxDotProduct( int* maxIndex  ) const {
     return maxDotProduct;
 }
 
-std::string ForceValidationResult::getForceName( void ) const {
+std::string ForceValidationResult::getForceName() const {
 
 // ---------------------------------------------------------------------------------------
 
@@ -376,7 +376,7 @@ void ForceValidationResult::compareForces( double tolerance ){
     std::vector<Vec3> forces2          = getForces( 1 );
     std::vector<double> forceNorms2    = getForceNorms( 1 );
 
-    clearInconsistentForceIndexList( );
+    clearInconsistentForceIndexList();
     for( unsigned int jj = 0; jj < forces1.size(); jj++ ){
         if( ValidateOpenMM::isNanOrInfinity( forceNorms1[jj] ) ||  ValidateOpenMM::isNanOrInfinity( forceNorms2[jj] ) ){
             registerInconsistentForceIndex( jj );
@@ -406,7 +406,7 @@ void ForceValidationResult::compareForceNorms( double tolerance ){
     std::vector<double> forceNorms0    = getForceNorms( 0 );
     std::vector<double> forceNorms1    = getForceNorms( 1 );
 
-    clearInconsistentForceIndexList( );
+    clearInconsistentForceIndexList();
     for( unsigned int jj = 0; jj < forceNorms0.size(); jj++ ){
         if( ValidateOpenMM::isNanOrInfinity( forceNorms0[jj] ) || ValidateOpenMM::isNanOrInfinity( forceNorms1[jj] ) ){
             registerInconsistentForceIndex( jj );
@@ -420,11 +420,11 @@ void ForceValidationResult::compareForceNorms( double tolerance ){
     }
 }
 
-ValidateOpenMMForces::ValidateOpenMMForces( void ) {
+ValidateOpenMMForces::ValidateOpenMMForces() {
     _initialize();
 }
 
-void ValidateOpenMMForces::_initialize( void ){
+void ValidateOpenMMForces::_initialize(){
 
     _forceTolerance                               = 1.0e-02;
     _maxErrorsToPrint                             = 25;
@@ -450,7 +450,7 @@ void ValidateOpenMMForces::_initialize( void ){
     _forcesToBeExcluded[ANDERSEN_THERMOSTAT]      = 1;
 }
 
-ValidateOpenMMForces::~ValidateOpenMMForces( ){
+ValidateOpenMMForces::~ValidateOpenMMForces(){
 
     for( unsigned int ii = 0; ii < _forceValidationResults.size(); ii++ ){
          delete _forceValidationResults[ii];
@@ -459,7 +459,7 @@ ValidateOpenMMForces::~ValidateOpenMMForces( ){
     
 }
 
-double ValidateOpenMMForces::getForceTolerance( void ) const {
+double ValidateOpenMMForces::getForceTolerance() const {
     return _forceTolerance;
 }
 
@@ -706,7 +706,7 @@ double ValidateOpenMMForces::getForceTolerance( const std::string& forceName ) c
     return _forceTolerance;
 }
 
-int ValidateOpenMMForces::getMaxErrorsToPrint( void ) const {
+int ValidateOpenMMForces::getMaxErrorsToPrint() const {
     return _maxErrorsToPrint;
 }
 

@@ -108,8 +108,8 @@ static void computeAmoebaPiTorsionForce(int bondIndex,  std::vector<Vec3>& posit
         deltaR[P][ii]  += positions[particle3][ii];
         deltaR[Q][ii]  += positions[particle4][ii];
     }
-    crossProductVector3(deltaR[CP], deltaR[DC], deltaR[T] );
-    crossProductVector3(deltaR[DC], deltaR[QD], deltaR[U] );
+    crossProductVector3(deltaR[CP], deltaR[DC], deltaR[T]);
+    crossProductVector3(deltaR[DC], deltaR[QD], deltaR[U]);
     crossProductVector3(deltaR[T],  deltaR[U],  deltaR[TU]);
  
     double rT2  = dotVector3(deltaR[T], deltaR[T]);
@@ -144,27 +144,27 @@ static void computeAmoebaPiTorsionForce(int bondIndex,  std::vector<Vec3>& posit
     double factorT =  dedphi/(rDC*rT2);
     double factorU = -dedphi/(rDC*rU2);
  
-    crossProductVector3(deltaR[T], deltaR[DC], deltaR[dT] );
-    crossProductVector3(deltaR[U], deltaR[DC], deltaR[dU] );
+    crossProductVector3(deltaR[T], deltaR[DC], deltaR[dT]);
+    crossProductVector3(deltaR[U], deltaR[DC], deltaR[dU]);
     for (int ii = 0; ii < 3; ii++) {
         deltaR[dT][ii] *= factorT;
         deltaR[dU][ii] *= factorU;
     }
  
-    crossProductVector3(deltaR[dT], deltaR[DC], deltaR[dP]  );
-    crossProductVector3(deltaR[dU], deltaR[DC], deltaR[dQ]  );
+    crossProductVector3(deltaR[dT], deltaR[DC], deltaR[dP] );
+    crossProductVector3(deltaR[dU], deltaR[DC], deltaR[dQ] );
  
-    crossProductVector3(deltaR[DP], deltaR[dT], deltaR[dC1] );
-    crossProductVector3(deltaR[dU], deltaR[QD], deltaR[dC2] );
+    crossProductVector3(deltaR[DP], deltaR[dT], deltaR[dC1]);
+    crossProductVector3(deltaR[dU], deltaR[QD], deltaR[dC2]);
  
-    crossProductVector3(deltaR[dT], deltaR[CP], deltaR[dD1] );
-    crossProductVector3(deltaR[QC], deltaR[dU], deltaR[dD2] );
+    crossProductVector3(deltaR[dT], deltaR[CP], deltaR[dD1]);
+    crossProductVector3(deltaR[QC], deltaR[dU], deltaR[dD2]);
  
-    crossProductVector3(deltaR[BD], deltaR[dP], d[A]        );
-    crossProductVector3(deltaR[dP], deltaR[AD], d[B]        );
+    crossProductVector3(deltaR[BD], deltaR[dP], d[A]       );
+    crossProductVector3(deltaR[dP], deltaR[AD], d[B]       );
  
-    crossProductVector3(deltaR[FC], deltaR[dQ], d[E]        );
-    crossProductVector3(deltaR[dQ], deltaR[EC], d[F]        );
+    crossProductVector3(deltaR[FC], deltaR[dQ], d[E]       );
+    crossProductVector3(deltaR[dQ], deltaR[EC], d[F]       );
  
     for (int ii = 0; ii < 3; ii++) {
         d[C][ii] = deltaR[dC1][ii] + deltaR[dC2][ii] + deltaR[dP][ii] - d[E][ii] - d[F][ii];

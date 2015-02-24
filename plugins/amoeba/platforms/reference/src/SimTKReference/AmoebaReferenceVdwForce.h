@@ -252,8 +252,8 @@ private:
     CombiningFunction _combineEpsilons;
     RealOpenMM arithmeticEpsilonCombiningRule(RealOpenMM epsilonI, RealOpenMM epsilonJ) const;
     RealOpenMM  geometricEpsilonCombiningRule(RealOpenMM epsilonI, RealOpenMM epsilonJ) const;
-    RealOpenMM  harmonicEpsilonCombiningRule( RealOpenMM epsilonI, RealOpenMM epsilonJ) const;
-    RealOpenMM  hhgEpsilonCombiningRule(      RealOpenMM epsilonI, RealOpenMM epsilonJ) const;
+    RealOpenMM  harmonicEpsilonCombiningRule(RealOpenMM epsilonI, RealOpenMM epsilonJ) const;
+    RealOpenMM  hhgEpsilonCombiningRule(     RealOpenMM epsilonI, RealOpenMM epsilonJ) const;
 
     /**---------------------------------------------------------------------------------------
     

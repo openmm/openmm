@@ -91,7 +91,7 @@ RealOpenMM AmoebaReferenceOutOfPlaneBendForce::calculateOutOfPlaneBendIxn(const 
  
     std::vector<RealOpenMM> tempVector(3);
     AmoebaReferenceForce::getCrossProduct(deltaR[CB], deltaR[DB], tempVector);
-    RealOpenMM   eE  = AmoebaReferenceForce::getDotProduct3(deltaR[AB], tempVector );
+    RealOpenMM   eE  = AmoebaReferenceForce::getDotProduct3(deltaR[AB], tempVector);
     RealOpenMM  dot  = AmoebaReferenceForce::getDotProduct3(deltaR[AD],  deltaR[CD]);
     RealOpenMM   cc  = rAD2*rCD2 - dot*dot;
  

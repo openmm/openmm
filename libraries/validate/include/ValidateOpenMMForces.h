@@ -41,7 +41,7 @@ typedef MapIntInt::const_iterator MapIntIntCI;
 class ForceValidationResult {
 public:
 
-    ForceValidationResult( const Context& context1, const Context& context2, StringUIntMap& forceNamesMap );
+    ForceValidationResult(const Context& context1, const Context& context2, StringUIntMap& forceNamesMap);
     ~ForceValidationResult();
 
     /**
@@ -51,7 +51,7 @@ public:
      *
      * @throws OpenMMException if energyIndex is not 0 or 1
      */
-    double getPotentialEnergy( int energyIndex  ) const; 
+    double getPotentialEnergy(int energyIndex) const;
 
     /**
      * Get array of forces at specified platform index (0 || 1)
@@ -60,7 +60,7 @@ public:
      *
      * @throws OpenMMException if forceIndex is not 0 or 1
      */
-    std::vector<double> getForceNorms( int forceIndex  ) const; 
+    std::vector<double> getForceNorms(int forceIndex) const;
 
     /**
      * Get array of forces at platform index (0 || 1)
@@ -69,7 +69,7 @@ public:
      *
      * @throws OpenMMException if forceIndex is not 0 or 1
      */
-    std::vector<Vec3> getForces( int forceIndex  ) const; 
+    std::vector<Vec3> getForces(int forceIndex) const;
 
     /**
      * Get maximum delta in force norm
@@ -78,7 +78,7 @@ public:
      *
      * @return max delta in norm of forces
      */
-    double getMaxDeltaForceNorm( int* maxIndex = NULL  ) const;
+    double getMaxDeltaForceNorm(int* maxIndex = NULL) const;
 
     /**
      * Get maximum relative delta in force norm
@@ -87,7 +87,7 @@ public:
      *
      * @return max relative delta in norm of forces
      */
-    double getMaxRelativeDeltaForceNorm( int* maxIndex = NULL  ) const;
+    double getMaxRelativeDeltaForceNorm(int* maxIndex = NULL) const;
 
     /**
      * Get maximum dot product between forces
@@ -96,7 +96,7 @@ public:
      *
      * @return max dot product between forces
      */
-    double getMaxDotProduct( int* maxIndex = NULL  ) const;
+    double getMaxDotProduct(int* maxIndex = NULL) const;
 
     /**
      * Get name of force associated w/ computed results
@@ -104,7 +104,7 @@ public:
      * @return force name(s); if more than one force active in computation, 
      * then names are concatenated and separated by '::' (e.g., 'NB_FORCE::GBSA_OBC_FORCE')
      */
-    std::string getForceName( void ) const;
+    std::string getForceName() const;
 
     /**
      * Get platform name
@@ -115,7 +115,7 @@ public:
      *
      * @throws OpenMMException if index is not 0 or 1
      */
-    std::string getPlatformName( int index ) const;
+    std::string getPlatformName(int index) const;
 
     /**
      * Register index of two entries that differ by a specified tolerance
@@ -123,46 +123,46 @@ public:
      * @param index inconsistent index
      *
      */
-    void registerInconsistentForceIndex( int index, int value = 1 );
+    void registerInconsistentForceIndex(int index, int value = 1);
 
     /**
      * Clear list of entries that differ by a specified tolerance
      * 
      */
-    void clearInconsistentForceIndexList( void );
+    void clearInconsistentForceIndexList();
 
     /**
      * Get list of entries that differ by a specified tolerance
      * 
      */
-    void getInconsistentForceIndexList( std::vector<int>& inconsistentIndices ) const;
+    void getInconsistentForceIndexList(std::vector<int>& inconsistentIndices) const;
 
     /**
      * Get number of entries in inconsistent index list
      * 
      */
-    int getNumberOfInconsistentForceEntries( void ) const;
+    int getNumberOfInconsistentForceEntries() const;
 
     /**
      * Return true if nans were detected
      * 
      * @return true if nans were detected
      */
-    int nansDetected( void ) const;
+    int nansDetected() const;
 
     /**
      * Determine if force norms are valid
      * 
      * @param tolerance              tolerance
      */
-    void compareForceNorms( double tolerance );
+    void compareForceNorms(double tolerance);
 
     /**
      * Determine if forces are valid
      * 
      * @param tolerance   tolerance
      */
-    void compareForces( double tolerance );
+    void compareForces(double tolerance);
 
 private:
 
@@ -193,13 +193,13 @@ private:
      * Calculate norms of vectors
      * 
      */
-    void _calculateNorms( void );
+    void _calculateNorms();
 
     /**
      * Calculate norms of specified vector
      * 
      */
-    void _calculateNormOfForceVector( int forceIndex );
+    void _calculateNormOfForceVector(int forceIndex);
 
     // stat indices
 
@@ -216,7 +216,7 @@ private:
      * Find vector stats
      * 
      */
-    void _findStatsForDouble( const std::vector<double>& array, std::vector<double>& statVector ) const;
+    void _findStatsForDouble(const std::vector<double>& array, std::vector<double>& statVector) const;
 };
 
 // Class used to compare forces/potential energies on two platforms
@@ -224,7 +224,7 @@ private:
 class ValidateOpenMMForces : public ValidateOpenMM {
 public:
 
-    OPENMM_VALIDATE_EXPORT ValidateOpenMMForces( void );
+    OPENMM_VALIDATE_EXPORT ValidateOpenMMForces();
     OPENMM_VALIDATE_EXPORT ~ValidateOpenMMForces();
 
     /**
@@ -236,7 +236,7 @@ public:
      *
      * @return number of inconsistent entries
      */
-     int OPENMM_VALIDATE_EXPORT compareWithReferencePlatform(Context& context, std::string* summaryString = NULL );
+     int OPENMM_VALIDATE_EXPORT compareWithReferencePlatform(Context& context, std::string* summaryString = NULL);
 
     /**
      * Validate force/energy by comparing the results between the forces/energies computed on two different platforms
@@ -250,7 +250,7 @@ public:
      *         on the two input platforms
      */
      ForceValidationResult* compareForce(Context& context, std::vector<int>& compareForces,
-                                          Platform& platform1, Platform& platform2 ) const;
+                                         Platform& platform1, Platform& platform2) const;
 
     /**
      * Compare individual forces by comparing calculations across two platforms (platform associated w/ input context and
@@ -261,42 +261,42 @@ public:
      * @param forceValidationResults  output vector of ForceValidationResult ptrs (user is responsible for deleting
      *                                individual ForceValidationResult objects)
      */
-    void compareOpenMMForces(Context& context, Platform& comparisonPlatform, std::vector<ForceValidationResult*>& forceValidationResults ) const;
+    void compareOpenMMForces(Context& context, Platform& comparisonPlatform, std::vector<ForceValidationResult*>& forceValidationResults) const;
 
     /**
      * Determine if results are consistent
      * 
      * @param forceValidationResults  vector of ForceValidationResult ptrs to check if forces are consistent
      */
-    void checkForInconsistentForceEntries( std::vector<ForceValidationResult*>& forceValidationResults ) const;
+    void checkForInconsistentForceEntries(std::vector<ForceValidationResult*>& forceValidationResults) const;
 
     /**
      * Get total number of force entries that are inconsistent
      * 
      * @param forceValidationResults  vector of ForceValidationResult ptrs to check if forces are consistent
      */
-    int getTotalNumberOfInconsistentForceEntries( std::vector<ForceValidationResult*>& forceValidationResults ) const;
+    int getTotalNumberOfInconsistentForceEntries(std::vector<ForceValidationResult*>& forceValidationResults) const;
 
     /**
      * Get summary string of results
      * 
      * @param forceValidationResults  vector of ForceValidationResult ptrs
      */
-    std::string getSummary( std::vector<ForceValidationResult*>& forceValidationResults ) const;
+    std::string getSummary(std::vector<ForceValidationResult*>& forceValidationResults) const;
 
     /**
      * Set force tolerance
      * 
      * @param tolerance     force tolerance
      */
-    void setForceTolerance( double tolerance );
+    void setForceTolerance(double tolerance);
 
     /**
      * Get force tolerance
      * 
      * @return force tolerance
      */
-    double getForceTolerance( void ) const;
+    double getForceTolerance() const;
 
     /* 
      * Get force tolerance for specified force
@@ -307,7 +307,7 @@ public:
      *
      * */
       
-    double getForceTolerance( const std::string& forceName ) const;
+    double getForceTolerance(const std::string& forceName) const;
        
     /* 
      * Get max errors to print in summary string
@@ -316,7 +316,7 @@ public:
      *
      * */
       
-    int getMaxErrorsToPrint( void ) const;
+    int getMaxErrorsToPrint() const;
        
     /* 
      * Set max errors to print in summary string
@@ -325,7 +325,7 @@ public:
      *
      * */
       
-    void setMaxErrorsToPrint( int maxErrorsToPrint );
+    void setMaxErrorsToPrint(int maxErrorsToPrint);
        
     /* 
      * Return true if force is not to be validated (Andersen thermostat, CM motion remover, ...)
@@ -335,13 +335,13 @@ public:
      * @return true if force is not currently validated
      **/
       
-    int isExcludedForce( std::string forceName ) const;
+    int isExcludedForce(std::string forceName) const;
        
 private:
 
      // initialize class entries
 
-     void _initialize( void );
+     void _initialize();
 
       /* 
        * Format output line
@@ -354,9 +354,9 @@ private:
        *
        * */
       
-      std::string _getLine( const std::string& tab,
-                            const std::string& description,
-                            const std::string& value ) const;
+      std::string _getLine(const std::string& tab,
+                           const std::string& description,
+                           const std::string& value) const;
       
      std::vector<ForceValidationResult*> _forceValidationResults;
 

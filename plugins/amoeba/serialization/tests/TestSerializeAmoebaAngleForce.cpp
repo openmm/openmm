@@ -45,10 +45,10 @@ void testSerialization() {
     // Create a Force.
 
     AmoebaAngleForce force1;
-    force1.setAmoebaGlobalAngleCubic( 12.3 );
-    force1.setAmoebaGlobalAngleQuartic( 98.7 );
-    force1.setAmoebaGlobalAnglePentic( 91.7 );
-    force1.setAmoebaGlobalAngleSextic( 93.7 );
+    force1.setAmoebaGlobalAngleCubic(12.3);
+    force1.setAmoebaGlobalAngleQuartic(98.7);
+    force1.setAmoebaGlobalAnglePentic(91.7);
+    force1.setAmoebaGlobalAngleSextic(93.7);
     force1.addAngle(0, 1, 3, 1.0, 2.0);
     force1.addAngle(0, 2, 3, 2.0, 2.1);
     force1.addAngle(2, 3, 5, 3.0, 2.2);

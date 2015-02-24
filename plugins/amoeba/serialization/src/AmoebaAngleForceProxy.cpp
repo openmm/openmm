@@ -66,13 +66,13 @@ void* AmoebaAngleForceProxy::deserialize(const SerializationNode& node) const {
     AmoebaAngleForce* force = new AmoebaAngleForce();
     try {
 
-        force->setAmoebaGlobalAngleCubic(node.getDoubleProperty(  "cubic"));
+        force->setAmoebaGlobalAngleCubic(node.getDoubleProperty("cubic"));
         force->setAmoebaGlobalAngleQuartic(node.getDoubleProperty("quartic"));
-        force->setAmoebaGlobalAnglePentic(node.getDoubleProperty( "pentic"));
-        force->setAmoebaGlobalAngleSextic(node.getDoubleProperty( "sextic"));
+        force->setAmoebaGlobalAnglePentic(node.getDoubleProperty("pentic"));
+        force->setAmoebaGlobalAngleSextic(node.getDoubleProperty("sextic"));
 
         const SerializationNode& bonds = node.getChildNode("Angles");
-        for ( unsigned int ii = 0; ii < bonds.getChildren().size(); ii++) {
+        for (unsigned int ii = 0; ii < bonds.getChildren().size(); ii++) {
             const SerializationNode& bond = bonds.getChildren()[ii];
             force->addAngle(bond.getIntProperty("p1"), bond.getIntProperty("p2"), bond.getIntProperty("p3"), bond.getDoubleProperty("d"), bond.getDoubleProperty("k"));
         }
