@@ -109,24 +109,12 @@ public:
     fvec4 operator|(const fvec4& other) const {
         return (fvec4) (((__m128i)val)|((__m128i)other.val));
     }
-    fvec4 operator==(const fvec4& other) const {
-        return (val==other.val);
-    }
-    fvec4 operator!=(const fvec4& other) const {
-        return (val!=other.val);
-    }
-    fvec4 operator>(const fvec4& other) const {
-        return (val>other.val);
-    }
-    fvec4 operator<(const fvec4& other) const {
-        return (val<other.val);
-    }
-    fvec4 operator>=(const fvec4& other) const {
-        return (val>=other.val);
-    }
-    fvec4 operator<=(const fvec4& other) const {
-        return (val<=other.val);
-    }
+    ivec4 operator==(const fvec4& other) const;
+    ivec4 operator!=(const fvec4& other) const;
+    ivec4 operator>(const fvec4& other) const;
+    ivec4 operator<(const fvec4& other) const;
+    ivec4 operator>=(const fvec4& other) const;
+    ivec4 operator<=(const fvec4& other) const;
     operator ivec4() const;
 };
 
@@ -207,6 +195,30 @@ public:
 
 // Conversion operators.
 
+inline ivec4 fvec4::operator==(const fvec4& other) const {
+    return (__m128i) (val==other.val);
+}
+
+inline ivec4 fvec4::operator!=(const fvec4& other) const {
+    return (__m128i) (val!=other.val);
+}
+
+inline ivec4 fvec4::operator>(const fvec4& other) const {
+    return (__m128i) (val>other.val);
+}
+
+inline ivec4 fvec4::operator<(const fvec4& other) const {
+    return (__m128i) (val<other.val);
+}
+
+inline ivec4 fvec4::operator>=(const fvec4& other) const {
+    return (__m128i) (val>=other.val);
+}
+
+inline ivec4 fvec4::operator<=(const fvec4& other) const {
+    return (__m128i) (val<=other.val);
+}
+
 inline fvec4::operator ivec4() const {
     return __builtin_convertvector(val, __m128i);
 }
@@ -219,10 +231,6 @@ inline ivec4::operator fvec4() const {
 
 static inline fvec4 abs(const fvec4& v) {
     return v&(__m128) ivec4(0x7FFFFFFF);
-}
-
-static inline fvec4 sqrt(const fvec4& v) {
-    return fvec4(std::sqrt(v[0]), std::sqrt(v[1]), std::sqrt(v[2]), std::sqrt(v[3]));
 }
 
 static inline float dot3(const fvec4& v1, const fvec4& v2) {
@@ -313,13 +321,29 @@ static inline fvec4 round(const fvec4& v) {
 }
 
 static inline fvec4 floor(const fvec4& v) {
-    fvec4 rounded = round(v);
-    return rounded + blend(0.0f, -1.0f, rounded>v);
+    fvec4 truncated = __builtin_convertvector(__builtin_convertvector(v.val, __m128i), __m128);
+    return truncated + blend(0.0f, -1.0f, truncated>v);
 }
 
 static inline fvec4 ceil(const fvec4& v) {
-    fvec4 rounded = round(v);
-    return rounded + blend(0.0f, 1.0f, rounded<v);
+    fvec4 truncated = __builtin_convertvector(__builtin_convertvector(v.val, __m128i), __m128);
+    return truncated + blend(0.0f, 1.0f, truncated<v);
+}
+
+static inline fvec4 sqrt(const fvec4& v) {
+    // Initial estimate of rsqrt().
+
+    ivec4 i = (__m128i) v;
+    i = ivec4(0x5f375a86)-ivec4(i.val>>ivec4(1).val);
+    fvec4 y = (__m128) i;
+
+    // Perform three iterations of Newton refinement.
+
+    fvec4 x2 = 0.5f*v;
+    y *= 1.5f-x2*y*y;
+    y *= 1.5f-x2*y*y;
+    y *= 1.5f-x2*y*y;
+    return y*v;
 }
 
 #endif /*OPENMM_VECTORIZE_PNACL_H_*/
