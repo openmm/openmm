@@ -257,13 +257,8 @@ void CudaIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
         context.updateContextState();
         Vec3 finalBox[3];
         context.getPeriodicBoxVectors(finalBox[0], finalBox[1], finalBox[2]);
-        if (initialBox[0] != finalBox[0] || initialBox[1] != finalBox[1] || initialBox[2] != finalBox[2]) {
-            // A barostat was applied during updateContextState().  Adjust the particle positions in all the
-            // other copies to match this one.
-            
-            void* args[] = {&positions->getDevicePointer(), &cu.getPosq().getDevicePointer(), &cu.getAtomIndexArray().getDevicePointer(), &i};
-            cu.executeKernel(translateKernel, args, cu.getNumAtoms());
-        }
+        if (initialBox[0] != finalBox[0] || initialBox[1] != finalBox[1] || initialBox[2] != finalBox[2])
+            throw OpenMMException("Standard barostats cannot be used with RPMDIntegrator.  Use RPMDMonteCarloBarostat instead.");
         context.calcForcesAndEnergy(true, false, groupsNotContracted);
         void* copyFromContextArgs[] = {&cu.getForce().getDevicePointer(), &forces->getDevicePointer(), &cu.getVelm().getDevicePointer(),
                 &velocities->getDevicePointer(), &cu.getPosq().getDevicePointer(), &positions->getDevicePointer(), &cu.getAtomIndexArray().getDevicePointer(), &i};

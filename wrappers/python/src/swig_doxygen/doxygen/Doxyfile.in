@@ -621,6 +621,7 @@ EXCLUDE_PATTERNS       = */tests/* \
                          *amoebaKernels.h \
                          *DrudeKernels.h \
                          *RpmdKernels.h \
+                         *RPMDUpdater.h \
                          *OpenMMFortranModule.f90 \
                          *OpenMMCWrapper.h
 

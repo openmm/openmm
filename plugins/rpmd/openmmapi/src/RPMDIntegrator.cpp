@@ -34,6 +34,7 @@
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/RpmdKernels.h"
+#include "openmm/RPMDUpdater.h"
 #include "SimTKOpenMMRealType.h"
 #include <cmath>
 #include <string>
@@ -189,6 +190,12 @@ void RPMDIntegrator::step(int steps) {
         vector<Vec3> p(context->getSystem().getNumParticles(), Vec3());
         context->getOwner().setPositions(p);
         isFirstStep = false;
+    }
+    vector<ForceImpl*>& forceImpls = context->getForceImpls();
+    for (int i = 0; i < (int) forceImpls.size(); i++) {
+        RPMDUpdater* updater = dynamic_cast<RPMDUpdater*>(forceImpls[i]);
+        if (updater != NULL)
+            updater->updateRPMDState(*context);
     }
     for (int i = 0; i < steps; ++i) {
         kernel.getAs<IntegrateRPMDStepKernel>().execute(*context, *this, forcesAreValid);
