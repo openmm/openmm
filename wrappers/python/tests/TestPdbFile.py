@@ -60,6 +60,12 @@ class TestPdbFile(unittest.TestCase):
             self.assertEqual(atom1.name, atom2.name)
             self.assertEqual(atom1.residue.name, atom2.residue.name)
 
+    def test_BinaryStream(self):
+        """Test reading a stream that was opened in binary mode."""
+        pdb = PDBFile(open('systems/triclinic.pdb', 'rb'))
+        self.assertEqual(len(pdb.positions), 8)
+
+
     def assertVecAlmostEqual(self, p1, p2, tol=1e-7):
         unit = p1.unit
         p1 = p1.value_in_unit(unit)
