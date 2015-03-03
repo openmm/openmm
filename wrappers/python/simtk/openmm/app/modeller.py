@@ -924,7 +924,7 @@ class Modeller(object):
                     # extra points.
 
                     template = None
-                    residueNoEP = Residue(residue.name, residue.index, residue.chain)
+                    residueNoEP = Residue(residue.name, residue.index, residue.chain, residue.id)
                     residueNoEP._atoms = [atom for atom in residue.atoms() if atom.element is not None]
                     if signature in forcefield._templateSignatures:
                         for t in forcefield._templateSignatures[signature]:
