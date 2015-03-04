@@ -229,16 +229,19 @@ class PDBFile(object):
                 map[atom.attrib[id]] = name
 
     @staticmethod
-    def writeFile(topology, positions, file=sys.stdout, modelIndex=None):
+    def writeFile(topology, positions, file=sys.stdout, keepIds=False):
         """Write a PDB file containing a single model.
 
         Parameters:
          - topology (Topology) The Topology defining the model to write
          - positions (list) The list of atomic positions to write
          - file (file=stdout) A file to write to
+         - keepIds (bool=False) If True, keep the residue and chain IDs specified in the Topology rather than generating
+           new ones.  Warning: It is up to the caller to make sure these are valid IDs that satisfy the requirements of
+           the PDB format.  Otherwise, the output file will be invalid.
         """
         PDBFile.writeHeader(topology, file)
-        PDBFile.writeModel(topology, positions, file)
+        PDBFile.writeModel(topology, positions, file, keepIds=keepIds)
         PDBFile.writeFooter(topology, file)
 
     @staticmethod
@@ -262,7 +265,7 @@ class PDBFile(object):
             print >>file, "CRYST1%9.3f%9.3f%9.3f%7.2f%7.2f%7.2f P 1           1 " % (a_length, b_length, c_length, alpha, beta, gamma)
 
     @staticmethod
-    def writeModel(topology, positions, file=sys.stdout, modelIndex=None):
+    def writeModel(topology, positions, file=sys.stdout, modelIndex=None, keepIds=False):
         """Write out a model to a PDB file.
 
         Parameters:
@@ -270,6 +273,9 @@ class PDBFile(object):
          - positions (list) The list of atomic positions to write
          - file (file=stdout) A file to write the model to
          - modelIndex (int=None) If not None, the model will be surrounded by MODEL/ENDMDL records with this index
+         - keepIds (bool=False) If True, keep the residue and chain IDs specified in the Topology rather than generating
+           new ones.  Warning: It is up to the caller to make sure these are valid IDs that satisfy the requirements of
+           the PDB format.  Otherwise, the output file will be invalid.
         """
         if len(list(topology.atoms())) != len(positions):
             raise ValueError('The number of positions must match the number of atoms')
@@ -284,13 +290,20 @@ class PDBFile(object):
         if modelIndex is not None:
             print >>file, "MODEL     %4d" % modelIndex
         for (chainIndex, chain) in enumerate(topology.chains()):
-            chainName = chr(ord('A')+chainIndex%26)
+            if keepIds:
+                chainName = chain.id
+            else:
+                chainName = chr(ord('A')+chainIndex%26)
             residues = list(chain.residues())
             for (resIndex, res) in enumerate(residues):
                 if len(res.name) > 3:
                     resName = res.name[:3]
                 else:
                     resName = res.name
+                if keepIds:
+                    resId = res.id
+                else:
+                    resId = "%4d" % ((resIndex+1)%10000)
                 for atom in res.atoms():
                     if len(atom.name) < 4 and atom.name[:1].isalpha() and (atom.element is None or len(atom.element.symbol) < 2):
                         atomName = ' '+atom.name
@@ -303,16 +316,15 @@ class PDBFile(object):
                         symbol = atom.element.symbol
                     else:
                         symbol = ' '
-                    line = "ATOM  %5d %-4s %3s %s%4d    %s%s%s  1.00  0.00          %2s  " % (
-                        atomIndex%100000, atomName, resName, chainName,
-                        (resIndex+1)%10000, _format_83(coords[0]),
+                    line = "ATOM  %5d %-4s %3s %s%4s    %s%s%s  1.00  0.00          %2s  " % (
+                        atomIndex%100000, atomName, resName, chainName, resId, _format_83(coords[0]),
                         _format_83(coords[1]), _format_83(coords[2]), symbol)
                     assert len(line) == 80, 'Fixed width overflow detected'
                     print >>file, line
                     posIndex += 1
                     atomIndex += 1
                 if resIndex == len(residues)-1:
-                    print >>file, "TER   %5d      %3s %s%4d" % (atomIndex, resName, chainName, resIndex+1)
+                    print >>file, "TER   %5d      %3s %s%4s" % (atomIndex, resName, chainName, resId)
                     atomIndex += 1
         if modelIndex is not None:
             print >>file, "ENDMDL"
