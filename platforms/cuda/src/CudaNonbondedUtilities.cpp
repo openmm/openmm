@@ -65,7 +65,7 @@ private:
 CudaNonbondedUtilities::CudaNonbondedUtilities(CudaContext& context) : context(context), cutoff(-1.0), useCutoff(false), anyExclusions(false), usePadding(true),
         exclusionIndices(NULL), exclusionRowIndices(NULL), exclusionTiles(NULL), exclusions(NULL), interactingTiles(NULL), interactingAtoms(NULL),
         interactionCount(NULL), blockCenter(NULL), blockBoundingBox(NULL), sortedBlocks(NULL), sortedBlockCenter(NULL), sortedBlockBoundingBox(NULL),
-        oldPositions(NULL), rebuildNeighborList(NULL), blockSorter(NULL), nonbondedForceGroup(0) {
+        oldPositions(NULL), rebuildNeighborList(NULL), blockSorter(NULL), nonbondedForceGroup(0), forceRebuildNeighborList(true) {
     // Decide how many thread blocks to use.
 
     string errorMessage = "Error initializing nonbonded utilities";
@@ -322,6 +322,7 @@ void CudaNonbondedUtilities::initialize(const System& system) {
         sortBoxDataArgs.push_back(&oldPositions->getDevicePointer());
         sortBoxDataArgs.push_back(&interactionCount->getDevicePointer());
         sortBoxDataArgs.push_back(&rebuildNeighborList->getDevicePointer());
+        sortBoxDataArgs.push_back(&forceRebuildNeighborList);
         findInteractingBlocksKernel = context.getKernel(interactingBlocksProgram, "findBlocksWithInteractions");
         findInteractingBlocksArgs.push_back(context.getPeriodicBoxSizePointer());
         findInteractingBlocksArgs.push_back(context.getInvPeriodicBoxSizePointer());
@@ -363,6 +364,7 @@ void CudaNonbondedUtilities::prepareInteractions() {
     blockSorter->sort(*sortedBlocks);
     context.executeKernel(sortBoxDataKernel, &sortBoxDataArgs[0], context.getNumAtoms());
     context.executeKernel(findInteractingBlocksKernel, &findInteractingBlocksArgs[0], context.getNumAtoms(), 256);
+    forceRebuildNeighborList = false;
 }
 
 void CudaNonbondedUtilities::computeInteractions() {
@@ -419,8 +421,9 @@ void CudaNonbondedUtilities::setAtomBlockRange(double startFraction, double endF
     startBlockIndex = (int) (startFraction*numAtomBlocks);
     numBlocks = (int) (endFraction*numAtomBlocks)-startBlockIndex;
     int totalTiles = context.getNumAtomBlocks()*(context.getNumAtomBlocks()+1)/2;
-    startTileIndex = (int) (startFraction*totalTiles);;
+    startTileIndex = (int) (startFraction*totalTiles);
     numTiles = (int) (endFraction*totalTiles)-startTileIndex;
+    forceRebuildNeighborList = true;
 }
 
 CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source, vector<ParameterInfo>& params, vector<ParameterInfo>& arguments, bool useExclusions, bool isSymmetric) {

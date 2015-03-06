@@ -177,23 +177,25 @@ double OpenCLParallelCalcForcesAndEnergyKernel::finishComputation(ContextImpl& c
         // Balance work between the contexts by transferring a little nonbonded work from the context that
         // finished last to the one that finished first.
         
-        int firstIndex = 0, lastIndex = 0;
-        for (int i = 0; i < (int) completionTimes.size(); i++) {
-            if (completionTimes[i] < completionTimes[firstIndex])
-                firstIndex = i;
-            if (completionTimes[i] > completionTimes[lastIndex])
-                lastIndex = i;
-        }
-        double fractionToTransfer = min(0.001, contextNonbondedFractions[lastIndex]);
-        contextNonbondedFractions[firstIndex] += fractionToTransfer;
-        contextNonbondedFractions[lastIndex] -= fractionToTransfer;
-        double startFraction = 0.0;
-        for (int i = 0; i < (int) contextNonbondedFractions.size(); i++) {
-            double endFraction = startFraction+contextNonbondedFractions[i];
-            if (i == contextNonbondedFractions.size()-1)
-                endFraction = 1.0; // Avoid roundoff error
-            data.contexts[i]->getNonbondedUtilities().setAtomBlockRange(startFraction, endFraction);
-            startFraction = endFraction;
+        if (cl.getComputeForceCount() < 200) {
+            int firstIndex = 0, lastIndex = 0;
+            for (int i = 0; i < (int) completionTimes.size(); i++) {
+                if (completionTimes[i] < completionTimes[firstIndex])
+                    firstIndex = i;
+                if (completionTimes[i] > completionTimes[lastIndex])
+                    lastIndex = i;
+            }
+            double fractionToTransfer = min(0.001, contextNonbondedFractions[lastIndex]);
+            contextNonbondedFractions[firstIndex] += fractionToTransfer;
+            contextNonbondedFractions[lastIndex] -= fractionToTransfer;
+            double startFraction = 0.0;
+            for (int i = 0; i < (int) contextNonbondedFractions.size(); i++) {
+                double endFraction = startFraction+contextNonbondedFractions[i];
+                if (i == contextNonbondedFractions.size()-1)
+                    endFraction = 1.0; // Avoid roundoff error
+                data.contexts[i]->getNonbondedUtilities().setAtomBlockRange(startFraction, endFraction);
+                startFraction = endFraction;
+            }
         }
     }
     return energy;

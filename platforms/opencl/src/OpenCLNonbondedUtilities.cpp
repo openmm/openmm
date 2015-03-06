@@ -340,6 +340,7 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
             sortBoxDataKernel.setArg<cl::Buffer>(6, oldPositions->getDeviceBuffer());
             sortBoxDataKernel.setArg<cl::Buffer>(7, interactionCount->getDeviceBuffer());
             sortBoxDataKernel.setArg<cl::Buffer>(8, rebuildNeighborList->getDeviceBuffer());
+            sortBoxDataKernel.setArg<cl_int>(9, true);
             findInteractingBlocksKernel = cl::Kernel(interactingBlocksProgram, "findBlocksWithInteractions");
             findInteractingBlocksKernel.setArg<cl::Buffer>(5, interactionCount->getDeviceBuffer());
             findInteractingBlocksKernel.setArg<cl::Buffer>(6, interactingTiles->getDeviceBuffer());
@@ -406,6 +407,7 @@ void OpenCLNonbondedUtilities::prepareInteractions() {
     context.executeKernel(sortBoxDataKernel, context.getNumAtoms());
     setPeriodicBoxArgs(context, findInteractingBlocksKernel, 0);
     context.executeKernel(findInteractingBlocksKernel, context.getNumAtoms(), interactingBlocksThreadBlockSize);
+    sortBoxDataKernel.setArg<cl_int>(9, false);
 }
 
 void OpenCLNonbondedUtilities::computeInteractions() {
@@ -474,6 +476,7 @@ void OpenCLNonbondedUtilities::setAtomBlockRange(double startFraction, double en
         forceKernel.setArg<cl_uint>(6, numTiles);
         findInteractingBlocksKernel.setArg<cl_uint>(10, startBlockIndex);
         findInteractingBlocksKernel.setArg<cl_uint>(11, numBlocks);
+        sortBoxDataKernel.setArg<cl_int>(9, true);
     }
 }
 

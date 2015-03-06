@@ -278,7 +278,7 @@ private:
     std::string kernelSource;
     std::map<std::string, std::string> kernelDefines;
     double cutoff;
-    bool useCutoff, usePeriodic, anyExclusions, usePadding;
+    bool useCutoff, usePeriodic, anyExclusions, usePadding, forceRebuildNeighborList;
     int startTileIndex, numTiles, startBlockIndex, numBlocks, maxTiles, numForceThreadBlocks, forceThreadBlockSize, nonbondedForceGroup, numAtoms;
 };
 
