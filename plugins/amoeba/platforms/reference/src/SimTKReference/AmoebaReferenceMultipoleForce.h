@@ -1361,8 +1361,6 @@ private:
     std::vector<RealOpenMM> _phid;
     std::vector<RealOpenMM> _phip;
     std::vector<RealOpenMM> _phidp;
-    std::vector<int> _pmeAtomRange;
-    std::vector<int2> _pmeAtomGridIndex;
     std::vector<RealOpenMM4> _pmeBsplineTheta;
     std::vector<RealOpenMM4> _pmeBsplineDtheta;
 
@@ -1438,31 +1436,6 @@ private:
      * @param particleData   vector of particle positions and parameters (charge, labFrame dipoles, quadrupoles, ...)
      */
     void computeAmoebaBsplines(const std::vector<MultipoleParticleData>& particleData);
-
-    /**
-     * For each grid point, find the range of sorted atoms associated with that point.
-     * 
-     * @param particleData              vector of particle positions and parameters (charge, labFrame dipoles, quadrupoles, ...)
-     */
-    void findAmoebaAtomRangeForGrid(const vector<MultipoleParticleData>& particleData);
-
-    /**
-     * Get grid point given grid index.
-     * 
-     * @param gridIndex  input grid index
-     * @param gridPoint  output grid point
-     */
-    void getGridPointGivenGridIndex(int gridIndex, IntVec& gridPoint) const;
-
-    /**
-     * Compute induced dipole grid value.
-     *
-     * @param particleGridIndices     particle grid indices
-     * @param ix                      x-dimension offset value
-     * @param iy                      y-dimension offset value
-     * @param gridPoint               grid point for which value is to be computed
-     */
-     RealOpenMM computeFixedMultipolesGridValue(const int2& particleGridIndices, int ix, int iy, const IntVec& gridPoint) const;
 
     /**
      * Transform multipoles from cartesian coordinates to fractional coordinates.
@@ -1558,21 +1531,6 @@ private:
      * @param updateInducedDipoleFields vector of UpdateInducedDipoleFieldStruct containing input induced dipoles and output fields
      */
     void initializeInducedDipoles(std::vector<UpdateInducedDipoleFieldStruct>& updateInducedDipoleFields); 
-
-    /**
-     * Compute induced dipole grid value.
-     *
-     * @param atomIndices             indices of first and last atom contiputing to grid point value
-     * @param cartToFrac              transformation matrix from Cartesian to fractional coordinates
-     * @param ix                      x-dimension offset value
-     * @param iy                      y-dimension offset value
-     * @param gridPoint               grid point for which value is to be computed
-     * @param inputInducedDipole      induced dipole value
-     * @param inputInducedDipolePolar induced dipole polar value
-     */
-    t_complex computeInducedDipoleGridValue(const int2& atomIndices, const RealVec* cartToFrac, int ix, int iy, const IntVec& gridPoint,
-                                            const std::vector<RealVec>& inputInducedDipole,
-                                            const std::vector<RealVec>& inputInducedDipolePolar) const;
 
     /**
      * Spread induced dipoles onto grid.
