@@ -282,14 +282,6 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
         sortedBlockCenter = new OpenCLArray(context, numAtomBlocks+1, 4*elementSize, "sortedBlockCenter");
         sortedBlockBoundingBox = new OpenCLArray(context, numAtomBlocks+1, 4*elementSize, "sortedBlockBoundingBox");
         oldPositions = new OpenCLArray(context, numAtoms, 4*elementSize, "oldPositions");
-        if (context.getUseDoublePrecision()) {
-            vector<mm_double4> oldPositionsVec(numAtoms, mm_double4(1e30, 1e30, 1e30, 0));
-            oldPositions->upload(oldPositionsVec);
-        }
-        else {
-            vector<mm_float4> oldPositionsVec(numAtoms, mm_float4(1e30f, 1e30f, 1e30f, 0));
-            oldPositions->upload(oldPositionsVec);
-        }
         rebuildNeighborList = OpenCLArray::create<int>(context, 1, "rebuildNeighborList");
         blockSorter = new OpenCLSort(context, new BlockSortTrait(context.getUseDoublePrecision()), numAtomBlocks);
         vector<cl_uint> count(1, 0);
@@ -447,15 +439,7 @@ void OpenCLNonbondedUtilities::updateNeighborListSize() {
     findInteractingBlocksKernel.setArg<cl::Buffer>(6, interactingTiles->getDeviceBuffer());
     findInteractingBlocksKernel.setArg<cl::Buffer>(7, interactingAtoms->getDeviceBuffer());
     findInteractingBlocksKernel.setArg<cl_uint>(9, maxTiles);
-    int numAtoms = context.getNumAtoms();
-    if (context.getUseDoublePrecision()) {
-        vector<mm_double4> oldPositionsVec(numAtoms, mm_double4(1e30, 1e30, 1e30, 0));
-        oldPositions->upload(oldPositionsVec);
-    }
-    else {
-        vector<mm_float4> oldPositionsVec(numAtoms, mm_float4(1e30f, 1e30f, 1e30f, 0));
-        oldPositions->upload(oldPositionsVec);
-    }
+    sortBoxDataKernel.setArg<cl_int>(9, true);
 }
 
 void OpenCLNonbondedUtilities::setUsePadding(bool padding) {

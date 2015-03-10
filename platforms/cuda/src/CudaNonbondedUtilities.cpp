@@ -264,14 +264,6 @@ void CudaNonbondedUtilities::initialize(const System& system) {
         sortedBlockCenter = new CudaArray(context, numAtomBlocks+1, 4*elementSize, "sortedBlockCenter");
         sortedBlockBoundingBox = new CudaArray(context, numAtomBlocks+1, 4*elementSize, "sortedBlockBoundingBox");
         oldPositions = new CudaArray(context, numAtoms, 4*elementSize, "oldPositions");
-        if (context.getUseDoublePrecision()) {
-            vector<double4> oldPositionsVec(numAtoms, make_double4(1e30, 1e30, 1e30, 0));
-            oldPositions->upload(oldPositionsVec);
-        }
-        else {
-            vector<float4> oldPositionsVec(numAtoms, make_float4(1e30f, 1e30f, 1e30f, 0));
-            oldPositions->upload(oldPositionsVec);
-        }
         rebuildNeighborList = CudaArray::create<int>(context, 1, "rebuildNeighborList");
         blockSorter = new CudaSort(context, new BlockSortTrait(context.getUseDoublePrecision()), numAtomBlocks);
         vector<unsigned int> count(1, 0);
@@ -402,14 +394,7 @@ void CudaNonbondedUtilities::updateNeighborListSize() {
     if (forceArgs.size() > 0)
         forceArgs[17] = &interactingAtoms->getDevicePointer();
     findInteractingBlocksArgs[7] = &interactingAtoms->getDevicePointer();
-    if (context.getUseDoublePrecision()) {
-        vector<double4> oldPositionsVec(numAtoms, make_double4(1e30, 1e30, 1e30, 0));
-        oldPositions->upload(oldPositionsVec);
-    }
-    else {
-        vector<float4> oldPositionsVec(numAtoms, make_float4(1e30f, 1e30f, 1e30f, 0));
-        oldPositions->upload(oldPositionsVec);
-    }
+    forceRebuildNeighborList = true;
 }
 
 void CudaNonbondedUtilities::setUsePadding(bool padding) {
