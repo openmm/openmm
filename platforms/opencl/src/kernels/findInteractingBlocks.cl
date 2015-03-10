@@ -44,7 +44,7 @@ __kernel void findBlockBounds(int numAtoms, real4 periodicBoxSize, real4 invPeri
 __kernel void sortBoxData(__global const real2* restrict sortedBlock, __global const real4* restrict blockCenter,
         __global const real4* restrict blockBoundingBox, __global real4* restrict sortedBlockCenter,
         __global real4* restrict sortedBlockBoundingBox, __global const real4* restrict posq, __global const real4* restrict oldPositions,
-        __global unsigned int* restrict interactionCount, __global int* restrict rebuildNeighborList) {
+        __global unsigned int* restrict interactionCount, __global int* restrict rebuildNeighborList, int forceRebuild) {
     for (int i = get_global_id(0); i < NUM_BLOCKS; i += get_global_size(0)) {
         int index = (int) sortedBlock[i].y;
         sortedBlockCenter[i] = blockCenter[index];
@@ -53,7 +53,7 @@ __kernel void sortBoxData(__global const real2* restrict sortedBlock, __global c
     
     // Also check whether any atom has moved enough so that we really need to rebuild the neighbor list.
 
-    bool rebuild = false;
+    bool rebuild = forceRebuild;
     for (int i = get_global_id(0); i < NUM_ATOMS; i += get_global_size(0)) {
         real4 delta = oldPositions[i]-posq[i];
         if (delta.x*delta.x + delta.y*delta.y + delta.z*delta.z > 0.25f*PADDING*PADDING)

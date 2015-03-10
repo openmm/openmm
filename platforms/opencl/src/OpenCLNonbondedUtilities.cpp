@@ -54,7 +54,7 @@ private:
     bool useDouble;
 };
 
-OpenCLNonbondedUtilities::OpenCLNonbondedUtilities(OpenCLContext& context) : context(context), cutoff(-1.0), useCutoff(false), anyExclusions(false), usePadding(true),
+OpenCLNonbondedUtilities::OpenCLNonbondedUtilities(OpenCLContext& context) : context(context), cutoff(-1.0), useCutoff(false), usePeriodic(false), anyExclusions(false), usePadding(true),
         numForceBuffers(0), exclusionIndices(NULL), exclusionRowIndices(NULL), exclusionTiles(NULL), exclusions(NULL), interactingTiles(NULL), interactingAtoms(NULL),
         interactionCount(NULL), blockCenter(NULL), blockBoundingBox(NULL), sortedBlocks(NULL), sortedBlockCenter(NULL), sortedBlockBoundingBox(NULL),
         oldPositions(NULL), rebuildNeighborList(NULL), blockSorter(NULL), nonbondedForceGroup(0) {
@@ -282,14 +282,6 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
         sortedBlockCenter = new OpenCLArray(context, numAtomBlocks+1, 4*elementSize, "sortedBlockCenter");
         sortedBlockBoundingBox = new OpenCLArray(context, numAtomBlocks+1, 4*elementSize, "sortedBlockBoundingBox");
         oldPositions = new OpenCLArray(context, numAtoms, 4*elementSize, "oldPositions");
-        if (context.getUseDoublePrecision()) {
-            vector<mm_double4> oldPositionsVec(numAtoms, mm_double4(1e30, 1e30, 1e30, 0));
-            oldPositions->upload(oldPositionsVec);
-        }
-        else {
-            vector<mm_float4> oldPositionsVec(numAtoms, mm_float4(1e30f, 1e30f, 1e30f, 0));
-            oldPositions->upload(oldPositionsVec);
-        }
         rebuildNeighborList = OpenCLArray::create<int>(context, 1, "rebuildNeighborList");
         blockSorter = new OpenCLSort(context, new BlockSortTrait(context.getUseDoublePrecision()), numAtomBlocks);
         vector<cl_uint> count(1, 0);
@@ -340,6 +332,7 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
             sortBoxDataKernel.setArg<cl::Buffer>(6, oldPositions->getDeviceBuffer());
             sortBoxDataKernel.setArg<cl::Buffer>(7, interactionCount->getDeviceBuffer());
             sortBoxDataKernel.setArg<cl::Buffer>(8, rebuildNeighborList->getDeviceBuffer());
+            sortBoxDataKernel.setArg<cl_int>(9, true);
             findInteractingBlocksKernel = cl::Kernel(interactingBlocksProgram, "findBlocksWithInteractions");
             findInteractingBlocksKernel.setArg<cl::Buffer>(5, interactionCount->getDeviceBuffer());
             findInteractingBlocksKernel.setArg<cl::Buffer>(6, interactingTiles->getDeviceBuffer());
@@ -406,6 +399,7 @@ void OpenCLNonbondedUtilities::prepareInteractions() {
     context.executeKernel(sortBoxDataKernel, context.getNumAtoms());
     setPeriodicBoxArgs(context, findInteractingBlocksKernel, 0);
     context.executeKernel(findInteractingBlocksKernel, context.getNumAtoms(), interactingBlocksThreadBlockSize);
+    sortBoxDataKernel.setArg<cl_int>(9, false);
 }
 
 void OpenCLNonbondedUtilities::computeInteractions() {
@@ -445,15 +439,7 @@ void OpenCLNonbondedUtilities::updateNeighborListSize() {
     findInteractingBlocksKernel.setArg<cl::Buffer>(6, interactingTiles->getDeviceBuffer());
     findInteractingBlocksKernel.setArg<cl::Buffer>(7, interactingAtoms->getDeviceBuffer());
     findInteractingBlocksKernel.setArg<cl_uint>(9, maxTiles);
-    int numAtoms = context.getNumAtoms();
-    if (context.getUseDoublePrecision()) {
-        vector<mm_double4> oldPositionsVec(numAtoms, mm_double4(1e30, 1e30, 1e30, 0));
-        oldPositions->upload(oldPositionsVec);
-    }
-    else {
-        vector<mm_float4> oldPositionsVec(numAtoms, mm_float4(1e30f, 1e30f, 1e30f, 0));
-        oldPositions->upload(oldPositionsVec);
-    }
+    sortBoxDataKernel.setArg<cl_int>(9, true);
 }
 
 void OpenCLNonbondedUtilities::setUsePadding(bool padding) {
@@ -474,6 +460,7 @@ void OpenCLNonbondedUtilities::setAtomBlockRange(double startFraction, double en
         forceKernel.setArg<cl_uint>(6, numTiles);
         findInteractingBlocksKernel.setArg<cl_uint>(10, startBlockIndex);
         findInteractingBlocksKernel.setArg<cl_uint>(11, numBlocks);
+        sortBoxDataKernel.setArg<cl_int>(9, true);
     }
 }
 

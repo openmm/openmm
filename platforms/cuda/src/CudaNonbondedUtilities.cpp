@@ -62,10 +62,10 @@ private:
     bool useDouble;
 };
 
-CudaNonbondedUtilities::CudaNonbondedUtilities(CudaContext& context) : context(context), cutoff(-1.0), useCutoff(false), anyExclusions(false), usePadding(true),
+CudaNonbondedUtilities::CudaNonbondedUtilities(CudaContext& context) : context(context), cutoff(-1.0), useCutoff(false), usePeriodic(false), anyExclusions(false), usePadding(true),
         exclusionIndices(NULL), exclusionRowIndices(NULL), exclusionTiles(NULL), exclusions(NULL), interactingTiles(NULL), interactingAtoms(NULL),
         interactionCount(NULL), blockCenter(NULL), blockBoundingBox(NULL), sortedBlocks(NULL), sortedBlockCenter(NULL), sortedBlockBoundingBox(NULL),
-        oldPositions(NULL), rebuildNeighborList(NULL), blockSorter(NULL), nonbondedForceGroup(0) {
+        oldPositions(NULL), rebuildNeighborList(NULL), blockSorter(NULL), nonbondedForceGroup(0), forceRebuildNeighborList(true) {
     // Decide how many thread blocks to use.
 
     string errorMessage = "Error initializing nonbonded utilities";
@@ -264,14 +264,6 @@ void CudaNonbondedUtilities::initialize(const System& system) {
         sortedBlockCenter = new CudaArray(context, numAtomBlocks+1, 4*elementSize, "sortedBlockCenter");
         sortedBlockBoundingBox = new CudaArray(context, numAtomBlocks+1, 4*elementSize, "sortedBlockBoundingBox");
         oldPositions = new CudaArray(context, numAtoms, 4*elementSize, "oldPositions");
-        if (context.getUseDoublePrecision()) {
-            vector<double4> oldPositionsVec(numAtoms, make_double4(1e30, 1e30, 1e30, 0));
-            oldPositions->upload(oldPositionsVec);
-        }
-        else {
-            vector<float4> oldPositionsVec(numAtoms, make_float4(1e30f, 1e30f, 1e30f, 0));
-            oldPositions->upload(oldPositionsVec);
-        }
         rebuildNeighborList = CudaArray::create<int>(context, 1, "rebuildNeighborList");
         blockSorter = new CudaSort(context, new BlockSortTrait(context.getUseDoublePrecision()), numAtomBlocks);
         vector<unsigned int> count(1, 0);
@@ -322,6 +314,7 @@ void CudaNonbondedUtilities::initialize(const System& system) {
         sortBoxDataArgs.push_back(&oldPositions->getDevicePointer());
         sortBoxDataArgs.push_back(&interactionCount->getDevicePointer());
         sortBoxDataArgs.push_back(&rebuildNeighborList->getDevicePointer());
+        sortBoxDataArgs.push_back(&forceRebuildNeighborList);
         findInteractingBlocksKernel = context.getKernel(interactingBlocksProgram, "findBlocksWithInteractions");
         findInteractingBlocksArgs.push_back(context.getPeriodicBoxSizePointer());
         findInteractingBlocksArgs.push_back(context.getInvPeriodicBoxSizePointer());
@@ -363,6 +356,7 @@ void CudaNonbondedUtilities::prepareInteractions() {
     blockSorter->sort(*sortedBlocks);
     context.executeKernel(sortBoxDataKernel, &sortBoxDataArgs[0], context.getNumAtoms());
     context.executeKernel(findInteractingBlocksKernel, &findInteractingBlocksArgs[0], context.getNumAtoms(), 256);
+    forceRebuildNeighborList = false;
 }
 
 void CudaNonbondedUtilities::computeInteractions() {
@@ -400,14 +394,7 @@ void CudaNonbondedUtilities::updateNeighborListSize() {
     if (forceArgs.size() > 0)
         forceArgs[17] = &interactingAtoms->getDevicePointer();
     findInteractingBlocksArgs[7] = &interactingAtoms->getDevicePointer();
-    if (context.getUseDoublePrecision()) {
-        vector<double4> oldPositionsVec(numAtoms, make_double4(1e30, 1e30, 1e30, 0));
-        oldPositions->upload(oldPositionsVec);
-    }
-    else {
-        vector<float4> oldPositionsVec(numAtoms, make_float4(1e30f, 1e30f, 1e30f, 0));
-        oldPositions->upload(oldPositionsVec);
-    }
+    forceRebuildNeighborList = true;
 }
 
 void CudaNonbondedUtilities::setUsePadding(bool padding) {
@@ -419,8 +406,9 @@ void CudaNonbondedUtilities::setAtomBlockRange(double startFraction, double endF
     startBlockIndex = (int) (startFraction*numAtomBlocks);
     numBlocks = (int) (endFraction*numAtomBlocks)-startBlockIndex;
     int totalTiles = context.getNumAtomBlocks()*(context.getNumAtomBlocks()+1)/2;
-    startTileIndex = (int) (startFraction*totalTiles);;
+    startTileIndex = (int) (startFraction*totalTiles);
     numTiles = (int) (endFraction*totalTiles)-startTileIndex;
+    forceRebuildNeighborList = true;
 }
 
 CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source, vector<ParameterInfo>& params, vector<ParameterInfo>& arguments, bool useExclusions, bool isSymmetric) {

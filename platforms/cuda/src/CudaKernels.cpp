@@ -104,7 +104,7 @@ void CudaCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool 
         nb.prepareInteractions();
 }
 
-double CudaCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
+double CudaCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForces, bool includeEnergy, int groups, bool& valid) {
     cu.getBondedUtilities().computeInteractions(groups);
     if ((groups&(1<<cu.getNonbondedUtilities().getForceGroup())) != 0)
         cu.getNonbondedUtilities().computeInteractions();

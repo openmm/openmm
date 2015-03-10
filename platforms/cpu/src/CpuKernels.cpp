@@ -231,13 +231,13 @@ void CpuCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool i
         throw OpenMMException("Particle coordinate is nan");
 }
 
-double CpuCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups) {
+double CpuCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups, bool& valid) {
     // Sum the forces from all the threads.
     
     SumForceTask task(context.getSystem().getNumParticles(), extractForces(context), data);
     data.threads.execute(task);
     data.threads.waitForThreads();
-    return referenceKernel.getAs<ReferenceCalcForcesAndEnergyKernel>().finishComputation(context, includeForce, includeEnergy, groups);
+    return referenceKernel.getAs<ReferenceCalcForcesAndEnergyKernel>().finishComputation(context, includeForce, includeEnergy, groups, valid);
 }
 
 CpuCalcPeriodicTorsionForceKernel::~CpuCalcPeriodicTorsionForceKernel() {
