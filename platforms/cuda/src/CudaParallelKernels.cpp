@@ -99,7 +99,7 @@ public:
     }
     void execute() {
         // Execute the kernel, then download forces.
-
+        
         energy += kernel.finishComputation(context, includeForce, includeEnergy, groups, valid);
         if (cu.getComputeForceCount() < 200) {
             // Record timing information for load balancing.  Since this takes time, only do it at the start of the simulation.
@@ -141,7 +141,7 @@ private:
 
 CudaParallelCalcForcesAndEnergyKernel::CudaParallelCalcForcesAndEnergyKernel(string name, const Platform& platform, CudaPlatform::PlatformData& data) :
         CalcForcesAndEnergyKernel(name, platform), data(data), completionTimes(data.contexts.size()), contextNonbondedFractions(data.contexts.size()),
-        tileCounts(data.contexts.size()), contextForces(NULL), pinnedPositionBuffer(NULL), pinnedForceBuffer(NULL) {
+        tileCounts(NULL), contextForces(NULL), pinnedPositionBuffer(NULL), pinnedForceBuffer(NULL) {
     for (int i = 0; i < (int) data.contexts.size(); i++)
         kernels.push_back(Kernel(new CudaCalcForcesAndEnergyKernel(name, platform, *data.contexts[i])));
 }
@@ -156,6 +156,8 @@ CudaParallelCalcForcesAndEnergyKernel::~CudaParallelCalcForcesAndEnergyKernel() 
         cuMemFreeHost(pinnedForceBuffer);
     cuEventDestroy(event);
     cuStreamDestroy(peerCopyStream);
+    if (tileCounts != NULL)
+        cuMemFreeHost(tileCounts);
 }
 
 void CudaParallelCalcForcesAndEnergyKernel::initialize(const System& system) {
@@ -163,12 +165,14 @@ void CudaParallelCalcForcesAndEnergyKernel::initialize(const System& system) {
     cu.setAsCurrent();
     CUmodule module = cu.createModule(CudaKernelSources::parallel);
     sumKernel = cu.getKernel(module, "sumForces");
-    for (int i = 0; i < (int) kernels.size(); i++)
+    int numContexts = data.contexts.size();
+    for (int i = 0; i < numContexts; i++)
         getKernel(i).initialize(system);
-    for (int i = 0; i < (int) contextNonbondedFractions.size(); i++)
-        contextNonbondedFractions[i] = 1/(double) contextNonbondedFractions.size();
+    for (int i = 0; i < numContexts; i++)
+        contextNonbondedFractions[i] = 1/(double) numContexts;
     CHECK_RESULT(cuEventCreate(&event, 0), "Error creating event");
     CHECK_RESULT(cuStreamCreate(&peerCopyStream, CU_STREAM_NON_BLOCKING), "Error creating stream");
+    CHECK_RESULT(cuMemHostAlloc((void**) &tileCounts, numContexts*sizeof(int), 0), "Error creating tile count buffer");
 }
 
 void CudaParallelCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups) {
