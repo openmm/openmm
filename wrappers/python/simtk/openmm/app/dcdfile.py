@@ -112,8 +112,8 @@ class DCDFile(object):
         file.seek(0, os.SEEK_END)
         boxVectors = self._topology.getPeriodicBoxVectors()
         if boxVectors is not None:
-            if getPeriodicBoxVectors is not None:
-                boxVectors = getPeriodicBoxVectors
+            if periodicBoxVectors is not None:
+                boxVectors = periodicBoxVectors
             elif unitCellDimensions is not None:
                 if is_quantity(unitCellDimensions):
                     unitCellDimensions = unitCellDimensions.value_in_unit(nanometers)
