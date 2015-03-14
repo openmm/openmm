@@ -1,4 +1,6 @@
 import unittest
+import os
+import tempfile
 from validateConstraints import *
 from simtk.openmm.app import *
 from simtk.openmm import *
@@ -291,8 +293,10 @@ class TestAmberPrmtopFile(unittest.TestCase):
         simulation.context.setPositions(inpcrd.positions)
         simulation.context.setPeriodicBoxVectors(*inpcrd.boxVectors)
 
-        simulation.reporters.append(DCDReporter('output.dcd', 1))  # This is an explicit test for the bugs in issue #850
+        fname = tempfile.mktemp(suffix='.dcd')
+        simulation.reporters.append(DCDReporter(fname, 1))  # This is an explicit test for the bugs in issue #850
         simulation.step(5)
+        os.remove(fname)
         
 
 if __name__ == '__main__':
