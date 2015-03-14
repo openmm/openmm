@@ -7,6 +7,8 @@ env:
     # encrypted AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY to push docs to s3
     - secure: "VVKz+yOMbKsskR+PfU1HfKBWdGYYrmIXNWQz4nqXCjtg2MRCQmjDulFZaPVDvsBzis9BUhnzAQrBYUrAtN8bZSTYRg7ADFVGdPFicg3Sv0owcghTQwokIvbw3G+HDz/WAnFmqEhqm3t5pNVWNinyHpMM3zYZOVKagyj53cwAM0M="
     - secure: "W2iPU6ooMujfzJNw9ElaEB8Go1rlNFJ5zEldr3FaH7SDRwqtqNOEp9CegCeG/hHtjg1j8TMyytQtvW+OaMKFIbq7Qqu7nIfwIFTV45vBHW6uwT/jAq/J3EgZ8K7JGyysVVHk86D8jT+xu90YVH5Tx/w97luxHOQGfSK8alhCszw="
+    # encrypted BINSTAR_TOKEN for push of dev package to binstar
+    - secure: Qz3pEYXXFnNQ/WK+15ad4cdbLJvzgCIZRwKD9fLiS3CDO2ldAQWxzaz8RQOwqbFtZUWu7lQpr+GukNJz5p0w18QEto+BxLYG9aW5mjoc+F2vCjyWFjkwnJ/Z/3uBKTcr5x9Y7HKaPGivaJ4BNACifjt7cCpeVJzV6u2+bBgSoHc=
 
 before_install:
   - sudo apt-get update -qq
@@ -23,8 +25,8 @@ script:
   - sudo make PythonInstall
   - # Run the testInstallation script
   - python -m simtk.testInstallation
-  - # run all of the tests
-  - ctest -j2 -V
+  - # run all of the tests, catching tests that fail the first time to give them a second try
+  - ctest -j2 -V || true
   - # get a list of all of the failed tests into this stupid ctest format
   - python -c 'fn = "Testing/Temporary/LastTestsFailed.log"; import os; os.path.exists(fn) or exit(0); l = [line.split(":")[0] for line in open(fn)]; triplets = zip(l, l, [","]*len(l)); print "".join(",".join(t) for t in triplets)' > FailedTests.log
   - # rerun all of the failed tests
@@ -32,12 +34,27 @@ script:
   - # run the python tests too
   - cd python/tests
   - nosetests -vv --processes=-1 --process-timeout=200
+  - cd ../..
 
 after_success:
   # Get libraries necessary for building docs and pushing
   # them to S3
-  - sudo apt-get install python-sphinx python-yaml
-  - sudo pip install sphinxcontrib-bibtex boto
-  - make DoxygenApiDocs
-  - make sphinxhtml
+  - sudo apt-get install -qq python-sphinx python-yaml
+  - sudo pip install --quiet sphinxcontrib-bibtex boto
+  - make --quiet DoxygenApiDocs
+  - make --quiet sphinxhtml
   - python devtools/ci/push-docs-to-s3.py
+  # Build conda dev package and push to binstar
+  - source devtools/ci/install.sh
+  - export PYTHONUNBUFFERED=true
+  - export CC="clang++"
+  - source deactivate
+  - conda install --yes --quiet conda-build jinja2
+  # Clean up old build.
+  - make clean
+  - rm -rf CMakeFiles
+  - rm -rf CMakeCache.txt
+  - rm -rf cmake_install.cmake
+  # Build the conda package, testing build before packaging.
+  - conda build --quiet devtools/conda-recipe
+  - source devtools/ci/after_success.sh
