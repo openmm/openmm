@@ -121,9 +121,9 @@ class DCDFile(object):
                     unitCellDimensions = unitCellDimensions.value_in_unit(nanometers)
                 boxVectors = (Vec3(unitCellDimensions[0], 0, 0), Vec3(0, unitCellDimensions[1], 0), Vec3(0, 0, unitCellDimensions[2]))*nanometers
             (a_length, b_length, c_length, alpha, beta, gamma) = computeLengthsAndAngles(boxVectors)
-            a_length = a_length.value_in_unit(angstroms)
-            b_length = b_length.value_in_unit(angstroms)
-            c_length = c_length.value_in_unit(angstroms)
+            a_length = a_length / 10.  # computeLengthsAndAngles returns unitless nanometers, but need angstroms here.
+            b_length = b_length / 10.  # computeLengthsAndAngles returns unitless nanometers, but need angstroms here..value_in_unit(angstroms)
+            c_length = c_length / 10.  # computeLengthsAndAngles returns unitless nanometers, but need angstroms here.
             angle1 = math.sin(math.pi/2-gamma)
             angle2 = math.sin(math.pi/2-beta)
             angle3 = math.sin(math.pi/2-alpha)
