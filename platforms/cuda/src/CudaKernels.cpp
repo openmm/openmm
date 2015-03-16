@@ -1166,6 +1166,9 @@ double CudaCalcCMAPTorsionForceKernel::execute(ContextImpl& context, bool includ
     return 0.0;
 }
 
+void CudaCalcCMAPTorsionForceKernel::copyParametersToContext(ContextImpl& context, const CMAPTorsionForce& force) {
+}
+
 class CudaCustomTorsionForceInfo : public CudaForceInfo {
 public:
     CudaCustomTorsionForceInfo(const CustomTorsionForce& force) : force(force) {

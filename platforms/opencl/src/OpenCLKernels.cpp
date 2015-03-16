@@ -1164,6 +1164,9 @@ double OpenCLCalcCMAPTorsionForceKernel::execute(ContextImpl& context, bool incl
     return 0.0;
 }
 
+void OpenCLCalcCMAPTorsionForceKernel::copyParametersToContext(ContextImpl& context, const CMAPTorsionForce& force) {
+}
+
 class OpenCLCustomTorsionForceInfo : public OpenCLForceInfo {
 public:
     OpenCLCustomTorsionForceInfo(const CustomTorsionForce& force) : OpenCLForceInfo(0), force(force) {
