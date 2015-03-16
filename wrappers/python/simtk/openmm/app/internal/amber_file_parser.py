@@ -305,6 +305,10 @@ class PrmtopLoader(object):
             return self._nonbondTerms
         except AttributeError:
             pass
+        # Check if there are any non-zero HBOND terms
+        for x, y in zip(self._raw_data['HBOND_ACOEF'], self._raw_data['HBOND_BCOEF']):
+            if float(x) or float(y):
+                raise Exception('10-12 interactions are not supported')
         self._nonbondTerms=[]
         lengthConversionFactor = units.angstrom.conversion_factor_to(units.nanometer)
         energyConversionFactor = units.kilocalorie_per_mole.conversion_factor_to(units.kilojoule_per_mole)
@@ -333,6 +337,7 @@ class PrmtopLoader(object):
         for i in range(numTypes):
             for j in range(numTypes):
                 index = int(self._raw_data['NONBONDED_PARM_INDEX'][numTypes*i+j]) - 1
+                if index < 0: continue
                 rij = type_parameters[i][0] + type_parameters[j][0]
                 wdij = sqrt(type_parameters[i][1] * type_parameters[j][1])
                 a = float(self._raw_data['LENNARD_JONES_ACOEF'][index])
@@ -477,6 +482,7 @@ class PrmtopLoader(object):
                     typ1 = atomTypeIndexes[iAtom] - 1
                     typ2 = atomTypeIndexes[lAtom] - 1
                     idx = nbidx[numTypes*typ1+typ2] - 1
+                    if idx < 0: continue
                     a = parm_acoef[idx]
                     b = parm_bcoef[idx]
                     try:
@@ -870,6 +876,7 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
         for i in range(numTypes):
             for j in range(numTypes):
                 idx = nbidx[numTypes*i+j] - 1
+                if idx < 0: continue
                 acoef[i+numTypes*j] = sqrt(parm_acoef[idx]) * afac
                 bcoef[i+numTypes*j] = parm_bcoef[idx] * bfac
         if has_1264:
@@ -878,6 +885,7 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
             for i in range(numTypes):
                 for j in range(numTypes):
                     idx = nbidx[numTypes*i+j] - 1
+                    if idx < 0: continue
                     ccoef[i+numTypes*j] = parm_ccoef[idx] * cfac
             cforce = mm.CustomNonbondedForce('(a/r6)^2-b/r6-c/r^4; r6=r^6;'
                                              'a=acoef(type1, type2);'
@@ -911,6 +919,7 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
             for i in range(numTypes):
                 for j in range(numTypes):
                     idx = nbidx[numTypes*i+j] - 1
+                    if idx < 0: continue
                     ccoef[i+numTypes*j] = parm_ccoef[idx] * cfac
             cforce = mm.CustomNonbondedForce('-c/r^4; c=ccoef(type1, type2)')
             cforce.addTabulatedFunction('ccoef',
