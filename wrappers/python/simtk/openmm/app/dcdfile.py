@@ -37,6 +37,8 @@ import time
 import struct
 import math
 from simtk.unit import picoseconds, nanometers, angstroms, is_quantity, norm
+from simtk.openmm import Vec3
+from simtk.openmm.app.internal.unitcell import computeLengthsAndAngles
 
 class DCDFile(object):
     """DCDFile provides methods for creating DCD files.
@@ -112,16 +114,16 @@ class DCDFile(object):
         file.seek(0, os.SEEK_END)
         boxVectors = self._topology.getPeriodicBoxVectors()
         if boxVectors is not None:
-            if getPeriodicBoxVectors is not None:
-                boxVectors = getPeriodicBoxVectors
+            if periodicBoxVectors is not None:
+                boxVectors = periodicBoxVectors
             elif unitCellDimensions is not None:
                 if is_quantity(unitCellDimensions):
                     unitCellDimensions = unitCellDimensions.value_in_unit(nanometers)
                 boxVectors = (Vec3(unitCellDimensions[0], 0, 0), Vec3(0, unitCellDimensions[1], 0), Vec3(0, 0, unitCellDimensions[2]))*nanometers
             (a_length, b_length, c_length, alpha, beta, gamma) = computeLengthsAndAngles(boxVectors)
-            a_length = a_length.value_in_unit(angstroms)
-            b_length = b_length.value_in_unit(angstroms)
-            c_length = c_length.value_in_unit(angstroms)
+            a_length = a_length * 10.  # computeLengthsAndAngles returns unitless nanometers, but need angstroms here.
+            b_length = b_length * 10.  # computeLengthsAndAngles returns unitless nanometers, but need angstroms here.
+            c_length = c_length * 10.  # computeLengthsAndAngles returns unitless nanometers, but need angstroms here.
             angle1 = math.sin(math.pi/2-gamma)
             angle2 = math.sin(math.pi/2-beta)
             angle3 = math.sin(math.pi/2-alpha)
