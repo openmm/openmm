@@ -510,6 +510,7 @@ private:
     bool hasInitializedKernel;
     OpenCLContext& cl;
     const System& system;
+    std::vector<mm_int2> mapPositionsVec;
     OpenCLArray* coefficients;
     OpenCLArray* mapPositions;
     OpenCLArray* torsionMaps;

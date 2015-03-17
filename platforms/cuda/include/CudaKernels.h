@@ -532,6 +532,7 @@ private:
     bool hasInitializedKernel;
     CudaContext& cu;
     const System& system;
+    std::vector<int2> mapPositionsVec;
     CudaArray* coefficients;
     CudaArray* mapPositions;
     CudaArray* torsionMaps;
