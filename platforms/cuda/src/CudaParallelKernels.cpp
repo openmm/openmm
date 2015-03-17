@@ -536,6 +536,11 @@ double CudaParallelCalcCMAPTorsionForceKernel::execute(ContextImpl& context, boo
     return 0.0;
 }
 
+void CudaParallelCalcCMAPTorsionForceKernel::copyParametersToContext(ContextImpl& context, const CMAPTorsionForce& force) {
+    for (int i = 0; i < (int) kernels.size(); i++)
+        getKernel(i).copyParametersToContext(context, force);
+}
+
 class CudaParallelCalcCustomTorsionForceKernel::Task : public CudaContext::WorkTask {
 public:
     Task(ContextImpl& context, CudaCalcCustomTorsionForceKernel& kernel, bool includeForce,

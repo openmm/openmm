@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -708,6 +708,40 @@ double ReferenceCalcCMAPTorsionForceKernel::execute(ContextImpl& context, bool i
     ReferenceCMAPTorsionIxn torsion(coeff, torsionMaps, torsionIndices);
     torsion.calculateIxn(posData, forceData, &totalEnergy);
     return totalEnergy;
+}
+
+void ReferenceCalcCMAPTorsionForceKernel::copyParametersToContext(ContextImpl& context, const CMAPTorsionForce& force) {
+    int numMaps = force.getNumMaps();
+    int numTorsions = force.getNumTorsions();
+    if (coeff.size() != numMaps)
+        throw OpenMMException("updateParametersInContext: The number of maps has changed");
+    if (torsionMaps.size() != numTorsions)
+        throw OpenMMException("updateParametersInContext: The number of CMAP torsions has changed");
+
+    // Update the maps.
+
+    vector<double> energy;
+    vector<vector<double> > c;
+    for (int i = 0; i < numMaps; i++) {
+        int size;
+        force.getMapParameters(i, size, energy);
+        if (coeff[i].size() != size*size)
+            throw OpenMMException("updateParametersInContext: The size of a map has changed");
+        CMAPTorsionForceImpl::calcMapDerivatives(size, energy, c);
+        for (int j = 0; j < size*size; j++)
+            for (int k = 0; k < 16; k++)
+                coeff[i][j][k] = c[j][k];
+    }
+
+    // Update the indices.
+
+    for (int i = 0; i < numTorsions; i++) {
+        int index[8];
+        force.getTorsionParameters(i, torsionMaps[i], index[0], index[1], index[2], index[3], index[4], index[5], index[6], index[7]);
+        for (int j = 0; j < 8; j++)
+            if (index[j] != torsionIndices[i][j])
+                throw OpenMMException("updateParametersInContext: The set of particles in a CMAP torsion has changed");
+    }
 }
 
 ReferenceCalcCustomTorsionForceKernel::~ReferenceCalcCustomTorsionForceKernel() {

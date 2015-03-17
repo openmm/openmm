@@ -1125,7 +1125,7 @@ void OpenCLCalcCMAPTorsionForceKernel::initialize(const System& system, const CM
         return;
     int numMaps = force.getNumMaps();
     vector<mm_float4> coeffVec;
-    vector<mm_int2> mapPositionsVec(numMaps);
+    mapPositionsVec.resize(numMaps);
     vector<double> energy;
     vector<vector<double> > c;
     int currentPosition = 0;
@@ -1162,6 +1162,49 @@ void OpenCLCalcCMAPTorsionForceKernel::initialize(const System& system, const CM
 
 double OpenCLCalcCMAPTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     return 0.0;
+}
+
+void OpenCLCalcCMAPTorsionForceKernel::copyParametersToContext(ContextImpl& context, const CMAPTorsionForce& force) {
+    int numMaps = force.getNumMaps();
+    int numContexts = cl.getPlatformData().contexts.size();
+    int startIndex = cl.getContextIndex()*force.getNumTorsions()/numContexts;
+    int endIndex = (cl.getContextIndex()+1)*force.getNumTorsions()/numContexts;
+    numTorsions = endIndex-startIndex;
+    if (mapPositions->getSize() != numMaps)
+        throw OpenMMException("updateParametersInContext: The number of maps has changed");
+    if (torsionMaps->getSize() != numTorsions)
+        throw OpenMMException("updateParametersInContext: The number of CMAP torsions has changed");
+
+    // Update the maps.
+
+    vector<mm_float4> coeffVec;
+    vector<double> energy;
+    vector<vector<double> > c;
+    int currentPosition = 0;
+    for (int i = 0; i < numMaps; i++) {
+        int size;
+        force.getMapParameters(i, size, energy);
+        if (size != mapPositionsVec[i].y)
+            throw OpenMMException("updateParametersInContext: The size of a map has changed");
+        CMAPTorsionForceImpl::calcMapDerivatives(size, energy, c);
+        currentPosition += 4*size*size;
+        for (int j = 0; j < size*size; j++) {
+            coeffVec.push_back(mm_float4((float) c[j][0], (float) c[j][1], (float) c[j][2], (float) c[j][3]));
+            coeffVec.push_back(mm_float4((float) c[j][4], (float) c[j][5], (float) c[j][6], (float) c[j][7]));
+            coeffVec.push_back(mm_float4((float) c[j][8], (float) c[j][9], (float) c[j][10], (float) c[j][11]));
+            coeffVec.push_back(mm_float4((float) c[j][12], (float) c[j][13], (float) c[j][14], (float) c[j][15]));
+        }
+    }
+    coefficients->upload(coeffVec);
+
+    // Update the indices.
+
+    vector<int> torsionMapsVec(numTorsions);
+    for (int i = 0; i < numTorsions; i++) {
+        int index[8];
+        force.getTorsionParameters(i, torsionMapsVec[i], index[0], index[1], index[2], index[3], index[4], index[5], index[6], index[7]);
+    }
+    torsionMaps->upload(torsionMapsVec);
 }
 
 class OpenCLCustomTorsionForceInfo : public OpenCLForceInfo {
