@@ -48,10 +48,11 @@
 using namespace OpenMM;
 using namespace std;
 
+ReferencePlatform platform;
+
 const double TOL = 1e-5;
 
 void testCoulomb() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -76,7 +77,6 @@ void testCoulomb() {
 }
 
 void testLJ() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -103,7 +103,6 @@ void testLJ() {
 }
 
 void testExclusionsAnd14() {
-    ReferencePlatform platform;
     System system;
     VerletIntegrator integrator(0.01);
     NonbondedForce* nonbonded = new NonbondedForce();
@@ -190,7 +189,6 @@ void testExclusionsAnd14() {
 }
 
 void testCutoff() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -229,7 +227,6 @@ void testCutoff() {
 }
 
 void testCutoff14() {
-    ReferencePlatform platform;
     System system;
     VerletIntegrator integrator(0.01);
     NonbondedForce* nonbonded = new NonbondedForce();
@@ -326,7 +323,6 @@ void testCutoff14() {
 }
 
 void testPeriodic() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -363,7 +359,6 @@ void testPeriodic() {
 }
 
 void testTriclinic() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -432,7 +427,6 @@ void testDispersionCorrection() {
     int numParticles = gridSize*gridSize*gridSize;
     double boxSize = gridSize*0.7;
     double cutoff = boxSize/3;
-    ReferencePlatform platform;
     System system;
     VerletIntegrator integrator(0.01);
     NonbondedForce* nonbonded = new NonbondedForce();
@@ -496,7 +490,6 @@ void testDispersionCorrection() {
 }
 
 void testSwitchingFunction(NonbondedForce::NonbondedMethod method) {
-    ReferencePlatform platform;
     System system;
     system.setDefaultPeriodicBoxVectors(Vec3(6, 0, 0), Vec3(0, 6, 0), Vec3(0, 0, 6));
     system.addParticle(1.0);

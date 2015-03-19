@@ -51,6 +51,8 @@
 using namespace OpenMM;
 using namespace std;
 
+ReferencePlatform platform;
+
 const double TOL = 1e-5;
 
 Vec3 computeDelta(const Vec3& pos1, const Vec3& pos2, bool periodic, const Vec3* periodicBoxVectors) {
@@ -93,7 +95,6 @@ void validateAxilrodTeller(CustomManyParticleForce* force, const vector<Vec3>& p
         ASSERT(!system.usesPeriodicBoundaryConditions());
     }
     VerletIntegrator integrator(0.001);
-    ReferencePlatform platform;
     Context context(system, integrator, platform);
     context.setPositions(positions);
     State state1 = context.getState(State::Forces | State::Energy);
@@ -155,7 +156,6 @@ void validateStillingerWeber(CustomManyParticleForce* force, const vector<Vec3>&
     system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
     system.addForce(force);
     VerletIntegrator integrator(0.001);
-    ReferencePlatform platform;
     Context context(system, integrator, platform);
     context.setPositions(positions);
     State state1 = context.getState(State::Forces | State::Energy);
@@ -340,7 +340,6 @@ void testExclusions() {
 
 void testAllTerms() {
     int numParticles = 4;
-    ReferencePlatform platform;
     
     // Create a system with a CustomManyParticleForce.
     
@@ -424,7 +423,6 @@ void testParameters() {
     }
     system.addForce(force);
     VerletIntegrator integrator(0.001);
-    ReferencePlatform platform;
     Context context(system, integrator, platform);
     context.setPositions(positions);
     
@@ -510,7 +508,6 @@ void testTabulatedFunctions() {
     }
     system.addForce(force);
     VerletIntegrator integrator(0.001);
-    ReferencePlatform platform;
     Context context(system, integrator, platform);
     context.setPositions(positions);
     
@@ -562,7 +559,6 @@ void testTypeFilters() {
     force->setTypeFilter(2, f2);
     system.addForce(force);
     VerletIntegrator integrator(0.001);
-    ReferencePlatform platform;
     Context context(system, integrator, platform);
     context.setPositions(positions);
     
