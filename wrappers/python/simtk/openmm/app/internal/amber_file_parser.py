@@ -122,21 +122,22 @@ class PrmtopLoader(object):
 
         with open(inFilename, 'r') as fIn:
             for line in fIn:
-                if line.startswith('%VERSION'):
-                    tag, self._prmtopVersion = line.rstrip().split(None, 1)
-                elif line.startswith('%FLAG'):
-                    tag, flag = line.rstrip().split(None, 1)
-                    self._flags.append(flag)
-                    self._raw_data[flag] = []
-                elif line.startswith('%FORMAT'):
-                    format = line.rstrip()
-                    index0=format.index('(')
-                    index1=format.index(')')
-                    format = format[index0+1:index1]
-                    m = FORMAT_RE_PATTERN.search(format)
-                    self._raw_format[self._flags[-1]] = (format, m.group(1), m.group(2), m.group(3), m.group(4))
-                elif line.startswith('%COMMENT'):
-                    continue
+                if line[0] == '%':
+                    if line.startswith('%VERSION'):
+                        tag, self._prmtopVersion = line.rstrip().split(None, 1)
+                    elif line.startswith('%FLAG'):
+                        tag, flag = line.rstrip().split(None, 1)
+                        self._flags.append(flag)
+                        self._raw_data[flag] = []
+                    elif line.startswith('%FORMAT'):
+                        format = line.rstrip()
+                        index0=format.index('(')
+                        index1=format.index(')')
+                        format = format[index0+1:index1]
+                        m = FORMAT_RE_PATTERN.search(format)
+                        self._raw_format[self._flags[-1]] = (format, m.group(1), m.group(2), int(m.group(3)), m.group(4))
+                    elif line.startswith('%COMMENT'):
+                        continue
                 elif self._flags \
                      and 'TITLE'==self._flags[-1] \
                      and not self._raw_data['TITLE']:
@@ -144,8 +145,7 @@ class PrmtopLoader(object):
                 else:
                     flag=self._flags[-1]
                     (format, numItems, itemType,
-                     itemLength, itemPrecision) = self._getFormat(flag)
-                    iLength=int(itemLength)
+                     iLength, itemPrecision) = self._getFormat(flag)
                     line = line.rstrip()
                     for index in range(0, len(line), iLength):
                         item = line[index:index+iLength]
