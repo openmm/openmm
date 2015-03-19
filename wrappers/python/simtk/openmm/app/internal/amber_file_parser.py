@@ -783,9 +783,8 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
             atomI = topatoms[iAtom]
             atomJ = topatoms[jAtom]
             atomK = topatoms[kAtom]
-            numH = ((atomI.element.atomic_number == 1) + (atomJ.element.atomic_number == 1) +
-                    (atomK.element.atomic_number == 1))
-            constrained = (numH == 2 or (numH == 1 and atomK.element is elem.oxygen))
+            numH = ((atomI.element.atomic_number == 1) + (atomK.element.atomic_number == 1))
+            constrained = (numH == 2 or (numH == 1 and atomJ.element is elem.oxygen))
         else:
             constrained = False
         if constrained:
