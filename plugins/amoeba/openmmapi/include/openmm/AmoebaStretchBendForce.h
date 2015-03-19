@@ -112,7 +112,7 @@ public:
     /**
      * Update the per-stretch-bend term parameters in a Context to match those stored in this Force object.  This method provides
      * an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
-     * Simply call setStretchBendParameters() to modify this object's parameters, then call updateParametersInState()
+     * Simply call setStretchBendParameters() to modify this object's parameters, then call updateParametersInContext()
      * to copy them over to the Context.
      * 
      * The only information this method updates is the values of per-stretch-bend term parameters.  The set of particles involved
