@@ -49,11 +49,11 @@
 using namespace OpenMM;
 using namespace std;
 
+ReferencePlatform platform;
+
 const double TOL = 1e-5;
 
 void testHbond() {
-    ReferencePlatform platform;
-
     // Create a system using a CustomHbondForce.
 
     System customSystem;
@@ -151,7 +151,6 @@ void testHbond() {
 }
 
 void testExclusions() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -178,7 +177,6 @@ void testExclusions() {
 }
 
 void testCutoff() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -206,7 +204,6 @@ void testCutoff() {
 }
 
 void testCustomFunctions() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);

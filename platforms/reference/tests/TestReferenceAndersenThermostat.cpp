@@ -48,12 +48,13 @@
 using namespace OpenMM;
 using namespace std;
 
+ReferencePlatform platform;
+
 void testTemperature() {
     const int numParticles = 8;
     const double temp = 100.0;
     const double collisionFreq = 10.0;
     const int numSteps = 5000;
-    ReferencePlatform platform;
     System system;
     VerletIntegrator integrator(0.003);
     NonbondedForce* forceField = new NonbondedForce();
@@ -94,7 +95,6 @@ void testConstraints() {
     const double temp = 100.0;
     const double collisionFreq = 10.0;
     const int numSteps = 15000;
-    ReferencePlatform platform;
     System system;
     VerletIntegrator integrator(0.004);
     NonbondedForce* forceField = new NonbondedForce();
@@ -147,7 +147,6 @@ void testRandomSeed() {
     const int numParticles = 8;
     const double temp = 100.0;
     const double collisionFreq = 10.0;
-    ReferencePlatform platform;
     System system;
     VerletIntegrator integrator(0.01);
     NonbondedForce* forceField = new NonbondedForce();

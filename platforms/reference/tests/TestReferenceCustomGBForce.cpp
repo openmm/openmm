@@ -51,6 +51,8 @@
 using namespace OpenMM;
 using namespace std;
 
+ReferencePlatform platform;
+
 const double TOL = 1e-5;
 
 void testOBC(GBSAOBCForce::NonbondedMethod obcMethod, CustomGBForce::NonbondedMethod customMethod) {
@@ -58,7 +60,6 @@ void testOBC(GBSAOBCForce::NonbondedMethod obcMethod, CustomGBForce::NonbondedMe
     const int numParticles = numMolecules*2;
     const double boxSize = 10.0;
     const double cutoff = 2.0;
-    ReferencePlatform platform;
 
     // Create two systems: one with a GBSAOBCForce, and one using a CustomGBForce to implement the same interaction.
 
@@ -190,7 +191,6 @@ void testMembrane() {
     const int numMolecules = 70;
     const int numParticles = numMolecules*2;
     const double boxSize = 10.0;
-    ReferencePlatform platform;
 
     // Create a system with an implicit membrane.
 
@@ -280,7 +280,6 @@ void testMembrane() {
 }
 
 void testTabulatedFunction() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -313,7 +312,6 @@ void testTabulatedFunction() {
 }
 
 void testMultipleChainRules() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -341,7 +339,6 @@ void testMultipleChainRules() {
 }
 
 void testPositionDependence() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -405,7 +402,6 @@ void testPositionDependence() {
 }
 
 void testExclusions() {
-    ReferencePlatform platform;
     for (int i = 3; i < 4; i++) {
         System system;
         system.addParticle(1.0);
@@ -817,7 +813,6 @@ void testGBVI(GBVIForce::NonbondedMethod gbviMethod, CustomGBForce::NonbondedMet
 
     const int numMolecules = 1;
     const double boxSize   = 10.0;
-    ReferencePlatform platform;
 
     GBVIForce*        gbvi = new GBVIForce();
     std::vector<Vec3> positions;

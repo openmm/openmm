@@ -49,8 +49,9 @@
 using namespace OpenMM;
 using namespace std;
 
+ReferencePlatform platform;
+
 void testChangingBoxSize() {
-    ReferencePlatform platform;
     System system;
     system.setDefaultPeriodicBoxVectors(Vec3(4, 0, 0), Vec3(0, 5, 0), Vec3(0, 0, 6));
     system.addParticle(1.0);
@@ -100,7 +101,6 @@ void testIdealGas() {
 
     // Create a gas of noninteracting particles.
 
-    ReferencePlatform platform;
     System system;
     system.setDefaultPeriodicBoxVectors(Vec3(initialLength, 0, 0), Vec3(0, 0.5*initialLength, 0), Vec3(0, 0, 2*initialLength));
     vector<Vec3> positions(numParticles);
@@ -148,7 +148,6 @@ void testRandomSeed() {
     const int numParticles = 8;
     const double temp = 100.0;
     const double pressure = 1.5;
-    ReferencePlatform platform;
     System system;
     system.setDefaultPeriodicBoxVectors(Vec3(8, 0, 0), Vec3(0, 8, 0), Vec3(0, 0, 8));
     VerletIntegrator integrator(0.01);

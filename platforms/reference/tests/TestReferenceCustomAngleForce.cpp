@@ -47,11 +47,11 @@
 using namespace OpenMM;
 using namespace std;
 
+ReferencePlatform platform;
+
 const double TOL = 1e-5;
 
 void testAngles() {
-    ReferencePlatform platform;
-
     // Create a system using a CustomAngleForce.
 
     System customSystem;

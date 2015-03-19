@@ -48,10 +48,11 @@
 using namespace OpenMM;
 using namespace std;
 
+ReferencePlatform platform;
+
 const double TOL = 1e-5;
 
 void testSingleBond() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(2.0);
     system.addParticle(2.0);
@@ -97,7 +98,6 @@ void testSingleBond() {
 void testTemperature() {
     const int numParticles = 8;
     const double temp = 100.0;
-    ReferencePlatform platform;
     System system;
     LangevinIntegrator integrator(temp, 2.0, 0.01);
     NonbondedForce* forceField = new NonbondedForce();
@@ -132,7 +132,6 @@ void testTemperature() {
 void testConstraints() {
     const int numParticles = 8;
     const double temp = 100.0;
-    ReferencePlatform platform;
     System system;
     LangevinIntegrator integrator(temp, 2.0, 0.01);
     integrator.setConstraintTolerance(1e-5);
@@ -172,7 +171,6 @@ void testConstraints() {
 }
 
 void testConstrainedMasslessParticles() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(0.0);
     system.addParticle(1.0);
@@ -207,7 +205,6 @@ void testRandomSeed() {
     const int numParticles = 8;
     const double temp = 100.0;
     const double collisionFreq = 10.0;
-    ReferencePlatform platform;
     System system;
     LangevinIntegrator integrator(temp, 2.0, 0.01);
     NonbondedForce* forceField = new NonbondedForce();

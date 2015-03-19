@@ -52,11 +52,11 @@
 using namespace OpenMM;
 using namespace std;
 
+ReferencePlatform platform;
+
 const double TOL = 1e-5;
 
 void testBond() {
-    ReferencePlatform platform;
-
     // Create a system using a CustomCompoundBondForce.
 
     System customSystem;
@@ -147,7 +147,6 @@ void testBond() {
 }
 
 void testPositionDependence() {
-    ReferencePlatform platform;
     System customSystem;
     customSystem.addParticle(1.0);
     customSystem.addParticle(1.0);
@@ -179,7 +178,6 @@ void testContinuous2DFunction() {
     const double xmax = 1.1;
     const double ymin = 0.0;
     const double ymax = 0.9;
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     VerletIntegrator integrator(0.01);
@@ -227,7 +225,6 @@ void testContinuous3DFunction() {
     const double ymax = 0.9;
     const double zmin = 0.2;
     const double zmax = 1.3;
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     VerletIntegrator integrator(0.01);
@@ -273,7 +270,6 @@ void testContinuous3DFunction() {
 
 void testMultipleBonds() {
     // Two compound bonds using Urey-Bradley example from API doc
-    ReferencePlatform platform;
     System customSystem;
     customSystem.addParticle(1.0);
     customSystem.addParticle(1.0);
