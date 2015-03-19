@@ -73,9 +73,8 @@ class AmberPrmtopFile(object):
 
     def __init__(self, file):
         """Load a prmtop file."""
-        top = Topology()
         ## The Topology read from the prmtop file
-        self.topology = top
+        self.topology = top = Topology()
         self.elements = []
 
         # Load the prmtop file
@@ -229,7 +228,7 @@ class AmberPrmtopFile(object):
         elif implicitSolvent is None:
             implicitSolventKappa = 0.0
 
-        sys = amber_file_parser.readAmberSystem(prmtop_loader=self._prmtop, shake=constraintString,
+        sys = amber_file_parser.readAmberSystem(self.topology, prmtop_loader=self._prmtop, shake=constraintString,
                         nonbondedCutoff=nonbondedCutoff, nonbondedMethod=methodMap[nonbondedMethod],
                         flexibleConstraints=False, gbmodel=implicitString, soluteDielectric=soluteDielectric,
                         solventDielectric=solventDielectric, implicitSolventKappa=implicitSolventKappa,

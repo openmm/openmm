@@ -651,7 +651,7 @@ class PrmtopLoader(object):
 # AMBER System builder (based on, but not identical to, systemManager from 'zander')
 #=============================================================================================
 
-def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmodel=None,
+def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=None, gbmodel=None,
           soluteDielectric=1.0, solventDielectric=78.5,
           implicitSolventKappa=0.0*(1/units.nanometer), nonbondedCutoff=None,
           nonbondedMethod='NoCutoff', scee=None, scnb=None, mm=None, verbose=False,
@@ -659,6 +659,9 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
     """
     Create an OpenMM System from an Amber prmtop file.
 
+    REQUIRED ARGUMENT
+      topology (forcefield.Topology) The topology for the system that is about
+      to be created
     ARGUMENTS (specify  one or the other, but not both)
       prmtop_filename (String) - name of Amber prmtop file (new-style only)
       prmtop_loader (PrmtopLoader) - the loaded prmtop file
@@ -739,7 +742,7 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
         system.addParticle(mass)
 
     # Add constraints.
-    isWater = [prmtop.getResidueLabel(i) in ('WAT', 'TP4', 'TP5', 'T4E') for i in range(prmtop.getNumAtoms())]
+    isWater = [prmtop.getResidueLabel(i) in ('WAT', 'HOH', 'TP4', 'TP5', 'T4E') for i in range(prmtop.getNumAtoms())]
     if shake in ('h-bonds', 'all-bonds', 'h-angles'):
         for (iAtom, jAtom, k, rMin) in prmtop.getBondsWithH():
             system.addConstraint(iAtom, jAtom, rMin)
@@ -774,13 +777,15 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
             distance = c[2].value_in_unit(units.nanometer)
             atomConstraints[c[0]].append((c[1], distance))
             atomConstraints[c[1]].append((c[0], distance))
+    topatoms = list(topology.atoms())
     for (iAtom, jAtom, kAtom, k, aMin) in prmtop.getAngles():
         if shake == 'h-angles':
-            type1 = prmtop.getAtomType(iAtom)
-            type2 = prmtop.getAtomType(jAtom)
-            type3 = prmtop.getAtomType(kAtom)
-            numH = len([type for type in (type1, type3) if type.startswith('H')])
-            constrained = (numH == 2 or (numH == 1 and type2.startswith('O')))
+            atomI = topatoms[iAtom]
+            atomJ = topatoms[jAtom]
+            atomK = topatoms[kAtom]
+            numH = ((atomI.element.atomic_number == 1) + (atomJ.element.atomic_number == 1) +
+                    (atomK.element.atomic_number == 1))
+            constrained = (numH == 2 or (numH == 1 and atomK.element is elem.oxygen))
         else:
             constrained = False
         if constrained:
