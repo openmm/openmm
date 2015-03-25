@@ -180,7 +180,7 @@ ReferenceConstraints::ReferenceConstraints(const System& system) : ccma(NULL), s
         
         // Create the CCMA object.
         
-        ccma = new ReferenceCCMAAlgorithm(numParticles, numCCMA, ccmaIndices, ccmaDistance, masses, angles);
+        ccma = new ReferenceCCMAAlgorithm(numParticles, numCCMA, ccmaIndices, ccmaDistance, masses, angles, 0.02);
     }
 }
 
