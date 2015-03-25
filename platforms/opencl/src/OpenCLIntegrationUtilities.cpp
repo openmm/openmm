@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,6 +32,7 @@
 #include "openmm/VirtualSite.h"
 #include "quern.h"
 #include "OpenCLExpressionUtilities.h"
+#include "ReferenceCCMAAlgorithm.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
@@ -323,156 +324,53 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
 
     int numCCMA = (int) ccmaConstraints.size();
     if (numCCMA > 0) {
+        // Record information needed by ReferenceCCMAAlgorithm.
+        
+        vector<pair<int, int> > refIndices(numCCMA);
+        vector<RealOpenMM> refDistance(numCCMA);
+        for (int i = 0; i < numCCMA; i++) {
+            int index = ccmaConstraints[i];
+            refIndices[i] = make_pair(atom1[index], atom2[index]);
+            refDistance[i] = distance[index];
+        }
+        vector<RealOpenMM> refMasses(numAtoms);
+        for (int i = 0; i < numAtoms; ++i)
+            refMasses[i] = (RealOpenMM) system.getParticleMass(i);
+
+        // Look up angles for CCMA.
+        
+        vector<ReferenceCCMAAlgorithm::AngleInfo> angles;
+        for (int i = 0; i < system.getNumForces(); i++) {
+            const HarmonicAngleForce* force = dynamic_cast<const HarmonicAngleForce*>(&system.getForce(i));
+            if (force != NULL) {
+                for (int j = 0; j < force->getNumAngles(); j++) {
+                    int atom1, atom2, atom3;
+                    double angle, k;
+                    force->getAngleParameters(j, atom1, atom2, atom3, angle, k);
+                    angles.push_back(ReferenceCCMAAlgorithm::AngleInfo(atom1, atom2, atom3, (RealOpenMM) angle));
+                }
+            }
+        }
+        
+        // Create a ReferenceCCMAAlgorithm.  It will build and invert the constraint matrix for us.
+        
+        ReferenceCCMAAlgorithm ccma(numAtoms, numCCMA, refIndices, refDistance, refMasses, angles, 0.1);
+        vector<vector<pair<int, double> > > matrix = ccma.getMatrix();
+        int maxRowElements = 0;
+        for (unsigned i = 0; i < matrix.size(); i++)
+            maxRowElements = max(maxRowElements, (int) matrix[i].size());
+        maxRowElements++;
+
+        // Build the list of constraints for each atom.
+
         vector<vector<int> > atomConstraints(context.getNumAtoms());
         for (int i = 0; i < numCCMA; i++) {
             atomConstraints[atom1[ccmaConstraints[i]]].push_back(i);
             atomConstraints[atom2[ccmaConstraints[i]]].push_back(i);
         }
-        vector<vector<int> > linkedConstraints(numCCMA);
-        for (unsigned atom = 0; atom < atomConstraints.size(); atom++) {
-            for (unsigned i = 0; i < atomConstraints[atom].size(); i++)
-                for (unsigned j = 0; j < i; j++) {
-                    int c1 = atomConstraints[atom][i];
-                    int c2 = atomConstraints[atom][j];
-                    linkedConstraints[c1].push_back(c2);
-                    linkedConstraints[c2].push_back(c1);
-                }
-        }
-        int maxLinks = 0;
-        for (unsigned i = 0; i < linkedConstraints.size(); i++)
-            maxLinks = max(maxLinks, (int) linkedConstraints[i].size());
         int maxAtomConstraints = 0;
         for (unsigned i = 0; i < atomConstraints.size(); i++)
             maxAtomConstraints = max(maxAtomConstraints, (int) atomConstraints[i].size());
-
-        // Compute the constraint coupling matrix
-
-        vector<vector<int> > atomAngles(numAtoms);
-        HarmonicAngleForce const* angleForce = NULL;
-        for (int i = 0; i < system.getNumForces() && angleForce == NULL; i++)
-            angleForce = dynamic_cast<HarmonicAngleForce const*>(&system.getForce(i));
-        if (angleForce != NULL)
-            for (int i = 0; i < angleForce->getNumAngles(); i++) {
-                int particle1, particle2, particle3;
-                double angle, k;
-                angleForce->getAngleParameters(i, particle1, particle2, particle3, angle, k);
-                atomAngles[particle2].push_back(i);
-            }
-        vector<vector<pair<int, double> > > matrix(numCCMA);
-        for (int j = 0; j < numCCMA; j++) {
-            for (int k = 0; k < numCCMA; k++) {
-                if (j == k) {
-                    matrix[j].push_back(pair<int, double>(j, 1.0));
-                    continue;
-                }
-                double scale;
-                int cj = ccmaConstraints[j];
-                int ck = ccmaConstraints[k];
-                int atomj0 = atom1[cj];
-                int atomj1 = atom2[cj];
-                int atomk0 = atom1[ck];
-                int atomk1 = atom2[ck];
-                int atoma, atomb, atomc;
-                double imj0 = 1.0/system.getParticleMass(atomj0);
-                double imj1 = 1.0/system.getParticleMass(atomj1);
-                if (atomj0 == atomk0) {
-                    atoma = atomj1;
-                    atomb = atomj0;
-                    atomc = atomk1;
-                    scale = imj0/(imj0+imj1);
-                }
-                else if (atomj1 == atomk1) {
-                    atoma = atomj0;
-                    atomb = atomj1;
-                    atomc = atomk0;
-                    scale = imj1/(imj0+imj1);
-                }
-                else if (atomj0 == atomk1) {
-                    atoma = atomj1;
-                    atomb = atomj0;
-                    atomc = atomk0;
-                    scale = imj0/(imj0+imj1);
-                }
-                else if (atomj1 == atomk0) {
-                    atoma = atomj0;
-                    atomb = atomj1;
-                    atomc = atomk1;
-                    scale = imj1/(imj0+imj1);
-                }
-                else
-                    continue; // These constraints are not connected.
-
-                // Look for a third constraint forming a triangle with these two.
-
-                bool foundConstraint = false;
-                for (int m = 0; m < numCCMA; m++) {
-                    int other = ccmaConstraints[m];
-                    if ((atom1[other] == atoma && atom2[other] == atomc) || (atom1[other] == atomc && atom2[other] == atoma)) {
-                        double d1 = distance[cj];
-                        double d2 = distance[ck];
-                        double d3 = distance[other];
-                        matrix[j].push_back(pair<int, double>(k, scale*(d1*d1+d2*d2-d3*d3)/(2.0*d1*d2)));
-                        foundConstraint = true;
-                        break;
-                    }
-                }
-                if (!foundConstraint && angleForce != NULL) {
-                    // We didn't find one, so look for an angle force field term.
-
-                    const vector<int>& angleCandidates = atomAngles[atomb];
-                    for (vector<int>::const_iterator iter = angleCandidates.begin(); iter != angleCandidates.end(); iter++) {
-                        int particle1, particle2, particle3;
-                        double angle, ka;
-                        angleForce->getAngleParameters(*iter, particle1, particle2, particle3, angle, ka);
-                        if ((particle1 == atoma && particle3 == atomc) || (particle3 == atoma && particle1 == atomc)) {
-                            matrix[j].push_back(pair<int, double>(k, scale*cos(angle)));
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-
-        // Invert it using QR.
-
-        vector<int> matrixRowStart;
-        vector<int> matrixColIndex;
-        vector<double> matrixValue;
-        for (int i = 0; i < numCCMA; i++) {
-            matrixRowStart.push_back(matrixValue.size());
-            for (int j = 0; j < (int) matrix[i].size(); j++) {
-                pair<int, double> element = matrix[i][j];
-                matrixColIndex.push_back(element.first);
-                matrixValue.push_back(element.second);
-            }
-        }
-        matrixRowStart.push_back(matrixValue.size());
-        int *qRowStart, *qColIndex, *rRowStart, *rColIndex;
-        double *qValue, *rValue;
-        int result = QUERN_compute_qr(numCCMA, numCCMA, &matrixRowStart[0], &matrixColIndex[0], &matrixValue[0], NULL,
-                &qRowStart, &qColIndex, &qValue, &rRowStart, &rColIndex, &rValue);
-        vector<double> rhs(numCCMA);
-        matrix.clear();
-        matrix.resize(numCCMA);
-        for (int i = 0; i < numCCMA; i++) {
-            // Extract column i of the inverse matrix.
-
-            for (int j = 0; j < numCCMA; j++)
-                rhs[j] = (i == j ? 1.0 : 0.0);
-            result = QUERN_multiply_with_q_transpose(numCCMA, qRowStart, qColIndex, qValue, &rhs[0]);
-            result = QUERN_solve_with_r(numCCMA, rRowStart, rColIndex, rValue, &rhs[0], &rhs[0]);
-            for (int j = 0; j < numCCMA; j++) {
-                double value = rhs[j]*distance[ccmaConstraints[i]]/distance[ccmaConstraints[j]];
-                if (abs(value) > 0.1)
-                    matrix[j].push_back(pair<int, double>(i, value));
-            }
-        }
-        QUERN_free_result(qRowStart, qColIndex, qValue);
-        QUERN_free_result(rRowStart, rColIndex, rValue);
-        int maxRowElements = 0;
-        for (unsigned i = 0; i < matrix.size(); i++)
-            maxRowElements = max(maxRowElements, (int) matrix[i].size());
-        maxRowElements++;
 
         // Sort the constraints.
 
