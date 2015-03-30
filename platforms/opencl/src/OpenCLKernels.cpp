@@ -1882,7 +1882,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             pmeUpdateBsplinesKernel.setArg<mm_float4>(7, recipBoxVectorsFloat[2]);
         }
         cl.executeKernel(pmeUpdateBsplinesKernel, cl.getNumAtoms());
-        if (deviceIsCpu) {
+        if (deviceIsCpu && !cl.getSupports64BitGlobalAtomics()) {
             setPeriodicBoxSizeArg(cl, pmeSpreadChargeKernel, 5);
             if (cl.getUseDoublePrecision()) {
                 pmeSpreadChargeKernel.setArg<mm_double4>(6, recipBoxVectors[0]);
