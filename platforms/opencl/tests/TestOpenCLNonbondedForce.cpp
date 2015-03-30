@@ -410,9 +410,9 @@ void testTriclinic() {
         }
         else {
             const Vec3 force = delta*ONE_4PI_EPS0*(-1.0/(distance*distance*distance)+2.0*krf);
-            ASSERT_EQUAL_TOL(ONE_4PI_EPS0*(1.0/distance+krf*distance*distance-crf), state.getPotentialEnergy(), TOL);
-            ASSERT_EQUAL_VEC(force, state.getForces()[0], TOL);
-            ASSERT_EQUAL_VEC(-force, state.getForces()[1], TOL);
+            ASSERT_EQUAL_TOL(ONE_4PI_EPS0*(1.0/distance+krf*distance*distance-crf), state.getPotentialEnergy(), 1e-4);
+            ASSERT_EQUAL_VEC(force, state.getForces()[0], 1e-4);
+            ASSERT_EQUAL_VEC(-force, state.getForces()[1], 1e-4);
         }
     }
 }
