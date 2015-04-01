@@ -33,6 +33,7 @@ __version__ = "1.0"
 
 from simtk.openmm.app import Topology
 from simtk.openmm.app import PDBFile
+from simtk.openmm.app.internal.grav import addGravity
 import forcefield as ff
 import element as elem
 import amberprmtopfile as prmtop
@@ -791,6 +792,9 @@ class GromacsTopFile(object):
 
         if removeCMMotion:
             sys.addForce(mm.CMMotionRemover())
+
+        # Add gravity
+        addGravity(sys, elevation=0*unit.meters)
         return sys
 
 def _defaultGromacsIncludeDir():
