@@ -794,7 +794,7 @@ class GromacsTopFile(object):
             sys.addForce(mm.CMMotionRemover())
 
         # Add gravity
-        addGravity(sys, elevation=0*u.meters)
+        addGravity(sys, elevation=0*unit.meters)
         return sys
 
 def _defaultGromacsIncludeDir():

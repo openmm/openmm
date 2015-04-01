@@ -533,7 +533,7 @@ class ForceField(object):
         for script in self._scripts:
             exec script
         # Add gravity
-        addGravity(sys, elevation=0*u.meters)
+        addGravity(sys, elevation=0*unit.meters)
         return sys
 
 

@@ -32,7 +32,7 @@ def addGravity(system, elevation=None):
     # Add all of the particles' masses to the gravitational force, then add it
     # to the system.
     for i in range(system.getNumParticles()):
-        mass = system.getParticleMass()
+        mass = system.getParticleMass(i)
         intergrav.addParticle((mass,))
     system.addForce(intergrav)
     # Add the force due to gravity of the earth, if requested. It is
@@ -56,6 +56,6 @@ def addGravity(system, elevation=None):
                                        g.value_in_unit_system(u.md_unit_system))
     earthgrav.addPerParticleParameter('mass')
     for i in range(system.getNumParticles()):
-        mass = system.getParticleMass()
+        mass = system.getParticleMass(i)
         earthgrav.addParticle((mass,))
     system.addForce(earthgrav)
