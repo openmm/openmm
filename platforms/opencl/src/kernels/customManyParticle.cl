@@ -227,7 +227,9 @@ __kernel void findNeighbors(real4 periodicBoxSize, real4 invPeriodicBoxSize, rea
                     int start = block2*TILE_SIZE;
                     int included[TILE_SIZE];
                     int numIncluded = 0;
+                    SYNC_WARPS;
                     positionCache[get_local_id(0)] = posq[start+indexInWarp];
+                    SYNC_WARPS;
                     if (atom1 < NUM_ATOMS) {
                         for (int j = 0; j < 32; j++) {
                             int atom2 = start+j;
@@ -287,7 +289,7 @@ __kernel void computeNeighborStartIndices(__global int* restrict numNeighborsFor
 
         unsigned int globalIndex = startAtom+get_local_id(0);
         posBuffer[get_local_id(0)] = (globalIndex < NUM_ATOMS ? numNeighborsForAtom[globalIndex] : 0);
-    barrier(CLK_LOCAL_MEM_FENCE);
+        barrier(CLK_LOCAL_MEM_FENCE);
 
         // Perform a parallel prefix sum.
 
