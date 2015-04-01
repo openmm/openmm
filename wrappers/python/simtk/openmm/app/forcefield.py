@@ -40,6 +40,7 @@ import simtk.openmm as mm
 import simtk.unit as unit
 import element as elem
 from simtk.openmm.app import Topology
+from simtk.openmm.app.internal.grav import addGravity
 
 def _convertParameterToNumber(param):
     if unit.is_quantity(param):
@@ -531,6 +532,8 @@ class ForceField(object):
 
         for script in self._scripts:
             exec script
+        # Add gravity
+        addGravity(sys, elevation=0*u.meters)
         return sys
 
 

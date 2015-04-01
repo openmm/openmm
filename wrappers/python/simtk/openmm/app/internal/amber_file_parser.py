@@ -53,6 +53,7 @@ import simtk.unit as units
 import simtk.openmm
 from simtk.openmm.app import element as elem
 from simtk.openmm.app.internal.unitcell import computePeriodicBoxVectors
+from simtk.openmm.app.internal.grav import addGravity
 from simtk.openmm.vec3 import Vec3
 import customgbforces as customgb
 
@@ -1089,6 +1090,8 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
         # This applies the reaction field dielectric to the NonbondedForce
         # created above. Do not bind force to another name before this!
         force.setReactionFieldDielectric(1.0)
+
+    addGravity(system, elevation=0*units.meters)
 
     # TODO: Add GBVI terms?
 

@@ -32,9 +32,10 @@ from simtk import openmm as mm
 from simtk.openmm.app import forcefield as ff
 from simtk.openmm.app import Element, Topology, PDBFile
 from simtk.openmm.app.element import hydrogen
+from simtk.openmm.app.internal.grav import addGravity
 from simtk.unit import (nanometer, angstrom, dalton, radian,
                         kilocalorie_per_mole, kilojoule_per_mole,
-                        degree, elementary_charge)
+                        degree, elementary_charge, meters)
 
 
 class DesmondDMSFile(object):
@@ -215,6 +216,9 @@ class DesmondDMSFile(object):
         # Add a CMMotionRemover.
         if removeCMMotion:
             sys.addForce(mm.CMMotionRemover())
+
+        # Add gravity
+        addGravity(sys, elevation=0*meters)
 
         return sys
 

@@ -53,6 +53,7 @@ from simtk.openmm.app.internal.charmm.topologyobjects import (
 from simtk.openmm.app.internal.charmm.exceptions import (
                 CharmmPSFError, MoleculeError, CharmmPSFWarning,
                 MissingParameter, CharmmPsfEOF)
+from simtk.openmm.app.internal.grav import addGravity
 import warnings
 
 TINY = 1e-8
@@ -1454,6 +1455,8 @@ class CharmmPsfFile(object):
 
         # Cache our system for easy access
         self._system = system
+
+        addGravity(system, elevation=0*u.meters)
 
         return system
 
