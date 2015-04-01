@@ -45,7 +45,7 @@ def addGravity(system, elevation=None):
     if u.is_quantity(elevation):
         elevation = elevation.value_in_unit(u.meters)
     # Don't support simulations below sea level yet
-    if elevation <= 0:
+    if elevation < 0:
         raise ValueError('Simulations below sea level are not yet supported')
     elevation *= u.meters
     # Calculate the acceleration; assume Earth's radius is 6.37101e6 meters,
