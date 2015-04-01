@@ -33,7 +33,7 @@ def addGravity(system, elevation=None):
     # to the system.
     for i in range(system.getNumParticles()):
         mass = system.getParticleMass(i)
-        intergrav.addParticle(i, (mass,))
+        intergrav.addParticle((mass,))
     system.addForce(intergrav)
     # Add the force due to gravity of the earth, if requested. It is
     # approximately constant over a distance of nanometers compared to earth's
