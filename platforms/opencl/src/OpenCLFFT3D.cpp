@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -35,25 +35,29 @@
 using namespace OpenMM;
 using namespace std;
 
-OpenCLFFT3D::OpenCLFFT3D(OpenCLContext& context, int xsize, int ysize, int zsize) : context(context), xsize(xsize), ysize(ysize), zsize(zsize) {
-    zkernel = createKernel(xsize, ysize, zsize, zthreads);
-    xkernel = createKernel(ysize, zsize, xsize, xthreads);
-    ykernel = createKernel(zsize, xsize, ysize, ythreads);
+OpenCLFFT3D::OpenCLFFT3D(OpenCLContext& context, int xsize, int ysize, int zsize, bool realToComplex) :
+        context(context), xsize(xsize), ysize(ysize), zsize(zsize), realToComplex(realToComplex) {
+    zkernel = createKernel(xsize, ysize, zsize, zthreads, 0, true);
+    xkernel = createKernel(ysize, zsize, xsize, xthreads, 1, true);
+    ykernel = createKernel(zsize, xsize, ysize, ythreads, 2, true);
+    invzkernel = createKernel(xsize, ysize, zsize, zthreads, 0, false);
+    invxkernel = createKernel(ysize, zsize, xsize, xthreads, 1, false);
+    invykernel = createKernel(zsize, xsize, ysize, ythreads, 2, false);
 }
 
 void OpenCLFFT3D::execFFT(OpenCLArray& in, OpenCLArray& out, bool forward) {
-    zkernel.setArg<cl::Buffer>(0, in.getDeviceBuffer());
-    zkernel.setArg<cl::Buffer>(1, out.getDeviceBuffer());
-    zkernel.setArg<cl_int>(2, forward ? 1 : -1);
-    context.executeKernel(zkernel, xsize*ysize*zsize, zthreads);
-    xkernel.setArg<cl::Buffer>(0, out.getDeviceBuffer());
-    xkernel.setArg<cl::Buffer>(1, in.getDeviceBuffer());
-    xkernel.setArg<cl_int>(2, forward ? 1 : -1);
-    context.executeKernel(xkernel, xsize*ysize*zsize, xthreads);
-    ykernel.setArg<cl::Buffer>(0, in.getDeviceBuffer());
-    ykernel.setArg<cl::Buffer>(1, out.getDeviceBuffer());
-    ykernel.setArg<cl_int>(2, forward ? 1 : -1);
-    context.executeKernel(ykernel, xsize*ysize*zsize, ythreads);
+    cl::Kernel kernel1 = (forward ? zkernel : invzkernel);
+    cl::Kernel kernel2 = (forward ? xkernel : invxkernel);
+    cl::Kernel kernel3 = (forward ? ykernel : invykernel);
+    kernel1.setArg<cl::Buffer>(0, in.getDeviceBuffer());
+    kernel1.setArg<cl::Buffer>(1, out.getDeviceBuffer());
+    context.executeKernel(kernel1, xsize*ysize*zsize, zthreads);
+    kernel2.setArg<cl::Buffer>(0, out.getDeviceBuffer());
+    kernel2.setArg<cl::Buffer>(1, in.getDeviceBuffer());
+    context.executeKernel(kernel2, xsize*ysize*zsize, xthreads);
+    kernel3.setArg<cl::Buffer>(0, in.getDeviceBuffer());
+    kernel3.setArg<cl::Buffer>(1, out.getDeviceBuffer());
+    context.executeKernel(kernel3, xsize*ysize*zsize, ythreads);
 }
 
 int OpenCLFFT3D::findLegalDimension(int minimum) {
@@ -73,7 +77,7 @@ int OpenCLFFT3D::findLegalDimension(int minimum) {
     }
 }
 
-cl::Kernel OpenCLFFT3D::createKernel(int xsize, int ysize, int zsize, int& threads) {
+cl::Kernel OpenCLFFT3D::createKernel(int xsize, int ysize, int zsize, int& threads, int axis, bool forward) {
     int maxThreads = std::min(256, (int) context.getDevice().getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>());
     bool isCPU = context.getDevice().getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_CPU;
     while (true) {
@@ -137,10 +141,10 @@ cl::Kernel OpenCLFFT3D::createKernel(int xsize, int ysize, int zsize, int& threa
                 source<<"real2 b2 = "<<context.doubleToString((2*cos(2*M_PI/7)-cos(4*M_PI/7)-cos(6*M_PI/7))/3)<<"*(d0-d4);\n";
                 source<<"real2 b3 = "<<context.doubleToString((cos(2*M_PI/7)-2*cos(4*M_PI/7)+cos(6*M_PI/7))/3)<<"*(d4-d2);\n";
                 source<<"real2 b4 = "<<context.doubleToString((cos(2*M_PI/7)+cos(4*M_PI/7)-2*cos(6*M_PI/7))/3)<<"*(d2-d0);\n";
-                source<<"real2 b5 = -sign*"<<context.doubleToString((sin(2*M_PI/7)+sin(4*M_PI/7)-sin(6*M_PI/7))/3)<<"*(d7+d1);\n";
-                source<<"real2 b6 = -sign*"<<context.doubleToString((2*sin(2*M_PI/7)-sin(4*M_PI/7)+sin(6*M_PI/7))/3)<<"*(d1-d5);\n";
-                source<<"real2 b7 = -sign*"<<context.doubleToString((sin(2*M_PI/7)-2*sin(4*M_PI/7)-sin(6*M_PI/7))/3)<<"*(d5-d3);\n";
-                source<<"real2 b8 = -sign*"<<context.doubleToString((sin(2*M_PI/7)+sin(4*M_PI/7)+2*sin(6*M_PI/7))/3)<<"*(d3-d1);\n";
+                source<<"real2 b5 = -(SIGN)*"<<context.doubleToString((sin(2*M_PI/7)+sin(4*M_PI/7)-sin(6*M_PI/7))/3)<<"*(d7+d1);\n";
+                source<<"real2 b6 = -(SIGN)*"<<context.doubleToString((2*sin(2*M_PI/7)-sin(4*M_PI/7)+sin(6*M_PI/7))/3)<<"*(d1-d5);\n";
+                source<<"real2 b7 = -(SIGN)*"<<context.doubleToString((sin(2*M_PI/7)-2*sin(4*M_PI/7)-sin(6*M_PI/7))/3)<<"*(d5-d3);\n";
+                source<<"real2 b8 = -(SIGN)*"<<context.doubleToString((sin(2*M_PI/7)+sin(4*M_PI/7)+2*sin(6*M_PI/7))/3)<<"*(d3-d1);\n";
                 source<<"real2 t0 = b0+b1;\n";
                 source<<"real2 t1 = b2+b3;\n";
                 source<<"real2 t2 = b4-b3;\n";
@@ -178,8 +182,8 @@ cl::Kernel OpenCLFFT3D::createKernel(int xsize, int ysize, int zsize, int& threa
                 source<<"real2 d7 = d6+d5;\n";
                 source<<"real2 d8 = d6-d5;\n";
                 string coeff = context.doubleToString(sin(0.2*M_PI)/sin(0.4*M_PI));
-                source<<"real2 d9 = sign*(real2) (d2.y+"<<coeff<<"*d3.y, -d2.x-"<<coeff<<"*d3.x);\n";
-                source<<"real2 d10 = sign*(real2) ("<<coeff<<"*d2.y-d3.y, d3.x-"<<coeff<<"*d2.x);\n";
+                source<<"real2 d9 = (SIGN)*(real2) (d2.y+"<<coeff<<"*d3.y, -d2.x-"<<coeff<<"*d3.x);\n";
+                source<<"real2 d10 = (SIGN)*(real2) ("<<coeff<<"*d2.y-d3.y, d3.x-"<<coeff<<"*d2.x);\n";
                 source<<"data"<<output<<"[base+4*j*"<<m<<"] = c0+d4;\n";
                 source<<"data"<<output<<"[base+(4*j+1)*"<<m<<"] = multiplyComplex(w[j*"<<zsize<<"/"<<(5*L)<<"], d7+d9);\n";
                 source<<"data"<<output<<"[base+(4*j+2)*"<<m<<"] = multiplyComplex(w[j*"<<(2*zsize)<<"/"<<(5*L)<<"], d8+d10);\n";
@@ -194,7 +198,7 @@ cl::Kernel OpenCLFFT3D::createKernel(int xsize, int ysize, int zsize, int& threa
                 source<<"real2 d0 = c0+c2;\n";
                 source<<"real2 d1 = c0-c2;\n";
                 source<<"real2 d2 = c1+c3;\n";
-                source<<"real2 d3 = sign*(real2) (c1.y-c3.y, c3.x-c1.x);\n";
+                source<<"real2 d3 = (SIGN)*(real2) (c1.y-c3.y, c3.x-c1.x);\n";
                 source<<"data"<<output<<"[base+3*j*"<<m<<"] = d0+d2;\n";
                 source<<"data"<<output<<"[base+(3*j+1)*"<<m<<"] = multiplyComplex(w[j*"<<zsize<<"/"<<(4*L)<<"], d1+d3);\n";
                 source<<"data"<<output<<"[base+(3*j+2)*"<<m<<"] = multiplyComplex(w[j*"<<(2*zsize)<<"/"<<(4*L)<<"], d0-d2);\n";
@@ -206,7 +210,7 @@ cl::Kernel OpenCLFFT3D::createKernel(int xsize, int ysize, int zsize, int& threa
                 source<<"real2 c2 = data"<<input<<"[base+"<<(2*L*m)<<"];\n";
                 source<<"real2 d0 = c1+c2;\n";
                 source<<"real2 d1 = c0-0.5f*d0;\n";
-                source<<"real2 d2 = sign*"<<context.doubleToString(sin(M_PI/3.0))<<"*(real2) (c1.y-c2.y, c2.x-c1.x);\n";
+                source<<"real2 d2 = (SIGN)*"<<context.doubleToString(sin(M_PI/3.0))<<"*(real2) (c1.y-c2.y, c2.x-c1.x);\n";
                 source<<"data"<<output<<"[base+2*j*"<<m<<"] = c0+d0;\n";
                 source<<"data"<<output<<"[base+(2*j+1)*"<<m<<"] = multiplyComplex(w[j*"<<zsize<<"/"<<(3*L)<<"], d1+d2);\n";
                 source<<"data"<<output<<"[base+(2*j+2)*"<<m<<"] = multiplyComplex(w[j*"<<(2*zsize)<<"/"<<(3*L)<<"], d1-d2);\n";
@@ -226,13 +230,15 @@ cl::Kernel OpenCLFFT3D::createKernel(int xsize, int ysize, int zsize, int& threa
 
         // Create the kernel.
 
+        bool outputIsReal = (realToComplex && axis == 2 && !forward);
+        string outputSuffix = (outputIsReal ? ".x" : "");
         if (loopRequired) {
             source<<"for (int z = get_local_id(0); z < ZSIZE; z += get_local_size(0))\n";
-            source<<"out[y*(ZSIZE*XSIZE)+z*XSIZE+x] = data"<<(stage%2)<<"[z];\n";
+            source<<"out[y*(ZSIZE*XSIZE)+z*XSIZE+x] = data"<<(stage%2)<<"[z]"<<outputSuffix<<";\n";
         }
         else {
             source<<"if (index < XSIZE*YSIZE)\n";
-            source<<"out[y*(ZSIZE*XSIZE)+(get_local_id(0)%ZSIZE)*XSIZE+x] = data"<<(stage%2)<<"[get_local_id(0)];\n";
+            source<<"out[y*(ZSIZE*XSIZE)+(get_local_id(0)%ZSIZE)*XSIZE+x] = data"<<(stage%2)<<"[get_local_id(0)]"<<outputSuffix<<";\n";
         }
         map<string, string> replacements;
         replacements["XSIZE"] = context.intToString(xsize);
@@ -242,6 +248,10 @@ cl::Kernel OpenCLFFT3D::createKernel(int xsize, int ysize, int zsize, int& threa
         replacements["M_PI"] = context.doubleToString(M_PI);
         replacements["COMPUTE_FFT"] = source.str();
         replacements["LOOP_REQUIRED"] = (loopRequired ? "1" : "0");
+        replacements["SIGN"] = (forward ? "1" : "-1");
+        replacements["INPUT_TYPE"] = (realToComplex && axis == 0 && forward ? "real" : "real2");
+        replacements["OUTPUT_TYPE"] = (outputIsReal ? "real" : "real2");
+        replacements["INPUT_IS_REAL"] = (realToComplex && axis == 0 && forward ? "1" : "0");
         cl::Program program = context.createProgram(context.replaceStrings(OpenCLKernelSources::fft, replacements));
         cl::Kernel kernel(program, "execFFT");
         threads = (isCPU ? 1 : blocksPerGroup*zsize);
@@ -253,9 +263,9 @@ cl::Kernel OpenCLFFT3D::createKernel(int xsize, int ysize, int zsize, int& threa
             continue;
         }
         int bufferSize = blocksPerGroup*zsize*(context.getUseDoublePrecision() ? sizeof(mm_double2) : sizeof(mm_float2));
+        kernel.setArg(2, bufferSize, NULL);
         kernel.setArg(3, bufferSize, NULL);
         kernel.setArg(4, bufferSize, NULL);
-        kernel.setArg(5, bufferSize, NULL);
         return kernel;
     }
 }

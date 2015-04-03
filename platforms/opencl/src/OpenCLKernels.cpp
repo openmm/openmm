@@ -1661,7 +1661,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
                 pmeAtomRange = OpenCLArray::create<cl_int>(cl, gridSizeX*gridSizeY*gridSizeZ+1, "pmeAtomRange");
                 pmeAtomGridIndex = OpenCLArray::create<mm_int2>(cl, numParticles, "pmeAtomGridIndex");
                 sort = new OpenCLSort(cl, new SortTrait(), cl.getNumAtoms());
-                fft = new OpenCLFFT3D(cl, gridSizeX, gridSizeY, gridSizeZ);
+                fft = new OpenCLFFT3D(cl, gridSizeX, gridSizeY, gridSizeZ, true);
                 string vendor = cl.getDevice().getInfo<CL_DEVICE_VENDOR>();
                 usePmeQueue = (vendor.size() >= 6 && vendor.substr(0, 6) == "NVIDIA");
                 if (usePmeQueue) {

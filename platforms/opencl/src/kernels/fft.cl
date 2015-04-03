@@ -6,10 +6,10 @@ real2 multiplyComplex(real2 c1, real2 c2) {
  * Perform a 1D FFT on each row along one axis.
  */
 
-__kernel void execFFT(__global const real2* restrict in, __global real2* restrict out, int sign, __local real2* restrict w,
+__kernel void execFFT(__global const INPUT_TYPE* restrict in, __global OUTPUT_TYPE* restrict out, __local real2* restrict w,
         __local real2* restrict data0, __local real2* restrict data1) {
     for (int i = get_local_id(0); i < ZSIZE; i += get_local_size(0))
-        w[i] = (real2) (cos(-sign*i*2*M_PI/ZSIZE), sin(-sign*i*2*M_PI/ZSIZE));
+        w[i] = (real2) (cos(-(SIGN)*i*2*M_PI/ZSIZE), sin(-(SIGN)*i*2*M_PI/ZSIZE));
     barrier(CLK_LOCAL_MEM_FENCE);
     
     for (int baseIndex = get_group_id(0)*BLOCKS_PER_GROUP; baseIndex < XSIZE*YSIZE; baseIndex += get_num_groups(0)*BLOCKS_PER_GROUP) {
@@ -18,10 +18,18 @@ __kernel void execFFT(__global const real2* restrict in, __global real2* restric
         int y = index-x*YSIZE;
 #if LOOP_REQUIRED
         for (int z = get_local_id(0); z < ZSIZE; z += get_local_size(0))
+    #if INPUT_IS_REAL
+            data0[z] = (real2) (in[x*(YSIZE*ZSIZE)+y*ZSIZE+z], 0);
+    #else
             data0[z] = in[x*(YSIZE*ZSIZE)+y*ZSIZE+z];
+    #endif
 #else
         if (index < XSIZE*YSIZE)
+    #if INPUT_IS_REAL
+            data0[get_local_id(0)] = (real2) (in[x*(YSIZE*ZSIZE)+y*ZSIZE+get_local_id(0)%ZSIZE], 0);
+    #else
             data0[get_local_id(0)] = in[x*(YSIZE*ZSIZE)+y*ZSIZE+get_local_id(0)%ZSIZE];
+    #endif
 #endif
         barrier(CLK_LOCAL_MEM_FENCE);
         COMPUTE_FFT
