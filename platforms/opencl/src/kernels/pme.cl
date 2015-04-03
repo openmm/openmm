@@ -138,29 +138,18 @@ __kernel void gridSpreadCharge(__global const real4* restrict posq, __global con
                     zindex -= (zindex >= GRID_SIZE_Z ? GRID_SIZE_Z : 0);
                     int index = xindex*GRID_SIZE_Y*GRID_SIZE_Z + yindex*GRID_SIZE_Z + zindex;
                     real add = pos.w*data[ix].x*data[iy].y*data[iz].z;
-#ifdef USE_DOUBLE_PRECISION
                     atom_add(&pmeGrid[index], (long) (add*0x100000000));
-#else
-                    int gridIndex = (index%2 == 0 ? index/2 : (index+GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z)/2);
-                    atom_add(&pmeGrid[gridIndex], (long) (add*0x100000000));
-#endif
-
                 }
             }
         }
     }
 }
 
-__kernel void finishSpreadCharge(__global long* restrict pmeGrid) {
-    __global real* realGrid = (__global real*) pmeGrid;
+__kernel void finishSpreadCharge(__global long* restrict fixedGrid, __global real* restrict realGrid) {
     const unsigned int gridSize = GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z;
     real scale = EPSILON_FACTOR/(real) 0x100000000;
     for (int index = get_global_id(0); index < gridSize; index += get_global_size(0)) {
-#ifdef USE_DOUBLE_PRECISION
-        long value = pmeGrid[index];
-#else
-        long value = pmeGrid[index%2 == 0 ? index/2 : (index+gridSize)/2];
-#endif
+        long value = fixedGrid[index];
         realGrid[index] = (real) (value*scale);
     }
 }

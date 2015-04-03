@@ -1652,8 +1652,11 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
 
                 int elementSize = (cl.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
                 pmeGrid = new OpenCLArray(cl, gridSizeX*gridSizeY*gridSizeZ, 2*elementSize, "pmeGrid");
-                cl.addAutoclearBuffer(*pmeGrid);
                 pmeGrid2 = new OpenCLArray(cl, gridSizeX*gridSizeY*gridSizeZ, 2*elementSize, "pmeGrid2");
+                if (cl.getSupports64BitGlobalAtomics())
+                    cl.addAutoclearBuffer(*pmeGrid2);
+                else
+                    cl.addAutoclearBuffer(*pmeGrid);
                 pmeBsplineModuliX = new OpenCLArray(cl, gridSizeX, elementSize, "pmeBsplineModuliX");
                 pmeBsplineModuliY = new OpenCLArray(cl, gridSizeY, elementSize, "pmeBsplineModuliY");
                 pmeBsplineModuliZ = new OpenCLArray(cl, gridSizeZ, elementSize, "pmeBsplineModuliZ");
@@ -1814,7 +1817,10 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             pmeSpreadChargeKernel.setArg<cl::Buffer>(0, cl.getPosq().getDeviceBuffer());
             pmeSpreadChargeKernel.setArg<cl::Buffer>(1, pmeAtomGridIndex->getDeviceBuffer());
             pmeSpreadChargeKernel.setArg<cl::Buffer>(2, pmeAtomRange->getDeviceBuffer());
-            pmeSpreadChargeKernel.setArg<cl::Buffer>(3, pmeGrid->getDeviceBuffer());
+            if (cl.getSupports64BitGlobalAtomics())
+                pmeSpreadChargeKernel.setArg<cl::Buffer>(3, pmeGrid2->getDeviceBuffer());
+            else
+                pmeSpreadChargeKernel.setArg<cl::Buffer>(3, pmeGrid->getDeviceBuffer());
             pmeSpreadChargeKernel.setArg<cl::Buffer>(4, pmeBsplineTheta->getDeviceBuffer());
             pmeConvolutionKernel.setArg<cl::Buffer>(0, pmeGrid2->getDeviceBuffer());
             pmeConvolutionKernel.setArg<cl::Buffer>(1, cl.getEnergyBuffer().getDeviceBuffer());
@@ -1827,7 +1833,8 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             pmeInterpolateForceKernel.setArg<cl::Buffer>(7, pmeAtomGridIndex->getDeviceBuffer());
             if (cl.getSupports64BitGlobalAtomics()) {
                 pmeFinishSpreadChargeKernel = cl::Kernel(program, "finishSpreadCharge");
-                pmeFinishSpreadChargeKernel.setArg<cl::Buffer>(0, pmeGrid->getDeviceBuffer());
+                pmeFinishSpreadChargeKernel.setArg<cl::Buffer>(0, pmeGrid2->getDeviceBuffer());
+                pmeFinishSpreadChargeKernel.setArg<cl::Buffer>(1, pmeGrid->getDeviceBuffer());
             }
        }
     }
