@@ -138,7 +138,13 @@ __kernel void gridSpreadCharge(__global const real4* restrict posq, __global con
                     zindex -= (zindex >= GRID_SIZE_Z ? GRID_SIZE_Z : 0);
                     int index = xindex*GRID_SIZE_Y*GRID_SIZE_Z + yindex*GRID_SIZE_Z + zindex;
                     real add = pos.w*data[ix].x*data[iy].y*data[iz].z;
+#ifdef USE_ALTERNATE_MEMORY_ACCESS_PATTERN
+                    // On Nvidia devices (at least Maxwell anyway), this split ordering produces much higher performance.  Why?
+                    // I have no idea!  And of course on AMD it produces slower performance.  GPUs are not meant to be understood.
+                    atom_add(&pmeGrid[index%2 == 0 ? index/2 : (index+GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z)/2], (long) (add*0x100000000));
+#else
                     atom_add(&pmeGrid[index], (long) (add*0x100000000));
+#endif
                 }
             }
         }
@@ -149,7 +155,11 @@ __kernel void finishSpreadCharge(__global long* restrict fixedGrid, __global rea
     const unsigned int gridSize = GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z;
     real scale = EPSILON_FACTOR/(real) 0x100000000;
     for (int index = get_global_id(0); index < gridSize; index += get_global_size(0)) {
+#ifdef USE_ALTERNATE_MEMORY_ACCESS_PATTERN
+        long value = fixedGrid[index%2 == 0 ? index/2 : (index+gridSize)/2];
+#else
         long value = fixedGrid[index];
+#endif
         realGrid[index] = (real) (value*scale);
     }
 }

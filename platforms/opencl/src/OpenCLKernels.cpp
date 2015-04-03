@@ -1666,7 +1666,10 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
                 sort = new OpenCLSort(cl, new SortTrait(), cl.getNumAtoms());
                 fft = new OpenCLFFT3D(cl, gridSizeX, gridSizeY, gridSizeZ, true);
                 string vendor = cl.getDevice().getInfo<CL_DEVICE_VENDOR>();
-                usePmeQueue = (vendor.size() >= 6 && vendor.substr(0, 6) == "NVIDIA");
+                bool isNvidia = (vendor.size() >= 6 && vendor.substr(0, 6) == "NVIDIA");
+                if (isNvidia)
+                    pmeDefines["USE_ALTERNATE_MEMORY_ACCESS_PATTERN"] = "1";
+                usePmeQueue = isNvidia;
                 if (usePmeQueue) {
                     pmeQueue = cl::CommandQueue(cl.getContext(), cl.getDevice());
                     int recipForceGroup = force.getReciprocalSpaceForceGroup();
