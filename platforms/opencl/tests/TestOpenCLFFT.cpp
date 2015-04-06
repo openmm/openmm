@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011 Stanford University and the Authors.           *
+ * Portions copyright (c) 2011-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -51,7 +51,7 @@ using namespace std;
 static OpenCLPlatform platform;
 
 template <class Real2>
-void testTransform() {
+void testTransform(bool realToComplex) {
     System system;
     system.addParticle(0.0);
     OpenCLPlatform::PlatformData platformData(system, "", "", platform.getPropertyDefaultValue("OpenCLPrecision"), "false");
@@ -67,10 +67,16 @@ void testTransform() {
         original[i] = value;
         reference[i] = t_complex(value.x, value.y);
     }
+    for (int i = 0; i < (int) reference.size(); i++) {
+        if (realToComplex)
+            reference[i] = t_complex(i%2 == 0 ? original[i/2].x : original[i/2].y, 0);
+        else
+            reference[i] = t_complex(original[i].x, original[i].y);
+    }
     OpenCLArray grid1(context, original.size(), sizeof(Real2), "grid1");
     OpenCLArray grid2(context, original.size(), sizeof(Real2), "grid2");
     grid1.upload(original);
-    OpenCLFFT3D fft(context, xsize, ysize, zsize);
+    OpenCLFFT3D fft(context, xsize, ysize, zsize, realToComplex);
 
     // Perform a forward FFT, then verify the result is correct.
 
@@ -91,7 +97,8 @@ void testTransform() {
     fft.execFFT(grid2, grid1, false);
     grid1.download(result);
     double scale = 1.0/(xsize*ysize*zsize);
-    for (int i = 0; i < (int) result.size(); ++i) {
+    int valuesToCheck = (realToComplex ? original.size()/2 : original.size());
+    for (int i = 0; i < valuesToCheck; ++i) {
         ASSERT_EQUAL_TOL(original[i].x, scale*result[i].x, 1e-4);
         ASSERT_EQUAL_TOL(original[i].y, scale*result[i].y, 1e-4);
     }
@@ -101,10 +108,14 @@ int main(int argc, char* argv[]) {
     try {
         if (argc > 1)
             platform.setPropertyDefaultValue("OpenCLPrecision", string(argv[1]));
-        if (platform.getPropertyDefaultValue("OpenCLPrecision") == "double")
-            testTransform<mm_double2>();
-        else
-            testTransform<mm_float2>();
+        if (platform.getPropertyDefaultValue("OpenCLPrecision") == "double") {
+            testTransform<mm_double2>(false);
+            testTransform<mm_double2>(true);
+        }
+        else {
+            testTransform<mm_float2>(false);
+            testTransform<mm_float2>(true);
+        }
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

@@ -138,35 +138,34 @@ __kernel void gridSpreadCharge(__global const real4* restrict posq, __global con
                     zindex -= (zindex >= GRID_SIZE_Z ? GRID_SIZE_Z : 0);
                     int index = xindex*GRID_SIZE_Y*GRID_SIZE_Z + yindex*GRID_SIZE_Z + zindex;
                     real add = pos.w*data[ix].x*data[iy].y*data[iz].z;
-#ifdef USE_DOUBLE_PRECISION
-                    atom_add(&pmeGrid[2*index], (long) (add*0x100000000));
+#ifdef USE_ALTERNATE_MEMORY_ACCESS_PATTERN
+                    // On Nvidia devices (at least Maxwell anyway), this split ordering produces much higher performance.  Why?
+                    // I have no idea!  And of course on AMD it produces slower performance.  GPUs are not meant to be understood.
+                    atom_add(&pmeGrid[index%2 == 0 ? index/2 : (index+GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z)/2], (long) (add*0x100000000));
 #else
                     atom_add(&pmeGrid[index], (long) (add*0x100000000));
 #endif
-
                 }
             }
         }
     }
 }
 
-__kernel void finishSpreadCharge(__global long* restrict pmeGrid) {
-    __global real2* realGrid = (__global real2*) pmeGrid;
+__kernel void finishSpreadCharge(__global long* restrict fixedGrid, __global real* restrict realGrid) {
     const unsigned int gridSize = GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z;
     real scale = EPSILON_FACTOR/(real) 0x100000000;
     for (int index = get_global_id(0); index < gridSize; index += get_global_size(0)) {
-#ifdef USE_DOUBLE_PRECISION
-        long value = pmeGrid[2*index];
+#ifdef USE_ALTERNATE_MEMORY_ACCESS_PATTERN
+        long value = fixedGrid[index%2 == 0 ? index/2 : (index+gridSize)/2];
 #else
-        long value = pmeGrid[index];
+        long value = fixedGrid[index];
 #endif
-        real2 realValue = (real2) ((real) (value*scale), 0);
-        realGrid[index] = realValue;
+        realGrid[index] = (real) (value*scale);
     }
 }
 #elif defined(DEVICE_IS_CPU)
 __kernel void gridSpreadCharge(__global const real4* restrict posq, __global const int2* restrict pmeAtomGridIndex, __global const int* restrict pmeAtomRange,
-        __global real2* restrict pmeGrid, __global const real4* restrict pmeBsplineTheta, real4 periodicBoxSize, real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ) {
+        __global real* restrict pmeGrid, __global const real4* restrict pmeBsplineTheta, real4 periodicBoxSize, real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ) {
     const int firstx = get_global_id(0)*GRID_SIZE_X/get_global_size(0);
     const int lastx = (get_global_id(0)+1)*GRID_SIZE_X/get_global_size(0);
     if (firstx == lastx)
@@ -230,7 +229,7 @@ __kernel void gridSpreadCharge(__global const real4* restrict posq, __global con
                     int zindex = gridIndex.z+iz;
                     zindex -= (zindex >= GRID_SIZE_Z ? GRID_SIZE_Z : 0);
                     int index = xindex*GRID_SIZE_Y*GRID_SIZE_Z + yindex*GRID_SIZE_Z + zindex;
-                    pmeGrid[index].x += EPSILON_FACTOR*pos.w*data[ix].x*data[iy].y*data[iz].z;
+                    pmeGrid[index] += EPSILON_FACTOR*pos.w*data[ix].x*data[iy].y*data[iz].z;
                 }
             }
         }
@@ -238,7 +237,7 @@ __kernel void gridSpreadCharge(__global const real4* restrict posq, __global con
 }
 #else
 __kernel void gridSpreadCharge(__global const real4* restrict posq, __global const int2* restrict pmeAtomGridIndex, __global const int* restrict pmeAtomRange,
-        __global real2* restrict pmeGrid, __global const real4* restrict pmeBsplineTheta) {
+        __global real* restrict pmeGrid, __global const real4* restrict pmeBsplineTheta) {
     unsigned int numGridPoints = GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z;
     for (int gridIndex = get_global_id(0); gridIndex < numGridPoints; gridIndex += get_global_size(0)) {
         // Compute the charge on a grid point.
@@ -290,7 +289,7 @@ __kernel void gridSpreadCharge(__global const real4* restrict posq, __global con
                 }
             }
         }
-        pmeGrid[gridIndex] = (real2) (result*EPSILON_FACTOR, 0);
+        pmeGrid[gridIndex] = result*EPSILON_FACTOR;
     }
 }
 #endif
@@ -325,7 +324,7 @@ __kernel void reciprocalConvolution(__global real2* restrict pmeGrid, __global r
     energyBuffer[get_global_id(0)] += 0.5f*energy;
 }
 
-__kernel void gridInterpolateForce(__global const real4* restrict posq, __global real4* restrict forceBuffers, __global const real2* restrict pmeGrid,
+__kernel void gridInterpolateForce(__global const real4* restrict posq, __global real4* restrict forceBuffers, __global const real* restrict pmeGrid,
         real4 periodicBoxSize, real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ, __global int2* restrict pmeAtomGridIndex) {
     const real4 scale = 1/(real) (PME_ORDER-1);
     real4 data[PME_ORDER];
@@ -385,7 +384,7 @@ __kernel void gridInterpolateForce(__global const real4* restrict posq, __global
                     int zindex = gridIndex.z+iz;
                     zindex -= (zindex >= GRID_SIZE_Z ? GRID_SIZE_Z : 0);
                     int index = xindex*GRID_SIZE_Y*GRID_SIZE_Z + yindex*GRID_SIZE_Z + zindex;
-                    real gridvalue = pmeGrid[index].x;
+                    real gridvalue = pmeGrid[index];
                     force.x += ddata[ix].x*data[iy].y*data[iz].z*gridvalue;
                     force.y += data[ix].x*ddata[iy].y*data[iz].z*gridvalue;
                     force.z += data[ix].x*data[iy].y*ddata[iz].z*gridvalue;
