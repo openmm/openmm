@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011 Stanford University and the Authors.           *
+ * Portions copyright (c) 2011-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -66,10 +66,16 @@ void testTransform(bool realToComplex, int xsize, int ysize, int zsize) {
         original[i] = value;
         reference[i] = t_complex(value.x, value.y);
     }
+    for (int i = 0; i < (int) reference.size(); i++) {
+        if (realToComplex)
+            reference[i] = t_complex(i%2 == 0 ? original[i/2].x : original[i/2].y, 0);
+        else
+            reference[i] = t_complex(original[i].x, original[i].y);
+    }
     OpenCLArray grid1(context, original.size(), sizeof(Real2), "grid1");
     OpenCLArray grid2(context, original.size(), sizeof(Real2), "grid2");
     grid1.upload(original);
-    OpenCLFFT3D fft(context, xsize, ysize, zsize);
+    OpenCLFFT3D fft(context, xsize, ysize, zsize, realToComplex);
 
     // Perform a forward FFT, then verify the result is correct.
 
@@ -90,7 +96,8 @@ void testTransform(bool realToComplex, int xsize, int ysize, int zsize) {
     fft.execFFT(grid2, grid1, false);
     grid1.download(result);
     double scale = 1.0/(xsize*ysize*zsize);
-    for (int i = 0; i < (int) result.size(); ++i) {
+    int valuesToCheck = (realToComplex ? original.size()/2 : original.size());
+    for (int i = 0; i < valuesToCheck; ++i) {
         ASSERT_EQUAL_TOL(original[i].x, scale*result[i].x, 1e-4);
         ASSERT_EQUAL_TOL(original[i].y, scale*result[i].y, 1e-4);
     }
