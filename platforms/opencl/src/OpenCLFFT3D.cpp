@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -35,25 +35,108 @@
 using namespace OpenMM;
 using namespace std;
 
-OpenCLFFT3D::OpenCLFFT3D(OpenCLContext& context, int xsize, int ysize, int zsize) : context(context), xsize(xsize), ysize(ysize), zsize(zsize) {
-    zkernel = createKernel(xsize, ysize, zsize, zthreads);
-    xkernel = createKernel(ysize, zsize, xsize, xthreads);
-    ykernel = createKernel(zsize, xsize, ysize, ythreads);
+OpenCLFFT3D::OpenCLFFT3D(OpenCLContext& context, int xsize, int ysize, int zsize, bool realToComplex) :
+        context(context), xsize(xsize), ysize(ysize), zsize(zsize) {
+    packRealAsComplex = false;
+    int packedXSize = xsize;
+    int packedYSize = ysize;
+    int packedZSize = zsize;
+    if (realToComplex) {
+        // If any axis size is even, we can pack the real values into a complex grid that is only half as large.
+        // Look for an appropriate axis.
+        
+        packRealAsComplex = true;
+        int packedAxis, bufferSize;
+        if (xsize%2 == 0) {
+            packedAxis = 0;
+            packedXSize /= 2;
+            bufferSize = packedXSize;
+        }
+        else if (ysize%2 == 0) {
+            packedAxis = 1;
+            packedYSize /= 2;
+            bufferSize = packedYSize;
+        }
+        else if (zsize%2 == 0) {
+            packedAxis = 2;
+            packedZSize /= 2;
+            bufferSize = packedZSize;
+        }
+        else
+            packRealAsComplex = false;
+        if (packRealAsComplex) {
+            // Build the kernels for packing and unpacking the data.
+            
+            map<string, string> defines;
+            defines["XSIZE"] = context.intToString(xsize);
+            defines["YSIZE"] = context.intToString(ysize);
+            defines["ZSIZE"] = context.intToString(zsize);
+            defines["PACKED_AXIS"] = context.intToString(packedAxis);
+            defines["PACKED_XSIZE"] = context.intToString(packedXSize);
+            defines["PACKED_YSIZE"] = context.intToString(packedYSize);
+            defines["PACKED_ZSIZE"] = context.intToString(packedZSize);
+            cl::Program program = context.createProgram(OpenCLKernelSources::fftR2C, defines);
+            packForwardKernel = cl::Kernel(program, "packForwardData");
+            unpackForwardKernel = cl::Kernel(program, "unpackForwardData");
+            unpackForwardKernel.setArg(2, bufferSize*(context.getUseDoublePrecision() ? sizeof(mm_double2) : sizeof(mm_float2)), NULL);
+            packBackwardKernel = cl::Kernel(program, "packBackwardData");
+            packBackwardKernel.setArg(2, bufferSize*(context.getUseDoublePrecision() ? sizeof(mm_double2) : sizeof(mm_float2)), NULL);
+            unpackBackwardKernel = cl::Kernel(program, "unpackBackwardData");
+        }
+    }
+    bool inputIsReal = (realToComplex && !packRealAsComplex);
+    zkernel = createKernel(packedXSize, packedYSize, packedZSize, zthreads, 0, true, inputIsReal);
+    xkernel = createKernel(packedYSize, packedZSize, packedXSize, xthreads, 1, true, inputIsReal);
+    ykernel = createKernel(packedZSize, packedXSize, packedYSize, ythreads, 2, true, inputIsReal);
+    invzkernel = createKernel(packedXSize, packedYSize, packedZSize, zthreads, 0, false, inputIsReal);
+    invxkernel = createKernel(packedYSize, packedZSize, packedXSize, xthreads, 1, false, inputIsReal);
+    invykernel = createKernel(packedZSize, packedXSize, packedYSize, ythreads, 2, false, inputIsReal);
 }
 
 void OpenCLFFT3D::execFFT(OpenCLArray& in, OpenCLArray& out, bool forward) {
-    zkernel.setArg<cl::Buffer>(0, in.getDeviceBuffer());
-    zkernel.setArg<cl::Buffer>(1, out.getDeviceBuffer());
-    zkernel.setArg<cl_int>(2, forward ? 1 : -1);
-    context.executeKernel(zkernel, xsize*ysize*zsize, zthreads);
-    xkernel.setArg<cl::Buffer>(0, out.getDeviceBuffer());
-    xkernel.setArg<cl::Buffer>(1, in.getDeviceBuffer());
-    xkernel.setArg<cl_int>(2, forward ? 1 : -1);
-    context.executeKernel(xkernel, xsize*ysize*zsize, xthreads);
-    ykernel.setArg<cl::Buffer>(0, in.getDeviceBuffer());
-    ykernel.setArg<cl::Buffer>(1, out.getDeviceBuffer());
-    ykernel.setArg<cl_int>(2, forward ? 1 : -1);
-    context.executeKernel(ykernel, xsize*ysize*zsize, ythreads);
+    cl::Kernel kernel1 = (forward ? zkernel : invzkernel);
+    cl::Kernel kernel2 = (forward ? xkernel : invxkernel);
+    cl::Kernel kernel3 = (forward ? ykernel : invykernel);
+    if (packRealAsComplex) {
+        cl::Kernel packKernel = (forward ? packForwardKernel : packBackwardKernel);
+        cl::Kernel unpackKernel = (forward ? unpackForwardKernel : unpackBackwardKernel);
+        int gridSize = xsize*ysize*zsize/2;
+
+        // Pack the data into a half sized grid.
+        
+        packKernel.setArg<cl::Buffer>(0, in.getDeviceBuffer());
+        packKernel.setArg<cl::Buffer>(1, out.getDeviceBuffer());
+        context.executeKernel(packKernel, gridSize);
+        
+        // Perform the FFT.
+        
+        kernel1.setArg<cl::Buffer>(0, out.getDeviceBuffer());
+        kernel1.setArg<cl::Buffer>(1, in.getDeviceBuffer());
+        context.executeKernel(kernel1, gridSize, zthreads);
+        kernel2.setArg<cl::Buffer>(0, in.getDeviceBuffer());
+        kernel2.setArg<cl::Buffer>(1, out.getDeviceBuffer());
+        context.executeKernel(kernel2, gridSize, xthreads);
+        kernel3.setArg<cl::Buffer>(0, out.getDeviceBuffer());
+        kernel3.setArg<cl::Buffer>(1, in.getDeviceBuffer());
+        context.executeKernel(kernel3, gridSize, ythreads);
+        
+        // Unpack the data.
+        
+        unpackKernel.setArg<cl::Buffer>(0, in.getDeviceBuffer());
+        unpackKernel.setArg<cl::Buffer>(1, out.getDeviceBuffer());
+        context.executeKernel(unpackKernel, gridSize);
+    }
+    else {
+        kernel1.setArg<cl::Buffer>(0, in.getDeviceBuffer());
+        kernel1.setArg<cl::Buffer>(1, out.getDeviceBuffer());
+        context.executeKernel(kernel1, xsize*ysize*zsize, zthreads);
+        kernel2.setArg<cl::Buffer>(0, out.getDeviceBuffer());
+        kernel2.setArg<cl::Buffer>(1, in.getDeviceBuffer());
+        context.executeKernel(kernel2, xsize*ysize*zsize, xthreads);
+        kernel3.setArg<cl::Buffer>(0, in.getDeviceBuffer());
+        kernel3.setArg<cl::Buffer>(1, out.getDeviceBuffer());
+        context.executeKernel(kernel3, xsize*ysize*zsize, ythreads);
+    }
 }
 
 int OpenCLFFT3D::findLegalDimension(int minimum) {
@@ -73,7 +156,7 @@ int OpenCLFFT3D::findLegalDimension(int minimum) {
     }
 }
 
-cl::Kernel OpenCLFFT3D::createKernel(int xsize, int ysize, int zsize, int& threads) {
+cl::Kernel OpenCLFFT3D::createKernel(int xsize, int ysize, int zsize, int& threads, int axis, bool forward, bool inputIsReal) {
     int maxThreads = std::min(256, (int) context.getDevice().getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>());
     bool isCPU = context.getDevice().getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_CPU;
     while (true) {
@@ -226,6 +309,8 @@ cl::Kernel OpenCLFFT3D::createKernel(int xsize, int ysize, int zsize, int& threa
 
         // Create the kernel.
 
+        bool outputIsReal = (inputIsReal && axis == 2 && !forward);
+        string outputSuffix = (outputIsReal ? ".x" : "");
         if (loopRequired) {
             source<<"for (int z = get_local_id(0); z < ZSIZE; z += get_local_size(0))\n";
             source<<"out[y*(ZSIZE*XSIZE)+z*XSIZE+x] = data"<<(stage%2)<<"[z];\n";
@@ -242,6 +327,10 @@ cl::Kernel OpenCLFFT3D::createKernel(int xsize, int ysize, int zsize, int& threa
         replacements["M_PI"] = context.doubleToString(M_PI);
         replacements["COMPUTE_FFT"] = source.str();
         replacements["LOOP_REQUIRED"] = (loopRequired ? "1" : "0");
+        replacements["SIGN"] = (forward ? "1" : "-1");
+        replacements["INPUT_TYPE"] = (inputIsReal && axis == 0 && forward ? "real" : "real2");
+        replacements["OUTPUT_TYPE"] = (outputIsReal ? "real" : "real2");
+        replacements["INPUT_IS_REAL"] = (inputIsReal && axis == 0 && forward ? "1" : "0");
         cl::Program program = context.createProgram(context.replaceStrings(OpenCLKernelSources::fft, replacements));
         cl::Kernel kernel(program, "execFFT");
         threads = (isCPU ? 1 : blocksPerGroup*zsize);

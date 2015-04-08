@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009 Stanford University and the Authors.           *
+ * Portions copyright (c) 2009-2015 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -61,8 +61,9 @@ public:
      * @param xsize   the first dimension of the data sets on which FFTs will be performed
      * @param ysize   the second dimension of the data sets on which FFTs will be performed
      * @param zsize   the third dimension of the data sets on which FFTs will be performed
+     * @param realToComplex if true, a real-to-complex transform will be done. Otherwise, it is complex-to-complex.
      */
-    OpenCLFFT3D(OpenCLContext& context, int xsize, int ysize, int zsize);
+    OpenCLFFT3D(OpenCLContext& context, int xsize, int ysize, int zsize, bool realToComplex=false);
     /**
      * Perform a Fourier transform.  The transform cannot be done in-place: the input and output
      * arrays must be different.  Also, the input array is used as workspace, so its contents
@@ -81,11 +82,14 @@ public:
      */
     static int findLegalDimension(int minimum);
 private:
-    cl::Kernel createKernel(int xsize, int ysize, int zsize, int& threads);
+    cl::Kernel createKernel(int xsize, int ysize, int zsize, int& threads, int axis, bool forward, bool inputIsReal);
     int xsize, ysize, zsize;
     int xthreads, ythreads, zthreads;
+    bool packRealAsComplex;
     OpenCLContext& context;
     cl::Kernel xkernel, ykernel, zkernel;
+    cl::Kernel invxkernel, invykernel, invzkernel;
+    cl::Kernel packForwardKernel, unpackForwardKernel, packBackwardKernel, unpackBackwardKernel;
 };
 
 } // namespace OpenMM
