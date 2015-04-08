@@ -45,9 +45,9 @@ __kernel void unpackForwardData(__global const real2* restrict in, __global real
         int remainder = index-x*(PACKED_YSIZE*PACKED_ZSIZE);
         int y = remainder/PACKED_ZSIZE;
         int z = remainder-y*PACKED_ZSIZE;
-        int xp = (x == 0 ? x : PACKED_XSIZE-x);
-        int yp = (y == 0 ? y : PACKED_YSIZE-y);
-        int zp = (z == 0 ? z : PACKED_ZSIZE-z);
+        int xp = (x == 0 ? 0 : PACKED_XSIZE-x);
+        int yp = (y == 0 ? 0 : PACKED_YSIZE-y);
+        int zp = (z == 0 ? 0 : PACKED_ZSIZE-z);
         real2 z1 = in[x*PACKED_YSIZE*PACKED_ZSIZE+y*PACKED_ZSIZE+z];
         real2 z2 = in[xp*PACKED_YSIZE*PACKED_ZSIZE+yp*PACKED_ZSIZE+zp];
 #if PACKED_AXIS == 0
@@ -59,9 +59,9 @@ __kernel void unpackForwardData(__global const real2* restrict in, __global real
 #endif
         real2 output = (real2) ((z1.x+z2.x - wfac.x*(z1.x-z2.x) + wfac.y*(z1.y+z2.y))/2, (z1.y-z2.y - wfac.y*(z1.x-z2.x) - wfac.x*(z1.y+z2.y))/2);
         out[x*YSIZE*ZSIZE+y*ZSIZE+z] = output;
-        xp = (x == 0 ? x : XSIZE-x);
-        yp = (y == 0 ? y : YSIZE-y);
-        zp = (z == 0 ? z : ZSIZE-z);
+        xp = (x == 0 ? 0 : XSIZE-x);
+        yp = (y == 0 ? 0 : YSIZE-y);
+        zp = (z == 0 ? 0 : ZSIZE-z);
 #if PACKED_AXIS == 0
         if (x == 0)
             out[PACKED_XSIZE*YSIZE*ZSIZE+yp*ZSIZE+zp] = (real2) ((z1.x-z1.y+z2.x-z2.y)/2, (-z1.x-z1.y+z2.x+z2.y)/2);
@@ -103,9 +103,9 @@ __kernel void packBackwardData(__global const real2* restrict in, __global real2
         int remainder = index-x*(PACKED_YSIZE*PACKED_ZSIZE);
         int y = remainder/PACKED_ZSIZE;
         int z = remainder-y*PACKED_ZSIZE;
-        int xp = (x == 0 ? x : PACKED_XSIZE-x);
-        int yp = (y == 0 ? y : PACKED_YSIZE-y);
-        int zp = (z == 0 ? z : PACKED_ZSIZE-z);
+        int xp = (x == 0 ? 0 : PACKED_XSIZE-x);
+        int yp = (y == 0 ? 0 : PACKED_YSIZE-y);
+        int zp = (z == 0 ? 0 : PACKED_ZSIZE-z);
         real2 z1 = in[x*YSIZE*ZSIZE+y*ZSIZE+z];
 #if PACKED_AXIS == 0
         real2 wfac = w[x];
