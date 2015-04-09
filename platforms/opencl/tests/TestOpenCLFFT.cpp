@@ -51,7 +51,7 @@ using namespace std;
 static OpenCLPlatform platform;
 
 template <class Real2>
-void testTransform(bool realToComplex) {
+void testTransform(bool realToComplex, int xsize, int ysize, int zsize) {
     System system;
     system.addParticle(0.0);
     OpenCLPlatform::PlatformData platformData(system, "", "", platform.getPropertyDefaultValue("OpenCLPrecision"), "false");
@@ -59,7 +59,6 @@ void testTransform(bool realToComplex) {
     context.initialize();
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);
-    int xsize = 28, ysize = 25, zsize = 30;
     vector<Real2> original(xsize*ysize*zsize);
     vector<t_complex> reference(original.size());
     for (int i = 0; i < (int) original.size(); i++) {
@@ -109,12 +108,18 @@ int main(int argc, char* argv[]) {
         if (argc > 1)
             platform.setPropertyDefaultValue("OpenCLPrecision", string(argv[1]));
         if (platform.getPropertyDefaultValue("OpenCLPrecision") == "double") {
-            testTransform<mm_double2>(false);
-            testTransform<mm_double2>(true);
+            testTransform<mm_double2>(false, 28, 25, 30);
+            testTransform<mm_double2>(true, 28, 25, 25);
+            testTransform<mm_double2>(true, 25, 28, 25);
+            testTransform<mm_double2>(true, 25, 25, 28);
+            testTransform<mm_double2>(true, 21, 25, 27);
         }
         else {
-            testTransform<mm_float2>(false);
-            testTransform<mm_float2>(true);
+            testTransform<mm_float2>(false, 28, 25, 30);
+            testTransform<mm_float2>(true, 28, 25, 25);
+            testTransform<mm_float2>(true, 25, 28, 25);
+            testTransform<mm_float2>(true, 25, 25, 28);
+            testTransform<mm_float2>(true, 21, 25, 27);
         }
     }
     catch(const exception& e) {
