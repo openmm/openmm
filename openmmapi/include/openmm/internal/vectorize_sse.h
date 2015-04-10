@@ -241,6 +241,18 @@ static inline fvec4 sqrt(const fvec4& v) {
     return fvec4(_mm_sqrt_ps(v.val));
 }
 
+static inline fvec4 rsqrt(const fvec4& v) {
+    // Initial estimate of rsqrt().
+
+    fvec4 y(_mm_rsqrt_ps(v.val));
+
+    // Perform an iteration of Newton refinement.
+
+    fvec4 x2 = v*0.5f;
+    y *= fvec4(1.5f)-x2*y*y;
+    return y;
+}
+
 static inline float dot3(const fvec4& v1, const fvec4& v2) {
     return _mm_cvtss_f32(_mm_dp_ps(v1, v2, 0x71));
 }

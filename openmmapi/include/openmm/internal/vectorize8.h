@@ -191,6 +191,18 @@ static inline fvec8 sqrt(const fvec8& v) {
     return fvec8(_mm256_sqrt_ps(v.val));
 }
 
+static inline fvec8 rsqrt(const fvec8& v) {
+    // Initial estimate of rsqrt().
+
+    fvec8 y(_mm256_rsqrt_ps(v.val));
+
+    // Perform an iteration of Newton refinement.
+
+    fvec8 x2 = v*0.5f;
+    y *= fvec8(1.5f)-x2*y*y;
+    return y;
+}
+
 static inline float dot8(const fvec8& v1, const fvec8& v2) {
     fvec8 result = _mm256_dp_ps(v1, v2, 0xF1);
     return _mm_cvtss_f32(result.lowerVec())+_mm_cvtss_f32(result.upperVec());

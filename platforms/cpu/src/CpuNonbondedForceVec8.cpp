@@ -126,8 +126,7 @@ void CpuNonbondedForceVec8::calculateBlockIxnImpl(int blockIndex, float* forces,
         
         // Compute the interactions.
         
-        fvec8 r = sqrt(r2);
-        fvec8 inverseR = fvec8(1.0f)/r;
+        fvec8 inverseR = rsqrt(r2);
         fvec8 energy, dEdR;
         float atomEpsilon = atomParameters[atom].second;
         if (atomEpsilon != 0.0f) {
@@ -139,6 +138,7 @@ void CpuNonbondedForceVec8::calculateBlockIxnImpl(int blockIndex, float* forces,
             dEdR = epsSig6*(12.0f*sig6 - 6.0f);
             energy = epsSig6*(sig6-1.0f);
             if (useSwitch) {
+                fvec8 r = r2*inverseR;
                 fvec8 t = (r>switchingDistance) & ((r-switchingDistance)*invSwitchingInterval);
                 fvec8 switchValue = 1+t*t*t*(-10.0f+t*(15.0f-t*6.0f));
                 fvec8 switchDeriv = t*t*(-30.0f+t*(60.0f-t*30.0f))*invSwitchingInterval;
@@ -242,8 +242,8 @@ void CpuNonbondedForceVec8::calculateBlockEwaldIxnImpl(int blockIndex, float* fo
         
         // Compute the interactions.
         
-        fvec8 r = sqrt(r2);
-        fvec8 inverseR = fvec8(1.0f)/r;
+        fvec8 inverseR = rsqrt(r2);
+        fvec8 r = r2*inverseR;
         fvec8 energy, dEdR;
         float atomEpsilon = atomParameters[atom].second;
         if (atomEpsilon != 0.0f) {
