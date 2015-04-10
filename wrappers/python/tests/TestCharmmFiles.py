@@ -115,6 +115,13 @@ class TestCharmmFiles(unittest.TestCase):
         ene = state.getPotentialEnergy().value_in_unit(kilocalories_per_mole)
         self.assertAlmostEqual(ene, 15490.0033559, delta=0.05)
 
+    def test_InsCode(self):
+        """ Test the parsing of PSF files that contain insertion codes in their residue numbers """
+        psf = CharmmPsfFile('systems/4TVP-dmj_wat-ion.psf')
+        self.assertEqual(len(list(psf.topology.atoms())), 66264)
+        self.assertEqual(len(list(psf.topology.residues())), 20169)
+        self.assertEqual(len(list(psf.bonds())), 46634)
+
     def test_ImplicitSolventForces(self):
         """Compute forces for different implicit solvent types, and compare them to ones generated with a previous version of OpenMM to ensure they haven't changed."""
         solventType = [HCT, OBC1, OBC2, GBn, GBn2]

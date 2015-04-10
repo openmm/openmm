@@ -37,6 +37,7 @@ from __future__ import division
 from functools import wraps
 from math import pi, cos, sin, sqrt
 import os
+import re
 import simtk.openmm as mm
 from simtk.openmm.vec3 import Vec3
 import simtk.unit as u
@@ -98,6 +99,8 @@ class _ZeroDict(dict):
             return 0, []
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+_resre = re.compile(r'(\d+)([a-zA-Z]*)')
 
 class CharmmPsfFile(object):
     """
@@ -196,7 +199,12 @@ class CharmmPsfFile(object):
             if atid != i + 1:
                 raise CharmmPSFError('Nonsequential atoms detected!')
             system = words[1]
-            resid = conv(words[2], int, 'residue number')
+            rematch = _resre.match(words[2])
+            if not rematch:
+                raise RuntimeError('Could not parse residue number %s' %
+                                   words[2])
+            resid, inscode = rematch.groups()
+            resid = conv(resid, int, 'residue number')
             resname = words[3]
             name = words[4]
             attype = words[5]
@@ -209,7 +217,7 @@ class CharmmPsfFile(object):
             mass = conv(words[7], float, 'atomic mass')
             props = words[8:]
             atom = residue_list.add_atom(system, resid, resname, name,
-                                         attype, charge, mass, props)
+                            attype, charge, mass, inscode, props)
             atom_list.append(atom)
         atom_list.assign_indexes()
         atom_list.changed = False
