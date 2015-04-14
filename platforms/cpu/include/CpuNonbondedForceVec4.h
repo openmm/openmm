@@ -56,8 +56,8 @@ protected:
       /**
        * Templatized implementation of calculateBlockIxn.
        */
-      template <bool TRICLINIC>
-      void calculateBlockIxnImpl(int blockIndex, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize);
+      template <int PERIODIC_TYPE>
+      void calculateBlockIxnImpl(int blockIndex, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize, const fvec4& blockCenter);
             
       /**---------------------------------------------------------------------------------------
       
@@ -74,15 +74,15 @@ protected:
       /**
        * Templatized implementation of calculateBlockEwaldIxn.
        */
-      template <bool TRICLINIC>
-      void calculateBlockEwaldIxnImpl(int blockIndex, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize);
+      template <int PERIODIC_TYPE>
+      void calculateBlockEwaldIxnImpl(int blockIndex, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize, const fvec4& blockCenter);
 
       /**
        * Compute the displacement and squared distance between a collection of points, optionally using
        * periodic boundary conditions.
        */
-      template <bool TRICLINIC>
-      void getDeltaR(const float* posI, const fvec4& x, const fvec4& y, const fvec4& z, fvec4& dx, fvec4& dy, fvec4& dz, fvec4& r2, bool periodic, const fvec4& boxSize, const fvec4& invBoxSize) const;
+      template <int PERIODIC_TYPE>
+      void getDeltaR(const fvec4& posI, const fvec4& x, const fvec4& y, const fvec4& z, fvec4& dx, fvec4& dy, fvec4& dz, fvec4& r2, bool periodic, const fvec4& boxSize, const fvec4& invBoxSize) const;
 
       /**
        * Compute a fast approximation to erfc(x).
