@@ -1806,6 +1806,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             pmeZIndexKernel = cl::Kernel(program, "recordZIndex");
             pmeSpreadChargeKernel = cl::Kernel(program, "gridSpreadCharge");
             pmeConvolutionKernel = cl::Kernel(program, "reciprocalConvolution");
+            pmeEvalEnergyKernel = cl::Kernel(program, "gridEvaluateEnergy");
             pmeInterpolateForceKernel = cl::Kernel(program, "gridInterpolateForce");
             int elementSize = (cl.getUseDoublePrecision() ? sizeof(mm_double4) : sizeof(mm_float4));
             pmeUpdateBsplinesKernel.setArg<cl::Buffer>(0, cl.getPosq().getDeviceBuffer());
@@ -1826,10 +1827,14 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
                 pmeSpreadChargeKernel.setArg<cl::Buffer>(3, pmeGrid->getDeviceBuffer());
             pmeSpreadChargeKernel.setArg<cl::Buffer>(4, pmeBsplineTheta->getDeviceBuffer());
             pmeConvolutionKernel.setArg<cl::Buffer>(0, pmeGrid2->getDeviceBuffer());
-            pmeConvolutionKernel.setArg<cl::Buffer>(1, cl.getEnergyBuffer().getDeviceBuffer());
-            pmeConvolutionKernel.setArg<cl::Buffer>(2, pmeBsplineModuliX->getDeviceBuffer());
-            pmeConvolutionKernel.setArg<cl::Buffer>(3, pmeBsplineModuliY->getDeviceBuffer());
-            pmeConvolutionKernel.setArg<cl::Buffer>(4, pmeBsplineModuliZ->getDeviceBuffer());
+            pmeConvolutionKernel.setArg<cl::Buffer>(1, pmeBsplineModuliX->getDeviceBuffer());
+            pmeConvolutionKernel.setArg<cl::Buffer>(2, pmeBsplineModuliY->getDeviceBuffer());
+            pmeConvolutionKernel.setArg<cl::Buffer>(3, pmeBsplineModuliZ->getDeviceBuffer());
+            pmeEvalEnergyKernel.setArg<cl::Buffer>(0, pmeGrid2->getDeviceBuffer());
+            pmeEvalEnergyKernel.setArg<cl::Buffer>(1, cl.getEnergyBuffer().getDeviceBuffer());
+            pmeEvalEnergyKernel.setArg<cl::Buffer>(2, pmeBsplineModuliX->getDeviceBuffer());
+            pmeEvalEnergyKernel.setArg<cl::Buffer>(3, pmeBsplineModuliY->getDeviceBuffer());
+            pmeEvalEnergyKernel.setArg<cl::Buffer>(4, pmeBsplineModuliZ->getDeviceBuffer());
             pmeInterpolateForceKernel.setArg<cl::Buffer>(0, cl.getPosq().getDeviceBuffer());
             pmeInterpolateForceKernel.setArg<cl::Buffer>(1, cl.getForceBuffers().getDeviceBuffer());
             pmeInterpolateForceKernel.setArg<cl::Buffer>(2, pmeGrid->getDeviceBuffer());
@@ -1861,7 +1866,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
         cl.executeKernel(ewaldForcesKernel, cl.getNumAtoms());
     }
     if (pmeGrid != NULL && includeReciprocal) {
-        if (usePmeQueue)
+        if (usePmeQueue && !includeEnergy)
             cl.setQueue(pmeQueue);
         
         // Invert the periodic box vectors.
@@ -1936,19 +1941,24 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
         }
         fft->execFFT(*pmeGrid, *pmeGrid2, true);
         mm_double4 boxSize = cl.getPeriodicBoxSizeDouble();
-        double scaleFactor = 1.0/(M_PI*boxSize.x*boxSize.y*boxSize.z);
         if (cl.getUseDoublePrecision()) {
-            pmeConvolutionKernel.setArg<mm_double4>(5, recipBoxVectors[0]);
-            pmeConvolutionKernel.setArg<mm_double4>(6, recipBoxVectors[1]);
-            pmeConvolutionKernel.setArg<mm_double4>(7, recipBoxVectors[2]);
-            pmeConvolutionKernel.setArg<cl_double>(8, scaleFactor);
+            pmeConvolutionKernel.setArg<mm_double4>(4, recipBoxVectors[0]);
+            pmeConvolutionKernel.setArg<mm_double4>(5, recipBoxVectors[1]);
+            pmeConvolutionKernel.setArg<mm_double4>(6, recipBoxVectors[2]);
+            pmeEvalEnergyKernel.setArg<mm_double4>(5, recipBoxVectors[0]);
+            pmeEvalEnergyKernel.setArg<mm_double4>(6, recipBoxVectors[1]);
+            pmeEvalEnergyKernel.setArg<mm_double4>(7, recipBoxVectors[2]);
         }
         else {
-            pmeConvolutionKernel.setArg<mm_float4>(5, recipBoxVectorsFloat[0]);
-            pmeConvolutionKernel.setArg<mm_float4>(6, recipBoxVectorsFloat[1]);
-            pmeConvolutionKernel.setArg<mm_float4>(7, recipBoxVectorsFloat[2]);
-            pmeConvolutionKernel.setArg<cl_float>(8, (float) scaleFactor);
+            pmeConvolutionKernel.setArg<mm_float4>(4, recipBoxVectorsFloat[0]);
+            pmeConvolutionKernel.setArg<mm_float4>(5, recipBoxVectorsFloat[1]);
+            pmeConvolutionKernel.setArg<mm_float4>(6, recipBoxVectorsFloat[2]);
+            pmeEvalEnergyKernel.setArg<mm_float4>(5, recipBoxVectorsFloat[0]);
+            pmeEvalEnergyKernel.setArg<mm_float4>(6, recipBoxVectorsFloat[1]);
+            pmeEvalEnergyKernel.setArg<mm_float4>(7, recipBoxVectorsFloat[2]);
         }
+        if (includeEnergy)
+            cl.executeKernel(pmeEvalEnergyKernel, cl.getNumAtoms());
         cl.executeKernel(pmeConvolutionKernel, cl.getNumAtoms());
         fft->execFFT(*pmeGrid2, *pmeGrid, false);
         setPeriodicBoxSizeArg(cl, pmeInterpolateForceKernel, 3);

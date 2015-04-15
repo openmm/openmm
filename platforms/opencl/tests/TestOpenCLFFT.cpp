@@ -85,10 +85,15 @@ void testTransform(bool realToComplex, int xsize, int ysize, int zsize) {
     fftpack_t plan;
     fftpack_init_3d(&plan, xsize, ysize, zsize);
     fftpack_exec_3d(plan, FFTPACK_FORWARD, &reference[0], &reference[0]);
-    for (int i = 0; i < (int) result.size(); ++i) {
-        ASSERT_EQUAL_TOL(reference[i].re, result[i].x, 1e-3);
-        ASSERT_EQUAL_TOL(reference[i].im, result[i].y, 1e-3);
-    }
+    int outputZSize = (realToComplex ? zsize/2+1 : zsize);
+    for (int x = 0; x < xsize; x++)
+        for (int y = 0; y < ysize; y++)
+            for (int z = 0; z < outputZSize; z++) {
+                int index1 = x*ysize*zsize + y*zsize + z;
+                int index2 = x*ysize*outputZSize + y*outputZSize + z;
+                ASSERT_EQUAL_TOL(reference[index1].re, result[index2].x, 1e-3);
+                ASSERT_EQUAL_TOL(reference[index1].im, result[index2].y, 1e-3);
+            }
     fftpack_destroy(plan);
 
     // Perform a backward transform and see if we get the original values.

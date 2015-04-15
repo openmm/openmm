@@ -294,17 +294,18 @@ __kernel void gridSpreadCharge(__global const real4* restrict posq, __global con
 }
 #endif
 
-__kernel void reciprocalConvolution(__global real2* restrict pmeGrid, __global real* restrict energyBuffer, __global const real* restrict pmeBsplineModuliX,
-        __global const real* restrict pmeBsplineModuliY, __global const real* restrict pmeBsplineModuliZ, real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ, real recipScaleFactor) {
-    const unsigned int gridSize = GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z;
-    real energy = 0.0f;
+__kernel void reciprocalConvolution(__global real2* restrict pmeGrid, __global const real* restrict pmeBsplineModuliX,
+        __global const real* restrict pmeBsplineModuliY, __global const real* restrict pmeBsplineModuliZ, real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ) {
+    // R2C stores into a half complex matrix where the last dimension is cut by half
+    const unsigned int gridSize = GRID_SIZE_X*GRID_SIZE_Y*(GRID_SIZE_Z/2+1);
+    const real recipScaleFactor = (1.0f/M_PI)*recipBoxVecX.x*recipBoxVecY.y*recipBoxVecZ.z;
+
     for (int index = get_global_id(0); index < gridSize; index += get_global_size(0)) {
-        int kx = index/(GRID_SIZE_Y*GRID_SIZE_Z);
-        int remainder = index-kx*GRID_SIZE_Y*GRID_SIZE_Z;
-        int ky = remainder/GRID_SIZE_Z;
-        int kz = remainder-ky*GRID_SIZE_Z;
-        if (kx == 0 && ky == 0 && kz == 0)
-            continue;
+        // real indices
+        int kx = index/(GRID_SIZE_Y*(GRID_SIZE_Z/2+1));
+        int remainder = index-kx*GRID_SIZE_Y*(GRID_SIZE_Z/2+1);
+        int ky = remainder/(GRID_SIZE_Z/2+1);
+        int kz = remainder-ky*(GRID_SIZE_Z/2+1);
         int mx = (kx < (GRID_SIZE_X+1)/2) ? kx : (kx-GRID_SIZE_X);
         int my = (ky < (GRID_SIZE_Y+1)/2) ? ky : (ky-GRID_SIZE_Y);
         int mz = (kz < (GRID_SIZE_Z+1)/2) ? kz : (kz-GRID_SIZE_Z);
@@ -318,8 +319,48 @@ __kernel void reciprocalConvolution(__global real2* restrict pmeGrid, __global r
         real m2 = mhx*mhx+mhy*mhy+mhz*mhz;
         real denom = m2*bx*by*bz;
         real eterm = recipScaleFactor*EXP(-RECIP_EXP_FACTOR*m2)/denom;
-        pmeGrid[index] = (real2) (grid.x*eterm, grid.y*eterm);
-        energy += eterm*(grid.x*grid.x + grid.y*grid.y);
+        if (kx != 0 || ky != 0 || kz != 0) {
+            pmeGrid[index] = (real2) (grid.x*eterm, grid.y*eterm);
+        }
+    }
+}
+
+__kernel void gridEvaluateEnergy(__global real2* restrict pmeGrid, __global real* restrict energyBuffer,
+                      __global const real* restrict pmeBsplineModuliX, __global const real* restrict pmeBsplineModuliY, __global const real* restrict pmeBsplineModuliZ,
+                      real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ) {
+    // R2C stores into a half complex matrix where the last dimension is cut by half
+    const unsigned int gridSize = GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z;
+    const real recipScaleFactor = (1.0f/M_PI)*recipBoxVecX.x*recipBoxVecY.y*recipBoxVecZ.z;
+ 
+    real energy = 0;
+    for (int index = get_global_id(0); index < gridSize; index += get_global_size(0)) {
+        // real indices
+        int kx = index/(GRID_SIZE_Y*(GRID_SIZE_Z));
+        int remainder = index-kx*GRID_SIZE_Y*(GRID_SIZE_Z);
+        int ky = remainder/(GRID_SIZE_Z);
+        int kz = remainder-ky*(GRID_SIZE_Z);
+        int mx = (kx < (GRID_SIZE_X+1)/2) ? kx : (kx-GRID_SIZE_X);
+        int my = (ky < (GRID_SIZE_Y+1)/2) ? ky : (ky-GRID_SIZE_Y);
+        int mz = (kz < (GRID_SIZE_Z+1)/2) ? kz : (kz-GRID_SIZE_Z);
+        real mhx = mx*recipBoxVecX.x;
+        real mhy = mx*recipBoxVecY.x+my*recipBoxVecY.y;
+        real mhz = mx*recipBoxVecZ.x+my*recipBoxVecZ.y+mz*recipBoxVecZ.z;
+        real m2 = mhx*mhx+mhy*mhy+mhz*mhz;
+        real bx = pmeBsplineModuliX[kx];
+        real by = pmeBsplineModuliY[ky];
+        real bz = pmeBsplineModuliZ[kz];
+        real denom = m2*bx*by*bz;
+        real eterm = recipScaleFactor*EXP(-RECIP_EXP_FACTOR*m2)/denom;
+        if (kz >= (GRID_SIZE_Z/2+1)) {
+            kx = ((kx == 0) ? kx : GRID_SIZE_X-kx);
+            ky = ((ky == 0) ? ky : GRID_SIZE_Y-ky);
+            kz = GRID_SIZE_Z-kz;
+        } 
+        int indexInHalfComplexGrid = kz + ky*(GRID_SIZE_Z/2+1)+kx*(GRID_SIZE_Y*(GRID_SIZE_Z/2+1));
+        real2 grid = pmeGrid[indexInHalfComplexGrid];
+        if (kx != 0 || ky != 0 || kz != 0) {
+            energy += eterm*(grid.x*grid.x + grid.y*grid.y);
+        }
     }
     energyBuffer[get_global_id(0)] += 0.5f*energy;
 }
