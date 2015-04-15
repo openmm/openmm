@@ -199,7 +199,7 @@ void CpuCustomManyParticleForce::setUseCutoff(RealOpenMM distance) {
 }
 
 void CpuCustomManyParticleForce::setPeriodic(RealVec* periodicBoxVectors) {
-    assert(cutoff);
+    assert(useCutoff);
     assert(periodicBoxVectors[0][0] >= 2.0*cutoffDistance);
     assert(periodicBoxVectors[1][1] >= 2.0*cutoffDistance);
     assert(periodicBoxVectors[2][2] >= 2.0*cutoffDistance);
