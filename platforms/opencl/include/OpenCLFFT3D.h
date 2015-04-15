@@ -69,6 +69,9 @@ public:
      * arrays must be different.  Also, the input array is used as workspace, so its contents
      * are destroyed.  This also means that both arrays must be large enough to hold complex values,
      * even when performing a real-to-complex transform.
+     * <p>
+     * When performing a real-to-complex transform, the output data is of size xsize*ysize*(zsize/2+1)
+     * and contains only the non-redundant elements.
      *
      * @param in       the data to transform, ordered such that in[x*ysize*zsize + y*zsize + z] contains element (x, y, z)
      * @param out      on exit, this contains the transformed data

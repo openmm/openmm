@@ -310,14 +310,26 @@ cl::Kernel OpenCLFFT3D::createKernel(int xsize, int ysize, int zsize, int& threa
         // Create the kernel.
 
         bool outputIsReal = (inputIsReal && axis == 2 && !forward);
+        bool outputIsPacked = (inputIsReal && axis == 2 && forward);
         string outputSuffix = (outputIsReal ? ".x" : "");
         if (loopRequired) {
+            if (outputIsPacked)
+                source<<"if (x < XSIZE/2+1)\n";
             source<<"for (int z = get_local_id(0); z < ZSIZE; z += get_local_size(0))\n";
-            source<<"out[y*(ZSIZE*XSIZE)+z*XSIZE+x] = data"<<(stage%2)<<"[z]"<<outputSuffix<<";\n";
+            if (outputIsPacked)
+                source<<"out[y*(ZSIZE*(XSIZE/2+1))+z*(XSIZE/2+1)+x] = data"<<(stage%2)<<"[z]"<<outputSuffix<<";\n";
+            else
+                source<<"out[y*(ZSIZE*XSIZE)+z*XSIZE+x] = data"<<(stage%2)<<"[z]"<<outputSuffix<<";\n";
         }
         else {
-            source<<"if (index < XSIZE*YSIZE)\n";
-            source<<"out[y*(ZSIZE*XSIZE)+(get_local_id(0)%ZSIZE)*XSIZE+x] = data"<<(stage%2)<<"[get_local_id(0)]"<<outputSuffix<<";\n";
+            if (outputIsPacked) {
+                source<<"if (index < XSIZE*YSIZE && x < XSIZE/2+1)\n";
+                source<<"out[y*(ZSIZE*(XSIZE/2+1))+(get_local_id(0)%ZSIZE)*(XSIZE/2+1)+x] = data"<<(stage%2)<<"[get_local_id(0)]"<<outputSuffix<<";\n";
+            }
+            else {
+                source<<"if (index < XSIZE*YSIZE)\n";
+                source<<"out[y*(ZSIZE*XSIZE)+(get_local_id(0)%ZSIZE)*XSIZE+x] = data"<<(stage%2)<<"[get_local_id(0)]"<<outputSuffix<<";\n";
+            }
         }
         map<string, string> replacements;
         replacements["XSIZE"] = context.intToString(xsize);
@@ -331,6 +343,8 @@ cl::Kernel OpenCLFFT3D::createKernel(int xsize, int ysize, int zsize, int& threa
         replacements["INPUT_TYPE"] = (inputIsReal && axis == 0 && forward ? "real" : "real2");
         replacements["OUTPUT_TYPE"] = (outputIsReal ? "real" : "real2");
         replacements["INPUT_IS_REAL"] = (inputIsReal && axis == 0 && forward ? "1" : "0");
+        replacements["INPUT_IS_PACKED"] = (inputIsReal && axis == 0 && !forward ? "1" : "0");
+        replacements["OUTPUT_IS_PACKED"] = (outputIsPacked ? "1" : "0");
         cl::Program program = context.createProgram(context.replaceStrings(OpenCLKernelSources::fft, replacements));
         cl::Kernel kernel(program, "execFFT");
         threads = (isCPU ? 1 : blocksPerGroup*zsize);
