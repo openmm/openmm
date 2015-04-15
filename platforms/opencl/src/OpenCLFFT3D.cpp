@@ -313,15 +313,23 @@ cl::Kernel OpenCLFFT3D::createKernel(int xsize, int ysize, int zsize, int& threa
         bool outputIsPacked = (inputIsReal && axis == 2 && forward);
         string outputSuffix = (outputIsReal ? ".x" : "");
         if (loopRequired) {
+            if (outputIsPacked)
+                source<<"if (x < XSIZE/2+1)\n";
             source<<"for (int z = get_local_id(0); z < ZSIZE; z += get_local_size(0))\n";
-            source<<"out[y*(ZSIZE*XSIZE)+z*XSIZE+x] = data"<<(stage%2)<<"[z]"<<outputSuffix<<";\n";
+            if (outputIsPacked)
+                source<<"out[y*(ZSIZE*(XSIZE/2+1))+z*(XSIZE/2+1)+x] = data"<<(stage%2)<<"[z]"<<outputSuffix<<";\n";
+            else
+                source<<"out[y*(ZSIZE*XSIZE)+z*XSIZE+x] = data"<<(stage%2)<<"[z]"<<outputSuffix<<";\n";
         }
         else {
-            source<<"if (index < XSIZE*YSIZE)\n";
-            if (outputIsPacked)
+            if (outputIsPacked) {
+                source<<"if (index < XSIZE*YSIZE && x < XSIZE/2+1)\n";
                 source<<"out[y*(ZSIZE*(XSIZE/2+1))+(get_local_id(0)%ZSIZE)*(XSIZE/2+1)+x] = data"<<(stage%2)<<"[get_local_id(0)]"<<outputSuffix<<";\n";
-            else
+            }
+            else {
+                source<<"if (index < XSIZE*YSIZE)\n";
                 source<<"out[y*(ZSIZE*XSIZE)+(get_local_id(0)%ZSIZE)*XSIZE+x] = data"<<(stage%2)<<"[get_local_id(0)]"<<outputSuffix<<";\n";
+            }
         }
         map<string, string> replacements;
         replacements["XSIZE"] = context.intToString(xsize);

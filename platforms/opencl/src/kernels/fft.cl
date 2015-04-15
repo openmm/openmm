@@ -30,8 +30,7 @@ __kernel void execFFT(__global const INPUT_TYPE* restrict in, __global OUTPUT_TY
         int x = index/YSIZE;
         int y = index-x*YSIZE;
 #if OUTPUT_IS_PACKED
-        if (x >= XSIZE/2+1)
-            continue;
+        if (x < XSIZE/2+1) {
 #endif
 #if LOOP_REQUIRED
         for (int z = get_local_id(0); z < ZSIZE; z += get_local_size(0))
@@ -53,6 +52,9 @@ __kernel void execFFT(__global const INPUT_TYPE* restrict in, __global OUTPUT_TY
     #endif
 #endif
         barrier(CLK_LOCAL_MEM_FENCE);
+#if OUTPUT_IS_PACKED
+        }
+#endif
         COMPUTE_FFT
     }
 }
