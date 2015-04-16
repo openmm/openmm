@@ -42,7 +42,6 @@ OpenCLSort::OpenCLSort(OpenCLContext& context, SortTrait* trait, unsigned int le
     replacements["MIN_KEY"] = trait->getMinKey();
     replacements["MAX_KEY"] = trait->getMaxKey();
     replacements["MAX_VALUE"] = trait->getMaxValue();
-    replacements["VALUE_IS_INT2"] = (trait->getDataType() == std::string("int2") ? "1" : "0");
     cl::Program program = context.createProgram(context.replaceStrings(OpenCLKernelSources::sort, replacements));
     shortListKernel = cl::Kernel(program, "sortShortList");
     computeRangeKernel = cl::Kernel(program, "computeRange");

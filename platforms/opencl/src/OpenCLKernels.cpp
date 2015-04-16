@@ -1628,6 +1628,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
             pmeDefines["GRID_SIZE_Y"] = cl.intToString(gridSizeY);
             pmeDefines["GRID_SIZE_Z"] = cl.intToString(gridSizeZ);
             pmeDefines["EPSILON_FACTOR"] = cl.doubleToString(sqrt(ONE_4PI_EPS0));
+            pmeDefines["M_PI"] = cl.doubleToString(M_PI);
             bool deviceIsCpu = (cl.getDevice().getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_CPU);
             if (deviceIsCpu)
                 pmeDefines["DEVICE_IS_CPU"] = "1";

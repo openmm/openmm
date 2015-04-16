@@ -75,6 +75,7 @@ OpenCLFFT3D::OpenCLFFT3D(OpenCLContext& context, int xsize, int ysize, int zsize
             defines["PACKED_XSIZE"] = context.intToString(packedXSize);
             defines["PACKED_YSIZE"] = context.intToString(packedYSize);
             defines["PACKED_ZSIZE"] = context.intToString(packedZSize);
+            defines["M_PI"] = context.doubleToString(M_PI);
             cl::Program program = context.createProgram(OpenCLKernelSources::fftR2C, defines);
             packForwardKernel = cl::Kernel(program, "packForwardData");
             unpackForwardKernel = cl::Kernel(program, "unpackForwardData");
