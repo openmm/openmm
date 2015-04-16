@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2013 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2015 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -30,13 +30,14 @@
 #include <vector>
 #include <set>
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class OPENMM_EXPORT ReferenceCCMAAlgorithm : public ReferenceConstraintAlgorithm {
 
 protected:
 
     int _maximumNumberOfIterations;
+    RealOpenMM _elementCutoff;
 
     int _numberOfConstraints;
     std::vector<std::pair<int, int> > _atomIndices;
@@ -66,25 +67,26 @@ public:
      * @param distance                 distances for constraints
      * @param masses                   atom masses
      * @param angles                   angle force field terms
+     * @param elementCutoff            the cutoff for which elements of the inverse matrix to keep
      */
-    ReferenceCCMAAlgorithm(int numberOfAtoms, int numberOfConstraints, const std::vector<std::pair<int, int> >& atomIndices, const std::vector<RealOpenMM>& distance, std::vector<RealOpenMM>& masses, std::vector<AngleInfo>& angles);
+    ReferenceCCMAAlgorithm(int numberOfAtoms, int numberOfConstraints, const std::vector<std::pair<int, int> >& atomIndices, const std::vector<RealOpenMM>& distance, std::vector<RealOpenMM>& masses, std::vector<AngleInfo>& angles, RealOpenMM elementCutoff);
 
-    ~ReferenceCCMAAlgorithm( );
+    ~ReferenceCCMAAlgorithm();
 
     /**
      * Get the number of constraints.
      */
-    int getNumberOfConstraints( void ) const;
+    int getNumberOfConstraints() const;
 
     /**
      * Get the maximum number of iterations to perform.
      */
-    int getMaximumNumberOfIterations( void ) const;
+    int getMaximumNumberOfIterations() const;
 
     /**
      * Set the maximum number of iterations to perform.
      */
-    void setMaximumNumberOfIterations( int maximumNumberOfIterations );
+    void setMaximumNumberOfIterations(int maximumNumberOfIterations);
 
     /**
      * Apply the constraint algorithm.
@@ -107,6 +109,13 @@ public:
      */
     void applyToVelocities(std::vector<OpenMM::RealVec>& atomCoordinates,
                      std::vector<OpenMM::RealVec>& velocities, std::vector<RealOpenMM>& inverseMasses, RealOpenMM tolerance);
+
+    /**
+     * Get the inverse constraint matrix.  Each element represents one column, and contains a list
+     * of all non-zero elements in the form (index, value).
+     */
+    const std::vector<std::vector<std::pair<int, RealOpenMM> > >& getMatrix() const;
+
 };
 
 class ReferenceCCMAAlgorithm::AngleInfo
@@ -120,6 +129,6 @@ public:
     }
 };
 
-// ---------------------------------------------------------------------------------------
+} // namespace OpenMM
 
 #endif // __ReferenceCCMAAlgorithm_H__

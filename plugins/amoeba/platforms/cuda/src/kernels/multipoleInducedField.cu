@@ -87,17 +87,13 @@ __device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, real3 de
         real scale3 = 1;
         real scale5 = 1;
         real damp = atom1.damp*atom2.damp;
-        if (damp != 0) {
-            real ratio = (r/damp);
-            ratio = ratio*ratio*ratio;
-            float pgamma = atom1.thole < atom2.thole ? atom1.thole : atom2.thole;
-            damp = -pgamma*ratio;
-            if (damp > -50) {
-                real expdamp = EXP(damp);
-                scale3 = 1 - expdamp;
-                scale5 = 1 - expdamp*(1-damp);
-            }
-        }
+        real ratio = (r/damp);
+        ratio = ratio*ratio*ratio;
+        float pgamma = atom1.thole < atom2.thole ? atom1.thole : atom2.thole;
+        damp = damp == 0 ? 0 : -pgamma*ratio;
+        real expdamp = EXP(damp);
+        scale3 = 1 - expdamp;
+        scale5 = 1 - expdamp*(1-damp);
         real dsc3 = scale3;
         real dsc5 = scale5;
         real r3 = (r*r2);
@@ -211,7 +207,8 @@ extern "C" __global__ void computeInducedField(
         unsigned long long* __restrict__ field, unsigned long long* __restrict__ fieldPolar, const real4* __restrict__ posq, const ushort2* __restrict__ exclusionTiles, 
         const real* __restrict__ inducedDipole, const real* __restrict__ inducedDipolePolar, unsigned int startTileIndex, unsigned int numTileIndices,
 #ifdef USE_CUTOFF
-        const int* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, unsigned int maxTiles, const real4* __restrict__ blockCenter, const unsigned int* __restrict__ interactingAtoms,
+        const int* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
+        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, const real4* __restrict__ blockCenter, const unsigned int* __restrict__ interactingAtoms,
 #elif defined USE_GK
         unsigned long long* __restrict__ fieldS, unsigned long long* __restrict__ fieldPolarS, const real* __restrict__ inducedDipoleS,
         const real* __restrict__ inducedDipolePolarS, const real* __restrict__ bornRadii,
@@ -255,9 +252,7 @@ extern "C" __global__ void computeInducedField(
             for (unsigned int j = 0; j < TILE_SIZE; j++) {
                 real3 delta = localData[tbx+j].pos-data.pos;
 #ifdef USE_PERIODIC
-                delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-                delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-                delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
+                APPLY_PERIODIC_TO_DELTA(delta)
 #endif
                 int atom2 = y*TILE_SIZE+j;
                 if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS)
@@ -277,9 +272,7 @@ extern "C" __global__ void computeInducedField(
             for (unsigned int j = 0; j < TILE_SIZE; j++) {
                 real3 delta = localData[tbx+tj].pos-data.pos;
 #ifdef USE_PERIODIC
-                delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-                delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-                delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
+                APPLY_PERIODIC_TO_DELTA(delta)
 #endif
                 int atom2 = y*TILE_SIZE+j;
                 if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS)
@@ -408,9 +401,7 @@ extern "C" __global__ void computeInducedField(
             for (j = 0; j < TILE_SIZE; j++) {
                 real3 delta = localData[tbx+tj].pos-data.pos;
 #ifdef USE_PERIODIC
-                delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-                delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-                delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
+                APPLY_PERIODIC_TO_DELTA(delta)
 #endif
                 int atom2 = atomIndices[tbx+tj];
                 if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS)

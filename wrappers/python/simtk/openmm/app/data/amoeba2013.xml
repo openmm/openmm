@@ -1,7 +1,7 @@
 <ForceField>
  <Info>
-  <Source>amoebapro13_5-2014.prm</Source>
-  <DateGenerated>2014-05-08</DateGenerated>
+  <Source>amoebapro13.prm</Source>
+  <DateGenerated>2015-02-19</DateGenerated>
   <Reference>Yue Shi, Zhen Xia, Jiajing Zhang, Robert Best, Chuanjie Wu, Jay W. Ponder, and Pengyu Ren. Polarizable Atomic Multipole-Based AMOEBA Force Field for Proteins. Journal of Chemical Theory and Computation, 9(9):4046–4063, 2013.</Reference>
  </Info>
  <AtomTypes>
@@ -170,7 +170,7 @@
   <Type name="163" class="32" element="C" mass="12.011"/>
   <Type name="164" class="33" element="O" mass="15.999"/>
   <Type name="165" class="34" element="O" mass="15.999"/>
-  <Type name="166" class="35" element="H" mass="15.999"/>
+  <Type name="166" class="35" element="H" mass="1.008"/>
   <Type name="167" class="8" element="C" mass="12.011"/>
   <Type name="168" class="9" element="H" mass="1.008"/>
   <Type name="169" class="8" element="C" mass="12.011"/>

@@ -26,8 +26,6 @@
 #include <sstream>
 #include <utility>
 
-#include "SimTKOpenMMCommon.h"
-#include "SimTKOpenMMLog.h"
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceForce.h"
 #include "ReferenceCustomHbondIxn.h"
@@ -38,7 +36,7 @@ using std::set;
 using std::string;
 using std::stringstream;
 using std::vector;
-using OpenMM::RealVec;
+using namespace OpenMM;
 
 /**---------------------------------------------------------------------------------------
 
@@ -65,7 +63,7 @@ ReferenceCustomHbondIxn::ReferenceCustomHbondIxn(const vector<vector<int> >& don
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceCustomHbondIxn::~ReferenceCustomHbondIxn( ){
+ReferenceCustomHbondIxn::~ReferenceCustomHbondIxn() {
 }
 
   /**---------------------------------------------------------------------------------------
@@ -87,19 +85,19 @@ void ReferenceCustomHbondIxn::setUseCutoff(RealOpenMM distance) {
      also been set, and the smallest side of the periodic box is at least twice the cutoff
      distance.
 
-     @param boxSize             the X, Y, and Z widths of the periodic box
+     @param vectors    the vectors defining the periodic box
 
      --------------------------------------------------------------------------------------- */
 
-void ReferenceCustomHbondIxn::setPeriodic(RealVec& boxSize) {
+void ReferenceCustomHbondIxn::setPeriodic(RealVec* vectors) {
     assert(cutoff);
-    assert(boxSize[0] >= 2.0*cutoffDistance);
-    assert(boxSize[1] >= 2.0*cutoffDistance);
-    assert(boxSize[2] >= 2.0*cutoffDistance);
+    assert(vectors[0][0] >= 2.0*cutoffDistance);
+    assert(vectors[1][1] >= 2.0*cutoffDistance);
+    assert(vectors[2][2] >= 2.0*cutoffDistance);
     periodic = true;
-    periodicBoxSize[0] = boxSize[0];
-    periodicBoxSize[1] = boxSize[1];
-    periodicBoxSize[2] = boxSize[2];
+    periodicBoxVectors[0] = vectors[0];
+    periodicBoxVectors[1] = vectors[1];
+    periodicBoxVectors[2] = vectors[2];
   }
 
 
@@ -129,7 +127,7 @@ void ReferenceCustomHbondIxn::calculatePairIxn(vector<RealVec>& atomCoordinates,
    int numDonors = donorAtoms.size();
    int numAcceptors = acceptorAtoms.size();
 
-   for( int donor = 0; donor < numDonors; donor++ ){
+   for (int donor = 0; donor < numDonors; donor++) {
       // Initialize per-donor parameters.
 
       for (int j = 0; j < (int) donorParamNames.size(); j++)
@@ -137,7 +135,7 @@ void ReferenceCustomHbondIxn::calculatePairIxn(vector<RealVec>& atomCoordinates,
 
       // loop over atom pairs
 
-      for( int acceptor = 0; acceptor < numAcceptors; acceptor++ ){
+      for (int acceptor = 0; acceptor < numAcceptors; acceptor++) {
          if (exclusions[donor].find(acceptor) == exclusions[donor].end()) {
              for (int j = 0; j < (int) acceptorParamNames.size(); j++)
                  variables[acceptorParamNames[j]] = acceptorParameters[acceptor][j];
@@ -288,7 +286,7 @@ void ReferenceCustomHbondIxn::calculateOneIxn(int donor, int acceptor, vector<Re
 
 void ReferenceCustomHbondIxn::computeDelta(int atom1, int atom2, RealOpenMM* delta, vector<RealVec>& atomCoordinates) const {
     if (periodic)
-        ReferenceForce::getDeltaRPeriodic(atomCoordinates[atom1], atomCoordinates[atom2], periodicBoxSize, delta);
+        ReferenceForce::getDeltaRPeriodic(atomCoordinates[atom1], atomCoordinates[atom2], periodicBoxVectors, delta);
     else
         ReferenceForce::getDeltaR(atomCoordinates[atom1], atomCoordinates[atom2], delta);
 }

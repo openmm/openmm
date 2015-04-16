@@ -89,7 +89,7 @@ extern "C" __global__ void selectVerletStepSize(int numAtoms, int paddedNumAtoms
     for (int index = threadIdx.x; index < numAtoms; index += blockDim.x*gridDim.x) {
         mixed3 f = make_mixed3(scale*force[index], scale*force[index+paddedNumAtoms], scale*force[index+paddedNumAtoms*2]);
         mixed invMass = velm[index].w;
-        err += (f.x*f.x + f.y*f.y + f.z*f.z)*invMass;
+        err += (f.x*f.x + f.y*f.y + f.z*f.z)*invMass*invMass;
     }
     error[threadIdx.x] = err;
     __syncthreads();

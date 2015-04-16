@@ -26,8 +26,6 @@
 #include <sstream>
 #include <utility>
 
-#include "SimTKOpenMMCommon.h"
-#include "SimTKOpenMMLog.h"
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceForce.h"
 #include "ReferenceCustomManyParticleIxn.h"
@@ -104,7 +102,7 @@ ReferenceCustomManyParticleIxn::ReferenceCustomManyParticleIxn(const CustomManyP
     CustomManyParticleForceImpl::buildFilterArrays(force, numTypes, particleTypes, orderIndex, particleOrder);
 }
 
-ReferenceCustomManyParticleIxn::~ReferenceCustomManyParticleIxn( ){
+ReferenceCustomManyParticleIxn::~ReferenceCustomManyParticleIxn() {
 }
 
 void ReferenceCustomManyParticleIxn::calculateIxn(vector<RealVec>& atomCoordinates, RealOpenMM** particleParameters,
@@ -120,15 +118,15 @@ void ReferenceCustomManyParticleIxn::setUseCutoff(RealOpenMM distance) {
     cutoffDistance = distance;
 }
 
-void ReferenceCustomManyParticleIxn::setPeriodic(RealVec& boxSize) {
+void ReferenceCustomManyParticleIxn::setPeriodic(RealVec* vectors) {
     assert(useCutoff);
-    assert(boxSize[0] >= 2.0*cutoffDistance);
-    assert(boxSize[1] >= 2.0*cutoffDistance);
-    assert(boxSize[2] >= 2.0*cutoffDistance);
+    assert(vectors[0][0] >= 2.0*cutoffDistance);
+    assert(vectors[1][1] >= 2.0*cutoffDistance);
+    assert(vectors[2][2] >= 2.0*cutoffDistance);
     usePeriodic = true;
-    periodicBoxSize[0] = boxSize[0];
-    periodicBoxSize[1] = boxSize[1];
-    periodicBoxSize[2] = boxSize[2];
+    periodicBoxVectors[0] = vectors[0];
+    periodicBoxVectors[1] = vectors[1];
+    periodicBoxVectors[2] = vectors[2];
 }
 
 void ReferenceCustomManyParticleIxn::loopOverInteractions(vector<int>& particles, int loopIndex, vector<OpenMM::RealVec>& atomCoordinates,
@@ -304,7 +302,7 @@ void ReferenceCustomManyParticleIxn::calculateOneIxn(const vector<int>& particle
 
 void ReferenceCustomManyParticleIxn::computeDelta(int atom1, int atom2, RealOpenMM* delta, vector<RealVec>& atomCoordinates) const {
     if (usePeriodic)
-        ReferenceForce::getDeltaRPeriodic(atomCoordinates[atom1], atomCoordinates[atom2], periodicBoxSize, delta);
+        ReferenceForce::getDeltaRPeriodic(atomCoordinates[atom1], atomCoordinates[atom2], periodicBoxVectors, delta);
     else
         ReferenceForce::getDeltaR(atomCoordinates[atom1], atomCoordinates[atom2], delta);
 }

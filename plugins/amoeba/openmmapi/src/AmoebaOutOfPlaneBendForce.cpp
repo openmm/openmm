@@ -44,35 +44,35 @@ AmoebaOutOfPlaneBendForce::AmoebaOutOfPlaneBendForce() {
 
 }
 
-double AmoebaOutOfPlaneBendForce::getAmoebaGlobalOutOfPlaneBendCubic( void ) const {
+double AmoebaOutOfPlaneBendForce::getAmoebaGlobalOutOfPlaneBendCubic() const {
     return _globalCubicK;
 }
 
-void AmoebaOutOfPlaneBendForce::setAmoebaGlobalOutOfPlaneBendCubic(double cubicK ) {
+void AmoebaOutOfPlaneBendForce::setAmoebaGlobalOutOfPlaneBendCubic(double cubicK) {
     _globalCubicK           = cubicK;
 }
 
-double AmoebaOutOfPlaneBendForce::getAmoebaGlobalOutOfPlaneBendQuartic( void ) const {
+double AmoebaOutOfPlaneBendForce::getAmoebaGlobalOutOfPlaneBendQuartic() const {
     return _globalQuarticK;
 }
 
-void AmoebaOutOfPlaneBendForce::setAmoebaGlobalOutOfPlaneBendQuartic(double quarticK ) {
+void AmoebaOutOfPlaneBendForce::setAmoebaGlobalOutOfPlaneBendQuartic(double quarticK) {
     _globalQuarticK         = quarticK;
 }
 
-double AmoebaOutOfPlaneBendForce::getAmoebaGlobalOutOfPlaneBendPentic( void ) const {
+double AmoebaOutOfPlaneBendForce::getAmoebaGlobalOutOfPlaneBendPentic() const {
     return _globalPenticK;
 }
 
-void AmoebaOutOfPlaneBendForce::setAmoebaGlobalOutOfPlaneBendPentic(double penticK ) {
+void AmoebaOutOfPlaneBendForce::setAmoebaGlobalOutOfPlaneBendPentic(double penticK) {
     _globalPenticK           = penticK;
 }
 
-double AmoebaOutOfPlaneBendForce::getAmoebaGlobalOutOfPlaneBendSextic( void ) const {
+double AmoebaOutOfPlaneBendForce::getAmoebaGlobalOutOfPlaneBendSextic() const {
     return _globalSexticK;
 }
 
-void AmoebaOutOfPlaneBendForce::setAmoebaGlobalOutOfPlaneBendSextic(double sexticK ) {
+void AmoebaOutOfPlaneBendForce::setAmoebaGlobalOutOfPlaneBendSextic(double sexticK) {
     _globalSexticK         = sexticK;
 }
 
@@ -82,7 +82,7 @@ int AmoebaOutOfPlaneBendForce::addOutOfPlaneBend(int particle1, int particle2, i
 }
 
 void AmoebaOutOfPlaneBendForce::getOutOfPlaneBendParameters(int index, int& particle1, int& particle2, int& particle3, int& particle4,
-                                                            double& k ) const {
+                                                            double& k) const {
     particle1       = outOfPlaneBends[index].particle1;
     particle2       = outOfPlaneBends[index].particle2;
     particle3       = outOfPlaneBends[index].particle3;

@@ -204,7 +204,7 @@ namespace OpenMM {
  * the force from a single force group, or a random number.
  * 
  * Expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
- * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, erf, erfc, min, max, abs, step, delta.  All trigonometric functions
+ * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, erf, erfc, min, max, abs, floor, ceil, step, delta.  All trigonometric functions
  * are defined in radians, and log is the natural logarithm.  step(x) = 0 if x is less than 0, 1 otherwise.  delta(x) = 1 if x is 0, 0 otherwise.  An expression
  * may also involve intermediate quantities that are defined following the main expression, using ";" as a separator.
  */
@@ -303,6 +303,13 @@ public:
      */
     double getGlobalVariable(int index) const;
     /**
+     * Get the current value of a global variable, specified by name.
+     *
+     * @param name    the name of the variable to get
+     * @return the current value of the parameter
+     */
+    double getGlobalVariableByName(const std::string& name) const;
+    /**
      * Set the value of a global variable.
      * 
      * @param index   the index of the variable to set
@@ -324,6 +331,14 @@ public:
      *                are stored into this
      */
     void getPerDofVariable(int index, std::vector<Vec3>& values) const;
+    /**
+     * Get the value of a per-DOF variable, specified by name.
+     *
+     * @param name    the name of the variable to get
+     * @param values  the values of the variable for all degrees of freedom
+     *                are stored into this
+     */
+    void getPerDofVariableByName(const std::string& name, std::vector<Vec3>& values) const;
     /**
      * Set the value of a per-DOF variable.
      * 
@@ -429,6 +444,10 @@ public:
      * the other hand, no guarantees are made about the behavior of simulations that use the same seed.
      * In particular, Platforms are permitted to use non-deterministic algorithms which produce different
      * results on successive runs, even if those runs were initialized identically.
+     *
+     * If seed is set to 0 (which is the default value assigned), a unique seed is chosen when a Context
+     * is created from this Force. This is done to ensure that each Context receives unique random seeds
+     * without you needing to set them explicitly.
      */
     void setRandomNumberSeed(int seed) {
         randomNumberSeed = seed;

@@ -28,7 +28,7 @@
 #include "RealVec.h"
 #include <vector>
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class AmoebaReferenceStretchBendForce {
 
@@ -40,7 +40,7 @@ public:
        
        --------------------------------------------------------------------------------------- */
  
-    AmoebaReferenceStretchBendForce( ){};
+    AmoebaReferenceStretchBendForce() {};
  
     /**---------------------------------------------------------------------------------------
        
@@ -48,7 +48,7 @@ public:
        
           --------------------------------------------------------------------------------------- */
  
-    ~AmoebaReferenceStretchBendForce( ){};
+    ~AmoebaReferenceStretchBendForce() {};
 
      /**---------------------------------------------------------------------------------------
      
@@ -70,15 +70,16 @@ public:
      
         --------------------------------------------------------------------------------------- */
 
-    RealOpenMM calculateForceAndEnergy( int numAngles, std::vector<OpenMM::RealVec>& posData,
-                                        const std::vector<int>& particle1,
-                                        const std::vector<int>&  particle2,
-                                        const std::vector<int>&  particle3,
-                                        const std::vector<RealOpenMM>& lengthABParameters,
-                                        const std::vector<RealOpenMM>& lengthCBParameters,
-                                        const std::vector<RealOpenMM>&  angle,
-                                        const std::vector<RealOpenMM>&  kQuadratic,
-                                        std::vector<OpenMM::RealVec>& forceData ) const;
+    RealOpenMM calculateForceAndEnergy(int numAngles, std::vector<OpenMM::RealVec>& posData,
+                                       const std::vector<int>& particle1,
+                                       const std::vector<int>&  particle2,
+                                       const std::vector<int>&  particle3,
+                                       const std::vector<RealOpenMM>& lengthABParameters,
+                                       const std::vector<RealOpenMM>& lengthCBParameters,
+                                       const std::vector<RealOpenMM>&  angle,
+                                       const std::vector<RealOpenMM>&  k1Quadratic,
+                                       const std::vector<RealOpenMM>&  k2Quadratic,
+                                       std::vector<OpenMM::RealVec>& forceData) const;
 
 
 private:
@@ -93,21 +94,22 @@ private:
        @param lengthAB                ideal AB bondlength
        @param lengthCB                ideal CB bondlength
        @param idealAngle              ideal angle
-       @param kParameter              k
+       @param k1Parameter             k for distance A-B * angle A-B-C
+       @param k2Parameter             k for distance B-C * angle A-B-C
        @param forces                  force vector
     
        @return energy
     
        --------------------------------------------------------------------------------------- */
 
-    RealOpenMM calculateStretchBendIxn( const OpenMM::RealVec& positionAtomA, const OpenMM::RealVec& positionAtomB,
-                                        const OpenMM::RealVec& positionAtomC,
-                                        RealOpenMM lengthAB,      RealOpenMM lengthCB,
-                                        RealOpenMM idealAngle,    RealOpenMM kParameter,
-                                        OpenMM::RealVec* forces ) const;
+    RealOpenMM calculateStretchBendIxn(const OpenMM::RealVec& positionAtomA, const OpenMM::RealVec& positionAtomB,
+                                       const OpenMM::RealVec& positionAtomC,
+                                       RealOpenMM lengthAB,      RealOpenMM lengthCB,
+                                       RealOpenMM idealAngle,    RealOpenMM k1Parameter,
+                                       RealOpenMM k2Parameter,   OpenMM::RealVec* forces) const;
  
 };
 
-// ---------------------------------------------------------------------------------------
+} // namespace OpenMM
 
 #endif // _AmoebaReferenceStretchBendForce___

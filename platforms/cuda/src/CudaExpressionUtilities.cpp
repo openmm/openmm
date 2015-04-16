@@ -239,7 +239,7 @@ void CudaExpressionUtilities::processExpression(stringstream& out, const Express
                     if (derivOrder[0] == 0) {
                         out << "real x = " << getTempName(node.getChildren()[0], temps) << ";\n";
                         out << "if (x >= 0 && x < " << paramsInt[0] << ") {\n";
-                        out << "int index = (int) round(x);\n";
+                        out << "int index = (int) floor(x+0.5f);\n";
                         out << nodeNames[j] << " = " << functionNames[i].second << "[index];\n";
                         out << "}\n";
                     }
@@ -249,8 +249,8 @@ void CudaExpressionUtilities::processExpression(stringstream& out, const Express
                 for (int j = 0; j < nodes.size(); j++) {
                     const vector<int>& derivOrder = dynamic_cast<const Operation::Custom*>(&nodes[j]->getOperation())->getDerivOrder();
                     if (derivOrder[0] == 0 && derivOrder[1] == 0) {
-                        out << "int x = (int) round(" << getTempName(node.getChildren()[0], temps) << ");\n";
-                        out << "int y = (int) round(" << getTempName(node.getChildren()[1], temps) << ");\n";
+                        out << "int x = (int) floor(" << getTempName(node.getChildren()[0], temps) << "+0.5f);\n";
+                        out << "int y = (int) floor(" << getTempName(node.getChildren()[1], temps) << "+0.5f);\n";
                         out << "int xsize = (int) " << paramsInt[0] << ";\n";
                         out << "int ysize = (int) " << paramsInt[1] << ";\n";
                         out << "int index = x+y*xsize;\n";
@@ -263,9 +263,9 @@ void CudaExpressionUtilities::processExpression(stringstream& out, const Express
                 for (int j = 0; j < nodes.size(); j++) {
                     const vector<int>& derivOrder = dynamic_cast<const Operation::Custom*>(&nodes[j]->getOperation())->getDerivOrder();
                     if (derivOrder[0] == 0 && derivOrder[1] == 0 && derivOrder[2] == 0) {
-                        out << "int x = (int) round(" << getTempName(node.getChildren()[0], temps) << ");\n";
-                        out << "int y = (int) round(" << getTempName(node.getChildren()[1], temps) << ");\n";
-                        out << "int z = (int) round(" << getTempName(node.getChildren()[2], temps) << ");\n";
+                        out << "int x = (int) floor(" << getTempName(node.getChildren()[0], temps) << "+0.5f);\n";
+                        out << "int y = (int) floor(" << getTempName(node.getChildren()[1], temps) << "+0.5f);\n";
+                        out << "int z = (int) floor(" << getTempName(node.getChildren()[2], temps) << "+0.5f);\n";
                         out << "int xsize = (int) " << paramsInt[0] << ";\n";
                         out << "int ysize = (int) " << paramsInt[1] << ";\n";
                         out << "int zsize = (int) " << paramsInt[2] << ";\n";
@@ -456,6 +456,12 @@ void CudaExpressionUtilities::processExpression(stringstream& out, const Express
             break;
         case Operation::ABS:
             out << "fabs(" << getTempName(node.getChildren()[0], temps) << ")";
+            break;
+        case Operation::FLOOR:
+            out << "floor(" << getTempName(node.getChildren()[0], temps) << ")";
+            break;
+        case Operation::CEIL:
+            out << "ceil(" << getTempName(node.getChildren()[0], temps) << ")";
             break;
         default:
             throw OpenMMException("Internal error: Unknown operation in user-defined expression: "+node.getOperation().getName());

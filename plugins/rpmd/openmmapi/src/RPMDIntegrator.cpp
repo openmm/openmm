@@ -33,8 +33,8 @@
 #include "openmm/Context.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/ContextImpl.h"
-#include "openmm/internal/OSRngSeed.h"
 #include "openmm/RpmdKernels.h"
+#include "openmm/RPMDUpdater.h"
 #include "SimTKOpenMMRealType.h"
 #include <cmath>
 #include <string>
@@ -48,7 +48,7 @@ RPMDIntegrator::RPMDIntegrator(int numCopies, double temperature, double frictio
     setFriction(frictionCoeff);
     setStepSize(stepSize);
     setConstraintTolerance(1e-5);
-    setRandomNumberSeed(osrngseed());
+    setRandomNumberSeed(0);
 }
 
 RPMDIntegrator::RPMDIntegrator(int numCopies, double temperature, double frictionCoeff, double stepSize) :
@@ -57,7 +57,7 @@ RPMDIntegrator::RPMDIntegrator(int numCopies, double temperature, double frictio
     setFriction(frictionCoeff);
     setStepSize(stepSize);
     setConstraintTolerance(1e-5);
-    setRandomNumberSeed(osrngseed());
+    setRandomNumberSeed(0);
 }
 
 void RPMDIntegrator::initialize(ContextImpl& contextRef) {
@@ -190,6 +190,12 @@ void RPMDIntegrator::step(int steps) {
         vector<Vec3> p(context->getSystem().getNumParticles(), Vec3());
         context->getOwner().setPositions(p);
         isFirstStep = false;
+    }
+    vector<ForceImpl*>& forceImpls = context->getForceImpls();
+    for (int i = 0; i < (int) forceImpls.size(); i++) {
+        RPMDUpdater* updater = dynamic_cast<RPMDUpdater*>(forceImpls[i]);
+        if (updater != NULL)
+            updater->updateRPMDState(*context);
     }
     for (int i = 0; i < steps; ++i) {
         kernel.getAs<IntegrateRPMDStepKernel>().execute(*context, *this, forcesAreValid);

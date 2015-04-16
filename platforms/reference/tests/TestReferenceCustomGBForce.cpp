@@ -51,6 +51,8 @@
 using namespace OpenMM;
 using namespace std;
 
+ReferencePlatform platform;
+
 const double TOL = 1e-5;
 
 void testOBC(GBSAOBCForce::NonbondedMethod obcMethod, CustomGBForce::NonbondedMethod customMethod) {
@@ -58,7 +60,6 @@ void testOBC(GBSAOBCForce::NonbondedMethod obcMethod, CustomGBForce::NonbondedMe
     const int numParticles = numMolecules*2;
     const double boxSize = 10.0;
     const double cutoff = 2.0;
-    ReferencePlatform platform;
 
     // Create two systems: one with a GBSAOBCForce, and one using a CustomGBForce to implement the same interaction.
 
@@ -135,6 +136,18 @@ void testOBC(GBSAOBCForce::NonbondedMethod obcMethod, CustomGBForce::NonbondedMe
     custom->setNonbondedMethod(customMethod);
     standardSystem.addForce(obc);
     customSystem.addForce(custom);
+    if (customMethod == CustomGBForce::CutoffPeriodic) {
+        ASSERT(custom->usesPeriodicBoundaryConditions());
+        ASSERT(obc->usesPeriodicBoundaryConditions());
+        ASSERT(standardSystem.usesPeriodicBoundaryConditions());
+        ASSERT(customSystem.usesPeriodicBoundaryConditions());
+    }
+    else {
+        ASSERT(!custom->usesPeriodicBoundaryConditions());
+        ASSERT(!obc->usesPeriodicBoundaryConditions());
+        ASSERT(!standardSystem.usesPeriodicBoundaryConditions());
+        ASSERT(!customSystem.usesPeriodicBoundaryConditions());
+    }
     VerletIntegrator integrator1(0.01);
     VerletIntegrator integrator2(0.01);
     Context context1(standardSystem, integrator1, platform);
@@ -178,7 +191,6 @@ void testMembrane() {
     const int numMolecules = 70;
     const int numParticles = numMolecules*2;
     const double boxSize = 10.0;
-    ReferencePlatform platform;
 
     // Create a system with an implicit membrane.
 
@@ -268,7 +280,6 @@ void testMembrane() {
 }
 
 void testTabulatedFunction() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -301,7 +312,6 @@ void testTabulatedFunction() {
 }
 
 void testMultipleChainRules() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -329,7 +339,6 @@ void testMultipleChainRules() {
 }
 
 void testPositionDependence() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -393,7 +402,6 @@ void testPositionDependence() {
 }
 
 void testExclusions() {
-    ReferencePlatform platform;
     for (int i = 3; i < 4; i++) {
         System system;
         system.addParticle(1.0);
@@ -461,7 +469,7 @@ void testExclusions() {
 
 // create custom GB/VI force
 
-static CustomGBForce* createCustomGBVI( double solventDielectric, double soluteDielectric ) {
+static CustomGBForce* createCustomGBVI(double solventDielectric, double soluteDielectric) {
 
     CustomGBForce* customGbviForce  = new CustomGBForce();
 
@@ -512,7 +520,7 @@ static CustomGBForce* createCustomGBVI( double solventDielectric, double soluteD
 
 // ethance GB/VI test case
 
-static void buildEthane( GBVIForce* gbviForce, std::vector<Vec3>& positions ) {
+static void buildEthane(GBVIForce* gbviForce, std::vector<Vec3>& positions) {
 
     const int numParticles = 8;
 
@@ -523,55 +531,56 @@ static void buildEthane( GBVIForce* gbviForce, std::vector<Vec3>& positions ) {
     int AM1_BCC = 1;
     H_charge    = -0.053;
     C_charge    = -3.0*H_charge;
-    if( AM1_BCC ){
+    if (AM1_BCC) {
        C_radius =  0.180;
        C_gamma  = -0.2863;
        H_radius =  0.125;
        H_gamma  =  0.2437;
-    } else {
+    }
+    else {
        C_radius =  0.215;
        C_gamma  = -1.1087;
        H_radius =  0.150;
        H_gamma  =  0.1237;
     }
 
-    for( int i = 0; i < numParticles; i++ ){
-       gbviForce->addParticle( H_charge, H_radius, H_gamma);
+    for (int i = 0; i < numParticles; i++) {
+       gbviForce->addParticle(H_charge, H_radius, H_gamma);
     }
-    gbviForce->setParticleParameters( 1, C_charge, C_radius, C_gamma);
-    gbviForce->setParticleParameters( 4, C_charge, C_radius, C_gamma);
+    gbviForce->setParticleParameters(1, C_charge, C_radius, C_gamma);
+    gbviForce->setParticleParameters(4, C_charge, C_radius, C_gamma);
  
-    gbviForce->addBond( 0, 1, C_HBondDistance );
-    gbviForce->addBond( 2, 1, C_HBondDistance );
-    gbviForce->addBond( 3, 1, C_HBondDistance );
-    gbviForce->addBond( 1, 4, C_CBondDistance );
-    gbviForce->addBond( 5, 4, C_HBondDistance );
-    gbviForce->addBond( 6, 4, C_HBondDistance );
-    gbviForce->addBond( 7, 4, C_HBondDistance );
+    gbviForce->addBond(0, 1, C_HBondDistance);
+    gbviForce->addBond(2, 1, C_HBondDistance);
+    gbviForce->addBond(3, 1, C_HBondDistance);
+    gbviForce->addBond(1, 4, C_CBondDistance);
+    gbviForce->addBond(5, 4, C_HBondDistance);
+    gbviForce->addBond(6, 4, C_HBondDistance);
+    gbviForce->addBond(7, 4, C_HBondDistance);
     
     std::vector<pair<int, int> > bondExceptions;
     std::vector<double> bondDistances;
     
     bondExceptions.push_back(pair<int, int>(0, 1)); 
-    bondDistances.push_back( C_HBondDistance );
+    bondDistances.push_back(C_HBondDistance);
     
     bondExceptions.push_back(pair<int, int>(2, 1)); 
-    bondDistances.push_back( C_HBondDistance );
+    bondDistances.push_back(C_HBondDistance);
     
     bondExceptions.push_back(pair<int, int>(3, 1)); 
-    bondDistances.push_back( C_HBondDistance );
+    bondDistances.push_back(C_HBondDistance);
     
     bondExceptions.push_back(pair<int, int>(1, 4)); 
-    bondDistances.push_back( C_CBondDistance );
+    bondDistances.push_back(C_CBondDistance);
     
     bondExceptions.push_back(pair<int, int>(5, 4)); 
-    bondDistances.push_back( C_HBondDistance );
+    bondDistances.push_back(C_HBondDistance);
     
     bondExceptions.push_back(pair<int, int>(6, 4)); 
-    bondDistances.push_back( C_HBondDistance );
+    bondDistances.push_back(C_HBondDistance);
  
     bondExceptions.push_back(pair<int, int>(7, 4));
-    bondDistances.push_back( C_HBondDistance );
+    bondDistances.push_back(C_HBondDistance);
  
     positions.resize(numParticles);
     positions[0] = Vec3(0.5480,    1.7661,    0.0000);
@@ -587,7 +596,7 @@ static void buildEthane( GBVIForce* gbviForce, std::vector<Vec3>& positions ) {
 
 // dimer GB/VI test case
 
-static void buildDimer( GBVIForce* gbviForce, std::vector<Vec3>& positions ) {
+static void buildDimer(GBVIForce* gbviForce, std::vector<Vec3>& positions) {
 
     const int numParticles = 2;
 
@@ -601,29 +610,30 @@ static void buildDimer( GBVIForce* gbviForce, std::vector<Vec3>& positions ) {
 
     H_charge    = 0.0;
     C_charge    = 0.0;
-    if( AM1_BCC ){
+    if (AM1_BCC) {
        C_radius =  0.180;
        C_gamma  = -0.2863;
        H_radius =  0.125;
        H_gamma  =  0.2437;
-    } else {
+    }
+    else {
        C_radius =  0.215;
        C_gamma  = -1.1087;
        H_radius =  0.150;
        H_gamma  =  0.1237;
     }
 
-    for( int i = 0; i < numParticles; i++ ){
-       gbviForce->addParticle( H_charge, H_radius, H_gamma);
+    for (int i = 0; i < numParticles; i++) {
+       gbviForce->addParticle(H_charge, H_radius, H_gamma);
     }
-    gbviForce->setParticleParameters( 1, C_charge, C_radius, C_gamma);
+    gbviForce->setParticleParameters(1, C_charge, C_radius, C_gamma);
  
-    gbviForce->addBond( 0, 1, C_HBondDistance );
+    gbviForce->addBond(0, 1, C_HBondDistance);
     std::vector<pair<int, int> > bondExceptions;
     std::vector<double> bondDistances;
     
     bondExceptions.push_back(pair<int, int>(0, 1)); 
-    bondDistances.push_back( C_HBondDistance );
+    bondDistances.push_back(C_HBondDistance);
     
     positions.resize(numParticles);
     positions[0] = Vec3(0.0,       0.0,       0.0);
@@ -632,7 +642,7 @@ static void buildDimer( GBVIForce* gbviForce, std::vector<Vec3>& positions ) {
 
 // monomer GB/VI test case
 
-static void buildMonomer( GBVIForce* gbviForce, std::vector<Vec3>& positions ) {
+static void buildMonomer(GBVIForce* gbviForce, std::vector<Vec3>& positions) {
 
     const int numParticles = 1;
 
@@ -642,8 +652,8 @@ static void buildMonomer( GBVIForce* gbviForce, std::vector<Vec3>& positions ) {
     H_radius = 0.125;
     H_gamma  = 0.2437;
 
-    for( int i = 0; i < numParticles; i++ ){
-       gbviForce->addParticle( H_charge, H_radius, H_gamma);
+    for (int i = 0; i < numParticles; i++) {
+       gbviForce->addParticle(H_charge, H_radius, H_gamma);
     }
     positions.resize(numParticles);
     positions[0] = Vec3(0.0,    0.0,    0.0);
@@ -652,7 +662,7 @@ static void buildMonomer( GBVIForce* gbviForce, std::vector<Vec3>& positions ) {
 // taken from gbviForceImpl class
 // computes the scaled radii based on covalent info and atomic radii
 
-static void findScaledRadii( GBVIForce& gbviForce, std::vector<double> & scaledRadii) {
+static void findScaledRadii(GBVIForce& gbviForce, std::vector<double> & scaledRadii) {
 
     int     numberOfParticles = gbviForce.getNumParticles();
     int numberOfBonds         = gbviForce.getNumBonds();
@@ -660,15 +670,11 @@ static void findScaledRadii( GBVIForce& gbviForce, std::vector<double> & scaledR
     // load 1-2 atom pairs along w/ bond distance using HarmonicBondForce & constraints
     // numberOfBonds < 1, indicating they were not set by the user
     
-    if( numberOfBonds < 1 && numberOfParticles > 1 ){
-        (void) fprintf( stderr, "Warning: no covalent bonds set for GB/VI force!\n" );
-    }
-    
     std::vector< std::vector<int> > bondIndices;
-    bondIndices.resize( numberOfBonds );
+    bondIndices.resize(numberOfBonds);
     
     std::vector<double> bondLengths;
-    bondLengths.resize( numberOfBonds );
+    bondLengths.resize(numberOfBonds);
 
     scaledRadii.resize(numberOfParticles);
     for (int i = 0; i < numberOfParticles; i++) {
@@ -693,14 +699,14 @@ static void findScaledRadii( GBVIForce& gbviForce, std::vector<double> & scaledR
             msg << particle2;
             throw OpenMMException(msg.str());
         }
-        if (bondLength < 0 ) {
+        if (bondLength < 0) {
             std::stringstream msg;
             msg << "GBVISoftcoreForce: negative bondlength: ";
             msg << bondLength;
             throw OpenMMException(msg.str());
         }
-        bondIndices[i].push_back( particle1 );
-        bondIndices[i].push_back( particle2 );
+        bondIndices[i].push_back(particle1);
+        bondIndices[i].push_back(particle2);
         bondLengths[i] = bondLength;
     }
 
@@ -718,7 +724,7 @@ static void findScaledRadii( GBVIForce& gbviForce, std::vector<double> & scaledR
 
     // compute scaled radii (Eq. 5 of Labute paper [JCC 29 p. 1693-1698 2008])
 
-    for (int j = 0; j < (int) bonded12.size(); ++j){
+    for (int j = 0; j < (int) bonded12.size(); ++j) {
 
         double charge;
         double gamma;
@@ -727,20 +733,18 @@ static void findScaledRadii( GBVIForce& gbviForce, std::vector<double> & scaledR
      
         gbviForce.getParticleParameters(j, charge, radiusJ, gamma); 
 
-        if(  bonded12[j].size() == 0 ){
-            if( numberOfParticles > 1 ){
-                (void) fprintf( stderr, "Warning GBVIForceImpl::findScaledRadii atom %d has no covalent bonds; using atomic radius=%.3f.\n", j, radiusJ );
-            }
+        if ( bonded12[j].size() == 0) {
             scaledRadiusJ = radiusJ;
 //             errors++;
-        } else {
+        }
+        else {
 
             double rJ2    = radiusJ*radiusJ;
     
             // loop over bonded neighbors of atom j, applying Eq. 5 in Labute
 
             scaledRadiusJ = 0.0;
-            for (int i = 0; i < (int) bonded12[j].size(); ++i){
+            for (int i = 0; i < (int) bonded12[j].size(); ++i) {
     
                int index            = bonded12[j][i];
                int bondedAtomIndex  = (j == bondIndices[index][0]) ? bondIndices[index][1] : bondIndices[index][0];
@@ -757,53 +761,33 @@ static void findScaledRadii( GBVIForce& gbviForce, std::vector<double> & scaledR
                       a_ji         *= a_ji;
                       a_ji          = (rI2 - a_ji)/(2.0*bondLengths[index]);
     
-               scaledRadiusJ       += a_ij*a_ij*(3.0*radiusI - a_ij) + a_ji*a_ji*( 3.0*radiusJ - a_ji );
+               scaledRadiusJ       += a_ij*a_ij*(3.0*radiusI - a_ij) + a_ji*a_ji*(3.0*radiusJ - a_ji);
             }
     
             scaledRadiusJ  = (radiusJ*radiusJ*radiusJ) - 0.125*scaledRadiusJ; 
-            if( scaledRadiusJ > 0.0 ){
-                scaledRadiusJ  = 0.95*pow( scaledRadiusJ, (1.0/3.0) );
-            } else {
+            if (scaledRadiusJ > 0.0) {
+                scaledRadiusJ  = 0.95*pow(scaledRadiusJ, (1.0/3.0));
+            }
+            else {
                 scaledRadiusJ  = 0.0;
             }
         }
-        //(void) fprintf( stderr, "scaledRadii %d %12.4f\n", j, scaledRadiusJ );
         scaledRadii[j] = scaledRadiusJ;
 
     }
 
     // abort if errors
 
-    if( errors ){
+    if (errors) {
         throw OpenMMException("GBVIForceImpl::findScaledRadii errors -- aborting");
     }
-
-#if GBVIDebug
-    (void) fprintf( stderr, "                  R              q          gamma   scaled radii no. bnds\n" );
-    double totalQ = 0.0;
-    for( int i = 0; i < (int) scaledRadii.size(); i++ ){
-
-        double charge;
-        double gamma;
-        double radiusI;
-     
-        gbviForce.getParticleParameters(i, charge, radiusI, gamma); 
-        totalQ += charge;
-        (void) fprintf( stderr, "%4d %14.5e %14.5e %14.5e %14.5e %d\n", i, radiusI, charge, gamma, scaledRadii[i], (int) bonded12[i].size() );
-    }
-    (void) fprintf( stderr, "Total charge=%e\n", totalQ );
-    (void) fflush( stderr );
-#endif
-
-#undef GBVIDebug
-
 }
 
 // load parameters from gbviForce to customGbviForce
 // findScaledRadii() is called to calculate the scaled radii (S)
 // S is derived quantity in GBVIForce, not a parameter is the case here
 
-static void loadGbviParameters( GBVIForce* gbviForce, CustomGBForce* customGbviForce ) {
+static void loadGbviParameters(GBVIForce* gbviForce, CustomGBForce* customGbviForce) {
 
     int numParticles = gbviForce->getNumParticles();
 
@@ -811,11 +795,11 @@ static void loadGbviParameters( GBVIForce* gbviForce, CustomGBForce* customGbviF
 
     vector<double> params(4);
     std::vector<double> scaledRadii;
-    findScaledRadii( *gbviForce, scaledRadii);
+    findScaledRadii(*gbviForce, scaledRadii);
 
-    for( int ii = 0; ii < numParticles; ii++) {
+    for (int ii = 0; ii < numParticles; ii++) {
         double charge, radius, gamma;
-        gbviForce->getParticleParameters( ii, charge, radius, gamma );
+        gbviForce->getParticleParameters(ii, charge, radius, gamma);
         params[0] = charge;
         params[1] = radius;
         params[2] = scaledRadii[ii];
@@ -829,19 +813,20 @@ void testGBVI(GBVIForce::NonbondedMethod gbviMethod, CustomGBForce::NonbondedMet
 
     const int numMolecules = 1;
     const double boxSize   = 10.0;
-    ReferencePlatform platform;
 
     GBVIForce*        gbvi = new GBVIForce();
     std::vector<Vec3> positions;
 
     // select molecule
 
-    if( molecule == "Monomer" ){
-        buildMonomer( gbvi, positions );
-    } else if( molecule == "Dimer" ){
-        buildDimer( gbvi, positions );
-    } else {
-        buildEthane( gbvi, positions );
+    if (molecule == "Monomer") {
+        buildMonomer(gbvi, positions);
+    }
+    else if (molecule == "Dimer") {
+        buildDimer(gbvi, positions);
+    }
+    else {
+        buildEthane(gbvi, positions);
     }
 
     int numParticles = gbvi->getNumParticles();
@@ -857,12 +842,12 @@ void testGBVI(GBVIForce::NonbondedMethod gbviMethod, CustomGBForce::NonbondedMet
 
     // create customGbviForce GBVI force
 
-    CustomGBForce* customGbviForce  = createCustomGBVI( gbvi->getSolventDielectric(), gbvi->getSoluteDielectric() );
+    CustomGBForce* customGbviForce  = createCustomGBVI(gbvi->getSolventDielectric(), gbvi->getSoluteDielectric());
     customGbviForce->setCutoffDistance(2.0);
 
     // load parameters from gbvi to customGbviForce
 
-    loadGbviParameters( gbvi, customGbviForce );
+    loadGbviParameters(gbvi, customGbviForce);
 
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);

@@ -27,7 +27,7 @@
 
 #include "ReferenceDynamics.h"
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class ReferenceVariableVerletDynamics : public ReferenceDynamics {
 
@@ -48,7 +48,7 @@ class ReferenceVariableVerletDynamics : public ReferenceDynamics {
 
          --------------------------------------------------------------------------------------- */
 
-       ReferenceVariableVerletDynamics( int numberOfAtoms, RealOpenMM accuracy );
+       ReferenceVariableVerletDynamics(int numberOfAtoms, RealOpenMM accuracy);
 
       /**---------------------------------------------------------------------------------------
 
@@ -56,7 +56,7 @@ class ReferenceVariableVerletDynamics : public ReferenceDynamics {
 
          --------------------------------------------------------------------------------------- */
 
-       ~ReferenceVariableVerletDynamics( );
+       ~ReferenceVariableVerletDynamics();
 
       /**---------------------------------------------------------------------------------------
 
@@ -66,7 +66,7 @@ class ReferenceVariableVerletDynamics : public ReferenceDynamics {
 
          --------------------------------------------------------------------------------------- */
 
-      RealOpenMM getAccuracy( void ) const;
+      RealOpenMM getAccuracy() const;
 
       /**---------------------------------------------------------------------------------------
 
@@ -74,7 +74,7 @@ class ReferenceVariableVerletDynamics : public ReferenceDynamics {
 
          --------------------------------------------------------------------------------------- */
 
-      void setAccuracy( RealOpenMM accuracy );
+      void setAccuracy(RealOpenMM accuracy);
 
       /**---------------------------------------------------------------------------------------
 
@@ -95,6 +95,6 @@ class ReferenceVariableVerletDynamics : public ReferenceDynamics {
 
 };
 
-// ---------------------------------------------------------------------------------------
+} // namespace OpenMM
 
 #endif // __ReferenceVariableVerletDynamics_H__

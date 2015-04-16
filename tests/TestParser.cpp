@@ -128,6 +128,18 @@ void verifyInvalidExpression(const string& expression) {
 }
 
 /**
+ * Verify that two numbers have the same value.
+ */
+
+void assertNumbersEqual(double val1, double val2) {
+    const double inf = numeric_limits<double>::infinity();
+    if (val1 == val1 || val2 == val2) // If both are NaN, that's fine.
+        if (val1 != inf || val2 != inf) // Both infinity is also fine.
+            if (val1 != -inf || val2 != -inf) // Same for -infinity.
+                ASSERT_EQUAL_TOL(val1, val2, 1e-10);
+}
+
+/**
  * Verify that two expressions give the same value.
  */
 
@@ -137,11 +149,22 @@ void verifySameValue(const ParsedExpression& exp1, const ParsedExpression& exp2,
     variables["y"] = y;
     double val1 = exp1.evaluate(variables);
     double val2 = exp2.evaluate(variables);
-    const double inf = numeric_limits<double>::infinity();
-    if (val1 == val1 || val2 == val2) // If both are NaN, that's fine.
-        if (val1 != inf || val2 != inf) // Both infinity is also fine.
-            if (val1 != -inf || val2 != -inf) // Same for -infinity.
-                ASSERT_EQUAL_TOL(val1, val2, 1e-10);
+    assertNumbersEqual(val1, val2);
+    
+    // Now create CompiledExpressions from them and see if those also match.
+
+    CompiledExpression compiled1 = exp1.createCompiledExpression();
+    CompiledExpression compiled2 = exp2.createCompiledExpression();
+    if (compiled1.getVariables().find("x") != compiled1.getVariables().end())
+        compiled1.getVariableReference("x") = x;
+    if (compiled1.getVariables().find("y") != compiled1.getVariables().end())
+        compiled1.getVariableReference("y") = y;
+    if (compiled2.getVariables().find("x") != compiled2.getVariables().end())
+        compiled2.getVariableReference("x") = x;
+    if (compiled2.getVariables().find("y") != compiled2.getVariables().end())
+        compiled2.getVariableReference("y") = y;
+    assertNumbersEqual(val1, compiled1.evaluate());
+    assertNumbersEqual(val2, compiled2.evaluate());
 }
 
 /**
@@ -171,14 +194,14 @@ void testCustomFunction(const string& expression, const string& equivalent) {
     verifySameValue(exp1, exp2, 2.0, 3.0);
     verifySameValue(exp1, exp2, -2.0, 3.0);
     verifySameValue(exp1, exp2, 2.0, -3.0);
-    ParsedExpression deriv1 = exp1.differentiate("x");
-    ParsedExpression deriv2 = exp2.differentiate("x");
+    ParsedExpression deriv1 = exp1.differentiate("x").optimize();
+    ParsedExpression deriv2 = exp2.differentiate("x").optimize();
     verifySameValue(deriv1, deriv2, 1.0, 2.0);
     verifySameValue(deriv1, deriv2, 2.0, 3.0);
     verifySameValue(deriv1, deriv2, -2.0, 3.0);
     verifySameValue(deriv1, deriv2, 2.0, -3.0);
-    ParsedExpression deriv3 = deriv1.differentiate("y");
-    ParsedExpression deriv4 = deriv2.differentiate("y");
+    ParsedExpression deriv3 = deriv1.differentiate("y").optimize();
+    ParsedExpression deriv4 = deriv2.differentiate("y").optimize();
     verifySameValue(deriv3, deriv4, 1.0, 2.0);
     verifySameValue(deriv3, deriv4, 2.0, 3.0);
     verifySameValue(deriv3, deriv4, -2.0, 3.0);
@@ -223,6 +246,9 @@ int main() {
         verifyEvaluation("max(x, -1)", 2.0, 3.0, 2.0);
         verifyEvaluation("abs(x-y)", 2.0, 3.0, 1.0);
         verifyEvaluation("delta(x)+3*delta(y-1.5)", 2.0, 1.5, 3.0);
+        verifyEvaluation("step(x-3)+y*step(x)", 2.0, 3.0, 3.0);
+        verifyEvaluation("floor(x)", -2.1, 3.0, -3.0);
+        verifyEvaluation("ceil(x)", -2.1, 3.0, -2.0);
         verifyInvalidExpression("1..2");
         verifyInvalidExpression("1*(2+3");
         verifyInvalidExpression("5++4");
@@ -255,6 +281,7 @@ int main() {
         verifyDerivative("min(x, 2*x)", "step(x-2*x)*2+(1-step(x-2*x))*1");
         verifyDerivative("max(5, x^2)", "(1-step(5-x^2))*2*x");
         verifyDerivative("abs(3*x)", "step(3*x)*3+(1-step(3*x))*-3");
+        verifyDerivative("floor(x)+0.5*x*ceil(x)", "0.5*ceil(x)");
         testCustomFunction("custom(x, y)/2", "x*y");
         testCustomFunction("custom(x^2, 1)+custom(2, y-1)", "2*x^2+4*(y-1)");
         cout << Parser::parse("x*x").optimize() << endl;

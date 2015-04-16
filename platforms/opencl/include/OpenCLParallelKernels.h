@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -69,11 +69,13 @@ public:
      * @param includeForce  true if forces should be computed
      * @param includeEnergy true if potential energy should be computed
      * @param groups        a set of bit flags for which force groups to include
+     * @param valid         the method may set this to false to indicate the results are invalid and the force/energy
+     *                      calculation should be repeated
      * @return the potential energy of the system.  This value is added to all values returned by ForceImpls'
      * calcForcesAndEnergy() methods.  That is, each force kernel may <i>either</i> return its contribution to the
      * energy directly, <i>or</i> add it to an internal buffer so that it will be included here.
      */
-    double finishComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups);
+    double finishComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups, bool& valid);
 private:
     class BeginComputationTask;
     class FinishComputationTask;
@@ -81,6 +83,7 @@ private:
     std::vector<Kernel> kernels;
     std::vector<long long> completionTimes;
     std::vector<double> contextNonbondedFractions;
+    std::vector<int> tileCounts;
     OpenCLArray* contextForces;
     cl::Buffer* pinnedPositionBuffer;
     cl::Buffer* pinnedForceBuffer;
@@ -341,6 +344,13 @@ public:
      * @return the potential energy due to the force
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CMAPTorsionForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const CMAPTorsionForce& force);
 private:
     class Task;
     OpenCLPlatform::PlatformData& data;

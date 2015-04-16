@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012 Stanford University and the Authors.
+Portions copyright (c) 2012-2015 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors:
 
@@ -40,7 +40,7 @@ from datetime import date
 from simtk.openmm import Vec3, Platform
 from simtk.openmm.app.internal.pdbstructure import PdbStructure
 from simtk.openmm.app import Topology
-from simtk.unit import nanometers, angstroms, is_quantity, norm, Quantity
+from simtk.unit import nanometers, angstroms, is_quantity, norm, Quantity, dot
 import element as elem
 try:
     import numpy
@@ -75,21 +75,25 @@ class PDBFile(object):
             pdb = file
         else:
             inputfile = file
+            own_handle = False
             if isinstance(file, str):
                 inputfile = open(file)
+                own_handle = True
             pdb = PdbStructure(inputfile, load_all_models=True)
+            if own_handle:
+                inputfile.close()
         PDBFile._loadNameReplacementTables()
 
         # Build the topology
 
         atomByNumber = {}
         for chain in pdb.iter_chains():
-            c = top.addChain()
+            c = top.addChain(chain.chain_id)
             for residue in chain.iter_residues():
                 resName = residue.get_name()
                 if resName in PDBFile._residueNameReplacements:
                     resName = PDBFile._residueNameReplacements[resName]
-                r = top.addResidue(resName, c)
+                r = top.addResidue(resName, c, str(residue.number))
                 if resName in PDBFile._atomNameReplacements:
                     atomReplacements = PDBFile._atomNameReplacements[resName]
                 else:
@@ -125,7 +129,7 @@ class PDBFile(object):
                                 element = elem.get_by_symbol(atomName[0])
                             except KeyError:
                                 pass
-                    newAtom = top.addAtom(atomName, element, r)
+                    newAtom = top.addAtom(atomName, element, r, str(atom.serial_number))
                     atomByNumber[atom.serial_number] = newAtom
         self._positions = []
         for model in pdb.iter_models(True):
@@ -138,7 +142,7 @@ class PDBFile(object):
             self._positions.append(coords*nanometers)
         ## The atom positions read from the PDB file.  If the file contains multiple frames, these are the positions in the first frame.
         self.positions = self._positions[0]
-        self.topology.setUnitCellDimensions(pdb.get_unit_cell_dimensions())
+        self.topology.setPeriodicBoxVectors(pdb.get_periodic_box_vectors())
         self.topology.createStandardBonds()
         self.topology.createDisulfideBonds(self.positions)
         self._numpyPositions = None
@@ -225,16 +229,19 @@ class PDBFile(object):
                 map[atom.attrib[id]] = name
 
     @staticmethod
-    def writeFile(topology, positions, file=sys.stdout, modelIndex=None):
+    def writeFile(topology, positions, file=sys.stdout, keepIds=False):
         """Write a PDB file containing a single model.
 
         Parameters:
          - topology (Topology) The Topology defining the model to write
          - positions (list) The list of atomic positions to write
          - file (file=stdout) A file to write to
+         - keepIds (bool=False) If True, keep the residue and chain IDs specified in the Topology rather than generating
+           new ones.  Warning: It is up to the caller to make sure these are valid IDs that satisfy the requirements of
+           the PDB format.  Otherwise, the output file will be invalid.
         """
         PDBFile.writeHeader(topology, file)
-        PDBFile.writeModel(topology, positions, file)
+        PDBFile.writeModel(topology, positions, file, keepIds=keepIds)
         PDBFile.writeFooter(topology, file)
 
     @staticmethod
@@ -246,13 +253,19 @@ class PDBFile(object):
          - file (file=stdout) A file to write the file to
         """
         print >>file, "REMARK   1 CREATED WITH OPENMM %s, %s" % (Platform.getOpenMMVersion(), str(date.today()))
-        boxSize = topology.getUnitCellDimensions()
-        if boxSize is not None:
-            size = boxSize.value_in_unit(angstroms)
-            print >>file, "CRYST1%9.3f%9.3f%9.3f  90.00  90.00  90.00 P 1           1 " % size
+        vectors = topology.getPeriodicBoxVectors()
+        if vectors is not None:
+            (a, b, c) = vectors.value_in_unit(angstroms)
+            a_length = norm(a)
+            b_length = norm(b)
+            c_length = norm(c)
+            alpha = math.acos(dot(b, c)/(b_length*c_length))*180.0/math.pi
+            beta = math.acos(dot(c, a)/(c_length*a_length))*180.0/math.pi
+            gamma = math.acos(dot(a, b)/(a_length*b_length))*180.0/math.pi
+            print >>file, "CRYST1%9.3f%9.3f%9.3f%7.2f%7.2f%7.2f P 1           1 " % (a_length, b_length, c_length, alpha, beta, gamma)
 
     @staticmethod
-    def writeModel(topology, positions, file=sys.stdout, modelIndex=None):
+    def writeModel(topology, positions, file=sys.stdout, modelIndex=None, keepIds=False):
         """Write out a model to a PDB file.
 
         Parameters:
@@ -260,6 +273,9 @@ class PDBFile(object):
          - positions (list) The list of atomic positions to write
          - file (file=stdout) A file to write the model to
          - modelIndex (int=None) If not None, the model will be surrounded by MODEL/ENDMDL records with this index
+         - keepIds (bool=False) If True, keep the residue and chain IDs specified in the Topology rather than generating
+           new ones.  Warning: It is up to the caller to make sure these are valid IDs that satisfy the requirements of
+           the PDB format.  Otherwise, the output file will be invalid.
         """
         if len(list(topology.atoms())) != len(positions):
             raise ValueError('The number of positions must match the number of atoms')
@@ -274,13 +290,20 @@ class PDBFile(object):
         if modelIndex is not None:
             print >>file, "MODEL     %4d" % modelIndex
         for (chainIndex, chain) in enumerate(topology.chains()):
-            chainName = chr(ord('A')+chainIndex%26)
+            if keepIds:
+                chainName = chain.id
+            else:
+                chainName = chr(ord('A')+chainIndex%26)
             residues = list(chain.residues())
             for (resIndex, res) in enumerate(residues):
                 if len(res.name) > 3:
                     resName = res.name[:3]
                 else:
                     resName = res.name
+                if keepIds:
+                    resId = res.id
+                else:
+                    resId = "%4d" % ((resIndex+1)%10000)
                 for atom in res.atoms():
                     if len(atom.name) < 4 and atom.name[:1].isalpha() and (atom.element is None or len(atom.element.symbol) < 2):
                         atomName = ' '+atom.name
@@ -293,16 +316,15 @@ class PDBFile(object):
                         symbol = atom.element.symbol
                     else:
                         symbol = ' '
-                    line = "ATOM  %5d %-4s %3s %s%4d    %s%s%s  1.00  0.00          %2s  " % (
-                        atomIndex%100000, atomName, resName, chainName,
-                        (resIndex+1)%10000, _format_83(coords[0]),
+                    line = "ATOM  %5d %-4s %3s %s%4s    %s%s%s  1.00  0.00          %2s  " % (
+                        atomIndex%100000, atomName, resName, chainName, resId, _format_83(coords[0]),
                         _format_83(coords[1]), _format_83(coords[2]), symbol)
                     assert len(line) == 80, 'Fixed width overflow detected'
                     print >>file, line
                     posIndex += 1
                     atomIndex += 1
                 if resIndex == len(residues)-1:
-                    print >>file, "TER   %5d      %3s %s%4d" % (atomIndex, resName, chainName, resIndex+1)
+                    print >>file, "TER   %5d      %3s %s%4s" % (atomIndex, resName, chainName, resId)
                     atomIndex += 1
         if modelIndex is not None:
             print >>file, "ENDMDL"

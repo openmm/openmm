@@ -49,7 +49,7 @@ ReferenceMonteCarloBarostat::ReferenceMonteCarloBarostat(int numAtoms, const vec
 
   --------------------------------------------------------------------------------------- */
 
-ReferenceMonteCarloBarostat::~ReferenceMonteCarloBarostat( ) {
+ReferenceMonteCarloBarostat::~ReferenceMonteCarloBarostat() {
 }
 
 /**---------------------------------------------------------------------------------------
@@ -57,14 +57,14 @@ ReferenceMonteCarloBarostat::~ReferenceMonteCarloBarostat( ) {
   Apply the barostat at the start of a time step.
 
   @param atomPositions      atom positions
-  @param boxSize            the periodic box dimensions
+  @param boxVectors         the periodic box vectors
   @param scaleX             the factor by which to scale atom x-coordinates
   @param scaleY             the factor by which to scale atom y-coordinates
   @param scaleZ             the factor by which to scale atom z-coordinates
 
   --------------------------------------------------------------------------------------- */
 
-void ReferenceMonteCarloBarostat::applyBarostat(vector<RealVec>& atomPositions, const RealVec& boxSize, RealOpenMM scaleX, RealOpenMM scaleY, RealOpenMM scaleZ) {
+void ReferenceMonteCarloBarostat::applyBarostat(vector<RealVec>& atomPositions, const RealVec* boxVectors, RealOpenMM scaleX, RealOpenMM scaleY, RealOpenMM scaleZ) {
     int numAtoms = savedAtomPositions[0].size();
     for (int i = 0; i < numAtoms; i++)
         for (int j = 0; j < 3; j++)
@@ -75,39 +75,29 @@ void ReferenceMonteCarloBarostat::applyBarostat(vector<RealVec>& atomPositions, 
     for (int i = 0; i < (int) molecules.size(); i++) {
         // Find the molecule center.
 
-        RealOpenMM pos[3] = {0, 0, 0};
+        RealVec pos(0, 0, 0);
         for (int j = 0; j < (int) molecules[i].size(); j++) {
             RealVec& atomPos = atomPositions[molecules[i][j]];
-            pos[0] += atomPos[0];
-            pos[1] += atomPos[1];
-            pos[2] += atomPos[2];
+            pos += atomPos;
         }
-        pos[0] /= molecules[i].size();
-        pos[1] /= molecules[i].size();
-        pos[2] /= molecules[i].size();
+        pos /= molecules[i].size();
 
         // Move it into the first periodic box.
 
-        int xcell = (int) floor(pos[0]/boxSize[0]);
-        int ycell = (int) floor(pos[1]/boxSize[1]);
-        int zcell = (int) floor(pos[2]/boxSize[2]);
-        RealOpenMM dx = xcell*boxSize[0];
-        RealOpenMM dy = ycell*boxSize[1];
-        RealOpenMM dz = zcell*boxSize[2];
-        pos[0] -= dx;
-        pos[1] -= dy;
-        pos[2] -= dz;
+        RealVec newPos = pos;
+        newPos -= boxVectors[2]*floor(newPos[2]/boxVectors[2][2]);
+        newPos -= boxVectors[1]*floor(newPos[1]/boxVectors[1][1]);
+        newPos -= boxVectors[0]*floor(newPos[0]/boxVectors[0][0]);
 
         // Now scale the position of the molecule center.
 
-        dx = pos[0]*(scaleX-1)-dx;
-        dy = pos[1]*(scaleY-1)-dy;
-        dz = pos[2]*(scaleZ-1)-dz;
+        newPos[0] *= scaleX;
+        newPos[1] *= scaleY;
+        newPos[2] *= scaleZ;
+        RealVec offset = newPos-pos;
         for (int j = 0; j < (int) molecules[i].size(); j++) {
             RealVec& atomPos = atomPositions[molecules[i][j]];
-            atomPos[0] += dx;
-            atomPos[1] += dy;
-            atomPos[2] += dz;
+            atomPos += offset;
         }
     }
 }

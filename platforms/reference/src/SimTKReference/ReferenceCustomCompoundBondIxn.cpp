@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009-2010 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2015 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -26,8 +26,6 @@
 #include <sstream>
 #include <utility>
 
-#include "SimTKOpenMMCommon.h"
-#include "SimTKOpenMMLog.h"
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceForce.h"
 #include "ReferenceCustomCompoundBondIxn.h"
@@ -37,7 +35,7 @@ using std::pair;
 using std::string;
 using std::stringstream;
 using std::vector;
-using OpenMM::RealVec;
+using namespace OpenMM;
 
 /**---------------------------------------------------------------------------------------
 
@@ -72,7 +70,7 @@ ReferenceCustomCompoundBondIxn::ReferenceCustomCompoundBondIxn(int numParticlesP
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceCustomCompoundBondIxn::~ReferenceCustomCompoundBondIxn( ){
+ReferenceCustomCompoundBondIxn::~ReferenceCustomCompoundBondIxn() {
 }
 
 /**---------------------------------------------------------------------------------------
@@ -93,7 +91,7 @@ void ReferenceCustomCompoundBondIxn::calculatePairIxn(vector<RealVec>& atomCoord
 
     map<string, double> variables = globalParameters;
     int numBonds = bondAtoms.size();
-    for (int bond = 0; bond < numBonds; bond++){
+    for (int bond = 0; bond < numBonds; bond++) {
         for (int j = 0; j < (int) bondParamNames.size(); j++)
             variables[bondParamNames[j]] = bondParameters[bond][j];
         calculateOneIxn(bond, atomCoordinates, variables, forces, totalEnergy);
@@ -127,7 +125,7 @@ void ReferenceCustomCompoundBondIxn::calculateOneIxn(int bond, vector<RealVec>& 
     const vector<int>& atoms = bondAtoms[bond];
     for (int i = 0; i < (int) particleTerms.size(); i++) {
         const ParticleTermInfo& term = particleTerms[i];
-        variables[term.name] = atomCoordinates[term.atom][term.component];
+        variables[term.name] = atomCoordinates[atoms[term.atom]][term.component];
     }
     for (int i = 0; i < (int) distanceTerms.size(); i++) {
         const DistanceTermInfo& term = distanceTerms[i];

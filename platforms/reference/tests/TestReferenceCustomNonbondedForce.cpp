@@ -53,10 +53,11 @@
 using namespace OpenMM;
 using namespace std;
 
+ReferencePlatform platform;
+
 const double TOL = 1e-5;
 
 void testSimpleExpression() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -79,7 +80,6 @@ void testSimpleExpression() {
 }
 
 void testParameters() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -140,7 +140,6 @@ void testParameters() {
 }
 
 void testExclusions() {
-    ReferencePlatform platform;
     System system;
     VerletIntegrator integrator(0.01);
     CustomNonbondedForce* nonbonded = new CustomNonbondedForce("a*r; a=a1+a2");
@@ -171,7 +170,6 @@ void testExclusions() {
 }
 
 void testCutoff() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -184,6 +182,8 @@ void testCutoff() {
     forceField->setNonbondedMethod(CustomNonbondedForce::CutoffNonPeriodic);
     forceField->setCutoffDistance(2.5);
     system.addForce(forceField);
+    ASSERT(!forceField->usesPeriodicBoundaryConditions());
+    ASSERT(!system.usesPeriodicBoundaryConditions());
     Context context(system, integrator, platform);
     vector<Vec3> positions(3);
     positions[0] = Vec3(0, 0, 0);
@@ -199,7 +199,6 @@ void testCutoff() {
 }
 
 void testPeriodic() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -213,6 +212,8 @@ void testPeriodic() {
     forceField->setCutoffDistance(2.0);
     system.setDefaultPeriodicBoxVectors(Vec3(4, 0, 0), Vec3(0, 4, 0), Vec3(0, 0, 4));
     system.addForce(forceField);
+    ASSERT(forceField->usesPeriodicBoundaryConditions());
+    ASSERT(system.usesPeriodicBoundaryConditions());
     Context context(system, integrator, platform);
     vector<Vec3> positions(3);
     positions[0] = Vec3(0, 0, 0);
@@ -227,8 +228,66 @@ void testPeriodic() {
     ASSERT_EQUAL_TOL(1.9+1+0.9, state.getPotentialEnergy(), TOL);
 }
 
+void testTriclinic() {
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    Vec3 a(3.1, 0, 0);
+    Vec3 b(0.4, 3.5, 0);
+    Vec3 c(-0.1, -0.5, 4.0);
+    system.setDefaultPeriodicBoxVectors(a, b, c);
+    VerletIntegrator integrator(0.01);
+    CustomNonbondedForce* nonbonded = new CustomNonbondedForce("r");
+    nonbonded->addParticle(vector<double>());
+    nonbonded->addParticle(vector<double>());
+    nonbonded->setNonbondedMethod(CustomNonbondedForce::CutoffPeriodic);
+    const double cutoff = 1.5;
+    nonbonded->setCutoffDistance(cutoff);
+    system.addForce(nonbonded);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(2);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int iteration = 0; iteration < 50; iteration++) {
+        // Generate random positions for the two particles.
+
+        positions[0] = a*genrand_real2(sfmt) + b*genrand_real2(sfmt) + c*genrand_real2(sfmt);
+        positions[1] = a*genrand_real2(sfmt) + b*genrand_real2(sfmt) + c*genrand_real2(sfmt);
+        context.setPositions(positions);
+
+        // Loop over all possible periodic copies and find the nearest one.
+
+        Vec3 delta;
+        double distance2 = 100.0;
+        for (int i = -1; i < 2; i++)
+            for (int j = -1; j < 2; j++)
+                for (int k = -1; k < 2; k++) {
+                    Vec3 d = positions[1]-positions[0]+a*i+b*j+c*k;
+                    if (d.dot(d) < distance2) {
+                        delta = d;
+                        distance2 = d.dot(d);
+                    }
+                }
+        double distance = sqrt(distance2);
+
+        // See if the force and energy are correct.
+
+        State state = context.getState(State::Forces | State::Energy);
+        if (distance >= cutoff) {
+            ASSERT_EQUAL(0.0, state.getPotentialEnergy());
+            ASSERT_EQUAL_VEC(Vec3(0, 0, 0), state.getForces()[0], 0);
+            ASSERT_EQUAL_VEC(Vec3(0, 0, 0), state.getForces()[1], 0);
+        }
+        else {
+            const Vec3 force = delta/sqrt(delta.dot(delta));
+            ASSERT_EQUAL_TOL(distance, state.getPotentialEnergy(), TOL);
+            ASSERT_EQUAL_VEC(force, state.getForces()[0], TOL);
+            ASSERT_EQUAL_VEC(-force, state.getForces()[1], TOL);
+        }
+    }
+}
+
 void testContinuous1DFunction() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -273,7 +332,6 @@ void testContinuous2DFunction() {
     const double xmax = 1.5;
     const double ymin = 0.0;
     const double ymax = 2.1;
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -319,13 +377,12 @@ void testContinuous3DFunction() {
     const int xsize = 10;
     const int ysize = 11;
     const int zsize = 12;
-    const double xmin = 0.4;
+    const double xmin = 0.6;
     const double xmax = 1.1;
     const double ymin = 0.0;
-    const double ymax = 0.9;
+    const double ymax = 0.7;
     const double zmin = 0.2;
-    const double zmax = 1.3;
-    ReferencePlatform platform;
+    const double zmax = 0.9;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -375,7 +432,6 @@ void testContinuous3DFunction() {
 }
 
 void testDiscrete1DFunction() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -405,7 +461,6 @@ void testDiscrete1DFunction() {
 void testDiscrete2DFunction() {
     const int xsize = 10;
     const int ysize = 5;
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -439,7 +494,6 @@ void testDiscrete3DFunction() {
     const int xsize = 8;
     const int ysize = 5;
     const int zsize = 6;
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -476,7 +530,6 @@ void testCoulombLennardJones() {
     const int numMolecules = 300;
     const int numParticles = numMolecules*2;
     const double boxSize = 20.0;
-    ReferencePlatform platform;
 
     // Create two systems: one with a NonbondedForce, and one using a CustomNonbondedForce to implement the same interaction.
 
@@ -531,6 +584,8 @@ void testCoulombLennardJones() {
     customNonbonded->setNonbondedMethod(CustomNonbondedForce::NoCutoff);
     standardSystem.addForce(standardNonbonded);
     customSystem.addForce(customNonbonded);
+    ASSERT(!customNonbonded->usesPeriodicBoundaryConditions());
+    ASSERT(!customSystem.usesPeriodicBoundaryConditions());
     VerletIntegrator integrator1(0.01);
     VerletIntegrator integrator2(0.01);
     Context context1(standardSystem, integrator1, platform);
@@ -548,7 +603,6 @@ void testCoulombLennardJones() {
 }
 
 void testSwitchingFunction() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -607,7 +661,6 @@ void testLongRangeCorrection() {
     int numParticles = gridSize*gridSize*gridSize;
     double boxSize = gridSize*0.7;
     double cutoff = boxSize/3;
-    ReferencePlatform platform;
     System standardSystem;
     System customSystem;
     VerletIntegrator integrator1(0.01);
@@ -682,7 +735,6 @@ void testLongRangeCorrection() {
 
 void testInteractionGroups() {
     const int numParticles = 6;
-    ReferencePlatform platform;
     System system;
     VerletIntegrator integrator(0.01);
     CustomNonbondedForce* nonbonded = new CustomNonbondedForce("v1+v2");
@@ -724,7 +776,6 @@ void testLargeInteractionGroup() {
     
     // Create a large system.
     
-    ReferencePlatform platform;
     System system;
     system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
     for (int i = 0; i < numParticles; i++)
@@ -802,7 +853,6 @@ void testInteractionGroupLongRangeCorrection() {
     const int numParticles = 10;
     const double boxSize = 10.0;
     const double cutoff = 0.5;
-    ReferencePlatform platform;
     System system;
     system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
     CustomNonbondedForce* nonbonded = new CustomNonbondedForce("c1*c2*r^-4");
@@ -863,6 +913,7 @@ int main() {
         testExclusions();
         testCutoff();
         testPeriodic();
+        testTriclinic();
         testContinuous1DFunction();
         testContinuous2DFunction();
         testContinuous3DFunction();

@@ -48,12 +48,13 @@
 using namespace OpenMM;
 using namespace std;
 
+ReferencePlatform platform;
+
 void testTemperature() {
     const int numParticles = 8;
     const double temp = 100.0;
     const double collisionFreq = 10.0;
     const int numSteps = 5000;
-    ReferencePlatform platform;
     System system;
     VerletIntegrator integrator(0.003);
     NonbondedForce* forceField = new NonbondedForce();
@@ -62,8 +63,9 @@ void testTemperature() {
         forceField->addParticle((i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
     }
     system.addForce(forceField);
-    AndersenThermostat* thermstat = new AndersenThermostat(temp, collisionFreq);
-    system.addForce(thermstat);
+    AndersenThermostat* thermostat = new AndersenThermostat(temp, collisionFreq);
+    system.addForce(thermostat);
+    ASSERT(!thermostat->usesPeriodicBoundaryConditions());
     Context context(system, integrator, platform);
     vector<Vec3> positions(numParticles);
     for (int i = 0; i < numParticles; ++i)
@@ -93,7 +95,6 @@ void testConstraints() {
     const double temp = 100.0;
     const double collisionFreq = 10.0;
     const int numSteps = 15000;
-    ReferencePlatform platform;
     System system;
     VerletIntegrator integrator(0.004);
     NonbondedForce* forceField = new NonbondedForce();
@@ -110,8 +111,8 @@ void testConstraints() {
     system.addConstraint(5, 6, 1);
     system.addConstraint(6, 7, 1);
     system.addConstraint(7, 4, 1);
-    AndersenThermostat* thermstat = new AndersenThermostat(temp, collisionFreq);
-    system.addForce(thermstat);
+    AndersenThermostat* thermostat = new AndersenThermostat(temp, collisionFreq);
+    system.addForce(thermostat);
     Context context(system, integrator, platform);
     vector<Vec3> positions(numParticles);
     positions[0] = Vec3(0, 0, 0);
@@ -146,7 +147,6 @@ void testRandomSeed() {
     const int numParticles = 8;
     const double temp = 100.0;
     const double collisionFreq = 10.0;
-    ReferencePlatform platform;
     System system;
     VerletIntegrator integrator(0.01);
     NonbondedForce* forceField = new NonbondedForce();

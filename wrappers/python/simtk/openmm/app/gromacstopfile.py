@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2014 Stanford University and the Authors.
+Portions copyright (c) 2012-2015 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors:
 
@@ -280,7 +280,7 @@ class GromacsTopFile(object):
             raise ValueError('Found [ cmap ] section before [ moleculetype ]')
         fields = line.split()
         if len(fields) < 6:
-            raise ValueError('Too few fields in [ pairs ] line: '+line);
+            raise ValueError('Too few fields in [ cmap ] line: '+line);
         self._currentMoleculeType.cmaps.append(fields)
 
     def _processAtomType(self, line):
@@ -358,12 +358,14 @@ class GromacsTopFile(object):
             raise ValueError('Unsupported function type in [ cmaptypes ] line: '+line);
         self._cmapTypes[tuple(fields[:5])] = fields
 
-    def __init__(self, file, unitCellDimensions=None, includeDir=None, defines=None):
+    def __init__(self, file, periodicBoxVectors=None, unitCellDimensions=None, includeDir=None, defines=None):
         """Load a top file.
 
         Parameters:
          - file (string) the name of the file to load
-         - unitCellDimensions (Vec3=None) the dimensions of the crystallographic unit cell
+         - periodicBoxVectors (tuple of Vec3=None) the vectors defining the periodic box
+         - unitCellDimensions (Vec3=None) the dimensions of the crystallographic unit cell.  For
+           non-rectangular unit cells, specify periodicBoxVectors instead.
          - includeDir (string=None) A directory in which to look for other files
            included from the top file. If not specified, we will attempt to locate a gromacs
            installation on your system. When gromacs is installed in /usr/local, this will resolve
@@ -403,7 +405,12 @@ class GromacsTopFile(object):
         top = Topology()
         ## The Topology read from the prmtop file
         self.topology = top
-        top.setUnitCellDimensions(unitCellDimensions)
+        if periodicBoxVectors is not None:
+            if unitCellDimensions is not None:
+                raise ValueError("specify either periodicBoxVectors or unitCellDimensions, but not both")
+            top.setPeriodicBoxVectors(periodicBoxVectors)
+        else:
+            top.setUnitCellDimensions(unitCellDimensions)
         PDBFile._loadNameReplacementTables()
         for moleculeName, moleculeCount in self._molecules:
             if moleculeName not in self._moleculeTypes:

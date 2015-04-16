@@ -149,7 +149,7 @@ namespace OpenMM {
  * still only be evaluated once for each triplet, so it must still be symmetric with respect to p2 and p3.
  * 
  * Expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
- * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, erf, erfc, min, max, abs, step, delta.  All trigonometric functions
+ * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, erf, erfc, min, max, abs, floor, ceil, step, delta.  All trigonometric functions
  * are defined in radians, and log is the natural logarithm.  step(x) = 0 if x is less than 0, 1 otherwise.  delta(x) = 1 if x is 0, 0 otherwise.
  * The names of per-particle parameters have the suffix "1", "2", etc. appended to them to indicate the values for the multiple interacting particles.
  * For example, if you define a per-particle parameter called "charge", then the variable "charge2" is the charge of particle p2.
@@ -461,6 +461,15 @@ public:
      * the parameters of existing ones.
      */
     void updateParametersInContext(Context& context);
+    /**
+     * Returns whether or not this force makes use of periodic boundary
+     * conditions.
+     *
+     * @returns true if force uses PBC and false otherwise
+     */
+    bool usesPeriodicBoundaryConditions() const {
+        return nonbondedMethod == CustomManyParticleForce::CutoffPeriodic;
+    }
 protected:
     ForceImpl* createImpl() const;
 private:

@@ -77,6 +77,10 @@ void CpuGBSAOBCForce::setSolventDielectric(float dielectric) {
     solventDielectric = dielectric;
 }
 
+void CpuGBSAOBCForce::setSurfaceAreaEnergy(float energy) {
+    surfaceAreaFactor = 4*M_PI*energy;
+}
+
 const std::vector<std::pair<float, float> >& CpuGBSAOBCForce::getParticleParameters() const {
     return particleParams;
 }
@@ -211,7 +215,6 @@ void CpuGBSAOBCForce::threadComputeForce(ThreadPool& threads, int threadIndex) {
     // Calculate ACE surface area term.
 
     const float probeRadius = 0.14f;
-    const float surfaceAreaFactor = 28.3919551;
     double energy = 0.0;
     AlignedArray<float>& bornForces = threadBornForces[threadIndex];
     for (int i = 0; i < numParticles; i++)

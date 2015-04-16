@@ -31,7 +31,7 @@
 #include <map>
 #include <vector>
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class ReferenceCustomCompoundBondIxn : public ReferenceBondIxn {
 
@@ -168,5 +168,7 @@ public:
             name(name), p1(atoms[0]), p2(atoms[1]), p3(atoms[2]), p4(atoms[3]), forceExpression(forceExpression) {
     }
 };
+
+} // namespace OpenMM
 
 #endif // __ReferenceCustomCompoundBondIxn_H__

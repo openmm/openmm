@@ -41,13 +41,13 @@ using std::vector;
 AmoebaVdwForce::AmoebaVdwForce() : nonbondedMethod(NoCutoff), sigmaCombiningRule("CUBIC-MEAN"), epsilonCombiningRule("HHG"), cutoff(1.0e+10), useDispersionCorrection(true) {
 }
 
-int AmoebaVdwForce::addParticle(int parentIndex, double sigma, double epsilon, double reductionFactor ) {
+int AmoebaVdwForce::addParticle(int parentIndex, double sigma, double epsilon, double reductionFactor) {
     parameters.push_back(VdwInfo(parentIndex, sigma, epsilon, reductionFactor));
     return parameters.size()-1;
 }
 
 void AmoebaVdwForce::getParticleParameters(int particleIndex, int& parentIndex,
-                                           double& sigma, double& epsilon, double& reductionFactor ) const {
+                                           double& sigma, double& epsilon, double& reductionFactor) const {
     parentIndex     = parameters[particleIndex].parentIndex;
     sigma           = parameters[particleIndex].sigma;
     epsilon         = parameters[particleIndex].epsilon;
@@ -55,54 +55,54 @@ void AmoebaVdwForce::getParticleParameters(int particleIndex, int& parentIndex,
 }
 
 void AmoebaVdwForce::setParticleParameters(int particleIndex, int parentIndex,
-                                           double sigma, double epsilon, double reductionFactor ) {
+                                           double sigma, double epsilon, double reductionFactor) {
     parameters[particleIndex].parentIndex     = parentIndex;
     parameters[particleIndex].sigma           = sigma;
     parameters[particleIndex].epsilon         = epsilon;
     parameters[particleIndex].reductionFactor = reductionFactor;
 }
 
-void AmoebaVdwForce::setSigmaCombiningRule( const std::string& inputSigmaCombiningRule ) {
+void AmoebaVdwForce::setSigmaCombiningRule(const std::string& inputSigmaCombiningRule) {
     sigmaCombiningRule = inputSigmaCombiningRule;
 }
 
-const std::string& AmoebaVdwForce::getSigmaCombiningRule( void ) const {
+const std::string& AmoebaVdwForce::getSigmaCombiningRule() const {
     return sigmaCombiningRule;
 }
 
-void AmoebaVdwForce::setEpsilonCombiningRule( const std::string& inputEpsilonCombiningRule ) {
+void AmoebaVdwForce::setEpsilonCombiningRule(const std::string& inputEpsilonCombiningRule) {
     epsilonCombiningRule = inputEpsilonCombiningRule;
 }
 
-const std::string& AmoebaVdwForce::getEpsilonCombiningRule( void ) const {
+const std::string& AmoebaVdwForce::getEpsilonCombiningRule() const {
     return epsilonCombiningRule;
 }
 
-void AmoebaVdwForce::setParticleExclusions( int particleIndex, const std::vector< int >& inputExclusions ) {
+void AmoebaVdwForce::setParticleExclusions(int particleIndex, const std::vector< int >& inputExclusions) {
 
-   if( exclusions.size() < parameters.size() ){
-       exclusions.resize( parameters.size() );
+   if (exclusions.size() < parameters.size()) {
+       exclusions.resize(parameters.size());
    }
-   if(  static_cast<int>(exclusions.size()) < particleIndex ){
-       exclusions.resize( particleIndex + 10 );
+   if (static_cast<int>(exclusions.size()) < particleIndex) {
+       exclusions.resize(particleIndex + 10);
    }
-   for( unsigned int ii = 0; ii < inputExclusions.size(); ii++ ){
-       exclusions[particleIndex].push_back( inputExclusions[ii] );
+   for (unsigned int ii = 0; ii < inputExclusions.size(); ii++) {
+       exclusions[particleIndex].push_back(inputExclusions[ii]);
    }
 }
 
-void AmoebaVdwForce::getParticleExclusions( int particleIndex, std::vector< int >& outputExclusions ) const {
+void AmoebaVdwForce::getParticleExclusions(int particleIndex, std::vector< int >& outputExclusions) const {
 
-   if( particleIndex < static_cast<int>(exclusions.size()) ){
-       outputExclusions.resize( exclusions[particleIndex].size() );
-       for( unsigned int ii = 0; ii < exclusions[particleIndex].size(); ii++ ){
+   if (particleIndex < static_cast<int>(exclusions.size())) {
+       outputExclusions.resize(exclusions[particleIndex].size());
+       for (unsigned int ii = 0; ii < exclusions[particleIndex].size(); ii++) {
            outputExclusions[ii] = exclusions[particleIndex][ii];
        }
    }
 
 }
 
-void AmoebaVdwForce::setCutoff( double inputCutoff ){
+void AmoebaVdwForce::setCutoff(double inputCutoff) {
     cutoff = inputCutoff;
 }
 

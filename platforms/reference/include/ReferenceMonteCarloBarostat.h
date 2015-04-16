@@ -25,11 +25,10 @@
 #ifndef __ReferenceMonteCarloBarostat_H__
 #define __ReferenceMonteCarloBarostat_H__
 
-#include "SimTKOpenMMCommon.h"
 #include <utility>
 #include <vector>
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class ReferenceMonteCarloBarostat {
 
@@ -61,14 +60,14 @@ class ReferenceMonteCarloBarostat {
          Apply the barostat at the start of a time step, scaling x, y, and z coordinates independently.
 
          @param atomPositions      atom positions
-         @param boxSize            the periodic box dimensions
+         @param boxVectors         the periodic box vectors
          @param scaleX             the factor by which to scale atomic x coordinates
          @param scaleY             the factor by which to scale atomic y coordinates
          @param scaleZ             the factor by which to scale atomic z coordinates
 
          --------------------------------------------------------------------------------------- */
 
-      void applyBarostat(std::vector<OpenMM::RealVec>& atomPositions, const OpenMM::RealVec& boxSize, RealOpenMM scaleX, RealOpenMM scaleY, RealOpenMM scaleZ);
+      void applyBarostat(std::vector<OpenMM::RealVec>& atomPositions, const OpenMM::RealVec* boxVectors, RealOpenMM scaleX, RealOpenMM scaleY, RealOpenMM scaleZ);
 
       /**---------------------------------------------------------------------------------------
 
@@ -82,6 +81,6 @@ class ReferenceMonteCarloBarostat {
 
 };
 
-// ---------------------------------------------------------------------------------------
+} // namespace OpenMM
 
 #endif // __ReferenceMonteCarloBarostat_H__

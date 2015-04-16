@@ -39,6 +39,7 @@ import forcefield as ff
 import element as elem
 import simtk.unit as unit
 import simtk.openmm as mm
+from simtk.openmm.app.internal.unitcell import computePeriodicBoxVectors
 
 # Enumerated values for implicit solvent model
 
@@ -72,9 +73,8 @@ class AmberPrmtopFile(object):
 
     def __init__(self, file):
         """Load a prmtop file."""
-        top = Topology()
         ## The Topology read from the prmtop file
-        self.topology = top
+        self.topology = top = Topology()
         self.elements = []
 
         # Load the prmtop file
@@ -141,7 +141,8 @@ class AmberPrmtopFile(object):
         # Set the periodic box size.
 
         if prmtop.getIfBox():
-            top.setUnitCellDimensions(tuple(x.value_in_unit(unit.nanometer) for x in prmtop.getBoxBetaAndDimensions()[1:4])*unit.nanometer)
+            box = prmtop.getBoxBetaAndDimensions()
+            top.setPeriodicBoxVectors(computePeriodicBoxVectors(*(box[1:4] + box[0:1]*3)))
 
     def createSystem(self, nonbondedMethod=ff.NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
                      constraints=None, rigidWater=True, implicitSolvent=None,
@@ -173,6 +174,10 @@ class AmberPrmtopFile(object):
          - ewaldErrorTolerance (float=0.0005) The error tolerance to use if nonbondedMethod is Ewald or PME.
         Returns: the newly created System
         """
+        if self._prmtop.chamber:
+            raise ValueError("CHAMBER-style topology file detected. CHAMBER "
+                             "topologies are not supported -- use the native "
+                             "CHARMM files directly.")
         methodMap = {ff.NoCutoff:'NoCutoff',
                      ff.CutoffNonPeriodic:'CutoffNonPeriodic',
                      ff.CutoffPeriodic:'CutoffPeriodic',
@@ -223,7 +228,7 @@ class AmberPrmtopFile(object):
         elif implicitSolvent is None:
             implicitSolventKappa = 0.0
 
-        sys = amber_file_parser.readAmberSystem(prmtop_loader=self._prmtop, shake=constraintString,
+        sys = amber_file_parser.readAmberSystem(self.topology, prmtop_loader=self._prmtop, shake=constraintString,
                         nonbondedCutoff=nonbondedCutoff, nonbondedMethod=methodMap[nonbondedMethod],
                         flexibleConstraints=False, gbmodel=implicitString, soluteDielectric=soluteDielectric,
                         solventDielectric=solventDielectric, implicitSolventKappa=implicitSolventKappa,

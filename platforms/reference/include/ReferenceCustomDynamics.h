@@ -34,7 +34,7 @@
 #include <string>
 #include <vector>
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class ReferenceCustomDynamics : public ReferenceDynamics {
 private:
@@ -121,6 +121,6 @@ public:
                                    std::map<std::string, RealOpenMM>& globals, std::vector<std::vector<OpenMM::RealVec> >& perDof, bool& forcesAreValid);
 };
 
-// ---------------------------------------------------------------------------------------
+} // namespace OpenMM
 
 #endif // __ReferenceCustomDynamics_H__

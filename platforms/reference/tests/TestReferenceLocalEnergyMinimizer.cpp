@@ -45,6 +45,8 @@
 using namespace OpenMM;
 using namespace std;
 
+ReferencePlatform platform;
+
 void testHarmonicBonds() {
     const int numParticles = 10;
     System system;
@@ -64,7 +66,6 @@ void testHarmonicBonds() {
     // Minimize it and check that all bonds are at their equilibrium distances.
 
     VerletIntegrator integrator(0.01);
-    ReferencePlatform platform;
     Context context(system, integrator, platform);
     context.setPositions(positions);
     LocalEnergyMinimizer::minimize(context, 1e-5);
@@ -76,10 +77,10 @@ void testHarmonicBonds() {
 }
 
 void testLargeSystem() {
-    const int numMolecules = 50;
+    const int numMolecules = 25;
     const int numParticles = numMolecules*2;
     const double cutoff = 2.0;
-    const double boxSize = 5.0;
+    const double boxSize = 4.0;
     const double tolerance = 5;
     System system;
     system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
@@ -105,7 +106,6 @@ void testLargeSystem() {
 
     // Minimize it and verify that the energy has decreased.
     
-    ReferencePlatform platform;
     VerletIntegrator integrator(0.01);
     Context context(system, integrator, platform);
     context.setPositions(positions);
@@ -134,10 +134,10 @@ void testLargeSystem() {
 }
 
 void testVirtualSites() {
-    const int numMolecules = 50;
+    const int numMolecules = 25;
     const int numParticles = numMolecules*3;
     const double cutoff = 2.0;
-    const double boxSize = 5.0;
+    const double boxSize = 4.0;
     const double tolerance = 5;
     System system;
     system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
@@ -167,7 +167,6 @@ void testVirtualSites() {
 
     // Minimize it and verify that the energy has decreased.
     
-    ReferencePlatform platform;
     VerletIntegrator integrator(0.01);
     Context context(system, integrator, platform);
     context.setPositions(positions);

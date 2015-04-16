@@ -49,7 +49,7 @@ public:
      * 
      * @param temperature    the temperature of the heat bath (in Kelvin)
      * @param frictionCoeff  the friction coefficient which couples the system to the heat bath, measured in 1/ps
-     * @param stepSize       the step size with which to integrator the system (in picoseconds)
+     * @param stepSize       the step size with which to integrate the system (in picoseconds)
      */
     BrownianIntegrator(double temperature, double frictionCoeff, double stepSize);
     /**
@@ -99,6 +99,10 @@ public:
      * the other hand, no guarantees are made about the behavior of simulations that use the same seed.
      * In particular, Platforms are permitted to use non-deterministic algorithms which produce different
      * results on successive runs, even if those runs were initialized identically.
+     *
+     * If seed is set to 0 (which is the default value assigned), a unique seed is chosen when a Context
+     * is created from this Force. This is done to ensure that each Context receives unique random seeds
+     * without you needing to set them explicitly.
      */
     void setRandomNumberSeed(int seed) {
         randomNumberSeed = seed;

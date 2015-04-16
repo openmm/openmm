@@ -5,6 +5,7 @@ from simtk.openmm import *
 from simtk.unit import *
 import simtk.openmm.app.element as elem
 import simtk.openmm.app.forcefield as forcefield
+import math
 
 class TestForceField(unittest.TestCase):
     """Test the ForceField.createSystem() method."""
@@ -20,7 +21,7 @@ class TestForceField(unittest.TestCase):
         self.topology1 = self.pdb1.topology
         self.topology1.setUnitCellDimensions(Vec3(2, 2, 2))
 
-        # alalnine dipeptide with implicit water
+        # alanine dipeptide with implicit water
         self.pdb2 = PDBFile('systems/alanine-dipeptide-implicit.pdb')
         self.forcefield2 = ForceField('amber99sb.xml', 'amber99_obc.xml')
 
@@ -186,6 +187,18 @@ class TestForceField(unittest.TestCase):
         system2 = ff2.createSystem(modeller.topology)
         self.assertEqual(XmlSerializer.serialize(system1), XmlSerializer.serialize(system2))
 
+    def test_PeriodicBoxVectors(self):
+        """Test setting the periodic box vectors."""
+
+        vectors = (Vec3(5, 0, 0), Vec3(-1.5, 4.5, 0), Vec3(0.4, 0.8, 7.5))*nanometers
+        self.pdb1.topology.setPeriodicBoxVectors(vectors)
+        self.assertEqual(Vec3(5, 4.5, 7.5)*nanometers, self.pdb1.topology.getUnitCellDimensions())
+        system = self.forcefield1.createSystem(self.pdb1.topology)
+        for i in range(3):
+            self.assertEqual(vectors[i], self.pdb1.topology.getPeriodicBoxVectors()[i])
+            self.assertEqual(vectors[i], system.getDefaultPeriodicBoxVectors()[i])
+        
+
 class AmoebaTestForceField(unittest.TestCase):
     """Test the ForceField.createSystem() method with the AMOEBA forcefield."""
  
@@ -196,7 +209,7 @@ class AmoebaTestForceField(unittest.TestCase):
         """
 
         self.pdb1 = PDBFile('systems/amoeba-ion-in-water.pdb')
-        self.forcefield1 = ForceField('amoeba2009.xml')
+        self.forcefield1 = ForceField('amoeba2013.xml')
         self.topology1 = self.pdb1.topology
 
 
@@ -241,6 +254,21 @@ class AmoebaTestForceField(unittest.TestCase):
                 if isinstance(force, AmoebaVdwForce):
                     self.assertEqual(useDispersionCorrection, force.getUseDispersionCorrection())
 
+    def test_RigidWater(self):
+        """Test that AMOEBA creates rigid water with the correct geometry."""
+
+        system = self.forcefield1.createSystem(self.pdb1.topology, rigidWater=True)
+        constraints = dict()
+        for i in range(system.getNumConstraints()):
+            p1,p2,dist = system.getConstraintParameters(i)
+            if p1 < 3:
+                constraints[(min(p1,p2), max(p1,p2))] = dist.value_in_unit(nanometers)
+        hoDist = 0.09572
+        hohAngle = 108.50*math.pi/180.0
+        hohDist = math.sqrt(2*hoDist**2 - 2*hoDist**2*math.cos(hohAngle))
+        self.assertAlmostEqual(constraints[(0,1)], hoDist)
+        self.assertAlmostEqual(constraints[(0,2)], hoDist)
+        self.assertAlmostEqual(constraints[(1,2)], hohDist)
 
 if __name__ == '__main__':
     unittest.main()

@@ -1,6 +1,5 @@
 #define DIELECTRIC_OFFSET 0.009f
 #define PROBE_RADIUS 0.14f
-#define SURFACE_AREA_FACTOR -170.351730667551f //-6.0f*3.14159265358979323846f*0.0216f*1000.0f*0.4184f;
 
 /**
  * Reduce the Born sums to compute the Born radii.

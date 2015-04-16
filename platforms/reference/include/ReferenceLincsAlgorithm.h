@@ -28,7 +28,7 @@
 #include "SimTKOpenMMRealType.h"
 #include <vector>
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class ReferenceLincsAlgorithm : public ReferenceConstraintAlgorithm {
 
@@ -92,7 +92,7 @@ class ReferenceLincsAlgorithm : public ReferenceConstraintAlgorithm {
 
          --------------------------------------------------------------------------------------- */
 
-      ReferenceLincsAlgorithm( int numberOfConstraints, int** atomIndices, RealOpenMM* distance );
+      ReferenceLincsAlgorithm(int numberOfConstraints, int** atomIndices, RealOpenMM* distance);
 
       /**---------------------------------------------------------------------------------------
 
@@ -102,7 +102,7 @@ class ReferenceLincsAlgorithm : public ReferenceConstraintAlgorithm {
 
          --------------------------------------------------------------------------------------- */
 
-      int getNumberOfConstraints( void ) const;
+      int getNumberOfConstraints() const;
 
       /**---------------------------------------------------------------------------------------
 
@@ -112,7 +112,7 @@ class ReferenceLincsAlgorithm : public ReferenceConstraintAlgorithm {
 
          --------------------------------------------------------------------------------------- */
 
-      int getNumTerms( void ) const;
+      int getNumTerms() const;
 
       /**---------------------------------------------------------------------------------------
 
@@ -120,7 +120,7 @@ class ReferenceLincsAlgorithm : public ReferenceConstraintAlgorithm {
 
          --------------------------------------------------------------------------------------- */
 
-      void setNumTerms( int terms );
+      void setNumTerms(int terms);
 
       /**---------------------------------------------------------------------------------------
 
@@ -131,13 +131,10 @@ class ReferenceLincsAlgorithm : public ReferenceConstraintAlgorithm {
          @param atomCoordinatesP atom coordinates prime
          @param inverseMasses    1/mass
 
-         @return SimTKOpenMMCommon::DefaultReturn if converge; else
-          return SimTKOpenMMCommon::ErrorReturn
-
          --------------------------------------------------------------------------------------- */
 
-      int apply( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
-                       std::vector<OpenMM::RealVec>& atomCoordinatesP, std::vector<RealOpenMM>& inverseMasses );
+      void apply(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
+                       std::vector<OpenMM::RealVec>& atomCoordinatesP, std::vector<RealOpenMM>& inverseMasses);
 
       /**---------------------------------------------------------------------------------------
 
@@ -148,15 +145,12 @@ class ReferenceLincsAlgorithm : public ReferenceConstraintAlgorithm {
          @param velocities       atom velocities
          @param inverseMasses    1/mass
 
-         @return SimTKOpenMMCommon::DefaultReturn if converge; else
-          return SimTKOpenMMCommon::ErrorReturn
-
          --------------------------------------------------------------------------------------- */
 
-      int applyToVelocities(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
+      void applyToVelocities(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
                      std::vector<OpenMM::RealVec>& velocities, std::vector<RealOpenMM>& inverseMasses);
 };
 
-// ---------------------------------------------------------------------------------------
+} // namespace OpenMM
 
 #endif // __ReferenceLincsAlgorithm_H__

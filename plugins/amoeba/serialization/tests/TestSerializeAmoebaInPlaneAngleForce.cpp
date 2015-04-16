@@ -46,10 +46,10 @@ void testSerialization() {
 
     AmoebaInPlaneAngleForce force1;
 
-    force1.setAmoebaGlobalInPlaneAngleCubic( 12.3 );
-    force1.setAmoebaGlobalInPlaneAngleQuartic( 98.7 );
-    force1.setAmoebaGlobalInPlaneAnglePentic( 91.7 );
-    force1.setAmoebaGlobalInPlaneAngleSextic( 93.7 );
+    force1.setAmoebaGlobalInPlaneAngleCubic(12.3);
+    force1.setAmoebaGlobalInPlaneAngleQuartic(98.7);
+    force1.setAmoebaGlobalInPlaneAnglePentic(91.7);
+    force1.setAmoebaGlobalInPlaneAngleSextic(93.7);
 
     force1.addAngle(0, 1, 3, 4, 1.0, 2.0);
     force1.addAngle(0, 2, 3, 5, 2.0, 2.1);
@@ -71,7 +71,7 @@ void testSerialization() {
     ASSERT_EQUAL(force1.getAmoebaGlobalInPlaneAngleSextic(),   force2.getAmoebaGlobalInPlaneAngleSextic());
     ASSERT_EQUAL(force1.getNumAngles(),                                force2.getNumAngles());
 
-    for ( unsigned int ii = 0; ii < static_cast<unsigned int>(force1.getNumAngles()); ii++) {
+    for (unsigned int ii = 0; ii < static_cast<unsigned int>(force1.getNumAngles()); ii++) {
         int a1, a2, a3, a4, b1, b2, b3, b4;
         double da, db, ka, kb;
         force1.getAngleParameters(ii, a1, a2, a3, a4, da, ka);

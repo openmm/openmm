@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -98,6 +98,8 @@ void NonbondedForceImpl::initialize(ContextImpl& context) {
         double cutoff = owner.getCutoffDistance();
         if (cutoff > 0.5*boxVectors[0][0] || cutoff > 0.5*boxVectors[1][1] || cutoff > 0.5*boxVectors[2][2])
             throw OpenMMException("NonbondedForce: The cutoff distance cannot be greater than half the periodic box size.");
+        if (owner.getNonbondedMethod() == NonbondedForce::Ewald && (boxVectors[1][0] != 0.0 || boxVectors[2][0] != 0.0 || boxVectors[2][1] != 0))
+            throw OpenMMException("NonbondedForce: Ewald is not supported with non-rectangular boxes.  Use PME instead.");
     }
     kernel.getAs<CalcNonbondedForceKernel>().initialize(context.getSystem(), owner);
 }

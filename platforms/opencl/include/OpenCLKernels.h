@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -71,11 +71,13 @@ public:
      * @param includeForce  true if forces should be computed
      * @param includeEnergy true if potential energy should be computed
      * @param groups        a set of bit flags for which force groups to include
+     * @param valid         the method may set this to false to indicate the results are invalid and the force/energy
+     *                      calculation should be repeated
      * @return the potential energy of the system.  This value is added to all values returned by ForceImpls'
      * calcForcesAndEnergy() methods.  That is, each force kernel may <i>either</i> return its contribution to the
      * energy directly, <i>or</i> add it to an internal buffer so that it will be included here.
      */
-    double finishComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups);
+    double finishComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups, bool& valid);
 private:
    OpenCLContext& cl;
 };
@@ -496,11 +498,19 @@ public:
      * @return the potential energy due to the force
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CMAPTorsionForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const CMAPTorsionForce& force);
 private:
     int numTorsions;
     bool hasInitializedKernel;
     OpenCLContext& cl;
     const System& system;
+    std::vector<mm_int2> mapPositionsVec;
     OpenCLArray* coefficients;
     OpenCLArray* mapPositions;
     OpenCLArray* torsionMaps;
@@ -599,6 +609,8 @@ private:
     class PmeIO;
     class PmePreComputation;
     class PmePostComputation;
+    class SyncQueuePreComputation;
+    class SyncQueuePostComputation;
     OpenCLContext& cl;
     bool hasInitializedKernel;
     OpenCLArray* sigmaEpsilon;
@@ -613,6 +625,8 @@ private:
     OpenCLArray* pmeAtomRange;
     OpenCLArray* pmeAtomGridIndex;
     OpenCLSort* sort;
+    cl::CommandQueue pmeQueue;
+    cl::Event pmeSyncEvent;
     OpenCLFFT3D* fft;
     Kernel cpuPme;
     PmeIO* pmeio;
@@ -625,11 +639,12 @@ private:
     cl::Kernel pmeSpreadChargeKernel;
     cl::Kernel pmeFinishSpreadChargeKernel;
     cl::Kernel pmeConvolutionKernel;
+    cl::Kernel pmeEvalEnergyKernel;
     cl::Kernel pmeInterpolateForceKernel;
     std::map<std::string, std::string> pmeDefines;
     std::vector<std::pair<int, int> > exceptionAtoms;
     double ewaldSelfEnergy, dispersionCoefficient, alpha;
-    bool hasCoulomb, hasLJ;
+    bool hasCoulomb, hasLJ, usePmeQueue;
     static const int PmeOrder = 5;
 };
 
@@ -717,7 +732,7 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const GBSAOBCForce& force);
 private:
-    double prefactor;
+    double prefactor, surfaceAreaFactor;
     bool hasCreatedKernels;
     int maxTiles;
     OpenCLContext& cl;

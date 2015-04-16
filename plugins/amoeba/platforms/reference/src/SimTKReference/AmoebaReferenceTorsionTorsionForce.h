@@ -28,7 +28,7 @@
 #include "RealVec.h"
 #include <vector>
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class AmoebaReferenceTorsionTorsionForce {
 
@@ -40,7 +40,7 @@ public:
        
        --------------------------------------------------------------------------------------- */
  
-    AmoebaReferenceTorsionTorsionForce( ){};
+    AmoebaReferenceTorsionTorsionForce() {};
  
     /**---------------------------------------------------------------------------------------
        
@@ -48,7 +48,7 @@ public:
        
           --------------------------------------------------------------------------------------- */
  
-    ~AmoebaReferenceTorsionTorsionForce( ){};
+    ~AmoebaReferenceTorsionTorsionForce() {};
 
      /**---------------------------------------------------------------------------------------
      
@@ -71,16 +71,16 @@ public:
      
         --------------------------------------------------------------------------------------- */
 
-    RealOpenMM calculateForceAndEnergy( int numTorsionTorsions, std::vector<OpenMM::RealVec>& posData,
-                                        const std::vector<int>&  particle1,
-                                        const std::vector<int>&  particle2,
-                                        const std::vector<int>&  particle3,
-                                        const std::vector<int>&  particle4,
-                                        const std::vector<int>&  particle5,
-                                        const std::vector<int>&  chiralCheckAtom,
-                                        const std::vector<int>&  gridIndices,
-                                        const std::vector< std::vector< std::vector< std::vector<RealOpenMM> > > >& torsionTorsionGrids,
-                                        std::vector<OpenMM::RealVec>& forceData ) const;
+    RealOpenMM calculateForceAndEnergy(int numTorsionTorsions, std::vector<OpenMM::RealVec>& posData,
+                                       const std::vector<int>&  particle1,
+                                       const std::vector<int>&  particle2,
+                                       const std::vector<int>&  particle3,
+                                       const std::vector<int>&  particle4,
+                                       const std::vector<int>&  particle5,
+                                       const std::vector<int>&  chiralCheckAtom,
+                                       const std::vector<int>&  gridIndices,
+                                       const std::vector< std::vector< std::vector< std::vector<RealOpenMM> > > >& torsionTorsionGrids,
+                                       std::vector<OpenMM::RealVec>& forceData) const;
 
 private:
 
@@ -105,7 +105,7 @@ private:
     void loadGridValuesFromEnclosingRectangle(
                const std::vector< std::vector< std::vector<RealOpenMM> > >& grid,
                RealOpenMM angle1, RealOpenMM angle2, RealOpenMM corners[2][2],
-               RealOpenMM* fValues, RealOpenMM* fValues1, RealOpenMM* fValues2, RealOpenMM* fValues12 ) const;
+               RealOpenMM* fValues, RealOpenMM* fValues1, RealOpenMM* fValues2, RealOpenMM* fValues12) const;
     
     /**---------------------------------------------------------------------------------------
     
@@ -128,8 +128,8 @@ private:
     
        --------------------------------------------------------------------------------------- */
     
-    void getBicubicCoefficientMatrix( const RealOpenMM* y, const RealOpenMM* y1, const RealOpenMM* y2, const RealOpenMM* y12,
-                                      const RealOpenMM d1, const RealOpenMM d2, RealOpenMM c[4][4] ) const;
+    void getBicubicCoefficientMatrix(const RealOpenMM* y, const RealOpenMM* y1, const RealOpenMM* y2, const RealOpenMM* y12,
+                                     const RealOpenMM d1, const RealOpenMM d2, RealOpenMM c[4][4]) const;
     
      /**---------------------------------------------------------------------------------------
      
@@ -167,7 +167,7 @@ private:
                const RealOpenMM x1Lower, const RealOpenMM x1Upper,
                const RealOpenMM x2Lower, const RealOpenMM x2Upper,
                const RealOpenMM gridValue1, const RealOpenMM gridValue2,
-               RealOpenMM* functionValue, RealOpenMM* functionValue1, RealOpenMM* functionValue2 ) const;
+               RealOpenMM* functionValue, RealOpenMM* functionValue1, RealOpenMM* functionValue2) const;
      
     /**---------------------------------------------------------------------------------------
      
@@ -183,8 +183,8 @@ private:
      
         --------------------------------------------------------------------------------------- */
     
-    int checkTorsionSign( const OpenMM::RealVec& positionAtomA, const OpenMM::RealVec& positionAtomB,
-                          const OpenMM::RealVec& positionAtomC, const OpenMM::RealVec& positionAtomD ) const;
+    int checkTorsionSign(const OpenMM::RealVec& positionAtomA, const OpenMM::RealVec& positionAtomB,
+                         const OpenMM::RealVec& positionAtomC, const OpenMM::RealVec& positionAtomD) const;
     
     /**---------------------------------------------------------------------------------------
     
@@ -204,14 +204,14 @@ private:
     
        --------------------------------------------------------------------------------------- */
     
-    RealOpenMM calculateTorsionTorsionIxn( const OpenMM::RealVec& positionAtomA, const OpenMM::RealVec& positionAtomB,
-                                           const OpenMM::RealVec& positionAtomC, const OpenMM::RealVec& positionAtomD,
-                                           const OpenMM::RealVec& positionAtomE, const OpenMM::RealVec* chiralCheckAtom,
-                                           const std::vector< std::vector< std::vector<RealOpenMM> > >& grid,
-                                           OpenMM::RealVec* forces ) const;
+    RealOpenMM calculateTorsionTorsionIxn(const OpenMM::RealVec& positionAtomA, const OpenMM::RealVec& positionAtomB,
+                                          const OpenMM::RealVec& positionAtomC, const OpenMM::RealVec& positionAtomD,
+                                          const OpenMM::RealVec& positionAtomE, const OpenMM::RealVec* chiralCheckAtom,
+                                          const std::vector< std::vector< std::vector<RealOpenMM> > >& grid,
+                                          OpenMM::RealVec* forces) const;
          
 };
 
-// ---------------------------------------------------------------------------------------
+} // namespace OpenMM
 
 #endif // _AmoebaReferenceTorsionTorsionForce___

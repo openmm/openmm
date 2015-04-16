@@ -25,8 +25,6 @@
 #include <cstring>
 #include <sstream>
 
-#include "SimTKOpenMMCommon.h"
-#include "SimTKOpenMMLog.h"
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceVerletDynamics.h"
 #include "ReferenceVirtualSites.h"
@@ -34,7 +32,7 @@
 #include <cstdio>
 
 using std::vector;
-using OpenMM::RealVec;
+using namespace OpenMM;
 
 /**---------------------------------------------------------------------------------------
 
@@ -47,9 +45,8 @@ using OpenMM::RealVec;
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceVerletDynamics::ReferenceVerletDynamics( int numberOfAtoms,
-                                                          RealOpenMM deltaT ) : 
-           ReferenceDynamics( numberOfAtoms, deltaT, 0.0 ) {
+ReferenceVerletDynamics::ReferenceVerletDynamics(int numberOfAtoms, RealOpenMM deltaT) :
+           ReferenceDynamics(numberOfAtoms, deltaT, 0.0) {
 
    // ---------------------------------------------------------------------------------------
 
@@ -70,7 +67,7 @@ ReferenceVerletDynamics::ReferenceVerletDynamics( int numberOfAtoms,
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceVerletDynamics::~ReferenceVerletDynamics( ){
+ReferenceVerletDynamics::~ReferenceVerletDynamics() {
 
    // ---------------------------------------------------------------------------------------
 
@@ -109,10 +106,10 @@ void ReferenceVerletDynamics::update(const OpenMM::System& system, vector<RealVe
    // first-time-through initialization
 
    int numberOfAtoms = system.getNumParticles();
-   if( getTimeStep() == 0 ){
+   if (getTimeStep() == 0) {
       // invert masses
 
-      for( int ii = 0; ii < numberOfAtoms; ii++ ){
+      for (int ii = 0; ii < numberOfAtoms; ii++) {
          if (masses[ii] == zero)
              inverseMasses[ii] = zero;
          else
@@ -135,7 +132,7 @@ void ReferenceVerletDynamics::update(const OpenMM::System& system, vector<RealVe
    
    // Update the positions and velocities.
    
-   RealOpenMM velocityScale = static_cast<RealOpenMM>( 1.0/getDeltaT() );
+   RealOpenMM velocityScale = static_cast<RealOpenMM>(1.0/getDeltaT());
    for (int i = 0; i < numberOfAtoms; ++i) {
        if (masses[i] != zero)
            for (int j = 0; j < 3; ++j) {

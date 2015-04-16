@@ -100,5 +100,5 @@ KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name, const Pla
         return new ReferenceApplyMonteCarloBarostatKernel(name, platform);
     if (name == RemoveCMMotionKernel::Name())
         return new ReferenceRemoveCMMotionKernel(name, platform, data);
-    throw OpenMMException( (std::string("Tried to create kernel with illegal kernel name '") + name + "'").c_str() );
+    throw OpenMMException((std::string("Tried to create kernel with illegal kernel name '") + name + "'").c_str());
 }

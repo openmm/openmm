@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -30,8 +30,8 @@
  * -------------------------------------------------------------------------- */
 
 #include "ReferenceKernels.h"
-#include "CpuObc.h"
-#include "CpuGBVI.h"
+#include "ReferenceObc.h"
+#include "ReferenceGBVI.h"
 #include "ReferenceAndersenThermostat.h"
 #include "ReferenceAngleBondIxn.h"
 #include "ReferenceBondForce.h"
@@ -134,6 +134,11 @@ static RealVec& extractBoxSize(ContextImpl& context) {
     return *(RealVec*) data->periodicBoxSize;
 }
 
+static RealVec* extractBoxVectors(ContextImpl& context) {
+    ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
+    return (RealVec*) data->periodicBoxVectors;
+}
+
 static ReferenceConstraints& extractConstraints(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
     return *(ReferenceConstraints*) data->constraints;
@@ -192,7 +197,7 @@ void ReferenceCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, 
         savedForces = forceData;
 }
 
-double ReferenceCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
+double ReferenceCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForces, bool includeEnergy, int groups, bool& valid) {
     if (!includeForces)
         extractForces(context) = savedForces; // Restore the forces so computing the energy doesn't overwrite the forces with incorrect values.
     else
@@ -256,10 +261,10 @@ void ReferenceUpdateStateDataKernel::getForces(ContextImpl& context, std::vector
 }
 
 void ReferenceUpdateStateDataKernel::getPeriodicBoxVectors(ContextImpl& context, Vec3& a, Vec3& b, Vec3& c) const {
-    RealVec& box = extractBoxSize(context);
-    a = Vec3(box[0], 0, 0);
-    b = Vec3(0, box[1], 0);
-    c = Vec3(0, 0, box[2]);
+    RealVec* vectors = extractBoxVectors(context);
+    a = vectors[0];
+    b = vectors[1];
+    c = vectors[2];
 }
 
 void ReferenceUpdateStateDataKernel::setPeriodicBoxVectors(ContextImpl& context, const Vec3& a, const Vec3& b, const Vec3& c) const {
@@ -267,33 +272,37 @@ void ReferenceUpdateStateDataKernel::setPeriodicBoxVectors(ContextImpl& context,
     box[0] = (RealOpenMM) a[0];
     box[1] = (RealOpenMM) b[1];
     box[2] = (RealOpenMM) c[2];
+    RealVec* vectors = extractBoxVectors(context);
+    vectors[0] = a;
+    vectors[1] = b;
+    vectors[2] = c;
 }
 
 void ReferenceUpdateStateDataKernel::createCheckpoint(ContextImpl& context, ostream& stream) {
-    int version = 1;
+    int version = 2;
     stream.write((char*) &version, sizeof(int));
     stream.write((char*) &data.time, sizeof(data.time));
     vector<RealVec>& posData = extractPositions(context);
     stream.write((char*) &posData[0], sizeof(RealVec)*posData.size());
     vector<RealVec>& velData = extractVelocities(context);
     stream.write((char*) &velData[0], sizeof(RealVec)*velData.size());
-    RealVec& box = extractBoxSize(context);
-    stream.write((char*) &box, sizeof(RealVec));
+    RealVec* vectors = extractBoxVectors(context);
+    stream.write((char*) vectors, 3*sizeof(RealVec));
     SimTKOpenMMUtilities::createCheckpoint(stream);
 }
 
 void ReferenceUpdateStateDataKernel::loadCheckpoint(ContextImpl& context, istream& stream) {
     int version;
     stream.read((char*) &version, sizeof(int));
-    if (version != 1)
+    if (version != 2)
         throw OpenMMException("Checkpoint was created with a different version of OpenMM");
     stream.read((char*) &data.time, sizeof(data.time));
     vector<RealVec>& posData = extractPositions(context);
     stream.read((char*) &posData[0], sizeof(RealVec)*posData.size());
     vector<RealVec>& velData = extractVelocities(context);
     stream.read((char*) &velData[0], sizeof(RealVec)*velData.size());
-    RealVec& box = extractBoxSize(context);
-    stream.read((char*) &box, sizeof(RealVec));
+    RealVec* vectors = extractBoxVectors(context);
+    stream.read((char*) vectors, 3*sizeof(RealVec));
     SimTKOpenMMUtilities::loadCheckpoint(stream);
 }
 
@@ -701,6 +710,40 @@ double ReferenceCalcCMAPTorsionForceKernel::execute(ContextImpl& context, bool i
     return totalEnergy;
 }
 
+void ReferenceCalcCMAPTorsionForceKernel::copyParametersToContext(ContextImpl& context, const CMAPTorsionForce& force) {
+    int numMaps = force.getNumMaps();
+    int numTorsions = force.getNumTorsions();
+    if (coeff.size() != numMaps)
+        throw OpenMMException("updateParametersInContext: The number of maps has changed");
+    if (torsionMaps.size() != numTorsions)
+        throw OpenMMException("updateParametersInContext: The number of CMAP torsions has changed");
+
+    // Update the maps.
+
+    vector<double> energy;
+    vector<vector<double> > c;
+    for (int i = 0; i < numMaps; i++) {
+        int size;
+        force.getMapParameters(i, size, energy);
+        if (coeff[i].size() != size*size)
+            throw OpenMMException("updateParametersInContext: The size of a map has changed");
+        CMAPTorsionForceImpl::calcMapDerivatives(size, energy, c);
+        for (int j = 0; j < size*size; j++)
+            for (int k = 0; k < 16; k++)
+                coeff[i][j][k] = c[j][k];
+    }
+
+    // Update the indices.
+
+    for (int i = 0; i < numTorsions; i++) {
+        int index[8];
+        force.getTorsionParameters(i, torsionMaps[i], index[0], index[1], index[2], index[3], index[4], index[5], index[6], index[7]);
+        for (int j = 0; j < 8; j++)
+            if (index[j] != torsionIndices[i][j])
+                throw OpenMMException("updateParametersInContext: The set of particles in a CMAP torsion has changed");
+    }
+}
+
 ReferenceCalcCustomTorsionForceKernel::~ReferenceCalcCustomTorsionForceKernel() {
     disposeIntArray(torsionIndexArray, numTorsions);
     disposeRealArray(torsionParamArray, numTorsions);
@@ -854,15 +897,15 @@ double ReferenceCalcNonbondedForceKernel::execute(ContextImpl& context, bool inc
     bool ewald  = (nonbondedMethod == Ewald);
     bool pme  = (nonbondedMethod == PME);
     if (nonbondedMethod != NoCutoff) {
-        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, extractBoxSize(context), periodic || ewald || pme, nonbondedCutoff, 0.0);
+        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, extractBoxVectors(context), periodic || ewald || pme, nonbondedCutoff, 0.0);
         clj.setUseCutoff(nonbondedCutoff, *neighborList, rfDielectric);
     }
     if (periodic || ewald || pme) {
-        RealVec& box = extractBoxSize(context);
+        RealVec* boxVectors = extractBoxVectors(context);
         double minAllowedSize = 1.999999*nonbondedCutoff;
-        if (box[0] < minAllowedSize || box[1] < minAllowedSize || box[2] < minAllowedSize)
+        if (boxVectors[0][0] < minAllowedSize || boxVectors[1][1] < minAllowedSize || boxVectors[2][2] < minAllowedSize)
             throw OpenMMException("The periodic box size has decreased to less than twice the nonbonded cutoff.");
-        clj.setPeriodic(box);
+        clj.setPeriodic(boxVectors);
     }
     if (ewald)
         clj.setUseEwald(ewaldAlpha, kmax[0], kmax[1], kmax[2]);
@@ -876,8 +919,8 @@ double ReferenceCalcNonbondedForceKernel::execute(ContextImpl& context, bool inc
         ReferenceLJCoulomb14 nonbonded14;
         refBondForce.calculateForce(num14, bonded14IndexArray, posData, bonded14ParamArray, forceData, includeEnergy ? &energy : NULL, nonbonded14);
         if (periodic || ewald || pme) {
-            RealVec& boxSize = extractBoxSize(context);
-            energy += dispersionCoefficient/(boxSize[0]*boxSize[1]*boxSize[2]);
+            RealVec* boxVectors = extractBoxVectors(context);
+            energy += dispersionCoefficient/(boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2]);
         }
     }
     return energy;
@@ -1013,19 +1056,19 @@ void ReferenceCalcCustomNonbondedForceKernel::initialize(const System& system, c
 double ReferenceCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     vector<RealVec>& posData = extractPositions(context);
     vector<RealVec>& forceData = extractForces(context);
-    RealVec& box = extractBoxSize(context);
+    RealVec* boxVectors = extractBoxVectors(context);
     RealOpenMM energy = 0;
     ReferenceCustomNonbondedIxn ixn(energyExpression, forceExpression, parameterNames);
     bool periodic = (nonbondedMethod == CutoffPeriodic);
     if (nonbondedMethod != NoCutoff) {
-        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, extractBoxSize(context), periodic, nonbondedCutoff, 0.0);
+        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, extractBoxVectors(context), periodic, nonbondedCutoff, 0.0);
         ixn.setUseCutoff(nonbondedCutoff, *neighborList);
     }
     if (periodic) {
         double minAllowedSize = 2*nonbondedCutoff;
-        if (box[0] < minAllowedSize || box[1] < minAllowedSize || box[2] < minAllowedSize)
+        if (boxVectors[0][0] < minAllowedSize || boxVectors[1][1] < minAllowedSize || boxVectors[2][2] < minAllowedSize)
             throw OpenMMException("The periodic box size has decreased to less than twice the nonbonded cutoff.");
-        ixn.setPeriodic(box);
+        ixn.setPeriodic(boxVectors);
     }
     if (interactionGroups.size() > 0)
         ixn.setInteractionGroups(interactionGroups);
@@ -1046,7 +1089,7 @@ double ReferenceCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bo
         longRangeCoefficient = CustomNonbondedForceImpl::calcLongRangeCorrection(*forceCopy, context.getOwner());
         hasInitializedLongRangeCorrection = true;
     }
-    energy += longRangeCoefficient/(box[0]*box[1]*box[2]);
+    energy += longRangeCoefficient/(boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2]);
     return energy;
 }
 
@@ -1096,12 +1139,13 @@ void ReferenceCalcGBSAOBCForceKernel::initialize(const System& system, const GBS
     ObcParameters* obcParameters = new ObcParameters(numParticles, ObcParameters::ObcTypeII);
     obcParameters->setAtomicRadii(atomicRadii);
     obcParameters->setScaledRadiusFactors(scaleFactors);
-    obcParameters->setSolventDielectric( static_cast<RealOpenMM>(force.getSolventDielectric()) );
-    obcParameters->setSoluteDielectric( static_cast<RealOpenMM>(force.getSoluteDielectric()) );
+    obcParameters->setSolventDielectric(static_cast<RealOpenMM>(force.getSolventDielectric()));
+    obcParameters->setSoluteDielectric(static_cast<RealOpenMM>(force.getSoluteDielectric()));
+    obcParameters->setPi4Asolv(4*M_PI*force.getSurfaceAreaEnergy());
     if (force.getNonbondedMethod() != GBSAOBCForce::NoCutoff)
         obcParameters->setUseCutoff(static_cast<RealOpenMM>(force.getCutoffDistance()));
     isPeriodic = (force.getNonbondedMethod() == GBSAOBCForce::CutoffPeriodic);
-    obc = new CpuObc(obcParameters);
+    obc = new ReferenceObc(obcParameters);
     obc->setIncludeAceApproximation(true);
 }
 
@@ -1109,7 +1153,7 @@ double ReferenceCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool inclu
     vector<RealVec>& posData = extractPositions(context);
     vector<RealVec>& forceData = extractForces(context);
     if (isPeriodic)
-        obc->getObcParameters()->setPeriodic(extractBoxSize(context));
+        obc->getObcParameters()->setPeriodic(extractBoxVectors(context));
     return obc->computeBornEnergyForces(posData, charges, forceData);
 }
 
@@ -1142,7 +1186,7 @@ ReferenceCalcGBVIForceKernel::~ReferenceCalcGBVIForceKernel() {
     }
 }
 
-void ReferenceCalcGBVIForceKernel::initialize(const System& system, const GBVIForce& force, const std::vector<double> & inputScaledRadii ) {
+void ReferenceCalcGBVIForceKernel::initialize(const System& system, const GBVIForce& force, const std::vector<double> & inputScaledRadii) {
 
     int numParticles = system.getNumParticles();
 
@@ -1175,7 +1219,7 @@ void ReferenceCalcGBVIForceKernel::initialize(const System& system, const GBVIFo
     if (force.getNonbondedMethod() != GBVIForce::NoCutoff)
         gBVIParameters->setUseCutoff(static_cast<RealOpenMM>(force.getCutoffDistance()));
     isPeriodic = (force.getNonbondedMethod() == GBVIForce::CutoffPeriodic);
-    gbvi = new CpuGBVI(gBVIParameters);
+    gbvi = new ReferenceGBVI(gBVIParameters);
 }
 
 double ReferenceCalcGBVIForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -1183,7 +1227,7 @@ double ReferenceCalcGBVIForceKernel::execute(ContextImpl& context, bool includeF
     vector<RealVec>& posData = extractPositions(context);
 
     if (isPeriodic)
-        gbvi->getGBVIParameters()->setPeriodic(extractBoxSize(context));
+        gbvi->getGBVIParameters()->setPeriodic(extractBoxVectors(context));
 
     RealOpenMM energy;
     if (includeForces) {
@@ -1191,7 +1235,7 @@ double ReferenceCalcGBVIForceKernel::execute(ContextImpl& context, bool includeF
         gbvi->computeBornForces(posData, charges, forceData);
         energy = 0.0;
     }
-    if( includeEnergy ){
+    if (includeEnergy) {
         energy = gbvi->computeBornEnergy(posData, charges);
     }
     return static_cast<double>(energy);
@@ -1319,9 +1363,9 @@ double ReferenceCalcCustomGBForceKernel::execute(ContextImpl& context, bool incl
         energyDerivExpressions, energyGradientExpressions, energyTypes, particleParameterNames);
     bool periodic = (nonbondedMethod == CutoffPeriodic);
     if (periodic)
-        ixn.setPeriodic(extractBoxSize(context));
+        ixn.setPeriodic(extractBoxVectors(context));
     if (nonbondedMethod != NoCutoff) {
-        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, extractBoxSize(context), periodic, nonbondedCutoff, 0.0);
+        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, extractBoxVectors(context), periodic, nonbondedCutoff, 0.0);
         ixn.setUseCutoff(nonbondedCutoff, *neighborList);
     }
     map<string, double> globalParameters;
@@ -1498,7 +1542,7 @@ double ReferenceCalcCustomHbondForceKernel::execute(ContextImpl& context, bool i
     vector<RealVec>& posData = extractPositions(context);
     vector<RealVec>& forceData = extractForces(context);
     if (isPeriodic)
-        ixn->setPeriodic(extractBoxSize(context));
+        ixn->setPeriodic(extractBoxVectors(context));
     RealOpenMM energy = 0;
     map<string, double> globalParameters;
     for (int i = 0; i < (int) globalParameterNames.size(); i++)
@@ -1651,11 +1695,11 @@ double ReferenceCalcCustomManyParticleForceKernel::execute(ContextImpl& context,
     for (int i = 0; i < (int) globalParameterNames.size(); i++)
         globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
     if (nonbondedMethod == CutoffPeriodic) {
-        RealVec& box = extractBoxSize(context);
+        RealVec* boxVectors = extractBoxVectors(context);
         double minAllowedSize = 2*cutoffDistance;
-        if (box[0] < minAllowedSize || box[1] < minAllowedSize || box[2] < minAllowedSize)
+        if (boxVectors[0][0] < minAllowedSize || boxVectors[1][1] < minAllowedSize || boxVectors[2][2] < minAllowedSize)
             throw OpenMMException("The periodic box size has decreased to less than twice the nonbonded cutoff.");
-        ixn->setPeriodic(box);
+        ixn->setPeriodic(boxVectors);
     }
     ixn->calculateIxn(posData, particleParamArray, globalParameters, forceData, includeEnergy ? &energy : NULL);
     return energy;
@@ -1700,7 +1744,7 @@ void ReferenceIntegrateVerletStepKernel::execute(ContextImpl& context, const Ver
         
         if (dynamics)
             delete dynamics;
-        dynamics = new ReferenceVerletDynamics(context.getSystem().getNumParticles(), static_cast<RealOpenMM>(stepSize) );
+        dynamics = new ReferenceVerletDynamics(context.getSystem().getNumParticles(), static_cast<RealOpenMM>(stepSize));
         dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
         prevStepSize = stepSize;
     }
@@ -1738,12 +1782,12 @@ void ReferenceIntegrateLangevinStepKernel::execute(ContextImpl& context, const L
         
         if (dynamics)
             delete dynamics;
-        RealOpenMM tau = static_cast<RealOpenMM>( friction == 0.0 ? 0.0 : 1.0/friction );
+        RealOpenMM tau = static_cast<RealOpenMM>(friction == 0.0 ? 0.0 : 1.0/friction);
         dynamics = new ReferenceStochasticDynamics(
                 context.getSystem().getNumParticles(), 
                 static_cast<RealOpenMM>(stepSize), 
                 static_cast<RealOpenMM>(tau), 
-                static_cast<RealOpenMM>(temperature) );
+                static_cast<RealOpenMM>(temperature));
         dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
         prevTemp = temperature;
         prevFriction = friction;
@@ -1787,7 +1831,7 @@ void ReferenceIntegrateBrownianStepKernel::execute(ContextImpl& context, const B
                 context.getSystem().getNumParticles(), 
                 static_cast<RealOpenMM>(stepSize), 
                 static_cast<RealOpenMM>(friction), 
-                static_cast<RealOpenMM>(temperature) );
+                static_cast<RealOpenMM>(temperature));
         dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
         prevTemp = temperature;
         prevFriction = friction;
@@ -1827,7 +1871,7 @@ double ReferenceIntegrateVariableLangevinStepKernel::execute(ContextImpl& contex
 
         if (dynamics)
             delete dynamics;
-        RealOpenMM tau = static_cast<RealOpenMM>( friction == 0.0 ? 0.0 : 1.0/friction );
+        RealOpenMM tau = static_cast<RealOpenMM>(friction == 0.0 ? 0.0 : 1.0/friction);
         dynamics = new ReferenceVariableStochasticDynamics(context.getSystem().getNumParticles(), (RealOpenMM) tau, (RealOpenMM) temperature, (RealOpenMM) errorTol);
         dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
         prevTemp = temperature;
@@ -2004,8 +2048,8 @@ void ReferenceApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& conte
     if (barostat == NULL)
         barostat = new ReferenceMonteCarloBarostat(context.getSystem().getNumParticles(), context.getMolecules());
     vector<RealVec>& posData = extractPositions(context);
-    RealVec& boxSize = extractBoxSize(context);
-    barostat->applyBarostat(posData, boxSize, scaleX, scaleY, scaleZ);
+    RealVec* boxVectors = extractBoxVectors(context);
+    barostat->applyBarostat(posData, boxVectors, scaleX, scaleY, scaleZ);
 }
 
 void ReferenceApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& context) {

@@ -23,7 +23,8 @@ __kernel void computeNonbonded(
         __global const ushort2* restrict exclusionTiles, unsigned int startTileIndex, unsigned int numTileIndices
 #ifdef USE_CUTOFF
         , __global const int* restrict tiles, __global const unsigned int* restrict interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, 
-        unsigned int maxTiles, __global const real4* restrict blockCenter, __global const real4* restrict blockSize, __global const int* restrict interactingAtoms
+        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, __global const real4* restrict blockCenter,
+        __global const real4* restrict blockSize, __global const int* restrict interactingAtoms
 #endif
         PARAMETER_ARGUMENTS) {
     real energy = 0;
@@ -65,7 +66,7 @@ __kernel void computeNonbonded(
                     real4 posq2 = (real4) (localData[j].x, localData[j].y, localData[j].z, localData[j].q);
                     real4 delta = (real4) (posq2.xyz - posq1.xyz, 0);
 #ifdef USE_PERIODIC
-                    delta.xyz -= floor(delta.xyz*invPeriodicBoxSize.xyz+0.5f)*periodicBoxSize.xyz;
+                    APPLY_PERIODIC_TO_DELTA(delta)
 #endif
                     real r2 = dot(delta.xyz, delta.xyz);
 #ifdef USE_CUTOFF
@@ -133,7 +134,7 @@ __kernel void computeNonbonded(
                     real4 posq2 = (real4) (localData[j].x, localData[j].y, localData[j].z, localData[j].q);
                     real4 delta = (real4) (posq2.xyz - posq1.xyz, 0);
 #ifdef USE_PERIODIC
-                    delta.xyz -= floor(delta.xyz*invPeriodicBoxSize.xyz+0.5f)*periodicBoxSize.xyz;
+                    APPLY_PERIODIC_TO_DELTA(delta)
 #endif
                     real r2 = dot(delta.xyz, delta.xyz);
 #ifdef USE_CUTOFF
@@ -291,15 +292,13 @@ __kernel void computeNonbonded(
 
                 real4 blockCenterX = blockCenter[x];
                 for (unsigned int tgx = 0; tgx < TILE_SIZE; tgx++) {
-                    localData[tgx].x -= floor((localData[tgx].x-blockCenterX.x)*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-                    localData[tgx].y -= floor((localData[tgx].y-blockCenterX.y)*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-                    localData[tgx].z -= floor((localData[tgx].z-blockCenterX.z)*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
+                    APPLY_PERIODIC_TO_POS_WITH_CENTER(localData[tgx], blockCenterX)
                 }
                 for (unsigned int tgx = 0; tgx < TILE_SIZE; tgx++) {
                     unsigned int atom1 = x*TILE_SIZE+tgx;
                     real4 force = 0;
                     real4 posq1 = posq[atom1];
-                    posq1.xyz -= floor((posq1.xyz-blockCenterX.xyz)*invPeriodicBoxSize.xyz+0.5f)*periodicBoxSize.xyz;
+                    APPLY_PERIODIC_TO_POS_WITH_CENTER(posq1, blockCenterX)
                     LOAD_ATOM1_PARAMETERS
                     for (unsigned int j = 0; j < TILE_SIZE; j++) {
                         real4 posq2 = (real4) (localData[j].x, localData[j].y, localData[j].z, localData[j].q);
@@ -364,7 +363,7 @@ __kernel void computeNonbonded(
                         real4 posq2 = (real4) (localData[j].x, localData[j].y, localData[j].z, localData[j].q);
                         real4 delta = (real4) (posq2.xyz - posq1.xyz, 0);
 #ifdef USE_PERIODIC
-                        delta.xyz -= floor(delta.xyz*invPeriodicBoxSize.xyz+0.5f)*periodicBoxSize.xyz;
+                        APPLY_PERIODIC_TO_DELTA(delta)
 #endif
                         real r2 = dot(delta.xyz, delta.xyz);
 #ifdef USE_CUTOFF

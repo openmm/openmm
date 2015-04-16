@@ -18,12 +18,10 @@ inline __device__ real3 trim(real4 v) {
  * Compute the difference between two vectors, taking periodic boundary conditions into account
  * and setting the fourth component to the squared magnitude.
  */
-inline __device__ real4 delta(real3 vec1, real3 vec2, real4 periodicBoxSize, real4 invPeriodicBoxSize) {
+inline __device__ real4 delta(real3 vec1, real3 vec2, real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ) {
     real4 result = make_real4(vec1.x-vec2.x, vec1.y-vec2.y, vec1.z-vec2.z, 0.0f);
 #ifdef USE_PERIODIC
-    result.x -= floor(result.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-    result.y -= floor(result.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-    result.z -= floor(result.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
+    APPLY_PERIODIC_TO_DELTA(result)
 #endif
     result.w = result.x*result.x + result.y*result.y + result.z*result.z;
     return result;
@@ -81,7 +79,7 @@ __constant__ float globals[NUM_GLOBALS];
  */
 extern "C" __global__ void computeInteraction(
         unsigned long long* __restrict__ forceBuffers, real* __restrict__ energyBuffer, const real4* __restrict__ posq,
-        real4 periodicBoxSize, real4 invPeriodicBoxSize
+        real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ
 #ifdef USE_CUTOFF
         , const int* __restrict__ neighbors, const int* __restrict__ neighborStartIndex
 #endif
@@ -144,16 +142,14 @@ extern "C" __global__ void computeInteraction(
 /**
  * Find a bounding box for the atoms in each block.
  */
-extern "C" __global__ void findBlockBounds(real4 periodicBoxSize, real4 invPeriodicBoxSize, const real4* __restrict__ posq,
-        real4* __restrict__ blockCenter, real4* __restrict__ blockBoundingBox, int* __restrict__ numNeighborPairs) {
+extern "C" __global__ void findBlockBounds(real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
+        const real4* __restrict__ posq, real4* __restrict__ blockCenter, real4* __restrict__ blockBoundingBox, int* __restrict__ numNeighborPairs) {
     int index = blockIdx.x*blockDim.x+threadIdx.x;
     int base = index*TILE_SIZE;
     while (base < NUM_ATOMS) {
         real4 pos = posq[base];
 #ifdef USE_PERIODIC
-        pos.x -= floor(pos.x*invPeriodicBoxSize.x)*periodicBoxSize.x;
-        pos.y -= floor(pos.y*invPeriodicBoxSize.y)*periodicBoxSize.y;
-        pos.z -= floor(pos.z*invPeriodicBoxSize.z)*periodicBoxSize.z;
+        APPLY_PERIODIC_TO_POS(pos)
 #endif
         real4 minPos = pos;
         real4 maxPos = pos;
@@ -162,9 +158,7 @@ extern "C" __global__ void findBlockBounds(real4 periodicBoxSize, real4 invPerio
             pos = posq[i];
 #ifdef USE_PERIODIC
             real4 center = 0.5f*(maxPos+minPos);
-            pos.x -= floor((pos.x-center.x)*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-            pos.y -= floor((pos.y-center.y)*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-            pos.z -= floor((pos.z-center.z)*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
+            APPLY_PERIODIC_TO_POS_WITH_CENTER(pos, center)
 #endif
             minPos = make_real4(min(minPos.x,pos.x), min(minPos.y,pos.y), min(minPos.z,pos.z), 0);
             maxPos = make_real4(max(maxPos.x,pos.x), max(maxPos.y,pos.y), max(maxPos.z,pos.z), 0);
@@ -182,8 +176,8 @@ extern "C" __global__ void findBlockBounds(real4 periodicBoxSize, real4 invPerio
 /**
  * Find a list of neighbors for each atom.
  */
-extern "C" __global__ void findNeighbors(real4 periodicBoxSize, real4 invPeriodicBoxSize, const real4* __restrict__ posq,
-        const real4* __restrict__ blockCenter, const real4* __restrict__ blockBoundingBox, int2* __restrict__ neighborPairs,
+extern "C" __global__ void findNeighbors(real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
+        const real4* __restrict__ posq, const real4* __restrict__ blockCenter, const real4* __restrict__ blockBoundingBox, int2* __restrict__ neighborPairs,
         int* __restrict__ numNeighborPairs, int* __restrict__ numNeighborsForAtom, int maxNeighborPairs
 #ifdef USE_EXCLUSIONS
         , int* __restrict__ exclusions, int* __restrict__ exclusionStartIndex
@@ -216,9 +210,7 @@ extern "C" __global__ void findNeighbors(real4 periodicBoxSize, real4 invPeriodi
                 real4 blockSize2 = blockBoundingBox[block2];
                 real4 blockDelta = blockCenter1-blockCenter2;
 #ifdef USE_PERIODIC
-                blockDelta.x -= floor(blockDelta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-                blockDelta.y -= floor(blockDelta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-                blockDelta.z -= floor(blockDelta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
+                APPLY_PERIODIC_TO_DELTA(blockDelta)
 #endif
                 blockDelta.x = max(0.0f, fabs(blockDelta.x)-blockSize1.x-blockSize2.x);
                 blockDelta.y = max(0.0f, fabs(blockDelta.y)-blockSize1.y-blockSize2.y);
@@ -247,7 +239,7 @@ extern "C" __global__ void findNeighbors(real4 periodicBoxSize, real4 invPeriodi
 
                         // Decide whether to include this atom pair in the neighbor list.
 
-                        real4 atomDelta = delta(pos1, pos2, periodicBoxSize, invPeriodicBoxSize);
+                        real4 atomDelta = delta(pos1, pos2, periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);
 #ifdef USE_CENTRAL_PARTICLE
                         bool includeAtom = (atom2 != atom1 && atom2 < NUM_ATOMS && atomDelta.w < CUTOFF_SQUARED);
 #else

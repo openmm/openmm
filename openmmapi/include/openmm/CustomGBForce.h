@@ -129,7 +129,7 @@ namespace OpenMM {
  * particular piece of the computation.
  *
  * Expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
- * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, erf, erfc, min, max, abs, step, delta.  All trigonometric functions
+ * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, erf, erfc, min, max, abs, floor, ceil, step, delta.  All trigonometric functions
  * are defined in radians, and log is the natural logarithm.  step(x) = 0 if x is less than 0, 1 otherwise.  delta(x) = 1 if x is 0, 0 otherwise.  In expressions for
  * particle pair calculations, the names of per-particle parameters and computed values
  * have the suffix "1" or "2" appended to them to indicate the values for the two interacting particles.  As seen in the above example,
@@ -515,7 +515,7 @@ public:
     /**
      * Update the per-particle parameters in a Context to match those stored in this Force object.  This method provides
      * an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
-     * Simply call setParticleParameters() to modify this object's parameters, then call updateParametersInState()
+     * Simply call setParticleParameters() to modify this object's parameters, then call updateParametersInContext()
      * to copy them over to the Context.
      * 
      * This method has several limitations.  The only information it updates is the values of per-particle parameters.
@@ -523,6 +523,15 @@ public:
      * the Context.  Also, this method cannot be used to add new particles, only to change the parameters of existing ones.
      */
     void updateParametersInContext(Context& context);
+    /**
+     * Returns whether or not this force makes use of periodic boundary
+     * conditions.
+     *
+     * @returns true if force uses PBC and false otherwise
+     */
+    bool usesPeriodicBoundaryConditions() const {
+        return nonbondedMethod == CustomGBForce::CutoffPeriodic;
+    }
 protected:
     ForceImpl* createImpl() const;
 private:

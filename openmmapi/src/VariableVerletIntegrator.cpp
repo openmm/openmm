@@ -43,6 +43,7 @@ using std::vector;
 
 VariableVerletIntegrator::VariableVerletIntegrator(double errorTol) : errorTol(errorTol) {
     setConstraintTolerance(1e-5);
+    setStepSize(0.0);
 }
 
 void VariableVerletIntegrator::initialize(ContextImpl& contextRef) {

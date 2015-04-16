@@ -37,7 +37,7 @@ using namespace OpenMM;
 
 AndersenThermostat::AndersenThermostat(double defaultTemperature, double defaultCollisionFrequency) :
         defaultTemp(defaultTemperature), defaultFreq(defaultCollisionFrequency) {
-    setRandomNumberSeed(osrngseed());
+    setRandomNumberSeed(0);
 }
 
 ForceImpl* AndersenThermostat::createImpl() const {

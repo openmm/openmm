@@ -48,82 +48,82 @@ AmoebaWcaDispersionForce::AmoebaWcaDispersionForce() {
     dispoff   = 0.26;
 }
 
-int AmoebaWcaDispersionForce::addParticle( double radius, double epsilon ) {
-    parameters.push_back(WcaDispersionInfo( radius, epsilon));
+int AmoebaWcaDispersionForce::addParticle(double radius, double epsilon) {
+    parameters.push_back(WcaDispersionInfo(radius, epsilon));
     return parameters.size()-1;
 }
 
-void AmoebaWcaDispersionForce::getParticleParameters(int particleIndex, double& radius, double& epsilon ) const {
+void AmoebaWcaDispersionForce::getParticleParameters(int particleIndex, double& radius, double& epsilon) const {
     radius          = parameters[particleIndex].radius;
     epsilon         = parameters[particleIndex].epsilon;
 }
 
-void AmoebaWcaDispersionForce::setParticleParameters(int particleIndex, double radius, double epsilon ) {
+void AmoebaWcaDispersionForce::setParticleParameters(int particleIndex, double radius, double epsilon) {
     parameters[particleIndex].radius          = radius;
     parameters[particleIndex].epsilon         = epsilon;
 }
 
-double AmoebaWcaDispersionForce::getEpso( void ) const {
+double AmoebaWcaDispersionForce::getEpso() const {
     return epso;
 }
 
-double AmoebaWcaDispersionForce::getEpsh( void ) const {
+double AmoebaWcaDispersionForce::getEpsh() const {
     return epsh;
 }
 
-double AmoebaWcaDispersionForce::getRmino( void ) const {
+double AmoebaWcaDispersionForce::getRmino() const {
     return rmino;
 }
 
-double AmoebaWcaDispersionForce::getRminh( void ) const {
+double AmoebaWcaDispersionForce::getRminh() const {
     return rminh;
 }
 
-double AmoebaWcaDispersionForce::getAwater( void ) const {
+double AmoebaWcaDispersionForce::getAwater() const {
     return awater;
 }
 
-double AmoebaWcaDispersionForce::getShctd( void ) const {
+double AmoebaWcaDispersionForce::getShctd() const {
     return shctd;
 }
 
-double AmoebaWcaDispersionForce::getDispoff( void ) const {
+double AmoebaWcaDispersionForce::getDispoff() const {
     return dispoff;
 }
 
-double AmoebaWcaDispersionForce::getSlevy( void ) const {
+double AmoebaWcaDispersionForce::getSlevy() const {
     return slevy;
 }
 
-void AmoebaWcaDispersionForce::setEpso( double inputEpso ){
+void AmoebaWcaDispersionForce::setEpso(double inputEpso) {
     epso = inputEpso;
 }
 
-void AmoebaWcaDispersionForce::setEpsh( double inputEpsh ){
+void AmoebaWcaDispersionForce::setEpsh(double inputEpsh) {
     epsh = inputEpsh;
 }
 
-void AmoebaWcaDispersionForce::setRmino( double inputRmino ){
+void AmoebaWcaDispersionForce::setRmino(double inputRmino) {
     rmino = inputRmino;
 }
 
-void AmoebaWcaDispersionForce::setRminh( double inputRminh ){
+void AmoebaWcaDispersionForce::setRminh(double inputRminh) {
     rminh = inputRminh;
 }
 
-void AmoebaWcaDispersionForce::setAwater( double inputAwater ){
+void AmoebaWcaDispersionForce::setAwater(double inputAwater) {
     awater = inputAwater;
 }
 
-void AmoebaWcaDispersionForce::setShctd( double inputShctd ){
+void AmoebaWcaDispersionForce::setShctd(double inputShctd) {
     shctd = inputShctd;
 }
 
-void AmoebaWcaDispersionForce::setDispoff( double inputDispoff ){
+void AmoebaWcaDispersionForce::setDispoff(double inputDispoff) {
     dispoff = inputDispoff;
 }
 
-void AmoebaWcaDispersionForce::setSlevy( double inputSlevy ){
+void AmoebaWcaDispersionForce::setSlevy(double inputSlevy) {
     slevy = inputSlevy;
 }
 

@@ -25,14 +25,12 @@
 #include <string.h>
 #include <sstream>
 
-#include "SimTKOpenMMCommon.h"
-#include "SimTKOpenMMLog.h"
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceAngleBondIxn.h"
 #include "ReferenceForce.h"
 
 using std::vector;
-using OpenMM::RealVec;
+using namespace OpenMM;
 
 /**---------------------------------------------------------------------------------------
 
@@ -40,7 +38,7 @@ using OpenMM::RealVec;
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceAngleBondIxn::ReferenceAngleBondIxn( ){
+ReferenceAngleBondIxn::ReferenceAngleBondIxn() {
 
    // ---------------------------------------------------------------------------------------
 
@@ -56,7 +54,7 @@ ReferenceAngleBondIxn::ReferenceAngleBondIxn( ){
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceAngleBondIxn::~ReferenceAngleBondIxn( ){
+ReferenceAngleBondIxn::~ReferenceAngleBondIxn() {
 
    // ---------------------------------------------------------------------------------------
 
@@ -78,8 +76,8 @@ ReferenceAngleBondIxn::~ReferenceAngleBondIxn( ){
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceAngleBondIxn::getPrefactorsGivenAngleCosine( RealOpenMM cosine, RealOpenMM* angleParameters,
-                                                          RealOpenMM* dEdR, RealOpenMM* energyTerm ) const {
+void ReferenceAngleBondIxn::getPrefactorsGivenAngleCosine(RealOpenMM cosine, RealOpenMM* angleParameters,
+                                                          RealOpenMM* dEdR, RealOpenMM* energyTerm) const {
 
    // ---------------------------------------------------------------------------------------
 
@@ -92,9 +90,9 @@ void ReferenceAngleBondIxn::getPrefactorsGivenAngleCosine( RealOpenMM cosine, Re
    // ---------------------------------------------------------------------------------------
 
    RealOpenMM angle;
-   if( cosine >= one ){
+   if (cosine >= one) {
       angle = zero;
-   } else if( cosine <= -one ){
+   } else if (cosine <= -one) {
       angle = PI_M;
    } else {
       angle = ACOS(cosine);
@@ -120,11 +118,11 @@ void ReferenceAngleBondIxn::getPrefactorsGivenAngleCosine( RealOpenMM cosine, Re
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceAngleBondIxn::calculateBondIxn( int* atomIndices,
+void ReferenceAngleBondIxn::calculateBondIxn(int* atomIndices,
                                              vector<RealVec>& atomCoordinates,
                                              RealOpenMM* parameters,
                                              vector<RealVec>& forces,
-                                             RealOpenMM* totalEnergy ) const {
+                                             RealOpenMM* totalEnergy) const {
 
    // constants -- reduce Visual Studio warnings regarding conversions between float & double
 
@@ -147,31 +145,31 @@ void ReferenceAngleBondIxn::calculateBondIxn( int* atomIndices,
    int atomAIndex = atomIndices[0];
    int atomBIndex = atomIndices[1];
    int atomCIndex = atomIndices[2];
-   ReferenceForce::getDeltaR( atomCoordinates[atomAIndex], atomCoordinates[atomBIndex], deltaR[0] );  
-   ReferenceForce::getDeltaR( atomCoordinates[atomCIndex], atomCoordinates[atomBIndex], deltaR[1] );  
+   ReferenceForce::getDeltaR(atomCoordinates[atomAIndex], atomCoordinates[atomBIndex], deltaR[0]);  
+   ReferenceForce::getDeltaR(atomCoordinates[atomCIndex], atomCoordinates[atomBIndex], deltaR[1]);  
 
    RealOpenMM pVector[threeI];
-   SimTKOpenMMUtilities::crossProductVector3( deltaR[0], deltaR[1], pVector );
-   RealOpenMM rp              = DOT3( pVector, pVector );
-   rp                         = SQRT( rp );
-   if( rp < 1.0e-06 ){
+   SimTKOpenMMUtilities::crossProductVector3(deltaR[0], deltaR[1], pVector);
+   RealOpenMM rp              = DOT3(pVector, pVector);
+   rp                         = SQRT(rp);
+   if (rp < 1.0e-06) {
       rp = (RealOpenMM) 1.0e-06;
    }   
-   RealOpenMM dot             = DOT3( deltaR[0], deltaR[1] );
-   RealOpenMM cosine          = dot/SQRT( (deltaR[0][ReferenceForce::R2Index]*deltaR[1][ReferenceForce::R2Index]) );
+   RealOpenMM dot             = DOT3(deltaR[0], deltaR[1]);
+   RealOpenMM cosine          = dot/SQRT((deltaR[0][ReferenceForce::R2Index]*deltaR[1][ReferenceForce::R2Index]));
 
    RealOpenMM dEdR;
    RealOpenMM energy;
-   getPrefactorsGivenAngleCosine( cosine, parameters, &dEdR, &energy );
+   getPrefactorsGivenAngleCosine(cosine, parameters, &dEdR, &energy);
 
    RealOpenMM termA           =  dEdR/(deltaR[0][ReferenceForce::R2Index]*rp);
    RealOpenMM termC           = -dEdR/(deltaR[1][ReferenceForce::R2Index]*rp);
 
    RealOpenMM deltaCrossP[LastAtomIndex][threeI];
-   SimTKOpenMMUtilities::crossProductVector3( deltaR[0], pVector, deltaCrossP[0] );
-   SimTKOpenMMUtilities::crossProductVector3( deltaR[1], pVector, deltaCrossP[2] );
+   SimTKOpenMMUtilities::crossProductVector3(deltaR[0], pVector, deltaCrossP[0]);
+   SimTKOpenMMUtilities::crossProductVector3(deltaR[1], pVector, deltaCrossP[2]);
 
-   for( int ii = 0; ii < threeI; ii++ ){
+   for (int ii = 0; ii < threeI; ii++) {
       deltaCrossP[0][ii] *= termA;
       deltaCrossP[2][ii] *= termC;
       deltaCrossP[1][ii]  = oneM*(deltaCrossP[0][ii] + deltaCrossP[2][ii]);
@@ -179,8 +177,8 @@ void ReferenceAngleBondIxn::calculateBondIxn( int* atomIndices,
 
    // accumulate forces
  
-   for( int jj = 0; jj < LastAtomIndex; jj++ ){
-      for( int ii = 0; ii < threeI; ii++ ){
+   for (int jj = 0; jj < LastAtomIndex; jj++) {
+      for (int ii = 0; ii < threeI; ii++) {
          forces[atomIndices[jj]][ii] += deltaCrossP[jj][ii];
       }   
    }   

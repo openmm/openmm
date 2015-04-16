@@ -308,44 +308,56 @@ class TestModeller(unittest.TestCase):
                         self.assertTrue(len(matoms)==0 and len(m1atoms)==1 and len(m2atoms)==1)
     
     def test_addSolventPeriodicBox(self):
-        """ Test the addSolvent() method; test that the three ways of passing in the periodic box all work. """
+        """ Test the addSolvent() method; test that the four ways of passing in the periodic box all work. """
     
-        # First way of passing in periodic box dimensions:  set it in the original topology.
+        # First way of passing in periodic box vectors:  set it in the original topology.
         topology_start = self.pdb.topology
         topology_start.setUnitCellDimensions(Vec3(3.5, 4.5, 5.5)*nanometers)
         modeller = Modeller(topology_start, self.positions)
         modeller.deleteWater()
         modeller.addSolvent(self.forcefield)
         topology_after = modeller.getTopology()
-        dim3 = topology_after.getUnitCellDimensions()
+        dim3 = topology_after.getPeriodicBoxVectors()
     
-        self.assertAlmostEqual(dim3[0]/nanometers, 3.5)
-        self.assertAlmostEqual(dim3[1]/nanometers, 4.5)
-        self.assertAlmostEqual(dim3[2]/nanometers, 5.5)
+        self.assertVecAlmostEqual(dim3[0]/nanometers, Vec3(3.5, 0, 0))
+        self.assertVecAlmostEqual(dim3[1]/nanometers, Vec3(0, 4.5, 0))
+        self.assertVecAlmostEqual(dim3[2]/nanometers, Vec3(0, 0, 5.5))
     
-        # Second way of passing in the periodic box dimensions: as a parameter to addSolvent()
+        # Second way of passing in the periodic box vectors: with the boxSize parameter to addSolvent()
         topology_start = self.pdb.topology
         modeller = Modeller(topology_start, self.positions)
         modeller.deleteWater()
         modeller.addSolvent(self.forcefield, boxSize = Vec3(3.6, 4.6, 5.6)*nanometers)
         topology_after = modeller.getTopology()
-        dim3 = topology_after.getUnitCellDimensions()
+        dim3 = topology_after.getPeriodicBoxVectors()
     
-        self.assertAlmostEqual(dim3[0]/nanometers, 3.6)
-        self.assertAlmostEqual(dim3[1]/nanometers, 4.6)
-        self.assertAlmostEqual(dim3[2]/nanometers, 5.6)
+        self.assertVecAlmostEqual(dim3[0]/nanometers, Vec3(3.6, 0, 0))
+        self.assertVecAlmostEqual(dim3[1]/nanometers, Vec3(0, 4.6, 0))
+        self.assertVecAlmostEqual(dim3[2]/nanometers, Vec3(0, 0, 5.6))
     
-        # Third way of passing in the periodic box dimensions: pass a 'padding' value to addSolvent()
+        # Third way of passing in the periodic box vectors: with the boxVectors parameter to addSolvent()
+        topology_start = self.pdb.topology
+        modeller = Modeller(topology_start, self.positions)
+        modeller.deleteWater()
+        modeller.addSolvent(self.forcefield, boxVectors = (Vec3(3.4, 0, 0), Vec3(0.5, 4.4, 0), Vec3(-1.0, -1.5, 5.4))*nanometers)
+        topology_after = modeller.getTopology()
+        dim3 = topology_after.getPeriodicBoxVectors()
+    
+        self.assertVecAlmostEqual(dim3[0]/nanometers, Vec3(3.4, 0, 0))
+        self.assertVecAlmostEqual(dim3[1]/nanometers, Vec3(0.5, 4.4, 0))
+        self.assertVecAlmostEqual(dim3[2]/nanometers, Vec3(-1.0, -1.5, 5.4))
+    
+        # Fourth way of passing in the periodic box vectors: pass a 'padding' value to addSolvent()
         topology_start = self.pdb.topology
         modeller = Modeller(topology_start, self.positions)
         modeller.deleteWater()
         modeller.addSolvent(self.forcefield, padding = 1.0*nanometers)
         topology_after = modeller.getTopology()
-        dim3 = topology_after.getUnitCellDimensions()
+        dim3 = topology_after.getPeriodicBoxVectors()
     
-        self.assertAlmostEqual(dim3[0]/nanometers, 2.8802)
-        self.assertAlmostEqual(dim3[1]/nanometers, 2.8802)
-        self.assertAlmostEqual(dim3[2]/nanometers, 2.8802)
+        self.assertVecAlmostEqual(dim3[0]/nanometers, Vec3(2.8802, 0, 0))
+        self.assertVecAlmostEqual(dim3[1]/nanometers, Vec3(0, 2.8802, 0))
+        self.assertVecAlmostEqual(dim3[2]/nanometers, Vec3(0, 0, 2.8802))
 
     def test_addSolventNeutralSolvent(self):
         """ Test the addSolvent() method; test adding ions to neutral solvent. """
@@ -873,6 +885,33 @@ class TestModeller(unittest.TestCase):
         topology_after = modeller2.getTopology()
 
         validate_equivalence(self, topology_LYN, topology_after)
+
+
+    def test_addExtraParticles(self):
+        """Test addExtraParticles()."""
+
+        # Create a box of water.
+
+        ff1 = ForceField('tip3p.xml')
+        modeller = Modeller(Topology(), []*nanometers)
+        modeller.addSolvent(ff1, 'tip3p', boxSize=Vec3(2,2,2)*nanometers)
+
+        # Now convert the water to TIP4P.
+
+        ff2 = ForceField('tip4pew.xml')
+        modeller.addExtraParticles(ff2)
+        for residue in modeller.topology.residues():
+            atoms = list(residue.atoms())
+            self.assertEqual(4, len(atoms))
+            ep = [atom for atom in atoms if atom.element is None]
+            self.assertEqual(1, len(ep))
+
+
+    def assertVecAlmostEqual(self, p1, p2, tol=1e-7):
+        scale = max(1.0, norm(p1),)
+        for i in range(3):
+            diff = abs(p1[i]-p2[i])/scale
+            self.assertTrue(diff < tol)
 
 if __name__ == '__main__':
     unittest.main()

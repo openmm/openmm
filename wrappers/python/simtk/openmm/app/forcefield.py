@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2014 Stanford University and the Authors.
+Portions copyright (c) 2012-2015 Stanford University and the Authors.
 Authors: Peter Eastman, Mark Friedrichs
 Contributors:
 
@@ -34,6 +34,7 @@ __version__ = "1.0"
 import os
 import itertools
 import xml.etree.ElementTree as etree
+import math
 from math import sqrt, cos
 import simtk.openmm as mm
 import simtk.unit as unit
@@ -403,9 +404,9 @@ class ForceField(object):
 
         # Set periodic boundary conditions.
 
-        boxSize = topology.getUnitCellDimensions()
-        if boxSize is not None:
-            sys.setDefaultPeriodicBoxVectors((boxSize[0], 0, 0), (0, boxSize[1], 0), (0, 0, boxSize[2]))
+        boxVectors = topology.getPeriodicBoxVectors()
+        if boxVectors is not None:
+            sys.setDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2])
         elif nonbondedMethod is not NoCutoff and nonbondedMethod is not CutoffNonPeriodic:
             raise ValueError('Requested periodic boundary conditions for a Topology that does not specify periodic box dimensions')
 
@@ -2101,7 +2102,7 @@ class AmoebaAngleGenerator:
                     hit = 1
                     if isConstrained and self.k[i] != 0.0:
                         angleDict['idealAngle'] = self.angle[i][0]
-                        addAngleConstraint(angle, self.angle[i][0], data, sys)
+                        addAngleConstraint(angle, self.angle[i][0]*math.pi/180.0, data, sys)
                     elif self.k[i] != 0:
                         lenAngle = len(self.angle[i])
                         if (lenAngle > 1):
@@ -2179,7 +2180,7 @@ class AmoebaAngleGenerator:
                     hit = 1
                     angleDict['idealAngle'] = self.angle[i][0]
                     if (isConstrained and self.k[i] != 0.0):
-                        addAngleConstraint(angle, self.angle[i][0], data, sys)
+                        addAngleConstraint(angle, self.angle[i][0]*math.pi/180.0, data, sys)
                     else:
                         force.addAngle(angle[0], angle[1], angle[2], angle[3], self.angle[i][0], self.k[i])
                     break
@@ -3086,7 +3087,7 @@ class AmoebaStretchBendGenerator:
                        raise ValueError(outputString)
 
                     else:
-                        force.addStretchBend(angle[0], angle[1], angle[2], bondAB, bondCB, angleDict['idealAngle']/radian, self.k1[i])
+                        force.addStretchBend(angle[0], angle[1], angle[2], bondAB, bondCB, angleDict['idealAngle']/radian, self.k1[i], self.k2[i])
 
                     break
 

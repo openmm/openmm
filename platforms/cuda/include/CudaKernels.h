@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -37,6 +37,27 @@
 #include <cufft.h>
 
 namespace OpenMM {
+
+/**
+ * This abstract class defines an interface for code that can compile CUDA kernels.  This allows a plugin to take advantage of runtime compilation
+ * when running on recent versions of CUDA.
+ */
+class CudaCompilerKernel : public KernelImpl {
+public:
+    static std::string Name() {
+        return "CudaCompilerKernel";
+    }
+    CudaCompilerKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    }
+    /**
+     * Compile a kernel to PTX.
+     *
+     * @param source     the source code for the kernel
+     * @param options    the flags to be passed to the compiler
+     * @param cu         the CudaContext for which the kernel is being compiled
+     */
+    virtual std::string createModule(const std::string& source, const std::string& flags, CudaContext& cu) = 0;
+};
 
 /**
  * This kernel is invoked at the beginning and end of force and energy computations.  It gives the
@@ -71,11 +92,13 @@ public:
      * @param includeForce  true if forces should be computed
      * @param includeEnergy true if potential energy should be computed
      * @param groups        a set of bit flags for which force groups to include
+     * @param valid         the method may set this to false to indicate the results are invalid and the force/energy
+     *                      calculation should be repeated
      * @return the potential energy of the system.  This value is added to all values returned by ForceImpls'
      * calcForcesAndEnergy() methods.  That is, each force kernel may <i>either</i> return its contribution to the
      * energy directly, <i>or</i> add it to an internal buffer so that it will be included here.
      */
-    double finishComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups);
+    double finishComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups, bool& valid);
 private:
    CudaContext& cu;
 };
@@ -497,11 +520,19 @@ public:
      * @return the potential energy due to the force
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CMAPTorsionForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const CMAPTorsionForce& force);
 private:
     int numTorsions;
     bool hasInitializedKernel;
     CudaContext& cu;
     const System& system;
+    std::vector<int2> mapPositionsVec;
     CudaArray* coefficients;
     CudaArray* mapPositions;
     CudaArray* torsionMaps;
@@ -591,14 +622,16 @@ private:
         int getKeySize() const {return 4;}
         const char* getDataType() const {return "int2";}
         const char* getKeyType() const {return "int";}
-        const char* getMinKey() const {return "INT_MIN";}
-        const char* getMaxKey() const {return "INT_MAX";}
-        const char* getMaxValue() const {return "make_int2(INT_MAX, INT_MAX)";}
+        const char* getMinKey() const {return "(-2147483647-1)";}
+        const char* getMaxKey() const {return "2147483647";}
+        const char* getMaxValue() const {return "make_int2(2147483647, 2147483647)";}
         const char* getSortKey() const {return "value.y";}
     };
     class PmeIO;
     class PmePreComputation;
     class PmePostComputation;
+    class SyncStreamPreComputation;
+    class SyncStreamPostComputation;
     CudaContext& cu;
     bool hasInitializedFFT;
     CudaArray* sigmaEpsilon;
@@ -614,6 +647,8 @@ private:
     CudaSort* sort;
     Kernel cpuPme;
     PmeIO* pmeio;
+    CUstream pmeStream;
+    CUevent pmeSyncEvent;
     cufftHandle fftForward;
     cufftHandle fftBackward;
     CUfunction ewaldSumsKernel;
@@ -628,7 +663,7 @@ private:
     std::vector<std::pair<int, int> > exceptionAtoms;
     double ewaldSelfEnergy, dispersionCoefficient, alpha;
     int interpolateForceThreads;
-    bool hasCoulomb, hasLJ;
+    bool hasCoulomb, hasLJ, usePmeStream;
     static const int PmeOrder = 5;
 };
 
@@ -715,7 +750,7 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const GBSAOBCForce& force);
 private:
-    double prefactor;
+    double prefactor, surfaceAreaFactor;
     bool hasCreatedKernels;
     int maxTiles;
     CudaContext& cu;

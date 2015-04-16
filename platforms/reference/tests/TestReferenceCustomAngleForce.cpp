@@ -47,11 +47,11 @@
 using namespace OpenMM;
 using namespace std;
 
+ReferencePlatform platform;
+
 const double TOL = 1e-5;
 
 void testAngles() {
-    ReferencePlatform platform;
-
     // Create a system using a CustomAngleForce.
 
     System customSystem;
@@ -71,6 +71,8 @@ void testAngles() {
     parameters[1] = 0.5;
     custom->addAngle(1, 2, 3, parameters);
     customSystem.addForce(custom);
+    ASSERT(!custom->usesPeriodicBoundaryConditions());
+    ASSERT(!customSystem.usesPeriodicBoundaryConditions());
 
     // Create an identical system using a HarmonicAngleForce.
 

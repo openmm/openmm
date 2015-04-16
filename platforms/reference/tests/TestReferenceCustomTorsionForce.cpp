@@ -50,11 +50,11 @@
 using namespace OpenMM;
 using namespace std;
 
+ReferencePlatform platform;
+
 const double TOL = 1e-5;
 
 void testTorsions() {
-    ReferencePlatform platform;
-
     // Create a system using a CustomTorsionForce.
 
     System customSystem;
@@ -75,6 +75,8 @@ void testTorsions() {
     parameters[1] = 2;
     custom->addTorsion(1, 2, 3, 4, parameters);
     customSystem.addForce(custom);
+    ASSERT(!custom->usesPeriodicBoundaryConditions());
+    ASSERT(!customSystem.usesPeriodicBoundaryConditions());
 
     // Create an identical system using a PeriodicTorsionForce.
 
@@ -139,7 +141,6 @@ void testTorsions() {
 }
 
 void testRange() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);

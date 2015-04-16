@@ -89,7 +89,7 @@ namespace OpenMM {
  * </pre></tt>
  *
  * Expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
- * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, erf, erfc, min, max, abs, step, delta.  All trigonometric functions
+ * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, erf, erfc, min, max, abs, floor, ceil, step, delta.  All trigonometric functions
  * are defined in radians, and log is the natural logarithm.  step(x) = 0 if x is less than 0, 1 otherwise.  delta(x) = 1 if x is 0, 0 otherwise.
  *
  * In addition, you can call addTabulatedFunction() to define a new function based on tabulated values.  You specify the function by
@@ -435,7 +435,7 @@ public:
      * Update the per-donor and per-acceptor parameters in a Context to match those stored in this Force object.  This method
      * provides an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
      * Simply call setDonorParameters() and setAcceptorParameters() to modify this object's parameters, then call
-     * updateParametersInState() to copy them over to the Context.
+     * updateParametersInContext() to copy them over to the Context.
      * 
      * This method has several limitations.  The only information it updates is the values of per-donor and per-acceptor parameters.
      * All other aspects of the Force (the energy function, nonbonded method, cutoff distance, etc.) are unaffected and can only
@@ -443,6 +443,15 @@ public:
      * new donors or acceptors be added.
      */
     void updateParametersInContext(Context& context);
+    /**
+     * Returns whether or not this force makes use of periodic boundary
+     * conditions.
+     *
+     * @returns true if force uses PBC and false otherwise
+     */
+    bool usesPeriodicBoundaryConditions() const {
+        return nonbondedMethod == CustomHbondForce::CutoffPeriodic;
+    }
 protected:
     ForceImpl* createImpl() const;
 private:
@@ -474,7 +483,7 @@ public:
     GroupInfo() : p1(-1), p2(-1), p3(-1) {
     }
     GroupInfo(int p1, int p2, int p3, const std::vector<double>& parameters) :
-        p1(p1), p2(p2), p3(p3), parameters(parameters) {
+        parameters(parameters), p1(p1), p2(p2), p3(p3) {
     }
 };
 

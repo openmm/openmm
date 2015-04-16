@@ -330,7 +330,7 @@ public:
      * the quadrupole moment is still undefined and should be ignored.
      *
      * @param context      context
-     * @param outputMultipoleMonents (charge,
+     * @param outputMultipoleMoments (charge,
                                       dipole_x, dipole_y, dipole_z,
                                       quadrupole_xx, quadrupole_xy, quadrupole_xz,
                                       quadrupole_yx, quadrupole_yy, quadrupole_yz,
@@ -340,7 +340,7 @@ public:
     /**
      * Update the multipole parameters in a Context to match those stored in this Force object.  This method
      * provides an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
-     * Simply call setMultipoleParameters() to modify this object's parameters, then call updateParametersInState() to
+     * Simply call setMultipoleParameters() to modify this object's parameters, then call updateParametersInContext() to
      * copy them over to the Context.
      * 
      * This method has several limitations.  The only information it updates is the parameters of multipoles.
@@ -349,7 +349,15 @@ public:
      * only to change the parameters of existing ones.
      */
     void updateParametersInContext(Context& context);
-
+    /**
+     * Returns whether or not this force makes use of periodic boundary
+     * conditions.
+     *
+     * @returns true if nonbondedMethod uses PBC and false otherwise
+     */
+    bool usesPeriodicBoundaryConditions() const {
+        return nonbondedMethod == AmoebaMultipoleForce::PME;
+    }
 protected:
     ForceImpl* createImpl() const;
 private:

@@ -43,15 +43,13 @@ troubleshooting guide that describes common problems and how to fix them
 Installing on Mac OS X
 **********************
 
-OpenMM works on Mac OS X 10.7 or later.  GPU acceleration is currently only
-supported on Nvidia GPUs, not on AMD or Intel GPUs.
+OpenMM works on Mac OS X 10.7 or later.
 
-.. warning::
-   A serious bug was introduced in Mac OS X 10.7.5 that prevents
-   OpenMM’s OpenCL platform from working correctly.  At the time of this writing,
-   the bug is present in all versions from 10.7.5 onward.  The CUDA platform (see
-   below) is not affected by the bug, so if you have an affected version of OS X,
-   you should use it instead of the OpenCL platform.
+.. note::
+   The OpenCL implementations on all recent versions of Mac OS X contain serious
+   bugs that make them unsuitable for use with OpenMM.  GPU acceleration is
+   therefore only supported with the CUDA platform.  This limits it to only Nvidia
+   GPUs, not AMD or Intel GPUs.
 
 1. Download the pre-compiled binary of OpenMM for Mac OS X, then double click
 the .zip file to expand it.
@@ -63,7 +61,7 @@ and tell it to install the command line tools.  With Xcode 4.2 and earlier, the
 command line tools are automatically installed when you install Xcode.)
 
 3. (Optional) If you have an Nvidia GPU and want to use the CUDA platform,
-download CUDA 6.0 from https://developer.nvidia.com/cuda-downloads.  Be sure to
+download CUDA 6.5 from https://developer.nvidia.com/cuda-downloads.  Be sure to
 install both the drivers and toolkit.
 
 4. (Optional) If you plan to use the CPU platform, it is recommended that you
@@ -107,14 +105,12 @@ example,
 
     export OPENMM_CUDA_COMPILER=/opt/CUDA/cuda-6.0/bin/nvcc
 
-7. Verify your installation by running the :file:`testInstallation.py` script found in
-the :file:`examples` folder of your OpenMM installation.  To run it, cd to the
-examples folder and type
+7. Verify your installation by typing the following command:
 ::
 
-    python testInstallation.py
+    python -m simtk.testInstallation
 
-This script confirms that OpenMM is installed, checks whether GPU acceleration
+This command confirms that OpenMM is installed, checks whether GPU acceleration
 is available (via the OpenCL and/or CUDA platforms), and verifies that all
 platforms produce consistent results.
 
@@ -139,7 +135,7 @@ into a console window.
 
 3. (Optional) If you want to run OpenMM on a GPU, install CUDA and/or OpenCL.
 
-  * If you have an Nvidia GPU, download CUDA 6.0 from
+  * If you have an Nvidia GPU, download CUDA 6.5 from
     https://developer.nvidia.com/cuda-downloads.  Be sure to install both the
     drivers and toolkit.  OpenCL is included with the CUDA drivers.
   * If you have an AMD GPU, download the latest version of the Catalyst driver
@@ -188,15 +184,13 @@ example,
 
     export OPENMM_CUDA_COMPILER=/opt/CUDA/cuda-6.0/bin/nvcc
 
-7. Verify your installation by running the :file:`testInstallation.py` script found in
-the :file:`examples` folder of your OpenMM installation.  To run it, :command:`cd` to the
-:file:`examples` folder and type
+7. Verify your installation by typing the following command:
 ::
 
-    python testInstallation.py
+    python -m simtk.testInstallation
 
-This script confirms that OpenMM is installed, checks whether GPU acceleration
-is available (via that OpenCL and/or CUDA platforms), and verifies that all
+This command confirms that OpenMM is installed, checks whether GPU acceleration
+is available (via the OpenCL and/or CUDA platforms), and verifies that all
 platforms produce consistent results.
 
 .. _installing-on-windows:
@@ -222,11 +216,9 @@ and ignore it.)
 
 4. (Optional) If you want to run OpenMM on a GPU, install CUDA and/or OpenCL.
 
-  * If you have an Nvidia GPU, download CUDA 6.0 from
+  * If you have an Nvidia GPU, download CUDA 6.5 from
     https://developer.nvidia.com/cuda-downloads.  Be sure to install both the
-    drivers and toolkit. For 64-bit machines, you should install the 64-bit driver,
-    but download the 32-bit version of the toolkit since the OpenMM binary is
-    32-bit.  OpenCL is included with the CUDA drivers.
+    drivers and toolkit.  OpenCL is included with the CUDA drivers.
   * If you have an AMD GPU, download the latest version of the Catalyst driver
     from http://support.amd.com.
 
@@ -276,15 +268,13 @@ your PATH.
     not set, it will assume plugins are in the default location (:file:`C:\\Program
     Files\\OpenMM\\lib\\plugins` or :file:`C:\\Program Files (x86)\\OpenMM\\lib\\plugins`).
 
-7. Verify your installation by running the :file:`testInstallation.py` script found in
-the :file:`examples` folder of your OpenMM installation.  To run it, open a command
-window, :command:`cd` to the :file:`examples` folder, and type
+7. Verify your installation by typing the following command:
 ::
 
-    python testInstallation.py
+    python -m simtk.testInstallation
 
-This script confirms that OpenMM is installed, checks whether GPU acceleration
-is available (via that OpenCL and/or CUDA platforms), and verifies that all
+This command confirms that OpenMM is installed, checks whether GPU acceleration
+is available (via the OpenCL and/or CUDA platforms), and verifies that all
 platforms produce consistent results.
 
 .. _running-simulations:
@@ -370,7 +360,8 @@ molecular topology and atom positions.  Your file need not be called
 :file:`input.pdb`.  Feel free to change this line to specify any file you want,
 though it must contain all of the atoms needed by the force field.
 (More information on how to add missing atoms and residues using OpenMM tools can be found in Chapter :ref:`model-building-and-editing`.)
-Make sure you include the single quotes around the file name.
+Make sure you include the single quotes around the file name.  OpenMM also can load
+files in the newer PDBx/mmCIF format: just change :class:`PDBFile` to :class:`PDBxFile`.
 ::
 
     forcefield = ForceField('amber99sb.xml', 'tip3p.xml')
@@ -581,7 +572,7 @@ with the name :file:`simulateGromacs.py`.
         from sys import stdout
 
         gro = GromacsGroFile('input.gro')
-        top = GromacsTopFile('input.top', unitCellDimensions=gro.getUnitCellDimensions(),
+        top = GromacsTopFile('input.top', periodicBoxVectors=gro.getPeriodicBoxVectors(),
                 includeDir='/usr/local/gromacs/share/gromacs/top')
         system = top.createSystem(nonbondedMethod=PME, nonbondedCutoff=1*nanometer,
                 constraints=HBonds)
@@ -602,10 +593,10 @@ This script is nearly identical to the previous one, just replacing
 :class:`AmberInpcrdFile` and :class:`AmberPrmtopFile` with :class:`GromacsGroFile` and :class:`GromacsTopFile`.
 Note that when we create the :class:`GromacsTopFile`, we specify values for two extra
 options.  First, we specify
-:code:`unitCellDimensions=gro.getUnitCellDimensions()`\ .  Unlike OpenMM and
-AMBER, which can store periodic unit cell dimensions with the topology, Gromacs
-only stores them with the coordinates.  To let :class:`GromacsTopFile` create a :class:`Topology`
-object, we therefore need to tell it the unit cell dimensions that were loaded
+:code:`periodicBoxVectors=gro.getPeriodicBoxVectors()`\ .  Unlike OpenMM and
+AMBER, which can store periodic unit cell information with the topology, Gromacs
+only stores it with the coordinates.  To let :class:`GromacsTopFile` create a :class:`Topology`
+object, we therefore need to tell it the periodic box vectors that were loaded
 from the :file:`gro` file.  You only need to do this if you are simulating a periodic
 system.  For implicit solvent simulations, it usually can be omitted.
 
@@ -809,8 +800,12 @@ you would type:
 
     forcefield = ForceField('amber99sb.xml', 'amber99_obc.xml')
 
+Note that the GBSA-OBC parameters in these files are those used in TINKER.\ :cite:`Tinker`
+They are designed for use with Amber force fields, but they are different from
+the parameters found in the AMBER application.
+
 If you are running a vacuum simulation, you do not need to specify a water
-model.  The following line specifies the AMBER10 force field and no water model.
+model.  The following line specifies the Amber10 force field and no water model.
 If you try to use it with a PDB file that contains explicit water, it will
 produce an error since no water parameters are defined:
 ::
@@ -1195,6 +1190,22 @@ change size.
 
     system.addForce(MonteCarloAnisotropicBarostat((1, 1, 1)*bar, 300*kelvin,
             False, True, False))
+
+There is a third barostat designed specifically for simulations of membranes.
+It assumes the membrane lies in the XY plane, and treats the X and Y axes of the
+box differently from the Z axis.  It also applies a uniform surface tension in
+the plane of the membrane.  The following line adds a membrane barostat that
+applies a pressure of 1 bar and a surface tension of 200 bar*nm.  It specifies
+that the X and Y axes are treated isotropically while the Z axis is free to
+change independently.
+::
+
+    system.addForce(MonteCarloMembraneBarostat(1*bar, 200*bar*nanometer,
+        MonteCarloMembraneBarostat.XYIsotropic, MonteCarloMembraneBarostat.ZFree, 300*kelvin))
+
+See the API documentation for details about the allowed parameter values and
+their meanings.
+
 
 Energy Minimization
 ===================

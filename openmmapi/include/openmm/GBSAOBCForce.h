@@ -139,6 +139,18 @@ public:
         soluteDielectric = dielectric;
     }
     /**
+     * Get the energy scale for the surface energy term, measured in kJ/mol/nm^2.
+     */
+    double getSurfaceAreaEnergy() const {
+        return surfaceAreaEnergy;
+    }
+    /**
+     * Set the energy scale for the surface energy term, measured in kJ/mol/nm^2.
+     */
+    void setSurfaceAreaEnergy(double energy) {
+        surfaceAreaEnergy = energy;
+    }
+    /**
      * Get the method used for handling long range nonbonded interactions.
      */
     NonbondedMethod getNonbondedMethod() const;
@@ -164,7 +176,7 @@ public:
      * Update the particle parameters in a Context to match those stored in this Force object.  This method
      * provides an efficient method to update certain parameters in an existing Context without needing to
      * reinitialize it.  Simply call setParticleParameters() to modify this object's parameters, then call
-     * updateParametersInState() to copy them over to the Context.
+     * updateParametersInContext() to copy them over to the Context.
      * 
      * The only information this method updates is the values of per-particle parameters.  All other aspects
      * of the Force (the nonbonded method, the cutoff distance, etc.) are unaffected and can only be changed
@@ -172,12 +184,21 @@ public:
      * change the parameters of existing ones.
      */
     void updateParametersInContext(Context& context);
+    /**
+     * Returns whether or not this force makes use of periodic boundary
+     * conditions.
+     *
+     * @returns true if force uses PBC and false otherwise
+     */
+    bool usesPeriodicBoundaryConditions() const {
+        return nonbondedMethod == GBSAOBCForce::CutoffPeriodic;
+    }
 protected:
     ForceImpl* createImpl() const;
 private:
     class ParticleInfo;
     NonbondedMethod nonbondedMethod;
-    double cutoffDistance, solventDielectric, soluteDielectric;
+    double cutoffDistance, solventDielectric, soluteDielectric, surfaceAreaEnergy;
     std::vector<ParticleInfo> particles;
 };
 

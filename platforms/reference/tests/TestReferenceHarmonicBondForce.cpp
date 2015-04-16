@@ -46,10 +46,11 @@
 using namespace OpenMM;
 using namespace std;
 
+ReferencePlatform platform;
+
 const double TOL = 1e-5;
 
 void testBonds() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -59,6 +60,8 @@ void testBonds() {
     forceField->addBond(0, 1, 1.5, 0.8);
     forceField->addBond(1, 2, 1.2, 0.7);
     system.addForce(forceField);
+    ASSERT(!forceField->usesPeriodicBoundaryConditions());
+    ASSERT(!system.usesPeriodicBoundaryConditions());
     Context context(system, integrator, platform);
     vector<Vec3> positions(3);
     positions[0] = Vec3(0, 2, 0);

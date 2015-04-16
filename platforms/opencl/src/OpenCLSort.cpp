@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -58,7 +58,11 @@ OpenCLSort::OpenCLSort(OpenCLContext& context, SortTrait* trait, unsigned int le
     unsigned int maxRangeSize = std::min(maxGroupSize, (unsigned int) computeRangeKernel.getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(context.getDevice()));
     unsigned int maxPositionsSize = std::min(maxGroupSize, (unsigned int) computeBucketPositionsKernel.getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(context.getDevice()));
     unsigned int maxShortListSize = shortListKernel.getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(context.getDevice());
-    isShortList = (length <= maxLocalBuffer && length < maxShortListSize);
+    // On Qualcomm's OpenCL, it's essential to check against maxShortListSize.  Otherwise you get a crash.
+    // But AMD's OpenCL returns an inappropriately small value for it that is much shorter than the actual
+    // maximum, so including the check hurts performance.  For the moment I'm going to just comment it out.
+    // If we officially support Qualcomm in the future, we'll need to do something better.
+    isShortList = (length <= maxLocalBuffer/* && length < maxShortListSize*/);
     for (rangeKernelSize = 1; rangeKernelSize*2 <= maxRangeSize; rangeKernelSize *= 2)
         ;
     positionsKernelSize = std::min(rangeKernelSize, maxPositionsSize);
@@ -115,16 +119,17 @@ void OpenCLSort::sort(OpenCLArray& data) {
     else {
         // Compute the range of data values.
 
+        unsigned int numBuckets = bucketOffset->getSize();
         computeRangeKernel.setArg<cl::Buffer>(0, data.getDeviceBuffer());
         computeRangeKernel.setArg<cl_uint>(1, data.getSize());
         computeRangeKernel.setArg<cl::Buffer>(2, dataRange->getDeviceBuffer());
         computeRangeKernel.setArg(3, rangeKernelSize*trait->getKeySize(), NULL);
+        computeRangeKernel.setArg<cl_int>(4, numBuckets);
+        computeRangeKernel.setArg<cl::Buffer>(5, bucketOffset->getDeviceBuffer());
         context.executeKernel(computeRangeKernel, rangeKernelSize, rangeKernelSize);
 
         // Assign array elements to buckets.
 
-        unsigned int numBuckets = bucketOffset->getSize();
-        context.clearBuffer(*bucketOffset);
         assignElementsKernel.setArg<cl::Buffer>(0, data.getDeviceBuffer());
         assignElementsKernel.setArg<cl_int>(1, data.getSize());
         assignElementsKernel.setArg<cl_int>(2, numBuckets);

@@ -45,17 +45,17 @@ void AmoebaGeneralizedKirkwoodForceProxy::serialize(const void* object, Serializ
     node.setIntProperty("version", 1);
     const AmoebaGeneralizedKirkwoodForce& force = *reinterpret_cast<const AmoebaGeneralizedKirkwoodForce*>(object);
 
-    node.setDoubleProperty("GeneralizedKirkwoodSolventDielectric", force.getSolventDielectric() );
-    node.setDoubleProperty("GeneralizedKirkwoodSoluteDielectric",  force.getSoluteDielectric() );
-    //node.setDoubleProperty("GeneralizedKirkwoodDielectricOffset",  force.getDielectricOffset() );
-    node.setDoubleProperty("GeneralizedKirkwoodProbeRadius",       force.getProbeRadius() );
-    node.setDoubleProperty("GeneralizedKirkwoodSurfaceAreaFactor", force.getSurfaceAreaFactor() );
-    node.setIntProperty(   "GeneralizedKirkwoodIncludeCavityTerm", force.getIncludeCavityTerm() );
+    node.setDoubleProperty("GeneralizedKirkwoodSolventDielectric", force.getSolventDielectric());
+    node.setDoubleProperty("GeneralizedKirkwoodSoluteDielectric",  force.getSoluteDielectric());
+    //node.setDoubleProperty("GeneralizedKirkwoodDielectricOffset",  force.getDielectricOffset());
+    node.setDoubleProperty("GeneralizedKirkwoodProbeRadius",       force.getProbeRadius());
+    node.setDoubleProperty("GeneralizedKirkwoodSurfaceAreaFactor", force.getSurfaceAreaFactor());
+    node.setIntProperty(  "GeneralizedKirkwoodIncludeCavityTerm", force.getIncludeCavityTerm());
 
     SerializationNode& particles = node.createChildNode("GeneralizedKirkwoodParticles");
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(force.getNumParticles()); ii++) {
         double radius, charge, scalingFactor;
-        force.getParticleParameters( ii, charge, radius, scalingFactor );
+        force.getParticleParameters(ii, charge, radius, scalingFactor);
         particles.createChildNode("Particle").setDoubleProperty("charge", charge).setDoubleProperty("radius", radius).setDoubleProperty("scaleFactor", scalingFactor);
     }
 
@@ -67,17 +67,17 @@ void* AmoebaGeneralizedKirkwoodForceProxy::deserialize(const SerializationNode& 
     AmoebaGeneralizedKirkwoodForce* force = new AmoebaGeneralizedKirkwoodForce();
     try {
 
-        force->setSolventDielectric(   node.getDoubleProperty( "GeneralizedKirkwoodSolventDielectric" ) );
-        force->setSoluteDielectric(    node.getDoubleProperty( "GeneralizedKirkwoodSoluteDielectric" ) );
-        //force->setDielectricOffset(    node.getDoubleProperty( "GeneralizedKirkwoodDielectricOffset" ) );
-        force->setProbeRadius(         node.getDoubleProperty( "GeneralizedKirkwoodProbeRadius" ) );
-        force->setSurfaceAreaFactor(   node.getDoubleProperty( "GeneralizedKirkwoodSurfaceAreaFactor" ) );
-        force->setIncludeCavityTerm(   node.getIntProperty(    "GeneralizedKirkwoodIncludeCavityTerm" ) );
+        force->setSolventDielectric(  node.getDoubleProperty("GeneralizedKirkwoodSolventDielectric"));
+        force->setSoluteDielectric(   node.getDoubleProperty("GeneralizedKirkwoodSoluteDielectric"));
+        //force->setDielectricOffset(   node.getDoubleProperty("GeneralizedKirkwoodDielectricOffset"));
+        force->setProbeRadius(        node.getDoubleProperty("GeneralizedKirkwoodProbeRadius"));
+        force->setSurfaceAreaFactor(  node.getDoubleProperty("GeneralizedKirkwoodSurfaceAreaFactor"));
+        force->setIncludeCavityTerm(  node.getIntProperty(   "GeneralizedKirkwoodIncludeCavityTerm"));
 
         const SerializationNode& particles = node.getChildNode("GeneralizedKirkwoodParticles");
         for (unsigned int ii = 0; ii < particles.getChildren().size(); ii++) {
             const SerializationNode& particle = particles.getChildren()[ii];
-            force->addParticle( particle.getDoubleProperty("charge"), particle.getDoubleProperty("radius"), particle.getDoubleProperty("scaleFactor"));
+            force->addParticle(particle.getDoubleProperty("charge"), particle.getDoubleProperty("radius"), particle.getDoubleProperty("scaleFactor"));
         }
     }
     catch (...) {

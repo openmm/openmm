@@ -24,15 +24,13 @@
 #include <string.h>
 #include <sstream>
 
-#include "SimTKOpenMMCommon.h"
 #include "SimTKOpenMMUtilities.h"
-#include "SimTKOpenMMLog.h"
 #include "ReferenceLincsAlgorithm.h"
 #include "ReferenceDynamics.h"
 #include "openmm/OpenMMException.h"
 
 using std::vector;
-using OpenMM::RealVec;
+using namespace OpenMM;
 
 /**---------------------------------------------------------------------------------------
 
@@ -44,9 +42,9 @@ using OpenMM::RealVec;
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceLincsAlgorithm::ReferenceLincsAlgorithm( int numberOfConstraints,
-                                                  int** atomIndices,
-                                                  RealOpenMM* distance ){
+ReferenceLincsAlgorithm::ReferenceLincsAlgorithm(int numberOfConstraints,
+                                                 int** atomIndices,
+                                                 RealOpenMM* distance) {
 
    // ---------------------------------------------------------------------------------------
 
@@ -70,7 +68,7 @@ ReferenceLincsAlgorithm::ReferenceLincsAlgorithm( int numberOfConstraints,
 
    --------------------------------------------------------------------------------------- */
 
-int ReferenceLincsAlgorithm::getNumberOfConstraints( void ) const {
+int ReferenceLincsAlgorithm::getNumberOfConstraints() const {
 
    // ---------------------------------------------------------------------------------------
 
@@ -89,7 +87,7 @@ int ReferenceLincsAlgorithm::getNumberOfConstraints( void ) const {
 
    --------------------------------------------------------------------------------------- */
 
-int ReferenceLincsAlgorithm::getNumTerms( void ) const {
+int ReferenceLincsAlgorithm::getNumTerms() const {
 
    // ---------------------------------------------------------------------------------------
 
@@ -106,7 +104,7 @@ int ReferenceLincsAlgorithm::getNumTerms( void ) const {
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceLincsAlgorithm::setNumTerms( int terms ){
+void ReferenceLincsAlgorithm::setNumTerms(int terms) {
 
    // ---------------------------------------------------------------------------------------
 
@@ -214,14 +212,11 @@ void ReferenceLincsAlgorithm::updateAtomPositions(int numberOfAtoms, vector<Real
    @param atomCoordinatesP atom coordinates prime
    @param inverseMasses    1/mass
 
-   @return SimTKOpenMMCommon::DefaultReturn if converge; else
-    return SimTKOpenMMCommon::ErrorReturn
-
    --------------------------------------------------------------------------------------- */
 
-int ReferenceLincsAlgorithm::apply( int numberOfAtoms, vector<RealVec>& atomCoordinates,
+void ReferenceLincsAlgorithm::apply(int numberOfAtoms, vector<RealVec>& atomCoordinates,
                                          vector<RealVec>& atomCoordinatesP,
-                                         vector<RealOpenMM>& inverseMasses ){
+                                         vector<RealOpenMM>& inverseMasses) {
 
    // ---------------------------------------------------------------------------------------
 
@@ -234,9 +229,9 @@ int ReferenceLincsAlgorithm::apply( int numberOfAtoms, vector<RealVec>& atomCoor
    // ---------------------------------------------------------------------------------------
 
    if (_numberOfConstraints == 0)
-       return SimTKOpenMMCommon::DefaultReturn;
+       return;
 
-   if( !_hasInitialized )
+   if (!_hasInitialized)
        initialize(numberOfAtoms, inverseMasses);
 
    // Calculate the direction of each constraint, along with the initial RHS and solution vectors.
@@ -288,9 +283,6 @@ int ReferenceLincsAlgorithm::apply( int numberOfAtoms, vector<RealVec>& atomCoor
    }
    solveMatrix();
    updateAtomPositions(numberOfAtoms, atomCoordinatesP, inverseMasses);
-
-   return SimTKOpenMMCommon::DefaultReturn;
-
 }
 
 /**---------------------------------------------------------------------------------------
@@ -302,12 +294,9 @@ int ReferenceLincsAlgorithm::apply( int numberOfAtoms, vector<RealVec>& atomCoor
    @param velocities       atom velocities
    @param inverseMasses    1/mass
 
-   @return SimTKOpenMMCommon::DefaultReturn if converge; else
-    return SimTKOpenMMCommon::ErrorReturn
-
    --------------------------------------------------------------------------------------- */
 
-int ReferenceLincsAlgorithm::applyToVelocities(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
+void ReferenceLincsAlgorithm::applyToVelocities(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
                std::vector<OpenMM::RealVec>& velocities, std::vector<RealOpenMM>& inverseMasses) {
     throw OpenMM::OpenMMException("applyToVelocities is not implemented");
 }

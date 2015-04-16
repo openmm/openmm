@@ -434,7 +434,7 @@ To download and unpack OpenMM source code:
 
 Alternatively, if you want the most recent development version of the code rather
 than the version corresponding to a particular release, you can get it from
-https://github.com/SimTk/openmm.  Be aware that the development code is constantly
+https://github.com/pandegroup/openmm.  Be aware that the development code is constantly
 changing, may contain bugs, and should never be used for production work.  If
 you want a stable, well tested version of OpenMM, you should download the source
 code for the latest release as described above.

@@ -26,7 +26,7 @@
 #include "AmoebaReferenceInPlaneAngleForce.h"
 
 using std::vector;
-using OpenMM::RealVec;
+using namespace OpenMM;
 
 /**---------------------------------------------------------------------------------------
 
@@ -46,11 +46,11 @@ using OpenMM::RealVec;
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM AmoebaReferenceInPlaneAngleForce::getPrefactorsGivenAngleCosine( RealOpenMM cosine,
+RealOpenMM AmoebaReferenceInPlaneAngleForce::getPrefactorsGivenAngleCosine(RealOpenMM cosine,
                                                                                     RealOpenMM idealAngle,     RealOpenMM angleK,
                                                                                     RealOpenMM angleCubic,     RealOpenMM angleQuartic,
                                                                                     RealOpenMM anglePentic,    RealOpenMM angleSextic,
-                                                                                    RealOpenMM* dEdR ) const {
+                                                                                    RealOpenMM* dEdR) const {
 
    // ---------------------------------------------------------------------------------------
 
@@ -67,9 +67,9 @@ RealOpenMM AmoebaReferenceInPlaneAngleForce::getPrefactorsGivenAngleCosine( Real
    // ---------------------------------------------------------------------------------------
 
    RealOpenMM angle;
-   if( cosine >= one ){
+   if (cosine >= one) {
       angle = zero;
-   } else if( cosine <= -one ){
+   } else if (cosine <= -one) {
       angle = RADIAN*PI_M;
    } else {
       angle = RADIAN*ACOS(cosine);
@@ -79,10 +79,10 @@ RealOpenMM AmoebaReferenceInPlaneAngleForce::getPrefactorsGivenAngleCosine( Real
    RealOpenMM deltaIdeal3        = deltaIdeal*deltaIdeal2;
    RealOpenMM deltaIdeal4        = deltaIdeal2*deltaIdeal2;
 
-   *dEdR                         = ( two + three*angleCubic*deltaIdeal +
-                                     four*angleQuartic*deltaIdeal2     + 
-                                     five*anglePentic*deltaIdeal3      +
-                                     six*angleSextic*deltaIdeal4 );
+   *dEdR                         = (two + three*angleCubic*deltaIdeal +
+                                    four*angleQuartic*deltaIdeal2     + 
+                                    five*anglePentic*deltaIdeal3      +
+                                    six*angleSextic*deltaIdeal4);
 
    *dEdR                        *= RADIAN*angleK*deltaIdeal;
 
@@ -114,12 +114,12 @@ RealOpenMM AmoebaReferenceInPlaneAngleForce::getPrefactorsGivenAngleCosine( Real
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM AmoebaReferenceInPlaneAngleForce::calculateAngleIxn( const RealVec& positionAtomA, const RealVec& positionAtomB,
+RealOpenMM AmoebaReferenceInPlaneAngleForce::calculateAngleIxn(const RealVec& positionAtomA, const RealVec& positionAtomB,
                                                                         const RealVec& positionAtomC, const RealVec& positionAtomD,
                                                                         RealOpenMM angle,                      RealOpenMM angleK,
                                                                         RealOpenMM angleCubic,                 RealOpenMM angleQuartic,
                                                                         RealOpenMM anglePentic,                RealOpenMM angleSextic,
-                                                                        RealVec* forces ) const {
+                                                                        RealVec* forces) const {
 
    // ---------------------------------------------------------------------------------------
 
@@ -140,80 +140,80 @@ RealOpenMM AmoebaReferenceInPlaneAngleForce::calculateAngleIxn( const RealVec& p
     enum { AD, BD, CD, T, AP, P, CP, M, APxM, CPxM, ADxBD, BDxCD, TxCD, ADxT, dBxAD, CDxdB, LastDeltaAtomIndex };
 
     std::vector<RealOpenMM> deltaR[LastDeltaAtomIndex];
-    for( int ii = 0; ii < LastDeltaAtomIndex; ii++ ){
+    for (int ii = 0; ii < LastDeltaAtomIndex; ii++) {
         deltaR[ii].resize(3);
     }
-    AmoebaReferenceForce::loadDeltaR( positionAtomD, positionAtomA, deltaR[AD] );
-    AmoebaReferenceForce::loadDeltaR( positionAtomD, positionAtomB, deltaR[BD] );
-    AmoebaReferenceForce::loadDeltaR( positionAtomD, positionAtomC, deltaR[CD] );
+    AmoebaReferenceForce::loadDeltaR(positionAtomD, positionAtomA, deltaR[AD]);
+    AmoebaReferenceForce::loadDeltaR(positionAtomD, positionAtomB, deltaR[BD]);
+    AmoebaReferenceForce::loadDeltaR(positionAtomD, positionAtomC, deltaR[CD]);
  
-    AmoebaReferenceForce::getCrossProduct( deltaR[AD], deltaR[CD], deltaR[T] );
+    AmoebaReferenceForce::getCrossProduct(deltaR[AD], deltaR[CD], deltaR[T]);
 
-    RealOpenMM rT2     = AmoebaReferenceForce::getNormSquared3( deltaR[T] );
-    RealOpenMM delta   = AmoebaReferenceForce::getDotProduct3( deltaR[T], deltaR[BD] )/rT2;
+    RealOpenMM rT2     = AmoebaReferenceForce::getNormSquared3(deltaR[T]);
+    RealOpenMM delta   = AmoebaReferenceForce::getDotProduct3(deltaR[T], deltaR[BD])/rT2;
          delta        *= -one;
  
-    for( int ii = 0; ii < 3; ii++ ){
+    for (int ii = 0; ii < 3; ii++) {
        deltaR[P][ii]  = positionAtomB[ii] + deltaR[T][ii]*delta;
        deltaR[AP][ii] = positionAtomA[ii] - deltaR[P][ii];
        deltaR[CP][ii] = positionAtomC[ii] - deltaR[P][ii];
     }
  
-    RealOpenMM rAp2 = AmoebaReferenceForce::getNormSquared3( deltaR[AP] );
-    RealOpenMM rCp2 = AmoebaReferenceForce::getNormSquared3( deltaR[CP] );
-    if( rAp2 <= zero && rCp2 <= zero ){
+    RealOpenMM rAp2 = AmoebaReferenceForce::getNormSquared3(deltaR[AP]);
+    RealOpenMM rCp2 = AmoebaReferenceForce::getNormSquared3(deltaR[CP]);
+    if (rAp2 <= zero && rCp2 <= zero) {
        return zero;
     }
  
-    AmoebaReferenceForce::getCrossProduct( deltaR[CP], deltaR[AP], deltaR[M] );
+    AmoebaReferenceForce::getCrossProduct(deltaR[CP], deltaR[AP], deltaR[M]);
  
-    RealOpenMM rm = AmoebaReferenceForce::getNorm3( deltaR[M] );
-    if( rm < 1.0e-06 ){
+    RealOpenMM rm = AmoebaReferenceForce::getNorm3(deltaR[M]);
+    if (rm < 1.0e-06) {
        rm = 1.0e-06;
     }
  
-    RealOpenMM dot     = AmoebaReferenceForce::getDotProduct3( deltaR[AP], deltaR[CP] );
-    RealOpenMM cosine  = dot/SQRT( rAp2*rCp2 );
+    RealOpenMM dot     = AmoebaReferenceForce::getDotProduct3(deltaR[AP], deltaR[CP]);
+    RealOpenMM cosine  = dot/SQRT(rAp2*rCp2);
  
     RealOpenMM dEdR;
-    RealOpenMM energy = getPrefactorsGivenAngleCosine( cosine, angle, angleK, angleCubic, angleQuartic,
-                                                       anglePentic, angleSextic, &dEdR );
+    RealOpenMM energy = getPrefactorsGivenAngleCosine(cosine, angle, angleK, angleCubic, angleQuartic,
+                                                      anglePentic, angleSextic, &dEdR);
 
     RealOpenMM termA   = -dEdR/(rAp2*rm);
     RealOpenMM termC   =  dEdR/(rCp2*rm);
  
-    AmoebaReferenceForce::getCrossProduct( deltaR[AP], deltaR[M], deltaR[APxM] );
-    AmoebaReferenceForce::getCrossProduct( deltaR[CP], deltaR[M], deltaR[CPxM] );
+    AmoebaReferenceForce::getCrossProduct(deltaR[AP], deltaR[M], deltaR[APxM]);
+    AmoebaReferenceForce::getCrossProduct(deltaR[CP], deltaR[M], deltaR[CPxM]);
  
     // forces will be gathered here
  
     enum { dA, dB, dC, dD, LastDIndex };
     std::vector<RealOpenMM> forceTerm[LastDIndex];
-    for( int ii = 0; ii < LastDIndex; ii++ ){
+    for (int ii = 0; ii < LastDIndex; ii++) {
         forceTerm[ii].resize(3);
     }
  
-    for( int ii = 0; ii < 3; ii++ ){
+    for (int ii = 0; ii < 3; ii++) {
        forceTerm[dA][ii] = deltaR[APxM][ii]*termA;
        forceTerm[dC][ii] = deltaR[CPxM][ii]*termC;
-       forceTerm[dB][ii] = -one*( forceTerm[dA][ii] + forceTerm[dC][ii] );
+       forceTerm[dB][ii] = -one*(forceTerm[dA][ii] + forceTerm[dC][ii]);
     }
  
-    RealOpenMM pTrT2  = AmoebaReferenceForce::getDotProduct3( forceTerm[dB], deltaR[T] );
+    RealOpenMM pTrT2  = AmoebaReferenceForce::getDotProduct3(forceTerm[dB], deltaR[T]);
                pTrT2 /= rT2;
  
-    AmoebaReferenceForce::getCrossProduct( deltaR[CD], forceTerm[dB], deltaR[CDxdB] );
-    AmoebaReferenceForce::getCrossProduct( forceTerm[dB], deltaR[AD], deltaR[dBxAD] );
+    AmoebaReferenceForce::getCrossProduct(deltaR[CD], forceTerm[dB], deltaR[CDxdB]);
+    AmoebaReferenceForce::getCrossProduct(forceTerm[dB], deltaR[AD], deltaR[dBxAD]);
  
-    if( FABS( pTrT2 ) > 1.0e-08 ){
+    if (FABS(pTrT2) > 1.0e-08) {
  
        RealOpenMM delta2 = delta*two;
  
-       AmoebaReferenceForce::getCrossProduct( deltaR[BD], deltaR[CD], deltaR[BDxCD] );
-       AmoebaReferenceForce::getCrossProduct( deltaR[T],  deltaR[CD], deltaR[TxCD]  );
-       AmoebaReferenceForce::getCrossProduct( deltaR[AD], deltaR[BD], deltaR[ADxBD] );
-       AmoebaReferenceForce::getCrossProduct( deltaR[AD], deltaR[T],  deltaR[ADxT]  );
-       for( int ii = 0; ii < 3; ii++ ){
+       AmoebaReferenceForce::getCrossProduct(deltaR[BD], deltaR[CD], deltaR[BDxCD]);
+       AmoebaReferenceForce::getCrossProduct(deltaR[T],  deltaR[CD], deltaR[TxCD]);
+       AmoebaReferenceForce::getCrossProduct(deltaR[AD], deltaR[BD], deltaR[ADxBD]);
+       AmoebaReferenceForce::getCrossProduct(deltaR[AD], deltaR[T],  deltaR[ADxT]);
+       for (int ii = 0; ii < 3; ii++) {
     
           RealOpenMM term     = deltaR[BDxCD][ii] + delta2*deltaR[TxCD][ii];
           forceTerm[dA][ii]  += delta*deltaR[CDxdB][ii] + term*pTrT2;
@@ -221,21 +221,21 @@ RealOpenMM AmoebaReferenceInPlaneAngleForce::calculateAngleIxn( const RealVec& p
                term           = deltaR[ADxBD][ii] + delta2*deltaR[ADxT][ii];
           forceTerm[dC][ii]  += delta*deltaR[dBxAD][ii] + term*pTrT2;
     
-          forceTerm[dD][ii]  = -( forceTerm[dA][ii] + forceTerm[dB][ii] + forceTerm[dC][ii] );
+          forceTerm[dD][ii]  = -(forceTerm[dA][ii] + forceTerm[dB][ii] + forceTerm[dC][ii]);
        }
     } else {
-       for( int ii = 0; ii < 3; ii++ ){
+       for (int ii = 0; ii < 3; ii++) {
     
           forceTerm[dA][ii] += delta*deltaR[CDxdB][ii];
           forceTerm[dC][ii] += delta*deltaR[dBxAD][ii];
  
-          forceTerm[dD][ii]  = -( forceTerm[dA][ii] + forceTerm[dB][ii] + forceTerm[dC][ii] );
+          forceTerm[dD][ii]  = -(forceTerm[dA][ii] + forceTerm[dB][ii] + forceTerm[dC][ii]);
        }
     }
  
     // accumulate forces
  
-    for( int jj = 0; jj < 4; jj++ ){
+    for (int jj = 0; jj < 4; jj++) {
         forces[jj][0] = forceTerm[jj][0];
         forces[jj][1] = forceTerm[jj][1];
         forces[jj][2] = forceTerm[jj][2];
@@ -245,18 +245,18 @@ RealOpenMM AmoebaReferenceInPlaneAngleForce::calculateAngleIxn( const RealVec& p
 
 }
 
-RealOpenMM AmoebaReferenceInPlaneAngleForce::calculateForceAndEnergy( int numAngles, vector<RealVec>& posData,
-                                                                       const std::vector<int>&  particle1,
-                                                                       const std::vector<int>&  particle2,
-                                                                       const std::vector<int>&  particle3,
-                                                                       const std::vector<int>&  particle4,
-                                                                       const std::vector<RealOpenMM>&  angle,
-                                                                       const std::vector<RealOpenMM>&  kQuadratic,
-                                                                       RealOpenMM angleCubic,
-                                                                       RealOpenMM angleQuartic,
-                                                                       RealOpenMM anglePentic,
-                                                                       RealOpenMM angleSextic,
-                                                                       vector<RealVec>& forceData) const {
+RealOpenMM AmoebaReferenceInPlaneAngleForce::calculateForceAndEnergy(int numAngles, vector<RealVec>& posData,
+                                                                      const std::vector<int>&  particle1,
+                                                                      const std::vector<int>&  particle2,
+                                                                      const std::vector<int>&  particle3,
+                                                                      const std::vector<int>&  particle4,
+                                                                      const std::vector<RealOpenMM>&  angle,
+                                                                      const std::vector<RealOpenMM>&  kQuadratic,
+                                                                      RealOpenMM angleCubic,
+                                                                      RealOpenMM angleQuartic,
+                                                                      RealOpenMM anglePentic,
+                                                                      RealOpenMM angleSextic,
+                                                                      vector<RealVec>& forceData) const {
     RealOpenMM energy      = 0.0; 
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(numAngles); ii++) {
         int particle1Index      = particle1[ii];
@@ -266,12 +266,12 @@ RealOpenMM AmoebaReferenceInPlaneAngleForce::calculateForceAndEnergy( int numAng
         RealOpenMM idealAngle   = angle[ii];
         RealOpenMM angleK       = kQuadratic[ii];
         RealVec forces[4];
-        energy                 += calculateAngleIxn( posData[particle1Index], posData[particle2Index], posData[particle3Index], posData[particle4Index],
-                                                     idealAngle, angleK, angleCubic, angleQuartic, anglePentic, angleSextic, forces );
+        energy                 += calculateAngleIxn(posData[particle1Index], posData[particle2Index], posData[particle3Index], posData[particle4Index],
+                                                    idealAngle, angleK, angleCubic, angleQuartic, anglePentic, angleSextic, forces);
 
         // accumulate forces
      
-        for( int jj = 0; jj < 3; jj++ ){
+        for (int jj = 0; jj < 3; jj++) {
             forceData[particle1Index][jj] -= forces[0][jj];
             forceData[particle2Index][jj] -= forces[1][jj];
             forceData[particle3Index][jj] -= forces[2][jj];

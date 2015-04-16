@@ -417,7 +417,6 @@ Parameters:
     @staticmethod
     def deserialize(inputString):
       """Reconstruct an object that has been serialized as XML."""
-      # Look for the first tag to figure out what type of object it is.
       import re
       match = re.search("<([^?]\S*)", inputString)
       if match is None:
@@ -452,5 +451,17 @@ Parameters:
 
     def __deepcopy__(self, memo):
         return self.__copy__()
+  }
+}
+
+%extend OpenMM::Integrator {
+  %pythoncode {
+    def __getstate__(self):
+        serializationString = XmlSerializer.serialize(self)
+        return serializationString
+
+    def __setstate__(self, serializationString):
+        system = XmlSerializer.deserialize(serializationString)
+        self.this = system.this
   }
 }
