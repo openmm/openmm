@@ -122,8 +122,8 @@ bool OpenCLPlatform::isPlatformSupported() {
     if (sscanf(str, "%d.%d.%d", &major, &minor, &micro) != 3)
         return false;
 
-    if (major < 14)
-        // 14.0.0 is the darwin release corresponding to OS X 10.10.0. Versions prior to that
+    if (major < 14 || (major == 14 && minor < 3))
+        // 14.3.0 is the darwin release corresponding to OS X 10.10.3. Versions prior to that
         // contained a number of serious bugs in the Apple OpenCL libraries.
         // (See https://github.com/SimTk/openmm/issues/395 for example.)
         return false;
