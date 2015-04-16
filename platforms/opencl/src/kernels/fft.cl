@@ -51,10 +51,10 @@ __kernel void execFFT(__global const INPUT_TYPE* restrict in, __global OUTPUT_TY
             data0[get_local_id(0)] = in[x*(YSIZE*ZSIZE)+y*ZSIZE+get_local_id(0)%ZSIZE];
     #endif
 #endif
-        barrier(CLK_LOCAL_MEM_FENCE);
 #if OUTPUT_IS_PACKED
         }
 #endif
+        barrier(CLK_LOCAL_MEM_FENCE);
         COMPUTE_FFT
     }
 }
