@@ -195,16 +195,13 @@ class CharmmPsfFile(object):
         atom_list = AtomList()
         for i in xrange(natom):
             words = psfsections['NATOM'][1][i].split()
-            atid = int(words[0])
-            if atid != i + 1:
-                raise CharmmPSFError('Nonsequential atoms detected!')
             system = words[1]
             rematch = _resre.match(words[2])
             if not rematch:
                 raise RuntimeError('Could not parse residue number %s' %
                                    words[2])
             resid, inscode = rematch.groups()
-            resid = conv(resid, int, 'residue number')
+            resid = int(resid)
             resname = words[3]
             name = words[4]
             attype = words[5]
@@ -451,175 +448,6 @@ class CharmmPsfFile(object):
                 line = psf.readline().strip()
         return title, pointers, data
 
-    def writePsf(self, dest, vmd=False):
-        """
-        Writes a PSF file from the stored molecule
-
-        Parameters:
-            - dest (str or file-like) : The place to write the output PSF file.
-                    If it has a "write" attribute, it will be used to print the
-                    PSF file. Otherwise, it will be treated like a string and a
-                    file will be opened, printed, then closed
-            - vmd (bool) : If True, it will write out a PSF in the format that
-                    VMD prints it in (i.e., no NUMLP/NUMLPH or MOLNT sections)
-        Example:
-            >>> cs = CharmmPsfFile('testfiles/test.psf')
-            >>> cs.writePsf('testfiles/test2.psf')
-        """
-        # See if this is an extended format
-        ext = 'EXT' in self.flags
-        own_handle = False
-        # Index the atoms and residues
-        self.residue_list.assign_indexes()
-        self.atom_list.assign_indexes()
-        if not hasattr(dest, 'write'):
-            own_handle = True
-            dest = open(dest, 'w')
-
-        # Assign the formats we need to write with
-        if ext:
-            atmfmt1 = ('%10d %-8s %-8i %-8s %-8s %4d %10.6f %13.4f' + 11*' ')
-            atmfmt2 = ('%10d %-8s %-8i %-8s %-8s %-4s %10.6f %13.4f' + 11*' ')
-            intfmt = '%10d' # For pointers
-        else:
-            atmfmt1 = ('%8d %-4s %-4i %-4s %-4s %4d %10.6f %13.4f' + 11*' ')
-            atmfmt2 = ('%8d %-4s %-4i %-4s %-4s %-4s %10.6f %13.4f' + 11*' ')
-            intfmt = '%8d' # For pointers
-
-        # Now print the header then the title
-        dest.write('PSF ' + ' '.join(self.flags) + '\n')
-        dest.write('\n')
-        dest.write(intfmt % len(self.title) + ' !NTITLE\n')
-        dest.write('\n'.join(self.title) + '\n\n')
-        # Now time for the atoms
-        dest.write(intfmt % len(self.atom_list) + ' !NATOM\n')
-        # atmfmt1 is for CHARMM format (i.e., atom types are integers)
-        # atmfmt is for XPLOR format (i.e., atom types are strings)
-        for i, atom in enumerate(self.atom_list):
-            if isinstance(atom.attype, str):
-                fmt = atmfmt2
-            else:
-                fmt = atmfmt1
-            atmstr = fmt % (i+1, atom.system, atom.residue.resnum,
-                            atom.residue.resname, atom.name, atom.attype,
-                            atom.charge, atom.mass)
-            dest.write(atmstr + '   '.join(atom.props) + '\n')
-        dest.write('\n')
-        # Bonds
-        dest.write(intfmt % len(self.bond_list) + ' !NBOND: bonds\n')
-        for i, bond in enumerate(self.bond_list):
-            dest.write((intfmt*2) % (bond.atom1.idx+1, bond.atom2.idx+1))
-            if i % 4 == 3: # Write 4 bonds per line
-                dest.write('\n')
-        # See if we need to terminate
-        if len(self.bond_list) % 4 != 0 or len(self.bond_list) == 0:
-            dest.write('\n')
-        dest.write('\n')
-        # Angles
-        dest.write(intfmt % len(self.angle_list) + ' !NTHETA: angles\n')
-        for i, angle in enumerate(self.angle_list):
-            dest.write((intfmt*3) % (angle.atom1.idx+1, angle.atom2.idx+1,
-                                     angle.atom3.idx+1)
-            )
-            if i % 3 == 2: # Write 3 angles per line
-                dest.write('\n')
-        # See if we need to terminate
-        if len(self.angle_list) % 3 != 0 or len(self.angle_list) == 0:
-            dest.write('\n')
-        dest.write('\n')
-        # Dihedrals
-        dest.write(intfmt % len(self.dihedral_list) + ' !NPHI: dihedrals\n')
-        for i, dih in enumerate(self.dihedral_list):
-            dest.write((intfmt*4) % (dih.atom1.idx+1, dih.atom2.idx+1,
-                                     dih.atom3.idx+1, dih.atom4.idx+1)
-            )
-            if i % 2 == 1: # Write 2 dihedrals per line
-                dest.write('\n')
-        # See if we need to terminate
-        if len(self.dihedral_list) % 2 != 0 or len(self.dihedral_list) == 0:
-            dest.write('\n')
-        dest.write('\n')
-        # Impropers
-        dest.write(intfmt % len(self.improper_list) + ' !NIMPHI: impropers\n')
-        for i, imp in enumerate(self.improper_list):
-            dest.write((intfmt*4) % (imp.atom1.idx+1, imp.atom2.idx+1,
-                                     imp.atom3.idx+1, imp.atom4.idx+1)
-            )
-            if i % 2 == 1: # Write 2 dihedrals per line
-                dest.write('\n')
-        # See if we need to terminate
-        if len(self.improper_list) % 2 != 0 or len(self.improper_list) == 0:
-            dest.write('\n')
-        dest.write('\n')
-        # Donor section
-        dest.write(intfmt % len(self.donor_list) + ' !NDON: donors\n')
-        for i, don in enumerate(self.donor_list):
-            dest.write((intfmt*2) % (don.atom1.idx+1, don.atom2.idx+1))
-            if i % 4 == 3: # 4 donors per line
-                dest.write('\n')
-        if len(self.donor_list) % 4 != 0 or len(self.donor_list) == 0:
-            dest.write('\n')
-        dest.write('\n')
-        # Acceptor section
-        dest.write(intfmt % len(self.acceptor_list) + ' !NACC: acceptors\n')
-        for i, acc in enumerate(self.acceptor_list):
-            dest.write((intfmt*2) % (acc.atom1.idx+1, acc.atom2.idx+1))
-            if i % 4 == 3: # 4 donors per line
-                dest.write('\n')
-        if len(self.acceptor_list) % 4 != 0 or len(self.acceptor_list) == 0:
-            dest.write('\n')
-        dest.write('\n')
-        # NNB section ??
-        dest.write(intfmt % 0 + ' !NNB\n\n')
-        for i in range(len(self.atom_list)):
-            dest.write(intfmt % 0)
-            if i % 8 == 7: # Write 8 0's per line
-                dest.write('\n')
-        if len(self.atom_list) % 8 != 0: dest.write('\n')
-        dest.write('\n')
-        # Group section
-        dest.write((intfmt*2) % (len(self.group_list), self.group_list.nst2))
-        dest.write(' !NGRP NST2\n')
-        for i, gp in enumerate(self.group_list):
-            dest.write((intfmt*3) % (gp.bs, gp.type, gp.move))
-            if i % 3 == 2: dest.write('\n')
-        if len(self.group_list) % 3 != 0 or len(self.group_list) == 0:
-            dest.write('\n')
-        dest.write('\n')
-        # The next two sections are never found in VMD prmtops...
-        if not vmd:
-            # Molecule section; first set molecularity
-            set_molecules(self.atom_list)
-            mollist = [a.marked for a in self.atom_list]
-            dest.write(intfmt % max(mollist) + ' !MOLNT\n')
-            for i, atom in enumerate(self.atom_list):
-                dest.write(intfmt % atom.marked)
-                if i % 8 == 7: dest.write('\n')
-            if len(self.atom_list) % 8 != 0: dest.write('\n')
-            dest.write('\n')
-            # NUMLP/NUMLPH section
-            dest.write((intfmt*2) % (0, 0) + ' !NUMLP NUMLPH\n')
-            dest.write('\n')
-        # CMAP section
-        dest.write(intfmt % len(self.cmap_list) + ' !NCRTERM: cross-terms\n')
-        for i, cmap in enumerate(self.cmap_list):
-            dest.write((intfmt*4) % (cmap.atom1.idx+1, cmap.atom2.idx+1,
-                                     cmap.atom3.idx+1, cmap.atom4.idx+1)
-            )
-            if cmap.consecutive:
-                dest.write((intfmt*4) % (cmap.atom2.idx+1, cmap.atom3.idx+1,
-                                         cmap.atom4.idx+1, cmap.atom5.idx+1)
-                )
-            else:
-                dest.write((intfmt*4) % (cmap.atom5.idx+1, cmap.atom6.idx+1,
-                                         cmap.atom7.idx+1, cmap.atom8.idx+1)
-                )
-            dest.write('\n')
-        # Done!
-        # If we opened our own handle, close it
-        if own_handle:
-            dest.close()
-        
     def loadParameters(self, parmset):
         """
         Loads parameters from a parameter set that was loaded via CHARMM RTF,

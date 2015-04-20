@@ -467,22 +467,17 @@ class ResidueList(list):
         Returns:
             The Atom instance created and added to the list of residues
         """
-        if self._last_residue is None:
+        lr = self._last_residue
+        if lr is None:
             res = self._last_residue = Residue(resname, resnum, inscode)
             list.append(self, res)
-        elif (self._last_residue != (resname, resnum, inscode) or
-              system != self._last_residue.system):
-            if (self._last_residue.idx == resnum and
-                self._last_residue.system == system and
-                self._last_residue.inscode == inscode):
-                lresname = self._last_residue.resname
-                warnings.warn('Residue %d split into separate residues %s '
-                              'and %s' % (resnum, lresname, resname),
-                              SplitResidueWarning)
-            res = self._last_residue = Residue(resname, resnum)
+        elif (lr.resname != resname or lr.idx != resname or
+                lr.inscode != inscode  or system != lr.system):
+            res = self._last_residue = Residue(resname, resnum, inscode)
+            res.system = system
             list.append(self, res)
         else:
-            res = self._last_residue
+            res = lr
         atom = Atom(system, name, attype, float(charge), float(mass), props)
         res.add_atom(atom)
         return atom
