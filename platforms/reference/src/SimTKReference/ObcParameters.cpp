@@ -382,9 +382,9 @@ void ObcParameters::setPeriodic(OpenMM::RealVec* vectors) {
 
     assert(_cutoff);
 
-    assert(boxSize[0][0] >= 2.0*_cutoffDistance);
-    assert(boxSize[1][1] >= 2.0*_cutoffDistance);
-    assert(boxSize[2][2] >= 2.0*_cutoffDistance);
+    assert(vectors[0][0] >= 2.0*_cutoffDistance);
+    assert(vectors[1][1] >= 2.0*_cutoffDistance);
+    assert(vectors[2][2] >= 2.0*_cutoffDistance);
 
     _periodic           = true;
     _periodicBoxVectors[0] = vectors[0];

@@ -639,6 +639,7 @@ private:
     cl::Kernel pmeSpreadChargeKernel;
     cl::Kernel pmeFinishSpreadChargeKernel;
     cl::Kernel pmeConvolutionKernel;
+    cl::Kernel pmeEvalEnergyKernel;
     cl::Kernel pmeInterpolateForceKernel;
     std::map<std::string, std::string> pmeDefines;
     std::vector<std::pair<int, int> > exceptionAtoms;
