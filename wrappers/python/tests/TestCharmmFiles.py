@@ -120,7 +120,7 @@ class TestCharmmFiles(unittest.TestCase):
         psf = CharmmPsfFile('systems/4TVP-dmj_wat-ion.psf')
         self.assertEqual(len(list(psf.topology.atoms())), 66264)
         self.assertEqual(len(list(psf.topology.residues())), 20169)
-        self.assertEqual(len(list(psf.bonds())), 46634)
+        self.assertEqual(len(list(psf.topology.bonds())), 46634)
 
     def test_ImplicitSolventForces(self):
         """Compute forces for different implicit solvent types, and compare them to ones generated with a previous version of OpenMM to ensure they haven't changed."""
