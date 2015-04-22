@@ -47,6 +47,7 @@ class Element(object):
 
     _elements_by_symbol = {}
     _elements_by_atomic_number = {}
+    _max_atomic_number = 0
 
     def __init__(self, number, name, symbol, mass):
         """Create a new element
@@ -67,6 +68,8 @@ class Element(object):
         self._mass = mass
         # Index this element in a global table
         s = symbol.strip().upper()
+        ## Keep track of the largest atomic number
+        Element._max_atomic_number = max(Element._max_atomic_number, number)
 
         assert s not in Element._elements_by_symbol
         Element._elements_by_symbol[s] = self
@@ -96,6 +99,17 @@ class Element(object):
         """
         Get the element whose mass is CLOSEST to the requested mass. This method
         should not be used for repartitioned masses
+
+        Parameters
+        ----------
+        mass : float or Quantity
+            Mass of the atom to find the element for. Units assumed to be
+            daltons if not specified
+
+        Returns
+        -------
+        element : Element
+            The element whose atomic mass is closest to the input mass
         """
         # Assume masses are in daltons if they are not units
         if not is_quantity(mass):
@@ -103,13 +117,18 @@ class Element(object):
         diff = mass
         best_guess = None
 
-        for key in Element._elements_by_atomic_number:
-            element = Element._elements_by_atomic_number[key]
+        for atnum in xrange(1, Element._max_atomic_number+1):
+            element = Element._elements_by_atomic_number[atnum]
             massdiff = abs(element.mass - mass)
             if massdiff < diff:
                 best_guess = element
                 diff = massdiff
+            if element.mass > mass:
+                # Elements are only getting heavier, so bail out early
+                return best_guess
 
+        # This really should only happen if we wanted ununoctium or something
+        # bigger... won't really happen but still make sure we return an Element
         return best_guess
 
     @property
