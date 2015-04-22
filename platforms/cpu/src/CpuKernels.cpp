@@ -231,13 +231,13 @@ void CpuCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool i
         throw OpenMMException("Particle coordinate is nan");
 }
 
-double CpuCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups) {
+double CpuCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups, bool& valid) {
     // Sum the forces from all the threads.
     
     SumForceTask task(context.getSystem().getNumParticles(), extractForces(context), data);
     data.threads.execute(task);
     data.threads.waitForThreads();
-    return referenceKernel.getAs<ReferenceCalcForcesAndEnergyKernel>().finishComputation(context, includeForce, includeEnergy, groups);
+    return referenceKernel.getAs<ReferenceCalcForcesAndEnergyKernel>().finishComputation(context, includeForce, includeEnergy, groups, valid);
 }
 
 CpuCalcPeriodicTorsionForceKernel::~CpuCalcPeriodicTorsionForceKernel() {
@@ -508,13 +508,12 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
         if (nonbondedMethod == PME) {
             // If available, use the optimized PME implementation.
 
-            try {
+            vector<string> kernelNames;
+            kernelNames.push_back("CalcPmeReciprocalForce");
+            useOptimizedPme = getPlatform().supportsKernels(kernelNames);
+            if (useOptimizedPme) {
                 optimizedPme = getPlatform().createKernel(CalcPmeReciprocalForceKernel::Name(), context);
                 optimizedPme.getAs<CalcPmeReciprocalForceKernel>().initialize(gridSize[0], gridSize[1], gridSize[2], numParticles, ewaldAlpha);
-                useOptimizedPme = true;
-            }
-            catch (OpenMMException& ex) {
-                // The CPU PME plugin isn't available.
             }
         }
     }

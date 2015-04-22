@@ -169,6 +169,12 @@ public:
      */
     void setConstraintParameters(int index, int particle1, int particle2, double distance);
     /**
+     * Remove a constraint from the System.
+     * 
+     * @param index    the index of the constraint to remove
+     */
+    void removeConstraint(int index);
+    /**
      * Add a Force to the System.  The Force should have been created on the heap with the
      * "new" operator.  The System takes over ownership of it, and deletes the Force when the
      * System itself is deleted.
@@ -198,6 +204,13 @@ public:
      * @param index  the index of the Force to get
      */
     Force& getForce(int index);
+    /**
+     * Remove a Force from the System.  The memory associated with the removed Force
+     * object is deleted.
+     *
+     * @param index   the index of the Force to remove
+     */
+    void removeForce(int index);
     /**
      * Get the default values of the vectors defining the axes of the periodic box (measured in nm).  Any newly
      * created Context will have its box vectors set to these.  They will affect

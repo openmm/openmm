@@ -108,6 +108,10 @@ public:
      * Get a map containing the values of all parameters.  If this State does not contain parameters, this will throw an exception.
      */
     const std::map<std::string, double>& getParameters() const;
+    /**
+     * Get which data types are stored in this State.  The return value is a sum of DataType flags.
+     */
+    int getDataTypes() const;
 private:
     State(double time);
     void setPositions(const std::vector<Vec3>& pos);

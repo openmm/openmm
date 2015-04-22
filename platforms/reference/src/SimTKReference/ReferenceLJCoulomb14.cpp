@@ -25,14 +25,12 @@
 #include <string.h>
 #include <sstream>
 
-#include "SimTKOpenMMCommon.h"
-#include "SimTKOpenMMLog.h"
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceLJCoulomb14.h"
 #include "ReferenceForce.h"
 
 using std::vector;
-using OpenMM::RealVec;
+using namespace OpenMM;
 
 /**---------------------------------------------------------------------------------------
 
@@ -40,7 +38,7 @@ using OpenMM::RealVec;
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceLJCoulomb14::ReferenceLJCoulomb14( ) {
+ReferenceLJCoulomb14::ReferenceLJCoulomb14() {
 
    // ---------------------------------------------------------------------------------------
 
@@ -56,7 +54,7 @@ ReferenceLJCoulomb14::ReferenceLJCoulomb14( ) {
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceLJCoulomb14::~ReferenceLJCoulomb14( ){
+ReferenceLJCoulomb14::~ReferenceLJCoulomb14() {
 
    // ---------------------------------------------------------------------------------------
 
@@ -81,9 +79,9 @@ ReferenceLJCoulomb14::~ReferenceLJCoulomb14( ){
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceLJCoulomb14::calculateBondIxn( int* atomIndices, vector<RealVec>& atomCoordinates,
+void ReferenceLJCoulomb14::calculateBondIxn(int* atomIndices, vector<RealVec>& atomCoordinates,
                                      RealOpenMM* parameters, vector<RealVec>& forces,
-                                     RealOpenMM* totalEnergy ) const {
+                                     RealOpenMM* totalEnergy) const {
 
    static const std::string methodName = "\nReferenceLJCoulomb14::calculateBondIxn";
 
@@ -113,7 +111,7 @@ void ReferenceLJCoulomb14::calculateBondIxn( int* atomIndices, vector<RealVec>& 
 
    int atomAIndex = atomIndices[0];
    int atomBIndex = atomIndices[1];
-   ReferenceForce::getDeltaR( atomCoordinates[atomBIndex], atomCoordinates[atomAIndex], deltaR[0] );  
+   ReferenceForce::getDeltaR(atomCoordinates[atomBIndex], atomCoordinates[atomAIndex], deltaR[0]);  
 
    RealOpenMM r2        = deltaR[0][ReferenceForce::R2Index];
    RealOpenMM inverseR  = one/(deltaR[0][ReferenceForce::RIndex]);
@@ -121,13 +119,13 @@ void ReferenceLJCoulomb14::calculateBondIxn( int* atomIndices, vector<RealVec>& 
               sig2     *= sig2;
    RealOpenMM sig6      = sig2*sig2*sig2;
 
-   RealOpenMM dEdR      = parameters[1]*( twelve*sig6 - six )*sig6;
+   RealOpenMM dEdR      = parameters[1]*(twelve*sig6 - six)*sig6;
               dEdR     += (RealOpenMM) (ONE_4PI_EPS0*parameters[2]*inverseR);
               dEdR     *= inverseR*inverseR;
 
    // accumulate forces
 
-   for( int ii = 0; ii < 3; ii++ ){
+   for (int ii = 0; ii < 3; ii++) {
       RealOpenMM force        = dEdR*deltaR[0][ii];
       forces[atomAIndex][ii] += force;
       forces[atomBIndex][ii] -= force;
@@ -136,5 +134,5 @@ void ReferenceLJCoulomb14::calculateBondIxn( int* atomIndices, vector<RealVec>& 
    // accumulate energies
 
    if (totalEnergy != NULL)
-       *totalEnergy += parameters[1]*( sig6 - one )*sig6 + (ONE_4PI_EPS0*parameters[2]*inverseR);
+       *totalEnergy += parameters[1]*(sig6 - one)*sig6 + (ONE_4PI_EPS0*parameters[2]*inverseR);
 }

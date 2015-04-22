@@ -41,29 +41,29 @@ using namespace std;
 AmoebaMultipoleForceProxy::AmoebaMultipoleForceProxy() : SerializationProxy("AmoebaMultipoleForce") {
 }
 
-static void getCovalentTypes( std::vector<std::string>& covalentTypes ){
+static void getCovalentTypes(std::vector<std::string>& covalentTypes) {
 
-    covalentTypes.push_back( "Covalent12" );
-    covalentTypes.push_back( "Covalent13" );
-    covalentTypes.push_back( "Covalent14" );
-    covalentTypes.push_back( "Covalent15" );
+    covalentTypes.push_back("Covalent12");
+    covalentTypes.push_back("Covalent13");
+    covalentTypes.push_back("Covalent14");
+    covalentTypes.push_back("Covalent15");
 
-    covalentTypes.push_back( "PolarizationCovalent11" );
-    covalentTypes.push_back( "PolarizationCovalent12" );
-    covalentTypes.push_back( "PolarizationCovalent13" );
-    covalentTypes.push_back( "PolarizationCovalent14" );
+    covalentTypes.push_back("PolarizationCovalent11");
+    covalentTypes.push_back("PolarizationCovalent12");
+    covalentTypes.push_back("PolarizationCovalent13");
+    covalentTypes.push_back("PolarizationCovalent14");
 }
 
-static void addCovalentMap( SerializationNode& particleExclusions, int particleIndex, std::string mapName, std::vector< int > covalentMap ){
+static void addCovalentMap(SerializationNode& particleExclusions, int particleIndex, std::string mapName, std::vector< int > covalentMap) {
     SerializationNode& map   = particleExclusions.createChildNode(mapName);
     for (unsigned int ii = 0; ii < covalentMap.size(); ii++) {
-        map.createChildNode("Cv").setIntProperty( "v", covalentMap[ii] );
+        map.createChildNode("Cv").setIntProperty("v", covalentMap[ii]);
     }
 }
 
-void loadCovalentMap( const SerializationNode& map, std::vector< int >& covalentMap ){
+void loadCovalentMap(const SerializationNode& map, std::vector< int >& covalentMap) {
     for (unsigned int ii = 0; ii < map.getChildren().size(); ii++) {
-        covalentMap.push_back( map.getChildren()[ii].getIntProperty( "v" ) );
+        covalentMap.push_back(map.getChildren()[ii].getIntProperty("v"));
     }
 }
 
@@ -84,12 +84,12 @@ void AmoebaMultipoleForceProxy::serialize(const void* object, SerializationNode&
     node.setDoubleProperty("ewaldErrorTolerance",           force.getEwaldErrorTolerance());
 
     std::vector<int> gridDimensions;
-    force.getPmeGridDimensions( gridDimensions );
+    force.getPmeGridDimensions(gridDimensions);
     SerializationNode& gridDimensionsNode  = node.createChildNode("MultipoleParticleGridDimension");
-    gridDimensionsNode.setIntProperty( "d0", gridDimensions[0] ).setIntProperty( "d1", gridDimensions[1] ).setIntProperty( "d2", gridDimensions[2] ); 
+    gridDimensionsNode.setIntProperty("d0", gridDimensions[0]).setIntProperty("d1", gridDimensions[1]).setIntProperty("d2", gridDimensions[2]); 
 
     std::vector<std::string> covalentTypes;
-    getCovalentTypes( covalentTypes );
+    getCovalentTypes(covalentTypes);
 
     SerializationNode& particles = node.createChildNode("MultipoleParticles");
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(force.getNumMultipoles()); ii++) {
@@ -100,25 +100,25 @@ void AmoebaMultipoleForceProxy::serialize(const void* object, SerializationNode&
         std::vector<double> molecularDipole;
         std::vector<double> molecularQuadrupole;
 
-        force.getMultipoleParameters( ii, charge, molecularDipole, molecularQuadrupole,
-                                      axisType, multipoleAtomZ, multipoleAtomX, multipoleAtomY, thole, dampingFactor, polarity );
+        force.getMultipoleParameters(ii, charge, molecularDipole, molecularQuadrupole,
+                                     axisType, multipoleAtomZ, multipoleAtomX, multipoleAtomY, thole, dampingFactor, polarity);
 
         SerializationNode& particle    = particles.createChildNode("Particle");
         particle.setIntProperty("axisType", axisType).setIntProperty("multipoleAtomZ", multipoleAtomZ).setIntProperty("multipoleAtomX", multipoleAtomX).setIntProperty("multipoleAtomY", multipoleAtomY);
         particle.setDoubleProperty("charge", charge).setDoubleProperty("thole", thole).setDoubleProperty("damp", dampingFactor).setDoubleProperty("polarity", polarity);
 
         SerializationNode& dipole      = particle.createChildNode("Dipole");
-        dipole.setDoubleProperty( "d0", molecularDipole[0] ).setDoubleProperty( "d1", molecularDipole[1] ).setDoubleProperty( "d2", molecularDipole[2] );
+        dipole.setDoubleProperty("d0", molecularDipole[0]).setDoubleProperty("d1", molecularDipole[1]).setDoubleProperty("d2", molecularDipole[2]);
 
         SerializationNode& quadrupole  = particle.createChildNode("Quadrupole");
-        quadrupole.setDoubleProperty( "q0", molecularQuadrupole[0] ).setDoubleProperty( "q1", molecularQuadrupole[1] ).setDoubleProperty( "q2", molecularQuadrupole[2] );
-        quadrupole.setDoubleProperty( "q3", molecularQuadrupole[3] ).setDoubleProperty( "q4", molecularQuadrupole[4] ).setDoubleProperty( "q5", molecularQuadrupole[5] );
-        quadrupole.setDoubleProperty( "q6", molecularQuadrupole[6] ).setDoubleProperty( "q7", molecularQuadrupole[7] ).setDoubleProperty( "q8", molecularQuadrupole[8] );
+        quadrupole.setDoubleProperty("q0", molecularQuadrupole[0]).setDoubleProperty("q1", molecularQuadrupole[1]).setDoubleProperty("q2", molecularQuadrupole[2]);
+        quadrupole.setDoubleProperty("q3", molecularQuadrupole[3]).setDoubleProperty("q4", molecularQuadrupole[4]).setDoubleProperty("q5", molecularQuadrupole[5]);
+        quadrupole.setDoubleProperty("q6", molecularQuadrupole[6]).setDoubleProperty("q7", molecularQuadrupole[7]).setDoubleProperty("q8", molecularQuadrupole[8]);
 
         for (unsigned int jj = 0; jj < covalentTypes.size(); jj++) {
             std::vector< int > covalentMap;
-            force.getCovalentMap(ii, static_cast<AmoebaMultipoleForce::CovalentType>(jj), covalentMap );
-            addCovalentMap( particle, ii, covalentTypes[jj], covalentMap );
+            force.getCovalentMap(ii, static_cast<AmoebaMultipoleForce::CovalentType>(jj), covalentMap);
+            addCovalentMap(particle, ii, covalentTypes[jj], covalentMap);
         }
     }
 }
@@ -130,54 +130,54 @@ void* AmoebaMultipoleForceProxy::deserialize(const SerializationNode& node) cons
 
     try {
 
-        force->setNonbondedMethod( static_cast<AmoebaMultipoleForce::NonbondedMethod>(node.getIntProperty( "nonbondedMethod" )) );
-        if( node.getIntProperty("version") == 2 ){
-            force->setPolarizationType( static_cast<AmoebaMultipoleForce::PolarizationType>(node.getIntProperty( "polarizationType" )) );
+        force->setNonbondedMethod(static_cast<AmoebaMultipoleForce::NonbondedMethod>(node.getIntProperty("nonbondedMethod")));
+        if (node.getIntProperty("version") == 2) {
+            force->setPolarizationType(static_cast<AmoebaMultipoleForce::PolarizationType>(node.getIntProperty("polarizationType")));
         }
-        //force->setPmeBSplineOrder( node.getIntProperty( "pmeBSplineOrder" ) );
-        //force->setMutualInducedIterationMethod( static_cast<AmoebaMultipoleForce::MutualInducedIterationMethod>(node.getIntProperty( "mutualInducedIterationMethod" ) ) );
-        force->setMutualInducedMaxIterations( node.getIntProperty( "mutualInducedMaxIterations" ) );
+        //force->setPmeBSplineOrder(node.getIntProperty("pmeBSplineOrder"));
+        //force->setMutualInducedIterationMethod(static_cast<AmoebaMultipoleForce::MutualInducedIterationMethod>(node.getIntProperty("mutualInducedIterationMethod")));
+        force->setMutualInducedMaxIterations(node.getIntProperty("mutualInducedMaxIterations"));
 
-        force->setCutoffDistance( node.getDoubleProperty( "cutoffDistance" ) );
-        force->setAEwald( node.getDoubleProperty( "aEwald" ) );
-        force->setMutualInducedTargetEpsilon( node.getDoubleProperty( "mutualInducedTargetEpsilon" ) );
-        //force->setElectricConstant( node.getDoubleProperty( "electricConstant" ) );
-        force->setEwaldErrorTolerance( node.getDoubleProperty( "ewaldErrorTolerance" ) );
+        force->setCutoffDistance(node.getDoubleProperty("cutoffDistance"));
+        force->setAEwald(node.getDoubleProperty("aEwald"));
+        force->setMutualInducedTargetEpsilon(node.getDoubleProperty("mutualInducedTargetEpsilon"));
+        //force->setElectricConstant(node.getDoubleProperty("electricConstant"));
+        force->setEwaldErrorTolerance(node.getDoubleProperty("ewaldErrorTolerance"));
 
         std::vector<int> gridDimensions;
         const SerializationNode& gridDimensionsNode  = node.getChildNode("MultipoleParticleGridDimension");
-        gridDimensions.push_back( gridDimensionsNode.getIntProperty( "d0" ));
-        gridDimensions.push_back( gridDimensionsNode.getIntProperty( "d1" ));
-        gridDimensions.push_back( gridDimensionsNode.getIntProperty( "d2" ));
-        force->setPmeGridDimensions( gridDimensions );
+        gridDimensions.push_back(gridDimensionsNode.getIntProperty("d0"));
+        gridDimensions.push_back(gridDimensionsNode.getIntProperty("d1"));
+        gridDimensions.push_back(gridDimensionsNode.getIntProperty("d2"));
+        force->setPmeGridDimensions(gridDimensions);
     
         std::vector<std::string> covalentTypes;
-        getCovalentTypes( covalentTypes );
+        getCovalentTypes(covalentTypes);
 
         const SerializationNode& particles = node.getChildNode("MultipoleParticles");
-        for ( unsigned int ii = 0; ii < particles.getChildren().size(); ii++) {
+        for (unsigned int ii = 0; ii < particles.getChildren().size(); ii++) {
 
             const SerializationNode& particle = particles.getChildren()[ii];
 
             std::vector<double> molecularDipole;
             const SerializationNode& dipole = particle.getChildNode("Dipole");
-            molecularDipole.push_back( dipole.getDoubleProperty( "d0" ) );
-            molecularDipole.push_back( dipole.getDoubleProperty( "d1" ) );
-            molecularDipole.push_back( dipole.getDoubleProperty( "d2" ) );
+            molecularDipole.push_back(dipole.getDoubleProperty("d0"));
+            molecularDipole.push_back(dipole.getDoubleProperty("d1"));
+            molecularDipole.push_back(dipole.getDoubleProperty("d2"));
 
             std::vector<double> molecularQuadrupole;
             const SerializationNode& quadrupole = particle.getChildNode("Quadrupole");
-            molecularQuadrupole.push_back( quadrupole.getDoubleProperty( "q0" ) );
-            molecularQuadrupole.push_back( quadrupole.getDoubleProperty( "q1" ) );
-            molecularQuadrupole.push_back( quadrupole.getDoubleProperty( "q2" ) );
-            molecularQuadrupole.push_back( quadrupole.getDoubleProperty( "q3" ) );
-            molecularQuadrupole.push_back( quadrupole.getDoubleProperty( "q4" ) );
-            molecularQuadrupole.push_back( quadrupole.getDoubleProperty( "q5" ) );
-            molecularQuadrupole.push_back( quadrupole.getDoubleProperty( "q6" ) );
-            molecularQuadrupole.push_back( quadrupole.getDoubleProperty( "q7" ) );
-            molecularQuadrupole.push_back( quadrupole.getDoubleProperty( "q8" ) );
+            molecularQuadrupole.push_back(quadrupole.getDoubleProperty("q0"));
+            molecularQuadrupole.push_back(quadrupole.getDoubleProperty("q1"));
+            molecularQuadrupole.push_back(quadrupole.getDoubleProperty("q2"));
+            molecularQuadrupole.push_back(quadrupole.getDoubleProperty("q3"));
+            molecularQuadrupole.push_back(quadrupole.getDoubleProperty("q4"));
+            molecularQuadrupole.push_back(quadrupole.getDoubleProperty("q5"));
+            molecularQuadrupole.push_back(quadrupole.getDoubleProperty("q6"));
+            molecularQuadrupole.push_back(quadrupole.getDoubleProperty("q7"));
+            molecularQuadrupole.push_back(quadrupole.getDoubleProperty("q8"));
 
-            force->addMultipole( particle.getDoubleProperty("charge"), molecularDipole, molecularQuadrupole,
+            force->addMultipole(particle.getDoubleProperty("charge"), molecularDipole, molecularQuadrupole,
                                 particle.getIntProperty("axisType"),
                                 particle.getIntProperty("multipoleAtomZ"),
                                 particle.getIntProperty("multipoleAtomX"),
@@ -189,8 +189,8 @@ void* AmoebaMultipoleForceProxy::deserialize(const SerializationNode& node) cons
 
             for (unsigned int jj = 0; jj < covalentTypes.size(); jj++) {
                 std::vector< int > covalentMap;
-                loadCovalentMap( particle.getChildNode(covalentTypes[jj]), covalentMap );
-                force->setCovalentMap( ii, static_cast<AmoebaMultipoleForce::CovalentType>(jj), covalentMap );
+                loadCovalentMap(particle.getChildNode(covalentTypes[jj]), covalentMap);
+                force->setCovalentMap(ii, static_cast<AmoebaMultipoleForce::CovalentType>(jj), covalentMap);
             }
         }
 

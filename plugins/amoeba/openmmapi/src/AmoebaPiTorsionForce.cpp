@@ -44,7 +44,7 @@ int AmoebaPiTorsionForce::addPiTorsion(int particle1, int particle2, int particl
     return piTorsions.size()-1;
 }
 
-void AmoebaPiTorsionForce::getPiTorsionParameters(int index, int& particle1, int& particle2, int& particle3, int& particle4, int& particle5, int& particle6, double& k ) const {
+void AmoebaPiTorsionForce::getPiTorsionParameters(int index, int& particle1, int& particle2, int& particle3, int& particle4, int& particle5, int& particle6, double& k) const {
     particle1       = piTorsions[index].particle1;
     particle2       = piTorsions[index].particle2;
     particle3       = piTorsions[index].particle3;
@@ -54,7 +54,7 @@ void AmoebaPiTorsionForce::getPiTorsionParameters(int index, int& particle1, int
     k               = piTorsions[index].k;
 }
 
-void AmoebaPiTorsionForce::setPiTorsionParameters(int index, int particle1, int particle2, int particle3, int particle4, int particle5, int particle6,  double k ) {
+void AmoebaPiTorsionForce::setPiTorsionParameters(int index, int particle1, int particle2, int particle3, int particle4, int particle5, int particle6,  double k) {
     piTorsions[index].particle1  = particle1;
     piTorsions[index].particle2  = particle2;
     piTorsions[index].particle3  = particle3;

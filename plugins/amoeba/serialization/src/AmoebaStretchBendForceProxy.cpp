@@ -60,7 +60,7 @@ void* AmoebaStretchBendForceProxy::deserialize(const SerializationNode& node) co
     AmoebaStretchBendForce* force = new AmoebaStretchBendForce();
     try {
         const SerializationNode& bonds = node.getChildNode("StretchBendAngles");
-        for ( unsigned int ii = 0; ii < (int) bonds.getChildren().size(); ii++) {
+        for (unsigned int ii = 0; ii < (int) bonds.getChildren().size(); ii++) {
             const SerializationNode& bond = bonds.getChildren()[ii];
             force->addStretchBend(bond.getIntProperty("p1"), bond.getIntProperty("p2"), bond.getIntProperty("p3"),  bond.getDoubleProperty("dAB"), bond.getDoubleProperty("dCB"), bond.getDoubleProperty("angle"), bond.getDoubleProperty("k1"), bond.getDoubleProperty("k2"));
 

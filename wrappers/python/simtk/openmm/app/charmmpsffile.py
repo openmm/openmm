@@ -777,11 +777,12 @@ class CharmmPsfFile(object):
         # Add each chain (separate 'system's) and residue
         for atom in self.atom_list:
             if atom.system != last_chain:
-                chain = topology.addChain()
+                chain = topology.addChain(atom.system)
                 last_chain = atom.system
             if atom.residue.idx != last_residue:
                 last_residue = atom.residue.idx
-                residue = topology.addResidue(atom.residue.resname, chain)
+                residue = topology.addResidue(atom.residue.resname, chain,
+                                              str(atom.residue.idx))
             if atom.type is not None:
                 # This is the most reliable way of determining the element
                 atomic_num = atom.type.atomic_number

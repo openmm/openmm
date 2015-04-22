@@ -25,11 +25,11 @@
 #include <string.h>
 #include <sstream>
 
-#include "SimTKOpenMMCommon.h"
-#include "SimTKOpenMMLog.h"
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceForce.h"
 #include "ReferencePairIxn.h"
+
+using namespace OpenMM;
 
 /**---------------------------------------------------------------------------------------
 
@@ -37,7 +37,7 @@
 
    --------------------------------------------------------------------------------------- */
 
-ReferencePairIxn::ReferencePairIxn( ){
+ReferencePairIxn::ReferencePairIxn() {
 
    // ---------------------------------------------------------------------------------------
 
@@ -53,7 +53,7 @@ ReferencePairIxn::ReferencePairIxn( ){
 
    --------------------------------------------------------------------------------------- */
 
-ReferencePairIxn::~ReferencePairIxn( ){
+ReferencePairIxn::~ReferencePairIxn() {
 
    // ---------------------------------------------------------------------------------------
 

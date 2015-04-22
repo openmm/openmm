@@ -46,7 +46,7 @@ int AmoebaStretchBendForce::addStretchBend(int particle1, int particle2, int par
 }
 
 void AmoebaStretchBendForce::getStretchBendParameters(int index, int& particle1, int& particle2, int& particle3,
-                                                      double& lengthAB, double& lengthCB, double& angle, double& k1, double& k2 ) const {
+                                                      double& lengthAB, double& lengthCB, double& angle, double& k1, double& k2) const {
     particle1       = stretchBends[index].particle1;
     particle2       = stretchBends[index].particle2;
     particle3       = stretchBends[index].particle3;

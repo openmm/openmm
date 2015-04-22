@@ -26,12 +26,11 @@
 #define __ReferenceDynamics_H__
 
 #include "ReferenceConstraintAlgorithm.h"
-#include "SimTKOpenMMCommon.h"
 #include "openmm/System.h"
 #include <cstddef>
 #include <vector>
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 /**---------------------------------------------------------------------------------------
 
@@ -68,7 +67,7 @@ class OPENMM_EXPORT ReferenceDynamics {
 
          --------------------------------------------------------------------------------------- */
 
-       ReferenceDynamics( int numberOfAtoms, RealOpenMM _deltaT, RealOpenMM temperature );
+       ReferenceDynamics(int numberOfAtoms, RealOpenMM _deltaT, RealOpenMM temperature);
 
       /**---------------------------------------------------------------------------------------
       
@@ -76,7 +75,7 @@ class OPENMM_EXPORT ReferenceDynamics {
       
          --------------------------------------------------------------------------------------- */
 
-       virtual ~ReferenceDynamics( );
+       virtual ~ReferenceDynamics();
 
       /**---------------------------------------------------------------------------------------
       
@@ -86,7 +85,7 @@ class OPENMM_EXPORT ReferenceDynamics {
       
          --------------------------------------------------------------------------------------- */
       
-      int getNumberOfAtoms( void ) const;
+      int getNumberOfAtoms() const;
       
       /**---------------------------------------------------------------------------------------
       
@@ -96,7 +95,7 @@ class OPENMM_EXPORT ReferenceDynamics {
       
          --------------------------------------------------------------------------------------- */
       
-      int getTimeStep( void ) const;
+      int getTimeStep() const;
       
       /**---------------------------------------------------------------------------------------
       
@@ -106,7 +105,7 @@ class OPENMM_EXPORT ReferenceDynamics {
       
          --------------------------------------------------------------------------------------- */
       
-      int incrementTimeStep( void );
+      int incrementTimeStep();
       
       /**---------------------------------------------------------------------------------------
       
@@ -116,7 +115,7 @@ class OPENMM_EXPORT ReferenceDynamics {
       
          --------------------------------------------------------------------------------------- */
       
-      RealOpenMM getDeltaT( void ) const;
+      RealOpenMM getDeltaT() const;
 
       /**---------------------------------------------------------------------------------------
 
@@ -124,7 +123,7 @@ class OPENMM_EXPORT ReferenceDynamics {
 
          --------------------------------------------------------------------------------------- */
 
-      void setDeltaT( RealOpenMM deltaT );
+      void setDeltaT(RealOpenMM deltaT);
 
       /**---------------------------------------------------------------------------------------
       
@@ -134,7 +133,7 @@ class OPENMM_EXPORT ReferenceDynamics {
       
          --------------------------------------------------------------------------------------- */
     
-      RealOpenMM getTemperature( void ) const;
+      RealOpenMM getTemperature() const;
 
       /**---------------------------------------------------------------------------------------
       
@@ -160,7 +159,7 @@ class OPENMM_EXPORT ReferenceDynamics {
       
          --------------------------------------------------------------------------------------- */
       
-      ReferenceConstraintAlgorithm* getReferenceConstraintAlgorithm( void ) const;
+      ReferenceConstraintAlgorithm* getReferenceConstraintAlgorithm() const;
       
       /**---------------------------------------------------------------------------------------
       
@@ -170,9 +169,10 @@ class OPENMM_EXPORT ReferenceDynamics {
       
          --------------------------------------------------------------------------------------- */
       
-      void setReferenceConstraintAlgorithm( ReferenceConstraintAlgorithm* referenceConstraint );
+      void setReferenceConstraintAlgorithm(ReferenceConstraintAlgorithm* referenceConstraint);
 };
 
-// ---------------------------------------------------------------------------------------
+} // namespace OpenMM
+
 
 #endif // __ReferenceDynamics_H__

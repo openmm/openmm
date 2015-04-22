@@ -65,10 +65,10 @@ static void setupMultipoleAmmonia(System& system, AmoebaGeneralizedKirkwoodForce
     AmoebaMultipoleForce* amoebaMultipoleForce        = new AmoebaMultipoleForce();;
     int numberOfParticles                             = 8;
 
-    amoebaMultipoleForce->setNonbondedMethod( AmoebaMultipoleForce::NoCutoff );
-    amoebaMultipoleForce->setPolarizationType( polarizationType );
-    amoebaMultipoleForce->setMutualInducedTargetEpsilon( 1.0e-06 );
-    amoebaMultipoleForce->setMutualInducedMaxIterations( 500 );
+    amoebaMultipoleForce->setNonbondedMethod(AmoebaMultipoleForce::NoCutoff);
+    amoebaMultipoleForce->setPolarizationType(polarizationType);
+    amoebaMultipoleForce->setMutualInducedTargetEpsilon(1.0e-06);
+    amoebaMultipoleForce->setMutualInducedMaxIterations(500);
 
     std::vector<double> nitrogenMolecularDipole(3);
     std::vector<double> nitrogenMolecularQuadrupole(9);
@@ -89,8 +89,8 @@ static void setupMultipoleAmmonia(System& system, AmoebaGeneralizedKirkwoodForce
 
     // first N
 
-    system.addParticle( 1.4007000e+01 );
-    amoebaMultipoleForce->addMultipole(  -5.7960000e-01, nitrogenMolecularDipole, nitrogenMolecularQuadrupole, 2, 1, 2, 3,  3.9000000e-01,  3.1996314e-01,  1.0730000e-03 );
+    system.addParticle(1.4007000e+01);
+    amoebaMultipoleForce->addMultipole(-5.7960000e-01, nitrogenMolecularDipole, nitrogenMolecularQuadrupole, 2, 1, 2, 3,  3.9000000e-01,  3.1996314e-01,  1.0730000e-03);
 
     // 3 H attached to first N
 
@@ -110,182 +110,182 @@ static void setupMultipoleAmmonia(System& system, AmoebaGeneralizedKirkwoodForce
     hydrogenMolecularQuadrupole[7] =   0.0000000e+00;
     hydrogenMolecularQuadrupole[8] =   2.4549167e-06;
 
-    system.addParticle( 1.0080000e+00 );
-    system.addParticle( 1.0080000e+00 );
-    system.addParticle( 1.0080000e+00 );
-    amoebaMultipoleForce->addMultipole(   1.9320000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 0, 2, 3, 3.9000000e-01,  2.8135002e-01,  4.9600000e-04 );
-    amoebaMultipoleForce->addMultipole(   1.9320000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 0, 1, 3, 3.9000000e-01,  2.8135002e-01,  4.9600000e-04 );
-    amoebaMultipoleForce->addMultipole(   1.9320000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 0, 1, 2, 3.9000000e-01,  2.8135002e-01,  4.9600000e-04 );
+    system.addParticle(1.0080000e+00);
+    system.addParticle(1.0080000e+00);
+    system.addParticle(1.0080000e+00);
+    amoebaMultipoleForce->addMultipole( 1.9320000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 0, 2, 3, 3.9000000e-01,  2.8135002e-01,  4.9600000e-04);
+    amoebaMultipoleForce->addMultipole( 1.9320000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 0, 1, 3, 3.9000000e-01,  2.8135002e-01,  4.9600000e-04);
+    amoebaMultipoleForce->addMultipole( 1.9320000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 0, 1, 2, 3.9000000e-01,  2.8135002e-01,  4.9600000e-04);
 
     // second N
 
-    system.addParticle(   1.4007000e+01 );
-    amoebaMultipoleForce->addMultipole(  -5.7960000e-01, nitrogenMolecularDipole, nitrogenMolecularQuadrupole, 2, 5, 6, 7,  3.9000000e-01,  3.1996314e-01,  1.0730000e-03 );
+    system.addParticle( 1.4007000e+01);
+    amoebaMultipoleForce->addMultipole(-5.7960000e-01, nitrogenMolecularDipole, nitrogenMolecularQuadrupole, 2, 5, 6, 7,  3.9000000e-01,  3.1996314e-01,  1.0730000e-03);
 
     // 3 H attached to second N
 
-    system.addParticle(   1.0080000e+00 );
-    system.addParticle(   1.0080000e+00 );
-    system.addParticle(   1.0080000e+00 );
-    amoebaMultipoleForce->addMultipole(   1.9320000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 4, 6, 7, 3.9000000e-01,  2.8135002e-01,  4.9600000e-04 );
-    amoebaMultipoleForce->addMultipole(   1.9320000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 4, 5, 7, 3.9000000e-01,  2.8135002e-01,  4.9600000e-04 );
-    amoebaMultipoleForce->addMultipole(   1.9320000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 4, 5, 6, 3.9000000e-01,  2.8135002e-01,  4.9600000e-04 );
+    system.addParticle( 1.0080000e+00);
+    system.addParticle( 1.0080000e+00);
+    system.addParticle( 1.0080000e+00);
+    amoebaMultipoleForce->addMultipole( 1.9320000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 4, 6, 7, 3.9000000e-01,  2.8135002e-01,  4.9600000e-04);
+    amoebaMultipoleForce->addMultipole( 1.9320000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 4, 5, 7, 3.9000000e-01,  2.8135002e-01,  4.9600000e-04);
+    amoebaMultipoleForce->addMultipole( 1.9320000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 4, 5, 6, 3.9000000e-01,  2.8135002e-01,  4.9600000e-04);
 
     // covalent maps
 
     std::vector< int > covalentMap;
     covalentMap.resize(0);
-    covalentMap.push_back( 1 );
-    covalentMap.push_back( 2 );
-    covalentMap.push_back( 3 );
-    amoebaMultipoleForce->setCovalentMap( 0, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(0), covalentMap );
+    covalentMap.push_back(1);
+    covalentMap.push_back(2);
+    covalentMap.push_back(3);
+    amoebaMultipoleForce->setCovalentMap(0, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(0), covalentMap);
 
     covalentMap.resize(0);
-    covalentMap.push_back( 0 );
-    covalentMap.push_back( 1 );
-    covalentMap.push_back( 2 );
-    covalentMap.push_back( 3 );
-    amoebaMultipoleForce->setCovalentMap( 0, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(4), covalentMap );
+    covalentMap.push_back(0);
+    covalentMap.push_back(1);
+    covalentMap.push_back(2);
+    covalentMap.push_back(3);
+    amoebaMultipoleForce->setCovalentMap(0, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(4), covalentMap);
 
     covalentMap.resize(0);
-    covalentMap.push_back( 0 );
-    amoebaMultipoleForce->setCovalentMap( 1, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(0), covalentMap );
+    covalentMap.push_back(0);
+    amoebaMultipoleForce->setCovalentMap(1, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(0), covalentMap);
 
     covalentMap.resize(0);
-    covalentMap.push_back( 2 );
-    covalentMap.push_back( 3 );
-    amoebaMultipoleForce->setCovalentMap( 1, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(1), covalentMap );
+    covalentMap.push_back(2);
+    covalentMap.push_back(3);
+    amoebaMultipoleForce->setCovalentMap(1, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(1), covalentMap);
 
     covalentMap.resize(0);
-    covalentMap.push_back( 0 );
-    covalentMap.push_back( 1 );
-    covalentMap.push_back( 2 );
-    covalentMap.push_back( 3 );
-    amoebaMultipoleForce->setCovalentMap( 1, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(4), covalentMap );
+    covalentMap.push_back(0);
+    covalentMap.push_back(1);
+    covalentMap.push_back(2);
+    covalentMap.push_back(3);
+    amoebaMultipoleForce->setCovalentMap(1, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(4), covalentMap);
 
     covalentMap.resize(0);
-    covalentMap.push_back( 0 );
-    amoebaMultipoleForce->setCovalentMap( 2, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(0), covalentMap );
+    covalentMap.push_back(0);
+    amoebaMultipoleForce->setCovalentMap(2, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(0), covalentMap);
 
     covalentMap.resize(0);
-    covalentMap.push_back( 1 );
-    covalentMap.push_back( 3 );
-    amoebaMultipoleForce->setCovalentMap( 2, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(1), covalentMap );
+    covalentMap.push_back(1);
+    covalentMap.push_back(3);
+    amoebaMultipoleForce->setCovalentMap(2, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(1), covalentMap);
 
     covalentMap.resize(0);
-    covalentMap.push_back( 0 );
-    covalentMap.push_back( 1 );
-    covalentMap.push_back( 2 );
-    covalentMap.push_back( 3 );
-    amoebaMultipoleForce->setCovalentMap( 2, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(4), covalentMap );
+    covalentMap.push_back(0);
+    covalentMap.push_back(1);
+    covalentMap.push_back(2);
+    covalentMap.push_back(3);
+    amoebaMultipoleForce->setCovalentMap(2, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(4), covalentMap);
 
     covalentMap.resize(0);
-    covalentMap.push_back( 0 );
-    amoebaMultipoleForce->setCovalentMap( 3, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(0), covalentMap );
+    covalentMap.push_back(0);
+    amoebaMultipoleForce->setCovalentMap(3, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(0), covalentMap);
 
     covalentMap.resize(0);
-    covalentMap.push_back( 1 );
-    covalentMap.push_back( 2 );
-    amoebaMultipoleForce->setCovalentMap( 3, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(1), covalentMap );
+    covalentMap.push_back(1);
+    covalentMap.push_back(2);
+    amoebaMultipoleForce->setCovalentMap(3, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(1), covalentMap);
 
     covalentMap.resize(0);
-    covalentMap.push_back( 0 );
-    covalentMap.push_back( 1 );
-    covalentMap.push_back( 2 );
-    covalentMap.push_back( 3 );
-    amoebaMultipoleForce->setCovalentMap( 3, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(4), covalentMap );
+    covalentMap.push_back(0);
+    covalentMap.push_back(1);
+    covalentMap.push_back(2);
+    covalentMap.push_back(3);
+    amoebaMultipoleForce->setCovalentMap(3, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(4), covalentMap);
 
     covalentMap.resize(0);
-    covalentMap.push_back( 5 );
-    covalentMap.push_back( 6 );
-    covalentMap.push_back( 7 );
-    amoebaMultipoleForce->setCovalentMap( 4, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(0), covalentMap );
+    covalentMap.push_back(5);
+    covalentMap.push_back(6);
+    covalentMap.push_back(7);
+    amoebaMultipoleForce->setCovalentMap(4, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(0), covalentMap);
 
     covalentMap.resize(0);
-    covalentMap.push_back( 4 );
-    covalentMap.push_back( 5 );
-    covalentMap.push_back( 6 );
-    covalentMap.push_back( 7 );
-    amoebaMultipoleForce->setCovalentMap( 4, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(4), covalentMap );
+    covalentMap.push_back(4);
+    covalentMap.push_back(5);
+    covalentMap.push_back(6);
+    covalentMap.push_back(7);
+    amoebaMultipoleForce->setCovalentMap(4, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(4), covalentMap);
 
     covalentMap.resize(0);
-    covalentMap.push_back( 4 );
-    amoebaMultipoleForce->setCovalentMap( 5, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(0), covalentMap );
+    covalentMap.push_back(4);
+    amoebaMultipoleForce->setCovalentMap(5, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(0), covalentMap);
 
     covalentMap.resize(0);
-    covalentMap.push_back( 6 );
-    covalentMap.push_back( 7 );
-    amoebaMultipoleForce->setCovalentMap( 5, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(1), covalentMap );
+    covalentMap.push_back(6);
+    covalentMap.push_back(7);
+    amoebaMultipoleForce->setCovalentMap(5, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(1), covalentMap);
 
     covalentMap.resize(0);
-    covalentMap.push_back( 4 );
-    covalentMap.push_back( 5 );
-    covalentMap.push_back( 6 );
-    covalentMap.push_back( 7 );
-    amoebaMultipoleForce->setCovalentMap( 5, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(4), covalentMap );
+    covalentMap.push_back(4);
+    covalentMap.push_back(5);
+    covalentMap.push_back(6);
+    covalentMap.push_back(7);
+    amoebaMultipoleForce->setCovalentMap(5, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(4), covalentMap);
 
     covalentMap.resize(0);
-    covalentMap.push_back( 4 );
-    amoebaMultipoleForce->setCovalentMap( 6, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(0), covalentMap );
+    covalentMap.push_back(4);
+    amoebaMultipoleForce->setCovalentMap(6, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(0), covalentMap);
 
     covalentMap.resize(0);
-    covalentMap.push_back( 5 );
-    covalentMap.push_back( 7 );
-    amoebaMultipoleForce->setCovalentMap( 6, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(1), covalentMap );
+    covalentMap.push_back(5);
+    covalentMap.push_back(7);
+    amoebaMultipoleForce->setCovalentMap(6, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(1), covalentMap);
 
     covalentMap.resize(0);
-    covalentMap.push_back( 4 );
-    covalentMap.push_back( 5 );
-    covalentMap.push_back( 6 );
-    covalentMap.push_back( 7 );
-    amoebaMultipoleForce->setCovalentMap( 6, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(4), covalentMap );
+    covalentMap.push_back(4);
+    covalentMap.push_back(5);
+    covalentMap.push_back(6);
+    covalentMap.push_back(7);
+    amoebaMultipoleForce->setCovalentMap(6, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(4), covalentMap);
 
     covalentMap.resize(0);
-    covalentMap.push_back( 4 );
-    amoebaMultipoleForce->setCovalentMap( 7, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(0), covalentMap );
+    covalentMap.push_back(4);
+    amoebaMultipoleForce->setCovalentMap(7, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(0), covalentMap);
 
     covalentMap.resize(0);
-    covalentMap.push_back( 5 );
-    covalentMap.push_back( 6 );
-    amoebaMultipoleForce->setCovalentMap( 7, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(1), covalentMap );
+    covalentMap.push_back(5);
+    covalentMap.push_back(6);
+    amoebaMultipoleForce->setCovalentMap(7, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(1), covalentMap);
 
     covalentMap.resize(0);
-    covalentMap.push_back( 4 );
-    covalentMap.push_back( 5 );
-    covalentMap.push_back( 6 );
-    covalentMap.push_back( 7 );
-    amoebaMultipoleForce->setCovalentMap( 7, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(4), covalentMap );
+    covalentMap.push_back(4);
+    covalentMap.push_back(5);
+    covalentMap.push_back(6);
+    covalentMap.push_back(7);
+    amoebaMultipoleForce->setCovalentMap(7, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(4), covalentMap);
 
     system.addForce(amoebaMultipoleForce);
 
     // GK force
 
-    amoebaGeneralizedKirkwoodForce->setSolventDielectric(   7.8300000e+01 );
-    amoebaGeneralizedKirkwoodForce->setSoluteDielectric(    1.0000000e+00 );
-    amoebaGeneralizedKirkwoodForce->setIncludeCavityTerm( includeCavityTerm );
+    amoebaGeneralizedKirkwoodForce->setSolventDielectric( 7.8300000e+01);
+    amoebaGeneralizedKirkwoodForce->setSoluteDielectric(  1.0000000e+00);
+    amoebaGeneralizedKirkwoodForce->setIncludeCavityTerm(includeCavityTerm);
 
     // addParticle: charge, radius, scalingFactor
 
-    for( unsigned int ii = 0; ii < 2; ii++ ){
-        amoebaGeneralizedKirkwoodForce->addParticle(  -5.7960000e-01,   1.5965000e-01,   6.9000000e-01 );
-        amoebaGeneralizedKirkwoodForce->addParticle(   1.9320000e-01,   1.2360000e-01,   6.9000000e-01 );
-        amoebaGeneralizedKirkwoodForce->addParticle(   1.9320000e-01,   1.2360000e-01,   6.9000000e-01 );
-        amoebaGeneralizedKirkwoodForce->addParticle(   1.9320000e-01,   1.2360000e-01,   6.9000000e-01 );
+    for (unsigned int ii = 0; ii < 2; ii++) {
+        amoebaGeneralizedKirkwoodForce->addParticle(-5.7960000e-01,   1.5965000e-01,   6.9000000e-01);
+        amoebaGeneralizedKirkwoodForce->addParticle( 1.9320000e-01,   1.2360000e-01,   6.9000000e-01);
+        amoebaGeneralizedKirkwoodForce->addParticle( 1.9320000e-01,   1.2360000e-01,   6.9000000e-01);
+        amoebaGeneralizedKirkwoodForce->addParticle( 1.9320000e-01,   1.2360000e-01,   6.9000000e-01);
     }
     system.addForce(amoebaGeneralizedKirkwoodForce);
 }
 
-static void getForcesEnergyMultipoleAmmonia(Context& context, std::vector<Vec3>& forces, double& energy, FILE* log) {
+static void getForcesEnergyMultipoleAmmonia(Context& context, std::vector<Vec3>& forces, double& energy) {
     std::vector<Vec3> positions(context.getSystem().getNumParticles());
 
-    positions[0]              = Vec3(   1.5927280e-01,  1.7000000e-06,   1.6491000e-03 );
-    positions[1]              = Vec3(   2.0805540e-01, -8.1258800e-02,   3.7282500e-02 );
-    positions[2]              = Vec3(   2.0843610e-01,  8.0953200e-02,   3.7462200e-02 );
-    positions[3]              = Vec3(   1.7280780e-01,  2.0730000e-04,  -9.8741700e-02 );
-    positions[4]              = Vec3(  -1.6743680e-01,  1.5900000e-05,  -6.6149000e-03 );
-    positions[5]              = Vec3(  -2.0428260e-01,  8.1071500e-02,   4.1343900e-02 );
-    positions[6]              = Vec3(  -6.7308300e-02,  1.2800000e-05,   1.0623300e-02 );
-    positions[7]              = Vec3(  -2.0426290e-01, -8.1231400e-02,   4.1033500e-02 );
+    positions[0]              = Vec3( 1.5927280e-01,  1.7000000e-06,   1.6491000e-03);
+    positions[1]              = Vec3( 2.0805540e-01, -8.1258800e-02,   3.7282500e-02);
+    positions[2]              = Vec3( 2.0843610e-01,  8.0953200e-02,   3.7462200e-02);
+    positions[3]              = Vec3( 1.7280780e-01,  2.0730000e-04,  -9.8741700e-02);
+    positions[4]              = Vec3(-1.6743680e-01,  1.5900000e-05,  -6.6149000e-03);
+    positions[5]              = Vec3(-2.0428260e-01,  8.1071500e-02,   4.1343900e-02);
+    positions[6]              = Vec3(-6.7308300e-02,  1.2800000e-05,   1.0623300e-02);
+    positions[7]              = Vec3(-2.0426290e-01, -8.1231400e-02,   4.1033500e-02);
 
     context.setPositions(positions);
     State state                      = context.getState(State::Forces | State::Energy);
@@ -295,8 +295,8 @@ static void getForcesEnergyMultipoleAmmonia(Context& context, std::vector<Vec3>&
 
 // setup for villin
 
-static void setupAndGetForcesEnergyMultipoleVillin( AmoebaMultipoleForce::PolarizationType polarizationType,
-                                                    int includeCavityTerm, std::vector<Vec3>& forces, double& energy, FILE* log ){
+static void setupAndGetForcesEnergyMultipoleVillin(AmoebaMultipoleForce::PolarizationType polarizationType,
+                                                    int includeCavityTerm, std::vector<Vec3>& forces, double& energy) {
 
     // beginning of Multipole setup
 
@@ -305,13 +305,13 @@ static void setupAndGetForcesEnergyMultipoleVillin( AmoebaMultipoleForce::Polari
     AmoebaMultipoleForce* amoebaMultipoleForce        = new AmoebaMultipoleForce();;
     int numberOfParticles                             = 596;
 
-    amoebaMultipoleForce->setNonbondedMethod( AmoebaMultipoleForce::NoCutoff );
-    amoebaMultipoleForce->setPolarizationType( polarizationType );
-    amoebaMultipoleForce->setMutualInducedTargetEpsilon( 1.0e-06 );
-    amoebaMultipoleForce->setMutualInducedMaxIterations( 500 );
+    amoebaMultipoleForce->setNonbondedMethod(AmoebaMultipoleForce::NoCutoff);
+    amoebaMultipoleForce->setPolarizationType(polarizationType);
+    amoebaMultipoleForce->setMutualInducedTargetEpsilon(1.0e-06);
+    amoebaMultipoleForce->setMutualInducedMaxIterations(500);
 
-    for( unsigned int ii = 0; ii < numberOfParticles; ii++ ){
-        system.addParticle( 1.0 );
+    for (unsigned int ii = 0; ii < numberOfParticles; ii++) {
+        system.addParticle(1.0);
     }
 
     static const double multipoleData[] = {
@@ -929,7 +929,7 @@ static void setupAndGetForcesEnergyMultipoleVillin( AmoebaMultipoleForce::Polari
     std::vector<double> quadrupole(9);
     unsigned int entriesPerParticle = 21;
     const double* data    = multipoleData;
-    for( unsigned int ii = 0; ii < numberOfParticles; ii++ ){ 
+    for (unsigned int ii = 0; ii < numberOfParticles; ii++) { 
 
         dipole[0]       = data[dipoleIndex + 0];
         dipole[1]       = data[dipoleIndex + 1];
@@ -945,9 +945,9 @@ static void setupAndGetForcesEnergyMultipoleVillin( AmoebaMultipoleForce::Polari
         quadrupole[7]   = data[quadrupoleIndex + 7];
         quadrupole[8]   = data[quadrupoleIndex + 8];
 
-        amoebaMultipoleForce->addMultipole( data[chargeIndex], dipole, quadrupole, static_cast<int>(data[axisTypeIndex]),
+        amoebaMultipoleForce->addMultipole(data[chargeIndex], dipole, quadrupole, static_cast<int>(data[axisTypeIndex]),
                                            static_cast<int>(data[multipoleAtomZIndex]), static_cast<int>(data[multipoleAtomXIndex]), static_cast<int>(data[multipoleAtomYIndex]),
-                                           data[tholeIndex], data[dampingFactorIndex], data[polarityIndex] );
+                                           data[tholeIndex], data[dampingFactorIndex], data[polarityIndex]);
         data           += entriesPerParticle;
     }
 
@@ -5727,15 +5727,15 @@ static void setupAndGetForcesEnergyMultipoleVillin( AmoebaMultipoleForce::Polari
     unsigned int covalentMapDataSize = sizeof(covalentMapData)/sizeof(int);
 
     unsigned int covalentIndex       = 0;
-    while( covalentIndex < covalentMapDataSize ){ 
+    while (covalentIndex < covalentMapDataSize) { 
         int particleIndex = covalentMapData[covalentIndex++];
         int typeIndex     = covalentMapData[covalentIndex++];
         int entries       = covalentMapData[covalentIndex++];
         std::vector< int > covalentMap(entries);
-        for( unsigned int ii = 0; ii < entries; ii++ ){
+        for (unsigned int ii = 0; ii < entries; ii++) {
             covalentMap[ii] =  covalentMapData[covalentIndex++];
         }
-        amoebaMultipoleForce->setCovalentMap( particleIndex, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(typeIndex), covalentMap );
+        amoebaMultipoleForce->setCovalentMap(particleIndex, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(typeIndex), covalentMap);
     }
     system.addForce(amoebaMultipoleForce);
 
@@ -5744,9 +5744,9 @@ static void setupAndGetForcesEnergyMultipoleVillin( AmoebaMultipoleForce::Polari
     // GK force
 
     AmoebaGeneralizedKirkwoodForce* amoebaGeneralizedKirkwoodForce  = new AmoebaGeneralizedKirkwoodForce();
-    amoebaGeneralizedKirkwoodForce->setSolventDielectric(   7.8300000e+01 );
-    amoebaGeneralizedKirkwoodForce->setSoluteDielectric(    1.0000000e+00 );
-    amoebaGeneralizedKirkwoodForce->setIncludeCavityTerm( includeCavityTerm );
+    amoebaGeneralizedKirkwoodForce->setSolventDielectric(7.8300000e+01);
+    amoebaGeneralizedKirkwoodForce->setSoluteDielectric( 1.0000000e+00);
+    amoebaGeneralizedKirkwoodForce->setIncludeCavityTerm(includeCavityTerm);
 
     // addParticle: charge, radius, scalingFactor
 
@@ -6350,8 +6350,8 @@ static void setupAndGetForcesEnergyMultipoleVillin( AmoebaMultipoleForce::Polari
     };
 
     const double* gkData = generalizedKirkwoodData;
-    for( unsigned int ii = 0; ii < numberOfParticles; ii++ ){
-        amoebaGeneralizedKirkwoodForce->addParticle( gkData[0], gkData[1], gkData[2] );
+    for (unsigned int ii = 0; ii < numberOfParticles; ii++) {
+        amoebaGeneralizedKirkwoodForce->addParticle(gkData[0], gkData[1], gkData[2]);
         gkData += 3;
     }
     system.addForce(amoebaGeneralizedKirkwoodForce);
@@ -6960,15 +6960,15 @@ static void setupAndGetForcesEnergyMultipoleVillin( AmoebaMultipoleForce::Polari
     };
 
     const double* positionsDataPtr = positionsData;
-    for( unsigned int ii = 0; ii < numberOfParticles; ii++ ){ 
-        positions[ii]     = Vec3( positionsDataPtr[0], positionsDataPtr[1], positionsDataPtr[2] );
+    for (unsigned int ii = 0; ii < numberOfParticles; ii++) { 
+        positions[ii]     = Vec3(positionsDataPtr[0], positionsDataPtr[1], positionsDataPtr[2]);
         positionsDataPtr += 3;
     }
 
     std::string platformName;
     platformName = "Reference";
     LangevinIntegrator integrator(0.0, 0.1, 0.01);
-    Context context(system, integrator, Platform::getPlatformByName( platformName ) );
+    Context context(system, integrator, Platform::getPlatformByName(platformName));
 
     context.setPositions(positions);
     State state                      = context.getState(State::Forces | State::Energy);
@@ -6978,117 +6978,40 @@ static void setupAndGetForcesEnergyMultipoleVillin( AmoebaMultipoleForce::Polari
 
 // compare forces and energies 
 
-static void compareForcesEnergy( std::string& testName, double expectedEnergy, double energy,
-                                 const std::vector<Vec3>& expectedForces,
-                                 const std::vector<Vec3>& forces, double tolerance, FILE* log ) {
+static void compareForcesEnergy(std::string& testName, double expectedEnergy, double energy,
+                                const std::vector<Vec3>& expectedForces,
+                                const std::vector<Vec3>& forces, double tolerance) {
 
-//#define AMOEBA_DEBUG
-#ifdef AMOEBA_DEBUG
-    if( log ){
-        double conversion = 1.0/4.184;
-        double energyAbsDiff = fabs( expectedEnergy - energy );   
-        double energyRelDiff =  2.0*energyAbsDiff/( fabs( expectedEnergy ) + fabs( energy ) + 1.0e-08 );   
-        (void) fprintf( log, "%s: expected energy=%14.7e %14.7e  absDiff=%15.7e relDiff=%15.7e\n", testName.c_str(), conversion*expectedEnergy, conversion*energy,
-                        conversion*energyAbsDiff, conversion*energyRelDiff );
-        if( conversion != 1.0 )conversion *= -0.1;
-        for( unsigned int ii = 0; ii < forces.size(); ii++ ){
-
-            double expectedNorm = sqrt( expectedForces[ii][0]*expectedForces[ii][0] +
-                                        expectedForces[ii][1]*expectedForces[ii][1] +
-                                        expectedForces[ii][2]*expectedForces[ii][2] );
-
-            double norm         = sqrt( forces[ii][0]*forces[ii][0] + forces[ii][1]*forces[ii][1] + forces[ii][2]*forces[ii][2] );
-            double absDiff      = fabs( norm - expectedNorm );
-            double relDiff      = 2.0*absDiff/(fabs( norm ) + fabs( expectedNorm ) + 1.0e-08);
-
-            (void) fprintf( log, "%6u %15.7e %15.7e [%14.7e %14.7e %14.7e]   [%14.7e %14.7e %14.7e]\n", ii,
-                            conversion*absDiff, conversion*relDiff,
-                            conversion*expectedForces[ii][0], conversion*expectedForces[ii][1], conversion*expectedForces[ii][2],
-                            conversion*forces[ii][0], conversion*forces[ii][1], conversion*forces[ii][2], conversion*expectedNorm, conversion*norm );
-        }
-        (void) fflush( log );
-        conversion = 1.0;
-        (void) fprintf( log, "\n%s: expected energy=%14.7e %14.7e no conversion\n", testName.c_str(), conversion*expectedEnergy, conversion*energy );
-        if( conversion != 1.0 )conversion = -1.0;
-        for( unsigned int ii = 0; ii < forces.size(); ii++ ){
-            (void) fprintf( log, "%6u [%14.7e %14.7e %14.7e]   [%14.7e %14.7e %14.7e]\n", ii,
-                            conversion*expectedForces[ii][0], conversion*expectedForces[ii][1], conversion*expectedForces[ii][2],
-                            conversion*forces[ii][0], conversion*forces[ii][1], conversion*forces[ii][2] );
-        }
-        (void) fflush( log );
+    for (unsigned int ii = 0; ii < forces.size(); ii++) {
+        ASSERT_EQUAL_VEC_MOD(expectedForces[ii], forces[ii], tolerance, testName);
     }
-#endif
-
-    for( unsigned int ii = 0; ii < forces.size(); ii++ ){
-        ASSERT_EQUAL_VEC_MOD( expectedForces[ii], forces[ii], tolerance, testName );
-    }
-    ASSERT_EQUAL_TOL_MOD( expectedEnergy, energy, tolerance, testName );
+    ASSERT_EQUAL_TOL_MOD(expectedEnergy, energy, tolerance, testName);
 }
 
 // compare relative differences in force norms and energies 
 
-static void compareForceNormsEnergy( std::string& testName, double expectedEnergy, double energy,
-                                     std::vector<Vec3>& expectedForces,
-                                     const std::vector<Vec3>& forces, double tolerance, FILE* log ) {
+static void compareForceNormsEnergy(std::string& testName, double expectedEnergy, double energy,
+                                    std::vector<Vec3>& expectedForces,
+                                    const std::vector<Vec3>& forces, double tolerance) {
+    for (unsigned int ii = 0; ii < forces.size(); ii++) {
+        double expectedNorm = sqrt(expectedForces[ii][0]*expectedForces[ii][0] +
+                                   expectedForces[ii][1]*expectedForces[ii][1] +
+                                   expectedForces[ii][2]*expectedForces[ii][2]);
 
+        double norm         = sqrt(forces[ii][0]*forces[ii][0] + forces[ii][1]*forces[ii][1] + forces[ii][2]*forces[ii][2]);
+        double absDiff      = fabs(norm - expectedNorm);
+        double relDiff      = 2.0*absDiff/(fabs(norm) + fabs(expectedNorm) + 1.0e-08);
 
-//#define AMOEBA_DEBUG
-#ifdef AMOEBA_DEBUG
-    if( log ){
-        double conversion = 1.0/4.184;
-        double energyAbsDiff = fabs( expectedEnergy - energy );   
-        double energyRelDiff =  2.0*energyAbsDiff/( fabs( expectedEnergy ) + fabs( energy ) + 1.0e-08 );   
-        (void) fprintf( log, "%s: expected energy=%14.7e %14.7e  absDiff=%15.7e relDiff=%15.7e\n", testName.c_str(), conversion*expectedEnergy, conversion*energy,
-                        conversion*energyAbsDiff, conversion*energyRelDiff );
-        if( conversion != 1.0 )conversion *= -0.1;
-        for( unsigned int ii = 0; ii < forces.size(); ii++ ){
-
-            double expectedNorm = sqrt( expectedForces[ii][0]*expectedForces[ii][0] +
-                                        expectedForces[ii][1]*expectedForces[ii][1] +
-                                        expectedForces[ii][2]*expectedForces[ii][2] );
-
-            double norm         = sqrt( forces[ii][0]*forces[ii][0] + forces[ii][1]*forces[ii][1] + forces[ii][2]*forces[ii][2] );
-            double absDiff      = fabs( (norm - expectedNorm) );
-            double relDiff      = 2.0*absDiff/(fabs( norm ) + fabs( expectedNorm ) + 1.0e-08);
-
-            (void) fprintf( log, "%6u %15.7e %15.7e [%14.7e %14.7e %14.7e]   [%14.7e %14.7e %14.7e]  %15.7e %15.7e\n", ii,
-                            fabs(conversion)*absDiff, relDiff,
-                            conversion*expectedForces[ii][0], conversion*expectedForces[ii][1], conversion*expectedForces[ii][2],
-                            conversion*forces[ii][0], conversion*forces[ii][1], conversion*forces[ii][2], 
-                            fabs(conversion)*expectedNorm, fabs(conversion)*norm );
-        }
-        (void) fflush( log );
-        conversion = 1.0;
-        (void) fprintf( log, "\n%s: expected energy=%14.7e %14.7e no conversion\n", testName.c_str(), conversion*expectedEnergy, conversion*energy );
-        if( conversion != 1.0 )conversion = -1.0;
-        for( unsigned int ii = 0; ii < forces.size(); ii++ ){
-            (void) fprintf( log, "%6u [%14.7e %14.7e %14.7e]   [%14.7e %14.7e %14.7e]\n", ii,
-                            conversion*expectedForces[ii][0], conversion*expectedForces[ii][1], conversion*expectedForces[ii][2],
-                            conversion*forces[ii][0], conversion*forces[ii][1], conversion*forces[ii][2] );
-        }
-        (void) fflush( log );
-    }
-#endif
-
-    for( unsigned int ii = 0; ii < forces.size(); ii++ ){
-        double expectedNorm = sqrt( expectedForces[ii][0]*expectedForces[ii][0] +
-                                    expectedForces[ii][1]*expectedForces[ii][1] +
-                                    expectedForces[ii][2]*expectedForces[ii][2] );
-
-        double norm         = sqrt( forces[ii][0]*forces[ii][0] + forces[ii][1]*forces[ii][1] + forces[ii][2]*forces[ii][2] );
-        double absDiff      = fabs( norm - expectedNorm );
-        double relDiff      = 2.0*absDiff/(fabs( norm ) + fabs( expectedNorm ) + 1.0e-08);
-
-        if( relDiff > tolerance && absDiff > 0.001 ){
+        if (relDiff > tolerance && absDiff > 0.001) {
             std::stringstream details;
             details << testName << "Relative difference in norms " << relDiff << " larger than allowed tolerance at particle=" << ii;
             details << ": norms=" << norm << " expected norm=" << expectedNorm; 
             throwException(__FILE__, __LINE__, details.str());
         }
     }
-    double energyAbsDiff = fabs( expectedEnergy - energy );   
-    double energyRelDiff =  2.0*energyAbsDiff/( fabs( expectedEnergy ) + fabs( energy ) + 1.0e-08 );   
-    if( energyRelDiff > tolerance ){
+    double energyAbsDiff = fabs(expectedEnergy - energy);   
+    double energyRelDiff =  2.0*energyAbsDiff/(fabs(expectedEnergy) + fabs(energy) + 1.0e-08);   
+    if (energyRelDiff > tolerance) {
         std::stringstream details;
         details << testName << "Relative difference in energies " << energyRelDiff << " larger than allowed tolerance.";
         details << "Energies=" << energy << " expected energy=" << expectedEnergy; 
@@ -7098,7 +7021,7 @@ static void compareForceNormsEnergy( std::string& testName, double expectedEnerg
 
 // test GK direct polarization for system comprised of two ammonia molecules
 
-static void testGeneralizedKirkwoodAmmoniaDirectPolarization( FILE* log ) {
+static void testGeneralizedKirkwoodAmmoniaDirectPolarization() {
 
     std::string testName      = "testGeneralizedKirkwoodAmmoniaDirectPolarization";
 
@@ -7111,27 +7034,27 @@ static void testGeneralizedKirkwoodAmmoniaDirectPolarization( FILE* log ) {
     setupMultipoleAmmonia(system, amoebaGeneralizedKirkwoodForce, AmoebaMultipoleForce::Direct, 0);
     LangevinIntegrator integrator(0.0, 0.1, 0.01);
     Context context(system, integrator, Platform::getPlatformByName("Reference"));
-    getForcesEnergyMultipoleAmmonia(context, forces, energy, log );
+    getForcesEnergyMultipoleAmmonia(context, forces, energy);
     std::vector<Vec3> expectedForces(numberOfParticles);
 
     double expectedEnergy     = -7.6636680e+01;
 
-    expectedForces[0]         = Vec3(  -6.9252994e+02,  -8.9085133e+00,   9.6489739e+01 );
-    expectedForces[1]         = Vec3(   1.5593797e+02,  -6.0331931e+01,   1.5104507e+01 );
-    expectedForces[2]         = Vec3(   1.5870088e+02,   6.1702809e+01,   6.7708985e+00 );
-    expectedForces[3]         = Vec3(   1.4089885e+02,   7.5870617e+00,  -1.1362294e+02 );
-    expectedForces[4]         = Vec3(  -1.8916205e+02,   2.1465549e-01,  -4.3433152e+02 );
-    expectedForces[5]         = Vec3(   1.0208290e+01,   6.2676753e+01,   1.4987953e+02 );
-    expectedForces[6]         = Vec3(   4.0621859e+02,   1.8962203e-01,   1.3021956e+02 );
-    expectedForces[7]         = Vec3(   9.7274235e+00,  -6.3130458e+01,   1.4949024e+02 );
+    expectedForces[0]         = Vec3(-6.9252994e+02,  -8.9085133e+00,   9.6489739e+01);
+    expectedForces[1]         = Vec3( 1.5593797e+02,  -6.0331931e+01,   1.5104507e+01);
+    expectedForces[2]         = Vec3( 1.5870088e+02,   6.1702809e+01,   6.7708985e+00);
+    expectedForces[3]         = Vec3( 1.4089885e+02,   7.5870617e+00,  -1.1362294e+02);
+    expectedForces[4]         = Vec3(-1.8916205e+02,   2.1465549e-01,  -4.3433152e+02);
+    expectedForces[5]         = Vec3( 1.0208290e+01,   6.2676753e+01,   1.4987953e+02);
+    expectedForces[6]         = Vec3( 4.0621859e+02,   1.8962203e-01,   1.3021956e+02);
+    expectedForces[7]         = Vec3( 9.7274235e+00,  -6.3130458e+01,   1.4949024e+02);
 
     double tolerance          = 1.0e-04;
-    compareForcesEnergy( testName, expectedEnergy, energy, expectedForces, forces, tolerance, log );
+    compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
 }
 
 // test GK mutual polarization for system comprised of two ammonia molecules
 
-static void testGeneralizedKirkwoodAmmoniaMutualPolarization( FILE* log ) {
+static void testGeneralizedKirkwoodAmmoniaMutualPolarization() {
 
     std::string testName      = "testGeneralizedKirkwoodAmmoniaMutualPolarization";
 
@@ -7144,28 +7067,28 @@ static void testGeneralizedKirkwoodAmmoniaMutualPolarization( FILE* log ) {
     setupMultipoleAmmonia(system, amoebaGeneralizedKirkwoodForce, AmoebaMultipoleForce::Mutual, 0);
     LangevinIntegrator integrator(0.0, 0.1, 0.01);
     Context context(system, integrator, Platform::getPlatformByName("Reference"));
-    getForcesEnergyMultipoleAmmonia(context, forces, energy, log );
+    getForcesEnergyMultipoleAmmonia(context, forces, energy);
     std::vector<Vec3> expectedForces(numberOfParticles);
 
     double expectedEnergy     =  -7.8018875e+01;
 
-    expectedForces[0]         = Vec3(  -7.6820301e+02,  -1.0102760e+01,   1.0094389e+02 );
-    expectedForces[1]         = Vec3(   1.7037307e+02,  -7.5621857e+01,   2.3320365e+01 );
-    expectedForces[2]         = Vec3(   1.7353828e+02,   7.7199741e+01,   1.3965379e+01 );
-    expectedForces[3]         = Vec3(   1.5045244e+02,   8.5784569e+00,  -1.3377619e+02 );
-    expectedForces[4]         = Vec3(  -2.1811615e+02,  -1.6818022e-01,  -4.6103163e+02 );
-    expectedForces[5]         = Vec3(   6.2091942e+00,   7.6748687e+01,   1.5883463e+02 );
-    expectedForces[6]         = Vec3(   4.8035662e+02,   4.9704902e-01,   1.3948083e+02 );
-    expectedForces[7]         = Vec3(   5.3895456e+00,  -7.7131137e+01,   1.5826273e+02 );
+    expectedForces[0]         = Vec3(-7.6820301e+02,  -1.0102760e+01,   1.0094389e+02);
+    expectedForces[1]         = Vec3( 1.7037307e+02,  -7.5621857e+01,   2.3320365e+01);
+    expectedForces[2]         = Vec3( 1.7353828e+02,   7.7199741e+01,   1.3965379e+01);
+    expectedForces[3]         = Vec3( 1.5045244e+02,   8.5784569e+00,  -1.3377619e+02);
+    expectedForces[4]         = Vec3(-2.1811615e+02,  -1.6818022e-01,  -4.6103163e+02);
+    expectedForces[5]         = Vec3( 6.2091942e+00,   7.6748687e+01,   1.5883463e+02);
+    expectedForces[6]         = Vec3( 4.8035662e+02,   4.9704902e-01,   1.3948083e+02);
+    expectedForces[7]         = Vec3( 5.3895456e+00,  -7.7131137e+01,   1.5826273e+02);
 
     double tolerance          = 1.0e-04;
-    compareForcesEnergy( testName, expectedEnergy, energy, expectedForces, forces, tolerance, log );
+    compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
 }
 
 // test GK mutual polarization for system comprised of two ammonia molecules
 // including cavity term
 
-static void testGeneralizedKirkwoodAmmoniaMutualPolarizationWithCavityTerm( FILE* log ) {
+static void testGeneralizedKirkwoodAmmoniaMutualPolarizationWithCavityTerm() {
 
     std::string testName      = "testGeneralizedKirkwoodAmmoniaMutualPolarizationWithCavityTerm";
 
@@ -7180,22 +7103,22 @@ static void testGeneralizedKirkwoodAmmoniaMutualPolarizationWithCavityTerm( FILE
     ASSERT(!system.usesPeriodicBoundaryConditions());
     LangevinIntegrator integrator(0.0, 0.1, 0.01);
     Context context(system, integrator, Platform::getPlatformByName("Reference"));
-    getForcesEnergyMultipoleAmmonia(context, forces, energy, log );
+    getForcesEnergyMultipoleAmmonia(context, forces, energy);
     std::vector<Vec3> expectedForces(numberOfParticles);
 
     double expectedEnergy     = -6.0434582e+01;
 
-    expectedForces[0]         = Vec3(  -7.8323218e+02,  -1.0097644e+01,   1.0256890e+02 );
-    expectedForces[1]         = Vec3(   1.7078480e+02,  -7.1896701e+01,   2.0840172e+01 );
-    expectedForces[2]         = Vec3(   1.7394089e+02,   7.3488594e+01,   1.1484648e+01 );
-    expectedForces[3]         = Vec3(   1.5169364e+02,   8.5611299e+00,  -1.2968050e+02 );
-    expectedForces[4]         = Vec3(  -2.1669693e+02,  -1.5926823e-01,  -4.6636274e+02 );
-    expectedForces[5]         = Vec3(   8.7397444e+00,   7.3330990e+01,   1.6016898e+02 );
-    expectedForces[6]         = Vec3(   4.8684950e+02,   4.8937161e-01,   1.4137061e+02 );
-    expectedForces[7]         = Vec3(   7.9205382e+00,  -7.3716473e+01,   1.5960993e+02 );
+    expectedForces[0]         = Vec3(-7.8323218e+02,  -1.0097644e+01,   1.0256890e+02);
+    expectedForces[1]         = Vec3( 1.7078480e+02,  -7.1896701e+01,   2.0840172e+01);
+    expectedForces[2]         = Vec3( 1.7394089e+02,   7.3488594e+01,   1.1484648e+01);
+    expectedForces[3]         = Vec3( 1.5169364e+02,   8.5611299e+00,  -1.2968050e+02);
+    expectedForces[4]         = Vec3(-2.1669693e+02,  -1.5926823e-01,  -4.6636274e+02);
+    expectedForces[5]         = Vec3( 8.7397444e+00,   7.3330990e+01,   1.6016898e+02);
+    expectedForces[6]         = Vec3( 4.8684950e+02,   4.8937161e-01,   1.4137061e+02);
+    expectedForces[7]         = Vec3( 7.9205382e+00,  -7.3716473e+01,   1.5960993e+02);
 
     double tolerance          = 1.0e-04;
-    compareForcesEnergy( testName, expectedEnergy, energy, expectedForces, forces, tolerance, log );
+    compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
     
     // Try changing the particle parameters and make sure it's still correct.
     
@@ -7212,7 +7135,7 @@ static void testGeneralizedKirkwoodAmmoniaMutualPolarizationWithCavityTerm( FILE
     bool exceptionThrown = false;
     try {
         // This should throw an exception.
-        compareForcesEnergy(testName, state2.getPotentialEnergy(), state1.getPotentialEnergy(), state2.getForces(), state1.getForces(), tolerance, log);
+        compareForcesEnergy(testName, state2.getPotentialEnergy(), state1.getPotentialEnergy(), state2.getForces(), state1.getForces(), tolerance);
     }
     catch (std::exception ex) {
         exceptionThrown = true;
@@ -7220,12 +7143,12 @@ static void testGeneralizedKirkwoodAmmoniaMutualPolarizationWithCavityTerm( FILE
     ASSERT(exceptionThrown);
     amoebaGeneralizedKirkwoodForce->updateParametersInContext(context);
     state1 = context.getState(State::Forces | State::Energy);
-    compareForcesEnergy(testName, state2.getPotentialEnergy(), state1.getPotentialEnergy(), state2.getForces(), state1.getForces(), tolerance, log);
+    compareForcesEnergy(testName, state2.getPotentialEnergy(), state1.getPotentialEnergy(), state2.getForces(), state1.getForces(), tolerance);
 }
 
 // test GK direct polarization for villin system
 
-static void testGeneralizedKirkwoodVillinDirectPolarization( FILE* log ) {
+static void testGeneralizedKirkwoodVillinDirectPolarization() {
 
     std::string testName      = "testGeneralizedKirkwoodVillinDirectPolarization";
 
@@ -7233,7 +7156,7 @@ static void testGeneralizedKirkwoodVillinDirectPolarization( FILE* log ) {
     std::vector<Vec3> forces;
     double energy;
 
-    setupAndGetForcesEnergyMultipoleVillin( AmoebaMultipoleForce::Direct, 0, forces, energy, log );
+    setupAndGetForcesEnergyMultipoleVillin(AmoebaMultipoleForce::Direct, 0, forces, energy);
     std::vector<Vec3> expectedForces(numberOfParticles);
 
     double expectedEnergy            = -8.4281157e+03;
@@ -7838,18 +7761,18 @@ static void testGeneralizedKirkwoodVillinDirectPolarization( FILE* log ) {
     };
 
     const double* forceDataPtr = forceData;
-    for( unsigned int ii = 0; ii < numberOfParticles; ii++ ){ 
-        expectedForces[ii]    = Vec3( forceDataPtr[0], forceDataPtr[1], forceDataPtr[2] );
+    for (unsigned int ii = 0; ii < numberOfParticles; ii++) { 
+        expectedForces[ii]    = Vec3(forceDataPtr[0], forceDataPtr[1], forceDataPtr[2]);
         forceDataPtr         += 3;
     }
 
     double tolerance          = 1.0e-05;
-    compareForceNormsEnergy( testName, expectedEnergy, energy, expectedForces, forces, tolerance, log );
+    compareForceNormsEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
 }
 
 // test GK mutual polarization for villin system
 
-static void testGeneralizedKirkwoodVillinMutualPolarization( FILE* log ) {
+static void testGeneralizedKirkwoodVillinMutualPolarization() {
 
     std::string testName      = "testGeneralizedKirkwoodVillinMutualPolarization";
 
@@ -7857,7 +7780,7 @@ static void testGeneralizedKirkwoodVillinMutualPolarization( FILE* log ) {
     std::vector<Vec3> forces;
     double energy;
 
-    setupAndGetForcesEnergyMultipoleVillin( AmoebaMultipoleForce::Mutual, 0, forces, energy, log );
+    setupAndGetForcesEnergyMultipoleVillin(AmoebaMultipoleForce::Mutual, 0, forces, energy);
     std::vector<Vec3> expectedForces(numberOfParticles);
 
     double expectedEnergy            = -8.6477811e+03;
@@ -8462,31 +8385,29 @@ static void testGeneralizedKirkwoodVillinMutualPolarization( FILE* log ) {
     };
 
     const double* forceDataPtr = forceData;
-    for( unsigned int ii = 0; ii < numberOfParticles; ii++ ){ 
-        expectedForces[ii]    = Vec3( forceDataPtr[0], forceDataPtr[1], forceDataPtr[2] );
+    for (unsigned int ii = 0; ii < numberOfParticles; ii++) { 
+        expectedForces[ii]    = Vec3(forceDataPtr[0], forceDataPtr[1], forceDataPtr[2]);
         forceDataPtr         += 3;
     }
 
     double tolerance          = 1.0e-05;
-    compareForceNormsEnergy( testName, expectedEnergy, energy, expectedForces, forces, tolerance, log );
+    compareForceNormsEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
 }
 
-int main( int numberOfArguments, char* argv[] ) {
+int main(int numberOfArguments, char* argv[]) {
 
     try {
         std::cout << "TestReferenceAmoebaGeneralizedKirkwoodForce running test..." << std::endl;
         registerAmoebaReferenceKernelFactories();
 
-        FILE* log = NULL;
-
         // test direct and mutual polarization cases and
         // mutual polarization w/ the cavity term
 
-        testGeneralizedKirkwoodAmmoniaMutualPolarization( log );
-        testGeneralizedKirkwoodAmmoniaDirectPolarization( log );
-        testGeneralizedKirkwoodAmmoniaMutualPolarizationWithCavityTerm( log );
-        testGeneralizedKirkwoodVillinDirectPolarization( log );
-        testGeneralizedKirkwoodVillinMutualPolarization( log );
+        testGeneralizedKirkwoodAmmoniaMutualPolarization();
+        testGeneralizedKirkwoodAmmoniaDirectPolarization();
+        testGeneralizedKirkwoodAmmoniaMutualPolarizationWithCavityTerm();
+        testGeneralizedKirkwoodVillinDirectPolarization();
+        testGeneralizedKirkwoodVillinMutualPolarization();
 
     }
     catch(const std::exception& e) {

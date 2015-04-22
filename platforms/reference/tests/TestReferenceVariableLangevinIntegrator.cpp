@@ -300,7 +300,7 @@ void testArgonBox() {
     system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
     system.addForce(nonbonded);
 
-    VariableLangevinIntegrator integrator(temp, 6.0, 1e-5);
+    VariableLangevinIntegrator integrator(temp, 6.0, 1e-4);
     Context context(system, integrator, platform);
     context.setPositions(positions);
     context.setVelocitiesToTemperature(temp);
@@ -312,13 +312,13 @@ void testArgonBox() {
     // Make sure the temperature is correct.
     
     double ke = 0.0;
-    for (int i = 0; i < 2000; ++i) {
-        double t = 2.0 + 0.01 * (i + 1);
+    for (int i = 0; i < 1000; ++i) {
+        double t = 2.0 + 0.02 * (i + 1);
         integrator.stepTo(t);
         State state = context.getState(State::Energy);
         ke += state.getKineticEnergy();
     }
-    ke /= 2000;
+    ke /= 1000;
     double expected = 1.5 * numParticles * BOLTZ * temp;
     ASSERT_USUALLY_EQUAL_TOL(expected, ke, 0.01);
 }

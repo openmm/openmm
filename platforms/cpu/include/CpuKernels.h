@@ -80,11 +80,13 @@ public:
      * @param includeForce  true if forces should be computed
      * @param includeEnergy true if potential energy should be computed
      * @param groups        a set of bit flags for which force groups to include
+     * @param valid         the method may set this to false to indicate the results are invalid and the force/energy
+     *                      calculation should be repeated
      * @return the potential energy of the system.  This value is added to all values returned by ForceImpls'
      * calcForcesAndEnergy() methods.  That is, each force kernel may <i>either</i> return its contribution to the
      * energy directly, <i>or</i> add it to an internal buffer so that it will be included here.
      */
-    double finishComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups);
+    double finishComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups, bool& valid);
 private:
     CpuPlatform::PlatformData& data;
     Kernel referenceKernel;

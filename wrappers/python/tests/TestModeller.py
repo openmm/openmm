@@ -886,6 +886,27 @@ class TestModeller(unittest.TestCase):
 
         validate_equivalence(self, topology_LYN, topology_after)
 
+
+    def test_addExtraParticles(self):
+        """Test addExtraParticles()."""
+
+        # Create a box of water.
+
+        ff1 = ForceField('tip3p.xml')
+        modeller = Modeller(Topology(), []*nanometers)
+        modeller.addSolvent(ff1, 'tip3p', boxSize=Vec3(2,2,2)*nanometers)
+
+        # Now convert the water to TIP4P.
+
+        ff2 = ForceField('tip4pew.xml')
+        modeller.addExtraParticles(ff2)
+        for residue in modeller.topology.residues():
+            atoms = list(residue.atoms())
+            self.assertEqual(4, len(atoms))
+            ep = [atom for atom in atoms if atom.element is None]
+            self.assertEqual(1, len(ep))
+
+
     def assertVecAlmostEqual(self, p1, p2, tol=1e-7):
         scale = max(1.0, norm(p1),)
         for i in range(3):

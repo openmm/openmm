@@ -150,6 +150,8 @@ class PdbStructure(object):
         self._reset_residue_numbers()
         # Read one line at a time
         for pdb_line in input_stream:
+            if not isinstance(pdb_line, str):
+                pdb_line = pdb_line.decode('utf-8')
             # Look for atoms
             if (pdb_line.find("ATOM  ") == 0) or (pdb_line.find("HETATM") == 0):
                 self._add_atom(Atom(pdb_line, self))

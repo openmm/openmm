@@ -22,164 +22,144 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __SimTKOpenMMLog_H__
-#define __SimTKOpenMMLog_H__
+#ifndef __ReferenceObc_H__
+#define __ReferenceObc_H__
 
-#include <cstdio>
-#include <sstream>
-#include "SimTKOpenMMCommon.h"
-#include "openmm/internal/windowsExport.h"
+#include "ObcParameters.h"
 
-/** ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
-   SimTKOpenMMLog class used for logging
-
-   --------------------------------------------------------------------------------------- */
-
-class OPENMM_EXPORT SimTKOpenMMLog {
-
-   public:
-
-      // log levels
-
-      enum LogLevels { LogOff, LogLowLevel, LogHighLevel };
+class ReferenceObc {
 
    private:
 
-      // file to write to
+      // GBSA/OBC parameters
 
-      FILE* _logFile;
+      ObcParameters* _obcParameters;
 
-      // log level
+      // arrays containing OBC chain derivative 
 
-      LogLevels _logLevel;
+      std::vector<RealOpenMM> _obcChain;
 
-      // global reference
+      // flag to signal whether ACE approximation
+      // is to be included
 
-      static SimTKOpenMMLog* _simTKOpenMMLog;
+      int _includeAceApproximation;
+
 
    public:
 
       /**---------------------------------------------------------------------------------------
       
-         SimTKOpenMMLog constructor (Simbios)
+         Constructor
       
-         @param logFile file reference for logging
+         @param implicitSolventParameters    ImplicitSolventParameters reference
+      
+         @return CpuImplicitSolvent object
       
          --------------------------------------------------------------------------------------- */
-      
-      SimTKOpenMMLog( FILE* logFile = NULL );
+
+       ReferenceObc(ObcParameters* obcParameters);
 
       /**---------------------------------------------------------------------------------------
       
-         SimTKOpenMMLog destructor (Simbios)
+         Destructor
       
          --------------------------------------------------------------------------------------- */
-      
-      ~SimTKOpenMMLog( );
+
+       ~ReferenceObc();
 
       /**---------------------------------------------------------------------------------------
       
-         SimTKOpenMMLog log message to log (Simbios)
+         Return ObcParameters
       
-         @param message         message to log
-      
-         --------------------------------------------------------------------------------------- */
-      
-     void logMessage( const std::stringstream& message ) const;
-
-      /**---------------------------------------------------------------------------------------
-
-         Get LogFile
-
-         @return    logFile
+         @return ObcParameters
       
          --------------------------------------------------------------------------------------- */
 
-      FILE* getLogFile( void ) const;
-
-      /**---------------------------------------------------------------------------------------
-
-         Set LogFile
-
-         @param    input logFile
-      
-         --------------------------------------------------------------------------------------- */
-
-      void setLogFile( FILE* logFile );
-
-      /**---------------------------------------------------------------------------------------
-
-         Set LogLevel
-
-         @param    input logLevel
-      
-         --------------------------------------------------------------------------------------- */
-
-      void setLogLevel( SimTKOpenMMLog::LogLevels logLevel );
+      ObcParameters* getObcParameters() const;
 
       /**---------------------------------------------------------------------------------------
       
-         Set global simTKLog (Simbios)
+         Set ImplicitSolventParameters
       
-         @param logFile         file to log to
-      
-         @return new SimTKOpenMMLog
-      
-         --------------------------------------------------------------------------------------- */
-      
-      static SimTKOpenMMLog* setSimTKOpenMMLog( FILE* logFile = NULL );
-      
-      /**---------------------------------------------------------------------------------------
-      
-         Get global simTKLog -- static method (Simbios)
-      
-         @return static member
-      
-         --------------------------------------------------------------------------------------- */
-      
-      static SimTKOpenMMLog* getSimTKOpenMMLog( void );
-      
-      /**---------------------------------------------------------------------------------------
-      
-         Get global simTKLog (Simbios)
-      
-         @return FILE reference
-      
-         --------------------------------------------------------------------------------------- */
-      
-      static FILE* getSimTKOpenMMLogFile( void );
-      
-      /**---------------------------------------------------------------------------------------
-      
-         Staitc method to print message (Simbios)
-      
-         @param message         message to log
-      
-         --------------------------------------------------------------------------------------- */
-      
-      static void printMessage( const std::stringstream& message );
-      
-      /**---------------------------------------------------------------------------------------
-      
-         Staitc method to print warning message (Simbios)
-      
-         @param message         message to log
-      
-         --------------------------------------------------------------------------------------- */
-      
-      static void printWarning( const std::stringstream& message );
-      
-      /**---------------------------------------------------------------------------------------
-      
-         Static method to print error message and exist program (Simbios)
-      
-         @param message         message to log
+         @param ImplicitSolventParameters
       
          --------------------------------------------------------------------------------------- */
 
-     static void printError( const std::stringstream& message );
+      void setObcParameters(ObcParameters* obcParameters);
+ 
+      /**---------------------------------------------------------------------------------------
+      
+         Return flag signalling whether AceApproximation for nonpolar term is to be included
+      
+         @return flag
+      
+         --------------------------------------------------------------------------------------- */
 
+      int includeAceApproximation() const;
+
+      /**---------------------------------------------------------------------------------------
+      
+         Set flag indicating whether AceApproximation is to be included
+      
+         @param includeAceApproximation new includeAceApproximation value
+      
+         --------------------------------------------------------------------------------------- */
+
+      void setIncludeAceApproximation(int includeAceApproximation);
+
+      /**---------------------------------------------------------------------------------------
+      
+         Return OBC chain derivative: size = _implicitSolventParameters->getNumberOfAtoms()
+      
+         @return array
+      
+         --------------------------------------------------------------------------------------- */
+      
+      std::vector<RealOpenMM>& getObcChain();
+      
+      /**---------------------------------------------------------------------------------------
+      
+         Get Born radii based on OBC 
+
+         @param atomCoordinates   atomic coordinates
+         @param bornRadii         output array of Born radii
+      
+         --------------------------------------------------------------------------------------- */
+      
+      void computeBornRadii(const std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<RealOpenMM>& bornRadii);
+      
+      /**---------------------------------------------------------------------------------------
+        
+         Get nonpolar solvation force constribution via ACE approximation
+        
+         @param obcParameters parameters
+         @param vdwRadii                  Vdw radii
+         @param bornRadii                 Born radii
+         @param energy                    energy (output): value is incremented from input value 
+         @param forces                    forces: values are incremented from input values
+        
+            --------------------------------------------------------------------------------------- */
+        
+      void computeAceNonPolarForce(const ObcParameters* obcParameters, const std::vector<RealOpenMM>& bornRadii,
+                                   RealOpenMM* energy, std::vector<RealOpenMM>& forces) const;
+        
+      /**---------------------------------------------------------------------------------------
+      
+         Get Born energy and forces based on OBC 
+      
+         @param atomCoordinates   atomic coordinates
+         @param partialCharges    partial charges
+         @param forces            forces
+      
+         --------------------------------------------------------------------------------------- */
+      
+      RealOpenMM computeBornEnergyForces(const std::vector<OpenMM::RealVec>& atomCoordinates,
+                                         const std::vector<RealOpenMM>& partialCharges, std::vector<OpenMM::RealVec>& forces);
+    
 };
 
-#endif //__SimTKOpenMMLog_H__
+} // namespace OpenMM
+
+#endif // __ReferenceObc_H__

@@ -31,6 +31,8 @@
 #include "fftpack.h"
 #include <complex>
 
+namespace OpenMM {
+
 typedef std::map< unsigned int, RealOpenMM> MapIntRealOpenMM;
 typedef MapIntRealOpenMM::iterator MapIntRealOpenMMI;
 typedef MapIntRealOpenMM::const_iterator MapIntRealOpenMMCI;
@@ -352,7 +354,7 @@ public:
      * Destructor
      * 
      */
-    virtual ~AmoebaReferenceMultipoleForce(){};
+    virtual ~AmoebaReferenceMultipoleForce() {};
  
     /**
      * Get nonbonded method.
@@ -709,15 +711,6 @@ protected:
      *
      */
     void setupScaleMaps(const std::vector< std::vector< std::vector<int> > >& multipoleAtomCovalentInfo);
-
-    /**
-     * Show scaling factor map
-     *
-     * @param particleI index of particle whose scale map is to be shown
-     * @param log       output destination 
-     * 
-     */
-    void showScaleMapForParticle(unsigned int particleI, FILE* log) const;
 
     /**
      * Get multipole scale factor for particleI & particleJ
@@ -1368,8 +1361,6 @@ private:
     std::vector<RealOpenMM> _phid;
     std::vector<RealOpenMM> _phip;
     std::vector<RealOpenMM> _phidp;
-    std::vector<int> _pmeAtomRange;
-    std::vector<int2> _pmeAtomGridIndex;
     std::vector<RealOpenMM4> _pmeBsplineTheta;
     std::vector<RealOpenMM4> _pmeBsplineDtheta;
 
@@ -1445,31 +1436,6 @@ private:
      * @param particleData   vector of particle positions and parameters (charge, labFrame dipoles, quadrupoles, ...)
      */
     void computeAmoebaBsplines(const std::vector<MultipoleParticleData>& particleData);
-
-    /**
-     * For each grid point, find the range of sorted atoms associated with that point.
-     * 
-     * @param particleData              vector of particle positions and parameters (charge, labFrame dipoles, quadrupoles, ...)
-     */
-    void findAmoebaAtomRangeForGrid(const vector<MultipoleParticleData>& particleData);
-
-    /**
-     * Get grid point given grid index.
-     * 
-     * @param gridIndex  input grid index
-     * @param gridPoint  output grid point
-     */
-    void getGridPointGivenGridIndex(int gridIndex, IntVec& gridPoint) const;
-
-    /**
-     * Compute induced dipole grid value.
-     *
-     * @param particleGridIndices     particle grid indices
-     * @param ix                      x-dimension offset value
-     * @param iy                      y-dimension offset value
-     * @param gridPoint               grid point for which value is to be computed
-     */
-     RealOpenMM computeFixedMultipolesGridValue(const int2& particleGridIndices, int ix, int iy, const IntVec& gridPoint) const;
 
     /**
      * Transform multipoles from cartesian coordinates to fractional coordinates.
@@ -1567,21 +1533,6 @@ private:
     void initializeInducedDipoles(std::vector<UpdateInducedDipoleFieldStruct>& updateInducedDipoleFields); 
 
     /**
-     * Compute induced dipole grid value.
-     *
-     * @param atomIndices             indices of first and last atom contiputing to grid point value
-     * @param cartToFrac              transformation matrix from Cartesian to fractional coordinates
-     * @param ix                      x-dimension offset value
-     * @param iy                      y-dimension offset value
-     * @param gridPoint               grid point for which value is to be computed
-     * @param inputInducedDipole      induced dipole value
-     * @param inputInducedDipolePolar induced dipole polar value
-     */
-    t_complex computeInducedDipoleGridValue(const int2& atomIndices, const RealVec* cartToFrac, int ix, int iy, const IntVec& gridPoint,
-                                            const std::vector<RealVec>& inputInducedDipole,
-                                            const std::vector<RealVec>& inputInducedDipolePolar) const;
-
-    /**
      * Spread induced dipoles onto grid.
      *
      * @param inputInducedDipole      induced dipole value
@@ -1663,5 +1614,7 @@ private:
                                       std::vector<OpenMM::RealVec>& forces);
 
 };
+
+} // namespace OpenMM
 
 #endif // _AmoebaReferenceMultipoleForce___

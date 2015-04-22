@@ -26,7 +26,6 @@
 
 #include "openmm/internal/OSRngSeed.h"
 #include "SimTKOpenMMUtilities.h"
-#include "SimTKOpenMMLog.h"
 #include "sfmt/SFMT.h"
 
 // fabs(), ...
@@ -35,6 +34,8 @@
 #include <cstdio>
 #include <string.h>
 #include <iostream>
+
+using namespace OpenMM;
 
 uint32_t SimTKOpenMMUtilities::_randomNumberSeed = 0;
 bool SimTKOpenMMUtilities::_randomInitialized = false;
@@ -58,9 +59,9 @@ OpenMM_SFMT::SFMT SimTKOpenMMUtilities::sfmt;
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM* SimTKOpenMMUtilities::allocateOneDRealOpenMMArray( int iSize, RealOpenMM* array1D, 
-                                                               int initialize, RealOpenMM initialValue,
-                                                               const std::string& idString ){
+RealOpenMM* SimTKOpenMMUtilities::allocateOneDRealOpenMMArray(int iSize, RealOpenMM* array1D, 
+                                                              int initialize, RealOpenMM initialValue,
+                                                              const std::string& idString) {
 
    // ---------------------------------------------------------------------------------------
 
@@ -70,17 +71,17 @@ RealOpenMM* SimTKOpenMMUtilities::allocateOneDRealOpenMMArray( int iSize, RealOp
 
    // ---------------------------------------------------------------------------------------
 
-   if( array1D == NULL ){
+   if (array1D == NULL) {
 
       array1D = new RealOpenMM[iSize];
 
    }
 
-   if( initialize ){
-      if( initialValue == zero ){
-         memset( array1D, 0, iSize*sizeof( RealOpenMM ) );
+   if (initialize) {
+      if (initialValue == zero) {
+         memset(array1D, 0, iSize*sizeof(RealOpenMM));
       } else {
-         for( int ii = 0; ii < iSize; ii++ ){
+         for (int ii = 0; ii < iSize; ii++) {
             array1D[ii] = initialValue;
          }
       }
@@ -106,9 +107,9 @@ RealOpenMM* SimTKOpenMMUtilities::allocateOneDRealOpenMMArray( int iSize, RealOp
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM** SimTKOpenMMUtilities::allocateTwoDRealOpenMMArray( int iSize, int jSize, RealOpenMM** array2D, 
-                                                                int initialize, RealOpenMM initialValue,
-                                                                const std::string& idString ){
+RealOpenMM** SimTKOpenMMUtilities::allocateTwoDRealOpenMMArray(int iSize, int jSize, RealOpenMM** array2D, 
+                                                               int initialize, RealOpenMM initialValue,
+                                                               const std::string& idString) {
 
    // ---------------------------------------------------------------------------------------
 
@@ -116,22 +117,22 @@ RealOpenMM** SimTKOpenMMUtilities::allocateTwoDRealOpenMMArray( int iSize, int j
 
    // ---------------------------------------------------------------------------------------
 
-   if( array2D == NULL ){
+   if (array2D == NULL) {
 
       array2D = new RealOpenMM*[iSize];
       std::string blockString = idString;
-      blockString.append( "Block" );
+      blockString.append("Block");
 
       RealOpenMM* block = new RealOpenMM[jSize*iSize];
 
-      for( int ii = 0; ii < iSize; ii++ ){
+      for (int ii = 0; ii < iSize; ii++) {
          array2D[ii]  = block;
          block       += jSize;
       }    
    }
 
-   if( initialize ){
-      initialize2DRealOpenMMArray( iSize, jSize, array2D, initialValue );
+   if (initialize) {
+      initialize2DRealOpenMMArray(iSize, jSize, array2D, initialValue);
    }
 
    return array2D;
@@ -148,7 +149,7 @@ RealOpenMM** SimTKOpenMMUtilities::allocateTwoDRealOpenMMArray( int iSize, int j
 
    --------------------------------------------------------------------------------------- */
 
-void SimTKOpenMMUtilities::freeTwoDRealOpenMMArray( RealOpenMM** array2D, const std::string& idString ){
+void SimTKOpenMMUtilities::freeTwoDRealOpenMMArray(RealOpenMM** array2D, const std::string& idString) {
 
    // ---------------------------------------------------------------------------------------
 
@@ -156,10 +157,10 @@ void SimTKOpenMMUtilities::freeTwoDRealOpenMMArray( RealOpenMM** array2D, const 
 
    // ---------------------------------------------------------------------------------------
 
-   if( array2D != NULL ){
+   if (array2D != NULL) {
 
       std::string blockString = idString;
-      blockString.append( "Block" );
+      blockString.append("Block");
 
       delete[] array2D[0];
       delete[] array2D;
@@ -177,7 +178,7 @@ void SimTKOpenMMUtilities::freeTwoDRealOpenMMArray( RealOpenMM** array2D, const 
 
    --------------------------------------------------------------------------------------- */
 
-void SimTKOpenMMUtilities::freeOneDRealOpenMMArray( RealOpenMM* array1D, const std::string& idString ){
+void SimTKOpenMMUtilities::freeOneDRealOpenMMArray(RealOpenMM* array1D, const std::string& idString) {
 
    // ---------------------------------------------------------------------------------------
 
@@ -185,7 +186,7 @@ void SimTKOpenMMUtilities::freeOneDRealOpenMMArray( RealOpenMM* array1D, const s
 
    // ---------------------------------------------------------------------------------------
 
-   if( array1D != NULL ){
+   if (array1D != NULL) {
       delete[] array1D;
    }
 }
@@ -203,9 +204,9 @@ void SimTKOpenMMUtilities::freeOneDRealOpenMMArray( RealOpenMM* array1D, const s
 
    --------------------------------------------------------------------------------------- */
 
-void SimTKOpenMMUtilities::initialize2DRealOpenMMArray( int iSize, int jSize,
+void SimTKOpenMMUtilities::initialize2DRealOpenMMArray(int iSize, int jSize,
                                                        RealOpenMM** array2D,
-                                                       RealOpenMM initialValue ){
+                                                       RealOpenMM initialValue) {
 
    // ---------------------------------------------------------------------------------------
 
@@ -216,9 +217,9 @@ void SimTKOpenMMUtilities::initialize2DRealOpenMMArray( int iSize, int jSize,
    bool useMemset;
    bool useMemsetSingleBlock;
 
-   if( initialValue == 0.0f ){
+   if (initialValue == 0.0f) {
       useMemset = true;
-      if( jSize > 1 && (array2D[0] + jSize) == array2D[1] ){  
+      if (jSize > 1 && (array2D[0] + jSize) == array2D[1]) {  
          useMemsetSingleBlock = true;
       } else {
          useMemsetSingleBlock = false;
@@ -228,17 +229,17 @@ void SimTKOpenMMUtilities::initialize2DRealOpenMMArray( int iSize, int jSize,
       useMemset = false;
    }
 
-   if( useMemset ){
-      if( useMemsetSingleBlock ){
-         memset( array2D[0], 0, iSize*jSize*sizeof( RealOpenMM ) );
+   if (useMemset) {
+      if (useMemsetSingleBlock) {
+         memset(array2D[0], 0, iSize*jSize*sizeof(RealOpenMM));
       } else {
-         for( int ii = 0; ii < iSize; ii++ ){
-            memset( array2D[ii], 0, jSize*sizeof( RealOpenMM ) );
+         for (int ii = 0; ii < iSize; ii++) {
+            memset(array2D[ii], 0, jSize*sizeof(RealOpenMM));
          }
       }
    } else {
-      for( int ii = 0; ii < iSize; ii++ ){
-         for( int jj = 0; jj < jSize; jj++ ){
+      for (int ii = 0; ii < iSize; ii++) {
+         for (int jj = 0; jj < jSize; jj++) {
             array2D[ii][jj] = initialValue;
          }
       }
@@ -259,9 +260,9 @@ void SimTKOpenMMUtilities::initialize2DRealOpenMMArray( int iSize, int jSize,
 
    --------------------------------------------------------------------------------------- */
      
-void SimTKOpenMMUtilities::crossProductVector3( RealOpenMM* vectorX,
-                                                RealOpenMM* vectorY,
-                                                RealOpenMM* vectorZ ){
+void SimTKOpenMMUtilities::crossProductVector3(RealOpenMM* vectorX,
+                                               RealOpenMM* vectorY,
+                                               RealOpenMM* vectorZ) {
 
    // ---------------------------------------------------------------------------------------
 
@@ -284,7 +285,7 @@ void SimTKOpenMMUtilities::crossProductVector3( RealOpenMM* vectorX,
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM SimTKOpenMMUtilities::getNormallyDistributedRandomNumber( void ) {
+RealOpenMM SimTKOpenMMUtilities::getNormallyDistributedRandomNumber() {
     if (nextGaussianIsValid) {
         nextGaussianIsValid = false;
         return nextGaussian;
@@ -303,7 +304,7 @@ RealOpenMM SimTKOpenMMUtilities::getNormallyDistributedRandomNumber( void ) {
         y = static_cast<RealOpenMM>(2.0 * genrand_real2(sfmt) - 1.0);
         r2 = x*x + y*y;
     } while (r2 >= 1.0 || r2 == 0.0);
-    RealOpenMM multiplier = static_cast<RealOpenMM>( sqrt((-2.0*log(r2))/r2) );
+    RealOpenMM multiplier = static_cast<RealOpenMM>(sqrt((-2.0*log(r2))/r2));
     nextGaussian = y*multiplier;
     nextGaussianIsValid = true;
     return x*multiplier;
@@ -317,13 +318,13 @@ RealOpenMM SimTKOpenMMUtilities::getNormallyDistributedRandomNumber( void ) {
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber( void ) {
+RealOpenMM SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber() {
     if (!_randomInitialized) {
         init_gen_rand(_randomNumberSeed, sfmt);
         _randomInitialized = true;
         nextGaussianIsValid = false;
     }
-    RealOpenMM value = static_cast<RealOpenMM>( genrand_real2(sfmt) );
+    RealOpenMM value = static_cast<RealOpenMM>(genrand_real2(sfmt));
     return value;
 }
 
@@ -335,7 +336,7 @@ RealOpenMM SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber( void ) {
 
    --------------------------------------------------------------------------------------- */
 
-uint32_t SimTKOpenMMUtilities::getRandomNumberSeed( void ) {
+uint32_t SimTKOpenMMUtilities::getRandomNumberSeed() {
 
    // ---------------------------------------------------------------------------------------
 
@@ -354,7 +355,7 @@ uint32_t SimTKOpenMMUtilities::getRandomNumberSeed( void ) {
 
    --------------------------------------------------------------------------------------- */
 
-void SimTKOpenMMUtilities::setRandomNumberSeed( uint32_t seed ) {
+void SimTKOpenMMUtilities::setRandomNumberSeed(uint32_t seed) {
 
    // ---------------------------------------------------------------------------------------
 

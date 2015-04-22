@@ -53,7 +53,6 @@ using namespace std;
 const double TOL = 1e-5;
 
 void testSingleParticle() {
-    const int log          = 0;
     ReferencePlatform platform;
     System system;
     system.addParticle(2.0);
@@ -80,24 +79,19 @@ void testSingleParticle() {
     double tau            = (1.0/forceField->getSoluteDielectric()-1.0/forceField->getSolventDielectric());
 
     double bornEnergy     = (-charge*charge/(8*PI_M*eps0))*tau/bornRadius;
-    double nonpolarEnergy = -gamma*tau*std::pow( radius/bornRadius, 3.0);
+    double nonpolarEnergy = -gamma*tau*std::pow(radius/bornRadius, 3.0);
 
     double expectedE      = (bornEnergy+nonpolarEnergy); 
     double obtainedE      = state.getPotentialEnergy(); 
-    double diff           = fabs( (obtainedE - expectedE)/expectedE );
-    if( log ){
-        (void) fprintf( stderr, "testSingleParticle expected=%14.6e obtained=%14.6e diff=%14.6e breakdown:[%14.6e %14.6e]\n",
-                        expectedE, obtainedE, diff, bornEnergy, nonpolarEnergy );
-    }
+    double diff           = fabs((obtainedE - expectedE)/expectedE);
 
     ASSERT_EQUAL_TOL((bornEnergy+nonpolarEnergy), state.getPotentialEnergy(), 0.01);
 }
 
-void testEnergyEthane( int applyBornRadiiScaling ) {
+void testEnergyEthane(int applyBornRadiiScaling) {
 
     ReferencePlatform platform;
     const int numParticles = 8;
-    const int log          = 0;
     System system;
     LangevinIntegrator integrator(0, 0.1, 0.01);
 
@@ -123,7 +117,7 @@ void testEnergyEthane( int applyBornRadiiScaling ) {
     int AM1_BCC = 1;
     H_charge    = -0.053;
     C_charge    = -3.0*H_charge;
-    if( AM1_BCC ){
+    if (AM1_BCC) {
        C_radius =  0.180;
        C_gamma  = -0.2863;
        H_radius =  0.125;
@@ -139,59 +133,56 @@ void testEnergyEthane( int applyBornRadiiScaling ) {
     NonbondedForce* nonbonded = new NonbondedForce();
     nonbonded->setNonbondedMethod(NonbondedForce::NoCutoff);
 
-    if( log ){
-       (void) fprintf( stderr, "Applying GB/VI\n" );
-    }
     GBVIForce* forceField = new GBVIForce();
-    if( applyBornRadiiScaling ){
-        forceField->setBornRadiusScalingMethod( GBVIForce::QuinticSpline );
+    if (applyBornRadiiScaling) {
+        forceField->setBornRadiusScalingMethod(GBVIForce::QuinticSpline);
     }
     else {
-        forceField->setBornRadiusScalingMethod( GBVIForce::NoScaling );
+        forceField->setBornRadiusScalingMethod(GBVIForce::NoScaling);
     }
-    for( int i = 0; i < numParticles; i++ ){
+    for (int i = 0; i < numParticles; i++) {
        system.addParticle(1.0);
-       forceField->addParticle( H_charge, H_radius, H_gamma);
-       nonbonded->addParticle(  H_charge, H_radius, 0.0);
+       forceField->addParticle(H_charge, H_radius, H_gamma);
+       nonbonded->addParticle( H_charge, H_radius, 0.0);
     }
  
-    forceField->setParticleParameters( 1, C_charge, C_radius, C_gamma);
-    forceField->setParticleParameters( 4, C_charge, C_radius, C_gamma);
+    forceField->setParticleParameters(1, C_charge, C_radius, C_gamma);
+    forceField->setParticleParameters(4, C_charge, C_radius, C_gamma);
  
-    nonbonded->setParticleParameters(  1, C_charge, C_radius, 0.0);
-    nonbonded->setParticleParameters(  4, C_charge, C_radius, 0.0);
+    nonbonded->setParticleParameters( 1, C_charge, C_radius, 0.0);
+    nonbonded->setParticleParameters( 4, C_charge, C_radius, 0.0);
  
-    forceField->addBond( 0, 1, C_HBondDistance );
-    forceField->addBond( 2, 1, C_HBondDistance );
-    forceField->addBond( 3, 1, C_HBondDistance );
-    forceField->addBond( 1, 4, C_CBondDistance );
-    forceField->addBond( 5, 4, C_HBondDistance );
-    forceField->addBond( 6, 4, C_HBondDistance );
-    forceField->addBond( 7, 4, C_HBondDistance );
+    forceField->addBond(0, 1, C_HBondDistance);
+    forceField->addBond(2, 1, C_HBondDistance);
+    forceField->addBond(3, 1, C_HBondDistance);
+    forceField->addBond(1, 4, C_CBondDistance);
+    forceField->addBond(5, 4, C_HBondDistance);
+    forceField->addBond(6, 4, C_HBondDistance);
+    forceField->addBond(7, 4, C_HBondDistance);
     
     std::vector<pair<int, int> > bondExceptions;
     std::vector<double> bondDistances;
     
     bondExceptions.push_back(pair<int, int>(0, 1)); 
-    bondDistances.push_back( C_HBondDistance );
+    bondDistances.push_back(C_HBondDistance);
     
     bondExceptions.push_back(pair<int, int>(2, 1)); 
-    bondDistances.push_back( C_HBondDistance );
+    bondDistances.push_back(C_HBondDistance);
     
     bondExceptions.push_back(pair<int, int>(3, 1)); 
-    bondDistances.push_back( C_HBondDistance );
+    bondDistances.push_back(C_HBondDistance);
     
     bondExceptions.push_back(pair<int, int>(1, 4)); 
-    bondDistances.push_back( C_CBondDistance );
+    bondDistances.push_back(C_CBondDistance);
     
     bondExceptions.push_back(pair<int, int>(5, 4)); 
-    bondDistances.push_back( C_HBondDistance );
+    bondDistances.push_back(C_HBondDistance);
     
     bondExceptions.push_back(pair<int, int>(6, 4)); 
-    bondDistances.push_back( C_HBondDistance );
+    bondDistances.push_back(C_HBondDistance);
  
     bondExceptions.push_back(pair<int, int>(7, 4));
-    bondDistances.push_back( C_HBondDistance );
+    bondDistances.push_back(C_HBondDistance);
  
     nonbonded->createExceptionsFromBonds(bondExceptions, 0.0, 0.0);
  
@@ -212,9 +203,6 @@ void testEnergyEthane( int applyBornRadiiScaling ) {
     context.setPositions(positions);
 
     State state = context.getState(State::Forces | State::Energy);
-    if( log ){
-        (void) fprintf( stderr, "Energy %.4e\n", state.getPotentialEnergy() );
-    }
     
     // Take a small step in the direction of the energy gradient.
     
@@ -222,18 +210,12 @@ void testEnergyEthane( int applyBornRadiiScaling ) {
     double forceSum[3] = { 0.0, 0.0, 0.0 };
     for (int i = 0; i < numParticles; ++i) {
         Vec3 f  = state.getForces()[i];
-        if( log ){
-            (void) fprintf( stderr, "F %d [%14.6e %14.6e %14.6e]\n", i, f[0], f[1], f[2] );
-        }
         norm        += f[0]*f[0] + f[1]*f[1] + f[2]*f[2];
         forceSum[0] += f[0];
         forceSum[1] += f[1];
         forceSum[2] += f[2];
     }
     norm               = std::sqrt(norm);
-    if( log ){
-        (void) fprintf( stderr, "Fsum [%14.6e %14.6e %14.6e] norm=%14.6e\n", forceSum[0], forceSum[1], forceSum[2], norm );
-    }
 
     const double delta = 1e-4;
     double step = delta/norm;
@@ -246,12 +228,6 @@ void testEnergyEthane( int applyBornRadiiScaling ) {
     
     State state2 = context.getState(State::Energy);
 
-    if( log ){
-        double deltaE = fabs( state.getPotentialEnergy() - state2.getPotentialEnergy() )/delta;
-        double diff   = (deltaE - norm)/norm;
-        (void) fprintf( stderr, "Energies %.8e %.8e deltaE=%14.7e %14.7e diff=%14.7e\n", state.getPotentialEnergy(), state2.getPotentialEnergy(), deltaE, norm, diff );
-    }
-
     // See whether the potential energy changed by the expected amount.
     
     ASSERT_EQUAL_TOL(norm, (state2.getPotentialEnergy()-state.getPotentialEnergy())/delta, 0.01)
@@ -260,8 +236,8 @@ void testEnergyEthane( int applyBornRadiiScaling ) {
 int main() {
     try {
         testSingleParticle();
-        testEnergyEthane( 0 );
-        testEnergyEthane( 1 );
+        testEnergyEthane(0);
+        testEnergyEthane(1);
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

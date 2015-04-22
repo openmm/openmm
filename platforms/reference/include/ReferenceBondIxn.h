@@ -29,7 +29,7 @@
 #include "openmm/internal/windowsExport.h"
 #include <vector>
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class OPENMM_EXPORT ReferenceBondIxn {
 
@@ -43,7 +43,7 @@ class OPENMM_EXPORT ReferenceBondIxn {
       
          --------------------------------------------------------------------------------------- */
 
-       ReferenceBondIxn( );
+       ReferenceBondIxn();
 
       /**---------------------------------------------------------------------------------------
       
@@ -51,7 +51,7 @@ class OPENMM_EXPORT ReferenceBondIxn {
       
          --------------------------------------------------------------------------------------- */
 
-       ~ReferenceBondIxn( );
+       ~ReferenceBondIxn();
 
       /**---------------------------------------------------------------------------------------
       
@@ -65,9 +65,9 @@ class OPENMM_EXPORT ReferenceBondIxn {
       
          --------------------------------------------------------------------------------------- */
       
-      virtual void calculateBondIxn( int* atomIndices, std::vector<OpenMM::RealVec>& atomCoordinates,
+      virtual void calculateBondIxn(int* atomIndices, std::vector<OpenMM::RealVec>& atomCoordinates,
                                     RealOpenMM* parameters, std::vector<OpenMM::RealVec>& forces,
-                                    RealOpenMM* totalEnergy ) const;
+                                    RealOpenMM* totalEnergy) const;
       
       /**---------------------------------------------------------------------------------------
       
@@ -82,7 +82,7 @@ class OPENMM_EXPORT ReferenceBondIxn {
       
          --------------------------------------------------------------------------------------- */
       
-      static RealOpenMM getNormedDotProduct( RealOpenMM* vector1, RealOpenMM* vector2, int hasREntry );
+      static RealOpenMM getNormedDotProduct(RealOpenMM* vector1, RealOpenMM* vector2, int hasREntry);
       
       /**---------------------------------------------------------------------------------------
       
@@ -98,8 +98,8 @@ class OPENMM_EXPORT ReferenceBondIxn {
       
          --------------------------------------------------------------------------------------- */
       
-      static RealOpenMM getAngleBetweenTwoVectors( RealOpenMM* vector1, RealOpenMM* vector2, 
-                                                   RealOpenMM* outputDotProduct, int hasREntry );
+      static RealOpenMM getAngleBetweenTwoVectors(RealOpenMM* vector1, RealOpenMM* vector2, 
+                                                   RealOpenMM* outputDotProduct, int hasREntry);
       
       /**---------------------------------------------------------------------------------------
       
@@ -119,13 +119,13 @@ class OPENMM_EXPORT ReferenceBondIxn {
       
          --------------------------------------------------------------------------------------- */
       
-      static RealOpenMM getDihedralAngleBetweenThreeVectors( RealOpenMM* vector1, RealOpenMM* vector2, 
-                                                             RealOpenMM* vector3, RealOpenMM** outputCrossProduct, 
-                                                             RealOpenMM* cosineOfAngle, RealOpenMM* signVector, 
-                                                             RealOpenMM* signOfAngle, int hasREntry );
+      static RealOpenMM getDihedralAngleBetweenThreeVectors(RealOpenMM* vector1, RealOpenMM* vector2, 
+                                                            RealOpenMM* vector3, RealOpenMM** outputCrossProduct, 
+                                                            RealOpenMM* cosineOfAngle, RealOpenMM* signVector, 
+                                                            RealOpenMM* signOfAngle, int hasREntry);
       
 };
 
-// ---------------------------------------------------------------------------------------
+} // namespace OpenMM
 
 #endif // __ReferenceBondIxn_H__

@@ -69,7 +69,7 @@ public:
      * @param particleIndex       the particle index
      * @param maxDispersionEnergy maximum dispersion energy
      */
-    static void getMaximumDispersionEnergy( const AmoebaWcaDispersionForce& force, int particleIndex, double& maxDispersionEnergy );
+    static void getMaximumDispersionEnergy(const AmoebaWcaDispersionForce& force, int particleIndex, double& maxDispersionEnergy);
 
     /** 
      * Get the total maximum dispersion energy
@@ -78,7 +78,7 @@ public:
      *
      * @return total maximum dispersion energy for the system
      */
-    static double getTotalMaximumDispersionEnergy( const AmoebaWcaDispersionForce& force);
+    static double getTotalMaximumDispersionEnergy(const AmoebaWcaDispersionForce& force);
     void updateParametersInContext(ContextImpl& context);
 
 private:

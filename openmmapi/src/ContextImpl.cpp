@@ -260,12 +260,16 @@ double ContextImpl::calcForcesAndEnergy(bool includeForces, bool includeEnergy, 
         throw OpenMMException("Particle positions have not been set");
     lastForceGroups = groups;
     CalcForcesAndEnergyKernel& kernel = initializeForcesKernel.getAs<CalcForcesAndEnergyKernel>();
-    double energy = 0.0;
-    kernel.beginComputation(*this, includeForces, includeEnergy, groups);
-    for (int i = 0; i < (int) forceImpls.size(); ++i)
-        energy += forceImpls[i]->calcForcesAndEnergy(*this, includeForces, includeEnergy, groups);
-    energy += kernel.finishComputation(*this, includeForces, includeEnergy, groups);
-    return energy;
+    while (true) {
+        double energy = 0.0;
+        kernel.beginComputation(*this, includeForces, includeEnergy, groups);
+        for (int i = 0; i < (int) forceImpls.size(); ++i)
+            energy += forceImpls[i]->calcForcesAndEnergy(*this, includeForces, includeEnergy, groups);
+        bool valid = true;
+        energy += kernel.finishComputation(*this, includeForces, includeEnergy, groups, valid);
+        if (valid)
+            return energy;
+    }
 }
 
 int ContextImpl::getLastForceGroups() const {

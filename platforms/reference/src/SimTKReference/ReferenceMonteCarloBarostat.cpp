@@ -49,7 +49,7 @@ ReferenceMonteCarloBarostat::ReferenceMonteCarloBarostat(int numAtoms, const vec
 
   --------------------------------------------------------------------------------------- */
 
-ReferenceMonteCarloBarostat::~ReferenceMonteCarloBarostat( ) {
+ReferenceMonteCarloBarostat::~ReferenceMonteCarloBarostat() {
 }
 
 /**---------------------------------------------------------------------------------------

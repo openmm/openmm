@@ -28,7 +28,7 @@
 #include "RealVec.h"
 #include <vector>
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class AmoebaReferenceBondForce {
 
@@ -40,7 +40,7 @@ public:
        
         --------------------------------------------------------------------------------------- */
  
-    AmoebaReferenceBondForce( ){};
+    AmoebaReferenceBondForce() {};
  
     /**---------------------------------------------------------------------------------------
        
@@ -48,7 +48,7 @@ public:
        
         --------------------------------------------------------------------------------------- */
  
-    ~AmoebaReferenceBondForce( ){};
+    ~AmoebaReferenceBondForce() {};
  
  
      /**---------------------------------------------------------------------------------------
@@ -69,13 +69,13 @@ public:
      
         --------------------------------------------------------------------------------------- */
      
-    RealOpenMM calculateForceAndEnergy( int numBonds, std::vector<OpenMM::RealVec>& posData,
-                                        const std::vector<int>& particle1,
-                                        const std::vector<int>&  particle2,
-                                        const std::vector<RealOpenMM>& bondLength,
-                                        const std::vector<RealOpenMM>& bondK,
-                                        RealOpenMM bondCubic, RealOpenMM bondQuartic,
-                                        std::vector<OpenMM::RealVec>& forceData ) const;
+    RealOpenMM calculateForceAndEnergy(int numBonds, std::vector<OpenMM::RealVec>& posData,
+                                       const std::vector<int>& particle1,
+                                       const std::vector<int>&  particle2,
+                                       const std::vector<RealOpenMM>& bondLength,
+                                       const std::vector<RealOpenMM>& bondK,
+                                       RealOpenMM bondCubic, RealOpenMM bondQuartic,
+                                       std::vector<OpenMM::RealVec>& forceData) const;
 
 private:
 
@@ -95,13 +95,13 @@ private:
      
         --------------------------------------------------------------------------------------- */
      
-    RealOpenMM calculateBondIxn( const OpenMM::RealVec& positionAtomA, const OpenMM::RealVec& positionAtomB,
-                                 RealOpenMM bondLength, RealOpenMM bondK,
-                                 RealOpenMM bondCubic, RealOpenMM bondQuartic,
-                                 OpenMM::RealVec* forces ) const;
+    RealOpenMM calculateBondIxn(const OpenMM::RealVec& positionAtomA, const OpenMM::RealVec& positionAtomB,
+                                RealOpenMM bondLength, RealOpenMM bondK,
+                                RealOpenMM bondCubic, RealOpenMM bondQuartic,
+                                OpenMM::RealVec* forces) const;
      
 };
 
-// ---------------------------------------------------------------------------------------
+} // namespace OpenMM
 
 #endif // _AmoebaReferenceBondForce___

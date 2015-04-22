@@ -83,7 +83,7 @@ typedef StringStringVectorMap::const_iterator StringStringVectorMapCI;
 class ValidateOpenMM {
 public:
 
-    ValidateOpenMM( void );
+    ValidateOpenMM();
     ~ValidateOpenMM();
 
     // force names
@@ -166,7 +166,7 @@ public:
      * @return log
      *
      */
-    FILE* getLog( ) const;
+    FILE* getLog() const;
     
     /**
      *

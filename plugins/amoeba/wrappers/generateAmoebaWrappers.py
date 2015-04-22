@@ -327,7 +327,7 @@ extern "C" {
 /* OpenMM_3D_DoubleArray */
 OPENMM_EXPORT_AMOEBA OpenMM_3D_DoubleArray* OpenMM_3D_DoubleArray_create(int size1, int size2, int size3);
 OPENMM_EXPORT_AMOEBA void OpenMM_3D_DoubleArray_set(OpenMM_3D_DoubleArray* array, int index1, int index2, OpenMM_DoubleArray* values);
-OPENMM_EXPORT_AMOEBA void OpenMM_3D_DoubleArray_destroy( OpenMM_3D_DoubleArray* array);""", file=self.out)
+OPENMM_EXPORT_AMOEBA void OpenMM_3D_DoubleArray_destroy(OpenMM_3D_DoubleArray* array);""", file=self.out)
 
         self.writeClasses()
 
@@ -586,29 +586,29 @@ OPENMM_EXPORT_AMOEBA int OpenMM_2D_IntArray_getSize(const OpenMM_2D_IntArray* ar
 OPENMM_EXPORT_AMOEBA void OpenMM_2D_IntArray_resize(OpenMM_2D_IntArray* array, int size) {
     reinterpret_cast<vector<vector<int> >*>(array)->resize(size);
 }
-OPENMM_EXPORT_AMOEBA void OpenMM_2D_IntArray_append(OpenMM_2D_IntArray* array, int index1, int value ) {
+OPENMM_EXPORT_AMOEBA void OpenMM_2D_IntArray_append(OpenMM_2D_IntArray* array, int index1, int value) {
     vector<vector<int> >* array2DInt = reinterpret_cast<vector<vector<int> >*>(array);
-    if( array2DInt->size() <= index1 ){
-        array2DInt->resize( index1+1 );
+    if (array2DInt->size() <= index1) {
+        array2DInt->resize(index1+1);
     }
-    (*array2DInt)[index1].push_back( value );
+    (*array2DInt)[index1].push_back(value);
 }
 OPENMM_EXPORT_AMOEBA void OpenMM_2D_IntArray_set(OpenMM_2D_IntArray* array, int index1, int index2, int value) {
     vector<vector<int> >* array2DInt = reinterpret_cast<vector<vector<int> >*>(array);
-    if( array2DInt->size() <= index1 ){
-        array2DInt->resize( index1+1 );
+    if (array2DInt->size() <= index1) {
+        array2DInt->resize(index1+1);
     }
-    if( array2DInt[index1].size() <= index2 ){
-        array2DInt[index1].resize( index2+1 );
+    if (array2DInt[index1].size() <= index2) {
+        array2DInt[index1].resize(index2+1);
     }
     (*array2DInt)[index1][index2] = value;
 }
 OPENMM_EXPORT_AMOEBA void OpenMM_2D_IntArray_get(const OpenMM_2D_IntArray* array, int index1, int index2, int* value) {
     const vector<vector<int> >* array2DInt = reinterpret_cast<const vector<vector<int> >*>(array);
-    if ( array2DInt->size() <= index1 )
+    if (array2DInt->size() <= index1)
         throw OpenMMException("OpenMM_2D_IntArray_get: first index out of range.");
 
-    if ( (*array2DInt)[index1].size() <= index2 )
+    if ((*array2DInt)[index1].size() <= index2)
         throw OpenMMException("OpenMM_2D_IntArray_get: second index out of range.");
     *value = (*array2DInt)[index1][index2];
 }
@@ -618,9 +618,9 @@ OPENMM_EXPORT_AMOEBA OpenMM_3D_DoubleArray* OpenMM_3D_DoubleArray_create(int siz
     int ii, jj;  
     std::vector< std::vector< std::vector<double> > >* v3D_Array = new std::vector<std::vector<std::vector<double> > >(size1);
 
-    for( ii = 0; ii < size1; ii++ ){
+    for (ii = 0; ii < size1; ii++) {
         (*v3D_Array)[ii].resize(size2);
-        for( jj = 0; jj < size2; jj++ ){
+        for (jj = 0; jj < size2; jj++) {
            (*v3D_Array)[ii][jj].resize(size3);
         }    
     }    
@@ -631,12 +631,12 @@ OPENMM_EXPORT_AMOEBA void OpenMM_3D_DoubleArray_set(OpenMM_3D_DoubleArray* array
     unsigned int ii;
     std::vector< std::vector< std::vector<double> > >* v3D_Array = reinterpret_cast<std::vector<std::vector<std::vector<double> > >*>(array);
     std::vector<double> * value_array                            = reinterpret_cast<std::vector<double> *>(values);
-    for( ii = 0; ii < (*value_array).size(); ii++ ){
+    for (ii = 0; ii < (*value_array).size(); ii++) {
         (*v3D_Array)[index1][index2][ii] = (*value_array)[ii];
     }    
 }
 
-OPENMM_EXPORT_AMOEBA void OpenMM_3D_DoubleArray_destroy( OpenMM_3D_DoubleArray* array) {
+OPENMM_EXPORT_AMOEBA void OpenMM_3D_DoubleArray_destroy(OpenMM_3D_DoubleArray* array) {
     delete reinterpret_cast<std::vector<std::vector<std::vector<double> > >*>(array);
 }""", file=self.out)
 

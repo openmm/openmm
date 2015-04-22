@@ -45,12 +45,12 @@ void testSerialization() {
     // Create a Force.
 
     AmoebaGeneralizedKirkwoodForce force1;
-    force1.setSolventDielectric(   80.0 );
-    force1.setSoluteDielectric(    1.0 );
-    //force1.setDielectricOffset(    0.09 );
-    force1.setProbeRadius(         1.40 );
-    force1.setSurfaceAreaFactor(   0.888 );
-    force1.setIncludeCavityTerm(   1 );
+    force1.setSolventDielectric(  80.0);
+    force1.setSoluteDielectric(   1.0);
+    //force1.setDielectricOffset(   0.09);
+    force1.setProbeRadius(        1.40);
+    force1.setSurfaceAreaFactor(  0.888);
+    force1.setIncludeCavityTerm(  1);
 
     force1.addParticle(1.0, 2.0, 0.9);
     force1.addParticle(-1.1,2.1, 0.8);
@@ -60,14 +60,6 @@ void testSerialization() {
 
     stringstream buffer;
     XmlSerializer::serialize<AmoebaGeneralizedKirkwoodForce>(&force1, "Force", buffer);
-#ifdef AMOEBA_DEBUG
-    if( 0 ){
-        FILE* filePtr = fopen("GeneralizedKirkwood.xml", "w" );
-        (void) fprintf( filePtr, "%s", buffer.str().c_str() );
-        (void) fclose( filePtr );
-    }
-#endif
-
     AmoebaGeneralizedKirkwoodForce* copy = XmlSerializer::deserialize<AmoebaGeneralizedKirkwoodForce>(buffer);
 
     // Compare the two forces to see if they are identical.  
@@ -85,8 +77,8 @@ void testSerialization() {
         double radius1, charge1, scaleFactor1;
         double radius2, charge2, scaleFactor2;
 
-        force1.getParticleParameters( ii, charge1, radius1, scaleFactor1 );
-        force2.getParticleParameters( ii, charge2, radius2, scaleFactor2 );
+        force1.getParticleParameters(ii, charge1, radius1, scaleFactor1);
+        force2.getParticleParameters(ii, charge2, radius2, scaleFactor2);
 
         ASSERT_EQUAL(charge1,      charge2);
         ASSERT_EQUAL(radius1,      radius2);

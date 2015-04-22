@@ -127,7 +127,7 @@ public:
     /**
      * Get the flag signaling whether the cavity term should be included
      */
-    int getIncludeCavityTerm( ) const;
+    int getIncludeCavityTerm() const;
 
     /**
      * Set the flag signaling whether the cavity term should be included
@@ -152,7 +152,7 @@ public:
     /**
      * Set the surface area factor kJ/(nm*nm) used in SASA contribution
      */
-    void setSurfaceAreaFactor( double surfaceAreaFactor );
+    void setSurfaceAreaFactor(double surfaceAreaFactor);
     /**
      * Update the per-particle parameters in a Context to match those stored in this Force object.  This method provides
      * an efficient method to update certain parameters in an existing Context without needing to reinitialize it.

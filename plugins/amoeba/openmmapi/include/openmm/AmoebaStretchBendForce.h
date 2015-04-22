@@ -148,7 +148,7 @@ public:
         lengthAB  = lengthCB   = angle     = k1 = k2 = 0.0;
     }
     StretchBendInfo(int particle1, int particle2, int particle3, 
-                    double lengthAB,  double lengthCB, double angle, double k1, double k2 ) :
+                    double lengthAB,  double lengthCB, double angle, double k1, double k2) :
                     particle1(particle1), particle2(particle2), particle3(particle3), 
                     lengthAB(lengthAB), lengthCB(lengthCB), angle(angle), k1(k1), k2(k2) {
     }

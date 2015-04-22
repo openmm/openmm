@@ -66,8 +66,8 @@ void testSerialization() {
     system.addForce(nonbonded);
 	system.addForce(new AndersenThermostat(393.3, 19.3));
 	system.addForce(new MonteCarloBarostat(25, 393.3, 25));
-	Integrator *intg = new LangevinIntegrator(300,79,0.002);
-	Context *ctxt = new Context(system, *intg);
+	LangevinIntegrator intg(300,79,0.002);
+	Context context(system, intg);
 	
 	// Set positions, velocities, forces
 	vector<Vec3> positions;
@@ -79,11 +79,11 @@ void testSerialization() {
 		velocities.push_back(Vec3( ((float) rand()/(float) RAND_MAX)*6.2, ((float) rand()/(float) RAND_MAX)*6.2, ((float) rand()/(float) RAND_MAX)*6.2));
 	}
 
-	ctxt->setPositions(positions);
-	ctxt->setVelocities(velocities);
+	context.setPositions(positions);
+	context.setVelocities(velocities);
 
 	// Serialize and then deserialize it.
-	State s1 = ctxt->getState(State::Positions | State::Velocities | State::Forces | State::Energy | State::Parameters);
+	State s1 = context.getState(State::Positions | State::Velocities | State::Forces | State::Energy | State::Parameters);
 
 	stringstream buffer;
     XmlSerializer::serialize<State>(&s1, "State", buffer);
@@ -132,6 +132,55 @@ void testSerialization() {
 		assert((it1->first).compare(it2->first) == 0);
 		ASSERT_EQUAL(it1->second, it2->second);
 	}
+    delete copy;
+
+    // Now create a series of States that include only one type of information.  Verify
+    // that serialization works correctly for them.
+
+    for (int types = 1; types <= 16; types *= 2) {
+        State s3 = context.getState(types);
+        stringstream buffer2;
+        XmlSerializer::serialize<State>(&s3, "State", buffer2);
+        copy = XmlSerializer::deserialize<State>(buffer2);
+        int foundTypes = 0;
+        try {
+            copy->getPositions();
+            foundTypes += State::Positions;
+        }
+        catch (...) {
+            // Ignore
+        }
+        try {
+            copy->getVelocities();
+            foundTypes += State::Velocities;
+        }
+        catch (...) {
+            // Ignore
+        }
+        try {
+            copy->getForces();
+            foundTypes += State::Forces;
+        }
+        catch (...) {
+            // Ignore
+        }
+        try {
+            copy->getPotentialEnergy();
+            foundTypes += State::Energy;
+        }
+        catch (...) {
+            // Ignore
+        }
+        try {
+            copy->getParameters();
+            foundTypes += State::Parameters;
+        }
+        catch (...) {
+            // Ignore
+        }
+        delete copy;
+        ASSERT_EQUAL(types, foundTypes);
+    }
 }
 
 int main() {

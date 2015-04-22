@@ -135,6 +135,8 @@ class PrmtopLoader(object):
                     format = format[index0+1:index1]
                     m = FORMAT_RE_PATTERN.search(format)
                     self._raw_format[self._flags[-1]] = (format, m.group(1), m.group(2), m.group(3), m.group(4))
+                elif line.startswith('%COMMENT'):
+                    continue
                 elif self._flags \
                      and 'TITLE'==self._flags[-1] \
                      and not self._raw_data['TITLE']:

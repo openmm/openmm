@@ -27,8 +27,9 @@
 
 #include "RealVec.h"
 #include "openmm/internal/windowsExport.h"
+#include <vector>
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class OPENMM_EXPORT ReferencePairIxn {
 
@@ -42,7 +43,7 @@ class OPENMM_EXPORT ReferencePairIxn {
       
          --------------------------------------------------------------------------------------- */
 
-       ReferencePairIxn( );
+       ReferencePairIxn();
 
       /**---------------------------------------------------------------------------------------
       
@@ -50,7 +51,7 @@ class OPENMM_EXPORT ReferencePairIxn {
       
          --------------------------------------------------------------------------------------- */
 
-       ~ReferencePairIxn( );
+       ~ReferencePairIxn();
 
       /**---------------------------------------------------------------------------------------
       
@@ -67,13 +68,13 @@ class OPENMM_EXPORT ReferencePairIxn {
             
          --------------------------------------------------------------------------------------- */
           
-      virtual void calculatePairIxn( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
+      virtual void calculatePairIxn(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
                             RealOpenMM** atomParameters, int** exclusions,
                             RealOpenMM* fixedParameters, std::vector<OpenMM::RealVec>& forces,
-                            RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const = 0;
+                            RealOpenMM* energyByAtom, RealOpenMM* totalEnergy) const = 0;
       
 };
 
-// ---------------------------------------------------------------------------------------
+} // namespace OpenMM
 
 #endif // __ReferencePairIxn_H__

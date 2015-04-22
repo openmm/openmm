@@ -774,16 +774,16 @@ public:
         vector<double> dipole1, dipole2, quadrupole1, quadrupole2;
         force.getMultipoleParameters(particle1, charge1, dipole1, quadrupole1, axis1, multipole11, multipole21, multipole31, thole1, damping1, polarity1);
         force.getMultipoleParameters(particle2, charge2, dipole2, quadrupole2, axis2, multipole12, multipole22, multipole32, thole2, damping2, polarity2);
-        if (charge1 != charge2 || thole1 != thole2 || damping1 != damping2 || polarity1 != polarity2 || axis1 != axis2){
+        if (charge1 != charge2 || thole1 != thole2 || damping1 != damping2 || polarity1 != polarity2 || axis1 != axis2) {
             return false;
         }
-        for (int i = 0; i < (int) dipole1.size(); ++i){
-            if (dipole1[i] != dipole2[i]){
+        for (int i = 0; i < (int) dipole1.size(); ++i) {
+            if (dipole1[i] != dipole2[i]) {
                 return false;
             }
         }
-        for (int i = 0; i < (int) quadrupole1.size(); ++i){
-            if (quadrupole1[i] != quadrupole2[i]){
+        for (int i = 0; i < (int) quadrupole1.size(); ++i) {
+            if (quadrupole1[i] != quadrupole2[i]) {
                 return false;
             }
         }

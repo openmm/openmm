@@ -25,11 +25,10 @@
 #ifndef __ReferenceMonteCarloBarostat_H__
 #define __ReferenceMonteCarloBarostat_H__
 
-#include "SimTKOpenMMCommon.h"
 #include <utility>
 #include <vector>
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class ReferenceMonteCarloBarostat {
 
@@ -82,6 +81,6 @@ class ReferenceMonteCarloBarostat {
 
 };
 
-// ---------------------------------------------------------------------------------------
+} // namespace OpenMM
 
 #endif // __ReferenceMonteCarloBarostat_H__
