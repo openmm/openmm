@@ -112,18 +112,18 @@ class Element(object):
             The element whose atomic mass is closest to the input mass
         """
         # Assume masses are in daltons if they are not units
-        if not is_quantity(mass):
-            mass = mass * daltons
+        if is_quantity(mass):
+            mass = mass.value_in_unit(daltons)
         diff = mass
         best_guess = None
 
         for atnum in xrange(1, Element._max_atomic_number+1):
             element = Element._elements_by_atomic_number[atnum]
-            massdiff = abs(element.mass - mass)
+            massdiff = abs(element.mass._value - mass)
             if massdiff < diff:
                 best_guess = element
                 diff = massdiff
-            if element.mass > mass:
+            if element.mass._value > mass:
                 # Elements are only getting heavier, so bail out early
                 return best_guess
 
@@ -164,6 +164,9 @@ def _pickle_element(element):
 
 copy_reg.pickle(Element, _pickle_element)
 
+# NOTE: getElementByMass assumes all masses are Quantity instances with unit
+# "daltons". All elements need to obey this assumption, or that method will
+# fail. No checking is done in getElementByMass for performance reasons
 hydrogen =       Element(  1, "hydrogen", "H", 1.007947*daltons)
 deuterium =      Element(  1, "deuterium", "D", 2.01355321270*daltons)
 helium =         Element(  2, "helium", "He", 4.003*daltons)
