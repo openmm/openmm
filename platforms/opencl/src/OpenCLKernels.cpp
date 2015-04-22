@@ -5993,7 +5993,7 @@ string OpenCLIntegrateCustomStepKernel::createGlobalComputation(const string& va
     variables["dt"] = "dt[0].y";
     variables["uniform"] = "uniform";
     variables["gaussian"] = "gaussian";
-    variables[energyName] = "energy[0]";
+    variables[energyName] = "energy";
     for (int i = 0; i < integrator.getNumGlobalVariables(); i++)
         variables[integrator.getGlobalVariableName(i)] = "globals["+cl.intToString(i)+"]";
     for (int i = 0; i < (int) parameterNames.size(); i++)
@@ -6029,7 +6029,7 @@ string OpenCLIntegrateCustomStepKernel::createPerDofComputation(const string& va
     variables["m"] = "mass";
     variables["dt"] = "stepSize";
     if (energyName != "")
-        variables[energyName] = "energy[0]";
+        variables[energyName] = "energy";
     for (int i = 0; i < integrator.getNumGlobalVariables(); i++)
         variables[integrator.getGlobalVariableName(i)] = "globals["+cl.intToString(i)+"]";
     for (int i = 0; i < integrator.getNumPerDofVariables(); i++)
@@ -6259,8 +6259,7 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
                 kernel.setArg<cl::Buffer>(index++, globalValues->getDeviceBuffer());
                 kernel.setArg<cl::Buffer>(index++, contextParameterValues->getDeviceBuffer());
                 kernel.setArg<cl::Buffer>(index++, sumBuffer->getDeviceBuffer());
-                index += 3;
-                kernel.setArg<cl::Buffer>(index++, potentialEnergy->getDeviceBuffer());
+                index += 4;
                 for (int i = 0; i < (int) perDofValues->getBuffers().size(); i++)
                     kernel.setArg<cl::Memory>(index++, perDofValues->getBuffers()[i].getMemory());
                 if (stepType[step] == CustomIntegrator::ComputeSum) {
@@ -6305,8 +6304,6 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
                 kernel.setArg<cl::Buffer>(index++, integration.getStepSize().getDeviceBuffer());
                 kernel.setArg<cl::Buffer>(index++, globalValues->getDeviceBuffer());
                 kernel.setArg<cl::Buffer>(index++, contextParameterValues->getDeviceBuffer());
-                index += 2;
-                kernel.setArg<cl::Buffer>(index++, potentialEnergy->getDeviceBuffer());
             }
             else if (stepType[step] == CustomIntegrator::ConstrainPositions) {
                 // Apply position constraints.
@@ -6347,16 +6344,6 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
         randomKernel.setArg<cl::Buffer>(1, uniformRandoms->getDeviceBuffer());
         randomKernel.setArg<cl::Buffer>(2, randomSeed->getDeviceBuffer());
         
-        // Create the kernel for summing the potential energy.
-
-        cl::Program program = cl.createProgram(OpenCLKernelSources::customIntegrator, defines);
-        sumPotentialEnergyKernel = cl::Kernel(program, cl.getUseDoublePrecision() ? "computeDoubleSum" : "computeFloatSum");
-        int index = 0;
-        sumPotentialEnergyKernel.setArg<cl::Buffer>(index++, cl.getEnergyBuffer().getDeviceBuffer());
-        sumPotentialEnergyKernel.setArg<cl::Buffer>(index++, potentialEnergy->getDeviceBuffer());
-        sumPotentialEnergyKernel.setArg<cl_int>(index++, 0);
-        sumPotentialEnergyKernel.setArg<cl_int>(index++, cl.getEnergyBuffer().getSize());
-        
         // Create the kernel for computing kinetic energy.
 
         stringstream computeKE;
@@ -6380,9 +6367,9 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
         replacements["PARAMETER_ARGUMENTS"] = args.str();
         if (defines.find("LOAD_POS_AS_DELTA") != defines.end())
             defines.erase("LOAD_POS_AS_DELTA");
-        program = cl.createProgram(cl.replaceStrings(OpenCLKernelSources::customIntegratorPerDof, replacements), defines);
+        cl::Program program = cl.createProgram(cl.replaceStrings(OpenCLKernelSources::customIntegratorPerDof, replacements), defines);
         kineticEnergyKernel = cl::Kernel(program, "computePerDof");
-        index = 0;
+        int index = 0;
         kineticEnergyKernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
         setPosqCorrectionArg(cl, kineticEnergyKernel, index++);
         kineticEnergyKernel.setArg<cl::Buffer>(index++, integration.getPosDelta().getDeviceBuffer());
@@ -6394,7 +6381,10 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
         kineticEnergyKernel.setArg<cl::Buffer>(index++, sumBuffer->getDeviceBuffer());
         index += 2;
         kineticEnergyKernel.setArg<cl::Buffer>(index++, uniformRandoms->getDeviceBuffer());
-        kineticEnergyKernel.setArg<cl::Buffer>(index++, potentialEnergy->getDeviceBuffer());
+        if (cl.getUseDoublePrecision())
+            kineticEnergyKernel.setArg<cl_double>(index++, 0.0);
+        else
+            kineticEnergyKernel.setArg<cl_float>(index++, 0.0f);
         for (int i = 0; i < (int) perDofValues->getBuffers().size(); i++)
             kineticEnergyKernel.setArg<cl::Memory>(index++, perDofValues->getBuffers()[i].getMemory());
         keNeedsForce = usesVariable(keExpression, "f");
@@ -6501,9 +6491,7 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
             }
             else {
                 recordChangedParameters(context);
-                context.calcForcesAndEnergy(computeForce, computeEnergy, forceGroup[i]);
-                if (computeEnergy)
-                    cl.executeKernel(sumPotentialEnergyKernel, OpenCLContext::ThreadBlockSize, OpenCLContext::ThreadBlockSize);
+                energy = context.calcForcesAndEnergy(computeForce, computeEnergy, forceGroup[i]);
             forcesAreValid = true;
             }
         }
@@ -6511,6 +6499,10 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
             kernels[i][0].setArg<cl_uint>(10, integration.prepareRandomNumbers(requiredGaussian[i]));
             kernels[i][0].setArg<cl::Buffer>(9, integration.getRandom().getDeviceBuffer());
             kernels[i][0].setArg<cl::Buffer>(11, uniformRandoms->getDeviceBuffer());
+            if (cl.getUseDoublePrecision())
+                kernels[i][0].setArg<cl_double>(12, energy);
+            else
+                kernels[i][0].setArg<cl_float>(12, (cl_float) energy);
             if (requiredUniform[i] > 0)
                 cl.executeKernel(randomKernel, numAtoms);
             cl.executeKernel(kernels[i][0], numAtoms);
@@ -6518,12 +6510,20 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
         else if (stepType[i] == CustomIntegrator::ComputeGlobal && !merged[i]) {
             kernels[i][0].setArg<cl_float>(3, (cl_float) SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber());
             kernels[i][0].setArg<cl_float>(4, (cl_float) SimTKOpenMMUtilities::getNormallyDistributedRandomNumber());
+            if (cl.getUseDoublePrecision())
+                kernels[i][0].setArg<cl_double>(5, energy);
+            else
+                kernels[i][0].setArg<cl_float>(5, (cl_float) energy);
             cl.executeKernel(kernels[i][0], 1, 1);
         }
         else if (stepType[i] == CustomIntegrator::ComputeSum) {
             kernels[i][0].setArg<cl_uint>(10, integration.prepareRandomNumbers(requiredGaussian[i]));
             kernels[i][0].setArg<cl::Buffer>(9, integration.getRandom().getDeviceBuffer());
             kernels[i][0].setArg<cl::Buffer>(11, uniformRandoms->getDeviceBuffer());
+            if (cl.getUseDoublePrecision())
+                kernels[i][0].setArg<cl_double>(12, energy);
+            else
+                kernels[i][0].setArg<cl_float>(12, (cl_float) energy);
             if (requiredUniform[i] > 0)
                 cl.executeKernel(randomKernel, numAtoms);
             cl.clearBuffer(*sumBuffer);
@@ -6573,9 +6573,7 @@ double OpenCLIntegrateCustomStepKernel::computeKineticEnergy(ContextImpl& contex
         bool willNeedEnergy = false;
         for (int i = 0; i < integrator.getNumComputations(); i++)
             willNeedEnergy |= needsEnergy[i];
-        context.calcForcesAndEnergy(true, willNeedEnergy, -1);
-        if (willNeedEnergy)
-            cl.executeKernel(sumPotentialEnergyKernel, OpenCLContext::ThreadBlockSize, OpenCLContext::ThreadBlockSize);
+        energy = context.calcForcesAndEnergy(true, willNeedEnergy, -1);
         forcesAreValid = true;
     }
     cl.clearBuffer(*sumBuffer);

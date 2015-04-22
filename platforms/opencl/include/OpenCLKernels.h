@@ -1273,7 +1273,7 @@ private:
     void prepareForComputation(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid);
     void recordChangedParameters(ContextImpl& context);
     OpenCLContext& cl;
-    double prevStepSize;
+    double prevStepSize, energy;
     int numGlobalVariables;
     bool hasInitializedKernels, deviceValuesAreCurrent, modifiesParameters, keNeedsForce;
     mutable bool localValuesAreCurrent;
@@ -1293,7 +1293,7 @@ private:
     std::vector<double> contextValuesDouble;
     std::vector<float> contextValues;
     std::vector<std::vector<cl::Kernel> > kernels;
-    cl::Kernel sumPotentialEnergyKernel, randomKernel, kineticEnergyKernel, sumKineticEnergyKernel;
+    cl::Kernel randomKernel, kineticEnergyKernel, sumKineticEnergyKernel;
     std::vector<CustomIntegrator::ComputationType> stepType;
     std::vector<bool> needsForces;
     std::vector<bool> needsEnergy;
