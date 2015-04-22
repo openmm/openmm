@@ -31,7 +31,7 @@ USE OR OTHER DEALINGS IN THE SOFTWARE.
 __author__ = "Christopher M. Bruns"
 __version__ = "1.0"
 
-
+from collections import OrderedDict
 from simtk.unit import daltons, is_quantity
 import copy_reg
 
@@ -47,7 +47,7 @@ class Element(object):
 
     _elements_by_symbol = {}
     _elements_by_atomic_number = {}
-    _max_atomic_number = 0
+    _elements_by_mass = None
 
     def __init__(self, number, name, symbol, mass):
         """Create a new element
@@ -68,8 +68,8 @@ class Element(object):
         self._mass = mass
         # Index this element in a global table
         s = symbol.strip().upper()
-        ## Keep track of the largest atomic number
-        Element._max_atomic_number = max(Element._max_atomic_number, number)
+        ## If we add a new element, we need to re-hash elements by mass
+        Element._elements_by_mass = None
 
         assert s not in Element._elements_by_symbol
         Element._elements_by_symbol[s] = self
@@ -114,16 +114,23 @@ class Element(object):
         # Assume masses are in daltons if they are not units
         if is_quantity(mass):
             mass = mass.value_in_unit(daltons)
+        # If this is our first time calling getByMass (or we added an element
+        # since the last call), re-generate the ordered by-mass dict cache
+        if Element._elements_by_mass is None:
+            Element._elements_by_mass = OrderedDict()
+            for elem in sorted(Element._elements_by_symbol.values(),
+                               key=lambda x: x.mass):
+                Element._elements_by_mass[elem.mass] = elem
+
         diff = mass
         best_guess = None
 
-        for atnum in xrange(1, Element._max_atomic_number+1):
-            element = Element._elements_by_atomic_number[atnum]
-            massdiff = abs(element.mass._value - mass)
+        for elemmass, element in Element._elements_by_symbol.iteritems():
+            massdiff = abs(elemmass._value - mass)
             if massdiff < diff:
                 best_guess = element
                 diff = massdiff
-            if element.mass._value > mass:
+            if elemmass._value > mass:
                 # Elements are only getting heavier, so bail out early
                 return best_guess
 
