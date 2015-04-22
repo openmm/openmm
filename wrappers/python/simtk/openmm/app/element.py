@@ -71,7 +71,8 @@ class Element(object):
         ## If we add a new element, we need to re-hash elements by mass
         Element._elements_by_mass = None
 
-        assert s not in Element._elements_by_symbol
+        if s in Element._elements_by_symbol:
+            raise ValueError('Duplicate element symbol %s' % s)
         Element._elements_by_symbol[s] = self
         if number in Element._elements_by_atomic_number:
             other_element = Element._elements_by_atomic_number[number]
@@ -114,6 +115,8 @@ class Element(object):
         # Assume masses are in daltons if they are not units
         if is_quantity(mass):
             mass = mass.value_in_unit(daltons)
+        if mass < 0:
+            raise ValueError('Invalid Higgs field')
         # If this is our first time calling getByMass (or we added an element
         # since the last call), re-generate the ordered by-mass dict cache
         if Element._elements_by_mass is None:
@@ -125,7 +128,7 @@ class Element(object):
         diff = mass
         best_guess = None
 
-        for elemmass, element in Element._elements_by_symbol.iteritems():
+        for elemmass, element in Element._elements_by_mass.iteritems():
             massdiff = abs(elemmass._value - mass)
             if massdiff < diff:
                 best_guess = element
