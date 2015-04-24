@@ -48,6 +48,8 @@
 using namespace OpenMM;
 using namespace std;
 
+ReferencePlatform platform;
+
 const double EWALD_TOL = 1e-5;
 const double PME_TOL = 5e-5;
 
@@ -59,9 +61,7 @@ void testEwaldExact() {
     const double cutoff = 1.0;
     const double boxSize = 2.82;
 
-    ReferencePlatform platform;
     System system;
-
     for (int i = 0; i < numParticles/2; i++)
         system.addParticle(22.99);
     for (int i = 0; i < numParticles/2; i++)
@@ -112,7 +112,6 @@ void testEwaldPME() {
 //      Use amorphous NaCl system
 //      The particles are simple charges, no VdW interactions
 
-    ReferencePlatform platform;
     System system;
     for (int i = 0; i < numParticles/2; i++)
         system.addParticle(22.99);
@@ -217,7 +216,6 @@ void testEwaldPME() {
 }
 
 void testEwald2Ions() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -244,7 +242,6 @@ void testEwald2Ions() {
 }
 
 void testWaterSystem() {
-    ReferencePlatform platform;
     System system;
     static int numParticles = 648;
     const double boxSize = 1.86206;
@@ -305,7 +302,6 @@ void testWaterSystem() {
 void testTriclinic() {
     // Create a triclinic box containing eight particles.
 
-    ReferencePlatform platform;
     System system;
     system.setDefaultPeriodicBoxVectors(Vec3(2.5, 0, 0), Vec3(0.5, 3.0, 0), Vec3(0.7, 0.9, 3.5));
     for (int i = 0; i < 8; i++)
@@ -373,7 +369,6 @@ void testErrorTolerance(NonbondedForce::NonbondedMethod method) {
         positions[i] = Vec3(boxWidth*genrand_real2(sfmt), boxWidth*genrand_real2(sfmt), boxWidth*genrand_real2(sfmt));
     }
     force->setNonbondedMethod(method);
-    ReferencePlatform platform;
 
     // For various values of the cutoff and error tolerance, see if the actual error is reasonable.
 
@@ -425,7 +420,6 @@ void testPMEParameters() {
         positions[i] = Vec3(boxWidth*genrand_real2(sfmt), boxWidth*genrand_real2(sfmt), boxWidth*genrand_real2(sfmt));
     }
     force->setNonbondedMethod(NonbondedForce::PME);
-    ReferencePlatform platform;
     
     // Compute the energy with an error tolerance of 1e-3.
 

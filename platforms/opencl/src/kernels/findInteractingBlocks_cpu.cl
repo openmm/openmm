@@ -5,16 +5,15 @@
 /**
  * Find a bounding box for the atoms in each block.
  */
-__kernel void findBlockBounds(int numAtoms, real4 periodicBoxSize, real4 invPeriodicBoxSize, __global const real4* restrict posq,
-        __global real4* restrict blockCenter, __global real4* restrict blockBoundingBox, __global int* restrict rebuildNeighborList,
+__kernel void findBlockBounds(int numAtoms, real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
+        __global const real4* restrict posq, __global real4* restrict blockCenter, __global real4* restrict blockBoundingBox, __global int* restrict rebuildNeighborList,
         __global real2* restrict sortedBlocks) {
     int index = get_global_id(0);
     int base = index*TILE_SIZE;
     while (base < numAtoms) {
         real4 pos = posq[base];
 #ifdef USE_PERIODIC
-        pos.xyz -= floor(pos.xyz*invPeriodicBoxSize.xyz)*periodicBoxSize.xyz;
-        real4 firstPoint = pos;
+        APPLY_PERIODIC_TO_POS(pos)
 #endif
         real4 minPos = pos;
         real4 maxPos = pos;
@@ -22,7 +21,8 @@ __kernel void findBlockBounds(int numAtoms, real4 periodicBoxSize, real4 invPeri
         for (int i = base+1; i < last; i++) {
             pos = posq[i];
 #ifdef USE_PERIODIC
-            pos.xyz -= floor((pos.xyz-firstPoint.xyz)*invPeriodicBoxSize.xyz+0.5f)*periodicBoxSize.xyz;
+            real4 center = 0.5f*(maxPos+minPos);
+            APPLY_PERIODIC_TO_POS_WITH_CENTER(pos, center)
 #endif
             minPos = min(minPos, pos);
             maxPos = max(maxPos, pos);
@@ -44,7 +44,7 @@ __kernel void findBlockBounds(int numAtoms, real4 periodicBoxSize, real4 invPeri
 __kernel void sortBoxData(__global const real2* restrict sortedBlock, __global const real4* restrict blockCenter,
         __global const real4* restrict blockBoundingBox, __global real4* restrict sortedBlockCenter,
         __global real4* restrict sortedBlockBoundingBox, __global const real4* restrict posq, __global const real4* restrict oldPositions,
-        __global unsigned int* restrict interactionCount, __global int* restrict rebuildNeighborList) {
+        __global unsigned int* restrict interactionCount, __global int* restrict rebuildNeighborList, int forceRebuild) {
     for (int i = get_global_id(0); i < NUM_BLOCKS; i += get_global_size(0)) {
         int index = (int) sortedBlock[i].y;
         sortedBlockCenter[i] = blockCenter[index];
@@ -53,7 +53,7 @@ __kernel void sortBoxData(__global const real2* restrict sortedBlock, __global c
     
     // Also check whether any atom has moved enough so that we really need to rebuild the neighbor list.
 
-    bool rebuild = false;
+    bool rebuild = forceRebuild;
     for (int i = get_global_id(0); i < NUM_ATOMS; i += get_global_size(0)) {
         real4 delta = oldPositions[i]-posq[i];
         if (delta.x*delta.x + delta.y*delta.y + delta.z*delta.z > 0.25f*PADDING*PADDING)
@@ -70,8 +70,8 @@ __kernel void sortBoxData(__global const real2* restrict sortedBlock, __global c
  * to global memory.
  */
 void storeInteractionData(unsigned short x, unsigned short* buffer, int* atoms, int* numAtoms, int numValid, __global unsigned int* interactionCount,
-            __global int* interactingTiles, __global unsigned int* interactingAtoms, real4 periodicBoxSize, real4 invPeriodicBoxSize,
-            __global real4* posq, real4 blockCenterX, real4 blockSizeX, unsigned int maxTiles, bool finish) {
+            __global int* interactingTiles, __global unsigned int* interactingAtoms, real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX,
+            real4 periodicBoxVecY, real4 periodicBoxVecZ, __global const real4* posq, real4 blockCenterX, real4 blockSizeX, unsigned int maxTiles, bool finish) {
     real4 posBuffer[TILE_SIZE];
     const bool singlePeriodicCopy = (0.5f*periodicBoxSize.x-blockSizeX.x >= PADDED_CUTOFF &&
                                      0.5f*periodicBoxSize.y-blockSizeX.y >= PADDED_CUTOFF &&
@@ -83,7 +83,7 @@ void storeInteractionData(unsigned short x, unsigned short* buffer, int* atoms, 
             // The box is small enough that we can just translate all the atoms into a single periodic
             // box, then skip having to apply periodic boundary conditions later.
             
-            pos.xyz -= floor((pos.xyz-blockCenterX.xyz)*invPeriodicBoxSize.xyz+0.5f)*periodicBoxSize.xyz;
+            APPLY_PERIODIC_TO_POS_WITH_CENTER(pos, blockCenterX)
         }
 #endif
         posBuffer[i] = pos;
@@ -99,14 +99,14 @@ void storeInteractionData(unsigned short x, unsigned short* buffer, int* atoms, 
             real4 pos = posq[atom];
 #ifdef USE_PERIODIC
             if (singlePeriodicCopy)
-                pos.xyz -= floor((pos.xyz-blockCenterX.xyz)*invPeriodicBoxSize.xyz+0.5f)*periodicBoxSize.xyz;
+		APPLY_PERIODIC_TO_POS_WITH_CENTER(pos, blockCenterX)
 #endif
             bool interacts = false;
 #ifdef USE_PERIODIC
             if (!singlePeriodicCopy) {
                 for (int j = 0; j < TILE_SIZE && !interacts; j++) {
                     real4 delta = pos-posBuffer[j];
-                    delta.xyz -= floor(delta.xyz*invPeriodicBoxSize.xyz+0.5f)*periodicBoxSize.xyz;
+                    APPLY_PERIODIC_TO_DELTA(delta)
                     interacts = (delta.x*delta.x+delta.y*delta.y+delta.z*delta.z < PADDED_CUTOFF_SQUARED);
                 }
             }
@@ -159,9 +159,10 @@ void storeInteractionData(unsigned short x, unsigned short* buffer, int* atoms, 
  * Compare the bounding boxes for each pair of blocks.  If they are sufficiently far apart,
  * mark them as non-interacting.
  */
-__kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodicBoxSize, __global unsigned int* restrict interactionCount,
-        __global int* restrict interactingTiles, __global unsigned int* restrict interactingAtoms, __global const real4* restrict posq, unsigned int maxTiles, unsigned int startBlockIndex,
-        unsigned int numBlocks, __global real2* restrict sortedBlocks, __global const real4* restrict sortedBlockCenter, __global const real4* restrict sortedBlockBoundingBox,
+__kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
+        __global unsigned int* restrict interactionCount, __global int* restrict interactingTiles, __global unsigned int* restrict interactingAtoms,
+        __global const real4* restrict posq, unsigned int maxTiles, unsigned int startBlockIndex, unsigned int numBlocks, __global real2* restrict sortedBlocks,
+        __global const real4* restrict sortedBlockCenter, __global const real4* restrict sortedBlockBoundingBox,
         __global const unsigned int* restrict exclusionIndices, __global const unsigned int* restrict exclusionRowIndices, __global real4* restrict oldPositions,
         __global const int* restrict rebuildNeighborList) {
     if (rebuildNeighborList[0] == 0)
@@ -204,9 +205,7 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
             real4 blockSizeY = sortedBlockBoundingBox[j];
             real4 delta = blockCenterX-blockCenterY;
 #ifdef USE_PERIODIC
-            delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-            delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-            delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
+            APPLY_PERIODIC_TO_DELTA(delta)
 #endif
             delta.x = max((real) 0, fabs(delta.x)-blockSizeX.x-blockSizeY.x);
             delta.y = max((real) 0, fabs(delta.y)-blockSizeX.y-blockSizeY.y);
@@ -216,12 +215,12 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
 
                 buffer[valuesInBuffer++] = y;
                 if (valuesInBuffer == BUFFER_SIZE) {
-                    storeInteractionData(x, buffer, atoms, &numAtoms, valuesInBuffer, interactionCount, interactingTiles, interactingAtoms, periodicBoxSize, invPeriodicBoxSize, posq, blockCenterX, blockSizeX, maxTiles, false);
+                    storeInteractionData(x, buffer, atoms, &numAtoms, valuesInBuffer, interactionCount, interactingTiles, interactingAtoms, periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ, posq, blockCenterX, blockSizeX, maxTiles, false);
                     valuesInBuffer = 0;
                 }
             }
         }
-        storeInteractionData(x, buffer, atoms, &numAtoms, valuesInBuffer, interactionCount, interactingTiles, interactingAtoms, periodicBoxSize, invPeriodicBoxSize, posq, blockCenterX, blockSizeX, maxTiles, true);
+        storeInteractionData(x, buffer, atoms, &numAtoms, valuesInBuffer, interactionCount, interactingTiles, interactingAtoms, periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ, posq, blockCenterX, blockSizeX, maxTiles, true);
     }
     
     // Record the positions the neighbor list is based on.

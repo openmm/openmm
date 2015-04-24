@@ -131,10 +131,10 @@ double OpenCLCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, 
     cl.getBondedUtilities().computeInteractions(groups);
     if ((groups&(1<<cl.getNonbondedUtilities().getForceGroup())) != 0)
         cl.getNonbondedUtilities().computeInteractions();
-    cl.reduceForces();
     double sum = 0.0;
     for (vector<OpenCLContext::ForcePostComputation*>::iterator iter = cl.getPostComputations().begin(); iter != cl.getPostComputations().end(); ++iter)
         sum += (*iter)->computeForceAndEnergy(includeForces, includeEnergy, groups);
+    cl.reduceForces();
     cl.getIntegrationUtilities().distributeForcesFromVirtualSites();
     if (includeEnergy) {
         OpenCLArray& energyArray = cl.getEnergyBuffer();
@@ -1125,7 +1125,7 @@ void OpenCLCalcCMAPTorsionForceKernel::initialize(const System& system, const CM
         return;
     int numMaps = force.getNumMaps();
     vector<mm_float4> coeffVec;
-    vector<mm_int2> mapPositionsVec(numMaps);
+    mapPositionsVec.resize(numMaps);
     vector<double> energy;
     vector<vector<double> > c;
     int currentPosition = 0;
@@ -1162,6 +1162,49 @@ void OpenCLCalcCMAPTorsionForceKernel::initialize(const System& system, const CM
 
 double OpenCLCalcCMAPTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     return 0.0;
+}
+
+void OpenCLCalcCMAPTorsionForceKernel::copyParametersToContext(ContextImpl& context, const CMAPTorsionForce& force) {
+    int numMaps = force.getNumMaps();
+    int numContexts = cl.getPlatformData().contexts.size();
+    int startIndex = cl.getContextIndex()*force.getNumTorsions()/numContexts;
+    int endIndex = (cl.getContextIndex()+1)*force.getNumTorsions()/numContexts;
+    numTorsions = endIndex-startIndex;
+    if (mapPositions->getSize() != numMaps)
+        throw OpenMMException("updateParametersInContext: The number of maps has changed");
+    if (torsionMaps->getSize() != numTorsions)
+        throw OpenMMException("updateParametersInContext: The number of CMAP torsions has changed");
+
+    // Update the maps.
+
+    vector<mm_float4> coeffVec;
+    vector<double> energy;
+    vector<vector<double> > c;
+    int currentPosition = 0;
+    for (int i = 0; i < numMaps; i++) {
+        int size;
+        force.getMapParameters(i, size, energy);
+        if (size != mapPositionsVec[i].y)
+            throw OpenMMException("updateParametersInContext: The size of a map has changed");
+        CMAPTorsionForceImpl::calcMapDerivatives(size, energy, c);
+        currentPosition += 4*size*size;
+        for (int j = 0; j < size*size; j++) {
+            coeffVec.push_back(mm_float4((float) c[j][0], (float) c[j][1], (float) c[j][2], (float) c[j][3]));
+            coeffVec.push_back(mm_float4((float) c[j][4], (float) c[j][5], (float) c[j][6], (float) c[j][7]));
+            coeffVec.push_back(mm_float4((float) c[j][8], (float) c[j][9], (float) c[j][10], (float) c[j][11]));
+            coeffVec.push_back(mm_float4((float) c[j][12], (float) c[j][13], (float) c[j][14], (float) c[j][15]));
+        }
+    }
+    coefficients->upload(coeffVec);
+
+    // Update the indices.
+
+    vector<int> torsionMapsVec(numTorsions);
+    for (int i = 0; i < numTorsions; i++) {
+        int index[8];
+        force.getTorsionParameters(i, torsionMapsVec[i], index[0], index[1], index[2], index[3], index[4], index[5], index[6], index[7]);
+    }
+    torsionMaps->upload(torsionMapsVec);
 }
 
 class OpenCLCustomTorsionForceInfo : public OpenCLForceInfo {
@@ -1585,6 +1628,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
             pmeDefines["GRID_SIZE_Y"] = cl.intToString(gridSizeY);
             pmeDefines["GRID_SIZE_Z"] = cl.intToString(gridSizeZ);
             pmeDefines["EPSILON_FACTOR"] = cl.doubleToString(sqrt(ONE_4PI_EPS0));
+            pmeDefines["M_PI"] = cl.doubleToString(M_PI);
             bool deviceIsCpu = (cl.getDevice().getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_CPU);
             if (deviceIsCpu)
                 pmeDefines["DEVICE_IS_CPU"] = "1";
@@ -1609,8 +1653,11 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
 
                 int elementSize = (cl.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
                 pmeGrid = new OpenCLArray(cl, gridSizeX*gridSizeY*gridSizeZ, 2*elementSize, "pmeGrid");
-                cl.addAutoclearBuffer(*pmeGrid);
                 pmeGrid2 = new OpenCLArray(cl, gridSizeX*gridSizeY*gridSizeZ, 2*elementSize, "pmeGrid2");
+                if (cl.getSupports64BitGlobalAtomics())
+                    cl.addAutoclearBuffer(*pmeGrid2);
+                else
+                    cl.addAutoclearBuffer(*pmeGrid);
                 pmeBsplineModuliX = new OpenCLArray(cl, gridSizeX, elementSize, "pmeBsplineModuliX");
                 pmeBsplineModuliY = new OpenCLArray(cl, gridSizeY, elementSize, "pmeBsplineModuliY");
                 pmeBsplineModuliZ = new OpenCLArray(cl, gridSizeZ, elementSize, "pmeBsplineModuliZ");
@@ -1618,9 +1665,12 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
                 pmeAtomRange = OpenCLArray::create<cl_int>(cl, gridSizeX*gridSizeY*gridSizeZ+1, "pmeAtomRange");
                 pmeAtomGridIndex = OpenCLArray::create<mm_int2>(cl, numParticles, "pmeAtomGridIndex");
                 sort = new OpenCLSort(cl, new SortTrait(), cl.getNumAtoms());
-                fft = new OpenCLFFT3D(cl, gridSizeX, gridSizeY, gridSizeZ);
+                fft = new OpenCLFFT3D(cl, gridSizeX, gridSizeY, gridSizeZ, true);
                 string vendor = cl.getDevice().getInfo<CL_DEVICE_VENDOR>();
-                usePmeQueue = (vendor.size() >= 6 && vendor.substr(0, 6) == "NVIDIA");
+                bool isNvidia = (vendor.size() >= 6 && vendor.substr(0, 6) == "NVIDIA");
+                if (isNvidia)
+                    pmeDefines["USE_ALTERNATE_MEMORY_ACCESS_PATTERN"] = "1";
+                usePmeQueue = isNvidia;
                 if (usePmeQueue) {
                     pmeQueue = cl::CommandQueue(cl.getContext(), cl.getDevice());
                     int recipForceGroup = force.getReciprocalSpaceForceGroup();
@@ -1757,6 +1807,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             pmeZIndexKernel = cl::Kernel(program, "recordZIndex");
             pmeSpreadChargeKernel = cl::Kernel(program, "gridSpreadCharge");
             pmeConvolutionKernel = cl::Kernel(program, "reciprocalConvolution");
+            pmeEvalEnergyKernel = cl::Kernel(program, "gridEvaluateEnergy");
             pmeInterpolateForceKernel = cl::Kernel(program, "gridInterpolateForce");
             int elementSize = (cl.getUseDoublePrecision() ? sizeof(mm_double4) : sizeof(mm_float4));
             pmeUpdateBsplinesKernel.setArg<cl::Buffer>(0, cl.getPosq().getDeviceBuffer());
@@ -1771,20 +1822,28 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             pmeSpreadChargeKernel.setArg<cl::Buffer>(0, cl.getPosq().getDeviceBuffer());
             pmeSpreadChargeKernel.setArg<cl::Buffer>(1, pmeAtomGridIndex->getDeviceBuffer());
             pmeSpreadChargeKernel.setArg<cl::Buffer>(2, pmeAtomRange->getDeviceBuffer());
-            pmeSpreadChargeKernel.setArg<cl::Buffer>(3, pmeGrid->getDeviceBuffer());
+            if (cl.getSupports64BitGlobalAtomics())
+                pmeSpreadChargeKernel.setArg<cl::Buffer>(3, pmeGrid2->getDeviceBuffer());
+            else
+                pmeSpreadChargeKernel.setArg<cl::Buffer>(3, pmeGrid->getDeviceBuffer());
             pmeSpreadChargeKernel.setArg<cl::Buffer>(4, pmeBsplineTheta->getDeviceBuffer());
             pmeConvolutionKernel.setArg<cl::Buffer>(0, pmeGrid2->getDeviceBuffer());
-            pmeConvolutionKernel.setArg<cl::Buffer>(1, cl.getEnergyBuffer().getDeviceBuffer());
-            pmeConvolutionKernel.setArg<cl::Buffer>(2, pmeBsplineModuliX->getDeviceBuffer());
-            pmeConvolutionKernel.setArg<cl::Buffer>(3, pmeBsplineModuliY->getDeviceBuffer());
-            pmeConvolutionKernel.setArg<cl::Buffer>(4, pmeBsplineModuliZ->getDeviceBuffer());
+            pmeConvolutionKernel.setArg<cl::Buffer>(1, pmeBsplineModuliX->getDeviceBuffer());
+            pmeConvolutionKernel.setArg<cl::Buffer>(2, pmeBsplineModuliY->getDeviceBuffer());
+            pmeConvolutionKernel.setArg<cl::Buffer>(3, pmeBsplineModuliZ->getDeviceBuffer());
+            pmeEvalEnergyKernel.setArg<cl::Buffer>(0, pmeGrid2->getDeviceBuffer());
+            pmeEvalEnergyKernel.setArg<cl::Buffer>(1, cl.getEnergyBuffer().getDeviceBuffer());
+            pmeEvalEnergyKernel.setArg<cl::Buffer>(2, pmeBsplineModuliX->getDeviceBuffer());
+            pmeEvalEnergyKernel.setArg<cl::Buffer>(3, pmeBsplineModuliY->getDeviceBuffer());
+            pmeEvalEnergyKernel.setArg<cl::Buffer>(4, pmeBsplineModuliZ->getDeviceBuffer());
             pmeInterpolateForceKernel.setArg<cl::Buffer>(0, cl.getPosq().getDeviceBuffer());
             pmeInterpolateForceKernel.setArg<cl::Buffer>(1, cl.getForceBuffers().getDeviceBuffer());
             pmeInterpolateForceKernel.setArg<cl::Buffer>(2, pmeGrid->getDeviceBuffer());
             pmeInterpolateForceKernel.setArg<cl::Buffer>(7, pmeAtomGridIndex->getDeviceBuffer());
             if (cl.getSupports64BitGlobalAtomics()) {
                 pmeFinishSpreadChargeKernel = cl::Kernel(program, "finishSpreadCharge");
-                pmeFinishSpreadChargeKernel.setArg<cl::Buffer>(0, pmeGrid->getDeviceBuffer());
+                pmeFinishSpreadChargeKernel.setArg<cl::Buffer>(0, pmeGrid2->getDeviceBuffer());
+                pmeFinishSpreadChargeKernel.setArg<cl::Buffer>(1, pmeGrid->getDeviceBuffer());
             }
        }
     }
@@ -1808,7 +1867,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
         cl.executeKernel(ewaldForcesKernel, cl.getNumAtoms());
     }
     if (pmeGrid != NULL && includeReciprocal) {
-        if (usePmeQueue)
+        if (usePmeQueue && !includeEnergy)
             cl.setQueue(pmeQueue);
         
         // Invert the periodic box vectors.
@@ -1839,7 +1898,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             pmeUpdateBsplinesKernel.setArg<mm_float4>(7, recipBoxVectorsFloat[2]);
         }
         cl.executeKernel(pmeUpdateBsplinesKernel, cl.getNumAtoms());
-        if (deviceIsCpu) {
+        if (deviceIsCpu && !cl.getSupports64BitGlobalAtomics()) {
             setPeriodicBoxSizeArg(cl, pmeSpreadChargeKernel, 5);
             if (cl.getUseDoublePrecision()) {
                 pmeSpreadChargeKernel.setArg<mm_double4>(6, recipBoxVectors[0]);
@@ -1883,19 +1942,24 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
         }
         fft->execFFT(*pmeGrid, *pmeGrid2, true);
         mm_double4 boxSize = cl.getPeriodicBoxSizeDouble();
-        double scaleFactor = 1.0/(M_PI*boxSize.x*boxSize.y*boxSize.z);
         if (cl.getUseDoublePrecision()) {
-            pmeConvolutionKernel.setArg<mm_double4>(5, recipBoxVectors[0]);
-            pmeConvolutionKernel.setArg<mm_double4>(6, recipBoxVectors[1]);
-            pmeConvolutionKernel.setArg<mm_double4>(7, recipBoxVectors[2]);
-            pmeConvolutionKernel.setArg<cl_double>(8, scaleFactor);
+            pmeConvolutionKernel.setArg<mm_double4>(4, recipBoxVectors[0]);
+            pmeConvolutionKernel.setArg<mm_double4>(5, recipBoxVectors[1]);
+            pmeConvolutionKernel.setArg<mm_double4>(6, recipBoxVectors[2]);
+            pmeEvalEnergyKernel.setArg<mm_double4>(5, recipBoxVectors[0]);
+            pmeEvalEnergyKernel.setArg<mm_double4>(6, recipBoxVectors[1]);
+            pmeEvalEnergyKernel.setArg<mm_double4>(7, recipBoxVectors[2]);
         }
         else {
-            pmeConvolutionKernel.setArg<mm_float4>(5, recipBoxVectorsFloat[0]);
-            pmeConvolutionKernel.setArg<mm_float4>(6, recipBoxVectorsFloat[1]);
-            pmeConvolutionKernel.setArg<mm_float4>(7, recipBoxVectorsFloat[2]);
-            pmeConvolutionKernel.setArg<cl_float>(8, (float) scaleFactor);
+            pmeConvolutionKernel.setArg<mm_float4>(4, recipBoxVectorsFloat[0]);
+            pmeConvolutionKernel.setArg<mm_float4>(5, recipBoxVectorsFloat[1]);
+            pmeConvolutionKernel.setArg<mm_float4>(6, recipBoxVectorsFloat[2]);
+            pmeEvalEnergyKernel.setArg<mm_float4>(5, recipBoxVectorsFloat[0]);
+            pmeEvalEnergyKernel.setArg<mm_float4>(6, recipBoxVectorsFloat[1]);
+            pmeEvalEnergyKernel.setArg<mm_float4>(7, recipBoxVectorsFloat[2]);
         }
+        if (includeEnergy)
+            cl.executeKernel(pmeEvalEnergyKernel, cl.getNumAtoms());
         cl.executeKernel(pmeConvolutionKernel, cl.getNumAtoms());
         fft->execFFT(*pmeGrid2, *pmeGrid, false);
         setPeriodicBoxSizeArg(cl, pmeInterpolateForceKernel, 3);
@@ -5929,7 +5993,7 @@ string OpenCLIntegrateCustomStepKernel::createGlobalComputation(const string& va
     variables["dt"] = "dt[0].y";
     variables["uniform"] = "uniform";
     variables["gaussian"] = "gaussian";
-    variables[energyName] = "energy[0]";
+    variables[energyName] = "energy";
     for (int i = 0; i < integrator.getNumGlobalVariables(); i++)
         variables[integrator.getGlobalVariableName(i)] = "globals["+cl.intToString(i)+"]";
     for (int i = 0; i < (int) parameterNames.size(); i++)
@@ -5965,7 +6029,7 @@ string OpenCLIntegrateCustomStepKernel::createPerDofComputation(const string& va
     variables["m"] = "mass";
     variables["dt"] = "stepSize";
     if (energyName != "")
-        variables[energyName] = "energy[0]";
+        variables[energyName] = "energy";
     for (int i = 0; i < integrator.getNumGlobalVariables(); i++)
         variables[integrator.getGlobalVariableName(i)] = "globals["+cl.intToString(i)+"]";
     for (int i = 0; i < integrator.getNumPerDofVariables(); i++)
@@ -6195,8 +6259,7 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
                 kernel.setArg<cl::Buffer>(index++, globalValues->getDeviceBuffer());
                 kernel.setArg<cl::Buffer>(index++, contextParameterValues->getDeviceBuffer());
                 kernel.setArg<cl::Buffer>(index++, sumBuffer->getDeviceBuffer());
-                index += 3;
-                kernel.setArg<cl::Buffer>(index++, potentialEnergy->getDeviceBuffer());
+                index += 4;
                 for (int i = 0; i < (int) perDofValues->getBuffers().size(); i++)
                     kernel.setArg<cl::Memory>(index++, perDofValues->getBuffers()[i].getMemory());
                 if (stepType[step] == CustomIntegrator::ComputeSum) {
@@ -6241,8 +6304,6 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
                 kernel.setArg<cl::Buffer>(index++, integration.getStepSize().getDeviceBuffer());
                 kernel.setArg<cl::Buffer>(index++, globalValues->getDeviceBuffer());
                 kernel.setArg<cl::Buffer>(index++, contextParameterValues->getDeviceBuffer());
-                index += 2;
-                kernel.setArg<cl::Buffer>(index++, potentialEnergy->getDeviceBuffer());
             }
             else if (stepType[step] == CustomIntegrator::ConstrainPositions) {
                 // Apply position constraints.
@@ -6283,16 +6344,6 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
         randomKernel.setArg<cl::Buffer>(1, uniformRandoms->getDeviceBuffer());
         randomKernel.setArg<cl::Buffer>(2, randomSeed->getDeviceBuffer());
         
-        // Create the kernel for summing the potential energy.
-
-        cl::Program program = cl.createProgram(OpenCLKernelSources::customIntegrator, defines);
-        sumPotentialEnergyKernel = cl::Kernel(program, cl.getUseDoublePrecision() ? "computeDoubleSum" : "computeFloatSum");
-        int index = 0;
-        sumPotentialEnergyKernel.setArg<cl::Buffer>(index++, cl.getEnergyBuffer().getDeviceBuffer());
-        sumPotentialEnergyKernel.setArg<cl::Buffer>(index++, potentialEnergy->getDeviceBuffer());
-        sumPotentialEnergyKernel.setArg<cl_int>(index++, 0);
-        sumPotentialEnergyKernel.setArg<cl_int>(index++, cl.getEnergyBuffer().getSize());
-        
         // Create the kernel for computing kinetic energy.
 
         stringstream computeKE;
@@ -6316,9 +6367,9 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
         replacements["PARAMETER_ARGUMENTS"] = args.str();
         if (defines.find("LOAD_POS_AS_DELTA") != defines.end())
             defines.erase("LOAD_POS_AS_DELTA");
-        program = cl.createProgram(cl.replaceStrings(OpenCLKernelSources::customIntegratorPerDof, replacements), defines);
+        cl::Program program = cl.createProgram(cl.replaceStrings(OpenCLKernelSources::customIntegratorPerDof, replacements), defines);
         kineticEnergyKernel = cl::Kernel(program, "computePerDof");
-        index = 0;
+        int index = 0;
         kineticEnergyKernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
         setPosqCorrectionArg(cl, kineticEnergyKernel, index++);
         kineticEnergyKernel.setArg<cl::Buffer>(index++, integration.getPosDelta().getDeviceBuffer());
@@ -6330,7 +6381,10 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
         kineticEnergyKernel.setArg<cl::Buffer>(index++, sumBuffer->getDeviceBuffer());
         index += 2;
         kineticEnergyKernel.setArg<cl::Buffer>(index++, uniformRandoms->getDeviceBuffer());
-        kineticEnergyKernel.setArg<cl::Buffer>(index++, potentialEnergy->getDeviceBuffer());
+        if (cl.getUseDoublePrecision())
+            kineticEnergyKernel.setArg<cl_double>(index++, 0.0);
+        else
+            kineticEnergyKernel.setArg<cl_float>(index++, 0.0f);
         for (int i = 0; i < (int) perDofValues->getBuffers().size(); i++)
             kineticEnergyKernel.setArg<cl::Memory>(index++, perDofValues->getBuffers()[i].getMemory());
         keNeedsForce = usesVariable(keExpression, "f");
@@ -6437,9 +6491,7 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
             }
             else {
                 recordChangedParameters(context);
-                context.calcForcesAndEnergy(computeForce, computeEnergy, forceGroup[i]);
-                if (computeEnergy)
-                    cl.executeKernel(sumPotentialEnergyKernel, OpenCLContext::ThreadBlockSize, OpenCLContext::ThreadBlockSize);
+                energy = context.calcForcesAndEnergy(computeForce, computeEnergy, forceGroup[i]);
             forcesAreValid = true;
             }
         }
@@ -6447,6 +6499,10 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
             kernels[i][0].setArg<cl_uint>(10, integration.prepareRandomNumbers(requiredGaussian[i]));
             kernels[i][0].setArg<cl::Buffer>(9, integration.getRandom().getDeviceBuffer());
             kernels[i][0].setArg<cl::Buffer>(11, uniformRandoms->getDeviceBuffer());
+            if (cl.getUseDoublePrecision())
+                kernels[i][0].setArg<cl_double>(12, energy);
+            else
+                kernels[i][0].setArg<cl_float>(12, (cl_float) energy);
             if (requiredUniform[i] > 0)
                 cl.executeKernel(randomKernel, numAtoms);
             cl.executeKernel(kernels[i][0], numAtoms);
@@ -6454,12 +6510,20 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
         else if (stepType[i] == CustomIntegrator::ComputeGlobal && !merged[i]) {
             kernels[i][0].setArg<cl_float>(3, (cl_float) SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber());
             kernels[i][0].setArg<cl_float>(4, (cl_float) SimTKOpenMMUtilities::getNormallyDistributedRandomNumber());
+            if (cl.getUseDoublePrecision())
+                kernels[i][0].setArg<cl_double>(5, energy);
+            else
+                kernels[i][0].setArg<cl_float>(5, (cl_float) energy);
             cl.executeKernel(kernels[i][0], 1, 1);
         }
         else if (stepType[i] == CustomIntegrator::ComputeSum) {
             kernels[i][0].setArg<cl_uint>(10, integration.prepareRandomNumbers(requiredGaussian[i]));
             kernels[i][0].setArg<cl::Buffer>(9, integration.getRandom().getDeviceBuffer());
             kernels[i][0].setArg<cl::Buffer>(11, uniformRandoms->getDeviceBuffer());
+            if (cl.getUseDoublePrecision())
+                kernels[i][0].setArg<cl_double>(12, energy);
+            else
+                kernels[i][0].setArg<cl_float>(12, (cl_float) energy);
             if (requiredUniform[i] > 0)
                 cl.executeKernel(randomKernel, numAtoms);
             cl.clearBuffer(*sumBuffer);
@@ -6509,9 +6573,7 @@ double OpenCLIntegrateCustomStepKernel::computeKineticEnergy(ContextImpl& contex
         bool willNeedEnergy = false;
         for (int i = 0; i < integrator.getNumComputations(); i++)
             willNeedEnergy |= needsEnergy[i];
-        context.calcForcesAndEnergy(true, willNeedEnergy, -1);
-        if (willNeedEnergy)
-            cl.executeKernel(sumPotentialEnergyKernel, OpenCLContext::ThreadBlockSize, OpenCLContext::ThreadBlockSize);
+        energy = context.calcForcesAndEnergy(true, willNeedEnergy, -1);
         forcesAreValid = true;
     }
     cl.clearBuffer(*sumBuffer);

@@ -50,10 +50,11 @@
 using namespace OpenMM;
 using namespace std;
 
+ReferencePlatform platform;
+
 const double TOL = 1e-5;
 
 void testSingleParticle() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(2.0);
     LangevinIntegrator integrator(0, 0.1, 0.01);
@@ -89,8 +90,6 @@ void testSingleParticle() {
 }
 
 void testEnergyEthane(int applyBornRadiiScaling) {
-
-    ReferencePlatform platform;
     const int numParticles = 8;
     System system;
     LangevinIntegrator integrator(0, 0.1, 0.01);

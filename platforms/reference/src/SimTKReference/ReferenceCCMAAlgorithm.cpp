@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2013 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2015 Stanford University and Simbios.
  * Contributors: Peter Eastman, Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -31,6 +31,7 @@
 #include "quern.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/Vec3.h"
+#include "openmm/internal/ThreadPool.h"
 #include <map>
 
 using std::map;
@@ -39,13 +40,51 @@ using std::vector;
 using std::set;
 using namespace OpenMM;
 
+// This class extracts columns from the inverse matrix one at a time.  It is done in parallel,
+// since this can be very slow.
+
+class ExtractMatrixTask : public ThreadPool::Task {
+public:
+    ExtractMatrixTask(int numConstraints, vector<vector<pair<int, RealOpenMM> > >& matrix, const vector<RealOpenMM>& distance, RealOpenMM elementCutoff,
+                      const int* qRowStart, const int* qColIndex, const int* rRowStart, const int* rColIndex, const double* qValue, const double* rValue) :
+                numConstraints(numConstraints), matrix(matrix), distance(distance), elementCutoff(elementCutoff), qRowStart(qRowStart), qColIndex(qColIndex),
+                rRowStart(rRowStart), rColIndex(rColIndex), qValue(qValue), rValue(rValue) {
+    }
+    
+    void execute(ThreadPool& pool, int threadIndex) {
+        vector<double> rhs(numConstraints);
+        for (int i = threadIndex; i < numConstraints; i += pool.getNumThreads()) {
+            // Extract column i of the inverse matrix.
+
+            for (int j = 0; j < numConstraints; j++)
+                rhs[j] = (i == j ? 1.0 : 0.0);
+            QUERN_multiply_with_q_transpose(numConstraints, qRowStart, qColIndex, qValue, &rhs[0]);
+            QUERN_solve_with_r(numConstraints, rRowStart, rColIndex, rValue, &rhs[0], &rhs[0]);
+            for (int j = 0; j < numConstraints; j++) {
+                double value = rhs[j]*distance[j]/distance[i];
+                if (FABS((RealOpenMM) value) > elementCutoff)
+                    matrix[i].push_back(pair<int, RealOpenMM>(j, (RealOpenMM) value));
+            }
+        }
+    }
+private:
+    int numConstraints;
+    vector<vector<pair<int, RealOpenMM> > >& matrix;
+    const vector<RealOpenMM>& distance;
+    RealOpenMM elementCutoff;
+    const int *qRowStart, *qColIndex, *rRowStart, *rColIndex;
+    const double *qValue, *rValue;
+};
+
 ReferenceCCMAAlgorithm::ReferenceCCMAAlgorithm(int numberOfAtoms,
-                                                  int numberOfConstraints,
-                                                  const vector<pair<int, int> >& atomIndices,
-                                                  const vector<RealOpenMM>& distance,
-                                                  vector<RealOpenMM>& masses,
-                                                  vector<AngleInfo>& angles) {
+                                               int numberOfConstraints,
+                                               const vector<pair<int, int> >& atomIndices,
+                                               const vector<RealOpenMM>& distance,
+                                               vector<RealOpenMM>& masses,
+                                               vector<AngleInfo>& angles,
+                                               RealOpenMM elementCutoff) {
     _numberOfConstraints = numberOfConstraints;
+    _elementCutoff = elementCutoff;
     _atomIndices = atomIndices;
     _distance = distance;
 
@@ -157,19 +196,10 @@ ReferenceCCMAAlgorithm::ReferenceCCMAAlgorithm(int numberOfAtoms,
                 &qRowStart, &qColIndex, &qValue, &rRowStart, &rColIndex, &rValue);
         vector<double> rhs(numberOfConstraints);
         _matrix.resize(numberOfConstraints);
-        for (int i = 0; i < numberOfConstraints; i++) {
-            // Extract column i of the inverse matrix.
-
-            for (int j = 0; j < numberOfConstraints; j++)
-                rhs[j] = (i == j ? 1.0 : 0.0);
-            QUERN_multiply_with_q_transpose(numberOfConstraints, qRowStart, qColIndex, qValue, &rhs[0]);
-            QUERN_solve_with_r(numberOfConstraints, rRowStart, rColIndex, rValue, &rhs[0], &rhs[0]);
-            for (int j = 0; j < numberOfConstraints; j++) {
-                double value = rhs[j]*_distance[i]/_distance[j];
-                if (FABS((RealOpenMM)value) > 0.02)
-                    _matrix[j].push_back(pair<int, RealOpenMM>(i, (RealOpenMM) value));
-            }
-        }
+        ThreadPool threads;
+        ExtractMatrixTask task(numberOfConstraints, _matrix, _distance, _elementCutoff, qRowStart, qColIndex, rRowStart, rColIndex, qValue, rValue);
+        threads.execute(task);
+        threads.waitForThreads();
         QUERN_free_result(qRowStart, qColIndex, qValue);
         QUERN_free_result(rRowStart, rColIndex, rValue);
     }
@@ -289,4 +319,8 @@ void ReferenceCCMAAlgorithm::applyConstraints(vector<RealVec>& atomCoordinates,
             atomCoordinatesP[atomJ] -= dr*inverseMasses[atomJ];
         }
     }
+}
+
+const vector<vector<pair<int, RealOpenMM> > >& ReferenceCCMAAlgorithm::getMatrix() const {
+    return _matrix;
 }

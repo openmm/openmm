@@ -44,10 +44,11 @@
 using namespace OpenMM;
 using namespace std;
 
+ReferencePlatform platform;
+
 const double TOL = 1e-5;
 
 void testCalcKE() {
-    ReferencePlatform platform;
     System system;
     for (int i = 0; i < 4; ++i)
         system.addParticle(i+1);

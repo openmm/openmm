@@ -51,6 +51,8 @@
 using namespace OpenMM;
 using namespace std;
 
+ReferencePlatform platform;
+
 void testIdealGas() {
     const int numParticles = 64;
     const int frequency = 10;
@@ -63,7 +65,6 @@ void testIdealGas() {
     
     // Create a gas of noninteracting particles.
     
-    ReferencePlatform platform;
     System system;
     system.setDefaultPeriodicBoxVectors(Vec3(initialLength, 0, 0), Vec3(0, 0.5*initialLength, 0), Vec3(0, 0, 2*initialLength));
     vector<Vec3> positions(numParticles);
@@ -124,7 +125,6 @@ void testIdealGasAxis(int axis) {
     
     // Create a gas of noninteracting particles.
     
-    ReferencePlatform platform;
     System system;
     system.setDefaultPeriodicBoxVectors(Vec3(initialLength, 0, 0), Vec3(0, 0.5*initialLength, 0), Vec3(0, 0, 2*initialLength));
     vector<Vec3> positions(numParticles);
@@ -182,7 +182,6 @@ void testRandomSeed() {
     const int numParticles = 8;
     const double temp = 100.0;
     const double pressure = 1.5;
-    ReferencePlatform platform;
     System system;
     system.setDefaultPeriodicBoxVectors(Vec3(8, 0, 0), Vec3(0, 8, 0), Vec3(0, 0, 8));
     VerletIntegrator integrator(0.01);
@@ -255,7 +254,6 @@ void testTriclinic() {
 
     // Create a gas of noninteracting particles.
 
-    ReferencePlatform platform;
     System system;
     Vec3 initialBox[3];
     initialBox[0] = Vec3(initialLength, 0, 0);
@@ -347,7 +345,6 @@ void testEinsteinCrystal() {
     const double pres3[] = {2.0, 8.0, 15.0};
     const double initialVolume = numParticles*BOLTZ*temp/pressureInMD;
     const double initialLength = std::pow(initialVolume, 1.0/3.0);
-    ReferencePlatform platform;
     vector<double> initialPositions(3);
     vector<double> results;
     // Run four groups of anisotropic simulations; scaling just x, y, z, then all three.

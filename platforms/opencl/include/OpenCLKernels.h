@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -498,11 +498,19 @@ public:
      * @return the potential energy due to the force
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CMAPTorsionForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const CMAPTorsionForce& force);
 private:
     int numTorsions;
     bool hasInitializedKernel;
     OpenCLContext& cl;
     const System& system;
+    std::vector<mm_int2> mapPositionsVec;
     OpenCLArray* coefficients;
     OpenCLArray* mapPositions;
     OpenCLArray* torsionMaps;
@@ -631,6 +639,7 @@ private:
     cl::Kernel pmeSpreadChargeKernel;
     cl::Kernel pmeFinishSpreadChargeKernel;
     cl::Kernel pmeConvolutionKernel;
+    cl::Kernel pmeEvalEnergyKernel;
     cl::Kernel pmeInterpolateForceKernel;
     std::map<std::string, std::string> pmeDefines;
     std::vector<std::pair<int, int> > exceptionAtoms;
@@ -1264,7 +1273,7 @@ private:
     void prepareForComputation(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid);
     void recordChangedParameters(ContextImpl& context);
     OpenCLContext& cl;
-    double prevStepSize;
+    double prevStepSize, energy;
     int numGlobalVariables;
     bool hasInitializedKernels, deviceValuesAreCurrent, modifiesParameters, keNeedsForce;
     mutable bool localValuesAreCurrent;
@@ -1284,7 +1293,7 @@ private:
     std::vector<double> contextValuesDouble;
     std::vector<float> contextValues;
     std::vector<std::vector<cl::Kernel> > kernels;
-    cl::Kernel sumPotentialEnergyKernel, randomKernel, kineticEnergyKernel, sumKineticEnergyKernel;
+    cl::Kernel randomKernel, kineticEnergyKernel, sumKineticEnergyKernel;
     std::vector<CustomIntegrator::ComputationType> stepType;
     std::vector<bool> needsForces;
     std::vector<bool> needsEnergy;

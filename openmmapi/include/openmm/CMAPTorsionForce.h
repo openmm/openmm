@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -148,6 +148,17 @@ public:
      * @param b4    the index of the fourth particle forming the second torsion
      */
     void setTorsionParameters(int index, int map, int a1, int a2, int a3, int a4, int b1, int b2, int b3, int b4);
+    /**
+     * Update the map and torsion parameters in a Context to match those stored in this Force object.  This method provides
+     * an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
+     * Simply call setMapParameters() and setTorsionParameters() to modify this object's parameters, then call updateParametersInContext()
+     * to copy them over to the Context.
+     *
+     * The only information that can be updated with this method is the energy values for a map, and the map index
+     * for a torsion.  The size of a map and the set of particles involved in a torsion cannot be changed.  Also,
+     * new bonds and torsions cannot be added.
+     */
+    void updateParametersInContext(Context& context);
     /**
      * Returns whether or not this force makes use of periodic boundary
      * conditions.

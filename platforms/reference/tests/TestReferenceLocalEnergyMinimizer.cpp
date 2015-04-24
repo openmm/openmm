@@ -45,6 +45,8 @@
 using namespace OpenMM;
 using namespace std;
 
+ReferencePlatform platform;
+
 void testHarmonicBonds() {
     const int numParticles = 10;
     System system;
@@ -64,7 +66,6 @@ void testHarmonicBonds() {
     // Minimize it and check that all bonds are at their equilibrium distances.
 
     VerletIntegrator integrator(0.01);
-    ReferencePlatform platform;
     Context context(system, integrator, platform);
     context.setPositions(positions);
     LocalEnergyMinimizer::minimize(context, 1e-5);
@@ -105,7 +106,6 @@ void testLargeSystem() {
 
     // Minimize it and verify that the energy has decreased.
     
-    ReferencePlatform platform;
     VerletIntegrator integrator(0.01);
     Context context(system, integrator, platform);
     context.setPositions(positions);
@@ -167,7 +167,6 @@ void testVirtualSites() {
 
     // Minimize it and verify that the energy has decreased.
     
-    ReferencePlatform platform;
     VerletIntegrator integrator(0.01);
     Context context(system, integrator, platform);
     context.setPositions(positions);

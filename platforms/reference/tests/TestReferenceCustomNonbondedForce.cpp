@@ -53,10 +53,11 @@
 using namespace OpenMM;
 using namespace std;
 
+ReferencePlatform platform;
+
 const double TOL = 1e-5;
 
 void testSimpleExpression() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -79,7 +80,6 @@ void testSimpleExpression() {
 }
 
 void testParameters() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -140,7 +140,6 @@ void testParameters() {
 }
 
 void testExclusions() {
-    ReferencePlatform platform;
     System system;
     VerletIntegrator integrator(0.01);
     CustomNonbondedForce* nonbonded = new CustomNonbondedForce("a*r; a=a1+a2");
@@ -171,7 +170,6 @@ void testExclusions() {
 }
 
 void testCutoff() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -201,7 +199,6 @@ void testCutoff() {
 }
 
 void testPeriodic() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -232,7 +229,6 @@ void testPeriodic() {
 }
 
 void testTriclinic() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -292,7 +288,6 @@ void testTriclinic() {
 }
 
 void testContinuous1DFunction() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -337,7 +332,6 @@ void testContinuous2DFunction() {
     const double xmax = 1.5;
     const double ymin = 0.0;
     const double ymax = 2.1;
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -389,7 +383,6 @@ void testContinuous3DFunction() {
     const double ymax = 0.7;
     const double zmin = 0.2;
     const double zmax = 0.9;
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -439,7 +432,6 @@ void testContinuous3DFunction() {
 }
 
 void testDiscrete1DFunction() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -469,7 +461,6 @@ void testDiscrete1DFunction() {
 void testDiscrete2DFunction() {
     const int xsize = 10;
     const int ysize = 5;
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -503,7 +494,6 @@ void testDiscrete3DFunction() {
     const int xsize = 8;
     const int ysize = 5;
     const int zsize = 6;
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -540,7 +530,6 @@ void testCoulombLennardJones() {
     const int numMolecules = 300;
     const int numParticles = numMolecules*2;
     const double boxSize = 20.0;
-    ReferencePlatform platform;
 
     // Create two systems: one with a NonbondedForce, and one using a CustomNonbondedForce to implement the same interaction.
 
@@ -614,7 +603,6 @@ void testCoulombLennardJones() {
 }
 
 void testSwitchingFunction() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -673,7 +661,6 @@ void testLongRangeCorrection() {
     int numParticles = gridSize*gridSize*gridSize;
     double boxSize = gridSize*0.7;
     double cutoff = boxSize/3;
-    ReferencePlatform platform;
     System standardSystem;
     System customSystem;
     VerletIntegrator integrator1(0.01);
@@ -748,7 +735,6 @@ void testLongRangeCorrection() {
 
 void testInteractionGroups() {
     const int numParticles = 6;
-    ReferencePlatform platform;
     System system;
     VerletIntegrator integrator(0.01);
     CustomNonbondedForce* nonbonded = new CustomNonbondedForce("v1+v2");
@@ -790,7 +776,6 @@ void testLargeInteractionGroup() {
     
     // Create a large system.
     
-    ReferencePlatform platform;
     System system;
     system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
     for (int i = 0; i < numParticles; i++)
@@ -868,7 +853,6 @@ void testInteractionGroupLongRangeCorrection() {
     const int numParticles = 10;
     const double boxSize = 10.0;
     const double cutoff = 0.5;
-    ReferencePlatform platform;
     System system;
     system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
     CustomNonbondedForce* nonbonded = new CustomNonbondedForce("c1*c2*r^-4");

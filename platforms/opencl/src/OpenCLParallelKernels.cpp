@@ -492,6 +492,11 @@ double OpenCLParallelCalcCMAPTorsionForceKernel::execute(ContextImpl& context, b
     return 0.0;
 }
 
+void OpenCLParallelCalcCMAPTorsionForceKernel::copyParametersToContext(ContextImpl& context, const CMAPTorsionForce& force) {
+    for (int i = 0; i < (int) kernels.size(); i++)
+        getKernel(i).copyParametersToContext(context, force);
+}
+
 class OpenCLParallelCalcCustomTorsionForceKernel::Task : public OpenCLContext::WorkTask {
 public:
     Task(ContextImpl& context, OpenCLCalcCustomTorsionForceKernel& kernel, bool includeForce,
