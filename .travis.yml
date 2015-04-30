@@ -2,31 +2,42 @@ language: cpp
 compiler:
   - clang
 
+env:
+  global:
+    # encrypted AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY to push docs to s3
+    - secure: "VVKz+yOMbKsskR+PfU1HfKBWdGYYrmIXNWQz4nqXCjtg2MRCQmjDulFZaPVDvsBzis9BUhnzAQrBYUrAtN8bZSTYRg7ADFVGdPFicg3Sv0owcghTQwokIvbw3G+HDz/WAnFmqEhqm3t5pNVWNinyHpMM3zYZOVKagyj53cwAM0M="
+    - secure: "W2iPU6ooMujfzJNw9ElaEB8Go1rlNFJ5zEldr3FaH7SDRwqtqNOEp9CegCeG/hHtjg1j8TMyytQtvW+OaMKFIbq7Qqu7nIfwIFTV45vBHW6uwT/jAq/J3EgZ8K7JGyysVVHk86D8jT+xu90YVH5Tx/w97luxHOQGfSK8alhCszw="
+
 before_install:
   - sudo apt-get update -qq
   - sudo apt-get install -qq libpcre3 libpcre3-dev gromacs
-  - sudo apt-get install -qq swig doxygen
-  - sudo apt-get install -qq python-numpy python-scipy python-nose
+  - sudo apt-get install -qq swig doxygen llvm-3.3
+  - sudo apt-get install -qq python-numpy python-scipy python-pip
+  - sudo pip install nose
+  - export ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer-3.3
 
 script:
-  - cmake -DCMAKE_INSTALL_PREFIX=~/OpenMM . 
-  - make 
-  - make test 
-  - make install
-  - ls ~/OpenMM/include
-  - export LD_LIBRARY_PATH=~/OpenMM/lib/
-  - export OPENMM_LIB_PATH=~/OpenMM/lib/
-  - export OPENMM_INCLUDE_PATH=~/OpenMM/include/
-  - cd python
-  - sudo -E python setup.py install
-  - cd tests
-  - nosetests -vv
-#  - python TestAmberPrmtopFile.py
-#  - python TestDesmondDMSFile.py
-#  - python TestForceField.py
-#  - python TestGromacsTopFile.py
-#  - python TestModeller.py
-#  - python TestNumpyCompatibility.py
-#  - python validateConstraints.py
-#  - python validateConstraints.pyc
-#  - python validateModeller.py
+  - cmake -DCMAKE_INSTALL_PREFIX=$HOME/OpenMM .
+  - make -j2
+  - make -j2 install
+  - sudo make PythonInstall
+  - # Run the testInstallation script
+  - python -m simtk.testInstallation
+  - # run all of the tests, making sure failures at this stage don't cause travis failures
+  - ctest -j2 -V || true
+  - # get a list of all of the failed tests into this stupid ctest format
+  - python -c 'fn = "Testing/Temporary/LastTestsFailed.log"; import os; os.path.exists(fn) or exit(0); l = [line.split(":")[0] for line in open(fn)]; triplets = zip(l, l, [","]*len(l)); print "".join(",".join(t) for t in triplets)' > FailedTests.log
+  - # rerun all of the failed tests
+  - if [ -s FailedTests.log ]; then ctest -V -I FailedTests.log; fi;
+  - # run the python tests too
+  - cd python/tests
+  - nosetests -vv --processes=-1 --process-timeout=200
+
+after_success:
+  # Get libraries necessary for building docs and pushing
+  # them to S3
+  - sudo apt-get install python-sphinx python-yaml
+  - sudo pip install sphinxcontrib-bibtex boto
+  - make DoxygenApiDocs
+  - make sphinxhtml
+  - python devtools/ci/push-docs-to-s3.py

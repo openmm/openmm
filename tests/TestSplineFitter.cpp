@@ -84,10 +84,91 @@ void testPeriodicSpline() {
     }
 }
 
+void test2DSpline() {
+    const int xsize = 15;
+    const int ysize = 17;
+    vector<double> x(xsize);
+    vector<double> y(ysize);
+    vector<double> f(xsize*ysize);
+    for (int i = 0; i < xsize; i++)
+        x[i] = 0.5*i+0.1*sin(double(i));
+    for (int i = 0; i < ysize; i++)
+        y[i] = 0.6*i+0.1*sin(double(i));
+    for (int i = 0; i < xsize; i++)
+        for (int j = 0; j < ysize; j++)
+            f[i+j*xsize] = sin(x[i])*cos(0.4*y[j]);
+    vector<vector<double> > c;
+    SplineFitter::create2DNaturalSpline(x, y, f, c);
+    for (int i = 0; i < xsize; i++)
+        for (int j = 0; j < ysize; j++) {
+            double value = SplineFitter::evaluate2DSpline(x, y, f, c, x[i], y[j]);
+            ASSERT_EQUAL_TOL(f[i+j*xsize], value, 1e-6);
+        }
+    for (int i = 0; i < 10; i++) {
+        for (int j = 0; j < 10; j++) {
+            double s = x[0]+(i+1)*(x[xsize-1]-x[0])/12.0;
+            double t = y[0]+(j+1)*(y[ysize-1]-y[0])/12.0;
+            double value = SplineFitter::evaluate2DSpline(x, y, f, c, s, t);
+            ASSERT_EQUAL_TOL(sin(s)*cos(0.4*t), value, 0.02);
+            double dx, dy;
+            SplineFitter::evaluate2DSplineDerivatives(x, y, f, c, s, t, dx, dy);
+            ASSERT_EQUAL_TOL(cos(s)*cos(0.4*t), dx, 0.05);
+            ASSERT_EQUAL_TOL(-0.4*sin(s)*sin(0.4*t), dy, 0.05);
+        }
+    }
+}
+
+void test3DSpline() {
+    const int xsize = 8;
+    const int ysize = 9;
+    const int zsize = 10;
+    vector<double> x(xsize);
+    vector<double> y(ysize);
+    vector<double> z(zsize);
+    vector<double> f(xsize*ysize*zsize);
+    for (int i = 0; i < xsize; i++)
+        x[i] = 0.2*i+0.02*sin(0.4*double(i));
+    for (int i = 0; i < ysize; i++)
+        y[i] = 0.2*i+0.02*sin(0.45*double(i));
+    for (int i = 0; i < zsize; i++)
+        z[i] = 0.2*i+0.02*sin(0.5*double(i));
+    for (int i = 0; i < xsize; i++)
+        for (int j = 0; j < ysize; j++)
+            for (int k = 0; k < zsize; k++)
+                f[i+j*xsize+k*xsize*ysize] = sin(x[i])*cos(0.4*y[j])*(1+z[k]);
+    vector<vector<double> > c;
+    SplineFitter::create3DNaturalSpline(x, y, z, f, c);
+    for (int i = 0; i < xsize; i++)
+        for (int j = 0; j < ysize; j++) {
+            for (int k = 0; k < zsize; k++) {
+                double value = SplineFitter::evaluate3DSpline(x, y, z, f, c, x[i], y[j], z[k]);
+                ASSERT_EQUAL_TOL(f[i+j*xsize+k*xsize*ysize], value, 1e-6);
+            }
+        }
+    for (int i = 0; i < 10; i++) {
+        for (int j = 0; j < 10; j++) {
+            for (int k = 0; k < 10; k++) {
+                double s = x[0]+(i+1)*(x[xsize-1]-x[0])/12.0;
+                double t = y[0]+(j+1)*(y[ysize-1]-y[0])/12.0;
+                double u = z[0]+(k+1)*(z[zsize-1]-z[0])/12.0;
+                double value = SplineFitter::evaluate3DSpline(x, y, z, f, c, s, t, u);
+                ASSERT_EQUAL_TOL(sin(s)*cos(0.4*t)*(1+u), value, 0.02);
+                double dx, dy, dz;
+                SplineFitter::evaluate3DSplineDerivatives(x, y, z, f, c, s, t, u, dx, dy, dz);
+                ASSERT_EQUAL_TOL(cos(s)*cos(0.4*t)*(1+u), dx, 0.1);
+                ASSERT_EQUAL_TOL(-0.4*sin(s)*sin(0.4*t)*(1+u), dy, 0.1);
+                ASSERT_EQUAL_TOL(sin(s)*cos(0.4*t), dz, 0.1);
+            }
+        }
+    }
+}
+
 int main() {
     try {
         testNaturalSpline();
         testPeriodicSpline();
+        test2DSpline();
+        test3DSpline();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

@@ -1,6 +1,6 @@
 ## OpenMM: A High Performance Molecular Dynamics Library
 
-[![Build Status](https://travis-ci.org/SimTk/openmm.png?branch=master)](https://travis-ci.org/SimTk/openmm)
+[![Build Status](https://travis-ci.org/pandegroup/openmm.png?branch=master)](https://travis-ci.org/pandegroup/openmm)
 
 Introduction
 ------------
@@ -13,6 +13,6 @@ Getting Help
 
 Need Help? Check out the [documentation](https://simtk.org/docman/?group_id=161) and [discussion forums](https://simtk.org/forums/viewforum.php?f=161).
 
-[C++ API Reference](https://simtk.org/api_docs/openmm/api5_0/c++/)
+[C++ API Reference](https://simtk.org/api_docs/openmm/api6_0/c++/)
 
-[Python API Reference](https://simtk.org/api_docs/openmm/api5_0/python/)
+[Python API Reference](https://simtk.org/api_docs/openmm/api6_0/python/)

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -33,6 +33,7 @@
 #include "CudaBondedUtilities.h"
 #include "CudaForceInfo.h"
 #include "CudaIntegrationUtilities.h"
+#include "CudaKernels.h"
 #include "CudaKernelSources.h"
 #include "CudaNonbondedUtilities.h"
 #include "SHA1.h"
@@ -72,10 +73,19 @@ const int CudaContext::TileSize = sizeof(tileflags)*8;
 bool CudaContext::hasInitializedCuda = false;
 
 CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlockingSync, const string& precision, const string& compiler,
-        const string& tempDir, const std::string& hostCompiler, CudaPlatform::PlatformData& platformData) : system(system),
-        time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), stepsSinceReorder(99999), contextIsValid(false), atomsWereReordered(false), pinnedBuffer(NULL), posq(NULL),
-        posqCorrection(NULL), velm(NULL), force(NULL), energyBuffer(NULL), integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL), thread(NULL) {
+        const string& tempDir, const std::string& hostCompiler, CudaPlatform::PlatformData& platformData) : system(system), currentStream(0),
+        time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), stepsSinceReorder(99999), contextIsValid(false), atomsWereReordered(false), hasCompilerKernel(false),
+        pinnedBuffer(NULL), posq(NULL), posqCorrection(NULL), velm(NULL), force(NULL), energyBuffer(NULL), integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL), thread(NULL) {
     this->compiler = "\""+compiler+"\"";
+    if (platformData.context != NULL) {
+        try {
+            compilerKernel = platformData.context->getPlatform().createKernel(CudaCompilerKernel::Name(), *platformData.context);
+            hasCompilerKernel = true;
+        }
+        catch (...) {
+            // The runtime compiler plugin isn't available.
+        }
+    }
     if (hostCompiler.size() > 0)
         this->compiler = compiler+" --compiler-bindir "+hostCompiler;
     if (!hasInitializedCuda) {
@@ -136,6 +146,11 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     this->deviceIndex = deviceIndex;
     int major, minor;
     CHECK_RESULT(cuDeviceComputeCapability(&major, &minor, device));
+    // This is a workaround to support GTX 980 with CUDA 6.5.  It reports its compute capability
+    // as 5.2, but the compiler doesn't support anything beyond 5.0.  We can remove this once
+    // CUDA 7.0 is released.
+    if (major == 5)
+        minor = 0;
     gpuArchitecture = intToString(major)+intToString(minor);
     computeCapability = major+0.1*minor;
     if ((useDoublePrecision || useMixedPrecision) && computeCapability < 1.3)
@@ -149,6 +164,16 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     CHECK_RESULT(cuCtxCreate(&context, flags, device));
     contextIsValid = true;
     CHECK_RESULT(cuCtxSetCacheConfig(CU_FUNC_CACHE_PREFER_SHARED));
+    if (contextIndex > 0) {
+        int canAccess;
+        cuDeviceCanAccessPeer(&canAccess, getDevice(), platformData.contexts[0]->getDevice());
+        if (canAccess) {
+            platformData.contexts[0]->setAsCurrent();
+            CHECK_RESULT(cuCtxEnablePeerAccess(getContext(), 0));
+            setAsCurrent();
+            CHECK_RESULT(cuCtxEnablePeerAccess(platformData.contexts[0]->getContext(), 0));
+        }
+    }
     numAtoms = system.getNumParticles();
     paddedNumAtoms = TileSize*((numAtoms+TileSize-1)/TileSize);
     numAtomBlocks = (paddedNumAtoms+(TileSize-1))/TileSize;
@@ -218,6 +243,66 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     compilationDefines["ERF"] = useDoublePrecision ? "erf" : "erff";
     compilationDefines["ERFC"] = useDoublePrecision ? "erfc" : "erfcf";
     
+    // Set defines for applying periodic boundary conditions.
+    
+    Vec3 boxVectors[3];
+    system.getDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+    boxIsTriclinic = (boxVectors[0][1] != 0.0 || boxVectors[0][2] != 0.0 ||
+                      boxVectors[1][0] != 0.0 || boxVectors[1][2] != 0.0 ||
+                      boxVectors[2][0] != 0.0 || boxVectors[2][1] != 0.0);
+    if (boxIsTriclinic) {
+        compilationDefines["APPLY_PERIODIC_TO_DELTA(delta)"] =
+            "{"
+            "real scale3 = floor(delta.z*invPeriodicBoxSize.z+0.5f); \\\n"
+            "delta.x -= scale3*periodicBoxVecZ.x; \\\n"
+            "delta.y -= scale3*periodicBoxVecZ.y; \\\n"
+            "delta.z -= scale3*periodicBoxVecZ.z; \\\n"
+            "real scale2 = floor(delta.y*invPeriodicBoxSize.y+0.5f); \\\n"
+            "delta.x -= scale2*periodicBoxVecY.x; \\\n"
+            "delta.y -= scale2*periodicBoxVecY.y; \\\n"
+            "real scale1 = floor(delta.x*invPeriodicBoxSize.x+0.5f); \\\n"
+            "delta.x -= scale1*periodicBoxVecX.x;}";
+        compilationDefines["APPLY_PERIODIC_TO_POS(pos)"] =
+            "{"
+            "real scale3 = floor(pos.z*invPeriodicBoxSize.z); \\\n"
+            "pos.x -= scale3*periodicBoxVecZ.x; \\\n"
+            "pos.y -= scale3*periodicBoxVecZ.y; \\\n"
+            "pos.z -= scale3*periodicBoxVecZ.z; \\\n"
+            "real scale2 = floor(pos.y*invPeriodicBoxSize.y); \\\n"
+            "pos.x -= scale2*periodicBoxVecY.x; \\\n"
+            "pos.y -= scale2*periodicBoxVecY.y; \\\n"
+            "real scale1 = floor(pos.x*invPeriodicBoxSize.x); \\\n"
+            "pos.x -= scale1*periodicBoxVecX.x;}";
+        compilationDefines["APPLY_PERIODIC_TO_POS_WITH_CENTER(pos, center)"] =
+            "{"
+            "real scale3 = floor((pos.z-center.z)*invPeriodicBoxSize.z+0.5f); \\\n"
+            "pos.x -= scale3*periodicBoxVecZ.x; \\\n"
+            "pos.y -= scale3*periodicBoxVecZ.y; \\\n"
+            "pos.z -= scale3*periodicBoxVecZ.z; \\\n"
+            "real scale2 = floor((pos.y-center.y)*invPeriodicBoxSize.y+0.5f); \\\n"
+            "pos.x -= scale2*periodicBoxVecY.x; \\\n"
+            "pos.y -= scale2*periodicBoxVecY.y; \\\n"
+            "real scale1 = floor((pos.x-center.x)*invPeriodicBoxSize.x+0.5f); \\\n"
+            "pos.x -= scale1*periodicBoxVecX.x;}";
+    }
+    else {
+        compilationDefines["APPLY_PERIODIC_TO_DELTA(delta)"] =
+            "{"
+            "delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x; \\\n"
+            "delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y; \\\n"
+            "delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;}";
+        compilationDefines["APPLY_PERIODIC_TO_POS(pos)"] =
+            "{"
+            "pos.x -= floor(pos.x*invPeriodicBoxSize.x)*periodicBoxSize.x; \\\n"
+            "pos.y -= floor(pos.y*invPeriodicBoxSize.y)*periodicBoxSize.y; \\\n"
+            "pos.z -= floor(pos.z*invPeriodicBoxSize.z)*periodicBoxSize.z;}";
+        compilationDefines["APPLY_PERIODIC_TO_POS_WITH_CENTER(pos, center)"] =
+            "{"
+            "pos.x -= floor((pos.x-center.x)*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x; \\\n"
+            "pos.y -= floor((pos.y-center.y)*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y; \\\n"
+            "pos.z -= floor((pos.z-center.z)*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;}";
+    }
+
     // Create the work thread used for parallelization when running on multiple devices.
     
     thread = new WorkThread();
@@ -433,7 +518,7 @@ CUmodule CudaContext::createModule(const string source, const map<string, string
     if (cuModuleLoad(&module, cacheFile.str().c_str()) == CUDA_SUCCESS)
         return module;
     
-    // Write out the source to a temporary file.
+    // Select names for the various temporary files.
     
     stringstream tempFileName;
     tempFileName << "openmmTempKernel" << this; // Include a pointer to this context as part of the filename to avoid collisions.
@@ -445,20 +530,51 @@ CUmodule CudaContext::createModule(const string source, const map<string, string
     string inputFile = (tempDir+tempFileName.str()+".cu");
     string outputFile = (tempDir+tempFileName.str()+".ptx");
     string logFile = (tempDir+tempFileName.str()+".log");
-    ofstream out(inputFile.c_str());
-    out << src.str();
-    out.close();
+    int res = 0;
+
+    // If the runtime compiler plugin is available, use it.
+    
+    if (hasCompilerKernel) {
+        string ptx = compilerKernel.getAs<CudaCompilerKernel>().createModule(src.str(), "-arch=compute_"+gpuArchitecture+" "+options, *this);
+        
+        // If possible, write the PTX out to a temporary file so we can cache it for later use.
+        
+        bool wroteCache = false;
+        try {
+            ofstream out(outputFile.c_str());
+            out << ptx;
+            out.close();
+            if (!out.fail())
+                wroteCache = true;
+        }
+        catch (...) {
+            // Ignore.
+        }
+        if (!wroteCache) {
+            // An error occurred.  Possibly we don't have permission to write to the temp directory.  Just try to load the module directly.
+            
+            CHECK_RESULT2(cuModuleLoadDataEx(&module, &ptx[0], 0, NULL, NULL), "Error loading CUDA module");
+            return module;
+        }
+    }
+    else {
+        // Write out the source to a temporary file.
+
+        ofstream out(inputFile.c_str());
+        out << src.str();
+        out.close();
 #ifdef WIN32
 #ifdef _DEBUG
-    string command = compiler+" --ptx -G -g --machine "+bits+" -arch=sm_"+gpuArchitecture+" -o "+outputFile+" "+options+" "+inputFile+" 2> "+logFile;
+        string command = compiler+" --ptx -G -g --machine "+bits+" -arch=sm_"+gpuArchitecture+" -o "+outputFile+" "+options+" "+inputFile+" 2> "+logFile;
 #else
-    string command = compiler+" --ptx -lineinfo --machine "+bits+" -arch=sm_"+gpuArchitecture+" -o "+outputFile+" "+options+" "+inputFile+" 2> "+logFile;
+        string command = compiler+" --ptx -lineinfo --machine "+bits+" -arch=sm_"+gpuArchitecture+" -o "+outputFile+" "+options+" "+inputFile+" 2> "+logFile;
 #endif
-    int res = compileInWindows(command);
+        int res = compileInWindows(command);
 #else
-    string command = compiler+" --ptx --machine "+bits+" -arch=sm_"+gpuArchitecture+" -o \""+outputFile+"\" "+options+" \""+inputFile+"\" 2> \""+logFile+"\"";
-    int res = std::system(command.c_str());
+        string command = compiler+" --ptx --machine "+bits+" -arch=sm_"+gpuArchitecture+" -o \""+outputFile+"\" "+options+" \""+inputFile+"\" 2> \""+logFile+"\"";
+        res = std::system(command.c_str());
 #endif
+    }
     try {
         if (res != 0) {
             // Load the error log.
@@ -507,7 +623,19 @@ CUfunction CudaContext::getKernel(CUmodule& module, const string& name) {
     return function;
 }
 
-string CudaContext::doubleToString(double value) {
+CUstream CudaContext::getCurrentStream() {
+    return currentStream;
+}
+
+void CudaContext::setCurrentStream(CUstream stream) {
+    currentStream = stream;
+}
+
+void CudaContext::restoreDefaultStream() {
+    setCurrentStream(0);
+}
+
+string CudaContext::doubleToString(double value) const {
     stringstream s;
     s.precision(useDoublePrecision ? 16 : 8);
     s << scientific << value;
@@ -516,7 +644,7 @@ string CudaContext::doubleToString(double value) {
     return s.str();
 }
 
-string CudaContext::intToString(int value) {
+string CudaContext::intToString(int value) const {
     stringstream s;
     s << value;
     return s.str();
@@ -550,6 +678,7 @@ std::string CudaContext::getErrorString(CUresult result) {
         case CUDA_ERROR_ECC_UNCORRECTABLE: return "CUDA_ERROR_ECC_UNCORRECTABLE";
         case CUDA_ERROR_UNSUPPORTED_LIMIT: return "CUDA_ERROR_UNSUPPORTED_LIMIT";
         case CUDA_ERROR_CONTEXT_ALREADY_IN_USE: return "CUDA_ERROR_CONTEXT_ALREADY_IN_USE";
+        case CUDA_ERROR_PEER_ACCESS_UNSUPPORTED: return "CUDA_ERROR_PEER_ACCESS_UNSUPPORTED";
         case CUDA_ERROR_INVALID_SOURCE: return "CUDA_ERROR_INVALID_SOURCE";
         case CUDA_ERROR_FILE_NOT_FOUND: return "CUDA_ERROR_FILE_NOT_FOUND";
         case CUDA_ERROR_SHARED_OBJECT_SYMBOL_NOT_FOUND: return "CUDA_ERROR_SHARED_OBJECT_SYMBOL_NOT_FOUND";
@@ -566,16 +695,22 @@ std::string CudaContext::getErrorString(CUresult result) {
         case CUDA_ERROR_PEER_ACCESS_NOT_ENABLED: return "CUDA_ERROR_PEER_ACCESS_NOT_ENABLED";
         case CUDA_ERROR_PRIMARY_CONTEXT_ACTIVE: return "CUDA_ERROR_PRIMARY_CONTEXT_ACTIVE";
         case CUDA_ERROR_CONTEXT_IS_DESTROYED: return "CUDA_ERROR_CONTEXT_IS_DESTROYED";
+        case CUDA_ERROR_ASSERT: return "CUDA_ERROR_ASSERT";
+        case CUDA_ERROR_TOO_MANY_PEERS: return "CUDA_ERROR_TOO_MANY_PEERS";
+        case CUDA_ERROR_HOST_MEMORY_ALREADY_REGISTERED: return "CUDA_ERROR_HOST_MEMORY_ALREADY_REGISTERED";
+        case CUDA_ERROR_HOST_MEMORY_NOT_REGISTERED: return "CUDA_ERROR_HOST_MEMORY_NOT_REGISTERED";
+        case CUDA_ERROR_NOT_PERMITTED: return "CUDA_ERROR_NOT_PERMITTED";
+        case CUDA_ERROR_NOT_SUPPORTED: return "CUDA_ERROR_NOT_SUPPORTED";
         case CUDA_ERROR_UNKNOWN: return "CUDA_ERROR_UNKNOWN";
     }
-    return "Invalid error code";
+    return "CUDA error";
 }
 
 void CudaContext::executeKernel(CUfunction kernel, void** arguments, int threads, int blockSize, unsigned int sharedSize) {
     if (blockSize == -1)
         blockSize = ThreadBlockSize;
     int gridSize = std::min((threads+blockSize-1)/blockSize, numThreadBlocks);
-    CUresult result = cuLaunchKernel(kernel, gridSize, 1, 1, blockSize, 1, 1, sharedSize, 0, arguments, NULL);
+    CUresult result = cuLaunchKernel(kernel, gridSize, 1, 1, blockSize, 1, 1, sharedSize, currentStream, arguments, NULL);
     if (result != CUDA_SUCCESS) {
         stringstream str;
         str<<"Error invoking kernel: "<<getErrorString(result)<<" ("<<result<<")";
@@ -1044,16 +1179,21 @@ void CudaContext::reorderAtomsImpl() {
             // Move each molecule position into the same box.
 
             for (int i = 0; i < numMolecules; i++) {
-                int xcell = (int) floor(molPos[i].x*invPeriodicBoxSize.x);
-                int ycell = (int) floor(molPos[i].y*invPeriodicBoxSize.y);
-                int zcell = (int) floor(molPos[i].z*invPeriodicBoxSize.z);
-                Real dx = xcell*periodicBoxSize.x;
-                Real dy = ycell*periodicBoxSize.y;
-                Real dz = zcell*periodicBoxSize.z;
-                if (dx != 0.0f || dy != 0.0f || dz != 0.0f) {
-                    molPos[i].x -= dx;
-                    molPos[i].y -= dy;
-                    molPos[i].z -= dz;
+                Real4 center = molPos[i];
+                int zcell = (int) floor(center.z*invPeriodicBoxSize.z);
+                center.x -= zcell*periodicBoxVecZ.x;
+                center.y -= zcell*periodicBoxVecZ.y;
+                center.z -= zcell*periodicBoxVecZ.z;
+                int ycell = (int) floor(center.y*invPeriodicBoxSize.y);
+                center.x -= ycell*periodicBoxVecY.x;
+                center.y -= ycell*periodicBoxVecY.y;
+                int xcell = (int) floor(center.x*invPeriodicBoxSize.x);
+                center.x -= xcell*periodicBoxVecX.x;
+                if (xcell != 0 || ycell != 0 || zcell != 0) {
+                    Real dx = molPos[i].x-center.x;
+                    Real dy = molPos[i].y-center.y;
+                    Real dz = molPos[i].z-center.z;
+                    molPos[i] = center;
                     for (int j = 0; j < (int) atoms.size(); j++) {
                         int atom = atoms[j]+mol.offsets[i];
                         Real4 p = oldPosq[atom];

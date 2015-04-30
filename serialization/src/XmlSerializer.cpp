@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -30,47 +30,169 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/serialization/XmlSerializer.h"
-#include "tinyxml.h"
+#include "irrXML.h"
+#include <cstring>
+#include <iostream>
+#include <map>
 
 using namespace OpenMM;
 using namespace std;
+using namespace irr;
+using namespace io;
 
-void XmlSerializer::serialize(const SerializationNode& node, std::ostream& stream) {
-    TiXmlDocument doc;
-    TiXmlDeclaration* decl = new TiXmlDeclaration( "1.0", "", "" );
-    doc.LinkEndChild(decl);
-    doc.LinkEndChild(encodeNode(node));
-    TiXmlPrinter printer;
-    printer.SetIndent("\t");
-    doc.Accept(&printer);
-    stream << printer.Str();
+/**
+ * Apply XML encoding to a string.  This is adapted from TinyXML (written by Lee Thomason).
+ */
+static void encodeString(const string& str, string* outString) {
+    static map<char, string> entities;
+    static bool hasInitialized = false;
+    if (!hasInitialized) {
+        hasInitialized = true;
+	entities['&'] = "&amp;";
+	entities['<'] = "&lt;";
+	entities['>'] = "&gt;";
+	entities['\"'] = "&quot;";
+	entities['\''] = "&apos;";
+    }
+
+    int i=0;
+
+    while (i<(int)str.length()) {
+        unsigned char c = (unsigned char) str[i];
+
+        if (c == '&' 
+             && i < ((int)str.length() - 2)
+             && str[i+1] == '#'
+             && str[i+2] == 'x') {
+            // Hexadecimal character reference.
+            // Pass through unchanged.
+            // &#xA9;	-- copyright symbol, for example.
+            //
+            // The -1 is a bug fix from Rob Laveaux. It keeps
+            // an overflow from happening if there is no ';'.
+            // There are actually 2 ways to exit this loop -
+            // while fails (error case) and break (semicolon found).
+            // However, there is no mechanism (currently) for
+            // this function to return an error.
+            while (i<(int)str.length()-1) {
+                outString->append(str.c_str() + i, 1);
+                ++i;
+                if (str[i] == ';')
+                    break;
+            }
+        }
+        else if (entities.find(c) != entities.end()) {
+            outString->append(entities[c]);
+            ++i;
+        }
+        else if (c < 32) {
+            // Easy pass at non-alpha/numeric/symbol
+            // Below 32 is symbolic.
+            char buf[ 32 ];
+
+            sprintf(buf, "&#x%02X;", (unsigned) (c & 0xff));
+
+            //*ME:	warning C4267: convert 'size_t' to 'int'
+            //*ME:	Int-Cast to make compiler happy ...
+            outString->append(buf, (int)strlen(buf));
+            ++i;
+        }
+        else {
+            //char realc = (char) c;
+            //outString->append(&realc, 1);
+            *outString += (char) c;	// somewhat more efficient function call.
+            ++i;
+        }
+    }
 }
 
-TiXmlElement* XmlSerializer::encodeNode(const SerializationNode& node) {
-    TiXmlElement* element = new TiXmlElement(node.getName());
+void XmlSerializer::serialize(const SerializationNode& node, std::ostream& stream) {
+    stream << "<?xml version=\"1.0\" ?>\n";
+    encodeNode(node, stream, 0);
+}
+
+void XmlSerializer::encodeNode(const SerializationNode& node, std::ostream& stream, int depth) {
+    for (int i = 0; i < depth; i++)
+        stream << '\t';
+    stream << '<' << node.getName();
     const map<string, string>& properties = node.getProperties();
-    for (map<string, string>::const_iterator iter = properties.begin(); iter != properties.end(); ++iter)
-        element->SetAttribute(iter->first.c_str(), iter->second.c_str());
+    for (map<string, string>::const_iterator iter = properties.begin(); iter != properties.end(); ++iter) {
+        string name, value;
+        encodeString(iter->first, &name);
+        encodeString(iter->second, &value);
+        stream << ' ' << name << "=\"" << value << '\"';
+    }
     const vector<SerializationNode>& children = node.getChildren();
-    for (int i = 0; i < (int) children.size(); i++)
-        element->LinkEndChild(encodeNode(children[i]));
-    return element;
+    if (children.size() == 0)
+        stream << "/>\n";
+    else {
+        stream << ">\n";
+        for (int i = 0; i < (int) children.size(); i++)
+            encodeNode(children[i], stream, depth+1);
+        for (int i = 0; i < depth; i++)
+            stream << '\t';
+        stream << "</" << node.getName() << ">\n";
+    }
+}
+
+/**
+ * Adapter class to let irrXML read a C++ stream.
+ */
+class XmlSerializer::StreamReader : public IFileReadCallBack {
+public:
+    StreamReader(std::istream& stream) : stream(stream) {
+        stream.seekg(0, ios_base::end);
+        size = stream.tellg();
+        stream.seekg(0);
+    }
+    int read(void* buffer, int sizeToRead) {
+        stream.read((char*) buffer, sizeToRead);
+        return stream.gcount();
+    }
+    int getSize() {
+        return size;
+    }
+private:
+    std::istream& stream;
+    int size;
+};
+
+/**
+ * Process an XML node, storing its content into a SerializationNode.
+ */
+static void decodeNode(SerializationNode& node, IrrXMLReader& xml) {
+    for (int i = 0; i < xml.getAttributeCount(); i++)
+        node.setStringProperty(xml.getAttributeName(i), xml.getAttributeValue(i));
+    if (xml.isEmptyElement())
+        return;
+    while (xml.read()) {
+        switch (xml.getNodeType()) {
+            case EXN_ELEMENT:
+            {
+                SerializationNode& childNode = node.createChildNode(xml.getNodeName());
+                decodeNode(childNode, xml);
+                break;
+            }
+            case EXN_ELEMENT_END:
+                return;
+        }
+    }
 }
 
 void* XmlSerializer::deserializeStream(std::istream& stream) {
-    TiXmlDocument doc;
-    stream >> doc;
     SerializationNode root;
-    decodeNode(root, *doc.FirstChildElement());
+    StreamReader reader(stream);
+    IrrXMLReader* xml = createIrrXMLReader(&reader);
+    
+    // Find the root node in the file.
+    
+    while (xml->read() && xml->getNodeType() != EXN_ELEMENT)
+        ;
+    decodeNode(root, *xml);
+    delete xml;
+    
+    // Process the SerializationNodes.
+    
     const SerializationProxy& proxy = SerializationProxy::getProxy(root.getStringProperty("type"));
     return proxy.deserialize(root);
-}
-
-void XmlSerializer::decodeNode(SerializationNode& node, const TiXmlElement& element) {
-    for (const TiXmlAttribute* attribute = element.FirstAttribute(); attribute != NULL; attribute = attribute->Next())
-        node.setStringProperty(attribute->NameTStr(), attribute->ValueStr());
-    for (const TiXmlElement* child = element.FirstChildElement(); child != NULL; child = child->NextSiblingElement()) {
-        SerializationNode& childNode = node.createChildNode(child->ValueTStr());
-        decodeNode(childNode, *child);
-    }
 }

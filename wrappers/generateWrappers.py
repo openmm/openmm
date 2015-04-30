@@ -42,7 +42,7 @@ def getText(subNodePath, node):
 def convertOpenMMPrefix(name):
     return name.replace('OpenMM::', 'OpenMM_')
 
-OPENMM_RE_PATTERN=re.compile("(.*)OpenMM:[a-zA-Z:]*:(.*)")
+OPENMM_RE_PATTERN=re.compile("(.*)OpenMM:[a-zA-Z0-9_:]*:(.*)")
 def stripOpenMMPrefix(name, rePattern=OPENMM_RE_PATTERN):
     try:
         m=rePattern.search(name)
@@ -68,7 +68,7 @@ class WrapperGenerator:
     
     def __init__(self, inputDirname, output):
         self.skipClasses = ['OpenMM::Vec3', 'OpenMM::XmlSerializer', 'OpenMM::Kernel', 'OpenMM::KernelImpl', 'OpenMM::KernelFactory', 'OpenMM::ContextImpl', 'OpenMM::SerializationNode', 'OpenMM::SerializationProxy']
-        self.skipMethods = ['OpenMM::Context::getState', 'OpenMM::Platform::loadPluginsFromDirectory', 'OpenMM::Context::createCheckpoint', 'OpenMM::Context::loadCheckpoint']
+        self.skipMethods = ['OpenMM::Context::getState', 'OpenMM::Platform::loadPluginsFromDirectory', 'OpenMM::Context::createCheckpoint', 'OpenMM::Context::loadCheckpoint', 'OpenMM::Context::getMolecules']
         self.hideClasses = ['Kernel', 'KernelImpl', 'KernelFactory', 'ContextImpl', 'SerializationNode', 'SerializationProxy']
         self.nodeByID={}
 
@@ -624,6 +624,8 @@ class CSourceGenerator(WrapperGenerator):
             unwrappedType = type[:-1].strip()
             if unwrappedType in self.classesByShortName:
                 unwrappedType  = self.classesByShortName[unwrappedType]
+            if unwrappedType == 'const std::string':
+                return 'std::string(%s)' % value
             return '*'+self.unwrapValue(unwrappedType+'*', value)
         if type in self.classesByShortName:
             return 'static_cast<%s>(%s)' % (self.classesByShortName[type], value)
@@ -972,6 +974,7 @@ class FortranHeaderGenerator(WrapperGenerator):
             hasReturnValue = (returnType in ('integer*4', 'real*8'))
             hasReturnArg = not (hasReturnValue or returnType == 'void')
             functionName = "%s_%s" % (typeName, methodName)
+            functionName = functionName[:63]
             if hasReturnValue:
                 self.out.write("        function ")
             else:
@@ -1515,8 +1518,9 @@ class FortranSourceGenerator(WrapperGenerator):
                 # There are two identical methods that differ only in whether they are const.  Skip the const one.
                 continue
             functionName = "%s_%s" % (typeName, methodName)
-            self.writeOneMethod(classNode, methodNode, functionName, functionName.lower()+'_')
-            self.writeOneMethod(classNode, methodNode, functionName, functionName.upper())
+            truncatedName = functionName[:63]
+            self.writeOneMethod(classNode, methodNode, functionName, truncatedName.lower()+'_')
+            self.writeOneMethod(classNode, methodNode, functionName, truncatedName.upper())
     
     def writeOneConstructor(self, classNode, methodNode, functionName, wrapperFunctionName):
         className = getText("compoundname", classNode)
@@ -1665,14 +1669,14 @@ class FortranSourceGenerator(WrapperGenerator):
         return type
     
     def isHandleType(self, type):
-        if type.startswith('OpenMM_'):
-            return True;
-        if type == 'Vec3':
-            return True
+        if type == 'OpenMM_Vec3':
+            return False
         if type.endswith('*') or type.endswith('&'):
             return self.isHandleType(type[:-1].strip())
         if type.startswith('const '):
             return self.isHandleType(type[6:].strip())
+        if type.startswith('OpenMM_'):
+            return True;
         return False
 
     def writeOutput(self):

@@ -54,7 +54,7 @@ void testWater() {
     // Create a box of SWM4-NDP water molecules.  This involves constraints, virtual sites,
     // and Drude particles.
     
-    const int gridSize = 4;
+    const int gridSize = 3;
     const int numMolecules = gridSize*gridSize*gridSize;
     const double spacing = 0.6;
     const double boxSize = spacing*(gridSize+1);
@@ -85,7 +85,7 @@ void testWater() {
         system.addConstraint(startIndex, startIndex+3, 0.09572);
         system.addConstraint(startIndex+2, startIndex+3, 0.15139);
         system.setVirtualSite(startIndex+4, new ThreeParticleAverageSite(startIndex, startIndex+2, startIndex+3, 0.786646558, 0.106676721, 0.106676721));
-        drude->addParticle(startIndex+1, startIndex, -1, -1, -1, -1.71636, 1.71636*1.71636/(100000*4.184), 1, 1);
+        drude->addParticle(startIndex+1, startIndex, -1, -1, -1, -1.71636, ONE_4PI_EPS0*1.71636*1.71636/(100000*4.184), 1, 1);
     }
     vector<Vec3> positions;
     for (int i = 0; i < gridSize; i++)

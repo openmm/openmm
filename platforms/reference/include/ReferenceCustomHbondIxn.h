@@ -32,7 +32,7 @@
 #include <set>
 #include <vector>
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class ReferenceCustomHbondIxn : public ReferenceBondIxn {
 
@@ -43,7 +43,7 @@ class ReferenceCustomHbondIxn : public ReferenceBondIxn {
       class DihedralTermInfo;
       bool cutoff;
       bool periodic;
-      RealOpenMM periodicBoxSize[3];
+      OpenMM::RealVec periodicBoxVectors[3];
       RealOpenMM cutoffDistance;
       std::vector<std::vector<int> > donorAtoms, acceptorAtoms;
       Lepton::ExpressionProgram energyExpression;
@@ -111,11 +111,11 @@ class ReferenceCustomHbondIxn : public ReferenceBondIxn {
          already been set, and the smallest side of the periodic box is at least twice the cutoff
          distance.
 
-         @param boxSize             the X, Y, and Z widths of the periodic box
+         @param vectors    the vectors defining the periodic box
 
          --------------------------------------------------------------------------------------- */
 
-      void setPeriodic(OpenMM::RealVec& boxSize);
+      void setPeriodic(OpenMM::RealVec* vectors);
 
       /**---------------------------------------------------------------------------------------
 
@@ -197,5 +197,7 @@ public:
             name(name), p1(atoms[0]), p2(atoms[1]), p3(atoms[2]), p4(atoms[3]), forceExpression(forceExpression) {
     }
 };
+
+} // namespace OpenMM
 
 #endif // __ReferenceCustomHbondIxn_H__

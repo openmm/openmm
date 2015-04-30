@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -42,6 +42,7 @@ void testSerialization() {
     // Create a Force.
 
     CustomHbondForce force("5*sin(x)^2+y*z");
+    force.setForceGroup(3);
     force.setNonbondedMethod(CustomHbondForce::CutoffPeriodic);
     force.setCutoffDistance(2.1);
     force.addGlobalParameter("x", 1.3);
@@ -66,7 +67,7 @@ void testSerialization() {
     vector<double> values(10);
     for (int i = 0; i < 10; i++)
         values[i] = sin((double) i);
-    force.addFunction("f", values, 0.5, 1.5);
+    force.addTabulatedFunction("f", new Discrete1DFunction(values));
 
     // Serialize and then deserialize it.
 
@@ -77,6 +78,7 @@ void testSerialization() {
     // Compare the two forces to see if they are identical.
 
     CustomHbondForce& force2 = *copy;
+    ASSERT_EQUAL(force.getForceGroup(), force2.getForceGroup());
     ASSERT_EQUAL(force.getEnergyFunction(), force2.getEnergyFunction());
     ASSERT_EQUAL(force.getNonbondedMethod(), force2.getNonbondedMethod());
     ASSERT_EQUAL(force.getCutoffDistance(), force2.getCutoffDistance());
@@ -125,16 +127,12 @@ void testSerialization() {
         ASSERT_EQUAL(a1, a2);
         ASSERT_EQUAL(b1, b2);
     }
-    ASSERT_EQUAL(force.getNumFunctions(), force2.getNumFunctions());
-    for (int i = 0; i < force.getNumFunctions(); i++) {
-        string name1, name2;
-        double min1, min2, max1, max2;
+    ASSERT_EQUAL(force.getNumTabulatedFunctions(), force2.getNumTabulatedFunctions());
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         vector<double> val1, val2;
-        force.getFunctionParameters(i, name1, val1, min1, max1);
-        force2.getFunctionParameters(i, name2, val2, min2, max2);
-        ASSERT_EQUAL(name1, name2);
-        ASSERT_EQUAL(min1, min2);
-        ASSERT_EQUAL(max1, max2);
+        dynamic_cast<Discrete1DFunction&>(force.getTabulatedFunction(i)).getFunctionParameters(val1);
+        dynamic_cast<Discrete1DFunction&>(force2.getTabulatedFunction(i)).getFunctionParameters(val2);
+        ASSERT_EQUAL(force.getTabulatedFunctionName(i), force2.getTabulatedFunctionName(i));
         ASSERT_EQUAL(val1.size(), val2.size());
         for (int j = 0; j < (int) val1.size(); j++)
             ASSERT_EQUAL(val1[j], val2[j]);

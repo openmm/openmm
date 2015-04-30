@@ -43,7 +43,7 @@
     int i, n;
     PyObject *pyList;
 
-    n=(*$1).size(); 
+    n=(*$1).size();
     pyList=PyList_New(n);
     PyObject* mm = PyImport_AddModule("simtk.openmm");
     PyObject* vec3 = PyObject_GetAttrString(mm, "Vec3");
@@ -117,6 +117,14 @@
   Py_DECREF(args);
 }
 
+%typemap(out) const Vec3& {
+  PyObject* mm = PyImport_AddModule("simtk.openmm");
+  PyObject* vec3 = PyObject_GetAttrString(mm, "Vec3");
+  PyObject* args = Py_BuildValue("(d,d,d)", (*$1)[0], (*$1)[1], (*$1)[2]);
+  $result = PyObject_CallObject(vec3, args);
+  Py_DECREF(args);
+}
+
 /* Convert C++ (Vec3&, Vec3&, Vec3&) object to python tuple or tuples */
 %typemap(argout) (Vec3& a, Vec3& b, Vec3& c) {
   // %typemap(argout) (Vec3& a, Vec3& b, Vec3& c)
@@ -156,3 +164,7 @@
   $3 = &tempC;
 }
 
+%typemap(out) std::string OpenMM::Context::createCheckpoint{
+    // createCheckpoint returns a bytes object
+    $result = PyBytes_FromStringAndSize($1.c_str(), $1.length());
+}

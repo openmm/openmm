@@ -36,6 +36,8 @@
 #include "RealVec.h"
 #include <vector>
 
+namespace OpenMM {
+
 class OPENMM_EXPORT ReferenceVirtualSites {
 public:
     /**
@@ -47,5 +49,7 @@ public:
      */
     static void distributeForces(const OpenMM::System& system, const std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& forces);
 };
+
+} // namespace OpenMM
 
 #endif // __ReferenceVirtualSites_H__

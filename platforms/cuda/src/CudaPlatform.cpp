@@ -81,6 +81,7 @@ CudaPlatform::CudaPlatform() {
     registerKernelFactory(CalcCustomExternalForceKernel::Name(), factory);
     registerKernelFactory(CalcCustomHbondForceKernel::Name(), factory);
     registerKernelFactory(CalcCustomCompoundBondForceKernel::Name(), factory);
+    registerKernelFactory(CalcCustomManyParticleForceKernel::Name(), factory);
     registerKernelFactory(IntegrateVerletStepKernel::Name(), factory);
     registerKernelFactory(IntegrateLangevinStepKernel::Name(), factory);
     registerKernelFactory(IntegrateBrownianStepKernel::Name(), factory);
@@ -228,22 +229,13 @@ CudaPlatform::PlatformData::PlatformData(ContextImpl* context, const System& sys
     
     // Determine whether peer-to-peer copying is supported, and enable it if so.
     
-    peerAccessSupported = false; // Disable until I figure out why it usually makes things slower
-//    peerAccessSupported = true;
-//    for (int i = 1; i < contexts.size(); i++) {
-//        int canAccess;
-//        cuDeviceCanAccessPeer(&canAccess, contexts[i]->getDevice(), contexts[0]->getDevice());
-//        if (!canAccess) {
-//            peerAccessSupported = false;
-//            break;
-//        }
-//    }
-    if (peerAccessSupported) {
-        for (int i = 1; i < contexts.size(); i++) {
-            contexts[0]->setAsCurrent();
-            CHECK_RESULT(cuCtxEnablePeerAccess(contexts[i]->getContext(), 0), "Error enabling peer access");
-            contexts[i]->setAsCurrent();
-            CHECK_RESULT(cuCtxEnablePeerAccess(contexts[0]->getContext(), 0), "Error enabling peer access");
+    peerAccessSupported = true;
+    for (int i = 1; i < contexts.size(); i++) {
+        int canAccess;
+        cuDeviceCanAccessPeer(&canAccess, contexts[i]->getDevice(), contexts[0]->getDevice());
+        if (!canAccess) {
+            peerAccessSupported = false;
+            break;
         }
     }
 }

@@ -31,13 +31,12 @@
 
 #include "openmm/MonteCarloBarostat.h"
 #include "openmm/internal/MonteCarloBarostatImpl.h"
-#include <ctime>
 
 using namespace OpenMM;
 
 MonteCarloBarostat::MonteCarloBarostat(double defaultPressure, double temperature, int frequency) :
         defaultPressure(defaultPressure), temperature(temperature), frequency(frequency) {
-    setRandomNumberSeed((int) time(NULL));
+    setRandomNumberSeed(0);
 }
 
 ForceImpl* MonteCarloBarostat::createImpl() const {

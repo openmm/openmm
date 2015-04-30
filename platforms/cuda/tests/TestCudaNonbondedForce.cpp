@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -355,6 +355,67 @@ void testPeriodic() {
     ASSERT_EQUAL_TOL(2*ONE_4PI_EPS0*(1.0)*(1.0+krf*1.0-crf), state.getPotentialEnergy(), TOL);
 }
 
+void testTriclinic() {
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    Vec3 a(3.1, 0, 0);
+    Vec3 b(0.4, 3.5, 0);
+    Vec3 c(-0.1, -0.5, 4.0);
+    system.setDefaultPeriodicBoxVectors(a, b, c);
+    VerletIntegrator integrator(0.01);
+    NonbondedForce* nonbonded = new NonbondedForce();
+    nonbonded->addParticle(1.0, 1, 0);
+    nonbonded->addParticle(1.0, 1, 0);
+    nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    const double cutoff = 1.5;
+    nonbonded->setCutoffDistance(cutoff);
+    system.addForce(nonbonded);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(2);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    const double eps = 78.3;
+    const double krf = (1.0/(cutoff*cutoff*cutoff))*(eps-1.0)/(2.0*eps+1.0);
+    const double crf = (1.0/cutoff)*(3.0*eps)/(2.0*eps+1.0);
+    for (int iteration = 0; iteration < 50; iteration++) {
+        // Generate random positions for the two particles.
+
+        positions[0] = a*genrand_real2(sfmt) + b*genrand_real2(sfmt) + c*genrand_real2(sfmt);
+        positions[1] = a*genrand_real2(sfmt) + b*genrand_real2(sfmt) + c*genrand_real2(sfmt);
+        context.setPositions(positions);
+
+        // Loop over all possible periodic copies and find the nearest one.
+
+        Vec3 delta;
+        double distance2 = 100.0;
+        for (int i = -1; i < 2; i++)
+            for (int j = -1; j < 2; j++)
+                for (int k = -1; k < 2; k++) {
+                    Vec3 d = positions[1]-positions[0]+a*i+b*j+c*k;
+                    if (d.dot(d) < distance2) {
+                        delta = d;
+                        distance2 = d.dot(d);
+                    }
+                }
+        double distance = sqrt(distance2);
+
+        // See if the force and energy are correct.
+
+        State state = context.getState(State::Forces | State::Energy);
+        if (distance >= cutoff) {
+            ASSERT_EQUAL(0.0, state.getPotentialEnergy());
+            ASSERT_EQUAL_VEC(Vec3(0, 0, 0), state.getForces()[0], 0);
+            ASSERT_EQUAL_VEC(Vec3(0, 0, 0), state.getForces()[1], 0);
+        }
+        else {
+            const Vec3 force = delta*ONE_4PI_EPS0*(-1.0/(distance*distance*distance)+2.0*krf);
+            ASSERT_EQUAL_TOL(ONE_4PI_EPS0*(1.0/distance+krf*distance*distance-crf), state.getPotentialEnergy(), TOL);
+            ASSERT_EQUAL_VEC(force, state.getForces()[0], TOL);
+            ASSERT_EQUAL_VEC(-force, state.getForces()[1], TOL);
+        }
+    }
+}
 
 void testLargeSystem() {
     const int numMolecules = 600;
@@ -748,7 +809,7 @@ void testChangingParameters() {
     ASSERT_EQUAL_TOL(cuState.getPotentialEnergy(), referenceState.getPotentialEnergy(), tol);
 }
 
-void testParallelComputation(bool useCutoff) {
+void testParallelComputation(NonbondedForce::NonbondedMethod method) {
     System system;
     const int numParticles = 200;
     for (int i = 0; i < numParticles; i++)
@@ -756,9 +817,9 @@ void testParallelComputation(bool useCutoff) {
     NonbondedForce* force = new NonbondedForce();
     for (int i = 0; i < numParticles; i++)
         force->addParticle(i%2-0.5, 0.5, 1.0);
-    if (useCutoff)
-        force->setNonbondedMethod(NonbondedForce::CutoffNonPeriodic);
+    force->setNonbondedMethod(method);
     system.addForce(force);
+    system.setDefaultPeriodicBoxVectors(Vec3(5,0,0), Vec3(0,5,0), Vec3(0,0,5));
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);
     vector<Vec3> positions(numParticles);
@@ -862,6 +923,33 @@ void testSwitchingFunction(NonbondedForce::NonbondedMethod method) {
     }
 }
 
+void testReordering() {
+    // Check that reordering of atoms doesn't alter their positions.
+    
+    const int numParticles = 200;
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(6, 0, 0), Vec3(2.1, 6, 0), Vec3(-1.5, -0.5, 6));
+    NonbondedForce *nonbonded = new NonbondedForce();
+    nonbonded->setNonbondedMethod(NonbondedForce::PME);
+    system.addForce(nonbonded);
+    vector<Vec3> positions;
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int i = 0; i < numParticles; i++) {
+        system.addParticle(1.0);
+        nonbonded->addParticle(0.0, 0.0, 0.0);
+        positions.push_back(Vec3(genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5)*20);
+    }
+    VerletIntegrator integrator(0.001);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    integrator.step(1);
+    State state = context.getState(State::Positions | State::Velocities);
+    for (int i = 0; i < numParticles; i++) {
+        ASSERT_EQUAL_VEC(positions[i], state.getPositions()[i], 1e-6);
+    }
+}
+
 int main(int argc, char* argv[]) {
     try {
         if (argc > 1)
@@ -872,15 +960,18 @@ int main(int argc, char* argv[]) {
         testCutoff();
         testCutoff14();
         testPeriodic();
+        testTriclinic();
         testLargeSystem();
         //testBlockInteractions(false);
         //testBlockInteractions(true);
         testDispersionCorrection();
         testChangingParameters();
-        testParallelComputation(false);
-        testParallelComputation(true);
+        testParallelComputation(NonbondedForce::NoCutoff);
+        testParallelComputation(NonbondedForce::Ewald);
+        testParallelComputation(NonbondedForce::PME);
         testSwitchingFunction(NonbondedForce::CutoffNonPeriodic);
         testSwitchingFunction(NonbondedForce::PME);
+        testReordering();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

@@ -25,14 +25,12 @@
 #include <cstring>
 #include <sstream>
 
-#include "SimTKOpenMMCommon.h"
-#include "SimTKOpenMMLog.h"
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceForce.h"
 
 #include <cstdio>
 
-using OpenMM::RealVec;
+using namespace OpenMM;
 
 /**---------------------------------------------------------------------------------------
 
@@ -40,14 +38,7 @@ using OpenMM::RealVec;
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceForce::ReferenceForce( ){
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceForce::ReferenceForce";
-
-   // ---------------------------------------------------------------------------------------
-
+ReferenceForce::ReferenceForce() {
 }
 
 /**---------------------------------------------------------------------------------------
@@ -56,14 +47,7 @@ ReferenceForce::ReferenceForce( ){
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceForce::~ReferenceForce( ){
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceForce::~ReferenceForce";
-
-   // ---------------------------------------------------------------------------------------
-
+ReferenceForce::~ReferenceForce() {
 }
 
 /**---------------------------------------------------------------------------------------
@@ -79,87 +63,37 @@ RealOpenMM ReferenceForce::periodicDifference(RealOpenMM val1, RealOpenMM val2, 
 
 }
 
-
-/**---------------------------------------------------------------------------------------
-
-   Get deltaR and distance and distance**2 between atomI and atomJ (static method)
-   deltaR: j - i
-
-   @param atomCoordinatesI    atom i coordinates
-   @param atomCoordinatesI    atom j coordinates
-   @param deltaR              deltaX, deltaY, deltaZ, R2, R upon return
-
-   --------------------------------------------------------------------------------------- */
-
-void ReferenceForce::getDeltaR( const RealVec& atomCoordinatesI, const RealVec& atomCoordinatesJ,
-                               RealOpenMM* deltaR ){
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const std::string methodName = "\nReferenceForce::getDeltaR";
-
-   // ---------------------------------------------------------------------------------------
-
+void ReferenceForce::getDeltaR(const RealVec& atomCoordinatesI, const RealVec& atomCoordinatesJ,
+                               RealOpenMM* deltaR) {
    deltaR[XIndex]    = atomCoordinatesJ[0] - atomCoordinatesI[0];
    deltaR[YIndex]    = atomCoordinatesJ[1] - atomCoordinatesI[1];
    deltaR[ZIndex]    = atomCoordinatesJ[2] - atomCoordinatesI[2];
 
-   deltaR[R2Index]   = DOT3( deltaR, deltaR );
-   deltaR[RIndex]    = (RealOpenMM) SQRT( deltaR[R2Index] );
+   deltaR[R2Index]   = DOT3(deltaR, deltaR);
+   deltaR[RIndex]    = (RealOpenMM) SQRT(deltaR[R2Index]);
 }
 
-/**---------------------------------------------------------------------------------------
-
-   Get deltaR and distance and distance**2 between atomI and atomJ, assuming periodic
-   boundary conditions (static method); deltaR: j - i
-
-   @param atomCoordinatesI    atom i coordinates
-   @param atomCoordinatesI    atom j coordinates
-   @param boxSize             X, Y, and Z sizes of the periodic box
-   @param deltaR              deltaX, deltaY, deltaZ, R2, R upon return
-
-   --------------------------------------------------------------------------------------- */
-
-void ReferenceForce::getDeltaRPeriodic( const RealVec& atomCoordinatesI, const RealVec& atomCoordinatesJ,
-                               const RealOpenMM* boxSize, RealOpenMM* deltaR ){
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const std::string methodName = "\nReferenceForce::getDeltaR";
-
-   // ---------------------------------------------------------------------------------------
-
+void ReferenceForce::getDeltaRPeriodic(const RealVec& atomCoordinatesI, const RealVec& atomCoordinatesJ,
+                               const RealOpenMM* boxSize, RealOpenMM* deltaR) {
    deltaR[XIndex]    = periodicDifference(atomCoordinatesJ[0], atomCoordinatesI[0], boxSize[0]);
    deltaR[YIndex]    = periodicDifference(atomCoordinatesJ[1], atomCoordinatesI[1], boxSize[1]);
    deltaR[ZIndex]    = periodicDifference(atomCoordinatesJ[2], atomCoordinatesI[2], boxSize[2]);
 
-   deltaR[R2Index]   = DOT3( deltaR, deltaR );
-   deltaR[RIndex]    = (RealOpenMM) SQRT( deltaR[R2Index] );
+   deltaR[R2Index]   = DOT3(deltaR, deltaR);
+   deltaR[RIndex]    = (RealOpenMM) SQRT(deltaR[R2Index]);
 }
 
-/**---------------------------------------------------------------------------------------
-
-   Get deltaR between atomI and atomJ (static method); deltaR: j - i
-
-   @param atomCoordinatesI    atom i coordinates
-   @param atomCoordinatesI    atom j coordinates
-   @param deltaR              deltaX, deltaY, deltaZ upon return
-
-   --------------------------------------------------------------------------------------- */
-
-void ReferenceForce::getDeltaROnly( const RealOpenMM* atomCoordinatesI,
-                                   const RealOpenMM* atomCoordinatesJ,
-                                   RealOpenMM* deltaR ){
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const std::string methodName = "\nReferenceForce::getDeltaR";
-
-   // ---------------------------------------------------------------------------------------
-
-   deltaR[XIndex]    = atomCoordinatesJ[0] - atomCoordinatesI[0];
-   deltaR[YIndex]    = atomCoordinatesJ[1] - atomCoordinatesI[1];
-   deltaR[ZIndex]    = atomCoordinatesJ[2] - atomCoordinatesI[2];
+void ReferenceForce::getDeltaRPeriodic(const RealVec& atomCoordinatesI, const RealVec& atomCoordinatesJ,
+                               const RealVec* boxVectors, RealOpenMM* deltaR) {
+    RealVec diff = atomCoordinatesJ-atomCoordinatesI;
+    diff -= boxVectors[2]*floor(diff[2]/boxVectors[2][2]+0.5);
+    diff -= boxVectors[1]*floor(diff[1]/boxVectors[1][1]+0.5);
+    diff -= boxVectors[0]*floor(diff[0]/boxVectors[0][0]+0.5);
+    deltaR[XIndex] = diff[0];
+    deltaR[YIndex] = diff[1];
+    deltaR[ZIndex] = diff[2];
+    deltaR[R2Index] = diff.dot(diff);
+    deltaR[RIndex] = SQRT(deltaR[R2Index]);
 }
 
 double* ReferenceForce::getVariablePointer(Lepton::CompiledExpression& expression, const std::string& name) {

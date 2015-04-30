@@ -22,8 +22,6 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "SimTKOpenMMCommon.h"
-#include "SimTKOpenMMLog.h"
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceVirtualSites.h"
 #include "ReferenceCustomDynamics.h"
@@ -97,7 +95,7 @@ ReferenceCustomDynamics::~ReferenceCustomDynamics() {
 
 void ReferenceCustomDynamics::update(ContextImpl& context, int numberOfAtoms, vector<RealVec>& atomCoordinates,
                                      vector<RealVec>& velocities, vector<RealVec>& forces, vector<RealOpenMM>& masses,
-                                     map<string, RealOpenMM>& globals, vector<vector<RealVec> >& perDof, bool& forcesAreValid, RealOpenMM tolerance){
+                                     map<string, RealOpenMM>& globals, vector<vector<RealVec> >& perDof, bool& forcesAreValid, RealOpenMM tolerance) {
     int numSteps = stepType.size();
     globals.insert(context.getParameters().begin(), context.getParameters().end());
     oldPos = atomCoordinates;

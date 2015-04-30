@@ -143,42 +143,15 @@ State Context::getState(int types, bool enforcePeriodicBox, int groups) const {
 }
 
 void Context::setState(const State& state) {
-    // Determine what information the state contains.
-    
-    bool hasPositions = false, hasVelocities = false, hasParameters = false;
-    try {
-        state.getPositions();
-        hasPositions = true;
-    }
-    catch (OpenMMException& ex) {
-        // The State does not include positions.
-    }
-    try {
-        state.getVelocities();
-        hasVelocities = true;
-    }
-    catch (OpenMMException& ex) {
-        // The State does not include velocities.
-    }
-    try {
-        state.getParameters();
-        hasParameters = true;
-    }
-    catch (OpenMMException& ex) {
-        // The State does not include parameters.
-    }
-    
-    // Copy it over.
-    
     setTime(state.getTime());
     Vec3 a, b, c;
     state.getPeriodicBoxVectors(a, b, c);
     setPeriodicBoxVectors(a, b, c);
-    if (hasPositions)
+    if ((state.getDataTypes()&State::Positions) != 0)
         setPositions(state.getPositions());
-    if (hasVelocities)
+    if ((state.getDataTypes()&State::Velocities) != 0)
         setVelocities(state.getVelocities());
-    if (hasParameters)
+    if ((state.getDataTypes()&State::Parameters) != 0)
         for (map<string, double>::const_iterator iter = state.getParameters().begin(); iter != state.getParameters().end(); ++iter)
             setParameter(iter->first, iter->second);
 }
@@ -277,4 +250,8 @@ void Context::loadCheckpoint(istream& stream) {
 
 ContextImpl& Context::getImpl() {
     return *impl;
+}
+
+const vector<vector<int> >& Context::getMolecules() const {
+    return impl->getMolecules();
 }

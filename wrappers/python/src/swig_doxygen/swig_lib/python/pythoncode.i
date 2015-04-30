@@ -9,6 +9,10 @@ import sys
 import math
 RMIN_PER_SIGMA=math.pow(2, 1/6.0)
 RVDW_PER_SIGMA=math.pow(2, 1/6.0)/2.0
+if sys.version_info[0] == 2:
+    _string_types = (basestring,)
+else:
+    _string_types = (bytes, str)
 
 import simtk.unit as unit
 from simtk.openmm.vec3 import Vec3
@@ -19,7 +23,7 @@ class State(_object):
      current state of a simulation at a point
      in time.  You create it by calling
      getState() on a Context.
-     
+
      When a State is created, you specify what
      information should be stored in it.  This
      saves time and memory by only copying in
@@ -75,12 +79,11 @@ class State(_object):
         self._paramMap=paramMap
 
     def __getstate__(self):
-        serializationString = XmlSerializer.serializeState(self)
+        serializationString = XmlSerializer.serialize(self)
         return serializationString
 
     def __setstate__(self, serializationString):
-        print 'calling set state'
-        dState = XmlSerializer.deserializeState(serializationString)
+        dState = XmlSerializer.deserialize(serializationString)
         # Safe provided no __slots__ or other weird things are used
         self.__dict__.update(dState.__dict__)
 
@@ -104,7 +107,7 @@ class State(_object):
 
         returnValue = unit.Quantity(returnValue, unit.nanometers)
         return returnValue
-    
+
     def getPeriodicBoxVolume(self):
         """Get the volume of the periodic box."""
         a = self._periodicBoxVectorsList[0]
@@ -216,28 +219,9 @@ class State(_object):
         return self._paramMap
 
 
-# Strings can cause trouble
-# as can any container that has infinite levels of containment
-def _is_string(x):
-    # step 1) String is always a container
-    # and its contents are themselves containers.
-    try:
-        first_item = iter(x).next()
-        inner_item = iter(first_item).next()
-        if first_item == inner_item:
-            return True
-        else:
-            return False
-    except TypeError:
-        return False
-    except StopIteration:
-        return False
-    except ValueError:
-        return False
-
 def stripUnits(args):
     """
-    getState(self, quantity) 
+    getState(self, quantity)
           -> value with *no* units
 
     Examples
@@ -283,15 +267,14 @@ def stripUnits(args):
             if arg.unit.is_compatible(unit.bar):
                 arg = arg / unit.bar
             else:
-                arg=arg.value_in_unit_system(unit.md_unit_system)                
+                arg = arg.value_in_unit_system(unit.md_unit_system)
             # JDC: End workaround.
         elif isinstance(arg, dict):
             newKeys = stripUnits(arg.keys())
             newValues = stripUnits(arg.values())
             arg = dict(zip(newKeys, newValues))
-        elif not _is_string(arg):
+        elif not isinstance(arg, _string_types):
             try:
-                iter(arg)
                 # Reclusively strip units from all quantities
                 arg=stripUnits(arg)
             except TypeError:

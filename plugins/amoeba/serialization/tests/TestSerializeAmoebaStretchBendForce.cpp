@@ -45,9 +45,9 @@ void testSerialization() {
     // Create a Force.
 
     AmoebaStretchBendForce force1;
-    force1.addStretchBend(0, 1, 3, 1.0, 1.2, 150.1, 83.2);
-    force1.addStretchBend(2, 4, 4, 1.1, 2.2, 180.1, 89.2);
-    force1.addStretchBend(5, 0, 1, 3.1, 8.2, 140.1, 98.2);
+    force1.addStretchBend(0, 1, 3, 1.0, 1.2, 150.1, 83.2, 100.);
+    force1.addStretchBend(2, 4, 4, 1.1, 2.2, 180.1, 89.2, 100.);
+    force1.addStretchBend(5, 0, 1, 3.1, 8.2, 140.1, 98.2, 100.);
 
     // Serialize and then deserialize it.
 
@@ -64,10 +64,10 @@ void testSerialization() {
         double dAB1, dAB2;
         double dCB1, dCB2;
         double angle1, angle2;
-        double k1, k2;
+        double k11, k12, k21, k22;
 
-        force1.getStretchBendParameters(ii, p11, p12, p13, dAB1, dCB1, angle1, k1);
-        force2.getStretchBendParameters(ii, p21, p22, p23, dAB2, dCB2, angle2, k2);
+        force1.getStretchBendParameters(ii, p11, p12, p13, dAB1, dCB1, angle1, k11, k12);
+        force2.getStretchBendParameters(ii, p21, p22, p23, dAB2, dCB2, angle2, k21, k22);
 
         ASSERT_EQUAL(p11, p21);
         ASSERT_EQUAL(p12, p22);
@@ -75,7 +75,8 @@ void testSerialization() {
         ASSERT_EQUAL(dAB1, dAB2);
         ASSERT_EQUAL(dCB1, dCB2);
         ASSERT_EQUAL(angle1, angle2);
-        ASSERT_EQUAL(k1, k2);
+        ASSERT_EQUAL(k11, k21);
+        ASSERT_EQUAL(k12, k22);
     }
 }
 

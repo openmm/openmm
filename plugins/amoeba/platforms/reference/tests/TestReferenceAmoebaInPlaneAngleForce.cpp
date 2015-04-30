@@ -64,7 +64,7 @@ const double TOL = 1e-5;
 
    --------------------------------------------------------------------------------------- */
      
-static void crossProductVector3( double* vectorX, double* vectorY, double* vectorZ ){
+static void crossProductVector3(double* vectorX, double* vectorY, double* vectorZ) {
 
     vectorZ[0]  = vectorX[1]*vectorY[2] - vectorX[2]*vectorY[1];
     vectorZ[1]  = vectorX[2]*vectorY[0] - vectorX[0]*vectorY[2];
@@ -73,28 +73,24 @@ static void crossProductVector3( double* vectorX, double* vectorY, double* vecto
     return;
 }
 
-static double dotVector3( double* vectorX, double* vectorY ){
+static double dotVector3(double* vectorX, double* vectorY) {
     return vectorX[0]*vectorY[0] + vectorX[1]*vectorY[1] + vectorX[2]*vectorY[2];
 }
 
-static void getPrefactorsGivenInPlaneAngleCosine( double cosine, double idealInPlaneAngle, double quadraticK, double cubicK,
-                                                  double quarticK, double penticK, double sexticK,
-                                                  double* dEdR, double* energyTerm, FILE* log ) {
+static void getPrefactorsGivenInPlaneAngleCosine(double cosine, double idealInPlaneAngle, double quadraticK, double cubicK,
+                                                 double quarticK, double penticK, double sexticK,
+                                                 double* dEdR, double* energyTerm) {
 
     double angle;
-    if( cosine >= 1.0 ){
+    if (cosine >= 1.0) {
         angle = 0.0f;
-    } else if( cosine <= -1.0 ){
+    }
+    else if (cosine <= -1.0) {
         angle = RADIAN*PI_M;
-    } else {
+    }
+    else {
         angle = RADIAN*acos(cosine);
     }
-#ifdef AMOEBA_DEBUG
-    if( log ){
-        (void) fprintf( log, "getPrefactorsGivenInPlaneAngleCosine: cosine=%10.3e angle=%10.3e ideal=%10.3e\n", cosine, angle, idealInPlaneAngle ); 
-        (void) fflush( log );
-    }
-#endif
 
     double deltaIdeal         = angle - idealInPlaneAngle;
     double deltaIdeal2        = deltaIdeal*deltaIdeal;
@@ -103,18 +99,18 @@ static void getPrefactorsGivenInPlaneAngleCosine( double cosine, double idealInP
  
     // deltaIdeal = r - r_0
  
-    *dEdR        = ( 2.0                        +
+    *dEdR        =  (2.0                        +
                      3.0*cubicK*  deltaIdeal    +
                      4.0*quarticK*deltaIdeal2   +
                      5.0*penticK* deltaIdeal3   +
-                     6.0*sexticK* deltaIdeal4     );
+                     6.0*sexticK* deltaIdeal4   );
  
     *dEdR       *= RADIAN*quadraticK*deltaIdeal;
  
 
-    *energyTerm  = 1.0f + cubicK* deltaIdeal    +
-                          quarticK*deltaIdeal2   +
-                          penticK* deltaIdeal3   +
+    *energyTerm  = 1.0f + cubicK* deltaIdeal   +
+                          quarticK*deltaIdeal2 +
+                          penticK* deltaIdeal3 +
                           sexticK* deltaIdeal4;
     *energyTerm *= quadraticK*deltaIdeal2;
 
@@ -122,24 +118,17 @@ static void getPrefactorsGivenInPlaneAngleCosine( double cosine, double idealInP
 }
 
 static void computeAmoebaInPlaneAngleForce(int bondIndex,  std::vector<Vec3>& positions, AmoebaInPlaneAngleForce& AmoebaInPlaneAngleForce,
-                                                   std::vector<Vec3>& forces, double* energy, FILE* log ) {
+                                                   std::vector<Vec3>& forces, double* energy) {
 
     int particle1, particle2, particle3, particle4;
     double idealInPlaneAngle;
     double quadraticK;
-    AmoebaInPlaneAngleForce.getAngleParameters(bondIndex, particle1, particle2, particle3, particle4, idealInPlaneAngle, quadraticK );
+    AmoebaInPlaneAngleForce.getAngleParameters(bondIndex, particle1, particle2, particle3, particle4, idealInPlaneAngle, quadraticK);
 
     double cubicK         = AmoebaInPlaneAngleForce.getAmoebaGlobalInPlaneAngleCubic();
     double quarticK       = AmoebaInPlaneAngleForce.getAmoebaGlobalInPlaneAngleQuartic();
     double penticK        = AmoebaInPlaneAngleForce.getAmoebaGlobalInPlaneAnglePentic();
     double sexticK        = AmoebaInPlaneAngleForce.getAmoebaGlobalInPlaneAngleSextic();
-#ifdef AMOEBA_DEBUG
-    if( log ){
-        (void) fprintf( log, "computeAmoebaInPlaneAngleForce: bond %d [%d %d %d %d] ang=%10.3f k=%10.3f [%10.3e %10.3e %10.3e %10.3e]\n", 
-                             bondIndex, particle1, particle2, particle3, particle4, idealInPlaneAngle, quadraticK, cubicK, quarticK, penticK, sexticK );
-        (void) fflush( log );
-    }
-#endif
 
     // T   = AD x CD
     // P   = B + T*delta
@@ -160,82 +149,76 @@ static void computeAmoebaInPlaneAngleForce(int bondIndex,  std::vector<Vec3>& po
     // APxM, CPxM, ADxBD, BDxCD, TxCD, ADxT, dBxAD, CDxdB, LastDeltaAtomIndex
 
     double deltaR[LastDeltaAtomIndex][3];
-    for( int ii = 0; ii < 3; ii++ ){
+    for (int ii = 0; ii < 3; ii++) {
         deltaR[AD][ii] = positions[particle1][ii] - positions[particle4][ii];
         deltaR[BD][ii] = positions[particle2][ii] - positions[particle4][ii];
         deltaR[CD][ii] = positions[particle3][ii] - positions[particle4][ii];
     }
-    crossProductVector3( deltaR[AD], deltaR[CD], deltaR[T] );
+    crossProductVector3(deltaR[AD], deltaR[CD], deltaR[T]);
  
-    double rT2     = dotVector3( deltaR[T], deltaR[T] );
-    double delta   = dotVector3( deltaR[T], deltaR[BD] );
+    double rT2     = dotVector3(deltaR[T], deltaR[T]);
+    double delta   = dotVector3(deltaR[T], deltaR[BD]);
          delta    *= -1.0/rT2;
  
-    for( int ii = 0; ii < 3; ii++ ){
+    for (int ii = 0; ii < 3; ii++) {
        deltaR[P][ii]  = positions[particle2][ii] + deltaR[T][ii]*delta;
        deltaR[AP][ii] = positions[particle1][ii] - deltaR[P][ii];
        deltaR[CP][ii] = positions[particle3][ii] - deltaR[P][ii];
-    }   
+    }
  
-    double rAp2 = dotVector3( deltaR[AP],  deltaR[AP] );
-    double rCp2 = dotVector3( deltaR[CP],  deltaR[CP] );
-    if( rAp2 <= 0.0 && rCp2 <= 0.0 ){
-#ifdef AMOEBA_DEBUG
-        if( log ){
-            (void) fprintf( log, "computeAmoebaInPlaneAngleForce:  rAp2 or rCp2 <= 0.0\n" );
-            (void) fflush( log );
-        }
-#endif
+    double rAp2 = dotVector3(deltaR[AP],  deltaR[AP]);
+    double rCp2 = dotVector3(deltaR[CP],  deltaR[CP]);
+    if (rAp2 <= 0.0 && rCp2 <= 0.0) {
         return;
     }
 
-    crossProductVector3( deltaR[CP], deltaR[AP], deltaR[M] );
+    crossProductVector3(deltaR[CP], deltaR[AP], deltaR[M]);
  
-    double rm = dotVector3( deltaR[M], deltaR[M] );
-         rm   = sqrt( rm );
-    if( rm < 0.000001 ){
+    double rm = dotVector3(deltaR[M], deltaR[M]);
+         rm   = sqrt(rm);
+    if (rm < 0.000001) {
        rm = 0.000001;
     }
  
-    double dot     = dotVector3( deltaR[AP], deltaR[CP] );
-    double cosine  = dot/sqrt( rAp2*rCp2 );
+    double dot     = dotVector3(deltaR[AP], deltaR[CP]);
+    double cosine  = dot/sqrt(rAp2*rCp2);
  
     double dEdR;
     double energyTerm;
-    getPrefactorsGivenInPlaneAngleCosine( cosine, idealInPlaneAngle, quadraticK, cubicK,
-                                          quarticK, penticK, sexticK, &dEdR,  &energyTerm, log );
+    getPrefactorsGivenInPlaneAngleCosine(cosine, idealInPlaneAngle, quadraticK, cubicK,
+                                         quarticK, penticK, sexticK, &dEdR,  &energyTerm);
  
     double termA   = -dEdR/(rAp2*rm);
     double termC   =  dEdR/(rCp2*rm);
  
-    crossProductVector3( deltaR[AP], deltaR[M], deltaR[APxM] );
-    crossProductVector3( deltaR[CP], deltaR[M], deltaR[CPxM] );
+    crossProductVector3(deltaR[AP], deltaR[M], deltaR[APxM]);
+    crossProductVector3(deltaR[CP], deltaR[M], deltaR[CPxM]);
  
     // forces will be gathered here
  
     enum { dA, dB, dC, dD, LastDIndex };
     double forceTerm[LastDIndex][3];
  
-    for( int ii = 0; ii < 3; ii++ ){
+    for (int ii = 0; ii < 3; ii++) {
        forceTerm[dA][ii] = deltaR[APxM][ii]*termA;
        forceTerm[dC][ii] = deltaR[CPxM][ii]*termC;
-       forceTerm[dB][ii] = -1.0*( forceTerm[dA][ii] + forceTerm[dC][ii] );
+       forceTerm[dB][ii] = -1.0*(forceTerm[dA][ii] + forceTerm[dC][ii]);
     }
  
-    double pTrT2  = dotVector3( forceTerm[dB], deltaR[T] );
+    double pTrT2  = dotVector3(forceTerm[dB], deltaR[T]);
          pTrT2   /= rT2;
  
-    crossProductVector3( deltaR[CD], forceTerm[dB], deltaR[CDxdB] );
-    crossProductVector3( forceTerm[dB], deltaR[AD], deltaR[dBxAD] );
+    crossProductVector3(deltaR[CD], forceTerm[dB], deltaR[CDxdB]);
+    crossProductVector3(forceTerm[dB], deltaR[AD], deltaR[dBxAD]);
  
-    if( fabs( pTrT2 ) > 1.0e-08 ){
+    if (fabs(pTrT2) > 1.0e-08) {
        double delta2 = delta*2.0;
  
-       crossProductVector3( deltaR[BD], deltaR[CD], deltaR[BDxCD] );
-       crossProductVector3( deltaR[T],  deltaR[CD], deltaR[TxCD]  );
-       crossProductVector3( deltaR[AD], deltaR[BD], deltaR[ADxBD] );
-       crossProductVector3( deltaR[AD], deltaR[T],  deltaR[ADxT]  );
-       for( int ii = 0; ii < 3; ii++ ){
+       crossProductVector3(deltaR[BD], deltaR[CD], deltaR[BDxCD]);
+       crossProductVector3(deltaR[T],  deltaR[CD], deltaR[TxCD]);
+       crossProductVector3(deltaR[AD], deltaR[BD], deltaR[ADxBD]);
+       crossProductVector3(deltaR[AD], deltaR[T],  deltaR[ADxT]);
+       for (int ii = 0; ii < 3; ii++) {
  
           double term           = deltaR[BDxCD][ii] + delta2*deltaR[TxCD][ii];
           forceTerm[dA][ii]  += delta*deltaR[CDxdB][ii] + term*pTrT2;
@@ -243,15 +226,16 @@ static void computeAmoebaInPlaneAngleForce(int bondIndex,  std::vector<Vec3>& po
                term           = deltaR[ADxBD][ii] + delta2*deltaR[ADxT][ii];
           forceTerm[dC][ii]  += delta*deltaR[dBxAD][ii] + term*pTrT2;
  
-          forceTerm[dD][ii]  = -( forceTerm[dA][ii] + forceTerm[dB][ii] + forceTerm[dC][ii] );
+          forceTerm[dD][ii]  = -(forceTerm[dA][ii] + forceTerm[dB][ii] + forceTerm[dC][ii]);
        }
-    } else {
-       for( int ii = 0; ii < 3; ii++ ){
+    }
+    else {
+       for (int ii = 0; ii < 3; ii++) {
  
           forceTerm[dA][ii] += delta*deltaR[CDxdB][ii];
           forceTerm[dC][ii] += delta*deltaR[dBxAD][ii];
  
-          forceTerm[dD][ii]  = -( forceTerm[dA][ii] + forceTerm[dB][ii] + forceTerm[dC][ii] );
+          forceTerm[dD][ii]  = -(forceTerm[dA][ii] + forceTerm[dB][ii] + forceTerm[dC][ii]);
        }
     }
  
@@ -277,69 +261,48 @@ static void computeAmoebaInPlaneAngleForce(int bondIndex,  std::vector<Vec3>& po
 
 }
 
-static void computeAmoebaInPlaneAngleForces( Context& context, AmoebaInPlaneAngleForce& AmoebaInPlaneAngleForce,
-                                                     std::vector<Vec3>& expectedForces, double* expectedEnergy, FILE* log ) {
+static void computeAmoebaInPlaneAngleForces(Context& context, AmoebaInPlaneAngleForce& AmoebaInPlaneAngleForce,
+                                                     std::vector<Vec3>& expectedForces, double* expectedEnergy) {
 
     // get positions and zero forces
 
     State state                 = context.getState(State::Positions);
     std::vector<Vec3> positions = state.getPositions();
-    expectedForces.resize( positions.size() );
+    expectedForces.resize(positions.size());
     
-    for( unsigned int ii = 0; ii < expectedForces.size(); ii++ ){
+    for (unsigned int ii = 0; ii < expectedForces.size(); ii++) {
         expectedForces[ii][0] = expectedForces[ii][1] = expectedForces[ii][2] = 0.0;
     }
 
     // calculates forces/energy
 
     *expectedEnergy = 0.0;
-    for( int ii = 0; ii < AmoebaInPlaneAngleForce.getNumAngles(); ii++ ){
-        computeAmoebaInPlaneAngleForce(ii, positions, AmoebaInPlaneAngleForce, expectedForces, expectedEnergy, log );
+    for (int ii = 0; ii < AmoebaInPlaneAngleForce.getNumAngles(); ii++) {
+        computeAmoebaInPlaneAngleForce(ii, positions, AmoebaInPlaneAngleForce, expectedForces, expectedEnergy);
     }
-#ifdef AMOEBA_DEBUG
-    if( log ){
-        (void) fprintf( log, "computeAmoebaInPlaneAngleForces: expected energy=%14.7e\n", *expectedEnergy );
-        for( unsigned int ii = 0; ii < positions.size(); ii++ ){
-            (void) fprintf( log, "%6u [%14.7e %14.7e %14.7e]\n", ii, expectedForces[ii][0], expectedForces[ii][1], expectedForces[ii][2] );
-        }
-        (void) fflush( log );
-    }
-#endif
-    return;
-
 }
 
-void compareWithExpectedForceAndEnergy( Context& context, AmoebaInPlaneAngleForce& AmoebaInPlaneAngleForce,
-                                        double tolerance, const std::string& idString, FILE* log) {
+void compareWithExpectedForceAndEnergy(Context& context, AmoebaInPlaneAngleForce& AmoebaInPlaneAngleForce,
+                                       double tolerance, const std::string& idString) {
 
     std::vector<Vec3> expectedForces;
     double expectedEnergy;
-    computeAmoebaInPlaneAngleForces( context, AmoebaInPlaneAngleForce, expectedForces, &expectedEnergy, log );
+    computeAmoebaInPlaneAngleForces(context, AmoebaInPlaneAngleForce, expectedForces, &expectedEnergy);
    
     State state                      = context.getState(State::Forces | State::Energy);
     const std::vector<Vec3> forces   = state.getForces();
-#ifdef AMOEBA_DEBUG
-    if( log ){
-        (void) fprintf( log, "computeAmoebaInPlaneAngleForces: expected energy=%14.7e %14.7e\n", expectedEnergy, state.getPotentialEnergy() );
-        for( unsigned int ii = 0; ii < forces.size(); ii++ ){
-            (void) fprintf( log, "%6u [%14.7e %14.7e %14.7e]   [%14.7e %14.7e %14.7e]\n", ii,
-                            expectedForces[ii][0], expectedForces[ii][1], expectedForces[ii][2], forces[ii][0], forces[ii][1], forces[ii][2] );
-        }
-        (void) fflush( log );
-    }
-#endif
 
-    for( unsigned int ii = 0; ii < forces.size(); ii++ ){
-        ASSERT_EQUAL_VEC( expectedForces[ii], forces[ii], tolerance );
+    for (unsigned int ii = 0; ii < forces.size(); ii++) {
+        ASSERT_EQUAL_VEC(expectedForces[ii], forces[ii], tolerance);
     }
-    ASSERT_EQUAL_TOL( expectedEnergy, state.getPotentialEnergy(), tolerance );
+    ASSERT_EQUAL_TOL(expectedEnergy, state.getPotentialEnergy(), tolerance);
 }
 
-void testOneAngle( FILE* log ) {
+void testOneAngle() {
 
     System system;
     int numberOfParticles = 4;
-    for( int ii = 0; ii < numberOfParticles; ii++ ){
+    for (int ii = 0; ii < numberOfParticles; ii++) {
         system.addParticle(1.0);
     }
 
@@ -361,7 +324,9 @@ void testOneAngle( FILE* log ) {
     amoebaInPlaneAngleForce->setAmoebaGlobalInPlaneAngleSextic(sexticK);
 
     system.addForce(amoebaInPlaneAngleForce);
-    Context context(system, integrator, Platform::getPlatformByName( "Reference"));
+    ASSERT(!amoebaInPlaneAngleForce->usesPeriodicBoundaryConditions());
+    ASSERT(!system.usesPeriodicBoundaryConditions());
+    Context context(system, integrator, Platform::getPlatformByName("Reference"));
 
     std::vector<Vec3> positions(numberOfParticles);
 
@@ -371,7 +336,7 @@ void testOneAngle( FILE* log ) {
     positions[3] = Vec3(1, 1, 1);
 
     context.setPositions(positions);
-    compareWithExpectedForceAndEnergy( context, *amoebaInPlaneAngleForce, TOL, "testOneInPlaneAngle", log );
+    compareWithExpectedForceAndEnergy(context, *amoebaInPlaneAngleForce, TOL, "testOneInPlaneAngle");
     
     // Try changing the angle parameters and make sure it's still correct.
     
@@ -379,31 +344,22 @@ void testOneAngle( FILE* log ) {
     bool exceptionThrown = false;
     try {
         // This should throw an exception.
-        compareWithExpectedForceAndEnergy( context, *amoebaInPlaneAngleForce, TOL, "testOneInPlaneAngle", log );
+        compareWithExpectedForceAndEnergy(context, *amoebaInPlaneAngleForce, TOL, "testOneInPlaneAngle");
     }
     catch (std::exception ex) {
         exceptionThrown = true;
     }
     ASSERT(exceptionThrown);
     amoebaInPlaneAngleForce->updateParametersInContext(context);
-    compareWithExpectedForceAndEnergy( context, *amoebaInPlaneAngleForce, TOL, "testOneInPlaneAngle", log );
+    compareWithExpectedForceAndEnergy(context, *amoebaInPlaneAngleForce, TOL, "testOneInPlaneAngle");
 }
 
-int main( int numberOfArguments, char* argv[] ) {
+int main(int numberOfArguments, char* argv[]) {
 
     try {
         std::cout << "TestReferenceAmoebaInPlaneAngleForce running test..." << std::endl;
         registerAmoebaReferenceKernelFactories();
-        FILE* log = NULL;
-        //FILE* log = stderr;
-        //FILE* log = fopen( "AmoebaInPlaneAngleForce.log", "w" );;
-
-        testOneAngle( NULL );
-#ifdef AMOEBA_DEBUG
-        if( log && log != stderr )
-            (void) fclose( log );
-#endif
-
+        testOneAngle();
     }
     catch(const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;

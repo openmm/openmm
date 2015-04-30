@@ -1,17 +1,15 @@
 #---------------------------------------------------
 # OpenMM Amoeba Plugin
 #
-# Creates OpenMM Amoeba plugin library, base name=OpenMMAmoeba.
-# Default libraries are shared & optimized. Variants
-# are created for static (_static) and debug (_d).
+# Creates OpenMMAmoeba plugin library.
 #
 # Windows:
-#   OpenMMAmoeba[_d].dll
-#   OpenMMAmoeba[_d].lib
-#   OpenMMAmoeba_static[_d].lib
+#   OpenMMAmoeba.dll
+#   OpenMMAmoeba.lib
+#   OpenMMAmoeba_static.lib
 # Unix:
-#   libOpenMMAmoeba[_d].so
-#   libOpenMMAmoeba_static[_d].a
+#   libOpenMMAmoeba.so
+#   libOpenMMAmoeba_static.a
 #----------------------------------------------------
 
 #INCLUDE(Dart)
@@ -35,12 +33,6 @@ ADD_DEFINITIONS(-DOPENMM_AMOEBA_LIBRARY_NAME=${OPENMM_AMOEBA_LIBRARY_NAME}
 
 SET(SHARED_AMOEBA_TARGET ${OPENMM_AMOEBA_LIBRARY_NAME})
 SET(STATIC_AMOEBA_TARGET ${OPENMM_AMOEBA_LIBRARY_NAME}_static)
-
-# But on Unix or Cygwin we have to add the suffix manually
-IF (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
-    SET(SHARED_AMOEBA_TARGET ${SHARED_AMOEBA_TARGET}_d)
-    SET(STATIC_AMOEBA_TARGET ${STATIC_AMOEBA_TARGET}_d)
-ENDIF (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
 
 # These are all the places to search for header files which are
 # to be part of the API.
@@ -123,10 +115,6 @@ IF(DL_LIBRARY)
 ENDIF(DL_LIBRARY)
 
 SET( OpenMMLib OpenMM )
-# But on Unix or Cygwin we have to add the suffix manually
-IF (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
-    SET(OpenMMLib ${OpenMMLib}_d)
-ENDIF (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
 
 TARGET_LINK_LIBRARIES( ${SHARED_AMOEBA_TARGET} ${SHARED_TARGET} )
 IF(OPENMM_BUILD_STATIC_LIB)
@@ -137,11 +125,11 @@ ENDIF(OPENMM_BUILD_STATIC_LIB)
 
 ADD_SUBDIRECTORY(platforms/reference)
 
-IF(CUDA_FOUND)
+IF(OPENMM_BUILD_CUDA_LIB)
     SET(OPENMM_BUILD_AMOEBA_CUDA_LIB ON CACHE BOOL "Build OpenMMAmoebaCuda library for Nvidia GPUs")
-ELSE(CUDA_FOUND)
+ELSE(OPENMM_BUILD_CUDA_LIB)
     SET(OPENMM_BUILD_AMOEBA_CUDA_LIB OFF CACHE BOOL "Build OpenMMAmoebaCuda library for Nvidia GPUs")
-ENDIF(CUDA_FOUND)
+ENDIF(OPENMM_BUILD_CUDA_LIB)
 
 SET(OPENMM_BUILD_AMOEBA_PATH)
 SET(OPENMM_BUILD_AMOEBA_CUDA_PATH)
@@ -174,4 +162,6 @@ ELSE (EXECUTABLE_OUTPUT_PATH)
   SET (TEST_PATH .)
 ENDIF (EXECUTABLE_OUTPUT_PATH)
 
-ADD_SUBDIRECTORY(serialization/tests)
+IF(BUILD_TESTING)
+    ADD_SUBDIRECTORY(serialization/tests)
+ENDIF(BUILD_TESTING)

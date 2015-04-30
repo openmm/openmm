@@ -33,6 +33,9 @@
  * -------------------------------------------------------------------------- */
 
 #include "CpuBondForce.h"
+#include "CpuCustomGBForce.h"
+#include "CpuCustomManyParticleForce.h"
+#include "CpuCustomNonbondedForce.h"
 #include "CpuGBSAOBCForce.h"
 #include "CpuLangevinDynamics.h"
 #include "CpuNeighborList.h"
@@ -77,11 +80,13 @@ public:
      * @param includeForce  true if forces should be computed
      * @param includeEnergy true if potential energy should be computed
      * @param groups        a set of bit flags for which force groups to include
+     * @param valid         the method may set this to false to indicate the results are invalid and the force/energy
+     *                      calculation should be repeated
      * @return the potential energy of the system.  This value is added to all values returned by ForceImpls'
      * calcForcesAndEnergy() methods.  That is, each force kernel may <i>either</i> return its contribution to the
      * energy directly, <i>or</i> add it to an internal buffer so that it will be included here.
      */
-    double finishComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups);
+    double finishComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups, bool& valid);
 private:
     CpuPlatform::PlatformData& data;
     Kernel referenceKernel;
@@ -218,6 +223,52 @@ private:
 };
 
 /**
+ * This kernel is invoked by CustomNonbondedForce to calculate the forces acting on the system.
+ */
+class CpuCalcCustomNonbondedForceKernel : public CalcCustomNonbondedForceKernel {
+public:
+    CpuCalcCustomNonbondedForceKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data);
+    ~CpuCalcCustomNonbondedForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomNonbondedForce this kernel will be used for
+     */
+    void initialize(const System& system, const CustomNonbondedForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomNonbondedForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force);
+private:
+    CpuPlatform::PlatformData& data;
+    int numParticles;
+    double **particleParamArray;
+    double nonbondedCutoff, switchingDistance, periodicBoxSize[3], longRangeCoefficient;
+    bool useSwitchingFunction, hasInitializedLongRangeCorrection;
+    CustomNonbondedForce* forceCopy;
+    std::map<std::string, double> globalParamValues;
+    std::vector<std::set<int> > exclusions;
+    std::vector<std::string> parameterNames, globalParameterNames;
+    std::vector<std::pair<std::set<int>, std::set<int> > > interactionGroups;
+    NonbondedMethod nonbondedMethod;
+    CpuNeighborList* neighborList;
+    CpuCustomNonbondedForce* nonbonded;
+};
+
+/**
  * This kernel is invoked by GBSAOBCForce to calculate the forces acting on the system.
  */
 class CpuCalcGBSAOBCForceKernel : public CalcGBSAOBCForceKernel {
@@ -256,12 +307,101 @@ private:
 };
 
 /**
+ * This kernel is invoked by CustomGBForce to calculate the forces acting on the system.
+ */
+class CpuCalcCustomGBForceKernel : public CalcCustomGBForceKernel {
+public:
+    CpuCalcCustomGBForceKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data) :
+            CalcCustomGBForceKernel(name, platform), data(data) {
+    }
+    ~CpuCalcCustomGBForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomGBForce this kernel will be used for
+     */
+    void initialize(const System& system, const CustomGBForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomGBForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const CustomGBForce& force);
+private:
+    CpuPlatform::PlatformData& data;
+    int numParticles;
+    bool isPeriodic;
+    RealOpenMM **particleParamArray;
+    RealOpenMM nonbondedCutoff;
+    CpuCustomGBForce* ixn;
+    std::vector<std::set<int> > exclusions;
+    std::vector<std::string> particleParameterNames, globalParameterNames, valueNames;
+    std::vector<OpenMM::CustomGBForce::ComputationType> valueTypes;
+    std::vector<OpenMM::CustomGBForce::ComputationType> energyTypes;
+    NonbondedMethod nonbondedMethod;
+    CpuNeighborList* neighborList;
+};
+
+/**
+ * This kernel is invoked by CustomManyParticleForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CpuCalcCustomManyParticleForceKernel : public CalcCustomManyParticleForceKernel {
+public:
+    CpuCalcCustomManyParticleForceKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data) : CalcCustomManyParticleForceKernel(name, platform),
+            data(data), ixn(NULL) {
+    }
+    ~CpuCalcCustomManyParticleForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomManyParticleForce this kernel will be used for
+     */
+    void initialize(const System& system, const CustomManyParticleForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomManyParticleForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const CustomManyParticleForce& force);
+private:
+    CpuPlatform::PlatformData& data;
+    int numParticles;
+    RealOpenMM cutoffDistance;
+    RealOpenMM **particleParamArray;
+    CpuCustomManyParticleForce* ixn;
+    std::vector<std::string> globalParameterNames;
+    NonbondedMethod nonbondedMethod;
+};
+
+/**
  * This kernel is invoked by LangevinIntegrator to take one time step.
  */
 class CpuIntegrateLangevinStepKernel : public IntegrateLangevinStepKernel {
 public:
     CpuIntegrateLangevinStepKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data) : IntegrateLangevinStepKernel(name, platform),
-        data(data), dynamics(NULL) {
+            data(data), dynamics(NULL) {
     }
     ~CpuIntegrateLangevinStepKernel();
     /**

@@ -48,10 +48,11 @@
 using namespace OpenMM;
 using namespace std;
 
+ReferencePlatform platform;
+
 const double TOL = 1e-5;
 
 void testSingleBond() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(2.0);
     system.addParticle(2.0);
@@ -89,7 +90,6 @@ void testSingleBond() {
 void testConstraints() {
     const int numParticles = 8;
     const double temp = 500.0;
-    ReferencePlatform platform;
     System system;
     VariableVerletIntegrator integrator(1e-5);
     integrator.setConstraintTolerance(1e-5);
@@ -148,7 +148,6 @@ void testConstraints() {
 void testConstrainedClusters() {
     const int numParticles = 7;
     const double temp = 500.0;
-    ReferencePlatform platform;
     System system;
     VariableVerletIntegrator integrator(1e-5);
     integrator.setConstraintTolerance(1e-5);
@@ -211,7 +210,6 @@ void testConstrainedClusters() {
 }
 
 void testConstrainedMasslessParticles() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(0.0);
     system.addParticle(1.0);
@@ -255,7 +253,6 @@ void testArgonBox() {
 
     // Create a box of argon atoms.
     
-    ReferencePlatform platform;
     System system;
     NonbondedForce* nonbonded = new NonbondedForce();
     vector<Vec3> positions;

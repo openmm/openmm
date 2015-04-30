@@ -40,13 +40,13 @@ AmoebaInPlaneAngleForce::AmoebaInPlaneAngleForce() {
     _globalCubicK = _globalQuarticK = _globalPenticK = _globalSexticK = 0.0;
 }
 
-int AmoebaInPlaneAngleForce::addAngle(int particle1, int particle2, int particle3, int particle4,  double length, double quadraticK ) {
-    angles.push_back(AngleInfo(particle1, particle2, particle3, particle4, length, quadraticK ));
+int AmoebaInPlaneAngleForce::addAngle(int particle1, int particle2, int particle3, int particle4,  double length, double quadraticK) {
+    angles.push_back(AngleInfo(particle1, particle2, particle3, particle4, length, quadraticK));
     return angles.size()-1;
 }
 
 void AmoebaInPlaneAngleForce::getAngleParameters(int index, int& particle1, int& particle2, int& particle3, int& particle4,
-                                                  double& length, double&  quadraticK ) const {
+                                                  double& length, double&  quadraticK) const {
     particle1       = angles[index].particle1;
     particle2       = angles[index].particle2;
     particle3       = angles[index].particle3;
@@ -56,7 +56,7 @@ void AmoebaInPlaneAngleForce::getAngleParameters(int index, int& particle1, int&
 }
 
 void AmoebaInPlaneAngleForce::setAngleParameters(int index, int particle1, int particle2, int particle3, int particle4,
-                                                    double length, double quadraticK ) {
+                                                    double length, double quadraticK) {
     angles[index].particle1  = particle1;
     angles[index].particle2  = particle2;
     angles[index].particle3  = particle3;
@@ -65,35 +65,35 @@ void AmoebaInPlaneAngleForce::setAngleParameters(int index, int particle1, int p
     angles[index].quadraticK = quadraticK;
 }
 
-void AmoebaInPlaneAngleForce::setAmoebaGlobalInPlaneAngleCubic(double cubicK ) {
+void AmoebaInPlaneAngleForce::setAmoebaGlobalInPlaneAngleCubic(double cubicK) {
     _globalCubicK           = cubicK;
 }
 
-void AmoebaInPlaneAngleForce::setAmoebaGlobalInPlaneAngleQuartic(double quarticK ) {
+void AmoebaInPlaneAngleForce::setAmoebaGlobalInPlaneAngleQuartic(double quarticK) {
     _globalQuarticK         = quarticK;
 }
 
-double AmoebaInPlaneAngleForce::getAmoebaGlobalInPlaneAngleCubic( void ) const {
+double AmoebaInPlaneAngleForce::getAmoebaGlobalInPlaneAngleCubic() const {
     return _globalCubicK;
 }
 
-double AmoebaInPlaneAngleForce::getAmoebaGlobalInPlaneAngleQuartic( void ) const {
+double AmoebaInPlaneAngleForce::getAmoebaGlobalInPlaneAngleQuartic() const {
     return _globalQuarticK;
 }
 
-void AmoebaInPlaneAngleForce::setAmoebaGlobalInPlaneAnglePentic(double cubicK ) {
+void AmoebaInPlaneAngleForce::setAmoebaGlobalInPlaneAnglePentic(double cubicK) {
     _globalPenticK           = cubicK;
 }
 
-void AmoebaInPlaneAngleForce::setAmoebaGlobalInPlaneAngleSextic(double quarticK ) {
+void AmoebaInPlaneAngleForce::setAmoebaGlobalInPlaneAngleSextic(double quarticK) {
     _globalSexticK         = quarticK;
 }
 
-double AmoebaInPlaneAngleForce::getAmoebaGlobalInPlaneAnglePentic( void ) const {
+double AmoebaInPlaneAngleForce::getAmoebaGlobalInPlaneAnglePentic() const {
     return _globalPenticK;
 }
 
-double AmoebaInPlaneAngleForce::getAmoebaGlobalInPlaneAngleSextic( void ) const {
+double AmoebaInPlaneAngleForce::getAmoebaGlobalInPlaneAngleSextic() const {
     return _globalSexticK;
 }
 

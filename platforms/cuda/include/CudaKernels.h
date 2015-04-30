@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -37,6 +37,27 @@
 #include <cufft.h>
 
 namespace OpenMM {
+
+/**
+ * This abstract class defines an interface for code that can compile CUDA kernels.  This allows a plugin to take advantage of runtime compilation
+ * when running on recent versions of CUDA.
+ */
+class CudaCompilerKernel : public KernelImpl {
+public:
+    static std::string Name() {
+        return "CudaCompilerKernel";
+    }
+    CudaCompilerKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    }
+    /**
+     * Compile a kernel to PTX.
+     *
+     * @param source     the source code for the kernel
+     * @param options    the flags to be passed to the compiler
+     * @param cu         the CudaContext for which the kernel is being compiled
+     */
+    virtual std::string createModule(const std::string& source, const std::string& flags, CudaContext& cu) = 0;
+};
 
 /**
  * This kernel is invoked at the beginning and end of force and energy computations.  It gives the
@@ -71,11 +92,13 @@ public:
      * @param includeForce  true if forces should be computed
      * @param includeEnergy true if potential energy should be computed
      * @param groups        a set of bit flags for which force groups to include
+     * @param valid         the method may set this to false to indicate the results are invalid and the force/energy
+     *                      calculation should be repeated
      * @return the potential energy of the system.  This value is added to all values returned by ForceImpls'
      * calcForcesAndEnergy() methods.  That is, each force kernel may <i>either</i> return its contribution to the
      * energy directly, <i>or</i> add it to an internal buffer so that it will be included here.
      */
-    double finishComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups);
+    double finishComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups, bool& valid);
 private:
    CudaContext& cu;
 };
@@ -497,11 +520,19 @@ public:
      * @return the potential energy due to the force
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CMAPTorsionForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const CMAPTorsionForce& force);
 private:
     int numTorsions;
     bool hasInitializedKernel;
     CudaContext& cu;
     const System& system;
+    std::vector<int2> mapPositionsVec;
     CudaArray* coefficients;
     CudaArray* mapPositions;
     CudaArray* torsionMaps;
@@ -591,14 +622,16 @@ private:
         int getKeySize() const {return 4;}
         const char* getDataType() const {return "int2";}
         const char* getKeyType() const {return "int";}
-        const char* getMinKey() const {return "INT_MIN";}
-        const char* getMaxKey() const {return "INT_MAX";}
-        const char* getMaxValue() const {return "make_int2(INT_MAX, INT_MAX)";}
+        const char* getMinKey() const {return "(-2147483647-1)";}
+        const char* getMaxKey() const {return "2147483647";}
+        const char* getMaxValue() const {return "make_int2(2147483647, 2147483647)";}
         const char* getSortKey() const {return "value.y";}
     };
     class PmeIO;
     class PmePreComputation;
     class PmePostComputation;
+    class SyncStreamPreComputation;
+    class SyncStreamPostComputation;
     CudaContext& cu;
     bool hasInitializedFFT;
     CudaArray* sigmaEpsilon;
@@ -614,6 +647,8 @@ private:
     CudaSort* sort;
     Kernel cpuPme;
     PmeIO* pmeio;
+    CUstream pmeStream;
+    CUevent pmeSyncEvent;
     cufftHandle fftForward;
     cufftHandle fftBackward;
     CUfunction ewaldSumsKernel;
@@ -628,7 +663,7 @@ private:
     std::vector<std::pair<int, int> > exceptionAtoms;
     double ewaldSelfEnergy, dispersionCoefficient, alpha;
     int interpolateForceThreads;
-    bool hasCoulomb, hasLJ;
+    bool hasCoulomb, hasLJ, usePmeStream;
     static const int PmeOrder = 5;
 };
 
@@ -638,7 +673,7 @@ private:
 class CudaCalcCustomNonbondedForceKernel : public CalcCustomNonbondedForceKernel {
 public:
     CudaCalcCustomNonbondedForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcCustomNonbondedForceKernel(name, platform),
-            cu(cu), params(NULL), globals(NULL), tabulatedFunctionParams(NULL), interactionGroupData(NULL), forceCopy(NULL), system(system), hasInitializedKernel(false) {
+            cu(cu), params(NULL), globals(NULL), interactionGroupData(NULL), forceCopy(NULL), system(system), hasInitializedKernel(false) {
     }
     ~CudaCalcCustomNonbondedForceKernel();
     /**
@@ -669,7 +704,6 @@ private:
     CudaContext& cu;
     CudaParameterSet* params;
     CudaArray* globals;
-    CudaArray* tabulatedFunctionParams;
     CudaArray* interactionGroupData;
     CUfunction interactionGroupKernel;
     std::vector<void*> interactionGroupArgs;
@@ -716,7 +750,7 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const GBSAOBCForce& force);
 private:
-    double prefactor;
+    double prefactor, surfaceAreaFactor;
     bool hasCreatedKernels;
     int maxTiles;
     CudaContext& cu;
@@ -739,7 +773,7 @@ class CudaCalcCustomGBForceKernel : public CalcCustomGBForceKernel {
 public:
     CudaCalcCustomGBForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcCustomGBForceKernel(name, platform),
             hasInitializedKernels(false), cu(cu), params(NULL), computedValues(NULL), energyDerivs(NULL), energyDerivChain(NULL), longEnergyDerivs(NULL), globals(NULL),
-            valueBuffers(NULL), tabulatedFunctionParams(NULL), system(system) {
+            valueBuffers(NULL), system(system) {
     }
     ~CudaCalcCustomGBForceKernel();
     /**
@@ -776,7 +810,6 @@ private:
     CudaArray* longEnergyDerivs;
     CudaArray* globals;
     CudaArray* valueBuffers;
-    CudaArray* tabulatedFunctionParams;
     std::vector<std::string> globalParamNames;
     std::vector<float> globalParamValues;
     std::vector<CudaArray*> tabulatedFunctions;
@@ -838,7 +871,7 @@ class CudaCalcCustomHbondForceKernel : public CalcCustomHbondForceKernel {
 public:
     CudaCalcCustomHbondForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcCustomHbondForceKernel(name, platform),
             hasInitializedKernel(false), cu(cu), donorParams(NULL), acceptorParams(NULL), donors(NULL), acceptors(NULL),
-            globals(NULL), donorExclusions(NULL), acceptorExclusions(NULL), tabulatedFunctionParams(NULL), system(system) {
+            globals(NULL), donorExclusions(NULL), acceptorExclusions(NULL), system(system) {
     }
     ~CudaCalcCustomHbondForceKernel();
     /**
@@ -875,7 +908,6 @@ private:
     CudaArray* acceptors;
     CudaArray* donorExclusions;
     CudaArray* acceptorExclusions;
-    CudaArray* tabulatedFunctionParams;
     std::vector<std::string> globalParamNames;
     std::vector<float> globalParamValues;
     std::vector<CudaArray*> tabulatedFunctions;
@@ -890,7 +922,7 @@ private:
 class CudaCalcCustomCompoundBondForceKernel : public CalcCustomCompoundBondForceKernel {
 public:
     CudaCalcCustomCompoundBondForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcCustomCompoundBondForceKernel(name, platform),
-            cu(cu), params(NULL), globals(NULL), tabulatedFunctionParams(NULL), system(system) {
+            cu(cu), params(NULL), globals(NULL), system(system) {
     }
     ~CudaCalcCustomCompoundBondForceKernel();
     /**
@@ -922,11 +954,73 @@ private:
     CudaContext& cu;
     CudaParameterSet* params;
     CudaArray* globals;
-    CudaArray* tabulatedFunctionParams;
     std::vector<std::string> globalParamNames;
     std::vector<float> globalParamValues;
     std::vector<CudaArray*> tabulatedFunctions;
     const System& system;
+};
+
+/**
+ * This kernel is invoked by CustomManyParticleForce to calculate the forces acting on the system.
+ */
+class CudaCalcCustomManyParticleForceKernel : public CalcCustomManyParticleForceKernel {
+public:
+    CudaCalcCustomManyParticleForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcCustomManyParticleForceKernel(name, platform),
+            hasInitializedKernel(false), cu(cu), params(NULL), particleTypes(NULL), orderIndex(NULL), particleOrder(NULL), exclusions(NULL),
+            exclusionStartIndex(NULL), blockCenter(NULL), blockBoundingBox(NULL), neighborPairs(NULL), numNeighborPairs(NULL), neighborStartIndex(NULL),
+            numNeighborsForAtom(NULL), neighbors(NULL), system(system) {
+    }
+    ~CudaCalcCustomManyParticleForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomManyParticleForce this kernel will be used for
+     */
+    void initialize(const System& system, const CustomManyParticleForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomManyParticleForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const CustomManyParticleForce& force);
+
+private:
+    CudaContext& cu;
+    bool hasInitializedKernel;
+    NonbondedMethod nonbondedMethod;
+    int maxNeighborPairs, forceWorkgroupSize, findNeighborsWorkgroupSize;
+    CudaParameterSet* params;
+    CudaArray* particleTypes;
+    CudaArray* orderIndex;
+    CudaArray* particleOrder;
+    CudaArray* exclusions;
+    CudaArray* exclusionStartIndex;
+    CudaArray* blockCenter;
+    CudaArray* blockBoundingBox;
+    CudaArray* neighborPairs;
+    CudaArray* numNeighborPairs;
+    CudaArray* neighborStartIndex;
+    CudaArray* numNeighborsForAtom;
+    CudaArray* neighbors;
+    std::vector<std::string> globalParamNames;
+    std::vector<float> globalParamValues;
+    std::vector<CudaArray*> tabulatedFunctions;
+    std::vector<void*> forceArgs, blockBoundsArgs, neighborsArgs, startIndicesArgs, copyPairsArgs;
+    const System& system;
+    CUfunction forceKernel, blockBoundsKernel, neighborsKernel, startIndicesKernel, copyPairsKernel;
+    CUdeviceptr globalsPtr;
+    CUevent event;
 };
 
 /**
@@ -1188,7 +1282,8 @@ private:
     void prepareForComputation(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid);
     void recordChangedParameters(ContextImpl& context);
     CudaContext& cu;
-    double prevStepSize;
+    double prevStepSize, energy;
+    float energyFloat;
     int numGlobalVariables;
     bool hasInitializedKernels, deviceValuesAreCurrent, modifiesParameters, keNeedsForce;
     mutable bool localValuesAreCurrent;
@@ -1209,7 +1304,7 @@ private:
     std::vector<std::vector<CUfunction> > kernels;
     std::vector<std::vector<std::vector<void*> > > kernelArgs;
     std::vector<void*> kineticEnergyArgs;
-    CUfunction sumPotentialEnergyKernel, randomKernel, kineticEnergyKernel, sumKineticEnergyKernel;
+    CUfunction randomKernel, kineticEnergyKernel, sumKineticEnergyKernel;
     std::vector<CustomIntegrator::ComputationType> stepType;
     std::vector<bool> needsForces;
     std::vector<bool> needsEnergy;

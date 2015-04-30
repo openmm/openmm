@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,6 +32,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include "TabulatedFunction.h"
 #include "Force.h"
 #include "Vec3.h"
 #include <map>
@@ -128,14 +129,14 @@ namespace OpenMM {
  * particular piece of the computation.
  *
  * Expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
- * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, erf, erfc, min, max, abs, step, delta.  All trigonometric functions
+ * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, erf, erfc, min, max, abs, floor, ceil, step, delta.  All trigonometric functions
  * are defined in radians, and log is the natural logarithm.  step(x) = 0 if x is less than 0, 1 otherwise.  delta(x) = 1 if x is 0, 0 otherwise.  In expressions for
  * particle pair calculations, the names of per-particle parameters and computed values
  * have the suffix "1" or "2" appended to them to indicate the values for the two interacting particles.  As seen in the above example,
  * an expression may also involve intermediate quantities that are defined following the main expression, using ";" as a separator.
  *
- * In addition, you can call addFunction() to define a new function based on tabulated values.  You specify a vector of
- * values, and a natural spline is created from them.  That function can then appear in expressions.
+ * In addition, you can call addTabulatedFunction() to define a new function based on tabulated values.  You specify the function by
+ * creating a TabulatedFunction object.  That function can then appear in expressions.
  */
 
 class OPENMM_EXPORT CustomGBForce : public Force {
@@ -181,6 +182,7 @@ public:
      * Create a CustomGBForce.
      */
     CustomGBForce();
+    ~CustomGBForce();
     /**
      * Get the number of particles for which force field parameters have been defined.
      */
@@ -207,6 +209,14 @@ public:
     }
     /**
      * Get the number of tabulated functions that have been defined.
+     */
+    int getNumTabulatedFunctions() const {
+        return functions.size();
+    }
+    /**
+     * Get the number of tabulated functions that have been defined.
+     * 
+     * @deprecated This method exists only for backward compatibility.  Use getNumTabulatedFunctions() instead.
      */
     int getNumFunctions() const {
         return functions.size();
@@ -452,42 +462,60 @@ public:
      */
     void setExclusionParticles(int index, int particle1, int particle2);
     /**
-     * Add a tabulated function that may appear in the energy expression.
+     * Add a tabulated function that may appear in expressions.
      *
      * @param name           the name of the function as it appears in expressions
-     * @param values         the tabulated values of the function f(x) at uniformly spaced values of x between min and max.
-     *                       The function is assumed to be zero for x &lt; min or x &gt; max.
-     * @param min            the value of the independent variable corresponding to the first element of values
-     * @param max            the value of the independent variable corresponding to the last element of values
+     * @param function       a TabulatedFunction object defining the function.  The TabulatedFunction
+     *                       should have been created on the heap with the "new" operator.  The
+     *                       Force takes over ownership of it, and deletes it when the Force itself is deleted.
      * @return the index of the function that was added
+     */
+    int addTabulatedFunction(const std::string& name, TabulatedFunction* function);
+    /**
+     * Get a const reference to a tabulated function that may appear in expressions.
+     *
+     * @param index     the index of the function to get
+     * @return the TabulatedFunction object defining the function
+     */
+    const TabulatedFunction& getTabulatedFunction(int index) const;
+    /**
+     * Get a reference to a tabulated function that may appear in expressions.
+     *
+     * @param index     the index of the function to get
+     * @return the TabulatedFunction object defining the function
+     */
+    TabulatedFunction& getTabulatedFunction(int index);
+    /**
+     * Get the name of a tabulated function that may appear in expressions.
+     *
+     * @param index     the index of the function to get
+     * @return the name of the function as it appears in expressions
+     */
+    const std::string& getTabulatedFunctionName(int index) const;
+    /**
+     * Add a tabulated function that may appear in expressions.
+     *
+     * @deprecated This method exists only for backward compatibility.  Use addTabulatedFunction() instead.
      */
     int addFunction(const std::string& name, const std::vector<double>& values, double min, double max);
     /**
-     * Get the parameters for a tabulated function that may appear in the energy expression.
+     * Get the parameters for a tabulated function that may appear in expressions.
      *
-     * @param index          the index of the function for which to get parameters
-     * @param name           the name of the function as it appears in expressions
-     * @param values         the tabulated values of the function f(x) at uniformly spaced values of x between min and max.
-     *                       The function is assumed to be zero for x &lt; min or x &gt; max.
-     * @param min            the value of the independent variable corresponding to the first element of values
-     * @param max            the value of the independent variable corresponding to the last element of values
+     * @deprecated This method exists only for backward compatibility.  Use getTabulatedFunctionParameters() instead.
+     * If the specified function is not a Continuous1DFunction, this throws an exception.
      */
     void getFunctionParameters(int index, std::string& name, std::vector<double>& values, double& min, double& max) const;
     /**
-     * Set the parameters for a tabulated function that may appear in algebraic expressions.
+     * Set the parameters for a tabulated function that may appear in expressions.
      *
-     * @param index          the index of the function for which to set parameters
-     * @param name           the name of the function as it appears in expressions
-     * @param values         the tabulated values of the function f(x) at uniformly spaced values of x between min and max.
-     *                       The function is assumed to be zero for x &lt; min or x &gt; max.
-     * @param min            the value of the independent variable corresponding to the first element of values
-     * @param max            the value of the independent variable corresponding to the last element of values
+     * @deprecated This method exists only for backward compatibility.  Use setTabulatedFunctionParameters() instead.
+     * If the specified function is not a Continuous1DFunction, this throws an exception.
      */
     void setFunctionParameters(int index, const std::string& name, const std::vector<double>& values, double min, double max);
     /**
      * Update the per-particle parameters in a Context to match those stored in this Force object.  This method provides
      * an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
-     * Simply call setParticleParameters() to modify this object's parameters, then call updateParametersInState()
+     * Simply call setParticleParameters() to modify this object's parameters, then call updateParametersInContext()
      * to copy them over to the Context.
      * 
      * This method has several limitations.  The only information it updates is the values of per-particle parameters.
@@ -495,6 +523,15 @@ public:
      * the Context.  Also, this method cannot be used to add new particles, only to change the parameters of existing ones.
      */
     void updateParametersInContext(Context& context);
+    /**
+     * Returns whether or not this force makes use of periodic boundary
+     * conditions.
+     *
+     * @returns true if force uses PBC and false otherwise
+     */
+    bool usesPeriodicBoundaryConditions() const {
+        return nonbondedMethod == CustomGBForce::CutoffPeriodic;
+    }
 protected:
     ForceImpl* createImpl() const;
 private:
@@ -577,12 +614,10 @@ public:
 class CustomGBForce::FunctionInfo {
 public:
     std::string name;
-    std::vector<double> values;
-    double min, max;
+    TabulatedFunction* function;
     FunctionInfo() {
     }
-    FunctionInfo(const std::string& name, const std::vector<double>& values, double min, double max) :
-        name(name), values(values), min(min), max(max) {
+    FunctionInfo(const std::string& name, TabulatedFunction* function) : name(name), function(function) {
     }
 };
 

@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,6 +32,7 @@
 #include <string>
 #include <pthread.h>
 #define __CL_ENABLE_EXCEPTIONS
+#define CL_USE_DEPRECATED_OPENCL_1_1_APIS
 #ifdef _MSC_VER
     // Prevent Windows from defining macros that interfere with other code.
     #define NOMINMAX
@@ -210,11 +211,17 @@ public:
         return contextIndex;
     }
     /**
-     * Get the cl::CommandQueue associated with this object.
+     * Get the cl::CommandQueue currently being used for execution.
      */
-    cl::CommandQueue& getQueue() {
-        return queue;
-    }
+    cl::CommandQueue& getQueue();
+    /**
+     * Set the cl::ComandQueue to use for execution.
+     */
+    void setQueue(cl::CommandQueue& queue);
+    /**
+     * Reset the context to using the default queue for execution.
+     */
+    void restoreDefaultQueue();
     /**
      * Get the array which contains the position (the xyz components) and charge (the w component) of each atom.
      */
@@ -441,36 +448,65 @@ public:
     /**
      * Get whether the device being used supports 64 bit atomic operations on global memory.
      */
-    bool getSupports64BitGlobalAtomics() {
+    bool getSupports64BitGlobalAtomics() const {
         return supports64BitGlobalAtomics;
     }
     /**
      * Get whether the device being used supports double precision math.
      */
-    bool getSupportsDoublePrecision() {
+    bool getSupportsDoublePrecision() const {
         return supportsDoublePrecision;
     }
     /**
      * Get whether double precision is being used.
      */
-    bool getUseDoublePrecision() {
+    bool getUseDoublePrecision() const {
         return useDoublePrecision;
     }
     /**
      * Get whether mixed precision is being used.
      */
-    bool getUseMixedPrecision() {
+    bool getUseMixedPrecision() const {
         return useMixedPrecision;
+    }
+    /**
+     * Get whether the periodic box is triclinic.
+     */
+    bool getBoxIsTriclinic() const {
+        return boxIsTriclinic;
     }
     /**
      * Convert a number to a string in a format suitable for including in a kernel.
      * This takes into account whether the context uses single or double precision.
      */
-    std::string doubleToString(double value);
+    std::string doubleToString(double value) const;
     /**
      * Convert a number to a string in a format suitable for including in a kernel.
      */
-    std::string intToString(int value);
+    std::string intToString(int value) const;
+    /**
+     * Get the vectors defining the periodic box.
+     */
+    void getPeriodicBoxVectors(Vec3& a, Vec3& b, Vec3& c) const {
+        a = Vec3(periodicBoxVecXDouble.x, periodicBoxVecXDouble.y, periodicBoxVecXDouble.z);
+        b = Vec3(periodicBoxVecYDouble.x, periodicBoxVecYDouble.y, periodicBoxVecYDouble.z);
+        c = Vec3(periodicBoxVecZDouble.x, periodicBoxVecZDouble.y, periodicBoxVecZDouble.z);
+    }
+    /**
+     * Set the vectors defining the periodic box.
+     */
+    void setPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Vec3& c) {
+        periodicBoxVecX = mm_float4((float) a[0], (float) a[1], (float) a[2], 0.0f);
+        periodicBoxVecY = mm_float4((float) b[0], (float) b[1], (float) b[2], 0.0f);
+        periodicBoxVecZ = mm_float4((float) c[0], (float) c[1], (float) c[2], 0.0f);
+        periodicBoxVecXDouble = mm_double4(a[0], a[1], a[2], 0.0);
+        periodicBoxVecYDouble = mm_double4(b[0], b[1], b[2], 0.0);
+        periodicBoxVecZDouble = mm_double4(c[0], c[1], c[2], 0.0);
+        periodicBoxSize = mm_float4((float) a[0], (float) b[1], (float) c[2], 0.0f);
+        invPeriodicBoxSize = mm_float4(1.0f/(float) a[0], 1.0f/(float) b[1], 1.0f/(float) c[2], 0.0f);
+        periodicBoxSizeDouble = mm_double4(a[0], b[1], c[2], 0.0);
+        invPeriodicBoxSizeDouble = mm_double4(1.0/a[0], 1.0/b[1], 1.0/c[2], 0.0);
+    }
     /**
      * Get the size of the periodic box.
      */
@@ -484,15 +520,6 @@ public:
         return periodicBoxSizeDouble;
     }
     /**
-     * Set the size of the periodic box.
-     */
-    void setPeriodicBoxSize(double xsize, double ysize, double zsize) {
-        periodicBoxSize = mm_float4((float) xsize, (float) ysize, (float) zsize, 0);
-        invPeriodicBoxSize = mm_float4((float) (1.0/xsize), (float) (1.0/ysize), (float) (1.0/zsize), 0);
-        periodicBoxSizeDouble = mm_double4(xsize, ysize, zsize, 0);
-        invPeriodicBoxSizeDouble = mm_double4(1.0/xsize, 1.0/ysize, 1.0/zsize, 0);
-    }
-    /**
      * Get the inverse of the size of the periodic box.
      */
     mm_float4 getInvPeriodicBoxSize() const {
@@ -503,6 +530,42 @@ public:
      */
     mm_double4 getInvPeriodicBoxSizeDouble() const {
         return invPeriodicBoxSizeDouble;
+    }
+    /**
+     * Get the first periodic box vector.
+     */
+    mm_float4 getPeriodicBoxVecX() {
+        return periodicBoxVecX;
+    }
+    /**
+     * Get the first periodic box vector.
+     */
+    mm_double4 getPeriodicBoxVecXDouble() {
+        return periodicBoxVecXDouble;
+    }
+    /**
+     * Get the second periodic box vector.
+     */
+    mm_float4 getPeriodicBoxVecY() {
+        return periodicBoxVecY;
+    }
+    /**
+     * Get the second periodic box vector.
+     */
+    mm_double4 getPeriodicBoxVecYDouble() {
+        return periodicBoxVecYDouble;
+    }
+    /**
+     * Get the third periodic box vector.
+     */
+    mm_float4 getPeriodicBoxVecZ() {
+        return periodicBoxVecZ;
+    }
+    /**
+     * Get the third periodic box vector.
+     */
+    mm_double4 getPeriodicBoxVecZDouble() {
+        return periodicBoxVecZDouble;
     }
     /**
      * Get the OpenCLIntegrationUtilities for this context.
@@ -621,14 +684,14 @@ private:
     int numThreadBlocks;
     int numForceBuffers;
     int simdWidth;
-    bool supports64BitGlobalAtomics, supportsDoublePrecision, useDoublePrecision, useMixedPrecision, atomsWereReordered;
-    mm_float4 periodicBoxSize, invPeriodicBoxSize;
-    mm_double4 periodicBoxSizeDouble, invPeriodicBoxSizeDouble;
+    bool supports64BitGlobalAtomics, supportsDoublePrecision, useDoublePrecision, useMixedPrecision, atomsWereReordered, boxIsTriclinic;
+    mm_float4 periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ;
+    mm_double4 periodicBoxSizeDouble, invPeriodicBoxSizeDouble, periodicBoxVecXDouble, periodicBoxVecYDouble, periodicBoxVecZDouble;
     std::string defaultOptimizationOptions;
     std::map<std::string, std::string> compilationDefines;
     cl::Context context;
     cl::Device device;
-    cl::CommandQueue queue;
+    cl::CommandQueue defaultQueue, currentQueue;
     cl::Kernel clearBufferKernel;
     cl::Kernel clearTwoBuffersKernel;
     cl::Kernel clearThreeBuffersKernel;

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -44,6 +44,7 @@ CustomExternalForceProxy::CustomExternalForceProxy() : SerializationProxy("Custo
 void CustomExternalForceProxy::serialize(const void* object, SerializationNode& node) const {
     node.setIntProperty("version", 1);
     const CustomExternalForce& force = *reinterpret_cast<const CustomExternalForce*>(object);
+    node.setIntProperty("forceGroup", force.getForceGroup());
     node.setStringProperty("energy", force.getEnergyFunction());
     SerializationNode& perParticleParams = node.createChildNode("PerParticleParameters");
     for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
@@ -74,6 +75,7 @@ void* CustomExternalForceProxy::deserialize(const SerializationNode& node) const
     CustomExternalForce* force = NULL;
     try {
         CustomExternalForce* force = new CustomExternalForce(node.getStringProperty("energy"));
+        force->setForceGroup(node.getIntProperty("forceGroup", 0));
         const SerializationNode& perParticleParams = node.getChildNode("PerParticleParameters");
         for (int i = 0; i < (int) perParticleParams.getChildren().size(); i++) {
             const SerializationNode& parameter = perParticleParams.getChildren()[i];

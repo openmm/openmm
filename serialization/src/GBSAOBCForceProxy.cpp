@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -42,12 +42,14 @@ GBSAOBCForceProxy::GBSAOBCForceProxy() : SerializationProxy("GBSAOBCForce") {
 }
 
 void GBSAOBCForceProxy::serialize(const void* object, SerializationNode& node) const {
-    node.setIntProperty("version", 1);
+    node.setIntProperty("version", 2);
     const GBSAOBCForce& force = *reinterpret_cast<const GBSAOBCForce*>(object);
+    node.setIntProperty("forceGroup", force.getForceGroup());
     node.setIntProperty("method", (int) force.getNonbondedMethod());
     node.setDoubleProperty("cutoff", force.getCutoffDistance());
     node.setDoubleProperty("soluteDielectric", force.getSoluteDielectric());
     node.setDoubleProperty("solventDielectric", force.getSolventDielectric());
+    node.setDoubleProperty("surfaceAreaEnergy", force.getSurfaceAreaEnergy());
     SerializationNode& particles = node.createChildNode("Particles");
     for (int i = 0; i < force.getNumParticles(); i++) {
         double charge, radius, scale;
@@ -57,14 +59,18 @@ void GBSAOBCForceProxy::serialize(const void* object, SerializationNode& node) c
 }
 
 void* GBSAOBCForceProxy::deserialize(const SerializationNode& node) const {
-    if (node.getIntProperty("version") != 1)
+    int version = node.getIntProperty("version");
+    if (version < 1 || version > 2)
         throw OpenMMException("Unsupported version number");
     GBSAOBCForce* force = new GBSAOBCForce();
     try {
+        force->setForceGroup(node.getIntProperty("forceGroup", 0));
         force->setNonbondedMethod((GBSAOBCForce::NonbondedMethod) node.getIntProperty("method"));
         force->setCutoffDistance(node.getDoubleProperty("cutoff"));
         force->setSoluteDielectric(node.getDoubleProperty("soluteDielectric"));
         force->setSolventDielectric(node.getDoubleProperty("solventDielectric"));
+        if (version > 1)
+            force->setSurfaceAreaEnergy(node.getDoubleProperty("surfaceAreaEnergy"));
         const SerializationNode& particles = node.getChildNode("Particles");
         for (int i = 0; i < (int) particles.getChildren().size(); i++) {
             const SerializationNode& particle = particles.getChildren()[i];

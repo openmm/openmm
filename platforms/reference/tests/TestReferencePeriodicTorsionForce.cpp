@@ -46,10 +46,11 @@
 using namespace OpenMM;
 using namespace std;
 
+ReferencePlatform platform;
+
 const double TOL = 1e-5;
 
 void testPeriodicTorsions() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -59,6 +60,8 @@ void testPeriodicTorsions() {
     PeriodicTorsionForce* forceField = new PeriodicTorsionForce();
     forceField->addTorsion(0, 1, 2, 3, 2, PI_M/3, 1.1);
     system.addForce(forceField);
+    ASSERT(!forceField->usesPeriodicBoundaryConditions());
+    ASSERT(!system.usesPeriodicBoundaryConditions());
     Context context(system, integrator, platform);
     vector<Vec3> positions(4);
     positions[0] = Vec3(0, 1, 0);

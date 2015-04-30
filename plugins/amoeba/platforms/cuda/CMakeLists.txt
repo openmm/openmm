@@ -1,15 +1,13 @@
 #---------------------------------------------------
 # OpenMM CUDA Amoeba Implementation
 #
-# Creates OpenMM library, base name=OpenMMAmoebaCUDA.
-# Default libraries are shared & optimized. Variants
-# are created for debug (_d).
+# Creates OpenMMAmoebaCUDA library.
 #
 # Windows:
-#   OpenMMAmoebaCUDA[_d].dll
-#   OpenMMAmoebaCUDA[_d].lib
+#   OpenMMAmoebaCUDA.dll
+#   OpenMMAmoebaCUDA.lib
 # Unix:
-#   libOpenMMAmoebaCUDA[_d].so
+#   libOpenMMAmoebaCUDA.so
 #----------------------------------------------------
 
 # The source is organized into subdirectories, but we handle them all from
@@ -23,18 +21,6 @@ SET(OPENMM_SOURCE_SUBDIRS .)
 SET(OPENMMAMOEBACUDA_LIBRARY_NAME OpenMMAmoebaCUDA)
 
 SET(SHARED_TARGET ${OPENMMAMOEBACUDA_LIBRARY_NAME})
-
-
-# Ensure that debug libraries have "_d" appended to their names.
-# CMake gets this right on Windows automatically with this definition.
-IF (MSVC)
-    SET(CMAKE_DEBUG_POSTFIX "_d" CACHE INTERNAL "" FORCE)
-ENDIF (MSVC)
-
-# But on Unix or Cygwin we have to add the suffix manually
-IF (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
-    SET(SHARED_TARGET ${SHARED_TARGET}_d)
-ENDIF (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
 
 
 # These are all the places to search for header files which are
@@ -101,14 +87,9 @@ ADD_CUSTOM_COMMAND(OUTPUT ${CUDA_KERNELS_CPP} ${CUDA_KERNELS_H}
 SET_SOURCE_FILES_PROPERTIES(${CUDA_KERNELS_CPP} ${CUDA_KERNELS_H} PROPERTIES GENERATED TRUE)
 ADD_LIBRARY(${SHARED_TARGET} SHARED ${SOURCE_FILES} ${SOURCE_INCLUDE_FILES} ${API_ABS_INCLUDE_FILES})
 
-IF (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
-    SET(MAIN_OPENMM_LIB ${OPENMM_LIBRARY_NAME}_d)
-ELSE (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
-    SET(MAIN_OPENMM_LIB ${OPENMM_LIBRARY_NAME})
-ENDIF (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
-TARGET_LINK_LIBRARIES(${SHARED_TARGET} ${MAIN_OPENMM_LIB}  ${CUDA_LIBRARIES} ${PTHREADS_LIB})
-TARGET_LINK_LIBRARIES(${SHARED_TARGET} debug ${OPENMM_LIBRARY_NAME}CUDA_d optimized ${OPENMM_LIBRARY_NAME}CUDA)
-TARGET_LINK_LIBRARIES(${SHARED_TARGET} debug ${SHARED_AMOEBA_TARGET} optimized ${SHARED_AMOEBA_TARGET})
+TARGET_LINK_LIBRARIES(${SHARED_TARGET} ${OPENMM_LIBRARY_NAME} ${PTHREADS_LIB})
+TARGET_LINK_LIBRARIES(${SHARED_TARGET} ${OPENMM_LIBRARY_NAME}CUDA)
+TARGET_LINK_LIBRARIES(${SHARED_TARGET} ${SHARED_AMOEBA_TARGET})
 SET_TARGET_PROPERTIES(${SHARED_TARGET} PROPERTIES COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS} -DOPENMM_BUILDING_SHARED_LIBRARY")
 IF (APPLE)
     SET_TARGET_PROPERTIES(${SHARED_TARGET} PROPERTIES LINK_FLAGS "${EXTRA_COMPILE_FLAGS} -F/Library/Frameworks -framework CUDA")
@@ -119,11 +100,7 @@ ENDIF (APPLE)
 INSTALL(TARGETS ${SHARED_TARGET} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/plugins)
 # Ensure that links to the main CUDA library will be resolved.
 IF (APPLE)
-    IF (CMAKE_BUILD_TYPE MATCHES Debug)
-        SET(CUDA_LIBRARY libOpenMMCUDA_d.dylib)
-    ELSE (CMAKE_BUILD_TYPE MATCHES Debug)
-        SET(CUDA_LIBRARY libOpenMMCUDA.dylib)
-    ENDIF (CMAKE_BUILD_TYPE MATCHES Debug)
+    SET(CUDA_LIBRARY libOpenMMCUDA.dylib)
     INSTALL(CODE "EXECUTE_PROCESS(COMMAND install_name_tool -change ${CUDA_LIBRARY} @loader_path/${CUDA_LIBRARY} ${CMAKE_INSTALL_PREFIX}/lib/plugins/lib${SHARED_TARGET}.dylib)")
 ENDIF (APPLE)
 if(OPENMM_BUILD_CUDA_TESTS)

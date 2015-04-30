@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -121,7 +121,7 @@ private:
     cl::Kernel ccmaPosForceKernel, ccmaVelForceKernel;
     cl::Kernel ccmaMultiplyKernel;
     cl::Kernel ccmaPosUpdateKernel, ccmaVelUpdateKernel;
-    cl::Kernel vsitePositionKernel, vsiteForceKernel;
+    cl::Kernel vsitePositionKernel, vsiteForceKernel, vsiteAddForcesKernel;
     cl::Kernel randomKernel, timeShiftKernel;
     OpenCLArray* posDelta;
     OpenCLArray* settleAtoms;
@@ -148,9 +148,11 @@ private:
     OpenCLArray* vsite3AvgWeights;
     OpenCLArray* vsiteOutOfPlaneAtoms;
     OpenCLArray* vsiteOutOfPlaneWeights;
+    OpenCLArray* vsiteLocalCoordsAtoms;
+    OpenCLArray* vsiteLocalCoordsParams;
     int randomPos;
     int lastSeed, numVsites;
-    bool hasInitializedPosConstraintKernels, hasInitializedVelConstraintKernels, ccmaUseDirectBuffer;
+    bool hasInitializedPosConstraintKernels, hasInitializedVelConstraintKernels, ccmaUseDirectBuffer, hasOverlappingVsites;
     struct ShakeCluster;
     struct ConstraintOrderer;
 };

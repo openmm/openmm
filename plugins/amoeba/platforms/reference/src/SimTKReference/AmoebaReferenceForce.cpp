@@ -25,7 +25,7 @@
 #include "AmoebaReferenceForce.h"
 #include <vector>
 
-using OpenMM::RealVec;
+using namespace OpenMM;
 
 /**---------------------------------------------------------------------------------------
 
@@ -37,8 +37,8 @@ using OpenMM::RealVec;
 
    --------------------------------------------------------------------------------------- */
 
-void AmoebaReferenceForce::loadDeltaR( const RealVec& xVector, const RealVec& yVector,
-                                       std::vector<RealOpenMM>& deltaR ){
+void AmoebaReferenceForce::loadDeltaR(const RealVec& xVector, const RealVec& yVector,
+                                      std::vector<RealOpenMM>& deltaR) {
 
 
    // ---------------------------------------------------------------------------------------
@@ -48,9 +48,9 @@ void AmoebaReferenceForce::loadDeltaR( const RealVec& xVector, const RealVec& yV
    // ---------------------------------------------------------------------------------------
 
     deltaR.resize(0);
-    deltaR.push_back( yVector[0] - xVector[0] );
-    deltaR.push_back( yVector[1] - xVector[1] );
-    deltaR.push_back( yVector[2] - xVector[2] );
+    deltaR.push_back(yVector[0] - xVector[0]);
+    deltaR.push_back(yVector[1] - xVector[1]);
+    deltaR.push_back(yVector[2] - xVector[2]);
 }
 
 /**---------------------------------------------------------------------------------------
@@ -63,7 +63,7 @@ void AmoebaReferenceForce::loadDeltaR( const RealVec& xVector, const RealVec& yV
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM AmoebaReferenceForce::getNormSquared3( const std::vector<RealOpenMM>& inputVector ){
+RealOpenMM AmoebaReferenceForce::getNormSquared3(const std::vector<RealOpenMM>& inputVector) {
 
    // ---------------------------------------------------------------------------------------
 
@@ -73,7 +73,7 @@ RealOpenMM AmoebaReferenceForce::getNormSquared3( const std::vector<RealOpenMM>&
 
    // get 3 norm
 
-   return ( inputVector[0]*inputVector[0] + inputVector[1]*inputVector[1] + inputVector[2]*inputVector[2] );
+   return (inputVector[0]*inputVector[0] + inputVector[1]*inputVector[1] + inputVector[2]*inputVector[2]);
 }
 
 /**---------------------------------------------------------------------------------------
@@ -86,7 +86,7 @@ RealOpenMM AmoebaReferenceForce::getNormSquared3( const std::vector<RealOpenMM>&
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM AmoebaReferenceForce::getNormSquared3( const RealOpenMM* inputVector ){
+RealOpenMM AmoebaReferenceForce::getNormSquared3(const RealOpenMM* inputVector) {
 
    // ---------------------------------------------------------------------------------------
 
@@ -96,7 +96,7 @@ RealOpenMM AmoebaReferenceForce::getNormSquared3( const RealOpenMM* inputVector 
 
    // get 3 norm
 
-   return ( inputVector[0]*inputVector[0] + inputVector[1]*inputVector[1] + inputVector[2]*inputVector[2] );
+   return (inputVector[0]*inputVector[0] + inputVector[1]*inputVector[1] + inputVector[2]*inputVector[2]);
 }
 
 /**---------------------------------------------------------------------------------------
@@ -109,7 +109,7 @@ RealOpenMM AmoebaReferenceForce::getNormSquared3( const RealOpenMM* inputVector 
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM AmoebaReferenceForce::getNorm3( const std::vector<RealOpenMM>& inputVector ){
+RealOpenMM AmoebaReferenceForce::getNorm3(const std::vector<RealOpenMM>& inputVector) {
 
    // ---------------------------------------------------------------------------------------
 
@@ -119,10 +119,10 @@ RealOpenMM AmoebaReferenceForce::getNorm3( const std::vector<RealOpenMM>& inputV
 
    // get 3 norm
 
-   return SQRT( inputVector[0]*inputVector[0] + inputVector[1]*inputVector[1] + inputVector[2]*inputVector[2] );
+   return SQRT(inputVector[0]*inputVector[0] + inputVector[1]*inputVector[1] + inputVector[2]*inputVector[2]);
 }
 
-RealOpenMM AmoebaReferenceForce::getNorm3( const RealOpenMM* inputVector ){
+RealOpenMM AmoebaReferenceForce::getNorm3(const RealOpenMM* inputVector) {
 
    // ---------------------------------------------------------------------------------------
 
@@ -132,10 +132,10 @@ RealOpenMM AmoebaReferenceForce::getNorm3( const RealOpenMM* inputVector ){
 
    // get 3 norm
 
-   return SQRT( inputVector[0]*inputVector[0] + inputVector[1]*inputVector[1] + inputVector[2]*inputVector[2] );
+   return SQRT(inputVector[0]*inputVector[0] + inputVector[1]*inputVector[1] + inputVector[2]*inputVector[2]);
 }
 
-RealOpenMM AmoebaReferenceForce::normalizeVector3( RealOpenMM* inputVector ){
+RealOpenMM AmoebaReferenceForce::normalizeVector3(RealOpenMM* inputVector) {
 
    // ---------------------------------------------------------------------------------------
 
@@ -143,8 +143,8 @@ RealOpenMM AmoebaReferenceForce::normalizeVector3( RealOpenMM* inputVector ){
 
    // ---------------------------------------------------------------------------------------
 
-    RealOpenMM norm   = SQRT( inputVector[0]*inputVector[0] + inputVector[1]*inputVector[1] + inputVector[2]*inputVector[2] );
-    if( norm > 0.0 ){
+    RealOpenMM norm   = SQRT(inputVector[0]*inputVector[0] + inputVector[1]*inputVector[1] + inputVector[2]*inputVector[2]);
+    if (norm > 0.0) {
         RealOpenMM normI  = 1.0/norm;
         inputVector[0]   *= normI;
         inputVector[1]   *= normI;
@@ -165,7 +165,7 @@ RealOpenMM AmoebaReferenceForce::normalizeVector3( RealOpenMM* inputVector ){
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM AmoebaReferenceForce::getDotProduct3( const std::vector<RealOpenMM>& xVector, const std::vector<RealOpenMM>& yVector ){
+RealOpenMM AmoebaReferenceForce::getDotProduct3(const std::vector<RealOpenMM>& xVector, const std::vector<RealOpenMM>& yVector) {
 
    // ---------------------------------------------------------------------------------------
 
@@ -189,7 +189,7 @@ RealOpenMM AmoebaReferenceForce::getDotProduct3( const std::vector<RealOpenMM>& 
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM AmoebaReferenceForce::getDotProduct3( const RealOpenMM* xVector, const RealOpenMM* yVector ){
+RealOpenMM AmoebaReferenceForce::getDotProduct3(const RealOpenMM* xVector, const RealOpenMM* yVector) {
 
    // ---------------------------------------------------------------------------------------
 
@@ -202,7 +202,7 @@ RealOpenMM AmoebaReferenceForce::getDotProduct3( const RealOpenMM* xVector, cons
    return xVector[0]*yVector[0] + xVector[1]*yVector[1] + xVector[2]*yVector[2];
 }
 
-RealOpenMM AmoebaReferenceForce::getDotProduct3( const RealOpenMM* xVector, const OpenMM::Vec3& yVector ){
+RealOpenMM AmoebaReferenceForce::getDotProduct3(const RealOpenMM* xVector, const OpenMM::Vec3& yVector) {
 
    // ---------------------------------------------------------------------------------------
 
@@ -227,7 +227,7 @@ RealOpenMM AmoebaReferenceForce::getDotProduct3( const RealOpenMM* xVector, cons
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM AmoebaReferenceForce::getDotProduct3( unsigned int vectorOffset, const std::vector<RealOpenMM>& xVector, const RealOpenMM* yVector ){
+RealOpenMM AmoebaReferenceForce::getDotProduct3(unsigned int vectorOffset, const std::vector<RealOpenMM>& xVector, const RealOpenMM* yVector) {
 
    // ---------------------------------------------------------------------------------------
 
@@ -250,9 +250,9 @@ RealOpenMM AmoebaReferenceForce::getDotProduct3( unsigned int vectorOffset, cons
 
    --------------------------------------------------------------------------------------- */
 
-void AmoebaReferenceForce::getCrossProduct( const std::vector<RealOpenMM>& xVector,
-                                            const std::vector<RealOpenMM>& yVector,
-                                            std::vector<RealOpenMM>& zVector ){
+void AmoebaReferenceForce::getCrossProduct(const std::vector<RealOpenMM>& xVector,
+                                           const std::vector<RealOpenMM>& yVector,
+                                           std::vector<RealOpenMM>& zVector) {
 
    // ---------------------------------------------------------------------------------------
 
@@ -277,9 +277,9 @@ void AmoebaReferenceForce::getCrossProduct( const std::vector<RealOpenMM>& xVect
 
    --------------------------------------------------------------------------------------- */
 
-void AmoebaReferenceForce::getCrossProduct( const RealOpenMM* xVector,
-                                            const RealOpenMM* yVector,
-                                            RealOpenMM* zVector ){
+void AmoebaReferenceForce::getCrossProduct(const RealOpenMM* xVector,
+                                           const RealOpenMM* yVector,
+                                           RealOpenMM* zVector) {
 
    // ---------------------------------------------------------------------------------------
 

@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -155,6 +155,10 @@ public:
      * the other hand, no guarantees are made about the behavior of simulations that use the same seed.
      * In particular, Platforms are permitted to use non-deterministic algorithms which produce different
      * results on successive runs, even if those runs were initialized identically.
+     *
+     * If seed is set to 0 (which is the default value assigned), a unique seed is chosen when a Context
+     * is created from this Force. This is done to ensure that each Context receives unique random seeds
+     * without you needing to set them explicitly.
      */
     void setRandomNumberSeed(int seed) {
         randomNumberSeed = seed;
@@ -195,6 +199,11 @@ public:
      * and energies.  Group i will be included if (groups&(1<<i)) != 0.  The default value includes all groups.
      */
     State getState(int copy, int types, bool enforcePeriodicBox=false, int groups=0xFFFFFFFF);
+    /**
+     * Get the total energy of the ring polymer.  This includes the potential and kinetic energies of all copies,
+     * plus the potential energy of the harmonic springs that link copies together.
+     */
+    double getTotalEnergy();
     /**
      * Advance a simulation through time by taking a series of time steps.
      *

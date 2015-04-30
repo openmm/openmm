@@ -156,6 +156,10 @@ def sum(val):
     >>> sum((2.0*meter, 30.0*centimeter))
     Quantity(value=2.3, unit=meter)
     """
+    try:
+        return val.sum()
+    except AttributeError:
+        pass
     if len(val) == 0:
         return 0
     result = val[0]

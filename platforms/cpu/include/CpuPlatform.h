@@ -55,27 +55,37 @@ public:
         return name;
     }
     double getSpeed() const;
+    const std::string& getPropertyValue(const Context& context, const std::string& property) const;
     bool supportsDoublePrecision() const;
     static bool isProcessorSupported();
     void contextCreated(ContextImpl& context, const std::map<std::string, std::string>& properties) const;
     void contextDestroyed(ContextImpl& context) const;
     /**
+     * This is the name of the parameter for selecting the number of threads to use.
+     */
+    static const std::string& CpuThreads() {
+        static const std::string key = "CpuThreads";
+        return key;
+    }
+    /**
      * We cannot use the standard mechanism for platform data, because that is already used by the superclass.
      * Instead, we maintain a table of ContextImpls to PlatformDatas.
      */
     static PlatformData& getPlatformData(ContextImpl& context);
+    static const PlatformData& getPlatformData(const ContextImpl& context);
 private:
-    static std::map<ContextImpl*, PlatformData*> contextData;
+    static std::map<const ContextImpl*, PlatformData*> contextData;
 };
 
 class CpuPlatform::PlatformData {
 public:
-    PlatformData(int numParticles);
+    PlatformData(int numParticles, int numThreads);
     AlignedArray<float> posq;
     std::vector<AlignedArray<float> > threadForce;
     ThreadPool threads;
     bool isPeriodic;
     CpuRandom random;
+    std::map<std::string, std::string> propertyValues;
 };
 
 } // namespace OpenMM

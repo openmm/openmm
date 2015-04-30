@@ -46,10 +46,10 @@ void testSerialization() {
 
     AmoebaOutOfPlaneBendForce force1;
 
-    force1.setAmoebaGlobalOutOfPlaneBendCubic( 12.3 );
-    force1.setAmoebaGlobalOutOfPlaneBendQuartic( 98.7 );
-    force1.setAmoebaGlobalOutOfPlaneBendPentic( 91.7 );
-    force1.setAmoebaGlobalOutOfPlaneBendSextic( 93.7 );
+    force1.setAmoebaGlobalOutOfPlaneBendCubic(12.3);
+    force1.setAmoebaGlobalOutOfPlaneBendQuartic(98.7);
+    force1.setAmoebaGlobalOutOfPlaneBendPentic(91.7);
+    force1.setAmoebaGlobalOutOfPlaneBendSextic(93.7);
 
     force1.addOutOfPlaneBend(0, 1, 3, 4, 2.0);
     force1.addOutOfPlaneBend(0, 2, 3, 5, 2.1);

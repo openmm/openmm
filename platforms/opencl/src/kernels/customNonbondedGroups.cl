@@ -2,8 +2,6 @@
 #pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
 #endif
 
-#define WARPS_PER_GROUP (THREAD_BLOCK_SIZE/TILE_SIZE)
-
 typedef struct {
     real x, y, z;
     real q;
@@ -44,15 +42,15 @@ __kernel void computeInteractionGroups(
 #else
         __global real4* restrict forceBuffers,
 #endif
-        __global real* restrict energyBuffer, __global const real4* restrict posq,
-        __global const int4* restrict groupData, real4 periodicBoxSize, real4 invPeriodicBoxSize
+        __global real* restrict energyBuffer, __global const real4* restrict posq, __global const int4* restrict groupData,
+        real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ
         PARAMETER_ARGUMENTS) {
     const unsigned int totalWarps = get_global_size(0)/TILE_SIZE;
     const unsigned int warp = get_global_id(0)/TILE_SIZE; // global warpIndex
     const unsigned int tgx = get_local_id(0) & (TILE_SIZE-1); // index within the warp
     const unsigned int tbx = get_local_id(0) - tgx;           // block warpIndex
     real energy = 0.0f;
-    __local AtomData localData[THREAD_BLOCK_SIZE];
+    __local AtomData localData[LOCAL_MEMORY_SIZE];
 
     const unsigned int startTile = FIRST_TILE+warp*(LAST_TILE-FIRST_TILE)/totalWarps;
     const unsigned int endTile = FIRST_TILE+(warp+1)*(LAST_TILE-FIRST_TILE)/totalWarps;
@@ -84,7 +82,7 @@ __kernel void computeInteractionGroups(
                 posq2 = (real4) (localData[localIndex].x, localData[localIndex].y, localData[localIndex].z, localData[localIndex].q);
                 real4 delta = (real4) (posq2.xyz - posq1.xyz, 0);
 #ifdef USE_PERIODIC
-                delta.xyz -= floor(delta.xyz*invPeriodicBoxSize.xyz+0.5f)*periodicBoxSize.xyz;
+                APPLY_PERIODIC_TO_DELTA(delta)
 #endif
                 real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
 #ifdef USE_CUTOFF

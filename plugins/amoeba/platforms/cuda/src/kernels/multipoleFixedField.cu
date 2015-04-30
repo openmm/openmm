@@ -3,8 +3,10 @@
 typedef struct {
     real4 posq;
     real3 field, fieldPolar, dipole;
+#ifdef INCLUDE_QUADRUPOLES
     real quadrupoleXX, quadrupoleXY, quadrupoleXZ;
     real quadrupoleYY, quadrupoleYZ, quadrupoleZZ;
+#endif
     float thole, damp;
 #ifdef USE_GK
     real3 gkField;
@@ -17,12 +19,14 @@ inline __device__ void loadAtomData(AtomData& data, int atom, const real4* __res
     data.dipole.x = labFrameDipole[atom*3];
     data.dipole.y = labFrameDipole[atom*3+1];
     data.dipole.z = labFrameDipole[atom*3+2];
+#ifdef INCLUDE_QUADRUPOLES
     data.quadrupoleXX = labFrameQuadrupole[atom*5];
     data.quadrupoleXY = labFrameQuadrupole[atom*5+1];
     data.quadrupoleXZ = labFrameQuadrupole[atom*5+2];
     data.quadrupoleYY = labFrameQuadrupole[atom*5+3];
     data.quadrupoleYZ = labFrameQuadrupole[atom*5+4];
     data.quadrupoleZZ = -(data.quadrupoleXX+data.quadrupoleYY);
+#endif
     float2 temp = dampingAndThole[atom];
     data.damp = temp.x;
     data.thole = temp.y;
@@ -36,10 +40,20 @@ __device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, real3 de
 
         real r = SQRT(r2);
         real ralpha = EWALD_ALPHA*r;
-        real bn0 = erfc(ralpha)/r;
+        real exp2a = EXP(-(ralpha*ralpha));
+#ifdef USE_DOUBLE_PRECISION
+        const real erfcAlphaR = erfc(ralpha);
+#else
+        // This approximation for erfc is from Abramowitz and Stegun (1964) p. 299.  They cite the following as
+        // the original source: C. Hastings, Jr., Approximations for Digital Computers (1955).  It has a maximum
+        // error of 1.5e-7.
+
+        const real t = RECIP(1.0f+0.3275911f*ralpha);
+        const real erfcAlphaR = (0.254829592f+(-0.284496736f+(1.421413741f+(-1.453152027f+1.061405429f*t)*t)*t)*t)*t*exp2a;
+#endif
+        real bn0 = erfcAlphaR/r;
         real alsq2 = 2*EWALD_ALPHA*EWALD_ALPHA;
         real alsq2n = RECIP(SQRT_PI*EWALD_ALPHA);
-        real exp2a = EXP(-(ralpha*ralpha));
         alsq2n *= alsq2;
         real bn1 = (bn0+alsq2n*exp2a)/r2;
         alsq2n *= alsq2;
@@ -85,14 +99,14 @@ __device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, real3 de
         real prr7 = 15*(1-psc7)/r7;
 
         real dir = dot(atom1.dipole, deltaR);
+        real dkr = dot(atom2.dipole, deltaR);
 
+#ifdef INCLUDE_QUADRUPOLES
         real3 qi;
         qi.x = atom1.quadrupoleXX*deltaR.x + atom1.quadrupoleXY*deltaR.y + atom1.quadrupoleXZ*deltaR.z;
         qi.y = atom1.quadrupoleXY*deltaR.x + atom1.quadrupoleYY*deltaR.y + atom1.quadrupoleYZ*deltaR.z;
         qi.z = atom1.quadrupoleXZ*deltaR.x + atom1.quadrupoleYZ*deltaR.y + atom1.quadrupoleZZ*deltaR.z;
         real qir = dot(qi, deltaR);
-
-        real dkr = dot(atom2.dipole, deltaR);
 
         real3 qk;
         qk.x = atom2.quadrupoleXX*deltaR.x + atom2.quadrupoleXY*deltaR.y + atom2.quadrupoleXZ*deltaR.z;
@@ -106,7 +120,14 @@ __device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, real3 de
         real3 fkd = deltaR*(drr3*atom1.posq.w+drr5*dir+drr7*qir) - drr3*atom1.dipole - 2*drr5*qi;
         real3 fip = -deltaR*(prr3*atom2.posq.w-prr5*dkr+prr7*qkr) - prr3*atom2.dipole + 2*prr5*qk;
         real3 fkp = deltaR*(prr3*atom1.posq.w+prr5*dir+prr7*qir) - prr3*atom1.dipole - 2*prr5*qi;
-
+#else
+        real3 fim = -deltaR*(bn1*atom2.posq.w-bn2*dkr) - bn1*atom2.dipole;
+        real3 fkm = deltaR*(bn1*atom1.posq.w+bn2*dir) - bn1*atom1.dipole;
+        real3 fid = -deltaR*(drr3*atom2.posq.w-drr5*dkr) - drr3*atom2.dipole;
+        real3 fkd = deltaR*(drr3*atom1.posq.w+drr5*dir) - drr3*atom1.dipole;
+        real3 fip = -deltaR*(prr3*atom2.posq.w-prr5*dkr) - prr3*atom2.dipole;
+        real3 fkp = deltaR*(prr3*atom1.posq.w+prr5*dir) - prr3*atom1.dipole;
+#endif
         // increment the field at each site due to this interaction
 
         fields[0] = fim-fid;
@@ -153,29 +174,34 @@ __device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, real3 de
       
     real rr5_2 = 2*rr5;
  
-    real3 qDotDelta;
-    qDotDelta.x = deltaR.x*atom2.quadrupoleXX + deltaR.y*atom2.quadrupoleXY + deltaR.z*atom2.quadrupoleXZ;
-    qDotDelta.y = deltaR.x*atom2.quadrupoleXY + deltaR.y*atom2.quadrupoleYY + deltaR.z*atom2.quadrupoleYZ;
-    qDotDelta.z = deltaR.x*atom2.quadrupoleXZ + deltaR.y*atom2.quadrupoleYZ + deltaR.z*atom2.quadrupoleZZ;
- 
-    real dotdd = dot(deltaR, atom2.dipole);
-    real dotqd = dot(deltaR, qDotDelta);
+    real dir = dot(atom1.dipole, deltaR);
+    real dkr = dot(atom2.dipole, deltaR);
 
-    real factor = -rr3*atom2.posq.w + rr5*dotdd - rr7*dotqd;
- 
-    real3 field1 = deltaR*factor - rr3*atom2.dipole + rr5_2*qDotDelta;
+#ifdef INCLUDE_QUADRUPOLES
+    real3 qi;
+    qi.x = atom1.quadrupoleXX*deltaR.x + atom1.quadrupoleXY*deltaR.y + atom1.quadrupoleXZ*deltaR.z;
+    qi.y = atom1.quadrupoleXY*deltaR.x + atom1.quadrupoleYY*deltaR.y + atom1.quadrupoleYZ*deltaR.z;
+    qi.z = atom1.quadrupoleXZ*deltaR.x + atom1.quadrupoleYZ*deltaR.y + atom1.quadrupoleZZ*deltaR.z;
+    real qir = dot(qi, deltaR);
+
+    real3 qk;
+    qk.x = atom2.quadrupoleXX*deltaR.x + atom2.quadrupoleXY*deltaR.y + atom2.quadrupoleXZ*deltaR.z;
+    qk.y = atom2.quadrupoleXY*deltaR.x + atom2.quadrupoleYY*deltaR.y + atom2.quadrupoleYZ*deltaR.z;
+    qk.z = atom2.quadrupoleXZ*deltaR.x + atom2.quadrupoleYZ*deltaR.y + atom2.quadrupoleZZ*deltaR.z;
+    real qkr = dot(qk, deltaR);
+
+    real factor = -rr3*atom2.posq.w + rr5*dkr - rr7*qkr;
+    real3 field1 = deltaR*factor - rr3*atom2.dipole + rr5_2*qk;
+    factor = rr3*atom1.posq.w + rr5*dir + rr7*qir;
+    real3 field2 = deltaR*factor - rr3*atom1.dipole - rr5_2*qi;
+#else
+    real factor = -rr3*atom2.posq.w + rr5*dkr;
+    real3 field1 = deltaR*factor - rr3*atom2.dipole;
+    factor = rr3*atom1.posq.w + rr5*dir;
+    real3 field2 = deltaR*factor - rr3*atom1.dipole;
+#endif
     fields[0] = dScale*field1;
     fields[1] = pScale*field1;
- 
-    qDotDelta.x = deltaR.x*atom1.quadrupoleXX + deltaR.y*atom1.quadrupoleXY + deltaR.z*atom1.quadrupoleXZ;
-    qDotDelta.y = deltaR.x*atom1.quadrupoleXY + deltaR.y*atom1.quadrupoleYY + deltaR.z*atom1.quadrupoleYZ;
-    qDotDelta.z = deltaR.x*atom1.quadrupoleXZ + deltaR.y*atom1.quadrupoleYZ + deltaR.z*atom1.quadrupoleZZ;
- 
-    dotdd = dot(deltaR, atom1.dipole);
-    dotqd = dot(deltaR, qDotDelta);
-    factor = rr3*atom1.posq.w + rr5*dotdd + rr7*dotqd;
- 
-    real3 field2 = deltaR*factor - rr3*atom1.dipole - rr5_2*qDotDelta;
     fields[2] = dScale*field2;
     fields[3] = pScale*field2;
 }
@@ -200,6 +226,7 @@ __device__ void computeOneGkInteraction(AtomData& atom1, AtomData& atom2, real3 
     real uyk = atom2.dipole.y;
     real uzk = atom2.dipole.z;
 
+#ifdef INCLUDE_QUADRUPOLES
     real qxxi = atom1.quadrupoleXX;
     real qxyi = atom1.quadrupoleXY;
     real qxzi = atom1.quadrupoleXZ;
@@ -212,7 +239,20 @@ __device__ void computeOneGkInteraction(AtomData& atom1, AtomData& atom2, real3 
     real qyyk = atom2.quadrupoleYY;
     real qyzk = atom2.quadrupoleYZ;
     real qzzk = atom2.quadrupoleZZ;
-
+#else
+    real qxxi = 0;
+    real qxyi = 0;
+    real qxzi = 0;
+    real qyyi = 0;
+    real qyzi = 0;
+    real qzzi = 0;
+    real qxxk = 0;
+    real qxyk = 0;
+    real qxzk = 0;
+    real qyyk = 0;
+    real qyzk = 0;
+    real qzzk = 0;
+#endif
     real xr2 = delta.x*delta.x;
     real yr2 = delta.y*delta.y;
     real zr2 = delta.z*delta.z;
@@ -400,7 +440,9 @@ extern "C" __global__ void computeFixedField(
         const uint2* __restrict__ covalentFlags, const unsigned int* __restrict__ polarizationGroupFlags, const ushort2* __restrict__ exclusionTiles,
         unsigned int startTileIndex, unsigned int numTileIndices,
 #ifdef USE_CUTOFF
-        const int* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, unsigned int maxTiles, const real4* __restrict__ blockCenter, const unsigned int* __restrict__ interactingAtoms,
+        const int* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
+        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, const real4* __restrict__ blockCenter,
+        const unsigned int* __restrict__ interactingAtoms,
 #elif defined USE_GK
         const real* __restrict__ bornRadii, unsigned long long* __restrict__ gkFieldBuffers,
 #endif
@@ -438,12 +480,14 @@ extern "C" __global__ void computeFixedField(
             const unsigned int localAtomIndex = threadIdx.x;
             localData[localAtomIndex].posq = data.posq;
             localData[localAtomIndex].dipole = data.dipole;
+#ifdef INCLUDE_QUADRUPOLES
             localData[localAtomIndex].quadrupoleXX = data.quadrupoleXX;
             localData[localAtomIndex].quadrupoleXY = data.quadrupoleXY;
             localData[localAtomIndex].quadrupoleXZ = data.quadrupoleXZ;
             localData[localAtomIndex].quadrupoleYY = data.quadrupoleYY;
             localData[localAtomIndex].quadrupoleYZ = data.quadrupoleYZ;
             localData[localAtomIndex].quadrupoleZZ = data.quadrupoleZZ;
+#endif
             localData[localAtomIndex].thole = data.thole;
             localData[localAtomIndex].damp = data.damp;
 #ifdef USE_GK
@@ -452,9 +496,7 @@ extern "C" __global__ void computeFixedField(
             for (unsigned int j = 0; j < TILE_SIZE; j++) {
                 real3 delta = trimTo3(localData[tbx+j].posq-data.posq);
 #ifdef USE_PERIODIC
-                delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-                delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-                delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
+                APPLY_PERIODIC_TO_DELTA(delta)
 #endif
                 int atom2 = y*TILE_SIZE+j;
                 if (atom1 != atom2 && atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
@@ -490,9 +532,7 @@ extern "C" __global__ void computeFixedField(
             for (j = 0; j < TILE_SIZE; j++) {
                 real3 delta = trimTo3(localData[tbx+tj].posq-data.posq);
 #ifdef USE_PERIODIC
-                delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-                delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-                delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
+                APPLY_PERIODIC_TO_DELTA(delta)
 #endif
                 int atom2 = y*TILE_SIZE+tj;
                 if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
@@ -549,12 +589,12 @@ extern "C" __global__ void computeFixedField(
 
 #ifdef USE_CUTOFF
     const unsigned int numTiles = interactionCount[0];
-    int pos = (numTiles > maxTiles ? startTileIndex+warp*numTileIndices/totalWarps : warp*numTiles/totalWarps);
-    int end = (numTiles > maxTiles ? startTileIndex+(warp+1)*numTileIndices/totalWarps : (warp+1)*numTiles/totalWarps);
+    int pos = (int) (numTiles > maxTiles ? startTileIndex+warp*(long long)numTileIndices/totalWarps : warp*(long long)numTiles/totalWarps);
+    int end = (int) (numTiles > maxTiles ? startTileIndex+(warp+1)*(long long)numTileIndices/totalWarps : (warp+1)*(long long)numTiles/totalWarps);
 #else
     const unsigned int numTiles = numTileIndices;
-    int pos = startTileIndex+warp*numTiles/totalWarps;
-    int end = startTileIndex+(warp+1)*numTiles/totalWarps;
+    int pos = (int) (startTileIndex+warp*(long long)numTiles/totalWarps);
+    int end = (int) (startTileIndex+(warp+1)*(long long)numTiles/totalWarps);
 #endif
     int skipBase = 0;
     int currentSkipIndex = tbx;
@@ -567,14 +607,14 @@ extern "C" __global__ void computeFixedField(
 
         // Extract the coordinates of this tile.
         
-        unsigned int x, y;
+        int x, y;
 #ifdef USE_CUTOFF
         if (numTiles <= maxTiles)
             x = tiles[pos];
         else
 #endif
         {
-            y = (unsigned int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
+            y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
             x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
             if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
                 y += (x < y ? -1 : 1);
@@ -633,9 +673,7 @@ extern "C" __global__ void computeFixedField(
             for (j = 0; j < TILE_SIZE; j++) {
                 real3 delta = trimTo3(localData[tbx+tj].posq-data.posq);
 #ifdef USE_PERIODIC
-                delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-                delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-                delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
+                APPLY_PERIODIC_TO_DELTA(delta)
 #endif
                 int atom2 = atomIndices[tbx+tj];
                 if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {

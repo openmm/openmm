@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -44,6 +44,7 @@ CustomHbondForceProxy::CustomHbondForceProxy() : SerializationProxy("CustomHbond
 void CustomHbondForceProxy::serialize(const void* object, SerializationNode& node) const {
     node.setIntProperty("version", 1);
     const CustomHbondForce& force = *reinterpret_cast<const CustomHbondForce*>(object);
+    node.setIntProperty("forceGroup", force.getForceGroup());
     node.setStringProperty("energy", force.getEnergyFunction());
     node.setIntProperty("method", (int) force.getNonbondedMethod());
     node.setDoubleProperty("cutoff", force.getCutoffDistance());
@@ -92,16 +93,8 @@ void CustomHbondForceProxy::serialize(const void* object, SerializationNode& nod
         exclusions.createChildNode("Exclusion").setIntProperty("donor", donor).setIntProperty("acceptor", acceptor);
     }
     SerializationNode& functions = node.createChildNode("Functions");
-    for (int i = 0; i < force.getNumFunctions(); i++) {
-        string name;
-        vector<double> values;
-        double min, max;
-        force.getFunctionParameters(i, name, values, min, max);
-        SerializationNode& node = functions.createChildNode("Function").setStringProperty("name", name).setDoubleProperty("min", min).setDoubleProperty("max", max);
-        SerializationNode& valuesNode = node.createChildNode("Values");
-        for (int j = 0; j < (int) values.size(); j++)
-            valuesNode.createChildNode("Value").setDoubleProperty("v", values[j]);
-    }
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++)
+        functions.createChildNode("Function", &force.getTabulatedFunction(i)).setStringProperty("name", force.getTabulatedFunctionName(i));
 }
 
 void* CustomHbondForceProxy::deserialize(const SerializationNode& node) const {
@@ -110,6 +103,7 @@ void* CustomHbondForceProxy::deserialize(const SerializationNode& node) const {
     CustomHbondForce* force = NULL;
     try {
         CustomHbondForce* force = new CustomHbondForce(node.getStringProperty("energy"));
+        force->setForceGroup(node.getIntProperty("forceGroup", 0));
         force->setNonbondedMethod((CustomHbondForce::NonbondedMethod) node.getIntProperty("method"));
         force->setCutoffDistance(node.getDoubleProperty("cutoff"));
         const SerializationNode& perDonorParams = node.getChildNode("PerDonorParameters");
@@ -159,11 +153,18 @@ void* CustomHbondForceProxy::deserialize(const SerializationNode& node) const {
         const SerializationNode& functions = node.getChildNode("Functions");
         for (int i = 0; i < (int) functions.getChildren().size(); i++) {
             const SerializationNode& function = functions.getChildren()[i];
-            const SerializationNode& valuesNode = function.getChildNode("Values");
-            vector<double> values;
-            for (int j = 0; j < (int) valuesNode.getChildren().size(); j++)
-                values.push_back(valuesNode.getChildren()[j].getDoubleProperty("v"));
-            force->addFunction(function.getStringProperty("name"), values, function.getDoubleProperty("min"), function.getDoubleProperty("max"));
+            if (function.hasProperty("type")) {
+                force->addTabulatedFunction(function.getStringProperty("name"), function.decodeObject<TabulatedFunction>());
+            }
+            else {
+                // This is an old file created before TabulatedFunction existed.
+                
+                const SerializationNode& valuesNode = function.getChildNode("Values");
+                vector<double> values;
+                for (int j = 0; j < (int) valuesNode.getChildren().size(); j++)
+                    values.push_back(valuesNode.getChildren()[j].getDoubleProperty("v"));
+                force->addTabulatedFunction(function.getStringProperty("name"), new Continuous1DFunction(values, function.getDoubleProperty("min"), function.getDoubleProperty("max")));
+            }
         }
         return force;
     }

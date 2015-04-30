@@ -22,12 +22,12 @@ void OPENMM_EXPORT computeNeighborListNaive(
                               int nAtoms,
                               const AtomLocationList& atomLocations, 
                               const std::vector<std::set<int> >& exclusions,
-                              const RealVec& periodicBoxSize,
+                              const RealVec* periodicBoxVectors,
                               bool usePeriodic,
                               double maxDistance,
                               double minDistance = 0.0,
                               bool reportSymmetricPairs = false
-                             );
+                            );
 
 // O(n) neighbor list method using voxel hash data structure
 // parameter neighborList is automatically clear()ed before 
@@ -35,14 +35,14 @@ void OPENMM_EXPORT computeNeighborListNaive(
 void OPENMM_EXPORT computeNeighborListVoxelHash(
                               NeighborList& neighborList,
                               int nAtoms,
-                              const AtomLocationList& atomLocations, 
+                              const AtomLocationList& atomLocations,
                               const std::vector<std::set<int> >& exclusions,
-                              const RealVec& periodicBoxSize,
+                              const RealVec* periodicBoxVectors,
                               bool usePeriodic,
                               double maxDistance,
                               double minDistance = 0.0,
                               bool reportSymmetricPairs = false
-                             );
+                            );
 
 } // namespace OpenMM
 

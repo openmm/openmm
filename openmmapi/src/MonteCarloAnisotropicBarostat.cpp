@@ -31,13 +31,12 @@
 
 #include "openmm/MonteCarloAnisotropicBarostat.h"
 #include "openmm/internal/MonteCarloAnisotropicBarostatImpl.h"
-#include <ctime>
 
 using namespace OpenMM;
 
 MonteCarloAnisotropicBarostat::MonteCarloAnisotropicBarostat(const Vec3& defaultPressure, double temperature, bool scaleX, bool scaleY, bool scaleZ, int frequency) :
         defaultPressure(defaultPressure), temperature(temperature), scaleX(scaleX), scaleY(scaleY), scaleZ(scaleZ), frequency(frequency) {
-    setRandomNumberSeed((int) time(NULL));
+    setRandomNumberSeed(0);
 }
 
 ForceImpl* MonteCarloAnisotropicBarostat::createImpl() const {

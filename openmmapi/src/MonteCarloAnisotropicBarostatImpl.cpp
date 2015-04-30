@@ -31,10 +31,12 @@
 
 #include "openmm/internal/MonteCarloAnisotropicBarostatImpl.h"
 #include "openmm/internal/ContextImpl.h"
+#include "openmm/internal/OSRngSeed.h"
 #include "openmm/Context.h"
 #include "openmm/kernels.h"
 #include <cmath>
 #include <vector>
+#include <algorithm>
 
 using namespace OpenMM;
 using namespace OpenMM_SFMT;
@@ -59,7 +61,10 @@ void MonteCarloAnisotropicBarostatImpl::initialize(ContextImpl& context) {
         numAttempted[i] = 0;
         numAccepted[i] = 0;
     }
-    init_gen_rand(owner.getRandomNumberSeed(), random);
+    int randSeed = owner.getRandomNumberSeed();
+    // A random seed of 0 means use a unique one
+    if (randSeed == 0) randSeed = osrngseed();
+    init_gen_rand(randSeed, random);
 }
 
 void MonteCarloAnisotropicBarostatImpl::updateContextState(ContextImpl& context) {
@@ -107,7 +112,9 @@ void MonteCarloAnisotropicBarostatImpl::updateContextState(ContextImpl& context)
     Vec3 lengthScale(1.0, 1.0, 1.0);
     lengthScale[axis] = newVolume/volume;
     kernel.getAs<ApplyMonteCarloBarostatKernel>().scaleCoordinates(context, lengthScale[0], lengthScale[1], lengthScale[2]);
-    context.getOwner().setPeriodicBoxVectors(box[0]*lengthScale[0], box[1]*lengthScale[1], box[2]*lengthScale[2]);
+    context.getOwner().setPeriodicBoxVectors(Vec3(box[0][0]*lengthScale[0], box[0][1]*lengthScale[1], box[0][2]*lengthScale[2]),
+                                             Vec3(box[1][0]*lengthScale[0], box[1][1]*lengthScale[1], box[1][2]*lengthScale[2]),
+                                             Vec3(box[2][0]*lengthScale[0], box[2][1]*lengthScale[1], box[2][2]*lengthScale[2]));
     
     // Compute the energy of the modified system.
     

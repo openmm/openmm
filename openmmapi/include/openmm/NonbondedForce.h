@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -46,7 +46,7 @@ namespace OpenMM {
  * This class implements nonbonded interactions between particles, including a Coulomb force to represent
  * electrostatics and a Lennard-Jones force to represent van der Waals interactions.  It optionally supports
  * periodic boundary conditions and cutoffs for long range interactions.  Lennard-Jones interactions are
- * calculated with the Lorentz-Bertelot combining rule: it uses the arithmetic mean of the sigmas and the
+ * calculated with the Lorentz-Berthelot combining rule: it uses the arithmetic mean of the sigmas and the
  * geometric mean of the epsilons for the two interacting particles.
  *
  * To use this class, create a NonbondedForce object, then call addParticle() once for each particle in the
@@ -182,20 +182,46 @@ public:
      * which is acceptable.  This value is used to select the reciprocal space cutoff and separation
      * parameter so that the average error level will be less than the tolerance.  There is not a
      * rigorous guarantee that all forces on all atoms will be less than the tolerance, however.
+     * 
+     * For PME calculations, if setPMEParameters() is used to set alpha to something other than 0,
+     * this value is ignored.
      */
     double getEwaldErrorTolerance() const;
     /**
-     * Get the error tolerance for Ewald summation.  This corresponds to the fractional error in the forces
+     * Set the error tolerance for Ewald summation.  This corresponds to the fractional error in the forces
      * which is acceptable.  This value is used to select the reciprocal space cutoff and separation
      * parameter so that the average error level will be less than the tolerance.  There is not a
      * rigorous guarantee that all forces on all atoms will be less than the tolerance, however.
+     * 
+     * For PME calculations, if setPMEParameters() is used to set alpha to something other than 0,
+     * this value is ignored.
      */
     void setEwaldErrorTolerance(double tol);
+    /**
+     * Get the parameters to use for PME calculations.  If alpha is 0 (the default), these parameters are
+     * ignored and instead their values are chosen based on the Ewald error tolerance.
+     * 
+     * @param alpha   the separation parameter
+     * @param nx      the number of grid points along the X axis
+     * @param ny      the number of grid points along the Y axis
+     * @param nz      the number of grid points along the Z axis
+     */
+    void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
+    /**
+     * Set the parameters to use for PME calculations.  If alpha is 0 (the default), these parameters are
+     * ignored and instead their values are chosen based on the Ewald error tolerance.
+     * 
+     * @param alpha   the separation parameter
+     * @param nx      the number of grid points along the X axis
+     * @param ny      the number of grid points along the Y axis
+     * @param nz      the number of grid points along the Z axis
+     */
+    void setPMEParameters(double alpha, int nx, int ny, int nz);
     /**
      * Add the nonbonded force parameters for a particle.  This should be called once for each particle
      * in the System.  When it is called for the i'th time, it specifies the parameters for the i'th particle.
      * For calculating the Lennard-Jones interaction between two particles, the arithmetic mean of the sigmas
-     * and the geometric mean of the epsilons for the two interacting particles is used (the Lorentz-Bertelot
+     * and the geometric mean of the epsilons for the two interacting particles is used (the Lorentz-Berthelot
      * combining rule).
      *
      * @param charge    the charge of the particle, measured in units of the proton charge
@@ -216,7 +242,7 @@ public:
     /**
      * Set the nonbonded force parameters for a particle.  When calculating the Lennard-Jones interaction between two particles,
      * it uses the arithmetic mean of the sigmas and the geometric mean of the epsilons for the two interacting particles
-     * (the Lorentz-Bertelot combining rule).
+     * (the Lorentz-Berthelot combining rule).
      *
      * @param index     the index of the particle for which to set parameters
      * @param charge    the charge of the particle, measured in units of the proton charge
@@ -317,7 +343,7 @@ public:
      * Update the particle and exception parameters in a Context to match those stored in this Force object.  This method
      * provides an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
      * Simply call setParticleParameters() and setExceptionParameters() to modify this object's parameters, then call
-     * updateParametersInState() to copy them over to the Context.
+     * updateParametersInContext() to copy them over to the Context.
      * 
      * This method has several limitations.  The only information it updates is the parameters of particles and exceptions.
      * All other aspects of the Force (the nonbonded method, the cutoff distance, etc.) are unaffected and can only be
@@ -326,15 +352,26 @@ public:
      * to add new particles or exceptions, only to change the parameters of existing ones.
      */
     void updateParametersInContext(Context& context);
+    /**
+     * Returns whether or not this force makes use of periodic boundary
+     * conditions.
+     *
+     * @returns true if force uses PBC and false otherwise
+     */
+    bool usesPeriodicBoundaryConditions() const {
+        return nonbondedMethod == NonbondedForce::CutoffPeriodic ||
+               nonbondedMethod == NonbondedForce::Ewald ||
+               nonbondedMethod == NonbondedForce::PME;
+    }
 protected:
     ForceImpl* createImpl() const;
 private:
     class ParticleInfo;
     class ExceptionInfo;
     NonbondedMethod nonbondedMethod;
-    double cutoffDistance, switchingDistance, rfDielectric, ewaldErrorTol;
+    double cutoffDistance, switchingDistance, rfDielectric, ewaldErrorTol, alpha;
     bool useSwitchingFunction, useDispersionCorrection;
-    int recipForceGroup;
+    int recipForceGroup, nx, ny, nz;
     void addExclusionsToSet(const std::vector<std::set<int> >& bonded12, std::set<int>& exclusions, int baseParticle, int fromParticle, int currentLevel) const;
     std::vector<ParticleInfo> particles;
     std::vector<ExceptionInfo> exceptions;

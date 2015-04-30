@@ -32,21 +32,25 @@
 #include "openmm/Context.h"
 #include "openmm/System.h"
 #include <algorithm>
+#include <cctype>
 #include <sstream>
+#ifdef __APPLE__
+#include "sys/sysctl.h"
+#endif
+
 
 using namespace OpenMM;
-using std::map;
-using std::string;
-using std::stringstream;
-using std::vector;
+using namespace std;
 
 #ifdef OPENMM_OPENCL_BUILDING_STATIC_LIBRARY
 extern "C" void registerOpenCLPlatform() {
-    Platform::registerPlatform(new OpenCLPlatform());
+    if (OpenCLPlatform::isPlatformSupported())
+        Platform::registerPlatform(new OpenCLPlatform());
 }
 #else
 extern "C" OPENMM_EXPORT_OPENCL void registerPlatforms() {
-    Platform::registerPlatform(new OpenCLPlatform());
+    if (OpenCLPlatform::isPlatformSupported())
+        Platform::registerPlatform(new OpenCLPlatform());
 }
 #endif
 
@@ -71,6 +75,7 @@ OpenCLPlatform::OpenCLPlatform() {
     registerKernelFactory(CalcCustomExternalForceKernel::Name(), factory);
     registerKernelFactory(CalcCustomHbondForceKernel::Name(), factory);
     registerKernelFactory(CalcCustomCompoundBondForceKernel::Name(), factory);
+    registerKernelFactory(CalcCustomManyParticleForceKernel::Name(), factory);
     registerKernelFactory(IntegrateVerletStepKernel::Name(), factory);
     registerKernelFactory(IntegrateLangevinStepKernel::Name(), factory);
     registerKernelFactory(IntegrateBrownianStepKernel::Name(), factory);
@@ -99,6 +104,31 @@ double OpenCLPlatform::getSpeed() const {
 }
 
 bool OpenCLPlatform::supportsDoublePrecision() const {
+    return true;
+}
+
+bool OpenCLPlatform::isPlatformSupported() {
+    // Return false for OpenCL implementations that are known
+    // to be buggy (Apple OS X prior to 10.10).
+
+#ifdef __APPLE__
+    char str[256];
+    size_t size = sizeof(str);
+    int ret = sysctlbyname("kern.osrelease", str, &size, NULL, 0);
+    if (ret != 0)
+        return false;
+
+    int major, minor, micro;
+    if (sscanf(str, "%d.%d.%d", &major, &minor, &micro) != 3)
+        return false;
+
+    if (major < 14 || (major == 14 && minor < 3))
+        // 14.3.0 is the darwin release corresponding to OS X 10.10.3. Versions prior to that
+        // contained a number of serious bugs in the Apple OpenCL libraries.
+        // (See https://github.com/SimTk/openmm/issues/395 for example.)
+        return false;
+#endif
+
     return true;
 }
 

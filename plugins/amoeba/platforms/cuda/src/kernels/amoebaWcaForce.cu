@@ -196,8 +196,8 @@ extern "C" __global__ void computeWCAForce(unsigned long long* __restrict__ forc
     unsigned int totalWarps = (blockDim.x*gridDim.x)/TILE_SIZE;
     unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/TILE_SIZE;
     const unsigned int numTiles = numTileIndices;
-    unsigned int pos = startTileIndex+warp*numTiles/totalWarps;
-    unsigned int end = startTileIndex+(warp+1)*numTiles/totalWarps;
+    unsigned int pos = (unsigned int) (startTileIndex+warp*(long long)numTiles/totalWarps);
+    unsigned int end = (unsigned int) (startTileIndex+(warp+1)*(long long)numTiles/totalWarps);
     real energy = 0;
     __shared__ AtomData localData[THREAD_BLOCK_SIZE];
     
@@ -207,10 +207,10 @@ extern "C" __global__ void computeWCAForce(unsigned long long* __restrict__ forc
         const unsigned int tgx = threadIdx.x & (TILE_SIZE-1);
         const unsigned int tbx = threadIdx.x - tgx;
         const unsigned int localGroupIndex = threadIdx.x/TILE_SIZE;
-        unsigned int x, y;
+        int x, y;
         AtomData data;
         if (pos < end) {
-            y = (unsigned int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
+            y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
             x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
             if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
                 y += (x < y ? -1 : 1);

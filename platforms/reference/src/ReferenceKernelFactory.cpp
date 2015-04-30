@@ -80,6 +80,8 @@ KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name, const Pla
         return new ReferenceCalcCustomHbondForceKernel(name, platform);
     if (name == CalcCustomCompoundBondForceKernel::Name())
         return new ReferenceCalcCustomCompoundBondForceKernel(name, platform);
+    if (name == CalcCustomManyParticleForceKernel::Name())
+        return new ReferenceCalcCustomManyParticleForceKernel(name, platform);
     if (name == IntegrateVerletStepKernel::Name())
         return new ReferenceIntegrateVerletStepKernel(name, platform, data);
     if (name == IntegrateLangevinStepKernel::Name())
@@ -98,5 +100,5 @@ KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name, const Pla
         return new ReferenceApplyMonteCarloBarostatKernel(name, platform);
     if (name == RemoveCMMotionKernel::Name())
         return new ReferenceRemoveCMMotionKernel(name, platform, data);
-    throw OpenMMException( (std::string("Tried to create kernel with illegal kernel name '") + name + "'").c_str() );
+    throw OpenMMException((std::string("Tried to create kernel with illegal kernel name '") + name + "'").c_str());
 }

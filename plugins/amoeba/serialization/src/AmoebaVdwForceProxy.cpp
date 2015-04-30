@@ -56,17 +56,17 @@ void AmoebaVdwForceProxy::serialize(const void* object, SerializationNode& node)
 
         int ivIndex;
         double sigma, epsilon, reductionFactor;
-        force.getParticleParameters( ii, ivIndex, sigma, epsilon, reductionFactor );
+        force.getParticleParameters(ii, ivIndex, sigma, epsilon, reductionFactor);
 
         SerializationNode& particle = particles.createChildNode("Particle");
         particle.setIntProperty("ivIndex", ivIndex).setDoubleProperty("sigma", sigma).setDoubleProperty("epsilon", epsilon).setDoubleProperty("reductionFactor", reductionFactor);
 
         std::vector< int > exclusions;
-        force.getParticleExclusions( ii,  exclusions );
+        force.getParticleExclusions(ii,  exclusions);
 
         SerializationNode& particleExclusions = particle.createChildNode("ParticleExclusions");
         for (unsigned int jj = 0; jj < exclusions.size(); jj++) {
-            particleExclusions.createChildNode( "excl" ).setIntProperty( "index", exclusions[jj] );
+            particleExclusions.createChildNode("excl").setIntProperty("index", exclusions[jj]);
         }
     }
 }
@@ -77,9 +77,9 @@ void* AmoebaVdwForceProxy::deserialize(const SerializationNode& node) const {
     AmoebaVdwForce* force = new AmoebaVdwForce();
     try {
 
-        force->setSigmaCombiningRule(node.getStringProperty( "SigmaCombiningRule" ) );
-        force->setEpsilonCombiningRule(node.getStringProperty( "EpsilonCombiningRule" ) );
-        force->setCutoff(node.getDoubleProperty( "VdwCutoff" ) );
+        force->setSigmaCombiningRule(node.getStringProperty("SigmaCombiningRule"));
+        force->setEpsilonCombiningRule(node.getStringProperty("EpsilonCombiningRule"));
+        force->setCutoff(node.getDoubleProperty("VdwCutoff"));
         force->setNonbondedMethod((AmoebaVdwForce::NonbondedMethod) node.getIntProperty("method"));
 
         const SerializationNode& particles = node.getChildNode("VdwParticles");
@@ -92,9 +92,9 @@ void* AmoebaVdwForceProxy::deserialize(const SerializationNode& node) const {
             const SerializationNode& particleExclusions = particle.getChildNode("ParticleExclusions");
             std::vector< int > exclusions;
             for (unsigned int jj = 0; jj < particleExclusions.getChildren().size(); jj++) {
-                exclusions.push_back( particleExclusions.getChildren()[jj].getIntProperty("index") );
+                exclusions.push_back(particleExclusions.getChildren()[jj].getIntProperty("index"));
             }
-            force->setParticleExclusions( ii, exclusions );
+            force->setParticleExclusions(ii, exclusions);
         }
 
     }

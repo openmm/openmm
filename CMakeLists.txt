@@ -1,17 +1,15 @@
 #---------------------------------------------------
 # OpenMM 
 #
-# Creates OpenMM library, base name=OpenMM.
-# Default libraries are shared & optimized. Variants
-# are created for static (_static) and debug (_d).
+# Creates OpenMM library.
 #
 # Windows:
-#   OpenMM[_d].dll
-#   OpenMM[_d].lib
-#   OpenMM_static[_d].lib
+#   OpenMM.dll
+#   OpenMM.lib
+#   OpenMM_static.lib
 # Unix:
-#   libOpenMM[_d].so
-#   libOpenMM_static[_d].a
+#   libOpenMM.so
+#   libOpenMM_static.a
 #----------------------------------------------------
 
 find_program(PYTHON_EXECUTABLE NAMES python)
@@ -63,6 +61,11 @@ ELSE(WIN32)
     ENDIF(NOT OPENMM_INSTALL_PREFIX)
 ENDIF(WIN32)
 
+# Include CPU-Features for Android
+IF (ANDROID)
+    INCLUDE_DIRECTORIES(${ANDROID_NDK}/sources/cpufeatures)
+ENDIF (ANDROID)
+
 # It seems that on linux and mac, everything is trying to be installed in /usr/local/openmm
 # But if every install target is prefixed with /openmm/, on Windows the install files
 # end up in C:/Program Files/OpenMM/openmm/ which is ugly.
@@ -75,7 +78,7 @@ ENDIF(${CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT})
 
 # The source is organized into subdirectories, but we handle them all from
 # this CMakeLists file rather than letting CMake visit them as SUBDIRS.
-SET(OPENMM_SOURCE_SUBDIRS . openmmapi olla libraries/jama libraries/quern libraries/lepton libraries/sfmt libraries/lbfgs libraries/hilbert libraries/csha1 platforms/reference serialization libraries/validate)
+SET(OPENMM_SOURCE_SUBDIRS . openmmapi olla libraries/jama libraries/quern libraries/lepton libraries/sfmt libraries/lbfgs libraries/hilbert libraries/csha1 platforms/reference serialization libraries/validate libraries/irrxml)
 IF(WIN32)
     SET(OPENMM_SOURCE_SUBDIRS ${OPENMM_SOURCE_SUBDIRS} libraries/pthreads)
     ADD_CUSTOM_TARGET(PthreadsLibraries ALL)
@@ -86,12 +89,18 @@ IF(WIN32)
         INSTALL(FILES ${lib} DESTINATION "lib/")
     ENDFOREACH(lib)
     LINK_DIRECTORIES("${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}")
-    SET(PTHREADS_LIB pthreadVC2)
-    SET(PTHREADS_LIB_STATIC pthreadVC2_static_mt)
+    IF(CMAKE_SIZEOF_VOID_P EQUAL 8)
+        SET(PTHREADS_LIB pthreadVC2_x64)
+    ELSE(CMAKE_SIZEOF_VOID_P EQUAL 8)
+        SET(PTHREADS_LIB pthreadVC2)
+        SET(PTHREADS_LIB_STATIC pthreadVC2_static_mt)
+    ENDIF(CMAKE_SIZEOF_VOID_P EQUAL 8)
 ELSE(WIN32)
-    SET(PTHREADS_LIB pthread)
-    # in linux, even in static builds we link against the dynamic object (since its tied to libc versions)
-    SET(PTHREADS_LIB_STATIC pthread)
+    IF (NOT ANDROID)
+        SET(PTHREADS_LIB pthread)
+        # in linux, even in static builds we link against the dynamic object (since its tied to libc versions)
+        SET(PTHREADS_LIB_STATIC pthread)
+    ENDIF (NOT ANDROID)
 ENDIF(WIN32)
 
 # The build system will set ARCH64 for 64 bit builds, which require
@@ -110,25 +119,25 @@ ELSE( CMAKE_SIZEOF_VOID_P EQUAL 8 )
   SET( LIB64  )
 ENDIF( CMAKE_SIZEOF_VOID_P EQUAL 8 )
 
-IF (APPLE)
-    # Build universal binaries compatible with OS X 10.7
+IF (APPLE AND (NOT PNACL))
+    # Build 64 bit binaries compatible with OS X 10.7
     IF (NOT CMAKE_OSX_DEPLOYMENT_TARGET)
         SET (CMAKE_OSX_DEPLOYMENT_TARGET "10.7" CACHE STRING "The minimum version of OS X to support" FORCE)
     ENDIF (NOT CMAKE_OSX_DEPLOYMENT_TARGET)
     IF (NOT CMAKE_OSX_ARCHITECTURES)
-        SET (CMAKE_OSX_ARCHITECTURES "i386;x86_64" CACHE STRING "The processor architectures to build for" FORCE)
+        SET (CMAKE_OSX_ARCHITECTURES "x86_64" CACHE STRING "The processor architectures to build for" FORCE)
     ENDIF (NOT CMAKE_OSX_ARCHITECTURES)
 
     # Improve the linking behavior of Mac libraries
     SET (CMAKE_INSTALL_NAME_DIR "@rpath")
     SET(EXTRA_COMPILE_FLAGS "-msse2 -stdlib=libc++")
-ELSE (APPLE)
-    IF (MSVC)
+ELSE (APPLE AND (NOT PNACL))
+    IF (MSVC OR ANDROID OR PNACL)
         SET(EXTRA_COMPILE_FLAGS)
-    ELSE (MSVC)
+    ELSE (MSVC OR ANDROID OR PNACL)
         SET(EXTRA_COMPILE_FLAGS "-msse2")
-    ENDIF (MSVC)
-ENDIF (APPLE)
+    ENDIF (MSVC OR ANDROID OR PNACL)
+ENDIF (APPLE AND (NOT PNACL))
 
 IF(UNIX AND NOT CMAKE_BUILD_TYPE)
     SET(CMAKE_BUILD_TYPE Release CACHE STRING "Debug or Release build" FORCE)
@@ -139,8 +148,13 @@ IF (NOT CMAKE_CXX_FLAGS_DEBUG)
 ENDIF (NOT CMAKE_CXX_FLAGS_DEBUG)
 
 IF (NOT CMAKE_CXX_FLAGS_RELEASE)
-    SET(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG" CACHE STRING 
-          "To use when CMAKE_BUILD_TYPE=Release" FORCE)
+    IF (ANDROID)
+        SET(CMAKE_CXX_FLAGS_RELEASE "-mfloat-abi=softfp -march=armv7-a -mfpu=neon -funsafe-math-optimizations -O3 -DNDEBUG" CACHE STRING
+        "To use when CMAKE_BUILD_TYPE=Release" FORCE)
+    ELSE (ANDROID)
+        SET(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG" CACHE STRING 
+        "To use when CMAKE_BUILD_TYPE=Release" FORCE)
+    ENDIF (ANDROID)
 ENDIF (NOT CMAKE_CXX_FLAGS_RELEASE)
 
 
@@ -150,10 +164,10 @@ ENDIF (NOT CMAKE_CXX_FLAGS_RELEASE)
 
 SET(OPENMM_LIBRARY_NAME OpenMM)
 SET(OPENMM_MAJOR_VERSION 6)
-SET(OPENMM_MINOR_VERSION 0)
+SET(OPENMM_MINOR_VERSION 3)
 SET(OPENMM_BUILD_VERSION 0)
 
-SET(OPENMM_COPYRIGHT_YEARS "2008-2014")
+SET(OPENMM_COPYRIGHT_YEARS "2008-2015")
 
 # underbar separated list of dotted authors, no spaces or commas
 SET(OPENMM_AUTHORS "Peter.Eastman")
@@ -211,18 +225,6 @@ ENDIF(NOT LIBRARY_OUTPUT_PATH)
 SET(${PROJECT_NAME}_EXECUTABLE_DIR ${EXECUTABLE_OUTPUT_PATH}/${CMAKE_CFG_INTDIR})
 SET(${PROJECT_NAME}_LIBRARY_DIR    ${LIBRARY_OUTPUT_PATH}/${CMAKE_CFG_INTDIR})
 
-# Ensure that debug libraries have "_d" appended to their names.
-# CMake gets this right on Windows automatically with this definition.
-IF (MSVC)
-    SET(CMAKE_DEBUG_POSTFIX "_d" CACHE INTERNAL "" FORCE)
-ENDIF (MSVC)
-
-# But on Unix or Cygwin we have to add the suffix manually
-IF (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
-    SET(SHARED_TARGET ${SHARED_TARGET}_d)
-    SET(STATIC_TARGET ${STATIC_TARGET}_d)
-ENDIF (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
-
 # used by plugin
 SET(OPENMM_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -266,7 +268,19 @@ FOREACH(subdir ${OPENMM_SOURCE_SUBDIRS})
     ## OpenMM was previously installed there.
     INCLUDE_DIRECTORIES(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/${subdir}/include)
 ENDFOREACH(subdir)
-SET_SOURCE_FILES_PROPERTIES(${CMAKE_SOURCE_DIR}/libraries/sfmt/src/SFMT.cpp PROPERTIES COMPILE_FLAGS "-DHAVE_SSE2=1")
+IF (ANDROID OR PNACL)
+    SET_SOURCE_FILES_PROPERTIES(${CMAKE_SOURCE_DIR}/libraries/sfmt/src/SFMT.cpp PROPERTIES COMPILE_FLAGS "-UHAVE_SSE2")
+ELSE (ANDROID OR PNACL)
+    SET_SOURCE_FILES_PROPERTIES(${CMAKE_SOURCE_DIR}/libraries/sfmt/src/SFMT.cpp PROPERTIES COMPILE_FLAGS "-DHAVE_SSE2=1")
+ENDIF(ANDROID OR PNACL)
+IF (NOT (ANDROID OR PNACL))
+    FILE(GLOB src_files ${CMAKE_CURRENT_SOURCE_DIR}/libraries/asmjit/*/*.cpp)
+    FILE(GLOB incl_files ${CMAKE_CURRENT_SOURCE_DIR}/libraries/asmjit/*.h)
+    SET(SOURCE_FILES ${SOURCE_FILES} ${src_files})
+    SET(SOURCE_INCLUDE_FILES ${SOURCE_INCLUDE_FILES} ${incl_files})
+    INCLUDE_DIRECTORIES(BEFORE "${CMAKE_CURRENT_SOURCE_DIR}/libraries/asmjit")
+    SET(EXTRA_COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS} -DLEPTON_USE_JIT")
+ENDIF (NOT (ANDROID OR PNACL))
 
 # If API wrappers are being generated, and add them to the build.
 SET(OPENMM_BUILD_C_AND_FORTRAN_WRAPPERS ON CACHE BOOL "Build wrappers for C and Fortran")
@@ -278,16 +292,28 @@ ENDIF(OPENMM_BUILD_C_AND_FORTRAN_WRAPPERS)
 
 INCLUDE_DIRECTORIES(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-ADD_LIBRARY(${SHARED_TARGET} SHARED ${SOURCE_FILES} ${SOURCE_INCLUDE_FILES} ${API_ABS_INCLUDE_FILES})
-SET_TARGET_PROPERTIES(${SHARED_TARGET} PROPERTIES LINK_FLAGS "${EXTRA_COMPILE_FLAGS}" COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS} -DOPENMM_BUILDING_SHARED_LIBRARY -DLEPTON_BUILDING_SHARED_LIBRARY -DOPENMM_VALIDATE_BUILDING_SHARED_LIBRARY")
-IF(WIN32)
-    ADD_DEPENDENCIES(${SHARED_TARGET} PthreadsLibraries)
-ENDIF(WIN32)
+SET(OPENMM_BUILD_SHARED_LIB ON CACHE BOOL "Whether to build shared OpenMM libraries")
+
+SET(EXTRA_LINK_FLAGS ${EXTRA_COMPILE_FLAGS})
+IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+    IF (NOT ANDROID)
+        SET(EXTRA_LINK_FLAGS "${EXTRA_LINK_FLAGS} -Wl,--no-as-needed -lrt")
+    ENDIF (NOT ANDROID)
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+
+IF(OPENMM_BUILD_SHARED_LIB)
+    ADD_LIBRARY(${SHARED_TARGET} SHARED ${SOURCE_FILES} ${SOURCE_INCLUDE_FILES} ${API_ABS_INCLUDE_FILES})
+    SET_TARGET_PROPERTIES(${SHARED_TARGET} PROPERTIES LINK_FLAGS "${EXTRA_LINK_FLAGS}" COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS} -DOPENMM_BUILDING_SHARED_LIBRARY -DLEPTON_BUILDING_SHARED_LIBRARY -DOPENMM_VALIDATE_BUILDING_SHARED_LIBRARY")
+    IF(WIN32)
+        ADD_DEPENDENCIES(${SHARED_TARGET} PthreadsLibraries)
+    ENDIF(WIN32)
+ENDIF(OPENMM_BUILD_SHARED_LIB)
 
 SET(OPENMM_BUILD_STATIC_LIB OFF CACHE BOOL "Whether to build static OpenMM libraries")
 IF(OPENMM_BUILD_STATIC_LIB)
     ADD_LIBRARY(${STATIC_TARGET} STATIC ${SOURCE_FILES} ${SOURCE_INCLUDE_FILES} ${API_ABS_INCLUDE_FILES})
-    SET_TARGET_PROPERTIES(${STATIC_TARGET} PROPERTIES LINK_FLAGS "${EXTRA_COMPILE_FLAGS}" COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS} -DOPENMM_USE_STATIC_LIBRARIES -DOPENMM_BUILDING_STATIC_LIBRARY -DLEPTON_USE_STATIC_LIBRARIES -DLEPTON_BUILDING_STATIC_LIBRARY -DOPENMMM_VALIDATE_BUILDING_STATIC_LIBRARY -DOPENMM_VALIDATE_BUILDING_STATIC_LIBRARY")
+    SET(EXTRA_COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS} -DOPENMM_USE_STATIC_LIBRARIES -DLEPTON_USE_STATIC_LIBRARIES -DPTW32_STATIC_LIB")
+    SET_TARGET_PROPERTIES(${STATIC_TARGET} PROPERTIES LINK_FLAGS "${EXTRA_LINK_FLAGS}" COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS} -DOPENMM_BUILDING_STATIC_LIBRARY -DLEPTON_BUILDING_STATIC_LIBRARY -DOPENMMM_VALIDATE_BUILDING_STATIC_LIBRARY -DOPENMM_VALIDATE_BUILDING_STATIC_LIBRARY")
 ENDIF(OPENMM_BUILD_STATIC_LIB)
 
 IF(OPENMM_BUILD_C_AND_FORTRAN_WRAPPERS)
@@ -300,16 +326,26 @@ ENDIF(OPENMM_BUILD_C_AND_FORTRAN_WRAPPERS)
 # On Linux need to link to libdl
 FIND_LIBRARY(DL_LIBRARY dl)
 IF(DL_LIBRARY)
-  TARGET_LINK_LIBRARIES(${SHARED_TARGET} ${DL_LIBRARY} ${PTHREADS_LIB})
-  IF(OPENMM_BUILD_STATIC_LIB)
-    TARGET_LINK_LIBRARIES(${STATIC_TARGET} ${DL_LIBRARY} ${PTHREADS_LIB})
-  ENDIF(OPENMM_BUILD_STATIC_LIB)
-  MARK_AS_ADVANCED(DL_LIBRARY)
+    IF(OPENMM_BUILD_SHARED_LIB)
+        TARGET_LINK_LIBRARIES(${SHARED_TARGET} ${DL_LIBRARY} ${PTHREADS_LIB})
+    ENDIF(OPENMM_BUILD_SHARED_LIB)
+    IF(OPENMM_BUILD_STATIC_LIB)
+        TARGET_LINK_LIBRARIES(${STATIC_TARGET} ${DL_LIBRARY} ${PTHREADS_LIB})
+    ENDIF(OPENMM_BUILD_STATIC_LIB)
+    MARK_AS_ADVANCED(DL_LIBRARY)
 ELSE(DL_LIBRARY)
-  TARGET_LINK_LIBRARIES(${SHARED_TARGET} ${PTHREADS_LIB})
+    IF(OPENMM_BUILD_SHARED_LIB)
+        IF (ANDROID)
+            TARGET_LINK_LIBRARIES(${SHARED_TARGET} ${PTHREADS_LIB} cpufeatures)
+        ELSE (ANDROID)
+            TARGET_LINK_LIBRARIES(${SHARED_TARGET} ${PTHREADS_LIB})
+        ENDIF (ANDROID)
+    ENDIF(OPENMM_BUILD_SHARED_LIB)
 ENDIF(DL_LIBRARY)
 
-ADD_SUBDIRECTORY(platforms/reference/tests)
+IF(BUILD_TESTING)
+    ADD_SUBDIRECTORY(platforms/reference/tests)
+ENDIF(BUILD_TESTING)
 
 # Which hardware platforms to build
 
@@ -369,7 +405,6 @@ MARK_AS_ADVANCED(CUDA_BUILD_CUBIN)
 MARK_AS_ADVANCED(CUDA_BUILD_EMULATION)
 
 FIND_PACKAGE(OpenCL QUIET)
-# Plus the tesla/linux is taking too long on the tests
 IF(OPENCL_FOUND)
     SET(OPENMM_BUILD_OPENCL_LIB ON CACHE BOOL "Build OpenMMOpenCL library")
 ELSE(OPENCL_FOUND)
@@ -427,7 +462,24 @@ IF(OPENMM_BUILD_PME_PLUGIN)
    ADD_SUBDIRECTORY(plugins/cpupme)
 ENDIF(OPENMM_BUILD_PME_PLUGIN)
 
-INSTALL_TARGETS(/lib RUNTIME_DIRECTORY /lib ${SHARED_TARGET})
+# CUDA compiler plugin
+
+GET_FILENAME_COMPONENT(CUDA_LIB_DIR "${CUDA_cufft_LIBRARY}" PATH)
+FIND_LIBRARY(CUDA_nvrtc_LIBRARY nvrtc "${CUDA_LIB_DIR}")
+IF(CUDA_nvrtc_LIBRARY)
+    SET(OPENMM_BUILD_CUDA_COMPILER_PLUGIN ON CACHE BOOL "Build CUDA runtime compiler plugin")
+ELSE(CUDA_nvrtc_LIBRARY)
+    SET(OPENMM_BUILD_CUDA_COMPILER_PLUGIN OFF CACHE BOOL "Build CUDA runtime compiler plugin")
+ENDIF(CUDA_nvrtc_LIBRARY)
+SET(OPENMM_BUILD_CUDACOMPILER_PATH)
+IF(OPENMM_BUILD_CUDA_COMPILER_PLUGIN)
+   SET(OPENMM_BUILD_CUDACOMPILER_PATH ${CMAKE_CURRENT_SOURCE_DIR}/plugins/cudacompiler)
+   ADD_SUBDIRECTORY(plugins/cudacompiler)
+ENDIF(OPENMM_BUILD_CUDA_COMPILER_PLUGIN)
+
+IF(OPENMM_BUILD_SHARED_LIB)
+    INSTALL_TARGETS(/lib RUNTIME_DIRECTORY /lib ${SHARED_TARGET})
+ENDIF(OPENMM_BUILD_SHARED_LIB)
 IF(OPENMM_BUILD_STATIC_LIB)
   INSTALL_TARGETS(/lib RUNTIME_DIRECTORY /lib ${STATIC_TARGET})
 ENDIF(OPENMM_BUILD_STATIC_LIB)
@@ -489,90 +541,10 @@ ELSE (EXECUTABLE_OUTPUT_PATH)
   SET (TEST_PATH .)
 ENDIF (EXECUTABLE_OUTPUT_PATH)
 
-# Build and install documentation
-
-find_package(Doxygen QUIET)
-mark_as_advanced(CLEAR DOXYGEN_EXECUTABLE)
-IF(DOXYGEN_EXECUTABLE)
-    # Generate C++ API documentation
-
-    SET(DOXY_CONFIG_C++ "${CMAKE_CURRENT_BINARY_DIR}/DoxyfileC++")
-    CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/docs/DoxyfileC++.in 
-          ${DOXY_CONFIG_C++}
-          @ONLY )
-    FILE(GLOB_RECURSE OPENMM_INCLUDES "openmm/include/*.h")
-    FILE(GLOB_RECURSE OLLA_INCLUDES "olla/include/*.h")
-    ADD_CUSTOM_COMMAND(
-        OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/api-c++/index.html"
-        COMMAND ${DOXYGEN_EXECUTABLE} ${DOXY_CONFIG_C++}
-        DEPENDS ${OPENMM_INCLUDES} ${OLLA_INCLUDES}
-        WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
-        COMMENT "Generating C++ API documentation using Doxygen")
-    ADD_CUSTOM_TARGET(C++ApiDocs 
-        DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/api-c++/index.html"
-        COMMENT "Generating C++ API documentation using Doxygen"
-        SOURCES 
-            "${CMAKE_CURRENT_SOURCE_DIR}/docs/DoxyfileC++.in"
-            ${OPENMM_INCLUDES}
-            ${OLLA_INCLUDES}
-    ) 
-    FILE(MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/api-c++/")
-    INSTALL(DIRECTORY "${PROJECT_BINARY_DIR}/api-c++/"
-            DESTINATION "docs/api-c++/")
-    INSTALL(FILES "docs/C++ API Reference.html"
-            DESTINATION "docs/")
-    ADD_CUSTOM_TARGET(DoxygenApiDocs
-        DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/api-c++/index.html"
-        COMMENT "Generating C++ API documentation using Doxygen"
-        SOURCES 
-        "${CMAKE_CURRENT_SOURCE_DIR}/docs/DoxyfileC++.in"
-        "${CMAKE_CURRENT_SOURCE_DIR}/docs/DoxyfilePython.in"
-        ${OPENMM_INCLUDES}
-        ${OLLA_INCLUDES}
-    )
-    set(OPENMM_GENERATE_API_DOCS OFF CACHE BOOL "Whether to create API documentation using Doxygen")
-    IF (OPENMM_GENERATE_API_DOCS)
-        SET_TARGET_PROPERTIES(DoxygenApiDocs PROPERTIES EXCLUDE_FROM_ALL FALSE)
-    ENDIF (OPENMM_GENERATE_API_DOCS)
-
-    # Generate Python API documentation
-
-    IF (OPENMM_BUILD_PYTHON_WRAPPERS)
-        SET(DOXY_CONFIG_PYTHON "${CMAKE_CURRENT_BINARY_DIR}/DoxyfilePython")
-        CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/docs/DoxyfilePython.in 
-            ${DOXY_CONFIG_PYTHON}
-            @ONLY )
-        ADD_CUSTOM_COMMAND(
-            OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/api-python/index.html"
-            COMMAND ${DOXYGEN_EXECUTABLE} ${DOXY_CONFIG_PYTHON}
-            DEPENDS RunSwig
-            WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
-            COMMENT "Generating Python API documentation using Doxygen")
-        ADD_CUSTOM_TARGET(PythonApiDocs 
-            DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/api-python/index.html"
-            COMMENT "Generating Python API documentation using Doxygen"
-            SOURCES 
-                "${CMAKE_CURRENT_SOURCE_DIR}/docs/DoxyfilePython.in"
-                ${OPENMM_INCLUDES}
-                ${OLLA_INCLUDES}
-        ) 
-        FILE(MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/api-python/")
-        INSTALL(DIRECTORY "${PROJECT_BINARY_DIR}/api-python/"
-                DESTINATION "docs/api-python/")
-        INSTALL(FILES "docs/Python API Reference.html"
-                DESTINATION "docs/")
-        ADD_DEPENDENCIES(DoxygenApiDocs PythonApiDocs)
-    ENDIF (OPENMM_BUILD_PYTHON_WRAPPERS)
-ENDIF(DOXYGEN_EXECUTABLE)
-
-install(FILES docs/OpenMMUsersGuide.pdf docs/OpenMMDeveloperGuide.pdf
-    DESTINATION docs/)
-
-FILE(GLOB LICENSE_FILES "docs/licenses/*.txt")
-install(FILES ${LICENSE_FILES}
-    DESTINATION licenses/)
-
-ADD_SUBDIRECTORY(tests)
+ADD_SUBDIRECTORY(docs-source)
+IF(BUILD_TESTING)
+    ADD_SUBDIRECTORY(tests)
+ENDIF(BUILD_TESTING)
 ADD_SUBDIRECTORY(examples)
 
 ENDIF(NOT cmv EQUAL "2.4") # This whole file...

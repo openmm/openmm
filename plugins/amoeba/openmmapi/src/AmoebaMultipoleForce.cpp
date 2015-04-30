@@ -45,23 +45,23 @@ AmoebaMultipoleForce::AmoebaMultipoleForce() : nonbondedMethod(NoCutoff), polari
     pmeGridDimension[0] = pmeGridDimension[1] = pmeGridDimension[2];
 }
 
-AmoebaMultipoleForce::NonbondedMethod AmoebaMultipoleForce::getNonbondedMethod( void ) const {
+AmoebaMultipoleForce::NonbondedMethod AmoebaMultipoleForce::getNonbondedMethod() const {
     return nonbondedMethod;
 }
 
-void AmoebaMultipoleForce::setNonbondedMethod( AmoebaMultipoleForce::NonbondedMethod method) {
+void AmoebaMultipoleForce::setNonbondedMethod(AmoebaMultipoleForce::NonbondedMethod method) {
     nonbondedMethod = method;
 }
 
-AmoebaMultipoleForce::PolarizationType AmoebaMultipoleForce::getPolarizationType( void ) const {
+AmoebaMultipoleForce::PolarizationType AmoebaMultipoleForce::getPolarizationType() const {
     return polarizationType;
 }
 
-void AmoebaMultipoleForce::setPolarizationType( AmoebaMultipoleForce::PolarizationType type ) {
+void AmoebaMultipoleForce::setPolarizationType(AmoebaMultipoleForce::PolarizationType type) {
     polarizationType = type;
 }
 
-double AmoebaMultipoleForce::getCutoffDistance( void ) const {
+double AmoebaMultipoleForce::getCutoffDistance() const {
     return cutoffDistance;
 }
 
@@ -73,19 +73,19 @@ double AmoebaMultipoleForce::getAEwald() const {
     return aewald; 
 } 
  
-void AmoebaMultipoleForce::setAEwald(double inputAewald ) { 
+void AmoebaMultipoleForce::setAEwald(double inputAewald) { 
     aewald = inputAewald; 
 } 
  
-int AmoebaMultipoleForce::getPmeBSplineOrder( void ) const { 
+int AmoebaMultipoleForce::getPmeBSplineOrder() const { 
     return pmeBSplineOrder; 
 } 
  
-void AmoebaMultipoleForce::getPmeGridDimensions( std::vector<int>& gridDimension ) const { 
-    if( gridDimension.size() < 3 ){
+void AmoebaMultipoleForce::getPmeGridDimensions(std::vector<int>& gridDimension) const { 
+    if (gridDimension.size() < 3) {
         gridDimension.resize(3);
     }
-    if( pmeGridDimension.size() > 2 ){
+    if (pmeGridDimension.size() > 2) {
         gridDimension[0] = pmeGridDimension[0];
         gridDimension[1] = pmeGridDimension[1];
         gridDimension[2] = pmeGridDimension[2];
@@ -95,7 +95,7 @@ void AmoebaMultipoleForce::getPmeGridDimensions( std::vector<int>& gridDimension
     return;
 } 
  
-void AmoebaMultipoleForce::setPmeGridDimensions( const std::vector<int>& gridDimension ) {
+void AmoebaMultipoleForce::setPmeGridDimensions(const std::vector<int>& gridDimension) {
     pmeGridDimension.resize(3);
     pmeGridDimension[0] = gridDimension[0];
     pmeGridDimension[1] = gridDimension[1];
@@ -103,19 +103,19 @@ void AmoebaMultipoleForce::setPmeGridDimensions( const std::vector<int>& gridDim
     return;
 } 
 
-int AmoebaMultipoleForce::getMutualInducedMaxIterations( void ) const {
+int AmoebaMultipoleForce::getMutualInducedMaxIterations() const {
     return mutualInducedMaxIterations;
 }
 
-void AmoebaMultipoleForce::setMutualInducedMaxIterations( int inputMutualInducedMaxIterations ) {
+void AmoebaMultipoleForce::setMutualInducedMaxIterations(int inputMutualInducedMaxIterations) {
     mutualInducedMaxIterations = inputMutualInducedMaxIterations;
 }
 
-double AmoebaMultipoleForce::getMutualInducedTargetEpsilon( void ) const {
+double AmoebaMultipoleForce::getMutualInducedTargetEpsilon() const {
     return mutualInducedTargetEpsilon;
 }
 
-void AmoebaMultipoleForce::setMutualInducedTargetEpsilon( double inputMutualInducedTargetEpsilon ) {
+void AmoebaMultipoleForce::setMutualInducedTargetEpsilon(double inputMutualInducedTargetEpsilon) {
     mutualInducedTargetEpsilon = inputMutualInducedTargetEpsilon;
 }
 
@@ -127,22 +127,22 @@ void AmoebaMultipoleForce::setEwaldErrorTolerance(double tol) {
     ewaldErrorTol = tol;
 }
 
-int AmoebaMultipoleForce::addMultipole( double charge, const std::vector<double>& molecularDipole, const std::vector<double>& molecularQuadrupole, int axisType, 
+int AmoebaMultipoleForce::addMultipole(double charge, const std::vector<double>& molecularDipole, const std::vector<double>& molecularQuadrupole, int axisType, 
                                        int multipoleAtomZ, int multipoleAtomX, int multipoleAtomY, double thole, double dampingFactor, double polarity) {
-    multipoles.push_back(MultipoleInfo( charge, molecularDipole, molecularQuadrupole,  axisType, multipoleAtomZ,  multipoleAtomX, multipoleAtomY, thole, dampingFactor, polarity));
+    multipoles.push_back(MultipoleInfo(charge, molecularDipole, molecularQuadrupole,  axisType, multipoleAtomZ,  multipoleAtomX, multipoleAtomY, thole, dampingFactor, polarity));
     return multipoles.size()-1;
 }
 
 void AmoebaMultipoleForce::getMultipoleParameters(int index, double& charge, std::vector<double>& molecularDipole, std::vector<double>& molecularQuadrupole, 
-                                                  int& axisType, int& multipoleAtomZ, int& multipoleAtomX, int& multipoleAtomY, double& thole, double& dampingFactor, double& polarity ) const {
+                                                  int& axisType, int& multipoleAtomZ, int& multipoleAtomX, int& multipoleAtomY, double& thole, double& dampingFactor, double& polarity) const {
     charge                      = multipoles[index].charge;
 
-    molecularDipole.resize( 3 );
+    molecularDipole.resize(3);
     molecularDipole[0]          = multipoles[index].molecularDipole[0];
     molecularDipole[1]          = multipoles[index].molecularDipole[1];
     molecularDipole[2]          = multipoles[index].molecularDipole[2];
 
-    molecularQuadrupole.resize( 9 );
+    molecularQuadrupole.resize(9);
     molecularQuadrupole[0]      = multipoles[index].molecularQuadrupole[0];
     molecularQuadrupole[1]      = multipoles[index].molecularQuadrupole[1];
     molecularQuadrupole[2]      = multipoles[index].molecularQuadrupole[2];
@@ -164,7 +164,7 @@ void AmoebaMultipoleForce::getMultipoleParameters(int index, double& charge, std
 }
 
 void AmoebaMultipoleForce::setMultipoleParameters(int index, double charge, const std::vector<double>& molecularDipole, const std::vector<double>& molecularQuadrupole, 
-                                                  int axisType, int multipoleAtomZ, int multipoleAtomX, int multipoleAtomY, double thole, double dampingFactor, double polarity ) {
+                                                  int axisType, int multipoleAtomZ, int multipoleAtomX, int multipoleAtomY, double thole, double dampingFactor, double polarity) {
 
     multipoles[index].charge                      = charge;
 
@@ -192,34 +192,34 @@ void AmoebaMultipoleForce::setMultipoleParameters(int index, double charge, cons
 
 }
 
-void AmoebaMultipoleForce::setCovalentMap(int index, CovalentType typeId, const std::vector<int>& covalentAtoms ) {
+void AmoebaMultipoleForce::setCovalentMap(int index, CovalentType typeId, const std::vector<int>& covalentAtoms) {
 
     std::vector<int>& covalentList = multipoles[index].covalentInfo[typeId];
-    covalentList.resize( covalentAtoms.size() );
-    for( unsigned int ii = 0; ii < covalentAtoms.size(); ii++ ){
+    covalentList.resize(covalentAtoms.size());
+    for (unsigned int ii = 0; ii < covalentAtoms.size(); ii++) {
        covalentList[ii] = covalentAtoms[ii];
     }
 }
 
-void AmoebaMultipoleForce::getCovalentMap(int index, CovalentType typeId, std::vector<int>& covalentAtoms ) const {
+void AmoebaMultipoleForce::getCovalentMap(int index, CovalentType typeId, std::vector<int>& covalentAtoms) const {
 
     // load covalent atom index entries for atomId==index and covalentId==typeId into covalentAtoms
 
     std::vector<int> covalentList = multipoles[index].covalentInfo[typeId];
-    covalentAtoms.resize( covalentList.size() );
-    for( unsigned int ii = 0; ii < covalentList.size(); ii++ ){
+    covalentAtoms.resize(covalentList.size());
+    for (unsigned int ii = 0; ii < covalentList.size(); ii++) {
        covalentAtoms[ii] = covalentList[ii];
     }
 }
 
-void AmoebaMultipoleForce::getCovalentMaps(int index, std::vector< std::vector<int> >& covalentLists ) const {
+void AmoebaMultipoleForce::getCovalentMaps(int index, std::vector< std::vector<int> >& covalentLists) const {
 
-    covalentLists.resize( CovalentEnd );
-    for( unsigned int jj = 0; jj < CovalentEnd; jj++ ){
+    covalentLists.resize(CovalentEnd);
+    for (unsigned int jj = 0; jj < CovalentEnd; jj++) {
         std::vector<int> covalentList = multipoles[index].covalentInfo[jj];
         std::vector<int> covalentAtoms;
-        covalentAtoms.resize( covalentList.size() );
-        for( unsigned int ii = 0; ii < covalentList.size(); ii++ ){
+        covalentAtoms.resize(covalentList.size());
+        for (unsigned int ii = 0; ii < covalentList.size(); ii++) {
            covalentAtoms[ii] = covalentList[ii];
         }
         covalentLists[jj] = covalentAtoms;
@@ -230,12 +230,12 @@ void AmoebaMultipoleForce::getInducedDipoles(Context& context, vector<Vec3>& dip
     dynamic_cast<AmoebaMultipoleForceImpl&>(getImplInContext(context)).getInducedDipoles(getContextImpl(context), dipoles);
 }
 
-void AmoebaMultipoleForce::getElectrostaticPotential( const std::vector< Vec3 >& inputGrid, Context& context, std::vector< double >& outputElectrostaticPotential ){
+void AmoebaMultipoleForce::getElectrostaticPotential(const std::vector< Vec3 >& inputGrid, Context& context, std::vector< double >& outputElectrostaticPotential) {
     dynamic_cast<AmoebaMultipoleForceImpl&>(getImplInContext(context)).getElectrostaticPotential(getContextImpl(context), inputGrid, outputElectrostaticPotential);
 }
 
-void AmoebaMultipoleForce::getSystemMultipoleMoments(Context& context, std::vector< double >& outputMultipoleMonents ){
-    dynamic_cast<AmoebaMultipoleForceImpl&>(getImplInContext(context)).getSystemMultipoleMoments(getContextImpl(context), outputMultipoleMonents);
+void AmoebaMultipoleForce::getSystemMultipoleMoments(Context& context, std::vector< double >& outputMultipoleMoments) {
+    dynamic_cast<AmoebaMultipoleForceImpl&>(getImplInContext(context)).getSystemMultipoleMoments(getContextImpl(context), outputMultipoleMoments);
 }
 
 ForceImpl* AmoebaMultipoleForce::createImpl()  const {

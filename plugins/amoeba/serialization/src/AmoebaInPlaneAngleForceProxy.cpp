@@ -52,7 +52,7 @@ void AmoebaInPlaneAngleForceProxy::serialize(const void* object, SerializationNo
     node.setDoubleProperty("sextic",     force.getAmoebaGlobalInPlaneAngleSextic());
 
     SerializationNode& bonds = node.createChildNode("InPlaneAngles");
-    for ( unsigned int ii = 0; ii < static_cast<unsigned int>(force.getNumAngles()); ii++) {
+    for (unsigned int ii = 0; ii < static_cast<unsigned int>(force.getNumAngles()); ii++) {
         int particle1, particle2, particle3, particle4;
         double distance, k;
         force.getAngleParameters(ii, particle1, particle2, particle3, particle4, distance, k);
@@ -66,10 +66,10 @@ void* AmoebaInPlaneAngleForceProxy::deserialize(const SerializationNode& node) c
     AmoebaInPlaneAngleForce* force = new AmoebaInPlaneAngleForce();
     try {
 
-        force->setAmoebaGlobalInPlaneAngleCubic(  node.getDoubleProperty("cubic"));
+        force->setAmoebaGlobalInPlaneAngleCubic( node.getDoubleProperty("cubic"));
         force->setAmoebaGlobalInPlaneAngleQuartic(node.getDoubleProperty("quartic"));
-        force->setAmoebaGlobalInPlaneAnglePentic( node.getDoubleProperty("pentic"));
-        force->setAmoebaGlobalInPlaneAngleSextic( node.getDoubleProperty("sextic"));
+        force->setAmoebaGlobalInPlaneAnglePentic(node.getDoubleProperty("pentic"));
+        force->setAmoebaGlobalInPlaneAngleSextic(node.getDoubleProperty("sextic"));
 
         const SerializationNode& bonds = node.getChildNode("InPlaneAngles");
         for (unsigned int ii = 0; ii < bonds.getChildren().size(); ii++) {

@@ -89,19 +89,19 @@ extern "C" __global__ void computeBornSum(unsigned long long* __restrict__ bornS
         const float2* __restrict__ params, unsigned int numTiles) {
     unsigned int totalWarps = (blockDim.x*gridDim.x)/TILE_SIZE;
     unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/TILE_SIZE;
-    unsigned int pos = warp*numTiles/totalWarps;
-    unsigned int end = (warp+1)*numTiles/totalWarps;
+    unsigned int pos = (unsigned int) (warp*(long long)numTiles/totalWarps);
+    unsigned int end = (unsigned int) ((warp+1)*(long long)numTiles/totalWarps);
     unsigned int lasty = 0xFFFFFFFF;
     __shared__ AtomData1 localData[BORN_SUM_THREAD_BLOCK_SIZE];
     do {
         // Extract the coordinates of this tile
         const unsigned int tgx = threadIdx.x & (TILE_SIZE-1);
         const unsigned int tbx = threadIdx.x - tgx;
-        unsigned int x, y;
+        int x, y;
         AtomData1 data;
         data.bornSum = 0;
         if (pos < end) {
-            y = (unsigned int) floor(NUM_BLOCKS+0.5f-sqrt((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
+            y = (int) floor(NUM_BLOCKS+0.5f-sqrt((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
             x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
             if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
                 y += (x < y ? -1 : 1);
@@ -223,8 +223,8 @@ extern "C" __global__ void computeGKForces(
     unsigned int totalWarps = (blockDim.x*gridDim.x)/TILE_SIZE;
     unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/TILE_SIZE;
     const unsigned int numTiles = numTileIndices;
-    unsigned int pos = startTileIndex+warp*numTiles/totalWarps;
-    unsigned int end = startTileIndex+(warp+1)*numTiles/totalWarps;
+    unsigned int pos = (unsigned int) (startTileIndex+warp*(long long)numTiles/totalWarps);
+    unsigned int end = (unsigned int) (startTileIndex+(warp+1)*(long long)numTiles/totalWarps);
     real energy = 0;
     __shared__ AtomData2 localData[GK_FORCE_THREAD_BLOCK_SIZE];
     
@@ -232,10 +232,10 @@ extern "C" __global__ void computeGKForces(
         // Extract the coordinates of this tile
         const unsigned int tgx = threadIdx.x & (TILE_SIZE-1);
         const unsigned int tbx = threadIdx.x - tgx;
-        unsigned int x, y;
+        int x, y;
         AtomData2 data;
         if (pos < end) {
-            y = (unsigned int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
+            y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
             x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
             if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
                 y += (x < y ? -1 : 1);
@@ -471,10 +471,10 @@ extern "C" __global__ void computeChainRuleForce(
         // Extract the coordinates of this tile
         const unsigned int tgx = threadIdx.x & (TILE_SIZE-1);
         const unsigned int tbx = threadIdx.x - tgx;
-        unsigned int x, y;
+        int x, y;
         AtomData3 data;
         if (pos < end) {
-            y = (unsigned int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
+            y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
             x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
             if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
                 y += (x < y ? -1 : 1);
@@ -766,8 +766,8 @@ extern "C" __global__ void computeEDiffForce(
     while (pos < end) {
         // Extract the coordinates of this tile.
 
-        unsigned int x, y;
-        y = (unsigned int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
+        int x, y;
+        y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
         x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
         if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
             y += (x < y ? -1 : 1);

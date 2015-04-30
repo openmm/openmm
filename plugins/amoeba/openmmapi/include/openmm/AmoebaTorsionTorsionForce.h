@@ -126,16 +126,26 @@ public:
      * Set the torsion-torsion grid at the specified index
      *
      * @param index         the index of the torsion-torsion for which to get parameters
-     * @param grid          grid
+     * @param grid          either 3 or 6 values may be specified per grid point.  If the derivatives
+     *                      are omitted, they are calculated automatically by fitting a 2D spline to
+     *                      the energies.
      *                         grid[x][y][0] = x value
      *                         grid[x][y][1] = y value
-     *                         grid[x][y][2] = function value
-     *                         grid[x][y][3] = dfdx value
-     *                         grid[x][y][4] = dfdy value
-     *                         grid[x][y][5] = dfd(xy) value
+     *                         grid[x][y][2] = energy
+     *                         grid[x][y][3] = dEdx value
+     *                         grid[x][y][4] = dEdy value
+     *                         grid[x][y][5] = dEd(xy) value
      */
     void setTorsionTorsionGrid(int index, const std::vector<std::vector<std::vector<double> > >& grid);
-
+    /**
+     * Returns whether or not this force makes use of periodic boundary
+     * conditions.
+     *
+     * @returns true if nonbondedMethod uses PBC and false otherwise
+     */
+    bool usesPeriodicBoundaryConditions() const {
+        return false;
+    }
 protected:
     ForceImpl* createImpl() const;
 private:
@@ -181,29 +191,7 @@ public:
         _spacing[0]     = _spacing[1]     = 1.0;
     }
 
-    TorsionTorsionGridInfo(const TorsionTorsionGrid& grid) {
-
-        _grid.resize(grid.size());
-        for(unsigned int kk = 0; kk < grid.size(); kk++){
-            _grid[kk].resize(grid[kk].size());
-            for(unsigned int jj = 0; jj < grid[kk].size(); jj++){
-                _grid[kk][jj].resize(grid[kk][jj].size());
-                for(unsigned int ii = 0; ii < grid[kk][jj].size(); ii++){
-                    _grid[kk][jj][ii] = grid[kk][jj][ii];
-                }
-            }
-        }
-
-        _startValues[0] =  _grid[0][0][0];
-        _startValues[1] =  _grid[0][0][1];
-
-        _spacing[0]     = static_cast<double>(_grid.size()-1)/360.0;
-        _spacing[1]     = static_cast<double>(grid.size()-1)/360.0;
-
-        _size[0]        = static_cast<int>(grid.size());
-        _size[1]        = static_cast<int>(grid[0].size());
-
-    }
+    TorsionTorsionGridInfo(const TorsionTorsionGrid& grid);
 
     const TorsionTorsionGrid& getTorsionTorsionGrid(void) const {
         return _grid;

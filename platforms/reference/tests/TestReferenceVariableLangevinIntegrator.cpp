@@ -48,10 +48,11 @@
 using namespace OpenMM;
 using namespace std;
 
+ReferencePlatform platform;
+
 const double TOL = 1e-5;
 
 void testSingleBond() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(2.0);
     system.addParticle(2.0);
@@ -97,7 +98,6 @@ void testSingleBond() {
 void testTemperature() {
     const int numParticles = 8;
     const double temp = 100.0;
-    ReferencePlatform platform;
     System system;
     VariableLangevinIntegrator integrator(temp, 5.0, 5e-5);
     NonbondedForce* forceField = new NonbondedForce();
@@ -133,7 +133,6 @@ void testTemperature() {
 void testConstraints() {
     const int numParticles = 8;
     const double temp = 100.0;
-    ReferencePlatform platform;
     System system;
     VariableLangevinIntegrator integrator(temp, 2.0, 1e-5);
     integrator.setConstraintTolerance(1e-5);
@@ -174,7 +173,6 @@ void testConstraints() {
 }
 
 void testConstrainedMasslessParticles() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(0.0);
     system.addParticle(1.0);
@@ -208,7 +206,6 @@ void testConstrainedMasslessParticles() {
 void testRandomSeed() {
     const int numParticles = 8;
     const double temp = 100.0;
-    ReferencePlatform platform;
     System system;
     VariableLangevinIntegrator integrator(temp, 2.0, 1e-5);
     NonbondedForce* forceField = new NonbondedForce();
@@ -276,7 +273,6 @@ void testArgonBox() {
 
     // Create a box of argon atoms.
     
-    ReferencePlatform platform;
     System system;
     NonbondedForce* nonbonded = new NonbondedForce();
     vector<Vec3> positions;
@@ -300,7 +296,7 @@ void testArgonBox() {
     system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
     system.addForce(nonbonded);
 
-    VariableLangevinIntegrator integrator(temp, 6.0, 1e-5);
+    VariableLangevinIntegrator integrator(temp, 6.0, 1e-4);
     Context context(system, integrator, platform);
     context.setPositions(positions);
     context.setVelocitiesToTemperature(temp);
@@ -312,13 +308,13 @@ void testArgonBox() {
     // Make sure the temperature is correct.
     
     double ke = 0.0;
-    for (int i = 0; i < 2000; ++i) {
-        double t = 2.0 + 0.01 * (i + 1);
+    for (int i = 0; i < 1000; ++i) {
+        double t = 2.0 + 0.02 * (i + 1);
         integrator.stepTo(t);
         State state = context.getState(State::Energy);
         ke += state.getKineticEnergy();
     }
-    ke /= 2000;
+    ke /= 1000;
     double expected = 1.5 * numParticles * BOLTZ * temp;
     ASSERT_USUALLY_EQUAL_TOL(expected, ke, 0.01);
 }

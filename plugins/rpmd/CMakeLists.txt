@@ -1,17 +1,15 @@
 #---------------------------------------------------
 # OpenMM RPMD Plugin
 #
-# Creates OpenMM RPMD plugin library, base name=OpenMMRPMD.
-# Default libraries are shared & optimized. Variants
-# are created for static (_static) and debug (_d).
+# Creates OpenMMRPMD plugin library.
 #
 # Windows:
-#   OpenMMRPMD[_d].dll
-#   OpenMMRPMD[_d].lib
-#   OpenMMRPMD_static[_d].lib
+#   OpenMMRPMD.dll
+#   OpenMMRPMD.lib
+#   OpenMMRPMD_static.lib
 # Unix:
-#   libOpenMMRPMD[_d].so
-#   libOpenMMRPMD_static[_d].a
+#   libOpenMMRPMD.so
+#   libOpenMMRPMD_static.a
 #----------------------------------------------------
 
 #INCLUDE(Dart)
@@ -30,15 +28,6 @@ SET(STATIC_RPMD_TARGET ${OPENMM_RPMD_LIBRARY_NAME}_static)
 IF( CREATE_SERIALIZABLE_OPENMM_RPMD )
     SET(SHARED_RPMD_SERIALIZABLE_TARGET ${OPENMM_RPMD_LIBRARY_NAME}_serializable)
 ENDIF( CREATE_SERIALIZABLE_OPENMM_RPMD )
-
-# But on Unix or Cygwin we have to add the suffix manually
-IF (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
-    SET(SHARED_RPMD_TARGET ${SHARED_RPMD_TARGET}_d)
-    SET(STATIC_RPMD_TARGET ${STATIC_RPMD_TARGET}_d)
-    IF( CREATE_SERIALIZABLE_OPENMM_RPMD )
-        SET(SHARED_RPMD_SERIALIZABLE_TARGET ${SHARED_RPMD_SERIALIZABLE_TARGET}_d)
-    ENDIF( CREATE_SERIALIZABLE_OPENMM_RPMD )
-ENDIF (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
 
 # These are all the places to search for header files which are
 # to be part of the API.
@@ -107,10 +96,6 @@ IF(DL_LIBRARY)
 ENDIF(DL_LIBRARY)
 
 SET( OpenMMLib OpenMM )
-# But on Unix or Cygwin we have to add the suffix manually
-IF (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
-    SET(OpenMMLib ${OpenMMLib}_d)
-ENDIF (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
 
 TARGET_LINK_LIBRARIES( ${SHARED_RPMD_TARGET} ${SHARED_TARGET} )
 IF( CREATE_SERIALIZABLE_OPENMM_RPMD )
@@ -124,20 +109,20 @@ ENDIF(OPENMM_BUILD_STATIC_LIB)
 
 ADD_SUBDIRECTORY(platforms/reference)
 
-IF(OPENCL_FOUND)
+IF(OPENMM_BUILD_OPENCL_LIB)
     SET(OPENMM_BUILD_RPMD_OPENCL_LIB ON CACHE BOOL "Build RPMD implementation for OpenCL")
-ELSE(OPENCL_FOUND)
+ELSE(OPENMM_BUILD_OPENCL_LIB)
     SET(OPENMM_BUILD_RPMD_OPENCL_LIB OFF CACHE BOOL "Build RPMD implementation for OpenCL")
-ENDIF(OPENCL_FOUND)
+ENDIF(OPENMM_BUILD_OPENCL_LIB)
 IF(OPENMM_BUILD_RPMD_OPENCL_LIB)
     ADD_SUBDIRECTORY(platforms/opencl)
 ENDIF(OPENMM_BUILD_RPMD_OPENCL_LIB)
 
-IF(CUDA_FOUND)
+IF(OPENMM_BUILD_CUDA_LIB)
     SET(OPENMM_BUILD_RPMD_CUDA_LIB ON CACHE BOOL "Build RPMD implementation for CUDA")
-ELSE(CUDA_FOUND)
+ELSE(OPENMM_BUILD_CUDA_LIB)
     SET(OPENMM_BUILD_RPMD_CUDA_LIB OFF CACHE BOOL "Build RPMD implementation for CUDA")
-ENDIF(CUDA_FOUND)
+ENDIF(OPENMM_BUILD_CUDA_LIB)
 IF(OPENMM_BUILD_RPMD_CUDA_LIB)
     ADD_SUBDIRECTORY(platforms/cuda)
 ENDIF(OPENMM_BUILD_RPMD_CUDA_LIB)

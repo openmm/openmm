@@ -49,6 +49,8 @@
 using namespace OpenMM;
 using namespace std;
 
+ReferencePlatform platform;
+
 Vec3 calcCM(const vector<Vec3>& values, System& system) {
     Vec3 cm;
     for (int j = 0; j < system.getNumParticles(); ++j) {
@@ -63,7 +65,6 @@ void testMotionRemoval() {
     const int numParticles = 8;
     const double temp = 100.0;
     const double collisionFreq = 10.0;
-    ReferencePlatform platform;
     System system;
     VerletIntegrator integrator(0.01);
     HarmonicBondForce* bonds = new HarmonicBondForce();

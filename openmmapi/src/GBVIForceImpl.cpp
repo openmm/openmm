@@ -145,8 +145,6 @@ int GBVIForceImpl::getBondsFromForces(ContextImpl& context) {
 }
 */
 
-#define GBVIDebug 0
-
 void GBVIForceImpl::findScaledRadii( int numberOfParticles, const std::vector<std::vector<int> >& bondIndices,
                                      const std::vector<double> & bondLengths, std::vector<double> & scaledRadii) const {
 
@@ -219,26 +217,6 @@ void GBVIForceImpl::findScaledRadii( int numberOfParticles, const std::vector<st
     if( errors ){
         throw OpenMMException("GBVIForceImpl::findScaledRadii errors -- aborting");
     }
-
-#if GBVIDebug
-    (void) fprintf( stderr, "                  R              q          gamma   scaled radii no. bnds\n" );
-    double totalQ = 0.0;
-    for( int i = 0; i < (int) scaledRadii.size(); i++ ){
-
-        double charge;
-        double gamma;
-        double radiusI;
-     
-        owner.getParticleParameters(i, charge, radiusI, gamma); 
-        totalQ += charge;
-        (void) fprintf( stderr, "%4d %14.5e %14.5e %14.5e %14.5e %d\n", i, radiusI, charge, gamma, scaledRadii[i], (int) bonded12[i].size() );
-    }
-    (void) fprintf( stderr, "Total charge=%e\n", totalQ );
-    (void) fflush( stderr );
-#endif
-
-#undef GBVIDebug
-
 }
 
 double GBVIForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {

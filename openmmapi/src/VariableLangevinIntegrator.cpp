@@ -36,7 +36,7 @@
 #include "openmm/kernels.h"
 #include <limits>
 #include <string>
-#include <ctime>
+
 
 using namespace OpenMM;
 using std::string;
@@ -47,7 +47,8 @@ VariableLangevinIntegrator::VariableLangevinIntegrator(double temperature, doubl
     setFriction(frictionCoeff);
     setErrorTolerance(errorTol);
     setConstraintTolerance(1e-5);
-    setRandomNumberSeed((int) time(NULL));
+    setRandomNumberSeed(0);
+    setStepSize(0.0);
 }
 
 void VariableLangevinIntegrator::initialize(ContextImpl& contextRef) {

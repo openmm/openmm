@@ -28,7 +28,7 @@
 #include "ReferencePairIxn.h"
 #include "ReferenceNeighborList.h"
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class ReferenceLJCoulombIxn {
 
@@ -40,7 +40,7 @@ class ReferenceLJCoulombIxn {
       bool ewald;
       bool pme;
       const OpenMM::NeighborList* neighborList;
-      RealOpenMM periodicBoxSize[3];
+      OpenMM::RealVec periodicBoxVectors[3];
       RealOpenMM cutoffDistance, switchingDistance;
       RealOpenMM krf, crf;
       RealOpenMM alphaEwald;
@@ -67,9 +67,9 @@ class ReferenceLJCoulombIxn {
             
          --------------------------------------------------------------------------------------- */
           
-      void calculateOneIxn( int atom1, int atom2, std::vector<OpenMM::RealVec>& atomCoordinates,
-                            RealOpenMM** atomParameters, std::vector<OpenMM::RealVec>& forces,
-                            RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const;
+      void calculateOneIxn(int atom1, int atom2, std::vector<OpenMM::RealVec>& atomCoordinates,
+                           RealOpenMM** atomParameters, std::vector<OpenMM::RealVec>& forces,
+                           RealOpenMM* energyByAtom, RealOpenMM* totalEnergy) const;
 
 
    public:
@@ -80,7 +80,7 @@ class ReferenceLJCoulombIxn {
       
          --------------------------------------------------------------------------------------- */
 
-       ReferenceLJCoulombIxn( );
+       ReferenceLJCoulombIxn();
 
       /**---------------------------------------------------------------------------------------
       
@@ -88,7 +88,7 @@ class ReferenceLJCoulombIxn {
       
          --------------------------------------------------------------------------------------- */
 
-       ~ReferenceLJCoulombIxn( );
+       ~ReferenceLJCoulombIxn();
 
       /**---------------------------------------------------------------------------------------
       
@@ -100,7 +100,7 @@ class ReferenceLJCoulombIxn {
       
          --------------------------------------------------------------------------------------- */
       
-      void setUseCutoff( RealOpenMM distance, const OpenMM::NeighborList& neighbors, RealOpenMM solventDielectric );
+      void setUseCutoff(RealOpenMM distance, const OpenMM::NeighborList& neighbors, RealOpenMM solventDielectric);
 
       /**---------------------------------------------------------------------------------------
       
@@ -110,7 +110,7 @@ class ReferenceLJCoulombIxn {
       
          --------------------------------------------------------------------------------------- */
       
-      void setUseSwitchingFunction( RealOpenMM distance );
+      void setUseSwitchingFunction(RealOpenMM distance);
       
       /**---------------------------------------------------------------------------------------
       
@@ -118,11 +118,11 @@ class ReferenceLJCoulombIxn {
          already been set, and the smallest side of the periodic box is at least twice the cutoff
          distance.
       
-         @param boxSize             the X, Y, and Z widths of the periodic box
+         @param vectors    the vectors defining the periodic box
       
          --------------------------------------------------------------------------------------- */
       
-      void setPeriodic( OpenMM::RealVec& boxSize );
+      void setPeriodic(OpenMM::RealVec* vectors);
        
       /**---------------------------------------------------------------------------------------
       
@@ -197,6 +197,6 @@ private:
                             RealOpenMM* energyByAtom, RealOpenMM* totalEnergy, bool includeDirect, bool includeReciprocal) const;
 };
 
-// ---------------------------------------------------------------------------------------
+} // namespace OpenMM
 
 #endif // __ReferenceLJCoulombIxn_H__

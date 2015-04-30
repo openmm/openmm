@@ -1,17 +1,15 @@
 #---------------------------------------------------
 # OpenMM Drude Plugin
 #
-# Creates OpenMM Drude plugin library, base name=OpenMMDrude.
-# Default libraries are shared & optimized. Variants
-# are created for static (_static) and debug (_d).
+# Creates OpenMMDrude plugin library.
 #
 # Windows:
-#   OpenMMDrude[_d].dll
-#   OpenMMDrude[_d].lib
-#   OpenMMDrude_static[_d].lib
+#   OpenMMDrude.dll
+#   OpenMMDrude.lib
+#   OpenMMDrude_static.lib
 # Unix:
-#   libOpenMMDrude[_d].so
-#   libOpenMMDrude_static[_d].a
+#   libOpenMMDrude.so
+#   libOpenMMDrude_static.a
 #----------------------------------------------------
 
 #INCLUDE(Dart)
@@ -23,12 +21,6 @@ SET(OPENMM_DRUDE_PLUGIN_SOURCE_SUBDIRS . openmmapi serialization)
 SET(OPENMM_DRUDE_LIBRARY_NAME OpenMMDrude)
 SET(SHARED_DRUDE_TARGET ${OPENMM_DRUDE_LIBRARY_NAME})
 SET(STATIC_DRUDE_TARGET ${OPENMM_DRUDE_LIBRARY_NAME}_static)
-
-# But on Unix or Cygwin we have to add the suffix manually
-IF (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
-    SET(SHARED_DRUDE_TARGET ${SHARED_DRUDE_TARGET}_d)
-    SET(STATIC_DRUDE_TARGET ${STATIC_DRUDE_TARGET}_d)
-ENDIF (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
 
 # These are all the places to search for header files which are
 # to be part of the API.
@@ -100,10 +92,6 @@ IF(DL_LIBRARY)
 ENDIF(DL_LIBRARY)
 
 SET( OpenMMLib OpenMM )
-# But on Unix or Cygwin we have to add the suffix manually
-IF (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
-    SET(OpenMMLib ${OpenMMLib}_d)
-ENDIF (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
 
 TARGET_LINK_LIBRARIES( ${SHARED_DRUDE_TARGET} ${SHARED_TARGET} )
 IF(OPENMM_BUILD_STATIC_LIB)
@@ -114,20 +102,20 @@ ENDIF(OPENMM_BUILD_STATIC_LIB)
 
 ADD_SUBDIRECTORY(platforms/reference)
 
-IF(OPENCL_FOUND)
+IF(OPENMM_BUILD_OPENCL_LIB)
     SET(OPENMM_BUILD_DRUDE_OPENCL_LIB ON CACHE BOOL "Build Drude implementation for OpenCL")
-ELSE(OPENCL_FOUND)
+ELSE(OPENMM_BUILD_OPENCL_LIB)
     SET(OPENMM_BUILD_DRUDE_OPENCL_LIB OFF CACHE BOOL "Build Drude implementation for OpenCL")
-ENDIF(OPENCL_FOUND)
+ENDIF(OPENMM_BUILD_OPENCL_LIB)
 IF(OPENMM_BUILD_DRUDE_OPENCL_LIB)
     ADD_SUBDIRECTORY(platforms/opencl)
 ENDIF(OPENMM_BUILD_DRUDE_OPENCL_LIB)
 
-IF(CUDA_FOUND)
+IF(OPENMM_BUILD_CUDA_LIB)
     SET(OPENMM_BUILD_DRUDE_CUDA_LIB ON CACHE BOOL "Build Drude implementation for CUDA")
-ELSE(CUDA_FOUND)
+ELSE(OPENMM_BUILD_CUDA_LIB)
     SET(OPENMM_BUILD_DRUDE_CUDA_LIB OFF CACHE BOOL "Build Drude implementation for CUDA")
-ENDIF(CUDA_FOUND)
+ENDIF(OPENMM_BUILD_CUDA_LIB)
 IF(OPENMM_BUILD_DRUDE_CUDA_LIB)
     ADD_SUBDIRECTORY(platforms/cuda)
 ENDIF(OPENMM_BUILD_DRUDE_CUDA_LIB)
@@ -157,4 +145,6 @@ ENDIF (EXECUTABLE_OUTPUT_PATH)
 
 #INCLUDE(ApiDoxygen.cmake)
 
-ADD_SUBDIRECTORY(serialization/tests)
+IF(BUILD_TESTING)
+    ADD_SUBDIRECTORY(serialization/tests)
+ENDIF(BUILD_TESTING)

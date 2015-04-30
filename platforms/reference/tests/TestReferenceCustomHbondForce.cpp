@@ -49,11 +49,11 @@
 using namespace OpenMM;
 using namespace std;
 
+ReferencePlatform platform;
+
 const double TOL = 1e-5;
 
 void testHbond() {
-    ReferencePlatform platform;
-
     // Create a system using a CustomHbondForce.
 
     System customSystem;
@@ -83,6 +83,8 @@ void testHbond() {
     custom->addAcceptor(2, 3, 4, parameters);
     custom->setCutoffDistance(10.0);
     customSystem.addForce(custom);
+    ASSERT(!custom->usesPeriodicBoundaryConditions());
+    ASSERT(!customSystem.usesPeriodicBoundaryConditions());
 
     // Create an identical system using HarmonicBondForce, HarmonicAngleForce, and PeriodicTorsionForce.
 
@@ -149,7 +151,6 @@ void testHbond() {
 }
 
 void testExclusions() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -176,7 +177,6 @@ void testExclusions() {
 }
 
 void testCutoff() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -204,7 +204,6 @@ void testCutoff() {
 }
 
 void testCustomFunctions() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -217,7 +216,7 @@ void testCustomFunctions() {
     vector<double> function(2);
     function[0] = 0;
     function[1] = 1;
-    custom->addFunction("foo", function, 0, 10);
+    custom->addTabulatedFunction("foo", new Continuous1DFunction(function, 0, 10));
     system.addForce(custom);
     Context context(system, integrator, platform);
     vector<Vec3> positions(3);

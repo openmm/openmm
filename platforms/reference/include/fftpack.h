@@ -14,14 +14,13 @@
 * drop a line to lindahl@cbr.su.se and let me know about it!
 */
 
-#include "SimTKOpenMMCommon.h"
-
 #ifndef _FFTPACK_H_
 #define _FFTPACK_H_
 
 
 #include <stdio.h>
 
+#include "RealVec.h"
 #include "openmm/internal/windowsExport.h"
 
 #ifdef __cplusplus

@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013 Stanford University and the Authors.           *
+ * Portions copyright (c) 2013-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -33,6 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "AlignedArray.h"
+#include "RealVec.h"
 #include "windowsExportCpu.h"
 #include "openmm/internal/ThreadPool.h"
 #include <set>
@@ -40,14 +41,14 @@
 #include <vector>
 
 namespace OpenMM {
-    
+
 class OPENMM_EXPORT_CPU CpuNeighborList {
 public:
     class ThreadTask;
     class Voxels;
     CpuNeighborList(int blockSize);
     void computeNeighborList(int numAtoms, const AlignedArray<float>& atomLocations, const std::vector<std::set<int> >& exclusions,
-            const float* periodicBoxSize, bool usePeriodic, float maxDistance, ThreadPool& threads);
+            const RealVec* periodicBoxVectors, bool usePeriodic, float maxDistance, ThreadPool& threads);
     int getNumBlocks() const;
     const std::vector<int>& getSortedAtoms() const;
     const std::vector<int>& getBlockNeighbors(int blockIndex) const;
@@ -60,6 +61,7 @@ public:
 private:
     int blockSize;
     std::vector<int> sortedAtoms;
+    std::vector<float> sortedPositions;
     std::vector<std::vector<int> > blockNeighbors;
     std::vector<std::vector<char> > blockExclusions;
     // The following variables are used to make information accessible to the individual threads.
@@ -68,7 +70,7 @@ private:
     Voxels* voxels;
     const std::vector<std::set<int> >* exclusions;
     const float* atomLocations;
-    const float* periodicBoxSize;
+    RealVec periodicBoxVectors[3];
     int numAtoms;
     bool usePeriodic;
     float maxDistance;

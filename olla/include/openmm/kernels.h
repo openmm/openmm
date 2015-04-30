@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -44,6 +44,7 @@
 #include "openmm/CustomHbondForce.h"
 #include "openmm/CustomIntegrator.h"
 #include "openmm/CustomNonbondedForce.h"
+#include "openmm/CustomManyParticleForce.h"
 #include "openmm/CustomTorsionForce.h"
 #include "openmm/GBSAOBCForce.h"
 #include "openmm/GBVIForce.h"
@@ -102,11 +103,13 @@ public:
      * @param includeForce  true if forces should be computed
      * @param includeEnergy true if potential energy should be computed
      * @param groups        a set of bit flags for which force groups to include
+     * @param valid         the method may set this to false to indicate the results are invalid and the force/energy
+     *                      calculation should be repeated
      * @return the potential energy of the system.  This value is added to all values returned by ForceImpls'
      * calcForcesAndEnergy() methods.  That is, each force kernel may <i>either</i> return its contribution to the
      * energy directly, <i>or</i> add it to an internal buffer so that it will be included here.
      */
-    virtual double finishComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups) = 0;
+    virtual double finishComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups, bool& valid) = 0;
 };
 
 /**
@@ -491,6 +494,13 @@ public:
      * @return the potential energy due to the force
      */
     virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CMAPTorsionForce to copy the parameters from
+     */
+    virtual void copyParametersToContext(ContextImpl& context, const CMAPTorsionForce& force) = 0;
 };
 
 /**
@@ -824,6 +834,46 @@ public:
      * @param force      the CustomCompoundBondForce to copy the parameters from
      */
     virtual void copyParametersToContext(ContextImpl& context, const CustomCompoundBondForce& force) = 0;
+};
+
+/**
+ * This kernel is invoked by CustomManyParticleForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CalcCustomManyParticleForceKernel : public KernelImpl {
+public:
+    enum NonbondedMethod {
+        NoCutoff = 0,
+        CutoffNonPeriodic = 1,
+        CutoffPeriodic = 2
+    };
+    static std::string Name() {
+        return "CalcCustomManyParticleForce";
+    }
+    CalcCustomManyParticleForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomManyParticleForce this kernel will be used for
+     */
+    virtual void initialize(const System& system, const CustomManyParticleForce& force) = 0;
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomManyParticleForce to copy the parameters from
+     */
+    virtual void copyParametersToContext(ContextImpl& context, const CustomManyParticleForce& force) = 0;
 };
 
 /**
@@ -1182,12 +1232,12 @@ public:
     virtual void initialize(int gridx, int gridy, int gridz, int numParticles, double alpha) = 0;
     /**
      * Begin computing the force and energy.
-     * 
-     * @param io               an object that coordinates data transfer
-     * @param periodicBoxSize  the size of the periodic box (measured in nm)
-     * @param includeEnergy    true if potential energy should be computed
+     *
+     * @param io                  an object that coordinates data transfer
+     * @param periodicBoxVectors  the vectors defining the periodic box (measured in nm)
+     * @param includeEnergy       true if potential energy should be computed
      */
-    virtual void beginComputation(IO& io, Vec3 periodicBoxSize, bool includeEnergy) = 0;
+    virtual void beginComputation(IO& io, const Vec3* periodicBoxVectors, bool includeEnergy) = 0;
     /**
      * Finish computing the force and energy.
      * 

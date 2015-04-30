@@ -66,24 +66,24 @@ void testSerialization() {
     system.addForce(nonbonded);
 	system.addForce(new AndersenThermostat(393.3, 19.3));
 	system.addForce(new MonteCarloBarostat(25, 393.3, 25));
-	Integrator *intg = new LangevinIntegrator(300,79,0.002);
-	Context *ctxt = new Context(system, *intg);
+	LangevinIntegrator intg(300,79,0.002);
+	Context context(system, intg);
 	
 	// Set positions, velocities, forces
 	vector<Vec3> positions;
-	for(int i=0;i<numParticles;i++) {
+	for (int i = 0; i < numParticles; i++) {
 		positions.push_back(Vec3( ((float) rand()/(float) RAND_MAX)*6.2, ((float) rand()/(float) RAND_MAX)*6.2, ((float) rand()/(float) RAND_MAX)*6.2));
 	}
 	vector<Vec3> velocities;
-	for(int i=0;i<numParticles;i++) {
+	for (int i = 0; i < numParticles; i++) {
 		velocities.push_back(Vec3( ((float) rand()/(float) RAND_MAX)*6.2, ((float) rand()/(float) RAND_MAX)*6.2, ((float) rand()/(float) RAND_MAX)*6.2));
 	}
 
-	ctxt->setPositions(positions);
-	ctxt->setVelocities(velocities);
+	context.setPositions(positions);
+	context.setVelocities(velocities);
 
 	// Serialize and then deserialize it.
-	State s1 = ctxt->getState(State::Positions | State::Velocities | State::Forces | State::Energy | State::Parameters);
+	State s1 = context.getState(State::Positions | State::Velocities | State::Forces | State::Energy | State::Parameters);
 
 	stringstream buffer;
     XmlSerializer::serialize<State>(&s1, "State", buffer);
@@ -95,19 +95,19 @@ void testSerialization() {
 	vector<Vec3> pos2 = s2.getPositions();
 	ASSERT_EQUAL(pos1.size(), pos2.size());
 	ASSERT_EQUAL(pos1.size(), positions.size());
-	for(int i=0; i<pos1.size(); i++) {
+	for (int i = 0; i < (int) pos1.size(); i++) {
 		ASSERT_EQUAL_VEC(pos1[i],pos2[i],0);
 	}
 	vector<Vec3> vel1 = s1.getVelocities();
 	vector<Vec3> vel2 = s2.getVelocities();
 	ASSERT_EQUAL(vel1.size(), vel2.size());
-	for(int i=0; i<pos1.size(); i++) {
+	for (int i = 0; i < (int) pos1.size(); i++) {
 		ASSERT_EQUAL_VEC(vel1[i],vel2[i],0);
 	}
 	vector<Vec3> forces1 = s1.getForces();
 	vector<Vec3> forces2 = s2.getForces();
 	ASSERT_EQUAL(forces1.size(), forces2.size());
-	for(int i=0; i<pos1.size(); i++) {
+	for (int i = 0; i < (int) pos1.size(); i++) {
 		ASSERT_EQUAL_VEC(forces1[i],forces2[i],0);
 	}
 	Vec3 a1,a2,a3,b1,b2,b3;
@@ -128,10 +128,59 @@ void testSerialization() {
 	map<string, double>::const_iterator it1=p1.begin();
 	map<string, double>::const_iterator it2=p2.begin();
 	//maps are ordered, so iterators should be in the same order. 
-	for(it1=p1.begin(); it1!=p1.end(); it1++, it2++) {
+	for (it1 = p1.begin(); it1 != p1.end(); it1++, it2++) {
 		assert((it1->first).compare(it2->first) == 0);
 		ASSERT_EQUAL(it1->second, it2->second);
 	}
+    delete copy;
+
+    // Now create a series of States that include only one type of information.  Verify
+    // that serialization works correctly for them.
+
+    for (int types = 1; types <= 16; types *= 2) {
+        State s3 = context.getState(types);
+        stringstream buffer2;
+        XmlSerializer::serialize<State>(&s3, "State", buffer2);
+        copy = XmlSerializer::deserialize<State>(buffer2);
+        int foundTypes = 0;
+        try {
+            copy->getPositions();
+            foundTypes += State::Positions;
+        }
+        catch (...) {
+            // Ignore
+        }
+        try {
+            copy->getVelocities();
+            foundTypes += State::Velocities;
+        }
+        catch (...) {
+            // Ignore
+        }
+        try {
+            copy->getForces();
+            foundTypes += State::Forces;
+        }
+        catch (...) {
+            // Ignore
+        }
+        try {
+            copy->getPotentialEnergy();
+            foundTypes += State::Energy;
+        }
+        catch (...) {
+            // Ignore
+        }
+        try {
+            copy->getParameters();
+            foundTypes += State::Parameters;
+        }
+        catch (...) {
+            // Ignore
+        }
+        delete copy;
+        ASSERT_EQUAL(types, foundTypes);
+    }
 }
 
 int main() {

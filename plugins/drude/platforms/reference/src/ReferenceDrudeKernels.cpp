@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -136,9 +136,9 @@ double ReferenceCalcDrudeForceKernel::execute(ContextImpl& context, bool include
         RealOpenMM a1 = (p2 == -1 ? 1 : aniso12[i]);
         RealOpenMM a2 = (p3 == -1 || p4 == -1 ? 1 : aniso34[i]);
         RealOpenMM a3 = 3-a1-a2;
-        RealOpenMM k3 = charge[i]*charge[i]/(polarizability[i]*a3);
-        RealOpenMM k1 = charge[i]*charge[i]/(polarizability[i]*a1) - k3;
-        RealOpenMM k2 = charge[i]*charge[i]/(polarizability[i]*a2) - k3;
+        RealOpenMM k3 = ONE_4PI_EPS0*charge[i]*charge[i]/(polarizability[i]*a3);
+        RealOpenMM k1 = ONE_4PI_EPS0*charge[i]*charge[i]/(polarizability[i]*a1) - k3;
+        RealOpenMM k2 = ONE_4PI_EPS0*charge[i]*charge[i]/(polarizability[i]*a2) - k3;
         
         // Compute the isotropic force.
         
@@ -188,6 +188,7 @@ double ReferenceCalcDrudeForceKernel::execute(ContextImpl& context, bool include
         int dipole2 = pair2[i];
         int dipole1Particles[] = {particle[dipole1], particle1[dipole1]};
         int dipole2Particles[] = {particle[dipole2], particle1[dipole2]};
+        RealOpenMM uscale = pairThole[i]/pow(polarizability[dipole1]*polarizability[dipole2], 1.0/6.0);
         for (int j = 0; j < 2; j++)
             for (int k = 0; k < 2; k++) {
                 int p1 = dipole1Particles[j];
@@ -195,10 +196,10 @@ double ReferenceCalcDrudeForceKernel::execute(ContextImpl& context, bool include
                 RealOpenMM chargeProduct = charge[dipole1]*charge[dipole2]*(j == k ? 1 : -1);
                 RealVec delta = pos[p1]-pos[p2];
                 RealOpenMM r = sqrt(delta.dot(delta));
-                RealOpenMM u = r*pairThole[i]/pow(polarizability[dipole1]*polarizability[dipole2], 1.0/6.0);
+                RealOpenMM u = r*uscale;
                 RealOpenMM screening = 1.0 - (1.0+0.5*u)*exp(-u);
                 energy += ONE_4PI_EPS0*chargeProduct*screening/r;
-                RealVec f = delta*(ONE_4PI_EPS0*chargeProduct*screening/(r*r*r));
+                RealVec f = delta*(ONE_4PI_EPS0*chargeProduct/(r*r))*(screening/r-0.5*(1+u)*exp(-u)*uscale);
                 force[p1] += f;
                 force[p2] -= f;
             }

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -37,12 +37,13 @@
 #include "openmm/internal/CustomNonbondedForceImpl.h"
 #include "openmm/internal/SplineFitter.h"
 #include "openmm/kernels.h"
-#include "lepton/CustomFunction.h"
+#include "ReferenceTabulatedFunction.h"
 #include "lepton/ParsedExpression.h"
 #include "lepton/Parser.h"
 #include <cmath>
 #include <sstream>
 #include <utility>
+#include <algorithm>
 
 using namespace OpenMM;
 using namespace std;
@@ -136,38 +137,6 @@ void CustomNonbondedForceImpl::updateParametersInContext(ContextImpl& context) {
     kernel.getAs<CalcCustomNonbondedForceKernel>().copyParametersToContext(context, owner);
 }
 
-class CustomNonbondedForceImpl::TabulatedFunction : public Lepton::CustomFunction {
-public:
-    TabulatedFunction(double min, double max, const vector<double>& values) :
-            min(min), max(max), values(values) {
-        int numValues = values.size();
-        x.resize(numValues);
-        for (int i = 0; i < numValues; i++)
-            x[i] = min+i*(max-min)/(numValues-1);
-        SplineFitter::createNaturalSpline(x, values, derivs);
-    }
-    int getNumArguments() const {
-        return 1;
-    }
-    double evaluate(const double* arguments) const {
-        double t = arguments[0];
-        if (t < min || t > max)
-            return 0.0;
-        return SplineFitter::evaluateSpline(x, values, derivs, t);
-    }
-    double evaluateDerivative(const double* arguments, const int* derivOrder) const {
-        double t = arguments[0];
-        if (t < min || t > max)
-            return 0.0;
-        return SplineFitter::evaluateSplineDerivative(x, values, derivs, t);
-    }
-    CustomFunction* clone() const {
-        return new TabulatedFunction(min, max, values);
-    }
-    double min, max;
-    vector<double> x, values, derivs;
-};
-
 double CustomNonbondedForceImpl::calcLongRangeCorrection(const CustomNonbondedForce& force, const Context& context) {
     if (force.getNonbondedMethod() == CustomNonbondedForce::NoCutoff || force.getNonbondedMethod() == CustomNonbondedForce::CutoffNonPeriodic)
         return 0.0;
@@ -175,13 +144,8 @@ double CustomNonbondedForceImpl::calcLongRangeCorrection(const CustomNonbondedFo
     // Parse the energy expression.
     
     map<string, Lepton::CustomFunction*> functions;
-    for (int i = 0; i < force.getNumFunctions(); i++) {
-        string name;
-        vector<double> values;
-        double min, max;
-        force.getFunctionParameters(i, name, values, min, max);
-        functions[name] = new TabulatedFunction(min, max, values);
-    }
+    for (int i = 0; i < force.getNumFunctions(); i++)
+        functions[force.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
     Lepton::CompiledExpression expression = Lepton::Parser::parse(force.getEnergyFunction(), functions).createCompiledExpression();
     
     // Identify all particle classes (defined by parameters), and record the class of each particle.
@@ -203,11 +167,11 @@ double CustomNonbondedForceImpl::calcLongRangeCorrection(const CustomNonbondedFo
     
     // Count the total number of particle pairs for each pair of classes.
     
-    map<pair<int, int>, int> interactionCount;
+    map<pair<int, int>, long long int> interactionCount;
     if (force.getNumInteractionGroups() == 0) {
         // Count the particles of each class.
         
-        vector<int> classCounts(numClasses, 0);
+        vector<long long int> classCounts(numClasses, 0);
         for (int i = 0; i < numParticles; i++)
             classCounts[atomClass[i]]++;
         for (int i = 0; i < numClasses; i++) {
@@ -246,9 +210,10 @@ double CustomNonbondedForceImpl::calcLongRangeCorrection(const CustomNonbondedFo
     for (int i = 0; i < numClasses; i++)
         for (int j = i; j < numClasses; j++)
             sum += interactionCount[make_pair(i, j)]*integrateInteraction(expression, classes[i], classes[j], force, context);
-    int numInteractions = (numParticles*(numParticles+1))/2;
+    double nPart = (double) numParticles;
+    double numInteractions = (nPart*(nPart+1))/2;
     sum /= numInteractions;
-    return 2*M_PI*numParticles*numParticles*sum;
+    return 2*M_PI*nPart*nPart*sum;
 }
 
 double CustomNonbondedForceImpl::integrateInteraction(Lepton::CompiledExpression& expression, const vector<double>& params1, const vector<double>& params2,

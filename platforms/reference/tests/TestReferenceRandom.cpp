@@ -43,6 +43,8 @@
 using namespace OpenMM;
 using namespace std;
 
+ReferencePlatform platform;
+
 void testGaussian() {
     const int numValues = 10000000;
     double mean = 0.0;
@@ -74,7 +76,6 @@ void testRandomVelocities() {
     
     const int numParticles = 10000;
     const double temperture = 100.0;
-    ReferencePlatform platform;
     System system;
     VerletIntegrator integrator(0.01);
     for (int i = 0; i < numParticles; ++i)

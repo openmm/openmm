@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -42,6 +42,7 @@ void testSerialization() {
     // Create a Force.
 
     CMAPTorsionForce force;
+    force.setForceGroup(3);
     vector<double> map1(9);
     for (int i = 0; i < 9; i++)
         map1[i] = 0.1*i;
@@ -64,6 +65,7 @@ void testSerialization() {
     // Compare the two forces to see if they are identical.
 
     CMAPTorsionForce& force2 = *copy;
+    ASSERT_EQUAL(force.getForceGroup(), force2.getForceGroup());
     ASSERT_EQUAL(force.getNumMaps(), force2.getNumMaps());
     for (int i = 0; i < force.getNumMaps(); i++) {
         int size1, size2;

@@ -448,7 +448,7 @@ extern "C" __global__ void mapTorqueToForce(unsigned long long* __restrict__ for
  */
 extern "C" __global__ void computePotentialAtPoints(const real4* __restrict__ posq, const real* __restrict__ labFrameDipole,
         const real* __restrict__ labFrameQuadrupole, const real* __restrict__ inducedDipole, const real4* __restrict__ points,
-        real* __restrict__ potential, int numPoints, real4 periodicBoxSize, real4 invPeriodicBoxSize) {
+        real* __restrict__ potential, int numPoints, real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ) {
     extern __shared__ real4 localPosq[];
     real3* localDipole = (real3*) &localPosq[blockDim.x];
     real3* localInducedDipole = (real3*) &localDipole[blockDim.x];
@@ -481,9 +481,7 @@ extern "C" __global__ void computePotentialAtPoints(const real4* __restrict__ po
                 for (int i = 0; i < end; i++) {
                     real3 delta = trimTo3(localPosq[i]-pointPos);
 #ifdef USE_PERIODIC
-                    delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-                    delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-                    delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
+                    APPLY_PERIODIC_TO_DELTA(delta)
 #endif
                     real r2 = dot(delta, delta);
                     real rInv = RSQRT(r2);

@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2013 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2014 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -22,7 +22,6 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "SimTKOpenMMCommon.h"
 #include "SimTKOpenMMUtilities.h"
 #include "CpuNonbondedForceVec4.h"
 
@@ -45,15 +44,68 @@ CpuNonbondedForce* createCpuNonbondedForceVec4() {
 CpuNonbondedForceVec4::CpuNonbondedForceVec4() {
 }
 
+enum PeriodicType {NoPeriodic, PeriodicPerAtom, PeriodicPerInteraction, PeriodicTriclinic};
+
 void CpuNonbondedForceVec4::calculateBlockIxn(int blockIndex, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize) {
+    // Determine whether we need to apply periodic boundary conditions.
+    
+    PeriodicType periodicType;
+    fvec4 blockCenter;
+    if (!periodic) {
+        periodicType = NoPeriodic;
+        blockCenter = 0.0f;
+    }
+    else {
+        const int* blockAtom = &neighborList->getSortedAtoms()[4*blockIndex];
+        float minx, maxx, miny, maxy, minz, maxz;
+        minx = maxx = posq[4*blockAtom[0]];
+        miny = maxy = posq[4*blockAtom[0]+1];
+        minz = maxz = posq[4*blockAtom[0]+2];
+        for (int i = 1; i < 4; i++) {
+            minx = min(minx, posq[4*blockAtom[i]]);
+            maxx = max(maxx, posq[4*blockAtom[i]]);
+            miny = min(miny, posq[4*blockAtom[i]+1]);
+            maxy = max(maxy, posq[4*blockAtom[i]+1]);
+            minz = min(minz, posq[4*blockAtom[i]+2]);
+            maxz = max(maxz, posq[4*blockAtom[i]+2]);
+        }
+        blockCenter = fvec4(0.5f*(minx+maxx), 0.5f*(miny+maxy), 0.5f*(minz+maxz), 0.0f);
+        if (!(minx < cutoffDistance || miny < cutoffDistance || minz < cutoffDistance ||
+                maxx > boxSize[0]-cutoffDistance || maxy > boxSize[1]-cutoffDistance || maxz > boxSize[2]-cutoffDistance))
+            periodicType = NoPeriodic;
+        else if (triclinic)
+            periodicType = PeriodicTriclinic;
+        else if (0.5f*(boxSize[0]-(maxx-minx)) >= cutoffDistance &&
+                 0.5f*(boxSize[1]-(maxy-miny)) >= cutoffDistance &&
+                 0.5f*(boxSize[2]-(maxz-minz)) >= cutoffDistance)
+            periodicType = PeriodicPerAtom;
+        else
+            periodicType = PeriodicPerInteraction;
+    }
+    
+    // Call the appropriate version depending on what calculation is required for periodic boundary conditions.
+    
+    if (periodicType == NoPeriodic)
+        calculateBlockIxnImpl<NoPeriodic>(blockIndex, forces, totalEnergy, boxSize, invBoxSize, blockCenter);
+    else if (periodicType == PeriodicPerAtom)
+        calculateBlockIxnImpl<PeriodicPerAtom>(blockIndex, forces, totalEnergy, boxSize, invBoxSize, blockCenter);
+    else if (periodicType == PeriodicPerInteraction)
+        calculateBlockIxnImpl<PeriodicPerInteraction>(blockIndex, forces, totalEnergy, boxSize, invBoxSize, blockCenter);
+    else if (periodicType == PeriodicTriclinic)
+        calculateBlockIxnImpl<PeriodicTriclinic>(blockIndex, forces, totalEnergy, boxSize, invBoxSize, blockCenter);
+}
+
+template <int PERIODIC_TYPE>
+void CpuNonbondedForceVec4::calculateBlockIxnImpl(int blockIndex, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize, const fvec4& blockCenter) {
     // Load the positions and parameters of the atoms in the block.
     
-    int blockAtom[4];
+    const int* blockAtom = &neighborList->getSortedAtoms()[4*blockIndex];
     fvec4 blockAtomPosq[4];
     fvec4 blockAtomForceX(0.0f), blockAtomForceY(0.0f), blockAtomForceZ(0.0f);
     for (int i = 0; i < 4; i++) {
-        blockAtom[i] = neighborList->getSortedAtoms()[4*blockIndex+i];
         blockAtomPosq[i] = fvec4(posq+4*blockAtom[i]);
+        if (PERIODIC_TYPE == PeriodicPerAtom)
+            blockAtomPosq[i] -= floor((blockAtomPosq[i]-blockCenter)*invBoxSize+0.5f)*boxSize;
     }
     fvec4 blockAtomX = fvec4(blockAtomPosq[0][0], blockAtomPosq[1][0], blockAtomPosq[2][0], blockAtomPosq[3][0]);
     fvec4 blockAtomY = fvec4(blockAtomPosq[0][1], blockAtomPosq[1][1], blockAtomPosq[2][1], blockAtomPosq[3][1]);
@@ -61,8 +113,7 @@ void CpuNonbondedForceVec4::calculateBlockIxn(int blockIndex, float* forces, dou
     fvec4 blockAtomCharge = fvec4(ONE_4PI_EPS0)*fvec4(blockAtomPosq[0][3], blockAtomPosq[1][3], blockAtomPosq[2][3], blockAtomPosq[3][3]);
     fvec4 blockAtomSigma(atomParameters[blockAtom[0]].first, atomParameters[blockAtom[1]].first, atomParameters[blockAtom[2]].first, atomParameters[blockAtom[3]].first);
     fvec4 blockAtomEpsilon(atomParameters[blockAtom[0]].second, atomParameters[blockAtom[1]].second, atomParameters[blockAtom[2]].second, atomParameters[blockAtom[3]].second);
-    bool needPeriodic = (periodic && (any(blockAtomX < cutoffDistance) || any(blockAtomY < cutoffDistance) || any(blockAtomZ < cutoffDistance) ||
-            any(blockAtomX > boxSize[0]-cutoffDistance) || any(blockAtomY > boxSize[1]-cutoffDistance) || any(blockAtomZ > boxSize[2]-cutoffDistance)));
+    const bool needPeriodic = (PERIODIC_TYPE == PeriodicPerInteraction || PERIODIC_TYPE == PeriodicTriclinic);
     const float invSwitchingInterval = 1/(cutoffDistance-switchingDistance);
     
     // Loop over neighbors for this block.
@@ -77,7 +128,10 @@ void CpuNonbondedForceVec4::calculateBlockIxn(int blockIndex, float* forces, dou
         // Compute the distances to the block atoms.
         
         fvec4 dx, dy, dz, r2;
-        getDeltaR(posq+4*atom, blockAtomX, blockAtomY, blockAtomZ, dx, dy, dz, r2, needPeriodic, boxSize, invBoxSize);
+        fvec4 atomPos(posq+4*atom);
+        if (PERIODIC_TYPE == PeriodicPerAtom)
+            atomPos -= floor((atomPos-blockCenter)*invBoxSize+0.5f)*boxSize;
+        getDeltaR<PERIODIC_TYPE>(atomPos, blockAtomX, blockAtomY, blockAtomZ, dx, dy, dz, r2, needPeriodic, boxSize, invBoxSize);
         ivec4 include;
         char excl = exclusions[i];
         if (excl == 0)
@@ -90,8 +144,7 @@ void CpuNonbondedForceVec4::calculateBlockIxn(int blockIndex, float* forces, dou
         
         // Compute the interactions.
         
-        fvec4 r = sqrt(r2);
-        fvec4 inverseR = fvec4(1.0f)/r;
+        fvec4 inverseR = rsqrt(r2);
         fvec4 energy, dEdR;
         float atomEpsilon = atomParameters[atom].second;
         if (atomEpsilon != 0.0f) {
@@ -103,7 +156,8 @@ void CpuNonbondedForceVec4::calculateBlockIxn(int blockIndex, float* forces, dou
             dEdR = epsSig6*(12.0f*sig6 - 6.0f);
             energy = epsSig6*(sig6-1.0f);
             if (useSwitch) {
-                fvec4 t = (r>switchingDistance) & ((r-switchingDistance)*invSwitchingInterval);
+                fvec4 r = r2*inverseR;
+                fvec4 t = blend(0.0f, (r-switchingDistance)*invSwitchingInterval, r>switchingDistance);
                 fvec4 switchValue = 1+t*t*t*(-10.0f+t*(15.0f-t*6.0f));
                 fvec4 switchDeriv = t*t*(-30.0f+t*(60.0f-t*30.0f))*invSwitchingInterval;
                 dEdR = switchValue*dEdR - energy*switchDeriv*r;
@@ -157,14 +211,65 @@ void CpuNonbondedForceVec4::calculateBlockIxn(int blockIndex, float* forces, dou
   }
 
 void CpuNonbondedForceVec4::calculateBlockEwaldIxn(int blockIndex, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize) {
+    // Determine whether we need to apply periodic boundary conditions.
+    
+    PeriodicType periodicType;
+    fvec4 blockCenter;
+    if (!periodic) {
+        periodicType = NoPeriodic;
+        blockCenter = 0.0f;
+    }
+    else {
+        const int* blockAtom = &neighborList->getSortedAtoms()[4*blockIndex];
+        float minx, maxx, miny, maxy, minz, maxz;
+        minx = maxx = posq[4*blockAtom[0]];
+        miny = maxy = posq[4*blockAtom[0]+1];
+        minz = maxz = posq[4*blockAtom[0]+2];
+        for (int i = 1; i < 4; i++) {
+            minx = min(minx, posq[4*blockAtom[i]]);
+            maxx = max(maxx, posq[4*blockAtom[i]]);
+            miny = min(miny, posq[4*blockAtom[i]+1]);
+            maxy = max(maxy, posq[4*blockAtom[i]+1]);
+            minz = min(minz, posq[4*blockAtom[i]+2]);
+            maxz = max(maxz, posq[4*blockAtom[i]+2]);
+        }
+        blockCenter = fvec4(0.5f*(minx+maxx), 0.5f*(miny+maxy), 0.5f*(minz+maxz), 0.0f);
+        if (!(minx < cutoffDistance || miny < cutoffDistance || minz < cutoffDistance ||
+                maxx > boxSize[0]-cutoffDistance || maxy > boxSize[1]-cutoffDistance || maxz > boxSize[2]-cutoffDistance))
+            periodicType = NoPeriodic;
+        else if (triclinic)
+            periodicType = PeriodicTriclinic;
+        else if (0.5f*(boxSize[0]-(maxx-minx)) >= cutoffDistance &&
+                 0.5f*(boxSize[1]-(maxy-miny)) >= cutoffDistance &&
+                 0.5f*(boxSize[2]-(maxz-minz)) >= cutoffDistance)
+            periodicType = PeriodicPerAtom;
+        else
+            periodicType = PeriodicPerInteraction;
+    }
+    
+    // Call the appropriate version depending on what calculation is required for periodic boundary conditions.
+    
+    if (periodicType == NoPeriodic)
+        calculateBlockEwaldIxnImpl<NoPeriodic>(blockIndex, forces, totalEnergy, boxSize, invBoxSize, blockCenter);
+    else if (periodicType == PeriodicPerAtom)
+        calculateBlockEwaldIxnImpl<PeriodicPerAtom>(blockIndex, forces, totalEnergy, boxSize, invBoxSize, blockCenter);
+    else if (periodicType == PeriodicPerInteraction)
+        calculateBlockEwaldIxnImpl<PeriodicPerInteraction>(blockIndex, forces, totalEnergy, boxSize, invBoxSize, blockCenter);
+    else if (periodicType == PeriodicTriclinic)
+        calculateBlockEwaldIxnImpl<PeriodicTriclinic>(blockIndex, forces, totalEnergy, boxSize, invBoxSize, blockCenter);
+}
+
+template <int PERIODIC_TYPE>
+void CpuNonbondedForceVec4::calculateBlockEwaldIxnImpl(int blockIndex, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize, const fvec4& blockCenter) {
     // Load the positions and parameters of the atoms in the block.
     
-    int blockAtom[4];
+    const int* blockAtom = &neighborList->getSortedAtoms()[4*blockIndex];
     fvec4 blockAtomPosq[4];
     fvec4 blockAtomForceX(0.0f), blockAtomForceY(0.0f), blockAtomForceZ(0.0f);
     for (int i = 0; i < 4; i++) {
-        blockAtom[i] = neighborList->getSortedAtoms()[4*blockIndex+i];
         blockAtomPosq[i] = fvec4(posq+4*blockAtom[i]);
+        if (PERIODIC_TYPE == PeriodicPerAtom)
+            blockAtomPosq[i] -= floor((blockAtomPosq[i]-blockCenter)*invBoxSize+0.5f)*boxSize;
     }
     fvec4 blockAtomX = fvec4(blockAtomPosq[0][0], blockAtomPosq[1][0], blockAtomPosq[2][0], blockAtomPosq[3][0]);
     fvec4 blockAtomY = fvec4(blockAtomPosq[0][1], blockAtomPosq[1][1], blockAtomPosq[2][1], blockAtomPosq[3][1]);
@@ -172,8 +277,7 @@ void CpuNonbondedForceVec4::calculateBlockEwaldIxn(int blockIndex, float* forces
     fvec4 blockAtomCharge = fvec4(ONE_4PI_EPS0)*fvec4(blockAtomPosq[0][3], blockAtomPosq[1][3], blockAtomPosq[2][3], blockAtomPosq[3][3]);
     fvec4 blockAtomSigma(atomParameters[blockAtom[0]].first, atomParameters[blockAtom[1]].first, atomParameters[blockAtom[2]].first, atomParameters[blockAtom[3]].first);
     fvec4 blockAtomEpsilon(atomParameters[blockAtom[0]].second, atomParameters[blockAtom[1]].second, atomParameters[blockAtom[2]].second, atomParameters[blockAtom[3]].second);
-    bool needPeriodic = (periodic && (any(blockAtomX < cutoffDistance) || any(blockAtomY < cutoffDistance) || any(blockAtomZ < cutoffDistance) ||
-            any(blockAtomX > boxSize[0]-cutoffDistance) || any(blockAtomY > boxSize[1]-cutoffDistance) || any(blockAtomZ > boxSize[2]-cutoffDistance)));
+    const bool needPeriodic = (PERIODIC_TYPE == PeriodicPerInteraction || PERIODIC_TYPE == PeriodicTriclinic);
     const float invSwitchingInterval = 1/(cutoffDistance-switchingDistance);
     
     // Loop over neighbors for this block.
@@ -188,7 +292,10 @@ void CpuNonbondedForceVec4::calculateBlockEwaldIxn(int blockIndex, float* forces
         // Compute the distances to the block atoms.
         
         fvec4 dx, dy, dz, r2;
-        getDeltaR(posq+4*atom, blockAtomX, blockAtomY, blockAtomZ, dx, dy, dz, r2, needPeriodic, boxSize, invBoxSize);
+        fvec4 atomPos(posq+4*atom);
+        if (PERIODIC_TYPE == PeriodicPerAtom)
+            atomPos -= floor((atomPos-blockCenter)*invBoxSize+0.5f)*boxSize;
+        getDeltaR<PERIODIC_TYPE>(atomPos, blockAtomX, blockAtomY, blockAtomZ, dx, dy, dz, r2, needPeriodic, boxSize, invBoxSize);
         ivec4 include;
         char excl = exclusions[i];
         if (excl == 0)
@@ -201,8 +308,8 @@ void CpuNonbondedForceVec4::calculateBlockEwaldIxn(int blockIndex, float* forces
         
         // Compute the interactions.
         
-        fvec4 r = sqrt(r2);
-        fvec4 inverseR = fvec4(1.0f)/r;
+        fvec4 inverseR = rsqrt(r2);
+        fvec4 r = r2*inverseR;
         fvec4 energy, dEdR;
         float atomEpsilon = atomParameters[atom].second;
         if (atomEpsilon != 0.0f) {
@@ -214,7 +321,7 @@ void CpuNonbondedForceVec4::calculateBlockEwaldIxn(int blockIndex, float* forces
             dEdR = epsSig6*(12.0f*sig6 - 6.0f);
             energy = epsSig6*(sig6-1.0f);
             if (useSwitch) {
-                fvec4 t = (r>switchingDistance) & ((r-switchingDistance)*invSwitchingInterval);
+                fvec4 t = blend(0.0f, (r-switchingDistance)*invSwitchingInterval, r>switchingDistance);
                 fvec4 switchValue = 1+t*t*t*(-10.0f+t*(15.0f-t*6.0f));
                 fvec4 switchDeriv = t*t*(-30.0f+t*(60.0f-t*30.0f))*invSwitchingInterval;
                 dEdR = switchValue*dEdR - energy*switchDeriv*r;
@@ -261,11 +368,23 @@ void CpuNonbondedForceVec4::calculateBlockEwaldIxn(int blockIndex, float* forces
         (fvec4(forces+4*blockAtom[j])+f[j]).store(forces+4*blockAtom[j]);
 }
 
-void CpuNonbondedForceVec4::getDeltaR(const float* posI, const fvec4& x, const fvec4& y, const fvec4& z, fvec4& dx, fvec4& dy, fvec4& dz, fvec4& r2, bool periodic, const fvec4& boxSize, const fvec4& invBoxSize) const {
+template <int PERIODIC_TYPE>
+void CpuNonbondedForceVec4::getDeltaR(const fvec4& posI, const fvec4& x, const fvec4& y, const fvec4& z, fvec4& dx, fvec4& dy, fvec4& dz, fvec4& r2, bool periodic, const fvec4& boxSize, const fvec4& invBoxSize) const {
     dx = x-posI[0];
     dy = y-posI[1];
     dz = z-posI[2];
-    if (periodic) {
+    if (PERIODIC_TYPE == PeriodicTriclinic) {
+        fvec4 scale3 = floor(dz*recipBoxSize[2]+0.5f);
+        dx -= scale3*periodicBoxVectors[2][0];
+        dy -= scale3*periodicBoxVectors[2][1];
+        dz -= scale3*periodicBoxVectors[2][2];
+        fvec4 scale2 = floor(dy*recipBoxSize[1]+0.5f);
+        dx -= scale2*periodicBoxVectors[1][0];
+        dy -= scale2*periodicBoxVectors[1][1];
+        fvec4 scale1 = floor(dx*recipBoxSize[0]+0.5f);
+        dx -= scale1*periodicBoxVectors[0][0];
+    }
+    else if (PERIODIC_TYPE == PeriodicPerInteraction) {
         dx -= round(dx*invBoxSize[0])*boxSize[0];
         dy -= round(dy*invBoxSize[1])*boxSize[1];
         dz -= round(dz*invBoxSize[2])*boxSize[2];

@@ -26,7 +26,7 @@
 /* $Id: arithmetic_ansi.h 65 2010-01-29 12:19:16Z naoaki $ */
 
 #include <stdlib.h>
-#include <memory.h>
+#include <string.h>
 
 #if     LBFGS_FLOAT == 32 && LBFGS_IEEE_FLOAT
 #define fsigndiff(x, y) (((*(uint32_t*)(x)) ^ (*(uint32_t*)(y))) & 0x80000000U)

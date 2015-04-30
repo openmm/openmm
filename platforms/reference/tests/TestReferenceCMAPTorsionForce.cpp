@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -48,6 +48,8 @@
 using namespace OpenMM;
 using namespace std;
 
+ReferencePlatform platform;
+
 const double TOL = 1e-5;
 
 void testCMAPTorsions() {
@@ -56,7 +58,6 @@ void testCMAPTorsions() {
     // Create two systems: one with a pair of periodic torsions, and one with a CMAP torsion
     // that approximates the same force.
 
-    ReferencePlatform platform;
     System system1;
     for (int i = 0; i < 5; i++)
         system1.addParticle(1.0);
@@ -64,6 +65,8 @@ void testCMAPTorsions() {
     periodic->addTorsion(0, 1, 2, 3, 2, M_PI/4, 1.5);
     periodic->addTorsion(1, 2, 3, 4, 3, M_PI/3, 2.0);
     system1.addForce(periodic);
+    ASSERT(!periodic->usesPeriodicBoundaryConditions());
+    ASSERT(!system1.usesPeriodicBoundaryConditions());
     System system2;
     for (int i = 0; i < 5; i++)
         system2.addParticle(1.0);
@@ -81,6 +84,8 @@ void testCMAPTorsions() {
     cmap->addMap(mapSize, mapEnergy);
     cmap->addTorsion(0, 0, 1, 2, 3, 1, 2, 3, 4);
     system2.addForce(cmap);
+    ASSERT(!cmap->usesPeriodicBoundaryConditions());
+    ASSERT(!system2.usesPeriodicBoundaryConditions());
 
     // Set the atoms in various positions, and verify that both systems give equal forces and energy.
 
@@ -104,9 +109,66 @@ void testCMAPTorsions() {
     }
 }
 
+void testChangingParameters() {
+    // Create a system with two maps and one torsion.
+
+    const int mapSize = 8;
+    System system;
+    for (int i = 0; i < 5; i++)
+        system.addParticle(1.0);
+    CMAPTorsionForce* cmap = new CMAPTorsionForce();
+    vector<double> mapEnergy1(mapSize*mapSize);
+    vector<double> mapEnergy2(mapSize*mapSize);
+    for (int i = 0; i < mapSize; i++) {
+        double angle1 = i*2*M_PI/mapSize;
+        double energy1 = cos(angle1);
+        for (int j = 0; j < mapSize; j++) {
+            double angle2 = j*2*M_PI/mapSize;
+            double energy2 = 10*sin(angle2);
+            mapEnergy1[i+j*mapSize] = energy1+energy2;
+            mapEnergy2[i+j*mapSize] = energy1-energy2;
+        }
+    }
+    cmap->addMap(mapSize, mapEnergy1);
+    cmap->addMap(mapSize, mapEnergy2);
+    cmap->addTorsion(0, 0, 1, 2, 3, 1, 2, 3, 4);
+    system.addForce(cmap);
+
+    // Set particle positions so angle1=0 and angle2=PI/4.
+
+    vector<Vec3> positions(5);
+    positions[0] = Vec3(0, 0, 1);
+    positions[1] = Vec3(0, 0, 0);
+    positions[2] = Vec3(1, 0, 0);
+    positions[3] = Vec3(1, 0, 1);
+    positions[4] = Vec3(0.5, -0.5, 1);
+    VerletIntegrator integrator(0.01);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+
+    // Check that the energy is correct.
+
+    double energy = context.getState(State::Energy).getPotentialEnergy();
+    ASSERT_EQUAL_TOL(1+10*sin(M_PI/4), energy, 1e-5);
+
+    // Modify the parameters.
+
+    cmap->setTorsionParameters(0, 1, 0, 1, 2, 3, 1, 2, 3, 4);
+    for (int i = 0; i < mapSize*mapSize; i++)
+        mapEnergy2[i] *= 2.0;
+    cmap->setMapParameters(1, mapSize, mapEnergy2);
+    cmap->updateParametersInContext(context);
+
+    // See if the results are correct.
+
+    energy = context.getState(State::Energy).getPotentialEnergy();
+    ASSERT_EQUAL_TOL(2-20*sin(M_PI/4), energy, 1e-5);
+}
+
 int main() {
     try {
         testCMAPTorsions();
+        testChangingParameters();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

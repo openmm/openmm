@@ -62,7 +62,7 @@ double AmoebaGeneralizedKirkwoodForce::getDielectricOffset() const {
     return dielectricOffset;
 }
 
-void AmoebaGeneralizedKirkwoodForce::setDielectricOffset(double inputDielectricOffset ) {
+void AmoebaGeneralizedKirkwoodForce::setDielectricOffset(double inputDielectricOffset) {
     dielectricOffset = inputDielectricOffset;
 } */
 
@@ -70,7 +70,7 @@ int AmoebaGeneralizedKirkwoodForce::getIncludeCavityTerm() const {
     return includeCavityTerm;
 }
 
-void AmoebaGeneralizedKirkwoodForce::setIncludeCavityTerm(int inputIncludeCavityTerm ) {
+void AmoebaGeneralizedKirkwoodForce::setIncludeCavityTerm(int inputIncludeCavityTerm) {
     includeCavityTerm = inputIncludeCavityTerm;
 }
 
@@ -78,7 +78,7 @@ double AmoebaGeneralizedKirkwoodForce::getProbeRadius() const {
     return probeRadius;
 }
 
-void AmoebaGeneralizedKirkwoodForce::setProbeRadius(double inputProbeRadius ) {
+void AmoebaGeneralizedKirkwoodForce::setProbeRadius(double inputProbeRadius) {
     probeRadius = inputProbeRadius;
 }
 
@@ -86,7 +86,7 @@ double AmoebaGeneralizedKirkwoodForce::getSurfaceAreaFactor() const {
     return surfaceAreaFactor;
 }
 
-void AmoebaGeneralizedKirkwoodForce::setSurfaceAreaFactor(double inputSurfaceAreaFactor ) {
+void AmoebaGeneralizedKirkwoodForce::setSurfaceAreaFactor(double inputSurfaceAreaFactor) {
     surfaceAreaFactor = inputSurfaceAreaFactor;
 }
 

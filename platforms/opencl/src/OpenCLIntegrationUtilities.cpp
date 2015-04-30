@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -27,10 +27,12 @@
 #include "OpenCLIntegrationUtilities.h"
 #include "OpenCLArray.h"
 #include "OpenCLKernelSources.h"
+#include "openmm/internal/OSRngSeed.h"
 #include "openmm/HarmonicAngleForce.h"
 #include "openmm/VirtualSite.h"
 #include "quern.h"
 #include "OpenCLExpressionUtilities.h"
+#include "ReferenceCCMAAlgorithm.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
@@ -100,7 +102,8 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
         ccmaReducedMass(NULL), ccmaAtomConstraints(NULL), ccmaNumAtomConstraints(NULL), ccmaConstraintMatrixColumn(NULL),
         ccmaConstraintMatrixValue(NULL), ccmaDelta1(NULL), ccmaDelta2(NULL), ccmaConverged(NULL), ccmaConvergedHostBuffer(NULL),
         vsite2AvgAtoms(NULL), vsite2AvgWeights(NULL), vsite3AvgAtoms(NULL), vsite3AvgWeights(NULL),
-        vsiteOutOfPlaneAtoms(NULL), vsiteOutOfPlaneWeights(NULL), hasInitializedPosConstraintKernels(false), hasInitializedVelConstraintKernels(false) {
+        vsiteOutOfPlaneAtoms(NULL), vsiteOutOfPlaneWeights(NULL), vsiteLocalCoordsAtoms(NULL), vsiteLocalCoordsParams(NULL),
+        hasInitializedPosConstraintKernels(false), hasInitializedVelConstraintKernels(false), hasOverlappingVsites(false) {
     // Create workspace arrays.
 
     if (context.getUseDoublePrecision() || context.getUseMixedPrecision()) {
@@ -321,156 +324,53 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
 
     int numCCMA = (int) ccmaConstraints.size();
     if (numCCMA > 0) {
+        // Record information needed by ReferenceCCMAAlgorithm.
+        
+        vector<pair<int, int> > refIndices(numCCMA);
+        vector<RealOpenMM> refDistance(numCCMA);
+        for (int i = 0; i < numCCMA; i++) {
+            int index = ccmaConstraints[i];
+            refIndices[i] = make_pair(atom1[index], atom2[index]);
+            refDistance[i] = distance[index];
+        }
+        vector<RealOpenMM> refMasses(numAtoms);
+        for (int i = 0; i < numAtoms; ++i)
+            refMasses[i] = (RealOpenMM) system.getParticleMass(i);
+
+        // Look up angles for CCMA.
+        
+        vector<ReferenceCCMAAlgorithm::AngleInfo> angles;
+        for (int i = 0; i < system.getNumForces(); i++) {
+            const HarmonicAngleForce* force = dynamic_cast<const HarmonicAngleForce*>(&system.getForce(i));
+            if (force != NULL) {
+                for (int j = 0; j < force->getNumAngles(); j++) {
+                    int atom1, atom2, atom3;
+                    double angle, k;
+                    force->getAngleParameters(j, atom1, atom2, atom3, angle, k);
+                    angles.push_back(ReferenceCCMAAlgorithm::AngleInfo(atom1, atom2, atom3, (RealOpenMM) angle));
+                }
+            }
+        }
+        
+        // Create a ReferenceCCMAAlgorithm.  It will build and invert the constraint matrix for us.
+        
+        ReferenceCCMAAlgorithm ccma(numAtoms, numCCMA, refIndices, refDistance, refMasses, angles, 0.1);
+        vector<vector<pair<int, double> > > matrix = ccma.getMatrix();
+        int maxRowElements = 0;
+        for (unsigned i = 0; i < matrix.size(); i++)
+            maxRowElements = max(maxRowElements, (int) matrix[i].size());
+        maxRowElements++;
+
+        // Build the list of constraints for each atom.
+
         vector<vector<int> > atomConstraints(context.getNumAtoms());
         for (int i = 0; i < numCCMA; i++) {
             atomConstraints[atom1[ccmaConstraints[i]]].push_back(i);
             atomConstraints[atom2[ccmaConstraints[i]]].push_back(i);
         }
-        vector<vector<int> > linkedConstraints(numCCMA);
-        for (unsigned atom = 0; atom < atomConstraints.size(); atom++) {
-            for (unsigned i = 0; i < atomConstraints[atom].size(); i++)
-                for (unsigned j = 0; j < i; j++) {
-                    int c1 = atomConstraints[atom][i];
-                    int c2 = atomConstraints[atom][j];
-                    linkedConstraints[c1].push_back(c2);
-                    linkedConstraints[c2].push_back(c1);
-                }
-        }
-        int maxLinks = 0;
-        for (unsigned i = 0; i < linkedConstraints.size(); i++)
-            maxLinks = max(maxLinks, (int) linkedConstraints[i].size());
         int maxAtomConstraints = 0;
         for (unsigned i = 0; i < atomConstraints.size(); i++)
             maxAtomConstraints = max(maxAtomConstraints, (int) atomConstraints[i].size());
-
-        // Compute the constraint coupling matrix
-
-        vector<vector<int> > atomAngles(numAtoms);
-        HarmonicAngleForce const* angleForce = NULL;
-        for (int i = 0; i < system.getNumForces() && angleForce == NULL; i++)
-            angleForce = dynamic_cast<HarmonicAngleForce const*>(&system.getForce(i));
-        if (angleForce != NULL)
-            for (int i = 0; i < angleForce->getNumAngles(); i++) {
-                int particle1, particle2, particle3;
-                double angle, k;
-                angleForce->getAngleParameters(i, particle1, particle2, particle3, angle, k);
-                atomAngles[particle2].push_back(i);
-            }
-        vector<vector<pair<int, double> > > matrix(numCCMA);
-        for (int j = 0; j < numCCMA; j++) {
-            for (int k = 0; k < numCCMA; k++) {
-                if (j == k) {
-                    matrix[j].push_back(pair<int, double>(j, 1.0));
-                    continue;
-                }
-                double scale;
-                int cj = ccmaConstraints[j];
-                int ck = ccmaConstraints[k];
-                int atomj0 = atom1[cj];
-                int atomj1 = atom2[cj];
-                int atomk0 = atom1[ck];
-                int atomk1 = atom2[ck];
-                int atoma, atomb, atomc;
-                double imj0 = 1.0/system.getParticleMass(atomj0);
-                double imj1 = 1.0/system.getParticleMass(atomj1);
-                if (atomj0 == atomk0) {
-                    atoma = atomj1;
-                    atomb = atomj0;
-                    atomc = atomk1;
-                    scale = imj0/(imj0+imj1);
-                }
-                else if (atomj1 == atomk1) {
-                    atoma = atomj0;
-                    atomb = atomj1;
-                    atomc = atomk0;
-                    scale = imj1/(imj0+imj1);
-                }
-                else if (atomj0 == atomk1) {
-                    atoma = atomj1;
-                    atomb = atomj0;
-                    atomc = atomk0;
-                    scale = imj0/(imj0+imj1);
-                }
-                else if (atomj1 == atomk0) {
-                    atoma = atomj0;
-                    atomb = atomj1;
-                    atomc = atomk1;
-                    scale = imj1/(imj0+imj1);
-                }
-                else
-                    continue; // These constraints are not connected.
-
-                // Look for a third constraint forming a triangle with these two.
-
-                bool foundConstraint = false;
-                for (int m = 0; m < numCCMA; m++) {
-                    int other = ccmaConstraints[m];
-                    if ((atom1[other] == atoma && atom2[other] == atomc) || (atom1[other] == atomc && atom2[other] == atoma)) {
-                        double d1 = distance[cj];
-                        double d2 = distance[ck];
-                        double d3 = distance[other];
-                        matrix[j].push_back(pair<int, double>(k, scale*(d1*d1+d2*d2-d3*d3)/(2.0*d1*d2)));
-                        foundConstraint = true;
-                        break;
-                    }
-                }
-                if (!foundConstraint && angleForce != NULL) {
-                    // We didn't find one, so look for an angle force field term.
-
-                    const vector<int>& angleCandidates = atomAngles[atomb];
-                    for (vector<int>::const_iterator iter = angleCandidates.begin(); iter != angleCandidates.end(); iter++) {
-                        int particle1, particle2, particle3;
-                        double angle, ka;
-                        angleForce->getAngleParameters(*iter, particle1, particle2, particle3, angle, ka);
-                        if ((particle1 == atoma && particle3 == atomc) || (particle3 == atoma && particle1 == atomc)) {
-                            matrix[j].push_back(pair<int, double>(k, scale*cos(angle)));
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-
-        // Invert it using QR.
-
-        vector<int> matrixRowStart;
-        vector<int> matrixColIndex;
-        vector<double> matrixValue;
-        for (int i = 0; i < numCCMA; i++) {
-            matrixRowStart.push_back(matrixValue.size());
-            for (int j = 0; j < (int) matrix[i].size(); j++) {
-                pair<int, double> element = matrix[i][j];
-                matrixColIndex.push_back(element.first);
-                matrixValue.push_back(element.second);
-            }
-        }
-        matrixRowStart.push_back(matrixValue.size());
-        int *qRowStart, *qColIndex, *rRowStart, *rColIndex;
-        double *qValue, *rValue;
-        int result = QUERN_compute_qr(numCCMA, numCCMA, &matrixRowStart[0], &matrixColIndex[0], &matrixValue[0], NULL,
-                &qRowStart, &qColIndex, &qValue, &rRowStart, &rColIndex, &rValue);
-        vector<double> rhs(numCCMA);
-        matrix.clear();
-        matrix.resize(numCCMA);
-        for (int i = 0; i < numCCMA; i++) {
-            // Extract column i of the inverse matrix.
-
-            for (int j = 0; j < numCCMA; j++)
-                rhs[j] = (i == j ? 1.0 : 0.0);
-            result = QUERN_multiply_with_q_transpose(numCCMA, qRowStart, qColIndex, qValue, &rhs[0]);
-            result = QUERN_solve_with_r(numCCMA, rRowStart, rColIndex, rValue, &rhs[0], &rhs[0]);
-            for (int j = 0; j < numCCMA; j++) {
-                double value = rhs[j]*distance[ccmaConstraints[i]]/distance[ccmaConstraints[j]];
-                if (abs(value) > 0.1)
-                    matrix[j].push_back(pair<int, double>(i, value));
-            }
-        }
-        QUERN_free_result(qRowStart, qColIndex, qValue);
-        QUERN_free_result(rRowStart, rColIndex, rValue);
-        int maxRowElements = 0;
-        for (unsigned i = 0; i < matrix.size(); i++)
-            maxRowElements = max(maxRowElements, (int) matrix[i].size());
-        maxRowElements++;
 
         // Sort the constraints.
 
@@ -595,6 +495,8 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
     vector<mm_double4> vsite3AvgWeightVec;
     vector<mm_int4> vsiteOutOfPlaneAtomVec;
     vector<mm_double4> vsiteOutOfPlaneWeightVec;
+    vector<mm_int4> vsiteLocalCoordsAtomVec;
+    vector<cl_double> vsiteLocalCoordsParamVec;
     for (int i = 0; i < numAtoms; i++) {
         if (system.isVirtualSite(i)) {
             if (dynamic_cast<const TwoParticleAverageSite*>(&system.getVirtualSite(i)) != NULL) {
@@ -618,35 +520,66 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
                 vsiteOutOfPlaneAtomVec.push_back(mm_int4(i, site.getParticle(0), site.getParticle(1), site.getParticle(2)));
                 vsiteOutOfPlaneWeightVec.push_back(mm_double4(site.getWeight12(), site.getWeight13(), site.getWeightCross(), 0.0));
             }
+            else if (dynamic_cast<const LocalCoordinatesSite*>(&system.getVirtualSite(i)) != NULL) {
+                // An out of plane site.
+                
+                const LocalCoordinatesSite& site = dynamic_cast<const LocalCoordinatesSite&>(system.getVirtualSite(i));
+                vsiteLocalCoordsAtomVec.push_back(mm_int4(i, site.getParticle(0), site.getParticle(1), site.getParticle(2)));
+                Vec3 origin = site.getOriginWeights();
+                Vec3 x = site.getXWeights();
+                Vec3 y = site.getYWeights();
+                Vec3 pos = site.getLocalPosition();
+                vsiteLocalCoordsParamVec.push_back(origin[0]);
+                vsiteLocalCoordsParamVec.push_back(origin[1]);
+                vsiteLocalCoordsParamVec.push_back(origin[2]);
+                vsiteLocalCoordsParamVec.push_back(x[0]);
+                vsiteLocalCoordsParamVec.push_back(x[1]);
+                vsiteLocalCoordsParamVec.push_back(x[2]);
+                vsiteLocalCoordsParamVec.push_back(y[0]);
+                vsiteLocalCoordsParamVec.push_back(y[1]);
+                vsiteLocalCoordsParamVec.push_back(y[2]);
+                vsiteLocalCoordsParamVec.push_back(pos[0]);
+                vsiteLocalCoordsParamVec.push_back(pos[1]);
+                vsiteLocalCoordsParamVec.push_back(pos[2]);
+            }
         }
     }
     int num2Avg = vsite2AvgAtomVec.size();
     int num3Avg = vsite3AvgAtomVec.size();
     int numOutOfPlane = vsiteOutOfPlaneAtomVec.size();
+    int numLocalCoords = vsiteLocalCoordsAtomVec.size();
+    numVsites = num2Avg+num3Avg+numOutOfPlane+numLocalCoords;
     vsite2AvgAtoms = OpenCLArray::create<mm_int4>(context, max(1, num2Avg), "vsite2AvgAtoms");
     vsite3AvgAtoms = OpenCLArray::create<mm_int4>(context, max(1, num3Avg), "vsite3AvgAtoms");
     vsiteOutOfPlaneAtoms = OpenCLArray::create<mm_int4>(context, max(1, numOutOfPlane), "vsiteOutOfPlaneAtoms");
+    vsiteLocalCoordsAtoms = OpenCLArray::create<mm_int4>(context, max(1, numLocalCoords), "vsiteLocalCoordinatesAtoms");
     if (num2Avg > 0)
         vsite2AvgAtoms->upload(vsite2AvgAtomVec);
     if (num3Avg > 0)
         vsite3AvgAtoms->upload(vsite3AvgAtomVec);
     if (numOutOfPlane > 0)
         vsiteOutOfPlaneAtoms->upload(vsiteOutOfPlaneAtomVec);
+    if (numLocalCoords > 0)
+        vsiteLocalCoordsAtoms->upload(vsiteLocalCoordsAtomVec);
     if (context.getUseDoublePrecision()) {
         vsite2AvgWeights = OpenCLArray::create<mm_double2>(context, max(1, num2Avg), "vsite2AvgWeights");
         vsite3AvgWeights = OpenCLArray::create<mm_double4>(context, max(1, num3Avg), "vsite3AvgWeights");
         vsiteOutOfPlaneWeights = OpenCLArray::create<mm_double4>(context, max(1, numOutOfPlane), "vsiteOutOfPlaneWeights");
+        vsiteLocalCoordsParams = OpenCLArray::create<cl_double>(context, max(1, 12*numLocalCoords), "vsiteLocalCoordinatesParams");
         if (num2Avg > 0)
             vsite2AvgWeights->upload(vsite2AvgWeightVec);
         if (num3Avg > 0)
             vsite3AvgWeights->upload(vsite3AvgWeightVec);
         if (numOutOfPlane > 0)
             vsiteOutOfPlaneWeights->upload(vsiteOutOfPlaneWeightVec);
+        if (numLocalCoords > 0)
+            vsiteLocalCoordsParams->upload(vsiteLocalCoordsParamVec);
     }
     else {
         vsite2AvgWeights = OpenCLArray::create<mm_float2>(context, max(1, num2Avg), "vsite2AvgWeights");
         vsite3AvgWeights = OpenCLArray::create<mm_float4>(context, max(1, num3Avg), "vsite3AvgWeights");
         vsiteOutOfPlaneWeights = OpenCLArray::create<mm_float4>(context, max(1, numOutOfPlane), "vsiteOutOfPlaneWeights");
+        vsiteLocalCoordsParams = OpenCLArray::create<float>(context, max(1, 12*numLocalCoords), "vsiteLocalCoordinatesParams");
         if (num2Avg > 0) {
             vector<mm_float2> floatWeights(num2Avg);
             for (int i = 0; i < num2Avg; i++)
@@ -665,7 +598,27 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
                 floatWeights[i] = mm_float4((float) vsiteOutOfPlaneWeightVec[i].x, (float) vsiteOutOfPlaneWeightVec[i].y, (float) vsiteOutOfPlaneWeightVec[i].z, 0.0f);
             vsiteOutOfPlaneWeights->upload(floatWeights);
         }
+        if (numLocalCoords > 0) {
+            vector<cl_float> floatParams(vsiteLocalCoordsParamVec.size());
+            for (int i = 0; i < (int) vsiteLocalCoordsParamVec.size(); i++)
+                floatParams[i] = (cl_float) vsiteLocalCoordsParamVec[i];
+            vsiteLocalCoordsParams->upload(floatParams);
+        }
     }
+    
+    // If multiple virtual sites depend on the same particle, make sure the force distribution
+    // can be done safely.
+    
+    vector<int> atomCounts(numAtoms, 0);
+    for (int i = 0; i < numAtoms; i++)
+        if (system.isVirtualSite(i))
+            for (int j = 0; j < system.getVirtualSite(i).getNumParticles(); j++)
+                atomCounts[system.getVirtualSite(i).getParticle(j)]++;
+    for (int i = 0; i < numAtoms; i++)
+        if (atomCounts[i] > 1)
+            hasOverlappingVsites = true;
+    if (hasOverlappingVsites && context.getUseDoublePrecision() && !context.getSupports64BitGlobalAtomics())
+        throw OpenMMException("This device does not support 64 bit atomics.  Cannot use double precision when multiple virtual sites depend on the same atom.");
     
     // Create the kernels for virtual sites.
 
@@ -673,6 +626,11 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
     defines["NUM_2_AVERAGE"] = context.intToString(num2Avg);
     defines["NUM_3_AVERAGE"] = context.intToString(num3Avg);
     defines["NUM_OUT_OF_PLANE"] = context.intToString(numOutOfPlane);
+    defines["NUM_LOCAL_COORDS"] = context.intToString(numLocalCoords);
+    defines["NUM_ATOMS"] = context.intToString(numAtoms);
+    defines["PADDED_NUM_ATOMS"] = context.intToString(context.getPaddedNumAtoms());
+    if (hasOverlappingVsites)
+        defines["HAS_OVERLAPPING_VSITES"] = "1";
     cl::Program vsiteProgram = context.createProgram(OpenCLKernelSources::virtualSites, defines);
     vsitePositionKernel = cl::Kernel(vsiteProgram, "computeVirtualSites");
     int index = 0;
@@ -685,10 +643,14 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
     vsitePositionKernel.setArg<cl::Buffer>(index++, vsite3AvgWeights->getDeviceBuffer());
     vsitePositionKernel.setArg<cl::Buffer>(index++, vsiteOutOfPlaneAtoms->getDeviceBuffer());
     vsitePositionKernel.setArg<cl::Buffer>(index++, vsiteOutOfPlaneWeights->getDeviceBuffer());
+    vsitePositionKernel.setArg<cl::Buffer>(index++, vsiteLocalCoordsAtoms->getDeviceBuffer());
+    vsitePositionKernel.setArg<cl::Buffer>(index++, vsiteLocalCoordsParams->getDeviceBuffer());
     vsiteForceKernel = cl::Kernel(vsiteProgram, "distributeForces");
     index = 0;
     vsiteForceKernel.setArg<cl::Buffer>(index++, context.getPosq().getDeviceBuffer());
     index++; // Skip argument 1: the force array hasn't been created yet.
+    if (context.getSupports64BitGlobalAtomics())
+        index++; // Skip argument 2: the force array hasn't been created yet.
     if (context.getUseMixedPrecision())
         vsiteForceKernel.setArg<cl::Buffer>(index++, context.getPosqCorrection().getDeviceBuffer());
     vsiteForceKernel.setArg<cl::Buffer>(index++, vsite2AvgAtoms->getDeviceBuffer());
@@ -697,7 +659,10 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
     vsiteForceKernel.setArg<cl::Buffer>(index++, vsite3AvgWeights->getDeviceBuffer());
     vsiteForceKernel.setArg<cl::Buffer>(index++, vsiteOutOfPlaneAtoms->getDeviceBuffer());
     vsiteForceKernel.setArg<cl::Buffer>(index++, vsiteOutOfPlaneWeights->getDeviceBuffer());
-    numVsites = num2Avg+num3Avg+numOutOfPlane;
+    vsiteForceKernel.setArg<cl::Buffer>(index++, vsiteLocalCoordsAtoms->getDeviceBuffer());
+    vsiteForceKernel.setArg<cl::Buffer>(index++, vsiteLocalCoordsParams->getDeviceBuffer());
+    if (hasOverlappingVsites && context.getSupports64BitGlobalAtomics())
+        vsiteAddForcesKernel = cl::Kernel(vsiteProgram, "addDistributedForces");
 }
 
 OpenCLIntegrationUtilities::~OpenCLIntegrationUtilities() {
@@ -751,6 +716,10 @@ OpenCLIntegrationUtilities::~OpenCLIntegrationUtilities() {
         delete vsiteOutOfPlaneAtoms;
     if (vsiteOutOfPlaneWeights != NULL)
         delete vsiteOutOfPlaneWeights;
+    if (vsiteLocalCoordsAtoms != NULL)
+        delete vsiteLocalCoordsAtoms;
+    if (vsiteLocalCoordsParams != NULL)
+        delete vsiteLocalCoordsParams;
 }
 
 void OpenCLIntegrationUtilities::applyConstraints(double tol) {
@@ -893,8 +862,25 @@ void OpenCLIntegrationUtilities::computeVirtualSites() {
 
 void OpenCLIntegrationUtilities::distributeForcesFromVirtualSites() {
     if (numVsites > 0) {
+        // Set arguments that didn't exist yet in the constructor.
+        
         vsiteForceKernel.setArg<cl::Buffer>(1, context.getForce().getDeviceBuffer());
+        if (context.getSupports64BitGlobalAtomics()) {
+            vsiteForceKernel.setArg<cl::Buffer>(2, context.getLongForceBuffer().getDeviceBuffer());
+            if (hasOverlappingVsites) {
+                // We'll be using 64 bit atomics for the force redistribution, so clear the buffer.
+                
+                context.clearBuffer(context.getLongForceBuffer());
+            }
+        }
         context.executeKernel(vsiteForceKernel, numVsites);
+        if (context.getSupports64BitGlobalAtomics() && hasOverlappingVsites) {
+            // Add the redistributed forces from the virtual sites to the main force array.
+            
+            vsiteAddForcesKernel.setArg<cl::Buffer>(0, context.getLongForceBuffer().getDeviceBuffer());
+            vsiteAddForcesKernel.setArg<cl::Buffer>(1, context.getForce().getDeviceBuffer());
+            context.executeKernel(vsiteAddForcesKernel, context.getNumAtoms());
+        }
     }
 }
 
@@ -916,6 +902,8 @@ void OpenCLIntegrationUtilities::initRandomNumberGenerator(unsigned int randomNu
 
     vector<mm_int4> seed(randomSeed->getSize());
     unsigned int r = randomNumberSeed;
+    // A seed of 0 means use a unique one
+    if (r == 0) r = (unsigned int) osrngseed();
     for (int i = 0; i < randomSeed->getSize(); i++) {
         seed[i].x = r = (1664525*r + 1013904223) & 0xFFFFFFFF;
         seed[i].y = r = (1664525*r + 1013904223) & 0xFFFFFFFF;

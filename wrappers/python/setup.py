@@ -144,7 +144,11 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
                                           "simtk.unit",
                                           "simtk.openmm",
                                           "simtk.openmm.app",
-                                          "simtk.openmm.app.internal"]
+                                          "simtk.openmm.app.internal",
+                                          "simtk.openmm.app.internal.charmm",
+                                          "simtk.openmm.app.internal.pdbx",
+                                          "simtk.openmm.app.internal.pdbx.reader",
+                                          "simtk.openmm.app.internal.pdbx.writer"]
     setupKeywords["data_files"]        = []
     setupKeywords["package_data"]      = {"simtk" : [],
                                           "simtk.unit" : [],
@@ -201,18 +205,17 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
     library_dirs=[openmm_lib_path]
     include_dirs=openmm_include_path.split(';')
 
-    setupKeywords["ext_modules"] = [
-       Extension(name = "simtk.openmm._openmm",
-                 sources = ["src/swig_doxygen/OpenMMSwig.cxx"],
-                 include_dirs = include_dirs,
-                 define_macros = define_macros,
-                 library_dirs = library_dirs,
-                 runtime_library_dirs = library_dirs,
-                 libraries = libraries,
-                 extra_compile_args=extra_compile_args,
-                 extra_link_args=extra_link_args,
-                 )
-    ]
+    extensionArgs = {"name": "simtk.openmm._openmm",
+                    "sources": ["src/swig_doxygen/OpenMMSwig.cxx"],
+                    "include_dirs": include_dirs,
+                    "define_macros": define_macros,
+                    "library_dirs": library_dirs,
+                    "libraries": libraries,
+                    "extra_compile_args": extra_compile_args,
+                    "extra_link_args": extra_link_args}
+    if platform.system() != "Windows":
+        extensionArgs["runtime_library_dirs"] = library_dirs
+    setupKeywords["ext_modules"] = [Extension(**extensionArgs)]
 
     outputString = ''
     firstTab     = 40

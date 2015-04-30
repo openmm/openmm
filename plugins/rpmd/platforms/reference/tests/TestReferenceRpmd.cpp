@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -37,11 +37,11 @@
 #include "openmm/CMMotionRemover.h"
 #include "openmm/Context.h"
 #include "openmm/HarmonicBondForce.h"
-#include "openmm/MonteCarloBarostat.h"
 #include "openmm/NonbondedForce.h"
 #include "openmm/Platform.h"
 #include "openmm/System.h"
 #include "openmm/RPMDIntegrator.h"
+#include "openmm/RPMDMonteCarloBarostat.h"
 #include "openmm/VirtualSite.h"
 #include "SimTKOpenMMUtilities.h"
 #include "sfmt/SFMT.h"
@@ -255,7 +255,7 @@ void testContractions() {
     system.addForce(bonds);
     NonbondedForce* nonbonded = new NonbondedForce();
     nonbonded->setCutoffDistance(cutoff);
-    nonbonded->setNonbondedMethod(NonbondedForce::PME);
+    nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
     nonbonded->setForceGroup(1);
     nonbonded->setReciprocalSpaceForceGroup(2);
     system.addForce(nonbonded);
@@ -350,30 +350,9 @@ void testWithoutThermostat() {
     
     double initialEnergy;
     int numSteps = 100;
-    const double hbar = 1.054571628e-34*AVOGADRO/(1000*1e-12);
-    const double wn = numCopies*BOLTZ*temperature/hbar;
-    const double springConstant = mass*wn*wn;
     for (int i = 0; i < numSteps; i++) {
         integ.step(1);
-        
-        // Sum the energies of all the copies.
-        
-        double energy = 0.0;
-        for (int j = 0; j < numCopies; j++) {
-            State state = integ.getState(j, State::Positions | State::Energy);
-            positions[j] = state.getPositions();
-            energy += state.getPotentialEnergy()+state.getKineticEnergy();
-        }
-        
-        // Add the energy from the springs connecting copies.
-        
-        for (int j = 0; j < numCopies; j++) {
-            int previous = (j == 0 ? numCopies-1 : j-1);
-            for (int k = 0; k < numParticles; k++) {
-                Vec3 delta = positions[j][k]-positions[previous][k];
-                energy += 0.5*springConstant*delta.dot(delta);
-            }
-        }
+        double energy = integ.getTotalEnergy();
         if (i == 0)
             initialEnergy = energy;
         else
@@ -396,11 +375,11 @@ void testWithBarostat() {
     system.addForce(bonds);
     NonbondedForce* nonbonded = new NonbondedForce();
     nonbonded->setCutoffDistance(cutoff);
-    nonbonded->setNonbondedMethod(NonbondedForce::PME);
+    nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
     nonbonded->setForceGroup(1);
     nonbonded->setReciprocalSpaceForceGroup(2);
     system.addForce(nonbonded);
-    system.addForce(new MonteCarloBarostat(0.5, temperature));
+    system.addForce(new RPMDMonteCarloBarostat(0.5, 10));
 
     // Create a cloud of molecules.
 

@@ -27,7 +27,7 @@
 
 #include "ReferenceDynamics.h"
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class ReferenceVariableStochasticDynamics : public ReferenceDynamics {
 
@@ -50,7 +50,7 @@ class ReferenceVariableStochasticDynamics : public ReferenceDynamics {
 
          --------------------------------------------------------------------------------------- */
 
-       ReferenceVariableStochasticDynamics( int numberOfAtoms, RealOpenMM tau, RealOpenMM temperature, RealOpenMM accuracy );
+       ReferenceVariableStochasticDynamics(int numberOfAtoms, RealOpenMM tau, RealOpenMM temperature, RealOpenMM accuracy);
 
       /**---------------------------------------------------------------------------------------
 
@@ -58,7 +58,7 @@ class ReferenceVariableStochasticDynamics : public ReferenceDynamics {
 
          --------------------------------------------------------------------------------------- */
 
-       ~ReferenceVariableStochasticDynamics( );
+       ~ReferenceVariableStochasticDynamics();
 
       /**---------------------------------------------------------------------------------------
 
@@ -68,7 +68,7 @@ class ReferenceVariableStochasticDynamics : public ReferenceDynamics {
 
          --------------------------------------------------------------------------------------- */
 
-      RealOpenMM getTau( void ) const;
+      RealOpenMM getTau() const;
       
       /**---------------------------------------------------------------------------------------
 
@@ -78,7 +78,7 @@ class ReferenceVariableStochasticDynamics : public ReferenceDynamics {
 
          --------------------------------------------------------------------------------------- */
 
-      RealOpenMM getAccuracy( void ) const;
+      RealOpenMM getAccuracy() const;
 
       /**---------------------------------------------------------------------------------------
 
@@ -86,7 +86,7 @@ class ReferenceVariableStochasticDynamics : public ReferenceDynamics {
 
          --------------------------------------------------------------------------------------- */
 
-      void setAccuracy( RealOpenMM accuracy );
+      void setAccuracy(RealOpenMM accuracy);
 
       /**---------------------------------------------------------------------------------------
 
@@ -120,9 +120,9 @@ class ReferenceVariableStochasticDynamics : public ReferenceDynamics {
 
          --------------------------------------------------------------------------------------- */
 
-      void updatePart1( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& velocities,
+      void updatePart1(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& velocities,
                        std::vector<OpenMM::RealVec>& forces, std::vector<RealOpenMM>& masses, std::vector<RealOpenMM>& inverseMasses,
-                       std::vector<OpenMM::RealVec>& xPrime, RealOpenMM maxStepSize );
+                       std::vector<OpenMM::RealVec>& xPrime, RealOpenMM maxStepSize);
 
       /**---------------------------------------------------------------------------------------
 
@@ -136,12 +136,12 @@ class ReferenceVariableStochasticDynamics : public ReferenceDynamics {
 
          --------------------------------------------------------------------------------------- */
 
-      void updatePart2( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& velocities,
+      void updatePart2(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& velocities,
                        std::vector<OpenMM::RealVec>& forces, std::vector<RealOpenMM>& inverseMasses,
-                       std::vector<OpenMM::RealVec>& xPrime );
+                       std::vector<OpenMM::RealVec>& xPrime);
       
 };
 
-// ---------------------------------------------------------------------------------------
+} // namespace OpenMM
 
 #endif // __ReferenceVariableStochasticDynamics_H__

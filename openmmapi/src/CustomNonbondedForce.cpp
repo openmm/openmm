@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -49,6 +49,28 @@ using std::vector;
 
 CustomNonbondedForce::CustomNonbondedForce(const string& energy) : energyExpression(energy), nonbondedMethod(NoCutoff), cutoffDistance(1.0),
     switchingDistance(-1.0), useSwitchingFunction(false), useLongRangeCorrection(false) {
+}
+
+CustomNonbondedForce::CustomNonbondedForce(const CustomNonbondedForce& rhs) {
+    // Copy everything and deep copy the tabulated functions
+    energyExpression = rhs.energyExpression;
+    nonbondedMethod = rhs.nonbondedMethod;
+    cutoffDistance = rhs.cutoffDistance;
+    switchingDistance = rhs.switchingDistance;
+    useSwitchingFunction = rhs.useSwitchingFunction;
+    useLongRangeCorrection = rhs.useLongRangeCorrection;
+    parameters = rhs.parameters;
+    globalParameters = rhs.globalParameters;
+    particles = rhs.particles;
+    exclusions = rhs.exclusions;
+    interactionGroups = rhs.interactionGroups;
+    for (vector<FunctionInfo>::const_iterator it = rhs.functions.begin(); it != rhs.functions.end(); it++)
+        functions.push_back(FunctionInfo(it->name, it->function->Copy()));
+}
+
+CustomNonbondedForce::~CustomNonbondedForce() {
+    for (int i = 0; i < (int) functions.size(); i++)
+        delete functions[i].function;
 }
 
 const string& CustomNonbondedForce::getEnergyFunction() const {
@@ -170,33 +192,73 @@ void CustomNonbondedForce::setExclusionParticles(int index, int particle1, int p
     exclusions[index].particle2 = particle2;
 }
 
+void CustomNonbondedForce::createExclusionsFromBonds(const vector<pair<int, int> >& bonds, int bondCutoff) {
+    if (bondCutoff < 1)
+        return;
+    vector<set<int> > exclusions(particles.size());
+    vector<set<int> > bonded12(exclusions.size());
+    for (int i = 0; i < (int) bonds.size(); ++i) {
+        int p1 = bonds[i].first;
+        int p2 = bonds[i].second;
+        exclusions[p1].insert(p2);
+        exclusions[p2].insert(p1);
+        bonded12[p1].insert(p2);
+        bonded12[p2].insert(p1);
+    }
+    for (int level = 0; level < bondCutoff-1; level++) {
+        vector<set<int> > currentExclusions = exclusions;
+        for (int i = 0; i < (int) particles.size(); i++) {
+            for (set<int>::const_iterator iter = currentExclusions[i].begin(); iter != currentExclusions[i].end(); ++iter)
+                exclusions[*iter].insert(bonded12[i].begin(), bonded12[i].end());
+        }
+    }
+    for (int i = 0; i < (int) exclusions.size(); ++i)
+        for (set<int>::const_iterator iter = exclusions[i].begin(); iter != exclusions[i].end(); ++iter)
+            if (*iter < i)
+                addExclusion(*iter, i);
+}
+
+int CustomNonbondedForce::addTabulatedFunction(const std::string& name, TabulatedFunction* function) {
+    functions.push_back(FunctionInfo(name, function));
+    return functions.size()-1;
+}
+
+const TabulatedFunction& CustomNonbondedForce::getTabulatedFunction(int index) const {
+    ASSERT_VALID_INDEX(index, functions);
+    return *functions[index].function;
+}
+
+TabulatedFunction& CustomNonbondedForce::getTabulatedFunction(int index) {
+    ASSERT_VALID_INDEX(index, functions);
+    return *functions[index].function;
+}
+
+const string& CustomNonbondedForce::getTabulatedFunctionName(int index) const {
+    ASSERT_VALID_INDEX(index, functions);
+    return functions[index].name;
+}
+
 int CustomNonbondedForce::addFunction(const std::string& name, const std::vector<double>& values, double min, double max) {
-    if (max <= min)
-        throw OpenMMException("CustomNonbondedForce: max <= min for a tabulated function.");
-    if (values.size() < 2)
-        throw OpenMMException("CustomNonbondedForce: a tabulated function must have at least two points");
-    functions.push_back(FunctionInfo(name, values, min, max));
+    functions.push_back(FunctionInfo(name, new Continuous1DFunction(values, min, max)));
     return functions.size()-1;
 }
 
 void CustomNonbondedForce::getFunctionParameters(int index, std::string& name, std::vector<double>& values, double& min, double& max) const {
     ASSERT_VALID_INDEX(index, functions);
+    Continuous1DFunction* function = dynamic_cast<Continuous1DFunction*>(functions[index].function);
+    if (function == NULL)
+        throw OpenMMException("CustomNonbondedForce: function is not a Continuous1DFunction");
     name = functions[index].name;
-    values = functions[index].values;
-    min = functions[index].min;
-    max = functions[index].max;
+    function->getFunctionParameters(values, min, max);
 }
 
 void CustomNonbondedForce::setFunctionParameters(int index, const std::string& name, const std::vector<double>& values, double min, double max) {
-    if (max <= min)
-        throw OpenMMException("CustomNonbondedForce: max <= min for a tabulated function.");
-    if (values.size() < 2)
-        throw OpenMMException("CustomNonbondedForce: a tabulated function must have at least two points");
     ASSERT_VALID_INDEX(index, functions);
+    Continuous1DFunction* function = dynamic_cast<Continuous1DFunction*>(functions[index].function);
+    if (function == NULL)
+        throw OpenMMException("CustomNonbondedForce: function is not a Continuous1DFunction");
     functions[index].name = name;
-    functions[index].values = values;
-    functions[index].min = min;
-    functions[index].max = max;
+    function->setFunctionParameters(values, min, max);
 }
 
 int CustomNonbondedForce::addInteractionGroup(const std::set<int>& set1, const std::set<int>& set2) {

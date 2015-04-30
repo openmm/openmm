@@ -67,6 +67,11 @@ public:
     void setSolventDielectric(float dielectric);
     
     /**
+     * Set the surface area energy.
+     */
+    void setSurfaceAreaEnergy(float energy);
+    
+    /**
      * Get the per-particle parameters (offset radius, scaled radius).
      */
     const std::vector<std::pair<float, float> >& getParticleParameters() const;
@@ -96,11 +101,11 @@ private:
     bool cutoff;
     bool periodic;
     float periodicBoxSize[3];
-    float cutoffDistance, soluteDielectric, solventDielectric;
+    float cutoffDistance, soluteDielectric, solventDielectric, surfaceAreaFactor;
     std::vector<std::pair<float, float> > particleParams;        
-    std::vector<float> bornRadii;
-    std::vector<std::vector<float> > threadBornForces;
-    std::vector<float> obcChain;
+    AlignedArray<float> bornRadii;
+    std::vector<AlignedArray<float> > threadBornForces;
+    AlignedArray<float> obcChain;
     std::vector<double> threadEnergy;
     std::vector<float> logTable;
     float logDX, logDXInv;

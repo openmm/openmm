@@ -24,8 +24,6 @@
 #include <string.h>
 #include <sstream>
 
-#include "SimTKOpenMMCommon.h"
-#include "SimTKOpenMMLog.h"
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceCustomAngleIxn.h"
 #include "ReferenceForce.h"
@@ -62,7 +60,7 @@ ReferenceCustomAngleIxn::ReferenceCustomAngleIxn(const Lepton::CompiledExpressio
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceCustomAngleIxn::~ReferenceCustomAngleIxn( ){
+ReferenceCustomAngleIxn::~ReferenceCustomAngleIxn() {
 
    // ---------------------------------------------------------------------------------------
 
@@ -84,11 +82,11 @@ ReferenceCustomAngleIxn::~ReferenceCustomAngleIxn( ){
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceCustomAngleIxn::calculateBondIxn( int* atomIndices,
-                                                vector<RealVec>& atomCoordinates,
-                                                RealOpenMM* parameters,
-                                                vector<RealVec>& forces,
-                                                RealOpenMM* totalEnergy ) const {
+void ReferenceCustomAngleIxn::calculateBondIxn(int* atomIndices,
+                                               vector<RealVec>& atomCoordinates,
+                                               RealOpenMM* parameters,
+                                               vector<RealVec>& forces,
+                                               RealOpenMM* totalEnergy) const {
 
    static const std::string methodName = "\nReferenceCustomAngleIxn::calculateAngleIxn";
 

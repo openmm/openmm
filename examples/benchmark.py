@@ -6,9 +6,9 @@ import sys
 from datetime import datetime
 from optparse import OptionParser
 
-def timeIntegration(context, steps):
+def timeIntegration(context, steps, initialSteps):
     """Integrate a Context for a specified number of steps, then return how many seconds it took."""
-    context.getIntegrator().step(5) # Make sure everything is fully initialized
+    context.getIntegrator().step(initialSteps) # Make sure everything is fully initialized
     context.getState(getEnergy=True)
     start = datetime.now()
     context.getIntegrator().step(steps)
@@ -79,11 +79,14 @@ def runOneTest(testName, options):
         system = ff.createSystem(pdb.topology, nonbondedMethod=method, nonbondedCutoff=cutoff, constraints=constraints, hydrogenMass=hydrogenMass)
     print('Step Size: %g fs' % dt.value_in_unit(unit.femtoseconds))
     properties = {}
+    initialSteps = 5
     if options.device is not None:
         if platform.getName() == 'CUDA':
             properties['CudaDeviceIndex'] = options.device
         elif platform.getName() == 'OpenCL':
             properties['OpenCLDeviceIndex'] = options.device
+        if ',' in options.device or ' ' in options.device:
+            initialSteps = 250
     if options.precision is not None:
         if platform.getName() == 'CUDA':
             properties['CudaPrecision'] = options.precision
@@ -102,7 +105,7 @@ def runOneTest(testName, options):
     context.setVelocitiesToTemperature(300*unit.kelvin)
     steps = 20
     while True:
-        time = timeIntegration(context, steps)
+        time = timeIntegration(context, steps, initialSteps)
         if time >= 0.5*options.seconds:
             break
         if time < 0.5:

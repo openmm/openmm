@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -42,6 +42,7 @@ void testSerialization() {
     // Create a Force.
 
     CustomCompoundBondForce force(3, "5*sin(distance(p1,p2))^2+y*z");
+    force.setForceGroup(3);
     force.addGlobalParameter("x", 1.3);
     force.addGlobalParameter("y", 2.221);
     force.addPerBondParameter("z");
@@ -62,6 +63,10 @@ void testSerialization() {
     particles[2] = 1;
     params[0] = 2.1;
     force.addBond(particles, params);
+    vector<double> values(10);
+    for (int i = 0; i < 10; i++)
+        values[i] = sin((double) i);
+    force.addTabulatedFunction("f", new Continuous1DFunction(values, 0.5, 1.5));
 
     // Serialize and then deserialize it.
 
@@ -72,6 +77,7 @@ void testSerialization() {
     // Compare the two forces to see if they are identical.
 
     CustomCompoundBondForce& force2 = *copy;
+    ASSERT_EQUAL(force.getForceGroup(), force2.getForceGroup());
     ASSERT_EQUAL(force.getNumParticlesPerBond(), force2.getNumParticlesPerBond());
     ASSERT_EQUAL(force.getEnergyFunction(), force2.getEnergyFunction());
     ASSERT_EQUAL(force.getNumPerBondParameters(), force2.getNumPerBondParameters());
@@ -94,6 +100,19 @@ void testSerialization() {
         ASSERT_EQUAL(particles1.size(), particles2.size());
         for (int j = 0; j < (int) particles1.size(); j++)
             ASSERT_EQUAL(particles1[j], particles2[j]);
+    }
+    ASSERT_EQUAL(force.getNumTabulatedFunctions(), force2.getNumTabulatedFunctions());
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
+        double min1, min2, max1, max2;
+        vector<double> val1, val2;
+        dynamic_cast<Continuous1DFunction&>(force.getTabulatedFunction(i)).getFunctionParameters(val1, min1, max1);
+        dynamic_cast<Continuous1DFunction&>(force2.getTabulatedFunction(i)).getFunctionParameters(val2, min2, max2);
+        ASSERT_EQUAL(force.getTabulatedFunctionName(i), force2.getTabulatedFunctionName(i));
+        ASSERT_EQUAL(min1, min2);
+        ASSERT_EQUAL(max1, max2);
+        ASSERT_EQUAL(val1.size(), val2.size());
+        for (int j = 0; j < (int) val1.size(); j++)
+            ASSERT_EQUAL(val1[j], val2[j]);
     }
 }
 

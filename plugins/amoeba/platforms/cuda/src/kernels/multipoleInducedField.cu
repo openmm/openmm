@@ -62,10 +62,20 @@ __device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, real3 de
         // calculate the error function damping terms
 
         real ralpha = EWALD_ALPHA*r;
-        real bn0 = erfc(ralpha)*rI;
+        real exp2a = EXP(-(ralpha*ralpha));
+#ifdef USE_DOUBLE_PRECISION
+        const real erfcAlphaR = erfc(ralpha);
+#else
+        // This approximation for erfc is from Abramowitz and Stegun (1964) p. 299.  They cite the following as
+        // the original source: C. Hastings, Jr., Approximations for Digital Computers (1955).  It has a maximum
+        // error of 1.5e-7.
+
+        const real t = RECIP(1.0f+0.3275911f*ralpha);
+        const real erfcAlphaR = (0.254829592f+(-0.284496736f+(1.421413741f+(-1.453152027f+1.061405429f*t)*t)*t)*t)*t*exp2a;
+#endif
+        real bn0 = erfcAlphaR*rI;
         real alsq2 = 2*EWALD_ALPHA*EWALD_ALPHA;
         real alsq2n = RECIP(SQRT_PI*EWALD_ALPHA);
-        real exp2a = EXP(-(ralpha*ralpha));
         alsq2n *= alsq2;
         real bn1 = (bn0+alsq2n*exp2a)*rI*rI;
 
@@ -77,17 +87,13 @@ __device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, real3 de
         real scale3 = 1;
         real scale5 = 1;
         real damp = atom1.damp*atom2.damp;
-        if (damp != 0) {
-            real ratio = (r/damp);
-            ratio = ratio*ratio*ratio;
-            float pgamma = atom1.thole < atom2.thole ? atom1.thole : atom2.thole;
-            damp = -pgamma*ratio;
-            if (damp > -50) {
-                real expdamp = EXP(damp);
-                scale3 = 1 - expdamp;
-                scale5 = 1 - expdamp*(1-damp);
-            }
-        }
+        real ratio = (r/damp);
+        ratio = ratio*ratio*ratio;
+        float pgamma = atom1.thole < atom2.thole ? atom1.thole : atom2.thole;
+        damp = damp == 0 ? 0 : -pgamma*ratio;
+        real expdamp = EXP(damp);
+        scale3 = 1 - expdamp;
+        scale5 = 1 - expdamp*(1-damp);
         real dsc3 = scale3;
         real dsc5 = scale5;
         real r3 = (r*r2);
@@ -201,7 +207,8 @@ extern "C" __global__ void computeInducedField(
         unsigned long long* __restrict__ field, unsigned long long* __restrict__ fieldPolar, const real4* __restrict__ posq, const ushort2* __restrict__ exclusionTiles, 
         const real* __restrict__ inducedDipole, const real* __restrict__ inducedDipolePolar, unsigned int startTileIndex, unsigned int numTileIndices,
 #ifdef USE_CUTOFF
-        const int* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, unsigned int maxTiles, const real4* __restrict__ blockCenter, const unsigned int* __restrict__ interactingAtoms,
+        const int* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
+        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, const real4* __restrict__ blockCenter, const unsigned int* __restrict__ interactingAtoms,
 #elif defined USE_GK
         unsigned long long* __restrict__ fieldS, unsigned long long* __restrict__ fieldPolarS, const real* __restrict__ inducedDipoleS,
         const real* __restrict__ inducedDipolePolarS, const real* __restrict__ bornRadii,
@@ -245,9 +252,7 @@ extern "C" __global__ void computeInducedField(
             for (unsigned int j = 0; j < TILE_SIZE; j++) {
                 real3 delta = localData[tbx+j].pos-data.pos;
 #ifdef USE_PERIODIC
-                delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-                delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-                delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
+                APPLY_PERIODIC_TO_DELTA(delta)
 #endif
                 int atom2 = y*TILE_SIZE+j;
                 if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS)
@@ -267,9 +272,7 @@ extern "C" __global__ void computeInducedField(
             for (unsigned int j = 0; j < TILE_SIZE; j++) {
                 real3 delta = localData[tbx+tj].pos-data.pos;
 #ifdef USE_PERIODIC
-                delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-                delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-                delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
+                APPLY_PERIODIC_TO_DELTA(delta)
 #endif
                 int atom2 = y*TILE_SIZE+j;
                 if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS)
@@ -319,12 +322,12 @@ extern "C" __global__ void computeInducedField(
 
 #ifdef USE_CUTOFF
     const unsigned int numTiles = interactionCount[0];
-    int pos = (numTiles > maxTiles ? startTileIndex+warp*numTileIndices/totalWarps : warp*numTiles/totalWarps);
-    int end = (numTiles > maxTiles ? startTileIndex+(warp+1)*numTileIndices/totalWarps : (warp+1)*numTiles/totalWarps);
+    int pos = (int) (numTiles > maxTiles ? startTileIndex+warp*(long long)numTileIndices/totalWarps : warp*(long long)numTiles/totalWarps);
+    int end = (int) (numTiles > maxTiles ? startTileIndex+(warp+1)*(long long)numTileIndices/totalWarps : (warp+1)*(long long)numTiles/totalWarps);
 #else
     const unsigned int numTiles = numTileIndices;
-    int pos = startTileIndex+warp*numTiles/totalWarps;
-    int end = startTileIndex+(warp+1)*numTiles/totalWarps;
+    int pos = (int) (startTileIndex+warp*(long long)numTiles/totalWarps);
+    int end = (int) (startTileIndex+(warp+1)*(long long)numTiles/totalWarps);
 #endif
     int skipBase = 0;
     int currentSkipIndex = tbx;
@@ -337,14 +340,14 @@ extern "C" __global__ void computeInducedField(
 
         // Extract the coordinates of this tile.
         
-        unsigned int x, y;
+        int x, y;
 #ifdef USE_CUTOFF
         if (numTiles <= maxTiles)
             x = tiles[pos];
         else
 #endif
         {
-            y = (unsigned int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
+            y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
             x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
             if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
                 y += (x < y ? -1 : 1);
@@ -398,9 +401,7 @@ extern "C" __global__ void computeInducedField(
             for (j = 0; j < TILE_SIZE; j++) {
                 real3 delta = localData[tbx+tj].pos-data.pos;
 #ifdef USE_PERIODIC
-                delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-                delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-                delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
+                APPLY_PERIODIC_TO_DELTA(delta)
 #endif
                 int atom2 = atomIndices[tbx+tj];
                 if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS)
@@ -485,7 +486,7 @@ extern "C" __global__ void updateInducedFieldBySOR(const long long* __restrict__
     
     buffer[threadIdx.x] = make_real2(sumErrors, sumPolarErrors);
     __syncthreads();
-    for (int offset = 1; offset < blockDim.x; offset *= 2) {   
+    for (int offset = 1; offset < blockDim.x; offset *= 2) {
         if (threadIdx.x+offset < blockDim.x && (threadIdx.x&(2*offset-1)) == 0) {
             buffer[threadIdx.x].x += buffer[threadIdx.x+offset].x;
             buffer[threadIdx.x].y += buffer[threadIdx.x+offset].y;
@@ -494,4 +495,115 @@ extern "C" __global__ void updateInducedFieldBySOR(const long long* __restrict__
     }
     if (threadIdx.x == 0)
         errors[blockIdx.x] = make_float2((float) buffer[0].x, (float) buffer[0].y);
+}
+
+extern "C" __global__ void recordInducedDipolesForDIIS(const long long* __restrict__ fixedField, const long long* __restrict__ fixedFieldPolar,
+        const long long* __restrict__ fixedFieldS, const long long* __restrict__ inducedField, const long long* __restrict__ inducedFieldPolar,
+        const real* __restrict__ inducedDipole, const real* __restrict__ inducedDipolePolar, const float* __restrict__ polarizability, float2* __restrict__ errors,
+        real* __restrict__ prevDipoles, real* __restrict__ prevDipolesPolar, real* __restrict__ prevErrors, int iteration, bool recordPrevErrors, real* __restrict__ matrix) {
+    extern __shared__ real2 buffer[];
+#ifdef USE_EWALD
+    const real ewaldScale = (4/(real) 3)*(EWALD_ALPHA*EWALD_ALPHA*EWALD_ALPHA)/SQRT_PI;
+#else
+    const real ewaldScale = 0;
+#endif
+    const real fieldScale = 1/(real) 0x100000000;
+    real sumErrors = 0;
+    real sumPolarErrors = 0;
+    for (int atom = blockIdx.x*blockDim.x + threadIdx.x; atom < NUM_ATOMS; atom += blockDim.x*gridDim.x) {
+        real scale = polarizability[atom];
+        for (int component = 0; component < 3; component++) {
+            int dipoleIndex = 3*atom+component;
+            int fieldIndex = atom+component*PADDED_NUM_ATOMS;
+            if (iteration >= MAX_PREV_DIIS_DIPOLES) {
+                // We have filled up the buffer for previous dipoles, so shift them all over by one.
+                
+                for (int i = 1; i < MAX_PREV_DIIS_DIPOLES; i++) {
+                    int index1 = dipoleIndex+(i-1)*NUM_ATOMS*3;
+                    int index2 = dipoleIndex+i*NUM_ATOMS*3;
+                    prevDipoles[index1] = prevDipoles[index2];
+                    prevDipolesPolar[index1] = prevDipolesPolar[index2];
+                    if (recordPrevErrors)
+                        prevErrors[index1] = prevErrors[index2];
+                }
+            }
+            
+            // Compute the new dipole, and record it along with the error.
+            
+            real oldDipole = inducedDipole[dipoleIndex];
+            real oldDipolePolar = inducedDipolePolar[dipoleIndex];
+            long long fixedS = (fixedFieldS == NULL ? (long long) 0 : fixedFieldS[fieldIndex]);
+            real newDipole = scale*((fixedField[fieldIndex]+fixedS+inducedField[fieldIndex])*fieldScale+ewaldScale*oldDipole);
+            real newDipolePolar = scale*((fixedFieldPolar[fieldIndex]+fixedS+inducedFieldPolar[fieldIndex])*fieldScale+ewaldScale*oldDipolePolar);
+            int storePrevIndex = dipoleIndex+min(iteration, MAX_PREV_DIIS_DIPOLES-1)*NUM_ATOMS*3;
+            prevDipoles[storePrevIndex] = newDipole;
+            prevDipolesPolar[storePrevIndex] = newDipolePolar;
+            if (recordPrevErrors)
+                prevErrors[storePrevIndex] = newDipole-oldDipole;
+            sumErrors += (newDipole-oldDipole)*(newDipole-oldDipole);
+            sumPolarErrors += (newDipolePolar-oldDipolePolar)*(newDipolePolar-oldDipolePolar);
+        }
+    }
+    
+    // Sum the errors over threads and store the total for this block.
+    
+    buffer[threadIdx.x] = make_real2(sumErrors, sumPolarErrors);
+    __syncthreads();
+    for (int offset = 1; offset < blockDim.x; offset *= 2) {
+        if (threadIdx.x+offset < blockDim.x && (threadIdx.x&(2*offset-1)) == 0) {
+            buffer[threadIdx.x].x += buffer[threadIdx.x+offset].x;
+            buffer[threadIdx.x].y += buffer[threadIdx.x+offset].y;
+        }
+        __syncthreads();
+    }
+    if (threadIdx.x == 0)
+        errors[blockIdx.x] = make_float2((float) buffer[0].x, (float) buffer[0].y);
+    
+    if (iteration >= MAX_PREV_DIIS_DIPOLES && recordPrevErrors && blockIdx.x == 0) {
+        // Shift over the existing matrix elements.
+        
+        for (int i = 0; i < MAX_PREV_DIIS_DIPOLES-1; i++) {
+            if (threadIdx.x < MAX_PREV_DIIS_DIPOLES-1)
+                matrix[threadIdx.x+i*MAX_PREV_DIIS_DIPOLES] = matrix[(threadIdx.x+1)+(i+1)*MAX_PREV_DIIS_DIPOLES];
+            __syncthreads();
+        }
+    }
+}
+
+extern "C" __global__ void computeDIISMatrix(real* __restrict__ prevErrors, int iteration, real* __restrict__ matrix) {
+    extern __shared__ real sumBuffer[];
+    int j = min(iteration, MAX_PREV_DIIS_DIPOLES-1);
+    for (int i = blockIdx.x; i <= j; i += gridDim.x) {
+        // All the threads in this thread block work together to compute a single matrix element.
+
+        real sum = 0;
+        for (int index = threadIdx.x; index < NUM_ATOMS*3; index += blockDim.x)
+            sum += prevErrors[index+i*NUM_ATOMS*3]*prevErrors[index+j*NUM_ATOMS*3];
+        sumBuffer[threadIdx.x] = sum;
+        __syncthreads();
+        for (int offset = 1; offset < blockDim.x; offset *= 2) { 
+            if (threadIdx.x+offset < blockDim.x && (threadIdx.x&(2*offset-1)) == 0)
+                sumBuffer[threadIdx.x] += sumBuffer[threadIdx.x+offset];
+            __syncthreads();
+        }
+        if (threadIdx.x == 0) {
+            matrix[i+MAX_PREV_DIIS_DIPOLES*j] = sumBuffer[0];
+            if (i != j)
+                matrix[j+MAX_PREV_DIIS_DIPOLES*i] = sumBuffer[0];
+        }
+    }
+}
+
+extern "C" __global__ void updateInducedFieldByDIIS(real* __restrict__ inducedDipole, real* __restrict__ inducedDipolePolar, 
+        const real* __restrict__ prevDipoles, const real* __restrict__ prevDipolesPolar, const float* __restrict__ coefficients, int numPrev) {
+    for (int index = blockIdx.x*blockDim.x + threadIdx.x; index < 3*NUM_ATOMS; index += blockDim.x*gridDim.x) {
+        real sum = 0;
+        real sumPolar = 0;
+        for (int i = 0; i < numPrev; i++) {
+            sum += coefficients[i]*prevDipoles[i*3*NUM_ATOMS+index];
+            sumPolar += coefficients[i]*prevDipolesPolar[i*3*NUM_ATOMS+index];
+        }
+        inducedDipole[index] = sum;
+        inducedDipolePolar[index] = sumPolar;
+    }
 }

@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2013 Stanford University and the Authors.
+Portions copyright (c) 2012-2015 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors:
 
@@ -39,6 +39,7 @@ from simtk.openmm.app.topology import Residue
 from simtk.openmm.vec3 import Vec3
 from simtk.openmm import System, Context, NonbondedForce, CustomNonbondedForce, HarmonicBondForce, HarmonicAngleForce, VerletIntegrator, LocalEnergyMinimizer
 from simtk.unit import nanometer, molar, elementary_charge, amu, gram, liter, degree, sqrt, acos, is_quantity, dot, norm
+import simtk.unit as unit
 import element as elem
 import os
 import random
@@ -93,15 +94,15 @@ class Modeller(object):
         # Copy over the existing model.
 
         newTopology = Topology()
-        newTopology.setUnitCellDimensions(deepcopy(self.topology.getUnitCellDimensions()))
+        newTopology.setPeriodicBoxVectors(self.topology.getPeriodicBoxVectors())
         newAtoms = {}
         newPositions = []*nanometer
         for chain in self.topology.chains():
-            newChain = newTopology.addChain()
+            newChain = newTopology.addChain(chain.id)
             for residue in chain.residues():
-                newResidue = newTopology.addResidue(residue.name, newChain)
+                newResidue = newTopology.addResidue(residue.name, newChain, residue.id)
                 for atom in residue.atoms():
-                    newAtom = newTopology.addAtom(atom.name, atom.element, newResidue)
+                    newAtom = newTopology.addAtom(atom.name, atom.element, newResidue, atom.id)
                     newAtoms[atom] = newAtom
                     newPositions.append(deepcopy(self.positions[atom.index]))
         for bond in self.topology.bonds():
@@ -111,11 +112,11 @@ class Modeller(object):
 
         newAtoms = {}
         for chain in addTopology.chains():
-            newChain = newTopology.addChain()
+            newChain = newTopology.addChain(chain.id)
             for residue in chain.residues():
-                newResidue = newTopology.addResidue(residue.name, newChain)
+                newResidue = newTopology.addResidue(residue.name, newChain, residue.id)
                 for atom in residue.atoms():
-                    newAtom = newTopology.addAtom(atom.name, atom.element, newResidue)
+                    newAtom = newTopology.addAtom(atom.name, atom.element, newResidue, atom.id)
                     newAtoms[atom] = newAtom
                     newPositions.append(deepcopy(addPositions[atom.index]))
         for bond in addTopology.bonds():
@@ -139,7 +140,7 @@ class Modeller(object):
          - toDelete (list) a list of Atoms, Residues, Chains, and bonds (specified as tuples of Atoms) to delete
         """
         newTopology = Topology()
-        newTopology.setUnitCellDimensions(deepcopy(self.topology.getUnitCellDimensions()))
+        newTopology.setPeriodicBoxVectors(self.topology.getPeriodicBoxVectors())
         newAtoms = {}
         newPositions = []*nanometer
         deleteSet = set(toDelete)
@@ -152,12 +153,12 @@ class Modeller(object):
                         for atom in residue.atoms():
                             if atom not in deleteSet:
                                 if needNewChain:
-                                    newChain = newTopology.addChain()
+                                    newChain = newTopology.addChain(chain.id)
                                     needNewChain = False;
                                 if needNewResidue:
-                                    newResidue = newTopology.addResidue(residue.name, newChain)
+                                    newResidue = newTopology.addResidue(residue.name, newChain, residue.id)
                                     needNewResidue = False;
-                                newAtom = newTopology.addAtom(atom.name, atom.element, newResidue)
+                                newAtom = newTopology.addAtom(atom.name, atom.element, newResidue, atom.id)
                                 newAtoms[atom] = newAtom
                                 newPositions.append(deepcopy(self.positions[atom.index]))
         for bond in self.topology.bonds():
@@ -188,13 +189,13 @@ class Modeller(object):
         else:
             raise ValueError('Unknown water model: %s' % model)
         newTopology = Topology()
-        newTopology.setUnitCellDimensions(deepcopy(self.topology.getUnitCellDimensions()))
+        newTopology.setPeriodicBoxVectors(self.topology.getPeriodicBoxVectors())
         newAtoms = {}
         newPositions = []*nanometer
         for chain in self.topology.chains():
-            newChain = newTopology.addChain()
+            newChain = newTopology.addChain(chain.id)
             for residue in chain.residues():
-                newResidue = newTopology.addResidue(residue.name, newChain)
+                newResidue = newTopology.addResidue(residue.name, newChain, residue.id)
                 if residue.name == "HOH":
                     # Copy the oxygen and hydrogens
                     oatom = [atom for atom in residue.atoms() if atom.element == elem.oxygen]
@@ -230,7 +231,7 @@ class Modeller(object):
                 else:
                     # Just copy the residue over.
                     for atom in residue.atoms():
-                        newAtom = newTopology.addAtom(atom.name, atom.element, newResidue)
+                        newAtom = newTopology.addAtom(atom.name, atom.element, newResidue, atom.id)
                         newAtoms[atom] = newAtom
                         newPositions.append(deepcopy(self.positions[atom.index]))
         for bond in self.topology.bonds():
@@ -239,7 +240,7 @@ class Modeller(object):
         self.topology = newTopology
         self.positions = newPositions
 
-    def addSolvent(self, forcefield, model='tip3p', boxSize=None, padding=None, positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*molar):
+    def addSolvent(self, forcefield, model='tip3p', boxSize=None, boxVectors=None, padding=None, positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*molar):
         """Add solvent (both water and ions) to the model to fill a rectangular box.
 
         The algorithm works as follows:
@@ -249,36 +250,48 @@ class Modeller(object):
            randomly selecting a water molecule and replacing it with the ion.
         4. Ion pairs are added to give the requested total ionic strength.
 
-        The box size can be specified in three ways.  First, you can explicitly give a box size to use.  Alternatively, you can
+        The box size can be specified in four ways.  First, you can explicitly give the vectors defining the periodic box to
+        use.  Alternatively, for a rectangular box you can simply give the dimensions of the unit cell.  Third, you can
         give a padding distance.  The largest dimension of the solute (along the x, y, or z axis) is determined, and a cubic
-        box of size (largest dimension)+2*padding is used.  Finally, if neither a box size nor a padding distance is specified,
-        the existing Topology's unit cell dimensions are used.
+        box of size (largest dimension)+2*padding is used.  Finally, if neither box vectors, box size, nor padding distance is specified,
+        the existing Topology's box vectors are used.
 
         Parameters:
          - forcefield (ForceField) the ForceField to use for determining van der Waals radii and atomic charges
          - model (string='tip3p') the water model to use.  Supported values are 'tip3p', 'spce', 'tip4pew', and 'tip5p'.
          - boxSize (Vec3=None) the size of the box to fill with water
+         - boxVectors (tuple of Vec3=None) the vectors defining the periodic box to fill with water
          - padding (distance=None) the padding distance to use
          - positiveIon (string='Na+') the type of positive ion to add.  Allowed values are 'Cs+', 'K+', 'Li+', 'Na+', and 'Rb+'
          - negativeIon (string='Cl-') the type of negative ion to add.  Allowed values are 'Cl-', 'Br-', 'F-', and 'I-'. Be aware
            that not all force fields support all ion types.
-         - ionicString (concentration=0*molar) the total concentration of ions (both positive and negative) to add.  This
+         - ionicStrength (concentration=0*molar) the total concentration of ions (both positive and negative) to add.  This
            does not include ions that are added to neutralize the system.
         """
         # Pick a unit cell size.
 
-        if boxSize is not None:
+        if boxVectors is not None:
+            if is_quantity(boxVectors[0]):
+                boxVectors = (boxVectors[0].value_in_unit(nanometer), boxVectors[1].value_in_unit(nanometer), boxVectors[2].value_in_unit(nanometer))
+            box = Vec3(boxVectors[0][0], boxVectors[1][1], boxVectors[2][2])
+            vectors = boxVectors
+        elif boxSize is not None:
             if is_quantity(boxSize):
                 boxSize = boxSize.value_in_unit(nanometer)
-            box = Vec3(boxSize[0], boxSize[1], boxSize[2])*nanometer
+            box = Vec3(boxSize[0], boxSize[1], boxSize[2])
+            vectors = (Vec3(boxSize[0], 0, 0), Vec3(0, boxSize[1], 0), Vec3(0, 0, boxSize[2]))
         elif padding is not None:
+            if is_quantity(padding):
+                padding = padding.value_in_unit(nanometer)
             maxSize = max(max((pos[i] for pos in self.positions))-min((pos[i] for pos in self.positions)) for i in range(3))
+            maxSize = maxSize.value_in_unit(nanometer)
             box = (maxSize+2*padding)*Vec3(1, 1, 1)
+            vectors = (Vec3(maxSize+2*padding, 0, 0), Vec3(0, maxSize+2*padding, 0), Vec3(0, 0, maxSize+2*padding))
         else:
-            box = self.topology.getUnitCellDimensions()
+            box = self.topology.getUnitCellDimensions().value_in_unit(nanometer)
+            vectors = self.topology.getPeriodicBoxVectors().value_in_unit(nanometer)
             if box is None:
-                raise ValueError('Neither the box size nor padding was specified, and the Topology does not define unit cell dimensions')
-        box = box.value_in_unit(nanometer)
+                raise ValueError('Neither the box size, box vectors, nor padding was specified, and the Topology does not define unit cell dimensions')
         invBox = Vec3(1.0/box[0], 1.0/box[1], 1.0/box[2])
 
         # Identify the ion types.
@@ -330,15 +343,15 @@ class Modeller(object):
         # Copy the solute over.
 
         newTopology = Topology()
-        newTopology.setUnitCellDimensions(box)
+        newTopology.setPeriodicBoxVectors(vectors*nanometer)
         newAtoms = {}
         newPositions = []*nanometer
         for chain in self.topology.chains():
-            newChain = newTopology.addChain()
+            newChain = newTopology.addChain(chain.id)
             for residue in chain.residues():
-                newResidue = newTopology.addResidue(residue.name, newChain)
+                newResidue = newTopology.addResidue(residue.name, newChain, residue.id)
                 for atom in residue.atoms():
-                    newAtom = newTopology.addAtom(atom.name, atom.element, newResidue)
+                    newAtom = newTopology.addAtom(atom.name, atom.element, newResidue, atom.id)
                     newAtoms[atom] = newAtom
                     newPositions.append(deepcopy(self.positions[atom.index]))
         for bond in self.topology.bonds():
@@ -377,7 +390,9 @@ class Modeller(object):
 
         def periodicDistance(pos1, pos2):
             delta = pos1-pos2
-            delta = [delta[i]-floor(delta[i]*invBox[i]+0.5)*box[i] for i in range(3)]
+            delta -= vectors[2]*floor(delta[2]*invBox[2]+0.5)
+            delta -= vectors[1]*floor(delta[1]*invBox[1]+0.5)
+            delta -= vectors[0]*floor(delta[0]*invBox[0]+0.5)
             return norm(delta)
 
         # Find the list of water molecules to add.
@@ -471,7 +486,6 @@ class Modeller(object):
                     for atom2 in molAtoms:
                         if atom2.element == elem.hydrogen:
                             newTopology.addBond(atom1, atom2)
-        newTopology.setUnitCellDimensions(deepcopy(box)*nanometer)
         self.topology = newTopology
         self.positions = newPositions
 
@@ -609,15 +623,15 @@ class Modeller(object):
         # Loop over residues.
 
         newTopology = Topology()
-        newTopology.setUnitCellDimensions(deepcopy(self.topology.getUnitCellDimensions()))
+        newTopology.setPeriodicBoxVectors(self.topology.getPeriodicBoxVectors())
         newAtoms = {}
         newPositions = []*nanometer
         newIndices = []
         acceptors = [atom for atom in self.topology.atoms() if atom.element in (elem.oxygen, elem.nitrogen)]
         for chain in self.topology.chains():
-            newChain = newTopology.addChain()
+            newChain = newTopology.addChain(chain.id)
             for residue in chain.residues():
-                newResidue = newTopology.addResidue(residue.name, newChain)
+                newResidue = newTopology.addResidue(residue.name, newChain, residue.id)
                 isNTerminal = (residue == chain._residues[0])
                 isCTerminal = (residue == chain._residues[-1])
                 if residue.name in Modeller._residueHydrogens:
@@ -811,7 +825,7 @@ class Modeller(object):
         else:
             context = Context(system, VerletIntegrator(0.0), platform)
         context.setPositions(newPositions)
-        LocalEnergyMinimizer.minimize(context)
+        LocalEnergyMinimizer.minimize(context, 1.0, 50)
         self.topology = newTopology
         self.positions = context.getState(getPositions=True).getPositions()
         del context
@@ -843,7 +857,9 @@ class Modeller(object):
                     if atom.element is not None:
                         newIndex[i] = index
                         index += 1
-                        newTemplate.atoms.append(ForceField._TemplateAtomData(atom.name, atom.type, atom.element))
+                        newAtom = ForceField._TemplateAtomData(atom.name, atom.type, atom.element)
+                        newAtom.externalBonds = atom.externalBonds
+                        newTemplate.atoms.append(newAtom)
                 for b1, b2 in template.bonds:
                     if b1 in newIndex and b2 in newIndex:
                         newTemplate.bonds.append((newIndex[b1], newIndex[b2]))
@@ -880,13 +896,13 @@ class Modeller(object):
         # Create the new Topology.
 
         newTopology = Topology()
-        newTopology.setUnitCellDimensions(deepcopy(self.topology.getUnitCellDimensions()))
+        newTopology.setPeriodicBoxVectors(self.topology.getPeriodicBoxVectors())
         newAtoms = {}
         newPositions = []*nanometer
         for chain in self.topology.chains():
-            newChain = newTopology.addChain()
+            newChain = newTopology.addChain(chain.id)
             for residue in chain.residues():
-                newResidue = newTopology.addResidue(residue.name, newChain)
+                newResidue = newTopology.addResidue(residue.name, newChain, residue.id)
 
                 # Look for a matching template.
 
@@ -908,7 +924,7 @@ class Modeller(object):
                     # extra points.
 
                     template = None
-                    residueNoEP = Residue(residue.name, residue.index, residue.chain)
+                    residueNoEP = Residue(residue.name, residue.index, residue.chain, residue.id)
                     residueNoEP._atoms = [atom for atom in residue.atoms() if atom.element is not None]
                     if signature in forcefield._templateSignatures:
                         for t in forcefield._templateSignatures[signature]:
@@ -919,7 +935,7 @@ class Modeller(object):
                                     # Record the corresponding atoms.
                                     matchingAtoms = {}
                                     for atom, match in zip(residueNoEP.atoms(), matches):
-                                        templateAtomName = t.atoms[match].name
+                                        templateAtomName = templatesNoEP[t].atoms[match].name
                                         for templateAtom in template.atoms:
                                             if templateAtom.name == templateAtomName:
                                                 matchingAtoms[templateAtom] = atom
@@ -949,14 +965,14 @@ class Modeller(object):
                                     # This is a virtual site.  Compute its position by the correct rule.
 
                                     if site.type == 'average2':
-                                        position = site.weights[0]*templateAtomPositions[index+site.atoms[0]] + site.weights[1]*templateAtomPositions[index+site.atoms[1]]
+                                        position = site.weights[0]*templateAtomPositions[site.atoms[0]] + site.weights[1]*templateAtomPositions[site.atoms[1]]
                                     elif site.type == 'average3':
-                                        position = site.weights[0]*templateAtomPositions[index+site.atoms[0]] + site.weights[1]*templateAtomPositions[index+site.atoms[1]] + site.weights[2]*templateAtomPositions[index+site.atoms[2]]
+                                        position = site.weights[0]*templateAtomPositions[site.atoms[0]] + site.weights[1]*templateAtomPositions[site.atoms[1]] + site.weights[2]*templateAtomPositions[site.atoms[2]]
                                     elif site.type == 'outOfPlane':
-                                        v1 = templateAtomPositions[index+site.atoms[1]] - templateAtomPositions[index+site.atoms[0]]
-                                        v2 = templateAtomPositions[index+site.atoms[2]] - templateAtomPositions[index+site.atoms[0]]
+                                        v1 = templateAtomPositions[site.atoms[1]] - templateAtomPositions[site.atoms[0]]
+                                        v2 = templateAtomPositions[site.atoms[2]] - templateAtomPositions[site.atoms[0]]
                                         cross = Vec3(v1[1]*v2[2]-v1[2]*v2[1], v1[2]*v2[0]-v1[0]*v2[2], v1[0]*v2[1]-v1[1]*v2[0])
-                                        position = templateAtomPositions[index+site.atoms[0]] + site.weights[0]*v1 + site.weights[1]*v2 + site.weights[2]*cross
+                                        position = templateAtomPositions[site.atoms[0]] + site.weights[0]*v1 + site.weights[1]*v2 + site.weights[2]*cross
                             if position is None and atom.type in drudeTypeMap:
                                 # This is a Drude particle.  Put it on top of its parent atom.
 
@@ -968,7 +984,7 @@ class Modeller(object):
                                 # and hope that energy minimization will fix it.
 
                                 knownPositions = [x for x in templateAtomPositions if x is not None]
-                                position = sum(knownPositions)/len(knownPositions)
+                                position = unit.sum(knownPositions)/len(knownPositions)
                             newPositions.append(position*nanometer)
         for bond in self.topology.bonds():
             if bond[0] in newAtoms and bond[1] in newAtoms:

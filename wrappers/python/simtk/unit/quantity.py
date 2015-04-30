@@ -114,7 +114,7 @@ class Quantity(object):
          - unit: (Unit) the physical unit, e.g. simtk.unit.meters.
         """
         # When no unit is specified, bend over backwards to handle all one-argument possibilities
-        if unit == None: # one argument version, copied from UList
+        if unit is None: # one argument version, copied from UList
             if is_unit(value):
                 # Unit argument creates an empty list with that unit attached
                 unit = value
@@ -139,7 +139,15 @@ class Quantity(object):
                         first_item = iter(value).next()
                         # Avoid infinite recursion for string, because a one-character
                         # string is its own first element
-                        if value == first_item:
+                        try:
+                            isstr = bool(value == first_item)
+                        except ValueError:
+                            # For numpy, value == first_item returns a numpy
+                            # array of booleans, which cannot be evaluated for
+                            # truthiness (a ValueError is raised). So in this
+                            # case, we don't have a string
+                            isstr = False
+                        if isstr:
                             unit = dimensionless
                         else:
                             unit = Quantity(first_item).unit
@@ -167,7 +175,7 @@ class Quantity(object):
             value = value * unit._value
             unit = unit.unit
         # Use empty list for unspecified values
-        if value == None:
+        if value is None:
             value = []
 
         self._value = value
@@ -306,7 +314,7 @@ class Quantity(object):
             value_factor = 1.0
             canonical_units = {} # dict of dimensionTuple: (Base/ScaledUnit, exponent)
             # Bias result toward guide units
-            if guide_unit != None:
+            if guide_unit is not None:
                 for u, exponent in guide_unit.iter_base_or_scaled_units():
                     d = u.get_dimension_tuple()
                     if d not in canonical_units:
@@ -348,7 +356,7 @@ class Quantity(object):
         if unit.is_dimensionless():
             assert unit is dimensionless # should have been set earlier in this method
             if is_quantity(result):
-                result = result._value
+                result = copy.deepcopy(result._value)
         return result
 
     def __mul__(self, other):
@@ -455,6 +463,129 @@ class Quantity(object):
             new_value *= math.sqrt(unit_factor)
         return Quantity(value=new_value, unit=new_unit)
 
+    def sum(self, *args, **kwargs):
+        """
+        Computes the sum of a sequence, with the result having the same unit as
+        the current sequence.
+
+        If the value is not iterable, it raises a TypeError (same behavior as if
+        you tried to iterate over, for instance, an integer).
+
+        This function can take as arguments any arguments recognized by
+        `numpy.sum`. If arguments are passed to a non-numpy array, a TypeError
+        is raised
+        """
+        try:
+            # This will be much faster for numpy arrays
+            mysum = self._value.sum(*args, **kwargs)
+        except AttributeError:
+            if args or kwargs:
+                raise TypeError('Unsupported arguments for Quantity.sum')
+            if len(self._value) == 0:
+                mysum = 0
+            else:
+                mysum = self._value[0]
+                for i in range(1, len(self._value)):
+                    mysum += self._value[i]
+        return Quantity(mysum, self.unit)
+
+    def mean(self, *args, **kwargs):
+        """
+        Computes the mean of a sequence, with the result having the same unit as
+        the current sequence.
+
+        If the value is not iterable, it raises a TypeError
+
+        This function can take as arguments any arguments recognized by
+        `numpy.mean`. If arguments are passed to a non-numpy array, a TypeError
+        is raised
+        """
+        try:
+            # Faster for numpy arrays
+            mean = self._value.mean(*args, **kwargs)
+        except AttributeError:
+            if args or kwargs:
+                raise TypeError('Unsupported arguments for Quantity.mean')
+            mean = (self.sum() / len(self._value))._value
+        return Quantity(mean, self.unit)
+
+    def std(self, *args, **kwargs):
+        """
+        Computes the square root of the variance of a sequence, with the result
+        having the same unit as the current sequence.
+
+        If the value is not iterable, it raises a TypeError
+
+        This function can take as arguments any arguments recognized by
+        `numpy.std`. If arguments are passed to a non-numpy array, a TypeError
+        is raised
+        """
+        try:
+            # Faster for numpy arrays
+            std = self._value.std(*args, **kwargs)
+        except AttributeError:
+            if args or kwargs:
+                raise TypeError('Unsupported arguments for Quantity.std')
+            mean = self.mean()._value
+            var = 0
+            for val in self._value:
+                res = mean - val
+                var += res * res
+            var /= len(self._value)
+            std = math.sqrt(var)
+        return Quantity(std, self.unit)
+
+    def max(self, *args, **kwargs):
+        """
+        Computes the maximum value of the sequence, with the result having the
+        same unit as the current sequence.
+
+        If the value is not iterable, it raises a TypeError
+
+        This function can take as arguments any arguments recognized by
+        `numpy.max`. If arguments are passed to a non-numpy array, a TypeError
+        is raised
+        """
+        try:
+            # Faster for numpy arrays
+            mymax = self._value.max(*args, **kwargs)
+        except AttributeError:
+            if args or kwargs:
+                raise TypeError('Unsupported arguments for Quantity.max')
+            mymax = max(self._value)
+        return Quantity(mymax, self.unit)
+
+    def min(self, *args, **kwargs):
+        """
+        Computes the minimum value of the sequence, with the result having the
+        same unit as the current sequence.
+
+        If the value is not iterable, it raises a TypeError
+
+        This function can take as arguments any arguments recognized by
+        `numpy.min`. If arguments are passed to a non-numpy array, a TypeError
+        is raised
+        """
+        try:
+            # Faster for numpy arrays
+            mymin = self._value.min(*args, **kwargs)
+        except AttributeError:
+            if args or kwargs:
+                raise TypeError('Unsupported arguments for Quantity.min')
+            mymin = min(self._value)
+        return Quantity(mymin, self.unit)
+
+    def reshape(self, shape, order='C'):
+        """
+        Same as numpy.ndarray.reshape, except the result is a Quantity with the
+        same units as the current object rather than a plain numpy.ndarray
+        """
+        try:
+            return Quantity(self._value.reshape(shape, order=order), self.unit)
+        except AttributeError:
+            raise AttributeError('Only numpy array Quantity objects can be '
+                                 'reshaped')
+
     def __abs__(self):
         """
         Return absolute value of a Quantity.
@@ -545,10 +676,7 @@ class Quantity(object):
             pass
         if factor_is_identity:
             # No multiplication required
-            if (self.unit is new_unit):
-                result = self
-            else:
-                result = Quantity(self._value, new_unit)
+            result = Quantity(copy.deepcopy(self._value), new_unit)
         else:
             try:
                 # multiply operator, if it exists, is preferred
@@ -558,18 +686,7 @@ class Quantity(object):
                     value = factor * self._value # works for number, numpy.array, or vec3, e.g.
                 result = Quantity(value, new_unit)
             except TypeError:
-                # list * float fails with TypeError
-                # Presumably a list type
-                # deep copy
-                value = self._value[:] # deep copy
-                # convert tuple to list
-                try:
-                    value[0] = value[0] # tuple is immutable
-                except TypeError:
-                    # convert immutable tuple to list
-                    value = []
-                    for i in self._value:
-                        value.append(i)
+                value = copy.deepcopy(self._value)
                 result = Quantity(self._scale_sequence(value, factor, post_multiply), new_unit)
         if (new_unit.is_dimensionless()):
             return result._value
@@ -579,20 +696,29 @@ class Quantity(object):
     def _scale_sequence(self, value, factor, post_multiply):
         try:
             if post_multiply:
-                if isinstance(self._value, tuple):
-                    value = tuple([x*factor for x in value])
-                else:
-                    for i in range(len(value)):
-                        value[i] = value[i]*factor
+                value = value*factor
             else:
-                if isinstance(self._value, tuple):
-                    value = tuple([factor*x for x in value])
+                value = factor*value
+        except TypeError:
+            try:
+                if post_multiply:
+                    if isinstance(value, tuple):
+                        value = tuple([x*factor for x in value])
+                    else:
+                        for i in range(len(value)):
+                            value[i] = value[i]*factor
+                else:
+                    if isinstance(value, tuple):
+                        value = tuple([factor*x for x in value])
+                    else:
+                        for i in range(len(value)):
+                            value[i] = factor*value[i]
+            except TypeError as ex:
+                if isinstance(value, tuple):
+                    value = tuple([self._scale_sequence(x, factor, post_multiply) for x in value])
                 else:
                     for i in range(len(value)):
-                        value[i] = factor*value[i]
-        except TypeError as ex:
-            for i in range(len(value)):
-                value[i] = self._scale_sequence(value[i], factor, post_multiply)
+                        value[i] = self._scale_sequence(value[i], factor, post_multiply)
         return value
 
 

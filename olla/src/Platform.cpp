@@ -38,7 +38,9 @@
 #include <windows.h>
 #include <sstream>
 #else
-#include <dlfcn.h>
+#ifndef __PNACL__
+    #include <dlfcn.h>
+#endif
 #include <dirent.h>
 #include <cstdlib>
 #endif
@@ -132,7 +134,10 @@ int Platform::getNumPlatforms() {
 }
 
 Platform& Platform::getPlatform(int index) {
-    return *getPlatforms()[index];
+    if (index >= 0 && index < getNumPlatforms()) {
+        return *getPlatforms()[index];
+    }
+    throw OpenMMException("Invalid platform index");
 }
 
 Platform& Platform::getPlatformByName(const string& name) {
@@ -187,13 +192,18 @@ static void initializePlugins(vector<HMODULE>& plugins) {
 }
 #else
 static void* loadOneLibrary(const string& file) {
+#ifdef __PNACL__
+    throw OpenMMException("Loading dynamic libraries is not supported on PNaCl");
+#else    
     void *handle = dlopen(file.c_str(), RTLD_LAZY | RTLD_GLOBAL);
     if (handle == NULL)
         throw OpenMMException("Error loading library "+file+": "+dlerror());
     return handle;
+#endif
 }
 
 static void initializePlugins(vector<void*>& plugins) {
+#ifndef __PNACL__
     for (int i = 0; i < (int) plugins.size(); i++) {
         void (*init)();
         *(void **)(&init) = dlsym(plugins[i], "registerPlatforms");
@@ -206,6 +216,7 @@ static void initializePlugins(vector<void*>& plugins) {
         if (init != NULL)
             (*init)();
     }
+#endif
 }
 #endif
 

@@ -104,6 +104,8 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
         return new OpenCLCalcCustomHbondForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcCustomCompoundBondForceKernel::Name())
         return new OpenCLCalcCustomCompoundBondForceKernel(name, platform, cl, context.getSystem());
+    if (name == CalcCustomManyParticleForceKernel::Name())
+        return new OpenCLCalcCustomManyParticleForceKernel(name, platform, cl, context.getSystem());
     if (name == IntegrateVerletStepKernel::Name())
         return new OpenCLIntegrateVerletStepKernel(name, platform, cl);
     if (name == IntegrateLangevinStepKernel::Name())

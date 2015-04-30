@@ -48,10 +48,11 @@
 using namespace OpenMM;
 using namespace std;
 
+ReferencePlatform platform;
+
 const double TOL = 1e-5;
 
 void testSingleBond() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(2.0);
     system.addParticle(2.0);
@@ -88,7 +89,6 @@ void testTemperature() {
     const int numParticles = 8;
     const int numBonds = numParticles-1;
     const double temp = 10.0;
-    ReferencePlatform platform;
     System system;
     BrownianIntegrator integrator(temp, 2.0, 0.01);
     HarmonicBondForce* forceField = new HarmonicBondForce();
@@ -125,7 +125,6 @@ void testTemperature() {
 void testConstraints() {
     const int numParticles = 8;
     const double temp = 100.0;
-    ReferencePlatform platform;
     System system;
     BrownianIntegrator integrator(temp, 2.0, 0.001);
     integrator.setConstraintTolerance(1e-5);
@@ -165,7 +164,6 @@ void testConstraints() {
 }
 
 void testConstrainedMasslessParticles() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(0.0);
     system.addParticle(1.0);
@@ -200,7 +198,6 @@ void testRandomSeed() {
     const int numParticles = 8;
     const double temp = 100.0;
     const double collisionFreq = 10.0;
-    ReferencePlatform platform;
     System system;
     BrownianIntegrator integrator(temp, 2.0, 0.001);
     NonbondedForce* forceField = new NonbondedForce();

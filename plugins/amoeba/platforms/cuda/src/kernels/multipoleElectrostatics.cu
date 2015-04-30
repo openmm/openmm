@@ -3,8 +3,10 @@
 typedef struct {
     real4 posq;
     real3 force, dipole, inducedDipole, inducedDipolePolar;
+#ifdef INCLUDE_QUADRUPOLES
     real quadrupoleXX, quadrupoleXY, quadrupoleXZ;
     real quadrupoleYY, quadrupoleYZ;
+#endif
     float thole, damp;
 } AtomData;
 
@@ -18,11 +20,13 @@ inline __device__ void loadAtomData(AtomData& data, int atom, const real4* __res
     data.dipole.x = labFrameDipole[atom*3];
     data.dipole.y = labFrameDipole[atom*3+1];
     data.dipole.z = labFrameDipole[atom*3+2];
+#ifdef INCLUDE_QUADRUPOLES
     data.quadrupoleXX = labFrameQuadrupole[atom*5];
     data.quadrupoleXY = labFrameQuadrupole[atom*5+1];
     data.quadrupoleXZ = labFrameQuadrupole[atom*5+2];
     data.quadrupoleYY = labFrameQuadrupole[atom*5+3];
     data.quadrupoleYZ = labFrameQuadrupole[atom*5+4];
+#endif
     data.inducedDipole.x = inducedDipole[atom*3];
     data.inducedDipole.y = inducedDipole[atom*3+1];
     data.inducedDipole.z = inducedDipole[atom*3+2];
@@ -61,7 +65,9 @@ extern "C" __global__ void computeElectrostatics(
         const real4* __restrict__ posq, const uint2* __restrict__ covalentFlags, const unsigned int* __restrict__ polarizationGroupFlags,
         const ushort2* __restrict__ exclusionTiles, unsigned int startTileIndex, unsigned int numTileIndices,
 #ifdef USE_CUTOFF
-        const int* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, unsigned int maxTiles, const real4* __restrict__ blockCenter, const unsigned int* __restrict__ interactingAtoms,
+        const int* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
+        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, const real4* __restrict__ blockCenter,
+        const unsigned int* __restrict__ interactingAtoms,
 #endif
         const real* __restrict__ labFrameDipole, const real* __restrict__ labFrameQuadrupole, const real* __restrict__ inducedDipole,
         const real* __restrict__ inducedDipolePolar, const float2* __restrict__ dampingAndThole) {
@@ -92,11 +98,13 @@ extern "C" __global__ void computeElectrostatics(
 
             localData[threadIdx.x].posq = data.posq;
             localData[threadIdx.x].dipole = data.dipole;
+#ifdef INCLUDE_QUADRUPOLES
             localData[threadIdx.x].quadrupoleXX = data.quadrupoleXX;
             localData[threadIdx.x].quadrupoleXY = data.quadrupoleXY;
             localData[threadIdx.x].quadrupoleXZ = data.quadrupoleXZ;
             localData[threadIdx.x].quadrupoleYY = data.quadrupoleYY;
             localData[threadIdx.x].quadrupoleYZ = data.quadrupoleYZ;
+#endif
             localData[threadIdx.x].inducedDipole = data.inducedDipole;
             localData[threadIdx.x].inducedDipolePolar = data.inducedDipolePolar;
             localData[threadIdx.x].thole = data.thole;
@@ -210,12 +218,12 @@ extern "C" __global__ void computeElectrostatics(
 
 #ifdef USE_CUTOFF
     const unsigned int numTiles = interactionCount[0];
-    int pos = (numTiles > maxTiles ? startTileIndex+warp*numTileIndices/totalWarps : warp*numTiles/totalWarps);
-    int end = (numTiles > maxTiles ? startTileIndex+(warp+1)*numTileIndices/totalWarps : (warp+1)*numTiles/totalWarps);
+    int pos = (int) (numTiles > maxTiles ? startTileIndex+warp*(long long)numTileIndices/totalWarps : warp*(long long)numTiles/totalWarps);
+    int end = (int) (numTiles > maxTiles ? startTileIndex+(warp+1)*(long long)numTileIndices/totalWarps : (warp+1)*(long long)numTiles/totalWarps);
 #else
     const unsigned int numTiles = numTileIndices;
-    int pos = startTileIndex+warp*numTiles/totalWarps;
-    int end = startTileIndex+(warp+1)*numTiles/totalWarps;
+    int pos = (int) (startTileIndex+warp*(long long)numTiles/totalWarps);
+    int end = (int) (startTileIndex+(warp+1)*(long long)numTiles/totalWarps);
 #endif
     int skipBase = 0;
     int currentSkipIndex = tbx;
@@ -228,14 +236,14 @@ extern "C" __global__ void computeElectrostatics(
 
         // Extract the coordinates of this tile.
         
-        unsigned int x, y;
+        int x, y;
 #ifdef USE_CUTOFF
         if (numTiles <= maxTiles)
             x = tiles[pos];
         else
 #endif
         {
-            y = (unsigned int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
+            y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
             x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
             if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
                 y += (x < y ? -1 : 1);

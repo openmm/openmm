@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -39,11 +39,14 @@
 #include "lepton/CompiledExpression.h"
 #include "lepton/ExpressionProgram.h"
 
-class CpuObc;
-class CpuGBVI;
+namespace OpenMM {
+
+class ReferenceObc;
+class ReferenceGBVI;
 class ReferenceAndersenThermostat;
 class ReferenceCustomCompoundBondIxn;
 class ReferenceCustomHbondIxn;
+class ReferenceCustomManyParticleIxn;
 class ReferenceBrownianDynamics;
 class ReferenceStochasticDynamics;
 class ReferenceConstraintAlgorithm;
@@ -52,8 +55,6 @@ class ReferenceVariableStochasticDynamics;
 class ReferenceVariableVerletDynamics;
 class ReferenceVerletDynamics;
 class ReferenceCustomDynamics;
-
-namespace OpenMM {
 
 /**
  * This kernel is invoked at the beginning and end of force and energy computations.  It gives the
@@ -88,11 +89,13 @@ public:
      * @param includeForce  true if forces should be computed
      * @param includeEnergy true if potential energy should be computed
      * @param groups        a set of bit flags for which force groups to include
+     * @param valid         the method may set this to false to indicate the results are invalid and the force/energy
+     *                      calculation should be repeated
      * @return the potential energy of the system.  This value is added to all values returned by ForceImpls'
      * calcForcesAndEnergy() methods.  That is, each force kernel may <i>either</i> return its contribution to the
      * energy directly, <i>or</i> add it to an internal buffer so that it will be included here.
      */
-    double finishComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups);
+    double finishComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups, bool& valid);
 private:
     std::vector<RealVec> savedForces;
 };
@@ -490,6 +493,13 @@ public:
      * @return the potential energy due to the force
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CMAPTorsionForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const CMAPTorsionForce& force);
 private:
     std::vector<std::vector<std::vector<RealOpenMM> > > coeff;
     std::vector<int> torsionMaps;
@@ -657,7 +667,7 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const GBSAOBCForce& force);
 private:
-    CpuObc* obc;
+    ReferenceObc* obc;
     std::vector<RealOpenMM> charges;
     bool isPeriodic;
 };
@@ -688,7 +698,7 @@ public:
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
-    CpuGBVI * gbvi;
+    ReferenceGBVI * gbvi;
     std::vector<RealOpenMM> charges;
     bool isPeriodic;
 };
@@ -859,6 +869,46 @@ private:
     RealOpenMM **bondParamArray;
     ReferenceCustomCompoundBondIxn* ixn;
     std::vector<std::string> globalParameterNames;
+};
+
+/**
+ * This kernel is invoked by CustomManyParticleForce to calculate the forces acting on the system and the energy of the system.
+ */
+class ReferenceCalcCustomManyParticleForceKernel : public CalcCustomManyParticleForceKernel {
+public:
+    ReferenceCalcCustomManyParticleForceKernel(std::string name, const Platform& platform) : CalcCustomManyParticleForceKernel(name, platform), ixn(NULL) {
+    }
+    ~ReferenceCalcCustomManyParticleForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomManyParticleForce this kernel will be used for
+     */
+    void initialize(const System& system, const CustomManyParticleForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomManyParticleForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const CustomManyParticleForce& force);
+private:
+    int numParticles;
+    RealOpenMM cutoffDistance;
+    RealOpenMM **particleParamArray;
+    ReferenceCustomManyParticleIxn* ixn;
+    std::vector<std::string> globalParameterNames;
+    NonbondedMethod nonbondedMethod;
 };
 
 /**

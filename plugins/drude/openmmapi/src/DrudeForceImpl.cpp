@@ -141,15 +141,28 @@ void DrudeForceImpl::initialize(ContextImpl& context) {
 }
 
 double DrudeForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
-    return kernel.getAs<CalcDrudeForceKernel>().execute(context, includeForces, includeEnergy);
+    if ((groups&(1<<owner.getForceGroup())) != 0)
+        return kernel.getAs<CalcDrudeForceKernel>().execute(context, includeForces, includeEnergy);
+    return 0.0;
 }
 
-std::vector<std::string> DrudeForceImpl::getKernelNames() {
-    std::vector<std::string> names;
+vector<string> DrudeForceImpl::getKernelNames() {
+    vector<string> names;
     names.push_back(CalcDrudeForceKernel::Name());
     return names;
 }
 
 void DrudeForceImpl::updateParametersInContext(ContextImpl& context) {
     kernel.getAs<CalcDrudeForceKernel>().copyParametersToContext(context, owner);
+}
+
+vector<pair<int, int> > DrudeForceImpl::getBondedParticles() const {
+    int numParticles = owner.getNumParticles();
+    vector<pair<int, int> > bonds(numParticles);
+    for (int i = 0; i < numParticles; i++) {
+        int p2, p3, p4;
+        double charge, polarizability, aniso12, aniso34;
+        owner.getParticleParameters(i, bonds[i].first, bonds[i].second, p2, p3, p4, charge, polarizability, aniso12, aniso34);
+    }
+    return bonds;
 }

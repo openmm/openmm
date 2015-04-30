@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -71,11 +71,13 @@ public:
      * @param includeForce  true if forces should be computed
      * @param includeEnergy true if potential energy should be computed
      * @param groups        a set of bit flags for which force groups to include
+     * @param valid         the method may set this to false to indicate the results are invalid and the force/energy
+     *                      calculation should be repeated
      * @return the potential energy of the system.  This value is added to all values returned by ForceImpls'
      * calcForcesAndEnergy() methods.  That is, each force kernel may <i>either</i> return its contribution to the
      * energy directly, <i>or</i> add it to an internal buffer so that it will be included here.
      */
-    double finishComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups);
+    double finishComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups, bool& valid);
 private:
    OpenCLContext& cl;
 };
@@ -496,11 +498,19 @@ public:
      * @return the potential energy due to the force
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CMAPTorsionForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const CMAPTorsionForce& force);
 private:
     int numTorsions;
     bool hasInitializedKernel;
     OpenCLContext& cl;
     const System& system;
+    std::vector<mm_int2> mapPositionsVec;
     OpenCLArray* coefficients;
     OpenCLArray* mapPositions;
     OpenCLArray* torsionMaps;
@@ -599,6 +609,8 @@ private:
     class PmeIO;
     class PmePreComputation;
     class PmePostComputation;
+    class SyncQueuePreComputation;
+    class SyncQueuePostComputation;
     OpenCLContext& cl;
     bool hasInitializedKernel;
     OpenCLArray* sigmaEpsilon;
@@ -613,6 +625,8 @@ private:
     OpenCLArray* pmeAtomRange;
     OpenCLArray* pmeAtomGridIndex;
     OpenCLSort* sort;
+    cl::CommandQueue pmeQueue;
+    cl::Event pmeSyncEvent;
     OpenCLFFT3D* fft;
     Kernel cpuPme;
     PmeIO* pmeio;
@@ -625,11 +639,12 @@ private:
     cl::Kernel pmeSpreadChargeKernel;
     cl::Kernel pmeFinishSpreadChargeKernel;
     cl::Kernel pmeConvolutionKernel;
+    cl::Kernel pmeEvalEnergyKernel;
     cl::Kernel pmeInterpolateForceKernel;
     std::map<std::string, std::string> pmeDefines;
     std::vector<std::pair<int, int> > exceptionAtoms;
     double ewaldSelfEnergy, dispersionCoefficient, alpha;
-    bool hasCoulomb, hasLJ;
+    bool hasCoulomb, hasLJ, usePmeQueue;
     static const int PmeOrder = 5;
 };
 
@@ -639,7 +654,7 @@ private:
 class OpenCLCalcCustomNonbondedForceKernel : public CalcCustomNonbondedForceKernel {
 public:
     OpenCLCalcCustomNonbondedForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcCustomNonbondedForceKernel(name, platform),
-            cl(cl), params(NULL), globals(NULL), tabulatedFunctionParams(NULL), interactionGroupData(NULL), forceCopy(NULL), system(system), hasInitializedKernel(false) {
+            cl(cl), params(NULL), globals(NULL), interactionGroupData(NULL), forceCopy(NULL), system(system), hasInitializedKernel(false) {
     }
     ~OpenCLCalcCustomNonbondedForceKernel();
     /**
@@ -670,7 +685,6 @@ private:
     OpenCLContext& cl;
     OpenCLParameterSet* params;
     OpenCLArray* globals;
-    OpenCLArray* tabulatedFunctionParams;
     OpenCLArray* interactionGroupData;
     cl::Kernel interactionGroupKernel;
     std::vector<void*> interactionGroupArgs;
@@ -718,7 +732,7 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const GBSAOBCForce& force);
 private:
-    double prefactor;
+    double prefactor, surfaceAreaFactor;
     bool hasCreatedKernels;
     int maxTiles;
     OpenCLContext& cl;
@@ -742,7 +756,7 @@ class OpenCLCalcCustomGBForceKernel : public CalcCustomGBForceKernel {
 public:
     OpenCLCalcCustomGBForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcCustomGBForceKernel(name, platform),
             hasInitializedKernels(false), cl(cl), params(NULL), computedValues(NULL), energyDerivs(NULL), energyDerivChain(NULL), longEnergyDerivs(NULL), globals(NULL),
-            valueBuffers(NULL), longValueBuffers(NULL), tabulatedFunctionParams(NULL), system(system) {
+            valueBuffers(NULL), longValueBuffers(NULL), system(system) {
     }
     ~OpenCLCalcCustomGBForceKernel();
     /**
@@ -780,7 +794,6 @@ private:
     OpenCLArray* globals;
     OpenCLArray* valueBuffers;
     OpenCLArray* longValueBuffers;
-    OpenCLArray* tabulatedFunctionParams;
     std::vector<std::string> globalParamNames;
     std::vector<cl_float> globalParamValues;
     std::vector<OpenCLArray*> tabulatedFunctions;
@@ -841,8 +854,7 @@ class OpenCLCalcCustomHbondForceKernel : public CalcCustomHbondForceKernel {
 public:
     OpenCLCalcCustomHbondForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcCustomHbondForceKernel(name, platform),
             hasInitializedKernel(false), cl(cl), donorParams(NULL), acceptorParams(NULL), donors(NULL), acceptors(NULL),
-            donorBufferIndices(NULL), acceptorBufferIndices(NULL), globals(NULL), donorExclusions(NULL), acceptorExclusions(NULL),
-            tabulatedFunctionParams(NULL), system(system) {
+            donorBufferIndices(NULL), acceptorBufferIndices(NULL), globals(NULL), donorExclusions(NULL), acceptorExclusions(NULL), system(system) {
     }
     ~OpenCLCalcCustomHbondForceKernel();
     /**
@@ -881,7 +893,6 @@ private:
     OpenCLArray* acceptorBufferIndices;
     OpenCLArray* donorExclusions;
     OpenCLArray* acceptorExclusions;
-    OpenCLArray* tabulatedFunctionParams;
     std::vector<std::string> globalParamNames;
     std::vector<cl_float> globalParamValues;
     std::vector<OpenCLArray*> tabulatedFunctions;
@@ -895,7 +906,7 @@ private:
 class OpenCLCalcCustomCompoundBondForceKernel : public CalcCustomCompoundBondForceKernel {
 public:
     OpenCLCalcCustomCompoundBondForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcCustomCompoundBondForceKernel(name, platform),
-            cl(cl), params(NULL), globals(NULL), tabulatedFunctionParams(NULL), system(system) {
+            cl(cl), params(NULL), globals(NULL), system(system) {
     }
     ~OpenCLCalcCustomCompoundBondForceKernel();
     /**
@@ -927,11 +938,71 @@ private:
     OpenCLContext& cl;
     OpenCLParameterSet* params;
     OpenCLArray* globals;
-    OpenCLArray* tabulatedFunctionParams;
     std::vector<std::string> globalParamNames;
     std::vector<cl_float> globalParamValues;
     std::vector<OpenCLArray*> tabulatedFunctions;
     const System& system;
+};
+
+/**
+ * This kernel is invoked by CustomManyParticleForce to calculate the forces acting on the system.
+ */
+class OpenCLCalcCustomManyParticleForceKernel : public CalcCustomManyParticleForceKernel {
+public:
+    OpenCLCalcCustomManyParticleForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcCustomManyParticleForceKernel(name, platform),
+            hasInitializedKernel(false), cl(cl), params(NULL), globals(NULL), particleTypes(NULL), orderIndex(NULL), particleOrder(NULL), exclusions(NULL),
+            exclusionStartIndex(NULL), blockCenter(NULL), blockBoundingBox(NULL), neighborPairs(NULL), numNeighborPairs(NULL), neighborStartIndex(NULL),
+            numNeighborsForAtom(NULL), neighbors(NULL), system(system) {
+    }
+    ~OpenCLCalcCustomManyParticleForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomManyParticleForce this kernel will be used for
+     */
+    void initialize(const System& system, const CustomManyParticleForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomManyParticleForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const CustomManyParticleForce& force);
+
+private:
+    OpenCLContext& cl;
+    bool hasInitializedKernel;
+    NonbondedMethod nonbondedMethod;
+    int maxNeighborPairs, forceWorkgroupSize, findNeighborsWorkgroupSize;
+    OpenCLParameterSet* params;
+    OpenCLArray* globals;
+    OpenCLArray* particleTypes;
+    OpenCLArray* orderIndex;
+    OpenCLArray* particleOrder;
+    OpenCLArray* exclusions;
+    OpenCLArray* exclusionStartIndex;
+    OpenCLArray* blockCenter;
+    OpenCLArray* blockBoundingBox;
+    OpenCLArray* neighborPairs;
+    OpenCLArray* numNeighborPairs;
+    OpenCLArray* neighborStartIndex;
+    OpenCLArray* numNeighborsForAtom;
+    OpenCLArray* neighbors;
+    std::vector<std::string> globalParamNames;
+    std::vector<float> globalParamValues;
+    std::vector<OpenCLArray*> tabulatedFunctions;
+    const System& system;
+    cl::Kernel forceKernel, blockBoundsKernel, neighborsKernel, startIndicesKernel, copyPairsKernel;
 };
 
 /**
@@ -1202,7 +1273,7 @@ private:
     void prepareForComputation(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid);
     void recordChangedParameters(ContextImpl& context);
     OpenCLContext& cl;
-    double prevStepSize;
+    double prevStepSize, energy;
     int numGlobalVariables;
     bool hasInitializedKernels, deviceValuesAreCurrent, modifiesParameters, keNeedsForce;
     mutable bool localValuesAreCurrent;
@@ -1222,7 +1293,7 @@ private:
     std::vector<double> contextValuesDouble;
     std::vector<float> contextValues;
     std::vector<std::vector<cl::Kernel> > kernels;
-    cl::Kernel sumPotentialEnergyKernel, randomKernel, kineticEnergyKernel, sumKineticEnergyKernel;
+    cl::Kernel randomKernel, kineticEnergyKernel, sumKineticEnergyKernel;
     std::vector<CustomIntegrator::ComputationType> stepType;
     std::vector<bool> needsForces;
     std::vector<bool> needsEnergy;

@@ -46,6 +46,8 @@ namespace OpenMM {
  * be exactly equal to the number of particles in the System, or else an exception will be thrown when you
  * try to create a Context.  After a particle has been added, you can modify its force field parameters
  * by calling setParticleParameters().
+ * 
+ * @deprecated This class is not supported by most platforms, and will eventually be removed.  You can implement the same force with CustomGBForce.
  */
 
 class OPENMM_EXPORT GBVIForce : public Force {
@@ -155,7 +157,7 @@ public:
      * 
      * @return number of bonds
      */
-    int getNumBonds( void ) const;
+    int getNumBonds() const;
 
     /**
      * Get the dielectric constant for the solvent.
@@ -206,7 +208,7 @@ public:
     /** 
      * Get Born radius scaling method
      */
-    BornRadiusScalingMethod getBornRadiusScalingMethod( void ) const;
+    BornRadiusScalingMethod getBornRadiusScalingMethod() const;
     /** 
      * Set Born radius scaling method
      */
@@ -214,7 +216,7 @@ public:
     /** 
      * Get the lower limit factor used in the quintic spline scaling method (typically 0.5-0.8)
      */
-    double getQuinticLowerLimitFactor( void ) const;
+    double getQuinticLowerLimitFactor() const;
     /** 
      * Set the lower limit factor used in the quintic spline scaling method (typically 0.5-0.8)
      */
@@ -222,11 +224,20 @@ public:
     /** 
      * Get the upper limit  used in the quintic spline scaling method, measured in nm (~5.0)
      */
-    double getQuinticUpperBornRadiusLimit( void ) const;
+    double getQuinticUpperBornRadiusLimit() const;
     /** 
      * Set the upper limit used in the quintic spline scaling method, measured in nm (~5.0)
      */
     void setQuinticUpperBornRadiusLimit(double quinticUpperBornRadiusLimit);
+    /**
+     * Returns whether or not this force makes use of periodic boundary
+     * conditions.
+     *
+     * @returns true if force uses PBC and false otherwise
+     */
+    bool usesPeriodicBoundaryConditions() const {
+        return nonbondedMethod == GBVIForce::CutoffPeriodic;
+    }
 protected:
     ForceImpl* createImpl() const;
 private:

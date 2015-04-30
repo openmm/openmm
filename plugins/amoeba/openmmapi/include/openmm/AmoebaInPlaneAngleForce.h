@@ -70,56 +70,56 @@ public:
      * 
      * @param cubicK        the cubic force constant for the angle
      */
-    void setAmoebaGlobalInPlaneAngleCubic( double cubicK );
+    void setAmoebaGlobalInPlaneAngleCubic(double cubicK);
 
     /**
      * Get the global cubic term
      * 
      * @return global cubicK term
      */
-    double getAmoebaGlobalInPlaneAngleCubic( void ) const;
+    double getAmoebaGlobalInPlaneAngleCubic() const;
 
     /**
      * Set the global quartic term
      * 
      * @param quarticK the quartic force constant for the angle
      */
-    void setAmoebaGlobalInPlaneAngleQuartic( double quarticK );
+    void setAmoebaGlobalInPlaneAngleQuartic(double quarticK);
 
     /**
      * Get the global quartic term
      * 
      * @return global  quartic term
      */
-    double getAmoebaGlobalInPlaneAngleQuartic( void ) const;
+    double getAmoebaGlobalInPlaneAngleQuartic() const;
 
     /**
      * Set the global pentic term
      * 
      * @param penticK the pentic force constant for the angle
      */
-    void setAmoebaGlobalInPlaneAnglePentic( double penticK );
+    void setAmoebaGlobalInPlaneAnglePentic(double penticK);
 
     /**
      * Get the global pentic term
      * 
      * @return global penticK term
      */
-    double getAmoebaGlobalInPlaneAnglePentic( void ) const;
+    double getAmoebaGlobalInPlaneAnglePentic() const;
 
     /**
      * Set the global sextic term
      * 
      * @param sexticK       the sextic force constant for the angle
      */
-    void setAmoebaGlobalInPlaneAngleSextic( double sexticK );
+    void setAmoebaGlobalInPlaneAngleSextic(double sexticK);
 
     /**
      * Get the global sextic term
      * 
      * @return global  sextic term
      */
-    double getAmoebaGlobalInPlaneAngleSextic( void ) const;
+    double getAmoebaGlobalInPlaneAngleSextic() const;
 
     /**
      * Add an angle term to the force field.
@@ -133,7 +133,7 @@ public:
      * @return the index of the angle that was added
      */
     int addAngle(int particle1, int particle2, int particle3, int particle4, double length, 
-                 double quadraticK );
+                 double quadraticK);
 
     /**
      * Get the force field parameters for an angle term.
@@ -147,7 +147,7 @@ public:
      * @param quadratic k   the quadratic force constant for the angle measured in kJ/mol/radian^2
      */
     void getAngleParameters(int index, int& particle1, int& particle2, int& particle3, int& particle4, double& length,
-                            double& quadraticK ) const;
+                            double& quadraticK) const;
 
     /**
      * Set the force field parameters for an angle term.
@@ -160,18 +160,26 @@ public:
      * @param length        the equilibrium angle, measured in radians
      * @param quadratic k   the quadratic force constant for the angle, measured in kJ/mol/radian^2
      */
-    void setAngleParameters(int index, int particle1, int particle2, int particle3, int particle4, double length, double quadraticK );
+    void setAngleParameters(int index, int particle1, int particle2, int particle3, int particle4, double length, double quadraticK);
     /**
      * Update the per-angle parameters in a Context to match those stored in this Force object.  This method provides
      * an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
-     * Simply call setAngleParameters() to modify this object's parameters, then call updateParametersInState()
+     * Simply call setAngleParameters() to modify this object's parameters, then call updateParametersInContext()
      * to copy them over to the Context.
      * 
      * The only information this method updates is the values of per-angle parameters.  The set of particles involved
      * in an angle cannot be changed, nor can new angles be added.
      */
     void updateParametersInContext(Context& context);
-
+    /**
+     * Returns whether or not this force makes use of periodic boundary
+     * conditions.
+     *
+     * @returns true if nonbondedMethod uses PBC and false otherwise
+     */
+    bool usesPeriodicBoundaryConditions() const {
+        return false;
+    }
 protected:
     ForceImpl* createImpl() const;
     double _globalCubicK, _globalQuarticK, _globalPenticK, _globalSexticK;
@@ -192,7 +200,7 @@ public:
         particle1 = particle2  = particle3 = particle4 = -1;
         length    = quadraticK = 0.0;
     }
-    AngleInfo(int particle1, int particle2, int particle3, int particle4, double length, double  quadraticK ) :
+    AngleInfo(int particle1, int particle2, int particle3, int particle4, double length, double  quadraticK) :
         particle1(particle1), particle2(particle2), particle3(particle3), particle4(particle4),
         length(length), quadraticK(quadraticK) {
     }
