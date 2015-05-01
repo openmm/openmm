@@ -34,11 +34,11 @@ __author__ = "Peter Eastman"
 __version__ = "1.0"
 
 from simtk.openmm.app import Topology, PDBFile, ForceField
-from simtk.openmm.app.forcefield import HAngles, _createResidueSignature, _matchResidue, DrudeGenerator
+from simtk.openmm.app.forcefield import _createResidueSignature, _matchResidue, DrudeGenerator
 from simtk.openmm.app.topology import Residue
 from simtk.openmm.vec3 import Vec3
 from simtk.openmm import System, Context, NonbondedForce, CustomNonbondedForce, HarmonicBondForce, HarmonicAngleForce, VerletIntegrator, LocalEnergyMinimizer
-from simtk.unit import nanometer, molar, elementary_charge, amu, gram, liter, degree, sqrt, acos, is_quantity, dot, norm
+from simtk.unit import nanometer, molar, elementary_charge, degree, acos, is_quantity, dot, norm
 import simtk.unit as unit
 import element as elem
 import os
@@ -177,7 +177,7 @@ class Modeller(object):
 
         Parameters:
          - model (string='tip3p') the water model to convert to.  Supported values are 'tip3p', 'spce', 'tip4pew', and 'tip5p'.
-        
+
         @deprecated Use addExtraParticles() instead.  It performs the same function but in a more general way.
         """
         if model in ('tip3p', 'spce'):
@@ -772,7 +772,7 @@ class Modeller(object):
 
         if forcefield is not None:
             # Use the ForceField the user specified.
-            
+
             system = forcefield.createSystem(newTopology, rigidWater=False)
             atoms = list(newTopology.atoms())
             for i in range(system.getNumParticles()):
@@ -782,7 +782,7 @@ class Modeller(object):
         else:
             # Create a System that restrains the distance of each hydrogen from its parent atom
             # and causes hydrogens to spread out evenly.
-            
+
             system = System()
             nonbonded = CustomNonbondedForce('1/((r/0.1)^4+1)')
             bonds = HarmonicBondForce()
@@ -806,7 +806,7 @@ class Modeller(object):
             for residue in newTopology.residues():
                 if residue.name == 'HOH':
                     # Add an angle term to make the water geometry correct.
-                    
+
                     atoms = list(residue.atoms())
                     oindex = [i for i in range(len(atoms)) if atoms[i].element == elem.oxygen]
                     if len(atoms) == 3 and len(oindex) == 1:
@@ -814,12 +814,12 @@ class Modeller(object):
                         angles.addAngle(atoms[hindex[0]].index, atoms[oindex[0]].index, atoms[hindex[1]].index, 1.824, 836.8)
                 else:
                     # Add angle terms for any hydroxyls.
-                    
+
                     for atom in residue.atoms():
                         index = atom.index
                         if atom.element == elem.oxygen and len(bondedTo[index]) == 2 and elem.hydrogen in (a.element for a in bondedTo[index]):
                             angles.addAngle(bondedTo[index][0].index, index, bondedTo[index][1].index, 1.894, 460.24)
-            
+
         if platform is None:
             context = Context(system, VerletIntegrator(0.0))
         else:
