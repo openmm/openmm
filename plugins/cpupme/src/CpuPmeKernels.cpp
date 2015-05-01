@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -38,6 +38,7 @@
 #include "openmm/internal/vectorize.h"
 #include <cmath>
 #include <cstring>
+#include <sstream>
 
 using namespace OpenMM;
 using namespace std;
@@ -353,6 +354,9 @@ static void* threadBody(void* args) {
 void CpuCalcPmeReciprocalForceKernel::initialize(int xsize, int ysize, int zsize, int numParticles, double alpha) {
     if (!hasInitializedThreads) {
         numThreads = getNumProcessors();
+        char* threadsEnv = getenv("OPENMM_CPU_THREADS");
+        if (threadsEnv != NULL)
+            stringstream(threadsEnv) >> numThreads;
         fftwf_init_threads();
         hasInitializedThreads = true;
     }
