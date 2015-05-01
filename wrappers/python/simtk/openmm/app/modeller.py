@@ -168,9 +168,26 @@ class Modeller(object):
         self.topology = newTopology
         self.positions = newPositions
 
+    def getAllResType(self, resType):
+        """Get all residues of type resType"""
+        for res in self.topology.residues():
+            if res.name == resType:
+                yield res
+
+    def getNumResType(self, resType):
+        """Get number of residues of type resType"""
+        res = self.getAllResType(resType)
+        for i, _ in enumerate(res):
+                pass
+        return i
+
+    def deleteResType(self, resType):
+        """Delete all residues of type resType from the model."""
+        self.delete(self.getAllResType(resType))
+
     def deleteWater(self):
         """Delete all water molecules from the model."""
-        self.delete(res for res in self.topology.residues() if res.name == "HOH")
+        self.deleteResType(self, 'HOH')
 
     def convertWater(self, model='tip3p'):
         """Convert all water molecules to a different water model.
@@ -239,6 +256,96 @@ class Modeller(object):
                 newTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]])
         self.topology = newTopology
         self.positions = newPositions
+
+    def addFixedNumWaters(self, forcefield, numWaters, model='tip3p', positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*molar, attempts=10):
+        """Add a fixed number of solvent (both water and ions) molecules to the model to fill a rectangular box.
+
+        The algorithm works as follows:
+        1. Solvent molecules are added to fill the box with a padding of 0.0*nanometers.
+        2. The size of the box is slowly scaled up based on the estimated density of the system,
+           until the target number of waters is reached or surpassed
+        3. If necessary, ions are removed to match the requested ionic strength.
+
+        The box size is chosen automatically based on the number of waters requested.
+
+        Parameters:
+         - forcefield (ForceField) the ForceField to use for determining van der Waals radii and atomic charges
+         - numWaters (int) the target number of waters to include in the box
+         - model (string='tip3p') the water model to use.  Supported values are 'tip3p', 'spce', 'tip4pew', and 'tip5p'.
+         - padding (distance=None) the padding distance to use
+         - positiveIon (string='Na+') the type of positive ion to add.  Allowed values are 'Cs+', 'K+', 'Li+', 'Na+', and 'Rb+'
+         - negativeIon (string='Cl-') the type of negative ion to add.  Allowed values are 'Cl-', 'Br-', 'F-', and 'I-'. Be aware
+           that not all force fields support all ion types.
+         - ionicStrength (concentration=0*molar) the total concentration of ions (both positive and negative) to add.  This
+           does not include ions that are added to neutralize the system.
+         - attempts (int=10) the number of attempts to reach target number of waters
+        """
+            self.addSolvent(forcefield, model=model,
+                            padding=0.0*nanometer, positiveIon=positiveIon,
+                            negativeIon=negativeIon,
+                            ionicStrength=ionicStrength)
+            box_o = self.topology.getUnitCellDimensions()
+            n_wat_o = self.getNumResType('HOH')
+            volume_o = box_o[0]*box_o[1]*box_o[2]
+
+            if n_wat_o > numWaters:
+                raise Exception("Target number of waters is too small.")
+
+            self.deleteWater()
+            self.deleteResType(positiveIon)
+            self.deleteResType(negativeIon)
+
+            # Slowly increase the box size until the just above target number of waters
+            scale = 0.9*(numWaters/n_wat_o)**(1.0/3.0)
+            over_target = False
+            xwat = ceil(.01*n_wat_o)
+            density = None
+            while not over_target and attempts > 0:
+                modeller = self.addSolvent(forcefield, model=model,
+                                           boxSize=scale * box_o,
+                                           positiveIon=positiveIon,
+                                           negativeIon=negativeIon,
+                                           ionicStrength=ionicStrength)
+                n_wat = self.getNumResType('HOH')
+                if (n_wat >=0 numWaters):
+                    over_target = True
+                else:
+                    if density is None:
+                        box = modeller.topology.getUnitCellDimensions()
+                        volume = box[0] * box[1] * box[2]
+                        density = (n_wat - n_wat_o) / (volume - volume_o)
+                    delta = (numWaters + xwat - n_wat_o) / density
+                    scale = ((volume_o + delta) / volume_o)**(1.0/3.0)
+                    xwat += xwat
+                    self.deleteWater()
+                    self.deleteResType(positiveIon)
+                    self.deleteResType(negativeIon)
+                    attempts -= 1
+
+            # Delete waters to achieve target number
+            n_wat_del = n_wat - numWaters
+            if n_wat_del > 0:
+                waters = self.getAllResType('HOH')
+                random.shuffle(waters)
+                self.delete(waters[:n_wat_del])
+
+            if self.getNumResType('HOH') != numWaters:
+                raise Exception("Target solvation could not be completed "
+                                "in %d tries." % tries)
+
+            # Adjust ion concentrations to expected concentration
+            n_anion = self.getNumResType(negativeIon)
+            n_anion_del = floor(float(n_wat_del)/n_wat * n_anion)
+            n_cation = self.getNumResType(positiveIon)
+            n_cation_del = floor(float(n_wat_del)/n_wat * n_cation)
+            if n_anion_del > 0:
+                anions = self.getAllResType(negativeIon)
+                random.shuffle(anions)
+                self.delete(anions[:n_anion_del])
+            if n_cation_del > 0:
+                cations = self.getAllResType(positiveIon)
+                random.shuffle(cations)
+                self.delete(cations[:n_cation_del])
 
     def addSolvent(self, forcefield, model='tip3p', boxSize=None, boxVectors=None, padding=None, positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*molar):
         """Add solvent (both water and ions) to the model to fill a rectangular box.
