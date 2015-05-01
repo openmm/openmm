@@ -307,7 +307,7 @@ class Modeller(object):
                                        negativeIon=negativeIon,
                                        ionicStrength=ionicStrength)
             n_wat = self.getNumResType('HOH')
-            if (n_wat >=0 numWaters):
+            if n_wat >= numWaters:
                 over_target = True
             else:
                 if density is None:
