@@ -303,6 +303,7 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
         defines["PADDED_CUTOFF_SQUARED"] = context.doubleToString(paddedCutoff*paddedCutoff);
         defines["NUM_TILES_WITH_EXCLUSIONS"] = context.intToString(exclusionTiles->getSize());
         defines["NUM_BLOCKS"] = context.intToString(context.getNumAtomBlocks());
+        defines["SIMD_WIDTH"] = context.intToString(context.getSIMDWidth());
         if (usePeriodic)
             defines["USE_PERIODIC"] = "1";
         int maxExclusions = 0;
