@@ -187,7 +187,7 @@ class Modeller(object):
 
     def deleteWater(self):
         """Delete all water molecules from the model."""
-        self.deleteResType(self, 'HOH')
+        self.deleteResType('HOH')
 
     def convertWater(self, model='tip3p'):
         """Convert all water molecules to a different water model.
