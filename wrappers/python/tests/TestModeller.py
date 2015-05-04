@@ -308,7 +308,7 @@ class TestModeller(unittest.TestCase):
                         self.assertTrue(len(matoms)==0 and len(m1atoms)==1 and len(m2atoms)==1)
     
     def test_addSolventPeriodicBox(self):
-        """ Test the addSolvent() method; test that the four ways of passing in the periodic box all work. """
+        """ Test the addSolvent() method; test that the five ways of passing in the periodic box all work. """
     
         # First way of passing in periodic box vectors:  set it in the original topology.
         topology_start = self.pdb.topology
@@ -358,17 +358,25 @@ class TestModeller(unittest.TestCase):
         self.assertVecAlmostEqual(dim3[0]/nanometers, Vec3(2.8802, 0, 0))
         self.assertVecAlmostEqual(dim3[1]/nanometers, Vec3(0, 2.8802, 0))
         self.assertVecAlmostEqual(dim3[2]/nanometers, Vec3(0, 0, 2.8802))
+        
+        # Fifth way: specify a number of molecules to add instead of a box size
+        topology_start = self.pdb.topology
+        modeller = Modeller(topology_start, self.positions)
+        modeller.deleteWater()
+        numInitial = len(list(modeller.topology.residues()))
+        modeller.addSolvent(self.forcefield, numAdded=1000)
+        self.assertEqual(numInitial+1000, len(list(modeller.topology.residues())))
 
     def test_addSolventNeutralSolvent(self):
         """ Test the addSolvent() method; test adding ions to neutral solvent. """
-
+    
         topology_start = self.pdb.topology
         topology_start.setUnitCellDimensions(Vec3(3.5, 3.5, 3.5)*nanometers)
         modeller = Modeller(topology_start, self.positions)
         modeller.deleteWater()
         modeller.addSolvent(self.forcefield, ionicStrength = 2.0*molar)
         topology_after = modeller.getTopology()
-
+    
         water_count=0
         sodium_count=0
         chlorine_count=0
@@ -379,24 +387,24 @@ class TestModeller(unittest.TestCase):
                 sodium_count += 1
             elif residue.name=='CL':
                 chlorine_count += 1
-
+    
         total_added = water_count+sodium_count+chlorine_count
         self.assertEqual(total_added, 1364)
         expected_ion_fraction = 2.0*molar/(55.4*molar)
         expected_ions = math.floor(total_added*expected_ion_fraction/2+0.5)
         self.assertEqual(sodium_count, expected_ions)
         self.assertEqual(chlorine_count, expected_ions)
-
+    
     def test_addSolventNegativeSolvent(self):
         """ Test the addSolvent() method; test adding ions to a negatively charged solvent. """
-
+    
         topology_start = self.pdb.topology
         topology_start.setUnitCellDimensions(Vec3(3.5, 3.5, 3.5)*nanometers)
                
         # set up modeller with no solvent
         modeller = Modeller(topology_start, self.positions)
         modeller.deleteWater()
-
+    
         # add 5 Cl- ions to the original topology
         topology_toAdd = Topology()
         newChain = topology_toAdd.addChain()
@@ -410,7 +418,7 @@ class TestModeller(unittest.TestCase):
         modeller.add(topology_toAdd, positions_toAdd)
         modeller.addSolvent(self.forcefield, ionicStrength=1.0*molar)
         topology_after = modeller.getTopology()
-
+    
         water_count = 0
         sodium_count = 0
         chlorine_count = 0
@@ -421,23 +429,23 @@ class TestModeller(unittest.TestCase):
                 sodium_count += 1
             elif residue.name=='CL':
                 chlorine_count += 1
-
+    
         total_water_ions = water_count+sodium_count+chlorine_count
         expected_ion_fraction = 1.0*molar/(55.4*molar)
         expected_ions = math.floor((total_water_ions-10)*expected_ion_fraction/2+0.5)+5
         self.assertEqual(sodium_count, expected_ions)
         self.assertEqual(chlorine_count, expected_ions)
-
+    
     def test_addSolventPositiveSolvent(self):
         """ Test the addSolvent() method; test adding ions to a positively charged solvent. """
-
+    
         topology_start = self.pdb.topology
         topology_start.setUnitCellDimensions(Vec3(3.5, 3.5, 3.5)*nanometers)
-
+    
         # set up modeller with no solvent
         modeller = Modeller(topology_start, self.positions)
         modeller.deleteWater()
-
+    
         # add 5 Na+ ions to the original topology
         topology_toAdd = Topology()
         newChain = topology_toAdd.addChain()
@@ -448,12 +456,12 @@ class TestModeller(unittest.TestCase):
              topology_toAdd.addAtom('Na',Element.getBySymbol('Na'), residues[i]) 
         positions_toAdd = [Vec3(1.0,1.2,1.5), Vec3(1.7,1.0,1.4), Vec3(1.5,2.0,1.0),
                            Vec3(2.0,2.0,2.0), Vec3(2.0,1.5,1.0)]*nanometers
-
+    
         # positions_toAdd doesn't need to change
         modeller.add(topology_toAdd, positions_toAdd)
         modeller.addSolvent(self.forcefield, ionicStrength=1.0*molar)
         topology_after = modeller.getTopology()
-
+    
         water_count = 0
         sodium_count = 0
         chlorine_count = 0
@@ -464,25 +472,25 @@ class TestModeller(unittest.TestCase):
                 sodium_count += 1
             elif residue.name=='CL':
                 chlorine_count += 1
-
+    
         total_water_ions = water_count+sodium_count+chlorine_count
         expected_ion_fraction = 1.0*molar/(55.4*molar)
         expected_ions = math.floor((total_water_ions-10)*expected_ion_fraction/2+0.5)+5
         self.assertEqual(sodium_count, expected_ions)
         self.assertEqual(chlorine_count, expected_ions)
-
+    
     def test_addSolventIons(self):
         """ Test the addSolvent() method with all possible choices for positive and negative ions. """
        
         topology_start = self.pdb.topology
         topology_start.setUnitCellDimensions(Vec3(3.5, 3.5, 3.5)*nanometers)
- 
+    
         # set up modeller with no solvent
         modeller = Modeller(topology_start, self.positions)
         modeller.deleteWater()
         topology_nowater = modeller.getTopology()
         positions_nowater = modeller.getPositions()
-
+    
         expected_ion_fraction = 1.0*molar/(55.4*molar)
         
         for positiveIon in ['Cs+', 'K+', 'Li+', 'Na+', 'Rb+']:
@@ -490,7 +498,7 @@ class TestModeller(unittest.TestCase):
             modeller = Modeller(topology_nowater, positions_nowater)
             modeller.addSolvent(self.forcefield, positiveIon=positiveIon, ionicStrength=1.0*molar)
             topology_after = modeller.getTopology()
-   
+    
             water_count = 0 
             positive_ion_count = 0
             chlorine_count = 0
@@ -501,20 +509,20 @@ class TestModeller(unittest.TestCase):
                     positive_ion_count += 1
                 elif residue.name=='CL':
                     chlorine_count += 1
-
+    
             total_added = water_count+positive_ion_count+chlorine_count
             self.assertEqual(total_added, 1364)
             expected_ions = math.floor(total_added*expected_ion_fraction/2+0.5)
             self.assertEqual(positive_ion_count, expected_ions)
             self.assertEqual(chlorine_count, expected_ions)
-
+    
         for negativeIon in ['Cl-', 'Br-', 'F-', 'I-']:
             ionName = negativeIon[:-1].upper()
             modeller = Modeller(topology_nowater, positions_nowater)
             modeller.addSolvent(self.forcefield, negativeIon=negativeIon, ionicStrength=1.0*molar)
-
+    
             topology_after = modeller.getTopology()
-   
+    
             water_count = 0
             sodium_count = 0   
             negative_ion_count = 0
@@ -531,7 +539,7 @@ class TestModeller(unittest.TestCase):
             expected_ions = math.floor(total_added*expected_ion_fraction/2+0.5)
             self.assertEqual(positive_ion_count, expected_ions)
             self.assertEqual(chlorine_count, expected_ions)
-
+    
     def test_addHydrogensPdb2(self):
         """ Test the addHydrogens() method on the T4-lysozyme-L99A pdb file. """
         
@@ -539,11 +547,11 @@ class TestModeller(unittest.TestCase):
         topology_start = self.topology_start2
         positions = self.positions2
         modeller = Modeller(topology_start, positions)
-
+    
         # remove hydrogens from the topology
         toDelete = [atom for atom in topology_start.atoms() if atom.element==Element.getBySymbol('H')]
         modeller.delete(toDelete)
- 
+    
         # Create a variants list to force the one histidine to be of the right variation.
         residues = [residue for residue in topology_start.residues()]
         variants = [None]*len(residues)
@@ -551,13 +559,13 @@ class TestModeller(unittest.TestCase):
         # By setting variants[30] to 'HIE', we force the hydrogen onto the epsilon nitrogen, so
         # that it will match the topology in topology_start.
         variants[30] = 'HIE'
-
+    
         # add the hydrogens back
         modeller.addHydrogens(self.forcefield, variants=variants)
         topology_after = modeller.getTopology()
-
+    
         validate_equivalence(self, topology_start, topology_after)
-   
+    
     def test_addHydrogensPdb3(self):
         """ Test the addHydrogens() method on the metallothionein pdb file. """
         
@@ -565,31 +573,31 @@ class TestModeller(unittest.TestCase):
         topology_start = self.topology_start3
         positions = self.positions3
         modeller = Modeller(topology_start, positions)
-
+    
         # remove hydrogens from the topology
         toDelete = [atom for atom in topology_start.atoms() if atom.element==Element.getBySymbol('H')]
         modeller.delete(toDelete)
-
+    
         # add the hydrogens back
         modeller.addHydrogens(self.forcefield)
         topology_after = modeller.getTopology()
-
+    
         validate_equivalence(self, topology_start, topology_after)
-
+    
     def test_addHydrogensASH(self):
         """ Test of addHydrogens() in which we force ASH to be a variant using the variants parameter. """
-
+    
         # use the T4-lysozyme-L99A pdb file
         topology_start = self.topology_start2
         positions = self.positions2
-
+    
         # build the Modeller
         modeller = Modeller(topology_start, positions)
-
+    
         # remove hydrogens from the topology
         toDelete = [atom for atom in topology_start.atoms() if atom.element==Element.getBySymbol('H')]
         modeller.delete(toDelete)
-
+    
         # Create a variants list to force the one histidine to be of the right variation.
         residues = [residue for residue in topology_start.residues()]
         variants = [None]*len(residues)
@@ -597,15 +605,15 @@ class TestModeller(unittest.TestCase):
         # By setting variants[30] to 'HIE', we force the hydrogen onto the epsilon nitrogen, so
         # that it will match the topology in topology_start.
         variants[30] = 'HIE'
-
+    
         ASP_residue_list = [9,19,46,60,69,71,88,91,126,158]
         for residue_index in ASP_residue_list:
             variants[residue_index] = 'ASH'
-
+    
         # add the hydrogens back, using the variants list we just built
         modeller.addHydrogens(self.forcefield, variants=variants)
         topology_ASH = modeller.getTopology()
-
+    
         # There should be extra hydrogens on the ASP residues.  Assert that they exist,
         # then we delete them and validate that the topology matches what we started with.
         index_list_ASH = [176, 357, 761, 976, 1121, 1150, 1430, 1473, 2028, 2556]
@@ -616,41 +624,41 @@ class TestModeller(unittest.TestCase):
             toDelete2.append(atoms[index])
         modeller.delete(toDelete2)
         topology_ASP = modeller.getTopology()
-
+    
         validate_equivalence(self, topology_ASP, topology_start)
-
+    
     def test_addHydrogensCYX(self):
         """ Test of addHydrogens() in which we force CYX to be a variant using the variants parameter. """
-
+    
         # use the metallothionein pdb file
         topology_start = self.topology_start3
         positions = self.positions3
-
+    
         # build the Modeller
         modeller = Modeller(topology_start, positions)
-
+    
         # remove hydrogens from the topology
         toDelete = [atom for atom in topology_start.atoms() if atom.element==Element.getBySymbol('H')]
         modeller.delete(toDelete)
-
+    
         # Create a variants list to force the cysteins to be of the CYX variety.
         residues = [residue for residue in topology_start.residues()]
         variants = [None]*len(residues)
         CYS_residues = [2,4,10,12,16,18,21]
         for index in CYS_residues:
              variants[index] = 'CYX'
-
+    
         # add the hydrogens
         modeller.addHydrogens(self.forcefield, variants=variants)
         topology_CYX = modeller.getTopology()
-
+    
         # create a second modeller that we will attempt to match with topology_CYX
         modeller2 = Modeller(topology_start, positions)
         topology2 = modeller2.getTopology()
-
+    
         # There should be extra hydrogens on the CYS residues.  Assert that they exist
         # on modeller2, then delete them and validate that the topologies match.
- 
+    
        # These are the indices of the hydrogens to delete from CYS to make CYX.
         index_list_CYS = [31, 49, 110, 135, 171, 193, 229]
         atoms = [atom for atom in topology2.atoms()]
@@ -660,23 +668,23 @@ class TestModeller(unittest.TestCase):
             toDelete2.append(atoms[index])
         modeller2.delete(toDelete2)
         topology_after = modeller2.getTopology()
-
+    
         validate_equivalence(self, topology_CYX, topology_after)
-
+    
     def test_addHydrogensGLH(self):
         """ Test of addHydrogens() in which we force GLH to be a variant using the variants parameter. """
-
+    
         # use the T4-lysozyme-L99A pdb file
         topology_start = self.topology_start2
         positions = self.positions2
-
+    
         # build the Modeller
         modeller = Modeller(topology_start, positions)
-
+    
         # remove hydrogens from the topology
         toDelete = [atom for atom in topology_start.atoms() if atom.element==Element.getBySymbol('H')]      
         modeller.delete(toDelete)
-
+    
         # Create a variants list to force the one histidine to be of the right variation.
         residues = [residue for residue in topology_start.residues()]
         variants = [None]*len(residues)
@@ -684,15 +692,15 @@ class TestModeller(unittest.TestCase):
         # By setting variants[30] to 'HIE', we force the hydrogen onto the epsilon nitrogen, so
         # that it will match the topology in topology_start.
         variants[30] = 'HIE'
-
+    
         GLU_residue_list = [4,10,21,44,61,63,107,127]
         for residue_index in GLU_residue_list:
             variants[residue_index] = 'GLH'
-
+    
         # add the hydrogens back, this time with the GLH variant in place of GLU
         modeller.addHydrogens(self.forcefield, variants=variants)
         topology_GLH = modeller.getTopology()
-
+    
         # There should be extra hydrogens on the GLU residues.  Assert that they exist,     
         # then we delete them and validate that the topology matches what we started with.
         index_list_GLH = [85, 192, 387, 731, 992, 1018, 1718, 2042]
@@ -703,23 +711,23 @@ class TestModeller(unittest.TestCase):
             toDelete2.append(atoms[index])
         modeller.delete(toDelete2)
         topology_GLU = modeller.getTopology()
-
+    
         validate_equivalence(self, topology_GLU, topology_start)
-
+    
     def test_addHydrogensLYN(self):
         """ Test of addHydrogens() in which we force LYN to be a variant using the variants parameter. """
-
+    
         # use the T4-lysozyme-L99A pdb file
         topology_start = self.topology_start2
         positions = self.positions2
-
+    
         # build the Modeller
         modeller = Modeller(topology_start, positions)
-
+    
         # remove hydrogens from topology
         toDelete = [atom for atom in topology_start.atoms() if atom.element==Element.getBySymbol('H')]
         modeller.delete(toDelete)
-
+    
         # Create a variants list to force the one histidine to be of the right variation.
         residues = [residue for residue in topology_start.residues()]
         variants = [None]*len(residues)
@@ -727,25 +735,25 @@ class TestModeller(unittest.TestCase):
         # By setting variants[30] to 'HIE', we force the hydrogen onto the epsilon nitrogen, so
         # that it will match the topology in topology_start.
         variants[30] = 'HIE'
-
+    
         # Here we add the residues in which LYS is present to the variant list.  The final
         # LYS residue, 161, is not on the list because Amber force fields do not have an
         # entry for a terminal LYN residue.
         residue_list_LYS = [15,18,34,42,47,59,64,82,84,123,134,146]
         for residue_index in residue_list_LYS:
             variants[residue_index] = 'LYN'
-
+    
         # add the hydrogens back, using the variants list we just built
         modeller.addHydrogens(self.forcefield, variants=variants)
-
+    
         topology_LYN = modeller.getTopology()
-
+    
         # create a second modeller that we will attempt to match with topology_LYN
         modeller2 = Modeller(topology_start, positions)
-
+    
         # There should be extra hydrogens on the LYS residues.  Assert that they exist
         # on modeller2, then delete them and validate that the topologies match.
-
+    
         # These are the indices of the hydrogens to delete from LYN to make LYS.
         index_list_LYN = [281,343,590,701,780,960,1034,1319,1360,1959,2135,2344]
         atoms = [atom for atom in topology_start.atoms()]
@@ -755,23 +763,23 @@ class TestModeller(unittest.TestCase):
              toDelete2.append(atoms[index])
         modeller2.delete(toDelete2)
         topology_after = modeller2.getTopology()
-
+    
         validate_equivalence(self, topology_LYN, topology_after)
-
+    
     def test_addHydrogenspH4(self):
         """ Test of addHydrogens() with pH=4. """
-
+    
         # use the T4-lysozyme-L99A pdb file
         topology_start = self.topology_start2
         positions = self.positions2
-
+    
         # build the Modeller
         modeller = Modeller(topology_start, positions)
-
+    
         # remove hydrogens from the topology
         toDelete = [atom for atom in topology_start.atoms() if atom.element==Element.getBySymbol('H')]
         modeller.delete(toDelete)
-
+    
         # Create a variants list to force the one histidine to be of the right variation.
         residues = [residue for residue in topology_start.residues()]
         variants = [None]*len(residues)
@@ -779,12 +787,12 @@ class TestModeller(unittest.TestCase):
         # By setting variants[30] to 'HIE', we force the hydrogen onto the epsilon nitrogen, so
         # that it will match the topology in topology_start.
         variants[30] = 'HIE'
-
+    
         # add the hydrogens back, this time at a lower pH
         modeller.addHydrogens(self.forcefield, variants=variants, pH=4.0)
-
+    
         topology_ASH_GLH = modeller.getTopology()
-
+    
         # There should be extra hydrogens on the ASP and GLU residues.  Assert that they exist,
         # then we delete them and validate that the topology matches what we started with.
         index_list_ASH = [177, 359, 765, 980, 1127, 1156, 1436, 1479, 2035, 2564]
@@ -799,34 +807,34 @@ class TestModeller(unittest.TestCase):
             toDelete2.append(atoms[index])
         modeller.delete(toDelete2)
         topology_ASP_GLU = modeller.getTopology()
-
+    
         validate_equivalence(self, topology_ASP_GLU, topology_start)
-
+    
     def test_addHydrogenspH9(self):
         """ Test of addHydrogens() with pH=9. """
-
+    
         # use the metallothionein pdb file
         topology_start = self.topology_start3
         positions = self.positions3
-
+    
         # build the Modeller
         modeller = Modeller(topology_start, positions)
-
+    
         # remove hydrogens from topology
         toDelete = [atom for atom in topology_start.atoms() if atom.element==Element.getBySymbol('H')]
         modeller.delete(toDelete)
-
+    
         # add hydrogens with pH=9, so that the variation CYX will be chosen
         modeller.addHydrogens(self.forcefield, pH=9.0)
         topology_CYX = modeller.getTopology()
-
+    
         # create a second modeller that we will attempt to match with topology_CYX
         modeller2 = Modeller(topology_start, positions)
         topology2 = modeller2.getTopology()
-
+    
         # There should be extra hydrogens on the CYS residues.  Assert that they exist
         # on modeller2, then delete them and validate that the topologies match.
-
+    
         # These are the indices of the hydrogens to delete from CYS to make CYX.
         index_list_CYS = [31, 49, 110, 135, 171, 193, 229]
         atoms = [atom for atom in topology2.atoms()]
@@ -836,23 +844,23 @@ class TestModeller(unittest.TestCase):
             toDelete2.append(atoms[index])
         modeller2.delete(toDelete2)
         topology_after = modeller2.getTopology()
-
+    
         validate_equivalence(self, topology_CYX, topology_after) 
-
+    
     def test_addHydrogenspH11(self):
         """ Test of addHydrogens() with pH=11. """
-
+    
         # use the T4-lysozyme-L99A pdb file
         topology_start = self.topology_start2
         positions = self.positions2
-
+    
         # build the Modeller
         modeller = Modeller(topology_start, positions)
-
+    
         # remove hydrogens from topology
         toDelete = [atom for atom in topology_start.atoms() if atom.element==Element.getBySymbol('H')]
         modeller.delete(toDelete)
-
+    
         # Create a variants list to force the one histidine to be of the right variation.
         residues = [residue for residue in topology_start.residues()] 
         variants = [None]*len(residues)
@@ -860,18 +868,18 @@ class TestModeller(unittest.TestCase):
         # By setting variants[30] to 'HIE', we force the hydrogen onto the epsilon nitrogen, so
         # that it will match the topology in topology_start.
         variants[30] = 'HIE'
-
+    
         # The Amber force fields do not have an entry for terminal LYN residues, so we need to
         # force residue 161 to be the LYS variant.
         variants[161] = 'LYS'
-
+    
         # add the hydrogens back at pH = 11
         modeller.addHydrogens(self.forcefield, variants=variants, pH=11.0)
         topology_LYN = modeller.getTopology()
-
+    
         # create a second modeller that we will attempt to match with topology_LYN
         modeller2 = Modeller(topology_start, positions)
-
+    
         # There should be extra hydrogens on the LYS residues.  Assert that they exist
         # on modeller2, then delete them and validate that the topologies match.
         index_list_LYN = [281,343,590,701,780,960,1034,1319,1360,1959,2135,2344]
@@ -880,24 +888,24 @@ class TestModeller(unittest.TestCase):
         for index in index_list_LYN:
             self.assertTrue(atoms[index].element.symbol=='H')
             toDelete2.append(atoms[index])
-
+    
         modeller2.delete(toDelete2)
         topology_after = modeller2.getTopology()
-
+    
         validate_equivalence(self, topology_LYN, topology_after)
-
-
+    
+    
     def test_addExtraParticles(self):
         """Test addExtraParticles()."""
-
+    
         # Create a box of water.
-
+    
         ff1 = ForceField('tip3p.xml')
         modeller = Modeller(Topology(), []*nanometers)
         modeller.addSolvent(ff1, 'tip3p', boxSize=Vec3(2,2,2)*nanometers)
-
+    
         # Now convert the water to TIP4P.
-
+    
         ff2 = ForceField('tip4pew.xml')
         modeller.addExtraParticles(ff2)
         for residue in modeller.topology.residues():
