@@ -1405,8 +1405,13 @@ size, you can specify one:
 
     modeller.addSolvent(forcefield, boxSize=Vec3(5.0, 3.5, 3.5)*nanometers)
 
-This requests a 5 nm by 3.5 nm by 3.5 nm box.  Another option is to specify a
-padding distance:
+This requests a 5 nm by 3.5 nm by 3.5 nm box.  For a non-rectangular box, you
+can specify the three box vectors defining the unit cell:
+::
+
+    modeller.addSolvent(forcefield, boxVectors=(avec, bvec, cvec))
+
+Another option is to specify a padding distance:
 ::
 
     modeller.addSolvent(forcefield, padding=1.0*nanometers)
@@ -1415,6 +1420,14 @@ This determines the largest size of the solute along any axis (x, y, or z).  It
 then creates a cubic box of width (solute size)+2*(padding).  The above line
 guarantees that no part of the solute comes closer than 1 nm to any edge of the
 box.
+
+Finally, you can specify the exact number of solvent molecules (including both
+water and ions) to add.  This is useful when you want to solvate several different
+conformations of the same molecule while guaranteeing they all have the same
+amount of solvent:
+::
+
+    modeller.addSolvent(forcefield, numAdded=5000)
 
 By default, :meth:`addSolvent` creates TIP3P water molecules, but it also supports other
 water models:
