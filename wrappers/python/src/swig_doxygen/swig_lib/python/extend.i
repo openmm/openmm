@@ -26,7 +26,7 @@
   }
 
 
-  %pythoncode {
+  %pythoncode %{
     def getState(self,
                  getPositions=False,
                  getVelocities=False,
@@ -107,7 +107,7 @@
         if state._paramMap is not None:
              for param in state._paramMap:
                  self.setParameter(param, state._paramMap[param])
-  }
+  %}
   
   %feature("docstring") createCheckpoint "Create a checkpoint recording the current state of the Context.
 This should be treated as an opaque block of binary data.  See loadCheckpoint() for more details.
@@ -175,7 +175,7 @@ Parameters:
   }
 
 
-  %pythoncode {
+  %pythoncode %{
     def getState(self,
                  copy,
                  getPositions=False,
@@ -235,11 +235,11 @@ Parameters:
                       periodicBoxVectorsList=periodicBoxVectorsList,
                       paramMap=paramMap)
         return state
-  }
+  %}
 }
 
 %extend OpenMM::NonbondedForce {
-  %pythoncode {
+  %pythoncode %{
     def addParticle_usingRVdw(self, charge, rVDW, epsilon):
         """Add particle using elemetrary charge.  Rvdw and epsilon,
            which is consistent with AMBER parameter file usage.
@@ -260,11 +260,11 @@ Parameters:
         """
         return self.addException(particle1, particle2,
                                  chargeProd, rMin/RMIN_PER_SIGMA, epsilon)
-  }
+  %}
 }
 
 %extend OpenMM::System {
-  %pythoncode {
+  %pythoncode %{
     def __getstate__(self):
         serializationString = XmlSerializer.serializeSystem(self)
         return serializationString
@@ -275,7 +275,7 @@ Parameters:
     def getForces(self):
         """Get the list of Forces in this System"""
         return [self.getForce(i) for i in range(self.getNumForces())]
-  }
+  %}
 }
 
 %extend OpenMM::XmlSerializer {
@@ -345,7 +345,7 @@ Parameters:
     return obj;
   }
 
-  %pythoncode {
+  %pythoncode %{
     @staticmethod
     def _serializeState(pythonState):
       positions = []
@@ -431,7 +431,7 @@ Parameters:
       if type == "State":
         return XmlSerializer._deserializeState(inputString)
       raise ValueError("Unsupported object type")
-  }
+  %}
 }
 
 %extend OpenMM::CustomIntegrator {
@@ -443,7 +443,7 @@ Parameters:
 }
 
 %extend OpenMM::Force {
-  %pythoncode {
+  %pythoncode %{
     def __copy__(self):
         copy = self.__class__.__new__(self.__class__)
         copy.__init__(self)
@@ -451,11 +451,11 @@ Parameters:
 
     def __deepcopy__(self, memo):
         return self.__copy__()
-  }
+  %}
 }
 
 %extend OpenMM::Integrator {
-  %pythoncode {
+  %pythoncode %{
     def __getstate__(self):
         serializationString = XmlSerializer.serialize(self)
         return serializationString
@@ -463,5 +463,5 @@ Parameters:
     def __setstate__(self, serializationString):
         system = XmlSerializer.deserialize(serializationString)
         self.this = system.this
-  }
+  %}
 }
