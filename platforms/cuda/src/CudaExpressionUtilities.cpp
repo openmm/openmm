@@ -463,6 +463,9 @@ void CudaExpressionUtilities::processExpression(stringstream& out, const Express
         case Operation::CEIL:
             out << "ceil(" << getTempName(node.getChildren()[0], temps) << ")";
             break;
+        case Operation::SELECT:
+            out << "select(" << getTempName(node.getChildren()[0], temps) << ", " << getTempName(node.getChildren()[1], temps) << ", " << getTempName(node.getChildren()[2], temps) << ")";
+            break;            
         default:
             throw OpenMMException("Internal error: Unknown operation in user-defined expression: "+node.getOperation().getName());
     }
