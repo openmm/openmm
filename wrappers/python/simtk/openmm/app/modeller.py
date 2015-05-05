@@ -240,7 +240,7 @@ class Modeller(object):
         self.topology = newTopology
         self.positions = newPositions
 
-    def addSolvent(self, forcefield, model='tip3p', boxSize=None, boxVectors=None, padding=None, positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*molar):
+    def addSolvent(self, forcefield, model='tip3p', boxSize=None, boxVectors=None, padding=None, numAdded=None, positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*molar):
         """Add solvent (both water and ions) to the model to fill a rectangular box.
 
         The algorithm works as follows:
@@ -250,11 +250,15 @@ class Modeller(object):
            randomly selecting a water molecule and replacing it with the ion.
         4. Ion pairs are added to give the requested total ionic strength.
 
-        The box size can be specified in four ways.  First, you can explicitly give the vectors defining the periodic box to
-        use.  Alternatively, for a rectangular box you can simply give the dimensions of the unit cell.  Third, you can
-        give a padding distance.  The largest dimension of the solute (along the x, y, or z axis) is determined, and a cubic
-        box of size (largest dimension)+2*padding is used.  Finally, if neither box vectors, box size, nor padding distance is specified,
-        the existing Topology's box vectors are used.
+        The box size can be specified in any of several ways:
+        
+        1. You can explicitly give the vectors defining the periodic box to use.
+        2. Alternatively, for a rectangular box you can simply give the dimensions of the unit cell.
+        3. You can give a padding distance.  The largest dimension of the solute (along the x, y, or z axis) is determined, and a cubic
+        box of size (largest dimension)+2*padding is used.
+        4. You can specify the total number of molecules (both waters and ions) to add.  A cubic box is then created whose size is
+        just large enough hold the specified amount of solvent.
+        5. Finally, if none of the above options is specified, the existing Topology's box vectors are used.
 
         Parameters:
          - forcefield (ForceField) the ForceField to use for determining van der Waals radii and atomic charges
@@ -262,14 +266,43 @@ class Modeller(object):
          - boxSize (Vec3=None) the size of the box to fill with water
          - boxVectors (tuple of Vec3=None) the vectors defining the periodic box to fill with water
          - padding (distance=None) the padding distance to use
+         - numAdded (int=None) the total number of molecules (waters and ions) to add
          - positiveIon (string='Na+') the type of positive ion to add.  Allowed values are 'Cs+', 'K+', 'Li+', 'Na+', and 'Rb+'
          - negativeIon (string='Cl-') the type of negative ion to add.  Allowed values are 'Cl-', 'Br-', 'F-', and 'I-'. Be aware
            that not all force fields support all ion types.
          - ionicStrength (concentration=0*molar) the total concentration of ions (both positive and negative) to add.  This
            does not include ions that are added to neutralize the system.
         """
+        if len([x for x in (boxSize, boxVectors, padding, numAdded) if x is not None]) > 1:
+            raise ValueError('At most one of the following arguments may be specified: boxSize, boxVectors, padding, numAdded')
+
+        # Load the pre-equilibrated water box.
+
+        vdwRadiusPerSigma = 0.5612310241546864907
+        if model == 'tip3p':
+            waterRadius = 0.31507524065751241*vdwRadiusPerSigma
+        elif model == 'spce':
+            waterRadius = 0.31657195050398818*vdwRadiusPerSigma
+        elif model == 'tip4pew':
+            waterRadius = 0.315365*vdwRadiusPerSigma
+        elif model == 'tip5p':
+            waterRadius = 0.312*vdwRadiusPerSigma
+        else:
+            raise ValueError('Unknown water model: %s' % model)
+        pdb = PDBFile(os.path.join(os.path.dirname(__file__), 'data', model+'.pdb'))
+        pdbTopology = pdb.getTopology()
+        pdbPositions = pdb.getPositions().value_in_unit(nanometer)
+        pdbResidues = list(pdbTopology.residues())
+        pdbBoxSize = pdbTopology.getUnitCellDimensions().value_in_unit(nanometer)            
+        
         # Pick a unit cell size.
 
+        if numAdded is not None:
+            # Select a padding distance which is guaranteed to give more than the specified number of molecules.
+            
+            padding = 1.1*(numAdded/((len(pdbResidues)/pdbBoxSize[0]**3)*8))**(1.0/3.0)
+            if padding < 0.5:
+                padding = 0.5 # Ensure we have enough when adding very small numbers of molecules
         if boxVectors is not None:
             if is_quantity(boxVectors[0]):
                 boxVectors = (boxVectors[0].value_in_unit(nanometer), boxVectors[1].value_in_unit(nanometer), boxVectors[2].value_in_unit(nanometer))
@@ -304,25 +337,6 @@ class Modeller(object):
             raise ValueError('Illegal value for negative ion: %s' % negativeIon)
         positiveElement = posIonElements[positiveIon]
         negativeElement = negIonElements[negativeIon]
-
-        # Load the pre-equilibrated water box.
-
-        vdwRadiusPerSigma = 0.5612310241546864907
-        if model == 'tip3p':
-            waterRadius = 0.31507524065751241*vdwRadiusPerSigma
-        elif model == 'spce':
-            waterRadius = 0.31657195050398818*vdwRadiusPerSigma
-        elif model == 'tip4pew':
-            waterRadius = 0.315365*vdwRadiusPerSigma
-        elif model == 'tip5p':
-            waterRadius = 0.312*vdwRadiusPerSigma
-        else:
-            raise ValueError('Unknown water model: %s' % model)
-        pdb = PDBFile(os.path.join(os.path.dirname(__file__), 'data', model+'.pdb'))
-        pdbTopology = pdb.getTopology()
-        pdbPositions = pdb.getPositions().value_in_unit(nanometer)
-        pdbResidues = list(pdbTopology.residues())
-        pdbBoxSize = pdbTopology.getUnitCellDimensions().value_in_unit(nanometer)
 
         # Have the ForceField build a System for the solute from which we can determine van der Waals radii.
 
@@ -424,27 +438,42 @@ class Modeller(object):
 
                                 addedWaters.append((residue.index, atomPos))
 
-        # There could be clashes between water molecules at the box edges.  Find ones to remove.
-
-        upperCutoff = center+box/2-Vec3(waterCutoff, waterCutoff, waterCutoff)
-        lowerCutoff = center-box/2+Vec3(waterCutoff, waterCutoff, waterCutoff)
-        lowerSkinPositions = [pos for index, pos in addedWaters if pos[0] < lowerCutoff[0] or pos[1] < lowerCutoff[1] or pos[2] < lowerCutoff[2]]
-        filteredWaters = []
-        cells = {}
-        for i in range(len(lowerSkinPositions)):
-            cell = tuple((int(floor(lowerSkinPositions[i][j]/cellSize[j]))%numCells[j] for j in range(3)))
-            if cell in cells:
-                cells[cell].append(i)
-            else:
-                cells[cell] = [i]
-        for entry in addedWaters:
-            pos = entry[1]
-            if pos[0] < upperCutoff[0] and pos[1] < upperCutoff[1] and pos[2] < upperCutoff[2]:
-                filteredWaters.append(entry)
-            else:
-                if not any((periodicDistance(lowerSkinPositions[i], pos) < waterCutoff and norm(lowerSkinPositions[i]-pos) > waterCutoff for i in neighbors(pos))):
+        if numAdded is not None:
+            # We added many more waters than we actually want.  Sort them based on distance to the nearest box edge and
+            # only keep the ones in the middle.
+            
+            lowerBound = center-box/2
+            upperBound = center+box/2
+            distToEdge = (min(min(pos-lowerBound), min(upperBound-pos)) for index, pos in addedWaters)
+            sortedIndex = [i[0] for i in sorted(enumerate(distToEdge), key=lambda x: -x[1])]
+            addedWaters = [addedWaters[i] for i in sortedIndex[:numAdded]]
+            
+            # Compute a new periodic box size.
+            
+            maxSize = max(max((pos[i] for index, pos in addedWaters))-min((pos[i] for index, pos in addedWaters)) for i in range(3))
+            newTopology.setUnitCellDimensions(Vec3(maxSize, maxSize, maxSize))
+        else:
+            # There could be clashes between water molecules at the box edges.  Find ones to remove.
+    
+            upperCutoff = center+box/2-Vec3(waterCutoff, waterCutoff, waterCutoff)
+            lowerCutoff = center-box/2+Vec3(waterCutoff, waterCutoff, waterCutoff)
+            lowerSkinPositions = [pos for index, pos in addedWaters if pos[0] < lowerCutoff[0] or pos[1] < lowerCutoff[1] or pos[2] < lowerCutoff[2]]
+            filteredWaters = []
+            cells = {}
+            for i in range(len(lowerSkinPositions)):
+                cell = tuple((int(floor(lowerSkinPositions[i][j]/cellSize[j]))%numCells[j] for j in range(3)))
+                if cell in cells:
+                    cells[cell].append(i)
+                else:
+                    cells[cell] = [i]
+            for entry in addedWaters:
+                pos = entry[1]
+                if pos[0] < upperCutoff[0] and pos[1] < upperCutoff[1] and pos[2] < upperCutoff[2]:
                     filteredWaters.append(entry)
-        addedWaters = filteredWaters
+                else:
+                    if not any((periodicDistance(lowerSkinPositions[i], pos) < waterCutoff and norm(lowerSkinPositions[i]-pos) > waterCutoff for i in neighbors(pos))):
+                        filteredWaters.append(entry)
+            addedWaters = filteredWaters
 
         # Add ions to neutralize the system.
 
