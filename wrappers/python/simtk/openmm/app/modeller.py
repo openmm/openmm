@@ -444,7 +444,7 @@ class Modeller(object):
             
             lowerBound = center-box/2
             upperBound = center+box/2
-            distToEdge = [min(min(pos-lowerBound), min(upperBound-pos)) for index, pos in addedWaters]
+            distToEdge = (min(min(pos-lowerBound), min(upperBound-pos)) for index, pos in addedWaters)
             sortedIndex = [i[0] for i in sorted(enumerate(distToEdge), key=lambda x: -x[1])]
             addedWaters = [addedWaters[i] for i in sortedIndex[:numAdded]]
             
