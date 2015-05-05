@@ -64,7 +64,7 @@ public:
      */
     enum Id {CONSTANT, VARIABLE, CUSTOM, ADD, SUBTRACT, MULTIPLY, DIVIDE, POWER, NEGATE, SQRT, EXP, LOG,
              SIN, COS, SEC, CSC, TAN, COT, ASIN, ACOS, ATAN, SINH, COSH, TANH, ERF, ERFC, STEP, DELTA, SQUARE, CUBE, RECIPROCAL,
-             ADD_CONSTANT, MULTIPLY_CONSTANT, POWER_CONSTANT, MIN, MAX, ABS, FLOOR, CEIL};
+             ADD_CONSTANT, MULTIPLY_CONSTANT, POWER_CONSTANT, MIN, MAX, ABS, FLOOR, CEIL, SELECT};
     /**
      * Get the name of this Operation.
      */
@@ -155,6 +155,7 @@ public:
     class Abs;
     class Floor;
     class Ceil;
+    class Select;
 };
 
 class LEPTON_EXPORT Operation::Constant : public Operation {
@@ -1133,6 +1134,28 @@ public:
     }
     double evaluate(double* args, const std::map<std::string, double>& variables) const {
         return std::ceil(args[0]);
+    }
+    ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
+};
+
+class LEPTON_EXPORT Operation::Select : public Operation {
+public:
+    Select() {
+    }
+    std::string getName() const {
+        return "select";
+    }
+    Id getId() const {
+        return SELECT;
+    }
+    int getNumArguments() const {
+        return 3;
+    }
+    Operation* clone() const {
+        return new Select();
+    }
+    double evaluate(double* args, const std::map<std::string, double>& variables) const {
+        return args[0] ? args[1] : args[2];
     }
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };

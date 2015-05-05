@@ -328,6 +328,7 @@ Operation* Parser::getFunctionOperation(const std::string& name, const map<strin
         opMap["abs"] = Operation::ABS;
         opMap["floor"] = Operation::FLOOR;
         opMap["ceil"] = Operation::CEIL;
+        opMap["select"] = Operation::SELECT;
     }
     string trimmed = name.substr(0, name.size()-1);
 
@@ -397,6 +398,8 @@ Operation* Parser::getFunctionOperation(const std::string& name, const map<strin
             return new Operation::Floor();
         case Operation::CEIL:
             return new Operation::Ceil();
+        case Operation::SELECT:
+            return new Operation::Select();
         default:
             throw Exception("unknown function");
     }

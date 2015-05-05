@@ -325,3 +325,7 @@ ExpressionTreeNode Operation::Floor::differentiate(const std::vector<ExpressionT
 ExpressionTreeNode Operation::Ceil::differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const {
     return ExpressionTreeNode(new Operation::Constant(0.0));
 }
+
+ExpressionTreeNode Operation::Select::differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const {
+    return ExpressionTreeNode(new Operation::Constant(0.0));
+}
