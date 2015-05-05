@@ -85,16 +85,18 @@ IF(OPENMM_BUILD_C_AND_FORTRAN_WRAPPERS)
   ENDFOREACH(EX_ROOT ${C_EXAMPLES})
 ENDIF(OPENMM_BUILD_C_AND_FORTRAN_WRAPPERS)
 
+set(EXAMPLE_PATH share/openmm/examples)
+
 FOREACH(EX_ROOT ${C_EXAMPLES})
-  INSTALL(FILES ${EX_ROOT}.c DESTINATION examples)
+  INSTALL(FILES ${EX_ROOT}.c DESTINATION ${EXAMPLE_PATH})
 ENDFOREACH(EX_ROOT ${C_EXAMPLES})
 
 FOREACH(EX_ROOT ${F_EXAMPLES})
-    INSTALL(FILES ${EX_ROOT}.f90 DESTINATION examples)
+    INSTALL(FILES ${EX_ROOT}.f90 DESTINATION ${EXAMPLE_PATH})
 ENDFOREACH(EX_ROOT ${F_EXAMPLES})
 
 INSTALL(FILES simulateAmber.py simulatePdb.py simulateGromacs.py benchmark.py argon-chemical-potential.py input.inpcrd input.prmtop input.pdb input.gro input.top 5dfr_minimized.pdb 5dfr_solv-cube_equil.pdb
-        DESTINATION examples)
+        DESTINATION ${EXAMPLE_PATH})
 
 INSTALL(FILES VisualStudio/HelloArgon.vcproj 
               VisualStudio/HelloArgon.sln 
@@ -102,9 +104,9 @@ INSTALL(FILES VisualStudio/HelloArgon.vcproj
               VisualStudio/HelloArgonInC.vcproj 
               VisualStudio/HelloArgonInFortran.sln 
               VisualStudio/HelloArgonInFortran.vfproj 
-        DESTINATION examples/VisualStudio)
+        DESTINATION ${EXAMPLE_PATH}/VisualStudio)
 
-INSTALL(FILES README.txt DESTINATION examples)
-INSTALL(FILES Makefile NMakefile DESTINATION examples)
+INSTALL(FILES README.txt DESTINATION ${EXAMPLE_PATH})
+INSTALL(FILES Makefile NMakefile DESTINATION ${EXAMPLE_PATH})
 
-INSTALL(FILES MakefileNotes.txt Empty.cpp DESTINATION examples)
+INSTALL(FILES MakefileNotes.txt Empty.cpp DESTINATION ${EXAMPLE_PATH})
