@@ -2,6 +2,7 @@
 # Build and install API documentation
 #
 
+set(DOCUMENTATION_PATH share/openmm/doc)
 find_package(Doxygen QUIET)
 mark_as_advanced(CLEAR DOXYGEN_EXECUTABLE)
 IF(DOXYGEN_EXECUTABLE)
@@ -31,7 +32,7 @@ IF(DOXYGEN_EXECUTABLE)
     INSTALL(DIRECTORY "${PROJECT_BINARY_DIR}/api-c++/"
             DESTINATION "docs/api-c++/")
     INSTALL(FILES "C++ API Reference.html"
-            DESTINATION "docs/")
+            DESTINATION ${DOCUMENTATION_PATH})
     ADD_CUSTOM_TARGET(DoxygenApiDocs
         DEPENDS "${CMAKE_BINARY_DIR}/api-c++/index.html"
         COMMENT "Generating C++ API documentation using Doxygen"
@@ -69,9 +70,9 @@ IF(DOXYGEN_EXECUTABLE)
         ) 
         FILE(MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/api-python/")
         INSTALL(DIRECTORY "${PROJECT_BINARY_DIR}/api-python/"
-                DESTINATION "docs/api-python/")
+                DESTINATION ${DOCUMENTATION_PATH}/api-python/)
         INSTALL(FILES "Python API Reference.html"
-                DESTINATION "docs/")
+                DESTINATION ${DOCUMENTATION_PATH})
         ADD_DEPENDENCIES(DoxygenApiDocs PythonApiDocs)
     ENDIF (OPENMM_BUILD_PYTHON_WRAPPERS)
 ENDIF(DOXYGEN_EXECUTABLE)
@@ -123,8 +124,8 @@ ADD_CUSTOM_TARGET(sphinxhtml
 )
 
 install(FILES "${SPHINX_BUILD_DIR}/userguide/latex/OpenMMUsersGuide.pdf" "${SPHINX_BUILD_DIR}developerguide/latex/OpenMMDeveloperGuide.pdf"
-    DESTINATION docs/ OPTIONAL)
+    DESTINATION ${DOCUMENTATION_PATH} OPTIONAL)
 
 FILE(GLOB LICENSE_FILES "licenses/*.txt")
 install(FILES ${LICENSE_FILES}
-    DESTINATION licenses/)
+    DESTINATION share/licenses/)
