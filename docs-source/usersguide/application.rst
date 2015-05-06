@@ -1222,9 +1222,9 @@ specify if you want further control over the minimization.  First, you can
 specify a tolerance for when the energy should be considered to have converged:
 ::
 
-    simulation.minimizeEnergy(tolerance=10*kilojoule/mole)
+    simulation.minimizeEnergy(tolerance=5*kilojoule/mole)
 
-If you do not specify this parameter, a default tolerance of 1 kJ/mole is used.
+If you do not specify this parameter, a default tolerance of 10 kJ/mole is used.
 
 Second, you can specify a maximum number of iterations:
 ::
