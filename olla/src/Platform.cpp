@@ -179,13 +179,13 @@ static HMODULE loadOneLibrary(const string& file) {
 static void initializePlugins(vector<HMODULE>& plugins) {
     for (int i = 0; i < (int) plugins.size(); i++) {
         void (*init)();
-        *(void **)(&init) = GetProcAddress(plugins[i], "registerPlatforms");
+        *(void **)(&init) = (void *) GetProcAddress(plugins[i], "registerPlatforms");
         if (init != NULL)
             (*init)();
     }
     for (int i = 0; i < (int) plugins.size(); i++) {
         void (*init)();
-        *(void **)(&init) = GetProcAddress(plugins[i], "registerKernelFactories");
+        *(void **)(&init) = (void *) GetProcAddress(plugins[i], "registerKernelFactories");
         if (init != NULL)
             (*init)();
     }
