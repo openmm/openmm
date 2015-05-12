@@ -238,10 +238,6 @@ protected:
        */
       void tabulateEwaldScaleFactor();
 
-      /**
-       * Compute a fast approximation to erfc(x).
-       */
-      static float erfcApprox(float x);
 };
 
 } // namespace OpenMM

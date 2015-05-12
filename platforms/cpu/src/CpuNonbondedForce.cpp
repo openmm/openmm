@@ -472,15 +472,3 @@ void CpuNonbondedForce::getDeltaR(const fvec4& posI, const fvec4& posJ, fvec4& d
     r2 = dot3(deltaR, deltaR);
 }
 
-float CpuNonbondedForce::erfcApprox(float x) {
-    // This approximation for erfc is from Abramowitz and Stegun (1964) p. 299.  They cite the following as
-    // the original source: C. Hastings, Jr., Approximations for Digital Computers (1955).  It has a maximum
-    // error of 3e-7.
-
-    float t = 1.0f+(0.0705230784f+(0.0422820123f+(0.0092705272f+(0.0001520143f+(0.0002765672f+0.0000430638f*x)*x)*x)*x)*x)*x;
-    t *= t;
-    t *= t;
-    t *= t;
-    return 1.0f/(t*t);
-}
-
