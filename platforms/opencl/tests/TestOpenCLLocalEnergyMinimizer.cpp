@@ -7,7 +7,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -81,7 +81,7 @@ void testLargeSystem() {
     const int numParticles = numMolecules*2;
     const double cutoff = 2.0;
     const double boxSize = 4.0;
-    const double tolerance = 5;
+    const double tolerance = 10;
     System system;
     system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
     NonbondedForce* nonbonded = new NonbondedForce();
@@ -114,7 +114,7 @@ void testLargeSystem() {
     State finalState = context.getState(State::Forces | State::Energy | State::Positions);
     ASSERT(finalState.getPotentialEnergy() < initialState.getPotentialEnergy());
 
-    // Compute the force magnitude, substracting off any component parallel to a constraint, and
+    // Compute the force magnitude, subtracting off any component parallel to a constraint, and
     // check that it satisfies the requested tolerance.
 
     double forceNorm = 0.0;
@@ -129,8 +129,8 @@ void testLargeSystem() {
         f -= dir*dir.dot(f);
         forceNorm += f.dot(f);
     }
-    forceNorm = sqrt(forceNorm/(4*numMolecules));
-    ASSERT(forceNorm < 3*tolerance);
+    forceNorm = sqrt(forceNorm/(5*numMolecules));
+    ASSERT(forceNorm < 2*tolerance);
 }
 
 void testVirtualSites() {
@@ -138,7 +138,7 @@ void testVirtualSites() {
     const int numParticles = numMolecules*3;
     const double cutoff = 2.0;
     const double boxSize = 4.0;
-    const double tolerance = 5;
+    const double tolerance = 10;
     System system;
     system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
     NonbondedForce* nonbonded = new NonbondedForce();
@@ -195,8 +195,8 @@ void testVirtualSites() {
         
         ASSERT_EQUAL_VEC((finalState.getPositions()[i+1]+finalState.getPositions()[i])*0.5, finalState.getPositions()[i+2], 1e-5);
     }
-    forceNorm = sqrt(forceNorm/(4*numMolecules));
-    ASSERT(forceNorm < 3*tolerance);
+    forceNorm = sqrt(forceNorm/(5*numMolecules));
+    ASSERT(forceNorm < 2*tolerance);
 }
 
 int main(int argc, char* argv[]) {

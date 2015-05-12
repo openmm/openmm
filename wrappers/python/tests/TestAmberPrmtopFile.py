@@ -316,7 +316,17 @@ class TestAmberPrmtopFile(unittest.TestCase):
         simulation.reporters.append(DCDReporter(fname, 1))  # This is an explicit test for the bugs in issue #850
         simulation.step(5)
         os.remove(fname)
-        
+
+    def testChamber(self):
+        """ Tests that Chamber prmtops fail with proper error message """
+        self.assertRaises(TypeError, lambda: AmberPrmtopFile('systems/ala3_solv.parm7'))
+        try:
+            parm = AmberPrmtopFile('systems/ala3_solv.parm7')
+            # Should not make it past here
+            self.assertTrue(False)
+        except TypeError as e:
+            # Make sure it says something about chamber
+            self.assertTrue('chamber' in str(e).lower())
 
 if __name__ == '__main__':
     unittest.main()

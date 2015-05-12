@@ -7,7 +7,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -129,8 +129,8 @@ void testLargeSystem() {
         f -= dir*dir.dot(f);
         forceNorm += f.dot(f);
     }
-    forceNorm = sqrt(forceNorm/(4*numMolecules));
-    ASSERT(forceNorm < 3*tolerance);
+    forceNorm = sqrt(forceNorm/(5*numMolecules));
+    ASSERT(forceNorm < 2*tolerance);
 }
 
 void testVirtualSites() {
@@ -195,8 +195,8 @@ void testVirtualSites() {
         
         ASSERT_EQUAL_VEC((finalState.getPositions()[i+1]+finalState.getPositions()[i])*0.5, finalState.getPositions()[i+2], 1e-5);
     }
-    forceNorm = sqrt(forceNorm/(4*numMolecules));
-    ASSERT(forceNorm < 3*tolerance);
+    forceNorm = sqrt(forceNorm/(5*numMolecules));
+    ASSERT(forceNorm < 2*tolerance);
 }
 
 int main() {

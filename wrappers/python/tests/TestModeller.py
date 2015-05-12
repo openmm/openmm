@@ -308,7 +308,7 @@ class TestModeller(unittest.TestCase):
                         self.assertTrue(len(matoms)==0 and len(m1atoms)==1 and len(m2atoms)==1)
     
     def test_addSolventPeriodicBox(self):
-        """ Test the addSolvent() method; test that the four ways of passing in the periodic box all work. """
+        """ Test the addSolvent() method; test that the five ways of passing in the periodic box all work. """
     
         # First way of passing in periodic box vectors:  set it in the original topology.
         topology_start = self.pdb.topology
@@ -358,6 +358,14 @@ class TestModeller(unittest.TestCase):
         self.assertVecAlmostEqual(dim3[0]/nanometers, Vec3(2.8802, 0, 0))
         self.assertVecAlmostEqual(dim3[1]/nanometers, Vec3(0, 2.8802, 0))
         self.assertVecAlmostEqual(dim3[2]/nanometers, Vec3(0, 0, 2.8802))
+        
+        # Fifth way: specify a number of molecules to add instead of a box size
+        topology_start = self.pdb.topology
+        modeller = Modeller(topology_start, self.positions)
+        modeller.deleteWater()
+        numInitial = len(list(modeller.topology.residues()))
+        modeller.addSolvent(self.forcefield, numAdded=1000)
+        self.assertEqual(numInitial+1000, len(list(modeller.topology.residues())))
 
     def test_addSolventNeutralSolvent(self):
         """ Test the addSolvent() method; test adding ions to neutral solvent. """
@@ -389,7 +397,7 @@ class TestModeller(unittest.TestCase):
 
     def test_addSolventNegativeSolvent(self):
         """ Test the addSolvent() method; test adding ions to a negatively charged solvent. """
-
+    
         topology_start = self.pdb.topology
         topology_start.setUnitCellDimensions(Vec3(3.5, 3.5, 3.5)*nanometers)
                
@@ -476,7 +484,7 @@ class TestModeller(unittest.TestCase):
        
         topology_start = self.pdb.topology
         topology_start.setUnitCellDimensions(Vec3(3.5, 3.5, 3.5)*nanometers)
- 
+
         # set up modeller with no solvent
         modeller = Modeller(topology_start, self.positions)
         modeller.deleteWater()
@@ -490,7 +498,7 @@ class TestModeller(unittest.TestCase):
             modeller = Modeller(topology_nowater, positions_nowater)
             modeller.addSolvent(self.forcefield, positiveIon=positiveIon, ionicStrength=1.0*molar)
             topology_after = modeller.getTopology()
-   
+
             water_count = 0 
             positive_ion_count = 0
             chlorine_count = 0
@@ -514,7 +522,7 @@ class TestModeller(unittest.TestCase):
             modeller.addSolvent(self.forcefield, negativeIon=negativeIon, ionicStrength=1.0*molar)
 
             topology_after = modeller.getTopology()
-   
+
             water_count = 0
             sodium_count = 0   
             negative_ion_count = 0
@@ -543,7 +551,7 @@ class TestModeller(unittest.TestCase):
         # remove hydrogens from the topology
         toDelete = [atom for atom in topology_start.atoms() if atom.element==Element.getBySymbol('H')]
         modeller.delete(toDelete)
- 
+
         # Create a variants list to force the one histidine to be of the right variation.
         residues = [residue for residue in topology_start.residues()]
         variants = [None]*len(residues)
@@ -557,7 +565,7 @@ class TestModeller(unittest.TestCase):
         topology_after = modeller.getTopology()
 
         validate_equivalence(self, topology_start, topology_after)
-   
+
     def test_addHydrogensPdb3(self):
         """ Test the addHydrogens() method on the metallothionein pdb file. """
         
@@ -650,7 +658,7 @@ class TestModeller(unittest.TestCase):
 
         # There should be extra hydrogens on the CYS residues.  Assert that they exist
         # on modeller2, then delete them and validate that the topologies match.
- 
+
        # These are the indices of the hydrogens to delete from CYS to make CYX.
         index_list_CYS = [31, 49, 110, 135, 171, 193, 229]
         atoms = [atom for atom in topology2.atoms()]

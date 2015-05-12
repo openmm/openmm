@@ -334,7 +334,7 @@ void testMonteCarlo() {
     integrator.addComputePerDof("oldx", "x");
     integrator.addComputePerDof("x", "x+dt*gaussian");
     integrator.addComputeGlobal("accept", "step(exp((oldE-energy)/kT)-uniform)");
-    integrator.addComputePerDof("x", "accept*x + (1-accept)*oldx");
+    integrator.addComputePerDof("x", "select(accept, x, oldx)");
     HarmonicBondForce* forceField = new HarmonicBondForce();
     forceField->addBond(0, 1, 2.0, 10.0);
     system.addForce(forceField);
