@@ -340,7 +340,7 @@ void CpuNonbondedForceVec4::calculateBlockEwaldIxnImpl(int blockIndex, float* fo
 
         fvec4 one(1.0f);
         if (totalEnergy) {
-            energy += chargeProd*inverseR*erfcApprox(alphaEwald*r);
+            energy += chargeProd*inverseR*erfc(alphaEwald*r);
             energy = blend(0.0f, energy, include);
             *totalEnergy += dot4(energy, one);
         }
@@ -390,18 +390,6 @@ void CpuNonbondedForceVec4::getDeltaR(const fvec4& posI, const fvec4& x, const f
         dz -= round(dz*invBoxSize[2])*boxSize[2];
     }
     r2 = dx*dx + dy*dy + dz*dz;
-}
-
-fvec4 CpuNonbondedForceVec4::erfcApprox(const fvec4& x) {
-    // This approximation for erfc is from Abramowitz and Stegun (1964) p. 299.  They cite the following as
-    // the original source: C. Hastings, Jr., Approximations for Digital Computers (1955).  It has a maximum
-    // error of 3e-7.
-
-    fvec4 t = 1.0f+(0.0705230784f+(0.0422820123f+(0.0092705272f+(0.0001520143f+(0.0002765672f+0.0000430638f*x)*x)*x)*x)*x)*x;
-    t *= t;
-    t *= t;
-    t *= t;
-    return 1.0f/(t*t);
 }
 
 fvec4 CpuNonbondedForceVec4::ewaldScaleFunction(const fvec4& x) {

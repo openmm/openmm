@@ -84,11 +84,6 @@ protected:
       void getDeltaR(const fvec4& posI, const fvec8& x, const fvec8& y, const fvec8& z, fvec8& dx, fvec8& dy, fvec8& dz, fvec8& r2, bool periodic, const fvec4& boxSize, const fvec4& invBoxSize) const;
 
       /**
-       * Compute a fast approximation to erfc(x).
-       */
-      static fvec8 erfcApprox(const fvec8& x);
-      
-      /**
        * Evaluate the scale factor used with Ewald and PME: erfc(alpha*r) + 2*alpha*r*exp(-alpha*alpha*r*r)/sqrt(PI)
        */
       fvec8 ewaldScaleFunction(const fvec8& x);
