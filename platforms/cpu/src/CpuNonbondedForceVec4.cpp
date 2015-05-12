@@ -393,16 +393,12 @@ void CpuNonbondedForceVec4::getDeltaR(const fvec4& posI, const fvec4& x, const f
 }
 
 fvec4 CpuNonbondedForceVec4::erfcApprox(const fvec4& x) {
-    // This approximation for erfc is from Abramowitz and Stegun (1964) p. 299.  They cite the following as
+    // This approximation for erfc is from Abramowitz and Stegun (1964) p. 299 Section 7.1.26.  They cite the following as
     // the original source: C. Hastings, Jr., Approximations for Digital Computers (1955).  It has a maximum
-    // error of 3e-7.
+    // absolute error of 1.5e-7.
 
-    fvec4 t = 1.0f+(0.0705230784f+(0.0422820123f+(0.0092705272f+(0.0001520143f+(0.0002765672f+0.0000430638f*x)*x)*x)*x)*x)*x;
-    t *= t;
-    t *= t;
-    t *= t;
-    return 1.0f/(t*t);
-}
+    fvec4 t = 1.0f / (1.0f+0.3275911f*x);
+    return (0.254829592f+(-0.284496736f+(1.421413741f+(-1.453152027f+1.061405429f*t)*t)*t)*t)*t*x;}
 
 fvec4 CpuNonbondedForceVec4::ewaldScaleFunction(const fvec4& x) {
     // Compute the tabulated Ewald scale factor: erfc(alpha*r) + 2*alpha*r*exp(-alpha*alpha*r*r)/sqrt(PI)
