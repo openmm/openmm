@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012 Stanford University and the Authors.
+Portions copyright (c) 2012-2015 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors:
 
@@ -126,3 +126,71 @@ class Simulation(object):
                     if next[0] == nextSteps:
                         reporter.report(self, state)
 
+    def saveCheckpoint(self, file):
+        """Save a checkpoint of the simulation to a file.
+        
+        The output is a binary file that contains a complete representation of the current state of the Simulation.
+        It includes both publicly visible data such as the particle positions and velocities, and also internal data
+        such as the states of random number generators.  Reloading the checkpoint will put the Simulation back into
+        precisely the same state it had before, so it can be exactly continued.
+        
+        A checkpoint file is highly specific to the Simulation it was created from.  It can only be loaded into
+        another Simulation that has an identical System, uses the same Platform and OpenMM version, and is running on
+        identical hardware.  If you need a more portable way to resume simulations, consider using saveState() instead.
+        
+        Parameters:
+         - file (string or file) a File-like object to write the checkpoint to, or alternatively a filename
+        """
+        if isinstance(file, str):
+            with open(file, 'wb') as f:
+                f.write(self.context.createCheckpoint())
+        else:
+            file.write(self.context.createCheckpoint())
+    
+    def loadCheckpoint(self, file):
+        """Load a checkpoint file that was created with saveCheckpoint().
+        
+        Parameters:
+         - file (string or file) a File-like object to load the checkpoint from, or alternatively a filename
+        """
+        if isinstance(file, str):
+            with open(file, 'rb') as f:
+                self.context.loadCheckpoint(f.read())
+        else:
+            self.context.loadCheckpoint(file.read())
+
+    def saveState(self, file):
+        """Save the current state of the simulation to a file.
+        
+        The output is an XML file containing a serialized State object.  It includes all publicly visible data,
+        including positions, velocities, and parameters.  Reloading the State will put the Simulation back into
+        approximately the same state it had before.
+        
+        Unlike saveCheckpoint(), this does not store internal data such as the states of random number generators.
+        Therefore, you should not expect the following trajectory to be identical to what would have been produced
+        with the original Simulation.  On the other hand, this means it is portable across different Platforms or
+        hardware.
+        
+        Parameters:
+         - file (string or file) a File-like object to write the state to, or alternatively a filename
+        """
+        state = self.context.getState(getPositions=True, getVelocities=True, getParameters=True)
+        xml = mm.XmlSerializer.serialize(state)
+        if isinstance(file, str):
+            with open(file, 'w') as f:
+                f.write(xml)
+        else:
+            file.write(xml)
+    
+    def loadState(self, file):
+        """Load a State file that was created with saveState().
+        
+        Parameters:
+         - file (string or file) a File-like object to load the state from, or alternatively a filename
+        """
+        if isinstance(file, str):
+            with open(file, 'r') as f:
+                xml = f.read()
+        else:
+            xml = file.read()
+        self.context.setState(mm.XmlSerializer.deserialize(xml))
