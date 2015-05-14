@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2014 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2015 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -87,7 +87,7 @@ protected:
       /**
        * Compute a fast approximation to erfc(x).
        */
-      static fvec4 erfcApprox(const fvec4& x);
+      fvec4 erfcApprox(const fvec4& x);
       
       /**
        * Evaluate the scale factor used with Ewald and PME: erfc(alpha*r) + 2*alpha*r*exp(-alpha*alpha*r*r)/sqrt(PI)

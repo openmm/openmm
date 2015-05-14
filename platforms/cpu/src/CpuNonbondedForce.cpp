@@ -171,17 +171,20 @@ void CpuNonbondedForce::setUseSwitchingFunction(float distance) {
   }
 
   
-void CpuNonbondedForce::tabulateEwaldScaleFactor() {
+  void CpuNonbondedForce::tabulateEwaldScaleFactor() {
     if (tableIsValid)
         return;
     tableIsValid = true;
     ewaldDX = cutoffDistance/NUM_TABLE_POINTS;
     ewaldDXInv = 1.0f/ewaldDX;
+    erfcDXInv = 1.0f/(ewaldDX*alphaEwald);
+    erfcTable.resize(NUM_TABLE_POINTS+4);
     ewaldScaleTable.resize(NUM_TABLE_POINTS+4);
     for (int i = 0; i < NUM_TABLE_POINTS+4; i++) {
         double r = i*ewaldDX;
         double alphaR = alphaEwald*r;
-        ewaldScaleTable[i] = erfc(alphaR) + TWO_OVER_SQRT_PI*alphaR*exp(-alphaR*alphaR);
+        erfcTable[i] = erfc(alphaR);
+        ewaldScaleTable[i] = erfcTable[i] + TWO_OVER_SQRT_PI*alphaR*exp(-alphaR*alphaR);
     }
 }
   
@@ -364,15 +367,15 @@ void CpuNonbondedForce::threadComputeDirect(ThreadPool& threads, int threadIndex
                     float inverseR = 1/r;
                     float chargeProd = ONE_4PI_EPS0*posq[4*i+3]*posq[4*j+3];
                     float alphaR = alphaEwald*r;
-                    float erfAlphaR = erf(alphaR);
-                    if (erfAlphaR > 1e-6f) {
+                    float erfcAlphaR = erfcApprox(alphaR);
+                    if (1-erfcAlphaR > 1e-6f) {
                         float dEdR = (float) (chargeProd * inverseR * inverseR * inverseR);
-                        dEdR = (float) (dEdR * (erfAlphaR-TWO_OVER_SQRT_PI*alphaR*exp(-alphaR*alphaR)));
+                        dEdR = (float) (dEdR * (1.0f-erfcAlphaR-TWO_OVER_SQRT_PI*alphaR*exp(-alphaR*alphaR)));
                         fvec4 result = deltaR*dEdR;
                         (fvec4(forces+4*i)-result).store(forces+4*i);
                         (fvec4(forces+4*j)+result).store(forces+4*j);
                         if (includeEnergy)
-                            threadEnergy[threadIndex] -= chargeProd*inverseR*erfAlphaR;
+                            threadEnergy[threadIndex] -= chargeProd*inverseR*(1.0f-erfcAlphaR);
                     }
                 }
             }
@@ -473,14 +476,10 @@ void CpuNonbondedForce::getDeltaR(const fvec4& posI, const fvec4& posJ, fvec4& d
 }
 
 float CpuNonbondedForce::erfcApprox(float x) {
-    // This approximation for erfc is from Abramowitz and Stegun (1964) p. 299.  They cite the following as
-    // the original source: C. Hastings, Jr., Approximations for Digital Computers (1955).  It has a maximum
-    // error of 3e-7.
-
-    float t = 1.0f+(0.0705230784f+(0.0422820123f+(0.0092705272f+(0.0001520143f+(0.0002765672f+0.0000430638f*x)*x)*x)*x)*x)*x;
-    t *= t;
-    t *= t;
-    t *= t;
-    return 1.0f/(t*t);
+    float x1 = x*erfcDXInv;
+    int index = min((int) floor(x1), NUM_TABLE_POINTS);
+    float coeff2 = x1-index;
+    float coeff1 = 1.0f-coeff2;
+    return coeff1*erfcTable[index] + coeff2*erfcTable[index+1];
 }
 
