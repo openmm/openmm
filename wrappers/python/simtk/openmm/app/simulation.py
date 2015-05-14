@@ -33,6 +33,8 @@ __version__ = "1.0"
 
 import simtk.openmm as mm
 import simtk.unit as unit
+import sys
+from datetime import datetime, timedelta
 
 class Simulation(object):
     """Simulation provides a simplified API for running simulations with OpenMM and reporting results.
@@ -90,10 +92,51 @@ class Simulation(object):
 
     def step(self, steps):
         """Advance the simulation by integrating a specified number of time steps."""
-        stepTo = self.currentStep+steps
+        self._simulate(endStep=self.currentStep+steps)
+        
+    def runForClockTime(self, time, checkpointFile=None, stateFile=None, checkpointInterval=None):
+        """Advance the simulation by integrating time steps until a fixed amount of clock time has elapsed.
+        
+        This is useful when you have a limited amount of computer time available, and want to run the longest simulation
+        possible in that time.  This method will continue taking time steps until the specified clock time has elapsed,
+        then return.  It also can automatically write out a checkpoint and/or state file before returning, so you can
+        later resume the simulation.  Another option allows it to write checkpoints or states at regular intervals, so
+        you can resume even if the simulation is interrupted before the time limit is reached.
+        
+        Parameters:
+         - time (time) the amount of time to run for.  If no units are specified, it is assumed to be a number of hours.
+         - checkpointFile (string or file=None) if specified, a checkpoint file will be written at the end of the
+           simulation (and optionally at regular intervals before then) by passing this to saveCheckpoint().
+         - stateFile (string or file=None) if specified, a state file will be written at the end of the
+           simulation (and optionally at regular intervals before then) by passing this to saveState().
+         - checkpointInterval (time=None) if specified, checkpoints and/or states will be written at regular intervals
+           during the simulation, in addition to writing a final version at the end.  If no units are specified, this is
+           assumed to be in hours.
+        """
+        if unit.is_quantity(time):
+            time = time.value_in_unit(unit.hours)
+        if unit.is_quantity(checkpointInterval):
+            checkpointInterval = checkpointInterval.value_in_unit(unit.hours)
+        endTime = datetime.now()+timedelta(hours=time)
+        while (datetime.now() < endTime):
+            if checkpointInterval is None:
+                nextTime = endTime
+            else:
+                nextTime = datetime.now()+timedelta(hours=checkpointInterval)
+                if nextTime > endTime:
+                    nextTime = endTime
+            self._simulate(endTime=nextTime)
+            if checkpointFile is not None:
+                self.saveCheckpoint(checkpointFile)
+            if stateFile is not None:
+                self.saveState(stateFile)
+        
+    def _simulate(self, endStep=None, endTime=None):
+        if endStep is None:
+            endStep = sys.maxint
         nextReport = [None]*len(self.reporters)
-        while self.currentStep < stepTo:
-            nextSteps = stepTo-self.currentStep
+        while self.currentStep < endStep:
+            nextSteps = endStep-self.currentStep
             anyReport = False
             for i, reporter in enumerate(self.reporters):
                 nextReport[i] = reporter.describeNextReport(self)
@@ -104,6 +147,8 @@ class Simulation(object):
             while stepsToGo > 10:
                 self.integrator.step(10) # Only take 10 steps at a time, to give Python more chances to respond to a control-c.
                 stepsToGo -= 10
+                if endTime is not None and datetime.now() >= endTime:
+                    return
             self.integrator.step(stepsToGo)
             self.currentStep += nextSteps
             if anyReport:

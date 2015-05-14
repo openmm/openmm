@@ -1,5 +1,6 @@
 import unittest
 import tempfile
+from datetime import datetime, timedelta
 from simtk.openmm import *
 from simtk.openmm.app import *
 from simtk.unit import *
@@ -73,6 +74,65 @@ class TestSimulation(unittest.TestCase):
         state = simulation.context.getState(getPositions=True, getVelocities=True)
         self.assertEqual(initialState.getPositions(), state.getPositions())
         self.assertEqual(initialState.getVelocities(), state.getVelocities())
+
+    def testStep(self):
+        """Test the step() method."""
+        pdb = PDBFile('systems/alanine-dipeptide-implicit.pdb')
+        ff = ForceField('amber99sb.xml', 'tip3p.xml')
+        system = ff.createSystem(pdb.topology)
+        integrator = VerletIntegrator(0.001*picoseconds)
+
+        # Create a Simulation.
+
+        simulation = Simulation(pdb.topology, system, integrator, Platform.getPlatformByName('Reference'))
+        simulation.context.setPositions(pdb.positions)
+        simulation.context.setVelocitiesToTemperature(300*kelvin)
+        self.assertEqual(0, simulation.currentStep)
+        self.assertEqual(0*picoseconds, simulation.context.getState().getTime())
+
+        # Take some steps and verify the simulation has advanced by the correct amount.
+
+        simulation.step(23)
+        self.assertEqual(23, simulation.currentStep)
+        self.assertAlmostEqual(0.023, simulation.context.getState().getTime().value_in_unit(picoseconds))
+
+    def testRunForClockTime(self):
+        """Test the runForClockTime() method."""
+        pdb = PDBFile('systems/alanine-dipeptide-implicit.pdb')
+        ff = ForceField('amber99sb.xml', 'tip3p.xml')
+        system = ff.createSystem(pdb.topology)
+        integrator = VerletIntegrator(0.001*picoseconds)
+
+        # Create a Simulation.
+
+        simulation = Simulation(pdb.topology, system, integrator, Platform.getPlatformByName('Reference'))
+        simulation.context.setPositions(pdb.positions)
+        simulation.context.setVelocitiesToTemperature(300*kelvin)
+        self.assertEqual(0, simulation.currentStep)
+        self.assertEqual(0*picoseconds, simulation.context.getState().getTime())
+
+        # Run for five seconds, the save both a checkpoint and a state.
+
+        checkpointFile = tempfile.mktemp()
+        stateFile = tempfile.mktemp()
+        startTime = datetime.now()
+        simulation.runForClockTime(5*seconds, checkpointFile=checkpointFile, stateFile=stateFile)
+        endTime = datetime.now()
+
+        # Make sure at least five seconds have elapsed, but no more than ten.
+
+        self.assertTrue(endTime >= startTime+timedelta(seconds=5))
+        self.assertTrue(endTime < startTime+timedelta(seconds=10))
+
+        # Load the checkpoint and state and make sure they are both correct.
+
+        velocities = simulation.context.getState(getVelocities=True).getVelocities()
+        simulation.context.setVelocitiesToTemperature(300*kelvin)
+        simulation.loadCheckpoint(checkpointFile)
+        self.assertEqual(velocities, simulation.context.getState(getVelocities=True).getVelocities())
+        simulation.context.setVelocitiesToTemperature(300*kelvin)
+        simulation.loadState(stateFile)
+        self.assertEqual(velocities, simulation.context.getState(getVelocities=True).getVelocities())
 
 
 if __name__ == '__main__':
