@@ -375,12 +375,13 @@ class AtomList(TrackedList):
 class Residue(object):
     """ Residue class """
 
-    def __init__(self, resname, idx):
+    def __init__(self, resname, idx, inscode=''):
         self.resname = resname
         self.idx = idx
         self.atoms = []
         self.resnum = None # Numbered based on SYSTEM name
         self.system = None
+        self.inscode = inscode
 
     def add_atom(self, atom):
         if self.system is None:
@@ -416,7 +417,7 @@ class Residue(object):
             return self.resname == thing.resname and self.idx == thing.idx
         if isinstance(thing, tuple) or isinstance(thing, list):
             # Must be resnum, resname
-            return thing == (self.resname, self.idx)
+            return thing == (self.resname, self.idx, self.inscode)
         return False # No other type can be equal.
 
     def __ne__(self, thing):
@@ -447,7 +448,7 @@ class ResidueList(list):
             resnum += 1
 
     def add_atom(self, system, resnum, resname, name,
-                 attype, charge, mass, props=None):
+                 attype, charge, mass, inscode, props=None):
         """
         Adds an atom to the list of residues. If the residue is not the same as
         the last residue that was created, a new Residue is created and added
@@ -461,25 +462,22 @@ class ResidueList(list):
             - attype (int or str) : Type of the atom
             - charge (float) : Partial atomic charge of the atom
             - mass (float) : Mass (amu) of the atom
+            - inscode (str) : Insertion code, if it is specified
 
         Returns:
             The Atom instance created and added to the list of residues
         """
-        if self._last_residue is None:
-            res = self._last_residue = Residue(resname, resnum)
+        lr = self._last_residue
+        if lr is None:
+            res = self._last_residue = Residue(resname, resnum, inscode)
             list.append(self, res)
-        elif (self._last_residue != (resname, resnum) or
-              system != self._last_residue.system):
-            if (self._last_residue.idx == resnum and
-                self._last_residue.system == system):
-                lresname = self._last_residue.resname
-                warnings.warn('Residue %d split into separate residues %s '
-                              'and %s' % (resnum, lresname, resname),
-                              SplitResidueWarning)
-            res = self._last_residue = Residue(resname, resnum)
+        elif (lr.resname != resname or lr.idx != resname or
+                lr.inscode != inscode  or system != lr.system):
+            res = self._last_residue = Residue(resname, resnum, inscode)
+            res.system = system
             list.append(self, res)
         else:
-            res = self._last_residue
+            res = lr
         atom = Atom(system, name, attype, float(charge), float(mass), props)
         res.add_atom(atom)
         return atom

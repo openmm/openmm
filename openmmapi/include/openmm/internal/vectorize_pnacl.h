@@ -330,7 +330,7 @@ static inline fvec4 ceil(const fvec4& v) {
     return truncated + blend(0.0f, 1.0f, truncated<v);
 }
 
-static inline fvec4 sqrt(const fvec4& v) {
+static inline fvec4 rsqrt(const fvec4& v) {
     // Initial estimate of rsqrt().
 
     ivec4 i = (__m128i) v;
@@ -343,7 +343,11 @@ static inline fvec4 sqrt(const fvec4& v) {
     y *= 1.5f-x2*y*y;
     y *= 1.5f-x2*y*y;
     y *= 1.5f-x2*y*y;
-    return y*v;
+    return y;
+}
+
+static inline fvec4 sqrt(const fvec4& v) {
+    return rsqrt(v)*v;
 }
 
 #endif /*OPENMM_VECTORIZE_PNACL_H_*/

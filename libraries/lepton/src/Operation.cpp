@@ -7,7 +7,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009 Stanford University and the Authors.           *
+ * Portions copyright (c) 2009-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -324,4 +324,12 @@ ExpressionTreeNode Operation::Floor::differentiate(const std::vector<ExpressionT
 
 ExpressionTreeNode Operation::Ceil::differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const {
     return ExpressionTreeNode(new Operation::Constant(0.0));
+}
+
+ExpressionTreeNode Operation::Select::differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const {
+    vector<ExpressionTreeNode> derivChildren;
+    derivChildren.push_back(children[0]);
+    derivChildren.push_back(childDerivs[1]);
+    derivChildren.push_back(childDerivs[2]);
+    return ExpressionTreeNode(new Operation::Select(), derivChildren);
 }

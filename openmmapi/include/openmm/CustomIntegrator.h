@@ -204,9 +204,9 @@ namespace OpenMM {
  * the force from a single force group, or a random number.
  * 
  * Expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
- * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, erf, erfc, min, max, abs, floor, ceil, step, delta.  All trigonometric functions
- * are defined in radians, and log is the natural logarithm.  step(x) = 0 if x is less than 0, 1 otherwise.  delta(x) = 1 if x is 0, 0 otherwise.  An expression
- * may also involve intermediate quantities that are defined following the main expression, using ";" as a separator.
+ * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, erf, erfc, min, max, abs, floor, ceil, step, delta, select.  All trigonometric functions
+ * are defined in radians, and log is the natural logarithm.  step(x) = 0 if x is less than 0, 1 otherwise.  delta(x) = 1 if x is 0, 0 otherwise.
+ * select(x,y,z) = z if x = 0, y otherwise.  An expression may also involve intermediate quantities that are defined following the main expression, using ";" as a separator.
  */
 
 class OPENMM_EXPORT CustomIntegrator : public Integrator {

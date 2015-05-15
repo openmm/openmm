@@ -127,6 +127,10 @@ class PrmtopLoader(object):
                         tag, self._prmtopVersion = line.rstrip().split(None, 1)
                     elif line.startswith('%FLAG'):
                         tag, flag = line.rstrip().split(None, 1)
+                        if flag == 'CTITLE':
+                            raise TypeError('CHAMBER-style topology files are not supported here. '
+                                            'Consider using the CHARMM files directly with CharmmPsfFile '
+                                            'or ParmEd (where CHAMBER topologies are supported)')
                         self._flags.append(flag)
                         self._raw_data[flag] = []
                     elif line.startswith('%FORMAT'):

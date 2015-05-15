@@ -1282,7 +1282,8 @@ private:
     void prepareForComputation(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid);
     void recordChangedParameters(ContextImpl& context);
     CudaContext& cu;
-    double prevStepSize;
+    double prevStepSize, energy;
+    float energyFloat;
     int numGlobalVariables;
     bool hasInitializedKernels, deviceValuesAreCurrent, modifiesParameters, keNeedsForce;
     mutable bool localValuesAreCurrent;
@@ -1303,7 +1304,7 @@ private:
     std::vector<std::vector<CUfunction> > kernels;
     std::vector<std::vector<std::vector<void*> > > kernelArgs;
     std::vector<void*> kineticEnergyArgs;
-    CUfunction sumPotentialEnergyKernel, randomKernel, kineticEnergyKernel, sumKineticEnergyKernel;
+    CUfunction randomKernel, kineticEnergyKernel, sumKineticEnergyKernel;
     std::vector<CustomIntegrator::ComputationType> stepType;
     std::vector<bool> needsForces;
     std::vector<bool> needsEnergy;
