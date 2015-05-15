@@ -32,6 +32,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#define NOMINMAX
 #include "internal/windowsExportPme.h"
 #include "openmm/kernels.h"
 #include "openmm/Vec3.h"
