@@ -30,6 +30,8 @@ from checkpointreporter import CheckpointReporter
 from charmmcrdfiles import CharmmCrdFile, CharmmRstFile
 from charmmparameterset import CharmmParameterSet
 from charmmpsffile import CharmmPsfFile, CharmmPSFWarning
+from mtsintegrator import MTSIntegrator
+from amd import AMDIntegrator, AMDForceGroupIntegrator, DualAMDIntegrator
 
 # Enumerated values
 
