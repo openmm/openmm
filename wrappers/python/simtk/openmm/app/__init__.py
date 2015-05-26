@@ -4,7 +4,7 @@ OpenMM Application
 __docformat__ = "epytext en"
 
 __author__ = "Peter Eastman"
-__copyright__ = "Copyright 2011, Stanford University and Peter Eastman"
+__copyright__ = "Copyright 2015, Stanford University and Peter Eastman"
 __credits__ = []
 __license__ = "MIT"
 __maintainer__ = "Peter Eastman"

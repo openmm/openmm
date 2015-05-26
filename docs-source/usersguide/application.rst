@@ -1121,6 +1121,25 @@ integrator is:
 The parameter is the integration error tolerance (0.001), whose meaning is the
 same as for the Langevin integrator.
 
+Multiple Time Step Integrator
+-----------------------------
+
+The :class:`MTSIntegrator` class implements the rRESPA multiple time step
+algorithm\ :cite:`Tuckerman1992`.  This allows some forces in the system to be evaluated more
+frequently than others.  For details on how to use it, consult the API
+documentation.
+
+aMD Integrator
+--------------
+
+There are three different integrator types that implement variations of the
+aMD\ :cite:`Hamelberg2007` accelerated sampling algorithm: :class:`AMDIntegrator`,
+:class:`AMDForceGroupIntegrator`, and :class:`DualAMDIntegrator`.  They
+perform integration on a modified potential energy surface to allow much faster
+sampling of conformations.  For details on how to use them, consult the API
+documentation.
+
+
 Temperature Coupling
 ====================
 
