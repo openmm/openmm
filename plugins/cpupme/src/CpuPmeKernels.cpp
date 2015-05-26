@@ -177,12 +177,12 @@ static void computeReciprocalEterm(int start, int end, int gridx, int gridy, int
     }
 }
 
-static float reciprocalEnergy(int start, int end, fftwf_complex* grid, int gridx, int gridy, int gridz, double alpha, vector<float>* bsplineModuli, Vec3* periodicBoxVectors, Vec3* recipBoxVectors) {
+static double reciprocalEnergy(int start, int end, fftwf_complex* grid, int gridx, int gridy, int gridz, double alpha, vector<float>* bsplineModuli, Vec3* periodicBoxVectors, Vec3* recipBoxVectors) {
     const unsigned int zsizeHalf = gridz/2+1;
     const unsigned int yzsizeHalf = gridy*zsizeHalf;
     const float scaleFactor = (float) (M_PI*periodicBoxVectors[0][0]*periodicBoxVectors[1][1]*periodicBoxVectors[2][2]);
     const float recipExpFactor = (float) (M_PI*M_PI/(alpha*alpha));
-    float energy = 0.0f;
+    double energy = 0.0;
 
     int firstz = (start == 0 ? 1 : 0);
     for (int kx = start; kx < end; kx++) {
@@ -220,7 +220,7 @@ static float reciprocalEnergy(int start, int end, fftwf_complex* grid, int gridx
             firstz = 0;
         }
     }
-    return 0.5f*energy;
+    return 0.5*energy;
 }
 
 static void reciprocalConvolution(int start, int end, fftwf_complex* grid, int gridx, int gridy, int gridz, vector<float>& recipEterm) {
