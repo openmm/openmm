@@ -114,6 +114,7 @@ class GromacsTopFile(object):
             self.exclusions = []
             self.pairs = []
             self.cmaps = []
+            self.has_virtual_sites = False
 
     def _processFile(self, file):
         append = ''
@@ -247,6 +248,11 @@ class GromacsTopFile(object):
                 self._processPairType(line)
             elif self._currentCategory == 'cmaptypes':
                 self._processCmapType(line)
+            elif self._currentCategory.startswith('virtual_sites'):
+                if self._currentMoleculeType is None:
+                    raise ValueError('Found %s before [ moleculetype ]' %
+                                     self._currentCategory)
+                self._currentMoleculeType.has_virtual_sites = True
 
     def _processDefaults(self, line):
         """Process the [ defaults ] line."""
@@ -483,6 +489,8 @@ class GromacsTopFile(object):
             if moleculeName not in self._moleculeTypes:
                 raise ValueError("Unknown molecule type: "+moleculeName)
             moleculeType = self._moleculeTypes[moleculeName]
+            if moleculeCount > 0 and moleculeType.has_virtual_sites:
+                raise ValueError('Virtual sites not yet supported by Gromacs parsers')
 
             # Create the specified number of molecules of this type.
 
