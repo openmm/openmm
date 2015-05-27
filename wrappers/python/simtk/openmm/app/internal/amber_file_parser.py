@@ -1363,6 +1363,7 @@ class AmberNetcdfRestart(object):
             if 'velocities' in ncfile.variables:
                 vels = ncfile.variables['velocities']
                 self.velocities = np.array(vels[:]) * vels.scale_factor
+                del vels # Get rid of reference to variable to avoid warnings
             if ('cell_lengths' in ncfile.variables and
                 'cell_angles' in ncfile.variables):
                 self.boxVectors = np.zeros((3,3), np.float32)
@@ -1372,6 +1373,7 @@ class AmberNetcdfRestart(object):
                         units.degrees)
                 self.boxVectors = computePeriodicBoxVectors(leng[0], leng[1],
                         leng[2], angl[0], angl[1], angl[2])
+                del leng, angl # Avoid warnings
             if 'time' in ncfile.variables:
                 self.time = ncfile.variables['time'].getValue()
         finally:
