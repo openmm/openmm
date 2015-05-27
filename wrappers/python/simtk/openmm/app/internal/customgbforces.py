@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2014 University of Virginia and the Authors.
+Portions copyright (c) 2012-2015 University of Virginia and the Authors.
 Authors: Christoph Klein, Michael R. Shirts
 Contributors: Jason M. Swails, Peter Eastman
 
@@ -31,7 +31,7 @@ USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 from __future__ import division
 
-from simtk.openmm import CustomGBForce, Discrete1DFunction
+from simtk.openmm import CustomGBForce, Discrete2DFunction
 
 d0=[2.26685,2.32548,2.38397,2.44235,2.50057,2.55867,2.61663,2.67444,
     2.73212,2.78965,2.84705,2.9043,2.96141,3.0184,3.07524,3.13196,
@@ -308,12 +308,12 @@ def GBSAGBnForce(solventDielectric=78.5, soluteDielectric=1, SA=None,
     custom.addPerParticleParameter("or") # Offset radius
     custom.addPerParticleParameter("sr") # Scaled offset radius
 
-    custom.addTabulatedFunction("getd0", Discrete1DFunction(d0))
-    custom.addTabulatedFunction("getm0", Discrete1DFunction(m0))
+    custom.addTabulatedFunction("getd0", Discrete2DFunction(21, 21, d0))
+    custom.addTabulatedFunction("getm0", Discrete2DFunction(21, 21, m0))
 
     custom.addComputedValue("I",  "Ivdw+neckScale*Ineck;"
-                                  "Ineck=step(radius1+radius2+neckCut-r)*getm0(index)/(1+100*(r-getd0(index))^2+0.3*1000000*(r-getd0(index))^6);"
-                                  "index = (radius2*200-20)*21 + (radius1*200-20);"
+                                  "Ineck=step(radius1+radius2+neckCut-r)*getm0(index1,index2)/(1+100*(r-getd0(index1,index2))^2+0.3*1000000*(r-getd0(index1,index2))^6);"
+                                  "index1=radius1*200-20; index2=radius2*200-20;"
                                   "Ivdw=step(r+sr2-or1)*0.5*(1/L-1/U+0.25*(r-sr2^2/r)*(1/(U^2)-1/(L^2))+0.5*log(L/U)/r);"
                                   "U=r+sr2;"
                                   "L=max(or1, D);"
@@ -350,12 +350,12 @@ def GBSAGBn2Force(solventDielectric=78.5, soluteDielectric=1, SA=None,
     custom.addPerParticleParameter("beta")
     custom.addPerParticleParameter("gamma")
 
-    custom.addTabulatedFunction("getd0", Discrete1DFunction(d0))
-    custom.addTabulatedFunction("getm0", Discrete1DFunction(m0))
+    custom.addTabulatedFunction("getd0", Discrete2DFunction(21, 21, d0))
+    custom.addTabulatedFunction("getm0", Discrete2DFunction(21, 21, m0))
 
     custom.addComputedValue("I",  "Ivdw+neckScale*Ineck;"
-                                  "Ineck=step(radius1+radius2+neckCut-r)*getm0(index)/(1+100*(r-getd0(index))^2+0.3*1000000*(r-getd0(index))^6);"
-                                  "index = (radius2*200-20)*21 + (radius1*200-20);"
+                                  "Ineck=step(radius1+radius2+neckCut-r)*getm0(index1,index2)/(1+100*(r-getd0(index1,index2))^2+0.3*1000000*(r-getd0(index1,index2))^6);"
+                                  "index1=radius1*200-20; index2=radius2*200-20;"
                                   "Ivdw=step(r+sr2-or1)*0.5*(1/L-1/U+0.25*(r-sr2^2/r)*(1/(U^2)-1/(L^2))+0.5*log(L/U)/r);"
                                   "U=r+sr2;"
                                   "L=max(or1, D);"
