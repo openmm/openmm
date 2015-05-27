@@ -264,7 +264,7 @@ class GromacsTopFile(object):
         if fields[1] != '2':
             raise ValueError('Unsupported combination rule: '+fields[1])
         if fields[2].lower() == 'no':
-            raise ValueError('gen_pairs=no is not supported')
+            self._genpairs = False
         self._defaults = fields
 
     def _processMoleculeType(self, line):
@@ -452,6 +452,7 @@ class GromacsTopFile(object):
         # constraint distances and exclusions.
         self._defines = OrderedDict()
         self._defines['FLEXIBLE'] = True
+        self._genpairs = True
         if defines is not None:
             for define, value in defines.iteritems():
                 self._defines[define] = value
@@ -822,6 +823,9 @@ class GromacsTopFile(object):
                         params = self._pairTypes[types][3:5]
                     elif types[::-1] in self._pairTypes:
                         params = self._pairTypes[types[::-1]][3:5]
+                    elif not self._genpairs:
+                        raise ValueError('No pair parameters defined for atom '
+                                         'types %s and gen-pairs is "no"' % types)
                     else:
                         continue # We'll use the automatically generated parameters
                     atom1params = nb.getParticleParameters(baseAtomIndex+atoms[0])
