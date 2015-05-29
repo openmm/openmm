@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman, Lee-Ping Wang                                      *
  * Contributors:                                                              *
  *                                                                            *
@@ -236,6 +236,82 @@ void testRandomSeed() {
     }
 }
 
+void testTriclinic() {
+    const int numParticles = 64;
+    const int frequency = 10;
+    const int steps = 1000;
+    const double pressure = 1.5;
+    const double pressureInMD = pressure*(AVOGADRO*1e-25); // pressure in kJ/mol/nm^3
+    const double temperature = 300.0;
+    const double initialVolume = numParticles*BOLTZ*temperature/pressureInMD;
+    const double initialLength = std::pow(initialVolume, 1.0/3.0);
+
+    // Create a gas of noninteracting particles.
+
+    System system;
+    Vec3 initialBox[3];
+    initialBox[0] = Vec3(initialLength, 0, 0);
+    initialBox[1] = Vec3(0.2*initialLength, initialLength, 0);
+    initialBox[2] = Vec3(0.1*initialLength, 0.3*initialLength, initialLength);
+    system.setDefaultPeriodicBoxVectors(initialBox[0], initialBox[1], initialBox[2]);
+    vector<Vec3> positions(numParticles);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int i = 0; i < numParticles; ++i) {
+        system.addParticle(1.0);
+        positions[i] = Vec3(initialLength*genrand_real2(sfmt), initialLength*genrand_real2(sfmt), initialLength*genrand_real2(sfmt));
+    }
+    MonteCarloAnisotropicBarostat* barostat = new MonteCarloAnisotropicBarostat(Vec3(pressure, pressure, pressure), temperature, true, true, true, frequency);
+    system.addForce(barostat);
+
+    // Run a simulation
+
+    LangevinIntegrator integrator(temperature, 0.1, 0.01);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+
+    // Let it equilibrate.
+
+    integrator.step(10000);
+
+    // Now run it for a while and see if the volume is correct.
+
+    double volume = 0.0;
+    for (int j = 0; j < steps; ++j) {
+        Vec3 box[3];
+        context.getState(0).getPeriodicBoxVectors(box[0], box[1], box[2]);
+        volume += box[0][0]*box[1][1]*box[2][2];
+        integrator.step(frequency);
+    }
+    volume /= steps;
+    double expected = (numParticles+1)*BOLTZ*temperature/pressureInMD;
+    ASSERT_USUALLY_EQUAL_TOL(expected, volume, 3/std::sqrt((double) steps));
+
+    // Make sure the box vectors have been scaled consistently.
+
+    State state = context.getState(State::Positions);
+    Vec3 box[3];
+    state.getPeriodicBoxVectors(box[0], box[1], box[2]);
+    double xscale = box[2][0]/(0.1*initialLength);
+    double yscale = box[2][1]/(0.3*initialLength);
+    double zscale = box[2][2]/(1.0*initialLength);
+    for (int i = 0; i < 3; i++) {
+        ASSERT_EQUAL_VEC(Vec3(xscale*initialBox[i][0], yscale*initialBox[i][1], zscale*initialBox[i][2]), box[i], 1e-5);
+    }
+
+    // The barostat should have put all particles inside the first periodic box.  One integration step
+    // has happened since then, so they may have moved slightly outside it.
+
+    for (int i = 0; i < numParticles; i++) {
+        Vec3 pos = state.getPositions()[i];
+        ASSERT(pos[2]/box[2][2] > -1 && pos[2]/box[2][2] < 2);
+        pos -= box[2]*floor(pos[2]/box[2][2]);
+        ASSERT(pos[1]/box[1][1] > -1 && pos[1]/box[1][1] < 2);
+        pos -= box[1]*floor(pos[1]/box[1][1]);
+        ASSERT(pos[0]/box[0][0] > -1 && pos[0]/box[0][0] < 2);
+    }
+}
+
 /**
  * Run a constant pressure simulation on an anisotropic Einstein crystal
  * using isotropic and anisotropic barostats.  There are a total of 15 simulations:
@@ -389,6 +465,7 @@ int main(int argc, char* argv[]) {
         testIdealGasAxis(1);
         testIdealGasAxis(2);
         testRandomSeed();
+        testTriclinic();
         //testEinsteinCrystal();
     }
     catch(const exception& e) {

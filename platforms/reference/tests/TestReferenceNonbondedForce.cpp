@@ -41,16 +41,18 @@
 #include "openmm/VerletIntegrator.h"
 #include "SimTKOpenMMRealType.h"
 #include "openmm/HarmonicBondForce.h"
+#include "sfmt/SFMT.h"
 #include <iostream>
 #include <vector>
 
 using namespace OpenMM;
 using namespace std;
 
+ReferencePlatform platform;
+
 const double TOL = 1e-5;
 
 void testCoulomb() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -59,6 +61,8 @@ void testCoulomb() {
     forceField->addParticle(0.5, 1, 0);
     forceField->addParticle(-1.5, 1, 0);
     system.addForce(forceField);
+    ASSERT(!forceField->usesPeriodicBoundaryConditions());
+    ASSERT(!system.usesPeriodicBoundaryConditions());
     Context context(system, integrator, platform);
     vector<Vec3> positions(2);
     positions[0] = Vec3(0, 0, 0);
@@ -73,7 +77,6 @@ void testCoulomb() {
 }
 
 void testLJ() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -82,6 +85,8 @@ void testLJ() {
     forceField->addParticle(0, 1.2, 1);
     forceField->addParticle(0, 1.4, 2);
     system.addForce(forceField);
+    ASSERT(!forceField->usesPeriodicBoundaryConditions());
+    ASSERT(!system.usesPeriodicBoundaryConditions());
     Context context(system, integrator, platform);
     vector<Vec3> positions(2);
     positions[0] = Vec3(0, 0, 0);
@@ -98,7 +103,6 @@ void testLJ() {
 }
 
 void testExclusionsAnd14() {
-    ReferencePlatform platform;
     System system;
     VerletIntegrator integrator(0.01);
     NonbondedForce* nonbonded = new NonbondedForce();
@@ -185,7 +189,6 @@ void testExclusionsAnd14() {
 }
 
 void testCutoff() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -201,6 +204,8 @@ void testCutoff() {
     const double eps = 50.0;
     forceField->setReactionFieldDielectric(eps);
     system.addForce(forceField);
+    ASSERT(!forceField->usesPeriodicBoundaryConditions());
+    ASSERT(!system.usesPeriodicBoundaryConditions());
     Context context(system, integrator, platform);
     vector<Vec3> positions(3);
     positions[0] = Vec3(0, 0, 0);
@@ -222,7 +227,6 @@ void testCutoff() {
 }
 
 void testCutoff14() {
-    ReferencePlatform platform;
     System system;
     VerletIntegrator integrator(0.01);
     NonbondedForce* nonbonded = new NonbondedForce();
@@ -252,6 +256,8 @@ void testCutoff14() {
             second14 = i;
     }
     system.addForce(nonbonded);
+    ASSERT(!nonbonded->usesPeriodicBoundaryConditions());
+    ASSERT(!system.usesPeriodicBoundaryConditions());
     Context context(system, integrator, platform);
     vector<Vec3> positions(5);
     positions[0] = Vec3(0, 0, 0);
@@ -317,7 +323,6 @@ void testCutoff14() {
 }
 
 void testPeriodic() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -333,6 +338,8 @@ void testPeriodic() {
     nonbonded->setCutoffDistance(cutoff);
     system.setDefaultPeriodicBoxVectors(Vec3(4, 0, 0), Vec3(0, 4, 0), Vec3(0, 0, 4));
     system.addForce(nonbonded);
+    ASSERT(nonbonded->usesPeriodicBoundaryConditions());
+    ASSERT(system.usesPeriodicBoundaryConditions());
     Context context(system, integrator, platform);
     vector<Vec3> positions(3);
     positions[0] = Vec3(0, 0, 0);
@@ -351,6 +358,68 @@ void testPeriodic() {
     ASSERT_EQUAL_TOL(2*ONE_4PI_EPS0*(1.0)*(1.0+krf*1.0-crf), state.getPotentialEnergy(), TOL);
 }
 
+void testTriclinic() {
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    Vec3 a(3.1, 0, 0);
+    Vec3 b(0.4, 3.5, 0);
+    Vec3 c(-0.1, -0.5, 4.0);
+    system.setDefaultPeriodicBoxVectors(a, b, c);
+    VerletIntegrator integrator(0.01);
+    NonbondedForce* nonbonded = new NonbondedForce();
+    nonbonded->addParticle(1.0, 1, 0);
+    nonbonded->addParticle(1.0, 1, 0);
+    nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    const double cutoff = 1.5;
+    nonbonded->setCutoffDistance(cutoff);
+    system.addForce(nonbonded);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(2);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    const double eps = 78.3;
+    const double krf = (1.0/(cutoff*cutoff*cutoff))*(eps-1.0)/(2.0*eps+1.0);
+    const double crf = (1.0/cutoff)*(3.0*eps)/(2.0*eps+1.0);
+    for (int iteration = 0; iteration < 50; iteration++) {
+        // Generate random positions for the two particles.
+
+        positions[0] = a*genrand_real2(sfmt) + b*genrand_real2(sfmt) + c*genrand_real2(sfmt);
+        positions[1] = a*genrand_real2(sfmt) + b*genrand_real2(sfmt) + c*genrand_real2(sfmt);
+        context.setPositions(positions);
+
+        // Loop over all possible periodic copies and find the nearest one.
+
+        Vec3 delta;
+        double distance2 = 100.0;
+        for (int i = -1; i < 2; i++)
+            for (int j = -1; j < 2; j++)
+                for (int k = -1; k < 2; k++) {
+                    Vec3 d = positions[1]-positions[0]+a*i+b*j+c*k;
+                    if (d.dot(d) < distance2) {
+                        delta = d;
+                        distance2 = d.dot(d);
+                    }
+                }
+        double distance = sqrt(distance2);
+
+        // See if the force and energy are correct.
+
+        State state = context.getState(State::Forces | State::Energy);
+        if (distance >= cutoff) {
+            ASSERT_EQUAL(0.0, state.getPotentialEnergy());
+            ASSERT_EQUAL_VEC(Vec3(0, 0, 0), state.getForces()[0], 0);
+            ASSERT_EQUAL_VEC(Vec3(0, 0, 0), state.getForces()[1], 0);
+        }
+        else {
+            const Vec3 force = delta*ONE_4PI_EPS0*(-1.0/(distance*distance*distance)+2.0*krf);
+            ASSERT_EQUAL_TOL(ONE_4PI_EPS0*(1.0/distance+krf*distance*distance-crf), state.getPotentialEnergy(), TOL);
+            ASSERT_EQUAL_VEC(force, state.getForces()[0], TOL);
+            ASSERT_EQUAL_VEC(-force, state.getForces()[1], TOL);
+        }
+    }
+}
+
 void testDispersionCorrection() {
     // Create a box full of identical particles.
 
@@ -358,7 +427,6 @@ void testDispersionCorrection() {
     int numParticles = gridSize*gridSize*gridSize;
     double boxSize = gridSize*0.7;
     double cutoff = boxSize/3;
-    ReferencePlatform platform;
     System system;
     VerletIntegrator integrator(0.01);
     NonbondedForce* nonbonded = new NonbondedForce();
@@ -376,6 +444,8 @@ void testDispersionCorrection() {
     nonbonded->setCutoffDistance(cutoff);
     system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
     system.addForce(nonbonded);
+    ASSERT(nonbonded->usesPeriodicBoundaryConditions());
+    ASSERT(system.usesPeriodicBoundaryConditions());
 
     // See if the correction has the correct value.
 
@@ -420,7 +490,6 @@ void testDispersionCorrection() {
 }
 
 void testSwitchingFunction(NonbondedForce::NonbondedMethod method) {
-    ReferencePlatform platform;
     System system;
     system.setDefaultPeriodicBoxVectors(Vec3(6, 0, 0), Vec3(0, 6, 0), Vec3(0, 0, 6));
     system.addParticle(1.0);
@@ -435,6 +504,14 @@ void testSwitchingFunction(NonbondedForce::NonbondedMethod method) {
     nonbonded->setSwitchingDistance(1.5);
     nonbonded->setUseDispersionCorrection(false);
     system.addForce(nonbonded);
+    if (method == NonbondedForce::PME) {
+        ASSERT(nonbonded->usesPeriodicBoundaryConditions());
+        ASSERT(system.usesPeriodicBoundaryConditions());
+    }
+    else {
+        ASSERT(!nonbonded->usesPeriodicBoundaryConditions());
+        ASSERT(!system.usesPeriodicBoundaryConditions());
+    }
     Context context(system, integrator, platform);
     vector<Vec3> positions(2);
     positions[0] = Vec3(0, 0, 0);
@@ -483,6 +560,7 @@ int main() {
         testCutoff();
         testCutoff14();
         testPeriodic();
+        testTriclinic();
         testDispersionCorrection();
         testSwitchingFunction(NonbondedForce::CutoffNonPeriodic);
         testSwitchingFunction(NonbondedForce::PME);

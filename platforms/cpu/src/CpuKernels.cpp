@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -71,6 +71,11 @@ static vector<RealVec>& extractForces(ContextImpl& context) {
 static RealVec& extractBoxSize(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
     return *(RealVec*) data->periodicBoxSize;
+}
+
+static RealVec* extractBoxVectors(ContextImpl& context) {
+    ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
+    return (RealVec*) data->periodicBoxVectors;
 }
 
 static ReferenceConstraints& extractConstraints(ContextImpl& context) {
@@ -140,32 +145,55 @@ public:
 
 class CpuCalcForcesAndEnergyKernel::InitForceTask : public ThreadPool::Task {
 public:
-    InitForceTask(int numParticles, ContextImpl& context, CpuPlatform::PlatformData& data) : numParticles(numParticles), context(context), data(data) {
+    InitForceTask(int numParticles, ContextImpl& context, CpuPlatform::PlatformData& data) : numParticles(numParticles), positionsValid(true), context(context), data(data) {
     }
     void execute(ThreadPool& threads, int threadIndex) {
         // Convert the positions to single precision and apply periodic boundary conditions
 
         AlignedArray<float>& posq = data.posq;
         vector<RealVec>& posData = extractPositions(context);
-        RealVec boxSize = extractBoxSize(context);
-        double invBoxSize[3] = {1/boxSize[0], 1/boxSize[1], 1/boxSize[2]};
+        RealVec* boxVectors = extractBoxVectors(context);
+        double boxSize[3] = {boxVectors[0][0], boxVectors[1][1], boxVectors[2][2]};
+        double invBoxSize[3] = {1/boxVectors[0][0], 1/boxVectors[1][1], 1/boxVectors[2][2]};
+        bool triclinic = (boxVectors[0][1] != 0 || boxVectors[0][2] != 0 || boxVectors[1][0] != 0 || boxVectors[1][2] != 0 || boxVectors[2][0] != 0 || boxVectors[2][1] != 0);
         int numParticles = context.getSystem().getNumParticles();
         int numThreads = threads.getNumThreads();
         int start = threadIndex*numParticles/numThreads;
         int end = (threadIndex+1)*numParticles/numThreads;
-        if (data.isPeriodic)
-            for (int i = start; i < end; i++)
-                for (int j = 0; j < 3; j++) {
-                    RealOpenMM x = posData[i][j];
-                    double base = floor(x*invBoxSize[j])*boxSize[j];
-                    posq[4*i+j] = (float) (x-base);
+        if (data.isPeriodic) {
+            if (triclinic) {
+                for (int i = start; i < end; i++) {
+                    RealVec pos = posData[i];
+                    pos -= boxVectors[2]*floor(pos[2]*invBoxSize[2]);
+                    pos -= boxVectors[1]*floor(pos[1]*invBoxSize[1]);
+                    pos -= boxVectors[0]*floor(pos[0]*invBoxSize[0]);
+                    posq[4*i] = (float) pos[0];
+                    posq[4*i+1] = (float) pos[1];
+                    posq[4*i+2] = (float) pos[2];
                 }
+            }
+            else {
+                for (int i = start; i < end; i++) {
+                    for (int j = 0; j < 3; j++) {
+                        RealOpenMM x = posData[i][j];
+                        double base = floor(x*invBoxSize[j])*boxSize[j];
+                        posq[4*i+j] = (float) (x-base);
+                    }
+                }
+            }
+        }
         else
             for (int i = start; i < end; i++) {
                 posq[4*i] = (float) posData[i][0];
                 posq[4*i+1] = (float) posData[i][1];
                 posq[4*i+2] = (float) posData[i][2];
             }
+        
+        // Check for invalid positions.
+        
+        for (int i = 4*start; i < 4*end; i += 4)
+            if (posq[i] != posq[i] || posq[i+1] != posq[i+1] || posq[i+2] != posq[i+2])
+                positionsValid = false;
 
         // Clear the forces.
 
@@ -174,6 +202,7 @@ public:
             zero.store(&data.threadForce[threadIndex][j*4]);
     }
     int numParticles;
+    bool positionsValid;
     ContextImpl& context;
     CpuPlatform::PlatformData& data;
 };
@@ -194,19 +223,21 @@ void CpuCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool i
     referenceKernel.getAs<ReferenceCalcForcesAndEnergyKernel>().beginComputation(context, includeForce, includeEnergy, groups);
     
     // Convert positions to single precision and clear the forces.
-    
+
     InitForceTask task(context.getSystem().getNumParticles(), context, data);
     data.threads.execute(task);
     data.threads.waitForThreads();
+    if (!task.positionsValid)
+        throw OpenMMException("Particle coordinate is nan");
 }
 
-double CpuCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups) {
+double CpuCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups, bool& valid) {
     // Sum the forces from all the threads.
     
     SumForceTask task(context.getSystem().getNumParticles(), extractForces(context), data);
     data.threads.execute(task);
     data.threads.waitForThreads();
-    return referenceKernel.getAs<ReferenceCalcForcesAndEnergyKernel>().finishComputation(context, includeForce, includeEnergy, groups);
+    return referenceKernel.getAs<ReferenceCalcForcesAndEnergyKernel>().finishComputation(context, includeForce, includeEnergy, groups, valid);
 }
 
 CpuCalcPeriodicTorsionForceKernel::~CpuCalcPeriodicTorsionForceKernel() {
@@ -477,21 +508,19 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
         if (nonbondedMethod == PME) {
             // If available, use the optimized PME implementation.
 
-            try {
+            vector<string> kernelNames;
+            kernelNames.push_back("CalcPmeReciprocalForce");
+            useOptimizedPme = getPlatform().supportsKernels(kernelNames);
+            if (useOptimizedPme) {
                 optimizedPme = getPlatform().createKernel(CalcPmeReciprocalForceKernel::Name(), context);
                 optimizedPme.getAs<CalcPmeReciprocalForceKernel>().initialize(gridSize[0], gridSize[1], gridSize[2], numParticles, ewaldAlpha);
-                useOptimizedPme = true;
-            }
-            catch (OpenMMException& ex) {
-                // The CPU PME plugin isn't available.
             }
         }
     }
     AlignedArray<float>& posq = data.posq;
     vector<RealVec>& posData = extractPositions(context);
     vector<RealVec>& forceData = extractForces(context);
-    RealVec boxSize = extractBoxSize(context);
-    float floatBoxSize[3] = {(float) boxSize[0], (float) boxSize[1], (float) boxSize[2]};
+    RealVec* boxVectors = extractBoxVectors(context);
     double energy = (includeReciprocal ? ewaldSelfEnergy : 0.0);
     bool ewald  = (nonbondedMethod == Ewald);
     bool pme  = (nonbondedMethod == PME);
@@ -537,16 +566,17 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
                 }
         }
         if (needRecompute) {
-            neighborList->computeNeighborList(numParticles, posq, exclusions, floatBoxSize, data.isPeriodic, nonbondedCutoff+padding, data.threads);
+            neighborList->computeNeighborList(numParticles, posq, exclusions, boxVectors, data.isPeriodic, nonbondedCutoff+padding, data.threads);
             lastPositions = posData;
         }
         nonbonded->setUseCutoff(nonbondedCutoff, *neighborList, rfDielectric);
     }
     if (data.isPeriodic) {
+        RealVec* boxVectors = extractBoxVectors(context);
         double minAllowedSize = 1.999999*nonbondedCutoff;
-        if (boxSize[0] < minAllowedSize || boxSize[1] < minAllowedSize || boxSize[2] < minAllowedSize)
+        if (boxVectors[0][0] < minAllowedSize || boxVectors[1][1] < minAllowedSize || boxVectors[2][2] < minAllowedSize)
             throw OpenMMException("The periodic box size has decreased to less than twice the nonbonded cutoff.");
-        nonbonded->setPeriodic(floatBoxSize);
+        nonbonded->setPeriodic(boxVectors);
     }
     if (ewald)
         nonbonded->setUseEwald(ewaldAlpha, kmax[0], kmax[1], kmax[2]);
@@ -560,8 +590,8 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
     if (includeReciprocal) {
         if (useOptimizedPme) {
             PmeIO io(&posq[0], &data.threadForce[0][0], numParticles);
-            Vec3 periodicBoxSize(boxSize[0], boxSize[1], boxSize[2]);
-            optimizedPme.getAs<CalcPmeReciprocalForceKernel>().beginComputation(io, periodicBoxSize, includeEnergy);
+            Vec3 periodicBoxVectors[3] = {boxVectors[0], boxVectors[1], boxVectors[2]};
+            optimizedPme.getAs<CalcPmeReciprocalForceKernel>().beginComputation(io, periodicBoxVectors, includeEnergy);
             nonbondedEnergy += optimizedPme.getAs<CalcPmeReciprocalForceKernel>().finishComputation(io);
         }
         else
@@ -573,7 +603,7 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
         ReferenceLJCoulomb14 nonbonded14;
         refBondForce.calculateForce(num14, bonded14IndexArray, posData, bonded14ParamArray, forceData, includeEnergy ? &energy : NULL, nonbonded14);
         if (data.isPeriodic)
-            energy += dispersionCoefficient/(boxSize[0]*boxSize[1]*boxSize[2]);
+            energy += dispersionCoefficient/(boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2]);
     }
     return energy;
 }
@@ -727,19 +757,18 @@ void CpuCalcCustomNonbondedForceKernel::initialize(const System& system, const C
 double CpuCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     vector<RealVec>& posData = extractPositions(context);
     vector<RealVec>& forceData = extractForces(context);
-    RealVec& box = extractBoxSize(context);
-    float floatBoxSize[3] = {(float) box[0], (float) box[1], (float) box[2]};
+    RealVec* boxVectors = extractBoxVectors(context);
     double energy = 0;
     bool periodic = (nonbondedMethod == CutoffPeriodic);
     if (nonbondedMethod != NoCutoff) {
-        neighborList->computeNeighborList(numParticles, data.posq, exclusions, floatBoxSize, data.isPeriodic, nonbondedCutoff, data.threads);
+        neighborList->computeNeighborList(numParticles, data.posq, exclusions, boxVectors, data.isPeriodic, nonbondedCutoff, data.threads);
         nonbonded->setUseCutoff(nonbondedCutoff, *neighborList);
     }
     if (periodic) {
         double minAllowedSize = 2*nonbondedCutoff;
-        if (box[0] < minAllowedSize || box[1] < minAllowedSize || box[2] < minAllowedSize)
+        if (boxVectors[0][0] < minAllowedSize || boxVectors[1][1] < minAllowedSize || boxVectors[2][2] < minAllowedSize)
             throw OpenMMException("The periodic box size has decreased to less than twice the nonbonded cutoff.");
-        nonbonded->setPeriodic(box);
+        nonbonded->setPeriodic(boxVectors);
     }
     bool globalParamsChanged = false;
     for (int i = 0; i < (int) globalParameterNames.size(); i++) {
@@ -758,7 +787,7 @@ double CpuCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool inc
         longRangeCoefficient = CustomNonbondedForceImpl::calcLongRangeCorrection(*forceCopy, context.getOwner());
         hasInitializedLongRangeCorrection = true;
     }
-    energy += longRangeCoefficient/(box[0]*box[1]*box[2]);
+    energy += longRangeCoefficient/(boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2]);
     return energy;
 }
 
@@ -966,13 +995,12 @@ void CpuCalcCustomGBForceKernel::initialize(const System& system, const CustomGB
 double CpuCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     vector<RealVec>& forceData = extractForces(context);
     RealOpenMM energy = 0;
-    RealVec& box = extractBoxSize(context);
-    float floatBoxSize[3] = {(float) box[0], (float) box[1], (float) box[2]};
+    RealVec* boxVectors = extractBoxVectors(context);
     if (data.isPeriodic)
         ixn->setPeriodic(extractBoxSize(context));
     if (nonbondedMethod != NoCutoff) {
         vector<set<int> > noExclusions(numParticles);
-        neighborList->computeNeighborList(numParticles, data.posq, exclusions, floatBoxSize, data.isPeriodic, nonbondedCutoff, data.threads);
+        neighborList->computeNeighborList(numParticles, data.posq, exclusions, boxVectors, data.isPeriodic, nonbondedCutoff, data.threads);
         ixn->setUseCutoff(nonbondedCutoff, *neighborList);
     }
     map<string, double> globalParameters;
@@ -1029,6 +1057,7 @@ void CpuCalcCustomManyParticleForceKernel::initialize(const System& system, cons
     ixn = new CpuCustomManyParticleForce(force, data.threads);
     nonbondedMethod = CalcCustomManyParticleForceKernel::NonbondedMethod(force.getNonbondedMethod());
     cutoffDistance = force.getCutoffDistance();
+    data.isPeriodic = (nonbondedMethod == CutoffPeriodic);
 }
 
 double CpuCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -1036,11 +1065,11 @@ double CpuCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bool 
     for (int i = 0; i < (int) globalParameterNames.size(); i++)
         globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
     if (nonbondedMethod == CutoffPeriodic) {
-        RealVec& box = extractBoxSize(context);
+        RealVec* boxVectors = extractBoxVectors(context);
         double minAllowedSize = 2*cutoffDistance;
-        if (box[0] < minAllowedSize || box[1] < minAllowedSize || box[2] < minAllowedSize)
+        if (boxVectors[0][0] < minAllowedSize || boxVectors[1][1] < minAllowedSize || boxVectors[2][2] < minAllowedSize)
             throw OpenMMException("The periodic box size has decreased to less than twice the nonbonded cutoff.");
-        ixn->setPeriodic(box);
+        ixn->setPeriodic(boxVectors);
     }
     double energy = 0;
     ixn->calculateIxn(data.posq, particleParamArray, globalParameters, data.threadForce, includeForces, includeEnergy, energy);

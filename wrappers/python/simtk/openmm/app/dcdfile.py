@@ -37,6 +37,8 @@ import time
 import struct
 import math
 from simtk.unit import picoseconds, nanometers, angstroms, is_quantity, norm
+from simtk.openmm import Vec3
+from simtk.openmm.app.internal.unitcell import computeLengthsAndAngles
 
 class DCDFile(object):
     """DCDFile provides methods for creating DCD files.
@@ -77,14 +79,17 @@ class DCDFile(object):
         header += struct.pack('<4i', 164, 4, len(list(topology.atoms())), 4)
         file.write(header)
 
-    def writeModel(self, positions, unitCellDimensions=None):
+    def writeModel(self, positions, unitCellDimensions=None, periodicBoxVectors=None):
         """Write out a model to the DCD file.
+
+        The periodic box can be specified either by the unit cell dimensions (for a rectangular box), or the full set of box
+        vectors (for an arbitrary triclinic box).  If neither is specified, the box vectors specified in the Topology will be
+        used.  Regardless of the value specified, no dimensions will be written if the Topology does not represent a periodic system.
 
         Parameters:
          - positions (list) The list of atomic positions to write
-         - unitCellDimensions (Vec3=None) The dimensions of the crystallographic unit cell.  If None, the dimensions specified in
-           the Topology will be used.  Regardless of the value specified, no dimensions will be written if the Topology does not
-           represent a periodic system.
+         - unitCellDimensions (Vec3=None) The dimensions of the crystallographic unit cell.
+         - periodicBoxVectors (tuple of Vec3=None) The vectors defining the periodic box.
         """
         if len(list(self._topology.atoms())) != len(positions):
             raise ValueError('The number of positions must match the number of atoms')
@@ -107,12 +112,22 @@ class DCDFile(object):
         # Write the data.
 
         file.seek(0, os.SEEK_END)
-        boxSize = self._topology.getUnitCellDimensions()
-        if boxSize is not None:
-            if unitCellDimensions is not None:
-                boxSize = unitCellDimensions
-            size = boxSize.value_in_unit(angstroms)
-            file.write(struct.pack('<i6di', 48, size[0], 0, size[1], 0, 0, size[2], 48))
+        boxVectors = self._topology.getPeriodicBoxVectors()
+        if boxVectors is not None:
+            if periodicBoxVectors is not None:
+                boxVectors = periodicBoxVectors
+            elif unitCellDimensions is not None:
+                if is_quantity(unitCellDimensions):
+                    unitCellDimensions = unitCellDimensions.value_in_unit(nanometers)
+                boxVectors = (Vec3(unitCellDimensions[0], 0, 0), Vec3(0, unitCellDimensions[1], 0), Vec3(0, 0, unitCellDimensions[2]))*nanometers
+            (a_length, b_length, c_length, alpha, beta, gamma) = computeLengthsAndAngles(boxVectors)
+            a_length = a_length * 10.  # computeLengthsAndAngles returns unitless nanometers, but need angstroms here.
+            b_length = b_length * 10.  # computeLengthsAndAngles returns unitless nanometers, but need angstroms here.
+            c_length = c_length * 10.  # computeLengthsAndAngles returns unitless nanometers, but need angstroms here.
+            angle1 = math.sin(math.pi/2-gamma)
+            angle2 = math.sin(math.pi/2-beta)
+            angle3 = math.sin(math.pi/2-alpha)
+            file.write(struct.pack('<i6di', 48, a_length, angle1, b_length, angle2, angle3, c_length, 48))
         length = struct.pack('<i', 4*len(positions))
         for i in range(3):
             file.write(length)

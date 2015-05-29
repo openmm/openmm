@@ -85,7 +85,7 @@ version = '%(version)s'
 full_version = '%(full_version)s'
 git_revision = '%(git_revision)s'
 release = %(isrelease)s
-openmm_library_path = '%(path)s'
+openmm_library_path = r'%(path)s'
 
 if not release:
     version = full_version

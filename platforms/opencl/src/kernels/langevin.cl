@@ -81,7 +81,7 @@ __kernel void selectLangevinStepSize(mixed maxStepSize, mixed errorTol, mixed ta
     while (index < NUM_ATOMS) {
         real4 f = force[index];
         mixed invMass = velm[index].w;
-        err += (f.x*f.x + f.y*f.y + f.z*f.z)*invMass;
+        err += (f.x*f.x + f.y*f.y + f.z*f.z)*invMass*invMass;
         index += get_global_size(0);
     }
     error[get_local_id(0)] = err;

@@ -48,10 +48,21 @@
 using namespace OpenMM;
 using namespace std;
 
-void testNeighborList(bool periodic) {
+void testNeighborList(bool periodic, bool triclinic) {
     const int numParticles = 500;
     const float cutoff = 2.0f;
-    const float boxSize[3] = {20.0f, 15.0f, 22.0f};
+    RealVec boxVectors[3];
+    if (triclinic) {
+        boxVectors[0] = RealVec(20, 0, 0);
+        boxVectors[1] = RealVec(5, 15, 0);
+        boxVectors[2] = RealVec(-3, -7, 22);
+    }
+    else {
+        boxVectors[0] = RealVec(20, 0, 0);
+        boxVectors[1] = RealVec(0, 15, 0);
+        boxVectors[2] = RealVec(0, 0, 22);
+    }
+    const float boxSize[3] = {(float) boxVectors[0][0], (float) boxVectors[1][1], (float) boxVectors[2][2]};
     const int blockSize = 8;
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);
@@ -69,7 +80,7 @@ void testNeighborList(bool periodic) {
     }
     ThreadPool threads;
     CpuNeighborList neighborList(blockSize);
-    neighborList.computeNeighborList(numParticles, positions, exclusions, boxSize, periodic, cutoff, threads);
+    neighborList.computeNeighborList(numParticles, positions, exclusions, boxVectors, periodic, cutoff, threads);
     
     // Convert the neighbor list to a set for faster lookup.
     
@@ -90,19 +101,17 @@ void testNeighborList(bool periodic) {
     }
     
     // Check each particle pair and figure out whether they should be in the neighbor list.
-    
+
     for (int i = 0; i < numParticles; i++)
         for (int j = 0; j <= i; j++) {
             bool shouldInclude = (exclusions[i].find(j) == exclusions[i].end());
-            float dx = positions[4*i]-positions[4*j];
-            float dy = positions[4*i+1]-positions[4*j+1];
-            float dz = positions[4*i+2]-positions[4*j+2];
+            Vec3 diff(positions[4*i]-positions[4*j], positions[4*i+1]-positions[4*j+1], positions[4*i+2]-positions[4*j+2]);
             if (periodic) {
-                dx -= floor(dx/boxSize[0]+0.5f)*boxSize[0];
-                dy -= floor(dy/boxSize[1]+0.5f)*boxSize[1];
-                dz -= floor(dz/boxSize[2]+0.5f)*boxSize[2];
+                diff -= boxVectors[2]*floor(diff[2]/boxSize[2]+0.5);
+                diff -= boxVectors[1]*floor(diff[1]/boxSize[1]+0.5);
+                diff -= boxVectors[0]*floor(diff[0]/boxSize[0]+0.5);
             }
-            if (dx*dx + dy*dy + dz*dz > cutoff*cutoff)
+            if (diff.dot(diff) > cutoff*cutoff)
                 shouldInclude = false;
             bool isIncluded = (neighbors.find(make_pair(i, j)) != neighbors.end() || neighbors.find(make_pair(j, i)) != neighbors.end());
             if (shouldInclude)
@@ -116,8 +125,9 @@ int main() {
             cout << "CPU is not supported.  Exiting." << endl;
             return 0;
         }
-        testNeighborList(false);
-        testNeighborList(true);
+        testNeighborList(false, false);
+        testNeighborList(true, false);
+        testNeighborList(true, true);
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

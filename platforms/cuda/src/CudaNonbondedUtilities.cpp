@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -62,10 +62,10 @@ private:
     bool useDouble;
 };
 
-CudaNonbondedUtilities::CudaNonbondedUtilities(CudaContext& context) : context(context), cutoff(-1.0), useCutoff(false), anyExclusions(false), usePadding(true),
+CudaNonbondedUtilities::CudaNonbondedUtilities(CudaContext& context) : context(context), cutoff(-1.0), useCutoff(false), usePeriodic(false), anyExclusions(false), usePadding(true),
         exclusionIndices(NULL), exclusionRowIndices(NULL), exclusionTiles(NULL), exclusions(NULL), interactingTiles(NULL), interactingAtoms(NULL),
         interactionCount(NULL), blockCenter(NULL), blockBoundingBox(NULL), sortedBlocks(NULL), sortedBlockCenter(NULL), sortedBlockBoundingBox(NULL),
-        oldPositions(NULL), rebuildNeighborList(NULL), blockSorter(NULL), nonbondedForceGroup(0) {
+        oldPositions(NULL), rebuildNeighborList(NULL), blockSorter(NULL), nonbondedForceGroup(0), forceRebuildNeighborList(true) {
     // Decide how many thread blocks to use.
 
     string errorMessage = "Error initializing nonbonded utilities";
@@ -264,14 +264,6 @@ void CudaNonbondedUtilities::initialize(const System& system) {
         sortedBlockCenter = new CudaArray(context, numAtomBlocks+1, 4*elementSize, "sortedBlockCenter");
         sortedBlockBoundingBox = new CudaArray(context, numAtomBlocks+1, 4*elementSize, "sortedBlockBoundingBox");
         oldPositions = new CudaArray(context, numAtoms, 4*elementSize, "oldPositions");
-        if (context.getUseDoublePrecision()) {
-            vector<double4> oldPositionsVec(numAtoms, make_double4(1e30, 1e30, 1e30, 0));
-            oldPositions->upload(oldPositionsVec);
-        }
-        else {
-            vector<float4> oldPositionsVec(numAtoms, make_float4(1e30f, 1e30f, 1e30f, 0));
-            oldPositions->upload(oldPositionsVec);
-        }
         rebuildNeighborList = CudaArray::create<int>(context, 1, "rebuildNeighborList");
         blockSorter = new CudaSort(context, new BlockSortTrait(context.getUseDoublePrecision()), numAtomBlocks);
         vector<unsigned int> count(1, 0);
@@ -304,6 +296,9 @@ void CudaNonbondedUtilities::initialize(const System& system) {
         findBlockBoundsArgs.push_back(&numAtoms);
         findBlockBoundsArgs.push_back(context.getPeriodicBoxSizePointer());
         findBlockBoundsArgs.push_back(context.getInvPeriodicBoxSizePointer());
+        findBlockBoundsArgs.push_back(context.getPeriodicBoxVecXPointer());
+        findBlockBoundsArgs.push_back(context.getPeriodicBoxVecYPointer());
+        findBlockBoundsArgs.push_back(context.getPeriodicBoxVecZPointer());
         findBlockBoundsArgs.push_back(&context.getPosq().getDevicePointer());
         findBlockBoundsArgs.push_back(&blockCenter->getDevicePointer());
         findBlockBoundsArgs.push_back(&blockBoundingBox->getDevicePointer());
@@ -319,9 +314,13 @@ void CudaNonbondedUtilities::initialize(const System& system) {
         sortBoxDataArgs.push_back(&oldPositions->getDevicePointer());
         sortBoxDataArgs.push_back(&interactionCount->getDevicePointer());
         sortBoxDataArgs.push_back(&rebuildNeighborList->getDevicePointer());
+        sortBoxDataArgs.push_back(&forceRebuildNeighborList);
         findInteractingBlocksKernel = context.getKernel(interactingBlocksProgram, "findBlocksWithInteractions");
         findInteractingBlocksArgs.push_back(context.getPeriodicBoxSizePointer());
         findInteractingBlocksArgs.push_back(context.getInvPeriodicBoxSizePointer());
+        findInteractingBlocksArgs.push_back(context.getPeriodicBoxVecXPointer());
+        findInteractingBlocksArgs.push_back(context.getPeriodicBoxVecYPointer());
+        findInteractingBlocksArgs.push_back(context.getPeriodicBoxVecZPointer());
         findInteractingBlocksArgs.push_back(&interactionCount->getDevicePointer());
         findInteractingBlocksArgs.push_back(&interactingTiles->getDevicePointer());
         findInteractingBlocksArgs.push_back(&interactingAtoms->getDevicePointer());
@@ -357,6 +356,7 @@ void CudaNonbondedUtilities::prepareInteractions() {
     blockSorter->sort(*sortedBlocks);
     context.executeKernel(sortBoxDataKernel, &sortBoxDataArgs[0], context.getNumAtoms());
     context.executeKernel(findInteractingBlocksKernel, &findInteractingBlocksArgs[0], context.getNumAtoms(), 256);
+    forceRebuildNeighborList = false;
 }
 
 void CudaNonbondedUtilities::computeInteractions() {
@@ -390,18 +390,11 @@ void CudaNonbondedUtilities::updateNeighborListSize() {
     interactingAtoms = CudaArray::create<int>(context, CudaContext::TileSize*maxTiles, "interactingAtoms");
     if (forceArgs.size() > 0)
         forceArgs[7] = &interactingTiles->getDevicePointer();
-    findInteractingBlocksArgs[3] = &interactingTiles->getDevicePointer();
+    findInteractingBlocksArgs[6] = &interactingTiles->getDevicePointer();
     if (forceArgs.size() > 0)
-        forceArgs[14] = &interactingAtoms->getDevicePointer();
-    findInteractingBlocksArgs[4] = &interactingAtoms->getDevicePointer();
-    if (context.getUseDoublePrecision()) {
-        vector<double4> oldPositionsVec(numAtoms, make_double4(1e30, 1e30, 1e30, 0));
-        oldPositions->upload(oldPositionsVec);
-    }
-    else {
-        vector<float4> oldPositionsVec(numAtoms, make_float4(1e30f, 1e30f, 1e30f, 0));
-        oldPositions->upload(oldPositionsVec);
-    }
+        forceArgs[17] = &interactingAtoms->getDevicePointer();
+    findInteractingBlocksArgs[7] = &interactingAtoms->getDevicePointer();
+    forceRebuildNeighborList = true;
 }
 
 void CudaNonbondedUtilities::setUsePadding(bool padding) {
@@ -413,8 +406,9 @@ void CudaNonbondedUtilities::setAtomBlockRange(double startFraction, double endF
     startBlockIndex = (int) (startFraction*numAtomBlocks);
     numBlocks = (int) (endFraction*numAtomBlocks)-startBlockIndex;
     int totalTiles = context.getNumAtomBlocks()*(context.getNumAtomBlocks()+1)/2;
-    startTileIndex = (int) (startFraction*totalTiles);;
+    startTileIndex = (int) (startFraction*totalTiles);
     numTiles = (int) (endFraction*totalTiles)-startTileIndex;
+    forceRebuildNeighborList = true;
 }
 
 CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source, vector<ParameterInfo>& params, vector<ParameterInfo>& arguments, bool useExclusions, bool isSymmetric) {
@@ -627,6 +621,9 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
         forceArgs.push_back(&interactionCount->getDevicePointer());
         forceArgs.push_back(context.getPeriodicBoxSizePointer());
         forceArgs.push_back(context.getInvPeriodicBoxSizePointer());
+        forceArgs.push_back(context.getPeriodicBoxVecXPointer());
+        forceArgs.push_back(context.getPeriodicBoxVecYPointer());
+        forceArgs.push_back(context.getPeriodicBoxVecZPointer());
         forceArgs.push_back(&maxTiles);
         forceArgs.push_back(&blockCenter->getDevicePointer());
         forceArgs.push_back(&blockBoundingBox->getDevicePointer());

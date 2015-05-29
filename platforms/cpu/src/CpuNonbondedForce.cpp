@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2013 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2015 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -24,7 +24,6 @@
 
 #include <complex>
 
-#include "SimTKOpenMMCommon.h"
 #include "SimTKOpenMMUtilities.h"
 #include "CpuNonbondedForce.h"
 #include "ReferenceForce.h"
@@ -103,20 +102,30 @@ void CpuNonbondedForce::setUseSwitchingFunction(float distance) {
      also been set, and the smallest side of the periodic box is at least twice the cutoff
      distance.
 
-     @param boxSize             the X, Y, and Z widths of the periodic box
+     @param periodicBoxVectors    the vectors defining the periodic box
 
      --------------------------------------------------------------------------------------- */
 
-  void CpuNonbondedForce::setPeriodic(float* periodicBoxSize) {
+  void CpuNonbondedForce::setPeriodic(RealVec* periodicBoxVectors) {
 
     assert(cutoff);
-    assert(periodicBoxSize[0] >= 2*cutoffDistance);
-    assert(periodicBoxSize[1] >= 2*cutoffDistance);
-    assert(periodicBoxSize[2] >= 2*cutoffDistance);
+    assert(periodicBoxVectors[0][0] >= 2.0*cutoffDistance);
+    assert(periodicBoxVectors[1][1] >= 2.0*cutoffDistance);
+    assert(periodicBoxVectors[2][2] >= 2.0*cutoffDistance);
     periodic = true;
-    this->periodicBoxSize[0] = periodicBoxSize[0];
-    this->periodicBoxSize[1] = periodicBoxSize[1];
-    this->periodicBoxSize[2] = periodicBoxSize[2];
+    this->periodicBoxVectors[0] = periodicBoxVectors[0];
+    this->periodicBoxVectors[1] = periodicBoxVectors[1];
+    this->periodicBoxVectors[2] = periodicBoxVectors[2];
+    recipBoxSize[0] = (float) (1.0/periodicBoxVectors[0][0]);
+    recipBoxSize[1] = (float) (1.0/periodicBoxVectors[1][1]);
+    recipBoxSize[2] = (float) (1.0/periodicBoxVectors[2][2]);
+    periodicBoxVec4.resize(3);
+    periodicBoxVec4[0] = fvec4(periodicBoxVectors[0][0], periodicBoxVectors[0][1], periodicBoxVectors[0][2], 0);
+    periodicBoxVec4[1] = fvec4(periodicBoxVectors[1][0], periodicBoxVectors[1][1], periodicBoxVectors[1][2], 0);
+    periodicBoxVec4[2] = fvec4(periodicBoxVectors[2][0], periodicBoxVectors[2][1], periodicBoxVectors[2][2], 0);
+    triclinic = (periodicBoxVectors[0][1] != 0.0 || periodicBoxVectors[0][2] != 0.0 ||
+                 periodicBoxVectors[1][0] != 0.0 || periodicBoxVectors[1][2] != 0.0 ||
+                 periodicBoxVectors[2][0] != 0.0 || periodicBoxVectors[2][1] != 0.0);
   }
 
   /**---------------------------------------------------------------------------------------
@@ -162,17 +171,20 @@ void CpuNonbondedForce::setUseSwitchingFunction(float distance) {
   }
 
   
-void CpuNonbondedForce::tabulateEwaldScaleFactor() {
+  void CpuNonbondedForce::tabulateEwaldScaleFactor() {
     if (tableIsValid)
         return;
     tableIsValid = true;
     ewaldDX = cutoffDistance/NUM_TABLE_POINTS;
     ewaldDXInv = 1.0f/ewaldDX;
+    erfcDXInv = 1.0f/(ewaldDX*alphaEwald);
+    erfcTable.resize(NUM_TABLE_POINTS+4);
     ewaldScaleTable.resize(NUM_TABLE_POINTS+4);
     for (int i = 0; i < NUM_TABLE_POINTS+4; i++) {
         double r = i*ewaldDX;
         double alphaR = alphaEwald*r;
-        ewaldScaleTable[i] = erfc(alphaR) + TWO_OVER_SQRT_PI*alphaR*exp(-alphaR*alphaR);
+        erfcTable[i] = erfc(alphaR);
+        ewaldScaleTable[i] = erfcTable[i] + TWO_OVER_SQRT_PI*alphaR*exp(-alphaR*alphaR);
     }
 }
   
@@ -186,18 +198,16 @@ void CpuNonbondedForce::calculateReciprocalIxn(int numberOfAtoms, float* posq, c
     int kmax                       = (ewald ? max(numRx, max(numRy,numRz)) : 0);
     float factorEwald              = -1 / (4*alphaEwald*alphaEwald);
     float TWO_PI                   = 2.0 * PI_M;
-    float recipCoeff               = (float)(ONE_4PI_EPS0*4*PI_M/(periodicBoxSize[0] * periodicBoxSize[1] * periodicBoxSize[2]) /epsilon);
+    float recipCoeff               = (float)(ONE_4PI_EPS0*4*PI_M/(periodicBoxVectors[0][0] * periodicBoxVectors[1][1] * periodicBoxVectors[2][2]) /epsilon);
 
     if (pme) {
         pme_t pmedata;
-        RealOpenMM virial[3][3];
         pme_init(&pmedata, alphaEwald, numberOfAtoms, meshDim, 5, 1);
         vector<RealOpenMM> charges(numberOfAtoms);
         for (int i = 0; i < numberOfAtoms; i++)
             charges[i] = posq[4*i+3];
-        RealOpenMM boxSize[3] = {periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2]};
         RealOpenMM recipEnergy = 0.0;
-        pme_exec(pmedata, atomCoordinates, forces, charges, boxSize, &recipEnergy, virial);
+        pme_exec(pmedata, atomCoordinates, forces, charges, periodicBoxVectors, &recipEnergy);
         if (totalEnergy)
             *totalEnergy += recipEnergy;
         pme_destroy(pmedata);
@@ -209,7 +219,7 @@ void CpuNonbondedForce::calculateReciprocalIxn(int numberOfAtoms, float* posq, c
 
         // setup reciprocal box
 
-        float recipBoxSize[3] = { TWO_PI / periodicBoxSize[0], TWO_PI / periodicBoxSize[1], TWO_PI / periodicBoxSize[2]};
+        float recipBoxSize[3] = {(float) (TWO_PI/periodicBoxVectors[0][0]), (float) (TWO_PI/periodicBoxVectors[1][1]), (float) (TWO_PI/periodicBoxVectors[2][2])};
 
 
         // setup K-vectors
@@ -330,8 +340,8 @@ void CpuNonbondedForce::threadComputeDirect(ThreadPool& threads, int threadIndex
     threadEnergy[threadIndex] = 0;
     double* energyPtr = (includeEnergy ? &threadEnergy[threadIndex] : NULL);
     float* forces = &(*threadForce)[threadIndex][0];
-    fvec4 boxSize(periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2], 0);
-    fvec4 invBoxSize((1/periodicBoxSize[0]), (1/periodicBoxSize[1]), (1/periodicBoxSize[2]), 0);
+    fvec4 boxSize(periodicBoxVectors[0][0], periodicBoxVectors[1][1], periodicBoxVectors[2][2], 0);
+    fvec4 invBoxSize(recipBoxSize[0], recipBoxSize[1], recipBoxSize[2], 0);
     if (ewald || pme) {
         // Compute the interactions from the neighbor list.
 
@@ -344,8 +354,6 @@ void CpuNonbondedForce::threadComputeDirect(ThreadPool& threads, int threadIndex
 
         // Now subtract off the exclusions, since they were implicitly included in the reciprocal space sum.
 
-        fvec4 boxSize(periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2], 0);
-        fvec4 invBoxSize((1/periodicBoxSize[0]), (1/periodicBoxSize[1]), (1/periodicBoxSize[2]), 0);
         for (int i = threadIndex; i < numberOfAtoms; i += numThreads) {
             fvec4 posI((float) atomCoordinates[i][0], (float) atomCoordinates[i][1], (float) atomCoordinates[i][2], 0.0f);
             for (set<int>::const_iterator iter = exclusions[i].begin(); iter != exclusions[i].end(); ++iter) {
@@ -359,15 +367,15 @@ void CpuNonbondedForce::threadComputeDirect(ThreadPool& threads, int threadIndex
                     float inverseR = 1/r;
                     float chargeProd = ONE_4PI_EPS0*posq[4*i+3]*posq[4*j+3];
                     float alphaR = alphaEwald*r;
-                    float erfcAlphaR = erfcApprox(alphaR);
-                    if (1-erfcAlphaR > 1e-6f) {
+                    float erfAlphaR = erf(alphaR);
+                    if (erfAlphaR > 1e-6f) {
                         float dEdR = (float) (chargeProd * inverseR * inverseR * inverseR);
-                        dEdR = (float) (dEdR * (1.0f-erfcAlphaR-TWO_OVER_SQRT_PI*alphaR*exp(-alphaR*alphaR)));
+                        dEdR = (float) (dEdR * (erfAlphaR-TWO_OVER_SQRT_PI*alphaR*exp(-alphaR*alphaR)));
                         fvec4 result = deltaR*dEdR;
                         (fvec4(forces+4*i)-result).store(forces+4*i);
                         (fvec4(forces+4*j)+result).store(forces+4*j);
                         if (includeEnergy)
-                            threadEnergy[threadIndex] -= chargeProd*inverseR*(1.0f-erfcAlphaR);
+                            threadEnergy[threadIndex] -= chargeProd*inverseR*erfAlphaR;
                     }
                 }
             }
@@ -454,21 +462,24 @@ void CpuNonbondedForce::calculateOneIxn(int ii, int jj, float* forces, double* t
 void CpuNonbondedForce::getDeltaR(const fvec4& posI, const fvec4& posJ, fvec4& deltaR, float& r2, bool periodic, const fvec4& boxSize, const fvec4& invBoxSize) const {
     deltaR = posJ-posI;
     if (periodic) {
-        fvec4 base = round(deltaR*invBoxSize)*boxSize;
-        deltaR = deltaR-base;
+        if (triclinic) {
+            deltaR -= periodicBoxVec4[2]*floorf(deltaR[2]*recipBoxSize[2]+0.5f);
+            deltaR -= periodicBoxVec4[1]*floorf(deltaR[1]*recipBoxSize[1]+0.5f);
+            deltaR -= periodicBoxVec4[0]*floorf(deltaR[0]*recipBoxSize[0]+0.5f);
+        }
+        else {
+            fvec4 base = round(deltaR*invBoxSize)*boxSize;
+            deltaR = deltaR-base;
+        }
     }
     r2 = dot3(deltaR, deltaR);
 }
 
 float CpuNonbondedForce::erfcApprox(float x) {
-    // This approximation for erfc is from Abramowitz and Stegun (1964) p. 299.  They cite the following as
-    // the original source: C. Hastings, Jr., Approximations for Digital Computers (1955).  It has a maximum
-    // error of 3e-7.
-
-    float t = 1.0f+(0.0705230784f+(0.0422820123f+(0.0092705272f+(0.0001520143f+(0.0002765672f+0.0000430638f*x)*x)*x)*x)*x)*x;
-    t *= t;
-    t *= t;
-    t *= t;
-    return 1.0f/(t*t);
+    float x1 = x*erfcDXInv;
+    int index = min((int) floor(x1), NUM_TABLE_POINTS);
+    float coeff2 = x1-index;
+    float coeff1 = 1.0f-coeff2;
+    return coeff1*erfcTable[index] + coeff2*erfcTable[index+1];
 }
 

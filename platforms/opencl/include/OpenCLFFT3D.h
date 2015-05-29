@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009 Stanford University and the Authors.           *
+ * Portions copyright (c) 2009-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -40,7 +40,7 @@ namespace OpenMM {
  * 15, 207–228 (2000).
  * <p>
  * This class places certain restrictions on the allowed dimensions of the grid.  First,
- * the size of each dimension may have no prime factors other than 2, 3, and 5.  You
+ * the size of each dimension may have no prime factors other than 2, 3, 5, and 7.  You
  * can call findLegalDimension() to determine the smallest size that satisfies this
  * requirement and is greater than or equal to a specified minimum size.  Second, the size
  * of each dimension must be small enough to compute each 1D transform entirely in local
@@ -61,12 +61,17 @@ public:
      * @param xsize   the first dimension of the data sets on which FFTs will be performed
      * @param ysize   the second dimension of the data sets on which FFTs will be performed
      * @param zsize   the third dimension of the data sets on which FFTs will be performed
+     * @param realToComplex  if true, a real-to-complex transform will be done.  Otherwise, it is complex-to-complex.
      */
-    OpenCLFFT3D(OpenCLContext& context, int xsize, int ysize, int zsize);
+    OpenCLFFT3D(OpenCLContext& context, int xsize, int ysize, int zsize, bool realToComplex=false);
     /**
      * Perform a Fourier transform.  The transform cannot be done in-place: the input and output
      * arrays must be different.  Also, the input array is used as workspace, so its contents
-     * are destroyed.
+     * are destroyed.  This also means that both arrays must be large enough to hold complex values,
+     * even when performing a real-to-complex transform.
+     * <p>
+     * When performing a real-to-complex transform, the output data is of size xsize*ysize*(zsize/2+1)
+     * and contains only the non-redundant elements.
      *
      * @param in       the data to transform, ordered such that in[x*ysize*zsize + y*zsize + z] contains element (x, y, z)
      * @param out      on exit, this contains the transformed data
@@ -75,17 +80,20 @@ public:
     void execFFT(OpenCLArray& in, OpenCLArray& out, bool forward = true);
     /**
      * Get the smallest legal size for a dimension of the grid (that is, a size with no prime
-     * factors other than 2, 3, and 5).
+     * factors other than 2, 3, 5, and 7).
      *
      * @param minimum   the minimum size the return value must be greater than or equal to
      */
     static int findLegalDimension(int minimum);
 private:
-    cl::Kernel createKernel(int xsize, int ysize, int zsize, int& threads);
+    cl::Kernel createKernel(int xsize, int ysize, int zsize, int& threads, int axis, bool forward, bool inputIsReal);
     int xsize, ysize, zsize;
     int xthreads, ythreads, zthreads;
+    bool packRealAsComplex;
     OpenCLContext& context;
     cl::Kernel xkernel, ykernel, zkernel;
+    cl::Kernel invxkernel, invykernel, invzkernel;
+    cl::Kernel packForwardKernel, unpackForwardKernel, packBackwardKernel, unpackBackwardKernel;
 };
 
 } // namespace OpenMM

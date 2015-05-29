@@ -25,14 +25,14 @@
 #ifdef _MSC_VER
     // We don't want to hear about how sprintf is "unsafe".
     #pragma warning(disable:4996)
+    // Keep MS VC++ quiet about lack of dll export of private members.
+    #pragma warning(disable:4251)
     #if defined(LEPTON_BUILDING_SHARED_LIBRARY)
         #define LEPTON_EXPORT __declspec(dllexport)
-        // Keep MS VC++ quiet about lack of dll export of private members.
-        #pragma warning(disable:4251)
     #elif defined(LEPTON_BUILDING_STATIC_LIBRARY) || defined(LEPTON_USE_STATIC_LIBRARIES)
-		#define LEPTON_EXPORT
+        #define LEPTON_EXPORT
     #else
-		#define LEPTON_EXPORT __declspec(dllimport)   // i.e., a client of a shared library
+        #define LEPTON_EXPORT __declspec(dllimport)   // i.e., a client of a shared library
     #endif
 #else
     #define LEPTON_EXPORT // Linux, Mac

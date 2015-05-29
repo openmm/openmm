@@ -50,11 +50,12 @@
 using namespace OpenMM;
 using namespace std;
 
+ReferencePlatform platform;
+
 /**
  * Check that massless particles are handled correctly.
  */
 void testMasslessParticle() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(0.0);
     system.addParticle(1.0);
@@ -91,7 +92,6 @@ void testMasslessParticle() {
  * Test a TwoParticleAverageSite virtual site.
  */
 void testTwoParticleAverage() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -128,7 +128,6 @@ void testTwoParticleAverage() {
  * Test a ThreeParticleAverageSite virtual site.
  */
 void testThreeParticleAverage() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -170,7 +169,6 @@ void testThreeParticleAverage() {
  * Test an OutOfPlaneSite virtual site.
  */
 void testOutOfPlane() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -223,7 +221,6 @@ void testLocalCoordinates() {
     const Vec3 xWeights(-1.0, 0.5, 0.5);
     const Vec3 yWeights(0.0, -1.0, 1.0);
     const Vec3 localPosition(0.4, 0.3, 0.2);
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -299,7 +296,6 @@ void testLocalCoordinates() {
  * when using virtual sites.
  */
 void testConservationLaws() {
-    ReferencePlatform platform;
     System system;
     NonbondedForce* forceField = new NonbondedForce();
     system.addForce(forceField);

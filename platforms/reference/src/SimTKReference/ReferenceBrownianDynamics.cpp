@@ -25,16 +25,15 @@
 #include <cstring>
 #include <sstream>
 
-#include "SimTKOpenMMCommon.h"
-#include "SimTKOpenMMLog.h"
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceBrownianDynamics.h"
 #include "ReferenceVirtualSites.h"
+#include "openmm/OpenMMException.h"
 
 #include <cstdio>
 
 using std::vector;
-using OpenMM::RealVec;
+using namespace OpenMM;
 
 /**---------------------------------------------------------------------------------------
 
@@ -47,29 +46,15 @@ using OpenMM::RealVec;
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceBrownianDynamics::ReferenceBrownianDynamics( int numberOfAtoms,
+ReferenceBrownianDynamics::ReferenceBrownianDynamics(int numberOfAtoms,
                                                           RealOpenMM deltaT, RealOpenMM friction,
-                                                          RealOpenMM temperature ) : 
-           ReferenceDynamics( numberOfAtoms, deltaT, temperature ), friction( friction ) {
+                                                          RealOpenMM temperature) : 
+           ReferenceDynamics(numberOfAtoms, deltaT, temperature), friction(friction) {
 
-   // ---------------------------------------------------------------------------------------
-
-   static const char* methodName      = "\nReferenceBrownianDynamics::ReferenceBrownianDynamics";
-
-   static const RealOpenMM zero       =  0.0;
-   static const RealOpenMM one        =  1.0;
-
-   // ---------------------------------------------------------------------------------------
-
-   if( friction <= zero ){
-
+   if (friction <= 0) {
       std::stringstream message;
-      message << methodName;
-      message << " input frction value=" << friction << " is invalid -- setting to 1.";
-      SimTKOpenMMLog::printError( message );
-
-      this->friction = one;
-     
+      message << "illegal friction value: " << friction;
+      throw OpenMMException(message.str());
    }
    xPrime.resize(numberOfAtoms);
    inverseMasses.resize(numberOfAtoms);
@@ -81,7 +66,7 @@ ReferenceBrownianDynamics::ReferenceBrownianDynamics( int numberOfAtoms,
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceBrownianDynamics::~ReferenceBrownianDynamics( ){
+ReferenceBrownianDynamics::~ReferenceBrownianDynamics() {
 
    // ---------------------------------------------------------------------------------------
 
@@ -99,7 +84,7 @@ ReferenceBrownianDynamics::~ReferenceBrownianDynamics( ){
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM ReferenceBrownianDynamics::getFriction( void ) const {
+RealOpenMM ReferenceBrownianDynamics::getFriction() const {
 
    // ---------------------------------------------------------------------------------------
 
@@ -139,10 +124,10 @@ void ReferenceBrownianDynamics::update(const OpenMM::System& system, vector<Real
    // first-time-through initialization
 
    int numberOfAtoms = system.getNumParticles();
-   if( getTimeStep() == 0 ){
+   if (getTimeStep() == 0) {
       // invert masses
 
-      for( int ii = 0; ii < numberOfAtoms; ii++ ){
+      for (int ii = 0; ii < numberOfAtoms; ii++) {
          if (masses[ii] == zero)
              inverseMasses[ii] = zero;
          else
@@ -152,7 +137,7 @@ void ReferenceBrownianDynamics::update(const OpenMM::System& system, vector<Real
    
    // Perform the integration.
    
-   const RealOpenMM noiseAmplitude = static_cast<RealOpenMM>( sqrt(2.0*BOLTZ*getTemperature()*getDeltaT()/getFriction()) );
+   const RealOpenMM noiseAmplitude = static_cast<RealOpenMM>(sqrt(2.0*BOLTZ*getTemperature()*getDeltaT()/getFriction()));
    const RealOpenMM forceScale = getDeltaT()/getFriction();
    for (int i = 0; i < numberOfAtoms; ++i) {
        if (masses[i] != zero)
@@ -166,7 +151,7 @@ void ReferenceBrownianDynamics::update(const OpenMM::System& system, vector<Real
    
    // Update the positions and velocities.
    
-   RealOpenMM velocityScale = static_cast<RealOpenMM>( 1.0/getDeltaT() );
+   RealOpenMM velocityScale = static_cast<RealOpenMM>(1.0/getDeltaT());
    for (int i = 0; i < numberOfAtoms; ++i) {
        if (masses[i] != zero)
            for (int j = 0; j < 3; ++j) {

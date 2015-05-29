@@ -49,13 +49,14 @@
 using namespace OpenMM;
 using namespace std;
 
+ReferencePlatform platform;
+
 const double TOL = 1e-5;
 
 /**
  * Test a simple leapfrog integrator on a single bond.
  */
 void testSingleBond() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(2.0);
     system.addParticle(2.0);
@@ -101,7 +102,6 @@ void testSingleBond() {
 void testConstraints() {
     const int numParticles = 8;
     const double temp = 500.0;
-    ReferencePlatform platform;
     System system;
     CustomIntegrator integrator(0.002);
     integrator.addPerDofVariable("oldx", 0);
@@ -160,7 +160,6 @@ void testConstraints() {
  */
 void testVelocityConstraints() {
     const int numParticles = 10;
-    ReferencePlatform platform;
     System system;
     CustomIntegrator integrator(0.002);
     integrator.addPerDofVariable("x1", 0);
@@ -236,7 +235,6 @@ void testVelocityConstraints() {
 }
 
 void testConstrainedMasslessParticles() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(0.0);
     system.addParticle(1.0);
@@ -282,7 +280,6 @@ void testWithThermostat() {
     const double temp = 100.0;
     const double collisionFreq = 10.0;
     const int numSteps = 5000;
-    ReferencePlatform platform;
     System system;
     CustomIntegrator integrator(0.003);
     integrator.addUpdateContextState();
@@ -324,7 +321,6 @@ void testWithThermostat() {
  * Test a Monte Carlo integrator that uses global variables and depends on energy.
  */
 void testMonteCarlo() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -338,7 +334,7 @@ void testMonteCarlo() {
     integrator.addComputePerDof("oldx", "x");
     integrator.addComputePerDof("x", "x+dt*gaussian");
     integrator.addComputeGlobal("accept", "step(exp((oldE-energy)/kT)-uniform)");
-    integrator.addComputePerDof("x", "accept*x + (1-accept)*oldx");
+    integrator.addComputePerDof("x", "select(accept, x, oldx)");
     HarmonicBondForce* forceField = new HarmonicBondForce();
     forceField->addBond(0, 1, 2.0, 10.0);
     system.addForce(forceField);
@@ -379,7 +375,6 @@ void testMonteCarlo() {
 void testSum() {
     const int numParticles = 200;
     const double boxSize = 10;
-    ReferencePlatform platform;
     System system;
     system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
     NonbondedForce* nb = new NonbondedForce();
@@ -422,7 +417,6 @@ void testSum() {
  * Test an integrator that both uses and modifies a context parameter.
  */
 void testParameter() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     AndersenThermostat* thermostat = new AndersenThermostat(0.1, 0.1);
@@ -448,7 +442,6 @@ void testRandomDistributions() {
     const int numParticles = 100;
     const int numBins = 20;
     const int numSteps = 100;
-    ReferencePlatform platform;
     System system;
     for (int i = 0; i < numParticles; i++)
         system.addParticle(1.0);
@@ -516,7 +509,6 @@ void testRandomDistributions() {
 void testPerDofVariables() {
     const int numParticles = 200;
     const double boxSize = 10;
-    ReferencePlatform platform;
     System system;
     system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
     NonbondedForce* nb = new NonbondedForce();
@@ -571,7 +563,6 @@ void testPerDofVariables() {
  * Test evaluating force groups separately.
  */
 void testForceGroups() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(2.0);
     system.addParticle(2.0);
@@ -647,7 +638,6 @@ void testForceGroups() {
  */
 void testRespa() {
     const int numParticles = 8;
-    ReferencePlatform platform;
     System system;
     system.setDefaultPeriodicBoxVectors(Vec3(4, 0, 0), Vec3(0, 4, 0), Vec3(0, 0, 4));
     CustomIntegrator integrator(0.002);

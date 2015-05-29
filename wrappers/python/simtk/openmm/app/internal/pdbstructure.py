@@ -8,7 +8,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2013 Stanford University and the Authors.
+Portions copyright (c) 2012-2015 Stanford University and the Authors.
 Authors: Christopher M. Bruns
 Contributors: Peter Eastman
 
@@ -37,8 +37,10 @@ __version__ = "1.0"
 from simtk.openmm.vec3 import Vec3
 import simtk.unit as unit
 from .. import element
+from unitcell import computePeriodicBoxVectors
 import warnings
 import sys
+import math
 
 class PdbStructure(object):
     """
@@ -137,7 +139,7 @@ class PdbStructure(object):
         self._current_model = None
         self.default_model = None
         self.models_by_number = {}
-        self._unit_cell_dimensions = None
+        self._periodic_box_vectors = None
         self.sequences = []
         self.modified_residues = []
         # read file
@@ -148,6 +150,8 @@ class PdbStructure(object):
         self._reset_residue_numbers()
         # Read one line at a time
         for pdb_line in input_stream:
+            if not isinstance(pdb_line, str):
+                pdb_line = pdb_line.decode('utf-8')
             # Look for atoms
             if (pdb_line.find("ATOM  ") == 0) or (pdb_line.find("HETATM") == 0):
                 self._add_atom(Atom(pdb_line, self))
@@ -170,7 +174,13 @@ class PdbStructure(object):
                 self._current_model._current_chain._add_ter_record()
                 self._reset_residue_numbers()
             elif (pdb_line.find("CRYST1") == 0):
-                self._unit_cell_dimensions = Vec3(float(pdb_line[6:15]), float(pdb_line[15:24]), float(pdb_line[24:33]))*unit.angstroms
+                a_length = float(pdb_line[6:15])*0.1
+                b_length = float(pdb_line[15:24])*0.1
+                c_length = float(pdb_line[24:33])*0.1
+                alpha = float(pdb_line[33:40])*math.pi/180.0
+                beta = float(pdb_line[40:47])*math.pi/180.0
+                gamma = float(pdb_line[47:54])*math.pi/180.0
+                self._periodic_box_vectors = computePeriodicBoxVectors(a_length, b_length, c_length, alpha, beta, gamma)
             elif (pdb_line.find("CONECT") == 0):
                 atoms = [int(pdb_line[6:11])]
                 for pos in (11,16,21,26):
@@ -187,7 +197,7 @@ class PdbStructure(object):
             elif (pdb_line.find("MODRES") == 0):
                 self.modified_residues.append(ModifiedResidue(pdb_line[16], int(pdb_line[18:22]), pdb_line[12:15].strip(), pdb_line[24:27].strip()))
         self._finalize()
-    
+
     def _reset_atom_numbers(self):
         self._atom_numbers_are_hex = False
         self._next_atom_number = 1
@@ -283,9 +293,9 @@ class PdbStructure(object):
         for model in self.models:
             model._finalize()
 
-    def get_unit_cell_dimensions(self):
-        """Get the dimensions of the crystallographic unit cell (may be None)."""
-        return self._unit_cell_dimensions
+    def get_periodic_box_vectors(self):
+        """Get the vectors defining the crystallographic unit cell (may be None)."""
+        return self._periodic_box_vectors
 
 
 class Sequence(object):

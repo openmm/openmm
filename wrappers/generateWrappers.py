@@ -974,6 +974,7 @@ class FortranHeaderGenerator(WrapperGenerator):
             hasReturnValue = (returnType in ('integer*4', 'real*8'))
             hasReturnArg = not (hasReturnValue or returnType == 'void')
             functionName = "%s_%s" % (typeName, methodName)
+            functionName = functionName[:63]
             if hasReturnValue:
                 self.out.write("        function ")
             else:
@@ -1517,8 +1518,9 @@ class FortranSourceGenerator(WrapperGenerator):
                 # There are two identical methods that differ only in whether they are const.  Skip the const one.
                 continue
             functionName = "%s_%s" % (typeName, methodName)
-            self.writeOneMethod(classNode, methodNode, functionName, functionName.lower()+'_')
-            self.writeOneMethod(classNode, methodNode, functionName, functionName.upper())
+            truncatedName = functionName[:63]
+            self.writeOneMethod(classNode, methodNode, functionName, truncatedName.lower()+'_')
+            self.writeOneMethod(classNode, methodNode, functionName, truncatedName.upper())
     
     def writeOneConstructor(self, classNode, methodNode, functionName, wrapperFunctionName):
         className = getText("compoundname", classNode)

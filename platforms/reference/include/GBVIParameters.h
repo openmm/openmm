@@ -25,9 +25,10 @@
 #ifndef __GBVIParameters_H__
 #define __GBVIParameters_H__
 
-#include "SimTKOpenMMCommon.h"
+#include "RealVec.h"
+#include <vector>
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class GBVIParameters {
 
@@ -57,15 +58,15 @@ class GBVIParameters {
 
       // parameter vectors
 
-      RealOpenMMVector _atomicRadii;
-      RealOpenMMVector _scaledRadii;
-      RealOpenMMVector _gammaParameters;
+      std::vector<RealOpenMM> _atomicRadii;
+      std::vector<RealOpenMM> _scaledRadii;
+      std::vector<RealOpenMM> _gammaParameters;
 
       // cutoff and periodic boundary conditions
       
       bool _cutoff;
       bool _periodic;
-      RealOpenMM _periodicBoxSize[3];
+      OpenMM::RealVec _periodicBoxVectors[3];
       RealOpenMM _cutoffDistance;
 
       int _bornRadiusScalingMethod;
@@ -82,7 +83,7 @@ class GBVIParameters {
       
          --------------------------------------------------------------------------------------- */
       
-       GBVIParameters( int numberOfAtoms );
+       GBVIParameters(int numberOfAtoms);
 
       /**---------------------------------------------------------------------------------------
       
@@ -90,7 +91,7 @@ class GBVIParameters {
       
          --------------------------------------------------------------------------------------- */
       
-       ~GBVIParameters( );
+       ~GBVIParameters();
 
       /**---------------------------------------------------------------------------------------
       
@@ -100,7 +101,7 @@ class GBVIParameters {
       
          --------------------------------------------------------------------------------------- */
 
-      int getNumberOfAtoms( void ) const;
+      int getNumberOfAtoms() const;
 
       /**---------------------------------------------------------------------------------------
       
@@ -110,7 +111,7 @@ class GBVIParameters {
       
          --------------------------------------------------------------------------------------- */
 
-      RealOpenMM getElectricConstant( void ) const;
+      RealOpenMM getElectricConstant() const;
 
       /**---------------------------------------------------------------------------------------
       
@@ -120,7 +121,7 @@ class GBVIParameters {
       
          --------------------------------------------------------------------------------------- */
 
-      RealOpenMM getSolventDielectric( void ) const;
+      RealOpenMM getSolventDielectric() const;
 
       /**---------------------------------------------------------------------------------------
       
@@ -130,7 +131,7 @@ class GBVIParameters {
       
          --------------------------------------------------------------------------------------- */
 
-      void setSolventDielectric( RealOpenMM solventDielectric );
+      void setSolventDielectric(RealOpenMM solventDielectric);
 
       /**---------------------------------------------------------------------------------------
       
@@ -140,7 +141,7 @@ class GBVIParameters {
       
          --------------------------------------------------------------------------------------- */
 
-      RealOpenMM getSoluteDielectric( void ) const;
+      RealOpenMM getSoluteDielectric() const;
 
       /**---------------------------------------------------------------------------------------
       
@@ -150,7 +151,7 @@ class GBVIParameters {
       
          --------------------------------------------------------------------------------------- */
 
-      void setSoluteDielectric( RealOpenMM soluteDielectric );
+      void setSoluteDielectric(RealOpenMM soluteDielectric);
 
       /**---------------------------------------------------------------------------------------
       
@@ -160,7 +161,7 @@ class GBVIParameters {
       
          --------------------------------------------------------------------------------------- */
       
-      const RealOpenMMVector& getScaledRadii( void ) const;
+      const std::vector<RealOpenMM>& getScaledRadii() const;
         
       /**---------------------------------------------------------------------------------------
       
@@ -170,7 +171,7 @@ class GBVIParameters {
       
          --------------------------------------------------------------------------------------- */
       
-      void setScaledRadii( const RealOpenMMVector& scaledRadii );
+      void setScaledRadii(const std::vector<RealOpenMM>& scaledRadii);
         
       /**---------------------------------------------------------------------------------------
       
@@ -180,7 +181,7 @@ class GBVIParameters {
       
          --------------------------------------------------------------------------------------- */
 
-      const RealOpenMMVector& getAtomicRadii( void ) const;
+      const std::vector<RealOpenMM>& getAtomicRadii() const;
 
       /**---------------------------------------------------------------------------------------
       
@@ -190,7 +191,7 @@ class GBVIParameters {
       
          --------------------------------------------------------------------------------------- */
 
-      void setAtomicRadii( const RealOpenMMVector& atomicRadii );
+      void setAtomicRadii(const std::vector<RealOpenMM>& atomicRadii);
 
       /**---------------------------------------------------------------------------------------
       
@@ -200,7 +201,7 @@ class GBVIParameters {
       
          --------------------------------------------------------------------------------------- */
 
-      const RealOpenMMVector& getGammaParameters( void ) const;
+      const std::vector<RealOpenMM>& getGammaParameters() const;
 
       /**---------------------------------------------------------------------------------------
       
@@ -210,7 +211,7 @@ class GBVIParameters {
       
          --------------------------------------------------------------------------------------- */
 
-      void setGammaParameters( const RealOpenMMVector& gammaParameters );
+      void setGammaParameters(const std::vector<RealOpenMM>& gammaParameters);
 
       /**---------------------------------------------------------------------------------------
 
@@ -220,7 +221,7 @@ class GBVIParameters {
 
          --------------------------------------------------------------------------------------- */
 
-      void setUseCutoff( RealOpenMM distance );
+      void setUseCutoff(RealOpenMM distance);
 
       /**---------------------------------------------------------------------------------------
 
@@ -244,11 +245,11 @@ class GBVIParameters {
          already been set, and the smallest side of the periodic box is at least twice the cutoff
          distance.
 
-         @param boxSize             the X, Y, and Z widths of the periodic box
+         @param vectors    the vectors defining the periodic box
 
          --------------------------------------------------------------------------------------- */
 
-      void setPeriodic( OpenMM::RealVec& boxSize );
+      void setPeriodic(OpenMM::RealVec* vectors);
 
       /**---------------------------------------------------------------------------------------
 
@@ -264,7 +265,7 @@ class GBVIParameters {
 
          --------------------------------------------------------------------------------------- */
 
-      const RealOpenMM* getPeriodicBox();
+      const OpenMM::RealVec* getPeriodicBox();
 
       /**---------------------------------------------------------------------------------------
       
@@ -274,7 +275,7 @@ class GBVIParameters {
       
          --------------------------------------------------------------------------------------- */
       
-      RealOpenMM getTau( void ) const;
+      RealOpenMM getTau() const;
       
     /**---------------------------------------------------------------------------------------
     
@@ -284,7 +285,7 @@ class GBVIParameters {
     
        --------------------------------------------------------------------------------------- */
     
-    int getBornRadiusScalingMethod( void ) const;
+    int getBornRadiusScalingMethod() const;
     
     /**---------------------------------------------------------------------------------------
     
@@ -294,7 +295,7 @@ class GBVIParameters {
     
        --------------------------------------------------------------------------------------- */
     
-    void setBornRadiusScalingMethod( int bornRadiusScalingMethod );
+    void setBornRadiusScalingMethod(int bornRadiusScalingMethod);
     
     /**---------------------------------------------------------------------------------------
     
@@ -304,7 +305,7 @@ class GBVIParameters {
     
        --------------------------------------------------------------------------------------- */
     
-    RealOpenMM getQuinticLowerLimitFactor( void ) const;
+    RealOpenMM getQuinticLowerLimitFactor() const;
     
     /**---------------------------------------------------------------------------------------
     
@@ -314,7 +315,7 @@ class GBVIParameters {
     
        --------------------------------------------------------------------------------------- */
     
-    void setQuinticLowerLimitFactor( RealOpenMM quinticLowerLimitFactor );
+    void setQuinticLowerLimitFactor(RealOpenMM quinticLowerLimitFactor);
     
     /**---------------------------------------------------------------------------------------
     
@@ -324,7 +325,7 @@ class GBVIParameters {
     
        --------------------------------------------------------------------------------------- */
     
-    RealOpenMM getQuinticUpperBornRadiusLimit( void ) const;
+    RealOpenMM getQuinticUpperBornRadiusLimit() const;
     
     /**---------------------------------------------------------------------------------------
     
@@ -334,8 +335,10 @@ class GBVIParameters {
     
        --------------------------------------------------------------------------------------- */
     
-    void setQuinticUpperBornRadiusLimit( RealOpenMM quinticUpperSplineLimit );
+    void setQuinticUpperBornRadiusLimit(RealOpenMM quinticUpperSplineLimit);
 
 };
-   
+
+} // namespace OpenMM
+
 #endif // __GBVIParameters_H__

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -106,9 +106,8 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
                 // if they supplied a valid deviceIndex, we only look through that one
                 if (i != deviceIndex && deviceIndex >= 0 && deviceIndex < (int) devices.size())
                     continue;
-
-                if (platformVendor == "Apple" && (devices[i].getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_CPU || devices[i].getInfo<CL_DEVICE_VENDOR>() == "AMD"))
-                    continue; // The CPU device on OS X won't work correctly, and there are serious bugs using AMD GPUs.
+                if (platformVendor == "Apple" && (devices[i].getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_CPU))
+                    continue; // The CPU device on OS X won't work correctly.
                 int maxSize = devices[i].getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>()[0];
                 int processingElementsPerComputeUnit = 8;
                 if (devices[i].getInfo<CL_DEVICE_TYPE>() != CL_DEVICE_TYPE_GPU) {
@@ -170,6 +169,8 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
         compilationDefines["WORK_GROUP_SIZE"] = intToString(ThreadBlockSize);
         if (platformVendor.size() >= 5 && platformVendor.substr(0, 5) == "Intel")
             defaultOptimizationOptions = "";
+        else if (platformVendor == "Apple")
+            defaultOptimizationOptions = "-cl-mad-enable -cl-no-signed-zeros";
         else
             defaultOptimizationOptions = "-cl-fast-relaxed-math";
         supports64BitGlobalAtomics = (device.getInfo<CL_DEVICE_EXTENSIONS>().find("cl_khr_int64_base_atomics") != string::npos);
@@ -190,6 +191,13 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
                 clGetDeviceInfo(device(), CL_DEVICE_COMPUTE_CAPABILITY_MAJOR_NV, sizeof(cl_uint), &computeCapabilityMajor, NULL);
                 if (computeCapabilityMajor > 1)
                     supports64BitGlobalAtomics = true;
+                if (computeCapabilityMajor == 5) {
+                    // Workaround for a bug in Maxwell on CUDA 6.x.
+
+                    string platformVersion = platforms[bestPlatform].getInfo<CL_PLATFORM_VERSION>();
+                    if (platformVersion.find("CUDA 6") != string::npos)
+                        supports64BitGlobalAtomics = false;
+                }
             }
         }
         else if (vendor.size() >= 28 && vendor.substr(0, 28) == "Advanced Micro Devices, Inc.") {
@@ -234,8 +242,6 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
         }
         else
             simdWidth = 1;
-        if (platformVendor == "Apple" && vendor == "AMD")
-            compilationDefines["MAC_AMD_WORKAROUND"] = "";
         if (supports64BitGlobalAtomics)
             compilationDefines["SUPPORTS_64_BIT_ATOMICS"] = "";
         if (supportsDoublePrecision)
@@ -336,6 +342,54 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
         compilationDefines["LOG"] = "log";
     }
     
+    // Set defines for applying periodic boundary conditions.
+    
+    Vec3 boxVectors[3];
+    system.getDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+    boxIsTriclinic = (boxVectors[0][1] != 0.0 || boxVectors[0][2] != 0.0 ||
+                      boxVectors[1][0] != 0.0 || boxVectors[1][2] != 0.0 ||
+                      boxVectors[2][0] != 0.0 || boxVectors[2][1] != 0.0);
+    if (boxIsTriclinic) {
+        compilationDefines["APPLY_PERIODIC_TO_DELTA(delta)"] =
+            "{"
+            "real scale3 = floor(delta.z*invPeriodicBoxSize.z+0.5f); \\\n"
+            "delta.xyz -= scale3*periodicBoxVecZ.xyz; \\\n"
+            "real scale2 = floor(delta.y*invPeriodicBoxSize.y+0.5f); \\\n"
+            "delta.xy -= scale2*periodicBoxVecY.xy; \\\n"
+            "real scale1 = floor(delta.x*invPeriodicBoxSize.x+0.5f); \\\n"
+            "delta.x -= scale1*periodicBoxVecX.x;}";
+        compilationDefines["APPLY_PERIODIC_TO_POS(pos)"] =
+            "{"
+            "real scale3 = floor(pos.z*invPeriodicBoxSize.z); \\\n"
+            "pos.xyz -= scale3*periodicBoxVecZ.xyz; \\\n"
+            "real scale2 = floor(pos.y*invPeriodicBoxSize.y); \\\n"
+            "pos.xy -= scale2*periodicBoxVecY.xy; \\\n"
+            "real scale1 = floor(pos.x*invPeriodicBoxSize.x); \\\n"
+            "pos.x -= scale1*periodicBoxVecX.x;}";
+        compilationDefines["APPLY_PERIODIC_TO_POS_WITH_CENTER(pos, center)"] =
+            "{"
+            "real scale3 = floor((pos.z-center.z)*invPeriodicBoxSize.z+0.5f); \\\n"
+            "pos.x -= scale3*periodicBoxVecZ.x; \\\n"
+            "pos.y -= scale3*periodicBoxVecZ.y; \\\n"
+            "pos.z -= scale3*periodicBoxVecZ.z; \\\n"
+            "real scale2 = floor((pos.y-center.y)*invPeriodicBoxSize.y+0.5f); \\\n"
+            "pos.x -= scale2*periodicBoxVecY.x; \\\n"
+            "pos.y -= scale2*periodicBoxVecY.y; \\\n"
+            "real scale1 = floor((pos.x-center.x)*invPeriodicBoxSize.x+0.5f); \\\n"
+            "pos.x -= scale1*periodicBoxVecX.x;}";
+    }
+    else {
+        compilationDefines["APPLY_PERIODIC_TO_DELTA(delta)"] =
+            "delta.xyz -= floor(delta.xyz*invPeriodicBoxSize.xyz+0.5f)*periodicBoxSize.xyz;";
+        compilationDefines["APPLY_PERIODIC_TO_POS(pos)"] =
+            "pos.xyz -= floor(pos.xyz*invPeriodicBoxSize.xyz)*periodicBoxSize.xyz;";
+        compilationDefines["APPLY_PERIODIC_TO_POS_WITH_CENTER(pos, center)"] =
+            "{"
+            "pos.x -= floor((pos.x-center.x)*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x; \\\n"
+            "pos.y -= floor((pos.y-center.y)*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y; \\\n"
+            "pos.z -= floor((pos.z-center.z)*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;}";
+    }
+
     // Create the work thread used for parallelization when running on multiple devices.
     
     thread = new WorkThread();
@@ -527,7 +581,7 @@ void OpenCLContext::restoreDefaultQueue() {
     currentQueue = defaultQueue;
 }
 
-string OpenCLContext::doubleToString(double value) {
+string OpenCLContext::doubleToString(double value) const {
     stringstream s;
     s.precision(useDoublePrecision ? 16 : 8);
     s << scientific << value;
@@ -536,7 +590,7 @@ string OpenCLContext::doubleToString(double value) {
     return s.str();
 }
 
-string OpenCLContext::intToString(int value) {
+string OpenCLContext::intToString(int value) const {
     stringstream s;
     s << value;
     return s.str();
@@ -1039,16 +1093,21 @@ void OpenCLContext::reorderAtomsImpl() {
             // Move each molecule position into the same box.
 
             for (int i = 0; i < numMolecules; i++) {
-                int xcell = (int) floor(molPos[i].x*invPeriodicBoxSizeDouble.x);
-                int ycell = (int) floor(molPos[i].y*invPeriodicBoxSizeDouble.y);
-                int zcell = (int) floor(molPos[i].z*invPeriodicBoxSizeDouble.z);
-                Real dx = xcell*periodicBoxSizeDouble.x;
-                Real dy = ycell*periodicBoxSizeDouble.y;
-                Real dz = zcell*periodicBoxSizeDouble.z;
-                if (dx != 0.0f || dy != 0.0f || dz != 0.0f) {
-                    molPos[i].x -= dx;
-                    molPos[i].y -= dy;
-                    molPos[i].z -= dz;
+                Real4 center = molPos[i];
+                int zcell = (int) floor(center.z*invPeriodicBoxSize.z);
+                center.x -= zcell*periodicBoxVecZ.x;
+                center.y -= zcell*periodicBoxVecZ.y;
+                center.z -= zcell*periodicBoxVecZ.z;
+                int ycell = (int) floor(center.y*invPeriodicBoxSize.y);
+                center.x -= ycell*periodicBoxVecY.x;
+                center.y -= ycell*periodicBoxVecY.y;
+                int xcell = (int) floor(center.x*invPeriodicBoxSize.x);
+                center.x -= xcell*periodicBoxVecX.x;
+                if (xcell != 0 || ycell != 0 || zcell != 0) {
+                    Real dx = molPos[i].x-center.x;
+                    Real dy = molPos[i].y-center.y;
+                    Real dz = molPos[i].z-center.z;
+                    molPos[i] = center;
                     for (int j = 0; j < (int) atoms.size(); j++) {
                         int atom = atoms[j]+mol.offsets[i];
                         Real4 p = oldPosq[atom];

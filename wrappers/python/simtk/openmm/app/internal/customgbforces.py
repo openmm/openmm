@@ -217,7 +217,7 @@ def _createEnergyTerms(force, solventDielectric, soluteDielectric, SA, cutoff, k
                                 "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))"+params, CustomGBForce.ParticlePairNoExclusions)
     else:
         if kappa > 0:
-            force.addEnergyTerm("-138.935485*(1/soluteDielectric-kappa/solventDielectric)*q1*q2*(1/f-"+str(1/cutoff)+");"
+            force.addEnergyTerm("-138.935485*(1/soluteDielectric-exp(-kappa*f)/solventDielectric)*q1*q2*(1/f-"+str(1/cutoff)+");"
                                 "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))"+params, CustomGBForce.ParticlePairNoExclusions)
         else:
             force.addEnergyTerm("-138.935485*(1/soluteDielectric-1/solventDielectric)*q1*q2*(1/f-"+str(1/cutoff)+");"

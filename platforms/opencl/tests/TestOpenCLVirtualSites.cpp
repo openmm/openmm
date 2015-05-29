@@ -413,7 +413,7 @@ void testConservationLaws() {
         if (i == 0)
             initialAngularMomentum = angularMomentum;
         else
-            ASSERT_EQUAL_VEC(initialAngularMomentum, angularMomentum, 0.03);
+            ASSERT_EQUAL_VEC(initialAngularMomentum, angularMomentum, 0.05);
         integrator.step(1);
     }
 }

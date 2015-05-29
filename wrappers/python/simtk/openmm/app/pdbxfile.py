@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2014 Stanford University and the Authors.
+Portions copyright (c) 2014-2015 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors:
 
@@ -33,8 +33,10 @@ __version__ = "1.0"
 
 import os
 import sys
+import math
 from simtk.openmm import Vec3
 from simtk.openmm.app.internal.pdbx.reader.PdbxReader import PdbxReader
+from simtk.openmm.app.internal.unitcell import computePeriodicBoxVectors
 from simtk.openmm.app import Topology
 from simtk.unit import nanometers, angstroms, is_quantity, norm, Quantity
 import element as elem
@@ -76,6 +78,7 @@ class PDBxFile(object):
         atomIdCol = atomData.getAttributeIndex('id')
         resNameCol = atomData.getAttributeIndex('label_comp_id')
         resIdCol = atomData.getAttributeIndex('label_seq_id')
+        resNumCol = atomData.getAttributeIndex('auth_seq_id')
         asymIdCol = atomData.getAttributeIndex('label_asym_id')
         chainIdCol = atomData.getAttributeIndex('label_entity_id')
         elementCol = atomData.getAttributeIndex('type_symbol')
@@ -105,13 +108,13 @@ class PDBxFile(object):
 
                 if lastChainId != row[chainIdCol]:
                     # The start of a new chain.
-                    chain = top.addChain()
+                    chain = top.addChain(row[chainIdCol])
                     lastChainId = row[chainIdCol]
                     lastResId = None
                     lastAsymId = None
                 if lastResId != row[resIdCol] or lastAsymId != row[asymIdCol]:
                     # The start of a new residue.
-                    res = top.addResidue(row[resNameCol], chain)
+                    res = top.addResidue(row[resNameCol], chain, None if resNumCol == -1 else row[resNumCol])
                     lastResId = row[resIdCol]
                     if lastResId == '.':
                         lastResId = None
@@ -121,7 +124,7 @@ class PDBxFile(object):
                     element = elem.get_by_symbol(row[elementCol])
                 except KeyError:
                     pass
-                atom = top.addAtom(row[atomNameCol], element, res)
+                atom = top.addAtom(row[atomNameCol], element, res, row[atomIdCol])
                 atomTable[atomKey] = atom
             else:
                 # This row defines coordinates for an existing atom in one of the later models.
@@ -145,8 +148,9 @@ class PDBxFile(object):
         cell = block.getObj('cell')
         if cell is not None and cell.getRowCount() > 0:
             row = cell.getRow(0)
-            cellSize = [float(row[cell.getAttributeIndex(attribute)]) for attribute in ('length_a', 'length_b', 'length_c')]*angstroms
-            self.topology.setUnitCellDimensions(cellSize)
+            (a, b, c) = [float(row[cell.getAttributeIndex(attribute)])*0.1 for attribute in ('length_a', 'length_b', 'length_c')]
+            (alpha, beta, gamma) = [float(row[cell.getAttributeIndex(attribute)])*math.pi/180.0 for attribute in ('angle_alpha', 'angle_beta', 'angle_gamma')]
+            self.topology.setPeriodicBoxVectors(computePeriodicBoxVectors(a, b, c, alpha, beta, gamma))
 
         # Add bonds based on struct_conn records.
 

@@ -43,14 +43,14 @@ struct InstNode;
 struct JumpNode;
 
 // ============================================================================
-// [asmjit::kConstScope]
+// [asmjit::ConstScope]
 // ============================================================================
 
 //! \addtogroup asmjit_base_compiler
 //! \{
 
 //! Scope of the constant.
-ASMJIT_ENUM(kConstScope) {
+ASMJIT_ENUM(ConstScope) {
   //! Local constant, always embedded right after the current function.
   kConstScopeLocal = 0,
   //! Global constant, embedded at the end of the currently compiled code.
@@ -58,10 +58,10 @@ ASMJIT_ENUM(kConstScope) {
 };
 
 // ============================================================================
-// [asmjit::kVarType]
+// [asmjit::VarType]
 // ============================================================================
 
-ASMJIT_ENUM(kVarType) {
+ASMJIT_ENUM(VarType) {
   //! Variable is 8-bit signed integer.
   kVarTypeInt8 = 0,
   //! Variable is 8-bit unsigned integer.
@@ -101,13 +101,13 @@ ASMJIT_ENUM(kVarType) {
 };
 
 // ============================================================================
-// [asmjit::kVarFlags]
+// [asmjit::VarFlags]
 // ============================================================================
 
 //! \internal
 //!
 //! X86/X64 variable flags.
-ASMJIT_ENUM(kVarFlags) {
+ASMJIT_ENUM(VarFlags) {
   //! Variable contains single-precision floating-point(s).
   kVarFlagSp = 0x10,
   //! Variable contains double-precision floating-point(s).
@@ -117,11 +117,11 @@ ASMJIT_ENUM(kVarFlags) {
 };
 
 // ============================================================================
-// [asmjit::kVarAttrFlags]
+// [asmjit::VarAttrFlags]
 // ============================================================================
 
 //! Variable attribute flags.
-ASMJIT_ENUM(kVarAttrFlags) {
+ASMJIT_ENUM(VarAttrFlags) {
   //! Variable is accessed through register on input.
   kVarAttrInReg = 0x00000001,
   //! Variable is accessed through register on output.
@@ -188,13 +188,13 @@ ASMJIT_ENUM(kVarAttrFlags) {
 };
 
 // ============================================================================
-// [asmjit::kVarHint]
+// [asmjit::VarHint]
 // ============================================================================
 
 //! Variable hint (used by `Compiler)`.
 //!
 //! \sa Compiler.
-ASMJIT_ENUM(kVarHint) {
+ASMJIT_ENUM(VarHint) {
   //! Alloc variable.
   kVarHintAlloc = 0,
   //! Spill variable.
@@ -211,35 +211,29 @@ ASMJIT_ENUM(kVarHint) {
 // [asmjit::kVarState]
 // ============================================================================
 
+// TODO: Rename `kVarState` or `VarState`.
+
 //! State of variable.
 //!
-//! \note State of variable is used only during make process and it's not
-//! visible to the developer.
+//! \note Variable states are used only during register allocation.
 ASMJIT_ENUM(kVarState) {
   //! Variable is currently not used.
-  kVarStateUnused = 0,
-
-  //! Variable is in register.
-  //!
+  kVarStateNone = 0,
   //! Variable is currently allocated in register.
   kVarStateReg = 1,
-
-  //! Variable is in memory location or spilled.
-  //!
-  //! Variable was spilled from register to memory or variable is used for
-  //! memory only storage.
+  //! Variable is currently allocated in memory (or has been spilled).
   kVarStateMem = 2
 };
 
 // ============================================================================
-// [asmjit::kFuncConv]
+// [asmjit::FuncConv]
 // ============================================================================
 
 //! Function calling convention.
 //!
 //! For a platform specific calling conventions, see:
-//!   - `kX86FuncConv` - X86/X64 calling conventions.
-ASMJIT_ENUM(kFuncConv) {
+//!   - `X86FuncConv` - X86/X64 calling conventions.
+ASMJIT_ENUM(FuncConv) {
   //! Calling convention is invalid (can't be used).
   kFuncConvNone = 0,
 
@@ -267,14 +261,14 @@ ASMJIT_ENUM(kFuncConv) {
 };
 
 // ============================================================================
-// [asmjit::kFuncHint]
+// [asmjit::FuncHint]
 // ============================================================================
 
 //! Function hints.
 //!
 //! For a platform specific calling conventions, see:
-//!   - `kX86FuncHint` - X86/X64 function hints.
-ASMJIT_ENUM(kFuncHint) {
+//!   - `X86FuncHint` - X86/X64 function hints.
+ASMJIT_ENUM(FuncHint) {
   //! Make a naked function (default true).
   //!
   //! Naked function is function without using standard prolog/epilog sequence).
@@ -325,14 +319,14 @@ ASMJIT_ENUM(kFuncHint) {
 };
 
 // ============================================================================
-// [asmjit::kFuncFlags]
+// [asmjit::FuncFlags]
 // ============================================================================
 
 //! Function flags.
 //!
 //! For a platform specific calling conventions, see:
-//!   - `kX86FuncFlags` - X86/X64 function flags.
-ASMJIT_ENUM(kFuncFlags) {
+//!   - `X86FuncFlags` - X86/X64 function flags.
+ASMJIT_ENUM(FuncFlags) {
   //! Whether the function is using naked (minimal) prolog / epilog.
   kFuncFlagIsNaked = 0x00000001,
 
@@ -360,11 +354,11 @@ ASMJIT_ENUM(kFuncFlags) {
 };
 
 // ============================================================================
-// [asmjit::kFuncDir]
+// [asmjit::FuncDir]
 // ============================================================================
 
 //! Function arguments direction.
-ASMJIT_ENUM(kFuncDir) {
+ASMJIT_ENUM(FuncDir) {
   //! Arguments are passed left to right.
   //!
   //! This arguments direction is unusual in C, however it's used in Pascal.
@@ -377,11 +371,11 @@ ASMJIT_ENUM(kFuncDir) {
 };
 
 // ============================================================================
-// [asmjit::kFuncArg]
+// [asmjit::FuncArgIndex]
 // ============================================================================
 
-//! Function argument (lo/hi) specification.
-ASMJIT_ENUM(kFuncArg) {
+//! Function argument index (lo/hi).
+ASMJIT_ENUM(FuncArgIndex) {
   //! Maxumum number of function arguments supported by AsmJit.
   kFuncArgCount = 16,
   //! Extended maximum number of arguments (used internally).
@@ -401,11 +395,11 @@ ASMJIT_ENUM(kFuncArg) {
 };
 
 // ============================================================================
-// [asmjit::kFuncRet]
+// [asmjit::FuncRet]
 // ============================================================================
 
 //! Function return value (lo/hi) specification.
-ASMJIT_ENUM(kFuncRet) {
+ASMJIT_ENUM(FuncRet) {
   //! Index to the LO part of function return value.
   kFuncRetLo = 0,
   //! Index to the HI part of function return value.
@@ -416,17 +410,17 @@ ASMJIT_ENUM(kFuncRet) {
 // [asmjit::kFuncStackInvalid]
 // ============================================================================
 
-enum kFuncMisc {
+enum {
   //! Invalid stack offset in function or function parameter.
   kFuncStackInvalid = -1
 };
 
 // ============================================================================
-// [asmjit::kNodeType]
+// [asmjit::NodeType]
 // ============================================================================
 
 //! Type of node, see \ref Node.
-ASMJIT_ENUM(kNodeType) {
+ASMJIT_ENUM(NodeType) {
   //! Invalid node (internal, can't be used).
   kNodeTypeNone = 0,
   //! Node is an .align directive, see \ref AlignNode.
@@ -454,10 +448,10 @@ ASMJIT_ENUM(kNodeType) {
 };
 
 // ============================================================================
-// [asmjit::kNodeFlags]
+// [asmjit::NodeFlags]
 // ============================================================================
 
-ASMJIT_ENUM(kNodeFlags) {
+ASMJIT_ENUM(NodeFlags) {
   //! Whether the node has been translated, thus contains only registers.
   kNodeFlagIsTranslated = 0x0001,
 
@@ -556,6 +550,12 @@ struct Var : public Operand {
   //! Clone `Var` operand.
   ASMJIT_INLINE Var clone() const {
     return Var(*this);
+  }
+
+  //! Reset Var operand.
+  ASMJIT_INLINE void reset() {
+    _init_packed_op_sz_b0_b1_id(kOperandTypeVar, 0, kInvalidReg, kInvalidReg, kInvalidValue);
+    _init_packed_d2_d3(kInvalidValue, kInvalidValue);
   }
 
   //! Get whether the variable has been initialized by `Compiler`.
@@ -987,11 +987,11 @@ struct VarAttr {
   //! Get whether `flag` is on.
   ASMJIT_INLINE bool hasFlag(uint32_t flag) { return (_flags & flag) != 0; }
   //! Add `flags`.
-  ASMJIT_INLINE void addFlags(uint32_t flags) { _flags |= flags; }
+  ASMJIT_INLINE void orFlags(uint32_t flags) { _flags |= flags; }
   //! Mask `flags`.
   ASMJIT_INLINE void andFlags(uint32_t flags) { _flags &= flags; }
   //! Clear `flags`.
-  ASMJIT_INLINE void delFlags(uint32_t flags) { _flags &= ~flags; }
+  ASMJIT_INLINE void andNotFlags(uint32_t flags) { _flags &= ~flags; }
 
   //! Get how many times the variable is used by the instruction/node.
   ASMJIT_INLINE uint32_t getVarCount() const { return _varCount; }
@@ -1174,7 +1174,7 @@ struct DoubleType {};
 #if !defined(ASMJIT_DOCGEN)
 template<typename T>
 struct TypeId {
-  enum { kId = static_cast<int>(::asmjit::kInvalidVar) };
+  // Left empty to report any type, which is not known to asmjit.
 };
 
 template<typename T>
@@ -1186,38 +1186,30 @@ struct TypeId<T*> {
   template<> \
   struct TypeId<_T_> { enum { kId = _Id_ }; }
 
-ASMJIT_TYPE_ID(void, kInvalidVar);
-ASMJIT_TYPE_ID(Void, kInvalidVar);
+ASMJIT_TYPE_ID(void         , kInvalidVar);
+ASMJIT_TYPE_ID(char         , IntTraits<char>::kIsSigned ? kVarTypeInt8 : kVarTypeUInt8);
+ASMJIT_TYPE_ID(signed char  , kVarTypeInt8);
+ASMJIT_TYPE_ID(unsigned char, kVarTypeUInt8);
+ASMJIT_TYPE_ID(int16_t      , kVarTypeInt16);
+ASMJIT_TYPE_ID(uint16_t     , kVarTypeUInt16);
+ASMJIT_TYPE_ID(int32_t      , kVarTypeInt32);
+ASMJIT_TYPE_ID(uint32_t     , kVarTypeUInt32);
+ASMJIT_TYPE_ID(int64_t      , kVarTypeInt64);
+ASMJIT_TYPE_ID(uint64_t     , kVarTypeUInt64);
+ASMJIT_TYPE_ID(float        , kVarTypeFp32);
+ASMJIT_TYPE_ID(double       , kVarTypeFp64);
 
-ASMJIT_TYPE_ID(int8_t, kVarTypeInt8);
-ASMJIT_TYPE_ID(Int8Type, kVarTypeInt8);
-
-ASMJIT_TYPE_ID(uint8_t, kVarTypeUInt8);
-ASMJIT_TYPE_ID(UInt8Type, kVarTypeUInt8);
-
-ASMJIT_TYPE_ID(int16_t, kVarTypeInt16);
-ASMJIT_TYPE_ID(Int16Type, kVarTypeInt16);
-
-ASMJIT_TYPE_ID(uint16_t, kVarTypeUInt8);
-ASMJIT_TYPE_ID(UInt16Type, kVarTypeUInt8);
-
-ASMJIT_TYPE_ID(int32_t, kVarTypeInt32);
-ASMJIT_TYPE_ID(Int32Type, kVarTypeUInt8);
-
-ASMJIT_TYPE_ID(uint32_t, kVarTypeUInt32);
-ASMJIT_TYPE_ID(UInt32Type, kVarTypeUInt8);
-
-ASMJIT_TYPE_ID(int64_t, kVarTypeInt64);
-ASMJIT_TYPE_ID(Int64Type, kVarTypeUInt8);
-
-ASMJIT_TYPE_ID(uint64_t, kVarTypeUInt64);
-ASMJIT_TYPE_ID(UInt64Type, kVarTypeUInt8);
-
-ASMJIT_TYPE_ID(float, kVarTypeFp32);
-ASMJIT_TYPE_ID(FloatType, kVarTypeFp32);
-
-ASMJIT_TYPE_ID(double, kVarTypeFp64);
-ASMJIT_TYPE_ID(DoubleType, kVarTypeFp64);
+ASMJIT_TYPE_ID(Void         , kInvalidVar);
+ASMJIT_TYPE_ID(Int8Type     , kVarTypeInt8);
+ASMJIT_TYPE_ID(UInt8Type    , kVarTypeUInt8);
+ASMJIT_TYPE_ID(Int16Type    , kVarTypeInt16);
+ASMJIT_TYPE_ID(UInt16Type   , kVarTypeUInt16);
+ASMJIT_TYPE_ID(Int32Type    , kVarTypeUInt32);
+ASMJIT_TYPE_ID(UInt32Type   , kVarTypeUInt32);
+ASMJIT_TYPE_ID(Int64Type    , kVarTypeUInt64);
+ASMJIT_TYPE_ID(UInt64Type   , kVarTypeUInt64);
+ASMJIT_TYPE_ID(FloatType    , kVarTypeFp32);
+ASMJIT_TYPE_ID(DoubleType   , kVarTypeFp64);
 #endif // !ASMJIT_DOCGEN
 
 // ============================================================================
@@ -1256,7 +1248,7 @@ struct FuncInOut {
 
   union {
     struct {
-      //! Variable type, see `kVarType`.
+      //! Variable type, see `VarType`.
       uint8_t _varType;
       //! Register index if argument / return value is a register.
       uint8_t _regIndex;
@@ -1482,7 +1474,7 @@ struct FuncDecl {
   // [Accessors - Calling Convention]
   // --------------------------------------------------------------------------
 
-  //! Get function calling convention, see `kFuncConv`.
+  //! Get function calling convention, see `FuncConv`.
   ASMJIT_INLINE uint32_t getConvention() const { return _convention; }
 
   //! Get whether the callee pops the stack.
@@ -1550,7 +1542,7 @@ struct FuncDecl {
   uint8_t _convention;
   //! Whether a callee pops stack.
   uint8_t _calleePopsStack : 1;
-  //! Direction for arguments passed on the stack, see `kFuncDir`.
+  //! Direction for arguments passed on the stack, see `FuncDir`.
   uint8_t _direction : 1;
   //! Reserved #0 (alignment).
   uint8_t _reserved0 : 6;
@@ -1636,7 +1628,7 @@ struct Node {
   // [Accessors - Type and Flags]
   // --------------------------------------------------------------------------
 
-  //! Get type of node, see `kNodeType`.
+  //! Get node type, see `NodeType`.
   ASMJIT_INLINE uint32_t getType() const {
     return _type;
   }
@@ -1646,24 +1638,29 @@ struct Node {
     return _flags;
   }
 
-  //! Set node flags to `flags`.
-  ASMJIT_INLINE void setFlags(uint32_t flags) {
-    _flags = static_cast<uint16_t>(flags);
-  }
-
   //! Get whether the instruction has flag `flag`.
   ASMJIT_INLINE bool hasFlag(uint32_t flag) const {
     return (static_cast<uint32_t>(_flags) & flag) != 0;
   }
 
+  //! Set node flags to `flags`.
+  ASMJIT_INLINE void setFlags(uint32_t flags) {
+    _flags = static_cast<uint16_t>(flags);
+  }
+
   //! Add instruction `flags`.
-  ASMJIT_INLINE void addFlags(uint32_t flags) {
+  ASMJIT_INLINE void orFlags(uint32_t flags) {
     _flags |= static_cast<uint16_t>(flags);
   }
 
+  //! And instruction `flags`.
+  ASMJIT_INLINE void andFlags(uint32_t flags) {
+    _flags &= static_cast<uint16_t>(flags);
+  }
+
   //! Clear instruction `flags`.
-  ASMJIT_INLINE void delFlags(uint32_t flags) {
-    _flags &= static_cast<uint16_t>(~flags);
+  ASMJIT_INLINE void andNotFlags(uint32_t flags) {
+    _flags &= ~static_cast<uint16_t>(flags);
   }
 
   //! Get whether the node has beed fetched.
@@ -1689,18 +1686,18 @@ struct Node {
     return hasFlag(kNodeFlagIsInformative);
   }
 
-  //! Whether the instruction is an unconditional jump.
+  //! Whether the node is `InstNode` and unconditional jump.
   ASMJIT_INLINE bool isJmp() const { return hasFlag(kNodeFlagIsJmp); }
-  //! Whether the instruction is a conditional jump.
+  //! Whether the node is `InstNode` and conditional jump.
   ASMJIT_INLINE bool isJcc() const { return hasFlag(kNodeFlagIsJcc); }
-  //! Whether the instruction is an unconditional or conditional jump.
+  //! Whether the node is `InstNode` and conditional/unconditional jump.
   ASMJIT_INLINE bool isJmpOrJcc() const { return hasFlag(kNodeFlagIsJmp | kNodeFlagIsJcc); }
-  //! Whether the instruction is a return.
+  //! Whether the node is `InstNode` and return.
   ASMJIT_INLINE bool isRet() const { return hasFlag(kNodeFlagIsRet); }
 
-  //! Get whether the instruction is special.
+  //! Get whether the node is `InstNode` and the instruction is special.
   ASMJIT_INLINE bool isSpecial() const { return hasFlag(kNodeFlagIsSpecial); }
-  //! Get whether the instruction accesses FPU.
+  //! Get whether the node is `InstNode` and the instruction uses x87-FPU.
   ASMJIT_INLINE bool isFp() const { return hasFlag(kNodeFlagIsFp); }
 
   // --------------------------------------------------------------------------
@@ -1785,7 +1782,7 @@ struct Node {
   //! Next node.
   Node* _next;
 
-  //! Node type, see `kNodeType`.
+  //! Node type, see `NodeType`.
   uint8_t _type;
   //! Operands count (if the node has operands, otherwise zero).
   uint8_t _opCount;
@@ -1863,7 +1860,7 @@ struct AlignNode : public Node {
   // [Members]
   // --------------------------------------------------------------------------
 
-  //! Alignment mode, see \ref kAlignMode.
+  //! Alignment mode, see \ref AlignMode.
   uint32_t _mode;
   //! Alignment offset in bytes.
   uint32_t _offset;
@@ -1891,7 +1888,9 @@ struct EmbedNode : public Node {
   // --------------------------------------------------------------------------
 
   //! Create a new `EmbedNode` instance.
-  ASMJIT_INLINE EmbedNode(Compiler* compiler, void* data, uint32_t size) : Node(compiler, kNodeTypeEmbed) {
+  ASMJIT_INLINE EmbedNode(Compiler* compiler, void* data, uint32_t size) :
+    Node(compiler, kNodeTypeEmbed) {
+
     _size = size;
     if (size <= kInlineBufferSize) {
       if (data != NULL)
@@ -1947,7 +1946,7 @@ struct CommentNode : public Node {
 
   //! Create a new `CommentNode` instance.
   ASMJIT_INLINE CommentNode(Compiler* compiler, const char* comment) : Node(compiler, kNodeTypeComment) {
-    addFlags(kNodeFlagIsInformative);
+    orFlags(kNodeFlagIsInformative);
     _comment = comment;
   }
 
@@ -1968,8 +1967,10 @@ struct HintNode : public Node {
   // --------------------------------------------------------------------------
 
   //! Create a new `HintNode` instance.
-  ASMJIT_INLINE HintNode(Compiler* compiler, VarData* vd, uint32_t hint, uint32_t value) : Node(compiler, kNodeTypeHint) {
-    addFlags(kNodeFlagIsInformative);
+  ASMJIT_INLINE HintNode(Compiler* compiler, VarData* vd, uint32_t hint, uint32_t value) :
+    Node(compiler, kNodeTypeHint) {
+
+    orFlags(kNodeFlagIsInformative);
     _vd = vd;
     _hint = hint;
     _value = value;
@@ -2095,9 +2096,12 @@ struct InstNode : public Node {
   // --------------------------------------------------------------------------
 
   //! Create a new `InstNode` instance.
-  ASMJIT_INLINE InstNode(Compiler* compiler, uint32_t code, uint32_t options, Operand* opList, uint32_t opCount) : Node(compiler, kNodeTypeInst) {
-    _code = static_cast<uint16_t>(code);
-    _options = static_cast<uint8_t>(options);
+  ASMJIT_INLINE InstNode(Compiler* compiler, uint32_t instId, uint32_t instOptions, Operand* opList, uint32_t opCount) :
+    Node(compiler, kNodeTypeInst) {
+
+    _instId = static_cast<uint16_t>(instId);
+    _reserved = 0;
+    _instOptions = instOptions;
 
     _opCount = static_cast<uint8_t>(opCount);
     _opList = opList;
@@ -2112,18 +2116,17 @@ struct InstNode : public Node {
   // [Accessors]
   // --------------------------------------------------------------------------
 
-  //! Get instruction code, see `kX86InstId`.
-  ASMJIT_INLINE uint32_t getCode() const {
-    return _code;
+  //! Get instruction ID, see `X86InstId`.
+  ASMJIT_INLINE uint32_t getInstId() const {
+    return _instId;
   }
 
-  //! Set instruction code to `code`.
+  //! Set instruction ID to `instId`.
   //!
-  //! Please do not modify instruction code if you are not know what you are
-  //! doing. Incorrect instruction code or operands can raise assertion() at
-  //! runtime.
-  ASMJIT_INLINE void setCode(uint32_t code) {
-    _code = static_cast<uint16_t>(code);
+  //! Please do not modify instruction code if you don't know what are you
+  //! doing. Incorrect instruction code or operands can cause assertion failure.
+  ASMJIT_INLINE void setInstId(uint32_t instId) {
+    _instId = static_cast<uint16_t>(instId);
   }
 
   //! Whether the instruction is an unconditional jump or whether the
@@ -2134,23 +2137,23 @@ struct InstNode : public Node {
 
   //! Get emit options.
   ASMJIT_INLINE uint32_t getOptions() const {
-    return _options;
+    return _instOptions;
   }
   //! Set emit options.
   ASMJIT_INLINE void setOptions(uint32_t options) {
-    _options = static_cast<uint8_t>(options);
+    _instOptions = options;
   }
   //! Add emit options.
   ASMJIT_INLINE void addOptions(uint32_t options) {
-    _options |= static_cast<uint8_t>(options);
+    _instOptions |= options;
   }
   //! Mask emit options.
   ASMJIT_INLINE void andOptions(uint32_t options) {
-    _options &= static_cast<uint8_t>(options);
+    _instOptions &= options;
   }
   //! Clear emit options.
   ASMJIT_INLINE void delOptions(uint32_t options) {
-    _options &= static_cast<uint8_t>(~options);
+    _instOptions &= ~options;
   }
 
   //! Get operands list.
@@ -2219,12 +2222,14 @@ _Update:
   // [Members]
   // --------------------------------------------------------------------------
 
-  //! Instruction code, see `kInstId`.
-  uint16_t _code;
-  //! Instruction options, see `kInstOptions`.
-  uint8_t _options;
+  //! Instruction ID, see `InstId`.
+  uint16_t _instId;
   //! \internal
   uint8_t _memOpIndex;
+  //! \internal
+  uint8_t _reserved;
+  //! Instruction options, see `InstOptions`.
+  uint32_t _instOptions;
 
   //! Operands list.
   Operand* _opList;
@@ -2468,7 +2473,7 @@ struct FuncNode : public Node {
   //! The "Red Zone" size - count of bytes which might be accessed without
   //! adjusting the stack pointer.
   uint16_t _redZoneSize;
-  //! Spill zone size (zone used by WIN64ABI).
+  //! Spill zone size (used by WIN64 ABI).
   uint16_t _spillZoneSize;
 
   //! Stack size needed for function arguments.
@@ -2954,14 +2959,50 @@ struct ASMJIT_VCLASS Compiler : public CodeGen {
   ASMJIT_API void alloc(Var& var);
   //! Alloc variable `var` using `regIndex` as a register index.
   ASMJIT_API void alloc(Var& var, uint32_t regIndex);
-  //! Alloc variable `var` using `reg` as a demanded register.
+  //! Alloc variable `var` using `reg` as a register operand.
   ASMJIT_API void alloc(Var& var, const Reg& reg);
   //! Spill variable `var`.
   ASMJIT_API void spill(Var& var);
-  //! Save variable `var` if modified.
+  //! Save variable `var` if the status is `modified` at this point.
   ASMJIT_API void save(Var& var);
   //! Unuse variable `var`.
   ASMJIT_API void unuse(Var& var);
+
+  //! Alloc variable `var` (if initialized), but only if it's initialized.
+  ASMJIT_INLINE void allocUnsafe(Var& var) {
+    if (var.isInitialized())
+      alloc(var);
+  }
+
+  //! Alloc variable `var` (if initialized) using `regIndex` as a register index
+  ASMJIT_INLINE void allocUnsafe(Var& var, uint32_t regIndex) {
+    if (var.isInitialized())
+      alloc(var, regIndex);
+  }
+
+  //! Alloc variable `var` (if initialized) using `reg` as a register operand.
+  ASMJIT_INLINE void allocUnsafe(Var& var, const Reg& reg) {
+    if (var.isInitialized())
+      alloc(var, reg);
+  }
+
+  //! Spill variable `var` (if initialized).
+  ASMJIT_INLINE void spillUnsafe(Var& var) {
+    if (var.isInitialized())
+      spill(var);
+  }
+
+  //! Save variable `var` (if initialized) if the status is `modified` at this point.
+  ASMJIT_INLINE void saveUnsafe(Var& var) {
+    if (var.isInitialized())
+      save(var);
+  }
+
+  //! Unuse variable `var` (if initialized).
+  ASMJIT_INLINE void unuseUnsafe(Var& var) {
+    if (var.isInitialized())
+      unuse(var);
+  }
 
   //! Get priority of variable `var`.
   ASMJIT_API uint32_t getPriority(Var& var) const;
@@ -3035,7 +3076,7 @@ struct ASMJIT_VCLASS Compiler : public CodeGen {
   //! registers.
   uint32_t _maxLookAhead;
 
-  //! Variable mapping (translates incoming kVarType into target).
+  //! Variable mapping (translates incoming VarType into target).
   const uint8_t* _targetVarMapping;
 
   //! First node.

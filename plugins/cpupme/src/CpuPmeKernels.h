@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013 Stanford University and the Authors.           *
+ * Portions copyright (c) 2013-2014 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,6 +32,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#define NOMINMAX
 #include "internal/windowsExportPme.h"
 #include "openmm/kernels.h"
 #include "openmm/Vec3.h"
@@ -66,11 +67,11 @@ public:
     /**
      * Begin computing the force and energy.
      * 
-     * @param io               an object that coordinates data transfer
-     * @param periodicBoxSize  the size of the periodic box (measured in nm)
-     * @param includeEnergy    true if potential energy should be computed
+     * @param io                  an object that coordinates data transfer
+     * @param periodicBoxVectors  the vectors defining the periodic box (measured in nm)
+     * @param includeEnergy       true if potential energy should be computed
      */
-    void beginComputation(IO& io, Vec3 periodicBoxSize, bool includeEnergy);
+    void beginComputation(IO& io, const Vec3* periodicBoxVectors, bool includeEnergy);
     /**
      * Finish computing the force and energy.
      * 
@@ -98,7 +99,7 @@ private:
     /**
      * Select a size for one grid dimension that FFTW can handle efficiently.
      */
-    int findFFTDimension(int minimum);
+    int findFFTDimension(int minimum, bool isZ);
     static bool hasInitializedThreads;
     static int numThreads;
     int gridx, gridy, gridz, numParticles;
@@ -107,7 +108,7 @@ private:
     std::vector<float> force;
     std::vector<float> bsplineModuli[3];
     std::vector<float> recipEterm;
-    Vec3 lastBoxSize;
+    Vec3 lastBoxVectors[3];
     float* realGrid;
     fftwf_complex* complexGrid;
     fftwf_plan forwardFFT, backwardFFT;
@@ -122,7 +123,7 @@ private:
     IO* io;
     float energy;
     float* posq;
-    Vec3 periodicBoxSize;
+    Vec3 periodicBoxVectors[3], recipBoxVectors[3];
     bool includeEnergy;
 };
 

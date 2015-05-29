@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2014 Stanford University and the Authors.           *
+ * Portions copyright (c) 2014-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -148,6 +148,7 @@ void testMathFunctions() {
     ASSERT_VEC4_EQUAL(min(f1, f2), 0.4, 1.2, -1.2, -5.0);
     ASSERT_VEC4_EQUAL(max(f1, f2), 1.1, 1.9, 1.3, -3.8);
     ASSERT_VEC4_EQUAL(sqrt(fvec4(1.5, 3.1, 4.0, 15.0)), sqrt(1.5), sqrt(3.1), sqrt(4.0), sqrt(15.0));
+    ASSERT_VEC4_EQUAL(rsqrt(fvec4(1.5, 3.1, 4.0, 15.0)), 1.0/sqrt(1.5), 1.0/sqrt(3.1), 1.0/sqrt(4.0), 1.0/sqrt(15.0));
     ASSERT_EQUAL_TOL(f1[0]*f2[0]+f1[1]*f2[1]+f1[2]*f2[2], dot3(f1, f2), 1e-6);
     ASSERT_EQUAL_TOL(f1[0]*f2[0]+f1[1]*f2[1]+f1[2]*f2[2]+f1[3]*f2[3], dot4(f1, f2), 1e-6);
     ASSERT(any(f1 > 0.5));

@@ -26,23 +26,23 @@ namespace asmjit {
 //! \{
 
 // ============================================================================
-// [asmjit::kInstId]
+// [asmjit::InstId]
 // ============================================================================
 
 //! Instruction codes (stub).
-ASMJIT_ENUM(kInstId) {
+ASMJIT_ENUM(InstId) {
   //! No instruction.
   kInstIdNone = 0
 };
 
 // ============================================================================
-// [asmjit::kInstOptions]
+// [asmjit::InstOptions]
 // ============================================================================
 
-//! Instruction options (stub).
-ASMJIT_ENUM(kInstOptions) {
+//! Instruction options.
+ASMJIT_ENUM(InstOptions) {
   //! No instruction options.
-  kInstOptionNone = 0x00,
+  kInstOptionNone = 0x00000000,
 
   //! Emit short form of the instruction.
   //!
@@ -53,7 +53,8 @@ ASMJIT_ENUM(kInstOptions) {
   //! can be dangerous if the short jmp/jcc is required, but not encodable due
   //! to large displacement, in such case an error happens and the whole
   //! assembler/compiler stream is unusable.
-  kInstOptionShortForm = 0x01,
+  kInstOptionShortForm = 0x00000001,
+
   //! Emit long form of the instruction.
   //!
   //! X86/X64:
@@ -61,12 +62,13 @@ ASMJIT_ENUM(kInstOptions) {
   //! Long form is mosrlt related to jmp and jcc instructions, but like the
   //! `kInstOptionShortForm` option it can be used by other instructions
   //! supporting both 8-bit and 32-bit immediates.
-  kInstOptionLongForm = 0x02,
+  kInstOptionLongForm = 0x00000002,
 
   //! Condition is likely to be taken.
-  kInstOptionTaken = 0x04,
+  kInstOptionTaken = 0x00000004,
+
   //! Condition is unlikely to be taken.
-  kInstOptionNotTaken = 0x08
+  kInstOptionNotTaken = 0x00000008
 };
 
 // ============================================================================
@@ -474,19 +476,20 @@ struct ASMJIT_VCLASS Assembler : public CodeGen {
   //! Emit an instruction with integer immediate operand.
   ASMJIT_API Error emit(uint32_t code, int o0);
   //! \overload
-  ASMJIT_API Error emit(uint32_t code, uint64_t o0);
-  //! \overload
   ASMJIT_API Error emit(uint32_t code, const Operand& o0, int o1);
-  //! \overload
-  ASMJIT_API Error emit(uint32_t code, const Operand& o0, uint64_t o1);
   //! \overload
   ASMJIT_API Error emit(uint32_t code, const Operand& o0, const Operand& o1, int o2);
   //! \overload
-  ASMJIT_API Error emit(uint32_t code, const Operand& o0, const Operand& o1, uint64_t o2);
-  //! \overload
   ASMJIT_API Error emit(uint32_t code, const Operand& o0, const Operand& o1, const Operand& o2, int o3);
+
   //! \overload
-  ASMJIT_API Error emit(uint32_t code, const Operand& o0, const Operand& o1, const Operand& o2, uint64_t o3);
+  ASMJIT_API Error emit(uint32_t code, int64_t o0);
+  //! \overload
+  ASMJIT_API Error emit(uint32_t code, const Operand& o0, int64_t o1);
+  //! \overload
+  ASMJIT_API Error emit(uint32_t code, const Operand& o0, const Operand& o1, int64_t o2);
+  //! \overload
+  ASMJIT_API Error emit(uint32_t code, const Operand& o0, const Operand& o1, const Operand& o2, int64_t o3);
 
   //! Emit an instruction (virtual).
   virtual Error _emit(uint32_t code, const Operand& o0, const Operand& o1, const Operand& o2, const Operand& o3) = 0;

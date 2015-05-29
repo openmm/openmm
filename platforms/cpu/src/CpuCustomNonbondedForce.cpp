@@ -25,8 +25,6 @@
 #include <string.h>
 #include <sstream>
 
-#include "SimTKOpenMMCommon.h"
-#include "SimTKOpenMMLog.h"
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceForce.h"
 #include "CpuCustomNonbondedForce.h"
@@ -98,15 +96,25 @@ void CpuCustomNonbondedForce::setUseSwitchingFunction(RealOpenMM distance) {
     switchingDistance = distance;
 }
 
-void CpuCustomNonbondedForce::setPeriodic(RealVec& boxSize) {
+void CpuCustomNonbondedForce::setPeriodic(RealVec* periodicBoxVectors) {
     assert(cutoff);
-    assert(boxSize[0] >= 2.0*cutoffDistance);
-    assert(boxSize[1] >= 2.0*cutoffDistance);
-    assert(boxSize[2] >= 2.0*cutoffDistance);
+    assert(periodicBoxVectors[0][0] >= 2.0*cutoffDistance);
+    assert(periodicBoxVectors[1][1] >= 2.0*cutoffDistance);
+    assert(periodicBoxVectors[2][2] >= 2.0*cutoffDistance);
     periodic = true;
-    periodicBoxSize[0] = boxSize[0];
-    periodicBoxSize[1] = boxSize[1];
-    periodicBoxSize[2] = boxSize[2];
+    this->periodicBoxVectors[0] = periodicBoxVectors[0];
+    this->periodicBoxVectors[1] = periodicBoxVectors[1];
+    this->periodicBoxVectors[2] = periodicBoxVectors[2];
+    recipBoxSize[0] = (float) (1.0/periodicBoxVectors[0][0]);
+    recipBoxSize[1] = (float) (1.0/periodicBoxVectors[1][1]);
+    recipBoxSize[2] = (float) (1.0/periodicBoxVectors[2][2]);
+    periodicBoxVec4.resize(3);
+    periodicBoxVec4[0] = fvec4(periodicBoxVectors[0][0], periodicBoxVectors[0][1], periodicBoxVectors[0][2], 0);
+    periodicBoxVec4[1] = fvec4(periodicBoxVectors[1][0], periodicBoxVectors[1][1], periodicBoxVectors[1][2], 0);
+    periodicBoxVec4[2] = fvec4(periodicBoxVectors[2][0], periodicBoxVectors[2][1], periodicBoxVectors[2][2], 0);
+    triclinic = (periodicBoxVectors[0][1] != 0.0 || periodicBoxVectors[0][2] != 0.0 ||
+                 periodicBoxVectors[1][0] != 0.0 || periodicBoxVectors[1][2] != 0.0 ||
+                 periodicBoxVectors[2][0] != 0.0 || periodicBoxVectors[2][1] != 0.0);
 }
 
 
@@ -155,8 +163,8 @@ void CpuCustomNonbondedForce::threadComputeForce(ThreadPool& threads, int thread
         ReferenceForce::setVariable(ReferenceForce::getVariablePointer(data.energyExpression, iter->first), iter->second);
         ReferenceForce::setVariable(ReferenceForce::getVariablePointer(data.forceExpression, iter->first), iter->second);
     }
-    fvec4 boxSize(periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2], 0);
-    fvec4 invBoxSize((1/periodicBoxSize[0]), (1/periodicBoxSize[1]), (1/periodicBoxSize[2]), 0);
+    fvec4 boxSize(periodicBoxVectors[0][0], periodicBoxVectors[1][1], periodicBoxVectors[2][2], 0);
+    fvec4 invBoxSize(recipBoxSize[0], recipBoxSize[1], recipBoxSize[2], 0);
     if (groupInteractions.size() > 0) {
         // The user has specified interaction groups, so compute only the requested interactions.
         
@@ -266,8 +274,15 @@ void CpuCustomNonbondedForce::calculateOneIxn(int ii, int jj, ThreadData& data,
 void CpuCustomNonbondedForce::getDeltaR(const fvec4& posI, const fvec4& posJ, fvec4& deltaR, float& r2, const fvec4& boxSize, const fvec4& invBoxSize) const {
     deltaR = posJ-posI;
     if (periodic) {
-        fvec4 base = round(deltaR*invBoxSize)*boxSize;
-        deltaR = deltaR-base;
+        if (triclinic) {
+            deltaR -= periodicBoxVec4[2]*floorf(deltaR[2]*recipBoxSize[2]+0.5f);
+            deltaR -= periodicBoxVec4[1]*floorf(deltaR[1]*recipBoxSize[1]+0.5f);
+            deltaR -= periodicBoxVec4[0]*floorf(deltaR[0]*recipBoxSize[0]+0.5f);
+        }
+        else {
+            fvec4 base = round(deltaR*invBoxSize)*boxSize;
+            deltaR = deltaR-base;
+        }
     }
     r2 = dot3(deltaR, deltaR);
 }

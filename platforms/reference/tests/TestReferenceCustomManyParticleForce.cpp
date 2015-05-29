@@ -51,9 +51,21 @@
 using namespace OpenMM;
 using namespace std;
 
+ReferencePlatform platform;
+
 const double TOL = 1e-5;
 
-void validateAxilrodTeller(CustomManyParticleForce* force, const vector<Vec3>& positions, const vector<const int*>& expectedSets, double boxSize) {
+Vec3 computeDelta(const Vec3& pos1, const Vec3& pos2, bool periodic, const Vec3* periodicBoxVectors) {
+    Vec3 diff = pos1-pos2;
+    if (periodic) {
+        diff -= periodicBoxVectors[2]*floor(diff[2]/periodicBoxVectors[2][2]+0.5);
+        diff -= periodicBoxVectors[1]*floor(diff[1]/periodicBoxVectors[1][1]+0.5);
+        diff -= periodicBoxVectors[0]*floor(diff[0]/periodicBoxVectors[0][0]+0.5);
+    }
+    return diff;
+}
+
+void validateAxilrodTeller(CustomManyParticleForce* force, const vector<Vec3>& positions, const vector<const int*>& expectedSets, double boxSize, bool triclinic) {
     // Create a System and Context.
     
     int numParticles = force->getNumParticles();
@@ -61,10 +73,28 @@ void validateAxilrodTeller(CustomManyParticleForce* force, const vector<Vec3>& p
     System system;
     for (int i = 0; i < numParticles; i++)
         system.addParticle(1.0);
-    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    Vec3 boxVectors[3];
+    if (triclinic) {
+        boxVectors[0] = Vec3(boxSize, 0, 0);
+        boxVectors[1] = Vec3(0.2*boxSize, boxSize, 0);
+        boxVectors[2] = Vec3(-0.3*boxSize, -0.1*boxSize, boxSize);
+    }
+    else {
+        boxVectors[0] = Vec3(boxSize, 0, 0);
+        boxVectors[1] = Vec3(0, boxSize, 0);
+        boxVectors[2] = Vec3(0, 0, boxSize);
+    }
+    system.setDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
     system.addForce(force);
+    if (force->getNonbondedMethod() == CustomManyParticleForce::CutoffPeriodic) {
+        ASSERT(force->usesPeriodicBoundaryConditions());
+        ASSERT(system.usesPeriodicBoundaryConditions());
+    }
+    else {
+        ASSERT(!force->usesPeriodicBoundaryConditions());
+        ASSERT(!system.usesPeriodicBoundaryConditions());
+    }
     VerletIntegrator integrator(0.001);
-    ReferencePlatform platform;
     Context context(system, integrator, platform);
     context.setPositions(positions);
     State state1 = context.getState(State::Forces | State::Energy);
@@ -73,20 +103,14 @@ void validateAxilrodTeller(CustomManyParticleForce* force, const vector<Vec3>& p
     // See if the energy matches the expected value.
     
     double expectedEnergy = 0;
+    bool periodic = (nonbondedMethod == CustomManyParticleForce::CutoffPeriodic);
     for (int i = 0; i < (int) expectedSets.size(); i++) {
         int p1 = expectedSets[i][0];
         int p2 = expectedSets[i][1];
         int p3 = expectedSets[i][2];
-        Vec3 d12 = positions[p2]-positions[p1];
-        Vec3 d13 = positions[p3]-positions[p1];
-        Vec3 d23 = positions[p3]-positions[p2];
-        if (nonbondedMethod == CustomManyParticleForce::CutoffPeriodic) {
-            for (int j = 0; j < 3; j++) {
-                d12[j] -= floor(d12[j]/boxSize+0.5f)*boxSize;
-                d13[j] -= floor(d13[j]/boxSize+0.5f)*boxSize;
-                d23[j] -= floor(d23[j]/boxSize+0.5f)*boxSize;
-            }
-        }
+        Vec3 d12 = computeDelta(positions[p2], positions[p1], periodic, boxVectors);
+        Vec3 d13 = computeDelta(positions[p3], positions[p1], periodic, boxVectors);
+        Vec3 d23 = computeDelta(positions[p3], positions[p2], periodic, boxVectors);
         double r12 = sqrt(d12.dot(d12));
         double r13 = sqrt(d13.dot(d13));
         double r23 = sqrt(d23.dot(d23));
@@ -132,7 +156,6 @@ void validateStillingerWeber(CustomManyParticleForce* force, const vector<Vec3>&
     system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
     system.addForce(force);
     VerletIntegrator integrator(0.001);
-    ReferencePlatform platform;
     Context context(system, integrator, platform);
     context.setPositions(positions);
     State state1 = context.getState(State::Forces | State::Energy);
@@ -210,7 +233,7 @@ void testNoCutoff() {
     positions.push_back(Vec3(0.4, 0, -0.8));
     int sets[4][3] = {{0,1,2}, {1,2,3}, {2,3,0}, {3,0,1}};
     vector<const int*> expectedSets(&sets[0], &sets[4]);
-    validateAxilrodTeller(force, positions, expectedSets, 2.0);
+    validateAxilrodTeller(force, positions, expectedSets, 2.0, false);
 }
 
 void testCutoff() {
@@ -235,7 +258,7 @@ void testCutoff() {
     positions.push_back(Vec3(0.2, 0.5, -0.1));
     int sets[7][3] = {{0,1,2}, {0,1,3}, {0,1,4}, {0,2,4}, {0,3,4}, {1,2,4}, {1,3,4}};
     vector<const int*> expectedSets(&sets[0], &sets[7]);
-    validateAxilrodTeller(force, positions, expectedSets, 2.0);
+    validateAxilrodTeller(force, positions, expectedSets, 2.0, false);
 }
 
 void testPeriodic() {
@@ -261,7 +284,33 @@ void testPeriodic() {
     double boxSize = 2.1;
     int sets[5][3] = {{0,1,3}, {0,1,4}, {0,2,4}, {0,3,4}, {1,3,4}};
     vector<const int*> expectedSets(&sets[0], &sets[5]);
-    validateAxilrodTeller(force, positions, expectedSets, boxSize);
+    validateAxilrodTeller(force, positions, expectedSets, boxSize, false);
+}
+
+void testTriclinic() {
+    CustomManyParticleForce* force = new CustomManyParticleForce(3,
+        "C*(1+3*cos(theta1)*cos(theta2)*cos(theta3))/(r12*r13*r23)^3;"
+        "theta1=angle(p1,p2,p3); theta2=angle(p2,p3,p1); theta3=angle(p3,p1,p2);"
+        "r12=distance(p1,p2); r13=distance(p1,p3); r23=distance(p2,p3)");
+    force->addGlobalParameter("C", 1.5);
+    force->setNonbondedMethod(CustomManyParticleForce::CutoffPeriodic);
+    force->setCutoffDistance(1.05);
+    vector<double> params;
+    force->addParticle(params);
+    force->addParticle(params);
+    force->addParticle(params);
+    force->addParticle(params);
+    force->addParticle(params);
+    vector<Vec3> positions;
+    positions.push_back(Vec3(0, 0, 0));
+    positions.push_back(Vec3(1, 0, 0));
+    positions.push_back(Vec3(0, 1.1, 0.3));
+    positions.push_back(Vec3(0.4, 0, -0.8));
+    positions.push_back(Vec3(0.2, 0.5, -0.1));
+    double boxSize = 2.1;
+    int sets[4][3] = {{0,1,3}, {0,1,4}, {0,3,4}, {1,3,4}};
+    vector<const int*> expectedSets(&sets[0], &sets[4]);
+    validateAxilrodTeller(force, positions, expectedSets, boxSize, true);
 }
 
 void testExclusions() {
@@ -286,12 +335,11 @@ void testExclusions() {
     force->addExclusion(0, 3);
     int sets[5][3] = {{0,1,4}, {1,2,3}, {1,2,4}, {1,3,4}, {2,3,4}};
     vector<const int*> expectedSets(&sets[0], &sets[5]);
-    validateAxilrodTeller(force, positions, expectedSets, 2.0);
+    validateAxilrodTeller(force, positions, expectedSets, 2.0, false);
 }
 
 void testAllTerms() {
     int numParticles = 4;
-    ReferencePlatform platform;
     
     // Create a system with a CustomManyParticleForce.
     
@@ -375,7 +423,6 @@ void testParameters() {
     }
     system.addForce(force);
     VerletIntegrator integrator(0.001);
-    ReferencePlatform platform;
     Context context(system, integrator, platform);
     context.setPositions(positions);
     
@@ -461,7 +508,6 @@ void testTabulatedFunctions() {
     }
     system.addForce(force);
     VerletIntegrator integrator(0.001);
-    ReferencePlatform platform;
     Context context(system, integrator, platform);
     context.setPositions(positions);
     
@@ -513,7 +559,6 @@ void testTypeFilters() {
     force->setTypeFilter(2, f2);
     system.addForce(force);
     VerletIntegrator integrator(0.001);
-    ReferencePlatform platform;
     Context context(system, integrator, platform);
     context.setPositions(positions);
     
@@ -592,6 +637,7 @@ int main() {
         testNoCutoff();
         testCutoff();
         testPeriodic();
+        testTriclinic();
         testExclusions();
         testAllTerms();
         testParameters();

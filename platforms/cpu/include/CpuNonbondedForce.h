@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2013 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2015 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -83,11 +83,11 @@ class CpuNonbondedForce {
          already been set, and the smallest side of the periodic box is at least twice the cutoff
          distance.
       
-         @param boxSize             the X, Y, and Z widths of the periodic box
+         @param periodicBoxVectors    the vectors defining the periodic box
       
          --------------------------------------------------------------------------------------- */
       
-      void setPeriodic(float* periodicBoxSize);
+      void setPeriodic(RealVec* periodicBoxVectors);
        
       /**---------------------------------------------------------------------------------------
       
@@ -161,18 +161,21 @@ protected:
         bool cutoff;
         bool useSwitch;
         bool periodic;
+        bool triclinic;
         bool ewald;
         bool pme;
         bool tableIsValid;
         const CpuNeighborList* neighborList;
-        float periodicBoxSize[3];
+        float recipBoxSize[3];
+        RealVec periodicBoxVectors[3];
+        AlignedArray<fvec4> periodicBoxVec4;
         float cutoffDistance, switchingDistance;
         float krf, crf;
         float alphaEwald;
         int numRx, numRy, numRz;
         int meshDim[3];
-        std::vector<float> ewaldScaleTable;
-        float ewaldDX, ewaldDXInv;
+        std::vector<float> erfcTable, ewaldScaleTable;
+        float ewaldDX, ewaldDXInv, erfcDXInv;
         std::vector<double> threadEnergy;
         // The following variables are used to make information accessible to the individual threads.
         int numberOfAtoms;
@@ -238,7 +241,7 @@ protected:
       /**
        * Compute a fast approximation to erfc(x).
        */
-      static float erfcApprox(float x);
+      float erfcApprox(float x);
 };
 
 } // namespace OpenMM

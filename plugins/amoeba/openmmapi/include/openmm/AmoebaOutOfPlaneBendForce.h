@@ -156,14 +156,22 @@ public:
     /**
      * Update the per-bend term parameters in a Context to match those stored in this Force object.  This method provides
      * an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
-     * Simply call setOutOfPlaneBendParameters() to modify this object's parameters, then call updateParametersInState()
+     * Simply call setOutOfPlaneBendParameters() to modify this object's parameters, then call updateParametersInContext()
      * to copy them over to the Context.
      * 
      * The only information this method updates is the values of per-bend term parameters.  The set of particles involved
      * in a term cannot be changed, nor can new terms be added.
      */
     void updateParametersInContext(Context& context);
-
+    /**
+     * Returns whether or not this force makes use of periodic boundary
+     * conditions.
+     *
+     * @returns true if nonbondedMethod uses PBC and false otherwise
+     */
+    bool usesPeriodicBoundaryConditions() const {
+        return false;
+    }
 protected:
     ForceImpl* createImpl() const;
     double _globalCubicK, _globalQuarticK, _globalPenticK, _globalSexticK;

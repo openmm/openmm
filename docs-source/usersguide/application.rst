@@ -572,7 +572,7 @@ with the name :file:`simulateGromacs.py`.
         from sys import stdout
 
         gro = GromacsGroFile('input.gro')
-        top = GromacsTopFile('input.top', unitCellDimensions=gro.getUnitCellDimensions(),
+        top = GromacsTopFile('input.top', periodicBoxVectors=gro.getPeriodicBoxVectors(),
                 includeDir='/usr/local/gromacs/share/gromacs/top')
         system = top.createSystem(nonbondedMethod=PME, nonbondedCutoff=1*nanometer,
                 constraints=HBonds)
@@ -593,10 +593,10 @@ This script is nearly identical to the previous one, just replacing
 :class:`AmberInpcrdFile` and :class:`AmberPrmtopFile` with :class:`GromacsGroFile` and :class:`GromacsTopFile`.
 Note that when we create the :class:`GromacsTopFile`, we specify values for two extra
 options.  First, we specify
-:code:`unitCellDimensions=gro.getUnitCellDimensions()`\ .  Unlike OpenMM and
-AMBER, which can store periodic unit cell dimensions with the topology, Gromacs
-only stores them with the coordinates.  To let :class:`GromacsTopFile` create a :class:`Topology`
-object, we therefore need to tell it the unit cell dimensions that were loaded
+:code:`periodicBoxVectors=gro.getPeriodicBoxVectors()`\ .  Unlike OpenMM and
+AMBER, which can store periodic unit cell information with the topology, Gromacs
+only stores it with the coordinates.  To let :class:`GromacsTopFile` create a :class:`Topology`
+object, we therefore need to tell it the periodic box vectors that were loaded
 from the :file:`gro` file.  You only need to do this if you are simulating a periodic
 system.  For implicit solvent simulations, it usually can be omitted.
 
@@ -1121,6 +1121,25 @@ integrator is:
 The parameter is the integration error tolerance (0.001), whose meaning is the
 same as for the Langevin integrator.
 
+Multiple Time Step Integrator
+-----------------------------
+
+The :class:`MTSIntegrator` class implements the rRESPA multiple time step
+algorithm\ :cite:`Tuckerman1992`.  This allows some forces in the system to be evaluated more
+frequently than others.  For details on how to use it, consult the API
+documentation.
+
+aMD Integrator
+--------------
+
+There are three different integrator types that implement variations of the
+aMD\ :cite:`Hamelberg2007` accelerated sampling algorithm: :class:`AMDIntegrator`,
+:class:`AMDForceGroupIntegrator`, and :class:`DualAMDIntegrator`.  They
+perform integration on a modified potential energy surface to allow much faster
+sampling of conformations.  For details on how to use them, consult the API
+documentation.
+
+
 Temperature Coupling
 ====================
 
@@ -1222,9 +1241,9 @@ specify if you want further control over the minimization.  First, you can
 specify a tolerance for when the energy should be considered to have converged:
 ::
 
-    simulation.minimizeEnergy(tolerance=10*kilojoule/mole)
+    simulation.minimizeEnergy(tolerance=5*kilojoule/mole)
 
-If you do not specify this parameter, a default tolerance of 1 kJ/mole is used.
+If you do not specify this parameter, a default tolerance of 10 kJ/mole is used.
 
 Second, you can specify a maximum number of iterations:
 ::
@@ -1405,8 +1424,13 @@ size, you can specify one:
 
     modeller.addSolvent(forcefield, boxSize=Vec3(5.0, 3.5, 3.5)*nanometers)
 
-This requests a 5 nm by 3.5 nm by 3.5 nm box.  Another option is to specify a
-padding distance:
+This requests a 5 nm by 3.5 nm by 3.5 nm box.  For a non-rectangular box, you
+can specify the three box vectors defining the unit cell:
+::
+
+    modeller.addSolvent(forcefield, boxVectors=(avec, bvec, cvec))
+
+Another option is to specify a padding distance:
 ::
 
     modeller.addSolvent(forcefield, padding=1.0*nanometers)
@@ -1415,6 +1439,14 @@ This determines the largest size of the solute along any axis (x, y, or z).  It
 then creates a cubic box of width (solute size)+2*(padding).  The above line
 guarantees that no part of the solute comes closer than 1 nm to any edge of the
 box.
+
+Finally, you can specify the exact number of solvent molecules (including both
+water and ions) to add.  This is useful when you want to solvate several different
+conformations of the same molecule while guaranteeing they all have the same
+amount of solvent:
+::
+
+    modeller.addSolvent(forcefield, numAdded=5000)
 
 By default, :meth:`addSolvent` creates TIP3P water molecules, but it also supports other
 water models:

@@ -28,7 +28,7 @@
 #include "ReferenceForce.h"
 #include "ReferenceBondIxn.h"
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class OPENMM_EXPORT ReferenceBondForce : public ReferenceForce {
 
@@ -42,7 +42,7 @@ class OPENMM_EXPORT ReferenceBondForce : public ReferenceForce {
       
          --------------------------------------------------------------------------------------- */
 
-       ReferenceBondForce( );
+       ReferenceBondForce();
 
       /**---------------------------------------------------------------------------------------
       
@@ -50,7 +50,7 @@ class OPENMM_EXPORT ReferenceBondForce : public ReferenceForce {
       
          --------------------------------------------------------------------------------------- */
 
-       ~ReferenceBondForce( );
+       ~ReferenceBondForce();
 
       /**---------------------------------------------------------------------------------------
       
@@ -67,13 +67,13 @@ class OPENMM_EXPORT ReferenceBondForce : public ReferenceForce {
       
          --------------------------------------------------------------------------------------- */
       
-       void calculateForce( int numberOfBonds, int** atomIndices,
+       void calculateForce(int numberOfBonds, int** atomIndices,
                            std::vector<OpenMM::RealVec>& atomCoordinates,
                            RealOpenMM** parameters, std::vector<OpenMM::RealVec>& forces, 
-                           RealOpenMM* totalEnergy, ReferenceBondIxn& referenceBondIxn );
+                           RealOpenMM* totalEnergy, ReferenceBondIxn& referenceBondIxn);
 
 };
 
-// ---------------------------------------------------------------------------------------
+} // namespace OpenMM
 
 #endif // __ReferenceBondForce_H__

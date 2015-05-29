@@ -48,6 +48,8 @@
 using namespace OpenMM;
 using namespace std;
 
+ReferencePlatform platform;
+
 const double TOL = 1e-5;
 
 void compareStates(State& s1, State& s2) {
@@ -71,7 +73,6 @@ void testCheckpoint() {
     const int numParticles = 10;
     const double boxSize = 3.0;
     const double temperature = 200.0;
-    ReferencePlatform platform;
     System system;
     system.addForce(new AndersenThermostat(0.0, 100.0));
     NonbondedForce* nonbonded = new NonbondedForce();
@@ -125,7 +126,6 @@ void testSetState() {
     const int numParticles = 10;
     const double boxSize = 3.0;
     const double temperature = 200.0;
-    ReferencePlatform platform;
     System system;
     system.addForce(new AndersenThermostat(0.0, 100.0));
     NonbondedForce* nonbonded = new NonbondedForce();

@@ -29,7 +29,7 @@
 #include "ReferenceAndersenThermostat.h"
 
 using std::vector;
-using OpenMM::RealVec;
+using namespace OpenMM;
 
       /**---------------------------------------------------------------------------------------
       
@@ -37,7 +37,7 @@ using OpenMM::RealVec;
       
          --------------------------------------------------------------------------------------- */
 
-       ReferenceAndersenThermostat::ReferenceAndersenThermostat( ) {
+       ReferenceAndersenThermostat::ReferenceAndersenThermostat() {
        }
 
       /**---------------------------------------------------------------------------------------
@@ -46,7 +46,7 @@ using OpenMM::RealVec;
       
          --------------------------------------------------------------------------------------- */
 
-       ReferenceAndersenThermostat::~ReferenceAndersenThermostat( ) {
+       ReferenceAndersenThermostat::~ReferenceAndersenThermostat() {
        }
 
       /**---------------------------------------------------------------------------------------
@@ -61,8 +61,8 @@ using OpenMM::RealVec;
                   
          --------------------------------------------------------------------------------------- */
           
-      void ReferenceAndersenThermostat::applyThermostat( const vector<vector<int> >& atomGroups, vector<RealVec>& atomVelocities, vector<RealOpenMM>& atomMasses,
-              RealOpenMM temperature, RealOpenMM collisionFrequency, RealOpenMM stepSize ) const {
+      void ReferenceAndersenThermostat::applyThermostat(const vector<vector<int> >& atomGroups, vector<RealVec>& atomVelocities, vector<RealOpenMM>& atomMasses,
+              RealOpenMM temperature, RealOpenMM collisionFrequency, RealOpenMM stepSize) const {
           
           const RealOpenMM collisionProbability = 1.0f - EXP(-collisionFrequency*stepSize);
           for (int i = 0; i < (int) atomGroups.size(); ++i) {

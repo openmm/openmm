@@ -48,16 +48,19 @@
 using namespace OpenMM;
 using namespace std;
 
+ReferencePlatform platform;
+
 const double TOL = 1e-5;
 
 void testSingleParticle() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(2.0);
     LangevinIntegrator integrator(0, 0.1, 0.01);
     GBSAOBCForce* forceField = new GBSAOBCForce();
     forceField->addParticle(0.5, 0.15, 1);
     system.addForce(forceField);
+    ASSERT(!forceField->usesPeriodicBoundaryConditions());
+    ASSERT(!system.usesPeriodicBoundaryConditions());
     Context context(system, integrator, platform);
     vector<Vec3> positions(1);
     positions[0] = Vec3(0, 0, 0);
@@ -83,7 +86,6 @@ void testSingleParticle() {
 }
 
 void testGlobalSettings() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(2.0);
     LangevinIntegrator integrator(0, 0.1, 0.01);
@@ -96,6 +98,8 @@ void testGlobalSettings() {
     forceField->setSolventDielectric(solventDielectric);
     forceField->setSurfaceAreaEnergy(surfaceAreaEnergy);
     system.addForce(forceField);
+    ASSERT(!forceField->usesPeriodicBoundaryConditions());
+    ASSERT(!system.usesPeriodicBoundaryConditions());
     Context context(system, integrator, platform);
     vector<Vec3> positions(1);
     positions[0] = Vec3(0, 0, 0);
@@ -110,7 +114,6 @@ void testGlobalSettings() {
 }
 
 void testCutoffAndPeriodic() {
-    ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -136,22 +139,34 @@ void testCutoffAndPeriodic() {
 
     nonbonded->setNonbondedMethod(NonbondedForce::CutoffNonPeriodic);
     gbsa->setNonbondedMethod(GBSAOBCForce::CutoffNonPeriodic);
+    ASSERT(!nonbonded->usesPeriodicBoundaryConditions());
+    ASSERT(!gbsa->usesPeriodicBoundaryConditions());
+    ASSERT(!system.usesPeriodicBoundaryConditions());
     Context context(system, integrator, platform);
     context.setPositions(positions);
     State state1 = context.getState(State::Forces);
     nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
     gbsa->setNonbondedMethod(GBSAOBCForce::CutoffPeriodic);
+    ASSERT(nonbonded->usesPeriodicBoundaryConditions());
+    ASSERT(gbsa->usesPeriodicBoundaryConditions());
+    ASSERT(system.usesPeriodicBoundaryConditions());
     context.reinitialize();
     context.setPositions(positions);
     State state2 = context.getState(State::Forces);
     positions[1][0]+= boxSize;
     nonbonded->setNonbondedMethod(NonbondedForce::CutoffNonPeriodic);
     gbsa->setNonbondedMethod(GBSAOBCForce::CutoffNonPeriodic);
+    ASSERT(!nonbonded->usesPeriodicBoundaryConditions());
+    ASSERT(!gbsa->usesPeriodicBoundaryConditions());
+    ASSERT(!system.usesPeriodicBoundaryConditions());
     context.reinitialize();
     context.setPositions(positions);
     State state3 = context.getState(State::Forces);
     nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
     gbsa->setNonbondedMethod(GBSAOBCForce::CutoffPeriodic);
+    ASSERT(nonbonded->usesPeriodicBoundaryConditions());
+    ASSERT(gbsa->usesPeriodicBoundaryConditions());
+    ASSERT(system.usesPeriodicBoundaryConditions());
     context.reinitialize();
     context.setPositions(positions);
     State state4 = context.getState(State::Forces);
@@ -167,7 +182,6 @@ void testCutoffAndPeriodic() {
 }
 
 void testForce() {
-    ReferencePlatform platform;
     const int numParticles = 10;
     System system;
     LangevinIntegrator integrator(0, 0.1, 0.01);

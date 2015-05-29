@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -109,24 +109,12 @@ public:
     fvec4 operator|(const fvec4& other) const {
         return (fvec4) (((__m128i)val)|((__m128i)other.val));
     }
-    fvec4 operator==(const fvec4& other) const {
-        return (val==other.val);
-    }
-    fvec4 operator!=(const fvec4& other) const {
-        return (val!=other.val);
-    }
-    fvec4 operator>(const fvec4& other) const {
-        return (val>other.val);
-    }
-    fvec4 operator<(const fvec4& other) const {
-        return (val<other.val);
-    }
-    fvec4 operator>=(const fvec4& other) const {
-        return (val>=other.val);
-    }
-    fvec4 operator<=(const fvec4& other) const {
-        return (val<=other.val);
-    }
+    ivec4 operator==(const fvec4& other) const;
+    ivec4 operator!=(const fvec4& other) const;
+    ivec4 operator>(const fvec4& other) const;
+    ivec4 operator<(const fvec4& other) const;
+    ivec4 operator>=(const fvec4& other) const;
+    ivec4 operator<=(const fvec4& other) const;
     operator ivec4() const;
 };
 
@@ -207,6 +195,30 @@ public:
 
 // Conversion operators.
 
+inline ivec4 fvec4::operator==(const fvec4& other) const {
+    return (__m128i) (val==other.val);
+}
+
+inline ivec4 fvec4::operator!=(const fvec4& other) const {
+    return (__m128i) (val!=other.val);
+}
+
+inline ivec4 fvec4::operator>(const fvec4& other) const {
+    return (__m128i) (val>other.val);
+}
+
+inline ivec4 fvec4::operator<(const fvec4& other) const {
+    return (__m128i) (val<other.val);
+}
+
+inline ivec4 fvec4::operator>=(const fvec4& other) const {
+    return (__m128i) (val>=other.val);
+}
+
+inline ivec4 fvec4::operator<=(const fvec4& other) const {
+    return (__m128i) (val<=other.val);
+}
+
 inline fvec4::operator ivec4() const {
     return __builtin_convertvector(val, __m128i);
 }
@@ -217,32 +229,8 @@ inline ivec4::operator fvec4() const {
 
 // Functions that operate on fvec4s.
 
-static inline fvec4 floor(const fvec4& v) {
-    return fvec4(std::floor(v[0]), std::floor(v[1]), std::floor(v[2]), std::floor(v[3]));
-}
-
-static inline fvec4 ceil(const fvec4& v) {
-    return fvec4(std::ceil(v[0]), std::ceil(v[1]), std::ceil(v[2]), std::ceil(v[3]));
-}
-
-static inline fvec4 round(const fvec4& v) {
-    return fvec4(std::round(v[0]), std::round(v[1]), std::round(v[2]), std::round(v[3]));
-}
-
-static inline fvec4 min(const fvec4& v1, const fvec4& v2) {
-    return fvec4(std::min(v1[0], v2[0]), std::min(v1[1], v2[1]), std::min(v1[2], v2[2]), std::min(v1[3], v2[3]));
-}
-
-static inline fvec4 max(const fvec4& v1, const fvec4& v2) {
-    return fvec4(std::max(v1[0], v2[0]), std::max(v1[1], v2[1]), std::max(v1[2], v2[2]), std::max(v1[3], v2[3]));
-}
-
 static inline fvec4 abs(const fvec4& v) {
-    return fvec4(std::abs(v[0]), std::abs(v[1]), std::abs(v[2]), std::abs(v[3]));
-}
-
-static inline fvec4 sqrt(const fvec4& v) {
-    return fvec4(std::sqrt(v[0]), std::sqrt(v[1]), std::sqrt(v[2]), std::sqrt(v[3]));
+    return v&(__m128) ivec4(0x7FFFFFFF);
 }
 
 static inline float dot3(const fvec4& v1, const fvec4& v2) {
@@ -252,7 +240,8 @@ static inline float dot3(const fvec4& v1, const fvec4& v2) {
 
 static inline float dot4(const fvec4& v1, const fvec4& v2) {
     fvec4 r = v1*v2;
-    return r[0]+r[1]+r[2]+r[3];
+    fvec4 temp = __builtin_shufflevector(r.val, r.val, 0, 1, -1, -1)+__builtin_shufflevector(r.val, r.val, 2, 3, -1, -1);
+    return temp[0]+temp[1];
 }
 
 static inline fvec4 cross(const fvec4& v1, const fvec4& v2) {
@@ -287,7 +276,8 @@ static inline ivec4 abs(const ivec4& v) {
 }
 
 static inline bool any(const __m128i& v) {
-    return (v[0] || v[1] || v[2] || v[3]);
+    ivec4 temp = __builtin_shufflevector(v, v, 0, 1, -1, -1) | __builtin_shufflevector(v, v, 2, 3, -1, -1);
+    return (temp[0] || temp[1]);
 }
 
 // Mathematical operators involving a scalar and a vector.
@@ -311,7 +301,53 @@ static inline fvec4 operator/(float v1, const fvec4& v2) {
 // Operations for blending fvec4s based on an ivec4.
 
 static inline fvec4 blend(const fvec4& v1, const fvec4& v2, const __m128i& mask) {
-    return fvec4(mask[0] ? v2[0] : v1[0], mask[1] ? v2[1] : v1[1], mask[2] ? v2[2] : v1[2], mask[3] ? v2[3] : v1[3]);
+    return (__m128) ((mask&(__m128i)v2) + ((ivec4(0xFFFFFFFF)-ivec4(mask))&(__m128i)v1));
+}
+
+// These are at the end since they involve other functions defined above.
+
+static inline fvec4 min(const fvec4& v1, const fvec4& v2) {
+    return blend(v1, v2, v1 > v2);
+}
+
+static inline fvec4 max(const fvec4& v1, const fvec4& v2) {
+    return blend(v1, v2, v1 < v2);
+}
+
+static inline fvec4 round(const fvec4& v) {
+    fvec4 shift(0x1.0p23f);
+    fvec4 absResult = (abs(v)+shift)-shift;
+    return (__m128) ((ivec4(0x80000000)&(__m128i)v) + (ivec4(0x7FFFFFFF)&(__m128i)absResult));
+}
+
+static inline fvec4 floor(const fvec4& v) {
+    fvec4 truncated = __builtin_convertvector(__builtin_convertvector(v.val, __m128i), __m128);
+    return truncated + blend(0.0f, -1.0f, truncated>v);
+}
+
+static inline fvec4 ceil(const fvec4& v) {
+    fvec4 truncated = __builtin_convertvector(__builtin_convertvector(v.val, __m128i), __m128);
+    return truncated + blend(0.0f, 1.0f, truncated<v);
+}
+
+static inline fvec4 rsqrt(const fvec4& v) {
+    // Initial estimate of rsqrt().
+
+    ivec4 i = (__m128i) v;
+    i = ivec4(0x5f375a86)-ivec4(i.val>>ivec4(1).val);
+    fvec4 y = (__m128) i;
+
+    // Perform three iterations of Newton refinement.
+
+    fvec4 x2 = 0.5f*v;
+    y *= 1.5f-x2*y*y;
+    y *= 1.5f-x2*y*y;
+    y *= 1.5f-x2*y*y;
+    return y;
+}
+
+static inline fvec4 sqrt(const fvec4& v) {
+    return rsqrt(v)*v;
 }
 
 #endif /*OPENMM_VECTORIZE_PNACL_H_*/

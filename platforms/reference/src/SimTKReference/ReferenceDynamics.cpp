@@ -25,15 +25,13 @@
 #include <cstring>
 #include <sstream>
 
-#include "SimTKOpenMMCommon.h"
-#include "SimTKOpenMMLog.h"
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceDynamics.h"
 
 #include <cstdio>
 
 using std::vector;
-using OpenMM::RealVec;
+using namespace OpenMM;
 
 
 /**---------------------------------------------------------------------------------------
@@ -46,7 +44,7 @@ using OpenMM::RealVec;
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceDynamics::ReferenceDynamics( int numberOfAtoms,  RealOpenMM deltaT, RealOpenMM temperature ) : 
+ReferenceDynamics::ReferenceDynamics(int numberOfAtoms,  RealOpenMM deltaT, RealOpenMM temperature) : 
                   _numberOfAtoms(numberOfAtoms), _deltaT(deltaT), _temperature(temperature) {
 
    // ---------------------------------------------------------------------------------------
@@ -69,7 +67,7 @@ ReferenceDynamics::ReferenceDynamics( int numberOfAtoms,  RealOpenMM deltaT, Rea
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceDynamics::~ReferenceDynamics( ){
+ReferenceDynamics::~ReferenceDynamics() {
 
    // ---------------------------------------------------------------------------------------
 
@@ -77,7 +75,7 @@ ReferenceDynamics::~ReferenceDynamics( ){
 
    // ---------------------------------------------------------------------------------------
 
-   if( _ownReferenceConstraint ){
+   if (_ownReferenceConstraint) {
       delete _referenceConstraint;
    }
 }
@@ -90,7 +88,7 @@ ReferenceDynamics::~ReferenceDynamics( ){
 
    --------------------------------------------------------------------------------------- */
 
-int ReferenceDynamics::getNumberOfAtoms( void ) const {
+int ReferenceDynamics::getNumberOfAtoms() const {
 
    // ---------------------------------------------------------------------------------------
 
@@ -109,7 +107,7 @@ int ReferenceDynamics::getNumberOfAtoms( void ) const {
 
    --------------------------------------------------------------------------------------- */
 
-int ReferenceDynamics::getTimeStep( void ) const {
+int ReferenceDynamics::getTimeStep() const {
 
    // ---------------------------------------------------------------------------------------
 
@@ -128,7 +126,7 @@ int ReferenceDynamics::getTimeStep( void ) const {
 
    --------------------------------------------------------------------------------------- */
 
-int ReferenceDynamics::incrementTimeStep( void ){
+int ReferenceDynamics::incrementTimeStep() {
 
    // ---------------------------------------------------------------------------------------
 
@@ -147,7 +145,7 @@ int ReferenceDynamics::incrementTimeStep( void ){
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM ReferenceDynamics::getDeltaT( void ) const {
+RealOpenMM ReferenceDynamics::getDeltaT() const {
 
    // ---------------------------------------------------------------------------------------
 
@@ -164,7 +162,7 @@ RealOpenMM ReferenceDynamics::getDeltaT( void ) const {
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceDynamics::setDeltaT( RealOpenMM deltaT ) {
+void ReferenceDynamics::setDeltaT(RealOpenMM deltaT) {
 
    // ---------------------------------------------------------------------------------------
 
@@ -183,7 +181,7 @@ void ReferenceDynamics::setDeltaT( RealOpenMM deltaT ) {
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM ReferenceDynamics::getTemperature( void ) const {
+RealOpenMM ReferenceDynamics::getTemperature() const {
 
    // ---------------------------------------------------------------------------------------
 
@@ -202,7 +200,7 @@ RealOpenMM ReferenceDynamics::getTemperature( void ) const {
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceConstraintAlgorithm* ReferenceDynamics::getReferenceConstraintAlgorithm( void ) const {
+ReferenceConstraintAlgorithm* ReferenceDynamics::getReferenceConstraintAlgorithm() const {
 
    // ---------------------------------------------------------------------------------------
 
@@ -221,7 +219,7 @@ ReferenceConstraintAlgorithm* ReferenceDynamics::getReferenceConstraintAlgorithm
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceDynamics::setReferenceConstraintAlgorithm( ReferenceConstraintAlgorithm* referenceConstraint ){
+void ReferenceDynamics::setReferenceConstraintAlgorithm(ReferenceConstraintAlgorithm* referenceConstraint) {
 
    // ---------------------------------------------------------------------------------------
 
@@ -231,7 +229,7 @@ void ReferenceDynamics::setReferenceConstraintAlgorithm( ReferenceConstraintAlgo
 
    // delete if own
 
-   if( _referenceConstraint && _ownReferenceConstraint ){
+   if (_referenceConstraint && _ownReferenceConstraint) {
       delete _referenceConstraint;
    }
 

@@ -251,11 +251,15 @@ static inline fvec4 abs(const fvec4& v) {
     return vabsq_f32(v);
 }
 
-static inline fvec4 sqrt(const fvec4& v) {
+static inline fvec4 rsqrt(const fvec4& v) {
     float32x4_t recipSqrt = vrsqrteq_f32(v);
     recipSqrt = vmulq_f32(recipSqrt, vrsqrtsq_f32(vmulq_f32(recipSqrt, v), recipSqrt));
     recipSqrt = vmulq_f32(recipSqrt, vrsqrtsq_f32(vmulq_f32(recipSqrt, v), recipSqrt));
-    return vmulq_f32(v, recipSqrt);
+    return recipSqrt;
+}
+
+static inline fvec4 sqrt(const fvec4& v) {
+    return rsqrt(v)*v;
 }
 
 static inline float dot3(const fvec4& v1, const fvec4& v2) {

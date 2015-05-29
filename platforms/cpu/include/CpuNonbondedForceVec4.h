@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2013 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2015 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -52,6 +52,12 @@ protected:
          --------------------------------------------------------------------------------------- */
           
       void calculateBlockIxn(int blockIndex, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize);
+
+      /**
+       * Templatized implementation of calculateBlockIxn.
+       */
+      template <int PERIODIC_TYPE>
+      void calculateBlockIxnImpl(int blockIndex, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize, const fvec4& blockCenter);
             
       /**---------------------------------------------------------------------------------------
       
@@ -66,15 +72,22 @@ protected:
       void calculateBlockEwaldIxn(int blockIndex, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize);
 
       /**
+       * Templatized implementation of calculateBlockEwaldIxn.
+       */
+      template <int PERIODIC_TYPE>
+      void calculateBlockEwaldIxnImpl(int blockIndex, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize, const fvec4& blockCenter);
+
+      /**
        * Compute the displacement and squared distance between a collection of points, optionally using
        * periodic boundary conditions.
        */
-      void getDeltaR(const float* posI, const fvec4& x, const fvec4& y, const fvec4& z, fvec4& dx, fvec4& dy, fvec4& dz, fvec4& r2, bool periodic, const fvec4& boxSize, const fvec4& invBoxSize) const;
+      template <int PERIODIC_TYPE>
+      void getDeltaR(const fvec4& posI, const fvec4& x, const fvec4& y, const fvec4& z, fvec4& dx, fvec4& dy, fvec4& dz, fvec4& r2, bool periodic, const fvec4& boxSize, const fvec4& invBoxSize) const;
 
       /**
        * Compute a fast approximation to erfc(x).
        */
-      static fvec4 erfcApprox(const fvec4& x);
+      fvec4 erfcApprox(const fvec4& x);
       
       /**
        * Evaluate the scale factor used with Ewald and PME: erfc(alpha*r) + 2*alpha*r*exp(-alpha*alpha*r*r)/sqrt(PI)

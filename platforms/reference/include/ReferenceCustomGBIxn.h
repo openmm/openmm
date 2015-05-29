@@ -32,7 +32,7 @@
 #include <set>
 #include <vector>
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class ReferenceCustomGBIxn {
 
@@ -41,7 +41,7 @@ class ReferenceCustomGBIxn {
       bool cutoff;
       bool periodic;
       const OpenMM::NeighborList* neighborList;
-      RealOpenMM periodicBoxSize[3];
+      OpenMM::RealVec periodicBoxVectors[3];
       RealOpenMM cutoffDistance;
       std::vector<Lepton::ExpressionProgram> valueExpressions;
       std::vector<std::vector<Lepton::ExpressionProgram> > valueDerivExpressions;
@@ -244,7 +244,7 @@ class ReferenceCustomGBIxn {
 
          --------------------------------------------------------------------------------------- */
 
-       ~ReferenceCustomGBIxn( );
+       ~ReferenceCustomGBIxn();
 
       /**---------------------------------------------------------------------------------------
 
@@ -255,7 +255,7 @@ class ReferenceCustomGBIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void setUseCutoff( RealOpenMM distance, const OpenMM::NeighborList& neighbors );
+      void setUseCutoff(RealOpenMM distance, const OpenMM::NeighborList& neighbors);
 
       /**---------------------------------------------------------------------------------------
 
@@ -263,11 +263,11 @@ class ReferenceCustomGBIxn {
          already been set, and the smallest side of the periodic box is at least twice the cutoff
          distance.
 
-         @param boxSize             the X, Y, and Z widths of the periodic box
+         @param vectors    the vectors defining the periodic box
 
          --------------------------------------------------------------------------------------- */
 
-      void setPeriodic( OpenMM::RealVec& boxSize );
+      void setPeriodic(OpenMM::RealVec* vectors);
 
       /**---------------------------------------------------------------------------------------
 
@@ -289,5 +289,7 @@ class ReferenceCustomGBIxn {
 // ---------------------------------------------------------------------------------------
 
 };
+
+} // namespace OpenMM
 
 #endif // __ReferenceCustomGBIxn_H__

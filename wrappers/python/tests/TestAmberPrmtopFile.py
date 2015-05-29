@@ -1,4 +1,6 @@
 import unittest
+import os
+import tempfile
 from validateConstraints import *
 from simtk.openmm.app import *
 from simtk.openmm import *
@@ -9,6 +11,8 @@ prmtop1 = AmberPrmtopFile('systems/alanine-dipeptide-explicit.prmtop')
 prmtop2 = AmberPrmtopFile('systems/alanine-dipeptide-implicit.prmtop')
 prmtop3 = AmberPrmtopFile('systems/ff14ipq.parm7')
 prmtop4 = AmberPrmtopFile('systems/Mg_water.prmtop')
+prmtop5 = AmberPrmtopFile('systems/tz2.truncoct.parm7')
+prmtop6 = AmberPrmtopFile('systems/gaffwat.parm7')
 inpcrd3 = AmberInpcrdFile('systems/ff14ipq.rst7')
 inpcrd4 = AmberInpcrdFile('systems/Mg_water.inpcrd')
 
@@ -197,6 +201,24 @@ class TestAmberPrmtopFile(unittest.TestCase):
         # Amber using this force field.
         self.assertAlmostEqual(-7042.3903307/ene, 1, places=3)
 
+    def test_HAngle(self):
+        """ Test that HAngle constraints are properly handled for all hydrogens """
+        system = prmtop6.createSystem(nonbondedMethod=PME,
+                                      nonbondedCutoff=1*nanometers,
+                                      constraints=HBonds)
+        self.assertEqual(system.getForce(0).getNumBonds(), 0)
+        self.assertEqual(system.getNumParticles(), 3000)
+        self.assertEqual(system.getNumConstraints(), 2000)
+        self.assertEqual(system.getForce(1).getNumAngles(), 1000)
+
+        system = prmtop6.createSystem(nonbondedMethod=PME,
+                                      nonbondedCutoff=1*nanometers,
+                                      constraints=HAngles)
+        self.assertEqual(system.getForce(0).getNumBonds(), 0)
+        self.assertEqual(system.getNumParticles(), 3000)
+        self.assertEqual(system.getNumConstraints(), 3000)
+        self.assertEqual(system.getForce(1).getNumAngles(), 0)
+
     def test_LJ1264(self):
         """Test prmtop with 12-6-4 vdW potential implemented"""
         system = prmtop4.createSystem(nonbondedMethod=PME,
@@ -229,7 +251,32 @@ class TestAmberPrmtopFile(unittest.TestCase):
         # Make sure the energy is relatively close to the value we get with
         # Amber using this force field.
         self.assertAlmostEqual(-7307.2735621/ene, 1, places=3)
-    
+
+    def test_triclinicParm(self):
+        """ Check that triclinic unit cells work correctly """
+        system = prmtop5.createSystem(nonbondedMethod=PME)
+        refa = Vec3(4.48903851, 0.0, 0.0) * nanometer
+        refb = Vec3(-1.4963460492639706, 4.232306137924705, 0.0) * nanometer
+        refc = Vec3(-1.4963460492639706, -2.116152812842565, 3.6652847799064165) * nanometer
+        a, b, c = system.getDefaultPeriodicBoxVectors()
+        la = norm(a)
+        lb = norm(b)
+        lc = norm(c)
+        diffa = a - refa
+        diffb = b - refb
+        diffc = c - refc
+        self.assertAlmostEqual(norm(diffa)/nanometers, 0)
+        self.assertAlmostEqual(norm(diffb)/nanometers, 0)
+        self.assertAlmostEqual(norm(diffc)/nanometers, 0)
+        self.assertAlmostEqual(dot(a, b)/la/lb, cos(109.4712190*degrees))
+        self.assertAlmostEqual(dot(a, c)/la/lc, cos(109.4712190*degrees))
+        self.assertAlmostEqual(dot(c, b)/lc/lb, cos(109.4712190*degrees))
+        self.assertAlmostEqual(la/nanometers, 4.48903851)
+        self.assertAlmostEqual(lb/nanometers, 4.48903851)
+        self.assertAlmostEqual(lc/nanometers, 4.48903851)
+        # Now make sure that the context builds correctly; then we can bail
+        self.assertTrue(Context(system, VerletIntegrator(1*femtoseconds)))
+
     def test_ImplicitSolventForces(self):
         """Compute forces for different implicit solvent types, and compare them to ones generated with a previous version of OpenMM to ensure they haven't changed."""
         
@@ -248,6 +295,38 @@ class TestAmberPrmtopFile(unittest.TestCase):
             for f1, f2, in zip(state1.getForces().value_in_unit(kilojoules_per_mole/nanometer), state2.getForces().value_in_unit(kilojoules_per_mole/nanometer)):
                 diff = norm(f1-f2)
                 self.assertTrue(diff < 0.1 or diff/norm(f1) < 1e-4)
+
+    def test_with_dcd_reporter(self):
+        """Check that an amber simulation like the docs example works with a DCD reporter."""
+
+        temperature = 50*kelvin
+
+        prmtop = prmtop4  # Mg + water
+        inpcrd = inpcrd4  # Mg + water
+        system = prmtop.createSystem(nonbondedMethod=PME, nonbondedCutoff=1*nanometer, constraints=HBonds)
+        system.addForce(MonteCarloBarostat(1.0 * atmospheres, temperature, 1))
+
+        integrator = LangevinIntegrator(temperature, 1.0 / picosecond, 0.0001 * picoseconds)
+        
+        simulation = Simulation(prmtop.topology, system, integrator)
+        simulation.context.setPositions(inpcrd.positions)
+        simulation.context.setPeriodicBoxVectors(*inpcrd.boxVectors)
+
+        fname = tempfile.mktemp(suffix='.dcd')
+        simulation.reporters.append(DCDReporter(fname, 1))  # This is an explicit test for the bugs in issue #850
+        simulation.step(5)
+        os.remove(fname)
+
+    def testChamber(self):
+        """ Tests that Chamber prmtops fail with proper error message """
+        self.assertRaises(TypeError, lambda: AmberPrmtopFile('systems/ala3_solv.parm7'))
+        try:
+            parm = AmberPrmtopFile('systems/ala3_solv.parm7')
+            # Should not make it past here
+            self.assertTrue(False)
+        except TypeError as e:
+            # Make sure it says something about chamber
+            self.assertTrue('chamber' in str(e).lower())
 
 if __name__ == '__main__':
     unittest.main()

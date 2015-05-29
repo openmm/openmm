@@ -26,8 +26,6 @@
 #include <sstream>
 #include <utility>
 
-#include "SimTKOpenMMCommon.h"
-#include "SimTKOpenMMLog.h"
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceForce.h"
 #include "CpuCustomManyParticleForce.h"
@@ -122,8 +120,7 @@ void CpuCustomManyParticleForce::calculateIxn(AlignedArray<float>& posq, RealOpe
         particleNeighbors.resize(numParticles);
         for (int i = 0; i < numParticles; i++)
             particleNeighbors[i].clear();
-        float boxSizeFloat[] = {(float) periodicBoxSize[0], (float) periodicBoxSize[1], (float) periodicBoxSize[2]};
-        neighborList->computeNeighborList(numParticles, posq, exclusions, boxSizeFloat, usePeriodic, cutoffDistance, threads);
+        neighborList->computeNeighborList(numParticles, posq, exclusions, periodicBoxVectors, usePeriodic, cutoffDistance, threads);
         for (int blockIndex = 0; blockIndex < neighborList->getNumBlocks(); blockIndex++) {
             const vector<int>& neighbors = neighborList->getBlockNeighbors(blockIndex);
             const vector<char>& exclusions = neighborList->getBlockExclusions(blockIndex);
@@ -159,8 +156,8 @@ void CpuCustomManyParticleForce::calculateIxn(AlignedArray<float>& posq, RealOpe
 
 void CpuCustomManyParticleForce::threadComputeForce(ThreadPool& threads, int threadIndex) {
     vector<int> particleIndices(numParticlesPerSet);
-    fvec4 boxSize(periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2], 0);
-    fvec4 invBoxSize((1/periodicBoxSize[0]), (1/periodicBoxSize[1]), (1/periodicBoxSize[2]), 0);
+    fvec4 boxSize(periodicBoxVectors[0][0], periodicBoxVectors[1][1], periodicBoxVectors[2][2], 0);
+    fvec4 invBoxSize(recipBoxSize[0], recipBoxSize[1], recipBoxSize[2], 0);
     float* forces = &(*threadForce)[threadIndex][0];
     ThreadData& data = *threadData[threadIndex];
     data.energy = 0;
@@ -201,15 +198,25 @@ void CpuCustomManyParticleForce::setUseCutoff(RealOpenMM distance) {
         neighborList = new CpuNeighborList(4);
 }
 
-void CpuCustomManyParticleForce::setPeriodic(RealVec& boxSize) {
+void CpuCustomManyParticleForce::setPeriodic(RealVec* periodicBoxVectors) {
     assert(useCutoff);
-    assert(boxSize[0] >= 2.0*cutoffDistance);
-    assert(boxSize[1] >= 2.0*cutoffDistance);
-    assert(boxSize[2] >= 2.0*cutoffDistance);
+    assert(periodicBoxVectors[0][0] >= 2.0*cutoffDistance);
+    assert(periodicBoxVectors[1][1] >= 2.0*cutoffDistance);
+    assert(periodicBoxVectors[2][2] >= 2.0*cutoffDistance);
     usePeriodic = true;
-    periodicBoxSize[0] = boxSize[0];
-    periodicBoxSize[1] = boxSize[1];
-    periodicBoxSize[2] = boxSize[2];
+    this->periodicBoxVectors[0] = periodicBoxVectors[0];
+    this->periodicBoxVectors[1] = periodicBoxVectors[1];
+    this->periodicBoxVectors[2] = periodicBoxVectors[2];
+    recipBoxSize[0] = (float) (1.0/periodicBoxVectors[0][0]);
+    recipBoxSize[1] = (float) (1.0/periodicBoxVectors[1][1]);
+    recipBoxSize[2] = (float) (1.0/periodicBoxVectors[2][2]);
+    periodicBoxVec4.resize(3);
+    periodicBoxVec4[0] = fvec4(periodicBoxVectors[0][0], periodicBoxVectors[0][1], periodicBoxVectors[0][2], 0);
+    periodicBoxVec4[1] = fvec4(periodicBoxVectors[1][0], periodicBoxVectors[1][1], periodicBoxVectors[1][2], 0);
+    periodicBoxVec4[2] = fvec4(periodicBoxVectors[2][0], periodicBoxVectors[2][1], periodicBoxVectors[2][2], 0);
+    triclinic = (periodicBoxVectors[0][1] != 0.0 || periodicBoxVectors[0][2] != 0.0 ||
+                 periodicBoxVectors[1][0] != 0.0 || periodicBoxVectors[1][2] != 0.0 ||
+                 periodicBoxVectors[2][0] != 0.0 || periodicBoxVectors[2][1] != 0.0);
 }
 
 void CpuCustomManyParticleForce::loopOverInteractions(vector<int>& availableParticles, vector<int>& particleSet, int loopIndex, int startIndex,
@@ -394,8 +401,15 @@ void CpuCustomManyParticleForce::calculateOneIxn(vector<int>& particleSet, RealO
 void CpuCustomManyParticleForce::computeDelta(const fvec4& posI, const fvec4& posJ, fvec4& deltaR, float& r2, const fvec4& boxSize, const fvec4& invBoxSize) const {
     deltaR = posJ-posI;
     if (usePeriodic) {
-        fvec4 base = round(deltaR*invBoxSize)*boxSize;
-        deltaR = deltaR-base;
+        if (triclinic) {
+            deltaR -= periodicBoxVec4[2]*floorf(deltaR[2]*recipBoxSize[2]+0.5f);
+            deltaR -= periodicBoxVec4[1]*floorf(deltaR[1]*recipBoxSize[1]+0.5f);
+            deltaR -= periodicBoxVec4[0]*floorf(deltaR[0]*recipBoxSize[0]+0.5f);
+        }
+        else {
+            fvec4 base = round(deltaR*invBoxSize)*boxSize;
+            deltaR = deltaR-base;
+        }
     }
     r2 = dot3(deltaR, deltaR);
 }

@@ -26,7 +26,7 @@
 #include "AmoebaReferenceTorsionTorsionForce.h"
 
 using std::vector;
-using OpenMM::RealVec;
+using namespace OpenMM;
 
 /**---------------------------------------------------------------------------------------
 
@@ -50,7 +50,7 @@ using OpenMM::RealVec;
 void AmoebaReferenceTorsionTorsionForce::loadGridValuesFromEnclosingRectangle(
            const std::vector< std::vector< std::vector<RealOpenMM> > >& grid,
            RealOpenMM angle1, RealOpenMM angle2, RealOpenMM corners[2][2],
-           RealOpenMM* fValues, RealOpenMM* fValues1, RealOpenMM* fValues2, RealOpenMM* fValues12 ) const {
+           RealOpenMM* fValues, RealOpenMM* fValues1, RealOpenMM* fValues2, RealOpenMM* fValues12) const {
  
     // ---------------------------------------------------------------------------------------
  
@@ -62,8 +62,8 @@ void AmoebaReferenceTorsionTorsionForce::loadGridValuesFromEnclosingRectangle(
 
     unsigned int gridSize  = grid.size();
     double gridSpacingI    = static_cast<double>(gridSize-1)/360.0;
-    const int X_gridIndex  =  (int) ( (angle1 - grid[0][0][0] )*gridSpacingI + 1.0e-06);
-    const int Y_gridIndex  =  (int) ( (angle2 - grid[0][0][1] )*gridSpacingI + 1.0e-06);
+    const int X_gridIndex  =  (int) ((angle1 - grid[0][0][0])*gridSpacingI + 1.0e-06);
+    const int Y_gridIndex  =  (int) ((angle2 - grid[0][0][1])*gridSpacingI + 1.0e-06);
 
     // get coordinates of corner indices
   
@@ -73,15 +73,15 @@ void AmoebaReferenceTorsionTorsionForce::loadGridValuesFromEnclosingRectangle(
     corners[1][0]         = grid[X_gridIndex][Y_gridIndex  ][1]; 
     corners[1][1]         = grid[X_gridIndex+1][Y_gridIndex+1][1]; 
 
-    for( int ii = 0; ii < 4; ii++ ){
+    for (int ii = 0; ii < 4; ii++) {
        int gridX = X_gridIndex;
        int gridY = Y_gridIndex;
-       if( ii == 1 ){
+       if (ii == 1) {
            gridX++;
-       } else if( ii == 2 ){
+       } else if (ii == 2) {
            gridX++;
            gridY++;
-       } else if( ii == 3 ){
+       } else if (ii == 3) {
            gridY++;
        }
            
@@ -117,9 +117,9 @@ void AmoebaReferenceTorsionTorsionForce::loadGridValuesFromEnclosingRectangle(
 
    --------------------------------------------------------------------------------------- */
 
-void AmoebaReferenceTorsionTorsionForce::getBicubicCoefficientMatrix( const RealOpenMM* y,
+void AmoebaReferenceTorsionTorsionForce::getBicubicCoefficientMatrix(const RealOpenMM* y,
         const RealOpenMM* y1, const RealOpenMM* y2, const RealOpenMM* y12, const RealOpenMM d1, const RealOpenMM d2,
-        RealOpenMM c[4][4] ) const {
+        RealOpenMM c[4][4]) const {
 
    // ---------------------------------------------------------------------------------------
 
@@ -159,9 +159,9 @@ void AmoebaReferenceTorsionTorsionForce::getBicubicCoefficientMatrix( const Real
  
     // pack y, y1, y2, y12 into single vector of dimension 16
  
-    std::vector<RealOpenMM> x( 16 );
+    std::vector<RealOpenMM> x(16);
     RealOpenMM d1d2 = d1*d2;
-    for( int ii = 0; ii < 4; ii++ ){
+    for (int ii = 0; ii < 4; ii++) {
        x[ii]     =   y[ii];
        x[ii+4]   =  y1[ii]*d1;
        x[ii+8]   =  y2[ii]*d2;
@@ -172,13 +172,13 @@ void AmoebaReferenceTorsionTorsionForce::getBicubicCoefficientMatrix( const Real
  
     int rowIndex = 0;
     int colIndex = 0;
-    for( int ii = 0; ii < 16; ii++ ){
+    for (int ii = 0; ii < 16; ii++) {
        RealOpenMM sum = weightMatrix[0][ii]*x[0];
-       for( int jj = 1; jj < 16; jj++ ){
+       for (int jj = 1; jj < 16; jj++) {
           sum += weightMatrix[jj][ii]*x[jj];
        }
        c[rowIndex][colIndex++] = sum;
-       if( !(colIndex % 4) ){
+       if (!(colIndex % 4)) {
           colIndex = 0;
           rowIndex++;
        }
@@ -216,12 +216,12 @@ void AmoebaReferenceTorsionTorsionForce::getBicubicCoefficientMatrix( const Real
  
     --------------------------------------------------------------------------------------- */
  
-void AmoebaReferenceTorsionTorsionForce::getBicubicValues( 
+void AmoebaReferenceTorsionTorsionForce::getBicubicValues(
          const RealOpenMM* y, const RealOpenMM* y1, const RealOpenMM* y2, const RealOpenMM* y12,
          const RealOpenMM x1Lower, const RealOpenMM x1Upper,
          const RealOpenMM x2Lower, const RealOpenMM x2Upper, 
          const RealOpenMM gridValue1, const RealOpenMM gridValue2,
-         RealOpenMM* functionValue, RealOpenMM* functionValue1, RealOpenMM* functionValue2 ) const { 
+         RealOpenMM* functionValue, RealOpenMM* functionValue1, RealOpenMM* functionValue2) const { 
  
     // ---------------------------------------------------------------------------------------
  
@@ -236,7 +236,7 @@ void AmoebaReferenceTorsionTorsionForce::getBicubicValues(
     // get coefficent matrix
  
     RealOpenMM coefficientMatrix[4][4];
-    getBicubicCoefficientMatrix( y, y1, y2, y12, x1Upper-x1Lower, x2Upper-x2Lower, coefficientMatrix );
+    getBicubicCoefficientMatrix(y, y1, y2, y12, x1Upper-x1Lower, x2Upper-x2Lower, coefficientMatrix);
  
     // apply coefficent matrix
  
@@ -247,10 +247,10 @@ void AmoebaReferenceTorsionTorsionForce::getBicubicValues(
     *functionValue1 = zero;
     *functionValue2 = zero;
  
-    for( int ii = 3; ii >= 0; ii-- ){
-       *functionValue   = t*(*functionValue)   + (     ( coefficientMatrix[ii][3]*u +     coefficientMatrix[ii][2] )*u + coefficientMatrix[ii][1])*u + coefficientMatrix[ii][0];
-       *functionValue1  = u*(*functionValue1)  + ( three*coefficientMatrix[3][ii]*t + two*coefficientMatrix[2][ii] )*t + coefficientMatrix[1][ii];
-       *functionValue2  = t*(*functionValue2)  + ( three*coefficientMatrix[ii][3]*u + two*coefficientMatrix[ii][2] )*u + coefficientMatrix[ii][1];
+    for (int ii = 3; ii >= 0; ii--) {
+       *functionValue   = t*(*functionValue)   + (     (coefficientMatrix[ii][3]*u +     coefficientMatrix[ii][2])*u + coefficientMatrix[ii][1])*u + coefficientMatrix[ii][0];
+       *functionValue1  = u*(*functionValue1)  + (three*coefficientMatrix[3][ii]*t + two*coefficientMatrix[2][ii])*t + coefficientMatrix[1][ii];
+       *functionValue2  = t*(*functionValue2)  + (three*coefficientMatrix[ii][3]*u + two*coefficientMatrix[ii][2])*u + coefficientMatrix[ii][1];
     }
  
     *functionValue1 /= (x1Upper - x1Lower);
@@ -273,9 +273,9 @@ void AmoebaReferenceTorsionTorsionForce::getBicubicValues(
  
     --------------------------------------------------------------------------------------- */
  
-int AmoebaReferenceTorsionTorsionForce::checkTorsionSign( 
+int AmoebaReferenceTorsionTorsionForce::checkTorsionSign(
          const RealVec& positionAtomA, const RealVec& positionAtomB,
-         const RealVec& positionAtomC, const RealVec& positionAtomD ) const {
+         const RealVec& positionAtomC, const RealVec& positionAtomD) const {
  
     // ---------------------------------------------------------------------------------------
  
@@ -290,17 +290,17 @@ int AmoebaReferenceTorsionTorsionForce::checkTorsionSign(
   
     enum { CA, CB, CD, LastDeltaIndex };
     std::vector<RealOpenMM> deltaR[LastDeltaIndex];
-    for( unsigned int ii = 0; ii < LastDeltaIndex; ii++ ){
+    for (unsigned int ii = 0; ii < LastDeltaIndex; ii++) {
         deltaR[ii].resize(3);
     }   
 
-    AmoebaReferenceForce::loadDeltaR( positionAtomC, positionAtomA, deltaR[CA] );
-    AmoebaReferenceForce::loadDeltaR( positionAtomC, positionAtomB, deltaR[CB] );
-    AmoebaReferenceForce::loadDeltaR( positionAtomC, positionAtomD, deltaR[CD] );
+    AmoebaReferenceForce::loadDeltaR(positionAtomC, positionAtomA, deltaR[CA]);
+    AmoebaReferenceForce::loadDeltaR(positionAtomC, positionAtomB, deltaR[CB]);
+    AmoebaReferenceForce::loadDeltaR(positionAtomC, positionAtomD, deltaR[CD]);
 
-    RealOpenMM volume = deltaR[CA][0]*( deltaR[CB][1]*deltaR[CD][2] - deltaR[CB][2]*deltaR[CD][1] ) +
-                        deltaR[CB][0]*( deltaR[CD][1]*deltaR[CA][2] - deltaR[CD][2]*deltaR[CA][1] ) +
-                        deltaR[CD][0]*( deltaR[CA][1]*deltaR[CB][2] - deltaR[CA][2]*deltaR[CB][1] );
+    RealOpenMM volume = deltaR[CA][0]*(deltaR[CB][1]*deltaR[CD][2] - deltaR[CB][2]*deltaR[CD][1]) +
+                        deltaR[CB][0]*(deltaR[CD][1]*deltaR[CA][2] - deltaR[CD][2]*deltaR[CA][1]) +
+                        deltaR[CD][0]*(deltaR[CA][1]*deltaR[CB][2] - deltaR[CA][2]*deltaR[CB][1]);
 
     return (volume >= zero ? one : -one);
  
@@ -324,11 +324,11 @@ int AmoebaReferenceTorsionTorsionForce::checkTorsionSign(
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM AmoebaReferenceTorsionTorsionForce::calculateTorsionTorsionIxn( const RealVec& positionAtomA, const RealVec& positionAtomB,
-                                                                           const RealVec& positionAtomC, const RealVec& positionAtomD,
-                                                                           const RealVec& positionAtomE, const RealVec* positionChiralCheckAtom,
-                                                                           const std::vector< std::vector< std::vector<RealOpenMM> > >& grid,
-                                                                           RealVec* forces ) const {
+RealOpenMM AmoebaReferenceTorsionTorsionForce::calculateTorsionTorsionIxn(const RealVec& positionAtomA, const RealVec& positionAtomB,
+                                                                          const RealVec& positionAtomC, const RealVec& positionAtomD,
+                                                                          const RealVec& positionAtomE, const RealVec* positionChiralCheckAtom,
+                                                                          const std::vector< std::vector< std::vector<RealOpenMM> > >& grid,
+                                                                          RealVec* forces) const {
  
    // ---------------------------------------------------------------------------------------
 
@@ -347,83 +347,83 @@ RealOpenMM AmoebaReferenceTorsionTorsionForce::calculateTorsionTorsionIxn( const
     enum { BA, CB, DC, ED, T, U, V, UxV, CA, DB, EC, dT, dU, dU2, dV2, LastDeltaIndex };
  
     std::vector<RealOpenMM> deltaR[LastDeltaIndex];
-    for( unsigned int ii = 0; ii < LastDeltaIndex; ii++ ){
+    for (unsigned int ii = 0; ii < LastDeltaIndex; ii++) {
         deltaR[ii].resize(3);
     }   
 
-    AmoebaReferenceForce::loadDeltaR( positionAtomA, positionAtomB, deltaR[BA] );
-    AmoebaReferenceForce::loadDeltaR( positionAtomB, positionAtomC, deltaR[CB] );
-    AmoebaReferenceForce::loadDeltaR( positionAtomC, positionAtomD, deltaR[DC] );
-    AmoebaReferenceForce::loadDeltaR( positionAtomD, positionAtomE, deltaR[ED] );
-    AmoebaReferenceForce::loadDeltaR( positionAtomA, positionAtomC, deltaR[CA] );
-    AmoebaReferenceForce::loadDeltaR( positionAtomB, positionAtomD, deltaR[DB] );
-    AmoebaReferenceForce::loadDeltaR( positionAtomC, positionAtomE, deltaR[EC] );
+    AmoebaReferenceForce::loadDeltaR(positionAtomA, positionAtomB, deltaR[BA]);
+    AmoebaReferenceForce::loadDeltaR(positionAtomB, positionAtomC, deltaR[CB]);
+    AmoebaReferenceForce::loadDeltaR(positionAtomC, positionAtomD, deltaR[DC]);
+    AmoebaReferenceForce::loadDeltaR(positionAtomD, positionAtomE, deltaR[ED]);
+    AmoebaReferenceForce::loadDeltaR(positionAtomA, positionAtomC, deltaR[CA]);
+    AmoebaReferenceForce::loadDeltaR(positionAtomB, positionAtomD, deltaR[DB]);
+    AmoebaReferenceForce::loadDeltaR(positionAtomC, positionAtomE, deltaR[EC]);
 
     std::vector<RealOpenMM> d[LastAtomIndex];
-    for( unsigned int ii = 0; ii < LastAtomIndex; ii++ ){
+    for (unsigned int ii = 0; ii < LastAtomIndex; ii++) {
         d[ii].resize(3);
     }   
  
-    AmoebaReferenceForce::getCrossProduct( deltaR[BA], deltaR[CB], deltaR[T] );
-    AmoebaReferenceForce::getCrossProduct( deltaR[CB], deltaR[DC], deltaR[U] );
-    AmoebaReferenceForce::getCrossProduct( deltaR[DC], deltaR[ED], deltaR[V] );
+    AmoebaReferenceForce::getCrossProduct(deltaR[BA], deltaR[CB], deltaR[T]);
+    AmoebaReferenceForce::getCrossProduct(deltaR[CB], deltaR[DC], deltaR[U]);
+    AmoebaReferenceForce::getCrossProduct(deltaR[DC], deltaR[ED], deltaR[V]);
  
-    AmoebaReferenceForce::getCrossProduct( deltaR[U],  deltaR[V],  deltaR[UxV] );
+    AmoebaReferenceForce::getCrossProduct(deltaR[U],  deltaR[V],  deltaR[UxV]);
  
-    RealOpenMM rT2  = AmoebaReferenceForce::getNormSquared3( deltaR[T] );
-    RealOpenMM rU2  = AmoebaReferenceForce::getNormSquared3( deltaR[U] );
-    RealOpenMM rV2  = AmoebaReferenceForce::getNormSquared3( deltaR[V] );
-    RealOpenMM rUrV = SQRT( rU2*rV2 );
+    RealOpenMM rT2  = AmoebaReferenceForce::getNormSquared3(deltaR[T]);
+    RealOpenMM rU2  = AmoebaReferenceForce::getNormSquared3(deltaR[U]);
+    RealOpenMM rV2  = AmoebaReferenceForce::getNormSquared3(deltaR[V]);
+    RealOpenMM rUrV = SQRT(rU2*rV2);
  
-    RealOpenMM rTrU = SQRT( rT2*rU2 );
+    RealOpenMM rTrU = SQRT(rT2*rU2);
  
-    if( rTrU <= zero || rUrV <= zero ){
+    if (rTrU <= zero || rUrV <= zero) {
        return zero;
     }
-    RealOpenMM rCB         = AmoebaReferenceForce::getNorm3( deltaR[CB] );
-    RealOpenMM cosine1     = AmoebaReferenceForce::getDotProduct3( deltaR[T], deltaR[U] );
+    RealOpenMM rCB         = AmoebaReferenceForce::getNorm3(deltaR[CB]);
+    RealOpenMM cosine1     = AmoebaReferenceForce::getDotProduct3(deltaR[T], deltaR[U]);
                cosine1    /= rTrU;
  
     RealOpenMM angle1;
-    if( cosine1 <= -one ){
+    if (cosine1 <= -one) {
        angle1 = PI_M*RADIAN;
-    } else if( cosine1 >= one ){
+    } else if (cosine1 >= one) {
        angle1 = zero;
     } else {
        angle1 = RADIAN*ACOS(cosine1);
     }
  
-    RealOpenMM sign = AmoebaReferenceForce::getDotProduct3( deltaR[BA], deltaR[U] );
-    if( sign < zero ){
+    RealOpenMM sign = AmoebaReferenceForce::getDotProduct3(deltaR[BA], deltaR[U]);
+    if (sign < zero) {
        angle1 = -angle1; 
     }
  
     // value1 = angle1;
  
-    RealOpenMM rDC         = AmoebaReferenceForce::getNorm3( deltaR[DC] );
-    RealOpenMM cosine2     = AmoebaReferenceForce::getDotProduct3( deltaR[U], deltaR[V] );
+    RealOpenMM rDC         = AmoebaReferenceForce::getNorm3(deltaR[DC]);
+    RealOpenMM cosine2     = AmoebaReferenceForce::getDotProduct3(deltaR[U], deltaR[V]);
                cosine2    /= rUrV;
  
     RealOpenMM angle2;
-    if( cosine2 <= -one ){
+    if (cosine2 <= -one) {
        angle2 = PI_M*RADIAN;
-    } else if( cosine1 >= one ){
+    } else if (cosine1 >= one) {
        angle2 = zero;
     } else {
        angle2 = RADIAN*ACOS(cosine2);
     }
  
-    sign = AmoebaReferenceForce::getDotProduct3( deltaR[CB], deltaR[V] );
-    if( sign < zero ){
+    sign = AmoebaReferenceForce::getDotProduct3(deltaR[CB], deltaR[V]);
+    if (sign < zero) {
        angle2 = -angle2; 
     }
  
     // swap signs of angles if chirality at central atom
     // is 'negative'
   
-    if( positionChiralCheckAtom ){
-        sign = checkTorsionSign( *positionChiralCheckAtom, positionAtomB, positionAtomC, positionAtomD );
-        if( sign < zero ){
+    if (positionChiralCheckAtom) {
+        sign = checkTorsionSign(*positionChiralCheckAtom, positionAtomB, positionAtomC, positionAtomD);
+        if (sign < zero) {
            angle1 = -angle1;
            angle2 = -angle2;
         }
@@ -436,7 +436,7 @@ RealOpenMM AmoebaReferenceTorsionTorsionForce::calculateTorsionTorsionIxn( const
     RealOpenMM corners[2][2];
     RealOpenMM eValues[4][4];
     enum { E0, E1, E2, E12, LastEIndex };
-    loadGridValuesFromEnclosingRectangle( grid, angle1, angle2, corners, eValues[E0], eValues[E1], eValues[E2], eValues[E12] );
+    loadGridValuesFromEnclosingRectangle(grid, angle1, angle2, corners, eValues[E0], eValues[E1], eValues[E2], eValues[E12]);
     
     // get coordinates of point in grid closest to angle1 & angle2
   
@@ -446,16 +446,16 @@ RealOpenMM AmoebaReferenceTorsionTorsionForce::calculateTorsionTorsionIxn( const
     RealOpenMM gridEnergy;
     RealOpenMM dEdAngle1;
     RealOpenMM dEdAngle2;
-    AmoebaReferenceTorsionTorsionForce::getBicubicValues( 
+    AmoebaReferenceTorsionTorsionForce::getBicubicValues(
           eValues[E0], eValues[E1], eValues[E2], eValues[E12],
           corners[0][0], corners[0][1], corners[1][0], corners[1][1],
-          angle1, angle2, &gridEnergy, &dEdAngle1, &dEdAngle2 ); 
+          angle1, angle2, &gridEnergy, &dEdAngle1, &dEdAngle2); 
  
     dEdAngle1 = sign*RADIAN*dEdAngle1;
     dEdAngle2 = sign*RADIAN*dEdAngle2;
  
-    AmoebaReferenceForce::getCrossProduct( deltaR[T], deltaR[CB], deltaR[dT] );
-    AmoebaReferenceForce::getCrossProduct( deltaR[U], deltaR[CB], deltaR[dU] );
+    AmoebaReferenceForce::getCrossProduct(deltaR[T], deltaR[CB], deltaR[dT]);
+    AmoebaReferenceForce::getCrossProduct(deltaR[U], deltaR[CB], deltaR[dU]);
  
     RealOpenMM factorT =  dEdAngle1/(rCB*rT2);
     RealOpenMM factorU = -dEdAngle1/(rCB*rU2);
@@ -468,18 +468,18 @@ RealOpenMM AmoebaReferenceTorsionTorsionForce::calculateTorsionTorsionIxn( const
     deltaR[dU][1] *= factorU;
     deltaR[dU][2] *= factorU;
  
-    AmoebaReferenceForce::getCrossProduct( deltaR[dT], deltaR[CB], d[A] );
-    AmoebaReferenceForce::getCrossProduct( deltaR[dU], deltaR[CB], d[D] );
+    AmoebaReferenceForce::getCrossProduct(deltaR[dT], deltaR[CB], d[A]);
+    AmoebaReferenceForce::getCrossProduct(deltaR[dU], deltaR[CB], d[D]);
  
     std::vector<RealOpenMM> tmp[3];
-    for( unsigned int ii = 0; ii < 3; ii++ ){
+    for (unsigned int ii = 0; ii < 3; ii++) {
         tmp[ii].resize(3);
     }   
-    AmoebaReferenceForce::getCrossProduct( deltaR[CA], deltaR[dT], d[B] );
-    AmoebaReferenceForce::getCrossProduct( deltaR[dU], deltaR[DC], tmp[0] );
+    AmoebaReferenceForce::getCrossProduct(deltaR[CA], deltaR[dT], d[B]);
+    AmoebaReferenceForce::getCrossProduct(deltaR[dU], deltaR[DC], tmp[0]);
  
-    AmoebaReferenceForce::getCrossProduct( deltaR[dT], deltaR[BA], d[C]   );
-    AmoebaReferenceForce::getCrossProduct( deltaR[DB], deltaR[dU], tmp[1]);
+    AmoebaReferenceForce::getCrossProduct(deltaR[dT], deltaR[BA], d[C]);
+    AmoebaReferenceForce::getCrossProduct(deltaR[DB], deltaR[dU], tmp[1]);
 
     d[B][0] += tmp[0][0];
     d[B][1] += tmp[0][1];
@@ -491,8 +491,8 @@ RealOpenMM AmoebaReferenceTorsionTorsionForce::calculateTorsionTorsionIxn( const
  
     // angle2
  
-    AmoebaReferenceForce::getCrossProduct( deltaR[U], deltaR[DC], deltaR[dU2] );
-    AmoebaReferenceForce::getCrossProduct( deltaR[V], deltaR[DC], deltaR[dV2] );
+    AmoebaReferenceForce::getCrossProduct(deltaR[U], deltaR[DC], deltaR[dU2]);
+    AmoebaReferenceForce::getCrossProduct(deltaR[V], deltaR[DC], deltaR[dV2]);
  
     RealOpenMM factorU2 =  dEdAngle2/(rDC*rU2);
     RealOpenMM factorV2 = -dEdAngle2/(rDC*rV2);
@@ -507,12 +507,12 @@ RealOpenMM AmoebaReferenceTorsionTorsionForce::calculateTorsionTorsionIxn( const
  
     // dB2
   
-    AmoebaReferenceForce::getCrossProduct( deltaR[dU2], deltaR[DC],  tmp[0]   );
+    AmoebaReferenceForce::getCrossProduct(deltaR[dU2], deltaR[DC],  tmp[0]);
  
     // dC2
   
-    AmoebaReferenceForce::getCrossProduct( deltaR[DB],  deltaR[dU2], tmp[1]   );
-    AmoebaReferenceForce::getCrossProduct( deltaR[dV2], deltaR[ED],  tmp[2]   );
+    AmoebaReferenceForce::getCrossProduct(deltaR[DB],  deltaR[dU2], tmp[1]);
+    AmoebaReferenceForce::getCrossProduct(deltaR[dV2], deltaR[ED],  tmp[2]);
 
     d[B][0] += tmp[0][0];
     d[B][1] += tmp[0][1];
@@ -524,8 +524,8 @@ RealOpenMM AmoebaReferenceTorsionTorsionForce::calculateTorsionTorsionIxn( const
  
     // dD2
   
-    AmoebaReferenceForce::getCrossProduct( deltaR[dU2],  deltaR[CB], tmp[0]   );
-    AmoebaReferenceForce::getCrossProduct( deltaR[EC], deltaR[dV2],  tmp[1]   );
+    AmoebaReferenceForce::getCrossProduct(deltaR[dU2],  deltaR[CB], tmp[0]);
+    AmoebaReferenceForce::getCrossProduct(deltaR[EC], deltaR[dV2],  tmp[1]);
 
     d[D][0] += tmp[0][0] + tmp[1][0];
     d[D][1] += tmp[0][1] + tmp[1][1];
@@ -533,13 +533,13 @@ RealOpenMM AmoebaReferenceTorsionTorsionForce::calculateTorsionTorsionIxn( const
  
     // dE
   
-    AmoebaReferenceForce::getCrossProduct( deltaR[dV2], deltaR[DC],  d[E]   );
+    AmoebaReferenceForce::getCrossProduct(deltaR[dV2], deltaR[DC],  d[E]);
  
     // ---------------------------------------------------------------------------------------
  
     // add in forces
  
-    for( int jj = 0; jj < LastAtomIndex; jj++ ){
+    for (int jj = 0; jj < LastAtomIndex; jj++) {
         forces[jj][0] = d[jj][0];
         forces[jj][1] = d[jj][1];
         forces[jj][2] = d[jj][2];
@@ -550,16 +550,16 @@ RealOpenMM AmoebaReferenceTorsionTorsionForce::calculateTorsionTorsionIxn( const
     return gridEnergy;
 }
 
-RealOpenMM AmoebaReferenceTorsionTorsionForce::calculateForceAndEnergy( int numTorsionTorsions, vector<RealVec>& posData,
-                                                                        const std::vector<int>&  particle1,
-                                                                        const std::vector<int>&  particle2,
-                                                                        const std::vector<int>&  particle3,
-                                                                        const std::vector<int>&  particle4,
-                                                                        const std::vector<int>&  particle5,
-                                                                        const std::vector<int>&  chiralCheckAtom,
-                                                                        const std::vector<int>&  gridIndices,
-                                                                        const std::vector< std::vector< std::vector< std::vector<RealOpenMM> > > >& torsionTorsionGrids,
-                                                                        vector<RealVec>& forceData ) const {
+RealOpenMM AmoebaReferenceTorsionTorsionForce::calculateForceAndEnergy(int numTorsionTorsions, vector<RealVec>& posData,
+                                                                       const std::vector<int>&  particle1,
+                                                                       const std::vector<int>&  particle2,
+                                                                       const std::vector<int>&  particle3,
+                                                                       const std::vector<int>&  particle4,
+                                                                       const std::vector<int>&  particle5,
+                                                                       const std::vector<int>&  chiralCheckAtom,
+                                                                       const std::vector<int>&  gridIndices,
+                                                                       const std::vector< std::vector< std::vector< std::vector<RealOpenMM> > > >& torsionTorsionGrids,
+                                                                       vector<RealVec>& forceData) const {
     RealOpenMM energy  = 0.0; 
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(numTorsionTorsions); ii++) {
 
@@ -575,19 +575,19 @@ RealOpenMM AmoebaReferenceTorsionTorsionForce::calculateForceAndEnergy( int numT
 
         RealVec forces[5];
         RealVec* chiralCheckAtom;
-        if( chiralCheckAtomIndex > -1 ){
+        if (chiralCheckAtomIndex > -1) {
             chiralCheckAtom = &posData[chiralCheckAtomIndex];
         } else {
             chiralCheckAtom = NULL;
         }
-        energy                 += calculateTorsionTorsionIxn( posData[particle1Index], posData[particle2Index],
-                                                              posData[particle3Index], posData[particle4Index],
-                                                              posData[particle5Index], chiralCheckAtom, torsionTorsionGrids[gridIndex],
-                                                              forces );
+        energy                 += calculateTorsionTorsionIxn(posData[particle1Index], posData[particle2Index],
+                                                             posData[particle3Index], posData[particle4Index],
+                                                             posData[particle5Index], chiralCheckAtom, torsionTorsionGrids[gridIndex],
+                                                             forces);
 
         // accumulate forces
     
-        for( int jj = 0; jj < 3; jj++ ){
+        for (int jj = 0; jj < 3; jj++) {
             forceData[particle1Index][jj] -= forces[0][jj];
             forceData[particle2Index][jj] -= forces[1][jj];
             forceData[particle3Index][jj] -= forces[2][jj];

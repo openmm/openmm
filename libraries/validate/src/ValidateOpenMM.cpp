@@ -54,7 +54,7 @@ const std::string ValidateOpenMM::CUSTOM_EXTERNAL_FORCE           = "CustomExter
 const std::string ValidateOpenMM::CUSTOM_NONBONDED_FORCE          = "CustomNonBonded";
 
 
-ValidateOpenMM::ValidateOpenMM( void ) {
+ValidateOpenMM::ValidateOpenMM() {
 
     _log                                          = NULL;
 
@@ -82,7 +82,7 @@ int ValidateOpenMM::isNanOrInfinity( double number ){
     return (number != number || number == std::numeric_limits<double>::infinity() || number == -std::numeric_limits<double>::infinity()) ? 1 : 0;
 }
 
-FILE* ValidateOpenMM::getLog( void ) const {
+FILE* ValidateOpenMM::getLog() const {
     return _log;
 }
 

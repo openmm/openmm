@@ -27,7 +27,7 @@
 
 #include "ReferenceDynamics.h"
 
-// ---------------------------------------------------------------------------------------
+namespace OpenMM {
 
 class ReferenceBrownianDynamics : public ReferenceDynamics {
 
@@ -50,7 +50,7 @@ class ReferenceBrownianDynamics : public ReferenceDynamics {
       
          --------------------------------------------------------------------------------------- */
 
-       ReferenceBrownianDynamics( int numberOfAtoms, RealOpenMM deltaT, RealOpenMM friction, RealOpenMM temperature );
+       ReferenceBrownianDynamics(int numberOfAtoms, RealOpenMM deltaT, RealOpenMM friction, RealOpenMM temperature);
 
       /**---------------------------------------------------------------------------------------
       
@@ -58,7 +58,7 @@ class ReferenceBrownianDynamics : public ReferenceDynamics {
       
          --------------------------------------------------------------------------------------- */
 
-       ~ReferenceBrownianDynamics( );
+       ~ReferenceBrownianDynamics();
 
       /**---------------------------------------------------------------------------------------
       
@@ -68,7 +68,7 @@ class ReferenceBrownianDynamics : public ReferenceDynamics {
       
          --------------------------------------------------------------------------------------- */
       
-      RealOpenMM getFriction( void ) const;
+      RealOpenMM getFriction() const;
       
       /**---------------------------------------------------------------------------------------
       
@@ -88,6 +88,6 @@ class ReferenceBrownianDynamics : public ReferenceDynamics {
       
 };
 
-// ---------------------------------------------------------------------------------------
+} // namespace OpenMM
 
 #endif // __ReferenceBrownianDynamics_H__

@@ -25,13 +25,11 @@
 #include <string.h>
 #include <sstream>
 
-#include "SimTKOpenMMCommon.h"
-#include "SimTKOpenMMLog.h"
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceBondForce.h"
 
 using std::vector;
-using OpenMM::RealVec;
+using namespace OpenMM;
 
 /**---------------------------------------------------------------------------------------
 
@@ -39,7 +37,7 @@ using OpenMM::RealVec;
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceBondForce::ReferenceBondForce( ){
+ReferenceBondForce::ReferenceBondForce() {
 
    // ---------------------------------------------------------------------------------------
 
@@ -55,7 +53,7 @@ ReferenceBondForce::ReferenceBondForce( ){
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceBondForce::~ReferenceBondForce( ){
+ReferenceBondForce::~ReferenceBondForce() {
 
    // ---------------------------------------------------------------------------------------
 
@@ -80,12 +78,12 @@ ReferenceBondForce::~ReferenceBondForce( ){
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceBondForce::calculateForce( int numberOfBonds, int** atomIndices,
+void ReferenceBondForce::calculateForce(int numberOfBonds, int** atomIndices,
                                         vector<RealVec>& atomCoordinates,
                                         RealOpenMM** parameters,
                                         vector<RealVec>& forces, 
                                         RealOpenMM *totalEnergy, 
-                                        ReferenceBondIxn& referenceBondIxn ){
+                                        ReferenceBondIxn& referenceBondIxn) {
 
 
    // ---------------------------------------------------------------------------------------
@@ -94,12 +92,12 @@ void ReferenceBondForce::calculateForce( int numberOfBonds, int** atomIndices,
 
    // ---------------------------------------------------------------------------------------
 
-   for( int ii = 0; ii < numberOfBonds; ii++ ){
+   for (int ii = 0; ii < numberOfBonds; ii++) {
 
       // calculate bond ixn
 
-      referenceBondIxn.calculateBondIxn( atomIndices[ii], atomCoordinates, parameters[ii], 
-                                         forces, totalEnergy );
+      referenceBondIxn.calculateBondIxn(atomIndices[ii], atomCoordinates, parameters[ii], 
+                                        forces, totalEnergy);
    }
 }
 

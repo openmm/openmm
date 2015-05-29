@@ -85,6 +85,8 @@ void testSingleParticle() {
     DrudeForce* drude = new DrudeForce();
     drude->addParticle(1, 0, -1, -1, -1, charge, alpha, 1, 1);
     system.addForce(drude);
+    ASSERT(!drude->usesPeriodicBoundaryConditions());
+    ASSERT(!system.usesPeriodicBoundaryConditions());
     vector<Vec3> positions(2);
     positions[0] = Vec3(-1, 0, 0);
     positions[1] = Vec3(2, 0, 0);

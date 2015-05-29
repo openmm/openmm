@@ -23,6 +23,7 @@
  */
 
 #include "CpuRandom.h"
+#include "openmm/internal/OSRngSeed.h"
 #include "openmm/OpenMMException.h"
 #include <cmath>
 
@@ -49,9 +50,13 @@ void CpuRandom::initialize(int seed, int numThreads) {
     nextGaussian.resize(numThreads);
     nextGaussianIsValid.resize(numThreads, false);
 
-    // Use a quick and dirty RNG to pick seeds for the real random number generator.
+    /* Use a quick and dirty RNG to pick seeds for the real random number generator.
+     * A random seed of 0 means pick a unique seed
+     */
 
     unsigned int r = (unsigned int) seed;
+    if (r == 0)
+        r = (unsigned int) osrngseed();
     for (int i = 0; i < numThreads; i++) {
         r = (1664525*r + 1013904223) & 0xFFFFFFFF;
         threadRandom[i] = new OpenMM_SFMT::SFMT();

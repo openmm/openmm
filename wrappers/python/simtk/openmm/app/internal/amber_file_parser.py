@@ -52,6 +52,7 @@ except:
 import simtk.unit as units
 import simtk.openmm
 from simtk.openmm.app import element as elem
+from simtk.openmm.app.internal.unitcell import computePeriodicBoxVectors
 from simtk.openmm.vec3 import Vec3
 import customgbforces as customgb
 
@@ -119,36 +120,44 @@ class PrmtopLoader(object):
         self._raw_data={}
         self._has_nbfix_terms = False
 
-        fIn=open(inFilename)
-        for line in fIn:
-            if line.startswith('%VERSION'):
-                tag, self._prmtopVersion = line.rstrip().split(None, 1)
-            elif line.startswith('%FLAG'):
-                tag, flag = line.rstrip().split(None, 1)
-                self._flags.append(flag)
-                self._raw_data[flag] = []
-            elif line.startswith('%FORMAT'):
-                format = line.rstrip()
-                index0=format.index('(')
-                index1=format.index(')')
-                format = format[index0+1:index1]
-                m = FORMAT_RE_PATTERN.search(format)
-                self._raw_format[self._flags[-1]] = (format, m.group(1), m.group(2), m.group(3), m.group(4))
-            elif self._flags \
-                 and 'TITLE'==self._flags[-1] \
-                 and not self._raw_data['TITLE']:
-                self._raw_data['TITLE'] = line.rstrip()
-            else:
-                flag=self._flags[-1]
-                (format, numItems, itemType,
-                 itemLength, itemPrecision) = self._getFormat(flag)
-                iLength=int(itemLength)
-                line = line.rstrip()
-                for index in range(0, len(line), iLength):
-                    item = line[index:index+iLength]
-                    if item:
-                        self._raw_data[flag].append(item.strip())
-        fIn.close()
+        with open(inFilename, 'r') as fIn:
+            for line in fIn:
+                if line[0] == '%':
+                    if line.startswith('%VERSION'):
+                        tag, self._prmtopVersion = line.rstrip().split(None, 1)
+                    elif line.startswith('%FLAG'):
+                        tag, flag = line.rstrip().split(None, 1)
+                        if flag == 'CTITLE':
+                            raise TypeError('CHAMBER-style topology files are not supported here. '
+                                            'Consider using the CHARMM files directly with CharmmPsfFile '
+                                            'or ParmEd (where CHAMBER topologies are supported)')
+                        self._flags.append(flag)
+                        self._raw_data[flag] = []
+                    elif line.startswith('%FORMAT'):
+                        format = line.rstrip()
+                        index0=format.index('(')
+                        index1=format.index(')')
+                        format = format[index0+1:index1]
+                        m = FORMAT_RE_PATTERN.search(format)
+                        self._raw_format[self._flags[-1]] = (format, m.group(1), m.group(2), int(m.group(3)), m.group(4))
+                    elif line.startswith('%COMMENT'):
+                        continue
+                elif self._flags \
+                     and 'TITLE'==self._flags[-1] \
+                     and not self._raw_data['TITLE']:
+                    self._raw_data['TITLE'] = line.rstrip()
+                else:
+                    flag=self._flags[-1]
+                    (format, numItems, itemType,
+                     iLength, itemPrecision) = self._getFormat(flag)
+                    line = line.rstrip()
+                    for index in range(0, len(line), iLength):
+                        item = line[index:index+iLength]
+                        if item:
+                            self._raw_data[flag].append(item.strip())
+        # See if this is a CHAMBER-style topology file, which is not supported
+        # for creating Systems
+        self.chamber = 'CTITLE' in self._flags
 
     def _getFormat(self, flag=None):
         if not flag:
@@ -300,6 +309,10 @@ class PrmtopLoader(object):
             return self._nonbondTerms
         except AttributeError:
             pass
+        # Check if there are any non-zero HBOND terms
+        for x, y in zip(self._raw_data['HBOND_ACOEF'], self._raw_data['HBOND_BCOEF']):
+            if float(x) or float(y):
+                raise Exception('10-12 interactions are not supported')
         self._nonbondTerms=[]
         lengthConversionFactor = units.angstrom.conversion_factor_to(units.nanometer)
         energyConversionFactor = units.kilocalorie_per_mole.conversion_factor_to(units.kilojoule_per_mole)
@@ -328,6 +341,7 @@ class PrmtopLoader(object):
         for i in range(numTypes):
             for j in range(numTypes):
                 index = int(self._raw_data['NONBONDED_PARM_INDEX'][numTypes*i+j]) - 1
+                if index < 0: continue
                 rij = type_parameters[i][0] + type_parameters[j][0]
                 wdij = sqrt(type_parameters[i][1] * type_parameters[j][1])
                 a = float(self._raw_data['LENNARD_JONES_ACOEF'][index])
@@ -472,6 +486,7 @@ class PrmtopLoader(object):
                     typ1 = atomTypeIndexes[iAtom] - 1
                     typ2 = atomTypeIndexes[lAtom] - 1
                     idx = nbidx[numTypes*typ1+typ2] - 1
+                    if idx < 0: continue
                     a = parm_acoef[idx]
                     b = parm_bcoef[idx]
                     try:
@@ -562,6 +577,12 @@ class PrmtopLoader(object):
                     screen[i] = 0.602256336067
                 else:
                     screen[i] = 0.5
+                # radii is currently in Angstroms right now. GBn lookup tables
+                # only support radii between 1.0 and 2.0
+                if radii[i] < 1.0 or radii[i] > 2.0:
+                    raise ValueError('GBn requires intrinsic radii between 1 and '
+                                     '2 Angstroms (%.3f found for atom %d)' %
+                                     (radii[i], i))
         if gbmodel == 'GBn2':
             if elements is None:
                 raise Exception('GBn2 model requires element information')
@@ -596,6 +617,12 @@ class PrmtopLoader(object):
                     alpha[i] = 1.0
                     beta[i] = 0.8
                     gamma[i] = 4.85
+                # radii is currently in Angstroms right now. GBn lookup tables
+                # only support radii between 1.0 and 2.0
+                if radii[i] < 1.0 or radii[i] > 2.0:
+                    raise ValueError('GBn2 requires intrinsic radii between 1 and '
+                                     '2 Angstroms (%.3f found for atom %d)' %
+                                     (radii[i], i))
         lengthConversionFactor = units.angstrom.conversion_factor_to(units.nanometer)
         if gbmodel == 'GBn2':
             for rad, scr, alp, bet, gam in zip(radii, screen, alpha, beta, gamma):
@@ -628,7 +655,7 @@ class PrmtopLoader(object):
 # AMBER System builder (based on, but not identical to, systemManager from 'zander')
 #=============================================================================================
 
-def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmodel=None,
+def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=None, gbmodel=None,
           soluteDielectric=1.0, solventDielectric=78.5,
           implicitSolventKappa=0.0*(1/units.nanometer), nonbondedCutoff=None,
           nonbondedMethod='NoCutoff', scee=None, scnb=None, mm=None, verbose=False,
@@ -636,6 +663,9 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
     """
     Create an OpenMM System from an Amber prmtop file.
 
+    REQUIRED ARGUMENT
+      topology (forcefield.Topology) The topology for the system that is about
+      to be created
     ARGUMENTS (specify  one or the other, but not both)
       prmtop_filename (String) - name of Amber prmtop file (new-style only)
       prmtop_loader (PrmtopLoader) - the loaded prmtop file
@@ -677,7 +707,6 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
     >>> system = readAmberSystem(prmtop_filename)
 
     """
-
     if prmtop_filename is None and prmtop_loader is None:
         raise Exception("Must specify a filename or loader")
     if prmtop_filename is not None and prmtop_loader is not None:
@@ -694,9 +723,6 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
 
     if prmtop.getIfPert()>0:
         raise Exception("perturbation not currently supported")
-
-    if prmtop.getIfBox()>1:
-        raise Exception("only standard periodic boxes are currently supported")
 
     if prmtop.has_scee_scnb and (scee is not None or scnb is not None):
         warnings.warn("1-4 scaling parameters in topology file are being ignored. "
@@ -720,7 +746,7 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
         system.addParticle(mass)
 
     # Add constraints.
-    isWater = [prmtop.getResidueLabel(i) in ('WAT', 'TP4', 'TP5', 'T4E') for i in range(prmtop.getNumAtoms())]
+    isWater = [prmtop.getResidueLabel(i) in ('WAT', 'HOH', 'TP4', 'TP5', 'T4E') for i in range(prmtop.getNumAtoms())]
     if shake in ('h-bonds', 'all-bonds', 'h-angles'):
         for (iAtom, jAtom, k, rMin) in prmtop.getBondsWithH():
             system.addConstraint(iAtom, jAtom, rMin)
@@ -755,13 +781,14 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
             distance = c[2].value_in_unit(units.nanometer)
             atomConstraints[c[0]].append((c[1], distance))
             atomConstraints[c[1]].append((c[0], distance))
+    topatoms = list(topology.atoms())
     for (iAtom, jAtom, kAtom, k, aMin) in prmtop.getAngles():
         if shake == 'h-angles':
-            type1 = prmtop.getAtomType(iAtom)
-            type2 = prmtop.getAtomType(jAtom)
-            type3 = prmtop.getAtomType(kAtom)
-            numH = len([type for type in (type1, type3) if type.startswith('H')])
-            constrained = (numH == 2 or (numH == 1 and type2.startswith('O')))
+            atomI = topatoms[iAtom]
+            atomJ = topatoms[jAtom]
+            atomK = topatoms[kAtom]
+            numH = ((atomI.element.atomic_number == 1) + (atomK.element.atomic_number == 1))
+            constrained = (numH == 2 or (numH == 1 and atomJ.element is elem.oxygen))
         else:
             constrained = False
         if constrained:
@@ -806,17 +833,7 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
         # System is periodic.
         # Set periodic box vectors for periodic system
         (boxBeta, boxX, boxY, boxZ) = prmtop.getBoxBetaAndDimensions()
-        boxBeta = boxBeta.value_in_unit(units.degrees)
-        boxX = boxX.value_in_unit(units.angstroms)
-        boxY = boxY.value_in_unit(units.angstroms)
-        boxZ = boxZ.value_in_unit(units.angstroms)
-        tmp = [[0.0, 0.0, 0.0],[0.0, 0.0, 0.0],[0.0, 0.0, 0.0]]
-        _box_vectors_from_lengths_angles([boxX, boxY, boxZ],
-                                         [boxBeta, boxBeta, boxBeta],
-                                         tmp)
-        xVec = units.Quantity(tmp[0], units.angstroms)
-        yVec = units.Quantity(tmp[1], units.angstroms)
-        zVec = units.Quantity(tmp[2], units.angstroms)
+        xVec, yVec, zVec = computePeriodicBoxVectors(boxX, boxY, boxZ, boxBeta, boxBeta, boxBeta)
         system.setDefaultPeriodicBoxVectors(xVec, yVec, zVec)
 
         # Set cutoff.
@@ -867,6 +884,7 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
         for i in range(numTypes):
             for j in range(numTypes):
                 idx = nbidx[numTypes*i+j] - 1
+                if idx < 0: continue
                 acoef[i+numTypes*j] = sqrt(parm_acoef[idx]) * afac
                 bcoef[i+numTypes*j] = parm_bcoef[idx] * bfac
         if has_1264:
@@ -875,6 +893,7 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
             for i in range(numTypes):
                 for j in range(numTypes):
                     idx = nbidx[numTypes*i+j] - 1
+                    if idx < 0: continue
                     ccoef[i+numTypes*j] = parm_ccoef[idx] * cfac
             cforce = mm.CustomNonbondedForce('(a/r6)^2-b/r6-c/r^4; r6=r^6;'
                                              'a=acoef(type1, type2);'
@@ -908,6 +927,7 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
             for i in range(numTypes):
                 for j in range(numTypes):
                     idx = nbidx[numTypes*i+j] - 1
+                    if idx < 0: continue
                     ccoef[i+numTypes*j] = parm_ccoef[idx] * cfac
             cforce = mm.CustomNonbondedForce('-c/r^4; c=ccoef(type1, type2)')
             cforce.addTabulatedFunction('ccoef',
@@ -1272,10 +1292,10 @@ class AmberAsciiRestart(object):
             except (IndexError, ValueError):
                 raise ValueError('Could not parse box line in %s' %
                                  self.filename)
-            lengths = tmp[:3]
-            angles = tmp[3:]
-            _box_vectors_from_lengths_angles(lengths, angles, boxVectors)
-            self.boxVectors = [units.Quantity(Vec3(*x), units.angstrom) for x in boxVectors]
+            lengths = tmp[:3] * units.angstroms
+            angles = tmp[3:] * units.degrees
+            self.boxVectors = computePeriodicBoxVectors(lengths[0], lengths[1],
+                    lengths[2], angles[0], angles[1], angles[2])
 
 class AmberNetcdfRestart(object):
     """
@@ -1343,14 +1363,17 @@ class AmberNetcdfRestart(object):
             if 'velocities' in ncfile.variables:
                 vels = ncfile.variables['velocities']
                 self.velocities = np.array(vels[:]) * vels.scale_factor
+                del vels # Get rid of reference to variable to avoid warnings
             if ('cell_lengths' in ncfile.variables and
                 'cell_angles' in ncfile.variables):
                 self.boxVectors = np.zeros((3,3), np.float32)
-                _box_vectors_from_lengths_angles(
-                        ncfile.variables['cell_lengths'][:],
-                        ncfile.variables['cell_angles'][:],
-                        self.boxVectors,
-                )
+                leng = units.Quantity(ncfile.variables['cell_lengths'][:],
+                        units.angstroms)
+                angl = units.Quantity(ncfile.variables['cell_angles'][:],
+                        units.degrees)
+                self.boxVectors = computePeriodicBoxVectors(leng[0], leng[1],
+                        leng[2], angl[0], angl[1], angl[2])
+                del leng, angl # Avoid warnings
             if 'time' in ncfile.variables:
                 self.time = ncfile.variables['time'].getValue()
         finally:
@@ -1361,51 +1384,17 @@ class AmberNetcdfRestart(object):
             self.coordinates = [Vec3(*x) for x in self.coordinates]
             if self.velocities is not None:
                 self.velocities = [Vec3(*x) for x in self.velocities]
+        else:
             if self.boxVectors is not None:
-                self.boxVectors = [Vec3(*x) for x in self.boxVectors]
+                self.boxVectors = np.asarray(self.boxVectors.value_in_unit(units.nanometers))
+                self.boxVectors = units.Quantity(self.boxVectors, units.nanometers)
 
         # Now add the units
         self.coordinates = units.Quantity(self.coordinates, units.angstroms)
         if self.velocities is not None:
             self.velocities = units.Quantity(self.velocities,
                                              units.angstroms/units.picoseconds)
-        if self.boxVectors is not None:
-            self.boxVectors = [units.Quantity(x, units.angstroms) for x in self.boxVectors]
         self.time = units.Quantity(self.time, units.picosecond)
-
-def _box_vectors_from_lengths_angles(lengths, angles, boxVectors):
-    """
-    Converts lengths and angles into a series of box vectors and modifies
-    boxVectors in-place (it must be a mutable sequence)
-
-    Parameters
-    ----------
-    lengths : 3-element array of floats
-        Lengths of the 3 periodic box vectors
-    angles : 3-element array of floats
-        Angles (in degrees) between the 3 periodic box vectors
-    boxVectors : mutable 3x3 sequence
-    """
-    alpha = angles[0] * pi / 180.0
-    beta = angles[1] * pi / 180.0
-    gamma = angles[2] * pi / 180.0
-
-    boxVectors[0][0] = lengths[0]
-
-    boxVectors[1][0] = lengths[1] * cos(gamma)
-    boxVectors[1][1] = lengths[1] * sin(gamma)
-
-    boxVectors[2][0] = cx = lengths[2] * cos(beta)
-    boxVectors[2][1] = cy = lengths[2] * (cos(alpha) - cos(beta) * cos(gamma))
-    boxVectors[2][2] = sqrt(lengths[2]*lengths[2] - cx*cx - cy*cy)
-
-    boxVectors[0][1] = boxVectors[0][2] = boxVectors[1][2] = 0.0
-
-    # Now make sure any vector close to zero is zero exactly
-    for i in range(3):
-        for j in range(3):
-            if abs(boxVectors[i][j]) < TINY:
-                boxVectors[i][j] = 0.0
 
 def readAmberCoordinates(filename, asNumpy=False):
     """

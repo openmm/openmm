@@ -90,7 +90,7 @@ extern "C" __global__ void selectLangevinStepSize(int numAtoms, int paddedNumAto
     while (index < numAtoms) {
         mixed3 f = make_mixed3(scale*force[index], scale*force[index+paddedNumAtoms], scale*force[index+paddedNumAtoms*2]);
         mixed invMass = velm[index].w;
-        err += (f.x*f.x + f.y*f.y + f.z*f.z)*invMass;
+        err += (f.x*f.x + f.y*f.y + f.z*f.z)*invMass*invMass;
         index += blockDim.x*gridDim.x;
     }
     error[threadIdx.x] = err;

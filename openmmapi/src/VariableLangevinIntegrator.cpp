@@ -33,7 +33,6 @@
 #include "openmm/Context.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/ContextImpl.h"
-#include "openmm/internal/OSRngSeed.h"
 #include "openmm/kernels.h"
 #include <limits>
 #include <string>
@@ -48,7 +47,8 @@ VariableLangevinIntegrator::VariableLangevinIntegrator(double temperature, doubl
     setFriction(frictionCoeff);
     setErrorTolerance(errorTol);
     setConstraintTolerance(1e-5);
-    setRandomNumberSeed(osrngseed());
+    setRandomNumberSeed(0);
+    setStepSize(0.0);
 }
 
 void VariableLangevinIntegrator::initialize(ContextImpl& contextRef) {
