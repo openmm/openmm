@@ -30,6 +30,7 @@
 #include "CudaPlatform.h"
 #include "CudaArray.h"
 #include "CudaContext.h"
+#include "CudaFFT3D.h"
 #include "CudaParameterSet.h"
 #include "CudaSort.h"
 #include "openmm/kernels.h"
@@ -588,7 +589,7 @@ class CudaCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
 public:
     CudaCalcNonbondedForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcNonbondedForceKernel(name, platform),
             cu(cu), hasInitializedFFT(false), sigmaEpsilon(NULL), exceptionParams(NULL), cosSinSums(NULL), directPmeGrid(NULL), reciprocalPmeGrid(NULL),
-            pmeBsplineModuliX(NULL), pmeBsplineModuliY(NULL), pmeBsplineModuliZ(NULL),  pmeAtomRange(NULL), pmeAtomGridIndex(NULL), sort(NULL), pmeio(NULL) {
+            pmeBsplineModuliX(NULL), pmeBsplineModuliY(NULL), pmeBsplineModuliZ(NULL),  pmeAtomRange(NULL), pmeAtomGridIndex(NULL), sort(NULL), fft(NULL), pmeio(NULL) {
     }
     ~CudaCalcNonbondedForceKernel();
     /**
@@ -649,6 +650,7 @@ private:
     PmeIO* pmeio;
     CUstream pmeStream;
     CUevent pmeSyncEvent;
+    CudaFFT3D* fft;
     cufftHandle fftForward;
     cufftHandle fftBackward;
     CUfunction ewaldSumsKernel;
