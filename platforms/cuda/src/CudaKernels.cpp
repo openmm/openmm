@@ -6207,6 +6207,7 @@ void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrat
     int maxUniformRandoms = uniformRandoms->getSize();
     void* randomArgs[] = {&maxUniformRandoms, &uniformRandoms->getDevicePointer(), &randomSeed->getDevicePointer()};
     CUdeviceptr posCorrection = (cu.getUseMixedPrecision() ? cu.getPosqCorrection().getDevicePointer() : 0);
+    bool terminate = false;
     for (int i = 0; i < numSteps; i++) {
         int lastForceGroups = context.getLastForceGroups();
         if ((needsForces[i] || needsEnergy[i]) && (!forcesAreValid || lastForceGroups != forceGroup[i])) {
@@ -6300,7 +6301,7 @@ void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrat
         }
         if (invalidatesForces[i])
             forcesAreValid = false;
-        if (terminate)
+        if (terminate == true)
             break;
     }
     recordChangedParameters(context);
