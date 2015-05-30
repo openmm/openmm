@@ -6291,7 +6291,7 @@ void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrat
         else if (stepType[i] == CustomIntegrator::ConstrainVelocities) {
             cu.getIntegrationUtilities().applyVelocityConstraints(integrator.getConstraintTolerance());
         }
-        else if (stepType[i] == CustomIntegrator::ConditionalTermination && !merged[i]) {
+        else if (stepType[i] == CustomIntegrator::ConditionalTermination) {
             float uniform = SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber();
             float gauss = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
             kernelArgs[i][0][3] = &uniform;
