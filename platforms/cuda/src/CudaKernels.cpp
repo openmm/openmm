@@ -6296,7 +6296,7 @@ void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrat
             kernelArgs[i][0][3] = &uniform;
             kernelArgs[i][0][4] = &gauss;
             cu.executeKernel(kernels[i][0], &kernelArgs[i][0][0], 1, 1);
-            terminate = bool(kernelArgs[i][0][0]);
+            //terminate = bool(kernelArgs[i][0][0]);  // Need to extract global here, not sure how.
         }
         if (invalidatesForces[i])
             forcesAreValid = false;
