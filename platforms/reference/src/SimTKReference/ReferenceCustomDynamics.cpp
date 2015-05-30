@@ -187,7 +187,7 @@ void ReferenceCustomDynamics::update(ContextImpl& context, int numberOfAtoms, ve
     }
     
     // Loop over steps and execute them.
-    
+    bool terminate = false;
     for (int i = 0; i < numSteps; i++) {
         if ((needsForces[i] || needsEnergy[i]) && (!forcesAreValid || context.getLastForceGroups() != forceGroup[i])) {
             // Recompute forces and or energy.  Figure out what is actually needed
@@ -263,9 +263,18 @@ void ReferenceCustomDynamics::update(ContextImpl& context, int numberOfAtoms, ve
                 context.updateContextState();
                 globals.insert(context.getParameters().begin(), context.getParameters().end());
             }
+            case CustomIntegrator::ConditionalTermination: {
+              map<string, RealOpenMM> variables = globals;
+              variables["uniform"] = SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber();
+              variables["gaussian"] = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+              terminate = bool(stepExpression[i].evaluate(variables));
+              break;
+            }
         }
         if (invalidatesForces[i])
             forcesAreValid = false;
+        if (terminate == true)
+            break;
     }
     ReferenceVirtualSites::computePositions(context.getSystem(), atomCoordinates);
     incrementTimeStep();

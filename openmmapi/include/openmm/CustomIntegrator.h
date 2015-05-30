@@ -238,7 +238,11 @@ public:
         /**
          * Allow Forces to update the context state.
          */
-        UpdateContextState = 5
+        UpdateContextState = 5,
+        /**
+         * Conditionally terminate the integration step based on an expression.
+         */
+        ConditionalTermination = 6
     };
     /**
      * Create a CustomIntegrator.
@@ -371,6 +375,15 @@ public:
      *                    per-DOF variables.  In each integration step, its value
      *                    is computed for every degree of freedom and stored into
      *                    the specified variable.
+     * @return the index of the step that was added
+     */
+     int addConditionalTermination(const std::string& expression);
+    /**
+     * Add a step to the integration algorithm that conditionally terminates the step.
+     *
+     * @param expression  a mathematical expression involving both global and
+     *                    per-DOF variables.  In each integration step, its value
+     *                    is computed for every degree of freedom.
      * @return the index of the step that was added
      */
     int addComputePerDof(const std::string& variable, const std::string& expression);
