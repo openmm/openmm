@@ -208,6 +208,13 @@ int CustomIntegrator::addComputeGlobal(const string& variable, const string& exp
     return computations.size()-1;
 }
 
+int CustomIntegrator::addConditionalTermination(const string& expression) {
+    if (owner != NULL)
+        throw OpenMMException("The integrator cannot be modified after it is bound to a context");
+    computations.push_back(ComputationInfo(ConditionalTermination, "", expression));
+    return computations.size()-1;
+}
+
 int CustomIntegrator::addComputePerDof(const string& variable, const string& expression) {
     if (owner != NULL)
         throw OpenMMException("The integrator cannot be modified after it is bound to a context");

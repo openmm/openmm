@@ -6207,6 +6207,7 @@ void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrat
     int maxUniformRandoms = uniformRandoms->getSize();
     void* randomArgs[] = {&maxUniformRandoms, &uniformRandoms->getDevicePointer(), &randomSeed->getDevicePointer()};
     CUdeviceptr posCorrection = (cu.getUseMixedPrecision() ? cu.getPosqCorrection().getDevicePointer() : 0);
+    bool terminate = false;
     for (int i = 0; i < numSteps; i++) {
         int lastForceGroups = context.getLastForceGroups();
         if ((needsForces[i] || needsEnergy[i]) && (!forcesAreValid || lastForceGroups != forceGroup[i])) {
@@ -6290,8 +6291,18 @@ void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrat
         else if (stepType[i] == CustomIntegrator::ConstrainVelocities) {
             cu.getIntegrationUtilities().applyVelocityConstraints(integrator.getConstraintTolerance());
         }
+        else if (stepType[i] == CustomIntegrator::ConditionalTermination) {
+            float uniform = SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber();
+            float gauss = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+            kernelArgs[i][0][3] = &uniform;
+            kernelArgs[i][0][4] = &gauss;
+            cu.executeKernel(kernels[i][0], &kernelArgs[i][0][0], 1, 1);
+            //terminate = bool(kernelArgs[i][0][0]);  // Need to extract global here, not sure how.
+        }
         if (invalidatesForces[i])
             forcesAreValid = false;
+        if (terminate == true)
+            break;
     }
     recordChangedParameters(context);
 
