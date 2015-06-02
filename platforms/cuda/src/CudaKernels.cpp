@@ -1513,26 +1513,6 @@ CudaCalcNonbondedForceKernel::~CudaCalcNonbondedForceKernel() {
     }
 }
 
-/**
- * Select a size for an FFT that is a multiple of 2, 3, 5, and 7.
- */
-static int findFFTDimension(int minimum) {
-    if (minimum < 1)
-        return 1;
-    while (true) {
-        // Attempt to factor the current value.
-
-        int unfactored = minimum;
-        for (int factor = 2; factor < 8; factor++) {
-            while (unfactored > 1 && unfactored%factor == 0)
-                unfactored /= factor;
-        }
-        if (unfactored == 1)
-            return minimum;
-        minimum++;
-    }
-}
-
 void CudaCalcNonbondedForceKernel::initialize(const System& system, const NonbondedForce& force) {
     cu.setAsCurrent();
 
