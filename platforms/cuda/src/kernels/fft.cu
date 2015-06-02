@@ -35,26 +35,15 @@ extern "C" __global__ void execFFT(const INPUT_TYPE* __restrict__ in, OUTPUT_TYP
 #if OUTPUT_IS_PACKED
         if (x < XSIZE/2+1) {
 #endif
-//#if LOOP_REQUIRED
         if (index < XSIZE*YSIZE)
-        for (int i = threadIdx.x-block*THREADS_PER_BLOCK; i < ZSIZE; i += THREADS_PER_BLOCK)
+            for (int i = threadIdx.x-block*THREADS_PER_BLOCK; i < ZSIZE; i += THREADS_PER_BLOCK)
     #if INPUT_IS_REAL
-            data0[i+block*ZSIZE] = make_real2(in[x*(YSIZE*ZSIZE)+y*ZSIZE+i], 0);
+                data0[i+block*ZSIZE] = make_real2(in[x*(YSIZE*ZSIZE)+y*ZSIZE+i], 0);
     #elif INPUT_IS_PACKED
-            data0[i+block*ZSIZE] = loadComplexValue(in, x, y, i);
+                data0[i+block*ZSIZE] = loadComplexValue(in, x, y, i);
     #else
-            data0[i+block*ZSIZE] = in[x*(YSIZE*ZSIZE)+y*ZSIZE+i];
+                data0[i+block*ZSIZE] = in[x*(YSIZE*ZSIZE)+y*ZSIZE+i];
     #endif
-//#else
-//        if (index < XSIZE*YSIZE && (threadIdx.x%BLOCK_SIZE) < ZSIZE)
-//    #if INPUT_IS_REAL
-//            data0[threadIdx.x] = make_real2(in[x*(YSIZE*ZSIZE)+y*ZSIZE+threadIdx.x%BLOCK_SIZE], 0);
-//    #elif INPUT_IS_PACKED
-//            data0[threadIdx.x] = loadComplexValue(in, x, y, threadIdx.x%BLOCK_SIZE);
-//    #else
-//            data0[threadIdx.x] = in[x*(YSIZE*ZSIZE)+y*ZSIZE+threadIdx.x%BLOCK_SIZE];
-//    #endif
-//#endif
 #if OUTPUT_IS_PACKED
         }
 #endif

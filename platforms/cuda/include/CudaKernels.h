@@ -665,7 +665,7 @@ private:
     std::vector<std::pair<int, int> > exceptionAtoms;
     double ewaldSelfEnergy, dispersionCoefficient, alpha;
     int interpolateForceThreads;
-    bool hasCoulomb, hasLJ, usePmeStream;
+    bool hasCoulomb, hasLJ, usePmeStream, useCudaFFT;
     static const int PmeOrder = 5;
 };
 

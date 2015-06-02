@@ -168,14 +168,12 @@ static int getSmallestRadix(int size) {
 }
 
 CUfunction CudaFFT3D::createKernel(int xsize, int ysize, int zsize, int& threads, int axis, bool forward, bool inputIsReal) {
-    int maxThreads = 256;//std::min(256, (int) context.getDevice().getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>());
+    int maxThreads = 256;
 //    while (maxThreads > 128 && maxThreads-64 >= zsize)
 //        maxThreads -= 64;
     int threadsPerBlock = zsize/getSmallestRadix(zsize);
-    bool isCPU = false;//context.getDevice().getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_CPU;
-    bool loopRequired = (threadsPerBlock > maxThreads || isCPU);
     stringstream source;
-    int blocksPerGroup = (loopRequired ? 1 : max(1, maxThreads/threadsPerBlock));
+    int blocksPerGroup = max(1, maxThreads/threadsPerBlock);
     int stage = 0;
     int L = zsize;
     int m = 1;
@@ -201,19 +199,13 @@ CUfunction CudaFFT3D::createKernel(int xsize, int ysize, int zsize, int& threads
         source<<"{\n";
         L = L/radix;
         source<<"// Pass "<<(stage+1)<<" (radix "<<radix<<")\n";
-        if (loopRequired) {
-            source<<"for (int i = threadIdx.x; i < "<<(L*m)<<"; i += blockDim.x) {\n";
-            source<<"int base = i;\n";
-        }
-        else {
-            if (L*m < threadsPerBlock)
-                source<<"if (threadIdx.x < "<<(blocksPerGroup*L*m)<<") {\n";
-            else
-                source<<"{\n";
-            source<<"int block = threadIdx.x/"<<(L*m)<<";\n";
-            source<<"int i = threadIdx.x-block*"<<(L*m)<<";\n";
-            source<<"int base = i+block*"<<zsize<<";\n";
-        }
+        if (L*m < threadsPerBlock)
+            source<<"if (threadIdx.x < "<<(blocksPerGroup*L*m)<<") {\n";
+        else
+            source<<"{\n";
+        source<<"int block = threadIdx.x/"<<(L*m)<<";\n";
+        source<<"int i = threadIdx.x-block*"<<(L*m)<<";\n";
+        source<<"int base = i+block*"<<zsize<<";\n";
         source<<"int j = i/"<<m<<";\n";
         if (radix == 7) {
             source<<"real2 c0 = data"<<input<<"[base];\n";
@@ -328,27 +320,15 @@ CUfunction CudaFFT3D::createKernel(int xsize, int ysize, int zsize, int& threads
     bool outputIsReal = (inputIsReal && axis == 2 && !forward);
     bool outputIsPacked = (inputIsReal && axis == 2 && forward);
     string outputSuffix = (outputIsReal ? ".x" : "");
-    if (loopRequired || true) {
-        if (outputIsPacked)
-            source<<"if (index < XSIZE*YSIZE && x < XSIZE/2+1)\n";
-        else
-            source<<"if (index < XSIZE*YSIZE)\n";
-        source<<"for (int i = threadIdx.x-block*THREADS_PER_BLOCK; i < ZSIZE; i += THREADS_PER_BLOCK)\n";
-        if (outputIsPacked)
-            source<<"out[y*(ZSIZE*(XSIZE/2+1))+i*(XSIZE/2+1)+x] = data"<<(stage%2)<<"[i+block*ZSIZE]"<<outputSuffix<<";\n";
-        else
+    if (outputIsPacked)
+        source<<"if (index < XSIZE*YSIZE && x < XSIZE/2+1)\n";
+    else
+        source<<"if (index < XSIZE*YSIZE)\n";
+    source<<"for (int i = threadIdx.x-block*THREADS_PER_BLOCK; i < ZSIZE; i += THREADS_PER_BLOCK)\n";
+    if (outputIsPacked)
+        source<<"out[y*(ZSIZE*(XSIZE/2+1))+i*(XSIZE/2+1)+x] = data"<<(stage%2)<<"[i+block*ZSIZE]"<<outputSuffix<<";\n";
+    else
             source<<"out[y*(ZSIZE*XSIZE)+i*XSIZE+x] = data"<<(stage%2)<<"[i+block*ZSIZE]"<<outputSuffix<<";\n";
-    }
-    else {
-        if (outputIsPacked) {
-            source<<"if (index < XSIZE*YSIZE && x < XSIZE/2+1)\n";
-            source<<"out[y*(ZSIZE*(XSIZE/2+1))+(threadIdx.x%ZSIZE)*(XSIZE/2+1)+x] = data"<<(stage%2)<<"[threadIdx.x]"<<outputSuffix<<";\n";
-        }
-        else {
-            source<<"if (index < XSIZE*YSIZE)\n";
-            source<<"out[y*(ZSIZE*XSIZE)+(threadIdx.x%ZSIZE)*XSIZE+x] = data"<<(stage%2)<<"[threadIdx.x]"<<outputSuffix<<";\n";
-        }
-    }
     map<string, string> replacements;
     replacements["XSIZE"] = context.intToString(xsize);
     replacements["YSIZE"] = context.intToString(ysize);
@@ -357,7 +337,6 @@ CUfunction CudaFFT3D::createKernel(int xsize, int ysize, int zsize, int& threads
     replacements["THREADS_PER_BLOCK"] = context.intToString(threadsPerBlock);
     replacements["M_PI"] = context.doubleToString(M_PI);
     replacements["COMPUTE_FFT"] = source.str();
-    replacements["LOOP_REQUIRED"] = (loopRequired ? "1" : "0");
     replacements["SIGN"] = (forward ? "1" : "-1");
     replacements["INPUT_TYPE"] = (inputIsReal && axis == 0 && forward ? "real" : "real2");
     replacements["OUTPUT_TYPE"] = (outputIsReal ? "real" : "real2");
@@ -366,6 +345,6 @@ CUfunction CudaFFT3D::createKernel(int xsize, int ysize, int zsize, int& threads
     replacements["OUTPUT_IS_PACKED"] = (outputIsPacked ? "1" : "0");
     CUmodule module = context.createModule(CudaKernelSources::vectorOps+context.replaceStrings(CudaKernelSources::fft, replacements));
     CUfunction kernel = context.getKernel(module, "execFFT");
-    threads = (isCPU ? 1 : blocksPerGroup*threadsPerBlock);
+    threads = blocksPerGroup*threadsPerBlock;
     return kernel;
 }

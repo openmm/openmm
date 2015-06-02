@@ -1502,8 +1502,10 @@ CudaCalcNonbondedForceKernel::~CudaCalcNonbondedForceKernel() {
     if (pmeio != NULL)
         delete pmeio;
     if (hasInitializedFFT) {
-        cufftDestroy(fftForward);
-        cufftDestroy(fftBackward);
+        if (useCudaFFT) {
+            cufftDestroy(fftForward);
+            cufftDestroy(fftBackward);
+        }
         if (usePmeStream) {
             cuStreamDestroy(pmeStream);
             cuEventDestroy(pmeSyncEvent);
@@ -1694,39 +1696,40 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                 // Create required data structures.
 
                 int elementSize = (cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
-
-                directPmeGrid = new CudaArray(cu, gridSizeX*gridSizeY*gridSizeZ, cu.getComputeCapability() >= 2.0 ? elementSize : sizeof(long long), "originalPmeGrid");
-                reciprocalPmeGrid = new CudaArray(cu, gridSizeX*gridSizeY*(gridSizeZ/2+1), 2*elementSize, "reciprocalPmeGrid");
-
+                directPmeGrid = new CudaArray(cu, gridSizeX*gridSizeY*gridSizeZ, cu.getComputeCapability() >= 2.0 ? 2*elementSize : 2*sizeof(long long), "originalPmeGrid");
+                reciprocalPmeGrid = new CudaArray(cu, gridSizeX*gridSizeY*gridSizeZ, 2*elementSize, "reciprocalPmeGrid");
                 cu.addAutoclearBuffer(*directPmeGrid);
-
                 pmeBsplineModuliX = new CudaArray(cu, gridSizeX, elementSize, "pmeBsplineModuliX");
                 pmeBsplineModuliY = new CudaArray(cu, gridSizeY, elementSize, "pmeBsplineModuliY");
                 pmeBsplineModuliZ = new CudaArray(cu, gridSizeZ, elementSize, "pmeBsplineModuliZ");
                 pmeAtomRange = CudaArray::create<int>(cu, gridSizeX*gridSizeY*gridSizeZ+1, "pmeAtomRange");
                 pmeAtomGridIndex = CudaArray::create<int2>(cu, numParticles, "pmeAtomGridIndex");
                 sort = new CudaSort(cu, new SortTrait(), cu.getNumAtoms());
-                fft = new CudaFFT3D(cu, gridSizeX, gridSizeY, gridSizeZ, true);
-
-                cufftResult result = cufftPlan3d(&fftForward, gridSizeX, gridSizeY, gridSizeZ, cu.getUseDoublePrecision() ? CUFFT_D2Z : CUFFT_R2C);
-                if (result != CUFFT_SUCCESS)
-                    throw OpenMMException("Error initializing FFT: "+cu.intToString(result));
-                result = cufftPlan3d(&fftBackward, gridSizeX, gridSizeY, gridSizeZ, cu.getUseDoublePrecision() ? CUFFT_Z2D : CUFFT_C2R);
-                if (result != CUFFT_SUCCESS)
-                    throw OpenMMException("Error initializing FFT: "+cu.intToString(result));
-
-                cufftSetCompatibilityMode(fftForward, CUFFT_COMPATIBILITY_NATIVE);
-                cufftSetCompatibilityMode(fftBackward, CUFFT_COMPATIBILITY_NATIVE);
+                useCudaFFT = false; // We might switch back in the future, once Nvidia has all their bugs worked out
+                if (useCudaFFT) {
+                    cufftResult result = cufftPlan3d(&fftForward, gridSizeX, gridSizeY, gridSizeZ, cu.getUseDoublePrecision() ? CUFFT_D2Z : CUFFT_R2C);
+                    if (result != CUFFT_SUCCESS)
+                        throw OpenMMException("Error initializing FFT: "+cu.intToString(result));
+                    result = cufftPlan3d(&fftBackward, gridSizeX, gridSizeY, gridSizeZ, cu.getUseDoublePrecision() ? CUFFT_Z2D : CUFFT_C2R);
+                    if (result != CUFFT_SUCCESS)
+                        throw OpenMMException("Error initializing FFT: "+cu.intToString(result));
+                    cufftSetCompatibilityMode(fftForward, CUFFT_COMPATIBILITY_NATIVE);
+                    cufftSetCompatibilityMode(fftBackward, CUFFT_COMPATIBILITY_NATIVE);
+                }
+                else
+                    fft = new CudaFFT3D(cu, gridSizeX, gridSizeY, gridSizeZ, true);
                 
                 // Prepare for doing PME on its own stream.
                 
-                int cufftVersion;
-                cufftGetVersion(&cufftVersion);
-                usePmeStream = true;//(cu.getComputeCapability() < 5.0 && numParticles < 130000 && cufftVersion >= 6000 && cufftVersion != 7000); // Workarounds for various CUDA bugs
+                char deviceName[100];
+                cuDeviceGetName(deviceName, 100, cu.getDevice());
+                usePmeStream = (string(deviceName) != "GeForce GTX 980"); // Using a separate stream is slower on GTX 980
                 if (usePmeStream) {
                     cuStreamCreate(&pmeStream, CU_STREAM_NON_BLOCKING);
-                    cufftSetStream(fftForward, pmeStream);
-                    cufftSetStream(fftBackward, pmeStream);
+                    if (useCudaFFT) {
+                        cufftSetStream(fftForward, pmeStream);
+                        cufftSetStream(fftBackward, pmeStream);
+                    }
                     CHECK_RESULT(cuEventCreate(&pmeSyncEvent, CU_EVENT_DISABLE_TIMING), "Error creating event for NonbondedForce");
                     int recipForceGroup = force.getReciprocalSpaceForceGroup();
                     if (recipForceGroup < 0)
@@ -1896,11 +1899,15 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
             cu.executeKernel(pmeFinishSpreadChargeKernel, finishSpreadArgs, directPmeGrid->getSize());
         }
 
-//        if (cu.getUseDoublePrecision())
-//            cufftExecD2Z(fftForward, (double*) directPmeGrid->getDevicePointer(), (double2*) reciprocalPmeGrid->getDevicePointer());
-//        else
-//            cufftExecR2C(fftForward, (float*) directPmeGrid->getDevicePointer(), (float2*) reciprocalPmeGrid->getDevicePointer());
-        fft->execFFT(*directPmeGrid, *reciprocalPmeGrid, true);
+        if (useCudaFFT) {
+            if (cu.getUseDoublePrecision())
+                cufftExecD2Z(fftForward, (double*) directPmeGrid->getDevicePointer(), (double2*) reciprocalPmeGrid->getDevicePointer());
+            else
+                cufftExecR2C(fftForward, (float*) directPmeGrid->getDevicePointer(), (float2*) reciprocalPmeGrid->getDevicePointer());
+        }
+        else {
+            fft->execFFT(*directPmeGrid, *reciprocalPmeGrid, true);
+        }
 
         if (includeEnergy) {
             void* computeEnergyArgs[] = {&reciprocalPmeGrid->getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(),
@@ -1914,12 +1921,15 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
                 cu.getPeriodicBoxSizePointer(), recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
         cu.executeKernel(pmeConvolutionKernel, convolutionArgs, cu.getNumAtoms());
 
-//        if (cu.getUseDoublePrecision())
-//            cufftExecZ2D(fftBackward, (double2*) reciprocalPmeGrid->getDevicePointer(), (double*) directPmeGrid->getDevicePointer());
-//        else
-//            cufftExecC2R(fftBackward, (float2*) reciprocalPmeGrid->getDevicePointer(), (float*)  directPmeGrid->getDevicePointer());
-        fft->execFFT(*reciprocalPmeGrid, *directPmeGrid, false);
-
+        if (useCudaFFT) {
+            if (cu.getUseDoublePrecision())
+                cufftExecZ2D(fftBackward, (double2*) reciprocalPmeGrid->getDevicePointer(), (double*) directPmeGrid->getDevicePointer());
+            else
+                cufftExecC2R(fftBackward, (float2*) reciprocalPmeGrid->getDevicePointer(), (float*)  directPmeGrid->getDevicePointer());
+        }
+        else {
+            fft->execFFT(*reciprocalPmeGrid, *directPmeGrid, false);
+        }
 
         void* interpolateArgs[] = {&cu.getPosq().getDevicePointer(), &cu.getForce().getDevicePointer(), &directPmeGrid->getDevicePointer(),
                 cu.getPeriodicBoxSizePointer(), recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2], &pmeAtomGridIndex->getDevicePointer()};
