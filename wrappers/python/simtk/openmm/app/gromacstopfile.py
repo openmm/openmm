@@ -8,7 +8,7 @@ Medical Research, grant U54 GM072970. See https://simtk.org.
 
 Portions copyright (c) 2012-2015 Stanford University and the Authors.
 Authors: Peter Eastman
-Contributors:
+Contributors: Jason Swails
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -40,13 +40,66 @@ import simtk.unit as unit
 import simtk.openmm as mm
 import math
 import os
+import re
 import distutils.spawn
+from collections import OrderedDict
 
 HBonds = ff.HBonds
 AllBonds = ff.AllBonds
 HAngles = ff.HAngles
 
 OBC2 = prmtop.OBC2
+
+novarcharre = re.compile(r'\W')
+
+def _find_all_instances_in_string(string, substr):
+    """ Find indices of all instances of substr in string """
+    indices = []
+    idx = string.find(substr, 0)
+    while idx > -1:
+        indices.append(idx)
+        idx = string.find(substr, idx+1)
+    return indices
+
+def _replace_defines(line, defines):
+    """ Replaces defined tokens in a given line """
+    if not defines: return line
+    for define in reversed(defines):
+        value = defines[define]
+        indices = _find_all_instances_in_string(line, define)
+        if not indices: continue
+        # Check to see if it's inside of quotes
+        inside = ''
+        idx = 0
+        n_to_skip = 0
+        new_line = []
+        for i, char in enumerate(line):
+            if n_to_skip:
+                n_to_skip -= 1
+                continue
+            if char in ('\'"'):
+                if not inside:
+                    inside = char
+                else:
+                    if inside == char:
+                        inside = ''
+            if idx < len(indices) and i == indices[idx]:
+                if inside:
+                    new_line.append(char)
+                    idx += 1
+                    continue
+                if i == 0 or novarcharre.match(line[i-1]):
+                    endidx = indices[idx] + len(define)
+                    if endidx >= len(line) or novarcharre.match(line[endidx]):
+                        new_line.extend(list(value))
+                        n_to_skip = len(define) - 1
+                        idx += 1
+                        continue
+                idx += 1
+            new_line.append(char)
+        line = ''.join(new_line)
+
+    return line
 
 class GromacsTopFile(object):
     """GromacsTopFile parses a Gromacs top file and constructs a Topology and (optionally) an OpenMM System from it."""
@@ -61,6 +114,7 @@ class GromacsTopFile(object):
             self.exclusions = []
             self.pairs = []
             self.cmaps = []
+            self.has_virtual_sites = False
 
     def _processFile(self, file):
         append = ''
@@ -113,6 +167,7 @@ class GromacsTopFile(object):
                 name = fields[1]
                 valueStart = stripped.find(name, len(command))+len(name)+1
                 value = line[valueStart:].strip()
+                value = value or '1' # Default define is 1
                 self._defines[name] = value
             elif command == '#ifdef':
                 # See whether this block should be ignored.
@@ -121,6 +176,12 @@ class GromacsTopFile(object):
                 name = fields[1]
                 self._ifStack.append(name in self._defines)
                 self._elseStack.append(False)
+            elif command == '#undef':
+                # Un-define a variable
+                if len(fields) < 2:
+                    raise ValueError('Illegal line in .top file: '+line)
+                if fields[1] in self._defines:
+                    self._defines.pop(fields[1])
             elif command == '#ifndef':
                 # See whether this block should be ignored.
                 if len(fields) < 2:
@@ -145,6 +206,11 @@ class GromacsTopFile(object):
                 self._elseStack[-1] = True
 
         elif not ignore:
+            # Gromacs occasionally uses #define's to introduce specific
+            # parameters for individual terms (for instance, this is how
+            # ff99SB-ILDN is implemented). So make sure we do the appropriate
+            # pre-processor replacements necessary
+            line = _replace_defines(line, self._defines)
             # A line of data for the current category
             if self._currentCategory is None:
                 raise ValueError('Unexpected line in .top file: '+line)
@@ -182,6 +248,11 @@ class GromacsTopFile(object):
                 self._processPairType(line)
             elif self._currentCategory == 'cmaptypes':
                 self._processCmapType(line)
+            elif self._currentCategory.startswith('virtual_sites'):
+                if self._currentMoleculeType is None:
+                    raise ValueError('Found %s before [ moleculetype ]' %
+                                     self._currentCategory)
+                self._currentMoleculeType.has_virtual_sites = True
 
     def _processDefaults(self, line):
         """Process the [ defaults ] line."""
@@ -193,7 +264,7 @@ class GromacsTopFile(object):
         if fields[1] != '2':
             raise ValueError('Unsupported combination rule: '+fields[1])
         if fields[2].lower() == 'no':
-            raise ValueError('gen_pairs=no is not supported')
+            self._genpairs = False
         self._defaults = fields
 
     def _processMoleculeType(self, line):
@@ -379,9 +450,12 @@ class GromacsTopFile(object):
         # unless the preprocessor #define FLEXIBLE is given, don't define
         # bonds between the water hydrogen and oxygens, but only give the
         # constraint distances and exclusions.
-        self._defines = {'FLEXIBLE': True}
+        self._defines = OrderedDict()
+        self._defines['FLEXIBLE'] = True
+        self._genpairs = True
         if defines is not None:
-            self._defines.update(defines)
+            for define, value in defines.iteritems():
+                self._defines[define] = value
 
         # Parse the file.
 
@@ -416,6 +490,8 @@ class GromacsTopFile(object):
             if moleculeName not in self._moleculeTypes:
                 raise ValueError("Unknown molecule type: "+moleculeName)
             moleculeType = self._moleculeTypes[moleculeName]
+            if moleculeCount > 0 and moleculeType.has_virtual_sites:
+                raise ValueError('Virtual sites not yet supported by Gromacs parsers')
 
             # Create the specified number of molecules of this type.
 
@@ -747,6 +823,9 @@ class GromacsTopFile(object):
                         params = self._pairTypes[types][3:5]
                     elif types[::-1] in self._pairTypes:
                         params = self._pairTypes[types[::-1]][3:5]
+                    elif not self._genpairs:
+                        raise ValueError('No pair parameters defined for atom '
+                                         'types %s and gen-pairs is "no"' % types)
                     else:
                         continue # We'll use the automatically generated parameters
                     atom1params = nb.getParticleParameters(baseAtomIndex+atoms[0])
@@ -796,8 +875,8 @@ class GromacsTopFile(object):
 def _defaultGromacsIncludeDir():
     """Find the location where gromacs #include files are referenced from, by
     searching for (1) gromacs environment variables, (2) for the gromacs binary
-    'pdb2gmx' in the PATH, or (3) just using the default gromacs install
-    location, /usr/local/gromacs/share/gromacs/top """
+    'pdb2gmx' or 'gmx' in the PATH, or (3) just using the default gromacs
+    install location, /usr/local/gromacs/share/gromacs/top """
     if 'GMXDATA' in os.environ:
         return os.path.join(os.environ['GMXDATA'], 'top')
     if 'GMXBIN' in os.environ:
@@ -806,5 +885,9 @@ def _defaultGromacsIncludeDir():
     pdb2gmx_path = distutils.spawn.find_executable('pdb2gmx')
     if pdb2gmx_path is not None:
         return os.path.abspath(os.path.join(os.path.dirname(pdb2gmx_path), '..', 'share', 'gromacs', 'top'))
+    else:
+        gmx_path = distutils.spawn.find_executable('gmx')
+        if gmx_path is not None:
+            return os.path.abspath(os.path.join(os.path.dirname(gmx_path), '..', 'share', 'gromacs', 'top'))
 
     return '/usr/local/gromacs/share/gromacs/top'

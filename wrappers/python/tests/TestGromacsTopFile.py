@@ -31,6 +31,20 @@ class TestGromacsTopFile(unittest.TestCase):
                                 f.getNonbondedMethod()==methodMap[method] 
                                 for f in forces))
 
+    def test_ff99SBILDN(self):
+        """ Test Gromacs topology #define replacement as used in ff99SB-ILDN """
+        top = GromacsTopFile('systems/aidilnaaaaa.top')
+        gro = GromacsGroFile('systems/aidilnaaaaa.gro')
+        system = top.createSystem()
+        for force in system.getForces():
+            if isinstance(force, PeriodicTorsionForce):
+                force.setForceGroup(1)
+        context = Context(system, VerletIntegrator(1*femtosecond),
+                          Platform.getPlatformByName('Reference'))
+        context.setPositions(gro.positions)
+        ene = context.getState(getEnergy=True, groups=2**1).getPotentialEnergy()
+        self.assertAlmostEqual(ene.value_in_unit(kilojoules_per_mole), 341.6905133582857)
+
     def test_Cutoff(self):
         """Test to make sure the nonbondedCutoff parameter is passed correctly."""
 

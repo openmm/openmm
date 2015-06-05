@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2014 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2015 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -393,15 +393,16 @@ void CpuNonbondedForceVec4::getDeltaR(const fvec4& posI, const fvec4& x, const f
 }
 
 fvec4 CpuNonbondedForceVec4::erfcApprox(const fvec4& x) {
-    // This approximation for erfc is from Abramowitz and Stegun (1964) p. 299.  They cite the following as
-    // the original source: C. Hastings, Jr., Approximations for Digital Computers (1955).  It has a maximum
-    // error of 3e-7.
-
-    fvec4 t = 1.0f+(0.0705230784f+(0.0422820123f+(0.0092705272f+(0.0001520143f+(0.0002765672f+0.0000430638f*x)*x)*x)*x)*x)*x;
-    t *= t;
-    t *= t;
-    t *= t;
-    return 1.0f/(t*t);
+    fvec4 x1 = x*erfcDXInv;
+    ivec4 index = min(floor(x1), NUM_TABLE_POINTS);
+    fvec4 coeff2 = x1-index;
+    fvec4 coeff1 = 1.0f-coeff2;
+    fvec4 t1(&erfcTable[index[0]]);
+    fvec4 t2(&erfcTable[index[1]]);
+    fvec4 t3(&erfcTable[index[2]]);
+    fvec4 t4(&erfcTable[index[3]]);
+    transpose(t1, t2, t3, t4);
+    return coeff1*t1 + coeff2*t2;
 }
 
 fvec4 CpuNonbondedForceVec4::ewaldScaleFunction(const fvec4& x) {

@@ -64,6 +64,7 @@
 
 #include <stdio.h>
 
+#define NOMINMAX
 #include <pthread.h>
 
 #ifdef __cplusplus

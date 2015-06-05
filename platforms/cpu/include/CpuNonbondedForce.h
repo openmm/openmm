@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2013 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2015 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -174,8 +174,8 @@ protected:
         float alphaEwald;
         int numRx, numRy, numRz;
         int meshDim[3];
-        std::vector<float> ewaldScaleTable;
-        float ewaldDX, ewaldDXInv;
+        std::vector<float> erfcTable, ewaldScaleTable;
+        float ewaldDX, ewaldDXInv, erfcDXInv;
         std::vector<double> threadEnergy;
         // The following variables are used to make information accessible to the individual threads.
         int numberOfAtoms;
@@ -241,7 +241,7 @@ protected:
       /**
        * Compute a fast approximation to erfc(x).
        */
-      static float erfcApprox(float x);
+      float erfcApprox(float x);
 };
 
 } // namespace OpenMM
