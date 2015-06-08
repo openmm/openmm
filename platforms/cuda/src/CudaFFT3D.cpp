@@ -75,6 +75,7 @@ CudaFFT3D::CudaFFT3D(CudaContext& context, int xsize, int ysize, int zsize, bool
             defines["PACKED_XSIZE"] = context.intToString(packedXSize);
             defines["PACKED_YSIZE"] = context.intToString(packedYSize);
             defines["PACKED_ZSIZE"] = context.intToString(packedZSize);
+            defines["M_PI"] = context.doubleToString(M_PI);
             CUmodule module = context.createModule(CudaKernelSources::vectorOps+CudaKernelSources::fftR2C, defines);
             packForwardKernel = context.getKernel(module, "packForwardData");
             unpackForwardKernel = context.getKernel(module, "unpackForwardData");
