@@ -70,6 +70,8 @@ double VariableVerletIntegrator::computeKineticEnergy() {
 }
 
 void VariableVerletIntegrator::step(int steps) {
+    if (context == NULL)
+        throw OpenMMException("This Integrator is not bound to a context!");
     for (int i = 0; i < steps; ++i) {
         context->updateContextState();
         context->calcForcesAndEnergy(true, false);
@@ -78,6 +80,8 @@ void VariableVerletIntegrator::step(int steps) {
 }
 
 void VariableVerletIntegrator::stepTo(double time) {
+    if (context == NULL)
+        throw OpenMMException("This Integrator is not bound to a context!");  
     while (time > context->getTime()) {
         context->updateContextState();
         context->calcForcesAndEnergy(true, false);
