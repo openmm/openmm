@@ -135,7 +135,7 @@ class Simulation(object):
         if endStep is None:
             endStep = sys.maxint
         nextReport = [None]*len(self.reporters)
-        while self.currentStep < endStep:
+        while self.currentStep < endStep and (endTime is None or datetime.now() < endTime):
             nextSteps = endStep-self.currentStep
             anyReport = False
             for i, reporter in enumerate(self.reporters):
