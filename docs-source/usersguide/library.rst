@@ -1850,7 +1850,8 @@ The CUDA Platform recognizes the following Platform-specific properties:
   might (or might not) improve performance.  To use this option, you must have
   FFTW (single precision, multithreaded) installed, and your CPU must support SSE
   4.1.
-* CudaCompiler: This specifies the path to the CUDA kernel compiler.  If you do
+* CudaCompiler: This specifies the path to the CUDA kernel compiler.  Versions
+  of CUDA before 7.0 require a separate compiler executable.  If you do
   not specify this, OpenMM will try to locate the compiler itself.  Specify this
   only when you want to override the default location.  The logic used to pick the
   default location depends on the operating system:
