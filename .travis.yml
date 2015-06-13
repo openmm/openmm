@@ -4,8 +4,8 @@ compiler:
 
 env:
   # Build matrix with both dynamic and static libraries.
-  - OPENMM_BUILD_STATIC_LIB=OFF
-  - OPENMM_BUILD_STATIC_LIB=ON
+  - OPENMM_BUILD_STATIC_LIB="OFF"
+  - OPENMM_BUILD_STATIC_LIB="ON"
   # Global environment variables.
   global:
     # encrypted AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY to push docs to s3
