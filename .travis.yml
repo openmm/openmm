@@ -3,10 +3,9 @@ compiler:
   - clang
 
 env:
-  # Build matrix with both dynamic and static libraries.
-  - OPENMM_BUILD_STATIC_LIB="OFF"
-  - OPENMM_BUILD_STATIC_LIB="ON"
-  # Global environment variables.
+  matrix:
+    - OPENMM_BUILD_STATIC_LIB="OFF"
+    - OPENMM_BUILD_STATIC_LIB="ON"
   global:
     # encrypted AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY to push docs to s3
     - secure: "VVKz+yOMbKsskR+PfU1HfKBWdGYYrmIXNWQz4nqXCjtg2MRCQmjDulFZaPVDvsBzis9BUhnzAQrBYUrAtN8bZSTYRg7ADFVGdPFicg3Sv0owcghTQwokIvbw3G+HDz/WAnFmqEhqm3t5pNVWNinyHpMM3zYZOVKagyj53cwAM0M="
