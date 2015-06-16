@@ -190,6 +190,13 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
                 clGetDeviceInfo(device(), CL_DEVICE_COMPUTE_CAPABILITY_MAJOR_NV, sizeof(cl_uint), &computeCapabilityMajor, NULL);
                 if (computeCapabilityMajor > 1)
                     supports64BitGlobalAtomics = true;
+                if (computeCapabilityMajor == 5) {
+                    // Workaround for a bug in Maxwell on CUDA 6.x.
+
+                    string platformVersion = platforms[bestPlatform].getInfo<CL_PLATFORM_VERSION>();
+                    if (platformVersion.find("CUDA 6") != string::npos)
+                        supports64BitGlobalAtomics = false;
+                }
             }
         }
         else if (vendor.size() >= 28 && vendor.substr(0, 28) == "Advanced Micro Devices, Inc.") {
