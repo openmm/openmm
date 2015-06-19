@@ -638,6 +638,7 @@ class TestUnits(QuantityTestCase):
         self.assertEqual(str(u.meters*u.meters), 'meter**2')
         self.assertEqual(str(u.meter*u.meter), 'meter**2')
 
+@unittest.skipIf(np is None, 'Skipping numpy units tests')
 class TestNumpyUnits(QuantityTestCase):
 
     def testNumpyQuantity(self):
@@ -686,6 +687,6 @@ class TestNumpyUnits(QuantityTestCase):
         b = a.reshape((5, 2))
         self.assertTrue(u.is_quantity(b))
 
-if np is None:
-    # Support lack of numpy
-    del TestNumpyUnits
+    def testMultiplication(self):
+        """ Tests that units override numpy.ndarray multiplication """
+        self.assertIsInstance(np.arange(10)*u.angstroms, u.Quantity)
