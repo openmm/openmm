@@ -690,6 +690,11 @@ class TestNumpyUnits(QuantityTestCase):
     def testMultiplication(self):
         """ Tests that units override numpy.ndarray multiplication """
         self.assertIsInstance(np.arange(10)*u.angstroms, u.Quantity)
-        x = np.array([1]) * u.liters
-        self.assertIsInstance(x, u.Quantity)
-        self.assertIsInstance(np.arange(10) * x, u.Quantity)
+        # This only works with versions of numpy > 1.7 due to a bug in older
+        # versions. Since Travis-CI installs Python 1.6.1 from aptitude, and we
+        # don't want it to report test failures *every time*, just disable this
+        # particular test for the numpy versions known to be bad.
+        if np.version.version > '1.7':
+            x = np.array([1]) * u.liters
+            self.assertIsInstance(x, u.Quantity)
+            self.assertIsInstance(np.arange(10) * x, u.Quantity)
