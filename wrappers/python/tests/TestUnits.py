@@ -638,6 +638,7 @@ class TestUnits(QuantityTestCase):
         self.assertEqual(str(u.meters*u.meters), 'meter**2')
         self.assertEqual(str(u.meter*u.meter), 'meter**2')
 
+@unittest.skipIf(np is None, 'Skipping numpy units tests')
 class TestNumpyUnits(QuantityTestCase):
 
     def testNumpyQuantity(self):
@@ -686,6 +687,14 @@ class TestNumpyUnits(QuantityTestCase):
         b = a.reshape((5, 2))
         self.assertTrue(u.is_quantity(b))
 
-if np is None:
-    # Support lack of numpy
-    del TestNumpyUnits
+    def testMultiplication(self):
+        """ Tests that units override numpy.ndarray multiplication """
+        self.assertIsInstance(np.arange(10)*u.angstroms, u.Quantity)
+        # This only works with versions of numpy > 1.7 due to a bug in older
+        # versions. Since Travis-CI installs Python 1.6.1 from aptitude, and we
+        # don't want it to report test failures *every time*, just disable this
+        # particular test for the numpy versions known to be bad.
+        if np.version.version > '1.7':
+            x = np.array([1]) * u.liters
+            self.assertIsInstance(x, u.Quantity)
+            self.assertIsInstance(np.arange(10) * x, u.Quantity)

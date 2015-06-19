@@ -33,6 +33,7 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
+from __future__ import print_function, division, absolute_import
 
 __author__ = "Christopher M. Bruns"
 __version__ = "0.6"
@@ -44,6 +45,7 @@ class BaseUnit(object):
     For example, meter_base_unit could be a BaseUnit for the length dimension.
     The BaseUnit class is used internally in the more general Unit class.
     '''
+    __array_priority__ = 100
 
     def __init__(self, base_dim, name, symbol):
         """Creates a new BaseUnit.
@@ -127,7 +129,7 @@ class BaseUnit(object):
         self._conversion_factor_to_by_name[other.name] = factor
         for (unit, cfac) in other._conversion_factor_to.items():
             if unit is self: continue
-            if self._conversion_factor_to.has_key(unit): continue
+            if unit in self._conversion_factor_to: continue
             self._conversion_factor_to[unit] = factor * cfac
             unit._conversion_factor_to[self] = pow(factor * cfac, -1)
             self._conversion_factor_to_by_name[unit.name] = factor * cfac
@@ -138,7 +140,7 @@ class BaseUnit(object):
         other._conversion_factor_to_by_name[self.name] = invFac
         for (unit, cfac) in self._conversion_factor_to.items():
             if unit is other: continue
-            if other._conversion_factor_to.has_key(unit): continue
+            if unit in other._conversion_factor_to: continue
             other._conversion_factor_to[unit] = invFac * cfac
             unit._conversion_factor_to[other] = pow(invFac * cfac, -1)
             other._conversion_factor_to_by_name[unit.name] = invFac * cfac
