@@ -31,8 +31,7 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
-
-from __future__ import division
+from __future__ import division, print_function, absolute_import
 
 __author__ = "Christopher M. Bruns"
 __version__ = "0.5"
@@ -40,15 +39,18 @@ __version__ = "0.5"
 
 import math
 import sys
-from mymatrix import MyMatrix, zeros
-from basedimension import BaseDimension
-from baseunit import BaseUnit
-from standard_dimensions import *
+from .mymatrix import MyMatrix, zeros
+from .basedimension import BaseDimension
+from .baseunit import BaseUnit
+from .standard_dimensions import *
 
 class Unit(object):
     """
     Physical unit such as meter or ampere.
     """
+
+    __array_priority__ = 100
+
     def __init__(self, base_or_scaled_units):
         """Create a new Unit.
 
@@ -495,6 +497,8 @@ class ScaledUnit(object):
     ScaledUnit and BaseUnit are both used in the internals of Unit.  They
     should only be used during the construction of Units.
     """
+    __array_priority__ = 100
+
     def __init__(self, factor, master, name, symbol):
         self.factor = factor
         # Convert to one base_unit per dimension
@@ -576,6 +580,14 @@ class ScaledUnit(object):
                 + ", symbol=" + repr(self.symbol) + ")"
 
 class UnitSystem(object):
+    """
+    A complete system of units defining the *base* unit in each dimension
+
+    Parameters
+    ----------
+    units: ``list``
+        List of base units from which to construct the unit system
+    """
     def __init__(self, units):
         self.units = units
         self._unit_conversion_cache = {}

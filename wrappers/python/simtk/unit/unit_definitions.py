@@ -30,16 +30,16 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
-from __future__ import division
+from __future__ import division, print_function, absolute_import
 
 __author__ = "Christopher M. Bruns"
 __version__ = "0.6"
 
-from baseunit import BaseUnit
-from standard_dimensions import *
-from unit import Unit, ScaledUnit, UnitSystem, dimensionless
-from unit_operators import * ; # needed for manipulation of units
-from prefix import *
+from .baseunit import BaseUnit
+from .standard_dimensions import *
+from .unit import Unit, ScaledUnit, UnitSystem, dimensionless
+from .unit_operators import * ; # needed for manipulation of units
+from .prefix import *
 import math
 import sys
 
@@ -303,20 +303,20 @@ mmHg = Unit({mmHg_base_unit: 1.0})
 
 ampere_base_unit = ScaledUnit(1.0, coulomb/second, "ampere", "A")
 
-si_unit_system = UnitSystem([\
-        meter_base_unit,\
-        kilogram_base_unit,\
-        second_base_unit,\
+si_unit_system = UnitSystem([
+        meter_base_unit,
+        kilogram_base_unit,
+        second_base_unit,
         ampere_base_unit,
         kelvin_base_unit,
         mole_base_unit,
         candela_base_unit,
         radian_base_unit])
 
-cgs_unit_system = UnitSystem([\
-        centimeter_base_unit,\
-        gram_base_unit,\
-        second_base_unit,\
+cgs_unit_system = UnitSystem([
+        centimeter_base_unit,
+        gram_base_unit,
+        second_base_unit,
         ampere_base_unit,
         kelvin_base_unit,
         mole_base_unit,
@@ -324,10 +324,10 @@ cgs_unit_system = UnitSystem([\
 
 dalton_base_unit = ScaledUnit(1.0, gram/mole, "dalton", "Da")
 
-md_unit_system = UnitSystem([\
-        nanometer_base_unit,\
+md_unit_system = UnitSystem([
+        nanometer_base_unit,
         dalton_base_unit,
-        picosecond_base_unit,\
+        picosecond_base_unit,
         elementary_charge_base_unit,
         kelvin_base_unit,
         mole_base_unit,
