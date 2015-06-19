@@ -92,6 +92,7 @@ class Quantity(object):
       4 - lists of tuples of numbers, lists of lists of ... etc. of numbers
       5 - numpy.arrays
     """
+    __array_priority__ = 99
 
     def __init__(self, value=None, unit=None):
         """

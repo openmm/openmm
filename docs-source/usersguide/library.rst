@@ -2712,10 +2712,6 @@ multiply operator (‘*’) or the explicit Quantity constructor:
     # or more verbosely
     bond_length = Quantity(value=1.53, unit=nanometer)
 
-When working with Numpy arrays you *must* use the explicit constructor.  You cannot
-multiply them by a unit, because the Numpy array class overloads the multiply operator.
-
-
 Arithmetic with units
 ---------------------
 
