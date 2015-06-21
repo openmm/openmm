@@ -33,6 +33,7 @@ find_path(OPENCL_INCLUDE_DIR
         "/usr/local/cuda"
         "/usr/local/streamsdk"
         "/usr"
+        "C:/Program Files (x86)/AMD APP SDK/3.0-0-Beta"
         "${CUDA_TOOLKIT_ROOT_DIR}"
     PATH_SUFFIXES "include"
 )

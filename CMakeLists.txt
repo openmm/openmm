@@ -530,4 +530,11 @@ IF(BUILD_TESTING)
 ENDIF(BUILD_TESTING)
 ADD_SUBDIRECTORY(examples)
 
+
+get_property(dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
+foreach(dir ${dirs})
+  message(STATUS "dir='${dir}'")
+endforeach()
+
+
 ENDIF(NOT cmv EQUAL "2.4") # This whole file...
