@@ -30,12 +30,12 @@
 #include <map>
 #include <queue>
 #include <string>
-#include <pthread.h>
 #define __CL_ENABLE_EXCEPTIONS
 #ifdef _MSC_VER
     // Prevent Windows from defining macros that interfere with other code.
     #define NOMINMAX
 #endif
+#include <pthread.h>
 #include <cuda.h>
 #include <builtin_types.h>
 #include <vector_functions.h>
