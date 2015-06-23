@@ -448,7 +448,7 @@ class TestUnits(QuantityTestCase):
         self.assertAlmostEqualQuantities(n, 2.05834818672e-17 * u.mole)
         self.assertAlmostEqualQuantities(V, 5.2359833333333e-19 * u.meters**3)
         self.assertEqual(str(T), '310.0 K')
-        self.assertEqual(str(u.MOLAR_GAS_CONSTANT_R), '8.31447247122 J/(K mol)')
+        self.assertEqual(str(1*u.joules/u.kelvin/u.mole), '1 J/(K mol)')
         self.assertTrue(u.is_quantity(V))
         # Checks trouble with complicated unit conversion factors
         p1 = 1.0 * u.atmospheres
