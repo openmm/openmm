@@ -77,7 +77,6 @@ import math
 import copy
 from .standard_dimensions import *
 from .unit import Unit, is_unit, dimensionless
-import sys
 
 class Quantity(object):
     """Physical quantity, such as 1.3 meters per second.
