@@ -604,7 +604,7 @@ class Quantity(object):
         return bool(self._value)
 
     def __bool__(self):
-        return self.__nonzero__()
+        return bool(self._value)
 
     def __complex__(self):
         return Quantity(complex(self._value), self.unit)
@@ -818,9 +818,6 @@ def _is_string(x):
          return False
      except StopIteration:
          return False
-
-if sys.version_info >= (3,):
-    del Quantity.__nonzero__
 
 # run module directly for testing
 if __name__=='__main__':
