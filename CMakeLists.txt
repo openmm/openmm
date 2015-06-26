@@ -470,10 +470,12 @@ FILE(GLOB CORE_HEADERS     include/*.h          */include/*.h)
 FILE(GLOB TOP_HEADERS      include/openmm/*.h          */include/openmm/*.h)
 FILE(GLOB INTERNAL_HEADERS include/openmm/internal/*.h */include/openmm/internal/*.h )
 FILE(GLOB REFERENCE_HEADERS platforms/reference/include/*.h)
+FILE(GLOB LEPTON_HEADERS   libraries/lepton/include/lepton/*.h)
 INSTALL_FILES(/include                 FILES ${CORE_HEADERS})
 INSTALL_FILES(/include/openmm          FILES ${TOP_HEADERS})
 INSTALL_FILES(/include/openmm/internal FILES ${INTERNAL_HEADERS})
 INSTALL_FILES(/include/openmm/reference FILES ${REFERENCE_HEADERS})
+INSTALL_FILES(/include/lepton          FILES ${LEPTON_HEADERS})
 
 # Serialization support
 
