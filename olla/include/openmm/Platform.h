@@ -174,7 +174,7 @@ public:
     /**
      * Get any failures caused during the last call to loadPluginsFromDirectory
      */
-    static std::vector<std::string> getLoadFailures();
+    static std::vector<std::string> getPluginLoadFailures();
     /**
      * Get the registered Platform with a particular name.  If no Platform with that name has been
      * registered, this throws an exception.
@@ -205,7 +205,7 @@ public:
      * Load multiple dynamic libraries (DLLs) which contain OpenMM plugins from a single directory.
      * This method loops over every file contained in the specified directory and calls loadPluginLibrary()
      * for each one.  If an error occurs while trying to load a particular file, that file is simply
-     * ignored.
+     * ignored. You can retrieve a list of all such errors by calling getPluginLoadFailures().
      *
      * @param directory    the path to the directory containing libraries to load
      * @return the names of all files which were successfully loaded as libraries
@@ -237,7 +237,7 @@ private:
     std::map<std::string, KernelFactory*> kernelFactories;
     std::map<std::string, std::string> defaultProperties;
     static std::vector<Platform*>& getPlatforms();
-    static std::vector<std::string> loadFailures;
+    static std::vector<std::string> pluginLoadFailures;
 };
 
 

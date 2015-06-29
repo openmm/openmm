@@ -45,19 +45,13 @@
 #include <cstdlib>
 #endif
 #include <set>
-#include <algorithm>
 
 #include "ReferencePlatform.h"
 
 using namespace OpenMM;
 using namespace std;
 
-std::vector<std::string> Platform::loadFailures;
-
-static bool stringLengthComparator(string i, string j) {
-  return (i.size() < j.size());
-}
-
+std::vector<std::string> Platform::pluginLoadFailures;
 
 static int registerPlatforms() {
 
@@ -148,8 +142,8 @@ Platform& Platform::getPlatform(int index) {
     throw OpenMMException("Invalid platform index");
 }
 
-std::vector<std::string> Platform::getLoadFailures() {
-  return loadFailures;
+std::vector<std::string> Platform::getPluginLoadFailures() {
+  return pluginLoadFailures;
 }
 
 Platform& Platform::getPlatformByName(const string& name) {
@@ -274,15 +268,14 @@ vector<string> Platform::loadPluginsFromDirectory(const string& directory) {
     vector<void*> plugins;
 #endif
     vector<string> loadedLibraries;
-    std::sort (files.begin(), files.end(), stringLengthComparator);
-    loadFailures.resize(0);
+    pluginLoadFailures.resize(0);
 
     for (unsigned int i = 0; i < files.size(); ++i) {
         try {
             plugins.push_back(loadOneLibrary(directory+dirSeparator+files[i]));
             loadedLibraries.push_back(files[i]);
         } catch (OpenMMException& ex) {
-	    loadFailures.push_back(ex.what());
+	    pluginLoadFailures.push_back(ex.what());
         }
     }
     initializePlugins(plugins);
