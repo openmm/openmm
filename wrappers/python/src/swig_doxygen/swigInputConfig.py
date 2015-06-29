@@ -180,6 +180,7 @@ UNITS = {
 ("*", "getParticleMass") : ("unit.amu", ()),
 ("*", "getPlatform") : (None, ()),
 ("*", "getPlatformByName") : (None, ()),
+("*", "getLoadFailures"): (None, ()),
 ("*", "getRandomNumberSeed") : (None, ()),
 ("*", "getReactionFieldDielectric") : (None, ()),
 ("*", "getSoluteDielectric") : (None, ()),
