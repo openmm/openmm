@@ -45,6 +45,7 @@
 #include <cstdlib>
 #endif
 #include <set>
+#include <algorithm>
 
 #include "ReferencePlatform.h"
 
@@ -52,6 +53,9 @@ using namespace OpenMM;
 using namespace std;
 
 std::vector<std::string> Platform::pluginLoadFailures;
+static bool stringLengthComparator(string i, string j) {
+  return (i.size() < j.size());
+}
 
 static int registerPlatforms() {
 
@@ -269,6 +273,7 @@ vector<string> Platform::loadPluginsFromDirectory(const string& directory) {
 #endif
     vector<string> loadedLibraries;
     pluginLoadFailures.resize(0);
+    std::sort (files.begin(), files.end(), stringLengthComparator);
 
     for (unsigned int i = 0; i < files.size(); ++i) {
         try {
