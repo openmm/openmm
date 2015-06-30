@@ -87,6 +87,7 @@ vector<string> RPMDIntegrator::getKernelNames() {
 
 void RPMDIntegrator::setPositions(int copy, const vector<Vec3>& positions) {
     kernel.getAs<IntegrateRPMDStepKernel>().setPositions(copy, positions);
+    forcesAreValid = false;
     hasSetPosition = true;
 }
 
