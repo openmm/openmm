@@ -194,7 +194,7 @@ void testParaHydrogen() {
         
         // Calculate the quantum contribution to the kinetic energy.
         
-        vector<Vec3> centroids(numParticles, Vec3());
+        vector<Vec3> centroids(numParticles, Vec3(0,0,0));
         for (int i = 0; i < numCopies; i++) {
             const vector<Vec3>& pos = states[i].getPositions();
             for (int j = 0; j < numParticles; j++)
@@ -272,7 +272,7 @@ void testCMMotionRemoval() {
             pos += calcCM(state.getPositions(), system);
         }
         pos *= 1.0/numCopies;
-        ASSERT_EQUAL_VEC(Vec3(), pos, 0.5);
+        ASSERT_EQUAL_VEC(Vec3(0,0,0), pos, 0.5);
     }
 }
 
