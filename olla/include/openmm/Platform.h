@@ -49,13 +49,13 @@ class KernelFactory;
  * More precisely, a Platform object acts as a registry for a set of KernelFactory
  * objects which together implement the kernels.  The Platform class, in turn, provides a
  * static registry of all available Platform objects.
- * 
+ *
  * To get a Platform object, call
- * 
+ *
  * <pre>
  * Platform& platform Platform::findPlatform(kernelNames);
  * </pre>
- * 
+ *
  * passing in the names of all kernels that will be required for the calculation you plan to perform.  It
  * will return the fastest available Platform which provides implementations of all the specified kernels.
  * You can then call createKernel() to construct particular kernels as needed.
@@ -133,14 +133,14 @@ public:
      * Register a KernelFactory which should be used to create Kernels with a particular name.
      * The Platform takes over ownership of the factory, and will delete it when the Platform itself
      * is deleted.
-     * 
+     *
      * @param name     the kernel name for which the factory should be used
      * @param factory  the factory to use for creating Kernels with the specified name
      */
     void registerKernelFactory(const std::string& name, KernelFactory* factory);
     /**
      * Determine whether this Platforms provides implementations of a set of kernels.
-     * 
+     *
      * @param kernelNames the names of the kernels of interests
      * @return true if this Platform provides implementations of all the kernels in the list,
      * false if there are any which it does not support
@@ -151,9 +151,9 @@ public:
      * the returned Kernels are independent and do not interact with each other.  This means
      * that it is possible to have multiple simulations in progress at one time without them
      * interfering.
-     * 
+     *
      * If no KernelFactory has been registered for the specified name, this will throw an exception.
-     * 
+     *
      * @param name the name of the Kernel to get
      * @param context the context for which to create a Kernel
      * @return a newly created Kernel object
@@ -172,13 +172,17 @@ public:
      */
     static Platform& getPlatform(int index);
     /**
+     * Get any failures caused during the last call to loadPluginsFromDirectory
+     */
+    static std::vector<std::string> getPluginLoadFailures();
+    /**
      * Get the registered Platform with a particular name.  If no Platform with that name has been
      * registered, this throws an exception.
      */
     static Platform& getPlatformByName(const std::string& name);
     /**
      * Find a Platform which can be used to perform a calculation.
-     * 
+     *
      * @param kernelNames the names of all kernels which will be needed for the calculation
      * @return the fastest registered Platform which supports all of the requested kernels.  If no
      * Platform exists which supports all of them, this will throw an exception.
@@ -201,7 +205,7 @@ public:
      * Load multiple dynamic libraries (DLLs) which contain OpenMM plugins from a single directory.
      * This method loops over every file contained in the specified directory and calls loadPluginLibrary()
      * for each one.  If an error occurs while trying to load a particular file, that file is simply
-     * ignored.
+     * ignored. You can retrieve a list of all such errors by calling getPluginLoadFailures().
      *
      * @param directory    the path to the directory containing libraries to load
      * @return the names of all files which were successfully loaded as libraries
@@ -233,7 +237,9 @@ private:
     std::map<std::string, KernelFactory*> kernelFactories;
     std::map<std::string, std::string> defaultProperties;
     static std::vector<Platform*>& getPlatforms();
+    static std::vector<std::string> pluginLoadFailures;
 };
+
 
 } // namespace OpenMM
 

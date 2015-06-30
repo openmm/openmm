@@ -68,7 +68,7 @@ class WrapperGenerator:
     
     def __init__(self, inputDirname, output):
         self.skipClasses = ['OpenMM::Vec3', 'OpenMM::XmlSerializer', 'OpenMM::Kernel', 'OpenMM::KernelImpl', 'OpenMM::KernelFactory', 'OpenMM::ContextImpl', 'OpenMM::SerializationNode', 'OpenMM::SerializationProxy']
-        self.skipMethods = ['OpenMM::Context::getState', 'OpenMM::Platform::loadPluginsFromDirectory', 'OpenMM::Context::createCheckpoint', 'OpenMM::Context::loadCheckpoint', 'OpenMM::Context::getMolecules']
+        self.skipMethods = ['OpenMM::Context::getState', 'OpenMM::Platform::loadPluginsFromDirectory', 'OpenMM::Platform::getPluginLoadFailures', 'OpenMM::Context::createCheckpoint', 'OpenMM::Context::loadCheckpoint', 'OpenMM::Context::getMolecules']
         self.hideClasses = ['Kernel', 'KernelImpl', 'KernelFactory', 'ContextImpl', 'SerializationNode', 'SerializationProxy']
         self.nodeByID={}
 
@@ -398,6 +398,7 @@ extern OPENMM_EXPORT void %(name)s_insert(%(name)s* set, %(type)s value);""" % v
    Unlike the C++ versions, the return value is allocated on the heap, and you must delete it yourself. */
 extern OPENMM_EXPORT OpenMM_State* OpenMM_Context_getState(const OpenMM_Context* target, int types, int enforcePeriodicBox);
 extern OPENMM_EXPORT OpenMM_StringArray* OpenMM_Platform_loadPluginsFromDirectory(const char* directory);
+extern OPENMM_EXPORT OpenMM_StringArray* OpenMM_Platform_getPluginLoadFailures();
 extern OPENMM_EXPORT char* OpenMM_XmlSerializer_serializeSystem(const OpenMM_System* system);
 extern OPENMM_EXPORT char* OpenMM_XmlSerializer_serializeState(const OpenMM_State* state);
 extern OPENMM_EXPORT char* OpenMM_XmlSerializer_serializeIntegrator(const OpenMM_Integrator* integrator);
@@ -802,6 +803,10 @@ OPENMM_EXPORT OpenMM_State* OpenMM_Context_getState(const OpenMM_Context* target
 }
 OPENMM_EXPORT OpenMM_StringArray* OpenMM_Platform_loadPluginsFromDirectory(const char* directory) {
     vector<string> result = Platform::loadPluginsFromDirectory(string(directory));
+    return reinterpret_cast<OpenMM_StringArray*>(new vector<string>(result));
+}
+OPENMM_EXPORT OpenMM_StringArray* OpenMM_Platform_getPluginLoadFailures() {
+    vector<string> result = Platform::getPluginLoadFailures();
     return reinterpret_cast<OpenMM_StringArray*>(new vector<string>(result));
 }
 static char* createStringFromStream(stringstream& stream) {
@@ -1312,6 +1317,10 @@ MODULE OpenMM
         subroutine OpenMM_Platform_loadPluginsFromDirectory(directory, result)
             use OpenMM_Types; implicit none
             character(*) directory
+            type(OpenMM_StringArray) result
+        end subroutine
+        subroutine OpenMM_Platform_getPluginLoadFailures(result)
+            use OpenMM_Types; implicit none
             type(OpenMM_StringArray) result
         end subroutine
         subroutine OpenMM_XmlSerializer_serializeSystemToC(system, result, result_length)
@@ -1987,6 +1996,12 @@ OPENMM_EXPORT void openmm_platform_loadpluginsfromdirectory_(const char* directo
 }
 OPENMM_EXPORT void OPENMM_PLATFORM_LOADPLUGINSFROMDIRECTORY(const char* directory, OpenMM_StringArray*& result, int length) {
     result = OpenMM_Platform_loadPluginsFromDirectory(makeString(directory, length).c_str());
+}
+OPENMM_EXPORT void openmm_platform_getpluginloadfailures_(OpenMM_StringArray*& result) {
+    result = OpenMM_Platform_getPluginLoadFailures();
+}
+OPENMM_EXPORT void OPENMM_PLATFORM_GETPLUGINLOADFAILURES(OpenMM_StringArray*& result) {
+    result = OpenMM_Platform_getPluginLoadFailures();
 }
 OPENMM_EXPORT void openmm_xmlserializer_serializesystemtoc_(OpenMM_System*& system, char*& result, int& result_length) {
     convertStringToChars(OpenMM_XmlSerializer_serializeSystem(system), result, result_length);
