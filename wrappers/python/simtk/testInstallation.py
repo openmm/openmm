@@ -101,7 +101,7 @@ def run_tests():
                         d = f1-f2
                         error = sqrt((d[0]*d[0]+d[1]*d[1]+d[2]*d[2])/(f1[0]*f1[0]+f1[1]*f1[1]+f1[2]*f1[2]))
                         errors.append(error)
-                    print("{} vs. {}: {:g}".format(Platform.getPlatform(j).getName(),
+                    print("{0} vs. {1}: {2:g}".format(Platform.getPlatform(j).getName(),
                                                   Platform.getPlatform(i).getName(),
                                                   sorted(errors)[len(errors)//2]))
 
