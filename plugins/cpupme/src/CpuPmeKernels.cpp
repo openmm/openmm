@@ -39,6 +39,7 @@
 #include <cmath>
 #include <cstring>
 #include <sstream>
+#include <cstdlib>
 
 using namespace OpenMM;
 using namespace std;
