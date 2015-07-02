@@ -206,7 +206,7 @@ void testVirtualSites() {
                     int index = k+gridSize*(j+gridSize*i);
                     positions[3*index] = pos;
                     positions[3*index+1] = Vec3(pos[0]+1.0, pos[1], pos[2]);
-                    positions[3*index+2] = Vec3(0,0,0);
+                    positions[3*index+2] = Vec3();
                 }
         integ.setPositions(copy, positions);
     }
