@@ -180,6 +180,7 @@ UNITS = {
 ("*", "getParticleMass") : ("unit.amu", ()),
 ("*", "getPlatform") : (None, ()),
 ("*", "getPlatformByName") : (None, ()),
+("*", "getPluginLoadFailures"): (None, ()),
 ("*", "getRandomNumberSeed") : (None, ()),
 ("*", "getReactionFieldDielectric") : (None, ()),
 ("*", "getSoluteDielectric") : (None, ()),
@@ -413,7 +414,8 @@ UNITS = {
 ("Platform", "getSpeed") : (None, ()),
 ("RBTorsionForce", "getTorsionParameters")
  : (None, (None, None, None, None,
-           None, None, None, None, None, None)),
+           'unit.kilojoules_per_mole', 'unit.kilojoules_per_mole', 'unit.kilojoules_per_mole',
+           'unit.kilojoules_per_mole', 'unit.kilojoules_per_mole', 'unit.kilojoules_per_mole')),
 ("System", "getConstraintParameters") : (None, (None, None, 'unit.nanometer')),
 ("System", "getForce") : (None, ()),
 ("System", "getVirtualSite") : (None, ()),

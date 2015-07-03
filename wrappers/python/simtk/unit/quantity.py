@@ -67,8 +67,7 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
-
-from __future__ import division
+from __future__ import division, print_function, absolute_import
 
 __author__ = "Christopher M. Bruns"
 __version__ = "0.5"
@@ -76,8 +75,8 @@ __version__ = "0.5"
 
 import math
 import copy
-from standard_dimensions import *
-from unit import Unit, is_unit, dimensionless
+from .standard_dimensions import *
+from .unit import Unit, is_unit, dimensionless
 
 class Quantity(object):
     """Physical quantity, such as 1.3 meters per second.
@@ -92,18 +91,8 @@ class Quantity(object):
             Note - unit conversions will cause tuples to be converted to lists
       4 - lists of tuples of numbers, lists of lists of ... etc. of numbers
       5 - numpy.arrays
-
-    Create numpy.arrays with units using the Quantity constructor, not the
-    multiply operator.  e.g.
-
-      Quantity(numpy.array([1,2,3]), centimeters) # correct
-
-        *NOT*
-
-      numpy.array([1,2,3]) * centimeters # won't work
-
-    because numpy.arrays already overload the multiply operator for EVERYTHING.
     """
+    __array_priority__ = 99
 
     def __init__(self, value=None, unit=None):
         """
@@ -136,7 +125,7 @@ class Quantity(object):
                     if len(value) < 1:
                         unit = dimensionless
                     else:
-                        first_item = iter(value).next()
+                        first_item = next(iter(value))
                         # Avoid infinite recursion for string, because a one-character
                         # string is its own first element
                         try:
@@ -613,6 +602,9 @@ class Quantity(object):
         """
         return bool(self._value)
 
+    def __bool__(self):
+        return bool(self._value)
+
     def __complex__(self):
         return Quantity(complex(self._value), self.unit)
     def __float__(self):
@@ -713,7 +705,7 @@ class Quantity(object):
                     else:
                         for i in range(len(value)):
                             value[i] = factor*value[i]
-            except TypeError as ex:
+            except TypeError:
                 if isinstance(value, tuple):
                     value = tuple([self._scale_sequence(x, factor, post_multiply) for x in value])
                 else:
@@ -825,7 +817,6 @@ def _is_string(x):
          return False
      except StopIteration:
          return False
-
 
 # run module directly for testing
 if __name__=='__main__':

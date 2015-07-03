@@ -39,6 +39,7 @@
 #include <cmath>
 #include <cstring>
 #include <sstream>
+#include <cstdlib>
 
 using namespace OpenMM;
 using namespace std;
@@ -59,13 +60,14 @@ static void spreadCharge(int start, int end, float* posq, float* grid, int gridx
     ivec4 gridSizeInt(gridx, gridy, gridz, 0);
     fvec4 one(1);
     fvec4 scale(1.0f/(PME_ORDER-1));
+    float posInBox[4] = {0,0,0,0};
     const float epsilonFactor = sqrt(ONE_4PI_EPS0);
     memset(grid, 0, sizeof(float)*gridx*gridy*gridz);
+
     for (int i = start; i < end; i++) {
         // Find the position relative to the nearest grid point.
-        
+
         fvec4 pos(&posq[4*i]);
-        float posInBox[4];
         (pos-boxSize*floor(pos*invBoxSize)).store(posInBox);
         fvec4 t = posInBox[0]*recipBoxVec0 + posInBox[1]*recipBoxVec1 + posInBox[2]*recipBoxVec2;
         t = (t-floor(t))*gridSize;
@@ -74,7 +76,7 @@ static void spreadCharge(int start, int end, float* posq, float* grid, int gridx
         ivec4 gridIndex = ti-(gridSizeInt&ti==gridSizeInt);
         
         // Compute the B-spline coefficients.
-        
+
         fvec4 data[PME_ORDER];
         data[PME_ORDER-1] = 0.0f;
         data[1] = dr;

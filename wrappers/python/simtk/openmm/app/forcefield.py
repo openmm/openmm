@@ -1341,7 +1341,6 @@ class GBVIGenerator:
         for bond in data.bonds:
             type1 = data.atomType[data.atoms[bond.atom1]]
             type2 = data.atomType[data.atoms[bond.atom2]]
-            hit = 0
             for i in range(len(hbGenerator.types1)):
                 types1 = hbGenerator.types1[i]
                 types2 = hbGenerator.types2[i]
@@ -1945,22 +1944,16 @@ class AmoebaBondGenerator:
         for bond in data.bonds:
             type1 = data.atomType[data.atoms[bond.atom1]]
             type2 = data.atomType[data.atoms[bond.atom2]]
-            hit = 0
             for i in range(len(self.types1)):
                 types1 = self.types1[i]
                 types2 = self.types2[i]
                 if (type1 in types1 and type2 in types2) or (type1 in types2 and type2 in types1):
                     bond.length = self.length[i]
-                    hit = 1
                     if bond.isConstrained:
                         sys.addConstraint(bond.atom1, bond.atom2, self.length[i])
                     elif self.k[i] != 0:
                         force.addBond(bond.atom1, bond.atom2, self.length[i], self.k[i])
                     break
-
-            if (hit == 0):
-                outputString = "AmoebaBondGenerator missing: types=[%5s %5s] atoms=[%6d %6d] " % (type1, type2, bond.atom1, bond.atom2)
-                raise ValueError(outputString)
 
 parsers["AmoebaBondForce"] = AmoebaBondGenerator.parseElement
 
@@ -2093,13 +2086,11 @@ class AmoebaAngleGenerator:
             type1 = data.atomType[data.atoms[angle[0]]]
             type2 = data.atomType[data.atoms[angle[1]]]
             type3 = data.atomType[data.atoms[angle[2]]]
-            hit = 0
             for i in range(len(self.types1)):
                 types1 = self.types1[i]
                 types2 = self.types2[i]
                 types3 = self.types3[i]
                 if (type1 in types1 and type2 in types2 and type3 in types3) or (type1 in types3 and type2 in types2 and type3 in types1):
-                    hit = 1
                     if isConstrained and self.k[i] != 0.0:
                         angleDict['idealAngle'] = self.angle[i][0]
                         addAngleConstraint(angle, self.angle[i][0]*math.pi/180.0, data, sys)
@@ -2127,13 +2118,6 @@ class AmoebaAngleGenerator:
                         angleDict['idealAngle'] = angleValue
                         force.addAngle(angle[0], angle[1], angle[2], angleValue, self.k[i])
                     break
-            if (hit == 0):
-                outputString = "AmoebaAngleGenerator missing types: [%s %s %s] for atoms: " % (type1, type2, type3)
-                outputString += getAtomPrint( data, angle[0] ) + ' '
-                outputString += getAtomPrint( data, angle[1] ) + ' '
-                outputString += getAtomPrint( data, angle[2] )
-                outputString += " indices: [%6d %6d %6d]" % (angle[0], angle[1], angle[2])
-                raise ValueError(outputString)
 
     #=============================================================================================
     # createForcePostOpBendInPlaneAngle is called by AmoebaOutOfPlaneBendForce with the list of
@@ -2169,7 +2153,6 @@ class AmoebaAngleGenerator:
             type2 = data.atomType[data.atoms[angle[1]]]
             type3 = data.atomType[data.atoms[angle[2]]]
 
-            hit = 0
             for i in range(len(self.types1)):
 
                 types1 = self.types1[i]
@@ -2177,21 +2160,12 @@ class AmoebaAngleGenerator:
                 types3 = self.types3[i]
 
                 if (type1 in types1 and type2 in types2 and type3 in types3) or (type1 in types3 and type2 in types2 and type3 in types1):
-                    hit = 1
                     angleDict['idealAngle'] = self.angle[i][0]
                     if (isConstrained and self.k[i] != 0.0):
                         addAngleConstraint(angle, self.angle[i][0]*math.pi/180.0, data, sys)
                     else:
                         force.addAngle(angle[0], angle[1], angle[2], angle[3], self.angle[i][0], self.k[i])
                     break
-
-            if (hit == 0):
-                outputString = "AmoebaInPlaneAngleGenerator missing types: [%s %s %s] atoms: " % (type1, type2, type3)
-                outputString += getAtomPrint( data, angle[0] ) + ' '
-                outputString += getAtomPrint( data, angle[1] ) + ' '
-                outputString += getAtomPrint( data, angle[2] )
-                outputString += " indices: [%6d %6d %6d]" % (angle[0], angle[1], angle[2])
-                raise ValueError(outputString)
 
 parsers["AmoebaAngleForce"] = AmoebaAngleGenerator.parseElement
 
@@ -2562,7 +2536,6 @@ class AmoebaTorsionGenerator:
             type3 = data.atomType[data.atoms[torsion[2]]]
             type4 = data.atomType[data.atoms[torsion[3]]]
 
-            hit = 0
             for i in range(len(self.types1)):
 
                 types1 = self.types1[i]
@@ -2573,7 +2546,6 @@ class AmoebaTorsionGenerator:
                 # match types in forward or reverse direction
 
                 if (type1 in types1 and type2 in types2 and type3 in types3 and type4 in types4) or (type4 in types1 and type3 in types2 and type2 in types3 and type1 in types4):
-                    hit = 1
                     if self.t1[i][0] != 0:
                         force.addTorsion(torsion[0], torsion[1], torsion[2], torsion[3], 1, self.t1[i][1], self.t1[i][0])
                     if self.t2[i][0] != 0:
@@ -2581,15 +2553,6 @@ class AmoebaTorsionGenerator:
                     if self.t3[i][0] != 0:
                         force.addTorsion(torsion[0], torsion[1], torsion[2], torsion[3], 3, self.t3[i][1], self.t3[i][0])
                     break
-
-            if (hit == 0):
-                outputString = "AmoebaTorsionGenerator missing type: [%s %s %s %s] atoms: " % (type1, type2, type3, type4)
-                outputString += getAtomPrint( data, torsion[0] ) + ' '
-                outputString += getAtomPrint( data, torsion[1] ) + ' '
-                outputString += getAtomPrint( data, torsion[2] ) + ' '
-                outputString += getAtomPrint( data, torsion[3] )
-                outputString += " indices: [%6d %6d %6d %6d]" % (torsion[0], torsion[1], torsion[2], torsion[3])
-                raise ValueError(outputString)
 
 parsers["AmoebaTorsionForce"] = AmoebaTorsionGenerator.parseElement
 

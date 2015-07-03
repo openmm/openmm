@@ -87,6 +87,7 @@ vector<string> RPMDIntegrator::getKernelNames() {
 
 void RPMDIntegrator::setPositions(int copy, const vector<Vec3>& positions) {
     kernel.getAs<IntegrateRPMDStepKernel>().setPositions(copy, positions);
+    forcesAreValid = false;
     hasSetPosition = true;
 }
 
@@ -100,7 +101,7 @@ State RPMDIntegrator::getState(int copy, int types, bool enforcePeriodicBox, int
         // Call setPositions() on the Context so it doesn't think the user is trying to
         // run a simulation without setting positions first.  These positions will
         // immediately get overwritten by the ones stored in this integrator.
-        
+
         vector<Vec3> p(context->getSystem().getNumParticles(), Vec3());
         context->getOwner().setPositions(p);
         isFirstStep = false;
@@ -110,7 +111,7 @@ State RPMDIntegrator::getState(int copy, int types, bool enforcePeriodicBox, int
     if (enforcePeriodicBox && copy > 0 && (types&State::Positions) != 0) {
         // Apply periodic boundary conditions based on copy 0.  Otherwise, molecules might end
         // up in different places for different copies.
-        
+
         kernel.getAs<IntegrateRPMDStepKernel>().copyToContext(0, *context);
         State state2 = context->getOwner().getState(State::Positions, false, groups);
         vector<Vec3> positions = state.getPositions();
@@ -144,9 +145,9 @@ State RPMDIntegrator::getState(int copy, int types, bool enforcePeriodicBox, int
                 pos[2] -= dz;
             }
         }
-        
+
         // Construct the new State.
-        
+
         State::StateBuilder builder(state.getTime());
         builder.setPositions(positions);
         builder.setPeriodicBoxVectors(periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2]);
@@ -168,16 +169,18 @@ double RPMDIntegrator::computeKineticEnergy() {
 }
 
 void RPMDIntegrator::step(int steps) {
+    if (context == NULL)
+        throw OpenMMException("This Integrator is not bound to a context!");    
     if (!hasSetPosition) {
         // Initialize the positions from the context.
-        
+
         State s = context->getOwner().getState(State::Positions);
         for (int i = 0; i < numCopies; i++)
             setPositions(i, s.getPositions());
     }
     if (!hasSetVelocity) {
         // Initialize the velocities from the context.
-        
+
         State s = context->getOwner().getState(State::Velocities);
         for (int i = 0; i < numCopies; i++)
             setVelocities(i, s.getVelocities());
@@ -186,7 +189,7 @@ void RPMDIntegrator::step(int steps) {
         // Call setPositions() on the Context so it doesn't think the user is trying to
         // run a simulation without setting positions first.  These positions will
         // immediately get overwritten by the ones stored in this integrator.
-        
+
         vector<Vec3> p(context->getSystem().getNumParticles(), Vec3());
         context->getOwner().setPositions(p);
         isFirstStep = false;
@@ -212,12 +215,12 @@ double RPMDIntegrator::getTotalEnergy() {
     State prevState = getState(numCopies-1, State::Positions);
     for (int i = 0; i < numCopies; i++) {
         // Add the energy of this copy.
-        
+
         State state = getState(i, State::Positions | State::Energy);
         energy += state.getKineticEnergy()+state.getPotentialEnergy();
-        
+
         // Add the energy from the springs connecting it to the previous copy.
-        
+
         for (int j = 0; j < numParticles; j++) {
             Vec3 delta = state.getPositions()[j]-prevState.getPositions()[j];
             energy += 0.5*wn*wn*system.getParticleMass(j)*delta.dot(delta);

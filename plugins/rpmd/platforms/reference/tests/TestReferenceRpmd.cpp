@@ -155,7 +155,7 @@ void testCMMotionRemoval() {
             pos += calcCM(state.getPositions(), system);
         }
         pos *= 1.0/numCopies;
-        ASSERT_EQUAL_VEC(Vec3(), pos, 0.5);
+        ASSERT_EQUAL_VEC(Vec3(0,0,0), pos, 0.5);
     }
 }
 

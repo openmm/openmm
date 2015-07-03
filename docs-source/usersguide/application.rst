@@ -61,7 +61,7 @@ and tell it to install the command line tools.  With Xcode 4.2 and earlier, the
 command line tools are automatically installed when you install Xcode.)
 
 3. (Optional) If you have an Nvidia GPU and want to use the CUDA platform,
-download CUDA 6.5 from https://developer.nvidia.com/cuda-downloads.  Be sure to
+download CUDA 7.0 from https://developer.nvidia.com/cuda-downloads.  Be sure to
 install both the drivers and toolkit.
 
 4. (Optional) If you plan to use the CPU platform, it is recommended that you
@@ -96,15 +96,6 @@ This will affect only the particular Terminal window you type it into.  If you
 want to run OpenMM in another Terminal window, you must type the above command
 in the new window.
 
-If you plan to use the CUDA platform, OpenMM also needs to locate the CUDA
-kernel compiler (:program:`nvcc`).  By default it looks for it in the location
-:file:`/usr/local/cuda/bin/nvcc`.  If you have installed the CUDA toolkit in a different
-location, you can set :envvar:`OPENMM_CUDA_COMPILER` to tell OpenMM where to find it.  For
-example,
-::
-
-    export OPENMM_CUDA_COMPILER=/opt/CUDA/cuda-6.0/bin/nvcc
-
 7. Verify your installation by typing the following command:
 ::
 
@@ -135,7 +126,7 @@ into a console window.
 
 3. (Optional) If you want to run OpenMM on a GPU, install CUDA and/or OpenCL.
 
-  * If you have an Nvidia GPU, download CUDA 6.5 from
+  * If you have an Nvidia GPU, download CUDA 7.0 from
     https://developer.nvidia.com/cuda-downloads.  Be sure to install both the
     drivers and toolkit.  OpenCL is included with the CUDA drivers.
   * If you have an AMD GPU, download the latest version of the Catalyst driver
@@ -175,15 +166,6 @@ This will affect only the particular console window you type it into.  If you
 want to run OpenMM in another console window, you must type the above command in
 the new window.
 
-If you plan to use the CUDA platform, OpenMM also needs to locate the CUDA
-kernel compiler (:program:`nvcc`).  By default it looks for it in the location
-:file:`/usr/local/cuda/bin/nvcc`.  If you have installed the CUDA toolkit in a different
-location, you can set :envvar:`OPENMM_CUDA_COMPILER` to tell OpenMM where to find it.  For
-example,
-::
-
-    export OPENMM_CUDA_COMPILER=/opt/CUDA/cuda-6.0/bin/nvcc
-
 7. Verify your installation by typing the following command:
 ::
 
@@ -199,10 +181,9 @@ Installing on Windows
 *********************
 
 1. Download the pre-compiled binary of OpenMM for Windows, then double click the
-.zip file to expand it.  Move the files to :file:`C:\\Program Files\\OpenMM`.  (On 64 bit
-Windows, use :file:`C:\\Program Files (x86)\\OpenMM`).
+.zip file to expand it.  Move the files to :file:`C:\\Program Files\\OpenMM`.
 
-2. Make sure you have the 32-bit version of Python 3.3 (other versions will not
+2. Make sure you have the 64-bit version of Python 3.3 or 3.4 (other versions will not
 work) installed on your computer.  To do this, launch the Python program (either
 the command line version or the GUI version).  The first line in the Python
 window will indicate the version you have, as well as whether you have a 32-bit
@@ -216,7 +197,7 @@ and ignore it.)
 
 4. (Optional) If you want to run OpenMM on a GPU, install CUDA and/or OpenCL.
 
-  * If you have an Nvidia GPU, download CUDA 6.5 from
+  * If you have an Nvidia GPU, download CUDA 7.0 from
     https://developer.nvidia.com/cuda-downloads.  Be sure to install both the
     drivers and toolkit.  OpenCL is included with the CUDA drivers.
   * If you have an AMD GPU, download the latest version of the Catalyst driver
@@ -225,9 +206,8 @@ and ignore it.)
 
 5. (Optional) If you plan to use the CPU platform, it is recommended that you
 install FFTW.  Precompiled binaries are available from http://www.fftw.org.
-Even on 64-bit machines you should use the 32-bit version since the OpenMM
-binary is 32-bit.  OpenMM will still work without FFTW, but the performance of
-particle mesh Ewald (PME) will be much worse.
+OpenMM will still work without FFTW, but the performance of particle mesh Ewald
+(PME) will be much worse.
 
 6. Before running OpenMM, you must add the OpenMM and FFTW libraries to your
 PATH environment variable.  You may also need to add the Python executable to
@@ -266,7 +246,7 @@ your PATH.
     If you installed OpenMM somewhere other than the default location, you must also
     set :envvar:`OPENMM_PLUGIN_DIR` to point to the plugins directory.  If this variable is
     not set, it will assume plugins are in the default location (:file:`C:\\Program
-    Files\\OpenMM\\lib\\plugins` or :file:`C:\\Program Files (x86)\\OpenMM\\lib\\plugins`).
+    Files\\OpenMM\\lib\\plugins`).
 
 7. Verify your installation by typing the following command:
 ::

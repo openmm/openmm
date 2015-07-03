@@ -54,9 +54,12 @@
 #include <sys/timeb.h>
 #include <process.h>
 
+#ifndef ETIMEDOUT
 #define ETIMEDOUT	110
+#endif
+#ifndef ENOTSUP
 #define ENOTSUP		134
-
+#endif
 
 #define PTHREAD_CANCEL_DISABLE 0
 #define PTHREAD_CANCEL_ENABLE 0x01

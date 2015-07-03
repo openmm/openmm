@@ -23,13 +23,16 @@ extern "C" __global__ void contractPositions(mixed4* posq, mixed4* contracted) {
     const int indexInBlock = threadIdx.x-blockStart;
     __shared__ mixed3 q[2*THREAD_BLOCK_SIZE];
     __shared__ mixed3 temp[2*THREAD_BLOCK_SIZE];
-    __shared__ mixed2 w[NUM_COPIES];
+    __shared__ mixed2 w1[NUM_COPIES];
+    __shared__ mixed2 w2[NUM_CONTRACTED_COPIES];
     mixed3* qreal = &q[blockStart];
     mixed3* qimag = &q[blockStart+blockDim.x];
     mixed3* tempreal = &temp[blockStart];
     mixed3* tempimag = &temp[blockStart+blockDim.x];
     if (threadIdx.x < NUM_COPIES)
-        w[indexInBlock] = make_mixed2(cos(-indexInBlock*2*M_PI/NUM_COPIES), sin(-indexInBlock*2*M_PI/NUM_COPIES));
+        w1[indexInBlock] = make_mixed2(cos(-indexInBlock*2*M_PI/NUM_COPIES), sin(-indexInBlock*2*M_PI/NUM_COPIES));
+    if (threadIdx.x < NUM_CONTRACTED_COPIES)
+        w2[indexInBlock] = make_mixed2(cos(-indexInBlock*2*M_PI/NUM_CONTRACTED_COPIES), sin(-indexInBlock*2*M_PI/NUM_CONTRACTED_COPIES));
     __syncthreads();
     for (int particle = (blockIdx.x*blockDim.x+threadIdx.x)/NUM_COPIES; particle < NUM_ATOMS; particle += numBlocks) {
         // Load the particle position.
@@ -41,6 +44,7 @@ extern "C" __global__ void contractPositions(mixed4* posq, mixed4* contracted) {
         // Forward FFT.
         
         __syncthreads();
+        mixed2* w = w1;
         FFT_Q_FORWARD
         if (NUM_CONTRACTED_COPIES > 1) {
             // Compress the data to remove high frequencies.
@@ -54,6 +58,7 @@ extern "C" __global__ void contractPositions(mixed4* posq, mixed4* contracted) {
                 qimag[indexInBlock] = tempimag[indexInBlock < start ? indexInBlock : indexInBlock+(NUM_COPIES-NUM_CONTRACTED_COPIES)];
             }
             __syncthreads();
+            w = w2;
             FFT_Q_BACKWARD
         }
         
@@ -74,13 +79,16 @@ extern "C" __global__ void contractForces(long long* force, long long* contracte
     const mixed forceScale = 1/(mixed) 0x100000000;
     __shared__ mixed3 f[2*THREAD_BLOCK_SIZE];
     __shared__ mixed3 temp[2*THREAD_BLOCK_SIZE];
-    __shared__ mixed2 w[NUM_COPIES];
+    __shared__ mixed2 w1[NUM_COPIES];
+    __shared__ mixed2 w2[NUM_CONTRACTED_COPIES];
     mixed3* freal = &f[blockStart];
     mixed3* fimag = &f[blockStart+blockDim.x];
     mixed3* tempreal = &temp[blockStart];
     mixed3* tempimag = &temp[blockStart+blockDim.x];
     if (threadIdx.x < NUM_COPIES)
-        w[indexInBlock] = make_mixed2(cos(-indexInBlock*2*M_PI/NUM_COPIES), sin(-indexInBlock*2*M_PI/NUM_COPIES));
+        w1[indexInBlock] = make_mixed2(cos(-indexInBlock*2*M_PI/NUM_COPIES), sin(-indexInBlock*2*M_PI/NUM_COPIES));
+    if (threadIdx.x < NUM_CONTRACTED_COPIES)
+        w2[indexInBlock] = make_mixed2(cos(-indexInBlock*2*M_PI/NUM_CONTRACTED_COPIES), sin(-indexInBlock*2*M_PI/NUM_CONTRACTED_COPIES));
     __syncthreads();
     for (int particle = (blockIdx.x*blockDim.x+threadIdx.x)/NUM_COPIES; particle < NUM_ATOMS; particle += numBlocks) {
         // Load the force.
@@ -94,6 +102,7 @@ extern "C" __global__ void contractForces(long long* force, long long* contracte
 
         // Forward FFT.
         
+        mixed2* w = w2;
         if (NUM_CONTRACTED_COPIES > 1) {
             FFT_F_FORWARD
         }
@@ -110,6 +119,7 @@ extern "C" __global__ void contractForces(long long* force, long long* contracte
             fimag[indexInBlock] = (indexInBlock < end ? make_mixed3(0) : tempimag[indexInBlock-(NUM_COPIES-NUM_CONTRACTED_COPIES)]);
         }
         __syncthreads();
+        w = w1;
         FFT_F_BACKWARD
         
         // Store results.

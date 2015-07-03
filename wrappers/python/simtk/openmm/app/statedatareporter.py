@@ -55,7 +55,7 @@ class StateDataReporter(object):
     """
 
     def __init__(self, file, reportInterval, step=False, time=False, potentialEnergy=False, kineticEnergy=False, totalEnergy=False, temperature=False, volume=False, density=False,
-                 progress=False, remainingTime=False, speed=False, separator=',', systemMass=None, totalSteps=None):
+                 progress=False, remainingTime=False, speed=False, elapsedTime=False, separator=',', systemMass=None, totalSteps=None):
         """Create a StateDataReporter.
 
         Parameters:
@@ -74,6 +74,7 @@ class StateDataReporter(object):
          - remainingTime (boolean=False) Whether to write an estimate of the remaining clock time until
            completion to the file.  If this is True, you must also specify totalSteps.
          - speed (bool=False) Whether to write an estimate of the simulation speed in ns/day to the file
+         - elapsedTime (bool=False) Whether to write the elapsed time of the simulation in seconds to the file.
          - separator (string=',') The separator to use between columns in the file
          - systemMass (mass=None) The total mass to use for the system when reporting density.  If this is
            None (the default), the system mass is computed by summing the masses of all particles.  This
@@ -113,6 +114,7 @@ class StateDataReporter(object):
         self._progress = progress
         self._remainingTime = remainingTime
         self._speed = speed
+        self._elapsedTime = elapsedTime
         self._separator = separator
         self._totalMass = systemMass
         self._totalSteps = totalSteps
@@ -207,6 +209,8 @@ class StateDataReporter(object):
                 values.append('%.3g' % (elapsedNs/elapsedDays))
             else:
                 values.append('--')
+        if self._elapsedTime:
+            values.append(time.time() - self._initialClockTime)
         if self._remainingTime:
             elapsedSeconds = clockTime-self._initialClockTime
             elapsedSteps = simulation.currentStep-self._initialSteps
@@ -284,6 +288,8 @@ class StateDataReporter(object):
             headers.append('Density (g/mL)')
         if self._speed:
             headers.append('Speed (ns/day)')
+        if self._elapsedTime:
+            headers.append('Elapsed Time (s)')
         if self._remainingTime:
             headers.append('Time Remaining')
         return headers

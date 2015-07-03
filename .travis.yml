@@ -3,6 +3,9 @@ compiler:
   - clang
 
 env:
+  matrix:
+    - OPENMM_BUILD_STATIC_LIB="OFF"
+    - OPENMM_BUILD_STATIC_LIB="ON"
   global:
     # encrypted AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY to push docs to s3
     - secure: "VVKz+yOMbKsskR+PfU1HfKBWdGYYrmIXNWQz4nqXCjtg2MRCQmjDulFZaPVDvsBzis9BUhnzAQrBYUrAtN8bZSTYRg7ADFVGdPFicg3Sv0owcghTQwokIvbw3G+HDz/WAnFmqEhqm3t5pNVWNinyHpMM3zYZOVKagyj53cwAM0M="
@@ -17,7 +20,7 @@ before_install:
   - export ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer-3.3
 
 script:
-  - cmake -DCMAKE_INSTALL_PREFIX=$HOME/OpenMM .
+  - cmake -DCMAKE_INSTALL_PREFIX=$HOME/OpenMM -DOPENMM_BUILD_STATIC_LIB=$OPENMM_BUILD_STATIC_LIB .
   - make -j2
   - make -j2 install
   - sudo make PythonInstall

@@ -51,6 +51,8 @@
 using namespace OpenMM;
 using namespace std;
 
+std::vector<std::string> Platform::pluginLoadFailures;
+
 static int registerPlatforms() {
 
     // Register the Platforms built into the main library.  This should eventually be moved elsewhere.
@@ -140,6 +142,10 @@ Platform& Platform::getPlatform(int index) {
     throw OpenMMException("Invalid platform index");
 }
 
+std::vector<std::string> Platform::getPluginLoadFailures() {
+  return pluginLoadFailures;
+}
+
 Platform& Platform::getPlatformByName(const string& name) {
     for (int i = 0; i < getNumPlatforms(); i++)
         if (getPlatform(i).getName() == name)
@@ -196,8 +202,9 @@ static void* loadOneLibrary(const string& file) {
     throw OpenMMException("Loading dynamic libraries is not supported on PNaCl");
 #else    
     void *handle = dlopen(file.c_str(), RTLD_LAZY | RTLD_GLOBAL);
-    if (handle == NULL)
+    if (handle == NULL) {
         throw OpenMMException("Error loading library "+file+": "+dlerror());
+    }
     return handle;
 #endif
 }
@@ -261,12 +268,14 @@ vector<string> Platform::loadPluginsFromDirectory(const string& directory) {
     vector<void*> plugins;
 #endif
     vector<string> loadedLibraries;
+    pluginLoadFailures.resize(0);
+
     for (unsigned int i = 0; i < files.size(); ++i) {
         try {
             plugins.push_back(loadOneLibrary(directory+dirSeparator+files[i]));
             loadedLibraries.push_back(files[i]);
         } catch (OpenMMException& ex) {
-            // Just ignore it.
+	    pluginLoadFailures.push_back(ex.what());
         }
     }
     initializePlugins(plugins);
