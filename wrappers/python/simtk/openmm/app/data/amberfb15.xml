@@ -1,6 +1,6 @@
 <ForceField>
  <Info>
-  <Source>a99sc-v2-r1.itp</Source>
+  <Source>Release 1.0 of AMBER-FB15 parameters: https://github.com/pandegroup/AMBER-FB15/releases/tag/1.0 and converted from Input/a99sc-v2-r1.itp</Source>
   <DateGenerated>2015-07-04</DateGenerated>
   <Reference>Lee-Ping Wang, Kyle A. Beauchamp, Teresa Head-Gordon, William C. Swope, Julia E. Rice, David A. Case, Todd J. Martinez and Vijay S. Pande. "Systematic optimization of intramolecular parameters in a protein force field", in preparation.</Reference>
  </Info>
