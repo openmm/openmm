@@ -233,34 +233,24 @@ public:
                 
                 float minx = centerPos[0];
                 float maxx = centerPos[0];
-                float offset[3] = {-xoffset, -yoffset+voxelSizeY*y+(usePeriodic ? 0.0f : miny), voxelSizeZ*z+(usePeriodic ? 0.0f : minz)};
-                for (int k = 0; k < (int) blockAtoms.size(); k += 4) {
-                    fvec4 dist2 = maxDistanceSquared;
-                    if (y != atomVoxelIndex[k].y) {
-                        fvec4 dy1 = offset[1]-fvec4(&blockAtomY[k]);
-                        fvec4 dy2 = dy1+voxelSizeY;
-                        if (usePeriodic) {
-                            dy1 -= round(dy1*invBoxSize[1])*boxSize[1];
-                            dy2 -= round(dy2*invBoxSize[1])*boxSize[1];
-                        }
-                        fvec4 dy = min(abs(dy1), abs(dy2));
-                        dist2 -= dy*dy;
+                fvec4 offset(-xoffset, -yoffset+voxelSizeY*y+(usePeriodic ? 0.0f : miny), voxelSizeZ*z+(usePeriodic ? 0.0f : minz), 0);
+                for (int k = 0; k < (int) blockAtoms.size(); k++) {
+                    const float* atomPos = &sortedPositions[4*(blockSize*blockIndex+k)];
+                    fvec4 posVec(atomPos);
+                    fvec4 delta1 = offset-posVec;
+                    fvec4 delta2 = delta1+fvec4(0, voxelSizeY, voxelSizeZ, 0);
+                    if (usePeriodic) {
+                        delta1 -= round(delta1*invBoxSize)*boxSize;
+                        delta2 -= round(delta2*invBoxSize)*boxSize;
                     }
-                    if (z != atomVoxelIndex[k].z) {
-                        fvec4 dz1 = offset[2]-fvec4(&blockAtomZ[k]);
-                        fvec4 dz2 = dz1+voxelSizeZ;
-                        if (usePeriodic) {
-                            dz1 -= round(dz1*invBoxSize[2])*boxSize[2];
-                            dz2 -= round(dz2*invBoxSize[2])*boxSize[2];
-                        }
-                        fvec4 dz = min(abs(dz1), abs(dz2));
-                        dist2 -= dz*dz;
-                    }
-                    fvec4 dist = sqrt(dist2);
-                    int numToCheck = min(4, (int) (blockAtoms.size()-k));
-                    for (int m = 0; m < numToCheck; m++) {
-                        minx = min(minx, blockAtomX[k+m]-dist[m]-xoffset);
-                        maxx = max(maxx, blockAtomX[k+m]+dist[m]-xoffset);
+                    fvec4 delta = min(abs(delta1), abs(delta2));
+                    float dy = (y == atomVoxelIndex[k].y ? 0.0f : delta[1]);
+                    float dz = (z == atomVoxelIndex[k].z ? 0.0f : delta[2]);
+                    float dist2 = maxDistanceSquared-dy*dy-dz*dz;
+                    if (dist2 > 0) {
+                        float dist = sqrtf(dist2);
+                        minx = min(minx, atomPos[0]-dist-xoffset);
+                        maxx = max(maxx, atomPos[0]+dist-xoffset);
                     }
                 }
                 if (minx == maxx)
