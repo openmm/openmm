@@ -370,9 +370,9 @@ private:
         int getKeySize() const {return 4;}
         const char* getDataType() const {return "int2";}
         const char* getKeyType() const {return "int";}
-        const char* getMinKey() const {return "INT_MIN";}
-        const char* getMaxKey() const {return "INT_MAX";}
-        const char* getMaxValue() const {return "make_int2(INT_MAX, INT_MAX)";}
+        const char* getMinKey() const {return "(-2147483647 - 1)";}
+        const char* getMaxKey() const {return "2147483647";}
+        const char* getMaxValue() const {return "make_int2(2147483647, 2147483647)";}
         const char* getSortKey() const {return "value.y";}
     };
     void initializeScaleFactors();
