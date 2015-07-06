@@ -44,6 +44,7 @@
 #include <utility>
 #include <vector>
 #include <algorithm>
+#include <cstdio>
 
 using namespace OpenMM;
 using namespace std;
@@ -70,20 +71,29 @@ void testNeighborList(bool periodic, bool triclinic) {
     for (int i = 0; i < 4*numParticles; i++)
         if (i%4 < 3)
             positions[i] = boxSize[i%4]*genrand_real2(sfmt);
+
+    positions[0] = 15.853786;
+    positions[1] = 9.955606;
+    positions[2] = 1.799127;
+    positions[4] = 17.792002;
+    positions[5] = 9.927888;
+    positions[6] = 2.222511;
+
     vector<set<int> > exclusions(numParticles);
     for (int i = 0; i < numParticles; i++) {
-        int num = min(i+1, 10);
+        int num = min(i+1, 1);  // only self exclusion
         for (int j = 0; j < num; j++) {
             exclusions[i].insert(i-j);
             exclusions[i-j].insert(i);
         }
     }
+
     ThreadPool threads;
     CpuNeighborList neighborList(blockSize);
     neighborList.computeNeighborList(numParticles, positions, exclusions, boxVectors, periodic, cutoff, threads);
-    
+
     // Convert the neighbor list to a set for faster lookup.
-    
+
     set<pair<int, int> > neighbors;
     for (int i = 0; i < (int) neighborList.getSortedAtoms().size(); i++) {
         int blockIndex = i/blockSize;
@@ -99,9 +109,9 @@ void testNeighborList(bool periodic, bool triclinic) {
             }
         }
     }
-    
-    // Check each particle pair and figure out whether they should be in the neighbor list.
 
+
+    // Check each particle pair and figure out whether they should be in the neighbor list.
     for (int i = 0; i < numParticles; i++)
         for (int j = 0; j <= i; j++) {
             bool shouldInclude = (exclusions[i].find(j) == exclusions[i].end());
@@ -114,8 +124,19 @@ void testNeighborList(bool periodic, bool triclinic) {
             if (diff.dot(diff) > cutoff*cutoff)
                 shouldInclude = false;
             bool isIncluded = (neighbors.find(make_pair(i, j)) != neighbors.end() || neighbors.find(make_pair(j, i)) != neighbors.end());
+
             if (shouldInclude)
                 ASSERT(isIncluded);
+
+	    if (shouldInclude && !isIncluded) {
+		fprintf(stderr, "shouldInclude: (%d, %d)  %d\n", i, j, shouldInclude);
+		fprintf(stderr, "isIncluded: (%d, %d)  %d\n", i, j, isIncluded);
+		fprintf(stderr, "i:  (%f %f %f)\n", positions[4*i], positions[4*i+1], positions[4*i+2]);
+		fprintf(stderr, "j:  (%f %f %f)\n", positions[4*j], positions[4*j+1], positions[4*j+2]);
+		fprintf(stderr, "d^2        = %f\n",  diff.dot(diff));
+		fprintf(stderr, "d^2 cutoff = %f\n", cutoff*cutoff);
+		ASSERT(isIncluded);
+	    }
         }
 }
 
