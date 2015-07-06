@@ -96,6 +96,7 @@ find_program(SWIG_EXECUTABLE swig PATHS
     "$ENV{HOME}/bin" "/Users/builder/bin" "/home/builder/bin"
     NO_DEFAULT_PATH)
 find_program(SWIG_EXECUTABLE swig)
+MARK_AS_ADVANCED(SWIG_VERSION)
 if(SWIG_EXECUTABLE)
     execute_process(COMMAND ${SWIG_EXECUTABLE} -version
         OUTPUT_VARIABLE SWIG_VERSION_output ERROR_VARIABLE SWIG_VERSION_output)
@@ -106,10 +107,17 @@ else(SWIG_EXECUTABLE)
     set(SWIG_VERSION "0.0.0" CACHE STRING "Swig version" FORCE)
 endif(SWIG_EXECUTABLE)
 # Enforce swig version
-string(COMPARE LESS "${SWIG_VERSION}" "1.3.39" SWIG_VERSION_ERROR)
-if(SWIG_VERSION_ERROR)
-    message("Swig version must be 1.3.39 or greater! (You have ${SWIG_VERSION})")
-endif(SWIG_VERSION_ERROR)
+if (PYTHON_VERSION_MAJOR EQUAL 3)
+    string(COMPARE LESS "${SWIG_VERSION}" "2.0.4" SWIG_VERSION_ERROR)
+    if(SWIG_VERSION_ERROR)
+        message("Swig version must be 2.0.4 or greater for Python 3! (You have ${SWIG_VERSION})")
+    endif(SWIG_VERSION_ERROR)
+else(PYTHON_VERSION_MAJOR EQUAL 3)
+    string(COMPARE LESS "${SWIG_VERSION}" "1.3.39" SWIG_VERSION_ERROR)
+    if(SWIG_VERSION_ERROR)
+        message("Swig version must be 1.3.39 or greater for Python 2! (You have ${SWIG_VERSION})")
+    endif(SWIG_VERSION_ERROR)
+endif(PYTHON_VERSION_MAJOR EQUAL 3)
 
 find_package(Doxygen REQUIRED)
 mark_as_advanced(CLEAR DOXYGEN_EXECUTABLE)
@@ -198,7 +206,7 @@ add_custom_command(
         ${SWIG_INPUT_FILES2}
     COMMENT "Creating OpenMM Python module sources with swig..."
 )
-add_custom_target(RunSwig DEPENDS 
+add_custom_target(RunSwig DEPENDS
     "${SWIG_OPENMM_DIR}/OpenMMSwig.cxx"
     "${OPENMM_PYTHON_STAGING_DIR}/simtk/openmm/openmm.py")
 
@@ -234,7 +242,7 @@ add_custom_command(
     OUTPUT ${OPENMM_PYTHON_STAGING_DIR}/build
     COMMAND ${CMAKE_COMMAND}
     ARGS -P "${CMAKE_CURRENT_BINARY_DIR}/pysetupbuild.cmake"
-    DEPENDS 
+    DEPENDS
         ${OPENMM_PYTHON_STAGING_DIR}/setup.py
         "${CMAKE_CURRENT_BINARY_DIR}/pysetupbuild.cmake"
         ${SHARED_TARGET}
@@ -283,4 +291,3 @@ add_custom_target(PythonInstall
     WORKING_DIRECTORY ${OPENMM_PYTHON_STAGING_DIR}
     COMMENT "Installing OpenMM Python binary module..."
 )
-

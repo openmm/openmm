@@ -12,7 +12,8 @@
 #   libOpenMM_static.a
 #----------------------------------------------------
 
-find_program(PYTHON_EXECUTABLE NAMES python)
+find_package(PythonInterp)
+mark_as_advanced(CLEAR PYTHON_EXECUTABLE)
 
 # Don't create a new project name if this is part of a mega-build from the
 # parent directory
@@ -386,6 +387,7 @@ ENDIF(OPENMM_BUILD_CUDA_LIB)
 MARK_AS_ADVANCED(CUDA_VERBOSE_BUILD)
 MARK_AS_ADVANCED(CUDA_BUILD_CUBIN)
 MARK_AS_ADVANCED(CUDA_BUILD_EMULATION)
+MARK_AS_ADVANCED(CUDA_HOST_COMPILER CUDA_HOST_COMPILER_OPTIONS)
 
 FIND_PACKAGE(OpenCL QUIET)
 IF(OPENCL_FOUND)
