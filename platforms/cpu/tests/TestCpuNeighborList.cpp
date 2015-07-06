@@ -40,11 +40,11 @@
 #include "CpuPlatform.h"
 #include "sfmt/SFMT.h"
 #include <iostream>
+#include <cstdio>
 #include <set>
 #include <utility>
 #include <vector>
 #include <algorithm>
-#include <cstdio>
 
 using namespace OpenMM;
 using namespace std;
@@ -87,7 +87,6 @@ void testNeighborList(bool periodic, bool triclinic) {
             exclusions[i-j].insert(i);
         }
     }
-
     ThreadPool threads;
     CpuNeighborList neighborList(blockSize);
     neighborList.computeNeighborList(numParticles, positions, exclusions, boxVectors, periodic, cutoff, threads);
@@ -124,19 +123,8 @@ void testNeighborList(bool periodic, bool triclinic) {
             if (diff.dot(diff) > cutoff*cutoff)
                 shouldInclude = false;
             bool isIncluded = (neighbors.find(make_pair(i, j)) != neighbors.end() || neighbors.find(make_pair(j, i)) != neighbors.end());
-
             if (shouldInclude)
                 ASSERT(isIncluded);
-
-	    if (shouldInclude && !isIncluded) {
-		fprintf(stderr, "shouldInclude: (%d, %d)  %d\n", i, j, shouldInclude);
-		fprintf(stderr, "isIncluded: (%d, %d)  %d\n", i, j, isIncluded);
-		fprintf(stderr, "i:  (%f %f %f)\n", positions[4*i], positions[4*i+1], positions[4*i+2]);
-		fprintf(stderr, "j:  (%f %f %f)\n", positions[4*j], positions[4*j+1], positions[4*j+2]);
-		fprintf(stderr, "d^2        = %f\n",  diff.dot(diff));
-		fprintf(stderr, "d^2 cutoff = %f\n", cutoff*cutoff);
-		ASSERT(isIncluded);
-	    }
         }
 }
 
