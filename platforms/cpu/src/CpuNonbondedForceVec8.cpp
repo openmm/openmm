@@ -37,6 +37,12 @@ using namespace OpenMM;
     #undef __AVX__
 #endif
 
+#if defined (__clang__) && (__clang_major__==3) && (__clang_minor__==6)
+  // Workaround for a compiler bug in Clang 3.6.0
+  #undef __AVX__
+#endif
+
+
 #ifndef __AVX__
 bool isVec8Supported() {
     return false;
