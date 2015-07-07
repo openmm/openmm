@@ -98,16 +98,13 @@ void CudaCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool 
     for (vector<CudaContext::ForcePreComputation*>::iterator iter = cu.getPreComputations().begin(); iter != cu.getPreComputations().end(); ++iter)
         (*iter)->computeForceAndEnergy(includeForces, includeEnergy, groups);
     CudaNonbondedUtilities& nb = cu.getNonbondedUtilities();
-    bool includeNonbonded = ((groups&(1<<nb.getForceGroup())) != 0);
     cu.setComputeForceCount(cu.getComputeForceCount()+1);
-    if (includeNonbonded)
-        nb.prepareInteractions();
+    nb.prepareInteractions(groups);
 }
 
 double CudaCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForces, bool includeEnergy, int groups, bool& valid) {
     cu.getBondedUtilities().computeInteractions(groups);
-    if ((groups&(1<<cu.getNonbondedUtilities().getForceGroup())) != 0)
-        cu.getNonbondedUtilities().computeInteractions();
+    cu.getNonbondedUtilities().computeInteractions(groups);
     double sum = 0.0;
     for (vector<CudaContext::ForcePostComputation*>::iterator iter = cu.getPostComputations().begin(); iter != cu.getPostComputations().end(); ++iter)
         sum += (*iter)->computeForceAndEnergy(includeForces, includeEnergy, groups);
@@ -2570,8 +2567,9 @@ void CudaCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOBCF
     surfaceAreaFactor = -6.0*4*M_PI*force.getSurfaceAreaEnergy();
     bool useCutoff = (force.getNonbondedMethod() != GBSAOBCForce::NoCutoff);
     bool usePeriodic = (force.getNonbondedMethod() != GBSAOBCForce::NoCutoff && force.getNonbondedMethod() != GBSAOBCForce::CutoffNonPeriodic);
+    cutoff = force.getCutoffDistance();
     string source = CudaKernelSources::gbsaObc2;
-    nb.addInteraction(useCutoff, usePeriodic, false, force.getCutoffDistance(), vector<vector<int> >(), source, force.getForceGroup());
+    nb.addInteraction(useCutoff, usePeriodic, false, cutoff, vector<vector<int> >(), source, force.getForceGroup());
     nb.addParameter(CudaNonbondedUtilities::ParameterInfo("obcParams", "float", 2, sizeof(float2), params->getDevicePointer()));;
     nb.addParameter(CudaNonbondedUtilities::ParameterInfo("bornForce", "long long", 1, sizeof(long long), bornForce->getDevicePointer()));;
     cu.addForce(new CudaGBSAOBCForceInfo(force));
@@ -2591,8 +2589,8 @@ double CudaCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeFor
             defines["USE_PERIODIC"] = "1";
         if (cu.getComputeCapability() >= 3.0 && !cu.getUseDoublePrecision())
             defines["ENABLE_SHUFFLE"] = "1";
-        defines["CUTOFF_SQUARED"] = cu.doubleToString(nb.getCutoffDistance()*nb.getCutoffDistance());
-        defines["CUTOFF"] = cu.doubleToString(nb.getCutoffDistance());
+        defines["CUTOFF_SQUARED"] = cu.doubleToString(cutoff*cutoff);
+        defines["CUTOFF"] = cu.doubleToString(cutoff);
         defines["PREFACTOR"] = cu.doubleToString(prefactor);
         defines["SURFACE_AREA_FACTOR"] = cu.doubleToString(surfaceAreaFactor);
         defines["NUM_ATOMS"] = cu.intToString(cu.getNumAtoms());
@@ -2764,6 +2762,7 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
     cu.setAsCurrent();
     if (cu.getPlatformData().contexts.size() > 1)
         throw OpenMMException("CustomGBForce does not support using multiple CUDA devices");
+    cutoff = force.getCutoffDistance();
     bool useExclusionsForValue = false;
     numComputedValues = force.getNumComputedValues();
     vector<string> computedValueNames(force.getNumComputedValues());
@@ -2956,7 +2955,7 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
             pairValueDefines["NEED_PADDING"] = "1";
         pairValueDefines["WARPS_PER_GROUP"] = cu.intToString(cu.getNonbondedUtilities().getForceThreadBlockSize()/CudaContext::TileSize);
         pairValueDefines["THREAD_BLOCK_SIZE"] = cu.intToString(cu.getNonbondedUtilities().getForceThreadBlockSize());
-        pairValueDefines["CUTOFF_SQUARED"] = cu.doubleToString(force.getCutoffDistance()*force.getCutoffDistance());
+        pairValueDefines["CUTOFF_SQUARED"] = cu.doubleToString(cutoff*cutoff);
         pairValueDefines["NUM_ATOMS"] = cu.intToString(cu.getNumAtoms());
         pairValueDefines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
         pairValueDefines["NUM_BLOCKS"] = cu.intToString(cu.getNumAtomBlocks());
@@ -3123,7 +3122,7 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
             pairEnergyDefines["NEED_PADDING"] = "1";
         pairEnergyDefines["THREAD_BLOCK_SIZE"] = cu.intToString(cu.getNonbondedUtilities().getForceThreadBlockSize());
         pairEnergyDefines["WARPS_PER_GROUP"] = cu.intToString(cu.getNonbondedUtilities().getForceThreadBlockSize()/CudaContext::TileSize);
-        pairEnergyDefines["CUTOFF_SQUARED"] = cu.doubleToString(force.getCutoffDistance()*force.getCutoffDistance());
+        pairEnergyDefines["CUTOFF_SQUARED"] = cu.doubleToString(cutoff*cutoff);
         pairEnergyDefines["NUM_ATOMS"] = cu.intToString(cu.getNumAtoms());
         pairEnergyDefines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
         pairEnergyDefines["NUM_BLOCKS"] = cu.intToString(cu.getNumAtomBlocks());
@@ -3367,7 +3366,7 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
             globals->upload(globalParamValues);
             arguments.push_back(CudaNonbondedUtilities::ParameterInfo(prefix+"globals", "float", 1, sizeof(float), globals->getDevicePointer()));
         }
-        cu.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, force.getNumExclusions() > 0, force.getCutoffDistance(), exclusionList, source, force.getForceGroup());
+        cu.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, force.getNumExclusions() > 0, cutoff, exclusionList, source, force.getForceGroup());
         for (int i = 0; i < (int) parameters.size(); i++)
             cu.getNonbondedUtilities().addParameter(parameters[i]);
         for (int i = 0; i < (int) arguments.size(); i++)
@@ -3393,7 +3392,7 @@ double CudaCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeFo
             int endExclusionIndex = (cu.getContextIndex()+1)*numExclusionTiles/numContexts;
             pairValueDefines["FIRST_EXCLUSION_TILE"] = cu.intToString(startExclusionIndex);
             pairValueDefines["LAST_EXCLUSION_TILE"] = cu.intToString(endExclusionIndex);
-            pairValueDefines["CUTOFF"] = cu.doubleToString(nb.getCutoffDistance());
+            pairValueDefines["CUTOFF"] = cu.doubleToString(cutoff);
             CUmodule module = cu.createModule(CudaKernelSources::vectorOps+pairValueSrc, pairValueDefines);
             pairValueKernel = cu.getKernel(module, "computeN2Value");
             pairValueSrc = "";
@@ -3407,7 +3406,7 @@ double CudaCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeFo
             int endExclusionIndex = (cu.getContextIndex()+1)*numExclusionTiles/numContexts;
             pairEnergyDefines["FIRST_EXCLUSION_TILE"] = cu.intToString(startExclusionIndex);
             pairEnergyDefines["LAST_EXCLUSION_TILE"] = cu.intToString(endExclusionIndex);
-            pairEnergyDefines["CUTOFF"] = cu.doubleToString(nb.getCutoffDistance());
+            pairEnergyDefines["CUTOFF"] = cu.doubleToString(cutoff);
             CUmodule module = cu.createModule(CudaKernelSources::vectorOps+pairEnergySrc, pairEnergyDefines);
             pairEnergyKernel = cu.getKernel(module, "computeN2Energy");
             pairEnergySrc = "";
