@@ -121,21 +121,6 @@ void testArithmetic() {
     f1 = fvec8(0.5, 1.0, 1.5, 2.0,   2.5, 3.0, 3.5, 4.0);
     f1 /= fvec8(1, 2, 3, 4, 5, 6, 7, 8);
     ASSERT_VEC8_EQUAL(f1, 0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5);
-
-    // Need AVX2 for these
-    // ivec8 i1(1, 2, 3, 4, 10, 11, 12, 13);
-    // ASSERT_VEC8_EQUAL_INT(i1+ivec8(5, 2, 1, 3, 0, 4, 2, 1), 6,  4,  4,  7, 10, 15, 14, 14);
-    // ASSERT_VEC8_EQUAL_INT(i1-ivec8(5, 2, 1, 3, 0, 4, 2, 1), -4,  0,  2,  1, 10,  7, 10, 12);
-    // ASSERT_VEC8_EQUAL_INT(i1*ivec8(5, 2, 1, 3, 0, 4, 2, 1), 5,  4,  3, 12,  0, 44, 24, 13);
-    // i1 = ivec4(1, 2, 3, 4);
-    // i1 += ivec4(5, 2, 1, 3);
-    // ASSERT_VEC4_EQUAL_INT(i1, 6, 4, 4, 7);
-    // i1 = ivec4(1, 2, 3, 4);
-    // i1 -= ivec4(5, 2, 1, 3);
-    // ASSERT_VEC4_EQUAL_INT(i1, -4, 0, 2, 1);
-    // i1 = ivec4(1, 2, 3, 4);
-    // i1 *= ivec4(5, 2, 1, 3);
-    // ASSERT_VEC4_EQUAL_INT(i1, 5, 4, 3, 12);
 }
 
 void testLogic() {
@@ -180,15 +165,6 @@ void testComparisons() {
     ASSERT_VEC8_EQUAL(blend(v1, v2,
         fvec8(1.0, 1.5, 3.0, 2.2, 10.0, 10.5, 13.0, 12.2)>=fvec8(1.1, 1.5, 3.0, 2.1, 10.1, 10.5, 13.0, 12.1)),
         0.0, 1.5, 1.5, 1.5, 0.0, 1.5, 1.5, 1.5);
-
-    // Need AVX2 for integer comparisons
-    // fvec4 imask(3, 3, 3, 3);
-    // ASSERT_VEC4_EQUAL_INT((ivec4(1, 3, 7, 5)==ivec4(2, 3, 7, 4))&imask, 0, 3, 3, 0);
-    // ASSERT_VEC4_EQUAL_INT((ivec4(1, 3, 7, 5)!=ivec4(2, 3, 7, 4))&imask, 3, 0, 0, 3);
-    // ASSERT_VEC4_EQUAL_INT((ivec4(1, 3, 7, 5)<ivec4(2, 3, 7, 4))&imask, 3, 0, 0, 0);
-    // ASSERT_VEC4_EQUAL_INT((ivec4(1, 3, 7, 5)>ivec4(2, 3, 7, 4))&imask, 0, 0, 0, 3);
-    // ASSERT_VEC4_EQUAL_INT((ivec4(1, 3, 7, 5)<=ivec4(2, 3, 7, 4))&imask, 3, 3, 3, 0);
-    // ASSERT_VEC4_EQUAL_INT((ivec4(1, 3, 7, 5)>=ivec4(2, 3, 7, 4))&imask, 0, 3, 3, 3);
 }
 
 void testMathFunctions() {
