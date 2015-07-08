@@ -1,3 +1,5 @@
+%module openmm
+
 %include "factory.i"
 %include "std_string.i"
 %include "std_iostream.i"

@@ -1,19 +1,55 @@
 #!/usr/bin/env python
 #
 #
- 
+
 """Build swig imput file from xml encoded header files (see gccxml)."""
 __author__ = "Randall J. Radmer"
 __version__ = "1.0"
-  
- 
+
+
 import sys, os
 import time
 import getopt
 import re
 import xml.etree.ElementTree as etree
 
-#
+try:
+    from html.parser import HTMLParser
+except ImportError:
+    # python 2
+    from HTMLParser import HTMLParser
+
+
+def striphtmltags(s):
+    """Strip a couple html tags used inside docstrings in the C++ source
+    to produce something more easily read as plain text.
+    """
+    class ConvertLists(HTMLParser):
+        def reset(self):
+            super(ConvertLists, self).reset()
+            self.out = []
+
+        def handle_starttag(self, tag, attrs):
+            if tag == 'li':
+                self.out.append('\n - ')
+        def handle_data(self, data):
+            self.out.append(data.strip())
+
+    convertlists = ConvertLists()
+
+    def replace_ul_tags(m):
+        a, b = m.span()
+        sub = s[a:b]
+
+        convertlists.reset()
+        convertlists.feed(sub)
+        return '\n%s\n\n' % ''.join(convertlists.out)
+
+    s = re.sub('\s*(<ul>.*</ul>\s*)', replace_ul_tags, s, flags=re.MULTILINE | re.DOTALL)
+    s = s.replace('<i>', '_')
+    s = s.replace('</i>', '_')
+    return s
+
 
 INDENT = "   ";
 
@@ -83,7 +119,7 @@ def getClassMethodList(classNode, skipMethods):
     shortClassName=stripOpenmmPrefix(className)
     methodList=[]
     for section in findNodes(classNode, "sectiondef", kind="public-static-func")+findNodes(classNode, "sectiondef", kind="public-func"):
-        for memberNode in findNodes(section, "memberdef", kind="function", prot="public"):    
+        for memberNode in findNodes(section, "memberdef", kind="function", prot="public"):
             methDefinition = getText("definition", memberNode)
             shortMethDefinition=stripOpenmmPrefix(methDefinition)
             methName=shortMethDefinition.split()[-1]
@@ -95,14 +131,14 @@ def getClassMethodList(classNode, skipMethods):
                     sys.stderr.write("Warning: Including class %s\n" %
                                      shortClassName)
                     continue
-    
+
             if (shortClassName, methName) in skipMethods: continue
-    
+
             # set template info
-    
+
             templateType = getText("templateparamlist/param/type", memberNode)
             templateName = getText("templateparamlist/param/declname", memberNode)
-    
+
             methodList.append( (shortClassName,
                                 memberNode,
                                 shortMethDefinition,
@@ -266,6 +302,7 @@ class SwigInputBuilder:
                 dNode = classNode.find('detaileddescription')
                 if dNode is not None:
                     docstring = getNodeText(dNode).strip().replace('"', '\\"')
+                    docstring = striphtmltags(docstring)
                     self.fOutDocstring.write('%%feature("docstring") %s "%s";\n' % (className, docstring))
             self.fOut.write("class %s" % className)
             if className in self.configModule.MISSING_BASE_CLASSES:
