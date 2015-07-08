@@ -45,9 +45,11 @@ def striphtmltags(s):
         convertlists.feed(sub)
         return '\n%s\n\n' % ''.join(convertlists.out)
 
+    s = s.replace('<i>', '_').replace('</i>', '_')
+    s = s.replace('<b>', '*').replace('</b>', '*')
+
     s = re.sub('\s*(<ul>.*</ul>\s*)', replace_ul_tags, s, flags=re.MULTILINE | re.DOTALL)
-    s = s.replace('<i>', '_')
-    s = s.replace('</i>', '_')
+
     return s
 
 
