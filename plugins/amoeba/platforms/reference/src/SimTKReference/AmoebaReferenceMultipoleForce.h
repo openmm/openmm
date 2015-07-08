@@ -47,10 +47,13 @@ const RealOpenMM oneThird = 1.0/3.0;
 const RealOpenMM twoThirds = 2.0/3.0;
 const RealOpenMM fourThirds = 4.0/3.0;
 const RealOpenMM fourSqrtOneThird = 4.0/sqrt(3.0);
+const RealOpenMM sqrtFourThirds = 2.0/sqrt(3.0);
+const RealOpenMM sqrtOneThird = 1.0/sqrt(3.0);
+const RealOpenMM sqrtThree = sqrt(3.0);
 const RealOpenMM oneNinth = 1.0/9.0;
 const RealOpenMM fourOverFortyFive = 4.0/45.0;
 const RealOpenMM fourOverFifteen = 4.0/15.0;
-#endif
+#endif // SPHERICAL_MULTIPOLES
 
 
 /**
@@ -837,7 +840,7 @@ protected:
      * @param D1                    The input spherical harmonic dipole rotation matrix
      * @param D2                    The output spherical harmonic quadrupole rotation matrix
      */
-     void buildSphericalQuadrupoleMatrix(const RealOpenMM (&D1)[3][3], RealOpenMM (&D2)[5][5]) const;
+     void buildSphericalQuadrupoleRotationMatrix(const RealOpenMM (&D1)[3][3], RealOpenMM (&D2)[5][5]) const;
 #endif
 
     /**
