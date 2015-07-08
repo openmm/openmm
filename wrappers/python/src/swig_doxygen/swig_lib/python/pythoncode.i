@@ -233,13 +233,13 @@ def _stripUnit(arg):
             arg = arg.value_in_unit_system(unit.md_unit_system)
         # JDC: End workaround.
     elif isinstance(arg, dict):
-        newKeys = stripUnits(arg.keys())
-        newValues = stripUnits(arg.values())
+        newKeys = [_stripUnit(k) for k in arg.keys()]
+        newValues = [_stripUnit(v) for v in arg.values()]
         arg = dict(zip(newKeys, newValues))
     elif not isinstance(arg, _string_types):
         try:
             # Reclusively strip units from all quantities
-            arg = stripUnits(arg)
+            arg = [_stripUnit(a) for a in arg]
         except TypeError:
             pass
     return arg
