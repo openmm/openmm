@@ -26,7 +26,7 @@ def striphtmltags(s):
     """
     class ConvertLists(HTMLParser):
         def reset(self):
-            super(ConvertLists, self).reset()
+            HTMLParser.reset(self)
             self.out = []
 
         def handle_starttag(self, tag, attrs):
