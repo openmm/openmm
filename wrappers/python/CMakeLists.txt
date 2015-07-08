@@ -176,7 +176,7 @@ add_custom_command(
         -o OpenMMSwigHeaders.i
         -a swig_lib/python/pythonprepend.i
         -z swig_lib/python/pythonappend.i
-	-v "${SWIG_VERSION}"
+        -v "${SWIG_VERSION}"
     WORKING_DIRECTORY "${SWIG_OPENMM_DIR}"
     DEPENDS
         "${SWIG_OPENMM_DIR}/swigInputConfig.py"
