@@ -219,68 +219,30 @@ class State(_object):
         return self._paramMap
 
 
-def stripUnits(args):
+def _stripUnit(arg):
+    """Remove units from a quantity and convert to OpenMM unit system,
+    suitable for use in C++ layer.
     """
-    getState(self, quantity)
-          -> value with *no* units
-
-    Examples
-    >>> import simtk
-
-    >>> x = 5
-    >>> print x
-    5
-
-    >>> x = stripUnits((5*simtk.unit.nanometer,))
-    >>> x
-    (5,)
-
-    >>> arg1 = 5*simtk.unit.angstrom
-    >>> x = stripUnits((arg1,))
-    >>> x
-    (0.5,)
-
-    >>> arg1 = 5
-    >>> x = stripUnits((arg1,))
-    >>> x
-    (5,)
-
-    >>> arg1 = (1*simtk.unit.angstrom, 5*simtk.unit.angstrom)
-    >>> x = stripUnits((arg1,))
-    >>> x
-    ((0.10000000000000001, 0.5),)
-
-    >>> arg1 = (1*simtk.unit.angstrom,
-    ...         5*simtk.unit.kilojoule_per_mole,
-    ...         1*simtk.unit.kilocalorie_per_mole)
-    >>> y = stripUnits((arg1,))
-    >>> y
-    ((0.10000000000000001, 5, 4.1840000000000002),)
-
-    """
-    newArgList=[]
-    for arg in args:
-        if 'numpy' in sys.modules and isinstance(arg, numpy.ndarray):
-           arg = arg.tolist()
-        elif unit.is_quantity(arg):
-            # JDC: Ugly workaround for OpenMM using 'bar' for fundamental pressure unit.
-            if arg.unit.is_compatible(unit.bar):
-                arg = arg / unit.bar
-            else:
-                arg = arg.value_in_unit_system(unit.md_unit_system)
-            # JDC: End workaround.
-        elif isinstance(arg, dict):
-            newKeys = stripUnits(arg.keys())
-            newValues = stripUnits(arg.values())
-            arg = dict(zip(newKeys, newValues))
-        elif not isinstance(arg, _string_types):
-            try:
-                # Reclusively strip units from all quantities
-                arg=stripUnits(arg)
-            except TypeError:
-                pass
-        newArgList.append(arg)
-    return tuple(newArgList)
+    if 'numpy' in sys.modules and isinstance(arg, numpy.ndarray):
+        arg = arg.tolist()
+    elif unit.is_quantity(arg):
+        # JDC: Ugly workaround for OpenMM using 'bar' for fundamental pressure unit.
+        if arg.unit.is_compatible(unit.bar):
+            arg = arg / unit.bar
+        else:
+            arg = arg.value_in_unit_system(unit.md_unit_system)
+        # JDC: End workaround.
+    elif isinstance(arg, dict):
+        newKeys = stripUnits(arg.keys())
+        newValues = stripUnits(arg.values())
+        arg = dict(zip(newKeys, newValues))
+    elif not isinstance(arg, _string_types):
+        try:
+            # Reclusively strip units from all quantities
+            arg = stripUnits(arg)
+        except TypeError:
+            pass
+    return arg
 %}
 
 %pythonappend OpenMM::Context::Context %{
