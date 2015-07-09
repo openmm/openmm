@@ -177,7 +177,31 @@ namespace OpenMM {
  * }
  * integrator.addComputePerDof("v", "v+0.5*dt*f1/m");
  * </pre></tt>
- * 
+ *
+ * The sequence of computations in a CustomIntegrator can include flow control in
+ * the form of "if" and "while" blocks.  The computations inside an "if" block
+ * are executed either zero or one times, depending on whether a condition is
+ * true.  The computations inside a "while" block are executed repeatedly for as
+ * long as the condition remains true.  Be very careful when writing "while"
+ * blocks; there is nothing to stop you from creating an infinite loop!
+ *
+ * For example, suppose you are writing a Monte Carlo algorithm.  Assume you have
+ * already computed a new set of particle coordinates "xnew" and a step acceptance
+ * probability "acceptanceProbability".  The following lines use an "if" block
+ * to decide whether to accept the step, and if it is accepted, store the new
+ * positions into "x".
+ *
+ * <tt><pre>
+ * integrator.beginIfBlock("uniform < acceptanceProbability");
+ * integrator.computePerDof("x", "xnew");
+ * integrator.endBlock();
+ * </pre></tt>
+ *
+ * The condition in an "if" or "while" block is evaluated globally, so it may
+ * only involve global variables, not per-DOF ones.  It may use any of the
+ * following comparison operators: =, <. >, !=, <=, >=.  Blocks may be nested
+ * inside each other.
+ *
  * An Integrator has one other job in addition to evolving the equations of motion:
  * it defines how to compute the kinetic energy of the system.  Depending on the
  * integration method used, simply summing mv<sup>2</sup>/2 over all degrees of
@@ -238,7 +262,19 @@ public:
         /**
          * Allow Forces to update the context state.
          */
-        UpdateContextState = 5
+        UpdateContextState = 5,
+        /**
+         * Begin an "if" block.
+         */
+        BeginIfBlock = 6,
+        /**
+         * Begin a while" block.
+         */
+        BeginWhileBlock = 7,
+        /**
+         * End an "if" or "while" block.
+         */
+        EndBlock = 8
     };
     /**
      * Create a CustomIntegrator.
@@ -407,6 +443,35 @@ public:
      * @return the index of the step that was added
      */
     int addUpdateContextState();
+    /**
+     * Add a step which begins a new "if" block.
+     *
+     * @param expression  a mathematical expression involving a comparison operator
+     *                    and global variables.  All steps between this one and
+     *                    the end of the block are executed only if the condition
+     *                    is true.
+     *
+     * @return the index of the step that was added
+     */
+    int beginIfBlock(const std::string& condition);
+    /**
+     * Add a step which begins a new "while" block.
+     *
+     * @param expression  a mathematical expression involving a comparison operator
+     *                    and global variables.  All steps between this one and
+     *                    the end of the block are executed repeatedly as long as
+     *                    the condition remains true.
+     *
+     * @return the index of the step that was added
+     */
+    int beginWhileBlock(const std::string& condition);
+    /**
+     * Add a step which marks the end of the most recently begun "if" or "while"
+     * block.
+     *
+     * @return the index of the step that was added
+     */
+    int endBlock();
     /**
      * Get the details of a computation step that has been added to the integration algorithm.
      * 
