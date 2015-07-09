@@ -163,7 +163,6 @@ set(SWIG_INPUT_FILES2
     "${SWIG_OPENMM_DIR}/swig_lib/python/header.i"
     "${SWIG_OPENMM_DIR}/swig_lib/python/pythoncode.i"
     "${SWIG_OPENMM_DIR}/swig_lib/python/typemaps.i"
-    "${SWIG_OPENMM_DIR}/swig_lib/python/pythonprepend_all.i"
 )
 
 # Create input files for swig
