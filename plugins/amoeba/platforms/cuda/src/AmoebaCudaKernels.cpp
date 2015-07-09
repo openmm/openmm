@@ -2407,7 +2407,7 @@ void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const Amoeba
     replacements["TAPER_C5"] = cu.doubleToString(6/pow(taperCutoff-cutoff, 5.0));
     bool useCutoff = (force.getNonbondedMethod() != AmoebaVdwForce::NoCutoff);
     nonbonded->addInteraction(useCutoff, useCutoff, true, force.getCutoff(), exclusions,
-        cu.replaceStrings(CudaAmoebaKernelSources::amoebaVdwForce2, replacements), force.getForceGroup());
+        cu.replaceStrings(CudaAmoebaKernelSources::amoebaVdwForce2, replacements), 0);
     
     // Create the other kernels.
     
@@ -2429,8 +2429,8 @@ double CudaCalcAmoebaVdwForceKernel::execute(ContextImpl& context, bool includeF
     void* prepareArgs[] = {&cu.getForce().getDevicePointer(), &cu.getPosq().getDevicePointer(), &tempPosq->getDevicePointer(),
         &bondReductionAtoms->getDevicePointer(), &bondReductionFactors->getDevicePointer()};
     cu.executeKernel(prepareKernel, prepareArgs, cu.getPaddedNumAtoms());
-    nonbonded->prepareInteractions();
-    nonbonded->computeInteractions();
+    nonbonded->prepareInteractions(1);
+    nonbonded->computeInteractions(1);
     void* spreadArgs[] = {&cu.getForce().getDevicePointer(), &tempForces->getDevicePointer(), &bondReductionAtoms->getDevicePointer(), &bondReductionFactors->getDevicePointer()};
     cu.executeKernel(spreadKernel, spreadArgs, cu.getPaddedNumAtoms());
     tempPosq->copyTo(cu.getPosq());
@@ -2534,7 +2534,7 @@ void CudaCalcAmoebaWcaDispersionForceKernel::initialize(const System& system, co
     // just so that CudaNonbondedUtilities will keep track of the tiles.
     
     vector<vector<int> > exclusions;
-    cu.getNonbondedUtilities().addInteraction(false, false, false, cu.getNonbondedUtilities().getCutoffDistance(), exclusions, "", force.getForceGroup());
+    cu.getNonbondedUtilities().addInteraction(false, false, false, 1.0, exclusions, "", force.getForceGroup());
     cu.addForce(new ForceInfo(force));
 }
 
