@@ -1,19 +1,19 @@
 #!/usr/bin/env python
 #
 #
- 
+
 """Build swig imput file from xml encoded header files (see gccxml)."""
 __author__ = "Randall J. Radmer"
 __version__ = "1.0"
-  
- 
+
+
 import sys, os
 import time
 import getopt
 import re
 import xml.etree.ElementTree as etree
-
-#
+from distutils.version import LooseVersion
+from collections import defaultdict
 
 INDENT = "   ";
 
@@ -78,12 +78,13 @@ def findNodes(parent, path, **args):
             nodes.append(node)
     return nodes
 
+
 def getClassMethodList(classNode, skipMethods):
     className = getText("compoundname", classNode)
     shortClassName=stripOpenmmPrefix(className)
     methodList=[]
     for section in findNodes(classNode, "sectiondef", kind="public-static-func")+findNodes(classNode, "sectiondef", kind="public-func"):
-        for memberNode in findNodes(section, "memberdef", kind="function", prot="public"):    
+        for memberNode in findNodes(section, "memberdef", kind="function", prot="public"):
             methDefinition = getText("definition", memberNode)
             shortMethDefinition=stripOpenmmPrefix(methDefinition)
             methName=shortMethDefinition.split()[-1]
@@ -95,14 +96,14 @@ def getClassMethodList(classNode, skipMethods):
                     sys.stderr.write("Warning: Including class %s\n" %
                                      shortClassName)
                     continue
-    
+
             if (shortClassName, methName) in skipMethods: continue
-    
+
             # set template info
-    
+
             templateType = getText("templateparamlist/param/type", memberNode)
             templateName = getText("templateparamlist/param/declname", memberNode)
-    
+
             methodList.append( (shortClassName,
                                 memberNode,
                                 shortMethDefinition,
@@ -120,8 +121,12 @@ class SwigInputBuilder:
                  docstringFilename=None,
                  pythonprependFilename=None,
                  pythonappendFilename=None,
-                 skipAdditionalMethods=[]):
+                 skipAdditionalMethods=[],
+                 SWIG_VERSION='3.0.2'):
         self.nodeByID={}
+
+        # describe me
+        self.SWIG_COMPACT_ARGUMENTS = LooseVersion(SWIG_VERSION) < LooseVersion('3.0.6')
 
         self.configModule = __import__(os.path.splitext(configFilename)[0])
 
@@ -164,6 +169,23 @@ class SwigInputBuilder:
 
         self._orderedClassNodes=self._buildOrderedClassNodes()
 
+
+    def getInputArgumentNames(self, paramList, shortClassName, methName):
+        names = []
+        for pNode in paramList:
+            try:
+                pType = getText('type', pNode)
+            except IndexError:
+                pType = getText('type/ref', pNode)
+            pName = getText('declname', pNode)
+            key = (shortClassName, methName, pName)
+
+            if ((pType.find('&') < 0 or 'const' in pType.split()) and
+                key not in self.configModule.NO_OUTPUT_ARGS):
+                names.append(pName)
+
+        return names
+
     def _getNodeByID(self, id):
         if id not in self.nodeByID:
             for node in findNodes(self.doc.getroot(), "compounddef", id=id):
@@ -187,7 +209,6 @@ class SwigInputBuilder:
                 baseNode = self._getNodeByID(baseNodeID)
                 self._findBaseNodes(baseNode, excludedClassNodes)
         excludedClassNodes.append(node)
-
 
     def writeFactories(self):
         self.fOut.write("\n/* Declare factories */\n\n")
@@ -282,7 +303,6 @@ class SwigInputBuilder:
             self.writeMethods(classNode)
             self.fOut.write("};\n\n")
         self.fOut.write("\n")
-
     def writeEnumerations(self, classNode):
         enumNodes = []
         for section in findNodes(classNode, "sectiondef", kind="public-type"):
@@ -310,7 +330,12 @@ class SwigInputBuilder:
 
 
     def writeMethods(self, classNode):
-        methodList=getClassMethodList(classNode, self.skipMethods)
+        methodList = getClassMethodList(classNode, self.skipMethods)
+
+        methodCounter = defaultdict(lambda: 0)
+        for item in methodList:
+            if item[6] == '':  # skip templated
+                methodCounter[item[3]] += 1
 
         #write only Constructors
         for items in methodList:
@@ -319,12 +344,14 @@ class SwigInputBuilder:
              isConstructors, isDestructor, templateType, templateName) = items
             if isConstructors:
                 mArgsstring = getText("argsstring", memberNode)
+
                 try:
                     pExceptions = " %s" % getText('exceptions', memberNode)
                 except IndexError:
                     pExceptions = ""
                 self.fOut.write("%s%s%s%s;\n" % (INDENT, shortMethDefinition,
                                                  mArgsstring, pExceptions))
+
         #write only Destructors
         for items in methodList:
             (shortClassName, memberNode,
@@ -399,31 +426,53 @@ class SwigInputBuilder:
 
             #write pythonprepend blocks
             mArgsstring = getText("argsstring", memberNode)
-            if self.fOutPythonprepend and \
-               len(paramList) and \
-               mArgsstring.find('=0')<0:
-                key=(shortClassName, methName)
+
+            if self.fOutPythonprepend and isConstructors:
+                prependText = '%%pythonprepend OpenMM::%s::%s %%{\n' % (
+                    (shortClassName, methName))
+                prependText += '{indent}args = tuple(map(_stripUnit, args))\n'.format(
+                    indent=INDENT)
+                prependText += '%}\n\n'
+                self.fOutPythonprepend.write(prependText)
+
+            elif self.fOutPythonprepend and len(paramList) > 0 and mArgsstring.find('=0') < 0:
+                prependText = '%%pythonprepend OpenMM::%s::%s%s %%{\n' % (
+                    (shortClassName, methName, mArgsstring))
+
+                # determine whether or not the signature for the swigged python method
+                # will be like ``def methodName(self, *args)``
+                # or ``def methodName(self, arg1, arg2)``
+                # Depending on the style, we need to generate different code for stripping
+                # the units
+                usesCompactArguments = (
+                    self.SWIG_COMPACT_ARGUMENTS
+                    or (methodCounter[methName] > 1)
+                    or any(getText('defval', p) not in ('', 'true', 'false') for p in paramList))
+
+                if usesCompactArguments:
+                    prependText += '{indent}args = tuple(map(_stripUnit, args))\n'.format(
+                        indent=INDENT)
+                else:
+                    names = self.getInputArgumentNames(paramList, shortClassName, methName)
+                    if len(names) > 0:
+                        prependText += '{indent}{names} = map(_stripUnit, ({names}))\n'.format(
+                            indent=INDENT, names=', '.join(names)+',')
+
+                key = (shortClassName, methName)
                 if key in self.configModule.STEAL_OWNERSHIP:
                     for argNum in self.configModule.STEAL_OWNERSHIP[key]:
-                        self.fOutPythonprepend.write("%pythonprepend")
-                        self.fOutPythonprepend.write(" OpenMM::%s::%s%s %%{\n"
-                                                     % (shortClassName,
-                                                        methName,
-                                                        mArgsstring))
-                        self.fOutPythonprepend.write(
-                                         "%sif not args[%s].thisown:\n"
-                                         % (INDENT, argNum))
-                        s = 's = "the %s object does not own its'
-                        s = '%s corresponding OpenMM object" \\' % s
-                        self.fOutPythonprepend.write("%s   %s\n" % (INDENT, s))
-
-                        s = '   %% args[%s].__class__.__name__' % argNum
-                        self.fOutPythonprepend.write("%s   %s\n" % (INDENT, s))
-
-                        s = "raise Exception(s)"
-                        self.fOutPythonprepend.write("%s   %s\n" % (INDENT, s))
-
-                        self.fOutPythonprepend.write("%}\n\n")
+                        if usesCompactArguments:
+                            name = 'args[%s]' % argNum
+                        else:
+                            name = getText('declname', paramList[argNum])
+                        text = '''if not {name}.thisown:
+    s = ("the %s object does not own its corresponding OpenMM object"
+         % self.__class__.__name__)
+    raise Exception(s)
+'''.format(name=name)
+                        prependText += '\n'.join([INDENT + line for line in text.splitlines()])
+                prependText += '%}\n\n'
+                self.fOutPythonprepend.write(prependText)
 
             #write pythonappend blocks
             if self.fOutPythonappend \
@@ -455,19 +504,24 @@ class SwigInputBuilder:
                                     valueUnits[0])
                         index+=1
                     else:
-                        addText = "%s%sval=unit.Quantity(val, %s)\n" \
+                        addText = "%s%sval = unit.Quantity(val, %s)\n" \
                                  % (addText, INDENT, valueUnits[0])
 
                 for vUnit in valueUnits[1]:
                         if vUnit!=None:
-                            addText = "%s%sval[%s]=unit.Quantity(val[%s], %s)\n" \
+                            addText = "%s%sval[%s] = unit.Quantity(val[%s], %s)\n" \
                                      % (addText, INDENT, index, index, vUnit)
                         index+=1
 
                 if key in self.configModule.STEAL_OWNERSHIP:
                     for argNum in self.configModule.STEAL_OWNERSHIP[key]:
-                        addText = "%s%sargs[%s].thisown=0\n" \
-                                % (addText, INDENT, argNum)
+                        if self.SWIG_COMPACT_ARGUMENTS:
+                            name = 'args[%s]' % argNum
+                        else:
+                            name = getText('declname', paramList[argNum])
+
+                        addText = "{prev}{indent}{name}.thisown=0\n".format(
+                            prev=addText, indent=INDENT, name=name)
 
                 if addText:
                     self.fOutPythonappend.write("%pythonappend")
@@ -553,7 +607,7 @@ class SwigInputBuilder:
 
 
 def parseCommandLine():
-    opts, args_proper = getopt.getopt(sys.argv[1:], 'hi:c:o:d:a:z:s:')
+    opts, args_proper = getopt.getopt(sys.argv[1:], 'hi:c:o:d:a:z:s:v:')
     inputDirname = None
     configFilename = None
     outputFilename = ""
@@ -561,28 +615,34 @@ def parseCommandLine():
     pythonprependFilename = ""
     pythonappendFilename = ""
     skipAdditionalMethods = []
+    swigVersion = '3.0.2'
+
     for option, parameter in opts:
         if option=='-h': usageError()
         if option=='-i': inputDirname = parameter
-        if option=='-c': configFilename=parameter
+        if option=='-c': configFilename = parameter
         if option=='-o': outputFilename = parameter
         if option=='-d': docstringFilename = parameter
-        if option=='-a': pythonprependFilename=parameter
-        if option=='-z': pythonappendFilename=parameter
+        if option=='-a': pythonprependFilename =parameter
+        if option=='-z': pythonappendFilename = parameter
         if option=='-s': skipAdditionalMethods.append(parameter)
+        if option=='-v': swigVersion = parameter
     if not inputDirname: usageError()
     if not configFilename: usageError()
+
     return (args_proper, inputDirname, configFilename, outputFilename,
-            docstringFilename,
-            pythonprependFilename, pythonappendFilename, skipAdditionalMethods)
+            docstringFilename, pythonprependFilename, pythonappendFilename,
+            skipAdditionalMethods, swigVersion)
+
 
 def main():
     (args_proper, inputDirname, configFilename, outputFilename,
      docstringFilename, pythonprependFilename, pythonappendFilename,
-     skipAdditionalMethods) = parseCommandLine()
+     skipAdditionalMethods, swigVersion) = parseCommandLine()
     sBuilder = SwigInputBuilder(inputDirname, configFilename, outputFilename,
                                 docstringFilename, pythonprependFilename,
-                                pythonappendFilename, skipAdditionalMethods)
+                                pythonappendFilename, skipAdditionalMethods,
+                                swigVersion)
     #print "Calling writeSwigFile\n"
     sBuilder.writeSwigFile()
     #print "Done writeSwigFile\n"
@@ -609,5 +669,3 @@ def usageError():
 
 if __name__=='__main__':
     main()
-
-

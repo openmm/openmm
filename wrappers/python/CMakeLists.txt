@@ -163,7 +163,6 @@ set(SWIG_INPUT_FILES2
     "${SWIG_OPENMM_DIR}/swig_lib/python/header.i"
     "${SWIG_OPENMM_DIR}/swig_lib/python/pythoncode.i"
     "${SWIG_OPENMM_DIR}/swig_lib/python/typemaps.i"
-    "${SWIG_OPENMM_DIR}/swig_lib/python/pythonprepend_all.i"
 )
 
 # Create input files for swig
@@ -176,6 +175,7 @@ add_custom_command(
         -o OpenMMSwigHeaders.i
         -a swig_lib/python/pythonprepend.i
         -z swig_lib/python/pythonappend.i
+        -v "${SWIG_VERSION}"
     WORKING_DIRECTORY "${SWIG_OPENMM_DIR}"
     DEPENDS
         "${SWIG_OPENMM_DIR}/swigInputConfig.py"
