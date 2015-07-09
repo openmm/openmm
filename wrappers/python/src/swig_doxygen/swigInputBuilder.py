@@ -1,21 +1,19 @@
 #!/usr/bin/env python
 #
 #
- 
+
 """Build swig imput file from xml encoded header files (see gccxml)."""
 __author__ = "Randall J. Radmer"
 __version__ = "1.0"
-  
- 
+
+
 import sys, os
 import time
 import getopt
 import re
 import xml.etree.ElementTree as etree
 from distutils.version import LooseVersion
-
-
-#
+from collections import defaultdict
 
 INDENT = "   ";
 
@@ -86,7 +84,7 @@ def getClassMethodList(classNode, skipMethods):
     shortClassName=stripOpenmmPrefix(className)
     methodList=[]
     for section in findNodes(classNode, "sectiondef", kind="public-static-func")+findNodes(classNode, "sectiondef", kind="public-func"):
-        for memberNode in findNodes(section, "memberdef", kind="function", prot="public"):    
+        for memberNode in findNodes(section, "memberdef", kind="function", prot="public"):
             methDefinition = getText("definition", memberNode)
             shortMethDefinition=stripOpenmmPrefix(methDefinition)
             methName=shortMethDefinition.split()[-1]
@@ -98,14 +96,14 @@ def getClassMethodList(classNode, skipMethods):
                     sys.stderr.write("Warning: Including class %s\n" %
                                      shortClassName)
                     continue
-    
+
             if (shortClassName, methName) in skipMethods: continue
-    
+
             # set template info
-    
+
             templateType = getText("templateparamlist/param/type", memberNode)
             templateName = getText("templateparamlist/param/declname", memberNode)
-    
+
             methodList.append( (shortClassName,
                                 memberNode,
                                 shortMethDefinition,
@@ -293,7 +291,6 @@ class SwigInputBuilder:
             self.writeMethods(classNode)
             self.fOut.write("};\n\n")
         self.fOut.write("\n")
-
     def writeEnumerations(self, classNode):
         enumNodes = []
         for section in findNodes(classNode, "sectiondef", kind="public-type"):
@@ -321,7 +318,11 @@ class SwigInputBuilder:
 
 
     def writeMethods(self, classNode):
-        methodList=getClassMethodList(classNode, self.skipMethods)
+        methodList = getClassMethodList(classNode, self.skipMethods)
+
+        methodCounter = defaultdict(lambda: 0)
+        for item in methodList:
+            methodCounter[item[3]] += 1
 
         #write only Constructors
         for items in methodList:
@@ -330,7 +331,6 @@ class SwigInputBuilder:
              isConstructors, isDestructor, templateType, templateName) = items
             if isConstructors:
                 mArgsstring = getText("argsstring", memberNode)
-
 
                 try:
                     pExceptions = " %s" % getText('exceptions', memberNode)
@@ -414,11 +414,21 @@ class SwigInputBuilder:
             #write pythonprepend blocks
             mArgsstring = getText("argsstring", memberNode)
 
-            if self.fOutPythonprepend and len(paramList) and mArgsstring.find('=0') < 0:
+            if self.fOutPythonprepend and isConstructors:
+                prependText = '%%pythonprepend OpenMM::%s::%s %%{\n' % (
+                    (shortClassName, methName))
+                prependText += '{indent}args = tuple(map(_stripUnit, args))\n'.format(
+                    indent=INDENT)
+                prependText += '%}\n\n'
+                print(prependText)
+                self.fOutPythonprepend.write(prependText)
+
+            elif self.fOutPythonprepend and len(paramList) > 0 and mArgsstring.find('=0') < 0:
                 prependText = '%%pythonprepend OpenMM::%s::%s%s %%{\n' % (
                     (shortClassName, methName, mArgsstring))
 
-                if self.SWIG_COMPACT_ARGUMENTS:
+                if self.SWIG_COMPACT_ARGUMENTS or methodCounter[methName] > 1:
+                    # overloaded functions also get *args
                     prependText += '{indent}args = tuple(map(_stripUnit, args))\n'.format(
                         indent=INDENT)
                 else:
