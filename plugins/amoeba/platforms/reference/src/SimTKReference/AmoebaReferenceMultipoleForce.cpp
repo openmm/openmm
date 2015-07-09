@@ -556,10 +556,11 @@ void AmoebaReferenceMultipoleForce::applyRotationMatrixToParticle(      Multipol
 #if SPHERICAL_MULTIPOLES
 void AmoebaReferenceMultipoleForce::formQIRotationMatrix(const MultipoleParticleData& particleI,
                                                          const MultipoleParticleData& particleJ,
+                                                         const RealVec &deltaR,
                                                          RealOpenMM r,
                                                          RealOpenMM (&rotationMatrix)[3][3]) const
 {
-    RealVec vectorZ = (particleJ.position - particleI.position)/r;
+    RealVec vectorZ = (deltaR)/r;
     RealVec vectorX(vectorZ);
     if ((particleI.position[1] != particleJ.position[1]) || (particleI.position[2] != particleJ.position[2])){
         vectorX[0] += 1.0;
@@ -6035,7 +6036,7 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::calculatePmeDirectElectrostaticPair
     // Start by constructing rotation matrices to put dipoles and
     // quadrupoles into the QI frame, from the lab frame.
     RealOpenMM qiRotationMatrix1[3][3];
-    formQIRotationMatrix(particleI, particleJ, r, qiRotationMatrix1);
+    formQIRotationMatrix(particleI, particleJ, deltaR, r, qiRotationMatrix1);
     RealOpenMM qiRotationMatrix2[5][5];
     buildSphericalQuadrupoleRotationMatrix(qiRotationMatrix1, qiRotationMatrix2);
     // The force rotation matrix rotates the QI forces into the lab

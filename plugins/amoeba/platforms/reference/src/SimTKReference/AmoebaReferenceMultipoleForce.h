@@ -826,11 +826,13 @@ protected:
      *
      * @param particleI             particleI data
      * @param particleJ             particleJ data
+     * @param deltaR                the internuclear vector, corrected for periodic boundary conditions
      * @param r                     the bond length between atoms I and J
      * @param rotationmatrix        the output rotation matrix for a 3-vector
      */
     void formQIRotationMatrix(const MultipoleParticleData& particleI,
                               const MultipoleParticleData& particleJ,
+                              const RealVec &deltaR,
                               RealOpenMM r,
                               RealOpenMM (&rotationMatrix)[3][3]) const;
 
