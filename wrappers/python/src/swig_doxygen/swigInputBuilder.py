@@ -169,10 +169,22 @@ class SwigInputBuilder:
 
         self._orderedClassNodes=self._buildOrderedClassNodes()
 
-    def getArgumentName(self, paramList, argNum):
-        if self.SWIG_COMPACT_ARGUMENTS:
-            return 'args[%s]' % argNum
-        return getText('declname', paramList[argNum])
+
+    def getInputArgumentNames(self, paramList, shortClassName, methName):
+        names = []
+        for pNode in paramList:
+            try:
+                pType = getText('type', pNode)
+            except IndexError:
+                pType = getText('type/ref', pNode)
+            pName = getText('declname', pNode)
+            key = (shortClassName, methName, pName)
+
+            if ((pType.find('&') < 0 or 'const' in pType.split()) and
+                key not in self.configModule.NO_OUTPUT_ARGS):
+                names.append(pName)
+
+        return names
 
     def _getNodeByID(self, id):
         if id not in self.nodeByID:
@@ -322,7 +334,8 @@ class SwigInputBuilder:
 
         methodCounter = defaultdict(lambda: 0)
         for item in methodList:
-            methodCounter[item[3]] += 1
+            if item[6] == '':  # skip templated
+                methodCounter[item[3]] += 1
 
         #write only Constructors
         for items in methodList:
@@ -420,26 +433,38 @@ class SwigInputBuilder:
                 prependText += '{indent}args = tuple(map(_stripUnit, args))\n'.format(
                     indent=INDENT)
                 prependText += '%}\n\n'
-                print(prependText)
                 self.fOutPythonprepend.write(prependText)
 
             elif self.fOutPythonprepend and len(paramList) > 0 and mArgsstring.find('=0') < 0:
                 prependText = '%%pythonprepend OpenMM::%s::%s%s %%{\n' % (
                     (shortClassName, methName, mArgsstring))
 
-                if self.SWIG_COMPACT_ARGUMENTS or methodCounter[methName] > 1:
-                    # overloaded functions also get *args
+                # determine whether or not the signature for the swigged python method
+                # will be like ``def methodName(self, *args)``
+                # or ``def methodName(self, arg1, arg2)``
+                # Depending on the style, we need to generate different code for stripping
+                # the units
+                usesCompactArguments = (
+                    self.SWIG_COMPACT_ARGUMENTS
+                    or (methodCounter[methName] > 1)
+                    or any(getText('defval', p) not in ('', 'true', 'false') for p in paramList))
+
+                if usesCompactArguments:
                     prependText += '{indent}args = tuple(map(_stripUnit, args))\n'.format(
                         indent=INDENT)
                 else:
-                    names = [self.getArgumentName(paramList, i) for i in range(len(paramList))]
-                    prependText += '{indent}{names} = map(_stripUnit, ({names}))\n'.format(
-                        indent=INDENT, names=', '.join(names)+',')
+                    names = self.getInputArgumentNames(paramList, shortClassName, methName)
+                    if len(names) > 0:
+                        prependText += '{indent}{names} = map(_stripUnit, ({names}))\n'.format(
+                            indent=INDENT, names=', '.join(names)+',')
 
                 key = (shortClassName, methName)
                 if key in self.configModule.STEAL_OWNERSHIP:
                     for argNum in self.configModule.STEAL_OWNERSHIP[key]:
-                        name = self.getArgumentName(paramList, argNum)
+                        if usesCompactArguments:
+                            name = 'args[%s]' % argNum
+                        else:
+                            name = getText('declname', paramList[argNum])
                         text = '''if not {name}.thisown:
     s = ("the %s object does not own its corresponding OpenMM object"
          % self.__class__.__name__)
