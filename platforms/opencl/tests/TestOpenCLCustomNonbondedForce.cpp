@@ -973,6 +973,62 @@ void testInteractionGroupLongRangeCorrection() {
     ASSERT_EQUAL_TOL(expected, energy2-energy1, 1e-4);
 }
 
+void testMultipleCutoffs() {
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    VerletIntegrator integrator(0.01);
+    
+    // Add multiple nonbonded forces that have different cutoffs.
+    
+    CustomNonbondedForce* nonbonded1 = new CustomNonbondedForce("2*r");
+    nonbonded1->addParticle(vector<double>());
+    nonbonded1->addParticle(vector<double>());
+    nonbonded1->setNonbondedMethod(CustomNonbondedForce::CutoffNonPeriodic);
+    nonbonded1->setCutoffDistance(2.5);
+    system.addForce(nonbonded1);
+    CustomNonbondedForce* nonbonded2 = new CustomNonbondedForce("3*r");
+    nonbonded2->addParticle(vector<double>());
+    nonbonded2->addParticle(vector<double>());
+    nonbonded2->setNonbondedMethod(CustomNonbondedForce::CutoffNonPeriodic);
+    nonbonded2->setCutoffDistance(2.9);
+    nonbonded2->setForceGroup(1);
+    system.addForce(nonbonded2);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(2);
+    positions[0] = Vec3(0, 0, 0);
+    positions[1] = Vec3(0, 0, 0);
+    for (double r = 2.4; r < 3.2; r += 0.2) {
+        positions[1][1] = r;
+        context.setPositions(positions);
+        double e1 = (r < 2.5 ? 2.0*r : 0.0);
+        double e2 = (r < 2.9 ? 3.0*r : 0.0);
+        double f1 = (r < 2.5 ? 2.0 : 0.0);
+        double f2 = (r < 2.9 ? 3.0 : 0.0);
+        
+        // Check the first force.
+        
+        State state = context.getState(State::Forces | State::Energy, false, 1);
+        ASSERT_EQUAL_VEC(Vec3(0, f1, 0), state.getForces()[0], TOL);
+        ASSERT_EQUAL_VEC(Vec3(0, -f1, 0), state.getForces()[1], TOL);
+        ASSERT_EQUAL_TOL(e1, state.getPotentialEnergy(), TOL);
+        
+        // Check the second force.
+        
+        state = context.getState(State::Forces | State::Energy, false, 2);
+        ASSERT_EQUAL_VEC(Vec3(0, f2, 0), state.getForces()[0], TOL);
+        ASSERT_EQUAL_VEC(Vec3(0, -f2, 0), state.getForces()[1], TOL);
+        ASSERT_EQUAL_TOL(e2, state.getPotentialEnergy(), TOL);
+        
+        // Check the sum of both forces.
+
+        state = context.getState(State::Forces | State::Energy);
+        ASSERT_EQUAL_VEC(Vec3(0, f1+f2, 0), state.getForces()[0], TOL);
+        ASSERT_EQUAL_VEC(Vec3(0, -f1-f2, 0), state.getForces()[1], TOL);
+        ASSERT_EQUAL_TOL(e1+e2, state.getPotentialEnergy(), TOL);
+    }
+}
+
 int main(int argc, char* argv[]) {
     try {
         if (argc > 1)
@@ -997,6 +1053,7 @@ int main(int argc, char* argv[]) {
         testInteractionGroups();
         testLargeInteractionGroup();
         testInteractionGroupLongRangeCorrection();
+        testMultipleCutoffs();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;
