@@ -24,8 +24,8 @@ CMAKE_FLAGS+=" -DCUDA_NVCC_EXECUTABLE=/usr/local/cuda-7.0/bin/nvcc"
 CMAKE_FLAGS+=" -DCUDA_SDK_ROOT_DIR=/usr/local/cuda-7.0/"
 CMAKE_FLAGS+=" -DCUDA_TOOLKIT_INCLUDE=/usr/local/cuda-7.0/include"
 CMAKE_FLAGS+=" -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-7.0/"
-CMAKE_FLAGS+=" -DOPENCL_INCLUDE_DIR=/usr/local/cuda-7.0/include"
-CMAKE_FLAGS+=" -DOPENCL_LIBRARY=/usr/local/cuda-7.0/lib64/libOpenCL.so"
+CMAKE_FLAGS+=" -DOPENCL_INCLUDE_DIR=/opt/AMDAPPSDK-2.9-1/include/"
+CMAKE_FLAGS+=" -DOPENCL_LIBRARY=/opt/AMDAPPSDK-2.9-1/lib/x86_64/libOpenCL.so"
 
 # Set location for FFTW3
 PREFIX="$WORKSPACE/miniconda"
