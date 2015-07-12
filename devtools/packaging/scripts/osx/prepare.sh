@@ -6,7 +6,7 @@
 export WORKSPACE=`pwd`
 
 # Install miniconda
-export VERSION="3.7.0"
+export VERSION="Latest"
 export PLATFORM="MacOSX"
 export ARCH="x86_64"
 export MINICONDA="Miniconda-$VERSION-$PLATFORM-$ARCH.sh"
