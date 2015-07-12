@@ -25,10 +25,10 @@
 #include "AmoebaReferenceMultipoleForce.h"
 #include "jama_svd.h"
 #include <algorithm>
-#if DEBUG_MULTIPOLES
 #include <iostream>
 #include <iomanip>
 #define FMT(x) std::setw(16) << std::setprecision(10) << (x)
+#if DEBUG_MULTIPOLES
 #endif
 
 // In case we're using some primitive version of Visual Studio this will
@@ -617,6 +617,26 @@ void AmoebaReferenceMultipoleForce::buildSphericalQuadrupoleRotationMatrix(const
     D2[3][4] = D1[1][1]*D1[1][2] - D1[2][1]*D1[2][2];
     D2[4][4] = D1[2][1]*D1[1][2] + D1[1][1]*D1[2][2];
 }
+
+void AmoebaReferenceMultipoleForce::buildPartialSphericalQuadrupoleRotationMatrix(const RealOpenMM (&D1)[3][3], RealOpenMM (&D2)[3][5]) const
+{
+    D2[0][0] = 0.5*(3.0*D1[0][0]*D1[0][0] - 1.0);
+    D2[1][0] = sqrtThree*D1[0][0]*D1[1][0];
+    D2[2][0] = sqrtThree*D1[0][0]*D1[2][0];
+    D2[0][1] = sqrtThree*D1[0][0]*D1[0][1];
+    D2[1][1] = D1[1][0]*D1[0][1] + D1[0][0]*D1[1][1];
+    D2[2][1] = D1[2][0]*D1[0][1] + D1[0][0]*D1[2][1];
+    D2[0][2] = sqrtThree*D1[0][0]*D1[0][2];
+    D2[1][2] = D1[1][0]*D1[0][2] + D1[0][0]*D1[1][2];
+    D2[2][2] = D1[2][0]*D1[0][2] + D1[0][0]*D1[2][2];
+    D2[0][3] = 0.5*sqrtThree*(D1[0][1]*D1[0][1] - D1[0][2]*D1[0][2]);
+    D2[1][3] = D1[0][1]*D1[1][1] - D1[0][2]*D1[1][2];
+    D2[2][3] = D1[0][1]*D1[2][1] - D1[0][2]*D1[2][2];
+    D2[0][4] = sqrtThree*D1[0][1]*D1[0][2];
+    D2[1][4] = D1[1][1]*D1[0][2] + D1[0][1]*D1[1][2];
+    D2[2][4] = D1[2][1]*D1[0][2] + D1[0][1]*D1[2][2];
+}
+
 #endif // SPHERICAL_MULTIPOLES
 
 void AmoebaReferenceMultipoleForce::applyRotationMatrix(vector<MultipoleParticleData>& particleData,
@@ -4867,6 +4887,9 @@ void AmoebaReferencePmeMultipoleForce::calculateFixedMultipoleFieldPairIxn(const
                                                                            RealOpenMM dscale, RealOpenMM pscale)
 {
 
+    unsigned int iIndex    = particleI.particleIndex;
+    unsigned int jIndex    = particleJ.particleIndex;
+
     // compute the real space portion of the Ewald summation
 
     if (particleI.particleIndex == particleJ.particleIndex)
@@ -4880,6 +4903,156 @@ void AmoebaReferencePmeMultipoleForce::calculateFixedMultipoleFieldPairIxn(const
         return;
 
     RealOpenMM r           = SQRT(r2);
+
+#if SPHERICAL_MULTIPOLES
+    // Start by constructing rotation matrices to put dipoles and
+    // quadrupoles into the QI frame, from the lab frame.
+    RealOpenMM qiRotationMatrix1[3][3];
+    formQIRotationMatrix(particleI, particleJ, deltaR, r, qiRotationMatrix1);
+    RealOpenMM qiRotationMatrix2[3][5];
+    buildPartialSphericalQuadrupoleRotationMatrix(qiRotationMatrix1, qiRotationMatrix2);
+    // The field rotation matrix rotates the QI fields into the lab
+    // frame, and makes sure the result is in {x,y,z} ordering
+    RealOpenMM fieldRotationMatrix[3][3];
+    fieldRotationMatrix[0][0] = qiRotationMatrix1[0][1];
+    fieldRotationMatrix[0][1] = qiRotationMatrix1[1][1];
+    fieldRotationMatrix[0][2] = qiRotationMatrix1[2][1];
+    fieldRotationMatrix[1][0] = qiRotationMatrix1[0][2];
+    fieldRotationMatrix[1][1] = qiRotationMatrix1[1][2];
+    fieldRotationMatrix[1][2] = qiRotationMatrix1[2][2];
+    fieldRotationMatrix[2][0] = qiRotationMatrix1[0][0];
+    fieldRotationMatrix[2][1] = qiRotationMatrix1[1][0];
+    fieldRotationMatrix[2][2] = qiRotationMatrix1[2][0];
+
+    // The Qtilde intermediates (QI frame multipoles) for atoms I and J
+    RealOpenMM qiQI[9], qiQJ[9];
+    // Rotate the permanent multipoles to the QI frame.
+    qiQI[0] = particleI.charge;
+    qiQJ[0] = particleJ.charge;
+    for (int ii = 0; ii < 3; ii++) {
+        RealOpenMM valI = 0.0;
+        RealOpenMM valJ = 0.0;
+        for (int jj = 0; jj < 3; jj++) {
+            valI += qiRotationMatrix1[ii][jj] * particleI.sphericalDipole[jj];
+            valJ += qiRotationMatrix1[ii][jj] * particleJ.sphericalDipole[jj];
+        }
+        qiQI[ii+1] = valI;
+        qiQJ[ii+1] = valJ;
+    }
+
+    // We only need to go up to 3 in this loop; the final two term don't contribute
+    // to the field because of orthogonality.
+    for (int ii = 0; ii < 3; ii++) {
+        RealOpenMM valI = 0.0;
+        RealOpenMM valJ = 0.0;
+        for (int jj = 0; jj < 5; jj++) {
+            valI += qiRotationMatrix2[ii][jj] * particleI.sphericalQuadrupole[jj];
+            valJ += qiRotationMatrix2[ii][jj] * particleJ.sphericalQuadrupole[jj];
+        }
+        qiQI[ii+4] = valI;
+        qiQJ[ii+4] = valJ;
+    }
+
+    RealOpenMM rInvVec[5], alphaRVec[6], bVec[4];
+
+    RealOpenMM rInv = 1.0 / r;
+    // The rInvVec array is defined such that the ith element is R^-i, with the
+    // dieleectric constant folded in, to avoid conversions later.
+    rInvVec[1] = rInv;
+    for(int i = 2; i < 5; ++i)
+        rInvVec[i] = rInvVec[i-1] * rInv;
+
+    // The alpharVec array is defined such that the ith element is (alpha R)^i,
+    // where kappa (alpha in OpenMM parlance) is the Ewald attenuation parameter.
+    alphaRVec[1] = _alphaEwald * r;
+    for(int i = 2; i < 6; ++i)
+        alphaRVec[i] = alphaRVec[i-1] * alphaRVec[1];
+
+    RealOpenMM erfAlphaR = erf(alphaRVec[1]);
+    RealOpenMM X = 2.0*EXP(-alphaRVec[2])/SQRT_PI;
+
+    int doubleFactorial = 1, facCount = 1;
+    RealOpenMM tmp = alphaRVec[1];
+    bVec[1] = -erfAlphaR;
+    for(int i=2; i < 4; ++i){
+        bVec[i] = bVec[i-1] + tmp * X / (RealOpenMM)(doubleFactorial);
+        facCount = facCount + 2;
+        doubleFactorial = doubleFactorial * facCount;
+        tmp *= 2.0 * alphaRVec[2];
+    }
+
+    RealOpenMM dmp = particleI.dampingFactor*particleJ.dampingFactor;
+    RealOpenMM a = particleI.thole < particleJ.thole ? particleI.thole : particleJ.thole;
+    RealOpenMM u = std::abs(dmp) > 1.0E-5 ? r/dmp : 1E50;
+    RealOpenMM au3 = a*u*u*u;
+    RealOpenMM expau3 = au3 < 50.0 ? EXP(-au3) : 0.0;
+    RealOpenMM a2u6 = au3*au3;
+    // Thole damping factors for energies
+    RealOpenMM thole_c  = 1.0 - expau3;
+    RealOpenMM thole_d0 = 1.0 - expau3*(1.0 + 1.5*au3);
+    RealOpenMM thole_d1 = 1.0 - expau3;
+    RealOpenMM thole_q0 = 1.0 - expau3*(1.0 + au3 + a2u6);
+    RealOpenMM thole_q1 = 1.0 - expau3*(1.0 + au3);
+
+    RealOpenMM qivec0[3] = {  qiQJ[0], qiQJ[1],  qiQJ[4] };
+    RealOpenMM qjvec0[3] = { -qiQI[0], qiQI[1], -qiQI[4] };
+    RealOpenMM qivec1[2] = { qiQJ[2], qiQJ[5] };
+    RealOpenMM qjvec1[2] = { qiQI[2], -qiQI[5] };
+    RealOpenMM qivec2[2] = { qiQJ[3], qiQJ[6] };
+    RealOpenMM qjvec2[2] = { qiQI[3], -qiQI[6] };
+
+    // Charge terms (m=0)
+    RealOpenMM eUIndC0 = -rInvVec[2]*(dscale*thole_c + bVec[2]);
+    RealOpenMM eUInpC0 = -rInvVec[2]*(pscale*thole_c + bVec[2]);
+    // Dipole terms (m=0)
+    RealOpenMM eUIndD0 = twoThirds*rInvVec[3]*(3.0*(dscale*thole_d0 + bVec[3]) + alphaRVec[3]*X);
+    RealOpenMM eUInpD0 = twoThirds*rInvVec[3]*(3.0*(pscale*thole_d0 + bVec[3]) + alphaRVec[3]*X);
+    // Dipole terms (m=1)
+    RealOpenMM eUIndD1 = -rInvVec[3]*(dscale*thole_d1 + bVec[3] - twoThirds*alphaRVec[3]*X);
+    RealOpenMM eUInpD1 = -rInvVec[3]*(pscale*thole_d1 + bVec[3] - twoThirds*alphaRVec[3]*X);
+    // Quadrupole terms (m=0)
+    RealOpenMM eUIndQ0 = -rInvVec[4]*(3.0*(dscale*thole_q0 + bVec[3]) + fourThirds*alphaRVec[5]*X);
+    RealOpenMM eUInpQ0 = -rInvVec[4]*(3.0*(pscale*thole_q0 + bVec[3]) + fourThirds*alphaRVec[5]*X);
+    // Quadrupole terms (m=1)
+    RealOpenMM eUIndQ1 = sqrtThree*rInvVec[4]*(dscale*thole_q1 + bVec[3]);
+    RealOpenMM eUInpQ1 = sqrtThree*rInvVec[4]*(pscale*thole_q1 + bVec[3]);
+
+    RealOpenMM v0d[3] = { eUIndC0, eUIndD0, eUIndQ0 };
+    RealOpenMM v0p[3] = { eUInpC0, eUInpD0, eUInpQ0 };
+    RealOpenMM v1d[2] = { eUIndD1, eUIndQ1 };
+    RealOpenMM v1p[2] = { eUInpD1, eUInpQ1 };
+
+    RealOpenMM Vijd[3] = { v0d[0]*qivec0[0] + v0d[1]*qivec0[1] + v0d[2]*qivec0[2],
+                           v1d[0]*qivec1[0] + v1d[1]*qivec1[1],
+                           v1d[0]*qivec2[0] + v1d[1]*qivec2[1] };
+    RealOpenMM Vijp[3] = { v0p[0]*qivec0[0] + v0p[1]*qivec0[1] + v0p[2]*qivec0[2],
+                           v1p[0]*qivec1[0] + v1p[1]*qivec1[1],
+                           v1p[0]*qivec2[0] + v1p[1]*qivec2[1] };
+    RealOpenMM Vjid[3] = { v0d[0]*qjvec0[0] + v0d[1]*qjvec0[1] + v0d[2]*qjvec0[2],
+                           v1d[0]*qjvec1[0] + v1d[1]*qjvec1[1],
+                           v1d[0]*qjvec2[0] + v1d[1]*qjvec2[1] };
+    RealOpenMM Vjip[3] = { v0p[0]*qjvec0[0] + v0p[1]*qjvec0[1] + v0p[2]*qjvec0[2],
+                           v1p[0]*qjvec1[0] + v1p[1]*qjvec1[1],
+                           v1p[0]*qjvec2[0] + v1p[1]*qjvec2[1] };
+
+    // Rotate the forces and torques back to the lab frame
+    for (int ii = 0; ii < 3; ii++) {
+        RealOpenMM VijpVal = 0.0;
+        RealOpenMM VijdVal = 0.0;
+        RealOpenMM VjipVal = 0.0;
+        RealOpenMM VjidVal = 0.0;
+        for (int jj = 0; jj < 3; jj++) {
+            VijdVal += fieldRotationMatrix[ii][jj] * Vijd[jj];
+            VijpVal += fieldRotationMatrix[ii][jj] * Vijp[jj];
+            VjidVal += fieldRotationMatrix[ii][jj] * Vjid[jj];
+            VjipVal += fieldRotationMatrix[ii][jj] * Vjip[jj];
+        }
+        _fixedMultipoleField[iIndex][ii]      += VijdVal;
+        _fixedMultipoleField[jIndex][ii]      += VjidVal;
+        _fixedMultipoleFieldPolar[iIndex][ii] += VijpVal;
+        _fixedMultipoleFieldPolar[jIndex][ii] += VjipVal;
+    }
+#else
 
     // calculate the error function damping terms
 
@@ -4941,14 +5114,13 @@ void AmoebaReferencePmeMultipoleForce::calculateFixedMultipoleFieldPairIxn(const
 
     // increment the field at each site due to this interaction
 
-    unsigned int iIndex    = particleI.particleIndex;
-    unsigned int jIndex    = particleJ.particleIndex;
 
     _fixedMultipoleField[iIndex]      += fim - fid;
     _fixedMultipoleField[jIndex]      += fjm - fjd;
 
     _fixedMultipoleFieldPolar[iIndex] += fim - fip;
     _fixedMultipoleFieldPolar[jIndex] += fjm - fjp;
+#endif
 }
 
 void AmoebaReferencePmeMultipoleForce::calculateFixedMultipoleField(const vector<MultipoleParticleData>& particleData)

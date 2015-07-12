@@ -836,6 +836,7 @@ protected:
                               RealOpenMM r,
                               RealOpenMM (&rotationMatrix)[3][3]) const;
 
+
     /**
      * Constructs a rotation matrix for spherical harmonic quadrupoles, using the dipole rotation matrix.
      *
@@ -843,6 +844,15 @@ protected:
      * @param D2                    The output spherical harmonic quadrupole rotation matrix
      */
      void buildSphericalQuadrupoleRotationMatrix(const RealOpenMM (&D1)[3][3], RealOpenMM (&D2)[5][5]) const;
+
+     /**
+      * Constructs a rotation matrix for spherical harmonic quadrupoles, using the dipole rotation matrix.
+      * Only the m={0,1c,1s} terms are constructed; these are the only terms needed to evaluate the field.
+      *
+      * @param D1                    The input spherical harmonic dipole rotation matrix
+      * @param D2                    The output spherical harmonic quadrupole rotation matrix
+      */
+      void buildPartialSphericalQuadrupoleRotationMatrix(const RealOpenMM (&D1)[3][3], RealOpenMM (&D2)[3][5]) const;
 #endif
 
     /**
