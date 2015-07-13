@@ -4,7 +4,7 @@
 setup.py: Used for building python wrappers for Simbios' OpenMM library.
 """
 __author__ = "Randall J. Radmer"
-__version__ = "6.3beta2"
+__version__ = "6.3"
 
 import ast
 import re
