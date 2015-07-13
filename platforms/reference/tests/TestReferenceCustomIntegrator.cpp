@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -688,6 +688,67 @@ void testRespa() {
     }
 }
 
+void testIfBlock() {
+    System system;
+    system.addParticle(2.0);
+    system.addParticle(2.0);
+    const double dt = 0.01;
+    CustomIntegrator integrator(dt);
+    integrator.addGlobalVariable("a", 0);
+    integrator.addGlobalVariable("b", 0);
+    integrator.addComputeGlobal("b", "1");
+    integrator.beginIfBlock("a < 3.5");
+    integrator.addComputeGlobal("b", "a+1");
+    integrator.endBlock();
+    Context context(system, integrator, platform);
+
+    // Set "a" to 1.7 and verify that "b" gets set to a+1.
+
+    integrator.setGlobalVariable(0, 1.7);
+    integrator.step(1);
+    ASSERT_EQUAL_TOL(2.7, integrator.getGlobalVariable(1), 1e-6);
+
+    // Now set it to a value that should cause the block to be skipped.
+
+    integrator.setGlobalVariable(0, 4.1);
+    integrator.step(1);
+    ASSERT_EQUAL_TOL(1.0, integrator.getGlobalVariable(1), 1e-6);
+}
+
+void testWhileBlock() {
+    System system;
+    system.addParticle(2.0);
+    system.addParticle(2.0);
+    const double dt = 0.01;
+    CustomIntegrator integrator(dt);
+    integrator.addGlobalVariable("a", 0);
+    integrator.addGlobalVariable("b", 0);
+    integrator.addComputeGlobal("b", "1");
+    integrator.beginWhileBlock("b <= a");
+    integrator.addComputeGlobal("b", "b+1");
+    integrator.endBlock();
+    Context context(system, integrator, platform);
+
+    // Try a case where the loop should be skipped.
+
+    integrator.setGlobalVariable(0, -3.3);
+    integrator.step(1);
+    ASSERT_EQUAL_TOL(1.0, integrator.getGlobalVariable(1), 1e-6);
+
+    // In this case it should be executed exactly once.
+
+    integrator.setGlobalVariable(0, 1.2);
+    integrator.step(1);
+    ASSERT_EQUAL_TOL(2.0, integrator.getGlobalVariable(1), 1e-6);
+
+    // In this case, it should be executed several times.
+
+    integrator.setGlobalVariable(0, 5.3);
+    integrator.step(1);
+    ASSERT_EQUAL_TOL(6.0, integrator.getGlobalVariable(1), 1e-6);
+}
+
+
 int main() {
     try {
         testSingleBond();
@@ -702,6 +763,8 @@ int main() {
         testPerDofVariables();
         testForceGroups();
         testRespa();
+        testIfBlock();
+        testWhileBlock();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

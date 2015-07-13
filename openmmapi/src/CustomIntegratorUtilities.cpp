@@ -69,7 +69,7 @@ bool CustomIntegratorUtilities::usesVariable(const Lepton::ParsedExpression& exp
 }
 
 void CustomIntegratorUtilities::analyzeComputations(const ContextImpl& context, const CustomIntegrator& integrator, vector<vector<Lepton::ParsedExpression> >& expressions,
-            vector<Comparison>& comparisons, vector<bool>& invalidatesForces, vector<bool>& needsForces, vector<bool>& needsEnergy,
+            vector<Comparison>& comparisons, vector<int>& blockEnd, vector<bool>& invalidatesForces, vector<bool>& needsForces, vector<bool>& needsEnergy,
             vector<bool>& computeBoth, vector<int>& forceGroup) {
     int numSteps = integrator.getNumComputations();
     expressions.resize(numSteps);
@@ -138,13 +138,13 @@ void CustomIntegratorUtilities::analyzeComputations(const ContextImpl& context, 
                     if (forceGroup[step] != -2)
                         throw OpenMMException("A single computation step cannot depend on multiple force groups");
                     needsForces[step] = true;
-                    forceGroup[step] = 1<<i;
+                    forceGroup[step] = i;
                 }
                 if (usesVariable(expressions[step][expr], energyGroupName[i])) {
                     if (forceGroup[step] != -2)
                         throw OpenMMException("A single computation step cannot depend on multiple force groups");
                     needsEnergy[step] = true;
-                    forceGroup[step] = 1<<i;
+                    forceGroup[step] = i;
                 }
             }
         }
@@ -153,7 +153,7 @@ void CustomIntegratorUtilities::analyzeComputations(const ContextImpl& context, 
     // Find the end point of each block.
 
     vector<int> blockStart;
-    vector<int> blockEnd(numSteps);
+    blockEnd.resize(numSteps, -1);
     for (int step = 0; step < numSteps; step++) {
         if (stepType[step] == CustomIntegrator::BeginIfBlock || stepType[step] == CustomIntegrator::BeginWhileBlock)
             blockStart.push_back(step);

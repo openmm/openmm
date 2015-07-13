@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2011 Stanford University and Simbios.
+/* Portions copyright (c) 2011-2015 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -28,6 +28,7 @@
 #include "ReferenceDynamics.h"
 #include "openmm/CustomIntegrator.h"
 #include "openmm/internal/ContextImpl.h"
+#include "openmm/internal/CustomIntegratorUtilities.h"
 #include "lepton/ExpressionProgram.h"
 
 #include <map>
@@ -44,9 +45,10 @@ private:
     std::vector<OpenMM::RealVec> sumBuffer, oldPos;
     std::vector<OpenMM::CustomIntegrator::ComputationType> stepType;
     std::vector<std::string> stepVariable, forceName, energyName;
-    std::vector<Lepton::ExpressionProgram> stepExpression;
-    std::vector<bool> invalidatesForces, needsForces, needsEnergy;
-    std::vector<int> forceGroup;
+    std::vector<std::vector<Lepton::ExpressionProgram> > stepExpressions;
+    std::vector<CustomIntegratorUtilities::Comparison> comparisons;
+    std::vector<bool> invalidatesForces, needsForces, needsEnergy, computeBothForceAndEnergy;
+    std::vector<int> forceGroupFlags, blockEnd;
     RealOpenMM energy;
     Lepton::ExpressionProgram kineticEnergyExpression;
     bool kineticEnergyNeedsForce;
@@ -57,6 +59,8 @@ private:
                   const Lepton::ExpressionProgram& expression, const std::string& forceName);
     
     void recordChangedParameters(OpenMM::ContextImpl& context, std::map<std::string, RealOpenMM>& globals);
+
+    bool evaluateCondition(int step, std::map<std::string, RealOpenMM>& globals);
       
 public:
 

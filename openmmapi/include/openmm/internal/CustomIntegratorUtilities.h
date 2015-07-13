@@ -60,16 +60,17 @@ public:
      * Analyze the sequence of steps in a CustomIntegrator.  For each step:
      *
      * 1. Parse all expressions involved in the step, and identify the comparison operator (for conditional steps).
-     * 2. Determine whether the step causes previously computed forces and energies to become invalid.
-     * 3. Determine whether the step itself needs forces and/or energies.
-     * 4. Decide whether forces and energies should both be computed at that step (because
+     * 2. For each conditional block, identify what step marks the end of the block.
+     * 3. Determine whether the step causes previously computed forces and energies to become invalid.
+     * 4. Determine whether the step itself needs forces and/or energies.
+     * 5. Decide whether forces and energies should both be computed at that step (because
      *    it is more efficient to compute both at once, even if one won't be needed
      *    until a later step).
-     * 5. Identify what force group each step needs forces and/or energies for.
+     * 6. Identify what force group each step needs forces and/or energies for.
      */
     static void analyzeComputations(const ContextImpl& context, const CustomIntegrator& integrator, std::vector<std::vector<Lepton::ParsedExpression> >& expressions,
-            std::vector<Comparison>& comparisons, std::vector<bool>& invalidatesForces, std::vector<bool>& needsForces, std::vector<bool>& needsEnergy,
-            std::vector<bool>& computeBoth, std::vector<int>& forceGroup);
+            std::vector<Comparison>& comparisons, std::vector<int>& blockEnd, std::vector<bool>& invalidatesForces, std::vector<bool>& needsForces,
+            std::vector<bool>& needsEnergy, std::vector<bool>& computeBoth, std::vector<int>& forceGroup);
     /**
      * Determine whether an expression involves a particular variable.
      */
