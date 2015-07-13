@@ -1,6 +1,7 @@
 cmake_modules
 CMakeLists.txt
 docs-source
+docs
 examples
 libraries
 olla
