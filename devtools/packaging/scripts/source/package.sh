@@ -19,7 +19,7 @@ rm -rf $PACKAGE_DIR
 mkdir $PACKAGE_DIR
 mkdir $PACKAGE_DIR/$PACKAGE_SUBDIR
 for filename in $( cat openmm/devtools/packaging/manifests/source/manifest.txt ); do
-   CMD="cp -r install/$filename $PACKAGE_DIR/$PACKAGE_SUBDIR"
+   CMD="cp -r $filename $PACKAGE_DIR/$PACKAGE_SUBDIR"
    echo $CMD
    `$CMD`
 done

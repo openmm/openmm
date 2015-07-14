@@ -30,10 +30,10 @@ CMAKE_FLAGS+=" -DOPENMM_BUILD_RPMD_CUDA_LIB=OFF"
 CMAKE_FLAGS+=" -DOPENMM_BUILD_RPMD_OPENCL_LIB=OFF"
 
 # Set location for FFTW3
-PREFIX="$WORKSPACE/miniconda"
-CMAKE_FLAGS+=" -DFFTW_INCLUDES=$PREFIX/include"
-CMAKE_FLAGS+=" -DFFTW_LIBRARY=$PREFIX/lib/libfftw3f.so"
-CMAKE_FLAGS+=" -DFFTW_THREADS_LIBRARY=$PREFIX/lib/libfftw3f_threads.so"
+#PREFIX="$WORKSPACE/miniconda"
+#CMAKE_FLAGS+=" -DFFTW_INCLUDES=$PREFIX/include"
+#CMAKE_FLAGS+=" -DFFTW_LIBRARY=$PREFIX/lib/libfftw3f.so"
+#CMAKE_FLAGS+=" -DFFTW_THREADS_LIBRARY=$PREFIX/lib/libfftw3f_threads.so"
 
 # Build in subdirectory.
 if [ -e build ]; then
