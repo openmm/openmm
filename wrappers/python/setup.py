@@ -3,9 +3,6 @@
 """
 setup.py: Used for building python wrappers for Simbios' OpenMM library.
 """
-__author__ = "Randall J. Radmer"
-__version__ = "6.3"
-
 import ast
 import re
 import os
@@ -18,6 +15,8 @@ MINOR_VERSION_NUM='@OPENMM_MINOR_VERSION@'
 BUILD_INFO='@OPENMM_BUILD_VERSION@'
 IS_RELEASED = False
 
+__author__ = "Randall J. Radmer"
+__version__ = "%s.%s" % (MAJOR_VERSION_NUM, MINOR_VERSION_NUM)
 
 def reportError(message):
     sys.stdout.write("ERROR: ")
