@@ -50,7 +50,7 @@ public:
                 numConstraints(numConstraints), matrix(matrix), distance(distance), elementCutoff(elementCutoff), qRowStart(qRowStart), qColIndex(qColIndex),
                 rRowStart(rRowStart), rColIndex(rColIndex), qValue(qValue), rValue(rValue) {
     }
-    
+
     void execute(ThreadPool& pool, int threadIndex) {
         vector<double> rhs(numConstraints);
         for (int i = threadIndex; i < numConstraints; i += pool.getNumThreads()) {
@@ -61,8 +61,8 @@ public:
             QUERN_multiply_with_q_transpose(numConstraints, qRowStart, qColIndex, qValue, &rhs[0]);
             QUERN_solve_with_r(numConstraints, rRowStart, rColIndex, rValue, &rhs[0], &rhs[0]);
             for (int j = 0; j < numConstraints; j++) {
-                double value = rhs[j]*distance[j]/distance[i];
-                if (FABS((RealOpenMM) value) > elementCutoff)
+	         double value = rhs[j]*distance[i]/distance[j];
+	         if (FABS((RealOpenMM) value) > elementCutoff)
                     matrix[i].push_back(pair<int, RealOpenMM>(j, (RealOpenMM) value));
             }
         }
@@ -195,11 +195,27 @@ ReferenceCCMAAlgorithm::ReferenceCCMAAlgorithm(int numberOfAtoms,
         QUERN_compute_qr(numberOfConstraints, numberOfConstraints, &matrixRowStart[0], &matrixColIndex[0], &matrixValue[0], NULL,
                 &qRowStart, &qColIndex, &qValue, &rRowStart, &rColIndex, &rValue);
         vector<double> rhs(numberOfConstraints);
-        _matrix.resize(numberOfConstraints);
-        ThreadPool threads;
-        ExtractMatrixTask task(numberOfConstraints, _matrix, _distance, _elementCutoff, qRowStart, qColIndex, rRowStart, rColIndex, qValue, rValue);
+
+	std::vector<std::vector<std::pair<int, RealOpenMM> > > _matrixTranspose;
+	_matrixTranspose.resize(numberOfConstraints);
+
+
+        ThreadPool threads(8);
+        ExtractMatrixTask task(numberOfConstraints, _matrixTranspose, _distance, _elementCutoff, qRowStart, qColIndex, rRowStart, rColIndex, qValue, rValue);
         threads.execute(task);
         threads.waitForThreads();
+
+        _matrix.resize(numberOfConstraints);
+	for (int i = 0; i < numberOfConstraints; i++) {
+	  for (int k = 0; k < _matrixTranspose[i].size(); k++) {
+	    int j = _matrixTranspose[i][k].first;
+	    RealOpenMM value = _matrixTranspose[i][k].second;
+	    _matrix[j].push_back(pair<int, RealOpenMM>(i, value));
+	  }
+	}
+
+
+
         QUERN_free_result(qRowStart, qColIndex, qValue);
         QUERN_free_result(rRowStart, rColIndex, rValue);
     }
