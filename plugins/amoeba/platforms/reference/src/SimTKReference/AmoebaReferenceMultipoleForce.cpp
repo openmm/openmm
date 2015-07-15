@@ -364,9 +364,15 @@ void AmoebaReferenceMultipoleForce::checkChiralCenterAtParticle(MultipoleParticl
     RealOpenMM volume = deltaC.dot(deltaAD);
 
     if (volume < 0.0) {
+#if SPHERICAL_MULTIPOLES
+        particleI.sphericalDipole[2]     *= -1.0;   // y
+        particleI.sphericalQuadrupole[2] *= -1.0;   // yz
+        particleI.sphericalQuadrupole[4] *= -1.0;   // xy
+#else
         particleI.dipole[1]         *= -1.0; // pole(3,i)
         particleI.quadrupole[QXY]   *= -1.0; // pole(6,i)  && pole(8,i)
         particleI.quadrupole[QYZ]   *= -1.0; // pole(10,i) && pole(12,i)
+#endif
     }
 }
 
@@ -554,21 +560,20 @@ void AmoebaReferenceMultipoleForce::applyRotationMatrixToParticle(      Multipol
 
 
 #if SPHERICAL_MULTIPOLES
-void AmoebaReferenceMultipoleForce::formQIRotationMatrix(const MultipoleParticleData& particleI,
-                                                         const MultipoleParticleData& particleJ,
+void AmoebaReferenceMultipoleForce::formQIRotationMatrix(const RealVec& iPosition,
+                                                         const RealVec& jPosition,
                                                          const RealVec &deltaR,
                                                          RealOpenMM r,
                                                          RealOpenMM (&rotationMatrix)[3][3]) const
 {
     RealVec vectorZ = (deltaR)/r;
     RealVec vectorX(vectorZ);
-    if ((particleI.position[1] != particleJ.position[1]) || (particleI.position[2] != particleJ.position[2])){
+    if ((iPosition[1] != jPosition[1]) || (iPosition[2] != jPosition[2])){
         vectorX[0] += 1.0;
     }else{
         vectorX[1] += 1.0;
     }
     RealVec vectorY;
-
 
     RealOpenMM dot      = vectorZ.dot(vectorX);
     vectorX            -= vectorZ*dot;
@@ -587,6 +592,8 @@ void AmoebaReferenceMultipoleForce::formQIRotationMatrix(const MultipoleParticle
     rotationMatrix[2][1] = vectorY[0];
     rotationMatrix[2][2] = vectorY[1];
 }
+
+
 
 
 void AmoebaReferenceMultipoleForce::buildSphericalQuadrupoleRotationMatrix(const RealOpenMM (&D1)[3][3], RealOpenMM (&D2)[5][5]) const
@@ -621,19 +628,19 @@ void AmoebaReferenceMultipoleForce::buildSphericalQuadrupoleRotationMatrix(const
 void AmoebaReferenceMultipoleForce::buildPartialSphericalQuadrupoleRotationMatrix(const RealOpenMM (&D1)[3][3], RealOpenMM (&D2)[3][5]) const
 {
     D2[0][0] = 0.5*(3.0*D1[0][0]*D1[0][0] - 1.0);
-    D2[1][0] = sqrtThree*D1[0][0]*D1[1][0];
-    D2[2][0] = sqrtThree*D1[0][0]*D1[2][0];
     D2[0][1] = sqrtThree*D1[0][0]*D1[0][1];
-    D2[1][1] = D1[1][0]*D1[0][1] + D1[0][0]*D1[1][1];
-    D2[2][1] = D1[2][0]*D1[0][1] + D1[0][0]*D1[2][1];
     D2[0][2] = sqrtThree*D1[0][0]*D1[0][2];
-    D2[1][2] = D1[1][0]*D1[0][2] + D1[0][0]*D1[1][2];
-    D2[2][2] = D1[2][0]*D1[0][2] + D1[0][0]*D1[2][2];
     D2[0][3] = 0.5*sqrtThree*(D1[0][1]*D1[0][1] - D1[0][2]*D1[0][2]);
-    D2[1][3] = D1[0][1]*D1[1][1] - D1[0][2]*D1[1][2];
-    D2[2][3] = D1[0][1]*D1[2][1] - D1[0][2]*D1[2][2];
     D2[0][4] = sqrtThree*D1[0][1]*D1[0][2];
+    D2[1][0] = sqrtThree*D1[0][0]*D1[1][0];
+    D2[1][1] = D1[1][0]*D1[0][1] + D1[0][0]*D1[1][1];
+    D2[1][2] = D1[1][0]*D1[0][2] + D1[0][0]*D1[1][2];
+    D2[1][3] = D1[0][1]*D1[1][1] - D1[0][2]*D1[1][2];
     D2[1][4] = D1[1][1]*D1[0][2] + D1[0][1]*D1[1][2];
+    D2[2][0] = sqrtThree*D1[0][0]*D1[2][0];
+    D2[2][1] = D1[2][0]*D1[0][1] + D1[0][0]*D1[2][1];
+    D2[2][2] = D1[2][0]*D1[0][2] + D1[0][0]*D1[2][2];
+    D2[2][3] = D1[0][1]*D1[2][1] - D1[0][2]*D1[2][2];
     D2[2][4] = D1[2][1]*D1[0][2] + D1[0][1]*D1[2][2];
 }
 
@@ -698,6 +705,126 @@ void AmoebaReferenceMultipoleForce::calculateFixedMultipoleFieldPairIxn(const Mu
 
     RealVec deltaR    = particleJ.position - particleI.position;
     RealOpenMM r      = SQRT(deltaR.dot(deltaR));
+
+#if SPHERICAL_MULTIPOLES
+    unsigned int iIndex = particleI.particleIndex;
+    unsigned int jIndex = particleJ.particleIndex;
+
+    // Start by constructing rotation matrices to put dipoles and
+    // quadrupoles into the QI frame, from the lab frame.
+    RealOpenMM qiRotationMatrix1[3][3];
+    formQIRotationMatrix(particleI.position, particleJ.position, deltaR, r, qiRotationMatrix1);
+    RealOpenMM qiRotationMatrix2[3][5];
+    buildPartialSphericalQuadrupoleRotationMatrix(qiRotationMatrix1, qiRotationMatrix2);
+    // The field rotation matrix rotates the QI fields into the lab
+    // frame, and makes sure the result is in {x,y,z} ordering
+    RealOpenMM fieldRotationMatrix[3][3];
+    fieldRotationMatrix[0][0] = qiRotationMatrix1[0][1];
+    fieldRotationMatrix[0][1] = qiRotationMatrix1[1][1];
+    fieldRotationMatrix[0][2] = qiRotationMatrix1[2][1];
+    fieldRotationMatrix[1][0] = qiRotationMatrix1[0][2];
+    fieldRotationMatrix[1][1] = qiRotationMatrix1[1][2];
+    fieldRotationMatrix[1][2] = qiRotationMatrix1[2][2];
+    fieldRotationMatrix[2][0] = qiRotationMatrix1[0][0];
+    fieldRotationMatrix[2][1] = qiRotationMatrix1[1][0];
+    fieldRotationMatrix[2][2] = qiRotationMatrix1[2][0];
+
+    // The Qtilde intermediates (QI frame multipoles) for atoms I and J
+    RealOpenMM qiQI[9], qiQJ[9];
+    // Rotate the permanent multipoles to the QI frame.
+    qiQI[0] = particleI.charge;
+    qiQJ[0] = particleJ.charge;
+    for (int ii = 0; ii < 3; ii++) {
+        RealOpenMM valI = 0.0;
+        RealOpenMM valJ = 0.0;
+        for (int jj = 0; jj < 3; jj++) {
+            valI += qiRotationMatrix1[ii][jj] * particleI.sphericalDipole[jj];
+            valJ += qiRotationMatrix1[ii][jj] * particleJ.sphericalDipole[jj];
+        }
+        qiQI[ii+1] = valI;
+        qiQJ[ii+1] = valJ;
+    }
+
+    // We only need to go up to 3 in this loop; the final two term don't contribute
+    // to the field because of orthogonality.
+    for (int ii = 0; ii < 3; ii++) {
+        RealOpenMM valI = 0.0;
+        RealOpenMM valJ = 0.0;
+        for (int jj = 0; jj < 5; jj++) {
+            valI += qiRotationMatrix2[ii][jj] * particleI.sphericalQuadrupole[jj];
+            valJ += qiRotationMatrix2[ii][jj] * particleJ.sphericalQuadrupole[jj];
+        }
+        qiQI[ii+4] = valI;
+        qiQJ[ii+4] = valJ;
+    }
+
+    RealOpenMM rInvVec[5];
+    RealOpenMM rInv = 1.0 / r;
+    // The rInvVec array is defined such that the ith element is R^-i, with the
+    // dieleectric constant folded in, to avoid conversions later.
+    rInvVec[1] = rInv;
+    for(int i = 2; i < 5; ++i)
+        rInvVec[i] = rInvVec[i-1] * rInv;
+
+    RealOpenMM dmp = particleI.dampingFactor*particleJ.dampingFactor;
+    RealOpenMM a = particleI.thole < particleJ.thole ? particleI.thole : particleJ.thole;
+    RealOpenMM u = std::abs(dmp) > 1.0E-5 ? r/dmp : 1E10;
+    RealOpenMM au3 = a*u*u*u;
+    RealOpenMM expau3 = au3 < 50.0 ? EXP(-au3) : 0.0;
+    RealOpenMM a2u6 = au3*au3;
+    // Thole damping factors for energies
+    RealOpenMM thole_c  = 1.0 - expau3;
+    RealOpenMM thole_d0 = 1.0 - expau3*(1.0 + 1.5*au3);
+    RealOpenMM thole_d1 = 1.0 - expau3;
+    RealOpenMM thole_q0 = 1.0 - expau3*(1.0 + au3 + a2u6);
+    RealOpenMM thole_q1 = 1.0 - expau3*(1.0 + au3);
+
+    // Build the QI frame multipole intermediates
+    RealOpenMM qivec0[3] = {  qiQJ[0], qiQJ[1],  qiQJ[4] };
+    RealOpenMM qjvec0[3] = { -qiQI[0], qiQI[1], -qiQI[4] };
+    RealOpenMM qivec1[2] = { qiQJ[2], qiQJ[5] };
+    RealOpenMM qjvec1[2] = { qiQI[2], -qiQI[5] };
+    RealOpenMM qivec2[2] = { qiQJ[3], qiQJ[6] };
+    RealOpenMM qjvec2[2] = { qiQI[3], -qiQI[6] };
+
+    // Build the QI frame Coulomb operator intermediates
+    RealOpenMM v0d[3] = { -rInvVec[2]*dScale*thole_c, 2.0*rInvVec[3]*dScale*thole_d0, -3.0*rInvVec[4]*dScale*thole_q0 };
+    RealOpenMM v0p[3] = { -rInvVec[2]*pScale*thole_c, 2.0*rInvVec[3]*pScale*thole_d0, -3.0*rInvVec[4]*pScale*thole_q0 };
+    RealOpenMM v1d[2] = { -rInvVec[3]*dScale*thole_d1, sqrtThree*rInvVec[4]*dScale*thole_q1 };
+    RealOpenMM v1p[2] = { -rInvVec[3]*pScale*thole_d1, sqrtThree*rInvVec[4]*pScale*thole_q1 };
+
+    // Contract the QI multipole intermediates and Coulomb operator to form the QI frame field.
+    RealOpenMM Vijd[3] = { v0d[0]*qivec0[0] + v0d[1]*qivec0[1] + v0d[2]*qivec0[2],
+                           v1d[0]*qivec1[0] + v1d[1]*qivec1[1],
+                           v1d[0]*qivec2[0] + v1d[1]*qivec2[1] };
+    RealOpenMM Vijp[3] = { v0p[0]*qivec0[0] + v0p[1]*qivec0[1] + v0p[2]*qivec0[2],
+                           v1p[0]*qivec1[0] + v1p[1]*qivec1[1],
+                           v1p[0]*qivec2[0] + v1p[1]*qivec2[1] };
+    RealOpenMM Vjid[3] = { v0d[0]*qjvec0[0] + v0d[1]*qjvec0[1] + v0d[2]*qjvec0[2],
+                           v1d[0]*qjvec1[0] + v1d[1]*qjvec1[1],
+                           v1d[0]*qjvec2[0] + v1d[1]*qjvec2[1] };
+    RealOpenMM Vjip[3] = { v0p[0]*qjvec0[0] + v0p[1]*qjvec0[1] + v0p[2]*qjvec0[2],
+                           v1p[0]*qjvec1[0] + v1p[1]*qjvec1[1],
+                           v1p[0]*qjvec2[0] + v1p[1]*qjvec2[1] };
+
+    // Rotate the forces and torques back to the lab frame
+    for (int ii = 0; ii < 3; ii++) {
+        RealOpenMM VijpVal = 0.0;
+        RealOpenMM VijdVal = 0.0;
+        RealOpenMM VjipVal = 0.0;
+        RealOpenMM VjidVal = 0.0;
+        for (int jj = 0; jj < 3; jj++) {
+            VijdVal += fieldRotationMatrix[ii][jj] * Vijd[jj];
+            VijpVal += fieldRotationMatrix[ii][jj] * Vijp[jj];
+            VjidVal += fieldRotationMatrix[ii][jj] * Vjid[jj];
+            VjipVal += fieldRotationMatrix[ii][jj] * Vjip[jj];
+        }
+        _fixedMultipoleField[iIndex][ii]      += VijdVal;
+        _fixedMultipoleField[jIndex][ii]      += VjidVal;
+        _fixedMultipoleFieldPolar[iIndex][ii] += VijpVal;
+        _fixedMultipoleFieldPolar[jIndex][ii] += VjipVal;
+    }
+#else
     vector<RealOpenMM> rrI(3);
  
     // get scaling factors, if needed
@@ -740,6 +867,7 @@ void AmoebaReferenceMultipoleForce::calculateFixedMultipoleFieldPairIxn(const Mu
     particleIndex                               = particleJ.particleIndex;
     _fixedMultipoleField[particleIndex]        += field*dScale;
     _fixedMultipoleFieldPolar[particleIndex]   += field*pScale;
+#endif
 }
 
 void AmoebaReferenceMultipoleForce::calculateFixedMultipoleField(const vector<MultipoleParticleData>& particleData)
@@ -1053,6 +1181,395 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateElectrostaticPairIxn(const Mu
                                                                         vector<RealVec>& forces,
                                                                         vector<RealVec>& torque) const 
 {
+
+#if SPHERICAL_MULTIPOLES
+
+    unsigned int iIndex = particleI.particleIndex;
+    unsigned int kIndex = particleK.particleIndex;
+
+    RealVec deltaR = particleK.position - particleI.position;
+    RealOpenMM r2  = deltaR.dot(deltaR);
+    RealOpenMM r   = SQRT(r2);
+
+    // Start by constructing rotation matrices to put dipoles and
+    // quadrupoles into the QI frame, from the lab frame.
+    RealOpenMM qiRotationMatrix1[3][3];
+    formQIRotationMatrix(particleI.position, particleK.position, deltaR, r, qiRotationMatrix1);
+    RealOpenMM qiRotationMatrix2[5][5];
+    buildSphericalQuadrupoleRotationMatrix(qiRotationMatrix1, qiRotationMatrix2);
+    // The force rotation matrix rotates the QI forces into the lab
+    // frame, and makes sure the result is in {x,y,z} ordering. Its
+    // transpose is used to rotate the induced dipoles to the QI frame.
+    RealOpenMM forceRotationMatrix[3][3];
+    forceRotationMatrix[0][0] = qiRotationMatrix1[1][1];
+    forceRotationMatrix[0][1] = qiRotationMatrix1[2][1];
+    forceRotationMatrix[0][2] = qiRotationMatrix1[0][1];
+    forceRotationMatrix[1][0] = qiRotationMatrix1[1][2];
+    forceRotationMatrix[1][1] = qiRotationMatrix1[2][2];
+    forceRotationMatrix[1][2] = qiRotationMatrix1[0][2];
+    forceRotationMatrix[2][0] = qiRotationMatrix1[1][0];
+    forceRotationMatrix[2][1] = qiRotationMatrix1[2][0];
+    forceRotationMatrix[2][2] = qiRotationMatrix1[0][0];
+    // For efficiency, we go ahead and cache that transposed version
+    // now, because we need to do 4 rotations in total (I,J, and p,d).
+    // We also fold in the factor of 0.5 needed to average the p and d
+    // components.
+    RealOpenMM inducedDipoleRotationMatrix[3][3];
+    inducedDipoleRotationMatrix[0][0] = 0.5*qiRotationMatrix1[0][1];
+    inducedDipoleRotationMatrix[0][1] = 0.5*qiRotationMatrix1[0][2];
+    inducedDipoleRotationMatrix[0][2] = 0.5*qiRotationMatrix1[0][0];
+    inducedDipoleRotationMatrix[1][0] = 0.5*qiRotationMatrix1[1][1];
+    inducedDipoleRotationMatrix[1][1] = 0.5*qiRotationMatrix1[1][2];
+    inducedDipoleRotationMatrix[1][2] = 0.5*qiRotationMatrix1[1][0];
+    inducedDipoleRotationMatrix[2][0] = 0.5*qiRotationMatrix1[2][1];
+    inducedDipoleRotationMatrix[2][1] = 0.5*qiRotationMatrix1[2][2];
+    inducedDipoleRotationMatrix[2][2] = 0.5*qiRotationMatrix1[2][0];
+
+    // Rotate the induced dipoles to the QI frame.
+    RealOpenMM qiUindI[3], qiUindJ[3], qiUinpI[3], qiUinpJ[3];
+    for (int ii = 0; ii < 3; ii++) {
+        RealOpenMM valIP = 0.0;
+        RealOpenMM valID = 0.0;
+        RealOpenMM valJP = 0.0;
+        RealOpenMM valJD = 0.0;
+        for (int jj = 0; jj < 3; jj++) {
+            valIP += inducedDipoleRotationMatrix[ii][jj] * _inducedDipolePolar[iIndex][jj];
+            valID += inducedDipoleRotationMatrix[ii][jj] * _inducedDipole[iIndex][jj];
+            valJP += inducedDipoleRotationMatrix[ii][jj] * _inducedDipolePolar[kIndex][jj];
+            valJD += inducedDipoleRotationMatrix[ii][jj] * _inducedDipole[kIndex][jj];
+        }
+        qiUindI[ii] = valID;
+        qiUinpI[ii] = valIP;
+        qiUindJ[ii] = valJD;
+        qiUinpJ[ii] = valJP;
+    }
+
+    // The Qtilde intermediates (QI frame multipoles) for atoms I and J
+    RealOpenMM qiQI[9], qiQJ[9];
+    // Rotate the permanent multipoles to the QI frame.
+    qiQI[0] = particleI.charge;
+    qiQJ[0] = particleK.charge;
+    for (int ii = 0; ii < 3; ii++) {
+        RealOpenMM valI = 0.0;
+        RealOpenMM valJ = 0.0;
+        for (int jj = 0; jj < 3; jj++) {
+            valI += qiRotationMatrix1[ii][jj] * particleI.sphericalDipole[jj];
+            valJ += qiRotationMatrix1[ii][jj] * particleK.sphericalDipole[jj];
+        }
+        qiQI[ii+1] = valI;
+        qiQJ[ii+1] = valJ;
+    }
+    for (int ii = 0; ii < 5; ii++) {
+        RealOpenMM valI = 0.0;
+        RealOpenMM valJ = 0.0;
+        for (int jj = 0; jj < 5; jj++) {
+            valI += qiRotationMatrix2[ii][jj] * particleI.sphericalQuadrupole[jj];
+            valJ += qiRotationMatrix2[ii][jj] * particleK.sphericalQuadrupole[jj];
+        }
+        qiQI[ii+4] = valI;
+        qiQJ[ii+4] = valJ;
+    }
+
+    // The Qtilde{x,y,z} torque intermediates for atoms I and J, which are used to obtain the torques on the permanent moments.
+    RealOpenMM qiQIX[9] = {0.0, qiQI[3], 0.0, -qiQI[1], sqrtThree*qiQI[6], qiQI[8], -sqrtThree*qiQI[4] - qiQI[7], qiQI[6], -qiQI[5]};
+    RealOpenMM qiQIY[9] = {0.0, -qiQI[2], qiQI[1], 0.0, -sqrtThree*qiQI[5], sqrtThree*qiQI[4] - qiQI[7], -qiQI[8], qiQI[5], qiQI[6]};
+    RealOpenMM qiQIZ[9] = {0.0, 0.0, -qiQI[3], qiQI[2], 0.0, -qiQI[6], qiQI[5], -2.0*qiQI[8], 2.0*qiQI[7]};
+    RealOpenMM qiQJX[9] = {0.0, qiQJ[3], 0.0, -qiQJ[1], sqrtThree*qiQJ[6], qiQJ[8], -sqrtThree*qiQJ[4] - qiQJ[7], qiQJ[6], -qiQJ[5]};
+    RealOpenMM qiQJY[9] = {0.0, -qiQJ[2], qiQJ[1], 0.0, -sqrtThree*qiQJ[5], sqrtThree*qiQJ[4] - qiQJ[7], -qiQJ[8], qiQJ[5], qiQJ[6]};
+    RealOpenMM qiQJZ[9] = {0.0, 0.0, -qiQJ[3], qiQJ[2], 0.0, -qiQJ[6], qiQJ[5], -2.0*qiQJ[8], 2.0*qiQJ[7]};
+
+    // The field derivatives at I due to permanent and induced moments on J, and vice-versa.
+    // Also, their derivatives w.r.t. R, which are needed for force calculations
+    RealOpenMM Vij[9], Vji[9], VjiR[9], VijR[9];
+    // The field derivatives at I due to only permanent moments on J, and vice-versa.
+    RealOpenMM Vijp[3], Vijd[3], Vjip[3], Vjid[3];
+    RealOpenMM rInvVec[7];
+
+    RealOpenMM prefac = (_electric/_dielectric);
+    RealOpenMM rInv = 1.0 / r;
+
+    // The rInvVec array is defined such that the ith element is R^-i, with the
+    // dieleectric constant folded in, to avoid conversions later.
+    rInvVec[1] = prefac * rInv;
+    for(int i = 2; i < 7; ++i)
+        rInvVec[i] = rInvVec[i-1] * rInv;
+
+    RealOpenMM mScale = scalingFactors[M_SCALE];
+    RealOpenMM dScale = scalingFactors[D_SCALE];
+    RealOpenMM pScale = scalingFactors[P_SCALE];
+    RealOpenMM uScale = scalingFactors[U_SCALE];
+
+    RealOpenMM dmp = particleI.dampingFactor*particleK.dampingFactor;
+    RealOpenMM a = particleI.thole < particleK.thole ? particleI.thole : particleK.thole;
+    RealOpenMM u = std::abs(dmp) > 1.0E-5 ? r/dmp : 1E10;
+    RealOpenMM au3 = a*u*u*u;
+    RealOpenMM expau3 = au3 < 50.0 ? EXP(-au3) : 0.0;
+    RealOpenMM a2u6 = au3*au3;
+    RealOpenMM a3u9 = a2u6*au3;
+    // Thole damping factors for energies
+    RealOpenMM thole_c  = 1.0 - expau3;
+    RealOpenMM thole_d0 = 1.0 - expau3*(1.0 + 1.5*au3);
+    RealOpenMM thole_d1 = 1.0 - expau3;
+    RealOpenMM thole_q0 = 1.0 - expau3*(1.0 + au3 + a2u6);
+    RealOpenMM thole_q1 = 1.0 - expau3*(1.0 + au3);
+    // Thole damping factors for derivatives
+    RealOpenMM dthole_c  = 1.0 - expau3*(1.0 + 1.5*au3);
+    RealOpenMM dthole_d0 = 1.0 - expau3*(1.0 + au3 + 1.5*a2u6);
+    RealOpenMM dthole_d1 = 1.0 - expau3*(1.0 + au3);
+    RealOpenMM dthole_q0 = 1.0 - expau3*(1.0 + au3 + 0.25*a2u6 + 0.75*a3u9);
+    RealOpenMM dthole_q1 = 1.0 - expau3*(1.0 + au3 + 0.75*a2u6);
+
+    // Now we compute the (attenuated) Coulomb operator and its derivatives, contracted with
+    // permanent moments and induced dipoles.  Note that the coefficient of the permanent force
+    // terms is half of the expected value; this is because we compute the interaction of I with
+    // the sum of induced and permanent moments on J, as well as the interaction of J with I's
+    // permanent and induced moments; doing so double counts the permanent-permanent interaction.
+    RealOpenMM ePermCoef, dPermCoef, eUIndCoef, dUIndCoef, eUInpCoef, dUInpCoef;
+
+    // C-C terms (m=0)
+    ePermCoef = rInvVec[1]*mScale;
+    dPermCoef = -0.5*mScale*rInvVec[2];
+    Vij[0]  = ePermCoef*qiQJ[0];
+    Vji[0]  = ePermCoef*qiQI[0];
+    VijR[0] = dPermCoef*qiQJ[0];
+    VjiR[0] = dPermCoef*qiQI[0];
+
+    // C-D and C-Uind terms (m=0)
+    ePermCoef = rInvVec[2]*mScale;
+    eUIndCoef = rInvVec[2]*dScale*thole_c;
+    eUInpCoef = rInvVec[2]*pScale*thole_c;
+    dPermCoef = -rInvVec[3]*mScale;
+    dUIndCoef = -2.0*rInvVec[3]*dScale*dthole_c;
+    dUInpCoef = -2.0*rInvVec[3]*pScale*dthole_c;
+    Vij[0]  += -(ePermCoef*qiQJ[1] + eUIndCoef*qiUindJ[0] + eUInpCoef*qiUinpJ[0]);
+    Vji[1]   = -(ePermCoef*qiQI[0]);
+    VijR[0] += -(dPermCoef*qiQJ[1] + dUIndCoef*qiUindJ[0] + dUInpCoef*qiUinpJ[0]);
+    VjiR[1]  = -(dPermCoef*qiQI[0]);
+    Vjip[0]  = -(eUInpCoef*qiQI[0]);
+    Vjid[0]  = -(eUIndCoef*qiQI[0]);
+    // D-C and Uind-C terms (m=0)
+    Vij[1]   = ePermCoef*qiQJ[0];
+    Vji[0]  += ePermCoef*qiQI[1] + eUIndCoef*qiUindI[0] + eUInpCoef*qiUinpI[0];
+    VijR[1]  = dPermCoef*qiQJ[0];
+    VjiR[0] += dPermCoef*qiQI[1] + dUIndCoef*qiUindI[0] + dUInpCoef*qiUinpI[0];
+    Vijp[0]  = eUInpCoef*qiQJ[0];
+    Vijd[0]  = eUIndCoef*qiQJ[0];
+
+    // D-D and D-Uind terms (m=0)
+    ePermCoef = -2.0*rInvVec[3]*mScale;
+    eUIndCoef = -2.0*rInvVec[3]*dScale*thole_d0;
+    eUInpCoef = -2.0*rInvVec[3]*pScale*thole_d0;
+    dPermCoef = 3.0*rInvVec[4]*mScale;
+    dUIndCoef = 6.0*rInvVec[4]*dScale*dthole_d0;
+    dUInpCoef = 6.0*rInvVec[4]*pScale*dthole_d0;
+    Vij[1]  += ePermCoef*qiQJ[1] + eUIndCoef*qiUindJ[0] + eUInpCoef*qiUinpJ[0];
+    Vji[1]  += ePermCoef*qiQI[1] + eUIndCoef*qiUindI[0] + eUInpCoef*qiUinpI[0];
+    VijR[1] += dPermCoef*qiQJ[1] + dUIndCoef*qiUindJ[0] + dUInpCoef*qiUinpJ[0];
+    VjiR[1] += dPermCoef*qiQI[1] + dUIndCoef*qiUindI[0] + dUInpCoef*qiUinpI[0];
+    Vijp[0] += eUInpCoef*qiQJ[1];
+    Vijd[0] += eUIndCoef*qiQJ[1];
+    Vjip[0] += eUInpCoef*qiQI[1];
+    Vjid[0] += eUIndCoef*qiQI[1];
+    // D-D and D-Uind terms (m=1)
+    ePermCoef = rInvVec[3]*mScale;
+    eUIndCoef = rInvVec[3]*dScale*thole_d1;
+    eUInpCoef = rInvVec[3]*pScale*thole_d1;
+    dPermCoef = -1.5*rInvVec[4]*mScale;
+    dUIndCoef = -3.0*rInvVec[4]*dScale*dthole_d1;
+    dUInpCoef = -3.0*rInvVec[4]*pScale*dthole_d1;
+    Vij[2]  = ePermCoef*qiQJ[2] + eUIndCoef*qiUindJ[1] + eUInpCoef*qiUinpJ[1];
+    Vji[2]  = ePermCoef*qiQI[2] + eUIndCoef*qiUindI[1] + eUInpCoef*qiUinpI[1];
+    VijR[2] = dPermCoef*qiQJ[2] + dUIndCoef*qiUindJ[1] + dUInpCoef*qiUinpJ[1];
+    VjiR[2] = dPermCoef*qiQI[2] + dUIndCoef*qiUindI[1] + dUInpCoef*qiUinpI[1];
+    Vij[3]  = ePermCoef*qiQJ[3] + eUIndCoef*qiUindJ[2] + eUInpCoef*qiUinpJ[2];
+    Vji[3]  = ePermCoef*qiQI[3] + eUIndCoef*qiUindI[2] + eUInpCoef*qiUinpI[2];
+    VijR[3] = dPermCoef*qiQJ[3] + dUIndCoef*qiUindJ[2] + dUInpCoef*qiUinpJ[2];
+    VjiR[3] = dPermCoef*qiQI[3] + dUIndCoef*qiUindI[2] + dUInpCoef*qiUinpI[2];
+    Vijp[1] = eUInpCoef*qiQJ[2];
+    Vijd[1] = eUIndCoef*qiQJ[2];
+    Vjip[1] = eUInpCoef*qiQI[2];
+    Vjid[1] = eUIndCoef*qiQI[2];
+    Vijp[2] = eUInpCoef*qiQJ[3];
+    Vijd[2] = eUIndCoef*qiQJ[3];
+    Vjip[2] = eUInpCoef*qiQI[3];
+    Vjid[2] = eUIndCoef*qiQI[3];
+
+    // C-Q terms (m=0)
+    ePermCoef = mScale*rInvVec[3];
+    dPermCoef = -1.5*rInvVec[4]*mScale;
+    Vij[0]  += ePermCoef*qiQJ[4];
+    Vji[4]   = ePermCoef*qiQI[0];
+    VijR[0] += dPermCoef*qiQJ[4];
+    VjiR[4]  = dPermCoef*qiQI[0];
+    // Q-C terms (m=0)
+    Vij[4]   = ePermCoef*qiQJ[0];
+    Vji[0]  += ePermCoef*qiQI[4];
+    VijR[4]  = dPermCoef*qiQJ[0];
+    VjiR[0] += dPermCoef*qiQI[4];
+
+    // D-Q and Uind-Q terms (m=0)
+    ePermCoef = rInvVec[4]*3.0*mScale;
+    eUIndCoef = rInvVec[4]*3.0*dScale*thole_q0;
+    eUInpCoef = rInvVec[4]*3.0*pScale*thole_q0;
+    dPermCoef = -6.0*rInvVec[5]*mScale;
+    dUIndCoef = -12.0*rInvVec[5]*dScale*dthole_q0;
+    dUInpCoef = -12.0*rInvVec[5]*pScale*dthole_q0;
+    Vij[1]  += ePermCoef*qiQJ[4];
+    Vji[4]  += ePermCoef*qiQI[1] + eUIndCoef*qiUindI[0] + eUInpCoef*qiUinpI[0];
+    VijR[1] += dPermCoef*qiQJ[4];
+    VjiR[4] += dPermCoef*qiQI[1] + dUIndCoef*qiUindI[0] + dUInpCoef*qiUinpI[0];
+    Vijp[0] += eUInpCoef*qiQJ[4];
+    Vijd[0] += eUIndCoef*qiQJ[4];
+    // Q-D and Q-Uind terms (m=0)
+    Vij[4]  += -(ePermCoef*qiQJ[1] + eUIndCoef*qiUindJ[0] + eUInpCoef*qiUinpJ[0]);
+    Vji[1]  += -(ePermCoef*qiQI[4]);
+    VijR[4] += -(dPermCoef*qiQJ[1] + dUIndCoef*qiUindJ[0] + dUInpCoef*qiUinpJ[0]);
+    VjiR[1] += -(dPermCoef*qiQI[4]);
+    Vjip[0] += -(eUInpCoef*qiQI[4]);
+    Vjid[0] += -(eUIndCoef*qiQI[4]);
+
+    // D-Q and Uind-Q terms (m=1)
+    ePermCoef = -sqrtThree*rInvVec[4]*mScale;
+    eUIndCoef = -sqrtThree*rInvVec[4]*dScale*thole_q1;
+    eUInpCoef = -sqrtThree*rInvVec[4]*pScale*thole_q1;
+    dPermCoef = 2.0*sqrtThree*rInvVec[5]*mScale;
+    dUIndCoef = 4.0*sqrtThree*rInvVec[5]*dScale*dthole_q1;
+    dUInpCoef = 4.0*sqrtThree*rInvVec[5]*pScale*dthole_q1;
+    Vij[2]  += ePermCoef*qiQJ[5];
+    Vji[5]   = ePermCoef*qiQI[2] + eUIndCoef*qiUindI[1] + eUInpCoef*qiUinpI[1];
+    VijR[2] += dPermCoef*qiQJ[5];
+    VjiR[5]  = dPermCoef*qiQI[2] + dUIndCoef*qiUindI[1] + dUInpCoef*qiUinpI[1];
+    Vij[3]  += ePermCoef*qiQJ[6];
+    Vji[6]   = ePermCoef*qiQI[3] + eUIndCoef*qiUindI[2] + eUInpCoef*qiUinpI[2];
+    VijR[3] += dPermCoef*qiQJ[6];
+    VjiR[6]  = dPermCoef*qiQI[3] + dUIndCoef*qiUindI[2] + dUInpCoef*qiUinpI[2];
+    Vijp[1] += eUInpCoef*qiQJ[5];
+    Vijd[1] += eUIndCoef*qiQJ[5];
+    Vijp[2] += eUInpCoef*qiQJ[6];
+    Vijd[2] += eUIndCoef*qiQJ[6];
+    // D-Q and Uind-Q terms (m=1)
+    Vij[5]   = -(ePermCoef*qiQJ[2] + eUIndCoef*qiUindJ[1] + eUInpCoef*qiUinpJ[1]);
+    Vji[2]  += -(ePermCoef*qiQI[5]);
+    VijR[5]  = -(dPermCoef*qiQJ[2] + dUIndCoef*qiUindJ[1] + dUInpCoef*qiUinpJ[1]);
+    VjiR[2] += -(dPermCoef*qiQI[5]);
+    Vij[6]   = -(ePermCoef*qiQJ[3] + eUIndCoef*qiUindJ[2] + eUInpCoef*qiUinpJ[2]);
+    Vji[3]  += -(ePermCoef*qiQI[6]);
+    VijR[6]  = -(dPermCoef*qiQJ[3] + dUIndCoef*qiUindJ[2] + dUInpCoef*qiUinpJ[2]);
+    VjiR[3] += -(dPermCoef*qiQI[6]);
+    Vjip[1] += -(eUInpCoef*qiQI[5]);
+    Vjid[1] += -(eUIndCoef*qiQI[5]);
+    Vjip[2] += -(eUInpCoef*qiQI[6]);
+    Vjid[2] += -(eUIndCoef*qiQI[6]);
+
+    // Q-Q terms (m=0)
+    ePermCoef = 6.0*rInvVec[5]*mScale;
+    dPermCoef = -15.0*rInvVec[6]*mScale;
+    Vij[4]  += ePermCoef*qiQJ[4];
+    Vji[4]  += ePermCoef*qiQI[4];
+    VijR[4] += dPermCoef*qiQJ[4];
+    VjiR[4] += dPermCoef*qiQI[4];
+    // Q-Q terms (m=1)
+    ePermCoef = -4.0*rInvVec[5]*mScale;
+    dPermCoef = 10.0*rInvVec[6]*mScale;
+    Vij[5]  += ePermCoef*qiQJ[5];
+    Vji[5]  += ePermCoef*qiQI[5];
+    VijR[5] += dPermCoef*qiQJ[5];
+    VjiR[5] += dPermCoef*qiQI[5];
+    Vij[6]  += ePermCoef*qiQJ[6];
+    Vji[6]  += ePermCoef*qiQI[6];
+    VijR[6] += dPermCoef*qiQJ[6];
+    VjiR[6] += dPermCoef*qiQI[6];
+    // Q-Q terms (m=2)
+    ePermCoef = rInvVec[5]*mScale;
+    dPermCoef = -2.5*rInvVec[6]*mScale;
+    Vij[7]  = ePermCoef*qiQJ[7];
+    Vji[7]  = ePermCoef*qiQI[7];
+    VijR[7] = dPermCoef*qiQJ[7];
+    VjiR[7] = dPermCoef*qiQI[7];
+    Vij[8]  = ePermCoef*qiQJ[8];
+    Vji[8]  = ePermCoef*qiQI[8];
+    VijR[8] = dPermCoef*qiQJ[8];
+    VjiR[8] = dPermCoef*qiQI[8];
+
+    // Evaluate the energies, forces and torques due to permanent+induced moments
+    // interacting with just the permanent moments.
+    RealOpenMM energy = 0.5*(qiQI[0]*Vij[0] + qiQJ[0]*Vji[0]);
+    RealOpenMM fIZ = qiQI[0]*VijR[0];
+    RealOpenMM fJZ = qiQJ[0]*VjiR[0];
+    RealOpenMM EIX = 0.0, EIY = 0.0, EIZ = 0.0, EJX = 0.0, EJY = 0.0, EJZ = 0.0;
+    for(int i = 1; i < 9; ++i){
+        energy += 0.5*(qiQI[i]*Vij[i] + qiQJ[i]*Vji[i]);
+        fIZ += qiQI[i]*VijR[i];
+        fJZ += qiQJ[i]*VjiR[i];
+        EIX += qiQIX[i]*Vij[i];
+        EIY += qiQIY[i]*Vij[i];
+        EIZ += qiQIZ[i]*Vij[i];
+        EJX += qiQJX[i]*Vji[i];
+        EJY += qiQJY[i]*Vji[i];
+        EJZ += qiQJZ[i]*Vji[i];
+    }
+
+    // Define the torque intermediates for the induced dipoles. These are simply the induced dipole torque
+    // intermediates dotted with the field due to permanent moments only, at each center. We inline the
+    // induced dipole torque intermediates here, for simplicity. N.B. There are no torques on the dipoles
+    // themselves, so we accumulate the torque intermediates into separate variables to allow them to be
+    // used only in the force calculation.
+    //
+    // The torque about the x axis (needed to obtain the y force on the induced dipoles, below)
+    //    qiUindIx[0] = qiQUindI[2];    qiUindIx[1] = 0;    qiUindIx[2] = -qiQUindI[0]
+    RealOpenMM iEIX = qiUinpI[2]*Vijp[0] + qiUindI[2]*Vijd[0] - qiUinpI[0]*Vijp[2] - qiUindI[0]*Vijd[2];
+    RealOpenMM iEJX = qiUinpJ[2]*Vjip[0] + qiUindJ[2]*Vjid[0] - qiUinpJ[0]*Vjip[2] - qiUindJ[0]*Vjid[2];
+    // The torque about the y axis (needed to obtain the x force on the induced dipoles, below)
+    //    qiUindIy[0] = -qiQUindI[1];   qiUindIy[1] = qiQUindI[0];    qiUindIy[2] = 0
+    RealOpenMM iEIY = qiUinpI[0]*Vijp[1] + qiUindI[0]*Vijd[1] - qiUinpI[1]*Vijp[0] - qiUindI[1]*Vijd[0];
+    RealOpenMM iEJY = qiUinpJ[0]*Vjip[1] + qiUindJ[0]*Vjid[1] - qiUinpJ[1]*Vjip[0] - qiUindJ[1]*Vjid[0];
+
+    // Add in the induced-induced terms, if needed.
+    if(getPolarizationType() == AmoebaReferenceMultipoleForce::Mutual){
+        // Uind-Uind terms (m=0)
+        RealOpenMM eCoef = -4.0*rInvVec[3]*uScale*thole_d0;
+        RealOpenMM dCoef = 6.0*rInvVec[4]*uScale*dthole_d0;
+        iEIX += eCoef*(qiUinpI[2]*qiUindJ[0] + qiUindI[2]*qiUinpJ[0]);
+        iEJX += eCoef*(qiUinpJ[2]*qiUindI[0] + qiUindJ[2]*qiUinpI[0]);
+        iEIY -= eCoef*(qiUinpI[1]*qiUindJ[0] + qiUindI[1]*qiUinpJ[0]);
+        iEJY -= eCoef*(qiUinpJ[1]*qiUindI[0] + qiUindJ[1]*qiUinpI[0]);
+        fIZ += dCoef*(qiUinpI[0]*qiUindJ[0] + qiUindI[0]*qiUinpJ[0]);
+        fIZ += dCoef*(qiUinpJ[0]*qiUindI[0] + qiUindJ[0]*qiUinpI[0]);
+        // Uind-Uind terms (m=1)
+        eCoef = 2.0*rInvVec[3]*uScale*thole_d1;
+        dCoef = -3.0*rInvVec[4]*uScale*dthole_d1;
+        iEIX -= eCoef*(qiUinpI[0]*qiUindJ[2] + qiUindI[0]*qiUinpJ[2]);
+        iEJX -= eCoef*(qiUinpJ[0]*qiUindI[2] + qiUindJ[0]*qiUinpI[2]);
+        iEIY += eCoef*(qiUinpI[0]*qiUindJ[1] + qiUindI[0]*qiUinpJ[1]);
+        iEJY += eCoef*(qiUinpJ[0]*qiUindI[1] + qiUindJ[0]*qiUinpI[1]);
+        fIZ += dCoef*(qiUinpI[1]*qiUindJ[1] + qiUindI[1]*qiUinpJ[1] + qiUinpI[2]*qiUindJ[2] + qiUindI[2]*qiUinpJ[2]);
+        fIZ += dCoef*(qiUinpJ[1]*qiUindI[1] + qiUindJ[1]*qiUinpI[1] + qiUinpJ[2]*qiUindI[2] + qiUindJ[2]*qiUinpI[2]);
+    }
+
+    // The quasi-internal frame forces and torques.  Note that the induced torque intermediates are
+    // used in the force expression, but not in the torques; the induced dipoles are isotropic.
+    RealOpenMM qiForce[3] = {rInv*(EIY+EJY+iEIY+iEJY), -rInv*(EIX+EJX+iEIX+iEJX), -(fJZ+fIZ)};
+    RealOpenMM qiTorqueI[3] = {-EIX, -EIY, -EIZ};
+    RealOpenMM qiTorqueJ[3] = {-EJX, -EJY, -EJZ};
+
+    // Rotate the forces and torques back to the lab frame
+    for (int ii = 0; ii < 3; ii++) {
+        RealOpenMM forceVal = 0.0;
+        RealOpenMM torqueIVal = 0.0;
+        RealOpenMM torqueJVal = 0.0;
+        for (int jj = 0; jj < 3; jj++) {
+            forceVal   += forceRotationMatrix[ii][jj] * qiForce[jj];
+            torqueIVal += forceRotationMatrix[ii][jj] * qiTorqueI[jj];
+            torqueJVal += forceRotationMatrix[ii][jj] * qiTorqueJ[jj];
+        }
+        torque[iIndex][ii] += torqueIVal;
+        torque[kIndex][ii] += torqueJVal;
+        forces[iIndex][ii] -= forceVal;
+        forces[kIndex][ii] += forceVal;
+    }
+    return energy;
+
+#else
     RealOpenMM temp3,temp5,temp7;
     RealOpenMM gl[9],gli[7],glip[7];
     RealOpenMM sc[10],sci[8],scip[8];
@@ -1402,8 +1919,8 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateElectrostaticPairIxn(const Mu
 
     torque[iIndex] += (ttm2*scalingFactors[M_SCALE] + ttm2i)*f;
     torque[kIndex] += (ttm3*scalingFactors[M_SCALE] + ttm3i)*f;
-
     return energy;
+#endif
 }
 
 void AmoebaReferenceMultipoleForce::mapTorqueToForceForParticle(const MultipoleParticleData& particleI,
@@ -1901,10 +2418,25 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateElectrostaticPotentialForPart
     RealOpenMM r             = SQRT(r2);
 
     RealOpenMM rr1           = 1.0/r;
-    RealOpenMM potential     = particleI.charge*rr1;
-
     RealOpenMM rr2           = rr1*rr1;
     RealOpenMM rr3           = rr1*rr2;
+    RealOpenMM potential     = particleI.charge*rr1;
+
+#if SPHERICAL_MULTIPOLES
+    unsigned int iIndex = particleI.particleIndex;
+    RealOpenMM D1[3][3];
+    formQIRotationMatrix(particleI.position, gridPoint, deltaR, r, D1);
+    RealOpenMM D2[5] = {1.5*D1[0][0]*D1[0][0] - 0.5, sqrtThree*D1[0][0]*D1[0][1], sqrtThree*D1[0][0]*D1[0][2],
+                        0.5*sqrtThree*(D1[0][1]*D1[0][1] - D1[0][2]*D1[0][2]), sqrtThree*D1[0][1]*D1[0][2] };
+    RealOpenMM induced[3] = { _inducedDipole[iIndex][2], _inducedDipole[iIndex][0], _inducedDipole[iIndex][1] };
+    RealOpenMM qiD0 = 0.0;
+    for(int i = 0; i < 3; ++i)
+        qiD0 += D1[0][i] * (particleI.sphericalDipole[i] + induced[i]);
+    RealOpenMM qiQ0 = 0.0;
+    for(int i = 0; i < 5; ++i)
+        qiQ0 += D2[i] * particleI.sphericalQuadrupole[i];
+    potential += qiQ0*rr3 - qiD0*rr2;
+#else
 
     RealOpenMM scd           = particleI.dipole.dot(deltaR);
     RealOpenMM scu           = _inducedDipole[particleI.particleIndex].dot(deltaR);
@@ -1915,6 +2447,7 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateElectrostaticPotentialForPart
           scq               += deltaR[1]*(particleI.quadrupole[QXY]*deltaR[0] + particleI.quadrupole[QYY]*deltaR[1] + particleI.quadrupole[QYZ]*deltaR[2]);
           scq               += deltaR[2]*(particleI.quadrupole[QXZ]*deltaR[0] + particleI.quadrupole[QYZ]*deltaR[1] + particleI.quadrupole[QZZ]*deltaR[2]);
     potential               += scq*rr5;
+#endif
 
     return potential;
 
@@ -4908,7 +5441,7 @@ void AmoebaReferencePmeMultipoleForce::calculateFixedMultipoleFieldPairIxn(const
     // Start by constructing rotation matrices to put dipoles and
     // quadrupoles into the QI frame, from the lab frame.
     RealOpenMM qiRotationMatrix1[3][3];
-    formQIRotationMatrix(particleI, particleJ, deltaR, r, qiRotationMatrix1);
+    formQIRotationMatrix(particleI.position, particleJ.position, deltaR, r, qiRotationMatrix1);
     RealOpenMM qiRotationMatrix2[3][5];
     buildPartialSphericalQuadrupoleRotationMatrix(qiRotationMatrix1, qiRotationMatrix2);
     // The field rotation matrix rotates the QI fields into the lab
@@ -4971,19 +5504,13 @@ void AmoebaReferencePmeMultipoleForce::calculateFixedMultipoleFieldPairIxn(const
     RealOpenMM erfAlphaR = erf(alphaRVec[1]);
     RealOpenMM X = 2.0*EXP(-alphaRVec[2])/SQRT_PI;
 
-    int doubleFactorial = 1, facCount = 1;
-    RealOpenMM tmp = alphaRVec[1];
     bVec[1] = -erfAlphaR;
-    for(int i=2; i < 4; ++i){
-        bVec[i] = bVec[i-1] + tmp * X / (RealOpenMM)(doubleFactorial);
-        facCount = facCount + 2;
-        doubleFactorial = doubleFactorial * facCount;
-        tmp *= 2.0 * alphaRVec[2];
-    }
+    bVec[2] = bVec[1] + alphaRVec[1]*X;
+    bVec[3] = bVec[2] + alphaRVec[3]*X*2.0/3.0;
 
     RealOpenMM dmp = particleI.dampingFactor*particleJ.dampingFactor;
     RealOpenMM a = particleI.thole < particleJ.thole ? particleI.thole : particleJ.thole;
-    RealOpenMM u = std::abs(dmp) > 1.0E-5 ? r/dmp : 1E50;
+    RealOpenMM u = std::abs(dmp) > 1.0E-5 ? r/dmp : 1E10;
     RealOpenMM au3 = a*u*u*u;
     RealOpenMM expau3 = au3 < 50.0 ? EXP(-au3) : 0.0;
     RealOpenMM a2u6 = au3*au3;
@@ -4994,6 +5521,7 @@ void AmoebaReferencePmeMultipoleForce::calculateFixedMultipoleFieldPairIxn(const
     RealOpenMM thole_q0 = 1.0 - expau3*(1.0 + au3 + a2u6);
     RealOpenMM thole_q1 = 1.0 - expau3*(1.0 + au3);
 
+    // Build the QI frame multipole intermediates
     RealOpenMM qivec0[3] = {  qiQJ[0], qiQJ[1],  qiQJ[4] };
     RealOpenMM qjvec0[3] = { -qiQI[0], qiQI[1], -qiQI[4] };
     RealOpenMM qivec1[2] = { qiQJ[2], qiQJ[5] };
@@ -5001,27 +5529,19 @@ void AmoebaReferencePmeMultipoleForce::calculateFixedMultipoleFieldPairIxn(const
     RealOpenMM qivec2[2] = { qiQJ[3], qiQJ[6] };
     RealOpenMM qjvec2[2] = { qiQI[3], -qiQI[6] };
 
-    // Charge terms (m=0)
-    RealOpenMM eUIndC0 = -rInvVec[2]*(dscale*thole_c + bVec[2]);
-    RealOpenMM eUInpC0 = -rInvVec[2]*(pscale*thole_c + bVec[2]);
-    // Dipole terms (m=0)
-    RealOpenMM eUIndD0 = twoThirds*rInvVec[3]*(3.0*(dscale*thole_d0 + bVec[3]) + alphaRVec[3]*X);
-    RealOpenMM eUInpD0 = twoThirds*rInvVec[3]*(3.0*(pscale*thole_d0 + bVec[3]) + alphaRVec[3]*X);
-    // Dipole terms (m=1)
-    RealOpenMM eUIndD1 = -rInvVec[3]*(dscale*thole_d1 + bVec[3] - twoThirds*alphaRVec[3]*X);
-    RealOpenMM eUInpD1 = -rInvVec[3]*(pscale*thole_d1 + bVec[3] - twoThirds*alphaRVec[3]*X);
-    // Quadrupole terms (m=0)
-    RealOpenMM eUIndQ0 = -rInvVec[4]*(3.0*(dscale*thole_q0 + bVec[3]) + fourThirds*alphaRVec[5]*X);
-    RealOpenMM eUInpQ0 = -rInvVec[4]*(3.0*(pscale*thole_q0 + bVec[3]) + fourThirds*alphaRVec[5]*X);
-    // Quadrupole terms (m=1)
-    RealOpenMM eUIndQ1 = sqrtThree*rInvVec[4]*(dscale*thole_q1 + bVec[3]);
-    RealOpenMM eUInpQ1 = sqrtThree*rInvVec[4]*(pscale*thole_q1 + bVec[3]);
+    // Build the QI frame Coulomb operator intermediates
+    RealOpenMM v0d[3] = { -rInvVec[2]*(dscale*thole_c + bVec[2]),
+                          twoThirds*rInvVec[3]*(3.0*(dscale*thole_d0 + bVec[3]) + alphaRVec[3]*X),
+                          -rInvVec[4]*(3.0*(dscale*thole_q0 + bVec[3]) + fourThirds*alphaRVec[5]*X) };
+    RealOpenMM v0p[3] = { -rInvVec[2]*(pscale*thole_c + bVec[2]),
+                          twoThirds*rInvVec[3]*(3.0*(pscale*thole_d0 + bVec[3]) + alphaRVec[3]*X),
+                          -rInvVec[4]*(3.0*(pscale*thole_q0 + bVec[3]) + fourThirds*alphaRVec[5]*X) };
+    RealOpenMM v1d[2] = {  -rInvVec[3]*(dscale*thole_d1 + bVec[3] - twoThirds*alphaRVec[3]*X),
+                          sqrtThree*rInvVec[4]*(dscale*thole_q1 + bVec[3]) };
+    RealOpenMM v1p[2] = { -rInvVec[3]*(pscale*thole_d1 + bVec[3] - twoThirds*alphaRVec[3]*X),
+                          sqrtThree*rInvVec[4]*(pscale*thole_q1 + bVec[3]) };
 
-    RealOpenMM v0d[3] = { eUIndC0, eUIndD0, eUIndQ0 };
-    RealOpenMM v0p[3] = { eUInpC0, eUInpD0, eUInpQ0 };
-    RealOpenMM v1d[2] = { eUIndD1, eUIndQ1 };
-    RealOpenMM v1p[2] = { eUInpD1, eUInpQ1 };
-
+    // Contract the QI multipole intermediates and Coulomb operator to form the QI frame field.
     RealOpenMM Vijd[3] = { v0d[0]*qivec0[0] + v0d[1]*qivec0[1] + v0d[2]*qivec0[2],
                            v1d[0]*qivec1[0] + v1d[1]*qivec1[1],
                            v1d[0]*qivec2[0] + v1d[1]*qivec2[1] };
@@ -5278,9 +5798,37 @@ void AmoebaReferencePmeMultipoleForce::transformMultipolesToFractionalCoordinate
                 b[i][j] += a[index1[i]][index2[j]]*a[index2[i]][index1[j]];
         }
     }
-    
+
     // Transform the multipoles.
-    
+#if SPHERICAL_MULTIPOLES
+    RealOpenMM cartDipole[3];
+    RealOpenMM cartQuadrupole[6];
+
+    _transformed.resize(particleData.size());
+    double quadScale[] = {1, 2, 2, 1, 2, 1};
+    for (int i = 0; i < (int) particleData.size(); i++) {
+        // Form Cartesian multipoles on the fly, from the spherical harmonics
+        cartDipole[0] = particleData[i].sphericalDipole[1];
+        cartDipole[1] = particleData[i].sphericalDipole[2];
+        cartDipole[2] = particleData[i].sphericalDipole[0];
+        cartQuadrupole[0] = (sqrtThree*particleData[i].sphericalQuadrupole[3] - particleData[i].sphericalQuadrupole[0])/6.0;
+        cartQuadrupole[1] = sqrtOneThird*particleData[i].sphericalQuadrupole[4]/2.0;
+        cartQuadrupole[2] = sqrtOneThird*particleData[i].sphericalQuadrupole[1]/2.0;
+        cartQuadrupole[3] = -(sqrtThree*particleData[i].sphericalQuadrupole[3] + particleData[i].sphericalQuadrupole[0])/6.0;
+        cartQuadrupole[4] = sqrtOneThird*particleData[i].sphericalQuadrupole[2]/2.0;
+        cartQuadrupole[5] = particleData[i].sphericalQuadrupole[0]/3.0;
+        _transformed[i].charge = particleData[i].charge;
+        _transformed[i].dipole = Vec3();
+        for (int j = 0; j < 3; j++)
+            for (int k = 0; k < 3; k++)
+                _transformed[i].dipole[j] += a[j][k]*cartDipole[k];
+        for (int j = 0; j < 6; j++) {
+            _transformed[i].quadrupole[j] = 0;
+            for (int k = 0; k < 6; k++)
+                _transformed[i].quadrupole[j] += quadScale[k]*b[j][k]*cartQuadrupole[k];
+        }
+    }
+#else
     _transformed.resize(particleData.size());
     double quadScale[] = {1, 2, 2, 1, 2, 1};
     for (int i = 0; i < (int) particleData.size(); i++) {
@@ -5295,6 +5843,7 @@ void AmoebaReferencePmeMultipoleForce::transformMultipolesToFractionalCoordinate
                 _transformed[i].quadrupole[j] += quadScale[k]*b[j][k]*particleData[i].quadrupole[k];
         }
     }
+#endif
 }
 
 void AmoebaReferencePmeMultipoleForce::transformPotentialToCartesianCoordinates(const vector<RealOpenMM>& fphi, vector<RealOpenMM>& cphi) const {
@@ -5800,6 +6349,20 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::computeReciprocalSpaceFixedMultipol
 
         multipole[0] = particleData[i].charge;
 
+#if SPHERICAL_MULTIPOLES
+        // Form Cartesian multipoles on the fly, from the spherical harmonics
+        multipole[1] = particleData[i].sphericalDipole[1];
+        multipole[2] = particleData[i].sphericalDipole[2];
+        multipole[3] = particleData[i].sphericalDipole[0];
+
+        multipole[4] = (sqrtThree*particleData[i].sphericalQuadrupole[3] - particleData[i].sphericalQuadrupole[0])/6.0;
+        multipole[5] = -(sqrtThree*particleData[i].sphericalQuadrupole[3] + particleData[i].sphericalQuadrupole[0])/6.0;
+        multipole[6] = particleData[i].sphericalQuadrupole[0]/3.0;
+
+        multipole[7] = sqrtOneThird*particleData[i].sphericalQuadrupole[4];
+        multipole[8] = sqrtOneThird*particleData[i].sphericalQuadrupole[1];
+        multipole[9] = sqrtOneThird*particleData[i].sphericalQuadrupole[2];
+#else
         multipole[1] =  particleData[i].dipole[0];
         multipole[2] =  particleData[i].dipole[1];
         multipole[3] =  particleData[i].dipole[2];
@@ -5811,6 +6374,7 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::computeReciprocalSpaceFixedMultipol
         multipole[7] = particleData[i].quadrupole[QXY]*2.0;
         multipole[8] = particleData[i].quadrupole[QXZ]*2.0;
         multipole[9] = particleData[i].quadrupole[QYZ]*2.0;
+#endif
 
         const RealOpenMM* phi = &cphi[10*i];
         torques[i][0] += _electric*(multipole[3]*phi[2] - multipole[2]*phi[3]
@@ -5890,12 +6454,27 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::computeReciprocalSpaceInducedDipole
         multipole[2] = particleData[i].dipole[1];
         multipole[3] = particleData[i].dipole[2];
 
+#if SPHERICAL_MULTIPOLES
+        // Form Cartesian multipoles on the fly, from the spherical harmonics
+        multipole[1] = particleData[i].sphericalDipole[1];
+        multipole[2] = particleData[i].sphericalDipole[2];
+        multipole[3] = particleData[i].sphericalDipole[0];
+
+        multipole[4] = (sqrtThree*particleData[i].sphericalQuadrupole[3] - particleData[i].sphericalQuadrupole[0])/6.0;
+        multipole[5] = -(sqrtThree*particleData[i].sphericalQuadrupole[3] + particleData[i].sphericalQuadrupole[0])/6.0;
+        multipole[6] = particleData[i].sphericalQuadrupole[0]/3.0;
+
+        multipole[7] = sqrtOneThird*particleData[i].sphericalQuadrupole[4];
+        multipole[8] = sqrtOneThird*particleData[i].sphericalQuadrupole[1];
+        multipole[9] = sqrtOneThird*particleData[i].sphericalQuadrupole[2];
+#else
         multipole[4] = particleData[i].quadrupole[QXX];
         multipole[5] = particleData[i].quadrupole[QYY];
         multipole[6] = particleData[i].quadrupole[QZZ];
         multipole[7] = particleData[i].quadrupole[QXY]*2.0;
         multipole[8] = particleData[i].quadrupole[QXZ]*2.0;
         multipole[9] = particleData[i].quadrupole[QYZ]*2.0;
+#endif
 
         const RealOpenMM* phi = &cphi[10*i];
         torques[iIndex][0] += 0.5*_electric*(multipole[3]*phi[2] - multipole[2]*phi[3]
@@ -6145,6 +6724,31 @@ void AmoebaReferencePmeMultipoleForce::calculateDirectInducedDipolePairIxns(cons
 
 RealOpenMM AmoebaReferencePmeMultipoleForce::calculatePmeSelfEnergy(const vector<MultipoleParticleData>& particleData) const 
 {
+#if SPHERICAL_MULTIPOLES
+    RealOpenMM cii = 0.0;
+    RealOpenMM dii = 0.0;
+    RealOpenMM qii = 0.0;
+    for (unsigned int ii = 0; ii < _numParticles; ii++) {
+
+        const MultipoleParticleData& particleI = particleData[ii];
+
+        cii += particleI.charge*particleI.charge;
+
+        RealVec dipole(particleI.sphericalDipole[1], particleI.sphericalDipole[2], particleI.sphericalDipole[0]);
+        dii += dipole.dot(dipole + _inducedDipole[ii]);
+
+        qii += (particleI.sphericalQuadrupole[0]*particleI.sphericalQuadrupole[0]
+               +particleI.sphericalQuadrupole[1]*particleI.sphericalQuadrupole[1]
+               +particleI.sphericalQuadrupole[2]*particleI.sphericalQuadrupole[2]
+               +particleI.sphericalQuadrupole[3]*particleI.sphericalQuadrupole[3]
+               +particleI.sphericalQuadrupole[4]*particleI.sphericalQuadrupole[4]);
+    }
+    RealOpenMM prefac = -_alphaEwald * _electric / (_dielectric*SQRT_PI);
+    RealOpenMM a2 = _alphaEwald * _alphaEwald;
+    RealOpenMM a4 = a2*a2;
+    RealOpenMM energy = prefac*(cii + twoThirds*a2*dii + fourOverFifteen*a4*qii);
+    return energy;
+#else
     RealOpenMM cii = 0.0;
     RealOpenMM dii = 0.0;
     RealOpenMM qii = 0.0;
@@ -6167,6 +6771,7 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::calculatePmeSelfEnergy(const vector
     RealOpenMM term      = 2.0*_alphaEwald*_alphaEwald;
     RealOpenMM energy    = (cii + term*(dii/3.0 + 2.0*term*qii/5.0));
                energy   *= -(_electric*_alphaEwald/(_dielectric*SQRT_PI));
+#endif
     return energy;
 }
 
@@ -6174,12 +6779,16 @@ void AmoebaReferencePmeMultipoleForce::calculatePmeSelfTorque(const vector<Multi
                                                               vector<RealVec>& torques) const 
 {
     RealOpenMM term = (2.0/3.0)*(_electric/_dielectric)*(_alphaEwald*_alphaEwald*_alphaEwald)/SQRT_PI;
-
     for (unsigned int ii = 0; ii < _numParticles; ii++) {
 
         const MultipoleParticleData& particleI = particleData[ii];
         RealVec ui                             = (_inducedDipole[ii] + _inducedDipolePolar[ii]);
+#if SPHERICAL_MULTIPOLES
+        RealVec dipole(particleI.sphericalDipole[1], particleI.sphericalDipole[2], particleI.sphericalDipole[0]);
+        RealVec torque                         = dipole.cross(ui);
+#else
         RealVec torque                         = particleI.dipole.cross(ui);
+#endif
                 torque                        *= term;
        torques[ii]                            += torque;
     }
@@ -6208,7 +6817,7 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::calculatePmeDirectElectrostaticPair
     // Start by constructing rotation matrices to put dipoles and
     // quadrupoles into the QI frame, from the lab frame.
     RealOpenMM qiRotationMatrix1[3][3];
-    formQIRotationMatrix(particleI, particleJ, deltaR, r, qiRotationMatrix1);
+    formQIRotationMatrix(particleI.position, particleJ.position, deltaR, r, qiRotationMatrix1);
     RealOpenMM qiRotationMatrix2[5][5];
     buildSphericalQuadrupoleRotationMatrix(qiRotationMatrix1, qiRotationMatrix2);
     // The force rotation matrix rotates the QI forces into the lab
@@ -6333,7 +6942,7 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::calculatePmeDirectElectrostaticPair
 
     RealOpenMM dmp = particleI.dampingFactor*particleJ.dampingFactor;
     RealOpenMM a = particleI.thole < particleJ.thole ? particleI.thole : particleJ.thole;
-    RealOpenMM u = std::abs(dmp) > 1.0E-5 ? r/dmp : 1E50;
+    RealOpenMM u = std::abs(dmp) > 1.0E-5 ? r/dmp : 1E10;
     RealOpenMM au3 = a*u*u*u;
     RealOpenMM expau3 = au3 < 50.0 ? EXP(-au3) : 0.0;
     RealOpenMM a2u6 = au3*au3;
