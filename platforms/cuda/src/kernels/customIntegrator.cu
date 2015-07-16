@@ -11,7 +11,7 @@ extern "C" __global__ void computeFloatSum(const float* __restrict__ sumBuffer, 
             tempBuffer[thread] += tempBuffer[thread+i];
     }
     if (thread == 0)
-        result[SUM_OUTPUT_INDEX] = tempBuffer[0];
+        *result = tempBuffer[0];
 }
 
 extern "C" __global__ void computeDoubleSum(const double* __restrict__ sumBuffer, double* result) {
@@ -27,7 +27,7 @@ extern "C" __global__ void computeDoubleSum(const double* __restrict__ sumBuffer
             tempBuffer[thread] += tempBuffer[thread+i];
     }
     if (thread == 0)
-        result[SUM_OUTPUT_INDEX] = tempBuffer[0];
+        *result = tempBuffer[0];
 }
 
 extern "C" __global__ void applyPositionDeltas(real4* __restrict__ posq, real4* __restrict__ posqCorrection, mixed4* __restrict__ posDelta) {

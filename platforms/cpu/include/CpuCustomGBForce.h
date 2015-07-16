@@ -25,10 +25,10 @@
 #ifndef OPENMM_CPU_CUSTOM_GB_FORCE_H__
 #define OPENMM_CPU_CUSTOM_GB_FORCE_H__
 
-#include "CompiledExpressionSet.h"
 #include "CpuNeighborList.h"
 #include "lepton/CompiledExpression.h"
 #include "openmm/CustomGBForce.h"
+#include "openmm/internal/CompiledExpressionSet.h"
 #include "openmm/internal/ThreadPool.h"
 #include "openmm/internal/vectorize.h"
 #include <map>

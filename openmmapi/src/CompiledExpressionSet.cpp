@@ -1,4 +1,4 @@
-/* Portions copyright (c) 2014 Stanford University and Simbios.
+/* Portions copyright (c) 2014-2015 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -21,7 +21,7 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "CompiledExpressionSet.h"
+#include "openmm/internal/CompiledExpressionSet.h"
 
 using namespace OpenMM;
 using namespace Lepton;
@@ -53,4 +53,8 @@ int CompiledExpressionSet::getVariableIndex(const std::string& name) {
 void CompiledExpressionSet::setVariable(int index, double value) {
     for (int i = 0; i < (int) variableReferences[index].size(); i++)
         *variableReferences[index][i] = value;
+}
+
+int CompiledExpressionSet::getNumVariables() const {
+    return variables.size();
 }
