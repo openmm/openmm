@@ -1288,6 +1288,7 @@ private:
     void prepareForComputation(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid);
     void recordGlobalValue(double value, GlobalTarget target);
     void recordChangedParameters(ContextImpl& context);
+    bool evaluateCondition(int step);
     CudaContext& cu;
     double prevStepSize, energy;
     float energyFloat;
