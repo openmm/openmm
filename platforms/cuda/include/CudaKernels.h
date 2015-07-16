@@ -1218,8 +1218,8 @@ class CudaIntegrateCustomStepKernel : public IntegrateCustomStepKernel {
 public:
     enum GlobalTargetType {DT, VARIABLE, PARAMETER};
     CudaIntegrateCustomStepKernel(std::string name, const Platform& platform, CudaContext& cu) : IntegrateCustomStepKernel(name, platform), cu(cu),
-            hasInitializedKernels(false), localValuesAreCurrent(false), globalValues(NULL), contextParameterValues(NULL), sumBuffer(NULL), potentialEnergy(NULL),
-            kineticEnergy(NULL), uniformRandoms(NULL), randomSeed(NULL), perDofValues(NULL) {
+            hasInitializedKernels(false), localValuesAreCurrent(false), globalValues(NULL), sumBuffer(NULL), summedValue(NULL), uniformRandoms(NULL),
+            randomSeed(NULL), perDofValues(NULL) {
     }
     ~CudaIntegrateCustomStepKernel();
     /**
@@ -1284,7 +1284,6 @@ public:
 private:
     class ReorderListener;
     class GlobalTarget;
-    std::string createGlobalComputation(const std::string& variable, const Lepton::ParsedExpression& expr, CustomIntegrator& integrator, const std::string& energyName);
     std::string createPerDofComputation(const std::string& variable, const Lepton::ParsedExpression& expr, int component, CustomIntegrator& integrator, const std::string& forceName, const std::string& energyName);
     void prepareForComputation(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid);
     void recordGlobalValue(double value, GlobalTarget target);
@@ -1296,10 +1295,8 @@ private:
     bool hasInitializedKernels, deviceValuesAreCurrent, deviceGlobalsAreCurrent, modifiesParameters, keNeedsForce;
     mutable bool localValuesAreCurrent;
     CudaArray* globalValues;
-    CudaArray* contextParameterValues;
     CudaArray* sumBuffer;
-    CudaArray* potentialEnergy;
-    CudaArray* kineticEnergy;
+    CudaArray* summedValue;
     CudaArray* uniformRandoms;
     CudaArray* randomSeed;
     std::map<int, CudaArray*> savedForces;
@@ -1307,8 +1304,6 @@ private:
     CudaParameterSet* perDofValues;
     mutable std::vector<std::vector<float> > localPerDofValuesFloat;
     mutable std::vector<std::vector<double> > localPerDofValuesDouble;
-    std::vector<float> contextValuesFloat;
-    std::vector<double> contextValuesDouble;
     std::vector<float> globalValuesFloat;
     std::vector<double> globalValuesDouble;
     std::vector<double> initialGlobalVariables;
