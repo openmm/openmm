@@ -1,4 +1,4 @@
-__kernel void computeFloatSum(__global const float* restrict sumBuffer, __global float* result, unsigned int outputIndex, int bufferSize) {
+__kernel void computeFloatSum(__global const float* restrict sumBuffer, __global float* result, int bufferSize) {
     __local float tempBuffer[WORK_GROUP_SIZE];
     const unsigned int thread = get_local_id(0);
     float sum = 0;
@@ -11,11 +11,11 @@ __kernel void computeFloatSum(__global const float* restrict sumBuffer, __global
             tempBuffer[thread] += tempBuffer[thread+i];
     }
     if (thread == 0)
-        result[outputIndex] = tempBuffer[0];
+        *result = tempBuffer[0];
 }
 
 #ifdef SUPPORTS_DOUBLE_PRECISION
-__kernel void computeDoubleSum(__global const double* restrict sumBuffer, __global double* result, unsigned int outputIndex, int bufferSize) {
+__kernel void computeDoubleSum(__global const double* restrict sumBuffer, __global double* result, int bufferSize) {
     __local double tempBuffer[WORK_GROUP_SIZE];
     const unsigned int thread = get_local_id(0);
     double sum = 0;
@@ -28,7 +28,7 @@ __kernel void computeDoubleSum(__global const double* restrict sumBuffer, __glob
             tempBuffer[thread] += tempBuffer[thread+i];
     }
     if (thread == 0)
-        result[outputIndex] = tempBuffer[0];
+        *result = tempBuffer[0];
 }
 #endif
 
