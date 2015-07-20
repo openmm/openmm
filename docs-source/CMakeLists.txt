@@ -3,8 +3,7 @@
 #
 
 find_package(Doxygen QUIET)
-mark_as_advanced(CLEAR DOXYGEN_EXECUTABLE)
-IF(DOXYGEN_EXECUTABLE)
+IF(DOXYGEN_FOUND)
     # Generate C++ API documentation
 
     SET(DOXY_CONFIG_C++ "${CMAKE_BINARY_DIR}/DoxyfileC++")
@@ -74,7 +73,7 @@ IF(DOXYGEN_EXECUTABLE)
                 DESTINATION "docs/")
         ADD_DEPENDENCIES(DoxygenApiDocs PythonApiDocs)
     ENDIF (OPENMM_BUILD_PYTHON_WRAPPERS)
-ENDIF(DOXYGEN_EXECUTABLE)
+ENDIF(DOXYGEN_FOUND)
 
 
 #
