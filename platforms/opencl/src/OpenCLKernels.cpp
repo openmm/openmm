@@ -6163,11 +6163,17 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
         // Identify steps that can be merged into a single kernel.
         
         for (int step = 1; step < numSteps; step++) {
-            if (needsForces[step] || needsEnergy[step])
+            if (invalidatesForces[step] || ((needsForces[step] || needsEnergy[step]) && forceGroupFlags[step] != forceGroupFlags[step-1]))
                 continue;
             if (stepType[step-1] == CustomIntegrator::ComputePerDof && stepType[step] == CustomIntegrator::ComputePerDof)
                 merged[step] = true;
         }
+        for (int step = numSteps-1; step > 0; step--)
+            if (merged[step]) {
+                needsForces[step-1] = (needsForces[step] || needsForces[step-1]);
+                needsEnergy[step-1] = (needsEnergy[step] || needsEnergy[step-1]);
+                needsGlobals[step-1] = (needsGlobals[step] || needsGlobals[step-1]);
+            }
         
         // Loop over all steps and create the kernels for them.
         

@@ -816,6 +816,32 @@ void testWhileBlock() {
     ASSERT_EQUAL_TOL(6.0, integrator.getGlobalVariable(1), 1e-6);
 }
 
+/**
+ * Test modifying a global variable, then using it in a per-DOF computation.
+ */
+void testChangingGlobal() {
+    System system;
+    system.addParticle(1.0);
+    CustomIntegrator integrator(0.1);
+    integrator.addGlobalVariable("g", 0);
+    integrator.addPerDofVariable("a", 0);
+    integrator.addPerDofVariable("b", 0);
+    integrator.addComputeGlobal("g", "g+1");
+    integrator.addComputePerDof("a", "0.5");
+    integrator.addComputePerDof("b", "a+g");
+    Context context(system, integrator, platform);
+    
+    // See if everything is being calculated correctly..
+    
+    for (int i = 0; i < 10; i++) {
+        integrator.step(1);
+        ASSERT_EQUAL_TOL(i+1, integrator.getGlobalVariable(0), 1e-5);
+        vector<Vec3> values;
+        integrator.getPerDofVariable(1, values);
+        ASSERT_EQUAL_VEC(Vec3(i+1.5, i+1.5, i+1.5), values[0], 1e-5);
+    }
+}
+
 int main(int argc, char* argv[]) {
     try {
         if (argc > 1)
@@ -835,6 +861,7 @@ int main(int argc, char* argv[]) {
         testMergedRandoms();
         testIfBlock();
         testWhileBlock();
+        testChangingGlobal();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;
