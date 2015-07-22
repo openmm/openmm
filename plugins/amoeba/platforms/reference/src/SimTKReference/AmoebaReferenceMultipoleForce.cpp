@@ -1182,6 +1182,7 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateElectrostaticPairIxn(const Mu
                                                                         vector<RealVec>& torque) const 
 {
 
+
 #if SPHERICAL_MULTIPOLES
 
     unsigned int iIndex = particleI.particleIndex;
@@ -1295,8 +1296,8 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateElectrostaticPairIxn(const Mu
         rInvVec[i] = rInvVec[i-1] * rInv;
 
     RealOpenMM mScale = scalingFactors[M_SCALE];
-    RealOpenMM dScale = scalingFactors[D_SCALE];
-    RealOpenMM pScale = scalingFactors[P_SCALE];
+    RealOpenMM pScale = scalingFactors[D_SCALE];
+    RealOpenMM dScale = scalingFactors[P_SCALE];
     RealOpenMM uScale = scalingFactors[U_SCALE];
 
     RealOpenMM dmp = particleI.dampingFactor*particleK.dampingFactor;
@@ -6926,8 +6927,8 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::calculatePmeDirectElectrostaticPair
     RealOpenMM erfAlphaR = erf(alphaRVec[1]);
     RealOpenMM X = 2.0*EXP(-alphaRVec[2])/SQRT_PI;
     RealOpenMM mScale = scalingFactors[M_SCALE];
-    RealOpenMM dScale = scalingFactors[D_SCALE];
-    RealOpenMM pScale = scalingFactors[P_SCALE];
+    RealOpenMM pScale = scalingFactors[D_SCALE];
+    RealOpenMM dScale = scalingFactors[P_SCALE];
     RealOpenMM uScale = scalingFactors[U_SCALE];
 
     int doubleFactorial = 1, facCount = 1;
