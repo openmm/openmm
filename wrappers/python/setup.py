@@ -1,6 +1,6 @@
-__author__ = "Peter Eastman"
-__version__ = "1.0"
-
+"""
+setup.py: Used for building python wrappers for Simbios' OpenMM library.
+"""
 import ast
 import re
 import os
@@ -13,6 +13,8 @@ MINOR_VERSION_NUM='@OPENMM_MINOR_VERSION@'
 BUILD_INFO='@OPENMM_BUILD_VERSION@'
 IS_RELEASED = False
 
+__author__ = "Peter Eastman"
+__version__ = "%s.%s" % (MAJOR_VERSION_NUM, MINOR_VERSION_NUM)
 
 def reportError(message):
     sys.stdout.write("ERROR: ")

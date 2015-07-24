@@ -20,6 +20,23 @@ ENDIF(BUILD_TESTING)
 # this CMakeLists file rather than letting CMake visit them as SUBDIRS.
 SET(OPENMM_SOURCE_SUBDIRS .)
 
+IF(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  set(CMAKE_COMPILER_IS_CLANGXX 1)
+ENDIF(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+
+IF(CMAKE_COMPILER_IS_CLANGXX)
+  EXECUTE_PROCESS( COMMAND ${CMAKE_CXX_COMPILER} --version OUTPUT_VARIABLE __clang_full_version_string )
+  string (REGEX REPLACE ".*clang version ([0-9]+\\.[0-9]+).*" "\\1" CLANG_VERSION_STRING ${__clang_full_version_string})
+  unset(__clang_full_version_string)
+ENDIF(CMAKE_COMPILER_IS_CLANGXX)
+
+IF(CMAKE_COMPILER_IS_CLANGXX AND CLANG_VERSION_STRING STREQUAL "3.6")
+ message(FATAL_ERROR  "The OpenMM CPU platform cannot be built with your current compiler, clang-3.6, due to bugs \
+in the compiler's AVX support. Either downgrade to clang-3.5, upgrade to clang-3.7 or later, switch to an \
+alternative compiler such as GCC, or turn off building of the CPU platform by unsetting the CMake variable \
+OPENMM_BUILD_CPU_LIB.")
+ENDIF(CMAKE_COMPILER_IS_CLANGXX AND CLANG_VERSION_STRING STREQUAL "3.6")
+
 
 # Collect up information about the version of the OpenMM library we're building
 # and make it available to the code so it can be built into the binaries.

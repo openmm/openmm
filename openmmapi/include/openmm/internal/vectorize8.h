@@ -45,7 +45,7 @@ class ivec8;
 class fvec8 {
 public:
     __m256 val;
-    
+
     fvec8() {}
     fvec8(float v) : val(_mm256_set1_ps(v)) {}
     fvec8(float v1, float v2, float v3, float v4, float v5, float v6, float v7, float v8) : val(_mm256_set_ps(v8, v7, v6, v5, v4, v3, v2, v1)) {}
@@ -123,7 +123,7 @@ public:
 class ivec8 {
 public:
     __m256i val;
-    
+
     ivec8() {}
     ivec8(int v) : val(_mm256_set1_epi32(v)) {}
     ivec8(int v1, int v2, int v3, int v4, int v5, int v6, int v7, int v8) : val(_mm256_set_epi32(v8, v7, v6, v5, v4, v3, v2, v1)) {}
