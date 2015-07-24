@@ -765,7 +765,7 @@ Agree and continue through the conversion process.
 
 In Visual Studio, make sure the "Solution Configuration" is set to "Release" and
 not "Debug".  The “Solution Configuration” can be set using the drop-down menu
-in the top toolbar, next to the green arrow (see :numref:`Figure,Visual Studio configuration`
+in the top toolbar, next to the green arrow (see :autonumref:`Figure,Visual Studio configuration`
 below).  Due to incompatibilities among Visual Studio versions, we do not provide pre-compiled
 debug binaries.
 
@@ -781,7 +781,7 @@ debug binaries.
 
 
 From the command options select Debug -> Start Without Debugging (or CTRL-F5).
-See :numref:`Figure,run in Visual Studio`.  This will also compile the program, if it has not
+See :autonumref:`Figure,run in Visual Studio`.  This will also compile the program, if it has not
 previously been compiled.
 
 
@@ -1992,7 +1992,7 @@ Mapping from the C++ API to the C API
 =====================================
 
 The automated generator of the C “wrappers” follows the translation strategy
-shown in :numref:`Table,C API`\ . The idea is that if you see the construct on the left in
+shown in :autonumref:`Table,C API`\ . The idea is that if you see the construct on the left in
 the C++ API documentation, you should interpret it as the corresponding
 construct on the right in C. Please look at the supplied example programs to see
 how this is done in practice.
@@ -2076,7 +2076,7 @@ C++ has built-in container types :code:`std::vector` and :code:`std::map`
 which OpenMM uses to manipulate arrays of objects. These don’t have direct
 equivalents in C, so we supply special array types for each kind of object for
 which OpenMM creates containers. These are: string, double, Vec3, bond, and
-parameter map. See :numref:`Table,C arrays` for the names of the C types for each of these
+parameter map. See :autonumref:`Table,C arrays` for the names of the C types for each of these
 object arrays. Each of the array types provides these functions (prefixed by
 :code:`OpenMM_` and the actual *Thing* name), with the syntax shown
 conceptually since it differs slightly for each kind of object.
@@ -2240,7 +2240,7 @@ Mapping from the C++ API to the Fortran API
 ===========================================
 
 The automated generator of the Fortran “wrappers” follows the translation
-strategy shown in :numref:`Table,Fortran API`\ . The idea is that if you see the construct on the
+strategy shown in :autonumref:`Table,Fortran API`\ . The idea is that if you see the construct on the
 left in the C++ API documentation, you should interpret it as the corresponding
 construct on the right in Fortran. Please look at the supplied example programs
 to see how this is done in practice. Note that all subroutines and modules are
@@ -2304,7 +2304,7 @@ C++ has built-in container types :code:`std::vector` and :code:`std::map`
 which OpenMM uses to manipulate arrays of objects. These don’t have direct
 equivalents in Fortran, so we supply special array types for each kind of object
 for which OpenMM creates containers. These are: string, double, Vec3, bond, and
-parameter map. See :numref:`Table,Fortran arrays` for the names of the Fortran types for each of
+parameter map. See :autonumref:`Table,Fortran arrays` for the names of the Fortran types for each of
 these object arrays. Each of the array types provides these functions (prefixed
 by :code:`OpenMM_` and the actual *Thing* name), with the syntax shown
 conceptually since it differs slightly for each kind of object.
@@ -3105,7 +3105,7 @@ Comparison to Reference Platform
 
 The differences between forces computed with the Reference platform and those
 computed with the OpenCL or CUDA platform are shown in
-:numref:`Table,force comparison between platforms`\ .  For every
+:autonumref:`Table,force comparison between platforms`\ .  For every
 atom, the relative difference between platforms was computed as
 2·\|F\ :sub:`ref`\ –F\ :sub:`test`\ \|/(\|F\ :sub:`ref`\ \|+|F\ :sub:`test`\ \|), where
 F\ :sub:`ref` is the force computed by the Reference platform and F\ :sub:`test`
@@ -3139,7 +3139,7 @@ OpenCL/CUDA platform
 Energy Conservation
 ===================
 
-:numref:`Figure,energy drift` shows the total system energy versus time for three simulations of
+:autonumref:`Figure,energy drift` shows the total system energy versus time for three simulations of
 ubiquitin in OBC implicit solvent.  All three simulations used the CUDA
 platform, a Verlet integrator, a time step of 0.5 fs, no constraints, and no
 cutoff on the nonbonded interactions.  They differ only in the level of numeric
@@ -3196,7 +3196,7 @@ repeated for OpenCL, CUDA, and CPU platforms.
 For every atom, the relative difference between OpenMM and Gromacs was computed
 as 2·\|F\ :sub:`MM`\ –F\ :sub:`Gro`\ \|/(\|F\ :sub:`MM`\ \|+\|F\ :sub:`Gro`\ \|),
 where F\ :sub:`MM` is the force computed by OpenMM and F\ :sub:`Gro` is the
-force computed by Gromacs.  The median over all atoms is shown in :numref:`Table,comparison to Gromacs`\ .
+force computed by Gromacs.  The median over all atoms is shown in :autonumref:`Table,comparison to Gromacs`\ .
 
 =============   ===================  ===================  ===================
 Solvent Model   OpenCL               CUDA                 CPU
@@ -3237,7 +3237,7 @@ OpenMM AMOEBA Supported Forces and Options
 Supported Forces and Options
 ============================
 
-The AMOEBA force terms implemented in OpenMM are listed in :numref:`Table,mapping from TINKER` along
+The AMOEBA force terms implemented in OpenMM are listed in :autonumref:`Table,mapping from TINKER` along
 with the supported and unsupported options. TINKER options that are not
 supported for any OpenMM force include the grouping of atoms (e.g. protein
 chains), the infinite polymer check, and no exclusion of particles from
@@ -3365,7 +3365,7 @@ Using TINKER-OpenMM
 ===================
 
 Run :code:`dynamic_openmm.x` with the same command-line options as you would
-\ :code:`dynamic.x`\ .  Consult the TINKER documentation and :numref:`Table,mapping from TINKER` for
+\ :code:`dynamic.x`\ .  Consult the TINKER documentation and :autonumref:`Table,mapping from TINKER` for
 more details.
 
 Available outputs
@@ -3523,7 +3523,7 @@ used the CUDA platform, and were repeated for both single and double precision.
 For every atom, the relative difference between OpenMM and TINKER was computed
 as 2·\|F\ :sub:`MM`\ –F\ :sub:`T`\ \|/(\|F\ :sub:`MM`\ \|+\|F\ :sub:`T`\ \|), where
 F\ :sub:`MM` is the force computed by OpenMM and F\ :sub:`T` is the force
-computed by TINKER.  The median over all atoms is shown in :numref:`Table,comparison to TINKER`\ .
+computed by TINKER.  The median over all atoms is shown in :autonumref:`Table,comparison to TINKER`\ .
 
 Because OpenMM and TINKER use different approximations to compute the cavity
 term, the differences in forces are much larger for implicit solvent than for

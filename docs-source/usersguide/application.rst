@@ -587,7 +587,7 @@ application.  OpenMM needs to know where to find these files, so the
 :code:`includeDir` parameter specifies the directory containing them.  If you
 omit this parameter, OpenMM will assume the default location :file:`/usr/local/gromacs/share/gromacs/top`,
 which is often where they are installed on
-Unix-like operating systems.  So in :numref:`Example,Gromacs example` we actually could have omitted
+Unix-like operating systems.  So in :autonumref:`Example,Gromacs example` we actually could have omitted
 this parameter, but if the Gromacs files were installed in any other location,
 we would need to include it.
 
