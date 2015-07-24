@@ -191,8 +191,8 @@ string CudaParameterSet::getParameterSuffix(int index, const std::string& extraS
  * Define template instantiations for float and double versions of getParameterValues() and setParameterValues().
  */
 namespace OpenMM {
-template void CudaParameterSet::getParameterValues<float>(vector<vector<float> >& values);
-template void CudaParameterSet::setParameterValues<float>(const vector<vector<float> >& values);
-template void CudaParameterSet::getParameterValues<double>(vector<vector<double> >& values);
-template void CudaParameterSet::setParameterValues<double>(const vector<vector<double> >& values);
+template OPENMM_EXPORT_CUDA void CudaParameterSet::getParameterValues<float>(vector<vector<float> >& values);
+template OPENMM_EXPORT_CUDA void CudaParameterSet::setParameterValues<float>(const vector<vector<float> >& values);
+template OPENMM_EXPORT_CUDA void CudaParameterSet::getParameterValues<double>(vector<vector<double> >& values);
+template OPENMM_EXPORT_CUDA void CudaParameterSet::setParameterValues<double>(const vector<vector<double> >& values);
 }
