@@ -121,16 +121,13 @@ void OpenCLCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, boo
     for (vector<OpenCLContext::ForcePreComputation*>::iterator iter = cl.getPreComputations().begin(); iter != cl.getPreComputations().end(); ++iter)
         (*iter)->computeForceAndEnergy(includeForces, includeEnergy, groups);
     OpenCLNonbondedUtilities& nb = cl.getNonbondedUtilities();
-    bool includeNonbonded = ((groups&(1<<nb.getForceGroup())) != 0);
     cl.setComputeForceCount(cl.getComputeForceCount()+1);
-    if (includeNonbonded)
-        nb.prepareInteractions();
+    nb.prepareInteractions(groups);
 }
 
 double OpenCLCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForces, bool includeEnergy, int groups, bool& valid) {
     cl.getBondedUtilities().computeInteractions(groups);
-    if ((groups&(1<<cl.getNonbondedUtilities().getForceGroup())) != 0)
-        cl.getNonbondedUtilities().computeInteractions();
+    cl.getNonbondedUtilities().computeInteractions(groups);
     double sum = 0.0;
     for (vector<OpenCLContext::ForcePostComputation*>::iterator iter = cl.getPostComputations().begin(); iter != cl.getPostComputations().end(); ++iter)
         sum += (*iter)->computeForceAndEnergy(includeForces, includeEnergy, groups);
@@ -2643,8 +2640,9 @@ void OpenCLCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOB
     surfaceAreaFactor = -6.0*4*M_PI*force.getSurfaceAreaEnergy();
     bool useCutoff = (force.getNonbondedMethod() != GBSAOBCForce::NoCutoff);
     bool usePeriodic = (force.getNonbondedMethod() != GBSAOBCForce::NoCutoff && force.getNonbondedMethod() != GBSAOBCForce::CutoffNonPeriodic);
+    cutoff = force.getCutoffDistance();
     string source = OpenCLKernelSources::gbsaObc2;
-    nb.addInteraction(useCutoff, usePeriodic, false, force.getCutoffDistance(), vector<vector<int> >(), source, force.getForceGroup());
+    nb.addInteraction(useCutoff, usePeriodic, false, cutoff, vector<vector<int> >(), source, force.getForceGroup());
     nb.addParameter(OpenCLNonbondedUtilities::ParameterInfo("obcParams", "float", 2, sizeof(cl_float2), params->getDeviceBuffer()));;
     nb.addParameter(OpenCLNonbondedUtilities::ParameterInfo("bornForce", "real", 1, elementSize, bornForce->getDeviceBuffer()));;
     cl.addForce(new OpenCLGBSAOBCForceInfo(nb.getNumForceBuffers(), force));
@@ -2663,8 +2661,8 @@ double OpenCLCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
             defines["USE_CUTOFF"] = "1";
         if (nb.getUsePeriodic())
             defines["USE_PERIODIC"] = "1";
-        defines["CUTOFF_SQUARED"] = cl.doubleToString(nb.getCutoffDistance()*nb.getCutoffDistance());
-        defines["CUTOFF"] = cl.doubleToString(nb.getCutoffDistance());
+        defines["CUTOFF_SQUARED"] = cl.doubleToString(cutoff*cutoff);
+        defines["CUTOFF"] = cl.doubleToString(cutoff);
         defines["PREFACTOR"] = cl.doubleToString(prefactor);
         defines["SURFACE_AREA_FACTOR"] = cl.doubleToString(surfaceAreaFactor);
         defines["NUM_ATOMS"] = cl.intToString(cl.getNumAtoms());
@@ -2856,6 +2854,7 @@ OpenCLCalcCustomGBForceKernel::~OpenCLCalcCustomGBForceKernel() {
 void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const CustomGBForce& force) {
     if (cl.getPlatformData().contexts.size() > 1)
         throw OpenMMException("CustomGBForce does not support using multiple OpenCL devices");
+    cutoff = force.getCutoffDistance();
     bool useExclusionsForValue = false;
     numComputedValues = force.getNumComputedValues();
     vector<string> computedValueNames(force.getNumComputedValues());
@@ -3047,7 +3046,7 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         if (useExclusionsForValue)
             pairValueDefines["USE_EXCLUSIONS"] = "1";
         pairValueDefines["FORCE_WORK_GROUP_SIZE"] = cl.intToString(cl.getNonbondedUtilities().getForceThreadBlockSize());
-        pairValueDefines["CUTOFF_SQUARED"] = cl.doubleToString(force.getCutoffDistance()*force.getCutoffDistance());
+        pairValueDefines["CUTOFF_SQUARED"] = cl.doubleToString(cutoff*cutoff);
         pairValueDefines["NUM_ATOMS"] = cl.intToString(cl.getNumAtoms());
         pairValueDefines["PADDED_NUM_ATOMS"] = cl.intToString(cl.getPaddedNumAtoms());
         pairValueDefines["NUM_BLOCKS"] = cl.intToString(cl.getNumAtomBlocks());
@@ -3240,7 +3239,7 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         if (anyExclusions)
             pairEnergyDefines["USE_EXCLUSIONS"] = "1";
         pairEnergyDefines["FORCE_WORK_GROUP_SIZE"] = cl.intToString(cl.getNonbondedUtilities().getForceThreadBlockSize());
-        pairEnergyDefines["CUTOFF_SQUARED"] = cl.doubleToString(force.getCutoffDistance()*force.getCutoffDistance());
+        pairEnergyDefines["CUTOFF_SQUARED"] = cl.doubleToString(cutoff*cutoff);
         pairEnergyDefines["NUM_ATOMS"] = cl.intToString(cl.getNumAtoms());
         pairEnergyDefines["PADDED_NUM_ATOMS"] = cl.intToString(cl.getPaddedNumAtoms());
         pairEnergyDefines["NUM_BLOCKS"] = cl.intToString(cl.getNumAtomBlocks());
@@ -3492,7 +3491,7 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
             globals->upload(globalParamValues);
             arguments.push_back(OpenCLNonbondedUtilities::ParameterInfo(prefix+"globals", "float", 1, sizeof(cl_float), globals->getDeviceBuffer()));
         }
-        cl.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, force.getNumExclusions() > 0, force.getCutoffDistance(), exclusionList, source, force.getForceGroup());
+        cl.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, force.getNumExclusions() > 0, cutoff, exclusionList, source, force.getForceGroup());
         for (int i = 0; i < (int) parameters.size(); i++)
             cl.getNonbondedUtilities().addParameter(parameters[i]);
         for (int i = 0; i < (int) arguments.size(); i++)
@@ -3527,7 +3526,7 @@ double OpenCLCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
             int endExclusionIndex = (cl.getContextIndex()+1)*numExclusionTiles/numContexts;
             pairValueDefines["FIRST_EXCLUSION_TILE"] = cl.intToString(startExclusionIndex);
             pairValueDefines["LAST_EXCLUSION_TILE"] = cl.intToString(endExclusionIndex);
-            pairValueDefines["CUTOFF"] = cl.doubleToString(nb.getCutoffDistance());
+            pairValueDefines["CUTOFF"] = cl.doubleToString(cutoff);
             cl::Program program = cl.createProgram(pairValueSrc, pairValueDefines);
             pairValueKernel = cl::Kernel(program, "computeN2Value");
             pairValueSrc = "";
@@ -3541,7 +3540,7 @@ double OpenCLCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
             int endExclusionIndex = (cl.getContextIndex()+1)*numExclusionTiles/numContexts;
             pairEnergyDefines["FIRST_EXCLUSION_TILE"] = cl.intToString(startExclusionIndex);
             pairEnergyDefines["LAST_EXCLUSION_TILE"] = cl.intToString(endExclusionIndex);
-            pairEnergyDefines["CUTOFF"] = cl.doubleToString(nb.getCutoffDistance());
+            pairEnergyDefines["CUTOFF"] = cl.doubleToString(cutoff);
             cl::Program program = cl.createProgram(pairEnergySrc, pairEnergyDefines);
             pairEnergyKernel = cl::Kernel(program, "computeN2Energy");
             pairEnergySrc = "";

@@ -43,6 +43,7 @@
 #include <algorithm>
 #include <fstream>
 #include <iostream>
+#include <set>
 #include <sstream>
 #include <typeinfo>
 
@@ -492,13 +493,32 @@ void OpenCLContext::addForce(OpenCLForceInfo* force) {
 }
 
 string OpenCLContext::replaceStrings(const string& input, const std::map<std::string, std::string>& replacements) const {
+    static set<char> symbolChars;
+    if (symbolChars.size() == 0) {
+        symbolChars.insert('_');
+        for (char c = 'a'; c <= 'z'; c++)
+            symbolChars.insert(c);
+        for (char c = 'A'; c <= 'Z'; c++)
+            symbolChars.insert(c);
+        for (char c = '0'; c <= '9'; c++)
+            symbolChars.insert(c);
+    }
     string result = input;
     for (map<string, string>::const_iterator iter = replacements.begin(); iter != replacements.end(); iter++) {
-        int index = -1;
+        int index = 0;
+        int size = iter->first.size();
         do {
-            index = result.find(iter->first);
-            if (index != result.npos)
-                result.replace(index, iter->first.size(), iter->second);
+            index = result.find(iter->first, index);
+            if (index != result.npos) {
+                if ((index == 0 || symbolChars.find(result[index-1]) == symbolChars.end()) && (index == result.size()-size || symbolChars.find(result[index+size]) == symbolChars.end())) {
+                    // We have found a complete symbol, not part of a longer symbol.
+                    
+                    result.replace(index, size, iter->second);
+                    index += iter->second.size();
+                }
+                else
+                    index++;
+            }
         } while (index != result.npos);
     }
     return result;
@@ -1130,7 +1150,7 @@ void OpenCLContext::reorderAtomsImpl() {
         if (useHilbert)
             binWidth = (Real) (max(max(maxx-minx, maxy-miny), maxz-minz)/255.0);
         else
-            binWidth = (Real) (0.2*nonbonded->getCutoffDistance());
+            binWidth = (Real) (0.2*nonbonded->getMaxCutoffDistance());
         Real invBinWidth = (Real) (1.0/binWidth);
         int xbins = 1 + (int) ((maxx-minx)*invBinWidth);
         int ybins = 1 + (int) ((maxy-miny)*invBinWidth);
