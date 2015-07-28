@@ -272,10 +272,15 @@ Parameters:
     def __setstate__(self, serializationString):
         system = XmlSerializer.deserializeSystem(serializationString)
         self.this = system.this
+    def __deepcopy__(self, memo):
+        return self.__copy__()
     def getForces(self):
         """Get the list of Forces in this System"""
         return [self.getForce(i) for i in range(self.getNumForces())]
   %}
+  OpenMM::System* __copy__() {
+      return OpenMM::XmlSerializer::clone<OpenMM::System>(*self);
+  }
 }
 
 %extend OpenMM::XmlSerializer {
@@ -444,14 +449,12 @@ Parameters:
 
 %extend OpenMM::Force {
   %pythoncode %{
-    def __copy__(self):
-        copy = self.__class__.__new__(self.__class__)
-        copy.__init__(self)
-        return copy
-
     def __deepcopy__(self, memo):
         return self.__copy__()
   %}
+  OpenMM::Force* __copy__() {
+      return OpenMM::XmlSerializer::clone<OpenMM::Force>(*self);
+  }
 }
 
 %extend OpenMM::Integrator {
@@ -463,5 +466,11 @@ Parameters:
     def __setstate__(self, serializationString):
         system = XmlSerializer.deserialize(serializationString)
         self.this = system.this
+
+    def __deepcopy__(self, memo):
+        return self.__copy__()
   %}
+  OpenMM::Integrator* __copy__() {
+      return OpenMM::XmlSerializer::clone<OpenMM::Integrator>(*self);
+  }
 }
