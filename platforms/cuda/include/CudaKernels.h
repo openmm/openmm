@@ -1294,7 +1294,7 @@ private:
     double prevStepSize, energy;
     float energyFloat;
     int numGlobalVariables;
-    bool hasInitializedKernels, deviceValuesAreCurrent, deviceGlobalsAreCurrent, modifiesParameters, keNeedsForce;
+    bool hasInitializedKernels, deviceValuesAreCurrent, deviceGlobalsAreCurrent, modifiesParameters, keNeedsForce, hasAnyConstraints;
     mutable bool localValuesAreCurrent;
     CudaArray* globalValues;
     CudaArray* sumBuffer;

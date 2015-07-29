@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -34,7 +34,7 @@
 using namespace OpenMM;
 using namespace std;
 
-CudaBondedUtilities::CudaBondedUtilities(CudaContext& context) : context(context), numForceBuffers(0), maxBonds(0), hasInitializedKernels(false) {
+CudaBondedUtilities::CudaBondedUtilities(CudaContext& context) : context(context), numForceBuffers(0), maxBonds(0), allGroups(0), hasInitializedKernels(false) {
 }
 
 CudaBondedUtilities::~CudaBondedUtilities() {
@@ -48,6 +48,7 @@ void CudaBondedUtilities::addInteraction(const vector<vector<int> >& atoms, cons
         forceAtoms.push_back(atoms);
         forceSource.push_back(source);
         forceGroup.push_back(group);
+        allGroups |= 1<<group;
     }
 }
 
@@ -152,6 +153,8 @@ string CudaBondedUtilities::createForceSource(int forceIndex, int numBonds, int 
 }
 
 void CudaBondedUtilities::computeInteractions(int groups) {
+    if ((groups&allGroups) == 0)
+        return;
     if (!hasInitializedKernels) {
         hasInitializedKernels = true;
         kernelArgs.push_back(&context.getForce().getDevicePointer());

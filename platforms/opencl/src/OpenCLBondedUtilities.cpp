@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -33,7 +33,7 @@
 using namespace OpenMM;
 using namespace std;
 
-OpenCLBondedUtilities::OpenCLBondedUtilities(OpenCLContext& context) : context(context), numForceBuffers(0), maxBonds(0), hasInitializedKernels(false) {
+OpenCLBondedUtilities::OpenCLBondedUtilities(OpenCLContext& context) : context(context), numForceBuffers(0), maxBonds(0), allGroups(0), hasInitializedKernels(false) {
 }
 
 OpenCLBondedUtilities::~OpenCLBondedUtilities() {
@@ -48,6 +48,7 @@ void OpenCLBondedUtilities::addInteraction(const vector<vector<int> >& atoms, co
         forceAtoms.push_back(atoms);
         forceSource.push_back(source);
         forceGroup.push_back(group);
+        allGroups |= 1<<group;
         int width = 1;
         while (width < (int) atoms[0].size())
             width *= 2;
@@ -73,7 +74,7 @@ void OpenCLBondedUtilities::initialize(const System& system) {
     if (numForces == 0)
         return;
     
-    // Build the lists of atom indicse and buffer indices.
+    // Build the lists of atom indices and buffer indices.
     
     vector<vector<cl_uint> > bufferVec(numForces);
     vector<vector<int> > bufferCounter(numForces, vector<int>(system.getNumParticles(), 0));
@@ -253,6 +254,8 @@ string OpenCLBondedUtilities::createForceSource(int forceIndex, int numBonds, in
 }
 
 void OpenCLBondedUtilities::computeInteractions(int groups) {
+    if ((groups&allGroups) == 0)
+        return;
     if (!hasInitializedKernels) {
         hasInitializedKernels = true;
         for (int i = 0; i < (int) forceSets.size(); i++) {
