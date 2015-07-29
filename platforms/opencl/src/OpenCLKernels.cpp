@@ -6141,22 +6141,25 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
         
         // Determine how each step will represent the position (as just a value, or a value plus a delta).
         
+        hasAnyConstraints = (context.getSystem().getNumConstraints() > 0);
         vector<bool> storePosAsDelta(numSteps, false);
         vector<bool> loadPosAsDelta(numSteps, false);
-        bool beforeConstrain = false;
-        for (int step = numSteps-1; step >= 0; step--) {
-            if (stepType[step] == CustomIntegrator::ConstrainPositions)
-                beforeConstrain = true;
-            else if (stepType[step] == CustomIntegrator::ComputePerDof && variable[step] == "x" && beforeConstrain)
-                storePosAsDelta[step] = true;
-        }
-        bool storedAsDelta = false;
-        for (int step = 0; step < numSteps; step++) {
-            loadPosAsDelta[step] = storedAsDelta;
-            if (storePosAsDelta[step] == true)
-                storedAsDelta = true;
-            if (stepType[step] == CustomIntegrator::ConstrainPositions)
-                storedAsDelta = false;
+        if (hasAnyConstraints) {
+            bool beforeConstrain = false;
+            for (int step = numSteps-1; step >= 0; step--) {
+                if (stepType[step] == CustomIntegrator::ConstrainPositions)
+                    beforeConstrain = true;
+                else if (stepType[step] == CustomIntegrator::ComputePerDof && variable[step] == "x" && beforeConstrain)
+                    storePosAsDelta[step] = true;
+            }
+            bool storedAsDelta = false;
+            for (int step = 0; step < numSteps; step++) {
+                loadPosAsDelta[step] = storedAsDelta;
+                if (storePosAsDelta[step] == true)
+                    storedAsDelta = true;
+                if (stepType[step] == CustomIntegrator::ConstrainPositions)
+                    storedAsDelta = false;
+            }
         }
         
         // Identify steps that can be merged into a single kernel.
@@ -6478,8 +6481,10 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
             context.updateContextState();
         }
         else if (stepType[step] == CustomIntegrator::ConstrainPositions) {
-            cl.getIntegrationUtilities().applyConstraints(integrator.getConstraintTolerance());
-            cl.executeKernel(kernels[step][0], numAtoms);
+            if (hasAnyConstraints) {
+                cl.getIntegrationUtilities().applyConstraints(integrator.getConstraintTolerance());
+                cl.executeKernel(kernels[step][0], numAtoms);
+            }
             cl.getIntegrationUtilities().computeVirtualSites();
         }
         else if (stepType[step] == CustomIntegrator::ConstrainVelocities) {
