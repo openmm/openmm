@@ -120,10 +120,10 @@ double OpenCLCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, 
     cl.getBondedUtilities().computeInteractions(groups);
     if ((groups&(1<<cl.getNonbondedUtilities().getForceGroup())) != 0)
         cl.getNonbondedUtilities().computeInteractions();
-    cl.reduceForces();
     double sum = 0.0;
     for (vector<OpenCLContext::ForcePostComputation*>::iterator iter = cl.getPostComputations().begin(); iter != cl.getPostComputations().end(); ++iter)
         sum += (*iter)->computeForceAndEnergy(includeForces, includeEnergy, groups);
+    cl.reduceForces();
     cl.getIntegrationUtilities().distributeForcesFromVirtualSites();
     if (includeEnergy) {
         OpenCLArray& energyArray = cl.getEnergyBuffer();
