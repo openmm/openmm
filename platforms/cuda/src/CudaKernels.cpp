@@ -5898,12 +5898,12 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
         // Identify steps that can be merged into a single kernel.
         
         for (int step = 1; step < numSteps; step++) {
-            if (invalidatesForces[step] || ((needsForces[step] || needsEnergy[step]) && forceGroupFlags[step] != forceGroupFlags[step-1]))
+            if ((needsForces[step] || needsEnergy[step]) && (invalidatesForces[step-1] || forceGroupFlags[step] != forceGroupFlags[step-1]))
                 continue;
             if (stepType[step-1] == CustomIntegrator::ComputePerDof && stepType[step] == CustomIntegrator::ComputePerDof)
                 merged[step] = true;
         }
-        for (int step = numSteps-1; step > 0; step--)
+        for (int step = numSteps-1; step > 0; step--) 
             if (merged[step]) {
                 needsForces[step-1] = (needsForces[step] || needsForces[step-1]);
                 needsEnergy[step-1] = (needsEnergy[step] || needsEnergy[step-1]);
@@ -6179,7 +6179,7 @@ void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrat
             kernelArgs[step][0][10] = &uniformRandoms->getDevicePointer();
             if (requiredUniform[step] > 0)
                 cu.executeKernel(randomKernel, &randomArgs[0], numAtoms);
-            cu.executeKernel(kernels[step][0], &kernelArgs[step][0][0], numAtoms);
+            cu.executeKernel(kernels[step][0], &kernelArgs[step][0][0], numAtoms, 128);
         }
         else if (stepType[step] == CustomIntegrator::ComputeGlobal) {
             expressionSet.setVariable(uniformVariableIndex, SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber());
@@ -6196,7 +6196,7 @@ void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrat
             if (requiredUniform[step] > 0)
                 cu.executeKernel(randomKernel, &randomArgs[0], numAtoms);
             cu.clearBuffer(*sumBuffer);
-            cu.executeKernel(kernels[step][0], &kernelArgs[step][0][0], numAtoms);
+            cu.executeKernel(kernels[step][0], &kernelArgs[step][0][0], numAtoms, 128);
             cu.executeKernel(kernels[step][1], &kernelArgs[step][1][0], CudaContext::ThreadBlockSize, CudaContext::ThreadBlockSize);
             if (cu.getUseDoublePrecision() || cu.getUseMixedPrecision()) {
                 double value;

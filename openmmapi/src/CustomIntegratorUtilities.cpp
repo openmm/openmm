@@ -149,6 +149,9 @@ void CustomIntegratorUtilities::analyzeComputations(const ContextImpl& context, 
             }
         }
     }
+    for (int step = numSteps-2; step >= 0; step--)
+        if (forceGroup[step] == -2)
+            forceGroup[step] = forceGroup[step+1];
 
     // Find the end point of each block.
 
