@@ -1,6 +1,8 @@
 ## OpenMM: A High Performance Molecular Dynamics Library
 
 [![Build Status](https://travis-ci.org/pandegroup/openmm.png?branch=master)](https://travis-ci.org/pandegroup/openmm)
+* Jenkins `openmm-dev` conda `osx` build: [![Jenkins `openmm-dev` conda `osx` build](https://jenkins.choderalab.org/job/conda-openmm-dev-osx-2/badge/icon)](https://jenkins.choderalab.org/job/conda-openmm-dev-osx-2/) [[console log]](https://jenkins.choderalab.org/job/conda-openmm-dev-osx-2/lastBuild/consoleFull)
+* Jenkins `openmm-dev` conda `linux` build: [![Jenkins `openmm-dev` conda `linux` build](https://jenkins.choderalab.org/job/conda-openmm-dev-linux-vagrant-2/badge/icon)](https://jenkins.choderalab.org/job/conda-openmm-dev-linux-vagrant-2/) [[console log]](https://jenkins.choderalab.org/job/conda-openmm-dev-linux-vagrant-2/lastBuild/consoleFull)
 
 Introduction
 ------------
