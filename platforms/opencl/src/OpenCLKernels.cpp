@@ -6162,7 +6162,7 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
         // Identify steps that can be merged into a single kernel.
         
         for (int step = 1; step < numSteps; step++) {
-            if (invalidatesForces[step] || ((needsForces[step] || needsEnergy[step]) && forceGroupFlags[step] != forceGroupFlags[step-1]))
+            if ((needsForces[step] || needsEnergy[step]) && (invalidatesForces[step-1] || forceGroupFlags[step] != forceGroupFlags[step-1]))
                 continue;
             if (stepType[step-1] == CustomIntegrator::ComputePerDof && stepType[step] == CustomIntegrator::ComputePerDof)
                 merged[step] = true;
@@ -6441,7 +6441,7 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
                 kernels[step][0].setArg<cl_float>(11, (cl_float) energy);
             if (requiredUniform[step] > 0)
                 cl.executeKernel(randomKernel, numAtoms);
-            cl.executeKernel(kernels[step][0], numAtoms);
+            cl.executeKernel(kernels[step][0], numAtoms, 128);
         }
         else if (stepType[step] == CustomIntegrator::ComputeGlobal) {
             expressionSet.setVariable(uniformVariableIndex, SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber());
@@ -6460,7 +6460,7 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
             if (requiredUniform[step] > 0)
                 cl.executeKernel(randomKernel, numAtoms);
             cl.clearBuffer(*sumBuffer);
-            cl.executeKernel(kernels[step][0], numAtoms);
+            cl.executeKernel(kernels[step][0], numAtoms, 128);
             cl.executeKernel(kernels[step][1], OpenCLContext::ThreadBlockSize, OpenCLContext::ThreadBlockSize);
             if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision()) {
                 double value;
