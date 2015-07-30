@@ -813,7 +813,7 @@ class Modeller(object):
             # and causes hydrogens to spread out evenly.
             
             system = System()
-            nonbonded = CustomNonbondedForce('1/((r/0.1)^4+1)')
+            nonbonded = CustomNonbondedForce('100/((r/0.1)^4+1)')
             bonds = HarmonicBondForce()
             angles = HarmonicAngleForce()
             system.addForce(nonbonded)
