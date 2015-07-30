@@ -835,7 +835,7 @@ void testChangingGlobal() {
     
     for (int i = 0; i < 10; i++) {
         integrator.step(1);
-        ASSERT_EQUAL_TOL(i+1, integrator.getGlobalVariable(0), 1e-5);
+        ASSERT_EQUAL_TOL(i+1.0, integrator.getGlobalVariable(0), 1e-5);
         vector<Vec3> values;
         integrator.getPerDofVariable(1, values);
         ASSERT_EQUAL_VEC(Vec3(i+1.5, i+1.5, i+1.5), values[0], 1e-5);
