@@ -435,7 +435,7 @@ void OpenCLNonbondedUtilities::createKernelsForGroups(int groups) {
     kernels.cutoffDistance = cutoff;
     if (kernels.hasForces)
         kernels.forceKernel = createInteractionKernel(source, parameters, arguments, true, true, groups);
-    if (useCutoff && kernels.hasForces) {
+    if (useCutoff) {
         double padding = (usePadding ? 0.1*cutoff : 0.0);
         double paddedCutoff = cutoff+padding;
         map<string, string> defines;
