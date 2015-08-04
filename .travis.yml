@@ -38,7 +38,7 @@ before_install:
 script:
   - virtualenv --system-site-packages openmm_env
   - source openmm_env/bin/activate
-  - cmake -DCMAKE_INSTALL_PREFIX=$HOME/OpenMM -DOPENMM_BUILD_STATIC_LIB=$OPENMM_BUILD_STATIC_LIB.
+  - cmake -DCMAKE_INSTALL_PREFIX=$HOME/OpenMM -DOPENMM_BUILD_STATIC_LIB=$OPENMM_BUILD_STATIC_LIB .
   - make -j2
   - make -j2 install
   - make PythonInstall
@@ -54,6 +54,7 @@ script:
   - cd python/tests
   - pip install nose
   - nosetests -vv --processes=-1 --process-timeout=200
+  - cd -
 
 after_success:
   # Get libraries necessary for building docs and pushing
