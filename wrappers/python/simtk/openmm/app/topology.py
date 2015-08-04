@@ -302,6 +302,9 @@ class Chain(object):
     def __len__(self):
         return len(self._residues)
 
+    def __repr__(self):
+        return "<Chain %d>" % self.index
+
 class Residue(object):
     """A Residue object represents a residue within a Topology."""
     def __init__(self, name, index, chain, id):
@@ -323,6 +326,9 @@ class Residue(object):
     def __len__(self):
         return len(self._atoms)
 
+    def __repr__(self):
+        return "<Residue %d (%s) of chain %d>" % (self.index, self.name, self.chain.index)
+
 class Atom(object):
     """An Atom object represents a residue within a Topology."""
 
@@ -339,3 +345,5 @@ class Atom(object):
         ## A user defined identifier for this Atom
         self.id = id
 
+    def __repr__(self):
+        return "<Atom %d (%s) of chain %d residue %d (%s)>" % (self.index, self.name, self.residue.chain.index, self.residue.index, self.residue.name)
