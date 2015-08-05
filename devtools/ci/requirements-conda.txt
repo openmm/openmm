@@ -1,5 +1,0 @@
-numpy
-cython
-pip
-nose
-
