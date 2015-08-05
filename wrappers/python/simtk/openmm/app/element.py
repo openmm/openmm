@@ -123,17 +123,17 @@ class Element(object):
             Element._elements_by_mass = OrderedDict()
             for elem in sorted(Element._elements_by_symbol.values(),
                                key=lambda x: x.mass):
-                Element._elements_by_mass[elem.mass] = elem
+                Element._elements_by_mass[elem.mass.value_in_unit(daltons)] = elem
 
         diff = mass
         best_guess = None
 
         for elemmass, element in Element._elements_by_mass.iteritems():
-            massdiff = abs(elemmass._value - mass)
+            massdiff = abs(elemmass - mass)
             if massdiff < diff:
                 best_guess = element
                 diff = massdiff
-            if elemmass._value > mass:
+            if elemmass > mass:
                 # Elements are only getting heavier, so bail out early
                 return best_guess
 

@@ -74,6 +74,8 @@ class TestNumpyCompatibility(unittest.TestCase):
         energy = np.random.randn(10*10)
         f.addMap(10, energy)
         size, energy_out = f.getMapParameters(0)
+        energy_out = energy_out.value_in_unit_system(unit.md_unit_system)
+
     
         self.assertEqual(size, 10)
         np.testing.assert_array_almost_equal(energy, np.asarray(energy_out))

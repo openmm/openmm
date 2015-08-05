@@ -1,14 +1,13 @@
 %module openmm
-
 %include "factory.i"
+
 %include "std_string.i"
 %include "std_iostream.i"
-%include "typemaps.i"
-
 %include "std_map.i"
 %include "std_pair.i"
 %include "std_set.i"
 %include "std_vector.i"
+
 namespace std {
   %template(pairii) pair<int,int>;
   %template(vectord) vector<double>;
@@ -23,6 +22,7 @@ namespace std {
   %template(seti) set<int>;
 };
 
+%include "typemaps.i"
 %include "windows.i"
 
 %{

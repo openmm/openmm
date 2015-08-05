@@ -307,7 +307,7 @@ UNITS = {
 
 ("Context", "getParameter") : (None, ()),
 ("Context", "getMolecules") : (None, ()),
-("CMAPTorsionForce", "getMapParameters") : (None, ()),
+("CMAPTorsionForce", "getMapParameters") : (None, (None, 'unit.kilojoule_per_mole')),
 ("CMAPTorsionForce", "getTorsionParameters") : (None, ()),
 ("CMMotionRemover", "getFrequency") : (None, ()),
 ("CustomAngleForce", "getNumPerAngleParameters") : (None, ()),
