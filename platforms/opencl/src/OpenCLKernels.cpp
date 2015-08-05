@@ -1436,10 +1436,11 @@ private:
 
 class OpenCLCalcNonbondedForceKernel::SyncQueuePreComputation : public OpenCLContext::ForcePreComputation {
 public:
-    SyncQueuePreComputation(OpenCLContext& cl, cl::CommandQueue queue, int forceGroup) : cl(cl), queue(queue), events(1), forceGroup(forceGroup) {
+    SyncQueuePreComputation(OpenCLContext& cl, cl::CommandQueue queue, int forceGroup) : cl(cl), queue(queue), forceGroup(forceGroup) {
     }
     void computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
         if ((groups&(1<<forceGroup)) != 0) {
+            vector<cl::Event> events(1);
             cl.getQueue().enqueueMarker(&events[0]);
             queue.enqueueWaitForEvents(events);
         }
@@ -1447,17 +1448,18 @@ public:
 private:
     OpenCLContext& cl;
     cl::CommandQueue queue;
-    vector<cl::Event> events;
     int forceGroup;
 };
 
 class OpenCLCalcNonbondedForceKernel::SyncQueuePostComputation : public OpenCLContext::ForcePostComputation {
 public:
-    SyncQueuePostComputation(OpenCLContext& cl, cl::Event& event, int forceGroup) : cl(cl), event(event), events(1), forceGroup(forceGroup) {
+    SyncQueuePostComputation(OpenCLContext& cl, cl::Event& event, int forceGroup) : cl(cl), event(event), forceGroup(forceGroup) {
     }
     double computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
         if ((groups&(1<<forceGroup)) != 0) {
+            vector<cl::Event> events(1);
             events[0] = event;
+            event = cl::Event();
             cl.getQueue().enqueueWaitForEvents(events);
         }
         return 0.0;
@@ -1465,7 +1467,6 @@ public:
 private:
     OpenCLContext& cl;
     cl::Event& event;
-    vector<cl::Event> events;
     int forceGroup;
 };
 
