@@ -91,6 +91,7 @@ class PDBxFile(object):
         lastResId = None
         lastAsymId = None
         atomTable = {}
+        atomsInResidue = set()
         models = []
         for row in atomData.getRowList():
             atomKey = ((row[resIdCol], row[asymIdCol], row[atomNameCol]))
@@ -108,17 +109,16 @@ class PDBxFile(object):
 
                 if lastChainId != row[chainIdCol]:
                     # The start of a new chain.
-                    chain = top.addChain(row[chainIdCol])
+                    chain = top.addChain(row[asymIdCol])
                     lastChainId = row[chainIdCol]
                     lastResId = None
                     lastAsymId = None
-                if lastResId != row[resIdCol] or lastAsymId != row[asymIdCol]:
+                if lastResId != row[resIdCol] or lastAsymId != row[asymIdCol] or (lastResId == '.' and row[atomNameCol] in atomsInResidue):
                     # The start of a new residue.
                     res = top.addResidue(row[resNameCol], chain, None if resNumCol == -1 else row[resNumCol])
                     lastResId = row[resIdCol]
-                    if lastResId == '.':
-                        lastResId = None
                     lastAsymId = row[asymIdCol]
+                    atomsInResidue.clear()
                 element = None
                 try:
                     element = elem.get_by_symbol(row[elementCol])
@@ -126,6 +126,7 @@ class PDBxFile(object):
                     pass
                 atom = top.addAtom(row[atomNameCol], element, res, row[atomIdCol])
                 atomTable[atomKey] = atom
+                atomsInResidue.add(row[atomNameCol])
             else:
                 # This row defines coordinates for an existing atom in one of the later models.
 
