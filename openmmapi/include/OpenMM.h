@@ -57,6 +57,7 @@
 #include "openmm/MonteCarloAnisotropicBarostat.h"
 #include "openmm/MonteCarloBarostat.h"
 #include "openmm/MonteCarloMembraneBarostat.h"
+#include "openmm/RPMDMonteCarloBarostat.h"
 #include "openmm/NonbondedForce.h"
 #include "openmm/Context.h"
 #include "openmm/OpenMMException.h"
