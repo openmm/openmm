@@ -530,7 +530,7 @@ class ForceField(object):
         # Execute scripts found in the XML files.
 
         for script in self._scripts:
-            exec script
+            exec(script, locals())
         return sys
 
 
