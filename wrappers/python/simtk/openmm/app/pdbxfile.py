@@ -1,14 +1,14 @@
 """
-pdbfile.py: Used for loading PDB files.
+pdbxfile.py: Used for loading PDBx/mmCIF files.
 
 This is part of the OpenMM molecular simulation toolkit originating from
 Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2014-2015 Stanford University and the Authors.
+Portions copyright (c) 2015 Stanford University and the Authors.
 Authors: Peter Eastman
-Contributors:
+Contributors: Jason Swails
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -28,8 +28,10 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
+from __future__ import division, absolute_import, print_function
+
 __author__ = "Peter Eastman"
-__version__ = "1.0"
+__version__ = "2.0"
 
 import os
 import sys
@@ -201,3 +203,133 @@ class PDBxFile(object):
                 self._numpyPositions[frame] = Quantity(numpy.array(self._positions[frame].value_in_unit(nanometers)), nanometers)
             return self._numpyPositions[frame]
         return self._positions[frame]
+
+    @staticmethod
+    def writeFile(topology, positions, file=sys.stdout, keepIds=False,
+                  entry=None):
+        """Write a PDB file containing a single model.
+
+        Parameters:
+         - topology (Topology) The Topology defining the model to write
+         - positions (list) The list of atomic positions to write
+         - file (file=stdout) A file to write to
+         - keepIds (bool=False) If True, keep the residue and chain IDs specified in the Topology rather than generating
+           new ones.  Warning: It is up to the caller to make sure these are valid IDs that satisfy the requirements of
+           the PDB format.  Otherwise, the output file will be invalid.
+         - entry (str=None) The entry ID to assign to the CIF file
+        """
+        PDBxFile.writeHeader(topology, file, entry)
+        PDBxFile.writeModel(topology, positions, file, keepIds=keepIds)
+
+    @staticmethod
+    def writeHeader(topology, file=sys.stdout, entry=None):
+        """Write out the header for a PDB file.
+
+        Parameters:
+         - topology (Topology) The Topology defining the molecular system being written
+         - file (file=stdout) A file to write the file to
+         - entry (str=None) The entry ID to assign to the CIF file
+        """
+        if entry is not None:
+            print('data_%s' % entry, file=file)
+        else:
+            print('data_cell', file=file)
+        print("# Created with OpenMM %s, %s" % (Platform.getOpenMMVersion(), str(date.today())), file=file)
+        print('#', file=file)
+        vectors = topology.getPeriodicBoxVectors()
+        if vectors is not None:
+            (a, b, c) = vectors.value_in_unit(angstroms)
+            a_length = norm(a)
+            b_length = norm(b)
+            c_length = norm(c)
+            alpha = math.acos(dot(b, c)/(b_length*c_length))*180.0/math.pi
+            beta = math.acos(dot(c, a)/(c_length*a_length))*180.0/math.pi
+            gamma = math.acos(dot(a, b)/(a_length*b_length))*180.0/math.pi
+            print('_cell.length_a     %10.4f', file=file)
+            print('_cell.length_b     %10.4f', file=file)
+            print('_cell.length_c     %10.4f', file=file)
+            print('_cell.angle_alpha  %10.4f', file=file)
+            print('_cell.angle_beta   %10.4f', file=file)
+            print('_cell.angle_gamma  %10.4f', file=file)
+            print('##', file=file)
+        print('loop_', file=file)
+        print('_atom_site.group_PDB', file=file)
+        print('_atom_site.id', file=file)
+        print('_atom_site.type_symbol', file=file)
+        print('_atom_site.label_atom_id', file=file)
+        print('_atom_site.label_alt_id', file=file)
+        print('_atom_site.label_comp_id', file=file)
+        print('_atom_site.label_asym_id', file=file)
+        print('_atom_site.label_entity_id', file=file)
+        print('_atom_site.label_seq_id', file=file)
+        print('_atom_site.pdbx_PDB_ins_code', file=file)
+        print('_atom_site.Cartn_x', file=file)
+        print('_atom_site.Cartn_y', file=file)
+        print('_atom_site.Cartn_z', file=file)
+        print('_atom_site.occupancy', file=file)
+        print('_atom_site.B_iso_or_equiv', file=file)
+        print('_atom_site.Cartn_x_esd', file=file)
+        print('_atom_site.Cartn_y_esd', file=file)
+        print('_atom_site.Cartn_z_esd', file=file)
+        print('_atom_site.occupancy_esd', file=file)
+        print('_atom_site.B_iso_or_equiv_esd', file=file)
+        print('_atom_site.pdbx_formal_charge', file=file)
+        print('_atom_site.auth_seq_id', file=file)
+        print('_atom_site.auth_comp_id', file=file)
+        print('_atom_site.auth_asym_id', file=file)
+        print('_atom_site.auth_atom_id', file=file)
+        print('_atom_site.pdbx_PDB_model_num', file=file)
+
+    @staticmethod
+    def writeModel(topology, positions, file=sys.stdout, modelIndex=1, keepIds=False):
+        """Write out a model to a PDB file.
+
+        Parameters:
+         - topology (Topology) The Topology defining the model to write
+         - positions (list) The list of atomic positions to write
+         - file (file=stdout) A file to write the model to
+         - modelIndex (int=1) The model number of this frame
+         - keepIds (bool=False) If True, keep the residue and chain IDs specified in the Topology rather than generating
+           new ones.  Warning: It is up to the caller to make sure these are valid IDs that satisfy the requirements of
+           the PDB format.  Otherwise, the output file will be invalid.
+        """
+        if len(list(topology.atoms())) != len(positions):
+            raise ValueError('The number of positions must match the number of atoms')
+        if is_quantity(positions):
+            positions = positions.value_in_unit(angstroms)
+        if any(math.isnan(norm(pos)) for pos in positions):
+            raise ValueError('Particle position is NaN')
+        if any(math.isinf(norm(pos)) for pos in positions):
+            raise ValueError('Particle position is infinite')
+        atomIndex = 1
+        posIndex = 0
+        for (chainIndex, chain) in enumerate(topology.chains()):
+            if keepIds:
+                chainName = chain.id
+            else:
+                chainName = chr(ord('A')+chainIndex%26)
+            residues = list(chain.residues())
+            for (resIndex, res) in enumerate(residues):
+                resName = res.name
+                if keepIds:
+                    resId = res.id
+                else:
+                    resId = resIndex + 1
+                for atom in res.atoms():
+                    atomName = atom.name
+                    if len(atom.name) < 4 and atom.name[:1].isalpha() and (atom.element is None or len(atom.element.symbol) < 2):
+                        atomName = ' '+atom.name
+                    elif len(atom.name) > 4:
+                        atomName = atom.name[:4]
+                    else:
+                        atomName = atom.name
+                    coords = positions[posIndex]
+                    if atom.element is not None:
+                        symbol = atom.element.symbol
+                    else:
+                        symbol = '?'
+                    line = "ATOM  %5d %-3s %-4s . %-4s %s ? %5s . %10.4f %10.4f %10.4f  0.0  0.0  ?  ?  ?  ?  ?  .  %5s %4s %s %4d"
+                    print(line % (atomIndex, symbol, atom.name, res.name, chainName, resId, coords[0], coords[1], coords[2],
+                                  resId, res.name, chainName, atom.name, modelIndex), file=file)
+                    posIndex += 1
+                    atomIndex += 1
