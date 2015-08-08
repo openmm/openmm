@@ -32,7 +32,7 @@ __author__ = "Peter Eastman"
 __version__ = "1.0"
 
 import simtk.openmm as mm
-from simtk.openmm.app import PDBFile
+from simtk.openmm.app import PDBFile, PDBxFile
 
 class PDBReporter(object):
     """PDBReporter outputs a series of frames from a Simulation to a PDB file.

@@ -33,15 +33,15 @@ from __future__ import division, absolute_import, print_function
 __author__ = "Peter Eastman"
 __version__ = "2.0"
 
-import os
 import sys
 import math
-from simtk.openmm import Vec3
+from simtk.openmm import Vec3, Platform
+from datetime import date
 from simtk.openmm.app.internal.pdbx.reader.PdbxReader import PdbxReader
 from simtk.openmm.app.internal.unitcell import computePeriodicBoxVectors
 from simtk.openmm.app import Topology
-from simtk.unit import nanometers, angstroms, is_quantity, norm, Quantity
-import element as elem
+from simtk.unit import nanometers, angstroms, is_quantity, norm, Quantity, dot
+from . import element as elem
 try:
     import numpy
 except:
@@ -245,12 +245,12 @@ class PDBxFile(object):
             alpha = math.acos(dot(b, c)/(b_length*c_length))*180.0/math.pi
             beta = math.acos(dot(c, a)/(c_length*a_length))*180.0/math.pi
             gamma = math.acos(dot(a, b)/(a_length*b_length))*180.0/math.pi
-            print('_cell.length_a     %10.4f', file=file)
-            print('_cell.length_b     %10.4f', file=file)
-            print('_cell.length_c     %10.4f', file=file)
-            print('_cell.angle_alpha  %10.4f', file=file)
-            print('_cell.angle_beta   %10.4f', file=file)
-            print('_cell.angle_gamma  %10.4f', file=file)
+            print('_cell.length_a     %10.4f' % a_length, file=file)
+            print('_cell.length_b     %10.4f' % b_length, file=file)
+            print('_cell.length_c     %10.4f' % c_length, file=file)
+            print('_cell.angle_alpha  %10.4f' % alpha, file=file)
+            print('_cell.angle_beta   %10.4f' % beta, file=file)
+            print('_cell.angle_gamma  %10.4f' % gamma, file=file)
             print('##', file=file)
         print('loop_', file=file)
         print('_atom_site.group_PDB', file=file)
@@ -310,25 +310,17 @@ class PDBxFile(object):
                 chainName = chr(ord('A')+chainIndex%26)
             residues = list(chain.residues())
             for (resIndex, res) in enumerate(residues):
-                resName = res.name
                 if keepIds:
                     resId = res.id
                 else:
                     resId = resIndex + 1
                 for atom in res.atoms():
-                    atomName = atom.name
-                    if len(atom.name) < 4 and atom.name[:1].isalpha() and (atom.element is None or len(atom.element.symbol) < 2):
-                        atomName = ' '+atom.name
-                    elif len(atom.name) > 4:
-                        atomName = atom.name[:4]
-                    else:
-                        atomName = atom.name
                     coords = positions[posIndex]
                     if atom.element is not None:
                         symbol = atom.element.symbol
                     else:
                         symbol = '?'
-                    line = "ATOM  %5d %-3s %-4s . %-4s %s ? %5s . %10.4f %10.4f %10.4f  0.0  0.0  ?  ?  ?  ?  ?  .  %5s %4s %s %4d"
+                    line = "ATOM  %5d %-3s %-4s . %-4s %s ? %5s . %10.4f %10.4f %10.4f  0.0  0.0  ?  ?  ?  ?  ?  .  %5s %4s %s %4s %5d"
                     print(line % (atomIndex, symbol, atom.name, res.name, chainName, resId, coords[0], coords[1], coords[2],
                                   resId, res.name, chainName, atom.name, modelIndex), file=file)
                     posIndex += 1
