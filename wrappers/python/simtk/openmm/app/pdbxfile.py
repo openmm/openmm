@@ -38,7 +38,7 @@ import math
 from simtk.openmm import Vec3, Platform
 from datetime import date
 from simtk.openmm.app.internal.pdbx.reader.PdbxReader import PdbxReader
-from simtk.openmm.app.internal.unitcell import computePeriodicBoxVectors
+from simtk.openmm.app.internal.unitcell import computePeriodicBoxVectors, computeLengthsAndAngles
 from simtk.openmm.app import Topology
 from simtk.unit import nanometers, angstroms, is_quantity, norm, Quantity, dot
 from . import element as elem
@@ -207,7 +207,7 @@ class PDBxFile(object):
     @staticmethod
     def writeFile(topology, positions, file=sys.stdout, keepIds=False,
                   entry=None):
-        """Write a PDB file containing a single model.
+        """Write a PDBx/mmCIF file containing a single model.
 
         Parameters:
          - topology (Topology) The Topology defining the model to write
@@ -215,7 +215,7 @@ class PDBxFile(object):
          - file (file=stdout) A file to write to
          - keepIds (bool=False) If True, keep the residue and chain IDs specified in the Topology rather than generating
            new ones.  Warning: It is up to the caller to make sure these are valid IDs that satisfy the requirements of
-           the PDB format.  Otherwise, the output file will be invalid.
+           the PDBx/mmCIF format.  Otherwise, the output file will be invalid.
          - entry (str=None) The entry ID to assign to the CIF file
         """
         PDBxFile.writeHeader(topology, file, entry)
@@ -223,7 +223,7 @@ class PDBxFile(object):
 
     @staticmethod
     def writeHeader(topology, file=sys.stdout, entry=None):
-        """Write out the header for a PDB file.
+        """Write out the header for a PDBx/mmCIF file.
 
         Parameters:
          - topology (Topology) The Topology defining the molecular system being written
@@ -238,19 +238,14 @@ class PDBxFile(object):
         print('#', file=file)
         vectors = topology.getPeriodicBoxVectors()
         if vectors is not None:
-            (a, b, c) = vectors.value_in_unit(angstroms)
-            a_length = norm(a)
-            b_length = norm(b)
-            c_length = norm(c)
-            alpha = math.acos(dot(b, c)/(b_length*c_length))*180.0/math.pi
-            beta = math.acos(dot(c, a)/(c_length*a_length))*180.0/math.pi
-            gamma = math.acos(dot(a, b)/(a_length*b_length))*180.0/math.pi
-            print('_cell.length_a     %10.4f' % a_length, file=file)
-            print('_cell.length_b     %10.4f' % b_length, file=file)
-            print('_cell.length_c     %10.4f' % c_length, file=file)
-            print('_cell.angle_alpha  %10.4f' % alpha, file=file)
-            print('_cell.angle_beta   %10.4f' % beta, file=file)
-            print('_cell.angle_gamma  %10.4f' % gamma, file=file)
+            a, b, c, alpha, beta, gamma = computeLengthsAndAngles(vectors)
+            RAD_TO_DEG = 180/math.pi
+            print('_cell.length_a     %10.4f' % a_length*10, file=file)
+            print('_cell.length_b     %10.4f' % b_length*10, file=file)
+            print('_cell.length_c     %10.4f' % c_length*10, file=file)
+            print('_cell.angle_alpha  %10.4f' % alpha*RAD_TO_DEG, file=file)
+            print('_cell.angle_beta   %10.4f' % beta*RAD_TO_DEG, file=file)
+            print('_cell.angle_gamma  %10.4f' % gamma*RAD_TO_DEG, file=file)
             print('##', file=file)
         print('loop_', file=file)
         print('_atom_site.group_PDB', file=file)
@@ -282,7 +277,7 @@ class PDBxFile(object):
 
     @staticmethod
     def writeModel(topology, positions, file=sys.stdout, modelIndex=1, keepIds=False):
-        """Write out a model to a PDB file.
+        """Write out a model to a PDBx/mmCIF file.
 
         Parameters:
          - topology (Topology) The Topology defining the model to write
@@ -291,7 +286,7 @@ class PDBxFile(object):
          - modelIndex (int=1) The model number of this frame
          - keepIds (bool=False) If True, keep the residue and chain IDs specified in the Topology rather than generating
            new ones.  Warning: It is up to the caller to make sure these are valid IDs that satisfy the requirements of
-           the PDB format.  Otherwise, the output file will be invalid.
+           the PDBx/mmCIF format.  Otherwise, the output file will be invalid.
         """
         if len(list(topology.atoms())) != len(positions):
             raise ValueError('The number of positions must match the number of atoms')
