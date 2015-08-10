@@ -397,14 +397,19 @@ void OpenCLNonbondedUtilities::prepareInteractions() {
 
     // Compute the neighbor list.
 
-    setPeriodicBoxSizeArg(context, findBlockBoundsKernel, 1);
-    setInvPeriodicBoxSizeArg(context, findBlockBoundsKernel, 2);
-    context.executeKernel(findBlockBoundsKernel, context.getNumAtoms());
-    blockSorter->sort(*sortedBlocks);
-    context.executeKernel(sortBoxDataKernel, context.getNumAtoms());
-    setPeriodicBoxSizeArg(context, findInteractingBlocksKernel, 0);
-    setInvPeriodicBoxSizeArg(context, findInteractingBlocksKernel, 1);
-    context.executeKernel(findInteractingBlocksKernel, context.getNumAtoms(), interactingBlocksThreadBlockSize);
+    bool rebuild = false;
+    do {
+        setPeriodicBoxSizeArg(context, findBlockBoundsKernel, 1);
+        setInvPeriodicBoxSizeArg(context, findBlockBoundsKernel, 2);
+        context.executeKernel(findBlockBoundsKernel, context.getNumAtoms());
+        blockSorter->sort(*sortedBlocks);
+        context.executeKernel(sortBoxDataKernel, context.getNumAtoms());
+        setPeriodicBoxSizeArg(context, findInteractingBlocksKernel, 0);
+        setInvPeriodicBoxSizeArg(context, findInteractingBlocksKernel, 1);
+        context.executeKernel(findInteractingBlocksKernel, context.getNumAtoms(), interactingBlocksThreadBlockSize);
+        if (context.getComputeForceCount() == 1)
+            rebuild = updateNeighborListSize(); // This is the first time step, so check whether our initial guess was large enough.
+    } while (rebuild);
 }
 
 void OpenCLNonbondedUtilities::computeInteractions() {
@@ -414,18 +419,16 @@ void OpenCLNonbondedUtilities::computeInteractions() {
             setInvPeriodicBoxSizeArg(context, forceKernel, 10);
         }
         context.executeKernel(forceKernel, numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
-        if (context.getComputeForceCount() == 1)
-            updateNeighborListSize(); // This is the first time step, so check whether our initial guess was large enough.
     }
 }
 
-void OpenCLNonbondedUtilities::updateNeighborListSize() {
+bool OpenCLNonbondedUtilities::updateNeighborListSize() {
     if (!useCutoff)
-        return;
+        return false;
     unsigned int* pinnedInteractionCount = (unsigned int*) context.getPinnedBuffer();
     interactionCount->download(pinnedInteractionCount);
     if (pinnedInteractionCount[0] <= (unsigned int) interactingTiles->getSize())
-        return;
+        return false;
 
     // The most recent timestep had too many interactions to fit in the arrays.  Make the arrays bigger to prevent
     // this from happening in the future.
@@ -455,6 +458,7 @@ void OpenCLNonbondedUtilities::updateNeighborListSize() {
         vector<mm_float4> oldPositionsVec(numAtoms, mm_float4(1e30f, 1e30f, 1e30f, 0));
         oldPositions->upload(oldPositionsVec);
     }
+    return true;
 }
 
 void OpenCLNonbondedUtilities::setUsePadding(bool padding) {

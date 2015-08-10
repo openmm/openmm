@@ -162,8 +162,10 @@ public:
     void computeInteractions();
     /**
      * Check to see if the neighbor list arrays are large enough, and make them bigger if necessary.
+     *
+     * @return true if the neighbor list needed to be enlarged.
      */
-    void updateNeighborListSize();
+    bool updateNeighborListSize();
     /**
      * Get the array containing the center of each atom block.
      */
