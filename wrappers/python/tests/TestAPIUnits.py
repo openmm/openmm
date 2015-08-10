@@ -2,6 +2,7 @@ import unittest
 from simtk.openmm import *
 from simtk.openmm.app import *
 from simtk.unit import *
+import random
 import math
 
 class TestAPIUnits(unittest.TestCase):
@@ -158,6 +159,31 @@ class TestAPIUnits(unittest.TestCase):
         self.assertIs(charge.unit, elementary_charge)
         self.assertIs(sigma.unit, nanometers)
         self.assertIs(epsilon.unit, kilojoules_per_mole)
+
+    def testCmapForce(self):
+        """ Tests the CMAPTorsionForce API features """
+        map1 = [random.random() for i in range(24*24)]
+        map2 = [random.random() for i in range(12*12)] * kilocalories_per_mole
+        force = CMAPTorsionForce()
+        force.addMap(24, map1)
+        force.addMap(12, map2)
+        force.addTorsion(0, 0, 1, 2, 3, 1, 2, 3, 4)
+        force.addTorsion(1, 5, 6, 7, 8, 6, 7, 8, 9)
+        force.addTorsion(0, 10, 11, 12, 13, 11, 12, 13, 14)
+        force.addTorsion(1, 15, 16, 17, 18, 16, 17, 18, 19)
+
+        self.assertEqual(force.getNumTorsions(), 4)
+        self.assertEqual(force.getNumMaps(), 2)
+        self.assertEqual(force.getMapParameters(0)[0], 24)
+        self.assertEqual(force.getMapParameters(1)[0], 12)
+        self.assertIs(force.getMapParameters(0)[1].unit, kilojoules_per_mole)
+        self.assertIs(force.getMapParameters(1)[1].unit, kilojoules_per_mole)
+
+        for x, y in zip(force.getMapParameters(0)[1], map1):
+            self.assertAlmostEqual(x.value_in_unit(kilojoules_per_mole), y)
+
+        for x, y in zip(force.getMapParameters(1)[1], map2):
+            self.assertAlmostEqualUnit(x, y)
 
 if __name__ == '__main__':
     unittest.main()
