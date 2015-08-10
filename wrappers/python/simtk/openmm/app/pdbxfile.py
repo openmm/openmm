@@ -240,12 +240,12 @@ class PDBxFile(object):
         if vectors is not None:
             a, b, c, alpha, beta, gamma = computeLengthsAndAngles(vectors)
             RAD_TO_DEG = 180/math.pi
-            print('_cell.length_a     %10.4f' % a_length*10, file=file)
-            print('_cell.length_b     %10.4f' % b_length*10, file=file)
-            print('_cell.length_c     %10.4f' % c_length*10, file=file)
-            print('_cell.angle_alpha  %10.4f' % alpha*RAD_TO_DEG, file=file)
-            print('_cell.angle_beta   %10.4f' % beta*RAD_TO_DEG, file=file)
-            print('_cell.angle_gamma  %10.4f' % gamma*RAD_TO_DEG, file=file)
+            print('_cell.length_a     %10.4f' % (a*10), file=file)
+            print('_cell.length_b     %10.4f' % (b*10), file=file)
+            print('_cell.length_c     %10.4f' % (c*10), file=file)
+            print('_cell.angle_alpha  %10.4f' % (alpha*RAD_TO_DEG), file=file)
+            print('_cell.angle_beta   %10.4f' % (beta*RAD_TO_DEG), file=file)
+            print('_cell.angle_gamma  %10.4f' % (gamma*RAD_TO_DEG), file=file)
             print('##', file=file)
         print('loop_', file=file)
         print('_atom_site.group_PDB', file=file)
