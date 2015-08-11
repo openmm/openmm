@@ -372,6 +372,7 @@ void CpuCalcPmeReciprocalForceKernel::initialize(int xsize, int ysize, int zsize
     
     // Initialize threads.
     
+    isFinished = false;
     pthread_cond_init(&startCondition, NULL);
     pthread_cond_init(&endCondition, NULL);
     pthread_cond_init(&mainThreadStartCondition, NULL);
@@ -385,6 +386,14 @@ void CpuCalcPmeReciprocalForceKernel::initialize(int xsize, int ysize, int zsize
         data->tempGrid = (float*) fftwf_malloc(sizeof(float)*(gridx*gridy*gridz+3));
     }
     pthread_create(&mainThread, NULL, threadBody, new ThreadData(*this, -1));
+    
+    // Wait until the main thread is up and running.
+    
+    pthread_mutex_lock(&lock);
+    while (!isFinished) {
+        pthread_cond_wait(&mainThreadEndCondition, &lock);
+    }
+    pthread_mutex_unlock(&lock);
     
     // Initialize FFTW.
     
@@ -478,6 +487,8 @@ void CpuCalcPmeReciprocalForceKernel::runThread(int index) {
         // This is the main thread that coordinates all the other ones.
         
         pthread_mutex_lock(&lock);
+        isFinished = true;
+        pthread_cond_signal(&mainThreadEndCondition);
         while (true) {
             // Wait for the signal to start.
             
