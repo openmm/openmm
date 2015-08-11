@@ -201,15 +201,17 @@ CudaIntegrationUtilities::CudaIntegrationUtilities(CudaContext& context, const S
                 params.push_back(make_float2(dist13, dist12));
             }
             else
-                throw OpenMMException("Two of the three distances constrained with SETTLE must be the same.");
+                continue; // We can't handle this with SETTLE
             isShakeAtom[atom1] = true;
             isShakeAtom[atom2] = true;
             isShakeAtom[atom3] = true;
         }
-        settleAtoms = CudaArray::create<int4>(context, atoms.size(), "settleAtoms");
-        settleParams = CudaArray::create<float2>(context, params.size(), "settleParams");
-        settleAtoms->upload(atoms);
-        settleParams->upload(params);
+        if (atoms.size() > 0) {
+            settleAtoms = CudaArray::create<int4>(context, atoms.size(), "settleAtoms");
+            settleParams = CudaArray::create<float2>(context, params.size(), "settleParams");
+            settleAtoms->upload(atoms);
+            settleParams->upload(params);
+        }
     }
 
     // Find clusters consisting of a central atom with up to three peripheral atoms.

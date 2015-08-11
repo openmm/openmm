@@ -220,15 +220,17 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
                 params.push_back(mm_float2(dist13, dist12));
             }
             else
-                throw OpenMMException("Two of the three distances constrained with SETTLE must be the same.");
+                continue; // We can't handle this with SETTLE
             isShakeAtom[atom1] = true;
             isShakeAtom[atom2] = true;
             isShakeAtom[atom3] = true;
         }
-        settleAtoms = OpenCLArray::create<mm_int4>(context, atoms.size(), "settleAtoms");
-        settleParams = OpenCLArray::create<mm_float2>(context, params.size(), "settleParams");
-        settleAtoms->upload(atoms);
-        settleParams->upload(params);
+        if (atoms.size() > 0) {
+            settleAtoms = OpenCLArray::create<mm_int4>(context, atoms.size(), "settleAtoms");
+            settleParams = OpenCLArray::create<mm_float2>(context, params.size(), "settleParams");
+            settleAtoms->upload(atoms);
+            settleParams->upload(params);
+        }
     }
 
     // Find clusters consisting of a central atom with up to three peripheral atoms.

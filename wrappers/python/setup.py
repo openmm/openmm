@@ -122,11 +122,6 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
                            build_info=BUILD_INFO):
     from distutils.core import Extension
     setupKeywords = {}
-    try:
-        from distutils.command.build_py import build_py_2to3 as build_py
-    except ImportError:
-        from distutils.command.build_py import build_py
-    setupKeywords["cmdclass"]          = {'build_py': build_py}
     setupKeywords["name"]              = "OpenMM"
     setupKeywords["version"]           = "%s.%s.%s" % (major_version_num,
                                                        minor_version_num,

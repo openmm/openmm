@@ -1,5 +1,3 @@
-#!/bin/env python
-
 """
 pdbstructure.py: Used for managing PDB formated files.
 
@@ -30,6 +28,8 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
+from __future__ import absolute_import
+from __future__ import print_function
 __author__ = "Christopher M. Bruns"
 __version__ = "1.0"
 
@@ -37,7 +37,7 @@ __version__ = "1.0"
 from simtk.openmm.vec3 import Vec3
 import simtk.unit as unit
 from .. import element
-from unitcell import computePeriodicBoxVectors
+from .unitcell import computePeriodicBoxVectors
 import warnings
 import sys
 import math
@@ -212,11 +212,11 @@ class PdbStructure(object):
             if len(model.chains) == 0:
                 continue
             if len(self.models) > 1:
-                print >>output_stream, "MODEL     %4d" % (model.number)
+                print("MODEL     %4d" % (model.number), file=output_stream)
             model.write(output_stream)
             if len(self.models) > 1:
-                print >>output_stream, "ENDMDL"
-        print >>output_stream, "END"
+                print("ENDMDL", file=output_stream)
+        print("END", file=output_stream)
 
     def _add_model(self, model):
         if self.default_model == None:
@@ -451,7 +451,7 @@ class Chain(object):
             residue.write(next_serial_number, output_stream)
         if self.has_ter_record:
             r = self.residues[-1]
-            print >>output_stream, "TER   %5d      %3s %1s%4d%1s" % (next_serial_number.val, r.name_with_spaces, self.chain_id, r.number, r.insertion_code)
+            print("TER   %5d      %3s %1s%4d%1s" % (next_serial_number.val, r.name_with_spaces, self.chain_id, r.number, r.insertion_code), file=output_stream)
             next_serial_number.increment()
 
     def _add_ter_record(self):
@@ -515,7 +515,7 @@ class Residue(object):
         """
         """
         alt_loc = atom.alternate_location_indicator
-        if not self.locations.has_key(alt_loc):
+        if alt_loc not in self.locations:
             self.locations[alt_loc] = Residue.Location(alt_loc, atom.residue_name_with_spaces)
         assert atom.residue_number == self.number
         assert atom.insertion_code == self.insertion_code
@@ -924,7 +924,7 @@ class Atom(object):
         else:
             locs = list(alt_loc)
         for loc_id in locs:
-            print >>output_stream, self._pdb_string(next_serial_number.val, loc_id)
+            print(self._pdb_string(next_serial_number.val, loc_id), file=output_stream)
             next_serial_number.increment()
 
     def set_name_with_spaces(self, name):
@@ -1025,7 +1025,7 @@ if __name__=='__main__':
 
     def parse_one_pdb(pdb_file_name):
         global atom_count, residue_count, chain_count, model_count, structure_count
-        print pdb_file_name
+        print(pdb_file_name)
         if pdb_file_name[-3:] == ".gz":
             fh = gzip.open(pdb_file_name)
         else:
@@ -1083,10 +1083,10 @@ if __name__=='__main__':
         seconds = elapsed % 60
         hours = minutes / 60
         minutes = minutes % 60
-        print "%dh:%02dm:%02ds elapsed" % (hours, minutes, seconds)
+        print("%dh:%02dm:%02ds elapsed" % (hours, minutes, seconds))
 
-        print "%d atoms found" % atom_count
-        print "%d residues found" % residue_count
-        print "%d chains found" % chain_count
-        print "%d models found" % model_count
-        print "%d structures found" % structure_count
+        print("%d atoms found" % atom_count)
+        print("%d residues found" % residue_count)
+        print("%d chains found" % chain_count)
+        print("%d models found" % model_count)
+        print("%d structures found" % structure_count)

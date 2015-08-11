@@ -38,6 +38,8 @@ Kernel::Kernel() : impl(0) {
 }
 
 Kernel::Kernel(KernelImpl* impl) : impl(impl) {
+    if (impl)
+        impl->referenceCount++;
 }
 
 Kernel::Kernel(const Kernel& copy) : impl(copy.impl) {

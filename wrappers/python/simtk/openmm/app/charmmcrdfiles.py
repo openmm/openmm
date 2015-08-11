@@ -33,6 +33,8 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
+from __future__ import absolute_import
+from __future__ import print_function
 
 from simtk.openmm.app.internal.charmm.exceptions import CharmmFileError
 import simtk.unit as u
@@ -117,7 +119,7 @@ class CharmmCrdFile(object):
                                        len(self.positions))
                 )
 
-        except (ValueError, IndexError), e:
+        except (ValueError, IndexError) as e:
             raise CharmmFileError('Error parsing CHARMM coordinate file')
 
         # Apply units to the positions now. Do it this way to allow for
@@ -197,7 +199,7 @@ class CharmmRstFile(object):
                         self.jhstrt = int(line[5])    # Num total steps?
                         break
                    
-                    except (ValueError, IndexError), e:
+                    except (ValueError, IndexError) as e:
                         raise CharmmFileError('Problem parsing CHARMM restart')
 
         self._scan(crdfile, '!XOLD')
@@ -255,9 +257,9 @@ class CharmmRstFile(object):
 
     def printcoords(self, crds):
         for crd in range(len(crds)):
-            print crds[crd],
+            print(crds[crd], end=' ')
             if not (crd+1) % 3:
-                print '\n',
+                print('\n', end=' ')
 
 if __name__ == '__main__':
     import doctest

@@ -1,5 +1,5 @@
 #---------------------------------------------------
-# OpenMM 
+# OpenMM
 #
 # Creates OpenMM library.
 #
@@ -43,11 +43,11 @@ SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake_modules")
 # (cmake 2.4.7 is OK)
 if(COMMAND cmake_policy)
     if(CMAKE_MAJOR_VERSION GREATER 2 OR CMAKE_MINOR_VERSION GREATER 5)
-        cmake_policy(SET CMP0003 NEW) 
-        cmake_policy(SET CMP0005 NEW) 
+        cmake_policy(SET CMP0003 NEW)
+        cmake_policy(SET CMP0005 NEW)
     endif(CMAKE_MAJOR_VERSION GREATER 2 OR CMAKE_MINOR_VERSION GREATER 5)
     if(CMAKE_MAJOR_VERSION GREATER 2 OR CMAKE_MINOR_VERSION GREATER 6 OR CMAKE_PATCH_VERSION GREATER 2)
-        cmake_policy(SET CMP0011 NEW) 
+        cmake_policy(SET CMP0011 NEW)
     endif(CMAKE_MAJOR_VERSION GREATER 2 OR CMAKE_MINOR_VERSION GREATER 6 OR CMAKE_PATCH_VERSION GREATER 2)
 endif(COMMAND cmake_policy)
 
@@ -70,7 +70,7 @@ ENDIF (ANDROID)
 # It seems that on linux and mac, everything is trying to be installed in /usr/local/openmm
 # But if every install target is prefixed with /openmm/, on Windows the install files
 # end up in C:/Program Files/OpenMM/openmm/ which is ugly.
-# Better to set CMAKE_INSTALL_PREFIX to /usr/local/openmm and leave /openmm/ off the 
+# Better to set CMAKE_INSTALL_PREFIX to /usr/local/openmm and leave /openmm/ off the
 # install target names.  Plus, the user now has the opportunity to install into /usr/local/
 # if she so chooses.  --cmb
 IF(${CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT})
@@ -121,6 +121,12 @@ IF (APPLE AND (NOT PNACL))
 ELSE (APPLE AND (NOT PNACL))
     IF (MSVC OR ANDROID OR PNACL)
         SET(EXTRA_COMPILE_FLAGS)
+        IF (MSVC)
+            # Use warning level 2, not whatever warning level CMake picked.
+            STRING(REGEX REPLACE "/W[0-4]" "/W2" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+            # Explicitly suppress warnings 4305 and 4244.
+            SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4305 /wd4244")
+        ENDIF (MSVC)
     ELSE (MSVC OR ANDROID OR PNACL)
         SET(EXTRA_COMPILE_FLAGS "-msse2")
     ENDIF (MSVC OR ANDROID OR PNACL)
@@ -139,7 +145,7 @@ IF (NOT CMAKE_CXX_FLAGS_RELEASE)
         SET(CMAKE_CXX_FLAGS_RELEASE "-mfloat-abi=softfp -march=armv7-a -mfpu=neon -funsafe-math-optimizations -O3 -DNDEBUG" CACHE STRING
         "To use when CMAKE_BUILD_TYPE=Release" FORCE)
     ELSE (ANDROID)
-        SET(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG" CACHE STRING 
+        SET(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG" CACHE STRING
         "To use when CMAKE_BUILD_TYPE=Release" FORCE)
     ENDIF (ANDROID)
 ENDIF (NOT CMAKE_CXX_FLAGS_RELEASE)
@@ -202,11 +208,11 @@ SET(STATIC_TARGET ${OPENMM_LIBRARY_NAME}_static)
 ## If no one says otherwise, change the executable path to drop into the same binary
 ## location as the DLLs so that the test cases will use the just-build DLLs.
 IF(NOT EXECUTABLE_OUTPUT_PATH)
-  SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR} 
+  SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}
       CACHE INTERNAL "Single output directory for building all executables.")
 ENDIF(NOT EXECUTABLE_OUTPUT_PATH)
 IF(NOT LIBRARY_OUTPUT_PATH)
-  SET(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR} 
+  SET(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}
       CACHE INTERNAL "Single output directory for building all libraries.")
 ENDIF(NOT LIBRARY_OUTPUT_PATH)
 SET(${PROJECT_NAME}_EXECUTABLE_DIR ${EXECUTABLE_OUTPUT_PATH}/${CMAKE_CFG_INTDIR})
@@ -221,7 +227,7 @@ SET(API_INCLUDE_DIRS) # start empty
 FOREACH(subdir ${OPENMM_SOURCE_SUBDIRS})
     # append
     SET(API_INCLUDE_DIRS ${API_INCLUDE_DIRS}
-                         ${CMAKE_CURRENT_SOURCE_DIR}/${subdir}/include 
+                         ${CMAKE_CURRENT_SOURCE_DIR}/${subdir}/include
                          ${CMAKE_CURRENT_SOURCE_DIR}/${subdir}/include/openmm
                          ${CMAKE_CURRENT_SOURCE_DIR}/${subdir}/include/openmm/internal)
 ENDFOREACH(subdir)
@@ -287,6 +293,9 @@ IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
         SET(EXTRA_LINK_FLAGS "${EXTRA_LINK_FLAGS} -Wl,--no-as-needed -lrt")
     ENDIF (NOT ANDROID)
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+IF (MSVC)
+    SET(EXTRA_LINK_FLAGS)
+ENDIF (MSVC)
 
 IF(OPENMM_BUILD_SHARED_LIB)
     ADD_LIBRARY(${SHARED_TARGET} SHARED ${SOURCE_FILES} ${SOURCE_INCLUDE_FILES} ${API_ABS_INCLUDE_FILES})
@@ -358,7 +367,7 @@ IF(CUDA_FOUND)
     SET(OPENMM_BUILD_CUDA_LIB ON CACHE BOOL "Build OpenMMCuda library for Nvidia GPUs")
 
     # I wish I was not hardcoding /MD here
-    # Avoid strange windows link error with cuda free energy 
+    # Avoid strange windows link error with cuda free energy
     # plugin by specifying /MD to CUDA_NVCC_FLAGS
     MARK_AS_ADVANCED(CLEAR CUDA_NVCC_FLAGS)
     IF(MSVC)
@@ -374,7 +383,7 @@ IF(CUDA_FOUND)
             if(CUDA_NVCC_FLAGS)
                 set(new_flags "${CUDA_NVCC_FLAGS};${new_flags}")
             endif(CUDA_NVCC_FLAGS)
-            SET(CUDA_NVCC_FLAGS "${new_flags}" 
+            SET(CUDA_NVCC_FLAGS "${new_flags}"
                 CACHE STRING "Semicolon delimit multiple arguments" FORCE)
         ENDIF(NOT HAS_NVCC_FLAG)
     ENDIF(MSVC)

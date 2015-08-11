@@ -4,11 +4,12 @@ from your own code. It provides a combination of extreme flexibility
 (through custom forces and integrators), openness, and high performance
 (especially on recent GPUs) that make it truly unique among simulation codes.
 """
+from __future__ import absolute_import
 __author__ = "Peter Eastman"
 
 import os, os.path
 import sys
-from simtk.openmm import version
+from . import version
 
 if sys.platform == 'win32':
     _path = os.environ['PATH']

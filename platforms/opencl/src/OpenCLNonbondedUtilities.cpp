@@ -186,7 +186,7 @@ static bool compareUshort2(mm_ushort2 a, mm_ushort2 b) {
 void OpenCLNonbondedUtilities::initialize(const System& system) {
     if (atomExclusions.size() == 0) {
         // No exclusions were specifically requested, so just mark every atom as not interacting with itself.
-        
+
         atomExclusions.resize(context.getNumAtoms());
         for (int i = 0; i < (int) atomExclusions.size(); i++)
             atomExclusions[i].push_back(i);
@@ -199,7 +199,7 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
     setAtomBlockRange(context.getContextIndex()/(double) numContexts, (context.getContextIndex()+1)/(double) numContexts);
 
     // Build a list of tiles that contain exclusions.
-    
+
     set<pair<int, int> > tilesWithExclusions;
     for (int atom1 = 0; atom1 < (int) atomExclusions.size(); ++atom1) {
         int x = atom1/OpenCLContext::TileSize;
@@ -341,14 +341,19 @@ void OpenCLNonbondedUtilities::prepareInteractions(int forceGroups) {
 
     if (lastCutoff != kernels.cutoffDistance)
         forceRebuildNeighborList = true;
-    setPeriodicBoxArgs(context, kernels.findBlockBoundsKernel, 1);
-    context.executeKernel(kernels.findBlockBoundsKernel, context.getNumAtoms());
-    blockSorter->sort(*sortedBlocks);
-    kernels.sortBoxDataKernel.setArg<cl_int>(9, forceRebuildNeighborList);
-    context.executeKernel(kernels.sortBoxDataKernel, context.getNumAtoms());
-    setPeriodicBoxArgs(context, kernels.findInteractingBlocksKernel, 0);
-    context.executeKernel(kernels.findInteractingBlocksKernel, context.getNumAtoms(), interactingBlocksThreadBlockSize);
-    forceRebuildNeighborList = false;
+    bool rebuild = false;
+    do {
+        setPeriodicBoxArgs(context, kernels.findBlockBoundsKernel, 1);
+        context.executeKernel(kernels.findBlockBoundsKernel, context.getNumAtoms());
+        blockSorter->sort(*sortedBlocks);
+        kernels.sortBoxDataKernel.setArg<cl_int>(9, forceRebuildNeighborList);
+        context.executeKernel(kernels.sortBoxDataKernel, context.getNumAtoms());
+        setPeriodicBoxArgs(context, kernels.findInteractingBlocksKernel, 0);
+        context.executeKernel(kernels.findInteractingBlocksKernel, context.getNumAtoms(), interactingBlocksThreadBlockSize);
+        forceRebuildNeighborList = false;
+        if (context.getComputeForceCount() == 1)
+            rebuild = updateNeighborListSize(); // This is the first time step, so check whether our initial guess was large enough.
+    } while (rebuild);
     lastCutoff = kernels.cutoffDistance;
 }
 
@@ -360,18 +365,16 @@ void OpenCLNonbondedUtilities::computeInteractions(int forceGroups) {
         if (useCutoff)
             setPeriodicBoxArgs(context, kernels.forceKernel, 9);
         context.executeKernel(kernels.forceKernel, numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
-        if (context.getComputeForceCount() == 1)
-            updateNeighborListSize(); // This is the first time step, so check whether our initial guess was large enough.
     }
 }
 
-void OpenCLNonbondedUtilities::updateNeighborListSize() {
+bool OpenCLNonbondedUtilities::updateNeighborListSize() {
     if (!useCutoff)
-        return;
+        return false;
     unsigned int* pinnedInteractionCount = (unsigned int*) context.getPinnedBuffer();
     interactionCount->download(pinnedInteractionCount);
     if (pinnedInteractionCount[0] <= (unsigned int) interactingTiles->getSize())
-        return;
+        return false;
 
     // The most recent timestep had too many interactions to fit in the arrays.  Make the arrays bigger to prevent
     // this from happening in the future.
@@ -395,6 +398,7 @@ void OpenCLNonbondedUtilities::updateNeighborListSize() {
         iter->second.findInteractingBlocksKernel.setArg<cl_uint>(9, maxTiles);
     }
     forceRebuildNeighborList = true;
+    return true;
 }
 
 void OpenCLNonbondedUtilities::setUsePadding(bool padding) {
@@ -410,7 +414,7 @@ void OpenCLNonbondedUtilities::setAtomBlockRange(double startFraction, double en
     numTiles = (int) (endFraction*totalTiles)-startTileIndex;
     if (useCutoff) {
         // We are using a cutoff, and the kernels have already been created.
-        
+
         for (map<int, KernelSet>::iterator iter = groupKernels.begin(); iter != groupKernels.end(); ++iter) {
             iter->second.forceKernel.setArg<cl_uint>(5, startTileIndex);
             iter->second.forceKernel.setArg<cl_uint>(6, numTiles);
@@ -491,7 +495,7 @@ void OpenCLNonbondedUtilities::createKernelsForGroups(int groups) {
             kernels.findInteractingBlocksKernel.setArg<cl::Buffer>(18, rebuildNeighborList->getDeviceBuffer());
             if (kernels.findInteractingBlocksKernel.getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(context.getDevice()) < groupSize) {
                 // The device can't handle this block size, so reduce it.
-                
+
                 groupSize -= 32;
                 if (groupSize < 32)
                     throw OpenMMException("Failed to create findInteractingBlocks kernel");

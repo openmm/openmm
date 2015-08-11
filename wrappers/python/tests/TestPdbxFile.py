@@ -70,6 +70,7 @@ class TestPdbxFile(unittest.TestCase):
         # There should only be 10 frames (0 through 9)
         self.assertRaises(IndexError, lambda: pdb.getPositions(frame=10))
         self.assertIs(pdb.topology.getPeriodicBoxVectors(), None)
+        del sim
         os.unlink('test.cif')
 
     def assertAlmostEqualVec(self, vec1, vec2, *args, **kwargs):
@@ -111,6 +112,7 @@ class TestPdbxFile(unittest.TestCase):
         self.assertAlmostEqualVec(parm.topology.getPeriodicBoxVectors()[2],
                                   pdb.topology.getPeriodicBoxVectors()[2],
                                   places=5)
+        del sim
         os.unlink('test.cif')
 
 if __name__ == '__main__':

@@ -8,7 +8,7 @@ import simtk.openmm.app.element as elem
 class TestCharmmFiles(unittest.TestCase):
 
     """Test the GromacsTopFile.createSystem() method."""
- 
+
     def setUp(self):
         """Set up the tests by loading the input files."""
 
@@ -23,14 +23,14 @@ class TestCharmmFiles(unittest.TestCase):
     def test_NonbondedMethod(self):
         """Test both non-periodic methods for the systems"""
 
-        methodMap = {NoCutoff:NonbondedForce.NoCutoff, 
+        methodMap = {NoCutoff:NonbondedForce.NoCutoff,
                      CutoffNonPeriodic:NonbondedForce.CutoffNonPeriodic}
         for top in (self.psf_c, self.psf_x, self.psf_v):
             for method in methodMap:
                 system = top.createSystem(self.params, nonbondedMethod=method)
                 forces = system.getForces()
-                self.assertTrue(any(isinstance(f, NonbondedForce) and 
-                                    f.getNonbondedMethod()==methodMap[method] 
+                self.assertTrue(any(isinstance(f, NonbondedForce) and
+                                    f.getNonbondedMethod()==methodMap[method]
                                     for f in forces))
 
     def test_Cutoff(self):
@@ -39,7 +39,7 @@ class TestCharmmFiles(unittest.TestCase):
         for top in (self.psf_c, self.psf_x, self.psf_v):
             for method in [CutoffNonPeriodic]:
                 system = top.createSystem(self.params, nonbondedMethod=method,
-                                          nonbondedCutoff=2*nanometer, 
+                                          nonbondedCutoff=2*nanometer,
                                           constraints=HBonds)
                 cutoff_distance = 0.0*nanometer
                 cutoff_check = 2.0*nanometer
@@ -67,7 +67,7 @@ class TestCharmmFiles(unittest.TestCase):
 
         """
         system = self.psf_x.createSystem(self.params, implicitSolvent=GBn,
-                                         solventDielectric=50.0, 
+                                         solventDielectric=50.0,
                                          soluteDielectric = 0.9)
         for force in system.getForces():
             if isinstance(force, NonbondedForce):
@@ -75,7 +75,7 @@ class TestCharmmFiles(unittest.TestCase):
 
     def test_HydrogenMass(self):
         """Test that altering the mass of hydrogens works correctly."""
-        
+
         topology = self.psf_v.topology
         hydrogenMass = 4*amu
         system1 = self.psf_v.createSystem(self.params)
@@ -131,7 +131,7 @@ class TestCharmmFiles(unittest.TestCase):
         for i in range(5):
             system = self.psf_c.createSystem(self.params, implicitSolvent=solventType[i], nonbondedMethod=nonbondedMethod[i], implicitSolventSaltConc=salt[i])
             integrator = VerletIntegrator(0.001)
-            context = Context(system, integrator, Platform.getPlatformByName("CPU"))
+            context = Context(system, integrator, Platform.getPlatformByName("Reference"))
             context.setPositions(self.pdb.positions)
             state1 = context.getState(getForces=True)
             #out = open('systems/ala-ala-ala-implicit-forces/'+file[i]+'.xml', 'w')

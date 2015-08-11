@@ -28,6 +28,7 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
+from __future__ import absolute_import
 __author__ = "Peter Eastman"
 __version__ = "1.0"
 
@@ -133,7 +134,7 @@ class Simulation(object):
         
     def _simulate(self, endStep=None, endTime=None):
         if endStep is None:
-            endStep = sys.maxint
+            endStep = sys.maxsize
         nextReport = [None]*len(self.reporters)
         while self.currentStep < endStep and (endTime is None or datetime.now() < endTime):
             nextSteps = endStep-self.currentStep
