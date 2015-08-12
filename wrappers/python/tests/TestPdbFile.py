@@ -5,7 +5,7 @@ from simtk.openmm import *
 from simtk.unit import *
 import simtk.openmm.app.element as elem
 if sys.version_info >= (3, 0):
-    from StringIO import StringIO
+    from io import StringIO
 else:
     from cStringIO import StringIO
 
