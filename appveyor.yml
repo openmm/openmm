@@ -35,7 +35,12 @@ install:
   
 build: false
 test_script:
-  - ctest
+  - ctest && exit 0
+  - python -c "import os; fn = os.path.join('Testing', 'Temporary', 'LastTestsFailed.log'); os.path.exists(fn) or exit(0); l = [line.split(':')[0] for line in open(fn)]; triplets = zip(l, l, [',']*len(l)); print(''.join(','.join(t) for t in triplets))" > FailedTests.log
+  - ps: >
+     If (Test-Path "FailedTests.log") {
+         ctest -V -I FailedTests.log
+     }
   - cd python\tests
   - nosetests -vv --processes=-1 --process-timeout=200
-
+  - cd %APPVEYOR_BUILD_FOLDER%
