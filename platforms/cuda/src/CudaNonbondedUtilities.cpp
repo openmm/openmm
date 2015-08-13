@@ -353,27 +353,30 @@ void CudaNonbondedUtilities::prepareInteractions() {
 
     // Compute the neighbor list.
 
-    context.executeKernel(findBlockBoundsKernel, &findBlockBoundsArgs[0], context.getNumAtoms());
-    blockSorter->sort(*sortedBlocks);
-    context.executeKernel(sortBoxDataKernel, &sortBoxDataArgs[0], context.getNumAtoms());
-    context.executeKernel(findInteractingBlocksKernel, &findInteractingBlocksArgs[0], context.getNumAtoms(), 256);
+    bool rebuild = false;
+    do {
+        context.executeKernel(findBlockBoundsKernel, &findBlockBoundsArgs[0], context.getNumAtoms());
+        blockSorter->sort(*sortedBlocks);
+        context.executeKernel(sortBoxDataKernel, &sortBoxDataArgs[0], context.getNumAtoms());
+        context.executeKernel(findInteractingBlocksKernel, &findInteractingBlocksArgs[0], context.getNumAtoms(), 256);
+        if (context.getComputeForceCount() == 1)
+            rebuild = updateNeighborListSize(); // This is the first time step, so check whether our initial guess was large enough.
+    } while (rebuild);
 }
 
 void CudaNonbondedUtilities::computeInteractions() {
     if (kernelSource.size() > 0) {
         context.executeKernel(forceKernel, &forceArgs[0], numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
-        if (context.getComputeForceCount() == 1)
-            updateNeighborListSize(); // This is the first time step, so check whether our initial guess was large enough.
     }
 }
 
-void CudaNonbondedUtilities::updateNeighborListSize() {
+bool CudaNonbondedUtilities::updateNeighborListSize() {
     if (!useCutoff)
-        return;
+        return false;
     unsigned int* pinnedInteractionCount = (unsigned int*) context.getPinnedBuffer();
     interactionCount->download(pinnedInteractionCount);
     if (pinnedInteractionCount[0] <= (unsigned int) maxTiles)
-        return;
+        return false;
 
     // The most recent timestep had too many interactions to fit in the arrays.  Make the arrays bigger to prevent
     // this from happening in the future.
@@ -402,6 +405,7 @@ void CudaNonbondedUtilities::updateNeighborListSize() {
         vector<float4> oldPositionsVec(numAtoms, make_float4(1e30f, 1e30f, 1e30f, 0));
         oldPositions->upload(oldPositionsVec);
     }
+    return true;
 }
 
 void CudaNonbondedUtilities::setUsePadding(bool padding) {
