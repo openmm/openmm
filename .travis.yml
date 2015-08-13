@@ -41,11 +41,11 @@ script:
   - # Run the testInstallation script
   - python -m simtk.testInstallation
   - # run all of the tests, making sure failures at this stage don't cause travis failures
-  - ctest -j2 -V || true
+  - ctest -j2 || true
   - # get a list of all of the failed tests into this stupid ctest format
   - python -c 'fn = "Testing/Temporary/LastTestsFailed.log"; import os; os.path.exists(fn) or exit(0); l = [line.split(":")[0] for line in open(fn)]; triplets = zip(l, l, [","]*len(l)); print "".join(",".join(t) for t in triplets)' > FailedTests.log
   - # rerun all of the failed tests
-  - if [ -s FailedTests.log ]; then ctest -V -I FailedTests.log; fi;
+  - if [ -s Testing/Temporary/LastTestsFailed.log ]; then ctest -I FailedTests.log; fi;
   - # run the python tests too
   - cd python/tests
   - pip install nose
