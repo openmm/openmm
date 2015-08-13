@@ -21,7 +21,7 @@ install:
 
 # Download and install some OpenMM build dependencies (doxygen, swig)
 # and the jom (parallel make) build tool
-  - choco install -y doxygen.portable swig jom
+  - choco install -y doxygen.portable swig jom xmlstarlet
 
 # Set CMake options
   - ps: $env:CMAKE_FLAGS="-DOPENMM_BUILD_PME_PLUGIN=ON -DFFTW_LIBRARY=C:/fftw/libfftw3f-3.lib -DFFTW_INCLUDES=C:/fftw -DCMAKE_BUILD_TYPE=Release -DOPENMM_BUILD_EXAMPLES=OFF"
@@ -29,13 +29,13 @@ install:
   - cd build
   - cmake -G "NMake Makefiles" %CMAKE_FLAGS% -LA ..
 
-# Run the build
+build: false
+build_script:
   - jom install
   - jom PythonInstall
 
-build: false
 test_script:
-  - ctest || exit 0
+  - ctest -T Test || exit 0
   - python -c "import os; fn = os.path.join('Testing', 'Temporary', 'LastTestsFailed.log'); os.path.exists(fn) or exit(0); failed = [line.split(':')[0] for line in open(fn)]; print(','.join(x+','+x for x in failed))" > FailedTests.log
   - ps: >
      If (Test-Path "Testing\\Temporary\\LastTestsFailed.log") {
@@ -45,4 +45,11 @@ test_script:
      }
   - cd python\tests
   - nosetests -vv --processes=-1 --process-timeout=200
+
+
+on_finish:
   - cd %APPVEYOR_BUILD_FOLDER%
+  - C:\MinGW\msys\1.0\bin\wget -q https://raw.githubusercontent.com/rpavlik/jenkins-ctest-plugin/master/ctest-to-junit.xsl
+  - xmlstarlet .\build\Testing\*\Test.xml > TestResults.xml
+  - ps : (New-Object 'System.Net.WebClient').UploadFile("https://ci.appveyor.com/api/testresults/xunit/$($env:APPVEYOR_JOB_ID)", (Resolve-Path .\TestResults.xml))
+  - ps : (New-Object 'System.Net.WebClient').UploadFile("https://ci.appveyor.com/api/testresults/xunit/$($env:APPVEYOR_JOB_ID)", (Resolve-Path .\build\python\tests\nosetests.xml))
