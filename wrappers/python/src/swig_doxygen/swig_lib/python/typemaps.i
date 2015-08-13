@@ -337,3 +337,32 @@ int Py_SequenceToVecDouble(PyObject* obj, std::vector<double>& out) {
     // createCheckpoint returns a bytes object
     $result = PyBytes_FromStringAndSize($1.c_str(), $1.length());
 }
+
+
+%typemap(in) std::string {
+    // if we have a C++ method that takes in a std::string, we're most happy
+    // to accept a python bytes object. But if the user passes in a unicode
+    // object we'll try to recover by encoding it to UTF-8 bytes
+    PyObject* temp = NULL;
+    char* c_str = NULL;
+    Py_ssize_t len = 0;
+
+    if (PyUnicode_Check($input)) {
+        temp = PyUnicode_AsUTF8String($input);
+        if (temp == NULL) {
+            SWIG_exception_fail(SWIG_TypeError, "'utf-8' codec can't decode byte");
+        }
+        PyBytes_AsStringAndSize(temp, &c_str, &len);
+        Py_XDECREF(temp);
+    } else if (PyBytes_Check($input)) {
+        PyBytes_AsStringAndSize($input, &c_str, &len);
+    } else {
+         SWIG_exception_fail(SWIG_TypeError, "argument must be str or bytes");
+    }
+
+    if (c_str == NULL) {
+        SWIG_exception_fail(SWIG_TypeError, "argument must be str or bytes");
+    }
+
+    $1 = std::string(c_str, len);
+}
