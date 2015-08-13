@@ -186,7 +186,7 @@ static bool compareUshort2(mm_ushort2 a, mm_ushort2 b) {
 void OpenCLNonbondedUtilities::initialize(const System& system) {
     if (atomExclusions.size() == 0) {
         // No exclusions were specifically requested, so just mark every atom as not interacting with itself.
-        
+
         atomExclusions.resize(context.getNumAtoms());
         for (int i = 0; i < (int) atomExclusions.size(); i++)
             atomExclusions[i].push_back(i);
@@ -199,7 +199,7 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
     setAtomBlockRange(context.getContextIndex()/(double) numContexts, (context.getContextIndex()+1)/(double) numContexts);
 
     // Build a list of tiles that contain exclusions.
-    
+
     set<pair<int, int> > tilesWithExclusions;
     for (int atom1 = 0; atom1 < (int) atomExclusions.size(); ++atom1) {
         int x = atom1/OpenCLContext::TileSize;
@@ -410,7 +410,7 @@ void OpenCLNonbondedUtilities::setAtomBlockRange(double startFraction, double en
     numTiles = (int) (endFraction*totalTiles)-startTileIndex;
     if (useCutoff) {
         // We are using a cutoff, and the kernels have already been created.
-        
+
         for (map<int, KernelSet>::iterator iter = groupKernels.begin(); iter != groupKernels.end(); ++iter) {
             iter->second.forceKernel.setArg<cl_uint>(5, startTileIndex);
             iter->second.forceKernel.setArg<cl_uint>(6, numTiles);
@@ -491,7 +491,7 @@ void OpenCLNonbondedUtilities::createKernelsForGroups(int groups) {
             kernels.findInteractingBlocksKernel.setArg<cl::Buffer>(18, rebuildNeighborList->getDeviceBuffer());
             if (kernels.findInteractingBlocksKernel.getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(context.getDevice()) < groupSize) {
                 // The device can't handle this block size, so reduce it.
-                
+
                 groupSize -= 32;
                 if (groupSize < 32)
                     throw OpenMMException("Failed to create findInteractingBlocks kernel");
