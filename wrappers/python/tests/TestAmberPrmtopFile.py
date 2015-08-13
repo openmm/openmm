@@ -315,6 +315,7 @@ class TestAmberPrmtopFile(unittest.TestCase):
         fname = tempfile.mktemp(suffix='.dcd')
         simulation.reporters.append(DCDReporter(fname, 1))  # This is an explicit test for the bugs in issue #850
         simulation.step(5)
+        del simulation
         os.remove(fname)
 
     def testChamber(self):
