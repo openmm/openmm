@@ -20,8 +20,7 @@ install:
   - "set PATH=C:\\fftw;%PATH%"
 
 # Download and install some OpenMM build dependencies (doxygen, swig)
-# and the jom (parallel make) build tool
-  - choco install -y doxygen.portable swig jom
+  - choco install -y doxygen.portable swig  # jom
 
 # Set CMake options
   - ps: $env:CMAKE_FLAGS="-DOPENMM_BUILD_PME_PLUGIN=ON -DFFTW_LIBRARY=C:/fftw/libfftw3f-3.lib -DFFTW_INCLUDES=C:/fftw -DCMAKE_BUILD_TYPE=Release -DOPENMM_BUILD_EXAMPLES=OFF"
@@ -29,11 +28,10 @@ install:
   - cd build
   - cmake -G "NMake Makefiles" %CMAKE_FLAGS% -LA ..
 
-# Run the build
-  - jom install
-  - jom PythonInstall
-  
-build: false
+build_script:
+  - cmake --build . --target install
+  - cmake --build . --target PythonInstall
+
 test_script:
   - ctest && exit 0
   - python -c "import os; fn = os.path.join('Testing', 'Temporary', 'LastTestsFailed.log'); os.path.exists(fn) or exit(0); l = [line.split(':')[0] for line in open(fn)]; triplets = zip(l, l, [',']*len(l)); print(''.join(','.join(t) for t in triplets))" > FailedTests.log
