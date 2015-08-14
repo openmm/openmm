@@ -24,9 +24,6 @@
 #ifndef __AmoebaReferenceMultipoleForce_H__
 #define __AmoebaReferenceMultipoleForce_H__
 
-#define SPHERICAL_MULTIPOLES 1
-#define DEBUG_MULTIPOLES 0
-
 #include "RealVec.h"
 #include "openmm/AmoebaMultipoleForce.h"
 #include "AmoebaReferenceGeneralizedKirkwoodForce.h"
@@ -41,7 +38,6 @@ typedef MapIntRealOpenMM::iterator MapIntRealOpenMMI;
 typedef MapIntRealOpenMM::const_iterator MapIntRealOpenMMCI;
 
 
-#if SPHERICAL_MULTIPOLES
 // A few useful constants for the spherical harmonic multipole code.
 const RealOpenMM oneThird = 1.0/3.0;
 const RealOpenMM twoThirds = 2.0/3.0;
@@ -53,7 +49,6 @@ const RealOpenMM sqrtThree = sqrt(3.0);
 const RealOpenMM oneNinth = 1.0/9.0;
 const RealOpenMM fourOverFortyFive = 4.0/45.0;
 const RealOpenMM fourOverFifteen = 4.0/15.0;
-#endif // SPHERICAL_MULTIPOLES
 
 
 /**
@@ -608,10 +603,8 @@ protected:
             RealOpenMM charge;
             RealVec dipole;
             RealOpenMM quadrupole[6];
-#if SPHERICAL_MULTIPOLES
             RealVec sphericalDipole;
             RealOpenMM sphericalQuadrupole[5];
-#endif
             RealOpenMM thole;
             RealOpenMM dampingFactor;
             RealOpenMM polarity;
@@ -818,7 +811,6 @@ protected:
                                        const MultipoleParticleData& particleX,
                                              MultipoleParticleData* particleY, int axisType) const;
 
-#if SPHERICAL_MULTIPOLES
     /**
      * Forms the rotation matrix for the quasi-internal coordinate system,
      * which is the rotation matrix that describes the orientation of the
@@ -853,7 +845,6 @@ protected:
       * @param D2                    The output spherical harmonic quadrupole rotation matrix
       */
       void buildPartialSphericalQuadrupoleRotationMatrix(const RealOpenMM (&D1)[3][3], RealOpenMM (&D2)[3][5]) const;
-#endif
 
     /**
      * Apply rotation matrix to molecular dipole/quadrupoles to get corresponding lab frame values.
