@@ -806,8 +806,8 @@ private:
 
 CudaCalcAmoebaMultipoleForceKernel::CudaCalcAmoebaMultipoleForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : 
         CalcAmoebaMultipoleForceKernel(name, platform), cu(cu), system(system), hasInitializedScaleFactors(false), hasInitializedFFT(false), multipolesAreValid(false),
-        multipoleParticles(NULL), molecularDipoles(NULL), molecularQuadrupoles(NULL), labFrameDipoles(NULL), labFrameQuadrupoles(NULL), fracDipoles(NULL),
-        fracQuadrupoles(NULL), field(NULL), fieldPolar(NULL), inducedField(NULL), inducedFieldPolar(NULL), torque(NULL), dampingAndThole(NULL), inducedDipole(NULL),
+        multipoleParticles(NULL), molecularDipoles(NULL), molecularQuadrupoles(NULL), labFrameDipoles(NULL), labFrameQuadrupoles(NULL), sphericalDipoles(NULL), sphericalQuadrupoles(NULL),
+        fracDipoles(NULL), fracQuadrupoles(NULL), field(NULL), fieldPolar(NULL), inducedField(NULL), inducedFieldPolar(NULL), torque(NULL), dampingAndThole(NULL), inducedDipole(NULL),
         diisCoefficients(NULL), inducedDipolePolar(NULL), inducedDipoleErrors(NULL), prevDipoles(NULL), prevDipolesPolar(NULL), prevDipolesGk(NULL),
         prevDipolesGkPolar(NULL), prevErrors(NULL), diisMatrix(NULL), polarizability(NULL), covalentFlags(NULL), polarizationGroupFlags(NULL),
         pmeGrid(NULL), pmeBsplineModuliX(NULL), pmeBsplineModuliY(NULL), pmeBsplineModuliZ(NULL), pmeIgrid(NULL), pmePhi(NULL),
@@ -826,6 +826,10 @@ CudaCalcAmoebaMultipoleForceKernel::~CudaCalcAmoebaMultipoleForceKernel() {
         delete labFrameDipoles;
     if (labFrameQuadrupoles != NULL)
         delete labFrameQuadrupoles;
+    if (sphericalDipoles != NULL)
+        delete sphericalDipoles;
+    if (sphericalQuadrupoles != NULL)
+        delete sphericalQuadrupoles;
     if (fracDipoles != NULL)
         delete fracDipoles;
     if (fracQuadrupoles != NULL)
@@ -985,6 +989,8 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
     int elementSize = (cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
     labFrameDipoles = new CudaArray(cu, 3*paddedNumAtoms, elementSize, "labFrameDipoles");
     labFrameQuadrupoles = new CudaArray(cu, 5*paddedNumAtoms, elementSize, "labFrameQuadrupoles");
+    sphericalDipoles = new CudaArray(cu, 3*paddedNumAtoms, elementSize, "sphericalDipoles");
+    sphericalQuadrupoles = new CudaArray(cu, 5*paddedNumAtoms, elementSize, "sphericalQuadrupoles");
     fracDipoles = new CudaArray(cu, 3*paddedNumAtoms, elementSize, "fracDipoles");
     fracQuadrupoles = new CudaArray(cu, 6*paddedNumAtoms, elementSize, "fracQuadrupoles");
     field = new CudaArray(cu, 3*paddedNumAtoms, sizeof(long long), "field");
@@ -1433,7 +1439,8 @@ double CudaCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool in
 
     void* computeMomentsArgs[] = {&cu.getPosq().getDevicePointer(), &multipoleParticles->getDevicePointer(),
         &molecularDipoles->getDevicePointer(), &molecularQuadrupoles->getDevicePointer(),
-        &labFrameDipoles->getDevicePointer(), &labFrameQuadrupoles->getDevicePointer()};
+        &labFrameDipoles->getDevicePointer(), &labFrameQuadrupoles->getDevicePointer(),
+        &sphericalDipoles->getDevicePointer(), &sphericalQuadrupoles->getDevicePointer()};
     cu.executeKernel(computeMomentsKernel, computeMomentsArgs, cu.getNumAtoms());
     int startTileIndex = nb.getStartTileIndex();
     int numTileIndices = nb.getNumTiles();

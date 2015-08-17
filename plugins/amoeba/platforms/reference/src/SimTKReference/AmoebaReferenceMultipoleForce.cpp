@@ -25,9 +25,6 @@
 #include "AmoebaReferenceMultipoleForce.h"
 #include "jama_svd.h"
 #include <algorithm>
-#include <iostream>
-#include <iomanip>
-#define FMT(x) std::setw(16) << std::setprecision(10) << (x)
 
 // In case we're using some primitive version of Visual Studio this will
 // make sure that erf() and erfc() are defined.
@@ -362,6 +359,9 @@ void AmoebaReferenceMultipoleForce::checkChiralCenterAtParticle(MultipoleParticl
     RealOpenMM volume = deltaC.dot(deltaAD);
 
     if (volume < 0.0) {
+        particleI.dipole[1] *= -1.0; // pole(3,i)
+        particleI.quadrupole[QXY] *= -1.0; // pole(6,i) && pole(8,i)
+        particleI.quadrupole[QYZ] *= -1.0; // pole(10,i) && pole(12,i)
         particleI.sphericalDipole[2]     *= -1.0;   // y
         particleI.sphericalQuadrupole[2] *= -1.0;   // yz
         particleI.sphericalQuadrupole[4] *= -1.0;   // xy

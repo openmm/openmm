@@ -392,6 +392,8 @@ private:
     CudaArray* molecularQuadrupoles;
     CudaArray* labFrameDipoles;
     CudaArray* labFrameQuadrupoles;
+    CudaArray* sphericalDipoles;
+    CudaArray* sphericalQuadrupoles;
     CudaArray* fracDipoles;
     CudaArray* fracQuadrupoles;
     CudaArray* field;
