@@ -58,7 +58,6 @@ def getDefaultAtom( ):
  
     atom                     = dict();
     atom['tinkerLookupName'] = 'XXX'
-    atom['numberOfBonds']    = -1
     atom['type']             = -1
     atom['bonds']            = dict()
 
@@ -89,7 +88,6 @@ def getXmlAtoms( atoms ):
         name                               = atom.attrib['name']
         atomInfo[name]                     = getDefaultAtom()
         atomInfo[name]['tinkerLookupName'] = atom.attrib['tinkerLookupName']
-        atomInfo[name]['numberOfBonds']    = atom.attrib['bonds']
 
     return atomInfo
 
@@ -112,166 +110,6 @@ def getXmlBonds( bonds ):
         bondInfo[atom2][atom1] = 1
 
     return bondInfo
-
-#=============================================================================================
-# Read residue xml file
-#=============================================================================================
-
-def buildResidueDict( residueXmlFileName ):
-
-    residueTree = etree.parse(residueXmlFileName)
-    root        = residueTree.getroot()
-    residueDict = dict()
-
-    # residueDict[residueName] = dict()
-    #      ['loc']
-    #      ['type']
-    #      ['atoms'] = dict()
-    #          [atomName]    = dict()
-    #              ['bonds'] = dict{}
-    for residue in root.findall('Residue'):
-
-        residueName = residue.attrib['name']
-        type        = residue.attrib['type']
-        fullName    = residue.attrib['fullName']
-        if( type == 'protein' ):
-            isProtein = 1
-        else:
-            isProtein = 0
-
-        bondInfo    = getXmlBonds( residue.findall('Bond') ) 
-
-        # if residue is an amino acid, then create CALA and NALA residues, in addition to non-termianal residue, and include approriate atoms
-        # HXT is excluded from all residues
-
-        if( isProtein ):
-
-            cResidueName                                    = 'C' + residueName
-            nResidueName                                    = 'N' + residueName
-            residueDict[residueName]                        = dict()
-            residueDict[cResidueName]                       = dict()
-            residueDict[nResidueName]                       = dict()
-
-            residueDict[residueName]['atoms']               = dict()
-            residueDict[residueName]['type']                = 'protein'
-            residueDict[residueName]['loc']                 = 'middle'
-            residueDict[residueName]['tinkerLookupName']    = fullName
-            residueDict[residueName]['fullName']            = fullName
-            residueDict[residueName]['include']             = 1
-
-            residueDict[cResidueName]['atoms']              = dict()
-            residueDict[cResidueName]['type']               = 'protein'
-            residueDict[cResidueName]['loc']                = 'C-Terminal'
-            residueDict[cResidueName]['loc']                = 'C-Terminal'
-            residueDict[cResidueName]['tinkerLookupName']   = 'C-Terminal ' + residueName
-            residueDict[cResidueName]['fullName']           = fullName
-
-            residueDict[nResidueName]['atoms']              = dict()
-            residueDict[nResidueName]['type']               = 'protein'
-            residueDict[nResidueName]['loc']                = 'N-Terminal'
-            residueDict[cResidueName]['tinkerLookupName']   = 'N-Terminal ' + residueName
-            residueDict[cResidueName]['fullName']           = fullName
-
-            residueList                                     = [ residueDict[residueName]['atoms'], residueDict[cResidueName]['atoms'] , residueDict[nResidueName]['atoms']  ]
-            for atom in bondInfo:
-                if( atom == 'OXT' ):
-                    residueDict[cResidueName]['atoms'][atom]  = dict()
-                elif( atom == 'H2' or atom == 'H3'):
-                    residueDict[nResidueName]['atoms'][atom]  = dict()
-                elif( atom != 'HXT' ):
-                    residueDict[nResidueName]['atoms'][atom]  = dict()
-                    residueDict[cResidueName]['atoms'][atom]  = dict()
-                    residueDict[residueName]['atoms'][atom]   = dict()
-
-            for atom1 in bondInfo:
-                for atom2 in bondInfo[atom1]:
-                    for resDict in residueList:
-
-                        if( atom1 in resDict and atom2 in resDict ):
-                            if( 'bonds' not in resDict[atom1] ):
-                                resDict[atom1]['bonds'] = dict()
-                            if( 'bonds' not in resDict[atom2] ):
-                                resDict[atom2]['bonds'] = dict()
-
-                            resDict[atom1]['bonds'][atom2] = 1
-                            resDict[atom2]['bonds'][atom1] = 1
-
-        else:
-            residueDict[residueName]                 = dict()
-            residueDict[residueName]['atoms']        = dict()
-            residueDict[residueName]['loc']          = 'unk'
-            residueDict[residueName]['type']         = 'unk'
-            residueDict[residueName]['include']      = 0
-            for atom in bondInfo:
-                if( atom not in  residueDict[residueName]['atoms'] ):
-                    residueDict[residueName]['atoms'][atom]          = dict()
-                    residueDict[residueName]['atoms'][atom]['bonds'] = dict()
-                for atom2 in bondInfo[atom]:
-                    if( atom2 not in  residueDict[residueName]['atoms'] ):
-                        residueDict[residueName]['atoms'][atom2]          = dict()
-                        residueDict[residueName]['atoms'][atom2]['bonds'] = dict()
-
-                    residueDict[residueName]['atoms'][atom2]['bonds'][atom] = 1
-                    residueDict[residueName]['atoms'][atom]['bonds'][atom2] = 1
-         
-    else:
-        print "File=%s does not have Residues tag." % (residueXmlFileName)
-        all = list( root.iter() )
-        for i in all:
-            print "Tag <%s>" % (i.tag)
-        etree.dump( root )
-           
-    printMap = 0
-    if( printMap ):
-        print "Residue Map"
-        for resName in sorted( residueDict.keys() ):
-            residueInfo = residueDict[resName]['atoms']
-            print "\nResidue %s  %s %s" % (resName, residueDict[resName]['type'], residueDict[resName]['loc'])
-            for atomName in sorted( residueInfo.keys() ):
-                bondInfo      = residueInfo[atomName]['bonds']
-                outputString  = atomName + ' { '
-                for bondedAtom in sorted( bondInfo.keys() ):
-                    outputString += bondedAtom + ' '
-                outputString += ' }'
-                print "%s" % outputString
-
-    print "Start Lookup XML\n\n"
-    printXml = 1
-    if( printXml ):
-        print "<Residues>"
-        for resName in sorted( residueDict.keys() ):
-            if( 'include' in residueDict[resName] and residueDict[resName]['include'] ):
-                type         = residueDict[resName]['type']
-                loc          = residueDict[resName]['loc']
-                tinkerLookupName   = residueDict[resName]['tinkerLookupName']
-                fullName     = residueDict[resName]['fullName']
-                outputString = """  <Residue abbreviation="%s" loc="%s" type="%s" tinkerLookupName="%s" fullName="%s">""" % (resName, loc, type, tinkerLookupName, fullName )
-                print "%s" % outputString
-
-                atomsInfo    = residueDict[resName]['atoms']
-                for atomName in sorted( atomsInfo.keys() ):
-                    numberOfBonds = len( atomsInfo[atomName]['bonds'] )
-                    outputString = """  <Atom name="%s" tinkerLookupName="%s" bonds=%d />""" % (atomName, atomName, numberOfBonds )
-                    print "%s" % outputString
-
-                includedBonds = dict()
-                for atomName in sorted( atomsInfo.keys() ):
-                    bondsInfo    = atomsInfo[atomName]['bonds']
-                    for bondedAtom  in bondsInfo:
-                        if( bondedAtom not in includedBonds or atomName not in includedBonds[bondedAtom] ):
-                            outputString = """  <Bond from="%s" to="%s" />""" % (atomName, bondedAtom)
-                            if( atomName not in includedBonds ):
-                                includedBonds[atomName] = dict()
-                            if( bondedAtom not in includedBonds ):
-                                includedBonds[bondedAtom] = dict()
-                            includedBonds[atomName][bondedAtom] = 1
-                            includedBonds[bondedAtom][atomName] = 1
-                            print "%s" % outputString
-                print "</Residue>"
-        print "</Residues>"
-
-    sys.exit(0)
-    return residueDict
 
 #=============================================================================================
 # Build entry for protein residue
@@ -363,7 +201,7 @@ def copyProteinResidue( residue ):
 # Build residue hash based on xml file
 #=============================================================================================
 
-def buildResidueDictFinal( residueXmlFileName ):
+def buildResidueDict( residueXmlFileName ):
 
     residueTree = etree.parse(residueXmlFileName)
     print "Read %s" % (residueXmlFileName)
@@ -384,12 +222,18 @@ def buildResidueDictFinal( residueXmlFileName ):
         type        = residue.attrib['type']
         tinkerName  = residue.attrib['tinkerLookupName']
         residueName = residue.attrib['fullName']
-        isProtein   = 0
-        isWater     = 0
-        if( type == 'protein' ):
-            isProtein = 1
-        elif( type == 'AmoebaWater' ):
-            isWater = 1
+        isProtein   = False
+        isWater     = False
+        isDNA       = False
+        isRNA       = False
+        if type == 'protein':
+            isProtein = True
+        elif type == 'AmoebaWater':
+            isWater = True
+        elif type == 'dna':
+            isDNA = True
+        elif type == 'rna':
+            isRNA = True
         else:
             continue
 
@@ -448,6 +292,10 @@ def buildResidueDictFinal( residueXmlFileName ):
                residueDict[nResidueName]['atoms']['H2']     = copyAtom( residueDict[abbr]['atoms']['H'] )
                residueDict[nResidueName]['atoms']['H3']     = copyAtom( residueDict[abbr]['atoms']['H'] )
 
+        elif isDNA or isRNA:
+
+            buildProteinResidue( residueDict, atoms, bondInfo, abbr, loc, tinkerName, 1, residueName, type )
+
     print "Start Lookup XML FFFFinal\n\n"
     printXml = 1
     if( printXml ):
@@ -463,9 +311,8 @@ def buildResidueDictFinal( residueXmlFileName ):
 
                 atomsInfo    = residueDict[resName]['atoms']
                 for atomName in sorted( atomsInfo.keys() ):
-                    numberOfBonds    = atomsInfo[atomName]['numberOfBonds']
                     tinkerLookupName = atomsInfo[atomName]['tinkerLookupName']
-                    outputString = """  <Atom name="%s" tinkerLookupName="%s" bonds="%s" />""" % (atomName, tinkerLookupName, numberOfBonds )
+                    outputString = """  <Atom name="%s" tinkerLookupName="%s" />""" % (atomName, tinkerLookupName)
                     print "%s" % outputString
 
                 includedBonds = dict()
@@ -492,18 +339,46 @@ def buildResidueDictFinal( residueXmlFileName ):
 
 def setBioTypes( bioTypes, residueDict ):
 
-    for res in residueDict:
-        for atom in residueDict[res]['atoms']:
-            lookupName =  residueDict[res]['atoms'][atom]['tinkerLookupName']  + '_' +  residueDict[res]['tinkerLookupName']
-            if( lookupName in bioTypes ):
-                residueDict[res]['atoms'][atom]['type'] = bioTypes[lookupName][3]
+    for res in residueDict.values():
+        for atom in res['atoms']:
+            atomLookup = res['atoms'][atom]['tinkerLookupName']
+            resLookup = [res['tinkerLookupName']]
+            if res['type'] == 'dna':
+                if res['loc'] in ('5', 'N'):
+                    resLookup.append("5'-Hydroxyl DNA")
+                    resLookup.append("5'-Phosphate OS DNA")
+                    resLookup.append("5'-Phosphate P DNA")
+                    resLookup.append("5'-Phosphate OP DNA")
+                if res['loc'] in ('3', 'N'):
+                    resLookup.append("3'-Hydroxyl DNA")
+                    resLookup.append("3'-Phosphate OS DNA")
+                    resLookup.append("3'-Phosphate P DNA")
+                    resLookup.append("3'-Phosphate OP DNA")
+                resLookup.append("Phosphodiester DNA")
+            if res['type'] == 'rna':
+                if res['loc'] in ('5', 'N'):
+                    resLookup.append("5'-Hydroxyl RNA")
+                    resLookup.append("5'-Phosphate OS RNA")
+                    resLookup.append("5'-Phosphate P RNA")
+                    resLookup.append("5'-Phosphate OP RNA")
+                if res['loc'] in ('3', 'N'):
+                    resLookup.append("3'-Hydroxyl RNA")
+                    resLookup.append("3'-Phosphate OS RNA")
+                    resLookup.append("3'-Phosphate P RNA")
+                    resLookup.append("3'-Phosphate OP RNA")
+                resLookup.append("Phosphodiester RNA")
+            for suffix in resLookup:
+                lookupName = atomLookup+'_'+suffix
+                if lookupName in bioTypes:
+                    break
+            if lookupName in bioTypes:
+                res['atoms'][atom]['type'] = bioTypes[lookupName][3]
             else:
-             
                 print "For %s lookupName=%s not in biotype" % (atom,lookupName)
-                if( 'parent' in residueDict[res] ):
-                    lookupName =  residueDict[res]['atoms'][atom]['tinkerLookupName']  + '_' +  residueDict[res]['parent']['tinkerLookupName']
+                if( 'parent' in res ):
+                    lookupName =  res['atoms'][atom]['tinkerLookupName']  + '_' +  res['parent']['tinkerLookupName']
                     if( lookupName in bioTypes ):
-                        residueDict[res]['atoms'][atom]['type'] = bioTypes[lookupName][3]
+                        res['atoms'][atom]['type'] = bioTypes[lookupName][3]
                     else:
                         print "Missing lookupName=%s from biotype" % (lookupName)
     return 0
@@ -584,14 +459,8 @@ def addTorTor( lineIndex, allLines, forces ):
 
 #=============================================================================================
 
-old = 0
-if( old ):
-    residueXmlFileName = '/home/friedrim/source/pyTinker/residues.xml'
-    residueXmlFileName = '/home/friedrim/source/pyTinker/residues.xml'
-    residueDict        = buildResidueDict( residueXmlFileName )
-else:    
-    residueXmlFileName = 'residuesFinal.xml'
-    residueDict        = buildResidueDictFinal( residueXmlFileName )
+residueXmlFileName = 'residuesFinal.xml'
+residueDict        = buildResidueDict( residueXmlFileName )
     
 #=============================================================================================
 
@@ -736,12 +605,17 @@ print "Opened %s." % (gkXmlFileName)
 
 today = datetime.date.today().isoformat()
 sourceFile = os.path.basename(sys.argv[1])
-header = "<!-- Generated on %s from %s -->\n\n" % (today, sourceFile)
-tinkerXmlFile.write(header)
-gkXmlFile.write(header)
+header = """ <Info>
+  <Source>%s</Source>
+  <DateGenerated>%s</DateGenerated>
+  <Reference></Reference>
+ </Info>
+""" % (sourceFile, today)
 
 gkXmlFile.write( "<ForceField>\n" )
+gkXmlFile.write(header)
 tinkerXmlFile.write( "<ForceField>\n" )
+tinkerXmlFile.write(header)
 tinkerXmlFile.write( " <AtomTypes>\n")
 
 if( scalars['forcefield'].find( 'AMOEBA' ) > -1 ):
@@ -803,25 +677,25 @@ tinkerXmlFile.write( " </AtomTypes>\n")
 # residues
 
 tinkerXmlFile.write( " <Residues>\n" )
-for res in sorted(residueDict):
-    if( residueDict[res]['include'] ):
-        outputString = """  <Residue name="%s">""" % (res)
+for resname, res in sorted(residueDict.items()):
+    if res['include']:
+        outputString = """  <Residue name="%s">""" % (resname)
         tinkerXmlFile.write( "%s\n" % (outputString) )
         atomIndex    = dict()
         atomCount    = 0
-        for atom in sorted( residueDict[res]['atoms'].keys() ):
-            type  = residueDict[res]['atoms'][atom]['type']
+        for atom in sorted( res['atoms'].keys() ):
+            type  = res['atoms'][atom]['type']
             typeI = int( type )
             if( typeI < 0 ):
-                print "Error: type=%s for atom=%s of residue=%s" % (type, atom, res)
+                print "Error: type=%s for atom=%s of residue=%s" % (type, atom, resname)
             tag  = "   <Atom name=\"%s\" type=\"%s\" />" % (atom, type)
             atomIndex[atom]  = atomCount
             atomCount       += 1
             tinkerXmlFile.write( "%s\n" % (tag) )
     
         includedBonds = dict()
-        for atomName in sorted( residueDict[res]['atoms'].keys() ):
-            bondsInfo    = residueDict[res]['atoms'][atomName]['bonds']
+        for atomName in sorted( res['atoms'].keys() ):
+            bondsInfo    = res['atoms'][atomName]['bonds']
             for bondedAtom  in bondsInfo:
                 if( bondedAtom not in includedBonds or atomName not in includedBonds[bondedAtom] ):
                     outputString = """   <Bond from="%s" to="%s" />""" % (str(atomIndex[atomName]), str(atomIndex[bondedAtom]))
@@ -834,15 +708,21 @@ for res in sorted(residueDict):
                     tinkerXmlFile.write( "%s\n" % (outputString) )
 
         outputStrings = []
-        if( residueDict[res]['loc'] == 'm' ):
-            outputStrings.append( """   <ExternalBond from="%s" />""" % (str(atomIndex['N']) ))
-            outputStrings.append( """   <ExternalBond from="%s" />""" % (str(atomIndex['C']) ) )
-        if( residueDict[res]['loc'] == 'n' ):
-            outputStrings.append( """   <ExternalBond from="%s" />""" % (str(atomIndex['C']) ) )
-        if( residueDict[res]['loc'] == 'c' ):
-            outputStrings.append( """   <ExternalBond from="%s" />""" % (str(atomIndex['N']) ) )
-        if( res.find('CYX') > -1 ):
-            outputStrings.append( """   <ExternalBond from="%s" />""" % (str(atomIndex['SG']) ) )
+        if res['type'] in ('rna', 'dna'):
+            if res['loc'] in ('middle', '3'):
+                outputStrings.append( """   <ExternalBond from="%s" />""" % (str(atomIndex['P']) ))
+            if res['loc'] in ('middle', '5'):
+                outputStrings.append( """   <ExternalBond from="%s" />""" % (str(atomIndex["O3'"]) ))
+        else:
+            if res['loc'] == 'm':
+                outputStrings.append( """   <ExternalBond from="%s" />""" % (str(atomIndex['N']) ))
+                outputStrings.append( """   <ExternalBond from="%s" />""" % (str(atomIndex['C']) ) )
+            if res['loc'] == 'n':
+                outputStrings.append( """   <ExternalBond from="%s" />""" % (str(atomIndex['C']) ) )
+            if res['loc'] == 'c':
+                outputStrings.append( """   <ExternalBond from="%s" />""" % (str(atomIndex['N']) ) )
+            if resname.find('CYX') > -1:
+                outputStrings.append( """   <ExternalBond from="%s" />""" % (str(atomIndex['SG']) ) )
         for outputString in outputStrings:
             tinkerXmlFile.write( "%s\n" % (outputString) )
 
@@ -1163,7 +1043,7 @@ if( isAmoeba ):
     # radii are set in forcefield.py
 
     for type in sorted( atomTypes ):
-        print "atoom type=%s  %s" % ( str(type), str(atomTypes[type]) )
+        print "atom type=%s  %s" % ( str(type), str(atomTypes[type]) )
 
     for type in sorted( bioTypes ):
         print "bio type=%s  %s" % ( str(type), str(bioTypes[type]) )
