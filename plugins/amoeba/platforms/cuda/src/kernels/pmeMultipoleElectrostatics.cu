@@ -184,8 +184,8 @@ __device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, bool has
     real dthole_c  = 1 - expau3*(1 + 1.5f*au3);
     real dthole_d0 = 1 - expau3*(1 + au3 + 1.5f*a2u6);
     real dthole_d1 = 1 - expau3*(1 + au3);
-    real dthole_q0 = 1 - expau3*(1 + au3 + 0.25*a2u6 + 0.75*a3u9);
-    real dthole_q1 = 1 - expau3*(1 + au3 + 0.75*a2u6);
+    real dthole_q0 = 1 - expau3*(1 + au3 + 0.25f*a2u6 + 0.75f*a3u9);
+    real dthole_q1 = 1 - expau3*(1 + au3 + 0.75f*a2u6);
 
     // Now we compute the (attenuated) Coulomb operator and its derivatives, contracted with
     // permanent moments and induced dipoles.  Note that the coefficient of the permanent force
@@ -265,7 +265,7 @@ __device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, bool has
 
     // C-Q terms (m=0)
     ePermCoef = (mScale + bVec[3])*rInvVec[3];
-    dPermCoef = -((real) 1/3)*rInvVec[4]*(4.5*(mScale + bVec[3]) + 2*alphaRVec[5]*X);
+    dPermCoef = -((real) 1/3)*rInvVec[4]*(4.5f*(mScale + bVec[3]) + 2*alphaRVec[5]*X);
     Vij[0]  += ePermCoef*qiQJ[4];
     Vji[4]   = ePermCoef*qiQI[0];
     VijR[0] += dPermCoef*qiQJ[4];
@@ -353,7 +353,7 @@ __device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, bool has
     VjiR[6] += dPermCoef*qiQI[6];
     // Q-Q terms (m=2)
     ePermCoef = rInvVec[5]*(mScale + bVec[4] - fourOverFifteen*alphaRVec[5]*X);
-    dPermCoef = -2.5*(mScale + bVec[4])*rInvVec[6];
+    dPermCoef = -2.5f*(mScale + bVec[4])*rInvVec[6];
     Vij[7]  = ePermCoef*qiQJ[7];
     Vji[7]  = ePermCoef*qiQI[7];
     VijR[7] = dPermCoef*qiQJ[7];
