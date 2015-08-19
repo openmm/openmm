@@ -6676,6 +6676,6 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::calculateElectrostatic(const vector
     energy += computeReciprocalSpaceInducedDipoleForceAndEnergy(getPolarizationType(), particleData, forces, torques);
     energy += computeReciprocalSpaceFixedMultipoleForceAndEnergy(particleData, forces, torques);
     energy += calculatePmeSelfEnergy(particleData);
-
+ 
     return energy;
 }

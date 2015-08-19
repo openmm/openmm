@@ -10,10 +10,10 @@ extern "C" __global__ void computeLabFrameMoments(real4* __restrict__ posq, int4
         sphericalDipoles[offset+2] = molecularDipoles[offset+1]; // y -> Q_11s
         offset = 5*atom;
         sphericalQuadrupoles[offset+0] = -3.0f*(molecularQuadrupoles[offset+0]+molecularQuadrupoles[offset+3]); // zz -> Q_20
-        sphericalQuadrupoles[offset+1] = (2*SQRT(3))*molecularQuadrupoles[offset+2]; // xz -> Q_21c
-        sphericalQuadrupoles[offset+2] = (2*SQRT(3))*molecularQuadrupoles[offset+4]; // yz -> Q_21s
-        sphericalQuadrupoles[offset+3] = SQRT(3)*(molecularQuadrupoles[offset+0]-molecularQuadrupoles[offset+3]); // xx-yy -> Q_22c
-        sphericalQuadrupoles[offset+4] = (2*SQRT(3))*molecularQuadrupoles[offset+1]; // xy -> Q_22s
+        sphericalQuadrupoles[offset+1] = (2*SQRT((real) 3))*molecularQuadrupoles[offset+2]; // xz -> Q_21c
+        sphericalQuadrupoles[offset+2] = (2*SQRT((real) 3))*molecularQuadrupoles[offset+4]; // yz -> Q_21s
+        sphericalQuadrupoles[offset+3] = SQRT((real) 3)*(molecularQuadrupoles[offset+0]-molecularQuadrupoles[offset+3]); // xx-yy -> Q_22c
+        sphericalQuadrupoles[offset+4] = (2*SQRT((real) 3))*molecularQuadrupoles[offset+1]; // xy -> Q_22s
         
         // get coordinates of this atom and the z & x axis atoms
         // compute the vector between the atoms and 1/sqrt(d2), d2 is distance between
@@ -236,32 +236,32 @@ extern "C" __global__ void computeLabFrameMoments(real4* __restrict__ posq, int4
                 sphericalQuadrupole[4] *= -1;
             }
             real rotatedQuadrupole[5] = {0, 0, 0, 0, 0};
-            real sqrtThree = SQRT(3);
-            rotatedQuadrupole[0] += sphericalQuadrupole[0]*0.5f*(3.0f*vectorZ.z*vectorZ.z - 1.0f);
-            rotatedQuadrupole[1] += sphericalQuadrupole[0]*sqrtThree*vectorZ.z*vectorZ.x;
-            rotatedQuadrupole[2] += sphericalQuadrupole[0]*sqrtThree*vectorZ.z*vectorZ.y;
-            rotatedQuadrupole[3] += sphericalQuadrupole[0]*0.5f*sqrtThree*(vectorZ.x*vectorZ.x - vectorZ.y*vectorZ.y);
-            rotatedQuadrupole[4] += sphericalQuadrupole[0]*sqrtThree*vectorZ.x*vectorZ.y;
-            rotatedQuadrupole[0] += sphericalQuadrupole[1]*sqrtThree*vectorZ.z*vectorX.z;
-            rotatedQuadrupole[1] += sphericalQuadrupole[1]*(vectorZ.x*vectorX.z + vectorZ.z*vectorX.x);
-            rotatedQuadrupole[2] += sphericalQuadrupole[1]*(vectorZ.y*vectorX.z + vectorZ.z*vectorX.y);
-            rotatedQuadrupole[3] += sphericalQuadrupole[1]*(vectorZ.x*vectorX.x - vectorZ.y*vectorX.y);
-            rotatedQuadrupole[4] += sphericalQuadrupole[1]*(vectorZ.y*vectorX.x + vectorZ.x*vectorX.y);
-            rotatedQuadrupole[0] += sphericalQuadrupole[2]*sqrtThree*vectorZ.z*vectorY.z;
-            rotatedQuadrupole[1] += sphericalQuadrupole[2]*(vectorZ.x*vectorY.z + vectorZ.z*vectorY.x);
-            rotatedQuadrupole[2] += sphericalQuadrupole[2]*(vectorZ.y*vectorY.z + vectorZ.z*vectorY.y);
-            rotatedQuadrupole[3] += sphericalQuadrupole[2]*(vectorZ.x*vectorY.x - vectorZ.y*vectorY.y);
-            rotatedQuadrupole[4] += sphericalQuadrupole[2]*(vectorZ.y*vectorY.x + vectorZ.x*vectorY.y);
-            rotatedQuadrupole[0] += sphericalQuadrupole[3]*0.5f*sqrtThree*(vectorX.z*vectorX.z - vectorY.z*vectorY.z);
-            rotatedQuadrupole[1] += sphericalQuadrupole[3]*(vectorX.z*vectorX.x - vectorY.z*vectorY.x);
-            rotatedQuadrupole[2] += sphericalQuadrupole[3]*(vectorX.z*vectorX.y - vectorY.z*vectorY.y);
-            rotatedQuadrupole[3] += sphericalQuadrupole[3]*0.5f*(vectorX.x*vectorX.x - vectorX.y*vectorX.y - vectorY.x*vectorY.x + vectorY.y*vectorY.y);
-            rotatedQuadrupole[4] += sphericalQuadrupole[3]*(vectorX.x*vectorX.y - vectorY.x*vectorY.y);
-            rotatedQuadrupole[0] += sphericalQuadrupole[4]*sqrtThree*vectorX.z*vectorY.z;
-            rotatedQuadrupole[1] += sphericalQuadrupole[4]*(vectorX.x*vectorY.z + vectorX.z*vectorY.x);
-            rotatedQuadrupole[2] += sphericalQuadrupole[4]*(vectorX.y*vectorY.z + vectorX.z*vectorY.y);
-            rotatedQuadrupole[3] += sphericalQuadrupole[4]*(vectorX.x*vectorY.x - vectorX.y*vectorY.y);
-            rotatedQuadrupole[4] += sphericalQuadrupole[4]*(vectorX.y*vectorY.x + vectorX.x*vectorY.y);
+            real sqrtThree = SQRT((real) 3);
+            rotatedQuadrupole[0] += sphericalQuadrupole[0]*0.5f*(3.0f*vectorZ.z*vectorZ.z - 1.0f) +
+                                    sphericalQuadrupole[1]*sqrtThree*vectorZ.z*vectorX.z +
+                                    sphericalQuadrupole[2]*sqrtThree*vectorZ.z*vectorY.z +
+                                    sphericalQuadrupole[3]*0.5f*sqrtThree*(vectorX.z*vectorX.z - vectorY.z*vectorY.z) +
+                                    sphericalQuadrupole[4]*sqrtThree*vectorX.z*vectorY.z;
+            rotatedQuadrupole[1] += sphericalQuadrupole[0]*sqrtThree*vectorZ.z*vectorZ.x +
+                                    sphericalQuadrupole[1]*(vectorZ.x*vectorX.z + vectorZ.z*vectorX.x) +
+                                    sphericalQuadrupole[2]*(vectorZ.x*vectorY.z + vectorZ.z*vectorY.x) +
+                                    sphericalQuadrupole[3]*(vectorX.z*vectorX.x - vectorY.z*vectorY.x) +
+                                    sphericalQuadrupole[4]*(vectorX.x*vectorY.z + vectorX.z*vectorY.x);
+            rotatedQuadrupole[2] += sphericalQuadrupole[0]*sqrtThree*vectorZ.z*vectorZ.y +
+                                    sphericalQuadrupole[1]*(vectorZ.y*vectorX.z + vectorZ.z*vectorX.y) +
+                                    sphericalQuadrupole[2]*(vectorZ.y*vectorY.z + vectorZ.z*vectorY.y) +
+                                    sphericalQuadrupole[3]*(vectorX.z*vectorX.y - vectorY.z*vectorY.y) +
+                                    sphericalQuadrupole[4]*(vectorX.y*vectorY.z + vectorX.z*vectorY.y);
+            rotatedQuadrupole[3] += sphericalQuadrupole[0]*0.5f*sqrtThree*(vectorZ.x*vectorZ.x - vectorZ.y*vectorZ.y) +
+                                    sphericalQuadrupole[1]*(vectorZ.x*vectorX.x - vectorZ.y*vectorX.y) +
+                                    sphericalQuadrupole[2]*(vectorZ.x*vectorY.x - vectorZ.y*vectorY.y) +
+                                    sphericalQuadrupole[3]*0.5f*(vectorX.x*vectorX.x - vectorX.y*vectorX.y - vectorY.x*vectorY.x + vectorY.y*vectorY.y) +
+                                    sphericalQuadrupole[4]*(vectorX.x*vectorY.x - vectorX.y*vectorY.y);
+            rotatedQuadrupole[4] += sphericalQuadrupole[0]*sqrtThree*vectorZ.x*vectorZ.y +
+                                    sphericalQuadrupole[1]*(vectorZ.y*vectorX.x + vectorZ.x*vectorX.y) +
+                                    sphericalQuadrupole[2]*(vectorZ.y*vectorY.x + vectorZ.x*vectorY.y) +
+                                    sphericalQuadrupole[3]*(vectorX.x*vectorX.y - vectorY.x*vectorY.y) +
+                                    sphericalQuadrupole[4]*(vectorX.y*vectorY.x + vectorX.x*vectorY.y);
             sphericalQuadrupoles[offset] = rotatedQuadrupole[0];
             sphericalQuadrupoles[offset+1] = rotatedQuadrupole[1];
             sphericalQuadrupoles[offset+2] = rotatedQuadrupole[2];
