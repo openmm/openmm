@@ -1233,8 +1233,8 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateElectrostaticPairIxn(const Mu
         rInvVec[i] = rInvVec[i-1] * rInv;
 
     RealOpenMM mScale = scalingFactors[M_SCALE];
-    RealOpenMM pScale = scalingFactors[D_SCALE];
-    RealOpenMM dScale = scalingFactors[P_SCALE];
+    RealOpenMM dScale = scalingFactors[D_SCALE];
+    RealOpenMM pScale = scalingFactors[P_SCALE];
     RealOpenMM uScale = scalingFactors[U_SCALE];
 
     RealOpenMM dmp = particleI.dampingFactor*particleK.dampingFactor;
@@ -1274,11 +1274,11 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateElectrostaticPairIxn(const Mu
 
     // C-D and C-Uind terms (m=0)
     ePermCoef = rInvVec[2]*mScale;
-    eUIndCoef = rInvVec[2]*dScale*thole_c;
-    eUInpCoef = rInvVec[2]*pScale*thole_c;
+    eUIndCoef = rInvVec[2]*pScale*thole_c;
+    eUInpCoef = rInvVec[2]*dScale*thole_c;
     dPermCoef = -rInvVec[3]*mScale;
-    dUIndCoef = -2.0*rInvVec[3]*dScale*dthole_c;
-    dUInpCoef = -2.0*rInvVec[3]*pScale*dthole_c;
+    dUIndCoef = -2.0*rInvVec[3]*pScale*dthole_c;
+    dUInpCoef = -2.0*rInvVec[3]*dScale*dthole_c;
     Vij[0]  += -(ePermCoef*qiQJ[1] + eUIndCoef*qiUindJ[0] + eUInpCoef*qiUinpJ[0]);
     Vji[1]   = -(ePermCoef*qiQI[0]);
     VijR[0] += -(dPermCoef*qiQJ[1] + dUIndCoef*qiUindJ[0] + dUInpCoef*qiUinpJ[0]);
@@ -1295,11 +1295,11 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateElectrostaticPairIxn(const Mu
 
     // D-D and D-Uind terms (m=0)
     ePermCoef = -2.0*rInvVec[3]*mScale;
-    eUIndCoef = -2.0*rInvVec[3]*dScale*thole_d0;
-    eUInpCoef = -2.0*rInvVec[3]*pScale*thole_d0;
+    eUIndCoef = -2.0*rInvVec[3]*pScale*thole_d0;
+    eUInpCoef = -2.0*rInvVec[3]*dScale*thole_d0;
     dPermCoef = 3.0*rInvVec[4]*mScale;
-    dUIndCoef = 6.0*rInvVec[4]*dScale*dthole_d0;
-    dUInpCoef = 6.0*rInvVec[4]*pScale*dthole_d0;
+    dUIndCoef = 6.0*rInvVec[4]*pScale*dthole_d0;
+    dUInpCoef = 6.0*rInvVec[4]*dScale*dthole_d0;
     Vij[1]  += ePermCoef*qiQJ[1] + eUIndCoef*qiUindJ[0] + eUInpCoef*qiUinpJ[0];
     Vji[1]  += ePermCoef*qiQI[1] + eUIndCoef*qiUindI[0] + eUInpCoef*qiUinpI[0];
     VijR[1] += dPermCoef*qiQJ[1] + dUIndCoef*qiUindJ[0] + dUInpCoef*qiUinpJ[0];
@@ -1310,11 +1310,11 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateElectrostaticPairIxn(const Mu
     Vjid[0] += eUIndCoef*qiQI[1];
     // D-D and D-Uind terms (m=1)
     ePermCoef = rInvVec[3]*mScale;
-    eUIndCoef = rInvVec[3]*dScale*thole_d1;
-    eUInpCoef = rInvVec[3]*pScale*thole_d1;
+    eUIndCoef = rInvVec[3]*pScale*thole_d1;
+    eUInpCoef = rInvVec[3]*dScale*thole_d1;
     dPermCoef = -1.5*rInvVec[4]*mScale;
-    dUIndCoef = -3.0*rInvVec[4]*dScale*dthole_d1;
-    dUInpCoef = -3.0*rInvVec[4]*pScale*dthole_d1;
+    dUIndCoef = -3.0*rInvVec[4]*pScale*dthole_d1;
+    dUInpCoef = -3.0*rInvVec[4]*dScale*dthole_d1;
     Vij[2]  = ePermCoef*qiQJ[2] + eUIndCoef*qiUindJ[1] + eUInpCoef*qiUinpJ[1];
     Vji[2]  = ePermCoef*qiQI[2] + eUIndCoef*qiUindI[1] + eUInpCoef*qiUinpI[1];
     VijR[2] = dPermCoef*qiQJ[2] + dUIndCoef*qiUindJ[1] + dUInpCoef*qiUinpJ[1];
@@ -1347,11 +1347,11 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateElectrostaticPairIxn(const Mu
 
     // D-Q and Uind-Q terms (m=0)
     ePermCoef = rInvVec[4]*3.0*mScale;
-    eUIndCoef = rInvVec[4]*3.0*dScale*thole_q0;
-    eUInpCoef = rInvVec[4]*3.0*pScale*thole_q0;
+    eUIndCoef = rInvVec[4]*3.0*pScale*thole_q0;
+    eUInpCoef = rInvVec[4]*3.0*dScale*thole_q0;
     dPermCoef = -6.0*rInvVec[5]*mScale;
-    dUIndCoef = -12.0*rInvVec[5]*dScale*dthole_q0;
-    dUInpCoef = -12.0*rInvVec[5]*pScale*dthole_q0;
+    dUIndCoef = -12.0*rInvVec[5]*pScale*dthole_q0;
+    dUInpCoef = -12.0*rInvVec[5]*dScale*dthole_q0;
     Vij[1]  += ePermCoef*qiQJ[4];
     Vji[4]  += ePermCoef*qiQI[1] + eUIndCoef*qiUindI[0] + eUInpCoef*qiUinpI[0];
     VijR[1] += dPermCoef*qiQJ[4];
@@ -1368,11 +1368,11 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateElectrostaticPairIxn(const Mu
 
     // D-Q and Uind-Q terms (m=1)
     ePermCoef = -sqrtThree*rInvVec[4]*mScale;
-    eUIndCoef = -sqrtThree*rInvVec[4]*dScale*thole_q1;
-    eUInpCoef = -sqrtThree*rInvVec[4]*pScale*thole_q1;
+    eUIndCoef = -sqrtThree*rInvVec[4]*pScale*thole_q1;
+    eUInpCoef = -sqrtThree*rInvVec[4]*dScale*thole_q1;
     dPermCoef = 2.0*sqrtThree*rInvVec[5]*mScale;
-    dUIndCoef = 4.0*sqrtThree*rInvVec[5]*dScale*dthole_q1;
-    dUInpCoef = 4.0*sqrtThree*rInvVec[5]*pScale*dthole_q1;
+    dUIndCoef = 4.0*sqrtThree*rInvVec[5]*pScale*dthole_q1;
+    dUInpCoef = 4.0*sqrtThree*rInvVec[5]*dScale*dthole_q1;
     Vij[2]  += ePermCoef*qiQJ[5];
     Vji[5]   = ePermCoef*qiQI[2] + eUIndCoef*qiUindI[1] + eUInpCoef*qiUinpI[1];
     VijR[2] += dPermCoef*qiQJ[5];
@@ -6357,8 +6357,8 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::calculatePmeDirectElectrostaticPair
     RealOpenMM erfAlphaR = erf(alphaRVec[1]);
     RealOpenMM X = 2.0*EXP(-alphaRVec[2])/SQRT_PI;
     RealOpenMM mScale = scalingFactors[M_SCALE];
-    RealOpenMM pScale = scalingFactors[D_SCALE];
-    RealOpenMM dScale = scalingFactors[P_SCALE];
+    RealOpenMM dScale = scalingFactors[D_SCALE];
+    RealOpenMM pScale = scalingFactors[P_SCALE];
     RealOpenMM uScale = scalingFactors[U_SCALE];
 
     int doubleFactorial = 1, facCount = 1;
@@ -6408,11 +6408,11 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::calculatePmeDirectElectrostaticPair
 
     // C-D and C-Uind terms (m=0)
     ePermCoef = rInvVec[2]*(mScale + bVec[2]);
-    eUIndCoef = rInvVec[2]*(dScale*thole_c + bVec[2]);
-    eUInpCoef = rInvVec[2]*(pScale*thole_c + bVec[2]);
+    eUIndCoef = rInvVec[2]*(pScale*thole_c + bVec[2]);
+    eUInpCoef = rInvVec[2]*(dScale*thole_c + bVec[2]);
     dPermCoef = -rInvVec[3]*(mScale + bVec[2] + alphaRVec[3]*X);
-    dUIndCoef = -2.0*rInvVec[3]*(dScale*dthole_c + bVec[2] + alphaRVec[3]*X);
-    dUInpCoef = -2.0*rInvVec[3]*(pScale*dthole_c + bVec[2] + alphaRVec[3]*X);
+    dUIndCoef = -2.0*rInvVec[3]*(pScale*dthole_c + bVec[2] + alphaRVec[3]*X);
+    dUInpCoef = -2.0*rInvVec[3]*(dScale*dthole_c + bVec[2] + alphaRVec[3]*X);
     Vij[0]  += -(ePermCoef*qiQJ[1] + eUIndCoef*qiUindJ[0] + eUInpCoef*qiUinpJ[0]);
     Vji[1]   = -(ePermCoef*qiQI[0]);
     VijR[0] += -(dPermCoef*qiQJ[1] + dUIndCoef*qiUindJ[0] + dUInpCoef*qiUinpJ[0]);
@@ -6429,11 +6429,11 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::calculatePmeDirectElectrostaticPair
 
     // D-D and D-Uind terms (m=0)
     ePermCoef = -twoThirds*rInvVec[3]*(3.0*(mScale + bVec[3]) + alphaRVec[3]*X);
-    eUIndCoef = -twoThirds*rInvVec[3]*(3.0*(dScale*thole_d0 + bVec[3]) + alphaRVec[3]*X);
-    eUInpCoef = -twoThirds*rInvVec[3]*(3.0*(pScale*thole_d0 + bVec[3]) + alphaRVec[3]*X);
+    eUIndCoef = -twoThirds*rInvVec[3]*(3.0*(pScale*thole_d0 + bVec[3]) + alphaRVec[3]*X);
+    eUInpCoef = -twoThirds*rInvVec[3]*(3.0*(dScale*thole_d0 + bVec[3]) + alphaRVec[3]*X);
     dPermCoef = rInvVec[4]*(3.0*(mScale + bVec[3]) + 2.*alphaRVec[5]*X);
-    dUIndCoef = rInvVec[4]*(6.0*(dScale*dthole_d0 + bVec[3]) + 4.0*alphaRVec[5]*X);
-    dUInpCoef = rInvVec[4]*(6.0*(pScale*dthole_d0 + bVec[3]) + 4.0*alphaRVec[5]*X);
+    dUIndCoef = rInvVec[4]*(6.0*(pScale*dthole_d0 + bVec[3]) + 4.0*alphaRVec[5]*X);
+    dUInpCoef = rInvVec[4]*(6.0*(dScale*dthole_d0 + bVec[3]) + 4.0*alphaRVec[5]*X);
     Vij[1]  += ePermCoef*qiQJ[1] + eUIndCoef*qiUindJ[0] + eUInpCoef*qiUinpJ[0];
     Vji[1]  += ePermCoef*qiQI[1] + eUIndCoef*qiUindI[0] + eUInpCoef*qiUinpI[0];
     VijR[1] += dPermCoef*qiQJ[1] + dUIndCoef*qiUindJ[0] + dUInpCoef*qiUinpJ[0];
@@ -6444,11 +6444,11 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::calculatePmeDirectElectrostaticPair
     Vjid[0] += eUIndCoef*qiQI[1];
     // D-D and D-Uind terms (m=1)
     ePermCoef = rInvVec[3]*(mScale + bVec[3] - twoThirds*alphaRVec[3]*X);
-    eUIndCoef = rInvVec[3]*(dScale*thole_d1 + bVec[3] - twoThirds*alphaRVec[3]*X);
-    eUInpCoef = rInvVec[3]*(pScale*thole_d1 + bVec[3] - twoThirds*alphaRVec[3]*X);
+    eUIndCoef = rInvVec[3]*(pScale*thole_d1 + bVec[3] - twoThirds*alphaRVec[3]*X);
+    eUInpCoef = rInvVec[3]*(dScale*thole_d1 + bVec[3] - twoThirds*alphaRVec[3]*X);
     dPermCoef = -1.5*rInvVec[4]*(mScale + bVec[3]);
-    dUIndCoef = -3.0*rInvVec[4]*(dScale*dthole_d1 + bVec[3]);
-    dUInpCoef = -3.0*rInvVec[4]*(pScale*dthole_d1 + bVec[3]);
+    dUIndCoef = -3.0*rInvVec[4]*(pScale*dthole_d1 + bVec[3]);
+    dUInpCoef = -3.0*rInvVec[4]*(dScale*dthole_d1 + bVec[3]);
     Vij[2]  = ePermCoef*qiQJ[2] + eUIndCoef*qiUindJ[1] + eUInpCoef*qiUinpJ[1];
     Vji[2]  = ePermCoef*qiQI[2] + eUIndCoef*qiUindI[1] + eUInpCoef*qiUinpI[1];
     VijR[2] = dPermCoef*qiQJ[2] + dUIndCoef*qiUindJ[1] + dUInpCoef*qiUinpJ[1];
@@ -6481,11 +6481,11 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::calculatePmeDirectElectrostaticPair
 
     // D-Q and Uind-Q terms (m=0)
     ePermCoef = rInvVec[4]*(3.0*(mScale + bVec[3]) + fourThirds*alphaRVec[5]*X);
-    eUIndCoef = rInvVec[4]*(3.0*(dScale*thole_q0 + bVec[3]) + fourThirds*alphaRVec[5]*X);
-    eUInpCoef = rInvVec[4]*(3.0*(pScale*thole_q0 + bVec[3]) + fourThirds*alphaRVec[5]*X);
+    eUIndCoef = rInvVec[4]*(3.0*(pScale*thole_q0 + bVec[3]) + fourThirds*alphaRVec[5]*X);
+    eUInpCoef = rInvVec[4]*(3.0*(dScale*thole_q0 + bVec[3]) + fourThirds*alphaRVec[5]*X);
     dPermCoef = -fourThirds*rInvVec[5]*(4.5*(mScale + bVec[3]) + (1.0 + alphaRVec[2])*alphaRVec[5]*X);
-    dUIndCoef = -fourThirds*rInvVec[5]*(9.0*(dScale*dthole_q0 + bVec[3]) + 2.0*(1.0 + alphaRVec[2])*alphaRVec[5]*X);
-    dUInpCoef = -fourThirds*rInvVec[5]*(9.0*(pScale*dthole_q0 + bVec[3]) + 2.0*(1.0 + alphaRVec[2])*alphaRVec[5]*X);
+    dUIndCoef = -fourThirds*rInvVec[5]*(9.0*(pScale*dthole_q0 + bVec[3]) + 2.0*(1.0 + alphaRVec[2])*alphaRVec[5]*X);
+    dUInpCoef = -fourThirds*rInvVec[5]*(9.0*(dScale*dthole_q0 + bVec[3]) + 2.0*(1.0 + alphaRVec[2])*alphaRVec[5]*X);
     Vij[1]  += ePermCoef*qiQJ[4];
     Vji[4]  += ePermCoef*qiQI[1] + eUIndCoef*qiUindI[0] + eUInpCoef*qiUinpI[0];
     VijR[1] += dPermCoef*qiQJ[4];
@@ -6502,11 +6502,11 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::calculatePmeDirectElectrostaticPair
 
     // D-Q and Uind-Q terms (m=1)
     ePermCoef = -sqrtThree*rInvVec[4]*(mScale + bVec[3]);
-    eUIndCoef = -sqrtThree*rInvVec[4]*(dScale*thole_q1 + bVec[3]);
-    eUInpCoef = -sqrtThree*rInvVec[4]*(pScale*thole_q1 + bVec[3]);
+    eUIndCoef = -sqrtThree*rInvVec[4]*(pScale*thole_q1 + bVec[3]);
+    eUInpCoef = -sqrtThree*rInvVec[4]*(dScale*thole_q1 + bVec[3]);
     dPermCoef = fourSqrtOneThird*rInvVec[5]*(1.5*(mScale + bVec[3]) + 0.5*alphaRVec[5]*X);
-    dUIndCoef = fourSqrtOneThird*rInvVec[5]*(3.0*(dScale*dthole_q1 + bVec[3]) + alphaRVec[5]*X);
-    dUInpCoef = fourSqrtOneThird*rInvVec[5]*(3.0*(pScale*dthole_q1 + bVec[3]) + alphaRVec[5]*X);
+    dUIndCoef = fourSqrtOneThird*rInvVec[5]*(3.0*(pScale*dthole_q1 + bVec[3]) + alphaRVec[5]*X);
+    dUInpCoef = fourSqrtOneThird*rInvVec[5]*(3.0*(dScale*dthole_q1 + bVec[3]) + alphaRVec[5]*X);
     Vij[2]  += ePermCoef*qiQJ[5];
     Vji[5]   = ePermCoef*qiQI[2] + eUIndCoef*qiUindI[1] + eUInpCoef*qiUinpI[1];
     VijR[2] += dPermCoef*qiQJ[5];
