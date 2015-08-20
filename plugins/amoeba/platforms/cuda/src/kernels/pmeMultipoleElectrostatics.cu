@@ -411,32 +411,23 @@ __device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, bool has
 /**
  * Compute the self energy and self torque.
  */
-__device__ void computeSelfEnergyAndTorque(AtomData& atom1, int atomIndex, real& energy, const real* __restrict__ labFrameDipole, const real* __restrict__ labFrameQuadrupole) {
-    real term = 2*EWALD_ALPHA*EWALD_ALPHA;
-    real fterm = -EWALD_ALPHA/SQRT_PI;
+__device__ void computeSelfEnergyAndTorque(AtomData& atom1, real& energy) {
     real cii = atom1.q*atom1.q;
-    real3 dipole = make_real3(labFrameDipole[atomIndex*3], labFrameDipole[atomIndex*3+1], labFrameDipole[atomIndex*3+2]);
-    real dii = dot(dipole, dipole);
+    real3 dipole = make_real3(atom1.sphericalDipole.y, atom1.sphericalDipole.z, atom1.sphericalDipole.x);
+    real dii = dot(dipole, dipole+atom1.inducedDipole);
 #ifdef INCLUDE_QUADRUPOLES
-    real quadrupoleXX = labFrameQuadrupole[atomIndex*5];
-    real quadrupoleXY = labFrameQuadrupole[atomIndex*5+1];
-    real quadrupoleXZ = labFrameQuadrupole[atomIndex*5+2];
-    real quadrupoleYY = labFrameQuadrupole[atomIndex*5+3];
-    real quadrupoleYZ = labFrameQuadrupole[atomIndex*5+4];
-    real qii = 2*(quadrupoleXX*quadrupoleXX +
-                  quadrupoleYY*quadrupoleYY +
-                  quadrupoleXX*quadrupoleYY +
-                  quadrupoleXY*quadrupoleXY +
-                  quadrupoleXZ*quadrupoleXZ +
-                  quadrupoleYZ*quadrupoleYZ);
+    real qii = (atom1.sphericalQuadrupole[0]*atom1.sphericalQuadrupole[0] +
+                atom1.sphericalQuadrupole[1]*atom1.sphericalQuadrupole[1] +
+                atom1.sphericalQuadrupole[2]*atom1.sphericalQuadrupole[2] +
+                atom1.sphericalQuadrupole[3]*atom1.sphericalQuadrupole[3] +
+                atom1.sphericalQuadrupole[4]*atom1.sphericalQuadrupole[4]);
 #else
     real qii = 0;
 #endif
-    real uii = dot(dipole, atom1.inducedDipole);
-    real selfEnergy = (cii + term*(dii/3 + 2*term*qii/5));
-    selfEnergy += term*uii/3;
-    selfEnergy *= fterm;
-    energy += selfEnergy;
+    real prefac = -EWALD_ALPHA/SQRT_PI;
+    real a2 = EWALD_ALPHA*EWALD_ALPHA;
+    real a4 = a2*a2;
+    energy += prefac*(cii + ((real)2/3)*a2*dii + ((real) 4/15)*a4*qii);
 
     // self-torque for PME
 
@@ -456,9 +447,8 @@ extern "C" __global__ void computeElectrostatics(
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, const real4* __restrict__ blockCenter,
         const unsigned int* __restrict__ interactingAtoms,
 #endif
-        const real* __restrict__ labFrameDipole, const real* __restrict__ labFrameQuadrupole, const real* __restrict__ sphericalDipole,
-        const real* __restrict__ sphericalQuadrupole, const real* __restrict__ inducedDipole, const real* __restrict__ inducedDipolePolar,
-        const float2* __restrict__ dampingAndThole) {
+        const real* __restrict__ sphericalDipole, const real* __restrict__ sphericalQuadrupole, const real* __restrict__ inducedDipole,
+        const real* __restrict__ inducedDipolePolar, const float2* __restrict__ dampingAndThole) {
     const unsigned int totalWarps = (blockDim.x*gridDim.x)/TILE_SIZE;
     const unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/TILE_SIZE;
     const unsigned int tgx = threadIdx.x & (TILE_SIZE-1);
@@ -511,7 +501,7 @@ extern "C" __global__ void computeElectrostatics(
                 }
             }
             if (atom1 < NUM_ATOMS)
-                computeSelfEnergyAndTorque(data, atom1, energy, labFrameDipole, labFrameQuadrupole);
+                computeSelfEnergyAndTorque(data, energy);
             data.force *= -ENERGY_SCALE_FACTOR;
             data.torque *= ENERGY_SCALE_FACTOR;
             atomicAdd(&forceBuffers[atom1], static_cast<unsigned long long>((long long) (data.force.x*0x100000000)));
