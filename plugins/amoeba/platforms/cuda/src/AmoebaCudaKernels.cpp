@@ -1163,23 +1163,12 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
         electrostaticsSource << CudaAmoebaKernelSources::sphericalMultipoles;
         electrostaticsSource << CudaAmoebaKernelSources::pmeMultipoleElectrostatics;
         electrostaticsThreadMemory = 24*elementSize+3*sizeof(float)+3*sizeof(int)/(double) cu.TileSize;
-        if (!useShuffle)
-            electrostaticsThreadMemory += 3*elementSize;
     }
     else {
         electrostaticsSource << CudaKernelSources::vectorOps;
+        electrostaticsSource << CudaAmoebaKernelSources::sphericalMultipoles;
         electrostaticsSource << CudaAmoebaKernelSources::multipoleElectrostatics;
-        electrostaticsSource << "#define F1\n";
-        electrostaticsSource << (hasQuadrupoles ? CudaAmoebaKernelSources::electrostaticPairForce : CudaAmoebaKernelSources::electrostaticPairForceNoQuadrupoles);
-        electrostaticsSource << "#undef F1\n";
-        electrostaticsSource << "#define T1\n";
-        electrostaticsSource << (hasQuadrupoles ? CudaAmoebaKernelSources::electrostaticPairForce : CudaAmoebaKernelSources::electrostaticPairForceNoQuadrupoles);
-        electrostaticsSource << "#undef T1\n";
-        electrostaticsSource << "#define T3\n";
-        electrostaticsSource << (hasQuadrupoles ? CudaAmoebaKernelSources::electrostaticPairForce : CudaAmoebaKernelSources::electrostaticPairForceNoQuadrupoles);
-        electrostaticsThreadMemory = 21*elementSize+2*sizeof(float)+3*sizeof(int)/(double) cu.TileSize;
-        if (!useShuffle)
-            electrostaticsThreadMemory += 3*elementSize;
+        electrostaticsThreadMemory = 24*elementSize+2*sizeof(float)+3*sizeof(int)/(double) cu.TileSize;
         if (gk != NULL)
             electrostaticsThreadMemory += 4*elementSize;
     }
@@ -1503,8 +1492,8 @@ double CudaCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool in
         void* electrostaticsArgs[] = {&cu.getForce().getDevicePointer(), &torque->getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(),
             &cu.getPosq().getDevicePointer(), &covalentFlags->getDevicePointer(), &polarizationGroupFlags->getDevicePointer(),
             &nb.getExclusionTiles().getDevicePointer(), &startTileIndex, &numTileIndices,
-            &labFrameDipoles->getDevicePointer(), &labFrameQuadrupoles->getDevicePointer(), &inducedDipole->getDevicePointer(),
-            &inducedDipolePolar->getDevicePointer(), &dampingAndThole->getDevicePointer()};
+            &labFrameDipoles->getDevicePointer(), &labFrameQuadrupoles->getDevicePointer(), &sphericalDipoles->getDevicePointer(), &sphericalQuadrupoles->getDevicePointer(),
+            &inducedDipole->getDevicePointer(), &inducedDipolePolar->getDevicePointer(), &dampingAndThole->getDevicePointer()};
         cu.executeKernel(electrostaticsKernel, electrostaticsArgs, numForceThreadBlocks*electrostaticsThreads, electrostaticsThreads);
         if (gkKernel != NULL)
             gkKernel->finishComputation(*torque, *labFrameDipoles, *labFrameQuadrupoles, *inducedDipole, *inducedDipolePolar, *dampingAndThole, *covalentFlags, *polarizationGroupFlags);
