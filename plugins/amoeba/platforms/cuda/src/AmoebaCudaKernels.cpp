@@ -806,8 +806,8 @@ private:
 
 CudaCalcAmoebaMultipoleForceKernel::CudaCalcAmoebaMultipoleForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : 
         CalcAmoebaMultipoleForceKernel(name, platform), cu(cu), system(system), hasInitializedScaleFactors(false), hasInitializedFFT(false), multipolesAreValid(false),
-        multipoleParticles(NULL), molecularDipoles(NULL), molecularQuadrupoles(NULL), labFrameDipoles(NULL), labFrameQuadrupoles(NULL), fracDipoles(NULL),
-        fracQuadrupoles(NULL), field(NULL), fieldPolar(NULL), inducedField(NULL), inducedFieldPolar(NULL), torque(NULL), dampingAndThole(NULL), inducedDipole(NULL),
+        multipoleParticles(NULL), molecularDipoles(NULL), molecularQuadrupoles(NULL), labFrameDipoles(NULL), labFrameQuadrupoles(NULL), sphericalDipoles(NULL), sphericalQuadrupoles(NULL),
+        fracDipoles(NULL), fracQuadrupoles(NULL), field(NULL), fieldPolar(NULL), inducedField(NULL), inducedFieldPolar(NULL), torque(NULL), dampingAndThole(NULL), inducedDipole(NULL),
         diisCoefficients(NULL), inducedDipolePolar(NULL), inducedDipoleErrors(NULL), prevDipoles(NULL), prevDipolesPolar(NULL), prevDipolesGk(NULL),
         prevDipolesGkPolar(NULL), prevErrors(NULL), diisMatrix(NULL), polarizability(NULL), covalentFlags(NULL), polarizationGroupFlags(NULL),
         pmeGrid(NULL), pmeBsplineModuliX(NULL), pmeBsplineModuliY(NULL), pmeBsplineModuliZ(NULL), pmeIgrid(NULL), pmePhi(NULL),
@@ -826,6 +826,10 @@ CudaCalcAmoebaMultipoleForceKernel::~CudaCalcAmoebaMultipoleForceKernel() {
         delete labFrameDipoles;
     if (labFrameQuadrupoles != NULL)
         delete labFrameQuadrupoles;
+    if (sphericalDipoles != NULL)
+        delete sphericalDipoles;
+    if (sphericalQuadrupoles != NULL)
+        delete sphericalQuadrupoles;
     if (fracDipoles != NULL)
         delete fracDipoles;
     if (fracQuadrupoles != NULL)
@@ -985,6 +989,8 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
     int elementSize = (cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
     labFrameDipoles = new CudaArray(cu, 3*paddedNumAtoms, elementSize, "labFrameDipoles");
     labFrameQuadrupoles = new CudaArray(cu, 5*paddedNumAtoms, elementSize, "labFrameQuadrupoles");
+    sphericalDipoles = new CudaArray(cu, 3*paddedNumAtoms, elementSize, "sphericalDipoles");
+    sphericalQuadrupoles = new CudaArray(cu, 5*paddedNumAtoms, elementSize, "sphericalQuadrupoles");
     fracDipoles = new CudaArray(cu, 3*paddedNumAtoms, elementSize, "fracDipoles");
     fracQuadrupoles = new CudaArray(cu, 6*paddedNumAtoms, elementSize, "fracQuadrupoles");
     field = new CudaArray(cu, 3*paddedNumAtoms, sizeof(long long), "field");
@@ -1144,6 +1150,7 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
     if (maxInducedIterations > 0) {
         defines["THREAD_BLOCK_SIZE"] = cu.intToString(inducedFieldThreads);
         defines["MAX_PREV_DIIS_DIPOLES"] = cu.intToString(MaxPrevDIISDipoles);
+        defines["USE_MUTUAL_POLARIZATION"] = "1";
         module = cu.createModule(CudaKernelSources::vectorOps+CudaAmoebaKernelSources::multipoleInducedField, defines);
         computeInducedFieldKernel = cu.getKernel(module, "computeInducedField");
         updateInducedFieldKernel = cu.getKernel(module, "updateInducedFieldByDIIS");
@@ -1151,33 +1158,13 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
         buildMatrixKernel = cu.getKernel(module, "computeDIISMatrix");
     }
     stringstream electrostaticsSource;
-    if (usePME) {
-        electrostaticsSource << CudaKernelSources::vectorOps;
+    electrostaticsSource << CudaKernelSources::vectorOps;
+    electrostaticsSource << CudaAmoebaKernelSources::sphericalMultipoles;
+    if (usePME)
         electrostaticsSource << CudaAmoebaKernelSources::pmeMultipoleElectrostatics;
-        electrostaticsSource << (hasQuadrupoles ? CudaAmoebaKernelSources::pmeElectrostaticPairForce : CudaAmoebaKernelSources::pmeElectrostaticPairForceNoQuadrupoles);
-        electrostaticsSource << "#define APPLY_SCALE\n";
-        electrostaticsSource << (hasQuadrupoles ? CudaAmoebaKernelSources::pmeElectrostaticPairForce : CudaAmoebaKernelSources::pmeElectrostaticPairForceNoQuadrupoles);
-        electrostaticsThreadMemory = 24*elementSize+3*sizeof(float)+3*sizeof(int)/(double) cu.TileSize;
-        if (!useShuffle)
-            electrostaticsThreadMemory += 3*elementSize;
-    }
-    else {
-        electrostaticsSource << CudaKernelSources::vectorOps;
+    else
         electrostaticsSource << CudaAmoebaKernelSources::multipoleElectrostatics;
-        electrostaticsSource << "#define F1\n";
-        electrostaticsSource << (hasQuadrupoles ? CudaAmoebaKernelSources::electrostaticPairForce : CudaAmoebaKernelSources::electrostaticPairForceNoQuadrupoles);
-        electrostaticsSource << "#undef F1\n";
-        electrostaticsSource << "#define T1\n";
-        electrostaticsSource << (hasQuadrupoles ? CudaAmoebaKernelSources::electrostaticPairForce : CudaAmoebaKernelSources::electrostaticPairForceNoQuadrupoles);
-        electrostaticsSource << "#undef T1\n";
-        electrostaticsSource << "#define T3\n";
-        electrostaticsSource << (hasQuadrupoles ? CudaAmoebaKernelSources::electrostaticPairForce : CudaAmoebaKernelSources::electrostaticPairForceNoQuadrupoles);
-        electrostaticsThreadMemory = 21*elementSize+2*sizeof(float)+3*sizeof(int)/(double) cu.TileSize;
-        if (!useShuffle)
-            electrostaticsThreadMemory += 3*elementSize;
-        if (gk != NULL)
-            electrostaticsThreadMemory += 4*elementSize;
-    }
+    electrostaticsThreadMemory = 24*elementSize+3*sizeof(float)+3*sizeof(int)/(double) cu.TileSize;
     electrostaticsThreads = min(maxThreads, cu.computeThreadBlockSize(electrostaticsThreadMemory));
     defines["THREAD_BLOCK_SIZE"] = cu.intToString(electrostaticsThreads);
     module = cu.createModule(electrostaticsSource.str(), defines);
@@ -1433,7 +1420,8 @@ double CudaCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool in
 
     void* computeMomentsArgs[] = {&cu.getPosq().getDevicePointer(), &multipoleParticles->getDevicePointer(),
         &molecularDipoles->getDevicePointer(), &molecularQuadrupoles->getDevicePointer(),
-        &labFrameDipoles->getDevicePointer(), &labFrameQuadrupoles->getDevicePointer()};
+        &labFrameDipoles->getDevicePointer(), &labFrameQuadrupoles->getDevicePointer(),
+        &sphericalDipoles->getDevicePointer(), &sphericalQuadrupoles->getDevicePointer()};
     cu.executeKernel(computeMomentsKernel, computeMomentsArgs, cu.getNumAtoms());
     int startTileIndex = nb.getStartTileIndex();
     int numTileIndices = nb.getNumTiles();
@@ -1497,8 +1485,8 @@ double CudaCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool in
         void* electrostaticsArgs[] = {&cu.getForce().getDevicePointer(), &torque->getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(),
             &cu.getPosq().getDevicePointer(), &covalentFlags->getDevicePointer(), &polarizationGroupFlags->getDevicePointer(),
             &nb.getExclusionTiles().getDevicePointer(), &startTileIndex, &numTileIndices,
-            &labFrameDipoles->getDevicePointer(), &labFrameQuadrupoles->getDevicePointer(), &inducedDipole->getDevicePointer(),
-            &inducedDipolePolar->getDevicePointer(), &dampingAndThole->getDevicePointer()};
+            &sphericalDipoles->getDevicePointer(), &sphericalQuadrupoles->getDevicePointer(),
+            &inducedDipole->getDevicePointer(), &inducedDipolePolar->getDevicePointer(), &dampingAndThole->getDevicePointer()};
         cu.executeKernel(electrostaticsKernel, electrostaticsArgs, numForceThreadBlocks*electrostaticsThreads, electrostaticsThreads);
         if (gkKernel != NULL)
             gkKernel->finishComputation(*torque, *labFrameDipoles, *labFrameQuadrupoles, *inducedDipole, *inducedDipolePolar, *dampingAndThole, *covalentFlags, *polarizationGroupFlags);
@@ -1652,8 +1640,8 @@ double CudaCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool in
             &nb.getInteractingTiles().getDevicePointer(), &nb.getInteractionCount().getDevicePointer(),
             cu.getPeriodicBoxSizePointer(), cu.getInvPeriodicBoxSizePointer(), cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer(),
             &maxTiles, &nb.getBlockCenters().getDevicePointer(), &nb.getInteractingAtoms().getDevicePointer(),
-            &labFrameDipoles->getDevicePointer(), &labFrameQuadrupoles->getDevicePointer(), &inducedDipole->getDevicePointer(),
-            &inducedDipolePolar->getDevicePointer(), &dampingAndThole->getDevicePointer()};
+            &sphericalDipoles->getDevicePointer(), &sphericalQuadrupoles->getDevicePointer(),
+            &inducedDipole->getDevicePointer(), &inducedDipolePolar->getDevicePointer(), &dampingAndThole->getDevicePointer()};
         cu.executeKernel(electrostaticsKernel, electrostaticsArgs, numForceThreadBlocks*electrostaticsThreads, electrostaticsThreads);
         void* pmeTransformInducedPotentialArgs[] = {&pmePhidp->getDevicePointer(), &pmeCphi->getDevicePointer(), recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
         cu.executeKernel(pmeTransformPotentialKernel, pmeTransformInducedPotentialArgs, cu.getNumAtoms());
