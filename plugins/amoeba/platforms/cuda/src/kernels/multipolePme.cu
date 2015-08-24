@@ -211,10 +211,13 @@ extern "C" __global__ void transformPotentialToCartesianCoordinates(const real* 
 extern "C" __global__ void gridSpreadFixedMultipoles(const real4* __restrict__ posq, const real* __restrict__ fracDipole,
         const real* __restrict__ fracQuadrupole, real2* __restrict__ pmeGrid, int2* __restrict__ pmeAtomGridIndex,
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ) {
-    // The workspace array doesn't really need to be shared, but we have shared memory to spare, and putting it there
-    // reduces the load on L2 cache.
+#if __CUDA_ARCH__ < 500
+    real array[PME_ORDER*PME_ORDER];
+#else
+    // We have shared memory to spare, and putting the workspace array there reduces the load on L2 cache.
     __shared__ real sharedArray[PME_ORDER*PME_ORDER*64];
     real* array = &sharedArray[PME_ORDER*PME_ORDER*threadIdx.x];
+#endif
     real4 theta1[PME_ORDER];
     real4 theta2[PME_ORDER];
     real4 theta3[PME_ORDER];
@@ -299,10 +302,13 @@ extern "C" __global__ void gridSpreadFixedMultipoles(const real4* __restrict__ p
 extern "C" __global__ void gridSpreadInducedDipoles(const real4* __restrict__ posq, const real* __restrict__ inducedDipole,
         const real* __restrict__ inducedDipolePolar, real2* __restrict__ pmeGrid, int2* __restrict__ pmeAtomGridIndex,
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ) {
-    // The workspace array doesn't really need to be shared, but we have shared memory to spare, and putting it there
-    // reduces the load on L2 cache.
+#if __CUDA_ARCH__ < 500
+    real array[PME_ORDER*PME_ORDER];
+#else
+    // We have shared memory to spare, and putting the workspace array there reduces the load on L2 cache.
     __shared__ real sharedArray[PME_ORDER*PME_ORDER*64];
     real* array = &sharedArray[PME_ORDER*PME_ORDER*threadIdx.x];
+#endif
     real4 theta1[PME_ORDER];
     real4 theta2[PME_ORDER];
     real4 theta3[PME_ORDER];
@@ -446,10 +452,13 @@ extern "C" __global__ void computeFixedPotentialFromGrid(const real2* __restrict
         long long* __restrict__ fieldBuffers, long long* __restrict__ fieldPolarBuffers,  const real4* __restrict__ posq,
         const real* __restrict__ labFrameDipole, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
         real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ, int2* __restrict__ pmeAtomGridIndex) {
-    // The workspace array doesn't really need to be shared, but we have shared memory to spare, and putting it there
-    // reduces the load on L2 cache.
+#if __CUDA_ARCH__ < 500
+    real array[PME_ORDER*PME_ORDER];
+#else
+    // We have shared memory to spare, and putting the workspace array there reduces the load on L2 cache.
     __shared__ real sharedArray[PME_ORDER*PME_ORDER*64];
     real* array = &sharedArray[PME_ORDER*PME_ORDER*threadIdx.x];
+#endif
     real4 theta1[PME_ORDER];
     real4 theta2[PME_ORDER];
     real4 theta3[PME_ORDER];
@@ -620,10 +629,13 @@ extern "C" __global__ void computeInducedPotentialFromGrid(const real2* __restri
         real* __restrict__ phip, real* __restrict__ phidp, const real4* __restrict__ posq,
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, real3 recipBoxVecX,
         real3 recipBoxVecY, real3 recipBoxVecZ, int2* __restrict__ pmeAtomGridIndex) {
-    // The workspace array doesn't really need to be shared, but we have shared memory to spare, and putting it there
-    // reduces the load on L2 cache.
+#if __CUDA_ARCH__ < 500
+    real array[PME_ORDER*PME_ORDER];
+#else
+    // We have shared memory to spare, and putting the workspace array there reduces the load on L2 cache.
     __shared__ real sharedArray[PME_ORDER*PME_ORDER*64];
     real* array = &sharedArray[PME_ORDER*PME_ORDER*threadIdx.x];
+#endif
     real4 theta1[PME_ORDER];
     real4 theta2[PME_ORDER];
     real4 theta3[PME_ORDER];
