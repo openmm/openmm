@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013 Stanford University and the Authors.           *
+ * Portions copyright (c) 2013-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -171,7 +171,7 @@ void testWater() {
     int numDrudeDof = 3*numMolecules;
     int numDof = numStandardDof+numDrudeDof;
     double expectedTemp = (numStandardDof*temperature+numDrudeDof*temperatureDrude)/numDof;
-    ASSERT_USUALLY_EQUAL_TOL(expectedTemp, ke/(0.5*numDof*BOLTZ), 0.02);
+    ASSERT_USUALLY_EQUAL_TOL(expectedTemp, ke/(0.5*numDof*BOLTZ), 0.03);
 }
 
 int main() {
