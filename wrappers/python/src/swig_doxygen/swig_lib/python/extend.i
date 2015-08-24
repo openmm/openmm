@@ -278,6 +278,7 @@ Parameters:
         """Get the list of Forces in this System"""
         return [self.getForce(i) for i in range(self.getNumForces())]
   %}
+  %newobject __copy__;
   OpenMM::System* __copy__() {
       return OpenMM::XmlSerializer::clone<OpenMM::System>(*self);
   }
@@ -452,6 +453,7 @@ Parameters:
     def __deepcopy__(self, memo):
         return self.__copy__()
   %}
+  %newobject __copy__;
   OpenMM::Force* __copy__() {
       return OpenMM::XmlSerializer::clone<OpenMM::Force>(*self);
   }
@@ -470,6 +472,7 @@ Parameters:
     def __deepcopy__(self, memo):
         return self.__copy__()
   %}
+  %newobject __copy__;
   OpenMM::Integrator* __copy__() {
       return OpenMM::XmlSerializer::clone<OpenMM::Integrator>(*self);
   }
