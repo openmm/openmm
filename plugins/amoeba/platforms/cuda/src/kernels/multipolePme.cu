@@ -196,14 +196,14 @@ extern "C" __global__ void transformPotentialToCartesianCoordinates(const real* 
     // Transform the potential.
     
     for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < NUM_ATOMS; i += blockDim.x*gridDim.x) {
-        cphi[10*i] = fphi[20*i];
-        cphi[10*i+1] = a[0][0]*fphi[20*i+1] + a[0][1]*fphi[20*i+2] + a[0][2]*fphi[20*i+3];
-        cphi[10*i+2] = a[1][0]*fphi[20*i+1] + a[1][1]*fphi[20*i+2] + a[1][2]*fphi[20*i+3];
-        cphi[10*i+3] = a[2][0]*fphi[20*i+1] + a[2][1]*fphi[20*i+2] + a[2][2]*fphi[20*i+3];
+        cphi[10*i] = fphi[i];
+        cphi[10*i+1] = a[0][0]*fphi[i+NUM_ATOMS*1] + a[0][1]*fphi[i+NUM_ATOMS*2] + a[0][2]*fphi[i+NUM_ATOMS*3];
+        cphi[10*i+2] = a[1][0]*fphi[i+NUM_ATOMS*1] + a[1][1]*fphi[i+NUM_ATOMS*2] + a[1][2]*fphi[i+NUM_ATOMS*3];
+        cphi[10*i+3] = a[2][0]*fphi[i+NUM_ATOMS*1] + a[2][1]*fphi[i+NUM_ATOMS*2] + a[2][2]*fphi[i+NUM_ATOMS*3];
         for (int j = 0; j < 6; j++) {
             cphi[10*i+4+j] = 0;
             for (int k = 0; k < 6; k++)
-                cphi[10*i+4+j] += b[j][k]*fphi[20*i+4+k];
+                cphi[10*i+4+j] += b[j][k]*fphi[i+NUM_ATOMS*(4+k)];
         }
     }
 }
@@ -211,20 +211,32 @@ extern "C" __global__ void transformPotentialToCartesianCoordinates(const real* 
 extern "C" __global__ void gridSpreadFixedMultipoles(const real4* __restrict__ posq, const real* __restrict__ fracDipole,
         const real* __restrict__ fracQuadrupole, real2* __restrict__ pmeGrid, int2* __restrict__ pmeAtomGridIndex,
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ) {
+#if __CUDA_ARCH__ < 500
     real array[PME_ORDER*PME_ORDER];
+#else
+    // We have shared memory to spare, and putting the workspace array there reduces the load on L2 cache.
+    __shared__ real sharedArray[PME_ORDER*PME_ORDER*64];
+    real* array = &sharedArray[PME_ORDER*PME_ORDER*threadIdx.x];
+#endif
     real4 theta1[PME_ORDER];
     real4 theta2[PME_ORDER];
     real4 theta3[PME_ORDER];
     
-    // Process the atoms in spatially sorted order.  This improves cache performance when loading
-    // the grid values.
-    
-    for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < NUM_ATOMS; i += blockDim.x*gridDim.x) {
-        int m = pmeAtomGridIndex[i].x;
+    for (int m = blockIdx.x*blockDim.x+threadIdx.x; m < NUM_ATOMS; m += blockDim.x*gridDim.x) {
         real4 pos = posq[m];
         pos -= periodicBoxVecZ*floor(pos.z*recipBoxVecZ.z+0.5f);
         pos -= periodicBoxVecY*floor(pos.y*recipBoxVecY.z+0.5f);
         pos -= periodicBoxVecX*floor(pos.x*recipBoxVecX.z+0.5f);
+        real atomCharge = pos.w;
+        real atomDipoleX = fracDipole[m*3];
+        real atomDipoleY = fracDipole[m*3+1];
+        real atomDipoleZ = fracDipole[m*3+2];
+        real atomQuadrupoleXX = fracQuadrupole[m*6];
+        real atomQuadrupoleXY = fracQuadrupole[m*6+1];
+        real atomQuadrupoleXZ = fracQuadrupole[m*6+2];
+        real atomQuadrupoleYY = fracQuadrupole[m*6+3];
+        real atomQuadrupoleYZ = fracQuadrupole[m*6+4];
+        real atomQuadrupoleZZ = fracQuadrupole[m*6+5];
 
         // Since we need the full set of thetas, it's faster to compute them here than load them
         // from global memory.
@@ -271,16 +283,6 @@ extern "C" __global__ void gridSpreadFixedMultipoles(const real4* __restrict__ p
                     int index = ybase + zindex;
                     real4 v = theta3[iz];
 
-                    real atomCharge = pos.w;
-                    real atomDipoleX = fracDipole[m*3];
-                    real atomDipoleY = fracDipole[m*3+1];
-                    real atomDipoleZ = fracDipole[m*3+2];
-                    real atomQuadrupoleXX = fracQuadrupole[m*6];
-                    real atomQuadrupoleXY = fracQuadrupole[m*6+1];
-                    real atomQuadrupoleXZ = fracQuadrupole[m*6+2];
-                    real atomQuadrupoleYY = fracQuadrupole[m*6+3];
-                    real atomQuadrupoleYZ = fracQuadrupole[m*6+4];
-                    real atomQuadrupoleZZ = fracQuadrupole[m*6+5];
                     real term0 = atomCharge*u.x*v.x + atomDipoleY*u.y*v.x + atomDipoleZ*u.x*v.y + atomQuadrupoleYY*u.z*v.x + atomQuadrupoleZZ*u.x*v.z + atomQuadrupoleYZ*u.y*v.y;
                     real term1 = atomDipoleX*u.x*v.x + atomQuadrupoleXY*u.y*v.x + atomQuadrupoleXZ*u.x*v.y;
                     real term2 = atomQuadrupoleXX * u.x * v.x;
@@ -300,7 +302,13 @@ extern "C" __global__ void gridSpreadFixedMultipoles(const real4* __restrict__ p
 extern "C" __global__ void gridSpreadInducedDipoles(const real4* __restrict__ posq, const real* __restrict__ inducedDipole,
         const real* __restrict__ inducedDipolePolar, real2* __restrict__ pmeGrid, int2* __restrict__ pmeAtomGridIndex,
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ) {
+#if __CUDA_ARCH__ < 500
     real array[PME_ORDER*PME_ORDER];
+#else
+    // We have shared memory to spare, and putting the workspace array there reduces the load on L2 cache.
+    __shared__ real sharedArray[PME_ORDER*PME_ORDER*64];
+    real* array = &sharedArray[PME_ORDER*PME_ORDER*threadIdx.x];
+#endif
     real4 theta1[PME_ORDER];
     real4 theta2[PME_ORDER];
     real4 theta3[PME_ORDER];
@@ -318,15 +326,19 @@ extern "C" __global__ void gridSpreadInducedDipoles(const real4* __restrict__ po
     }
     __syncthreads();
     
-    // Process the atoms in spatially sorted order.  This improves cache performance when loading
-    // the grid values.
-    
-    for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < NUM_ATOMS; i += blockDim.x*gridDim.x) {
-        int m = pmeAtomGridIndex[i].x;
+    for (int m = blockIdx.x*blockDim.x+threadIdx.x; m < NUM_ATOMS; m += blockDim.x*gridDim.x) {
         real4 pos = posq[m];
         pos -= periodicBoxVecZ*floor(pos.z*recipBoxVecZ.z+0.5f);
         pos -= periodicBoxVecY*floor(pos.y*recipBoxVecY.z+0.5f);
         pos -= periodicBoxVecX*floor(pos.x*recipBoxVecX.z+0.5f);
+        real3 cinducedDipole = ((const real3*) inducedDipole)[m];
+        real3 cinducedDipolePolar = ((const real3*) inducedDipolePolar)[m];
+        real3 finducedDipole = make_real3(cinducedDipole.x*cartToFrac[0][0] + cinducedDipole.y*cartToFrac[0][1] + cinducedDipole.z*cartToFrac[0][2],
+                                          cinducedDipole.x*cartToFrac[1][0] + cinducedDipole.y*cartToFrac[1][1] + cinducedDipole.z*cartToFrac[1][2],
+                                          cinducedDipole.x*cartToFrac[2][0] + cinducedDipole.y*cartToFrac[2][1] + cinducedDipole.z*cartToFrac[2][2]);
+        real3 finducedDipolePolar = make_real3(cinducedDipolePolar.x*cartToFrac[0][0] + cinducedDipolePolar.y*cartToFrac[0][1] + cinducedDipolePolar.z*cartToFrac[0][2],
+                                               cinducedDipolePolar.x*cartToFrac[1][0] + cinducedDipolePolar.y*cartToFrac[1][1] + cinducedDipolePolar.z*cartToFrac[1][2],
+                                               cinducedDipolePolar.x*cartToFrac[2][0] + cinducedDipolePolar.y*cartToFrac[2][1] + cinducedDipolePolar.z*cartToFrac[2][2]);
 
         // Since we need the full set of thetas, it's faster to compute them here than load them
         // from global memory.
@@ -373,14 +385,6 @@ extern "C" __global__ void gridSpreadInducedDipoles(const real4* __restrict__ po
                     int index = ybase + zindex;
                     real4 v = theta3[iz];
 
-                    real3 cinducedDipole = make_real3(inducedDipole[m*3], inducedDipole[m*3+1], inducedDipole[m*3+2]);
-                    real3 cinducedDipolePolar = make_real3(inducedDipolePolar[m*3], inducedDipolePolar[m*3+1], inducedDipolePolar[m*3+2]);
-                    real3 finducedDipole = make_real3(cinducedDipole.x*cartToFrac[0][0] + cinducedDipole.y*cartToFrac[0][1] + cinducedDipole.z*cartToFrac[0][2],
-                                                      cinducedDipole.x*cartToFrac[1][0] + cinducedDipole.y*cartToFrac[1][1] + cinducedDipole.z*cartToFrac[1][2],
-                                                      cinducedDipole.x*cartToFrac[2][0] + cinducedDipole.y*cartToFrac[2][1] + cinducedDipole.z*cartToFrac[2][2]);
-                    real3 finducedDipolePolar = make_real3(cinducedDipolePolar.x*cartToFrac[0][0] + cinducedDipolePolar.y*cartToFrac[0][1] + cinducedDipolePolar.z*cartToFrac[0][2],
-                                                           cinducedDipolePolar.x*cartToFrac[1][0] + cinducedDipolePolar.y*cartToFrac[1][1] + cinducedDipolePolar.z*cartToFrac[1][2],
-                                                           cinducedDipolePolar.x*cartToFrac[2][0] + cinducedDipolePolar.y*cartToFrac[2][1] + cinducedDipolePolar.z*cartToFrac[2][2]);
                     real term01 = finducedDipole.y*u.y*v.x + finducedDipole.z*u.x*v.y;
                     real term11 = finducedDipole.x*u.x*v.x;
                     real term02 = finducedDipolePolar.y*u.y*v.x + finducedDipolePolar.z*u.x*v.y;
@@ -448,7 +452,13 @@ extern "C" __global__ void computeFixedPotentialFromGrid(const real2* __restrict
         long long* __restrict__ fieldBuffers, long long* __restrict__ fieldPolarBuffers,  const real4* __restrict__ posq,
         const real* __restrict__ labFrameDipole, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
         real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ, int2* __restrict__ pmeAtomGridIndex) {
+#if __CUDA_ARCH__ < 500
     real array[PME_ORDER*PME_ORDER];
+#else
+    // We have shared memory to spare, and putting the workspace array there reduces the load on L2 cache.
+    __shared__ real sharedArray[PME_ORDER*PME_ORDER*64];
+    real* array = &sharedArray[PME_ORDER*PME_ORDER*threadIdx.x];
+#endif
     real4 theta1[PME_ORDER];
     real4 theta2[PME_ORDER];
     real4 theta3[PME_ORDER];
@@ -582,26 +592,26 @@ extern "C" __global__ void computeFixedPotentialFromGrid(const real2* __restrict
             tuv012 += tu01*v.z;
             tuv111 += tu11*v.y;
         }
-        phi[20*m] = tuv000;
-        phi[20*m+1] = tuv100;
-        phi[20*m+2] = tuv010;
-        phi[20*m+3] = tuv001;
-        phi[20*m+4] = tuv200;
-        phi[20*m+5] = tuv020;
-        phi[20*m+6] = tuv002;
-        phi[20*m+7] = tuv110;
-        phi[20*m+8] = tuv101;
-        phi[20*m+9] = tuv011;
-        phi[20*m+10] = tuv300;
-        phi[20*m+11] = tuv030;
-        phi[20*m+12] = tuv003;
-        phi[20*m+13] = tuv210;
-        phi[20*m+14] = tuv201;
-        phi[20*m+15] = tuv120;
-        phi[20*m+16] = tuv021;
-        phi[20*m+17] = tuv102;
-        phi[20*m+18] = tuv012;
-        phi[20*m+19] = tuv111;
+        phi[m] = tuv000;
+        phi[m+NUM_ATOMS] = tuv100;
+        phi[m+NUM_ATOMS*2] = tuv010;
+        phi[m+NUM_ATOMS*3] = tuv001;
+        phi[m+NUM_ATOMS*4] = tuv200;
+        phi[m+NUM_ATOMS*5] = tuv020;
+        phi[m+NUM_ATOMS*6] = tuv002;
+        phi[m+NUM_ATOMS*7] = tuv110;
+        phi[m+NUM_ATOMS*8] = tuv101;
+        phi[m+NUM_ATOMS*9] = tuv011;
+        phi[m+NUM_ATOMS*10] = tuv300;
+        phi[m+NUM_ATOMS*11] = tuv030;
+        phi[m+NUM_ATOMS*12] = tuv003;
+        phi[m+NUM_ATOMS*13] = tuv210;
+        phi[m+NUM_ATOMS*14] = tuv201;
+        phi[m+NUM_ATOMS*15] = tuv120;
+        phi[m+NUM_ATOMS*16] = tuv021;
+        phi[m+NUM_ATOMS*17] = tuv102;
+        phi[m+NUM_ATOMS*18] = tuv012;
+        phi[m+NUM_ATOMS*19] = tuv111;
         real dipoleScale = (4/(real) 3)*(EWALD_ALPHA*EWALD_ALPHA*EWALD_ALPHA)/SQRT_PI;
         long long fieldx = (long long) ((dipoleScale*labFrameDipole[m*3]-tuv100*fracToCart[0][0]-tuv010*fracToCart[0][1]-tuv001*fracToCart[0][2])*0x100000000);
         fieldBuffers[m] = fieldx;
@@ -619,7 +629,13 @@ extern "C" __global__ void computeInducedPotentialFromGrid(const real2* __restri
         real* __restrict__ phip, real* __restrict__ phidp, const real4* __restrict__ posq,
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, real3 recipBoxVecX,
         real3 recipBoxVecY, real3 recipBoxVecZ, int2* __restrict__ pmeAtomGridIndex) {
+#if __CUDA_ARCH__ < 500
     real array[PME_ORDER*PME_ORDER];
+#else
+    // We have shared memory to spare, and putting the workspace array there reduces the load on L2 cache.
+    __shared__ real sharedArray[PME_ORDER*PME_ORDER*64];
+    real* array = &sharedArray[PME_ORDER*PME_ORDER*threadIdx.x];
+#endif
     real4 theta1[PME_ORDER];
     real4 theta2[PME_ORDER];
     real4 theta3[PME_ORDER];
@@ -812,55 +828,55 @@ extern "C" __global__ void computeInducedPotentialFromGrid(const real2* __restri
             tuv012 += tu01*v.z;
             tuv111 += tu11*v.y;
         }
-        phid[10*m]   = 0;
-        phid[10*m+1] = tuv100_1;
-        phid[10*m+2] = tuv010_1;
-        phid[10*m+3] = tuv001_1;
-        phid[10*m+4] = tuv200_1;
-        phid[10*m+5] = tuv020_1;
-        phid[10*m+6] = tuv002_1;
-        phid[10*m+7] = tuv110_1;
-        phid[10*m+8] = tuv101_1;
-        phid[10*m+9] = tuv011_1;
+        phid[m]   = 0;
+        phid[m+NUM_ATOMS] = tuv100_1;
+        phid[m+NUM_ATOMS*2] = tuv010_1;
+        phid[m+NUM_ATOMS*3] = tuv001_1;
+        phid[m+NUM_ATOMS*4] = tuv200_1;
+        phid[m+NUM_ATOMS*5] = tuv020_1;
+        phid[m+NUM_ATOMS*6] = tuv002_1;
+        phid[m+NUM_ATOMS*7] = tuv110_1;
+        phid[m+NUM_ATOMS*8] = tuv101_1;
+        phid[m+NUM_ATOMS*9] = tuv011_1;
 
-        phip[10*m]   = 0;
-        phip[10*m+1] = tuv100_2;
-        phip[10*m+2] = tuv010_2;
-        phip[10*m+3] = tuv001_2;
-        phip[10*m+4] = tuv200_2;
-        phip[10*m+5] = tuv020_2;
-        phip[10*m+6] = tuv002_2;
-        phip[10*m+7] = tuv110_2;
-        phip[10*m+8] = tuv101_2;
-        phip[10*m+9] = tuv011_2;
+        phip[m]   = 0;
+        phip[m+NUM_ATOMS] = tuv100_2;
+        phip[m+NUM_ATOMS*2] = tuv010_2;
+        phip[m+NUM_ATOMS*3] = tuv001_2;
+        phip[m+NUM_ATOMS*4] = tuv200_2;
+        phip[m+NUM_ATOMS*5] = tuv020_2;
+        phip[m+NUM_ATOMS*6] = tuv002_2;
+        phip[m+NUM_ATOMS*7] = tuv110_2;
+        phip[m+NUM_ATOMS*8] = tuv101_2;
+        phip[m+NUM_ATOMS*9] = tuv011_2;
 
-        phidp[20*m] = tuv000;
-        phidp[20*m+1] = tuv100;
-        phidp[20*m+2] = tuv010;
-        phidp[20*m+3] = tuv001;
-        phidp[20*m+4] = tuv200;
-        phidp[20*m+5] = tuv020;
-        phidp[20*m+6] = tuv002;
-        phidp[20*m+7] = tuv110;
-        phidp[20*m+8] = tuv101;
-        phidp[20*m+9] = tuv011;
-        phidp[20*m+10] = tuv300;
-        phidp[20*m+11] = tuv030;
-        phidp[20*m+12] = tuv003;
-        phidp[20*m+13] = tuv210;
-        phidp[20*m+14] = tuv201;
-        phidp[20*m+15] = tuv120;
-        phidp[20*m+16] = tuv021;
-        phidp[20*m+17] = tuv102;
-        phidp[20*m+18] = tuv012;
-        phidp[20*m+19] = tuv111;
+        phidp[m] = tuv000;
+        phidp[m+NUM_ATOMS*1] = tuv100;
+        phidp[m+NUM_ATOMS*2] = tuv010;
+        phidp[m+NUM_ATOMS*3] = tuv001;
+        phidp[m+NUM_ATOMS*4] = tuv200;
+        phidp[m+NUM_ATOMS*5] = tuv020;
+        phidp[m+NUM_ATOMS*6] = tuv002;
+        phidp[m+NUM_ATOMS*7] = tuv110;
+        phidp[m+NUM_ATOMS*8] = tuv101;
+        phidp[m+NUM_ATOMS*9] = tuv011;
+        phidp[m+NUM_ATOMS*10] = tuv300;
+        phidp[m+NUM_ATOMS*11] = tuv030;
+        phidp[m+NUM_ATOMS*12] = tuv003;
+        phidp[m+NUM_ATOMS*13] = tuv210;
+        phidp[m+NUM_ATOMS*14] = tuv201;
+        phidp[m+NUM_ATOMS*15] = tuv120;
+        phidp[m+NUM_ATOMS*16] = tuv021;
+        phidp[m+NUM_ATOMS*17] = tuv102;
+        phidp[m+NUM_ATOMS*18] = tuv012;
+        phidp[m+NUM_ATOMS*19] = tuv111;
     }
 }
 
 extern "C" __global__ void computeFixedMultipoleForceAndEnergy(real4* __restrict__ posq, unsigned long long* __restrict__ forceBuffers,
         long long* __restrict__ torqueBuffers, real* __restrict__ energyBuffer, const real* __restrict__ labFrameDipole,
         const real* __restrict__ labFrameQuadrupole, const real* __restrict__ fracDipole, const real* __restrict__ fracQuadrupole,
-        const real* __restrict__ phi_global, const real* __restrict__ cphi_global, real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ) {
+        const real* __restrict__ phi, const real* __restrict__ cphi_global, real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ) {
     real multipole[10];
     const int deriv1[] = {1, 4, 7, 8, 10, 15, 17, 13, 14, 19};
     const int deriv2[] = {2, 7, 5, 9, 13, 11, 18, 15, 19, 16};
@@ -922,13 +938,12 @@ extern "C" __global__ void computeFixedMultipoleForceAndEnergy(real4* __restrict
         multipole[8] = fracQuadrupole[i*6+2];
         multipole[9] = fracQuadrupole[i*6+4];
 
-        const real* phi = &phi_global[20*i];
         real4 f = make_real4(0, 0, 0, 0);
         for (int k = 0; k < 10; k++) {
-            energy += multipole[k]*phi[k];
-            f.x += multipole[k]*phi[deriv1[k]];
-            f.y += multipole[k]*phi[deriv2[k]];
-            f.z += multipole[k]*phi[deriv3[k]];
+            energy += multipole[k]*phi[i+NUM_ATOMS*k];
+            f.x += multipole[k]*phi[i+NUM_ATOMS*deriv1[k]];
+            f.y += multipole[k]*phi[i+NUM_ATOMS*deriv2[k]];
+            f.z += multipole[k]*phi[i+NUM_ATOMS*deriv3[k]];
         }
         f = make_real4(EPSILON_FACTOR*(f.x*fracToCart[0][0] + f.y*fracToCart[0][1] + f.z*fracToCart[0][2]),
                        EPSILON_FACTOR*(f.x*fracToCart[1][0] + f.y*fracToCart[1][1] + f.z*fracToCart[1][2]),
@@ -944,8 +959,8 @@ extern "C" __global__ void computeInducedDipoleForceAndEnergy(real4* __restrict_
         long long* __restrict__ torqueBuffers, real* __restrict__ energyBuffer, const real* __restrict__ labFrameDipole,
         const real* __restrict__ labFrameQuadrupole, const real* __restrict__ fracDipole, const real* __restrict__ fracQuadrupole,
         const real* __restrict__ inducedDipole_global, const real* __restrict__ inducedDipolePolar_global,
-        const real* __restrict__ phi_global, const real* __restrict__ phid_global, const real* __restrict__ phip_global,
-        const real* __restrict__ phidp_global, const real* __restrict__ cphi_global, real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ) {
+        const real* __restrict__ phi, const real* __restrict__ phid, const real* __restrict__ phip,
+        const real* __restrict__ phidp, const real* __restrict__ cphi_global, real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ) {
     real multipole[10];
     real cinducedDipole[3], inducedDipole[3];
     real cinducedDipolePolar[3], inducedDipolePolar[3];
@@ -1023,34 +1038,30 @@ extern "C" __global__ void computeInducedDipoleForceAndEnergy(real4* __restrict_
         inducedDipolePolar[0] = cinducedDipolePolar[0]*fracToCart[0][0] + cinducedDipolePolar[1]*fracToCart[1][0] + cinducedDipolePolar[2]*fracToCart[2][0];
         inducedDipolePolar[1] = cinducedDipolePolar[0]*fracToCart[0][1] + cinducedDipolePolar[1]*fracToCart[1][1] + cinducedDipolePolar[2]*fracToCart[2][1];
         inducedDipolePolar[2] = cinducedDipolePolar[0]*fracToCart[0][2] + cinducedDipolePolar[1]*fracToCart[1][2] + cinducedDipolePolar[2]*fracToCart[2][2];
-        const real* phi = &phi_global[20*i];
-        const real* phip = &phip_global[10*i];
-        const real* phid = &phid_global[10*i];
         real4 f = make_real4(0, 0, 0, 0);
 
-        energy += inducedDipole[0]*phi[1];
-        energy += inducedDipole[1]*phi[2];
-        energy += inducedDipole[2]*phi[3];
+        energy += inducedDipole[0]*phi[i+NUM_ATOMS];
+        energy += inducedDipole[1]*phi[i+NUM_ATOMS*2];
+        energy += inducedDipole[2]*phi[i+NUM_ATOMS*3];
 
         for (int k = 0; k < 3; k++) {
             int j1 = deriv1[k+1];
             int j2 = deriv2[k+1];
             int j3 = deriv3[k+1];
-            f.x += (inducedDipole[k]+inducedDipolePolar[k])*phi[j1];
-            f.y += (inducedDipole[k]+inducedDipolePolar[k])*phi[j2];
-            f.z += (inducedDipole[k]+inducedDipolePolar[k])*phi[j3];
+            f.x += (inducedDipole[k]+inducedDipolePolar[k])*phi[i+NUM_ATOMS*j1];
+            f.y += (inducedDipole[k]+inducedDipolePolar[k])*phi[i+NUM_ATOMS*j2];
+            f.z += (inducedDipole[k]+inducedDipolePolar[k])*phi[i+NUM_ATOMS*j3];
 #ifndef DIRECT_POLARIZATION
-            f.x += (inducedDipole[k]*phip[j1] + inducedDipolePolar[k]*phid[j1]);
-            f.y += (inducedDipole[k]*phip[j2] + inducedDipolePolar[k]*phid[j2]);
-            f.z += (inducedDipole[k]*phip[j3] + inducedDipolePolar[k]*phid[j3]);
+            f.x += (inducedDipole[k]*phip[i+NUM_ATOMS*j1] + inducedDipolePolar[k]*phid[i+NUM_ATOMS*j1]);
+            f.y += (inducedDipole[k]*phip[i+NUM_ATOMS*j2] + inducedDipolePolar[k]*phid[i+NUM_ATOMS*j2]);
+            f.z += (inducedDipole[k]*phip[i+NUM_ATOMS*j3] + inducedDipolePolar[k]*phid[i+NUM_ATOMS*j3]);
 #endif
         }
 
-        const real* phidp = &phidp_global[20*i];
         for (int k = 0; k < 10; k++) {
-            f.x += multipole[k]*phidp[deriv1[k]];
-            f.y += multipole[k]*phidp[deriv2[k]];
-            f.z += multipole[k]*phidp[deriv3[k]];
+            f.x += multipole[k]*phidp[i+NUM_ATOMS*deriv1[k]];
+            f.y += multipole[k]*phidp[i+NUM_ATOMS*deriv2[k]];
+            f.z += multipole[k]*phidp[i+NUM_ATOMS*deriv3[k]];
         }
         f = make_real4(0.5f*EPSILON_FACTOR*(f.x*fracToCart[0][0] + f.y*fracToCart[0][1] + f.z*fracToCart[0][2]),
                        0.5f*EPSILON_FACTOR*(f.x*fracToCart[1][0] + f.y*fracToCart[1][1] + f.z*fracToCart[1][2]),
@@ -1078,11 +1089,11 @@ extern "C" __global__ void recordInducedFieldDipoles(const real* __restrict__ ph
     }
     __syncthreads();
     for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < NUM_ATOMS; i += blockDim.x*gridDim.x) {
-        inducedField[i] -= (long long) (0x100000000*(phid[10*i+1]*fracToCart[0][0] + phid[10*i+2]*fracToCart[0][1] + phid[10*i+3]*fracToCart[0][2]));
-        inducedField[i+PADDED_NUM_ATOMS] -= (long long) (0x100000000*(phid[10*i+1]*fracToCart[1][0] + phid[10*i+2]*fracToCart[1][1] + phid[10*i+3]*fracToCart[1][2]));
-        inducedField[i+PADDED_NUM_ATOMS*2] -= (long long) (0x100000000*(phid[10*i+1]*fracToCart[2][0] + phid[10*i+2]*fracToCart[2][1] + phid[10*i+3]*fracToCart[2][2]));
-        inducedFieldPolar[i] -= (long long) (0x100000000*(phip[10*i+1]*fracToCart[0][0] + phip[10*i+2]*fracToCart[0][1] + phip[10*i+3]*fracToCart[0][2]));
-        inducedFieldPolar[i+PADDED_NUM_ATOMS] -= (long long) (0x100000000*(phip[10*i+1]*fracToCart[1][0] + phip[10*i+2]*fracToCart[1][1] + phip[10*i+3]*fracToCart[1][2]));
-        inducedFieldPolar[i+PADDED_NUM_ATOMS*2] -= (long long) (0x100000000*(phip[10*i+1]*fracToCart[2][0] + phip[10*i+2]*fracToCart[2][1] + phip[10*i+3]*fracToCart[2][2]));
+        inducedField[i] -= (long long) (0x100000000*(phid[i+NUM_ATOMS]*fracToCart[0][0] + phid[i+NUM_ATOMS*2]*fracToCart[0][1] + phid[i+NUM_ATOMS*3]*fracToCart[0][2]));
+        inducedField[i+PADDED_NUM_ATOMS] -= (long long) (0x100000000*(phid[i+NUM_ATOMS]*fracToCart[1][0] + phid[i+NUM_ATOMS*2]*fracToCart[1][1] + phid[i+NUM_ATOMS*3]*fracToCart[1][2]));
+        inducedField[i+PADDED_NUM_ATOMS*2] -= (long long) (0x100000000*(phid[i+NUM_ATOMS]*fracToCart[2][0] + phid[i+NUM_ATOMS*2]*fracToCart[2][1] + phid[i+NUM_ATOMS*3]*fracToCart[2][2]));
+        inducedFieldPolar[i] -= (long long) (0x100000000*(phip[i+NUM_ATOMS]*fracToCart[0][0] + phip[i+NUM_ATOMS*2]*fracToCart[0][1] + phip[i+NUM_ATOMS*3]*fracToCart[0][2]));
+        inducedFieldPolar[i+PADDED_NUM_ATOMS] -= (long long) (0x100000000*(phip[i+NUM_ATOMS]*fracToCart[1][0] + phip[i+NUM_ATOMS*2]*fracToCart[1][1] + phip[i+NUM_ATOMS*3]*fracToCart[1][2]));
+        inducedFieldPolar[i+PADDED_NUM_ATOMS*2] -= (long long) (0x100000000*(phip[i+NUM_ATOMS]*fracToCart[2][0] + phip[i+NUM_ATOMS*2]*fracToCart[2][1] + phip[i+NUM_ATOMS*3]*fracToCart[2][2]));
     }
 }

@@ -24,16 +24,16 @@ install:
   - choco install -y doxygen.portable swig jom xmlstarlet
 
 # Set CMake options
-  - ps: $env:CMAKE_FLAGS="-DOPENMM_BUILD_PME_PLUGIN=ON -DFFTW_LIBRARY=C:/fftw/libfftw3f-3.lib -DFFTW_INCLUDES=C:/fftw -DCMAKE_BUILD_TYPE=Release -DOPENMM_BUILD_EXAMPLES=OFF"
+  - ps: $env:CMAKE_FLAGS='-DOPENMM_BUILD_PME_PLUGIN=ON -DFFTW_LIBRARY=C:/fftw/libfftw3f-3.lib -DFFTW_INCLUDES=C:/fftw -DCMAKE_BUILD_TYPE=Release -DOPENMM_BUILD_EXAMPLES=OFF -DCMAKE_CXX_FLAGS_RELEASE="/MD /Od /Ob0 /D NDEBUG"'
   - mkdir build
   - cd build
-  - cmake -G "NMake Makefiles" %CMAKE_FLAGS% -LA ..
+  - cmake -G "NMake Makefiles JOM" %CMAKE_FLAGS% -LA ..
+
+# Run the build
+  - cmake --build . --target install
+  - cmake --build . --target PythonInstall
 
 build: false
-build_script:
-  - jom install
-  - jom PythonInstall
-
 test_script:
   - ctest -T Test || exit 0
   - python -c "import os; fn = os.path.join('Testing', 'Temporary', 'LastTestsFailed.log'); os.path.exists(fn) or exit(0); failed = [line.split(':')[0] for line in open(fn)]; print(','.join(x+','+x for x in failed))" > FailedTests.log

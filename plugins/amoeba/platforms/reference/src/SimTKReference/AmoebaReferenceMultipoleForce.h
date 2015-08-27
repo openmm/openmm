@@ -37,6 +37,20 @@ typedef std::map< unsigned int, RealOpenMM> MapIntRealOpenMM;
 typedef MapIntRealOpenMM::iterator MapIntRealOpenMMI;
 typedef MapIntRealOpenMM::const_iterator MapIntRealOpenMMCI;
 
+
+// A few useful constants for the spherical harmonic multipole code.
+const RealOpenMM oneThird = 1.0/3.0;
+const RealOpenMM twoThirds = 2.0/3.0;
+const RealOpenMM fourThirds = 4.0/3.0;
+const RealOpenMM fourSqrtOneThird = 4.0/sqrt(3.0);
+const RealOpenMM sqrtFourThirds = 2.0/sqrt(3.0);
+const RealOpenMM sqrtOneThird = 1.0/sqrt(3.0);
+const RealOpenMM sqrtThree = sqrt(3.0);
+const RealOpenMM oneNinth = 1.0/9.0;
+const RealOpenMM fourOverFortyFive = 4.0/45.0;
+const RealOpenMM fourOverFifteen = 4.0/15.0;
+
+
 /**
  * 2-dimensional int vector
  */
@@ -589,6 +603,8 @@ protected:
             RealOpenMM charge;
             RealVec dipole;
             RealOpenMM quadrupole[6];
+            RealVec sphericalDipole;
+            RealOpenMM sphericalQuadrupole[5];
             RealOpenMM thole;
             RealOpenMM dampingFactor;
             RealOpenMM polarity;
@@ -794,6 +810,41 @@ protected:
                                        const MultipoleParticleData& particleZ,
                                        const MultipoleParticleData& particleX,
                                              MultipoleParticleData* particleY, int axisType) const;
+
+    /**
+     * Forms the rotation matrix for the quasi-internal coordinate system,
+     * which is the rotation matrix that describes the orientation of the
+     * internuclear vector for a given pair (I,J) in lab frame.
+     *
+     * @param particleI             particleI position
+     * @param particleJ             particleJ position
+     * @param deltaR                the internuclear vector, corrected for periodic boundary conditions
+     * @param r                     the bond length between atoms I and J
+     * @param rotationmatrix        the output rotation matrix for a 3-vector
+     */
+    void formQIRotationMatrix(const RealVec& iPosition,
+                              const RealVec& jPosition,
+                              const RealVec &deltaR,
+                              RealOpenMM r,
+                              RealOpenMM (&rotationMatrix)[3][3]) const;
+
+
+    /**
+     * Constructs a rotation matrix for spherical harmonic quadrupoles, using the dipole rotation matrix.
+     *
+     * @param D1                    The input spherical harmonic dipole rotation matrix
+     * @param D2                    The output spherical harmonic quadrupole rotation matrix
+     */
+     void buildSphericalQuadrupoleRotationMatrix(const RealOpenMM (&D1)[3][3], RealOpenMM (&D2)[5][5]) const;
+
+     /**
+      * Constructs a rotation matrix for spherical harmonic quadrupoles, using the dipole rotation matrix.
+      * Only the m={0,1c,1s} terms are constructed; these are the only terms needed to evaluate the field.
+      *
+      * @param D1                    The input spherical harmonic dipole rotation matrix
+      * @param D2                    The output spherical harmonic quadrupole rotation matrix
+      */
+      void buildPartialSphericalQuadrupoleRotationMatrix(const RealOpenMM (&D1)[3][3], RealOpenMM (&D2)[3][5]) const;
 
     /**
      * Apply rotation matrix to molecular dipole/quadrupoles to get corresponding lab frame values.
