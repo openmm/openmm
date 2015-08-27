@@ -44,7 +44,7 @@ test_script:
          ctest -I FailedTests.log
      }
   - cd python\tests
-  - nosetests -vv --processes=-1 --process-timeout=200
+  - nosetests --with-xunit -vv --processes=-1 --process-timeout=200
 
 
 on_finish:
