@@ -1,5 +1,5 @@
-#ifndef OPENMM_CUSTOMCOMPOUNDBONDFORCE_H_
-#define OPENMM_CUSTOMCOMPOUNDBONDFORCE_H_
+#ifndef OPENMM_CUSTOMCENTROIDBONDFORCE_H_
+#define OPENMM_CUSTOMCENTROIDBONDFORCE_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -41,51 +41,62 @@
 namespace OpenMM {
 
 /**
- * This class supports a wide variety of bonded interactions.  It defines a "bond" as a single energy term
- * that depends on the positions of a fixed set of particles.  The number of particles involved in a bond, and how
- * the energy depends on their positions, is configurable.  It may depend on the positions of individual particles,
- * the distances between pairs of particles, the angles formed by sets of three particles, and the dihedral
- * angles formed by sets of four particles.
- * 
- * We refer to the particles in a bond as p1, p2, p3, etc.  For each bond, CustomCompoundBondForce evaluates a
+ * This class is similar to CustomCompoundBondForce, but instead of applying forces between individual particles,
+ * it applies them between the centers of groups of particles.  This is useful for a variety of purposes, such as
+ * restraints to keep two molecules from moving too far apart.
+ *
+ * When using this class, you define groups of particles, and the center of each group is calculated as a weighted
+ * average of the particle positions.  By default, the particle masses are used as weights, so the center position
+ * is the center of mass.  You can optionally specify different weights to use.  You then add bonds just as with
+ * CustomCompoundBondForce, but instead of specifying the particles that make up a bond, you specify the groups.
+ *
+ * When creating a CustomCentroidBondForce, you specify the number of groups involved in a bond, and an expression
+ * for the energy of each bond.  It may depend on the center positions of individual groups, the distances between
+ * the centers of pairs of groups, the angles formed by sets of three groups, and the dihedral angles formed by
+ * sets of four groups.
+ *
+ * We refer to the groups in a bond as g1, g2, g3, etc.  For each bond, CustomCentroidBondForce evaluates a
  * user supplied algebraic expression to determine the interaction energy.  The expression may depend on the
  * following variables and functions:
- * 
+ *
  * <ul>
- * <li>x1, y1, z1, x2, y2, z2, etc.: The x, y, and z coordinates of the particle positions.  For example, x1
- * is the x coordinate of particle p1, and y3 is the y coordinate of particle p3.</li>
- * <li>distance(p1, p2): the distance between particles p1 and p2 (where "p1" and "p2" may be replaced by the names
- * of whichever particles you want to calculate the distance between).</li>
- * <li>angle(p1, p2, p3): the angle formed by the three specified particles.</li>
- * <li>dihedral(p1, p2, p3, p4): the dihedral angle formed by the four specified particles.</li>
+ * <li>x1, y1, z1, x2, y2, z2, etc.: The x, y, and z coordinates of the centers of the groups.  For example, x1
+ * is the x coordinate of the center of group g1, and y3 is the y coordinate of the center of group g3.</li>
+ * <li>distance(g1, g2): the distance between the centers of groups g1 and g2 (where "g1" and "g2" may be replaced
+ * by the names of whichever groups you want to calculate the distance between).</li>
+ * <li>angle(g1, g2, g3): the angle formed by the centers of the three specified groups.</li>
+ * <li>dihedral(g1, g2, g3, g4): the dihedral angle formed by the centers of the four specified groups.</li>
  * </ul>
  *
- * The expression also may involve tabulated functions, and may depend on arbitrary
- * global and per-bond parameters.
+ * The expression also may involve tabulated functions, and may depend on arbitrary global and per-bond parameters.
  *
- * To use this class, create a CustomCompoundBondForce object, passing an algebraic expression to the constructor
+ * To use this class, create a CustomCentroidBondForce object, passing an algebraic expression to the constructor
  * that defines the interaction energy of each bond.  Then call addPerBondParameter() to define per-bond
  * parameters and addGlobalParameter() to define global parameters.  The values of per-bond parameters are specified
  * as part of the system definition, while values of global parameters may be modified during a simulation by calling
  * Context::setParameter().
  *
- * Next, call addBond() to define bonds and specify their parameter values.  After a bond has been added, you can
+ * Next call addGroup() to define the particle groups.  Each group is specified by the particles it contains, and
+ * the weights to use when computing the center position.
+ *
+ * Then call addBond() to define bonds and specify their parameter values.  After a bond has been added, you can
  * modify its parameters by calling setBondParameters().  This will have no effect on Contexts that already exist unless
  * you call updateParametersInContext().
  *
- * As an example, the following code creates a CustomCompoundBondForce that implements a Urey-Bradley potential.  This
- * is an interaction between three particles that depends on the angle formed by p1-p2-p3, and on the distance between
- * p1 and p3.
- *
- * <tt>CustomCompoundBondForce* force = new CustomCompoundBondForce(3, "0.5*(kangle*(angle(p1,p2,p3)-theta0)^2+kbond*(distance(p1,p3)-r0)^2)");</tt>
- *
- * This force depends on four parameters: kangle, kbond, theta0, and r0.  The following code defines these as per-bond parameters:
- *
+ * As an example, the following code creates a CustomCentroidBondForce that implements a harmonic force between the
+ * centers of mass of two groups of particles.
+ * 
  * <tt><pre>
- * force->addPerBondParameter("kangle");
- * force->addPerBondParameter("kbond");
- * force->addPerBondParameter("theta0");
- * force->addPerBondParameter("r0");
+ * CustomCentroidBondForce* force = new CustomCentroidBondForce(2, "0.5*k*distance(g1,g2)^2");
+ * force->addPerBondParameter("k");
+ * force->addGroup(particles1);
+ * force->addGroup(particles2);
+ * vector<int> bondGroups;
+ * bondGroups.push_back(0);
+ * bondGroups.push_back(1);
+ * vector<double> bondParameters;
+ * bondParameters.push_back(k);
+ * force->addBond(bondGroups, bondParameters);
  * </pre></tt>
  *
  * Expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
@@ -97,23 +108,29 @@ namespace OpenMM {
  * creating a TabulatedFunction object.  That function can then appear in the expression.
  */
 
-class OPENMM_EXPORT CustomCompoundBondForce : public Force {
+class OPENMM_EXPORT CustomCentroidBondForce : public Force {
 public:
     /**
-     * Create a CustomCompoundBondForce.
+     * Create a CustomCentroidBondForce.
      *
-     * @param numParticles  the number of particles used to define each bond
+     * @param numGroups     the number of groups used to define each bond
      * @param energy        an algebraic expression giving the interaction energy of each bond as a function
      *                      of particle positions, inter-particle distances, angles, and dihedrals, and any global
      *                      and per-bond parameters
      */
-    explicit CustomCompoundBondForce(int numParticles, const std::string& energy);
-    ~CustomCompoundBondForce();
+    explicit CustomCentroidBondForce(int numGroups, const std::string& energy);
+    ~CustomCentroidBondForce();
     /**
-     * Get the number of particles used to define each bond.
+     * Get the number of groups used to define each bond.
      */
-    int getNumParticlesPerBond() const {
-        return particlesPerBond;
+    int getNumGroupsPerBond() const {
+        return groupsPerBond;
+    }
+    /**
+     * Get the number of particle groups that have been defined.
+     */
+    int getNumGroups() const {
+        return groups.size();
     }
     /**
      * Get the number of bonds for which force field parameters have been defined.
@@ -141,7 +158,7 @@ public:
     }
     /**
      * Get the number of tabulated functions that have been defined.
-     * 
+     *
      * @deprecated This method exists only for backward compatibility.  Use getNumTabulatedFunctions() instead.
      */
     int getNumFunctions() const {
@@ -213,29 +230,57 @@ public:
      */
     void setGlobalParameterDefaultValue(int index, double defaultValue);
     /**
+     * Add a particle group.
+     *
+     * @param particles   the indices of the particles to include in the group
+     * @param weights     the weight to use for each particle when computing the center position.
+     *                    If this is omitted, then particle masses will be used as weights.
+     * @return the index of the group that was added
+     */
+    int addGroup(const std::vector<int>& particles, const std::vector<double>& weights = std::vector<double>());
+    /**
+     * Get the properties of a group.
+     *
+     * @param index       the index of the group to get
+     * @param particles   the indices of the particles in the group
+     * @param weights     the weight used for each particle when computing the center position.
+     *                    If no weights were specified, this vector will be empty indicating that particle
+     *                    masses should be used as weights.
+     */
+    void getGroupParameters(int index, std::vector<int>& particles, std::vector<double>& weights) const;
+    /**
+     * Set the properties of a group.
+     *
+     * @param index       the index of the group to set
+     * @param particles   the indices of the particles in the group
+     * @param weights     the weight to use for each particle when computing the center position.
+     *                    If this is omitted, then particle masses will be used as weights.
+     */
+    void setGroupParameters(int index, const std::vector<int>& particles, const std::vector<double>& weights = std::vector<double>());
+    /**
      * Add a bond to the force
      *
-     * @param particles   the indices of the particles the bond depends on
+     * @param groups      the indices of the groups the bond depends on
      * @param parameters  the list of per-bond parameter values for the new bond
      * @return the index of the bond that was added
      */
-    int addBond(const std::vector<int>& particles, const std::vector<double>& parameters);
+    int addBond(const std::vector<int>& groups, const std::vector<double>& parameters);
     /**
      * Get the properties of a bond.
      *
      * @param index       the index of the bond to get
-     * @param particles   the indices of the particles in the bond
+     * @param groups      the indices of the groups in the bond
      * @param parameters  the list of per-bond parameter values for the bond
      */
-    void getBondParameters(int index, std::vector<int>& particles, std::vector<double>& parameters) const;
+    void getBondParameters(int index, std::vector<int>& groups, std::vector<double>& parameters) const;
     /**
      * Set the properties of a bond.
      *
      * @param index       the index of the bond to set
-     * @param particles   the indices of the particles in the bond
+     * @param groups      the indices of the groups in the bond
      * @param parameters  the list of per-bond parameter values for the bond
      */
-    void setBondParameters(int index, const std::vector<int>& particles, const std::vector<double>& parameters);
+    void setBondParameters(int index, const std::vector<int>& groups, const std::vector<double>& parameters);
     /**
      * Add a tabulated function that may appear in the energy expression.
      *
@@ -268,34 +313,14 @@ public:
      */
     const std::string& getTabulatedFunctionName(int index) const;
     /**
-     * Add a tabulated function that may appear in the energy expression.
-     *
-     * @deprecated This method exists only for backward compatibility.  Use addTabulatedFunction() instead.
-     */
-    int addFunction(const std::string& name, const std::vector<double>& values, double min, double max);
-    /**
-     * Get the parameters for a tabulated function that may appear in the energy expression.
-     *
-     * @deprecated This method exists only for backward compatibility.  Use getTabulatedFunctionParameters() instead.
-     * If the specified function is not a Continuous1DFunction, this throws an exception.
-     */
-    void getFunctionParameters(int index, std::string& name, std::vector<double>& values, double& min, double& max) const;
-    /**
-     * Set the parameters for a tabulated function that may appear in the energy expression.
-     *
-     * @deprecated This method exists only for backward compatibility.  Use setTabulatedFunctionParameters() instead.
-     * If the specified function is not a Continuous1DFunction, this throws an exception.
-     */
-    void setFunctionParameters(int index, const std::string& name, const std::vector<double>& values, double min, double max);
-    /**
      * Update the per-bond parameters in a Context to match those stored in this Force object.  This method provides
      * an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
      * Simply call setBondParameters() to modify this object's parameters, then call updateParametersInContext()
      * to copy them over to the Context.
-     * 
+     *
      * This method has several limitations.  The only information it updates is the values of per-bond parameters.
      * All other aspects of the Force (such as the energy function) are unaffected and can only be changed by reinitializing
-     * the Context.  The set of particles involved in a bond cannot be changed, nor can new bonds be added.
+     * the Context.  The set of groups involved in a bond cannot be changed, nor can new bonds be added.
      */
     void updateParametersInContext(Context& context);
     /**
@@ -310,30 +335,47 @@ public:
 protected:
     ForceImpl* createImpl() const;
 private:
+    class GroupInfo;
     class BondInfo;
     class BondParameterInfo;
     class GlobalParameterInfo;
     class FunctionInfo;
-    int particlesPerBond;
+    int groupsPerBond;
     std::string energyExpression;
     std::vector<BondParameterInfo> bondParameters;
     std::vector<GlobalParameterInfo> globalParameters;
+    std::vector<GroupInfo> groups;
     std::vector<BondInfo> bonds;
     std::vector<FunctionInfo> functions;
+};
+
+/**
+ * This is an internal class used to record information about a group.
+ * @private
+ */
+class CustomCentroidBondForce::GroupInfo {
+public:
+    std::vector<int> particles;
+    std::vector<double> weights;
+    GroupInfo() {
+    }
+    GroupInfo(const std::vector<int>& particles, const std::vector<double>& weights) :
+        particles(particles), weights(weights) {
+    }
 };
 
 /**
  * This is an internal class used to record information about a bond.
  * @private
  */
-class CustomCompoundBondForce::BondInfo {
+class CustomCentroidBondForce::BondInfo {
 public:
-    std::vector<int> particles;
+    std::vector<int> groups;
     std::vector<double> parameters;
     BondInfo() {
     }
-    BondInfo(const std::vector<int>& particles, const std::vector<double>& parameters) :
-        particles(particles), parameters(parameters) {
+    BondInfo(const std::vector<int>& groups, const std::vector<double>& parameters) :
+        groups(groups), parameters(parameters) {
     }
 };
 
@@ -341,7 +383,7 @@ public:
  * This is an internal class used to record information about a per-bond parameter.
  * @private
  */
-class CustomCompoundBondForce::BondParameterInfo {
+class CustomCentroidBondForce::BondParameterInfo {
 public:
     std::string name;
     BondParameterInfo() {
@@ -354,7 +396,7 @@ public:
  * This is an internal class used to record information about a global parameter.
  * @private
  */
-class CustomCompoundBondForce::GlobalParameterInfo {
+class CustomCentroidBondForce::GlobalParameterInfo {
 public:
     std::string name;
     double defaultValue;
@@ -368,7 +410,7 @@ public:
  * This is an internal class used to record information about a tabulated function.
  * @private
  */
-class CustomCompoundBondForce::FunctionInfo {
+class CustomCentroidBondForce::FunctionInfo {
 public:
     std::string name;
     TabulatedFunction* function;
@@ -380,4 +422,4 @@ public:
 
 } // namespace OpenMM
 
-#endif /*OPENMM_CUSTOMCOMPOUNDBONDFORCE_H_*/
+#endif /*OPENMM_CUSTOMCENTROIDBONDFORCE_H_*/

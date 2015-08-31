@@ -38,6 +38,7 @@
 #include "openmm/CMMotionRemover.h"
 #include "openmm/CustomAngleForce.h"
 #include "openmm/CustomBondForce.h"
+#include "openmm/CustomCentroidBondForce.h"
 #include "openmm/CustomCompoundBondForce.h"
 #include "openmm/CustomExternalForce.h"
 #include "openmm/CustomGBForce.h"
@@ -799,6 +800,41 @@ public:
      * @param force      the CustomHbondForce to copy the parameters from
      */
     virtual void copyParametersToContext(ContextImpl& context, const CustomHbondForce& force) = 0;
+};
+
+/**
+ * This kernel is invoked by CustomCentroidBondForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CalcCustomCentroidBondForceKernel : public KernelImpl {
+public:
+    static std::string Name() {
+        return "CalcCustomCentroidBondForce";
+    }
+    CalcCustomCentroidBondForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomCentroidBondForce this kernel will be used for
+     */
+    virtual void initialize(const System& system, const CustomCentroidBondForce& force) = 0;
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomCentroidBondForce to copy the parameters from
+     */
+    virtual void copyParametersToContext(ContextImpl& context, const CustomCentroidBondForce& force) = 0;
 };
 
 /**
