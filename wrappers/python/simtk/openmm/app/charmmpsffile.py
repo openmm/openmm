@@ -33,11 +33,14 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
 
 from functools import wraps
 from math import pi, cos, sin, sqrt
 import os
 import re
+import sys
 import simtk.openmm as mm
 from simtk.openmm.vec3 import Vec3
 import simtk.unit as u
@@ -58,7 +61,8 @@ import warnings
 
 TINY = 1e-8
 WATNAMES = ('WAT', 'HOH', 'TIP3', 'TIP4', 'TIP5', 'SPCE', 'SPC')
-
+if sys.version_info >= (3, 0):
+    xrange = range
 
 def _catchindexerror(func):
     """
@@ -70,7 +74,7 @@ def _catchindexerror(func):
         """ Catch the index error """
         try:
             return func(*args, **kwargs)
-        except IndexError, e:
+        except IndexError as e:
             raise CharmmPSFError('Array is too short: %s' % e)
 
     return newfunc
@@ -386,8 +390,8 @@ class CharmmPsfFile(object):
         """
         try:
             return type(string)
-        except ValueError, e:
-            print e
+        except ValueError as e:
+            print(e)
             raise CharmmPSFError('Could not convert %s' % message)
 
     @staticmethod
@@ -1251,8 +1255,8 @@ class CharmmPsfFile(object):
             elif implicitSolvent is GBn2:
                 gb = GBSAGBn2Force(solventDielectric, soluteDielectric, None,
                                    cutoff, kappa=implicitSolventKappa)
-            for i, atom in enumerate(self.atom_list):
-                gb.addParticle([atom.charge] + list(gb_parms[i]))
+            for atom, gb_parm in zip(self.atom_list, gb_parms):
+                gb.addParticle([atom.charge] + list(gb_parm))
             # Set cutoff method
             if nonbondedMethod is ff.NoCutoff:
                 gb.setNonbondedMethod(mm.NonbondedForce.NoCutoff)

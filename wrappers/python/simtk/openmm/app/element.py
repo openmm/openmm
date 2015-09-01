@@ -28,12 +28,18 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
+from __future__ import absolute_import
 __author__ = "Christopher M. Bruns"
 __version__ = "1.0"
 
+import sys
 from collections import OrderedDict
 from simtk.unit import daltons, is_quantity
-import copy_reg
+if sys.version_info >= (3, 0):
+    import copyreg
+else:
+    import copy_reg as copyreg
+
 
 class Element(object):
     """An Element represents a chemical element.
@@ -128,7 +134,7 @@ class Element(object):
         diff = mass
         best_guess = None
 
-        for elemmass, element in Element._elements_by_mass.iteritems():
+        for elemmass, element in _iteritems(Element._elements_by_mass):
             massdiff = abs(elemmass - mass)
             if massdiff < diff:
                 best_guess = element
@@ -172,7 +178,7 @@ def get_by_symbol(symbol):
 def _pickle_element(element):
     return (get_by_symbol, (element.symbol,))
 
-copy_reg.pickle(Element, _pickle_element)
+copyreg.pickle(Element, _pickle_element)
 
 # NOTE: getElementByMass assumes all masses are Quantity instances with unit
 # "daltons". All elements need to obey this assumption, or that method will
@@ -299,3 +305,10 @@ ununhexium =     Element(116, "ununhexium",     "Uuh", 292*daltons)
 # relational operators will work with any chosen name
 sulphur = sulfur
 aluminium = aluminum
+
+if sys.version_info >= (3, 0):
+    def _iteritems(dict):
+        return dict.items()
+else:
+    def _iteritems(dict):
+        return dict.iteritems()

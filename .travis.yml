@@ -1,6 +1,8 @@
-language: cpp
-compiler:
-  - clang
+language: python
+python:
+  - "2.7_with_system_site_packages"
+  - "3.4"
+
 sudo: false
 addons:
   apt:
@@ -10,16 +12,10 @@ addons:
       - libpcre3
       - libpcre3-dev
       - gromacs
-      - swig
       - doxygen
-      - clang-3.3
-      - llvm-3.3
       - python-numpy
       - python-scipy
-      - python-sphinx
-      - python-yaml
-      - python-pip
-      - python-virtualenv
+
 
 env:
   matrix:
@@ -29,11 +25,14 @@ env:
 before_install:
   - export CC=clang
   - export CXX=clang++
-  - export ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer-3.3
+
+  - wget https://anaconda.org/anaconda/swig/3.0.2/download/linux-64/swig-3.0.2-0.tar.bz2
+  - mkdir $HOME/swig
+  - tar -xjvf swig-3.0.2-0.tar.bz2 -C $HOME/swig
+  - export PATH=$HOME/swig/bin:$PATH
+  - export SWIG_LIB=$HOME/swig/share/swig/3.0.2
 
 script:
-  - virtualenv --system-site-packages openmm_env
-  - source openmm_env/bin/activate
   - cmake -DCMAKE_INSTALL_PREFIX=$HOME/OpenMM -DOPENMM_BUILD_STATIC_LIB=$OPENMM_BUILD_STATIC_LIB .
   - make -j2
   - make -j2 install
@@ -43,11 +42,12 @@ script:
   - # run all of the tests, making sure failures at this stage don't cause travis failures
   - ctest -j2 || true
   - # get a list of all of the failed tests into this stupid ctest format
-  - python -c 'fn = "Testing/Temporary/LastTestsFailed.log"; import os; os.path.exists(fn) or exit(0); l = [line.split(":")[0] for line in open(fn)]; triplets = zip(l, l, [","]*len(l)); print "".join(",".join(t) for t in triplets)' > FailedTests.log
+  - python -c "import os; fn = os.path.join('Testing', 'Temporary', 'LastTestsFailed.log'); os.path.exists(fn) or exit(0); failed = [line.split(':')[0] for line in open(fn)]; print(','.join(x+','+x for x in failed))" > FailedTests.log
   - # rerun all of the failed tests
   - if [ -s Testing/Temporary/LastTestsFailed.log ]; then ctest -I FailedTests.log; fi;
   - # run the python tests too
-  - cd python/tests
-  - pip install nose
-  - nosetests -vv --processes=-1 --process-timeout=200
+  - cd python/tests  
+  - # nosetests -vv --processes=-1 --process-timeout=200
+  - # nosetests -vv
+  - py.test -v *
   - cd -

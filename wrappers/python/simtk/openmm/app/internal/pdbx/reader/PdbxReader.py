@@ -22,6 +22,7 @@ Acknowledgements:
  See:  http://pymmlib.sourceforge.net/
 
 """
+from __future__ import absolute_import
 
 import re,sys
 from simtk.openmm.app.internal.pdbx.reader.PdbxContainers import *
@@ -126,7 +127,7 @@ class PdbxReader(object):
         # Find the first reserved word and begin capturing data.
         #
         while True:
-            curCatName, curAttName, curQuotedString, curWord = tokenizer.next()
+            curCatName, curAttName, curQuotedString, curWord = next(tokenizer)
             if curWord is None:
                 continue
             reservedWord, state  = self.__getState(curWord)
@@ -183,7 +184,7 @@ class PdbxReader(object):
 
 
                 # Get the data for this attribute from the next token
-                tCat, tAtt, curQuotedString, curWord = tokenizer.next()
+                tCat, tAtt, curQuotedString, curWord = next(tokenizer)
 
                 if tCat is not None or (curQuotedString is None and curWord is None):
                     self.__syntaxError("Missing data for item _%s.%s" % (curCatName,curAttName))
@@ -204,7 +205,7 @@ class PdbxReader(object):
                 else:
                     self.__syntaxError("Missing value in item-value pair")
 
-                curCatName, curAttName, curQuotedString, curWord = tokenizer.next()
+                curCatName, curAttName, curQuotedString, curWord = next(tokenizer)
                 continue
 
             #
@@ -214,14 +215,14 @@ class PdbxReader(object):
 
                 # The category name in the next curCatName,curAttName pair
                 #    defines the name of the category container.
-                curCatName,curAttName,curQuotedString,curWord = tokenizer.next()
+                curCatName,curAttName,curQuotedString,curWord = next(tokenizer)
 
                 if curCatName is None or curAttName is None:
                     self.__syntaxError("Unexpected token in loop_ declaration")
                     return
 
                 # Check for a previous category declaration.
-                if categoryIndex.has_key(curCatName):
+                if curCatName in categoryIndex:
                     self.__syntaxError("Duplicate category declaration in loop_")
                     return
 
@@ -237,7 +238,7 @@ class PdbxReader(object):
 
                 # Read the rest of the loop_ declaration 
                 while True:
-                    curCatName, curAttName, curQuotedString, curWord = tokenizer.next()
+                    curCatName, curAttName, curQuotedString, curWord = next(tokenizer)
                     
                     if curCatName is None:
                         break
@@ -269,7 +270,7 @@ class PdbxReader(object):
                         elif curQuotedString is not None:
                             curRow.append(curQuotedString)
 
-                        curCatName,curAttName,curQuotedString,curWord = tokenizer.next()
+                        curCatName,curAttName,curQuotedString,curWord = next(tokenizer)
 
                     # loop_ data processing ends if - 
 
@@ -295,7 +296,7 @@ class PdbxReader(object):
                     categoryIndex = {}
                     curCategory = None
 
-                curCatName,curAttName,curQuotedString,curWord = tokenizer.next()
+                curCatName,curAttName,curQuotedString,curWord = next(tokenizer)
 
             elif state == "ST_DATA_CONTAINER":
                 #
@@ -306,7 +307,7 @@ class PdbxReader(object):
                 containerList.append(curContainer)
                 categoryIndex = {}
                 curCategory = None
-                curCatName,curAttName,curQuotedString,curWord = tokenizer.next()
+                curCatName,curAttName,curQuotedString,curWord = next(tokenizer)
 
             elif state == "ST_STOP":
                 return
@@ -316,7 +317,7 @@ class PdbxReader(object):
                 containerList.append(curContainer)
                 categoryIndex = {}
                 curCategory = None
-                curCatName,curAttName,curQuotedString,curWord = tokenizer.next()
+                curCatName,curAttName,curQuotedString,curWord = next(tokenizer)
 
             elif state == "ST_UNKNOWN":
                 self.__syntaxError("Unrecogized syntax element: " + str(curWord))
@@ -355,7 +356,7 @@ class PdbxReader(object):
 
         ## Tokenizer loop begins here ---
         while True:
-            line = fileIter.next()
+            line = next(fileIter)
             self.__curLineNumber += 1
 
             # Dump comments
@@ -368,7 +369,7 @@ class PdbxReader(object):
             if line.startswith(";"):
                 mlString = [line[1:]]
                 while True:
-                    line = fileIter.next()
+                    line = next(fileIter)
                     self.__curLineNumber += 1
                     if line.startswith(";"):
                         break
@@ -426,7 +427,7 @@ class PdbxReader(object):
 
         ## Tokenizer loop begins here ---
         while True:
-            line = fileIter.next()
+            line = next(fileIter)
             self.__curLineNumber += 1
 
             # Dump comments
@@ -439,7 +440,7 @@ class PdbxReader(object):
             if line.startswith(";"):
                 mlString = [line[1:]]
                 while True:
-                    line = fileIter.next()
+                    line = next(fileIter)
                     self.__curLineNumber += 1
                     if line.startswith(";"):
                         break

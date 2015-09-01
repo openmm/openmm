@@ -34,6 +34,8 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
+from __future__ import absolute_import
+from __future__ import print_function
 
 #=============================================================================================
 # GLOBAL IMPORTS
@@ -54,7 +56,7 @@ import simtk.openmm
 from simtk.openmm.app import element as elem
 from simtk.openmm.app.internal.unitcell import computePeriodicBoxVectors
 from simtk.openmm.vec3 import Vec3
-import customgbforces as customgb
+from . import customgbforces as customgb
 
 #=============================================================================================
 # AMBER parmtop loader (from 'zander', by Randall J. Radmer)
@@ -713,7 +715,7 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
         raise Exception("Cannot specify both a filename and a loader")
     if prmtop_filename is not None:
         # Load prmtop file.
-        if verbose: print "Reading prmtop file '%s'..." % prmtop_filename
+        if verbose: print("Reading prmtop file '%s'..." % prmtop_filename)
         prmtop = PrmtopLoader(prmtop_filename)
     else:
         prmtop = prmtop_loader
@@ -737,11 +739,11 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
         mm = simtk.openmm
 
     # Create OpenMM System.
-    if verbose: print "Creating OpenMM system..."
+    if verbose: print("Creating OpenMM system...")
     system = mm.System()
 
     # Populate system with atomic masses.
-    if verbose: print "Adding particles..."
+    if verbose: print("Adding particles...")
     for mass in prmtop.getMasses():
         system.addParticle(mass)
 
@@ -759,7 +761,7 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
                 system.addConstraint(iAtom, jAtom, rMin)
 
     # Add harmonic bonds.
-    if verbose: print "Adding bonds..."
+    if verbose: print("Adding bonds...")
     force = mm.HarmonicBondForce()
     if flexibleConstraints or (shake not in ('h-bonds', 'all-bonds', 'h-angles')):
         for (iAtom, jAtom, k, rMin) in prmtop.getBondsWithH():
@@ -771,7 +773,7 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
     system.addForce(force)
 
     # Add harmonic angles.
-    if verbose: print "Adding angles..."
+    if verbose: print("Adding angles...")
     force = mm.HarmonicAngleForce()
     if shake == 'h-angles':
         numConstrainedBonds = system.getNumConstraints()
@@ -809,14 +811,14 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
     system.addForce(force)
 
     # Add torsions.
-    if verbose: print "Adding torsions..."
+    if verbose: print("Adding torsions...")
     force = mm.PeriodicTorsionForce()
     for (iAtom, jAtom, kAtom, lAtom, forceConstant, phase, periodicity) in prmtop.getDihedrals():
         force.addTorsion(iAtom, jAtom, kAtom, lAtom, periodicity, phase, forceConstant)
     system.addForce(force)
 
     # Add nonbonded interactions.
-    if verbose: print "Adding nonbonded interactions..."
+    if verbose: print("Adding nonbonded interactions...")
     force = mm.NonbondedForce()
     if (prmtop.getIfBox() == 0):
         # System is non-periodic.
@@ -1044,7 +1046,7 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
         # Convert implicitSolventKappa to nanometers if it is a unit.
         if units.is_quantity(implicitSolventKappa):
             implicitSolventKappa = implicitSolventKappa.value_in_unit((1/units.nanometers).unit)
-        if verbose: print "Adding GB parameters..."
+        if verbose: print("Adding GB parameters...")
         charges = prmtop.getCharges()
         cutoff = None
         if nonbondedMethod != 'NoCutoff':
@@ -1071,14 +1073,15 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
             gb = customgb.GBSAGBn2Force(solventDielectric, soluteDielectric, 'ACE', cutoff, implicitSolventKappa)
         else:
             raise Exception("Illegal value specified for implicit solvent model")
-        for iAtom in range(prmtop.getNumAtoms()):
+
+        for charge, gb_parm in zip(charges, gb_parms):
             if gbmodel == 'OBC2' and implicitSolventKappa == 0:
-                gb.addParticle(charges[iAtom], gb_parms[iAtom][0], gb_parms[iAtom][1])
+                gb.addParticle(charge, gb_parm[0], gb_parm[1])
             elif gbmodel == 'GBn2':
-                gb.addParticle([charges[iAtom], gb_parms[iAtom][0], gb_parms[iAtom][1],
-                                gb_parms[iAtom][2], gb_parms[iAtom][3], gb_parms[iAtom][4]])
+                gb.addParticle([charge, gb_parm[0], gb_parm[1],
+                                gb_parm[2], gb_parm[3], gb_parm[4]])
             else:
-                gb.addParticle([charges[iAtom], gb_parms[iAtom][0], gb_parms[iAtom][1]])
+                gb.addParticle([charge, gb_parm[0], gb_parm[1]])
         system.addForce(gb)
         if nonbondedMethod == 'NoCutoff':
             gb.setNonbondedMethod(mm.NonbondedForce.NoCutoff)

@@ -28,6 +28,8 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
+from __future__ import absolute_import
+from __future__ import print_function
 __author__ = "Peter Eastman"
 __version__ = "1.0"
 
@@ -38,7 +40,7 @@ import math
 from math import sqrt, cos
 import simtk.openmm as mm
 import simtk.unit as unit
-import element as elem
+from . import element as elem
 from simtk.openmm.app import Topology
 
 def _convertParameterToNumber(param):
@@ -1883,7 +1885,7 @@ def countConstraint(data):
         if (isConstrained):
             angleCount += 1
 
-    print "Constraints bond=%d angle=%d  total=%d" % (bondCount, angleCount, (bondCount+angleCount))
+    print("Constraints bond=%d angle=%d  total=%d" % (bondCount, angleCount, (bondCount+angleCount)))
 
 ## @private
 class AmoebaBondGenerator:
