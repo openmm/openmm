@@ -320,7 +320,8 @@ public:
      *
      * This method has several limitations.  The only information it updates is the values of per-bond parameters.
      * All other aspects of the Force (such as the energy function) are unaffected and can only be changed by reinitializing
-     * the Context.  The set of groups involved in a bond cannot be changed, nor can new bonds be added.
+     * the Context.  Neither the definitions of groups nor the set of groups involved in a bond can be changed, nor can new
+     * bonds be added.
      */
     void updateParametersInContext(Context& context);
     /**

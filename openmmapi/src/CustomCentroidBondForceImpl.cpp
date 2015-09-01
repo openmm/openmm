@@ -36,18 +36,14 @@
 #include "lepton/Operation.h"
 #include "lepton/Parser.h"
 #include <sstream>
+#include <utility>
 
 using namespace OpenMM;
+using namespace std;
 using Lepton::CustomFunction;
 using Lepton::ExpressionTreeNode;
 using Lepton::Operation;
 using Lepton::ParsedExpression;
-using std::map;
-using std::pair;
-using std::vector;
-using std::set;
-using std::string;
-using std::stringstream;
 
 /**
  * This class serves as a placeholder for angles and dihedrals in expressions.
@@ -211,6 +207,65 @@ ExpressionTreeNode CustomCentroidBondForceImpl::replaceFunctions(const Expressio
     return ExpressionTreeNode(new Operation::Variable(name));
 }
 
+vector<pair<int, int> > CustomCentroidBondForceImpl::getBondedParticles() const {
+    vector<pair<int, int> > bonds;
+    for (int i = 0; i < owner.getNumBonds(); i++) {
+        vector<int> groups;
+        vector<double> parameters;
+        owner.getBondParameters(i, groups, parameters);
+        for (int j = 1; j < groups.size(); j++)
+            for (int k = 0; k < j; k++)
+                addBondsBetweenGroups(j, k, bonds);
+    }
+    return bonds;
+}
+
+void CustomCentroidBondForceImpl::addBondsBetweenGroups(int group1, int group2, vector<pair<int, int> >& bonds) const {
+    vector<int> atoms1;
+    vector<int> atoms2;
+    vector<double> weights;
+    owner.getGroupParameters(group1, atoms1, weights);
+    owner.getGroupParameters(group2, atoms2, weights);
+    for (int i = 0; i < atoms1.size(); i++)
+        for (int j = 0; j < atoms2.size(); j++)
+            bonds.push_back(make_pair(atoms1[i], atoms2[j]));
+}
+
 void CustomCentroidBondForceImpl::updateParametersInContext(ContextImpl& context) {
     kernel.getAs<CalcCustomCentroidBondForceKernel>().copyParametersToContext(context, owner);
+}
+
+void CustomCentroidBondForceImpl::computeNormalizedWeights(const CustomCentroidBondForce& force, const System& system, vector<vector<double> >& weights) {
+    int numGroups = force.getNumGroups();
+    weights.resize(numGroups);
+    for (int i = 0; i < numGroups; i++) {
+        vector<int> particles;
+        vector<double> groupWeights;
+        force.getGroupParameters(i, particles, groupWeights);
+        int numParticles = particles.size();
+
+        // If weights were not specified, use particle masses.
+
+        if (groupWeights.size() == 0) {
+            groupWeights.resize(numParticles);
+            for (int j = 0; j < numParticles; j++)
+                groupWeights[j] = system.getParticleMass(particles[j]);
+        }
+
+        // Normalize the weights.
+
+        double total = 0;
+        for (int j = 0; j < numParticles; j++)
+            total += groupWeights[j];
+        if (total == 0.0) {
+            stringstream msg;
+            msg << "CustomCentroidBondForce: Weights for group ";
+            msg << i;
+            msg << " add to 0";
+            throw OpenMMException(msg.str());
+        }
+        weights[i].resize(numParticles);
+        for (int j = 0; j < numParticles; j++)
+            weights[i][j] = groupWeights[j]/total;
+    }
 }

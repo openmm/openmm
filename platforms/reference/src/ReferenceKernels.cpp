@@ -41,6 +41,7 @@
 #include "ReferenceConstraints.h"
 #include "ReferenceCustomAngleIxn.h"
 #include "ReferenceCustomBondIxn.h"
+#include "ReferenceCustomCentroidBondIxn.h"
 #include "ReferenceCustomCompoundBondIxn.h"
 #include "ReferenceCustomDynamics.h"
 #include "ReferenceCustomExternalIxn.h"
@@ -66,6 +67,7 @@
 #include "openmm/System.h"
 #include "openmm/internal/AndersenThermostatImpl.h"
 #include "openmm/internal/ContextImpl.h"
+#include "openmm/internal/CustomCentroidBondForceImpl.h"
 #include "openmm/internal/CustomCompoundBondForceImpl.h"
 #include "openmm/internal/CustomHbondForceImpl.h"
 #include "openmm/internal/CustomNonbondedForceImpl.h"
@@ -1582,6 +1584,90 @@ void ReferenceCalcCustomHbondForceKernel::copyParametersToContext(ContextImpl& c
     }
 }
 
+ReferenceCalcCustomCentroidBondForceKernel::~ReferenceCalcCustomCentroidBondForceKernel() {
+    disposeRealArray(bondParamArray, numBonds);
+    if (ixn != NULL)
+        delete ixn;
+}
+
+void ReferenceCalcCustomCentroidBondForceKernel::initialize(const System& system, const CustomCentroidBondForce& force) {
+
+    // Build the arrays.
+
+    int numGroups = force.getNumGroups();
+    vector<vector<int> > groupAtoms(numGroups);
+    vector<double> ignored;
+    for (int i = 0; i < numGroups; i++)
+        force.getGroupParameters(i, groupAtoms[i], ignored);
+    vector<vector<double> > normalizedWeights;
+    CustomCentroidBondForceImpl::computeNormalizedWeights(force, system, normalizedWeights);
+    numBonds = force.getNumBonds();
+    vector<vector<int> > bondGroups(numBonds);
+    int numBondParameters = force.getNumPerBondParameters();
+    bondParamArray = allocateRealArray(numBonds, numBondParameters);
+    for (int i = 0; i < numBonds; ++i) {
+        vector<double> parameters;
+        force.getBondParameters(i, bondGroups[i], parameters);
+        for (int j = 0; j < numBondParameters; j++)
+            bondParamArray[i][j] = static_cast<RealOpenMM>(parameters[j]);
+    }
+
+    // Create custom functions for the tabulated functions.
+
+    map<string, Lepton::CustomFunction*> functions;
+    for (int i = 0; i < force.getNumFunctions(); i++)
+        functions[force.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
+
+    // Parse the expression and create the object used to calculate the interaction.
+
+    map<string, vector<int> > distances;
+    map<string, vector<int> > angles;
+    map<string, vector<int> > dihedrals;
+    Lepton::ParsedExpression energyExpression = CustomCentroidBondForceImpl::prepareExpression(force, functions, distances, angles, dihedrals);
+    vector<string> bondParameterNames;
+    for (int i = 0; i < numBondParameters; i++)
+        bondParameterNames.push_back(force.getPerBondParameterName(i));
+    for (int i = 0; i < force.getNumGlobalParameters(); i++)
+        globalParameterNames.push_back(force.getGlobalParameterName(i));
+    ixn = new ReferenceCustomCentroidBondIxn(force.getNumGroupsPerBond(), groupAtoms, normalizedWeights, bondGroups, energyExpression, bondParameterNames, distances, angles, dihedrals);
+
+    // Delete the custom functions.
+
+    for (map<string, Lepton::CustomFunction*>::iterator iter = functions.begin(); iter != functions.end(); iter++)
+        delete iter->second;
+}
+
+double ReferenceCalcCustomCentroidBondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    vector<RealVec>& posData = extractPositions(context);
+    vector<RealVec>& forceData = extractForces(context);
+    RealOpenMM energy = 0;
+    map<string, double> globalParameters;
+    for (int i = 0; i < (int) globalParameterNames.size(); i++)
+        globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
+    ixn->calculatePairIxn(posData, bondParamArray, globalParameters, forceData, includeEnergy ? &energy : NULL);
+    return energy;
+}
+
+void ReferenceCalcCustomCentroidBondForceKernel::copyParametersToContext(ContextImpl& context, const CustomCentroidBondForce& force) {
+    if (numBonds != force.getNumBonds())
+        throw OpenMMException("updateParametersInContext: The number of bonds has changed");
+
+    // Record the values.
+
+    int numParameters = force.getNumPerBondParameters();
+    const vector<vector<int> >& bondGroups = ixn->getBondGroups();
+    vector<int> groups;
+    vector<double> params;
+    for (int i = 0; i < numBonds; ++i) {
+        force.getBondParameters(i, groups, params);
+        for (int j = 0; j < groups.size(); j++)
+            if (groups[j] != bondGroups[i][j])
+                throw OpenMMException("updateParametersInContext: The set of groups in a bond has changed");
+        for (int j = 0; j < numParameters; j++)
+            bondParamArray[i][j] = (RealOpenMM) params[j];
+    }
+}
+
 ReferenceCalcCustomCompoundBondForceKernel::~ReferenceCalcCustomCompoundBondForceKernel() {
     disposeRealArray(bondParamArray, numBonds);
     if (ixn != NULL)
@@ -1593,7 +1679,6 @@ void ReferenceCalcCustomCompoundBondForceKernel::initialize(const System& system
     // Build the arrays.
 
     numBonds = force.getNumBonds();
-    numParticles = system.getNumParticles();
     vector<vector<int> > bondParticles(numBonds);
     int numBondParameters = force.getNumPerBondParameters();
     bondParamArray = allocateRealArray(numBonds, numBondParameters);
@@ -1652,7 +1737,7 @@ void ReferenceCalcCustomCompoundBondForceKernel::copyParametersToContext(Context
     vector<double> params;
     for (int i = 0; i < numBonds; ++i) {
         force.getBondParameters(i, particles, params);
-        for (int j = 0; j < numParticles; j++)
+        for (int j = 0; j < particles.size(); j++)
             if (particles[j] != bondAtoms[i][j])
                 throw OpenMMException("updateParametersInContext: The set of particles in a bond has changed");
         for (int j = 0; j < numParameters; j++)

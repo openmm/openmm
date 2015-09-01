@@ -35,6 +35,7 @@
 #include "ForceImpl.h"
 #include "openmm/CustomCentroidBondForce.h"
 #include "openmm/Kernel.h"
+#include "openmm/System.h"
 #include "lepton/CustomFunction.h"
 #include "lepton/ExpressionTreeNode.h"
 #include "lepton/ParsedExpression.h"
@@ -62,6 +63,7 @@ public:
     double calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups);
     std::map<std::string, double> getDefaultParameters();
     std::vector<std::string> getKernelNames();
+    std::vector<std::pair<int, int> > getBondedParticles() const;
     void updateParametersInContext(ContextImpl& context);
     /**
      * This is a utility routine that parses the energy expression, identifies the angles and dihedrals
@@ -79,11 +81,20 @@ public:
      */
     static Lepton::ParsedExpression prepareExpression(const CustomCentroidBondForce& force, const std::map<std::string, Lepton::CustomFunction*>& functions, std::map<std::string, std::vector<int> >& distances,
             std::map<std::string, std::vector<int> >& angles, std::map<std::string, std::vector<int> >& dihedrals);
+    /**
+     * Compute the normalized weights to use for each particle in each group.
+     *
+     * @param force     the CustomCentroidBondForce to process
+     * @param system    the System it is part of
+     * @param weights   on exit, weights[i][j] contains the normalized weight for particle j in group i.
+     */
+    static void computeNormalizedWeights(const CustomCentroidBondForce& force, const System& system, std::vector<std::vector<double> >& weights);
 private:
     class FunctionPlaceholder;
     static Lepton::ExpressionTreeNode replaceFunctions(const Lepton::ExpressionTreeNode& node, std::map<std::string, int> atoms,
             std::map<std::string, std::vector<int> >& distances, std::map<std::string, std::vector<int> >& angles,
             std::map<std::string, std::vector<int> >& dihedrals);
+    void addBondsBetweenGroups(int group1, int group2, std::vector<std::pair<int, int> >& bonds) const;
     const CustomCentroidBondForce& owner;
     Kernel kernel;
 };
