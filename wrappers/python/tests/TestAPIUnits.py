@@ -1,3 +1,5 @@
+from __future__ import division
+
 import unittest
 from simtk.openmm import *
 from simtk.openmm.app import *
@@ -160,6 +162,27 @@ class TestAPIUnits(unittest.TestCase):
         self.assertIs(sigma.unit, nanometers)
         self.assertIs(epsilon.unit, kilojoules_per_mole)
 
+        force.setCutoffDistance(10*angstroms)
+        self.assertEqual(force.getCutoffDistance(), 1*nanometers)
+        force.setCutoffDistance(1)
+        self.assertEqual(force.getCutoffDistance(), 1*nanometers)
+
+        force.setSwitchingDistance(8*angstroms)
+        self.assertEqual(force.getSwitchingDistance(), 0.8*nanometers)
+        self.assertIs(force.getSwitchingDistance().unit, nanometer)
+
+        self.assertFalse(force.usesPeriodicBoundaryConditions())
+        force.setNonbondedMethod(NonbondedForce.NoCutoff)
+        self.assertFalse(force.usesPeriodicBoundaryConditions())
+        force.setNonbondedMethod(NonbondedForce.CutoffNonPeriodic)
+        self.assertFalse(force.usesPeriodicBoundaryConditions())
+        force.setNonbondedMethod(NonbondedForce.CutoffPeriodic)
+        self.assertTrue(force.usesPeriodicBoundaryConditions())
+        force.setNonbondedMethod(NonbondedForce.Ewald)
+        self.assertTrue(force.usesPeriodicBoundaryConditions())
+        force.setNonbondedMethod(NonbondedForce.PME)
+        self.assertTrue(force.usesPeriodicBoundaryConditions())
+
     def testCmapForce(self):
         """ Tests the CMAPTorsionForce API features """
         map1 = [random.random() for i in range(24*24)]
@@ -184,6 +207,315 @@ class TestAPIUnits(unittest.TestCase):
 
         for x, y in zip(force.getMapParameters(1)[1], map2):
             self.assertAlmostEqualUnit(x, y)
+
+    def testCustomBondForce(self):
+        """ Tests the CustomBondForce API features """
+        force = CustomBondForce('1/2*k*(r-r0)^2')
+        force.addPerBondParameter('r0')
+        force.addBond(0, 1, [0.1])
+        force.addBond(1, 2, [1.0*angstroms])
+
+        self.assertEqual(force.getNumBonds(), 2)
+        i, j, req = force.getBondParameters(0)
+        self.assertEqual(i, 0)
+        self.assertEqual(j, 1)
+        self.assertEqual(req[0], 0.1)
+
+        i, j, req = force.getBondParameters(1)
+        self.assertEqual(i, 1)
+        self.assertEqual(j, 2)
+        self.assertEqual(req[0], 0.1)
+
+    def testCustomAngleForce(self):
+        """ Tests the CustomAngleForce API features """
+        force = CustomAngleForce('1/2*k*(theta-theta0)^2')
+        force.addPerAngleParameter('theta0')
+        force.addAngle(0, 1, 2, [math.pi / 2])
+        force.addAngle(3, 4, 5, [90*degrees])
+
+        self.assertEqual(force.getNumAngles(), 2)
+        i, j, k, theta = force.getAngleParameters(0)
+        self.assertEqual(i, 0)
+        self.assertEqual(j, 1)
+        self.assertEqual(k, 2)
+        self.assertEqual(theta[0], math.pi / 2)
+
+        i, j, k, theta = force.getAngleParameters(1)
+        self.assertEqual(i, 3)
+        self.assertEqual(j, 4)
+        self.assertEqual(k, 5)
+        self.assertEqual(theta[0], math.pi / 2)
+
+    def testCustomTorsionForce(self):
+        """ Tests the CustomTorsionForce API features """
+        force = CustomTorsionForce('1/2*k*(theta-theta0)^2')
+        force.addTorsion(0, 1, 2, 3, [math.pi])
+        force.addTorsion(4, 5, 6, 7, [180*degrees])
+
+        self.assertEqual(force.getNumTorsions(), 2)
+        i, j, k, l, theta = force.getTorsionParameters(0)
+        self.assertEqual(i, 0)
+        self.assertEqual(j, 1)
+        self.assertEqual(k, 2)
+        self.assertEqual(l, 3)
+        self.assertEqual(theta[0], math.pi)
+
+        i, j, k, l, theta = force.getTorsionParameters(1)
+        self.assertEqual(i, 4)
+        self.assertEqual(j, 5)
+        self.assertEqual(k, 6)
+        self.assertEqual(l, 7)
+        self.assertEqual(theta[0], math.pi)
+
+    def testCustomCompoundBondForce(self):
+        """ Tests the CustomCompoundBondForce API features """
+        force = CustomCompoundBondForce(4, 'kb*distance(p1, p2)*distance(p2, p3)*distance(p3, p4)+'
+                                           'ka*angle(p1, p2, p3)*angle(p2, p3, p4)+'
+                                           'kd*dihedral(p1, p2, p3, p4)')
+        force.addPerBondParameter('kb')
+        force.addPerBondParameter('ka')
+        force.addPerBondParameter('kd')
+        force.addBond([0, 1, 2, 3], [1.0, 2.0, 3.0])
+        force.addBond([4, 5, 6, 7], [1.0*kilocalories_per_mole/angstroms,
+                                     2.0*kilocalories_per_mole/radians,
+                                     3.0*kilocalories_per_mole]
+        )
+
+        self.assertEqual(force.getNumBonds(), 2)
+        (i, j, k, l), (kb, ka, kd) = force.getBondParameters(0)
+        self.assertEqual(i, 0)
+        self.assertEqual(j, 1)
+        self.assertEqual(k, 2)
+        self.assertEqual(l, 3)
+        self.assertEqual(kb, 1)
+        self.assertEqual(ka, 2)
+        self.assertEqual(kd, 3)
+
+        (i, j, k, l), (kb, ka, kd) = force.getBondParameters(1)
+        self.assertEqual(i, 4)
+        self.assertEqual(j, 5)
+        self.assertEqual(k, 6)
+        self.assertEqual(l, 7)
+        self.assertEqual(kb, 1*10*4.184)
+        self.assertEqual(ka, 2*4.184)
+        self.assertEqual(kd, 3*4.184)
+
+    def testCustomExternalForce(self):
+        """ Tests the CustomExternalForce API features """
+        force = CustomExternalForce('1/2*k*k2*((x-x0)^2+(y-y0)^2+(z-z0)^2)')
+        force.addGlobalParameter('k', 10*kilocalories_per_mole/angstroms**2)
+        force.addGlobalParameter('k2', 20)
+        force.addPerParticleParameter('x0')
+        force.addPerParticleParameter('y0')
+        force.addPerParticleParameter('z0')
+        force.addParticle(0, [1.0, 2.0, 3.0])
+        force.addParticle(1, [1.0*angstroms, 2.0*angstroms, 3.0*angstroms])
+
+        self.assertEqual(force.getNumParticles(), 2)
+        self.assertEqual(force.getNumGlobalParameters(), 2)
+        self.assertEqual(force.getGlobalParameterName(0), 'k')
+        self.assertEqual(force.getGlobalParameterName(1), 'k2')
+        self.assertEqual(force.getGlobalParameterDefaultValue(0), 1000*4.184)
+        self.assertEqual(force.getGlobalParameterDefaultValue(1), 20)
+
+        i, (x0, y0, z0) = force.getParticleParameters(0)
+        self.assertEqual(i, 0)
+        self.assertEqual(x0, 1)
+        self.assertEqual(y0, 2)
+        self.assertEqual(z0, 3)
+
+        i, (x0, y0, z0) = force.getParticleParameters(1)
+        self.assertEqual(i, 1)
+        self.assertAlmostEqual(x0, 1/10)
+        self.assertAlmostEqual(y0, 2/10)
+        self.assertAlmostEqual(z0, 3/10)
+
+    def testCustomGBForce(self):
+        """ Tests the CustomGBForce API features """
+        force = CustomGBForce()
+        force.addPerParticleParameter('q')
+        force.addPerParticleParameter('radius')
+        force.addPerParticleParameter('scale')
+        force.addGlobalParameter('extDiel', 78.5)
+        force.addGlobalParameter('intDiel', 1.0)
+        force.addComputedValue('I',
+                'step(r+sr2-or1)*0.5*(1/L-1/U+0.25*(1/U^2-1/L^2)*'
+                '(r-sr2^2/r)+0.5*log(L/U)/r+C);'
+                'U=r+sr2; C=2*(1/or1-1/L)*step(sr2-r-or1);'
+                'L=max(or1, D); D=abs(r-sr2); sr2=scale2*or2;'
+                'or1=radius1-0.009; or2=radius2-0.009',
+                CustomGBForce.ParticlePairNoExclusions
+        )
+        force.addComputedValue('B',
+                '1/(1/or-tanh(1*psi-0.8*psi^2+4.85*psi^3)/radius);'
+                'psi=I*or; or=radius-0.009',
+                CustomGBForce.SingleParticle
+        )
+        force.addEnergyTerm('-138.935456*(1/intDiel-1/extDiel)*q1*q2/f;'
+                            'f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))',
+                            CustomGBForce.ParticlePair
+        )
+
+        force.setNonbondedMethod(CustomGBForce.CutoffPeriodic)
+
+        force.addParticle([1.0, 0.1, 0.5])
+        force.addParticle([-1.0*coulombs, 1.0*angstroms, 0.5])
+
+        self.assertEqual(force.getNumParticles(), 2)
+        self.assertEqual(force.getNumComputedValues(), 2)
+        self.assertEqual(force.getNumEnergyTerms(), 1)
+        self.assertEqual(force.getNumPerParticleParameters(), 3)
+        self.assertEqual(force.getPerParticleParameterName(0), 'q')
+        self.assertEqual(force.getPerParticleParameterName(1), 'radius')
+        self.assertEqual(force.getPerParticleParameterName(2), 'scale')
+        self.assertTrue(force.usesPeriodicBoundaryConditions())
+
+        force.setNonbondedMethod(CustomGBForce.NoCutoff)
+        self.assertFalse(force.usesPeriodicBoundaryConditions())
+        force.setNonbondedMethod(CustomGBForce.CutoffNonPeriodic)
+        self.assertFalse(force.usesPeriodicBoundaryConditions())
+
+        q, rad, scale = force.getParticleParameters(0)
+        self.assertEqual(q, 1.0)
+        self.assertEqual(rad, 0.1)
+        self.assertEqual(scale, 0.5)
+
+        q, rad, scale = force.getParticleParameters(1)
+        self.assertEqual(q, -6.24150962915265e+18) # very electronegative
+        self.assertEqual(rad, 0.1)
+        self.assertEqual(scale, 0.5)
+
+        force.setCutoffDistance(12*angstroms)
+        self.assertAlmostEqualUnit(force.getCutoffDistance(), 1.2*nanometers)
+        force.setCutoffDistance(1)
+        self.assertEqual(force.getCutoffDistance(), 1*nanometers)
+
+    def testCustomHBondForce(self):
+        """ Tests the CustomHbondForce API features """
+        force = CustomHbondForce('kd*(distance(a1,d1)-r0)^2 + '
+                                 'ka*(angle(a1,d1,d2)-theta0)^2')
+        force.addPerAcceptorParameter('r0')
+        force.addPerAcceptorParameter('ka')
+        force.addPerDonorParameter('theta0')
+        force.addPerDonorParameter('kd')
+        force.setCutoffDistance(10*angstroms)
+
+        self.assertEqual(force.getNumPerAcceptorParameters(), 2)
+        self.assertEqual(force.getNumPerDonorParameters(), 2)
+        self.assertEqual(force.getCutoffDistance(), 1*nanometers)
+        self.assertIs(force.getCutoffDistance().unit, nanometer)
+
+        force.addAcceptor(0, 1, 2, [0.2, 10.0])
+        force.addAcceptor(3, -1, -1, [4*angstroms,
+                                      20.0*kilocalories_per_mole/angstroms**2])
+        force.addDonor(4, 5, 6, [math.pi, 30])
+        force.addDonor(7, 8, -1, [180*degrees,
+                                  40*kilocalories_per_mole/radians**2])
+
+        self.assertEqual(force.getNumAcceptors(), 2)
+        self.assertEqual(force.getNumDonors(), 2)
+
+        i, j, k, (r0, ka) = force.getAcceptorParameters(0)
+        self.assertEqual(i, 0)
+        self.assertEqual(j, 1)
+        self.assertEqual(k, 2)
+        self.assertEqual(r0, 0.2)
+        self.assertEqual(ka, 10)
+
+        i, j, k, (r0, ka) = force.getAcceptorParameters(1)
+        self.assertEqual(i, 3)
+        self.assertEqual(j, -1)
+        self.assertEqual(k, -1)
+        self.assertEqual(r0, 0.4)
+        self.assertEqual(ka, 20*4.184*100)
+
+        i, j, k, (theta0, kd) = force.getDonorParameters(0)
+        self.assertEqual(i, 4)
+        self.assertEqual(j, 5)
+        self.assertEqual(k, 6)
+        self.assertEqual(theta0, math.pi)
+        self.assertEqual(kd, 30)
+
+        i, j, k, (theta0, kd) = force.getDonorParameters(1)
+        self.assertEqual(i, 7)
+        self.assertEqual(j, 8)
+        self.assertEqual(k, -1)
+        self.assertEqual(theta0, math.pi)
+        self.assertEqual(kd, 40*4.184)
+
+        self.assertFalse(force.usesPeriodicBoundaryConditions())
+        force.setNonbondedMethod(CustomHbondForce.NoCutoff)
+        self.assertFalse(force.usesPeriodicBoundaryConditions())
+        force.setNonbondedMethod(CustomHbondForce.CutoffNonPeriodic)
+        self.assertFalse(force.usesPeriodicBoundaryConditions())
+        force.setNonbondedMethod(CustomHbondForce.CutoffPeriodic)
+        self.assertTrue(force.usesPeriodicBoundaryConditions())
+
+    def testCustomNonbondedForce(self):
+        """ Tests the CustomNonbondedForce API features """
+        force = CustomNonbondedForce('4*diel*q1*q2/r+sqrt(p1*p2)/r^2-sqrt(m1*m2)/r^3')
+        force.addGlobalParameter('diel', 1.0)
+        force.addPerParticleParameter('q')
+        force.addPerParticleParameter('p')
+        force.addPerParticleParameter('m')
+        force.addParticle([1, 2, 3])
+        force.addParticle([1*coulombs, 2*kilocalories_per_mole*angstroms**2, 3*kilocalories_per_mole*angstroms**3])
+
+        self.assertEqual(force.getNumParticles(), 2)
+        charge, sigma, epsilon = force.getParticleParameters(0)
+        self.assertEqual(charge, 1)
+        self.assertEqual(sigma, 2)
+        self.assertEqual(epsilon, 3)
+
+        charge, sigma, epsilon = force.getParticleParameters(1)
+        self.assertEqual(charge, 6.24150962915265e+18) # very electronegative
+        self.assertEqual(sigma, 2*4.184/100)
+        self.assertAlmostEqual(epsilon, 3*4.184/1000)
+
+        force.setCutoffDistance(10*angstroms)
+        self.assertEqual(force.getCutoffDistance(), 1*nanometers)
+        force.setCutoffDistance(1)
+        self.assertEqual(force.getCutoffDistance(), 1*nanometers)
+
+        force.setSwitchingDistance(8*angstroms)
+        self.assertEqual(force.getSwitchingDistance(), 0.8*nanometers)
+        self.assertIs(force.getSwitchingDistance().unit, nanometer)
+
+        self.assertFalse(force.usesPeriodicBoundaryConditions())
+        force.setNonbondedMethod(CustomNonbondedForce.NoCutoff)
+        self.assertFalse(force.usesPeriodicBoundaryConditions())
+        force.setNonbondedMethod(CustomNonbondedForce.CutoffNonPeriodic)
+        self.assertFalse(force.usesPeriodicBoundaryConditions())
+        force.setNonbondedMethod(CustomNonbondedForce.CutoffPeriodic)
+        self.assertTrue(force.usesPeriodicBoundaryConditions())
+
+    def testCustomManyParticleForce(self):
+        """ Tests the CustomManyParticleForce API features """
+        force = CustomManyParticleForce(3,
+                "C*(1+3*cos(theta1)*cos(theta2)*cos(theta3))/(r12*r13*r23)^3;"
+                "theta1=k1*angle(p1,p2,p3); theta2=k2*angle(p2,p3,p1); theta3=k3*angle(p3,p1,p2);"
+                "r12=distance(p1,p2); r13=distance(p1,p3); r23=distance(p2,p3)")
+        force.setPermutationMode(CustomManyParticleForce.SinglePermutation)
+        force.setTypeFilter(0, [0])
+        force.setTypeFilter(1, [1])
+        force.setTypeFilter(2, [2])
+
+        force.addGlobalParameter('C', 1.0*kilocalories_per_mole)
+        force.addPerParticleParameter('k')
+
+        self.assertEqual(force.getNumGlobalParameters(), 1)
+        self.assertEqual(force.getGlobalParameterName(0), 'C')
+        self.assertEqual(force.getGlobalParameterDefaultValue(0), 4.184)
+        self.assertEqual(force.getNumPerParticleParameters(), 1)
+
+        force.addParticle([10], 0)
+        force.addParticle([20], 1)
+        force.addParticle([30*kilocalories_per_mole], 2)
+
+        self.assertEqual(force.getNumParticles(), 3)
+        self.assertEqual(force.getParticleParameters(0)[0][0], 10)
+        self.assertEqual(force.getParticleParameters(1)[0][0], 20)
+        self.assertEqual(force.getParticleParameters(2)[0][0], 30*4.184)
 
 if __name__ == '__main__':
     unittest.main()
