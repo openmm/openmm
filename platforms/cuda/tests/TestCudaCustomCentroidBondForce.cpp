@@ -115,21 +115,34 @@ void testHarmonicBond() {
     ASSERT_EQUAL_VEC(Vec3(4*2.5*(3.0/12.0), 0, 0), state.getForces()[2], TOL);
     ASSERT_EQUAL_VEC(Vec3(4*2.5*(4.0/12.0), 0, 0), state.getForces()[3], TOL);
     ASSERT_EQUAL_VEC(Vec3(4*2.5*(5.0/12.0), 0, 0), state.getForces()[4], TOL);
+    
+    // All the particles should be treated as a single molecule.
+    
+    vector<std::vector<int> > molecules = context.getMolecules();
+    ASSERT_EQUAL(1, molecules.size());
+    ASSERT_EQUAL(5, molecules[0].size());
 }
 
 void testComplexFunction() {
-    int numParticles = 4;
+    int numParticles = 5;
     System system;
     for (int i = 0; i < numParticles; i++)
         system.addParticle(2.0);
+    vector<double> table(20);
+    for (int i = 0; i < 20; i++)
+        table[i] = sin(0.11*i);
 
     // When every group contains only one particle, a CustomCentroidBondForce is identical to a
     // CustomCompoundBondForce.  Use that to test a complicated energy function with lots of terms.
 
-    CustomCompoundBondForce* compound = new CustomCompoundBondForce(4, "x1+y2+z4+distance(p1,p2)*angle(p3,p2,p4)+0.5*dihedral(p2,p1,p4,p3)");
-    CustomCentroidBondForce* centroid = new CustomCentroidBondForce(4, "x1+y2+z4+distance(g1,g2)*angle(g3,g2,g4)+0.5*dihedral(g2,g1,g4,g3)");
+    CustomCompoundBondForce* compound = new CustomCompoundBondForce(4, "x1+y2+z4+fn(distance(p1,p2))*angle(p3,p2,p4)+scale*dihedral(p2,p1,p4,p3)");
+    CustomCentroidBondForce* centroid = new CustomCentroidBondForce(4, "x1+y2+z4+fn(distance(g1,g2))*angle(g3,g2,g4)+scale*dihedral(g2,g1,g4,g3)");
+    compound->addGlobalParameter("scale", 0.5);
+    centroid->addGlobalParameter("scale", 0.5);
+    compound->addTabulatedFunction("fn", new Continuous1DFunction(table, -1, 10));
+    centroid->addTabulatedFunction("fn", new Continuous1DFunction(table, -1, 10));
 
-    // Add a single bond to the CustomCompoundBondForce.
+    // Add two bonds to the CustomCompoundBondForce.
 
     vector<int> particles(4);
     vector<double> parameters;
@@ -138,8 +151,13 @@ void testComplexFunction() {
     particles[2] = 2;
     particles[3] = 3;
     compound->addBond(particles, parameters);
+    particles[0] = 2;
+    particles[1] = 4;
+    particles[2] = 3;
+    particles[3] = 1;
+    compound->addBond(particles, parameters);
 
-    // Add an identical bond to the CustomCentroidBondForce.  As a stronger test, make sure that
+    // Add identical bonds to the CustomCentroidBondForce.  As a stronger test, make sure that
     // group number is different from particle number.
 
     vector<int> groupMembers(1);
@@ -151,11 +169,18 @@ void testComplexFunction() {
     centroid->addGroup(groupMembers);
     groupMembers[0] = 2;
     centroid->addGroup(groupMembers);
+    groupMembers[0] = 4;
+    centroid->addGroup(groupMembers);
     vector<int> groups(4);
     groups[0] = 1;
     groups[1] = 2;
     groups[2] = 3;
     groups[3] = 0;
+    centroid->addBond(groups, parameters);
+    groups[0] = 3;
+    groups[1] = 4;
+    groups[2] = 0;
+    groups[3] = 2;
     centroid->addBond(groups, parameters);
 
     // Add both forces as different force groups, and create a context.

@@ -4252,16 +4252,34 @@ public:
     }
     void getParticlesInGroup(int index, vector<int>& particles) {
         vector<double> parameters;
-        force.getBondParameters(index, particles, parameters);
+        vector<int> groups;
+        force.getBondParameters(index, groups, parameters);
+        for (int i = 0; i < groups.size(); i++) {
+            vector<int> groupParticles;
+            vector<double> weights;
+            force.getGroupParameters(groups[i], groupParticles, weights);
+            particles.insert(particles.end(), groupParticles.begin(), groupParticles.end());
+        }
     }
     bool areGroupsIdentical(int group1, int group2) {
-        vector<int> particles;
+        vector<int> groups1, groups2;
         vector<double> parameters1, parameters2;
-        force.getBondParameters(group1, particles, parameters1);
-        force.getBondParameters(group2, particles, parameters2);
+        force.getBondParameters(group1, groups1, parameters1);
+        force.getBondParameters(group2, groups2, parameters2);
         for (int i = 0; i < (int) parameters1.size(); i++)
             if (parameters1[i] != parameters2[i])
                 return false;
+        for (int i = 0; i < groups1.size(); i++) {
+            vector<int> groupParticles;
+            vector<double> weights1, weights2;
+            force.getGroupParameters(groups1[i], groupParticles, weights1);
+            force.getGroupParameters(groups2[i], groupParticles, weights2);
+            if (weights1.size() != weights2.size())
+                return false;
+            for (int j = 0; j < weights1.size(); j++)
+                if (weights1[j] != weights2[j])
+                    return false;
+        }
         return true;
     }
 private:
