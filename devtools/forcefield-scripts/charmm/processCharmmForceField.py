@@ -169,6 +169,12 @@ def getLennardJonesParams(class1, class2, is14):
 
 continuedLine = None
 for inputfile in sys.argv[1:]:
+    if inputfile.endswith('.str'):
+        section = 'rtf'
+    elif inputfile.endswith('prm'):
+        section = 'para'
+    elif inputfile.endswith('.str'):
+        continue
     for line in open(inputfile):
         if continuedLine is not None:
             line = continuedLine+' '+line
@@ -216,7 +222,7 @@ for inputfile in sys.argv[1:]:
                 params = dict(getFieldPairs(fields[6:]))
                 residue.lonepairs.append(fields[2:6]+[fields[1], float(params['distance'])*angstrom, float(params['angle'])*degrees, float(params['dihe'])*degrees])
         elif section == 'para':
-            if fields[0] in ('BONDS', 'ANGLES', 'DIHEDRALS', 'IMPROPER', 'CMAP','NONBONDED', 'NBFIX', 'THOLE'):
+            if fields[0] in ('BONDS', 'ANGLES', 'DIHEDRALS', 'IMPROPER', 'CMAP','NONBONDED', 'NBFIX', 'THOLE', 'HBOND'):
                 category = fields[0]
                 residue = None
             elif category == 'BONDS':
