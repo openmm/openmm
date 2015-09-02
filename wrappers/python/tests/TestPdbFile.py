@@ -1,13 +1,18 @@
+import sys
 import unittest
 from simtk.openmm.app import *
 from simtk.openmm import *
 from simtk.unit import *
 import simtk.openmm.app.element as elem
-import cStringIO
+if sys.version_info >= (3, 0):
+    from io import StringIO
+else:
+    from cStringIO import StringIO
+
 
 class TestPdbFile(unittest.TestCase):
     """Test the PDB file parser"""
- 
+
     def test_Triclinic(self):
         """Test parsing a file that describes a triclinic box."""
         pdb = PDBFile('systems/triclinic.pdb')
@@ -43,9 +48,9 @@ class TestPdbFile(unittest.TestCase):
     def test_WriteFile(self):
         """Write a file, read it back, and make sure it matches the original."""
         pdb1 = PDBFile('systems/triclinic.pdb')
-        output = cStringIO.StringIO()
+        output = StringIO()
         PDBFile.writeFile(pdb1.topology, pdb1.positions, output)
-        input = cStringIO.StringIO(output.getvalue())
+        input = StringIO(output.getvalue())
         pdb2 = PDBFile(input)
         output.close();
         input.close();

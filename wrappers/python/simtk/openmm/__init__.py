@@ -1,17 +1,15 @@
+"""OpenMM is a toolkit for molecular simulation. It can be used either as a
+stand-alone application for running simulations, or as a library you call
+from your own code. It provides a combination of extreme flexibility
+(through custom forces and integrators), openness, and high performance
+(especially on recent GPUs) that make it truly unique among simulation codes.
 """
-Package simtk.openmm
-
-This package wraps the simtk.openmm.openmm module.
-When imported, it loads the swig module and then does some magic
-to make the POSIX function "dlopen" work on Linux.
-It also tries to load any plugin modules it can find.
-"""
-
-__author__ = "Randall J. Radmer"
+from __future__ import absolute_import
+__author__ = "Peter Eastman"
 
 import os, os.path
 import sys
-from simtk.openmm import version
+from . import version
 
 if sys.platform == 'win32':
     _path = os.environ['PATH']

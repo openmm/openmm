@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2014 Stanford University and the Authors.           *
+ * Portions copyright (c) 2014-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -33,7 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "lepton/CompiledExpression.h"
-#include "windowsExportCpu.h"
+#include "windowsExport.h"
 #include <string>
 #include <vector>
 
@@ -42,7 +42,7 @@ namespace OpenMM {
 /**
  * This class simplifies the management of a set of related CompiledExpressions that share variables.
  */
-class OPENMM_EXPORT_CPU CompiledExpressionSet {
+class OPENMM_EXPORT CompiledExpressionSet {
 public:
     CompiledExpressionSet();
     /**
@@ -60,6 +60,10 @@ public:
      * @param value    the value to set it to
      */
     void setVariable(int index, double value);
+    /**
+     * Get the total number of variables for which indices have been allocated.
+     */
+    int getNumVariables() const;
 private:
     std::vector<Lepton::CompiledExpression*> expressions;
     std::vector<std::string> variables;

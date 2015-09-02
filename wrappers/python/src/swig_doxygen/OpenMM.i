@@ -1,27 +1,13 @@
-
-%define DOCSTRING
-"PyOpenMM is a Python application programming interface (API) to be
-used for performing molecular dynamics (MD) simulations on various
-computer architectures (including GPUs).  It is implemented in Python
-and C/C++, and provides a Python interface to the OpenMM libraries
-(see https://simtk.org/home/openmm for OpenMM details).  The primary
-motivation for creating PyOpenMM is to make it possible to write
-GPU-accelerated MD code in pure Python.
-
-See https://simtk.org/home/pyopenmm for details"
-%enddef
-
-%module (docstring=DOCSTRING) openmm
-
+%module openmm
 %include "factory.i"
+
 %include "std_string.i"
 %include "std_iostream.i"
-%include "typemaps.i"
-
 %include "std_map.i"
 %include "std_pair.i"
 %include "std_set.i"
 %include "std_vector.i"
+
 namespace std {
   %template(pairii) pair<int,int>;
   %template(vectord) vector<double>;
@@ -36,6 +22,7 @@ namespace std {
   %template(seti) set<int>;
 };
 
+%include "typemaps.i"
 %include "windows.i"
 
 %{

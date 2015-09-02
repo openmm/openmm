@@ -28,6 +28,8 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
+from __future__ import absolute_import
+from __future__ import print_function
 __author__ = "Peter Eastman"
 __version__ = "1.0"
 
@@ -146,7 +148,7 @@ class StateDataReporter(object):
         if not self._hasInitialized:
             self._initializeConstants(simulation)
             headers = self._constructHeaders()
-            print >>self._out, '#"%s"' % ('"'+self._separator+'"').join(headers)
+            print('#"%s"' % ('"'+self._separator+'"').join(headers), file=self._out)
             try:
                 self._out.flush()
             except AttributeError:
@@ -163,7 +165,7 @@ class StateDataReporter(object):
         values = self._constructReportValues(simulation, state)
 
         # Write the values.
-        print >>self._out, self._separator.join(str(v) for v in values)
+        print(self._separator.join(str(v) for v in values), file=self._out)
         try:
             self._out.flush()
         except AttributeError:

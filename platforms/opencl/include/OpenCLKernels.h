@@ -34,6 +34,9 @@
 #include "OpenCLParameterSet.h"
 #include "OpenCLSort.h"
 #include "openmm/kernels.h"
+#include "openmm/internal/CompiledExpressionSet.h"
+#include "openmm/internal/CustomIntegratorUtilities.h"
+#include "lepton/CompiledExpression.h"
 #include "openmm/System.h"
 
 namespace OpenMM {
@@ -732,7 +735,7 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const GBSAOBCForce& force);
 private:
-    double prefactor, surfaceAreaFactor;
+    double prefactor, surfaceAreaFactor, cutoff;
     bool hasCreatedKernels;
     int maxTiles;
     OpenCLContext& cl;
@@ -783,6 +786,7 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const CustomGBForce& force);
 private:
+    double cutoff;
     bool hasInitializedKernels, needParameterGradient;
     int maxTiles, numComputedValues;
     OpenCLContext& cl;
@@ -1202,9 +1206,10 @@ private:
  */
 class OpenCLIntegrateCustomStepKernel : public IntegrateCustomStepKernel {
 public:
+    enum GlobalTargetType {DT, VARIABLE, PARAMETER};
     OpenCLIntegrateCustomStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateCustomStepKernel(name, platform), cl(cl),
-            hasInitializedKernels(false), localValuesAreCurrent(false), globalValues(NULL), contextParameterValues(NULL), sumBuffer(NULL), potentialEnergy(NULL),
-            kineticEnergy(NULL), uniformRandoms(NULL), randomSeed(NULL), perDofValues(NULL) {
+            hasInitializedKernels(false), localValuesAreCurrent(false), globalValues(NULL), sumBuffer(NULL), summedValue(NULL), uniformRandoms(NULL),
+            randomSeed(NULL), perDofValues(NULL) {
     }
     ~OpenCLIntegrateCustomStepKernel();
     /**
@@ -1268,20 +1273,21 @@ public:
     void setPerDofVariable(ContextImpl& context, int variable, const std::vector<Vec3>& values);
 private:
     class ReorderListener;
-    std::string createGlobalComputation(const std::string& variable, const Lepton::ParsedExpression& expr, CustomIntegrator& integrator, const std::string& energyName);
+    class GlobalTarget;
     std::string createPerDofComputation(const std::string& variable, const Lepton::ParsedExpression& expr, int component, CustomIntegrator& integrator, const std::string& forceName, const std::string& energyName);
     void prepareForComputation(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid);
+    void recordGlobalValue(double value, GlobalTarget target);
     void recordChangedParameters(ContextImpl& context);
+    bool evaluateCondition(int step);
     OpenCLContext& cl;
     double prevStepSize, energy;
+    float energyFloat;
     int numGlobalVariables;
-    bool hasInitializedKernels, deviceValuesAreCurrent, modifiesParameters, keNeedsForce;
+    bool hasInitializedKernels, deviceValuesAreCurrent, deviceGlobalsAreCurrent, modifiesParameters, keNeedsForce, hasAnyConstraints;
     mutable bool localValuesAreCurrent;
     OpenCLArray* globalValues;
-    OpenCLArray* contextParameterValues;
     OpenCLArray* sumBuffer;
-    OpenCLArray* potentialEnergy;
-    OpenCLArray* kineticEnergy;
+    OpenCLArray* summedValue;
     OpenCLArray* uniformRandoms;
     OpenCLArray* randomSeed;
     std::map<int, OpenCLArray*> savedForces;
@@ -1289,20 +1295,41 @@ private:
     OpenCLParameterSet* perDofValues;
     mutable std::vector<std::vector<cl_float> > localPerDofValuesFloat;
     mutable std::vector<std::vector<cl_double> > localPerDofValuesDouble;
-    std::vector<float> contextValuesFloat;
-    std::vector<double> contextValuesDouble;
-    std::vector<float> contextValues;
+    std::vector<float> globalValuesFloat;
+    std::vector<double> globalValuesDouble;
+    std::vector<double> initialGlobalVariables;
     std::vector<std::vector<cl::Kernel> > kernels;
     cl::Kernel randomKernel, kineticEnergyKernel, sumKineticEnergyKernel;
     std::vector<CustomIntegrator::ComputationType> stepType;
+    std::vector<CustomIntegratorUtilities::Comparison> comparisons;
+    std::vector<std::vector<Lepton::CompiledExpression> > globalExpressions;
+    CompiledExpressionSet expressionSet;
+    std::vector<bool> needsGlobals;
     std::vector<bool> needsForces;
     std::vector<bool> needsEnergy;
+    std::vector<bool> computeBothForceAndEnergy;
     std::vector<bool> invalidatesForces;
     std::vector<bool> merged;
-    std::vector<int> forceGroup;
+    std::vector<int> forceGroupFlags;
+    std::vector<int> blockEnd;
     std::vector<int> requiredGaussian;
     std::vector<int> requiredUniform;
+    std::vector<int> stepEnergyVariableIndex;
+    std::vector<int> globalVariableIndex;
+    std::vector<int> parameterVariableIndex;
+    int gaussianVariableIndex, uniformVariableIndex, dtVariableIndex;
     std::vector<std::string> parameterNames;
+    std::vector<GlobalTarget> stepTarget;
+};
+
+class OpenCLIntegrateCustomStepKernel::GlobalTarget {
+public:
+    OpenCLIntegrateCustomStepKernel::GlobalTargetType type;
+    int variableIndex;
+    GlobalTarget() {
+    }
+    GlobalTarget(OpenCLIntegrateCustomStepKernel::GlobalTargetType type, int variableIndex) : type(type), variableIndex(variableIndex) {
+    }
 };
 
 /**

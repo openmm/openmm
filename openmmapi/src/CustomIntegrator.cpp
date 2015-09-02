@@ -245,6 +245,27 @@ int CustomIntegrator::addUpdateContextState() {
     return computations.size()-1;
 }
 
+int CustomIntegrator::beginIfBlock(const string& expression) {
+    if (owner != NULL)
+        throw OpenMMException("The integrator cannot be modified after it is bound to a context");
+    computations.push_back(ComputationInfo(BeginIfBlock, "", expression));
+    return computations.size()-1;
+}
+
+int CustomIntegrator::beginWhileBlock(const string& expression) {
+    if (owner != NULL)
+        throw OpenMMException("The integrator cannot be modified after it is bound to a context");
+    computations.push_back(ComputationInfo(BeginWhileBlock, "", expression));
+    return computations.size()-1;
+}
+
+int CustomIntegrator::endBlock() {
+    if (owner != NULL)
+        throw OpenMMException("The integrator cannot be modified after it is bound to a context");
+    computations.push_back(ComputationInfo(EndBlock, "", ""));
+    return computations.size()-1;
+}
+
 void CustomIntegrator::getComputationStep(int index, ComputationType& type, string& variable, string& expression) const {
     ASSERT_VALID_INDEX(index, computations);
     type = computations[index].type;

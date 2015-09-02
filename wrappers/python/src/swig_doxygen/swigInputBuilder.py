@@ -1,23 +1,57 @@
 #!/usr/bin/env python
-#
-#
- 
 """Build swig imput file from xml encoded header files (see gccxml)."""
 __author__ = "Randall J. Radmer"
 __version__ = "1.0"
-  
- 
+
+
 import sys, os
 import time
 import getopt
 import re
 import xml.etree.ElementTree as etree
+from distutils.version import LooseVersion
 
-#
+try:
+    from html.parser import HTMLParser
+except ImportError:
+    # python 2
+    from HTMLParser import HTMLParser
 
-INDENT = "   ";
-
+INDENT = "   "
 docTags = {'emphasis':'i', 'bold':'b', 'itemizedlist':'ul', 'listitem':'li', 'preformatted':'pre', 'computeroutput':'tt', 'subscript':'sub'}
+
+
+def striphtmltags(s):
+    """Strip a couple html tags used inside docstrings in the C++ source
+    to produce something more easily read as plain text.
+    """
+    class ConvertLists(HTMLParser):
+        def reset(self):
+            HTMLParser.reset(self)
+            self.out = []
+
+        def handle_starttag(self, tag, attrs):
+            if tag == 'li':
+                self.out.append('\n - ')
+        def handle_data(self, data):
+            self.out.append(data.strip())
+
+    convertlists = ConvertLists()
+
+    def replace_ul_tags(m):
+        a, b = m.span()
+        sub = s[a:b]
+
+        convertlists.reset()
+        convertlists.feed(sub)
+        return '\n%s\n\n' % ''.join(convertlists.out)
+
+    s = s.replace('<i>', '_').replace('</i>', '_')
+    s = s.replace('<b>', '*').replace('</b>', '*')
+
+    s = re.sub('\s*(<ul>.*</ul>\s*)', replace_ul_tags, s, flags=re.MULTILINE | re.DOTALL)
+
+    return s
 
 def trimToSingleSpace(text):
     if text is None or len(text) == 0:
@@ -83,7 +117,7 @@ def getClassMethodList(classNode, skipMethods):
     shortClassName=stripOpenmmPrefix(className)
     methodList=[]
     for section in findNodes(classNode, "sectiondef", kind="public-static-func")+findNodes(classNode, "sectiondef", kind="public-func"):
-        for memberNode in findNodes(section, "memberdef", kind="function", prot="public"):    
+        for memberNode in findNodes(section, "memberdef", kind="function", prot="public"):
             methDefinition = getText("definition", memberNode)
             shortMethDefinition=stripOpenmmPrefix(methDefinition)
             methName=shortMethDefinition.split()[-1]
@@ -95,14 +129,14 @@ def getClassMethodList(classNode, skipMethods):
                     sys.stderr.write("Warning: Including class %s\n" %
                                      shortClassName)
                     continue
-    
+
             if (shortClassName, methName) in skipMethods: continue
-    
+
             # set template info
-    
+
             templateType = getText("templateparamlist/param/type", memberNode)
             templateName = getText("templateparamlist/param/declname", memberNode)
-    
+
             methodList.append( (shortClassName,
                                 memberNode,
                                 shortMethDefinition,
@@ -120,8 +154,10 @@ class SwigInputBuilder:
                  docstringFilename=None,
                  pythonprependFilename=None,
                  pythonappendFilename=None,
-                 skipAdditionalMethods=[]):
+                 skipAdditionalMethods=[],
+                 SWIG_VERSION='3.0.2'):
         self.nodeByID={}
+        self.SWIG_COMPACT_ARGUMENTS = LooseVersion(SWIG_VERSION) < LooseVersion('3.0.6')
 
         self.configModule = __import__(os.path.splitext(configFilename)[0])
 
@@ -266,6 +302,7 @@ class SwigInputBuilder:
                 dNode = classNode.find('detaileddescription')
                 if dNode is not None:
                     docstring = getNodeText(dNode).strip().replace('"', '\\"')
+                    docstring = striphtmltags(docstring)
                     self.fOutDocstring.write('%%feature("docstring") %s "%s";\n' % (className, docstring))
             self.fOut.write("class %s" % className)
             if className in self.configModule.MISSING_BASE_CLASSES:
@@ -405,25 +442,20 @@ class SwigInputBuilder:
                 key=(shortClassName, methName)
                 if key in self.configModule.STEAL_OWNERSHIP:
                     for argNum in self.configModule.STEAL_OWNERSHIP[key]:
-                        self.fOutPythonprepend.write("%pythonprepend")
-                        self.fOutPythonprepend.write(" OpenMM::%s::%s%s %%{\n"
-                                                     % (shortClassName,
-                                                        methName,
-                                                        mArgsstring))
-                        self.fOutPythonprepend.write(
-                                         "%sif not args[%s].thisown:\n"
-                                         % (INDENT, argNum))
-                        s = 's = "the %s object does not own its'
-                        s = '%s corresponding OpenMM object" \\' % s
-                        self.fOutPythonprepend.write("%s   %s\n" % (INDENT, s))
+                        if self.SWIG_COMPACT_ARGUMENTS:
+                            argName = 'args[%s]' % argNum
+                        else:
+                            argName = getText('declname', paramList[argNum])
 
-                        s = '   %% args[%s].__class__.__name__' % argNum
-                        self.fOutPythonprepend.write("%s   %s\n" % (INDENT, s))
+                        text = '''
+%pythonprepend OpenMM::{shortClassName}::{methName}{mArgsstring} %{{
+    if not {argName}.thisown:
+        s = ("the %s object does not own its corresponding OpenMM object"
+             % self.__class__.__name__)
+        raise Exception(s)
+%}}'''.format(argName=argName, shortClassName=shortClassName, methName=methName, mArgsstring=mArgsstring)
+                        self.fOutPythonprepend.write(text)
 
-                        s = "raise Exception(s)"
-                        self.fOutPythonprepend.write("%s   %s\n" % (INDENT, s))
-
-                        self.fOutPythonprepend.write("%}\n\n")
 
             #write pythonappend blocks
             if self.fOutPythonappend \
@@ -466,8 +498,12 @@ class SwigInputBuilder:
 
                 if key in self.configModule.STEAL_OWNERSHIP:
                     for argNum in self.configModule.STEAL_OWNERSHIP[key]:
-                        addText = "%s%sargs[%s].thisown=0\n" \
-                                % (addText, INDENT, argNum)
+                        if self.SWIG_COMPACT_ARGUMENTS:
+                            argName = 'args[%s]' % argNum
+                        else:
+                            argName = getText('declname', paramList[argNum])
+                        addText = "%s%s%s.thisown=0\n" \
+                                % (addText, INDENT, argName)
 
                 if addText:
                     self.fOutPythonappend.write("%pythonappend")
@@ -553,7 +589,7 @@ class SwigInputBuilder:
 
 
 def parseCommandLine():
-    opts, args_proper = getopt.getopt(sys.argv[1:], 'hi:c:o:d:a:z:s:')
+    opts, args_proper = getopt.getopt(sys.argv[1:], 'hi:c:o:d:a:z:s:v:')
     inputDirname = None
     configFilename = None
     outputFilename = ""
@@ -561,6 +597,7 @@ def parseCommandLine():
     pythonprependFilename = ""
     pythonappendFilename = ""
     skipAdditionalMethods = []
+    swigVersion = '3.0.2'
     for option, parameter in opts:
         if option=='-h': usageError()
         if option=='-i': inputDirname = parameter
@@ -570,19 +607,21 @@ def parseCommandLine():
         if option=='-a': pythonprependFilename=parameter
         if option=='-z': pythonappendFilename=parameter
         if option=='-s': skipAdditionalMethods.append(parameter)
+        if option=='-v': swigVersion = parameter
     if not inputDirname: usageError()
     if not configFilename: usageError()
     return (args_proper, inputDirname, configFilename, outputFilename,
-            docstringFilename,
-            pythonprependFilename, pythonappendFilename, skipAdditionalMethods)
+            docstringFilename, pythonprependFilename, pythonappendFilename,
+            skipAdditionalMethods, swigVersion)
 
 def main():
     (args_proper, inputDirname, configFilename, outputFilename,
      docstringFilename, pythonprependFilename, pythonappendFilename,
-     skipAdditionalMethods) = parseCommandLine()
+     skipAdditionalMethods, swigVersion) = parseCommandLine()
     sBuilder = SwigInputBuilder(inputDirname, configFilename, outputFilename,
                                 docstringFilename, pythonprependFilename,
-                                pythonappendFilename, skipAdditionalMethods)
+                                pythonappendFilename, skipAdditionalMethods,
+                                swigVersion)
     #print "Calling writeSwigFile\n"
     sBuilder.writeSwigFile()
     #print "Done writeSwigFile\n"
@@ -604,6 +643,8 @@ def usageError():
     sys.stdout.write('       %s[-z pythonappendFilename]\n' \
          % (' '*len(os.path.basename(sys.argv[0]))))
     sys.stdout.write('       %s[-s skippedClasses]\n' \
+         % (' '*len(os.path.basename(sys.argv[0]))))
+    sys.stdout.write('       %s[-v swigVersion]\n' \
          % (' '*len(os.path.basename(sys.argv[0]))))
     sys.exit(1)
 

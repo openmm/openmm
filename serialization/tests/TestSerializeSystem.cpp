@@ -40,32 +40,7 @@
 using namespace OpenMM;
 using namespace std;
 
-void testSerialization() {
-    // Create a System.
-
-    System system;
-    for (int i = 0; i < 5; i++)
-        system.addParticle(0.1*i+1);
-    for (int i = 0; i < 4; i++)
-        system.addParticle(0.0);
-    system.addConstraint(0, 1, 3.0);
-    system.addConstraint(1, 2, 2.5);
-    system.addConstraint(4, 1, 1.001);
-    system.setDefaultPeriodicBoxVectors(Vec3(5, 0, 0), Vec3(0, 4, 0), Vec3(0, 0, 1.5));
-    system.setVirtualSite(5, new TwoParticleAverageSite(0, 1, 0.3, 0.7));
-    system.setVirtualSite(6, new ThreeParticleAverageSite(2, 4, 3, 0.5, 0.2, 0.3));
-    system.setVirtualSite(7, new OutOfPlaneSite(0, 3, 1, 0.1, 0.2, 0.5));
-    system.addForce(new HarmonicBondForce());
-
-    // Serialize and then deserialize it.
-
-    stringstream buffer;
-    XmlSerializer::serialize<System>(&system, "System", buffer);
-    System* copy = XmlSerializer::deserialize<System>(buffer);
-
-    // Compare the two systems to see if they are identical.
-
-    System& system2 = *copy;
+void compareSystems(System& system, System& system2) {
     ASSERT_EQUAL(system.getNumParticles(), system2.getNumParticles());
     for (int i = 0; i < system.getNumParticles(); i++)
         ASSERT_EQUAL(system.getParticleMass(i), system2.getParticleMass(i));
@@ -110,6 +85,38 @@ void testSerialization() {
     ASSERT_EQUAL(system.getNumForces(), system2.getNumForces());
     for (int i = 0; i < system.getNumForces(); i++)
         ASSERT(typeid(system.getForce(i)) == typeid(system2.getForce(i)))
+}
+
+void testSerialization() {
+    // Create a System.
+
+    System system;
+    for (int i = 0; i < 5; i++)
+        system.addParticle(0.1*i+1);
+    for (int i = 0; i < 4; i++)
+        system.addParticle(0.0);
+    system.addConstraint(0, 1, 3.0);
+    system.addConstraint(1, 2, 2.5);
+    system.addConstraint(4, 1, 1.001);
+    system.setDefaultPeriodicBoxVectors(Vec3(5, 0, 0), Vec3(0, 4, 0), Vec3(0, 0, 1.5));
+    system.setVirtualSite(5, new TwoParticleAverageSite(0, 1, 0.3, 0.7));
+    system.setVirtualSite(6, new ThreeParticleAverageSite(2, 4, 3, 0.5, 0.2, 0.3));
+    system.setVirtualSite(7, new OutOfPlaneSite(0, 3, 1, 0.1, 0.2, 0.5));
+    system.addForce(new HarmonicBondForce());
+
+    // Serialize and then deserialize it, then make sure the systems are identical.
+
+    stringstream buffer;
+    XmlSerializer::serialize<System>(&system, "System", buffer);
+    System* copy = XmlSerializer::deserialize<System>(buffer);
+    compareSystems(system, *copy);
+    delete copy;
+
+    // Now do the same thing but by calling clone().
+
+    copy = XmlSerializer::clone(system);
+    compareSystems(system, *copy);
+    delete copy;
 }
 
 int main() {

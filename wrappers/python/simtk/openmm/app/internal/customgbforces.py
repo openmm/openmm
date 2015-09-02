@@ -30,6 +30,7 @@ USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
 from __future__ import division
+from __future__ import absolute_import
 
 from simtk.openmm import CustomGBForce, Continuous2DFunction
 
@@ -369,13 +370,13 @@ def GBSAGBn2Force(solventDielectric=78.5, soluteDielectric=1, SA=None,
 
 def convertParameters(params, gbmodel):
     """Convert the GB parameters from the file into the values expected by the appropriate CustomGBForce."""
-    newparams = [None]*len(params)
     if gbmodel == 'GBn2':
         offset = 0.0195141
     else:
         offset = 0.009
-    for i in range(len(params)):
-        newparams[i] = list(params[i])
-        newparams[i][0] -= offset
-        newparams[i][1] *= newparams[i][0]
-    return newparams
+
+    for p in params:
+        newParam = list(p)
+        newParam[0] -= offset
+        newParam[1] *= newParam[0]
+        yield newParam

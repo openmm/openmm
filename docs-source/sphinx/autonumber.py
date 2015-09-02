@@ -65,7 +65,7 @@ def setup(app):
     roles.register_local_role('autonumber', autonumber_role)
     app.add_node(autonumber)
     app.add_node(autonumber_ref)
-    app.add_role('numref', XRefRole(nodeclass=autonumber_ref))
+    app.add_role('autonumref', XRefRole(nodeclass=autonumber_ref))
     app.connect('doctree-resolved', doctree_resolved)
 
 

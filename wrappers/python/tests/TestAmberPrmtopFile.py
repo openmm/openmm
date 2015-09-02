@@ -23,23 +23,23 @@ class TestAmberPrmtopFile(unittest.TestCase):
     def test_NonbondedMethod(self):
         """Test all five options for the nonbondedMethod parameter."""
 
-        methodMap = {NoCutoff:NonbondedForce.NoCutoff, 
-                     CutoffNonPeriodic:NonbondedForce.CutoffNonPeriodic, 
-                     CutoffPeriodic:NonbondedForce.CutoffPeriodic, 
+        methodMap = {NoCutoff:NonbondedForce.NoCutoff,
+                     CutoffNonPeriodic:NonbondedForce.CutoffNonPeriodic,
+                     CutoffPeriodic:NonbondedForce.CutoffPeriodic,
                      Ewald:NonbondedForce.Ewald, PME: NonbondedForce.PME}
         for method in methodMap:
             system = prmtop1.createSystem(nonbondedMethod=method)
             forces = system.getForces()
-            self.assertTrue(any(isinstance(f, NonbondedForce) and 
-                                f.getNonbondedMethod()==methodMap[method] 
+            self.assertTrue(any(isinstance(f, NonbondedForce) and
+                                f.getNonbondedMethod()==methodMap[method]
                                 for f in forces))
 
     def test_Cutoff(self):
         """Test to make sure the nonbondedCutoff parameter is passed correctly."""
 
         for method in [CutoffNonPeriodic, CutoffPeriodic, Ewald, PME]:
-            system = prmtop1.createSystem(nonbondedMethod=method, 
-                                          nonbondedCutoff=2*nanometer, 
+            system = prmtop1.createSystem(nonbondedMethod=method,
+                                          nonbondedCutoff=2*nanometer,
                                           constraints=HBonds)
             cutoff_distance = 0.0*nanometer
             cutoff_check = 2.0*nanometer
@@ -52,8 +52,8 @@ class TestAmberPrmtopFile(unittest.TestCase):
         """Test to make sure the ewaldErrorTolerance parameter is passed correctly."""
 
         for method in [Ewald, PME]:
-            system = prmtop1.createSystem(nonbondedMethod=method, 
-                                          ewaldErrorTolerance=1e-6, 
+            system = prmtop1.createSystem(nonbondedMethod=method,
+                                          ewaldErrorTolerance=1e-6,
                                           constraints=HBonds)
             tolerance = 0
             tolerance_check = 1e-6
@@ -76,13 +76,13 @@ class TestAmberPrmtopFile(unittest.TestCase):
         topology = prmtop1.topology
         for constraints_value in [None, HBonds, AllBonds, HAngles]:
             for rigidWater_value in [True, False]:
-                system = prmtop1.createSystem(constraints=constraints_value, 
+                system = prmtop1.createSystem(constraints=constraints_value,
                                               rigidWater=rigidWater_value)
-                validateConstraints(self, topology, system, 
+                validateConstraints(self, topology, system,
                                     constraints_value, rigidWater_value)
 
     def test_ImplicitSolvent(self):
-        """Test the four types of implicit solvents using the implicitSolvent 
+        """Test the four types of implicit solvents using the implicitSolvent
         parameter.
 
         """
@@ -93,7 +93,7 @@ class TestAmberPrmtopFile(unittest.TestCase):
                 force_type = CustomGBForce
             else:
                 force_type = GBSAOBCForce
-            
+
             self.assertTrue(any(isinstance(f, force_type) for f in forces))
 
     def test_ImplicitSolventParameters(self):
@@ -102,7 +102,7 @@ class TestAmberPrmtopFile(unittest.TestCase):
                      CutoffNonPeriodic:NonbondedForce.CutoffNonPeriodic}
         for implicitSolvent_value in [HCT, OBC1, OBC2, GBn]:
             for method in methodMap:
-                system = prmtop2.createSystem(implicitSolvent=implicitSolvent_value, 
+                system = prmtop2.createSystem(implicitSolvent=implicitSolvent_value,
                                     solventDielectric=50.0, soluteDielectric=0.9, nonbondedMethod=method)
                 if implicitSolvent_value in set([HCT, OBC1, GBn]):
                     for force in system.getForces():
@@ -122,12 +122,12 @@ class TestAmberPrmtopFile(unittest.TestCase):
                         if isinstance(force, NonbondedForce):
                             self.assertEqual(force.getReactionFieldDielectric(), 1.0)
                             self.assertEqual(force.getNonbondedMethod(), methodMap[method])
-                    self.assertTrue(found_matching_solvent_dielectric and 
+                    self.assertTrue(found_matching_solvent_dielectric and
                                     found_matching_solute_dielectric)
 
     def test_HydrogenMass(self):
         """Test that altering the mass of hydrogens works correctly."""
-        
+
         topology = prmtop1.topology
         hydrogenMass = 4*amu
         system1 = prmtop1.createSystem()
@@ -279,7 +279,7 @@ class TestAmberPrmtopFile(unittest.TestCase):
 
     def test_ImplicitSolventForces(self):
         """Compute forces for different implicit solvent types, and compare them to ones generated with a previous version of OpenMM to ensure they haven't changed."""
-        
+
         solventType = [HCT, OBC1, OBC2, GBn, GBn2]
         nonbondedMethod = [NoCutoff, CutoffNonPeriodic, CutoffNonPeriodic, NoCutoff, NoCutoff]
         salt = [0.0, 0.0, 0.5, 0.5, 0.0]*(moles/liter)
@@ -288,7 +288,7 @@ class TestAmberPrmtopFile(unittest.TestCase):
         for i in range(5):
             system = prmtop2.createSystem(implicitSolvent=solventType[i], nonbondedMethod=nonbondedMethod[i], implicitSolventSaltConc=salt[i])
             integrator = VerletIntegrator(0.001)
-            context = Context(system, integrator, Platform.getPlatformByName("CPU"))
+            context = Context(system, integrator, Platform.getPlatformByName("Reference"))
             context.setPositions(pdb.positions)
             state1 = context.getState(getForces=True)
             state2 = XmlSerializer.deserialize(open('systems/alanine-dipeptide-implicit-forces/'+file[i]+'.xml').read())
@@ -307,7 +307,7 @@ class TestAmberPrmtopFile(unittest.TestCase):
         system.addForce(MonteCarloBarostat(1.0 * atmospheres, temperature, 1))
 
         integrator = LangevinIntegrator(temperature, 1.0 / picosecond, 0.0001 * picoseconds)
-        
+
         simulation = Simulation(prmtop.topology, system, integrator)
         simulation.context.setPositions(inpcrd.positions)
         simulation.context.setPeriodicBoxVectors(*inpcrd.boxVectors)
@@ -315,6 +315,7 @@ class TestAmberPrmtopFile(unittest.TestCase):
         fname = tempfile.mktemp(suffix='.dcd')
         simulation.reporters.append(DCDReporter(fname, 1))  # This is an explicit test for the bugs in issue #850
         simulation.step(5)
+        del simulation
         os.remove(fname)
 
     def testChamber(self):

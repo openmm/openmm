@@ -11,6 +11,7 @@
 Classes for writing data and dictionary containers in PDBx/mmCIF format.
 
 """
+from __future__ import absolute_import
 __docformat__ = "restructuredtext en"
 __author__    = "John Westbrook"
 __email__     = "jwest@rcsb.rutgers.edu"

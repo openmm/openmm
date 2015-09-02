@@ -129,35 +129,23 @@ public:
         return forceThreadBlockSize;
     }
     /**
-     * Get the cutoff distance.
+     * Get the maximum cutoff distance used by any force group.
      */
-    double getCutoffDistance() {
-        return cutoff;
-    }
-    /**
-     * Get whether any interactions have been added.
-     */
-    bool getHasInteractions() {
-        return cutoff != -1.0;
-    }
-    /**
-     * Get the force group in which nonbonded interactions should be computed.
-     */
-    int getForceGroup() {
-        return nonbondedForceGroup;
-    }
+    double getMaxCutoffDistance();
     /**
      * Prepare to compute interactions.  This updates the neighbor list.
      */
-    void prepareInteractions();
+    void prepareInteractions(int forceGroups);
     /**
      * Compute the nonbonded interactions.
      */
-    void computeInteractions();
+    void computeInteractions(int forceGroups);
     /**
      * Check to see if the neighbor list arrays are large enough, and make them bigger if necessary.
+     *
+     * @return true if the neighbor list needed to be enlarged.
      */
-    void updateNeighborListSize();
+    bool updateNeighborListSize();
     /**
      * Get the array containing the center of each atom block.
      */
@@ -246,16 +234,20 @@ public:
      * @param arguments     arrays (other than per-atom parameters) that should be passed as arguments to the kernel
      * @param useExclusions specifies whether exclusions are applied to this interaction
      * @param isSymmetric   specifies whether the interaction is symmetric
+     * @param groups        the set of force groups this kernel is for
      */
-    CUfunction createInteractionKernel(const std::string& source, std::vector<ParameterInfo>& params, std::vector<ParameterInfo>& arguments, bool useExclusions, bool isSymmetric);
+    CUfunction createInteractionKernel(const std::string& source, std::vector<ParameterInfo>& params, std::vector<ParameterInfo>& arguments, bool useExclusions, bool isSymmetric, int groups);
+    /**
+     * Create the set of kernels that will be needed for a particular combination of force groups.
+     * 
+     * @param groups    the set of force groups
+     */
+    void createKernelsForGroups(int groups);
 private:
+    class KernelSet;
     class BlockSortTrait;
     CudaContext& context;
-    CUfunction forceKernel;
-    CUfunction findBlockBoundsKernel;
-    CUfunction sortBoxDataKernel;
-    CUfunction findInteractingBlocksKernel;
-    CUfunction findInteractionsWithinBlocksKernel;
+    std::map<int, KernelSet> groupKernels;
     CudaArray* exclusionTiles;
     CudaArray* exclusions;
     CudaArray* exclusionIndices;
@@ -275,11 +267,26 @@ private:
     std::vector<std::vector<int> > atomExclusions;
     std::vector<ParameterInfo> parameters;
     std::vector<ParameterInfo> arguments;
-    std::string kernelSource;
-    std::map<std::string, std::string> kernelDefines;
-    double cutoff;
+    std::map<int, double> groupCutoff;
+    std::map<int, std::string> groupKernelSource;
+    double lastCutoff;
     bool useCutoff, usePeriodic, anyExclusions, usePadding, forceRebuildNeighborList;
-    int startTileIndex, numTiles, startBlockIndex, numBlocks, maxTiles, numForceThreadBlocks, forceThreadBlockSize, nonbondedForceGroup, numAtoms;
+    int startTileIndex, numTiles, startBlockIndex, numBlocks, maxTiles, maxExclusions, numForceThreadBlocks, forceThreadBlockSize, numAtoms, groupFlags;
+};
+
+/**
+ * This class stores the kernels to execute for a set of force groups.
+ */
+
+class CudaNonbondedUtilities::KernelSet {
+public:
+    bool hasForces;
+    double cutoffDistance;
+    CUfunction forceKernel;
+    CUfunction findBlockBoundsKernel;
+    CUfunction sortBoxDataKernel;
+    CUfunction findInteractingBlocksKernel;
+    CUfunction findInteractionsWithinBlocksKernel;
 };
 
 /**

@@ -33,6 +33,7 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
+from __future__ import absolute_import
 import os
 from simtk.openmm.app.internal.charmm._charmmfile import (
             CharmmFile, CharmmStreamFile)
@@ -428,7 +429,7 @@ class CharmmParameterSet(object):
                     # soldier on
                     if not read_first_nonbonded: continue
                     raise CharmmFileError('Could not parse nonbonded terms.')
-                except CharmmFileError, e:
+                except CharmmFileError as e:
                     if not read_first_nonbonded: continue
                     raise CharmmFileError(str(e))
                 else:
@@ -587,7 +588,7 @@ class CharmmParameterSet(object):
         # multiterm dihedral have to have a DIFFERENT periodicity, we don't have
         # to condense _within_ a single list of torsions assigned to the same
         # key (they're guaranteed to be different)
-        keylist = self.dihedral_types.keys()
+        keylist = list(self.dihedral_types.keys())
         for i in range(len(keylist) - 1):
             key1 = keylist[i]
             for dihedral in self.dihedral_types[key1]:
@@ -606,7 +607,7 @@ class CharmmParameterSet(object):
         Parameter:
             - typedict : Type dictionary to condense
         """
-        keylist = typedict.keys()
+        keylist = list(typedict.keys())
         for i in range(len(keylist) - 1):
             key1 = keylist[i]
             for j in range(i+1, len(keylist)):

@@ -43,6 +43,7 @@
 #include <algorithm>
 #include <fstream>
 #include <iostream>
+#include <set>
 #include <sstream>
 #include <typeinfo>
 
@@ -129,7 +130,7 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
                             // This will be less than the wavefront width since it takes several
                             // cycles to execute the full wavefront.
                             // The SIMD instruction width is the VLIW instruction width (or 1 for scalar),
-                            // this is the number of ALUs that can be executing per instruction per thread. 
+                            // this is the number of ALUs that can be executing per instruction per thread.
                             devices[i].getInfo<CL_DEVICE_SIMD_PER_COMPUTE_UNIT_AMD>() *
                             devices[i].getInfo<CL_DEVICE_SIMD_WIDTH_AMD>() *
                             devices[i].getInfo<CL_DEVICE_SIMD_INSTRUCTION_WIDTH_AMD>();
@@ -341,9 +342,9 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
         compilationDefines["EXP"] = "exp";
         compilationDefines["LOG"] = "log";
     }
-    
+
     // Set defines for applying periodic boundary conditions.
-    
+
     Vec3 boxVectors[3];
     system.getDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
     boxIsTriclinic = (boxVectors[0][1] != 0.0 || boxVectors[0][2] != 0.0 ||
@@ -391,11 +392,11 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
     }
 
     // Create the work thread used for parallelization when running on multiple devices.
-    
+
     thread = new WorkThread();
-    
+
     // Create utilities objects.
-    
+
     bonded = new OpenCLBondedUtilities(*this);
     nonbonded = new OpenCLNonbondedUtilities(*this);
     integration = new OpenCLIntegrationUtilities(*this, system);
@@ -492,13 +493,32 @@ void OpenCLContext::addForce(OpenCLForceInfo* force) {
 }
 
 string OpenCLContext::replaceStrings(const string& input, const std::map<std::string, std::string>& replacements) const {
+    static set<char> symbolChars;
+    if (symbolChars.size() == 0) {
+        symbolChars.insert('_');
+        for (char c = 'a'; c <= 'z'; c++)
+            symbolChars.insert(c);
+        for (char c = 'A'; c <= 'Z'; c++)
+            symbolChars.insert(c);
+        for (char c = '0'; c <= '9'; c++)
+            symbolChars.insert(c);
+    }
     string result = input;
     for (map<string, string>::const_iterator iter = replacements.begin(); iter != replacements.end(); iter++) {
-        int index = -1;
+        int index = 0;
+        int size = iter->first.size();
         do {
-            index = result.find(iter->first);
-            if (index != result.npos)
-                result.replace(index, iter->first.size(), iter->second);
+            index = result.find(iter->first, index);
+            if (index != result.npos) {
+                if ((index == 0 || symbolChars.find(result[index-1]) == symbolChars.end()) && (index == result.size()-size || symbolChars.find(result[index+size]) == symbolChars.end())) {
+                    // We have found a complete symbol, not part of a longer symbol.
+
+                    result.replace(index, size, iter->second);
+                    index += iter->second.size();
+                }
+                else
+                    index++;
+            }
         } while (index != result.npos);
     }
     return result;
@@ -777,7 +797,7 @@ private:
 
 void OpenCLContext::findMoleculeGroups() {
     // The first time this is called, we need to identify all the molecules in the system.
-    
+
     if (moleculeGroups.size() == 0) {
         // Add a ForceInfo that makes sure reordering doesn't break virtual sites.
 
@@ -859,7 +879,7 @@ void OpenCLContext::findMoleculeGroups() {
                     if (!forces[k]->areParticlesIdentical(mol.atoms[i], mol2.atoms[i]))
                         identical = false;
             }
-            
+
             // See if the constraints are identical.
 
             for (int i = 0; i < (int) mol.constraints.size() && identical; i++) {
@@ -940,11 +960,11 @@ void OpenCLContext::invalidateMolecules() {
     }
     if (valid)
         return;
-    
+
     // The list of which molecules are identical is no longer valid.  We need to restore the
     // atoms to their original order, rebuild the list of identical molecules, and sort them
     // again.
-    
+
     vector<mm_int4> newCellOffsets(numAtoms);
     if (useDoublePrecision) {
         vector<mm_double4> oldPosq(paddedNumAtoms);
@@ -1130,7 +1150,7 @@ void OpenCLContext::reorderAtomsImpl() {
         if (useHilbert)
             binWidth = (Real) (max(max(maxx-minx, maxy-miny), maxz-minz)/255.0);
         else
-            binWidth = (Real) (0.2*nonbonded->getCutoffDistance());
+            binWidth = (Real) (0.2*nonbonded->getMaxCutoffDistance());
         Real invBinWidth = (Real) (1.0/binWidth);
         int xbins = 1 + (int) ((maxx-minx)*invBinWidth);
         int ybins = 1 + (int) ((maxy-miny)*invBinWidth);
