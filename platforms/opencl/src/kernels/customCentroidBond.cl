@@ -1,16 +1,18 @@
+#pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
+
 /**
  * Compute the center of each group.
  */
-extern "C" __global__ void computeGroupCenters(const real4* __restrict__ posq, const int* __restrict__ groupParticles,
-        const real* __restrict__ groupWeights, const int* __restrict__ groupOffsets, real4* __restrict__ centerPositions) {
-    __shared__ volatile real3 temp[64];
-    for (int group = blockIdx.x; group < NUM_GROUPS; group += gridDim.x) {
+__kernel void computeGroupCenters(__global const real4* restrict posq, __global const int* restrict groupParticles,
+        __global const real* restrict groupWeights, __global const int* restrict groupOffsets, __global real4* restrict centerPositions) {
+    __local volatile real3 temp[64];
+    for (int group = get_group_id(0); group < NUM_GROUPS; group += get_num_groups(0)) {
         // The threads in this block work together to compute the center one group.
         
         int firstIndex = groupOffsets[group];
         int lastIndex = groupOffsets[group+1];
-        real3 center = make_real3(0, 0, 0);
-        for (int index = threadIdx.x; index < lastIndex-firstIndex; index += blockDim.x) {
+        real3 center = (real3) 0;
+        for (int index = get_local_id(0); index < lastIndex-firstIndex; index += get_local_size(0)) {
             int atom = groupParticles[firstIndex+index];
             real weight = groupWeights[firstIndex+index];
             real4 pos = posq[atom];
@@ -21,7 +23,7 @@ extern "C" __global__ void computeGroupCenters(const real4* __restrict__ posq, c
         
         // Sum the values.
         
-        int thread = threadIdx.x;
+        int thread = get_local_id(0);
         temp[thread].x = center.x;
         temp[thread].y = center.y;
         temp[thread].z = center.z;
@@ -52,22 +54,15 @@ extern "C" __global__ void computeGroupCenters(const real4* __restrict__ posq, c
             }
         }
         if (thread == 0)
-            centerPositions[group] = make_real4(temp[0].x+temp[1].x, temp[0].y+temp[1].y, temp[0].z+temp[1].z, 0);
+            centerPositions[group] = (real4) (temp[0].x+temp[1].x, temp[0].y+temp[1].y, temp[0].z+temp[1].z, 0);
     }
-}
-
-/**
- * Convert a real4 to a real3 by removing its last element.
- */
-inline __device__ real3 trim(real4 v) {
-    return make_real3(v.x, v.y, v.z);
 }
 
 /**
  * Compute the difference between two vectors, setting the fourth component to the squared magnitude.
  */
-inline __device__ real4 delta(real4 vec1, real4 vec2) {
-    real4 result = make_real4(vec1.x-vec2.x, vec1.y-vec2.y, vec1.z-vec2.z, 0);
+real4 delta(real4 vec1, real4 vec2) {
+    real4 result = (real4) (vec1.x-vec2.x, vec1.y-vec2.y, vec1.z-vec2.z, 0);
     result.w = result.x*result.x + result.y*result.y + result.z*result.z;
     return result;
 }
@@ -75,62 +70,63 @@ inline __device__ real4 delta(real4 vec1, real4 vec2) {
 /**
  * Compute the angle between two vectors.  The w component of each vector should contain the squared magnitude.
  */
-__device__ real computeAngle(real4 vec1, real4 vec2) {
+real computeAngle(real4 vec1, real4 vec2) {
     real dotProduct = vec1.x*vec2.x + vec1.y*vec2.y + vec1.z*vec2.z;
     real cosine = dotProduct*RSQRT(vec1.w*vec2.w);
     real angle;
     if (cosine > 0.99f || cosine < -0.99f) {
         // We're close to the singularity in acos(), so take the cross product and use asin() instead.
 
-        real3 crossProduct = cross(vec1, vec2);
+        real4 crossProduct = cross(vec1, vec2);
         real scale = vec1.w*vec2.w;
-        angle = ASIN(SQRT(dot(crossProduct, crossProduct)/scale));
-        if (cosine < 0.0f)
+        angle = asin(SQRT(dot(crossProduct, crossProduct)/scale));
+        if (cosine < 0)
             angle = M_PI-angle;
     }
     else
-       angle = ACOS(cosine);
+       angle = acos(cosine);
     return angle;
 }
 
 /**
  * Compute the cross product of two vectors, setting the fourth component to the squared magnitude.
  */
-inline __device__ real4 computeCross(real4 vec1, real4 vec2) {
-    real3 cp = cross(vec1, vec2);
-    return make_real4(cp.x, cp.y, cp.z, cp.x*cp.x+cp.y*cp.y+cp.z*cp.z);
+real4 computeCross(real4 vec1, real4 vec2) {
+    real4 result = cross(vec1, vec2);
+    result.w = result.x*result.x + result.y*result.y + result.z*result.z;
+    return result;
 }
 
 /**
  * Compute the forces on groups based on the bonds.
  */
-extern "C" __global__ void computeGroupForces(unsigned long long* __restrict__ groupForce, real* __restrict__ energyBuffer, const real4* __restrict__ centerPositions,
-        const int* __restrict__ bondGroups
+__kernel void computeGroupForces(__global long* restrict groupForce, __global real* restrict energyBuffer, __global const real4* restrict centerPositions,
+        __global const int* restrict bondGroups
         EXTRA_ARGS) {
     real energy = 0;
-    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_BONDS; index += blockDim.x*gridDim.x) {
+    for (int index = get_global_id(0); index < NUM_BONDS; index += get_global_size(0)) {
         COMPUTE_FORCE
     }
-    energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] += energy;
+    energyBuffer[get_global_id(0)] += energy;
 }
 
 /**
  * Apply the forces from the group centers to the individual atoms.
  */
-extern "C" __global__ void applyForcesToAtoms(const int* __restrict__ groupParticles, const real* __restrict__ groupWeights, const int* __restrict__ groupOffsets,
-        const long long* __restrict__ groupForce, unsigned long long* __restrict__ atomForce) {
-    for (int group = blockIdx.x; group < NUM_GROUPS; group += gridDim.x) {
-        long long fx = groupForce[group];
-        long long fy = groupForce[group+NUM_GROUPS];
-        long long fz = groupForce[group+NUM_GROUPS*2];
+__kernel void applyForcesToAtoms(__global const int* restrict groupParticles, __global const real* restrict groupWeights, __global const int* restrict groupOffsets,
+        __global const long* restrict groupForce, __global long* restrict atomForce) {
+    for (int group = get_group_id(0); group < NUM_GROUPS; group += get_num_groups(0)) {
+        long fx = groupForce[group];
+        long fy = groupForce[group+NUM_GROUPS];
+        long fz = groupForce[group+NUM_GROUPS*2];
         int firstIndex = groupOffsets[group];
         int lastIndex = groupOffsets[group+1];
-        for (int index = threadIdx.x; index < lastIndex-firstIndex; index += blockDim.x) {
+        for (int index = get_local_id(0); index < lastIndex-firstIndex; index += get_local_size(0)) {
             int atom = groupParticles[firstIndex+index];
             real weight = groupWeights[firstIndex+index];
-            atomicAdd(&atomForce[atom], static_cast<unsigned long long>((long long) (fx*weight)));
-            atomicAdd(&atomForce[atom+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (fy*weight)));
-            atomicAdd(&atomForce[atom+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (fz*weight)));
+            atom_add(&atomForce[atom], (long) (fx*weight));
+            atom_add(&atomForce[atom+PADDED_NUM_ATOMS], (long) (fy*weight));
+            atom_add(&atomForce[atom+2*PADDED_NUM_ATOMS], (long) (fz*weight));
         }
     }
 }
