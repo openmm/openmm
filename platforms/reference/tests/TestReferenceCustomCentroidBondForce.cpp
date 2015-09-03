@@ -252,7 +252,7 @@ void testCustomWeights() {
     Context context(system, integrator, platform);
     context.setPositions(positions);
     State state = context.getState(State::Forces | State::Energy);
-    ASSERT_EQUAL_TOL(9*9, state.getPotentialEnergy(), TOL);
+    ASSERT_EQUAL_TOL(9.0*9.0, state.getPotentialEnergy(), TOL);
     ASSERT_EQUAL_VEC(Vec3(0, 2*9*(0.5/2.0), 0), state.getForces()[0], TOL);
     ASSERT_EQUAL_VEC(Vec3(0, 2*9*(1.5/2.0), 0), state.getForces()[1], TOL);
     ASSERT_EQUAL_VEC(Vec3(0, -2*9*(2.0/3.0), 0), state.getForces()[2], TOL);
