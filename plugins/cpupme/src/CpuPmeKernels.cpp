@@ -583,6 +583,13 @@ bool CpuCalcPmeReciprocalForceKernel::isProcessorSupported() {
     return isVec4Supported();
 }
 
+void CpuCalcPmeReciprocalForceKernel::getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {
+    alpha = this->alpha;
+    nx = gridx;
+    ny = gridy;
+    nz = gridz;
+}
+
 int CpuCalcPmeReciprocalForceKernel::findFFTDimension(int minimum, bool isZ) {
     if (minimum < 1)
         return 1;

@@ -99,6 +99,10 @@ protected:
      */
     ForceImpl& getImplInContext(Context& context);
     /**
+     * Get a const reference to the ForceImpl corresponding to this Force in a Context.
+     */
+    const ForceImpl& getImplInContext(const Context& context) const;
+    /**
      * Get the ContextImpl corresponding to a Context.
      */
     ContextImpl& getContextImpl(Context& context);

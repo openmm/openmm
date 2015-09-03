@@ -218,6 +218,19 @@ public:
      */
     void setPMEParameters(double alpha, int nx, int ny, int nz);
     /**
+     * Get the parameters being used for PME in a particular Context.  Because some platforms have restrictions
+     * on the allowed grid sizes, the values that are actually used may be slightly different from those
+     * specified with setPMEParameters(), or the standard values calculated based on the Ewald error tolerance.
+     * See the manual for details.
+     * 
+     * @param context the Context for which to get the parameters
+     * @param alpha   the separation parameter
+     * @param nx      the number of grid points along the X axis
+     * @param ny      the number of grid points along the Y axis
+     * @param nz      the number of grid points along the Z axis
+     */
+    void getPMEParametersInContext(const Context& context, double& alpha, int& nx, int& ny, int& nz) const;
+    /**
      * Add the nonbonded force parameters for a particle.  This should be called once for each particle
      * in the System.  When it is called for the i'th time, it specifies the parameters for the i'th particle.
      * For calculating the Lennard-Jones interaction between two particles, the arithmetic mean of the sigmas

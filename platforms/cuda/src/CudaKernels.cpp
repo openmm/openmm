@@ -1561,8 +1561,9 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
     }
     posq.upload(&temp[0]);
     sigmaEpsilon->upload(sigmaEpsilonVector);
-    bool useCutoff = (force.getNonbondedMethod() != NonbondedForce::NoCutoff);
-    bool usePeriodic = (force.getNonbondedMethod() != NonbondedForce::NoCutoff && force.getNonbondedMethod() != NonbondedForce::CutoffNonPeriodic);
+    nonbondedMethod = CalcNonbondedForceKernel::NonbondedMethod(force.getNonbondedMethod());
+    bool useCutoff = (nonbondedMethod != NoCutoff);
+    bool usePeriodic = (nonbondedMethod != NoCutoff && nonbondedMethod != CutoffNonPeriodic);
     map<string, string> defines;
     defines["HAS_COULOMB"] = (hasCoulomb ? "1" : "0");
     defines["HAS_LENNARD_JONES"] = (hasLJ ? "1" : "0");
@@ -1590,7 +1591,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
         dispersionCoefficient = 0.0;
     alpha = 0;
     ewaldSelfEnergy = 0.0;
-    if (force.getNonbondedMethod() == NonbondedForce::Ewald) {
+    if (nonbondedMethod == Ewald) {
         // Compute the Ewald parameters.
 
         int kmaxx, kmaxy, kmaxz;
@@ -1619,10 +1620,8 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
             cosSinSums = new CudaArray(cu, (2*kmaxx-1)*(2*kmaxy-1)*(2*kmaxz-1), elementSize, "cosSinSums");
         }
     }
-    else if (force.getNonbondedMethod() == NonbondedForce::PME) {
+    else if (nonbondedMethod == PME) {
         // Compute the PME parameters.
-
-        int gridSizeX, gridSizeY, gridSizeZ;
 
         NonbondedForceImpl::calcPMEParameters(system, force, alpha, gridSizeX, gridSizeY, gridSizeZ);
         gridSizeX = CudaFFT3D::findLegalDimension(gridSizeX);
@@ -1994,12 +1993,24 @@ void CudaCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context,
     
     // Compute other values.
     
-    NonbondedForce::NonbondedMethod method = force.getNonbondedMethod();
-    if (method == NonbondedForce::Ewald || method == NonbondedForce::PME)
+    if (nonbondedMethod == Ewald || nonbondedMethod == PME)
         ewaldSelfEnergy = (cu.getContextIndex() == 0 ? -ONE_4PI_EPS0*alpha*sumSquaredCharges/sqrt(M_PI) : 0.0);
-    if (force.getUseDispersionCorrection() && cu.getContextIndex() == 0 && (method == NonbondedForce::CutoffPeriodic || method == NonbondedForce::Ewald || method == NonbondedForce::PME))
+    if (force.getUseDispersionCorrection() && cu.getContextIndex() == 0 && (nonbondedMethod == CutoffPeriodic || nonbondedMethod == Ewald || nonbondedMethod == PME))
         dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(context.getSystem(), force);
     cu.invalidateMolecules();
+}
+
+void CudaCalcNonbondedForceKernel::getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {
+    if (nonbondedMethod != PME)
+        throw OpenMMException("getPMEParametersInContext: This Context is not using PME");
+    if (cu.getPlatformData().useCpuPme)
+        cpuPme.getAs<CalcPmeReciprocalForceKernel>().getPMEParameters(alpha, nx, ny, nz);
+    else {
+        alpha = this->alpha;
+        nx = gridSizeX;
+        ny = gridSizeY;
+        nz = gridSizeZ;
+    }
 }
 
 class CudaCustomNonbondedForceInfo : public CudaForceInfo {

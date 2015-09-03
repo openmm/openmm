@@ -252,6 +252,10 @@ ContextImpl& Context::getImpl() {
     return *impl;
 }
 
+const ContextImpl& Context::getImpl() const {
+    return *impl;
+}
+
 const vector<vector<int> >& Context::getMolecules() const {
     return impl->getMolecules();
 }

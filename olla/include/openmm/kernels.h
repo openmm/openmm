@@ -581,6 +581,15 @@ public:
      * @param force      the NonbondedForce to copy the parameters from
      */
     virtual void copyParametersToContext(ContextImpl& context, const NonbondedForce& force) = 0;
+    /**
+     * Get the parameters being used for PME.
+     * 
+     * @param alpha   the separation parameter
+     * @param nx      the number of grid points along the X axis
+     * @param ny      the number of grid points along the Y axis
+     * @param nz      the number of grid points along the Z axis
+     */
+    virtual void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const = 0;
 };
 
 /**
@@ -1281,6 +1290,15 @@ public:
      * @return the potential energy due to the PME reciprocal space interactions
      */
     virtual double finishComputation(IO& io) = 0;
+    /**
+     * Get the parameters being used for PME.
+     * 
+     * @param alpha   the separation parameter
+     * @param nx      the number of grid points along the X axis
+     * @param ny      the number of grid points along the Y axis
+     * @param nz      the number of grid points along the Z axis
+     */
+    virtual void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const = 0;
 };
 
 /**

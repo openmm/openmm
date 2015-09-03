@@ -91,6 +91,15 @@ public:
      * Get whether the current CPU supports all features needed by this kernel.
      */
     static bool isProcessorSupported();
+    /**
+     * Get the parameters being used for PME.
+     * 
+     * @param alpha   the separation parameter
+     * @param nx      the number of grid points along the X axis
+     * @param ny      the number of grid points along the Y axis
+     * @param nz      the number of grid points along the Z axis
+     */
+    void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
 private:
     class ComputeTask;
     /**
