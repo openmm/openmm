@@ -598,6 +598,15 @@ public:
      * @param force      the NonbondedForce to copy the parameters from
      */
     void copyParametersToContext(ContextImpl& context, const NonbondedForce& force);
+    /**
+     * Get the parameters being used for PME.
+     * 
+     * @param alpha   the separation parameter
+     * @param nx      the number of grid points along the X axis
+     * @param ny      the number of grid points along the Y axis
+     * @param nz      the number of grid points along the Z axis
+     */
+    void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
 private:
     class SortTrait : public OpenCLSort::SortTrait {
         int getDataSize() const {return 8;}
@@ -647,7 +656,9 @@ private:
     std::map<std::string, std::string> pmeDefines;
     std::vector<std::pair<int, int> > exceptionAtoms;
     double ewaldSelfEnergy, dispersionCoefficient, alpha;
+    int gridSizeX, gridSizeY, gridSizeZ;
     bool hasCoulomb, hasLJ, usePmeQueue;
+    NonbondedMethod nonbondedMethod;
     static const int PmeOrder = 5;
 };
 

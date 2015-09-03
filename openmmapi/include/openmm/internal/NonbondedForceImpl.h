@@ -64,6 +64,7 @@ public:
     }
     std::vector<std::string> getKernelNames();
     void updateParametersInContext(ContextImpl& context);
+    void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
     /**
      * This is a utility routine that calculates the values to use for alpha and kmax when using
      * Ewald summation.

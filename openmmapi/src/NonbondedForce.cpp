@@ -113,6 +113,10 @@ void NonbondedForce::setPMEParameters(double alpha, int nx, int ny, int nz) {
     this->nz = nz;
 }
 
+void NonbondedForce::getPMEParametersInContext(const Context& context, double& alpha, int& nx, int& ny, int& nz) const {
+    dynamic_cast<const NonbondedForceImpl&>(getImplInContext(context)).getPMEParameters(alpha, nx, ny, nz);
+}
+
 int NonbondedForce::addParticle(double charge, double sigma, double epsilon) {
     particles.push_back(ParticleInfo(charge, sigma, epsilon));
     return particles.size()-1;

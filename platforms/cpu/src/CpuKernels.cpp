@@ -654,6 +654,19 @@ void CpuCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, 
         dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(context.getSystem(), force);
 }
 
+void CpuCalcNonbondedForceKernel::getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {
+    if (nonbondedMethod != PME)
+        throw OpenMMException("getPMEParametersInContext: This Context is not using PME");
+    if (useOptimizedPme)
+        optimizedPme.getAs<const CalcPmeReciprocalForceKernel>().getPMEParameters(alpha, nx, ny, nz);
+    else {
+        alpha = ewaldAlpha;
+        nx = gridSize[0];
+        ny = gridSize[1];
+        nz = gridSize[2];
+    }
+}
+
 CpuCalcCustomNonbondedForceKernel::CpuCalcCustomNonbondedForceKernel(string name, const Platform& platform, CpuPlatform::PlatformData& data) :
             CalcCustomNonbondedForceKernel(name, platform), data(data), forceCopy(NULL), neighborList(NULL), nonbonded(NULL) {
 }

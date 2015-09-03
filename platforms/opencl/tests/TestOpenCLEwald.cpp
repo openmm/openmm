@@ -42,6 +42,7 @@
 #include "openmm/LangevinIntegrator.h"
 #include "openmm/VerletIntegrator.h"
 #include "openmm/internal/ContextImpl.h"
+#include "openmm/internal/NonbondedForceImpl.h"
 #include "SimTKOpenMMRealType.h"
 #include "sfmt/SFMT.h"
 #include <iostream>
@@ -298,6 +299,19 @@ void testErrorTolerance(NonbondedForce::NonbondedMethod method) {
                 }
                 diff = sqrt(diff)/norm;
                 ASSERT(diff < 2*tol);
+            }
+            if (method == NonbondedForce::PME) {
+                // See if the PME parameters were calculated correctly.
+
+                double expectedAlpha, actualAlpha;
+                int expectedSize[3], actualSize[3];
+                NonbondedForceImpl::calcPMEParameters(system, *force, expectedAlpha, expectedSize[0], expectedSize[1], expectedSize[2]);
+                force->getPMEParametersInContext(context, actualAlpha, actualSize[0], actualSize[1], actualSize[2]);
+                ASSERT_EQUAL_TOL(expectedAlpha, actualAlpha, 1e-5);
+                for (int i = 0; i < 3; i++) {
+                    ASSERT(actualSize[i] >= expectedSize[i]);
+                    ASSERT(actualSize[i] < expectedSize[i]+10);
+                }
             }
         }
     }
