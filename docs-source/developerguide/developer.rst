@@ -66,7 +66,7 @@ information related to a particular simulation, and define methods for
 performing calculations.
 
 Note that, whereas a Force is logically “part of” a System, a ForceImpl is
-logically “part of” a Context.  (See :numref:`Figure,API Relationships`\ .)  If you create many Contexts
+logically “part of” a Context.  (See :autonumref:`Figure,API Relationships`\ .)  If you create many Contexts
 for simulating the same System, there is still only one System and only one copy
 of each Force in it.  But there will be separate ForceImpls for each Context,
 and those ForceImpls store information related to their particular Contexts.
