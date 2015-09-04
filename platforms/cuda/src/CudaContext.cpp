@@ -120,7 +120,9 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     int numDevices;
     string errorMessage = "Error initializing Context";
     CHECK_RESULT(cuDeviceGetCount(&numDevices));
-    if (deviceIndex < 0 || deviceIndex >= numDevices) {
+    if (deviceIndex < -1 || deviceIndex >= numDevices)
+        throw OpenMMException("Illegal value for CudaDeviceIndex: "+intToString(deviceIndex));
+    if (deviceIndex == -1) {
         // Try to figure out which device is the fastest.
 
         int bestSpeed = -1;
