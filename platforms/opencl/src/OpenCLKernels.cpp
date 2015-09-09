@@ -4837,6 +4837,8 @@ void OpenCLCalcCustomCentroidBondForceKernel::initialize(const System& system, c
 }
 
 double OpenCLCalcCustomCentroidBondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    if (numBonds == 0)
+        return 0.0;
     if (globals != NULL) {
         bool changed = false;
         for (int i = 0; i < (int) globalParamNames.size(); i++) {
@@ -4857,10 +4859,7 @@ double OpenCLCalcCustomCentroidBondForceKernel::execute(ContextImpl& context, bo
 }
 
 void OpenCLCalcCustomCentroidBondForceKernel::copyParametersToContext(ContextImpl& context, const CustomCentroidBondForce& force) {
-    int numContexts = cl.getPlatformData().contexts.size();
-    int startIndex = cl.getContextIndex()*force.getNumBonds()/numContexts;
-    int endIndex = (cl.getContextIndex()+1)*force.getNumBonds()/numContexts;
-    if (numBonds != endIndex-startIndex)
+    if (numBonds != force.getNumBonds())
         throw OpenMMException("updateParametersInContext: The number of bonds has changed");
     if (numBonds == 0)
         return;
@@ -4871,7 +4870,7 @@ void OpenCLCalcCustomCentroidBondForceKernel::copyParametersToContext(ContextImp
     vector<int> particles;
     vector<double> parameters;
     for (int i = 0; i < numBonds; i++) {
-        force.getBondParameters(startIndex+i, particles, parameters);
+        force.getBondParameters(i, particles, parameters);
         paramVector[i].resize(parameters.size());
         for (int j = 0; j < (int) parameters.size(); j++)
             paramVector[i][j] = (float) parameters[j];
