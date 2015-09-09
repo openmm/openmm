@@ -1682,7 +1682,9 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                 pmeAtomRange = CudaArray::create<int>(cu, gridSizeX*gridSizeY*gridSizeZ+1, "pmeAtomRange");
                 pmeAtomGridIndex = CudaArray::create<int2>(cu, numParticles, "pmeAtomGridIndex");
                 sort = new CudaSort(cu, new SortTrait(), cu.getNumAtoms());
-                useCudaFFT = false; // We might switch back in the future, once Nvidia has all their bugs worked out
+                int cufftVersion;
+                cufftGetVersion(&cufftVersion);
+                useCudaFFT = (cufftVersion >= 7050); // There was a critical bug in version 7.0
                 if (useCudaFFT) {
                     cufftResult result = cufftPlan3d(&fftForward, gridSizeX, gridSizeY, gridSizeZ, cu.getUseDoublePrecision() ? CUFFT_D2Z : CUFFT_R2C);
                     if (result != CUFFT_SUCCESS)
