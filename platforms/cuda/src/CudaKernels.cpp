@@ -4634,6 +4634,8 @@ void CudaCalcCustomCentroidBondForceKernel::initialize(const System& system, con
 }
 
 double CudaCalcCustomCentroidBondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    if (numBonds == 0)
+        return 0.0;
     if (globals != NULL) {
         bool changed = false;
         for (int i = 0; i < (int) globalParamNames.size(); i++) {
@@ -4658,10 +4660,7 @@ double CudaCalcCustomCentroidBondForceKernel::execute(ContextImpl& context, bool
 
 void CudaCalcCustomCentroidBondForceKernel::copyParametersToContext(ContextImpl& context, const CustomCentroidBondForce& force) {
     cu.setAsCurrent();
-    int numContexts = cu.getPlatformData().contexts.size();
-    int startIndex = cu.getContextIndex()*force.getNumBonds()/numContexts;
-    int endIndex = (cu.getContextIndex()+1)*force.getNumBonds()/numContexts;
-    if (numBonds != endIndex-startIndex)
+    if (numBonds != force.getNumBonds())
         throw OpenMMException("updateParametersInContext: The number of bonds has changed");
     if (numBonds == 0)
         return;
@@ -4672,7 +4671,7 @@ void CudaCalcCustomCentroidBondForceKernel::copyParametersToContext(ContextImpl&
     vector<int> particles;
     vector<double> parameters;
     for (int i = 0; i < numBonds; i++) {
-        force.getBondParameters(startIndex+i, particles, parameters);
+        force.getBondParameters(i, particles, parameters);
         paramVector[i].resize(parameters.size());
         for (int j = 0; j < (int) parameters.size(); j++)
             paramVector[i][j] = (float) parameters[j];
