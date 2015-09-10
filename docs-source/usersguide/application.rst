@@ -675,11 +675,17 @@ Platforms
 
 When creating a :class:`Simulation`, you can optionally tell it what :class:`Platform` to use.
 OpenMM includes four platforms: :class:`Reference`, :class:`CPU`, :class:`CUDA`, and :class:`OpenCL`.  For a
-description of the differences between them, see Section :ref:`platforms`.  If you do not
-specify a :class:`Platform`, it will select one automatically.  Usually its choice will
-be reasonable, but you may want to change it.
+description of the differences between them, see Section :ref:`platforms`.  There are three ways in which
+the :class:`Platform` can be chosen:
 
-The following lines specify to use the :class:`CUDA` platform:
+1. By default, OpenMM will try to select the fastest available :class:`Platform`.  Usually its choice will
+be reasonable, but sometimes you may want to change it.
+
+2. Alternatively, you can set the :envvar:`OPENMM_DEFAULT_PLATFORM` environment variable to the name
+of the :class:`Platform` to use.  This overrides the default logic.
+
+3. Finally, you can explicitly specify a :class:`Platform` object in your script when you create the
+:class:`Simulation`.  The following lines specify to use the :class:`CUDA` platform:
 ::
 
     platform = Platform.getPlatformByName('CUDA')
