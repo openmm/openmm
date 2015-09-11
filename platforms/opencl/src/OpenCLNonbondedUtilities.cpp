@@ -180,6 +180,22 @@ void OpenCLNonbondedUtilities::requestExclusions(const vector<vector<int> >& exc
 }
 
 static bool compareUshort2(mm_ushort2 a, mm_ushort2 b) {
+    // This version is used on devices with SIMD width of 32 or less.  It sorts tiles to improve cache efficiency.
+
+    return ((a.y < b.y) || (a.y == b.y && a.x < b.x));
+}
+
+static bool compareUshort2LargeSIMD(mm_ushort2 a, mm_ushort2 b) {
+    // This version is used on devices with SIMD width greater than 32.  It puts diagonal tiles before off-diagonal
+    // ones to reduce thread divergence.
+    
+    if (a.x == a.y) {
+        if (b.x == b.y)
+            return (a.x < b.x);
+        return true;
+    }
+    if (b.x == b.y)
+        return false;
     return ((a.y < b.y) || (a.y == b.y && a.x < b.x));
 }
 
@@ -212,7 +228,7 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
     vector<mm_ushort2> exclusionTilesVec;
     for (set<pair<int, int> >::const_iterator iter = tilesWithExclusions.begin(); iter != tilesWithExclusions.end(); ++iter)
         exclusionTilesVec.push_back(mm_ushort2((unsigned short) iter->first, (unsigned short) iter->second));
-    sort(exclusionTilesVec.begin(), exclusionTilesVec.end(), compareUshort2);
+    sort(exclusionTilesVec.begin(), exclusionTilesVec.end(), context.getSIMDWidth() <= 32 ? compareUshort2 : compareUshort2LargeSIMD);
     exclusionTiles = OpenCLArray::create<mm_ushort2>(context, exclusionTilesVec.size(), "exclusionTiles");
     exclusionTiles->upload(exclusionTilesVec);
     map<pair<int, int>, int> exclusionTileMap;
