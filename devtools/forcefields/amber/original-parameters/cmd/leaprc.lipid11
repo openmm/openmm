@@ -1,0 +1,47 @@
+logFile leap.log
+#
+# ----- leaprc for loading the Lipid 11 force field
+#       of Skjevik, Teigen and Walker.
+#       
+#       Note this file is designed to be used in addition
+#       to one of the standard protein force field leaprc files
+#       even if you are running a pure lipid.
+#
+#       For example, you would enter in leap:
+#         source leaprc.ff12SB
+#         source leaprc.lipid11
+#
+#	load atom type hybridizations
+#
+addAtomTypes {
+	{ "cA"  "C" "sp3" }
+	{ "cB"  "C" "sp2" }
+	{ "cC"  "C" "sp2" }
+	{ "cR"  "C" "sp3" }
+	{ "cP"  "C" "sp3" }
+	{ "oC"  "O" "sp2" }
+	{ "oS"  "O" "sp3" }
+	{ "oH"  "O" "sp3" }
+	{ "oR"  "O" "sp3" }
+        { "oT"  "O" "sp3" }
+        { "oP"  "O" "sp2" }
+        { "oO"  "O" "sp2" }
+	{ "nA"  "N" "sp3" }
+	{ "pA"  "P" "sp3" }
+	{ "hA"  "H" "sp3" }
+	{ "hE"  "H" "sp3" }
+	{ "hX"  "H" "sp3" }
+	{ "hB"  "H" "sp3" }
+	{ "hN"  "H" "sp3" }
+	{ "hO"  "H" "sp3" }
+	{ "hR"  "H" "sp3" }
+	{ "hS"  "H" "sp3" }
+}
+#
+#	Load the Lipid 11 parameter set.
+#
+lipid11 = loadamberparams lipid11.dat
+
+#       Load the Lipid 11 master lib file.
+loadoff lipid11.lib
+

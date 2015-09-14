@@ -1,0 +1,119 @@
+!!index array str
+ "CH3"
+ "MOC"
+!entry.CH3.unit.atoms table  str name  str type  int typex  int resx  int flags  int seq  int elmnt  dbl chg
+ "C1" "CT" 0 1 131072 1 6 -0.730700
+ "H2" "H1" 0 1 131072 2 1 0.243600
+ "H3" "H1" 0 1 131072 3 1 0.243600
+ "H4" "H1" 0 1 131072 4 1 0.243600
+!entry.CH3.unit.atomspertinfo table  str pname  str ptype  int ptypex  int pelmnt  dbl pchg
+ "C1" "CT" 0 -1 0.0
+ "H2" "H1" 0 -1 0.0
+ "H3" "H1" 0 -1 0.0
+ "H4" "H1" 0 -1 0.0
+!entry.CH3.unit.boundbox array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CH3.unit.childsequence single int
+ 2
+!entry.CH3.unit.connect array int
+ 1
+ 0
+!entry.CH3.unit.connectivity table  int atom1x  int atom2x  int flags
+ 1 2 1
+ 1 3 1
+ 1 4 1
+!entry.CH3.unit.hierarchy table  str abovetype  int abovex  str belowtype  int belowx
+ "U" 0 "R" 1
+ "R" 1 "A" 1
+ "R" 1 "A" 2
+ "R" 1 "A" 3
+ "R" 1 "A" 4
+!entry.CH3.unit.name single str
+ "CH3"
+!entry.CH3.unit.positions table  dbl x  dbl y  dbl z
+ 1.165500 0.188900 1.000000E-04
+ 2.002800 -0.495400 1.000000E-04
+ 1.228600 0.822700 0.883200
+ 1.228700 0.822700 -0.883100
+!entry.CH3.unit.residueconnect table  int c1x  int c2x  int c3x  int c4x  int c5x  int c6x
+ 0 0 0 0 0 0
+!entry.CH3.unit.residues table  str name  int seq  int childseq  int startatomx  str restype  int imagingx
+ "CH3" 1 5 1 "?" 0
+!entry.CH3.unit.residuesPdbSequenceNumber array int
+ 0
+!entry.CH3.unit.solventcap array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CH3.unit.velocities table  dbl x  dbl y  dbl z
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+!entry.MOC.unit.atoms table  str name  str type  int typex  int resx  int flags  int seq  int elmnt  dbl chg
+ "C1" "CT" 0 1 131072 1 6 1.387300
+ "H2" "H1" 0 1 131072 2 1 -0.288000
+ "H3" "H1" 0 1 131072 3 1 -0.288000
+ "H4" "H1" 0 1 131072 4 1 -0.288000
+ "O5" "OS" 0 1 131072 5 8 -0.523200
+!entry.MOC.unit.atomspertinfo table  str pname  str ptype  int ptypex  int pelmnt  dbl pchg
+ "C1" "CT" 0 -1 0.0
+ "H2" "H1" 0 -1 0.0
+ "H3" "H1" 0 -1 0.0
+ "H4" "H1" 0 -1 0.0
+ "O5" "OS" 0 -1 0.0
+!entry.MOC.unit.boundbox array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.MOC.unit.childsequence single int
+ 2
+!entry.MOC.unit.connect array int
+ 0
+ 5
+!entry.MOC.unit.connectivity table  int atom1x  int atom2x  int flags
+ 1 2 1
+ 1 3 1
+ 1 4 1
+ 1 5 1
+!entry.MOC.unit.hierarchy table  str abovetype  int abovex  str belowtype  int belowx
+ "U" 0 "R" 1
+ "R" 1 "A" 1
+ "R" 1 "A" 2
+ "R" 1 "A" 3
+ "R" 1 "A" 4
+ "R" 1 "A" 5
+!entry.MOC.unit.name single str
+ "MOC"
+!entry.MOC.unit.positions table  dbl x  dbl y  dbl z
+ -1.165500 0.188900 -1.000000E-04
+ -2.002800 -0.495400 -1.000000E-04
+ -1.228600 0.822700 -0.883200
+ -1.228700 0.822700 0.883100
+ 0.0 -0.570800 0.0
+!entry.MOC.unit.residueconnect table  int c1x  int c2x  int c3x  int c4x  int c5x  int c6x
+ 0 0 0 0 0 0
+!entry.MOC.unit.residues table  str name  int seq  int childseq  int startatomx  str restype  int imagingx
+ "MOC" 1 6 1 "?" 0
+!entry.MOC.unit.residuesPdbSequenceNumber array int
+ 0
+!entry.MOC.unit.solventcap array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.MOC.unit.velocities table  dbl x  dbl y  dbl z
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0

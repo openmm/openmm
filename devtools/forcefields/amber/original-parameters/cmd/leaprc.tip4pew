@@ -1,0 +1,10 @@
+#
+#       Load water and ions for TIP4P-ew + Joung-Chetham monovalent ions
+# 
+loadOff atomic_ions.lib
+loadOff solvents.lib
+HOH = T4P
+WAT = T4P
+loadAmberParams frcmod.tip4pew
+loadAmberParams frcmod.ionsjc_tip4pew
+

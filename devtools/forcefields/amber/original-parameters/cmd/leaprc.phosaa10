@@ -1,0 +1,60 @@
+logFile leap.log
+#
+# ----- leaprc for loading phosphorylated amino acid residues
+#
+# This file contains optimized parameters for phosphorylated amino acids:
+#
+# PTR:   phosphotyrosine with a 2- net charge  (using PDB nomenclature)
+# SEP:   phosphoserine with a 2- net charge  (using PDB nomenclature)
+# TPO:   phosphothreonine with a 2- net charge  (using PDB nomenclature)
+# Y1P:   phosphotyrosine with a 1- net charge  (nonstandard nomenclature)
+# S1P:   phosphoserine with a 1- net charge  (nonstandard nomenclature)
+# T1P:   phosphothreonine with a 1- net charge  (nonstandard nomenclature)
+#
+# To use these residues, load this file into leap, after the Amber-FF, e.g.:
+#
+# > source leaprc.ff14SB
+# > source leaprc.phosaa10
+#
+# The charge model comes from:
+#
+# N. Homeyer, A.H.C. Horn, A H. Lanig, A H. Sticht
+# "AMBER force-field parameters for phosphorylated amino acids in
+# different protonation states: phosphoserine, phosphothreonine,
+# phosphotyrosine, and phosphohistidine"
+# J. Mol. Model. 12:281-289, 2006
+#
+# For more information on the vdW parameterisation, consult:
+#
+# T. Steinbrecher, J. Latzer, D.A. Case, 
+# "Revised AMBER parameters for bioorganic phosphates", 
+# JCTC, 8:4405-4412, 2012
+#
+#
+#	load atom type hybridizations
+#
+addAtomTypes {
+	{ "OP"  "O" "sp3" }
+	{ "OQ"  "O" "sp3" }
+	{ "OR"  "O" "sp3" }
+	{ "OT"  "O" "sp3" }
+	{ "OV"  "O" "sp3" }
+	{ "OX"  "O" "sp3" }
+	{ "OZ"  "O" "sp3" }
+}
+#
+#	Load the phosphorylated amino acid parameter set.
+#
+phosaa = loadamberparams frcmod.phosaa10
+#
+#       Load the phosphorylated amino acid libraries.
+#
+#loadoff phosaa10.lib
+#
+# load individual residues
+loadoff PTR.lib
+loadoff SEP.lib
+loadoff TPO.lib
+loadoff Y1P.lib
+loadoff S1P.lib
+loadoff T1P.lib

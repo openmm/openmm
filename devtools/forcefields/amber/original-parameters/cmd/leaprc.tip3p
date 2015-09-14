@@ -1,0 +1,9 @@
+#
+#       Load water and ions for TIP3P + Joung-Chetham monovalent ions
+# 
+loadOff atomic_ions.lib
+loadOff solvents.lib
+HOH = TP3
+WAT = TP3
+loadAmberParams frcmod.ionsjc_tip3p
+

@@ -1,0 +1,22 @@
+This is the additional/replacement parameter set for TIP4P
+MASS
+OW    16.0
+EP     0.0
+ 
+BOND
+OW-EP   553.000   0.1250
+OW-HW   553.0     0.9572    
+HW-HW   553.0     1.5136    
+ 
+ANGLE
+HW-OW-EP    0.0       120.0
+HW-OW-HW    100.      104.52  
+HW-HW-OW      0.      127.74  
+
+DIHE
+X -HW-OW-X    2       0.0         0.0         1.0
+
+NONBON
+  OW       1.775931  0.16275
+  EP       1.0       0.0
+

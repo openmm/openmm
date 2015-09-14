@@ -1,0 +1,26 @@
+source leaprc.ff14SB 
+
+addAtomTypes {
+	{ "C3"  "C" "sp3" }
+        { "C1"  "C" "sp2" }
+        { "C2"  "C" "sp2" }
+}
+
+addPdbAtomMap {
+  { "H2*1" "H2'1" }
+  { "H2*2" "H2'2" }
+  { "H2'"  "H2'1" }
+  { "H2''" "H2'2" }
+  { "H5'"  "H5'1" }
+  { "H5''" "H5'2" }
+  { "HO2'" "HO'2" }
+  { "HO5'" "H5T" }
+  { "HO3'" "H3T" }
+  { "OP1" "O1P" }
+  { "OP2" "O2P" }
+}
+
+loadamberprep dna_nuc94-bsc0_chiOl4-ezOL1.in
+ez = loadamberparams frcmod.parmbsc0_ezOL1
+chi = loadamberparams frcmod.chiOL4
+

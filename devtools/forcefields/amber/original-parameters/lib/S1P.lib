@@ -1,0 +1,123 @@
+!!index array str
+ "S1P"
+!entry.S1P.unit.atoms table  str name  str type  int typex  int resx  int flags  int seq  int elmnt  dbl chg
+ "N" "N" 0 1 131072 1 7 -0.516300
+ "H" "H" 0 1 131072 2 1 0.293600
+ "CA" "CT" 0 1 131072 3 6 0.021706
+ "HA" "H1" 0 1 131072 4 1 0.122918
+ "CB" "CT" 0 1 131072 5 6 0.025023
+ "HB2" "H1" 0 1 131072 6 1 0.105184
+ "HB3" "H1" 0 1 131072 7 1 0.105184
+ "OG" "OR" 0 1 131072 8 8 -0.465690
+ "P" "P" 0 1 131072 9 15 1.322975
+ "O1P" "OQ" 0 1 131072 10 8 -0.752781
+ "O2P" "OP" 0 1 131072 11 8 -0.821810
+ "O3P" "OP" 0 1 131072 12 8 -0.821810
+ "H1P" "HO" 0 1 131072 13 1 0.427101
+ "C" "C" 0 1 131072 14 6 0.536600
+ "O" "O" 0 1 131072 15 8 -0.581900
+!entry.S1P.unit.atomspertinfo table  str pname  str ptype  int ptypex  int pelmnt  dbl pchg
+ "N" "N" 0 -1 0.0
+ "H" "H" 0 -1 0.0
+ "CA" "CT" 0 -1 0.0
+ "HA" "H1" 0 -1 0.0
+ "CB" "CT" 0 -1 0.0
+ "HB2" "H1" 0 -1 0.0
+ "HB3" "H1" 0 -1 0.0
+ "OG" "OR" 0 -1 0.0
+ "P" "P" 0 -1 0.0
+ "O1P" "OQ" 0 -1 0.0
+ "O2P" "OP" 0 -1 0.0
+ "O3P" "OP" 0 -1 0.0
+ "H1P" "HO" 0 -1 0.0
+ "C" "C" 0 -1 0.0
+ "O" "O" 0 -1 0.0
+!entry.S1P.unit.boundbox array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.S1P.unit.childsequence single int
+ 3
+!entry.S1P.unit.connect array int
+ 1
+ 14
+!entry.S1P.unit.connectivity table  int atom1x  int atom2x  int flags
+ 1 2 17
+ 1 3 17
+ 3 4 17
+ 3 14 17
+ 3 5 17
+ 5 6 17
+ 5 7 17
+ 5 8 17
+ 8 9 17
+ 9 12 17
+ 9 11 17
+ 9 10 17
+ 10 13 17
+ 14 15 17
+!entry.S1P.unit.hierarchy table  str abovetype  int abovex  str belowtype  int belowx
+ "U" 0 "R" 1
+ "R" 1 "A" 1
+ "R" 1 "A" 2
+ "R" 1 "A" 3
+ "R" 1 "A" 4
+ "R" 1 "A" 5
+ "R" 1 "A" 6
+ "R" 1 "A" 7
+ "R" 1 "A" 8
+ "R" 1 "A" 9
+ "R" 1 "A" 10
+ "R" 1 "A" 11
+ "R" 1 "A" 12
+ "R" 1 "A" 13
+ "R" 1 "A" 14
+ "R" 1 "A" 15
+!entry.S1P.unit.name single str
+ "S1P"
+!entry.S1P.unit.positions table  dbl x  dbl y  dbl z
+ 1.017000 1.085000 -0.124000
+ 0.176000 1.512000 -0.454000
+ 0.776000 -0.161000 0.584000
+ 0.683000 0.024000 1.647000
+ -0.542000 -0.743000 0.055000
+ -0.420000 -1.107000 -0.958000
+ -0.835000 -1.575000 0.684000
+ -1.481000 0.285000 0.091000
+ -3.073000 -0.056000 -0.218000
+ -3.476000 -0.784000 1.188000
+ -3.745000 1.250000 -0.256000
+ -3.102000 -1.068000 -1.281000
+ -3.795000 -0.113000 1.776000
+ 1.900000 -1.180000 0.437000
+ 2.182000 -1.923000 1.338000
+!entry.S1P.unit.residueconnect table  int c1x  int c2x  int c3x  int c4x  int c5x  int c6x
+ 1 14 0 0 0 0
+!entry.S1P.unit.residues table  str name  int seq  int childseq  int startatomx  str restype  int imagingx
+ "S1P" 1 16 1 "p" 0
+!entry.S1P.unit.residuesPdbSequenceNumber array int
+ 1
+!entry.S1P.unit.solventcap array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.S1P.unit.velocities table  dbl x  dbl y  dbl z
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
