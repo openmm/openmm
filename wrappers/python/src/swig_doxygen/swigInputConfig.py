@@ -224,8 +224,8 @@ UNITS = {
 ("AmoebaAngleForce",             "getAmoebaGlobalAngleSextic")            :  ( None,()),
 ("AmoebaAngleForce",             "getAngleParameters")                            :  ( None, (None, None, None, 'unit.radian', 'unit.kilojoule_per_mole/(unit.radian*unit.radian)')),
 
-("AmoebaBondForce",              "getAmoebaGlobalBondCubic")              :  ( None,()),
-("AmoebaBondForce",              "getAmoebaGlobalBondQuartic")            :  ( None,()),
+("AmoebaBondForce",              "getAmoebaGlobalBondCubic")              :  ( '1/unit.nanometer',()),
+("AmoebaBondForce",              "getAmoebaGlobalBondQuartic")            :  ( '1/unit.nanometer**2',()),
 ("AmoebaBondForce",              "getBondParameters")                             :  ( None, (None, None, 'unit.nanometer', 'unit.kilojoule_per_mole/(unit.nanometer*unit.nanometer)')),
 
 ("AmoebaInPlaneAngleForce",      "getAmoebaGlobalInPlaneAngleCubic")      :  ( None,()),

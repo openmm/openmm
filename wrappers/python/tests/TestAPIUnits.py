@@ -517,5 +517,36 @@ class TestAPIUnits(unittest.TestCase):
         self.assertEqual(force.getParticleParameters(1)[0][0], 20)
         self.assertEqual(force.getParticleParameters(2)[0][0], 30*4.184)
 
+    def testAmoebaBondForce(self):
+        """ Tests the AmoebaBondForce API features """
+        force1 = AmoebaBondForce()
+        force2 = AmoebaBondForce()
+        force1.setAmoebaGlobalBondCubic(1.5)
+        force2.setAmoebaGlobalBondCubic(1.5/angstrom)
+        force1.setAmoebaGlobalBondQuartic(1.5)
+        force2.setAmoebaGlobalBondQuartic(1.5/angstrom**2)
+
+        self.assertEqual(force1.getAmoebaGlobalBondCubic(), 1.5/nanometer)
+        self.assertEqual(force2.getAmoebaGlobalBondCubic(), 1.5/angstrom)
+        self.assertEqual(force1.getAmoebaGlobalBondQuartic(), 1.5/nanometer**2)
+        self.assertAlmostEqualUnit(force2.getAmoebaGlobalBondQuartic(), 1.5/angstrom**2)
+
+        force1.addBond(0, 1, 0.15, 10.0)
+        force1.addBond(1, 2, 1.5*angstroms, 10.0*kilocalories_per_mole/angstroms**2)
+
+        self.assertEqual(force1.getNumBonds(), 2)
+        self.assertEqual(force2.getNumBonds(), 0)
+
+        i, j, req, k = force1.getBondParameters(0)
+        self.assertEqual(req, 0.15*nanometers)
+        self.assertEqual(k, 10.0*kilojoules_per_mole/nanometers**2)
+
+        i, j, req, k = force1.getBondParameters(1)
+        self.assertAlmostEqualUnit(req, 1.5*angstroms)
+        self.assertAlmostEqualUnit(k, 10.0*kilocalories_per_mole/angstroms**2)
+
+    def testAmoebaAngleForce(self):
+        """ Tests the AmoebaAngleForce API features """
+
 if __name__ == '__main__':
     unittest.main()
