@@ -636,5 +636,50 @@ class TestAPIUnits(unittest.TestCase):
         self.assertIs(r.unit, nanometer)
         self.assertEqual(s, 0.4)
 
+    def testAmoebaInPlaneAngleForce(self):
+        """ Tests the AmoebaInPlaneAngleForce API features """
+        force = AmoebaInPlaneAngleForce()
+
+        force.setAmoebaGlobalInPlaneAngleCubic(1.0)
+        self.assertEqual(force.getAmoebaGlobalInPlaneAngleCubic(), 1/radian)
+        self.assertEqual(str(force.getAmoebaGlobalInPlaneAngleCubic().unit), '/radian')
+
+        force.setAmoebaGlobalInPlaneAngleQuartic(1.0/degrees**2)
+        self.assertAlmostEqualUnit(force.getAmoebaGlobalInPlaneAngleQuartic(), 1/degrees**2)
+        self.assertEqual(str(force.getAmoebaGlobalInPlaneAngleQuartic().unit), '/(radian**2)')
+
+        force.setAmoebaGlobalInPlaneAnglePentic(1.0/radians**3)
+        self.assertEqual(force.getAmoebaGlobalInPlaneAnglePentic(), 1/radian**3)
+        self.assertEqual(str(force.getAmoebaGlobalInPlaneAnglePentic().unit), '/(radian**3)')
+
+        force.setAmoebaGlobalInPlaneAngleSextic(1.0/radians**4)
+        self.assertEqual(force.getAmoebaGlobalInPlaneAngleSextic(), 1/radian**4)
+        self.assertEqual(str(force.getAmoebaGlobalInPlaneAngleSextic().unit), '/(radian**4)')
+
+        force.addAngle(0, 1, 2, 3, math.pi, 1.0)
+        force.addAngle(1, 2, 3, 4, 180*degrees, 1.0*kilocalories_per_mole/radians**2)
+
+        self.assertEqual(force.getNumAngles(), 2)
+
+        i, j, k, l, t, tk = force.getAngleParameters(0)
+        self.assertEqual(i, 0)
+        self.assertEqual(j, 1)
+        self.assertEqual(k, 2)
+        self.assertEqual(l, 3)
+        self.assertEqual(t, math.pi*radians)
+        self.assertIs(t.unit, radians)
+        self.assertEqual(tk, 1.0*kilojoules_per_mole/radians**2)
+        self.assertIs(tk.unit, kilojoules_per_mole/radians**2)
+
+        i, j, k, l, t, tk = force.getAngleParameters(1)
+        self.assertEqual(i, 1)
+        self.assertEqual(j, 2)
+        self.assertEqual(k, 3)
+        self.assertEqual(l, 4)
+        self.assertEqual(t, 180*degrees)
+        self.assertIs(t.unit, radians)
+        self.assertEqual(tk, 1.0*kilocalorie_per_mole/radians**2)
+        self.assertIs(tk.unit, kilojoules_per_mole/radians**2)
+
 if __name__ == '__main__':
     unittest.main()

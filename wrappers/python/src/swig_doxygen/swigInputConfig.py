@@ -228,10 +228,10 @@ UNITS = {
 ("AmoebaBondForce",              "getAmoebaGlobalBondQuartic")            :  ( '1/unit.nanometer**2',()),
 ("AmoebaBondForce",              "getBondParameters")                             :  ( None, (None, None, 'unit.nanometer', 'unit.kilojoule_per_mole/(unit.nanometer*unit.nanometer)')),
 
-("AmoebaInPlaneAngleForce",      "getAmoebaGlobalInPlaneAngleCubic")      :  ( None,()),
-("AmoebaInPlaneAngleForce",      "getAmoebaGlobalInPlaneAngleQuartic")    :  ( None,()),
-("AmoebaInPlaneAngleForce",      "getAmoebaGlobalInPlaneAnglePentic")     :  ( None,()),
-("AmoebaInPlaneAngleForce",      "getAmoebaGlobalInPlaneAngleSextic")     :  ( None,()),
+("AmoebaInPlaneAngleForce",      "getAmoebaGlobalInPlaneAngleCubic")      :  ( '1/unit.radian',()),
+("AmoebaInPlaneAngleForce",      "getAmoebaGlobalInPlaneAngleQuartic")    :  ( '1/unit.radian**2',()),
+("AmoebaInPlaneAngleForce",      "getAmoebaGlobalInPlaneAnglePentic")     :  ( '1/unit.radian**3',()),
+("AmoebaInPlaneAngleForce",      "getAmoebaGlobalInPlaneAngleSextic")     :  ( '1/unit.radian**4',()),
 ("AmoebaInPlaneAngleForce",      "getAngleParameters")                            :  ( None, (None, None, None, None, 'unit.radian', 'unit.kilojoule_per_mole/(unit.radian*unit.radian)')),
 
 ("AmoebaMultipoleForce",                 "getNumMultipoles")                              :  ( None,()),
