@@ -591,5 +591,50 @@ class TestAPIUnits(unittest.TestCase):
         self.assertAlmostEqualUnit(tk, 1.5*kilojoules_per_mole/radians**2)
         self.assertIs(tk.unit, kilojoules_per_mole/radians**2)
 
+    def testGeneralizedKirkwood(self):
+        """ Tests the AmoebaGeneralizedKirkwoodForce API features """
+        force = AmoebaGeneralizedKirkwoodForce()
+
+        self.assertEqual(force.getProbeRadius(), 0.14*nanometer) # default
+        force.setProbeRadius(0.16)
+        self.assertEqual(force.getProbeRadius(), 0.16*nanometer)
+        self.assertIs(force.getProbeRadius().unit, nanometer)
+        force.setProbeRadius(1.4*angstrom)
+        self.assertEqual(force.getProbeRadius(), 1.4*angstrom)
+        self.assertIs(force.getProbeRadius().unit, nanometer)
+
+        self.assertEqual(force.getSoluteDielectric(), 1.0) # default
+        force.setSoluteDielectric(2.0)
+        self.assertEqual(force.getSoluteDielectric(), 2.0)
+
+        self.assertEqual(force.getSolventDielectric(), 78.3) # default
+        force.setSolventDielectric(80)
+        self.assertEqual(force.getSolventDielectric(), 80)
+
+        self.assertEqual(force.getSurfaceAreaFactor(),
+                -170.35173066268223*kilojoule_per_mole/nanometer**2) # default
+        force.setSurfaceAreaFactor(-1.0*kilocalorie_per_mole/angstrom**2)
+        self.assertAlmostEqualUnit(force.getSurfaceAreaFactor(),
+                -1.0*kilocalorie_per_mole/angstrom**2) # default
+
+        force.addParticle(1.0*coulomb, 1.0*angstroms, 0.5)
+        force.addParticle(1.0, 1.0, 0.4)
+
+        self.assertEqual(force.getNumParticles(), 2)
+
+        q, r, s = force.getParticleParameters(0)
+        self.assertAlmostEqualUnit(q, 1.0*coulomb)
+        self.assertIs(q.unit, elementary_charge)
+        self.assertEqual(r, 1.0*angstroms)
+        self.assertIs(r.unit, nanometer)
+        self.assertEqual(s, 0.5)
+
+        q, r, s = force.getParticleParameters(1)
+        self.assertAlmostEqualUnit(q, 1.0*elementary_charge)
+        self.assertIs(q.unit, elementary_charge)
+        self.assertEqual(r, 1.0*nanometer)
+        self.assertIs(r.unit, nanometer)
+        self.assertEqual(s, 0.4)
+
 if __name__ == '__main__':
     unittest.main()

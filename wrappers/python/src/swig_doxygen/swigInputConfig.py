@@ -216,7 +216,7 @@ UNITS = {
 ("AmoebaGeneralizedKirkwoodForce",       "getDielectricOffset")                           :  ( 'unit.nanometer', ()),
 ("AmoebaGeneralizedKirkwoodForce",       "getIncludeCavityTerm")                          :  ( None,()),
 ("AmoebaGeneralizedKirkwoodForce",       "getProbeRadius")                                :  ( 'unit.nanometer', ()),
-("AmoebaGeneralizedKirkwoodForce",       "getSurfaceAreaFactor")                          :  ( '(unit.nanometer*unit.nanometer)/unit.kilojoule_per_mole',()),
+("AmoebaGeneralizedKirkwoodForce",       "getSurfaceAreaFactor")                          :  ( 'unit.kilojoule_per_mole/(unit.nanometer*unit.nanometer)',()),
 
 ("AmoebaAngleForce",             "getAmoebaGlobalAngleCubic")             :  ( '1/unit.radian',()),
 ("AmoebaAngleForce",             "getAmoebaGlobalAngleQuartic")           :  ( '1/unit.radian**2',()),
