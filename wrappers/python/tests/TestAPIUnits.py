@@ -547,6 +547,49 @@ class TestAPIUnits(unittest.TestCase):
 
     def testAmoebaAngleForce(self):
         """ Tests the AmoebaAngleForce API features """
+        force = AmoebaAngleForce()
+        force.setAmoebaGlobalAngleCubic(1.0)
+        force.setAmoebaGlobalAngleQuartic(2.0/radians**2)
+        force.setAmoebaGlobalAnglePentic(3.0/degrees**3)
+        force.setAmoebaGlobalAngleSextic(4.0)
+
+        self.assertEqual(force.getAmoebaGlobalAngleCubic(), 1.0/radians)
+        self.assertEqual(force.getAmoebaGlobalAngleQuartic(), 2.0/radians**2)
+        self.assertAlmostEqualUnit(force.getAmoebaGlobalAnglePentic(), 3.0/degrees**3)
+        self.assertEqual(force.getAmoebaGlobalAngleSextic(), 4.0/radians**4)
+
+        force.addAngle(0, 1, 2, math.pi*radians, 1.5*kilocalories_per_mole/radians**2)
+        force.addAngle(1, 2, 3, 180*degrees, 1.5*kilocalories_per_mole/radians**2)
+        force.addAngle(2, 3, 4, 109.4, 1.5)
+
+        self.assertEqual(force.getNumAngles(), 3)
+
+        i, j, k, t, tk = force.getAngleParameters(0)
+        self.assertEqual(i, 0)
+        self.assertEqual(j, 1)
+        self.assertEqual(k, 2)
+        self.assertAlmostEqualUnit(t, math.pi*radians)
+        self.assertIs(t.unit, degree)
+        self.assertAlmostEqualUnit(tk, 1.5*kilocalories_per_mole/radians**2)
+        self.assertIs(tk.unit, kilojoules_per_mole/radians**2)
+
+        i, j, k, t, tk = force.getAngleParameters(1)
+        self.assertEqual(i, 1)
+        self.assertEqual(j, 2)
+        self.assertEqual(k, 3)
+        self.assertAlmostEqualUnit(t, 180*degrees)
+        self.assertIs(t.unit, degree)
+        self.assertAlmostEqualUnit(tk, 1.5*kilocalories_per_mole/radians**2)
+        self.assertIs(tk.unit, kilojoules_per_mole/radians**2)
+
+        i, j, k, t, tk = force.getAngleParameters(2)
+        self.assertEqual(i, 2)
+        self.assertEqual(j, 3)
+        self.assertEqual(k, 4)
+        self.assertAlmostEqualUnit(t, 109.4*degrees)
+        self.assertIs(t.unit, degree)
+        self.assertAlmostEqualUnit(tk, 1.5*kilojoules_per_mole/radians**2)
+        self.assertIs(tk.unit, kilojoules_per_mole/radians**2)
 
 if __name__ == '__main__':
     unittest.main()

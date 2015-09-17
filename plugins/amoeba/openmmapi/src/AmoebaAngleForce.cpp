@@ -29,6 +29,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include <cmath>
 #include "openmm/Force.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/AmoebaAngleForce.h"
@@ -41,6 +42,7 @@ AmoebaAngleForce::AmoebaAngleForce() {
 }
 
 int AmoebaAngleForce::addAngle(int particle1, int particle2, int particle3,  double length, double quadraticK) {
+    length = length < 2*M_PI ? length * 180.0/M_PI : length;
     angles.push_back(AngleInfo(particle1, particle2, particle3, length, quadraticK));
     return angles.size()-1;
 }
@@ -59,7 +61,7 @@ void AmoebaAngleForce::setAngleParameters(int index, int particle1, int particle
     angles[index].particle1  = particle1;
     angles[index].particle2  = particle2;
     angles[index].particle3  = particle3;
-    angles[index].length     = length;
+    angles[index].length     = length < 2*M_PI ? length * 180.0/M_PI : length;
     angles[index].quadraticK = quadraticK;
 }
 

@@ -218,11 +218,11 @@ UNITS = {
 ("AmoebaGeneralizedKirkwoodForce",       "getProbeRadius")                                :  ( 'unit.nanometer', ()),
 ("AmoebaGeneralizedKirkwoodForce",       "getSurfaceAreaFactor")                          :  ( '(unit.nanometer*unit.nanometer)/unit.kilojoule_per_mole',()),
 
-("AmoebaAngleForce",             "getAmoebaGlobalAngleCubic")             :  ( None,()),
-("AmoebaAngleForce",             "getAmoebaGlobalAngleQuartic")           :  ( None,()),
-("AmoebaAngleForce",             "getAmoebaGlobalAnglePentic")            :  ( None,()),
-("AmoebaAngleForce",             "getAmoebaGlobalAngleSextic")            :  ( None,()),
-("AmoebaAngleForce",             "getAngleParameters")                            :  ( None, (None, None, None, 'unit.radian', 'unit.kilojoule_per_mole/(unit.radian*unit.radian)')),
+("AmoebaAngleForce",             "getAmoebaGlobalAngleCubic")             :  ( '1/unit.radian',()),
+("AmoebaAngleForce",             "getAmoebaGlobalAngleQuartic")           :  ( '1/unit.radian**2',()),
+("AmoebaAngleForce",             "getAmoebaGlobalAnglePentic")            :  ( '1/unit.radian**3',()),
+("AmoebaAngleForce",             "getAmoebaGlobalAngleSextic")            :  ( '1/unit.radian**4',()),
+("AmoebaAngleForce",             "getAngleParameters")                            :  ( None, (None, None, None, 'unit.degree', 'unit.kilojoule_per_mole/(unit.radian*unit.radian)')),
 
 ("AmoebaBondForce",              "getAmoebaGlobalBondCubic")              :  ( '1/unit.nanometer',()),
 ("AmoebaBondForce",              "getAmoebaGlobalBondQuartic")            :  ( '1/unit.nanometer**2',()),
