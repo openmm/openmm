@@ -722,5 +722,75 @@ class TestAPIUnits(unittest.TestCase):
         self.assertEqual(tk, 1.0*kilocalorie_per_mole/radians**2)
         self.assertIs(tk.unit, kilojoules_per_mole/radians**2)
 
+    def testAmoebaPiTorsionForce(self):
+        """ Tests the AmoebaPiTorsionForce API features """
+        force = AmoebaPiTorsionForce()
+
+        force.addPiTorsion(0, 1, 2, 3, 4, 5, 1.0)
+        force.addPiTorsion(1, 2, 3, 4, 5, 6, 1.0*kilocalories_per_mole)
+
+        self.assertEqual(force.getNumPiTorsions(), 2)
+
+        i, j, k, l, m, n, tk = force.getPiTorsionParameters(0)
+        self.assertEqual(i, 0)
+        self.assertEqual(j, 1)
+        self.assertEqual(k, 2)
+        self.assertEqual(l, 3)
+        self.assertEqual(m, 4)
+        self.assertEqual(n, 5)
+        self.assertEqual(tk, 1.0*kilojoules_per_mole)
+        self.assertIs(tk.unit, kilojoule_per_mole)
+
+        i, j, k, l, m, n, tk = force.getPiTorsionParameters(1)
+        self.assertEqual(i, 1)
+        self.assertEqual(j, 2)
+        self.assertEqual(k, 3)
+        self.assertEqual(l, 4)
+        self.assertEqual(m, 5)
+        self.assertEqual(n, 6)
+        self.assertEqual(tk, 1.0*kilocalories_per_mole)
+        self.assertIs(tk.unit, kilojoule_per_mole)
+
+    def testAmoebaStretchBendForce(self):
+        """ Tests the AmoebaStretchBendForce API features """
+        force = AmoebaStretchBendForce()
+
+        force.addStretchBend(0, 1, 2, 0.10, 0.12, math.pi/2, 10.0, 12.0)
+        force.addStretchBend(1, 2, 3, 1.0*angstroms, 1.2*angstroms, 60*degrees,
+                10.0*kilocalories_per_mole/angstroms/radians,
+                12.0*kilocalories_per_mole/angstroms/radians)
+
+        self.assertEqual(force.getNumStretchBends(), 2)
+
+        i, j, k, r1, r2, t, k1, k2 = force.getStretchBendParameters(0)
+        self.assertEqual(i, 0)
+        self.assertEqual(j, 1)
+        self.assertEqual(k, 2)
+        self.assertEqual(r1, 0.1*nanometers)
+        self.assertIs(r1.unit, nanometers)
+        self.assertEqual(r2, 0.12*nanometers)
+        self.assertIs(r2.unit, nanometers)
+        self.assertEqual(t, math.pi/2*radians)
+        self.assertIs(t.unit, radians)
+        self.assertEqual(k1, 10*kilojoules_per_mole/nanometers/radians)
+        self.assertIs(k1.unit, kilojoules_per_mole/nanometers/radians)
+        self.assertEqual(k2, 12*kilojoules_per_mole/nanometers/radians)
+        self.assertIs(k2.unit, kilojoules_per_mole/nanometers/radians)
+
+        i, j, k, r1, r2, t, k1, k2 = force.getStretchBendParameters(1)
+        self.assertEqual(i, 1)
+        self.assertEqual(j, 2)
+        self.assertEqual(k, 3)
+        self.assertEqual(r1, 1.0*angstroms)
+        self.assertIs(r1.unit, nanometers)
+        self.assertEqual(r2, 1.2*angstroms)
+        self.assertIs(r2.unit, nanometers)
+        self.assertAlmostEqualUnit(t, 60*degrees)
+        self.assertIs(t.unit, radians)
+        self.assertEqual(k1, 10*kilocalories_per_mole/angstroms/radians)
+        self.assertIs(k1.unit, kilojoules_per_mole/nanometers/radians)
+        self.assertEqual(k2, 12*kilocalories_per_mole/angstroms/radians)
+        self.assertIs(k2.unit, kilojoules_per_mole/nanometers/radians)
+
 if __name__ == '__main__':
     unittest.main()
