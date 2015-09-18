@@ -67,6 +67,14 @@ namespace OpenMM {
  * force->addPerParticleParameter("z0");
  * </pre></tt>
  *
+ * Special care is needed in systems that use periodic boundary conditions.  In that case, each particle really represents
+ * an infinite set of particles repeating through space.  The variables x, y, and z contain the coordinates of one of those
+ * periodic copies, but there is no guarantee about which.  It might even change from one time step to the next.  You can handle
+ * this situation by using the function periodicdistance(x1, y1, z1, x2, y2, z2), which returns the minimum distance between
+ * periodic copies of the points (x1, y1, z1) and (x2, y2, z2).  For example, the force given above would be rewritten as
+ *
+ * <tt>CustomExternalForce* force = new CustomExternalForce("k*periodicdistance(x, y, z, x0, y0, z0)^2");</tt>
+ *
  * Expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
  * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, erf, erfc, min, max, abs, floor, ceil, step, delta, select.  All trigonometric functions
  * are defined in radians, and log is the natural logarithm.  step(x) = 0 if x is less than 0, 1 otherwise.  delta(x) = 1 if x is 0, 0 otherwise.
