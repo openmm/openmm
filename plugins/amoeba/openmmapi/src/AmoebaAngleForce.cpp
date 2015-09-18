@@ -29,6 +29,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#define _USE_MATH_DEFINES 1 /* Needed for Windows */
 #include <cmath>
 #include "openmm/Force.h"
 #include "openmm/OpenMMException.h"
