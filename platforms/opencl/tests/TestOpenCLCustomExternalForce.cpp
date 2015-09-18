@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -161,6 +161,47 @@ void testParallelComputation() {
         ASSERT_EQUAL_VEC(state1.getForces()[i], state2.getForces()[i], 1e-5);
 }
 
+void testPeriodic() {
+    Vec3 vx(5, 0, 0);
+    Vec3 vy(0, 6, 0);
+    Vec3 vz(1, 2, 7);
+    double x0 = 51, y0 = -17, z0 = 11.2;
+    System system;
+    system.setDefaultPeriodicBoxVectors(vx, vy, vz);
+    system.addParticle(1.0);
+    CustomExternalForce* force = new CustomExternalForce("periodicdistance(x, y, z, x0, y0, z0)^2");
+    force->addPerParticleParameter("x0");
+    force->addPerParticleParameter("y0");
+    force->addPerParticleParameter("z0");
+    vector<double> params(3);
+    params[0] = x0;
+    params[1] = y0;
+    params[2] = z0;
+    force->addParticle(0, params);
+    system.addForce(force);
+    VerletIntegrator integrator(0.01);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(1);
+    positions[0] = Vec3(0, 2, 0);
+    context.setPositions(positions);
+    for (int i = 0; i < 100; i++) {
+        State state = context.getState(State::Positions | State::Forces | State::Energy);
+
+        // Apply periodic boundary conditions to the difference between the two positions.
+
+        Vec3 delta = Vec3(x0, y0, z0)-state.getPositions()[0];
+        delta -= vz*floor(delta[2]/vz[2]+0.5);
+        delta -= vy*floor(delta[1]/vy[1]+0.5);
+        delta -= vx*floor(delta[0]/vx[0]+0.5);
+
+        // Verify that the force and energy are correct.
+
+        ASSERT_EQUAL_VEC(delta*2, state.getForces()[0], 1e-5);
+        ASSERT_EQUAL_TOL(delta.dot(delta), state.getPotentialEnergy(), 1e-5);
+        integrator.step(1);
+    }
+}
+
 int main(int argc, char* argv[]) {
     try {
         if (argc > 1)
@@ -168,6 +209,7 @@ int main(int argc, char* argv[]) {
         testForce();
         testManyParameters();
         testParallelComputation();
+        testPeriodic();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;
