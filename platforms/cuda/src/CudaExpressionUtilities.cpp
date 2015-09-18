@@ -101,15 +101,15 @@ void CudaExpressionUtilities::processExpression(stringstream& out, const Express
             if (node.getOperation().getName() == "periodicdistance") {
                 // This is the periodicdistance() function.
 
-                out << tempType << " periodicDistance_delta = make_real3(";
+                out << tempType << "3 periodicDistance_delta = make_real3(";
                 for (int i = 0; i < 3; i++) {
                     if (i > 0)
                         out << ", ";
                     out << getTempName(node.getChildren()[i], temps) << "-" << getTempName(node.getChildren()[i+3], temps);
-                    out << ");\n";
                 }
+                out << ");\n";
                 out << "APPLY_PERIODIC_TO_DELTA(periodicDistance_delta)\n";
-                out << tempType << " periodicDistance_r = SQRT(periodicDistance_delta.x*periodicDistance_delta.x + periodicDistance_delta.y*periodicDistance_delta.y + periodicDistance_delta.z*periodicDistance_delta.z);\n";
+                out << tempType << " periodicDistance_rinv = RSQRT(periodicDistance_delta.x*periodicDistance_delta.x + periodicDistance_delta.y*periodicDistance_delta.y + periodicDistance_delta.z*periodicDistance_delta.z);\n";
                 for (int j = 0; j < nodes.size(); j++) {
                     const vector<int>& derivOrder = dynamic_cast<const Operation::Custom*>(&nodes[j]->getOperation())->getDerivOrder();
                     int argIndex = -1;
@@ -121,19 +121,19 @@ void CudaExpressionUtilities::processExpression(stringstream& out, const Express
                         }
                     }
                     if (argIndex == -1)
-                        out << nodeNames[j] << " = periodicDistance_r;\n";
+                        out << nodeNames[j] << " = RECIP(periodicDistance_rinv);\n";
                     else if (argIndex == 0)
-                        out << nodeNames[j] << " = periodicDistance_delta.x/periodicDistance_r;\n";
+                        out << nodeNames[j] << " = periodicDistance_delta.x*periodicDistance_rinv;\n";
                     else if (argIndex == 1)
-                        out << nodeNames[j] << " = periodicDistance_delta.y/periodicDistance_r;\n";
+                        out << nodeNames[j] << " = periodicDistance_delta.y*periodicDistance_rinv;\n";
                     else if (argIndex == 2)
-                        out << nodeNames[j] << " = periodicDistance_delta.z/periodicDistance_r;\n";
+                        out << nodeNames[j] << " = periodicDistance_delta.z*periodicDistance_rinv;\n";
                     else if (argIndex == 3)
-                        out << nodeNames[j] << " = -periodicDistance_delta.x/periodicDistance_r;\n";
+                        out << nodeNames[j] << " = -periodicDistance_delta.x*periodicDistance_rinv;\n";
                     else if (argIndex == 4)
-                        out << nodeNames[j] << " = -periodicDistance_delta.y/periodicDistance_r;\n";
+                        out << nodeNames[j] << " = -periodicDistance_delta.y*periodicDistance_rinv;\n";
                     else if (argIndex == 5)
-                        out << nodeNames[j] << " = -periodicDistance_delta.z/periodicDistance_r;\n";
+                        out << nodeNames[j] << " = -periodicDistance_delta.z*periodicDistance_rinv;\n";
                 }
             }
             else {

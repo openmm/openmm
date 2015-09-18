@@ -196,8 +196,8 @@ void testPeriodic() {
 
         // Verify that the force and energy are correct.
 
-        ASSERT_EQUAL_VEC(delta*2, state.getForces()[0], 1e-6);
-        ASSERT_EQUAL_TOL(delta.dot(delta), state.getPotentialEnergy(), 1e-6);
+        ASSERT_EQUAL_VEC(delta*2, state.getForces()[0], 1e-5);
+        ASSERT_EQUAL_TOL(delta.dot(delta), state.getPotentialEnergy(), 1e-5);
         integrator.step(1);
     }
 }
