@@ -792,5 +792,19 @@ class TestAPIUnits(unittest.TestCase):
         self.assertEqual(k2, 12*kilocalories_per_mole/angstroms/radians)
         self.assertIs(k2.unit, kilojoules_per_mole/nanometers/radians)
 
+    def testAmoebaTorsionTorsionForce(self):
+        """ Tests the AmoebaTorsionTorsionForce API features """
+        force = AmoebaTorsionTorsionForce()
+
+        grid1 = [[[i, j, random.random(), random.random(), random.random(), random.random()]
+                    for j in range(-180, 180, 24)] for i in range(-180, 180, 24)]
+        kcal = kilocalories_per_mole
+        grid2 = [[[i*degrees, j*degrees, random.random()*kcal,
+                   random.random()*kcal/radians, random.random()*kcal/radians,
+                   random.random()*kcal/radians**2]
+            for j in range(-180, 0, 10)] for i in range(-180, 0, 10)]
+        force.setTorsionTorsionGrid(0, grid1)
+        force.setTorsionTorsionGrid(0, grid2)
+
 if __name__ == '__main__':
     unittest.main()

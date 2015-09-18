@@ -1017,7 +1017,6 @@ if( isAmoeba ):
     torsionTorsionUnit      = 1.0
     outputString            = """ <AmoebaTorsionTorsionForce >"""
     tinkerXmlFile.write( "%s\n" % (outputString ) )
-    conversion              = 41.84/radian
     torsionTorsions         = forces['tortors']
     for (index, torsionTorsion) in enumerate(torsionTorsions):
        torInfo       = torsionTorsion[0]
