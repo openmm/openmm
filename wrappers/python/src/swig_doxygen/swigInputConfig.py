@@ -272,7 +272,7 @@ UNITS = {
 ("AmoebaOutOfPlaneBendForce",            "getAmoebaGlobalOutOfPlaneBendQuartic")          :  ( '1/unit.radian**2',()),
 ("AmoebaOutOfPlaneBendForce",            "getAmoebaGlobalOutOfPlaneBendPentic")           :  ( '1/unit.radian**3',()),
 ("AmoebaOutOfPlaneBendForce",            "getAmoebaGlobalOutOfPlaneBendSextic")           :  ( '1/unit.radian**4',()),
-("AmoebaOutOfPlaneBendForce",            "getOutOfPlaneBendParameters")                   :  ( None, (None, None, None, None, 'unit.kilojoule_per_mole')),
+("AmoebaOutOfPlaneBendForce",            "getOutOfPlaneBendParameters")                   :  ( None, (None, None, None, None, 'unit.kilojoule_per_mole/unit.radians**2')),
 
 ("AmoebaPiTorsionForce",                  "getNumPiTorsions")                              :  ( None, ()),
 ("AmoebaPiTorsionForce",                  "getPiTorsionParameters")                        :  ( None, (None, None, None, None, None,  None, 'unit.kilojoule_per_mole')),

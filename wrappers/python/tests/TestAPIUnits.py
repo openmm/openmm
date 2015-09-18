@@ -711,16 +711,16 @@ class TestAPIUnits(unittest.TestCase):
         self.assertEqual(j, 1)
         self.assertEqual(k, 2)
         self.assertEqual(l, 3)
-        self.assertEqual(tk, 1.0*kilojoules_per_mole)
-        self.assertIs(tk.unit, kilojoules_per_mole)
+        self.assertEqual(tk, 1.0*kilojoules_per_mole/radians**2)
+        self.assertIs(tk.unit, kilojoules_per_mole/radians**2)
 
         i, j, k, l, tk = force.getOutOfPlaneBendParameters(1)
         self.assertEqual(i, 1)
         self.assertEqual(j, 2)
         self.assertEqual(k, 3)
         self.assertEqual(l, 4)
-        self.assertEqual(tk, 1.0*kilocalorie_per_mole)
-        self.assertIs(tk.unit, kilojoules_per_mole)
+        self.assertEqual(tk, 1.0*kilocalorie_per_mole/radians**2)
+        self.assertIs(tk.unit, kilojoules_per_mole/radians**2)
 
 if __name__ == '__main__':
     unittest.main()

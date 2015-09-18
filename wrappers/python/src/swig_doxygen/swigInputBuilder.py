@@ -481,7 +481,6 @@ class SwigInputBuilder:
                     sys.stdout.write("%s.%s() returns %s\n" %
                                      (shortClassName, methName, valueUnits[0]))
                     if len(valueUnits[1])>0:
-                        print('IT IS GREATER THAN 1')
                         addText = "%s%sval[%d]=unit.Quantity(val[%d], %s)\n" \
                                  % (addText, INDENT,
                                     index, index,
@@ -492,10 +491,10 @@ class SwigInputBuilder:
                                  % (addText, INDENT, valueUnits[0])
 
                 for vUnit in valueUnits[1]:
-                        if vUnit!=None:
-                            addText = "%s%sval[%s]=unit.Quantity(val[%s], %s)\n" \
+                    if vUnit is not None:
+                        addText = "%s%sval[%s]=unit.Quantity(val[%s], %s)\n" \
                                      % (addText, INDENT, index, index, vUnit)
-                        index+=1
+                    index+=1
 
                 if key in self.configModule.STEAL_OWNERSHIP:
                     for argNum in self.configModule.STEAL_OWNERSHIP[key]:
