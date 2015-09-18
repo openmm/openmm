@@ -681,5 +681,46 @@ class TestAPIUnits(unittest.TestCase):
         self.assertEqual(tk, 1.0*kilocalorie_per_mole/radians**2)
         self.assertIs(tk.unit, kilojoules_per_mole/radians**2)
 
+    def testAmoebaOutOfPlaneBendForce(self):
+        """ Tests the AmoebaOutOfPlaneBendForce API features """
+        force = AmoebaOutOfPlaneBendForce()
+
+        force.setAmoebaGlobalOutOfPlaneBendCubic(1.0)
+        self.assertEqual(force.getAmoebaGlobalOutOfPlaneBendCubic(), 1/radian)
+        self.assertEqual(str(force.getAmoebaGlobalOutOfPlaneBendCubic().unit), '/radian')
+
+        force.setAmoebaGlobalOutOfPlaneBendQuartic(1.0/degrees**2)
+        self.assertAlmostEqualUnit(force.getAmoebaGlobalOutOfPlaneBendQuartic(), 1/degrees**2)
+        self.assertEqual(str(force.getAmoebaGlobalOutOfPlaneBendQuartic().unit), '/(radian**2)')
+
+        force.setAmoebaGlobalOutOfPlaneBendPentic(1.0/radians**3)
+        self.assertEqual(force.getAmoebaGlobalOutOfPlaneBendPentic(), 1/radian**3)
+        self.assertEqual(str(force.getAmoebaGlobalOutOfPlaneBendPentic().unit), '/(radian**3)')
+
+        force.setAmoebaGlobalOutOfPlaneBendSextic(1.0/radians**4)
+        self.assertEqual(force.getAmoebaGlobalOutOfPlaneBendSextic(), 1/radian**4)
+        self.assertEqual(str(force.getAmoebaGlobalOutOfPlaneBendSextic().unit), '/(radian**4)')
+
+        force.addOutOfPlaneBend(0, 1, 2, 3, 1.0)
+        force.addOutOfPlaneBend(1, 2, 3, 4, 1.0*kilocalories_per_mole/radians**2)
+
+        self.assertEqual(force.getNumOutOfPlaneBends(), 2)
+
+        i, j, k, l, tk = force.getOutOfPlaneBendParameters(0)
+        self.assertEqual(i, 0)
+        self.assertEqual(j, 1)
+        self.assertEqual(k, 2)
+        self.assertEqual(l, 3)
+        self.assertEqual(tk, 1.0*kilojoules_per_mole)
+        self.assertIs(tk.unit, kilojoules_per_mole)
+
+        i, j, k, l, tk = force.getOutOfPlaneBendParameters(1)
+        self.assertEqual(i, 1)
+        self.assertEqual(j, 2)
+        self.assertEqual(k, 3)
+        self.assertEqual(l, 4)
+        self.assertEqual(tk, 1.0*kilocalorie_per_mole)
+        self.assertIs(tk.unit, kilojoules_per_mole)
+
 if __name__ == '__main__':
     unittest.main()

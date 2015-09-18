@@ -10,6 +10,7 @@ import getopt
 import re
 import xml.etree.ElementTree as etree
 from distutils.version import LooseVersion
+import copy
 
 try:
     from html.parser import HTMLParser
@@ -19,7 +20,6 @@ except ImportError:
 
 INDENT = "   "
 docTags = {'emphasis':'i', 'bold':'b', 'itemizedlist':'ul', 'listitem':'li', 'preformatted':'pre', 'computeroutput':'tt', 'subscript':'sub'}
-
 
 def striphtmltags(s):
     """Strip a couple html tags used inside docstrings in the C++ source
@@ -477,10 +477,11 @@ class SwigInputBuilder:
                     valueUnits=[None, ()]
 
                 index=0
-                if valueUnits[0]:
+                if valueUnits[0] is not None:
                     sys.stdout.write("%s.%s() returns %s\n" %
                                      (shortClassName, methName, valueUnits[0]))
                     if len(valueUnits[1])>0:
+                        print('IT IS GREATER THAN 1')
                         addText = "%s%sval[%d]=unit.Quantity(val[%d], %s)\n" \
                                  % (addText, INDENT,
                                     index, index,
