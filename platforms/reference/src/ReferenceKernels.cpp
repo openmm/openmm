@@ -1402,6 +1402,46 @@ void ReferenceCalcCustomGBForceKernel::copyParametersToContext(ContextImpl& cont
     }
 }
 
+ReferenceCalcCustomExternalForceKernel::PeriodicDistanceFunction::PeriodicDistanceFunction(RealVec** boxVectorHandle) : boxVectorHandle(boxVectorHandle) {
+}
+
+int ReferenceCalcCustomExternalForceKernel::PeriodicDistanceFunction::getNumArguments() const {
+    return 6;
+}
+
+double ReferenceCalcCustomExternalForceKernel::PeriodicDistanceFunction::evaluate(const double* arguments) const {
+    RealVec* boxVectors = *boxVectorHandle;
+    RealVec delta = RealVec(arguments[0], arguments[1], arguments[2])-RealVec(arguments[3], arguments[4], arguments[5]);
+    delta -= boxVectors[2]*floor(delta[2]/boxVectors[2][2]+0.5);
+    delta -= boxVectors[1]*floor(delta[1]/boxVectors[1][1]+0.5);
+    delta -= boxVectors[0]*floor(delta[0]/boxVectors[0][0]+0.5);
+    return sqrt(delta.dot(delta));
+}
+
+double ReferenceCalcCustomExternalForceKernel::PeriodicDistanceFunction::evaluateDerivative(const double* arguments, const int* derivOrder) const {
+    int argIndex = -1;
+    for (int i = 0; i < 6; i++) {
+        if (derivOrder[i] > 0) {
+            if (derivOrder[i] > 1 || argIndex != -1)
+                throw OpenMMException("Unsupported derivative of periodicdistance"); // Should be impossible for this to happen.
+            argIndex = i;
+        }
+    }
+    RealVec* boxVectors = *boxVectorHandle;
+    RealVec delta = RealVec(arguments[0], arguments[1], arguments[2])-RealVec(arguments[3], arguments[4], arguments[5]);
+    delta -= boxVectors[2]*floor(delta[2]/boxVectors[2][2]+0.5);
+    delta -= boxVectors[1]*floor(delta[1]/boxVectors[1][1]+0.5);
+    delta -= boxVectors[0]*floor(delta[0]/boxVectors[0][0]+0.5);
+    double r = sqrt(delta.dot(delta));
+    if (argIndex < 3)
+        return delta[argIndex]/r;
+    return -delta[argIndex-3]/r;
+}
+
+Lepton::CustomFunction* ReferenceCalcCustomExternalForceKernel::PeriodicDistanceFunction::clone() const {
+    return new PeriodicDistanceFunction(boxVectorHandle);
+}
+
 ReferenceCalcCustomExternalForceKernel::~ReferenceCalcCustomExternalForceKernel() {
     disposeRealArray(particleParamArray, numParticles);
 }
@@ -1423,7 +1463,10 @@ void ReferenceCalcCustomExternalForceKernel::initialize(const System& system, co
 
     // Parse the expression used to calculate the force.
 
-    Lepton::ParsedExpression expression = Lepton::Parser::parse(force.getEnergyFunction()).optimize();
+    map<string, Lepton::CustomFunction*> functions;
+    PeriodicDistanceFunction periodicDistance(&boxVectors);
+    functions["periodicdistance"] = &periodicDistance;
+    Lepton::ParsedExpression expression = Lepton::Parser::parse(force.getEnergyFunction(), functions).optimize();
     energyExpression = expression.createCompiledExpression();
     forceExpressionX = expression.differentiate("x").createCompiledExpression();
     forceExpressionY = expression.differentiate("y").createCompiledExpression();
@@ -1437,6 +1480,7 @@ void ReferenceCalcCustomExternalForceKernel::initialize(const System& system, co
 double ReferenceCalcCustomExternalForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     vector<RealVec>& posData = extractPositions(context);
     vector<RealVec>& forceData = extractForces(context);
+    boxVectors = extractBoxVectors(context);
     RealOpenMM energy = 0;
     map<string, double> globalParameters;
     for (int i = 0; i < (int) globalParameterNames.size(); i++)

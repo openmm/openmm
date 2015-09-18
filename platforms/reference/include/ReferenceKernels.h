@@ -37,6 +37,7 @@
 #include "SimTKOpenMMRealType.h"
 #include "ReferenceNeighborList.h"
 #include "lepton/CompiledExpression.h"
+#include "lepton/CustomFunction.h"
 #include "lepton/ExpressionProgram.h"
 
 namespace OpenMM {
@@ -795,11 +796,23 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const CustomExternalForce& force);
 private:
+    class PeriodicDistanceFunction;
     int numParticles;
     std::vector<int> particles;
     RealOpenMM **particleParamArray;
     Lepton::CompiledExpression energyExpression, forceExpressionX, forceExpressionY, forceExpressionZ;
     std::vector<std::string> parameterNames, globalParameterNames;
+    RealVec* boxVectors;
+};
+
+class ReferenceCalcCustomExternalForceKernel::PeriodicDistanceFunction : public Lepton::CustomFunction {
+public:
+    RealVec** boxVectorHandle;
+    PeriodicDistanceFunction(RealVec** boxVectorHandle);
+    int getNumArguments() const;
+    double evaluate(const double* arguments) const;
+    double evaluateDerivative(const double* arguments, const int* derivOrder) const;
+    Lepton::CustomFunction* clone() const;
 };
 
 /**
