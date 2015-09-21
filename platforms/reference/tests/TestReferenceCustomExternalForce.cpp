@@ -119,6 +119,8 @@ void testPeriodic() {
     params[2] = z0;
     force->addParticle(0, params);
     system.addForce(force);
+    ASSERT(force->usesPeriodicBoundaryConditions());
+    ASSERT(system.usesPeriodicBoundaryConditions());
     VerletIntegrator integrator(0.01);
     Context context(system, integrator, platform);
     vector<Vec3> positions(1);
