@@ -345,11 +345,16 @@ public:
          */
         Mutual = 0,
 
-        /** 
+        /**
          * Direct polarization
          */
-        Direct = 1 
-    };  
+        Direct = 1,
+
+        /**
+         * Optimized perturbation theory
+         */
+        OPT = 2
+    };
 
     /**
      * Constructor
@@ -421,6 +426,15 @@ public:
      *
      */
     RealOpenMM getMutualInducedDipoleEpsilon() const;
+
+    /**
+     * Set the coefficients for the µ_0, µ_1, µ_2, µ_n terms in the pertubation
+     * theory algorithm for induced dipoles
+     *
+     * @param optCoefficients a vector whose mth entry specifies the coefficient for µ_m
+     *
+     */
+    void setOPTCoefficients(const std::vector<RealOpenMM> &OPTFullCoefficients);
 
     /**
      * Set the target epsilon for converging mutual induced dipoles.
@@ -655,6 +669,9 @@ protected:
     int _mutualInducedDipoleConverged;
     int _mutualInducedDipoleIterations;
     int _maximumMutualInducedDipoleIterations;
+    int _maxPTOrder;
+    std::vector<RealOpenMM>  _OPTFullCoefficients;
+    std::vector<RealOpenMM>  _OPTPartCoefficients;
     RealOpenMM  _mutualInducedDipoleEpsilon;
     RealOpenMM  _mutualInducedDipoleTargetEpsilon;
     RealOpenMM  _polarSOR;

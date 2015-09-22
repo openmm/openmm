@@ -162,6 +162,19 @@ RealOpenMM AmoebaReferenceMultipoleForce::getMutualInducedDipoleTargetEpsilon() 
     return _mutualInducedDipoleTargetEpsilon;
 }
 
+void AmoebaReferenceMultipoleForce::setOPTCoefficients(const std::vector<RealOpenMM> &OPTFullCoefficients)
+{
+    _maxPTOrder = OPTFullCoefficients.size(); // This accounts for the zero-based counting; actual highest order is 1 less
+    _OPTFullCoefficients.resize(_maxPTOrder);
+    _OPTPartCoefficients.resize(_maxPTOrder);
+    std::copy(OPTFullCoefficients.begin(), OPTFullCoefficients.end(), _OPTFullCoefficients.begin());
+    for(int i = 0; i < _maxPTOrder; ++i){
+        _OPTPartCoefficients[i] = 0.0;
+        for(int j = i; j < _maxPTOrder; ++j)
+            _OPTPartCoefficients[i] += _OPTFullCoefficients[j];
+    }
+}
+
 void AmoebaReferenceMultipoleForce::setMutualInducedDipoleTargetEpsilon(RealOpenMM mutualInducedDipoleTargetEpsilon)
 {
     _mutualInducedDipoleTargetEpsilon = mutualInducedDipoleTargetEpsilon;

@@ -79,7 +79,13 @@ public:
         /**
          * Direct polarization
          */
-        Direct = 1
+        Direct = 1,
+
+        /**
+         * Optimized perturbation theory
+         */
+        OPT = 2
+
     };
 
     enum MultipoleAxisTypes { ZThenX = 0, Bisector = 1, ZBisect = 2, ThreeFold = 3, ZOnly = 4, NoAxisType = 5, LastAxisTypeIndex = 6 };
@@ -297,6 +303,24 @@ public:
     void setMutualInducedTargetEpsilon(double inputMutualInducedTargetEpsilon);
 
     /**
+     * Set the coefficients for the µ_0, µ_1, µ_2, µ_n terms in the pertubation
+     * theory algorithm for induced dipoles
+     *
+     * @param optCoefficients a vector whose mth entry specifies the coefficient for µ_m
+     *
+     */
+    void setOPTCoefficients(const std::vector<double> &OPTFullCoefficientsIn);
+
+    /**
+     * Set the coefficients for the µ_0, µ_1, µ_2, µ_n terms in the pertubation
+     * theory algorithm for induced dipoles
+     *
+     * @param optCoefficients a vector whose mth entry specifies the coefficient for µ_m
+     *
+     */
+    const std::vector<double>& getOPTCoefficients() const;
+
+    /**
      * Get the error tolerance for Ewald summation.  This corresponds to the fractional error in the forces
      * which is acceptable.  This value is used to select the grid dimensions and separation (alpha)
      * parameter so that the average error level will be less than the tolerance.  There is not a
@@ -382,6 +406,8 @@ private:
     int pmeBSplineOrder;
     std::vector<int> pmeGridDimension;
     int mutualInducedMaxIterations;
+    std::vector<double>  OPTFullCoefficients;
+
     double mutualInducedTargetEpsilon;
     double scalingDistanceCutoff;
     double electricConstant;
