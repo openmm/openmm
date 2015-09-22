@@ -455,16 +455,18 @@ void testExclusions() {
         for (int i = 0; i < (int) forces.size(); ++i)
             norm += forces[i].dot(forces[i]);
         norm = std::sqrt(norm);
-        const double stepSize = 1e-3;
-        double step = stepSize/norm;
-        for (int i = 0; i < (int) positions.size(); ++i) {
-            Vec3 p = positions[i];
-            Vec3 f = forces[i];
-            positions[i] = Vec3(p[0]-f[0]*step, p[1]-f[1]*step, p[2]-f[2]*step);
+        if (norm > 0) {
+            const double stepSize = 1e-3;
+            double step = stepSize/norm;
+            for (int i = 0; i < (int) positions.size(); ++i) {
+                Vec3 p = positions[i];
+                Vec3 f = forces[i];
+                positions[i] = Vec3(p[0]-f[0]*step, p[1]-f[1]*step, p[2]-f[2]*step);
+            }
+            context.setPositions(positions);
+            State state2 = context.getState(State::Energy);
+            ASSERT_EQUAL_TOL(norm, (state2.getPotentialEnergy()-state.getPotentialEnergy())/stepSize, 1e-3*abs(state.getPotentialEnergy()));
         }
-        context.setPositions(positions);
-        State state2 = context.getState(State::Energy);
-        ASSERT_EQUAL_TOL(norm, (state2.getPotentialEnergy()-state.getPotentialEnergy())/stepSize, 1e-3*abs(state.getPotentialEnergy()));
     }
 }
 

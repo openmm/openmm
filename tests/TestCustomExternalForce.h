@@ -167,6 +167,7 @@ void testPeriodic() {
     }
 
 }
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
