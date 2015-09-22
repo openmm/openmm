@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2015 Stanford University and the Authors.s      *
+ * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -31,7 +31,7 @@
 
 #include "openmm/internal/AssertionUtilities.h"
 #include "openmm/Context.h"
-#include "openmm/HarmonicAngleForce.h"
+#include "openmm/CustomBondForce.h"
 #include "openmm/System.h"
 #include "openmm/VerletIntegrator.h"
 #include "SimTKOpenMMRealType.h"
@@ -43,54 +43,91 @@ using namespace std;
 
 const double TOL = 1e-5;
 
-void testAngles() {
+void testBonds() {
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
     system.addParticle(1.0);
-    system.addParticle(1.0);
     VerletIntegrator integrator(0.01);
-    HarmonicAngleForce* forceField = new HarmonicAngleForce();
-    forceField->addAngle(0, 1, 2, PI_M/3, 1.1);
-    forceField->addAngle(1, 2, 3, PI_M/2, 1.2);
+    CustomBondForce* forceField = new CustomBondForce("scale*k*(r-r0)^2");
+    forceField->addPerBondParameter("r0");
+    forceField->addPerBondParameter("k");
+    forceField->addGlobalParameter("scale", 0.5);
+    vector<double> parameters(2);
+    parameters[0] = 1.5;
+    parameters[1] = 0.8;
+    forceField->addBond(0, 1, parameters);
+    parameters[0] = 1.2;
+    parameters[1] = 0.7;
+    forceField->addBond(1, 2, parameters);
     system.addForce(forceField);
     ASSERT(!forceField->usesPeriodicBoundaryConditions());
     ASSERT(!system.usesPeriodicBoundaryConditions());
     Context context(system, integrator, platform);
-    vector<Vec3> positions(4);
-    positions[0] = Vec3(0, 1, 0);
+    vector<Vec3> positions(3);
+    positions[0] = Vec3(0, 2, 0);
     positions[1] = Vec3(0, 0, 0);
     positions[2] = Vec3(1, 0, 0);
-    positions[3] = Vec3(2, 1, 0);
     context.setPositions(positions);
     State state = context.getState(State::Forces | State::Energy);
     {
         const vector<Vec3>& forces = state.getForces();
-        double torque1 = 1.1*PI_M/6;
-        double torque2 = 1.2*PI_M/4;
-        ASSERT_EQUAL_VEC(Vec3(torque1, 0, 0), forces[0], TOL);
-        ASSERT_EQUAL_VEC(Vec3(-0.5*torque2, 0.5*torque2, 0), forces[3], TOL); // reduced by sqrt(2) due to the bond length, another sqrt(2) due to the angle
-        ASSERT_EQUAL_VEC(Vec3(forces[0][0]+forces[1][0]+forces[2][0]+forces[3][0], forces[0][1]+forces[1][1]+forces[2][1]+forces[3][1], forces[0][2]+forces[1][2]+forces[2][2]+forces[3][2]), Vec3(0, 0, 0), TOL);
-        ASSERT_EQUAL_TOL(0.5*1.1*(PI_M/6)*(PI_M/6) + 0.5*1.2*(PI_M/4)*(PI_M/4), state.getPotentialEnergy(), TOL);
+        ASSERT_EQUAL_VEC(Vec3(0, -0.8*0.5, 0), forces[0], TOL);
+        ASSERT_EQUAL_VEC(Vec3(0.7*0.2, 0, 0), forces[2], TOL);
+        ASSERT_EQUAL_VEC(Vec3(-forces[0][0]-forces[2][0], -forces[0][1]-forces[2][1], -forces[0][2]-forces[2][2]), forces[1], TOL);
+        ASSERT_EQUAL_TOL(0.5*0.8*0.5*0.5 + 0.5*0.7*0.2*0.2, state.getPotentialEnergy(), TOL);
     }
     
-    // Try changing the angle parameters and make sure it's still correct.
+    // Try changing the bond parameters and make sure it's still correct.
     
-    forceField->setAngleParameters(0, 0, 1, 2, PI_M/3.1, 1.3);
-    forceField->setAngleParameters(1, 1, 2, 3, PI_M/2.1, 1.4);
+    parameters[0] = 1.6;
+    parameters[1] = 0.9;
+    forceField->setBondParameters(0, 0, 1, parameters);
+    parameters[0] = 1.3;
+    parameters[1] = 0.8;
+    forceField->setBondParameters(1, 1, 2, parameters);
     forceField->updateParametersInContext(context);
     state = context.getState(State::Forces | State::Energy);
     {
         const vector<Vec3>& forces = state.getForces();
-        double dtheta1 = (PI_M/2)-(PI_M/3.1);
-        double dtheta2 = (3*PI_M/4)-(PI_M/2.1);
-        double torque1 = 1.3*dtheta1;
-        double torque2 = 1.4*dtheta2;
-        ASSERT_EQUAL_VEC(Vec3(torque1, 0, 0), forces[0], TOL);
-        ASSERT_EQUAL_VEC(Vec3(-0.5*torque2, 0.5*torque2, 0), forces[3], TOL); // reduced by sqrt(2) due to the bond length, another sqrt(2) due to the angle
-        ASSERT_EQUAL_VEC(Vec3(forces[0][0]+forces[1][0]+forces[2][0]+forces[3][0], forces[0][1]+forces[1][1]+forces[2][1]+forces[3][1], forces[0][2]+forces[1][2]+forces[2][2]+forces[3][2]), Vec3(0, 0, 0), TOL);
-        ASSERT_EQUAL_TOL(0.5*1.3*dtheta1*dtheta1 + 0.5*1.4*dtheta2*dtheta2, state.getPotentialEnergy(), TOL);
+        ASSERT_EQUAL_VEC(Vec3(0, -0.9*0.4, 0), forces[0], TOL);
+        ASSERT_EQUAL_VEC(Vec3(0.8*0.3, 0, 0), forces[2], TOL);
+        ASSERT_EQUAL_VEC(Vec3(-forces[0][0]-forces[2][0], -forces[0][1]-forces[2][1], -forces[0][2]-forces[2][2]), forces[1], TOL);
+        ASSERT_EQUAL_TOL(0.5*0.9*0.4*0.4 + 0.5*0.8*0.3*0.3, state.getPotentialEnergy(), TOL);
     }
+}
+
+void testManyParameters() {
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    VerletIntegrator integrator(0.01);
+    CustomBondForce* forceField = new CustomBondForce("(a+b+c+d+e+f+g+h+i)*r");
+    forceField->addPerBondParameter("a");
+    forceField->addPerBondParameter("b");
+    forceField->addPerBondParameter("c");
+    forceField->addPerBondParameter("d");
+    forceField->addPerBondParameter("e");
+    forceField->addPerBondParameter("f");
+    forceField->addPerBondParameter("g");
+    forceField->addPerBondParameter("h");
+    forceField->addPerBondParameter("i");
+    vector<double> parameters(forceField->getNumPerBondParameters());
+    for (int i = 0; i < parameters.size(); i++)
+        parameters[i] = i;
+    forceField->addBond(0, 1, parameters);
+    system.addForce(forceField);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(2);
+    positions[0] = Vec3(0, 0, 0);
+    positions[1] = Vec3(0, 2.5, 0);
+    context.setPositions(positions);
+    State state = context.getState(State::Forces | State::Energy);
+    const vector<Vec3>& forces = state.getForces();
+    double f = 1+2+3+4+5+6+7+8;
+    ASSERT_EQUAL_VEC(Vec3(0, f, 0), forces[0], TOL);
+    ASSERT_EQUAL_VEC(Vec3(0, -f, 0), forces[1], TOL);
+    ASSERT_EQUAL_TOL(f*2.5, state.getPotentialEnergy(), TOL);
 }
 
 void runPlatformTests();
@@ -98,7 +135,8 @@ void runPlatformTests();
 int main(int argc, char* argv[]) {
     try {
         initializeTests(argc, argv);
-        testAngles();
+        testBonds();
+        testManyParameters();
         runPlatformTests();
     }
     catch(const exception& e) {
@@ -108,3 +146,4 @@ int main(int argc, char* argv[]) {
     cout << "Done" << endl;
     return 0;
 }
+
