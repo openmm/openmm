@@ -2407,7 +2407,7 @@ double CudaCalcAmoebaVdwForceKernel::execute(ContextImpl& context, bool includeF
         &bondReductionAtoms->getDevicePointer(), &bondReductionFactors->getDevicePointer()};
     cu.executeKernel(prepareKernel, prepareArgs, cu.getPaddedNumAtoms());
     nonbonded->prepareInteractions(1);
-    nonbonded->computeInteractions(1);
+    nonbonded->computeInteractions(1, includeForces, includeEnergy);
     void* spreadArgs[] = {&cu.getForce().getDevicePointer(), &tempForces->getDevicePointer(), &bondReductionAtoms->getDevicePointer(), &bondReductionFactors->getDevicePointer()};
     cu.executeKernel(spreadKernel, spreadArgs, cu.getPaddedNumAtoms());
     tempPosq->copyTo(cu.getPosq());

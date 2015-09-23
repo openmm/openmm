@@ -105,7 +105,7 @@ void CudaCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool 
 
 double CudaCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForces, bool includeEnergy, int groups, bool& valid) {
     cu.getBondedUtilities().computeInteractions(groups);
-    cu.getNonbondedUtilities().computeInteractions(groups);
+    cu.getNonbondedUtilities().computeInteractions(groups, includeForces, includeEnergy);
     double sum = 0.0;
     for (vector<CudaContext::ForcePostComputation*>::iterator iter = cu.getPostComputations().begin(); iter != cu.getPostComputations().end(); ++iter)
         sum += (*iter)->computeForceAndEnergy(includeForces, includeEnergy, groups);
