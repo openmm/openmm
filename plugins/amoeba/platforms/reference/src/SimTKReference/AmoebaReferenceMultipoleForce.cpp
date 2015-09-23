@@ -912,6 +912,60 @@ void AmoebaReferenceMultipoleForce::convergeInduceDipolesBySOR(const vector<Mult
     setMutualInducedDipoleIterations(iteration);
 }
 
+
+void AmoebaReferenceMultipoleForce::convergeInduceDipolesByOPT(const vector<MultipoleParticleData>& particleData, vector<UpdateInducedDipoleFieldStruct>& updateInducedDipoleField) {
+    if (_OPTFullCoefficients.empty()){
+        std::stringstream message;
+        message << "An OPT calcultion was requested, but setOPTCoefficients() was not called.";
+        throw OpenMMException(message.str());
+    }
+
+    _ptDipoleD.clear();
+    _ptDipoleP.clear();
+
+    UpdateInducedDipoleFieldStruct& fieldD = updateInducedDipoleField[0];
+    UpdateInducedDipoleFieldStruct& fieldP = updateInducedDipoleField[1];
+
+    // Start by storing the direct dipoles as PT0
+    vector<RealVec> thisDipoleD;
+    vector<RealVec> thisDipoleP;
+    for(int atom = 0; atom < _numParticles; ++atom){
+        thisDipoleD.push_back((*fieldD.inducedDipoles)[atom]);
+        thisDipoleP.push_back((*fieldP.inducedDipoles)[atom]);
+    }
+    _ptDipoleD.push_back(thisDipoleD);
+    _ptDipoleP.push_back(thisDipoleP);
+
+    // Recursively apply alpha.Tau to the µ_(n) components to generate µ_(n+1), and store the result
+    for(int order = 1; order < _maxPTOrder; ++order){
+        calculateInducedDipoleFields(particleData, updateInducedDipoleField);
+        vector<RealVec> thisDipoleD;
+        vector<RealVec> thisDipoleP;
+        for(int atom = 0; atom < _numParticles; ++atom){
+            (*fieldD.inducedDipoles)[atom] = fieldD.inducedDipoleField[atom] * particleData[atom].polarity;
+            (*fieldP.inducedDipoles)[atom] = fieldP.inducedDipoleField[atom] * particleData[atom].polarity;
+            thisDipoleD.push_back((*fieldD.inducedDipoles)[atom]);
+            thisDipoleP.push_back((*fieldP.inducedDipoles)[atom]);
+        }
+        _ptDipoleD.push_back(thisDipoleD);
+        _ptDipoleP.push_back(thisDipoleP);
+    }
+
+    // Take a linear combination of the µ_(n) components to form the total dipole
+    RealVec zeroVec(0.0, 0.0, 0.0);
+    std::fill(_inducedDipole.begin(), _inducedDipole.end(), zeroVec);
+    std::fill(_inducedDipolePolar.begin(), _inducedDipolePolar.end(), zeroVec);
+
+    for(int order = 0; order < _maxPTOrder; ++order){
+        for(int atom = 0; atom < _numParticles; ++atom){
+            _inducedDipole[atom]      +=  _ptDipoleD[order][atom] * _OPTPartCoefficients[order];
+            _inducedDipolePolar[atom] +=  _ptDipoleP[order][atom] * _OPTPartCoefficients[order];
+        }
+    }
+
+    setMutualInducedDipoleConverged(true);
+}
+
 void AmoebaReferenceMultipoleForce::convergeInduceDipolesByDIIS(const vector<MultipoleParticleData>& particleData, vector<UpdateInducedDipoleFieldStruct>& updateInducedDipoleField) {
     int numFields = updateInducedDipoleField.size();
     vector<vector<vector<RealVec> > > prevDipoles(numFields);
@@ -1050,8 +1104,12 @@ void AmoebaReferenceMultipoleForce::calculateInducedDipoles(const vector<Multipo
 
     // UpdateInducedDipoleFieldStruct contains induced dipole, fixed multipole fields and fields
     // due to other induced dipoles at each site
+    if (getPolarizationType() == AmoebaReferenceMultipoleForce::Mutual){
+        convergeInduceDipolesByDIIS(particleData, updateInducedDipoleField);
+    }if (getPolarizationType() == AmoebaReferenceMultipoleForce::OPT){
+        convergeInduceDipolesByOPT(particleData, updateInducedDipoleField);
+    }
 
-    convergeInduceDipolesByDIIS(particleData, updateInducedDipoleField);
 }
 
 RealOpenMM AmoebaReferenceMultipoleForce::calculateElectrostaticPairIxn(const MultipoleParticleData& particleI,
@@ -1401,7 +1459,69 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateElectrostaticPairIxn(const Mu
     RealOpenMM iEJY = qiUinpJ[0]*Vjip[1] + qiUindJ[0]*Vjid[1] - qiUinpJ[1]*Vjip[0] - qiUindJ[1]*Vjid[0];
 
     // Add in the induced-induced terms, if needed.
-    if(getPolarizationType() == AmoebaReferenceMultipoleForce::Mutual){
+    if(getPolarizationType() == AmoebaReferenceMultipoleForce::OPT){
+        std::vector<RealVec> qiPTUinpI, qiPTUinpJ, qiPTUindI, qiPTUindJ;
+        for(int o = 0; o < _maxPTOrder-1; ++o){
+            // Rotate the PT dipole components to the QI frame
+            qiPTUindI.push_back(RealVec( inducedDipoleRotationMatrix[0][0]*_ptDipoleD[o][iIndex][0]
+                                       + inducedDipoleRotationMatrix[0][1]*_ptDipoleD[o][iIndex][1]
+                                       + inducedDipoleRotationMatrix[0][2]*_ptDipoleD[o][iIndex][2],
+                                         inducedDipoleRotationMatrix[1][0]*_ptDipoleD[o][iIndex][0]
+                                       + inducedDipoleRotationMatrix[1][1]*_ptDipoleD[o][iIndex][1]
+                                       + inducedDipoleRotationMatrix[1][2]*_ptDipoleD[o][iIndex][2],
+                                         inducedDipoleRotationMatrix[2][0]*_ptDipoleD[o][iIndex][0]
+                                       + inducedDipoleRotationMatrix[2][1]*_ptDipoleD[o][iIndex][1]
+                                       + inducedDipoleRotationMatrix[2][2]*_ptDipoleD[o][iIndex][2] ));
+            qiPTUindJ.push_back(RealVec( inducedDipoleRotationMatrix[0][0]*_ptDipoleD[o][kIndex][0]
+                                       + inducedDipoleRotationMatrix[0][1]*_ptDipoleD[o][kIndex][1]
+                                       + inducedDipoleRotationMatrix[0][2]*_ptDipoleD[o][kIndex][2],
+                                         inducedDipoleRotationMatrix[1][0]*_ptDipoleD[o][kIndex][0]
+                                       + inducedDipoleRotationMatrix[1][1]*_ptDipoleD[o][kIndex][1]
+                                       + inducedDipoleRotationMatrix[1][2]*_ptDipoleD[o][kIndex][2],
+                                         inducedDipoleRotationMatrix[2][0]*_ptDipoleD[o][kIndex][0]
+                                       + inducedDipoleRotationMatrix[2][1]*_ptDipoleD[o][kIndex][1]
+                                       + inducedDipoleRotationMatrix[2][2]*_ptDipoleD[o][kIndex][2] ));
+            qiPTUinpI.push_back(RealVec( inducedDipoleRotationMatrix[0][0]*_ptDipoleP[o][iIndex][0]
+                                       + inducedDipoleRotationMatrix[0][1]*_ptDipoleP[o][iIndex][1]
+                                       + inducedDipoleRotationMatrix[0][2]*_ptDipoleP[o][iIndex][2],
+                                         inducedDipoleRotationMatrix[1][0]*_ptDipoleP[o][iIndex][0]
+                                       + inducedDipoleRotationMatrix[1][1]*_ptDipoleP[o][iIndex][1]
+                                       + inducedDipoleRotationMatrix[1][2]*_ptDipoleP[o][iIndex][2],
+                                         inducedDipoleRotationMatrix[2][0]*_ptDipoleP[o][iIndex][0]
+                                       + inducedDipoleRotationMatrix[2][1]*_ptDipoleP[o][iIndex][1]
+                                       + inducedDipoleRotationMatrix[2][2]*_ptDipoleP[o][iIndex][2] ));
+            qiPTUinpJ.push_back(RealVec( inducedDipoleRotationMatrix[0][0]*_ptDipoleP[o][kIndex][0]
+                                       + inducedDipoleRotationMatrix[0][1]*_ptDipoleP[o][kIndex][1]
+                                       + inducedDipoleRotationMatrix[0][2]*_ptDipoleP[o][kIndex][2],
+                                         inducedDipoleRotationMatrix[1][0]*_ptDipoleP[o][kIndex][0]
+                                       + inducedDipoleRotationMatrix[1][1]*_ptDipoleP[o][kIndex][1]
+                                       + inducedDipoleRotationMatrix[1][2]*_ptDipoleP[o][kIndex][2],
+                                         inducedDipoleRotationMatrix[2][0]*_ptDipoleP[o][kIndex][0]
+                                       + inducedDipoleRotationMatrix[2][1]*_ptDipoleP[o][kIndex][1]
+                                       + inducedDipoleRotationMatrix[2][2]*_ptDipoleP[o][kIndex][2] ));
+        }
+        RealOpenMM e0 = -4.0*rInvVec[3]*uScale*thole_d0;
+        RealOpenMM d0 = 12.0*rInvVec[4]*uScale*dthole_d0;
+        RealOpenMM e1 = 2.0*rInvVec[3]*uScale*thole_d1;
+        RealOpenMM d1 = -6.0*rInvVec[4]*uScale*dthole_d1;
+        for(int o = 0; o < _maxPTOrder; ++o){
+            RealOpenMM p = _OPTPartCoefficients[o];
+            for(int l = 0; l < o; ++l){
+                int m = o - l - 1;
+                iEIX += p*(qiPTUinpI[l][2]*e0*qiPTUindJ[m][0] + qiPTUindI[l][2]*e0*qiPTUinpJ[m][0]
+                         - qiPTUinpI[l][0]*e1*qiPTUindJ[m][2] - qiPTUindI[l][0]*e1*qiPTUinpJ[m][2]);
+                iEJX += p*(qiPTUinpJ[l][2]*e0*qiPTUindI[m][0] + qiPTUindJ[l][2]*e0*qiPTUinpI[m][0]
+                         - qiPTUinpJ[l][0]*e1*qiPTUindI[m][2] - qiPTUindJ[l][0]*e1*qiPTUinpI[m][2]);
+                iEIY += p*(qiPTUinpI[l][0]*e1*qiPTUindJ[m][1] + qiPTUindI[l][0]*e1*qiPTUinpJ[m][1]
+                         - qiPTUinpI[l][1]*e0*qiPTUindJ[m][0] - qiPTUindI[l][1]*e0*qiPTUinpJ[m][0]);
+                iEJY += p*(qiPTUinpJ[l][0]*e1*qiPTUindI[m][1] + qiPTUindJ[l][0]*e1*qiPTUinpI[m][1]
+                         - qiPTUinpJ[l][1]*e0*qiPTUindI[m][0] - qiPTUindJ[l][1]*e0*qiPTUinpI[m][0]);
+                fIZ  += p*(qiPTUinpI[l][0]*d0*qiPTUindJ[m][0] + qiPTUindI[l][0]*d0*qiPTUinpJ[m][0]
+                         + qiPTUinpI[l][1]*d1*qiPTUindJ[m][1] + qiPTUindI[l][1]*d1*qiPTUinpJ[m][1]
+                         + qiPTUinpI[l][2]*d1*qiPTUindJ[m][2] + qiPTUindI[l][2]*d1*qiPTUinpJ[m][2]);
+            }
+        }
+    } else if(getPolarizationType() == AmoebaReferenceMultipoleForce::Mutual){
         // Uind-Uind terms (m=0)
         RealOpenMM eCoef = -4.0*rInvVec[3]*uScale*thole_d0;
         RealOpenMM dCoef = 6.0*rInvVec[4]*uScale*dthole_d0;

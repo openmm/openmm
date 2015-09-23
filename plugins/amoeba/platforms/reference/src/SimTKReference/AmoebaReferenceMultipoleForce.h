@@ -665,6 +665,9 @@ protected:
     std::vector<RealVec> _fixedMultipoleFieldPolar;
     std::vector<RealVec> _inducedDipole;
     std::vector<RealVec> _inducedDipolePolar;
+    std::vector< std::vector<RealVec> > _ptDipoleP;
+    std::vector< std::vector<RealVec> > _ptDipoleD;
+
 
     int _mutualInducedDipoleConverged;
     int _mutualInducedDipoleIterations;
@@ -937,6 +940,14 @@ protected:
      */
     virtual void calculateInducedDipoleFields(const std::vector<MultipoleParticleData>& particleData,
                                               std::vector<UpdateInducedDipoleFieldStruct>& updateInducedDipoleFields);
+    /**
+     * Calculated induced dipoles using Optimized Perturbation Theory.
+     *
+     * @param particleData              vector of particle positions and parameters (charge, labFrame dipoles, quadrupoles, ...)
+     * @param updateInducedDipoleFields vector of UpdateInducedDipoleFieldStruct containing input induced dipoles and output fields
+     */
+    void convergeInduceDipolesByOPT(const std::vector<MultipoleParticleData>& particleData,
+                                    std::vector<UpdateInducedDipoleFieldStruct>& calculateInducedDipoleField);
     /**
      * Converge induced dipoles.
      * 
