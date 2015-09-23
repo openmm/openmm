@@ -166,6 +166,27 @@ void testRange() {
     ASSERT(maxAngle <= M_PI);
 }
 
+void testIllegalVariable() {
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    CustomTorsionForce* force = new CustomTorsionForce("theta+none");
+    vector<double> params;
+    force->addTorsion(0, 1, 2, 3, params);
+    system.addForce(force);
+    VerletIntegrator integrator(0.001);
+    bool threwException = false;
+    try {
+        Context(system, integrator, platform);
+    }
+    catch (const exception& e) {
+        threwException = true;
+    }
+    ASSERT(threwException);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -173,6 +194,7 @@ int main(int argc, char* argv[]) {
         initializeTests(argc, argv);
         testTorsions();
         testRange();
+        testIllegalVariable();
         runPlatformTests();
     }
     catch(const exception& e) {

@@ -309,6 +309,28 @@ void testMultipleBonds() {
     ASSERT_EQUAL_VEC(Vec3(0.776, 0.0, -0.084), forces[3], 1e-3);
 }
 
+void testIllegalVariable() {
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    CustomCompoundBondForce* force = new CustomCompoundBondForce(2, "1+none");
+    vector<int> particles;
+    particles.push_back(0);
+    particles.push_back(1);
+    vector<double> params;
+    force->addBond(particles, params);
+    system.addForce(force);
+    VerletIntegrator integrator(0.001);
+    bool threwException = false;
+    try {
+        Context(system, integrator, platform);
+    }
+    catch (const exception& e) {
+        threwException = true;
+    }
+    ASSERT(threwException);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -319,6 +341,7 @@ int main(int argc, char* argv[]) {
         testContinuous2DFunction();
         testContinuous3DFunction();
         testMultipleBonds();
+        testIllegalVariable();
         runPlatformTests();
     }
     catch(const exception& e) {

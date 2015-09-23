@@ -707,6 +707,24 @@ void testCentralParticleModeLargeSystem() {
         ASSERT_EQUAL_VEC(state1.getForces()[i], state2.getForces()[i], 1e-4);
 }
 
+void testIllegalVariable() {
+    System system;
+    system.addParticle(1.0);
+    CustomManyParticleForce* force = new CustomManyParticleForce(2, "x1+y2+none");
+    vector<double> params;
+    force->addParticle(params);
+    system.addForce(force);
+    VerletIntegrator integrator(0.001);
+    bool threwException = false;
+    try {
+        Context(system, integrator, platform);
+    }
+    catch (const exception& e) {
+        threwException = true;
+    }
+    ASSERT(threwException);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -725,6 +743,7 @@ int main(int argc, char* argv[]) {
         testCentralParticleModeNoCutoff();
         testCentralParticleModeCutoff();
         testCentralParticleModeLargeSystem();
+        testIllegalVariable();
         runPlatformTests();
     }
     catch(const exception& e) {

@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2010 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -40,6 +40,7 @@
 #include "lepton/ParsedExpression.h"
 #include <utility>
 #include <map>
+#include <set>
 #include <string>
 
 namespace OpenMM {
@@ -84,7 +85,7 @@ private:
     class FunctionPlaceholder;
     static Lepton::ExpressionTreeNode replaceFunctions(const Lepton::ExpressionTreeNode& node, std::map<std::string, int> atoms,
             std::map<std::string, std::vector<int> >& distances, std::map<std::string, std::vector<int> >& angles,
-            std::map<std::string, std::vector<int> >& dihedrals);
+            std::map<std::string, std::vector<int> >& dihedrals, std::set<std::string>& variables);
     const CustomHbondForce& owner;
     Kernel kernel;
 };

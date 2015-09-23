@@ -225,6 +225,26 @@ void testCustomFunctions() {
     ASSERT_EQUAL_TOL(0.1*2+0.1*2, state.getPotentialEnergy(), TOL);
 }
 
+void testIllegalVariable() {
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    CustomHbondForce* force = new CustomHbondForce("1+none");
+    vector<double> params;
+    force->addDonor(0, -1, -1, params);
+    force->addAcceptor(1, -1, -1, params);
+    system.addForce(force);
+    VerletIntegrator integrator(0.001);
+    bool threwException = false;
+    try {
+        Context(system, integrator, platform);
+    }
+    catch (const exception& e) {
+        threwException = true;
+    }
+    ASSERT(threwException);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -234,6 +254,7 @@ int main(int argc, char* argv[]) {
         testExclusions();
         testCutoff();
         testCustomFunctions();
+        testIllegalVariable();
         runPlatformTests();
     }
     catch(const exception& e) {
