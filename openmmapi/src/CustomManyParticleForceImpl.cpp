@@ -165,24 +165,40 @@ ParsedExpression CustomManyParticleForceImpl::prepareExpression(const CustomMany
     functions["dihedral"] = &dihedral;
     ParsedExpression expression = Lepton::Parser::parse(force.getEnergyFunction(), functions);
     map<string, int> atoms;
+    set<string> variables;
     for (int i = 0; i < force.getNumParticlesPerSet(); i++) {
-        stringstream name;
+        stringstream name, x, y, z;
         name << 'p' << (i+1);
+        x << 'x' << (i+1);
+        y << 'y' << (i+1);
+        z << 'z' << (i+1);
         atoms[name.str()] = i;
+        variables.insert(x.str());
+        variables.insert(y.str());
+        variables.insert(z.str());
+        for (int j = 0; j < force.getNumPerParticleParameters(); j++) {
+            stringstream param;
+            param << force.getPerParticleParameterName(j) << (i+1);
+            variables.insert(param.str());
+        }
     }
-    return ParsedExpression(replaceFunctions(expression.getRootNode(), atoms, distances, angles, dihedrals)).optimize();
+    for (int i = 0; i < force.getNumGlobalParameters(); i++)
+        variables.insert(force.getGlobalParameterName(i));
+    return ParsedExpression(replaceFunctions(expression.getRootNode(), atoms, distances, angles, dihedrals, variables)).optimize();
 }
 
 ExpressionTreeNode CustomManyParticleForceImpl::replaceFunctions(const ExpressionTreeNode& node, map<string, int> atoms,
-        map<string, vector<int> >& distances, map<string, vector<int> >& angles, map<string, vector<int> >& dihedrals) {
+        map<string, vector<int> >& distances, map<string, vector<int> >& angles, map<string, vector<int> >& dihedrals, set<string>& variables) {
     const Operation& op = node.getOperation();
+    if (op.getId() == Operation::VARIABLE && variables.find(op.getName()) == variables.end())
+        throw OpenMMException("CustomManyParticleForce: Unknown variable '"+op.getName()+"'");
     if (op.getId() != Operation::CUSTOM || (op.getName() != "distance" && op.getName() != "angle" && op.getName() != "dihedral"))
     {
         // This is not an angle or dihedral, so process its children.
 
         vector<ExpressionTreeNode> children;
         for (int i = 0; i < (int) node.getChildren().size(); i++)
-            children.push_back(replaceFunctions(node.getChildren()[i], atoms, distances, angles, dihedrals));
+            children.push_back(replaceFunctions(node.getChildren()[i], atoms, distances, angles, dihedrals, variables));
         return ExpressionTreeNode(op.clone(), children);
     }
     const Operation::Custom& custom = static_cast<const Operation::Custom&>(op);

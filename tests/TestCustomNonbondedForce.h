@@ -993,6 +993,24 @@ void testMultipleCutoffs() {
     }
 }
 
+void testIllegalVariable() {
+    System system;
+    system.addParticle(1.0);
+    CustomNonbondedForce* force = new CustomNonbondedForce("r+none");
+    vector<double> params;
+    force->addParticle(params);
+    system.addForce(force);
+    VerletIntegrator integrator(0.001);
+    bool threwException = false;
+    try {
+        Context(system, integrator, platform);
+    }
+    catch (const exception& e) {
+        threwException = true;
+    }
+    ASSERT(threwException);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -1017,6 +1035,7 @@ int main(int argc, char* argv[]) {
         testLargeInteractionGroup();
         testInteractionGroupLongRangeCorrection();
         testMultipleCutoffs();
+        testIllegalVariable();
         runPlatformTests();
     }
     catch(const exception& e) {

@@ -77,6 +77,7 @@
 #include "openmm/OpenMMException.h"
 #include "SimTKOpenMMUtilities.h"
 #include "lepton/CustomFunction.h"
+#include "lepton/Operation.h"
 #include "lepton/Parser.h"
 #include "lepton/ParsedExpression.h"
 #include <cmath>
@@ -144,6 +145,17 @@ static RealVec* extractBoxVectors(ContextImpl& context) {
 static ReferenceConstraints& extractConstraints(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
     return *(ReferenceConstraints*) data->constraints;
+}
+
+/**
+ * Make sure an expression doesn't use any undefined variables.
+ */
+static void validateVariables(const Lepton::ExpressionTreeNode& node, const set<string>& variables) {
+    const Lepton::Operation& op = node.getOperation();
+    if (op.getId() == Lepton::Operation::VARIABLE && variables.find(op.getName()) == variables.end())
+        throw OpenMMException("Unknown variable in expression: "+op.getName());
+    for (int i = 0; i < (int) node.getChildren().size(); i++)
+        validateVariables(node.getChildren()[i], variables);
 }
 
 /**
@@ -422,6 +434,11 @@ void ReferenceCalcCustomBondForceKernel::initialize(const System& system, const 
         parameterNames.push_back(force.getPerBondParameterName(i));
     for (int i = 0; i < force.getNumGlobalParameters(); i++)
         globalParameterNames.push_back(force.getGlobalParameterName(i));
+    set<string> variables;
+    variables.insert("r");
+    variables.insert(parameterNames.begin(), parameterNames.end());
+    variables.insert(globalParameterNames.begin(), globalParameterNames.end());
+    validateVariables(expression.getRootNode(), variables);
 }
 
 double ReferenceCalcCustomBondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -536,6 +553,11 @@ void ReferenceCalcCustomAngleForceKernel::initialize(const System& system, const
         parameterNames.push_back(force.getPerAngleParameterName(i));
     for (int i = 0; i < force.getNumGlobalParameters(); i++)
         globalParameterNames.push_back(force.getGlobalParameterName(i));
+    set<string> variables;
+    variables.insert("theta");
+    variables.insert(parameterNames.begin(), parameterNames.end());
+    variables.insert(globalParameterNames.begin(), globalParameterNames.end());
+    validateVariables(expression.getRootNode(), variables);
 }
 
 double ReferenceCalcCustomAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -780,6 +802,11 @@ void ReferenceCalcCustomTorsionForceKernel::initialize(const System& system, con
         parameterNames.push_back(force.getPerTorsionParameterName(i));
     for (int i = 0; i < force.getNumGlobalParameters(); i++)
         globalParameterNames.push_back(force.getGlobalParameterName(i));
+    set<string> variables;
+    variables.insert("theta");
+    variables.insert(parameterNames.begin(), parameterNames.end());
+    variables.insert(globalParameterNames.begin(), globalParameterNames.end());
+    validateVariables(expression.getRootNode(), variables);
 }
 
 double ReferenceCalcCustomTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -1038,6 +1065,14 @@ void ReferenceCalcCustomNonbondedForceKernel::initialize(const System& system, c
         globalParameterNames.push_back(force.getGlobalParameterName(i));
         globalParamValues[force.getGlobalParameterName(i)] = force.getGlobalParameterDefaultValue(i);
     }
+    set<string> variables;
+    variables.insert("r");
+    for (int i = 0; i < numParameters; i++) {
+        variables.insert(parameterNames[i]+"1");
+        variables.insert(parameterNames[i]+"2");
+    }
+    variables.insert(globalParameterNames.begin(), globalParameterNames.end());
+    validateVariables(expression.getRootNode(), variables);
 
     // Delete the custom functions.
 
@@ -1314,6 +1349,18 @@ void ReferenceCalcCustomGBForceKernel::initialize(const System& system, const Cu
 
     valueDerivExpressions.resize(force.getNumComputedValues());
     valueGradientExpressions.resize(force.getNumComputedValues());
+    set<string> particleVariables, pairVariables;
+    pairVariables.insert("r");
+    particleVariables.insert("x");
+    particleVariables.insert("y");
+    particleVariables.insert("z");
+    for (int i = 0; i < numPerParticleParameters; i++) {
+        particleVariables.insert(particleParameterNames[i]);
+        pairVariables.insert(particleParameterNames[i]+"1");
+        pairVariables.insert(particleParameterNames[i]+"2");
+    }
+    particleVariables.insert(globalParameterNames.begin(), globalParameterNames.end());
+    pairVariables.insert(globalParameterNames.begin(), globalParameterNames.end());
     for (int i = 0; i < force.getNumComputedValues(); i++) {
         string name, expression;
         CustomGBForce::ComputationType type;
@@ -1322,15 +1369,21 @@ void ReferenceCalcCustomGBForceKernel::initialize(const System& system, const Cu
         valueExpressions.push_back(ex.createProgram());
         valueTypes.push_back(type);
         valueNames.push_back(name);
-        if (i == 0)
+        if (i == 0) {
             valueDerivExpressions[i].push_back(ex.differentiate("r").optimize().createProgram());
+            validateVariables(ex.getRootNode(), pairVariables);
+        }
         else {
             valueGradientExpressions[i].push_back(ex.differentiate("x").optimize().createProgram());
             valueGradientExpressions[i].push_back(ex.differentiate("y").optimize().createProgram());
             valueGradientExpressions[i].push_back(ex.differentiate("z").optimize().createProgram());
             for (int j = 0; j < i; j++)
                 valueDerivExpressions[i].push_back(ex.differentiate(valueNames[j]).optimize().createProgram());
+            validateVariables(ex.getRootNode(), particleVariables);
         }
+        particleVariables.insert(name);
+        pairVariables.insert(name+"1");
+        pairVariables.insert(name+"2");
     }
 
     // Parse the expressions for energy terms.
@@ -1352,10 +1405,12 @@ void ReferenceCalcCustomGBForceKernel::initialize(const System& system, const Cu
                 energyGradientExpressions[i].push_back(ex.differentiate("x").optimize().createProgram());
                 energyGradientExpressions[i].push_back(ex.differentiate("y").optimize().createProgram());
                 energyGradientExpressions[i].push_back(ex.differentiate("z").optimize().createProgram());
+                validateVariables(ex.getRootNode(), particleVariables);
             }
             else {
                 energyDerivExpressions[i].push_back(ex.differentiate(valueNames[j]+"1").optimize().createProgram());
                 energyDerivExpressions[i].push_back(ex.differentiate(valueNames[j]+"2").optimize().createProgram());
+                validateVariables(ex.getRootNode(), pairVariables);
             }
         }
     }
@@ -1475,6 +1530,13 @@ void ReferenceCalcCustomExternalForceKernel::initialize(const System& system, co
         parameterNames.push_back(force.getPerParticleParameterName(i));
     for (int i = 0; i < force.getNumGlobalParameters(); i++)
         globalParameterNames.push_back(force.getGlobalParameterName(i));
+    set<string> variables;
+    variables.insert("x");
+    variables.insert("y");
+    variables.insert("z");
+    variables.insert(parameterNames.begin(), parameterNames.end());
+    variables.insert(globalParameterNames.begin(), globalParameterNames.end());
+    validateVariables(expression.getRootNode(), variables);
 }
 
 double ReferenceCalcCustomExternalForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {

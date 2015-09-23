@@ -47,6 +47,7 @@
 #include "RealVec.h"
 #include "lepton/CompiledExpression.h"
 #include "lepton/CustomFunction.h"
+#include "lepton/Operation.h"
 #include "lepton/Parser.h"
 #include "lepton/ParsedExpression.h"
 
@@ -81,6 +82,17 @@ static RealVec* extractBoxVectors(ContextImpl& context) {
 static ReferenceConstraints& extractConstraints(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
     return *(ReferenceConstraints*) data->constraints;
+}
+
+/**
+ * Make sure an expression doesn't use any undefined variables.
+ */
+static void validateVariables(const Lepton::ExpressionTreeNode& node, const set<string>& variables) {
+    const Lepton::Operation& op = node.getOperation();
+    if (op.getId() == Lepton::Operation::VARIABLE && variables.find(op.getName()) == variables.end())
+        throw OpenMMException("Unknown variable in expression: "+op.getName());
+    for (int i = 0; i < (int) node.getChildren().size(); i++)
+        validateVariables(node.getChildren()[i], variables);
 }
 
 /**
@@ -737,6 +749,14 @@ void CpuCalcCustomNonbondedForceKernel::initialize(const System& system, const C
         globalParameterNames.push_back(force.getGlobalParameterName(i));
         globalParamValues[force.getGlobalParameterName(i)] = force.getGlobalParameterDefaultValue(i);
     }
+    set<string> variables;
+    variables.insert("r");
+    for (int i = 0; i < numParameters; i++) {
+        variables.insert(parameterNames[i]+"1");
+        variables.insert(parameterNames[i]+"2");
+    }
+    variables.insert(globalParameterNames.begin(), globalParameterNames.end());
+    validateVariables(expression.getRootNode(), variables);
 
     // Delete the custom functions.
 
@@ -950,6 +970,18 @@ void CpuCalcCustomGBForceKernel::initialize(const System& system, const CustomGB
     vector<vector<Lepton::CompiledExpression> > valueGradientExpressions(force.getNumComputedValues());
     vector<Lepton::CompiledExpression> valueExpressions;
     vector<Lepton::CompiledExpression> energyExpressions;
+    set<string> particleVariables, pairVariables;
+    pairVariables.insert("r");
+    particleVariables.insert("x");
+    particleVariables.insert("y");
+    particleVariables.insert("z");
+    for (int i = 0; i < numPerParticleParameters; i++) {
+        particleVariables.insert(particleParameterNames[i]);
+        pairVariables.insert(particleParameterNames[i]+"1");
+        pairVariables.insert(particleParameterNames[i]+"2");
+    }
+    particleVariables.insert(globalParameterNames.begin(), globalParameterNames.end());
+    pairVariables.insert(globalParameterNames.begin(), globalParameterNames.end());
     for (int i = 0; i < force.getNumComputedValues(); i++) {
         string name, expression;
         CustomGBForce::ComputationType type;
@@ -958,15 +990,21 @@ void CpuCalcCustomGBForceKernel::initialize(const System& system, const CustomGB
         valueExpressions.push_back(ex.createCompiledExpression());
         valueTypes.push_back(type);
         valueNames.push_back(name);
-        if (i == 0)
+        if (i == 0) {
             valueDerivExpressions[i].push_back(ex.differentiate("r").createCompiledExpression());
+            validateVariables(ex.getRootNode(), pairVariables);
+        }
         else {
             valueGradientExpressions[i].push_back(ex.differentiate("x").createCompiledExpression());
             valueGradientExpressions[i].push_back(ex.differentiate("y").createCompiledExpression());
             valueGradientExpressions[i].push_back(ex.differentiate("z").createCompiledExpression());
             for (int j = 0; j < i; j++)
                 valueDerivExpressions[i].push_back(ex.differentiate(valueNames[j]).createCompiledExpression());
+            validateVariables(ex.getRootNode(), particleVariables);
         }
+        particleVariables.insert(name);
+        pairVariables.insert(name+"1");
+        pairVariables.insert(name+"2");
     }
 
     // Parse the expressions for energy terms.
@@ -988,10 +1026,12 @@ void CpuCalcCustomGBForceKernel::initialize(const System& system, const CustomGB
                 energyGradientExpressions[i].push_back(ex.differentiate("x").createCompiledExpression());
                 energyGradientExpressions[i].push_back(ex.differentiate("y").createCompiledExpression());
                 energyGradientExpressions[i].push_back(ex.differentiate("z").createCompiledExpression());
+                validateVariables(ex.getRootNode(), particleVariables);
             }
             else {
                 energyDerivExpressions[i].push_back(ex.differentiate(valueNames[j]+"1").createCompiledExpression());
                 energyDerivExpressions[i].push_back(ex.differentiate(valueNames[j]+"2").createCompiledExpression());
+                validateVariables(ex.getRootNode(), pairVariables);
             }
         }
     }

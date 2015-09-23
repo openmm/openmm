@@ -126,12 +126,33 @@ void testAngles() {
     }
 }
 
+void testIllegalVariable() {
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    CustomAngleForce* force = new CustomAngleForce("theta+none");
+    vector<double> params;
+    force->addAngle(0, 1, 2, params);
+    system.addForce(force);
+    VerletIntegrator integrator(0.001);
+    bool threwException = false;
+    try {
+        Context(system, integrator, platform);
+    }
+    catch (const exception& e) {
+        threwException = true;
+    }
+    ASSERT(threwException);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
     try {
         initializeTests(argc, argv);
         testAngles();
+        testIllegalVariable();
         runPlatformTests();
     }
     catch(const exception& e) {

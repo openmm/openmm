@@ -130,6 +130,25 @@ void testManyParameters() {
     ASSERT_EQUAL_TOL(f*2.5, state.getPotentialEnergy(), TOL);
 }
 
+void testIllegalVariable() {
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    CustomBondForce* force = new CustomBondForce("r+none");
+    vector<double> params;
+    force->addBond(0, 1, params);
+    system.addForce(force);
+    VerletIntegrator integrator(0.001);
+    bool threwException = false;
+    try {
+        Context(system, integrator, platform);
+    }
+    catch (const exception& e) {
+        threwException = true;
+    }
+    ASSERT(threwException);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -137,6 +156,7 @@ int main(int argc, char* argv[]) {
         initializeTests(argc, argv);
         testBonds();
         testManyParameters();
+        testIllegalVariable();
         runPlatformTests();
     }
     catch(const exception& e) {

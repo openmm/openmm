@@ -252,6 +252,32 @@ void testCustomWeights() {
     ASSERT_EQUAL_VEC(Vec3(0, -2*9*(1.0/3.0), 0), state.getForces()[3], TOL);
 }
 
+void testIllegalVariable() {
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    CustomCentroidBondForce* force = new CustomCentroidBondForce(2, "1+none");
+    vector<int> particles;
+    particles.push_back(0);
+    force->addGroup(particles);
+    force->addGroup(particles);
+    vector<int> groups;
+    groups.push_back(0);
+    groups.push_back(1);
+    vector<double> params;
+    force->addBond(groups, params);
+    system.addForce(force);
+    VerletIntegrator integrator(0.001);
+    bool threwException = false;
+    try {
+        Context(system, integrator, platform);
+    }
+    catch (const exception& e) {
+        threwException = true;
+    }
+    ASSERT(threwException);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -260,6 +286,7 @@ int main(int argc, char* argv[]) {
         testHarmonicBond();
         testComplexFunction();
         testCustomWeights();
+        testIllegalVariable();
         runPlatformTests();
     }
     catch(const exception& e) {

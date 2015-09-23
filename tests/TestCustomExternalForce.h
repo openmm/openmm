@@ -165,7 +165,24 @@ void testPeriodic() {
         ASSERT_EQUAL_TOL(delta.dot(delta), state.getPotentialEnergy(), TOL);
         integrator.step(1);
     }
+}
 
+void testIllegalVariable() {
+    System system;
+    system.addParticle(1.0);
+    CustomExternalForce* force = new CustomExternalForce("x+none");
+    vector<double> params;
+    force->addParticle(0, params);
+    system.addForce(force);
+    VerletIntegrator integrator(0.001);
+    bool threwException = false;
+    try {
+        Context(system, integrator, platform);
+    }
+    catch (const exception& e) {
+        threwException = true;
+    }
+    ASSERT(threwException);
 }
 
 void runPlatformTests();
@@ -176,6 +193,7 @@ int main(int argc, char* argv[]) {
         testForce();
         testManyParameters();
         testPeriodic();
+        testIllegalVariable();
         runPlatformTests();
     }
     catch(const exception& e) {
