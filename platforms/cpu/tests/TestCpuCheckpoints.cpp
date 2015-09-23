@@ -29,7 +29,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "CudaTests.h"
+#include "CpuTests.h"
 #include "TestCheckpoints.h"
 
 void testCheckpoint() {
@@ -92,34 +92,6 @@ void testCheckpoint() {
     integrator.step(10);
     State s4 = context.getState(State::Positions | State::Velocities | State::Parameters);
     compareStates(s2, s4);
-    
-    // Create a new Context that uses multiple devices.
-
-    string deviceIndex = platform.getPropertyValue(context, CudaPlatform::CudaDeviceIndex());
-    map<string, string> props;
-    props[CudaPlatform::CudaDeviceIndex()] = deviceIndex+","+deviceIndex;
-    VerletIntegrator integrator2(0.001);
-    Context context2(system, integrator2, platform, props);
-    context2.setPositions(positions);
-    context2.setPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
-    context2.setParameter(AndersenThermostat::Temperature(), temperature);
-    
-    // Now repeat all of the above tests with it.
-
-    integrator2.step(100);
-    State s5 = context2.getState(State::Positions | State::Velocities | State::Parameters);
-    stringstream stream2(ios_base::out | ios_base::in | ios_base::binary);
-    context2.createCheckpoint(stream2);
-    integrator2.step(10);
-    State s6 = context2.getState(State::Positions | State::Velocities | State::Parameters);
-    context2.setPeriodicBoxVectors(Vec3(2*boxSize, 0, 0), Vec3(0, 2*boxSize, 0), Vec3(0, 0, 2*boxSize));
-    context2.setParameter(AndersenThermostat::Temperature(), temperature+10);
-    context2.loadCheckpoint(stream2);
-    State s7 = context2.getState(State::Positions | State::Velocities | State::Parameters);
-    compareStates(s5, s7);
-    integrator2.step(10);
-    State s8 = context2.getState(State::Positions | State::Velocities | State::Parameters);
-    compareStates(s6, s8);
 }
 
 void runPlatformTests() {

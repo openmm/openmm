@@ -29,12 +29,42 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "CudaTests.h"
-#include "TestCheckpoints.h"
+#include "openmm/internal/AssertionUtilities.h"
+#include "openmm/AndersenThermostat.h"
+#include "openmm/Context.h"
+#include "openmm/NonbondedForce.h"
+#include "openmm/System.h"
+#include "openmm/VerletIntegrator.h"
+#include "sfmt/SFMT.h"
+#include <iostream>
+#include <sstream>
+#include <vector>
 
-void testCheckpoint() {
-    const int numParticles = 100;
-    const double boxSize = 5.0;
+using namespace OpenMM;
+using namespace std;
+
+const double TOL = 1e-5;
+
+void compareStates(State& s1, State& s2) {
+    ASSERT_EQUAL_TOL(s1.getTime(), s2.getTime(), TOL);
+    int numParticles = s1.getPositions().size();
+    for (int i = 0; i < numParticles; i++) {
+        ASSERT_EQUAL_VEC(s1.getPositions()[i], s2.getPositions()[i], TOL);
+        ASSERT_EQUAL_VEC(s1.getVelocities()[i], s2.getVelocities()[i], TOL);
+        Vec3 a1, b1, c1, a2, b2, c2;
+        s1.getPeriodicBoxVectors(a1, b1, c1);
+        s2.getPeriodicBoxVectors(a2, b2, c2);
+        ASSERT_EQUAL_VEC(a1, a2, TOL);
+        ASSERT_EQUAL_VEC(b1, b2, TOL);
+        ASSERT_EQUAL_VEC(c1, c2, TOL);
+        for (map<string, double>::const_iterator iter = s1.getParameters().begin(); iter != s1.getParameters().end(); ++iter)
+            ASSERT_EQUAL(iter->second, (*s2.getParameters().find(iter->first)).second);
+    }
+}
+
+void testSetState() {
+    const int numParticles = 10;
+    const double boxSize = 3.0;
     const double temperature = 200.0;
     System system;
     system.addForce(new AndersenThermostat(0.0, 100.0));
@@ -47,16 +77,7 @@ void testCheckpoint() {
     for (int i = 0; i < numParticles; i++) {
         system.addParticle(1.0);
         nonbonded->addParticle(i%2 == 0 ? 0.1 : -0.1, 0.2, 0.1);
-        bool clash;
-        do {
-            clash = false;
-            positions[i] = Vec3(boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt));
-            for (int j = 0; j < i; j++) {
-                Vec3 delta = positions[i]-positions[j];
-                if (sqrt(delta.dot(delta)) < 0.1)
-                    clash = true;
-            }
-        } while (clash);
+        positions[i] = Vec3(boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt));
     }
     VerletIntegrator integrator(0.001);
     Context context(system, integrator, platform);
@@ -68,60 +89,45 @@ void testCheckpoint() {
     
     integrator.step(100);
     
-    // Record the current state and make a checkpoint.
+    // Record the current state.
     
     State s1 = context.getState(State::Positions | State::Velocities | State::Parameters);
-    stringstream stream1(ios_base::out | ios_base::in | ios_base::binary);
-    context.createCheckpoint(stream1);
     
-    // Continue the simulation for a few more steps and record the state again.
+    // Continue the simulation for a few more steps and record a partial state.
     
     integrator.step(10);
-    State s2 = context.getState(State::Positions | State::Velocities | State::Parameters);
+    State s2 = context.getState(State::Positions);
     
-    // Restore from the checkpoint and see if everything gets restored correctly.
+    // Restore the original state and see if everything gets restored correctly.
     
     context.setPeriodicBoxVectors(Vec3(2*boxSize, 0, 0), Vec3(0, 2*boxSize, 0), Vec3(0, 0, 2*boxSize));
     context.setParameter(AndersenThermostat::Temperature(), temperature+10);
-    context.loadCheckpoint(stream1);
+    context.setState(s1);
     State s3 = context.getState(State::Positions | State::Velocities | State::Parameters);
     compareStates(s1, s3);
     
-    // Now simulate from there and see if the trajectory is identical.
+    // Set the partial state and see if the correct things were set.
     
-    integrator.step(10);
+    context.setState(s2);
     State s4 = context.getState(State::Positions | State::Velocities | State::Parameters);
-    compareStates(s2, s4);
-    
-    // Create a new Context that uses multiple devices.
-
-    string deviceIndex = platform.getPropertyValue(context, CudaPlatform::CudaDeviceIndex());
-    map<string, string> props;
-    props[CudaPlatform::CudaDeviceIndex()] = deviceIndex+","+deviceIndex;
-    VerletIntegrator integrator2(0.001);
-    Context context2(system, integrator2, platform, props);
-    context2.setPositions(positions);
-    context2.setPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
-    context2.setParameter(AndersenThermostat::Temperature(), temperature);
-    
-    // Now repeat all of the above tests with it.
-
-    integrator2.step(100);
-    State s5 = context2.getState(State::Positions | State::Velocities | State::Parameters);
-    stringstream stream2(ios_base::out | ios_base::in | ios_base::binary);
-    context2.createCheckpoint(stream2);
-    integrator2.step(10);
-    State s6 = context2.getState(State::Positions | State::Velocities | State::Parameters);
-    context2.setPeriodicBoxVectors(Vec3(2*boxSize, 0, 0), Vec3(0, 2*boxSize, 0), Vec3(0, 0, 2*boxSize));
-    context2.setParameter(AndersenThermostat::Temperature(), temperature+10);
-    context2.loadCheckpoint(stream2);
-    State s7 = context2.getState(State::Positions | State::Velocities | State::Parameters);
-    compareStates(s5, s7);
-    integrator2.step(10);
-    State s8 = context2.getState(State::Positions | State::Velocities | State::Parameters);
-    compareStates(s6, s8);
+    for (int i = 0; i < numParticles; i++) {
+        ASSERT_EQUAL_VEC(s2.getPositions()[i], s4.getPositions()[i], TOL);
+        ASSERT_EQUAL_VEC(s1.getVelocities()[i], s4.getVelocities()[i], TOL);
+    }
 }
 
-void runPlatformTests() {
-    testCheckpoint();
+void runPlatformTests();
+
+int main(int argc, char* argv[]) {
+    try {
+        initializeTests(argc, argv);
+        testSetState();
+        runPlatformTests();
+    }
+    catch(const exception& e) {
+        cout << "exception: " << e.what() << endl;
+        return 1;
+    }
+    cout << "Done" << endl;
+    return 0;
 }

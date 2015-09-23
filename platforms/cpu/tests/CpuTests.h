@@ -30,8 +30,14 @@
  * -------------------------------------------------------------------------- */
 
 #include "CpuPlatform.h"
+#include <cstdlib>
+#include <iostream>
 
 OpenMM::CpuPlatform platform;
 
 void initializeTests(int argc, char* argv[]) {
+    if (!OpenMM::CpuPlatform::isProcessorSupported()) {
+        std::cout << "CPU is not supported.  Exiting." << std::endl;
+        exit(0);
+    }
 }
