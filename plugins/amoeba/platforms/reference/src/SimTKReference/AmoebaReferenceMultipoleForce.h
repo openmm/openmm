@@ -667,6 +667,9 @@ protected:
     std::vector<RealVec> _inducedDipolePolar;
     std::vector< std::vector<RealVec> > _ptDipoleP;
     std::vector< std::vector<RealVec> > _ptDipoleD;
+    std::vector<std::vector<RealOpenMM> > _ptDipoleFieldP;
+    std::vector<std::vector<RealOpenMM> > _ptDipoleFieldD;
+
 
 
     int _mutualInducedDipoleConverged;
