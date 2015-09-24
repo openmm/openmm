@@ -475,8 +475,7 @@ void testIllegalVariable() {
     system.addParticle(1.0);
     CustomGBForce* force = new CustomGBForce();
     force->addComputedValue("a", "r+none", CustomGBForce::ParticlePair);
-    vector<double> params;
-    force->addParticle(params);
+    force->addParticle();
     system.addForce(force);
     VerletIntegrator integrator(0.001);
     bool threwException = false;

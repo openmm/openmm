@@ -997,8 +997,7 @@ void testIllegalVariable() {
     System system;
     system.addParticle(1.0);
     CustomNonbondedForce* force = new CustomNonbondedForce("r+none");
-    vector<double> params;
-    force->addParticle(params);
+    force->addParticle();
     system.addForce(force);
     VerletIntegrator integrator(0.001);
     bool threwException = false;

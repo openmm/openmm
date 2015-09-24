@@ -132,8 +132,7 @@ void testIllegalVariable() {
     system.addParticle(1.0);
     system.addParticle(1.0);
     CustomAngleForce* force = new CustomAngleForce("theta+none");
-    vector<double> params;
-    force->addAngle(0, 1, 2, params);
+    force->addAngle(0, 1, 2);
     system.addForce(force);
     VerletIntegrator integrator(0.001);
     bool threwException = false;

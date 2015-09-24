@@ -230,9 +230,8 @@ void testIllegalVariable() {
     system.addParticle(1.0);
     system.addParticle(1.0);
     CustomHbondForce* force = new CustomHbondForce("1+none");
-    vector<double> params;
-    force->addDonor(0, -1, -1, params);
-    force->addAcceptor(1, -1, -1, params);
+    force->addDonor(0, -1, -1);
+    force->addAcceptor(1, -1, -1);
     system.addForce(force);
     VerletIntegrator integrator(0.001);
     bool threwException = false;

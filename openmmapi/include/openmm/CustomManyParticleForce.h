@@ -348,7 +348,7 @@ public:
      * @param type          the type of the new particle
      * @return the index of the particle that was added
      */
-    int addParticle(const std::vector<double>& parameters, int type=0);
+    int addParticle(const std::vector<double>& parameters=std::vector<double>(), int type=0);
     /**
      * Get the nonbonded force parameters for a particle.
      *

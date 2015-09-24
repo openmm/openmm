@@ -317,8 +317,7 @@ void testIllegalVariable() {
     vector<int> particles;
     particles.push_back(0);
     particles.push_back(1);
-    vector<double> params;
-    force->addBond(particles, params);
+    force->addBond(particles);
     system.addForce(force);
     VerletIntegrator integrator(0.001);
     bool threwException = false;

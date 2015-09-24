@@ -135,8 +135,7 @@ void testIllegalVariable() {
     system.addParticle(1.0);
     system.addParticle(1.0);
     CustomBondForce* force = new CustomBondForce("r+none");
-    vector<double> params;
-    force->addBond(0, 1, params);
+    force->addBond(0, 1);
     system.addForce(force);
     VerletIntegrator integrator(0.001);
     bool threwException = false;

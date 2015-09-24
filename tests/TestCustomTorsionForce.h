@@ -173,8 +173,7 @@ void testIllegalVariable() {
     system.addParticle(1.0);
     system.addParticle(1.0);
     CustomTorsionForce* force = new CustomTorsionForce("theta+none");
-    vector<double> params;
-    force->addTorsion(0, 1, 2, 3, params);
+    force->addTorsion(0, 1, 2, 3);
     system.addForce(force);
     VerletIntegrator integrator(0.001);
     bool threwException = false;

@@ -180,7 +180,7 @@ public:
      * @param parameters   the list of parameters for the new force term
      * @return the index of the particle term that was added
      */
-    int addParticle(int particle, const std::vector<double>& parameters);
+    int addParticle(int particle, const std::vector<double>& parameters=std::vector<double>());
     /**
      * Get the force field parameters for a force field term.
      *
@@ -196,7 +196,7 @@ public:
      * @param particle      the index of the particle this term is applied to
      * @param parameters    the list of parameters for the force field term
      */
-    void setParticleParameters(int index, int particle, const std::vector<double>& parameters);
+    void setParticleParameters(int index, int particle, const std::vector<double>& parameters=std::vector<double>());
     /**
      * Update the per-particle parameters in a Context to match those stored in this Force object.  This method provides
      * an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
