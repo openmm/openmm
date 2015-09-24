@@ -171,8 +171,7 @@ void testIllegalVariable() {
     System system;
     system.addParticle(1.0);
     CustomExternalForce* force = new CustomExternalForce("x+none");
-    vector<double> params;
-    force->addParticle(0, params);
+    force->addParticle(0);
     system.addForce(force);
     VerletIntegrator integrator(0.001);
     bool threwException = false;

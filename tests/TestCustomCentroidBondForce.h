@@ -264,8 +264,7 @@ void testIllegalVariable() {
     vector<int> groups;
     groups.push_back(0);
     groups.push_back(1);
-    vector<double> params;
-    force->addBond(groups, params);
+    force->addBond(groups);
     system.addForce(force);
     VerletIntegrator integrator(0.001);
     bool threwException = false;

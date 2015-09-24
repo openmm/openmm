@@ -170,7 +170,7 @@ public:
      * @param parameters    the list of parameters for the new bond
      * @return the index of the bond that was added
      */
-    int addBond(int particle1, int particle2, const std::vector<double>& parameters);
+    int addBond(int particle1, int particle2, const std::vector<double>& parameters=std::vector<double>());
     /**
      * Get the force field parameters for a bond term.
      *
@@ -188,7 +188,7 @@ public:
      * @param particle2     the index of the second particle connected by the bond
      * @param parameters    the list of parameters for the bond
      */
-    void setBondParameters(int index, int particle1, int particle2, const std::vector<double>& parameters);
+    void setBondParameters(int index, int particle1, int particle2, const std::vector<double>& parameters=std::vector<double>());
     /**
      * Update the per-bond parameters in a Context to match those stored in this Force object.  This method provides
      * an efficient method to update certain parameters in an existing Context without needing to reinitialize it.

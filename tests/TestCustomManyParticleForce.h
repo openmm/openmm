@@ -711,8 +711,7 @@ void testIllegalVariable() {
     System system;
     system.addParticle(1.0);
     CustomManyParticleForce* force = new CustomManyParticleForce(2, "x1+y2+none");
-    vector<double> params;
-    force->addParticle(params);
+    force->addParticle();
     system.addForce(force);
     VerletIntegrator integrator(0.001);
     bool threwException = false;
