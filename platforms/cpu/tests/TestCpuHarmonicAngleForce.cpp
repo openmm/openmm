@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -29,35 +29,35 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "CpuKernelFactory.h"
-#include "CpuKernels.h"
-#include "CpuPlatform.h"
-#include "openmm/internal/ContextImpl.h"
-#include "openmm/OpenMMException.h"
+#include "CpuTests.h"
+#include "TestHarmonicAngleForce.h"
 
-using namespace OpenMM;
+void testParallelComputation() {
+    System system;
+    const int numParticles = 200;
+    for (int i = 0; i < numParticles; i++)
+        system.addParticle(1.0);
+    HarmonicAngleForce* force = new HarmonicAngleForce();
+    for (int i = 2; i < numParticles; i++)
+        force->addAngle(i-2, i-1, i, 1.1, i);
+    system.addForce(force);
+    vector<Vec3> positions(numParticles);
+    for (int i = 0; i < numParticles; i++)
+        positions[i] = Vec3(i, i%2, 0);
+    VerletIntegrator integrator1(0.01);
+    ReferencePlatform reference;
+    Context context1(system, integrator1, reference);
+    context1.setPositions(positions);
+    State state1 = context1.getState(State::Forces | State::Energy);
+    VerletIntegrator integrator2(0.01);
+    Context context2(system, integrator2, platform);
+    context2.setPositions(positions);
+    State state2 = context2.getState(State::Forces | State::Energy);
+    ASSERT_EQUAL_TOL(state1.getPotentialEnergy(), state2.getPotentialEnergy(), 1e-5);
+    for (int i = 0; i < numParticles; i++)
+        ASSERT_EQUAL_VEC(state1.getForces()[i], state2.getForces()[i], 1e-5);
+}
 
-KernelImpl* CpuKernelFactory::createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const {
-    CpuPlatform::PlatformData& data = CpuPlatform::getPlatformData(context);
-    if (name == CalcForcesAndEnergyKernel::Name())
-        return new CpuCalcForcesAndEnergyKernel(name, platform, data, context);
-    if (name == CalcHarmonicAngleForceKernel::Name())
-        return new CpuCalcHarmonicAngleForceKernel(name, platform, data);
-    if (name == CalcPeriodicTorsionForceKernel::Name())
-        return new CpuCalcPeriodicTorsionForceKernel(name, platform, data);
-    if (name == CalcRBTorsionForceKernel::Name())
-        return new CpuCalcRBTorsionForceKernel(name, platform, data);
-    if (name == CalcNonbondedForceKernel::Name())
-        return new CpuCalcNonbondedForceKernel(name, platform, data);
-    if (name == CalcCustomNonbondedForceKernel::Name())
-        return new CpuCalcCustomNonbondedForceKernel(name, platform, data);
-    if (name == CalcCustomManyParticleForceKernel::Name())
-        return new CpuCalcCustomManyParticleForceKernel(name, platform, data);
-    if (name == CalcGBSAOBCForceKernel::Name())
-        return new CpuCalcGBSAOBCForceKernel(name, platform, data);
-    if (name == CalcCustomGBForceKernel::Name())
-        return new CpuCalcCustomGBForceKernel(name, platform, data);
-    if (name == IntegrateLangevinStepKernel::Name())
-        return new CpuIntegrateLangevinStepKernel(name, platform, data);
-    throw OpenMMException((std::string("Tried to create kernel with illegal kernel name '") + name + "'").c_str());
+void runPlatformTests() {
+    testParallelComputation();
 }
