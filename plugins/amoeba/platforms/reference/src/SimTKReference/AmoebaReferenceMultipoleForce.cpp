@@ -6086,8 +6086,6 @@ void AmoebaReferencePmeMultipoleForce::calculateInducedDipoleFields(const vector
     calculateReciprocalSpaceInducedDipoleField(updateInducedDipoleFields);
     // Cache the fractional dipole coordinate fields for later use
     if (getPolarizationType() == AmoebaReferenceMultipoleForce::OPT) {
-        std::vector<RealOpenMM> phid(_phid.begin(), _phid.end());
-        std::vector<RealOpenMM> phip(_phip.begin(), _phip.end());
         _ptDipoleFieldD.push_back(_phid);
         _ptDipoleFieldP.push_back(_phip);
     }
@@ -6648,9 +6646,9 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::calculatePmeDirectElectrostaticPair
                                        + inducedDipoleRotationMatrix[2][2]*_ptDipoleP[o][jIndex][2] ));
         }
         RealOpenMM e0 = -fourThirds*rInvVec[3]*(3.0*(uScale*thole_d0 + bVec[3]) + alphaRVec[3]*X);
-        RealOpenMM d0 = 4.0*rInvVec[4]*(6.0*(uScale*dthole_d0 + bVec[3]) + 4.0*alphaRVec[5]*X);
+        RealOpenMM d0 = 2.0*rInvVec[4]*(6.0*(uScale*dthole_d0 + bVec[3]) + 4.0*alphaRVec[5]*X);
         RealOpenMM e1 = 2.0*rInvVec[3]*(uScale*thole_d1 + bVec[3] - twoThirds*alphaRVec[3]*X);
-        RealOpenMM d1 = -12.0*rInvVec[4]*(uScale*dthole_d1 + bVec[3]);
+        RealOpenMM d1 = -6.0*rInvVec[4]*(uScale*dthole_d1 + bVec[3]);
 
         for(int o = 0; o < _maxPTOrder; ++o){
             RealOpenMM p = _OPTPartCoefficients[o];
@@ -6664,8 +6662,9 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::calculatePmeDirectElectrostaticPair
                          - qiPTUinpI[l][1]*e0*qiPTUindJ[m][0] - qiPTUindI[l][1]*e0*qiPTUinpJ[m][0]);
                 iEJY += p*(qiPTUinpJ[l][0]*e1*qiPTUindI[m][1] + qiPTUindJ[l][0]*e1*qiPTUinpI[m][1]
                          - qiPTUinpJ[l][1]*e0*qiPTUindI[m][0] - qiPTUindJ[l][1]*e0*qiPTUinpI[m][0]);
-                fIZ  += p*(qiPTUindI[l][0]*d0*qiPTUinpJ[m][0]
-                         + qiPTUindI[l][1]*d1*qiPTUinpJ[m][1] + qiPTUindI[l][2]*d1*qiPTUinpJ[m][2]);
+                fIZ  += p*(qiPTUinpI[l][0]*d0*qiPTUindJ[m][0] + qiPTUindI[l][0]*d0*qiPTUinpJ[m][0]
+                         + qiPTUinpI[l][1]*d1*qiPTUindJ[m][1] + qiPTUindI[l][1]*d1*qiPTUinpJ[m][1]
+                         + qiPTUinpI[l][2]*d1*qiPTUindJ[m][2] + qiPTUindI[l][2]*d1*qiPTUinpJ[m][2]);
             }
         }
     } else if(getPolarizationType() == AmoebaReferenceMultipoleForce::Mutual) {
@@ -6743,10 +6742,11 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::calculateElectrostatic(const vector
         }
     }
 
-        calculatePmeSelfTorque(particleData, torques);
-        energy += computeReciprocalSpaceInducedDipoleForceAndEnergy(getPolarizationType(), particleData, forces, torques);
-        energy += computeReciprocalSpaceFixedMultipoleForceAndEnergy(particleData, forces, torques);
-        energy += calculatePmeSelfEnergy(particleData);
- 
+    // The polarization energy
+    calculatePmeSelfTorque(particleData, torques);
+    energy += computeReciprocalSpaceInducedDipoleForceAndEnergy(getPolarizationType(), particleData, forces, torques);
+    energy += computeReciprocalSpaceFixedMultipoleForceAndEnergy(particleData, forces, torques);
+    energy += calculatePmeSelfEnergy(particleData);
+
     return energy;
 }
