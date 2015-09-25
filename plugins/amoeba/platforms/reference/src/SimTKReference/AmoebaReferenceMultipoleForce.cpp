@@ -5979,7 +5979,7 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::computeReciprocalSpaceInducedDipole
                 inducedDipolePolar[0] = _ptDipoleP[l][i][0]*cartToFrac[0][0] + _ptDipoleP[l][i][1]*cartToFrac[0][1] + _ptDipoleP[l][i][2]*cartToFrac[0][2];
                 inducedDipolePolar[1] = _ptDipoleP[l][i][0]*cartToFrac[1][0] + _ptDipoleP[l][i][1]*cartToFrac[1][1] + _ptDipoleP[l][i][2]*cartToFrac[1][2];
                 inducedDipolePolar[2] = _ptDipoleP[l][i][0]*cartToFrac[2][0] + _ptDipoleP[l][i][1]*cartToFrac[2][1] + _ptDipoleP[l][i][2]*cartToFrac[2][2];
-                for(int m = 0; m < _maxPTOrder-1; ++m) {
+                for(int m = 0; m < _maxPTOrder-1-l; ++m) {
                     RealOpenMM p = _OPTPartCoefficients[l+m+1];
                     if(std::fabs(p) < 1e-6) continue;
                     for (int k = 0; k < 3; k++) {
