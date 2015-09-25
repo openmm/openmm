@@ -157,7 +157,7 @@ class SwigInputBuilder:
                  skipAdditionalMethods=[],
                  SWIG_VERSION='3.0.2'):
         self.nodeByID={}
-        self.SWIG_COMPACT_ARGUMENTS = LooseVersion(SWIG_VERSION) < LooseVersion('3.0.6')
+        self.SWIG_COMPACT_ARGUMENTS = LooseVersion(SWIG_VERSION) < LooseVersion('3.0.5')
 
         self.configModule = __import__(os.path.splitext(configFilename)[0])
 
