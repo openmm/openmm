@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2013 Stanford University and Simbios.
+/* Portions copyright (c) 2013-2015 Stanford University and Simbios.
  * Authors: Peter Eastman
  * Contributors: 
  *
@@ -37,6 +37,7 @@ class CpuLangevinDynamics : public ReferenceStochasticDynamics {
 public:
     class Update1Task;
     class Update2Task;
+    class Update3Task;
     /**
      * Constructor.
      *
@@ -80,9 +81,21 @@ public:
     void updatePart2(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& velocities,
                      std::vector<OpenMM::RealVec>& forces, std::vector<RealOpenMM>& inverseMasses, std::vector<OpenMM::RealVec>& xPrime);
 
+    /**  
+     * Third update
+     * 
+     * @param numberOfAtoms       number of atoms
+     * @param atomCoordinates     atom coordinates
+     * @param velocities          velocities
+     * @param inverseMasses       inverse atom masses
+     */
+    void updatePart3(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& velocities,
+                     std::vector<RealOpenMM>& inverseMasses, std::vector<OpenMM::RealVec>& xPrime);
+
 private:
     void threadUpdate1(int threadIndex);
     void threadUpdate2(int threadIndex);
+    void threadUpdate3(int threadIndex);
     OpenMM::ThreadPool& threads;
     OpenMM::CpuRandom& random;
     std::vector<OpenMM_SFMT::SFMT> threadRandom;

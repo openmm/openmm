@@ -119,3 +119,7 @@ ForceImpl* CustomExternalForce::createImpl() const {
 void CustomExternalForce::updateParametersInContext(Context& context) {
     dynamic_cast<CustomExternalForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
 }
+
+bool CustomExternalForce::usesPeriodicBoundaryConditions() const {
+    return (energyExpression.find("periodicdistance") != string::npos);
+}

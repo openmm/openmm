@@ -124,11 +124,13 @@ public:
 };
 
 void SFMT::createCheckpoint(std::ostream& stream) {
+    stream.write((char*) &data->baseData, sizeof(data->baseData));
     stream.write((char*) &data->sfmt, sizeof(data->sfmt));
     stream.write((char*) &data->idx, sizeof(data->idx));
 }
 
 void SFMT::loadCheckpoint(std::istream& stream) {
+    stream.read((char*) &data->baseData, sizeof(data->baseData));
     stream.read((char*) &data->sfmt, sizeof(data->sfmt));
     stream.read((char*) &data->idx, sizeof(data->idx));
 }

@@ -128,7 +128,7 @@ void OpenCLCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, boo
 
 double OpenCLCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForces, bool includeEnergy, int groups, bool& valid) {
     cl.getBondedUtilities().computeInteractions(groups);
-    cl.getNonbondedUtilities().computeInteractions(groups);
+    cl.getNonbondedUtilities().computeInteractions(groups, includeForces, includeEnergy);
     double sum = 0.0;
     for (vector<OpenCLContext::ForcePostComputation*>::iterator iter = cl.getPostComputations().begin(); iter != cl.getPostComputations().end(); ++iter)
         sum += (*iter)->computeForceAndEnergy(includeForces, includeEnergy, groups);
@@ -3821,7 +3821,9 @@ void OpenCLCalcCustomExternalForceKernel::initialize(const System& system, const
         globalParamNames[i] = force.getGlobalParameterName(i);
         globalParamValues[i] = (cl_float) force.getGlobalParameterDefaultValue(i);
     }
-    Lepton::ParsedExpression energyExpression = Lepton::Parser::parse(force.getEnergyFunction()).optimize();
+    map<string, Lepton::CustomFunction*> customFunctions;
+    customFunctions["periodicdistance"] = cl.getExpressionUtilities().getPeriodicDistancePlaceholder();
+    Lepton::ParsedExpression energyExpression = Lepton::Parser::parse(force.getEnergyFunction(), customFunctions).optimize();
     Lepton::ParsedExpression forceExpressionX = energyExpression.differentiate("x").optimize();
     Lepton::ParsedExpression forceExpressionY = energyExpression.differentiate("y").optimize();
     Lepton::ParsedExpression forceExpressionZ = energyExpression.differentiate("z").optimize();

@@ -172,7 +172,7 @@ public:
      * @param parameters    the list of parameters for the new torsion
      * @return the index of the torsion that was added
      */
-    int addTorsion(int particle1, int particle2, int particle3, int particle4, const std::vector<double>& parameters);
+    int addTorsion(int particle1, int particle2, int particle3, int particle4, const std::vector<double>& parameters=std::vector<double>());
     /**
      * Get the force field parameters for a torsion term.
      *
@@ -194,7 +194,7 @@ public:
      * @param particle4     the index of the fourth particle connected by the torsion
      * @param parameters    the list of parameters for the torsion
      */
-    void setTorsionParameters(int index, int particle1, int particle2, int particle3, int particle4, const std::vector<double>& parameters);
+    void setTorsionParameters(int index, int particle1, int particle2, int particle3, int particle4, const std::vector<double>& parameters=std::vector<double>());
     /**
      * Update the per-torsion parameters in a Context to match those stored in this Force object.  This method provides
      * an efficient method to update certain parameters in an existing Context without needing to reinitialize it.

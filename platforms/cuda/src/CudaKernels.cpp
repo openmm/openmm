@@ -105,7 +105,7 @@ void CudaCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool 
 
 double CudaCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForces, bool includeEnergy, int groups, bool& valid) {
     cu.getBondedUtilities().computeInteractions(groups);
-    cu.getNonbondedUtilities().computeInteractions(groups);
+    cu.getNonbondedUtilities().computeInteractions(groups, includeForces, includeEnergy);
     double sum = 0.0;
     for (vector<CudaContext::ForcePostComputation*>::iterator iter = cu.getPostComputations().begin(); iter != cu.getPostComputations().end(); ++iter)
         sum += (*iter)->computeForceAndEnergy(includeForces, includeEnergy, groups);
@@ -3652,7 +3652,9 @@ void CudaCalcCustomExternalForceKernel::initialize(const System& system, const C
         globalParamNames[i] = force.getGlobalParameterName(i);
         globalParamValues[i] = (float) force.getGlobalParameterDefaultValue(i);
     }
-    Lepton::ParsedExpression energyExpression = Lepton::Parser::parse(force.getEnergyFunction()).optimize();
+    map<string, Lepton::CustomFunction*> customFunctions;
+    customFunctions["periodicdistance"] = cu.getExpressionUtilities().getPeriodicDistancePlaceholder();
+    Lepton::ParsedExpression energyExpression = Lepton::Parser::parse(force.getEnergyFunction(), customFunctions).optimize();
     Lepton::ParsedExpression forceExpressionX = energyExpression.differentiate("x").optimize();
     Lepton::ParsedExpression forceExpressionY = energyExpression.differentiate("y").optimize();
     Lepton::ParsedExpression forceExpressionZ = energyExpression.differentiate("z").optimize();
