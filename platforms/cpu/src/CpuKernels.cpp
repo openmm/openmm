@@ -30,6 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "CpuKernels.h"
+#include "ReferenceAngleBondIxn.h"
 #include "ReferenceBondForce.h"
 #include "ReferenceConstraints.h"
 #include "ReferenceKernelFactory.h"
@@ -250,6 +251,64 @@ double CpuCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, boo
     data.threads.execute(task);
     data.threads.waitForThreads();
     return referenceKernel.getAs<ReferenceCalcForcesAndEnergyKernel>().finishComputation(context, includeForce, includeEnergy, groups, valid);
+}
+
+CpuCalcHarmonicAngleForceKernel::~CpuCalcHarmonicAngleForceKernel() {
+    if (angleIndexArray != NULL) {
+        for (int i = 0; i < numAngles; i++) {
+            delete[] angleIndexArray[i];
+            delete[] angleParamArray[i];
+        }
+        delete[] angleIndexArray;
+        delete[] angleParamArray;
+    }
+}
+
+void CpuCalcHarmonicAngleForceKernel::initialize(const System& system, const HarmonicAngleForce& force) {
+    numAngles = force.getNumAngles();
+    angleIndexArray = new int*[numAngles];
+    for (int i = 0; i < numAngles; i++)
+        angleIndexArray[i] = new int[3];
+    angleParamArray = new RealOpenMM*[numAngles];
+    for (int i = 0; i < numAngles; i++)
+        angleParamArray[i] = new RealOpenMM[2];
+    for (int i = 0; i < numAngles; ++i) {
+        int particle1, particle2, particle3;
+        double angle, k;
+        force.getAngleParameters(i, particle1, particle2, particle3, angle, k);
+        angleIndexArray[i][0] = particle1;
+        angleIndexArray[i][1] = particle2;
+        angleIndexArray[i][2] = particle3;
+        angleParamArray[i][0] = (RealOpenMM) angle;
+        angleParamArray[i][1] = (RealOpenMM) k;
+    }
+    bondForce.initialize(system.getNumParticles(), numAngles, 3, angleIndexArray, data.threads);
+}
+
+double CpuCalcHarmonicAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    vector<RealVec>& posData = extractPositions(context);
+    vector<RealVec>& forceData = extractForces(context);
+    RealOpenMM energy = 0;
+    ReferenceAngleBondIxn angleBond;
+    bondForce.calculateForce(posData, angleParamArray, forceData, includeEnergy ? &energy : NULL, angleBond);
+    return energy;
+}
+
+void CpuCalcHarmonicAngleForceKernel::copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force) {
+    if (numAngles != force.getNumAngles())
+        throw OpenMMException("updateParametersInContext: The number of angles has changed");
+
+    // Record the values.
+
+    for (int i = 0; i < numAngles; ++i) {
+        int particle1, particle2, particle3;
+        double angle, k;
+        force.getAngleParameters(i, particle1, particle2, particle3, angle, k);
+        if (particle1 != angleIndexArray[i][0] || particle2 != angleIndexArray[i][1] || particle3 != angleIndexArray[i][2])
+            throw OpenMMException("updateParametersInContext: The set of particles in an angle has changed");
+        angleParamArray[i][0] = (RealOpenMM) angle;
+        angleParamArray[i][1] = (RealOpenMM) k;
+    }
 }
 
 CpuCalcPeriodicTorsionForceKernel::~CpuCalcPeriodicTorsionForceKernel() {
@@ -479,6 +538,7 @@ void CpuCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
         bonded14ParamArray[i][1] = static_cast<RealOpenMM>(4.0*depth);
         bonded14ParamArray[i][2] = static_cast<RealOpenMM>(charge);
     }
+    bondForce.initialize(system.getNumParticles(), num14, 2, bonded14IndexArray, data.threads);
     
     // Record other parameters.
     
@@ -611,9 +671,8 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
     }
     energy += nonbondedEnergy;
     if (includeDirect) {
-        ReferenceBondForce refBondForce;
         ReferenceLJCoulomb14 nonbonded14;
-        refBondForce.calculateForce(num14, bonded14IndexArray, posData, bonded14ParamArray, forceData, includeEnergy ? &energy : NULL, nonbonded14);
+        bondForce.calculateForce(posData, bonded14ParamArray, forceData, includeEnergy ? &energy : NULL, nonbonded14);
         if (data.isPeriodic)
             energy += dispersionCoefficient/(boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2]);
     }

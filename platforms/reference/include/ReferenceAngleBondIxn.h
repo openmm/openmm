@@ -29,7 +29,7 @@
 
 namespace OpenMM {
 
-class ReferenceAngleBondIxn : public ReferenceBondIxn {
+class OPENMM_EXPORT ReferenceAngleBondIxn : public ReferenceBondIxn {
 
    private:
 
