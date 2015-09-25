@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013 Stanford University and the Authors.           *
+ * Portions copyright (c) 2013-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -30,6 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "CpuSETTLE.h"
+#include "openmm/internal/gmx_atomic.h"
 
 using namespace OpenMM;
 using namespace std;
@@ -39,10 +40,14 @@ public:
     ApplyToPositionsTask(vector<OpenMM::RealVec>& atomCoordinates, vector<OpenMM::RealVec>& atomCoordinatesP, vector<RealOpenMM>& inverseMasses,
             RealOpenMM tolerance, vector<ReferenceSETTLEAlgorithm*>& threadSettle) : atomCoordinates(atomCoordinates), atomCoordinatesP(atomCoordinatesP),
             inverseMasses(inverseMasses), tolerance(tolerance), threadSettle(threadSettle) {
+        gmx_atomic_set(&atomicCounter, 0);
     }
     void execute(ThreadPool& threads, int threadIndex) {
-        if (threadIndex < threadSettle.size()) {
-            threadSettle[threadIndex]->apply(atomCoordinates, atomCoordinatesP, inverseMasses, tolerance);
+        while (true) {
+            int index = gmx_atomic_fetch_add(&atomicCounter, 1);
+            if (index >= threadSettle.size())
+                break;
+            threadSettle[index]->apply(atomCoordinates, atomCoordinatesP, inverseMasses, tolerance);
         }
     }
     vector<OpenMM::RealVec>& atomCoordinates;
@@ -50,6 +55,7 @@ public:
     vector<RealOpenMM>& inverseMasses;
     RealOpenMM tolerance;
     vector<ReferenceSETTLEAlgorithm*>& threadSettle;
+    gmx_atomic_t atomicCounter;
 };
 
 class CpuSETTLE::ApplyToVelocitiesTask : public ThreadPool::Task {
@@ -57,10 +63,14 @@ public:
     ApplyToVelocitiesTask(vector<OpenMM::RealVec>& atomCoordinates, vector<OpenMM::RealVec>& velocities, vector<RealOpenMM>& inverseMasses,
             RealOpenMM tolerance, vector<ReferenceSETTLEAlgorithm*>& threadSettle) : atomCoordinates(atomCoordinates), velocities(velocities),
             inverseMasses(inverseMasses), tolerance(tolerance), threadSettle(threadSettle) {
+        gmx_atomic_set(&atomicCounter, 0);
     }
     void execute(ThreadPool& threads, int threadIndex) {
-        if (threadIndex < threadSettle.size()) {
-            threadSettle[threadIndex]->applyToVelocities(atomCoordinates, velocities, inverseMasses, tolerance);
+        while (true) {
+            int index = gmx_atomic_fetch_add(&atomicCounter, 1);
+            if (index >= threadSettle.size())
+                break;
+            threadSettle[index]->applyToVelocities(atomCoordinates, velocities, inverseMasses, tolerance);
         }
     }
     vector<OpenMM::RealVec>& atomCoordinates;
@@ -68,17 +78,18 @@ public:
     vector<RealOpenMM>& inverseMasses;
     RealOpenMM tolerance;
     vector<ReferenceSETTLEAlgorithm*>& threadSettle;
+    gmx_atomic_t atomicCounter;
 };
 
 CpuSETTLE::CpuSETTLE(const System& system, const ReferenceSETTLEAlgorithm& settle, ThreadPool& threads) : threads(threads) {
-    int numThreads = threads.getNumThreads();
+    int numBlocks = 10*threads.getNumThreads();
     int numClusters = settle.getNumClusters();
     vector<RealOpenMM> mass(system.getNumParticles());
     for (int i = 0; i < system.getNumParticles(); i++)
         mass[i] = system.getParticleMass(i);
-    for (int i = 0; i < numThreads; i++) {
-        int start = i*numClusters/numThreads;
-        int end = (i+1)*numClusters/numThreads;
+    for (int i = 0; i < numBlocks; i++) {
+        int start = i*numClusters/numBlocks;
+        int end = (i+1)*numClusters/numBlocks;
         if (start != end) {
             int numThreadClusters = end-start;
             vector<int> atom1(numThreadClusters), atom2(numThreadClusters), atom3(numThreadClusters);

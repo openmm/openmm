@@ -28,7 +28,7 @@
 #include "CpuNonbondedForce.h"
 #include "ReferenceForce.h"
 #include "ReferencePME.h"
-#include "gmx_atomic.h"
+#include "openmm/internal/gmx_atomic.h"
 #include <algorithm>
 
 // In case we're using some primitive version of Visual Studio this will
