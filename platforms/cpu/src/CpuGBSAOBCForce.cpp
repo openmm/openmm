@@ -25,7 +25,7 @@
 #include "CpuGBSAOBCForce.h"
 #include "SimTKOpenMMRealType.h"
 #include "openmm/internal/vectorize.h"
-#include "gmx_atomic.h"
+#include "openmm/internal/gmx_atomic.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>

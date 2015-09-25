@@ -32,7 +32,7 @@
 #include "ReferenceTabulatedFunction.h"
 #include "openmm/internal/CustomManyParticleForceImpl.h"
 #include "lepton/CustomFunction.h"
-#include "gmx_atomic.h"
+#include "openmm/internal/gmx_atomic.h"
 
 using namespace OpenMM;
 using namespace std;
