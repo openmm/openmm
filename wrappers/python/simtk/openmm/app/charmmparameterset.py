@@ -175,7 +175,33 @@ class CharmmParameterSet(object):
                 inst.readStreamFile(sfile)
         return inst
 
-    def readParameterFile(self, pfile):
+    def _read_atom_types_from_psf( self, psf ):
+       if( isinstance( psf, str ) ):
+           data = CharmmPsfFile( psf )
+       else:
+           data = psf
+       idx=1000
+       for a in data.atom_list:
+            name = a.attype
+            mass = a.mass
+            # Figure element out from the mass
+            masselem = Element.getByMass(mass)
+            if masselem is None:
+                atomic_number = 0 # Extra point or something
+            else:
+                atomic_number = masselem.atomic_number
+
+            if not name in self.atom_types_str:
+                atype = AtomType(name=name, number=idx, mass=mass,
+                                 atomic_number=atomic_number)
+                self.atom_types_str[atype.name] = atype
+                self.atom_types_int[atype.number] = atype
+                self.atom_types_tuple[(atype.name, atype.number)] = atype
+                idx=idx+1
+            else:
+                pass
+  
+    def readParameterFile(self, pfile, psf=None, permissive=False ):
         """
         Reads all of the parameters from a parameter file. Versions 36 and
         later of the CHARMM force field files have an ATOMS section defining
@@ -184,12 +210,20 @@ class CharmmParameterSet(object):
 
         Parameters:
             - pfile (str) : Name of the CHARMM PARameter file to read
+            - psf         : Optional CharmPsfFile object or PSF filename
+                            from which atom types will be read
+            - permissive  : Boolean - accept a parameter file that contains
+                            references to undefined atom types 
 
         Notes: The atom types must all be loaded by the end of this routine.
         Either supply a PAR file with atom definitions in them or read in a
         RTF/TOP file first. Failure to do so will result in a raised
         RuntimeError.
         """
+        # Read in the atom types in the pdb
+        if(psf):
+            self._read_atom_types_from_psf( psf )
+
         conv = CharmmParameterSet._convert
         if isinstance(pfile, str):
             own_handle = True
@@ -481,12 +515,16 @@ class CharmmParameterSet(object):
         # instances. In order for this to work, all keys in nonbonded_types
         # must be in the self.atom_types_str dict. Raise a RuntimeError if this
         # is not satisfied
-        try:
-            for key in nonbonded_types:
+        for key in nonbonded_types:
+            try:
                 self.atom_types_str[key].set_lj_params(*nonbonded_types[key])
-        except KeyError:
-            raise RuntimeError('Atom type %s not present in AtomType list' %
+            except KeyError:
+                if( permissive ):
+                    print( " Atom type " + key + " unknown" )
+                else:
+                    raise RuntimeError('Atom type %s not present in AtomType list' %
                                key)
+
         if parameterset is not None: self.parametersets.append(parameterset)
         if own_handle: f.close()
 
