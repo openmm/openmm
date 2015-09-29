@@ -1201,5 +1201,16 @@ class TestAPIUnits(unittest.TestCase):
         integrator.setStepSize(0.0005)
         self.assertEqual(integrator.getStepSize(), 0.0005*picosecond)
 
+    def testCustomIntegrator(self):
+        """ Tests the CustomIntegrator API features """
+        integrator = CustomIntegrator(1.0)
+        self.assertEqual(integrator.getStepSize(), 1.0*picosecond)
+        self.assertEqual(integrator.getConstraintTolerance(), 1e-5)
+        integrator.setConstraintTolerance(1e-6)
+        self.assertEqual(integrator.getConstraintTolerance(), 1e-6)
+
+        integrator = CustomIntegrator(1.0*femtoseconds)
+        self.assertEqual(integrator.getStepSize(), 1.0*femtoseconds)
+
 if __name__ == '__main__':
     unittest.main()
