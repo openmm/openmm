@@ -378,6 +378,9 @@ UNITS = {
 ("CustomTorsionForce", "getPerTorsionParameterName") : (None, ()),
 ("CustomTorsionForce", "getGlobalParameterName") : (None, ()),
 ("CustomTorsionForce", "getTorsionParameters") : (None, ()),
+("DrudeForce", "getParticleParameters") : (None, (None, None, None, None, None, 'unit.elementary_charge', 'unit.nanometer**3', None, None)),
+("DrudeForce", "getNumScreenedPairs") : (None, ()),
+("DrudeForce", "getScreenedPairParameters") : (None, ()),
 ("GBSAOBCForce", "getParticleParameters")
  : (None, ('unit.elementary_charge',
            'unit.nanometer', None)),

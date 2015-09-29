@@ -521,6 +521,71 @@ class TestAPIUnits(unittest.TestCase):
         self.assertEqual(force.getParticleParameters(1)[0][0], 20)
         self.assertEqual(force.getParticleParameters(2)[0][0], 30*4.184)
 
+    def testDrudeForce(self):
+        """ Tests the DrudeForce API features """
+        force = DrudeForce()
+        self.assertFalse(force.usesPeriodicBoundaryConditions())
+        force.addParticle(0, 1, -1, -1, -1, 1, 1, 0, 0)
+        force.addParticle(1, 2, 3, -1, -1, 1*elementary_charge, 1*angstrom**3, 0.5, 0)
+        force.addParticle(2, 3, 4, 5, 6, 1*elementary_charge, 10*angstrom**3, 0.5, 0.5)
+        force.addScreenedPair(0, 1, 0.5)
+        force.addScreenedPair(1, 2, 0.25)
+        force.addScreenedPair(0, 2, 0.125)
+
+        self.assertEqual(force.getNumParticles(), 3)
+        self.assertEqual(force.getNumScreenedPairs(), 3)
+
+        i, j, k, l, m, q, a, an12, an34 = force.getParticleParameters(0)
+
+        self.assertEqual(i, 0)
+        self.assertEqual(j, 1)
+        self.assertEqual(k, -1)
+        self.assertEqual(l, -1)
+        self.assertEqual(m, -1)
+        self.assertEqual(q, 1*elementary_charge)
+        self.assertEqual(a, 1*nanometer**3)
+        self.assertEqual(an12, 0)
+        self.assertEqual(an34, 0)
+
+        i, j, k, l, m, q, a, an12, an34 = force.getParticleParameters(1)
+
+        self.assertEqual(i, 1)
+        self.assertEqual(j, 2)
+        self.assertEqual(k, 3)
+        self.assertEqual(l, -1)
+        self.assertEqual(m, -1)
+        self.assertEqual(q, 1*elementary_charge)
+        self.assertAlmostEqualUnit(a, 1*angstrom**3)
+        self.assertEqual(an12, 0.5)
+        self.assertEqual(an34, 0)
+
+        i, j, k, l, m, q, a, an12, an34 = force.getParticleParameters(2)
+
+        self.assertEqual(i, 2)
+        self.assertEqual(j, 3)
+        self.assertEqual(k, 4)
+        self.assertEqual(l, 5)
+        self.assertEqual(m, 6)
+        self.assertEqual(q, 1*elementary_charge)
+        self.assertAlmostEqualUnit(a, 10*angstrom**3)
+        self.assertEqual(an12, 0.5)
+        self.assertEqual(an34, 0.5)
+
+        i, j, thole = force.getScreenedPairParameters(0)
+        self.assertEqual(i, 0)
+        self.assertEqual(j, 1)
+        self.assertEqual(thole, 0.5)
+
+        i, j, thole = force.getScreenedPairParameters(1)
+        self.assertEqual(i, 1)
+        self.assertEqual(j, 2)
+        self.assertEqual(thole, 0.25)
+
+        i, j, thole = force.getScreenedPairParameters(2)
+        self.assertEqual(i, 0)
+        self.assertEqual(j, 2)
+        self.assertEqual(thole, 0.125)
+
     def testAmoebaBondForce(self):
         """ Tests the AmoebaBondForce API features """
         force1 = AmoebaBondForce()
