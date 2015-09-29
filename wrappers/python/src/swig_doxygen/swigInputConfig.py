@@ -256,7 +256,9 @@ UNITS = {
 #    void getCovalentMap(int index, CovalentType typeId, std::vector<int>& covalentAtoms )
 #    void getCovalentMaps(int index, std::vector < std::vector<int> >& covalentLists )
 
-("AmoebaMultipoleForce",                 "getMultipoleParameters")                        :  ( None, ()),
+("AmoebaMultipoleForce",                 "getMultipoleParameters")                        :  ( None, ('unit.elementary_charge', 'unit.elementary_charge/unit.nanometer',
+                                                                                                      'unit.elementary_charge/unit.nanometer**2', None, None, None, None, None, None,
+                                                                                                      'unit.nanometer**3')),
 ("AmoebaMultipoleForce",                 "getCovalentMap")                                :  ( None, ()),
 ("AmoebaMultipoleForce",                 "getCovalentMaps")                               :  ( None, ()),
 ("AmoebaMultipoleForce",                 "getScalingDistanceCutoff")                      :  ( 'unit.nanometer', ()),

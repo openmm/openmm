@@ -13,6 +13,10 @@ class TestAPIUnits(unittest.TestCase):
     def assertAlmostEqualUnit(self, x1, x2):
         self.assertAlmostEqual(x1._value, x2.value_in_unit(x1.unit))
 
+    def assertAlmostEqualUnitArray(self, a1, a2):
+        for x1, x2 in zip(a1._value, a2.value_in_unit(a1.unit)):
+            self.assertAlmostEqual(x1, x2)
+
     def testHarmonicBondForce(self):
         """ Tests HarmonicBondForce API features """
         force = HarmonicBondForce()
@@ -981,6 +985,61 @@ class TestAPIUnits(unittest.TestCase):
         self.assertIs(sig.unit, nanometer)
         self.assertEqual(eps, 1*kilocalorie_per_mole)
         self.assertIs(eps.unit, kilojoule_per_mole)
+
+    def testAmoebaMultipoleForce(self):
+        """ Tests the AmoebaMultipoleForce API features """
+        force = AmoebaMultipoleForce()
+        self.assertIs(force.getNonbondedMethod(), AmoebaMultipoleForce.NoCutoff)
+        self.assertFalse(force.usesPeriodicBoundaryConditions())
+        force.setNonbondedMethod(AmoebaMultipoleForce.PME)
+        self.assertIs(force.getNonbondedMethod(), AmoebaMultipoleForce.PME)
+        self.assertTrue(force.usesPeriodicBoundaryConditions())
+
+        self.assertEqual(force.getCutoffDistance(), 1*nanometer)
+        self.assertIs(force.getCutoffDistance().unit, nanometer)
+        force.setCutoffDistance(8*angstroms)
+        self.assertEqual(force.getCutoffDistance(), 8*angstrom)
+        self.assertIs(force.getCutoffDistance().unit, nanometer)
+
+        self.assertEqual(force.getPolarizationType(), AmoebaMultipoleForce.Mutual)
+        force.setPolarizationType(AmoebaMultipoleForce.Direct)
+        self.assertEqual(force.getPolarizationType(), AmoebaMultipoleForce.Direct)
+        force.setPolarizationType(AmoebaMultipoleForce.Mutual)
+        self.assertEqual(force.getPolarizationType(), AmoebaMultipoleForce.Mutual)
+
+        force.addMultipole(1.0, [0.5, 0, -0.5], list(range(9)),
+                AmoebaMultipoleForce.ZThenX, 1, 2, 3, 0.5, 0.5, 1.0)
+        force.addMultipole(1.0*elementary_charge, [0.5, 0, -0.5]*elementary_charge/angstrom,
+                list(range(9))*elementary_charge/angstrom**2,
+                AmoebaMultipoleForce.Bisector, 2, 3, 4, 0.5, 0.5, 1.0*angstrom**3)
+
+        self.assertEqual(force.getNumMultipoles(), 2)
+
+        q, mu, quad, ax, i, j, k, thole, damp, polarity = force.getMultipoleParameters(0)
+
+        self.assertEqual(q, 1.0*elementary_charge)
+        self.assertEqual(mu, (0.5, 0, -0.5)*elementary_charge/nanometer)
+        self.assertEqual(quad, tuple(range(9))*elementary_charge/nanometer**2)
+        self.assertEqual(ax, AmoebaMultipoleForce.ZThenX)
+        self.assertEqual(i, 1)
+        self.assertEqual(j, 2)
+        self.assertEqual(k, 3)
+        self.assertEqual(thole, 0.5)
+        self.assertEqual(damp, 0.5)
+        self.assertEqual(polarity, 1*nanometer**3)
+
+        q, mu, quad, ax, i, j, k, thole, damp, polarity = force.getMultipoleParameters(1)
+
+        self.assertEqual(q, 1.0*elementary_charge)
+        self.assertEqual(mu, (0.5, 0, -0.5)*elementary_charge/angstrom)
+        self.assertAlmostEqualUnitArray(quad, tuple(range(9))*elementary_charge/angstrom**2)
+        self.assertEqual(ax, AmoebaMultipoleForce.Bisector)
+        self.assertEqual(i, 2)
+        self.assertEqual(j, 3)
+        self.assertEqual(k, 4)
+        self.assertEqual(thole, 0.5)
+        self.assertEqual(damp, 0.5)
+        self.assertAlmostEqualUnit(polarity, 1*angstrom**3)
 
 if __name__ == '__main__':
     unittest.main()
