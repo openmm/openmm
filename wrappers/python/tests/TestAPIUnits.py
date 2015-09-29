@@ -799,12 +799,188 @@ class TestAPIUnits(unittest.TestCase):
         grid1 = [[[i, j, random.random(), random.random(), random.random(), random.random()]
                     for j in range(-180, 180, 24)] for i in range(-180, 180, 24)]
         kcal = kilocalories_per_mole
-        grid2 = [[[i*degrees, j*degrees, random.random()*kcal,
+        grid2 = [[[i*math.pi/180*radians, j*math.pi/180*radians, random.random()*kcal,
                    random.random()*kcal/radians, random.random()*kcal/radians,
                    random.random()*kcal/radians**2]
             for j in range(-180, 0, 10)] for i in range(-180, 0, 10)]
+        grid3 = [[[i, j, random.random()*kcal]
+            for j in range(-180, 180, 24)] for i in range(-180, 180, 24)]
         force.setTorsionTorsionGrid(0, grid1)
-        force.setTorsionTorsionGrid(0, grid2)
+        force.setTorsionTorsionGrid(1, grid2)
+        force.setTorsionTorsionGrid(2, grid3)
+
+        self.assertEqual(force.getNumTorsionTorsionGrids(), 3)
+
+        # Check the grids
+        g1 = force.getTorsionTorsionGrid(0)
+        for row1, row2 in zip(g1, grid1):
+            for column1, column2 in zip(row1, row2):
+                self.assertEqual(len(column1), len(column2))
+                for x1, x2 in zip(column1, column2):
+                    self.assertEqual(x1, x2)
+        g2 = force.getTorsionTorsionGrid(1)
+        for row1, row2 in zip(g2, grid2):
+            for column1, column2 in zip(row1, row2):
+                self.assertEqual(column1[0], column2[0].value_in_unit(degree))
+                self.assertEqual(column1[1], column2[1].value_in_unit(degree))
+                self.assertEqual(column1[2], column2[2].value_in_unit(kilojoules_per_mole))
+                self.assertEqual(column1[3], column2[3].value_in_unit(kilojoules_per_mole/radian))
+                self.assertEqual(column1[4], column2[4].value_in_unit(kilojoules_per_mole/radian))
+                self.assertEqual(column1[5], column2[5].value_in_unit(kilojoules_per_mole/radian**2))
+        g3 = force.getTorsionTorsionGrid(2)
+        for row1, row2 in zip(g3, grid3):
+            for column1, column2 in zip(row1, row2):
+                self.assertEqual(len(column1), 6)
+                self.assertEqual(len(column2), 3)
+                self.assertEqual(column1[0], column2[0])
+                self.assertEqual(column1[1], column2[1])
+                self.assertEqual(column1[2], column2[2].value_in_unit(kilojoules_per_mole))
+
+        force.addTorsionTorsion(0, 1, 2, 3, 4, 5, 0)
+        force.addTorsionTorsion(1, 2, 3, 4, 5, 6, 1)
+        force.addTorsionTorsion(2, 3, 4, 5, 6, 7, 2)
+
+        self.assertEqual(force.getNumTorsionTorsions(), 3)
+
+        i, j, k, l, m, ch, g = force.getTorsionTorsionParameters(0)
+        self.assertEqual(i, 0)
+        self.assertEqual(j, 1)
+        self.assertEqual(k, 2)
+        self.assertEqual(l, 3)
+        self.assertEqual(m, 4)
+        self.assertEqual(ch, 5)
+        self.assertEqual(g, 0)
+
+        i, j, k, l, m, ch, g = force.getTorsionTorsionParameters(1)
+        self.assertEqual(i, 1)
+        self.assertEqual(j, 2)
+        self.assertEqual(k, 3)
+        self.assertEqual(l, 4)
+        self.assertEqual(m, 5)
+        self.assertEqual(ch, 6)
+        self.assertEqual(g, 1)
+
+    def testAmoebaVdwForce(self):
+        """ Tests the AmoebaVdwForce API features """
+        force = AmoebaVdwForce()
+
+        self.assertEqual(force.getSigmaCombiningRule(), 'CUBIC-MEAN')
+        force.setSigmaCombiningRule('ARITHMETIC')
+        self.assertEqual(force.getSigmaCombiningRule(), 'ARITHMETIC')
+        force.setSigmaCombiningRule('GEOMETRIC')
+        self.assertEqual(force.getSigmaCombiningRule(), 'GEOMETRIC')
+
+        self.assertEqual(force.getEpsilonCombiningRule(), 'HHG')
+        force.setEpsilonCombiningRule('HARMONIC')
+        self.assertEqual(force.getEpsilonCombiningRule(), 'HARMONIC')
+        force.setEpsilonCombiningRule('GEOMETRIC')
+        self.assertEqual(force.getEpsilonCombiningRule(), 'GEOMETRIC')
+        force.setEpsilonCombiningRule('ARITHMETIC')
+        self.assertEqual(force.getEpsilonCombiningRule(), 'ARITHMETIC')
+
+        self.assertTrue(force.getUseDispersionCorrection())
+        force.setUseDispersionCorrection(False)
+        self.assertFalse(force.getUseDispersionCorrection())
+
+        self.assertIs(force.getNonbondedMethod(), AmoebaVdwForce.NoCutoff)
+        self.assertFalse(force.usesPeriodicBoundaryConditions())
+        force.setNonbondedMethod(AmoebaVdwForce.CutoffPeriodic)
+        self.assertTrue(force.usesPeriodicBoundaryConditions())
+        self.assertIs(force.getNonbondedMethod(), AmoebaVdwForce.CutoffPeriodic)
+
+        force.setCutoff(10.0*angstroms)
+        self.assertEqual(force.getCutoff(), 10.0*angstroms)
+        self.assertIs(force.getCutoff().unit, nanometers)
+
+        force.addParticle(0, 0.1, 1.0, 1.0)
+        force.addParticle(1, 1.0*angstroms, 1.0*kilocalories_per_mole, 0.5)
+        force.addParticle(1, 0.8*angstroms, 2.0*kilocalories_per_mole, 0.25)
+
+        self.assertEqual(force.getNumParticles(), 3)
+
+        p, sig, eps, scale = force.getParticleParameters(0)
+        self.assertEqual(p, 0)
+        self.assertEqual(sig, 0.1*nanometers)
+        self.assertIs(sig.unit, nanometers)
+        self.assertEqual(eps, 1.0*kilojoules_per_mole)
+        self.assertIs(eps.unit, kilojoules_per_mole)
+        self.assertEqual(scale, 1.0)
+
+        p, sig, eps, scale = force.getParticleParameters(1)
+        self.assertEqual(p, 1)
+        self.assertEqual(sig, 1.0*angstroms)
+        self.assertIs(sig.unit, nanometers)
+        self.assertEqual(eps, 1.0*kilocalories_per_mole)
+        self.assertIs(eps.unit, kilojoules_per_mole)
+        self.assertEqual(scale, 0.5)
+
+        p, sig, eps, scale = force.getParticleParameters(2)
+        self.assertEqual(p, 1)
+        self.assertAlmostEqualUnit(sig, 0.8*angstroms)
+        self.assertIs(sig.unit, nanometers)
+        self.assertEqual(eps, 2.0*kilocalories_per_mole)
+        self.assertIs(eps.unit, kilojoules_per_mole)
+        self.assertEqual(scale, 0.25)
+
+    def testAmoebaWcaDispersionForce(self):
+        """ Tests the AmoebaWcaDispersionForce API features """
+        force = AmoebaWcaDispersionForce()
+
+        self.assertEqual(force.getDispoff(), 0.26*nanometer)
+        self.assertEqual(force.getAwater(), 0.033428*nanometer**-3)
+        self.assertEqual(force.getEpsh(), 0.0135*kilojoule_per_mole)
+        self.assertEqual(force.getEpso(), 0.11*kilojoule_per_mole)
+        self.assertEqual(force.getRminh(), 1.3275*nanometer)
+        self.assertEqual(force.getRmino(), 1.7025*nanometer)
+        self.assertEqual(force.getShctd(), 0.81)
+        self.assertEqual(force.getSlevy(), 1.0)
+
+        force.setDispoff(3*angstroms)
+        self.assertAlmostEqualUnit(force.getDispoff(), 3*angstroms)
+        self.assertIs(force.getDispoff().unit, nanometer)
+
+        force.setAwater(3*angstroms**-3)
+        self.assertAlmostEqualUnit(force.getAwater(), 3*angstroms**-3)
+        self.assertEqual(1*force.getAwater().unit, 1*nanometer**-3)
+
+        force.setEpsh(1*kilocalorie_per_mole)
+        self.assertEqual(force.getEpsh(), 1*kilocalorie_per_mole)
+        self.assertIs(force.getEpsh().unit, kilojoule_per_mole)
+
+        force.setEpso(1*kilocalorie_per_mole)
+        self.assertEqual(force.getEpso(), 1*kilocalorie_per_mole)
+        self.assertIs(force.getEpso().unit, kilojoule_per_mole)
+
+        force.setRminh(20*angstroms)
+        self.assertEqual(force.getRminh(), 20*angstroms)
+        self.assertIs(force.getRminh().unit, nanometer)
+
+        force.setRmino(30*angstroms)
+        self.assertEqual(force.getRmino(), 30*angstroms)
+        self.assertIs(force.getRmino().unit, nanometer)
+
+        force.setShctd(1)
+        self.assertEqual(force.getShctd(), 1)
+
+        force.setSlevy(2)
+        self.assertEqual(force.getSlevy(), 2)
+
+        force.addParticle(0.5, 1)
+        force.addParticle(3*angstroms, 1*kilocalorie_per_mole)
+
+        self.assertEqual(force.getNumParticles(), 2)
+
+        sig, eps = force.getParticleParameters(0)
+        self.assertEqual(sig, 0.5*nanometer)
+        self.assertIs(sig.unit, nanometer)
+        self.assertEqual(eps, 1*kilojoule_per_mole)
+        self.assertIs(eps.unit, kilojoule_per_mole)
+
+        sig, eps = force.getParticleParameters(1)
+        self.assertAlmostEqualUnit(sig, 3*angstrom)
+        self.assertIs(sig.unit, nanometer)
+        self.assertEqual(eps, 1*kilocalorie_per_mole)
+        self.assertIs(eps.unit, kilojoule_per_mole)
 
 if __name__ == '__main__':
     unittest.main()
