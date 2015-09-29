@@ -1041,5 +1041,50 @@ class TestAPIUnits(unittest.TestCase):
         self.assertEqual(damp, 0.5)
         self.assertAlmostEqualUnit(polarity, 1*angstrom**3)
 
+    def testVerletIntegrator(self):
+        """ Tests the VerletIntegrator API features """
+        integrator = VerletIntegrator(1.0)
+        self.assertEqual(integrator.getStepSize(), 1.0*picosecond)
+        self.assertEqual(integrator.getConstraintTolerance(), 1e-5)
+        integrator.setConstraintTolerance(1e-6)
+        self.assertEqual(integrator.getConstraintTolerance(), 1e-6)
+
+        integrator = VerletIntegrator(1.0*femtoseconds)
+        self.assertEqual(integrator.getStepSize(), 1.0*femtoseconds)
+
+    def testVariableVerletIntegrator(self):
+        """ Tests the VariableVerletIntegrator API features """
+        integrator = VariableVerletIntegrator(0.1)
+        self.assertEqual(integrator.getErrorTolerance(), 0.1)
+        integrator.setErrorTolerance(0.01)
+        self.assertEqual(integrator.getErrorTolerance(), 0.01)
+        self.assertEqual(integrator.getConstraintTolerance(), 1e-5)
+        integrator.setConstraintTolerance(1e-6)
+        self.assertEqual(integrator.getConstraintTolerance(), 1e-6)
+
+    def testLangevinIntegrator(self):
+        """ Tests the LangevinIntegrator API features """
+        integrator = LangevinIntegrator(300, 0.1, 1)
+        self.assertEqual(integrator.getTemperature(), 300*kelvin)
+        self.assertEqual(integrator.getFriction(), 0.1/picosecond)
+        self.assertEqual(integrator.getStepSize(), 1*picosecond)
+
+        integrator = LangevinIntegrator(300*kelvin, 0.1/microsecond, 1*femtosecond)
+        self.assertEqual(integrator.getTemperature(), 300*kelvin)
+        self.assertAlmostEqualUnit(integrator.getFriction(), 0.1/microsecond)
+        self.assertEqual(integrator.getStepSize(), 1*femtosecond)
+
+    def testVariableLangevinIntegrator(self):
+        """ Tests the VariableLangevinIntegrator API features """
+        integrator = VariableLangevinIntegrator(300, 0.1, 0.1)
+        self.assertEqual(integrator.getTemperature(), 300*kelvin)
+        self.assertEqual(integrator.getFriction(), 0.1/picosecond)
+        self.assertEqual(integrator.getErrorTolerance(), 0.1)
+
+        integrator = VariableLangevinIntegrator(300*kelvin, 0.1/microsecond, 0.01)
+        self.assertEqual(integrator.getTemperature(), 300*kelvin)
+        self.assertAlmostEqualUnit(integrator.getFriction(), 0.1/microsecond)
+        self.assertEqual(integrator.getErrorTolerance(), 0.01)
+
 if __name__ == '__main__':
     unittest.main()
