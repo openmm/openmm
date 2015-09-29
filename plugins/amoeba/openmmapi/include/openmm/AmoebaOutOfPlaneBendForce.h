@@ -74,7 +74,7 @@ public:
      * 
      * @return global cubicK term
      */
-    double getAmoebaGlobalOutOfPlaneBendCubic(void) const;
+    double getAmoebaGlobalOutOfPlaneBendCubic() const;
 
     /** 
      * Set the global cubic term
@@ -88,7 +88,7 @@ public:
      * 
      * @return global  quartic term
      */
-    double getAmoebaGlobalOutOfPlaneBendQuartic(void) const;
+    double getAmoebaGlobalOutOfPlaneBendQuartic() const;
 
     /** 
      * Set the global pentic term
@@ -102,7 +102,7 @@ public:
      * 
      * @return global penticK term
      */
-    double getAmoebaGlobalOutOfPlaneBendPentic(void) const;
+    double getAmoebaGlobalOutOfPlaneBendPentic() const;
 
     /** 
      * Set the global sextic term
@@ -116,7 +116,7 @@ public:
      * 
      * @return global sexticK term
      */
-    double getAmoebaGlobalOutOfPlaneBendSextic(void) const;
+    double getAmoebaGlobalOutOfPlaneBendSextic() const;
 
     /**
      * Add an out-of-plane bend term to the force field.
