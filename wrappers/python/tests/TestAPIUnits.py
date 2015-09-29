@@ -1086,5 +1086,55 @@ class TestAPIUnits(unittest.TestCase):
         self.assertAlmostEqualUnit(integrator.getFriction(), 0.1/microsecond)
         self.assertEqual(integrator.getErrorTolerance(), 0.01)
 
+    def testBrownianIntegrator(self):
+        """ Tests the BrownianIntegrator API features """
+        integrator = BrownianIntegrator(300, 0.1, 1)
+        self.assertEqual(integrator.getTemperature(), 300*kelvin)
+        self.assertEqual(integrator.getFriction(), 0.1/picosecond)
+        self.assertEqual(integrator.getStepSize(), 1*picosecond)
+
+        integrator = BrownianIntegrator(300*kelvin, 0.1/microsecond, 1*femtosecond)
+        self.assertEqual(integrator.getTemperature(), 300*kelvin)
+        self.assertAlmostEqualUnit(integrator.getFriction(), 0.1/microsecond)
+        self.assertEqual(integrator.getStepSize(), 1*femtosecond)
+
+    def testAndersenThermostat(self):
+        """ Tests the AndersenThermostat API features """
+        force = AndersenThermostat(300*kelvin, 1/microsecond)
+        self.assertEqual(force.getDefaultTemperature(), 300*kelvin)
+        self.assertAlmostEqualUnit(force.getDefaultCollisionFrequency(), 1/microsecond)
+
+        force.setDefaultTemperature(298.15)
+        force.setDefaultCollisionFrequency(1)
+        self.assertEqual(force.getDefaultTemperature(), 298.15*kelvin)
+        self.assertAlmostEqualUnit(force.getDefaultCollisionFrequency(), 1/picosecond)
+
+    def testDrudeSCFIntegrator(self):
+        """ Tests the DrudeSCFIntegrator API features """
+        integrator = DrudeSCFIntegrator(0.002)
+        self.assertEqual(integrator.getStepSize(), 0.002*picoseconds)
+        self.assertAlmostEqualUnit(integrator.getMinimizationErrorTolerance(),
+                                   0.1*kilojoule_per_mole/nanometer)
+        integrator.setMinimizationErrorTolerance(1*kilocalorie_per_mole/angstrom)
+        self.assertAlmostEqualUnit(integrator.getMinimizationErrorTolerance(),
+                                   1*kilocalorie_per_mole/angstrom)
+
+    def testDrudeLangevinIntegrator(self):
+        """ Tests the DrudeLangevinIntegrator API features """
+        integrator = DrudeLangevinIntegrator(300*kelvin, 1.0/microsecond,
+                                             100*kelvin, 1/picosecond, 0.1*femtosecond)
+        self.assertEqual(integrator.getTemperature(), 300*kelvin)
+        integrator.setTemperature(298.15)
+        self.assertEqual(integrator.getTemperature(), 298.15*kelvin)
+        self.assertAlmostEqualUnit(integrator.getFriction(), 1/microsecond)
+        integrator.setFriction(1)
+        self.assertEqual(integrator.getFriction(), 1/picosecond)
+        self.assertEqual(integrator.getDrudeTemperature(), 100*kelvin)
+        integrator.setDrudeTemperature(50)
+        self.assertEqual(integrator.getDrudeTemperature(), 50*kelvin)
+        self.assertEqual(integrator.getStepSize(), 0.1*femtosecond)
+        integrator.setStepSize(0.0005)
+        self.assertEqual(integrator.getStepSize(), 0.0005*picosecond)
+
 if __name__ == '__main__':
     unittest.main()
