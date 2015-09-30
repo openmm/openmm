@@ -13,9 +13,9 @@
 #----------------------------------------------------
 
 set(OPENMM_BUILD_CUDA_TESTS TRUE CACHE BOOL "Whether to build CUDA test cases")
-if(OPENMM_BUILD_CUDA_TESTS)
+if(BUILD_TESTING AND OPENMM_BUILD_CUDA_TESTS)
     SUBDIRS (tests)
-endif(OPENMM_BUILD_CUDA_TESTS)
+endif(BUILD_TESTING AND OPENMM_BUILD_CUDA_TESTS)
 
 # The source is organized into subdirectories, but we handle them all from
 # this CMakeLists file rather than letting CMake visit them as SUBDIRS.
