@@ -370,13 +370,13 @@ void CpuNonbondedForce::threadComputeDirect(ThreadPool& threads, int threadIndex
                 break;
             int end = min(start+groupSize, numberOfAtoms);
             for (int i = start; i < end; i++) {
-                fvec4 posI(posq[4*i], posq[4*i+1], posq[4*i+2], 0.0f);
+               fvec4 posI((float) atomCoordinates[i][0], (float) atomCoordinates[i][1], (float) atomCoordinates[i][2], 0.0f);
                 float scaledChargeI = (float) (ONE_4PI_EPS0*posq[4*i+3]);
                 for (set<int>::const_iterator iter = exclusions[i].begin(); iter != exclusions[i].end(); ++iter) {
                     if (*iter > i) {
                         int j = *iter;
                         fvec4 deltaR;
-                        fvec4 posJ(posq[4*j], posq[4*j+1], posq[4*j+2], 0.0f);
+                        fvec4 posJ((float) atomCoordinates[j][0], (float) atomCoordinates[j][1], (float) atomCoordinates[j][2], 0.0f);
                         float r2;
                         getDeltaR(posJ, posI, deltaR, r2, false, boxSize, invBoxSize);
                         float r = sqrtf(r2);
