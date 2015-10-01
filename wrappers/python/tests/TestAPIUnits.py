@@ -1074,8 +1074,8 @@ class TestAPIUnits(unittest.TestCase):
 
         force.addMultipole(1.0, [0.5, 0, -0.5], list(range(9)),
                 AmoebaMultipoleForce.ZThenX, 1, 2, 3, 0.5, 0.5, 1.0)
-        force.addMultipole(1.0*elementary_charge, [0.5, 0, -0.5]*elementary_charge/angstrom,
-                list(range(9))*elementary_charge/angstrom**2,
+        force.addMultipole(1.0*elementary_charge, [0.5, 0, -0.5]*elementary_charge*angstrom,
+                list(range(9))*elementary_charge*angstrom**2,
                 AmoebaMultipoleForce.Bisector, 2, 3, 4, 0.5, 0.5, 1.0*angstrom**3)
 
         self.assertEqual(force.getNumMultipoles(), 2)
@@ -1083,8 +1083,8 @@ class TestAPIUnits(unittest.TestCase):
         q, mu, quad, ax, i, j, k, thole, damp, polarity = force.getMultipoleParameters(0)
 
         self.assertEqual(q, 1.0*elementary_charge)
-        self.assertEqual(mu, (0.5, 0, -0.5)*elementary_charge/nanometer)
-        self.assertEqual(quad, tuple(range(9))*elementary_charge/nanometer**2)
+        self.assertEqual(mu, (0.5, 0, -0.5)*elementary_charge*nanometer)
+        self.assertEqual(quad, tuple(range(9))*elementary_charge*nanometer**2)
         self.assertEqual(ax, AmoebaMultipoleForce.ZThenX)
         self.assertEqual(i, 1)
         self.assertEqual(j, 2)
@@ -1096,8 +1096,8 @@ class TestAPIUnits(unittest.TestCase):
         q, mu, quad, ax, i, j, k, thole, damp, polarity = force.getMultipoleParameters(1)
 
         self.assertEqual(q, 1.0*elementary_charge)
-        self.assertEqual(mu, (0.5, 0, -0.5)*elementary_charge/angstrom)
-        self.assertAlmostEqualUnitArray(quad, tuple(range(9))*elementary_charge/angstrom**2)
+        self.assertEqual(mu, (0.5, 0, -0.5)*elementary_charge*angstrom)
+        self.assertAlmostEqualUnitArray(quad, tuple(range(9))*elementary_charge*angstrom**2)
         self.assertEqual(ax, AmoebaMultipoleForce.Bisector)
         self.assertEqual(i, 2)
         self.assertEqual(j, 3)
