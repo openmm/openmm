@@ -874,14 +874,14 @@ extern "C" __global__ void computeInducedPotentialFromGrid(const real2* __restri
 }
 
 extern "C" __global__ void computeFixedMultipoleForceAndEnergy(real4* __restrict__ posq, unsigned long long* __restrict__ forceBuffers,
-        long long* __restrict__ torqueBuffers, real* __restrict__ energyBuffer, const real* __restrict__ labFrameDipole,
+        long long* __restrict__ torqueBuffers, mixed* __restrict__ energyBuffer, const real* __restrict__ labFrameDipole,
         const real* __restrict__ labFrameQuadrupole, const real* __restrict__ fracDipole, const real* __restrict__ fracQuadrupole,
         const real* __restrict__ phi, const real* __restrict__ cphi_global, real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ) {
     real multipole[10];
     const int deriv1[] = {1, 4, 7, 8, 10, 15, 17, 13, 14, 19};
     const int deriv2[] = {2, 7, 5, 9, 13, 11, 18, 15, 19, 16};
     const int deriv3[] = {3, 8, 9, 6, 14, 16, 12, 19, 17, 18};
-    real energy = 0;
+    mixed energy = 0;
     __shared__ real fracToCart[3][3];
     if (threadIdx.x == 0) {
         fracToCart[0][0] = GRID_SIZE_X*recipBoxVecX.x;
@@ -956,7 +956,7 @@ extern "C" __global__ void computeFixedMultipoleForceAndEnergy(real4* __restrict
 }
 
 extern "C" __global__ void computeInducedDipoleForceAndEnergy(real4* __restrict__ posq, unsigned long long* __restrict__ forceBuffers,
-        long long* __restrict__ torqueBuffers, real* __restrict__ energyBuffer, const real* __restrict__ labFrameDipole,
+        long long* __restrict__ torqueBuffers, mixed* __restrict__ energyBuffer, const real* __restrict__ labFrameDipole,
         const real* __restrict__ labFrameQuadrupole, const real* __restrict__ fracDipole, const real* __restrict__ fracQuadrupole,
         const real* __restrict__ inducedDipole_global, const real* __restrict__ inducedDipolePolar_global,
         const real* __restrict__ phi, const real* __restrict__ phid, const real* __restrict__ phip,
@@ -967,7 +967,7 @@ extern "C" __global__ void computeInducedDipoleForceAndEnergy(real4* __restrict_
     const int deriv1[] = {1, 4, 7, 8, 10, 15, 17, 13, 14, 19};
     const int deriv2[] = {2, 7, 5, 9, 13, 11, 18, 15, 19, 16};
     const int deriv3[] = {3, 8, 9, 6, 14, 16, 12, 19, 17, 18};
-    real energy = 0;
+    mixed energy = 0;
     __shared__ real fracToCart[3][3];
     if (threadIdx.x == 0) {
         fracToCart[0][0] = GRID_SIZE_X*recipBoxVecX.x;

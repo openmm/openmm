@@ -50,8 +50,8 @@ __kernel void reduceBornForce(int bufferSize, int numBuffers, __global real* bor
 #ifdef SUPPORTS_64_BIT_ATOMICS
             __global const long* restrict bornForceIn,
 #endif
-            __global real* restrict energyBuffer, __global const float2* restrict params, __global const real* restrict bornRadii, __global const real* restrict obcChain) {
-    real energy = 0.0f;
+            __global mixed* restrict energyBuffer, __global const float2* restrict params, __global const real* restrict bornRadii, __global const real* restrict obcChain) {
+    mixed energy = 0;
     unsigned int index = get_global_id(0);
     while (index < NUM_ATOMS) {
         // Sum the Born force

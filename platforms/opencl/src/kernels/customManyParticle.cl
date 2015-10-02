@@ -72,7 +72,7 @@ inline bool isInteractionExcluded(int atom1, int atom2, __global int* restrict e
  * Compute the interaction.
  */
 __kernel void computeInteraction(
-        __global long* restrict forceBuffers, __global real* restrict energyBuffer, __global const real4* restrict posq,
+        __global long* restrict forceBuffers, __global mixed* restrict energyBuffer, __global const real4* restrict posq,
         real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ
 #ifdef USE_CUTOFF
         , __global const int* restrict neighbors, __global const int* restrict neighborStartIndex
@@ -84,7 +84,7 @@ __kernel void computeInteraction(
         , __global int* restrict exclusions, __global int* restrict exclusionStartIndex
 #endif
         PARAMETER_ARGUMENTS) {
-    real energy = 0.0f;
+    mixed energy = 0;
     
     // Loop over particles to be the first one in the set.
     

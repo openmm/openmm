@@ -368,7 +368,7 @@ void CudaContext::initialize() {
         CHECK_RESULT(cuMemHostAlloc(&pinnedBuffer, pinnedBufferSize*sizeof(double), 0));
     }
     else if (useMixedPrecision) {
-        energyBuffer = CudaArray::create<float>(*this, numEnergyBuffers, "energyBuffer");
+        energyBuffer = CudaArray::create<double>(*this, numEnergyBuffers, "energyBuffer");
         int pinnedBufferSize = max(paddedNumAtoms*4, numEnergyBuffers);
         CHECK_RESULT(cuMemHostAlloc(&pinnedBuffer, pinnedBufferSize*sizeof(double), 0));
     }

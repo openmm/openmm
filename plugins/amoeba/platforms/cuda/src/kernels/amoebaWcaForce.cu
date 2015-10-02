@@ -191,14 +191,14 @@ __device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, real rmi
 /**
  * Compute WCA interaction.
  */
-extern "C" __global__ void computeWCAForce(unsigned long long* __restrict__ forceBuffers, real* __restrict__ energyBuffer,
+extern "C" __global__ void computeWCAForce(unsigned long long* __restrict__ forceBuffers, mixed* __restrict__ energyBuffer,
         const real4* __restrict__ posq, unsigned int startTileIndex, unsigned int numTileIndices, const float2* __restrict__ radiusEpsilon) {
     unsigned int totalWarps = (blockDim.x*gridDim.x)/TILE_SIZE;
     unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/TILE_SIZE;
     const unsigned int numTiles = numTileIndices;
     unsigned int pos = (unsigned int) (startTileIndex+warp*(long long)numTiles/totalWarps);
     unsigned int end = (unsigned int) (startTileIndex+(warp+1)*(long long)numTiles/totalWarps);
-    real energy = 0;
+    mixed energy = 0;
     __shared__ AtomData localData[THREAD_BLOCK_SIZE];
     
     do {
