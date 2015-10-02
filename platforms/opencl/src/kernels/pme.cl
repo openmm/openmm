@@ -325,14 +325,14 @@ __kernel void reciprocalConvolution(__global real2* restrict pmeGrid, __global c
     }
 }
 
-__kernel void gridEvaluateEnergy(__global real2* restrict pmeGrid, __global real* restrict energyBuffer,
+__kernel void gridEvaluateEnergy(__global real2* restrict pmeGrid, __global mixed* restrict energyBuffer,
                       __global const real* restrict pmeBsplineModuliX, __global const real* restrict pmeBsplineModuliY, __global const real* restrict pmeBsplineModuliZ,
                       real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ) {
     // R2C stores into a half complex matrix where the last dimension is cut by half
     const unsigned int gridSize = GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z;
     const real recipScaleFactor = (1.0f/M_PI)*recipBoxVecX.x*recipBoxVecY.y*recipBoxVecZ.z;
  
-    real energy = 0;
+    mixed energy = 0;
     for (int index = get_global_id(0); index < gridSize; index += get_global_size(0)) {
         // real indices
         int kx = index/(GRID_SIZE_Y*(GRID_SIZE_Z));

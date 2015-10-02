@@ -100,7 +100,7 @@ static __inline__ __device__ long long real_shfl(long long var, int srcLane) {
  *
  */
 extern "C" __global__ void computeNonbonded(
-        unsigned long long* __restrict__ forceBuffers, real* __restrict__ energyBuffer, const real4* __restrict__ posq, const tileflags* __restrict__ exclusions,
+        unsigned long long* __restrict__ forceBuffers, mixed* __restrict__ energyBuffer, const real4* __restrict__ posq, const tileflags* __restrict__ exclusions,
         const ushort2* __restrict__ exclusionTiles, unsigned int startTileIndex, unsigned int numTileIndices
 #ifdef USE_CUTOFF
         , const int* __restrict__ tiles, const unsigned int* __restrict__ interactionCount,real4 periodicBoxSize, real4 invPeriodicBoxSize, 
@@ -583,6 +583,6 @@ extern "C" __global__ void computeNonbonded(
         pos++;
     }
 #ifdef INCLUDE_ENERGY
-    energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] += (real) energy;
+    energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] += energy;
 #endif
 }

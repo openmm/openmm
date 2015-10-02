@@ -105,10 +105,10 @@ real4 computeCross(real4 vec1, real4 vec2) {
 /**
  * Compute the forces on groups based on the bonds.
  */
-__kernel void computeGroupForces(__global long* restrict groupForce, __global real* restrict energyBuffer, __global const real4* restrict centerPositions,
+__kernel void computeGroupForces(__global long* restrict groupForce, __global mixed* restrict energyBuffer, __global const real4* restrict centerPositions,
         __global const int* restrict bondGroups
         EXTRA_ARGS) {
-    real energy = 0;
+    mixed energy = 0;
     for (int index = get_global_id(0); index < NUM_BONDS; index += get_global_size(0)) {
         COMPUTE_FORCE
     }

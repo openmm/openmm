@@ -23,8 +23,8 @@ extern "C" __global__ void reduceBornSum(const long long* __restrict__ bornSum, 
 /**
  * Apply the surface area term to the force and energy.
  */
-extern "C" __global__ void computeSurfaceAreaForce(long long* __restrict__ bornForce, real* __restrict__ energyBuffer, const float2* __restrict__ params, const real* __restrict__ bornRadii) {
-    real energy = 0;
+extern "C" __global__ void computeSurfaceAreaForce(long long* __restrict__ bornForce, mixed* __restrict__ energyBuffer, const float2* __restrict__ params, const real* __restrict__ bornRadii) {
+    mixed energy = 0;
     for (unsigned int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_ATOMS; index += blockDim.x*gridDim.x) {
         real bornRadius = bornRadii[index];
         float radius = params[index].x;
@@ -216,7 +216,7 @@ inline __device__ void zeroAtomData(AtomData2& data) {
  * Compute electrostatic interactions.
  */
 extern "C" __global__ void computeGKForces(
-        unsigned long long* __restrict__ forceBuffers, unsigned long long* __restrict__ torqueBuffers, real* __restrict__ energyBuffer,
+        unsigned long long* __restrict__ forceBuffers, unsigned long long* __restrict__ torqueBuffers, mixed* __restrict__ energyBuffer,
         const real4* __restrict__ posq, unsigned int startTileIndex, unsigned int numTileIndices, const real* __restrict__ labFrameDipole,
         const real* __restrict__ labFrameQuadrupole, const real* __restrict__ inducedDipole, const real* __restrict__ inducedDipolePolar,
         const real* __restrict__ bornRadii, unsigned long long* __restrict__ bornForce) {
@@ -225,7 +225,7 @@ extern "C" __global__ void computeGKForces(
     const unsigned int numTiles = numTileIndices;
     unsigned int pos = (unsigned int) (startTileIndex+warp*(long long)numTiles/totalWarps);
     unsigned int end = (unsigned int) (startTileIndex+(warp+1)*(long long)numTiles/totalWarps);
-    real energy = 0;
+    mixed energy = 0;
     __shared__ AtomData2 localData[GK_FORCE_THREAD_BLOCK_SIZE];
     
     do {
@@ -605,7 +605,7 @@ __device__ float computePScaleFactor(uint2 covalent, unsigned int polarizationGr
  * Compute electrostatic interactions.
  */
 extern "C" __global__ void computeEDiffForce(
-        unsigned long long* __restrict__ forceBuffers, unsigned long long* __restrict__ torqueBuffers, real* __restrict__ energyBuffer,
+        unsigned long long* __restrict__ forceBuffers, unsigned long long* __restrict__ torqueBuffers, mixed* __restrict__ energyBuffer,
         const real4* __restrict__ posq, const uint2* __restrict__ covalentFlags, const unsigned int* __restrict__ polarizationGroupFlags,
         const ushort2* __restrict__ exclusionTiles, unsigned int startTileIndex, unsigned int numTileIndices,
         const real* __restrict__ labFrameDipole, const real* __restrict__ labFrameQuadrupole, const real* __restrict__ inducedDipole,
@@ -615,7 +615,7 @@ extern "C" __global__ void computeEDiffForce(
     const unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/TILE_SIZE;
     const unsigned int tgx = threadIdx.x & (TILE_SIZE-1);
     const unsigned int tbx = threadIdx.x - tgx;
-    real energy = 0;
+    mixed energy = 0;
     __shared__ AtomData4 localData[EDIFF_THREAD_BLOCK_SIZE];
 
     // First loop: process tiles that contain exclusions.

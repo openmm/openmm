@@ -136,7 +136,7 @@ double OpenCLCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, 
     cl.getIntegrationUtilities().distributeForcesFromVirtualSites();
     if (includeEnergy) {
         OpenCLArray& energyArray = cl.getEnergyBuffer();
-        if (cl.getUseDoublePrecision()) {
+        if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision()) {
             double* energy = (double*) cl.getPinnedBuffer();
             energyArray.download(energy);
             for (int i = 0; i < energyArray.getSize(); i++)
