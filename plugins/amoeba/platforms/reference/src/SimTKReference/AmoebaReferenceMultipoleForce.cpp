@@ -5805,9 +5805,9 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::computeReciprocalSpaceInducedDipole
         inducedDipolePolar[1] = _inducedDipolePolar[i][0]*cartToFrac[1][0] + _inducedDipolePolar[i][1]*cartToFrac[1][1] + _inducedDipolePolar[i][2]*cartToFrac[1][2];
         inducedDipolePolar[2] = _inducedDipolePolar[i][0]*cartToFrac[2][0] + _inducedDipolePolar[i][1]*cartToFrac[2][1] + _inducedDipolePolar[i][2]*cartToFrac[2][2];
 
-        energy += inducedDipole[0]*_phi[20*i+1];
-        energy += inducedDipole[1]*_phi[20*i+2];
-        energy += inducedDipole[2]*_phi[20*i+3];
+        energy += (inducedDipole[0]+inducedDipolePolar[0])*_phi[20*i+1];
+        energy += (inducedDipole[1]+inducedDipolePolar[1])*_phi[20*i+2];
+        energy += (inducedDipole[2]+inducedDipolePolar[2])*_phi[20*i+3];
 
         RealVec f        = RealVec(0.0, 0.0, 0.0);
 
@@ -5841,7 +5841,7 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::computeReciprocalSpaceInducedDipole
                                   f[0]*fracToCart[1][0] + f[1]*fracToCart[1][1] + f[2]*fracToCart[1][2],
                                   f[0]*fracToCart[2][0] + f[1]*fracToCart[2][1] + f[2]*fracToCart[2][2]);
     }
-    return (0.5*_electric*energy);
+    return (0.25*_electric*energy);
 }
 
 void AmoebaReferencePmeMultipoleForce::recordFixedMultipoleField()
@@ -6028,7 +6028,7 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::calculatePmeSelfEnergy(const vector
         cii += particleI.charge*particleI.charge;
 
         RealVec dipole(particleI.sphericalDipole[1], particleI.sphericalDipole[2], particleI.sphericalDipole[0]);
-        dii += dipole.dot(dipole + _inducedDipole[ii]);
+        dii += dipole.dot(dipole + (_inducedDipole[ii]+_inducedDipolePolar[ii])*0.5);
 
         qii += (particleI.sphericalQuadrupole[0]*particleI.sphericalQuadrupole[0]
                +particleI.sphericalQuadrupole[1]*particleI.sphericalQuadrupole[1]

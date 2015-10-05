@@ -1040,9 +1040,9 @@ extern "C" __global__ void computeInducedDipoleForceAndEnergy(real4* __restrict_
         inducedDipolePolar[2] = cinducedDipolePolar[0]*fracToCart[0][2] + cinducedDipolePolar[1]*fracToCart[1][2] + cinducedDipolePolar[2]*fracToCart[2][2];
         real4 f = make_real4(0, 0, 0, 0);
 
-        energy += inducedDipole[0]*phi[i+NUM_ATOMS];
-        energy += inducedDipole[1]*phi[i+NUM_ATOMS*2];
-        energy += inducedDipole[2]*phi[i+NUM_ATOMS*3];
+        energy += (inducedDipole[0]+inducedDipolePolar[0])*phi[i+NUM_ATOMS];
+        energy += (inducedDipole[1]+inducedDipolePolar[1])*phi[i+NUM_ATOMS*2];
+        energy += (inducedDipole[2]+inducedDipolePolar[2])*phi[i+NUM_ATOMS*3];
 
         for (int k = 0; k < 3; k++) {
             int j1 = deriv1[k+1];
@@ -1070,7 +1070,7 @@ extern "C" __global__ void computeInducedDipoleForceAndEnergy(real4* __restrict_
         forceBuffers[i+PADDED_NUM_ATOMS] -= static_cast<unsigned long long>((long long) (f.y*0x100000000));
         forceBuffers[i+PADDED_NUM_ATOMS*2] -= static_cast<unsigned long long>((long long) (f.z*0x100000000));
     }
-    energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] += 0.5f*EPSILON_FACTOR*energy;
+    energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] += 0.25f*EPSILON_FACTOR*energy;
 }
 
 extern "C" __global__ void recordInducedFieldDipoles(const real* __restrict__ phid, real* const __restrict__ phip,
