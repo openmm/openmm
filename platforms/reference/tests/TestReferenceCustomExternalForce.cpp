@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
+ * Portions copyright (c) 2015 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -29,88 +29,8 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-/**
- * This tests the reference implementation of CustomExternalForce.
- */
+#include "ReferenceTests.h"
+#include "TestCustomExternalForce.h"
 
-#include "openmm/internal/AssertionUtilities.h"
-#include "openmm/Context.h"
-#include "ReferencePlatform.h"
-#include "openmm/CustomExternalForce.h"
-#include "openmm/System.h"
-#include "openmm/VerletIntegrator.h"
-#include "SimTKOpenMMRealType.h"
-#include <iostream>
-#include <vector>
-
-using namespace OpenMM;
-using namespace std;
-
-ReferencePlatform platform;
-
-const double TOL = 1e-5;
-
-void testForce() {
-    System system;
-    system.addParticle(1.0);
-    system.addParticle(1.0);
-    system.addParticle(1.0);
-    VerletIntegrator integrator(0.01);
-    CustomExternalForce* forceField = new CustomExternalForce("scale*(x+yscale*(y-y0)^2)");
-    forceField->addPerParticleParameter("y0");
-    forceField->addPerParticleParameter("yscale");
-    forceField->addGlobalParameter("scale", 0.5);
-    vector<double> parameters(2);
-    parameters[0] = 0.5;
-    parameters[1] = 2.0;
-    forceField->addParticle(0, parameters);
-    parameters[0] = 1.5;
-    parameters[1] = 3.0;
-    forceField->addParticle(2, parameters);
-    system.addForce(forceField);
-    ASSERT(!forceField->usesPeriodicBoundaryConditions());
-    ASSERT(!system.usesPeriodicBoundaryConditions());
-    Context context(system, integrator, platform);
-    vector<Vec3> positions(3);
-    positions[0] = Vec3(0, 2, 0);
-    positions[1] = Vec3(0, 0, 1);
-    positions[2] = Vec3(1, 0, 1);
-    context.setPositions(positions);
-    State state = context.getState(State::Forces | State::Energy);
-    {
-        const vector<Vec3>& forces = state.getForces();
-        ASSERT_EQUAL_VEC(Vec3(-0.5, -0.5*2.0*2.0*1.5, 0), forces[0], TOL);
-        ASSERT_EQUAL_VEC(Vec3(0, 0, 0), forces[1], TOL);
-        ASSERT_EQUAL_VEC(Vec3(-0.5, 0.5*3.0*2.0*1.5, 0), forces[2], TOL);
-        ASSERT_EQUAL_TOL(0.5*(1.0 + 2.0*1.5*1.5 + 3.0*1.5*1.5), state.getPotentialEnergy(), TOL);
-    }
-    
-    // Try changing the parameters and make sure it's still correct.
-    
-    parameters[0] = 1.4;
-    parameters[1] = 3.5;
-    forceField->setParticleParameters(1, 2, parameters);
-    forceField->updateParametersInContext(context);
-    state = context.getState(State::Forces | State::Energy);
-    {
-        const vector<Vec3>& forces = state.getForces();
-        ASSERT_EQUAL_VEC(Vec3(-0.5, -0.5*2.0*2.0*1.5, 0), forces[0], TOL);
-        ASSERT_EQUAL_VEC(Vec3(0, 0, 0), forces[1], TOL);
-        ASSERT_EQUAL_VEC(Vec3(-0.5, 0.5*3.5*2.0*1.4, 0), forces[2], TOL);
-        ASSERT_EQUAL_TOL(0.5*(1.0 + 2.0*1.5*1.5 + 3.5*1.4*1.4), state.getPotentialEnergy(), TOL);
-    }
+void runPlatformTests() {
 }
-
-int main() {
-    try {
-        testForce();
-    }
-    catch(const exception& e) {
-        cout << "exception: " << e.what() << endl;
-        return 1;
-    }
-    cout << "Done" << endl;
-    return 0;
-}
-
-

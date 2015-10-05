@@ -82,7 +82,7 @@ ENDIF(${CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT})
 
 # The source is organized into subdirectories, but we handle them all from
 # this CMakeLists file rather than letting CMake visit them as SUBDIRS.
-SET(OPENMM_SOURCE_SUBDIRS . openmmapi olla libraries/jama libraries/quern libraries/lepton libraries/sfmt libraries/lbfgs libraries/hilbert libraries/csha1 platforms/reference serialization libraries/validate libraries/irrxml)
+SET(OPENMM_SOURCE_SUBDIRS . openmmapi olla libraries/jama libraries/quern libraries/lepton libraries/sfmt libraries/lbfgs libraries/hilbert libraries/csha1 platforms/reference serialization libraries/validate libraries/irrxml libraries/vecmath)
 IF(WIN32)
     SET(OPENMM_SOURCE_SUBDIRS ${OPENMM_SOURCE_SUBDIRS} libraries/pthreads)
 ELSE(WIN32)
@@ -159,8 +159,8 @@ ENDIF (NOT CMAKE_CXX_FLAGS_RELEASE)
 # and make it available to the code so it can be built into the binaries.
 
 SET(OPENMM_LIBRARY_NAME OpenMM)
-SET(OPENMM_MAJOR_VERSION 6)
-SET(OPENMM_MINOR_VERSION 3)
+SET(OPENMM_MAJOR_VERSION 7)
+SET(OPENMM_MINOR_VERSION 0)
 SET(OPENMM_BUILD_VERSION 0)
 
 SET(OPENMM_COPYRIGHT_YEARS "2008-2015")
@@ -340,6 +340,7 @@ ELSE(DL_LIBRARY)
 ENDIF(DL_LIBRARY)
 
 IF(BUILD_TESTING)
+    INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/tests)
     ADD_SUBDIRECTORY(platforms/reference/tests)
 ENDIF(BUILD_TESTING)
 

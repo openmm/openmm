@@ -41,6 +41,7 @@
 #include "lepton/ParsedExpression.h"
 #include <utility>
 #include <map>
+#include <set>
 #include <string>
 
 namespace OpenMM {
@@ -93,7 +94,7 @@ private:
     class FunctionPlaceholder;
     static Lepton::ExpressionTreeNode replaceFunctions(const Lepton::ExpressionTreeNode& node, std::map<std::string, int> atoms,
             std::map<std::string, std::vector<int> >& distances, std::map<std::string, std::vector<int> >& angles,
-            std::map<std::string, std::vector<int> >& dihedrals);
+            std::map<std::string, std::vector<int> >& dihedrals, std::set<std::string>& variables);
     void addBondsBetweenGroups(int group1, int group2, std::vector<std::pair<int, int> >& bonds) const;
     const CustomCentroidBondForce& owner;
     Kernel kernel;

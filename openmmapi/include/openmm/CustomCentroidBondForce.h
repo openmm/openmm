@@ -237,7 +237,7 @@ public:
      *                    If this is omitted, then particle masses will be used as weights.
      * @return the index of the group that was added
      */
-    int addGroup(const std::vector<int>& particles, const std::vector<double>& weights = std::vector<double>());
+    int addGroup(const std::vector<int>& particles, const std::vector<double>& weights=std::vector<double>());
     /**
      * Get the properties of a group.
      *
@@ -256,7 +256,7 @@ public:
      * @param weights     the weight to use for each particle when computing the center position.
      *                    If this is omitted, then particle masses will be used as weights.
      */
-    void setGroupParameters(int index, const std::vector<int>& particles, const std::vector<double>& weights = std::vector<double>());
+    void setGroupParameters(int index, const std::vector<int>& particles, const std::vector<double>& weights=std::vector<double>());
     /**
      * Add a bond to the force
      *
@@ -264,7 +264,7 @@ public:
      * @param parameters  the list of per-bond parameter values for the new bond
      * @return the index of the bond that was added
      */
-    int addBond(const std::vector<int>& groups, const std::vector<double>& parameters);
+    int addBond(const std::vector<int>& groups, const std::vector<double>& parameters=std::vector<double>());
     /**
      * Get the properties of a bond.
      *
@@ -280,7 +280,7 @@ public:
      * @param groups      the indices of the groups in the bond
      * @param parameters  the list of per-bond parameter values for the bond
      */
-    void setBondParameters(int index, const std::vector<int>& groups, const std::vector<double>& parameters);
+    void setBondParameters(int index, const std::vector<int>& groups, const std::vector<double>& parameters=std::vector<double>());
     /**
      * Add a tabulated function that may appear in the energy expression.
      *

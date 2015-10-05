@@ -296,7 +296,7 @@ public:
      * @param parameters  the list of per-donor parameter values for the new donor
      * @return the index of the donor that was added
      */
-    int addDonor(int d1, int d2, int d3, const std::vector<double>& parameters);
+    int addDonor(int d1, int d2, int d3, const std::vector<double>& parameters=std::vector<double>());
     /**
      * Get the properties of a donor group.
      *
@@ -320,7 +320,7 @@ public:
      *                    less than three particles, this must be -1.
      * @param parameters  the list of per-donor parameter values for the donor
      */
-    void setDonorParameters(int index, int d1, int d2, int d3, const std::vector<double>& parameters);
+    void setDonorParameters(int index, int d1, int d2, int d3, const std::vector<double>& parameters=std::vector<double>());
     /**
      * Add an acceptor group to the force
      *
@@ -332,7 +332,7 @@ public:
      * @param parameters  the list of per-acceptor parameter values for the new acceptor
      * @return the index of the acceptor that was added
      */
-    int addAcceptor(int a1, int a2, int a3, const std::vector<double>& parameters);
+    int addAcceptor(int a1, int a2, int a3, const std::vector<double>& parameters=std::vector<double>());
     /**
      * Get the properties of an acceptor group.
      *
@@ -356,7 +356,7 @@ public:
      *                    less than three particles, this must be -1.
      * @param parameters  the list of per-acceptor parameter values for the acceptor
      */
-    void setAcceptorParameters(int index, int a1, int a2, int a3, const std::vector<double>& parameters);
+    void setAcceptorParameters(int index, int a1, int a2, int a3, const std::vector<double>& parameters=std::vector<double>());
     /**
      * Add a donor-acceptor pair to the list of interactions that should be excluded.
      *

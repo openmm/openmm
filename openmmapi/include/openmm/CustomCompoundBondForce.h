@@ -219,7 +219,7 @@ public:
      * @param parameters  the list of per-bond parameter values for the new bond
      * @return the index of the bond that was added
      */
-    int addBond(const std::vector<int>& particles, const std::vector<double>& parameters);
+    int addBond(const std::vector<int>& particles, const std::vector<double>& parameters=std::vector<double>());
     /**
      * Get the properties of a bond.
      *
@@ -235,7 +235,7 @@ public:
      * @param particles   the indices of the particles in the bond
      * @param parameters  the list of per-bond parameter values for the bond
      */
-    void setBondParameters(int index, const std::vector<int>& particles, const std::vector<double>& parameters);
+    void setBondParameters(int index, const std::vector<int>& particles, const std::vector<double>& parameters=std::vector<double>());
     /**
      * Add a tabulated function that may appear in the energy expression.
      *
