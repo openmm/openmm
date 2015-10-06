@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -44,6 +44,10 @@ namespace OpenMM {
  * are not part of a Drude particle pair), as well as to the center of mass of each Drude particle pair.
  * A second thermostat, typically with a much lower temperature, is applied to the relative internal
  * displacement of each pair.
+ *
+ * This integrator can optionally set an upper limit on how far any Drude particle is ever allowed to
+ * get from its parent particle.  This can sometimes help to improve stability.  The limit is enforced
+ * with a hard wall constraint.
  * 
  * This Integrator requires the System to include a DrudeForce, which it uses to identify the Drude
  * particles.
@@ -130,6 +134,16 @@ public:
         drudeFriction = coeff;
     }
     /**
+     * Get the maximum distance a Drude particle can ever move from its parent particle, measured in nm.  This is implemented
+     * with a hard wall constraint.  If this distance is set to 0 (the default), the hard wall constraint is omitted.
+     */
+    double getMaxDrudeDistance() const;
+    /**
+     * Set the maximum distance a Drude particle can ever move from its parent particle, measured in nm.  This is implemented
+     * with a hard wall constraint.  If this distance is set to 0 (the default), the hard wall constraint is omitted.
+     */
+    void setMaxDrudeDistance(double distance);
+    /**
      * Get the random number seed.  See setRandomNumberSeed() for details.
      */
     int getRandomNumberSeed() const {
@@ -181,7 +195,7 @@ protected:
      */
     double computeKineticEnergy();
 private:
-    double temperature, friction, drudeTemperature, drudeFriction;
+    double temperature, friction, drudeTemperature, drudeFriction, maxDrudeDistance;
     int randomNumberSeed;
     Kernel kernel;
 };
