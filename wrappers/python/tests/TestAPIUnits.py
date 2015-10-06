@@ -1200,6 +1200,9 @@ class TestAPIUnits(unittest.TestCase):
         self.assertEqual(integrator.getStepSize(), 0.1*femtosecond)
         integrator.setStepSize(0.0005)
         self.assertEqual(integrator.getStepSize(), 0.0005*picosecond)
+        self.assertEqual(integrator.getMaxDrudeDistance(), 0*nanometer)
+        integrator.setMaxDrudeDistance(0.05)
+        self.assertEqual(integrator.getMaxDrudeDistance(), 0.05*nanometer)
 
     def testCustomIntegrator(self):
         """ Tests the CustomIntegrator API features """

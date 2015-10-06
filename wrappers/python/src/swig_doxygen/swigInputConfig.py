@@ -425,6 +425,7 @@ UNITS = {
 ("System", "getForce") : (None, ()),
 ("System", "getVirtualSite") : (None, ()),
 ("DrudeLangevinIntegrator", "getDrudeTemperature") : ("unit.kelvin", ()),
+("DrudeLangevinIntegrator", "getMaxDrudeDistance") : ("unit.nanometer", ()),
 ("MonteCarloMembraneBarostat", "getXYMode") : (None, ()),
 ("MonteCarloMembraneBarostat", "getZMode") : (None, ()),
 ("DrudeLangevinIntegrator", "getDrudeFriction") : ("1/unit.picosecond", ()),
