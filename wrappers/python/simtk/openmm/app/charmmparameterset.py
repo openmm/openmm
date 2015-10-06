@@ -136,7 +136,7 @@ class CharmmParameterSet(object):
             else:
                 raise TypeError('Unrecognized file type: %s' % arg)
         for top in tops: self.readTopologyFile(top)
-        for par in pars: self.readParameterFile(par, permissive=self.permissive )
+        for par in pars: self.readParameterFile(par, permissive=permissive )
         for strf in strs: self.readStreamFile(strf)
 
     @classmethod
