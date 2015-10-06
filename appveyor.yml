@@ -20,13 +20,13 @@ install:
   - "set PATH=C:\\fftw;%PATH%"
 
 # Download and install some OpenMM build dependencies (doxygen, swig)
-  - choco install -y doxygen.portable swig jom
+  - choco install -y doxygen.portable swig
 
 # Set CMake options
   - ps: $env:CMAKE_FLAGS='-DOPENMM_BUILD_PME_PLUGIN=ON -DFFTW_LIBRARY=C:/fftw/libfftw3f-3.lib -DFFTW_INCLUDES=C:/fftw -DCMAKE_BUILD_TYPE=Release -DOPENMM_BUILD_EXAMPLES=OFF -DCMAKE_CXX_FLAGS_RELEASE="/MD /Od /Ob0 /D NDEBUG"'
   - mkdir build
   - cd build
-  - cmake -G "NMake Makefiles JOM" %CMAKE_FLAGS% -LA ..
+  - cmake -G "NMake Makefiles" %CMAKE_FLAGS% -LA ..
 
 # Run the build
   - cmake --build . --target install
