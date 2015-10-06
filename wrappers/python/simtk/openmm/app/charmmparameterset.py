@@ -100,7 +100,7 @@ class CharmmParameterSet(object):
         except ValueError:
             raise CharmmFileError('Could not convert %s to %s' % (msg, type))
 
-    def __init__(self, *args, permissive=False):
+    def __init__(self, *args ):
         # Instantiate the list types
         self.atom_types_str = dict()
         self.atom_types_int = dict()
@@ -136,7 +136,7 @@ class CharmmParameterSet(object):
             else:
                 raise TypeError('Unrecognized file type: %s' % arg)
         for top in tops: self.readTopologyFile(top)
-        for par in pars: self.readParameterFile(par, permissive=permissive )
+        for par in pars: self.readParameterFile(par)
         for strf in strs: self.readStreamFile(strf)
 
     @classmethod
