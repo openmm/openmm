@@ -902,7 +902,7 @@ class Modeller(object):
                         newTemplate.externalBonds.append(newIndex[b])
                 templatesNoEP[template] = newTemplate
 
-        # Record which atoms are bonded to each other atom, with and without extra particles.
+        # Record which atoms are bonded to each other atom, with and without extra particles. Do not record bonds to metal ions (zinc) so that correct residue - template matches can be made. 
 
         bondedToAtom = []
         bondedToAtomNoEP = []
@@ -910,18 +910,19 @@ class Modeller(object):
             bondedToAtom.append(set())
             bondedToAtomNoEP.append(set())
         for atom1, atom2 in self.topology.bonds():
-            bondedToAtom[atom1.index].add(atom2.index)
-            bondedToAtom[atom2.index].add(atom1.index)
-            if atom1.element is not None and atom2.element is not None:
-                bondedToAtomNoEP[atom1.index].add(atom2.index)
-                bondedToAtomNoEP[atom2.index].add(atom1.index)
+            if atom1.name != "ZN" and atom2.name != "ZN":
+                bondedToAtom[atom1.index].add(atom2.index)
+                bondedToAtom[atom2.index].add(atom1.index)
+                if atom1.element is not None and atom2.element is not None:
+                    bondedToAtomNoEP[atom1.index].add(atom2.index)
+                    bondedToAtomNoEP[atom2.index].add(atom1.index)
 
-        # Remove bonds to zinc so that residue matches can be made and dummyTetrZinc dummy atoms added
+        # Remove bonds between zinc and cysteines so that residue matches with forcefield templates can be made
 
-        for atom in self.topology.atoms():
-            if atom.name == "ZN":
-                bondedToAtom[atom.index] = set()
-                bondedToAtomNoEP[atom.index] = set()
+    #    for atom in self.topology.atoms():
+    #        if atom.name == "ZN":
+    #            bondedToAtom[atom.index] = set()
+    #            bondedToAtomNoEP[atom.index] = set()
 
         # If the force field has a DrudeForce, record the types of Drude particles and their parents since we'll
         # need them for picking particle positions.
