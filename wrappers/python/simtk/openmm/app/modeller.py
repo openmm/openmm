@@ -917,13 +917,6 @@ class Modeller(object):
                     bondedToAtomNoEP[atom1.index].add(atom2.index)
                     bondedToAtomNoEP[atom2.index].add(atom1.index)
 
-        # Remove bonds between zinc and cysteines so that residue matches with forcefield templates can be made
-
-    #    for atom in self.topology.atoms():
-    #        if atom.name == "ZN":
-    #            bondedToAtom[atom.index] = set()
-    #            bondedToAtomNoEP[atom.index] = set()
-
         # If the force field has a DrudeForce, record the types of Drude particles and their parents since we'll
         # need them for picking particle positions.
 
