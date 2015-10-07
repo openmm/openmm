@@ -100,7 +100,7 @@ class CharmmParameterSet(object):
         except ValueError:
             raise CharmmFileError('Could not convert %s to %s' % (msg, type))
 
-    def __init__(self, *args):
+    def __init__(self, *args, **kwargs):
         # Instantiate the list types
         self.atom_types_str = dict()
         self.atom_types_int = dict()
@@ -113,7 +113,7 @@ class CharmmParameterSet(object):
         self.cmap_types = dict()
         self.nbfix_types = dict()
         self.parametersets = []
-
+        
         # Load all of the files
         tops, pars, strs = [], [], []
         for arg in args:
@@ -135,12 +135,17 @@ class CharmmParameterSet(object):
                     raise TypeError('Unrecognized file type: %s' % arg)
             else:
                 raise TypeError('Unrecognized file type: %s' % arg)
+
+        permissive=kwargs.pop("permissive", False)
+        if len(kwargs):
+            raise TypeError('Unrecognised named argument')
+
         for top in tops: self.readTopologyFile(top)
-        for par in pars: self.readParameterFile(par)
+        for par in pars: self.readParameterFile(par, permissive=permissive)
         for strf in strs: self.readStreamFile(strf)
 
     @classmethod
-    def loadSet(cls, tfile=None, pfile=None, sfiles=[]):
+    def loadSet(cls, tfile=None, pfile=None, sfiles=[], permissive=False):
         """
         Instantiates a CharmmParameterSet from a Topology file and a Parameter
         file (or just a Parameter file if it has all information)
@@ -149,6 +154,8 @@ class CharmmParameterSet(object):
             - tfile (str) : Name of the Topology (RTF/TOP) file
             - pfile (str) : Name of the Parameter (PAR) file
             - sfiles (list of str) : List or tuple of stream (STR) file names.
+            - permissive (bool) : Accept non-bonbded parameters for undefined 
+                                  atom types (default False)
 
         Returns:
             New CharmmParameterSet populated with the parameters found in the
@@ -165,7 +172,7 @@ class CharmmParameterSet(object):
         if tfile is not None:
             inst.readTopologyFile(tfile)
         if pfile is not None:
-            inst.readParameterFile(pfile)
+            inst.readParameterFile(pfile, permissive=permissive)
         if isinstance(sfiles, str):
             # The API docstring requests a list, but allow for users to pass a
             # string with a single filename instead
@@ -175,7 +182,7 @@ class CharmmParameterSet(object):
                 inst.readStreamFile(sfile)
         return inst
 
-    def readParameterFile(self, pfile):
+    def readParameterFile(self, pfile, permissive=False):
         """
         Reads all of the parameters from a parameter file. Versions 36 and
         later of the CHARMM force field files have an ATOMS section defining
@@ -184,6 +191,8 @@ class CharmmParameterSet(object):
 
         Parameters:
             - pfile (str) : Name of the CHARMM PARameter file to read
+            - permissive (bool) : Accept non-bonbded parameters for undefined 
+                                  atom types (default False)
 
         Notes: The atom types must all be loaded by the end of this routine.
         Either supply a PAR file with atom definitions in them or read in a
@@ -477,6 +486,23 @@ class CharmmParameterSet(object):
         if current_cmap is not None:
             ty = CmapType(current_cmap_res, current_cmap_data)
             self.cmap_types[current_cmap] = ty
+
+        # If in permissive mode create an atomtype for every type used in  
+        # the nonbonded parameters. This is a work-around for when all that's
+        # available is a CHARMM22 inp file, which has no ATOM/MASS fields
+
+        if permissive:
+            try:
+               idx = max(self.atom_types_int.keys())+1000
+            except ValueError:
+               idx = 10000
+            for key in nonbonded_types:
+                if not key in self.atom_types_str:
+                    atype =AtomType(name=key, number=idx, mass= float('NaN'), atomic_number= 1 )
+                    self.atom_types_str[key] = atype 
+                    self.atom_types_int[idx] = atype
+                    idx=idx+1
+
         # Now we're done. Load the nonbonded types into the relevant AtomType
         # instances. In order for this to work, all keys in nonbonded_types
         # must be in the self.atom_types_str dict. Raise a RuntimeError if this
@@ -487,6 +513,7 @@ class CharmmParameterSet(object):
         except KeyError:
             raise RuntimeError('Atom type %s not present in AtomType list' %
                                key)
+
         if parameterset is not None: self.parametersets.append(parameterset)
         if own_handle: f.close()
 
