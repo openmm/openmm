@@ -414,7 +414,7 @@ __device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, bool has
 __device__ void computeSelfEnergyAndTorque(AtomData& atom1, mixed& energy) {
     real cii = atom1.q*atom1.q;
     real3 dipole = make_real3(atom1.sphericalDipole.y, atom1.sphericalDipole.z, atom1.sphericalDipole.x);
-    real dii = dot(dipole, dipole+(atom1.inducedDipole+atom1.inducedDipolePolar)*0.5);
+    real dii = dot(dipole, dipole+(atom1.inducedDipole+atom1.inducedDipolePolar)*0.5f);
 #ifdef INCLUDE_QUADRUPOLES
     real qii = (atom1.sphericalQuadrupole[0]*atom1.sphericalQuadrupole[0] +
                 atom1.sphericalQuadrupole[1]*atom1.sphericalQuadrupole[1] +
