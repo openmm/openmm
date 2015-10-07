@@ -100,7 +100,7 @@ class CharmmParameterSet(object):
         except ValueError:
             raise CharmmFileError('Could not convert %s to %s' % (msg, type))
 
-    def __init__(self, *args ):
+    def __init__(self, *args, **kwargs):
         # Instantiate the list types
         self.atom_types_str = dict()
         self.atom_types_int = dict()
@@ -135,8 +135,13 @@ class CharmmParameterSet(object):
                     raise TypeError('Unrecognized file type: %s' % arg)
             else:
                 raise TypeError('Unrecognized file type: %s' % arg)
+
+        permissive=kwargs.pop("permissive", False)
+        if len(kwargs):
+            raise TypeError('Unrecognised named argument')
+
         for top in tops: self.readTopologyFile(top)
-        for par in pars: self.readParameterFile(par)
+        for par in pars: self.readParameterFile(par, permissive=permissive)
         for strf in strs: self.readStreamFile(strf)
 
     @classmethod
@@ -489,13 +494,13 @@ class CharmmParameterSet(object):
         if permissive:
             try:
                idx = max(self.atom_types_int.keys())+1000
-            except:
+            except ValueError:
                idx = 10000
             for key in nonbonded_types:
                 if not key in self.atom_types_str:
                     atype =AtomType(name=key, number=idx, mass= float('NaN'), atomic_number= 1 )
                     self.atom_types_str[key] = atype 
-                    self.atom_types_int[key] = atype
+                    self.atom_types_int[idx] = atype
                     idx=idx+1
 
         # Now we're done. Load the nonbonded types into the relevant AtomType
