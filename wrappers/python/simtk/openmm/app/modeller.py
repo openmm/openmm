@@ -47,6 +47,7 @@ import random
 import xml.etree.ElementTree as etree
 from copy import deepcopy
 from math import ceil, floor
+from collections import defaultdict
 
 class Modeller(object):
     """Modeller provides tools for editing molecular models, such as adding water or missing hydrogens.
@@ -586,6 +587,7 @@ class Modeller(object):
             HID: Neutral form with a hydrogen on the ND1 atom
             HIE: Neutral form with a hydrogen on the NE2 atom
             HIP: Positively charged form with hydrogens on both ND1 and NE2
+            HIN: Negatively charged form (no hydrogen on either ND1 or NE2)
 
         Lysine:
             LYN: Neutral form with two hydrogens on the zeta nitrogen
@@ -914,6 +916,13 @@ class Modeller(object):
                 bondedToAtomNoEP[atom1.index].add(atom2.index)
                 bondedToAtomNoEP[atom2.index].add(atom1.index)
 
+        # Remove bonds to zinc so that residue matches can be made and dummyTetrZinc dummy atoms added
+
+        for atom in self.topology.atoms():
+            if atom.name == "ZN":
+                bondedToAtom[atom.index] = set()
+                bondedToAtomNoEP[atom.index] = set()
+
         # If the force field has a DrudeForce, record the types of Drude particles and their parents since we'll
         # need them for picking particle positions.
 
@@ -929,6 +938,8 @@ class Modeller(object):
         newTopology.setPeriodicBoxVectors(self.topology.getPeriodicBoxVectors())
         newAtoms = {}
         newPositions = []*nanometer
+        delBonds = []
+        newVirtualBonds = []
         for chain in self.topology.chains():
             newChain = newTopology.addChain(chain.id)
             for residue in chain.residues():
@@ -983,12 +994,20 @@ class Modeller(object):
                     # Add the extra points.
 
                     templateAtomPositions = len(template.atoms)*[None]
+                    templateOutsideLigands = defaultdict(list)
                     for index, atom in enumerate(template.atoms):
                         if atom in matchingAtoms:
                             templateAtomPositions[index] = self.positions[matchingAtoms[atom].index].value_in_unit(nanometer)
+                            for bond in self.topology.bonds():
+                                if matchingAtoms[atom] == bond[0]:
+                                    templateOutsideLigands[index].append(bond[1])
+                                    delBonds.append(bond)
+                                elif matchingAtoms[atom] == bond[1]:
+                                    templateOutsideLigands[index].append(bond[0])
+                                    delBonds.append(bond)
                     for index, atom in enumerate(template.atoms):
                         if atom.element is None:
-                            newTopology.addAtom(atom.name, None, newResidue)
+                            newAtom = newTopology.addAtom(atom.name, None, newResidue)
                             position = None
                             for site in template.virtualSites:
                                 if site.index == index:
@@ -1003,6 +1022,12 @@ class Modeller(object):
                                         v2 = templateAtomPositions[site.atoms[2]] - templateAtomPositions[site.atoms[0]]
                                         cross = Vec3(v1[1]*v2[2]-v1[2]*v2[1], v1[2]*v2[0]-v1[0]*v2[2], v1[0]*v2[1]-v1[1]*v2[0])
                                         position = templateAtomPositions[site.atoms[0]] + site.weights[0]*v1 + site.weights[1]*v2 + site.weights[2]*cross
+                                    elif site.type == 'dummyTetrZinc' and len(templateOutsideLigands[0]) == 4:
+                                        v = self.positions[templateOutsideLigands[0][index - 1].index].value_in_unit(nanometer) - templateAtomPositions[site.atoms[0]]
+                                        v = Vec3(v[0], v[1], v[2])
+                                        position = templateAtomPositions[site.atoms[0]] + site.weights[0] * v/norm(v)
+                                        newVirtualBonds.append((newAtoms[matchingAtoms.items()[0][1]], newAtom))
+
                             if position is None and atom.type in drudeTypeMap:
                                 # This is a Drude particle.  Put it on top of its parent atom.
 
@@ -1017,7 +1042,22 @@ class Modeller(object):
                                 position = unit.sum(knownPositions)/len(knownPositions)
                             newPositions.append(position*nanometer)
         for bond in self.topology.bonds():
-            if bond[0] in newAtoms and bond[1] in newAtoms:
+            if bond[0] in newAtoms and bond[1] in newAtoms and bond not in delBonds:
                 newTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]])
+
+        # if a dummyTetrZinc virtual site was used, newVirtualBonds will not be empty - add the bonds between the dummy atoms
+        if newVirtualBonds:
+            i = 0
+            newVirtualBondslen = len(newVirtualBonds)
+            while i < newVirtualBondslen:
+                newVirtualBonds.append((newVirtualBonds[i][1], newVirtualBonds[i+1][1]))
+                newVirtualBonds.append((newVirtualBonds[i][1], newVirtualBonds[i+2][1]))
+                newVirtualBonds.append((newVirtualBonds[i][1], newVirtualBonds[i+3][1]))
+                newVirtualBonds.append((newVirtualBonds[i+1][1], newVirtualBonds[i+2][1]))
+                newVirtualBonds.append((newVirtualBonds[i+1][1], newVirtualBonds[i+3][1]))
+                newVirtualBonds.append((newVirtualBonds[i+2][1], newVirtualBonds[i+3][1]))
+                i += 4
+        for bond in newVirtualBonds:
+            newTopology.addBond(bond[0], bond[1])
         self.topology = newTopology
         self.positions = newPositions
