@@ -150,7 +150,7 @@ class AmberPrmtopFile(object):
                      implicitSolventSaltConc=0.0*(unit.moles/unit.liter),
                      implicitSolventKappa=None, temperature=298.15*unit.kelvin,
                      soluteDielectric=1.0, solventDielectric=78.5,
-                     removeCMMotion=True, hydrogenMass=None, ewaldErrorTolerance=0.0005, switchDist=0.0*unit.nanometer):
+                     removeCMMotion=True, hydrogenMass=None, ewaldErrorTolerance=0.0005, switchDistance=0.0*unit.nanometer):
         """Construct an OpenMM System representing the topology described by this prmtop file.
 
         Parameters:
