@@ -1196,6 +1196,8 @@ void CudaContext::reorderAtomsImpl() {
             molPos[i].x *= invNumAtoms;
             molPos[i].y *= invNumAtoms;
             molPos[i].z *= invNumAtoms;
+            if (molPos[i].x != molPos[i].x)
+                throw OpenMMException("Particle coordinate is nan");
         }
         if (nonbonded->getUsePeriodic()) {
             // Move each molecule position into the same box.
