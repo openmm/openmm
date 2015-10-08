@@ -150,7 +150,7 @@ class AmberPrmtopFile(object):
                      implicitSolventSaltConc=0.0*(unit.moles/unit.liter),
                      implicitSolventKappa=None, temperature=298.15*unit.kelvin,
                      soluteDielectric=1.0, solventDielectric=78.5,
-                     removeCMMotion=True, hydrogenMass=None, ewaldErrorTolerance=0.0005):
+                     removeCMMotion=True, hydrogenMass=None, ewaldErrorTolerance=0.0005, switchDist=0.0*unit.nanometer):
         """Construct an OpenMM System representing the topology described by this prmtop file.
 
         Parameters:
@@ -173,6 +173,12 @@ class AmberPrmtopFile(object):
          - hydrogenMass (mass=None) The mass to use for hydrogen atoms bound to heavy atoms.  Any mass added to a hydrogen is
            subtracted from the heavy atom to keep their total mass the same.
          - ewaldErrorTolerance (float=0.0005) The error tolerance to use if nonbondedMethod is Ewald or PME.
+         -  switchDistance (distance=0*nanometer) The distance at which the
+            switching function is active for nonbonded interactions. If the
+            switchDistance evaluates to boolean False (if it is 0), no
+            switching function will be used. Illegal values will raise a
+            ValueError
+
         Returns: the newly created System
         """
         if self._prmtop.chamber:
@@ -248,4 +254,16 @@ class AmberPrmtopFile(object):
                 force.setEwaldErrorTolerance(ewaldErrorTolerance)
         if removeCMMotion:
             sys.addForce(mm.CMMotionRemover())
+
+        if switchDistance and nonbondedMethod is not ff.NoCutoff:
+            # make sure it's legal
+            if switchDistance >= nonbondedCutoff:
+                raise ValueError('switchDistance is too large compared '
+                                     'to the cutoff!')
+                if abs(switchDistance) != switchDistance:
+                    # Detects negatives for both Quantity and float
+                    raise ValueError('switchDistance must be non-negative!')
+                force.setUseSwitchingFunction(True)
+                force.setSwitchingDistance(switchDistance)
+
         return sys
