@@ -932,6 +932,7 @@ class Modeller(object):
         newTopology.setPeriodicBoxVectors(self.topology.getPeriodicBoxVectors())
         newAtoms = {}
         newPositions = []*nanometer
+        delBondAtoms = []
         delBonds = []
         newVirtualBonds = []
         for chain in self.topology.chains():
@@ -995,10 +996,8 @@ class Modeller(object):
                             for bond in self.topology.bonds():
                                 if matchingAtoms[atom] == bond[0]:
                                     templateOutsideLigands[index].append(bond[1])
-                                    delBonds.append(bond)
                                 elif matchingAtoms[atom] == bond[1]:
                                     templateOutsideLigands[index].append(bond[0])
-                                    delBonds.append(bond)
                     for index, atom in enumerate(template.atoms):
                         if atom.element is None:
                             newAtom = newTopology.addAtom(atom.name, None, newResidue)
@@ -1021,6 +1020,8 @@ class Modeller(object):
                                         v = Vec3(v[0], v[1], v[2])
                                         position = templateAtomPositions[site.atoms[0]] + site.weights[0] * v/norm(v)
                                         newVirtualBonds.append((newAtoms[matchingAtoms.items()[0][1]], newAtom))
+                                        if matchingAtoms.items()[0][1] not in delBondAtoms:
+                                            delBondAtoms.append(matchingAtoms.items()[0][1])
 
                             if position is None and atom.type in drudeTypeMap:
                                 # This is a Drude particle.  Put it on top of its parent atom.
@@ -1035,11 +1036,13 @@ class Modeller(object):
                                 knownPositions = [x for x in templateAtomPositions if x is not None]
                                 position = unit.sum(knownPositions)/len(knownPositions)
                             newPositions.append(position*nanometer)
-        for bond in self.topology.bonds():
-            if bond[0] in newAtoms and bond[1] in newAtoms and bond not in delBonds:
-                newTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]])
 
-        # if a dummyTetrZinc virtual site was used, newVirtualBonds will not be empty - add the bonds between the dummy atoms
+        # if a dummyTetrZinc virtual site was used - chose bonds in the initial topology that can't be copied into the new one and add bonds between the dummy atoms
+        if delBondAtoms:
+            for bond in self.topology.bonds():
+                for atom in delBondAtoms:
+                    if bond[0] == atom or bond[1] == atom:
+                        delBonds.append(bond)
         if newVirtualBonds:
             i = 0
             newVirtualBondslen = len(newVirtualBonds)
@@ -1051,6 +1054,10 @@ class Modeller(object):
                 newVirtualBonds.append((newVirtualBonds[i+1][1], newVirtualBonds[i+3][1]))
                 newVirtualBonds.append((newVirtualBonds[i+2][1], newVirtualBonds[i+3][1]))
                 i += 4
+
+        for bond in self.topology.bonds():
+            if bond[0] in newAtoms and bond[1] in newAtoms and bond not in delBonds:
+                newTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]])
         for bond in newVirtualBonds:
             newTopology.addBond(bond[0], bond[1])
         self.topology = newTopology
