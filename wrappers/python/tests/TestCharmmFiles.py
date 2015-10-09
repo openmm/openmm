@@ -4,6 +4,7 @@ from simtk.openmm.app import *
 from simtk.openmm import *
 from simtk.unit import *
 import simtk.openmm.app.element as elem
+import warnings
 
 class TestCharmmFiles(unittest.TestCase):
 
@@ -90,7 +91,6 @@ class TestCharmmFiles(unittest.TestCase):
 
     def test_NBFIX(self):
         """Tests CHARMM systems with NBFIX Lennard-Jones modifications"""
-        import warnings
         warnings.filterwarnings('ignore', category=CharmmPSFWarning)
         psf = CharmmPsfFile('systems/ala3_solv.psf')
         crd = CharmmCrdFile('systems/ala3_solv.crd')
@@ -121,6 +121,34 @@ class TestCharmmFiles(unittest.TestCase):
         self.assertEqual(len(list(psf.topology.atoms())), 66264)
         self.assertEqual(len(list(psf.topology.residues())), 20169)
         self.assertEqual(len(list(psf.topology.bonds())), 46634)
+
+    def testSystemOptions(self):
+        """ Test various options in CharmmPsfFile.createSystem """
+        warnings.filterwarnings('ignore', category=CharmmPSFWarning)
+        psf = CharmmPsfFile('systems/ala3_solv.psf')
+        crd = CharmmCrdFile('systems/ala3_solv.crd')
+        params = CharmmParameterSet('systems/par_all36_prot.prm',
+                                    'systems/toppar_water_ions.str')
+        # Box dimensions (found from bounding box)
+        psf.setBox(32.7119500*angstroms, 32.9959600*angstroms, 33.0071500*angstroms)
+
+        # Check some illegal options
+        self.assertRaises(ValueError, lambda:
+                    psf.createSystem(params, nonbondedMethod=5))
+        self.assertRaises(TypeError, lambda:
+                    psf.createSystem(params, nonbondedMethod=PME,
+                                     nonbondedCutoff=1*radian)
+        )
+        self.assertRaises(TypeError, lambda:
+                    psf.createSystem(params, nonbondedMethod=PME,
+                                     switchDistance=1*radian)
+        )
+
+        # Check what should be some legal options
+        psf.createSystem(params, nonbondedMethod=PME, switchDistance=0.8,
+                         nonbondedCutoff=1.2)
+        psf.createSystem(params, nonbondedMethod=PME, switchDistance=0.8,
+                         nonbondedCutoff=1.2*nanometer)
 
     def test_ImplicitSolventForces(self):
         """Compute forces for different implicit solvent types, and compare them to ones generated with a previous version of OpenMM to ensure they haven't changed."""
