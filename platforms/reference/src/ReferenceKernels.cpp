@@ -1488,6 +1488,8 @@ double ReferenceCalcCustomExternalForceKernel::PeriodicDistanceFunction::evaluat
     delta -= boxVectors[1]*floor(delta[1]/boxVectors[1][1]+0.5);
     delta -= boxVectors[0]*floor(delta[0]/boxVectors[0][0]+0.5);
     double r = sqrt(delta.dot(delta));
+    if (r == 0)
+        return 0.0;    
     if (argIndex < 3)
         return delta[argIndex]/r;
     return -delta[argIndex-3]/r;

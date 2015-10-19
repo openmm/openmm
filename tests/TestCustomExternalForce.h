@@ -167,6 +167,38 @@ void testPeriodic() {
     }
 }
 
+void testZeroPeriodicDistance() {
+    Vec3 vx(5, 0, 0);
+    Vec3 vy(0, 6, 0);
+    Vec3 vz(1, 2, 7);
+    double x0 = 51, y0 = -17, z0 = 11.2;
+    System system;
+    system.setDefaultPeriodicBoxVectors(vx, vy, vz);
+    system.addParticle(1.0);
+    CustomExternalForce* force = new CustomExternalForce("periodicdistance(x, y, z, x0, y0, z0)^2");
+    force->addPerParticleParameter("x0");
+    force->addPerParticleParameter("y0");
+    force->addPerParticleParameter("z0");
+    vector<double> params(3);
+    params[0] = x0;
+    params[1] = y0;
+    params[2] = z0;
+    force->addParticle(0, params);
+    system.addForce(force);
+    ASSERT(force->usesPeriodicBoundaryConditions());
+    ASSERT(system.usesPeriodicBoundaryConditions());
+    VerletIntegrator integrator(0.01);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(1);
+    positions[0] = Vec3(x0, y0, z0);
+    context.setPositions(positions);
+
+    State state = context.getState(State::Positions | State::Forces | State::Energy);
+    vector<Vec3> forces = state.getForces();
+    for (int i = 0; i < 3; i++)
+        ASSERT_EQUAL(forces[0][i], forces[0][i]);
+}
+
 void testIllegalVariable() {
     System system;
     system.addParticle(1.0);
@@ -192,6 +224,7 @@ int main(int argc, char* argv[]) {
         testForce();
         testManyParameters();
         testPeriodic();
+        testZeroPeriodicDistance();
         testIllegalVariable();
         runPlatformTests();
     }
