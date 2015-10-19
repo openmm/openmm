@@ -167,7 +167,7 @@ void testPeriodic() {
     }
 }
 
-void testGithub1191() {
+void testZeroPeriodicDistance() {
     Vec3 vx(5, 0, 0);
     Vec3 vy(0, 6, 0);
     Vec3 vz(1, 2, 7);
@@ -224,7 +224,7 @@ int main(int argc, char* argv[]) {
         testForce();
         testManyParameters();
         testPeriodic();
-        testGithub1191();
+        testZeroPeriodicDistance();
         testIllegalVariable();
         runPlatformTests();
     }

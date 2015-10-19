@@ -124,17 +124,17 @@ void OpenCLExpressionUtilities::processExpression(stringstream& out, const Expre
                     if (argIndex == -1)
                         out << nodeNames[j] << " = RECIP(periodicDistance_rinv);\n";
                     else if (argIndex == 0)
-                        out << nodeNames[j] << " = periodicDistance_delta.x*periodicDistance_rinv*(periodicDistance_r2>0);\n";
+                        out << nodeNames[j] << " = (periodicDistance_r2 > 0 ? periodicDistance_delta.x*periodicDistance_rinv : 0);\n";
                     else if (argIndex == 1)
-                        out << nodeNames[j] << " = periodicDistance_delta.y*periodicDistance_rinv*(periodicDistance_r2>0);\n";
+                        out << nodeNames[j] << " = (periodicDistance_r2 > 0 ? periodicDistance_delta.y*periodicDistance_rinv : 0);\n";
                     else if (argIndex == 2)
-                        out << nodeNames[j] << " = periodicDistance_delta.z*periodicDistance_rinv*(periodicDistance_r2>0);\n";
+                        out << nodeNames[j] << " = (periodicDistance_r2 > 0 ? periodicDistance_delta.z*periodicDistance_rinv : 0);\n";
                     else if (argIndex == 3)
-                        out << nodeNames[j] << " = -periodicDistance_delta.x*periodicDistance_rinv*(periodicDistance_r2>0);\n";
+                        out << nodeNames[j] << " = (periodicDistance_r2 > 0 ? -periodicDistance_delta.x*periodicDistance_rinv : 0);\n";
                     else if (argIndex == 4)
-                        out << nodeNames[j] << " = -periodicDistance_delta.y*periodicDistance_rinv*(periodicDistance_r2>0);\n";
+                        out << nodeNames[j] << " = (periodicDistance_r2 > 0 ? -periodicDistance_delta.y*periodicDistance_rinv : 0);\n";
                     else if (argIndex == 5)
-                        out << nodeNames[j] << " = -periodicDistance_delta.z*periodicDistance_rinv*(periodicDistance_r2>0);\n";
+                        out << nodeNames[j] << " = (periodicDistance_r2 > 0 ? -periodicDistance_delta.z*periodicDistance_rinv : 0);\n";
                 }
             }
             else {
