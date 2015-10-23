@@ -1,9 +1,5 @@
 language: python
-python:
-  - "2.7_with_system_site_packages"
-  - "3.4"
 
-sudo: false
 addons:
   apt:
     sources:
@@ -16,15 +12,24 @@ addons:
       - python-numpy
       - python-scipy
 
-
-env:
-  matrix:
-    - OPENMM_BUILD_STATIC_LIB="OFF"
-    - OPENMM_BUILD_STATIC_LIB="ON"
+matrix:
+  include:
+    - sudo: required
+      python: 3.4
+      env: SUDO=true OPENMM_BUILD_STATIC_LIB=OFF CC=gcc CXX=g++
+    - sudo: false
+      python: 2.7_with_system_site_packages
+      env: SUDO=false OPENMM_BUILD_STATIC_LIB=ON CC=clang CXX=clang++
+    - sudo: false
+      python: 2.7_with_system_site_packages
+      env: SUDO=false OPENMM_BUILD_STATIC_LIB=OFF CC=clang CXX=clang++
+    - sudo: false
+      python: 3.4
+      env: SUDO=false OPENMM_BUILD_STATIC_LIB=OFF CC=gcc CXX=g++
 
 before_install:
-  - export CC=clang
-  - export CXX=clang++
+  - echo $SUDO
+  - if [[ "$SUDO" == "true" ]]; then sudo apt-get install -qq fglrx=2:8.960-0ubuntu1 opencl-headers; fi
 
   - wget https://anaconda.org/anaconda/swig/3.0.2/download/linux-64/swig-3.0.2-0.tar.bz2
   - mkdir $HOME/swig
@@ -34,7 +39,6 @@ before_install:
 
 script:
   - cmake -DCMAKE_INSTALL_PREFIX=$HOME/OpenMM -DOPENMM_BUILD_STATIC_LIB=$OPENMM_BUILD_STATIC_LIB .
-  - make -j2
   - make -j2 install
   - make PythonInstall
   - # Run the testInstallation script
@@ -46,7 +50,7 @@ script:
   - # rerun all of the failed tests
   - if [ -s Testing/Temporary/LastTestsFailed.log ]; then ctest -I FailedTests.log; fi;
   - # run the python tests too
-  - cd python/tests  
+  - cd python/tests
   - # nosetests -vv --processes=-1 --process-timeout=200
   - # nosetests -vv
   - py.test -v *
