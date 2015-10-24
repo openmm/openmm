@@ -149,6 +149,18 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     if (this->deviceIndex == -1)
         throw OpenMMException("No compatible CUDA device is available");
 
+    int major, minor
+    CHECK_RESULT(cuDeviceComputeCapability(&major, &minor, device));
+#if __CUDA_API_VERSION < 7000
+        // This is a workaround to support GTX 980 with CUDA 6.5.  It reports
+        // its compute capability as 5.2, but the compiler doesn't support
+        // anything beyond 5.0.
+        if (major == 5)
+            minor = 0;
+#endif
+    gpuArchitecture = intToString(major)+intToString(minor);
+    computeCapability = major+0.1*minor;
+
     contextIsValid = true;
     CHECK_RESULT(cuCtxSetCacheConfig(CU_FUNC_CACHE_PREFER_SHARED));
     if (contextIndex > 0) {
@@ -1381,33 +1393,24 @@ void CudaContext::WorkThread::flush() {
 
 vector<int> CudaContext::getDevicePrecedence() {
     int numDevices;
+    CUdevice thisDevice;
     string errorMessage = "Error initializing Context";
     vector<pair<pair<int, int>, int> > devices;
 
     CHECK_RESULT(cuDeviceGetCount(&numDevices));
     for (int i = 0; i < numDevices; i++) {
-        CHECK_RESULT(cuDeviceGet(&device, i));
-        int major, minor, clock, multiprocessors;
-        CHECK_RESULT(cuDeviceComputeCapability(&major, &minor, device));
+        CHECK_RESULT(cuDeviceGet(&thisDevice, i));
+        int major, minor, clock, multiprocessors, speed;
+        CHECK_RESULT(cuDeviceComputeCapability(&major, &minor, thisDevice));
         if (major == 1 && minor < 2)
             continue;
 
-#if __CUDA_API_VERSION < 7000
-        // This is a workaround to support GTX 980 with CUDA 6.5.  It reports
-        // its compute capability as 5.2, but the compiler doesn't support
-        // anything beyond 5.0.
-        if (major == 5)
-            minor = 0;
-#endif
-
-        gpuArchitecture = intToString(major)+intToString(minor);
-        computeCapability = major+0.1*minor;
-        if ((useDoublePrecision || useMixedPrecision) && computeCapability < 1.3)
+        if ((useDoublePrecision || useMixedPrecision) && (major*0.1*minor < 1.3))
             continue;
 
-        CHECK_RESULT(cuDeviceGetAttribute(&clock, CU_DEVICE_ATTRIBUTE_CLOCK_RATE, device));
-        CHECK_RESULT(cuDeviceGetAttribute(&multiprocessors, CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT, device));
-        int speed = clock*multiprocessors;
+        CHECK_RESULT(cuDeviceGetAttribute(&clock, CU_DEVICE_ATTRIBUTE_CLOCK_RATE, thisDevice));
+        CHECK_RESULT(cuDeviceGetAttribute(&multiprocessors, CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT, thisDevice));
+        speed = clock*multiprocessors;
         pair<int, int> deviceProperties = std::make_pair(major, speed);
         devices.push_back(std::make_pair(deviceProperties, -i));
     }
