@@ -117,7 +117,6 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     cacheDir = cacheDir+"/";
 #endif
     contextIndex = platformData.contexts.size();
-
     int numDevices;
     string errorMessage = "Error initializing Context";
     CHECK_RESULT(cuDeviceGetCount(&numDevices));
@@ -135,19 +134,6 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     for (int i = 0; i < static_cast<int>(devicePrecedence.size()); i++) {
         deviceIndex = devicePrecedence[i];
         CHECK_RESULT(cuDeviceGet(&device, deviceIndex));
-        int major, minor;
-        CHECK_RESULT(cuDeviceComputeCapability(&major, &minor, device));
-        // This is a workaround to support GTX 980 with CUDA 6.5.  It reports its compute capability
-        // as 5.2, but the compiler doesn't support anything beyond 5.0.  We can remove this once
-        // CUDA 7.0 is released.
-        if (major == 5)
-            minor = 0;
-        gpuArchitecture = intToString(major)+intToString(minor);
-        computeCapability = major+0.1*minor;
-        if ((useDoublePrecision || useMixedPrecision) && computeCapability < 1.3)
-            continue;
-            // throw OpenMMException("This device does not support double precision");
-
         defaultOptimizationOptions = "--use_fast_math";
         unsigned int flags = CU_CTX_MAP_HOST;
         if (useBlockingSync)
@@ -1406,6 +1392,19 @@ vector<int> CudaContext::getDevicePrecedence() {
         if (major == 1 && minor < 2)
             continue;
 
+#if __CUDA_API_VERSION < 7000
+        // This is a workaround to support GTX 980 with CUDA 6.5.  It reports
+        // its compute capability as 5.2, but the compiler doesn't support
+        // anything beyond 5.0.
+        if (major == 5)
+            minor = 0;
+#endif
+
+        gpuArchitecture = intToString(major)+intToString(minor);
+        computeCapability = major+0.1*minor;
+        if ((useDoublePrecision || useMixedPrecision) && computeCapability < 1.3)
+            continue;
+
         CHECK_RESULT(cuDeviceGetAttribute(&clock, CU_DEVICE_ATTRIBUTE_CLOCK_RATE, device));
         CHECK_RESULT(cuDeviceGetAttribute(&multiprocessors, CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT, device));
         int speed = clock*multiprocessors;
@@ -1413,8 +1412,8 @@ vector<int> CudaContext::getDevicePrecedence() {
         devices.push_back(std::make_pair(deviceProperties, -i));
     }
 
-    // sort first by compute capability (higher is better), then speed (higher is better),
-    // and finally device index (lower is better)
+    // sort first by compute capability (higher is better), then speed
+    // (higher is better), and finally device index (lower is better)
     std::sort(devices.begin(), devices.end());
     std::reverse(devices.begin(), devices.end());
 
