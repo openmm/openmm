@@ -149,7 +149,7 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     if (this->deviceIndex == -1)
         throw OpenMMException("No compatible CUDA device is available");
 
-    int major, minor
+    int major, minor;
     CHECK_RESULT(cuDeviceComputeCapability(&major, &minor, device));
 #if __CUDA_API_VERSION < 7000
         // This is a workaround to support GTX 980 with CUDA 6.5.  It reports
