@@ -51,7 +51,7 @@ int main() {
     
     for (int i = 0; i < devices.size(); i++) {
       cl::Device d = devices[i];
-      cout << "OpenCL Platform " << j << ", Device " << i << ": \"" << d.getInfo<CL_DEVICE_NAME>()
+      cout << "OpenCLPlatformIndex " << j << ", OpenCLDeviceIndex " << i << ": \"" << d.getInfo<CL_DEVICE_NAME>()
            << "\"" << endl << "    " << left << setw(32) << "CL_PLATFORM_NAME" << " = "
            << cl::Platform(d.getInfo<CL_DEVICE_PLATFORM>()).getInfo<CL_PLATFORM_NAME>()
            << endl
