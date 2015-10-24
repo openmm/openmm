@@ -26,6 +26,8 @@ matrix:
     - sudo: false
       python: 3.4
       env: SUDO=false OPENMM_BUILD_STATIC_LIB=OFF CC=gcc CXX=g++
+  allow_failures:
+   - sudo: required
 
 before_install:
   - echo $SUDO
@@ -44,7 +46,7 @@ script:
   - # Run the testInstallation script
   - python -m simtk.testInstallation
   - # run all of the tests, making sure failures at this stage don't cause travis failures
-  - ctest -j2 || true
+  - ctest -j2 --schedule-random || true
   - # get a list of all of the failed tests into this stupid ctest format
   - python -c "import os; fn = os.path.join('Testing', 'Temporary', 'LastTestsFailed.log'); os.path.exists(fn) or exit(0); failed = [line.split(':')[0] for line in open(fn)]; print(','.join(x+','+x for x in failed))" > FailedTests.log
   - # rerun all of the failed tests
