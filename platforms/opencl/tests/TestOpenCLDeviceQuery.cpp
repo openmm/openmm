@@ -30,7 +30,7 @@ int main() {
            << "\"" << endl << "    " << left << setw(32) << "CL_PLATFORM_NAME" << " = "
            << cl::Platform(d.getInfo<CL_DEVICE_PLATFORM>()).getInfo<CL_PLATFORM_NAME>()
            << endl
-           << "    " << left << setw(32) << "CL_PLATFORM_NAME" << " = "
+           << "    " << left << setw(32) << "CL_PLATFORM_VENDOR" << " = "
            << platforms[j].getInfo<CL_PLATFORM_VENDOR>()
            << endl;
 
