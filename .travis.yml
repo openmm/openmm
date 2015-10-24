@@ -40,7 +40,7 @@ before_install:
   - export SWIG_LIB=$HOME/swig/share/swig/3.0.2
 
 script:
-  - CTEST_STOP_TIME=$(python -c "from datetime import datetime, timedelta; import sys; sys.stdout.write((datetime.now() + timedelta(minutes=40)).strftime('%H:%M:%S'))")
+  - CTEST_STOP_TIME=$(python -c "from datetime import datetime, timedelta; import sys; sys.stdout.write((datetime.now() + timedelta(minutes=30)).strftime('%H:%M:%S'))")
   - cmake -DCMAKE_INSTALL_PREFIX=$HOME/OpenMM -DOPENMM_BUILD_STATIC_LIB=$OPENMM_BUILD_STATIC_LIB .
   - make -j2 install
   - make PythonInstall
