@@ -132,8 +132,8 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
 
     this->deviceIndex = -1;
     for (int i = 0; i < static_cast<int>(devicePrecedence.size()); i++) {
-        deviceIndex = devicePrecedence[i];
-        CHECK_RESULT(cuDeviceGet(&device, deviceIndex));
+        int trialDeviceIndex = devicePrecedence[i];
+        CHECK_RESULT(cuDeviceGet(&device, trialDeviceIndex));
         defaultOptimizationOptions = "--use_fast_math";
         unsigned int flags = CU_CTX_MAP_HOST;
         if (useBlockingSync)
@@ -142,12 +142,12 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
             flags += CU_CTX_SCHED_SPIN;
 
         if (cuCtxCreate(&context, flags, device) == CUDA_SUCCESS) {
-            this->deviceIndex = deviceIndex;
+            this->deviceIndex = trialDeviceIndex;
             break;
         }
     }
     if (this->deviceIndex == -1)
-        if (devicePrecedence.size() == 1)
+        if (deviceIndex != -1)
             throw OpenMMException("The requested CUDA device could not be loaded");
         else
             throw OpenMMException("No compatible CUDA device is available");
