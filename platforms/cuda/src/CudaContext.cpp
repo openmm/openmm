@@ -1408,7 +1408,7 @@ vector<int> CudaContext::getDevicePrecedence() {
         if (major == 1 && minor < 2)
             continue;
 
-        if ((useDoublePrecision || useMixedPrecision) && (major*0.1*minor < 1.3))
+        if ((useDoublePrecision || useMixedPrecision) && (major+0.1*minor < 1.3))
             continue;
 
         CHECK_RESULT(cuDeviceGetAttribute(&clock, CU_DEVICE_ATTRIBUTE_CLOCK_RATE, thisDevice));
