@@ -51,7 +51,7 @@ class TestPickle(unittest.TestCase):
         """Test that deep copying of forces works correctly."""
         force = NonbondedForce()
         force_copy = copy.deepcopy(force)
-        self.assertIsEqual(force.__class__.__name__, 'NonbondedForce')
+        self.assertEqual(force.__class__.__name__, 'NonbondedForce')
 
 if __name__ == '__main__':
     unittest.main()
