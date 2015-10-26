@@ -3,6 +3,7 @@ from validateConstraints import *
 from simtk.openmm.app import *
 from simtk.openmm import *
 from simtk.unit import *
+import simtk.openmm
 import simtk.openmm.app.element as elem
 import simtk.openmm.app.forcefield as forcefield
 import copy
@@ -32,6 +33,8 @@ class TestPickle(unittest.TestCase):
         force_copy = copy.deepcopy(force)
         # Check class name is same.
         self.assertEqual(force.__class__.__name__, force_copy.__class__.__name__)
+        # Check Force object contents are the same.
+        self.assertEqual(XmlSerializer.serialize(force), XmlSerializer.serialize(force_copy))
 
     def test_deepcopy(self):
         """Test that serialization/deserialization works (via deepcopy)."""
@@ -60,7 +63,8 @@ class TestPickle(unittest.TestCase):
             force_copy = copy.deepcopy(force)
             # Check class name is same.
             self.assertEqual(force.__class__.__name__, force_copy.__class__.__name__)
-            # TODO: Check to make sure all force data properly copied?
+            # Check Force object contents are the same.
+            self.assertEqual(XmlSerializer.serialize(force), XmlSerializer.serialize(force_copy))
 
 if __name__ == '__main__':
     unittest.main()
