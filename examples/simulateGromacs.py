@@ -4,7 +4,7 @@ from simtk.unit import *
 from sys import stdout
 
 gro = GromacsGroFile('input.gro')
-top = GromacsTopFile('input.top', periodicBoxVectors=gro.getPeriodicBoxVectors(), includeDir='/usr/local/gromacs/share/gromacs/top')
+top = GromacsTopFile('input.top', periodicBoxVectors=gro.getPeriodicBoxVectors())
 system = top.createSystem(nonbondedMethod=PME, nonbondedCutoff=1*nanometer, constraints=HBonds)
 integrator = LangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
 simulation = Simulation(top.topology, system, integrator)
