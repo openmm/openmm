@@ -24,7 +24,7 @@ class TestTopology(unittest.TestCase):
 
     def test_getters(self):
         """Test getters for number of atoms, residues, chains."""
-        check_pdbfile('systems/1T2Y.pdb', 271, 25, 1)
+        self.check_pdbfile('systems/1T2Y.pdb', 271, 25, 1)
 
 if __name__ == '__main__':
     unittest.main()
