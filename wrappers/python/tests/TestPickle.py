@@ -26,8 +26,15 @@ class TestPickle(unittest.TestCase):
         self.pdb2 = PDBFile('systems/alanine-dipeptide-implicit.pdb')
         self.forcefield2 = ForceField('amber99sb.xml', 'amber99_obc.xml')
 
-    def test_system_integrator_deepcopy(self):
-        """Test that serialization/deserialization of system and integrator works (via deepcopy)."""
+    def test_force_deepcopy(self):
+        """Test that deep copying of forces works correctly."""
+        force = NonbondedForce()
+        force_copy = copy.deepcopy(force)
+        # Check class name is same.
+        self.assertEqual(force.__class__.__name__, force_copy.__class__.__name__)
+
+    def test_deepcopy(self):
+        """Test that serialization/deserialization works (via deepcopy)."""
 
         system = self.forcefield1.createSystem(self.pdb1.topology)
         integrator = VerletIntegrator(2*femtosecond)
@@ -47,11 +54,13 @@ class TestPickle(unittest.TestCase):
 
         del context, integrator
 
-    def test_force_deepcopy(self):
-        """Test that deep copying of forces works correctly."""
-        force = NonbondedForce()
-        force_copy = copy.deepcopy(force)
-        self.assertEqual(force.__class__.__name__, 'NonbondedForce')
+        # Check deep copy of each force.
+        forces = [ system.getForce(index) for index in range(system.getNumForces()) ]
+        for force in forces:
+            force_copy = copy.deepcopy(force)
+            # Check class name is same.
+            self.assertEqual(force.__class__.__name__, force_copy.__class__.__name__)
+            # TODO: Check to make sure all force data properly copied?
 
 if __name__ == '__main__':
     unittest.main()
