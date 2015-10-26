@@ -450,13 +450,22 @@ Parameters:
 
 %extend OpenMM::Force {
   %pythoncode %{
+    def __getstate__(self):
+        serializationString = XmlSerializer.serialize(self)
+        return serializationString
+
+    def __setstate__(self, serializationString):
+        system = XmlSerializer.deserialize(serializationString)
+        self.this = system.this
+
+    def __copy__(self):
+        copy = self.__class__.__new__(self.__class__)
+        copy.__init__(self)
+        return copy
+
     def __deepcopy__(self, memo):
         return self.__copy__()
   %}
-  %newobject __copy__;
-  OpenMM::Force* __copy__() {
-      return OpenMM::XmlSerializer::clone<OpenMM::Force>(*self);
-  }
 }
 
 %extend OpenMM::Integrator {
@@ -469,11 +478,12 @@ Parameters:
         system = XmlSerializer.deserialize(serializationString)
         self.this = system.this
 
+    def __copy__(self):
+        copy = self.__class__.__new__(self.__class__)
+        copy.__init__(self)
+        return copy
+
     def __deepcopy__(self, memo):
         return self.__copy__()
   %}
-  %newobject __copy__;
-  OpenMM::Integrator* __copy__() {
-      return OpenMM::XmlSerializer::clone<OpenMM::Integrator>(*self);
-  }
 }
