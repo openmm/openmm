@@ -450,13 +450,13 @@ Parameters:
 
 %extend OpenMM::Force {
   %pythoncode %{
+    def __copy__(self):
+        copy = self.__class__.__new__(self.__class__)
+        copy.__init__(self)
+        return copy
     def __deepcopy__(self, memo):
         return self.__copy__()
   %}
-  %newobject __copy__;
-  OpenMM::Force* __copy__() {
-      return OpenMM::XmlSerializer::clone<OpenMM::Force>(*self);
-  }
 }
 
 %extend OpenMM::Integrator {
