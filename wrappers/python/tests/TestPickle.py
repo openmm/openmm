@@ -9,7 +9,7 @@ import copy
 import pickle
 
 class TestPickle(unittest.TestCase):
-    """Pickling / deepcopy of OpenMM state and integrator objects."""
+    """Pickling / deepcopy of OpenMM objects."""
 
     def setUp(self):
         """Set up the tests by loading the input pdb files and force field
@@ -26,9 +26,8 @@ class TestPickle(unittest.TestCase):
         self.pdb2 = PDBFile('systems/alanine-dipeptide-implicit.pdb')
         self.forcefield2 = ForceField('amber99sb.xml', 'amber99_obc.xml')
 
-
-    def test_deepcopy(self):
-        """Test that serialization/deserialization works (via deepcopy)."""
+    def test_system_integrator_deepcopy(self):
+        """Test that serialization/deserialization of system and integrator works (via deepcopy)."""
 
         system = self.forcefield1.createSystem(self.pdb1.topology)
         integrator = VerletIntegrator(2*femtosecond)
@@ -39,15 +38,20 @@ class TestPickle(unittest.TestCase):
         system2 = copy.deepcopy(system)
         integrator2 = copy.deepcopy(integrator)
         state2 = copy.deepcopy(state)
-        
+
         str_state = pickle.dumps(state)
         str_integrator = pickle.dumps(integrator)
-        
+
         state3 = pickle.loads(str_state)
         context.setState(state3)
 
-
         del context, integrator
+
+    def test_force_deepcopy(self):
+        """Test that deep copying of forces works correctly."""
+        force = NonbondedForce()
+        force_copy = copy.deepcopy(force)
+        self.assertIsEqual(force.__class__.__name__, 'NonbondedForce')
 
 if __name__ == '__main__':
     unittest.main()
