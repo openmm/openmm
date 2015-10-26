@@ -62,8 +62,8 @@ class Topology(object):
 
     def __repr__(self):
         nchains = len(self._chains)
-        nres = sum(1 for r in self.residues())
-        natom = sum(1 for a in self.atoms())
+        nres = self._numResidues
+        natom = self._numAtoms
         nbond = len(self._bonds)
         return '<%s; %d chains, %d residues, %d atoms, %d bonds>' % (
                 type(self).__name__, nchains, nres, natom, nbond)
@@ -71,13 +71,13 @@ class Topology(object):
     def getNumAtoms(self):
         """Return the number of atoms in the Topology.
         """
-        natom = self.__numAtoms
+        natom = self._numAtoms
         return natom
 
     def getNumResidues(self):
         """Return the number of residues in the Topology.
         """
-        nres = self.__numResidues
+        nres = self._numResidues
         return nres
 
     def getNumChains(self):
