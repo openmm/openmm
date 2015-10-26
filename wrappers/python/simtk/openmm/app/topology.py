@@ -68,6 +68,30 @@ class Topology(object):
         return '<%s; %d chains, %d residues, %d atoms, %d bonds>' % (
                 type(self).__name__, nchains, nres, natom, nbond)
 
+    def getNumAtoms(self):
+        """Return the number of atoms in the Topology.
+
+        Returns: the number of atoms in the Topology
+        """
+        natom = sum(1 for a in self.atoms())
+        return natom
+
+    def getNumResidues(self):
+        """Return the number of residues in the Topology.
+
+        Returns: the number of residues in the Topology
+        """
+        nres = sum(1 for r in self.residues())
+        return nres
+
+    def getNumChains(self):
+        """Return the number of chains in the Topology.
+
+        Returns: the number of chains in the Topology
+        """
+        nchain = sum(1 for c in self.chains())
+        return nchain
+
     def addChain(self, id=None):
         """Create a new Chain and add it to the Topology.
 
