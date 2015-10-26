@@ -450,6 +450,14 @@ Parameters:
 
 %extend OpenMM::Force {
   %pythoncode %{
+    def __getstate__(self):
+        serializationString = XmlSerializer.serialize(self)
+        return serializationString
+
+    def __setstate__(self, serializationString):
+        system = XmlSerializer.deserialize(serializationString)
+        self.this = system.this
+
     def __copy__(self):
         copy = self.__class__.__new__(self.__class__)
         copy.__init__(self)
