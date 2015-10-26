@@ -89,7 +89,7 @@ class Topology(object):
 
         Returns: the number of chains in the Topology
         """
-        nchain = sum(1 for c in self.chains())
+        nchain = len(self._chains)
         return nchain
 
     def addChain(self, id=None):
