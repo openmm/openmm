@@ -27,44 +27,46 @@ class TestPickle(unittest.TestCase):
         self.pdb2 = PDBFile('systems/alanine-dipeptide-implicit.pdb')
         self.forcefield2 = ForceField('amber99sb.xml', 'amber99_obc.xml')
 
-    def test_force_deepcopy(self):
-        """Test that deep copying of forces works correctly."""
-        force = NonbondedForce()
-        force_copy = copy.deepcopy(force)
+    def check_copy(self, object, object_copy):
+        """Check that an object's copy is an accurate replica."""
         # Check class name is same.
-        self.assertEqual(force.__class__.__name__, force_copy.__class__.__name__)
-        # Check Force object contents are the same.
-        self.assertEqual(XmlSerializer.serialize(force), XmlSerializer.serialize(force_copy))
+        self.assertEqual(object.__class__.__name__, object_copy.__class__.__name__)
+        # Check serialized contents are the same.
+        self.assertEqual(XmlSerializer.serialize(object), XmlSerializer.serialize(object_copy))
 
     def test_deepcopy(self):
         """Test that serialization/deserialization works (via deepcopy)."""
 
+        # Create system, integrator, and state.
         system = self.forcefield1.createSystem(self.pdb1.topology)
         integrator = VerletIntegrator(2*femtosecond)
         context = Context(system, integrator)
         context.setPositions(self.pdb1.positions)
         state = context.getState(getPositions=True, getForces=True, getEnergy=True)
 
-        system2 = copy.deepcopy(system)
-        integrator2 = copy.deepcopy(integrator)
-        state2 = copy.deepcopy(state)
+        #
+        # Test deepcopy
+        #
 
-        str_state = pickle.dumps(state)
-        str_integrator = pickle.dumps(integrator)
-
-        state3 = pickle.loads(str_state)
-        context.setState(state3)
-
-        del context, integrator
-
-        # Check deep copy of each force.
-        forces = [ system.getForce(index) for index in range(system.getNumForces()) ]
-        for force in forces:
+        self.check_copy(system, copy.deepcopy(system))
+        self.check_copy(integrator, copy.deepcopy(integrator))
+        self.check_copy(state, copy.deepcopy(state))
+        for force_index in range(system.getNumForces()):
+            force = system.getForce(force_index)
             force_copy = copy.deepcopy(force)
-            # Check class name is same.
-            self.assertEqual(force.__class__.__name__, force_copy.__class__.__name__)
-            # Check Force object contents are the same.
-            self.assertEqual(XmlSerializer.serialize(force), XmlSerializer.serialize(force_copy))
+            self.check_copy(force, force_copy)
+
+        #
+        # Test pickle
+        #
+
+        self.check_copy(system, pickle.loads(pickle.dumps(system)))
+        self.check_copy(integrator, pickle.loads(pickle.dumps(integrator)))
+        self.check_copy(state, pickle.loads(pickle.dumps(state)))
+        for force_index in range(system.getNumForces()):
+            force = system.getForce(force_index)
+            force_copy = pickle.loads(pickle.dumps(force))
+            self.check_copy(force, force_copy)
 
 if __name__ == '__main__':
     unittest.main()
