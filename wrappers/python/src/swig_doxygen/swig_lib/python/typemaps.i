@@ -1,10 +1,44 @@
+%fragment("Vec3_to_PyVec3", "header") {
+/**
+ * Convert an OpenMM::Vec3 into a Python simtk.openmm.Vec3 object
+ *
+ * Returns a new reference.
+ */
+PyObject* Vec3_to_PyVec3(const OpenMM::Vec3& v) {
+    static PyObject *__s_mm = NULL;
+    static PyObject *__s_Vec3 = NULL;
+    if (__s_mm == NULL) {
+        __s_mm = PyImport_AddModule("simtk.openmm");
+        __s_Vec3 = PyObject_GetAttrString(__s_mm, "Vec3");
+    }
+    PyObject* tuple = Py_BuildValue("(d,d,d)", v[0], v[1], v[2]);
+    PyObject* PyVec3 = PyObject_CallObject(__s_Vec3, tuple);
+    Py_DECREF(tuple);
+    return PyVec3;
+}
+}
+
 %fragment("Py_StripOpenMMUnits", "header") {
 
-static PyObject *__s_Quantity = NULL;
-static PyObject *__s_md_unit_system_tuple = NULL;
-static PyObject *__s_bar_tuple = NULL;
-
+/**
+ * Strip any OpenMM units of an input PyObject.
+ *
+ * This is equivalent to the following Python code
+ *
+ * >>> from simtk import unit
+ * >>> if isinstance(input, unit.Quantity)
+ * ...     if input.is_compatible(unit.bar)
+ * ...         return input.value_in_unit(unit.bar)
+ * ...     return input.value_in_unit_system(unit.md_input_system)
+ * ... return input
+ *
+ * Returns a new reference.
+ */
 PyObject* Py_StripOpenMMUnits(PyObject *input) {
+    static PyObject *__s_Quantity = NULL;
+    static PyObject *__s_md_unit_system_tuple = NULL;
+    static PyObject *__s_bar_tuple = NULL;
+
     if (__s_Quantity == NULL) {
         PyObject* module = NULL;
         module = PyImport_ImportModule("simtk.unit");
@@ -412,22 +446,14 @@ int Py_SequenceToVecVecVecDouble(PyObject* obj, std::vector<std::vector<std::vec
 }
 
 
-%typemap(argout) std::vector<Vec3>& {
-    int i, n;
-    PyObject *pyList;
-
-    n=(*$1).size();
-    pyList=PyList_New(n);
-    PyObject* mm = PyImport_AddModule("simtk.openmm");   // borrowed ref.
-    PyObject* vec3 = PyObject_GetAttrString(mm, "Vec3");
-    for (i=0; i<n; i++) {
+%typemap(argout, fragment="Vec3_to_PyVec3") std::vector<Vec3>& {
+    int n = (*$1).size();
+    PyObject * pyList = PyList_New(n);
+    for (int i=0; i<n; i++) {
         OpenMM::Vec3& v = (*$1).at(i);
-        PyObject* args = Py_BuildValue("(d,d,d)", v[0], v[1], v[2]);
-        PyObject* pyVec = PyObject_CallObject(vec3, args);
-        Py_DECREF(args);
+        PyObject* pyVec = Vec3_to_PyVec3(v);
         PyList_SET_ITEM(pyList, i, pyVec);
     }
-    Py_DECREF(vec3);
     $result = pyList;
 }
 
@@ -437,42 +463,20 @@ int Py_SequenceToVecVecVecDouble(PyObject* obj, std::vector<std::vector<std::vec
 }
 
 
-
-
-%typemap(out) Vec3 {
-    PyObject* mm = PyImport_AddModule("simtk.openmm");   // borrowed ref
-    PyObject* vec3 = PyObject_GetAttrString(mm, "Vec3");
-    PyObject* args = Py_BuildValue("(d,d,d)", ($1)[0], ($1)[1], ($1)[2]);
-    $result = PyObject_CallObject(vec3, args);
-    Py_DECREF(vec3);
-    Py_DECREF(args);
+%typemap(out, fragment="Vec3_to_PyVec3") Vec3 {
+    $result = Vec3_to_PyVec3(*$1);
 }
 
 
-%typemap(out) const Vec3& {
-    PyObject* mm = PyImport_AddModule("simtk.openmm");   // borrowed ref
-    PyObject* vec3 = PyObject_GetAttrString(mm, "Vec3");
-    PyObject* args = Py_BuildValue("(d,d,d)", (*$1)[0], (*$1)[1], (*$1)[2]);
-    $result = PyObject_CallObject(vec3, args);
-    Py_DECREF(vec3);
-    Py_DECREF(args);
+%typemap(out, fragment="Vec3_to_PyVec3") const Vec3& {
+    $result = Vec3_to_PyVec3(*$1);
 }
 
 /* Convert C++ (Vec3&, Vec3&, Vec3&) object to python tuple or tuples */
-%typemap(argout) (Vec3& a, Vec3& b, Vec3& c) {
-    // %typemap(argout) (Vec3& a, Vec3& b, Vec3& c)
-    PyObject* mm = PyImport_AddModule("simtk.openmm");   // borrowed ref
-    PyObject* vec3 = PyObject_GetAttrString(mm, "Vec3");
-    PyObject* args1 = Py_BuildValue("(d,d,d)", (*$1)[0], (*$1)[1], (*$1)[2]);
-    PyObject* args2 = Py_BuildValue("(d,d,d)", (*$2)[0], (*$2)[1], (*$2)[2]);
-    PyObject* args3 = Py_BuildValue("(d,d,d)", (*$3)[0], (*$3)[1], (*$3)[2]);
-    PyObject* pyVec1 = PyObject_CallObject(vec3, args1);
-    PyObject* pyVec2 = PyObject_CallObject(vec3, args2);
-    PyObject* pyVec3 = PyObject_CallObject(vec3, args3);
-    Py_DECREF(args1);
-    Py_DECREF(args2);
-    Py_DECREF(args3);
-    Py_DECREF(vec3);
+%typemap(argout, fragment="Vec3_to_PyVec3") (Vec3& a, Vec3& b, Vec3& c) {
+    PyObject* pyVec1 = Vec3_to_PyVec3(*$1);
+    PyObject* pyVec2 = Vec3_to_PyVec3(*$2);
+    PyObject* pyVec3 = Vec3_to_PyVec3(*$3);
     PyObject *o, *o2, *o3;
     o = Py_BuildValue("[N, N, N]", pyVec1, pyVec2, pyVec3);
     if ((!$result) || ($result == Py_None)) {
