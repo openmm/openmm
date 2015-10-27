@@ -30,6 +30,7 @@
 #include <map>
 #include <queue>
 #include <string>
+#include <utility>
 #define __CL_ENABLE_EXCEPTIONS
 #ifdef _MSC_VER
     // Prevent Windows from defining macros that interfere with other code.
@@ -538,6 +539,11 @@ public:
      */
     void invalidateMolecules();
 private:
+    /**
+     * Compute a sorted list of device indices in decreasing order of desirability
+     */
+    std::vector<int> getDevicePrecedence();
+
     struct Molecule;
     struct MoleculeGroup;
     class VirtualSiteInfo;
