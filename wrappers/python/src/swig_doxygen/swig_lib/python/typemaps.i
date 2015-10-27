@@ -418,7 +418,7 @@ int Py_SequenceToVecVecVecDouble(PyObject* obj, std::vector<std::vector<std::vec
 
     n=(*$1).size();
     pyList=PyList_New(n);
-    PyObject* mm = PyImport_AddModule("simtk.openmm");
+    PyObject* mm = PyImport_AddModule("simtk.openmm");   // borrowed ref.
     PyObject* vec3 = PyObject_GetAttrString(mm, "Vec3");
     for (i=0; i<n; i++) {
         OpenMM::Vec3& v = (*$1).at(i);
@@ -427,6 +427,7 @@ int Py_SequenceToVecVecVecDouble(PyObject* obj, std::vector<std::vector<std::vec
         Py_DECREF(args);
         PyList_SET_ITEM(pyList, i, pyVec);
     }
+    Py_DECREF(vec3);
     $result = pyList;
 }
 
@@ -439,26 +440,28 @@ int Py_SequenceToVecVecVecDouble(PyObject* obj, std::vector<std::vector<std::vec
 
 
 %typemap(out) Vec3 {
-    PyObject* mm = PyImport_AddModule("simtk.openmm");
+    PyObject* mm = PyImport_AddModule("simtk.openmm");   // borrowed ref
     PyObject* vec3 = PyObject_GetAttrString(mm, "Vec3");
     PyObject* args = Py_BuildValue("(d,d,d)", ($1)[0], ($1)[1], ($1)[2]);
     $result = PyObject_CallObject(vec3, args);
+    Py_DECREF(vec3);
     Py_DECREF(args);
 }
 
 
 %typemap(out) const Vec3& {
-    PyObject* mm = PyImport_AddModule("simtk.openmm");
+    PyObject* mm = PyImport_AddModule("simtk.openmm");   // borrowed ref
     PyObject* vec3 = PyObject_GetAttrString(mm, "Vec3");
     PyObject* args = Py_BuildValue("(d,d,d)", (*$1)[0], (*$1)[1], (*$1)[2]);
     $result = PyObject_CallObject(vec3, args);
+    Py_DECREF(vec3);
     Py_DECREF(args);
 }
 
 /* Convert C++ (Vec3&, Vec3&, Vec3&) object to python tuple or tuples */
 %typemap(argout) (Vec3& a, Vec3& b, Vec3& c) {
     // %typemap(argout) (Vec3& a, Vec3& b, Vec3& c)
-    PyObject* mm = PyImport_AddModule("simtk.openmm");
+    PyObject* mm = PyImport_AddModule("simtk.openmm");   // borrowed ref
     PyObject* vec3 = PyObject_GetAttrString(mm, "Vec3");
     PyObject* args1 = Py_BuildValue("(d,d,d)", (*$1)[0], (*$1)[1], (*$1)[2]);
     PyObject* args2 = Py_BuildValue("(d,d,d)", (*$2)[0], (*$2)[1], (*$2)[2]);
@@ -469,7 +472,6 @@ int Py_SequenceToVecVecVecDouble(PyObject* obj, std::vector<std::vector<std::vec
     Py_DECREF(args1);
     Py_DECREF(args2);
     Py_DECREF(args3);
-    Py_DECREF(mm);
     Py_DECREF(vec3);
     PyObject *o, *o2, *o3;
     o = Py_BuildValue("[N, N, N]", pyVec1, pyVec2, pyVec3);
