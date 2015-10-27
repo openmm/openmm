@@ -127,7 +127,6 @@ void testLargeSystem() {
         forceNorm += f.dot(f);
     }
     forceNorm = sqrt(forceNorm/(5*numMolecules));
-    cout<<forceNorm<<" "<<2*tolerance<<endl;
     ASSERT(forceNorm < 2*tolerance);
 }
 
