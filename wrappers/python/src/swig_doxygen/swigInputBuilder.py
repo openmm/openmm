@@ -243,22 +243,37 @@ class SwigInputBuilder:
                         forceSubclassList.append(shortClassName)
                     elif baseName == 'OpenMM::Integrator':
                         integratorSubclassList.append(shortClassName)
+
         self.fOut.write("%factory(OpenMM::Force& OpenMM::System::getForce")
         for name in sorted(forceSubclassList):
             self.fOut.write(",\n         OpenMM::%s" % name)
         self.fOut.write(");\n\n")
+
+        self.fOut.write("%factory(OpenMM::Force* OpenMM::Force::__copy__")
+        for name in sorted(forceSubclassList):
+            self.fOut.write(",\n         OpenMM::%s" % name)
+        self.fOut.write(");\n\n")
+
         self.fOut.write("%factory(OpenMM::Force* OpenMM_XmlSerializer__deserializeForce")
         for name in sorted(forceSubclassList):
             self.fOut.write(",\n         OpenMM::%s" % name)
         self.fOut.write(");\n\n")
+
+        self.fOut.write("%factory(OpenMM::Integrator* OpenMM::Integrator::__copy__")
+        for name in sorted(integratorSubclassList):
+            self.fOut.write(",\n         OpenMM::%s" % name)
+        self.fOut.write(");\n\n")
+
         self.fOut.write("%factory(OpenMM::Integrator* OpenMM_XmlSerializer__deserializeIntegrator")
         for name in sorted(integratorSubclassList):
             self.fOut.write(",\n         OpenMM::%s" % name)
         self.fOut.write(");\n\n")
+
         self.fOut.write("%factory(OpenMM::Integrator& OpenMM::Context::getIntegrator")
         for name in sorted(integratorSubclassList):
             self.fOut.write(",\n         OpenMM::%s" % name)
         self.fOut.write(");\n\n")
+
         self.fOut.write("%factory(OpenMM::VirtualSite& OpenMM::System::getVirtualSite, OpenMM::TwoParticleAverageSite, OpenMM::ThreeParticleAverageSite, OpenMM::OutOfPlaneSite);\n\n")
         self.fOut.write("\n")
 
