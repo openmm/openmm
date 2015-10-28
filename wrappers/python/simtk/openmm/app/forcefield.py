@@ -1216,7 +1216,6 @@ class NonbondedGenerator:
         self.ff = forcefield
         self.coulomb14scale = coulomb14scale
         self.lj14scale = lj14scale
-        self.typeMap = {}
         self.params = ForceField._AtomTypeParameters(forcefield, 'NonbondedForce', 'Atom', ('charge', 'sigma', 'epsilon'))
 
     def registerAtom(self, parameters):
@@ -1295,7 +1294,6 @@ class GBSAOBCGenerator:
 
     def __init__(self, forcefield):
         self.ff = forcefield
-        self.typeMap = {}
         self.params = ForceField._AtomTypeParameters(forcefield, 'GBSAOBCForce', 'Atom', ('charge', 'radius', 'scale'))
 
     def registerAtom(self, parameters):
@@ -1639,7 +1637,6 @@ class CustomNonbondedGenerator:
         self.ff = forcefield
         self.energy = energy
         self.bondCutoff = bondCutoff
-        self.typeMap = {}
         self.globalParams = {}
         self.perParticleParams = []
         self.functions = []
@@ -1726,7 +1723,6 @@ class CustomGBGenerator:
 
     def __init__(self, forcefield):
         self.ff = forcefield
-        self.typeMap = {}
         self.globalParams = {}
         self.perParticleParams = []
         self.computedValues = []
@@ -1812,7 +1808,6 @@ class CustomManyParticleGenerator:
         self.energy = energy
         self.permutationMode = permutationMode
         self.bondCutoff = bondCutoff
-        self.typeMap = {}
         self.globalParams = {}
         self.perParticleParams = []
         self.functions = []
@@ -1830,12 +1825,8 @@ class CustomManyParticleGenerator:
             generator.perParticleParams.append(param.attrib['name'])
         for param in element.findall('TypeFilter'):
             generator.typeFilters.append((int(param.attrib['index']), [int(x) for x in param.attrib['types'].split(',')]))
-        for atom in element.findall('Atom'):
-            types = ff._findAtomTypes(atom.attrib, 1)
-            if None not in types:
-                values = [float(atom.attrib[param]) for param in generator.perParticleParams]
-                for t in types[0]:
-                    generator.typeMap[t] = (values, int(atom.attrib['filterType']))
+        generator.params = ForceField._AtomTypeParameters(ff, 'CustomManyParticleForce', 'Atom', generator.perParticleParams)
+        generator.params.parseDefinitions(element)
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         methodMap = {NoCutoff:mm.CustomManyParticleForce.NoCutoff,
@@ -1865,12 +1856,9 @@ class CustomManyParticleGenerator:
             elif type == 'Discrete3D':
                 force.addTabulatedFunction(name, mm.Discrete2DFunction(params['xsize'], params['ysize'], params['zsize'], values))
         for atom in data.atoms:
-            t = data.atomType[atom]
-            if t in self.typeMap:
-                values = self.typeMap[t]
-                force.addParticle(values[0], values[1])
-            else:
-                raise ValueError('No CustomManyParticle parameters defined for atom type '+t)
+            values = self.params.getAtomParameters(atom, data)
+            type = int(self.params.getExtraParameters(atom, data)['filterType'])
+            force.addParticle(values, type)
         force.setNonbondedMethod(methodMap[nonbondedMethod])
         force.setCutoffDistance(nonbondedCutoff)
         sys.addForce(force)
