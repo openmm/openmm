@@ -1,53 +1,83 @@
 language: python
-python:
-  - "2.7_with_system_site_packages"
-  - "3.4"
 
-sudo: false
 addons:
   apt:
-    sources:
-      - ubuntu-toolchain-r-test
     packages:
-      - libpcre3
-      - libpcre3-dev
       - gromacs
       - doxygen
       - python-numpy
       - python-scipy
 
+matrix:
+  include:
+    - sudo: required
+      env: OPENCL=true
+           CC=gcc
+           CXX=g++
+           CMAKE_FLAGS="
+           -OPENMM_BUILD_OPENCL_LIB=ON
+           -DOPENMM_BUILD_OPENCL_TESTS=ON
+           -DOPENMM_BUILD_STATIC_LIB=OFF
+           -DOPENMM_BUILD_CPU_LIB=OFF
+           -DOPENMM_BUILD_REFERENCE_TESTS=OFF
+           -DOPENMM_BUILD_SERIALIZATION_TESTS=OFF
+           -DOPENMM_BUILD_PME_PLUGIN=OFF
+           -DOPENMM_BUILD_AMOEBA_PLUGIN=OFF
+           -DOPENMM_BUILD_PYTHON_WRAPPERS=OFF
+           -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF
+           -DOPENMM_BUILD_EXAMPLES=OFF"
+      addons: {apt: {packages: []}}
 
-env:
-  matrix:
-    - OPENMM_BUILD_STATIC_LIB="OFF"
-    - OPENMM_BUILD_STATIC_LIB="ON"
+    - sudo: false
+      python: 2.7_with_system_site_packages
+      env: OPENCL=false
+           CC=clang
+           CXX=clang++
+           CMAKE_FLAGS="-DOPENMM_BUILD_STATIC_LIB=ON"
+
+    - sudo: false
+      python: 2.7_with_system_site_packages
+      env: OPENCL=false
+           CC=clang
+           CXX=clang++
+           CMAKE_FLAGS="-DOPENMM_BUILD_STATIC_LIB=OFF"
+
+    - sudo: false
+      python: 3.4
+      env: OPENCL=false
+           CC=gcc
+           CXX=g++
+           CMAKE_FLAGS="-DOPENMM_BUILD_STATIC_LIB=OFF"
 
 before_install:
-  - export CC=clang
-  - export CXX=clang++
-
-  - wget https://anaconda.org/anaconda/swig/3.0.2/download/linux-64/swig-3.0.2-0.tar.bz2
-  - mkdir $HOME/swig
-  - tar -xjvf swig-3.0.2-0.tar.bz2 -C $HOME/swig
-  - export PATH=$HOME/swig/bin:$PATH
-  - export SWIG_LIB=$HOME/swig/share/swig/3.0.2
+  - if [[ "$OPENCL" == "true" ]]; then
+      sudo apt-get -yq update &>> ~/apt-get-update.log;
+      sudo apt-get install -qq fglrx=2:8.960-0ubuntu1 opencl-headers;
+    fi
+  - if [[ "$OPENCL" == "false" ]]; then
+      wget https://anaconda.org/anaconda/swig/3.0.2/download/linux-64/swig-3.0.2-0.tar.bz2;
+      mkdir $HOME/swig;
+      tar -xjvf swig-3.0.2-0.tar.bz2 -C $HOME/swig;
+      export PATH=$HOME/swig/bin:$PATH;
+      export SWIG_LIB=$HOME/swig/share/swig/3.0.2;
+    fi
 
 script:
-  - cmake -DCMAKE_INSTALL_PREFIX=$HOME/OpenMM -DOPENMM_BUILD_STATIC_LIB=$OPENMM_BUILD_STATIC_LIB .
-  - make -j2
+  - CTEST_STOP_TIME=$(python -c "from datetime import datetime, timedelta; import sys; sys.stdout.write((datetime.now() + timedelta(minutes=25)).strftime('%H:%M:%S'))")
+  - cmake . $CMAKE_FLAGS -DCMAKE_INSTALL_PREFIX=$HOME/OpenMM
+
   - make -j2 install
-  - make PythonInstall
-  - # Run the testInstallation script
-  - python -m simtk.testInstallation
+  - if [[ "$OPENCL" == "true" ]]; then ./TestOpenCLDeviceQuery; fi
+  - if [[ "$OPENCL" == "false" ]]; then
+      make PythonInstall;
+      python -m simtk.testInstallation;
+      (cd python/tests && py.test -v *);
+    fi
+
   - # run all of the tests, making sure failures at this stage don't cause travis failures
-  - ctest -j2 || true
+  - ctest -j2 --output-on-failure --schedule-random --stop-time $CTEST_STOP_TIME || true
   - # get a list of all of the failed tests into this stupid ctest format
   - python -c "import os; fn = os.path.join('Testing', 'Temporary', 'LastTestsFailed.log'); os.path.exists(fn) or exit(0); failed = [line.split(':')[0] for line in open(fn)]; print(','.join(x+','+x for x in failed))" > FailedTests.log
-  - # rerun all of the failed tests
-  - if [ -s Testing/Temporary/LastTestsFailed.log ]; then ctest -I FailedTests.log; fi;
-  - # run the python tests too
-  - cd python/tests  
-  - # nosetests -vv --processes=-1 --process-timeout=200
-  - # nosetests -vv
-  - py.test -v *
-  - cd -
+  - if [ -s Testing/Temporary/LastTestsFailed.log ]; then
+      ctest -I FailedTests.log;
+    fi

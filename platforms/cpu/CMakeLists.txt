@@ -12,9 +12,11 @@
 #   libOpenMMCPU_static.a
 #----------------------------------------------------
 
-IF(BUILD_TESTING)
+SET(OPENMM_BUILD_CPU_TESTS TRUE CACHE BOOL "Whether to build CPU platform test cases")
+MARK_AS_ADVANCED(OPENMM_BUILD_CPU_TESTS)
+IF(BUILD_TESTING AND OPENMM_BUILD_CPU_TESTS)
     SUBDIRS(tests)
-ENDIF(BUILD_TESTING)
+ENDIF(BUILD_TESTING AND OPENMM_BUILD_CPU_TESTS)
 
 # The source is organized into subdirectories, but we handle them all from
 # this CMakeLists file rather than letting CMake visit them as SUBDIRS.
