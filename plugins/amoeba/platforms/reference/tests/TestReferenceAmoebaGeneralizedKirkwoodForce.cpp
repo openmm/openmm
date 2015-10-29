@@ -6983,7 +6983,7 @@ static void compareForcesEnergy(std::string& testName, double expectedEnergy, do
                                 const std::vector<Vec3>& forces, double tolerance) {
 
     for (unsigned int ii = 0; ii < forces.size(); ii++) {
-        ASSERT_EQUAL_VEC_MOD(expectedForces[ii], forces[ii], tolerance, testName);
+        ASSERT_EQUAL_VEC(expectedForces[ii], forces[ii], tolerance);
     }
     ASSERT_EQUAL_TOL_MOD(expectedEnergy, energy, tolerance, testName);
 }

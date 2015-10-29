@@ -675,11 +675,17 @@ Platforms
 
 When creating a :class:`Simulation`, you can optionally tell it what :class:`Platform` to use.
 OpenMM includes four platforms: :class:`Reference`, :class:`CPU`, :class:`CUDA`, and :class:`OpenCL`.  For a
-description of the differences between them, see Section :ref:`platforms`.  If you do not
-specify a :class:`Platform`, it will select one automatically.  Usually its choice will
-be reasonable, but you may want to change it.
+description of the differences between them, see Section :ref:`platforms`.  There are three ways in which
+the :class:`Platform` can be chosen:
 
-The following lines specify to use the :class:`CUDA` platform:
+1. By default, OpenMM will try to select the fastest available :class:`Platform`.  Usually its choice will
+be reasonable, but sometimes you may want to change it.
+
+2. Alternatively, you can set the :envvar:`OPENMM_DEFAULT_PLATFORM` environment variable to the name
+of the :class:`Platform` to use.  This overrides the default logic.
+
+3. Finally, you can explicitly specify a :class:`Platform` object in your script when you create the
+:class:`Simulation`.  The following lines specify to use the :class:`CUDA` platform:
 ::
 
     platform = Platform.getPlatformByName('CUDA')
@@ -1837,7 +1843,7 @@ The :code:`<ForceField>` tag contains the following children:
 * Zero or more tags defining specific forces
 
 
-The order of these tags does not matter.  They are described in details below.
+The order of these tags does not matter.  They are described in detail below.
 
 <AtomTypes>
 ===========
@@ -1921,9 +1927,9 @@ as in the following example:
 
 Each :code:`<VirtualSite>` tag indicates an atom in the residue that should
 be represented with a virtual site.  The :code:`type` attribute may equal
-:code:`"average2"`\ , :code:`"average3"`\ , or :code:`"outOfPlane"`\ , which
-correspond to the TwoParticleAverageSite, ThreeParticleAverageSite, and
-OutOfPlaneSite classes respectively.  The :code:`index` attribute gives the
+:code:`"average2"`\ , :code:`"average3"`\ , :code:`"outOfPlane"`\ , or
+:code:`"localCoords"`\ , which correspond to the TwoParticleAverageSite, ThreeParticleAverageSite,
+OutOfPlaneSite, and LocalCoordinatesSite classes respectively.  The :code:`index` attribute gives the
 index (starting from 0) of the atom to represent with a virtual site.  The atoms
 it is calculated based on are specified by :code:`atom1`\ , :code:`atom2`\ ,
 and (for virtual site classes that involve three atoms) :code:`atom3`\ .  The
@@ -1932,7 +1938,10 @@ parameters for calculating the site position.  For a TwoParticleAverageSite,
 they are :code:`weight1` and :code:`weight2`\ .  For a
 ThreeParticleAverageSite, they are :code:`weight1`\ , :code:`weight2`\ , and
 \ :code:`weight3`\ . For an OutOfPlaneSite, they are :code:`weight12`\ ,
-:code:`weight13`\ , and :code:`weightCross`\ .
+:code:`weight13`\ , and :code:`weightCross`\ . For a LocalCoordinatesSite, they
+are :code:`wo1`\ , :code:`wo2`\ , :code:`wo3`\ , :code:`wx1`\ , :code:`wx2`\ ,
+:code:`wx3`\ , :code:`wy1`\ , :code:`wy2`\ , :code:`wy3`\ , :code:`p1`\ ,
+:code:`p2`\ , and :code:`p3`\ .
 
 
 <HarmonicBondForce>
@@ -2490,8 +2499,9 @@ The following operators are supported: + (add), - (subtract), * (multiply), /
 
 The following standard functions are supported: sqrt, exp, log, sin, cos, sec,
 csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, erf, erfc, min, max, abs,
-step. step(x) = 0 if x < 0, 1 otherwise.  Some custom forces allow additional
-functions to be defined from tabulated values.
+floor, ceil, step, delta, select. step(x) = 0 if x < 0, 1 otherwise.
+delta(x) = 1 if x is 0, 0 otherwise.  select(x,y,z) = z if x = 0, y otherwise.
+Some custom forces allow additional functions to be defined from tabulated values.
 
 Numbers may be given in either decimal or exponential form.  All of the
 following are valid numbers: 5, -3.1, 1e6, and 3.12e-2.
@@ -2515,8 +2525,8 @@ values.  All uses of a value must appear *before* that value’s definition.
 
 .. _tabulated-functions:
 
-TabulatedFunctions
-==================
+Tabulated Functions
+===================
 
 Some forces, such as CustomNonbondedForce and CustomGBForce, allow you to define
 tabulated functions.  To define a function, include a :code:`<Function>` tag inside the
@@ -2561,6 +2571,47 @@ a continuous function.  The "size" attributes define the size of the table along
 each axis.  The tabulated values are listed inside the body of the tag, with
 successive values separated by white space.  See the API documentation for more
 details.
+
+
+Residue Template Parameters
+===========================
+
+In forces that use an :code:`<Atom>` tag to define parameters for atom types or
+classes, there is an alternate mechanism you can also use: defining those
+parameter values in the residue template.  This is useful for situations that
+come up in certain force fields.  For example, :code:`NonbondedForce` and
+:code:`GBSAOBCForce` each have a :code:`charge` attribute.  If you only have to
+define the charge of each atom type once, that is more convenient and avoids
+potential bugs.  Also, many force fields have a different charge for each atom
+type, but Lennard-Jones parameters that are the same for all types in a class.
+It would be preferable not to have to repeat those parameter values many times
+over.
+
+When writing a residue template, you can add arbitrary additional attributes
+to each :code:`<Atom>` tag.  For example, you might include a :code:`charge`
+attribute as follows:
+
+.. code-block:: xml
+
+   <Atom name="CA" type="53" charge="0.0381"/>
+
+When writing the tag for a force, you can then include a
+:code:`<UseAttributeFromResidue>` tag inside it.  This indicates that a
+specified attribute should be taken from the residue template.  Finally, you
+simply omit that attribute in the force's own :code:`<Atom>` tags.  For example:
+
+.. code-block:: xml
+
+    <NonbondedForce coulomb14scale="0.833333" lj14scale="0.5">
+     <UseAttributeFromResidue name="charge"/>
+     <Atom class="CX" sigma="0.339966950842" epsilon="0.4577296"/>
+     ...
+    </NonbondedForce>
+
+Notice that the :code:`charge` attribute is missing, and that the parameters
+are specified by class, not by type.  This means that sigma and epsilon only
+need to be specified once for each class.  The atom charges, which are different
+for each type, are taken from the residue template instead.
 
 
 Using Multiple Files

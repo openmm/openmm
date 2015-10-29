@@ -363,6 +363,15 @@ public:
      * @param force      the AmoebaMultipoleForce to copy the parameters from
      */
     void copyParametersToContext(ContextImpl& context, const AmoebaMultipoleForce& force);
+    /**
+     * Get the parameters being used for PME.
+     * 
+     * @param alpha   the separation parameter
+     * @param nx      the number of grid points along the X axis
+     * @param ny      the number of grid points along the Y axis
+     * @param nz      the number of grid points along the Z axis
+     */
+    void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
 private:
     class ForceInfo;
     class SortTrait : public CudaSort::SortTrait {
@@ -381,8 +390,9 @@ private:
     template <class T, class T4, class M4> void computeSystemMultipoleMoments(ContextImpl& context, std::vector<double>& outputMultipoleMoments);
     int numMultipoles, maxInducedIterations;
     int fixedFieldThreads, inducedFieldThreads, electrostaticsThreads;
-    double inducedEpsilon;
-    bool hasQuadrupoles, hasInitializedScaleFactors, hasInitializedFFT, multipolesAreValid;
+    int gridSizeX, gridSizeY, gridSizeZ;
+    double alpha, inducedEpsilon;
+    bool usePME, hasQuadrupoles, hasInitializedScaleFactors, hasInitializedFFT, multipolesAreValid;
     CudaContext& cu;
     const System& system;
     std::vector<int3> covalentFlagValues;
@@ -392,6 +402,8 @@ private:
     CudaArray* molecularQuadrupoles;
     CudaArray* labFrameDipoles;
     CudaArray* labFrameQuadrupoles;
+    CudaArray* sphericalDipoles;
+    CudaArray* sphericalQuadrupoles;
     CudaArray* fracDipoles;
     CudaArray* fracQuadrupoles;
     CudaArray* field;

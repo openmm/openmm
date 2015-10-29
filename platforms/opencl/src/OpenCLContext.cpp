@@ -89,23 +89,27 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
         contextIndex = platformData.contexts.size();
         std::vector<cl::Platform> platforms;
         cl::Platform::get(&platforms);
+        if (platformIndex < -1 || platformIndex >= (int) platforms.size())
+            throw OpenMMException("Illegal value for OpenCLPlatformIndex: "+intToString(platformIndex));
         const int minThreadBlockSize = 32;
 
         int bestSpeed = -1;
         int bestDevice = -1;
         int bestPlatform = -1;
         for (int j = 0; j < platforms.size(); j++) {
-            // if they supplied a valid platformIndex, we only look through that platform
-            if (j != platformIndex && platformIndex >= 0 && platformIndex < (int) platforms.size())
+            // If they supplied a valid platformIndex, we only look through that platform
+            if (j != platformIndex && platformIndex != -1)
                 continue;
 
             string platformVendor = platforms[j].getInfo<CL_PLATFORM_VENDOR>();
             vector<cl::Device> devices;
             platforms[j].getDevices(CL_DEVICE_TYPE_ALL, &devices);
+            if (deviceIndex < -1 || deviceIndex >= (int) devices.size())
+                throw OpenMMException("Illegal value for OpenCLDeviceIndex: "+intToString(deviceIndex));
 
             for (int i = 0; i < (int) devices.size(); i++) {
-                // if they supplied a valid deviceIndex, we only look through that one
-                if (i != deviceIndex && deviceIndex >= 0 && deviceIndex < (int) devices.size())
+                // If they supplied a valid deviceIndex, we only look through that one
+                if (i != deviceIndex && deviceIndex != -1)
                     continue;
                 if (platformVendor == "Apple" && (devices[i].getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_CPU))
                     continue; // The CPU device on OS X won't work correctly.
@@ -130,7 +134,7 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
                             // This will be less than the wavefront width since it takes several
                             // cycles to execute the full wavefront.
                             // The SIMD instruction width is the VLIW instruction width (or 1 for scalar),
-                            // this is the number of ALUs that can be executing per instruction per thread. 
+                            // this is the number of ALUs that can be executing per instruction per thread.
                             devices[i].getInfo<CL_DEVICE_SIMD_PER_COMPUTE_UNIT_AMD>() *
                             devices[i].getInfo<CL_DEVICE_SIMD_WIDTH_AMD>() *
                             devices[i].getInfo<CL_DEVICE_SIMD_INSTRUCTION_WIDTH_AMD>();
@@ -342,9 +346,9 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
         compilationDefines["EXP"] = "exp";
         compilationDefines["LOG"] = "log";
     }
-    
+
     // Set defines for applying periodic boundary conditions.
-    
+
     Vec3 boxVectors[3];
     system.getDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
     boxIsTriclinic = (boxVectors[0][1] != 0.0 || boxVectors[0][2] != 0.0 ||
@@ -392,11 +396,11 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
     }
 
     // Create the work thread used for parallelization when running on multiple devices.
-    
+
     thread = new WorkThread();
-    
+
     // Create utilities objects.
-    
+
     bonded = new OpenCLBondedUtilities(*this);
     nonbonded = new OpenCLNonbondedUtilities(*this);
     integration = new OpenCLIntegrationUtilities(*this, system);
@@ -456,7 +460,7 @@ void OpenCLContext::initialize() {
     else {
         forceBuffers = OpenCLArray::create<mm_float4>(*this, paddedNumAtoms*numForceBuffers, "forceBuffers");
         force = OpenCLArray::create<mm_float4>(*this, &forceBuffers->getDeviceBuffer(), paddedNumAtoms, "force");
-        energyBuffer = OpenCLArray::create<cl_float>(*this, max(numThreadBlocks*ThreadBlockSize, nonbonded->getNumEnergyBuffers()), "energyBuffer");
+        energyBuffer = OpenCLArray::create<cl_double>(*this, max(numThreadBlocks*ThreadBlockSize, nonbonded->getNumEnergyBuffers()), "energyBuffer");
     }
     if (supports64BitGlobalAtomics) {
         longForceBuffer = OpenCLArray::create<cl_long>(*this, 3*paddedNumAtoms, "longForceBuffer");
@@ -512,7 +516,7 @@ string OpenCLContext::replaceStrings(const string& input, const std::map<std::st
             if (index != result.npos) {
                 if ((index == 0 || symbolChars.find(result[index-1]) == symbolChars.end()) && (index == result.size()-size || symbolChars.find(result[index+size]) == symbolChars.end())) {
                     // We have found a complete symbol, not part of a longer symbol.
-                    
+
                     result.replace(index, size, iter->second);
                     index += iter->second.size();
                 }
@@ -797,7 +801,7 @@ private:
 
 void OpenCLContext::findMoleculeGroups() {
     // The first time this is called, we need to identify all the molecules in the system.
-    
+
     if (moleculeGroups.size() == 0) {
         // Add a ForceInfo that makes sure reordering doesn't break virtual sites.
 
@@ -879,7 +883,7 @@ void OpenCLContext::findMoleculeGroups() {
                     if (!forces[k]->areParticlesIdentical(mol.atoms[i], mol2.atoms[i]))
                         identical = false;
             }
-            
+
             // See if the constraints are identical.
 
             for (int i = 0; i < (int) mol.constraints.size() && identical; i++) {
@@ -960,11 +964,11 @@ void OpenCLContext::invalidateMolecules() {
     }
     if (valid)
         return;
-    
+
     // The list of which molecules are identical is no longer valid.  We need to restore the
     // atoms to their original order, rebuild the list of identical molecules, and sort them
     // again.
-    
+
     vector<mm_int4> newCellOffsets(numAtoms);
     if (useDoublePrecision) {
         vector<mm_double4> oldPosq(paddedNumAtoms);
@@ -1108,6 +1112,8 @@ void OpenCLContext::reorderAtomsImpl() {
             molPos[i].x *= invNumAtoms;
             molPos[i].y *= invNumAtoms;
             molPos[i].z *= invNumAtoms;
+            if (molPos[i].x != molPos[i].x)
+                throw OpenMMException("Particle coordinate is nan");
         }
         if (nonbonded->getUsePeriodic()) {
             // Move each molecule position into the same box.

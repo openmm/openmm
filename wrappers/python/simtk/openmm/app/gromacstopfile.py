@@ -28,14 +28,15 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
+from __future__ import absolute_import
 __author__ = "Peter Eastman"
 __version__ = "1.0"
 
 from simtk.openmm.app import Topology
 from simtk.openmm.app import PDBFile
-import forcefield as ff
-import element as elem
-import amberprmtopfile as prmtop
+from . import forcefield as ff
+from . import element as elem
+from . import amberprmtopfile as prmtop
 import simtk.unit as unit
 import simtk.openmm as mm
 import math
@@ -601,7 +602,7 @@ class GromacsTopFile(object):
         for key in self._dihedralTypes:
             if key[1] == 'X' or key[2] == 'X':
                 wildcardDihedralTypes.append(key)
-                for types in dihedralTypeTable.itervalues():
+                for types in dihedralTypeTable.values():
                     types.append(key)
 
         # Loop over molecules and create the specified number of each type.
@@ -617,7 +618,7 @@ class GromacsTopFile(object):
                 try:
                     bondedTypes = [self._atomTypes[t][1] for t in atomTypes]
                 except KeyError as e:
-                    raise ValueError('Unknown atom type: '+e.message)
+                    raise ValueError('Unknown atom type: ' + e.message)
                 bondedTypes = [b if b is not None else a for a, b in zip(atomTypes, bondedTypes)]
 
                 # Add atoms.

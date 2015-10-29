@@ -28,6 +28,7 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
+from __future__ import print_function, division, absolute_import
 __author__ = "Peter Eastman"
 __version__ = "1.0"
 
@@ -39,12 +40,13 @@ from copy import copy
 from datetime import date
 from simtk.openmm import Vec3, Platform
 from simtk.openmm.app.internal.pdbstructure import PdbStructure
+from simtk.openmm.app.internal.unitcell import computeLengthsAndAngles
 from simtk.openmm.app import Topology
 from simtk.unit import nanometers, angstroms, is_quantity, norm, Quantity, dot
-import element as elem
+from . import element as elem
 try:
     import numpy
-except:
+except ImportError:
     pass
 
 class PDBFile(object):
@@ -252,17 +254,13 @@ class PDBFile(object):
          - topology (Topology) The Topology defining the molecular system being written
          - file (file=stdout) A file to write the file to
         """
-        print >>file, "REMARK   1 CREATED WITH OPENMM %s, %s" % (Platform.getOpenMMVersion(), str(date.today()))
+        print("REMARK   1 CREATED WITH OPENMM %s, %s" % (Platform.getOpenMMVersion(), str(date.today())), file=file)
         vectors = topology.getPeriodicBoxVectors()
         if vectors is not None:
-            (a, b, c) = vectors.value_in_unit(angstroms)
-            a_length = norm(a)
-            b_length = norm(b)
-            c_length = norm(c)
-            alpha = math.acos(dot(b, c)/(b_length*c_length))*180.0/math.pi
-            beta = math.acos(dot(c, a)/(c_length*a_length))*180.0/math.pi
-            gamma = math.acos(dot(a, b)/(a_length*b_length))*180.0/math.pi
-            print >>file, "CRYST1%9.3f%9.3f%9.3f%7.2f%7.2f%7.2f P 1           1 " % (a_length, b_length, c_length, alpha, beta, gamma)
+            a, b, c, alpha, beta, gamma = computeLengthsAndAngles(vectors)
+            RAD_TO_DEG = 180/math.pi
+            print("CRYST1%9.3f%9.3f%9.3f%7.2f%7.2f%7.2f P 1           1 " % (
+                    a*10, b*10, c*10, alpha*RAD_TO_DEG, beta*RAD_TO_DEG, gamma*RAD_TO_DEG), file=file)
 
     @staticmethod
     def writeModel(topology, positions, file=sys.stdout, modelIndex=None, keepIds=False):
@@ -288,7 +286,7 @@ class PDBFile(object):
         atomIndex = 1
         posIndex = 0
         if modelIndex is not None:
-            print >>file, "MODEL     %4d" % modelIndex
+            print("MODEL     %4d" % modelIndex, file=file)
         for (chainIndex, chain) in enumerate(topology.chains()):
             if keepIds:
                 chainName = chain.id
@@ -320,14 +318,14 @@ class PDBFile(object):
                         atomIndex%100000, atomName, resName, chainName, resId, _format_83(coords[0]),
                         _format_83(coords[1]), _format_83(coords[2]), symbol)
                     assert len(line) == 80, 'Fixed width overflow detected'
-                    print >>file, line
+                    print(line, file=file)
                     posIndex += 1
                     atomIndex += 1
                 if resIndex == len(residues)-1:
-                    print >>file, "TER   %5d      %3s %s%4s" % (atomIndex, resName, chainName, resId)
+                    print("TER   %5d      %3s %s%4s" % (atomIndex, resName, chainName, resId), file=file)
                     atomIndex += 1
         if modelIndex is not None:
-            print >>file, "ENDMDL"
+            print("ENDMDL", file=file)
 
     @staticmethod
     def writeFooter(topology, file=sys.stdout):
@@ -381,13 +379,13 @@ class PDBFile(object):
             for index1 in sorted(atomBonds):
                 bonded = atomBonds[index1]
                 while len(bonded) > 4:
-                    print >>file, "CONECT%5d%5d%5d%5d" % (index1, bonded[0], bonded[1], bonded[2])
+                    print("CONECT%5d%5d%5d%5d" % (index1, bonded[0], bonded[1], bonded[2]), file=file)
                     del bonded[:4]
                 line = "CONECT%5d" % index1
                 for index2 in bonded:
                     line = "%s%5d" % (line, index2)
-                print >>file, line
-        print >>file, "END"
+                print(line, file=file)
+        print("END", file=file)
 
 
 def _format_83(f):

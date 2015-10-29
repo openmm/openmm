@@ -122,11 +122,6 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
                            build_info=BUILD_INFO):
     from distutils.core import Extension
     setupKeywords = {}
-    try:
-        from distutils.command.build_py import build_py_2to3 as build_py
-    except ImportError:
-        from distutils.command.build_py import build_py
-    setupKeywords["cmdclass"]          = {'build_py': build_py}
     setupKeywords["name"]              = "OpenMM"
     setupKeywords["version"]           = "%s.%s.%s" % (major_version_num,
                                                        minor_version_num,
@@ -198,6 +193,13 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
         if platform.system() == 'Darwin':
             extra_compile_args += ['-stdlib=libc++', '-mmacosx-version-min=10.7']
             extra_link_args += ['-stdlib=libc++', '-mmacosx-version-min=10.7', '-Wl', '-rpath', openmm_lib_path]
+            # Hard-code CC and CXX to clang, since gcc/g++ will *not* work with
+            # Anaconda, despite the fact that distutils will try to use them.
+            # System Python, homebrew, and MacPorts on Macs will always use
+            # clang, so this hack should always work and fix issues with users
+            # that have GCC installed from MacPorts or homebrew *and* Anaconda
+            os.environ['CC'] = 'clang'
+            os.environ['CXX'] = 'clang++'
 
     library_dirs=[openmm_lib_path]
     include_dirs=openmm_include_path.split(';')

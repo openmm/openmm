@@ -30,6 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "CpuKernels.h"
+#include "ReferenceAngleBondIxn.h"
 #include "ReferenceBondForce.h"
 #include "ReferenceConstraints.h"
 #include "ReferenceKernelFactory.h"
@@ -47,6 +48,7 @@
 #include "RealVec.h"
 #include "lepton/CompiledExpression.h"
 #include "lepton/CustomFunction.h"
+#include "lepton/Operation.h"
 #include "lepton/Parser.h"
 #include "lepton/ParsedExpression.h"
 
@@ -81,6 +83,17 @@ static RealVec* extractBoxVectors(ContextImpl& context) {
 static ReferenceConstraints& extractConstraints(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
     return *(ReferenceConstraints*) data->constraints;
+}
+
+/**
+ * Make sure an expression doesn't use any undefined variables.
+ */
+static void validateVariables(const Lepton::ExpressionTreeNode& node, const set<string>& variables) {
+    const Lepton::Operation& op = node.getOperation();
+    if (op.getId() == Lepton::Operation::VARIABLE && variables.find(op.getName()) == variables.end())
+        throw OpenMMException("Unknown variable in expression: "+op.getName());
+    for (int i = 0; i < (int) node.getChildren().size(); i++)
+        validateVariables(node.getChildren()[i], variables);
 }
 
 /**
@@ -238,6 +251,64 @@ double CpuCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, boo
     data.threads.execute(task);
     data.threads.waitForThreads();
     return referenceKernel.getAs<ReferenceCalcForcesAndEnergyKernel>().finishComputation(context, includeForce, includeEnergy, groups, valid);
+}
+
+CpuCalcHarmonicAngleForceKernel::~CpuCalcHarmonicAngleForceKernel() {
+    if (angleIndexArray != NULL) {
+        for (int i = 0; i < numAngles; i++) {
+            delete[] angleIndexArray[i];
+            delete[] angleParamArray[i];
+        }
+        delete[] angleIndexArray;
+        delete[] angleParamArray;
+    }
+}
+
+void CpuCalcHarmonicAngleForceKernel::initialize(const System& system, const HarmonicAngleForce& force) {
+    numAngles = force.getNumAngles();
+    angleIndexArray = new int*[numAngles];
+    for (int i = 0; i < numAngles; i++)
+        angleIndexArray[i] = new int[3];
+    angleParamArray = new RealOpenMM*[numAngles];
+    for (int i = 0; i < numAngles; i++)
+        angleParamArray[i] = new RealOpenMM[2];
+    for (int i = 0; i < numAngles; ++i) {
+        int particle1, particle2, particle3;
+        double angle, k;
+        force.getAngleParameters(i, particle1, particle2, particle3, angle, k);
+        angleIndexArray[i][0] = particle1;
+        angleIndexArray[i][1] = particle2;
+        angleIndexArray[i][2] = particle3;
+        angleParamArray[i][0] = (RealOpenMM) angle;
+        angleParamArray[i][1] = (RealOpenMM) k;
+    }
+    bondForce.initialize(system.getNumParticles(), numAngles, 3, angleIndexArray, data.threads);
+}
+
+double CpuCalcHarmonicAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    vector<RealVec>& posData = extractPositions(context);
+    vector<RealVec>& forceData = extractForces(context);
+    RealOpenMM energy = 0;
+    ReferenceAngleBondIxn angleBond;
+    bondForce.calculateForce(posData, angleParamArray, forceData, includeEnergy ? &energy : NULL, angleBond);
+    return energy;
+}
+
+void CpuCalcHarmonicAngleForceKernel::copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force) {
+    if (numAngles != force.getNumAngles())
+        throw OpenMMException("updateParametersInContext: The number of angles has changed");
+
+    // Record the values.
+
+    for (int i = 0; i < numAngles; ++i) {
+        int particle1, particle2, particle3;
+        double angle, k;
+        force.getAngleParameters(i, particle1, particle2, particle3, angle, k);
+        if (particle1 != angleIndexArray[i][0] || particle2 != angleIndexArray[i][1] || particle3 != angleIndexArray[i][2])
+            throw OpenMMException("updateParametersInContext: The set of particles in an angle has changed");
+        angleParamArray[i][0] = (RealOpenMM) angle;
+        angleParamArray[i][1] = (RealOpenMM) k;
+    }
 }
 
 CpuCalcPeriodicTorsionForceKernel::~CpuCalcPeriodicTorsionForceKernel() {
@@ -467,6 +538,7 @@ void CpuCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
         bonded14ParamArray[i][1] = static_cast<RealOpenMM>(4.0*depth);
         bonded14ParamArray[i][2] = static_cast<RealOpenMM>(charge);
     }
+    bondForce.initialize(system.getNumParticles(), num14, 2, bonded14IndexArray, data.threads);
     
     // Record other parameters.
     
@@ -527,7 +599,7 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
     if (nonbondedMethod != NoCutoff) {
         // Determine whether we need to recompute the neighbor list.
         
-        double padding = 0.15*nonbondedCutoff;
+        double padding = 0.25*nonbondedCutoff;
         bool needRecompute = false;
         double closeCutoff2 = 0.25*padding*padding;
         double farCutoff2 = 0.5*padding*padding;
@@ -599,9 +671,8 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
     }
     energy += nonbondedEnergy;
     if (includeDirect) {
-        ReferenceBondForce refBondForce;
         ReferenceLJCoulomb14 nonbonded14;
-        refBondForce.calculateForce(num14, bonded14IndexArray, posData, bonded14ParamArray, forceData, includeEnergy ? &energy : NULL, nonbonded14);
+        bondForce.calculateForce(posData, bonded14ParamArray, forceData, includeEnergy ? &energy : NULL, nonbonded14);
         if (data.isPeriodic)
             energy += dispersionCoefficient/(boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2]);
     }
@@ -652,6 +723,19 @@ void CpuCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, 
     NonbondedForce::NonbondedMethod method = force.getNonbondedMethod();
     if (force.getUseDispersionCorrection() && (method == NonbondedForce::CutoffPeriodic || method == NonbondedForce::Ewald || method == NonbondedForce::PME))
         dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(context.getSystem(), force);
+}
+
+void CpuCalcNonbondedForceKernel::getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {
+    if (nonbondedMethod != PME)
+        throw OpenMMException("getPMEParametersInContext: This Context is not using PME");
+    if (useOptimizedPme)
+        optimizedPme.getAs<const CalcPmeReciprocalForceKernel>().getPMEParameters(alpha, nx, ny, nz);
+    else {
+        alpha = ewaldAlpha;
+        nx = gridSize[0];
+        ny = gridSize[1];
+        nz = gridSize[2];
+    }
 }
 
 CpuCalcCustomNonbondedForceKernel::CpuCalcCustomNonbondedForceKernel(string name, const Platform& platform, CpuPlatform::PlatformData& data) :
@@ -724,6 +808,14 @@ void CpuCalcCustomNonbondedForceKernel::initialize(const System& system, const C
         globalParameterNames.push_back(force.getGlobalParameterName(i));
         globalParamValues[force.getGlobalParameterName(i)] = force.getGlobalParameterDefaultValue(i);
     }
+    set<string> variables;
+    variables.insert("r");
+    for (int i = 0; i < numParameters; i++) {
+        variables.insert(parameterNames[i]+"1");
+        variables.insert(parameterNames[i]+"2");
+    }
+    variables.insert(globalParameterNames.begin(), globalParameterNames.end());
+    validateVariables(expression.getRootNode(), variables);
 
     // Delete the custom functions.
 
@@ -937,6 +1029,18 @@ void CpuCalcCustomGBForceKernel::initialize(const System& system, const CustomGB
     vector<vector<Lepton::CompiledExpression> > valueGradientExpressions(force.getNumComputedValues());
     vector<Lepton::CompiledExpression> valueExpressions;
     vector<Lepton::CompiledExpression> energyExpressions;
+    set<string> particleVariables, pairVariables;
+    pairVariables.insert("r");
+    particleVariables.insert("x");
+    particleVariables.insert("y");
+    particleVariables.insert("z");
+    for (int i = 0; i < numPerParticleParameters; i++) {
+        particleVariables.insert(particleParameterNames[i]);
+        pairVariables.insert(particleParameterNames[i]+"1");
+        pairVariables.insert(particleParameterNames[i]+"2");
+    }
+    particleVariables.insert(globalParameterNames.begin(), globalParameterNames.end());
+    pairVariables.insert(globalParameterNames.begin(), globalParameterNames.end());
     for (int i = 0; i < force.getNumComputedValues(); i++) {
         string name, expression;
         CustomGBForce::ComputationType type;
@@ -945,15 +1049,21 @@ void CpuCalcCustomGBForceKernel::initialize(const System& system, const CustomGB
         valueExpressions.push_back(ex.createCompiledExpression());
         valueTypes.push_back(type);
         valueNames.push_back(name);
-        if (i == 0)
+        if (i == 0) {
             valueDerivExpressions[i].push_back(ex.differentiate("r").createCompiledExpression());
+            validateVariables(ex.getRootNode(), pairVariables);
+        }
         else {
             valueGradientExpressions[i].push_back(ex.differentiate("x").createCompiledExpression());
             valueGradientExpressions[i].push_back(ex.differentiate("y").createCompiledExpression());
             valueGradientExpressions[i].push_back(ex.differentiate("z").createCompiledExpression());
             for (int j = 0; j < i; j++)
                 valueDerivExpressions[i].push_back(ex.differentiate(valueNames[j]).createCompiledExpression());
+            validateVariables(ex.getRootNode(), particleVariables);
         }
+        particleVariables.insert(name);
+        pairVariables.insert(name+"1");
+        pairVariables.insert(name+"2");
     }
 
     // Parse the expressions for energy terms.
@@ -975,10 +1085,12 @@ void CpuCalcCustomGBForceKernel::initialize(const System& system, const CustomGB
                 energyGradientExpressions[i].push_back(ex.differentiate("x").createCompiledExpression());
                 energyGradientExpressions[i].push_back(ex.differentiate("y").createCompiledExpression());
                 energyGradientExpressions[i].push_back(ex.differentiate("z").createCompiledExpression());
+                validateVariables(ex.getRootNode(), particleVariables);
             }
             else {
                 energyDerivExpressions[i].push_back(ex.differentiate(valueNames[j]+"1").createCompiledExpression());
                 energyDerivExpressions[i].push_back(ex.differentiate(valueNames[j]+"2").createCompiledExpression());
+                validateVariables(ex.getRootNode(), pairVariables);
             }
         }
     }

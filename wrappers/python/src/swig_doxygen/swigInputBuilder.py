@@ -10,6 +10,7 @@ import getopt
 import re
 import xml.etree.ElementTree as etree
 from distutils.version import LooseVersion
+import copy
 
 try:
     from html.parser import HTMLParser
@@ -19,7 +20,6 @@ except ImportError:
 
 INDENT = "   "
 docTags = {'emphasis':'i', 'bold':'b', 'itemizedlist':'ul', 'listitem':'li', 'preformatted':'pre', 'computeroutput':'tt', 'subscript':'sub'}
-
 
 def striphtmltags(s):
     """Strip a couple html tags used inside docstrings in the C++ source
@@ -157,7 +157,7 @@ class SwigInputBuilder:
                  skipAdditionalMethods=[],
                  SWIG_VERSION='3.0.2'):
         self.nodeByID={}
-        self.SWIG_COMPACT_ARGUMENTS = LooseVersion(SWIG_VERSION) < LooseVersion('3.0.6')
+        self.SWIG_COMPACT_ARGUMENTS = LooseVersion(SWIG_VERSION) < LooseVersion('3.0.5')
 
         self.configModule = __import__(os.path.splitext(configFilename)[0])
 
@@ -243,22 +243,37 @@ class SwigInputBuilder:
                         forceSubclassList.append(shortClassName)
                     elif baseName == 'OpenMM::Integrator':
                         integratorSubclassList.append(shortClassName)
+
         self.fOut.write("%factory(OpenMM::Force& OpenMM::System::getForce")
         for name in sorted(forceSubclassList):
             self.fOut.write(",\n         OpenMM::%s" % name)
         self.fOut.write(");\n\n")
+
+        self.fOut.write("%factory(OpenMM::Force* OpenMM::Force::__copy__")
+        for name in sorted(forceSubclassList):
+            self.fOut.write(",\n         OpenMM::%s" % name)
+        self.fOut.write(");\n\n")
+
         self.fOut.write("%factory(OpenMM::Force* OpenMM_XmlSerializer__deserializeForce")
         for name in sorted(forceSubclassList):
             self.fOut.write(",\n         OpenMM::%s" % name)
         self.fOut.write(");\n\n")
+
+        self.fOut.write("%factory(OpenMM::Integrator* OpenMM::Integrator::__copy__")
+        for name in sorted(integratorSubclassList):
+            self.fOut.write(",\n         OpenMM::%s" % name)
+        self.fOut.write(");\n\n")
+
         self.fOut.write("%factory(OpenMM::Integrator* OpenMM_XmlSerializer__deserializeIntegrator")
         for name in sorted(integratorSubclassList):
             self.fOut.write(",\n         OpenMM::%s" % name)
         self.fOut.write(");\n\n")
+
         self.fOut.write("%factory(OpenMM::Integrator& OpenMM::Context::getIntegrator")
         for name in sorted(integratorSubclassList):
             self.fOut.write(",\n         OpenMM::%s" % name)
         self.fOut.write(");\n\n")
+
         self.fOut.write("%factory(OpenMM::VirtualSite& OpenMM::System::getVirtualSite, OpenMM::TwoParticleAverageSite, OpenMM::ThreeParticleAverageSite, OpenMM::OutOfPlaneSite);\n\n")
         self.fOut.write("\n")
 
@@ -477,7 +492,7 @@ class SwigInputBuilder:
                     valueUnits=[None, ()]
 
                 index=0
-                if valueUnits[0]:
+                if valueUnits[0] is not None:
                     sys.stdout.write("%s.%s() returns %s\n" %
                                      (shortClassName, methName, valueUnits[0]))
                     if len(valueUnits[1])>0:
@@ -491,10 +506,10 @@ class SwigInputBuilder:
                                  % (addText, INDENT, valueUnits[0])
 
                 for vUnit in valueUnits[1]:
-                        if vUnit!=None:
-                            addText = "%s%sval[%s]=unit.Quantity(val[%s], %s)\n" \
+                    if vUnit is not None:
+                        addText = "%s%sval[%s]=unit.Quantity(val[%s], %s)\n" \
                                      % (addText, INDENT, index, index, vUnit)
-                        index+=1
+                    index+=1
 
                 if key in self.configModule.STEAL_OWNERSHIP:
                     for argNum in self.configModule.STEAL_OWNERSHIP[key]:

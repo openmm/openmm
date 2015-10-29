@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013 Stanford University and the Authors.           *
+ * Portions copyright (c) 2013-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -98,14 +98,13 @@ ReferenceConstraints::ReferenceConstraints(const System& system) : ccma(NULL), s
     // Record the SETTLE clusters.
 
     vector<bool> isSettleAtom(numParticles, false);
-    int numSETTLE = settleClusters.size();
-    if (numSETTLE > 0) {
-        vector<int> atom1(numSETTLE);
-        vector<int> atom2(numSETTLE);
-        vector<int> atom3(numSETTLE);
-        vector<RealOpenMM> distance1(numSETTLE);
-        vector<RealOpenMM> distance2(numSETTLE);
-        for (int i = 0; i < numSETTLE; i++) {
+    if (settleClusters.size() > 0) {
+        vector<int> atom1;
+        vector<int> atom2;
+        vector<int> atom3;
+        vector<RealOpenMM> distance1;
+        vector<RealOpenMM> distance2;
+        for (int i = 0; i < settleClusters.size(); i++) {
             int p1 = settleClusters[i];
             int p2 = settleConstraints[p1].begin()->first;
             int p3 = (++settleConstraints[p1].begin())->first;
@@ -114,35 +113,36 @@ ReferenceConstraints::ReferenceConstraints(const System& system) : ccma(NULL), s
             float dist23 = settleConstraints[p2].find(p3)->second;
             if (dist12 == dist13) {
                 // p1 is the central atom
-                atom1[i] = p1;
-                atom2[i] = p2;
-                atom3[i] = p3;
-                distance1[i] = dist12;
-                distance2[i] = dist23;
+                atom1.push_back(p1);
+                atom2.push_back(p2);
+                atom3.push_back(p3);
+                distance1.push_back(dist12);
+                distance2.push_back(dist23);
             }
             else if (dist12 == dist23) {
                 // p2 is the central atom
-                atom1[i] = p2;
-                atom2[i] = p1;
-                atom3[i] = p3;
-                distance1[i] = dist12;
-                distance2[i] = dist13;
+                atom1.push_back(p2);
+                atom2.push_back(p1);
+                atom3.push_back(p3);
+                distance1.push_back(dist12);
+                distance2.push_back(dist13);
             }
             else if (dist13 == dist23) {
                 // p3 is the central atom
-                atom1[i] = p3;
-                atom2[i] = p1;
-                atom3[i] = p2;
-                distance1[i] = dist13;
-                distance2[i] = dist12;
+                atom1.push_back(p3);
+                atom2.push_back(p1);
+                atom3.push_back(p2);
+                distance1.push_back(dist13);
+                distance2.push_back(dist12);
             }
             else
-                throw OpenMMException("Two of the three distances constrained with SETTLE must be the same.");
+                continue; // We can't handle this with SETTLE
             isSettleAtom[p1] = true;
             isSettleAtom[p2] = true;
             isSettleAtom[p3] = true;
         }
-        settle = new ReferenceSETTLEAlgorithm(atom1, atom2, atom3, distance1, distance2, masses);
+        if (atom1.size() > 0)
+            settle = new ReferenceSETTLEAlgorithm(atom1, atom2, atom3, distance1, distance2, masses);
     }
 
     // All other constraints are handled with CCMA.

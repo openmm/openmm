@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -29,69 +29,8 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-/**
- * This tests the CUDA implementation of PeriodicTorsionForce.
- */
-
-#include "openmm/internal/AssertionUtilities.h"
-#include "openmm/Context.h"
-#include "CudaPlatform.h"
-#include "openmm/PeriodicTorsionForce.h"
-#include "openmm/System.h"
-#include "openmm/VerletIntegrator.h"
-#include "SimTKOpenMMRealType.h"
-#include <iostream>
-#include <vector>
-
-using namespace OpenMM;
-using namespace std;
-
-CudaPlatform platform;
-
-const double TOL = 1e-5;
-
-void testPeriodicTorsions() {
-    System system;
-    system.addParticle(1.0);
-    system.addParticle(1.0);
-    system.addParticle(1.0);
-    system.addParticle(1.0);
-    VerletIntegrator integrator(0.01);
-    PeriodicTorsionForce* forceField = new PeriodicTorsionForce();
-    forceField->addTorsion(0, 1, 2, 3, 2, PI_M/3, 1.1);
-    system.addForce(forceField);
-    Context context(system, integrator, platform);
-    vector<Vec3> positions(4);
-    positions[0] = Vec3(0, 1, 0);
-    positions[1] = Vec3(0, 0, 0);
-    positions[2] = Vec3(1, 0, 0);
-    positions[3] = Vec3(1, 0, 2);
-    context.setPositions(positions);
-    State state = context.getState(State::Forces | State::Energy);
-    {
-        const vector<Vec3>& forces = state.getForces();
-        double torque = -2*1.1*std::sin(2*PI_M/3);
-        ASSERT_EQUAL_VEC(Vec3(0, 0, torque), forces[0], TOL);
-        ASSERT_EQUAL_VEC(Vec3(0, 0.5*torque, 0), forces[3], TOL);
-        ASSERT_EQUAL_VEC(Vec3(forces[0][0]+forces[1][0]+forces[2][0]+forces[3][0], forces[0][1]+forces[1][1]+forces[2][1]+forces[3][1], forces[0][2]+forces[1][2]+forces[2][2]+forces[3][2]), Vec3(0, 0, 0), TOL);
-        ASSERT_EQUAL_TOL(1.1*(1+std::cos(2*PI_M/3)), state.getPotentialEnergy(), TOL);
-    }
-    
-    // Try changing the torsion parameters and make sure it's still correct.
-    
-    forceField->setTorsionParameters(0, 0, 1, 2, 3, 3, PI_M/3.2, 1.3);
-    forceField->updateParametersInContext(context);
-    state = context.getState(State::Forces | State::Energy);
-    {
-        const vector<Vec3>& forces = state.getForces();
-        double dtheta = (3*PI_M/2)-(PI_M/3.2);
-        double torque = -3*1.3*std::sin(dtheta);
-        ASSERT_EQUAL_VEC(Vec3(0, 0, torque), forces[0], TOL);
-        ASSERT_EQUAL_VEC(Vec3(0, 0.5*torque, 0), forces[3], TOL);
-        ASSERT_EQUAL_VEC(Vec3(forces[0][0]+forces[1][0]+forces[2][0]+forces[3][0], forces[0][1]+forces[1][1]+forces[2][1]+forces[3][1], forces[0][2]+forces[1][2]+forces[2][2]+forces[3][2]), Vec3(0, 0, 0), TOL);
-        ASSERT_EQUAL_TOL(1.3*(1+std::cos(dtheta)), state.getPotentialEnergy(), TOL);
-    }
-}
+#include "CudaTests.h"
+#include "TestPeriodicTorsionForce.h"
 
 void testParallelComputation() {
     System system;
@@ -121,18 +60,6 @@ void testParallelComputation() {
         ASSERT_EQUAL_VEC(state1.getForces()[i], state2.getForces()[i], 1e-5);
 }
 
-int main(int argc, char* argv[]) {
-    try {
-        if (argc > 1)
-            platform.setPropertyDefaultValue("CudaPrecision", string(argv[1]));
-        testPeriodicTorsions();
-        testParallelComputation();
-    }
-    catch(const exception& e) {
-        cout << "exception: " << e.what() << endl;
-        return 1;
-    }
-    cout << "Done" << endl;
-    return 0;
+void runPlatformTests() {
+    testParallelComputation();
 }
-

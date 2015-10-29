@@ -216,22 +216,22 @@ UNITS = {
 ("AmoebaGeneralizedKirkwoodForce",       "getDielectricOffset")                           :  ( 'unit.nanometer', ()),
 ("AmoebaGeneralizedKirkwoodForce",       "getIncludeCavityTerm")                          :  ( None,()),
 ("AmoebaGeneralizedKirkwoodForce",       "getProbeRadius")                                :  ( 'unit.nanometer', ()),
-("AmoebaGeneralizedKirkwoodForce",       "getSurfaceAreaFactor")                          :  ( '(unit.nanometer*unit.nanometer)/unit.kilojoule_per_mole',()),
+("AmoebaGeneralizedKirkwoodForce",       "getSurfaceAreaFactor")                          :  ( 'unit.kilojoule_per_mole/(unit.nanometer*unit.nanometer)',()),
 
-("AmoebaAngleForce",             "getAmoebaGlobalAngleCubic")             :  ( None,()),
-("AmoebaAngleForce",             "getAmoebaGlobalAngleQuartic")           :  ( None,()),
-("AmoebaAngleForce",             "getAmoebaGlobalAnglePentic")            :  ( None,()),
-("AmoebaAngleForce",             "getAmoebaGlobalAngleSextic")            :  ( None,()),
-("AmoebaAngleForce",             "getAngleParameters")                            :  ( None, (None, None, None, 'unit.radian', 'unit.kilojoule_per_mole/(unit.radian*unit.radian)')),
+("AmoebaAngleForce",             "getAmoebaGlobalAngleCubic")             :  ( '1/unit.radian',()),
+("AmoebaAngleForce",             "getAmoebaGlobalAngleQuartic")           :  ( '1/unit.radian**2',()),
+("AmoebaAngleForce",             "getAmoebaGlobalAnglePentic")            :  ( '1/unit.radian**3',()),
+("AmoebaAngleForce",             "getAmoebaGlobalAngleSextic")            :  ( '1/unit.radian**4',()),
+("AmoebaAngleForce",             "getAngleParameters")                            :  ( None, (None, None, None, 'unit.degree', 'unit.kilojoule_per_mole/(unit.radian*unit.radian)')),
 
-("AmoebaBondForce",              "getAmoebaGlobalBondCubic")              :  ( None,()),
-("AmoebaBondForce",              "getAmoebaGlobalBondQuartic")            :  ( None,()),
+("AmoebaBondForce",              "getAmoebaGlobalBondCubic")              :  ( '1/unit.nanometer',()),
+("AmoebaBondForce",              "getAmoebaGlobalBondQuartic")            :  ( '1/unit.nanometer**2',()),
 ("AmoebaBondForce",              "getBondParameters")                             :  ( None, (None, None, 'unit.nanometer', 'unit.kilojoule_per_mole/(unit.nanometer*unit.nanometer)')),
 
-("AmoebaInPlaneAngleForce",      "getAmoebaGlobalInPlaneAngleCubic")      :  ( None,()),
-("AmoebaInPlaneAngleForce",      "getAmoebaGlobalInPlaneAngleQuartic")    :  ( None,()),
-("AmoebaInPlaneAngleForce",      "getAmoebaGlobalInPlaneAnglePentic")     :  ( None,()),
-("AmoebaInPlaneAngleForce",      "getAmoebaGlobalInPlaneAngleSextic")     :  ( None,()),
+("AmoebaInPlaneAngleForce",      "getAmoebaGlobalInPlaneAngleCubic")      :  ( '1/unit.radian',()),
+("AmoebaInPlaneAngleForce",      "getAmoebaGlobalInPlaneAngleQuartic")    :  ( '1/unit.radian**2',()),
+("AmoebaInPlaneAngleForce",      "getAmoebaGlobalInPlaneAnglePentic")     :  ( '1/unit.radian**3',()),
+("AmoebaInPlaneAngleForce",      "getAmoebaGlobalInPlaneAngleSextic")     :  ( '1/unit.radian**4',()),
 ("AmoebaInPlaneAngleForce",      "getAngleParameters")                            :  ( None, (None, None, None, None, 'unit.radian', 'unit.kilojoule_per_mole/(unit.radian*unit.radian)')),
 
 ("AmoebaMultipoleForce",                 "getNumMultipoles")                              :  ( None,()),
@@ -256,7 +256,9 @@ UNITS = {
 #    void getCovalentMap(int index, CovalentType typeId, std::vector<int>& covalentAtoms )
 #    void getCovalentMaps(int index, std::vector < std::vector<int> >& covalentLists )
 
-("AmoebaMultipoleForce",                 "getMultipoleParameters")                        :  ( None, ()),
+("AmoebaMultipoleForce",                 "getMultipoleParameters")                        :  ( None, ('unit.elementary_charge', 'unit.elementary_charge*unit.nanometer',
+                                                                                                      'unit.elementary_charge*unit.nanometer**2', None, None, None, None, None, None,
+                                                                                                      'unit.nanometer**3')),
 ("AmoebaMultipoleForce",                 "getCovalentMap")                                :  ( None, ()),
 ("AmoebaMultipoleForce",                 "getCovalentMaps")                               :  ( None, ()),
 ("AmoebaMultipoleForce",                 "getScalingDistanceCutoff")                      :  ( 'unit.nanometer', ()),
@@ -268,17 +270,17 @@ UNITS = {
 ("AmoebaMultipoleForce",                 "getSystemMultipoleMoments")                     :  ( None, ()),
 
 ("AmoebaOutOfPlaneBendForce",            "getNumOutOfPlaneBends")                         :  ( None, ()),
-("AmoebaOutOfPlaneBendForce",            "getAmoebaGlobalOutOfPlaneBendCubic")            :  ( None,()),
-("AmoebaOutOfPlaneBendForce",            "getAmoebaGlobalOutOfPlaneBendQuartic")          :  ( None,()),
-("AmoebaOutOfPlaneBendForce",            "getAmoebaGlobalOutOfPlaneBendPentic")           :  ( None,()),
-("AmoebaOutOfPlaneBendForce",            "getAmoebaGlobalOutOfPlaneBendSextic")           :  ( None,()),
-("AmoebaOutOfPlaneBendForce",            "getOutOfPlaneBendParameters")                   :  ( None, (None, None, None, None, 'unit.kilojoule_per_mole')),
+("AmoebaOutOfPlaneBendForce",            "getAmoebaGlobalOutOfPlaneBendCubic")            :  ( '1/unit.radian',()),
+("AmoebaOutOfPlaneBendForce",            "getAmoebaGlobalOutOfPlaneBendQuartic")          :  ( '1/unit.radian**2',()),
+("AmoebaOutOfPlaneBendForce",            "getAmoebaGlobalOutOfPlaneBendPentic")           :  ( '1/unit.radian**3',()),
+("AmoebaOutOfPlaneBendForce",            "getAmoebaGlobalOutOfPlaneBendSextic")           :  ( '1/unit.radian**4',()),
+("AmoebaOutOfPlaneBendForce",            "getOutOfPlaneBendParameters")                   :  ( None, (None, None, None, None, 'unit.kilojoule_per_mole/unit.radians**2')),
 
 ("AmoebaPiTorsionForce",                  "getNumPiTorsions")                              :  ( None, ()),
 ("AmoebaPiTorsionForce",                  "getPiTorsionParameters")                        :  ( None, (None, None, None, None, None,  None, 'unit.kilojoule_per_mole')),
 
 ("AmoebaStretchBendForce",                "getNumStretchBends")                            :  ( None, ()),
-("AmoebaStretchBendForce",                "getStretchBendParameters")                      :  ( None, (None, None, None, 'unit.nanometer', 'unit.nanometer', 'unit.radian', 'unit.kilojoule_per_mole/unit.nanometer/unit.degree', 'unit.kilojoule_per_mole/unit.nanometer/unit.degree')),
+("AmoebaStretchBendForce",                "getStretchBendParameters")                      :  ( None, (None, None, None, 'unit.nanometer', 'unit.nanometer', 'unit.radian', 'unit.kilojoule_per_mole/unit.nanometer/unit.radian', 'unit.kilojoule_per_mole/unit.nanometer/unit.radian')),
 
 ("AmoebaTorsionTorsionForce",             "getNumTorsionTorsions")                         :  ( None, ()),
 ("AmoebaTorsionTorsionForce",             "getNumTorsionTorsionGrids")                     :  ( None, ()),
@@ -376,6 +378,9 @@ UNITS = {
 ("CustomTorsionForce", "getPerTorsionParameterName") : (None, ()),
 ("CustomTorsionForce", "getGlobalParameterName") : (None, ()),
 ("CustomTorsionForce", "getTorsionParameters") : (None, ()),
+("DrudeForce", "getParticleParameters") : (None, (None, None, None, None, None, 'unit.elementary_charge', 'unit.nanometer**3', None, None)),
+("DrudeForce", "getNumScreenedPairs") : (None, ()),
+("DrudeForce", "getScreenedPairParameters") : (None, ()),
 ("GBSAOBCForce", "getParticleParameters")
  : (None, ('unit.elementary_charge',
            'unit.nanometer', None)),
@@ -420,6 +425,7 @@ UNITS = {
 ("System", "getForce") : (None, ()),
 ("System", "getVirtualSite") : (None, ()),
 ("DrudeLangevinIntegrator", "getDrudeTemperature") : ("unit.kelvin", ()),
+("DrudeLangevinIntegrator", "getMaxDrudeDistance") : ("unit.nanometer", ()),
 ("MonteCarloMembraneBarostat", "getXYMode") : (None, ()),
 ("MonteCarloMembraneBarostat", "getZMode") : (None, ()),
 ("DrudeLangevinIntegrator", "getDrudeFriction") : ("1/unit.picosecond", ()),

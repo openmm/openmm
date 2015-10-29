@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013 Stanford University and the Authors.           *
+ * Portions copyright (c) 2013-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -284,6 +284,7 @@ void OpenCLIntegrateDrudeLangevinStepKernel::initialize(const System& system, co
     cl::Program program = cl.createProgram(OpenCLDrudeKernelSources::drudeLangevin, defines, "");
     kernel1 = cl::Kernel(program, "integrateDrudeLangevinPart1");
     kernel2 = cl::Kernel(program, "integrateDrudeLangevinPart2");
+    hardwallKernel = cl::Kernel(program, "applyHardWallConstraints");
     prevStepSize = -1.0;
 }
 
@@ -307,6 +308,14 @@ void OpenCLIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, const
         kernel2.setArg<cl::Buffer>(2, integration.getPosDelta().getDeviceBuffer());
         kernel2.setArg<cl::Buffer>(3, cl.getVelm().getDeviceBuffer());
         kernel2.setArg<cl::Buffer>(4, integration.getStepSize().getDeviceBuffer());
+        hardwallKernel.setArg<cl::Buffer>(0, cl.getPosq().getDeviceBuffer());
+        if (cl.getUseMixedPrecision())
+            hardwallKernel.setArg<cl::Buffer>(1, cl.getPosqCorrection().getDeviceBuffer());
+        else
+            hardwallKernel.setArg<void*>(1, NULL);
+        hardwallKernel.setArg<cl::Buffer>(2, cl.getVelm().getDeviceBuffer());
+        hardwallKernel.setArg<cl::Buffer>(3, pairParticles->getDeviceBuffer());
+        hardwallKernel.setArg<cl::Buffer>(4, integration.getStepSize().getDeviceBuffer());
     }
     
     // Compute integrator coefficients.
@@ -318,6 +327,8 @@ void OpenCLIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, const
     double vscaleDrude = exp(-stepSize*integrator.getDrudeFriction());
     double fscaleDrude = (1-vscaleDrude)/integrator.getDrudeFriction();
     double noisescaleDrude = sqrt(2*BOLTZ*integrator.getDrudeTemperature()*integrator.getDrudeFriction())*sqrt(0.5*(1-vscaleDrude*vscaleDrude)/integrator.getDrudeFriction());
+    double maxDrudeDistance = integrator.getMaxDrudeDistance();
+    double hardwallscaleDrude = sqrt(BOLTZ*integrator.getDrudeTemperature());
     if (stepSize != prevStepSize) {
         if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision()) {
             mm_double2 ss = mm_double2(0, stepSize);
@@ -336,6 +347,8 @@ void OpenCLIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, const
             kernel1.setArg<cl_double>(9, vscaleDrude);
             kernel1.setArg<cl_double>(10, fscaleDrude);
             kernel1.setArg<cl_double>(11, noisescaleDrude);
+            hardwallKernel.setArg<cl_double>(5, maxDrudeDistance);
+            hardwallKernel.setArg<cl_double>(6, hardwallscaleDrude);
     }
     else {
             kernel1.setArg<cl_float>(6, (cl_float) vscale);
@@ -344,6 +357,8 @@ void OpenCLIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, const
             kernel1.setArg<cl_float>(9, (cl_float) vscaleDrude);
             kernel1.setArg<cl_float>(10, (cl_float) fscaleDrude);
             kernel1.setArg<cl_float>(11, (cl_float) noisescaleDrude);
+            hardwallKernel.setArg<cl_float>(5, (cl_float) maxDrudeDistance);
+            hardwallKernel.setArg<cl_float>(6, (cl_float) hardwallscaleDrude);
     }
 
     // Call the first integration kernel.
@@ -358,6 +373,10 @@ void OpenCLIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, const
     // Call the second integration kernel.
 
     cl.executeKernel(kernel2, numAtoms);
+    
+    // Apply hard wall constraints.
+    
+    cl.executeKernel(hardwallKernel, pairParticles->getSize());
     integration.computeVirtualSites();
 
     // Update the time and step count.

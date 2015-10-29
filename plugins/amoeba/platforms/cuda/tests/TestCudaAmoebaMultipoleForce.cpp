@@ -1943,7 +1943,16 @@ static void setupAndGetForcesEnergyMultipoleLargeWater(AmoebaMultipoleForce::Non
         energy                    = state.getPotentialEnergy();
     }
 
-    return;
+    if (nonbondedMethod == AmoebaMultipoleForce::PME) {
+        double actualAlpha;
+        int actualSize[3];
+        amoebaMultipoleForce->getPMEParametersInContext(context, actualAlpha, actualSize[0], actualSize[1], actualSize[2]);
+        ASSERT_EQUAL_TOL(amoebaMultipoleForce->getAEwald(), actualAlpha, 1e-5);
+        for (int i = 0; i < 3; i++) {
+            ASSERT(actualSize[i] >= inputPmeGridDimension);
+            ASSERT(actualSize[i] < inputPmeGridDimension+10);
+        }
+    }
 }
 
 // test multipole mutual polarization using PME for box of water

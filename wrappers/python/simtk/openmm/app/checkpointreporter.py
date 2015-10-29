@@ -28,6 +28,7 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
+from __future__ import absolute_import
 __author__ = "Robert McGibbon"
 __version__ = "1.0"
 
@@ -77,7 +78,7 @@ class CheckpointReporter(object):
         """
 
         self._reportInterval = reportInterval
-        if isinstance(file, basestring):
+        if isinstance(file, str):
             self._own_handle = True
             self._out = open(file, 'w+b', 0)
         else:

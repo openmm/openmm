@@ -1,0 +1,47 @@
+os: Windows Server 2012 R2
+shallow_clone: true
+install:
+
+# Setup shell for VS2010, x64, release mode
+  - >
+    "%ProgramFiles%\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd" /x64 /release
+
+# Set path to python, git-bash tools.
+  - "set PATH=C:\\Python34-x64;C:\\Python34-x64\\Scripts;%PATH%"
+  - "set PATH=C:\\Program Files (x86)\\Git\\bin;%PATH%"
+  - pip install nose
+
+# Download FFTW3 for PME plugin
+  - C:\MinGW\msys\1.0\bin\wget -q ftp://ftp.fftw.org/pub/fftw/fftw-3.3.4-dll64.zip
+  - 7z x fftw-3.3.4-dll64.zip -oC:\fftw > null
+  - cd C:\fftw
+  - lib /def:libfftw3f-3.def
+  - cd %APPVEYOR_BUILD_FOLDER%
+  - "set PATH=C:\\fftw;%PATH%"
+
+# Download and install some OpenMM build dependencies (doxygen, swig)
+  - choco install -y doxygen.portable swig
+
+# Set CMake options
+  - ps: $env:CMAKE_FLAGS='-DOPENMM_BUILD_PME_PLUGIN=ON -DFFTW_LIBRARY=C:/fftw/libfftw3f-3.lib -DFFTW_INCLUDES=C:/fftw -DCMAKE_BUILD_TYPE=Release -DOPENMM_BUILD_EXAMPLES=OFF -DCMAKE_CXX_FLAGS_RELEASE="/MD /Od /Ob0 /D NDEBUG"'
+  - mkdir build
+  - cd build
+  - cmake -G "NMake Makefiles" %CMAKE_FLAGS% -LA ..
+
+# Run the build
+  - cmake --build . --target install
+  - cmake --build . --target PythonInstall
+
+build: false
+test_script:
+  - ctest || exit 0
+  - python -c "import os; fn = os.path.join('Testing', 'Temporary', 'LastTestsFailed.log'); os.path.exists(fn) or exit(0); failed = [line.split(':')[0] for line in open(fn)]; print(','.join(x+','+x for x in failed))" > FailedTests.log
+  - ps: >
+     If (Test-Path "Testing\\Temporary\\LastTestsFailed.log") {
+         cat Testing\\Temporary\\LastTestsFailed.log
+         cat FailedTests.log
+         ctest -I FailedTests.log
+     }
+  - cd python\tests
+  - nosetests -vv --processes=-1 --process-timeout=200
+  - cd %APPVEYOR_BUILD_FOLDER%

@@ -33,11 +33,14 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
 
 from functools import wraps
 from math import pi, cos, sin, sqrt
 import os
 import re
+import sys
 import simtk.openmm as mm
 from simtk.openmm.vec3 import Vec3
 import simtk.unit as u
@@ -58,7 +61,8 @@ import warnings
 
 TINY = 1e-8
 WATNAMES = ('WAT', 'HOH', 'TIP3', 'TIP4', 'TIP5', 'SPCE', 'SPC')
-
+if sys.version_info >= (3, 0):
+    xrange = range
 
 def _catchindexerror(func):
     """
@@ -70,7 +74,7 @@ def _catchindexerror(func):
         """ Catch the index error """
         try:
             return func(*args, **kwargs)
-        except IndexError, e:
+        except IndexError as e:
             raise CharmmPSFError('Array is too short: %s' % e)
 
     return newfunc
@@ -97,6 +101,15 @@ class _ZeroDict(dict):
                         return dict.__getitem__(self, k)
                 return [0, 0], []
             return 0, []
+
+def _strip_optunit(thing, unit):
+    """
+    Strips optional units, converting to specified unit type. If no unit
+    present, it just returns the number
+    """
+    if u.is_quantity(thing):
+        return thing.value_in_unit(unit)
+    return thing
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -386,8 +399,8 @@ class CharmmPsfFile(object):
         """
         try:
             return type(string)
-        except ValueError, e:
-            print e
+        except ValueError as e:
+            print(e)
             raise CharmmPSFError('Could not convert %s' % message)
 
     @staticmethod
@@ -1022,10 +1035,11 @@ class CharmmPsfFile(object):
             # See if we need to use a switching function
             if switchDistance and nonbondedMethod is not ff.NoCutoff:
                 # make sure it's legal
-                if switchDistance >= nonbondedCutoff:
+                if (_strip_optunit(switchDistance, u.nanometer) >=
+                        _strip_optunit(nonbondedCutoff, u.nanometer)):
                     raise ValueError('switchDistance is too large compared '
                                      'to the cutoff!')
-                if abs(switchDistance) != switchDistance:
+                if _strip_optunit(switchDistance, u.nanometer) < 0:
                     # Detects negatives for both Quantity and float
                     raise ValueError('switchDistance must be non-negative!')
                 force.setUseSwitchingFunction(True)
@@ -1066,10 +1080,11 @@ class CharmmPsfFile(object):
             # See if we need to use a switching function
             if switchDistance and nonbondedMethod is not ff.NoCutoff:
                 # make sure it's legal
-                if switchDistance >= nonbondedCutoff:
+                if (_strip_optunit(switchDistance, u.nanometer) >=
+                        _strip_optunit(nonbondedCutoff, u.nanometer)):
                     raise ValueError('switchDistance is too large compared '
                                      'to the cutoff!')
-                if abs(switchDistance) != switchDistance:
+                if _strip_optunit(switchDistance, u.nanometer) < 0:
                     # Detects negatives for both Quantity and float
                     raise ValueError('switchDistance must be non-negative!')
                 force.setUseSwitchingFunction(True)
@@ -1152,11 +1167,15 @@ class CharmmPsfFile(object):
                 raise ValueError('Unrecognized nonbonded method')
             if switchDistance and nonbondedMethod is not ff.NoCutoff:
                 # make sure it's legal
-                if switchDistance >= nonbondedCutoff:
+                if (_strip_optunit(switchDistance, u.nanometer) >=
+                        _strip_optunit(nonbondedCutoff, u.nanometer)):
                     raise ValueError('switchDistance is too large compared '
                                      'to the cutoff!')
-                    cforce.setUseSwitchingFunction(True)
-                    cforce.setSwitchingDistance(switchDistance)
+                if _strip_optunit(switchDistance, u.nanometer) < 0:
+                    # Detects negatives for both Quantity and float
+                    raise ValueError('switchDistance must be non-negative!')
+                cforce.setUseSwitchingFunction(True)
+                cforce.setSwitchingDistance(switchDistance)
             for i in lj_idx_list:
                 cforce.addParticle((i - 1,)) # adjust for indexing from 0
 
@@ -1251,8 +1270,8 @@ class CharmmPsfFile(object):
             elif implicitSolvent is GBn2:
                 gb = GBSAGBn2Force(solventDielectric, soluteDielectric, None,
                                    cutoff, kappa=implicitSolventKappa)
-            for i, atom in enumerate(self.atom_list):
-                gb.addParticle([atom.charge] + list(gb_parms[i]))
+            for atom, gb_parm in zip(self.atom_list, gb_parms):
+                gb.addParticle([atom.charge] + list(gb_parm))
             # Set cutoff method
             if nonbondedMethod is ff.NoCutoff:
                 gb.setNonbondedMethod(mm.NonbondedForce.NoCutoff)

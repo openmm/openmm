@@ -33,7 +33,12 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
+from __future__ import absolute_import
 from simtk.openmm.app.internal.charmm.exceptions import CharmmFileError
+import sys
+if sys.version_info < (3, 0):
+    from codecs import open
+
 
 class CharmmFile(object):
     """
@@ -54,8 +59,8 @@ class CharmmFile(object):
         else:
             self.status = 'NEW'
         try:
-            self._handle = open(fname, mode)
-        except IOError, e:
+            self._handle = open(fname, mode, encoding='utf-8')
+        except IOError as e:
             raise CharmmFileError(str(e))
         self.closed = False
         self.line_number = 0

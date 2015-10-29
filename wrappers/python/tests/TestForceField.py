@@ -6,6 +6,10 @@ from simtk.unit import *
 import simtk.openmm.app.element as elem
 import simtk.openmm.app.forcefield as forcefield
 import math
+if sys.version_info >= (3, 0):
+    from io import StringIO
+else:
+    from cStringIO import StringIO
 
 class TestForceField(unittest.TestCase):
     """Test the ForceField.createSystem() method."""
@@ -144,7 +148,8 @@ class TestForceField(unittest.TestCase):
         context = Context(system, integrator)
         context.setPositions(pdb.positions)
         state1 = context.getState(getForces=True)
-        state2 = XmlSerializer.deserialize(open('systems/lysozyme-implicit-forces.xml').read())
+        with open('systems/lysozyme-implicit-forces.xml') as input:
+            state2 = XmlSerializer.deserialize(input.read())
         numDifferences = 0
         for f1, f2, in zip(state1.getForces().value_in_unit(kilojoules_per_mole/nanometer), state2.getForces().value_in_unit(kilojoules_per_mole/nanometer)):
             diff = norm(f1-f2)
@@ -197,7 +202,51 @@ class TestForceField(unittest.TestCase):
         for i in range(3):
             self.assertEqual(vectors[i], self.pdb1.topology.getPeriodicBoxVectors()[i])
             self.assertEqual(vectors[i], system.getDefaultPeriodicBoxVectors()[i])
-        
+
+    def test_ResidueAttributes(self):
+        """Test a ForceField that gets per-particle parameters from residue attributes."""
+
+        xml = """
+<ForceField>
+ <AtomTypes>
+  <Type name="tip3p-O" class="OW" element="O" mass="15.99943"/>
+  <Type name="tip3p-H" class="HW" element="H" mass="1.007947"/>
+ </AtomTypes>
+ <Residues>
+  <Residue name="HOH">
+   <Atom name="O" type="tip3p-O" charge="-0.834"/>
+   <Atom name="H1" type="tip3p-H" charge="0.417"/>
+   <Atom name="H2" type="tip3p-H" charge="0.417"/>
+   <Bond from="0" to="1"/>
+   <Bond from="0" to="2"/>
+  </Residue>
+ </Residues>
+ <NonbondedForce coulomb14scale="0.833333" lj14scale="0.5">
+  <UseAttributeFromResidue name="charge"/>
+  <Atom type="tip3p-O" sigma="0.315" epsilon="0.635"/>
+  <Atom type="tip3p-H" sigma="1" epsilon="0"/>
+ </NonbondedForce>
+</ForceField>"""
+        ff = ForceField(StringIO(xml))
+
+        # Build a water box.
+        modeller = Modeller(Topology(), [])
+        modeller.addSolvent(ff, boxSize=Vec3(3, 3, 3)*nanometers)
+
+        # Create a system and make sure all nonbonded parameters are correct.
+        system = ff.createSystem(modeller.topology)
+        nonbonded = [f for f in system.getForces() if isinstance(f, NonbondedForce)][0]
+        atoms = list(modeller.topology.atoms())
+        for i in range(len(atoms)):
+            params = nonbonded.getParticleParameters(i)
+            if atoms[i].element == elem.oxygen:
+                self.assertEqual(params[0], -0.834*elementary_charge)
+                self.assertEqual(params[1], 0.315*nanometers)
+                self.assertEqual(params[2], 0.635*kilojoule_per_mole)
+            else:
+                self.assertEqual(params[0], 0.417*elementary_charge)
+                self.assertEqual(params[1], 1.0*nanometers)
+                self.assertEqual(params[2], 0.0*kilojoule_per_mole)
 
 class AmoebaTestForceField(unittest.TestCase):
     """Test the ForceField.createSystem() method with the AMOEBA forcefield."""
@@ -269,6 +318,22 @@ class AmoebaTestForceField(unittest.TestCase):
         self.assertAlmostEqual(constraints[(0,1)], hoDist)
         self.assertAlmostEqual(constraints[(0,2)], hoDist)
         self.assertAlmostEqual(constraints[(1,2)], hohDist)
+
+    def test_Forces(self):
+        """Compute forces and compare them to ones generated with a previous version of OpenMM to ensure they haven't changed."""
+
+        pdb = PDBFile('systems/alanine-dipeptide-implicit.pdb')
+        forcefield = ForceField('amoeba2013.xml', 'amoeba2013_gk.xml')
+        system = forcefield.createSystem(pdb.topology, polarization='direct')
+        integrator = VerletIntegrator(0.001)
+        context = Context(system, integrator)
+        context.setPositions(pdb.positions)
+        state1 = context.getState(getForces=True)
+        with open('systems/alanine-dipeptide-amoeba-forces.xml') as input:
+            state2 = XmlSerializer.deserialize(input.read())
+        for f1, f2, in zip(state1.getForces().value_in_unit(kilojoules_per_mole/nanometer), state2.getForces().value_in_unit(kilojoules_per_mole/nanometer)):
+            diff = norm(f1-f2)
+            self.assertTrue(diff < 0.1 or diff/norm(f1) < 1e-3)
 
 if __name__ == '__main__':
     unittest.main()

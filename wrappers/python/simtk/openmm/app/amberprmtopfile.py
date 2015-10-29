@@ -28,6 +28,7 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
+from __future__ import absolute_import
 __author__ = "Peter Eastman"
 __version__ = "1.0"
 
@@ -35,8 +36,8 @@ from math import sqrt
 from simtk.openmm.app import Topology
 from simtk.openmm.app import PDBFile
 from simtk.openmm.app.internal import amber_file_parser
-import forcefield as ff
-import element as elem
+from . import forcefield as ff
+from . import element as elem
 import simtk.unit as unit
 import simtk.openmm as mm
 from simtk.openmm.app.internal.unitcell import computePeriodicBoxVectors

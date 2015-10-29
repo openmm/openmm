@@ -28,7 +28,7 @@
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceForce.h"
 #include "CpuCustomNonbondedForce.h"
-#include "gmx_atomic.h"
+#include "openmm/internal/gmx_atomic.h"
 
 using namespace OpenMM;
 using namespace std;

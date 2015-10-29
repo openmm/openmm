@@ -28,7 +28,7 @@
 #include "CpuNonbondedForce.h"
 #include "ReferenceForce.h"
 #include "ReferencePME.h"
-#include "gmx_atomic.h"
+#include "openmm/internal/gmx_atomic.h"
 #include <algorithm>
 
 // In case we're using some primitive version of Visual Studio this will
@@ -322,6 +322,14 @@ void CpuNonbondedForce::calculateDirectIxn(int numberOfAtoms, float* posq, const
     threads.execute(task);
     threads.waitForThreads();
     
+    // Signal the threads to subtract the exclusions.
+    
+    if (ewald || pme) {
+        gmx_atomic_set(&counter, 0);
+        threads.resumeThreads();
+        threads.waitForThreads();
+    }
+    
     // Combine the energies from all the threads.
     
     if (totalEnergy != NULL) {
@@ -354,28 +362,37 @@ void CpuNonbondedForce::threadComputeDirect(ThreadPool& threads, int threadIndex
 
         // Now subtract off the exclusions, since they were implicitly included in the reciprocal space sum.
 
-        for (int i = threadIndex; i < numberOfAtoms; i += numThreads) {
-            fvec4 posI((float) atomCoordinates[i][0], (float) atomCoordinates[i][1], (float) atomCoordinates[i][2], 0.0f);
-            for (set<int>::const_iterator iter = exclusions[i].begin(); iter != exclusions[i].end(); ++iter) {
-                if (*iter > i) {
-                    int j = *iter;
-                    fvec4 deltaR;
-                    fvec4 posJ((float) atomCoordinates[j][0], (float) atomCoordinates[j][1], (float) atomCoordinates[j][2], 0.0f);
-                    float r2;
-                    getDeltaR(posJ, posI, deltaR, r2, false, boxSize, invBoxSize);
-                    float r = sqrtf(r2);
-                    float inverseR = 1/r;
-                    float chargeProd = ONE_4PI_EPS0*posq[4*i+3]*posq[4*j+3];
-                    float alphaR = alphaEwald*r;
-                    float erfAlphaR = erf(alphaR);
-                    if (erfAlphaR > 1e-6f) {
-                        float dEdR = (float) (chargeProd * inverseR * inverseR * inverseR);
-                        dEdR = (float) (dEdR * (erfAlphaR-TWO_OVER_SQRT_PI*alphaR*exp(-alphaR*alphaR)));
-                        fvec4 result = deltaR*dEdR;
-                        (fvec4(forces+4*i)-result).store(forces+4*i);
-                        (fvec4(forces+4*j)+result).store(forces+4*j);
-                        if (includeEnergy)
-                            threadEnergy[threadIndex] -= chargeProd*inverseR*erfAlphaR;
+        threads.syncThreads();
+        const int groupSize = max(1, numberOfAtoms/(10*numThreads));
+        while (true) {
+            int start = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), groupSize);
+            if (start >= numberOfAtoms)
+                break;
+            int end = min(start+groupSize, numberOfAtoms);
+            for (int i = start; i < end; i++) {
+               fvec4 posI((float) atomCoordinates[i][0], (float) atomCoordinates[i][1], (float) atomCoordinates[i][2], 0.0f);
+                float scaledChargeI = (float) (ONE_4PI_EPS0*posq[4*i+3]);
+                for (set<int>::const_iterator iter = exclusions[i].begin(); iter != exclusions[i].end(); ++iter) {
+                    if (*iter > i) {
+                        int j = *iter;
+                        fvec4 deltaR;
+                        fvec4 posJ((float) atomCoordinates[j][0], (float) atomCoordinates[j][1], (float) atomCoordinates[j][2], 0.0f);
+                        float r2;
+                        getDeltaR(posJ, posI, deltaR, r2, false, boxSize, invBoxSize);
+                        float r = sqrtf(r2);
+                        float alphaR = alphaEwald*r;
+                        float erfAlphaR = erf(alphaR);
+                        if (erfAlphaR > 1e-6f) {
+                            float inverseR = 1/r;
+                            float chargeProdOverR = scaledChargeI*posq[4*j+3]*inverseR;
+                            float dEdR = chargeProdOverR*inverseR*inverseR;
+                            dEdR = dEdR * (erfAlphaR-(float)TWO_OVER_SQRT_PI*alphaR*(float)exp(-alphaR*alphaR));
+                            fvec4 result = deltaR*dEdR;
+                            (fvec4(forces+4*i)-result).store(forces+4*i);
+                            (fvec4(forces+4*j)+result).store(forces+4*j);
+                            if (includeEnergy)
+                                threadEnergy[threadIndex] -= chargeProdOverR*erfAlphaR;
+                        }
                     }
                 }
             }

@@ -278,3 +278,7 @@ double NonbondedForceImpl::calcDispersionCorrection(const System& system, const 
 void NonbondedForceImpl::updateParametersInContext(ContextImpl& context) {
     kernel.getAs<CalcNonbondedForceKernel>().copyParametersToContext(context, owner);
 }
+
+void NonbondedForceImpl::getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {
+    kernel.getAs<CalcNonbondedForceKernel>().getPMEParameters(alpha, nx, ny, nz);
+}

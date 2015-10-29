@@ -861,6 +861,28 @@ Parameters may be specified in two ways:
 * Per-bond parameters are defined by specifying a value for each bond.
 
 
+CustomCentroidBondForce
+***********************
+
+CustomCentroidBondForce is very similar to CustomCompoundBondForce, but instead
+of creating bonds between individual particles, the bonds are between the
+centers of groups of particles.  This is useful for purposes such as restraining
+the distance between two molecules or pinning the center of mass of a single
+molecule.
+
+The first step in computing this force is to calculate the center position of
+each defined group of particles.  This is calculated as a weighted average of
+the positions of all the particles in the group, with the weights being user
+defined.  The computation then proceeds exactly as with CustomCompoundBondForce,
+but the energy of each "bond" is now calculated based on the centers of a set
+of groups, rather than on the positions of individual particles.
+
+This class supports all the same function types and features as
+CustomCompoundBondForce.  In fact, any interaction that could be implemented
+with CustomCompoundBondForce can also be implemented with this class, simply by
+defining each group to contain only a single atom.
+
+
 CustomManyParticleForce
 ***********************
 

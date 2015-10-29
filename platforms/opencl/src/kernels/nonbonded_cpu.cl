@@ -19,19 +19,19 @@ __kernel void computeNonbonded(
 #else
         __global real4* restrict forceBuffers,
 #endif
-        __global real* restrict energyBuffer, __global const real4* restrict posq, __global const unsigned int* restrict exclusions,
+        __global mixed* restrict energyBuffer, __global const real4* restrict posq, __global const unsigned int* restrict exclusions,
         __global const ushort2* restrict exclusionTiles, unsigned int startTileIndex, unsigned int numTileIndices
 #ifdef USE_CUTOFF
-        , __global const int* restrict tiles, __global const unsigned int* restrict interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, 
+        , __global const int* restrict tiles, __global const unsigned int* restrict interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, __global const real4* restrict blockCenter,
         __global const real4* restrict blockSize, __global const int* restrict interactingAtoms
 #endif
         PARAMETER_ARGUMENTS) {
-    real energy = 0;
+    mixed energy = 0;
     __local AtomData localData[TILE_SIZE];
 
     // First loop: process tiles that contain exclusions.
-    
+
     const unsigned int firstExclusionTile = FIRST_EXCLUSION_TILE+get_group_id(0)*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/get_num_groups(0);
     const unsigned int lastExclusionTile = FIRST_EXCLUSION_TILE+(get_group_id(0)+1)*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/get_num_groups(0);
     for (int pos = firstExclusionTile; pos < lastExclusionTile; pos++) {
@@ -70,7 +70,7 @@ __kernel void computeNonbonded(
 #endif
                     real r2 = dot(delta.xyz, delta.xyz);
 #ifdef USE_CUTOFF
-                    if (r2 < CUTOFF_SQUARED) {
+                    if (r2 < MAX_CUTOFF*MAX_CUTOFF) {
 #endif
                         real invR = RSQRT(r2);
                         real r = r2*invR;
@@ -138,7 +138,7 @@ __kernel void computeNonbonded(
 #endif
                     real r2 = dot(delta.xyz, delta.xyz);
 #ifdef USE_CUTOFF
-                    if (r2 < CUTOFF_SQUARED) {
+                    if (r2 < MAX_CUTOFF*MAX_CUTOFF) {
 #endif
                         real invR = RSQRT(r2);
                         real r = r2*invR;
@@ -228,18 +228,18 @@ __kernel void computeNonbonded(
     while (pos < end) {
         const bool hasExclusions = false;
         bool includeTile = true;
-        
+
         // Extract the coordinates of this tile.
-        
+
         int x, y;
         bool singlePeriodicCopy = false;
 #ifdef USE_CUTOFF
         if (numTiles <= maxTiles) {
             x = tiles[pos];
             real4 blockSizeX = blockSize[x];
-            singlePeriodicCopy = (0.5f*periodicBoxSize.x-blockSizeX.x >= CUTOFF &&
-                                  0.5f*periodicBoxSize.y-blockSizeX.y >= CUTOFF &&
-                                  0.5f*periodicBoxSize.z-blockSizeX.z >= CUTOFF);
+            singlePeriodicCopy = (0.5f*periodicBoxSize.x-blockSizeX.x >= MAX_CUTOFF &&
+                                  0.5f*periodicBoxSize.y-blockSizeX.y >= MAX_CUTOFF &&
+                                  0.5f*periodicBoxSize.z-blockSizeX.z >= MAX_CUTOFF);
         }
         else
 #endif
@@ -304,7 +304,7 @@ __kernel void computeNonbonded(
                         real4 posq2 = (real4) (localData[j].x, localData[j].y, localData[j].z, localData[j].q);
                         real4 delta = (real4) (posq2.xyz - posq1.xyz, 0);
                         real r2 = dot(delta.xyz, delta.xyz);
-                        if (r2 < CUTOFF_SQUARED) {
+                        if (r2 < MAX_CUTOFF*MAX_CUTOFF) {
                             real invR = RSQRT(r2);
                             real r = r2*invR;
                             unsigned int atom2 = j;
@@ -367,7 +367,7 @@ __kernel void computeNonbonded(
 #endif
                         real r2 = dot(delta.xyz, delta.xyz);
 #ifdef USE_CUTOFF
-                        if (r2 < CUTOFF_SQUARED) {
+                        if (r2 < MAX_CUTOFF*MAX_CUTOFF) {
 #endif
                             real invR = RSQRT(r2);
                             real r = r2*invR;

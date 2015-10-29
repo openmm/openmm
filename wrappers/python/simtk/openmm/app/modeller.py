@@ -29,6 +29,7 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 from __future__ import division
+from __future__ import absolute_import
 
 __author__ = "Peter Eastman"
 __version__ = "1.0"
@@ -40,7 +41,7 @@ from simtk.openmm.vec3 import Vec3
 from simtk.openmm import System, Context, NonbondedForce, CustomNonbondedForce, HarmonicBondForce, HarmonicAngleForce, VerletIntegrator, LocalEnergyMinimizer
 from simtk.unit import nanometer, molar, elementary_charge, amu, gram, liter, degree, sqrt, acos, is_quantity, dot, norm
 import simtk.unit as unit
-import element as elem
+from . import element as elem
 import os
 import random
 import xml.etree.ElementTree as etree
@@ -877,7 +878,7 @@ class Modeller(object):
         # Create copies of all residue templates that have had all extra points removed.
 
         templatesNoEP = {}
-        for resName, template in forcefield._templates.iteritems():
+        for resName, template  in forcefield._templates.items():
             if any(atom.element is None for atom in template.atoms):
                 index = 0
                 newIndex = {}

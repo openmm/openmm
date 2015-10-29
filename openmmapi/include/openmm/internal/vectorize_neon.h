@@ -40,6 +40,10 @@ typedef int int32_t;
 
 // This file defines classes and functions to simplify vectorizing code with NEON.
 
+// These two functions are defined in the vecmath library, which is linked into OpenMM.
+float32x4_t exp_ps(float32x4_t);
+float32x4_t log_ps(float32x4_t);
+
 /**
  * Determine whether ivec4 and fvec4 are supported on this processor.
  */
@@ -260,6 +264,14 @@ static inline fvec4 rsqrt(const fvec4& v) {
 
 static inline fvec4 sqrt(const fvec4& v) {
     return rsqrt(v)*v;
+}
+
+static inline fvec4 exp(const fvec4& v) {
+    return fvec4(exp_ps(v.val));
+}
+
+static inline fvec4 log(const fvec4& v) {
+    return fvec4(log_ps(v.val));
 }
 
 static inline float dot3(const fvec4& v1, const fvec4& v2) {

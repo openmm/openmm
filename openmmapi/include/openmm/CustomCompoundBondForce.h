@@ -219,7 +219,7 @@ public:
      * @param parameters  the list of per-bond parameter values for the new bond
      * @return the index of the bond that was added
      */
-    int addBond(const std::vector<int>& particles, const std::vector<double>& parameters);
+    int addBond(const std::vector<int>& particles, const std::vector<double>& parameters=std::vector<double>());
     /**
      * Get the properties of a bond.
      *
@@ -231,11 +231,11 @@ public:
     /**
      * Set the properties of a bond.
      *
-     * @param index       the index of the bond group to set
+     * @param index       the index of the bond to set
      * @param particles   the indices of the particles in the bond
      * @param parameters  the list of per-bond parameter values for the bond
      */
-    void setBondParameters(int index, const std::vector<int>& particles, const std::vector<double>& parameters);
+    void setBondParameters(int index, const std::vector<int>& particles, const std::vector<double>& parameters=std::vector<double>());
     /**
      * Add a tabulated function that may appear in the energy expression.
      *
@@ -323,7 +323,7 @@ private:
 };
 
 /**
- * This is an internal class used to record information about a bond or acceptor.
+ * This is an internal class used to record information about a bond.
  * @private
  */
 class CustomCompoundBondForce::BondInfo {
@@ -338,7 +338,7 @@ public:
 };
 
 /**
- * This is an internal class used to record information about a per-bond or per-acceptor parameter.
+ * This is an internal class used to record information about a per-bond parameter.
  * @private
  */
 class CustomCompoundBondForce::BondParameterInfo {

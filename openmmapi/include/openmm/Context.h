@@ -261,6 +261,7 @@ private:
     friend class Force;
     friend class Platform;
     ContextImpl& getImpl();
+    const ContextImpl& getImpl() const;
     ContextImpl* impl;
     std::map<std::string, std::string> properties;
 };

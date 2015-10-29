@@ -317,6 +317,18 @@ void AmoebaReferenceMultipoleForce::loadParticleData(const vector<RealVec>& part
         particleData[ii].quadrupole[QYZ]      = quadrupoles[9*ii+5];
         particleData[ii].quadrupole[QZZ]      = quadrupoles[9*ii+8];
 
+        // Form spherical harmonic dipoles from Cartesian moments.
+        particleData[ii].sphericalDipole[0]  = dipoles[3*ii+2]; // z -> Q_10
+        particleData[ii].sphericalDipole[1]  = dipoles[3*ii+0]; // x -> Q_11c
+        particleData[ii].sphericalDipole[2]  = dipoles[3*ii+1]; // y -> Q_11s
+
+        // Form spherical harmonic quadrupoles from Cartesian moments.
+        particleData[ii].sphericalQuadrupole[0] = quadrupoles[9*ii+8]*3.0; // zz -> Q_20
+        particleData[ii].sphericalQuadrupole[1] = sqrtFourThirds * quadrupoles[9*ii+2]*3.0; // xz -> Q_21c
+        particleData[ii].sphericalQuadrupole[2] = sqrtFourThirds * quadrupoles[9*ii+5]*3.0; // yz -> Q_21s
+        particleData[ii].sphericalQuadrupole[3] = sqrtOneThird * (quadrupoles[9*ii+0] - quadrupoles[9*ii+4])*3.0; // xx-yy -> Q_22c
+        particleData[ii].sphericalQuadrupole[4] = sqrtFourThirds * quadrupoles[9*ii+1]*3.0; // xy -> Q_22s
+
         particleData[ii].thole                = tholes[ii];
         particleData[ii].dampingFactor        = dampingFactors[ii];
         particleData[ii].polarity             = polarity[ii];
@@ -335,10 +347,10 @@ void AmoebaReferenceMultipoleForce::checkChiralCenterAtParticle(MultipoleParticl
                                                                 MultipoleParticleData& particleY) const 
 {
 
-    if (axisType == AmoebaMultipoleForce::ZThenX) {
+    if (axisType == AmoebaMultipoleForce::ZThenX || particleY.particleIndex == -1) {
         return;
     }
-        
+
     RealVec deltaAD   = particleI.position - particleY.position;
     RealVec deltaBD   = particleZ.position - particleY.position;
     RealVec deltaCD   = particleX.position - particleY.position;
@@ -347,9 +359,12 @@ void AmoebaReferenceMultipoleForce::checkChiralCenterAtParticle(MultipoleParticl
     RealOpenMM volume = deltaC.dot(deltaAD);
 
     if (volume < 0.0) {
-        particleI.dipole[1]         *= -1.0; // pole(3,i)
-        particleI.quadrupole[QXY]   *= -1.0; // pole(6,i)  && pole(8,i)
-        particleI.quadrupole[QYZ]   *= -1.0; // pole(10,i) && pole(12,i)
+        particleI.dipole[1] *= -1.0; // pole(3,i)
+        particleI.quadrupole[QXY] *= -1.0; // pole(6,i) && pole(8,i)
+        particleI.quadrupole[QYZ] *= -1.0; // pole(10,i) && pole(12,i)
+        particleI.sphericalDipole[2]     *= -1.0;   // y
+        particleI.sphericalQuadrupole[2] *= -1.0;   // yz
+        particleI.sphericalQuadrupole[4] *= -1.0;   // xy
     }
 }
 
@@ -359,7 +374,6 @@ void AmoebaReferenceMultipoleForce::checkChiral(vector<MultipoleParticleData>& p
                                                 const vector<int>& multipoleAtomZs,
                                                 const vector<int>& axisTypes) const 
 {
-
     for (unsigned int ii = 0; ii < _numParticles; ii++) {
         if (multipoleAtomYs[ii] > -1) {
             checkChiralCenterAtParticle(particleData[ii], axisTypes[ii],
@@ -382,6 +396,7 @@ void AmoebaReferenceMultipoleForce::applyRotationMatrixToParticle(      Multipol
     // get coordinates of this atom and the z & x axis atoms
     // compute the vector between the atoms and 1/sqrt(d2), d2 is distance between
     // this atom and the axis atom
+
 
     RealVec vectorY;
     RealVec vectorZ = particleZ.position - particleI.position;
@@ -491,6 +506,130 @@ void AmoebaReferenceMultipoleForce::applyRotationMatrixToParticle(      Multipol
     particleI.quadrupole[QYY] = rPole[1][1];
     particleI.quadrupole[QYZ] = rPole[1][2];
     particleI.quadrupole[QZZ] = rPole[2][2];
+
+    RealOpenMM dipoleRotationMatrix[3][3];
+
+    // Reorder the Cartesian {x,y,z} dipole rotation matrix, to account
+    // for spherical harmonic ordering {z,x,y}.
+    dipoleRotationMatrix[0][0] = vectorZ[2];
+    dipoleRotationMatrix[0][1] = vectorX[2];
+    dipoleRotationMatrix[0][2] = vectorY[2];
+    dipoleRotationMatrix[1][0] = vectorZ[0];
+    dipoleRotationMatrix[1][1] = vectorX[0];
+    dipoleRotationMatrix[1][2] = vectorY[0];
+    dipoleRotationMatrix[2][0] = vectorZ[1];
+    dipoleRotationMatrix[2][1] = vectorX[1];
+    dipoleRotationMatrix[2][2] = vectorY[1];
+
+    RealOpenMM quadrupoleRotationMatrix[5][5];
+    buildSphericalQuadrupoleRotationMatrix(dipoleRotationMatrix, quadrupoleRotationMatrix);
+
+    // Rotate the dipoles
+    RealOpenMM rotatedDipole[3];
+    for (int ii = 0; ii < 3; ii++) {
+        RealOpenMM val = 0.0;
+        for (int jj = 0; jj < 3; jj++) {
+            val += dipoleRotationMatrix[ii][jj] * particleI.sphericalDipole[jj];
+        }
+        rotatedDipole[ii] = val;
+    }
+    for (int ii = 0; ii < 3; ii++)
+        particleI.sphericalDipole[ii] = rotatedDipole[ii];
+    // Rotate the quadrupoles
+    RealOpenMM rotatedQuadrupole[5];
+    for (int ii = 0; ii < 5; ii++) {
+        RealOpenMM val = 0.0;
+        for (int jj = 0; jj < 5; jj++) {
+            val += quadrupoleRotationMatrix[ii][jj] * particleI.sphericalQuadrupole[jj];
+        }
+        rotatedQuadrupole[ii] = val;
+    }
+    for (int ii = 0; ii < 5; ii++)
+        particleI.sphericalQuadrupole[ii] = rotatedQuadrupole[ii];
+}
+
+void AmoebaReferenceMultipoleForce::formQIRotationMatrix(const RealVec& iPosition,
+                                                         const RealVec& jPosition,
+                                                         const RealVec &deltaR,
+                                                         RealOpenMM r,
+                                                         RealOpenMM (&rotationMatrix)[3][3]) const
+{
+    RealVec vectorZ = (deltaR)/r;
+    RealVec vectorX(vectorZ);
+    if ((iPosition[1] != jPosition[1]) || (iPosition[2] != jPosition[2])){
+        vectorX[0] += 1.0;
+    }else{
+        vectorX[1] += 1.0;
+    }
+    RealVec vectorY;
+
+    RealOpenMM dot      = vectorZ.dot(vectorX);
+    vectorX            -= vectorZ*dot;
+    normalizeRealVec(vectorX);
+    vectorY = vectorZ.cross(vectorX);
+
+    // Reorder the Cartesian {x,y,z} dipole rotation matrix, to account
+    // for spherical harmonic ordering {z,x,y}.
+    rotationMatrix[0][0] = vectorZ[2];
+    rotationMatrix[0][1] = vectorZ[0];
+    rotationMatrix[0][2] = vectorZ[1];
+    rotationMatrix[1][0] = vectorX[2];
+    rotationMatrix[1][1] = vectorX[0];
+    rotationMatrix[1][2] = vectorX[1];
+    rotationMatrix[2][0] = vectorY[2];
+    rotationMatrix[2][1] = vectorY[0];
+    rotationMatrix[2][2] = vectorY[1];
+}
+
+
+
+
+void AmoebaReferenceMultipoleForce::buildSphericalQuadrupoleRotationMatrix(const RealOpenMM (&D1)[3][3], RealOpenMM (&D2)[5][5]) const
+{
+    D2[0][0] = 0.5*(3.0*D1[0][0]*D1[0][0] - 1.0);
+    D2[1][0] = sqrtThree*D1[0][0]*D1[1][0];
+    D2[2][0] = sqrtThree*D1[0][0]*D1[2][0];
+    D2[3][0] = 0.5*sqrtThree*(D1[1][0]*D1[1][0] - D1[2][0]*D1[2][0]);
+    D2[4][0] = sqrtThree*D1[1][0]*D1[2][0];
+    D2[0][1] = sqrtThree*D1[0][0]*D1[0][1];
+    D2[1][1] = D1[1][0]*D1[0][1] + D1[0][0]*D1[1][1];
+    D2[2][1] = D1[2][0]*D1[0][1] + D1[0][0]*D1[2][1];
+    D2[3][1] = D1[1][0]*D1[1][1] - D1[2][0]*D1[2][1];
+    D2[4][1] = D1[2][0]*D1[1][1] + D1[1][0]*D1[2][1];
+    D2[0][2] = sqrtThree*D1[0][0]*D1[0][2];
+    D2[1][2] = D1[1][0]*D1[0][2] + D1[0][0]*D1[1][2];
+    D2[2][2] = D1[2][0]*D1[0][2] + D1[0][0]*D1[2][2];
+    D2[3][2] = D1[1][0]*D1[1][2] - D1[2][0]*D1[2][2];
+    D2[4][2] = D1[2][0]*D1[1][2] + D1[1][0]*D1[2][2];
+    D2[0][3] = 0.5*sqrtThree*(D1[0][1]*D1[0][1] - D1[0][2]*D1[0][2]);
+    D2[1][3] = D1[0][1]*D1[1][1] - D1[0][2]*D1[1][2];
+    D2[2][3] = D1[0][1]*D1[2][1] - D1[0][2]*D1[2][2];
+    D2[3][3] = 0.5*(D1[1][1]*D1[1][1] - D1[2][1]*D1[2][1] - D1[1][2]*D1[1][2] + D1[2][2]*D1[2][2]);
+    D2[4][3] = D1[1][1]*D1[2][1] - D1[1][2]*D1[2][2];
+    D2[0][4] = sqrtThree*D1[0][1]*D1[0][2];
+    D2[1][4] = D1[1][1]*D1[0][2] + D1[0][1]*D1[1][2];
+    D2[2][4] = D1[2][1]*D1[0][2] + D1[0][1]*D1[2][2];
+    D2[3][4] = D1[1][1]*D1[1][2] - D1[2][1]*D1[2][2];
+    D2[4][4] = D1[2][1]*D1[1][2] + D1[1][1]*D1[2][2];
+}
+
+void AmoebaReferenceMultipoleForce::buildPartialSphericalQuadrupoleRotationMatrix(const RealOpenMM (&D1)[3][3], RealOpenMM (&D2)[3][5]) const
+{
+    D2[0][0] = 0.5*(3.0*D1[0][0]*D1[0][0] - 1.0);
+    D2[0][1] = sqrtThree*D1[0][0]*D1[0][1];
+    D2[0][2] = sqrtThree*D1[0][0]*D1[0][2];
+    D2[0][3] = 0.5*sqrtThree*(D1[0][1]*D1[0][1] - D1[0][2]*D1[0][2]);
+    D2[0][4] = sqrtThree*D1[0][1]*D1[0][2];
+    D2[1][0] = sqrtThree*D1[0][0]*D1[1][0];
+    D2[1][1] = D1[1][0]*D1[0][1] + D1[0][0]*D1[1][1];
+    D2[1][2] = D1[1][0]*D1[0][2] + D1[0][0]*D1[1][2];
+    D2[1][3] = D1[0][1]*D1[1][1] - D1[0][2]*D1[1][2];
+    D2[1][4] = D1[1][1]*D1[0][2] + D1[0][1]*D1[1][2];
+    D2[2][0] = sqrtThree*D1[0][0]*D1[2][0];
+    D2[2][1] = D1[2][0]*D1[0][1] + D1[0][0]*D1[2][1];
+    D2[2][2] = D1[2][0]*D1[0][2] + D1[0][0]*D1[2][2];
+    D2[2][3] = D1[0][1]*D1[2][1] - D1[0][2]*D1[2][2];
+    D2[2][4] = D1[2][1]*D1[0][2] + D1[0][1]*D1[2][2];
 }
 
 void AmoebaReferenceMultipoleForce::applyRotationMatrix(vector<MultipoleParticleData>& particleData,
@@ -552,6 +691,7 @@ void AmoebaReferenceMultipoleForce::calculateFixedMultipoleFieldPairIxn(const Mu
 
     RealVec deltaR    = particleJ.position - particleI.position;
     RealOpenMM r      = SQRT(deltaR.dot(deltaR));
+
     vector<RealOpenMM> rrI(3);
  
     // get scaling factors, if needed
@@ -907,356 +1047,389 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateElectrostaticPairIxn(const Mu
                                                                         vector<RealVec>& forces,
                                                                         vector<RealVec>& torque) const 
 {
-    RealOpenMM temp3,temp5,temp7;
-    RealOpenMM gl[9],gli[7],glip[7];
-    RealOpenMM sc[10],sci[8],scip[8];
-    RealOpenMM gf[7],gfi[6],gti[6];
- 
     unsigned int iIndex = particleI.particleIndex;
     unsigned int kIndex = particleK.particleIndex;
 
-    RealVec delta       = particleK.position - particleI.position;
-    RealOpenMM r2       = delta.dot(delta);
+    RealVec deltaR = particleK.position - particleI.position;
+    RealOpenMM r2  = deltaR.dot(deltaR);
+    RealOpenMM r   = SQRT(r2);
 
-    // set conversion factor, cutoff and switching coefficients
+    // Start by constructing rotation matrices to put dipoles and
+    // quadrupoles into the QI frame, from the lab frame.
+    RealOpenMM qiRotationMatrix1[3][3];
+    formQIRotationMatrix(particleI.position, particleK.position, deltaR, r, qiRotationMatrix1);
+    RealOpenMM qiRotationMatrix2[5][5];
+    buildSphericalQuadrupoleRotationMatrix(qiRotationMatrix1, qiRotationMatrix2);
+    // The force rotation matrix rotates the QI forces into the lab
+    // frame, and makes sure the result is in {x,y,z} ordering. Its
+    // transpose is used to rotate the induced dipoles to the QI frame.
+    RealOpenMM forceRotationMatrix[3][3];
+    forceRotationMatrix[0][0] = qiRotationMatrix1[1][1];
+    forceRotationMatrix[0][1] = qiRotationMatrix1[2][1];
+    forceRotationMatrix[0][2] = qiRotationMatrix1[0][1];
+    forceRotationMatrix[1][0] = qiRotationMatrix1[1][2];
+    forceRotationMatrix[1][1] = qiRotationMatrix1[2][2];
+    forceRotationMatrix[1][2] = qiRotationMatrix1[0][2];
+    forceRotationMatrix[2][0] = qiRotationMatrix1[1][0];
+    forceRotationMatrix[2][1] = qiRotationMatrix1[2][0];
+    forceRotationMatrix[2][2] = qiRotationMatrix1[0][0];
+    // For efficiency, we go ahead and cache that transposed version
+    // now, because we need to do 4 rotations in total (I,J, and p,d).
+    // We also fold in the factor of 0.5 needed to average the p and d
+    // components.
+    RealOpenMM inducedDipoleRotationMatrix[3][3];
+    inducedDipoleRotationMatrix[0][0] = 0.5*qiRotationMatrix1[0][1];
+    inducedDipoleRotationMatrix[0][1] = 0.5*qiRotationMatrix1[0][2];
+    inducedDipoleRotationMatrix[0][2] = 0.5*qiRotationMatrix1[0][0];
+    inducedDipoleRotationMatrix[1][0] = 0.5*qiRotationMatrix1[1][1];
+    inducedDipoleRotationMatrix[1][1] = 0.5*qiRotationMatrix1[1][2];
+    inducedDipoleRotationMatrix[1][2] = 0.5*qiRotationMatrix1[1][0];
+    inducedDipoleRotationMatrix[2][0] = 0.5*qiRotationMatrix1[2][1];
+    inducedDipoleRotationMatrix[2][1] = 0.5*qiRotationMatrix1[2][2];
+    inducedDipoleRotationMatrix[2][2] = 0.5*qiRotationMatrix1[2][0];
 
-    RealOpenMM f        = _electric/_dielectric;
-
-    // set scale factors for permanent multipole and induced terms
-
-    RealOpenMM pdi      = particleI.dampingFactor;
-    RealOpenMM pti      = particleI.thole;
-
-    // apply Thole polarization damping to scale factors
-
-    RealOpenMM r        = SQRT(r2);
-    RealOpenMM rr1      = 1.0/r;
-    RealOpenMM rr3      = rr1/r2;
-    RealOpenMM rr5      = 3.0*rr3/r2;
-    RealOpenMM rr7      = 5.0*rr5/r2;
-    RealOpenMM rr9      = 7.0*rr7/r2;
-    RealOpenMM rr11     = 9.0*rr9/r2;
-
-    RealOpenMM scale3   = 1.0;
-    RealOpenMM scale5   = 1.0;
-    RealOpenMM scale7   = 1.0;
-
-    RealVec ddsc3(0.0, 0.0, 0.0);
-    RealVec ddsc5(0.0, 0.0, 0.0);
-    RealVec ddsc7(0.0, 0.0, 0.0);
-
-    RealOpenMM damp = particleI.dampingFactor*particleK.dampingFactor;
-    if (damp != 0.0) {
-        RealOpenMM pgamma = particleI.thole < particleK.thole ? particleI.thole : particleK.thole;
-        RealOpenMM ratio  = (r/damp);
-        damp              = -pgamma * ratio*ratio*ratio;
-        if (damp > -50.0) {
-            RealOpenMM expdamp = EXP(damp);
-            scale3 = 1.0 - expdamp;
-            scale5 = 1.0 - (1.0-damp)*expdamp;
-            scale7 = 1.0 - (1.0-damp+0.6*damp*damp)*expdamp;
-            temp3 = -3.0 * damp * expdamp / r2;
-            temp5 = -damp;
-            temp7 = -0.2 - 0.6*damp;
-
-            ddsc3 = delta*temp3;
-            ddsc5 = ddsc3*temp5;
-            ddsc7 = ddsc5*temp7;
-
+    // Rotate the induced dipoles to the QI frame.
+    RealOpenMM qiUindI[3], qiUindJ[3], qiUinpI[3], qiUinpJ[3];
+    for (int ii = 0; ii < 3; ii++) {
+        RealOpenMM valIP = 0.0;
+        RealOpenMM valID = 0.0;
+        RealOpenMM valJP = 0.0;
+        RealOpenMM valJD = 0.0;
+        for (int jj = 0; jj < 3; jj++) {
+            valIP += inducedDipoleRotationMatrix[ii][jj] * _inducedDipolePolar[iIndex][jj];
+            valID += inducedDipoleRotationMatrix[ii][jj] * _inducedDipole[iIndex][jj];
+            valJP += inducedDipoleRotationMatrix[ii][jj] * _inducedDipolePolar[kIndex][jj];
+            valJD += inducedDipoleRotationMatrix[ii][jj] * _inducedDipole[kIndex][jj];
         }
-    }
-    RealOpenMM scale3i = scale3*scalingFactors[U_SCALE];
-    RealOpenMM scale5i = scale5*scalingFactors[U_SCALE];
-    RealOpenMM scale7i = scale7*scalingFactors[U_SCALE];
- 
-    RealOpenMM dsc3    = scale3*scalingFactors[D_SCALE];
-    RealOpenMM dsc5    = scale5*scalingFactors[D_SCALE];
-    RealOpenMM dsc7    = scale7*scalingFactors[D_SCALE];
- 
-    RealOpenMM psc3    = scale3*scalingFactors[P_SCALE];
-    RealOpenMM psc5    = scale5*scalingFactors[P_SCALE];
-    RealOpenMM psc7    = scale7*scalingFactors[P_SCALE];
- 
-    // construct necessary auxiliary vectors
-
-    RealVec dixdk      = particleI.dipole.cross(particleK.dipole);
-    RealVec dixuk      = particleI.dipole.cross(_inducedDipole[kIndex]);
-    RealVec dkxui      = particleK.dipole.cross(_inducedDipole[iIndex]);
-    RealVec dixukp     = particleI.dipole.cross(_inducedDipolePolar[kIndex]);
-    RealVec dkxuip     = particleK.dipole.cross(_inducedDipolePolar[iIndex]);
-    RealVec dixr       = particleI.dipole.cross(delta);
-    RealVec dkxr       = particleK.dipole.cross(delta);
-
-    RealVec qir;
-    qir[0] = particleI.quadrupole[QXX]*delta[0] + particleI.quadrupole[QXY]*delta[1] + particleI.quadrupole[QXZ]*delta[2];
-    qir[1] = particleI.quadrupole[QXY]*delta[0] + particleI.quadrupole[QYY]*delta[1] + particleI.quadrupole[QYZ]*delta[2];
-    qir[2] = particleI.quadrupole[QXZ]*delta[0] + particleI.quadrupole[QYZ]*delta[1] + particleI.quadrupole[QZZ]*delta[2];
-
-    RealVec qkr;
-    qkr[0] = particleK.quadrupole[QXX]*delta[0] + particleK.quadrupole[QXY]*delta[1] + particleK.quadrupole[QXZ]*delta[2];
-    qkr[1] = particleK.quadrupole[QXY]*delta[0] + particleK.quadrupole[QYY]*delta[1] + particleK.quadrupole[QYZ]*delta[2];
-    qkr[2] = particleK.quadrupole[QXZ]*delta[0] + particleK.quadrupole[QYZ]*delta[1] + particleK.quadrupole[QZZ]*delta[2];
-
-    RealVec qiqkr;
-    qiqkr[0] = particleI.quadrupole[QXX]*qkr[0] + particleI.quadrupole[QXY]*qkr[1] + particleI.quadrupole[QXZ]*qkr[2];
-    qiqkr[1] = particleI.quadrupole[QXY]*qkr[0] + particleI.quadrupole[QYY]*qkr[1] + particleI.quadrupole[QYZ]*qkr[2];
-    qiqkr[2] = particleI.quadrupole[QXZ]*qkr[0] + particleI.quadrupole[QYZ]*qkr[1] + particleI.quadrupole[QZZ]*qkr[2];
-
-    RealVec qkqir;
-    qkqir[0] = particleK.quadrupole[QXX]*qir[0] + particleK.quadrupole[QXY]*qir[1] + particleK.quadrupole[QXZ]*qir[2];
-    qkqir[1] = particleK.quadrupole[QXY]*qir[0] + particleK.quadrupole[QYY]*qir[1] + particleK.quadrupole[QYZ]*qir[2];
-    qkqir[2] = particleK.quadrupole[QXZ]*qir[0] + particleK.quadrupole[QYZ]*qir[1] + particleK.quadrupole[QZZ]*qir[2];
-
-    RealVec qixqk;
-    qixqk[0] = particleI.quadrupole[QXY]*particleK.quadrupole[QXZ] +
-               particleI.quadrupole[QYY]*particleK.quadrupole[QYZ] +
-               particleI.quadrupole[QYZ]*particleK.quadrupole[QZZ] -
-               particleI.quadrupole[QXZ]*particleK.quadrupole[QXY] -
-               particleI.quadrupole[QYZ]*particleK.quadrupole[QYY] -
-               particleI.quadrupole[QZZ]*particleK.quadrupole[QYZ];
-
-    qixqk[1] = particleI.quadrupole[QXZ]*particleK.quadrupole[QXX] +
-               particleI.quadrupole[QYZ]*particleK.quadrupole[QXY] +
-               particleI.quadrupole[QZZ]*particleK.quadrupole[QXZ] -
-               particleI.quadrupole[QXX]*particleK.quadrupole[QXZ] -
-               particleI.quadrupole[QXY]*particleK.quadrupole[QYZ] -
-               particleI.quadrupole[QXZ]*particleK.quadrupole[QZZ];
-
-    qixqk[2] = particleI.quadrupole[QXX]*particleK.quadrupole[QXY] +
-               particleI.quadrupole[QXY]*particleK.quadrupole[QYY] +
-               particleI.quadrupole[QXZ]*particleK.quadrupole[QYZ] -
-               particleI.quadrupole[QXY]*particleK.quadrupole[QXX] -
-               particleI.quadrupole[QYY]*particleK.quadrupole[QXY] -
-               particleI.quadrupole[QYZ]*particleK.quadrupole[QXZ];
-
-    RealVec rxqir   = delta.cross(qir);
-    RealVec rxqkr   = delta.cross(qkr);
-    RealVec rxqikr  = delta.cross(qiqkr);
-    RealVec rxqkir  = delta.cross(qkqir);
-    RealVec qkrxqir = qkr.cross(qir);
-
-    RealVec qidk,qkdi;
-    qidk[0] = particleI.quadrupole[QXX]*particleK.dipole[0] + particleI.quadrupole[QXY]*particleK.dipole[1] + particleI.quadrupole[QXZ]*particleK.dipole[2];
-    qidk[1] = particleI.quadrupole[QXY]*particleK.dipole[0] + particleI.quadrupole[QYY]*particleK.dipole[1] + particleI.quadrupole[QYZ]*particleK.dipole[2];
-    qidk[2] = particleI.quadrupole[QXZ]*particleK.dipole[0] + particleI.quadrupole[QYZ]*particleK.dipole[1] + particleI.quadrupole[QZZ]*particleK.dipole[2];
-
-    qkdi[0] = particleK.quadrupole[QXX]*particleI.dipole[0] + particleK.quadrupole[QXY]*particleI.dipole[1] + particleK.quadrupole[QXZ]*particleI.dipole[2];
-    qkdi[1] = particleK.quadrupole[QXY]*particleI.dipole[0] + particleK.quadrupole[QYY]*particleI.dipole[1] + particleK.quadrupole[QYZ]*particleI.dipole[2];
-    qkdi[2] = particleK.quadrupole[QXZ]*particleI.dipole[0] + particleK.quadrupole[QYZ]*particleI.dipole[1] + particleK.quadrupole[QZZ]*particleI.dipole[2];
-
-    RealVec qiuk,qkui;
-    qiuk[0] = particleI.quadrupole[QXX]*_inducedDipole[kIndex][0] + particleI.quadrupole[QXY]*_inducedDipole[kIndex][1] + particleI.quadrupole[QXZ]*_inducedDipole[kIndex][2];
-    qiuk[1] = particleI.quadrupole[QXY]*_inducedDipole[kIndex][0] + particleI.quadrupole[QYY]*_inducedDipole[kIndex][1] + particleI.quadrupole[QYZ]*_inducedDipole[kIndex][2];
-    qiuk[2] = particleI.quadrupole[QXZ]*_inducedDipole[kIndex][0] + particleI.quadrupole[QYZ]*_inducedDipole[kIndex][1] + particleI.quadrupole[QZZ]*_inducedDipole[kIndex][2];
-
-    qkui[0] = particleK.quadrupole[QXX]*_inducedDipole[iIndex][0] + particleK.quadrupole[QXY]*_inducedDipole[iIndex][1] + particleK.quadrupole[QXZ]*_inducedDipole[iIndex][2];
-    qkui[1] = particleK.quadrupole[QXY]*_inducedDipole[iIndex][0] + particleK.quadrupole[QYY]*_inducedDipole[iIndex][1] + particleK.quadrupole[QYZ]*_inducedDipole[iIndex][2];
-    qkui[2] = particleK.quadrupole[QXZ]*_inducedDipole[iIndex][0] + particleK.quadrupole[QYZ]*_inducedDipole[iIndex][1] + particleK.quadrupole[QZZ]*_inducedDipole[iIndex][2];
-
-    RealVec qiukp,qkuip;
-    qiukp[0] = particleI.quadrupole[QXX]*_inducedDipolePolar[kIndex][0] + particleI.quadrupole[QXY]*_inducedDipolePolar[kIndex][1] + particleI.quadrupole[QXZ]*_inducedDipolePolar[kIndex][2];
-    qiukp[1] = particleI.quadrupole[QXY]*_inducedDipolePolar[kIndex][0] + particleI.quadrupole[QYY]*_inducedDipolePolar[kIndex][1] + particleI.quadrupole[QYZ]*_inducedDipolePolar[kIndex][2];
-    qiukp[2] = particleI.quadrupole[QXZ]*_inducedDipolePolar[kIndex][0] + particleI.quadrupole[QYZ]*_inducedDipolePolar[kIndex][1] + particleI.quadrupole[QZZ]*_inducedDipolePolar[kIndex][2];
-
-    qkuip[0] = particleK.quadrupole[QXX]*_inducedDipolePolar[iIndex][0] + particleK.quadrupole[QXY]*_inducedDipolePolar[iIndex][1] + particleK.quadrupole[QXZ]*_inducedDipolePolar[iIndex][2];
-    qkuip[1] = particleK.quadrupole[QXY]*_inducedDipolePolar[iIndex][0] + particleK.quadrupole[QYY]*_inducedDipolePolar[iIndex][1] + particleK.quadrupole[QYZ]*_inducedDipolePolar[iIndex][2];
-    qkuip[2] = particleK.quadrupole[QXZ]*_inducedDipolePolar[iIndex][0] + particleK.quadrupole[QYZ]*_inducedDipolePolar[iIndex][1] + particleK.quadrupole[QZZ]*_inducedDipolePolar[iIndex][2];
-
-    RealVec dixqkr   = particleI.dipole.cross(qkr);
-    RealVec dkxqir   = particleK.dipole.cross(qir);
-    RealVec uixqkr   = _inducedDipole[iIndex].cross(qkr);
-    RealVec ukxqir   = _inducedDipole[kIndex].cross(qir);
-    RealVec uixqkrp  = _inducedDipolePolar[iIndex].cross(qkr);
-    RealVec ukxqirp  = _inducedDipolePolar[kIndex].cross(qir);
-    RealVec rxqidk   = delta.cross(qidk);
-    RealVec rxqkdi   = delta.cross(qkdi);
-    RealVec rxqiuk   = delta.cross(qiuk);
-    RealVec rxqkui   = delta.cross(qkui);
-    RealVec rxqiukp  = delta.cross(qiukp);
-    RealVec rxqkuip  = delta.cross(qkuip);
-
-    // calculate scalar products for permanent components
-
-    sc[1] = particleI.dipole.dot(particleK.dipole);
-    sc[2] = particleI.dipole.dot(delta);
-    sc[3] = particleK.dipole.dot(delta);
-    sc[4] = qir.dot(delta);
-    sc[5] = qkr.dot(delta);
-    sc[6] = qir.dot(particleK.dipole);
-    sc[7] = qkr.dot(particleI.dipole);
-    sc[8] = qir.dot(qkr);
-    sc[9] = particleI.quadrupole[QXX]*particleK.quadrupole[QXX] + particleI.quadrupole[QXY]*particleK.quadrupole[QXY] + particleI.quadrupole[QXZ]*particleK.quadrupole[QXZ] +
-            particleI.quadrupole[QXY]*particleK.quadrupole[QXY] + particleI.quadrupole[QYY]*particleK.quadrupole[QYY] + particleI.quadrupole[QYZ]*particleK.quadrupole[QYZ] +
-            particleI.quadrupole[QXZ]*particleK.quadrupole[QXZ] + particleI.quadrupole[QYZ]*particleK.quadrupole[QYZ] + particleI.quadrupole[QZZ]*particleK.quadrupole[QZZ];
- 
-    // calculate scalar products for induced components
-
-    sci[0] = _inducedDipole[iIndex][0]*particleK.dipole[0] + _inducedDipole[iIndex][1]*particleK.dipole[1] + _inducedDipole[iIndex][2]*particleK.dipole[2] +particleI.dipole[0]*_inducedDipole[kIndex][0] +particleI.dipole[1]*_inducedDipole[kIndex][1] +particleI.dipole[2]*_inducedDipole[kIndex][2];
-    sci[1] = _inducedDipole[iIndex][0]*_inducedDipole[kIndex][0] + _inducedDipole[iIndex][1]*_inducedDipole[kIndex][1] + _inducedDipole[iIndex][2]*_inducedDipole[kIndex][2];
-    sci[2] = _inducedDipole[iIndex][0]*delta[0] + _inducedDipole[iIndex][1]*delta[1] + _inducedDipole[iIndex][2]*delta[2];
-    sci[3] = _inducedDipole[kIndex][0]*delta[0] + _inducedDipole[kIndex][1]*delta[1] + _inducedDipole[kIndex][2]*delta[2];
-    sci[6] = qir[0]*_inducedDipole[kIndex][0] + qir[1]*_inducedDipole[kIndex][1] + qir[2]*_inducedDipole[kIndex][2];
-    sci[7] = qkr[0]*_inducedDipole[iIndex][0] + qkr[1]*_inducedDipole[iIndex][1] + qkr[2]*_inducedDipole[iIndex][2];
-    scip[0] = _inducedDipolePolar[iIndex][0]*particleK.dipole[0] + _inducedDipolePolar[iIndex][1]*particleK.dipole[1] + _inducedDipolePolar[iIndex][2]*particleK.dipole[2] +particleI.dipole[0]*_inducedDipolePolar[kIndex][0] +particleI.dipole[1]*_inducedDipolePolar[kIndex][1] +particleI.dipole[2]*_inducedDipolePolar[kIndex][2];
-    scip[1] = _inducedDipole[iIndex][0]*_inducedDipolePolar[kIndex][0]+_inducedDipole[iIndex][1]*_inducedDipolePolar[kIndex][1] + _inducedDipole[iIndex][2]*_inducedDipolePolar[kIndex][2]+_inducedDipolePolar[iIndex][0]*_inducedDipole[kIndex][0] + _inducedDipolePolar[iIndex][1]*_inducedDipole[kIndex][1]+_inducedDipolePolar[iIndex][2]*_inducedDipole[kIndex][2];
-    scip[2] = _inducedDipolePolar[iIndex][0]*delta[0] + _inducedDipolePolar[iIndex][1]*delta[1] + _inducedDipolePolar[iIndex][2]*delta[2];
-    scip[3] = _inducedDipolePolar[kIndex][0]*delta[0] + _inducedDipolePolar[kIndex][1]*delta[1] + _inducedDipolePolar[kIndex][2]*delta[2];
-    scip[6] = qir[0]*_inducedDipolePolar[kIndex][0] + qir[1]*_inducedDipolePolar[kIndex][1] + qir[2]*_inducedDipolePolar[kIndex][2];
-    scip[7] = qkr[0]*_inducedDipolePolar[iIndex][0] + qkr[1]*_inducedDipolePolar[iIndex][1] + qkr[2]*_inducedDipolePolar[iIndex][2];
-
-    // calculate the gl functions for permanent components
-
-    gl[0] = particleI.charge*particleK.charge;
-    gl[1] = particleK.charge*sc[2] - particleI.charge*sc[3];
-    gl[2] = particleI.charge*sc[5] + particleK.charge*sc[4] - sc[2]*sc[3];
-    gl[3] = sc[2]*sc[5] - sc[3]*sc[4];
-    gl[4] = sc[4]*sc[5];
-    gl[5] = -4.0 * sc[8];
-    gl[6] = sc[1];
-    gl[7] = 2.0 * (sc[6]-sc[7]);
-    gl[8] = 2.0 * sc[9];
-
-    // calculate the gl functions for induced components
-
-    gli[0] = particleK.charge*sci[2] - particleI.charge*sci[3];
-    gli[1] = -sc[2]*sci[3] - sci[2]*sc[3];
-    gli[2] = sci[2]*sc[5] - sci[3]*sc[4];
-    gli[5] = sci[0];
-    gli[6] = 2.0 * (sci[6]-sci[7]);
-    glip[0] = particleK.charge*scip[2] - particleI.charge*scip[3];
-    glip[1] = -sc[2]*scip[3] - scip[2]*sc[3];
-    glip[2] = scip[2]*sc[5] - scip[3]*sc[4];
-    glip[5] = scip[0];
-    glip[6] = 2.0 * (scip[6]-scip[7]);
-
-    // compute the energy contributions for this interaction
-
-    RealOpenMM energy = rr1*gl[0] + rr3*(gl[1]+gl[6]) + rr5*(gl[2]+gl[7]+gl[8]) + rr7*(gl[3]+gl[5]) + rr9*gl[4];
-    energy           *= scalingFactors[M_SCALE];
-    energy           += 0.5*(rr3*(gli[0]+gli[5])*psc3 + rr5*(gli[1]+gli[6])*psc5 + rr7*gli[2]*psc7);
-    energy           *= f;
-
-    // intermediate variables for the permanent components
-
-    gf[0] = rr3*gl[0] + rr5*(gl[1]+gl[6]) + rr7*(gl[2]+gl[7]+gl[8]) + rr9*(gl[3]+gl[5]) + rr11*gl[4];
-    gf[1] = -particleK.charge*rr3 + sc[3]*rr5 - sc[5]*rr7;
-    gf[2] =  particleI.charge*rr3 + sc[2]*rr5 + sc[4]*rr7;
-    gf[3] = 2.0*rr5;
-    gf[4] = 2.0*(-particleK.charge*rr5+sc[3]*rr7-sc[5]*rr9);
-    gf[5] = 2.0*(-particleI.charge*rr5-sc[2]*rr7-sc[4]*rr9);
-    gf[6] = 4.0*rr7;
-
-    // intermediate variables for the induced components
-
-    gfi[0] = 0.5 * rr5 * ((gli[0]+gli[5])*psc3 + (glip[0]+glip[5])*dsc3 + scip[1]*scale3i)
-           + 0.5 * rr7 * ((gli[6]+gli[1])*psc5 + (glip[6]+glip[1])*dsc5 - (sci[2]*scip[3]+scip[2]*sci[3])*scale5i)
-           + 0.5 * rr9 * (gli[2]*psc7+glip[2]*dsc7);
-
-    gfi[1] = -rr3*particleK.charge + rr5*sc[3] - rr7*sc[5];
-    gfi[2] =  rr3*particleI.charge + rr5*sc[2] + rr7*sc[4];
-    gfi[3] = 2.0*rr5;
-    gfi[4] = rr7*(sci[3]*psc7+scip[3]*dsc7);
-    gfi[5] = -rr7*(sci[2]*psc7+scip[2]*dsc7);
-
-    // get the permanent force components
-
-    RealVec ftm2 = delta*gf[0] + particleI.dipole*gf[1] + particleK.dipole*gf[2] + (qkdi -qidk)*gf[3] + qir*gf[4] +
-                   qkr*gf[5] + (qiqkr+qkqir)*gf[6];
-
-    // get the induced force components
-
-    RealVec ftm2i  = delta*gfi[0] + qir*gfi[4] + qkr*gfi[5];
-            ftm2i += (
-
-         (_inducedDipole[iIndex]*psc3 + _inducedDipolePolar[iIndex]*dsc3)*(-rr3*particleK.charge) +
-         (_inducedDipole[iIndex]*psc5 + _inducedDipolePolar[iIndex]*dsc5)*(rr5*sc[3]) +
-         (_inducedDipole[iIndex]*psc7 + _inducedDipolePolar[iIndex]*dsc7)*(-rr7*sc[5]) +
-         (_inducedDipole[kIndex]*psc3 + _inducedDipolePolar[kIndex]*dsc3)*(rr3*particleI.charge) +
-         (_inducedDipole[kIndex]*psc5 + _inducedDipolePolar[kIndex]*dsc5)*(rr5*sc[2]) +
-         (_inducedDipole[kIndex]*psc7 + _inducedDipolePolar[kIndex]*dsc7)*(rr7*sc[4]) +
-         (_inducedDipolePolar[iIndex]*sci[3] + _inducedDipole[iIndex]*scip[3] +
-          _inducedDipolePolar[kIndex]*sci[2] + _inducedDipole[kIndex]*scip[2])*(rr5*scale5i) +
-         particleI.dipole*((sci[3]*psc5  + scip[3]*dsc5)*rr5) +
-         particleK.dipole*((sci[2]*psc5  + scip[2]*dsc5)*rr5) +
-         ((qkui - qiuk)*psc5 + (qkuip - qiukp)*dsc5)*(gfi[3]))*0.5;
-
-    // account for partially excluded induced interactions
-
-    temp3 = rr3 * ((gli[0]+gli[5])*scalingFactors[P_SCALE] +(glip[0]+glip[5])*scalingFactors[D_SCALE]);
-    temp5 = rr5 * ((gli[1]+gli[6])*scalingFactors[P_SCALE] +(glip[1]+glip[6])*scalingFactors[D_SCALE]);
-    temp7 = rr7 * (gli[2]*scalingFactors[P_SCALE] +glip[2]*scalingFactors[D_SCALE]);
-
-    RealVec fridmp,findmp;
-    fridmp = (ddsc3*temp3 + ddsc5*temp5 + ddsc7*temp7);
-
-    // find some scaling terms for induced-induced force
-
-    temp3 =  rr3*scalingFactors[U_SCALE]*scip[1];
-    temp5 = -rr5*scalingFactors[U_SCALE]*(sci[2]*scip[3]+scip[2]*sci[3]);
-
-    findmp = (ddsc3*temp3 + ddsc5*temp5);
-
-    // modify induced force for partially excluded interactions
-
-    ftm2i -= (fridmp + findmp)*0.5;
-
-    // correction to convert mutual to direct polarization force
-
-    if (getPolarizationType() == AmoebaReferenceMultipoleForce::Direct) {
-       RealOpenMM gfd   = (rr5*scip[1]*scale3i - rr7*(scip[2]*sci[3]+sci[2]*scip[3])*scale5i);
-       temp5            = rr5*scale5i;
-
-       RealVec fdir;
-       fdir = delta*gfd + (_inducedDipolePolar[iIndex]*sci[3] +
-                           _inducedDipole[iIndex]*scip[3] +
-                           _inducedDipolePolar[kIndex]*sci[2] +
-                           _inducedDipole[kIndex]*scip[2])*temp5;
-
-       ftm2i += (findmp - fdir)*0.5;
+        qiUindI[ii] = valID;
+        qiUinpI[ii] = valIP;
+        qiUindJ[ii] = valJD;
+        qiUinpJ[ii] = valJP;
     }
 
-    // intermediate terms for induced torque on multipoles
+    // The Qtilde intermediates (QI frame multipoles) for atoms I and J
+    RealOpenMM qiQI[9], qiQJ[9];
+    // Rotate the permanent multipoles to the QI frame.
+    qiQI[0] = particleI.charge;
+    qiQJ[0] = particleK.charge;
+    for (int ii = 0; ii < 3; ii++) {
+        RealOpenMM valI = 0.0;
+        RealOpenMM valJ = 0.0;
+        for (int jj = 0; jj < 3; jj++) {
+            valI += qiRotationMatrix1[ii][jj] * particleI.sphericalDipole[jj];
+            valJ += qiRotationMatrix1[ii][jj] * particleK.sphericalDipole[jj];
+        }
+        qiQI[ii+1] = valI;
+        qiQJ[ii+1] = valJ;
+    }
+    for (int ii = 0; ii < 5; ii++) {
+        RealOpenMM valI = 0.0;
+        RealOpenMM valJ = 0.0;
+        for (int jj = 0; jj < 5; jj++) {
+            valI += qiRotationMatrix2[ii][jj] * particleI.sphericalQuadrupole[jj];
+            valJ += qiRotationMatrix2[ii][jj] * particleK.sphericalQuadrupole[jj];
+        }
+        qiQI[ii+4] = valI;
+        qiQJ[ii+4] = valJ;
+    }
 
-    gti[1] = 0.5*rr5*(sci[3]*psc5+scip[3]*dsc5);
-    gti[2] = 0.5*rr5*(sci[2]*psc5+scip[2]*dsc5);
-    gti[3] = gfi[3];
-    gti[4] = gfi[4];
-    gti[5] = gfi[5];
+    // The Qtilde{x,y,z} torque intermediates for atoms I and J, which are used to obtain the torques on the permanent moments.
+    RealOpenMM qiQIX[9] = {0.0, qiQI[3], 0.0, -qiQI[1], sqrtThree*qiQI[6], qiQI[8], -sqrtThree*qiQI[4] - qiQI[7], qiQI[6], -qiQI[5]};
+    RealOpenMM qiQIY[9] = {0.0, -qiQI[2], qiQI[1], 0.0, -sqrtThree*qiQI[5], sqrtThree*qiQI[4] - qiQI[7], -qiQI[8], qiQI[5], qiQI[6]};
+    RealOpenMM qiQIZ[9] = {0.0, 0.0, -qiQI[3], qiQI[2], 0.0, -qiQI[6], qiQI[5], -2.0*qiQI[8], 2.0*qiQI[7]};
+    RealOpenMM qiQJX[9] = {0.0, qiQJ[3], 0.0, -qiQJ[1], sqrtThree*qiQJ[6], qiQJ[8], -sqrtThree*qiQJ[4] - qiQJ[7], qiQJ[6], -qiQJ[5]};
+    RealOpenMM qiQJY[9] = {0.0, -qiQJ[2], qiQJ[1], 0.0, -sqrtThree*qiQJ[5], sqrtThree*qiQJ[4] - qiQJ[7], -qiQJ[8], qiQJ[5], qiQJ[6]};
+    RealOpenMM qiQJZ[9] = {0.0, 0.0, -qiQJ[3], qiQJ[2], 0.0, -qiQJ[6], qiQJ[5], -2.0*qiQJ[8], 2.0*qiQJ[7]};
 
-    // get the permanent torque components
+    // The field derivatives at I due to permanent and induced moments on J, and vice-versa.
+    // Also, their derivatives w.r.t. R, which are needed for force calculations
+    RealOpenMM Vij[9], Vji[9], VjiR[9], VijR[9];
+    // The field derivatives at I due to only permanent moments on J, and vice-versa.
+    RealOpenMM Vijp[3], Vijd[3], Vjip[3], Vjid[3];
+    RealOpenMM rInvVec[7];
 
-    RealVec ttm2  =  dixdk*(-rr3) + dixr*gf[1] - rxqir*gf[4] +
-                     (dixqkr + dkxqir + rxqidk - qixqk*2.0)*gf[3] -
-                     (rxqikr + qkrxqir)*gf[6];
+    RealOpenMM prefac = (_electric/_dielectric);
+    RealOpenMM rInv = 1.0 / r;
 
-    RealVec ttm3  =  dixdk*rr3 + dkxr*gf[2] - rxqkr*gf[5] -
-                     (dixqkr + dkxqir + rxqkdi - qixqk*2.0)*gf[3] -
-                     (rxqkir - qkrxqir)*gf[6];
+    // The rInvVec array is defined such that the ith element is R^-i, with the
+    // dieleectric constant folded in, to avoid conversions later.
+    rInvVec[1] = prefac * rInv;
+    for(int i = 2; i < 7; ++i)
+        rInvVec[i] = rInvVec[i-1] * rInv;
 
-    // get the induced torque components
-   
-    RealVec ttm2i = (dixuk*psc3 + dixukp*dsc3)*(0.5*(-rr3)) +
-                     dixr*gti[1] + 
-                     ((ukxqir+rxqiuk)*psc5 + (ukxqirp+rxqiukp)*dsc5)*(0.5*gti[3]) - 
-                     rxqir*gti[4];
+    RealOpenMM mScale = scalingFactors[M_SCALE];
+    RealOpenMM dScale = scalingFactors[D_SCALE];
+    RealOpenMM pScale = scalingFactors[P_SCALE];
+    RealOpenMM uScale = scalingFactors[U_SCALE];
 
-    RealVec ttm3i = (dkxui*psc3 + dkxuip*dsc3)*(0.5*(-rr3)) +
-                     dkxr*gti[2] - 
-                    ((uixqkr + rxqkui)*psc5 + (uixqkrp + rxqkuip)*dsc5)*(0.5*gti[3]) - 
-                      rxqkr*gti[5];
+    RealOpenMM dmp = particleI.dampingFactor*particleK.dampingFactor;
+    RealOpenMM a = particleI.thole < particleK.thole ? particleI.thole : particleK.thole;
+    RealOpenMM u = std::abs(dmp) > 1.0E-5 ? r/dmp : 1E10;
+    RealOpenMM au3 = a*u*u*u;
+    RealOpenMM expau3 = au3 < 50.0 ? EXP(-au3) : 0.0;
+    RealOpenMM a2u6 = au3*au3;
+    RealOpenMM a3u9 = a2u6*au3;
+    // Thole damping factors for energies
+    RealOpenMM thole_c  = 1.0 - expau3;
+    RealOpenMM thole_d0 = 1.0 - expau3*(1.0 + 1.5*au3);
+    RealOpenMM thole_d1 = 1.0 - expau3;
+    RealOpenMM thole_q0 = 1.0 - expau3*(1.0 + au3 + a2u6);
+    RealOpenMM thole_q1 = 1.0 - expau3*(1.0 + au3);
+    // Thole damping factors for derivatives
+    RealOpenMM dthole_c  = 1.0 - expau3*(1.0 + 1.5*au3);
+    RealOpenMM dthole_d0 = 1.0 - expau3*(1.0 + au3 + 1.5*a2u6);
+    RealOpenMM dthole_d1 = 1.0 - expau3*(1.0 + au3);
+    RealOpenMM dthole_q0 = 1.0 - expau3*(1.0 + au3 + 0.25*a2u6 + 0.75*a3u9);
+    RealOpenMM dthole_q1 = 1.0 - expau3*(1.0 + au3 + 0.75*a2u6);
 
-    // increment forces and torques
-    // remove factor of f from torques and add back in?
+    // Now we compute the (attenuated) Coulomb operator and its derivatives, contracted with
+    // permanent moments and induced dipoles.  Note that the coefficient of the permanent force
+    // terms is half of the expected value; this is because we compute the interaction of I with
+    // the sum of induced and permanent moments on J, as well as the interaction of J with I's
+    // permanent and induced moments; doing so double counts the permanent-permanent interaction.
+    RealOpenMM ePermCoef, dPermCoef, eUIndCoef, dUIndCoef, eUInpCoef, dUInpCoef;
 
-    RealVec force   = ftm2*scalingFactors[M_SCALE] + ftm2i;
-            force  *= f;
+    // C-C terms (m=0)
+    ePermCoef = rInvVec[1]*mScale;
+    dPermCoef = -0.5*mScale*rInvVec[2];
+    Vij[0]  = ePermCoef*qiQJ[0];
+    Vji[0]  = ePermCoef*qiQI[0];
+    VijR[0] = dPermCoef*qiQJ[0];
+    VjiR[0] = dPermCoef*qiQI[0];
 
-    forces[iIndex] -= force;
-    forces[kIndex] += force;
+    // C-D and C-Uind terms (m=0)
+    ePermCoef = rInvVec[2]*mScale;
+    eUIndCoef = rInvVec[2]*pScale*thole_c;
+    eUInpCoef = rInvVec[2]*dScale*thole_c;
+    dPermCoef = -rInvVec[3]*mScale;
+    dUIndCoef = -2.0*rInvVec[3]*pScale*dthole_c;
+    dUInpCoef = -2.0*rInvVec[3]*dScale*dthole_c;
+    Vij[0]  += -(ePermCoef*qiQJ[1] + eUIndCoef*qiUindJ[0] + eUInpCoef*qiUinpJ[0]);
+    Vji[1]   = -(ePermCoef*qiQI[0]);
+    VijR[0] += -(dPermCoef*qiQJ[1] + dUIndCoef*qiUindJ[0] + dUInpCoef*qiUinpJ[0]);
+    VjiR[1]  = -(dPermCoef*qiQI[0]);
+    Vjip[0]  = -(eUInpCoef*qiQI[0]);
+    Vjid[0]  = -(eUIndCoef*qiQI[0]);
+    // D-C and Uind-C terms (m=0)
+    Vij[1]   = ePermCoef*qiQJ[0];
+    Vji[0]  += ePermCoef*qiQI[1] + eUIndCoef*qiUindI[0] + eUInpCoef*qiUinpI[0];
+    VijR[1]  = dPermCoef*qiQJ[0];
+    VjiR[0] += dPermCoef*qiQI[1] + dUIndCoef*qiUindI[0] + dUInpCoef*qiUinpI[0];
+    Vijp[0]  = eUInpCoef*qiQJ[0];
+    Vijd[0]  = eUIndCoef*qiQJ[0];
 
-    torque[iIndex] += (ttm2*scalingFactors[M_SCALE] + ttm2i)*f;
-    torque[kIndex] += (ttm3*scalingFactors[M_SCALE] + ttm3i)*f;
+    // D-D and D-Uind terms (m=0)
+    ePermCoef = -2.0*rInvVec[3]*mScale;
+    eUIndCoef = -2.0*rInvVec[3]*pScale*thole_d0;
+    eUInpCoef = -2.0*rInvVec[3]*dScale*thole_d0;
+    dPermCoef = 3.0*rInvVec[4]*mScale;
+    dUIndCoef = 6.0*rInvVec[4]*pScale*dthole_d0;
+    dUInpCoef = 6.0*rInvVec[4]*dScale*dthole_d0;
+    Vij[1]  += ePermCoef*qiQJ[1] + eUIndCoef*qiUindJ[0] + eUInpCoef*qiUinpJ[0];
+    Vji[1]  += ePermCoef*qiQI[1] + eUIndCoef*qiUindI[0] + eUInpCoef*qiUinpI[0];
+    VijR[1] += dPermCoef*qiQJ[1] + dUIndCoef*qiUindJ[0] + dUInpCoef*qiUinpJ[0];
+    VjiR[1] += dPermCoef*qiQI[1] + dUIndCoef*qiUindI[0] + dUInpCoef*qiUinpI[0];
+    Vijp[0] += eUInpCoef*qiQJ[1];
+    Vijd[0] += eUIndCoef*qiQJ[1];
+    Vjip[0] += eUInpCoef*qiQI[1];
+    Vjid[0] += eUIndCoef*qiQI[1];
+    // D-D and D-Uind terms (m=1)
+    ePermCoef = rInvVec[3]*mScale;
+    eUIndCoef = rInvVec[3]*pScale*thole_d1;
+    eUInpCoef = rInvVec[3]*dScale*thole_d1;
+    dPermCoef = -1.5*rInvVec[4]*mScale;
+    dUIndCoef = -3.0*rInvVec[4]*pScale*dthole_d1;
+    dUInpCoef = -3.0*rInvVec[4]*dScale*dthole_d1;
+    Vij[2]  = ePermCoef*qiQJ[2] + eUIndCoef*qiUindJ[1] + eUInpCoef*qiUinpJ[1];
+    Vji[2]  = ePermCoef*qiQI[2] + eUIndCoef*qiUindI[1] + eUInpCoef*qiUinpI[1];
+    VijR[2] = dPermCoef*qiQJ[2] + dUIndCoef*qiUindJ[1] + dUInpCoef*qiUinpJ[1];
+    VjiR[2] = dPermCoef*qiQI[2] + dUIndCoef*qiUindI[1] + dUInpCoef*qiUinpI[1];
+    Vij[3]  = ePermCoef*qiQJ[3] + eUIndCoef*qiUindJ[2] + eUInpCoef*qiUinpJ[2];
+    Vji[3]  = ePermCoef*qiQI[3] + eUIndCoef*qiUindI[2] + eUInpCoef*qiUinpI[2];
+    VijR[3] = dPermCoef*qiQJ[3] + dUIndCoef*qiUindJ[2] + dUInpCoef*qiUinpJ[2];
+    VjiR[3] = dPermCoef*qiQI[3] + dUIndCoef*qiUindI[2] + dUInpCoef*qiUinpI[2];
+    Vijp[1] = eUInpCoef*qiQJ[2];
+    Vijd[1] = eUIndCoef*qiQJ[2];
+    Vjip[1] = eUInpCoef*qiQI[2];
+    Vjid[1] = eUIndCoef*qiQI[2];
+    Vijp[2] = eUInpCoef*qiQJ[3];
+    Vijd[2] = eUIndCoef*qiQJ[3];
+    Vjip[2] = eUInpCoef*qiQI[3];
+    Vjid[2] = eUIndCoef*qiQI[3];
 
+    // C-Q terms (m=0)
+    ePermCoef = mScale*rInvVec[3];
+    dPermCoef = -1.5*rInvVec[4]*mScale;
+    Vij[0]  += ePermCoef*qiQJ[4];
+    Vji[4]   = ePermCoef*qiQI[0];
+    VijR[0] += dPermCoef*qiQJ[4];
+    VjiR[4]  = dPermCoef*qiQI[0];
+    // Q-C terms (m=0)
+    Vij[4]   = ePermCoef*qiQJ[0];
+    Vji[0]  += ePermCoef*qiQI[4];
+    VijR[4]  = dPermCoef*qiQJ[0];
+    VjiR[0] += dPermCoef*qiQI[4];
+
+    // D-Q and Uind-Q terms (m=0)
+    ePermCoef = rInvVec[4]*3.0*mScale;
+    eUIndCoef = rInvVec[4]*3.0*pScale*thole_q0;
+    eUInpCoef = rInvVec[4]*3.0*dScale*thole_q0;
+    dPermCoef = -6.0*rInvVec[5]*mScale;
+    dUIndCoef = -12.0*rInvVec[5]*pScale*dthole_q0;
+    dUInpCoef = -12.0*rInvVec[5]*dScale*dthole_q0;
+    Vij[1]  += ePermCoef*qiQJ[4];
+    Vji[4]  += ePermCoef*qiQI[1] + eUIndCoef*qiUindI[0] + eUInpCoef*qiUinpI[0];
+    VijR[1] += dPermCoef*qiQJ[4];
+    VjiR[4] += dPermCoef*qiQI[1] + dUIndCoef*qiUindI[0] + dUInpCoef*qiUinpI[0];
+    Vijp[0] += eUInpCoef*qiQJ[4];
+    Vijd[0] += eUIndCoef*qiQJ[4];
+    // Q-D and Q-Uind terms (m=0)
+    Vij[4]  += -(ePermCoef*qiQJ[1] + eUIndCoef*qiUindJ[0] + eUInpCoef*qiUinpJ[0]);
+    Vji[1]  += -(ePermCoef*qiQI[4]);
+    VijR[4] += -(dPermCoef*qiQJ[1] + dUIndCoef*qiUindJ[0] + dUInpCoef*qiUinpJ[0]);
+    VjiR[1] += -(dPermCoef*qiQI[4]);
+    Vjip[0] += -(eUInpCoef*qiQI[4]);
+    Vjid[0] += -(eUIndCoef*qiQI[4]);
+
+    // D-Q and Uind-Q terms (m=1)
+    ePermCoef = -sqrtThree*rInvVec[4]*mScale;
+    eUIndCoef = -sqrtThree*rInvVec[4]*pScale*thole_q1;
+    eUInpCoef = -sqrtThree*rInvVec[4]*dScale*thole_q1;
+    dPermCoef = 2.0*sqrtThree*rInvVec[5]*mScale;
+    dUIndCoef = 4.0*sqrtThree*rInvVec[5]*pScale*dthole_q1;
+    dUInpCoef = 4.0*sqrtThree*rInvVec[5]*dScale*dthole_q1;
+    Vij[2]  += ePermCoef*qiQJ[5];
+    Vji[5]   = ePermCoef*qiQI[2] + eUIndCoef*qiUindI[1] + eUInpCoef*qiUinpI[1];
+    VijR[2] += dPermCoef*qiQJ[5];
+    VjiR[5]  = dPermCoef*qiQI[2] + dUIndCoef*qiUindI[1] + dUInpCoef*qiUinpI[1];
+    Vij[3]  += ePermCoef*qiQJ[6];
+    Vji[6]   = ePermCoef*qiQI[3] + eUIndCoef*qiUindI[2] + eUInpCoef*qiUinpI[2];
+    VijR[3] += dPermCoef*qiQJ[6];
+    VjiR[6]  = dPermCoef*qiQI[3] + dUIndCoef*qiUindI[2] + dUInpCoef*qiUinpI[2];
+    Vijp[1] += eUInpCoef*qiQJ[5];
+    Vijd[1] += eUIndCoef*qiQJ[5];
+    Vijp[2] += eUInpCoef*qiQJ[6];
+    Vijd[2] += eUIndCoef*qiQJ[6];
+    // D-Q and Uind-Q terms (m=1)
+    Vij[5]   = -(ePermCoef*qiQJ[2] + eUIndCoef*qiUindJ[1] + eUInpCoef*qiUinpJ[1]);
+    Vji[2]  += -(ePermCoef*qiQI[5]);
+    VijR[5]  = -(dPermCoef*qiQJ[2] + dUIndCoef*qiUindJ[1] + dUInpCoef*qiUinpJ[1]);
+    VjiR[2] += -(dPermCoef*qiQI[5]);
+    Vij[6]   = -(ePermCoef*qiQJ[3] + eUIndCoef*qiUindJ[2] + eUInpCoef*qiUinpJ[2]);
+    Vji[3]  += -(ePermCoef*qiQI[6]);
+    VijR[6]  = -(dPermCoef*qiQJ[3] + dUIndCoef*qiUindJ[2] + dUInpCoef*qiUinpJ[2]);
+    VjiR[3] += -(dPermCoef*qiQI[6]);
+    Vjip[1] += -(eUInpCoef*qiQI[5]);
+    Vjid[1] += -(eUIndCoef*qiQI[5]);
+    Vjip[2] += -(eUInpCoef*qiQI[6]);
+    Vjid[2] += -(eUIndCoef*qiQI[6]);
+
+    // Q-Q terms (m=0)
+    ePermCoef = 6.0*rInvVec[5]*mScale;
+    dPermCoef = -15.0*rInvVec[6]*mScale;
+    Vij[4]  += ePermCoef*qiQJ[4];
+    Vji[4]  += ePermCoef*qiQI[4];
+    VijR[4] += dPermCoef*qiQJ[4];
+    VjiR[4] += dPermCoef*qiQI[4];
+    // Q-Q terms (m=1)
+    ePermCoef = -4.0*rInvVec[5]*mScale;
+    dPermCoef = 10.0*rInvVec[6]*mScale;
+    Vij[5]  += ePermCoef*qiQJ[5];
+    Vji[5]  += ePermCoef*qiQI[5];
+    VijR[5] += dPermCoef*qiQJ[5];
+    VjiR[5] += dPermCoef*qiQI[5];
+    Vij[6]  += ePermCoef*qiQJ[6];
+    Vji[6]  += ePermCoef*qiQI[6];
+    VijR[6] += dPermCoef*qiQJ[6];
+    VjiR[6] += dPermCoef*qiQI[6];
+    // Q-Q terms (m=2)
+    ePermCoef = rInvVec[5]*mScale;
+    dPermCoef = -2.5*rInvVec[6]*mScale;
+    Vij[7]  = ePermCoef*qiQJ[7];
+    Vji[7]  = ePermCoef*qiQI[7];
+    VijR[7] = dPermCoef*qiQJ[7];
+    VjiR[7] = dPermCoef*qiQI[7];
+    Vij[8]  = ePermCoef*qiQJ[8];
+    Vji[8]  = ePermCoef*qiQI[8];
+    VijR[8] = dPermCoef*qiQJ[8];
+    VjiR[8] = dPermCoef*qiQI[8];
+
+    // Evaluate the energies, forces and torques due to permanent+induced moments
+    // interacting with just the permanent moments.
+    RealOpenMM energy = 0.5*(qiQI[0]*Vij[0] + qiQJ[0]*Vji[0]);
+    RealOpenMM fIZ = qiQI[0]*VijR[0];
+    RealOpenMM fJZ = qiQJ[0]*VjiR[0];
+    RealOpenMM EIX = 0.0, EIY = 0.0, EIZ = 0.0, EJX = 0.0, EJY = 0.0, EJZ = 0.0;
+    for(int i = 1; i < 9; ++i){
+        energy += 0.5*(qiQI[i]*Vij[i] + qiQJ[i]*Vji[i]);
+        fIZ += qiQI[i]*VijR[i];
+        fJZ += qiQJ[i]*VjiR[i];
+        EIX += qiQIX[i]*Vij[i];
+        EIY += qiQIY[i]*Vij[i];
+        EIZ += qiQIZ[i]*Vij[i];
+        EJX += qiQJX[i]*Vji[i];
+        EJY += qiQJY[i]*Vji[i];
+        EJZ += qiQJZ[i]*Vji[i];
+    }
+
+    // Define the torque intermediates for the induced dipoles. These are simply the induced dipole torque
+    // intermediates dotted with the field due to permanent moments only, at each center. We inline the
+    // induced dipole torque intermediates here, for simplicity. N.B. There are no torques on the dipoles
+    // themselves, so we accumulate the torque intermediates into separate variables to allow them to be
+    // used only in the force calculation.
+    //
+    // The torque about the x axis (needed to obtain the y force on the induced dipoles, below)
+    //    qiUindIx[0] = qiQUindI[2];    qiUindIx[1] = 0;    qiUindIx[2] = -qiQUindI[0]
+    RealOpenMM iEIX = qiUinpI[2]*Vijp[0] + qiUindI[2]*Vijd[0] - qiUinpI[0]*Vijp[2] - qiUindI[0]*Vijd[2];
+    RealOpenMM iEJX = qiUinpJ[2]*Vjip[0] + qiUindJ[2]*Vjid[0] - qiUinpJ[0]*Vjip[2] - qiUindJ[0]*Vjid[2];
+    // The torque about the y axis (needed to obtain the x force on the induced dipoles, below)
+    //    qiUindIy[0] = -qiQUindI[1];   qiUindIy[1] = qiQUindI[0];    qiUindIy[2] = 0
+    RealOpenMM iEIY = qiUinpI[0]*Vijp[1] + qiUindI[0]*Vijd[1] - qiUinpI[1]*Vijp[0] - qiUindI[1]*Vijd[0];
+    RealOpenMM iEJY = qiUinpJ[0]*Vjip[1] + qiUindJ[0]*Vjid[1] - qiUinpJ[1]*Vjip[0] - qiUindJ[1]*Vjid[0];
+
+    // Add in the induced-induced terms, if needed.
+    if(getPolarizationType() == AmoebaReferenceMultipoleForce::Mutual){
+        // Uind-Uind terms (m=0)
+        RealOpenMM eCoef = -4.0*rInvVec[3]*uScale*thole_d0;
+        RealOpenMM dCoef = 6.0*rInvVec[4]*uScale*dthole_d0;
+        iEIX += eCoef*(qiUinpI[2]*qiUindJ[0] + qiUindI[2]*qiUinpJ[0]);
+        iEJX += eCoef*(qiUinpJ[2]*qiUindI[0] + qiUindJ[2]*qiUinpI[0]);
+        iEIY -= eCoef*(qiUinpI[1]*qiUindJ[0] + qiUindI[1]*qiUinpJ[0]);
+        iEJY -= eCoef*(qiUinpJ[1]*qiUindI[0] + qiUindJ[1]*qiUinpI[0]);
+        fIZ += dCoef*(qiUinpI[0]*qiUindJ[0] + qiUindI[0]*qiUinpJ[0]);
+        fIZ += dCoef*(qiUinpJ[0]*qiUindI[0] + qiUindJ[0]*qiUinpI[0]);
+        // Uind-Uind terms (m=1)
+        eCoef = 2.0*rInvVec[3]*uScale*thole_d1;
+        dCoef = -3.0*rInvVec[4]*uScale*dthole_d1;
+        iEIX -= eCoef*(qiUinpI[0]*qiUindJ[2] + qiUindI[0]*qiUinpJ[2]);
+        iEJX -= eCoef*(qiUinpJ[0]*qiUindI[2] + qiUindJ[0]*qiUinpI[2]);
+        iEIY += eCoef*(qiUinpI[0]*qiUindJ[1] + qiUindI[0]*qiUinpJ[1]);
+        iEJY += eCoef*(qiUinpJ[0]*qiUindI[1] + qiUindJ[0]*qiUinpI[1]);
+        fIZ += dCoef*(qiUinpI[1]*qiUindJ[1] + qiUindI[1]*qiUinpJ[1] + qiUinpI[2]*qiUindJ[2] + qiUindI[2]*qiUinpJ[2]);
+        fIZ += dCoef*(qiUinpJ[1]*qiUindI[1] + qiUindJ[1]*qiUinpI[1] + qiUinpJ[2]*qiUindI[2] + qiUindJ[2]*qiUinpI[2]);
+    }
+
+    // The quasi-internal frame forces and torques.  Note that the induced torque intermediates are
+    // used in the force expression, but not in the torques; the induced dipoles are isotropic.
+    RealOpenMM qiForce[3] = {rInv*(EIY+EJY+iEIY+iEJY), -rInv*(EIX+EJX+iEIX+iEJX), -(fJZ+fIZ)};
+    RealOpenMM qiTorqueI[3] = {-EIX, -EIY, -EIZ};
+    RealOpenMM qiTorqueJ[3] = {-EJX, -EJY, -EJZ};
+
+    // Rotate the forces and torques back to the lab frame
+    for (int ii = 0; ii < 3; ii++) {
+        RealOpenMM forceVal = 0.0;
+        RealOpenMM torqueIVal = 0.0;
+        RealOpenMM torqueJVal = 0.0;
+        for (int jj = 0; jj < 3; jj++) {
+            forceVal   += forceRotationMatrix[ii][jj] * qiForce[jj];
+            torqueIVal += forceRotationMatrix[ii][jj] * qiTorqueI[jj];
+            torqueJVal += forceRotationMatrix[ii][jj] * qiTorqueJ[jj];
+        }
+        torque[iIndex][ii] += torqueIVal;
+        torque[kIndex][ii] += torqueJVal;
+        forces[iIndex][ii] -= forceVal;
+        forces[kIndex][ii] += forceVal;
+    }
     return energy;
 }
 
@@ -1755,10 +1928,9 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateElectrostaticPotentialForPart
     RealOpenMM r             = SQRT(r2);
 
     RealOpenMM rr1           = 1.0/r;
-    RealOpenMM potential     = particleI.charge*rr1;
-
     RealOpenMM rr2           = rr1*rr1;
     RealOpenMM rr3           = rr1*rr2;
+    RealOpenMM potential     = particleI.charge*rr1;
 
     RealOpenMM scd           = particleI.dipole.dot(deltaR);
     RealOpenMM scu           = _inducedDipole[particleI.particleIndex].dot(deltaR);
@@ -1769,9 +1941,7 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateElectrostaticPotentialForPart
           scq               += deltaR[1]*(particleI.quadrupole[QXY]*deltaR[0] + particleI.quadrupole[QYY]*deltaR[1] + particleI.quadrupole[QYZ]*deltaR[2]);
           scq               += deltaR[2]*(particleI.quadrupole[QXZ]*deltaR[0] + particleI.quadrupole[QYZ]*deltaR[1] + particleI.quadrupole[QZZ]*deltaR[2]);
     potential               += scq*rr5;
-
     return potential;
-
 }
 
 void AmoebaReferenceMultipoleForce::calculateElectrostaticPotential(const vector<RealVec>& particlePositions,
@@ -4741,6 +4911,9 @@ void AmoebaReferencePmeMultipoleForce::calculateFixedMultipoleFieldPairIxn(const
                                                                            RealOpenMM dscale, RealOpenMM pscale)
 {
 
+    unsigned int iIndex    = particleI.particleIndex;
+    unsigned int jIndex    = particleJ.particleIndex;
+
     // compute the real space portion of the Ewald summation
 
     if (particleI.particleIndex == particleJ.particleIndex)
@@ -4815,8 +4988,6 @@ void AmoebaReferencePmeMultipoleForce::calculateFixedMultipoleFieldPairIxn(const
 
     // increment the field at each site due to this interaction
 
-    unsigned int iIndex    = particleI.particleIndex;
-    unsigned int jIndex    = particleJ.particleIndex;
 
     _fixedMultipoleField[iIndex]      += fim - fid;
     _fixedMultipoleField[jIndex]      += fjm - fjd;
@@ -4980,9 +5151,9 @@ void AmoebaReferencePmeMultipoleForce::transformMultipolesToFractionalCoordinate
                 b[i][j] += a[index1[i]][index2[j]]*a[index2[i]][index1[j]];
         }
     }
-    
+
     // Transform the multipoles.
-    
+
     _transformed.resize(particleData.size());
     double quadScale[] = {1, 2, 2, 1, 2, 1};
     for (int i = 0; i < (int) particleData.size(); i++) {
@@ -5634,9 +5805,9 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::computeReciprocalSpaceInducedDipole
         inducedDipolePolar[1] = _inducedDipolePolar[i][0]*cartToFrac[1][0] + _inducedDipolePolar[i][1]*cartToFrac[1][1] + _inducedDipolePolar[i][2]*cartToFrac[1][2];
         inducedDipolePolar[2] = _inducedDipolePolar[i][0]*cartToFrac[2][0] + _inducedDipolePolar[i][1]*cartToFrac[2][1] + _inducedDipolePolar[i][2]*cartToFrac[2][2];
 
-        energy += inducedDipole[0]*_phi[20*i+1];
-        energy += inducedDipole[1]*_phi[20*i+2];
-        energy += inducedDipole[2]*_phi[20*i+3];
+        energy += (inducedDipole[0]+inducedDipolePolar[0])*_phi[20*i+1];
+        energy += (inducedDipole[1]+inducedDipolePolar[1])*_phi[20*i+2];
+        energy += (inducedDipole[2]+inducedDipolePolar[2])*_phi[20*i+3];
 
         RealVec f        = RealVec(0.0, 0.0, 0.0);
 
@@ -5670,7 +5841,7 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::computeReciprocalSpaceInducedDipole
                                   f[0]*fracToCart[1][0] + f[1]*fracToCart[1][1] + f[2]*fracToCart[1][2],
                                   f[0]*fracToCart[2][0] + f[1]*fracToCart[2][1] + f[2]*fracToCart[2][2]);
     }
-    return (0.5*_electric*energy);
+    return (0.25*_electric*energy);
 }
 
 void AmoebaReferencePmeMultipoleForce::recordFixedMultipoleField()
@@ -5854,21 +6025,21 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::calculatePmeSelfEnergy(const vector
 
         const MultipoleParticleData& particleI = particleData[ii];
 
-        cii      +=  particleI.charge*particleI.charge;
-        dii      +=  particleI.dipole.dot(particleI.dipole + _inducedDipole[ii]) ;
-    
-        qii      +=  particleI.quadrupole[QXX]*particleI.quadrupole[QXX] +
-                     particleI.quadrupole[QYY]*particleI.quadrupole[QYY] +
-                     particleI.quadrupole[QZZ]*particleI.quadrupole[QZZ] +
-                    (particleI.quadrupole[QXY]*particleI.quadrupole[QXY] +
-                     particleI.quadrupole[QXZ]*particleI.quadrupole[QXZ] +
-                     particleI.quadrupole[QYZ]*particleI.quadrupole[QYZ])*2.0;
-    
-    }
+        cii += particleI.charge*particleI.charge;
 
-    RealOpenMM term      = 2.0*_alphaEwald*_alphaEwald;
-    RealOpenMM energy    = (cii + term*(dii/3.0 + 2.0*term*qii/5.0));
-               energy   *= -(_electric*_alphaEwald/(_dielectric*SQRT_PI));
+        RealVec dipole(particleI.sphericalDipole[1], particleI.sphericalDipole[2], particleI.sphericalDipole[0]);
+        dii += dipole.dot(dipole + (_inducedDipole[ii]+_inducedDipolePolar[ii])*0.5);
+
+        qii += (particleI.sphericalQuadrupole[0]*particleI.sphericalQuadrupole[0]
+               +particleI.sphericalQuadrupole[1]*particleI.sphericalQuadrupole[1]
+               +particleI.sphericalQuadrupole[2]*particleI.sphericalQuadrupole[2]
+               +particleI.sphericalQuadrupole[3]*particleI.sphericalQuadrupole[3]
+               +particleI.sphericalQuadrupole[4]*particleI.sphericalQuadrupole[4]);
+    }
+    RealOpenMM prefac = -_alphaEwald * _electric / (_dielectric*SQRT_PI);
+    RealOpenMM a2 = _alphaEwald * _alphaEwald;
+    RealOpenMM a4 = a2*a2;
+    RealOpenMM energy = prefac*(cii + twoThirds*a2*dii + fourOverFifteen*a4*qii);
     return energy;
 }
 
@@ -5876,12 +6047,12 @@ void AmoebaReferencePmeMultipoleForce::calculatePmeSelfTorque(const vector<Multi
                                                               vector<RealVec>& torques) const 
 {
     RealOpenMM term = (2.0/3.0)*(_electric/_dielectric)*(_alphaEwald*_alphaEwald*_alphaEwald)/SQRT_PI;
-
     for (unsigned int ii = 0; ii < _numParticles; ii++) {
 
         const MultipoleParticleData& particleI = particleData[ii];
         RealVec ui                             = (_inducedDipole[ii] + _inducedDipolePolar[ii]);
-        RealVec torque                         = particleI.dipole.cross(ui);
+        RealVec dipole(particleI.sphericalDipole[1], particleI.sphericalDipole[2], particleI.sphericalDipole[0]);
+        RealVec torque                         = dipole.cross(ui);
                 torque                        *= term;
        torques[ii]                            += torque;
     }
@@ -5904,681 +6075,402 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::calculatePmeDirectElectrostaticPair
 
     if (r2 > _cutoffDistanceSquared)return 0.0;
 
-    RealOpenMM xr    = deltaR[0];
-    RealOpenMM yr    = deltaR[1];
-    RealOpenMM zr    = deltaR[2];
-
     RealOpenMM r      = SQRT(r2);
-    RealOpenMM ck     = particleJ.charge;
 
-    // set the permanent multipole and induced dipole values;
+    // Start by constructing rotation matrices to put dipoles and
+    // quadrupoles into the QI frame, from the lab frame.
+    RealOpenMM qiRotationMatrix1[3][3];
+    formQIRotationMatrix(particleI.position, particleJ.position, deltaR, r, qiRotationMatrix1);
+    RealOpenMM qiRotationMatrix2[5][5];
+    buildSphericalQuadrupoleRotationMatrix(qiRotationMatrix1, qiRotationMatrix2);
+    // The force rotation matrix rotates the QI forces into the lab
+    // frame, and makes sure the result is in {x,y,z} ordering. Its
+    // transpose is used to rotate the induced dipoles to the QI frame.
+    RealOpenMM forceRotationMatrix[3][3];
+    forceRotationMatrix[0][0] = qiRotationMatrix1[1][1];
+    forceRotationMatrix[0][1] = qiRotationMatrix1[2][1];
+    forceRotationMatrix[0][2] = qiRotationMatrix1[0][1];
+    forceRotationMatrix[1][0] = qiRotationMatrix1[1][2];
+    forceRotationMatrix[1][1] = qiRotationMatrix1[2][2];
+    forceRotationMatrix[1][2] = qiRotationMatrix1[0][2];
+    forceRotationMatrix[2][0] = qiRotationMatrix1[1][0];
+    forceRotationMatrix[2][1] = qiRotationMatrix1[2][0];
+    forceRotationMatrix[2][2] = qiRotationMatrix1[0][0];
+    // For efficiency, we go ahead and cache that transposed version
+    // now, because we need to do 4 rotations in total (I,J, and p,d).
+    // We also fold in the factor of 0.5 needed to average the p and d
+    // components.
+    RealOpenMM inducedDipoleRotationMatrix[3][3];
+    inducedDipoleRotationMatrix[0][0] = 0.5*qiRotationMatrix1[0][1];
+    inducedDipoleRotationMatrix[0][1] = 0.5*qiRotationMatrix1[0][2];
+    inducedDipoleRotationMatrix[0][2] = 0.5*qiRotationMatrix1[0][0];
+    inducedDipoleRotationMatrix[1][0] = 0.5*qiRotationMatrix1[1][1];
+    inducedDipoleRotationMatrix[1][1] = 0.5*qiRotationMatrix1[1][2];
+    inducedDipoleRotationMatrix[1][2] = 0.5*qiRotationMatrix1[1][0];
+    inducedDipoleRotationMatrix[2][0] = 0.5*qiRotationMatrix1[2][1];
+    inducedDipoleRotationMatrix[2][1] = 0.5*qiRotationMatrix1[2][2];
+    inducedDipoleRotationMatrix[2][2] = 0.5*qiRotationMatrix1[2][0];
 
-    RealOpenMM ci    = particleI.charge;
-
-    RealOpenMM di1   = particleI.dipole[0];
-    RealOpenMM di2   = particleI.dipole[1];
-    RealOpenMM di3   = particleI.dipole[2];
-
-    RealOpenMM qi1   = particleI.quadrupole[QXX];
-    RealOpenMM qi2   = particleI.quadrupole[QXY];
-    RealOpenMM qi3   = particleI.quadrupole[QXZ];
-    RealOpenMM qi5   = particleI.quadrupole[QYY];
-    RealOpenMM qi6   = particleI.quadrupole[QYZ];
-    RealOpenMM qi9   = -(particleI.quadrupole[QXX] + particleI.quadrupole[QYY]);
-
-    RealOpenMM dk1  = particleJ.dipole[0];
-    RealOpenMM dk2  = particleJ.dipole[1];
-    RealOpenMM dk3  = particleJ.dipole[2];
-
-    RealOpenMM qk1   = particleJ.quadrupole[QXX];
-    RealOpenMM qk2   = particleJ.quadrupole[QXY];
-    RealOpenMM qk3   = particleJ.quadrupole[QXZ];
-    RealOpenMM qk5   = particleJ.quadrupole[QYY];
-    RealOpenMM qk6   = particleJ.quadrupole[QYZ];
-    RealOpenMM qk9   = -(particleJ.quadrupole[QXX] + particleJ.quadrupole[QYY]);
-
-    // calculate the real space error function terms
-
-    RealOpenMM ralpha = _alphaEwald*r;
-    RealOpenMM bn0    = erfc(ralpha)/r;
-
-    RealOpenMM alsq2  = 2.0*_alphaEwald*_alphaEwald;
-    RealOpenMM alsq2n = 0.0;
-    if (_alphaEwald > 0.0) {
-        alsq2n = 1.0/(SQRT_PI*_alphaEwald);
-    }
-    RealOpenMM exp2a  = EXP(-(ralpha*ralpha));
-
-    alsq2n           *= alsq2;
-    RealOpenMM bn1    = (bn0+alsq2n*exp2a)/r2;
-
-    alsq2n           *= alsq2;
-    RealOpenMM bn2    = (3.0*bn1+alsq2n*exp2a)/r2;
-
-    alsq2n      *= alsq2;
-    RealOpenMM bn3    = (5.0*bn2+alsq2n*exp2a)/r2;
-
-    alsq2n      *= alsq2;
-    RealOpenMM bn4    = (7.0*bn3+alsq2n*exp2a)/r2;
-
-    alsq2n      *= alsq2;
-    RealOpenMM bn5    = (9.0*bn4+alsq2n*exp2a)/r2;
-
-    // apply Thole polarization damping to scale factors
-
-    RealOpenMM rr1    = 1.0/r;
-    RealOpenMM rr3    = rr1/r2;
-    RealOpenMM rr5    = 3.0*rr3/r2;
-    RealOpenMM rr7    = 5.0*rr5/r2;
-    RealOpenMM rr9    = 7.0*rr7/r2;
-    RealOpenMM rr11   = 9.0*rr9/r2;
-
-    RealOpenMM scale3 = 1.0;
-    RealOpenMM scale5 = 1.0;
-    RealOpenMM scale7 = 1.0;
-
-    RealOpenMM ddsc31 = 0.0;
-    RealOpenMM ddsc32 = 0.0;
-    RealOpenMM ddsc33 = 0.0;
-
-    RealOpenMM ddsc51 = 0.0;
-    RealOpenMM ddsc52 = 0.0;
-    RealOpenMM ddsc53 = 0.0;
-
-    RealOpenMM ddsc71 = 0.0;
-    RealOpenMM ddsc72 = 0.0;
-    RealOpenMM ddsc73 = 0.0;
-
-    RealOpenMM damp   = particleI.dampingFactor*particleJ.dampingFactor;
-    if (damp != 0.0) {
-        RealOpenMM pgamma = particleI.thole < particleJ.thole ? particleI.thole : particleJ.thole;
-        RealOpenMM ratio  = r/damp;
-            damp     = -pgamma*ratio*ratio*ratio;
-        if (damp > -50.0) {
-            RealOpenMM expdamp  = EXP(damp);
-            scale3         = 1.0 - expdamp;
-               scale5      = 1.0 - (1.0-damp)*expdamp;
-               scale7      = 1.0 - (1.0-damp+0.6*damp*damp)*expdamp;
-            RealOpenMM temp3    = -3.0 * damp * expdamp / r2;
-            RealOpenMM temp5    = -damp;
-            RealOpenMM temp7    = -0.2 - 0.6*damp;
-
-            ddsc31         = temp3 * xr;
-            ddsc32         = temp3 * yr;
-            ddsc33         = temp3 * zr;
-
-            ddsc51         = temp5 * ddsc31;
-            ddsc52         = temp5 * ddsc32;
-            ddsc53         = temp5 * ddsc33;
-
-            ddsc71         = temp7 * ddsc51;
-            ddsc72         = temp7 * ddsc52;
-            ddsc73         = temp7 * ddsc53;
+    // Rotate the induced dipoles to the QI frame.
+    RealOpenMM qiUindI[3], qiUindJ[3], qiUinpI[3], qiUinpJ[3];
+    for (int ii = 0; ii < 3; ii++) {
+        RealOpenMM valIP = 0.0;
+        RealOpenMM valID = 0.0;
+        RealOpenMM valJP = 0.0;
+        RealOpenMM valJD = 0.0;
+        for (int jj = 0; jj < 3; jj++) {
+            valIP += inducedDipoleRotationMatrix[ii][jj] * _inducedDipolePolar[iIndex][jj];
+            valID += inducedDipoleRotationMatrix[ii][jj] * _inducedDipole[iIndex][jj];
+            valJP += inducedDipoleRotationMatrix[ii][jj] * _inducedDipolePolar[jIndex][jj];
+            valJD += inducedDipoleRotationMatrix[ii][jj] * _inducedDipole[jIndex][jj];
         }
+        qiUindI[ii] = valID;
+        qiUinpI[ii] = valIP;
+        qiUindJ[ii] = valJD;
+        qiUinpJ[ii] = valJP;
     }
 
-    RealOpenMM dsc3 = 1.0 - scale3*scalingFactors[D_SCALE];
-    RealOpenMM dsc5 = 1.0 - scale5*scalingFactors[D_SCALE];
-    RealOpenMM dsc7 = 1.0 - scale7*scalingFactors[D_SCALE];
-
-    RealOpenMM psc3 = 1.0 - scale3*scalingFactors[P_SCALE];
-    RealOpenMM psc5 = 1.0 - scale5*scalingFactors[P_SCALE];
-    RealOpenMM psc7 = 1.0 - scale7*scalingFactors[P_SCALE];
-
-    RealOpenMM usc3 = 1.0 - scale3*scalingFactors[U_SCALE];
-    RealOpenMM usc5 = 1.0 - scale5*scalingFactors[U_SCALE];
-
-    // construct necessary auxiliary vectors
-
-    RealOpenMM dixdk1       = di2*dk3 - di3*dk2;
-    RealOpenMM dixdk2       = di3*dk1 - di1*dk3;
-    RealOpenMM dixdk3       = di1*dk2 - di2*dk1;
-
-    RealOpenMM dixuk1       = di2*_inducedDipole[jIndex][2]  - di3*_inducedDipole[jIndex][1];
-    RealOpenMM dixuk2       = di3*_inducedDipole[jIndex][0]  - di1*_inducedDipole[jIndex][2];
-    RealOpenMM dixuk3       = di1*_inducedDipole[jIndex][1]  - di2*_inducedDipole[jIndex][0];
-    RealOpenMM dkxui1       = dk2*_inducedDipole[iIndex][2]  - dk3*_inducedDipole[iIndex][1];
-    RealOpenMM dkxui2       = dk3*_inducedDipole[iIndex][0]  - dk1*_inducedDipole[iIndex][2];
-    RealOpenMM dkxui3       = dk1*_inducedDipole[iIndex][1]  - dk2*_inducedDipole[iIndex][0];
-
-    RealOpenMM dixukp1      = di2*_inducedDipolePolar[jIndex][2] - di3*_inducedDipolePolar[jIndex][1];
-    RealOpenMM dixukp2      = di3*_inducedDipolePolar[jIndex][0] - di1*_inducedDipolePolar[jIndex][2];
-    RealOpenMM dixukp3      = di1*_inducedDipolePolar[jIndex][1] - di2*_inducedDipolePolar[jIndex][0];
-    RealOpenMM dkxuip1      = dk2*_inducedDipolePolar[iIndex][2] - dk3*_inducedDipolePolar[iIndex][1];
-    RealOpenMM dkxuip2      = dk3*_inducedDipolePolar[iIndex][0] - dk1*_inducedDipolePolar[iIndex][2];
-    RealOpenMM dkxuip3      = dk1*_inducedDipolePolar[iIndex][1] - dk2*_inducedDipolePolar[iIndex][0];
-
-    RealOpenMM dixr1        = di2*zr - di3*yr;
-    RealOpenMM dixr2        = di3*xr - di1*zr;
-    RealOpenMM dixr3        = di1*yr - di2*xr;
-
-    RealOpenMM dkxr1        = dk2*zr - dk3*yr;
-    RealOpenMM dkxr2        = dk3*xr - dk1*zr;
-    RealOpenMM dkxr3        = dk1*yr - dk2*xr;
-
-    RealOpenMM qir1         = qi1*xr + qi2*yr + qi3*zr;
-    RealOpenMM qir2         = qi2*xr + qi5*yr + qi6*zr;
-    RealOpenMM qir3         = qi3*xr + qi6*yr + qi9*zr;
-
-    RealOpenMM qkr1         = qk1*xr + qk2*yr + qk3*zr;
-    RealOpenMM qkr2         = qk2*xr + qk5*yr + qk6*zr;
-    RealOpenMM qkr3         = qk3*xr + qk6*yr + qk9*zr;
-
-    RealOpenMM qiqkr1       = qi1*qkr1 + qi2*qkr2 + qi3*qkr3;
-    RealOpenMM qiqkr2       = qi2*qkr1 + qi5*qkr2 + qi6*qkr3;
-    RealOpenMM qiqkr3       = qi3*qkr1 + qi6*qkr2 + qi9*qkr3;
-
-    RealOpenMM qkqir1       = qk1*qir1 + qk2*qir2 + qk3*qir3;
-    RealOpenMM qkqir2       = qk2*qir1 + qk5*qir2 + qk6*qir3;
-    RealOpenMM qkqir3       = qk3*qir1 + qk6*qir2 + qk9*qir3;
-
-    RealOpenMM qixqk1       = qi2*qk3 + qi5*qk6 + qi6*qk9 - qi3*qk2 - qi6*qk5 - qi9*qk6;
-    RealOpenMM qixqk2       = qi3*qk1 + qi6*qk2 + qi9*qk3 - qi1*qk3 - qi2*qk6 - qi3*qk9;
-    RealOpenMM qixqk3       = qi1*qk2 + qi2*qk5 + qi3*qk6 - qi2*qk1 - qi5*qk2 - qi6*qk3;
-
-    RealOpenMM rxqir1       = yr*qir3 - zr*qir2;
-    RealOpenMM rxqir2       = zr*qir1 - xr*qir3;
-    RealOpenMM rxqir3       = xr*qir2 - yr*qir1;
-
-    RealOpenMM rxqkr1       = yr*qkr3 - zr*qkr2;
-    RealOpenMM rxqkr2       = zr*qkr1 - xr*qkr3;
-    RealOpenMM rxqkr3       = xr*qkr2 - yr*qkr1;
-
-    RealOpenMM rxqikr1      = yr*qiqkr3 - zr*qiqkr2;
-    RealOpenMM rxqikr2      = zr*qiqkr1 - xr*qiqkr3;
-    RealOpenMM rxqikr3      = xr*qiqkr2 - yr*qiqkr1;
-
-    RealOpenMM rxqkir1      = yr*qkqir3 - zr*qkqir2;
-    RealOpenMM rxqkir2      = zr*qkqir1 - xr*qkqir3;
-    RealOpenMM rxqkir3      = xr*qkqir2 - yr*qkqir1;
-
-    RealOpenMM qkrxqir1     = qkr2*qir3 - qkr3*qir2;
-    RealOpenMM qkrxqir2     = qkr3*qir1 - qkr1*qir3;
-    RealOpenMM qkrxqir3     = qkr1*qir2 - qkr2*qir1;
-
-    RealOpenMM qidk1        = qi1*dk1 + qi2*dk2 + qi3*dk3;
-    RealOpenMM qidk2        = qi2*dk1 + qi5*dk2 + qi6*dk3;
-    RealOpenMM qidk3        = qi3*dk1 + qi6*dk2 + qi9*dk3;
-
-    RealOpenMM qkdi1        = qk1*di1 + qk2*di2 + qk3*di3;
-    RealOpenMM qkdi2        = qk2*di1 + qk5*di2 + qk6*di3;
-    RealOpenMM qkdi3        = qk3*di1 + qk6*di2 + qk9*di3;
-
-    RealOpenMM qiuk1        = qi1*_inducedDipole[jIndex][0]  + qi2*_inducedDipole[jIndex][1]  + qi3*_inducedDipole[jIndex][2];
-    RealOpenMM qiuk2        = qi2*_inducedDipole[jIndex][0]  + qi5*_inducedDipole[jIndex][1]  + qi6*_inducedDipole[jIndex][2];
-    RealOpenMM qiuk3        = qi3*_inducedDipole[jIndex][0]  + qi6*_inducedDipole[jIndex][1]  + qi9*_inducedDipole[jIndex][2];
-
-    RealOpenMM qkui1        = qk1*_inducedDipole[iIndex][0]  + qk2*_inducedDipole[iIndex][1]  + qk3*_inducedDipole[iIndex][2];
-    RealOpenMM qkui2        = qk2*_inducedDipole[iIndex][0]  + qk5*_inducedDipole[iIndex][1]  + qk6*_inducedDipole[iIndex][2];
-    RealOpenMM qkui3        = qk3*_inducedDipole[iIndex][0]  + qk6*_inducedDipole[iIndex][1]  + qk9*_inducedDipole[iIndex][2];
-
-    RealOpenMM qiukp1       = qi1*_inducedDipolePolar[jIndex][0] + qi2*_inducedDipolePolar[jIndex][1] + qi3*_inducedDipolePolar[jIndex][2];
-    RealOpenMM qiukp2       = qi2*_inducedDipolePolar[jIndex][0] + qi5*_inducedDipolePolar[jIndex][1] + qi6*_inducedDipolePolar[jIndex][2];
-    RealOpenMM qiukp3       = qi3*_inducedDipolePolar[jIndex][0] + qi6*_inducedDipolePolar[jIndex][1] + qi9*_inducedDipolePolar[jIndex][2];
-
-    RealOpenMM qkuip1       = qk1*_inducedDipolePolar[iIndex][0] + qk2*_inducedDipolePolar[iIndex][1] + qk3*_inducedDipolePolar[iIndex][2];
-    RealOpenMM qkuip2       = qk2*_inducedDipolePolar[iIndex][0] + qk5*_inducedDipolePolar[iIndex][1] + qk6*_inducedDipolePolar[iIndex][2];
-    RealOpenMM qkuip3       = qk3*_inducedDipolePolar[iIndex][0] + qk6*_inducedDipolePolar[iIndex][1] + qk9*_inducedDipolePolar[iIndex][2];
-
-    RealOpenMM dixqkr1      = di2*qkr3 - di3*qkr2;
-    RealOpenMM dixqkr2      = di3*qkr1 - di1*qkr3;
-    RealOpenMM dixqkr3      = di1*qkr2 - di2*qkr1;
-
-    RealOpenMM dkxqir1      = dk2*qir3 - dk3*qir2;
-    RealOpenMM dkxqir2      = dk3*qir1 - dk1*qir3;
-    RealOpenMM dkxqir3      = dk1*qir2 - dk2*qir1;
-
-    RealOpenMM uixqkr1      = _inducedDipole[iIndex][1]*qkr3 - _inducedDipole[iIndex][2]*qkr2;
-    RealOpenMM uixqkr2      = _inducedDipole[iIndex][2]*qkr1 - _inducedDipole[iIndex][0]*qkr3;
-    RealOpenMM uixqkr3      = _inducedDipole[iIndex][0]*qkr2 - _inducedDipole[iIndex][1]*qkr1;
-
-    RealOpenMM ukxqir1      = _inducedDipole[jIndex][1]*qir3 - _inducedDipole[jIndex][2]*qir2;
-    RealOpenMM ukxqir2      = _inducedDipole[jIndex][2]*qir1 - _inducedDipole[jIndex][0]*qir3;
-    RealOpenMM ukxqir3      = _inducedDipole[jIndex][0]*qir2 - _inducedDipole[jIndex][1]*qir1;
-
-    RealOpenMM uixqkrp1     = _inducedDipolePolar[iIndex][1]*qkr3 - _inducedDipolePolar[iIndex][2]*qkr2;
-    RealOpenMM uixqkrp2     = _inducedDipolePolar[iIndex][2]*qkr1 - _inducedDipolePolar[iIndex][0]*qkr3;
-    RealOpenMM uixqkrp3     = _inducedDipolePolar[iIndex][0]*qkr2 - _inducedDipolePolar[iIndex][1]*qkr1;
-
-    RealOpenMM ukxqirp1     = _inducedDipolePolar[jIndex][1]*qir3 - _inducedDipolePolar[jIndex][2]*qir2;
-    RealOpenMM ukxqirp2     = _inducedDipolePolar[jIndex][2]*qir1 - _inducedDipolePolar[jIndex][0]*qir3;
-    RealOpenMM ukxqirp3     = _inducedDipolePolar[jIndex][0]*qir2 - _inducedDipolePolar[jIndex][1]*qir1;
-
-    RealOpenMM rxqidk1      = yr*qidk3 - zr*qidk2;
-    RealOpenMM rxqidk2      = zr*qidk1 - xr*qidk3;
-    RealOpenMM rxqidk3      = xr*qidk2 - yr*qidk1;
-
-    RealOpenMM rxqkdi1      = yr*qkdi3 - zr*qkdi2;
-    RealOpenMM rxqkdi2      = zr*qkdi1 - xr*qkdi3;
-    RealOpenMM rxqkdi3      = xr*qkdi2 - yr*qkdi1;
-
-    RealOpenMM rxqiuk1      = yr*qiuk3 - zr*qiuk2;
-    RealOpenMM rxqiuk2      = zr*qiuk1 - xr*qiuk3;
-    RealOpenMM rxqiuk3      = xr*qiuk2 - yr*qiuk1;
-
-    RealOpenMM rxqkui1      = yr*qkui3 - zr*qkui2;
-    RealOpenMM rxqkui2      = zr*qkui1 - xr*qkui3;
-    RealOpenMM rxqkui3      = xr*qkui2 - yr*qkui1;
-
-    RealOpenMM rxqiukp1     = yr*qiukp3 - zr*qiukp2;
-    RealOpenMM rxqiukp2     = zr*qiukp1 - xr*qiukp3;
-    RealOpenMM rxqiukp3     = xr*qiukp2 - yr*qiukp1;
-
-    RealOpenMM rxqkuip1     = yr*qkuip3 - zr*qkuip2;
-    RealOpenMM rxqkuip2     = zr*qkuip1 - xr*qkuip3;
-    RealOpenMM rxqkuip3     = xr*qkuip2 - yr*qkuip1;
-
-    // calculate the scalar products for permanent components
-
-    RealOpenMM sc2          = di1*dk1 + di2*dk2 + di3*dk3;
-    RealOpenMM sc3          = di1*xr + di2*yr + di3*zr;
-    RealOpenMM sc4          = dk1*xr + dk2*yr + dk3*zr;
-    RealOpenMM sc5          = qir1*xr + qir2*yr + qir3*zr;
-    RealOpenMM sc6          = qkr1*xr + qkr2*yr + qkr3*zr;
-    RealOpenMM sc7          = qir1*dk1 + qir2*dk2 + qir3*dk3;
-    RealOpenMM sc8          = qkr1*di1 + qkr2*di2 + qkr3*di3;
-    RealOpenMM sc9          = qir1*qkr1 + qir2*qkr2 + qir3*qkr3;
-    RealOpenMM sc10         = qi1*qk1 + qi2*qk2 + qi3*qk3
-                         + qi2*qk2 + qi5*qk5 + qi6*qk6
-                         + qi3*qk3 + qi6*qk6 + qi9*qk9;
-
-    // calculate the scalar products for induced components
-
-    RealOpenMM sci1         = _inducedDipole[iIndex][0]*dk1 + _inducedDipole[iIndex][1]*dk2
-                         + _inducedDipole[iIndex][2]*dk3 + di1*_inducedDipole[jIndex][0]
-                         + di2*_inducedDipole[jIndex][1] + di3*_inducedDipole[jIndex][2];
-
-    RealOpenMM sci3         = _inducedDipole[iIndex][0]*xr + _inducedDipole[iIndex][1]*yr + _inducedDipole[iIndex][2]*zr;
-    RealOpenMM sci4         = _inducedDipole[jIndex][0]*xr + _inducedDipole[jIndex][1]*yr + _inducedDipole[jIndex][2]*zr;
-    RealOpenMM sci7         = qir1*_inducedDipole[jIndex][0] + qir2*_inducedDipole[jIndex][1] + qir3*_inducedDipole[jIndex][2];
-    RealOpenMM sci8         = qkr1*_inducedDipole[iIndex][0] + qkr2*_inducedDipole[iIndex][1] + qkr3*_inducedDipole[iIndex][2];
-    RealOpenMM scip1        = _inducedDipolePolar[iIndex][0]*dk1 + _inducedDipolePolar[iIndex][1]*dk2 + _inducedDipolePolar[iIndex][2]*dk3 + di1*_inducedDipolePolar[jIndex][0] + di2*_inducedDipolePolar[jIndex][1] + di3*_inducedDipolePolar[jIndex][2];
-    RealOpenMM scip2        = _inducedDipole[iIndex][0]*_inducedDipolePolar[jIndex][0]+_inducedDipole[iIndex][1]*_inducedDipolePolar[jIndex][1]
-                          + _inducedDipole[iIndex][2]*_inducedDipolePolar[jIndex][2]+_inducedDipolePolar[iIndex][0]*_inducedDipole[jIndex][0]
-                          + _inducedDipolePolar[iIndex][1]*_inducedDipole[jIndex][1]+_inducedDipolePolar[iIndex][2]*_inducedDipole[jIndex][2];
-
-    RealOpenMM scip3        = _inducedDipolePolar[iIndex][0]*xr + _inducedDipolePolar[iIndex][1]*yr + _inducedDipolePolar[iIndex][2]*zr;
-    RealOpenMM scip4        = _inducedDipolePolar[jIndex][0]*xr + _inducedDipolePolar[jIndex][1]*yr + _inducedDipolePolar[jIndex][2]*zr;
-
-    RealOpenMM scip7        = qir1*_inducedDipolePolar[jIndex][0] + qir2*_inducedDipolePolar[jIndex][1] + qir3*_inducedDipolePolar[jIndex][2];
-    RealOpenMM scip8        = qkr1*_inducedDipolePolar[iIndex][0] + qkr2*_inducedDipolePolar[iIndex][1] + qkr3*_inducedDipolePolar[iIndex][2];
-
-    // calculate the gl functions for permanent components
-
-    RealOpenMM gl0           = ci*ck;
-    RealOpenMM gl1           = ck*sc3 - ci*sc4;
-    RealOpenMM gl2           = ci*sc6 + ck*sc5 - sc3*sc4;
-    RealOpenMM gl3           = sc3*sc6 - sc4*sc5;
-    RealOpenMM gl4           = sc5*sc6;
-    RealOpenMM gl5           = -4.0*sc9;
-    RealOpenMM gl6           = sc2;
-    RealOpenMM gl7           = 2.0 * (sc7-sc8);
-    RealOpenMM gl8           = 2.0 * sc10;
-
-    // calculate the gl functions for induced components
-
-    RealOpenMM gli1          = ck*sci3 - ci*sci4;
-    RealOpenMM gli2          = -sc3*sci4 - sci3*sc4;
-    RealOpenMM gli3          = sci3*sc6 - sci4*sc5;
-    RealOpenMM gli6          = sci1;
-    RealOpenMM gli7          = 2.0 * (sci7-sci8);
-    RealOpenMM glip1         = ck*scip3 - ci*scip4;
-    RealOpenMM glip2         = -sc3*scip4 - scip3*sc4;
-    RealOpenMM glip3         = scip3*sc6 - scip4*sc5;
-    RealOpenMM glip6         = scip1;
-    RealOpenMM glip7         = 2.0 * (scip7-scip8);
-
-    // compute the energy contributions for this interaction
-
-    RealOpenMM e             = bn0*gl0 + bn1*(gl1+gl6) + bn2*(gl2+gl7+gl8) + bn3*(gl3+gl5) + bn4*gl4;
-    RealOpenMM ei            = 0.5 * (bn1*(gli1+gli6) + bn2*(gli2+gli7) + bn3*gli3); 
-
-    // get the real energy without any screening function
-
-    RealOpenMM erl           = rr1*gl0 + rr3*(gl1+gl6) + rr5*(gl2+gl7+gl8) + rr7*(gl3+gl5) + rr9*gl4;
-    RealOpenMM erli          = 0.5*(rr3*(gli1+gli6)*psc3 + rr5*(gli2+gli7)*psc5 + rr7*gli3*psc7);
-    e                   = e - (1.0-scalingFactors[M_SCALE])*erl;
-    ei                  = ei - erli;
-
-    energy              = (e + ei);
-
-    // intermediate variables for permanent force terms
-
-    RealOpenMM gf1 = bn1*gl0 + bn2*(gl1+gl6)
-                 + bn3*(gl2+gl7+gl8)
-                 + bn4*(gl3+gl5) + bn5*gl4;
-    RealOpenMM gf2 = -ck*bn1 + sc4*bn2 - sc6*bn3;
-    RealOpenMM gf3 = ci*bn1 + sc3*bn2 + sc5*bn3;
-    RealOpenMM gf4 = 2.0*bn2;
-    RealOpenMM gf5 = 2.0*(-ck*bn2+sc4*bn3-sc6*bn4);
-    RealOpenMM gf6 = 2.0*(-ci*bn2-sc3*bn3-sc5*bn4);
-    RealOpenMM gf7 = 4.0*bn3;
-    RealOpenMM gfr1 = rr3*gl0 + rr5*(gl1+gl6)
-                  + rr7*(gl2+gl7+gl8)
-                  + rr9*(gl3+gl5) + rr11*gl4;
-    RealOpenMM gfr2 = -ck*rr3 + sc4*rr5 - sc6*rr7;
-    RealOpenMM gfr3 = ci*rr3 + sc3*rr5 + sc5*rr7;
-    RealOpenMM gfr4 = 2.0*rr5;
-    RealOpenMM gfr5 = 2.0*(-ck*rr5+sc4*rr7-sc6*rr9);
-    RealOpenMM gfr6 = 2.0*(-ci*rr5-sc3*rr7-sc5*rr9);
-    RealOpenMM gfr7 = 4.0*rr7;
-
-    // intermediate variables for induced force terms
-
-    RealOpenMM gfi1 = 0.5*(bn2*(gli1+glip1+gli6+glip6)
-                  + bn2*scip2
-                  + bn3*(gli2+glip2+gli7+glip7)
-                  - bn3*(sci3*scip4+scip3*sci4)
-                  + bn4*(gli3+glip3));
-    RealOpenMM gfi2 = -ck*bn1 + sc4*bn2 - sc6*bn3;
-    RealOpenMM gfi3 = ci*bn1 + sc3*bn2 + sc5*bn3;
-    RealOpenMM gfi4 = 2.0 * bn2;
-    RealOpenMM gfi5 = bn3 * (sci4+scip4);
-    RealOpenMM gfi6 = -bn3 * (sci3+scip3);
-    RealOpenMM gfri1 = 0.5*(rr5*((gli1+gli6)*psc3
-                         + (glip1+glip6)*dsc3
-                         + scip2*usc3)
-              + rr7*((gli7+gli2)*psc5
-                         + (glip7+glip2)*dsc5
-                  - (sci3*scip4+scip3*sci4)*usc5)
-              + rr9*(gli3*psc7+glip3*dsc7));
-    RealOpenMM gfri4 = 2.0 * rr5;
-    RealOpenMM gfri5 = rr7 * (sci4*psc7+scip4*dsc7);
-    RealOpenMM gfri6 = -rr7 * (sci3*psc7+scip3*dsc7);
-
-    // get the permanent force with screening
-
-    RealOpenMM ftm21 = gf1*xr + gf2*di1 + gf3*dk1
-                   + gf4*(qkdi1-qidk1) + gf5*qir1
-                   + gf6*qkr1 + gf7*(qiqkr1+qkqir1);
-    RealOpenMM ftm22 = gf1*yr + gf2*di2 + gf3*dk2
-                   + gf4*(qkdi2-qidk2) + gf5*qir2
-                   + gf6*qkr2 + gf7*(qiqkr2+qkqir2);
-    RealOpenMM ftm23 = gf1*zr + gf2*di3 + gf3*dk3
-                   + gf4*(qkdi3-qidk3) + gf5*qir3
-                   + gf6*qkr3 + gf7*(qiqkr3+qkqir3);
-
-    // get the permanent force without screening
-
-    RealOpenMM ftm2r1 = gfr1*xr + gfr2*di1 + gfr3*dk1
-                   + gfr4*(qkdi1-qidk1) + gfr5*qir1
-                   + gfr6*qkr1 + gfr7*(qiqkr1+qkqir1);
-    RealOpenMM ftm2r2 = gfr1*yr + gfr2*di2 + gfr3*dk2
-                   + gfr4*(qkdi2-qidk2) + gfr5*qir2
-                   + gfr6*qkr2 + gfr7*(qiqkr2+qkqir2);
-    RealOpenMM ftm2r3 = gfr1*zr + gfr2*di3 + gfr3*dk3
-                   + gfr4*(qkdi3-qidk3) + gfr5*qir3
-                   + gfr6*qkr3 + gfr7*(qiqkr3+qkqir3);
-
-    // get the induced force with screening
-
-    RealOpenMM ftm2i1 = gfi1*xr + 0.5*
-          (gfi2*(_inducedDipole[iIndex][0]+_inducedDipolePolar[iIndex][0])
-         + bn2*(sci4*_inducedDipolePolar[iIndex][0]+scip4*_inducedDipole[iIndex][0])
-         + gfi3*(_inducedDipole[jIndex][0]+_inducedDipolePolar[jIndex][0])
-         + bn2*(sci3*_inducedDipolePolar[jIndex][0]+scip3*_inducedDipole[jIndex][0])
-         + (sci4+scip4)*bn2*di1
-         + (sci3+scip3)*bn2*dk1
-         + gfi4*(qkui1+qkuip1-qiuk1-qiukp1))
-         + gfi5*qir1 + gfi6*qkr1;
-
-    RealOpenMM ftm2i2 = gfi1*yr + 0.5*
-          (gfi2*(_inducedDipole[iIndex][1]+_inducedDipolePolar[iIndex][1])
-         + bn2*(sci4*_inducedDipolePolar[iIndex][1]+scip4*_inducedDipole[iIndex][1])
-         + gfi3*(_inducedDipole[jIndex][1]+_inducedDipolePolar[jIndex][1])
-         + bn2*(sci3*_inducedDipolePolar[jIndex][1]+scip3*_inducedDipole[jIndex][1])
-         + (sci4+scip4)*bn2*di2
-         + (sci3+scip3)*bn2*dk2
-         + gfi4*(qkui2+qkuip2-qiuk2-qiukp2))
-         + gfi5*qir2 + gfi6*qkr2;
-
-    RealOpenMM ftm2i3 = gfi1*zr + 0.5*
-          (gfi2*(_inducedDipole[iIndex][2]+_inducedDipolePolar[iIndex][2])
-         + bn2*(sci4*_inducedDipolePolar[iIndex][2]+scip4*_inducedDipole[iIndex][2])
-         + gfi3*(_inducedDipole[jIndex][2]+_inducedDipolePolar[jIndex][2])
-         + bn2*(sci3*_inducedDipolePolar[jIndex][2]+scip3*_inducedDipole[jIndex][2])
-         + (sci4+scip4)*bn2*di3
-         + (sci3+scip3)*bn2*dk3
-         + gfi4*(qkui3+qkuip3-qiuk3-qiukp3))
-         + gfi5*qir3 + gfi6*qkr3;
-
-    // get the induced force without screening
-
-    RealOpenMM ftm2ri1 = gfri1*xr + 0.5*
-        (- rr3*ck*(_inducedDipole[iIndex][0]*psc3+_inducedDipolePolar[iIndex][0]*dsc3)
-         + rr5*sc4*(_inducedDipole[iIndex][0]*psc5+_inducedDipolePolar[iIndex][0]*dsc5)
-         - rr7*sc6*(_inducedDipole[iIndex][0]*psc7+_inducedDipolePolar[iIndex][0]*dsc7))
-         + (rr3*ci*(_inducedDipole[jIndex][0]*psc3+_inducedDipolePolar[jIndex][0]*dsc3)
-         + rr5*sc3*(_inducedDipole[jIndex][0]*psc5+_inducedDipolePolar[jIndex][0]*dsc5)
-         + rr7*sc5*(_inducedDipole[jIndex][0]*psc7+_inducedDipolePolar[jIndex][0]*dsc7))*0.5
-         + rr5*usc5*(sci4*_inducedDipolePolar[iIndex][0]+scip4*_inducedDipole[iIndex][0]
-         + sci3*_inducedDipolePolar[jIndex][0]+scip3*_inducedDipole[jIndex][0])*0.5
-         + 0.5*(sci4*psc5+scip4*dsc5)*rr5*di1
-         + 0.5*(sci3*psc5+scip3*dsc5)*rr5*dk1
-         + 0.5*gfri4*((qkui1-qiuk1)*psc5
-         + (qkuip1-qiukp1)*dsc5)
-         + gfri5*qir1 + gfri6*qkr1;
-
-    RealOpenMM ftm2ri2 = gfri1*yr + 0.5*
-        (- rr3*ck*(_inducedDipole[iIndex][1]*psc3+_inducedDipolePolar[iIndex][1]*dsc3)
-         + rr5*sc4*(_inducedDipole[iIndex][1]*psc5+_inducedDipolePolar[iIndex][1]*dsc5)
-         - rr7*sc6*(_inducedDipole[iIndex][1]*psc7+_inducedDipolePolar[iIndex][1]*dsc7))
-         + (rr3*ci*(_inducedDipole[jIndex][1]*psc3+_inducedDipolePolar[jIndex][1]*dsc3)
-         + rr5*sc3*(_inducedDipole[jIndex][1]*psc5+_inducedDipolePolar[jIndex][1]*dsc5)
-         + rr7*sc5*(_inducedDipole[jIndex][1]*psc7+_inducedDipolePolar[jIndex][1]*dsc7))*0.5
-         + rr5*usc5*(sci4*_inducedDipolePolar[iIndex][1]+scip4*_inducedDipole[iIndex][1]
-         + sci3*_inducedDipolePolar[jIndex][1]+scip3*_inducedDipole[jIndex][1])*0.5
-         + 0.5*(sci4*psc5+scip4*dsc5)*rr5*di2
-         + 0.5*(sci3*psc5+scip3*dsc5)*rr5*dk2
-         + 0.5*gfri4*((qkui2-qiuk2)*psc5
-         + (qkuip2-qiukp2)*dsc5)
-         + gfri5*qir2 + gfri6*qkr2;
-
-    RealOpenMM ftm2ri3 = gfri1*zr + 0.5*
-        (- rr3*ck*(_inducedDipole[iIndex][2]*psc3+_inducedDipolePolar[iIndex][2]*dsc3)
-         + rr5*sc4*(_inducedDipole[iIndex][2]*psc5+_inducedDipolePolar[iIndex][2]*dsc5)
-         - rr7*sc6*(_inducedDipole[iIndex][2]*psc7+_inducedDipolePolar[iIndex][2]*dsc7))
-         + (rr3*ci*(_inducedDipole[jIndex][2]*psc3+_inducedDipolePolar[jIndex][2]*dsc3)
-         + rr5*sc3*(_inducedDipole[jIndex][2]*psc5+_inducedDipolePolar[jIndex][2]*dsc5)
-         + rr7*sc5*(_inducedDipole[jIndex][2]*psc7+_inducedDipolePolar[jIndex][2]*dsc7))*0.5
-         + rr5*usc5*(sci4*_inducedDipolePolar[iIndex][2]+scip4*_inducedDipole[iIndex][2]
-         + sci3*_inducedDipolePolar[jIndex][2]+scip3*_inducedDipole[jIndex][2])*0.5
-         + 0.5*(sci4*psc5+scip4*dsc5)*rr5*di3
-         + 0.5*(sci3*psc5+scip3*dsc5)*rr5*dk3
-         + 0.5*gfri4*((qkui3-qiuk3)*psc5
-         + (qkuip3-qiukp3)*dsc5)
-         + gfri5*qir3 + gfri6*qkr3;
-
-    // account for partially excluded induced interactions
-
-    RealOpenMM temp3 = 0.5 * rr3 * ((gli1+gli6)*scalingFactors[P_SCALE]
-                               +(glip1+glip6)*scalingFactors[D_SCALE]);
-
-    RealOpenMM temp5 = 0.5 * rr5 * ((gli2+gli7)*scalingFactors[P_SCALE]
-                               +(glip2+glip7)*scalingFactors[D_SCALE]);
-
-    RealOpenMM temp7 = 0.5 * rr7 * (gli3*scalingFactors[P_SCALE]
-                               +glip3*scalingFactors[D_SCALE]);
-
-    RealOpenMM fridmp1 = temp3*ddsc31 + temp5*ddsc51 + temp7*ddsc71;
-    RealOpenMM fridmp2 = temp3*ddsc32 + temp5*ddsc52 + temp7*ddsc72;
-    RealOpenMM fridmp3 = temp3*ddsc33 + temp5*ddsc53 + temp7*ddsc73;
-
-    // find some scaling terms for induced-induced force
-
-    temp3         = 0.5 * rr3 * scalingFactors[U_SCALE] * scip2;
-    temp5         = -0.5 * rr5 * scalingFactors[U_SCALE] * (sci3*scip4+scip3*sci4);
-    RealOpenMM findmp1 = temp3*ddsc31 + temp5*ddsc51;
-    RealOpenMM findmp2 = temp3*ddsc32 + temp5*ddsc52;
-    RealOpenMM findmp3 = temp3*ddsc33 + temp5*ddsc53;
-
-    // modify the forces for partially excluded interactions
-
-    ftm2i1       -= (fridmp1 + findmp1);
-    ftm2i2       -= (fridmp2 + findmp2);
-    ftm2i3       -= (fridmp3 + findmp3);
-
-    // correction to convert mutual to direct polarization force
-
-    if (getPolarizationType() == AmoebaReferenceMultipoleForce::Direct) {
-
-       RealOpenMM gfd     = 0.5 * (bn2*scip2 - bn3*(scip3*sci4+sci3*scip4));
-       ftm2i1       -= gfd*xr + 0.5*bn2*(sci4*_inducedDipolePolar[iIndex][0]+scip4*_inducedDipole[iIndex][0]+sci3*_inducedDipolePolar[jIndex][0]+scip3*_inducedDipole[jIndex][0]);
-       ftm2i2       -= gfd*yr + 0.5*bn2*(sci4*_inducedDipolePolar[iIndex][1]+scip4*_inducedDipole[iIndex][1]+sci3*_inducedDipolePolar[jIndex][1]+scip3*_inducedDipole[jIndex][1]);
-       ftm2i3       -= gfd*zr + 0.5*bn2*(sci4*_inducedDipolePolar[iIndex][2]+scip4*_inducedDipole[iIndex][2]+sci3*_inducedDipolePolar[jIndex][2]+scip3*_inducedDipole[jIndex][2]);
-
-       RealOpenMM gfdr    = 0.5 * (rr5*scip2*usc3 - rr7*(scip3*sci4 +sci3*scip4)*usc5);
-       RealOpenMM fdir1   = gfdr*xr + 0.5*usc5*rr5*(sci4*_inducedDipolePolar[iIndex][0]+scip4*_inducedDipole[iIndex][0] + sci3*_inducedDipolePolar[jIndex][0]+scip3*_inducedDipole[jIndex][0]);
-       RealOpenMM fdir2   = gfdr*yr + 0.5*usc5*rr5*(sci4*_inducedDipolePolar[iIndex][1]+scip4*_inducedDipole[iIndex][1] + sci3*_inducedDipolePolar[jIndex][1]+scip3*_inducedDipole[jIndex][1]);
-       RealOpenMM fdir3   = gfdr*zr + 0.5*usc5*rr5*(sci4*_inducedDipolePolar[iIndex][2]+scip4*_inducedDipole[iIndex][2] + sci3*_inducedDipolePolar[jIndex][2]+scip3*_inducedDipole[jIndex][2]);
-
-       ftm2i1       += fdir1 + findmp1;
-       ftm2i2       += fdir2 + findmp2;
-       ftm2i3       += fdir3 + findmp3;
+    // The Qtilde intermediates (QI frame multipoles) for atoms I and J
+    RealOpenMM qiQI[9], qiQJ[9];
+    // Rotate the permanent multipoles to the QI frame.
+    qiQI[0] = particleI.charge;
+    qiQJ[0] = particleJ.charge;
+    for (int ii = 0; ii < 3; ii++) {
+        RealOpenMM valI = 0.0;
+        RealOpenMM valJ = 0.0;
+        for (int jj = 0; jj < 3; jj++) {
+            valI += qiRotationMatrix1[ii][jj] * particleI.sphericalDipole[jj];
+            valJ += qiRotationMatrix1[ii][jj] * particleJ.sphericalDipole[jj];
+        }
+        qiQI[ii+1] = valI;
+        qiQJ[ii+1] = valJ;
+    }
+    for (int ii = 0; ii < 5; ii++) {
+        RealOpenMM valI = 0.0;
+        RealOpenMM valJ = 0.0;
+        for (int jj = 0; jj < 5; jj++) {
+            valI += qiRotationMatrix2[ii][jj] * particleI.sphericalQuadrupole[jj];
+            valJ += qiRotationMatrix2[ii][jj] * particleJ.sphericalQuadrupole[jj];
+        }
+        qiQI[ii+4] = valI;
+        qiQJ[ii+4] = valJ;
     }
 
-    // intermediate variables for induced torque terms
+    // The Qtilde{x,y,z} torque intermediates for atoms I and J, which are used to obtain the torques on the permanent moments.
+    RealOpenMM qiQIX[9] = {0.0, qiQI[3], 0.0, -qiQI[1], sqrtThree*qiQI[6], qiQI[8], -sqrtThree*qiQI[4] - qiQI[7], qiQI[6], -qiQI[5]};
+    RealOpenMM qiQIY[9] = {0.0, -qiQI[2], qiQI[1], 0.0, -sqrtThree*qiQI[5], sqrtThree*qiQI[4] - qiQI[7], -qiQI[8], qiQI[5], qiQI[6]};
+    RealOpenMM qiQIZ[9] = {0.0, 0.0, -qiQI[3], qiQI[2], 0.0, -qiQI[6], qiQI[5], -2.0*qiQI[8], 2.0*qiQI[7]};
+    RealOpenMM qiQJX[9] = {0.0, qiQJ[3], 0.0, -qiQJ[1], sqrtThree*qiQJ[6], qiQJ[8], -sqrtThree*qiQJ[4] - qiQJ[7], qiQJ[6], -qiQJ[5]};
+    RealOpenMM qiQJY[9] = {0.0, -qiQJ[2], qiQJ[1], 0.0, -sqrtThree*qiQJ[5], sqrtThree*qiQJ[4] - qiQJ[7], -qiQJ[8], qiQJ[5], qiQJ[6]};
+    RealOpenMM qiQJZ[9] = {0.0, 0.0, -qiQJ[3], qiQJ[2], 0.0, -qiQJ[6], qiQJ[5], -2.0*qiQJ[8], 2.0*qiQJ[7]};
 
-    RealOpenMM gti2  = 0.5 * bn2 * (sci4+scip4);
-    RealOpenMM gti3  = 0.5 * bn2 * (sci3+scip3);
-    RealOpenMM gti4  = gfi4;
-    RealOpenMM gti5  = gfi5;
-    RealOpenMM gti6  = gfi6;
-    RealOpenMM gtri2 = 0.5 * rr5 * (sci4*psc5+scip4*dsc5);
-    RealOpenMM gtri3 = 0.5 * rr5 * (sci3*psc5+scip3*dsc5);
-    RealOpenMM gtri4 = gfri4;
-    RealOpenMM gtri5 = gfri5;
-    RealOpenMM gtri6 = gfri6;
+    // The field derivatives at I due to permanent and induced moments on J, and vice-versa.
+    // Also, their derivatives w.r.t. R, which are needed for force calculations
+    RealOpenMM Vij[9], Vji[9], VjiR[9], VijR[9];
+    // The field derivatives at I due to only permanent moments on J, and vice-versa.
+    RealOpenMM Vijp[3], Vijd[3], Vjip[3], Vjid[3];
+    RealOpenMM rInvVec[7], alphaRVec[8], bVec[5];
 
-    // get the permanent torque with screening
+    RealOpenMM prefac = (_electric/_dielectric);
+    RealOpenMM rInv = 1.0 / r;
 
-    RealOpenMM ttm21 = -bn1*dixdk1 + gf2*dixr1
-        + gf4*(dixqkr1+dkxqir1+rxqidk1-2.0*qixqk1)
-        - gf5*rxqir1 - gf7*(rxqikr1+qkrxqir1);
-    RealOpenMM ttm22 = -bn1*dixdk2 + gf2*dixr2
-        + gf4*(dixqkr2+dkxqir2+rxqidk2-2.0*qixqk2)
-        - gf5*rxqir2 - gf7*(rxqikr2+qkrxqir2);
-    RealOpenMM ttm23 = -bn1*dixdk3 + gf2*dixr3
-        + gf4*(dixqkr3+dkxqir3+rxqidk3-2.0*qixqk3)
-        - gf5*rxqir3 - gf7*(rxqikr3+qkrxqir3);
-    RealOpenMM ttm31 = bn1*dixdk1 + gf3*dkxr1
-        - gf4*(dixqkr1+dkxqir1+rxqkdi1-2.0*qixqk1)
-        - gf6*rxqkr1 - gf7*(rxqkir1-qkrxqir1);
-    RealOpenMM ttm32 = bn1*dixdk2 + gf3*dkxr2
-        - gf4*(dixqkr2+dkxqir2+rxqkdi2-2.0*qixqk2)
-        - gf6*rxqkr2 - gf7*(rxqkir2-qkrxqir2);
-    RealOpenMM ttm33 = bn1*dixdk3 + gf3*dkxr3
-        - gf4*(dixqkr3+dkxqir3+rxqkdi3-2.0*qixqk3)
-        - gf6*rxqkr3 - gf7*(rxqkir3-qkrxqir3);
+    // The rInvVec array is defined such that the ith element is R^-i, with the
+    // dieleectric constant folded in, to avoid conversions later.
+    rInvVec[1] = prefac * rInv;
+    for(int i = 2; i < 7; ++i)
+        rInvVec[i] = rInvVec[i-1] * rInv;
 
-    // get the permanent torque without screening
+    // The alpharVec array is defined such that the ith element is (alpha R)^i,
+    // where kappa (alpha in OpenMM parlance) is the Ewald attenuation parameter.
+    alphaRVec[1] = _alphaEwald * r;
+    for(int i = 2; i < 8; ++i)
+        alphaRVec[i] = alphaRVec[i-1] * alphaRVec[1];
 
-    RealOpenMM ttm2r1 = -rr3*dixdk1 + gfr2*dixr1-gfr5*rxqir1
-        + gfr4*(dixqkr1+dkxqir1+rxqidk1-2.0*qixqk1)
-        - gfr7*(rxqikr1+qkrxqir1);
-    RealOpenMM ttm2r2 = -rr3*dixdk2 + gfr2*dixr2-gfr5*rxqir2
-        + gfr4*(dixqkr2+dkxqir2+rxqidk2-2.0*qixqk2)
-        - gfr7*(rxqikr2+qkrxqir2);
-    RealOpenMM ttm2r3 = -rr3*dixdk3 + gfr2*dixr3-gfr5*rxqir3
-        + gfr4*(dixqkr3+dkxqir3+rxqidk3-2.0*qixqk3)
-        - gfr7*(rxqikr3+qkrxqir3);
-    RealOpenMM ttm3r1 = rr3*dixdk1 + gfr3*dkxr1 -gfr6*rxqkr1
-        - gfr4*(dixqkr1+dkxqir1+rxqkdi1-2.0*qixqk1)
-        - gfr7*(rxqkir1-qkrxqir1);
-    RealOpenMM ttm3r2 = rr3*dixdk2 + gfr3*dkxr2 -gfr6*rxqkr2
-        - gfr4*(dixqkr2+dkxqir2+rxqkdi2-2.0*qixqk2)
-        - gfr7*(rxqkir2-qkrxqir2);
-    RealOpenMM ttm3r3 = rr3*dixdk3 + gfr3*dkxr3 -gfr6*rxqkr3
-        - gfr4*(dixqkr3+dkxqir3+rxqkdi3-2.0*qixqk3)
-        - gfr7*(rxqkir3-qkrxqir3);
+    RealOpenMM erfAlphaR = erf(alphaRVec[1]);
+    RealOpenMM X = 2.0*EXP(-alphaRVec[2])/SQRT_PI;
+    RealOpenMM mScale = scalingFactors[M_SCALE];
+    RealOpenMM dScale = scalingFactors[D_SCALE];
+    RealOpenMM pScale = scalingFactors[P_SCALE];
+    RealOpenMM uScale = scalingFactors[U_SCALE];
 
-    // get the induced torque with screening
+    int doubleFactorial = 1, facCount = 1;
+    RealOpenMM tmp = alphaRVec[1];
+    bVec[1] = -erfAlphaR;
+    for(int i=2; i < 5; ++i){
+        bVec[i] = bVec[i-1] + tmp * X / (RealOpenMM)(doubleFactorial);
+        facCount = facCount + 2;
+        doubleFactorial = doubleFactorial * facCount;
+        tmp *= 2.0 * alphaRVec[2];
+    }
 
-    RealOpenMM ttm2i1 = -bn1*(dixuk1+dixukp1)*0.5
-        + gti2*dixr1 + gti4*(ukxqir1+rxqiuk1
-        + ukxqirp1+rxqiukp1)*0.5 - gti5*rxqir1;
-    RealOpenMM ttm2i2 = -bn1*(dixuk2+dixukp2)*0.5
-        + gti2*dixr2 + gti4*(ukxqir2+rxqiuk2
-        + ukxqirp2+rxqiukp2)*0.5 - gti5*rxqir2;
-    RealOpenMM ttm2i3 = -bn1*(dixuk3+dixukp3)*0.5
-        + gti2*dixr3 + gti4*(ukxqir3+rxqiuk3
-        + ukxqirp3+rxqiukp3)*0.5 - gti5*rxqir3;
-    RealOpenMM ttm3i1 = -bn1*(dkxui1+dkxuip1)*0.5
-        + gti3*dkxr1 - gti4*(uixqkr1+rxqkui1
-        + uixqkrp1+rxqkuip1)*0.5 - gti6*rxqkr1;
-    RealOpenMM ttm3i2 = -bn1*(dkxui2+dkxuip2)*0.5
-        + gti3*dkxr2 - gti4*(uixqkr2+rxqkui2
-        + uixqkrp2+rxqkuip2)*0.5 - gti6*rxqkr2;
-    RealOpenMM ttm3i3 = -bn1*(dkxui3+dkxuip3)*0.5
-        + gti3*dkxr3 - gti4*(uixqkr3+rxqkui3
-        + uixqkrp3+rxqkuip3)*0.5 - gti6*rxqkr3;
+    RealOpenMM dmp = particleI.dampingFactor*particleJ.dampingFactor;
+    RealOpenMM a = particleI.thole < particleJ.thole ? particleI.thole : particleJ.thole;
+    RealOpenMM u = std::abs(dmp) > 1.0E-5 ? r/dmp : 1E10;
+    RealOpenMM au3 = a*u*u*u;
+    RealOpenMM expau3 = au3 < 50.0 ? EXP(-au3) : 0.0;
+    RealOpenMM a2u6 = au3*au3;
+    RealOpenMM a3u9 = a2u6*au3;
+    // Thole damping factors for energies
+    RealOpenMM thole_c  = 1.0 - expau3;
+    RealOpenMM thole_d0 = 1.0 - expau3*(1.0 + 1.5*au3);
+    RealOpenMM thole_d1 = 1.0 - expau3;
+    RealOpenMM thole_q0 = 1.0 - expau3*(1.0 + au3 + a2u6);
+    RealOpenMM thole_q1 = 1.0 - expau3*(1.0 + au3);
+    // Thole damping factors for derivatives
+    RealOpenMM dthole_c  = 1.0 - expau3*(1.0 + 1.5*au3);
+    RealOpenMM dthole_d0 = 1.0 - expau3*(1.0 + au3 + 1.5*a2u6);
+    RealOpenMM dthole_d1 = 1.0 - expau3*(1.0 + au3);
+    RealOpenMM dthole_q0 = 1.0 - expau3*(1.0 + au3 + 0.25*a2u6 + 0.75*a3u9);
+    RealOpenMM dthole_q1 = 1.0 - expau3*(1.0 + au3 + 0.75*a2u6);
 
-    // get the induced torque without screening
+    // Now we compute the (attenuated) Coulomb operator and its derivatives, contracted with
+    // permanent moments and induced dipoles.  Note that the coefficient of the permanent force
+    // terms is half of the expected value; this is because we compute the interaction of I with
+    // the sum of induced and permanent moments on J, as well as the interaction of J with I's
+    // permanent and induced moments; doing so double counts the permanent-permanent interaction.
+    RealOpenMM ePermCoef, dPermCoef, eUIndCoef, dUIndCoef, eUInpCoef, dUInpCoef;
 
-    RealOpenMM ttm2ri1 = -rr3*(dixuk1*psc3+dixukp1*dsc3)*0.5
-        + gtri2*dixr1 + gtri4*((ukxqir1+rxqiuk1)*psc5
-        +(ukxqirp1+rxqiukp1)*dsc5)*0.5 - gtri5*rxqir1;
-    RealOpenMM ttm2ri2 = -rr3*(dixuk2*psc3+dixukp2*dsc3)*0.5
-        + gtri2*dixr2 + gtri4*((ukxqir2+rxqiuk2)*psc5
-        +(ukxqirp2+rxqiukp2)*dsc5)*0.5 - gtri5*rxqir2;
-    RealOpenMM ttm2ri3 = -rr3*(dixuk3*psc3+dixukp3*dsc3)*0.5
-        + gtri2*dixr3 + gtri4*((ukxqir3+rxqiuk3)*psc5
-        +(ukxqirp3+rxqiukp3)*dsc5)*0.5 - gtri5*rxqir3;
-    RealOpenMM ttm3ri1 = -rr3*(dkxui1*psc3+dkxuip1*dsc3)*0.5
-        + gtri3*dkxr1 - gtri4*((uixqkr1+rxqkui1)*psc5
-        +(uixqkrp1+rxqkuip1)*dsc5)*0.5 - gtri6*rxqkr1;
-    RealOpenMM ttm3ri2 = -rr3*(dkxui2*psc3+dkxuip2*dsc3)*0.5
-        + gtri3*dkxr2 - gtri4*((uixqkr2+rxqkui2)*psc5
-        +(uixqkrp2+rxqkuip2)*dsc5)*0.5 - gtri6*rxqkr2;
-    RealOpenMM ttm3ri3 = -rr3*(dkxui3*psc3+dkxuip3*dsc3)*0.5
-        + gtri3*dkxr3 - gtri4*((uixqkr3+rxqkui3)*psc5
-        +(uixqkrp3+rxqkuip3)*dsc5)*0.5 - gtri6*rxqkr3;
+    // C-C terms (m=0)
+    ePermCoef = rInvVec[1]*(mScale + bVec[2] - alphaRVec[1]*X);
+    dPermCoef = -0.5*(mScale + bVec[2])*rInvVec[2];
+    Vij[0]  = ePermCoef*qiQJ[0];
+    Vji[0]  = ePermCoef*qiQI[0];
+    VijR[0] = dPermCoef*qiQJ[0];
+    VjiR[0] = dPermCoef*qiQI[0];
 
-    // handle the case where scaling is used
+    // C-D and C-Uind terms (m=0)
+    ePermCoef = rInvVec[2]*(mScale + bVec[2]);
+    eUIndCoef = rInvVec[2]*(pScale*thole_c + bVec[2]);
+    eUInpCoef = rInvVec[2]*(dScale*thole_c + bVec[2]);
+    dPermCoef = -rInvVec[3]*(mScale + bVec[2] + alphaRVec[3]*X);
+    dUIndCoef = -2.0*rInvVec[3]*(pScale*dthole_c + bVec[2] + alphaRVec[3]*X);
+    dUInpCoef = -2.0*rInvVec[3]*(dScale*dthole_c + bVec[2] + alphaRVec[3]*X);
+    Vij[0]  += -(ePermCoef*qiQJ[1] + eUIndCoef*qiUindJ[0] + eUInpCoef*qiUinpJ[0]);
+    Vji[1]   = -(ePermCoef*qiQI[0]);
+    VijR[0] += -(dPermCoef*qiQJ[1] + dUIndCoef*qiUindJ[0] + dUInpCoef*qiUinpJ[0]);
+    VjiR[1]  = -(dPermCoef*qiQI[0]);
+    Vjip[0]  = -(eUInpCoef*qiQI[0]);
+    Vjid[0]  = -(eUIndCoef*qiQI[0]);
+    // D-C and Uind-C terms (m=0)
+    Vij[1]   = ePermCoef*qiQJ[0];
+    Vji[0]  += ePermCoef*qiQI[1] + eUIndCoef*qiUindI[0] + eUInpCoef*qiUinpI[0];
+    VijR[1]  = dPermCoef*qiQJ[0];
+    VjiR[0] += dPermCoef*qiQI[1] + dUIndCoef*qiUindI[0] + dUInpCoef*qiUinpI[0];
+    Vijp[0]  = eUInpCoef*qiQJ[0];
+    Vijd[0]  = eUIndCoef*qiQJ[0];
 
-    ftm21  = (ftm21-(1.0-scalingFactors[M_SCALE])*ftm2r1);
-    ftm2i1 = (ftm2i1-ftm2ri1);
-    ttm21  = (ttm21-(1.0-scalingFactors[M_SCALE])*ttm2r1);
-    ttm2i1 = (ttm2i1-ttm2ri1);
-    ttm31  = (ttm31-(1.0-scalingFactors[M_SCALE])*ttm3r1);
-    ttm3i1 = (ttm3i1-ttm3ri1);
+    // D-D and D-Uind terms (m=0)
+    ePermCoef = -twoThirds*rInvVec[3]*(3.0*(mScale + bVec[3]) + alphaRVec[3]*X);
+    eUIndCoef = -twoThirds*rInvVec[3]*(3.0*(pScale*thole_d0 + bVec[3]) + alphaRVec[3]*X);
+    eUInpCoef = -twoThirds*rInvVec[3]*(3.0*(dScale*thole_d0 + bVec[3]) + alphaRVec[3]*X);
+    dPermCoef = rInvVec[4]*(3.0*(mScale + bVec[3]) + 2.*alphaRVec[5]*X);
+    dUIndCoef = rInvVec[4]*(6.0*(pScale*dthole_d0 + bVec[3]) + 4.0*alphaRVec[5]*X);
+    dUInpCoef = rInvVec[4]*(6.0*(dScale*dthole_d0 + bVec[3]) + 4.0*alphaRVec[5]*X);
+    Vij[1]  += ePermCoef*qiQJ[1] + eUIndCoef*qiUindJ[0] + eUInpCoef*qiUinpJ[0];
+    Vji[1]  += ePermCoef*qiQI[1] + eUIndCoef*qiUindI[0] + eUInpCoef*qiUinpI[0];
+    VijR[1] += dPermCoef*qiQJ[1] + dUIndCoef*qiUindJ[0] + dUInpCoef*qiUinpJ[0];
+    VjiR[1] += dPermCoef*qiQI[1] + dUIndCoef*qiUindI[0] + dUInpCoef*qiUinpI[0];
+    Vijp[0] += eUInpCoef*qiQJ[1];
+    Vijd[0] += eUIndCoef*qiQJ[1];
+    Vjip[0] += eUInpCoef*qiQI[1];
+    Vjid[0] += eUIndCoef*qiQI[1];
+    // D-D and D-Uind terms (m=1)
+    ePermCoef = rInvVec[3]*(mScale + bVec[3] - twoThirds*alphaRVec[3]*X);
+    eUIndCoef = rInvVec[3]*(pScale*thole_d1 + bVec[3] - twoThirds*alphaRVec[3]*X);
+    eUInpCoef = rInvVec[3]*(dScale*thole_d1 + bVec[3] - twoThirds*alphaRVec[3]*X);
+    dPermCoef = -1.5*rInvVec[4]*(mScale + bVec[3]);
+    dUIndCoef = -3.0*rInvVec[4]*(pScale*dthole_d1 + bVec[3]);
+    dUInpCoef = -3.0*rInvVec[4]*(dScale*dthole_d1 + bVec[3]);
+    Vij[2]  = ePermCoef*qiQJ[2] + eUIndCoef*qiUindJ[1] + eUInpCoef*qiUinpJ[1];
+    Vji[2]  = ePermCoef*qiQI[2] + eUIndCoef*qiUindI[1] + eUInpCoef*qiUinpI[1];
+    VijR[2] = dPermCoef*qiQJ[2] + dUIndCoef*qiUindJ[1] + dUInpCoef*qiUinpJ[1];
+    VjiR[2] = dPermCoef*qiQI[2] + dUIndCoef*qiUindI[1] + dUInpCoef*qiUinpI[1];
+    Vij[3]  = ePermCoef*qiQJ[3] + eUIndCoef*qiUindJ[2] + eUInpCoef*qiUinpJ[2];
+    Vji[3]  = ePermCoef*qiQI[3] + eUIndCoef*qiUindI[2] + eUInpCoef*qiUinpI[2];
+    VijR[3] = dPermCoef*qiQJ[3] + dUIndCoef*qiUindJ[2] + dUInpCoef*qiUinpJ[2];
+    VjiR[3] = dPermCoef*qiQI[3] + dUIndCoef*qiUindI[2] + dUInpCoef*qiUinpI[2];
+    Vijp[1] = eUInpCoef*qiQJ[2];
+    Vijd[1] = eUIndCoef*qiQJ[2];
+    Vjip[1] = eUInpCoef*qiQI[2];
+    Vjid[1] = eUIndCoef*qiQI[2];
+    Vijp[2] = eUInpCoef*qiQJ[3];
+    Vijd[2] = eUIndCoef*qiQJ[3];
+    Vjip[2] = eUInpCoef*qiQI[3];
+    Vjid[2] = eUIndCoef*qiQI[3];
 
-    ftm22  = (ftm22-(1.0-scalingFactors[M_SCALE])*ftm2r2);
-    ftm2i2 = (ftm2i2-ftm2ri2);
-    ttm22  = (ttm22-(1.0-scalingFactors[M_SCALE])*ttm2r2);
-    ttm2i2 = (ttm2i2-ttm2ri2);
-    ttm32  = (ttm32-(1.0-scalingFactors[M_SCALE])*ttm3r2);
-    ttm3i2 = (ttm3i2-ttm3ri2);
+    // C-Q terms (m=0)
+    ePermCoef = (mScale + bVec[3])*rInvVec[3];
+    dPermCoef = -oneThird*rInvVec[4]*(4.5*(mScale + bVec[3]) + 2.0*alphaRVec[5]*X);
+    Vij[0]  += ePermCoef*qiQJ[4];
+    Vji[4]   = ePermCoef*qiQI[0];
+    VijR[0] += dPermCoef*qiQJ[4];
+    VjiR[4]  = dPermCoef*qiQI[0];
+    // Q-C terms (m=0)
+    Vij[4]   = ePermCoef*qiQJ[0];
+    Vji[0]  += ePermCoef*qiQI[4];
+    VijR[4]  = dPermCoef*qiQJ[0];
+    VjiR[0] += dPermCoef*qiQI[4];
 
-    ftm23  = (ftm23-(1.0-scalingFactors[M_SCALE])*ftm2r3);
-    ftm2i3 = (ftm2i3-ftm2ri3);
-    ttm23  = (ttm23-(1.0-scalingFactors[M_SCALE])*ttm2r3);
-    ttm2i3 = (ttm2i3-ttm2ri3);
-    ttm33  = (ttm33-(1.0-scalingFactors[M_SCALE])*ttm3r3);
-    ttm3i3 = (ttm3i3-ttm3ri3);
+    // D-Q and Uind-Q terms (m=0)
+    ePermCoef = rInvVec[4]*(3.0*(mScale + bVec[3]) + fourThirds*alphaRVec[5]*X);
+    eUIndCoef = rInvVec[4]*(3.0*(pScale*thole_q0 + bVec[3]) + fourThirds*alphaRVec[5]*X);
+    eUInpCoef = rInvVec[4]*(3.0*(dScale*thole_q0 + bVec[3]) + fourThirds*alphaRVec[5]*X);
+    dPermCoef = -fourThirds*rInvVec[5]*(4.5*(mScale + bVec[3]) + (1.0 + alphaRVec[2])*alphaRVec[5]*X);
+    dUIndCoef = -fourThirds*rInvVec[5]*(9.0*(pScale*dthole_q0 + bVec[3]) + 2.0*(1.0 + alphaRVec[2])*alphaRVec[5]*X);
+    dUInpCoef = -fourThirds*rInvVec[5]*(9.0*(dScale*dthole_q0 + bVec[3]) + 2.0*(1.0 + alphaRVec[2])*alphaRVec[5]*X);
+    Vij[1]  += ePermCoef*qiQJ[4];
+    Vji[4]  += ePermCoef*qiQI[1] + eUIndCoef*qiUindI[0] + eUInpCoef*qiUinpI[0];
+    VijR[1] += dPermCoef*qiQJ[4];
+    VjiR[4] += dPermCoef*qiQI[1] + dUIndCoef*qiUindI[0] + dUInpCoef*qiUinpI[0];
+    Vijp[0] += eUInpCoef*qiQJ[4];
+    Vijd[0] += eUIndCoef*qiQJ[4];
+    // Q-D and Q-Uind terms (m=0)
+    Vij[4]  += -(ePermCoef*qiQJ[1] + eUIndCoef*qiUindJ[0] + eUInpCoef*qiUinpJ[0]);
+    Vji[1]  += -(ePermCoef*qiQI[4]);
+    VijR[4] += -(dPermCoef*qiQJ[1] + dUIndCoef*qiUindJ[0] + dUInpCoef*qiUinpJ[0]);
+    VjiR[1] += -(dPermCoef*qiQI[4]);
+    Vjip[0] += -(eUInpCoef*qiQI[4]);
+    Vjid[0] += -(eUIndCoef*qiQI[4]);
 
-    // increment gradient due to force and torque on first site;
+    // D-Q and Uind-Q terms (m=1)
+    ePermCoef = -sqrtThree*rInvVec[4]*(mScale + bVec[3]);
+    eUIndCoef = -sqrtThree*rInvVec[4]*(pScale*thole_q1 + bVec[3]);
+    eUInpCoef = -sqrtThree*rInvVec[4]*(dScale*thole_q1 + bVec[3]);
+    dPermCoef = fourSqrtOneThird*rInvVec[5]*(1.5*(mScale + bVec[3]) + 0.5*alphaRVec[5]*X);
+    dUIndCoef = fourSqrtOneThird*rInvVec[5]*(3.0*(pScale*dthole_q1 + bVec[3]) + alphaRVec[5]*X);
+    dUInpCoef = fourSqrtOneThird*rInvVec[5]*(3.0*(dScale*dthole_q1 + bVec[3]) + alphaRVec[5]*X);
+    Vij[2]  += ePermCoef*qiQJ[5];
+    Vji[5]   = ePermCoef*qiQI[2] + eUIndCoef*qiUindI[1] + eUInpCoef*qiUinpI[1];
+    VijR[2] += dPermCoef*qiQJ[5];
+    VjiR[5]  = dPermCoef*qiQI[2] + dUIndCoef*qiUindI[1] + dUInpCoef*qiUinpI[1];
+    Vij[3]  += ePermCoef*qiQJ[6];
+    Vji[6]   = ePermCoef*qiQI[3] + eUIndCoef*qiUindI[2] + eUInpCoef*qiUinpI[2];
+    VijR[3] += dPermCoef*qiQJ[6];
+    VjiR[6]  = dPermCoef*qiQI[3] + dUIndCoef*qiUindI[2] + dUInpCoef*qiUinpI[2];
+    Vijp[1] += eUInpCoef*qiQJ[5];
+    Vijd[1] += eUIndCoef*qiQJ[5];
+    Vijp[2] += eUInpCoef*qiQJ[6];
+    Vijd[2] += eUIndCoef*qiQJ[6];
+    // D-Q and Uind-Q terms (m=1)
+    Vij[5]   = -(ePermCoef*qiQJ[2] + eUIndCoef*qiUindJ[1] + eUInpCoef*qiUinpJ[1]);
+    Vji[2]  += -(ePermCoef*qiQI[5]);
+    VijR[5]  = -(dPermCoef*qiQJ[2] + dUIndCoef*qiUindJ[1] + dUInpCoef*qiUinpJ[1]);
+    VjiR[2] += -(dPermCoef*qiQI[5]);
+    Vij[6]   = -(ePermCoef*qiQJ[3] + eUIndCoef*qiUindJ[2] + eUInpCoef*qiUinpJ[2]);
+    Vji[3]  += -(ePermCoef*qiQI[6]);
+    VijR[6]  = -(dPermCoef*qiQJ[3] + dUIndCoef*qiUindJ[2] + dUInpCoef*qiUinpJ[2]);
+    VjiR[3] += -(dPermCoef*qiQI[6]);
+    Vjip[1] += -(eUInpCoef*qiQI[5]);
+    Vjid[1] += -(eUIndCoef*qiQI[5]);
+    Vjip[2] += -(eUInpCoef*qiQI[6]);
+    Vjid[2] += -(eUIndCoef*qiQI[6]);
 
-    RealOpenMM conversionFactor  = (_electric/_dielectric);
+    // Q-Q terms (m=0)
+    ePermCoef = rInvVec[5]*(6.0*(mScale + bVec[4]) + fourOverFortyFive*(-3.0 + 10.0*alphaRVec[2])*alphaRVec[5]*X);
+    dPermCoef = -oneNinth*rInvVec[6]*(135.0*(mScale + bVec[4]) + 4.0*(1.0 + 2.0*alphaRVec[2])*alphaRVec[7]*X);
+    Vij[4]  += ePermCoef*qiQJ[4];
+    Vji[4]  += ePermCoef*qiQI[4];
+    VijR[4] += dPermCoef*qiQJ[4];
+    VjiR[4] += dPermCoef*qiQI[4];
+    // Q-Q terms (m=1)
+    ePermCoef = -fourOverFifteen*rInvVec[5]*(15.0*(mScale + bVec[4]) + alphaRVec[5]*X);
+    dPermCoef = rInvVec[6]*(10.0*(mScale + bVec[4]) + fourThirds*alphaRVec[7]*X);
+    Vij[5]  += ePermCoef*qiQJ[5];
+    Vji[5]  += ePermCoef*qiQI[5];
+    VijR[5] += dPermCoef*qiQJ[5];
+    VjiR[5] += dPermCoef*qiQI[5];
+    Vij[6]  += ePermCoef*qiQJ[6];
+    Vji[6]  += ePermCoef*qiQI[6];
+    VijR[6] += dPermCoef*qiQJ[6];
+    VjiR[6] += dPermCoef*qiQI[6];
+    // Q-Q terms (m=2)
+    ePermCoef = rInvVec[5]*(mScale + bVec[4] - fourOverFifteen*alphaRVec[5]*X);
+    dPermCoef = -2.5*(mScale + bVec[4])*rInvVec[6];
+    Vij[7]  = ePermCoef*qiQJ[7];
+    Vji[7]  = ePermCoef*qiQI[7];
+    VijR[7] = dPermCoef*qiQJ[7];
+    VjiR[7] = dPermCoef*qiQI[7];
+    Vij[8]  = ePermCoef*qiQJ[8];
+    Vji[8]  = ePermCoef*qiQI[8];
+    VijR[8] = dPermCoef*qiQJ[8];
+    VjiR[8] = dPermCoef*qiQI[8];
 
-    energy                 *= conversionFactor;
+    // Evaluate the energies, forces and torques due to permanent+induced moments
+    // interacting with just the permanent moments.
+    energy = 0.5*(qiQI[0]*Vij[0] + qiQJ[0]*Vji[0]);
+    RealOpenMM fIZ = qiQI[0]*VijR[0];
+    RealOpenMM fJZ = qiQJ[0]*VjiR[0];
+    RealOpenMM EIX = 0.0, EIY = 0.0, EIZ = 0.0, EJX = 0.0, EJY = 0.0, EJZ = 0.0;
+    for(int i = 1; i < 9; ++i){
+        energy += 0.5*(qiQI[i]*Vij[i] + qiQJ[i]*Vji[i]);
+        fIZ += qiQI[i]*VijR[i];
+        fJZ += qiQJ[i]*VjiR[i];
+        EIX += qiQIX[i]*Vij[i];
+        EIY += qiQIY[i]*Vij[i];
+        EIZ += qiQIZ[i]*Vij[i];
+        EJX += qiQJX[i]*Vji[i];
+        EJY += qiQJY[i]*Vji[i];
+        EJZ += qiQJZ[i]*Vji[i];
+    }
 
-    forces[iIndex][0]      -= (ftm21 + ftm2i1)*conversionFactor;
-    forces[iIndex][1]      -= (ftm22 + ftm2i2)*conversionFactor;
-    forces[iIndex][2]      -= (ftm23 + ftm2i3)*conversionFactor;
+    // Define the torque intermediates for the induced dipoles. These are simply the induced dipole torque
+    // intermediates dotted with the field due to permanent moments only, at each center. We inline the
+    // induced dipole torque intermediates here, for simplicity. N.B. There are no torques on the dipoles
+    // themselves, so we accumulate the torque intermediates into separate variables to allow them to be
+    // used only in the force calculation.
+    //
+    // The torque about the x axis (needed to obtain the y force on the induced dipoles, below)
+    //    qiUindIx[0] = qiQUindI[2];    qiUindIx[1] = 0;    qiUindIx[2] = -qiQUindI[0]
+    RealOpenMM iEIX = qiUinpI[2]*Vijp[0] + qiUindI[2]*Vijd[0] - qiUinpI[0]*Vijp[2] - qiUindI[0]*Vijd[2];
+    RealOpenMM iEJX = qiUinpJ[2]*Vjip[0] + qiUindJ[2]*Vjid[0] - qiUinpJ[0]*Vjip[2] - qiUindJ[0]*Vjid[2];
+    // The torque about the y axis (needed to obtain the x force on the induced dipoles, below)
+    //    qiUindIy[0] = -qiQUindI[1];   qiUindIy[1] = qiQUindI[0];    qiUindIy[2] = 0
+    RealOpenMM iEIY = qiUinpI[0]*Vijp[1] + qiUindI[0]*Vijd[1] - qiUinpI[1]*Vijp[0] - qiUindI[1]*Vijd[0];
+    RealOpenMM iEJY = qiUinpJ[0]*Vjip[1] + qiUindJ[0]*Vjid[1] - qiUinpJ[1]*Vjip[0] - qiUindJ[1]*Vjid[0];
 
-    forces[jIndex][0]      += (ftm21 + ftm2i1)*conversionFactor;
-    forces[jIndex][1]      += (ftm22 + ftm2i2)*conversionFactor;
-    forces[jIndex][2]      += (ftm23 + ftm2i3)*conversionFactor;
+    // Add in the induced-induced terms, if needed.
+    if(getPolarizationType() == AmoebaReferenceMultipoleForce::Mutual){
+        // Uind-Uind terms (m=0)
+        RealOpenMM eCoef = -fourThirds*rInvVec[3]*(3.0*(uScale*thole_d0 + bVec[3]) + alphaRVec[3]*X);
+        RealOpenMM dCoef = rInvVec[4]*(6.0*(uScale*dthole_d0 + bVec[3]) + 4.0*alphaRVec[5]*X);
+        iEIX += eCoef*(qiUinpI[2]*qiUindJ[0] + qiUindI[2]*qiUinpJ[0]);
+        iEJX += eCoef*(qiUinpJ[2]*qiUindI[0] + qiUindJ[2]*qiUinpI[0]);
+        iEIY -= eCoef*(qiUinpI[1]*qiUindJ[0] + qiUindI[1]*qiUinpJ[0]);
+        iEJY -= eCoef*(qiUinpJ[1]*qiUindI[0] + qiUindJ[1]*qiUinpI[0]);
+        fIZ += dCoef*(qiUinpI[0]*qiUindJ[0] + qiUindI[0]*qiUinpJ[0]);
+        fIZ += dCoef*(qiUinpJ[0]*qiUindI[0] + qiUindJ[0]*qiUinpI[0]);
+        // Uind-Uind terms (m=1)
+        eCoef = 2.0*rInvVec[3]*(uScale*thole_d1 + bVec[3] - twoThirds*alphaRVec[3]*X);
+        dCoef = -3.0*rInvVec[4]*(uScale*dthole_d1 + bVec[3]);
+        iEIX -= eCoef*(qiUinpI[0]*qiUindJ[2] + qiUindI[0]*qiUinpJ[2]);
+        iEJX -= eCoef*(qiUinpJ[0]*qiUindI[2] + qiUindJ[0]*qiUinpI[2]);
+        iEIY += eCoef*(qiUinpI[0]*qiUindJ[1] + qiUindI[0]*qiUinpJ[1]);
+        iEJY += eCoef*(qiUinpJ[0]*qiUindI[1] + qiUindJ[0]*qiUinpI[1]);
+        fIZ += dCoef*(qiUinpI[1]*qiUindJ[1] + qiUindI[1]*qiUinpJ[1] + qiUinpI[2]*qiUindJ[2] + qiUindI[2]*qiUinpJ[2]);
+        fIZ += dCoef*(qiUinpJ[1]*qiUindI[1] + qiUindJ[1]*qiUinpI[1] + qiUinpJ[2]*qiUindI[2] + qiUindJ[2]*qiUinpI[2]);
+    }
 
-    torques[iIndex][0]     += (ttm21 + ttm2i1)*conversionFactor;
-    torques[iIndex][1]     += (ttm22 + ttm2i2)*conversionFactor;
-    torques[iIndex][2]     += (ttm23 + ttm2i3)*conversionFactor;
+    // The quasi-internal frame forces and torques.  Note that the induced torque intermediates are
+    // used in the force expression, but not in the torques; the induced dipoles are isotropic.
+    RealOpenMM qiForce[3] = {rInv*(EIY+EJY+iEIY+iEJY), -rInv*(EIX+EJX+iEIX+iEJX), -(fJZ+fIZ)};
+    RealOpenMM qiTorqueI[3] = {-EIX, -EIY, -EIZ};
+    RealOpenMM qiTorqueJ[3] = {-EJX, -EJY, -EJZ};
 
-    torques[jIndex][0]     += (ttm31 + ttm3i1)*conversionFactor;
-    torques[jIndex][1]     += (ttm32 + ttm3i2)*conversionFactor;
-    torques[jIndex][2]     += (ttm33 + ttm3i3)*conversionFactor;
-
+    // Rotate the forces and torques back to the lab frame
+    for (int ii = 0; ii < 3; ii++) {
+        RealOpenMM forceVal = 0.0;
+        RealOpenMM torqueIVal = 0.0;
+        RealOpenMM torqueJVal = 0.0;
+        for (int jj = 0; jj < 3; jj++) {
+            forceVal   += forceRotationMatrix[ii][jj] * qiForce[jj];
+            torqueIVal += forceRotationMatrix[ii][jj] * qiTorqueI[jj];
+            torqueJVal += forceRotationMatrix[ii][jj] * qiTorqueJ[jj];
+        }
+        torques[iIndex][ii] += torqueIVal;
+        torques[jIndex][ii] += torqueJVal;
+        forces[iIndex][ii]  -= forceVal;
+        forces[jIndex][ii]  += forceVal;
+    }
     return energy;
 
 }
@@ -6616,6 +6508,6 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::calculateElectrostatic(const vector
     energy += computeReciprocalSpaceInducedDipoleForceAndEnergy(getPolarizationType(), particleData, forces, torques);
     energy += computeReciprocalSpaceFixedMultipoleForceAndEnergy(particleData, forces, torques);
     energy += calculatePmeSelfEnergy(particleData);
-
+ 
     return energy;
 }

@@ -1,6 +1,6 @@
+import os
 import unittest
 import tempfile
-import numpy as np
 from simtk.openmm import app
 import simtk.openmm as mm
 from simtk import unit
@@ -18,21 +18,24 @@ class TestCheckpointReporter(unittest.TestCase):
         self.simulation.context.setPositions(pdb.positions)
 
     def test_1(self):
-        file = tempfile.NamedTemporaryFile()
+        file = tempfile.NamedTemporaryFile(delete=False)
         self.simulation.reporters.append(app.CheckpointReporter(file, 1))
         self.simulation.step(1)
 
         # get the current positions
-        positions = self.simulation.context.getState(getPositions=True).getPositions(asNumpy=True)._value
+        positions = self.simulation.context.getState(getPositions=True).getPositions()
+
         # now set the positions into junk...
-        self.simulation.context.setPositions(np.random.random(positions.shape))
+        self.simulation.context.setPositions([mm.Vec3(0, 0, 0)] * len(positions))
+
         # then reload the right positions from the checkpoint
+        file.close()
         with open(file.name, 'rb') as f:
             self.simulation.context.loadCheckpoint(f.read())
-        file.close()
+        os.unlink(file.name)
 
-        newPositions = self.simulation.context.getState(getPositions=True).getPositions(asNumpy=True)._value
-        np.testing.assert_array_equal(positions, newPositions)
+        newPositions = self.simulation.context.getState(getPositions=True).getPositions()
+        self.assertSequenceEqual(positions, newPositions)
 
 if __name__ == '__main__':
     unittest.main()

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -46,9 +46,20 @@ DrudeLangevinIntegrator::DrudeLangevinIntegrator(double temperature, double fric
     setFriction(frictionCoeff);
     setDrudeTemperature(drudeTemperature);
     setDrudeFriction(drudeFrictionCoeff);
+    setMaxDrudeDistance(0);
     setStepSize(stepSize);
     setConstraintTolerance(1e-5);
     setRandomNumberSeed(0);
+}
+
+double DrudeLangevinIntegrator::getMaxDrudeDistance() const {
+    return maxDrudeDistance;
+}
+
+void DrudeLangevinIntegrator::setMaxDrudeDistance(double distance) {
+    if (distance < 0)
+        throw OpenMMException("setMaxDrudeDistance: Distance cannot be negative");
+    maxDrudeDistance = distance;
 }
 
 void DrudeLangevinIntegrator::initialize(ContextImpl& contextRef) {

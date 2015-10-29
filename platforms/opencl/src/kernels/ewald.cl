@@ -6,13 +6,13 @@ real2 multofReal2(real2 a, real2 b) {
  * Precompute the cosine and sine sums which appear in each force term.
  */
 
-__kernel void calculateEwaldCosSinSums(__global real* restrict energyBuffer, __global const real4* restrict posq, __global real2* restrict cosSinSum, real4 reciprocalPeriodicBoxSize, real reciprocalCoefficient) {
+__kernel void calculateEwaldCosSinSums(__global mixed* restrict energyBuffer, __global const real4* restrict posq, __global real2* restrict cosSinSum, real4 reciprocalPeriodicBoxSize, real reciprocalCoefficient) {
     const unsigned int ksizex = 2*KMAX_X-1;
     const unsigned int ksizey = 2*KMAX_Y-1;
     const unsigned int ksizez = 2*KMAX_Z-1;
     const unsigned int totalK = ksizex*ksizey*ksizez;
     unsigned int index = get_global_id(0);
-    real energy = 0.0f;
+    mixed energy = 0;
     while (index < (KMAX_Y-1)*ksizez+KMAX_Z)
         index += get_global_size(0);
     while (index < totalK) {
