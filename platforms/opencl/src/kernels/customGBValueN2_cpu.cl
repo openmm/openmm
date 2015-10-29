@@ -245,6 +245,7 @@ __kernel void computeN2Value(__global const real4* restrict posq, __local real4*
                     unsigned int atom1 = x*TILE_SIZE+tgx;
                     real value = 0;
                     real4 posq1 = posq[atom1];
+                    APPLY_PERIODIC_TO_POS_WITH_CENTER(posq1, blockCenterX)
                     LOAD_ATOM1_PARAMETERS
                     for (unsigned int j = 0; j < TILE_SIZE; j++) {
                         real4 posq2 = local_posq[j];
