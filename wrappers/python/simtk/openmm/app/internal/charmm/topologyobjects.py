@@ -76,22 +76,33 @@ class AtomType(object):
     new atom types with the "add" constructor to make sure the registry is
     filled with only unique types
 
-    Parameters and Attributes:
-        - name (str) : The name of the atom type
-        - number (int) : The integer index of the atom type
-        - mass (float) : The mass of the atom type
-        - atomic_number (int) : The atomic number of the element of the atom
-                                type
-    Attributes:
-        - name (str) : The name of the atom type
-        - number (int) : The integer index of the atom type
-        - _member_number (int, private) : The order in which this atom type
-                was 'added' this is used to make sure that atom types added
-                last have priority in assignment in the generated hash tables
-        - nbfix (dict) : Dictionary that maps nbfix terms with other atom types.
-                         Dict entries are (rmin, epsilon) -- precombined values
-                         for that particular atom pair
-    Example:
+    Parameters
+    ----------
+    name : str
+        The name of the atom type
+    number : int
+        The integer index of the atom type
+    mass : float
+        The mass of the atom type
+    atomic_number : int
+        The atomic number of the element of the atom type
+
+    Attributes
+    ----------
+    name : str
+        The name of the atom type
+    number : int
+        The integer index of the atom type
+    _member_number : int, private)
+        The order in which this atom type was 'added' this is used to make
+        sure that atom types added last have priority in assignment in the
+        generated hash tables
+    nbfix : dict
+        Dictionary that maps nbfix terms with other atom types. Dict entries
+        are (rmin, epsilon) -- precombined values for that particular atom pair
+
+    Examples
+    --------
     >>> at = AtomType('HA', 1, 1.008, 1)
     >>> at.name, at.number
     ('HA', 1)
@@ -212,34 +223,59 @@ WildCard = WildCard() # Turn it into a singleton
 class Atom(object):
     """ An atom in a structure.
 
-    Parameters:
-        system (str) : Name of the system this atom belongs to
-        name (str): name of the atom
-        type (str or int) : Type of the atom
-        charge (float) : Partial atomic charge (elementary charge units)
-        mass (float) : Atomic mass (amu)
-        props (list) : Other properties from the PSF
+    Parameters
+    ----------
+    system : str
+        Name of the system this atom belongs to
+    name : str
+        name of the atom
+    type : str or int
+        Type of the atom
+    charge : float
+        Partial atomic charge (elementary charge units)
+    mass : float
+        Atomic mass (amu)
+    props : list
+        Other properties from the PSF
 
-    Attributes:
-        - attype (str) : Name of the atom type
-        - system (str) : The system name associated with this atom
-        - name (str) : Name of the atom (str)
-        - charge (float) : Partial atomic charge
-        - mass (float) : Mass of the atom (amu)
-        - idx (int) : index of the atom in the system, starting from 0
-        - props (list) : List of extraneous properties parsed from a PSF
-        - type (AtomType) : If assigned, has additional properties like the
-             non-bonded LJ parameters. If None, it has not yet been assigned
+    Attributes
+    ----------
+    attype : str
+        Name of the atom type
+    system : str
+        The system name associated with this atom
+    name : str
+        Name of the atom (str)
+    charge : float
+        Partial atomic charge
+    mass : float
+        Mass of the atom (amu)
+    idx : int
+        index of the atom in the system, starting from 0
+    props : list
+        List of extraneous properties parsed from a PSF
+    type : AtomType
+        If assigned, has additional properties like the non-bonded LJ
+        parameters. If None, it has not yet been assigned
 
-    Possible Attributes (SOA == Set of Atom instances)
-        - bond_partners (SOA) : List of all atoms I am bonded to
-        - angle_partners (SOA) : List of all atoms I am angled to
-        - dihedral_partners (SOA) : List of all atoms I am dihedraled to
-        - bonds (list of Bond's) : All bonds to which I belong
-        - angles (list of Angle's) : All angles to which I belong
-        - dihedrals (list of Dihedral's) : All dihedrals to which I belong
-        - impropers (list of Improper's) : All impropers to which I belong
-        - cmaps (list of Cmap's) : All correction maps to which I belong
+    Possible Attributes
+    -------------------
+    bond_partners : set of Atoms
+        List of all atoms I am bonded to
+    angle_partners set of Atoms
+        List of all atoms I am angled to
+    dihedral_partners : et of Atoms
+        List of all atoms I am dihedraled to
+    bonds : list of Bonds
+        All bonds to which I belong
+    angles : list of Angles
+        All angles to which I belong
+    dihedrals : list of Dihedrals
+        All dihedrals to which I belong
+    impropers : list of Impropers
+        All impropers to which I belong
+    cmaps : list of Cmaps
+        All correction maps to which I belong
     """
     def __init__(self, system, name, attype, charge, mass, props=None):
         self.name = name
@@ -450,22 +486,33 @@ class ResidueList(list):
 
     def add_atom(self, system, resnum, resname, name,
                  attype, charge, mass, inscode, props=None):
-        """
-        Adds an atom to the list of residues. If the residue is not the same as
-        the last residue that was created, a new Residue is created and added
-        to this list
+        """Adds an atom to the list of residues. If the residue is not the same as
+        the last residue that was created, a new Residue is created and added to
+        this list
 
-        Parameters:
-            - system (str) : The system this atom belongs to
-            - resnum (int) : Residue number
-            - resname (str) : Name of the residue
-            - name (str) : Name of the atom
-            - attype (int or str) : Type of the atom
-            - charge (float) : Partial atomic charge of the atom
-            - mass (float) : Mass (amu) of the atom
-            - inscode (str) : Insertion code, if it is specified
+        Parameters
+        ----------
+        system : str
+            The system this atom belongs to
+        resnum : int
+            Residue number
+        resname : str
+            Name of the residue
+        name : str
+            Name of the atom
+        attype : int or str
+            Type of the atom
+        charge : float
+            Partial atomic charge of the atom
+        mass : float
+            Mass (amu) of the atom
+        inscode : str
+            Insertion code, if it is specified
+        props : list
+            Other properties from the PSF
 
-        Returns:
+        Returns
+        -------
             The Atom instance created and added to the list of residues
         """
         lr = self._last_residue
@@ -482,7 +529,7 @@ class ResidueList(list):
         atom = Atom(system, name, attype, float(charge), float(mass), props)
         res.add_atom(atom)
         return atom
-    
+
     def append(self, thing):
         raise NotImplemented('Use "add_atom" to build a residue list')
 
@@ -491,13 +538,16 @@ class ResidueList(list):
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 class Bond(object):
-    """
-    A bond object that links 2 atoms
+    """A bond object that links 2 atoms
 
-    Parameters:
-        - atom1 (Atom) : First atom included in the bond
-        - atom2 (Atom) : Second atom included in the bond
-        - bond_type (BondType) : Type for the bond (None if unknown)
+    Parameters
+    ----------
+    atom1 : Atom
+        First atom included in the bond
+    atom2 : Atom
+        Second atom included in the bond
+    bond_type : BondType
+        Type for the bond (None if unknown)
     """
     def __init__(self, atom1, atom2, bond_type=None):
         self.atom1 = atom1
@@ -519,14 +569,18 @@ class Bond(object):
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 class Angle(object):
-    """
-    An angle object that links 3 atoms
+    """An angle object that links 3 atoms
 
-    Parameters:
-        - atom1 (Atom) : First atom included in the angle
-        - atom2 (Atom) : Central atom in the valence angle
-        - atom3 (Atom) : Third atom in the valence angle
-        - angle_type (AngleType) : Type for the angle (None if unknown)
+    Parameters
+    ----------
+    atom1 : Atom
+        First atom included in the angle
+    atom2 : Atom
+        Central atom in the valence angle
+    atom3 : Atom
+        Third atom in the valence angle
+    angle_type : AngleType
+        Type for the angle (None if unknown)
     """
     def __init__(self, atom1, atom2, atom3, angle_type=None):
         self.atom1 = atom1
@@ -554,15 +608,17 @@ class Angle(object):
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 class UreyBradley(object):
-    """
-    A harmonic restraint between two atoms separated by 2 valence bonds (i.e.,
-    involved in a valence angle with each other
+    """A harmonic restraint between two atoms separated by 2 valence bonds
+    (i.e., involved in a valence angle with each other
 
-    Parameters:
-        - atom1 (Atom) : The first atom included in the Urey-Bradley term
-        - atom2 (Atom) : The second atom included in the Urey-Bradley term
-        - ub_type (UreyBradleyType) : The type for the Urey-Bradley term (None
-                                      if unknown)
+    Parameters
+    ----------
+    atom1 : Atom
+        The first atom included in the Urey-Bradley term
+    atom2 : Atom
+        The second atom included in the Urey-Bradley term
+    ub_type : UreyBradleyType
+        The type for the Urey-Bradley term (None if unknown)
     """
     def __init__(self, atom1, atom2, ub_type=None):
         self.atom1 = atom1
@@ -599,15 +655,20 @@ class UreyBradley(object):
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 class Dihedral(object):
-    """
-    A torsion angle object that links 4 atoms
+    """A torsion angle object that links 4 atoms
 
-    Parameters:
-        - atom1 (Atom) : First atom included in the torsion
-        - atom2 (Atom) : Second atom included in the torsion
-        - atom3 (Atom) : Third atom included in the torsion
-        - atom4 (Atom) : Fourth atom included in the torsion
-        - dihedral_type (DihedralType) : Type for the torsion (None if unknown)
+    Parameters
+    ----------
+    atom1 : Atom
+        First atom included in the torsion
+    atom2 : Atom
+        Second atom included in the torsion
+    atom3 : Atom
+        Third atom included in the torsion
+    atom4 : Atom
+        Fourth atom included in the torsion
+    dihedral_type : DihedralType
+        Type for the torsion (None if unknown)
     """
     def __init__(self, atom1, atom2, atom3, atom4, dihedral_type=None):
         self.atom1 = atom1
@@ -648,15 +709,20 @@ class Dihedral(object):
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 class Improper(object):
-    """
-    An improper torsion object. The third atom is bonded to each other atom
+    """An improper torsion object. The third atom is bonded to each other atom
 
-    Parameters:
-        - atom1 (Atom) : First atom included in the torsion
-        - atom2 (Atom) : Second atom included in the torsion
-        - atom3 (Atom) : Third atom included in the torsion
-        - atom4 (Atom) : Fourth atom included in the torsion
-        - improper_type (ImproperType) : Type for the improper (None if unknown)
+    Parameters
+    ----------
+    atom1 : Atom
+        First atom included in the torsion
+    atom2 : Atom
+        Second atom included in the torsion
+    atom3 : Atom
+        Third atom included in the torsion
+    atom4 : Atom
+        Fourth atom included in the torsion
+    improper_type : ImproperType
+        Type for the improper (None if unknown)
     """
     def __init__(self, atom1, atom2, atom3, atom4, improper_type=None):
         self.atom1 = atom1
@@ -685,7 +751,7 @@ class Improper(object):
                                 |
                                 |
                        A4 ----- A1 ----- A2
-         
+
         So the bonds will either be between atom1 and any other atom
         """
         if isinstance(thing, Bond):
@@ -703,12 +769,14 @@ class Improper(object):
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 class AcceptorDonor(object):
-    """
-    Just a holder for donors and acceptors in CHARMM speak
-    
-    Parameters:
-        - atom1 (Atom) : First atom in the donor/acceptor group
-        - atom2 (Atom) : Second atom in the donor/acceptor group
+    """Just a holder for donors and acceptors in CHARMM speak
+
+    Parameters
+    ----------
+    atom1 : Atom
+        First atom in the donor/acceptor group
+    atom2 : Atom
+        Second atom in the donor/acceptor group
     """
     def __init__(self, atom1, atom2):
         self.atom1 = atom1
@@ -724,13 +792,16 @@ class AcceptorDonor(object):
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 class Group(object):
-    """
-    An 'interacting' group defined by the PSF.
+    """An 'interacting' group defined by the PSF.
 
-    Parameters:
-        - bs (int) : ??
-        - type (int) : The group type
-        - move (int) : If the group moves ??
+    Parameters
+    ----------
+    bs : int
+        ??
+    type : int
+        The group type
+    move : int
+        If the group moves ??
 
     Disclaimer: I really don't know what these numbers mean. I'm speculating
     based on the source code of 'chamber', and this section is simply ignored
@@ -749,36 +820,61 @@ class Cmap(object):
     consecutive correction maps). "Consecutive torsions" (i.e., those definable
     by 5 atoms) will only be recognized if the two torsions have the same order
 
-    Parameters:
-        - atom1 (Atom) : 1st atom of first dihedral
-        - atom2 (Atom) : 2nd atom of first dihedral
-        - atom3 (Atom) : 3rd atom of first dihedral
-        - atom4 (Atom) : 4th atom of first dihedral
-        - atom5 (Atom) : 1st atom of second dihedral
-        - atom6 (Atom) : 2nd atom of second dihedral
-        - atom7 (Atom) : 3rd atom of second dihedral
-        - atom8 (Atom) : 4th atom of second dihedral
-        - cmap_type (CmapType) : Cmap type for this cmap (None if unknown)
+    Parameters
+    ----------
+    atom1 : Atom
+        1st atom of first dihedral
+    atom2 : Atom
+        2nd atom of first dihedral
+    atom3 : Atom
+        3rd atom of first dihedral
+    atom4 : Atom
+        4th atom of first dihedral
+    atom5 : Atom
+        1st atom of second dihedral
+    atom6 : Atom
+        2nd atom of second dihedral
+    atom7 : Atom
+        3rd atom of second dihedral
+    atom8 : Atom
+        4th atom of second dihedral
+    cmap_type : CmapType
+        Cmap type for this cmap (None if unknown)
 
-    Attributes:
-        - consecutive (bool) : Are the dihedrals consecutive?
+    Attributes
+    ----------
+    consecutive : bool
+        Are the dihedrals consecutive?
 
-     if consecutive:
-        - atom1 (Atom) : 1st atom of 1st dihedral
-        - atom2 (Atom) : 2nd atom of 1st dihedral && 1st atom of 2nd dihedral
-        - atom3 (Atom) : 3rd atom of 1st dihedral && 2nd atom of 2nd dihedral
-        - atom4 (Atom) : 4th atom of 1st dihedral && 3rd atom of 2nd dihedral
-        - atom5 (Atom) :                             4th atom of 2nd dihedral
-     
+    if consecutive:
+        atom1 : Atom
+            1st atom of 1st dihedral
+        atom2 L Atom
+            2nd atom of 1st dihedral && 1st atom of 2nd dihedral
+        atom3 : Atom
+            3rd atom of 1st dihedral && 2nd atom of 2nd dihedral
+        atom4 : Atom
+            4th atom of 1st dihedral && 3rd atom of 2nd dihedral
+        atom5 : Atom
+            4th atom of 2nd dihedral
+
      if not consecutive:
-        - atom1 (Atom) : 1st atom of first dihedral
-        - atom2 (Atom) : 2nd atom of first dihedral
-        - atom3 (Atom) : 3rd atom of first dihedral
-        - atom4 (Atom) : 4th atom of first dihedral
-        - atom5 (Atom) : 1st atom of second dihedral
-        - atom6 (Atom) : 2nd atom of second dihedral
-        - atom7 (Atom) : 3rd atom of second dihedral
-        - atom8 (Atom) : 4th atom of second dihedral
+         atom1 : Atom
+            1st atom of first dihedral
+         atom2 : Atom
+            2nd atom of first dihedral
+         atom3 : Atom
+            3rd atom of first dihedral
+         atom4 : Atom
+            4th atom of first dihedral
+         atom5 : Atom
+            1st atom of second dihedral
+         atom6 : Atom
+            2nd atom of second dihedral
+         atom7 : Atom
+            3rd atom of second dihedral
+         atom8 : Atom
+            4th atom of second dihedral
     """
     def __init__(self, atom1, atom2, atom3, atom4, atom5, atom6, atom7,
                  atom8, cmap_type=None):
@@ -866,9 +962,12 @@ class BondType(object):
     A bond type with an equilibrium length (Angstroms) and force constant
     (kcal/mol/Angstrom^2)
 
-    Parameters:
-        - k (float) : Force constant (kcal/mol/A^2)
-        - req (float) : Equilibrium distance
+    Parameters
+    ----------
+    k : float
+        : Force constant (kcal/mol/A^2)
+    req : float
+        : Equilibrium distance
     """
     def __init__(self, k, req):
         self.k = k
@@ -880,13 +979,15 @@ class BondType(object):
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 class AngleType(object):
-    """
-    An angle type with an equilibrium angle (degrees) and force constant
+    """An angle type with an equilibrium angle (degrees) and force constant
     (kcal/mol/radians^2)
 
-    Parameters:
-        - k (float) : Force constant (kcal/mol/radians^2)
-        - theteq (float) : Equilibrium angle value (degrees)
+    Parameters
+    ----------
+    k : float
+        Force constant (kcal/mol/radians^2)
+    theteq : float
+        Equilibrium angle value (degrees)
     """
     def __init__(self, k, theteq):
         self.k = k
@@ -911,14 +1012,17 @@ NoUreyBradley = UreyBradleyType(None, None)
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 class DihedralType(object):
-    """
-    A torsion angle type with a force constant (kcal/mol), periodicity (int),
-    and phase (degrees)
+    """A torsion angle type with a force constant (kcal/mol), periodicity
+    (int), and phase (degrees)
 
-    Parameters:
-        - phi_k (float) : Force constant (kcal/mol)
-        - per (int) : Periodicity
-        - phase (float): Phase of the torsion
+    Parameters
+    ----------
+    phi_k : float
+        Force constant (kcal/mol)
+    per : int
+        Periodicity
+    phase : float
+        Phase of the torsion
     """
     def __init__(self, phi_k, per, phase):
         self.phi_k = float(phi_k)
@@ -936,13 +1040,15 @@ class DihedralType(object):
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 class ImproperType(object):
-    """
-    An improper torsion angle type with a force constant (kcal/mol) and
+    """An improper torsion angle type with a force constant (kcal/mol) and
     equilibrium angle (degrees)
 
-    Parameters:
-        - k (float) : Force constant (kcal/mol)
-        - phieq (int) : Equilibrium angle (degrees)
+    Parameters
+    ----------
+    k : float
+        : Force constant (kcal/mol)
+    phieq : int
+        : Equilibrium angle (degrees)
     """
     def __init__(self, k, phieq):
         self.k = k
@@ -950,7 +1056,7 @@ class ImproperType(object):
 
     def __eq__(self, other):
         return self.k == other.k and self.phieq == other.phieq
-    
+
     def __repr__(self):
         return '<ImproperType; k=%s; phieq=%s>' % (self.k, self.phieq)
 
@@ -959,11 +1065,14 @@ class ImproperType(object):
 class CmapType(object):
     """
     Contains a correction map interpolation grid
-    
-    Parameters:
-        - resolution (int) : Number of interpolation points for each dihedral
-        - grid (list of floats) : resolution x resolution list of energy values
-                (kcal/mol) for the angles with the 2nd angle changing fastest.
+
+    Parameters
+    ----------
+    resolution : int
+        Number of interpolation points for each dihedral
+    grid : list of floats
+        resolution x resolution list of energy values (kcal/mol) for the
+        angles with the 2nd angle changing fastest.
 
     The grid object is converted to a _CmapGrid instance which can be treated
     like a normal list, but also has the ability to quickly return a transpose

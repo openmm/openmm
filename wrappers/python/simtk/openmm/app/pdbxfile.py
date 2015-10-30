@@ -193,10 +193,14 @@ class PDBxFile(object):
     def getPositions(self, asNumpy=False, frame=0):
         """Get the atomic positions.
 
-        Parameters:
-         - asNumpy (boolean=False) if true, the values are returned as a numpy array instead of a list of Vec3s
-         - frame (int=0) the index of the frame for which to get positions
-         """
+        Parameters
+        ----------
+        asNumpy : bool=False
+            if true, the values are returned as a numpy array instead of a list
+            of Vec3s
+        frame : int=0
+            the index of the frame for which to get positions
+        """
         if asNumpy:
             if self._numpyPositions is None:
                 self._numpyPositions = [None]*len(self._positions)
@@ -210,14 +214,21 @@ class PDBxFile(object):
                   entry=None):
         """Write a PDBx/mmCIF file containing a single model.
 
-        Parameters:
-         - topology (Topology) The Topology defining the model to write
-         - positions (list) The list of atomic positions to write
-         - file (file=stdout) A file to write to
-         - keepIds (bool=False) If True, keep the residue and chain IDs specified in the Topology rather than generating
-           new ones.  Warning: It is up to the caller to make sure these are valid IDs that satisfy the requirements of
-           the PDBx/mmCIF format.  Otherwise, the output file will be invalid.
-         - entry (str=None) The entry ID to assign to the CIF file
+        Parameters
+        ----------
+        topology : Topology
+            The Topology defining the model to write
+        positions : list
+            The list of atomic positions to write
+        file : file=stdout
+            A file to write to
+        keepIds : bool=False
+            If True, keep the residue and chain IDs specified in the Topology
+            rather than generating new ones.  Warning: It is up to the caller to
+            make sure these are valid IDs that satisfy the requirements of the
+            PDBx/mmCIF format.  Otherwise, the output file will be invalid.
+        entry : str=None
+            The entry ID to assign to the CIF file
         """
         PDBxFile.writeHeader(topology, file, entry)
         PDBxFile.writeModel(topology, positions, file, keepIds=keepIds)
@@ -226,10 +237,14 @@ class PDBxFile(object):
     def writeHeader(topology, file=sys.stdout, entry=None):
         """Write out the header for a PDBx/mmCIF file.
 
-        Parameters:
-         - topology (Topology) The Topology defining the molecular system being written
-         - file (file=stdout) A file to write the file to
-         - entry (str=None) The entry ID to assign to the CIF file
+        Parameters
+        ----------
+        topology : Topology
+            The Topology defining the molecular system being written
+        file : file=stdout
+            A file to write the file to
+        entry : str=None
+            The entry ID to assign to the CIF file
         """
         if entry is not None:
             print('data_%s' % entry, file=file)
@@ -280,14 +295,21 @@ class PDBxFile(object):
     def writeModel(topology, positions, file=sys.stdout, modelIndex=1, keepIds=False):
         """Write out a model to a PDBx/mmCIF file.
 
-        Parameters:
-         - topology (Topology) The Topology defining the model to write
-         - positions (list) The list of atomic positions to write
-         - file (file=stdout) A file to write the model to
-         - modelIndex (int=1) The model number of this frame
-         - keepIds (bool=False) If True, keep the residue and chain IDs specified in the Topology rather than generating
-           new ones.  Warning: It is up to the caller to make sure these are valid IDs that satisfy the requirements of
-           the PDBx/mmCIF format.  Otherwise, the output file will be invalid.
+        Parameters
+        ----------
+        topology : Topology
+            The Topology defining the model to write
+        positions : list
+            The list of atomic positions to write
+        file : file=stdout
+            A file to write the model to
+        modelIndex : int=1
+            The model number of this frame
+        keepIds : bool=False
+            If True, keep the residue and chain IDs specified in the Topology
+            rather than generating new ones.  Warning: It is up to the caller to
+            make sure these are valid IDs that satisfy the requirements of the
+            PDBx/mmCIF format.  Otherwise, the output file will be invalid.
         """
         if len(list(topology.atoms())) != len(positions):
             raise ValueError('The number of positions must match the number of atoms')

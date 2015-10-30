@@ -89,10 +89,15 @@ class Topology(object):
     def addChain(self, id=None):
         """Create a new Chain and add it to the Topology.
 
-        Parameters:
-         - id (string=None) An optional identifier for the chain.  If this is omitted, an id
-           is generated based on the chain index.
-        Returns: the newly created Chain
+        Parameters
+        ----------
+        id : string=None
+            An optional identifier for the chain.  If this is omitted, an id is
+            generated based on the chain index.
+
+        Returns
+        -------
+             the newly created Chain
         """
         if id is None:
             id = str(len(self._chains)+1)
@@ -103,12 +108,19 @@ class Topology(object):
     def addResidue(self, name, chain, id=None):
         """Create a new Residue and add it to the Topology.
 
-        Parameters:
-         - name (string) The name of the residue to add
-         - chain (Chain) The Chain to add it to
-         - id (string=None) An optional identifier for the residue.  If this is omitted, an id
-           is generated based on the residue index.
-        Returns: the newly created Residue
+        Parameters
+        ----------
+        name : string
+            The name of the residue to add
+        chain : Chain
+            The Chain to add it to
+        id : string=None
+            An optional identifier for the residue.  If this is omitted, an id
+            is generated based on the residue index.
+
+        Returns
+        -------
+             the newly created Resid
         """
         if id is None:
             id = str(self._numResidues+1)
@@ -120,13 +132,21 @@ class Topology(object):
     def addAtom(self, name, element, residue, id=None):
         """Create a new Atom and add it to the Topology.
 
-        Parameters:
-         - name (string) The name of the atom to add
-         - element (Element) The element of the atom to add
-         - residue (Residue) The Residue to add it to
-         - id (string=None) An optional identifier for the atom.  If this is omitted, an id
-           is generated based on the atom index.
-        Returns: the newly created Atom
+        Parameters
+        ----------
+        name : string
+            The name of the atom to add
+        element : Element
+            The element of the atom to add
+        residue : Residue
+            The Residue to add it to
+        id : string=None
+            An optional identifier for the atom.  If this is omitted, an id is
+            generated based on the atom index.
+
+        Returns
+        -------
+             the newly created Atom
         """
         if id is None:
             id = str(self._numAtoms+1)
@@ -138,9 +158,12 @@ class Topology(object):
     def addBond(self, atom1, atom2):
         """Create a new bond and add it to the Topology.
 
-        Parameters:
-         - atom1 (Atom) The first Atom connected by the bond
-         - atom2 (Atom) The second Atom connected by the bond
+        Parameters
+        ----------
+        atom1 : Atom
+            The first Atom connected by the bond
+        atom2 : Atom
+            The second Atom connected by the bond
         """
         self._bonds.append((atom1, atom2))
 
@@ -274,10 +297,13 @@ class Topology(object):
                             self.addBond(atomMaps[fromResidue][fromAtom], atomMaps[toResidue][toAtom])
 
     def createDisulfideBonds(self, positions):
-        """Identify disulfide bonds based on proximity and add them to the Topology.
+        """Identify disulfide bonds based on proximity and add them to the
+        Topology.
 
-        Parameters:
-         - positions (list) The list of atomic positions based on which to identify bonded atoms
+        Parameters
+        ----------
+        positions : list
+            The list of atomic positions based on which to identify bonded atoms
         """
         def isCyx(res):
             names = [atom.name for atom in res._atoms]

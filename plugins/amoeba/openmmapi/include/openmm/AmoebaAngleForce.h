@@ -128,20 +128,20 @@ public:
      * @param particle2     the index of the second particle connected by the angle
      * @param particle3     the index of the third particle connected by the angle
      * @param length        the equilibrium angle, measured in degrees
-     * @param quadratic k   the quadratic force constant for the angle, measured in kJ/mol/radian^2
-     * @return the index of the angle that was added
+     * @param quadraticK    the quadratic force constant for the angle, measured in kJ/mol/radian^2
+     * @return              the index of the angle that was added
      */
     int addAngle(int particle1, int particle2, int particle3, double length, double quadraticK);
 
     /**
      * Get the force field parameters for an angle term.
      * 
-     * @param index         the index of the angle for which to get parameters
-     * @param particle1     the index of the first particle connected by the angle
-     * @param particle2     the index of the second particle connected by the angle
-     * @param particle3     the index of the third particle connected by the angle
-     * @param length        the equilibrium angle, measured in degrees
-     * @param quadratic k   the quadratic force constant for the angle, measured in kJ/mol/radian^2
+     * @param index              the index of the angle for which to get parameters
+     * @param[out] particle1     the index of the first particle connected by the angle
+     * @param[out] particle2     the index of the second particle connected by the angle
+     * @param[out] particle3     the index of the third particle connected by the angle
+     * @param[out] length        the equilibrium angle, measured in degrees
+     * @param[out] quadraticK    the quadratic force constant for the angle, measured in kJ/mol/radian^2
      */
     void getAngleParameters(int index, int& particle1, int& particle2, int& particle3, double& length, double& quadraticK) const;
 
@@ -153,7 +153,7 @@ public:
      * @param particle2     the index of the second particle connected by the angle
      * @param particle3     the index of the third particle connected by the angle
      * @param length        the equilibrium angle, measured in degrees
-     * @param quadratic k   the quadratic force constant for the angle, measured in kJ/mol/radian^2
+     * @param quadraticK    the quadratic force constant for the angle, measured in kJ/mol/radian^2
      */
     void setAngleParameters(int index, int particle1, int particle2, int particle3, double length, double quadraticK);
     /**

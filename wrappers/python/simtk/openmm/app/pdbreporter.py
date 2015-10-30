@@ -56,11 +56,23 @@ class PDBReporter(object):
     def describeNextReport(self, simulation):
         """Get information about the next report this object will generate.
 
-        Parameters:
-         - simulation (Simulation) The Simulation to generate a report for
-        Returns: A five element tuple.  The first element is the number of steps until the
-        next report.  The remaining elements specify whether that report will require
-        positions, velocities, forces, and energies respectively.
+        Parameters
+        ----------
+        simulation : Simulation
+            The Simulation to generate a report for
+
+        Returns
+        -------
+        int
+            The number of steps until the
+        bool
+            Requires positions
+        bool
+            Requires velocities
+        bool
+            Requires forces
+        bool
+            Requires energies
         """
         steps = self._reportInterval - simulation.currentStep%self._reportInterval
         return (steps, True, False, False, False)
@@ -68,9 +80,12 @@ class PDBReporter(object):
     def report(self, simulation, state):
         """Generate a report.
 
-        Parameters:
-         - simulation (Simulation) The Simulation to generate a report for
-         - state (State) The current state of the simulation
+        Parameters
+        ----------
+        simulation : Simulation
+            The Simulation to generate a report for
+        state : State
+            The current state of the simulation
         """
         if self._nextModel == 0:
             PDBFile.writeHeader(simulation.topology, self._out)
@@ -95,9 +110,12 @@ class PDBxReporter(PDBReporter):
     def report(self, simulation, state):
         """Generate a report.
 
-        Parameters:
-         - simulation (Simulation) The Simulation to generate a report for
-         - state (State) The current state of the simulation
+        Parameters
+        ----------
+        simulation : Simulation
+            The Simulation to generate a report for
+        state : State
+            The current state of the simulation
         """
         if self._nextModel == 0:
             PDBxFile.writeHeader(simulation.topology, self._out)

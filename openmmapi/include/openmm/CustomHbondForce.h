@@ -171,7 +171,7 @@ public:
     }
     /**
      * Get the number of tabulated functions that have been defined.
-     * 
+     *
      * @deprecated This method exists only for backward compatibility.  Use getNumTabulatedFunctions() instead.
      */
     int getNumFunctions() const {
@@ -282,7 +282,7 @@ public:
      * Set the default value of a global parameter.
      *
      * @param index          the index of the parameter for which to set the default value
-     * @param name           the default value of the parameter
+     * @param defaultValue   the default value of the parameter
      */
     void setGlobalParameterDefaultValue(int index, double defaultValue);
     /**
@@ -300,13 +300,13 @@ public:
     /**
      * Get the properties of a donor group.
      *
-     * @param index       the index of the donor group to get
-     * @param d1          the index of the first particle for this donor group
-     * @param d2          the index of the second particle for this donor group.  If the group only
-     *                    includes one particle, this will be -1.
-     * @param d3          the index of the third particle for this donor group.  If the group includes
-     *                    less than three particles, this will be -1.
-     * @param parameters  the list of per-donor parameter values for the donor
+     * @param index            the index of the donor group to get
+     * @param[out] d1          the index of the first particle for this donor group
+     * @param[out] d2          the index of the second particle for this donor group.  If the group only
+     *                         includes one particle, this will be -1.
+     * @param[out] d3          the index of the third particle for this donor group.  If the group includes
+     *                         less than three particles, this will be -1.
+     * @param[out] parameters  the list of per-donor parameter values for the donor
      */
     void getDonorParameters(int index, int& d1, int& d2, int& d3, std::vector<double>& parameters) const;
     /**
@@ -336,13 +336,13 @@ public:
     /**
      * Get the properties of an acceptor group.
      *
-     * @param index       the index of the acceptor group to get
-     * @param a1          the index of the first particle for this acceptor group
-     * @param a2          the index of the second particle for this acceptor group.  If the group only
-     *                    includes one particle, this will be -1.
-     * @param a3          the index of the third particle for this acceptor group.  If the group includes
-     *                    less than three particles, this will be -1.
-     * @param parameters  the list of per-acceptor parameter values for the acceptor
+     * @param index            the index of the acceptor group to get
+     * @param[out] a1          the index of the first particle for this acceptor group
+     * @param[out] a2          the index of the second particle for this acceptor group.  If the group only
+     *                         includes one particle, this will be -1.
+     * @param[out] a3          the index of the third particle for this acceptor group.  If the group includes
+     *                         less than three particles, this will be -1.
+     * @param[out] parameters  the list of per-acceptor parameter values for the acceptor
      */
     void getAcceptorParameters(int index, int& a1, int& a2, int& a3, std::vector<double>& parameters) const;
     /**
@@ -368,17 +368,17 @@ public:
     /**
      * Get the donor and acceptor in a pair whose interaction should be excluded.
      *
-     * @param index      the index of the exclusion for which to get donor and acceptor indices
-     * @param particle1  the index of the donor
-     * @param particle2  the index of the acceptor
+     * @param index           the index of the exclusion for which to get donor and acceptor indices
+     * @param[out] particle1  the index of the donor
+     * @param[out] particle2  the index of the acceptor
      */
     void getExclusionParticles(int index, int& donor, int& acceptor) const;
     /**
      * Get the donor and acceptor in a pair whose interaction should be excluded.
      *
      * @param index      the index of the exclusion for which to get donor and acceptor indices
-     * @param particle1  the index of the donor
-     * @param particle2  the index of the acceptor
+     * @param donor      the index of the donor
+     * @param acceptor   the index of the acceptor
      */
     void setExclusionParticles(int index, int donor, int acceptor);
     /**
@@ -437,7 +437,7 @@ public:
      * provides an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
      * Simply call setDonorParameters() and setAcceptorParameters() to modify this object's parameters, then call
      * updateParametersInContext() to copy them over to the Context.
-     * 
+     *
      * This method has several limitations.  The only information it updates is the values of per-donor and per-acceptor parameters.
      * All other aspects of the Force (the energy function, nonbonded method, cutoff distance, etc.) are unaffected and can only
      * be changed by reinitializing the Context.  The set of particles involved in a donor or acceptor cannot be changed, nor can

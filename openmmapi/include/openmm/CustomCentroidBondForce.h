@@ -85,7 +85,7 @@ namespace OpenMM {
  *
  * As an example, the following code creates a CustomCentroidBondForce that implements a harmonic force between the
  * centers of mass of two groups of particles.
- * 
+ *
  * <tt><pre>
  * CustomCentroidBondForce* force = new CustomCentroidBondForce(2, "0.5*k*distance(g1,g2)^2");
  * force->addPerBondParameter("k");
@@ -226,7 +226,7 @@ public:
      * Set the default value of a global parameter.
      *
      * @param index          the index of the parameter for which to set the default value
-     * @param name           the default value of the parameter
+     * @param defaultValue   the default value of the parameter
      */
     void setGlobalParameterDefaultValue(int index, double defaultValue);
     /**
@@ -241,11 +241,11 @@ public:
     /**
      * Get the properties of a group.
      *
-     * @param index       the index of the group to get
-     * @param particles   the indices of the particles in the group
-     * @param weights     the weight used for each particle when computing the center position.
-     *                    If no weights were specified, this vector will be empty indicating that particle
-     *                    masses should be used as weights.
+     * @param index            the index of the group to get
+     * @param[out] particles   the indices of the particles in the group
+     * @param[out] weights     the weight used for each particle when computing the center position.
+     *                         If no weights were specified, this vector will be empty indicating that particle
+     *                         masses should be used as weights.
      */
     void getGroupParameters(int index, std::vector<int>& particles, std::vector<double>& weights) const;
     /**
@@ -268,9 +268,9 @@ public:
     /**
      * Get the properties of a bond.
      *
-     * @param index       the index of the bond to get
-     * @param groups      the indices of the groups in the bond
-     * @param parameters  the list of per-bond parameter values for the bond
+     * @param      index       the index of the bond to get
+     * @param[out] groups      the indices of the groups in the bond
+     * @param[out] parameters  the list of per-bond parameter values for the bond
      */
     void getBondParameters(int index, std::vector<int>& groups, std::vector<double>& parameters) const;
     /**

@@ -97,12 +97,12 @@ public:
     /**
      * Get the force field parameters for a vdw particle.
      * 
-     * @param particleIndex   the particle index
-     * @param parentIndex     the index of the parent particle
-     * @param sigma           vdw sigma
-     * @param epsilon         vdw epsilon
-     * @param reductionFactor the fraction of the distance along the line from the parent particle to this particle
-     *                        at which the interaction site should be placed
+     * @param particleIndex        the particle index
+     * @param[out] parentIndex     the index of the parent particle
+     * @param[out] sigma           vdw sigma
+     * @param[out] epsilon         vdw epsilon
+     * @param[out] reductionFactor the fraction of the distance along the line from the parent particle to this particle
+     *                             at which the interaction site should be placed
      */
     void getParticleParameters(int particleIndex, int& parentIndex, double& sigma, double& epsilon, double& reductionFactor) const;
 
@@ -178,8 +178,8 @@ public:
     /**
      * Get exclusions for specified particle
      * 
-     * @param particleIndex particle index
-     * @param exclusions vector of exclusions
+     * @param particleIndex    particle index
+     * @param[out] exclusions  vector of exclusions
      */
     void getParticleExclusions(int particleIndex, std::vector<int>& exclusions) const;
 

@@ -10,7 +10,7 @@ Portions copyright (c) 2012 Stanford University and the Authors.
 Authors: Peter Eastman, Steffen Lindert
 Contributors:
 
-Permission is hereby granted, free of charge, to any person obtaining a 
+Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
 to deal in the Software without restriction, including without limitation
 the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -37,18 +37,18 @@ from simtk.unit import kilojoules_per_mole, is_quantity
 
 class AMDIntegrator(CustomIntegrator):
     """AMDIntegrator implements the aMD integration algorithm.
-    
+
     The system is integrated based on a modified potential.  Whenever the energy V(r) is less than a
     cutoff value E, the following effective potential is used:
-    
+
     V*(r) = V(r) + (E-V(r))^2 / (alpha+E-V(r))
-    
+
     For details, see Hamelberg et al., J. Chem. Phys. 127, 155102 (2007).
     """
-    
+
     def __init__(self, dt, alpha, E):
         """Create an AMDIntegrator.
-        
+
         Parameters:
          - dt (time) The integration time step to use
          - alpha (energy) The alpha parameter to use
@@ -64,23 +64,23 @@ class AMDIntegrator(CustomIntegrator):
         self.addComputePerDof("x", "x+dt*v")
         self.addConstrainPositions()
         self.addComputePerDof("v", "(x-oldx)/dt")
-    
+
     def getAlpha(self):
         """Get the value of alpha for the integrator."""
         return self.getGlobalVariable(0)*kilojoules_per_mole
-    
+
     def setAlpha(self, alpha):
         """Set the value of alpha for the integrator."""
         self.setGlobalVariable(0, alpha)
-    
+
     def getE(self):
         """Get the energy threshold E for the integrator."""
         return self.getGlobalVariable(1)*kilojoules_per_mole
-    
+
     def setE(self, E):
         """Set the energy threshold E for the integrator."""
         self.setGlobalVariable(1, E)
-    
+
     def getEffectiveEnergy(self, energy):
         """Given the actual potential energy of the system, return the value of the effective potential."""
         alpha = self.getAlpha()
@@ -94,16 +94,16 @@ class AMDIntegrator(CustomIntegrator):
 
 class AMDForceGroupIntegrator(CustomIntegrator):
     """AMDForceGroupIntegrator implements a single boost aMD integration algorithm.
-    
+
     This is similar to AMDIntegrator, but is applied based on the energy of a single force group
     (typically representing torsions).
-    
+
     For details, see Hamelberg et al., J. Chem. Phys. 127, 155102 (2007).
     """
-    
+
     def __init__(self, dt, group, alphaGroup, EGroup):
         """Create a AMDForceGroupIntegrator.
-        
+
         Parameters:
          - dt (time) The integration time step to use
          - group (int) The force group to apply the boost to
@@ -124,26 +124,26 @@ class AMDForceGroupIntegrator(CustomIntegrator):
         self.addComputePerDof("x", "x+dt*v")
         self.addConstrainPositions()
         self.addComputePerDof("v", "(x-oldx)/dt")
-    
+
     def getAlphaGroup(self):
         """Get the value of alpha for the boosted force group."""
         return self.getGlobalVariable(0)*kilojoules_per_mole
-    
+
     def setAlphaGroup(self, alpha):
         """Set the value of alpha for the boosted force group."""
         self.setGlobalVariable(0, alpha)
-    
+
     def getEGroup(self):
         """Get the energy threshold E for the boosted force group."""
         return self.getGlobalVariable(1)*kilojoules_per_mole
-    
+
     def setEGroup(self, E):
         """Set the energy threshold E for the boosted force group."""
         self.setGlobalVariable(1, E)
-    
+
     def getEffectiveEnergy(self, groupEnergy):
         """Given the actual group energy of the system, return the value of the effective potential.
-        
+
         Parameters:
           - groupEnergy (energy): the actual potential energy of the boosted force group
         Returns: the value of the effective potential
@@ -161,14 +161,14 @@ class AMDForceGroupIntegrator(CustomIntegrator):
 
 class DualAMDIntegrator(CustomIntegrator):
     """DualAMDIntegrator implements a dual boost aMD integration algorithm.
-    
+
     This is similar to AMDIntegrator, but two different boosts are applied to the potential:
     one based on the total energy, and one based on the energy of a single force group
     (typically representing torsions).
 
     For details, see Hamelberg et al., J. Chem. Phys. 127, 155102 (2007).
     """
-    
+
     def __init__(self, dt, group, alphaTotal, ETotal, alphaGroup, EGroup):
         """Create a DualAMDIntegrator.
 
@@ -201,42 +201,42 @@ class DualAMDIntegrator(CustomIntegrator):
         self.addComputePerDof("x", "x+dt*v")
         self.addConstrainPositions()
         self.addComputePerDof("v", "(x-oldx)/dt")
-    
+
     def getAlphaTotal(self):
         """Get the value of alpha for the total energy."""
         return self.getGlobalVariable(0)*kilojoules_per_mole
-    
+
     def setAlphaTotal(self, alpha):
         """Set the value of alpha for the total energy."""
         self.setGlobalVariable(0, alpha)
-    
+
     def getETotal(self):
         """Get the energy threshold E for the total energy."""
         return self.getGlobalVariable(1)*kilojoules_per_mole
-    
+
     def setETotal(self, E):
         """Set the energy threshold E for the total energy."""
         self.setGlobalVariable(1, E)
-    
+
     def getAlphaGroup(self):
         """Get the value of alpha for the boosted force group."""
         return self.getGlobalVariable(2)*kilojoules_per_mole
-    
+
     def setAlphaGroup(self, alpha):
         """Set the value of alpha for the boosted force group."""
         self.setGlobalVariable(2, alpha)
-    
+
     def getEGroup(self):
         """Get the energy threshold E for the boosted force group."""
         return self.getGlobalVariable(3)*kilojoules_per_mole
-    
+
     def setEGroup(self, E):
         """Set the energy threshold E for the boosted force group."""
         self.setGlobalVariable(3, E)
-    
+
     def getEffectiveEnergy(self, totalEnergy, groupEnergy):
         """Given the actual potential energy of the system, return the value of the effective potential.
-        
+
         Parameters:
          - totalEnergy (energy): the actual potential energy of the whole system
          - groupEnergy (energy): the actual potential energy of the boosted force group

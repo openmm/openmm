@@ -75,9 +75,9 @@ public:
     /**
      * Get the force field parameters for a WCA dispersion particle.
      * 
-     * @param particleIndex   the particle index
-     * @param radius          radius
-     * @param epsilon         epsilon 
+     * @param particleIndex        the particle index
+     * @param[out] radius          radius
+     * @param[out] epsilon         epsilon 
      */
     void getParticleParameters(int particleIndex, double& radius, double& epsilon) const;
 

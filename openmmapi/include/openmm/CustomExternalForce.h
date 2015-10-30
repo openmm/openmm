@@ -170,7 +170,7 @@ public:
      * Set the default value of a global parameter.
      *
      * @param index          the index of the parameter for which to set the default value
-     * @param name           the default value of the parameter
+     * @param defaultValue   the default value of the parameter
      */
     void setGlobalParameterDefaultValue(int index, double defaultValue);
     /**
@@ -184,9 +184,9 @@ public:
     /**
      * Get the force field parameters for a force field term.
      *
-     * @param index         the index of the particle term for which to get parameters
-     * @param particle      the index of the particle this term is applied to
-     * @param parameters    the list of parameters for the force field term
+     * @param index              the index of the particle term for which to get parameters
+     * @param[out] particle      the index of the particle this term is applied to
+     * @param[out] parameters    the list of parameters for the force field term
      */
     void getParticleParameters(int index, int& particle, std::vector<double>& parameters) const;
     /**

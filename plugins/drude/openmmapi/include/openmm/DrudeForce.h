@@ -44,7 +44,7 @@ namespace OpenMM {
  * it applies: an anisotropic harmonic force connecting each Drude particle to its parent particle; and
  * a screened Coulomb interaction between specific pairs of dipoles.  The latter is typically used between
  * closely bonded particles whose Coulomb interaction would otherwise be fully excluded.
- * 
+ *
  * To use this class, create a DrudeForce object, then call addParticle() once for each Drude particle in the
  * System to define its parameters.  After a particle has been added, you can modify its force field parameters
  * by calling setParticleParameters().  This will have no effect on Contexts that already exist unless you
@@ -91,19 +91,19 @@ public:
     /**
      * Get the parameters for a Drude particle.
      *
-     * @param index           the index of the Drude particle for which to get parameters
-     * @param particle        the index within the System of the Drude particle
-     * @param particle1       the index within the System of the particle to which the Drude particle is attached
-     * @param particle2       the index within the System of the second particle used for defining anisotropic polarizability.
-     *                        This may be set to -1, in which case aniso12 will be ignored.
-     * @param particle3       the index within the System of the third particle used for defining anisotropic polarizability.
-     *                        This may be set to -1, in which case aniso34 will be ignored.
-     * @param particle4       the index within the System of the fourth particle used for defining anisotropic polarizability.
-     *                        This may be set to -1, in which case aniso34 will be ignored.
-     * @param charge          The charge on the Drude particle
-     * @param polarizability  The isotropic polarizability
-     * @param aniso12         The scale factor for the polarizability along the direction defined by particle1 and particle2
-     * @param aniso34         The scale factor for the polarizability along the direction defined by particle3 and particle4
+     * @param index                the index of the Drude particle for which to get parameters
+     * @param[out] particle        the index within the System of the Drude particle
+     * @param[out] particle1       the index within the System of the particle to which the Drude particle is attached
+     * @param[out] particle2       the index within the System of the second particle used for defining anisotropic polarizability.
+     *                             This may be set to -1, in which case aniso12 will be ignored.
+     * @param[out] particle3       the index within the System of the third particle used for defining anisotropic polarizability.
+     *                             This may be set to -1, in which case aniso34 will be ignored.
+     * @param[out] particle4       the index within the System of the fourth particle used for defining anisotropic polarizability.
+     *                             This may be set to -1, in which case aniso34 will be ignored.
+     * @param[out] charge          The charge on the Drude particle
+     * @param[out] polarizability  The isotropic polarizability
+     * @param[out] aniso12         The scale factor for the polarizability along the direction defined by particle1 and particle2
+     * @param[out] aniso34         The scale factor for the polarizability along the direction defined by particle3 and particle4
      */
     void getParticleParameters(int index, int& particle, int& particle1, int& particle2, int& particle3, int& particle4, double& charge, double& polarizability, double& aniso12, double& aniso34) const;
     /**
@@ -135,16 +135,15 @@ public:
     int addScreenedPair(int particle1, int particle2, double thole);
     /**
      * Get the force field parameters for screened pair.
-     * 
-     * @param index      the index of the pair for which to get parameters
-     * @param particle1  the index within this Force of the first particle involved in the interaction
-     * @param particle2  the index within this Force of the second particle involved in the interaction
-     * @param thole      the Thole screening factor
+     *
+     * @param[out] particle1  the index within this Force of the first particle involved in the interaction
+     * @param[out] particle2  the index within this Force of the second particle involved in the interaction
+     * @param[out] thole      the Thole screening factor
      */
     void getScreenedPairParameters(int index, int& particle1, int& particle2, double& thole) const;
     /**
      * Set the force field parameters for screened pair.
-     * 
+     *
      * @param index      the index of the pair for which to get parameters
      * @param particle1  the index within this Force of the first particle involved in the interaction
      * @param particle2  the index within this Force of the second particle involved in the interaction
@@ -156,7 +155,7 @@ public:
      * provides an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
      * Simply call setParticleParameters() and setScreenedPairParameters() to modify this object's parameters, then call
      * updateParametersInContext() to copy them over to the Context.
-     * 
+     *
      * This method has several limitations.  It can be used to modify the numeric parameters associated with a particle or
      * screened pair (polarizability, thole, etc.), but not the identities of the particles they involve.  It also cannot
      * be used to add new particles or screenedPairs, only to change the parameters of existing ones.

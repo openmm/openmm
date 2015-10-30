@@ -81,15 +81,15 @@ public:
     /**
      * Get the force field parameters for a stretch-bend term.
      * 
-     * @param index         the index of the stretch-bend for which to get parameters
-     * @param particle1     the index of the first particle connected by the stretch-bend
-     * @param particle2     the index of the second particle connected by the stretch-bend
-     * @param particle3     the index of the third particle connected by the stretch-bend
-     * @param lengthAB      the equilibrium length of the stretch-bend in bond ab [particle1, particle2], measured in nm
-     * @param lengthCB      the equilibrium length of the stretch-bend in bond cb [particle3, particle2], measured in nm
-     * @param angle         the equilibrium angle in radians
-     * @param k1            the force constant of the product of bond ab and angle a-b-c
-     * @param k2            the force constant of the product of bond bc and angle a-b-c
+     * @param index              the index of the stretch-bend for which to get parameters
+     * @param[out] particle1     the index of the first particle connected by the stretch-bend
+     * @param[out] particle2     the index of the second particle connected by the stretch-bend
+     * @param[out] particle3     the index of the third particle connected by the stretch-bend
+     * @param[out] lengthAB      the equilibrium length of the stretch-bend in bond ab [particle1, particle2], measured in nm
+     * @param[out] lengthCB      the equilibrium length of the stretch-bend in bond cb [particle3, particle2], measured in nm
+     * @param[out] angle         the equilibrium angle in radians
+     * @param[out] k1            the force constant of the product of bond ab and angle a-b-c
+     * @param[out] k2            the force constant of the product of bond bc and angle a-b-c
      */
     void getStretchBendParameters(int index, int& particle1, int& particle2, int& particle3, double& lengthAB,
                                   double& lengthCB, double& angle, double& k1, double& k2) const;

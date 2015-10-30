@@ -123,12 +123,14 @@ class ForceField(object):
     def loadFile(self, file):
         """Load an XML file and add the definitions from it to this FieldField.
 
-        Parameters:
-         - file (string or file) An XML file containing force field definitions.  It may
-           be either an absolute file path, a path relative to the current working
-           directory, a path relative to this module's data subdirectory
-           (for built in force fields), or an open file-like object with a
-           read() method from which the forcefield XML data can be loaded.
+        Parameters
+        ----------
+        file : string or file
+            An XML file containing force field definitions.  It may be either an
+            absolute file path, a path relative to the current working
+            directory, a path relative to this module's data subdirectory (for
+            built in force fields), or an open file-like object with a read()
+            method from which the forcefield XML data can be loaded.
         """
         try:
             # this handles either filenames or open file-like objects

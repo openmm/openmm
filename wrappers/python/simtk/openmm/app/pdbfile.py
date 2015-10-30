@@ -176,10 +176,14 @@ class PDBFile(object):
     def getPositions(self, asNumpy=False, frame=0):
         """Get the atomic positions.
 
-        Parameters:
-         - asNumpy (boolean=False) if true, the values are returned as a numpy array instead of a list of Vec3s
-         - frame (int=0) the index of the frame for which to get positions
-         """
+        Parameters
+        ----------
+        asNumpy : boolean=False
+            if true, the values are returned as a numpy array instead of a list
+            of Vec3s
+        frame : int=0
+            the index of the frame for which to get positions
+        """
         if asNumpy:
             if self._numpyPositions is None:
                 self._numpyPositions = [None]*len(self._positions)
@@ -234,13 +238,19 @@ class PDBFile(object):
     def writeFile(topology, positions, file=sys.stdout, keepIds=False):
         """Write a PDB file containing a single model.
 
-        Parameters:
-         - topology (Topology) The Topology defining the model to write
-         - positions (list) The list of atomic positions to write
-         - file (file=stdout) A file to write to
-         - keepIds (bool=False) If True, keep the residue and chain IDs specified in the Topology rather than generating
-           new ones.  Warning: It is up to the caller to make sure these are valid IDs that satisfy the requirements of
-           the PDB format.  Otherwise, the output file will be invalid.
+        Parameters
+        ----------
+        topology : Topology
+            The Topology defining the model to write
+        positions : list
+            The list of atomic positions to write
+        file : file=stdout
+            A file to write to
+        keepIds : bool=False
+            If True, keep the residue and chain IDs specified in the Topology
+            rather than generating new ones.  Warning: It is up to the caller to
+            make sure these are valid IDs that satisfy the requirements of the
+            PDB format.  Otherwise, the output file will be invalid.
         """
         PDBFile.writeHeader(topology, file)
         PDBFile.writeModel(topology, positions, file, keepIds=keepIds)
@@ -250,9 +260,12 @@ class PDBFile(object):
     def writeHeader(topology, file=sys.stdout):
         """Write out the header for a PDB file.
 
-        Parameters:
-         - topology (Topology) The Topology defining the molecular system being written
-         - file (file=stdout) A file to write the file to
+        Parameters
+        ----------
+        topology : Topology
+            The Topology defining the molecular system being written
+        file : file=stdout
+            A file to write the file to
         """
         print("REMARK   1 CREATED WITH OPENMM %s, %s" % (Platform.getOpenMMVersion(), str(date.today())), file=file)
         vectors = topology.getPeriodicBoxVectors()
@@ -266,15 +279,24 @@ class PDBFile(object):
     def writeModel(topology, positions, file=sys.stdout, modelIndex=None, keepIds=False):
         """Write out a model to a PDB file.
 
-        Parameters:
-         - topology (Topology) The Topology defining the model to write
-         - positions (list) The list of atomic positions to write
-         - file (file=stdout) A file to write the model to
-         - modelIndex (int=None) If not None, the model will be surrounded by MODEL/ENDMDL records with this index
-         - keepIds (bool=False) If True, keep the residue and chain IDs specified in the Topology rather than generating
-           new ones.  Warning: It is up to the caller to make sure these are valid IDs that satisfy the requirements of
-           the PDB format.  Otherwise, the output file will be invalid.
+        Parameters
+        ----------
+        topology : Topology
+            The Topology defining the model to write
+        positions : list
+            The list of atomic positions to write
+        file : file=stdout
+            A file to write the model to
+        modelIndex : int=None
+            If not None, the model will be surrounded by MODEL/ENDMDL records
+            with this index
+        keepIds : bool=False
+            If True, keep the residue and chain IDs specified in the Topology
+            rather than generating new ones.  Warning: It is up to the caller to
+            make sure these are valid IDs that satisfy the requirements of the
+            PDB format.  Otherwise, the output file will be invalid.
         """
+
         if len(list(topology.atoms())) != len(positions):
             raise ValueError('The number of positions must match the number of atoms')
         if is_quantity(positions):
@@ -331,12 +353,15 @@ class PDBFile(object):
     def writeFooter(topology, file=sys.stdout):
         """Write out the footer for a PDB file.
 
-        Parameters:
-         - topology (Topology) The Topology defining the molecular system being written
-         - file (file=stdout) A file to write the file to
+        Parameters
+        ----------
+        topology : Topology
+            The Topology defining the molecular system being written
+        file : file=stdout
+            A file to write the file to
         """
         # Identify bonds that should be listed as CONECT records.
-        
+
         standardResidues = ['ALA', 'ASN', 'CYS', 'GLU', 'HIS', 'LEU', 'MET', 'PRO', 'THR', 'TYR',
                             'ARG', 'ASP', 'GLN', 'GLY', 'ILE', 'LYS', 'PHE', 'SER', 'TRP', 'VAL',
                             'A', 'G', 'C', 'U', 'I', 'DA', 'DG', 'DC', 'DT', 'DI', 'HOH']
@@ -347,9 +372,9 @@ class PDBFile(object):
             elif atom1.name == 'SG' and atom2.name == 'SG' and atom1.residue.name == 'CYS' and atom2.residue.name == 'CYS':
                 conectBonds.append((atom1, atom2))
         if len(conectBonds) > 0:
-            
+
             # Work out the index used in the PDB file for each atom.
-            
+
             atomIndex = {}
             nextAtomIndex = 0
             prevChain = None
@@ -360,9 +385,9 @@ class PDBFile(object):
                         prevChain = atom.residue.chain
                     atomIndex[atom] = nextAtomIndex
                     nextAtomIndex += 1
-            
+
             # Record which other atoms each atom is bonded to.
-            
+
             atomBonds = {}
             for atom1, atom2 in conectBonds:
                 index1 = atomIndex[atom1]
@@ -373,9 +398,9 @@ class PDBFile(object):
                     atomBonds[index2] = []
                 atomBonds[index1].append(index2)
                 atomBonds[index2].append(index1)
-            
+
             # Write the CONECT records.
-            
+
             for index1 in sorted(atomBonds):
                 bonded = atomBonds[index1]
                 while len(bonded) > 4:

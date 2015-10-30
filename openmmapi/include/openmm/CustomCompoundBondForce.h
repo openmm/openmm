@@ -46,11 +46,11 @@ namespace OpenMM {
  * the energy depends on their positions, is configurable.  It may depend on the positions of individual particles,
  * the distances between pairs of particles, the angles formed by sets of three particles, and the dihedral
  * angles formed by sets of four particles.
- * 
+ *
  * We refer to the particles in a bond as p1, p2, p3, etc.  For each bond, CustomCompoundBondForce evaluates a
  * user supplied algebraic expression to determine the interaction energy.  The expression may depend on the
  * following variables and functions:
- * 
+ *
  * <ul>
  * <li>x1, y1, z1, x2, y2, z2, etc.: The x, y, and z coordinates of the particle positions.  For example, x1
  * is the x coordinate of particle p1, and y3 is the y coordinate of particle p3.</li>
@@ -141,7 +141,7 @@ public:
     }
     /**
      * Get the number of tabulated functions that have been defined.
-     * 
+     *
      * @deprecated This method exists only for backward compatibility.  Use getNumTabulatedFunctions() instead.
      */
     int getNumFunctions() const {
@@ -209,7 +209,7 @@ public:
      * Set the default value of a global parameter.
      *
      * @param index          the index of the parameter for which to set the default value
-     * @param name           the default value of the parameter
+     * @param defaultValue   the default value of the parameter
      */
     void setGlobalParameterDefaultValue(int index, double defaultValue);
     /**
@@ -223,9 +223,9 @@ public:
     /**
      * Get the properties of a bond.
      *
-     * @param index       the index of the bond to get
-     * @param particles   the indices of the particles in the bond
-     * @param parameters  the list of per-bond parameter values for the bond
+     * @param index            the index of the bond to get
+     * @param[out] particles   the indices of the particles in the bond
+     * @param[out] parameters  the list of per-bond parameter values for the bond
      */
     void getBondParameters(int index, std::vector<int>& particles, std::vector<double>& parameters) const;
     /**
@@ -292,7 +292,7 @@ public:
      * an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
      * Simply call setBondParameters() to modify this object's parameters, then call updateParametersInContext()
      * to copy them over to the Context.
-     * 
+     *
      * This method has several limitations.  The only information it updates is the values of per-bond parameters.
      * All other aspects of the Force (such as the energy function) are unaffected and can only be changed by reinitializing
      * the Context.  The set of particles involved in a bond cannot be changed, nor can new bonds be added.

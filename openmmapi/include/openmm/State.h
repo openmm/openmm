@@ -43,7 +43,7 @@ namespace OpenMM {
 /**
  * A State object records a snapshot of the current state of a simulation at a point in time.
  * You create it by calling getState() on a Context.
- * 
+ *
  * When a State is created, you specify what information should be stored in it.  This saves
  * time and memory by only copying in the information that you actually want.  This is especially
  * important for forces and energies, since they may need to be calculated.  If you query a
@@ -81,7 +81,7 @@ public:
     const std::vector<Vec3>& getForces() const;
     /**
      * Get the total kinetic energy of the system.  If this State does not contain energies, this will throw an exception.
-     * 
+     *
      * Note that this may be different from simply mv<sup>2</sup>/2 summed over all particles.  For example, a leapfrog
      * integrator will store velocities offset by half a step, so they must be adjusted before computing the kinetic energy.
      * This routine returns the kinetic energy at the current time, computed in a way that is appropriate for whatever
@@ -95,9 +95,9 @@ public:
     /**
      * Get the vectors defining the axes of the periodic box (measured in nm).
      *
-     * @param a      on exit, this contains the vector defining the first edge of the periodic box
-     * @param b      on exit, this contains the vector defining the second edge of the periodic box
-     * @param c      on exit, this contains the vector defining the third edge of the periodic box
+     * @param[out] a    the vector defining the first edge of the periodic box
+     * @param[out] b    the vector defining the second edge of the periodic box
+     * @param[out] c    the vector defining the third edge of the periodic box
      */
     void getPeriodicBoxVectors(Vec3& a, Vec3& b, Vec3& c) const;
     /**

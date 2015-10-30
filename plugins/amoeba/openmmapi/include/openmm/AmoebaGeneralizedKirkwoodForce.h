@@ -79,10 +79,10 @@ public:
     /**
      * Get the force field parameters for a particle.
      * 
-     * @param index          the index of the particle for which to get parameters
-     * @param charge         the charge of the particle, measured in units of the proton charge
-     * @param radius         the atomic radius of the particle, measured in nm
-     * @param scalingFactor  the scaling factor for the particle
+     * @param      index          the index of the particle for which to get parameters
+     * @param[out] charge         the charge of the particle, measured in units of the proton charge
+     * @param[out] radius         the atomic radius of the particle, measured in nm
+     * @param[out] scalingFactor  the scaling factor for the particle
      */
     void getParticleParameters(int index, double& charge, double& radius, double& scalingFactor) const;
 

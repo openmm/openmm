@@ -1,5 +1,8 @@
 from __future__ import print_function
+from numpydoc.docscrape import NumpyDocString
 import sys
+import textwrap
+
 
 # Doxygen does a bad job of generating documentation based on docstrings.  This script is run as a filter
 # on each file, and converts the docstrings into Doxygen style comments so we get better documentation.
@@ -15,46 +18,51 @@ while True:
         split = stripped.split()
         if split[0] == 'class' and split[1][0].islower():
             # Classes that start with a lowercase letter were defined by SWIG.  We want to hide them.
-            print("%s## @private" % prefix)
+            print("%s## @private" % prefix, end='')
         if split[1][0] == '_' and split[1][1] != '_':
             # Names starting with a single _ are assumed to be private.
-            print("%s## @private" % prefix)
-        
+            print("%s## @private" % prefix, end='')
+
         # We're at the start of a class or function definition.  Find all lines that contain the declaration.
-        
+
         declaration = line
         while len(line) > 0 and line.find(':') == -1:
             line = input.readline()
             declaration += line
-        
+
         # Now look for a docstring.
-        
-        docstrings = []
+
+        docstringlines = []
         line = input.readline()
         stripped = line.lstrip()
-        if stripped.startswith('"""'):
+        if stripped.startswith('"""') or stripped.startswith("'''"):
             line = stripped[3:]
             readingParameters = False
-            while line.find('"""') == -1:
-                docstrings.append(line)
-                line = input.readline()
-                if line.strip() == 'Parameters:':
-                    readingParameters = True
+            if line.find('"""') != -1 or line.find(("'''")) != -1:
+                docstringlines.append(line.rstrip()[:-3])
+            else:
+                while line.find('"""') == -1:
+                    docstringlines.append(line)
                     line = input.readline()
-                stripped = line.lstrip()
-                if readingParameters and stripped.startswith('- '):
-                    line = "@param %s" % stripped[2:]
-                elif stripped.startswith('Returns:'):
-                    line = "@return %s" % stripped[8:]
-            line = line[:line.find('"""')]
-            docstrings.append(line)            
-        
+        docstring = NumpyDocString(''.join(docstringlines))
+
         # Print out the docstring in Doxygen syntax, followed by the declaration.
-        
-        for s in docstrings:
-            print("%s##%s" % (prefix, s.strip()))
+        sep = '\n{prefix}##\n{prefix}## '.format(prefix=prefix)
+        for line in textwrap.wrap(' '.join(docstring['Summary'])):
+            print('{prefix}## {line}'.format(prefix=prefix, line=line))
+        if len(docstring['Extended Summary']) > 0:
+            print('{prefix}##'.format(prefix=prefix))
+            print('{prefix}## {ext_summary}'.format(prefix=prefix, ext_summary=sep.join(docstring['Extended Summary'])))
+        print('{prefix}##'.format(prefix=prefix))
+        for name, type, descr in docstring['Parameters']:
+            print('{prefix}## @param {name} ({type}) {descr}'.format(prefix=prefix, type=type, name=name, descr=''.join(descr)))
+        for name, type, descr in docstring['Returns']:
+            if type == '':
+                type = name
+            print('{prefix}## @return ({type}) {descr}'.format(prefix=prefix, type=type, name=name, descr=''.join(descr)))
+
         print(declaration)
-        if len(docstrings) == 0:
-            print(line)
+        if len(docstringlines) == 0:
+            print(line, end='')
     else:
-        print(line)
+        print(line, end='')

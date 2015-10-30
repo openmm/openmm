@@ -84,35 +84,48 @@ class Simulation(object):
     def minimizeEnergy(self, tolerance=10*unit.kilojoule/unit.mole, maxIterations=0):
         """Perform a local energy minimization on the system.
 
-        Parameters:
-         - tolerance (energy=10*kilojoules/mole) The energy tolerance to which the system should be minimized
-         - maxIterations (int=0) The maximum number of iterations to perform.  If this is 0, minimization is continued
-           until the results converge without regard to how many iterations it takes.
+        Parameters
+        ----------
+        tolerance : energy=10*kilojoules/mole
+            The energy tolerance to which the system should be minimized
+        maxIterations : int=0
+            The maximum number of iterations to perform.  If this is 0,
+            minimization is continued until the results converge without regard
+            to how many iterations it takes.
         """
         mm.LocalEnergyMinimizer.minimize(self.context, tolerance, maxIterations)
 
     def step(self, steps):
         """Advance the simulation by integrating a specified number of time steps."""
         self._simulate(endStep=self.currentStep+steps)
-        
+
     def runForClockTime(self, time, checkpointFile=None, stateFile=None, checkpointInterval=None):
         """Advance the simulation by integrating time steps until a fixed amount of clock time has elapsed.
-        
+
         This is useful when you have a limited amount of computer time available, and want to run the longest simulation
         possible in that time.  This method will continue taking time steps until the specified clock time has elapsed,
         then return.  It also can automatically write out a checkpoint and/or state file before returning, so you can
         later resume the simulation.  Another option allows it to write checkpoints or states at regular intervals, so
         you can resume even if the simulation is interrupted before the time limit is reached.
-        
-        Parameters:
-         - time (time) the amount of time to run for.  If no units are specified, it is assumed to be a number of hours.
-         - checkpointFile (string or file=None) if specified, a checkpoint file will be written at the end of the
-           simulation (and optionally at regular intervals before then) by passing this to saveCheckpoint().
-         - stateFile (string or file=None) if specified, a state file will be written at the end of the
-           simulation (and optionally at regular intervals before then) by passing this to saveState().
-         - checkpointInterval (time=None) if specified, checkpoints and/or states will be written at regular intervals
-           during the simulation, in addition to writing a final version at the end.  If no units are specified, this is
-           assumed to be in hours.
+
+        Parameters
+        ----------
+        time : time
+            the amount of time to run for.  If no units are specified, it is
+            assumed to be a number of hours.
+        checkpointFile : string or file=None
+            if specified, a checkpoint file will be written at the end of the
+            simulation (and optionally at regular intervals before then) by
+            passing this to saveCheckpoint().
+        stateFile : string or file=None
+            if specified, a state file will be written at the end of the
+            simulation (and optionally at regular intervals before then) by
+            passing this to saveState().
+        checkpointInterval : time=None
+            if specified, checkpoints and/or states will be written at regular
+            intervals during the simulation, in addition to writing a final
+            version at the end.  If no units are specified, this is assumed to
+            be in hours.
         """
         if unit.is_quantity(time):
             time = time.value_in_unit(unit.hours)
@@ -131,7 +144,7 @@ class Simulation(object):
                 self.saveCheckpoint(checkpointFile)
             if stateFile is not None:
                 self.saveState(stateFile)
-        
+
     def _simulate(self, endStep=None, endTime=None):
         if endStep is None:
             endStep = sys.maxsize
@@ -174,30 +187,36 @@ class Simulation(object):
 
     def saveCheckpoint(self, file):
         """Save a checkpoint of the simulation to a file.
-        
+
         The output is a binary file that contains a complete representation of the current state of the Simulation.
         It includes both publicly visible data such as the particle positions and velocities, and also internal data
         such as the states of random number generators.  Reloading the checkpoint will put the Simulation back into
         precisely the same state it had before, so it can be exactly continued.
-        
+
         A checkpoint file is highly specific to the Simulation it was created from.  It can only be loaded into
         another Simulation that has an identical System, uses the same Platform and OpenMM version, and is running on
         identical hardware.  If you need a more portable way to resume simulations, consider using saveState() instead.
-        
-        Parameters:
-         - file (string or file) a File-like object to write the checkpoint to, or alternatively a filename
+
+        Parameters
+        ----------
+        file : string or file
+            a File-like object to write the checkpoint to, or alternatively a
+            filename
         """
         if isinstance(file, str):
             with open(file, 'wb') as f:
                 f.write(self.context.createCheckpoint())
         else:
             file.write(self.context.createCheckpoint())
-    
+
     def loadCheckpoint(self, file):
         """Load a checkpoint file that was created with saveCheckpoint().
-        
-        Parameters:
-         - file (string or file) a File-like object to load the checkpoint from, or alternatively a filename
+
+        Parameters
+        ----------
+        file : string or file
+            a File-like object to load the checkpoint from, or alternatively a
+            filename
         """
         if isinstance(file, str):
             with open(file, 'rb') as f:
@@ -207,18 +226,21 @@ class Simulation(object):
 
     def saveState(self, file):
         """Save the current state of the simulation to a file.
-        
+
         The output is an XML file containing a serialized State object.  It includes all publicly visible data,
         including positions, velocities, and parameters.  Reloading the State will put the Simulation back into
         approximately the same state it had before.
-        
+
         Unlike saveCheckpoint(), this does not store internal data such as the states of random number generators.
         Therefore, you should not expect the following trajectory to be identical to what would have been produced
         with the original Simulation.  On the other hand, this means it is portable across different Platforms or
         hardware.
-        
-        Parameters:
-         - file (string or file) a File-like object to write the state to, or alternatively a filename
+
+        Parameters
+        ----------
+        file : string or file
+            a File-like object to write the state to, or alternatively a
+            filename
         """
         state = self.context.getState(getPositions=True, getVelocities=True, getParameters=True)
         xml = mm.XmlSerializer.serialize(state)
@@ -227,12 +249,15 @@ class Simulation(object):
                 f.write(xml)
         else:
             file.write(xml)
-    
+
     def loadState(self, file):
         """Load a State file that was created with saveState().
-        
-        Parameters:
-         - file (string or file) a File-like object to load the state from, or alternatively a filename
+
+        Parameters
+        ----------
+        file : string or file
+            a File-like object to load the state from, or alternatively a
+            filename
         """
         if isinstance(file, str):
             with open(file, 'r') as f:
