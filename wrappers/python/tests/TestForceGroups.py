@@ -20,7 +20,7 @@ class TestForceGroups(unittest.TestCase):
         self.context = context
 
     def test1(self):
-        n = 31  # Should be 32, but github issue #1198
+        n = 32
         for (i,j) in itertools.combinations(range(n), 2):
             groups = 1<<i | 1<<j
             e_0 = self.context.getState(getEnergy=True, groups=groups).getPotentialEnergy()._value
@@ -33,6 +33,12 @@ class TestForceGroups(unittest.TestCase):
         with self.assertRaises(TypeError):
             # groups must be an int or set
             self.context.getState(getEnergy=True, groups=(1, 2))
+
+    def test3(self):
+        e_0 = self.context.getState(getEnergy=True, groups=-1).getPotentialEnergy()._value
+        e_ref = sum(range(32))
+        self.assertEqual(e_0, e_ref)
+
 
 if __name__ == '__main__':
     unittest.main()
