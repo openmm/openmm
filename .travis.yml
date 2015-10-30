@@ -7,11 +7,14 @@ addons:
       - doxygen
       - python-numpy
       - python-scipy
+      - libfftw3-dev
 
 matrix:
   include:
     - sudo: required
-      env: OPENCL=true
+      env: ==CPU_OPENCL==
+           OPENCL=true
+           CUDA=false
            CC=gcc
            CXX=g++
            CMAKE_FLAGS="
@@ -28,33 +31,73 @@ matrix:
            -DOPENMM_BUILD_EXAMPLES=OFF"
       addons: {apt: {packages: []}}
 
+    - sudo: required
+      env: ==CUDA_COMPILE==
+           CUDA=true
+           OPENCL=false
+           CUDA_VERSION="7.0-28"
+           CMAKE_FLAGS="
+             -DOPENMM_BUILD_CUDA_TESTS=OFF
+             -DOPENMM_BUILD_OPENCL_TESTS=OFF
+             -DOPENMM_BUILD_PYTHON_WRAPPERS=OFF
+             -DOPENMM_BUILD_REFERENCE_TESTS=OFF
+             -DOPENMM_BUILD_SERIALIZATION_TESTS=OFF
+             -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF
+             -DOPENMM_BUILD_EXAMPLES=OFF
+             -DOPENCL_LIBRARY=/usr/local/cuda-7.0/lib64/libOpenCL.so"
+      addons: {apt: {packages: []}}
+
+    - language: objective-c
+      os: osx
+      env: ==OSX==
+           OPENCL=false
+           CUDA=false
+           CMAKE_FLAGS="
+             -DOPENMM_BUILD_OPENCL_TESTS=OFF
+             -DSWIG_EXECUTABLE=/usr/local/Cellar/swig/3.0.2/bin/swig"
+      addons: {apt: {packages: []}}
+
     - sudo: false
       python: 2.7_with_system_site_packages
-      env: OPENCL=false
+      env: ==STATIC_LIB==
+           OPENCL=false
+           CUDA=false
            CC=clang
            CXX=clang++
            CMAKE_FLAGS="-DOPENMM_BUILD_STATIC_LIB=ON"
 
     - sudo: false
       python: 2.7_with_system_site_packages
-      env: OPENCL=false
+      env: ==PYTNON_2==
+           OPENCL=false
+           CUDA=false
            CC=clang
            CXX=clang++
-           CMAKE_FLAGS="-DOPENMM_BUILD_STATIC_LIB=OFF"
+           CMAKE_FLAGS=""
 
     - sudo: false
       python: 3.4
-      env: OPENCL=false
+      env: ==PYTHON_3==
+           OPENCL=false
+           CUDA=false
            CC=gcc
            CXX=g++
-           CMAKE_FLAGS="-DOPENMM_BUILD_STATIC_LIB=OFF"
+           CMAKE_FLAGS=""
 
 before_install:
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+      brew install doxygen swig fftw;
+      sudo easy_install pytest;
+    fi
   - if [[ "$OPENCL" == "true" ]]; then
-      sudo apt-get -yq update &>> ~/apt-get-update.log;
+      sudo apt-get -yq update > /dev/null 2>&1 ;
       sudo apt-get install -qq fglrx=2:8.960-0ubuntu1 opencl-headers;
     fi
-  - if [[ "$OPENCL" == "false" ]]; then
+  # Install swig for Python wrappers. However, testing CUDA and OpenCL, we
+  # skip the Python wrapper for speed. We're not using anaconda python,
+  # but this is a fast way to get an apparently functional precompiled
+  # build of swig that's more modern than what's in apt.
+  - if [[ "$OPENCL" == "false" && "$CUDA" == "false" && "$TRAVIS_OS_NAME" == "linux" ]]; then
       wget https://anaconda.org/anaconda/swig/3.0.2/download/linux-64/swig-3.0.2-0.tar.bz2;
       mkdir $HOME/swig;
       tar -xjvf swig-3.0.2-0.tar.bz2 -C $HOME/swig;
@@ -62,14 +105,30 @@ before_install:
       export SWIG_LIB=$HOME/swig/share/swig/3.0.2;
     fi
 
+  - if [[ "$CUDA" == "true" ]]; then
+      wget "http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1204/x86_64/cuda-repo-ubuntu1204_${CUDA_VERSION}_amd64.deb";
+      sudo dpkg -i cuda-repo-ubuntu1204_${CUDA_VERSION}_amd64.deb;
+      sudo apt-get update -qq;
+      export CUDA_APT=${CUDA_VERSION%-*};
+      export CUDA_APT=${CUDA_APT/./-};
+      sudo apt-get install -y cuda-drivers cuda-core-${CUDA_APT} cuda-cudart-dev-${CUDA_APT} cuda-cufft-dev-${CUDA_APT};
+      sudo apt-get clean;
+      export CUDA_HOME=/usr/local/cuda-${CUDA_VERSION%%-*};
+      export LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH};
+      export PATH=${CUDA_HOME}/bin:${PATH};
+    fi
+
 script:
   - CTEST_STOP_TIME=$(python -c "from datetime import datetime, timedelta; import sys; sys.stdout.write((datetime.now() + timedelta(minutes=25)).strftime('%H:%M:%S'))")
   - cmake . $CMAKE_FLAGS -DCMAKE_INSTALL_PREFIX=$HOME/OpenMM
-
   - make -j2 install
   - if [[ "$OPENCL" == "true" ]]; then ./TestOpenCLDeviceQuery; fi
-  - if [[ "$OPENCL" == "false" ]]; then
-      make PythonInstall;
+  - if [[ "$OPENCL" == "false" && "$CUDA" == "false" ]]; then
+      if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+          sudo make PythonInstall;
+      else
+          make PythonInstall;
+      fi;
       python -m simtk.testInstallation;
       (cd python/tests && py.test -v *);
     fi
