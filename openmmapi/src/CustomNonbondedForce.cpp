@@ -263,9 +263,9 @@ void CustomNonbondedForce::setFunctionParameters(int index, const std::string& n
 
 int CustomNonbondedForce::addInteractionGroup(const std::set<int>& set1, const std::set<int>& set2) {
     for (set<int>::iterator it = set1.begin(); it != set1.end(); ++it)
-        ASSERT_VALID_INDEX(*it, particles);
+        ASSERT(*it >= 0);
     for (set<int>::iterator it = set2.begin(); it != set2.end(); ++it)
-        ASSERT_VALID_INDEX(*it, particles);
+        ASSERT(*it >= 0);
     interactionGroups.push_back(InteractionGroupInfo(set1, set2));
     return interactionGroups.size()-1;
 }
