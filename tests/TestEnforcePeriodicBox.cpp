@@ -1,4 +1,3 @@
-
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -41,7 +40,7 @@
 using namespace OpenMM;
 using namespace std;
 
-void testTrunactedOctahedron() {
+void testTruncatedOctahedron() {
     const int numMolecules = 5;
     const int numParticles = numMolecules*2;
     const float cutoff = 2.0;
@@ -85,7 +84,7 @@ void testTrunactedOctahedron() {
 
 int main(int argc, char* argv[]) {
     try {
-        testTrunactedOctahedron();
+        testTruncatedOctahedron();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;
