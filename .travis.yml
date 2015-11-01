@@ -98,11 +98,11 @@ before_install:
   # but this is a fast way to get an apparently functional precompiled
   # build of swig that's more modern than what's in apt.
   - if [[ "$OPENCL" == "false" && "$CUDA" == "false" && "$TRAVIS_OS_NAME" == "linux" ]]; then
-      wget https://anaconda.org/anaconda/swig/3.0.2/download/linux-64/swig-3.0.2-0.tar.bz2;
+      wget https://anaconda.org/omnia/swig/3.0.7/download/linux-64/swig-3.0.7-0.tar.bz2;
       mkdir $HOME/swig;
-      tar -xjvf swig-3.0.2-0.tar.bz2 -C $HOME/swig;
+      tar -xjvf swig-3.0.7-0.tar.bz2 -C $HOME/swig;
       export PATH=$HOME/swig/bin:$PATH;
-      export SWIG_LIB=$HOME/swig/share/swig/3.0.2;
+      export SWIG_LIB=$HOME/swig/share/swig/3.0.7;
     fi
 
   - if [[ "$CUDA" == "true" ]]; then
@@ -120,8 +120,9 @@ before_install:
 
 script:
   - CTEST_STOP_TIME=$(python -c "from datetime import datetime, timedelta; import sys; sys.stdout.write((datetime.now() + timedelta(minutes=25)).strftime('%H:%M:%S'))")
-  - cmake . $CMAKE_FLAGS -DCMAKE_INSTALL_PREFIX=$HOME/OpenMM
-  - make -j2 install
+  - mkdir build; cd build
+  - cmake .. $CMAKE_FLAGS -DCMAKE_INSTALL_PREFIX=$HOME/OpenMM
+  - make -j2 install VERBOSE=1
   - if [[ "$OPENCL" == "true" ]]; then ./TestOpenCLDeviceQuery; fi
   - if [[ "$OPENCL" == "false" && "$CUDA" == "false" ]]; then
       if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
