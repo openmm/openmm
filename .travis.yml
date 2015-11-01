@@ -100,7 +100,7 @@ before_install:
   - if [[ "$OPENCL" == "false" && "$CUDA" == "false" && "$TRAVIS_OS_NAME" == "linux" ]]; then
       wget https://anaconda.org/omnia/swig/3.0.7/download/linux-64/swig-3.0.7-0.tar.bz2;
       mkdir $HOME/swig;
-      tar -xjvf swig-3.0.2-0.tar.bz2 -C $HOME/swig;
+      tar -xjvf swig-3.0.7-0.tar.bz2 -C $HOME/swig;
       export PATH=$HOME/swig/bin:$PATH;
       export SWIG_LIB=$HOME/swig/share/swig/3.0.7;
     fi
