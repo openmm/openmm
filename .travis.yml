@@ -122,7 +122,7 @@ script:
   - CTEST_STOP_TIME=$(python -c "from datetime import datetime, timedelta; import sys; sys.stdout.write((datetime.now() + timedelta(minutes=25)).strftime('%H:%M:%S'))")
   - mkdir build; cd build
   - cmake .. $CMAKE_FLAGS -DCMAKE_INSTALL_PREFIX=$HOME/OpenMM
-  - make -j2 install
+  - make -j2 install VERBOSE=1
   - if [[ "$OPENCL" == "true" ]]; then ./TestOpenCLDeviceQuery; fi
   - if [[ "$OPENCL" == "false" && "$CUDA" == "false" ]]; then
       if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
