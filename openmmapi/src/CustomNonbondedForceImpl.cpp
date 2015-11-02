@@ -111,6 +111,26 @@ void CustomNonbondedForceImpl::initialize(ContextImpl& context) {
         if (cutoff > 0.5*boxVectors[0][0] || cutoff > 0.5*boxVectors[1][1] || cutoff > 0.5*boxVectors[2][2])
             throw OpenMMException("CustomNonbondedForce: The cutoff distance cannot be greater than half the periodic box size.");
     }
+    // Check that all interaction groups only specify particles that have been defined.
+    for (int group = 0; group < owner.getNumInteractionGroups(); group++) {
+        set<int> set1, set2;
+        owner.getInteractionGroupParameters(group, set1, set2);
+        for (set<int>::iterator it = set1.begin(); it != set1.end(); ++it)
+            if ((*it < 0) || (*it >= owner.getNumParticles())) {
+                stringstream msg;
+                msg << "CustomNonbondedForce: Interaction group " << group << " set1 contains a particle index (" << *it << ") "
+                    << "not present in system (" << owner.getNumParticles() << " particles).";
+                throw OpenMMException(msg.str());
+            }
+        for (set<int>::iterator it = set2.begin(); it != set2.end(); ++it)
+            if ((*it < 0) || (*it >= owner.getNumParticles())) {
+                stringstream msg;
+                msg << "CustomNonbondedForce: Interaction group " << group << " set2 contains a particle index (" << *it << ") "
+                    << "not present in system (" << owner.getNumParticles() << " particles).";
+                throw OpenMMException(msg.str());
+            }
+    }
+
     kernel.getAs<CalcCustomNonbondedForceKernel>().initialize(context.getSystem(), owner);
 }
 
