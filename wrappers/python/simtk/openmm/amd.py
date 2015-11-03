@@ -49,10 +49,14 @@ class AMDIntegrator(CustomIntegrator):
     def __init__(self, dt, alpha, E):
         """Create an AMDIntegrator.
 
-        Parameters:
-         - dt (time) The integration time step to use
-         - alpha (energy) The alpha parameter to use
-         - E (energy) The energy cutoff to use
+        Parameters
+        ----------
+        dt : time
+            The integration time step to use
+        alpha : energy
+            The alpha parameter to use
+        E : energy
+            The energy cutoff to use
         """
         CustomIntegrator.__init__(self, dt)
         self.addGlobalVariable("alpha", alpha)
@@ -104,11 +108,16 @@ class AMDForceGroupIntegrator(CustomIntegrator):
     def __init__(self, dt, group, alphaGroup, EGroup):
         """Create a AMDForceGroupIntegrator.
 
-        Parameters:
-         - dt (time) The integration time step to use
-         - group (int) The force group to apply the boost to
-         - alphaGroup (energy) The alpha parameter to use for the boosted force group
-         - EGroup (energy) The energy cutoff to use for the boosted force group
+        Parameters
+        ----------
+        dt : time
+            The integration time step to use
+        group : int
+            The force group to apply the boost to
+        alphaGroup : energy
+            The alpha parameter to use for the boosted force group
+        EGroup : energy
+            The energy cutoff to use for the boosted force group
         """
         CustomIntegrator.__init__(self, dt)
         self.addGlobalVariable("alphaGroup", alphaGroup)
@@ -144,9 +153,14 @@ class AMDForceGroupIntegrator(CustomIntegrator):
     def getEffectiveEnergy(self, groupEnergy):
         """Given the actual group energy of the system, return the value of the effective potential.
 
-        Parameters:
-          - groupEnergy (energy): the actual potential energy of the boosted force group
-        Returns: the value of the effective potential
+        Parameters
+        ----------
+        groupEnergy : energy
+            the actual potential energy of the boosted force group
+
+        Returns
+        -------
+        the value of the effective potential
         """
         alphaGroup = self.getAlphaGroup()
         EGroup = self.getEGroup()
@@ -172,13 +186,20 @@ class DualAMDIntegrator(CustomIntegrator):
     def __init__(self, dt, group, alphaTotal, ETotal, alphaGroup, EGroup):
         """Create a DualAMDIntegrator.
 
-        Parameters:
-         - dt (time) The integration time step to use
-         - group (int) The force group to apply the second boost to
-         - alphaTotal (energy) The alpha parameter to use for the total energy
-         - ETotal (energy) The energy cutoff to use for the total energy
-         - alphaGroup (energy) The alpha parameter to use for the boosted force group
-         - EGroup (energy) The energy cutoff to use for the boosted force group
+        Parameters
+        ----------
+        dt : time
+            The integration time step to use
+        group : int
+            The force group to apply the second boost to
+        alphaTotal : energy
+            The alpha parameter to use for the total energy
+        ETotal : energy
+            The energy cutoff to use for the total energy
+        alphaGroup : energy
+            The alpha parameter to use for the boosted force group
+        EGroup : energy
+            The energy cutoff to use for the boosted force group
         """
         CustomIntegrator.__init__(self, dt)
         self.addGlobalVariable("alphaTotal", alphaTotal)
@@ -237,10 +258,16 @@ class DualAMDIntegrator(CustomIntegrator):
     def getEffectiveEnergy(self, totalEnergy, groupEnergy):
         """Given the actual potential energy of the system, return the value of the effective potential.
 
-        Parameters:
-         - totalEnergy (energy): the actual potential energy of the whole system
-         - groupEnergy (energy): the actual potential energy of the boosted force group
-        Returns: the value of the effective potential
+        Parameters
+        ----------
+        totalEnergy : energy
+            the actual potential energy of the whole system
+        groupEnergy : energy
+            the actual potential energy of the boosted force group
+
+        Returns
+        -------
+        the value of the effective potential
         """
         alphaTotal = self.getAlphaTotal()
         ETotal = self.getETotal()

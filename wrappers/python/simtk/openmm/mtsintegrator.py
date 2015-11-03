@@ -10,7 +10,7 @@ Portions copyright (c) 2013-2015 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors:
 
-Permission is hereby granted, free of charge, to any person obtaining a 
+Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
 to deal in the Software without restriction, including without limitation
 the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -36,49 +36,52 @@ from simtk.openmm import CustomIntegrator
 
 class MTSIntegrator(CustomIntegrator):
     """MTSIntegrator implements the rRESPA multiple time step integration algorithm.
-    
+
     This integrator allows different forces to be evaluated at different frequencies,
     for example to evaluate the expensive, slowly changing forces less frequently than
     the inexpensive, quickly changing forces.
-    
+
     To use it, you must first divide your forces into two or more groups (by calling
     setForceGroup() on them) that should be evaluated at different frequencies.  When
     you create the integrator, you provide a tuple for each group specifying the index
     of the force group and the frequency (as a fraction of the outermost time step) at
     which to evaluate it.  For example:
-    
+
     <pre>
     integrator = MTSIntegrator(4*femtoseconds, [(0,1), (1,2), (2,8)])
     </pre>
-    
+
     This specifies that the outermost time step is 4 fs, so each step of the integrator
     will advance time by that much.  It also says that force group 0 should be evaluated
     once per time step, force group 1 should be evaluated twice per time step (every 2 fs),
     and force group 2 should be evaluated eight times per time step (every 0.5 fs).
-    
+
     A common use of this algorithm is to evaluate reciprocal space nonbonded interactions
     less often than the bonded and direct space nonbonded interactions.  The following
     example looks up the NonbondedForce, sets the reciprocal space interactions to their
     own force group, and then creates an integrator that evaluates them once every 4 fs,
     but all other interactions every 2 fs.
-    
+
     <pre>
     nonbonded = [f for f in system.getForces() if isinstance(f, NonbondedForce)][0]
     nonbonded.setReciprocalSpaceForceGroup(1)
     integrator = MTSIntegrator(4*femtoseconds, [(1,1), (0,2)])
     </pre>
-    
+
     For details, see Tuckerman et al., J. Chem. Phys. 97(3) pp. 1990-2001 (1992).
     """
-    
+
     def __init__(self, dt, groups):
         """Create an MTSIntegrator.
-        
-        Parameters:
-         - dt (time) The largest (outermost) integration time step to use
-         - groups (list) A list of tuples defining the force groups.  The first element of each
-           tuple is the force group index, and the second element is the number of times that force
-           group should be evaluated in one time step.
+
+        Parameters
+        ----------
+        dt : time
+            The largest (outermost) integration time step to use
+        groups : list
+            A list of tuples defining the force groups.  The first element of
+            each tuple is the force group index, and the second element is the
+            number of times that force group should be evaluated in one time step.
         """
         if len(groups) == 0:
             raise ValueError("No force groups specified")
@@ -88,7 +91,7 @@ class MTSIntegrator(CustomIntegrator):
         self.addUpdateContextState();
         self._createSubsteps(1, groups)
         self.addConstrainVelocities();
-            
+
     def _createSubsteps(self, parentSubsteps, groups):
         group, substeps = groups[0]
         stepsPerParentStep = substeps/parentSubsteps
