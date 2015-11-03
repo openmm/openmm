@@ -2,6 +2,7 @@ from __future__ import print_function
 from numpydoc.docscrape import NumpyDocString
 import sys
 import textwrap
+from inspect import cleandoc
 
 
 # Doxygen does a bad job of generating documentation based on docstrings.  This script is run as a filter
@@ -38,21 +39,22 @@ while True:
         if stripped.startswith('"""') or stripped.startswith("'''"):
             line = stripped[3:]
             readingParameters = False
-            if line.find('"""') != -1 or line.find(("'''")) != -1:
+            if line.find('"""') != -1 or line.find("'''") != -1:
                 docstringlines.append(line.rstrip()[:-3])
             else:
-                while line.find('"""') == -1:
+                while line.find('"""') == -1 and line.find("'''") == -1:
                     docstringlines.append(line)
                     line = input.readline()
-        docstring = NumpyDocString(''.join(docstringlines))
+
+        docstring = NumpyDocString(cleandoc(''.join(docstringlines)))
 
         # Print out the docstring in Doxygen syntax, followed by the declaration.
-        sep = '\n{prefix}##\n{prefix}## '.format(prefix=prefix)
-        for line in textwrap.wrap(' '.join(docstring['Summary'])):
+        for line in docstring['Summary']:
             print('{prefix}## {line}'.format(prefix=prefix, line=line))
         if len(docstring['Extended Summary']) > 0:
             print('{prefix}##'.format(prefix=prefix))
-            print('{prefix}## {ext_summary}'.format(prefix=prefix, ext_summary=sep.join(docstring['Extended Summary'])))
+            for line in docstring['Extended Summary']:
+                print('{prefix}## {line}'.format(prefix=prefix, line=line.strip()))
         print('{prefix}##'.format(prefix=prefix))
         for name, type, descr in docstring['Parameters']:
             print('{prefix}## @param {name} ({type}) {descr}'.format(prefix=prefix, type=type, name=name, descr=''.join(descr)))
