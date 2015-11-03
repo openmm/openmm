@@ -10,22 +10,18 @@ def fullname(klass):
     return klass.__module__ + '.' + klass.__name__
 
 
-def template_variables():
+#        'integrators': [],
+#        'library_extras': [],
+#         'forces': [],
+
+def library_template_variables():
     data = {
-        'reporters': [],
-        'forces': [],
         'integrators': [],
-        'library_extras': []
+        'library_extras': [],
+        'forces': [],
     }
 
-
-    app_klasses = inspect.getmembers(app, predicate=inspect.isclass)
     mm_klasses = inspect.getmembers(mm, predicate=inspect.isclass)
-
-    # gather all Reporters
-    for name, klass in app_klasses:
-        if name.endswith('Reporter'):
-            data['reporters'].append(fullname(klass))
 
     # gather all Force subclasses
     for name, klass in mm_klasses:
@@ -37,23 +33,54 @@ def template_variables():
         if issubclass(klass, mm.Integrator):
             data['integrators'].append(fullname(klass))
 
-    # gather all extra subclasses
+    # gather all extra subclasses in simtk.openmm.openmm
+    exclude = ['simtk.openmm.openmm.Platform', 'simtk.openmm.openmm.Context',
+              'simtk.openmm.openmm.System', 'simtk.openmm.openmm.State']
+    exclude.extend(data['forces'])
+    exclude.extend(data['integrators'])
+    exclude.extend([
+        'simtk.openmm.openmm.SwigPyIterator',
+        'simtk.openmm.openmm.OpenMMException'])
+
     for _, klass in mm_klasses:
         full = fullname(klass)
+        if full not in exclude and not klass.__name__[0].islower():
+            data['library_extras'].append(full)
 
-        if full in data['forces']:
-            continue
-        if full in data['integrators']:
-            continue
-        if full in ('simtk.openmm.openmm.Platform', 'simtk.openmm.openmm.Context',
-                    'simtk.openmm.openmm.System'):
-            continue
-        if klass.__name__[0].islower():
-            continue
-        if klass.__name__ in ['SwigPyIterator', 'OpenMMException']:
-            continue
+    return data
 
-        data['library_extras'].append(full)
+
+def app_template_variables():
+    data = {
+        'reporters': [],
+        'fileclasses': [],
+        'app_extras': [],
+    }
+
+    app_klasses = inspect.getmembers(app, predicate=inspect.isclass)
+
+    # gather all Reporters
+    for name, klass in app_klasses:
+        if name.endswith('Reporter'):
+            data['reporters'].append(fullname(klass))
+
+    # gather all classes with "File" in the name
+    for name, klass in app_klasses:
+        if 'File' in name:
+            data['fileclasses'].append(fullname(klass))
+
+    # gather all extra subclasses in simtk.openmm.app
+    exclude = ['simtk.openmm.app.topology.Topology',
+               'simtk.openmm.app.modeller.Modeller',
+               'simtk.openmm.app.forcefield.ForceField',
+               'simtk.openmm.app.simulation.Simulation']
+    exclude.extend(data['reporters'])
+    exclude.extend(data['fileclasses'])
+
+    for _, klass in app_klasses:
+        full = fullname(klass)
+        if full not in exclude and not klass.__name__[0].islower():
+            data['app_extras'].append(full)
 
     return data
 
@@ -62,7 +89,8 @@ def main():
     here = dirname(__file__)
     templateLoader = jinja2.FileSystemLoader(here)
     templateEnv = jinja2.Environment(loader=templateLoader)
-    data = template_variables()
+    data = library_template_variables()
+    data.update(app_template_variables())
 
     for template_fn in glob(join(here, '*.jinja2')):
         output_fn = splitext(template_fn)[0]

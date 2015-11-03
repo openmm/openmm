@@ -44,14 +44,15 @@ pygments_style = 'sphinx'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = "alabaster"
+html_theme = "sphinx_rtd_theme"
 html_theme_options = {
-    'logo': 'OPENMMLogo.png',
-    'description': 'A high performance GPU molecular simulation toolkit',
-    'github_user': 'pandegroup',
-    'github_repo': 'openmm',
-    'travis_button': True,
+    # 'logo': 'OPENMMLogo.png',
+    #'description': 'A high performance GPU molecular simulation toolkit',
+    #'github_user': 'pandegroup',
+    #'github_repo': 'openmm',
+    #'travis_button': True,
 }
+html_logo = 'OPENMMLogo.png'
 
 
 # Add any paths that contain custom themes here, relative to this directory.

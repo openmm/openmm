@@ -7,16 +7,9 @@ Loaders and Setup
     :toctree: generated/
     :template: class.rst
 
-    ~simtk.openmm.app.pdbfile.PDBFile
-    ~simtk.openmm.app.pdbxfile.PDBxFile
-    ~simtk.openmm.app.gromacsgrofile.GromacsGroFile
-    ~simtk.openmm.app.gromacstopfile.GromacsTopFile
-    ~simtk.openmm.app.amberinpcrdfile.AmberInpcrdFile
-    ~simtk.openmm.app.amberprmtopfile.AmberPrmtopFile
-    ~simtk.openmm.app.charmmpsffile.CharmmPsfFile
-    ~simtk.openmm.app.charmmcrdfiles.CharmmRstFile
-    ~simtk.openmm.app.charmmparameterset.CharmmParameterSet
-    ~simtk.openmm.app.desmonddmsfile.DesmondDMSFile
+{% for fileclass in fileclasses %}
+    ~{{ fileclass }}
+{% endfor %}
 
 
 Representation and Manipulation
@@ -47,4 +40,14 @@ Reporting Output
 {% for reporter in reporters %}
     ~{{ reporter }}
 {% endfor %}
-    ~simtk.openmm.app.dcdfile.DCDFile
+
+
+Extras
+~~~~~~
+.. autosummary::
+    :toctree: generated/
+    :template: class.rst
+
+    {% for extra in app_extras %}
+    ~{{ extra }}
+    {% endfor %}
