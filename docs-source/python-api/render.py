@@ -8,8 +8,10 @@ from glob import glob
 import inspect
 
 import jinja2
-import simtk.openmm.openmm
+import simtk.openmm
 import simtk.openmm.app
+
+
 
 def fullname(klass):
     return klass.__module__ + '.' + klass.__name__
@@ -32,16 +34,17 @@ def library_template_variables():
         'library_extras': [],
     }
 
-    mm_klasses = inspect.getmembers(simtk.openmm.openmm, predicate=inspect.isclass)
+    mm_klasses = inspect.getmembers(simtk.openmm, predicate=inspect.isclass)
+
 
     # gather all Force subclasses
     for name, klass in mm_klasses:
-        if issubclass(klass, mm.Force):
+        if issubclass(klass, simtk.openmm.openmm.Force):
             data['forces'].append(fullname(klass))
 
     # gather all Integrator subclasses
     for _, klass in mm_klasses:
-        if issubclass(klass, mm.Integrator):
+        if issubclass(klass, simtk.openmm.openmm.Integrator):
             data['integrators'].append(fullname(klass))
 
     # gather all extra subclasses in simtk.openmm.openmm
@@ -81,7 +84,6 @@ def app_template_variables():
         'fileclasses': [],
         'app_extras': [],
     }
-
     app_klasses = inspect.getmembers(simtk.openmm.app, predicate=inspect.isclass)
 
     # gather all Reporters
