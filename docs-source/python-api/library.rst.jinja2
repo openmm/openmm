@@ -1,0 +1,45 @@
+Library API
+===========
+
+
+Core Objects
+~~~~~~~~~~~~
+.. autosummary::
+    :toctree: generated/
+    :template: class.rst
+
+    simtk.openmm.openmm.System
+    simtk.openmm.openmm.Context
+    simtk.openmm.openmm.Platform
+
+
+Forces
+~~~~~~
+.. autosummary::
+    :toctree: generated/
+    :template: class.rst
+
+    {% for force in forces %}
+    ~{{ force }}
+    {% endfor %}
+
+
+Integrators
+~~~~~~~~~~~
+.. autosummary::
+    :toctree: generated/
+    :template: class.rst
+
+    {% for integrator in integrators %}
+    ~{{ integrator }}
+    {% endfor %}
+
+Extras
+~~~~~~
+.. autosummary::
+    :toctree: generated/
+    :template: class.rst
+
+    {% for extra in library_extras %}
+    ~{{ extra }}
+    {% endfor %}
