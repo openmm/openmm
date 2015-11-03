@@ -308,6 +308,7 @@ UNITS = {
 ("AmoebaWcaDispersionForce",              "getShctd")                                      :  ( None, ()),
 
 ("Context", "getParameter") : (None, ()),
+("Context", "getParameters") : (None, ()),
 ("Context", "getMolecules") : (None, ()),
 ("CMAPTorsionForce", "getMapParameters") : (None, (None, 'unit.kilojoule_per_mole')),
 ("CMAPTorsionForce", "getTorsionParameters") : (None, ()),
