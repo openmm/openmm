@@ -241,13 +241,13 @@ class Modeller(object):
         self.topology = newTopology
         self.positions = newPositions
 
-    def addSolvent(self, forcefield, model='tip3p', boxSize=None, boxVectors=None, padding=None, numAdded=None, positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*molar):
+    def addSolvent(self, forcefield, model='tip3p', boxSize=None, boxVectors=None, padding=None, numAdded=None, positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*molar, neutralize=True):
         """Add solvent (both water and ions) to the model to fill a rectangular box.
 
         The algorithm works as follows:
         1. Water molecules are added to fill the box.
         2. Water molecules are removed if their distance to any solute atom is less than the sum of their van der Waals radii.
-        3. If the solute is charged, enough positive or negative ions are added to neutralize it.  Each ion is added by
+        3. If the solute is charged and neutralize=True, enough positive or negative ions are added to neutralize it.  Each ion is added by
            randomly selecting a water molecule and replacing it with the ion.
         4. Ion pairs are added to give the requested total ionic strength.
 
@@ -256,9 +256,9 @@ class Modeller(object):
         1. You can explicitly give the vectors defining the periodic box to use.
         2. Alternatively, for a rectangular box you can simply give the dimensions of the unit cell.
         3. You can give a padding distance.  The largest dimension of the solute (along the x, y, or z axis) is determined, and a cubic
-        box of size (largest dimension)+2*padding is used.
+           box of size (largest dimension)+2*padding is used.
         4. You can specify the total number of molecules (both waters and ions) to add.  A cubic box is then created whose size is
-        just large enough hold the specified amount of solvent.
+           just large enough to hold the specified amount of solvent.
         5. Finally, if none of the above options is specified, the existing Topology's box vectors are used.
 
         Parameters:
@@ -273,6 +273,7 @@ class Modeller(object):
            that not all force fields support all ion types.
          - ionicStrength (concentration=0*molar) the total concentration of ions (both positive and negative) to add.  This
            does not include ions that are added to neutralize the system.
+         - neutralize (bool=True) whether to add ions to neutralize the system
         """
         if len([x for x in (boxSize, boxVectors, padding, numAdded) if x is not None]) > 1:
             raise ValueError('At most one of the following arguments may be specified: boxSize, boxVectors, padding, numAdded')
@@ -478,9 +479,6 @@ class Modeller(object):
 
         # Add ions to neutralize the system.
 
-        totalCharge = int(floor(0.5+sum((nonbonded.getParticleParameters(i)[0].value_in_unit(elementary_charge) for i in range(system.getNumParticles())))))
-        if abs(totalCharge) > len(addedWaters):
-            raise Exception('Cannot neutralize the system because the charge is greater than the number of available positions for ions')
         def addIon(element):
             # Replace a water by an ion.
             index = random.randint(0, len(addedWaters)-1)
@@ -488,8 +486,12 @@ class Modeller(object):
             newTopology.addAtom(element.symbol, element, newResidue)
             newPositions.append(addedWaters[index][1]*nanometer)
             del addedWaters[index]
-        for i in range(abs(totalCharge)):
-            addIon(positiveElement if totalCharge < 0 else negativeElement)
+        if neutralize:
+            totalCharge = int(floor(0.5+sum((nonbonded.getParticleParameters(i)[0].value_in_unit(elementary_charge) for i in range(system.getNumParticles())))))
+            if abs(totalCharge) > len(addedWaters):
+                raise Exception('Cannot neutralize the system because the charge is greater than the number of available positions for ions')
+            for i in range(abs(totalCharge)):
+                addIon(positiveElement if totalCharge < 0 else negativeElement)
 
         # Add ions based on the desired ionic strength.
 
