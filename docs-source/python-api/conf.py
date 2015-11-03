@@ -52,7 +52,7 @@ html_theme_options = {
     #'github_repo': 'openmm',
     #'travis_button': True,
 }
-html_logo = 'OPENMMLogo.png'
+html_logo = 'logo.png'
 
 
 # Add any paths that contain custom themes here, relative to this directory.
