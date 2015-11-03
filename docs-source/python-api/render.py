@@ -1,27 +1,38 @@
+"""
+The function of this script is to render the Jinja2 templates in the current
+directory into input files for sphinx. It introspects the OpenMM Python module
+to find all of the classes and formats them for inclusion into the templates.
+"""
 from os.path import dirname, join, splitext
 from glob import glob
 import inspect
 
 import jinja2
-import simtk.openmm as mm
-from simtk.openmm import app
+import simtk.openmm.openmm
+import simtk.openmm.app
 
 def fullname(klass):
     return klass.__module__ + '.' + klass.__name__
 
 
-#        'integrators': [],
-#        'library_extras': [],
-#         'forces': [],
-
 def library_template_variables():
+    """Create the data structure available to the Jinja2 renderer when
+    filling in the templates.
+
+    This function extracts all of classes in ``simtk.openmm.openmm`` and returns
+    a dictionary with them grouped into three lists, the integrators, the forces,
+    and the remainder (library_extras).
+
+    A couple core classes are skipped, because they're included manually in the
+    template.
+    """
     data = {
         'integrators': [],
-        'library_extras': [],
         'forces': [],
+        'library_extras': [],
     }
 
-    mm_klasses = inspect.getmembers(mm, predicate=inspect.isclass)
+    mm_klasses = inspect.getmembers(simtk.openmm.openmm, predicate=inspect.isclass)
 
     # gather all Force subclasses
     for name, klass in mm_klasses:
@@ -34,10 +45,14 @@ def library_template_variables():
             data['integrators'].append(fullname(klass))
 
     # gather all extra subclasses in simtk.openmm.openmm
+
+    # core classes that are already included in library.rst.jinja2
     exclude = ['simtk.openmm.openmm.Platform', 'simtk.openmm.openmm.Context',
               'simtk.openmm.openmm.System', 'simtk.openmm.openmm.State']
     exclude.extend(data['forces'])
     exclude.extend(data['integrators'])
+
+    # these classes are useless and not worth documenting.
     exclude.extend([
         'simtk.openmm.openmm.SwigPyIterator',
         'simtk.openmm.openmm.OpenMMException'])
@@ -51,13 +66,23 @@ def library_template_variables():
 
 
 def app_template_variables():
+    """Create the data structure available to the Jinja2 renderer when
+    filling in the templates.
+
+    This function extracts all of classes in ``simtk.openmm.app`` and returns
+    a dictionary with them grouped into three lists, the reporters, the
+    classes with the word "File" in the name, and the remainder.
+
+    Four classes are skipped (see exclude), because they're included manually
+    in the template.
+    """
     data = {
         'reporters': [],
         'fileclasses': [],
         'app_extras': [],
     }
 
-    app_klasses = inspect.getmembers(app, predicate=inspect.isclass)
+    app_klasses = inspect.getmembers(simtk.openmm.app, predicate=inspect.isclass)
 
     # gather all Reporters
     for name, klass in app_klasses:
