@@ -136,6 +136,7 @@ public:
     /**
      * Get the force field parameters for screened pair.
      *
+     * @param index           the index of the pair for which to get parameters
      * @param[out] particle1  the index within this Force of the first particle involved in the interaction
      * @param[out] particle2  the index within this Force of the second particle involved in the interaction
      * @param[out] thole      the Thole screening factor
