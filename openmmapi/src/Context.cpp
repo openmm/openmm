@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -199,6 +199,10 @@ void Context::setVelocitiesToTemperature(double temperature, int randomSeed) {
     }
     setVelocities(velocities);
     impl->applyVelocityConstraints(1e-5);
+}
+
+const map<string, double>& Context::getParameters() const {
+    return impl->getParameters();
 }
 
 double Context::getParameter(const string& name) const {
