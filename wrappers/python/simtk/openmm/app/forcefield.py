@@ -104,12 +104,14 @@ class ForceField(object):
     def __init__(self, *files):
         """Load one or more XML files and create a ForceField object based on them.
 
-        Parameters:
-         - files (list) A list of XML files defining the force field.  Each entry may
-           be an absolute file path, a path relative to the current working
-           directory, a path relative to this module's data subdirectory
-           (for built in force fields), or an open file-like object with a
-           read() method from which the forcefield XML data can be loaded.
+        Parameters
+        ----------
+        files : list
+            A list of XML files defining the force field.  Each entry may
+            be an absolute file path, a path relative to the current working
+            directory, a path relative to this module's data subdirectory
+            (for built in force fields), or an open file-like object with a
+            read() method from which the forcefield XML data can be loaded.
         """
         self._atomTypes = {}
         self._templates = {}
@@ -408,20 +410,36 @@ class ForceField(object):
                      constraints=None, rigidWater=True, removeCMMotion=True, hydrogenMass=None, **args):
         """Construct an OpenMM System representing a Topology with this force field.
 
-        Parameters:
-         - topology (Topology) The Topology for which to create a System
-         - nonbondedMethod (object=NoCutoff) The method to use for nonbonded interactions.  Allowed values are
-           NoCutoff, CutoffNonPeriodic, CutoffPeriodic, Ewald, or PME.
-         - nonbondedCutoff (distance=1*nanometer) The cutoff distance to use for nonbonded interactions
-         - constraints (object=None) Specifies which bonds and angles should be implemented with constraints.
-           Allowed values are None, HBonds, AllBonds, or HAngles.
-         - rigidWater (boolean=True) If true, water molecules will be fully rigid regardless of the value passed for the constraints argument
-         - removeCMMotion (boolean=True) If true, a CMMotionRemover will be added to the System
-         - hydrogenMass (mass=None) The mass to use for hydrogen atoms bound to heavy atoms.  Any mass added to a hydrogen is
-           subtracted from the heavy atom to keep their total mass the same.
-         - args Arbitrary additional keyword arguments may also be specified.  This allows extra parameters to be specified that are specific to
-           particular force fields.
-        Returns: the newly created System
+        Parameters
+        ----------
+        topology : Topology
+            The Topology for which to create a System
+        nonbondedMethod : object=NoCutoff
+            The method to use for nonbonded interactions.  Allowed values are
+            NoCutoff, CutoffNonPeriodic, CutoffPeriodic, Ewald, or PME.
+        nonbondedCutoff : distance=1*nanometer
+            The cutoff distance to use for nonbonded interactions
+        constraints : object=None
+            Specifies which bonds and angles should be implemented with constraints.
+            Allowed values are None, HBonds, AllBonds, or HAngles.
+        rigidWater : boolean=True
+            If true, water molecules will be fully rigid regardless of the value
+            passed for the constraints argument
+        removeCMMotion : boolean=True
+            If true, a CMMotionRemover will be added to the System
+        hydrogenMass : mass=None
+            The mass to use for hydrogen atoms bound to heavy atoms.  Any mass
+            added to a hydrogen is subtracted from the heavy atom to keep
+            their total mass the same.
+        args
+             Arbitrary additional keyword arguments may also be specified.
+             This allows extra parameters to be specified that are specific to
+             particular force fields.
+
+        Returns
+        -------
+        system
+            the newly created System
         """
         data = ForceField._SystemData()
         data.atoms = list(topology.atoms())
@@ -649,11 +667,18 @@ def _createResidueSignature(elements):
 def _matchResidue(res, template, bondedToAtom):
     """Determine whether a residue matches a template and return a list of corresponding atoms.
 
-    Parameters:
-     - res (Residue) The residue to check
-     - template (_TemplateData) The template to compare it to
-     - bondedToAtom (list) Enumerates which other atoms each atom is bonded to
-    Returns: a list specifying which atom of the template each atom of the residue corresponds to,
+    Parameters
+    ----------
+    res : Residue
+        The residue to check
+    template : _TemplateData
+        The template to compare it to
+    bondedToAtom : list
+        Enumerates which other atoms each atom is bonded to
+
+    Returns
+    -------
+    a list specifying which atom of the template each atom of the residue corresponds to,
     or None if it does not match the template
     """
     atoms = list(res.atoms())
