@@ -3,7 +3,7 @@ The function of this script is to render the Jinja2 templates in the current
 directory into input files for sphinx. It introspects the OpenMM Python module
 to find all of the classes and formats them for inclusion into the templates.
 """
-from os.path import dirname, join, splitext
+from os.path import dirname, join, splitext, basename
 from glob import glob
 import inspect
 
@@ -119,7 +119,7 @@ def main():
     data = library_template_variables()
     data.update(app_template_variables())
 
-    for template_fn in glob(join(here, '*.jinja2')):
+    for template_fn in map(basename, glob(join(here, '*.jinja2'))):
         output_fn = splitext(template_fn)[0]
         print('Rendering %s to %s...' % (template_fn, output_fn))
 
