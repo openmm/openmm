@@ -183,8 +183,10 @@ class StateDataReporter(object):
         corresponds to one of the columns in the resulting CSV file.
         """
         values = []
-        box = state.getPeriodicBoxVectors()
-        volume = box[0][0]*box[1][1]*box[2][2]
+        if self._volume or self._density:
+            a, b, c = state.getPeriodicBoxVectors().value_in_unit(unit.nanometer)
+            bxc = mm.Vec3(b[1]*c[2]-c[1]*b[2], b[2]*c[0]-b[0]*c[2], b[0]*c[1]-b[1]*c[0])
+            volume = a[0]*bxc[0] + a[1]*bxc[1] + a[2]*bxc[2]
         clockTime = time.time()
         if self._progress:
             values.append('%.1f%%' % (100.0*simulation.currentStep/self._totalSteps))
