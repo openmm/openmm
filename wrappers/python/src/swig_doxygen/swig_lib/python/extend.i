@@ -35,31 +35,30 @@
                  getParameters=False,
                  enforcePeriodicBox=False,
                  groups=-1):
-        """
-        getState(self,
-                 getPositions = False,
-                 getVelocities = False,
-                 getForces = False,
-                 getEnergy = False,
-                 getParameters = False,
-                 enforcePeriodicBox = False,
-                 groups = -1)
-              -> State
+        """Get a State object recording the current state information stored in this context.
 
-        Get a State object recording the current state information stored in this context.
-
-        Parameters:
-         - getPositions (bool=False) whether to store particle positions in the State
-         - getVelocities (bool=False) whether to store particle velocities in the State
-         - getForces (bool=False) whether to store the forces acting on particles in the State
-         - getEnergy (bool=False) whether to store potential and kinetic energy in the State
-         - getParameter (bool=False) whether to store context parameters in the State
-         - enforcePeriodicBox (bool=False) if false, the position of each particle will be whatever position is stored in the Context, regardless of periodic boundary conditions.  If true, particle positions will be translated so the center of every molecule lies in the same periodic box.
-         - groups (set={0,1,2,...,31}) a set of indices for which force groups
-           to include when computing forces and energies. The default value
-           includes all groups. groups can also be passed as an unsigned integer
-           interpreted as a bitmask, in which case group i will be included if
-           (groups&(1<<i)) != 0.
+        Parameters
+        ----------
+        getPositions : bool=False
+            whether to store particle positions in the State
+        getVelocities : bool=False
+            whether to store particle velocities in the State
+        getForces : bool=False
+            whether to store the forces acting on particles in the State
+        getEnergy : bool=False
+            whether to store potential and kinetic energy in the State
+        getParameter : bool=False
+            whether to store context parameters in the State
+        enforcePeriodicBox : bool=False
+            if false, the position of each particle will be whatever position
+            is stored in the Context, regardless of periodic boundary conditions.
+            If true, particle positions will be translated so the center of
+            every molecule lies in the same periodic box.
+        groups : set={0,1,2,...,31}
+            a set of indices for which force groups to include when computing
+            forces and energies. The default value includes all groups. groups
+            can also be passed as an unsigned integer interpreted as a bitmask,
+            in which case group i will be included if (groups&(1<<i)) != 0.
         """
         getP, getV, getF, getE, getPa, enforcePeriodic = map(bool,
             (getPositions, getVelocities, getForces, getEnergy, getParameters,
@@ -204,19 +203,30 @@ Parameters:
 
         Get a State object recording the current state information about one copy of the system.
 
-        Parameters:
-         - copy (int) the index of the copy for which to retrieve state information
-         - getPositions (bool=False) whether to store particle positions in the State
-         - getVelocities (bool=False) whether to store particle velocities in the State
-         - getForces (bool=False) whether to store the forces acting on particles in the State
-         - getEnergy (bool=False) whether to store potential and kinetic energy in the State
-         - getParameter (bool=False) whether to store context parameters in the State
-         - enforcePeriodicBox (bool=False) if false, the position of each particle will be whatever position is stored in the Context, regardless of periodic boundary conditions.  If true, particle positions will be translated so the center of every molecule lies in the same periodic box.
-         - groups (set={0,1,2,...,31}) a set of indices for which force groups
-           to include when computing forces and energies. The default value
-           includes all groups. groups can also be passed as an unsigned integer
-           interpreted as a bitmask, in which case group i will be included if
-           (groups&(1<<i)) != 0.
+        Parameters
+        ----------
+        copy : int
+            the index of the copy for which to retrieve state information
+        getPositions : bool=False
+            whether to store particle positions in the State
+        getVelocities : bool=False
+            whether to store particle velocities in the State
+        getForces : bool=False
+            whether to store the forces acting on particles in the State
+        getEnergy : bool=False
+            whether to store potential and kinetic energy in the State
+        getParameter : bool=False
+            whether to store context parameters in the State
+        enforcePeriodicBox : bool=False
+            if false, the position of each particle will be whatever position
+            is stored in the Context, regardless of periodic boundary conditions.
+            If true, particle positions will be translated so the center of
+            every molecule lies in the same periodic box.
+        groups : set={0,1,2,...,31}
+            a set of indices for which force groups to include when computing
+            forces and energies. The default value includes all groups. groups
+            can also be passed as an unsigned integer interpreted as a bitmask,
+            in which case group i will be included if (groups&(1<<i)) != 0.
         """
         getP, getV, getF, getE, getPa, enforcePeriodic = map(bool,
             (getPositions, getVelocities, getForces, getEnergy, getParameters,
