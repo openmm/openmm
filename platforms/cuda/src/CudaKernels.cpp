@@ -5674,7 +5674,6 @@ void CudaIntegrateVerletStepKernel::initialize(const System& system, const Verle
     CUmodule module = cu.createModule(CudaKernelSources::verlet, defines, "");
     kernel1 = cu.getKernel(module, "integrateVerletPart1");
     kernel2 = cu.getKernel(module, "integrateVerletPart2");
-    prevStepSize = -1.0;
 }
 
 void CudaIntegrateVerletStepKernel::execute(ContextImpl& context, const VerletIntegrator& integrator) {
@@ -5683,19 +5682,7 @@ void CudaIntegrateVerletStepKernel::execute(ContextImpl& context, const VerletIn
     int numAtoms = cu.getNumAtoms();
     int paddedNumAtoms = cu.getPaddedNumAtoms();
     double dt = integrator.getStepSize();
-    if (dt != prevStepSize) {
-        if (cu.getUseDoublePrecision() || cu.getUseMixedPrecision()) {
-            vector<double2> stepSizeVec(1);
-            stepSizeVec[0] = make_double2(dt, dt);
-            cu.getIntegrationUtilities().getStepSize().upload(stepSizeVec);
-        }
-        else {
-            vector<float2> stepSizeVec(1);
-            stepSizeVec[0] = make_float2((float) dt, (float) dt);
-            cu.getIntegrationUtilities().getStepSize().upload(stepSizeVec);
-        }
-        prevStepSize = dt;
-    }
+    cu.getIntegrationUtilities().setNextStepSize(dt);
 
     // Call the first integration kernel.
 
@@ -5752,6 +5739,7 @@ void CudaIntegrateLangevinStepKernel::execute(ContextImpl& context, const Langev
     double temperature = integrator.getTemperature();
     double friction = integrator.getFriction();
     double stepSize = integrator.getStepSize();
+    cu.getIntegrationUtilities().setNextStepSize(stepSize);
     if (temperature != prevTemp || friction != prevFriction || stepSize != prevStepSize) {
         // Calculate the integration parameters.
 
@@ -5766,8 +5754,6 @@ void CudaIntegrateLangevinStepKernel::execute(ContextImpl& context, const Langev
             p[1] = fscale;
             p[2] = noisescale;
             params->upload(p);
-            double2 ss = make_double2(0, stepSize);
-            integration.getStepSize().upload(&ss);
         }
         else {
             vector<float> p(params->getSize());
@@ -5775,8 +5761,6 @@ void CudaIntegrateLangevinStepKernel::execute(ContextImpl& context, const Langev
             p[1] = (float) fscale;
             p[2] = (float) noisescale;
             params->upload(p);
-            float2 ss = make_float2(0, (float) stepSize);
-            integration.getStepSize().upload(&ss);
         }
         prevTemp = temperature;
         prevFriction = friction;
@@ -5929,20 +5913,13 @@ double CudaIntegrateVariableVerletStepKernel::execute(ContextImpl& context, cons
 
     // Update the time and step count.
 
-    double dt, time;
+    double dt = cu.getIntegrationUtilities().getLastStepSize();
+    double time = cu.getTime()+dt;
     if (useDouble) {
-        double2 stepSize;
-        cu.getIntegrationUtilities().getStepSize().download(&stepSize);
-        dt = stepSize.y;
-        time = cu.getTime()+dt;
         if (dt == maxStepSize)
             time = maxTime; // Avoid round-off error
     }
     else {
-        float2 stepSize;
-        cu.getIntegrationUtilities().getStepSize().download(&stepSize);
-        dt = stepSize.y;
-        time = cu.getTime()+dt;
         if (dt == maxStepSizeFloat)
             time = maxTime; // Avoid round-off error
     }
@@ -6023,20 +6000,13 @@ double CudaIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, co
 
     // Update the time and step count.
 
-    double dt, time;
+    double dt = cu.getIntegrationUtilities().getLastStepSize();
+    double time = cu.getTime()+dt;
     if (useDouble) {
-        double2 stepSize;
-        cu.getIntegrationUtilities().getStepSize().download(&stepSize);
-        dt = stepSize.y;
-        time = cu.getTime()+dt;
         if (dt == maxStepSize)
             time = maxTime; // Avoid round-off error
     }
     else {
-        float2 stepSize;
-        cu.getIntegrationUtilities().getStepSize().download(&stepSize);
-        dt = stepSize.y;
-        time = cu.getTime()+dt;
         if (dt == maxStepSizeFloat)
             time = maxTime; // Avoid round-off error
     }
@@ -6139,7 +6109,6 @@ void CudaIntegrateCustomStepKernel::initialize(const System& system, const Custo
     summedValue = new CudaArray(cu, 1, elementSize, "summedValue");
     perDofValues = new CudaParameterSet(cu, integrator.getNumPerDofVariables(), 3*system.getNumParticles(), "perDofVariables", false, cu.getUseDoublePrecision() || cu.getUseMixedPrecision());
     cu.addReorderListener(new ReorderListener(cu, *perDofValues, localPerDofValuesFloat, localPerDofValuesDouble, deviceValuesAreCurrent));
-    prevStepSize = -1.0;
     SimTKOpenMMUtilities::setRandomNumberSeed(integrator.getRandomNumberSeed());
 }
 
@@ -6553,9 +6522,7 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
     }
     localValuesAreCurrent = false;
     double stepSize = integrator.getStepSize();
-    if (stepSize != prevStepSize) {
-        recordGlobalValue(stepSize, GlobalTarget(DT, dtVariableIndex));
-    }
+    recordGlobalValue(stepSize, GlobalTarget(DT, dtVariableIndex));
     for (int i = 0; i < (int) parameterNames.size(); i++) {
         double value = context.getParameter(parameterNames[i]);
         if (value != globalValuesDouble[parameterVariableIndex[i]]) {
@@ -6760,17 +6727,10 @@ double CudaIntegrateCustomStepKernel::computeKineticEnergy(ContextImpl& context,
 void CudaIntegrateCustomStepKernel::recordGlobalValue(double value, GlobalTarget target) {
     switch (target.type) {
         case DT:
+            if (value != globalValuesDouble[dtVariableIndex])
+                deviceGlobalsAreCurrent = false;
             globalValuesDouble[dtVariableIndex] = value;
-            deviceGlobalsAreCurrent = false;
-            if (cu.getUseDoublePrecision() || cu.getUseMixedPrecision()) {
-                double size[] = {0, value};
-                cu.getIntegrationUtilities().getStepSize().upload(size);
-            }
-            else {
-                float size[] = {0, (float) value};
-                cu.getIntegrationUtilities().getStepSize().upload(size);
-            }
-            prevStepSize = value;
+            cu.getIntegrationUtilities().setNextStepSize(value);
             break;
         case VARIABLE:
         case PARAMETER:

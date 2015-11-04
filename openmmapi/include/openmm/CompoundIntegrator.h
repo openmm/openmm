@@ -95,6 +95,12 @@ public:
      */
     Integrator& getIntegrator(int index);
     /**
+     * Get a const reference to one of the Integrators that have been added to this CompoundIntegrator.
+     * 
+     * @param index     the index of the Integrator to get
+     */
+    const Integrator& getIntegrator(int index) const;
+    /**
      * Get the index of the current Integrator.
      */
     int getCurrentIntegrator() const;

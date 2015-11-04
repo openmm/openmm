@@ -64,6 +64,11 @@ Integrator& CompoundIntegrator::getIntegrator(int index) {
     return *integrators[index];
 }
 
+const Integrator& CompoundIntegrator::getIntegrator(int index) const {
+    ASSERT_VALID_INDEX(index, integrators);
+    return *integrators[index];
+}
+
 int CompoundIntegrator::getCurrentIntegrator() const {
     return currentIntegrator;
 }
@@ -95,6 +100,8 @@ void CompoundIntegrator::step(int steps) {
 }
 
 void CompoundIntegrator::initialize(ContextImpl& context) {
+    if (integrators.size() == 0)
+        throw OpenMMException("CompoundIntegrator must contain at least one Integrator");
     for (int i = 0; i < integrators.size(); i++)
         integrators[i]->initialize(context);
 }

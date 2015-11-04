@@ -55,8 +55,8 @@ void testChangingIntegrator() {
     system.addForce(bonds);
     CompoundIntegrator integrator;
     integrator.addIntegrator(new VerletIntegrator(0.01));
-    integrator.addIntegrator(new LangevinIntegrator(300.0, 10.0, 0.01));
-    integrator.addIntegrator(new BrownianIntegrator(300.0, 10.0, 0.01));
+    integrator.addIntegrator(new LangevinIntegrator(300.0, 10.0, 0.011));
+    integrator.addIntegrator(new BrownianIntegrator(300.0, 10.0, 0.012));
     Context context(system, integrator, platform);
     ASSERT_EQUAL(0, integrator.getCurrentIntegrator());
     vector<Vec3> positions(2);
@@ -83,7 +83,7 @@ void testChangingIntegrator() {
             ASSERT_EQUAL_TOL(initialEnergy, energy, 0.01);
             integrator.step(1);
         }
-        ASSERT_EQUAL_TOL(1.0, context.getState(0).getTime(), 1e-5);
+        ASSERT_EQUAL_TOL(100*0.01, context.getState(0).getTime(), 1e-5);
 
         // Switch to the Langevin integrator and make sure that it heats up.
 
@@ -97,6 +97,7 @@ void testChangingIntegrator() {
         }
         double expectedKE = 0.5*2*3*BOLTZ*300.0;
         ASSERT_USUALLY_EQUAL_TOL(expectedKE, ke/1000, 0.1);
+        ASSERT_EQUAL_TOL(100*0.01+10100*0.011, context.getState(0).getTime(), 1e-5);
         
         // Now reinitialize the context and repeat all of these tests to make sure that works correctly.
         
@@ -146,6 +147,67 @@ void testChangingParameters() {
     }
 }
 
+void testDifferentStepSizes() {
+    System system;
+    system.addParticle(2.0);
+    system.addParticle(2.0);
+    HarmonicBondForce* bonds = new HarmonicBondForce();
+    bonds->addBond(0, 1, 1.5, 1);
+    system.addForce(bonds);
+    CompoundIntegrator integrator;
+    integrator.addIntegrator(new VerletIntegrator(0.005));
+    integrator.addIntegrator(new VerletIntegrator(0.01));
+    Context context(system, integrator, platform);
+    ASSERT_EQUAL(0, integrator.getCurrentIntegrator());
+    vector<Vec3> positions(2);
+    positions[0] = Vec3(-1, 0, 0);
+    positions[1] = Vec3(1, 0, 0);
+    context.setPositions(positions);
+
+    // Integrate with the first Verlet integrator and compare it to the analytical solution.
+
+    const double freq = 1.0;
+    double expectedTime = 0;
+    for (int i = 0; i < 100; ++i) {
+        State state = context.getState(State::Positions);
+        double time = state.getTime();
+        ASSERT_EQUAL_TOL(expectedTime, time, 1e-5);
+        double expectedDist = 1.5+0.5*std::cos(freq*time);
+        ASSERT_EQUAL_VEC(Vec3(-0.5*expectedDist, 0, 0), state.getPositions()[0], 0.02);
+        ASSERT_EQUAL_VEC(Vec3(0.5*expectedDist, 0, 0), state.getPositions()[1], 0.02);
+        integrator.step(1);
+        expectedTime += 0.005;
+    }
+    
+    // Now switch to the second Verlet integrator which has a different step size.
+
+    integrator.setCurrentIntegrator(1);
+    for (int i = 0; i < 100; ++i) {
+        State state = context.getState(State::Positions);
+        double time = state.getTime();
+        ASSERT_EQUAL_TOL(expectedTime, time, 1e-5);
+        double expectedDist = 1.5+0.5*std::cos(freq*time);
+        ASSERT_EQUAL_VEC(Vec3(-0.5*expectedDist, 0, 0), state.getPositions()[0], 0.02);
+        ASSERT_EQUAL_VEC(Vec3(0.5*expectedDist, 0, 0), state.getPositions()[1], 0.02);
+        integrator.step(1);
+        expectedTime += 0.01;
+    }
+    
+    // Finally, switch back to the first one again.
+
+    integrator.setCurrentIntegrator(0);
+    for (int i = 0; i < 100; ++i) {
+        State state = context.getState(State::Positions);
+        double time = state.getTime();
+        ASSERT_EQUAL_TOL(expectedTime, time, 1e-5);
+        double expectedDist = 1.5+0.5*std::cos(freq*time);
+        ASSERT_EQUAL_VEC(Vec3(-0.5*expectedDist, 0, 0), state.getPositions()[0], 0.02);
+        ASSERT_EQUAL_VEC(Vec3(0.5*expectedDist, 0, 0), state.getPositions()[1], 0.02);
+        integrator.step(1);
+        expectedTime += 0.005;
+    }
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -153,6 +215,7 @@ int main(int argc, char* argv[]) {
         initializeTests(argc, argv);
         testChangingIntegrator();
         testChangingParameters();
+        testDifferentStepSizes();
         runPlatformTests();
     }
     catch(const exception& e) {
