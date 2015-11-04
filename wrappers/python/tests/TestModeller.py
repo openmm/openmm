@@ -397,44 +397,46 @@ class TestModeller(unittest.TestCase):
 
     def test_addSolventNegativeSolvent(self):
         """ Test the addSolvent() method; test adding ions to a negatively charged solvent. """
-    
+
         topology_start = self.pdb.topology
         topology_start.setUnitCellDimensions(Vec3(3.5, 3.5, 3.5)*nanometers)
-               
-        # set up modeller with no solvent
-        modeller = Modeller(topology_start, self.positions)
-        modeller.deleteWater()
 
-        # add 5 Cl- ions to the original topology
-        topology_toAdd = Topology()
-        newChain = topology_toAdd.addChain()
-        for i in range(5):
-            topology_toAdd.addResidue('CL',  newChain)
-        residues = [residue for residue in topology_toAdd.residues()]
-        for i in range(5):
-            topology_toAdd.addAtom('Cl',Element.getBySymbol('Cl'), residues[i]) 
-        positions_toAdd = [Vec3(1.0,1.2,1.5), Vec3(1.7,1.0,1.4), Vec3(1.5,2.0,1.0),
-                           Vec3(2.0,2.0,2.0), Vec3(2.0,1.5,1.0)]*nanometers
-        modeller.add(topology_toAdd, positions_toAdd)
-        modeller.addSolvent(self.forcefield, ionicStrength=1.0*molar)
-        topology_after = modeller.getTopology()
+        for neutralize in (True, False):
+            # set up modeller with no solvent
+            modeller = Modeller(topology_start, self.positions)
+            modeller.deleteWater()
 
-        water_count = 0
-        sodium_count = 0
-        chlorine_count = 0
-        for residue in topology_after.residues():
-            if residue.name=='HOH':
-                water_count += 1
-            elif residue.name=='NA':
-                sodium_count += 1
-            elif residue.name=='CL':
-                chlorine_count += 1
+            # add 5 Cl- ions to the original topology
+            topology_toAdd = Topology()
+            newChain = topology_toAdd.addChain()
+            for i in range(5):
+                topology_toAdd.addResidue('CL',  newChain)
+            residues = [residue for residue in topology_toAdd.residues()]
+            for i in range(5):
+                topology_toAdd.addAtom('Cl',Element.getBySymbol('Cl'), residues[i]) 
+            positions_toAdd = [Vec3(1.0,1.2,1.5), Vec3(1.7,1.0,1.4), Vec3(1.5,2.0,1.0),
+                               Vec3(2.0,2.0,2.0), Vec3(2.0,1.5,1.0)]*nanometers
+            modeller.add(topology_toAdd, positions_toAdd)
+            modeller.addSolvent(self.forcefield, ionicStrength=1.0*molar, neutralize=neutralize)
+            topology_after = modeller.getTopology()
 
-        total_water_ions = water_count+sodium_count+chlorine_count
-        expected_ion_fraction = 1.0*molar/(55.4*molar)
-        expected_ions = math.floor((total_water_ions-10)*expected_ion_fraction/2+0.5)+5
-        self.assertEqual(sodium_count, expected_ions)
-        self.assertEqual(chlorine_count, expected_ions)
+            water_count = 0
+            sodium_count = 0
+            chlorine_count = 0
+            for residue in topology_after.residues():
+                if residue.name=='HOH':
+                    water_count += 1
+                elif residue.name=='NA':
+                    sodium_count += 1
+                elif residue.name=='CL':
+                    chlorine_count += 1
+
+            total_water_ions = water_count+sodium_count+chlorine_count
+            expected_ion_fraction = 1.0*molar/(55.4*molar)
+            expected_chlorine = math.floor((total_water_ions-10)*expected_ion_fraction/2+0.5)+5
+            expected_sodium = expected_chlorine if neutralize else expected_chlorine-5
+            self.assertEqual(sodium_count, expected_sodium)
+            self.assertEqual(chlorine_count, expected_chlorine)
 
     def test_addSolventPositiveSolvent(self):
         """ Test the addSolvent() method; test adding ions to a positively charged solvent. """
@@ -442,42 +444,44 @@ class TestModeller(unittest.TestCase):
         topology_start = self.pdb.topology
         topology_start.setUnitCellDimensions(Vec3(3.5, 3.5, 3.5)*nanometers)
 
-        # set up modeller with no solvent
-        modeller = Modeller(topology_start, self.positions)
-        modeller.deleteWater()
+        for neutralize in (True, False):
+            # set up modeller with no solvent
+            modeller = Modeller(topology_start, self.positions)
+            modeller.deleteWater()
 
-        # add 5 Na+ ions to the original topology
-        topology_toAdd = Topology()
-        newChain = topology_toAdd.addChain()
-        for i in range(5):
-            topology_toAdd.addResidue('NA', newChain)
-        residues = [residue for residue in topology_toAdd.residues()]
-        for i in range(5):
-             topology_toAdd.addAtom('Na',Element.getBySymbol('Na'), residues[i]) 
-        positions_toAdd = [Vec3(1.0,1.2,1.5), Vec3(1.7,1.0,1.4), Vec3(1.5,2.0,1.0),
-                           Vec3(2.0,2.0,2.0), Vec3(2.0,1.5,1.0)]*nanometers
+            # add 5 Na+ ions to the original topology
+            topology_toAdd = Topology()
+            newChain = topology_toAdd.addChain()
+            for i in range(5):
+                topology_toAdd.addResidue('NA', newChain)
+            residues = [residue for residue in topology_toAdd.residues()]
+            for i in range(5):
+                 topology_toAdd.addAtom('Na',Element.getBySymbol('Na'), residues[i]) 
+            positions_toAdd = [Vec3(1.0,1.2,1.5), Vec3(1.7,1.0,1.4), Vec3(1.5,2.0,1.0),
+                               Vec3(2.0,2.0,2.0), Vec3(2.0,1.5,1.0)]*nanometers
 
-        # positions_toAdd doesn't need to change
-        modeller.add(topology_toAdd, positions_toAdd)
-        modeller.addSolvent(self.forcefield, ionicStrength=1.0*molar)
-        topology_after = modeller.getTopology()
+            # positions_toAdd doesn't need to change
+            modeller.add(topology_toAdd, positions_toAdd)
+            modeller.addSolvent(self.forcefield, ionicStrength=1.0*molar, neutralize=neutralize)
+            topology_after = modeller.getTopology()
 
-        water_count = 0
-        sodium_count = 0
-        chlorine_count = 0
-        for residue in topology_after.residues():
-            if residue.name=='HOH':
-                water_count += 1
-            elif residue.name=='NA':
-                sodium_count += 1
-            elif residue.name=='CL':
-                chlorine_count += 1
+            water_count = 0
+            sodium_count = 0
+            chlorine_count = 0
+            for residue in topology_after.residues():
+                if residue.name=='HOH':
+                    water_count += 1
+                elif residue.name=='NA':
+                    sodium_count += 1
+                elif residue.name=='CL':
+                    chlorine_count += 1
 
-        total_water_ions = water_count+sodium_count+chlorine_count
-        expected_ion_fraction = 1.0*molar/(55.4*molar)
-        expected_ions = math.floor((total_water_ions-10)*expected_ion_fraction/2+0.5)+5
-        self.assertEqual(sodium_count, expected_ions)
-        self.assertEqual(chlorine_count, expected_ions)
+            total_water_ions = water_count+sodium_count+chlorine_count
+            expected_ion_fraction = 1.0*molar/(55.4*molar)
+            expected_sodium = math.floor((total_water_ions-10)*expected_ion_fraction/2+0.5)+5
+            expected_chlorine = expected_sodium if neutralize else expected_sodium-5
+            self.assertEqual(sodium_count, expected_sodium)
+            self.assertEqual(chlorine_count, expected_chlorine)
 
     def test_addSolventIons(self):
         """ Test the addSolvent() method with all possible choices for positive and negative ions. """

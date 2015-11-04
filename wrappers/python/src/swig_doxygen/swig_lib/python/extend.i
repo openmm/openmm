@@ -1,3 +1,27 @@
+%inline %{
+    typedef int bitmask32t;
+%}
+
+%typemap(in) bitmask32t %{
+    $1 = 0;
+#if PY_VERSION_HEX >= 0x03000000
+    if (PyLong_Check($input)) {
+        unsigned long u = PyLong_AsUnsignedLongMask($input);
+#else
+    if (PyInt_Check($input)) {
+        unsigned long u = PyInt_AsUnsignedLongMask($input);
+#endif
+        // 64-bit Windows has 32-bit longs, but other platforms have
+        // 64-bit longs
+        $1 = u & 0xffffffff;
+    } else {
+        PyErr_SetString(PyExc_ValueError, "in method $symname, argument $argnum could not be converted to type $type");
+        SWIG_fail;
+    }
+%}
+
+
+
 %extend OpenMM::Context {
   PyObject *_getStateAsLists(int getPositions,
                             int getVelocities,
@@ -5,7 +29,7 @@
                             int getEnergy,
                             int getParameters,
                             int enforcePeriodic,
-                            int groups) {
+                            bitmask32t groups) {
     State state;
     PyThreadState* _savePythonThreadState = PyEval_SaveThread();
     int types = 0;
@@ -27,14 +51,9 @@
 
 
   %pythoncode %{
-    def getState(self,
-                 getPositions=False,
-                 getVelocities=False,
-                 getForces=False,
-                 getEnergy=False,
-                 getParameters=False,
-                 enforcePeriodicBox=False,
-                 groups=-1):
+    def getState(self, getPositions=False, getVelocities=False,
+                 getForces=False, getEnergy=False, getParameters=False,
+                 enforcePeriodicBox=False, groups=-1):
         """Get a State object recording the current state information stored in this context.
 
         Parameters
@@ -189,19 +208,7 @@ Parameters:
                  getParameters=False,
                  enforcePeriodicBox=False,
                  groups=-1):
-        """
-        getState(self,
-                 copy,
-                 getPositions = False,
-                 getVelocities = False,
-                 getForces = False,
-                 getEnergy = False,
-                 getParameters = False,
-                 enforcePeriodicBox = False,
-                 groups = -1)
-              -> State
-
-        Get a State object recording the current state information about one copy of the system.
+        """Get a State object recording the current state information about one copy of the system.
 
         Parameters
         ----------
