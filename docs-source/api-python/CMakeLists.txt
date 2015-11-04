@@ -5,6 +5,7 @@ file(GLOB STAGING_INPUT_FILES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
     "index.rst"
     "render.py"
     "conf.py"
+    "process-docstring.py"
     "_static/logo.png"
     "_templates/class.rst"
 )
@@ -35,6 +36,7 @@ add_custom_command(
     COMMAND "${PYTHON_EXECUTABLE}" -m sphinx . "${CMAKE_BINARY_DIR}/api-python"
     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
     DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/conf.py"
+            "${CMAKE_CURRENT_BINARY_DIR}/process-docstring.py"
             "${CMAKE_CURRENT_BINARY_DIR}/app.rst"
             "${CMAKE_CURRENT_BINARY_DIR}/library.rst"
             "${CMAKE_CURRENT_BINARY_DIR}/index.rst"
@@ -44,7 +46,7 @@ add_custom_command(
 )
 
 add_custom_target(PythonApiDocs DEPENDS ${CMAKE_BINARY_DIR}/api-python/index.html)
-INSTALL(DIRECTORY "${PROJECT_BINARY_DIR}/api-python/"
+INSTALL(DIRECTORY "${CMAKE_BINARY_DIR}/api-python/"
         DESTINATION "docs/api-python/")
-INSTALL(FILES "Python API Reference.html"
+INSTALL(FILES "${CMAKE_CURRENT_SOURCE_DIR}/../Python API Reference.html"
         DESTINATION "docs/")

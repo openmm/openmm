@@ -5,7 +5,7 @@ import os
 import simtk.openmm.version
 
 extensions = ['sphinx.ext.mathjax', 'sphinx.ext.ifconfig', 'sphinx.ext.autosummary',
-              'sphinx.ext.autodoc', 'numpydoc',]
+              'sphinx.ext.autodoc', 'numpydoc', 'process-docstring']
 
 autosummary_generate = True
 autodoc_default_flags = ['members', 'inherited-members']
