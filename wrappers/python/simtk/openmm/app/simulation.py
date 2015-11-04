@@ -55,13 +55,19 @@ class Simulation(object):
     def __init__(self, topology, system, integrator, platform=None, platformProperties=None):
         """Create a Simulation.
 
-        Parameters:
-         - topology (Topology) A Topology describing the the system to simulate
-         - system (System) The OpenMM System object to simulate
-         - integrator (Integrator) The OpenMM Integrator to use for simulating the System
-         - platform (Platform=None) If not None, the OpenMM Platform to use
-         - platformProperties (map=None) If not None, a set of platform-specific properties to pass
-           to the Context's constructor
+        Parameters
+        ----------
+        topology : Topology
+            A Topology describing the the system to simulate
+        system : System
+            The OpenMM System object to simulate
+        integrator : Integrator
+            The OpenMM Integrator to use for simulating the System
+        platform : Platform=None
+            If not None, the OpenMM Platform to use
+        platformProperties : map=None
+            If not None, a set of platform-specific properties to pass to the
+            Context's constructor
         """
         ## The Topology describing the system being simulated
         self.topology = topology

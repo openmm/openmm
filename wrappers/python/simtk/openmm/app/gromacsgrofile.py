@@ -114,10 +114,11 @@ class GromacsGroFile(object):
 
         The atom positions can be retrieved by calling getPositions().
 
-        Parameters:
-         - file (string) the name of the file to load
+        Parameters
+        ----------
+        file : string
+            the name of the file to load
         """
-
         xyzs     = []
         elements = [] # The element, most useful for quantum chemistry calculations
         atomname = [] # The atom name, for instance 'HW1'

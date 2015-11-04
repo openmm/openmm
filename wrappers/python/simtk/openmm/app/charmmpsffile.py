@@ -591,13 +591,22 @@ class CharmmPsfFile(object):
 
     def setBox(self, a, b, c, alpha=90.0*u.degrees, beta=90.0*u.degrees,
                gamma=90.0*u.degrees):
-        """
-        Sets the periodic box boundary conditions.
+        """Sets the periodic box boundary conditions.
 
-        Parameters:
-            - a, b, c (floats) : Lengths of the periodic cell
-            - alpha, beta, gamma (floats, optional) : Angles between the
-                periodic cell vectors.
+        Parameters
+        ----------
+        a : length
+            Lengths of the periodic cell
+        b : length
+            Lengths of the periodic cell
+        c : length
+            Lengths of the periodic cell
+        alpha : floats, optional
+            Angles between the periodic cell vectors.
+        beta : floats, optional
+            Angles between the periodic cell vectors.
+        gamma : floats, optional
+            Angles between the periodic cell vectors.
         """
         try:
             # Since we are setting the box, delete the cached box lengths if we

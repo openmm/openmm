@@ -45,9 +45,12 @@ class DCDReporter(object):
     def __init__(self, file, reportInterval):
         """Create a DCDReporter.
 
-        Parameters:
-         - file (string) The file to write to
-         - reportInterval (int) The interval (in time steps) at which to write frames
+        Parameters
+        ----------
+        file : string
+            The file to write to
+        reportInterval : int
+            The interval (in time steps) at which to write frames
         """
         self._reportInterval = reportInterval
         self._out = open(file, 'wb')

@@ -60,31 +60,54 @@ class StateDataReporter(object):
                  progress=False, remainingTime=False, speed=False, elapsedTime=False, separator=',', systemMass=None, totalSteps=None):
         """Create a StateDataReporter.
 
-        Parameters:
-         - file (string or file) The file to write to, specified as a file name or file object
-         - reportInterval (int) The interval (in time steps) at which to write frames
-         - step (boolean=False) Whether to write the current step index to the file
-         - time (boolean=False) Whether to write the current time to the file
-         - potentialEnergy (boolean=False) Whether to write the potential energy to the file
-         - kineticEnergy (boolean=False) Whether to write the kinetic energy to the file
-         - totalEnergy (boolean=False) Whether to write the total energy to the file
-         - temperature (boolean=False) Whether to write the instantaneous temperature to the file
-         - volume (boolean=False) Whether to write the periodic box volume to the file
-         - density (boolean=False) Whether to write the system density to the file
-         - progress (boolean=False) Whether to write current progress (percent completion) to the file.
-           If this is True, you must also specify totalSteps.
-         - remainingTime (boolean=False) Whether to write an estimate of the remaining clock time until
-           completion to the file.  If this is True, you must also specify totalSteps.
-         - speed (bool=False) Whether to write an estimate of the simulation speed in ns/day to the file
-         - elapsedTime (bool=False) Whether to write the elapsed time of the simulation in seconds to the file.
-         - separator (string=',') The separator to use between columns in the file
-         - systemMass (mass=None) The total mass to use for the system when reporting density.  If this is
-           None (the default), the system mass is computed by summing the masses of all particles.  This
-           parameter is useful when the particle masses do not reflect their actual physical mass, such as
-           when some particles have had their masses set to 0 to immobilize them.
-         - totalSteps (int=None) The total number of steps that will be included in the simulation.  This
-           is required if either progress or remainingTime is set to True, and defines how many steps will
-           indicate 100% completion.
+        Parameters
+        ----------
+        file : string or file
+            The file to write to, specified as a file name or file object
+        reportInterval : int
+            The interval (in time steps) at which to write frames
+        step : bool=False
+            Whether to write the current step index to the file
+        time : bool=False
+            Whether to write the current time to the file
+        potentialEnergy : bool=False
+            Whether to write the potential energy to the file
+        kineticEnergy : bool=False
+            Whether to write the kinetic energy to the file
+        totalEnergy : bool=False
+            Whether to write the total energy to the file
+        temperature : bool=False
+            Whether to write the instantaneous temperature to the file
+        volume : bool=False
+            Whether to write the periodic box volume to the file
+        density : bool=False
+            Whether to write the system density to the file
+        progress : bool=False
+            Whether to write current progress (percent completion) to the file.
+            If this is True, you must also specify totalSteps.
+        remainingTime : bool=False
+            Whether to write an estimate of the remaining clock time until
+            completion to the file.  If this is True, you must also specify
+            totalSteps.
+        speed : bool=False
+            Whether to write an estimate of the simulation speed in ns/day to
+            the file
+        elapsedTime : bool=False
+            Whether to write the elapsed time of the simulation in seconds to
+            the file.
+        separator : string=','
+            The separator to use between columns in the file
+        systemMass : mass=None
+            The total mass to use for the system when reporting density.  If
+            this is None (the default), the system mass is computed by summing
+            the masses of all particles.  This parameter is useful when the
+            particle masses do not reflect their actual physical mass, such as
+            when some particles have had their masses set to 0 to immobilize
+            them.
+        totalSteps : int=None
+            The total number of steps that will be included in the simulation.
+            This is required if either progress or remainingTime is set to True,
+            and defines how many steps will indicate 100% completion.
         """
         self._reportInterval = reportInterval
         self._openedFile = isinstance(file, str)
@@ -189,11 +212,16 @@ class StateDataReporter(object):
     def _constructReportValues(self, simulation, state):
         """Query the simulation for the current state of our observables of interest.
 
-        Parameters:
-         - simulation (Simulation) The Simulation to generate a report for
-         - state (State) The current state of the simulation
+        Parameters
+        ----------
+        simulation : Simulation
+            The Simulation to generate a report for
+        state : State
+            The current state of the simulation
 
-        Returns: A list of values summarizing the current state of
+        Returns
+        -------
+        A list of values summarizing the current state of
         the simulation, to be printed or saved. Each element in the list
         corresponds to one of the columns in the resulting CSV file.
         """

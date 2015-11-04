@@ -53,10 +53,14 @@ class PDBxFile(object):
     def __init__(self, file):
         """Load a PDBx/mmCIF file.
 
-        The atom positions and Topology can be retrieved by calling getPositions() and getTopology().
+        The atom positions and Topology can be retrieved by calling
+        getPositions() and getTopology().
 
-        Parameters:
-         - file (string) the name of the file to load.  Alternatively you can pass an open file object.
+        Parameters
+        ----------
+        file : string
+            the name of the file to load.  Alternatively you can pass an open
+            file object.
         """
         top = Topology()
         ## The Topology read from the PDBx/mmCIF file

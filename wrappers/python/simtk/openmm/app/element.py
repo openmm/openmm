@@ -58,11 +58,16 @@ class Element(object):
     def __init__(self, number, name, symbol, mass):
         """Create a new element
 
-        Parameters:
-        number (int) The atomic number of the element
-        name (string) The name of the element
-        symbol (string) The chemical symbol of the element
-        mass (float) The atomic mass of the element
+        Parameters
+        ----------
+        number : int
+            The atomic number of the element
+        name : string
+            The name of the element
+        symbol : string
+            The chemical symbol of the element
+        mass : float
+            The atomic mass of the element
         """
         ## The atomic number of the element
         self._atomic_number = number

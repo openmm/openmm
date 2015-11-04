@@ -64,8 +64,10 @@ class PDBFile(object):
 
         The atom positions and Topology can be retrieved by calling getPositions() and getTopology().
 
-        Parameters:
-         - file (string) the name of the file to load
+        Parameters
+        ----------
+        file : string
+            the name of the file to load
         """
         top = Topology()
         ## The Topology read from the PDB file

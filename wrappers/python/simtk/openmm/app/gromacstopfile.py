@@ -433,16 +433,22 @@ class GromacsTopFile(object):
     def __init__(self, file, periodicBoxVectors=None, unitCellDimensions=None, includeDir=None, defines=None):
         """Load a top file.
 
-        Parameters:
-         - file (string) the name of the file to load
-         - periodicBoxVectors (tuple of Vec3=None) the vectors defining the periodic box
-         - unitCellDimensions (Vec3=None) the dimensions of the crystallographic unit cell.  For
-           non-rectangular unit cells, specify periodicBoxVectors instead.
-         - includeDir (string=None) A directory in which to look for other files
-           included from the top file. If not specified, we will attempt to locate a gromacs
-           installation on your system. When gromacs is installed in /usr/local, this will resolve
-           to  /usr/local/gromacs/share/gromacs/top
-         - defines (dict={}) preprocessor definitions that should be predefined when parsing the file
+        Parameters
+        ----------
+        file : str
+            the name of the file to load
+        periodicBoxVectors : tuple of Vec3=None
+            the vectors defining the periodic box
+        unitCellDimensions : Vec3=None
+            the dimensions of the crystallographic unit cell.  For
+            non-rectangular unit cells, specify periodicBoxVectors instead.
+        includeDir : string=None
+            A directory in which to look for other files included from the
+            top file. If not specified, we will attempt to locate a gromacs
+            installation on your system. When gromacs is installed in
+            /usr/local, this will resolve to /usr/local/gromacs/share/gromacs/top
+        defines : dict={}
+            preprocessor definitions that should be predefined when parsing the file
          """
         if includeDir is None:
             includeDir = _defaultGromacsIncludeDir()

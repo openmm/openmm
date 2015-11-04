@@ -46,10 +46,11 @@ class DesmondDMSFile(object):
     def __init__(self, file):
         """Load a DMS file
 
-        Parameters:
-         - file (string) the name of the file to load
+        Parameters
+        ----------
+        file : string
+            the name of the file to load
         """
-
         # sqlite3 is included in the standard lib, but at python
         # compile time, you can disable support (I think), so it's
         # not *guarenteed* to be available. Doing the import here
