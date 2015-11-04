@@ -63,9 +63,12 @@ class Modeller(object):
     def __init__(self, topology, positions):
         """Create a new Modeller object
 
-        Parameters:
-         - topology (Topology) the initial Topology of the model
-         - positions (list) the initial atomic positions
+        Parameters
+        ----------
+        topology : Topology
+            the initial Topology of the model
+        positions : list
+            the initial atomic positions
         """
         ## The Topology describing the structure of the system
         self.topology = topology
@@ -252,6 +255,7 @@ class Modeller(object):
         """Add solvent (both water and ions) to the model to fill a rectangular box.
 
         The algorithm works as follows:
+
         1. Water molecules are added to fill the box.
         2. Water molecules are removed if their distance to any solute atom is less than the sum of their van der Waals radii.
         3. If the solute is charged, enough positive or negative ions are added to neutralize it.  Each ion is added by
@@ -263,23 +267,33 @@ class Modeller(object):
         1. You can explicitly give the vectors defining the periodic box to use.
         2. Alternatively, for a rectangular box you can simply give the dimensions of the unit cell.
         3. You can give a padding distance.  The largest dimension of the solute (along the x, y, or z axis) is determined, and a cubic
-        box of size (largest dimension)+2*padding is used.
+           box of size (largest dimension)+2*padding is used.
         4. You can specify the total number of molecules (both waters and ions) to add.  A cubic box is then created whose size is
-        just large enough hold the specified amount of solvent.
+           just large enough hold the specified amount of solvent.
         5. Finally, if none of the above options is specified, the existing Topology's box vectors are used.
 
-        Parameters:
-         - forcefield (ForceField) the ForceField to use for determining van der Waals radii and atomic charges
-         - model (string='tip3p') the water model to use.  Supported values are 'tip3p', 'spce', 'tip4pew', and 'tip5p'.
-         - boxSize (Vec3=None) the size of the box to fill with water
-         - boxVectors (tuple of Vec3=None) the vectors defining the periodic box to fill with water
-         - padding (distance=None) the padding distance to use
-         - numAdded (int=None) the total number of molecules (waters and ions) to add
-         - positiveIon (string='Na+') the type of positive ion to add.  Allowed values are 'Cs+', 'K+', 'Li+', 'Na+', and 'Rb+'
-         - negativeIon (string='Cl-') the type of negative ion to add.  Allowed values are 'Cl-', 'Br-', 'F-', and 'I-'. Be aware
-           that not all force fields support all ion types.
-         - ionicStrength (concentration=0*molar) the total concentration of ions (both positive and negative) to add.  This
-           does not include ions that are added to neutralize the system.
+        Parameters
+        ----------
+        forcefield : ForceField
+            the ForceField to use for determining van der Waals radii and atomic charges
+        model : str='tip3p'
+            the water model to use.  Supported values are 'tip3p', 'spce', 'tip4pew', and 'tip5p'.
+        boxSize : Vec3=None
+            the size of the box to fill with water
+        boxVectors : tuple of Vec3=None
+            the vectors defining the periodic box to fill with water
+        padding : distance=None
+            the padding distance to use
+        numAdded : int=None
+            the total number of molecules (waters and ions) to add
+        positiveIon : string='Na+'
+            the type of positive ion to add.  Allowed values are 'Cs+', 'K+', 'Li+', 'Na+', and 'Rb+'
+        negativeIon : string='Cl-'
+            the type of negative ion to add.  Allowed values are 'Cl-', 'Br-', 'F-', and 'I-'. Be aware
+            that not all force fields support all ion types.
+        ionicStrength : concentration=0*molar
+            the total concentration of ions (both positive and negative) to add.  This
+            does not include ions that are added to neutralize the system.
         """
         if len([x for x in (boxSize, boxVectors, padding, numAdded) if x is not None]) > 1:
             raise ValueError('At most one of the following arguments may be specified: boxSize, boxVectors, padding, numAdded')
