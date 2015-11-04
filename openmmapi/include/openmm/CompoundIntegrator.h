@@ -73,6 +73,7 @@ public:
      * Create a CompoundIntegrator.
      */
     explicit CompoundIntegrator();
+    ~CompoundIntegrator();
     /**
      * Get the number of Integrators that have been added to this CompoundIntegrator.
      */
@@ -103,6 +104,30 @@ public:
      * @param index    the index of the Integrator to use
      */
     void setCurrentIntegrator(int index);
+    /**
+     * Get the size of each time step, in picoseconds.  This method calls getStepSize() on
+     * whichever Integrator has been set as current.
+     * 
+     * @return the step size, measured in ps
+     */
+    double getStepSize() const;
+    /**
+     * Set the size of each time step, in picoseconds.  This method calls setStepSize() on
+     * whichever Integrator has been set as current.
+     * 
+     * @param size    the step size, measured in ps
+     */
+    void setStepSize(double size);
+    /**
+     * Get the distance tolerance within which constraints are maintained, as a fraction of the constrained distance.
+     * This method calls getConstraintTolerance() on whichever Integrator has been set as current.
+     */
+    double getConstraintTolerance() const;
+    /**
+     * Set the distance tolerance within which constraints are maintained, as a fraction of the constrained distance.
+     * This method calls setConstraintTolerance() on whichever Integrator has been set as current.
+     */
+    void setConstraintTolerance(double tol);
    /**
      * Advance a simulation through time by taking a series of time steps.  This method
      * calls step() on whichever Integrator has been set as current.
