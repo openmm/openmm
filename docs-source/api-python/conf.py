@@ -5,7 +5,7 @@ import os
 import simtk.openmm.version
 
 extensions = ['sphinx.ext.mathjax', 'sphinx.ext.ifconfig', 'sphinx.ext.autosummary',
-              'sphinx.ext.autodoc', 'numpydoc', 'process-docstring']
+              'sphinx.ext.autodoc', 'sphinx.ext.napoleon', 'process-docstring']
 
 autosummary_generate = True
 autodoc_default_flags = ['members', 'inherited-members']
@@ -45,5 +45,14 @@ html_static_path = ['_static']
 
 autodoc_member_order = 'bysource'
 
-# stackoverflow.com/questions/12206334
-numpydoc_show_class_members = False
+# Napoleon settings
+napoleon_google_docstring = False
+napoleon_numpy_docstring = True
+napoleon_include_private_with_doc = False
+napoleon_include_special_with_doc = True
+napoleon_use_admonition_for_examples = False
+napoleon_use_admonition_for_notes = False
+napoleon_use_admonition_for_references = False
+napoleon_use_ivar = False
+napoleon_use_param = True
+napoleon_use_rtype = True
