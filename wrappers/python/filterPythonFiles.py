@@ -38,15 +38,15 @@ while True:
         stripped = line.lstrip()
         if stripped.startswith('"""') or stripped.startswith("'''"):
             line = stripped[3:]
-            readingParameters = False
-            if line.find('"""') != -1 or line.find("'''") != -1:
-                docstringlines.append(line.rstrip()[:-3])
-            else:
-                while line.find('"""') == -1 and line.find("'''") == -1:
-                    docstringlines.append(line)
-                    line = input.readline()
 
-        docstring = NumpyDocString(cleandoc(''.join(docstringlines)))
+            while line.find('"""') == -1 and line.find("'''") == -1:
+                docstringlines.append(line)
+                line = input.readline().rstrip()
+            if line.endswith('"""') or line.endswith("'''"):
+                docstringlines.append(line[:-3])
+
+
+        docstring = NumpyDocString(cleandoc('\n'.join(docstringlines)))
 
         # Print out the docstring in Doxygen syntax, followed by the declaration.
         for line in docstring['Summary']:
@@ -57,7 +57,7 @@ while True:
                 print('{prefix}## {line}'.format(prefix=prefix, line=line.strip()))
         print('{prefix}##'.format(prefix=prefix))
         for name, type, descr in docstring['Parameters']:
-            print('{prefix}## @param {name} ({type}) {descr}'.format(prefix=prefix, type=type, name=name, descr=''.join(descr)))
+            print('{prefix}## @param {name} ({type}) {descr}'.format(prefix=prefix, type=type, name=name, descr=' '.join(descr)))
         for name, type, descr in docstring['Returns']:
             if type == '':
                 type = name

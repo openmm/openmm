@@ -49,8 +49,7 @@ def striphtmltags(s):
     s = s.replace('<i>', '_').replace('</i>', '_')
     s = s.replace('<b>', '*').replace('</b>', '*')
 
-    s = re.sub('\s*(<ul>.*</ul>\s*)', replace_ul_tags, s, flags=re.MULTILINE | re.DOTALL)
-
+    s = re.sub('\s*(<ul>.*?</ul>\s*)', replace_ul_tags, s, flags=re.MULTILINE | re.DOTALL)
     return s
 
 def trimToSingleSpace(text):
