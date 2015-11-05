@@ -188,7 +188,7 @@ gridEvaluateEnergy(real2* __restrict__ halfcomplex_pmeGrid, mixed* __restrict__ 
             energy += eterm*(grid.x*grid.x + grid.y*grid.y);
         }
     }
-    energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] += 0.5f*energy;
+    energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] = 0.5f*energy;
 }
 
 extern "C" __global__
@@ -285,4 +285,10 @@ void addForces(const real4* __restrict__ forces, unsigned long long* __restrict_
         forceBuffers[atom+PADDED_NUM_ATOMS] += static_cast<unsigned long long>((long long) (f.y*0x100000000));
         forceBuffers[atom+2*PADDED_NUM_ATOMS] += static_cast<unsigned long long>((long long) (f.z*0x100000000));
     }
+}
+
+extern "C" __global__
+void addEnergy(const mixed* __restrict__ pmeEnergyBuffer, mixed* __restrict__ energyBuffer, int bufferSize) {
+    for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < bufferSize; i += blockDim.x*gridDim.x)
+        energyBuffer[i] += pmeEnergyBuffer[i];
 }
