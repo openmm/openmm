@@ -65,6 +65,14 @@ namespace OpenMM {
  * compoundIntegrator.setCurrentIntegrator(1);
  * compoundIntegrator.step(1000); // Take 1000 steps of Langevin dynamics
  * </pre></tt>
+ * 
+ * When switching between integrators, it is important to make sure they are compatible with
+ * each other, and that they will interpret the positions and velocities in the same way.
+ * Remember that leapfrog style integrators assume the positions and velocities are offset
+ * from each other by half a time step.  When switching between a leapfrog and non-leapfrog
+ * integrator, you must first adjust the velocities to avoid introducing error.  This is also
+ * true when switching between two leapfrog integrators that use different step sizes,
+ * since they will interpret the velocities as corresponding to different times.
  */
 
 class OPENMM_EXPORT CompoundIntegrator : public Integrator {
