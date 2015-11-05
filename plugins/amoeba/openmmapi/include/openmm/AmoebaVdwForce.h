@@ -253,7 +253,7 @@ public:
         epsilon              = 0.0;
     }
     VdwInfo(int parentIndex, double sigma, double epsilon, double reductionFactor) :
-        parentIndex(parentIndex), sigma(sigma), epsilon(epsilon), reductionFactor(reductionFactor)  {
+        parentIndex(parentIndex), reductionFactor(reductionFactor), sigma(sigma), epsilon(epsilon)  {
     }
 };
 

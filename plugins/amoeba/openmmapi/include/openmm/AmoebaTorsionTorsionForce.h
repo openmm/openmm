@@ -172,7 +172,7 @@ public:
     }
     TorsionTorsionInfo(int particle1, int particle2, int particle3, int particle4, int particle5, int chiralCheckAtomIndex, int gridIndex) :
                        particle1(particle1), particle2(particle2), particle3(particle3),
-                       particle4(particle4), particle5(particle5), gridIndex(gridIndex), chiralCheckAtomIndex(chiralCheckAtomIndex) {
+                       particle4(particle4), particle5(particle5), chiralCheckAtomIndex(chiralCheckAtomIndex), gridIndex(gridIndex) {
 
     }
 };

@@ -415,8 +415,8 @@ public:
 
     MultipoleInfo(double charge, const std::vector<double>& inputMolecularDipole, const std::vector<double>& inputMolecularQuadrupole,
                    int axisType, int multipoleAtomZ, int multipoleAtomX, int multipoleAtomY, double thole, double dampingFactor, double polarity) :
-        charge(charge), axisType(axisType), multipoleAtomZ(multipoleAtomZ), multipoleAtomX(multipoleAtomX), multipoleAtomY(multipoleAtomY),
-        thole(thole), dampingFactor(dampingFactor), polarity(polarity) {
+        axisType(axisType), multipoleAtomZ(multipoleAtomZ), multipoleAtomX(multipoleAtomX), multipoleAtomY(multipoleAtomY),
+        charge(charge), thole(thole), dampingFactor(dampingFactor), polarity(polarity) {
 
        covalentInfo.resize(CovalentEnd);
 
