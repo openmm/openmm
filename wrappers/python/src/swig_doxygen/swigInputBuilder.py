@@ -274,6 +274,11 @@ class SwigInputBuilder:
             self.fOut.write(",\n         OpenMM::%s" % name)
         self.fOut.write(");\n\n")
 
+        self.fOut.write("%factory(OpenMM::Integrator& OpenMM::CompoundIntegrator::getIntegrator")
+        for name in sorted(integratorSubclassList):
+            self.fOut.write(",\n         OpenMM::%s" % name)
+        self.fOut.write(");\n\n")
+
         self.fOut.write("%factory(OpenMM::VirtualSite& OpenMM::System::getVirtualSite, OpenMM::TwoParticleAverageSite, OpenMM::ThreeParticleAverageSite, OpenMM::OutOfPlaneSite);\n\n")
         self.fOut.write("\n")
 

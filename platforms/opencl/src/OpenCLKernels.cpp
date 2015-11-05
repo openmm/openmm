@@ -5866,7 +5866,6 @@ void OpenCLIntegrateVerletStepKernel::initialize(const System& system, const Ver
     cl::Program program = cl.createProgram(OpenCLKernelSources::verlet, "");
     kernel1 = cl::Kernel(program, "integrateVerletPart1");
     kernel2 = cl::Kernel(program, "integrateVerletPart2");
-    prevStepSize = -1.0;
 }
 
 void OpenCLIntegrateVerletStepKernel::execute(ContextImpl& context, const VerletIntegrator& integrator) {
@@ -5889,19 +5888,7 @@ void OpenCLIntegrateVerletStepKernel::execute(ContextImpl& context, const Verlet
         kernel2.setArg<cl::Buffer>(4, cl.getVelm().getDeviceBuffer());
         kernel2.setArg<cl::Buffer>(5, integration.getPosDelta().getDeviceBuffer());
     }
-    if (dt != prevStepSize) {
-        if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision()) {
-            vector<mm_double2> stepSizeVec(1);
-            stepSizeVec[0] = mm_double2(dt, dt);
-            cl.getIntegrationUtilities().getStepSize().upload(stepSizeVec);
-        }
-        else {
-            vector<mm_float2> stepSizeVec(1);
-            stepSizeVec[0] = mm_float2((cl_float) dt, (cl_float) dt);
-            cl.getIntegrationUtilities().getStepSize().upload(stepSizeVec);
-        }
-        prevStepSize = dt;
-    }
+    cl.getIntegrationUtilities().setNextStepSize(dt);
 
     // Call the first integration kernel.
 
@@ -5971,6 +5958,7 @@ void OpenCLIntegrateLangevinStepKernel::execute(ContextImpl& context, const Lang
     double temperature = integrator.getTemperature();
     double friction = integrator.getFriction();
     double stepSize = integrator.getStepSize();
+    cl.getIntegrationUtilities().setNextStepSize(stepSize);
     if (temperature != prevTemp || friction != prevFriction || stepSize != prevStepSize) {
         // Calculate the integration parameters.
 
@@ -5985,8 +5973,6 @@ void OpenCLIntegrateLangevinStepKernel::execute(ContextImpl& context, const Lang
             p[1] = fscale;
             p[2] = noisescale;
             params->upload(p);
-            mm_double2 ss = mm_double2(0, stepSize);
-            integration.getStepSize().upload(&ss);
         }
         else {
             vector<cl_float> p(params->getSize());
@@ -5994,8 +5980,6 @@ void OpenCLIntegrateLangevinStepKernel::execute(ContextImpl& context, const Lang
             p[1] = (cl_float) fscale;
             p[2] = (cl_float) noisescale;
             params->upload(p);
-            mm_float2 ss = mm_float2(0, (float) stepSize);
-            integration.getStepSize().upload(&ss);
         }
         prevTemp = temperature;
         prevFriction = friction;
@@ -6186,20 +6170,13 @@ double OpenCLIntegrateVariableVerletStepKernel::execute(ContextImpl& context, co
 
     // Update the time and step count.
 
-    double dt, time;
+    double dt = cl.getIntegrationUtilities().getLastStepSize();
+    double time = cl.getTime()+dt;
     if (useDouble) {
-        mm_double2 stepSize;
-        cl.getIntegrationUtilities().getStepSize().download(&stepSize);
-        dt = stepSize.y;
-        time = cl.getTime()+dt;
         if (dt == maxStepSize)
             time = maxTime; // Avoid round-off error
     }
     else {
-        mm_float2 stepSize;
-        cl.getIntegrationUtilities().getStepSize().download(&stepSize);
-        dt = stepSize.y;
-        time = cl.getTime()+dt;
         if (dt == maxStepSizeFloat)
             time = maxTime; // Avoid round-off error
     }
@@ -6300,20 +6277,13 @@ double OpenCLIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, 
 
     // Update the time and step count.
 
-    double dt, time;
+    double dt = cl.getIntegrationUtilities().getLastStepSize();
+    double time = cl.getTime()+dt;
     if (useDouble) {
-        mm_double2 stepSize;
-        cl.getIntegrationUtilities().getStepSize().download(&stepSize);
-        dt = stepSize.y;
-        time = cl.getTime()+dt;
         if (dt == maxStepSize)
             time = maxTime; // Avoid round-off error
     }
     else {
-        mm_float2 stepSize;
-        cl.getIntegrationUtilities().getStepSize().download(&stepSize);
-        dt = stepSize.y;
-        time = cl.getTime()+dt;
         if (dt == maxStepSizeFloat)
             time = maxTime; // Avoid round-off error
     }
@@ -6414,7 +6384,6 @@ void OpenCLIntegrateCustomStepKernel::initialize(const System& system, const Cus
     summedValue = new OpenCLArray(cl, 1, elementSize, "summedValue");
     perDofValues = new OpenCLParameterSet(cl, integrator.getNumPerDofVariables(), 3*system.getNumParticles(), "perDofVariables", false, cl.getUseDoublePrecision() || cl.getUseMixedPrecision());
     cl.addReorderListener(new ReorderListener(cl, *perDofValues, localPerDofValuesFloat, localPerDofValuesDouble, deviceValuesAreCurrent));
-    prevStepSize = -1.0;
     SimTKOpenMMUtilities::setRandomNumberSeed(integrator.getRandomNumberSeed());
 }
 
@@ -6825,9 +6794,7 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
     }
     localValuesAreCurrent = false;
     double stepSize = integrator.getStepSize();
-    if (stepSize != prevStepSize) {
-        recordGlobalValue(stepSize, GlobalTarget(DT, dtVariableIndex));
-    }
+    recordGlobalValue(stepSize, GlobalTarget(DT, dtVariableIndex));
     for (int i = 0; i < (int) parameterNames.size(); i++) {
         double value = context.getParameter(parameterNames[i]);
         if (value != globalValuesDouble[parameterVariableIndex[i]]) {
@@ -7032,17 +6999,10 @@ double OpenCLIntegrateCustomStepKernel::computeKineticEnergy(ContextImpl& contex
 void OpenCLIntegrateCustomStepKernel::recordGlobalValue(double value, GlobalTarget target) {
     switch (target.type) {
         case DT:
+            if (value != globalValuesDouble[dtVariableIndex])
+                deviceGlobalsAreCurrent = false;
             globalValuesDouble[dtVariableIndex] = value;
-            deviceGlobalsAreCurrent = false;
-            if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision()) {
-                double size[] = {0, value};
-                cl.getIntegrationUtilities().getStepSize().upload(size);
-            }
-            else {
-                float size[] = {0, (float) value};
-                cl.getIntegrationUtilities().getStepSize().upload(size);
-            }
-            prevStepSize = value;
+            cl.getIntegrationUtilities().setNextStepSize(value);
             break;
         case VARIABLE:
         case PARAMETER:

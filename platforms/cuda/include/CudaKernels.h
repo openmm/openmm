@@ -1123,7 +1123,6 @@ public:
     double computeKineticEnergy(ContextImpl& context, const VerletIntegrator& integrator);
 private:
     CudaContext& cu;
-    double prevStepSize;
     CUfunction kernel1, kernel2;
 };
 
@@ -1354,7 +1353,7 @@ private:
     void recordChangedParameters(ContextImpl& context);
     bool evaluateCondition(int step);
     CudaContext& cu;
-    double prevStepSize, energy;
+    double energy;
     float energyFloat;
     int numGlobalVariables;
     bool hasInitializedKernels, deviceValuesAreCurrent, deviceGlobalsAreCurrent, modifiesParameters, keNeedsForce, hasAnyConstraints;

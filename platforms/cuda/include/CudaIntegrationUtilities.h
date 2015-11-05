@@ -63,6 +63,14 @@ public:
         return *stepSize;
     }
     /**
+     * Set the size to use for the next step.
+     */
+    void setNextStepSize(double size);
+    /**
+     * Get the size that was used for the last step.
+     */
+    double getLastStepSize();
+    /**
      * Apply constraints to the atom positions.
      *
      * @param tol             the constraint tolerance
@@ -154,6 +162,7 @@ private:
     CudaArray* vsiteLocalCoordsParams;
     int randomPos;
     int lastSeed, numVsites;
+    double2 lastStepSize;
     struct ShakeCluster;
     struct ConstraintOrderer;
 };

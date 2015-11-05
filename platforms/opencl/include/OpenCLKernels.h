@@ -1103,7 +1103,6 @@ public:
     double computeKineticEnergy(ContextImpl& context, const VerletIntegrator& integrator);
 private:
     OpenCLContext& cl;
-    double prevStepSize;
     bool hasInitializedKernels;
     cl::Kernel kernel1, kernel2;
 };
@@ -1342,7 +1341,7 @@ private:
     void recordChangedParameters(ContextImpl& context);
     bool evaluateCondition(int step);
     OpenCLContext& cl;
-    double prevStepSize, energy;
+    double energy;
     float energyFloat;
     int numGlobalVariables;
     bool hasInitializedKernels, deviceValuesAreCurrent, deviceGlobalsAreCurrent, modifiesParameters, keNeedsForce, hasAnyConstraints;
