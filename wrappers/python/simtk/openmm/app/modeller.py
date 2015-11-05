@@ -655,7 +655,7 @@ class Modeller(object):
         -------
         list
              a list of what variant was actually selected for each residue,
-             in the same format as the variants param
+             in the same format as the variants parameter
         """
         # Check the list of variants.
 

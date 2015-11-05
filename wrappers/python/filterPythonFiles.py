@@ -71,7 +71,7 @@ while True:
         for name, type, descr in docstring['Returns']:
             if type == '':
                 type = name
-            print('{prefix}## @return ({type}) {descr}'.format(prefix=prefix, type=type, name=name, descr=''.join(descr)))
+            print('{prefix}## @return ({type}) {descr}'.format(prefix=prefix, type=type, name=name, descr=' '.join(descr)))
 
         print(declaration, end='')
         if len(docstringlines) == 0:

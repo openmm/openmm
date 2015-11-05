@@ -423,7 +423,7 @@ class CharmmPsfFile(object):
             If one pointer is set, pointers is simply the integer that is
             value of that pointer. Otherwise it is a tuple with every pointer
             value defined in the first line
-        data : list
+        list
             A list of all data in the parsed section converted to `dtype'
         """
         conv = CharmmPsfFile._convert
