@@ -613,10 +613,6 @@ class CharmmParameterSet(object):
         Example
         -------
         >>> params = CharmmParameterSet('charmm.prm').condense()
-
-        Returns
-        -------
-        self
         """
         # First scan through all of the bond types
         self._condense_types(self.bond_types)

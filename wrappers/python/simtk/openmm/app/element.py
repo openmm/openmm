@@ -120,7 +120,7 @@ class Element(object):
 
         Returns
         -------
-        element : Element
+        Element
             The element whose atomic mass is closest to the input mass
         """
         # Assume masses are in daltons if they are not units

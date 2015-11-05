@@ -580,6 +580,7 @@ class GromacsTopFile(object):
 
         Returns
         -------
+        System
              the newly created System
         """
         # Create the System.

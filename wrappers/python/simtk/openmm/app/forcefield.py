@@ -678,8 +678,9 @@ def _matchResidue(res, template, bondedToAtom):
 
     Returns
     -------
-    a list specifying which atom of the template each atom of the residue corresponds to,
-    or None if it does not match the template
+    list
+        a list specifying which atom of the template each atom of the residue
+        corresponds to, or None if it does not match the template
     """
     atoms = list(res.atoms())
     if len(atoms) != len(template.atoms):

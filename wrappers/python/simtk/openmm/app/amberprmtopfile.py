@@ -195,6 +195,7 @@ class AmberPrmtopFile(object):
 
         Returns
         -------
+        System
             the newly created System
         """
         if self._prmtop.chamber:

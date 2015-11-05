@@ -417,9 +417,9 @@ class CharmmPsfFile(object):
 
         Returns
         --------
-        title : str
+        str
             The label of the PSF section we are parsing
-        pointers : int/tuple of ints
+        int/tuple of ints
             If one pointer is set, pointers is simply the integer that is
             value of that pointer. Otherwise it is a tuple with every pointer
             value defined in the first line

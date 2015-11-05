@@ -97,6 +97,7 @@ class Topology(object):
 
         Returns
         -------
+        Chain
              the newly created Chain
         """
         if id is None:
@@ -120,7 +121,8 @@ class Topology(object):
 
         Returns
         -------
-             the newly created Resid
+        Residue
+             the newly created Residue
         """
         if id is None:
             id = str(self._numResidues+1)
@@ -146,6 +148,7 @@ class Topology(object):
 
         Returns
         -------
+        Atom
              the newly created Atom
         """
         if id is None:
