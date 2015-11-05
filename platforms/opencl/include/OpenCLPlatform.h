@@ -106,7 +106,7 @@ public:
     ContextImpl* context;
     std::vector<OpenCLContext*> contexts;
     std::vector<double> contextEnergy;
-    bool removeCM, useCpuPme;
+    bool hasInitializedContexts, removeCM, useCpuPme;
     int cmMotionFrequency;
     int stepCount, computeForceCount;
     double time;

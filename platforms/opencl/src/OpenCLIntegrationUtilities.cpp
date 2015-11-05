@@ -106,21 +106,21 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
         hasInitializedPosConstraintKernels(false), hasInitializedVelConstraintKernels(false), hasOverlappingVsites(false) {
     // Create workspace arrays.
 
+    lastStepSize = mm_double2(0.0, 0.0);
     if (context.getUseDoublePrecision() || context.getUseMixedPrecision()) {
         posDelta = OpenCLArray::create<mm_double4>(context, context.getPaddedNumAtoms(), "posDelta");
         vector<mm_double4> deltas(posDelta->getSize(), mm_double4(0.0, 0.0, 0.0, 0.0));
         posDelta->upload(deltas);
         stepSize = OpenCLArray::create<mm_double2>(context, 1, "stepSize");
-        vector<mm_double2> step(1, mm_double2(0.0, 0.0));
-        stepSize->upload(step);
+        stepSize->upload(&lastStepSize);
     }
     else {
         posDelta = OpenCLArray::create<mm_float4>(context, context.getPaddedNumAtoms(), "posDelta");
         vector<mm_float4> deltas(posDelta->getSize(), mm_float4(0.0f, 0.0f, 0.0f, 0.0f));
         posDelta->upload(deltas);
         stepSize = OpenCLArray::create<mm_float2>(context, 1, "stepSize");
-        vector<mm_float2> step(1, mm_float2(0.0f, 0.0f));
-        stepSize->upload(step);
+        mm_float2 lastStepSizeFloat = mm_float2(0.0f, 0.0f);
+        stepSize->upload(&lastStepSizeFloat);
     }
     
     // Create the time shift kernel for calculating kinetic energy.
@@ -722,6 +722,29 @@ OpenCLIntegrationUtilities::~OpenCLIntegrationUtilities() {
         delete vsiteLocalCoordsAtoms;
     if (vsiteLocalCoordsParams != NULL)
         delete vsiteLocalCoordsParams;
+}
+
+void OpenCLIntegrationUtilities::setNextStepSize(double size) {
+    if (size != lastStepSize.x || size != lastStepSize.y) {
+        lastStepSize = mm_double2(size, size);
+        if (context.getUseDoublePrecision() || context.getUseMixedPrecision())
+            stepSize->upload(&lastStepSize);
+        else {
+            mm_float2 lastStepSizeFloat = mm_float2((float) size, (float) size);
+            stepSize->upload(&lastStepSizeFloat);
+        }
+    }
+}
+
+double OpenCLIntegrationUtilities::getLastStepSize() {
+    if (context.getUseDoublePrecision() || context.getUseMixedPrecision())
+        stepSize->download(&lastStepSize);
+    else {
+        mm_float2 lastStepSizeFloat;
+        stepSize->download(&lastStepSizeFloat);
+        lastStepSize = mm_double2(lastStepSizeFloat.x, lastStepSizeFloat.y);
+    }
+    return lastStepSize.y;
 }
 
 void OpenCLIntegrationUtilities::applyConstraints(double tol) {

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013 Stanford University and the Authors.           *
+ * Portions copyright (c) 2013-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -46,4 +46,20 @@ Integrator::~Integrator() {
         cleanup();
         context->integratorDeleted();
     }
+}
+
+double Integrator::getStepSize() const {
+    return stepSize;
+}
+
+void Integrator::setStepSize(double size) {
+    stepSize = size;
+}
+
+double Integrator::getConstraintTolerance() const {
+    return constraintTol;
+}
+
+void Integrator::setConstraintTolerance(double tol) {
+    constraintTol = tol;
 }

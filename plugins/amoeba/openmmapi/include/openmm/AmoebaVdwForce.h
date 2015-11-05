@@ -40,11 +40,11 @@ namespace OpenMM {
 
 /**
  * This class implements a buffered 14-7 potential used to model van der Waals forces.
- * 
+ *
  * To use it, create an AmoebaVdwForce object then call addParticle() once for each particle.  After
  * a particle has been added, you can modify its force field parameters by calling setParticleParameters().
  * This will have no effect on Contexts that already exist unless you call updateParametersInContext().
- * 
+ *
  * A unique feature of this class is that the interaction site for a particle does not need to be
  * exactly at the particle's location.  Instead, it can be placed a fraction of the distance from that
  * particle to another one.  This is typically done for hydrogens to place the interaction site slightly
@@ -84,7 +84,7 @@ public:
 
     /**
      * Set the force field parameters for a vdw particle.
-     * 
+     *
      * @param particleIndex   the particle index
      * @param parentIndex     the index of the parent particle
      * @param sigma           vdw sigma
@@ -96,7 +96,7 @@ public:
 
     /**
      * Get the force field parameters for a vdw particle.
-     * 
+     *
      * @param particleIndex        the particle index
      * @param[out] parentIndex     the index of the parent particle
      * @param[out] sigma           vdw sigma
@@ -109,7 +109,7 @@ public:
 
     /**
      * Add the force field parameters for a vdw particle.
-     * 
+     *
      * @param parentIndex     the index of the parent particle
      * @param sigma           vdw sigma
      * @param epsilon         vdw epsilon
@@ -121,28 +121,28 @@ public:
 
     /**
      * Set sigma combining rule
-     * 
+     *
      * @param sigmaCombiningRule   sigma combining rule:  'ARITHMETIC', 'GEOMETRIC'. 'CUBIC-MEAN'
      */
     void setSigmaCombiningRule(const std::string& sigmaCombiningRule);
 
     /**
      * Get sigma combining rule
-     * 
+     *
      * @return sigmaCombiningRule   sigma combining rule:  'ARITHMETIC', 'GEOMETRIC'. 'CUBIC-MEAN'
      */
     const std::string& getSigmaCombiningRule(void) const;
 
     /**
      * Set epsilon combining rule
-     * 
+     *
      * @param epsilonCombiningRule   epsilon combining rule:   'ARITHMETIC', 'GEOMETRIC'. 'HARMONIC', 'HHG'
      */
     void setEpsilonCombiningRule(const std::string& epsilonCombiningRule);
 
     /**
      * Get epsilon combining rule
-     * 
+     *
      * @return epsilonCombiningRule   epsilon combining rule:  'ARITHMETIC', 'GEOMETRIC'. 'HARMONIC', 'HHG'
      */
     const std::string& getEpsilonCombiningRule(void) const;
@@ -169,7 +169,7 @@ public:
 
     /**
      * Set exclusions for specified particle
-     * 
+     *
      * @param particleIndex particle index
      * @param exclusions vector of exclusions
      */
@@ -177,9 +177,9 @@ public:
 
     /**
      * Get exclusions for specified particle
-     * 
-     * @param particleIndex    particle index
-     * @param[out] exclusions  vector of exclusions
+     *
+     * @param particleIndex   particle index
+     * @param[out] exclusions vector of exclusions
      */
     void getParticleExclusions(int particleIndex, std::vector<int>& exclusions) const;
 
@@ -207,7 +207,7 @@ public:
      * an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
      * Simply call setParticleParameters() to modify this object's parameters, then call updateParametersInContext()
      * to copy them over to the Context.
-     * 
+     *
      * The only information this method updates is the values of per-particle parameters.  All other aspects of the Force
      * (the nonbonded method, the cutoff distance, etc.) are unaffected and can only be changed by reinitializing the Context.
      */
@@ -253,7 +253,7 @@ public:
         epsilon              = 0.0;
     }
     VdwInfo(int parentIndex, double sigma, double epsilon, double reductionFactor) :
-        parentIndex(parentIndex), sigma(sigma), epsilon(epsilon), reductionFactor(reductionFactor)  {
+        parentIndex(parentIndex), reductionFactor(reductionFactor), sigma(sigma), epsilon(epsilon)  {
     }
 };
 

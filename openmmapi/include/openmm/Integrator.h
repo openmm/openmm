@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -61,30 +61,22 @@ public:
      *
      * @return the step size, measured in ps
      */
-    double getStepSize() const {
-        return stepSize;
-    }
+    virtual double getStepSize() const;
     /**
      * Set the size of each time step, in picoseconds.  If this integrator uses variable time steps,
      * the effect of calling this method is undefined, and it may simply be ignored.
      *
      * @param size    the step size, measured in ps
      */
-    void setStepSize(double size) {
-        stepSize = size;
-    }
+    virtual void setStepSize(double size);
     /**
      * Get the distance tolerance within which constraints are maintained, as a fraction of the constrained distance.
      */
-    double getConstraintTolerance() const {
-        return constraintTol;
-    }
+    virtual double getConstraintTolerance() const;
     /**
      * Set the distance tolerance within which constraints are maintained, as a fraction of the constrained distance.
      */
-    void setConstraintTolerance(double tol) {
-        constraintTol = tol;
-    }
+    virtual void setConstraintTolerance(double tol);
     /**
      * Advance a simulation through time by taking a series of time steps.
      * 
@@ -94,6 +86,7 @@ public:
 protected:
     friend class Context;
     friend class ContextImpl;
+    friend class CompoundIntegrator;
     ContextImpl* context;
     Context* owner;
     /**
