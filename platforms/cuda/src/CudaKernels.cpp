@@ -1458,16 +1458,24 @@ private:
 
 class CudaCalcNonbondedForceKernel::SyncStreamPostComputation : public CudaContext::ForcePostComputation {
 public:
-    SyncStreamPostComputation(CudaContext& cu, CUevent event, int forceGroup) : cu(cu), event(event), forceGroup(forceGroup) {
+    SyncStreamPostComputation(CudaContext& cu, CUevent event, CUfunction addEnergyKernel, CudaArray& pmeEnergyBuffer, int forceGroup) : cu(cu), event(event),
+            addEnergyKernel(addEnergyKernel), pmeEnergyBuffer(pmeEnergyBuffer), forceGroup(forceGroup) {
     }
     double computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
         if ((groups&(1<<forceGroup)) != 0)
             cuStreamWaitEvent(cu.getCurrentStream(), event, 0);
+        if (includeEnergy) {
+            int bufferSize = pmeEnergyBuffer.getSize();
+            void* args[] = {&pmeEnergyBuffer.getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(), &bufferSize};
+            cu.executeKernel(addEnergyKernel, args, bufferSize);
+        }
         return 0.0;
     }
 private:
     CudaContext& cu;
     CUevent event;
+    CUfunction addEnergyKernel;
+    CudaArray& pmeEnergyBuffer;
     int forceGroup;
 };
 
@@ -1493,6 +1501,8 @@ CudaCalcNonbondedForceKernel::~CudaCalcNonbondedForceKernel() {
         delete pmeAtomRange;
     if (pmeAtomGridIndex != NULL)
         delete pmeAtomGridIndex;
+    if (pmeEnergyBuffer != NULL)
+        delete pmeEnergyBuffer;
     if (sort != NULL)
         delete sort;
     if (fft != NULL)
@@ -1681,6 +1691,9 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                 pmeBsplineModuliZ = new CudaArray(cu, gridSizeZ, elementSize, "pmeBsplineModuliZ");
                 pmeAtomRange = CudaArray::create<int>(cu, gridSizeX*gridSizeY*gridSizeZ+1, "pmeAtomRange");
                 pmeAtomGridIndex = CudaArray::create<int2>(cu, numParticles, "pmeAtomGridIndex");
+                int energyElementSize = (cu.getUseDoublePrecision() || cu.getUseMixedPrecision() ? sizeof(double) : sizeof(float));
+                pmeEnergyBuffer = new CudaArray(cu, cu.getNumThreadBlocks()*CudaContext::ThreadBlockSize, energyElementSize, "pmeEnergyBuffer");
+                cu.clearBuffer(*pmeEnergyBuffer);
                 sort = new CudaSort(cu, new SortTrait(), cu.getNumAtoms());
                 int cufftVersion;
                 cufftGetVersion(&cufftVersion);
@@ -1714,7 +1727,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                     if (recipForceGroup < 0)
                         recipForceGroup = force.getForceGroup();
                     cu.addPreComputation(new SyncStreamPreComputation(cu, pmeStream, pmeSyncEvent, recipForceGroup));
-                    cu.addPostComputation(new SyncStreamPostComputation(cu, pmeSyncEvent, recipForceGroup));
+                    cu.addPostComputation(new SyncStreamPostComputation(cu, pmeSyncEvent, cu.getKernel(module, "addEnergy"), *pmeEnergyBuffer, recipForceGroup));
                 }
                 hasInitializedFFT = true;
 
@@ -1889,7 +1902,7 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
         }
 
         if (includeEnergy) {
-            void* computeEnergyArgs[] = {&reciprocalPmeGrid->getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(),
+            void* computeEnergyArgs[] = {&reciprocalPmeGrid->getDevicePointer(), usePmeStream ? &pmeEnergyBuffer->getDevicePointer() : &cu.getEnergyBuffer().getDevicePointer(),
                     &pmeBsplineModuliX->getDevicePointer(), &pmeBsplineModuliY->getDevicePointer(), &pmeBsplineModuliZ->getDevicePointer(),
                     cu.getPeriodicBoxSizePointer(), recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
             cu.executeKernel(pmeEvalEnergyKernel, computeEnergyArgs, cu.getNumAtoms());
