@@ -335,6 +335,9 @@ class ForceField(object):
                 self.xWeights = [float(attrib['wx1']), float(attrib['wx2']), float(attrib['wx3'])]
                 self.yWeights = [float(attrib['wy1']), float(attrib['wy2']), float(attrib['wy3'])]
                 self.localPos = [float(attrib['p1']), float(attrib['p2']), float(attrib['p3'])]
+            elif self.type == 'dummyTetrZinc':
+                self.atoms = [int(attrib['atom1'])]
+                self.weights = [float(attrib['weight1'])]
             else:
                 raise ValueError('Unknown virtual site type: %s' % self.type)
             if 'excludeWith' in attrib:

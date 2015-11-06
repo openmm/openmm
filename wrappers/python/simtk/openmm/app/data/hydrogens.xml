@@ -220,6 +220,7 @@
   <Variant name="HID"/>
   <Variant name="HIE"/>
   <Variant name="HIP"/>
+  <Variant name="HIN"/>
   <H name="H" parent="N"/>
   <H name="H2" parent="N" terminal="N"/>
   <H name="H3" parent="N" terminal="N"/>
