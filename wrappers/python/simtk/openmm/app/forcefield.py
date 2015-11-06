@@ -270,6 +270,17 @@ class ForceField(object):
             self.impropers = []
             self.atomBonds = []
             self.isAngleConstrained = []
+            self.constraints = {}
+
+        def addConstraint(self, system, atom1, atom2, distance):
+            """Add a constraint to the system, avoiding duplicate constraints."""
+            key = (min(atom1, atom2), max(atom1, atom2))
+            if key in self.constraints:
+                if self.constraints(key) != distance:
+                    raise ValueError('Two constraints were specified between atoms %d and %d with different distances' % (atom1, atom2))
+            else:
+                self.constraints[key] = distance
+                system.addConstraint(atom1, atom2, distance)
 
     class _TemplateData:
         """Inner class used to encapsulate data about a residue template definition."""
@@ -829,7 +840,7 @@ class HarmonicBondGenerator:
                 if (type1 in types1 and type2 in types2) or (type1 in types2 and type2 in types1):
                     bond.length = self.length[i]
                     if bond.isConstrained:
-                        sys.addConstraint(bond.atom1, bond.atom2, self.length[i])
+                        data.addConstraint(sys, bond.atom1, bond.atom2, self.length[i])
                     elif self.k[i] != 0:
                         force.addBond(bond.atom1, bond.atom2, self.length[i], self.k[i])
                     break
@@ -902,7 +913,7 @@ class HarmonicAngleGenerator:
                             l2 = data.bonds[bond2].length
                             if l1 is not None and l2 is not None:
                                 length = sqrt(l1*l1 + l2*l2 - 2*l1*l2*cos(self.angle[i]))
-                                sys.addConstraint(angle[0], angle[2], length)
+                                data.addConstraint(sys, angle[0], angle[2], length)
                     elif self.k[i] != 0:
                         force.addAngle(angle[0], angle[1], angle[2], self.angle[i], self.k[i])
                     break
@@ -1990,7 +2001,7 @@ class AmoebaBondGenerator:
                 if (type1 in types1 and type2 in types2) or (type1 in types2 and type2 in types1):
                     bond.length = self.length[i]
                     if bond.isConstrained:
-                        sys.addConstraint(bond.atom1, bond.atom2, self.length[i])
+                        data.addConstraint(sys, bond.atom1, bond.atom2, self.length[i])
                     elif self.k[i] != 0:
                         force.addBond(bond.atom1, bond.atom2, self.length[i], self.k[i])
                     break
@@ -2022,7 +2033,7 @@ def addAngleConstraint(angle, idealAngle, data, sys):
             l2 = data.bonds[bond2].length
             if l1 is not None and l2 is not None:
                 length = sqrt(l1*l1 + l2*l2 - 2*l1*l2*cos(idealAngle))
-                sys.addConstraint(angle[0], angle[2], length)
+                data.addConstraint(sys, angle[0], angle[2], length)
                 return
 
 #=============================================================================================
