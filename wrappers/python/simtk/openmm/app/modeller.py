@@ -35,7 +35,7 @@ __author__ = "Peter Eastman"
 __version__ = "1.0"
 
 from simtk.openmm.app import Topology, PDBFile, ForceField
-from simtk.openmm.app.forcefield import HAngles, _createResidueSignature, _matchResidue, DrudeGenerator
+from simtk.openmm.app.forcefield import HAngles, AllBonds, _createResidueSignature, _matchResidue, DrudeGenerator
 from simtk.openmm.app.topology import Residue
 from simtk.openmm.vec3 import Vec3
 from simtk.openmm import System, Context, NonbondedForce, CustomNonbondedForce, HarmonicBondForce, HarmonicAngleForce, VerletIntegrator, LocalEnergyMinimizer
@@ -931,6 +931,7 @@ class Modeller(object):
         newTopology.setPeriodicBoxVectors(self.topology.getPeriodicBoxVectors())
         newAtoms = {}
         newPositions = []*nanometer
+        missingPositions = set()
         for chain in self.topology.chains():
             newChain = newTopology.addChain(chain.id)
             for residue in chain.residues():
@@ -988,9 +989,10 @@ class Modeller(object):
                     for index, atom in enumerate(template.atoms):
                         if atom in matchingAtoms:
                             templateAtomPositions[index] = self.positions[matchingAtoms[atom].index].value_in_unit(nanometer)
+                    newExtraPoints = {}
                     for index, atom in enumerate(template.atoms):
                         if atom.element is None:
-                            newTopology.addAtom(atom.name, None, newResidue)
+                            newExtraPoints[atom] = newTopology.addAtom(atom.name, None, newResidue)
                             position = None
                             for site in template.virtualSites:
                                 if site.index == index:
@@ -1012,14 +1014,61 @@ class Modeller(object):
                                     if atom2.type in drudeTypeMap[atom.type]:
                                         position = deepcopy(pos)
                             if position is None:
-                                # We couldn't figure out the correct position.  As a wild guess, just put it at the center of the residue
-                                # and hope that energy minimization will fix it.
+                                # We couldn't figure out the correct position.  Put it at a random position near the center of the residue,
+                                # and we'll try to fix it later based on bonds.
 
                                 knownPositions = [x for x in templateAtomPositions if x is not None]
-                                position = unit.sum(knownPositions)/len(knownPositions)
+                                position = Vec3(random.gauss(0, 1), random.gauss(0, 1), random.gauss(0, 1))+(unit.sum(knownPositions)/len(knownPositions))
+                                missingPositions.add(len(newPositions))
                             newPositions.append(position*nanometer)
+
+                    # Add bonds involving the extra points.
+
+                    for atom1, atom2 in template.bonds:
+                        atom1 = template.atoms[atom1]
+                        atom2 = template.atoms[atom2]
+                        if atom1 in newExtraPoints or atom2 in newExtraPoints:
+                            if atom1 in newExtraPoints:
+                                a1 = newExtraPoints[atom1]
+                            else:
+                                a1 = newAtoms[matchingAtoms[atom1]]
+                            if atom2 in newExtraPoints:
+                                a2 = newExtraPoints[atom2]
+                            else:
+                                a2 = newAtoms[matchingAtoms[atom2]]
+                            newTopology.addBond(a1, a2)
+                            
         for bond in self.topology.bonds():
             if bond[0] in newAtoms and bond[1] in newAtoms:
                 newTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]])
+
+        if len(missingPositions) > 0:
+            # There were particles whose position we couldn't identify before, since they were neither virtual sites nor Drude particles.
+            # Try to figure them out based on bonds.  First, use the ForceField to create a list of every bond involving one of them.
+
+            system = forcefield.createSystem(newTopology, constraints=AllBonds)
+            bonds = []
+            for i in range(system.getNumConstraints()):
+                bond = system.getConstraintParameters(i)
+                if bond[0] in missingPositions or bond[1] in missingPositions:
+                    bonds.append(bond)
+
+            # Now run a few iterations of SHAKE to try to select reasonable positions.
+
+            for iteration in range(10):
+                for atom1, atom2, distance in bonds:
+                    if atom1 in missingPositions:
+                        if atom2 in missingPositions:
+                            weights = (0.5, 0.5)
+                        else:
+                            weights = (1.0, 0.0)
+                    else:
+                        weights = (0.0, 1.0)
+                    delta = newPositions[atom2]-newPositions[atom1]
+                    length = norm(delta)
+                    delta *= (distance-length)/length
+                    newPositions[atom1] -= weights[0]*delta
+                    newPositions[atom2] += weights[1]*delta
+                
         self.topology = newTopology
         self.positions = newPositions

@@ -3,6 +3,10 @@ from validateModeller import *
 from simtk.openmm.app import *
 from simtk.openmm import *
 from simtk.unit import *
+if sys.version_info >= (3, 0):
+    from io import StringIO
+else:
+    from cStringIO import StringIO
 
 class TestModeller(unittest.TestCase):
     """ Test the Modeller class. """
@@ -918,6 +922,72 @@ class TestModeller(unittest.TestCase):
             ep = [atom for atom in atoms if atom.element is None]
             self.assertEqual(1, len(ep))
 
+
+    def test_multiSiteIon(self):
+        """Test adding extra particles whose positions are determined based on bonds."""
+        xml = """
+<ForceField>
+ <AtomTypes>
+  <Type name="Zn" class="Zn" element="Zn" mass="53.380"/>
+  <Type name="DA" class="DA" mass="3.0"/>
+ </AtomTypes>
+ <Residues>
+  <Residue name="ZN">
+   <Atom name="ZN" type="Zn"/>
+   <Atom name="D1" type="DA"/>
+   <Atom name="D2" type="DA"/>
+   <Atom name="D3" type="DA"/>
+   <Atom name="D4" type="DA"/>
+   <Bond from="0" to="2"/>
+   <Bond from="0" to="1"/>
+   <Bond from="0" to="3"/>
+   <Bond from="0" to="4"/>
+   <Bond from="1" to="2"/>
+   <Bond from="1" to="3"/>
+   <Bond from="1" to="4"/>
+   <Bond from="2" to="4"/>
+   <Bond from="2" to="3"/>
+   <Bond from="3" to="4"/>
+  </Residue>
+ </Residues>
+ <HarmonicBondForce>
+  <Bond class1="DA" class2="Zn" length="0.09" k="535552.0"/>
+  <Bond class1="DA" class2="DA" length="0.147" k="535552.0"/>
+ </HarmonicBondForce>
+</ForceField>"""
+        ff = ForceField(StringIO(xml))
+
+        # Create two zinc atoms.
+
+        topology = Topology()
+        chain = topology.addChain()
+        residue = topology.addResidue('ZN', chain)
+        topology.addAtom('ZN', element.zinc, residue)
+        residue = topology.addResidue('ZN', chain)
+        topology.addAtom('ZN', element.zinc, residue)
+
+        # Add the extra particles.
+
+        modeller = Modeller(topology, [Vec3(0.5, 1.0, 1.5), Vec3(2.0, 2.0, 0.0)]*nanometers)
+        modeller.addExtraParticles(ff)
+        top = modeller.topology
+        pos = modeller.positions
+
+        # Check that the correct particles were added.
+
+        self.assertEqual(len(pos), 10)
+        for i, atom in enumerate(top.atoms()):
+            self.assertEqual(element.zinc if i in (0,5) else None, atom.element)
+
+        # Check that the positions in the first residue are reasonable.
+
+        center = Vec3(0.5, 1.0, 1.5)*nanometers
+        self.assertEqual(center, modeller.positions[0])
+        for i in range(1, 5):
+            for j in range(i):
+                dist = norm(pos[i]-pos[j])
+                expectedDist = 0.09 if j == 0 else 0.147
+                self.assertTrue(dist > (expectedDist-0.01)*nanometers and dist < (expectedDist+0.01)*nanometers)
 
     def assertVecAlmostEqual(self, p1, p2, tol=1e-7):
         scale = max(1.0, norm(p1),)
