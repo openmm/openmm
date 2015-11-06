@@ -1029,11 +1029,11 @@ class Modeller(object):
                             if atom1 in newExtraPoints:
                                 a1 = newExtraPoints[atom1]
                             else:
-                                a1 = matchingAtoms[atom1]
+                                a1 = newAtoms[matchingAtoms[atom1]]
                             if atom2 in newExtraPoints:
                                 a2 = newExtraPoints[atom2]
                             else:
-                                a2 = matchingAtoms[atom2]
+                                a2 = newAtoms[matchingAtoms[atom2]]
                             newTopology.addBond(a1, a2)
                             
         for bond in self.topology.bonds():

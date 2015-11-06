@@ -953,27 +953,29 @@ class TestModeller(unittest.TestCase):
 </ForceField>"""
         ff = ForceField(StringIO(xml))
 
-        # Create a zinc atom.
+        # Create two zinc atoms.
 
         topology = Topology()
         chain = topology.addChain()
         residue = topology.addResidue('ZN', chain)
         topology.addAtom('ZN', element.zinc, residue)
+        residue = topology.addResidue('ZN', chain)
+        topology.addAtom('ZN', element.zinc, residue)
 
         # Add the extra particles.
 
-        modeller = Modeller(topology, [Vec3(0.5, 1.0, 1.5)]*nanometers)
+        modeller = Modeller(topology, [Vec3(0.5, 1.0, 1.5), Vec3(2.0, 2.0, 0.0)]*nanometers)
         modeller.addExtraParticles(ff)
         top = modeller.topology
         pos = modeller.positions
 
         # Check that the correct particles were added.
 
-        self.assertEqual(len(pos), 5)
+        self.assertEqual(len(pos), 10)
         for i, atom in enumerate(top.atoms()):
-            self.assertEqual(element.zinc if i == 0 else None, atom.element)
+            self.assertEqual(element.zinc if i in (0,5) else None, atom.element)
 
-        # Check that their positions are reasonable.
+        # Check that the positions in the first residue are reasonable.
 
         center = Vec3(0.5, 1.0, 1.5)*nanometers
         self.assertEqual(center, modeller.positions[0])
