@@ -923,38 +923,101 @@ class TestModeller(unittest.TestCase):
             self.assertEqual(1, len(ep))
 
 
+    def test_addVirtualSites(self):
+        """Test adding extra particles defined by virtual sites."""
+        xml = """
+            <ForceField>
+             <AtomTypes>
+              <Type name="C" class="C" element="C" mass="10"/>
+              <Type name="N" class="N" element="N" mass="10"/>
+              <Type name="O" class="O" element="O" mass="10"/>
+              <Type name="V" class="V" mass="0.0"/>
+             </AtomTypes>
+             <Residues>
+              <Residue name="Test">
+               <Atom name="C" type="C"/>
+               <Atom name="N" type="N"/>
+               <Atom name="O" type="O"/>
+               <Atom name="V1" type="V"/>
+               <Atom name="V2" type="V"/>
+               <Atom name="V3" type="V"/>
+               <Atom name="V4" type="V"/>
+               <VirtualSite type="average2" index="3" atom1="0" atom2="1" weight1="0.7" weight2="0.3"/>
+               <VirtualSite type="average3" index="4" atom1="0" atom2="1" atom3="2" weight1="0.2" weight2="0.3" weight3="0.5"/>
+               <VirtualSite type="outOfPlane" index="5" atom1="0" atom2="1" atom3="2" weight12="0.1" weight13="-0.2" weightCross="0.8"/>
+               <VirtualSite type="localCoords" index="6" atom1="0" atom2="1" atom3="2" wo1="0.1" wo2="0.5" wo3="0.4" wx1="1" wx2="-0.6" wx3="-0.4" wy1="0.1" wy2="0.9" wy3="-1" p1="-0.5" p2="0.4" p3="1.1"/>
+              </Residue>
+             </Residues>
+            </ForceField>"""
+        ff = ForceField(StringIO(xml))
+
+        # Create the three real atoms.
+
+        topology = Topology()
+        chain = topology.addChain()
+        residue = topology.addResidue('Test', chain)
+        topology.addAtom('C', element.carbon, residue)
+        topology.addAtom('N', element.nitrogen, residue)
+        topology.addAtom('V', element.oxygen, residue)
+        
+
+        # Add the virtual sites.
+
+        modeller = Modeller(topology, [Vec3(0.1, 0.2, 0.3), Vec3(1.0, 0.9, 0.8), Vec3(1.5, 1.1, 0.7)]*nanometers)
+        modeller.addExtraParticles(ff)
+        top = modeller.topology
+        pos = modeller.positions
+
+        # Check that the correct particles were added.
+
+        self.assertEqual(len(pos), 7)
+        for atom, elem in zip(top.atoms(), [element.carbon, element.nitrogen, element.oxygen, None, None, None, None]):
+            self.assertEqual(elem, atom.element)
+
+        # Check that the positions were calculated correctly.
+
+        system = ff.createSystem(top)
+        integ = VerletIntegrator(1.0)
+        context = Context(system, integ)
+        context.setPositions(pos)
+        context.computeVirtualSites()
+        state = context.getState(getPositions=True)
+        for p1, p2 in zip (pos, state.getPositions()):
+            self.assertVecAlmostEqual(p1.value_in_unit(nanometers), p2.value_in_unit(nanometers), 1e-6)
+
+
     def test_multiSiteIon(self):
         """Test adding extra particles whose positions are determined based on bonds."""
         xml = """
-<ForceField>
- <AtomTypes>
-  <Type name="Zn" class="Zn" element="Zn" mass="53.380"/>
-  <Type name="DA" class="DA" mass="3.0"/>
- </AtomTypes>
- <Residues>
-  <Residue name="ZN">
-   <Atom name="ZN" type="Zn"/>
-   <Atom name="D1" type="DA"/>
-   <Atom name="D2" type="DA"/>
-   <Atom name="D3" type="DA"/>
-   <Atom name="D4" type="DA"/>
-   <Bond from="0" to="2"/>
-   <Bond from="0" to="1"/>
-   <Bond from="0" to="3"/>
-   <Bond from="0" to="4"/>
-   <Bond from="1" to="2"/>
-   <Bond from="1" to="3"/>
-   <Bond from="1" to="4"/>
-   <Bond from="2" to="4"/>
-   <Bond from="2" to="3"/>
-   <Bond from="3" to="4"/>
-  </Residue>
- </Residues>
- <HarmonicBondForce>
-  <Bond class1="DA" class2="Zn" length="0.09" k="535552.0"/>
-  <Bond class1="DA" class2="DA" length="0.147" k="535552.0"/>
- </HarmonicBondForce>
-</ForceField>"""
+            <ForceField>
+             <AtomTypes>
+              <Type name="Zn" class="Zn" element="Zn" mass="53.380"/>
+              <Type name="DA" class="DA" mass="3.0"/>
+             </AtomTypes>
+             <Residues>
+              <Residue name="ZN">
+               <Atom name="ZN" type="Zn"/>
+               <Atom name="D1" type="DA"/>
+               <Atom name="D2" type="DA"/>
+               <Atom name="D3" type="DA"/>
+               <Atom name="D4" type="DA"/>
+               <Bond from="0" to="2"/>
+               <Bond from="0" to="1"/>
+               <Bond from="0" to="3"/>
+               <Bond from="0" to="4"/>
+               <Bond from="1" to="2"/>
+               <Bond from="1" to="3"/>
+               <Bond from="1" to="4"/>
+               <Bond from="2" to="4"/>
+               <Bond from="2" to="3"/>
+               <Bond from="3" to="4"/>
+              </Residue>
+             </Residues>
+             <HarmonicBondForce>
+              <Bond class1="DA" class2="Zn" length="0.09" k="535552.0"/>
+              <Bond class1="DA" class2="DA" length="0.147" k="535552.0"/>
+             </HarmonicBondForce>
+            </ForceField>"""
         ff = ForceField(StringIO(xml))
 
         # Create two zinc atoms.
