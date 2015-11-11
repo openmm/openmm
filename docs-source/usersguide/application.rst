@@ -1889,12 +1889,12 @@ The residue template definitions look like this:
       <Atom name="HH33" type="710"/>
       <Atom name="C" type="712"/>
       <Atom name="O" type="713"/>
-      <Bond from="0" to="1"/>
-      <Bond from="1" to="2"/>
-      <Bond from="1" to="3"/>
-      <Bond from="1" to="4"/>
-      <Bond from="4" to="5"/>
-      <ExternalBond from="4"/>
+      <Bond atomName1="HH31" atomName2="CH3"/>
+      <Bond atomName1="CH3" atomName2="HH32"/>
+      <Bond atomName1="CH3" atomName2="HH33"/>
+      <Bond atomName1="CH3" atomName2="C"/>
+      <Bond atomName1="C" atomName2="O"/>
+      <ExternalBond atomName="C"/>
      </Residue>
      <Residue name="ALA">
       ...
@@ -1908,10 +1908,12 @@ contains the following tags:
 * An :code:`<Atom>` tag for each atom in the residue.  This specifies the
   name of the atom and its atom type.
 * A :code:`<Bond>` tag for each pair of atoms that are bonded to each
-  other.  The :code:`to` and :code:`from` attributes are the indices of
-  the two bonded atoms (starting from 0) in the order they were listed.  For
-  example, :code:`<Bond from="1" to="3"/>` describes a bond between atom CH3
-  and atom HH33.
+  other.  The :code:`atomName1` and :code:`atomName2` attributes are the names
+  of the two bonded atoms.  (Some older force fields use the alternate tags
+  :code:`to` and :code:`from` to specify the atoms by index instead of name.
+  This is still supported for backward compatibility, but specifying atoms by
+  name is recommended, since it makes the residue definition much easier to
+  understand.)
 * An :code:`<ExternalBond>` tag for each atom that will be bonded to an
   atom of a different residue.
 
@@ -1926,20 +1928,20 @@ as in the following example:
      <Atom name="H1" type="tip4pew-H"/>
      <Atom name="H2" type="tip4pew-H"/>
      <Atom name="M" type="tip4pew-M"/>
-     <VirtualSite type="average3" index="3" atom1="0" atom2="1" atom3="2"
+     <VirtualSite type="average3" siteName="M" atomName1="O" atomName2="H1" atomName3="H2"
          weight1="0.786646558" weight2="0.106676721" weight3="0.106676721"/>
-     <Bond from="0" to="1"/>
-     <Bond from="0" to="2"/>
+     <Bond atomName1="O" atomName2="H1"/>
+     <Bond atomName1="O" atomName2="H2"/>
     </Residue>
 
 Each :code:`<VirtualSite>` tag indicates an atom in the residue that should
 be represented with a virtual site.  The :code:`type` attribute may equal
 :code:`"average2"`\ , :code:`"average3"`\ , :code:`"outOfPlane"`\ , or
 :code:`"localCoords"`\ , which correspond to the TwoParticleAverageSite, ThreeParticleAverageSite,
-OutOfPlaneSite, and LocalCoordinatesSite classes respectively.  The :code:`index` attribute gives the
-index (starting from 0) of the atom to represent with a virtual site.  The atoms
-it is calculated based on are specified by :code:`atom1`\ , :code:`atom2`\ ,
-and (for virtual site classes that involve three atoms) :code:`atom3`\ .  The
+OutOfPlaneSite, and LocalCoordinatesSite classes respectively.  The :code:`siteName`
+attribute gives the name of the atom to represent with a virtual site.  The atoms
+it is calculated based on are specified by :code:`atomName1`\ , :code:`atomName2`\ ,
+and (for virtual site classes that involve three atoms) :code:`atomName3`\ .  The
 remaining attributes are specific to the virtual site class, and specify the
 parameters for calculating the site position.  For a TwoParticleAverageSite,
 they are :code:`weight1` and :code:`weight2`\ .  For a

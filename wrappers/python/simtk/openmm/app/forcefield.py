@@ -149,18 +149,29 @@ class ForceField(object):
             for residue in root.find('Residues').findall('Residue'):
                 resName = residue.attrib['name']
                 template = ForceField._TemplateData(resName)
+                atomIndices = {}
                 for atom in residue.findall('Atom'):
                     params = {}
                     for key in atom.attrib:
                         if key not in ('name', 'type'):
                             params[key] = _convertParameterToNumber(atom.attrib[key])
-                    template.atoms.append(ForceField._TemplateAtomData(atom.attrib['name'], atom.attrib['type'], self._atomTypes[atom.attrib['type']][2], params))
+                    atomName = atom.attrib['name']
+                    if atomName in atomIndices:
+                        raise ValueError('Residue '+resName+' contains multiple atoms named '+atomName)
+                    atomIndices[atomName] = len(template.atoms)
+                    template.atoms.append(ForceField._TemplateAtomData(atomName, atom.attrib['type'], self._atomTypes[atom.attrib['type']][2], params))
                 for site in residue.findall('VirtualSite'):
-                    template.virtualSites.append(ForceField._VirtualSiteData(site))
+                    template.virtualSites.append(ForceField._VirtualSiteData(site, atomIndices))
                 for bond in residue.findall('Bond'):
-                    template.addBond(int(bond.attrib['from']), int(bond.attrib['to']))
+                    if 'atomName1' in bond.attrib:
+                        template.addBond(atomIndices[bond.attrib['atomName1']], atomIndices[bond.attrib['atomName2']])
+                    else:
+                        template.addBond(int(bond.attrib['from']), int(bond.attrib['to']))
                 for bond in residue.findall('ExternalBond'):
-                    b = int(bond.attrib['from'])
+                    if 'atomName' in bond.attrib:
+                        b = atomIndices[bond.attrib['atomName']]
+                    else:
+                        b = int(bond.attrib['from'])
                     template.externalBonds.append(b)
                     template.atoms[b].externalBonds += 1
                 self.registerResidueTemplate(template)
@@ -316,27 +327,32 @@ class ForceField(object):
 
     class _VirtualSiteData:
         """Inner class used to encapsulate data about a virtual site."""
-        def __init__(self, node):
+        def __init__(self, node, atomIndices):
             attrib = node.attrib
-            self.index = int(attrib['index'])
             self.type = attrib['type']
             if self.type == 'average2':
-                self.atoms = [int(attrib['atom1']), int(attrib['atom2'])]
+                numAtoms = 2
                 self.weights = [float(attrib['weight1']), float(attrib['weight2'])]
             elif self.type == 'average3':
-                self.atoms = [int(attrib['atom1']), int(attrib['atom2']), int(attrib['atom3'])]
+                numAtoms = 3
                 self.weights = [float(attrib['weight1']), float(attrib['weight2']), float(attrib['weight3'])]
             elif self.type == 'outOfPlane':
-                self.atoms = [int(attrib['atom1']), int(attrib['atom2']), int(attrib['atom3'])]
+                numAtoms = 3
                 self.weights = [float(attrib['weight12']), float(attrib['weight13']), float(attrib['weightCross'])]
             elif self.type == 'localCoords':
-                self.atoms = [int(attrib['atom1']), int(attrib['atom2']), int(attrib['atom3'])]
+                numAtoms = 3
                 self.originWeights = [float(attrib['wo1']), float(attrib['wo2']), float(attrib['wo3'])]
                 self.xWeights = [float(attrib['wx1']), float(attrib['wx2']), float(attrib['wx3'])]
                 self.yWeights = [float(attrib['wy1']), float(attrib['wy2']), float(attrib['wy3'])]
                 self.localPos = [float(attrib['p1']), float(attrib['p2']), float(attrib['p3'])]
             else:
                 raise ValueError('Unknown virtual site type: %s' % self.type)
+            if 'siteName' in attrib:
+                self.index = atomIndices[attrib['siteName']]
+                self.atoms = [atomIndices[attrib['atomName%d'%(i+1)]] for i in range(numAtoms)]
+            else:
+                self.index = int(attrib['index'])
+                self.atoms = [int(attrib['atom%d'%(i+1)]) for i in range(numAtoms)]
             if 'excludeWith' in attrib:
                 self.excludeWith = int(attrib['excludeWith'])
             else:

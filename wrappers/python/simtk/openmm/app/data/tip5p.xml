@@ -11,10 +11,10 @@
    <Atom name="H2" type="tip5p-H"/>
    <Atom name="M1" type="tip5p-M"/>
    <Atom name="M2" type="tip5p-M"/>
-   <VirtualSite type="outOfPlane" index="3" atom1="0" atom2="1" atom3="2" weight12="-0.34490826" weight13="-0.34490826" weightCross="-6.4437903"/>
-   <VirtualSite type="outOfPlane" index="4" atom1="0" atom2="1" atom3="2" weight12="-0.34490826" weight13="-0.34490826" weightCross="6.4437903"/>
-   <Bond from="0" to="1"/>
-   <Bond from="0" to="2"/>
+   <VirtualSite type="outOfPlane" siteName="M1" atomName1="O" atomName2="H1" atomName3="H2" weight12="-0.34490826" weight13="-0.34490826" weightCross="-6.4437903"/>
+   <VirtualSite type="outOfPlane" siteName="M2" atomName1="O" atomName2="H1" atomName3="H2" weight12="-0.34490826" weight13="-0.34490826" weightCross="6.4437903"/>
+   <Bond atomName1="O" atomName2="H1"/>
+   <Bond atomName1="O" atomName2="H2"/>
   </Residue>
  </Residues>
  <HarmonicBondForce>
