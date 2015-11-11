@@ -148,7 +148,7 @@ public:
      * Set the Ewald alpha parameter.  If this is 0 (the default), a value is chosen automatically
      * based on the Ewald error tolerance.
      *
-     * @param Ewald alpha parameter
+     * @param aewald alpha parameter
      */
     void setAEwald(double aewald);
 
@@ -171,7 +171,7 @@ public:
      * Set the PME grid dimensions.  If Ewald alpha is 0 (the default), this is ignored and grid dimensions
      * are chosen automatically based on the Ewald error tolerance.
      *
-     * @param the PME grid dimensions
+     * @param gridDimension   the PME grid dimensions
      */
     void setPmeGridDimensions(const std::vector<int>& gridDimension);
 
@@ -180,12 +180,12 @@ public:
      * on the allowed grid sizes, the values that are actually used may be slightly different from those
      * specified with setPmeGridDimensions(), or the standard values calculated based on the Ewald error tolerance.
      * See the manual for details.
-     * 
-     * @param context the Context for which to get the parameters
-     * @param alpha   the separation parameter
-     * @param nx      the number of grid points along the X axis
-     * @param ny      the number of grid points along the Y axis
-     * @param nz      the number of grid points along the Z axis
+     *
+     * @param context      the Context for which to get the parameters
+     * @param[out] alpha   the separation parameter
+     * @param[out] nx      the number of grid points along the X axis
+     * @param[out] ny      the number of grid points along the Y axis
+     * @param[out] nz      the number of grid points along the Z axis
      */
     void getPMEParametersInContext(const Context& context, double& alpha, int& nx, int& ny, int& nz) const;
 
@@ -211,17 +211,17 @@ public:
     /**
      * Get the multipole parameters for a particle.
      *
-     * @param index                the index of the atom for which to get parameters
-     * @param charge               the particle's charge
-     * @param molecularDipole      the particle's molecular dipole (vector of size 3)
-     * @param molecularQuadrupole  the particle's molecular quadrupole (vector of size 9)
-     * @param axisType             the particle's axis type
-     * @param multipoleAtomZ       index of first atom used in constructing lab<->molecular frames
-     * @param multipoleAtomX       index of second atom used in constructing lab<->molecular frames
-     * @param multipoleAtomY       index of second atom used in constructing lab<->molecular frames
-     * @param thole                Thole parameter
-     * @param dampingFactor        dampingFactor parameter
-     * @param polarity             polarity parameter
+     * @param index                     the index of the atom for which to get parameters
+     * @param[out] charge               the particle's charge
+     * @param[out] molecularDipole      the particle's molecular dipole (vector of size 3)
+     * @param[out] molecularQuadrupole  the particle's molecular quadrupole (vector of size 9)
+     * @param[out] axisType             the particle's axis type
+     * @param[out] multipoleAtomZ       index of first atom used in constructing lab<->molecular frames
+     * @param[out] multipoleAtomX       index of second atom used in constructing lab<->molecular frames
+     * @param[out] multipoleAtomY       index of second atom used in constructing lab<->molecular frames
+     * @param[out] thole                Thole parameter
+     * @param[out] dampingFactor        dampingFactor parameter
+     * @param[out] polarity             polarity parameter
      */
     void getMultipoleParameters(int index, double& charge, std::vector<double>& molecularDipole, std::vector<double>& molecularQuadrupole,
                                 int& axisType, int& multipoleAtomZ, int& multipoleAtomX, int& multipoleAtomY, double& thole, double& dampingFactor, double& polarity) const;
@@ -237,6 +237,8 @@ public:
      * @param multipoleAtomZ       index of first atom used in constructing lab<->molecular frames
      * @param multipoleAtomX       index of second atom used in constructing lab<->molecular frames
      * @param multipoleAtomY       index of second atom used in constructing lab<->molecular frames
+     * @param thole                thole parameter
+     * @param dampingFactor        damping factor parameter
      * @param polarity             polarity parameter
      */
     void setMultipoleParameters(int index, double charge, const std::vector<double>& molecularDipole, const std::vector<double>& molecularQuadrupole,
@@ -256,7 +258,7 @@ public:
      *
      * @param index                the index of the atom for which to set parameters
      * @param typeId               CovalentTypes type
-     * @param covalentAtoms        output vector of covalent atoms associated w/ the specfied CovalentType
+     * @param[out] covalentAtoms   output vector of covalent atoms associated w/ the specfied CovalentType
      */
     void getCovalentMap(int index, CovalentType typeId, std::vector<int>& covalentAtoms) const;
 
@@ -264,7 +266,7 @@ public:
      * Get the CovalentMap for an atom
      *
      * @param index                the index of the atom for which to set parameters
-     * @param covalentLists        output vector of covalent lists of atoms
+     * @param[out] covalentLists   output vector of covalent lists of atoms
      */
     void getCovalentMaps(int index, std::vector < std::vector<int> >& covalentLists) const;
 
@@ -278,7 +280,7 @@ public:
     /**
      * Set the max number of iterations to be used in calculating the mutual induced dipoles
      *
-     * @param max number of iterations
+     * @param inputMutualInducedMaxIterations   number of iterations
      */
     void setMutualInducedMaxIterations(int inputMutualInducedMaxIterations);
 
@@ -292,7 +294,7 @@ public:
     /**
      * Set the target epsilon to be used to test for convergence of iterative method used in calculating the mutual induced dipoles
      *
-     * @param target epsilon
+     * @param inputMutualInducedTargetEpsilon   target epsilon
      */
     void setMutualInducedTargetEpsilon(double inputMutualInducedTargetEpsilon);
 
@@ -301,7 +303,7 @@ public:
      * which is acceptable.  This value is used to select the grid dimensions and separation (alpha)
      * parameter so that the average error level will be less than the tolerance.  There is not a
      * rigorous guarantee that all forces on all atoms will be less than the tolerance, however.
-     * 
+     *
      * This can be overridden by explicitly setting an alpha parameter and grid dimensions to use.
      */
     double getEwaldErrorTolerance() const;
@@ -310,25 +312,25 @@ public:
      * which is acceptable.  This value is used to select the grid dimensions and separation (alpha)
      * parameter so that the average error level will be less than the tolerance.  There is not a
      * rigorous guarantee that all forces on all atoms will be less than the tolerance, however.
-     * 
+     *
      * This can be overridden by explicitly setting an alpha parameter and grid dimensions to use.
      */
     void setEwaldErrorTolerance(double tol);
 
     /**
      * Get the induced dipole moments of all particles.
-     * 
-     * @param context    the Context for which to get the induced dipoles
-     * @param dipoles    the induced dipole moment of particle i is stored into the i'th element
+     *
+     * @param context         the Context for which to get the induced dipoles
+     * @param[out] dipoles    the induced dipole moment of particle i is stored into the i'th element
      */
     void getInducedDipoles(Context& context, std::vector<Vec3>& dipoles);
-    
+
     /**
      * Get the electrostatic potential.
      *
      * @param inputGrid    input grid points over which the potential is to be evaluated
      * @param context      context
-     * @param outputElectrostaticPotential output potential
+     * @param[out] outputElectrostaticPotential output potential
      */
 
     void getElectrostaticPotential(const std::vector< Vec3 >& inputGrid,
@@ -336,7 +338,7 @@ public:
 
     /**
      * Get the system multipole moments.
-     * 
+     *
      * This method is most useful for non-periodic systems.  When called for a periodic system, only the
      * <i>lowest nonvanishing moment</i> has a well defined value.  This means that if the system has a net
      * nonzero charge, the dipole and quadrupole moments are not well defined and should be ignored.  If the
@@ -344,11 +346,11 @@ public:
      * the quadrupole moment is still undefined and should be ignored.
      *
      * @param context      context
-     * @param outputMultipoleMoments (charge,
-                                      dipole_x, dipole_y, dipole_z,
-                                      quadrupole_xx, quadrupole_xy, quadrupole_xz,
-                                      quadrupole_yx, quadrupole_yy, quadrupole_yz,
-                                      quadrupole_zx, quadrupole_zy, quadrupole_zz)
+     * @param[out] outputMultipoleMoments (charge,
+                                           dipole_x, dipole_y, dipole_z,
+                                           quadrupole_xx, quadrupole_xy, quadrupole_xz,
+                                           quadrupole_yx, quadrupole_yy, quadrupole_yz,
+                                           quadrupole_zx, quadrupole_zy, quadrupole_zz)
      */
     void getSystemMultipoleMoments(Context& context, std::vector< double >& outputMultipoleMoments);
     /**
@@ -356,7 +358,7 @@ public:
      * provides an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
      * Simply call setMultipoleParameters() to modify this object's parameters, then call updateParametersInContext() to
      * copy them over to the Context.
-     * 
+     *
      * This method has several limitations.  The only information it updates is the parameters of multipoles.
      * All other aspects of the Force (the nonbonded method, the cutoff distance, etc.) are unaffected and can only be
      * changed by reinitializing the Context.  Furthermore, this method cannot be used to add new multipoles,

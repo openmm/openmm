@@ -63,9 +63,12 @@ class Modeller(object):
     def __init__(self, topology, positions):
         """Create a new Modeller object
 
-        Parameters:
-         - topology (Topology) the initial Topology of the model
-         - positions (list) the initial atomic positions
+        Parameters
+        ----------
+        topology : Topology
+            the initial Topology of the model
+        positions : list
+            the initial atomic positions
         """
         ## The Topology describing the structure of the system
         self.topology = topology
@@ -85,12 +88,16 @@ class Modeller(object):
     def add(self, addTopology, addPositions):
         """Add chains, residues, atoms, and bonds to the model.
 
-        Specify what to add by providing a new Topology object and the corresponding atomic positions.
-        All chains, residues, atoms, and bonds contained in the Topology are added to the model.
+        Specify what to add by providing a new Topology object and the
+        corresponding atomic positions. All chains, residues, atoms, and bonds
+        contained in the Topology are added to the model.
 
-        Parameters:
-         - addTopoology (Topology) a Topology whose contents should be added to the model
-         - addPositions (list) the positions of the atoms to add
+        Parameters
+        ----------
+        addTopology : Topology
+            a Topology whose contents should be added to the model
+        addPositions : list
+            the positions of the atoms to add
         """
         # Copy over the existing model.
 
@@ -137,8 +144,11 @@ class Modeller(object):
         You also can specify a bond (as a tuple of Atom objects) to delete just that bond without
         deleting the Atoms it connects.
 
-        Parameters:
-         - toDelete (list) a list of Atoms, Residues, Chains, and bonds (specified as tuples of Atoms) to delete
+        Parameters
+        ----------
+        toDelete : list
+            a list of Atoms, Residues, Chains, and bonds (specified as tuples of
+            Atoms) to delete
         """
         newTopology = Topology()
         newTopology.setPeriodicBoxVectors(self.topology.getPeriodicBoxVectors())
@@ -176,10 +186,15 @@ class Modeller(object):
     def convertWater(self, model='tip3p'):
         """Convert all water molecules to a different water model.
 
-        Parameters:
-         - model (string='tip3p') the water model to convert to.  Supported values are 'tip3p', 'spce', 'tip4pew', and 'tip5p'.
-        
-        @deprecated Use addExtraParticles() instead.  It performs the same function but in a more general way.
+        Parameters
+        ----------
+        model : string='tip3p'
+            the water model to convert to.  Supported values are 'tip3p',
+            'spce', 'tip4pew', and 'tip5p'.
+
+
+        @deprecated Use addExtraParticles() instead.  It performs the same
+        function but in a more general way.
         """
         if model in ('tip3p', 'spce'):
             sites = 3
@@ -245,6 +260,7 @@ class Modeller(object):
         """Add solvent (both water and ions) to the model to fill a rectangular box.
 
         The algorithm works as follows:
+
         1. Water molecules are added to fill the box.
         2. Water molecules are removed if their distance to any solute atom is less than the sum of their van der Waals radii.
         3. If the solute is charged and neutralize=True, enough positive or negative ions are added to neutralize it.  Each ion is added by
@@ -252,28 +268,39 @@ class Modeller(object):
         4. Ion pairs are added to give the requested total ionic strength.
 
         The box size can be specified in any of several ways:
-        
+
         1. You can explicitly give the vectors defining the periodic box to use.
         2. Alternatively, for a rectangular box you can simply give the dimensions of the unit cell.
         3. You can give a padding distance.  The largest dimension of the solute (along the x, y, or z axis) is determined, and a cubic
            box of size (largest dimension)+2*padding is used.
         4. You can specify the total number of molecules (both waters and ions) to add.  A cubic box is then created whose size is
-           just large enough to hold the specified amount of solvent.
+           just large enough hold the specified amount of solvent.
         5. Finally, if none of the above options is specified, the existing Topology's box vectors are used.
 
-        Parameters:
-         - forcefield (ForceField) the ForceField to use for determining van der Waals radii and atomic charges
-         - model (string='tip3p') the water model to use.  Supported values are 'tip3p', 'spce', 'tip4pew', and 'tip5p'.
-         - boxSize (Vec3=None) the size of the box to fill with water
-         - boxVectors (tuple of Vec3=None) the vectors defining the periodic box to fill with water
-         - padding (distance=None) the padding distance to use
-         - numAdded (int=None) the total number of molecules (waters and ions) to add
-         - positiveIon (string='Na+') the type of positive ion to add.  Allowed values are 'Cs+', 'K+', 'Li+', 'Na+', and 'Rb+'
-         - negativeIon (string='Cl-') the type of negative ion to add.  Allowed values are 'Cl-', 'Br-', 'F-', and 'I-'. Be aware
-           that not all force fields support all ion types.
-         - ionicStrength (concentration=0*molar) the total concentration of ions (both positive and negative) to add.  This
-           does not include ions that are added to neutralize the system.
-         - neutralize (bool=True) whether to add ions to neutralize the system
+        Parameters
+        ----------
+        forcefield : ForceField
+            the ForceField to use for determining van der Waals radii and atomic charges
+        model : str='tip3p'
+            the water model to use.  Supported values are 'tip3p', 'spce', 'tip4pew', and 'tip5p'.
+        boxSize : Vec3=None
+            the size of the box to fill with water
+        boxVectors : tuple of Vec3=None
+            the vectors defining the periodic box to fill with water
+        padding : distance=None
+            the padding distance to use
+        numAdded : int=None
+            the total number of molecules (waters and ions) to add
+        positiveIon : string='Na+'
+            the type of positive ion to add.  Allowed values are 'Cs+', 'K+', 'Li+', 'Na+', and 'Rb+'
+        negativeIon : string='Cl-'
+            the type of negative ion to add.  Allowed values are 'Cl-', 'Br-', 'F-', and 'I-'. Be aware
+            that not all force fields support all ion types.
+        ionicStrength : concentration=0*molar
+            the total concentration of ions (both positive and negative) to add.  This
+            does not include ions that are added to neutralize the system.
+        neutralize : bool=True
+            whether to add ions to neutralize the system
         """
         if len([x for x in (boxSize, boxVectors, padding, numAdded) if x is not None]) > 1:
             raise ValueError('At most one of the following arguments may be specified: boxSize, boxVectors, padding, numAdded')
@@ -295,13 +322,13 @@ class Modeller(object):
         pdbTopology = pdb.getTopology()
         pdbPositions = pdb.getPositions().value_in_unit(nanometer)
         pdbResidues = list(pdbTopology.residues())
-        pdbBoxSize = pdbTopology.getUnitCellDimensions().value_in_unit(nanometer)            
-        
+        pdbBoxSize = pdbTopology.getUnitCellDimensions().value_in_unit(nanometer)
+
         # Pick a unit cell size.
 
         if numAdded is not None:
             # Select a padding distance which is guaranteed to give more than the specified number of molecules.
-            
+
             padding = 1.1*(numAdded/((len(pdbResidues)/pdbBoxSize[0]**3)*8))**(1.0/3.0)
             if padding < 0.5:
                 padding = 0.5 # Ensure we have enough when adding very small numbers of molecules
@@ -443,20 +470,20 @@ class Modeller(object):
         if numAdded is not None:
             # We added many more waters than we actually want.  Sort them based on distance to the nearest box edge and
             # only keep the ones in the middle.
-            
+
             lowerBound = center-box/2
             upperBound = center+box/2
             distToEdge = (min(min(pos-lowerBound), min(upperBound-pos)) for index, pos in addedWaters)
             sortedIndex = [i[0] for i in sorted(enumerate(distToEdge), key=lambda x: -x[1])]
             addedWaters = [addedWaters[i] for i in sortedIndex[:numAdded]]
-            
+
             # Compute a new periodic box size.
-            
+
             maxSize = max(max((pos[i] for index, pos in addedWaters))-min((pos[i] for index, pos in addedWaters)) for i in range(3))
             newTopology.setUnitCellDimensions(Vec3(maxSize, maxSize, maxSize))
         else:
             # There could be clashes between water molecules at the box edges.  Find ones to remove.
-    
+
             upperCutoff = center+box/2-Vec3(waterCutoff, waterCutoff, waterCutoff)
             lowerCutoff = center-box/2+Vec3(waterCutoff, waterCutoff, waterCutoff)
             lowerSkinPositions = [pos for index, pos in addedWaters if pos[0] < lowerCutoff[0] or pos[1] < lowerCutoff[1] or pos[2] < lowerCutoff[2]]
@@ -606,16 +633,29 @@ class Modeller(object):
         Definitions for standard amino acids and nucleotides are built in.  You can call loadHydrogenDefinitions() to load
         additional definitions for other residue types.
 
-        Parameters:
-         - forcefield (ForceField=None) the ForceField to use for determining the positions of hydrogens.  If this is None,
-           positions will be picked which are generally reasonable but not optimized for any particular ForceField.
-         - pH (float=7.0) the pH based on which to select variants
-         - variants (list=None) an optional list of variants to use.  If this is specified, its length must equal the number
-           of residues in the model.  variants[i] is the name of the variant to use for residue i (indexed starting at 0).
-           If an element is None, the standard rules will be followed to select a variant for that residue.
-         - platform (Platform=None) the Platform to use when computing the hydrogen atom positions.  If this is None,
-           the default Platform will be used.
-        Returns: a list of what variant was actually selected for each residue, in the same format as the variants parameter
+        Parameters
+        ----------
+        forcefield : ForceField=None
+            the ForceField to use for determining the positions of hydrogens.
+            If this is None, positions will be picked which are generally
+            reasonable but not optimized for any particular ForceField.
+        pH : float=7.0
+            the pH based on which to select variants
+        variants : list=None
+            an optional list of variants to use.  If this is specified, its
+            length must equal the number of residues in the model.  variants[i]
+            is the name of the variant to use for residue i (indexed starting at
+            0). If an element is None, the standard rules will be followed to
+            select a variant for that residue.
+        platform : Platform=None
+            the Platform to use when computing the hydrogen atom positions.  If
+            this is None, the default Platform will be used.
+
+        Returns
+        -------
+        list
+             a list of what variant was actually selected for each residue,
+             in the same format as the variants parameter
         """
         # Check the list of variants.
 
@@ -804,7 +844,7 @@ class Modeller(object):
 
         if forcefield is not None:
             # Use the ForceField the user specified.
-            
+
             system = forcefield.createSystem(newTopology, rigidWater=False)
             atoms = list(newTopology.atoms())
             for i in range(system.getNumParticles()):
@@ -814,7 +854,7 @@ class Modeller(object):
         else:
             # Create a System that restrains the distance of each hydrogen from its parent atom
             # and causes hydrogens to spread out evenly.
-            
+
             system = System()
             nonbonded = CustomNonbondedForce('100/((r/0.1)^4+1)')
             bonds = HarmonicBondForce()
@@ -838,7 +878,7 @@ class Modeller(object):
             for residue in newTopology.residues():
                 if residue.name == 'HOH':
                     # Add an angle term to make the water geometry correct.
-                    
+
                     atoms = list(residue.atoms())
                     oindex = [i for i in range(len(atoms)) if atoms[i].element == elem.oxygen]
                     if len(atoms) == 3 and len(oindex) == 1:
@@ -846,12 +886,12 @@ class Modeller(object):
                         angles.addAngle(atoms[hindex[0]].index, atoms[oindex[0]].index, atoms[hindex[1]].index, 1.824, 836.8)
                 else:
                     # Add angle terms for any hydroxyls.
-                    
+
                     for atom in residue.atoms():
                         index = atom.index
                         if atom.element == elem.oxygen and len(bondedTo[index]) == 2 and elem.hydrogen in (a.element for a in bondedTo[index]):
                             angles.addAngle(bondedTo[index][0].index, index, bondedTo[index][1].index, 1.894, 460.24)
-            
+
         if platform is None:
             context = Context(system, VerletIntegrator(0.0))
         else:
@@ -864,18 +904,24 @@ class Modeller(object):
         return actualVariants
 
     def addExtraParticles(self, forcefield):
-        """Add missing extra particles to the model that are required by a force field.
+        """Add missing extra particles to the model that are required by a force
+        field.
 
-        Some force fields use "extra particles" that do not represent actual atoms, but still need to be included in
-        the System.  Examples include lone pairs, Drude particles, and the virtual sites used in some water models
-        to adjust the charge distribution.  Extra particles can be recognized by the fact that their element is None.
+        Some force fields use "extra particles" that do not represent
+        actual atoms, but still need to be included in the System.  Examples
+        include lone pairs, Drude particles, and the virtual sites used in some
+        water models to adjust the charge distribution.  Extra particles can be
+        recognized by the fact that their element is None.
 
-        This method is primarily used to add extra particles, but it can also remove them.  It tries to match every
-        residue in the Topology to a template in the force field.  If there is no match, it will both add and remove
-        extra particles as necessary to make it match.
+        This method is primarily used to add extra particles, but it can also
+        remove them.  It tries to match every residue in the Topology to a
+        template in the force field.  If there is no match, it will both add
+        and remove extra particles as necessary to make it match.
 
-        Parameters:
-         - forcefield (ForceField) the ForceField defining what extra particles should be present
+        Parameters
+        ----------
+        forcefield : ForceField
+            the ForceField defining what extra particles should be present
         """
         # Create copies of all residue templates that have had all extra points removed.
 

@@ -54,9 +54,12 @@ class Unit(object):
     def __init__(self, base_or_scaled_units):
         """Create a new Unit.
 
-        Parameters:
-         - self (Unit) The newly created Unit.
-         - base_or_scaled_units (dict) Keys are BaseUnits or ScaledUnits.  Values are exponents (numbers).
+        Parameters
+        ----------
+        self : Unit
+            The newly created Unit.
+        base_or_scaled_units : dict
+            Keys are BaseUnits or ScaledUnits.  Values are exponents (numbers).
         """
         # Unit contents are of two types: BaseUnits and ScaledUnits
         self._top_base_units = {}
@@ -389,7 +392,8 @@ class Unit(object):
         Strips off any ScaledUnits in the Unit, leaving only BaseUnits.
 
         Parameters
-         - system: a dictionary of (BaseDimension, BaseUnit) pairs
+        ----------
+        system : a dictionary of (BaseDimension, BaseUnit) pairs
         """
         return system.express_unit(self)
 
@@ -583,7 +587,7 @@ class UnitSystem(object):
 
     Parameters
     ----------
-    units: ``list``
+    units : list
         List of base units from which to construct the unit system
     """
     def __init__(self, units):
@@ -678,7 +682,7 @@ def is_unit(x):
     Returns True if x is a Unit, False otherwise.
 
     Examples
-
+    --------
     >>> is_unit(16)
     False
     """

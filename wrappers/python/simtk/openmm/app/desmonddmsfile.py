@@ -46,10 +46,11 @@ class DesmondDMSFile(object):
     def __init__(self, file):
         """Load a DMS file
 
-        Parameters:
-         - file (string) the name of the file to load
+        Parameters
+        ----------
+        file : string
+            the name of the file to load
         """
-
         # sqlite3 is included in the standard lib, but at python
         # compile time, you can disable support (I think), so it's
         # not *guarenteed* to be available. Doing the import here
@@ -157,16 +158,24 @@ class DesmondDMSFile(object):
 
     def createSystem(self, nonbondedMethod=ff.NoCutoff, nonbondedCutoff=1.0*nanometer,
                      ewaldErrorTolerance=0.0005, removeCMMotion=True, hydrogenMass=None):
-        """Construct an OpenMM System representing the topology described by this dms file
+        """Construct an OpenMM System representing the topology described by this
+        DMS file
 
-        Parameters:
-         - nonbondedMethod (object=NoCutoff) The method to use for nonbonded interactions.  Allowed values are
-           NoCutoff, CutoffNonPeriodic, CutoffPeriodic, Ewald, or PME.
-         - nonbondedCutoff (distance=1*nanometer) The cutoff distance to use for nonbonded interactions
-         - ewaldErrorTolerance (float=0.0005) The error tolerance to use if nonbondedMethod is Ewald or PME.
-         - removeCMMotion (boolean=True) If true, a CMMotionRemover will be added to the System
-         - hydrogenMass (mass=None) The mass to use for hydrogen atoms bound to heavy atoms.  Any mass added to a hydrogen is
-           subtracted from the heavy atom to keep their total mass the same.
+        Parameters
+        ----------
+        nonbondedMethod : object=NoCutoff
+            The method to use for nonbonded interactions.  Allowed values are
+            NoCutoff, CutoffNonPeriodic, CutoffPeriodic, Ewald, or PME.
+        nonbondedCutoff : distance=1*nanometer
+            The cutoff distance to use for nonbonded interactions
+        ewaldErrorTolerance : float=0.0005
+            The error tolerance to use if nonbondedMethod is Ewald or PME.
+        removeCMMotion : boolean=True
+            If true, a CMMotionRemover will be added to the System
+        hydrogenMass : mass=None
+            The mass to use for hydrogen atoms bound to heavy atoms.  Any mass
+            added to a hydrogen is subtracted from the heavy atom to keep their
+            total mass the same.
         """
         self._checkForUnsupportedTerms()
         sys = mm.System()

@@ -159,7 +159,7 @@ public:
      * Set the default value of a global parameter.
      *
      * @param index          the index of the parameter for which to set the default value
-     * @param name           the default value of the parameter
+     * @param defaultValue   the default value of the parameter
      */
     void setGlobalParameterDefaultValue(int index, double defaultValue);
     /**
@@ -175,11 +175,11 @@ public:
     /**
      * Get the force field parameters for an angle term.
      *
-     * @param index         the index of the angle for which to get parameters
-     * @param particle1     the index of the first particle connected by the angle
-     * @param particle2     the index of the second particle connected by the angle
-     * @param particle3     the index of the third particle connected by the angle
-     * @param parameters    the list of parameters for the angle
+     * @param index              the index of the angle for which to get parameters
+     * @param[out] particle1     the index of the first particle connected by the angle
+     * @param[out] particle2     the index of the second particle connected by the angle
+     * @param[out] particle3     the index of the third particle connected by the angle
+     * @param[out] parameters    the list of parameters for the angle
      */
     void getAngleParameters(int index, int& particle1, int& particle2, int& particle3, std::vector<double>& parameters) const;
     /**
