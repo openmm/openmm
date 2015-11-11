@@ -66,16 +66,11 @@ class DCDReporter(object):
 
         Returns
         -------
-        int
-            The number of steps until the
-        bool
-            Requires positions
-        bool
-            Requires velocities
-        bool
-            Requires forces
-        bool
-            Requires energies
+        tuple
+            A five element tuple. The first element is the number of steps
+            until the next report. The remaining elements specify whether
+            that report will require positions, velocities, forces, and
+            energies respectively.
         """
         steps = self._reportInterval - simulation.currentStep%self._reportInterval
         return (steps, True, False, False, False)
