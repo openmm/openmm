@@ -60,12 +60,17 @@ class AmberInpcrdFile(object):
     def __init__(self, file, loadVelocities=None, loadBoxVectors=None):
         """Load an inpcrd file.
 
-        An inpcrd file contains atom positions and, optionally, velocities and periodic box dimensions.
+        An inpcrd file contains atom positions and, optionally, velocities and
+        periodic box dimensions.
 
-        Parameters:
-         - file (string) the name of the file to load
-         - loadVelocities (boolean=None) deprecated. Velocities are loaded automatically if present
-         - loadBoxVectors (boolean=None) deprecated. Box vectors are loaded automatically if present
+        Parameters
+        ----------
+        file : str
+             The name of the file to load
+        loadVelocities : bool
+             Deprecated. Velocities are loaded automatically if present
+        loadBoxVectors : bool
+            Deprecated. Box vectors are loaded automatically if present
         """
         self.file = file
         if loadVelocities is not None or loadBoxVectors is not None:
@@ -84,8 +89,11 @@ class AmberInpcrdFile(object):
     def getPositions(self, asNumpy=False):
         """Get the atomic positions.
 
-        Parameters:
-         - asNumpy (boolean=False) if true, the values are returned as a numpy array instead of a list of Vec3s
+        Parameters
+        ----------
+        asNumpy : bool=False
+            if true, the values are returned as a numpy array instead of a list
+            of Vec3s
         """
         if asNumpy:
             if self._numpyPositions is None:
@@ -97,8 +105,10 @@ class AmberInpcrdFile(object):
     def getVelocities(self, asNumpy=False):
         """Get the atomic velocities.
 
-        Parameters:
-         - asNumpy (boolean=False) if true, the vectors are returned as numpy arrays instead of Vec3s
+        Parameters
+        ----------
+        asNumpy : bool=False
+            if true, the vectors are returned as numpy arrays instead of Vec3s
         """
         if self.velocities is None:
             raise AttributeError('velocities not found in %s' % self.file)
@@ -112,8 +122,11 @@ class AmberInpcrdFile(object):
     def getBoxVectors(self, asNumpy=False):
         """Get the periodic box vectors.
 
-        Parameters:
-         - asNumpy (boolean=False) if true, the values are returned as a numpy array instead of a list of Vec3s
+        Parameters
+        ----------
+        asNumpy : bool=False
+            if true, the values are returned as a numpy array instead of a list
+            of Vec3s
         """
         if self.boxVectors is None:
             raise AttributeError('Box information not found in %s' % self.file)

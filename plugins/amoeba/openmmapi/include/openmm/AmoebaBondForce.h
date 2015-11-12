@@ -100,7 +100,7 @@ public:
      * @param particle1     the index of the first particle connected by the bond
      * @param particle2     the index of the second particle connected by the bond
      * @param length        the equilibrium length of the bond, measured in nm
-     * @param k             the quadratic force constant for the bond
+     * @param quadraticK    the quadratic force constant for the bond
      * @return the index of the bond that was added
      */
 
@@ -109,11 +109,11 @@ public:
     /**
      * Get the force field parameters for a bond term.
      * 
-     * @param index         the index of the bond for which to get parameters
-     * @param particle1     the index of the first particle connected by the bond
-     * @param particle2     the index of the second particle connected by the bond
-     * @param length        the equilibrium length of the bond, measured in nm
-     * @param quadratic k   the quadratic force constant for the bond
+     * @param index              the index of the bond for which to get parameters
+     * @param[out] particle1     the index of the first particle connected by the bond
+     * @param[out] particle2     the index of the second particle connected by the bond
+     * @param[out] length        the equilibrium length of the bond, measured in nm
+     * @param[out] quadraticK    the quadratic force constant for the bond
      */
 
     void getBondParameters(int index, int& particle1, int& particle2, double& length, double& quadraticK) const;
@@ -121,11 +121,11 @@ public:
     /**
      * Set the force field parameters for a bond term.
      * 
-     * @param index     the index of the bond for which to set parameters
-     * @param particle1 the index of the first particle connected by the bond
-     * @param particle2 the index of the second particle connected by the bond
-     * @param length    the equilibrium length of the bond, measured in nm
-     * @param k         the quadratic force constant for the bond
+     * @param index       the index of the bond for which to set parameters
+     * @param particle1   the index of the first particle connected by the bond
+     * @param particle2   the index of the second particle connected by the bond
+     * @param length      the equilibrium length of the bond, measured in nm
+     * @param quadraticK  the quadratic force constant for the bond
      */
     void setBondParameters(int index, int particle1, int particle2, double length, double quadraticK);
     /**

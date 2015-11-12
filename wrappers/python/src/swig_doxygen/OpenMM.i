@@ -45,7 +45,7 @@ using namespace OpenMM;
 
 %}
 
-%feature("autodoc", "1");
+%feature("autodoc", "0");
 %nodefaultctor;
 
 %include features.i

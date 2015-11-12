@@ -72,18 +72,18 @@ public:
     int addAngle(int particle1, int particle2, int particle3, double angle, double k);
     /**
      * Get the force field parameters for an angle term.
-     * 
-     * @param index     the index of the angle for which to get parameters
-     * @param particle1 the index of the first particle forming the angle
-     * @param particle2 the index of the second particle forming the angle
-     * @param particle3 the index of the third particle forming the angle
-     * @param angle     the equilibrium angle, measured in radians
-     * @param k         the harmonic force constant for the angle, measured in kJ/mol/radian^2
+     *
+     * @param      index     the index of the angle for which to get parameters
+     * @param[out] particle1 the index of the first particle forming the angle
+     * @param[out] particle2 the index of the second particle forming the angle
+     * @param[out] particle3 the index of the third particle forming the angle
+     * @param[out] angle     the equilibrium angle, measured in radians
+     * @param[out] k         the harmonic force constant for the angle, measured in kJ/mol/radian^2
      */
     void getAngleParameters(int index, int& particle1, int& particle2, int& particle3, double& angle, double& k) const;
     /**
      * Set the force field parameters for an angle term.
-     * 
+     *
      * @param index     the index of the angle for which to set parameters
      * @param particle1 the index of the first particle forming the angle
      * @param particle2 the index of the second particle forming the angle
@@ -97,7 +97,7 @@ public:
      * an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
      * Simply call setAngleParameters() to modify this object's parameters, then call updateParametersInContext()
      * to copy them over to the Context.
-     * 
+     *
      * The only information this method updates is the values of per-angle parameters.  The set of particles involved
      * in a angle cannot be changed, nor can new angles be added.
      */

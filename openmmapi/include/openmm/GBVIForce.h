@@ -46,13 +46,13 @@ namespace OpenMM {
  * be exactly equal to the number of particles in the System, or else an exception will be thrown when you
  * try to create a Context.  After a particle has been added, you can modify its force field parameters
  * by calling setParticleParameters().
- * 
+ *
  * @deprecated This class is not supported by most platforms, and will eventually be removed.  You can implement the same force with CustomGBForce.
  */
 
 class OPENMM_EXPORT GBVIForce : public Force {
 public:
-    /** 
+    /**
      * This is an enumeration of the different methods that may be used for handling long range nonbonded forces.
      */
     enum NonbondedMethod {
@@ -70,9 +70,9 @@ public:
          * each other particle.  Interactions beyond the cutoff distance are ignored.
          */
         CutoffPeriodic = 2,
-    };  
+    };
 
-    /** 
+    /**
      * This is an enumeration of the different methods that may be used for scaling of the Born radii.
      */
     enum BornRadiusScalingMethod {
@@ -84,7 +84,7 @@ public:
          * Use quintic spline scaling function
          */
         QuinticSpline       = 1
-    };  
+    };
 
     /*
      * Create a GBVIForce.
@@ -108,16 +108,16 @@ public:
     int addParticle(double charge, double radius, double gamma);
     /**
      * Get the force field parameters for a particle.
-     * 
-     * @param index          the index of the particle for which to get parameters
-     * @param charge         the charge of the particle, measured in units of the proton charge
-     * @param radius         the GBSA radius of the particle, measured in nm
-     * @param gamma          the gamma parameter
+     *
+     * @param index               the index of the particle for which to get parameters
+     * @param[out] charge         the charge of the particle, measured in units of the proton charge
+     * @param[out] radius         the GBSA radius of the particle, measured in nm
+     * @param[out] gamma          the gamma parameter
      */
     void getParticleParameters(int index, double& charge, double& radius, double& gamma) const;
     /**
      * Set the force field parameters for a particle.
-     * 
+     *
      * @param index          the index of the particle for which to set parameters
      * @param charge         the charge of the particle, measured in units of the proton charge
      * @param radius         the GB/VI radius of the particle, measured in nm
@@ -125,36 +125,36 @@ public:
      */
     void setParticleParameters(int index, double charge, double radius, double gamma);
     /**
-     * Add a bond 
+     * Add a bond
      *
-     * @param particle1 the index of the first particle 
+     * @param particle1 the index of the first particle
      * @param particle2 the index of the second particle
      * @param distance  the distance between the two particles, measured in nm
      * @return the index of the bond that was added
      */
     int addBond(int particle1, int particle2, double distance);
 
-    /** 
+    /**
      * Get the parameters defining a bond
-     * 
-     * @param index     the index of the bond for which to get parameters
-     * @param particle1 the index of the first particle involved in the bond
-     * @param particle2 the index of the second particle involved in the bond
-     * @param distance  the distance between the two particles, measured in nm
+     *
+     * @param      index     the index of the bond for which to get parameters
+     * @param[out] particle1 the index of the first particle involved in the bond
+     * @param[out] particle2 the index of the second particle involved in the bond
+     * @param[out] distance  the distance between the two particles, measured in nm
      */
     void getBondParameters(int index, int& particle1, int& particle2, double& distance) const;
     /**
      * Set 1-2 bonds
-     * 
+     *
      * @param index          index of the bond for which to set parameters
      * @param particle1      index of first atom in bond
      * @param particle2      index of second atom in bond
      * @param bondLength     bond length, measured in nm
      */
     void setBondParameters( int index, int particle1, int particle2, double bondLength);
-    /** 
+    /**
      * Get number of bonds
-     * 
+     *
      * @return number of bonds
      */
     int getNumBonds() const;
@@ -183,49 +183,49 @@ public:
     void setSoluteDielectric(double dielectric) {
         soluteDielectric = dielectric;
     }
-    /** 
+    /**
      * Get the method used for handling long range nonbonded interactions.
      */
     NonbondedMethod getNonbondedMethod() const;
-    /** 
+    /**
      * Set the method used for handling long range nonbonded interactions.
      */
     void setNonbondedMethod(NonbondedMethod method);
-    /** 
+    /**
      * Get the cutoff distance (in nm) being used for nonbonded interactions.  If the NonbondedMethod in use
      * is NoCutoff, this value will have no effect.
      *
      * @return the cutoff distance, measured in nm
      */
     double getCutoffDistance() const;
-    /** 
+    /**
      * Set the cutoff distance (in nm) being used for nonbonded interactions.  If the NonbondedMethod in use
      * is NoCutoff, this value will have no effect.
      *
      * @param distance    the cutoff distance, measured in nm
      */
     void setCutoffDistance(double distance);
-    /** 
+    /**
      * Get Born radius scaling method
      */
     BornRadiusScalingMethod getBornRadiusScalingMethod() const;
-    /** 
+    /**
      * Set Born radius scaling method
      */
     void setBornRadiusScalingMethod( BornRadiusScalingMethod method);
-    /** 
+    /**
      * Get the lower limit factor used in the quintic spline scaling method (typically 0.5-0.8)
      */
     double getQuinticLowerLimitFactor() const;
-    /** 
+    /**
      * Set the lower limit factor used in the quintic spline scaling method (typically 0.5-0.8)
      */
     void setQuinticLowerLimitFactor(double quinticLowerLimitFactor );
-    /** 
+    /**
      * Get the upper limit  used in the quintic spline scaling method, measured in nm (~5.0)
      */
     double getQuinticUpperBornRadiusLimit() const;
-    /** 
+    /**
      * Set the upper limit used in the quintic spline scaling method, measured in nm (~5.0)
      */
     void setQuinticUpperBornRadiusLimit(double quinticUpperBornRadiusLimit);

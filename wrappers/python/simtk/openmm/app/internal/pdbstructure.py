@@ -123,15 +123,18 @@ class PdbStructure(object):
     """
 
 
-    def __init__(self, input_stream, load_all_models = False):
+    def __init__(self, input_stream, load_all_models=False):
         """Create a PDB model from a PDB file stream.
 
-        Parameters:
-         - self (PdbStructure) The new object that is created.
-         - input_stream (stream) An input file stream, probably created with
-             open().
-         - load_all_models (bool) Whether to load every model of an NMR
-             structure or trajectory, or just load the first model, to save memory.
+        Parameters
+        ----------
+        self : PdbStructure
+            The new object that is created.
+        input_stream : stream
+            An input file stream, probably created with open().
+        load_all_models : bool
+            Whether to load every model of an NMR structure or trajectory, or
+            just load the first model, to save memory.
         """
         # initialize models
         self.load_all_models = load_all_models
@@ -201,7 +204,7 @@ class PdbStructure(object):
     def _reset_atom_numbers(self):
         self._atom_numbers_are_hex = False
         self._next_atom_number = 1
-    
+
     def _reset_residue_numbers(self):
         self._residue_numbers_are_hex = False
         self._next_residue_number = 1
@@ -269,8 +272,11 @@ class PdbStructure(object):
         Iterate over atomic positions.
 
         Parameters
-         - use_all_models (bool=False) Get positions from all models or just the first one.
-         - include_alt_loc (bool=False) Get all positions for each atom, or just the first one.
+        ----------
+        use_all_models : bool=False
+            Get positions from all models or just the first one.
+        include_alt_loc : bool=False
+            Get all positions for each atom, or just the first one.
         """
         for model in self.iter_models(use_all_models):
             for loc in model.iter_positions(include_alt_loc):
@@ -711,7 +717,7 @@ class Atom(object):
         self.is_first_atom_in_chain = False
         self.is_final_atom_in_chain = False
         self.is_first_residue_in_chain = False
-        self.is_final_residue_in_chain = False 
+        self.is_final_residue_in_chain = False
         # Start parsing fields from pdb line
         self.record_name = pdb_line[0:6].strip()
         if pdbstructure is not None and pdbstructure._atom_numbers_are_hex:
