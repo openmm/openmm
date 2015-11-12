@@ -73,6 +73,7 @@ matrix:
            CUDA=false
            CC=clang
            CXX=clang++
+           DOCS_DEPLOY=true
            CMAKE_FLAGS=""
 
     - sudo: false
@@ -140,3 +141,23 @@ script:
   - if [ -s Testing/Temporary/LastTestsFailed.log ]; then
       ctest -I FailedTests.log;
     fi
+  - if [[ ! -z "${DOCS_DEPLOY}" && "${DOCS_DEPLOY}" = "true" ]]; then
+      make DoxygenApiDocs PythonApiDocs;
+      mkdir -p api-docs;
+      mv api-python api-docs;
+      mv api-c++ api-docs;
+    fi
+
+deploy:
+  - provider: s3
+    access_key_id:
+      secure: "AjE3nuj6kVuf21mOf0aZydW/3S/uCWsaoXC/huRxkxrmsNlnHBNGHZ9N48san1IxZAQM5pyaf7Yo9gkHur9obgq+e3lNgGvPp2mfkNXtLYcLJ46JF4kYliAtutjLWskrLg25Gu3xzF4EQkqSe0Le/oWldWWbTgvvH+KRq/vTHzI="
+    secret_access_key:
+      secure: "ISDQNSG2t0666PULtffo4wsKLFdu622EzuZxmiTxvLkjQGQlqm5+qn1Gd5UMLk7Ts2E0psdnmSrf6LVVCfrrQO/hcZHiJw3ZslMPDBBlRr8Epwdldn98ULhVoyQKtjXjCPzroa2UZCl1RFs4Nwb/VdDlI490XV0Lp4Woj1AT8tY="
+    bucket: "docs.openmm.org"
+    skip_cleanup: true
+    local_dir: api-docs/
+    upload_dir: development/
+    on:
+      branch: master
+      condition: '! -z "${DOCS_DEPLOY}" && "${DOCS_DEPLOY}" = "true"'
