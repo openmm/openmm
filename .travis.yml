@@ -142,7 +142,7 @@ script:
       ctest -I FailedTests.log;
     fi
   - if [[ ! -z "${DOCS_DEPLOY}" && "${DOCS_DEPLOY}" = "true" ]]; then
-      pip install numpydoc;
+      pip install sphinx numpydoc;
       make DoxygenApiDocs PythonApiDocs;
       mkdir -p api-docs;
       mv api-python api-docs;
