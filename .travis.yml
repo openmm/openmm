@@ -159,7 +159,7 @@ deploy:
     skip_cleanup: true
     region: us-west-1
     local_dir: api-docs/
-    upload_dir: development/
+    upload_dir: development
     on:
       branch: master
       condition: '! -z "${DOCS_DEPLOY}" && "${DOCS_DEPLOY}" = "true"'
