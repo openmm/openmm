@@ -160,7 +160,8 @@ class AMDForceGroupIntegrator(CustomIntegrator):
 
         Returns
         -------
-        the value of the effective potential
+        value
+            the value of the effective potential
         """
         alphaGroup = self.getAlphaGroup()
         EGroup = self.getEGroup()
