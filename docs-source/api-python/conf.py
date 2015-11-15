@@ -5,45 +5,43 @@ import os
 import simtk.openmm.version
 
 extensions = ['sphinx.ext.mathjax', 'sphinx.ext.ifconfig', 'sphinx.ext.autosummary',
-              'sphinx.ext.autodoc', 'sphinx.ext.napoleon', 'process-docstring']
+              'sphinx.ext.autodoc', 'sphinx.ext.napoleon', 'process-docstring',
+              'sphinxcontrib.lunrsearch']
 
 autosummary_generate = True
 autodoc_default_flags = ['members', 'inherited-members']
+autodoc_member_order = 'bysource'
 
-# Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
-
-# The suffix of source filenames.
 source_suffix = '.rst'
-
-# The master toctree document.
 master_doc = 'index'
 
-# General information about the project.
 project = u'OpenMM'
 copyright = u'2015, Stanford University and the Authors'
 
-# The short X.Y version.
 version = simtk.openmm.version.short_version
-# The full version, including alpha/beta/rc tags.
 release = simtk.openmm.version.full_version
 
-# List of patterns, relative to source directory, that match files and
-# directories to ignore when looking for source files.
 exclude_patterns = ['_build']
-
-# The name of the Pygments (syntax highlighting) style to use.
-pygments_style = 'sphinx'
-
-# The theme to use for HTML and HTML Help pages.  See the documentation for
-# a list of builtin themes.
-html_theme = "sphinx_rtd_theme"
-html_logo = 'logo.png'
-#html_favicon = None
-
 html_static_path = ['_static']
 
-autodoc_member_order = 'bysource'
+pygments_style = 'sphinx'
+
+html_theme = "alabaster"
+html_theme_options = {
+    'description': "High performance molecular simulation on GPUs",
+    'github_button': False,
+    # 'github_user': 'pandegroup',
+    # 'github_repo': 'openmm',
+    'logo_name': False,
+    'logo': 'logo.png',
+}
+html_sidebars = {
+    '**': [
+        'about.html',
+        'searchbox.html',
+        'navigation.html',
+    ]
+}
 
 # Napoleon settings
 napoleon_google_docstring = False
