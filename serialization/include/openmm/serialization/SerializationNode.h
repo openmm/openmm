@@ -105,7 +105,7 @@ public:
     /**
      * Determine whether this node has a property with a particular node.
      *
-     * @param the name of the property to check for
+     * @param name  the name of the property to check for
      */
     bool hasProperty(const std::string& name) const;
     /**

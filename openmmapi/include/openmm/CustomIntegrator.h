@@ -47,7 +47,7 @@ namespace OpenMM {
  * methods including both deterministic and stochastic integrators, Metropolized
  * integrators, and integrators that must integrate additional quantities along
  * with the particle positions and momenta.
- * 
+ *
  * To create an integration algorithm, you first define a set of variables the
  * integrator will compute.  Variables come in two types: <i>global</i> variables
  * have a single value, while <i>per-DOF</i> variables have a value for every
@@ -57,12 +57,12 @@ namespace OpenMM {
  * the CustomIntegrator.  All variables are persistent between integration
  * steps; once a value is set, it keeps that value until it is changed by the
  * user or recomputed in a later integration step.
- * 
+ *
  * Next, you define the algorithm as a series of computations.  To execute a
  * time step, the integrator performs the list of computations in order.  Each
  * computation updates the value of one global or per-DOF value.  There are
  * several types of computations that can be done:
- * 
+ *
  * <ul>
  * <li>Global: You provide a mathematical expression involving only global
  * variables.  It is evaluated and stored into a global variable.</li>
@@ -78,15 +78,15 @@ namespace OpenMM {
  * <li>Constrain Velocities: The particle velocities are updated so the net
  * velocity along any constrained distance is 0.</li>
  * </ul>
- * 
+ *
  * Like all integrators, CustomIntegrator ignores any particle whose mass is 0.
  * It is skipped when doing per-DOF computations, and is not included when
  * computing sums over degrees of freedom.
- * 
+ *
  * In addition to the variables you define by calling addGlobalVariable() and
  * addPerDofVariable(), the integrator provides the following pre-defined
  * variables:
- * 
+ *
  * <ul>
  * <li>dt: (global) This is the step size being used by the integrator.</li>
  * <li>energy: (global, read-only) This is the current potential energy of the
@@ -123,24 +123,24 @@ namespace OpenMM {
  * <li>A global variable is created for every adjustable parameter defined
  * in the integrator's Context.</li>
  * </ul>
- * 
+ *
  * The following example uses a CustomIntegrator to implement a velocity Verlet
  * integrator:
- * 
+ *
  * <tt><pre>
  * CustomIntegrator integrator(0.001);
  * integrator.addComputePerDof("v", "v+0.5*dt*f/m");
  * integrator.addComputePerDof("x", "x+dt*v");
  * integrator.addComputePerDof("v", "v+0.5*dt*f/m");
  * </pre></tt>
- * 
+ *
  * The first step updates the velocities based on the current forces.
  * The second step updates the positions based on the new velocities, and the
  * third step updates the velocities again.  Although the first and third steps
  * look identical, the forces used in them are different.  You do not need to
  * tell the integrator that; it will recognize that the positions have changed
  * and know to recompute the forces automatically.
- * 
+ *
  * The above example has two problems.  First, it does not respect distance
  * constraints.  To make the integrator work with constraints, you need to add
  * extra steps to tell it when and how to apply them.  Second, it never gives
@@ -149,7 +149,7 @@ namespace OpenMM {
  * or a MonteCarloBarostat can scale particle positions.  You need to add a
  * step to tell the integrator when to do this.  The following example corrects
  * both these problems, using the RATTLE algorithm to apply constraints:
- * 
+ *
  * <tt><pre>
  * CustomIntegrator integrator(0.001);
  * integrator.addPerDofVariable("x1", 0);
@@ -161,12 +161,12 @@ namespace OpenMM {
  * integrator.addComputePerDof("v", "v+0.5*dt*f/m+(x-x1)/dt");
  * integrator.addConstrainVelocities();
  * </pre></tt>
- * 
+ *
  * CustomIntegrator can be used to implement multiple time step integrators.  The
  * following example shows an r-RESPA integrator.  It assumes the quickly changing
  * forces are in force group 0 and the slowly changing ones are in force group 1.
  * It evaluates the "fast" forces four times as often as the "slow" forces.
- * 
+ *
  * <tt><pre>
  * CustomIntegrator integrator(0.004);
  * integrator.addComputePerDof("v", "v+0.5*dt*f1/m");
@@ -208,25 +208,25 @@ namespace OpenMM {
  * freedom may not give the correct answer.  For example, in a leapfrog integrator
  * the velocities are "delayed" by half a time step, so the above formula would
  * give the kinetic energy half a time step ago, not at the current time.
- * 
+ *
  * Call setKineticEnergyExpression() to set an expression for the kinetic energy.
  * It is computed for every degree of freedom (excluding ones whose mass is 0) and
  * the result is summed.  The default expression is "m*v*v/2", which is correct
  * for many integrators.
- * 
+ *
  * As example, the following line defines the correct way to compute kinetic energy
  * when using a leapfrog algorithm:
- * 
+ *
  * <tt><pre>
  * integrator.setKineticEnergyExpression("m*v1*v1/2; v1=v+0.5*dt*f/m");
  * </pre></tt>
- * 
+ *
  * The kinetic energy expression may depend on the following pre-defined variables:
  * x, v, f, m, dt.  It also may depend on user-defined global and per-DOF variables,
  * and on the values of adjustable parameters defined  in the integrator's Context.
  * It may <i>not</i> depend on any other variable, such as the potential energy,
  * the force from a single force group, or a random number.
- * 
+ *
  * Expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
  * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, erf, erfc, min, max, abs, floor, ceil, step, delta, select.  All trigonometric functions
  * are defined in radians, and log is the natural logarithm.  step(x) = 0 if x is less than 0, 1 otherwise.  delta(x) = 1 if x is 0, 0 otherwise.
@@ -278,7 +278,7 @@ public:
     };
     /**
      * Create a CustomIntegrator.
-     * 
+     *
      * @param stepSize       the step size with which to integrate the system (in picoseconds)
      */
     CustomIntegrator(double stepSize);
@@ -302,7 +302,7 @@ public:
     }
     /**
      * Define a new global variable.
-     * 
+     *
      * @param name          the name of the variable
      * @param initialValue  the variable will initially be set to this value
      * @return the index of the variable that was added
@@ -310,14 +310,14 @@ public:
     int addGlobalVariable(const std::string& name, double initialValue);
     /**
      * Get the name of a global variable.
-     * 
+     *
      * @param index    the index of the variable to get
      * @return the name of the variable
      */
     const std::string& getGlobalVariableName(int index) const;
     /**
      * Define a new per-DOF variable.
-     * 
+     *
      * @param name          the name of the variable
      * @param initialValue  the variable will initially be set to this value for
      *                      all degrees of freedom
@@ -326,14 +326,14 @@ public:
     int addPerDofVariable(const std::string& name, double initialValue);
     /**
      * Get the name of a per-DOF variable.
-     * 
+     *
      * @param index    the index of the variable to get
      * @return the name of the variable
      */
     const std::string& getPerDofVariableName(int index) const;
     /**
      * Get the current value of a global variable.
-     * 
+     *
      * @param index   the index of the variable to get
      * @return the current value of the variable
      */
@@ -347,21 +347,21 @@ public:
     double getGlobalVariableByName(const std::string& name) const;
     /**
      * Set the value of a global variable.
-     * 
+     *
      * @param index   the index of the variable to set
      * @param value   the new value of the variable
      */
     void setGlobalVariable(int index, double value);
     /**
      * Set the value of a global variable, specified by name.
-     * 
+     *
      * @param name    the name of the variable to set
      * @param value   the new value of the variable
      */
     void setGlobalVariableByName(const std::string& name, double value);
     /**
      * Get the value of a per-DOF variable.
-     * 
+     *
      * @param index   the index of the variable to get
      * @param values  the values of the variable for all degrees of freedom
      *                are stored into this
@@ -370,28 +370,28 @@ public:
     /**
      * Get the value of a per-DOF variable, specified by name.
      *
-     * @param name    the name of the variable to get
-     * @param values  the values of the variable for all degrees of freedom
-     *                are stored into this
+     * @param name         the name of the variable to get
+     * @param[out] values  the values of the variable for all degrees of freedom
+     *                     are stored into this
      */
     void getPerDofVariableByName(const std::string& name, std::vector<Vec3>& values) const;
     /**
      * Set the value of a per-DOF variable.
-     * 
+     *
      * @param index   the index of the variable to set
      * @param values  the new values of the variable for all degrees of freedom
      */
     void setPerDofVariable(int index, const std::vector<Vec3>& values);
     /**
      * Set the value of a per-DOF variable, specified by name.
-     * 
+     *
      * @param name    the name of the variable to set
      * @param values  the new values of the variable for all degrees of freedom
      */
     void setPerDofVariableByName(const std::string& name, const std::vector<Vec3>& values);
     /**
      * Add a step to the integration algorithm that computes a global value.
-     * 
+     *
      * @param variable    the global variable to store the computed value into
      * @param expression  a mathematical expression involving only global variables.
      *                    In each integration step, its value is computed and
@@ -401,7 +401,7 @@ public:
     int addComputeGlobal(const std::string& variable, const std::string& expression);
     /**
      * Add a step to the integration algorithm that computes a per-DOF value.
-     * 
+     *
      * @param variable    the per-DOF variable to store the computed value into
      * @param expression  a mathematical expression involving both global and
      *                    per-DOF variables.  In each integration step, its value
@@ -412,7 +412,7 @@ public:
     int addComputePerDof(const std::string& variable, const std::string& expression);
     /**
      * Add a step to the integration algorithm that computes a sum over degrees of freedom.
-     * 
+     *
      * @param variable    the global variable to store the computed value into
      * @param expression  a mathematical expression involving both global and
      *                    per-DOF variables.  In each integration step, its value
@@ -425,28 +425,28 @@ public:
     /**
      * Add a step to the integration algorithm that updates particle positions so
      * all constraints are satisfied.
-     * 
+     *
      * @return the index of the step that was added
      */
     int addConstrainPositions();
     /**
      * Add a step to the integration algorithm that updates particle velocities
      * so the net velocity along all constraints is 0.
-     * 
+     *
      * @return the index of the step that was added
      */
     int addConstrainVelocities();
     /**
      * Add a step to the integration algorithm that allows Forces to update the
      * context state.
-     * 
+     *
      * @return the index of the step that was added
      */
     int addUpdateContextState();
     /**
      * Add a step which begins a new "if" block.
      *
-     * @param expression  a mathematical expression involving a comparison operator
+     * @param condition   a mathematical expression involving a comparison operator
      *                    and global variables.  All steps between this one and
      *                    the end of the block are executed only if the condition
      *                    is true.
@@ -457,7 +457,7 @@ public:
     /**
      * Add a step which begins a new "while" block.
      *
-     * @param expression  a mathematical expression involving a comparison operator
+     * @param condition   a mathematical expression involving a comparison operator
      *                    and global variables.  All steps between this one and
      *                    the end of the block are executed repeatedly as long as
      *                    the condition remains true.
@@ -474,14 +474,15 @@ public:
     int endBlock();
     /**
      * Get the details of a computation step that has been added to the integration algorithm.
-     * 
-     * @param index      the index of the computation step to get
-     * @param type       on exit, the type of computation this step performs
-     * @param variable   on exit, the variable into which this step stores its result.  If this
-     *                   step does not store a result in a variable, this will be an
-     *                   empty string.
-     * @param expression on exit, the expression this step evaluates.  If this step does not
-     *                   evaluate an expression, this will be an empty string.
+     *
+     * @param      index       the index of the computation step to get
+     * @param[out] type        the type of computation this step performs
+     * @param[out] variable    the variable into which this step stores its
+     *                         result.  If this step does not store a result in
+     *                         a variable, this will be an empty string.
+     * @param[out] expression  the expression this step evaluates.  If
+     *                         this step does not evaluate an expression, this
+     *                         will be an empty string.
      */
     void getComputationStep(int index, ComputationType& type, std::string& variable, std::string& expression) const;
     /**
@@ -519,7 +520,7 @@ public:
     }
     /**
      * Advance a simulation through time by taking a series of time steps.
-     * 
+     *
      * @param steps   the number of time steps to take
      */
     void step(int steps);

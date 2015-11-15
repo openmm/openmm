@@ -104,12 +104,14 @@ class ForceField(object):
     def __init__(self, *files):
         """Load one or more XML files and create a ForceField object based on them.
 
-        Parameters:
-         - files (list) A list of XML files defining the force field.  Each entry may
-           be an absolute file path, a path relative to the current working
-           directory, a path relative to this module's data subdirectory
-           (for built in force fields), or an open file-like object with a
-           read() method from which the forcefield XML data can be loaded.
+        Parameters
+        ----------
+        files : list
+            A list of XML files defining the force field.  Each entry may
+            be an absolute file path, a path relative to the current working
+            directory, a path relative to this module's data subdirectory
+            (for built in force fields), or an open file-like object with a
+            read() method from which the forcefield XML data can be loaded.
         """
         self._atomTypes = {}
         self._templates = {}
@@ -123,12 +125,14 @@ class ForceField(object):
     def loadFile(self, file):
         """Load an XML file and add the definitions from it to this FieldField.
 
-        Parameters:
-         - file (string or file) An XML file containing force field definitions.  It may
-           be either an absolute file path, a path relative to the current working
-           directory, a path relative to this module's data subdirectory
-           (for built in force fields), or an open file-like object with a
-           read() method from which the forcefield XML data can be loaded.
+        Parameters
+        ----------
+        file : string or file
+            An XML file containing force field definitions.  It may be either an
+            absolute file path, a path relative to the current working
+            directory, a path relative to this module's data subdirectory (for
+            built in force fields), or an open file-like object with a read()
+            method from which the forcefield XML data can be loaded.
         """
         try:
             # this handles either filenames or open file-like objects
@@ -270,6 +274,17 @@ class ForceField(object):
             self.impropers = []
             self.atomBonds = []
             self.isAngleConstrained = []
+            self.constraints = {}
+
+        def addConstraint(self, system, atom1, atom2, distance):
+            """Add a constraint to the system, avoiding duplicate constraints."""
+            key = (min(atom1, atom2), max(atom1, atom2))
+            if key in self.constraints:
+                if self.constraints(key) != distance:
+                    raise ValueError('Two constraints were specified between atoms %d and %d with different distances' % (atom1, atom2))
+            else:
+                self.constraints[key] = distance
+                system.addConstraint(atom1, atom2, distance)
 
     class _TemplateData:
         """Inner class used to encapsulate data about a residue template definition."""
@@ -406,20 +421,36 @@ class ForceField(object):
                      constraints=None, rigidWater=True, removeCMMotion=True, hydrogenMass=None, **args):
         """Construct an OpenMM System representing a Topology with this force field.
 
-        Parameters:
-         - topology (Topology) The Topology for which to create a System
-         - nonbondedMethod (object=NoCutoff) The method to use for nonbonded interactions.  Allowed values are
-           NoCutoff, CutoffNonPeriodic, CutoffPeriodic, Ewald, or PME.
-         - nonbondedCutoff (distance=1*nanometer) The cutoff distance to use for nonbonded interactions
-         - constraints (object=None) Specifies which bonds and angles should be implemented with constraints.
-           Allowed values are None, HBonds, AllBonds, or HAngles.
-         - rigidWater (boolean=True) If true, water molecules will be fully rigid regardless of the value passed for the constraints argument
-         - removeCMMotion (boolean=True) If true, a CMMotionRemover will be added to the System
-         - hydrogenMass (mass=None) The mass to use for hydrogen atoms bound to heavy atoms.  Any mass added to a hydrogen is
-           subtracted from the heavy atom to keep their total mass the same.
-         - args Arbitrary additional keyword arguments may also be specified.  This allows extra parameters to be specified that are specific to
-           particular force fields.
-        Returns: the newly created System
+        Parameters
+        ----------
+        topology : Topology
+            The Topology for which to create a System
+        nonbondedMethod : object=NoCutoff
+            The method to use for nonbonded interactions.  Allowed values are
+            NoCutoff, CutoffNonPeriodic, CutoffPeriodic, Ewald, or PME.
+        nonbondedCutoff : distance=1*nanometer
+            The cutoff distance to use for nonbonded interactions
+        constraints : object=None
+            Specifies which bonds and angles should be implemented with constraints.
+            Allowed values are None, HBonds, AllBonds, or HAngles.
+        rigidWater : boolean=True
+            If true, water molecules will be fully rigid regardless of the value
+            passed for the constraints argument
+        removeCMMotion : boolean=True
+            If true, a CMMotionRemover will be added to the System
+        hydrogenMass : mass=None
+            The mass to use for hydrogen atoms bound to heavy atoms.  Any mass
+            added to a hydrogen is subtracted from the heavy atom to keep
+            their total mass the same.
+        args
+             Arbitrary additional keyword arguments may also be specified.
+             This allows extra parameters to be specified that are specific to
+             particular force fields.
+
+        Returns
+        -------
+        system
+            the newly created System
         """
         data = ForceField._SystemData()
         data.atoms = list(topology.atoms())
@@ -647,12 +678,20 @@ def _createResidueSignature(elements):
 def _matchResidue(res, template, bondedToAtom):
     """Determine whether a residue matches a template and return a list of corresponding atoms.
 
-    Parameters:
-     - res (Residue) The residue to check
-     - template (_TemplateData) The template to compare it to
-     - bondedToAtom (list) Enumerates which other atoms each atom is bonded to
-    Returns: a list specifying which atom of the template each atom of the residue corresponds to,
-    or None if it does not match the template
+    Parameters
+    ----------
+    res : Residue
+        The residue to check
+    template : _TemplateData
+        The template to compare it to
+    bondedToAtom : list
+        Enumerates which other atoms each atom is bonded to
+
+    Returns
+    -------
+    list
+        a list specifying which atom of the template each atom of the residue
+        corresponds to, or None if it does not match the template
     """
     atoms = list(res.atoms())
     if len(atoms) != len(template.atoms):
@@ -829,7 +868,7 @@ class HarmonicBondGenerator:
                 if (type1 in types1 and type2 in types2) or (type1 in types2 and type2 in types1):
                     bond.length = self.length[i]
                     if bond.isConstrained:
-                        sys.addConstraint(bond.atom1, bond.atom2, self.length[i])
+                        data.addConstraint(sys, bond.atom1, bond.atom2, self.length[i])
                     elif self.k[i] != 0:
                         force.addBond(bond.atom1, bond.atom2, self.length[i], self.k[i])
                     break
@@ -902,7 +941,7 @@ class HarmonicAngleGenerator:
                             l2 = data.bonds[bond2].length
                             if l1 is not None and l2 is not None:
                                 length = sqrt(l1*l1 + l2*l2 - 2*l1*l2*cos(self.angle[i]))
-                                sys.addConstraint(angle[0], angle[2], length)
+                                data.addConstraint(sys, angle[0], angle[2], length)
                     elif self.k[i] != 0:
                         force.addAngle(angle[0], angle[1], angle[2], self.angle[i], self.k[i])
                     break
@@ -1990,7 +2029,7 @@ class AmoebaBondGenerator:
                 if (type1 in types1 and type2 in types2) or (type1 in types2 and type2 in types1):
                     bond.length = self.length[i]
                     if bond.isConstrained:
-                        sys.addConstraint(bond.atom1, bond.atom2, self.length[i])
+                        data.addConstraint(sys, bond.atom1, bond.atom2, self.length[i])
                     elif self.k[i] != 0:
                         force.addBond(bond.atom1, bond.atom2, self.length[i], self.k[i])
                     break
@@ -2022,7 +2061,7 @@ def addAngleConstraint(angle, idealAngle, data, sys):
             l2 = data.bonds[bond2].length
             if l1 is not None and l2 is not None:
                 length = sqrt(l1*l1 + l2*l2 - 2*l1*l2*cos(idealAngle))
-                sys.addConstraint(angle[0], angle[2], length)
+                data.addConstraint(sys, angle[0], angle[2], length)
                 return
 
 #=============================================================================================

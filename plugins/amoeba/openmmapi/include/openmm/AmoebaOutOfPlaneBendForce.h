@@ -133,12 +133,12 @@ public:
     /**
      * Get the force field parameters for an out-of-plane bend term.
      * 
-     * @param index         the index of the outOfPlaneBend for which to get parameters
-     * @param particle1     the index of the first particle connected by the outOfPlaneBend
-     * @param particle2     the index of the second particle connected by the outOfPlaneBend
-     * @param particle3     the index of the third particle connected by the outOfPlaneBend
-     * @param particle4     the index of the fourth particle connected by the outOfPlaneBend
-     * @param k             the force constant for the out-of-plane bend
+     * @param index              the index of the outOfPlaneBend for which to get parameters
+     * @param[out] particle1     the index of the first particle connected by the outOfPlaneBend
+     * @param[out] particle2     the index of the second particle connected by the outOfPlaneBend
+     * @param[out] particle3     the index of the third particle connected by the outOfPlaneBend
+     * @param[out] particle4     the index of the fourth particle connected by the outOfPlaneBend
+     * @param[out] k             the force constant for the out-of-plane bend
      */
     void getOutOfPlaneBendParameters(int index, int& particle1, int& particle2, int& particle3, int& particle4, double& k) const;
 

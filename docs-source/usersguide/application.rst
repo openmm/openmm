@@ -1125,6 +1125,13 @@ perform integration on a modified potential energy surface to allow much faster
 sampling of conformations.  For details on how to use them, consult the API
 documentation.
 
+Compound Integrator
+-------------------
+
+The :class:`CompoundIntegrator` class is useful for cases where you want to use
+multiple integration algorithms within a single simulation.  It allows you to
+create multiple integrators, then switch back and forth between them.  For
+details on how to use it, consult the API documentation.
 
 Temperature Coupling
 ====================

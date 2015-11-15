@@ -1,6 +1,3 @@
-#ifndef OPENMM_H_
-#define OPENMM_H_
-
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -9,8 +6,8 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2015 Stanford University and the Authors.      *
- * Authors: Peter Eastman                                                     *
+ * Portions copyright (c) 2010-2015 Stanford University and the Authors.      *
+ * Authors: Robert McGibbon                                                   *
  * Contributors:                                                              *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
@@ -32,48 +29,67 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/AndersenThermostat.h"
-#include "openmm/BrownianIntegrator.h"
-#include "openmm/CMAPTorsionForce.h"
-#include "openmm/CMMotionRemover.h"
-#include "openmm/CompoundIntegrator.h"
-#include "openmm/CustomBondForce.h"
-#include "openmm/CustomCentroidBondForce.h"
-#include "openmm/CustomCompoundBondForce.h"
-#include "openmm/CustomAngleForce.h"
-#include "openmm/CustomTorsionForce.h"
-#include "openmm/CustomExternalForce.h"
-#include "openmm/CustomGBForce.h"
-#include "openmm/CustomHbondForce.h"
-#include "openmm/CustomIntegrator.h"
-#include "openmm/CustomManyParticleForce.h"
-#include "openmm/CustomNonbondedForce.h"
-#include "openmm/Force.h"
-#include "openmm/GBSAOBCForce.h"
-#include "openmm/GBVIForce.h"
-#include "openmm/HarmonicAngleForce.h"
-#include "openmm/HarmonicBondForce.h"
-#include "openmm/Integrator.h"
-#include "openmm/LangevinIntegrator.h"
-#include "openmm/LocalEnergyMinimizer.h"
-#include "openmm/MonteCarloAnisotropicBarostat.h"
-#include "openmm/MonteCarloBarostat.h"
-#include "openmm/MonteCarloMembraneBarostat.h"
-#include "openmm/NonbondedForce.h"
+#include "openmm/internal/AssertionUtilities.h"
 #include "openmm/Context.h"
-#include "openmm/OpenMMException.h"
-#include "openmm/PeriodicTorsionForce.h"
-#include "openmm/RBTorsionForce.h"
-#include "openmm/State.h"
-#include "openmm/System.h"
-#include "openmm/TabulatedFunction.h"
-#include "openmm/Units.h"
-#include "openmm/VariableLangevinIntegrator.h"
-#include "openmm/VariableVerletIntegrator.h"
-#include "openmm/Vec3.h"
-#include "openmm/VerletIntegrator.h"
-#include "openmm/VirtualSite.h"
+#include "openmm/NonbondedForce.h"
 #include "openmm/Platform.h"
-#include "openmm/serialization/XmlSerializer.h"
+#include "openmm/VerletIntegrator.h"
+#include "sfmt/SFMT.h"
+#include <iostream>
 
-#endif /*OPENMM_H_*/
+using namespace OpenMM;
+using namespace std;
+
+void testTruncatedOctahedron() {
+    const int numMolecules = 5;
+    const int numParticles = numMolecules*2;
+    const float cutoff = 2.0;
+    Vec3 a(6.7929, 0, 0);
+    Vec3 b(-2.264163559406279, 6.404455775962287, 0);
+    Vec3 c(-2.264163559406279, -3.2019384603140684, 5.54658849047036);
+        
+    System system;
+    system.setDefaultPeriodicBoxVectors(a, b, c);
+    NonbondedForce* force = new NonbondedForce();
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    vector<Vec3> positions(numParticles);
+    
+    force->setCutoffDistance(cutoff);
+    force->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    
+    for (int i = 0; i < numMolecules; i++) {
+        system.addParticle(1.0);
+        system.addParticle(1.0);
+        force->addParticle(-1, 0.2, 0.2);
+        force->addParticle(1, 0.2, 0.2);
+        positions[2*i] = a*genrand_real2(sfmt) + b*genrand_real2(sfmt) + c*genrand_real2(sfmt);
+        positions[2*i+1] = positions[2*i] + Vec3(1.0, 0.0, 0.0);
+        system.addConstraint(2*i, 2*i+1, 1.0);
+    }
+    system.addForce(force);
+    
+    VerletIntegrator integrator(0.01);
+    Context context(system, integrator, Platform::getPlatformByName("Reference"));
+    context.setPositions(positions);
+    State initialState = context.getState(State::Positions | State::Energy, true);
+    double initialEnergy = initialState.getPotentialEnergy();
+
+    context.setState(initialState);
+    State finalState = context.getState(State::Positions | State::Energy, true);
+    double finalEnergy = finalState.getPotentialEnergy();
+
+    ASSERT_EQUAL_TOL(initialEnergy, finalEnergy, 1e-4);
+}
+
+int main(int argc, char* argv[]) {
+    try {
+        testTruncatedOctahedron();
+    }
+    catch(const exception& e) {
+        cout << "exception: " << e.what() << endl;
+        return 1;
+    }
+    cout << "Done" << endl;
+    return 0;
+}

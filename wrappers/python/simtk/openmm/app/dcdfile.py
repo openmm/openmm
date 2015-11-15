@@ -55,12 +55,19 @@ class DCDFile(object):
     def __init__(self, file, topology, dt, firstStep=0, interval=1):
         """Create a DCD file and write out the header.
 
-        Parameters:
-         - file (file) A file to write to
-         - topology (Topology) The Topology defining the molecular system being written
-         - dt (time) The time step used in the trajectory
-         - firstStep (int=0) The index of the first step in the trajectory
-         - interval (int=1) The frequency (measured in time steps) at which states are written to the trajectory
+        Parameters
+        ----------
+        file : file
+            A file to write to
+        topology : Topology
+            The Topology defining the molecular system being written
+        dt : time
+            The time step used in the trajectory
+        firstStep : int=0
+            The index of the first step in the trajectory
+        interval : int=1
+            The frequency (measured in time steps) at which states are written
+            to the trajectory
         """
         self._file = file
         self._topology = topology
@@ -83,14 +90,21 @@ class DCDFile(object):
     def writeModel(self, positions, unitCellDimensions=None, periodicBoxVectors=None):
         """Write out a model to the DCD file.
 
-        The periodic box can be specified either by the unit cell dimensions (for a rectangular box), or the full set of box
-        vectors (for an arbitrary triclinic box).  If neither is specified, the box vectors specified in the Topology will be
-        used.  Regardless of the value specified, no dimensions will be written if the Topology does not represent a periodic system.
+        The periodic box can be specified either by the unit cell dimensions
+        (for a rectangular box), or the full set of box vectors (for an
+        arbitrary triclinic box).  If neither is specified, the box vectors
+        specified in the Topology will be used. Regardless of the value
+        specified, no dimensions will be written if the Topology does not
+        represent a periodic system.
 
-        Parameters:
-         - positions (list) The list of atomic positions to write
-         - unitCellDimensions (Vec3=None) The dimensions of the crystallographic unit cell.
-         - periodicBoxVectors (tuple of Vec3=None) The vectors defining the periodic box.
+        Parameters
+        ----------
+        positions : list
+            The list of atomic positions to write
+        unitCellDimensions : Vec3=None
+            The dimensions of the crystallographic unit cell.
+        periodicBoxVectors : tuple of Vec3=None
+            The vectors defining the periodic box.
         """
         if len(list(self._topology.atoms())) != len(positions):
             raise ValueError('The number of positions must match the number of atoms')
