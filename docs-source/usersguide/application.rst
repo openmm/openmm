@@ -1915,7 +1915,9 @@ contains the following tags:
   name is recommended, since it makes the residue definition much easier to
   understand.)
 * An :code:`<ExternalBond>` tag for each atom that will be bonded to an
-  atom of a different residue.
+  atom of a different residue.  :code:`atomName` is the name of the atom.
+  (Alternatively, the deprecated :code:`from` tag may indicate the atom by
+  index instead of name.)
 
 
 The :code:`<Residue>` tag may also contain :code:`<VirtualSite>` tags,
@@ -1941,8 +1943,11 @@ be represented with a virtual site.  The :code:`type` attribute may equal
 OutOfPlaneSite, and LocalCoordinatesSite classes respectively.  The :code:`siteName`
 attribute gives the name of the atom to represent with a virtual site.  The atoms
 it is calculated based on are specified by :code:`atomName1`\ , :code:`atomName2`\ ,
-and (for virtual site classes that involve three atoms) :code:`atomName3`\ .  The
-remaining attributes are specific to the virtual site class, and specify the
+and (for virtual site classes that involve three atoms) :code:`atomName3`\ .
+(Some old force fields use the deprecated tags :code:`index`, :code:`atom1`,
+:code:`atom2`, and :code:`atom3` to refer to them by index instead of name.)
+
+The remaining attributes are specific to the virtual site class, and specify the
 parameters for calculating the site position.  For a TwoParticleAverageSite,
 they are :code:`weight1` and :code:`weight2`\ .  For a
 ThreeParticleAverageSite, they are :code:`weight1`\ , :code:`weight2`\ , and
