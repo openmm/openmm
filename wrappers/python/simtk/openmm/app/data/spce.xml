@@ -8,8 +8,8 @@
    <Atom name="O" type="spce-O"/>
    <Atom name="H1" type="spce-H"/>
    <Atom name="H2" type="spce-H"/>
-   <Bond from="0" to="1"/>
-   <Bond from="0" to="2"/>
+   <Bond atomName1="O" atomName2="H1"/>
+   <Bond atomName1="O" atomName2="H2"/>
   </Residue>
  </Residues>
  <HarmonicBondForce>
