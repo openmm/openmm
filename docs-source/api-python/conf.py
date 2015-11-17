@@ -23,6 +23,7 @@ release = simtk.openmm.version.full_version
 
 exclude_patterns = ['_build']
 html_static_path = ['_static']
+templates_path = ['_templates']
 
 pygments_style = 'sphinx'
 
