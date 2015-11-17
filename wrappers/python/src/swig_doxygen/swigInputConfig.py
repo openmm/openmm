@@ -144,6 +144,12 @@ STEAL_OWNERSHIP = {("Platform", "registerPlatform") : [0],
                    ("CompoundIntegrator", "addIntegrator") : [0],
 }
 
+
+REQUIRE_ORDERED_SET = {("CustomNonbondedForce", "addInteractionGroup") : [0, 1],
+                       ("CustomNonbondedForce", "setInteractionGroupParameters") : [1, 2],
+}
+
+
 # This is a list of units to attach to return values and method args.
 # Indexed by (ClassName, MethodsName)
 UNITS = {
