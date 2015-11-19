@@ -35,16 +35,16 @@ import os.path
 # biotype    2006    CA      "Calcium Ion"                     256
 # biotype    2007    CL      "Chloride Ion"                    258
 
-ions    = { 'Li+' :  [ 'LI', 249, 249  ],
-            'Na+' :  [ 'NA', 250, 2003 ],
-            'K+'  :  [ 'K',  251, 2004 ],
-            'Rb+' :  [ 'RB', 252, 252  ],  
-            'Cs+' :  [ 'CS', 253, 253  ], 
-            'Be+' :  [ 'BE', 254, 254  ],
-            'Mg+' :  [ 'MG', 255, 2005 ],
-            'Ca+' :  [ 'CA', 256, 2006 ],
-            'Zn+' :  [ 'ZN', 257, 257 ],
-            'Cl-' :  [ 'Cl', 258, 2007 ]
+ions    = { 'Li+' :  ['LI', 249],
+            'Na+' :  ['NA', 250],
+            'K+'  :  ['K',  251],
+            'Rb+' :  ['RB', 252],  
+            'Cs+' :  ['CS', 253], 
+            'Be+' :  ['BE', 254],
+            'Mg+' :  ['MG', 255],
+            'Ca+' :  ['CA', 256],
+            'Zn+' :  ['ZN', 257],
+            'Cl-' :  ['Cl', 258]
            }
 
 atomTypes                    = {}
@@ -339,34 +339,23 @@ def buildResidueDict( residueXmlFileName ):
 
 def setBioTypes( bioTypes, residueDict ):
 
-    for res in residueDict.values():
+    for resname, res in residueDict.items():
         for atom in res['atoms']:
             atomLookup = res['atoms'][atom]['tinkerLookupName']
-            resLookup = [res['tinkerLookupName']]
+            resLookup = []
             if res['type'] == 'dna':
                 if res['loc'] in ('5', 'N'):
                     resLookup.append("5'-Hydroxyl DNA")
-                    resLookup.append("5'-Phosphate OS DNA")
-                    resLookup.append("5'-Phosphate P DNA")
-                    resLookup.append("5'-Phosphate OP DNA")
                 if res['loc'] in ('3', 'N'):
                     resLookup.append("3'-Hydroxyl DNA")
-                    resLookup.append("3'-Phosphate OS DNA")
-                    resLookup.append("3'-Phosphate P DNA")
-                    resLookup.append("3'-Phosphate OP DNA")
                 resLookup.append("Phosphodiester DNA")
             if res['type'] == 'rna':
                 if res['loc'] in ('5', 'N'):
                     resLookup.append("5'-Hydroxyl RNA")
-                    resLookup.append("5'-Phosphate OS RNA")
-                    resLookup.append("5'-Phosphate P RNA")
-                    resLookup.append("5'-Phosphate OP RNA")
                 if res['loc'] in ('3', 'N'):
                     resLookup.append("3'-Hydroxyl RNA")
-                    resLookup.append("3'-Phosphate OS RNA")
-                    resLookup.append("3'-Phosphate P RNA")
-                    resLookup.append("3'-Phosphate OP RNA")
                 resLookup.append("Phosphodiester RNA")
+            resLookup.append(res['tinkerLookupName'])
             for suffix in resLookup:
                 lookupName = atomLookup+'_'+suffix
                 if lookupName in bioTypes:
@@ -556,6 +545,7 @@ while lineIndex < len( allLines ):
         if( fields[3] in ions ):
             ionInfo = ions[fields[3]]
             element = ionInfo[0]
+            ionInfo[1] = int(fields[1])
         else:
             element = fields[3][0]
         atomTypes[int(fields[1])] = (fields[2], element, fields[6])
@@ -564,6 +554,9 @@ while lineIndex < len( allLines ):
     elif fields[0] == 'biotype':
 
         lookUp            = fields[2] + '_' + fields[3]
+        if lookUp in bioTypes:
+            # Workaround for Tinker using the same name but different types for H2', H2'', and for H5', H5''
+            lookUp = fields[2]+'*_'+fields[3]
         bioTypes[lookUp]  = fields[1:]
         lineIndex        += 1
 
@@ -840,24 +833,26 @@ if( isAmoeba ):
     # AmoebaTorsionForce
 
     torsionUnit      = float(scalars['torsionunit']) 
-    outputString     = """ <AmoebaTorsionForce torsionUnit="%s">""" % ( torsionUnit )
+    outputString     = """ <PeriodicTorsionForce>"""
     tinkerXmlFile.write( "%s\n" % (outputString ) )
     torsions         = forces['torsion']
     conversion       = 4.184*torsionUnit
     for torsion in torsions:
-       outputString  = """  <Torsion class1="%s" class2="%s" class3="%s" class4="%s" """ % (torsion[0], torsion[1], torsion[2],  torsion[3])
+       outputString  = """  <Proper class1="%s" class2="%s" class3="%s" class4="%s" """ % (torsion[0], torsion[1], torsion[2],  torsion[3])
        startIndex    = 4
        for ii in range(0,3):
           torsionSuffix            = str(ii+1)
-          amplitudeAttributeName   = 'amp' + torsionSuffix
-          angleAttributeName       = 'angle'     + torsionSuffix
+          amplitudeAttributeName   = 'k'+torsionSuffix
+          angleAttributeName       = 'phase'+torsionSuffix
+          periodicityAttributeName = 'periodicity'+torsionSuffix
           amplitude                = float(torsion[startIndex])*conversion
           angle                    = float(torsion[startIndex+1])/radian
-          outputString            += """  %s="%s" %s="%s" """ % (amplitudeAttributeName, str(amplitude), angleAttributeName, str(angle) )
+          periodicity              = int(torsion[startIndex+2])
+          outputString            += """  %s="%s" %s="%s" %s="%s" """ % (amplitudeAttributeName, str(amplitude), angleAttributeName, str(angle), periodicityAttributeName, str(periodicity))
           startIndex              += 3
        outputString += "/>"
        tinkerXmlFile.write( "%s\n" % (outputString ) )
-    tinkerXmlFile.write( " </AmoebaTorsionForce>\n" )
+    tinkerXmlFile.write( " </PeriodicTorsionForce>\n" )
 
 #=============================================================================================
 
