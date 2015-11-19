@@ -1611,7 +1611,10 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
                 sort = new OpenCLSort(cl, new SortTrait(), cl.getNumAtoms());
                 fft = new OpenCLFFT3D(cl, gridSizeX, gridSizeY, gridSizeZ);
                 string vendor = cl.getDevice().getInfo<CL_DEVICE_VENDOR>();
-                usePmeQueue = (vendor.size() >= 6 && vendor.substr(0, 6) == "NVIDIA");
+                //usePmeQueue = (vendor.size() >= 6 && vendor.substr(0, 6) == "NVIDIA");
+		usePmeQueue = false; // force PmeQueue force to eliminate potential race condition
+	                             // See https://github.com/pandegroup/openmm/pull/1249
+		                     // and https://github.com/FoldingAtHome/openmm-core/pull/90
                 if (usePmeQueue) {
                     pmeQueue = cl::CommandQueue(cl.getContext(), cl.getDevice());
                     int recipForceGroup = force.getReciprocalSpaceForceGroup();
