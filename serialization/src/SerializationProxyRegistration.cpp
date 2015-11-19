@@ -45,7 +45,6 @@
 #include "openmm/CustomNonbondedForce.h"
 #include "openmm/CustomTorsionForce.h"
 #include "openmm/GBSAOBCForce.h"
-#include "openmm/GBVIForce.h"
 #include "openmm/HarmonicAngleForce.h"
 #include "openmm/HarmonicBondForce.h"
 #include "openmm/LangevinIntegrator.h"
@@ -78,7 +77,6 @@
 #include "openmm/serialization/CustomNonbondedForceProxy.h"
 #include "openmm/serialization/CustomTorsionForceProxy.h"
 #include "openmm/serialization/GBSAOBCForceProxy.h"
-#include "openmm/serialization/GBVIForceProxy.h"
 #include "openmm/serialization/HarmonicAngleForceProxy.h"
 #include "openmm/serialization/HarmonicBondForceProxy.h"
 #include "openmm/serialization/LangevinIntegratorProxy.h"
@@ -132,7 +130,6 @@ extern "C" void registerSerializationProxies() {
     SerializationProxy::registerProxy(typeid(Discrete2DFunction), new Discrete2DFunctionProxy());
     SerializationProxy::registerProxy(typeid(Discrete3DFunction), new Discrete3DFunctionProxy());
     SerializationProxy::registerProxy(typeid(GBSAOBCForce), new GBSAOBCForceProxy());
-    SerializationProxy::registerProxy(typeid(GBVIForce), new GBVIForceProxy());
     SerializationProxy::registerProxy(typeid(HarmonicAngleForce), new HarmonicAngleForceProxy());
     SerializationProxy::registerProxy(typeid(HarmonicBondForce), new HarmonicBondForceProxy());
     SerializationProxy::registerProxy(typeid(LangevinIntegrator), new LangevinIntegratorProxy());

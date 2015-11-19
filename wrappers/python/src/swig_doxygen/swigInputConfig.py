@@ -43,7 +43,6 @@ SKIP_METHODS = [('State',),
                 ('CalcCustomTorsionForceKernel',),
                 ('CalcForcesAndEnergyKernel',),
                 ('CalcGBSAOBCForceKernel',),
-                ('CalcGBVIForceKernel',),
                 ('CalcHarmonicAngleForceKernel',),
                 ('CalcHarmonicBondForceKernel',),
                 ('CalcKineticEnergyKernel',),
@@ -393,14 +392,6 @@ UNITS = {
  : (None, ('unit.elementary_charge',
            'unit.nanometer', None)),
 ("GBSAOBCForce", "getSurfaceAreaEnergy") : ('unit.kilojoule_per_mole/unit.nanometer/unit.nanometer', ()),
-("GBVIForce", "getBornRadiusScalingMethod") : (None, ()),
-("GBVIForce", "getQuinticLowerLimitFactor") : (None, ()),
-("GBVIForce", "getQuinticUpperBornRadiusLimit") : ('unit.nanometer', ()),
-("GBVIForce", "getBondParameters")
- : (None, (None, None, 'unit.nanometer')),
-("GBVIForce", "getParticleParameters")
- : (None, ('unit.elementary_charge',
-           'unit.nanometer', 'unit.kilojoule_per_mole')),
 ("HarmonicAngleForce", "getAngleParameters")
  : (None, (None, None, None, 'unit.radian',
            'unit.kilojoule_per_mole/(unit.radian*unit.radian)')),
