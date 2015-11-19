@@ -2656,7 +2656,7 @@ class AmoebaPiTorsionGenerator:
             atom1 = bond.atom1
             atom2 = bond.atom2
 
-            if (len(data.atomBonds[atom1]) == 3 and len(data.atomBonds[atom1]) == 3):
+            if (len(data.atomBonds[atom1]) == 3 and len(data.atomBonds[atom2]) == 3):
 
                 type1 = data.atomType[data.atoms[atom1]]
                 type2 = data.atomType[data.atoms[atom2]]
@@ -2941,7 +2941,7 @@ class AmoebaTorsionTorsionGenerator:
 
                                 # match in reverse order
 
-                                if (type5 in types1 and type4 in types2 and type3 in types3 and type2 in types4 and type1 in types5):
+                                elif (type5 in types1 and type4 in types2 and type3 in types3 and type2 in types4 and type1 in types5):
                                     chiralAtomIndex = self.getChiralAtomIndex(data, sys, ib, ic, id)
                                     force.addTorsionTorsion(ie, id, ic, ib, ia, chiralAtomIndex, self.gridIndex[i])
 
