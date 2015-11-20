@@ -38,7 +38,7 @@ from simtk.openmm.app import PDBFile
 from simtk.openmm.app.internal import amber_file_parser
 from . import forcefield as ff
 from . import element as elem
-import simtk.unit as unit
+import simtk.unit as u
 import simtk.openmm as mm
 from simtk.openmm.app.internal.unitcell import computePeriodicBoxVectors
 
@@ -154,13 +154,13 @@ class AmberPrmtopFile(object):
             box = prmtop.getBoxBetaAndDimensions()
             top.setPeriodicBoxVectors(computePeriodicBoxVectors(*(box[1:4] + box[0:1]*3)))
 
-    def createSystem(self, nonbondedMethod=ff.NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
+    def createSystem(self, nonbondedMethod=ff.NoCutoff, nonbondedCutoff=1.0*u.nanometer,
                      constraints=None, rigidWater=True, implicitSolvent=None,
-                     implicitSolventSaltConc=0.0*(unit.moles/unit.liter),
-                     implicitSolventKappa=None, temperature=298.15*unit.kelvin,
+                     implicitSolventSaltConc=0.0*(u.moles/u.liter),
+                     implicitSolventKappa=None, temperature=298.15*u.kelvin,
                      soluteDielectric=1.0, solventDielectric=78.5,
                      removeCMMotion=True, hydrogenMass=None, ewaldErrorTolerance=0.0005,
-                     switchDistance=0.0*unit.nanometer):
+                     switchDistance=0.0*u.nanometer):
         """Construct an OpenMM System representing the topology described by this
         prmtop file.
 
@@ -252,10 +252,10 @@ class AmberPrmtopFile(object):
             raise ValueError('Illegal value for implicit solvent model')
         # If implicitSolventKappa is None, compute it from the salt concentration
         if implicitSolvent is not None and implicitSolventKappa is None:
-            if unit.is_quantity(implicitSolventSaltConc):
-                implicitSolventSaltConc = implicitSolventSaltConc.value_in_unit(unit.moles/unit.liter)
-            if unit.is_quantity(temperature):
-                temperature = temperature.value_in_unit(unit.kelvin)
+            if u.is_quantity(implicitSolventSaltConc):
+                implicitSolventSaltConc = implicitSolventSaltConc.value_in_unit(u.moles/u.liter)
+            if u.is_quantity(temperature):
+                temperature = temperature.value_in_unit(u.kelvin)
             # The constant is 1 / sqrt( epsilon_0 * kB / (2 * NA * q^2 * 1000) )
             # where NA is avogadro's number, epsilon_0 is the permittivity of
             # free space, q is the elementary charge (this number matches
