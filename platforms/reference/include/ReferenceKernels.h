@@ -43,7 +43,6 @@
 namespace OpenMM {
 
 class ReferenceObc;
-class ReferenceGBVI;
 class ReferenceAndersenThermostat;
 class ReferenceCustomCentroidBondIxn;
 class ReferenceCustomCompoundBondIxn;
@@ -679,37 +678,6 @@ public:
     void copyParametersToContext(ContextImpl& context, const GBSAOBCForce& force);
 private:
     ReferenceObc* obc;
-    std::vector<RealOpenMM> charges;
-    bool isPeriodic;
-};
-
-/**
- * This kernel is invoked by GBVIForce to calculate the forces acting on the system.
- */
-class ReferenceCalcGBVIForceKernel : public CalcGBVIForceKernel {
-public:
-    ReferenceCalcGBVIForceKernel(std::string name, const Platform& platform) : CalcGBVIForceKernel(name, platform) {
-    }
-    ~ReferenceCalcGBVIForceKernel();
-    /**
-     * Initialize the kernel.
-     * 
-     * @param system       the System this kernel will be applied to
-     * @param force        the GBVIForce this kernel will be used for
-     * @param scaled radii the scaled radii (Eq. 5 of Labute paper)
-     */
-    void initialize(const System& system, const GBVIForce& force, const std::vector<double> & scaledRadii);
-    /**
-     * Execute the kernel to calculate the forces and/or energy.
-     *
-     * @param context        the context in which to execute this kernel
-     * @param includeForces  true if forces should be calculated
-     * @param includeEnergy  true if the energy should be calculated
-     * @return the potential energy due to the force
-     */
-    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-private:
-    ReferenceGBVI * gbvi;
     std::vector<RealOpenMM> charges;
     bool isPeriodic;
 };

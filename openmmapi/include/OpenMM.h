@@ -50,7 +50,6 @@
 #include "openmm/CustomNonbondedForce.h"
 #include "openmm/Force.h"
 #include "openmm/GBSAOBCForce.h"
-#include "openmm/GBVIForce.h"
 #include "openmm/HarmonicAngleForce.h"
 #include "openmm/HarmonicBondForce.h"
 #include "openmm/Integrator.h"
