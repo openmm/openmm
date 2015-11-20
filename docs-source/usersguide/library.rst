@@ -1905,6 +1905,19 @@ The CPU Platform recognizes the following Platform-specific properties:
   running something else on the computer at the same time, and you want to
   prevent OpenMM from monopolizing all available cores.
 
+.. _platform-specific-properties-determinism:
+
+Determinism
+***********
+
+Whether a simulation is deterministic will depend on what plaform you run on in
+addition to what settings/methods you use. For instance, as of this writing,
+using PME on the Reference, OpenCL, and double-precision CUDA will result in
+deterministic simulations. Single-precision CUDA and CPU platforms are not
+deterministic in this case. However, none of this behavior is guaranteed in
+future versions. In many cases it will still result in an identical trajectory.
+If determinism is a critical for your needs, you should carefully check to
+ensure that your settings and platform allow for this.
 
 .. _using-openmm-with-software-written-in-languages-other-than-c++:
 

@@ -1329,6 +1329,60 @@ separated by spaces instead of commas:
     simulation.reporters.append(StateDataReporter('data.txt', 1000, progress=True,
             temperature=True, totalSteps=10000, separator=' '))
 
+
+Saving Simulation Progress and Results
+==========================================
+
+There are three built-in ways to save the results of your simulation in OpenMM
+(additional methods can be written yourself or imported through other packages
+like mdtraj or parmed). If you are simply interested in saving the structure,
+you can write it out as a PDB file using :code:`PDBFile.writeFile()`.  You can
+see an example of this in the modeller section :ref:`saving-the-results`.
+
+If you are hoping to save more information than just positions, you can use
+:code:`simulation.saveState()`. This will save the entire state of the
+simulation, including positions, velocities, box dimensions and much more in an
+XML file. This same file can be loaded back into OpenMM and used to continue
+the simulation. Importantly, because this file is a text file, it can be
+transfered between different platforms. A potential downside to this approach
+is that state files are often quite large, and may not fit all use cases.
+Here's an example of how to use it:
+::
+
+    simulation.saveState('output.xml')
+
+To load the simulation back in:
+::
+
+    simulation.loadState('output.xml')
+
+There is a third way to save your simulation, known as a checkpoint file, which
+will save the entire simulation as a binary file. It will allow you to exactly
+continue a simulation if the need arises (though whether the simulation is
+deterministic depends on platform and methods, see
+:ref:`platform-specific-properties-determinism`). There are important caveats
+to this approach, however. This binary can only be used to restart simulations
+on machines with the same hardware and software as the one that saved it.
+Therefore, it should only be used when it's clear that won't be an issue.
+::
+
+    simulation.saveCheckpoint('state.chk')
+
+And can be loaded back in like this:
+::
+
+    simulation.loadCheckpoint('state.chk')
+
+Finally, OpenMM comes with a built-in reporter for saving checkpoints, the
+:class:`CheckpointReporter`, which can be helpful in restarting simulations
+that failed unexpectedly or due to outside reasons (e.g. server crash). To save
+a checkpoint file every 5,000 steps, for example:
+::
+
+    simulation.reporters.append(CheckpointReporter('checkpnt.chk', 5000))
+
+Note that the checkpoint reporter will overwrite the last checkpoint file.
+
 .. _model-building-and-editing:
 
 Model Building and Editing
@@ -1503,6 +1557,8 @@ Call deleteWater to remove all water molecules from the system:
 This is useful, for example, if you want to simulate it with implicit solvent.
 Be aware, though, that this only removes water molecules, not ions or other
 small molecules that might be considered “solvent”.
+
+.. _saving-the-results:
 
 Saving The Results
 ******************
