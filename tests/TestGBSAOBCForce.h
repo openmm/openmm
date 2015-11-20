@@ -255,7 +255,7 @@ void testForce(int numParticles, NonbondedForce::NonbondedMethod method, GBSAOBC
         State state2 = context.getState(State::Energy);
         context.setPositions(positions3);
         State state3 = context.getState(State::Energy);
-        ASSERT_EQUAL_TOL(norm, (state2.getPotentialEnergy()-state3.getPotentialEnergy())/delta, 1e-2)
+        ASSERT_EQUAL_TOL(state2.getPotentialEnergy(), state3.getPotentialEnergy()+norm*delta, 1e-5)
     }
 }
 

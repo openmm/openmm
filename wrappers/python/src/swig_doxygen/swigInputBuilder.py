@@ -49,8 +49,7 @@ def striphtmltags(s):
     s = s.replace('<i>', '_').replace('</i>', '_')
     s = s.replace('<b>', '*').replace('</b>', '*')
 
-    s = re.sub('\s*(<ul>.*</ul>\s*)', replace_ul_tags, s, flags=re.MULTILINE | re.DOTALL)
-
+    s = re.sub('\s*(<ul>.*?</ul>\s*)', replace_ul_tags, s, flags=re.MULTILINE | re.DOTALL)
     return s
 
 def trimToSingleSpace(text):
@@ -144,6 +143,20 @@ def getClassMethodList(classNode, skipMethods):
                                 shortClassName==methName,
                                 '~'+shortClassName==methName, templateType, templateName ) )
     return methodList
+
+
+def docstringTypemap(cpptype):
+    """Translate a C++ type to Python for inclusion in the Python docstrings.
+    This doesn't need to be perfectly accurate -- it's not used for generating
+    the actual swig wrapper code. It's only used for generating the docstrings.
+    """
+    pytype = cpptype
+    if pytype.startswith('const '):
+        pytype = pytype[6:]
+    if pytype.startswith('std::'):
+        pytype = pytype[5:]
+    pytype = pytype.strip('&')
+    return pytype.strip()
 
 
 class SwigInputBuilder:
@@ -243,23 +256,43 @@ class SwigInputBuilder:
                         forceSubclassList.append(shortClassName)
                     elif baseName == 'OpenMM::Integrator':
                         integratorSubclassList.append(shortClassName)
+
         self.fOut.write("%factory(OpenMM::Force& OpenMM::System::getForce")
         for name in sorted(forceSubclassList):
             self.fOut.write(",\n         OpenMM::%s" % name)
         self.fOut.write(");\n\n")
+
+        self.fOut.write("%factory(OpenMM::Force* OpenMM::Force::__copy__")
+        for name in sorted(forceSubclassList):
+            self.fOut.write(",\n         OpenMM::%s" % name)
+        self.fOut.write(");\n\n")
+
         self.fOut.write("%factory(OpenMM::Force* OpenMM_XmlSerializer__deserializeForce")
         for name in sorted(forceSubclassList):
             self.fOut.write(",\n         OpenMM::%s" % name)
         self.fOut.write(");\n\n")
+
+        self.fOut.write("%factory(OpenMM::Integrator* OpenMM::Integrator::__copy__")
+        for name in sorted(integratorSubclassList):
+            self.fOut.write(",\n         OpenMM::%s" % name)
+        self.fOut.write(");\n\n")
+
         self.fOut.write("%factory(OpenMM::Integrator* OpenMM_XmlSerializer__deserializeIntegrator")
         for name in sorted(integratorSubclassList):
             self.fOut.write(",\n         OpenMM::%s" % name)
         self.fOut.write(");\n\n")
+
         self.fOut.write("%factory(OpenMM::Integrator& OpenMM::Context::getIntegrator")
         for name in sorted(integratorSubclassList):
             self.fOut.write(",\n         OpenMM::%s" % name)
         self.fOut.write(");\n\n")
-        self.fOut.write("%factory(OpenMM::VirtualSite& OpenMM::System::getVirtualSite, OpenMM::TwoParticleAverageSite, OpenMM::ThreeParticleAverageSite, OpenMM::OutOfPlaneSite);\n\n")
+
+        self.fOut.write("%factory(OpenMM::Integrator& OpenMM::CompoundIntegrator::getIntegrator")
+        for name in sorted(integratorSubclassList):
+            self.fOut.write(",\n         OpenMM::%s" % name)
+        self.fOut.write(");\n\n")
+
+        self.fOut.write("%factory(OpenMM::VirtualSite& OpenMM::System::getVirtualSite, OpenMM::TwoParticleAverageSite, OpenMM::ThreeParticleAverageSite, OpenMM::OutOfPlaneSite, OpenMM::LocalCoordinatesSite);\n\n")
         self.fOut.write("\n")
 
     def writeGlobalConstants(self):
@@ -344,7 +377,6 @@ class SwigInputBuilder:
                 argSep=",\n"
             self.fOut.write("\n%s};\n" % INDENT)
         if len(enumNodes)>0: self.fOut.write("\n")
-
 
     def writeMethods(self, classNode):
         methodList=getClassMethodList(classNode, self.skipMethods)
@@ -432,35 +464,44 @@ class SwigInputBuilder:
             (shortClassName, memberNode,
              shortMethDefinition, methName,
              isConstructors, isDestructor, templateType, templateName) = items
-            paramList=findNodes(memberNode, 'param')
+            paramList = findNodes(memberNode, 'param')
 
-            #write pythonprepend blocks
+            # write pythonprepend blocks
             mArgsstring = getText("argsstring", memberNode)
             if self.fOutPythonprepend and \
                len(paramList) and \
-               mArgsstring.find('=0')<0:
-                key=(shortClassName, methName)
-                if key in self.configModule.STEAL_OWNERSHIP:
-                    for argNum in self.configModule.STEAL_OWNERSHIP[key]:
-                        if self.SWIG_COMPACT_ARGUMENTS:
-                            argName = 'args[%s]' % argNum
-                        else:
-                            argName = getText('declname', paramList[argNum])
+               mArgsstring.find('=0') < 0:
+                text = '''
+%pythonprepend OpenMM::{shortClassName}::{methName}{mArgsstring} %{{{{{{0}}
+%}}}}'''.format(shortClassName=shortClassName, methName=methName, mArgsstring=mArgsstring)
+                textInside = ''
+                key = (shortClassName, methName)
+                for argNum in self.configModule.STEAL_OWNERSHIP.get(key, []):
+                    if self.SWIG_COMPACT_ARGUMENTS:
+                        argName = 'args[%s]' % argNum
+                    else:
+                        argName = getText('declname', paramList[argNum])
 
-                        text = '''
-%pythonprepend OpenMM::{shortClassName}::{methName}{mArgsstring} %{{
+                    textInside += '''
     if not {argName}.thisown:
         s = ("the %s object does not own its corresponding OpenMM object"
              % self.__class__.__name__)
-        raise Exception(s)
-%}}'''.format(argName=argName, shortClassName=shortClassName, methName=methName, mArgsstring=mArgsstring)
-                        self.fOutPythonprepend.write(text)
+        raise Exception(s)'''.format(argName=argName)
+                for argNum in self.configModule.REQUIRE_ORDERED_SET.get(key, []):
+                    if self.SWIG_COMPACT_ARGUMENTS:
+                        argName = 'args[%s]' % argNum
+                    else:
+                        argName = getText('declname', paramList[argNum])
 
+                    textInside += '''
+    {argName} = list({argName})'''.format(argName=argName)
+                if textInside:
+                    self.fOutPythonprepend.write(text.format(textInside))
 
-            #write pythonappend blocks
+            # write pythonappend blocks
             if self.fOutPythonappend \
-               and mArgsstring.find('=0')<0:
-                key=(shortClassName, methName)
+               and mArgsstring.find('=0') < 0:
+                key = (shortClassName, methName)
                 #print "key %s %s \n" % (shortClassName, methName)
                 addText=''
                 returnType = getText("type", memberNode)
@@ -548,32 +589,58 @@ class SwigInputBuilder:
             (shortClassName, memberNode,
              shortMethDefinition, methName,
              isConstructors, isDestructor, templateType, templateName ) = items
-            if self.fOutDocstring:
-                for dNode in findNodes(memberNode, 'detaileddescription'):
-                    dString=""
-                    try:
-                        description=getText('para', dNode)
-                        description.strip()
-                        if description:
-                            dString=description
-                    except IndexError:
-                        pass
-                    params = findNodes(dNode, 'para/parameterlist/parameteritem')
-                    if len(params) > 0:
-                        dString="%s\n   Parameters:" % dString
-                    for pNode in params:
-                        argName = getText('parameternamelist/parametername', pNode)
-                        argDoc = getText('parameterdescription/para', pNode)
-                        dString="%s\n    - %s %s" % (dString, argName, argDoc)
-                        dString.strip()
-                    if dString:
-                        dString=re.sub(r'([^\\])"', r'\g<1>\"', dString)
-                        s = '%%feature("docstring") OpenMM::%s::%s "%s";' \
-                           % (shortClassName, methName, dString)
-                        self.fOutDocstring.write("%s\n" % s)
-                self.fOutDocstring.write("\n\n")
-        #print "Done write Docstring info\n"
 
+            if self.fOutDocstring:
+                signatureParams = findNodes(memberNode, 'param')
+                assert len(findNodes(memberNode, 'detaileddescription')) == 1
+                dNode = findNodes(memberNode, 'detaileddescription')[0]
+
+                try:
+                    description=getText('para', dNode)
+                    description.strip()
+                except IndexError:
+                    description = ''
+                params = findNodes(dNode, 'para/parameterlist/parameteritem')
+
+                paramString = ['Parameters', '----------']
+                returnString = ['Returns', '-------']
+
+                if len(params) > 0:
+                    if len(signatureParams) != len(params):
+                        raise ValueError('docstring in %s.%s does not match the signature' % (shortClassName, methName))
+
+                    for pNode, pSignatureNode in zip(params, signatureParams):
+                        parameterNameNode = findNodes(pNode, 'parameternamelist/parametername')[0]
+                        argDoc = getText('parameterdescription/para', pNode)
+                        argName = getNodeText(parameterNameNode)
+                        argType = docstringTypemap(getText('type', pSignatureNode))
+
+                        isOutput = parameterNameNode.get('direction') == 'out'
+                        if isOutput:
+                            returnString.extend(['%s : %s' % (argName, argType), '    %s' % argDoc])
+                        else:
+                            paramString.extend(['%s : %s' % (argName, argType), '    %s' % argDoc])
+
+
+                returnSection = findNodes(dNode, 'para/simplesect')
+                if len(returnSection) > 0:
+                    returnNode = returnSection[0]
+                    if returnNode.get('kind') == 'return':
+                        argType = getNodeText(findNodes(memberNode, 'type')[0])
+                        argType = docstringTypemap(argType)
+                        returnString.extend([argType, '    %s' % getNodeText(returnNode).strip()])
+
+                dString = '\n'.join(
+                    ([description] + [''] if len(description) > 0 else []) +
+                    (paramString + [''] if len(paramString) > 2 else []) +
+                    (returnString if len(returnString) > 2 else [])).strip()
+                if dString:
+                    dString = re.sub(r'([^\\])"', r'\g<1>\"', dString)
+                    s = '%%feature("docstring") OpenMM::%s::%s "%s";' \
+                       % (shortClassName, methName, dString)
+                    self.fOutDocstring.write("%s\n" % s)
+
+                self.fOutDocstring.write("\n\n")
 
 
     def writeSwigFile(self):

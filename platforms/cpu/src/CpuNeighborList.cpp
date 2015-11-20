@@ -113,12 +113,10 @@ public:
     }
     
     /**
-     * Find the index of the first particle in voxel (y,z) whose x coordinate in >= the specified value.
+     * Find the index of the first particle in voxel (y,z) whose x coordinate is >= the specified value.
      */
-    int findLowerBound(int y, int z, double x) const {
+    int findLowerBound(int y, int z, double x, int lower, int upper) const {
         const vector<pair<float, int> >& bin = bins[y][z];
-        int lower = 0;
-        int upper = bin.size();
         while (lower < upper) {
             int middle = (lower+upper)/2;
             if (bin[middle].first < x)
@@ -130,12 +128,10 @@ public:
     }
     
     /**
-     * Find the index of the first particle in voxel (y,z) whose x coordinate in greater than the specified value.
+     * Find the index of the first particle in voxel (y,z) whose x coordinate is greater than the specified value.
      */
-    int findUpperBound(int y, int z, double x) const {
+    int findUpperBound(int y, int z, double x, int lower, int upper) const {
         const vector<pair<float, int> >& bin = bins[y][z];
-        int lower = 0;
-        int upper = bin.size();
         while (lower < upper) {
             int middle = (lower+upper)/2;
             if (bin[middle].first > x)
@@ -211,7 +207,7 @@ public:
 
             // Loop over voxels along the y axis.
 
-            int boxz = (int) floor((float) z/nz);
+            float boxz = floor((float) z/nz);
             int starty = centerVoxelIndex.y-dIndexY;
             int endy = centerVoxelIndex.y+dIndexY;
             float yoffset = (float) (usePeriodic ? boxz*periodicBoxVectors[2][1] : 0);
@@ -228,7 +224,7 @@ public:
                 voxelIndex.y = y;
                 if (usePeriodic)
                     voxelIndex.y = (y < 0 ? y+ny : (y >= ny ? y-ny : y));
-                int boxy = (int) floor((float) y/ny);
+                float boxy = floor((float) y/ny);
                 float xoffset = (float) (usePeriodic ? boxy*periodicBoxVectors[1][0]+boxz*periodicBoxVectors[2][0] : 0);
                 
                 // Identify the range of atoms within this bin we need to search.  When using periodic boundary
@@ -264,22 +260,25 @@ public:
                 int numRanges;
                 int rangeStart[2];
                 int rangeEnd[2];
-                rangeStart[0] = findLowerBound(voxelIndex.y, voxelIndex.z, minx);
+                int binSize = bins[voxelIndex.y][voxelIndex.z].size();
+                rangeStart[0] = findLowerBound(voxelIndex.y, voxelIndex.z, minx, 0, binSize);
                 if (needPeriodic) {
                     numRanges = 2;
-                    rangeEnd[0] = findUpperBound(voxelIndex.y, voxelIndex.z, maxx);
-                    if (rangeStart[0] > 0) {
+                    rangeEnd[0] = findUpperBound(voxelIndex.y, voxelIndex.z, maxx, rangeStart[0], binSize);
+                    if (rangeStart[0] > 0 && rangeEnd[0] < binSize)
+                        numRanges = 1;
+                    else if (rangeStart[0] > 0) {
                         rangeStart[1] = 0;
-                        rangeEnd[1] = min(findUpperBound(voxelIndex.y, voxelIndex.z, maxx-periodicBoxSize[0]), rangeStart[0]);
+                        rangeEnd[1] = min(findUpperBound(voxelIndex.y, voxelIndex.z, maxx-periodicBoxSize[0], 0, rangeStart[0]), rangeStart[0]);
                     }
                     else {
-                        rangeStart[1] = max(findLowerBound(voxelIndex.y, voxelIndex.z, minx+periodicBoxSize[0]), rangeEnd[0]);
+                        rangeStart[1] = max(findLowerBound(voxelIndex.y, voxelIndex.z, minx+periodicBoxSize[0], rangeEnd[0], binSize), rangeEnd[0]);
                         rangeEnd[1] = bins[voxelIndex.y][voxelIndex.z].size();
                     }
                 }
                 else {
                     numRanges = 1;
-                    rangeEnd[0] = findUpperBound(voxelIndex.y, voxelIndex.z, maxx);
+                    rangeEnd[0] = findUpperBound(voxelIndex.y, voxelIndex.z, maxx, rangeStart[0], binSize);
                 }
                 bool periodicRectangular = (needPeriodic && !triclinic);
                 

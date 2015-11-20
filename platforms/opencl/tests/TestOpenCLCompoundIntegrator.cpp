@@ -1,6 +1,3 @@
-#ifndef OPENMM_GBVIFORCE_PROXY_H_
-#define OPENMM_GBVIFORCE_PROXY_H_
-
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -9,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2015 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,22 +29,8 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/internal/windowsExport.h"
-#include "openmm/serialization/SerializationProxy.h"
+#include "OpenCLTests.h"
+#include "TestCompoundIntegrator.h"
 
-namespace OpenMM {
-
-/**
- * This is a proxy for serializing GBVIForce objects.
- */
-
-class OPENMM_EXPORT GBVIForceProxy : public SerializationProxy {
-public:
-    GBVIForceProxy();
-    void serialize(const void* object, SerializationNode& node) const;
-    void* deserialize(const SerializationNode& node) const;
-};
-
-} // namespace OpenMM
-
-#endif /*OPENMM_GBVIFORCE_PROXY_H_*/
+void runPlatformTests() {
+}

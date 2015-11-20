@@ -169,7 +169,7 @@ void OpenCLPlatform::contextDestroyed(ContextImpl& context) const {
 }
 
 OpenCLPlatform::PlatformData::PlatformData(const System& system, const string& platformPropValue, const string& deviceIndexProperty,
-        const string& precisionProperty, const string& cpuPmeProperty) : removeCM(false), stepCount(0), computeForceCount(0), time(0.0)  {
+        const string& precisionProperty, const string& cpuPmeProperty) : removeCM(false), stepCount(0), computeForceCount(0), time(0.0), hasInitializedContexts(false)  {
     int platformIndex = -1;
     if (platformPropValue.length() > 0)
         stringstream(platformPropValue) >> platformIndex;
@@ -227,8 +227,11 @@ OpenCLPlatform::PlatformData::~PlatformData() {
 }
 
 void OpenCLPlatform::PlatformData::initializeContexts(const System& system) {
+    if (hasInitializedContexts)
+        return;
     for (int i = 0; i < (int) contexts.size(); i++)
         contexts[i]->initialize();
+    hasInitializedContexts = true;
 }
 
 void OpenCLPlatform::PlatformData::syncContexts() {

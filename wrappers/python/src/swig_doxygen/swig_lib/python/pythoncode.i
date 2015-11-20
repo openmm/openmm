@@ -8,6 +8,8 @@ except ImportError:
 import copy
 import sys
 import math
+import functools
+import operator
 RMIN_PER_SIGMA=math.pow(2, 1/6.0)
 RVDW_PER_SIGMA=math.pow(2, 1/6.0)/2.0
 if sys.version_info[0] == 2:

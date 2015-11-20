@@ -31,7 +31,6 @@
 
 #include "ReferenceKernels.h"
 #include "ReferenceObc.h"
-#include "ReferenceGBVI.h"
 #include "ReferenceAndersenThermostat.h"
 #include "ReferenceAngleBondIxn.h"
 #include "ReferenceBondForce.h"
@@ -1224,69 +1223,6 @@ void ReferenceCalcGBSAOBCForceKernel::copyParametersToContext(ContextImpl& conte
     obcParameters->setScaledRadiusFactors(scaleFactors);
 }
 
-ReferenceCalcGBVIForceKernel::~ReferenceCalcGBVIForceKernel() {
-    if (gbvi) {
-        GBVIParameters * gBVIParameters = gbvi->getGBVIParameters();
-        delete gBVIParameters;
-        delete gbvi;
-    }
-}
-
-void ReferenceCalcGBVIForceKernel::initialize(const System& system, const GBVIForce& force, const std::vector<double> & inputScaledRadii) {
-
-    int numParticles = system.getNumParticles();
-
-    charges.resize(numParticles);
-    vector<RealOpenMM> atomicRadii(numParticles);
-    vector<RealOpenMM> scaledRadii(numParticles);
-    vector<RealOpenMM> gammas(numParticles);
-
-    for (int i = 0; i < numParticles; ++i) {
-        double charge, radius, gamma;
-        force.getParticleParameters(i, charge, radius, gamma);
-        charges[i]       = static_cast<RealOpenMM>(charge);
-        atomicRadii[i]   = static_cast<RealOpenMM>(radius);
-        gammas[i]        = static_cast<RealOpenMM>(gamma);
-        scaledRadii[i]   = static_cast<RealOpenMM>(inputScaledRadii[i]);
-    }
-
-    GBVIParameters * gBVIParameters = new GBVIParameters(numParticles);
-
-    gBVIParameters->setAtomicRadii(atomicRadii);
-    gBVIParameters->setGammaParameters(gammas);
-    gBVIParameters->setScaledRadii(scaledRadii);
-    gBVIParameters->setSolventDielectric(static_cast<RealOpenMM>(force.getSolventDielectric()));
-    gBVIParameters->setSoluteDielectric(static_cast<RealOpenMM>(force.getSoluteDielectric()));
-
-    gBVIParameters->setBornRadiusScalingMethod(force.getBornRadiusScalingMethod());
-    gBVIParameters->setQuinticUpperBornRadiusLimit(static_cast<RealOpenMM>(force.getQuinticUpperBornRadiusLimit()));
-    gBVIParameters->setQuinticLowerLimitFactor(static_cast<RealOpenMM>(force.getQuinticLowerLimitFactor()));
-
-    if (force.getNonbondedMethod() != GBVIForce::NoCutoff)
-        gBVIParameters->setUseCutoff(static_cast<RealOpenMM>(force.getCutoffDistance()));
-    isPeriodic = (force.getNonbondedMethod() == GBVIForce::CutoffPeriodic);
-    gbvi = new ReferenceGBVI(gBVIParameters);
-}
-
-double ReferenceCalcGBVIForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-
-    vector<RealVec>& posData = extractPositions(context);
-
-    if (isPeriodic)
-        gbvi->getGBVIParameters()->setPeriodic(extractBoxVectors(context));
-
-    RealOpenMM energy;
-    if (includeForces) {
-        vector<RealVec>& forceData = extractForces(context);
-        gbvi->computeBornForces(posData, charges, forceData);
-        energy = 0.0;
-    }
-    if (includeEnergy) {
-        energy = gbvi->computeBornEnergy(posData, charges);
-    }
-    return static_cast<double>(energy);
-}
-
 ReferenceCalcCustomGBForceKernel::~ReferenceCalcCustomGBForceKernel() {
     disposeRealArray(particleParamArray, numParticles);
     if (neighborList != NULL)
@@ -1488,6 +1424,8 @@ double ReferenceCalcCustomExternalForceKernel::PeriodicDistanceFunction::evaluat
     delta -= boxVectors[1]*floor(delta[1]/boxVectors[1][1]+0.5);
     delta -= boxVectors[0]*floor(delta[0]/boxVectors[0][0]+0.5);
     double r = sqrt(delta.dot(delta));
+    if (r == 0)
+        return 0.0;    
     if (argIndex < 3)
         return delta[argIndex]/r;
     return -delta[argIndex-3]/r;

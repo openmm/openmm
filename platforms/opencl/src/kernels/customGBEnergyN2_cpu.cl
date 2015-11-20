@@ -279,6 +279,7 @@ __kernel void computeN2Energy(
                     real4 force = 0;
                     DECLARE_ATOM1_DERIVATIVES
                     real4 posq1 = posq[atom1];
+                    APPLY_PERIODIC_TO_POS_WITH_CENTER(posq1, blockCenterX)
                     LOAD_ATOM1_PARAMETERS
                     for (unsigned int j = 0; j < TILE_SIZE; j++) {
                         real4 posq2 = local_posq[j];

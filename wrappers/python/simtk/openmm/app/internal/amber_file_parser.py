@@ -674,7 +674,7 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
 
     OPTIONAL ARGUMENTS
       shake (String) - if 'h-bonds', will SHAKE all bonds to hydrogen and water; if 'all-bonds', will SHAKE all bonds and water (default: None)
-      gbmodel (String) - if 'OBC', OBC GBSA will be used; if 'GBVI', GB/VI will be used (default: None)
+      gbmodel (String) - if 'OBC', OBC GBSA will be used (default: None)
       soluteDielectric (float) - The solute dielectric constant to use in the implicit solvent model (default: 1.0)
       solventDielectric (float) - The solvent dielectric constant to use in the implicit solvent model (default: 78.5)
       implicitSolventKappa (float) - The Debye screening parameter corresponding to implicit solvent ionic strength
@@ -1096,8 +1096,6 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
         # This applies the reaction field dielectric to the NonbondedForce
         # created above. Do not bind force to another name before this!
         force.setReactionFieldDielectric(1.0)
-
-    # TODO: Add GBVI terms?
 
     return system
 

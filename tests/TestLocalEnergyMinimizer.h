@@ -78,7 +78,7 @@ void testLargeSystem() {
     const int numParticles = numMolecules*2;
     const double cutoff = 2.0;
     const double boxSize = 4.0;
-    const double tolerance = 10;
+    const double tolerance = 15;
     System system;
     system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
     NonbondedForce* nonbonded = new NonbondedForce();
