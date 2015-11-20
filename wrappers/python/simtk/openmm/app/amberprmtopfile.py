@@ -204,9 +204,9 @@ class AmberPrmtopFile(object):
             The error tolerance to use if nonbondedMethod is Ewald or PME.
         switchDistance : float=0*nanometers
             The distance at which the potential energy switching function is
-            turned on. If the switchDistance is 0 or evaluates to boolean False,
-            no switching function will be used. Values greater than
-            nonbondedCutoff or less than 0 raise a ValueError
+            turned on for Lennard-Jones interactions. If the switchDistance is 0
+            or evaluates to boolean False, no switching function will be used.
+            Values greater than nonbondedCutoff or less than 0 raise ValueError
 
         Returns
         -------
