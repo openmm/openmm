@@ -115,9 +115,9 @@ State Context::getState(int types, bool enforcePeriodicBox, int groups) const {
 
                 // Find the displacement to move it into the first periodic box.
                 Vec3 diff;
-                diff -= periodicBoxSize[0]*static_cast<int>(center[0]/periodicBoxSize[0][0]);
-                diff -= periodicBoxSize[1]*static_cast<int>(center[1]/periodicBoxSize[1][1]);
-                diff -= periodicBoxSize[2]*static_cast<int>(center[2]/periodicBoxSize[2][2]);
+                diff += periodicBoxSize[2]*floor(center[2]/periodicBoxSize[2][2]);
+                diff += periodicBoxSize[1]*floor((center[1]-diff[1])/periodicBoxSize[1][1]);
+                diff += periodicBoxSize[0]*floor((center[0]-diff[0])/periodicBoxSize[0][0]);
 
                 // Translate all the particles in the molecule.
                 for (int j = 0; j < (int) molecules[i].size(); j++) {

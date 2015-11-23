@@ -41,7 +41,7 @@ using namespace OpenMM;
 using namespace std;
 
 void testTruncatedOctahedron() {
-    const int numMolecules = 5;
+    const int numMolecules = 50;
     const int numParticles = numMolecules*2;
     const float cutoff = 2.0;
     Vec3 a(6.7929, 0, 0);
@@ -63,7 +63,7 @@ void testTruncatedOctahedron() {
         system.addParticle(1.0);
         force->addParticle(-1, 0.2, 0.2);
         force->addParticle(1, 0.2, 0.2);
-        positions[2*i] = a*genrand_real2(sfmt) + b*genrand_real2(sfmt) + c*genrand_real2(sfmt);
+        positions[2*i] = a*(5*genrand_real2(sfmt)-2) + b*(5*genrand_real2(sfmt)-2) + c*(5*genrand_real2(sfmt)-2);
         positions[2*i+1] = positions[2*i] + Vec3(1.0, 0.0, 0.0);
         system.addConstraint(2*i, 2*i+1, 1.0);
     }
@@ -73,6 +73,15 @@ void testTruncatedOctahedron() {
     Context context(system, integrator, Platform::getPlatformByName("Reference"));
     context.setPositions(positions);
     State initialState = context.getState(State::Positions | State::Energy, true);
+    for (int i = 0; i < numMolecules; i++) {
+        Vec3 center = (initialState.getPositions()[2*i]+initialState.getPositions()[2*i+1])*0.5;
+        ASSERT(center[0] >= 0.0);
+        ASSERT(center[1] >= 0.0);
+        ASSERT(center[2] >= 0.0);
+        ASSERT(center[0] <= a[0]);
+        ASSERT(center[1] <= b[1]);
+        ASSERT(center[2] <= c[2]);
+    }
     double initialEnergy = initialState.getPotentialEnergy();
 
     context.setState(initialState);
