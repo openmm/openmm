@@ -21,8 +21,9 @@ copyright = u'2015, Stanford University and the Authors'
 version = simtk.openmm.version.short_version
 release = simtk.openmm.version.full_version
 
-exclude_patterns = ['_build']
+exclude_patterns = ['_build', '_templates']
 html_static_path = ['_static']
+templates_path = ['_templates']
 
 pygments_style = 'sphinx'
 
