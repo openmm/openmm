@@ -48,7 +48,6 @@
 #include "openmm/CustomManyParticleForce.h"
 #include "openmm/CustomTorsionForce.h"
 #include "openmm/GBSAOBCForce.h"
-#include "openmm/GBVIForce.h"
 #include "openmm/HarmonicAngleForce.h"
 #include "openmm/HarmonicBondForce.h"
 #include "openmm/KernelImpl.h"
@@ -665,35 +664,6 @@ public:
      * @param force      the GBSAOBCForce to copy the parameters from
      */
     virtual void copyParametersToContext(ContextImpl& context, const GBSAOBCForce& force) = 0;
-};
-
-/**
- * This kernel is invoked by GBVIForce to calculate the forces acting on the system and the energy of the system.
- */
-class CalcGBVIForceKernel : public KernelImpl {
-public:
-    static std::string Name() {
-        return "CalcGBVIForce";
-    }
-    CalcGBVIForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
-    }
-    /**
-     * Initialize the kernel.
-     * 
-     * @param system      the System this kernel will be applied to
-     * @param force       the GBVIForce this kernel will be used for
-     * @param scaledRadii scaled radii
-     */
-    virtual void initialize(const System& system, const GBVIForce& force, const std::vector<double>& scaledRadii) = 0;
-    /**
-     * Execute the kernel to calculate the forces and/or energy.
-     *
-     * @param context        the context in which to execute this kernel
-     * @param includeForces  true if forces should be calculated
-     * @param includeEnergy  true if the energy should be calculated
-     * @return the potential energy due to the force
-     */
-    virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
 };
 
 /**

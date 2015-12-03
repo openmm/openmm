@@ -43,7 +43,6 @@ SKIP_METHODS = [('State',),
                 ('CalcCustomTorsionForceKernel',),
                 ('CalcForcesAndEnergyKernel',),
                 ('CalcGBSAOBCForceKernel',),
-                ('CalcGBVIForceKernel',),
                 ('CalcHarmonicAngleForceKernel',),
                 ('CalcHarmonicBondForceKernel',),
                 ('CalcKineticEnergyKernel',),
@@ -143,6 +142,12 @@ STEAL_OWNERSHIP = {("Platform", "registerPlatform") : [0],
                    ("CustomManyParticleForce", "addTabulatedFunction") : [1],
                    ("CompoundIntegrator", "addIntegrator") : [0],
 }
+
+
+REQUIRE_ORDERED_SET = {("CustomNonbondedForce", "addInteractionGroup") : [0, 1],
+                       ("CustomNonbondedForce", "setInteractionGroupParameters") : [1, 2],
+}
+
 
 # This is a list of units to attach to return values and method args.
 # Indexed by (ClassName, MethodsName)
@@ -387,14 +392,6 @@ UNITS = {
  : (None, ('unit.elementary_charge',
            'unit.nanometer', None)),
 ("GBSAOBCForce", "getSurfaceAreaEnergy") : ('unit.kilojoule_per_mole/unit.nanometer/unit.nanometer', ()),
-("GBVIForce", "getBornRadiusScalingMethod") : (None, ()),
-("GBVIForce", "getQuinticLowerLimitFactor") : (None, ()),
-("GBVIForce", "getQuinticUpperBornRadiusLimit") : ('unit.nanometer', ()),
-("GBVIForce", "getBondParameters")
- : (None, (None, None, 'unit.nanometer')),
-("GBVIForce", "getParticleParameters")
- : (None, ('unit.elementary_charge',
-           'unit.nanometer', 'unit.kilojoule_per_mole')),
 ("HarmonicAngleForce", "getAngleParameters")
  : (None, (None, None, None, 'unit.radian',
            'unit.kilojoule_per_mole/(unit.radian*unit.radian)')),

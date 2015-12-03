@@ -378,7 +378,6 @@ class SwigInputBuilder:
             self.fOut.write("\n%s};\n" % INDENT)
         if len(enumNodes)>0: self.fOut.write("\n")
 
-
     def writeMethods(self, classNode):
         methodList=getClassMethodList(classNode, self.skipMethods)
 
@@ -465,35 +464,44 @@ class SwigInputBuilder:
             (shortClassName, memberNode,
              shortMethDefinition, methName,
              isConstructors, isDestructor, templateType, templateName) = items
-            paramList=findNodes(memberNode, 'param')
+            paramList = findNodes(memberNode, 'param')
 
-            #write pythonprepend blocks
+            # write pythonprepend blocks
             mArgsstring = getText("argsstring", memberNode)
             if self.fOutPythonprepend and \
                len(paramList) and \
-               mArgsstring.find('=0')<0:
-                key=(shortClassName, methName)
-                if key in self.configModule.STEAL_OWNERSHIP:
-                    for argNum in self.configModule.STEAL_OWNERSHIP[key]:
-                        if self.SWIG_COMPACT_ARGUMENTS:
-                            argName = 'args[%s]' % argNum
-                        else:
-                            argName = getText('declname', paramList[argNum])
+               mArgsstring.find('=0') < 0:
+                text = '''
+%pythonprepend OpenMM::{shortClassName}::{methName}{mArgsstring} %{{{{{{0}}
+%}}}}'''.format(shortClassName=shortClassName, methName=methName, mArgsstring=mArgsstring)
+                textInside = ''
+                key = (shortClassName, methName)
+                for argNum in self.configModule.STEAL_OWNERSHIP.get(key, []):
+                    if self.SWIG_COMPACT_ARGUMENTS:
+                        argName = 'args[%s]' % argNum
+                    else:
+                        argName = getText('declname', paramList[argNum])
 
-                        text = '''
-%pythonprepend OpenMM::{shortClassName}::{methName}{mArgsstring} %{{
+                    textInside += '''
     if not {argName}.thisown:
         s = ("the %s object does not own its corresponding OpenMM object"
              % self.__class__.__name__)
-        raise Exception(s)
-%}}'''.format(argName=argName, shortClassName=shortClassName, methName=methName, mArgsstring=mArgsstring)
-                        self.fOutPythonprepend.write(text)
+        raise Exception(s)'''.format(argName=argName)
+                for argNum in self.configModule.REQUIRE_ORDERED_SET.get(key, []):
+                    if self.SWIG_COMPACT_ARGUMENTS:
+                        argName = 'args[%s]' % argNum
+                    else:
+                        argName = getText('declname', paramList[argNum])
 
+                    textInside += '''
+    {argName} = list({argName})'''.format(argName=argName)
+                if textInside:
+                    self.fOutPythonprepend.write(text.format(textInside))
 
-            #write pythonappend blocks
+            # write pythonappend blocks
             if self.fOutPythonappend \
-               and mArgsstring.find('=0')<0:
-                key=(shortClassName, methName)
+               and mArgsstring.find('=0') < 0:
+                key = (shortClassName, methName)
                 #print "key %s %s \n" % (shortClassName, methName)
                 addText=''
                 returnType = getText("type", memberNode)

@@ -1109,7 +1109,7 @@ class Modeller(object):
 
             # Now run a few iterations of SHAKE to try to select reasonable positions.
 
-            for iteration in range(10):
+            for iteration in range(15):
                 for atom1, atom2, distance in bonds:
                     if atom1 in missingPositions:
                         if atom2 in missingPositions:

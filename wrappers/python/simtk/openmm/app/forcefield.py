@@ -153,18 +153,29 @@ class ForceField(object):
             for residue in root.find('Residues').findall('Residue'):
                 resName = residue.attrib['name']
                 template = ForceField._TemplateData(resName)
+                atomIndices = {}
                 for atom in residue.findall('Atom'):
                     params = {}
                     for key in atom.attrib:
                         if key not in ('name', 'type'):
                             params[key] = _convertParameterToNumber(atom.attrib[key])
-                    template.atoms.append(ForceField._TemplateAtomData(atom.attrib['name'], atom.attrib['type'], self._atomTypes[atom.attrib['type']][2], params))
+                    atomName = atom.attrib['name']
+                    if atomName in atomIndices:
+                        raise ValueError('Residue '+resName+' contains multiple atoms named '+atomName)
+                    atomIndices[atomName] = len(template.atoms)
+                    template.atoms.append(ForceField._TemplateAtomData(atomName, atom.attrib['type'], self._atomTypes[atom.attrib['type']][2], params))
                 for site in residue.findall('VirtualSite'):
-                    template.virtualSites.append(ForceField._VirtualSiteData(site))
+                    template.virtualSites.append(ForceField._VirtualSiteData(site, atomIndices))
                 for bond in residue.findall('Bond'):
-                    template.addBond(int(bond.attrib['from']), int(bond.attrib['to']))
+                    if 'atomName1' in bond.attrib:
+                        template.addBond(atomIndices[bond.attrib['atomName1']], atomIndices[bond.attrib['atomName2']])
+                    else:
+                        template.addBond(int(bond.attrib['from']), int(bond.attrib['to']))
                 for bond in residue.findall('ExternalBond'):
-                    b = int(bond.attrib['from'])
+                    if 'atomName' in bond.attrib:
+                        b = atomIndices[bond.attrib['atomName']]
+                    else:
+                        b = int(bond.attrib['from'])
                     template.externalBonds.append(b)
                     template.atoms[b].externalBonds += 1
                 self.registerResidueTemplate(template)
@@ -320,27 +331,32 @@ class ForceField(object):
 
     class _VirtualSiteData:
         """Inner class used to encapsulate data about a virtual site."""
-        def __init__(self, node):
+        def __init__(self, node, atomIndices):
             attrib = node.attrib
-            self.index = int(attrib['index'])
             self.type = attrib['type']
             if self.type == 'average2':
-                self.atoms = [int(attrib['atom1']), int(attrib['atom2'])]
+                numAtoms = 2
                 self.weights = [float(attrib['weight1']), float(attrib['weight2'])]
             elif self.type == 'average3':
-                self.atoms = [int(attrib['atom1']), int(attrib['atom2']), int(attrib['atom3'])]
+                numAtoms = 3
                 self.weights = [float(attrib['weight1']), float(attrib['weight2']), float(attrib['weight3'])]
             elif self.type == 'outOfPlane':
-                self.atoms = [int(attrib['atom1']), int(attrib['atom2']), int(attrib['atom3'])]
+                numAtoms = 3
                 self.weights = [float(attrib['weight12']), float(attrib['weight13']), float(attrib['weightCross'])]
             elif self.type == 'localCoords':
-                self.atoms = [int(attrib['atom1']), int(attrib['atom2']), int(attrib['atom3'])]
+                numAtoms = 3
                 self.originWeights = [float(attrib['wo1']), float(attrib['wo2']), float(attrib['wo3'])]
                 self.xWeights = [float(attrib['wx1']), float(attrib['wx2']), float(attrib['wx3'])]
                 self.yWeights = [float(attrib['wy1']), float(attrib['wy2']), float(attrib['wy3'])]
                 self.localPos = [float(attrib['p1']), float(attrib['p2']), float(attrib['p3'])]
             else:
                 raise ValueError('Unknown virtual site type: %s' % self.type)
+            if 'siteName' in attrib:
+                self.index = atomIndices[attrib['siteName']]
+                self.atoms = [atomIndices[attrib['atomName%d'%(i+1)]] for i in range(numAtoms)]
+            else:
+                self.index = int(attrib['index'])
+                self.atoms = [int(attrib['atom%d'%(i+1)]) for i in range(numAtoms)]
             if 'excludeWith' in attrib:
                 self.excludeWith = int(attrib['excludeWith'])
             else:
@@ -1376,92 +1392,6 @@ class GBSAOBCGenerator:
 
 parsers["GBSAOBCForce"] = GBSAOBCGenerator.parseElement
 
-
-## @private
-class GBVIGenerator:
-
-    """A GBVIGenerator constructs a GBVIForce."""
-
-    def __init__(self,ff):
-        self.ff = ff
-        self.fixedParameters = {}
-        self.fixedParameters['soluteDielectric'] = 1.0
-        self.fixedParameters['solventDielectric'] = 78.3
-        self.fixedParameters['scalingMethod'] = 1
-        self.fixedParameters['quinticUpperBornRadiusLimit'] = 5.0
-        self.fixedParameters['quinticLowerLimitFactor'] = 0.8
-
-        self.typeMap = {}
-
-    @staticmethod
-    def parseElement(element, ff):
-        generator = GBVIGenerator(ff)
-        for key in generator.fixedParameters.iterkeys():
-            if (key in element.attrib):
-                generator.fixedParameters[key] = float(element.attrib[key])
-
-        ff.registerGenerator(generator)
-        for atom in element.findall('Atom'):
-            types = ff._findAtomTypes(atom.attrib, 1)
-            if None not in types:
-                values = (float(atom.attrib['charge']), float(atom.attrib['radius']), float(atom.attrib['gamma']))
-                for t in types[0]:
-                    generator.typeMap[t] = values
-
-    def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
-
-        methodMap = {NoCutoff:mm.NonbondedForce.NoCutoff,
-                     CutoffNonPeriodic:mm.NonbondedForce.CutoffNonPeriodic,
-                     CutoffPeriodic:mm.NonbondedForce.CutoffPeriodic}
-
-        if nonbondedMethod not in methodMap:
-            raise ValueError('Illegal nonbonded method for GB/VI Force')
-
-        # add particles
-
-        force = mm.GBVIForce()
-        for atom in data.atoms:
-            t = data.atomType[atom]
-            if t in self.typeMap:
-                values = self.typeMap[t]
-                force.addParticle(values[0], values[1], values[2])
-            else:
-                raise ValueError('No GB/VI parameters defined for atom type '+t)
-
-        # get HarmonicBond generator -- exit if not found
-
-        hbGenerator = 0
-        for generator in self.ff._forces:
-            if (generator.__class__.__name__ == 'HarmonicBondGenerator'):
-               hbGenerator = generator
-               break
-
-        if (hbGenerator == 0):
-            raise ValueError('HarmonicBondGenerator not found.')
-
-        # add bonds
-
-        for bond in data.bonds:
-            type1 = data.atomType[data.atoms[bond.atom1]]
-            type2 = data.atomType[data.atoms[bond.atom2]]
-            for i in range(len(hbGenerator.types1)):
-                types1 = hbGenerator.types1[i]
-                types2 = hbGenerator.types2[i]
-                if (type1 in types1 and type2 in types2) or (type1 in types2 and type2 in types1):
-                    #bond.length = hbGenerator.length[i]
-                    force.addBond(bond.atom1, bond.atom2, hbGenerator.length[i])
-
-        force.setNonbondedMethod(methodMap[nonbondedMethod])
-        force.setCutoffDistance(nonbondedCutoff)
-        force.setSolventDielectric(self.fixedParameters['solventDielectric'])
-        force.setSoluteDielectric(self.fixedParameters['soluteDielectric'])
-        force.setBornRadiusScalingMethod(self.fixedParameters['scalingMethod'])
-        force.setQuinticLowerLimitFactor(self.fixedParameters['quinticLowerLimitFactor'])
-        force.setQuinticUpperBornRadiusLimit(self.fixedParameters['quinticUpperBornRadiusLimit'])
-
-        sys.addForce(force)
-
-parsers["GBVIForce"] = GBVIGenerator.parseElement
 
 ## @private
 class CustomBondGenerator:
@@ -2695,7 +2625,7 @@ class AmoebaPiTorsionGenerator:
             atom1 = bond.atom1
             atom2 = bond.atom2
 
-            if (len(data.atomBonds[atom1]) == 3 and len(data.atomBonds[atom1]) == 3):
+            if (len(data.atomBonds[atom1]) == 3 and len(data.atomBonds[atom2]) == 3):
 
                 type1 = data.atomType[data.atoms[atom1]]
                 type2 = data.atomType[data.atoms[atom2]]
@@ -2980,7 +2910,7 @@ class AmoebaTorsionTorsionGenerator:
 
                                 # match in reverse order
 
-                                if (type5 in types1 and type4 in types2 and type3 in types3 and type2 in types4 and type1 in types5):
+                                elif (type5 in types1 and type4 in types2 and type3 in types3 and type2 in types4 and type1 in types5):
                                     chiralAtomIndex = self.getChiralAtomIndex(data, sys, ib, ic, id)
                                     force.addTorsionTorsion(ie, id, ic, ib, ia, chiralAtomIndex, self.gridIndex[i])
 
