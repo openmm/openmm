@@ -38,6 +38,7 @@ add_custom_command(
             "${CMAKE_CURRENT_BINARY_DIR}/forces.rst.jinja2"
             "${CMAKE_CURRENT_BINARY_DIR}/extras.rst.jinja2"
             "${CMAKE_BINARY_DIR}/wrappers/python/src/swig_doxygen/doxygen/xml/index.xml"
+            RunSwig
 )
 
 add_custom_command(

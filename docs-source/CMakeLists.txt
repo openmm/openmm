@@ -3,7 +3,8 @@
 #
 
 find_package(Doxygen QUIET)
-mark_as_advanced(CLEAR DOXYGEN_EXECUTABLE)
+set(OPENMM_GENERATE_API_DOCS OFF CACHE BOOL "Whether to create API documentation using Doxygen")
+
 IF(DOXYGEN_EXECUTABLE)
     # Generate C++ API documentation
     IF (OPENMM_GENERATE_API_DOCS)
