@@ -36,7 +36,7 @@ def allclasses(root):
 
 def template_data(root):
     data = {
-        'core': ('OpenMM::System', 'OpenMM::Context', 'OpenMM::State', 'OpenMM::State'),
+        'core': ('OpenMM::System', 'OpenMM::Context', 'OpenMM::State', 'OpenMM::Platform'),
         'forces': sorted(subclasses(root, 'OpenMM::Force')),
         'integrators': sorted(subclasses(root, 'OpenMM::Integrator')),
 
