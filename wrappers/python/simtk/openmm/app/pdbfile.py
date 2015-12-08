@@ -69,6 +69,10 @@ class PDBFile(object):
         file : string
             the name of the file to load
         """
+        
+        metalElements = ['Al','As','Ba','Ca','Cd','Ce','Co','Cs','Cu','Dy','Fe','Gd','Hg','Ho','In','Ir','K','Li','Mg',
+        'Mn','Mo','Na','Ni','Pb','Pd','Pt','Rb','Rh','Ru','Sm','Sr','Te','Tl','V','W','Yb','Zn']
+        
         top = Topology()
         ## The Topology read from the PDB file
         self.topology = top
@@ -151,14 +155,21 @@ class PDBFile(object):
         self.topology.createDisulfideBonds(self.positions)
         self._numpyPositions = None
 
-        # Add bonds based on CONECT records.
+        # Add bonds based on CONECT records. Bonds are not added for elements in metalElements, unless in the same residue. 
 
         connectBonds = []
         for connect in pdb.models[-1].connects:
             i = connect[0]
             for j in connect[1:]:
                 if i in atomByNumber and j in atomByNumber:
-                    connectBonds.append((atomByNumber[i], atomByNumber[j]))
+                    if atomByNumber[i].element != None and atomByNumber[j].element != None:
+                        if atomByNumber[i].element.symbol in metalElements or atomByNumber[j].element.symbol in metalElements:
+                            if atomByNumber[i].residue == atomByNumber[j].residue:
+                                connectBonds.append((atomByNumber[i], atomByNumber[j])) 
+                        else:
+                            connectBonds.append((atomByNumber[i], atomByNumber[j])) 
+                    else:
+                        connectBonds.append((atomByNumber[i], atomByNumber[j]))         
         if len(connectBonds) > 0:
             # Only add bonds that don't already exist.
             existingBonds = set(top.bonds())
