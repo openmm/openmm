@@ -71,7 +71,7 @@ class PDBFile(object):
         """
         
         metalElements = ['Al','As','Ba','Ca','Cd','Ce','Co','Cs','Cu','Dy','Fe','Gd','Hg','Ho','In','Ir','K','Li','Mg',
-        'Mn','Mo','Na','Ni','Pb','Pd','Pt','Rb','Rh','Ru','Sm','Sr','Te','Tl','V','W','Yb','Zn']
+        'Mn','Mo','Na','Ni','Pb','Pd','Pt','Rb','Rh','Sm','Sr','Te','Tl','V','W','Yb','Zn']
         
         top = Topology()
         ## The Topology read from the PDB file
