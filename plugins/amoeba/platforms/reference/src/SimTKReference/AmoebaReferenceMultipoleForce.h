@@ -642,6 +642,7 @@ protected:
             std::vector<OpenMM::RealVec>* fixedMultipoleField;
             std::vector<OpenMM::RealVec>* inducedDipoles;
             std::vector<OpenMM::RealVec> inducedDipoleField;
+            std::vector<std::vector<RealOpenMM> > inducedDipoleFieldGradient;
     };
 
     unsigned int _numParticles;
@@ -667,8 +668,10 @@ protected:
     std::vector<RealVec> _inducedDipolePolar;
     std::vector< std::vector<RealVec> > _ptDipoleP;
     std::vector< std::vector<RealVec> > _ptDipoleD;
-    std::vector<std::vector<RealOpenMM> > _ptDipoleFieldP;
-    std::vector<std::vector<RealOpenMM> > _ptDipoleFieldD;
+    std::vector<std::vector<RealOpenMM> > _ptDipoleRecFieldP;
+    std::vector<std::vector<RealOpenMM> > _ptDipoleRecFieldD;
+    std::vector<std::vector<RealOpenMM> > _ptDipoleDirFieldP;
+    std::vector<std::vector<RealOpenMM> > _ptDipoleDirFieldD;
 
 
 
@@ -927,7 +930,7 @@ protected:
 
     /**
      * Calculate fields due induced dipoles at each site.
-     * 
+     *
      * @param particleI                 positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle I
      * @param particleJ                 positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle J
      * @param updateInducedDipoleFields vector of UpdateInducedDipoleFieldStruct containing input induced dipoles and output fields

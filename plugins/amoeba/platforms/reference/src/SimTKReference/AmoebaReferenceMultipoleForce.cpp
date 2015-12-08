@@ -25,7 +25,6 @@
 #include "AmoebaReferenceMultipoleForce.h"
 #include "jama_svd.h"
 #include <algorithm>
-
 // In case we're using some primitive version of Visual Studio this will
 // make sure that erf() and erfc() are defined.
 #include "openmm/internal/MSVC_erfc.h"
@@ -814,6 +813,9 @@ void AmoebaReferenceMultipoleForce::calculateInducedDipolePairIxns(const Multipo
     RealVec deltaR       = particleJ.position - particleI.position;
     RealOpenMM r         =  SQRT(deltaR.dot(deltaR));
     vector<RealOpenMM> rrI(2);
+    // If we're using the OPT algorithm, we need to compute the field gradient, so ask for one more rrI value.
+    if (getPolarizationType() == AmoebaReferenceMultipoleForce::OPT)
+        rrI.push_back(0.0);
   
     getAndScaleInverseRs(particleI.dampingFactor, particleJ.dampingFactor,
                           particleI.thole, particleJ.thole, r, rrI);
@@ -824,6 +826,50 @@ void AmoebaReferenceMultipoleForce::calculateInducedDipolePairIxns(const Multipo
     for (unsigned int ii = 0; ii < updateInducedDipoleFields.size(); ii++) {
         calculateInducedDipolePairIxn(particleI.particleIndex, particleJ.particleIndex, rr3, rr5, deltaR,
                                        *updateInducedDipoleFields[ii].inducedDipoles, updateInducedDipoleFields[ii].inducedDipoleField);
+        if (getPolarizationType() == AmoebaReferenceMultipoleForce::OPT){
+            // Compute and store the field gradient for later use.
+            RealOpenMM dx = deltaR[0];
+            RealOpenMM dy = deltaR[1];
+            RealOpenMM dz = deltaR[2];
+
+            OpenMM::RealVec &dipolesI = (*updateInducedDipoleFields[ii].inducedDipoles)[particleI.particleIndex];
+            RealOpenMM xDipole = dipolesI[0];
+            RealOpenMM yDipole = dipolesI[1];
+            RealOpenMM zDipole = dipolesI[2];
+            RealOpenMM muDotR = xDipole*dx + yDipole*dy + zDipole*dz;
+            RealOpenMM Exx = muDotR*dx*dx*rrI[2] - (2.0*xDipole*dx + muDotR)*rrI[1];
+            RealOpenMM Eyy = muDotR*dy*dy*rrI[2] - (2.0*yDipole*dy + muDotR)*rrI[1];
+            RealOpenMM Ezz = muDotR*dz*dz*rrI[2] - (2.0*zDipole*dz + muDotR)*rrI[1];
+            RealOpenMM Exy = muDotR*dx*dy*rrI[2] - (xDipole*dy + yDipole*dx)*rrI[1];
+            RealOpenMM Exz = muDotR*dx*dz*rrI[2] - (xDipole*dz + zDipole*dx)*rrI[1];
+            RealOpenMM Eyz = muDotR*dy*dz*rrI[2] - (yDipole*dz + zDipole*dy)*rrI[1];
+
+            updateInducedDipoleFields[ii].inducedDipoleFieldGradient[particleJ.particleIndex][0] -= Exx;
+            updateInducedDipoleFields[ii].inducedDipoleFieldGradient[particleJ.particleIndex][1] -= Eyy;
+            updateInducedDipoleFields[ii].inducedDipoleFieldGradient[particleJ.particleIndex][2] -= Ezz;
+            updateInducedDipoleFields[ii].inducedDipoleFieldGradient[particleJ.particleIndex][3] -= Exy;
+            updateInducedDipoleFields[ii].inducedDipoleFieldGradient[particleJ.particleIndex][4] -= Exz;
+            updateInducedDipoleFields[ii].inducedDipoleFieldGradient[particleJ.particleIndex][5] -= Eyz;
+
+            OpenMM::RealVec &dipolesJ = (*updateInducedDipoleFields[ii].inducedDipoles)[particleJ.particleIndex];
+            xDipole = dipolesJ[0];
+            yDipole = dipolesJ[1];
+            zDipole = dipolesJ[2];
+            muDotR = xDipole*dx + yDipole*dy + zDipole*dz;
+            Exx = muDotR*dx*dx*rrI[2] - (2.0*xDipole*dx + muDotR)*rrI[1];
+            Eyy = muDotR*dy*dy*rrI[2] - (2.0*yDipole*dy + muDotR)*rrI[1];
+            Ezz = muDotR*dz*dz*rrI[2] - (2.0*zDipole*dz + muDotR)*rrI[1];
+            Exy = muDotR*dx*dy*rrI[2] - (xDipole*dy + yDipole*dx)*rrI[1];
+            Exz = muDotR*dx*dz*rrI[2] - (xDipole*dz + zDipole*dx)*rrI[1];
+            Eyz = muDotR*dy*dz*rrI[2] - (yDipole*dz + zDipole*dy)*rrI[1];
+
+            updateInducedDipoleFields[ii].inducedDipoleFieldGradient[particleI.particleIndex][0] += Exx;
+            updateInducedDipoleFields[ii].inducedDipoleFieldGradient[particleI.particleIndex][1] += Eyy;
+            updateInducedDipoleFields[ii].inducedDipoleFieldGradient[particleI.particleIndex][2] += Ezz;
+            updateInducedDipoleFields[ii].inducedDipoleFieldGradient[particleI.particleIndex][3] += Exy;
+            updateInducedDipoleFields[ii].inducedDipoleFieldGradient[particleI.particleIndex][4] += Exz;
+            updateInducedDipoleFields[ii].inducedDipoleFieldGradient[particleI.particleIndex][5] += Eyz;
+        }
     }
 }
 
@@ -936,8 +982,15 @@ void AmoebaReferenceMultipoleForce::convergeInduceDipolesByOPT(const vector<Mult
     _ptDipoleD.push_back(thisDipoleD);
     _ptDipoleP.push_back(thisDipoleP);
 
+    // Make sure there is some storage available for the field derivatives
+    std::vector<RealOpenMM> zeros(6, 0.0);
+    fieldD.inducedDipoleFieldGradient.resize(_numParticles);
+    fieldP.inducedDipoleFieldGradient.resize(_numParticles);
+
     // Recursively apply alpha.Tau to the µ_(n) components to generate µ_(n+1), and store the result
     for(int order = 1; order < _maxPTOrder; ++order){
+        std::fill(fieldD.inducedDipoleFieldGradient.begin(), fieldD.inducedDipoleFieldGradient.end(), zeros);
+        std::fill(fieldP.inducedDipoleFieldGradient.begin(), fieldP.inducedDipoleFieldGradient.end(), zeros);
         calculateInducedDipoleFields(particleData, updateInducedDipoleField);
         vector<RealVec> thisDipoleD;
         vector<RealVec> thisDipoleP;
@@ -949,6 +1002,16 @@ void AmoebaReferenceMultipoleForce::convergeInduceDipolesByOPT(const vector<Mult
         }
         _ptDipoleD.push_back(thisDipoleD);
         _ptDipoleP.push_back(thisDipoleP);
+        vector<RealOpenMM> fieldGradD(10*_numParticles, 0.0);
+        vector<RealOpenMM> fieldGradP(10*_numParticles, 0.0);
+        for(int atom = 0; atom < _numParticles; ++atom){
+            for(int component = 0; component < 6; ++component){
+                fieldGradD[10*atom + 4 + component] = fieldD.inducedDipoleFieldGradient[atom][component];
+                fieldGradP[10*atom + 4 + component] = fieldD.inducedDipoleFieldGradient[atom][component];
+            }
+        }
+        _ptDipoleDirFieldD.push_back(fieldGradD);
+        _ptDipoleDirFieldP.push_back(fieldGradP);
     }
 
     // Take a linear combination of the µ_(n) components to form the total dipole
@@ -1126,7 +1189,7 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateElectrostaticPairIxn(const Mu
                                                                         const MultipoleParticleData& particleK,
                                                                         const vector<RealOpenMM>& scalingFactors,
                                                                         vector<RealVec>& forces,
-                                                                        vector<RealVec>& torque) const 
+                                                                        vector<RealVec>& torque) const
 {
     unsigned int iIndex = particleI.particleIndex;
     unsigned int kIndex = particleK.particleIndex;
@@ -1469,69 +1532,7 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateElectrostaticPairIxn(const Mu
     RealOpenMM iEJY = qiUinpJ[0]*Vjip[1] + qiUindJ[0]*Vjid[1] - qiUinpJ[1]*Vjip[0] - qiUindJ[1]*Vjid[0];
 
     // Add in the induced-induced terms, if needed.
-    if(getPolarizationType() == AmoebaReferenceMultipoleForce::OPT){
-        std::vector<RealVec> qiPTUinpI, qiPTUinpJ, qiPTUindI, qiPTUindJ;
-        for(int o = 0; o < _maxPTOrder-1; ++o){
-            // Rotate the PT dipole components to the QI frame
-            qiPTUindI.push_back(RealVec( inducedDipoleRotationMatrix[0][0]*_ptDipoleD[o][iIndex][0]
-                                       + inducedDipoleRotationMatrix[0][1]*_ptDipoleD[o][iIndex][1]
-                                       + inducedDipoleRotationMatrix[0][2]*_ptDipoleD[o][iIndex][2],
-                                         inducedDipoleRotationMatrix[1][0]*_ptDipoleD[o][iIndex][0]
-                                       + inducedDipoleRotationMatrix[1][1]*_ptDipoleD[o][iIndex][1]
-                                       + inducedDipoleRotationMatrix[1][2]*_ptDipoleD[o][iIndex][2],
-                                         inducedDipoleRotationMatrix[2][0]*_ptDipoleD[o][iIndex][0]
-                                       + inducedDipoleRotationMatrix[2][1]*_ptDipoleD[o][iIndex][1]
-                                       + inducedDipoleRotationMatrix[2][2]*_ptDipoleD[o][iIndex][2] ));
-            qiPTUindJ.push_back(RealVec( inducedDipoleRotationMatrix[0][0]*_ptDipoleD[o][kIndex][0]
-                                       + inducedDipoleRotationMatrix[0][1]*_ptDipoleD[o][kIndex][1]
-                                       + inducedDipoleRotationMatrix[0][2]*_ptDipoleD[o][kIndex][2],
-                                         inducedDipoleRotationMatrix[1][0]*_ptDipoleD[o][kIndex][0]
-                                       + inducedDipoleRotationMatrix[1][1]*_ptDipoleD[o][kIndex][1]
-                                       + inducedDipoleRotationMatrix[1][2]*_ptDipoleD[o][kIndex][2],
-                                         inducedDipoleRotationMatrix[2][0]*_ptDipoleD[o][kIndex][0]
-                                       + inducedDipoleRotationMatrix[2][1]*_ptDipoleD[o][kIndex][1]
-                                       + inducedDipoleRotationMatrix[2][2]*_ptDipoleD[o][kIndex][2] ));
-            qiPTUinpI.push_back(RealVec( inducedDipoleRotationMatrix[0][0]*_ptDipoleP[o][iIndex][0]
-                                       + inducedDipoleRotationMatrix[0][1]*_ptDipoleP[o][iIndex][1]
-                                       + inducedDipoleRotationMatrix[0][2]*_ptDipoleP[o][iIndex][2],
-                                         inducedDipoleRotationMatrix[1][0]*_ptDipoleP[o][iIndex][0]
-                                       + inducedDipoleRotationMatrix[1][1]*_ptDipoleP[o][iIndex][1]
-                                       + inducedDipoleRotationMatrix[1][2]*_ptDipoleP[o][iIndex][2],
-                                         inducedDipoleRotationMatrix[2][0]*_ptDipoleP[o][iIndex][0]
-                                       + inducedDipoleRotationMatrix[2][1]*_ptDipoleP[o][iIndex][1]
-                                       + inducedDipoleRotationMatrix[2][2]*_ptDipoleP[o][iIndex][2] ));
-            qiPTUinpJ.push_back(RealVec( inducedDipoleRotationMatrix[0][0]*_ptDipoleP[o][kIndex][0]
-                                       + inducedDipoleRotationMatrix[0][1]*_ptDipoleP[o][kIndex][1]
-                                       + inducedDipoleRotationMatrix[0][2]*_ptDipoleP[o][kIndex][2],
-                                         inducedDipoleRotationMatrix[1][0]*_ptDipoleP[o][kIndex][0]
-                                       + inducedDipoleRotationMatrix[1][1]*_ptDipoleP[o][kIndex][1]
-                                       + inducedDipoleRotationMatrix[1][2]*_ptDipoleP[o][kIndex][2],
-                                         inducedDipoleRotationMatrix[2][0]*_ptDipoleP[o][kIndex][0]
-                                       + inducedDipoleRotationMatrix[2][1]*_ptDipoleP[o][kIndex][1]
-                                       + inducedDipoleRotationMatrix[2][2]*_ptDipoleP[o][kIndex][2] ));
-        }
-        RealOpenMM e0 = -4.0*rInvVec[3]*uScale*thole_d0;
-        RealOpenMM d0 = 12.0*rInvVec[4]*uScale*dthole_d0;
-        RealOpenMM e1 = 2.0*rInvVec[3]*uScale*thole_d1;
-        RealOpenMM d1 = -6.0*rInvVec[4]*uScale*dthole_d1;
-        for(int o = 0; o < _maxPTOrder; ++o){
-            RealOpenMM p = _OPTPartCoefficients[o];
-            for(int l = 0; l < o; ++l){
-                int m = o - l - 1;
-                iEIX += p*(qiPTUinpI[l][2]*e0*qiPTUindJ[m][0] + qiPTUindI[l][2]*e0*qiPTUinpJ[m][0]
-                         - qiPTUinpI[l][0]*e1*qiPTUindJ[m][2] - qiPTUindI[l][0]*e1*qiPTUinpJ[m][2]);
-                iEJX += p*(qiPTUinpJ[l][2]*e0*qiPTUindI[m][0] + qiPTUindJ[l][2]*e0*qiPTUinpI[m][0]
-                         - qiPTUinpJ[l][0]*e1*qiPTUindI[m][2] - qiPTUindJ[l][0]*e1*qiPTUinpI[m][2]);
-                iEIY += p*(qiPTUinpI[l][0]*e1*qiPTUindJ[m][1] + qiPTUindI[l][0]*e1*qiPTUinpJ[m][1]
-                         - qiPTUinpI[l][1]*e0*qiPTUindJ[m][0] - qiPTUindI[l][1]*e0*qiPTUinpJ[m][0]);
-                iEJY += p*(qiPTUinpJ[l][0]*e1*qiPTUindI[m][1] + qiPTUindJ[l][0]*e1*qiPTUinpI[m][1]
-                         - qiPTUinpJ[l][1]*e0*qiPTUindI[m][0] - qiPTUindJ[l][1]*e0*qiPTUinpI[m][0]);
-                fIZ  += p*(qiPTUinpI[l][0]*d0*qiPTUindJ[m][0] + qiPTUindI[l][0]*d0*qiPTUinpJ[m][0]
-                         + qiPTUinpI[l][1]*d1*qiPTUindJ[m][1] + qiPTUindI[l][1]*d1*qiPTUinpJ[m][1]
-                         + qiPTUinpI[l][2]*d1*qiPTUindJ[m][2] + qiPTUindI[l][2]*d1*qiPTUinpJ[m][2]);
-            }
-        }
-    } else if(getPolarizationType() == AmoebaReferenceMultipoleForce::Mutual){
+    if(getPolarizationType() == AmoebaReferenceMultipoleForce::Mutual){
         // Uind-Uind terms (m=0)
         RealOpenMM eCoef = -4.0*rInvVec[3]*uScale*thole_d0;
         RealOpenMM dCoef = 6.0*rInvVec[4]*uScale*dthole_d0;
@@ -1818,6 +1819,9 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateElectrostatic(const vector<Mu
                                                                  vector<RealVec>& torques,
                                                                  vector<RealVec>& forces)
 {
+    const int deriv1[] = {1, 4, 7, 8, 10, 15, 17, 13, 14, 19};
+    const int deriv2[] = {2, 7, 5, 9, 13, 11, 18, 15, 19, 16};
+    const int deriv3[] = {3, 8, 9, 6, 14, 16, 12, 19, 17, 18};
 
     RealOpenMM energy = 0.0;
     vector<RealOpenMM> scaleFactors(LAST_SCALE_TYPE_INDEX);
@@ -1826,7 +1830,6 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateElectrostatic(const vector<Mu
     }   
 
     // main loop over particle pairs
-
     for (unsigned int ii = 0; ii < particleData.size(); ii++) {
         for (unsigned int jj = ii+1; jj < particleData.size(); jj++) {
 
@@ -1839,6 +1842,38 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateElectrostatic(const vector<Mu
             if (jj <= _maxScaleIndex[ii]) {
                 for (unsigned int kk = 0; kk < LAST_SCALE_TYPE_INDEX; kk++) {
                     scaleFactors[kk] = 1.0;
+                }
+            }
+        }
+    }
+    if (getPolarizationType() == AmoebaReferenceMultipoleForce::OPT){
+        RealOpenMM inducedDipole[3];
+        RealOpenMM inducedDipolePolar[3];
+        RealOpenMM prefac = (_electric/_dielectric);
+        for (int i = 0; i < _numParticles; i++) {
+            // Compute the µ(m) T µ(n) force contributions here
+            RealOpenMM tmp[3] = {0.0, 0.0, 0.0};
+            for(int l = 0; l < _maxPTOrder-1; ++l) {
+                inducedDipole[0]      = _ptDipoleD[l][i][0];
+                inducedDipole[1]      = _ptDipoleD[l][i][1];
+                inducedDipole[2]      = _ptDipoleD[l][i][2];
+                inducedDipolePolar[0] = _ptDipoleP[l][i][0];
+                inducedDipolePolar[1] = _ptDipoleP[l][i][1];
+                inducedDipolePolar[2] = _ptDipoleP[l][i][2];
+                for(int m = 0; m < _maxPTOrder-1-l; ++m) {
+                    RealOpenMM p = _OPTPartCoefficients[l+m+1];
+                    if(std::fabs(p) < 1e-6) continue;
+                    tmp[0] = 0;
+                    tmp[1] = 0;
+                    tmp[2] = 0;
+                    for (int k = 0; k < 3; k++) {
+                        int j1 = deriv1[k+1];
+                        int j2 = deriv2[k+1];
+                        int j3 = deriv3[k+1];
+                        forces[i][0] += 0.5*p*prefac*(inducedDipole[k]*_ptDipoleDirFieldP[m][10*i+j1] + inducedDipolePolar[k]*_ptDipoleDirFieldD[m][10*i+j1]);
+                        forces[i][1] += 0.5*p*prefac*(inducedDipole[k]*_ptDipoleDirFieldP[m][10*i+j2] + inducedDipolePolar[k]*_ptDipoleDirFieldD[m][10*i+j2]);
+                        forces[i][2] += 0.5*p*prefac*(inducedDipole[k]*_ptDipoleDirFieldP[m][10*i+j3] + inducedDipolePolar[k]*_ptDipoleDirFieldD[m][10*i+j3]);
+                    }
                 }
             }
         }
@@ -5986,9 +6021,9 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::computeReciprocalSpaceInducedDipole
                         int j1 = deriv1[k+1];
                         int j2 = deriv2[k+1];
                         int j3 = deriv3[k+1];
-                        f[0] += p*(inducedDipole[k]*_ptDipoleFieldP[m][10*i+j1] + inducedDipolePolar[k]*_ptDipoleFieldD[m][10*i+j1]);
-                        f[1] += p*(inducedDipole[k]*_ptDipoleFieldP[m][10*i+j2] + inducedDipolePolar[k]*_ptDipoleFieldD[m][10*i+j2]);
-                        f[2] += p*(inducedDipole[k]*_ptDipoleFieldP[m][10*i+j3] + inducedDipolePolar[k]*_ptDipoleFieldD[m][10*i+j3]);
+                        f[0] += p*(inducedDipole[k]*_ptDipoleRecFieldP[m][10*i+j1] + inducedDipolePolar[k]*_ptDipoleRecFieldD[m][10*i+j1]);
+                        f[1] += p*(inducedDipole[k]*_ptDipoleRecFieldP[m][10*i+j2] + inducedDipolePolar[k]*_ptDipoleRecFieldD[m][10*i+j2]);
+                        f[2] += p*(inducedDipole[k]*_ptDipoleRecFieldP[m][10*i+j3] + inducedDipolePolar[k]*_ptDipoleRecFieldD[m][10*i+j3]);
                     }
                 }
             }
@@ -6026,8 +6061,8 @@ void AmoebaReferencePmeMultipoleForce::initializeInducedDipoles(vector<UpdateInd
 
     this->AmoebaReferenceMultipoleForce::initializeInducedDipoles(updateInducedDipoleFields);
     if (getPolarizationType() == AmoebaReferenceMultipoleForce::OPT) {
-        _ptDipoleFieldD.clear();
-        _ptDipoleFieldP.clear();
+        _ptDipoleRecFieldD.clear();
+        _ptDipoleRecFieldP.clear();
     }
     calculateReciprocalSpaceInducedDipoleField(updateInducedDipoleFields);
 }
@@ -6086,8 +6121,8 @@ void AmoebaReferencePmeMultipoleForce::calculateInducedDipoleFields(const vector
     calculateReciprocalSpaceInducedDipoleField(updateInducedDipoleFields);
     // Cache the fractional dipole coordinate fields for later use
     if (getPolarizationType() == AmoebaReferenceMultipoleForce::OPT) {
-        _ptDipoleFieldD.push_back(_phid);
-        _ptDipoleFieldP.push_back(_phip);
+        _ptDipoleRecFieldD.push_back(_phid);
+        _ptDipoleRecFieldP.push_back(_phip);
     }
 
 
