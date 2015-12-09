@@ -158,7 +158,7 @@ class PDBFile(object):
         self.topology.createDisulfideBonds(self.positions)
         self._numpyPositions = None
 
-        # Add bonds based on CONECT records. Bonds are not added for elements in metalElements, unless in the same residue. 
+        # Add bonds based on CONECT records.
 
         connectBonds = []
         for connect in pdb.models[-1].connects:
