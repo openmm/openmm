@@ -1847,29 +1847,31 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateElectrostatic(const vector<Mu
         }
     }
     if (getPolarizationType() == AmoebaReferenceMultipoleForce::OPT){
-        RealOpenMM inducedDipole[3];
-        RealOpenMM inducedDipolePolar[3];
         RealOpenMM prefac = (_electric/_dielectric);
         for (int i = 0; i < _numParticles; i++) {
             // Compute the µ(m) T µ(n) force contributions here
             for(int l = 0; l < _maxPTOrder-1; ++l) {
-                inducedDipole[0]      = _ptDipoleD[l][i][0];
-                inducedDipole[1]      = _ptDipoleD[l][i][1];
-                inducedDipole[2]      = _ptDipoleD[l][i][2];
-                inducedDipolePolar[0] = _ptDipoleP[l][i][0];
-                inducedDipolePolar[1] = _ptDipoleP[l][i][1];
-                inducedDipolePolar[2] = _ptDipoleP[l][i][2];
                 for(int m = 0; m < _maxPTOrder-1-l; ++m) {
                     RealOpenMM p = _OPTPartCoefficients[l+m+1];
                     if(std::fabs(p) < 1e-6) continue;
-                    for (int k = 0; k < 3; k++) {
-                        int j1 = deriv1[k+1];
-                        int j2 = deriv2[k+1];
-                        int j3 = deriv3[k+1];
-                        forces[i][0] += 0.5*p*prefac*(inducedDipole[k]*_ptDipoleFieldGradientP[m][6*i+j1] + inducedDipolePolar[k]*_ptDipoleFieldGradientD[m][6*i+j1]);
-                        forces[i][1] += 0.5*p*prefac*(inducedDipole[k]*_ptDipoleFieldGradientP[m][6*i+j2] + inducedDipolePolar[k]*_ptDipoleFieldGradientD[m][6*i+j2]);
-                        forces[i][2] += 0.5*p*prefac*(inducedDipole[k]*_ptDipoleFieldGradientP[m][6*i+j3] + inducedDipolePolar[k]*_ptDipoleFieldGradientD[m][6*i+j3]);
-                    }
+                    forces[i][0] += 0.5*p*prefac*(_ptDipoleD[l][i][0]*_ptDipoleFieldGradientP[m][6*i+0]
+                                                + _ptDipoleD[l][i][1]*_ptDipoleFieldGradientP[m][6*i+3]
+                                                + _ptDipoleD[l][i][2]*_ptDipoleFieldGradientP[m][6*i+4]);
+                    forces[i][1] += 0.5*p*prefac*(_ptDipoleD[l][i][0]*_ptDipoleFieldGradientP[m][6*i+3]
+                                                + _ptDipoleD[l][i][1]*_ptDipoleFieldGradientP[m][6*i+1]
+                                                + _ptDipoleD[l][i][2]*_ptDipoleFieldGradientP[m][6*i+5]);
+                    forces[i][2] += 0.5*p*prefac*(_ptDipoleD[l][i][0]*_ptDipoleFieldGradientP[m][6*i+4]
+                                                + _ptDipoleD[l][i][1]*_ptDipoleFieldGradientP[m][6*i+5]
+                                                + _ptDipoleD[l][i][2]*_ptDipoleFieldGradientP[m][6*i+2]);
+                    forces[i][0] += 0.5*p*prefac*(_ptDipoleP[l][i][0]*_ptDipoleFieldGradientD[m][6*i+0]
+                                                + _ptDipoleP[l][i][1]*_ptDipoleFieldGradientD[m][6*i+3]
+                                                + _ptDipoleP[l][i][2]*_ptDipoleFieldGradientD[m][6*i+4]);
+                    forces[i][1] += 0.5*p*prefac*(_ptDipoleP[l][i][0]*_ptDipoleFieldGradientD[m][6*i+3]
+                                                + _ptDipoleP[l][i][1]*_ptDipoleFieldGradientD[m][6*i+1]
+                                                + _ptDipoleP[l][i][2]*_ptDipoleFieldGradientD[m][6*i+5]);
+                    forces[i][2] += 0.5*p*prefac*(_ptDipoleP[l][i][0]*_ptDipoleFieldGradientD[m][6*i+4]
+                                                + _ptDipoleP[l][i][1]*_ptDipoleFieldGradientD[m][6*i+5]
+                                                + _ptDipoleP[l][i][2]*_ptDipoleFieldGradientD[m][6*i+2]);
                 }
             }
         }
