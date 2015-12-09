@@ -106,21 +106,21 @@ CudaIntegrationUtilities::CudaIntegrationUtilities(CudaContext& context, const S
         vsiteOutOfPlaneAtoms(NULL), vsiteOutOfPlaneWeights(NULL), vsiteLocalCoordsAtoms(NULL), vsiteLocalCoordsParams(NULL) {
     // Create workspace arrays.
 
+    lastStepSize = make_double2(0.0, 0.0);
     if (context.getUseDoublePrecision() || context.getUseMixedPrecision()) {
         posDelta = CudaArray::create<double4>(context, context.getPaddedNumAtoms(), "posDelta");
         vector<double4> deltas(posDelta->getSize(), make_double4(0.0, 0.0, 0.0, 0.0));
         posDelta->upload(deltas);
         stepSize = CudaArray::create<double2>(context, 1, "stepSize");
-        vector<double2> step(1, make_double2(0.0, 0.0));
-        stepSize->upload(step);
+        stepSize->upload(&lastStepSize);
     }
     else {
         posDelta = CudaArray::create<float4>(context, context.getPaddedNumAtoms(), "posDelta");
         vector<float4> deltas(posDelta->getSize(), make_float4(0.0f, 0.0f, 0.0f, 0.0f));
         posDelta->upload(deltas);
         stepSize = CudaArray::create<float2>(context, 1, "stepSize");
-        vector<float2> step(1, make_float2(0.0f, 0.0f));
-        stepSize->upload(step);
+        float2 lastStepSizeFloat = make_float2(0.0f, 0.0f);
+        stepSize->upload(&lastStepSizeFloat);
     }
 
     // Record the set of constraints and how many constraints each atom is involved in.
@@ -648,6 +648,29 @@ CudaIntegrationUtilities::~CudaIntegrationUtilities() {
         delete vsiteLocalCoordsAtoms;
     if (vsiteLocalCoordsParams != NULL)
         delete vsiteLocalCoordsParams;
+}
+
+void CudaIntegrationUtilities::setNextStepSize(double size) {
+    if (size != lastStepSize.x || size != lastStepSize.y) {
+        lastStepSize = make_double2(size, size);
+        if (context.getUseDoublePrecision() || context.getUseMixedPrecision())
+            stepSize->upload(&lastStepSize);
+        else {
+            float2 lastStepSizeFloat = make_float2((float) size, (float) size);
+            stepSize->upload(&lastStepSizeFloat);
+        }
+    }
+}
+
+double CudaIntegrationUtilities::getLastStepSize() {
+    if (context.getUseDoublePrecision() || context.getUseMixedPrecision())
+        stepSize->download(&lastStepSize);
+    else {
+        float2 lastStepSizeFloat;
+        stepSize->download(&lastStepSizeFloat);
+        lastStepSize = make_double2(lastStepSizeFloat.x, lastStepSizeFloat.y);
+    }
+    return lastStepSize.y;
 }
 
 void CudaIntegrationUtilities::applyConstraints(double tol) {

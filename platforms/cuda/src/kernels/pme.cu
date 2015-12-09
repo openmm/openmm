@@ -115,7 +115,7 @@ extern "C" __global__ void finishSpreadCharge(long long* __restrict__ originalPm
 
 // convolutes on the halfcomplex_pmeGrid, which is of size NX*NY*(NZ/2+1) as F(Q) is conjugate symmetric
 extern "C" __global__ void 
-reciprocalConvolution(real2* __restrict__ halfcomplex_pmeGrid, real* __restrict__ energyBuffer, 
+reciprocalConvolution(real2* __restrict__ halfcomplex_pmeGrid, mixed* __restrict__ energyBuffer, 
                       const real* __restrict__ pmeBsplineModuliX, const real* __restrict__ pmeBsplineModuliY, const real* __restrict__ pmeBsplineModuliZ, 
                       real4 periodicBoxSize, real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ) {
     // R2C stores into a half complex matrix where the last dimension is cut by half
@@ -150,14 +150,14 @@ reciprocalConvolution(real2* __restrict__ halfcomplex_pmeGrid, real* __restrict_
 
 
 extern "C" __global__ void
-gridEvaluateEnergy(real2* __restrict__ halfcomplex_pmeGrid, real* __restrict__ energyBuffer,
+gridEvaluateEnergy(real2* __restrict__ halfcomplex_pmeGrid, mixed* __restrict__ energyBuffer,
                       const real* __restrict__ pmeBsplineModuliX, const real* __restrict__ pmeBsplineModuliY, const real* __restrict__ pmeBsplineModuliZ,
                       real4 periodicBoxSize, real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ) {
     // R2C stores into a half complex matrix where the last dimension is cut by half
     const unsigned int gridSize = GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z;
     const real recipScaleFactor = RECIP(M_PI*periodicBoxSize.x*periodicBoxSize.y*periodicBoxSize.z);
  
-    real energy = 0;
+    mixed energy = 0;
     for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < gridSize; index += blockDim.x*gridDim.x) {
         // real indices
         int kx = index/(GRID_SIZE_Y*(GRID_SIZE_Z));
@@ -188,7 +188,7 @@ gridEvaluateEnergy(real2* __restrict__ halfcomplex_pmeGrid, real* __restrict__ e
             energy += eterm*(grid.x*grid.x + grid.y*grid.y);
         }
     }
-    energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] += 0.5f*energy;
+    energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] = 0.5f*energy;
 }
 
 extern "C" __global__
@@ -285,4 +285,10 @@ void addForces(const real4* __restrict__ forces, unsigned long long* __restrict_
         forceBuffers[atom+PADDED_NUM_ATOMS] += static_cast<unsigned long long>((long long) (f.y*0x100000000));
         forceBuffers[atom+2*PADDED_NUM_ATOMS] += static_cast<unsigned long long>((long long) (f.z*0x100000000));
     }
+}
+
+extern "C" __global__
+void addEnergy(const mixed* __restrict__ pmeEnergyBuffer, mixed* __restrict__ energyBuffer, int bufferSize) {
+    for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < bufferSize; i += blockDim.x*gridDim.x)
+        energyBuffer[i] += pmeEnergyBuffer[i];
 }

@@ -54,7 +54,7 @@ __device__ float computePScaleFactor(uint2 covalent, unsigned int polarizationGr
     return (x && y ? 0.0f : (x && p ? 0.5f : 1.0f));
 }
 
-__device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, bool hasExclusions, float dScale, float pScale, float mScale, float forceFactor, real& energy) {
+__device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, bool hasExclusions, float dScale, float pScale, float mScale, float forceFactor, mixed& energy) {
     // Compute the displacement.
     
     real3 delta;
@@ -374,7 +374,7 @@ __device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, bool has
  * Compute electrostatic interactions.
  */
 extern "C" __global__ void computeElectrostatics(
-        unsigned long long* __restrict__ forceBuffers, unsigned long long* __restrict__ torqueBuffers, real* __restrict__ energyBuffer,
+        unsigned long long* __restrict__ forceBuffers, unsigned long long* __restrict__ torqueBuffers, mixed* __restrict__ energyBuffer,
         const real4* __restrict__ posq, const uint2* __restrict__ covalentFlags, const unsigned int* __restrict__ polarizationGroupFlags,
         const ushort2* __restrict__ exclusionTiles, unsigned int startTileIndex, unsigned int numTileIndices,
 #ifdef USE_CUTOFF
@@ -388,7 +388,7 @@ extern "C" __global__ void computeElectrostatics(
     const unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/TILE_SIZE;
     const unsigned int tgx = threadIdx.x & (TILE_SIZE-1);
     const unsigned int tbx = threadIdx.x - tgx;
-    real energy = 0;
+    mixed energy = 0;
     __shared__ AtomData localData[THREAD_BLOCK_SIZE];
 
     // First loop: process tiles that contain exclusions.

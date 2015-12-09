@@ -47,13 +47,13 @@ namespace OpenMM {
  * every possible set of N particles in the system.  It may depend on the positions of the individual particles,
  * the distances between pairs of particles, the angles formed by sets of three particles, and the dihedral
  * angles formed by sets of four particles.
- * 
+ *
  * Be aware that the cost of evaluating an N-particle interaction increases very rapidly with N.  Values larger
  * than N=3 are rarely used.
- * 
+ *
  * We refer to a set of particles for which the energy is being evaluated  as p1, p2, p3, etc.  The energy expression
  * may depend on the following variables and functions:
- * 
+ *
  * <ul>
  * <li>x1, y1, z1, x2, y2, z2, etc.: The x, y, and z coordinates of the particle positions.  For example, x1
  * is the x coordinate of particle p1, and y3 is the y coordinate of particle p3.</li>
@@ -68,16 +68,16 @@ namespace OpenMM {
  * that defines the interaction energy of each set of particles.  Then call addPerParticleParameter() to define per-particle
  * parameters, and addGlobalParameter() to define global parameters.  The values of per-particle parameters are specified as
  * part of the system definition, while values of global parameters may be modified during a simulation by calling Context::setParameter().
- * 
+ *
  * Next, call addParticle() once for each particle in the System to set the values of its per-particle parameters.
  * The number of particles for which you set parameters must be exactly equal to the number of particles in the
  * System, or else an exception will be thrown when you try to create a Context.  After a particle has been added,
  * you can modify its parameters by calling setParticleParameters().  This will have no effect on Contexts that already exist
  * unless you call updateParametersInContext().
- * 
+ *
  * Multi-particle interactions can be very expensive to evaluate, so they are usually used with a cutoff distance.  The exact
  * interpretation of the cutoff depends on the permutation mode, as discussed below.
- * 
+ *
  * CustomManyParticleForce also lets you specify "exclusions", particular pairs of particles whose interactions should be
  * omitted from force and energy calculations.  This is most often used for particles that are bonded to each other.
  * If you specify a pair of particles as an exclusion, <i>all</i> sets that include those two particles will be omitted.
@@ -97,7 +97,7 @@ namespace OpenMM {
  * <tt><pre>
  * force->addGlobalParameter("C", 1.0);
  * </pre></tt>
- * 
+ *
  * Notice that the expression is symmetric with respect to the particles.  It only depends on the products
  * cos(theta1)*cos(theta2)*cos(theta3) and r12*r13*r23, both of which are unchanged if the labels p1, p2, and p3 are permuted.
  * This is required because we specified SinglePermutation as the permutation mode.  (This is the default, so we did not
@@ -105,36 +105,36 @@ namespace OpenMM {
  * each set of particles.  No guarantee is made about which particle will be identified as p1, p2, etc.  Therefore, the
  * energy <i>must</i> be symmetric with respect to exchange of particles.  Otherwise, the results would be undefined because
  * permuting the labels would change the energy.
- * 
+ *
  * Not all many-particle interactions work this way.  Another common pattern is for the expression to describe an interaction
  * between one central particle and other nearby particles.  An example of this is the 3-particle piece of the Stillinger-Weber
  * potential:
- * 
+ *
  * <tt><pre>CustomManyParticleForce* force = new CustomManyParticleForce(3,
  *     "L*eps*(cos(theta1)+1/3)^2*exp(sigma*gamma/(r12-a*sigma))*exp(sigma*gamma/(r13-a*sigma));"
        "r12 = distance(p1,p2); r13 = distance(p1,p3); theta1 = angle(p3,p1,p2)");
  * force->setPermutationMode(CustomManyParticleForce::UniqueCentralParticle);
  * </pre></tt>
- * 
+ *
  * When the permutation mode is set to UniqueCentralParticle, particle p1 is treated as the central particle.  For a set of
  * N particles, the expression is evaluated N times, once with each particle as p1.  The expression can therefore treat
  * p1 differently from the other particles.  Notice that it is still symmetric with respect to p2 and p3, however.  There
  * is no guarantee about how those labels will be assigned to particles.
- * 
+ *
  * Distance cutoffs are applied in different ways depending on the permutation mode.  In SinglePermutation mode, every particle
  * in the set must be within the cutoff distance of every other particle.  If <i>any</i> two particles are further apart than
  * the cutoff distance, the interaction is skipped.  In UniqueCentralParticle mode, each particle must be within the cutoff
  * distance of the central particle, but not necessarily of all the other particles.  The cutoff may therefore exclude a subset
  * of the permutations of a set of particles.
- * 
+ *
  * Another common situation is that some particles are fundamentally different from others, causing the expression to be
  * inherently non-symmetric.  An example would be a water model that involves three particles, two of which <i>must</i> be
  * hydrogen and one of which <i>must</i> be oxygen.  Cases like this can be implemented using particle types.
- * 
+ *
  * A particle type is an integer that you specify when you call addParticle().  (If you omit the argument, it defaults
  * to 0.)  For the water model, you could specify 0 for all oxygen atoms and 1 for all hydrogen atoms.  You can then
  * call setTypeFilter() to specify the list of allowed types for each of the N particles involved in an interaction:
- * 
+ *
  * <tt><pre>
  * set&lt;int&gt; oxygenTypes, hydrogenTypes;
  * oxygenTypes.insert(0);
@@ -147,7 +147,7 @@ namespace OpenMM {
  * This specifies that of the three particles in an interaction, p1 must be oxygen while p2 and p3 must be hydrogen.
  * The energy expression will only be evaluated for triplets of particles that satisfy those requirements.  It will
  * still only be evaluated once for each triplet, so it must still be symmetric with respect to p2 and p3.
- * 
+ *
  * Expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
  * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, erf, erfc, min, max, abs, floor, ceil, step, delta, select.  All trigonometric functions
  * are defined in radians, and log is the natural logarithm.  step(x) = 0 if x is less than 0, 1 otherwise.  delta(x) = 1 if x is 0, 0 otherwise.
@@ -337,7 +337,7 @@ public:
      * Set the default value of a global parameter.
      *
      * @param index          the index of the parameter for which to set the default value
-     * @param name           the default value of the parameter
+     * @param defaultValue   the default value of the parameter
      */
     void setGlobalParameterDefaultValue(int index, double defaultValue);
     /**
@@ -352,9 +352,9 @@ public:
     /**
      * Get the nonbonded force parameters for a particle.
      *
-     * @param index       the index of the particle for which to get parameters
-     * @param parameters  the list of parameters for the specified particle
-     * @param type        the type of the specified particle
+     * @param index            the index of the particle for which to get parameters
+     * @param[out] parameters  the list of parameters for the specified particle
+     * @param[out] type        the type of the specified particle
      */
     void getParticleParameters(int index, std::vector<double>& parameters, int& type) const;
     /**
@@ -367,7 +367,7 @@ public:
     void setParticleParameters(int index, const std::vector<double>& parameters, int type);
     /**
      * Add a particle pair to the list of interactions that should be excluded.
-     * 
+     *
      * In many cases, you can use createExclusionsFromBonds() rather than adding each exclusion explicitly.
      *
      * @param particle1  the index of the first particle in the pair
@@ -378,9 +378,9 @@ public:
     /**
      * Get the particles in a pair whose interaction should be excluded.
      *
-     * @param index      the index of the exclusion for which to get particle indices
-     * @param particle1  the index of the first particle in the pair
-     * @param particle2  the index of the second particle in the pair
+     * @param index           the index of the exclusion for which to get particle indices
+     * @param[out] particle1  the index of the first particle in the pair
+     * @param[out] particle2  the index of the second particle in the pair
      */
     void getExclusionParticles(int index, int& particle1, int& particle2) const;
     /**
@@ -404,16 +404,16 @@ public:
      * Get the allowed particle types for one of the particles involved in the interaction.
      * If this an empty set (the default), no filter is applied and all interactions are evaluated
      * regardless of the type of the specified particle.
-     * 
-     * @param index    the index of the particle within the interaction (between 0 and getNumParticlesPerSet())
-     * @param types    the allowed types for the specified particle
+     *
+     * @param index         the index of the particle within the interaction (between 0 and getNumParticlesPerSet())
+     * @param[out] types    the allowed types for the specified particle
      */
     void getTypeFilter(int index, std::set<int>& types) const;
     /**
      * Set the allowed particle types for one of the particles involved in the interaction.
      * If this an empty set (the default), no filter is applied and all interactions are evaluated
      * regardless of the type of the specified particle.
-     * 
+     *
      * @param index    the index of the particle within the interaction (between 0 and getNumParticlesPerSet())
      * @param types    the allowed types for the specified particle
      */
@@ -454,7 +454,7 @@ public:
      * an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
      * Simply call setParticleParameters() to modify this object's parameters, then call updateParametersInContext()
      * to copy them over to the Context.
-     * 
+     *
      * This method has several limitations.  The only information it updates is the values of per-particle parameters.
      * All other aspects of the Force (the energy function, nonbonded method, cutoff distance, etc.) are unaffected and can
      * only be changed by reinitializing the Context.  Also, this method cannot be used to add new particles, only to change

@@ -42,14 +42,14 @@ __kernel void computeInteractionGroups(
 #else
         __global real4* restrict forceBuffers,
 #endif
-        __global real* restrict energyBuffer, __global const real4* restrict posq, __global const int4* restrict groupData,
+        __global mixed* restrict energyBuffer, __global const real4* restrict posq, __global const int4* restrict groupData,
         real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ
         PARAMETER_ARGUMENTS) {
     const unsigned int totalWarps = get_global_size(0)/TILE_SIZE;
     const unsigned int warp = get_global_id(0)/TILE_SIZE; // global warpIndex
     const unsigned int tgx = get_local_id(0) & (TILE_SIZE-1); // index within the warp
     const unsigned int tbx = get_local_id(0) - tgx;           // block warpIndex
-    real energy = 0.0f;
+    mixed energy = 0;
     __local AtomData localData[LOCAL_MEMORY_SIZE];
 
     const unsigned int startTile = FIRST_TILE+warp*(LAST_TILE-FIRST_TILE)/totalWarps;

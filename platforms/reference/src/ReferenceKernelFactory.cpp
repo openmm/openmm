@@ -70,8 +70,6 @@ KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name, const Pla
         return new ReferenceCalcCustomTorsionForceKernel(name, platform);
     if (name == CalcGBSAOBCForceKernel::Name())
         return new ReferenceCalcGBSAOBCForceKernel(name, platform);
-    if (name == CalcGBVIForceKernel::Name())
-        return new ReferenceCalcGBVIForceKernel(name, platform);
     if (name == CalcCustomGBForceKernel::Name())
         return new ReferenceCalcCustomGBForceKernel(name, platform);
     if (name == CalcCustomExternalForceKernel::Name())

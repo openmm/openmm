@@ -136,7 +136,7 @@ double OpenCLCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, 
     cl.getIntegrationUtilities().distributeForcesFromVirtualSites();
     if (includeEnergy) {
         OpenCLArray& energyArray = cl.getEnergyBuffer();
-        if (cl.getUseDoublePrecision()) {
+        if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision()) {
             double* energy = (double*) cl.getPinnedBuffer();
             energyArray.download(energy);
             for (int i = 0; i < energyArray.getSize(); i++)
@@ -1454,7 +1454,14 @@ private:
 
 class OpenCLCalcNonbondedForceKernel::SyncQueuePostComputation : public OpenCLContext::ForcePostComputation {
 public:
-    SyncQueuePostComputation(OpenCLContext& cl, cl::Event& event, int forceGroup) : cl(cl), event(event), forceGroup(forceGroup) {
+    SyncQueuePostComputation(OpenCLContext& cl, cl::Event& event, OpenCLArray& pmeEnergyBuffer, int forceGroup) : cl(cl), event(event),
+            pmeEnergyBuffer(pmeEnergyBuffer), forceGroup(forceGroup) {
+    }
+    void setKernel(cl::Kernel kernel) {
+        addEnergyKernel = kernel;
+        addEnergyKernel.setArg<cl::Buffer>(0, pmeEnergyBuffer.getDeviceBuffer());
+        addEnergyKernel.setArg<cl::Buffer>(1, cl.getEnergyBuffer().getDeviceBuffer());
+        addEnergyKernel.setArg<cl_int>(2, pmeEnergyBuffer.getSize());
     }
     double computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
         if ((groups&(1<<forceGroup)) != 0) {
@@ -1463,11 +1470,15 @@ public:
             event = cl::Event();
             cl.getQueue().enqueueWaitForEvents(events);
         }
+        if (includeEnergy)
+            cl.executeKernel(addEnergyKernel, pmeEnergyBuffer.getSize());
         return 0.0;
     }
 private:
     OpenCLContext& cl;
     cl::Event& event;
+    cl::Kernel addEnergyKernel;
+    OpenCLArray& pmeEnergyBuffer;
     int forceGroup;
 };
 
@@ -1494,6 +1505,8 @@ OpenCLCalcNonbondedForceKernel::~OpenCLCalcNonbondedForceKernel() {
         delete pmeAtomRange;
     if (pmeAtomGridIndex != NULL)
         delete pmeAtomGridIndex;
+    if (pmeEnergyBuffer != NULL)
+        delete pmeEnergyBuffer;
     if (sort != NULL)
         delete sort;
     if (fft != NULL)
@@ -1663,6 +1676,9 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
                 pmeBsplineTheta = new OpenCLArray(cl, PmeOrder*numParticles, 4*elementSize, "pmeBsplineTheta");
                 pmeAtomRange = OpenCLArray::create<cl_int>(cl, gridSizeX*gridSizeY*gridSizeZ+1, "pmeAtomRange");
                 pmeAtomGridIndex = OpenCLArray::create<mm_int2>(cl, numParticles, "pmeAtomGridIndex");
+                int energyElementSize = (cl.getUseDoublePrecision() || cl.getUseMixedPrecision() ? sizeof(double) : sizeof(float));
+                pmeEnergyBuffer = new OpenCLArray(cl, cl.getNumThreadBlocks()*OpenCLContext::ThreadBlockSize, energyElementSize, "pmeEnergyBuffer");
+                cl.clearBuffer(*pmeEnergyBuffer);
                 sort = new OpenCLSort(cl, new SortTrait(), cl.getNumAtoms());
                 fft = new OpenCLFFT3D(cl, gridSizeX, gridSizeY, gridSizeZ, true);
                 string vendor = cl.getDevice().getInfo<CL_DEVICE_VENDOR>();
@@ -1676,7 +1692,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
                     if (recipForceGroup < 0)
                         recipForceGroup = force.getForceGroup();
                     cl.addPreComputation(new SyncQueuePreComputation(cl, pmeQueue, recipForceGroup));
-                    cl.addPostComputation(new SyncQueuePostComputation(cl, pmeSyncEvent, recipForceGroup));
+                    cl.addPostComputation(syncQueue = new SyncQueuePostComputation(cl, pmeSyncEvent, *pmeEnergyBuffer, recipForceGroup));
                 }
 
                 // Initialize the b-spline moduli.
@@ -1831,7 +1847,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             pmeConvolutionKernel.setArg<cl::Buffer>(2, pmeBsplineModuliY->getDeviceBuffer());
             pmeConvolutionKernel.setArg<cl::Buffer>(3, pmeBsplineModuliZ->getDeviceBuffer());
             pmeEvalEnergyKernel.setArg<cl::Buffer>(0, pmeGrid2->getDeviceBuffer());
-            pmeEvalEnergyKernel.setArg<cl::Buffer>(1, cl.getEnergyBuffer().getDeviceBuffer());
+            pmeEvalEnergyKernel.setArg<cl::Buffer>(1, usePmeQueue ? pmeEnergyBuffer->getDeviceBuffer() : cl.getEnergyBuffer().getDeviceBuffer());
             pmeEvalEnergyKernel.setArg<cl::Buffer>(2, pmeBsplineModuliX->getDeviceBuffer());
             pmeEvalEnergyKernel.setArg<cl::Buffer>(3, pmeBsplineModuliY->getDeviceBuffer());
             pmeEvalEnergyKernel.setArg<cl::Buffer>(4, pmeBsplineModuliZ->getDeviceBuffer());
@@ -1844,6 +1860,8 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
                 pmeFinishSpreadChargeKernel.setArg<cl::Buffer>(0, pmeGrid2->getDeviceBuffer());
                 pmeFinishSpreadChargeKernel.setArg<cl::Buffer>(1, pmeGrid->getDeviceBuffer());
             }
+            if (usePmeQueue)
+                syncQueue->setKernel(cl::Kernel(program, "addEnergy"));
        }
     }
     if (cosSinSums != NULL && includeReciprocal) {
@@ -3655,7 +3673,7 @@ double OpenCLCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
         if (useLong) {
             pairEnergyKernel.setArg<cl::Memory>(index++, longEnergyDerivs->getDeviceBuffer());
             for (int i = 0; i < numComputedValues; ++i)
-                pairEnergyKernel.setArg(index++, nb.getForceThreadBlockSize()*elementSize, NULL);
+                pairEnergyKernel.setArg(index++, (deviceIsCpu ? OpenCLContext::TileSize : nb.getForceThreadBlockSize())*elementSize, NULL);
         }
         else {
             for (int i = 0; i < (int) energyDerivs->getBuffers().size(); i++) {
@@ -5866,7 +5884,6 @@ void OpenCLIntegrateVerletStepKernel::initialize(const System& system, const Ver
     cl::Program program = cl.createProgram(OpenCLKernelSources::verlet, "");
     kernel1 = cl::Kernel(program, "integrateVerletPart1");
     kernel2 = cl::Kernel(program, "integrateVerletPart2");
-    prevStepSize = -1.0;
 }
 
 void OpenCLIntegrateVerletStepKernel::execute(ContextImpl& context, const VerletIntegrator& integrator) {
@@ -5889,19 +5906,7 @@ void OpenCLIntegrateVerletStepKernel::execute(ContextImpl& context, const Verlet
         kernel2.setArg<cl::Buffer>(4, cl.getVelm().getDeviceBuffer());
         kernel2.setArg<cl::Buffer>(5, integration.getPosDelta().getDeviceBuffer());
     }
-    if (dt != prevStepSize) {
-        if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision()) {
-            vector<mm_double2> stepSizeVec(1);
-            stepSizeVec[0] = mm_double2(dt, dt);
-            cl.getIntegrationUtilities().getStepSize().upload(stepSizeVec);
-        }
-        else {
-            vector<mm_float2> stepSizeVec(1);
-            stepSizeVec[0] = mm_float2((cl_float) dt, (cl_float) dt);
-            cl.getIntegrationUtilities().getStepSize().upload(stepSizeVec);
-        }
-        prevStepSize = dt;
-    }
+    cl.getIntegrationUtilities().setNextStepSize(dt);
 
     // Call the first integration kernel.
 
@@ -5971,6 +5976,7 @@ void OpenCLIntegrateLangevinStepKernel::execute(ContextImpl& context, const Lang
     double temperature = integrator.getTemperature();
     double friction = integrator.getFriction();
     double stepSize = integrator.getStepSize();
+    cl.getIntegrationUtilities().setNextStepSize(stepSize);
     if (temperature != prevTemp || friction != prevFriction || stepSize != prevStepSize) {
         // Calculate the integration parameters.
 
@@ -5985,8 +5991,6 @@ void OpenCLIntegrateLangevinStepKernel::execute(ContextImpl& context, const Lang
             p[1] = fscale;
             p[2] = noisescale;
             params->upload(p);
-            mm_double2 ss = mm_double2(0, stepSize);
-            integration.getStepSize().upload(&ss);
         }
         else {
             vector<cl_float> p(params->getSize());
@@ -5994,8 +5998,6 @@ void OpenCLIntegrateLangevinStepKernel::execute(ContextImpl& context, const Lang
             p[1] = (cl_float) fscale;
             p[2] = (cl_float) noisescale;
             params->upload(p);
-            mm_float2 ss = mm_float2(0, (float) stepSize);
-            integration.getStepSize().upload(&ss);
         }
         prevTemp = temperature;
         prevFriction = friction;
@@ -6186,20 +6188,13 @@ double OpenCLIntegrateVariableVerletStepKernel::execute(ContextImpl& context, co
 
     // Update the time and step count.
 
-    double dt, time;
+    double dt = cl.getIntegrationUtilities().getLastStepSize();
+    double time = cl.getTime()+dt;
     if (useDouble) {
-        mm_double2 stepSize;
-        cl.getIntegrationUtilities().getStepSize().download(&stepSize);
-        dt = stepSize.y;
-        time = cl.getTime()+dt;
         if (dt == maxStepSize)
             time = maxTime; // Avoid round-off error
     }
     else {
-        mm_float2 stepSize;
-        cl.getIntegrationUtilities().getStepSize().download(&stepSize);
-        dt = stepSize.y;
-        time = cl.getTime()+dt;
         if (dt == maxStepSizeFloat)
             time = maxTime; // Avoid round-off error
     }
@@ -6300,20 +6295,13 @@ double OpenCLIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, 
 
     // Update the time and step count.
 
-    double dt, time;
+    double dt = cl.getIntegrationUtilities().getLastStepSize();
+    double time = cl.getTime()+dt;
     if (useDouble) {
-        mm_double2 stepSize;
-        cl.getIntegrationUtilities().getStepSize().download(&stepSize);
-        dt = stepSize.y;
-        time = cl.getTime()+dt;
         if (dt == maxStepSize)
             time = maxTime; // Avoid round-off error
     }
     else {
-        mm_float2 stepSize;
-        cl.getIntegrationUtilities().getStepSize().download(&stepSize);
-        dt = stepSize.y;
-        time = cl.getTime()+dt;
         if (dt == maxStepSizeFloat)
             time = maxTime; // Avoid round-off error
     }
@@ -6414,7 +6402,6 @@ void OpenCLIntegrateCustomStepKernel::initialize(const System& system, const Cus
     summedValue = new OpenCLArray(cl, 1, elementSize, "summedValue");
     perDofValues = new OpenCLParameterSet(cl, integrator.getNumPerDofVariables(), 3*system.getNumParticles(), "perDofVariables", false, cl.getUseDoublePrecision() || cl.getUseMixedPrecision());
     cl.addReorderListener(new ReorderListener(cl, *perDofValues, localPerDofValuesFloat, localPerDofValuesDouble, deviceValuesAreCurrent));
-    prevStepSize = -1.0;
     SimTKOpenMMUtilities::setRandomNumberSeed(integrator.getRandomNumberSeed());
 }
 
@@ -6825,9 +6812,7 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
     }
     localValuesAreCurrent = false;
     double stepSize = integrator.getStepSize();
-    if (stepSize != prevStepSize) {
-        recordGlobalValue(stepSize, GlobalTarget(DT, dtVariableIndex));
-    }
+    recordGlobalValue(stepSize, GlobalTarget(DT, dtVariableIndex));
     for (int i = 0; i < (int) parameterNames.size(); i++) {
         double value = context.getParameter(parameterNames[i]);
         if (value != globalValuesDouble[parameterVariableIndex[i]]) {
@@ -7032,17 +7017,10 @@ double OpenCLIntegrateCustomStepKernel::computeKineticEnergy(ContextImpl& contex
 void OpenCLIntegrateCustomStepKernel::recordGlobalValue(double value, GlobalTarget target) {
     switch (target.type) {
         case DT:
+            if (value != globalValuesDouble[dtVariableIndex])
+                deviceGlobalsAreCurrent = false;
             globalValuesDouble[dtVariableIndex] = value;
-            deviceGlobalsAreCurrent = false;
-            if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision()) {
-                double size[] = {0, value};
-                cl.getIntegrationUtilities().getStepSize().upload(size);
-            }
-            else {
-                float size[] = {0, (float) value};
-                cl.getIntegrationUtilities().getStepSize().upload(size);
-            }
-            prevStepSize = value;
+            cl.getIntegrationUtilities().setNextStepSize(value);
             break;
         case VARIABLE:
         case PARAMETER:

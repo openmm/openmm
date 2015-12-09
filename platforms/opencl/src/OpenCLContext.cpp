@@ -460,7 +460,7 @@ void OpenCLContext::initialize() {
     else {
         forceBuffers = OpenCLArray::create<mm_float4>(*this, paddedNumAtoms*numForceBuffers, "forceBuffers");
         force = OpenCLArray::create<mm_float4>(*this, &forceBuffers->getDeviceBuffer(), paddedNumAtoms, "force");
-        energyBuffer = OpenCLArray::create<cl_float>(*this, max(numThreadBlocks*ThreadBlockSize, nonbonded->getNumEnergyBuffers()), "energyBuffer");
+        energyBuffer = OpenCLArray::create<cl_double>(*this, max(numThreadBlocks*ThreadBlockSize, nonbonded->getNumEnergyBuffers()), "energyBuffer");
     }
     if (supports64BitGlobalAtomics) {
         longForceBuffer = OpenCLArray::create<cl_long>(*this, 3*paddedNumAtoms, "longForceBuffer");
@@ -1112,6 +1112,8 @@ void OpenCLContext::reorderAtomsImpl() {
             molPos[i].x *= invNumAtoms;
             molPos[i].y *= invNumAtoms;
             molPos[i].z *= invNumAtoms;
+            if (molPos[i].x != molPos[i].x)
+                throw OpenMMException("Particle coordinate is nan");
         }
         if (nonbonded->getUsePeriodic()) {
             // Move each molecule position into the same box.

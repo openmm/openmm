@@ -1,6 +1,3 @@
-#ifndef OPENMM_GBVIFORCEFIELDIMPL_H_
-#define OPENMM_GBVIFORCEFIELDIMPL_H_
-
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -9,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2015 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,46 +29,8 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "ForceImpl.h"
-#include "openmm/GBVIForce.h"
-#include "openmm/Kernel.h"
-#include <string>
+#include "ReferenceTests.h"
+#include "TestCompoundIntegrator.h"
 
-namespace OpenMM {
-
-/**
- * This is the internal implementation of GBVIForce.
- */
-
-class GBVIForceImpl : public ForceImpl {
-public:
-    GBVIForceImpl(const GBVIForce& owner);
-    void initialize(ContextImpl& context);
-    const GBVIForce& getOwner() const {
-        return owner;
-    }
-    
-    // calculate scaled radii (Eq. 5 of Labute paper [JCC 29 1693-1698 2008])
-
-    void findScaledRadii( int numberOfParticles, const std::vector<std::vector<int> >& bondIndices,
-                          const std::vector<double> & bondLengths, std::vector<double> & scaledRadii) const;
-
-    // if bond info not set, then use bond forces/constraints
-    int getBondsFromForces(ContextImpl& context);
-
-    void updateContextState(ContextImpl& context) {
-        // This force field doesn't update the state directly.
-    }
-    double calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups);
-    std::map<std::string, double> getDefaultParameters() {
-        return std::map<std::string, double>(); // This force field doesn't define any parameters.
-    }
-    std::vector<std::string> getKernelNames();
-private:
-    const GBVIForce& owner;
-    Kernel kernel;
-};
-
-} // namespace OpenMM
-
-#endif /*OPENMM_GBVIFORCEFIELDIMPL_H_*/
+void runPlatformTests() {
+}

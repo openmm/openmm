@@ -251,8 +251,8 @@ void testRandomSeed() {
 
     for (int i = 0; i < numParticles; i++) {
         for (int j = 0; j < 3; j++) {
-            ASSERT(state1.getPositions()[i][j] == state2.getPositions()[i][j]);
-            ASSERT(state3.getPositions()[i][j] == state4.getPositions()[i][j]);
+            ASSERT_EQUAL_TOL(state1.getPositions()[i][j], state2.getPositions()[i][j], 1e-6);
+            ASSERT_EQUAL_TOL(state3.getPositions()[i][j], state4.getPositions()[i][j], 1e-6);
             ASSERT(state1.getPositions()[i][j] != state3.getPositions()[i][j]);
         }
     }

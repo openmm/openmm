@@ -433,16 +433,22 @@ class GromacsTopFile(object):
     def __init__(self, file, periodicBoxVectors=None, unitCellDimensions=None, includeDir=None, defines=None):
         """Load a top file.
 
-        Parameters:
-         - file (string) the name of the file to load
-         - periodicBoxVectors (tuple of Vec3=None) the vectors defining the periodic box
-         - unitCellDimensions (Vec3=None) the dimensions of the crystallographic unit cell.  For
-           non-rectangular unit cells, specify periodicBoxVectors instead.
-         - includeDir (string=None) A directory in which to look for other files
-           included from the top file. If not specified, we will attempt to locate a gromacs
-           installation on your system. When gromacs is installed in /usr/local, this will resolve
-           to  /usr/local/gromacs/share/gromacs/top
-         - defines (dict={}) preprocessor definitions that should be predefined when parsing the file
+        Parameters
+        ----------
+        file : str
+            the name of the file to load
+        periodicBoxVectors : tuple of Vec3=None
+            the vectors defining the periodic box
+        unitCellDimensions : Vec3=None
+            the dimensions of the crystallographic unit cell.  For
+            non-rectangular unit cells, specify periodicBoxVectors instead.
+        includeDir : string=None
+            A directory in which to look for other files included from the
+            top file. If not specified, we will attempt to locate a gromacs
+            installation on your system. When gromacs is installed in
+            /usr/local, this will resolve to /usr/local/gromacs/share/gromacs/top
+        defines : dict={}
+            preprocessor definitions that should be predefined when parsing the file
          """
         if includeDir is None:
             includeDir = _defaultGromacsIncludeDir()
@@ -539,23 +545,43 @@ class GromacsTopFile(object):
 
     def createSystem(self, nonbondedMethod=ff.NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
                      constraints=None, rigidWater=True, implicitSolvent=None, soluteDielectric=1.0, solventDielectric=78.5, ewaldErrorTolerance=0.0005, removeCMMotion=True, hydrogenMass=None):
-        """Construct an OpenMM System representing the topology described by this prmtop file.
+        """Construct an OpenMM System representing the topology described by this
+        prmtop file.
 
-        Parameters:
-         - nonbondedMethod (object=NoCutoff) The method to use for nonbonded interactions.  Allowed values are
-           NoCutoff, CutoffNonPeriodic, CutoffPeriodic, Ewald, or PME.
-         - nonbondedCutoff (distance=1*nanometer) The cutoff distance to use for nonbonded interactions
-         - constraints (object=None) Specifies which bonds and angles should be implemented with constraints.
-           Allowed values are None, HBonds, AllBonds, or HAngles.
-         - rigidWater (boolean=True) If true, water molecules will be fully rigid regardless of the value passed for the constraints argument
-         - implicitSolvent (object=None) If not None, the implicit solvent model to use.  The only allowed value is OBC2.
-         - soluteDielectric (float=1.0) The solute dielectric constant to use in the implicit solvent model.
-         - solventDielectric (float=78.5) The solvent dielectric constant to use in the implicit solvent model.
-         - ewaldErrorTolerance (float=0.0005) The error tolerance to use if nonbondedMethod is Ewald or PME.
-         - removeCMMotion (boolean=True) If true, a CMMotionRemover will be added to the System
-         - hydrogenMass (mass=None) The mass to use for hydrogen atoms bound to heavy atoms.  Any mass added to a hydrogen is
-           subtracted from the heavy atom to keep their total mass the same.
-        Returns: the newly created System
+        Parameters
+        ----------
+        nonbondedMethod : object=NoCutoff
+            The method to use for nonbonded interactions.  Allowed values are
+            NoCutoff, CutoffNonPeriodic, CutoffPeriodic, Ewald, or PME.
+        nonbondedCutoff : distance=1*nanometer
+            The cutoff distance to use for nonbonded interactions
+        constraints : object=None
+            Specifies which bonds and angles should be implemented with
+            constraints. Allowed values are None, HBonds, AllBonds, or HAngles.
+        rigidWater : boolean=True
+            If true, water molecules will be fully rigid regardless of the value
+            passed for the constraints argument
+        implicitSolvent : object=None
+            If not None, the implicit solvent model to use.  The only allowed
+            value is OBC2.
+        soluteDielectric : float=1.0
+            The solute dielectric constant to use in the implicit solvent model.
+        solventDielectric : float=78.5
+            The solvent dielectric constant to use in the implicit solvent
+            model.
+        ewaldErrorTolerance : float=0.0005
+            The error tolerance to use if nonbondedMethod is Ewald or PME.
+        removeCMMotion : boolean=True
+            If true, a CMMotionRemover will be added to the System
+        hydrogenMass : mass=None
+            The mass to use for hydrogen atoms bound to heavy atoms.  Any mass
+            added to a hydrogen is subtracted from the heavy atom to keep their
+            total mass the same.
+
+        Returns
+        -------
+        System
+             the newly created System
         """
         # Create the System.
 
@@ -586,9 +612,9 @@ class GromacsTopFile(object):
         topologyAtoms = list(self.topology.atoms())
         exceptions = []
         fudgeQQ = float(self._defaults[4])
-        
+
         # Build a lookup table to let us process dihedrals more quickly.
-        
+
         dihedralTypeTable = {}
         for key in self._dihedralTypes:
             if key[1] != 'X' and key[2] != 'X':
@@ -837,7 +863,7 @@ class GromacsTopFile(object):
                     for atom in atoms[1:]:
                         if atom > atoms[0]:
                             exceptions.append((baseAtomIndex+atoms[0], baseAtomIndex+atom, 0, 0, 0))
-                    
+
 
         # Create nonbonded exceptions.
 
@@ -855,9 +881,9 @@ class GromacsTopFile(object):
         nb.setNonbondedMethod(methodMap[nonbondedMethod])
         nb.setCutoffDistance(nonbondedCutoff)
         nb.setEwaldErrorTolerance(ewaldErrorTolerance)
-        
+
         # Adjust masses.
-        
+
         if hydrogenMass is not None:
             for atom1, atom2 in self.topology.bonds():
                 if atom1.element == elem.hydrogen:

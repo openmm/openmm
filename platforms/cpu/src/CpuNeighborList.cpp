@@ -59,22 +59,25 @@ public:
  */
 class CpuNeighborList::Voxels {
 public:
-    Voxels(int blockSize, float vsy, float vsz, float miny, float maxy, float minz, float maxz, const RealVec* periodicBoxVectors, bool usePeriodic) :
-            blockSize(blockSize), voxelSizeY(vsy), voxelSizeZ(vsz), miny(miny), maxy(maxy), minz(minz), maxz(maxz), periodicBoxVectors(periodicBoxVectors), usePeriodic(usePeriodic) {
-        periodicBoxSize[0] = (float) periodicBoxVectors[0][0];
-        periodicBoxSize[1] = (float) periodicBoxVectors[1][1];
-        periodicBoxSize[2] = (float) periodicBoxVectors[2][2];
-        recipBoxSize[0] = (float) (1/periodicBoxVectors[0][0]);
-        recipBoxSize[1] = (float) (1/periodicBoxVectors[1][1]);
-        recipBoxSize[2] = (float) (1/periodicBoxVectors[2][2]);
-        triclinic = (periodicBoxVectors[0][1] != 0.0 || periodicBoxVectors[0][2] != 0.0 ||
-                     periodicBoxVectors[1][0] != 0.0 || periodicBoxVectors[1][2] != 0.0 ||
-                     periodicBoxVectors[2][0] != 0.0 || periodicBoxVectors[2][1] != 0.0);
+    Voxels(int blockSize, float vsy, float vsz, float miny, float maxy, float minz, float maxz, const RealVec* boxVectors, bool usePeriodic) :
+            blockSize(blockSize), voxelSizeY(vsy), voxelSizeZ(vsz), miny(miny), maxy(maxy), minz(minz), maxz(maxz), usePeriodic(usePeriodic) {
+        for (int i = 0; i < 3; i++)
+            for (int j = 0; j < 3; j++)
+                periodicBoxVectors[i][j] = (float) boxVectors[i][j];
+        periodicBoxSize[0] = (float) boxVectors[0][0];
+        periodicBoxSize[1] = (float) boxVectors[1][1];
+        periodicBoxSize[2] = (float) boxVectors[2][2];
+        recipBoxSize[0] = (float) (1/boxVectors[0][0]);
+        recipBoxSize[1] = (float) (1/boxVectors[1][1]);
+        recipBoxSize[2] = (float) (1/boxVectors[2][2]);
+        triclinic = (boxVectors[0][1] != 0.0 || boxVectors[0][2] != 0.0 ||
+                     boxVectors[1][0] != 0.0 || boxVectors[1][2] != 0.0 ||
+                     boxVectors[2][0] != 0.0 || boxVectors[2][1] != 0.0);
         if (usePeriodic) {
-            ny = (int) floorf(periodicBoxVectors[1][1]/voxelSizeY+0.5f);
-            nz = (int) floorf(periodicBoxVectors[2][2]/voxelSizeZ+0.5f);
-            voxelSizeY = periodicBoxVectors[1][1]/ny;
-            voxelSizeZ = periodicBoxVectors[2][2]/nz;
+            ny = (int) floorf(boxVectors[1][1]/voxelSizeY+0.5f);
+            nz = (int) floorf(boxVectors[2][2]/voxelSizeZ+0.5f);
+            voxelSizeY = boxVectors[1][1]/ny;
+            voxelSizeZ = boxVectors[2][2]/nz;
         }
         else {
             ny = max(1, (int) floorf((maxy-miny)/voxelSizeY+0.5f));
@@ -110,12 +113,10 @@ public:
     }
     
     /**
-     * Find the index of the first particle in voxel (y,z) whose x coordinate in >= the specified value.
+     * Find the index of the first particle in voxel (y,z) whose x coordinate is >= the specified value.
      */
-    int findLowerBound(int y, int z, double x) const {
+    int findLowerBound(int y, int z, double x, int lower, int upper) const {
         const vector<pair<float, int> >& bin = bins[y][z];
-        int lower = 0;
-        int upper = bin.size();
         while (lower < upper) {
             int middle = (lower+upper)/2;
             if (bin[middle].first < x)
@@ -127,12 +128,10 @@ public:
     }
     
     /**
-     * Find the index of the first particle in voxel (y,z) whose x coordinate in greater than the specified value.
+     * Find the index of the first particle in voxel (y,z) whose x coordinate is greater than the specified value.
      */
-    int findUpperBound(int y, int z, double x) const {
+    int findUpperBound(int y, int z, double x, int lower, int upper) const {
         const vector<pair<float, int> >& bin = bins[y][z];
-        int lower = 0;
-        int upper = bin.size();
         while (lower < upper) {
             int middle = (lower+upper)/2;
             if (bin[middle].first > x)
@@ -208,7 +207,7 @@ public:
 
             // Loop over voxels along the y axis.
 
-            int boxz = (int) floor((float) z/nz);
+            float boxz = floor((float) z/nz);
             int starty = centerVoxelIndex.y-dIndexY;
             int endy = centerVoxelIndex.y+dIndexY;
             float yoffset = (float) (usePeriodic ? boxz*periodicBoxVectors[2][1] : 0);
@@ -225,7 +224,7 @@ public:
                 voxelIndex.y = y;
                 if (usePeriodic)
                     voxelIndex.y = (y < 0 ? y+ny : (y >= ny ? y-ny : y));
-                int boxy = (int) floor((float) y/ny);
+                float boxy = floor((float) y/ny);
                 float xoffset = (float) (usePeriodic ? boxy*periodicBoxVectors[1][0]+boxz*periodicBoxVectors[2][0] : 0);
                 
                 // Identify the range of atoms within this bin we need to search.  When using periodic boundary
@@ -261,30 +260,34 @@ public:
                 int numRanges;
                 int rangeStart[2];
                 int rangeEnd[2];
-                rangeStart[0] = findLowerBound(voxelIndex.y, voxelIndex.z, minx);
+                int binSize = bins[voxelIndex.y][voxelIndex.z].size();
+                rangeStart[0] = findLowerBound(voxelIndex.y, voxelIndex.z, minx, 0, binSize);
                 if (needPeriodic) {
                     numRanges = 2;
-                    rangeEnd[0] = findUpperBound(voxelIndex.y, voxelIndex.z, maxx);
-                    if (rangeStart[0] > 0) {
+                    rangeEnd[0] = findUpperBound(voxelIndex.y, voxelIndex.z, maxx, rangeStart[0], binSize);
+                    if (rangeStart[0] > 0 && rangeEnd[0] < binSize)
+                        numRanges = 1;
+                    else if (rangeStart[0] > 0) {
                         rangeStart[1] = 0;
-                        rangeEnd[1] = min(findUpperBound(voxelIndex.y, voxelIndex.z, maxx-periodicBoxSize[0]), rangeStart[0]);
+                        rangeEnd[1] = min(findUpperBound(voxelIndex.y, voxelIndex.z, maxx-periodicBoxSize[0], 0, rangeStart[0]), rangeStart[0]);
                     }
                     else {
-                        rangeStart[1] = max(findLowerBound(voxelIndex.y, voxelIndex.z, minx+periodicBoxSize[0]), rangeEnd[0]);
+                        rangeStart[1] = max(findLowerBound(voxelIndex.y, voxelIndex.z, minx+periodicBoxSize[0], rangeEnd[0], binSize), rangeEnd[0]);
                         rangeEnd[1] = bins[voxelIndex.y][voxelIndex.z].size();
                     }
                 }
                 else {
                     numRanges = 1;
-                    rangeEnd[0] = findUpperBound(voxelIndex.y, voxelIndex.z, maxx);
+                    rangeEnd[0] = findUpperBound(voxelIndex.y, voxelIndex.z, maxx, rangeStart[0], binSize);
                 }
                 bool periodicRectangular = (needPeriodic && !triclinic);
                 
                 // Loop over atoms and check to see if they are neighbors of this block.
                 
+                const vector<pair<float, int> >& voxelBins = bins[voxelIndex.y][voxelIndex.z];
                 for (int range = 0; range < numRanges; range++) {
                     for (int item = rangeStart[range]; item < rangeEnd[range]; item++) {
-                        const int sortedIndex = bins[voxelIndex.y][voxelIndex.z][item].second;
+                        const int sortedIndex = voxelBins[item].second;
 
                         // Avoid duplicate entries.
                         if (sortedIndex >= lastSortedIndex)
@@ -361,7 +364,7 @@ private:
     int ny, nz;
     float periodicBoxSize[3], recipBoxSize[3];
     bool triclinic;
-    const RealVec* periodicBoxVectors;
+    float periodicBoxVectors[3][3];
     const bool usePeriodic;
     vector<vector<vector<pair<float, int> > > > bins;
 };
@@ -444,6 +447,7 @@ void CpuNeighborList::computeNeighborList(int numAtoms, const AlignedArray<float
 
     // Signal the threads to start running and wait for them to finish.
     
+    gmx_atomic_set(&atomicCounter, 0);
     threads.resumeThreads();
     threads.waitForThreads();
     
@@ -500,7 +504,11 @@ void CpuNeighborList::threadComputeNeighborList(ThreadPool& threads, int threadI
     vector<int> blockAtoms;
     vector<float> blockAtomX(blockSize), blockAtomY(blockSize), blockAtomZ(blockSize);
     vector<VoxelIndex> atomVoxelIndex;
-    for (int i = threadIndex; i < numBlocks; i += numThreads) {
+    while (true) {
+        int i = gmx_atomic_fetch_add(&atomicCounter, 1);
+        if (i >= numBlocks)
+            break;
+
         // Find the atoms in this block and compute their bounding box.
         
         int firstIndex = blockSize*i;
@@ -532,14 +540,24 @@ void CpuNeighborList::threadComputeNeighborList(ThreadPool& threads, int threadI
 
         // Record the exclusions for this block.
 
+        map<int, char> atomFlags;
         for (int j = 0; j < atomsInBlock; j++) {
             const set<int>& atomExclusions = (*exclusions)[sortedAtoms[firstIndex+j]];
             char mask = 1<<j;
-            for (int k = 0; k < (int) blockNeighbors[i].size(); k++) {
-                int atomIndex = blockNeighbors[i][k];
-                if (atomExclusions.find(atomIndex) != atomExclusions.end())
-                    blockExclusions[i][k] |= mask;
+            for (set<int>::const_iterator iter = atomExclusions.begin(); iter != atomExclusions.end(); ++iter) {
+                map<int, char>::iterator thisAtomFlags = atomFlags.find(*iter);
+                if (thisAtomFlags == atomFlags.end())
+                    atomFlags[*iter] = mask;
+                else
+                    thisAtomFlags->second |= mask;
             }
+        }
+        int numNeighbors = blockNeighbors[i].size();
+        for (int k = 0; k < numNeighbors; k++) {
+            int atomIndex = blockNeighbors[i][k];
+            map<int, char>::iterator thisAtomFlags = atomFlags.find(atomIndex);
+            if (thisAtomFlags != atomFlags.end())
+                blockExclusions[i][k] |= thisAtomFlags->second;
         }
     }
 }

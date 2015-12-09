@@ -3,6 +3,10 @@ from validateModeller import *
 from simtk.openmm.app import *
 from simtk.openmm import *
 from simtk.unit import *
+if sys.version_info >= (3, 0):
+    from io import StringIO
+else:
+    from cStringIO import StringIO
 
 class TestModeller(unittest.TestCase):
     """ Test the Modeller class. """
@@ -397,44 +401,46 @@ class TestModeller(unittest.TestCase):
 
     def test_addSolventNegativeSolvent(self):
         """ Test the addSolvent() method; test adding ions to a negatively charged solvent. """
-    
+
         topology_start = self.pdb.topology
         topology_start.setUnitCellDimensions(Vec3(3.5, 3.5, 3.5)*nanometers)
-               
-        # set up modeller with no solvent
-        modeller = Modeller(topology_start, self.positions)
-        modeller.deleteWater()
 
-        # add 5 Cl- ions to the original topology
-        topology_toAdd = Topology()
-        newChain = topology_toAdd.addChain()
-        for i in range(5):
-            topology_toAdd.addResidue('CL',  newChain)
-        residues = [residue for residue in topology_toAdd.residues()]
-        for i in range(5):
-            topology_toAdd.addAtom('Cl',Element.getBySymbol('Cl'), residues[i]) 
-        positions_toAdd = [Vec3(1.0,1.2,1.5), Vec3(1.7,1.0,1.4), Vec3(1.5,2.0,1.0),
-                           Vec3(2.0,2.0,2.0), Vec3(2.0,1.5,1.0)]*nanometers
-        modeller.add(topology_toAdd, positions_toAdd)
-        modeller.addSolvent(self.forcefield, ionicStrength=1.0*molar)
-        topology_after = modeller.getTopology()
+        for neutralize in (True, False):
+            # set up modeller with no solvent
+            modeller = Modeller(topology_start, self.positions)
+            modeller.deleteWater()
 
-        water_count = 0
-        sodium_count = 0
-        chlorine_count = 0
-        for residue in topology_after.residues():
-            if residue.name=='HOH':
-                water_count += 1
-            elif residue.name=='NA':
-                sodium_count += 1
-            elif residue.name=='CL':
-                chlorine_count += 1
+            # add 5 Cl- ions to the original topology
+            topology_toAdd = Topology()
+            newChain = topology_toAdd.addChain()
+            for i in range(5):
+                topology_toAdd.addResidue('CL',  newChain)
+            residues = [residue for residue in topology_toAdd.residues()]
+            for i in range(5):
+                topology_toAdd.addAtom('Cl',Element.getBySymbol('Cl'), residues[i]) 
+            positions_toAdd = [Vec3(1.0,1.2,1.5), Vec3(1.7,1.0,1.4), Vec3(1.5,2.0,1.0),
+                               Vec3(2.0,2.0,2.0), Vec3(2.0,1.5,1.0)]*nanometers
+            modeller.add(topology_toAdd, positions_toAdd)
+            modeller.addSolvent(self.forcefield, ionicStrength=1.0*molar, neutralize=neutralize)
+            topology_after = modeller.getTopology()
 
-        total_water_ions = water_count+sodium_count+chlorine_count
-        expected_ion_fraction = 1.0*molar/(55.4*molar)
-        expected_ions = math.floor((total_water_ions-10)*expected_ion_fraction/2+0.5)+5
-        self.assertEqual(sodium_count, expected_ions)
-        self.assertEqual(chlorine_count, expected_ions)
+            water_count = 0
+            sodium_count = 0
+            chlorine_count = 0
+            for residue in topology_after.residues():
+                if residue.name=='HOH':
+                    water_count += 1
+                elif residue.name=='NA':
+                    sodium_count += 1
+                elif residue.name=='CL':
+                    chlorine_count += 1
+
+            total_water_ions = water_count+sodium_count+chlorine_count
+            expected_ion_fraction = 1.0*molar/(55.4*molar)
+            expected_chlorine = math.floor((total_water_ions-10)*expected_ion_fraction/2+0.5)+5
+            expected_sodium = expected_chlorine if neutralize else expected_chlorine-5
+            self.assertEqual(sodium_count, expected_sodium)
+            self.assertEqual(chlorine_count, expected_chlorine)
 
     def test_addSolventPositiveSolvent(self):
         """ Test the addSolvent() method; test adding ions to a positively charged solvent. """
@@ -442,42 +448,44 @@ class TestModeller(unittest.TestCase):
         topology_start = self.pdb.topology
         topology_start.setUnitCellDimensions(Vec3(3.5, 3.5, 3.5)*nanometers)
 
-        # set up modeller with no solvent
-        modeller = Modeller(topology_start, self.positions)
-        modeller.deleteWater()
+        for neutralize in (True, False):
+            # set up modeller with no solvent
+            modeller = Modeller(topology_start, self.positions)
+            modeller.deleteWater()
 
-        # add 5 Na+ ions to the original topology
-        topology_toAdd = Topology()
-        newChain = topology_toAdd.addChain()
-        for i in range(5):
-            topology_toAdd.addResidue('NA', newChain)
-        residues = [residue for residue in topology_toAdd.residues()]
-        for i in range(5):
-             topology_toAdd.addAtom('Na',Element.getBySymbol('Na'), residues[i]) 
-        positions_toAdd = [Vec3(1.0,1.2,1.5), Vec3(1.7,1.0,1.4), Vec3(1.5,2.0,1.0),
-                           Vec3(2.0,2.0,2.0), Vec3(2.0,1.5,1.0)]*nanometers
+            # add 5 Na+ ions to the original topology
+            topology_toAdd = Topology()
+            newChain = topology_toAdd.addChain()
+            for i in range(5):
+                topology_toAdd.addResidue('NA', newChain)
+            residues = [residue for residue in topology_toAdd.residues()]
+            for i in range(5):
+                 topology_toAdd.addAtom('Na',Element.getBySymbol('Na'), residues[i]) 
+            positions_toAdd = [Vec3(1.0,1.2,1.5), Vec3(1.7,1.0,1.4), Vec3(1.5,2.0,1.0),
+                               Vec3(2.0,2.0,2.0), Vec3(2.0,1.5,1.0)]*nanometers
 
-        # positions_toAdd doesn't need to change
-        modeller.add(topology_toAdd, positions_toAdd)
-        modeller.addSolvent(self.forcefield, ionicStrength=1.0*molar)
-        topology_after = modeller.getTopology()
+            # positions_toAdd doesn't need to change
+            modeller.add(topology_toAdd, positions_toAdd)
+            modeller.addSolvent(self.forcefield, ionicStrength=1.0*molar, neutralize=neutralize)
+            topology_after = modeller.getTopology()
 
-        water_count = 0
-        sodium_count = 0
-        chlorine_count = 0
-        for residue in topology_after.residues():
-            if residue.name=='HOH':
-                water_count += 1
-            elif residue.name=='NA':
-                sodium_count += 1
-            elif residue.name=='CL':
-                chlorine_count += 1
+            water_count = 0
+            sodium_count = 0
+            chlorine_count = 0
+            for residue in topology_after.residues():
+                if residue.name=='HOH':
+                    water_count += 1
+                elif residue.name=='NA':
+                    sodium_count += 1
+                elif residue.name=='CL':
+                    chlorine_count += 1
 
-        total_water_ions = water_count+sodium_count+chlorine_count
-        expected_ion_fraction = 1.0*molar/(55.4*molar)
-        expected_ions = math.floor((total_water_ions-10)*expected_ion_fraction/2+0.5)+5
-        self.assertEqual(sodium_count, expected_ions)
-        self.assertEqual(chlorine_count, expected_ions)
+            total_water_ions = water_count+sodium_count+chlorine_count
+            expected_ion_fraction = 1.0*molar/(55.4*molar)
+            expected_sodium = math.floor((total_water_ions-10)*expected_ion_fraction/2+0.5)+5
+            expected_chlorine = expected_sodium if neutralize else expected_sodium-5
+            self.assertEqual(sodium_count, expected_sodium)
+            self.assertEqual(chlorine_count, expected_chlorine)
 
     def test_addSolventIons(self):
         """ Test the addSolvent() method with all possible choices for positive and negative ions. """
@@ -914,6 +922,135 @@ class TestModeller(unittest.TestCase):
             ep = [atom for atom in atoms if atom.element is None]
             self.assertEqual(1, len(ep))
 
+
+    def test_addVirtualSites(self):
+        """Test adding extra particles defined by virtual sites."""
+        xml = """
+            <ForceField>
+             <AtomTypes>
+              <Type name="C" class="C" element="C" mass="10"/>
+              <Type name="N" class="N" element="N" mass="10"/>
+              <Type name="O" class="O" element="O" mass="10"/>
+              <Type name="V" class="V" mass="0.0"/>
+             </AtomTypes>
+             <Residues>
+              <Residue name="Test">
+               <Atom name="C" type="C"/>
+               <Atom name="N" type="N"/>
+               <Atom name="O" type="O"/>
+               <Atom name="V1" type="V"/>
+               <Atom name="V2" type="V"/>
+               <Atom name="V3" type="V"/>
+               <Atom name="V4" type="V"/>
+               <VirtualSite type="average2" index="3" atom1="0" atom2="1" weight1="0.7" weight2="0.3"/>
+               <VirtualSite type="average3" index="4" atom1="0" atom2="1" atom3="2" weight1="0.2" weight2="0.3" weight3="0.5"/>
+               <VirtualSite type="outOfPlane" index="5" atom1="0" atom2="1" atom3="2" weight12="0.1" weight13="-0.2" weightCross="0.8"/>
+               <VirtualSite type="localCoords" index="6" atom1="0" atom2="1" atom3="2" wo1="0.1" wo2="0.5" wo3="0.4" wx1="1" wx2="-0.6" wx3="-0.4" wy1="0.1" wy2="0.9" wy3="-1" p1="-0.5" p2="0.4" p3="1.1"/>
+              </Residue>
+             </Residues>
+            </ForceField>"""
+        ff = ForceField(StringIO(xml))
+
+        # Create the three real atoms.
+
+        topology = Topology()
+        chain = topology.addChain()
+        residue = topology.addResidue('Test', chain)
+        topology.addAtom('C', element.carbon, residue)
+        topology.addAtom('N', element.nitrogen, residue)
+        topology.addAtom('V', element.oxygen, residue)
+        
+
+        # Add the virtual sites.
+
+        modeller = Modeller(topology, [Vec3(0.1, 0.2, 0.3), Vec3(1.0, 0.9, 0.8), Vec3(1.5, 1.1, 0.7)]*nanometers)
+        modeller.addExtraParticles(ff)
+        top = modeller.topology
+        pos = modeller.positions
+
+        # Check that the correct particles were added.
+
+        self.assertEqual(len(pos), 7)
+        for atom, elem in zip(top.atoms(), [element.carbon, element.nitrogen, element.oxygen, None, None, None, None]):
+            self.assertEqual(elem, atom.element)
+
+        # Check that the positions were calculated correctly.
+
+        system = ff.createSystem(top)
+        integ = VerletIntegrator(1.0)
+        context = Context(system, integ)
+        context.setPositions(pos)
+        context.computeVirtualSites()
+        state = context.getState(getPositions=True)
+        for p1, p2 in zip (pos, state.getPositions()):
+            self.assertVecAlmostEqual(p1.value_in_unit(nanometers), p2.value_in_unit(nanometers), 1e-6)
+
+
+    def test_multiSiteIon(self):
+        """Test adding extra particles whose positions are determined based on bonds."""
+        xml = """
+            <ForceField>
+             <AtomTypes>
+              <Type name="Zn" class="Zn" element="Zn" mass="53.380"/>
+              <Type name="DA" class="DA" mass="3.0"/>
+             </AtomTypes>
+             <Residues>
+              <Residue name="ZN">
+               <Atom name="ZN" type="Zn"/>
+               <Atom name="D1" type="DA"/>
+               <Atom name="D2" type="DA"/>
+               <Atom name="D3" type="DA"/>
+               <Atom name="D4" type="DA"/>
+               <Bond from="0" to="2"/>
+               <Bond from="0" to="1"/>
+               <Bond from="0" to="3"/>
+               <Bond from="0" to="4"/>
+               <Bond from="1" to="2"/>
+               <Bond from="1" to="3"/>
+               <Bond from="1" to="4"/>
+               <Bond from="2" to="4"/>
+               <Bond from="2" to="3"/>
+               <Bond from="3" to="4"/>
+              </Residue>
+             </Residues>
+             <HarmonicBondForce>
+              <Bond class1="DA" class2="Zn" length="0.09" k="535552.0"/>
+              <Bond class1="DA" class2="DA" length="0.147" k="535552.0"/>
+             </HarmonicBondForce>
+            </ForceField>"""
+        ff = ForceField(StringIO(xml))
+
+        # Create two zinc atoms.
+
+        topology = Topology()
+        chain = topology.addChain()
+        residue = topology.addResidue('ZN', chain)
+        topology.addAtom('ZN', element.zinc, residue)
+        residue = topology.addResidue('ZN', chain)
+        topology.addAtom('ZN', element.zinc, residue)
+
+        # Add the extra particles.
+
+        modeller = Modeller(topology, [Vec3(0.5, 1.0, 1.5), Vec3(2.0, 2.0, 0.0)]*nanometers)
+        modeller.addExtraParticles(ff)
+        top = modeller.topology
+        pos = modeller.positions
+
+        # Check that the correct particles were added.
+
+        self.assertEqual(len(pos), 10)
+        for i, atom in enumerate(top.atoms()):
+            self.assertEqual(element.zinc if i in (0,5) else None, atom.element)
+
+        # Check that the positions in the first residue are reasonable.
+
+        center = Vec3(0.5, 1.0, 1.5)*nanometers
+        self.assertEqual(center, modeller.positions[0])
+        for i in range(1, 5):
+            for j in range(i):
+                dist = norm(pos[i]-pos[j])
+                expectedDist = 0.09 if j == 0 else 0.147
+                self.assertTrue(dist > (expectedDist-0.01)*nanometers and dist < (expectedDist+0.01)*nanometers)
 
     def assertVecAlmostEqual(self, p1, p2, tol=1e-7):
         scale = max(1.0, norm(p1),)

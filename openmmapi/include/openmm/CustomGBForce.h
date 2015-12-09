@@ -215,7 +215,7 @@ public:
     }
     /**
      * Get the number of tabulated functions that have been defined.
-     * 
+     *
      * @deprecated This method exists only for backward compatibility.  Use getNumTabulatedFunctions() instead.
      */
     int getNumFunctions() const {
@@ -308,8 +308,8 @@ public:
     /**
      * Set the default value of a global parameter.
      *
-     * @param index          the index of the parameter for which to set the default value
-     * @param name           the default value of the parameter
+     * @param index         the index of the parameter for which to set the default value
+     * @param defaultValue  the default value of the parameter
      */
     void setGlobalParameterDefaultValue(int index, double defaultValue);
     /**
@@ -323,8 +323,8 @@ public:
     /**
      * Get the nonbonded force parameters for a particle.
      *
-     * @param index       the index of the particle for which to get parameters
-     * @param parameters  the list of parameters for the specified particle
+     * @param index            the index of the particle for which to get parameters
+     * @param[out] parameters  the list of parameters for the specified particle
      */
     void getParticleParameters(int index, std::vector<double>& parameters) const;
     /**
@@ -354,19 +354,19 @@ public:
     /**
      * Get the properties of a computed value.
      *
-     * @param index       the index of the computed value for which to get parameters
-     * @param name        the name of the value
-     * @param expression  an algebraic expression to evaluate when calculating the computed value.  If the
-     *                    ComputationType is SingleParticle, the expression is evaluated independently
-     *                    for each particle, and may depend on its x, y, and z coordinates, as well as the per-particle
-     *                    parameters and previous computed values for that particle.  If the ComputationType is ParticlePair
-     *                    or ParticlePairNoExclusions, the expression is evaluated once for every other
-     *                    particle in the system and summed to get the final value.  In the latter case,
-     *                    the expression may depend on the distance r between the two particles, and on
-     *                    the per-particle parameters and previous computed values for each of them.
-     *                    Append "1" to a variable name to indicate the parameter for the particle whose
-     *                    value is being calculated, and "2" to indicate the particle it is interacting with.
-     * @param type        the method to use for computing this value
+     * @param index            the index of the computed value for which to get parameters
+     * @param[out] name        the name of the value
+     * @param[out] expression  an algebraic expression to evaluate when calculating the computed value.  If the
+     *                         ComputationType is SingleParticle, the expression is evaluated independently
+     *                         for each particle, and may depend on its x, y, and z coordinates, as well as the per-particle
+     *                         parameters and previous computed values for that particle.  If the ComputationType is ParticlePair
+     *                         or ParticlePairNoExclusions, the expression is evaluated once for every other
+     *                         particle in the system and summed to get the final value.  In the latter case,
+     *                         the expression may depend on the distance r between the two particles, and on
+     *                         the per-particle parameters and previous computed values for each of them.
+     *                         Append "1" to a variable name to indicate the parameter for the particle whose
+     *                         value is being calculated, and "2" to indicate the particle it is interacting with.
+     * @param[out] type        the method to use for computing this value
      */
     void getComputedValueParameters(int index, std::string& name, std::string& expression, ComputationType& type) const;
     /**
@@ -406,18 +406,18 @@ public:
     /**
      * Get the properties of a term to the energy computation.
      *
-     * @param index       the index of the term for which to get parameters
-     * @param expression  an algebraic expression to evaluate when calculating the energy.  If the
-     *                    ComputationType is SingleParticle, the expression is evaluated once
-     *                    for each particle, and may depend on its x, y, and z coordinates, as well as the per-particle
-     *                    parameters and computed values for that particle.  If the ComputationType is ParticlePair or
-     *                    ParticlePairNoExclusions, the expression is evaluated once for every pair of
-     *                    particles in the system.  In the latter case,
-     *                    the expression may depend on the distance r between the two particles, and on
-     *                    the per-particle parameters and computed values for each of them.
-     *                    Append "1" to a variable name to indicate the parameter for the first particle
-     *                    in the pair and "2" to indicate the second particle in the pair.
-     * @param type        the method to use for computing this value
+     * @param index            the index of the term for which to get parameters
+     * @param[out] expression  an algebraic expression to evaluate when calculating the energy.  If the
+     *                         ComputationType is SingleParticle, the expression is evaluated once
+     *                         for each particle, and may depend on its x, y, and z coordinates, as well as the per-particle
+     *                         parameters and computed values for that particle.  If the ComputationType is ParticlePair or
+     *                         ParticlePairNoExclusions, the expression is evaluated once for every pair of
+     *                         particles in the system.  In the latter case,
+     *                         the expression may depend on the distance r between the two particles, and on
+     *                         the per-particle parameters and computed values for each of them.
+     *                         Append "1" to a variable name to indicate the parameter for the first particle
+     *                         in the pair and "2" to indicate the second particle in the pair.
+     * @param[out] type        the method to use for computing this value
      */
     void getEnergyTermParameters(int index, std::string& expression, ComputationType& type) const;
     /**
@@ -448,9 +448,9 @@ public:
     /**
      * Get the particles in a pair whose interaction should be excluded.
      *
-     * @param index      the index of the exclusion for which to get particle indices
-     * @param particle1  the index of the first particle in the pair
-     * @param particle2  the index of the second particle in the pair
+     * @param index           the index of the exclusion for which to get particle indices
+     * @param[out] particle1  the index of the first particle in the pair
+     * @param[out] particle2  the index of the second particle in the pair
      */
     void getExclusionParticles(int index, int& particle1, int& particle2) const;
     /**
@@ -517,7 +517,7 @@ public:
      * an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
      * Simply call setParticleParameters() to modify this object's parameters, then call updateParametersInContext()
      * to copy them over to the Context.
-     * 
+     *
      * This method has several limitations.  The only information it updates is the values of per-particle parameters.
      * All other aspects of the Force (such as the energy function) are unaffected and can only be changed by reinitializing
      * the Context.  Also, this method cannot be used to add new particles, only to change the parameters of existing ones.

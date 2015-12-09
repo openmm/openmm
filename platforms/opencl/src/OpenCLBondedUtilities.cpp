@@ -181,7 +181,7 @@ void OpenCLBondedUtilities::initialize(const System& system) {
         for (int i = 0; i < (int) prefixCode.size(); i++)
             s<<prefixCode[i];
         string bufferType = (context.getSupports64BitGlobalAtomics() ? "long" : "real4");
-        s<<"__kernel void computeBondedForces(__global "<<bufferType<<"* restrict forceBuffers, __global real* restrict energyBuffer, __global const real4* restrict posq, int groups, real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ";
+        s<<"__kernel void computeBondedForces(__global "<<bufferType<<"* restrict forceBuffers, __global mixed* restrict energyBuffer, __global const real4* restrict posq, int groups, real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ";
         for (int i = 0; i < setSize; i++) {
             int force = set[i];
             string indexType = "uint"+(indexWidth[force] == 1 ? "" : context.intToString(indexWidth[force]));
@@ -191,7 +191,7 @@ void OpenCLBondedUtilities::initialize(const System& system) {
         for (int i = 0; i < (int) arguments.size(); i++)
             s<<", __global "<<argTypes[i]<<"* customArg"<<(i+1);
         s<<") {\n";
-        s<<"real energy = 0.0f;\n";
+        s<<"mixed energy = 0;\n";
         for (int i = 0; i < setSize; i++) {
             int force = set[i];
             s<<createForceSource(i, forceAtoms[force].size(), forceAtoms[force][0].size(), forceGroup[force], forceSource[force]);

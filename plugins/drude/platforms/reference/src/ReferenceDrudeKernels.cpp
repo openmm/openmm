@@ -235,7 +235,6 @@ void ReferenceIntegrateDrudeLangevinStepKernel::initialize(const System& system,
     // Identify particle pairs and ordinary particles.
     
     set<int> particles;
-    vector<RealOpenMM> particleMass;
     for (int i = 0; i < system.getNumParticles(); i++) {
         particles.insert(i);
         double mass = system.getParticleMass(i);
@@ -323,6 +322,75 @@ void ReferenceIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, co
         if (particleInvMass[i] != 0.0) {
             vel[i] = (xPrime[i]-pos[i])*dtInv;
             pos[i] = xPrime[i];
+        }
+    }
+
+    // Apply hard wall constraints.
+
+    const RealOpenMM maxDrudeDistance = integrator.getMaxDrudeDistance();
+    if (maxDrudeDistance > 0) {
+        const RealOpenMM hardwallscaleDrude = sqrt(kTDrude);
+        for (int i = 0; i < (int) pairParticles.size(); i++) {
+            int p1 = pairParticles[i].first;
+            int p2 = pairParticles[i].second;
+            RealVec delta = pos[p1]-pos[p2];
+            RealOpenMM r = sqrt(delta.dot(delta));
+            RealOpenMM rInv = 1/r;
+            if (rInv*maxDrudeDistance < 1.0) {
+                // The constraint has been violated, so make the inter-particle distance "bounce"
+                // off the hard wall.
+                
+                if (rInv*maxDrudeDistance < 0.5)
+                    throw OpenMMException("Drude particle moved too far beyond hard wall constraint");
+                RealVec bondDir = delta*rInv;
+                RealVec vel1 = vel[p1];
+                RealVec vel2 = vel[p2];
+                RealOpenMM mass1 = particleMass[p1];
+                RealOpenMM mass2 = particleMass[p2];
+                RealOpenMM deltaR = r-maxDrudeDistance;
+                RealOpenMM deltaT = dt;
+                RealOpenMM dotvr1 = vel1.dot(bondDir);
+                RealVec vb1 = bondDir*dotvr1;
+                RealVec vp1 = vel1-vb1;
+                if (mass2 == 0) {
+                    // The parent particle is massless, so move only the Drude particle.
+
+                    if (dotvr1 != 0.0)
+                        deltaT = deltaR/abs(dotvr1);
+                    if (deltaT > dt)
+                        deltaT = dt;
+                    dotvr1 = -dotvr1*hardwallscaleDrude/(abs(dotvr1)*sqrt(mass1));
+                    RealOpenMM dr = -deltaR + deltaT*dotvr1;
+                    pos[p1] += bondDir*dr;
+                    vel[p1] = vp1 + bondDir*dotvr1;
+                }
+                else {
+                    // Move both particles.
+
+                    RealOpenMM invTotalMass = pairInvTotalMass[i];
+                    RealOpenMM dotvr2 = vel2.dot(bondDir);
+                    RealVec vb2 = bondDir*dotvr2;
+                    RealVec vp2 = vel2-vb2;
+                    RealOpenMM vbCMass = (mass1*dotvr1 + mass2*dotvr2)*invTotalMass;
+                    dotvr1 -= vbCMass;
+                    dotvr2 -= vbCMass;
+                    if (dotvr1 != dotvr2)
+                        deltaT = deltaR/abs(dotvr1-dotvr2);
+                    if (deltaT > dt)
+                        deltaT = dt;
+                    RealOpenMM vBond = hardwallscaleDrude/sqrt(mass1);
+                    dotvr1 = -dotvr1*vBond*mass2*invTotalMass/abs(dotvr1);
+                    dotvr2 = -dotvr2*vBond*mass1*invTotalMass/abs(dotvr2);
+                    RealOpenMM dr1 = -deltaR*mass2*invTotalMass + deltaT*dotvr1;
+                    RealOpenMM dr2 = deltaR*mass1*invTotalMass + deltaT*dotvr2;
+                    dotvr1 += vbCMass;
+                    dotvr2 += vbCMass;
+                    pos[p1] += bondDir*dr1;
+                    pos[p2] += bondDir*dr2;
+                    vel[p1] = vp1 + bondDir*dotvr1;
+                    vel[p2] = vp2 + bondDir*dotvr2;
+                }
+            }
         }
     }
     ReferenceVirtualSites::computePositions(context.getSystem(), pos);

@@ -8,7 +8,7 @@ __kernel void computeGroupCenters(__global const real4* restrict posq, __global 
     __local volatile real3 temp[64];
     for (int group = get_group_id(0); group < NUM_GROUPS; group += get_num_groups(0)) {
         // The threads in this block work together to compute the center one group.
-        
+
         int firstIndex = groupOffsets[group];
         int lastIndex = groupOffsets[group+1];
         real3 center = (real3) 0;
@@ -20,44 +20,48 @@ __kernel void computeGroupCenters(__global const real4* restrict posq, __global 
             center.y += weight*pos.y;
             center.z += weight*pos.z;
         }
-        
+
         // Sum the values.
-        
+
         int thread = get_local_id(0);
         temp[thread].x = center.x;
         temp[thread].y = center.y;
         temp[thread].z = center.z;
+
         barrier(CLK_LOCAL_MEM_FENCE);
         if (thread < 32) {
             temp[thread].x += temp[thread+32].x;
             temp[thread].y += temp[thread+32].y;
             temp[thread].z += temp[thread+32].z;
-            SYNC_WARPS;
-            if (thread < 16) {
-                temp[thread].x += temp[thread+16].x;
-                temp[thread].y += temp[thread+16].y;
-                temp[thread].z += temp[thread+16].z;
-                SYNC_WARPS;
-            }
-            if (thread < 8) {
-                temp[thread].x += temp[thread+8].x;
-                temp[thread].y += temp[thread+8].y;
-                temp[thread].z += temp[thread+8].z;
-                SYNC_WARPS;
-            }
-            if (thread < 4) {
-                temp[thread].x += temp[thread+4].x;
-                temp[thread].y += temp[thread+4].y;
-                temp[thread].z += temp[thread+4].z;
-                SYNC_WARPS;
-            }
-            if (thread < 2) {
-                temp[thread].x += temp[thread+2].x;
-                temp[thread].y += temp[thread+2].y;
-                temp[thread].z += temp[thread+2].z;
-                SYNC_WARPS;
-            }
         }
+
+        SYNC_WARPS;
+        if (thread < 16) {
+            temp[thread].x += temp[thread+16].x;
+            temp[thread].y += temp[thread+16].y;
+            temp[thread].z += temp[thread+16].z;
+        }
+        SYNC_WARPS;
+        if (thread < 8) {
+            temp[thread].x += temp[thread+8].x;
+            temp[thread].y += temp[thread+8].y;
+            temp[thread].z += temp[thread+8].z;
+        }
+
+        SYNC_WARPS;
+        if (thread < 4) {
+            temp[thread].x += temp[thread+4].x;
+            temp[thread].y += temp[thread+4].y;
+            temp[thread].z += temp[thread+4].z;
+        }
+        SYNC_WARPS;
+        if (thread < 2) {
+            temp[thread].x += temp[thread+2].x;
+            temp[thread].y += temp[thread+2].y;
+            temp[thread].z += temp[thread+2].z;
+        }
+
+        SYNC_WARPS;
         if (thread == 0)
             centerPositions[group] = (real4) (temp[0].x+temp[1].x, temp[0].y+temp[1].y, temp[0].z+temp[1].z, 0);
     }
@@ -105,10 +109,10 @@ real4 computeCross(real4 vec1, real4 vec2) {
 /**
  * Compute the forces on groups based on the bonds.
  */
-__kernel void computeGroupForces(__global long* restrict groupForce, __global real* restrict energyBuffer, __global const real4* restrict centerPositions,
+__kernel void computeGroupForces(__global long* restrict groupForce, __global mixed* restrict energyBuffer, __global const real4* restrict centerPositions,
         __global const int* restrict bondGroups
         EXTRA_ARGS) {
-    real energy = 0;
+    mixed energy = 0;
     for (int index = get_global_id(0); index < NUM_BONDS; index += get_global_size(0)) {
         COMPUTE_FORCE
     }

@@ -22,7 +22,7 @@ __kernel void computeNonbonded(
 #else
         __global real4* restrict forceBuffers,
 #endif
-        __global real* restrict energyBuffer, __global const real4* restrict posq, __global const unsigned int* restrict exclusions,
+        __global mixed* restrict energyBuffer, __global const real4* restrict posq, __global const unsigned int* restrict exclusions,
         __global const ushort2* restrict exclusionTiles, unsigned int startTileIndex, unsigned int numTileIndices
 #ifdef USE_CUTOFF
         , __global const int* restrict tiles, __global const unsigned int* restrict interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
@@ -429,6 +429,6 @@ __kernel void computeNonbonded(
         pos++;
     }
 #ifdef INCLUDE_ENERGY
-    energyBuffer[get_global_id(0)] += (real) energy;
+    energyBuffer[get_global_id(0)] += energy;
 #endif
 }

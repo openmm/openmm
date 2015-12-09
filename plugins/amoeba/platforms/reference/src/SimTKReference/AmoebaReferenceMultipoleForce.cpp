@@ -6317,7 +6317,7 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::calculatePmeSelfEnergy(const vector
         cii += particleI.charge*particleI.charge;
 
         RealVec dipole(particleI.sphericalDipole[1], particleI.sphericalDipole[2], particleI.sphericalDipole[0]);
-        dii += dipole.dot(dipole + (_inducedDipole[ii] + _inducedDipolePolar[ii])*0.5);
+        dii += dipole.dot(dipole + (_inducedDipole[ii]+_inducedDipolePolar[ii])*0.5);
 
         qii += (particleI.sphericalQuadrupole[0]*particleI.sphericalQuadrupole[0]
                +particleI.sphericalQuadrupole[1]*particleI.sphericalQuadrupole[1]

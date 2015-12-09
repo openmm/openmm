@@ -53,11 +53,11 @@ real4 computeCross(real4 vec1, real4 vec2) {
 /**
  * Compute forces on donors.
  */
-__kernel void computeDonorForces(__global real4* restrict forceBuffers, __global real* restrict energyBuffer, __global const real4* restrict posq, __global const int4* restrict exclusions,
+__kernel void computeDonorForces(__global real4* restrict forceBuffers, __global mixed* restrict energyBuffer, __global const real4* restrict posq, __global const int4* restrict exclusions,
         __global const int4* restrict donorAtoms, __global const int4* restrict acceptorAtoms, __global const int4* restrict donorBufferIndices, __local real4* posBuffer, real4 periodicBoxSize, real4 invPeriodicBoxSize,
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ
         PARAMETER_ARGUMENTS) {
-    real energy = 0;
+    mixed energy = 0;
     real4 f1 = (real4) 0;
     real4 f2 = (real4) 0;
     real4 f3 = (real4) 0;
@@ -142,7 +142,7 @@ __kernel void computeDonorForces(__global real4* restrict forceBuffers, __global
 /**
  * Compute forces on acceptors.
  */
-__kernel void computeAcceptorForces(__global real4* restrict forceBuffers, __global real* restrict energyBuffer, __global const real4* restrict posq, __global const int4* restrict exclusions,
+__kernel void computeAcceptorForces(__global real4* restrict forceBuffers, __global mixed* restrict energyBuffer, __global const real4* restrict posq, __global const int4* restrict exclusions,
         __global const int4* restrict donorAtoms, __global const int4* restrict acceptorAtoms, __global const int4* restrict acceptorBufferIndices, __local real4* restrict posBuffer, real4 periodicBoxSize, real4 invPeriodicBoxSize,
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ
         PARAMETER_ARGUMENTS) {

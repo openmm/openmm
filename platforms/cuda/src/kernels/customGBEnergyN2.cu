@@ -13,7 +13,7 @@ typedef struct {
 /**
  * Compute a force based on pair interactions.
  */
-extern "C" __global__ void computeN2Energy(unsigned long long* __restrict__ forceBuffers, real* __restrict__ energyBuffer,
+extern "C" __global__ void computeN2Energy(unsigned long long* __restrict__ forceBuffers, mixed* __restrict__ energyBuffer,
         const real4* __restrict__ posq, const unsigned int* __restrict__ exclusions, const ushort2* __restrict__ exclusionTiles,
 #ifdef USE_CUTOFF
         const int* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
@@ -27,7 +27,7 @@ extern "C" __global__ void computeN2Energy(unsigned long long* __restrict__ forc
     const unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/TILE_SIZE;
     const unsigned int tgx = threadIdx.x & (TILE_SIZE-1);
     const unsigned int tbx = threadIdx.x - tgx;
-    real energy = 0;
+    mixed energy = 0;
     __shared__ AtomData localData[THREAD_BLOCK_SIZE];
 
     // First loop: process tiles that contain exclusions.

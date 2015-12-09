@@ -570,7 +570,7 @@ public:
     OpenCLCalcNonbondedForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcNonbondedForceKernel(name, platform),
             hasInitializedKernel(false), cl(cl), sigmaEpsilon(NULL), exceptionParams(NULL), cosSinSums(NULL), pmeGrid(NULL),
             pmeGrid2(NULL), pmeBsplineModuliX(NULL), pmeBsplineModuliY(NULL), pmeBsplineModuliZ(NULL), pmeBsplineTheta(NULL),
-            pmeAtomRange(NULL), pmeAtomGridIndex(NULL), sort(NULL), fft(NULL), pmeio(NULL) {
+            pmeAtomRange(NULL), pmeAtomGridIndex(NULL), pmeEnergyBuffer(NULL), sort(NULL), fft(NULL), pmeio(NULL) {
     }
     ~OpenCLCalcNonbondedForceKernel();
     /**
@@ -636,12 +636,14 @@ private:
     OpenCLArray* pmeBsplineTheta;
     OpenCLArray* pmeAtomRange;
     OpenCLArray* pmeAtomGridIndex;
+    OpenCLArray* pmeEnergyBuffer;
     OpenCLSort* sort;
     cl::CommandQueue pmeQueue;
     cl::Event pmeSyncEvent;
     OpenCLFFT3D* fft;
     Kernel cpuPme;
     PmeIO* pmeio;
+    SyncQueuePostComputation* syncQueue;
     cl::Kernel ewaldSumsKernel;
     cl::Kernel ewaldForcesKernel;
     cl::Kernel pmeGridIndexKernel;
@@ -1103,7 +1105,6 @@ public:
     double computeKineticEnergy(ContextImpl& context, const VerletIntegrator& integrator);
 private:
     OpenCLContext& cl;
-    double prevStepSize;
     bool hasInitializedKernels;
     cl::Kernel kernel1, kernel2;
 };
@@ -1342,7 +1343,7 @@ private:
     void recordChangedParameters(ContextImpl& context);
     bool evaluateCondition(int step);
     OpenCLContext& cl;
-    double prevStepSize, energy;
+    double energy;
     float energyFloat;
     int numGlobalVariables;
     bool hasInitializedKernels, deviceValuesAreCurrent, deviceGlobalsAreCurrent, modifiesParameters, keNeedsForce, hasAnyConstraints;
