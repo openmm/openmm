@@ -668,10 +668,8 @@ protected:
     std::vector<RealVec> _inducedDipolePolar;
     std::vector< std::vector<RealVec> > _ptDipoleP;
     std::vector< std::vector<RealVec> > _ptDipoleD;
-    std::vector<std::vector<RealOpenMM> > _ptDipoleRecFieldP;
-    std::vector<std::vector<RealOpenMM> > _ptDipoleRecFieldD;
-    std::vector<std::vector<RealOpenMM> > _ptDipoleDirFieldP;
-    std::vector<std::vector<RealOpenMM> > _ptDipoleDirFieldD;
+    std::vector<std::vector<RealOpenMM> > _ptDipoleFieldGradientP;
+    std::vector<std::vector<RealOpenMM> > _ptDipoleFieldGradientD;
 
 
 

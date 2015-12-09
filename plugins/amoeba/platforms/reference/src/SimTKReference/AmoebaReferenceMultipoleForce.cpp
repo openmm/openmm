@@ -1002,16 +1002,16 @@ void AmoebaReferenceMultipoleForce::convergeInduceDipolesByOPT(const vector<Mult
         }
         _ptDipoleD.push_back(thisDipoleD);
         _ptDipoleP.push_back(thisDipoleP);
-        vector<RealOpenMM> fieldGradD(10*_numParticles, 0.0);
-        vector<RealOpenMM> fieldGradP(10*_numParticles, 0.0);
+        vector<RealOpenMM> fieldGradD(6*_numParticles, 0.0);
+        vector<RealOpenMM> fieldGradP(6*_numParticles, 0.0);
         for(int atom = 0; atom < _numParticles; ++atom){
             for(int component = 0; component < 6; ++component){
-                fieldGradD[10*atom + 4 + component] = fieldD.inducedDipoleFieldGradient[atom][component];
-                fieldGradP[10*atom + 4 + component] = fieldD.inducedDipoleFieldGradient[atom][component];
+                fieldGradD[6*atom + component] = fieldD.inducedDipoleFieldGradient[atom][component];
+                fieldGradP[6*atom + component] = fieldD.inducedDipoleFieldGradient[atom][component];
             }
         }
-        _ptDipoleDirFieldD.push_back(fieldGradD);
-        _ptDipoleDirFieldP.push_back(fieldGradP);
+        _ptDipoleFieldGradientD.push_back(fieldGradD);
+        _ptDipoleFieldGradientP.push_back(fieldGradP);
     }
 
     // Take a linear combination of the µ_(n) components to form the total dipole
@@ -1866,9 +1866,9 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateElectrostatic(const vector<Mu
                         int j1 = deriv1[k+1];
                         int j2 = deriv2[k+1];
                         int j3 = deriv3[k+1];
-                        forces[i][0] += 0.5*p*prefac*(inducedDipole[k]*_ptDipoleDirFieldP[m][10*i+j1] + inducedDipolePolar[k]*_ptDipoleDirFieldD[m][10*i+j1]);
-                        forces[i][1] += 0.5*p*prefac*(inducedDipole[k]*_ptDipoleDirFieldP[m][10*i+j2] + inducedDipolePolar[k]*_ptDipoleDirFieldD[m][10*i+j2]);
-                        forces[i][2] += 0.5*p*prefac*(inducedDipole[k]*_ptDipoleDirFieldP[m][10*i+j3] + inducedDipolePolar[k]*_ptDipoleDirFieldD[m][10*i+j3]);
+                        forces[i][0] += 0.5*p*prefac*(inducedDipole[k]*_ptDipoleFieldGradientP[m][6*i+j1] + inducedDipolePolar[k]*_ptDipoleFieldGradientD[m][6*i+j1]);
+                        forces[i][1] += 0.5*p*prefac*(inducedDipole[k]*_ptDipoleFieldGradientP[m][6*i+j2] + inducedDipolePolar[k]*_ptDipoleFieldGradientD[m][6*i+j2]);
+                        forces[i][2] += 0.5*p*prefac*(inducedDipole[k]*_ptDipoleFieldGradientP[m][6*i+j3] + inducedDipolePolar[k]*_ptDipoleFieldGradientD[m][6*i+j3]);
                     }
                 }
             }
@@ -6002,29 +6002,6 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::computeReciprocalSpaceInducedDipole
             }
         }
 
-        if (getPolarizationType() == AmoebaReferenceMultipoleForce::OPT) {
-            for(int l = 0; l < _maxPTOrder-1; ++l) {
-                inducedDipole[0]      = _ptDipoleD[l][i][0]*cartToFrac[0][0] + _ptDipoleD[l][i][1]*cartToFrac[0][1] + _ptDipoleD[l][i][2]*cartToFrac[0][2];
-                inducedDipole[1]      = _ptDipoleD[l][i][0]*cartToFrac[1][0] + _ptDipoleD[l][i][1]*cartToFrac[1][1] + _ptDipoleD[l][i][2]*cartToFrac[1][2];
-                inducedDipole[2]      = _ptDipoleD[l][i][0]*cartToFrac[2][0] + _ptDipoleD[l][i][1]*cartToFrac[2][1] + _ptDipoleD[l][i][2]*cartToFrac[2][2];
-                inducedDipolePolar[0] = _ptDipoleP[l][i][0]*cartToFrac[0][0] + _ptDipoleP[l][i][1]*cartToFrac[0][1] + _ptDipoleP[l][i][2]*cartToFrac[0][2];
-                inducedDipolePolar[1] = _ptDipoleP[l][i][0]*cartToFrac[1][0] + _ptDipoleP[l][i][1]*cartToFrac[1][1] + _ptDipoleP[l][i][2]*cartToFrac[1][2];
-                inducedDipolePolar[2] = _ptDipoleP[l][i][0]*cartToFrac[2][0] + _ptDipoleP[l][i][1]*cartToFrac[2][1] + _ptDipoleP[l][i][2]*cartToFrac[2][2];
-                for(int m = 0; m < _maxPTOrder-1-l; ++m) {
-                    RealOpenMM p = _OPTPartCoefficients[l+m+1];
-                    if(std::fabs(p) < 1e-6) continue;
-                    for (int k = 0; k < 3; k++) {
-                        int j1 = deriv1[k+1];
-                        int j2 = deriv2[k+1];
-                        int j3 = deriv3[k+1];
-                        f[0] += p*(inducedDipole[k]*_ptDipoleRecFieldP[m][10*i+j1] + inducedDipolePolar[k]*_ptDipoleRecFieldD[m][10*i+j1]);
-                        f[1] += p*(inducedDipole[k]*_ptDipoleRecFieldP[m][10*i+j2] + inducedDipolePolar[k]*_ptDipoleRecFieldD[m][10*i+j2]);
-                        f[2] += p*(inducedDipole[k]*_ptDipoleRecFieldP[m][10*i+j3] + inducedDipolePolar[k]*_ptDipoleRecFieldD[m][10*i+j3]);
-                    }
-                }
-            }
-        }
-
         for (int k = 0; k < 10; k++) {
             f[0] += multipole[k]*_phidp[20*i+deriv1[k]];
             f[1] += multipole[k]*_phidp[20*i+deriv2[k]];
@@ -6056,10 +6033,6 @@ void AmoebaReferencePmeMultipoleForce::initializeInducedDipoles(vector<UpdateInd
 {
 
     this->AmoebaReferenceMultipoleForce::initializeInducedDipoles(updateInducedDipoleFields);
-    if (getPolarizationType() == AmoebaReferenceMultipoleForce::OPT) {
-        _ptDipoleRecFieldD.clear();
-        _ptDipoleRecFieldP.clear();
-    }
     calculateReciprocalSpaceInducedDipoleField(updateInducedDipoleFields);
 }
 
@@ -6115,14 +6088,70 @@ void AmoebaReferencePmeMultipoleForce::calculateInducedDipoleFields(const vector
     // reciprocal space ixns
 
     calculateReciprocalSpaceInducedDipoleField(updateInducedDipoleFields);
-    // Cache the fractional dipole coordinate fields for later use
-    if (getPolarizationType() == AmoebaReferenceMultipoleForce::OPT) {
-        _ptDipoleRecFieldD.push_back(_phid);
-        _ptDipoleRecFieldP.push_back(_phip);
+
+    if(getPolarizationType() == AmoebaReferenceMultipoleForce::OPT){
+        // While we have the reciprocal space (fractional coordinate) field gradient available, add it to the real space
+        // terms computed above, after transforming to Cartesian coordinates.  This allows real and reciprocal space
+        // dipole response force contributions to be computed together.
+        RealVec fracToCart[3];
+        for (int i = 0; i < 3; i++)
+            for (int j = 0; j < 3; j++)
+                fracToCart[i][j] = _pmeGridDimensions[j]*_recipBoxVectors[i][j];
+
+
+        for (int i = 0; i < _numParticles; i++) {
+            RealOpenMM EmatD[3][3] = {
+                { _phid[10*i+4], _phid[10*i+7], _phid[10*i+8] },
+                { _phid[10*i+7], _phid[10*i+5], _phid[10*i+9] },
+                { _phid[10*i+8], _phid[10*i+9], _phid[10*i+6] }
+            };
+
+            RealOpenMM Exx = 0.0, Eyy = 0.0, Ezz = 0.0, Exy = 0.0, Exz = 0.0, Eyz = 0.0;
+            for(int k = 0; k < 3; ++k){
+                for(int l = 0; l < 3; ++l){
+                    Exx += fracToCart[0][k] * EmatD[k][l] * fracToCart[0][l];
+                    Eyy += fracToCart[1][k] * EmatD[k][l] * fracToCart[1][l];
+                    Ezz += fracToCart[2][k] * EmatD[k][l] * fracToCart[2][l];
+                    Exy += fracToCart[0][k] * EmatD[k][l] * fracToCart[1][l];
+                    Exz += fracToCart[0][k] * EmatD[k][l] * fracToCart[2][l];
+                    Eyz += fracToCart[1][k] * EmatD[k][l] * fracToCart[2][l];
+                }
+            }
+            updateInducedDipoleFields[0].inducedDipoleFieldGradient[i][0] -= Exx;
+            updateInducedDipoleFields[0].inducedDipoleFieldGradient[i][1] -= Eyy;
+            updateInducedDipoleFields[0].inducedDipoleFieldGradient[i][2] -= Ezz;
+            updateInducedDipoleFields[0].inducedDipoleFieldGradient[i][3] -= Exy;
+            updateInducedDipoleFields[0].inducedDipoleFieldGradient[i][4] -= Exz;
+            updateInducedDipoleFields[0].inducedDipoleFieldGradient[i][5] -= Eyz;
+
+            RealOpenMM EmatP[3][3] = {
+                { _phip[10*i+4], _phip[10*i+7], _phip[10*i+8] },
+                { _phip[10*i+7], _phip[10*i+5], _phip[10*i+9] },
+                { _phip[10*i+8], _phip[10*i+9], _phip[10*i+6] }
+            };
+
+            Exx = 0.0; Eyy = 0.0; Ezz = 0.0; Exy = 0.0; Exz = 0.0; Eyz = 0.0;
+            for(int k = 0; k < 3; ++k){
+                for(int l = 0; l < 3; ++l){
+                    Exx += fracToCart[0][k] * EmatP[k][l] * fracToCart[0][l];
+                    Eyy += fracToCart[1][k] * EmatP[k][l] * fracToCart[1][l];
+                    Ezz += fracToCart[2][k] * EmatP[k][l] * fracToCart[2][l];
+                    Exy += fracToCart[0][k] * EmatP[k][l] * fracToCart[1][l];
+                    Exz += fracToCart[0][k] * EmatP[k][l] * fracToCart[2][l];
+                    Eyz += fracToCart[1][k] * EmatP[k][l] * fracToCart[2][l];
+                }
+            }
+
+            updateInducedDipoleFields[1].inducedDipoleFieldGradient[i][0] -= Exx;
+            updateInducedDipoleFields[1].inducedDipoleFieldGradient[i][1] -= Eyy;
+            updateInducedDipoleFields[1].inducedDipoleFieldGradient[i][2] -= Ezz;
+            updateInducedDipoleFields[1].inducedDipoleFieldGradient[i][3] -= Exy;
+            updateInducedDipoleFields[1].inducedDipoleFieldGradient[i][4] -= Exz;
+            updateInducedDipoleFields[1].inducedDipoleFieldGradient[i][5] -= Eyz;
+        }
     }
 
-
-    // self ixn 
+    // self ixn
 
     RealOpenMM term = (4.0/3.0)*(_alphaEwald*_alphaEwald*_alphaEwald)/SQRT_PI;
     for (unsigned int ii = 0; ii < updateInducedDipoleFields.size(); ii++) {
@@ -6738,10 +6767,6 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::calculatePmeDirectElectrostaticPair
 RealOpenMM AmoebaReferencePmeMultipoleForce::calculateElectrostatic(const vector<MultipoleParticleData>& particleData,
                                                                     vector<RealVec>& torques, vector<RealVec>& forces)
 {
-    const int deriv1[] = {1, 4, 7, 8, 10, 15, 17, 13, 14, 19};
-    const int deriv2[] = {2, 7, 5, 9, 13, 11, 18, 15, 19, 16};
-    const int deriv3[] = {3, 8, 9, 6, 14, 16, 12, 19, 17, 18};
-
     RealOpenMM energy = 0.0;
     vector<RealOpenMM> scaleFactors(LAST_SCALE_TYPE_INDEX);
     for (unsigned int kk = 0; kk < scaleFactors.size(); kk++) {
@@ -6766,34 +6791,6 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::calculateElectrostatic(const vector
             }
         }
     }
-    if (getPolarizationType() == AmoebaReferenceMultipoleForce::OPT){
-        RealOpenMM inducedDipole[3];
-        RealOpenMM inducedDipolePolar[3];
-        RealOpenMM prefac = (_electric/_dielectric);
-        for (int i = 0; i < _numParticles; i++) {
-            // Compute the µ(m) T µ(n) force contributions here
-            for(int l = 0; l < _maxPTOrder-1; ++l) {
-                inducedDipole[0]      = _ptDipoleD[l][i][0];
-                inducedDipole[1]      = _ptDipoleD[l][i][1];
-                inducedDipole[2]      = _ptDipoleD[l][i][2];
-                inducedDipolePolar[0] = _ptDipoleP[l][i][0];
-                inducedDipolePolar[1] = _ptDipoleP[l][i][1];
-                inducedDipolePolar[2] = _ptDipoleP[l][i][2];
-                for(int m = 0; m < _maxPTOrder-1-l; ++m) {
-                    RealOpenMM p = _OPTPartCoefficients[l+m+1];
-                    if(std::fabs(p) < 1e-6) continue;
-                    for (int k = 0; k < 3; k++) {
-                        int j1 = deriv1[k+1];
-                        int j2 = deriv2[k+1];
-                        int j3 = deriv3[k+1];
-                        forces[i][0] += 0.5*p*prefac*(inducedDipole[k]*_ptDipoleDirFieldP[m][10*i+j1] + inducedDipolePolar[k]*_ptDipoleDirFieldD[m][10*i+j1]);
-                        forces[i][1] += 0.5*p*prefac*(inducedDipole[k]*_ptDipoleDirFieldP[m][10*i+j2] + inducedDipolePolar[k]*_ptDipoleDirFieldD[m][10*i+j2]);
-                        forces[i][2] += 0.5*p*prefac*(inducedDipole[k]*_ptDipoleDirFieldP[m][10*i+j3] + inducedDipolePolar[k]*_ptDipoleDirFieldD[m][10*i+j3]);
-                    }
-                }
-            }
-        }
-    }
 
     // The polarization energy
     calculatePmeSelfTorque(particleData, torques);
@@ -6801,5 +6798,37 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::calculateElectrostatic(const vector
     energy += computeReciprocalSpaceFixedMultipoleForceAndEnergy(particleData, forces, torques);
     energy += calculatePmeSelfEnergy(particleData);
 
+    // Now that both the direct and reciprocal space contributions have been added, we can compute the dipole
+    // response contributions to the forces, if we're using the OPT polarization algorithm.
+    if (getPolarizationType() == AmoebaReferenceMultipoleForce::OPT){
+        RealOpenMM prefac = (_electric/_dielectric);
+        for (int i = 0; i < _numParticles; i++) {
+            // Compute the µ(m) T µ(n) force contributions here
+            for(int l = 0; l < _maxPTOrder-1; ++l) {
+                for(int m = 0; m < _maxPTOrder-1-l; ++m) {
+                    RealOpenMM p = _OPTPartCoefficients[l+m+1];
+                    if(std::fabs(p) < 1e-6) continue;
+                    forces[i][0] += 0.5*p*prefac*(_ptDipoleD[l][i][0]*_ptDipoleFieldGradientP[m][6*i+0]
+                                                + _ptDipoleD[l][i][1]*_ptDipoleFieldGradientP[m][6*i+3]
+                                                + _ptDipoleD[l][i][2]*_ptDipoleFieldGradientP[m][6*i+4]);
+                    forces[i][1] += 0.5*p*prefac*(_ptDipoleD[l][i][0]*_ptDipoleFieldGradientP[m][6*i+3]
+                                                + _ptDipoleD[l][i][1]*_ptDipoleFieldGradientP[m][6*i+1]
+                                                + _ptDipoleD[l][i][2]*_ptDipoleFieldGradientP[m][6*i+5]);
+                    forces[i][2] += 0.5*p*prefac*(_ptDipoleD[l][i][0]*_ptDipoleFieldGradientP[m][6*i+4]
+                                                + _ptDipoleD[l][i][1]*_ptDipoleFieldGradientP[m][6*i+5]
+                                                + _ptDipoleD[l][i][2]*_ptDipoleFieldGradientP[m][6*i+2]);
+                    forces[i][0] += 0.5*p*prefac*(_ptDipoleP[l][i][0]*_ptDipoleFieldGradientD[m][6*i+0]
+                                                + _ptDipoleP[l][i][1]*_ptDipoleFieldGradientD[m][6*i+3]
+                                                + _ptDipoleP[l][i][2]*_ptDipoleFieldGradientD[m][6*i+4]);
+                    forces[i][1] += 0.5*p*prefac*(_ptDipoleP[l][i][0]*_ptDipoleFieldGradientD[m][6*i+3]
+                                                + _ptDipoleP[l][i][1]*_ptDipoleFieldGradientD[m][6*i+1]
+                                                + _ptDipoleP[l][i][2]*_ptDipoleFieldGradientD[m][6*i+5]);
+                    forces[i][2] += 0.5*p*prefac*(_ptDipoleP[l][i][0]*_ptDipoleFieldGradientD[m][6*i+4]
+                                                + _ptDipoleP[l][i][1]*_ptDipoleFieldGradientD[m][6*i+5]
+                                                + _ptDipoleP[l][i][2]*_ptDipoleFieldGradientD[m][6*i+2]);
+                }
+            }
+        }
+    }
     return energy;
 }
