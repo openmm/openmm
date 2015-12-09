@@ -162,7 +162,7 @@ class PDBFile(object):
             i = connect[0]
             for j in connect[1:]:
                 if i in atomByNumber and j in atomByNumber:
-                    if atomByNumber[i].element != None and atomByNumber[j].element != None:
+                    if atomByNumber[i].element is not None and atomByNumber[j].element is not None:
                         if atomByNumber[i].element.symbol in metalElements or atomByNumber[j].element.symbol in metalElements:
                             if atomByNumber[i].residue == atomByNumber[j].residue:
                                 connectBonds.append((atomByNumber[i], atomByNumber[j])) 
