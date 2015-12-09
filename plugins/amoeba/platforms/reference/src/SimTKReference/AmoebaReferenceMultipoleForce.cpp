@@ -1007,7 +1007,7 @@ void AmoebaReferenceMultipoleForce::convergeInduceDipolesByOPT(const vector<Mult
         for(int atom = 0; atom < _numParticles; ++atom){
             for(int component = 0; component < 6; ++component){
                 fieldGradD[6*atom + component] = fieldD.inducedDipoleFieldGradient[atom][component];
-                fieldGradP[6*atom + component] = fieldD.inducedDipoleFieldGradient[atom][component];
+                fieldGradP[6*atom + component] = fieldP.inducedDipoleFieldGradient[atom][component];
             }
         }
         _ptDipoleFieldGradientD.push_back(fieldGradD);
