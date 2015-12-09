@@ -305,8 +305,8 @@ public:
     void setMutualInducedTargetEpsilon(double inputMutualInducedTargetEpsilon);
 
     /**
-     * Set the coefficients for the mu_0, mu_1, mu_2, mu_n terms in the pertubation
-     * theory algorithm for induced dipoles
+     * Set the coefficients for the mu_0, mu_1, mu_2, ..., mu_n terms in the perturbation
+     * theory algorithm for induced dipoles.
      *
      * @param optCoefficients a vector whose mth entry specifies the coefficient for mu_m
      *
@@ -314,11 +314,8 @@ public:
     void setOPTCoefficients(const std::vector<double> &OPTFullCoefficientsIn);
 
     /**
-     * Set the coefficients for the mu_0, mu_1, mu_2, mu_n terms in the pertubation
-     * theory algorithm for induced dipoles
-     *
-     * @param optCoefficients a vector whose mth entry specifies the coefficient for mu_m
-     *
+     * Get the coefficients for the mu_0, mu_1, mu_2, ..., mu_n terms in the perturbation
+     * theory algorithm for induced dipoles.
      */
     const std::vector<double>& getOPTCoefficients() const;
 
