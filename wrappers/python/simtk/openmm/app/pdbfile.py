@@ -59,7 +59,7 @@ class PDBFile(object):
     _residueNameReplacements = {}
     _atomNameReplacements = {}
 
-    def __init__(self, file, removeBondsToMetals=False):
+    def __init__(self, file):
         """Load a PDB file.
 
         The atom positions and Topology can be retrieved by calling getPositions() and getTopology().
@@ -68,9 +68,6 @@ class PDBFile(object):
         ----------
         file : string
             the name of the file to load
-        removeBondsToMetals : bool
-            if True, those inter-residue CONECT bonds that indicate coordination to metals 
-            (cf. metalc connectivity in mmCIF/PDBx) are not added to the topology
         """
         
         metalElements = ['Al','As','Ba','Ca','Cd','Ce','Co','Cs','Cu','Dy','Fe','Gd','Hg','Ho','In','Ir','K','Li','Mg',
@@ -158,21 +155,20 @@ class PDBFile(object):
         self.topology.createDisulfideBonds(self.positions)
         self._numpyPositions = None
 
-        # Add bonds based on CONECT records.
+        # Add bonds based on CONECT records. Bonds between metals of element specified in metalElements and standard residues are not added. 
 
         connectBonds = []
         for connect in pdb.models[-1].connects:
             i = connect[0]
             for j in connect[1:]:
-                if i in atomByNumber and j in atomByNumber and not removeBondsToMetals:
-                    connectBonds.append((atomByNumber[i], atomByNumber[j]))  
-                elif i in atomByNumber and j in atomByNumber and removeBondsToMetals:    
+                if i in atomByNumber and j in atomByNumber:    
                     if atomByNumber[i].element is not None and atomByNumber[j].element is not None:
-                        if atomByNumber[i].element.symbol in metalElements or atomByNumber[j].element.symbol in metalElements:
-                            if atomByNumber[i].residue == atomByNumber[j].residue:
-                                connectBonds.append((atomByNumber[i], atomByNumber[j])) 
-                        else:
+                        if atomByNumber[i].element.symbol not in metalElements and atomByNumber[j].element.symbol not in metalElements:
                             connectBonds.append((atomByNumber[i], atomByNumber[j])) 
+                        elif atomByNumber[i].element.symbol in metalElements and atomByNumber[j].residue.name not in top._standardBonds:
+                            connectBonds.append((atomByNumber[i], atomByNumber[j])) 
+                        elif atomByNumber[j].element.symbol in metalElements and atomByNumber[i].residue.name not in top._standardBonds:
+                            connectBonds.append((atomByNumber[i], atomByNumber[j]))     
                     else:
                         connectBonds.append((atomByNumber[i], atomByNumber[j]))         
         if len(connectBonds) > 0:
