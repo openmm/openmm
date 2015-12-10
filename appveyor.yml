@@ -43,5 +43,6 @@ test_script:
          ctest -I FailedTests.log
      }
   - cd python\tests
-  - nosetests -vv --processes=-1 --process-timeout=200
+  - pip install pytest
+  - py.test -v *
   - cd %APPVEYOR_BUILD_FOLDER%
