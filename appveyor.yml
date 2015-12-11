@@ -24,6 +24,7 @@ install:
   - "set PATH=C:\\fftw;%PATH%"
 
 # Download OpenCL Headers and build the ICL loader
+  - ps: $opencl_registry = $env:OPENCL_REGISTRY
   - ps: mkdir C:/opencl
   - ps: cd C:/opencl
   - ps: wget $opencl_registry/specs/opencl-icd-1.2.11.0.tgz -OutFile opencl-icd-1.2.11.0.tgz
