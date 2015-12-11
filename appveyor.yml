@@ -1,5 +1,9 @@
 os: Windows Server 2012 R2
 shallow_clone: true
+environment:
+  global:
+    OPENCL_REGISTRY: "https://www.khronos.org/registry/cl"
+
 install:
 
 # Setup shell for VS2010, x64, release mode
@@ -9,7 +13,7 @@ install:
 # Set path to python, git-bash tools.
   - "set PATH=C:\\Python34-x64;C:\\Python34-x64\\Scripts;%PATH%"
   - "set PATH=C:\\Program Files (x86)\\Git\\bin;%PATH%"
-  - pip install nose
+  - pip install pytest
 
 # Download FFTW3 for PME plugin
   - C:\MinGW\msys\1.0\bin\wget -q ftp://ftp.fftw.org/pub/fftw/fftw-3.3.4-dll64.zip
@@ -19,11 +23,27 @@ install:
   - cd %APPVEYOR_BUILD_FOLDER%
   - "set PATH=C:\\fftw;%PATH%"
 
+# Download OpenCL Headers and build the ICL loader
+  - ps: $opencl_registry = $env:OPENCL_REGISTRY
+  - ps: mkdir C:/opencl > $null
+  - ps: cd C:/opencl
+  - ps: wget $opencl_registry/specs/opencl-icd-1.2.11.0.tgz -OutFile opencl-icd-1.2.11.0.tgz
+  - ps: 7z x opencl-icd-1.2.11.0.tgz > $null
+  - ps: 7z x opencl-icd-1.2.11.0.tar > $null
+  - ps: mv .\icd\* .
+  - ps: mkdir inc/CL > $null
+  - ps: wget $opencl_registry/api/1.2/ | select -ExpandProperty links | where {$_.href -like "*.h*"} | select -ExpandProperty outerText | foreach{ wget $opencl_registry/api/1.2/$_ -OutFile inc/CL/$_ }
+  - ps: mkdir lib > $null
+  - ps: cd lib
+  - cmake -G "NMake Makefiles" ..
+  - nmake
+  - cd %APPVEYOR_BUILD_FOLDER%
+
 # Download and install some OpenMM build dependencies (doxygen, swig)
   - choco install -y doxygen.portable swig > null
 
 # Set CMake options
-  - ps: $env:CMAKE_FLAGS='-DOPENMM_BUILD_PME_PLUGIN=ON -DFFTW_LIBRARY=C:/fftw/libfftw3f-3.lib -DFFTW_INCLUDES=C:/fftw -DCMAKE_BUILD_TYPE=Release -DOPENMM_BUILD_EXAMPLES=OFF -DCMAKE_CXX_FLAGS_RELEASE="/MD /Od /Ob0 /D NDEBUG"'
+  - ps: $env:CMAKE_FLAGS='-DOPENMM_BUILD_PME_PLUGIN=ON -DOPENCL_INCLUDE_DIR=C:/opencl/inc -DOPENCL_LIBRARY=C:/opencl/lib/OpenCL.lib -DFFTW_LIBRARY=C:/fftw/libfftw3f-3.lib -DFFTW_INCLUDES=C:/fftw -DOPENMM_BUILD_OPENCL_TESTS=OFF -DCMAKE_BUILD_TYPE=Release -DOPENMM_BUILD_EXAMPLES=OFF -DCMAKE_CXX_FLAGS_RELEASE="/MD /Od /Ob0 /D NDEBUG"'
   - mkdir build
   - cd build
   - cmake -G "NMake Makefiles" %CMAKE_FLAGS% -LA ..
@@ -43,5 +63,5 @@ test_script:
          ctest -I FailedTests.log
      }
   - cd python\tests
-  - nosetests -vv --processes=-1 --process-timeout=200
+  - py.test -v
   - cd %APPVEYOR_BUILD_FOLDER%
