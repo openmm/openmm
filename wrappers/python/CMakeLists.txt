@@ -51,6 +51,7 @@ foreach(SUBDIR ${SUBDIRS})
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*README.txt"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.py"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.i"
+        "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.ini"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.sh"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.xml"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.pdb"
