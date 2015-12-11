@@ -39,12 +39,11 @@ install:
   - nmake
   - cd %APPVEYOR_BUILD_FOLDER%
 
-
 # Download and install some OpenMM build dependencies (doxygen, swig)
   - choco install -y doxygen.portable swig > null
 
 # Set CMake options
-  - ps: $env:CMAKE_FLAGS='-DOPENMM_BUILD_PME_PLUGIN=ON -DOPENCL_INCLUDE_DIR=C:/opencl/inc -DOPENCL_LIBRARY=C:/opencl/lib/OpenCL.lib -DFFTW_LIBRARY=C:/fftw/libfftw3f-3.lib -DFFTW_INCLUDES=C:/fftw -DCMAKE_BUILD_TYPE=Release -DOPENMM_BUILD_EXAMPLES=OFF -DCMAKE_CXX_FLAGS_RELEASE="/MD /Od /Ob0 /D NDEBUG"'
+  - ps: $env:CMAKE_FLAGS='-DOPENMM_BUILD_PME_PLUGIN=ON -DOPENCL_INCLUDE_DIR=C:/opencl/inc -DOPENCL_LIBRARY=C:/opencl/lib/OpenCL.lib -DFFTW_LIBRARY=C:/fftw/libfftw3f-3.lib -DFFTW_INCLUDES=C:/fftw -DOPENMM_BUILD_OPENCL_TESTS=OFF -DCMAKE_BUILD_TYPE=Release -DOPENMM_BUILD_EXAMPLES=OFF -DCMAKE_CXX_FLAGS_RELEASE="/MD /Od /Ob0 /D NDEBUG"'
   - mkdir build
   - cd build
   - cmake -G "NMake Makefiles" %CMAKE_FLAGS% -LA ..
