@@ -25,15 +25,15 @@ install:
 
 # Download OpenCL Headers and build the ICL loader
   - ps: $opencl_registry = $env:OPENCL_REGISTRY
-  - ps: mkdir C:/opencl
+  - ps: mkdir C:/opencl > $null
   - ps: cd C:/opencl
   - ps: wget $opencl_registry/specs/opencl-icd-1.2.11.0.tgz -OutFile opencl-icd-1.2.11.0.tgz
-  - ps: 7z x opencl-icd-1.2.11.0.tgz
-  - ps: 7z x opencl-icd-1.2.11.0.tar
+  - ps: 7z x opencl-icd-1.2.11.0.tgz > $null
+  - ps: 7z x opencl-icd-1.2.11.0.tar > $null
   - ps: mv .\icd\* .
-  - ps: mkdir inc/CL
+  - ps: mkdir inc/CL > $null
   - ps: wget $opencl_registry/api/1.2/ | select -ExpandProperty links | where {$_.href -like "*.h*"} | select -ExpandProperty outerText | foreach{ wget $opencl_registry/api/1.2/$_ -OutFile inc/CL/$_ }
-  - ps: mkdir lib
+  - ps: mkdir lib > $null
   - ps: cd lib
   - cmake -G "NMake Makefiles" ..
   - nmake
