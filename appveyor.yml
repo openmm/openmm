@@ -9,7 +9,7 @@ install:
 # Set path to python, git-bash tools.
   - "set PATH=C:\\Python34-x64;C:\\Python34-x64\\Scripts;%PATH%"
   - "set PATH=C:\\Program Files (x86)\\Git\\bin;%PATH%"
-  - pip install nose
+  - pip install pytest
 
 # Download FFTW3 for PME plugin
   - C:\MinGW\msys\1.0\bin\wget -q ftp://ftp.fftw.org/pub/fftw/fftw-3.3.4-dll64.zip
@@ -43,5 +43,5 @@ test_script:
          ctest -I FailedTests.log
      }
   - cd python\tests
-  - nosetests -vv --processes=-1 --process-timeout=200
+  - py.test -v
   - cd %APPVEYOR_BUILD_FOLDER%

@@ -131,7 +131,7 @@ script:
           make PythonInstall;
       fi;
       python -m simtk.testInstallation;
-      (cd python/tests && py.test -v *);
+      (cd python/tests && py.test -v);
     fi
 
   - # run all of the tests, making sure failures at this stage don't cause travis failures
