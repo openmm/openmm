@@ -53,7 +53,7 @@ class KernelFactory;
  * To get a Platform object, call
  *
  * <pre>
- * Platform& platform Platform::findPlatform(kernelNames);
+ * Platform& platform = Platform::findPlatform(kernelNames);
  * </pre>
  *
  * passing in the names of all kernels that will be required for the calculation you plan to perform.  It
@@ -78,6 +78,9 @@ public:
     /**
      * Get whether this Platform supports double precision arithmetic.  If this returns false, the platform
      * is permitted to represent double precision values internally as single precision.
+     *
+     * @deprecated This method is not well defined, and is too simplistic to describe the actual behavior of
+     * some Platforms, such as ones that offer multiple precision modes.  It will be removed in a future release.
      */
     virtual bool supportsDoublePrecision() const = 0;
     /**
