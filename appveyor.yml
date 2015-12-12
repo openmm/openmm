@@ -53,9 +53,8 @@ build_script:
   - cmake -G "NMake Makefiles" %CMAKE_FLAGS% -LA -DCMAKE_CXX_FLAGS_RELEASE="/MD /Od /Ob0 /D NDEBUG" ..
   - cmake --build . --target install
   - cmake --build . --target PythonInstall
-  - cd %APPVEYOR_BUILD_FOLDER%
 
 test_script:
-  - python devtools\run-ctest.py
+  - python %APPVEYOR_BUILD_FOLDER%\devtools\run-ctest.py
   - cd python\tests
   - py.test -v
