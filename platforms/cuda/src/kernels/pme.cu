@@ -188,7 +188,11 @@ gridEvaluateEnergy(real2* __restrict__ halfcomplex_pmeGrid, mixed* __restrict__ 
             energy += eterm*(grid.x*grid.x + grid.y*grid.y);
         }
     }
+#ifdef USE_PME_STREAM
     energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] = 0.5f*energy;
+#else
+    energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] += 0.5f*energy;
+#endif
 }
 
 extern "C" __global__

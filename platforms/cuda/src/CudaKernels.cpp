@@ -1717,6 +1717,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                 cuDeviceGetName(deviceName, 100, cu.getDevice());
                 usePmeStream = (string(deviceName) != "GeForce GTX 980"); // Using a separate stream is slower on GTX 980
                 if (usePmeStream) {
+                    pmeDefines["USE_PME_STREAM"] = "1";
                     cuStreamCreate(&pmeStream, CU_STREAM_NON_BLOCKING);
                     if (useCudaFFT) {
                         cufftSetStream(fftForward, pmeStream);
