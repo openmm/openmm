@@ -24,8 +24,14 @@ def load_doxygen_xml(doxygen_xml):
 
 
 def subclasses(root, parent):
-    xp_query = ('.//compounddef/basecompoundref[text()="%s"]'
-                '/../compoundname') % parent
+    parent_el = root.xpath('.//compounddef/compoundname[text()="%s"]/..' % parent)
+    if len(parent_el) == 1:
+        parent_id = parent_el[0].get('id')
+    else:
+        raise ValueError("Can't find %s" % parent)
+
+    xp_query = ('.//compounddef/basecompoundref[@refid="%s"]'
+                '/../compoundname') % parent_id
     return [parent] + [n.text.strip() for n in root.xpath(xp_query)]
 
 

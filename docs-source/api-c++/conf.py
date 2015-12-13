@@ -40,4 +40,4 @@ html_sidebars = {
     ]
 }
 
-doxygen_xml = "@DOXYGEN_XML_DIRECTORY@"
+doxygen_xml = "doxygen/xml"
