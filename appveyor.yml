@@ -5,11 +5,10 @@ install:
 # Setup shell for VS2010, x64, release mode
   - >
     "%ProgramFiles%\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd" /x64 /release
-
 # Set path to python, git-bash tools.
   - "set PATH=C:\\Python34-x64;C:\\Python34-x64\\Scripts;%PATH%"
   - "set PATH=C:\\Program Files (x86)\\Git\\bin;%PATH%"
-  - pip install nose
+  - pip install pytest
 
 # Download FFTW3 for PME plugin
   - C:\MinGW\msys\1.0\bin\wget -q ftp://ftp.fftw.org/pub/fftw/fftw-3.3.4-dll64.zip
@@ -22,26 +21,40 @@ install:
 # Download and install some OpenMM build dependencies (doxygen, swig)
   - choco install -y doxygen.portable swig > null
 
-# Set CMake options
-  - ps: $env:CMAKE_FLAGS='-DOPENMM_BUILD_PME_PLUGIN=ON -DFFTW_LIBRARY=C:/fftw/libfftw3f-3.lib -DFFTW_INCLUDES=C:/fftw -DCMAKE_BUILD_TYPE=Release -DOPENMM_BUILD_EXAMPLES=OFF -DCMAKE_CXX_FLAGS_RELEASE="/MD /Od /Ob0 /D NDEBUG"'
+# Download OpenCL Headers and build the ICD loader
+  - ps: $opencl_registry = "https://www.khronos.org/registry/cl"
+  - ps: mkdir C:/opencl > $null
+  - ps: cd C:/opencl
+  - ps: wget $opencl_registry/specs/opencl-icd-1.2.11.0.tgz -OutFile opencl-icd-1.2.11.0.tgz
+  - ps: 7z x opencl-icd-1.2.11.0.tgz > $null
+  - ps: 7z x opencl-icd-1.2.11.0.tar > $null
+  - ps: mv .\icd\* .
+  - ps: mkdir inc/CL > $null
+  - ps: wget $opencl_registry/api/1.2/ | select -ExpandProperty links | where {$_.href -like "*.h*"} | select -ExpandProperty outerText | foreach{ wget $opencl_registry/api/1.2/$_ -OutFile inc/CL/$_ }
+  - ps: mkdir lib > $null
+  - ps: cd lib
+  - cmake -G "NMake Makefiles" ..
+  - nmake
+  - cd %APPVEYOR_BUILD_FOLDER%
+
+build_script:
+  - ps: $env:CMAKE_FLAGS =
+      "-DOPENMM_BUILD_PME_PLUGIN=ON
+       -DOPENCL_INCLUDE_DIR=C:/opencl/inc
+       -DOPENCL_LIBRARY=C:/opencl/lib/OpenCL.lib
+       -DFFTW_LIBRARY=C:/fftw/libfftw3f-3.lib
+       -DFFTW_INCLUDES=C:/fftw
+       -DOPENMM_BUILD_EXAMPLES=OFF
+       -DOPENMM_BUILD_OPENCL_TESTS=OFF
+       -DCMAKE_BUILD_TYPE=Release
+       -LA"
   - mkdir build
   - cd build
-  - cmake -G "NMake Makefiles" %CMAKE_FLAGS% -LA ..
-
-# Run the build
+  - cmake -G "NMake Makefiles" %CMAKE_FLAGS% -LA -DCMAKE_CXX_FLAGS_RELEASE="/MD /Od /Ob0 /D NDEBUG" ..
   - cmake --build . --target install
   - cmake --build . --target PythonInstall
 
-build: false
 test_script:
-  - ctest || exit 0
-  - python -c "import os; fn = os.path.join('Testing', 'Temporary', 'LastTestsFailed.log'); os.path.exists(fn) or exit(0); failed = [line.split(':')[0] for line in open(fn)]; print(','.join(x+','+x for x in failed))" > FailedTests.log
-  - ps: >
-     If (Test-Path "Testing\\Temporary\\LastTestsFailed.log") {
-         cat Testing\\Temporary\\LastTestsFailed.log
-         cat FailedTests.log
-         ctest -I FailedTests.log
-     }
+  - python %APPVEYOR_BUILD_FOLDER%\devtools\run-ctest.py
   - cd python\tests
-  - nosetests -vv --processes=-1 --process-timeout=200
-  - cd %APPVEYOR_BUILD_FOLDER%
+  - py.test -v
