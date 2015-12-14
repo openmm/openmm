@@ -42,29 +42,3 @@ in time.  It is created by calling a method on a Context.  As discussed earlier,
 this is a potentially expensive operation.  This is the only way to query the
 values of state variables, such as particle positions and velocities; Context
 does not provide methods for accessing them directly.
-
-Here is an example of what the source code to create a System and run a
-simulation might look like:
-
-
-.. code-block:: c
-
-    System system;
-    for (int i = 0; i < numParticles; ++i)
-        system.addParticle(particle[i].mass);
-    HarmonicBondForce* bonds = new HarmonicBondForce();
-    system.addForce(bonds);
-    for (int i = 0; i < numBonds; ++i)
-        bonds->addBond(bond[i].particle1, bond[i].particle2,
-            bond[i].length, bond[i].k);
-    HarmonicAngleForce* angles = new HarmonicAngleForce();
-    system.addForce(angles);
-    for (int i = 0; i < numAngles; ++i)
-        angles->addAngle(angle[i].particle1, angle[i].particle2,
-            angle[i].particle3, angle[i].angle, angle[i].k);
-    // ...create and initialize other force field terms in the same way
-    LangevinIntegrator integrator(temperature, friction, stepSize);
-    Context context(system, integrator);
-    context.setPositions(initialPositions);
-    context.setVelocities(initialVelocities);
-    integrator.step(10000);
