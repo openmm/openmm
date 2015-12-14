@@ -362,7 +362,11 @@ __kernel void gridEvaluateEnergy(__global real2* restrict pmeGrid, __global real
             energy += eterm*(grid.x*grid.x + grid.y*grid.y);
         }
     }
+#ifdef USE_PME_STREAM
+    energyBuffer[get_global_id(0)] = 0.5f*energy;
+#else
     energyBuffer[get_global_id(0)] += 0.5f*energy;
+#endif
 }
 
 __kernel void gridInterpolateForce(__global const real4* restrict posq, __global real4* restrict forceBuffers, __global const real* restrict pmeGrid,
@@ -444,4 +448,9 @@ __kernel void gridInterpolateForce(__global const real4* restrict posq, __global
 __kernel void addForces(__global const real4* restrict forces, __global real4* restrict forceBuffers) {
     for (int atom = get_global_id(0); atom < NUM_ATOMS; atom += get_global_size(0))
         forceBuffers[atom] += forces[atom];
+}
+
+__kernel void addEnergy(__global const mixed* restrict pmeEnergyBuffer, __global mixed* restrict energyBuffer, int bufferSize) {
+    for (int i = get_global_id(0); i < bufferSize; i += get_global_size(0))
+        energyBuffer[i] += pmeEnergyBuffer[i];
 }
