@@ -1646,6 +1646,8 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
         defines["USE_EWALD"] = "1";
         if (cu.getContextIndex() == 0) {
             ewaldSelfEnergy = -ONE_4PI_EPS0*alpha*sumSquaredCharges/sqrt(M_PI);
+            char deviceName[100];
+            cuDeviceGetName(deviceName, 100, cu.getDevice());
             usePmeStream = (string(deviceName) != "GeForce GTX 980"); // Using a separate stream is slower on GTX 980
             pmeDefines["PME_ORDER"] = cu.intToString(PmeOrder);
             pmeDefines["NUM_ATOMS"] = cu.intToString(numParticles);
@@ -1717,8 +1719,6 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                 
                 // Prepare for doing PME on its own stream.
                 
-                char deviceName[100];
-                cuDeviceGetName(deviceName, 100, cu.getDevice());
                 if (usePmeStream) {
                     cuStreamCreate(&pmeStream, CU_STREAM_NON_BLOCKING);
                     if (useCudaFFT) {
