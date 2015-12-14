@@ -40,10 +40,10 @@ namespace OpenMM {
 /**
  * A TabulatedFunction uses a set of tabulated values to define a mathematical function.
  * It can be used by various custom forces.
- * 
+ *
  * TabulatedFunction is an abstract class with concrete subclasses for more specific
  * types of functions.  There are subclasses for:
- * 
+ *
  * <ul>
  * <li>1, 2, and 3 dimensional functions.  The dimensionality of a function means
  * the number of input arguments it takes.</li>
@@ -69,7 +69,7 @@ class OPENMM_EXPORT Continuous1DFunction : public TabulatedFunction {
 public:
     /**
      * Create a Continuous1DFunction f(x) based on a set of tabulated values.
-     * 
+     *
      * @param values         the tabulated values of the function f(x) at uniformly spaced values of x between min
      *                       and max.  A natural cubic spline is used to interpolate between the tabulated values.
      *                       The function is assumed to be zero for x &lt; min or x &gt; max.
@@ -80,11 +80,11 @@ public:
     /**
      * Get the parameters for the tabulated function.
      *
-     * @param values         the tabulated values of the function f(x) at uniformly spaced values of x between min
-     *                       and max.  A natural cubic spline is used to interpolate between the tabulated values.
-     *                       The function is assumed to be zero for x &lt; min or x &gt; max.
-     * @param min            the value of x corresponding to the first element of values
-     * @param max            the value of x corresponding to the last element of values
+     * @param[out] values         the tabulated values of the function f(x) at uniformly spaced values of x between min
+     *                            and max.  A natural cubic spline is used to interpolate between the tabulated values.
+     *                            The function is assumed to be zero for x &lt; min or x &gt; max.
+     * @param[out] min            the value of x corresponding to the first element of values
+     * @param[out] max            the value of x corresponding to the last element of values
      */
     void getFunctionParameters(std::vector<double>& values, double& min, double& max) const;
     /**
@@ -113,7 +113,7 @@ class OPENMM_EXPORT Continuous2DFunction : public TabulatedFunction {
 public:
     /**
      * Create a Continuous2DFunction f(x,y) based on a set of tabulated values.
-     * 
+     *
      * @param values     the tabulated values of the function f(x,y) at xsize uniformly spaced values of x between xmin
      *                   and xmax, and ysize values of y between ymin and ymax.  A natural cubic spline is used to interpolate between the tabulated values.
      *                   The function is assumed to be zero when x or y is outside its specified range.  The values should be ordered so that
@@ -129,16 +129,16 @@ public:
     /**
      * Get the parameters for the tabulated function.
      *
-     * @param values     the tabulated values of the function f(x,y) at xsize uniformly spaced values of x between xmin
-     *                   and xmax, and ysize values of y between ymin and ymax.  A natural cubic spline is used to interpolate between the tabulated values.
-     *                   The function is assumed to be zero when x or y is outside its specified range.  The values should be ordered so that
-     *                   values[i+xsize*j] = f(x_i,y_j), where x_i is the i'th uniformly spaced value of x.  This must be of length xsize*ysize.
-     * @param xsize      the number of table elements along the x direction
-     * @param ysize      the number of table elements along the y direction
-     * @param xmin       the value of x corresponding to the first element of values
-     * @param xmax       the value of x corresponding to the last element of values
-     * @param ymin       the value of y corresponding to the first element of values
-     * @param ymax       the value of y corresponding to the last element of values
+     * @param[out] values     the tabulated values of the function f(x,y) at xsize uniformly spaced values of x between xmin
+     *                        and xmax, and ysize values of y between ymin and ymax.  A natural cubic spline is used to interpolate between the tabulated values.
+     *                        The function is assumed to be zero when x or y is outside its specified range.  The values should be ordered so that
+     *                        values[i+xsize*j] = f(x_i,y_j), where x_i is the i'th uniformly spaced value of x.  This must be of length xsize*ysize.
+     * @param[out] xsize      the number of table elements along the x direction
+     * @param[out] ysize      the number of table elements along the y direction
+     * @param[out] xmin       the value of x corresponding to the first element of values
+     * @param[out] xmax       the value of x corresponding to the last element of values
+     * @param[out] ymin       the value of y corresponding to the first element of values
+     * @param[out] ymax       the value of y corresponding to the last element of values
      */
     void getFunctionParameters(int& xsize, int& ysize, std::vector<double>& values, double& xmin, double& xmax, double& ymin, double& ymax) const;
     /**
@@ -173,7 +173,7 @@ class OPENMM_EXPORT Continuous3DFunction : public TabulatedFunction {
 public:
     /**
      * Create a Continuous3DFunction f(x,y,z) based on a set of tabulated values.
-     * 
+     *
      * @param values     the tabulated values of the function f(x,y,z) at xsize uniformly spaced values of x between xmin
      *                   and xmax, ysize values of y between ymin and ymax, and zsize values of z between zmin and zmax.
      *                   A natural cubic spline is used to interpolate between the tabulated values.  The function is
@@ -194,21 +194,21 @@ public:
     /**
      * Get the parameters for the tabulated function.
      *
-     * @param values     the tabulated values of the function f(x,y,z) at xsize uniformly spaced values of x between xmin
-     *                   and xmax, ysize values of y between ymin and ymax, and zsize values of z between zmin and zmax.
-     *                   A natural cubic spline is used to interpolate between the tabulated values.  The function is
-     *                   assumed to be zero when x, y, or z is outside its specified range.  The values should be ordered so
-     *                   that values[i+xsize*j+xsize*ysize*k] = f(x_i,y_j,z_k), where x_i is the i'th uniformly spaced value of x.
-     *                   This must be of length xsize*ysize*zsize.
-     * @param xsize      the number of table elements along the x direction
-     * @param ysize      the number of table elements along the y direction
-     * @param ysize      the number of table elements along the z direction
-     * @param xmin       the value of x corresponding to the first element of values
-     * @param xmax       the value of x corresponding to the last element of values
-     * @param ymin       the value of y corresponding to the first element of values
-     * @param ymax       the value of y corresponding to the last element of values
-     * @param zmin       the value of z corresponding to the first element of values
-     * @param zmax       the value of z corresponding to the last element of values
+     * @param[out] values     the tabulated values of the function f(x,y,z) at xsize uniformly spaced values of x between xmin
+     *                        and xmax, ysize values of y between ymin and ymax, and zsize values of z between zmin and zmax.
+     *                        A natural cubic spline is used to interpolate between the tabulated values.  The function is
+     *                        assumed to be zero when x, y, or z is outside its specified range.  The values should be ordered so
+     *                        that values[i+xsize*j+xsize*ysize*k] = f(x_i,y_j,z_k), where x_i is the i'th uniformly spaced value of x.
+     *                        This must be of length xsize*ysize*zsize.
+     * @param[out] xsize      the number of table elements along the x direction
+     * @param[out] ysize      the number of table elements along the y direction
+     * @param[out] zsize      the number of table elements along the z direction
+     * @param[out] xmin       the value of x corresponding to the first element of values
+     * @param[out] xmax       the value of x corresponding to the last element of values
+     * @param[out] ymin       the value of y corresponding to the first element of values
+     * @param[out] ymax       the value of y corresponding to the last element of values
+     * @param[out] zmin       the value of z corresponding to the first element of values
+     * @param[out] zmax       the value of z corresponding to the last element of values
      */
     void getFunctionParameters(int& xsize, int& ysize, int& zsize, std::vector<double>& values, double& xmin, double& xmax, double& ymin, double& ymax, double& zmin, double& zmax) const;
     /**
@@ -222,7 +222,7 @@ public:
      *                   This must be of length xsize*ysize*zsize.
      * @param xsize      the number of table elements along the x direction
      * @param ysize      the number of table elements along the y direction
-     * @param ysize      the number of table elements along the z direction
+     * @param zsize      the number of table elements along the z direction
      * @param xmin       the value of x corresponding to the first element of values
      * @param xmax       the value of x corresponding to the last element of values
      * @param ymin       the value of y corresponding to the first element of values
@@ -250,14 +250,14 @@ class OPENMM_EXPORT Discrete1DFunction : public TabulatedFunction {
 public:
     /**
      * Create a Discrete1DFunction f(x) based on a set of tabulated values.
-     * 
+     *
      * @param values         the tabulated values of the function f(x)
      */
     Discrete1DFunction(const std::vector<double>& values);
     /**
      * Get the parameters for the tabulated function.
      *
-     * @param values         the tabulated values of the function f(x)
+     * @param[out] values    the tabulated values of the function f(x)
      */
     void getFunctionParameters(std::vector<double>& values) const;
     /**
@@ -283,7 +283,7 @@ class OPENMM_EXPORT Discrete2DFunction : public TabulatedFunction {
 public:
     /**
      * Create a Discrete2DFunction f(x,y) based on a set of tabulated values.
-     * 
+     *
      * @param xsize     the number of table elements along the x direction
      * @param ysize     the number of table elements along the y direction
      * @param values    the tabulated values of the function f(x,y), ordered so that
@@ -293,10 +293,10 @@ public:
     /**
      * Get the parameters for the tabulated function.
      *
-     * @param xsize     the number of table elements along the x direction
-     * @param ysize     the number of table elements along the y direction
-     * @param values    the tabulated values of the function f(x,y), ordered so that
-     *                  values[i+xsize*j] = f(i,j).  This must be of length xsize*ysize.
+     * @param[out] xsize     the number of table elements along the x direction
+     * @param[out] ysize     the number of table elements along the y direction
+     * @param[out] values    the tabulated values of the function f(x,y), ordered so that
+     *                       values[i+xsize*j] = f(i,j).  This must be of length xsize*ysize.
      */
     void getFunctionParameters(int& xsize, int& ysize, std::vector<double>& values) const;
     /**
@@ -326,7 +326,7 @@ class OPENMM_EXPORT Discrete3DFunction : public TabulatedFunction {
 public:
     /**
      * Create a Discrete3DFunction f(x,y,z) based on a set of tabulated values.
-     * 
+     *
      * @param xsize     the number of table elements along the x direction
      * @param ysize     the number of table elements along the y direction
      * @param zsize     the number of table elements along the z direction
@@ -337,11 +337,11 @@ public:
     /**
      * Get the parameters for the tabulated function.
      *
-     * @param xsize     the number of table elements along the x direction
-     * @param ysize     the number of table elements along the y direction
-     * @param zsize     the number of table elements along the z direction
-     * @param values    the tabulated values of the function f(x,y,z), ordered so that
-     *                  values[i+xsize*j+xsize*ysize*k] = f(i,j,k).  This must be of length xsize*ysize*zsize.
+     * @param[out] xsize     the number of table elements along the x direction
+     * @param[out] ysize     the number of table elements along the y direction
+     * @param[out] zsize     the number of table elements along the z direction
+     * @param[out] values    the tabulated values of the function f(x,y,z), ordered so that
+     *                       values[i+xsize*j+xsize*ysize*k] = f(i,j,k).  This must be of length xsize*ysize*zsize.
      */
     void getFunctionParameters(int& xsize, int& ysize, int& zsize, std::vector<double>& values) const;
     /**
