@@ -35,31 +35,23 @@ foreach(INIT_FILE ${STAGING_INPUT_FILES})
 endforeach(INIT_FILE ${STAGING_INPUT_FILES})
 
 add_custom_command(
-    OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/core.rst"
-           "${CMAKE_CURRENT_BINARY_DIR}/integrators.rst"
-           "${CMAKE_CURRENT_BINARY_DIR}/forces.rst"
-           "${CMAKE_CURRENT_BINARY_DIR}/extras.rst"
+    OUTPUT  "${CMAKE_CURRENT_BINARY_DIR}/library.rst"
     COMMAND "${PYTHON_EXECUTABLE}" "${CMAKE_CURRENT_BINARY_DIR}/render.py"
             "${WRAPPER_DOXYGEN_DIR}/xml/"
     DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/render.py"
-            "${CMAKE_CURRENT_BINARY_DIR}/core.rst.jinja2"
-            "${CMAKE_CURRENT_BINARY_DIR}/integrators.rst.jinja2"
-            "${CMAKE_CURRENT_BINARY_DIR}/forces.rst.jinja2"
-            "${CMAKE_CURRENT_BINARY_DIR}/extras.rst.jinja2"
+            "${CMAKE_CURRENT_BINARY_DIR}/library.rst.jinja2"
             "${WRAPPER_DOXYGEN_DIR}/xml/index.xml"
-)
+    )
 
 add_custom_command(
     OUTPUT "${CMAKE_BINARY_DIR}/api-c++/index.html"
     COMMAND "${PYTHON_EXECUTABLE}" -m sphinx . "${CMAKE_BINARY_DIR}/api-c++"
     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
     DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/conf.py"
-                "${CMAKE_CURRENT_BINARY_DIR}/core.rst"
-                "${CMAKE_CURRENT_BINARY_DIR}/forces.rst"
-                "${CMAKE_CURRENT_BINARY_DIR}/extras.rst"
-                "${CMAKE_CURRENT_BINARY_DIR}/integrators.rst"
-                "${CMAKE_CURRENT_BINARY_DIR}/index.rst"
-                "${CMAKE_CURRENT_BINARY_DIR}/_static/logo.png"
+            "${CMAKE_CURRENT_BINARY_DIR}/library.rst"
+            "${CMAKE_CURRENT_BINARY_DIR}/index.rst"
+            "${CMAKE_CURRENT_BINARY_DIR}/_static/logo.png"
+            "${WRAPPER_DOXYGEN_DIR}/xml/index.xml"
 )
 
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/api-c++/)

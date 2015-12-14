@@ -74,7 +74,7 @@ matrix:
            CC=clang
            CXX=clang++
            DOCS_DEPLOY=true
-           CMAKE_FLAGS=""
+           CMAKE_FLAGS="-DOPENMM_GENERATE_API_DOCS=ON"
 
     - sudo: false
       python: 3.4
@@ -142,7 +142,7 @@ script:
       ctest -I FailedTests.log;
     fi
   - if [[ ! -z "${DOCS_DEPLOY}" && "${DOCS_DEPLOY}" = "true" ]]; then
-      pip install sphinx sphinxcontrib.lunrsearch sphinxcontrib.autodoc_doxygen;
+      pip install sphinx sphinxcontrib-lunrsearch sphinxcontrib-autodoc_doxygen;
       make C++ApiDocs PythonApiDocs;
       mkdir -p api-docs;
       mv api-python api-docs;
