@@ -3,6 +3,13 @@ OpenMM C++ API
 
 The C++ API provides information about the classes and methods available in OpenMM for C++ developers. The public API is based on a small number of classes.
 
+
+.. toctree::
+   :maxdepth: 2
+
+   library
+
+
 :cpp:class:`System <OpenMM::System>`\ : A System specifies generic properties of the system to be
 simulated: the number of particles it contains, the mass of each one, the size
 of the periodic box, etc.  The interactions between the particles are specified
@@ -61,19 +68,3 @@ simulation might look like:
     context.setPositions(initialPositions);
     context.setVelocities(initialVelocities);
     integrator.step(10000);
-
-
-.. raw:: html
-
-   <div style="display:none">
-
-
-.. toctree::
-   :maxdepth: 2
-
-   library
-
-
-.. raw:: html
-
-   </div>
