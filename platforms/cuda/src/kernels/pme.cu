@@ -292,7 +292,7 @@ void addForces(const real4* __restrict__ forces, unsigned long long* __restrict_
 }
 
 extern "C" __global__
-void addEnergy(const mixed* __restrict__ pmeEnergyBuffer, mixed* __restrict__ energyBuffer, int bufferSize) {
+void addEnergy(const real* __restrict__ pmeEnergyBuffer, real* __restrict__ energyBuffer, int bufferSize) {
     for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < bufferSize; i += blockDim.x*gridDim.x)
         energyBuffer[i] += pmeEnergyBuffer[i];
 }

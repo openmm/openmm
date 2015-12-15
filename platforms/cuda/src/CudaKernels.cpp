@@ -1699,7 +1699,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                 pmeBsplineModuliZ = new CudaArray(cu, gridSizeZ, elementSize, "pmeBsplineModuliZ");
                 pmeAtomRange = CudaArray::create<int>(cu, gridSizeX*gridSizeY*gridSizeZ+1, "pmeAtomRange");
                 pmeAtomGridIndex = CudaArray::create<int2>(cu, numParticles, "pmeAtomGridIndex");
-                int energyElementSize = (cu.getUseDoublePrecision() || cu.getUseMixedPrecision() ? sizeof(double) : sizeof(float));
+                int energyElementSize = (cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
                 pmeEnergyBuffer = new CudaArray(cu, cu.getNumThreadBlocks()*CudaContext::ThreadBlockSize, energyElementSize, "pmeEnergyBuffer");
                 cu.clearBuffer(*pmeEnergyBuffer);
                 sort = new CudaSort(cu, new SortTrait(), cu.getNumAtoms());

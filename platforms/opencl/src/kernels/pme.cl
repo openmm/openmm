@@ -450,7 +450,7 @@ __kernel void addForces(__global const real4* restrict forces, __global real4* r
         forceBuffers[atom] += forces[atom];
 }
 
-__kernel void addEnergy(__global const mixed* restrict pmeEnergyBuffer, __global mixed* restrict energyBuffer, int bufferSize) {
+__kernel void addEnergy(__global const real* restrict pmeEnergyBuffer, __global real* restrict energyBuffer, int bufferSize) {
     for (int i = get_global_id(0); i < bufferSize; i += get_global_size(0))
         energyBuffer[i] += pmeEnergyBuffer[i];
 }

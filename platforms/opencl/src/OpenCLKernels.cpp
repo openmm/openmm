@@ -1678,7 +1678,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
                 pmeBsplineTheta = new OpenCLArray(cl, PmeOrder*numParticles, 4*elementSize, "pmeBsplineTheta");
                 pmeAtomRange = OpenCLArray::create<cl_int>(cl, gridSizeX*gridSizeY*gridSizeZ+1, "pmeAtomRange");
                 pmeAtomGridIndex = OpenCLArray::create<mm_int2>(cl, numParticles, "pmeAtomGridIndex");
-                int energyElementSize = (cl.getUseDoublePrecision() || cl.getUseMixedPrecision() ? sizeof(double) : sizeof(float));
+                int energyElementSize = (cl.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
                 pmeEnergyBuffer = new OpenCLArray(cl, cl.getNumThreadBlocks()*OpenCLContext::ThreadBlockSize, energyElementSize, "pmeEnergyBuffer");
                 cl.clearBuffer(*pmeEnergyBuffer);
                 sort = new OpenCLSort(cl, new SortTrait(), cl.getNumAtoms());
