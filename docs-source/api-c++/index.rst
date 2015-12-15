@@ -38,7 +38,6 @@ algorithms.  Examples of Integrator subclasses include :cpp:class:`LangevinInteg
 :cpp:class:`VerletIntegrator <OpenMM::VerletIntegrator>`, and :cpp:class:`BrownianIntegrator <OpenMM::BrownianIntegrator>`.
 
 :cpp:class:`State <OpenMM::State>`\ : A State stores a snapshot of the simulation at a particular point
-in time.  It is created by calling a method on a Context.  As discussed earlier,
-this is a potentially expensive operation.  This is the only way to query the
+in time.  It is created by calling a method on a Context. This is the only way to query the
 values of state variables, such as particle positions and velocities; Context
 does not provide methods for accessing them directly.
