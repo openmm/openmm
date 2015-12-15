@@ -76,7 +76,7 @@ bool CudaContext::hasInitializedCuda = false;
 CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlockingSync, const string& precision, const string& compiler,
         const string& tempDir, const std::string& hostCompiler, CudaPlatform::PlatformData& platformData) : system(system), currentStream(0),
         time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), stepsSinceReorder(99999), contextIsValid(false), atomsWereReordered(false), hasCompilerKernel(false),
-        pinnedBuffer(NULL), posq(NULL), posqCorrection(NULL), velm(NULL), force(NULL), energyBuffer(NULL), integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL), thread(NULL) {
+        pinnedBuffer(NULL), posq(NULL), posqCorrection(NULL), velm(NULL), force(NULL), energyBuffer(NULL), atomIndexDevice(NULL), integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL), thread(NULL) {
     this->compiler = "\""+compiler+"\"";
     if (platformData.context != NULL) {
         try {
@@ -339,6 +339,8 @@ CudaContext::~CudaContext() {
         delete force;
     if (energyBuffer != NULL)
         delete energyBuffer;
+    if (atomIndexDevice != NULL)
+        delete atomIndexDevice;
     if (integration != NULL)
         delete integration;
     if (expression != NULL)
