@@ -131,16 +131,11 @@ script:
           make PythonInstall;
       fi;
       python -m simtk.testInstallation;
-      (cd python/tests && py.test -v *);
+      (cd python/tests && py.test -v);
     fi
 
   - # run all of the tests, making sure failures at this stage don't cause travis failures
-  - ctest -j2 --output-on-failure --schedule-random --stop-time $CTEST_STOP_TIME || true
-  - # get a list of all of the failed tests into this stupid ctest format
-  - python -c "import os; fn = os.path.join('Testing', 'Temporary', 'LastTestsFailed.log'); os.path.exists(fn) or exit(0); failed = [line.split(':')[0] for line in open(fn)]; print(','.join(x+','+x for x in failed))" > FailedTests.log
-  - if [ -s Testing/Temporary/LastTestsFailed.log ]; then
-      ctest -I FailedTests.log;
-    fi
+  - python devtools/run-ctest.py -j2 --schedule-random --stop-time $CTEST_STOP_TIME
   - if [[ ! -z "${DOCS_DEPLOY}" && "${DOCS_DEPLOY}" = "true" ]]; then
       pip install sphinx sphinxcontrib-lunrsearch sphinxcontrib-autodoc_doxygen;
       make C++ApiDocs PythonApiDocs;

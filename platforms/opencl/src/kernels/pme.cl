@@ -84,7 +84,7 @@ __kernel void recordZIndex(__global int2* restrict pmeAtomGridIndex, __global co
 
 __kernel void gridSpreadCharge(__global const real4* restrict posq, __global const int2* restrict pmeAtomGridIndex, __global const int* restrict pmeAtomRange,
         __global long* restrict pmeGrid, __global const real4* restrict pmeBsplineTheta, real4 periodicBoxSize, real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ) {
-    const real4 scale = 1/(real) (PME_ORDER-1);
+    const real scale = 1/(real) (PME_ORDER-1);
     real4 data[PME_ORDER];
     
     // Process the atoms in spatially sorted order.  This improves efficiency when writing
@@ -118,7 +118,7 @@ __kernel void gridSpreadCharge(__global const real4* restrict posq, __global con
             data[j-1] = div*dr*data[j-2];
             for (int k = 1; k < (j-1); k++)
                 data[j-k-1] = div*((dr+(real4) k) *data[j-k-2] + (-dr+(real4) (j-k))*data[j-k-1]);
-            data[0] = div*(- dr+1.0f)*data[0];
+            data[0] = div*(-dr+1.0f)*data[0];
         }
         data[PME_ORDER-1] = scale*dr*data[PME_ORDER-2];
         for (int j = 1; j < (PME_ORDER-1); j++)
@@ -362,12 +362,16 @@ __kernel void gridEvaluateEnergy(__global real2* restrict pmeGrid, __global mixe
             energy += eterm*(grid.x*grid.x + grid.y*grid.y);
         }
     }
+#ifdef USE_PME_STREAM
     energyBuffer[get_global_id(0)] = 0.5f*energy;
+#else
+    energyBuffer[get_global_id(0)] += 0.5f*energy;
+#endif
 }
 
 __kernel void gridInterpolateForce(__global const real4* restrict posq, __global real4* restrict forceBuffers, __global const real* restrict pmeGrid,
         real4 periodicBoxSize, real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ, __global int2* restrict pmeAtomGridIndex) {
-    const real4 scale = 1/(real) (PME_ORDER-1);
+    const real scale = 1/(real) (PME_ORDER-1);
     real4 data[PME_ORDER];
     real4 ddata[PME_ORDER];
     
@@ -403,7 +407,7 @@ __kernel void gridInterpolateForce(__global const real4* restrict posq, __global
             data[j-1] = div*dr*data[j-2];
             for (int k = 1; k < (j-1); k++)
                 data[j-k-1] = div*((dr+(real4) k) *data[j-k-2] + (-dr+(real4) (j-k))*data[j-k-1]);
-            data[0] = div*(- dr+1.0f)*data[0];
+            data[0] = div*(-dr+1.0f)*data[0];
         }
         ddata[0] = -data[0];
         for (int j = 1; j < PME_ORDER; j++)

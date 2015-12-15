@@ -1,5 +1,5 @@
-#ifndef OPENMM_KERNEL_H_
-#define OPENMM_KERNEL_H_
+#ifndef OPENMM_CUSTOMCENTROIDBONDFORCE_PROXY_H_
+#define OPENMM_CUSTOMCENTROIDBONDFORCE_PROXY_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2015 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,71 +32,22 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "KernelImpl.h"
 #include "openmm/internal/windowsExport.h"
+#include "openmm/serialization/SerializationProxy.h"
 
 namespace OpenMM {
 
 /**
- * A Kernel encapsulates a particular implementation of a calculation that can be performed on the data
- * in a Context.  Kernel objects are created by Platforms:
- *
- * <pre>
- * Kernel kernel = platform.createKernel(kernelName);
- * </pre>
- *
- * The Kernel class itself does not specify any details of what calculation is to be performed or the API
- * for calling it.  Instead, subclasses of KernelImpl will define APIs which are appropriate to particular
- * calculations.  To execute a Kernel, you therefore request its implementation object and cast it to the
- * correct type:
- *
- * <pre>
- * dynamic_cast<AddStreamsImpl&>(kernel.getImpl()).execute(stream1, stream2);
- * </pre>
+ * This is a proxy for serializing CustomCentroidBondForce objects.
  */
 
-class OPENMM_EXPORT Kernel {
+class OPENMM_EXPORT CustomCentroidBondForceProxy : public SerializationProxy {
 public:
-    Kernel();
-    Kernel(const Kernel& copy);
-    /**
-     * Create a Kernel that wraps a KernelImpl.
-     *
-     * @param KernelImpl the KernelImpl to wrap
-     */
-    Kernel(KernelImpl* impl);
-    ~Kernel();
-    Kernel& operator=(const Kernel& copy);
-    /**
-     * Get the name of this Kernel.
-     */
-    std::string getName() const;
-    /**
-     * Get the object which implements this Kernel.
-     */
-    const KernelImpl& getImpl() const;
-    /**
-     * Get the object which implements this Kernel.
-     */
-    KernelImpl& getImpl();
-    /**
-     * Get a reference to the object which implements this Kernel, casting it to the specified type.
-     */
-    template <class T>
-    const T& getAs() const {
-        return dynamic_cast<T&>(*impl);
-    }
-    /**
-     * Get a reference to the object which implements this Kernel, casting it to the specified type.
-     */
-    template <class T>
-    T& getAs() {
-        return dynamic_cast<T&>(*impl);
-    }
-private:
-    KernelImpl* impl;
+    CustomCentroidBondForceProxy();
+    void serialize(const void* object, SerializationNode& node) const;
+    void* deserialize(const SerializationNode& node) const;
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_KERNEL_H_*/
+#endif /*OPENMM_CUSTOMCENTROIDBONDFORCE_PROXY_H_*/
