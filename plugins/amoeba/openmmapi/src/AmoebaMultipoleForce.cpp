@@ -61,6 +61,19 @@ void AmoebaMultipoleForce::setPolarizationType(AmoebaMultipoleForce::Polarizatio
     polarizationType = type;
 }
 
+void AmoebaMultipoleForce::setOPTCoefficients(const std::vector<double> &OPTFullCoefficientsIn)
+{
+    size_t maxPTOrder = OPTFullCoefficientsIn.size();
+    OPTFullCoefficients.resize(maxPTOrder);
+    std::copy(OPTFullCoefficientsIn.begin(), OPTFullCoefficientsIn.end(), OPTFullCoefficients.begin());
+}
+
+const std::vector<double> & AmoebaMultipoleForce::getOPTCoefficients() const
+{
+    return OPTFullCoefficients;
+}
+
+
 double AmoebaMultipoleForce::getCutoffDistance() const {
     return cutoffDistance;
 }

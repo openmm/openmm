@@ -345,11 +345,16 @@ public:
          */
         Mutual = 0,
 
-        /** 
+        /**
          * Direct polarization
          */
-        Direct = 1 
-    };  
+        Direct = 1,
+
+        /**
+         * Optimized perturbation theory
+         */
+        OPT = 2
+    };
 
     /**
      * Constructor
@@ -421,6 +426,15 @@ public:
      *
      */
     RealOpenMM getMutualInducedDipoleEpsilon() const;
+
+    /**
+     * Set the coefficients for the µ_0, µ_1, µ_2, µ_n terms in the pertubation
+     * theory algorithm for induced dipoles
+     *
+     * @param optCoefficients a vector whose mth entry specifies the coefficient for µ_m
+     *
+     */
+    void setOPTCoefficients(const std::vector<RealOpenMM> &OPTFullCoefficients);
 
     /**
      * Set the target epsilon for converging mutual induced dipoles.
@@ -628,6 +642,7 @@ protected:
             std::vector<OpenMM::RealVec>* fixedMultipoleField;
             std::vector<OpenMM::RealVec>* inducedDipoles;
             std::vector<OpenMM::RealVec> inducedDipoleField;
+            std::vector<std::vector<RealOpenMM> > inducedDipoleFieldGradient;
     };
 
     unsigned int _numParticles;
@@ -651,10 +666,19 @@ protected:
     std::vector<RealVec> _fixedMultipoleFieldPolar;
     std::vector<RealVec> _inducedDipole;
     std::vector<RealVec> _inducedDipolePolar;
+    std::vector< std::vector<RealVec> > _ptDipoleP;
+    std::vector< std::vector<RealVec> > _ptDipoleD;
+    std::vector<std::vector<RealOpenMM> > _ptDipoleFieldGradientP;
+    std::vector<std::vector<RealOpenMM> > _ptDipoleFieldGradientD;
+
+
 
     int _mutualInducedDipoleConverged;
     int _mutualInducedDipoleIterations;
     int _maximumMutualInducedDipoleIterations;
+    int _maxPTOrder;
+    std::vector<RealOpenMM>  _OPTFullCoefficients;
+    std::vector<RealOpenMM>  _OPTPartCoefficients;
     RealOpenMM  _mutualInducedDipoleEpsilon;
     RealOpenMM  _mutualInducedDipoleTargetEpsilon;
     RealOpenMM  _polarSOR;
@@ -904,7 +928,7 @@ protected:
 
     /**
      * Calculate fields due induced dipoles at each site.
-     * 
+     *
      * @param particleI                 positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle I
      * @param particleJ                 positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle J
      * @param updateInducedDipoleFields vector of UpdateInducedDipoleFieldStruct containing input induced dipoles and output fields
@@ -920,6 +944,14 @@ protected:
      */
     virtual void calculateInducedDipoleFields(const std::vector<MultipoleParticleData>& particleData,
                                               std::vector<UpdateInducedDipoleFieldStruct>& updateInducedDipoleFields);
+    /**
+     * Calculated induced dipoles using Optimized Perturbation Theory.
+     *
+     * @param particleData              vector of particle positions and parameters (charge, labFrame dipoles, quadrupoles, ...)
+     * @param updateInducedDipoleFields vector of UpdateInducedDipoleFieldStruct containing input induced dipoles and output fields
+     */
+    void convergeInduceDipolesByOPT(const std::vector<MultipoleParticleData>& particleData,
+                                    std::vector<UpdateInducedDipoleFieldStruct>& calculateInducedDipoleField);
     /**
      * Converge induced dipoles.
      * 
