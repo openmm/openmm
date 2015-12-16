@@ -123,7 +123,7 @@ class PdbStructure(object):
     """
 
 
-    def __init__(self, input_stream, load_all_models=False):
+    def __init__(self, input_stream, load_all_models=False, extraParticleIdentifier='EP'):
         """Create a PDB model from a PDB file stream.
 
         Parameters
@@ -138,6 +138,7 @@ class PdbStructure(object):
         """
         # initialize models
         self.load_all_models = load_all_models
+        self.extraParticleIdentifier = extraParticleIdentifier
         self.models = []
         self._current_model = None
         self.default_model = None
@@ -157,7 +158,7 @@ class PdbStructure(object):
                 pdb_line = pdb_line.decode('utf-8')
             # Look for atoms
             if (pdb_line.find("ATOM  ") == 0) or (pdb_line.find("HETATM") == 0):
-                self._add_atom(Atom(pdb_line, self))
+                self._add_atom(Atom(pdb_line, self, self.extraParticleIdentifier))
             # Notice MODEL punctuation, for the next level of detail
             # in the structure->model->chain->residue->atom->position hierarchy
             elif (pdb_line.find("MODEL") == 0):
@@ -682,7 +683,7 @@ class Residue(object):
 class Atom(object):
     """Atom represents one atom in a PDB structure.
     """
-    def __init__(self, pdb_line, pdbstructure=None):
+    def __init__(self, pdb_line, pdbstructure=None, extraParticleIdentifier='EP'):
         """Create a new pdb.Atom from an ATOM or HETATM line.
 
         Example line:
@@ -795,11 +796,14 @@ class Atom(object):
         try: self.formal_charge = int(pdb_line[78:80])
         except ValueError: self.formal_charge = None
         # figure out atom element
-        try:
-            # Try to find a sensible element symbol from columns 76-77
-            self.element = element.get_by_symbol(self.element_symbol)
-        except KeyError:
-            self.element = None
+        if self.element_symbol == extraParticleIdentifier:
+            self.element = self.element_symbol
+        else:
+            try:
+                # Try to find a sensible element symbol from columns 76-77
+                self.element = element.get_by_symbol(self.element_symbol)
+            except KeyError:    
+                self.element = None
         if pdbstructure is not None:
             pdbstructure._next_atom_number = self.serial_number+1
             pdbstructure._next_residue_number = self.residue_number+1

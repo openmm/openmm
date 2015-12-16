@@ -59,7 +59,7 @@ class PDBFile(object):
     _residueNameReplacements = {}
     _atomNameReplacements = {}
 
-    def __init__(self, file):
+    def __init__(self, file, extraParticleIdentifier='EP'):
         """Load a PDB file.
 
         The atom positions and Topology can be retrieved by calling getPositions() and getTopology().
@@ -83,7 +83,7 @@ class PDBFile(object):
             if isinstance(file, str):
                 inputfile = open(file)
                 own_handle = True
-            pdb = PdbStructure(inputfile, load_all_models=True)
+            pdb = PdbStructure(inputfile, load_all_models=True, extraParticleIdentifier=extraParticleIdentifier)
             if own_handle:
                 inputfile.close()
         PDBFile._loadNameReplacementTables()
@@ -108,7 +108,9 @@ class PDBFile(object):
                         atomName = atomReplacements[atomName]
                     atomName = atomName.strip()
                     element = atom.element
-                    if element is None:
+                    if element == extraParticleIdentifier:
+                        element = None
+                    elif element is None:
                         # Try to guess the element.
 
                         upper = atomName.upper()
@@ -132,7 +134,7 @@ class PDBFile(object):
                             try:
                                 element = elem.get_by_symbol(atomName[0])
                             except KeyError:
-                                pass
+                                pass            
                     newAtom = top.addAtom(atomName, element, r, str(atom.serial_number))
                     atomByNumber[atom.serial_number] = newAtom
         self._positions = []
@@ -237,7 +239,7 @@ class PDBFile(object):
                 map[atom.attrib[id]] = name
 
     @staticmethod
-    def writeFile(topology, positions, file=sys.stdout, keepIds=False):
+    def writeFile(topology, positions, file=sys.stdout, keepIds=False, extraParticleIdentifier='EP'):
         """Write a PDB file containing a single model.
 
         Parameters
@@ -255,7 +257,7 @@ class PDBFile(object):
             PDB format.  Otherwise, the output file will be invalid.
         """
         PDBFile.writeHeader(topology, file)
-        PDBFile.writeModel(topology, positions, file, keepIds=keepIds)
+        PDBFile.writeModel(topology, positions, file, keepIds=keepIds, extraParticleIdentifier=extraParticleIdentifier)
         PDBFile.writeFooter(topology, file)
 
     @staticmethod
@@ -278,7 +280,7 @@ class PDBFile(object):
                     a*10, b*10, c*10, alpha*RAD_TO_DEG, beta*RAD_TO_DEG, gamma*RAD_TO_DEG), file=file)
 
     @staticmethod
-    def writeModel(topology, positions, file=sys.stdout, modelIndex=None, keepIds=False):
+    def writeModel(topology, positions, file=sys.stdout, modelIndex=None, keepIds=False, extraParticleIdentifier='EP'):
         """Write out a model to a PDB file.
 
         Parameters
@@ -327,7 +329,7 @@ class PDBFile(object):
                 else:
                     resId = "%4d" % ((resIndex+1)%10000)
                 for atom in res.atoms():
-                    if len(atom.name) < 4 and atom.name[:1].isalpha() and (atom.element is None or len(atom.element.symbol) < 2):
+                    if len(atom.name) < 4 and atom.name[:1].isalpha() and ((atom.element is None and extraParticleIdentifier is not None) or len(atom.element.symbol) < 2):
                         atomName = ' '+atom.name
                     elif len(atom.name) > 4:
                         atomName = atom.name[:4]
@@ -337,7 +339,7 @@ class PDBFile(object):
                     if atom.element is not None:
                         symbol = atom.element.symbol
                     else:
-                        symbol = ' '
+                        symbol = extraParticleIdentifier
                     line = "ATOM  %5d %-4s %3s %s%4s    %s%s%s  1.00  0.00          %2s  " % (
                         atomIndex%100000, atomName, resName, chainName, resId, _format_83(coords[0]),
                         _format_83(coords[1]), _format_83(coords[2]), symbol)
