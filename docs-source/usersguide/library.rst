@@ -154,9 +154,9 @@ OpenMM is based on a layered architecture, as shown in the following diagram:
 .. figure:: ../images/ArchitectureLayers.jpg
    :align: center
    :width: 100%
-   
+
    :autonumber:`Figure,OpenMM architecture`:  OpenMM architecture
-   
+
 At the highest level is the OpenMM public API.  This is the API developers
 program against when using OpenMM within their own applications.  It is designed
 to be simple, easy to understand, and completely platform independent.  This is
@@ -240,7 +240,7 @@ simulation might look like:
     HarmonicAngleForce* angles = new HarmonicAngleForce();
     system.addForce(angles);
     for (int i = 0; i < numAngles; ++i)
-        angles->addAngle(angle[i].particle1, angle[i].particle2, 
+        angles->addAngle(angle[i].particle1, angle[i].particle2,
             angle[i].particle3, angle[i].angle, angle[i].k);
     // ...create and initialize other force field terms in the same way
     LangevinIntegrator integrator(temperature, friction, stepSize);
@@ -506,7 +506,7 @@ Mac and Linux
 
 On Mac and Linux machines, type the following two lines:
 ::
-    
+
     cd build_openmm
     ccmake -i <path to OpenMM src directory>
 
@@ -623,7 +623,7 @@ If you are installing to a system area, such as /usr/local/openmm/, you will
 need to type:
 ::
 
-    sudo make install 
+    sudo make install
 
 Step 5: Install the Python API
 ******************************
@@ -646,7 +646,7 @@ If you are installing into the system Python, such as /usr/bin/python, you will
 need to type:
 ::
 
-    sudo make PythonInstall 
+    sudo make PythonInstall
 
 .. _test-your-build:
 
@@ -668,7 +668,7 @@ Mac and Linux
 
 Type:
 ::
-    
+
     make test
 
 You should see a series of test results like this:
@@ -688,12 +688,69 @@ some tests are stochastic, and therefore are expected to fail a small fraction
 of the time.  These tests will say so in the error message:
 ::
 
-    ./TestReferenceLangevinIntegrator 
-    
+    ./TestReferenceLangevinIntegrator
+
     exception: Assertion failure at TestReferenceLangevinIntegrator.cpp:129.  Expected 9.97741,
         found 10.7884 (This test is stochastic and may occasionally fail)
 
 Congratulations! You successfully have built and installed OpenMM from source.
+
+Building the Documentation (Optional)
+*************************************
+
+The documentation that you're currently reading, as well as the developer guide and API
+documentation can be built through CMake as well.
+
+User Guide and Developer Guide
+==============================
+
+Generating the user guide and developer guide requires the following dependencies
+
+* Sphinx (http://sphinx-doc.org/)
+
+* sphinxcontrib-bibtex (https://pypi.python.org/pypi/sphinxcontrib-bibtex)
+
+These dependencies may not be available in your system package manager, but should
+be installable through Python's ``pip`` package manager. ::
+
+   pip install sphinx sphinxcontrib-bibtex
+
+The developer and user guides can be built either as HTML or a PDFs. Building the
+PDF version will also require a functional LaTeX installation.
+
+To build the HTML version of the documentation, type: ::
+
+  make sphinxhtml
+
+To build the PDF version of the documentation, type: ::
+
+  make sphinxpdf
+
+
+Python and C++ API Documentation
+================================
+
+The following dependencies are required to build the Python and C++ API documentation.
+
+* Sphinx (http://sphinx-doc.org/)
+
+* sphinxcontrib-lunrsearch (https://pypi.python.org/pypi/sphinxcontrib-lunrsearch)
+
+* sphinxcontrib-autodoc_doxygen (https://pypi.python.org/pypi/sphinxcontrib-autodoc_doxygen)
+
+
+These dependencies may not be available in your system package manager, but should
+be installable through Python's ``pip`` package manager. ::
+
+   pip install sphinx sphinxcontrib-lunrsearch sphinxcontrib-autodoc_doxygen
+
+To build the C++ API documentation, type: ::
+
+  make C++ApiDocs
+
+To build the Python API documentation, type: ::
+
+  make PythonApiDocs
 
 
 .. _openmm-tutorials:
@@ -734,12 +791,12 @@ HelloArgon and HelloSodiumChloride also serve as examples of how to do these map
 sections below describe the HelloArgon, HelloSodiumChloride, and HelloEthane programs in more detail.
 
 ===============  ==============  ==========  ========  ========================================  ===============
-Example          Solvent         Thermostat  Boundary  Forces & Constraints                      API            
+Example          Solvent         Thermostat  Boundary  Forces & Constraints                      API
 ===============  ==============  ==========  ========  ========================================  ===============
 Argon            Vacuum          None        None      Non-bonded\*                              C++, C, Fortran
 Sodium Chloride  Implicit water  Langevin    None      Non-bonded\*                              C++, C, Fortran
-Ethane           Vacuum          None        None      Non-bonded\*, stretch, bend, torsion      C++            
-Water Box        Explicit water  Andersen    Periodic  Non-bonded\*, stretch, bend, constraints  C++            
+Ethane           Vacuum          None        None      Non-bonded\*, stretch, bend, torsion      C++
+Water Box        Explicit water  Andersen    Periodic  Non-bonded\*, stretch, bend, constraints  C++
 ===============  ==============  ==========  ========  ========================================  ===============
 
 \*van der Waals and Coulomb forces
@@ -774,7 +831,7 @@ debug binaries.
 .. figure:: ../images/VisualStudioSetConfiguration.jpg
    :align: center
    :width: 100%
-   
+
    :autonumber:`Figure,Visual Studio configuration`:  Setting "Solution Configuration" to "Release" mode in Visual Studio
 
 
@@ -789,7 +846,7 @@ previously been compiled.
 .. figure:: ../images/VisualStudioLaunch.jpg
    :align: center
    :width: 100%
-   
+
    :autonumber:`Figure,run in Visual Studio`:  Run a program in Visual Studio
 
 You should see a series of lines like the following output on your screen:
@@ -801,9 +858,9 @@ You should see a series of lines like the following output on your screen:
     ATOM      2  AR   AR     1       5.000   0.000   0.000  1.00  0.00
     ATOM      3  AR   AR     1       10.000  0.000   0.000  1.00  0.00
     ENDMDL
-    
+
     …
-    
+
     MODEL     250
     ATOM      1  AR   AR     1       0.233   0.000   0.000  1.00  0.00
     ATOM      2  AR   AR     1       5.068   0.000   0.000  1.00  0.00
@@ -819,7 +876,7 @@ You should see a series of lines like the following output on your screen:
     ATOM      2  AR   AR     1       5.097   0.000   0.000  1.00  0.00
     ATOM      3  AR   AR     1       9.717   0.000   0.000  1.00  0.00
     ENDMDL
-    
+
 
 Determining the platform being used
 -----------------------------------
@@ -880,20 +937,20 @@ Type:::
 Then run the program by typing:
 ::
 
-    ./HelloArgon 
+    ./HelloArgon
 
 You should see a series of lines like the following output on your screen:
 ::
-    
+
     REMARK  Using OpenMM platform Reference
     MODEL     1
     ATOM      1  AR   AR     1       0.000   0.000   0.000  1.00  0.00
     ATOM      2  AR   AR     1       5.000   0.000   0.000  1.00  0.00
     ATOM      3  AR   AR     1       10.000  0.000   0.000  1.00  0.00
     ENDMDL
-    
+
     ...
-    
+
     MODEL     250
     ATOM      1  AR   AR     1       0.233   0.000   0.000  1.00  0.00
     ATOM      2  AR   AR     1       5.068   0.000   0.000  1.00  0.00
@@ -967,7 +1024,7 @@ The OpenMM header file *OpenMM.h* instructs the program to include
 everything defined by the OpenMM libraries.  Include the header file by adding
 the following line at the top of your program:  ::
 
-    
+
     #include "OpenMM.h"
 
 Running a program on GPU platforms
@@ -1002,7 +1059,7 @@ simulation.  The main components of the simulation are within the function
 
         // Create a system with nonbonded forces.
         OpenMM::System system;
-        OpenMM::NonbondedForce* nonbond = new OpenMM::NonbondedForce(); 
+        OpenMM::NonbondedForce* nonbond = new OpenMM::NonbondedForce();
         system.addForce(nonbond);
 
    We then add the three argon atoms to the system.  For this system, all the data
@@ -1014,7 +1071,7 @@ simulation.  The main components of the simulation are within the function
 
         // Create three atoms.
         std::vector<OpenMM::Vec3> initPosInNm(3);
-        for (int a = 0; a < 3; ++a) 
+        for (int a = 0; a < 3; ++a)
         {
             initPosInNm[a] = OpenMM::Vec3(0.5*a,0,0); // location, nm
 
@@ -1113,7 +1170,7 @@ simulation.  The main components of the simulation are within the function
 
          if (timeInPs >= 10.)
              break;
-        
+
          // Advance state many steps at a time, for efficient use of OpenMM.
          integrator.step(10); // (use a lot more than this normally)
 
@@ -1128,7 +1185,7 @@ to ensure you do catch the exception.
 
 .. code-block:: c
 
-    int main() 
+    int main()
     {
         try {
             simulateArgon();
@@ -1152,12 +1209,12 @@ converts them to Angstroms (10\ :sup:`-10` m) to be compatible with the PDB
 format.   Again, we emphasize how important it is to track the units being used!
 
 .. code-block:: c
-    
-    void writePdbFrame(int frameNum, const OpenMM::State& state) 
+
+    void writePdbFrame(int frameNum, const OpenMM::State& state)
     {
         // Reference atomic positions in the OpenMM State.
         const std::vector<OpenMM::Vec3>& posInNm = state.getPositions();
-    
+
         // Use PDB MODEL cards to number trajectory frames
         printf("MODEL     %d\n", frameNum); // start of frame
         for (int a = 0; a < (int)posInNm.size(); ++a)
@@ -1238,7 +1295,7 @@ MD code, and will be used to demonstrate how to integrate OpenMM with an
 existing MD program.
 
 .. code-block:: c
-    
+
     // -----------------------------------------------------------------
     //                   MODELING AND SIMULATION PARAMETERS
     // -----------------------------------------------------------------
@@ -1246,25 +1303,25 @@ existing MD program.
     static const double FrictionInPerPs     = 91.;     // collisions per picosecond
     static const double SolventDielectric   = 80.;     // typical for water
     static const double SoluteDielectric    = 2.;      // typical for protein
-    
+
     static const double StepSizeInFs        = 2;       // integration step size (fs)
     static const double ReportIntervalInFs  = 50;      // how often to issue PDB frame (fs)
     static const double SimulationTimeInPs  = 100;     // total simulation time (ps)
-    
+
     // Decide whether to request energy calculations.
     static const bool   WantEnergy          = true;
-    
-    
+
+
     // -----------------------------------------------------------------
     //                          ATOM AND FORCE FIELD DATA
     // -----------------------------------------------------------------
-    // This is not part of OpenMM; just a struct we can use to collect atom 
-    // parameters for this example. Normally atom parameters would come from the 
-    // force field's parameterization file. We're going to use data in Angstrom and 
-    // Kilocalorie units and show how to safely convert to OpenMM's internal unit 
+    // This is not part of OpenMM; just a struct we can use to collect atom
+    // parameters for this example. Normally atom parameters would come from the
+    // force field's parameterization file. We're going to use data in Angstrom and
+    // Kilocalorie units and show how to safely convert to OpenMM's internal unit
     // system which uses nanometers and kilojoules.
-    static struct MyAtomInfo { 
-        const char* pdb; 
+    static struct MyAtomInfo {
+        const char* pdb;
         double      mass, charge, vdwRadiusInAng, vdwEnergyInKcal,
                     gbsaRadiusInAng, gbsaScaleFactor;
         double      initPosInAng[3];
@@ -1279,7 +1336,7 @@ existing MD program.
     {" CL ", 35.45, -1,    2.4700, 0.1000,     1.735,   0.8,     0, 0, 10},
     {""} // end of list
     };
-    
+
 
 Interface routines
 ==================
@@ -1325,34 +1382,34 @@ to change the build environment.
                                             double frictionInPs,
                                             double solventDielectric,
                                             double soluteDielectric,
-                                            double stepSizeInFs, 
+                                            double stepSizeInFs,
                                             std::string& platformName);
     static void          myStepWithOpenMM(MyOpenMMData*, int numSteps);
     static void          myGetOpenMMState(MyOpenMMData*,
                                           bool wantEnergy,
                                           double& time,
-                                          double& energy, 
+                                          double& energy,
                                           MyAtomInfo atoms[]);
     static void          myTerminateOpenMM(MyOpenMMData*);
-    
-    
+
+
     // -----------------------------------------------------------------
     //                                MAIN PROGRAM
     // -----------------------------------------------------------------
     int main() {
         const int NumReports     = (int)(SimulationTimeInPs*1000 / ReportIntervalInFs + 0.5);
         const int NumSilentSteps = (int)(ReportIntervalInFs / StepSizeInFs + 0.5);
-    
+
         // ALWAYS enclose all OpenMM calls with a try/catch block to make sure that
         // usage and runtime errors are caught and reported.
         try {
             double        time, energy;
             std::string   platformName;
-    
+
             // Set up OpenMM data structures; returns OpenMM Platform name.
             MyOpenMMData* omm = myInitializeOpenMM(atoms, Temperature, FrictionInPerPs,
                  SolventDielectric, SoluteDielectric, StepSizeInFs, platformName);
-    
+
             // Run the simulation:
             //  (1) Write the first line of the PDB file and the initial configuration.
             //  (2) Run silently entirely within OpenMM between reporting intervals.
@@ -1360,26 +1417,26 @@ to change the build environment.
             printf("REMARK  Using OpenMM platform %s\n", platformName.c_str());
             myGetOpenMMState(omm, WantEnergy, time, energy, atoms);
             myWritePDBFrame(1, time, energy, atoms);
-    
+
             for (int frame=2; frame <= NumReports; ++frame) {
                 myStepWithOpenMM(omm, NumSilentSteps);
                 myGetOpenMMState(omm, WantEnergy, time, energy, atoms);
                 myWritePDBFrame(frame, time, energy, atoms);
-            } 
-     
+            }
+
             // Clean up OpenMM data structures.
             myTerminateOpenMM(omm);
-    
+
             return 0; // Normal return from main.
         }
-    
+
         // Catch and report usage and runtime errors detected by OpenMM and fail.
         catch(const std::exception& e) {
             printf("EXCEPTION: %s\n", e.what());
             return 1;
         }
     }
-    
+
 We will examine the implementation of each of the four interface routines and
 the opaque data structure (handle) in the sections below.
 
@@ -1461,7 +1518,7 @@ there would be no change in the main program using the handle.
         OpenMM::Context*        context;
         OpenMM::Integrator*     integrator;
     };
-    
+
 In addition to establishing pointers to the required three OpenMM objects,
 :code:`MyOpenMMData` has a constructor :code:`MyOpenMMData()` that sets
 the pointers for the three OpenMM objects to zero and a destructor
@@ -1480,16 +1537,16 @@ OpenCL, Reference) was used.
 
 .. code-block:: c
 
-    static MyOpenMMData* 
+    static MyOpenMMData*
     myInitializeOpenMM( const MyAtomInfo    atoms[],
                         double              temperature,
                         double              frictionInPs,
                         double              solventDielectric,
                         double              soluteDielectric,
-                        double              stepSizeInFs, 
-                        std::string&        platformName) 
-    
-    
+                        double              stepSizeInFs,
+                        std::string&        platformName)
+
+
 This initialization routine is very similar to the HelloArgon example program,
 except that objects are created and put in the handle.  For instance, just as in
 the HelloArgon program, the first step is to load the OpenMM plug-ins, so that
@@ -1498,14 +1555,14 @@ a System is created **and** assigned to the handle :code:`omm`\ .
 Similarly, forces are added to the System which is already in the handle.
 
 .. code-block:: c
-    
+
     // Load all available OpenMM plugins from their default location.
     OpenMM::Platform::loadPluginsFromDirectory
            (OpenMM::Platform::getDefaultPluginsDirectory());
-    
+
     // Allocate space to hold OpenMM objects while we're using them.
     MyOpenMMData* omm = new MyOpenMMData();
-    
+
     // Create a System and Force objects within the System. Retain a reference
     // to each force object so we can fill in the forces. Note: the OpenMM
     // System takes ownership of the force objects;don't delete them yourself.
@@ -1514,12 +1571,12 @@ Similarly, forces are added to the System which is already in the handle.
     OpenMM::GBSAOBCForce*   gbsa    = new OpenMM::GBSAOBCForce();
     omm->system->addForce(nonbond);
     omm->system->addForce(gbsa);
-    
+
     // Specify dielectrics for GBSA implicit solvation.
     gbsa->setSolventDielectric(solventDielectric);
     gbsa->setSoluteDielectric(soluteDielectric);
-    
-    
+
+
 In the next step, atoms are added to the System within the handle, with
 information about each atom coming from the data structure that was passed into
 the initialization function from the existing MD code.  As shown in the
@@ -1529,7 +1586,7 @@ atoms.  For those unfamiliar with the C++ Standard Template Library, the
 the given argument to the end of a C++ “vector” container.
 
 .. code-block:: c
-    
+
     // Specify the atoms and their properties:
     //  (1) System needs to know the masses.
     //  (2) NonbondedForce needs charges,van der Waals properties(in MD units!).
@@ -1538,24 +1595,24 @@ the given argument to the end of a C++ “vector” container.
     std::vector<Vec3> initialPosInNm;
     for (int n=0; *atoms[n].pdb; ++n) {
          const MyAtomInfo& atom = atoms[n];
-    
+
          omm->system->addParticle(atom.mass);
-    
+
          nonbond->addParticle(atom.charge,
-                             atom.vdwRadiusInAng * OpenMM::NmPerAngstrom 
+                             atom.vdwRadiusInAng * OpenMM::NmPerAngstrom
                                                  * OpenMM::SigmaPerVdwRadius,
                              atom.vdwEnergyInKcal * OpenMM::KJPerKcal);
-    
-         gbsa->addParticle(atom.charge, 
+
+         gbsa->addParticle(atom.charge,
                            atom.gbsaRadiusInAng * OpenMM::NmPerAngstrom,
                            atom.gbsaScaleFactor);
-    
+
          // Convert the initial position to nm and append to the array.
          const Vec3 posInNm(atom.initPosInAng[0] * OpenMM::NmPerAngstrom,
                       atom.initPosInAng[1] * OpenMM::NmPerAngstrom,
                       atom.initPosInAng[2] * OpenMM::NmPerAngstrom);
          initialPosInNm.push_back(posInNm);
-        
+
 
 **Units:**  Here we emphasize the need to pay special attention to the
 units.   As mentioned earlier, the existing MD code in this example uses units
@@ -1575,21 +1632,21 @@ then gets the platform that will be used to run the simulation and returns that,
 along with the handle :code:`omm`\ , back to the calling function.
 
 .. code-block:: c
-    
+
     // Choose an Integrator for advancing time, and a Context connecting the
     // System with the Integrator for simulation. Let the Context choose the
     // best available Platform. Initialize the configuration from the default
     // positions we collected above. Initial velocities will be zero but could
     // have been set here.
-    omm->integrator = new OpenMM::LangevinIntegrator(temperature, 
-    frictionInPs, 
+    omm->integrator = new OpenMM::LangevinIntegrator(temperature,
+    frictionInPs,
     stepSizeInFs * OpenMM::PsPerFs);
     omm->context    = new OpenMM::Context(*omm->system, *omm->integrator);
     omm->context->setPositions(initialPosInNm);
-    
+
     platformName = omm->context->getPlatform().getName();
     return omm;
-    
+
 
 myGetOpenMMState
 ----------------
@@ -1601,7 +1658,7 @@ use them without modification.
 .. code-block:: c
 
     static void
-    myGetOpenMMState(MyOpenMMData* omm, bool wantEnergy, 
+    myGetOpenMMState(MyOpenMMData* omm, bool wantEnergy,
                      double& timeInPs, double& energyInKcal, MyAtomInfo atoms[])
 
 Again, this is another interface routine in which you need to be very careful of
@@ -1617,19 +1674,19 @@ the existing MD code.
        infoMask += OpenMM::State::Energy;     // for pot. energy (more expensive)
     }
     // Forces are also available (and cheap).
-    
+
     const OpenMM::State state = omm->context->getState(infoMask);
     timeInPs = state.getTime(); // OpenMM time is in ps already
-    
+
     // Copy OpenMM positions into atoms array and change units from nm to Angstroms.
     const std::vector<Vec3>& positionsInNm = state.getPositions();
     for (int i=0; i < (int)positionsInNm.size(); ++i)
         for (int j=0; j < 3; ++j)
              atoms[i].posInAng[j] = positionsInNm[i][j] * OpenMM::AngstromsPerNm;
-    
+
     // If energy has been requested, obtain it and convert from kJ to kcal.
     energyInKcal = 0;
-    if (wantEnergy) 
+    if (wantEnergy)
        energyInKcal = (state.getPotentialEnergy() + state.getKineticEnergy())
                       * OpenMM::KcalPerKJ;
 
@@ -1641,8 +1698,8 @@ Integrator, and then sets the number of steps for the Integrator to take.  It
 does not return any values.
 
 .. code-block:: c
-    
-    static void 
+
+    static void
     myStepWithOpenMM(MyOpenMMData* omm, int numSteps) {
         omm->integrator->step(numSteps);
     }
@@ -1654,12 +1711,12 @@ The :code:`myTerminateOpenMM` routine takes the handle and deletes all the
 components, e.g., the Context and System, cleaning up the heap space.
 
 .. code-block:: c
-    
-    static void 
+
+    static void
     myTerminateOpenMM(MyOpenMMData* omm) {
         delete omm;
     }
-    
+
 
 HelloEthane Program
 *******************
@@ -1694,7 +1751,7 @@ routine, we also set up the bonds.  If constraints are being used, then we tell
 the System about the constrainable bonds:
 
 .. code-block:: c
-    
+
     std::vector< std::pair<int,int> > bondPairs;
     for (int i=0; bonds[i].type != EndOfList; ++i) {
         const int*      atom = bonds[i].atoms;
@@ -1703,7 +1760,7 @@ the System about the constrainable bonds:
         if (UseConstraints && bond.canConstrain) {
             system.addConstraint(atom[0], atom[1],
                     bond.nominalLengthInAngstroms * OpenMM::NmPerAngstrom);
-        } 
+        }
 
 Otherwise, we need to give the HarmonicBondForce the bond stretch parameters.
 
@@ -1716,11 +1773,11 @@ of 2 must be introduced when setting the bond stretch parameters in an OpenMM
 system using data from an AMBER system.
 
 .. code-block:: c
-    
+
     bondStretch.addBond(atom[0], atom[1], bond.nominalLengthInAngstroms * OpenMM::NmPerAngstrom,
                         bond.stiffnessInKcalPerAngstrom2 * 2 * OpenMM::KJPerKcal *
                         OpenMM::AngstromsPerNm * OpenMM::AngstromsPerNm);
-            
+
 
 **Non-bond exclusions:** Next, we deal with non-bond exclusions. These are
 used for pairs of atoms that appear close to one another in the network of bonds
@@ -1729,9 +1786,9 @@ are reduced in magnitude.  First, we create a list of bonds to generate the non-
 bond exclusions:
 
 .. code-block:: c
-    
+
     bondPairs.push_back(std::make_pair(atom[0], atom[1]));
-    
+
 OpenMM’s non-bonded force provides a convenient routine for creating the common
 exceptions. These are: (1) for atoms connected by one bond (1-2) or connected by
 just one additional bond (1-3), Coulomb and van der Waals terms do not apply;
@@ -1741,28 +1798,28 @@ general, you may introduce additional exceptions, but the standard ones suffice
 here and in many other circumstances.
 
 .. code-block:: c
-    
+
     // Exclude 1-2, 1-3 bonded atoms from nonbonded forces, and scale down 1-4 bonded atoms.
     nonbond.createExceptionsFromBonds(bondPairs, Coulomb14Scale, LennardJones14Scale);
-    
+
     // Create the 1-2-3 bond angle harmonic terms.
     for (int i=0; angles[i].type != EndOfList; ++i) {
          const int*       atom  = angles[i].atoms;
          const AngleType& angle = angleType[angles[i].type];
-    
+
     // See note under bond stretch above regarding the factor of 2 here.
     bondBend.addAngle(atom[0],atom[1],atom[2],
     angle.nominalAngleInDegrees     * OpenMM::RadiansPerDegree,
-    angle.stiffnessInKcalPerRadian2 * 2 * 
+    angle.stiffnessInKcalPerRadian2 * 2 *
     OpenMM::KJPerKcal);
     }
-    
+
     // Create the 1-2-3-4 bond torsion (dihedral) terms.
     for (int i=0; torsions[i].type != EndOfList; ++i) {
          const int*         atom = torsions[i].atoms;
         const TorsionType& torsion = torsionType[torsions[i].type];
-        bondTorsion.addTorsion(atom[0],atom[1],atom[2],atom[3], 
-                torsion.periodicity, 
+        bondTorsion.addTorsion(atom[0],atom[1],atom[2],atom[3],
+                torsion.periodicity,
                 torsion.phaseInDegrees  * OpenMM::RadiansPerDegree,
                 torsion.amplitudeInKcal * OpenMM::KJPerKcal);
     }
@@ -2105,7 +2162,7 @@ OpenMM_DoubleArray
 
 .. code-block:: c
 
-    OpenMM_DoubleArray* 
+    OpenMM_DoubleArray*
                 OpenMM_DoubleArray_create(int size);
     void        OpenMM_DoubleArray_destroy(OpenMM_DoubleArray*);
     int         OpenMM_DoubleArray_getSize(const OpenMM_DoubleArray*);
@@ -2119,7 +2176,7 @@ OpenMM_StringArray
 
 .. code-block:: c
 
-    OpenMM_StringArray* 
+    OpenMM_StringArray*
                 OpenMM_StringArray_create(int size);
     void        OpenMM_StringArray_destroy(OpenMM_StringArray*);
     int         OpenMM_StringArray_getSize(const OpenMM_StringArray*);
@@ -2133,14 +2190,14 @@ OpenMM_Vec3Array
 
 .. code-block:: c
 
-    OpenMM_Vec3Array*  
+    OpenMM_Vec3Array*
                 OpenMM_Vec3Array_create(int size);
     void        OpenMM_Vec3Array_destroy(OpenMM_Vec3Array*);
     int         OpenMM_Vec3Array_getSize(const OpenMM_Vec3Array*);
     void        OpenMM_Vec3Array_resize(OpenMM_Vec3Array*, int size);
     void        OpenMM_Vec3Array_append(OpenMM_Vec3Array*, const OpenMM_Vec3 vec);
     void        OpenMM_Vec3Array_set(OpenMM_Vec3Array*, int index, const OpenMM_Vec3 vec);
-    const OpenMM_Vec3* 
+    const OpenMM_Vec3*
                 OpenMM_Vec3Array_get(const OpenMM_Vec3Array*, int index);
 
 OpenMM_BondArray
@@ -2152,14 +2209,14 @@ its functional return.
 
 .. code-block:: c
 
-    OpenMM_BondArray* 
+    OpenMM_BondArray*
                 OpenMM_BondArray_create(int size);
     void        OpenMM_BondArray_destroy(OpenMM_BondArray*);
     int         OpenMM_BondArray_getSize(const OpenMM_BondArray*);
     void        OpenMM_BondArray_resize(OpenMM_BondArray*, int size);
     void        OpenMM_BondArray_append(OpenMM_BondArray*, int particle1, int particle2);
     void        OpenMM_BondArray_set(OpenMM_BondArray*, int index, int particle1, int particle2);
-    void        OpenMM_BondArray_get(const OpenMM_BondArray*, int index, 
+    void        OpenMM_BondArray_get(const OpenMM_BondArray*, int index,
                                      int* particle1, int* particle2);
 
 OpenMM_ParameterArray
@@ -2538,7 +2595,7 @@ Note that if you are using the system Python (as opposed to a locally installed
 version), you may need to use the :code:`sudo` command when running
 :code:`python setup.py install`\ .
 ::
-    
+
     export OPENMM_INCLUDE_PATH=/usr/local/openmm/include
     export OPENMM_LIB_PATH=/usr/local/openmm/lib
     python setup.py build
@@ -2561,7 +2618,7 @@ notable differences:
    ::
 
     myContext.getState(getEnergy=True, getForce=False, …)
-    
+
 #. Wherever the C++ API uses references to return multiple values from a method,
    the Python API returns a tuple.  For example, in C++ you would query a
    HarmonicBondForce for a bond’s parameters as follows:
@@ -2570,7 +2627,7 @@ notable differences:
     int particle1, particle2;
     double length, k;
     f.getBondParameters(i, particle1, particle2, length, k);
-    
+
    In Python, the equivalent code is:
    ::
 
@@ -2612,7 +2669,7 @@ Creating and using OpenMM objects is then done exactly as in C++:
 Note that when setting the cutoff distance, we explicitly specify that it is in
 nanometers.  We could just as easily specify it in different units:
 ::
-    
+
     nb.setCutoffDistance(12*unit.angstrom)
 
 The use of units in OpenMM is discussed in the next section.
@@ -2741,7 +2798,7 @@ dimension.  For example, dividing a distance by a time results in a velocity.
     m = 0.36 * kilogram; # mass
     F = m * a; # force in kg*m/s**2::
 
-    
+
 Multiplication or division of two Units results in a composite Unit.
 ::
 
@@ -3115,7 +3172,7 @@ errors for that system.  Finally, the median of those values for all test
 systems was computed to give the value shown in the table.
 
 ====================================  ========================  ====================  ===================  =====================
-Force                                 OpenCL (single)           OpenCL (double)       CUDA (single)        CUDA (double)       
+Force                                 OpenCL (single)           OpenCL (double)       CUDA (single)        CUDA (double)
 ====================================  ========================  ====================  ===================  =====================
 Total Force                           2.53·10\ :sup:`-6`        1.44·10\ :sup:`-7`    2.56·10\ :sup:`-6`   8.78·10\ :sup:`-8`
 HarmonicBondForce                     2.88·10\ :sup:`-6`        1.57·10\ :sup:`-13`   2.88·10\ :sup:`-6`   1.57·10\ :sup:`-13`
@@ -3148,7 +3205,7 @@ precision that was used for calculations (see Chapter :ref:`platform-specific-pr
 
 .. figure:: ../images/EnergyDrift.png
    :align: center
-   
+
    :autonumber:`Figure,energy drift`: Total energy versus time for simulations run in three different
    precision modes.
 
@@ -3249,21 +3306,21 @@ All rotation axis types are supported: ‘Z-then-X’, ‘Bisector’, ‘Z-Bise
 
 
 =================================  ==================================  ======================================================================================================================================================================================
-TINKER Force                       OpenMM Force                        Option/Note                                                                                                                                                                           
+TINKER Force                       OpenMM Force                        Option/Note
 =================================  ==================================  ======================================================================================================================================================================================
-ebond1 (bondterm)                  AmoebaBondForce                     bndtyp='HARMONIC' supported, 'MORSE' not implemented                                                                                                                                  
-Eangle71 (angleterm)               AmoebaAngleForce                    angtyp='HARMONIC' and 'IN-PLANE' supported; 'LINEAR' and 'FOURIER' not implemented                                                                                                    
-etors1a (torsionterm)              PeriodicTorsionForce                All options implemented; smoothing version(etors1b) not supported                                                                                                                     
-etortor1 (tortorterm)              AmoebaTorsionTorsionForce           All options implemented                                                                                                                                                               
-eopbend1 (opbendterm)              AmoebaOutOfPlaneBendForce           opbtyp = 'ALLINGER' implemented; 'W-D-C' not implemented                                                                                                                              
-epitors1 (pitorsterm)              AmoebaPiTorsionForce                All options implemented                                                                                                                                                               
-estrbnd1 (strbndterm)              AmoebaStretchBendForce              All options implemented                                                                                                                                                               
-ehal1a (vdwterm)                   AmoebaVdwForce                      ehal1b(LIGHTS) not supported                                                                                                                                                          
-empole1a (mpoleterm)               AmoebaMultipoleForce                poltyp = 'MUTUAL', 'DIRECT'  supported                                                                                                                                                
-empole1c (mpoleterm) PME           AmoebaMultipoleForce                poltyp = 'MUTUAL', 'DIRECT' supported; boundary= 'VACUUM' unsupported                                                                                                                 
+ebond1 (bondterm)                  AmoebaBondForce                     bndtyp='HARMONIC' supported, 'MORSE' not implemented
+Eangle71 (angleterm)               AmoebaAngleForce                    angtyp='HARMONIC' and 'IN-PLANE' supported; 'LINEAR' and 'FOURIER' not implemented
+etors1a (torsionterm)              PeriodicTorsionForce                All options implemented; smoothing version(etors1b) not supported
+etortor1 (tortorterm)              AmoebaTorsionTorsionForce           All options implemented
+eopbend1 (opbendterm)              AmoebaOutOfPlaneBendForce           opbtyp = 'ALLINGER' implemented; 'W-D-C' not implemented
+epitors1 (pitorsterm)              AmoebaPiTorsionForce                All options implemented
+estrbnd1 (strbndterm)              AmoebaStretchBendForce              All options implemented
+ehal1a (vdwterm)                   AmoebaVdwForce                      ehal1b(LIGHTS) not supported
+empole1a (mpoleterm)               AmoebaMultipoleForce                poltyp = 'MUTUAL', 'DIRECT'  supported
+empole1c (mpoleterm) PME           AmoebaMultipoleForce                poltyp = 'MUTUAL', 'DIRECT' supported; boundary= 'VACUUM' unsupported
 esolv1 (solvateterm)               | AmoebaWcaDispersionForce,         Only born-radius=’grycuk’ and solvate=’GK’ supported; unsupported solvate settings:
                                    | AmoebaGeneralizedKirkwoodForce    ‘ASP’, ‘SASA’, ‘ONION’, ‘pb’, 'GB-HPMF’, 'Gk-HPMF’; SASA computation is based on ACE approximation
-eurey1 (ureyterm)                  HarmonicBondForce                   All options implemented                                                                                                                                                               
+eurey1 (ureyterm)                  HarmonicBondForce                   All options implemented
 =================================  ==================================  ======================================================================================================================================================================================
 
 :autonumber:`Table,mapping from TINKER`\ :  Mapping between TINKER and OpenMM AMOEBA forces
@@ -3532,7 +3589,7 @@ term.  This yields much closer agreement between OpenMM and TINKER,
 demonstrating that the difference comes entirely from that one term.
 
 =========================  ==========================  ===================
-Solvent Model              single                      double             
+Solvent Model              single                      double
 =========================  ==========================  ===================
 Implicit                   1.04·10\ :sup:`-2`          1.04·10\ :sup:`-2`
 Implicit (no cavity term)  9.23·10\ :sup:`-6`          1.17·10\ :sup:`-6`
@@ -3642,4 +3699,3 @@ The equations of motion can be integrated with two different methods:
    temperature, while using a much lower temperature for their relative internal
    motion.  In practice, this produces dipole moments very close to those from the
    SCF solution while being much faster to compute.
-

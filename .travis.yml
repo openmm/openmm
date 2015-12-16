@@ -81,7 +81,7 @@ matrix:
            CC=$CCACHE/clang
            CXX=$CCACHE/clang++
            DOCS_DEPLOY=true
-           CMAKE_FLAGS=""
+           CMAKE_FLAGS="-DOPENMM_GENERATE_API_DOCS=ON"
 
     - sudo: false
       python: 3.4
@@ -146,8 +146,8 @@ script:
   - # run all of the tests, making sure failures at this stage don't cause travis failures
   - python devtools/run-ctest.py -j2 --schedule-random --stop-time $CTEST_STOP_TIME
   - if [[ ! -z "${DOCS_DEPLOY}" && "${DOCS_DEPLOY}" = "true" ]]; then
-      pip install sphinx numpydoc;
-      make DoxygenApiDocs PythonApiDocs;
+      pip install sphinx sphinxcontrib-lunrsearch sphinxcontrib-autodoc_doxygen;
+      make C++ApiDocs PythonApiDocs;
       mkdir -p api-docs;
       mv api-python api-docs;
       mv api-c++ api-docs;
