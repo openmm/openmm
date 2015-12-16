@@ -134,7 +134,7 @@ class PDBFile(object):
                             try:
                                 element = elem.get_by_symbol(atomName[0])
                             except KeyError:
-                                pass            
+                                pass
                     newAtom = top.addAtom(atomName, element, r, str(atom.serial_number))
                     atomByNumber[atom.serial_number] = newAtom
         self._positions = []
@@ -329,17 +329,19 @@ class PDBFile(object):
                 else:
                     resId = "%4d" % ((resIndex+1)%10000)
                 for atom in res.atoms():
-                    if len(atom.name) < 4 and atom.name[:1].isalpha() and ((atom.element is None and extraParticleIdentifier is not None) or len(atom.element.symbol) < 2):
+                    if atom.element is not None:
+                        symbol = atom.element.symbol
+                    elif atom.element is None and extraParticleIdentifier is not None:
+                        symbol = extraParticleIdentifier
+                    else:
+                        symbol = ' '
+                    if len(atom.name) < 4 and atom.name[:1].isalpha() and len(symbol) < 2:
                         atomName = ' '+atom.name
                     elif len(atom.name) > 4:
                         atomName = atom.name[:4]
                     else:
                         atomName = atom.name
                     coords = positions[posIndex]
-                    if atom.element is not None:
-                        symbol = atom.element.symbol
-                    else:
-                        symbol = extraParticleIdentifier
                     line = "ATOM  %5d %-4s %3s %s%4s    %s%s%s  1.00  0.00          %2s  " % (
                         atomIndex%100000, atomName, resName, chainName, resId, _format_83(coords[0]),
                         _format_83(coords[1]), _format_83(coords[2]), symbol)
