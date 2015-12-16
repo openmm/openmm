@@ -959,75 +959,50 @@ void AmoebaReferenceMultipoleForce::convergeInduceDipolesBySOR(const vector<Mult
 
 
 void AmoebaReferenceMultipoleForce::convergeInduceDipolesByExtrapolation(const vector<MultipoleParticleData>& particleData, vector<UpdateInducedDipoleFieldStruct>& updateInducedDipoleField) {
-    _ptDipoleD.clear();
-    _ptDipoleP.clear();
-
-    UpdateInducedDipoleFieldStruct& fieldD = updateInducedDipoleField[0];
-    UpdateInducedDipoleFieldStruct& fieldP = updateInducedDipoleField[1];
-
     // Start by storing the direct dipoles as PT0
-    vector<RealVec> thisDipoleD;
-    vector<RealVec> thisDipoleP;
-    for (int atom = 0; atom < _numParticles; ++atom) {
-        thisDipoleD.push_back((*fieldD.inducedDipoles)[atom]);
-        thisDipoleP.push_back((*fieldP.inducedDipoles)[atom]);
-    }
-    _ptDipoleD.push_back(thisDipoleD);
-    _ptDipoleP.push_back(thisDipoleP);
 
-    // Make sure there is some storage available for the field derivatives
-    std::vector<RealOpenMM> zeros(6, 0.0);
-    fieldD.inducedDipoleFieldGradient.resize(_numParticles);
-    fieldP.inducedDipoleFieldGradient.resize(_numParticles);
+    int numFields = updateInducedDipoleField.size();
+    for (int i = 0; i < numFields; i++) {
+        UpdateInducedDipoleFieldStruct& field = updateInducedDipoleField[i];
+        field.extrapolatedDipoles->resize(_maxPTOrder);
+        (*field.extrapolatedDipoles)[0].resize(_numParticles);
+        for (int atom = 0; atom < _numParticles; ++atom)
+            (*field.extrapolatedDipoles)[0][atom] = (*field.inducedDipoles)[atom];
+        field.inducedDipoleFieldGradient.resize(_numParticles);
+    }
 
     // Recursively apply alpha.Tau to the µ_(n) components to generate µ_(n+1), and store the result
+
+    vector<RealOpenMM> zeros(6, 0.0);
     for (int order = 1; order < _maxPTOrder; ++order) {
-        std::fill(fieldD.inducedDipoleFieldGradient.begin(), fieldD.inducedDipoleFieldGradient.end(), zeros);
-        std::fill(fieldP.inducedDipoleFieldGradient.begin(), fieldP.inducedDipoleFieldGradient.end(), zeros);
+        for (int i = 0; i < numFields; i++)
+            std::fill(updateInducedDipoleField[i].inducedDipoleFieldGradient.begin(), updateInducedDipoleField[i].inducedDipoleFieldGradient.end(), zeros);
         calculateInducedDipoleFields(particleData, updateInducedDipoleField);
-        vector<RealVec> thisDipoleD;
-        vector<RealVec> thisDipoleP;
-        for (int atom = 0; atom < _numParticles; ++atom) {
-            (*fieldD.inducedDipoles)[atom] = fieldD.inducedDipoleField[atom] * particleData[atom].polarity;
-            (*fieldP.inducedDipoles)[atom] = fieldP.inducedDipoleField[atom] * particleData[atom].polarity;
-            thisDipoleD.push_back((*fieldD.inducedDipoles)[atom]);
-            thisDipoleP.push_back((*fieldP.inducedDipoles)[atom]);
-        }
-        _ptDipoleD.push_back(thisDipoleD);
-        _ptDipoleP.push_back(thisDipoleP);
-        vector<RealOpenMM> fieldGradD(6*_numParticles, 0.0);
-        vector<RealOpenMM> fieldGradP(6*_numParticles, 0.0);
-        for (int atom = 0; atom < _numParticles; ++atom) {
-            for (int component = 0; component < 6; ++component) {
-                fieldGradD[6*atom + component] = fieldD.inducedDipoleFieldGradient[atom][component];
-                fieldGradP[6*atom + component] = fieldP.inducedDipoleFieldGradient[atom][component];
+        for (int i = 0; i < numFields; i++) {
+            UpdateInducedDipoleFieldStruct& field = updateInducedDipoleField[i];
+            (*field.extrapolatedDipoles)[order].resize(_numParticles);
+            for (int atom = 0; atom < _numParticles; ++atom) {
+                (*field.inducedDipoles)[atom] = field.inducedDipoleField[atom] * particleData[atom].polarity;
+                (*field.extrapolatedDipoles)[order][atom] = (*field.inducedDipoles)[atom];
             }
+            vector<RealOpenMM> fieldGrad(6*_numParticles, 0.0);
+            for (int atom = 0; atom < _numParticles; ++atom)
+                for (int component = 0; component < 6; ++component)
+                    fieldGrad[6*atom + component] = field.inducedDipoleFieldGradient[atom][component];
+            field.extrapolatedDipoleFieldGradient->push_back(fieldGrad);
         }
-        _ptDipoleFieldGradientD.push_back(fieldGradD);
-        _ptDipoleFieldGradientP.push_back(fieldGradP);
     }
 
     // Take a linear combination of the µ_(n) components to form the total dipole
-    RealVec zeroVec(0.0, 0.0, 0.0);
-    std::fill(_inducedDipole.begin(), _inducedDipole.end(), zeroVec);
-    std::fill(_inducedDipolePolar.begin(), _inducedDipolePolar.end(), zeroVec);
-
-    for (int order = 0; order < _maxPTOrder; ++order) {
-        for (int atom = 0; atom < _numParticles; ++atom) {
-            _inducedDipole[atom]      +=  _ptDipoleD[order][atom] * _extPartCoefficients[order];
-            _inducedDipolePolar[atom] +=  _ptDipoleP[order][atom] * _extPartCoefficients[order];
-        }
-    }
-
-    // Copy the combined dipoles over to compute the field
-    for (int order = 0; order < _maxPTOrder; ++order) {
-        for (int atom = 0; atom < _numParticles; ++atom) {
-            (*fieldD.inducedDipoles)[atom] = _inducedDipole[atom];
-            (*fieldP.inducedDipoles)[atom] = _inducedDipolePolar[atom];
-        }
+    
+    for (int i = 0; i < numFields; i++) {
+        UpdateInducedDipoleFieldStruct& field = updateInducedDipoleField[i];
+        *field.inducedDipoles = vector<RealVec>(_numParticles, RealVec());
+        for (int order = 0; order < _maxPTOrder; ++order)
+            for (int atom = 0; atom < _numParticles; ++atom)
+                (*field.inducedDipoles)[atom] += (*field.extrapolatedDipoles)[order][atom] * _extPartCoefficients[order];
     }
     calculateInducedDipoleFields(particleData, updateInducedDipoleField);
-
     setMutualInducedDipoleConverged(true);
 }
 
@@ -1158,8 +1133,8 @@ void AmoebaReferenceMultipoleForce::calculateInducedDipoles(const vector<Multipo
     _inducedDipole.resize(_numParticles);
     _inducedDipolePolar.resize(_numParticles);
     vector<UpdateInducedDipoleFieldStruct> updateInducedDipoleField;
-    updateInducedDipoleField.push_back(UpdateInducedDipoleFieldStruct(_fixedMultipoleField,       _inducedDipole));
-    updateInducedDipoleField.push_back(UpdateInducedDipoleFieldStruct(_fixedMultipoleFieldPolar,  _inducedDipolePolar));
+    updateInducedDipoleField.push_back(UpdateInducedDipoleFieldStruct(_fixedMultipoleField, _inducedDipole, _ptDipoleD, _ptDipoleFieldGradientD));
+    updateInducedDipoleField.push_back(UpdateInducedDipoleFieldStruct(_fixedMultipoleFieldPolar, _inducedDipolePolar, _ptDipoleP, _ptDipoleFieldGradientP));
 
     initializeInducedDipoles(updateInducedDipoleField);
 
@@ -2156,8 +2131,8 @@ void AmoebaReferenceMultipoleForce::calculateElectrostaticPotential(const vector
     }
 }
 
-AmoebaReferenceMultipoleForce::UpdateInducedDipoleFieldStruct::UpdateInducedDipoleFieldStruct(vector<OpenMM::RealVec>& inputFixed_E_Field, vector<OpenMM::RealVec>& inputInducedDipoles) :
-        fixedMultipoleField(&inputFixed_E_Field), inducedDipoles(&inputInducedDipoles) { 
+AmoebaReferenceMultipoleForce::UpdateInducedDipoleFieldStruct::UpdateInducedDipoleFieldStruct(vector<OpenMM::RealVec>& inputFixed_E_Field, vector<OpenMM::RealVec>& inputInducedDipoles, vector<vector<RealVec> >& extrapolatedDipoles, vector<vector<RealOpenMM> >& extrapolatedDipoleFieldGradient) :
+        fixedMultipoleField(&inputFixed_E_Field), inducedDipoles(&inputInducedDipoles), extrapolatedDipoles(&extrapolatedDipoles), extrapolatedDipoleFieldGradient(&extrapolatedDipoleFieldGradient) { 
     inducedDipoleField.resize(fixedMultipoleField->size());
 }   
 
@@ -2575,10 +2550,10 @@ void AmoebaReferenceGeneralizedKirkwoodMultipoleForce::calculateInducedDipoles(c
     }
 
     vector<UpdateInducedDipoleFieldStruct> updateInducedDipoleField;
-    updateInducedDipoleField.push_back(UpdateInducedDipoleFieldStruct(_fixedMultipoleField,       _inducedDipole));
-    updateInducedDipoleField.push_back(UpdateInducedDipoleFieldStruct(_fixedMultipoleFieldPolar,  _inducedDipolePolar));
-    updateInducedDipoleField.push_back(UpdateInducedDipoleFieldStruct(_gkField,             _inducedDipoleS));
-    updateInducedDipoleField.push_back(UpdateInducedDipoleFieldStruct(gkFieldPolar,         _inducedDipolePolarS));
+    updateInducedDipoleField.push_back(UpdateInducedDipoleFieldStruct(_fixedMultipoleField, _inducedDipole, _ptDipoleD, _ptDipoleFieldGradientD));
+    updateInducedDipoleField.push_back(UpdateInducedDipoleFieldStruct(_fixedMultipoleFieldPolar, _inducedDipolePolar, _ptDipoleP, _ptDipoleFieldGradientP));
+    updateInducedDipoleField.push_back(UpdateInducedDipoleFieldStruct(_gkField, _inducedDipoleS, _ptDipoleDS, _ptDipoleFieldGradientDS));
+    updateInducedDipoleField.push_back(UpdateInducedDipoleFieldStruct(gkFieldPolar, _inducedDipolePolarS, _ptDipolePS, _ptDipoleFieldGradientPS));
 
     convergeInduceDipolesByDIIS(particleData, updateInducedDipoleField);
 }

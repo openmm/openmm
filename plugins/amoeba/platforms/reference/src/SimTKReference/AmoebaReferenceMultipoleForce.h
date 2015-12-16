@@ -638,9 +638,11 @@ protected:
      * Helper class used in calculating induced dipoles
      */
     struct UpdateInducedDipoleFieldStruct {
-            UpdateInducedDipoleFieldStruct(std::vector<OpenMM::RealVec>& inputFixed_E_Field, std::vector<OpenMM::RealVec>& inputInducedDipoles);
+            UpdateInducedDipoleFieldStruct(std::vector<OpenMM::RealVec>& inputFixed_E_Field, std::vector<OpenMM::RealVec>& inputInducedDipoles, std::vector<std::vector<RealVec> >& extrapolatedDipoles, std::vector<std::vector<RealOpenMM> >& extrapolatedDipoleFieldGradient);
             std::vector<OpenMM::RealVec>* fixedMultipoleField;
             std::vector<OpenMM::RealVec>* inducedDipoles;
+            std::vector<std::vector<RealVec> >* extrapolatedDipoles;
+            std::vector<std::vector<RealOpenMM> >* extrapolatedDipoleFieldGradient;
             std::vector<OpenMM::RealVec> inducedDipoleField;
             std::vector<std::vector<RealOpenMM> > inducedDipoleFieldGradient;
     };
@@ -666,8 +668,8 @@ protected:
     std::vector<RealVec> _fixedMultipoleFieldPolar;
     std::vector<RealVec> _inducedDipole;
     std::vector<RealVec> _inducedDipolePolar;
-    std::vector< std::vector<RealVec> > _ptDipoleP;
-    std::vector< std::vector<RealVec> > _ptDipoleD;
+    std::vector<std::vector<RealVec> > _ptDipoleP;
+    std::vector<std::vector<RealVec> > _ptDipoleD;
     std::vector<std::vector<RealOpenMM> > _ptDipoleFieldGradientP;
     std::vector<std::vector<RealOpenMM> > _ptDipoleFieldGradientD;
 
@@ -1223,6 +1225,10 @@ private:
     std::vector<RealVec> _gkField;
     std::vector<RealVec> _inducedDipoleS;
     std::vector<RealVec> _inducedDipolePolarS;
+    std::vector<std::vector<RealVec> > _ptDipolePS;
+    std::vector<std::vector<RealVec> > _ptDipoleDS;
+    std::vector<std::vector<RealOpenMM> > _ptDipoleFieldGradientPS;
+    std::vector<std::vector<RealOpenMM> > _ptDipoleFieldGradientDS;
 
     int _includeCavityTerm;
     RealOpenMM _probeRadius;
