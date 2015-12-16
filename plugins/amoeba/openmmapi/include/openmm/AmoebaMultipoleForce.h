@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
  * Authors: Mark Friedrichs, Peter Eastman                                    *
  * Contributors:                                                              *
  *                                                                            *
@@ -72,19 +72,24 @@ public:
     enum PolarizationType {
 
         /**
-         * Mutual polarization
+         * Full mutually induced polarization.  The dipoles are iterated until the converge to the accuracy specified
+         * by getMutualInducedTargetEpsilon().
          */
         Mutual = 0,
 
         /**
-         * Direct polarization
+         * Direct polarization approximation.  The induced dipoles depend only on the fixed multipoles, not on other
+         * induced dipoles.
          */
         Direct = 1,
 
         /**
-         * Optimized perturbation theory
+         * Extrapolated perturbation theory approximation.  The dipoles are iterated a few times, and then an analytic
+         * approximation is used to extrapolate to the fully converged values.  Call setExtrapolationCoefficients()
+         * to set the coefficients used for the extrapolation.  The default coefficients used in this release are
+         * [0, -0.3, 0, 1.3], but be aware that those may change in a future release.
          */
-        OPT = 2
+        Extrapolated = 2
 
     };
 
@@ -305,19 +310,21 @@ public:
     void setMutualInducedTargetEpsilon(double inputMutualInducedTargetEpsilon);
 
     /**
-     * Set the coefficients for the mu_0, mu_1, mu_2, ..., mu_n terms in the perturbation
-     * theory algorithm for induced dipoles.
+     * Set the coefficients for the mu_0, mu_1, mu_2, ..., mu_n terms in the extrapolation
+     * algorithm for induced dipoles.
      *
-     * @param optCoefficients a vector whose mth entry specifies the coefficient for mu_m
+     * @param coefficients      a vector whose mth entry specifies the coefficient for mu_m.  The length of this
+     *                          vector determines how many iterations are performed.
      *
      */
-    void setOPTCoefficients(const std::vector<double> &OPTFullCoefficientsIn);
+    void setExtrapolationCoefficients(const std::vector<double> &coefficients);
 
     /**
-     * Get the coefficients for the mu_0, mu_1, mu_2, ..., mu_n terms in the perturbation
-     * theory algorithm for induced dipoles.
+     * Get the coefficients for the mu_0, mu_1, mu_2, ..., mu_n terms in the extrapolation
+     * algorithm for induced dipoles.  In this release, the default values for the coefficients are
+     * [0, -0.3, 0, 1.3], but be aware that those may change in a future release.
      */
-    const std::vector<double>& getOPTCoefficients() const;
+    const std::vector<double>& getExtrapolationCoefficients() const;
 
     /**
      * Get the error tolerance for Ewald summation.  This corresponds to the fractional error in the forces
@@ -405,7 +412,7 @@ private:
     int pmeBSplineOrder;
     std::vector<int> pmeGridDimension;
     int mutualInducedMaxIterations;
-    std::vector<double>  OPTFullCoefficients;
+    std::vector<double> extrapolationCoefficients;
 
     double mutualInducedTargetEpsilon;
     double scalingDistanceCutoff;

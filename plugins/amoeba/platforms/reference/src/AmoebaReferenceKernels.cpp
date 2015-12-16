@@ -565,8 +565,8 @@ void ReferenceCalcAmoebaMultipoleForceKernel::initialize(const System& system, c
     if (polarizationType == AmoebaMultipoleForce::Mutual) {
         mutualInducedMaxIterations = force.getMutualInducedMaxIterations();
         mutualInducedTargetEpsilon = force.getMutualInducedTargetEpsilon();
-    } else if (polarizationType == AmoebaMultipoleForce::OPT) {
-        OPTFullCoefficients = force.getOPTCoefficients();
+    } else if (polarizationType == AmoebaMultipoleForce::Extrapolated) {
+        extrapolationCoefficients = force.getExtrapolationCoefficients();
     }
 
     // PME
@@ -669,9 +669,9 @@ AmoebaReferenceMultipoleForce* ReferenceCalcAmoebaMultipoleForceKernel::setupAmo
         amoebaReferenceMultipoleForce->setMaximumMutualInducedDipoleIterations(mutualInducedMaxIterations);
     } else if (polarizationType == AmoebaMultipoleForce::Direct) {
         amoebaReferenceMultipoleForce->setPolarizationType(AmoebaReferenceMultipoleForce::Direct);
-    } else if (polarizationType == AmoebaMultipoleForce::OPT) {
-        amoebaReferenceMultipoleForce->setPolarizationType(AmoebaReferenceMultipoleForce::OPT);
-        amoebaReferenceMultipoleForce->setOPTCoefficients(OPTFullCoefficients);
+    } else if (polarizationType == AmoebaMultipoleForce::Extrapolated) {
+        amoebaReferenceMultipoleForce->setPolarizationType(AmoebaReferenceMultipoleForce::Extrapolated);
+        amoebaReferenceMultipoleForce->setExtrapolationCoefficients(extrapolationCoefficients);
     } else {
         throw OpenMMException("Polarization type not recognzied.");
     }

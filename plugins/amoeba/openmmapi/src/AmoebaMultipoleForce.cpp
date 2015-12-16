@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
  * Authors:                                                                   *
  * Contributors:                                                              *
  *                                                                            *
@@ -43,6 +43,10 @@ AmoebaMultipoleForce::AmoebaMultipoleForce() : nonbondedMethod(NoCutoff), polari
                                                mutualInducedTargetEpsilon(1.0e-02), scalingDistanceCutoff(100.0), electricConstant(138.9354558456), aewald(0.0) {
     pmeGridDimension.resize(3);
     pmeGridDimension[0] = pmeGridDimension[1] = pmeGridDimension[2];
+    extrapolationCoefficients.push_back(0.0);
+    extrapolationCoefficients.push_back(-0.3);
+    extrapolationCoefficients.push_back(0.0);
+    extrapolationCoefficients.push_back(1.3);
 }
 
 AmoebaMultipoleForce::NonbondedMethod AmoebaMultipoleForce::getNonbondedMethod() const {
@@ -61,18 +65,13 @@ void AmoebaMultipoleForce::setPolarizationType(AmoebaMultipoleForce::Polarizatio
     polarizationType = type;
 }
 
-void AmoebaMultipoleForce::setOPTCoefficients(const std::vector<double> &OPTFullCoefficientsIn)
-{
-    size_t maxPTOrder = OPTFullCoefficientsIn.size();
-    OPTFullCoefficients.resize(maxPTOrder);
-    std::copy(OPTFullCoefficientsIn.begin(), OPTFullCoefficientsIn.end(), OPTFullCoefficients.begin());
+void AmoebaMultipoleForce::setExtrapolationCoefficients(const std::vector<double> &coefficients) {
+    extrapolationCoefficients = coefficients;
 }
 
-const std::vector<double> & AmoebaMultipoleForce::getOPTCoefficients() const
-{
-    return OPTFullCoefficients;
+const std::vector<double> & AmoebaMultipoleForce::getExtrapolationCoefficients() const {
+    return extrapolationCoefficients;
 }
-
 
 double AmoebaMultipoleForce::getCutoffDistance() const {
     return cutoffDistance;

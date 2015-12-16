@@ -319,13 +319,13 @@ static void testWaterDimerExPTPolarizationTriclinicPME() {
                                         Vec3(0.2, 2.0, 0.0),
                                         Vec3(0.1, 0.5, 2.0));
     amoebaMultipoleForce->setNonbondedMethod(AmoebaMultipoleForce::PME);
-    amoebaMultipoleForce->setPolarizationType(AmoebaMultipoleForce::OPT);
+    amoebaMultipoleForce->setPolarizationType(AmoebaMultipoleForce::Extrapolated);
     std::vector<double> coefs;
     coefs.push_back(0.0);  // The mu_0 coefficient
     coefs.push_back(-0.3); // The mu_1 coefficient
     coefs.push_back(0.0);  // The mu_2 coefficient
     coefs.push_back(1.3);  // The mu_3 coefficient
-    amoebaMultipoleForce->setOPTCoefficients(coefs);
+    amoebaMultipoleForce->setExtrapolationCoefficients(coefs);
     amoebaMultipoleForce->setCutoffDistance(9.0*OpenMM::NmPerAngstrom);
     amoebaMultipoleForce->setAEwald(4);
     amoebaMultipoleForce->setEwaldErrorTolerance(1.0e-06);
@@ -368,13 +368,13 @@ static void testWaterDimerExPTPolarizationTriclinicPMENoPolGroups() {
                                         Vec3(0.2, 2.0, 0.0),
                                         Vec3(0.1, 0.5, 2.0));
     amoebaMultipoleForce->setNonbondedMethod(AmoebaMultipoleForce::PME);
-    amoebaMultipoleForce->setPolarizationType(AmoebaMultipoleForce::OPT);
+    amoebaMultipoleForce->setPolarizationType(AmoebaMultipoleForce::Extrapolated);
     std::vector<double> coefs;
     coefs.push_back(0.0);  // The mu_0 coefficient
     coefs.push_back(-0.3); // The mu_1 coefficient
     coefs.push_back(0.0);  // The mu_2 coefficient
     coefs.push_back(1.3);  // The mu_3 coefficient
-    amoebaMultipoleForce->setOPTCoefficients(coefs);
+    amoebaMultipoleForce->setExtrapolationCoefficients(coefs);
     amoebaMultipoleForce->setCutoffDistance(9.0*OpenMM::NmPerAngstrom);
     amoebaMultipoleForce->setAEwald(4);
     amoebaMultipoleForce->setEwaldErrorTolerance(1.0e-06);
@@ -415,13 +415,13 @@ static void testWaterDimerExPTPolarizationNoCutoff() {
     vector<Vec3> coords = setupWaterDimer(system, amoebaMultipoleForce, true);
 
     amoebaMultipoleForce->setNonbondedMethod(AmoebaMultipoleForce::NoCutoff);
-    amoebaMultipoleForce->setPolarizationType(AmoebaMultipoleForce::OPT);
+    amoebaMultipoleForce->setPolarizationType(AmoebaMultipoleForce::Extrapolated);
     std::vector<double> coefs;
     coefs.push_back(0.0);  // The mu_0 coefficient
     coefs.push_back(-0.3); // The mu_1 coefficient
     coefs.push_back(0.0);  // The mu_2 coefficient
     coefs.push_back(1.3);  // The mu_3 coefficient
-    amoebaMultipoleForce->setOPTCoefficients(coefs);
+    amoebaMultipoleForce->setExtrapolationCoefficients(coefs);
 
     LangevinIntegrator integrator(0.0, 0.1, 0.01);
     Context context(system, integrator, Platform::getPlatformByName("Reference"));
@@ -456,13 +456,13 @@ static void testWaterDimerExPTPolarizationNoCutoffNoPolGroups() {
     vector<Vec3> coords = setupWaterDimer(system, amoebaMultipoleForce, false);
 
     amoebaMultipoleForce->setNonbondedMethod(AmoebaMultipoleForce::NoCutoff);
-    amoebaMultipoleForce->setPolarizationType(AmoebaMultipoleForce::OPT);
+    amoebaMultipoleForce->setPolarizationType(AmoebaMultipoleForce::Extrapolated);
     std::vector<double> coefs;
     coefs.push_back(0.0);  // The mu_0 coefficient
     coefs.push_back(-0.3); // The mu_1 coefficient
     coefs.push_back(0.0);  // The mu_2 coefficient
     coefs.push_back(1.3);  // The mu_3 coefficient
-    amoebaMultipoleForce->setOPTCoefficients(coefs);
+    amoebaMultipoleForce->setExtrapolationCoefficients(coefs);
 
     LangevinIntegrator integrator(0.0, 0.1, 0.01);
     Context context(system, integrator, Platform::getPlatformByName("Reference"));
@@ -492,7 +492,6 @@ static void testWaterDimerExPTPolarizationNoCutoffNoPolGroups() {
 int main(int numberOfArguments, char* argv[]) {
 
     try {
-        std::cout << "TestReferenceAmoebaPTPolarization running test..." << std::endl;
         registerAmoebaReferenceKernelFactories();
 
         /*

@@ -351,9 +351,9 @@ public:
         Direct = 1,
 
         /**
-         * Optimized perturbation theory
+         * Extrapolated perturbation theory
          */
-        OPT = 2
+        Extrapolated = 2
     };
 
     /**
@@ -428,13 +428,13 @@ public:
     RealOpenMM getMutualInducedDipoleEpsilon() const;
 
     /**
-     * Set the coefficients for the µ_0, µ_1, µ_2, µ_n terms in the pertubation
+     * Set the coefficients for the µ_0, µ_1, µ_2, µ_n terms in the extrapolation
      * theory algorithm for induced dipoles
      *
      * @param optCoefficients a vector whose mth entry specifies the coefficient for µ_m
      *
      */
-    void setOPTCoefficients(const std::vector<RealOpenMM> &OPTFullCoefficients);
+    void setExtrapolationCoefficients(const std::vector<RealOpenMM> &coefficients);
 
     /**
      * Set the target epsilon for converging mutual induced dipoles.
@@ -677,8 +677,8 @@ protected:
     int _mutualInducedDipoleIterations;
     int _maximumMutualInducedDipoleIterations;
     int _maxPTOrder;
-    std::vector<RealOpenMM>  _OPTFullCoefficients;
-    std::vector<RealOpenMM>  _OPTPartCoefficients;
+    std::vector<RealOpenMM>  _extrapolationCoefficients;
+    std::vector<RealOpenMM>  _extPartCoefficients;
     RealOpenMM  _mutualInducedDipoleEpsilon;
     RealOpenMM  _mutualInducedDipoleTargetEpsilon;
     RealOpenMM  _polarSOR;
@@ -945,13 +945,13 @@ protected:
     virtual void calculateInducedDipoleFields(const std::vector<MultipoleParticleData>& particleData,
                                               std::vector<UpdateInducedDipoleFieldStruct>& updateInducedDipoleFields);
     /**
-     * Calculated induced dipoles using Optimized Perturbation Theory.
+     * Calculated induced dipoles using extrapolated perturbation theory.
      *
      * @param particleData              vector of particle positions and parameters (charge, labFrame dipoles, quadrupoles, ...)
      * @param updateInducedDipoleFields vector of UpdateInducedDipoleFieldStruct containing input induced dipoles and output fields
      */
-    void convergeInduceDipolesByOPT(const std::vector<MultipoleParticleData>& particleData,
-                                    std::vector<UpdateInducedDipoleFieldStruct>& calculateInducedDipoleField);
+    void convergeInduceDipolesByExtrapolation(const std::vector<MultipoleParticleData>& particleData,
+                                              std::vector<UpdateInducedDipoleFieldStruct>& calculateInducedDipoleField);
     /**
      * Converge induced dipoles.
      * 

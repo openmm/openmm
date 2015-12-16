@@ -74,6 +74,12 @@ void testSerialization() {
     force1.setMutualInducedTargetEpsilon(1.0e-05); 
     //force1.setElectricConstant(138.93); 
     force1.setEwaldErrorTolerance(1.0e-05); 
+    
+    vector<double> coeff;
+    coeff.push_back(0.0);
+    coeff.push_back(-0.1);
+    coeff.push_back(1.1);
+    force1.setExtrapolationCoefficients(coeff);
 
     std::vector<std::string> covalentTypes;
     getCovalentTypes(covalentTypes);
@@ -124,6 +130,8 @@ void testSerialization() {
     for (unsigned int jj = 0; jj < gridDimension1.size(); jj++) {
         ASSERT_EQUAL(gridDimension1[jj], gridDimension2[jj]);
     }
+    
+    ASSERT_EQUAL_CONTAINERS(force1.getExtrapolationCoefficients(), force2.getExtrapolationCoefficients());
     
     ASSERT_EQUAL(force1.getNumMultipoles(),  force2.getNumMultipoles());
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(force1.getNumMultipoles()); ii++) {

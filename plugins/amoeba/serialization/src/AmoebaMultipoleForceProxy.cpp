@@ -68,7 +68,7 @@ void loadCovalentMap(const SerializationNode& map, std::vector< int >& covalentM
 }
 
 void AmoebaMultipoleForceProxy::serialize(const void* object, SerializationNode& node) const {
-    node.setIntProperty("version", 2);
+    node.setIntProperty("version", 3);
     const AmoebaMultipoleForce& force = *reinterpret_cast<const AmoebaMultipoleForce*>(object);
 
     node.setIntProperty("nonbondedMethod",                  force.getNonbondedMethod());
@@ -87,6 +87,14 @@ void AmoebaMultipoleForceProxy::serialize(const void* object, SerializationNode&
     force.getPmeGridDimensions(gridDimensions);
     SerializationNode& gridDimensionsNode  = node.createChildNode("MultipoleParticleGridDimension");
     gridDimensionsNode.setIntProperty("d0", gridDimensions[0]).setIntProperty("d1", gridDimensions[1]).setIntProperty("d2", gridDimensions[2]); 
+    
+    SerializationNode& coefficients = node.createChildNode("ExtrapolationCoefficients");
+    vector<double> coeff = force.getExtrapolationCoefficients();
+    for (int i = 0; i < coeff.size(); i++) {
+        stringstream key;
+        key << "c" << i;
+        coefficients.setDoubleProperty(key.str(), coeff[i]);
+    }
 
     std::vector<std::string> covalentTypes;
     getCovalentTypes(covalentTypes);
@@ -124,16 +132,16 @@ void AmoebaMultipoleForceProxy::serialize(const void* object, SerializationNode&
 }
 
 void* AmoebaMultipoleForceProxy::deserialize(const SerializationNode& node) const {
-    if (node.getIntProperty("version") > 2)
+    int version = node.getIntProperty("version");
+    if (version < 0 || version > 3)
         throw OpenMMException("Unsupported version number");
     AmoebaMultipoleForce* force = new AmoebaMultipoleForce();
 
     try {
 
         force->setNonbondedMethod(static_cast<AmoebaMultipoleForce::NonbondedMethod>(node.getIntProperty("nonbondedMethod")));
-        if (node.getIntProperty("version") == 2) {
+        if (version >= 2)
             force->setPolarizationType(static_cast<AmoebaMultipoleForce::PolarizationType>(node.getIntProperty("polarizationType")));
-        }
         //force->setPmeBSplineOrder(node.getIntProperty("pmeBSplineOrder"));
         //force->setMutualInducedIterationMethod(static_cast<AmoebaMultipoleForce::MutualInducedIterationMethod>(node.getIntProperty("mutualInducedIterationMethod")));
         force->setMutualInducedMaxIterations(node.getIntProperty("mutualInducedMaxIterations"));
@@ -151,6 +159,18 @@ void* AmoebaMultipoleForceProxy::deserialize(const SerializationNode& node) cons
         gridDimensions.push_back(gridDimensionsNode.getIntProperty("d2"));
         force->setPmeGridDimensions(gridDimensions);
     
+        if (version >= 3) {
+            const SerializationNode& coefficients = node.getChildNode("ExtrapolationCoefficients");
+            vector<double> coeff;
+            for (int i = 0; ; i++) {
+                stringstream key;
+                key << "c" << i;
+                if (coefficients.getProperties().find(key.str()) == coefficients.getProperties().end())
+                    break;
+                coeff.push_back(coefficients.getDoubleProperty(key.str()));
+            }
+            force->setExtrapolationCoefficients(coeff);
+        }
         std::vector<std::string> covalentTypes;
         getCovalentTypes(covalentTypes);
 
