@@ -9,14 +9,19 @@ addons:
       - python-scipy
       - libfftw3-dev
 
+env:
+  global:
+    - CCACHE=$HOME/ccache/lib/ccache/bin
+
+
 matrix:
   include:
     - sudo: required
       env: ==CPU_OPENCL==
            OPENCL=true
            CUDA=false
-           CC=gcc
-           CXX=g++
+           CC=$CCACHE/gcc
+           CXX=$CCACHE/g++
            CMAKE_FLAGS="
            -OPENMM_BUILD_OPENCL_LIB=ON
            -DOPENMM_BUILD_OPENCL_TESTS=ON
@@ -36,6 +41,8 @@ matrix:
            CUDA=true
            OPENCL=false
            CUDA_VERSION="7.0-28"
+           CC=$CCACHE/gcc
+           CXX=$CCACHE/g++
            CMAKE_FLAGS="
              -DOPENMM_BUILD_CUDA_TESTS=OFF
              -DOPENMM_BUILD_OPENCL_TESTS=OFF
@@ -62,8 +69,8 @@ matrix:
       env: ==STATIC_LIB==
            OPENCL=false
            CUDA=false
-           CC=clang
-           CXX=clang++
+           CC=$CCACHE/clang
+           CXX=$CCACHE/clang++
            CMAKE_FLAGS="-DOPENMM_BUILD_STATIC_LIB=ON"
 
     - sudo: false
@@ -71,8 +78,8 @@ matrix:
       env: ==PYTNON_2==
            OPENCL=false
            CUDA=false
-           CC=clang
-           CXX=clang++
+           CC=$CCACHE/clang
+           CXX=$CCACHE/clang++
            DOCS_DEPLOY=true
            CMAKE_FLAGS=""
 
@@ -81,11 +88,13 @@ matrix:
       env: ==PYTHON_3==
            OPENCL=false
            CUDA=false
-           CC=gcc
-           CXX=g++
+           CC=$CCACHE/gcc
+           CXX=$CCACHE/g++
            CMAKE_FLAGS=""
 
 before_install:
+  - wget https://anaconda.org/omnia/ccache/3.2.4/download/${TRAVIS_OS_NAME}-64/ccache-3.2.4-0.tar.bz2
+  - mkdir -p $HOME/ccache && tar xf ccache-3.2.4-0.tar.bz2 -C $HOME/ccache
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
       brew install doxygen swig fftw;
       sudo easy_install pytest;
@@ -158,3 +167,7 @@ deploy:
     on:
       branch: master
       condition: '! -z "${DOCS_DEPLOY}" && "${DOCS_DEPLOY}" = "true"'
+
+cache:
+  directories:
+    - $HOME/.ccache

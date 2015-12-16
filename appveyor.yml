@@ -10,6 +10,12 @@ install:
   - "set PATH=C:\\Program Files (x86)\\Git\\bin;%PATH%"
   - pip install pytest
 
+# Use cclash for compiler caching (experimental)
+  - ps: wget https://github.com/inorton/cclash/releases/download/0.3.14/cclash-0.3.14.zip -OutFile cclash-0.3.14.zip
+  - ps: 7z x cclash-0.3.14.zip
+  - "set PATH=%APPVEYOR_BUILD_FOLDER%\\cclash-0.3.14;%PATH%"
+  - "set CCLASH_DIR=C:\\ProgramData\\cclash"
+
 # Download FFTW3 for PME plugin
   - C:\MinGW\msys\1.0\bin\wget -q ftp://ftp.fftw.org/pub/fftw/fftw-3.3.4-dll64.zip
   - 7z x fftw-3.3.4-dll64.zip -oC:\fftw > null
@@ -50,7 +56,7 @@ build_script:
        -LA"
   - mkdir build
   - cd build
-  - cmake -G "NMake Makefiles" %CMAKE_FLAGS% -LA -DCMAKE_CXX_FLAGS_RELEASE="/MD /Od /Ob0 /D NDEBUG" ..
+  - cmake -G "NMake Makefiles" %CMAKE_FLAGS% -DCMAKE_CXX_FLAGS_RELEASE="/MD /Od /Ob0 /D NDEBUG" ..
   - cmake --build . --target install
   - cmake --build . --target PythonInstall
 
@@ -58,3 +64,6 @@ test_script:
   - python %APPVEYOR_BUILD_FOLDER%\devtools\run-ctest.py
   - cd python\tests
   - py.test -v
+
+cache:
+- C:\ProgramData\cclash -> appveyor.yml
