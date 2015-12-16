@@ -108,7 +108,7 @@ class PDBFile(object):
                         atomName = atomReplacements[atomName]
                     atomName = atomName.strip()
                     element = atom.element
-                    if element == extraParticleIdentifier:
+                    if element == 'EP':
                         element = None
                     elif element is None:
                         # Try to guess the element.

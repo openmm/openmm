@@ -797,7 +797,9 @@ class Atom(object):
         except ValueError: self.formal_charge = None
         # figure out atom element
         if self.element_symbol == extraParticleIdentifier:
-            self.element = self.element_symbol
+            self.element = 'EP'
+        elif not self.element_symbol and extraParticleIdentifier is None:
+            self.element = 'EP'
         else:
             try:
                 # Try to find a sensible element symbol from columns 76-77
