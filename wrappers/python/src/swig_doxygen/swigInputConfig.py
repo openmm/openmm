@@ -247,7 +247,7 @@ UNITS = {
 ("AmoebaMultipoleForce",                 "getPmeBSplineOrder")                            :  ( None,()),
 ("AmoebaMultipoleForce",                 "getMutualInducedMaxIterations")                 :  ( None, ()),
 ("AmoebaMultipoleForce",                 "getMutualInducedTargetEpsilon")                 :  ( None, ()),
-("AmoebaMultipoleForce",                 "getOPTCoefficients")                            :  ( None, ()),
+("AmoebaMultipoleForce",                 "getExtrapolationCoefficients")                            :  ( None, ()),
 ("AmoebaMultipoleForce",                 "getEwaldErrorTolerance")                        :  ( None, ()),
 ("AmoebaMultipoleForce",                 "getPmeGridDimensions")                          :  ( None,()),
 

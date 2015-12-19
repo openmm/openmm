@@ -1145,12 +1145,10 @@ void AmoebaReferenceMultipoleForce::calculateInducedDipoles(const vector<Multipo
 
     // UpdateInducedDipoleFieldStruct contains induced dipole, fixed multipole fields and fields
     // due to other induced dipoles at each site
-    if (getPolarizationType() == AmoebaReferenceMultipoleForce::Mutual) {
+    if (getPolarizationType() == AmoebaReferenceMultipoleForce::Mutual)
         convergeInduceDipolesByDIIS(particleData, updateInducedDipoleField);
-    }if (getPolarizationType() == AmoebaReferenceMultipoleForce::Extrapolated) {
+    else if (getPolarizationType() == AmoebaReferenceMultipoleForce::Extrapolated)
         convergeInduceDipolesByExtrapolation(particleData, updateInducedDipoleField);
-    }
-
 }
 
 RealOpenMM AmoebaReferenceMultipoleForce::calculateElectrostaticPairIxn(const MultipoleParticleData& particleI,
@@ -2555,7 +2553,10 @@ void AmoebaReferenceGeneralizedKirkwoodMultipoleForce::calculateInducedDipoles(c
     updateInducedDipoleField.push_back(UpdateInducedDipoleFieldStruct(_gkField, _inducedDipoleS, _ptDipoleDS, _ptDipoleFieldGradientDS));
     updateInducedDipoleField.push_back(UpdateInducedDipoleFieldStruct(gkFieldPolar, _inducedDipolePolarS, _ptDipolePS, _ptDipoleFieldGradientPS));
 
-    convergeInduceDipolesByDIIS(particleData, updateInducedDipoleField);
+    if (getPolarizationType() == AmoebaReferenceMultipoleForce::Mutual)
+        convergeInduceDipolesByDIIS(particleData, updateInducedDipoleField);
+    else if (getPolarizationType() == AmoebaReferenceMultipoleForce::Extrapolated)
+        convergeInduceDipolesByExtrapolation(particleData, updateInducedDipoleField);
 }
 
 RealOpenMM AmoebaReferenceGeneralizedKirkwoodMultipoleForce::calculateKirkwoodPairIxn(const MultipoleParticleData& particleI,
@@ -3810,7 +3811,7 @@ RealOpenMM AmoebaReferenceGeneralizedKirkwoodMultipoleForce::calculateKirkwoodPa
 
     // mutual polarization electrostatic solvation free energy gradient
 
-    if (getPolarizationType() == AmoebaReferenceMultipoleForce::Mutual) {
+    if (getPolarizationType() == AmoebaReferenceMultipoleForce::Mutual || getPolarizationType() == AmoebaReferenceMultipoleForce::Extrapolated) {
 
         dpdx = dpdx - 0.5 *
                            (_inducedDipoleS[iIndex][0]*(_inducedDipolePolarS[jIndex][0]*gux5+_inducedDipolePolarS[jIndex][1]*gux6+_inducedDipolePolarS[jIndex][2]*gux7)
@@ -4028,6 +4029,55 @@ RealOpenMM AmoebaReferenceGeneralizedKirkwoodMultipoleForce::calculateElectrosta
         }
     }
     energy += (_electric/_dielectric)*eDiffEnergy;
+
+    if (getPolarizationType() == AmoebaReferenceMultipoleForce::Extrapolated) {
+        RealOpenMM prefac = (_electric/_dielectric);
+        for (int i = 0; i < _numParticles; i++) {
+            // Compute the µ(m) T µ(n) force contributions here
+            for (int l = 0; l < _maxPTOrder-1; ++l) {
+                for (int m = 0; m < _maxPTOrder-1-l; ++m) {
+                    RealOpenMM p = _extPartCoefficients[l+m+1];
+                    if(std::fabs(p) < 1e-6) continue;
+                    forces[i][0] -= 0.5*p*prefac*(_ptDipoleD[l][i][0]*_ptDipoleFieldGradientP[m][6*i+0]
+                                                + _ptDipoleD[l][i][1]*_ptDipoleFieldGradientP[m][6*i+3]
+                                                + _ptDipoleD[l][i][2]*_ptDipoleFieldGradientP[m][6*i+4]);
+                    forces[i][1] -= 0.5*p*prefac*(_ptDipoleD[l][i][0]*_ptDipoleFieldGradientP[m][6*i+3]
+                                                + _ptDipoleD[l][i][1]*_ptDipoleFieldGradientP[m][6*i+1]
+                                                + _ptDipoleD[l][i][2]*_ptDipoleFieldGradientP[m][6*i+5]);
+                    forces[i][2] -= 0.5*p*prefac*(_ptDipoleD[l][i][0]*_ptDipoleFieldGradientP[m][6*i+4]
+                                                + _ptDipoleD[l][i][1]*_ptDipoleFieldGradientP[m][6*i+5]
+                                                + _ptDipoleD[l][i][2]*_ptDipoleFieldGradientP[m][6*i+2]);
+                    forces[i][0] -= 0.5*p*prefac*(_ptDipoleP[l][i][0]*_ptDipoleFieldGradientD[m][6*i+0]
+                                                + _ptDipoleP[l][i][1]*_ptDipoleFieldGradientD[m][6*i+3]
+                                                + _ptDipoleP[l][i][2]*_ptDipoleFieldGradientD[m][6*i+4]);
+                    forces[i][1] -= 0.5*p*prefac*(_ptDipoleP[l][i][0]*_ptDipoleFieldGradientD[m][6*i+3]
+                                                + _ptDipoleP[l][i][1]*_ptDipoleFieldGradientD[m][6*i+1]
+                                                + _ptDipoleP[l][i][2]*_ptDipoleFieldGradientD[m][6*i+5]);
+                    forces[i][2] -= 0.5*p*prefac*(_ptDipoleP[l][i][0]*_ptDipoleFieldGradientD[m][6*i+4]
+                                                + _ptDipoleP[l][i][1]*_ptDipoleFieldGradientD[m][6*i+5]
+                                                + _ptDipoleP[l][i][2]*_ptDipoleFieldGradientD[m][6*i+2]);
+                    forces[i][0] += 0.5*p*prefac*(_ptDipoleDS[l][i][0]*_ptDipoleFieldGradientPS[m][6*i+0]
+                                                + _ptDipoleDS[l][i][1]*_ptDipoleFieldGradientPS[m][6*i+3]
+                                                + _ptDipoleDS[l][i][2]*_ptDipoleFieldGradientPS[m][6*i+4]);
+                    forces[i][1] += 0.5*p*prefac*(_ptDipoleDS[l][i][0]*_ptDipoleFieldGradientPS[m][6*i+3]
+                                                + _ptDipoleDS[l][i][1]*_ptDipoleFieldGradientPS[m][6*i+1]
+                                                + _ptDipoleDS[l][i][2]*_ptDipoleFieldGradientPS[m][6*i+5]);
+                    forces[i][2] += 0.5*p*prefac*(_ptDipoleDS[l][i][0]*_ptDipoleFieldGradientPS[m][6*i+4]
+                                                + _ptDipoleDS[l][i][1]*_ptDipoleFieldGradientPS[m][6*i+5]
+                                                + _ptDipoleDS[l][i][2]*_ptDipoleFieldGradientPS[m][6*i+2]);
+                    forces[i][0] += 0.5*p*prefac*(_ptDipolePS[l][i][0]*_ptDipoleFieldGradientDS[m][6*i+0]
+                                                + _ptDipolePS[l][i][1]*_ptDipoleFieldGradientDS[m][6*i+3]
+                                                + _ptDipolePS[l][i][2]*_ptDipoleFieldGradientDS[m][6*i+4]);
+                    forces[i][1] += 0.5*p*prefac*(_ptDipolePS[l][i][0]*_ptDipoleFieldGradientDS[m][6*i+3]
+                                                + _ptDipolePS[l][i][1]*_ptDipoleFieldGradientDS[m][6*i+1]
+                                                + _ptDipolePS[l][i][2]*_ptDipoleFieldGradientDS[m][6*i+5]);
+                    forces[i][2] += 0.5*p*prefac*(_ptDipolePS[l][i][0]*_ptDipoleFieldGradientDS[m][6*i+4]
+                                                + _ptDipolePS[l][i][1]*_ptDipoleFieldGradientDS[m][6*i+5]
+                                                + _ptDipolePS[l][i][2]*_ptDipoleFieldGradientDS[m][6*i+2]);
+                }
+            }
+        }
+    }
 
     return energy;
 }
@@ -4445,7 +4495,7 @@ RealOpenMM AmoebaReferenceGeneralizedKirkwoodMultipoleForce::calculateKirkwoodED
 
     // correction to convert mutual to direct polarization force
 
-    if (getPolarizationType() == AmoebaReferenceMultipoleForce::Direct) {
+    if (getPolarizationType() != AmoebaReferenceMultipoleForce::Mutual) {
         RealOpenMM gfd      = 0.5*(rr5*scip2*scale3i - rr7*(scip3*sci4+sci3*scip4)*scale5i);
         RealOpenMM fdir1    = gfd*xr + 0.5*rr5*scale5i* (sci4*_inducedDipolePolarS[iIndex][0]+scip4*_inducedDipoleS[iIndex][0] + sci3*_inducedDipolePolarS[jIndex][0]+scip3*_inducedDipoleS[jIndex][0]);
         RealOpenMM fdir2    = gfd*yr + 0.5*rr5*scale5i* (sci4*_inducedDipolePolarS[iIndex][1]+scip4*_inducedDipoleS[iIndex][1] + sci3*_inducedDipolePolarS[jIndex][1]+scip3*_inducedDipoleS[jIndex][1]);
@@ -4708,7 +4758,7 @@ RealOpenMM AmoebaReferenceGeneralizedKirkwoodMultipoleForce::calculateKirkwoodED
 
     // correction to convert mutual to direct polarization force
 
-    if (getPolarizationType() == AmoebaReferenceMultipoleForce::Direct) {
+    if (getPolarizationType() != AmoebaReferenceMultipoleForce::Mutual) {
 
         RealOpenMM gfd    = 0.5*(rr5*scip2*scale3i- rr7*(scip3*sci4+sci3*scip4)*scale5i);
         RealOpenMM fdir1  = gfd*xr + 0.5*rr5*scale5i* (sci4*_inducedDipolePolar[iIndex][0]+scip4*_inducedDipole[iIndex][0] + sci3*_inducedDipolePolar[jIndex][0]+scip3*_inducedDipole[jIndex][0]);
