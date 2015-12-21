@@ -33,6 +33,12 @@ from __future__ import division
 from __future__ import absolute_import
 
 from simtk.openmm import CustomGBForce, Continuous2DFunction
+import simtk.unit as u
+
+def strip_unit(value, unit):
+    if not u.is_quantity(value):
+        return value
+    return value.value_in_unit(unit)
 
 d0=[2.26685,2.32548,2.38397,2.44235,2.50057,2.55867,2.61663,2.67444,
     2.73212,2.78965,2.84705,2.9043,2.96141,3.0184,3.07524,3.13196,
@@ -227,146 +233,164 @@ def _createEnergyTerms(force, solventDielectric, soluteDielectric, SA, cutoff, k
 """
 Amber Equivalent: igb = 1
 """
+class GBSAHCTForce(CustomGBForce):
 
-
-def GBSAHCTForce(solventDielectric=78.5, soluteDielectric=1, SA=None,
+    def __init__(self, solventDielectric=78.5, soluteDielectric=1, SA=None,
                  cutoff=None, kappa=0.0):
+        CustomGBForce.__init__(self)
+        self.addPerParticleParameter("q")
+        self.add
 
-    custom = CustomGBForce()
+        self.addPerParticleParameter("q")
+        self.addPerParticleParameter("or") # Offset radius
+        self.addPerParticleParameter("sr") # Scaled offset radius
+        self.addComputedValue("I", "step(r+sr2-or1)*0.5*(1/L-1/U+0.25*(r-sr2^2/r)*(1/(U^2)-1/(L^2))+0.5*log(L/U)/r);"
+                                   "U=r+sr2;"
+                                   "L=max(or1, D);"
+                                   "D=abs(r-sr2)",
+                              CustomGBForce.ParticlePairNoExclusions)
 
-    custom.addPerParticleParameter("q")
-    custom.addPerParticleParameter("or") # Offset radius
-    custom.addPerParticleParameter("sr") # Scaled offset radius
-    custom.addComputedValue("I", "step(r+sr2-or1)*0.5*(1/L-1/U+0.25*(r-sr2^2/r)*(1/(U^2)-1/(L^2))+0.5*log(L/U)/r);"
-                                  "U=r+sr2;"
-                                  "L=max(or1, D);"
-                                  "D=abs(r-sr2)", CustomGBForce.ParticlePairNoExclusions)
-
-    custom.addComputedValue("B", "1/(1/or-I)", CustomGBForce.SingleParticle)
-    _createEnergyTerms(custom, solventDielectric, soluteDielectric, SA, cutoff, kappa, 0.009)
-    return custom
+        self.addComputedValue("B", "1/(1/or-I)", CustomGBForce.SingleParticle)
+        _createEnergyTerms(self, solventDielectric, soluteDielectric, SA, cutoff, kappa, 0.009)
 
 """
 Amber Equivalents: igb = 2
 """
-def GBSAOBC1Force(solventDielectric=78.5, soluteDielectric=1, SA=None,
-                  cutoff=None, kappa=0.0):
+class GBSAOBC1Force(CustomGBForce):
 
-    custom = CustomGBForce()
+    def __init__(self, solventDielectric=78.5, soluteDielectric=1, SA=None,
+                 cutoff=None, kappa=0.0):
 
-    custom.addPerParticleParameter("q")
-    custom.addPerParticleParameter("or") # Offset radius
-    custom.addPerParticleParameter("sr") # Scaled offset radius
-    custom.addComputedValue("I",  "step(r+sr2-or1)*0.5*(1/L-1/U+0.25*(r-sr2^2/r)*(1/(U^2)-1/(L^2))+0.5*log(L/U)/r);"
-                                  "U=r+sr2;"
-                                  "L=max(or1, D);"
-                                  "D=abs(r-sr2)", CustomGBForce.ParticlePairNoExclusions)
+        CustomGBForce.__init__(self)
 
-    custom.addComputedValue("B", "1/(1/or-tanh(0.8*psi+2.909125*psi^3)/radius);"
-                                 "psi=I*or; radius=or+offset; offset=0.009", CustomGBForce.SingleParticle)
-    _createEnergyTerms(custom, solventDielectric, soluteDielectric, SA, cutoff, kappa, 0.009)
-    return custom
+        self.addPerParticleParameter("q")
+        self.addPerParticleParameter("or") # Offset radius
+        self.addPerParticleParameter("sr") # Scaled offset radius
+        self.addComputedValue("I",  "step(r+sr2-or1)*0.5*(1/L-1/U+0.25*(r-sr2^2/r)*(1/(U^2)-1/(L^2))+0.5*log(L/U)/r);"
+                                    "U=r+sr2;"
+                                    "L=max(or1, D);"
+                                    "D=abs(r-sr2)", CustomGBForce.ParticlePairNoExclusions)
+
+        self.addComputedValue("B", "1/(1/or-tanh(0.8*psi+2.909125*psi^3)/radius);"
+                                   "psi=I*or; radius=or+offset; offset=0.009", CustomGBForce.SingleParticle)
+        _createEnergyTerms(self, solventDielectric, soluteDielectric, SA, cutoff, kappa, 0.009)
 
 """
 Amber Equivalents: igb = 5
 """
-def GBSAOBC2Force(solventDielectric=78.5, soluteDielectric=1, SA=None,
-                  cutoff=None, kappa=0.0):
+class GBSAOBC2Force(CustomGBForce):
 
-    custom = CustomGBForce()
+    def __init__(self, solventDielectric=78.5, soluteDielectric=1, SA=None,
+                 cutoff=None, kappa=0.0):
 
-    custom.addPerParticleParameter("q")
-    custom.addPerParticleParameter("or") # Offset radius
-    custom.addPerParticleParameter("sr") # Scaled offset radius
-    custom.addComputedValue("I",  "step(r+sr2-or1)*0.5*(1/L-1/U+0.25*(r-sr2^2/r)*(1/(U^2)-1/(L^2))+0.5*log(L/U)/r);"
-                                  "U=r+sr2;"
-                                  "L=max(or1, D);"
-                                  "D=abs(r-sr2)", CustomGBForce.ParticlePairNoExclusions)
+        CustomGBForce.__init__(self)
 
-    custom.addComputedValue("B", "1/(1/or-tanh(psi-0.8*psi^2+4.85*psi^3)/radius);"
-                                 "psi=I*or; radius=or+offset; offset=0.009", CustomGBForce.SingleParticle)
-    _createEnergyTerms(custom, solventDielectric, soluteDielectric, SA, cutoff, kappa, 0.009)
-    return custom
+        self.addPerParticleParameter("q")
+        self.addPerParticleParameter("or") # Offset radius
+        self.addPerParticleParameter("sr") # Scaled offset radius
+        self.addComputedValue("I",  "step(r+sr2-or1)*0.5*(1/L-1/U+0.25*(r-sr2^2/r)*(1/(U^2)-1/(L^2))+0.5*log(L/U)/r);"
+                                    "U=r+sr2;"
+                                    "L=max(or1, D);"
+                                    "D=abs(r-sr2)", CustomGBForce.ParticlePairNoExclusions)
+
+        self.addComputedValue("B", "1/(1/or-tanh(psi-0.8*psi^2+4.85*psi^3)/radius);"
+                                     "psi=I*or; radius=or+offset; offset=0.009", CustomGBForce.SingleParticle)
+        _createEnergyTerms(self, solventDielectric, soluteDielectric, SA, cutoff, kappa, 0.009)
 
 """
 Amber Equivalents: igb = 7
 """
-def GBSAGBnForce(solventDielectric=78.5, soluteDielectric=1, SA=None,
-                  cutoff=None, kappa=0.0):
+class GBSAGBnForce(CustomGBForce):
 
+    def __init__(self, solventDielectric=78.5, soluteDielectric=1, SA=None,
+                 cutoff=None, kappa=0.0):
 
-    """
-    Indexing for tables:
-        input: radius1, radius2
-        index = (radius2*200-20)*21 + (radius1*200-20)
-        output: index of desired value in row-by-row, 1D version of Tables 3 & 4
-    """
+        CustomGBForce.__init__(self)
 
+        self.addPerParticleParameter("q")
+        self.addPerParticleParameter("or") # Offset radius
+        self.addPerParticleParameter("sr") # Scaled offset radius
 
-    custom = CustomGBForce()
+        self.addTabulatedFunction("getd0", Continuous2DFunction(21, 21, d0, 0.1, 0.2, 0.1, 0.2))
+        self.addTabulatedFunction("getm0", Continuous2DFunction(21, 21, m0, 0.1, 0.2, 0.1, 0.2))
 
-    custom.addPerParticleParameter("q")
-    custom.addPerParticleParameter("or") # Offset radius
-    custom.addPerParticleParameter("sr") # Scaled offset radius
+        self.addComputedValue("I",  "Ivdw+neckScale*Ineck;"
+                                    "Ineck=step(radius1+radius2+neckCut-r)*getm0(radius1,radius2)/(1+100*(r-getd0(radius1,radius2))^2+0.3*1000000*(r-getd0(radius1,radius2))^6);"
+                                    "Ivdw=step(r+sr2-or1)*0.5*(1/L-1/U+0.25*(r-sr2^2/r)*(1/(U^2)-1/(L^2))+0.5*log(L/U)/r);"
+                                    "U=r+sr2;"
+                                    "L=max(or1, D);"
+                                    "D=abs(r-sr2);"
+                                    "radius1=or1+offset; radius2=or2+offset;"
+                                    "neckScale=0.361825; neckCut=0.68; offset=0.009", CustomGBForce.ParticlePairNoExclusions)
 
-    custom.addTabulatedFunction("getd0", Continuous2DFunction(21, 21, d0, 0.1, 0.2, 0.1, 0.2))
-    custom.addTabulatedFunction("getm0", Continuous2DFunction(21, 21, m0, 0.1, 0.2, 0.1, 0.2))
+        self.addComputedValue("B", "1/(1/or-tanh(1.09511284*psi-1.907992938*psi^2+2.50798245*psi^3)/radius);"
+                                  "psi=I*or; radius=or+offset; offset=0.009", CustomGBForce.SingleParticle)
+        _createEnergyTerms(self, solventDielectric, soluteDielectric, SA, cutoff, kappa, 0.009)
 
-    custom.addComputedValue("I",  "Ivdw+neckScale*Ineck;"
-                                  "Ineck=step(radius1+radius2+neckCut-r)*getm0(radius1,radius2)/(1+100*(r-getd0(radius1,radius2))^2+0.3*1000000*(r-getd0(radius1,radius2))^6);"
-                                  "Ivdw=step(r+sr2-or1)*0.5*(1/L-1/U+0.25*(r-sr2^2/r)*(1/(U^2)-1/(L^2))+0.5*log(L/U)/r);"
-                                  "U=r+sr2;"
-                                  "L=max(or1, D);"
-                                  "D=abs(r-sr2);"
-                                  "radius1=or1+offset; radius2=or2+offset;"
-                                  "neckScale=0.361825; neckCut=0.68; offset=0.009", CustomGBForce.ParticlePairNoExclusions)
+    def addParticle(self, parameters):
+        parameters = list(parameters)
+        parameters[0] = strip_unit(parameters[0], u.elementary_charge)
+        parameters[1] = strip_unit(parameters[0], u.nanometer)
+        if parameters[1] < 0.1 or parameters[1] > 0.2:
+            raise ValueError('Radii must be between 1 and 2 Angstroms for neck lookup')
+        CustomGBForce.addParticle(self, parameters)
 
-    custom.addComputedValue("B", "1/(1/or-tanh(1.09511284*psi-1.907992938*psi^2+2.50798245*psi^3)/radius);"
-                              "psi=I*or; radius=or+offset; offset=0.009", CustomGBForce.SingleParticle)
-    _createEnergyTerms(custom, solventDielectric, soluteDielectric, SA, cutoff, kappa, 0.009)
-    return custom
+    def setParticleParameters(self, idx, parameters):
+        parameters = list(parameters)
+        parameters[0] = strip_unit(parameters[0], u.elementary_charge)
+        parameters[1] = strip_unit(parameters[0], u.nanometer)
+        if parameters[1] < 0.1 or parameters[1] > 0.2:
+            raise ValueError('Radii must be between 1 and 2 Angstroms for neck lookup')
+        CustomGBForce.setParticleParameters(self, idx, parameters)
 
 """
 Amber Equivalents: igb = 8
 """
-def GBSAGBn2Force(solventDielectric=78.5, soluteDielectric=1, SA=None,
-                  cutoff=None, kappa=0.0):
+class GBSAGBn2Force(CustomGBForce):
 
+    def __init__(self, solventDielectric=78.5, soluteDielectric=1, SA=None,
+                 cutoff=None, kappa=0.0):
 
-    """
-    Indexing for tables:
-        input: radius1, radius2
-        index = (radius2*200-20)*21 + (radius1*200-20)
-        output: index of desired value in row-by-row, 1D version of Tables 3 & 4
-    """
+        CustomGBForce.__init__(self)
 
+        self.addPerParticleParameter("q")
+        self.addPerParticleParameter("or") # Offset radius
+        self.addPerParticleParameter("sr") # Scaled offset radius
+        self.addPerParticleParameter("alpha")
+        self.addPerParticleParameter("beta")
+        self.addPerParticleParameter("gamma")
 
-    custom = CustomGBForce()
+        self.addTabulatedFunction("getd0", Continuous2DFunction(21, 21, d0, 0.1, 0.2, 0.1, 0.2))
+        self.addTabulatedFunction("getm0", Continuous2DFunction(21, 21, m0, 0.1, 0.2, 0.1, 0.2))
 
-    custom.addPerParticleParameter("q")
-    custom.addPerParticleParameter("or") # Offset radius
-    custom.addPerParticleParameter("sr") # Scaled offset radius
-    custom.addPerParticleParameter("alpha")
-    custom.addPerParticleParameter("beta")
-    custom.addPerParticleParameter("gamma")
+        self.addComputedValue("I",  "Ivdw+neckScale*Ineck;"
+                                    "Ineck=step(radius1+radius2+neckCut-r)*getm0(radius1,radius2)/(1+100*(r-getd0(radius1,radius2))^2+0.3*1000000*(r-getd0(radius1,radius2))^6);"
+                                    "Ivdw=step(r+sr2-or1)*0.5*(1/L-1/U+0.25*(r-sr2^2/r)*(1/(U^2)-1/(L^2))+0.5*log(L/U)/r);"
+                                    "U=r+sr2;"
+                                    "L=max(or1, D);"
+                                    "D=abs(r-sr2);"
+                                    "radius1=or1+offset; radius2=or2+offset;"
+                                    "neckScale=0.826836; neckCut=0.68; offset=0.0195141", CustomGBForce.ParticlePairNoExclusions)
 
-    custom.addTabulatedFunction("getd0", Continuous2DFunction(21, 21, d0, 0.1, 0.2, 0.1, 0.2))
-    custom.addTabulatedFunction("getm0", Continuous2DFunction(21, 21, m0, 0.1, 0.2, 0.1, 0.2))
+        self.addComputedValue("B", "1/(1/or-tanh(alpha*psi-beta*psi^2+gamma*psi^3)/radius);"
+                                     "psi=I*or; radius=or+offset; offset=0.0195141", CustomGBForce.SingleParticle)
+        _createEnergyTerms(self, solventDielectric, soluteDielectric, SA, cutoff, kappa, 0.0195141)
 
-    custom.addComputedValue("I",  "Ivdw+neckScale*Ineck;"
-                                  "Ineck=step(radius1+radius2+neckCut-r)*getm0(radius1,radius2)/(1+100*(r-getd0(radius1,radius2))^2+0.3*1000000*(r-getd0(radius1,radius2))^6);"
-                                  "Ivdw=step(r+sr2-or1)*0.5*(1/L-1/U+0.25*(r-sr2^2/r)*(1/(U^2)-1/(L^2))+0.5*log(L/U)/r);"
-                                  "U=r+sr2;"
-                                  "L=max(or1, D);"
-                                  "D=abs(r-sr2);"
-                                  "radius1=or1+offset; radius2=or2+offset;"
-                                  "neckScale=0.826836; neckCut=0.68; offset=0.0195141", CustomGBForce.ParticlePairNoExclusions)
+    def addParticle(self, parameters):
+        parameters = list(parameters)
+        parameters[0] = strip_unit(parameters[0], u.elementary_charge)
+        parameters[1] = strip_unit(parameters[0], u.nanometer)
+        if parameters[1] < 0.1 or parameters[1] > 0.2:
+            raise ValueError('Radii must be between 1 and 2 Angstroms for neck lookup')
+        CustomGBForce.addParticle(self, parameters)
 
-    custom.addComputedValue("B", "1/(1/or-tanh(alpha*psi-beta*psi^2+gamma*psi^3)/radius);"
-                                 "psi=I*or; radius=or+offset; offset=0.0195141", CustomGBForce.SingleParticle)
-    _createEnergyTerms(custom, solventDielectric, soluteDielectric, SA, cutoff, kappa, 0.0195141)
-    return custom
-
+    def setParticleParameters(self, idx, parameters):
+        parameters = list(parameters)
+        parameters[0] = strip_unit(parameters[0], u.elementary_charge)
+        parameters[1] = strip_unit(parameters[0], u.nanometer)
+        if parameters[1] < 0.1 or parameters[1] > 0.2:
+            raise ValueError('Radii must be between 1 and 2 Angstroms for neck lookup')
+        CustomGBForce.setParticleParameters(self, idx, parameters)
 
 def convertParameters(params, gbmodel):
     """Convert the GB parameters from the file into the values expected by the appropriate CustomGBForce."""
