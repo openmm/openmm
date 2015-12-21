@@ -238,8 +238,6 @@ class GBSAHCTForce(CustomGBForce):
     def __init__(self, solventDielectric=78.5, soluteDielectric=1, SA=None,
                  cutoff=None, kappa=0.0):
         CustomGBForce.__init__(self)
-        self.addPerParticleParameter("q")
-        self.add
 
         self.addPerParticleParameter("q")
         self.addPerParticleParameter("or") # Offset radius
