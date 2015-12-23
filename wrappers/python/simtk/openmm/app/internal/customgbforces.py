@@ -328,7 +328,7 @@ class GBSAGBnForce(CustomGBForce):
     def addParticle(self, parameters):
         parameters = list(parameters)
         parameters[0] = strip_unit(parameters[0], u.elementary_charge)
-        parameters[1] = strip_unit(parameters[0], u.nanometer)
+        parameters[1] = strip_unit(parameters[1], u.nanometer)
         if parameters[1] < 0.1 or parameters[1] > 0.2:
             raise ValueError('Radii must be between 1 and 2 Angstroms for neck lookup')
         CustomGBForce.addParticle(self, parameters)
@@ -336,7 +336,7 @@ class GBSAGBnForce(CustomGBForce):
     def setParticleParameters(self, idx, parameters):
         parameters = list(parameters)
         parameters[0] = strip_unit(parameters[0], u.elementary_charge)
-        parameters[1] = strip_unit(parameters[0], u.nanometer)
+        parameters[1] = strip_unit(parameters[1], u.nanometer)
         if parameters[1] < 0.1 or parameters[1] > 0.2:
             raise ValueError('Radii must be between 1 and 2 Angstroms for neck lookup')
         CustomGBForce.setParticleParameters(self, idx, parameters)
@@ -344,7 +344,7 @@ class GBSAGBnForce(CustomGBForce):
 """
 Amber Equivalents: igb = 8
 """
-class GBSAGBn2Force(CustomGBForce):
+class GBSAGBn2Force(GBSAGBnForce):
 
     def __init__(self, solventDielectric=78.5, soluteDielectric=1, SA=None,
                  cutoff=None, kappa=0.0):
@@ -373,22 +373,6 @@ class GBSAGBn2Force(CustomGBForce):
         self.addComputedValue("B", "1/(1/or-tanh(alpha*psi-beta*psi^2+gamma*psi^3)/radius);"
                                      "psi=I*or; radius=or+offset; offset=0.0195141", CustomGBForce.SingleParticle)
         _createEnergyTerms(self, solventDielectric, soluteDielectric, SA, cutoff, kappa, 0.0195141)
-
-    def addParticle(self, parameters):
-        parameters = list(parameters)
-        parameters[0] = strip_unit(parameters[0], u.elementary_charge)
-        parameters[1] = strip_unit(parameters[0], u.nanometer)
-        if parameters[1] < 0.1 or parameters[1] > 0.2:
-            raise ValueError('Radii must be between 1 and 2 Angstroms for neck lookup')
-        CustomGBForce.addParticle(self, parameters)
-
-    def setParticleParameters(self, idx, parameters):
-        parameters = list(parameters)
-        parameters[0] = strip_unit(parameters[0], u.elementary_charge)
-        parameters[1] = strip_unit(parameters[0], u.nanometer)
-        if parameters[1] < 0.1 or parameters[1] > 0.2:
-            raise ValueError('Radii must be between 1 and 2 Angstroms for neck lookup')
-        CustomGBForce.setParticleParameters(self, idx, parameters)
 
 def convertParameters(params, gbmodel):
     """Convert the GB parameters from the file into the values expected by the appropriate CustomGBForce."""
