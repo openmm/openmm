@@ -47,7 +47,7 @@ import simtk.unit as u
 from simtk.openmm.app import (forcefield as ff, Topology, element)
 from simtk.openmm.app.amberprmtopfile import HCT, OBC1, OBC2, GBn, GBn2
 from simtk.openmm.app.internal.customgbforces import (GBSAHCTForce,
-                GBSAOBC1Force, GBSAOBC2Force, GBSAGBnForce, GBSAGBn2Force, convertParameters)
+                GBSAOBC1Force, GBSAOBC2Force, GBSAGBnForce, GBSAGBn2Force)
 from simtk.openmm.app.internal.unitcell import computePeriodicBoxVectors
 # CHARMM imports
 from simtk.openmm.app.internal.charmm.topologyobjects import (
@@ -1250,7 +1250,6 @@ class CharmmPsfFile(object):
         if implicitSolvent is not None:
             if verbose: print('Adding GB parameters...')
             gb_parms = self._get_gb_params(implicitSolvent)
-            gb_parms = convertParameters(gb_parms, str(implicitSolvent))
 
             # If implicitSolventKappa is None, compute it from salt
             # concentration

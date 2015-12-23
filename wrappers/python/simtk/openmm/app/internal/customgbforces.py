@@ -32,6 +32,7 @@ USE OR OTHER DEALINGS IN THE SOFTWARE.
 from __future__ import division
 from __future__ import absolute_import
 
+import copy
 from simtk.openmm import CustomGBForce, Continuous2DFunction
 import simtk.unit as u
 
@@ -230,10 +231,33 @@ def _createEnergyTerms(force, solventDielectric, soluteDielectric, SA, cutoff, k
             force.addEnergyTerm("-138.935485*(1/soluteDielectric-1/solventDielectric)*q1*q2*(1/f-"+str(1/cutoff)+");"
                                 "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))"+params, CustomGBForce.ParticlePairNoExclusions)
 
+class CustomAmberGBForce(CustomGBForce):
+
+    OFFSET = 0.009
+    RADIUS_ARG_POSITION = 1
+    SCREEN_POSITION = 2
+
+    def __init__(self, *args, **kwargs):
+        raise NotImplementedError('Cannot instantiate ABC')
+
+    def addParticle(self, params):
+        params = copy.deepcopy(params)
+        params[self.RADIUS_ARG_POSITION] = strip_unit(params[self.RADIUS_ARG_POSITION], u.nanometer) - self.OFFSET
+        params[self.SCREEN_POSITION] *= params[self.RADIUS_ARG_POSITION]
+        CustomGBForce.addParticle(self, params)
+        return params
+
+    def setParticleParameters(self, idx, params):
+        params = copy.deepcopy(params)
+        params[self.RADIUS_ARG_POSITION] = strip_unit(params[self.RADIUS_ARG_POSITION], u.nanometer) - self.OFFSET
+        params[self.SCREEN_POSITION] *= params[self.RADIUS_ARG_POSITION]
+        CustomGBForce.addParticle(self, params)
+        return params
+
 """
 Amber Equivalent: igb = 1
 """
-class GBSAHCTForce(CustomGBForce):
+class GBSAHCTForce(CustomAmberGBForce):
 
     def __init__(self, solventDielectric=78.5, soluteDielectric=1, SA=None,
                  cutoff=None, kappa=0.0):
@@ -254,7 +278,7 @@ class GBSAHCTForce(CustomGBForce):
 """
 Amber Equivalents: igb = 2
 """
-class GBSAOBC1Force(CustomGBForce):
+class GBSAOBC1Force(CustomAmberGBForce):
 
     def __init__(self, solventDielectric=78.5, soluteDielectric=1, SA=None,
                  cutoff=None, kappa=0.0):
@@ -276,7 +300,7 @@ class GBSAOBC1Force(CustomGBForce):
 """
 Amber Equivalents: igb = 5
 """
-class GBSAOBC2Force(CustomGBForce):
+class GBSAOBC2Force(CustomAmberGBForce):
 
     def __init__(self, solventDielectric=78.5, soluteDielectric=1, SA=None,
                  cutoff=None, kappa=0.0):
@@ -298,7 +322,7 @@ class GBSAOBC2Force(CustomGBForce):
 """
 Amber Equivalents: igb = 7
 """
-class GBSAGBnForce(CustomGBForce):
+class GBSAGBnForce(CustomAmberGBForce):
 
     def __init__(self, solventDielectric=78.5, soluteDielectric=1, SA=None,
                  cutoff=None, kappa=0.0):
@@ -326,25 +350,21 @@ class GBSAGBnForce(CustomGBForce):
         _createEnergyTerms(self, solventDielectric, soluteDielectric, SA, cutoff, kappa, 0.009)
 
     def addParticle(self, parameters):
-        parameters = list(parameters)
-        parameters[0] = strip_unit(parameters[0], u.elementary_charge)
-        parameters[1] = strip_unit(parameters[1], u.nanometer)
+        parameters = CustomAmberGBForce.addParticle(self, parameters)
         if parameters[1] < 0.1 or parameters[1] > 0.2:
             raise ValueError('Radii must be between 1 and 2 Angstroms for neck lookup')
-        CustomGBForce.addParticle(self, parameters)
 
     def setParticleParameters(self, idx, parameters):
-        parameters = list(parameters)
-        parameters[0] = strip_unit(parameters[0], u.elementary_charge)
-        parameters[1] = strip_unit(parameters[1], u.nanometer)
+        parameters = CustomAmberGBForce.setParticleParameters(self, idx, parameters)
         if parameters[1] < 0.1 or parameters[1] > 0.2:
             raise ValueError('Radii must be between 1 and 2 Angstroms for neck lookup')
-        CustomGBForce.setParticleParameters(self, idx, parameters)
 
 """
 Amber Equivalents: igb = 8
 """
 class GBSAGBn2Force(GBSAGBnForce):
+
+    OFFSET = 0.0195141
 
     def __init__(self, solventDielectric=78.5, soluteDielectric=1, SA=None,
                  cutoff=None, kappa=0.0):
@@ -373,16 +393,3 @@ class GBSAGBn2Force(GBSAGBnForce):
         self.addComputedValue("B", "1/(1/or-tanh(alpha*psi-beta*psi^2+gamma*psi^3)/radius);"
                                      "psi=I*or; radius=or+offset; offset=0.0195141", CustomGBForce.SingleParticle)
         _createEnergyTerms(self, solventDielectric, soluteDielectric, SA, cutoff, kappa, 0.0195141)
-
-def convertParameters(params, gbmodel):
-    """Convert the GB parameters from the file into the values expected by the appropriate CustomGBForce."""
-    if gbmodel == 'GBn2':
-        offset = 0.0195141
-    else:
-        offset = 0.009
-
-    for p in params:
-        newParam = list(p)
-        newParam[0] -= offset
-        newParam[1] *= newParam[0]
-        yield newParam

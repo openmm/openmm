@@ -1054,8 +1054,6 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
             if units.is_quantity(cutoff):
                 cutoff = cutoff.value_in_unit(units.nanometers)
         gb_parms = prmtop.getGBParms(gbmodel, elements)
-        if gbmodel != 'OBC2' or implicitSolventKappa != 0:
-            gb_parms = customgb.convertParameters(gb_parms, gbmodel)
         if gbmodel == 'HCT':
             gb = customgb.GBSAHCTForce(solventDielectric, soluteDielectric, 'ACE', cutoff, implicitSolventKappa)
         elif gbmodel == 'OBC1':
