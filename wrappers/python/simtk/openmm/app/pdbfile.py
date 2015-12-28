@@ -69,6 +69,14 @@ class PDBFile(object):
         file : string
             the name of the file to load
         """
+        
+        metalElements = ['Al','As','Ba','Ca','Cd','Ce','Co','Cs','Cu','Dy','Fe','Gd','Hg','Ho','In','Ir','K','Li','Mg',
+        'Mn','Mo','Na','Ni','Pb','Pd','Pt','Rb','Rh','Sm','Sr','Te','Tl','V','W','Yb','Zn']
+        
+        standardResidues = ['ALA', 'ASN', 'CYS', 'GLU', 'HIS', 'LEU', 'MET', 'PRO', 'THR', 'TYR',
+                            'ARG', 'ASP', 'GLN', 'GLY', 'ILE', 'LYS', 'PHE', 'SER', 'TRP', 'VAL',
+                            'A', 'G', 'C', 'U', 'I', 'DA', 'DG', 'DC', 'DT', 'DI', 'HOH']
+
         top = Topology()
         ## The Topology read from the PDB file
         self.topology = top
@@ -151,14 +159,22 @@ class PDBFile(object):
         self.topology.createDisulfideBonds(self.positions)
         self._numpyPositions = None
 
-        # Add bonds based on CONECT records.
+        # Add bonds based on CONECT records. Bonds between metals of elements specified in metalElements and residues in standardResidues are not added.
 
         connectBonds = []
         for connect in pdb.models[-1].connects:
             i = connect[0]
             for j in connect[1:]:
-                if i in atomByNumber and j in atomByNumber:
-                    connectBonds.append((atomByNumber[i], atomByNumber[j]))
+                if i in atomByNumber and j in atomByNumber:    
+                    if atomByNumber[i].element is not None and atomByNumber[j].element is not None:
+                        if atomByNumber[i].element.symbol not in metalElements and atomByNumber[j].element.symbol not in metalElements:
+                            connectBonds.append((atomByNumber[i], atomByNumber[j])) 
+                        elif atomByNumber[i].element.symbol in metalElements and atomByNumber[j].residue.name not in standardResidues:
+                            connectBonds.append((atomByNumber[i], atomByNumber[j])) 
+                        elif atomByNumber[j].element.symbol in metalElements and atomByNumber[i].residue.name not in standardResidues:
+                            connectBonds.append((atomByNumber[i], atomByNumber[j]))     
+                    else:
+                        connectBonds.append((atomByNumber[i], atomByNumber[j]))         
         if len(connectBonds) > 0:
             # Only add bonds that don't already exist.
             existingBonds = set(top.bonds())
