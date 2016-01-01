@@ -26,5 +26,26 @@ class TestTopology(unittest.TestCase):
         """Test getters for number of atoms, residues, chains."""
         self.check_pdbfile('systems/1T2Y.pdb', 271, 25, 1)
 
+    def test_residue_bonds(self):
+        """Test retrieving bonds for a residue produces expected results."""
+        # Create a test topology
+        # atom connectivity = A1-|-B1-B2-|-C1
+        topology = Topology()
+        chain = topology.addChain(id='A')
+        residue1 = topology.addResidue('AAA', chain)
+        residue2 = topology.addResidue('BBB', chain)
+        residue3 = topology.addResidue('CCC', chain)
+        atom_A1 = topology.addAtom('A1', element.carbon, residue1)
+        atom_B1 = topology.addAtom('B1', element.carbon, residue2)
+        atom_B2 = topology.addAtom('B2', element.carbon, residue2)
+        atom_C1 = topology.addAtom('C1', element.carbon, residue3)
+        # Check bonds
+        all_bonds = [ bond for bond in residue.bonds() ]
+        internal_bonds = [ bond for bond in residue.internal_bonds() ]
+        external_bonds = [ bond for bond in residue.external_bonds() ]
+        self.assertEqual(all_bonds, [ (atom_A1, atom_B1), (atom_B1, atom_B2), (atom_B2, atom_C1) ])
+        self.assertEqual(internal_bonds, [ (atom_B1, atom_B2) ])
+        self.assertEqual(external_bonds, [ (atom_A1, atom_B1), (atom_B2, atom_C1) ])
+
 if __name__ == '__main__':
     unittest.main()
