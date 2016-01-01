@@ -169,16 +169,14 @@ class ForceField(object):
                     template.virtualSites.append(ForceField._VirtualSiteData(site, atomIndices))
                 for bond in residue.findall('Bond'):
                     if 'atomName1' in bond.attrib:
-                        template.addBond(atomIndices[bond.attrib['atomName1']], atomIndices[bond.attrib['atomName2']])
+                        template.addBondByName(bond.attrib['atomName1'], bond.attrib['atomName2'])
                     else:
                         template.addBond(int(bond.attrib['from']), int(bond.attrib['to']))
                 for bond in residue.findall('ExternalBond'):
                     if 'atomName' in bond.attrib:
-                        b = atomIndices[bond.attrib['atomName']]
+                        template.addExternalBondByName(bond.attrib['atomName'])
                     else:
-                        b = int(bond.attrib['from'])
-                    template.externalBonds.append(b)
-                    template.atoms[b].externalBonds += 1
+                        template.addExternalBond(int(bond.attrib['from']))
                 self.registerResidueTemplate(template)
 
         # Load force definitions
@@ -335,10 +333,34 @@ class ForceField(object):
             self.bonds = []
             self.externalBonds = []
 
+        def getAtomIndexByName(self, atom_name):
+            """Look up an atom index by atom name, providing a helpful error message if not found."""
+            for (index, atom) in enumerate(self.atoms):
+                if atom.name == atom_name:
+                    return index
+
+            # Provide a helpful error message if atom name not found.
+            msg =  "Atom '%s' not found in residue template '%s'." % (atom_name, self.name)
+            msg += "Possible names are: %s" % str(atomIndices.keys())
+            raise ValueError(msg)
+
         def addBond(self, atom1, atom2):
             self.bonds.append((atom1, atom2))
             self.atoms[atom1].bondedTo.append(atom2)
             self.atoms[atom2].bondedTo.append(atom1)
+
+        def addBondByName(self, atom1_name, atom2_name):
+            atom1 = self.getAtomIndexByName(atom1_name)
+            atom2 = self.getAtomIndexByName(atom2_name)
+            self.addBond(atom1, atom2)
+
+        def addExternalBond(self, atom_index):
+            self.externalBonds.append(atom_index)
+            self.atoms[atom_index].externalBonds += 1
+
+        def addExternalBondByName(self, atom_name):
+            atom = self.getAtomIndexByName(atom_name)
+            self.addExternalBond(atom)
 
     class _TemplateAtomData:
         """Inner class used to encapsulate data about an atom in a residue template definition."""
