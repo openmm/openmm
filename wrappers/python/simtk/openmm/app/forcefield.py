@@ -119,6 +119,7 @@ class ForceField(object):
         self._atomClasses = {'':set()}
         self._forces = []
         self._scripts = []
+        self._templateGenerators = []
         for file in files:
             self.loadFile(file)
 
@@ -232,6 +233,34 @@ class ForceField(object):
     def registerScript(self, script):
         """Register a new script to be executed after building the System."""
         self._scripts.append(script)
+
+    def registerTemplateGenerator(self, template_generator):
+        """Register a residue template generator that can be used to parameterize residues that do not match existing forcefield templates.
+
+        This functionality can be used to add handlers to parameterize small molecules or unnatural/modified residues.
+
+        Parameters
+        ----------
+        template_generator : function
+            A function that will be called when a residue is encountered that does not match an existing forcefield template.
+
+        When a residue without a template is encountered, the `template_generator` function is called with:
+
+        ```
+        success = template_generator(forcefield, residue)
+        ```
+
+        where `residue` is a simtk.openmm.app.topology.Residue object.
+        `template_generator` should either register a residue template directly with `forcefield.registerResidueTemplate(template)`
+        or it should call `forcefield.loadFile(file)` to load residue definitions from an ffxml file.
+
+        Residue template generators are called in the order in which they were added.
+        The first residue template generator that can provide a template for an unmatched residue has this residue template added to the forcefield.
+
+        The residue template generator must return `True` if it could successfully generate a template, and `False` if it could not.
+
+        """
+        self._templateGenerators.append(handler)
 
     def _findAtomTypes(self, attrib, num):
         """Parse the attributes on an XML tag to find the set of atom types for each atom it involves."""
@@ -491,21 +520,53 @@ class ForceField(object):
             data.atomBonds[bond.atom1].append(i)
             data.atomBonds[bond.atom2].append(i)
 
+        def getResidueTemplateMatches(res):
+            """Return the residue template matches, or None if none are found.
+            
+            Parameters
+            ----------
+
+            Returns
+            -------
+            template
+            matches
+
+            """
+            template = None
+            matches = None
+            signature = _createResidueSignature([atom.element for atom in res.atoms()])
+            if signature in self._templateSignatures:
+                for t in self._templateSignatures[signature]:
+                    matches = _matchResidue(res, t, bondedToAtom)
+                    if matches is not None:
+                        template = t
+                        break
+            return [template, matches]
+
         # Find the template matching each residue and assign atom types.
 
         for chain in topology.chains():
             for res in chain.residues():
-                template = None
-                matches = None
-                signature = _createResidueSignature([atom.element for atom in res.atoms()])
-                if signature in self._templateSignatures:
-                    for t in self._templateSignatures[signature]:
-                        matches = _matchResidue(res, t, bondedToAtom)
-                        if matches is not None:
-                            template = t
-                            break
+                # Attempt to match one of the existing templates.
+                [template, matches] = getResidueTemplateMatches(res)
+                if matches is None:
+                    # No existing templates match.  Try any registered residue template generators.
+                    for generator in self._residueTemplateGenerators:
+                        if generator(forcefield, res):
+                            # This generator has registered a new residue template that should match.
+                            [template, matches] = getResidueTemplateMatches(res)
+                            if matches is None:
+                                # Something went wrong because the generated template does not match the residue signature.
+                                raise Exception('The residue handler %s indicated it had correctly parameterized residue %s, but the generated template did not match the residue signature.' % (generator.__class__.__name__, str(res)))
+                            else:
+                                # We successfully generated a residue template.  Break out of the for loop.
+                                break
+
+                # Raise an exception if we have found no templates that match.
                 if matches is None:
                     raise ValueError('No template found for residue %d (%s).  %s' % (res.index+1, res.name, _findMatchErrors(self, res)))
+
+                # Store parameters for the matched residue template.
                 matchAtoms = dict(zip(matches, res.atoms()))
                 for atom, match in zip(res.atoms(), matches):
                     data.atomType[atom] = template.atoms[match].type
