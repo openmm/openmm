@@ -484,6 +484,34 @@ class ForceField(object):
                 raise ValueError('%s: No parameters defined for atom type %s' % (self.forceName, t))
 
 
+    def _getResidueTemplateMatches(res):
+        """Return the residue template matches, or None if none are found.
+
+        Parameters
+        ----------
+        res : Topology.Residue
+            The residue for which template matches are to be retrieved.
+
+        Returns
+        -------
+        template : _ForceFieldTemplate
+            The matching forcefield residue template, or None if no matches are found.
+        matches : list
+            a list specifying which atom of the template each atom of the residue
+            corresponds to, or None if it does not match the template
+
+        """
+        template = None
+        matches = None
+        signature = _createResidueSignature([atom.element for atom in res.atoms()])
+        if signature in self._templateSignatures:
+            for t in self._templateSignatures[signature]:
+                matches = _matchResidue(res, t, bondedToAtom)
+                if matches is not None:
+                    template = t
+                    break
+        return [template, matches]
+
     def createSystem(self, topology, nonbondedMethod=NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
                      constraints=None, rigidWater=True, removeCMMotion=True, hydrogenMass=None, **args):
         """Construct an OpenMM System representing a Topology with this force field.
@@ -542,41 +570,18 @@ class ForceField(object):
             data.atomBonds[bond.atom1].append(i)
             data.atomBonds[bond.atom2].append(i)
 
-        def getResidueTemplateMatches(res):
-            """Return the residue template matches, or None if none are found.
-            
-            Parameters
-            ----------
-
-            Returns
-            -------
-            template
-            matches
-
-            """
-            template = None
-            matches = None
-            signature = _createResidueSignature([atom.element for atom in res.atoms()])
-            if signature in self._templateSignatures:
-                for t in self._templateSignatures[signature]:
-                    matches = _matchResidue(res, t, bondedToAtom)
-                    if matches is not None:
-                        template = t
-                        break
-            return [template, matches]
-
         # Find the template matching each residue and assign atom types.
 
         for chain in topology.chains():
             for res in chain.residues():
                 # Attempt to match one of the existing templates.
-                [template, matches] = getResidueTemplateMatches(res)
+                [template, matches] = self._getResidueTemplateMatches(res)
                 if matches is None:
                     # No existing templates match.  Try any registered residue template generators.
                     for generator in self._residueTemplateGenerators:
                         if generator(forcefield, res):
                             # This generator has registered a new residue template that should match.
-                            [template, matches] = getResidueTemplateMatches(res)
+                            [template, matches] = self._getResidueTemplateMatches(res)
                             if matches is None:
                                 # Something went wrong because the generated template does not match the residue signature.
                                 raise Exception('The residue handler %s indicated it had correctly parameterized residue %s, but the generated template did not match the residue signature.' % (generator.__class__.__name__, str(res)))
