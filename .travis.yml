@@ -99,10 +99,9 @@ before_install:
       brew install doxygen swig fftw;
       sudo easy_install pytest;
     fi
-  # JDC: fglrx=2:8.960-0ubuntu1 no longer appears to be available, so I removed the =2:8.960-0ubuntu1 constraint
   - if [[ "$OPENCL" == "true" ]]; then
       sudo apt-get -yq update > /dev/null 2>&1 ;
-      sudo apt-get install -qq fglrx opencl-headers;
+      sudo apt-get install -qq fglrx=2:8.960-0ubuntu1 opencl-headers;
     fi
   # Install swig for Python wrappers. However, testing CUDA and OpenCL, we
   # skip the Python wrapper for speed. We're not using anaconda python,
