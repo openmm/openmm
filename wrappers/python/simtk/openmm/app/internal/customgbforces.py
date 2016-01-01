@@ -288,9 +288,9 @@ def _mbondi_radii(topology):
 
 def _mbondi2_radii(topology):
     """ Sets the mbondi2 radii """
-    radii = [0.0 for atom in atom_list]
+    radii = [0.0 for atom in topology.getAtoms()]
     all_bonds = _get_bonded_atom_list(topology)
-    for i, atom in enumerate(atom_list):
+    for i, atom in enumerate(topology.getAtoms()):
         # Radius of H atom depends on element it is bonded to
         if atom.element in (E.hydrogen, E.deuterium):
             bondeds = all_bonds[atom]
