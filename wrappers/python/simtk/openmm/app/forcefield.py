@@ -484,7 +484,7 @@ class ForceField(object):
                 raise ValueError('%s: No parameters defined for atom type %s' % (self.forceName, t))
 
 
-    def _getResidueTemplateMatches(res):
+    def _getResidueTemplateMatches(self, res):
         """Return the residue template matches, or None if none are found.
 
         Parameters
