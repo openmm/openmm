@@ -230,7 +230,7 @@ def _bondi_radii(topology):
     for i, atom in enumerate(topology.getAtoms()):
         if atom.element is E.carbon:
             radii[i] = 1.7
-        elif atom.element in (E.hydrogen, E.deuterium);
+        elif atom.element in (E.hydrogen, E.deuterium):
             radii[i] = 1.2
         elif atom.element is E.nitrogen:
             radii[i] = 1.55
