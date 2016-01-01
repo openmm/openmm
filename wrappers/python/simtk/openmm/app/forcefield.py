@@ -258,7 +258,7 @@ class ForceField(object):
         The residue template generator must return `True` if it could successfully generate a template, and `False` if it could not.
 
         """
-        self._templateGenerators.append(handler)
+        self._templateGenerators.append(template_generator)
 
     def _findAtomTypes(self, attrib, num):
         """Parse the attributes on an XML tag to find the set of atom types for each atom it involves."""
@@ -580,7 +580,7 @@ class ForceField(object):
                 [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom)
                 if matches is None:
                     # No existing templates match.  Try any registered residue template generators.
-                    for generator in self._residueTemplateGenerators:
+                    for generator in self._templateGenerators:
                         if generator(forcefield, res):
                             # This generator has registered a new residue template that should match.
                             [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom)
