@@ -484,13 +484,15 @@ class ForceField(object):
                 raise ValueError('%s: No parameters defined for atom type %s' % (self.forceName, t))
 
 
-    def _getResidueTemplateMatches(self, res):
+    def _getResidueTemplateMatches(self, res, bondedToAtom):
         """Return the residue template matches, or None if none are found.
 
         Parameters
         ----------
         res : Topology.Residue
             The residue for which template matches are to be retrieved.
+        bondedToAtom : list of set of int
+            bondedToAtom[i] is the set of atoms bonded to atom index i
 
         Returns
         -------
@@ -575,13 +577,13 @@ class ForceField(object):
         for chain in topology.chains():
             for res in chain.residues():
                 # Attempt to match one of the existing templates.
-                [template, matches] = self._getResidueTemplateMatches(res)
+                [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom)
                 if matches is None:
                     # No existing templates match.  Try any registered residue template generators.
                     for generator in self._residueTemplateGenerators:
                         if generator(forcefield, res):
                             # This generator has registered a new residue template that should match.
-                            [template, matches] = self._getResidueTemplateMatches(res)
+                            [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom)
                             if matches is None:
                                 # Something went wrong because the generated template does not match the residue signature.
                                 raise Exception('The residue handler %s indicated it had correctly parameterized residue %s, but the generated template did not match the residue signature.' % (generator.__class__.__name__, str(res)))
