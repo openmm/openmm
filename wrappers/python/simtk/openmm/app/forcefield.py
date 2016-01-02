@@ -113,7 +113,7 @@ class ForceField(object):
             (for built in force fields), or an open file-like object with a
             read() method from which the forcefield XML data can be loaded.
         """
-        self._atomTypes = {}
+        self._atomTypes = {} # self._atomTypes[typename] = (atomclass, mass, element)
         self._templates = {}
         self._templateSignatures = {None:[]}
         self._atomClasses = {'':set()}
@@ -622,7 +622,18 @@ class ForceField(object):
 
         sys = mm.System()
         for atom in topology.atoms():
-            sys.addParticle(self._atomTypes[data.atomType[atom]][1])
+            if atom not in data.atomType:
+                raise Exception("Could not identify atom type for atom '%s'." % str(atom))
+            typename = data.atomType[atom]
+
+            if typename not in self._atomTypes:
+                msg  = "Could not find typename '%s' for atom '%s' in list of known atom types.\n" % (typename, str(atom))
+                msg += "Known atom types are: %s" % str(self._atomTypes.keys())
+                raise Exception(msg)
+            atomtype_data = self._atomTypes[typename]
+
+            mass = atomtype_data[1]
+            sys.addParticle(mass)
 
         # Adjust masses.
 
