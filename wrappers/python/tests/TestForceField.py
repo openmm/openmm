@@ -250,7 +250,7 @@ class TestForceField(unittest.TestCase):
 
     def test_residueTemplateGenerator(self):
         """Test the ability to add residue template generators to parameterize unmatched residues."""
-        def simpleTemplateGenerator(residue, forcefield):
+        def simpleTemplateGenerator(forcefield, residue):
             """\
             Simple residue template generator.
             This implementation uses the programmatic API to define residue templates.
