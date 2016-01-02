@@ -260,19 +260,9 @@ class TestForceField(unittest.TestCase):
             # Generate a unique prefix name for generating parameters.
             from uuid import uuid4
             template_name = uuid4()
-            # Generate an atom type for each atom.
-            #for atom in residue.atoms():
-            #    parameters = {
-            #        'name' : '%s-%s-%s' % (template_name, residue.name, atom.name),
-            #        'class' : 'XXX',
-            #        'mass' : atom.element._mass,
-            #        'element' : atom.element
-            #        }
-            #    forcefield.registerAtomType(parameters)
             # Create residue template.
             template = ForceField._TemplateData(template_name)
             for atom in residue.atoms():
-                #typename = '%s-%s-%s' % (template_name, residue.name, atom.name)
                 typename = 'XXX'
                 atom_template = ForceField._TemplateAtomData(atom.name, typename, atom.element)
                 template.atoms.append(atom_template)
