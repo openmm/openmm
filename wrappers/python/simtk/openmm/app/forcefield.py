@@ -124,7 +124,7 @@ class ForceField(object):
             self.loadFile(file)
 
     def loadFile(self, file):
-        """Load an XML file and add the definitions from it to this FieldField.
+        """Load an XML file and add the definitions from it to this ForceField.
 
         Parameters
         ----------
@@ -140,6 +140,18 @@ class ForceField(object):
             tree = etree.parse(file)
         except IOError:
             tree = etree.parse(os.path.join(os.path.dirname(__file__), 'data', file))
+        except Exception as e:
+            # Fail with a more useful error message about which file could not be read.
+            # TODO: Also handle case where fallback to 'data' directory encounters problems,
+            # but this is much less worrisome because we control those files.
+            msg  = str(e) + '\n'
+            if hasattr(file, 'close'):
+                filename = file.name
+            else:
+                filename = file
+            msg += 'ForceField.loadFile() encountered an error reading file: %s' % filename
+            raise Exception(msg)
+
         root = tree.getroot()
 
         # Load the atom types.

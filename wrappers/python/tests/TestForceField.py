@@ -293,20 +293,20 @@ class TestForceField(unittest.TestCase):
         # Define forcefield parameters used by simpleTemplateGenerator.
         # NOTE: This parameter definition file will currently only work for residues that either have
         # no external bonds or external bonds to other residues parameterized by the simpleTemplateGenerator.
-        simple_ffxml_contents = """
+        simple_ffxml_contents = """\
 <ForceField>
- <AtomTypes>
-  <Type name="XXX" class="XXX" element="C" mass="12"/>
- </AtomTypes>
- <HarmonicBondForce>
-  <Bond type1="XXX" type2="XXX" length="0.1409" k="392459.2"/>
- </HarmonicBondForce>
- <HarmonicAngleForce>
-  <Angle type1="XXX" type2="XXX" type3="XXX" angle="2.09439510239" k="527.184"/>
- </HarmonicAngleForce>
- <NonbondedForce coulomb14scale="0.833333" lj14scale="0.5">
-  <Atom type="XXX" charge="0.000" sigma="0.315" epsilon="0.635"/>
- </NonbondedForce>
+<AtomTypes>
+ <Type name="XXX" class="XXX" element="C" mass="12"/>
+</AtomTypes>
+<HarmonicBondForce>
+ <Bond type1="XXX" type2="XXX" length="0.1409" k="392459.2"/>
+</HarmonicBondForce>
+<HarmonicAngleForce>
+ <Angle type1="XXX" type2="XXX" type3="XXX" angle="2.09439510239" k="527.184"/>
+</HarmonicAngleForce>
+<NonbondedForce coulomb14scale="0.833333" lj14scale="0.5">
+ <Atom type="XXX" charge="0.000" sigma="0.315" epsilon="0.635"/>
+</NonbondedForce>
 </ForceField>"""
         simple_ffxml = StringIO(simple_ffxml_contents)
 
