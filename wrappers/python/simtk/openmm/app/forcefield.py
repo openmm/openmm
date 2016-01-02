@@ -223,7 +223,7 @@ class ForceField(object):
             element = parameters['element']
             if not isinstance(element, elem.Element):
                 element = elem.get_by_symbol(element)
-        self._atomTypes[name] = _AtomType(name, atomClass, mass, element)
+        self._atomTypes[name] = ForceField._AtomType(name, atomClass, mass, element)
         if atomClass in self._atomClasses:
             typeSet = self._atomClasses[atomClass]
         else:
