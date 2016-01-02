@@ -258,8 +258,8 @@ class TestForceField(unittest.TestCase):
             NOTE: We presume we have already loaded the force definitions into ForceField.
             """
             # Generate a unique prefix name for generating parameters.
-            from uuid import UUID
-            template_name = UUID()
+            from uuid import uuid4
+            template_name = uuid4()
             # Generate an atom type for each atom.
             for atom in residue.atoms():
                 parameters = {
