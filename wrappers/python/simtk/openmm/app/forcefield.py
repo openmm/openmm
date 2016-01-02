@@ -145,11 +145,11 @@ class ForceField(object):
             # TODO: Also handle case where fallback to 'data' directory encounters problems,
             # but this is much less worrisome because we control those files.
             msg  = str(e) + '\n'
-            if hasattr(file, 'close'):
+            if hasattr(file, 'name'):
                 filename = file.name
             else:
-                filename = file
-            msg += 'ForceField.loadFile() encountered an error reading file: %s' % filename
+                filename = str(file)
+            msg += "ForceField.loadFile() encountered an error reading file '%s'\n" % filename
             raise Exception(msg)
 
         root = tree.getroot()
