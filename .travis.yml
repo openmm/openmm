@@ -100,6 +100,7 @@ before_install:
       sudo easy_install pytest;
     fi
   - if [[ "$OPENCL" == "true" ]]; then
+      sudo add-apt-repository "deb http://archive.ubuntu.com/ubuntu $(lsb_release -sc) main universe restricted multiverse";
       sudo apt-get -yq update > /dev/null 2>&1 ;
       sudo apt-get install -qq fglrx=2:8.960-0ubuntu1 opencl-headers;
     fi
