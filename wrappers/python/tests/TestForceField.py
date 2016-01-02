@@ -261,18 +261,19 @@ class TestForceField(unittest.TestCase):
             from uuid import uuid4
             template_name = uuid4()
             # Generate an atom type for each atom.
-            for atom in residue.atoms():
-                parameters = {
-                    'name' : '%s-%s-%s' % (template_name, residue.name, atom.name),
-                    'class' : 'XXX',
-                    'mass' : atom.element._mass,
-                    'element' : atom.element
-                    }
-                forcefield.registerAtomType(parameters)
+            #for atom in residue.atoms():
+            #    parameters = {
+            #        'name' : '%s-%s-%s' % (template_name, residue.name, atom.name),
+            #        'class' : 'XXX',
+            #        'mass' : atom.element._mass,
+            #        'element' : atom.element
+            #        }
+            #    forcefield.registerAtomType(parameters)
             # Create residue template.
             template = ForceField._TemplateData(template_name)
             for atom in residue.atoms():
-                typename = '%s-%s-%s' % (template_name, residue.name, atom.name)
+                #typename = '%s-%s-%s' % (template_name, residue.name, atom.name)
+                typename = 'XXX'
                 atom_template = ForceField._TemplateAtomData(atom.name, typename, atom.element)
                 template.atoms.append(atom_template)
             for (atom1,atom2) in residue.internal_bonds():
@@ -295,19 +296,19 @@ class TestForceField(unittest.TestCase):
         simple_ffxml_contents = """
 <ForceField>
  <HarmonicBondForce>
-  <Bond class1="XXX" class2="XXX" length="0.1409" k="392459.2"/>
+  <Bond type1="XXX" type2="XXX" length="0.1409" k="392459.2"/>
  </HarmonicBondForce>
  <HarmonicAngleForce>
-  <Angle class1="XXX" class2="XXX" class3="XXX" angle="2.09439510239" k="527.184"/>
+  <Angle type1="XXX" type2="XXX" type3="XXX" angle="2.09439510239" k="527.184"/>
  </HarmonicAngleForce>
  <NonbondedForce coulomb14scale="0.833333" lj14scale="0.5">
-  <Atom class="XXX" charge="0.000" sigma="0.315" epsilon="0.635"/>
+  <Atom type="XXX" charge="0.000" sigma="0.315" epsilon="0.635"/>
  </NonbondedForce>
 </ForceField>"""
         simple_ffxml = StringIO(simple_ffxml_contents)
 
         #
-        # Test where we generate a parameters for only a ligand.
+        # Test where we generate parameters for only a ligand.
         #
 
         # Load the PDB file.
