@@ -101,6 +101,7 @@ before_install:
     fi
   - if [[ "$OPENCL" == "true" ]]; then
       sudo apt-get -yq update > /dev/null 2>&1 ;
+      sudo apt-get install -qq ubuntu-restricted-extras
       sudo apt-get install -qq fglrx=2:8.960-0ubuntu1 opencl-headers;
     fi
   # Install swig for Python wrappers. However, testing CUDA and OpenCL, we
