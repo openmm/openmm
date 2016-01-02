@@ -581,7 +581,7 @@ class ForceField(object):
                 if matches is None:
                     # No existing templates match.  Try any registered residue template generators.
                     for generator in self._templateGenerators:
-                        if generator(forcefield, res):
+                        if generator(self, res):
                             # This generator has registered a new residue template that should match.
                             [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom)
                             if matches is None:
