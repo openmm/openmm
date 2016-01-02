@@ -295,6 +295,9 @@ class TestForceField(unittest.TestCase):
         # no external bonds or external bonds to other residues parameterized by the simpleTemplateGenerator.
         simple_ffxml_contents = """
 <ForceField>
+ <AtomTypes>
+  <Type name="XXX" class="XXX" element="C" mass="12"/>
+ </AtomTypes>
  <HarmonicBondForce>
   <Bond type1="XXX" type2="XXX" length="0.1409" k="392459.2"/>
  </HarmonicBondForce>
