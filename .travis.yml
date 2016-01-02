@@ -130,6 +130,7 @@ before_install:
     fi
 
 script:
+  - CTEST_TIMEOUT=600
   - CTEST_STOP_TIME=$(python -c "from datetime import datetime, timedelta; import sys; sys.stdout.write((datetime.now() + timedelta(minutes=25)).strftime('%H:%M:%S'))")
   - cmake . $CMAKE_FLAGS -DCMAKE_INSTALL_PREFIX=$HOME/OpenMM
   - make -j2 install
@@ -145,7 +146,8 @@ script:
     fi
 
   - # run all of the tests, making sure failures at this stage don't cause travis failures
-  - python devtools/run-ctest.py -j2 --schedule-random --stop-time $CTEST_STOP_TIME
+  - # set a timeout of $CTEST_TIMEOUT seconds for each individual test
+  - python devtools/run-ctest.py -j2 --schedule-random --stop-time $CTEST_STOP_TIME --timeout $CTEST_TIMEOUT
   - if [[ ! -z "${DOCS_DEPLOY}" && "${DOCS_DEPLOY}" = "true" ]]; then
       pip install sphinx sphinxcontrib-lunrsearch sphinxcontrib-autodoc_doxygen;
       make C++ApiDocs PythonApiDocs;
