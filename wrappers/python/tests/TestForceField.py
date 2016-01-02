@@ -270,21 +270,21 @@ class TestForceField(unittest.TestCase):
                     }
                 forcefield.registerAtomType(parameters)
             # Create residue template.
-            residue = ForceField._TemplateData(template_name)
+            template = ForceField._TemplateData(template_name)
             for atom in residue.atoms():
                 typename = '%s-%s-%s' % (template_name, residue.name, atom.name)
                 atom_template = ForceField._TemplateAtomData(atom.name, typename, atom.element)
-                residue.atoms.append(atom_template)
+                template.atoms.append(atom_template)
             for (atom1,atom2) in residue.internal_bonds():
-                residue.addBondByName(atom1.name, atom2.name)
+                template.addBondByName(atom1.name, atom2.name)
             residue_atoms = [ atom for atom in residue.atoms() ]
             for (atom1,atom2) in residue.external_bonds():
                 if atom1 in residue_atoms:
-                    residue.addExternalBondByName(atom1.name)
+                    template.addExternalBondByName(atom1.name)
                 elif atom2 in residue_atoms:
-                    residue.addExternalBondByName(atom2.name)
+                    template.addExternalBondByName(atom2.name)
             # Register the template.
-            forcefield.registerResidueTemplate(residue)
+            forcefield.registerResidueTemplate(template)
 
             # Signal that we have successfully parameterized the residue.
             return True
