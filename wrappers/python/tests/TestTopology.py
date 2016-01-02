@@ -39,6 +39,9 @@ class TestTopology(unittest.TestCase):
         atom_B1 = topology.addAtom('B1', element.carbon, residue2)
         atom_B2 = topology.addAtom('B2', element.carbon, residue2)
         atom_C1 = topology.addAtom('C1', element.carbon, residue3)
+        topology.addBond(atom_A1, atom_B1)
+        topology.addBond(atom_B1, atom_B2)
+        topology.addBond(atom_B2, atom_C1)
         # Check bonds
         all_bonds = [ bond for bond in residue2.bonds() ]
         internal_bonds = [ bond for bond in residue2.internal_bonds() ]

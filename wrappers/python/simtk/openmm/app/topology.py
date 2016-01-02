@@ -373,18 +373,15 @@ class Residue(object):
 
     def bonds(self):
         """Iterate over all Bonds involving any atom in this residue."""
-        bonds = [ bond for bond in self.chain.topology.bonds() if ((bond[0] in self._atoms) or (bond[1] in self._atoms)) ]
-        return iter(bonds)
+        return ( bond for bond in self.chain.topology.bonds() if ((bond[0] in self._atoms) or (bond[1] in self._atoms)) )
 
     def internal_bonds(self):
         """Iterate over all internal Bonds."""
-        bonds = [ bond for bond in self.chain.topology.bonds() if ((bond[0] in self._atoms) and (bond[1] in self._atoms)) ]
-        return iter(bonds)
+        return ( bond for bond in self.chain.topology.bonds() if ((bond[0] in self._atoms) and (bond[1] in self._atoms)) )
 
     def external_bonds(self):
         """Iterate over all Bonds to external atoms."""
-        bonds = [ bond for bond in self.chain.topology.bonds() if ((bond[0] in self._atoms) != (bond[1] in self._atoms)) ]
-        return iter(bonds)
+        return ( bond for bond in self.chain.topology.bonds() if ((bond[0] in self._atoms) != (bond[1] in self._atoms)) )
 
     def __len__(self):
         return len(self._atoms)
