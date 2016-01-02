@@ -113,7 +113,7 @@ class ForceField(object):
             (for built in force fields), or an open file-like object with a
             read() method from which the forcefield XML data can be loaded.
         """
-        self._atomTypes = {} # self._atomTypes[typename] = (atomclass, mass, element)
+        self._atomTypes = {} # self._atomTypes[typename] in an _AtomType object
         self._templates = {}
         self._templateSignatures = {None:[]}
         self._atomClasses = {'':set()}
@@ -176,7 +176,8 @@ class ForceField(object):
                     if atomName in atomIndices:
                         raise ValueError('Residue '+resName+' contains multiple atoms named '+atomName)
                     atomIndices[atomName] = len(template.atoms)
-                    template.atoms.append(ForceField._TemplateAtomData(atomName, atom.attrib['type'], self._atomTypes[atom.attrib['type']][2], params))
+                    typeName = atom.attrib['type']
+                    template.atoms.append(ForceField._TemplateAtomData(atomName, typeName, self._atomTypes[typeName].element, params))
                 for site in residue.findall('VirtualSite'):
                     template.virtualSites.append(ForceField._VirtualSiteData(site, atomIndices))
                 for bond in residue.findall('Bond'):
@@ -222,7 +223,7 @@ class ForceField(object):
             element = parameters['element']
             if not isinstance(element, elem.Element):
                 element = elem.get_by_symbol(element)
-        self._atomTypes[name] = (atomClass, mass, element)
+        self._atomTypes[name] = _AtomType(name, atomClass, mass, element)
         if atomClass in self._atomClasses:
             typeSet = self._atomClasses[atomClass]
         else:
@@ -439,6 +440,14 @@ class ForceField(object):
             else:
                 self.excludeWith = self.atoms[0]
 
+    class _AtomType:
+        """Inner class used to record atom types and associated properties."""
+        def __init__(self, name, atomClass, mass, element):
+            self.name = name
+            self.atomClass = atomClass
+            self.mass = mass
+            self.element = element
+
     class _AtomTypeParameters:
         """Inner class used to record parameter values for atom types."""
         def __init__(self, forcefield, forceName, atomTag, paramNames):
@@ -642,9 +651,7 @@ class ForceField(object):
                 msg  = "Could not find typename '%s' for atom '%s' in list of known atom types.\n" % (typename, str(atom))
                 msg += "Known atom types are: %s" % str(self._atomTypes.keys())
                 raise Exception(msg)
-            atomtype_data = self._atomTypes[typename]
-
-            mass = atomtype_data[1]
+            mass = self._atomTypes[typename].mass
             sys.addParticle(mass)
 
         # Adjust masses.
