@@ -2659,6 +2659,9 @@ The ForceField class is designed to be modular and extensible.  This means you
 can add support for entirely new force types, such as ones implemented with
 plugins.
 
+Adding new force types
+======================
+
 For every force class, there is a “generator” class that parses the
 corresponding XML tag, then creates Force objects and adds them to the System.
 ForceField maintains a map of tag names to generator classes.  When a ForceField
@@ -2722,3 +2725,56 @@ parsing it.
 Now you can simply create a ForceField object as usual.  If an XML file contains
 a :code:`<MyForce>` tag, it will be recognized and processed correctly.
 
+Adding residue template generators
+==================================
+
+.. CAUTION::
+   This feature is experimental, and its API is subject to change.
+
+Typically, when :class:`ForceField` encounters a residue it does not have a template for,
+it simply raises an :code:`Exception`, since it does not know how to assign atom types for
+the unknown residue.
+
+However, :class:`ForceField` has an API for registering *residue template generators* that are
+called when a residue without an existing template is encountered.  These generators
+may create new residue templates that match existing atom types and parameters, or can
+even create new atom types and new parameters that are added to :class:`ForceField`. This
+functionality can be useful for adding residue template generators that are able to
+parameterize small molecules that are not represented in a protein or nucleic acid
+forcefield, for example, or for creating new residue templates for post-translationally
+modified residues, covalently-bound ligands, or unnatural amino acids or bases.
+
+To register a new residue template generator named :code:`generator`, simply call the
+:meth:`registerTemplateGenerator` method on an existing :class:`ForceField` object:
+::
+    forcefield.registerTemplateGenerator(generator)
+
+This :code:`generator` function must conform to the following API:
+::
+    def generator(forcefield, residue):
+        """
+        Parameters
+        ----------
+        forcefield : simtk.openmm.app.ForceField
+            The ForceField object to which residue templates and/or parameters are to be added.
+        residue : simtk.openmm.app.Topology.Residue
+            The residue topology for which a template is to be generated.
+
+        Returns
+        -------
+        success : bool
+            If the generator is able to successfully parameterize the residue, `True` is returned.
+            If the generator cannot parameterize the residue, it should return `False` and not modify `forcefield`.
+
+        The generator should either register a residue template directly with `forcefield.registerResidueTemplate(template)`
+        or it should call `forcefield.loadFile(file)` to load residue definitions from an ffxml file.
+
+        It can also use the `ForceField` programmatic API to add additional atom types (via `forcefield.registerAtomType(parameters)`)
+        or additional parameters.
+
+        """
+
+The :code:`ForceField` object will be modified by the residue template generator as residues without previously
+defined templates are encountered.  Because these templates are added to `ForceField` as new residue
+types are encountered, subsequent residues will be parameterized using the same residue templates without
+calling the :code:`generator` again.
