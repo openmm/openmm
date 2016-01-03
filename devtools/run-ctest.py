@@ -5,9 +5,7 @@ from subprocess import call
 
 def main():
     # pass any extra arguments to the first ctest invocation
-    command = ['ctest', '--output-on-failure'] + sys.argv[1:]
-    print(command)
-    if call(command) == 0:
+    if call(['ctest', '--output-on-failure'] + sys.argv[1:]) == 0:
         return 0
 
     # load the log file containing the failed tests and reformat
@@ -23,7 +21,7 @@ def main():
     with open('FailedTests.log', 'w') as f:
         print(','.join(x + ',' + x for x in failed), file=f)
 
-    return call(['ctest', '--output-on-failure', '-I', 'FailedTests.log'])
+    return call(['ctest', '--output-on-failure', '-I', 'FailedTests.log'] + sys.argv[1:])
 
 
 if __name__ == '__main__':
