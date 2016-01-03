@@ -7,7 +7,7 @@ def main():
     # pass any extra arguments to the first ctest invocation
     command = ['ctest', '--output-on-failure'] + sys.argv[1:]
     print(command)
-    if call(command, shell=True) == 0:
+    if call(command) == 0:
         return 0
 
     # load the log file containing the failed tests and reformat
