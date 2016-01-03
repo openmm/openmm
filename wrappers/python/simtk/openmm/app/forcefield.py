@@ -113,7 +113,7 @@ class ForceField(object):
             (for built in force fields), or an open file-like object with a
             read() method from which the forcefield XML data can be loaded.
         """
-        self._atomTypes = {} # self._atomTypes[typename] in an _AtomType object
+        self._atomTypes = {}
         self._templates = {}
         self._templateSignatures = {None:[]}
         self._atomClasses = {'':set()}
@@ -141,7 +141,7 @@ class ForceField(object):
         except IOError:
             tree = etree.parse(os.path.join(os.path.dirname(__file__), 'data', file))
         except Exception as e:
-            # Fail with a more useful error message about which file could not be read.
+            # Fail with an error message about which file could not be read.
             # TODO: Also handle case where fallback to 'data' directory encounters problems,
             # but this is much less worrisome because we control those files.
             msg  = str(e) + '\n'
@@ -245,30 +245,46 @@ class ForceField(object):
         """Register a new script to be executed after building the System."""
         self._scripts.append(script)
 
-    def registerTemplateGenerator(self, template_generator):
+    def registerTemplateGenerator(self, generator):
         """Register a residue template generator that can be used to parameterize residues that do not match existing forcefield templates.
 
         This functionality can be used to add handlers to parameterize small molecules or unnatural/modified residues.
 
+        .. CAUTION:: This method is experimental, and its API is subject to change.
+
         Parameters
         ----------
-        template_generator : function
+        generator : function
             A function that will be called when a residue is encountered that does not match an existing forcefield template.
 
-        When a residue without a template is encountered, the `template_generator` function is called with:
+        When a residue without a template is encountered, the `generator` function is called with:
 
+        ::
+           success = generator(forcefield, residue)
         ```
-        success = template_generator(forcefield, residue)
-        ```
 
-        where `residue` is a simtk.openmm.app.topology.Residue object.
-        `template_generator` should either register a residue template directly with `forcefield.registerResidueTemplate(template)`
-        or it should call `forcefield.loadFile(file)` to load residue definitions from an ffxml file.
+        where `forcefield` is the calling `ForceField` object and `residue` is a simtk.openmm.app.topology.Residue object.
 
-        Residue template generators are called in the order in which they were added.
-        The first residue template generator that can provide a template for an unmatched residue has this residue template added to the forcefield.
+        `generator` must conform to the following API:
+        ::
+          Parameters
+           ----------
+           forcefield : simtk.openmm.app.ForceField
+               The ForceField object to which residue templates and/or parameters are to be added.
+           residue : simtk.openmm.app.Topology.Residue
+               The residue topology for which a template is to be generated.
 
-        The residue template generator must return `True` if it could successfully generate a template, and `False` if it could not.
+           Returns
+           -------
+           success : bool
+               If the generator is able to successfully parameterize the residue, `True` is returned.
+               If the generator cannot parameterize the residue, it should return `False` and not modify `forcefield`.
+
+           The generator should either register a residue template directly with `forcefield.registerResidueTemplate(template)`
+           or it should call `forcefield.loadFile(file)` to load residue definitions from an ffxml file.
+
+           It can also use the `ForceField` programmatic API to add additional atom types (via `forcefield.registerAtomType(parameters)`)
+           or additional parameters.
 
         """
         self._templateGenerators.append(template_generator)
@@ -367,25 +383,29 @@ class ForceField(object):
                     return index
 
             # Provide a helpful error message if atom name not found.
-            msg =  "Atom '%s' not found in residue template '%s'." % (atom_name, self.name)
-            msg += "Possible names are: %s" % str(atomIndices.keys())
+            msg =  "Atom name '%s' not found in residue template '%s'.\n" % (atom_name, self.name)
+            msg += "Possible atom names are: %s" % str(atomIndices.keys())
             raise ValueError(msg)
 
         def addBond(self, atom1, atom2):
+            """Add a bond between two atoms in a template given their indices in the template."""
             self.bonds.append((atom1, atom2))
             self.atoms[atom1].bondedTo.append(atom2)
             self.atoms[atom2].bondedTo.append(atom1)
 
         def addBondByName(self, atom1_name, atom2_name):
+            """Add a bond between two atoms in a template given their atom names."""
             atom1 = self.getAtomIndexByName(atom1_name)
             atom2 = self.getAtomIndexByName(atom2_name)
             self.addBond(atom1, atom2)
 
         def addExternalBond(self, atom_index):
+            """Designate that an atom in a residue template has an external bond, using atom index within template."""
             self.externalBonds.append(atom_index)
             self.atoms[atom_index].externalBonds += 1
 
         def addExternalBondByName(self, atom_name):
+            """Designate that an atom in a residue template has an external bond, using atom name within template."""
             atom = self.getAtomIndexByName(atom_name)
             self.addExternalBond(atom)
 
@@ -608,6 +628,7 @@ class ForceField(object):
             data.atomBonds[bond.atom2].append(i)
 
         # Find the template matching each residue and assign atom types.
+        # If no templates are found, attempt to use residue template generators to create new templates (and potentially atom types/parameters).
 
         for chain in topology.chains():
             for res in chain.residues():
@@ -643,18 +664,22 @@ class ForceField(object):
 
         sys = mm.System()
         for atom in topology.atoms():
+            # Look up the atom type name, returning a helpful error message if it cannot be found.
             if atom not in data.atomType:
                 raise Exception("Could not identify atom type for atom '%s'." % str(atom))
             typename = data.atomType[atom]
 
+            # Look up the type name in the list of registered atom types, returning a helpful error message if it cannot be found.
             if typename not in self._atomTypes:
                 msg  = "Could not find typename '%s' for atom '%s' in list of known atom types.\n" % (typename, str(atom))
                 msg += "Known atom types are: %s" % str(self._atomTypes.keys())
                 raise Exception(msg)
+
+            # Add the particle to the OpenMM system.
             mass = self._atomTypes[typename].mass
             sys.addParticle(mass)
 
-        # Adjust masses.
+        # Adjust hydroten masses if requested.
 
         if hydrogenMass is not None:
             for atom1, atom2 in topology.bonds():
@@ -670,7 +695,7 @@ class ForceField(object):
         boxVectors = topology.getPeriodicBoxVectors()
         if boxVectors is not None:
             sys.setDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2])
-        elif nonbondedMethod is not NoCutoff and nonbondedMethod is not CutoffNonPeriodic:
+        elif nonbondedMethod not in [NoCutoff, CutoffNonPeriodic]:
             raise ValueError('Requested periodic boundary conditions for a Topology that does not specify periodic box dimensions')
 
         # Make a list of all unique angles
@@ -784,7 +809,7 @@ class ForceField(object):
         if removeCMMotion:
             sys.addForce(mm.CMMotionRemover())
 
-        # Let generators do postprocessing
+        # Let force generators do postprocessing
 
         for force in self._forces:
             if 'postprocessSystem' in dir(force):
