@@ -146,8 +146,10 @@ script:
 
   - # run all of the tests, making sure failures at this stage don't cause travis failures
   - # set a timeout of $CTEST_TIMEOUT seconds for each individual test
+  - echo `date`
+  - echo $CTEST_STOP_TIME
   - CTEST_TIMEOUT=180
-  - python devtools/run-ctest.py -j2 --schedule-random --stop-time $CTEST_STOP_TIME --timeout $CTEST_TIMEOUT --output-on-failure
+  - python devtools/run-ctest.py -j1 --schedule-random --stop-time $CTEST_STOP_TIME --timeout $CTEST_TIMEOUT --output-on-failure
   - if [[ ! -z "${DOCS_DEPLOY}" && "${DOCS_DEPLOY}" = "true" ]]; then
       pip install sphinx sphinxcontrib-lunrsearch sphinxcontrib-autodoc_doxygen;
       make C++ApiDocs PythonApiDocs;
