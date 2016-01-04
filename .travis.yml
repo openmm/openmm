@@ -93,6 +93,7 @@ matrix:
            CMAKE_FLAGS=""
 
 before_install:
+  - START_TIME=$(date +%s)
   - wget https://anaconda.org/omnia/ccache/3.2.4/download/${TRAVIS_OS_NAME}-64/ccache-3.2.4-0.tar.bz2
   - mkdir -p $HOME/ccache && tar xf ccache-3.2.4-0.tar.bz2 -C $HOME/ccache
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
@@ -130,8 +131,6 @@ before_install:
     fi
 
 script:
-  - CTEST_TIMEOUT=600
-  - CTEST_STOP_TIME=$(python -c "from datetime import datetime, timedelta; import sys; sys.stdout.write((datetime.now() + timedelta(minutes=20)).strftime('%H:%M:%S'))")
   - cmake . $CMAKE_FLAGS -DCMAKE_INSTALL_PREFIX=$HOME/OpenMM
   - make -j2 install
   - if [[ "$OPENCL" == "true" ]]; then ./TestOpenCLDeviceQuery; fi
@@ -145,9 +144,9 @@ script:
       (cd python/tests && py.test -v);
     fi
 
-  - # run all of the tests, making sure failures at this stage don't cause travis failures
-  - # set a timeout of $CTEST_TIMEOUT seconds for each individual test
-  - python devtools/run-ctest.py -j2 --schedule-random --stop-time $CTEST_STOP_TIME --timeout $CTEST_TIMEOUT
+  # Run the tests, and rerun any failing tests.
+  - python devtools/run-ctest.py --start-time $START_TIME
+
   - if [[ ! -z "${DOCS_DEPLOY}" && "${DOCS_DEPLOY}" = "true" ]]; then
       pip install sphinx sphinxcontrib-lunrsearch sphinxcontrib-autodoc_doxygen;
       make C++ApiDocs PythonApiDocs;
