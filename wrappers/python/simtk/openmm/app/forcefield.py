@@ -287,7 +287,7 @@ class ForceField(object):
            or additional parameters.
 
         """
-        self._templateGenerators.append(template_generator)
+        self._templateGenerators.append(generator)
 
     def _findAtomTypes(self, attrib, num):
         """Parse the attributes on an XML tag to find the set of atom types for each atom it involves.
