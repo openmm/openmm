@@ -16,7 +16,8 @@ from simtk.openmm.vec3 import Vec3
 from simtk.openmm.mtsintegrator import MTSIntegrator
 from simtk.openmm.amd import AMDIntegrator, AMDForceGroupIntegrator, DualAMDIntegrator
 
+
 pluginLoadedLibNames = Platform.loadPluginsFromDirectory(
-    os.path.join(os.path.dirname(os.path.abspath(__file__)), 'lib', 'plugins'))
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), 'plugins'))
 
 __version__ = Platform.getOpenMMVersion()
