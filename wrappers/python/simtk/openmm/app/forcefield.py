@@ -778,7 +778,7 @@ def _findAtomMatches(atoms, template, bondedTo, externalBonds, matches, hasMatch
 def _findMatchErrors(forcefield, res):
     """Try to guess why a residue failed to match any template and return an error message."""
     residueCounts = _countResidueAtoms([atom.element for atom in res.atoms()])
-    numResidueAtoms = sum(residueCounts.itervalues())
+    numResidueAtoms = sum(residueCounts.values())
     numResidueHeavyAtoms = sum(residueCounts[element] for element in residueCounts if element not in (None, elem.hydrogen))
 
     # Loop over templates and see how closely each one might match.
@@ -797,7 +797,7 @@ def _findMatchErrors(forcefield, res):
 
         # If there are too many missing atoms, discard this template.
 
-        numTemplateAtoms = sum(templateCounts.itervalues())
+        numTemplateAtoms = sum(templateCounts.values())
         numTemplateHeavyAtoms = sum(templateCounts[element] for element in templateCounts if element not in (None, elem.hydrogen))
         if numTemplateAtoms > numBestMatchAtoms:
             continue
