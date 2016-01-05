@@ -33,7 +33,7 @@ def reportError(message):
 
 def libraryFilename(libName):
     if platform.system() == 'Windows':
-        return '%s.lib' % libName
+        return '%s.dll' % libName
     elif platform.system() == 'Darwin':
         return 'lib%s.dylib' % libName
     elif platform.system() == 'Linux':
@@ -70,7 +70,7 @@ class install_lib(_install_lib):
         return _install_lib.install(self)
 
     def copyOpenMMLibraries(self, openMMLibPath):
-        dest = os.path.join(self.build_dir, 'simtk/openmm/lib/')
+        dest = os.path.join(self.build_dir, 'simtk/openmm')
         if not os.path.exists(dest):
             os.makedirs(dest)
         for libName in getLibraries():
@@ -79,7 +79,7 @@ class install_lib(_install_lib):
             shutil.copy2(src, dest)
 
     def copyOpenMMPlugins(self, openMMLibPath):
-        dest = os.path.join(self.build_dir, 'simtk/openmm/lib/plugins')
+        dest = os.path.join(self.build_dir, 'simtk/openmm/plugins')
         if os.path.exists(dest):
             shutil.rmtree(dest)
 
@@ -194,7 +194,7 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
         extra_compile_args.append('/EHsc')
     elif platform.system() == 'Darwin':
         extra_compile_args += ['-stdlib=libc++', '-mmacosx-version-min=10.7']
-        extra_link_args += ['-stdlib=libc++', '-mmacosx-version-min=10.7', '-Wl,-rpath,@loader_path/lib']
+        extra_link_args += ['-stdlib=libc++', '-mmacosx-version-min=10.7', '-Wl,-rpath,@loader_path/.']
         # Hard-code CC and CXX to clang, since gcc/g++ will *not* work with
         # Anaconda, despite the fact that distutils will try to use them.
         # System Python, homebrew, and MacPorts on Macs will always use
@@ -203,7 +203,7 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
         os.environ['CC'] = 'clang'
         os.environ['CXX'] = 'clang++'
     elif platform.system() == 'Linux':
-        extra_link_args = ['-Wl,-rpath,$ORIGIN/lib',]
+        extra_link_args = ['-Wl,-rpath,$ORIGIN/.',]
 
     libraries = getLibraries()
     library_dirs = [os.getenv('OPENMM_LIB_PATH')]
