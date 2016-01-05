@@ -254,11 +254,7 @@ add_custom_command(
 add_custom_target(BuildModule ALL DEPENDS ${STAGING_OUTPUT_FILES})
 
 # Binary distribution
-if(WIN32)
-    set(PYTHON_SETUP_COMMAND bdist_wininst)
-else(WIN32)
-    set(PYTHON_SETUP_COMMAND bdist)
-endif(WIN32)
+set(PYTHON_SETUP_COMMAND bdist_wheel)
 configure_file(pysetup.cmake.in
     "${CMAKE_CURRENT_BINARY_DIR}/pysetupbdist.cmake" @ONLY)
 add_custom_target(PythonBdist
@@ -268,6 +264,7 @@ add_custom_target(PythonBdist
     WORKING_DIRECTORY ${OPENMM_PYTHON_STAGING_DIR}
     COMMENT "Packaging binary distribution package (bdist)..."
 )
+
 
 # Source distribution
 set(PYTHON_SETUP_COMMAND sdist)

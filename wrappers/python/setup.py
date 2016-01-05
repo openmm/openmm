@@ -7,8 +7,12 @@ import os
 import sys
 import shutil
 import platform
-from distutils.core import setup
-from distutils.core import Extension
+
+try:
+    from setuptools import setup, Extension
+except ImportError:
+    from distutils.core import setup, Extension
+
 from distutils.command.install_lib import install_lib as _install_lib
 
 MAJOR_VERSION_NUM = '@OPENMM_MAJOR_VERSION@'
@@ -18,6 +22,7 @@ IS_RELEASED = False
 
 __author__ = "Peter Eastman"
 __version__ = "%s.%s" % (MAJOR_VERSION_NUM, MINOR_VERSION_NUM)
+
 
 def reportError(message):
     sys.stdout.write("ERROR: ")
