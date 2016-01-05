@@ -385,14 +385,17 @@ private:
         const char* getSortKey() const {return "value.y";}
     };
     void initializeScaleFactors();
+    void computeInducedField(void** recipBoxVectorPointer);
     bool iterateDipolesByDIIS(int iteration);
+    void computeExtrapolatedDipoles(void** recipBoxVectorPointer);
     void ensureMultipolesValid(ContextImpl& context);
     template <class T, class T4, class M4> void computeSystemMultipoleMoments(ContextImpl& context, std::vector<double>& outputMultipoleMoments);
-    int numMultipoles, maxInducedIterations;
+    int numMultipoles, maxInducedIterations, maxExtrapolationOrder;
     int fixedFieldThreads, inducedFieldThreads, electrostaticsThreads;
     int gridSizeX, gridSizeY, gridSizeZ;
     double alpha, inducedEpsilon;
     bool usePME, hasQuadrupoles, hasInitializedScaleFactors, hasInitializedFFT, multipolesAreValid;
+    AmoebaMultipoleForce::PolarizationType polarizationType;
     CudaContext& cu;
     const System& system;
     std::vector<int3> covalentFlagValues;
@@ -422,6 +425,18 @@ private:
     CudaArray* prevErrors;
     CudaArray* diisMatrix;
     CudaArray* diisCoefficients;
+    CudaArray* extrapolatedDipole;
+    CudaArray* extrapolatedDipolePolar;
+    CudaArray* extrapolatedDipoleGk;
+    CudaArray* extrapolatedDipoleGkPolar;
+    CudaArray* inducedDipoleFieldGradient;
+    CudaArray* inducedDipoleFieldGradientPolar;
+    CudaArray* inducedDipoleFieldGradientGk;
+    CudaArray* inducedDipoleFieldGradientGkPolar;
+    CudaArray* extrapolatedDipoleFieldGradient;
+    CudaArray* extrapolatedDipoleFieldGradientPolar;
+    CudaArray* extrapolatedDipoleFieldGradientGk;
+    CudaArray* extrapolatedDipoleFieldGradientGkPolar;
     CudaArray* polarizability;
     CudaArray* covalentFlags;
     CudaArray* polarizationGroupFlags;
@@ -444,6 +459,7 @@ private:
     CUfunction pmeGridIndexKernel, pmeSpreadFixedMultipolesKernel, pmeSpreadInducedDipolesKernel, pmeFinishSpreadChargeKernel, pmeConvolutionKernel;
     CUfunction pmeFixedPotentialKernel, pmeInducedPotentialKernel, pmeFixedForceKernel, pmeInducedForceKernel, pmeRecordInducedFieldDipolesKernel, computePotentialKernel;
     CUfunction recordDIISDipolesKernel, buildMatrixKernel;
+    CUfunction initExtrapolatedKernel, iterateExtrapolatedKernel, computeExtrapolatedKernel;
     CUfunction pmeTransformMultipolesKernel, pmeTransformPotentialKernel;
     CudaCalcAmoebaGeneralizedKirkwoodForceKernel* gkKernel;
     static const int PmeOrder = 5;
