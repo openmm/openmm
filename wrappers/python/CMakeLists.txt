@@ -280,7 +280,7 @@ set(STAGING_OUTPUT_FILES ${STAGING_OUTPUT_FILES}
 # Binary distribution
 add_custom_target(
     PythonBdist
-    COMMAND "@PYTHON_EXECUTABLE@" setup.py bdist_wheel
+    COMMAND "${PYTHON_EXECUTABLE}" setup.py bdist_wheel
     DEPENDS ${STAGING_OUTPUT_FILES} ${ALL_PLUGIN_TARGETS}
     WORKING_DIRECTORY ${OPENMM_PYTHON_STAGING_DIR}
     COMMENT "Installing OpenMM Python binary module..."
@@ -290,7 +290,7 @@ add_custom_target(
 # Install Python package (to system location)
 add_custom_target(
     PythonInstall
-    COMMAND "@PYTHON_EXECUTABLE@" setup.py install
+    COMMAND "${PYTHON_EXECUTABLE}" setup.py install
     # COMMAND "touch ${CMAKE_BINARY_DIR}/.PythonInstall"
     DEPENDS ${STAGING_OUTPUT_FILES} ${ALL_PLUGIN_TARGETS}
     WORKING_DIRECTORY ${OPENMM_PYTHON_STAGING_DIR}
