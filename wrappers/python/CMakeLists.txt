@@ -1,3 +1,4 @@
+cmake_policy(SET CMP0026 OLD)
 #############################################
 ### Copy all source files to staging area ###
 #############################################
@@ -23,8 +24,15 @@ file(GLOB STAGING_INPUT_FILES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
 ###############################################################################
-# Make a list of all folders containing include files the wrappers must be
-# compiled against.
+# Collect the necessary information for building and compiling the Python
+# package:
+#  - WRAPPER_INCLUDE_DIRS: All folders containing header files that the
+#    wrappers must be compiled against.
+#  - ALL_PLUGIN_TARGET_LOCATIONS: All of the plugin libraries that should be
+#    copied into the Python installation
+#  - ALL_LIBRARIES: The OpenMM libraries that the wrappers should be linked
+#    against
+#  - ALL_LIBRARY_LOCATIONS: The paths to these libraries
 ###############################################################################
 
 SET(WRAPPER_BASE_SUBDIRS . openmmapi olla serialization plugins/amoeba/openmmapi plugins/rpmd/openmmapi plugins/drude/openmmapi)
@@ -37,26 +45,57 @@ FOREACH(subdir ${WRAPPER_BASE_SUBDIRS})
                          ${CMAKE_SOURCE_DIR}/${subdir}/include/openmm/internal)
 ENDFOREACH(subdir)
 
-
 GET_PROPERTY(ALL_PLUGIN_TARGETS GLOBAL PROPERTY AllPluginTargets)
+SET(ALL_PLUGIN_TARGET_LOCATIONS)
+foreach(PLUGIN_TARGET ${ALL_PLUGIN_TARGETS})
+    get_property(PLUGIN_TARGET_LOCATION TARGET ${PLUGIN_TARGET} PROPERTY LOCATION)
+    SET(ALL_PLUGIN_TARGET_LOCATIONS "${ALL_PLUGIN_TARGET_LOCATIONS}" "${PLUGIN_TARGET_LOCATION}")
+endforeach()
+
+SET(ALL_LIBRARIES "OpenMM" "OpenMMAmoeba" "OpenMMRPMD" "OpenMMDrude")
+SET(ALL_LIBRARY_LOCATIONS)
+foreach(LIBRARY_TARGET ${ALL_LIBRARIES})
+    get_property(TARGET_LOCATION TARGET ${LIBRARY_TARGET} PROPERTY LOCATION)
+    set(ALL_LIBRARY_LOCATIONS "${ALL_LIBRARY_LOCATIONS}" "${TARGET_LOCATION}")
+endforeach()
+
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/setup.py
     ${OPENMM_PYTHON_STAGING_DIR}/setup.py @ONLY)
 
-###########################################################
-### Check the git revision of the source, and write it  ###
-### to a python file in the in the staging directory    ###
-###########################################################
+###############################################################################
+# Collect the current git revision and whether or not we are on a git tag
+# (used to indicate releases), and use this information to write
+# ${OPENMM_PYTHON_STAGING_DIR}/simtk/openmm/version.py
+###############################################################################
+
 execute_process(
-  COMMAND git rev-parse HEAD
+  COMMAND git rev-parse --short HEAD
   WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
-  OUTPUT_VARIABLE rev_hash_str
+  OUTPUT_VARIABLE GIT_REVISION
   OUTPUT_STRIP_TRAILING_WHITESPACE
   ERROR_QUIET
 )
-if(NOT rev_hash_str)
-  set(rev_hash_str "Unknown")
+
+execute_process(
+  COMMAND git describe --tags --exact-match
+  WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+  OUTPUT_VARIABLE GIT_TAG_EXACT_MATCH_STR
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+  ERROR_QUIET
+)
+
+if(NOT GIT_REVISION)
+  set(GIT_REVISION "Unknown")
 endif()
-file(WRITE "${OPENMM_PYTHON_STAGING_DIR}/simtk/openmm/version.py" "git_revision = '${rev_hash_str}'\n")
+if (NOT GIT_TAG_EXACT_MATCH_STR)
+    SET(GIT_TAG_EXACT_MATCH "False")
+else()
+    SET(GIT_TAG_EXACT_MATCH "True")
+endif()
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/version.py.in
+    ${OPENMM_PYTHON_STAGING_DIR}/simtk/openmm/version.py @ONLY)
+
 
 set(SUBDIRS src simtk tests)
 foreach(SUBDIR ${SUBDIRS})
@@ -199,6 +238,7 @@ add_custom_command(
     COMMENT "Creating OpenMM Python swig input files..."
 )
 
+add_custom_target(OpenMMSwigHeaders ALL DEPENDS "${SWIG_OPENMM_DIR}/OpenMMSwigHeaders.i")
 INSTALL_FILES(/include FILES "${SWIG_OPENMM_DIR}/OpenMMSwigHeaders.i")
 
 #~ swig -python -c++ \
@@ -225,55 +265,36 @@ add_custom_target(RunSwig DEPENDS
     "${SWIG_OPENMM_DIR}/OpenMMSwig.cxx"
     "${OPENMM_PYTHON_STAGING_DIR}/simtk/openmm/openmm.py")
 
-set (STAGING_OUTPUT_FILES ${STAGING_OUTPUT_FILES}
+set(STAGING_OUTPUT_FILES ${STAGING_OUTPUT_FILES}
     "${OPENMM_PYTHON_STAGING_DIR}/src/swig_doxygen/OpenMMSwig.cxx"
-    "${OPENMM_PYTHON_STAGING_DIR}/simtk/openmm/openmm.py")
-
-
+    "${OPENMM_PYTHON_STAGING_DIR}/simtk/openmm/openmm.py"
+    "${OPENMM_PYTHON_STAGING_DIR}/simtk/openmm/version.py"
+    "${OPENMM_PYTHON_STAGING_DIR}/setup.py"
+)
 
 
 ###########################################################################
-### Run python setup.py indirectly, so we can set environment variables ###
+### Run python setup.py
 ###########################################################################
-
 
 # Binary distribution
-set(PYTHON_SETUP_COMMAND bdist_wheel)
-configure_file(pysetup.cmake.in
-    "${CMAKE_CURRENT_BINARY_DIR}/pysetupbdist.cmake" @ONLY)
-add_custom_target(PythonBdist
-    COMMAND ${CMAKE_COMMAND}
-        -P "${CMAKE_CURRENT_BINARY_DIR}/pysetupbdist.cmake"
-    DEPENDS ${STAGING_OUTPUT_FILES} "${CMAKE_CURRENT_BINARY_DIR}/pysetupbdist.cmake"
+add_custom_target(
+    PythonBdist
+    COMMAND "@PYTHON_EXECUTABLE@" setup.py bdist_wheel
+    DEPENDS ${STAGING_OUTPUT_FILES} ${ALL_PLUGIN_TARGETS}
     WORKING_DIRECTORY ${OPENMM_PYTHON_STAGING_DIR}
-    COMMENT "Packaging binary distribution package (bdist)..."
+    COMMENT "Installing OpenMM Python binary module..."
 )
 
 
-# Source distribution
-set(PYTHON_SETUP_COMMAND sdist)
-configure_file(pysetup.cmake.in
-    "${CMAKE_CURRENT_BINARY_DIR}/pysetupsdist.cmake" @ONLY)
-add_custom_target(PythonSdist
-    COMMAND ${CMAKE_COMMAND}
-        -P "${CMAKE_CURRENT_BINARY_DIR}/pysetupsdist.cmake"
-    DEPENDS ${STAGING_OUTPUT_FILES} "${CMAKE_CURRENT_BINARY_DIR}/pysetupsdist.cmake"
+# Install Python package (to system location)
+add_custom_target(
+    PythonInstall
+    COMMAND "@PYTHON_EXECUTABLE@" setup.py install
+    # COMMAND "touch ${CMAKE_BINARY_DIR}/.PythonInstall"
+    DEPENDS ${STAGING_OUTPUT_FILES} ${ALL_PLUGIN_TARGETS}
     WORKING_DIRECTORY ${OPENMM_PYTHON_STAGING_DIR}
-    COMMENT "Packaging source distribution package (sdist)..."
+    COMMENT "Installing OpenMM Python binary module..."
 )
 
-# Install binary module (to system location)
-GET_PROPERTY(ALL_PLUGIN_TARGETS GLOBAL PROPERTY AllPluginTargets)
-set(PYTHON_SETUP_COMMAND "install")
-configure_file(pysetup.cmake.in
-    "${CMAKE_CURRENT_BINARY_DIR}/pysetupinstall.cmake" @ONLY)
-add_custom_target(PythonInstall
-    ALL
-    COMMAND ${CMAKE_COMMAND}
-        -P "${CMAKE_CURRENT_BINARY_DIR}/pysetupinstall.cmake"
-    DEPENDS ${STAGING_OUTPUT_FILES} ${OPENMM_PYTHON_STAGING_DIR}/build "${CMAKE_CURRENT_BINARY_DIR}/pysetupinstall.cmake" ${plugin_targets}
-    WORKING_DIRECTORY ${OPENMM_PYTHON_STAGING_DIR}
-    COMMENT "Installing OpenMM Python binary module... (${plugin_targets})"
-)
-
-
+install(CODE "execute_process(COMMAND \"${CMAKE_COMMAND}\" --build \"${CMAKE_BINARY_DIR}\" --target PythonInstall)")
