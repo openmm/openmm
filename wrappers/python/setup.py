@@ -13,9 +13,15 @@ except ImportError:
 
 from distutils.command.install_lib import install_lib as _install_lib
 
+# Configured by CMake when this filed is copied into the staging directory
 MAJOR_VERSION_NUM = '@OPENMM_MAJOR_VERSION@'
 MINOR_VERSION_NUM = '@OPENMM_MINOR_VERSION@'
 BUILD_INFO = '@OPENMM_BUILD_VERSION@'
+ALL_PLUGIN_TARGETS = '@ALL_PLUGIN_TARGETS@'
+WRAPPER_INCLUDE_DIRS = '@WRAPPER_INCLUDE_DIRS@'
+
+
+
 IS_RELEASED = False
 
 __author__ = "Peter Eastman"
@@ -171,6 +177,8 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
             """,
         "cmdclass": {"install_lib": install_lib},
     }
+    if 'setuptools' in sys.modules:
+        setupKeywords['zip_safe'] = False
 
     define_macros = [('MAJOR_VERSION', major_version_num),
                      ('MINOR_VERSION', minor_version_num)]

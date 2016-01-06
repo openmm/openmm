@@ -98,6 +98,9 @@ ELSE (APPLE)
 ENDIF (APPLE)
 
 INSTALL(TARGETS ${SHARED_TARGET} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/plugins)
+SET_PROPERTY(GLOBAL PROPERTY AllPluginTargets "${SHARED_TARGET}" APPEND)
+
+
 # Ensure that links to the main CUDA library will be resolved.
 IF (APPLE)
     SET(CUDA_LIBRARY libOpenMMCUDA.dylib)

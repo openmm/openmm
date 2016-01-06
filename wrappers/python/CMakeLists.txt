@@ -21,7 +21,26 @@ file(GLOB STAGING_INPUT_FILES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
     "${CMAKE_CURRENT_SOURCE_DIR}/MANIFEST.in"
     "${CMAKE_CURRENT_SOURCE_DIR}/README.txt"
 )
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/setup.py ${OPENMM_PYTHON_STAGING_DIR}/setup.py)
+
+###############################################################################
+# Make a list of all folders containing include files the wrappers must be
+# compiled against.
+###############################################################################
+
+SET(WRAPPER_BASE_SUBDIRS . openmmapi olla serialization plugins/amoeba/openmmapi plugins/rpmd/openmmapi plugins/drude/openmmapi)
+SET(WRAPPER_INCLUDE_DIRS) # start empty
+FOREACH(subdir ${WRAPPER_BASE_SUBDIRS})
+    # append
+    SET(WRAPPER_INCLUDE_DIRS ${WRAPPER_INCLUDE_DIRS}
+                         ${CMAKE_SOURCE_DIR}/${subdir}/include
+                         ${CMAKE_SOURCE_DIR}/${subdir}/include/openmm
+                         ${CMAKE_SOURCE_DIR}/${subdir}/include/openmm/internal)
+ENDFOREACH(subdir)
+
+
+GET_PROPERTY(ALL_PLUGIN_TARGETS GLOBAL PROPERTY AllPluginTargets)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/setup.py
+    ${OPENMM_PYTHON_STAGING_DIR}/setup.py @ONLY)
 
 ###########################################################
 ### Check the git revision of the source, and write it  ###
@@ -38,11 +57,6 @@ if(NOT rev_hash_str)
   set(rev_hash_str "Unknown")
 endif()
 file(WRITE "${OPENMM_PYTHON_STAGING_DIR}/simtk/openmm/version.py" "git_revision = '${rev_hash_str}'\n")
-
-# file(GLOB_RECURSE temp RELATIVE "${CMAKE_SOURCE_DIR}" "${CMAKE_SOURCE_DIR}/src/*.i")
-# foreach(f ${temp})
-#     set(temp2 "${temp2}\n${f}")
-# endforeach()
 
 set(SUBDIRS src simtk tests)
 foreach(SUBDIR ${SUBDIRS})
@@ -215,43 +229,13 @@ set (STAGING_OUTPUT_FILES ${STAGING_OUTPUT_FILES}
     "${OPENMM_PYTHON_STAGING_DIR}/src/swig_doxygen/OpenMMSwig.cxx"
     "${OPENMM_PYTHON_STAGING_DIR}/simtk/openmm/openmm.py")
 
-##################################################################################################
-### Make a list of all folders containing include files the wrappers must be compiled against. ###
-##################################################################################################
 
-SET(WRAPPER_BASE_SUBDIRS . openmmapi olla serialization plugins/amoeba/openmmapi plugins/rpmd/openmmapi plugins/drude/openmmapi)
-SET(WRAPPER_INCLUDE_DIRS) # start empty
-FOREACH(subdir ${WRAPPER_BASE_SUBDIRS})
-    # append
-    SET(WRAPPER_INCLUDE_DIRS ${WRAPPER_INCLUDE_DIRS}
-                         ${CMAKE_SOURCE_DIR}/${subdir}/include
-                         ${CMAKE_SOURCE_DIR}/${subdir}/include/openmm
-                         ${CMAKE_SOURCE_DIR}/${subdir}/include/openmm/internal)
-ENDFOREACH(subdir)
+
 
 ###########################################################################
 ### Run python setup.py indirectly, so we can set environment variables ###
 ###########################################################################
 
-set(PYTHON_SETUP_COMMAND build)
-configure_file(
-    pysetup.cmake.in
-    "${CMAKE_CURRENT_BINARY_DIR}/pysetupbuild.cmake"
-    @ONLY
-)
-add_custom_command(
-    OUTPUT ${OPENMM_PYTHON_STAGING_DIR}/build
-    COMMAND ${CMAKE_COMMAND}
-    ARGS -P "${CMAKE_CURRENT_BINARY_DIR}/pysetupbuild.cmake"
-    DEPENDS
-        ${OPENMM_PYTHON_STAGING_DIR}/setup.py
-        "${CMAKE_CURRENT_BINARY_DIR}/pysetupbuild.cmake"
-        ${SHARED_TARGET}
-        ${STAGING_OUTPUT_FILES}
-    WORKING_DIRECTORY ${OPENMM_PYTHON_STAGING_DIR}
-    COMMENT "Building OpenMM Python binary module..."
-)
-add_custom_target(BuildModule ALL DEPENDS ${STAGING_OUTPUT_FILES})
 
 # Binary distribution
 set(PYTHON_SETUP_COMMAND bdist_wheel)
@@ -279,13 +263,17 @@ add_custom_target(PythonSdist
 )
 
 # Install binary module (to system location)
+GET_PROPERTY(ALL_PLUGIN_TARGETS GLOBAL PROPERTY AllPluginTargets)
 set(PYTHON_SETUP_COMMAND "install")
 configure_file(pysetup.cmake.in
     "${CMAKE_CURRENT_BINARY_DIR}/pysetupinstall.cmake" @ONLY)
 add_custom_target(PythonInstall
+    ALL
     COMMAND ${CMAKE_COMMAND}
         -P "${CMAKE_CURRENT_BINARY_DIR}/pysetupinstall.cmake"
-    DEPENDS ${STAGING_OUTPUT_FILES} ${OPENMM_PYTHON_STAGING_DIR}/build "${CMAKE_CURRENT_BINARY_DIR}/pysetupinstall.cmake"
+    DEPENDS ${STAGING_OUTPUT_FILES} ${OPENMM_PYTHON_STAGING_DIR}/build "${CMAKE_CURRENT_BINARY_DIR}/pysetupinstall.cmake" ${plugin_targets}
     WORKING_DIRECTORY ${OPENMM_PYTHON_STAGING_DIR}
-    COMMENT "Installing OpenMM Python binary module..."
+    COMMENT "Installing OpenMM Python binary module... (${plugin_targets})"
 )
+
+
