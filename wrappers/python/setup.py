@@ -16,6 +16,7 @@ from distutils.command.install_lib import install_lib as _install_lib
 MAJOR_VERSION_NUM = '@OPENMM_MAJOR_VERSION@'
 MINOR_VERSION_NUM = '@OPENMM_MINOR_VERSION@'
 BUILD_INFO = '@OPENMM_BUILD_VERSION@'
+CMAKE_SOURCE_DIR = '@CMAKE_SOURCE_DIR@'
 ALL_PLUGIN_TARGET_LOCATIONS = list(filter(None, '@ALL_PLUGIN_TARGET_LOCATIONS@'.split(';')))
 ALL_LIBRARIES = list(filter(None, '@ALL_LIBRARIES@'.split(';')))
 ALL_LIBRARY_LOCATIONS = list(filter(None, '@ALL_LIBRARY_LOCATIONS@'.split(';')))
@@ -36,6 +37,7 @@ class install_lib(_install_lib):
     def install(self):
         self.copyOpenMMLibraries()
         self.copyOpenMMPlugins()
+        self.copyLicenses()
         return _install_lib.install(self)
 
     def copyOpenMMLibraries(self):
@@ -54,6 +56,10 @@ class install_lib(_install_lib):
 
         for src in ALL_PLUGIN_TARGET_LOCATIONS:
             shutil.copy2(src, dest)
+
+    def copyLicenses(self):
+        dest = os.path.join(self.build_dir, 'simtk/openmm/licenses')
+        shutil.copytree(os.path.join(CMAKE_SOURCE_DIR, 'docs-source/licenses'), dest)
 
 
 def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
