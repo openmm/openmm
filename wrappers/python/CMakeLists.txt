@@ -1,4 +1,6 @@
-cmake_policy(SET CMP0026 OLD)
+if(POLICY CMP0026)
+    cmake_policy(SET CMP0026 OLD)
+endif()
 #############################################
 ### Copy all source files to staging area ###
 #############################################
@@ -35,25 +37,25 @@ file(GLOB STAGING_INPUT_FILES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
 #  - ALL_LIBRARY_LOCATIONS: The paths to these libraries
 ###############################################################################
 
-SET(WRAPPER_BASE_SUBDIRS . openmmapi olla serialization plugins/amoeba/openmmapi plugins/rpmd/openmmapi plugins/drude/openmmapi)
-SET(WRAPPER_INCLUDE_DIRS) # start empty
-FOREACH(subdir ${WRAPPER_BASE_SUBDIRS})
+set(WRAPPER_BASE_SUBDIRS . openmmapi olla serialization plugins/amoeba/openmmapi plugins/rpmd/openmmapi plugins/drude/openmmapi)
+set(WRAPPER_INCLUDE_DIRS) # start empty
+foreach(subdir ${WRAPPER_BASE_SUBDIRS})
     # append
     SET(WRAPPER_INCLUDE_DIRS ${WRAPPER_INCLUDE_DIRS}
                          ${CMAKE_SOURCE_DIR}/${subdir}/include
                          ${CMAKE_SOURCE_DIR}/${subdir}/include/openmm
                          ${CMAKE_SOURCE_DIR}/${subdir}/include/openmm/internal)
-ENDFOREACH(subdir)
+endforeach(subdir)
 
-GET_PROPERTY(ALL_PLUGIN_TARGETS GLOBAL PROPERTY AllPluginTargets)
-SET(ALL_PLUGIN_TARGET_LOCATIONS)
+get_property(ALL_PLUGIN_TARGETS GLOBAL PROPERTY AllPluginTargets)
+set(ALL_PLUGIN_TARGET_LOCATIONS)
 foreach(PLUGIN_TARGET ${ALL_PLUGIN_TARGETS})
     get_property(PLUGIN_TARGET_LOCATION TARGET ${PLUGIN_TARGET} PROPERTY LOCATION)
-    SET(ALL_PLUGIN_TARGET_LOCATIONS "${ALL_PLUGIN_TARGET_LOCATIONS}" "${PLUGIN_TARGET_LOCATION}")
+    set(ALL_PLUGIN_TARGET_LOCATIONS "${ALL_PLUGIN_TARGET_LOCATIONS}" "${PLUGIN_TARGET_LOCATION}")
 endforeach()
 
-SET(ALL_LIBRARIES "OpenMM" "OpenMMAmoeba" "OpenMMRPMD" "OpenMMDrude")
-SET(ALL_LIBRARY_LOCATIONS)
+set(ALL_LIBRARIES "OpenMM" "OpenMMAmoeba" "OpenMMRPMD" "OpenMMDrude")
+set(ALL_LIBRARY_LOCATIONS)
 foreach(LIBRARY_TARGET ${ALL_LIBRARIES})
     get_property(TARGET_LOCATION TARGET ${LIBRARY_TARGET} PROPERTY LOCATION)
     set(ALL_LIBRARY_LOCATIONS "${ALL_LIBRARY_LOCATIONS}" "${TARGET_LOCATION}")
