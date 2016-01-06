@@ -59,6 +59,8 @@ class install_lib(_install_lib):
 
     def copyLicenses(self):
         dest = os.path.join(self.build_dir, 'simtk/openmm/licenses')
+        if os.path.exists(dest):
+            shutil.rmtree(dest)
         shutil.copytree(os.path.join(CMAKE_SOURCE_DIR, 'docs-source/licenses'), dest)
 
 
