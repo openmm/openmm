@@ -25,6 +25,7 @@
 #include "AmoebaReferenceMultipoleForce.h"
 #include "jama_svd.h"
 #include <algorithm>
+
 // In case we're using some primitive version of Visual Studio this will
 // make sure that erf() and erfc() are defined.
 #include "openmm/internal/MSVC_erfc.h"
@@ -1785,10 +1786,6 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateElectrostatic(const vector<Mu
                                                                  vector<RealVec>& torques,
                                                                  vector<RealVec>& forces)
 {
-    const int deriv1[] = {1, 4, 7, 8, 10, 15, 17, 13, 14, 19};
-    const int deriv2[] = {2, 7, 5, 9, 13, 11, 18, 15, 19, 16};
-    const int deriv3[] = {3, 8, 9, 6, 14, 16, 12, 19, 17, 18};
-
     RealOpenMM energy = 0.0;
     vector<RealOpenMM> scaleFactors(LAST_SCALE_TYPE_INDEX);
     for (unsigned int kk = 0; kk < scaleFactors.size(); kk++) {
@@ -1796,6 +1793,7 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateElectrostatic(const vector<Mu
     }   
 
     // main loop over particle pairs
+
     for (unsigned int ii = 0; ii < particleData.size(); ii++) {
         for (unsigned int jj = ii+1; jj < particleData.size(); jj++) {
 
@@ -6072,7 +6070,6 @@ void AmoebaReferencePmeMultipoleForce::recordInducedDipoleField(vector<RealVec>&
         fieldPolar[i][1] -= _phip[10*i+1]*fracToCart[1][0] + _phip[10*i+2]*fracToCart[1][1] + _phip[10*i+3]*fracToCart[1][2];
         fieldPolar[i][2] -= _phip[10*i+1]*fracToCart[2][0] + _phip[10*i+2]*fracToCart[2][1] + _phip[10*i+3]*fracToCart[2][2];
     }
-
 }
 
 void AmoebaReferencePmeMultipoleForce::calculateReciprocalSpaceInducedDipoleField(vector<UpdateInducedDipoleFieldStruct>& updateInducedDipoleFields)
@@ -6237,7 +6234,6 @@ void AmoebaReferencePmeMultipoleForce::calculateDirectInducedDipolePairIxns(cons
 
     alsq2n                *= alsq2;
     RealOpenMM bn3         = (5.0*bn2+alsq2n*exp2a)/r2;
-
 
     // compute the error function scaled and unscaled terms
 

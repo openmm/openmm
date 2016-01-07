@@ -30,7 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 /**
- * This tests the Reference implementation of the PT polarization algorithms in ReferenceAmoebaMultipoleForce.
+ * This tests the Reference implementation of the extrapolated polarization algorithms in AmoebaMultipoleForce.
  */
 
 #include "openmm/internal/AssertionUtilities.h"
@@ -307,9 +307,9 @@ static void check_finite_differences(vector<Vec3> analytic_forces, Context &cont
 }
 
 
-static void testWaterDimerExPTPolarizationTriclinicPME() {
+static void testWaterDimerTriclinicPME() {
 
-    std::string testName      = "testWaterDimerExPTPolarizationTriclinicPME";
+    std::string testName      = "testWaterDimerTriclinicPME";
 
     System system;
     AmoebaMultipoleForce* amoebaMultipoleForce = new AmoebaMultipoleForce();;
@@ -356,9 +356,9 @@ static void testWaterDimerExPTPolarizationTriclinicPME() {
 }
 
 
-static void testWaterDimerExPTPolarizationTriclinicPMENoPolGroups() {
+static void testWaterDimerTriclinicPMENoPolGroups() {
 
-    std::string testName      = "testWaterDimerExPTPolarizationTriclinicPMENoPolGroups";
+    std::string testName      = "testWaterDimerTriclinicPMENoPolGroups";
 
     System system;
     AmoebaMultipoleForce* amoebaMultipoleForce = new AmoebaMultipoleForce();;
@@ -406,9 +406,9 @@ static void testWaterDimerExPTPolarizationTriclinicPMENoPolGroups() {
 }
 
 
-static void testWaterDimerExPTPolarizationNoCutoff() {
+static void testWaterDimerNoCutoff() {
 
-    std::string testName      = "testWaterDimerExPTPolarizationNoCutoff";
+    std::string testName      = "testWaterDimerNoCutoff";
 
     System system;
     AmoebaMultipoleForce* amoebaMultipoleForce = new AmoebaMultipoleForce();;
@@ -447,9 +447,9 @@ static void testWaterDimerExPTPolarizationNoCutoff() {
 }
 
 
-static void testWaterDimerExPTPolarizationNoCutoffNoPolGroups() {
+static void testWaterDimerNoCutoffNoPolGroups() {
 
-    std::string testName      = "testWaterDimerExPTPolarizationNoCutoffNoPolGroups";
+    std::string testName      = "testWaterDimerNoCutoffNoPolGroups";
 
     System system;
     AmoebaMultipoleForce* amoebaMultipoleForce = new AmoebaMultipoleForce();;
@@ -499,16 +499,16 @@ int main(int numberOfArguments, char* argv[]) {
          */
 
         // PME, triclinic
-        testWaterDimerExPTPolarizationTriclinicPME();
+        testWaterDimerTriclinicPME();
 
         // PME, triclinic, no polarization groups
-        testWaterDimerExPTPolarizationTriclinicPMENoPolGroups();
+        testWaterDimerTriclinicPMENoPolGroups();
 
         // No cutoff
-        testWaterDimerExPTPolarizationNoCutoff();
+        testWaterDimerNoCutoff();
 
         // No cutoff, no polarization groups
-        testWaterDimerExPTPolarizationNoCutoffNoPolGroups();
+        testWaterDimerNoCutoffNoPolGroups();
 
     }
     catch(const std::exception& e) {

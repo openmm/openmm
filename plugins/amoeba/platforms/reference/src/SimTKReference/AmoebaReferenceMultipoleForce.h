@@ -673,8 +673,6 @@ protected:
     std::vector<std::vector<RealOpenMM> > _ptDipoleFieldGradientP;
     std::vector<std::vector<RealOpenMM> > _ptDipoleFieldGradientD;
 
-
-
     int _mutualInducedDipoleConverged;
     int _mutualInducedDipoleIterations;
     int _maximumMutualInducedDipoleIterations;
