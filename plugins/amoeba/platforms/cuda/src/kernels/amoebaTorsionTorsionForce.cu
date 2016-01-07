@@ -45,13 +45,12 @@ if (cosine1 > 0.99f || cosine1 < -0.99f) {
     // We're close to the singularity in acos(), so take the cross product and use asin() instead.
 
     real3 cross_prod = cross(make_real3(xt, yt, zt), make_real3(xu, yu, zu));
-    angle1 = ASIN(SQRT(dot(cross_prod, cross_prod)/(rt2*ru2)));
+    angle1 = RAD_TO_DEG*ASIN(SQRT(dot(cross_prod, cross_prod)/(rt2*ru2)));
     if (cosine1 < 0.0f)
-        angle1 = M_PI-angle1;
+        angle1 = 180-angle1;
 }
 else
-   angle1 = ACOS(cosine1);
-angle1 = RAD_TO_DEG*angle1;
+   angle1 = RAD_TO_DEG*ACOS(cosine1);
 real sign = xba*xu + yba*yu + zba*zu;
 angle1 = (sign < 0 ? -angle1 : angle1);
 real value1 = angle1;
@@ -65,13 +64,12 @@ if (cosine2 > 0.99f || cosine2 < -0.99f) {
     // We're close to the singularity in acos(), so take the cross product and use asin() instead.
 
     real3 cross_prod = cross(make_real3(xu, yu, zu), make_real3(xv, yv, zv));
-    angle2 = ASIN(SQRT(dot(cross_prod, cross_prod)/(ru2*rv2)));
+    angle2 = RAD_TO_DEG*ASIN(SQRT(dot(cross_prod, cross_prod)/(ru2*rv2)));
     if (cosine2 < 0.0f)
-        angle2 = M_PI-angle2;
+        angle2 = 180-angle2;
 }
 else
-   angle2 = ACOS(cosine2);
-angle2 = RAD_TO_DEG*angle2;
+   angle2 = RAD_TO_DEG*ACOS(cosine2);
 sign = xcb*xv + ycb*yv + zcb*zv;
 angle2 = (sign < 0 ? -angle2 : angle2);
 real value2 = angle2;
