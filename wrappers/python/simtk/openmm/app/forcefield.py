@@ -119,11 +119,12 @@ class ForceField(object):
         self._atomClasses = {'':set()}
         self._forces = []
         self._scripts = []
+        self._templateGenerators = []
         for file in files:
             self.loadFile(file)
 
     def loadFile(self, file):
-        """Load an XML file and add the definitions from it to this FieldField.
+        """Load an XML file and add the definitions from it to this ForceField.
 
         Parameters
         ----------
@@ -139,6 +140,18 @@ class ForceField(object):
             tree = etree.parse(file)
         except IOError:
             tree = etree.parse(os.path.join(os.path.dirname(__file__), 'data', file))
+        except Exception as e:
+            # Fail with an error message about which file could not be read.
+            # TODO: Also handle case where fallback to 'data' directory encounters problems,
+            # but this is much less worrisome because we control those files.
+            msg  = str(e) + '\n'
+            if hasattr(file, 'name'):
+                filename = file.name
+            else:
+                filename = str(file)
+            msg += "ForceField.loadFile() encountered an error reading file '%s'\n" % filename
+            raise Exception(msg)
+
         root = tree.getroot()
 
         # Load the atom types.
@@ -163,21 +176,20 @@ class ForceField(object):
                     if atomName in atomIndices:
                         raise ValueError('Residue '+resName+' contains multiple atoms named '+atomName)
                     atomIndices[atomName] = len(template.atoms)
-                    template.atoms.append(ForceField._TemplateAtomData(atomName, atom.attrib['type'], self._atomTypes[atom.attrib['type']][2], params))
+                    typeName = atom.attrib['type']
+                    template.atoms.append(ForceField._TemplateAtomData(atomName, typeName, self._atomTypes[typeName].element, params))
                 for site in residue.findall('VirtualSite'):
                     template.virtualSites.append(ForceField._VirtualSiteData(site, atomIndices))
                 for bond in residue.findall('Bond'):
                     if 'atomName1' in bond.attrib:
-                        template.addBond(atomIndices[bond.attrib['atomName1']], atomIndices[bond.attrib['atomName2']])
+                        template.addBondByName(bond.attrib['atomName1'], bond.attrib['atomName2'])
                     else:
                         template.addBond(int(bond.attrib['from']), int(bond.attrib['to']))
                 for bond in residue.findall('ExternalBond'):
                     if 'atomName' in bond.attrib:
-                        b = atomIndices[bond.attrib['atomName']]
+                        template.addExternalBondByName(bond.attrib['atomName'])
                     else:
-                        b = int(bond.attrib['from'])
-                    template.externalBonds.append(b)
-                    template.atoms[b].externalBonds += 1
+                        template.addExternalBond(int(bond.attrib['from']))
                 self.registerResidueTemplate(template)
 
         # Load force definitions
@@ -211,7 +223,7 @@ class ForceField(object):
             element = parameters['element']
             if not isinstance(element, elem.Element):
                 element = elem.get_by_symbol(element)
-        self._atomTypes[name] = (atomClass, mass, element)
+        self._atomTypes[name] = ForceField._AtomType(name, atomClass, mass, element)
         if atomClass in self._atomClasses:
             typeSet = self._atomClasses[atomClass]
         else:
@@ -233,8 +245,66 @@ class ForceField(object):
         """Register a new script to be executed after building the System."""
         self._scripts.append(script)
 
+    def registerTemplateGenerator(self, generator):
+        """Register a residue template generator that can be used to parameterize residues that do not match existing forcefield templates.
+
+        This functionality can be used to add handlers to parameterize small molecules or unnatural/modified residues.
+
+        .. CAUTION:: This method is experimental, and its API is subject to change.
+
+        Parameters
+        ----------
+        generator : function
+            A function that will be called when a residue is encountered that does not match an existing forcefield template.
+
+        When a residue without a template is encountered, the `generator` function is called with:
+
+        ::
+           success = generator(forcefield, residue)
+        ```
+
+        where `forcefield` is the calling `ForceField` object and `residue` is a simtk.openmm.app.topology.Residue object.
+
+        `generator` must conform to the following API:
+        ::
+          Parameters
+           ----------
+           forcefield : simtk.openmm.app.ForceField
+               The ForceField object to which residue templates and/or parameters are to be added.
+           residue : simtk.openmm.app.Topology.Residue
+               The residue topology for which a template is to be generated.
+
+           Returns
+           -------
+           success : bool
+               If the generator is able to successfully parameterize the residue, `True` is returned.
+               If the generator cannot parameterize the residue, it should return `False` and not modify `forcefield`.
+
+           The generator should either register a residue template directly with `forcefield.registerResidueTemplate(template)`
+           or it should call `forcefield.loadFile(file)` to load residue definitions from an ffxml file.
+
+           It can also use the `ForceField` programmatic API to add additional atom types (via `forcefield.registerAtomType(parameters)`)
+           or additional parameters.
+
+        """
+        self._templateGenerators.append(generator)
+
     def _findAtomTypes(self, attrib, num):
-        """Parse the attributes on an XML tag to find the set of atom types for each atom it involves."""
+        """Parse the attributes on an XML tag to find the set of atom types for each atom it involves.
+
+        Parameters
+        ----------
+        attrib : dict of attributes
+            The dictionary of attributes for an XML parameter tag.
+        num : int
+            The number of atom specifiers (e.g. 'class1' through 'class4') to extract.
+
+        Returns
+        -------
+        types : list
+            A list of atom types that match.
+
+        """
         types = []
         for i in range(num):
             if num == 1:
@@ -306,10 +376,38 @@ class ForceField(object):
             self.bonds = []
             self.externalBonds = []
 
+        def getAtomIndexByName(self, atom_name):
+            """Look up an atom index by atom name, providing a helpful error message if not found."""
+            for (index, atom) in enumerate(self.atoms):
+                if atom.name == atom_name:
+                    return index
+
+            # Provide a helpful error message if atom name not found.
+            msg =  "Atom name '%s' not found in residue template '%s'.\n" % (atom_name, self.name)
+            msg += "Possible atom names are: %s" % str(atomIndices.keys())
+            raise ValueError(msg)
+
         def addBond(self, atom1, atom2):
+            """Add a bond between two atoms in a template given their indices in the template."""
             self.bonds.append((atom1, atom2))
             self.atoms[atom1].bondedTo.append(atom2)
             self.atoms[atom2].bondedTo.append(atom1)
+
+        def addBondByName(self, atom1_name, atom2_name):
+            """Add a bond between two atoms in a template given their atom names."""
+            atom1 = self.getAtomIndexByName(atom1_name)
+            atom2 = self.getAtomIndexByName(atom2_name)
+            self.addBond(atom1, atom2)
+
+        def addExternalBond(self, atom_index):
+            """Designate that an atom in a residue template has an external bond, using atom index within template."""
+            self.externalBonds.append(atom_index)
+            self.atoms[atom_index].externalBonds += 1
+
+        def addExternalBondByName(self, atom_name):
+            """Designate that an atom in a residue template has an external bond, using atom name within template."""
+            atom = self.getAtomIndexByName(atom_name)
+            self.addExternalBond(atom)
 
     class _TemplateAtomData:
         """Inner class used to encapsulate data about an atom in a residue template definition."""
@@ -361,6 +459,14 @@ class ForceField(object):
                 self.excludeWith = int(attrib['excludeWith'])
             else:
                 self.excludeWith = self.atoms[0]
+
+    class _AtomType:
+        """Inner class used to record atom types and associated properties."""
+        def __init__(self, name, atomClass, mass, element):
+            self.name = name
+            self.atomClass = atomClass
+            self.mass = mass
+            self.element = element
 
     class _AtomTypeParameters:
         """Inner class used to record parameter values for atom types."""
@@ -433,6 +539,36 @@ class ForceField(object):
                 raise ValueError('%s: No parameters defined for atom type %s' % (self.forceName, t))
 
 
+    def _getResidueTemplateMatches(self, res, bondedToAtom):
+        """Return the residue template matches, or None if none are found.
+
+        Parameters
+        ----------
+        res : Topology.Residue
+            The residue for which template matches are to be retrieved.
+        bondedToAtom : list of set of int
+            bondedToAtom[i] is the set of atoms bonded to atom index i
+
+        Returns
+        -------
+        template : _ForceFieldTemplate
+            The matching forcefield residue template, or None if no matches are found.
+        matches : list
+            a list specifying which atom of the template each atom of the residue
+            corresponds to, or None if it does not match the template
+
+        """
+        template = None
+        matches = None
+        signature = _createResidueSignature([atom.element for atom in res.atoms()])
+        if signature in self._templateSignatures:
+            for t in self._templateSignatures[signature]:
+                matches = _matchResidue(res, t, bondedToAtom)
+                if matches is not None:
+                    template = t
+                    break
+        return [template, matches]
+
     def createSystem(self, topology, nonbondedMethod=NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
                      constraints=None, rigidWater=True, removeCMMotion=True, hydrogenMass=None, **args):
         """Construct an OpenMM System representing a Topology with this force field.
@@ -492,20 +628,30 @@ class ForceField(object):
             data.atomBonds[bond.atom2].append(i)
 
         # Find the template matching each residue and assign atom types.
+        # If no templates are found, attempt to use residue template generators to create new templates (and potentially atom types/parameters).
 
         for chain in topology.chains():
             for res in chain.residues():
-                template = None
-                matches = None
-                signature = _createResidueSignature([atom.element for atom in res.atoms()])
-                if signature in self._templateSignatures:
-                    for t in self._templateSignatures[signature]:
-                        matches = _matchResidue(res, t, bondedToAtom)
-                        if matches is not None:
-                            template = t
-                            break
+                # Attempt to match one of the existing templates.
+                [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom)
+                if matches is None:
+                    # No existing templates match.  Try any registered residue template generators.
+                    for generator in self._templateGenerators:
+                        if generator(self, res):
+                            # This generator has registered a new residue template that should match.
+                            [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom)
+                            if matches is None:
+                                # Something went wrong because the generated template does not match the residue signature.
+                                raise Exception('The residue handler %s indicated it had correctly parameterized residue %s, but the generated template did not match the residue signature.' % (generator.__class__.__name__, str(res)))
+                            else:
+                                # We successfully generated a residue template.  Break out of the for loop.
+                                break
+
+                # Raise an exception if we have found no templates that match.
                 if matches is None:
                     raise ValueError('No template found for residue %d (%s).  %s' % (res.index+1, res.name, _findMatchErrors(self, res)))
+
+                # Store parameters for the matched residue template.
                 matchAtoms = dict(zip(matches, res.atoms()))
                 for atom, match in zip(res.atoms(), matches):
                     data.atomType[atom] = template.atoms[match].type
@@ -518,9 +664,22 @@ class ForceField(object):
 
         sys = mm.System()
         for atom in topology.atoms():
-            sys.addParticle(self._atomTypes[data.atomType[atom]][1])
+            # Look up the atom type name, returning a helpful error message if it cannot be found.
+            if atom not in data.atomType:
+                raise Exception("Could not identify atom type for atom '%s'." % str(atom))
+            typename = data.atomType[atom]
 
-        # Adjust masses.
+            # Look up the type name in the list of registered atom types, returning a helpful error message if it cannot be found.
+            if typename not in self._atomTypes:
+                msg  = "Could not find typename '%s' for atom '%s' in list of known atom types.\n" % (typename, str(atom))
+                msg += "Known atom types are: %s" % str(self._atomTypes.keys())
+                raise Exception(msg)
+
+            # Add the particle to the OpenMM system.
+            mass = self._atomTypes[typename].mass
+            sys.addParticle(mass)
+
+        # Adjust hydroten masses if requested.
 
         if hydrogenMass is not None:
             for atom1, atom2 in topology.bonds():
@@ -536,7 +695,7 @@ class ForceField(object):
         boxVectors = topology.getPeriodicBoxVectors()
         if boxVectors is not None:
             sys.setDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2])
-        elif nonbondedMethod is not NoCutoff and nonbondedMethod is not CutoffNonPeriodic:
+        elif nonbondedMethod not in [NoCutoff, CutoffNonPeriodic]:
             raise ValueError('Requested periodic boundary conditions for a Topology that does not specify periodic box dimensions')
 
         # Make a list of all unique angles
@@ -650,7 +809,7 @@ class ForceField(object):
         if removeCMMotion:
             sys.addForce(mm.CMMotionRemover())
 
-        # Let generators do postprocessing
+        # Let force generators do postprocessing
 
         for force in self._forces:
             if 'postprocessSystem' in dir(force):

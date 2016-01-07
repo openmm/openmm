@@ -248,6 +248,105 @@ class TestForceField(unittest.TestCase):
                 self.assertEqual(params[1], 1.0*nanometers)
                 self.assertEqual(params[2], 0.0*kilojoule_per_mole)
 
+    def test_residueTemplateGenerator(self):
+        """Test the ability to add residue template generators to parameterize unmatched residues."""
+        def simpleTemplateGenerator(forcefield, residue):
+            """\
+            Simple residue template generator.
+            This implementation uses the programmatic API to define residue templates.
+
+            NOTE: We presume we have already loaded the force definitions into ForceField.
+            """
+            # Generate a unique prefix name for generating parameters.
+            from uuid import uuid4
+            template_name = uuid4()
+            # Create residue template.
+            template = ForceField._TemplateData(template_name)
+            for atom in residue.atoms():
+                typename = 'XXX'
+                atom_template = ForceField._TemplateAtomData(atom.name, typename, atom.element)
+                template.atoms.append(atom_template)
+            for (atom1,atom2) in residue.internal_bonds():
+                template.addBondByName(atom1.name, atom2.name)
+            residue_atoms = [ atom for atom in residue.atoms() ]
+            for (atom1,atom2) in residue.external_bonds():
+                if atom1 in residue_atoms:
+                    template.addExternalBondByName(atom1.name)
+                elif atom2 in residue_atoms:
+                    template.addExternalBondByName(atom2.name)
+            # Register the template.
+            forcefield.registerResidueTemplate(template)
+
+            # Signal that we have successfully parameterized the residue.
+            return True
+
+        # Define forcefield parameters used by simpleTemplateGenerator.
+        # NOTE: This parameter definition file will currently only work for residues that either have
+        # no external bonds or external bonds to other residues parameterized by the simpleTemplateGenerator.
+        simple_ffxml_contents = """
+<ForceField>
+ <AtomTypes>
+  <Type name="XXX" class="XXX" element="C" mass="12.0"/>
+ </AtomTypes>
+ <HarmonicBondForce>
+  <Bond type1="XXX" type2="XXX" length="0.1409" k="392459.2"/>
+ </HarmonicBondForce>
+ <HarmonicAngleForce>
+  <Angle type1="XXX" type2="XXX" type3="XXX" angle="2.09439510239" k="527.184"/>
+ </HarmonicAngleForce>
+ <NonbondedForce coulomb14scale="0.833333" lj14scale="0.5">
+  <Atom type="XXX" charge="0.000" sigma="0.315" epsilon="0.635"/>
+ </NonbondedForce>
+</ForceField>"""
+
+        #
+        # Test where we generate parameters for only a ligand.
+        #
+
+        # Load the PDB file.
+        pdb = PDBFile(os.path.join('systems', 'T4-lysozyme-L99A-p-xylene-implicit.pdb'))
+        # Create a ForceField object.
+        forcefield = ForceField('amber99sb.xml', 'tip3p.xml', StringIO(simple_ffxml_contents))
+        # Add the residue template generator.
+        forcefield.registerTemplateGenerator(simpleTemplateGenerator)
+        # Parameterize system.
+        system = forcefield.createSystem(pdb.topology, nonbondedMethod=NoCutoff)
+        # TODO: Test energies are finite?
+
+        #
+        # Test for a few systems where we generate all parameters.
+        #
+
+        tests = [
+            { 'pdb_filename' : 'alanine-dipeptide-implicit.pdb', 'nonbondedMethod' : NoCutoff },
+            { 'pdb_filename' : 'lysozyme-implicit.pdb', 'nonbondedMethod' : NoCutoff },
+            { 'pdb_filename' : 'alanine-dipeptide-explicit.pdb', 'nonbondedMethod' : CutoffPeriodic },
+            ]
+
+        # Test all systems with separate ForceField objects.
+        for test in tests:
+            # Load the PDB file.
+            pdb = PDBFile(os.path.join('systems', test['pdb_filename']))
+            # Create a ForceField object.
+            forcefield = ForceField(StringIO(simple_ffxml_contents))
+            # Add the residue template generator.
+            forcefield.registerTemplateGenerator(simpleTemplateGenerator)
+            # Parameterize system.
+            system = forcefield.createSystem(pdb.topology, nonbondedMethod=test['nonbondedMethod'])
+            # TODO: Test energies are finite?
+
+        # Now test all systems with a single ForceField object.
+        # Create a ForceField object.
+        forcefield = ForceField(StringIO(simple_ffxml_contents))
+        # Add the residue template generator.
+        forcefield.registerTemplateGenerator(simpleTemplateGenerator)
+        for test in tests:
+            # Load the PDB file.
+            pdb = PDBFile(os.path.join('systems', test['pdb_filename']))
+            # Parameterize system.
+            system = forcefield.createSystem(pdb.topology, nonbondedMethod=test['nonbondedMethod'])
+            # TODO: Test energies are finite?
+
 class AmoebaTestForceField(unittest.TestCase):
     """Test the ForceField.createSystem() method with the AMOEBA forcefield."""
  
