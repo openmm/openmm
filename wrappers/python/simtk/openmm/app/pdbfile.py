@@ -68,6 +68,8 @@ class PDBFile(object):
         ----------
         file : string
             the name of the file to load
+        extraParticleIdentifier : string='EP'
+            if this value appears in the element column for an ATOM record, the Atom's element will be set to None to mark it as an extra particle
         """
         top = Topology()
         ## The Topology read from the PDB file
@@ -255,6 +257,8 @@ class PDBFile(object):
             rather than generating new ones.  Warning: It is up to the caller to
             make sure these are valid IDs that satisfy the requirements of the
             PDB format.  Otherwise, the output file will be invalid.
+        extraParticleIdentifier : string=' '
+            String to write in the element column of the ATOM records for atoms whose element is None (extra particles)
         """
         PDBFile.writeHeader(topology, file)
         PDBFile.writeModel(topology, positions, file, keepIds=keepIds, extraParticleIdentifier=extraParticleIdentifier)
@@ -299,6 +303,8 @@ class PDBFile(object):
             rather than generating new ones.  Warning: It is up to the caller to
             make sure these are valid IDs that satisfy the requirements of the
             PDB format.  Otherwise, the output file will be invalid.
+        extraParticleIdentifier : string=' '
+            String to write in the element column of the ATOM records for atoms whose element is None (extra particles)
         """
 
         if len(list(topology.atoms())) != len(positions):
