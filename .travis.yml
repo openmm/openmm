@@ -180,11 +180,14 @@ script:
          binstar -t $BINSTAR_TOKEN upload --force -u omnia -p openmm-dev $HOME/miniconda/conda-bld/*/openmm-dev-*.tar.bz2;
       fi;
    fi
-  # Build and test C++ and Python.
-  - cmake . $CMAKE_FLAGS -DCMAKE_INSTALL_PREFIX=$HOME/OpenMM
-  - make -j2 install
+  # Test OpenCL
   - if [[ "$OPENCL" == "true" ]]; then ./TestOpenCLDeviceQuery; fi
-  - if [[ "$OPENCL" == "false" && "$CUDA" == "false" ]]; then
+  # Build and test C++ and Python.
+  - if [[ "$CONDA" == "false" ]]; then
+       cmake . $CMAKE_FLAGS -DCMAKE_INSTALL_PREFIX=$HOME/OpenMM;
+       make -j2 install;
+    fi
+  - if [[ "$CONDA" == "false" && "$OPENCL" == "false" && "$CUDA" == "false" ]]; then
       if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
           sudo make PythonInstall;
       else
@@ -195,7 +198,9 @@ script:
     fi
 
   # Run the tests, and rerun any failing tests.
-  - python devtools/run-ctest.py --start-time $START_TIME
+  - if [[ "$CONDA" == "false" ]]; then
+       python devtools/run-ctest.py --start-time $START_TIME;
+    fi
 
   - if [[ ! -z "${DOCS_DEPLOY}" && "${DOCS_DEPLOY}" = "true" ]]; then
       pip install sphinx sphinxcontrib-lunrsearch sphinxcontrib-autodoc_doxygen;
