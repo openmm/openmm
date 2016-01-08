@@ -151,26 +151,26 @@ before_install:
   # Install miniconda if requested.
   - if [[ "$CONDA" == "true" ]]; then
       if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-          MINICONDA=Miniconda-latest-MacOSX-x86_64.sh
+          MINICONDA=Miniconda-latest-MacOSX-x86_64.sh;
       else
-          MINICONDA=Miniconda-latest-Linux-x86_64.sh
+          MINICONDA=Miniconda-latest-Linux-x86_64.sh;
       fi;      
       wget "https://repo.continuum.io/miniconda/${MINICONDA}";
       ./${MINICONDA} -b -p $HOME/miniconda;
       export PATH=$HOME/miniconda/bin:${PATH};
-      conda config --add channels omnia
-      conda install --yes anaconda-client conda-build jinja2 pip
+      conda config --add channels omnia;
+      conda install --yes anaconda-client conda-build jinja2 pip;
     fi
 
 script:
   # Build openmm-dev conda package in commits to master.
   - if [ "${CONDA}" = "true" ]; then 
-      echo "Building openmm-dev conda package..."
-      conda build devtools/conda-recipe      
+      echo "Building openmm-dev conda package...";
+      conda build devtools/conda-recipe;
       if [ "${TRAVIS_PULL_REQUEST}" = "false" ]; then
-         echo "Uploading package to anaconda cloud..."
-         binstar -t $BINSTAR_TOKEN upload --force -u omnia -p openmm-dev $HOME/miniconda/conda-bld/*/openmm-dev-*.tar.bz2
-      fi
+         echo "Uploading package to anaconda cloud...";
+         binstar -t $BINSTAR_TOKEN upload --force -u omnia -p openmm-dev $HOME/miniconda/conda-bld/*/openmm-dev-*.tar.bz2;
+      fi;
    fi
   # Build and test C++ and Python.
   - cmake . $CMAKE_FLAGS -DCMAKE_INSTALL_PREFIX=$HOME/OpenMM
