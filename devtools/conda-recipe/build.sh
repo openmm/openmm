@@ -32,28 +32,22 @@ elif [[ "$OSTYPE" == "darwin"* ]]; then
     CMAKE_FLAGS+=" -DFFTW_THREADS_LIBRARY=$PREFIX/lib/libfftw3f_threads.dylib"
 fi
 
-# TODO: What do we do about other dependencies, such as pdflatex and doxygen?
-if pdflatex -v  >/dev/null 2>&1; then
-    OTHER_TARGETS="sphinxpdf";
-else
-    echo "Skipping LaTeX documentation. No pdflatex found!";
-    OTHER_TARGETS=" ";
-fi
-
 # Build in subdirectory.
 mkdir build
 cd build
 cmake .. $CMAKE_FLAGS
-make -j$CPU_COUNT all sphinxhtml $OTHER_TARGETS
+make -j$CPU_COUNT all $OTHER_TARGETS
 make -j$CPU_COUNT install PythonInstall
 
-# Put docs into a subdirectory.
-cd $PREFIX/docs
-mkdir openmm
-mv *.html api-* openmm/
-if pdflatex -v  >/dev/null 2>&1; then
-    mv *.pdf openmm/
-fi
+# Build manuals
+make -j$CPU_COUNT sphinxhtml
+mkdir -p $PREFIX/docs/openmm
+cp docs/*.html $PREFIX/docs/openmm
+# Build API docs
+make -j$CPU_COUNT C++ApiDocs PythonApiDocs
+mkdir -p $PREFIX/docs/openmm/api-docs
+mv docs/api-python/* $PREFIX/docs/openmm/api-docs
+mv api-c++/* $PREFIX/docs/openmm/api-docs
 
 # Put examples into an appropriate subdirectory.
 mkdir $PREFIX/share/openmm/

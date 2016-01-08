@@ -168,6 +168,7 @@ before_install:
       export PATH=$HOME/miniconda/bin:${PATH};
       conda config --add channels omnia;
       conda install --yes anaconda-client conda-build jinja2 pip;
+      pip install sphinx sphinxcontrib-lunrsearch sphinxcontrib-autodoc_doxygen;
     fi
 
 script:
