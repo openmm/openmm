@@ -110,12 +110,12 @@ matrix:
            CXX=$CCACHE/g++
       addons: {apt: {packages: []}}
 
-    - sudo: required
+    - language: objective-c
+      os: osx
       env: ==CONDA_OSX==
            CUDA=false
            OPENCL=false
            CONDA=true
-      os: osx
       addons: {apt: {packages: []}}
 
 before_install:

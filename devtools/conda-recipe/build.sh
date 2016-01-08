@@ -44,7 +44,7 @@ fi
 mkdir build
 cd build
 cmake .. $CMAKE_FLAGS
-make -j$CPU_COUNT all DoxygenApiDocs $OTHER_TARGETS
+make -j$CPU_COUNT all sphinxhtml $OTHER_TARGETS
 make -j$CPU_COUNT install PythonInstall
 
 # Put docs into a subdirectory.
