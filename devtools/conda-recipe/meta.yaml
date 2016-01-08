@@ -1,23 +1,28 @@
 package:
   name: openmm-dev
-  version: !!str 7.0.0.dev0
+  version: 7.0.0.dev0
 
 source:
   path: ../..
 
 build:
   number: 0
-  preserve_egg_dir: yes
+  skip:
+    # don't build on Appveyor (no OpenCL / CUDA)
+    - [ {{ os.environ.get('APPVEYOR', 'False') == 'True' }} ]
 
 requirements:
   build:
     # on windows, need to install cmake manually
-    - cmake  # [not win]
+    - cmake     [not win]
+    - jom       [win]
     - python
     - fftw3f
     - sphinx
     - sphinxcontrib-bibtex
-    - swig   # [not win]
+    - swig
+    # on osx, need to install doxygen manually
+    - doxygen   [not osx]
 
   run:
     - python
@@ -30,7 +35,7 @@ test:
     - simtk
     - simtk.openmm
   commands:
-    - python -m simtk.testInstallation  # [not win]
+    - python -m simtk.testInstallation
 
 about:
   home: http://openmm.org
