@@ -22,7 +22,7 @@ matrix:
       env: ==CPU_OPENCL==
            OPENCL=true
            CUDA=false
-	   CONDA=false
+           CONDA=false
            CC=$CCACHE/gcc
            CXX=$CCACHE/g++
            CMAKE_FLAGS="
@@ -43,7 +43,7 @@ matrix:
       env: ==CUDA_COMPILE==
            CUDA=true
            OPENCL=false
-	   CONDA=false
+           CONDA=false
            CUDA_VERSION="7.0-28"
            CC=$CCACHE/gcc
            CXX=$CCACHE/g++
@@ -63,7 +63,7 @@ matrix:
       env: ==OSX==
            OPENCL=false
            CUDA=false
-	   CONDA=false
+           CONDA=false
            CMAKE_FLAGS="
              -DOPENMM_BUILD_OPENCL_TESTS=OFF
              -DSWIG_EXECUTABLE=/usr/local/Cellar/swig/3.0.2/bin/swig"
@@ -74,7 +74,7 @@ matrix:
       env: ==STATIC_LIB==
            OPENCL=false
            CUDA=false
-	   CONDA=false
+           CONDA=false
            CC=$CCACHE/clang
            CXX=$CCACHE/clang++
            CMAKE_FLAGS="-DOPENMM_BUILD_STATIC_LIB=ON"
@@ -84,7 +84,7 @@ matrix:
       env: ==PYTNON_2==
            OPENCL=false
            CUDA=false
-	   CONDA=false
+           CONDA=false
            CC=$CCACHE/clang
            CXX=$CCACHE/clang++
            DOCS_DEPLOY=true
@@ -95,7 +95,7 @@ matrix:
       env: ==PYTHON_3==
            OPENCL=false
            CUDA=false
-	   CONDA=false
+           CONDA=false
            CC=$CCACHE/gcc
            CXX=$CCACHE/g++
            CMAKE_FLAGS=""
@@ -104,7 +104,7 @@ matrix:
       env: ==CONDA_LINUX==
            CUDA=true
            OPENCL=false
-	   CONDA=true
+           CONDA=true
            CUDA_VERSION="7.0-28"
            CC=$CCACHE/gcc
            CXX=$CCACHE/g++
