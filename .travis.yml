@@ -156,7 +156,7 @@ before_install:
           MINICONDA=Miniconda-latest-Linux-x86_64.sh;
       fi;      
       wget "https://repo.continuum.io/miniconda/${MINICONDA}";
-      ./${MINICONDA} -b -p $HOME/miniconda;
+      bash ./${MINICONDA} -b -p $HOME/miniconda;
       export PATH=$HOME/miniconda/bin:${PATH};
       conda config --add channels omnia;
       conda install --yes anaconda-client conda-build jinja2 pip;
