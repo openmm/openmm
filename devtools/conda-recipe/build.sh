@@ -42,7 +42,7 @@ make -j$CPU_COUNT install PythonInstall
 # Build manuals
 make -j$CPU_COUNT sphinxhtml
 mkdir -p $PREFIX/docs/openmm
-cp sphinx-docs/userguide/html/* $PREFIX/docs/openmm
+mv sphinx-docs/userguide/html/* $PREFIX/docs/openmm
 # Build API docs
 make -j$CPU_COUNT C++ApiDocs PythonApiDocs
 mkdir -p $PREFIX/docs/openmm/api-docs
