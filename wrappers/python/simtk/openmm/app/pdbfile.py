@@ -239,7 +239,7 @@ class PDBFile(object):
                 map[atom.attrib[id]] = name
 
     @staticmethod
-    def writeFile(topology, positions, file=sys.stdout, keepIds=False, extraParticleIdentifier='EP'):
+    def writeFile(topology, positions, file=sys.stdout, keepIds=False, extraParticleIdentifier=' '):
         """Write a PDB file containing a single model.
 
         Parameters
@@ -280,7 +280,7 @@ class PDBFile(object):
                     a*10, b*10, c*10, alpha*RAD_TO_DEG, beta*RAD_TO_DEG, gamma*RAD_TO_DEG), file=file)
 
     @staticmethod
-    def writeModel(topology, positions, file=sys.stdout, modelIndex=None, keepIds=False, extraParticleIdentifier='EP'):
+    def writeModel(topology, positions, file=sys.stdout, modelIndex=None, keepIds=False, extraParticleIdentifier=' '):
         """Write out a model to a PDB file.
 
         Parameters
@@ -331,10 +331,8 @@ class PDBFile(object):
                 for atom in res.atoms():
                     if atom.element is not None:
                         symbol = atom.element.symbol
-                    elif atom.element is None and extraParticleIdentifier is not None:
-                        symbol = extraParticleIdentifier
                     else:
-                        symbol = ' '
+                        symbol = extraParticleIdentifier
                     if len(atom.name) < 4 and atom.name[:1].isalpha() and len(symbol) < 2:
                         atomName = ' '+atom.name
                     elif len(atom.name) > 4:
