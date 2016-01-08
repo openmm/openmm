@@ -81,7 +81,7 @@ matrix:
 
     - sudo: false
       python: 2.7_with_system_site_packages
-      env: ==PYTNON_2==
+      env: ==PYTHON_2==
            OPENCL=false
            CUDA=false
            CONDA=false
@@ -103,11 +103,19 @@ matrix:
     - sudo: required
       env: ==CONDA_LINUX==
            CUDA=true
-           OPENCL=false
+           OPENCL=true
            CONDA=true
            CUDA_VERSION="7.0-28"
            CC=$CCACHE/gcc
            CXX=$CCACHE/g++
+      addons: {apt: {packages: []}}
+
+    - sudo: required
+      env: ==CONDA_OSX==
+      os: osx
+           CUDA=false
+           OPENCL=false
+           CONDA=true
       addons: {apt: {packages: []}}
 
 before_install:
