@@ -112,10 +112,10 @@ matrix:
 
     - sudo: required
       env: ==CONDA_OSX==
-      os: osx
            CUDA=false
            OPENCL=false
            CONDA=true
+      os: osx
       addons: {apt: {packages: []}}
 
 before_install:
