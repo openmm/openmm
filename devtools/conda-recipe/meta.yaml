@@ -1,0 +1,43 @@
+package:
+  name: openmm-dev
+  version: 7.0.0.dev0
+
+source:
+  path: ../..
+
+build:
+  number: 0
+  skip:
+    # don't build on Appveyor (no OpenCL / CUDA)
+    - [ {{ os.environ.get('APPVEYOR', 'False') == 'True' }} ]
+
+requirements:
+  build:
+    # on windows, need to install cmake manually
+    - cmake     [not win]
+    - jom       [win]
+    - python
+    - fftw3f
+    - sphinx
+    - sphinxcontrib-bibtex
+    - swig
+    # on osx, need to install doxygen manually
+    - doxygen   [not osx]
+
+  run:
+    - python
+    - fftw3f
+
+test:
+  requires:
+    - python
+  imports:
+    - simtk
+    - simtk.openmm
+  commands:
+    - python -m simtk.testInstallation
+
+about:
+  home: http://openmm.org
+  license: LGPL and MIT
+  summary: A high performance toolkit for molecular simulation.
