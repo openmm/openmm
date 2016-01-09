@@ -23,7 +23,6 @@ requirements:
     - swig
     # on osx, need to install doxygen manually
     - doxygen   [not osx]
-    - lxml
 
   run:
     - python
