@@ -152,8 +152,8 @@ script:
       make sphinxhtml;
       make C++ApiDocs PythonApiDocs;
       mkdir -p api-docs;
-      mv sphinx-docs/userguide api-docs;
-      mv sphinx-docs/developerguide api-docs;
+      mv /home/travis/build/pandegroup/openmm/sphinx-docs/sphinx-docs/userguide api-docs;
+      mv /home/travis/build/pandegroup/openmm/sphinx-docs/sphinx-docs/developerguide api-docs;
       mv api-python api-docs;
       mv api-c++ api-docs;
     fi
