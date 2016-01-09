@@ -148,9 +148,12 @@ script:
   - python devtools/run-ctest.py --start-time $START_TIME
 
   - if [[ ! -z "${DOCS_DEPLOY}" && "${DOCS_DEPLOY}" = "true" ]]; then
-      pip install sphinx sphinxcontrib-lunrsearch sphinxcontrib-autodoc_doxygen;
+      pip install sphinx sphinxcontrib-bibtex sphinxcontrib-lunrsearch sphinxcontrib-autodoc_doxygen;
+      make sphinxhtml;
       make C++ApiDocs PythonApiDocs;
       mkdir -p api-docs;
+      mv sphinx-docs/userguide api-docs;
+      mv sphinx-docs/developerguide api-docs;
       mv api-python api-docs;
       mv api-c++ api-docs;
     fi
