@@ -1198,7 +1198,6 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
     if (polarizationType != AmoebaMultipoleForce::Direct) {
         defines["THREAD_BLOCK_SIZE"] = cu.intToString(inducedFieldThreads);
         defines["MAX_PREV_DIIS_DIPOLES"] = cu.intToString(MaxPrevDIISDipoles);
-        defines["USE_MUTUAL_POLARIZATION"] = "1";
         module = cu.createModule(CudaKernelSources::vectorOps+CudaAmoebaKernelSources::multipoleInducedField, defines);
         computeInducedFieldKernel = cu.getKernel(module, "computeInducedField");
         updateInducedFieldKernel = cu.getKernel(module, "updateInducedFieldByDIIS");
@@ -1240,6 +1239,8 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
         pmeDefines["SQRT_PI"] = cu.doubleToString(sqrt(M_PI));
         if (polarizationType == AmoebaMultipoleForce::Direct)
             pmeDefines["DIRECT_POLARIZATION"] = "";
+        else if (polarizationType == AmoebaMultipoleForce::Extrapolated)
+            pmeDefines["EXTRAPOLATED_POLARIZATION"] = "";
         CUmodule module = cu.createModule(CudaKernelSources::vectorOps+CudaAmoebaKernelSources::multipolePme, pmeDefines);
         pmeGridIndexKernel = cu.getKernel(module, "findAtomGridIndex");
         pmeTransformMultipolesKernel = cu.getKernel(module, "transformMultipolesToFractionalCoordinates");
@@ -1773,9 +1774,17 @@ void CudaCalcAmoebaMultipoleForceKernel::computeInducedField(void** recipBoxVect
             cu.getPeriodicBoxVecZPointer(), recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2],
             &pmeAtomGridIndex->getDevicePointer()};
         cu.executeKernel(pmeInducedPotentialKernel, pmeInducedPotentialArgs, cu.getNumAtoms());
-        void* pmeRecordInducedFieldDipolesArgs[] = {&pmePhid->getDevicePointer(), &pmePhip->getDevicePointer(),
-            &inducedField->getDevicePointer(), &inducedFieldPolar->getDevicePointer(), recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
-        cu.executeKernel(pmeRecordInducedFieldDipolesKernel, pmeRecordInducedFieldDipolesArgs, cu.getNumAtoms());
+        if (polarizationType == AmoebaMultipoleForce::Extrapolated) {
+            void* pmeRecordInducedFieldDipolesArgs[] = {&pmePhid->getDevicePointer(), &pmePhip->getDevicePointer(),
+                &inducedField->getDevicePointer(), &inducedFieldPolar->getDevicePointer(), &inducedDipoleFieldGradient->getDevicePointer(),
+                &inducedDipoleFieldGradientPolar->getDevicePointer(), recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
+            cu.executeKernel(pmeRecordInducedFieldDipolesKernel, pmeRecordInducedFieldDipolesArgs, cu.getNumAtoms());
+        }
+        else {
+            void* pmeRecordInducedFieldDipolesArgs[] = {&pmePhid->getDevicePointer(), &pmePhip->getDevicePointer(),
+                &inducedField->getDevicePointer(), &inducedFieldPolar->getDevicePointer(), recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
+            cu.executeKernel(pmeRecordInducedFieldDipolesKernel, pmeRecordInducedFieldDipolesArgs, cu.getNumAtoms());
+        }
     }
 }
 

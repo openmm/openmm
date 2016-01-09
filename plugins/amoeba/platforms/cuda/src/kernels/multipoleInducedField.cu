@@ -120,11 +120,12 @@ inline __device__ void saveAtomData(int index, AtomData& data, unsigned long lon
 __device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, real3 deltaR, bool isSelfInteraction) {
     if (isSelfInteraction)
         return;
-    real scale1, scale2;
+    real scale1, scale2, scale3;
     real r2 = dot(deltaR, deltaR);
     if (r2 < CUTOFF_SQUARED) {
         real rI = RSQRT(r2);
         real r = RECIP(rI);
+        real rI2 = rI*rI;
 
         // calculate the error function damping terms
 
@@ -144,36 +145,40 @@ __device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, real3 de
         real alsq2 = 2*EWALD_ALPHA*EWALD_ALPHA;
         real alsq2n = RECIP(SQRT_PI*EWALD_ALPHA);
         alsq2n *= alsq2;
-        real bn1 = (bn0+alsq2n*exp2a)*rI*rI;
+        real bn1 = (bn0+alsq2n*exp2a)*rI2;
 
         alsq2n *= alsq2;
-        real bn2 = (3*bn1+alsq2n*exp2a)*rI*rI;
+        real bn2 = (3*bn1+alsq2n*exp2a)*rI2;
+
+        alsq2n *= alsq2;
+        real bn3 = (5*bn2+alsq2n*exp2a)*rI2;
 
         // compute the error function scaled and unscaled terms
 
-        real scale3 = 1;
-        real scale5 = 1;
         real damp = atom1.damp*atom2.damp;
         real ratio = (r/damp);
         ratio = ratio*ratio*ratio;
         float pgamma = atom1.thole < atom2.thole ? atom1.thole : atom2.thole;
         damp = damp == 0 ? 0 : -pgamma*ratio;
         real expdamp = EXP(damp);
-        scale3 = 1 - expdamp;
-        scale5 = 1 - expdamp*(1-damp);
-        real dsc3 = scale3;
-        real dsc5 = scale5;
+        real dsc3 = 1 - expdamp;
+        real dsc5 = 1 - expdamp*(1-damp);
+        real dsc7 = 1 - (1-damp+(0.6f*damp*damp))*expdamp;
         real r3 = (r*r2);
         real r5 = (r3*r2);
+        real r7 = (r5*r2);
         real rr3 = (1-dsc3)/r3;
         real rr5 = 3*(1-dsc5)/r5;
+        real rr7 = 15*(1-dsc7)/r7;
 
         scale1 = rr3 - bn1;
         scale2 = bn2 - rr5;
+        scale3 = bn3 - rr7;
     }
     else {
         scale1 = 0;
         scale2 = 0;
+        scale3 = 0;
     }
     real dDotDelta = scale2*dot(deltaR, atom2.inducedDipole);
     atom1.field += scale1*atom2.inducedDipole + dDotDelta*deltaR;
@@ -183,6 +188,45 @@ __device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, real3 de
     atom2.field += scale1*atom1.inducedDipole + dDotDelta*deltaR;
     dDotDelta = scale2*dot(deltaR, atom1.inducedDipolePolar);
     atom2.fieldPolar += scale1*atom1.inducedDipolePolar + dDotDelta*deltaR;
+#ifdef EXTRAPOLATED_POLARIZATION
+    // Compute and store the field gradients for later use.
+    
+    real3 dipole = atom1.inducedDipole;
+    real muDotR = dipole.x*deltaR.x + dipole.y*deltaR.y + dipole.z*deltaR.z;
+    atom2.fieldGradient[0] -= muDotR*deltaR.x*deltaR.x*scale3 - (2*dipole.x*deltaR.x + muDotR)*scale2;
+    atom2.fieldGradient[1] -= muDotR*deltaR.y*deltaR.y*scale3 - (2*dipole.y*deltaR.y + muDotR)*scale2;
+    atom2.fieldGradient[2] -= muDotR*deltaR.z*deltaR.z*scale3 - (2*dipole.z*deltaR.z + muDotR)*scale2;
+    atom2.fieldGradient[3] -= muDotR*deltaR.x*deltaR.y*scale3 - (dipole.x*deltaR.y + dipole.y*deltaR.x)*scale2;
+    atom2.fieldGradient[4] -= muDotR*deltaR.x*deltaR.z*scale3 - (dipole.x*deltaR.z + dipole.z*deltaR.x)*scale2;
+    atom2.fieldGradient[5] -= muDotR*deltaR.y*deltaR.z*scale3 - (dipole.y*deltaR.z + dipole.z*deltaR.y)*scale2;
+
+    dipole = atom1.inducedDipolePolar;
+    muDotR = dipole.x*deltaR.x + dipole.y*deltaR.y + dipole.z*deltaR.z;
+    atom2.fieldGradientPolar[0] -= muDotR*deltaR.x*deltaR.x*scale3 - (2*dipole.x*deltaR.x + muDotR)*scale2;
+    atom2.fieldGradientPolar[1] -= muDotR*deltaR.y*deltaR.y*scale3 - (2*dipole.y*deltaR.y + muDotR)*scale2;
+    atom2.fieldGradientPolar[2] -= muDotR*deltaR.z*deltaR.z*scale3 - (2*dipole.z*deltaR.z + muDotR)*scale2;
+    atom2.fieldGradientPolar[3] -= muDotR*deltaR.x*deltaR.y*scale3 - (dipole.x*deltaR.y + dipole.y*deltaR.x)*scale2;
+    atom2.fieldGradientPolar[4] -= muDotR*deltaR.x*deltaR.z*scale3 - (dipole.x*deltaR.z + dipole.z*deltaR.x)*scale2;
+    atom2.fieldGradientPolar[5] -= muDotR*deltaR.y*deltaR.z*scale3 - (dipole.y*deltaR.z + dipole.z*deltaR.y)*scale2;
+
+    dipole = atom2.inducedDipole;
+    muDotR = dipole.x*deltaR.x + dipole.y*deltaR.y + dipole.z*deltaR.z;
+    atom1.fieldGradient[0] += muDotR*deltaR.x*deltaR.x*scale3 - (2*dipole.x*deltaR.x + muDotR)*scale2;
+    atom1.fieldGradient[1] += muDotR*deltaR.y*deltaR.y*scale3 - (2*dipole.y*deltaR.y + muDotR)*scale2;
+    atom1.fieldGradient[2] += muDotR*deltaR.z*deltaR.z*scale3 - (2*dipole.z*deltaR.z + muDotR)*scale2;
+    atom1.fieldGradient[3] += muDotR*deltaR.x*deltaR.y*scale3 - (dipole.x*deltaR.y + dipole.y*deltaR.x)*scale2;
+    atom1.fieldGradient[4] += muDotR*deltaR.x*deltaR.z*scale3 - (dipole.x*deltaR.z + dipole.z*deltaR.x)*scale2;
+    atom1.fieldGradient[5] += muDotR*deltaR.y*deltaR.z*scale3 - (dipole.y*deltaR.z + dipole.z*deltaR.y)*scale2;
+
+    dipole = atom2.inducedDipolePolar;
+    muDotR = dipole.x*deltaR.x + dipole.y*deltaR.y + dipole.z*deltaR.z;
+    atom1.fieldGradientPolar[0] += muDotR*deltaR.x*deltaR.x*scale3 - (2*dipole.x*deltaR.x + muDotR)*scale2;
+    atom1.fieldGradientPolar[1] += muDotR*deltaR.y*deltaR.y*scale3 - (2*dipole.y*deltaR.y + muDotR)*scale2;
+    atom1.fieldGradientPolar[2] += muDotR*deltaR.z*deltaR.z*scale3 - (2*dipole.z*deltaR.z + muDotR)*scale2;
+    atom1.fieldGradientPolar[3] += muDotR*deltaR.x*deltaR.y*scale3 - (dipole.x*deltaR.y + dipole.y*deltaR.x)*scale2;
+    atom1.fieldGradientPolar[4] += muDotR*deltaR.x*deltaR.z*scale3 - (dipole.x*deltaR.z + dipole.z*deltaR.x)*scale2;
+    atom1.fieldGradientPolar[5] += muDotR*deltaR.y*deltaR.z*scale3 - (dipole.y*deltaR.z + dipole.z*deltaR.y)*scale2;
+#endif
 }
 #elif defined USE_GK
 __device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, real3 deltaR, bool isSelfInteraction) {
@@ -268,9 +312,9 @@ __device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, real3 de
     atom2.fieldPolar += rr3*atom1.inducedDipolePolar + dDotDelta*deltaR;
 #ifdef EXTRAPOLATED_POLARIZATION
     // Compute and store the field gradients for later use.
+    
     real3 dipole = atom1.inducedDipole;
     real muDotR = dipole.x*deltaR.x + dipole.y*deltaR.y + dipole.z*deltaR.z;
-    
     atom2.fieldGradient[0] -= muDotR*deltaR.x*deltaR.x*rr7 - (2*dipole.x*deltaR.x + muDotR)*rr5;
     atom2.fieldGradient[1] -= muDotR*deltaR.y*deltaR.y*rr7 - (2*dipole.y*deltaR.y + muDotR)*rr5;
     atom2.fieldGradient[2] -= muDotR*deltaR.z*deltaR.z*rr7 - (2*dipole.z*deltaR.z + muDotR)*rr5;
@@ -771,6 +815,7 @@ extern "C" __global__ void addExtrapolatedFieldGradientToForce(long long* __rest
         ) {
     real coeff[] = {EXTRAPOLATION_COEFFICIENTS_SUM};
     for (int atom = blockIdx.x*blockDim.x+threadIdx.x; atom < NUM_ATOMS; atom += blockDim.x*gridDim.x) {
+        real fx = 0, fy = 0, fz = 0;
         for (int l = 0; l < MAX_EXTRAPOLATION_ORDER-1; l++) {
             int index1 = 3*(l*NUM_ATOMS+atom);
             real dipole[] = {extrapolatedDipole[index1], extrapolatedDipole[index1+1], extrapolatedDipole[index1+2]};
@@ -782,16 +827,16 @@ extern "C" __global__ void addExtrapolatedFieldGradientToForce(long long* __rest
                 real gradientPolar[] = {extrapolatedDipoleFieldGradientPolar[index2], extrapolatedDipoleFieldGradientPolar[index2+1], extrapolatedDipoleFieldGradientPolar[index2+2],
                                         extrapolatedDipoleFieldGradientPolar[index2+3], extrapolatedDipoleFieldGradientPolar[index2+4], extrapolatedDipoleFieldGradientPolar[index2+5]};
                 real scale = 0.5f*coeff[l+m+1]*ENERGY_SCALE_FACTOR;
-                real fx = scale*(dipole[0]*gradientPolar[0] + dipole[1]*gradientPolar[3] + dipole[2]*gradientPolar[4]);
-                real fy = scale*(dipole[0]*gradientPolar[3] + dipole[1]*gradientPolar[1] + dipole[2]*gradientPolar[5]);
-                real fz = scale*(dipole[0]*gradientPolar[4] + dipole[1]*gradientPolar[5] + dipole[2]*gradientPolar[2]);
+                fx += scale*(dipole[0]*gradientPolar[0] + dipole[1]*gradientPolar[3] + dipole[2]*gradientPolar[4]);
+                fy += scale*(dipole[0]*gradientPolar[3] + dipole[1]*gradientPolar[1] + dipole[2]*gradientPolar[5]);
+                fz += scale*(dipole[0]*gradientPolar[4] + dipole[1]*gradientPolar[5] + dipole[2]*gradientPolar[2]);
                 fx += scale*(dipolePolar[0]*gradient[0] + dipolePolar[1]*gradient[3] + dipolePolar[2]*gradient[4]);
                 fy += scale*(dipolePolar[0]*gradient[3] + dipolePolar[1]*gradient[1] + dipolePolar[2]*gradient[5]);
                 fz += scale*(dipolePolar[0]*gradient[4] + dipolePolar[1]*gradient[5] + dipolePolar[2]*gradient[2]);
-                forceBuffers[atom] += (long long) (fx*0x100000000);
-                forceBuffers[atom+PADDED_NUM_ATOMS] += (long long) (fy*0x100000000);
-                forceBuffers[atom+PADDED_NUM_ATOMS*2] += (long long) (fz*0x100000000);
             }
         }
+        forceBuffers[atom] += (long long) (fx*0x100000000);
+        forceBuffers[atom+PADDED_NUM_ATOMS] += (long long) (fy*0x100000000);
+        forceBuffers[atom+PADDED_NUM_ATOMS*2] += (long long) (fz*0x100000000);
     }
 }
