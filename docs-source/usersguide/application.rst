@@ -2747,10 +2747,12 @@ modified residues, covalently-bound ligands, or unnatural amino acids or bases.
 To register a new residue template generator named :code:`generator`, simply call the
 :meth:`registerTemplateGenerator` method on an existing :class:`ForceField` object:
 ::
+
     forcefield.registerTemplateGenerator(generator)
 
 This :code:`generator` function must conform to the following API:
 ::
+
     def generator(forcefield, residue):
         """
         Parameters
