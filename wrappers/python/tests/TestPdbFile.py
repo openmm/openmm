@@ -70,15 +70,6 @@ class TestPdbFile(unittest.TestCase):
         pdb = PDBFile(open('systems/triclinic.pdb', 'rb'))
         self.assertEqual(len(pdb.positions), 8)
 
-    def assertVecAlmostEqual(self, p1, p2, tol=1e-7):
-        unit = p1.unit
-        p1 = p1.value_in_unit(unit)
-        p2 = p2.value_in_unit(unit)
-        scale = max(1.0, norm(p1),)
-        for i in range(3):
-            diff = abs(p1[i]-p2[i])/scale
-            self.assertTrue(diff < tol)
-            
     def test_ExtraParticles(self):
         """Test reading, and writing and re-reading of a file containing extra particle atoms."""
         pdb = PDBFile('systems/tip5p.pdb')  
@@ -91,8 +82,18 @@ class TestPdbFile(unittest.TestCase):
         pdb = PDBFile(input, extraParticleIdentifier = '')
         for atom in pdb.topology.atoms():
             if atom.index > 2:
-                self.assertEqual(None, atom.element)    
-                      
+                self.assertEqual(None, atom.element)
+
+
+    def assertVecAlmostEqual(self, p1, p2, tol=1e-7):
+        unit = p1.unit
+        p1 = p1.value_in_unit(unit)
+        p2 = p2.value_in_unit(unit)
+        scale = max(1.0, norm(p1),)
+        for i in range(3):
+            diff = abs(p1[i]-p2[i])/scale
+            self.assertTrue(diff < tol)
+
 
 if __name__ == '__main__':
     unittest.main()
