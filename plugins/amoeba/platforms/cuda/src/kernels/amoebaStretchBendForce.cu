@@ -21,14 +21,22 @@ real dot = xab*xcb + yab*ycb + zab*zcb;
 real cosine = rab*rcb > 0 ? (dot / (rab*rcb)) : (real) 1;
 cosine = (cosine > 1 ? (real) 1 : cosine);
 cosine = (cosine < -1 ? -(real) 1 : cosine);
-real angle = ACOS(cosine);
+real angle;
+if (cosine > 0.99f || cosine < -0.99f) {
+    real3 cross_prod = cross(make_real3(xab, yab, zab), make_real3(xcb, ycb, zcb));
+    angle = ASIN(SQRT(dot(cross_prod, cross_prod)/(rap2*rcp2)))*RAD_TO_DEG;
+    if (cosine < 0.0f)
+        angle = 180-angle;
+}
+else
+    real angle = ACOS(cosine)*RAD_TO_DEG;
 
 // find chain rule terms for the bond angle deviation
 
 float3 parameters = PARAMS[index];
 float2 force_constants = FORCE_CONSTANTS[index];
 
-real dt = RAD_TO_DEG*(angle - parameters.z);
+real dt = angle - RAD_TO_DEG*parameters.z;
 real terma = rab*rp != 0 ? (-RAD_TO_DEG/(rab*rab*rp)) : (real) 0;
 real termc = rcb*rp != 0 ? (RAD_TO_DEG/(rcb*rcb*rp)) : (real) 0;
 

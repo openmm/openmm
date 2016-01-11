@@ -43,11 +43,19 @@ real dot = xap*xcp + yap*ycp + zap*zcp;
 real product = SQRT(rap2*rcp2);
 real cosine = (product > 0 ? (dot/product) : 0);
 cosine = max(min(cosine, (real) 1), (real) -1);
-real angle = ACOS(cosine);
+real angle;
+if (cosine > 0.99f || cosine < -0.99f) {
+    real3 cross_prod = cross(make_real3(xap, yap, zap), make_real3(xcp, ycp, zcp));
+    angle = ASIN(SQRT(dot(cross_prod, cross_prod)/(rap2*rcp2)))*RAD_TO_DEG;
+    if (cosine < 0.0f)
+        angle = 180-angle;
+}
+else
+    real angle = ACOS(cosine)*RAD_TO_DEG;
 
 // if product == 0, set force/energy to 0
 
-real deltaIdeal = (product > 0 ? (angle*RAD_TO_DEG - angleParams.x) : 0);
+real deltaIdeal = (product > 0 ? (angle - angleParams.x) : 0);
 real deltaIdeal2 = deltaIdeal*deltaIdeal;
 real deltaIdeal3 = deltaIdeal*deltaIdeal2;
 real deltaIdeal4 = deltaIdeal2*deltaIdeal2;
