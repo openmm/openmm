@@ -39,9 +39,9 @@ real ym = zcp*xap - xcp*zap;
 real zm = xcp*yap - ycp*xap;
 
 real rm = max(SQRT(xm*xm + ym*ym + zm*zm), (real) 1e-6f);
-real dot = xap*xcp + yap*ycp + zap*zcp;
+real dotp = xap*xcp + yap*ycp + zap*zcp;
 real product = SQRT(rap2*rcp2);
-real cosine = (product > 0 ? (dot/product) : 0);
+real cosine = (product > 0 ? (dotp/product) : 0);
 cosine = max(min(cosine, (real) 1), (real) -1);
 real angle;
 if (cosine > 0.99f || cosine < -0.99f) {
@@ -51,7 +51,7 @@ if (cosine > 0.99f || cosine < -0.99f) {
         angle = 180-angle;
 }
 else
-    real angle = ACOS(cosine)*RAD_TO_DEG;
+    angle = ACOS(cosine)*RAD_TO_DEG;
 
 // if product == 0, set force/energy to 0
 

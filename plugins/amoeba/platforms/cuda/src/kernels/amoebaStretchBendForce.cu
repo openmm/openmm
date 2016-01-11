@@ -17,19 +17,20 @@ real zp = xcb*yab - ycb*xab;
 
 real rp = SQRT(xp*xp + yp*yp + zp*zp);
 
-real dot = xab*xcb + yab*ycb + zab*zcb;
-real cosine = rab*rcb > 0 ? (dot / (rab*rcb)) : (real) 1;
+real dotp = xab*xcb + yab*ycb + zab*zcb;
+real cosine = rab*rcb > 0 ? (dotp / (rab*rcb)) : (real) 1;
 cosine = (cosine > 1 ? (real) 1 : cosine);
 cosine = (cosine < -1 ? -(real) 1 : cosine);
 real angle;
 if (cosine > 0.99f || cosine < -0.99f) {
+    // Highly unlikely a stretch-bend angle will be near 0 or 180, but just in case...
     real3 cross_prod = cross(make_real3(xab, yab, zab), make_real3(xcb, ycb, zcb));
-    angle = ASIN(SQRT(dot(cross_prod, cross_prod)/(rap2*rcp2)))*RAD_TO_DEG;
+    angle = ASIN(SQRT(dot(cross_prod, cross_prod))/(rab*rcb))*RAD_TO_DEG;
     if (cosine < 0.0f)
         angle = 180-angle;
 }
 else
-    real angle = ACOS(cosine)*RAD_TO_DEG;
+    angle = ACOS(cosine)*RAD_TO_DEG;
 
 // find chain rule terms for the bond angle deviation
 
