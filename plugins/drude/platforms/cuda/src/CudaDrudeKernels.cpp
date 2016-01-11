@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013 Stanford University and the Authors.           *
+ * Portions copyright (c) 2013-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -279,6 +279,7 @@ void CudaIntegrateDrudeLangevinStepKernel::initialize(const System& system, cons
     CUmodule module = cu.createModule(CudaKernelSources::vectorOps+CudaDrudeKernelSources::drudeLangevin, defines, "");
     kernel1 = cu.getKernel(module, "integrateDrudeLangevinPart1");
     kernel2 = cu.getKernel(module, "integrateDrudeLangevinPart2");
+    hardwallKernel = cu.getKernel(module, "applyHardWallConstraints");
     prevStepSize = -1.0;
 }
 
@@ -296,6 +297,8 @@ void CudaIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, const D
     double vscaleDrude = exp(-stepSize*integrator.getDrudeFriction());
     double fscaleDrude = (1-vscaleDrude)/integrator.getDrudeFriction()/(double) 0x100000000;
     double noisescaleDrude = sqrt(2*BOLTZ*integrator.getDrudeTemperature()*integrator.getDrudeFriction())*sqrt(0.5*(1-vscaleDrude*vscaleDrude)/integrator.getDrudeFriction());
+    double maxDrudeDistance = integrator.getMaxDrudeDistance();
+    double hardwallscaleDrude = sqrt(BOLTZ*integrator.getDrudeTemperature());
     if (stepSize != prevStepSize) {
         if (cu.getUseDoublePrecision() || cu.getUseMixedPrecision()) {
             double2 ss = make_double2(0, stepSize);
@@ -316,7 +319,9 @@ void CudaIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, const D
     float vscaleDrudeFloat = (float) vscaleDrude;
     float fscaleDrudeFloat = (float) fscaleDrude;
     float noisescaleDrudeFloat = (float) noisescaleDrude;
-    void *vscalePtr, *fscalePtr, *noisescalePtr, *vscaleDrudePtr, *fscaleDrudePtr, *noisescaleDrudePtr;
+    float maxDrudeDistanceFloat =(float) maxDrudeDistance;
+    float hardwallscaleDrudeFloat = (float) hardwallscaleDrude;
+    void *vscalePtr, *fscalePtr, *noisescalePtr, *vscaleDrudePtr, *fscaleDrudePtr, *noisescaleDrudePtr, *maxDrudeDistancePtr, *hardwallscaleDrudePtr;
     if (cu.getUseDoublePrecision() || cu.getUseMixedPrecision()) {
         vscalePtr = &vscale;
         fscalePtr = &fscale;
@@ -324,6 +329,8 @@ void CudaIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, const D
         vscaleDrudePtr = &vscaleDrude;
         fscaleDrudePtr = &fscaleDrude;
         noisescaleDrudePtr = &noisescaleDrude;
+        maxDrudeDistancePtr = &maxDrudeDistance;
+        hardwallscaleDrudePtr = &hardwallscaleDrude;
     }
     else {
         vscalePtr = &vscaleFloat;
@@ -332,6 +339,8 @@ void CudaIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, const D
         vscaleDrudePtr = &vscaleDrudeFloat;
         fscaleDrudePtr = &fscaleDrudeFloat;
         noisescaleDrudePtr = &noisescaleDrudeFloat;
+        maxDrudeDistancePtr = &maxDrudeDistanceFloat;
+        hardwallscaleDrudePtr = &hardwallscaleDrudeFloat;
     }
 
     // Call the first integration kernel.
@@ -352,6 +361,12 @@ void CudaIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, const D
     void* args2[] = {&cu.getPosq().getDevicePointer(), &posCorrection, &integration.getPosDelta().getDevicePointer(),
             &cu.getVelm().getDevicePointer(), &integration.getStepSize().getDevicePointer()};
     cu.executeKernel(kernel2, args2, numAtoms);
+    
+    // Apply hard wall constraints.
+    
+    void* hardwallArgs[] = {&cu.getPosq().getDevicePointer(), &posCorrection, &cu.getVelm().getDevicePointer(),
+            &pairParticles->getDevicePointer(), &integration.getStepSize().getDevicePointer(), maxDrudeDistancePtr, hardwallscaleDrudePtr};
+    cu.executeKernel(hardwallKernel, hardwallArgs, pairParticles->getSize());
     integration.computeVirtualSites();
 
     // Update the time and step count.

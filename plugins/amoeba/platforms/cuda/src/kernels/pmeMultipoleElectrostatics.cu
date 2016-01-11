@@ -56,7 +56,7 @@ __device__ float computePScaleFactor(uint2 covalent, unsigned int polarizationGr
 }
 
 __device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, bool hasExclusions, float dScale, float pScale, float mScale, float forceFactor,
-                                      real& energy, real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ) {
+                                      mixed& energy, real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ) {
     // Compute the displacement.
     
     real3 delta;
@@ -411,10 +411,10 @@ __device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, bool has
 /**
  * Compute the self energy and self torque.
  */
-__device__ void computeSelfEnergyAndTorque(AtomData& atom1, real& energy) {
+__device__ void computeSelfEnergyAndTorque(AtomData& atom1, mixed& energy) {
     real cii = atom1.q*atom1.q;
     real3 dipole = make_real3(atom1.sphericalDipole.y, atom1.sphericalDipole.z, atom1.sphericalDipole.x);
-    real dii = dot(dipole, dipole+atom1.inducedDipole);
+    real dii = dot(dipole, dipole+(atom1.inducedDipole+atom1.inducedDipolePolar)*0.5f);
 #ifdef INCLUDE_QUADRUPOLES
     real qii = (atom1.sphericalQuadrupole[0]*atom1.sphericalQuadrupole[0] +
                 atom1.sphericalQuadrupole[1]*atom1.sphericalQuadrupole[1] +
@@ -439,7 +439,7 @@ __device__ void computeSelfEnergyAndTorque(AtomData& atom1, real& energy) {
  * Compute electrostatic interactions.
  */
 extern "C" __global__ void computeElectrostatics(
-        unsigned long long* __restrict__ forceBuffers, unsigned long long* __restrict__ torqueBuffers, real* __restrict__ energyBuffer,
+        unsigned long long* __restrict__ forceBuffers, unsigned long long* __restrict__ torqueBuffers, mixed* __restrict__ energyBuffer,
         const real4* __restrict__ posq, const uint2* __restrict__ covalentFlags, const unsigned int* __restrict__ polarizationGroupFlags,
         const ushort2* __restrict__ exclusionTiles, unsigned int startTileIndex, unsigned int numTileIndices,
 #ifdef USE_CUTOFF
@@ -453,7 +453,7 @@ extern "C" __global__ void computeElectrostatics(
     const unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/TILE_SIZE;
     const unsigned int tgx = threadIdx.x & (TILE_SIZE-1);
     const unsigned int tbx = threadIdx.x - tgx;
-    real energy = 0;
+    mixed energy = 0;
     __shared__ AtomData localData[THREAD_BLOCK_SIZE];
 
     // First loop: process tiles that contain exclusions.

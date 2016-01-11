@@ -16,7 +16,7 @@ __kernel void computeN2Energy(
 #else
         __global real4* restrict forceBuffers,
 #endif
-        __global real* restrict energyBuffer, __local real4* restrict local_force,
+        __global mixed* restrict energyBuffer, __local real4* restrict local_force,
         __global const real4* restrict posq, __local real4* restrict local_posq, __global const unsigned int* restrict exclusions,
         __global const ushort2* exclusionTiles,
 #ifdef USE_CUTOFF
@@ -31,7 +31,7 @@ __kernel void computeN2Energy(
     const unsigned int warp = get_global_id(0)/TILE_SIZE;
     const unsigned int tgx = get_local_id(0) & (TILE_SIZE-1);
     const unsigned int tbx = get_local_id(0) - tgx;
-    real energy = 0;
+    mixed energy = 0;
 
     // First loop: process tiles that contain exclusions.
     

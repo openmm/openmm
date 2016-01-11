@@ -163,9 +163,19 @@ void ReferenceStochasticDynamics::updatePart2(int numberOfAtoms, vector<RealVec>
 
    for (int ii = 0; ii < numberOfAtoms; ii++) {
        if (inverseMasses[ii] != 0.0)
-           for (int jj = 0; jj < 3; jj++)
-               xPrime[ii][jj] = atomCoordinates[ii][jj]+getDeltaT()*velocities[ii][jj];
+            xPrime[ii] = atomCoordinates[ii]+velocities[ii]*getDeltaT();
    }
+}
+
+void ReferenceStochasticDynamics::updatePart3(int numberOfAtoms, vector<RealVec>& atomCoordinates,
+                                              vector<RealVec>& velocities, vector<RealOpenMM>& inverseMasses,
+                                              vector<RealVec>& xPrime) {
+   RealOpenMM invStepSize = 1.0/getDeltaT();
+   for (int i = 0; i < numberOfAtoms; ++i)
+       if (inverseMasses[i] != 0) {
+            velocities[i] = (xPrime[i]-atomCoordinates[i])*invStepSize;
+            atomCoordinates[i] = xPrime[i];
+       }
 }
 
 /**---------------------------------------------------------------------------------------
@@ -221,13 +231,7 @@ void ReferenceStochasticDynamics::update(const OpenMM::System& system, vector<Re
 
    // copy xPrime -> atomCoordinates
 
-   RealOpenMM invStepSize = 1.0/getDeltaT();
-   for (int i = 0; i < numberOfAtoms; ++i)
-       if (masses[i] != zero)
-           for (int j = 0; j < 3; ++j) {
-               velocities[i][j] = invStepSize*(xPrime[i][j]-atomCoordinates[i][j]);
-               atomCoordinates[i][j] = xPrime[i][j];
-           }
+   updatePart3(numberOfAtoms, atomCoordinates, velocities, inverseMasses, xPrime);
 
    ReferenceVirtualSites::computePositions(system, atomCoordinates);
    incrementTimeStep();

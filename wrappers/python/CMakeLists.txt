@@ -20,7 +20,6 @@ set(STAGING_OUTPUT_FILES "") # Will contain all required package files
 file(GLOB STAGING_INPUT_FILES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
     "${CMAKE_CURRENT_SOURCE_DIR}/MANIFEST.in"
     "${CMAKE_CURRENT_SOURCE_DIR}/README.txt"
-    "${CMAKE_CURRENT_SOURCE_DIR}/filterPythonFiles.py"
 )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/setup.py ${OPENMM_PYTHON_STAGING_DIR}/setup.py)
 
@@ -51,6 +50,7 @@ foreach(SUBDIR ${SUBDIRS})
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*README.txt"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.py"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.i"
+        "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.ini"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.sh"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.xml"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.pdb"
@@ -69,6 +69,7 @@ foreach(SUBDIR ${SUBDIRS})
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.str"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*psf"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/charmm22.*"
+        "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/par*.inp"
     )
     foreach(file ${STAGING_INPUT_FILES1})
         set(STAGING_INPUT_FILES ${STAGING_INPUT_FILES} "${file}")

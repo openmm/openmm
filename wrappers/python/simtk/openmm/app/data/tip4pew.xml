@@ -10,9 +10,9 @@
    <Atom name="H1" type="tip4pew-H"/>
    <Atom name="H2" type="tip4pew-H"/>
    <Atom name="M" type="tip4pew-M"/>
-   <VirtualSite type="average3" index="3" atom1="0" atom2="1" atom3="2" weight1="0.786646558" weight2="0.106676721" weight3="0.106676721"/>
-   <Bond from="0" to="1"/>
-   <Bond from="0" to="2"/>
+   <VirtualSite type="average3" siteName="M" atomName1="O" atomName2="H1" atomName3="H2" weight1="0.786646558" weight2="0.106676721" weight3="0.106676721"/>
+   <Bond atomName1="O" atomName2="H1"/>
+   <Bond atomName1="O" atomName2="H2"/>
   </Residue>
  </Residues>
  <HarmonicBondForce>

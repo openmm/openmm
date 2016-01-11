@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -30,7 +30,9 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/serialization/StateProxy.h"
-#include <OpenMM.h>
+#include "openmm/Platform.h"
+#include "openmm/State.h"
+#include "openmm/Vec3.h"
 #include <map>
 
 using namespace std;
@@ -42,6 +44,7 @@ StateProxy::StateProxy() : SerializationProxy("State") {
 
 void StateProxy::serialize(const void* object, SerializationNode& node) const {
     node.setIntProperty("version", 1);
+    node.setStringProperty("openmmVersion", Platform::getOpenMMVersion());
     const State& s = *reinterpret_cast<const State*>(object);
     node.setDoubleProperty("time", s.getTime());
     Vec3 a,b,c;

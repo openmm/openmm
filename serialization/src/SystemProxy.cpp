@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,6 +32,7 @@
 #include "openmm/serialization/SystemProxy.h"
 #include "openmm/serialization/SerializationNode.h"
 #include "openmm/Force.h"
+#include "openmm/Platform.h"
 #include "openmm/System.h"
 #include "openmm/VirtualSite.h"
 #include <sstream>
@@ -44,6 +45,7 @@ SystemProxy::SystemProxy() : SerializationProxy("System") {
 
 void SystemProxy::serialize(const void* object, SerializationNode& node) const {
     node.setIntProperty("version", 1);
+    node.setStringProperty("openmmVersion", Platform::getOpenMMVersion());
     const System& system = *reinterpret_cast<const System*>(object);
     Vec3 a, b, c;
     system.getDefaultPeriodicBoxVectors(a, b, c);

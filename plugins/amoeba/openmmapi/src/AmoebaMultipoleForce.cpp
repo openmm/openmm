@@ -103,6 +103,10 @@ void AmoebaMultipoleForce::setPmeGridDimensions(const std::vector<int>& gridDime
     return;
 } 
 
+void AmoebaMultipoleForce::getPMEParametersInContext(const Context& context, double& alpha, int& nx, int& ny, int& nz) const {
+    dynamic_cast<const AmoebaMultipoleForceImpl&>(getImplInContext(context)).getPMEParameters(alpha, nx, ny, nz);
+}
+
 int AmoebaMultipoleForce::getMutualInducedMaxIterations() const {
     return mutualInducedMaxIterations;
 }

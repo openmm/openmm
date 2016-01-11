@@ -52,7 +52,11 @@ def runOneTest(testName, options):
             cutoff = 2.0*unit.nanometers
             vdwCutoff = 1.2*unit.nanometers
             system = ff.createSystem(pdb.topology, nonbondedMethod=app.NoCutoff, constraints=constraints, mutualInducedTargetEpsilon=epsilon, polarization=polarization)
-        dt = 0.001*unit.picoseconds
+        for f in system.getForces():
+            if isinstance(f, mm.AmoebaMultipoleForce) or isinstance(f, mm.AmoebaVdwForce) or isinstance(f, mm.AmoebaGeneralizedKirkwoodForce) or isinstance(f, mm.AmoebaWcaDispersionForce):
+                f.setForceGroup(1)
+        dt = 0.002*unit.picoseconds
+        integ = mm.MTSIntegrator(dt, [(0,2), (1,1)])
     else:
         if explicit:
             ff = app.ForceField('amber99sb.xml', 'tip3p.xml')
@@ -77,6 +81,7 @@ def runOneTest(testName, options):
             constraints = app.HBonds
             hydrogenMass = None
         system = ff.createSystem(pdb.topology, nonbondedMethod=method, nonbondedCutoff=cutoff, constraints=constraints, hydrogenMass=hydrogenMass)
+        integ = mm.LangevinIntegrator(300*unit.kelvin, 91*(1/unit.picoseconds), dt)
     print('Step Size: %g fs' % dt.value_in_unit(unit.femtoseconds))
     properties = {}
     initialSteps = 5
@@ -95,7 +100,6 @@ def runOneTest(testName, options):
     
     # Run the simulation.
     
-    integ = mm.LangevinIntegrator(300*unit.kelvin, 91*(1/unit.picoseconds), dt)
     integ.setConstraintTolerance(1e-5)
     if len(properties) > 0:
         context = mm.Context(system, integ, platform, properties)

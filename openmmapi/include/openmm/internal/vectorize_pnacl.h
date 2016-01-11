@@ -233,6 +233,14 @@ static inline fvec4 abs(const fvec4& v) {
     return v&(__m128) ivec4(0x7FFFFFFF);
 }
 
+static inline fvec4 exp(const fvec4& v) {
+    return fvec4(expf(v[0]), expf(v[1]), expf(v[2]), expf(v[3]));
+}
+
+static inline fvec4 log(const fvec4& v) {
+    return fvec4(logf(v[0]), logf(v[1]), logf(v[2]), logf(v[3]));
+}
+
 static inline float dot3(const fvec4& v1, const fvec4& v2) {
     fvec4 r = v1*v2;
     return r[0]+r[1]+r[2];

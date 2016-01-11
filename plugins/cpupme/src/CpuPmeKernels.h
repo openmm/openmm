@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -36,6 +36,7 @@
 #include "internal/windowsExportPme.h"
 #include "openmm/kernels.h"
 #include "openmm/Vec3.h"
+#include "openmm/internal/gmx_atomic.h"
 #include "openmm/internal/ThreadPool.h"
 #include <fftw3.h>
 #include <pthread.h>
@@ -91,6 +92,15 @@ public:
      * Get whether the current CPU supports all features needed by this kernel.
      */
     static bool isProcessorSupported();
+    /**
+     * Get the parameters being used for PME.
+     * 
+     * @param alpha   the separation parameter
+     * @param nx      the number of grid points along the X axis
+     * @param ny      the number of grid points along the Y axis
+     * @param nz      the number of grid points along the Z axis
+     */
+    void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
 private:
     class ComputeTask;
     /**
@@ -121,6 +131,7 @@ private:
     float* posq;
     Vec3 periodicBoxVectors[3], recipBoxVectors[3];
     bool includeEnergy;
+    gmx_atomic_t atomicCounter;
 };
 
 } // namespace OpenMM

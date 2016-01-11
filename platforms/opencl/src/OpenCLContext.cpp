@@ -89,23 +89,27 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
         contextIndex = platformData.contexts.size();
         std::vector<cl::Platform> platforms;
         cl::Platform::get(&platforms);
+        if (platformIndex < -1 || platformIndex >= (int) platforms.size())
+            throw OpenMMException("Illegal value for OpenCLPlatformIndex: "+intToString(platformIndex));
         const int minThreadBlockSize = 32;
 
         int bestSpeed = -1;
         int bestDevice = -1;
         int bestPlatform = -1;
         for (int j = 0; j < platforms.size(); j++) {
-            // if they supplied a valid platformIndex, we only look through that platform
-            if (j != platformIndex && platformIndex >= 0 && platformIndex < (int) platforms.size())
+            // If they supplied a valid platformIndex, we only look through that platform
+            if (j != platformIndex && platformIndex != -1)
                 continue;
 
             string platformVendor = platforms[j].getInfo<CL_PLATFORM_VENDOR>();
             vector<cl::Device> devices;
             platforms[j].getDevices(CL_DEVICE_TYPE_ALL, &devices);
+            if (deviceIndex < -1 || deviceIndex >= (int) devices.size())
+                throw OpenMMException("Illegal value for OpenCLDeviceIndex: "+intToString(deviceIndex));
 
             for (int i = 0; i < (int) devices.size(); i++) {
-                // if they supplied a valid deviceIndex, we only look through that one
-                if (i != deviceIndex && deviceIndex >= 0 && deviceIndex < (int) devices.size())
+                // If they supplied a valid deviceIndex, we only look through that one
+                if (i != deviceIndex && deviceIndex != -1)
                     continue;
                 if (platformVendor == "Apple" && (devices[i].getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_CPU))
                     continue; // The CPU device on OS X won't work correctly.
@@ -456,7 +460,7 @@ void OpenCLContext::initialize() {
     else {
         forceBuffers = OpenCLArray::create<mm_float4>(*this, paddedNumAtoms*numForceBuffers, "forceBuffers");
         force = OpenCLArray::create<mm_float4>(*this, &forceBuffers->getDeviceBuffer(), paddedNumAtoms, "force");
-        energyBuffer = OpenCLArray::create<cl_float>(*this, max(numThreadBlocks*ThreadBlockSize, nonbonded->getNumEnergyBuffers()), "energyBuffer");
+        energyBuffer = OpenCLArray::create<cl_double>(*this, max(numThreadBlocks*ThreadBlockSize, nonbonded->getNumEnergyBuffers()), "energyBuffer");
     }
     if (supports64BitGlobalAtomics) {
         longForceBuffer = OpenCLArray::create<cl_long>(*this, 3*paddedNumAtoms, "longForceBuffer");
@@ -1031,7 +1035,7 @@ void OpenCLContext::invalidateMolecules() {
 
 void OpenCLContext::reorderAtoms() {
     atomsWereReordered = false;
-    if (numAtoms == 0 || nonbonded == NULL || !nonbonded->getUseCutoff() || stepsSinceReorder < 100) {
+    if (numAtoms == 0 || nonbonded == NULL || !nonbonded->getUseCutoff() || stepsSinceReorder < 250) {
         stepsSinceReorder++;
         return;
     }
@@ -1108,6 +1112,8 @@ void OpenCLContext::reorderAtomsImpl() {
             molPos[i].x *= invNumAtoms;
             molPos[i].y *= invNumAtoms;
             molPos[i].z *= invNumAtoms;
+            if (molPos[i].x != molPos[i].x)
+                throw OpenMMException("Particle coordinate is nan");
         }
         if (nonbonded->getUsePeriodic()) {
             // Move each molecule position into the same box.

@@ -22,7 +22,7 @@ __kernel void computeNonbonded(
 #else
         __global real4* restrict forceBuffers,
 #endif
-        __global real* restrict energyBuffer, __global const real4* restrict posq, __global const unsigned int* restrict exclusions,
+        __global mixed* restrict energyBuffer, __global const real4* restrict posq, __global const unsigned int* restrict exclusions,
         __global const ushort2* restrict exclusionTiles, unsigned int startTileIndex, unsigned int numTileIndices
 #ifdef USE_CUTOFF
         , __global const int* restrict tiles, __global const unsigned int* restrict interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
@@ -34,7 +34,7 @@ __kernel void computeNonbonded(
     const unsigned int warp = get_global_id(0)/TILE_SIZE;
     const unsigned int tgx = get_local_id(0) & (TILE_SIZE-1);
     const unsigned int tbx = get_local_id(0) - tgx;
-    real energy = 0;
+    mixed energy = 0;
     __local AtomData localData[FORCE_WORK_GROUP_SIZE];
 
     // First loop: process tiles that contain exclusions.
@@ -87,10 +87,12 @@ __kernel void computeNonbonded(
                 real tempEnergy = 0;
                 COMPUTE_INTERACTION
                 energy += 0.5f*tempEnergy;
+#ifdef INCLUDE_FORCES
 #ifdef USE_SYMMETRIC
                 force.xyz -= delta.xyz*dEdR;
 #else
                 force.xyz -= dEdR1.xyz;
+#endif
 #endif
 #ifdef USE_EXCLUSIONS
                 excl >>= 1;
@@ -144,6 +146,7 @@ __kernel void computeNonbonded(
                     real tempEnergy = 0;
                     COMPUTE_INTERACTION
                     energy += tempEnergy;
+#ifdef INCLUDE_FORCES
 #ifdef USE_SYMMETRIC
                     delta.xyz *= dEdR;
                     force.xyz -= delta.xyz;
@@ -155,6 +158,7 @@ __kernel void computeNonbonded(
                     localData[tbx+tj].fx += dEdR2.x;
                     localData[tbx+tj].fy += dEdR2.y;
                     localData[tbx+tj].fz += dEdR2.z;
+#endif
 #endif
 #ifdef PRUNE_BY_CUTOFF
                 }
@@ -169,6 +173,7 @@ __kernel void computeNonbonded(
 
         // Write results.
 
+#ifdef INCLUDE_FORCES
 #ifdef SUPPORTS_64_BIT_ATOMICS
         unsigned int offset = x*TILE_SIZE + tgx;
         atom_add(&forceBuffers[offset], (long) (force.x*0x100000000));
@@ -186,6 +191,7 @@ __kernel void computeNonbonded(
         forceBuffers[offset1].xyz += force.xyz;
         if (x != y)
             forceBuffers[offset2] += (real4) (localData[get_local_id(0)].fx, localData[get_local_id(0)].fy, localData[get_local_id(0)].fz, 0.0f);
+#endif
 #endif
     }
 
@@ -318,6 +324,7 @@ __kernel void computeNonbonded(
                         real tempEnergy = 0;
                         COMPUTE_INTERACTION
                         energy += tempEnergy;
+#ifdef INCLUDE_FORCES
 #ifdef USE_SYMMETRIC
                         delta.xyz *= dEdR;
                         force.xyz -= delta.xyz;
@@ -329,6 +336,7 @@ __kernel void computeNonbonded(
                         localData[tbx+tj].fx += dEdR2.x;
                         localData[tbx+tj].fy += dEdR2.y;
                         localData[tbx+tj].fz += dEdR2.z;
+#endif
 #endif
 #ifdef PRUNE_BY_CUTOFF
                     }
@@ -370,6 +378,7 @@ __kernel void computeNonbonded(
                         real tempEnergy = 0;
                         COMPUTE_INTERACTION
                         energy += tempEnergy;
+#ifdef INCLUDE_FORCES
 #ifdef USE_SYMMETRIC
                         delta.xyz *= dEdR;
                         force.xyz -= delta.xyz;
@@ -382,6 +391,7 @@ __kernel void computeNonbonded(
                         localData[tbx+tj].fy += dEdR2.y;
                         localData[tbx+tj].fz += dEdR2.z;
 #endif
+#endif
 #ifdef PRUNE_BY_CUTOFF
                     }
 #endif
@@ -392,6 +402,7 @@ __kernel void computeNonbonded(
 
             // Write results.
 
+#ifdef INCLUDE_FORCES
 #ifdef USE_CUTOFF
             unsigned int atom2 = atomIndices[get_local_id(0)];
 #else
@@ -413,8 +424,11 @@ __kernel void computeNonbonded(
             if (atom2 < PADDED_NUM_ATOMS)
                 forceBuffers[offset2] += (real4) (localData[get_local_id(0)].fx, localData[get_local_id(0)].fy, localData[get_local_id(0)].fz, 0.0f);
 #endif
+#endif
         }
         pos++;
     }
+#ifdef INCLUDE_ENERGY
     energyBuffer[get_global_id(0)] += energy;
+#endif
 }

@@ -99,7 +99,7 @@ void CudaBondedUtilities::initialize(const System& system) {
     s<<CudaKernelSources::vectorOps;
     for (int i = 0; i < (int) prefixCode.size(); i++)
         s<<prefixCode[i];
-    s<<"extern \"C\" __global__ void computeBondedForces(unsigned long long* __restrict__ forceBuffer, real* __restrict__ energyBuffer, const real4* __restrict__ posq, int groups";
+    s<<"extern \"C\" __global__ void computeBondedForces(unsigned long long* __restrict__ forceBuffer, mixed* __restrict__ energyBuffer, const real4* __restrict__ posq, int groups, real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ";
     for (int force = 0; force < numForces; force++) {
         for (int i = 0; i < (int) atomIndices[force].size(); i++) {
             int indexWidth = atomIndices[force][i]->getElementSize()/4;
@@ -110,7 +110,7 @@ void CudaBondedUtilities::initialize(const System& system) {
     for (int i = 0; i < (int) arguments.size(); i++)
         s<<", "<<argTypes[i]<<"* customArg"<<(i+1);
     s<<") {\n";
-    s<<"real energy = 0;\n";
+    s<<"mixed energy = 0;\n";
     for (int force = 0; force < numForces; force++)
         s<<createForceSource(force, forceAtoms[force].size(), forceAtoms[force][0].size(), forceGroup[force], forceSource[force]);
     s<<"energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] += energy;\n";
@@ -161,6 +161,11 @@ void CudaBondedUtilities::computeInteractions(int groups) {
         kernelArgs.push_back(&context.getEnergyBuffer().getDevicePointer());
         kernelArgs.push_back(&context.getPosq().getDevicePointer());
         kernelArgs.push_back(NULL);
+        kernelArgs.push_back(context.getPeriodicBoxSizePointer());
+        kernelArgs.push_back(context.getInvPeriodicBoxSizePointer());
+        kernelArgs.push_back(context.getPeriodicBoxVecXPointer());
+        kernelArgs.push_back(context.getPeriodicBoxVecYPointer());
+        kernelArgs.push_back(context.getPeriodicBoxVecZPointer());
         for (int i = 0; i < (int) atomIndices.size(); i++)
             for (int j = 0; j < (int) atomIndices[i].size(); j++)
                 kernelArgs.push_back(&atomIndices[i][j]->getDevicePointer());

@@ -78,7 +78,7 @@ __constant__ float globals[NUM_GLOBALS];
  * Compute the interaction.
  */
 extern "C" __global__ void computeInteraction(
-        unsigned long long* __restrict__ forceBuffers, real* __restrict__ energyBuffer, const real4* __restrict__ posq,
+        unsigned long long* __restrict__ forceBuffers, mixed* __restrict__ energyBuffer, const real4* __restrict__ posq,
         real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ
 #ifdef USE_CUTOFF
         , const int* __restrict__ neighbors, const int* __restrict__ neighborStartIndex
@@ -90,7 +90,7 @@ extern "C" __global__ void computeInteraction(
         , int* __restrict__ exclusions, int* __restrict__ exclusionStartIndex
 #endif
         PARAMETER_ARGUMENTS) {
-    real energy = 0.0f;
+    mixed energy = 0;
     
     // Loop over particles to be the first one in the set.
     

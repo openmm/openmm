@@ -35,6 +35,7 @@
 #include "AlignedArray.h"
 #include "RealVec.h"
 #include "windowsExportCpu.h"
+#include "openmm/internal/gmx_atomic.h"
 #include "openmm/internal/ThreadPool.h"
 #include <set>
 #include <utility>
@@ -74,6 +75,7 @@ private:
     int numAtoms;
     bool usePeriodic;
     float maxDistance;
+    gmx_atomic_t atomicCounter;
 };
 
 } // namespace OpenMM

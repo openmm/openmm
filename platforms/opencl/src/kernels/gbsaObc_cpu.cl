@@ -409,7 +409,7 @@ __kernel void computeGBSAForce1(
 #else
         __global real4* restrict forceBuffers, __global real* restrict global_bornForce,
 #endif
-        __global real* restrict energyBuffer, __global const real4* restrict posq, __global const real* restrict global_bornRadii,
+        __global mixed* restrict energyBuffer, __global const real4* restrict posq, __global const real* restrict global_bornRadii,
 #ifdef USE_CUTOFF
         __global const int* restrict tiles, __global const unsigned int* restrict interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, __global const real4* restrict blockCenter,
@@ -418,7 +418,7 @@ __kernel void computeGBSAForce1(
         unsigned int numTiles,
 #endif
         __global const ushort2* exclusionTiles) {
-    real energy = 0.0f;
+    mixed energy = 0;
     __local AtomData2 localData[TILE_SIZE];
 
     // First loop: process tiles that contain exclusions.

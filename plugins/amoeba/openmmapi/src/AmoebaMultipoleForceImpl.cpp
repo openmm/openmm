@@ -199,3 +199,7 @@ void AmoebaMultipoleForceImpl::getSystemMultipoleMoments(ContextImpl& context, s
 void AmoebaMultipoleForceImpl::updateParametersInContext(ContextImpl& context) {
     kernel.getAs<CalcAmoebaMultipoleForceKernel>().copyParametersToContext(context, owner);
 }
+
+void AmoebaMultipoleForceImpl::getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {
+    kernel.getAs<CalcAmoebaMultipoleForceKernel>().getPMEParameters(alpha, nx, ny, nz);
+}

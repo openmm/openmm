@@ -1,15 +1,8 @@
 from __future__ import print_function
 from __future__ import absolute_import
-from functools import wraps
 import os
 import sys
 # First make sure OpenMM is installed.
-
-class TestingError(Exception):
-    """
-    An error is encountered when
-    """
-    pass
 
 try:
     from simtk.openmm.app import *
@@ -21,24 +14,7 @@ except ImportError as err:
 else:
     simtk_import_failed = False
 
-def error_converter(error_type):
-    """ Converts all exceptions to the given Exception type """
-    def wrapper(func):
-        @wraps(func)
-        def new_func(*args, **kwargs):
-            try:
-                func(*args, **kwargs)
-            except error_type:
-                # Pass the existing error through
-                raise
-            except BaseException as err:
-                raise TestingError('Problem with OpenMM installation '
-                        'encountered. OpenMM will not work until the problem '
-                        'has been fixed.\n\nError message: %s' % err.message)
-        return new_func
-    return wrapper
 
-@error_converter(TestingError)
 def run_tests():
     """
     Runs a set of tests to determine which platforms are available and tests the
@@ -51,10 +27,7 @@ def run_tests():
     between them for a test system. If a problem is detected, TestingError is
     raised.
     """
-    if simtk_import_failed:
-        raise TestingError('Failed to import OpenMM packages; OpenMM will not work.\n'
-                           'Make sure OpenMM is installed and the library path is set correctly.'
-                           '\n\nError message: %s' % simtk_import_error)
+
     # Create a System for the tests.
     data_dir = os.path.join(os.path.abspath(os.path.split(__file__)[0]), 'openmm', 'app', 'data')
     pdb = PDBFile(os.path.join(data_dir, 'test.pdb'))
@@ -66,7 +39,7 @@ def run_tests():
     numPlatforms = Platform.getNumPlatforms()
     print("There are", numPlatforms, "Platforms available:")
     print()
-    forces = [None]*numPlatforms
+    forces = [None] * numPlatforms
     platformErrors = {}
     for i in range(numPlatforms):
         platform = Platform.getPlatform(i)
@@ -106,10 +79,25 @@ def run_tests():
                                                   Platform.getPlatform(i).getName(),
                                                   sorted(errors)[len(errors)//2]))
 
-if __name__ == '__main__':
+
+def main():
+    if simtk_import_failed:
+        print('Failed to import OpenMM packages; OpenMM will not work.\n'            
+              'Make sure OpenMM is installed and the library path is set correctly.'
+              '\n\nError message: %s' % simtk_import_error,
+              file=sys.stderr)
+        sys.exit(1)
 
     try:
         run_tests()
-    except TestingError as err:
-        print(err.message)
+    except Exception as err:
+        print('Problem with OpenMM installation '
+              'encountered. OpenMM will not work until the problem '
+              'has been fixed.\n\n',
+              file=sys.stderr)
+        print('Error message: %s' % str(err), file=sys.stderr)
         sys.exit(1)
+
+
+if __name__ == '__main__':
+    main()

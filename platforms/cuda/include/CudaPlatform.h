@@ -121,7 +121,7 @@ public:
     ContextImpl* context;
     std::vector<CudaContext*> contexts;
     std::vector<double> contextEnergy;
-    bool removeCM, peerAccessSupported, useCpuPme;
+    bool hasInitializedContexts, removeCM, peerAccessSupported, useCpuPme;
     int cmMotionFrequency;
     int stepCount, computeForceCount;
     double time;

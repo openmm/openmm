@@ -388,12 +388,15 @@ void CudaNonbondedUtilities::prepareInteractions(int forceGroups) {
     lastCutoff = kernels.cutoffDistance;
 }
 
-void CudaNonbondedUtilities::computeInteractions(int forceGroups) {
+void CudaNonbondedUtilities::computeInteractions(int forceGroups, bool includeForces, bool includeEnergy) {
     if ((forceGroups&groupFlags) == 0)
         return;
     KernelSet& kernels = groupKernels[forceGroups];
     if (kernels.hasForces) {
-        context.executeKernel(kernels.forceKernel, &forceArgs[0], numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
+        CUfunction& kernel = (includeForces ? (includeEnergy ? kernels.forceEnergyKernel : kernels.forceKernel) : kernels.energyKernel);
+        if (kernel == NULL)
+            kernel = createInteractionKernel(kernels.source, parameters, arguments, true, true, forceGroups, includeForces, includeEnergy);
+        context.executeKernel(kernel, &forceArgs[0], numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
     }
 }
 
@@ -454,8 +457,8 @@ void CudaNonbondedUtilities::createKernelsForGroups(int groups) {
     }
     kernels.hasForces = (source.size() > 0);
     kernels.cutoffDistance = cutoff;
-    if (kernels.hasForces)
-        kernels.forceKernel = createInteractionKernel(source, parameters, arguments, true, true, groups);
+    kernels.source = source;
+    kernels.forceKernel = kernels.energyKernel = kernels.forceEnergyKernel = NULL;
     if (useCutoff) {
         double padding = (usePadding ? 0.1*cutoff : 0.0);
         double paddedCutoff = cutoff+padding;
@@ -478,7 +481,7 @@ void CudaNonbondedUtilities::createKernelsForGroups(int groups) {
     groupKernels[groups] = kernels;
 }
 
-CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source, vector<ParameterInfo>& params, vector<ParameterInfo>& arguments, bool useExclusions, bool isSymmetric, int groups) {
+CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source, vector<ParameterInfo>& params, vector<ParameterInfo>& arguments, bool useExclusions, bool isSymmetric, int groups, bool includeForces, bool includeEnergy) {
     map<string, string> replacements;
     replacements["COMPUTE_INTERACTION"] = source;
     const string suffixes[] = {"x", "y", "z", "w"};
@@ -654,6 +657,10 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
         defines["USE_SYMMETRIC"] = "1";
     if (useShuffle)
         defines["ENABLE_SHUFFLE"] = "1";
+    if (includeForces)
+        defines["INCLUDE_FORCES"] = "1";
+    if (includeEnergy)
+        defines["INCLUDE_ENERGY"] = "1";
     defines["THREAD_BLOCK_SIZE"] = context.intToString(forceThreadBlockSize);
     double maxCutoff = 0.0;
     for (int i = 0; i < 32; i++) {

@@ -37,6 +37,7 @@
 #include "openmm/internal/AmoebaVdwForceImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
 #include "CudaBondedUtilities.h"
+#include "CudaFFT3D.h"
 #include "CudaForceInfo.h"
 #include "CudaKernelSources.h"
 #include "CudaNonbondedUtilities.h"
@@ -902,26 +903,6 @@ CudaCalcAmoebaMultipoleForceKernel::~CudaCalcAmoebaMultipoleForceKernel() {
         cufftDestroy(fft);
 }
 
-/**
- * Select a size for an FFT that is a multiple of 2, 3, 5, and 7.
- */
-static int findFFTDimension(int minimum) {
-    if (minimum < 1)
-        return 1;
-    while (true) {
-        // Attempt to factor the current value.
-
-        int unfactored = minimum;
-        for (int factor = 2; factor < 8; factor++) {
-            while (unfactored > 1 && unfactored%factor == 0)
-                unfactored /= factor;
-        }
-        if (unfactored == 1)
-            return minimum;
-        minimum++;
-    }
-}
-
 void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const AmoebaMultipoleForce& force) {
     cu.setAsCurrent();
 
@@ -1063,7 +1044,7 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
     }
     else
         maxInducedIterations = 0;
-    bool usePME = (force.getNonbondedMethod() == AmoebaMultipoleForce::PME);
+    usePME = (force.getNonbondedMethod() == AmoebaMultipoleForce::PME);
     
     // See whether there's an AmoebaGeneralizedKirkwoodForce in the System.
 
@@ -1099,8 +1080,7 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
     int endExclusionIndex = (cu.getContextIndex()+1)*numExclusionTiles/numContexts;
     defines["FIRST_EXCLUSION_TILE"] = cu.intToString(startExclusionIndex);
     defines["LAST_EXCLUSION_TILE"] = cu.intToString(endExclusionIndex);
-    double alpha = force.getAEwald();
-    int gridSizeX, gridSizeY, gridSizeZ;
+    alpha = force.getAEwald();
     if (usePME) {
         vector<int> pmeGridDimension;
         force.getPmeGridDimensions(pmeGridDimension);
@@ -1109,13 +1089,13 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
             nb.setEwaldErrorTolerance(force.getEwaldErrorTolerance());
             nb.setCutoffDistance(force.getCutoffDistance());
             NonbondedForceImpl::calcPMEParameters(system, nb, alpha, gridSizeX, gridSizeY, gridSizeZ);
-            gridSizeX = findFFTDimension(gridSizeX);
-            gridSizeY = findFFTDimension(gridSizeY);
-            gridSizeZ = findFFTDimension(gridSizeZ);
+            gridSizeX = CudaFFT3D::findLegalDimension(gridSizeX);
+            gridSizeY = CudaFFT3D::findLegalDimension(gridSizeY);
+            gridSizeZ = CudaFFT3D::findLegalDimension(gridSizeZ);
         } else {
-            gridSizeX = pmeGridDimension[0];
-            gridSizeY = pmeGridDimension[1];
-            gridSizeZ = pmeGridDimension[2];
+            gridSizeX = CudaFFT3D::findLegalDimension(pmeGridDimension[0]);
+            gridSizeY = CudaFFT3D::findLegalDimension(pmeGridDimension[1]);
+            gridSizeZ = CudaFFT3D::findLegalDimension(pmeGridDimension[2]);
         }
         defines["EWALD_ALPHA"] = cu.doubleToString(alpha);
         defines["SQRT_PI"] = cu.doubleToString(sqrt(M_PI));
@@ -2035,6 +2015,15 @@ void CudaCalcAmoebaMultipoleForceKernel::copyParametersToContext(ContextImpl& co
     multipolesAreValid = false;
 }
 
+void CudaCalcAmoebaMultipoleForceKernel::getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {
+    if (!usePME)
+        throw OpenMMException("getPMEParametersInContext: This Context is not using PME");
+    alpha = this->alpha;
+    nx = gridSizeX;
+    ny = gridSizeY;
+    nz = gridSizeZ;
+}
+
 /* -------------------------------------------------------------------------- *
  *                       AmoebaGeneralizedKirkwood                            *
  * -------------------------------------------------------------------------- */
@@ -2418,7 +2407,7 @@ double CudaCalcAmoebaVdwForceKernel::execute(ContextImpl& context, bool includeF
         &bondReductionAtoms->getDevicePointer(), &bondReductionFactors->getDevicePointer()};
     cu.executeKernel(prepareKernel, prepareArgs, cu.getPaddedNumAtoms());
     nonbonded->prepareInteractions(1);
-    nonbonded->computeInteractions(1);
+    nonbonded->computeInteractions(1, includeForces, includeEnergy);
     void* spreadArgs[] = {&cu.getForce().getDevicePointer(), &tempForces->getDevicePointer(), &bondReductionAtoms->getDevicePointer(), &bondReductionFactors->getDevicePointer()};
     cu.executeKernel(spreadKernel, spreadArgs, cu.getPaddedNumAtoms());
     tempPosq->copyTo(cu.getPosq());

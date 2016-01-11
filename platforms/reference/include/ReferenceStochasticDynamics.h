@@ -111,13 +111,26 @@ class OPENMM_EXPORT ReferenceStochasticDynamics : public ReferenceDynamics {
          @param atomCoordinates     atom coordinates
          @param velocities          velocities
          @param forces              forces
-         @param masses              atom masses
+         @param inverseMasses       inverse atom masses
       
          --------------------------------------------------------------------------------------- */
       
       virtual void updatePart2(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& velocities,
                        std::vector<OpenMM::RealVec>& forces, std::vector<RealOpenMM>& inverseMasses, std::vector<OpenMM::RealVec>& xPrime);
       
+      /**---------------------------------------------------------------------------------------
+      
+         Third update
+      
+         @param numberOfAtoms       number of atoms
+         @param atomCoordinates     atom coordinates
+         @param velocities          velocities
+         @param inverseMasses       inverse atom masses
+      
+         --------------------------------------------------------------------------------------- */
+      
+      virtual void updatePart3(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& velocities,
+                       std::vector<RealOpenMM>& inverseMasses, std::vector<OpenMM::RealVec>& xPrime);
 };
 
 } // namespace OpenMM

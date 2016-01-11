@@ -80,6 +80,7 @@ CudaPlatform::CudaPlatform() {
     registerKernelFactory(CalcCustomGBForceKernel::Name(), factory);
     registerKernelFactory(CalcCustomExternalForceKernel::Name(), factory);
     registerKernelFactory(CalcCustomHbondForceKernel::Name(), factory);
+    registerKernelFactory(CalcCustomCentroidBondForceKernel::Name(), factory);
     registerKernelFactory(CalcCustomCompoundBondForceKernel::Name(), factory);
     registerKernelFactory(CalcCustomManyParticleForceKernel::Name(), factory);
     registerKernelFactory(IntegrateVerletStepKernel::Name(), factory);
@@ -178,7 +179,7 @@ void CudaPlatform::contextDestroyed(ContextImpl& context) const {
 }
 
 CudaPlatform::PlatformData::PlatformData(ContextImpl* context, const System& system, const string& deviceIndexProperty, const string& blockingProperty, const string& precisionProperty,
-            const string& cpuPmeProperty, const string& compilerProperty, const string& tempProperty, const string& hostCompilerProperty) : context(context), removeCM(false), stepCount(0), computeForceCount(0), time(0.0) {
+            const string& cpuPmeProperty, const string& compilerProperty, const string& tempProperty, const string& hostCompilerProperty) : context(context), removeCM(false), stepCount(0), computeForceCount(0), time(0.0), hasInitializedContexts(false) {
     bool blocking = (blockingProperty == "true");
     vector<string> devices;
     size_t searchPos = 0, nextPos;
@@ -246,8 +247,11 @@ CudaPlatform::PlatformData::~PlatformData() {
 }
 
 void CudaPlatform::PlatformData::initializeContexts(const System& system) {
+    if (hasInitializedContexts)
+        return;
     for (int i = 0; i < (int) contexts.size(); i++)
         contexts[i]->initialize();
+    hasInitializedContexts = true;
 }
 
 void CudaPlatform::PlatformData::syncContexts() {

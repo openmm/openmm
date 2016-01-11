@@ -138,8 +138,12 @@ public:
     void prepareInteractions(int forceGroups);
     /**
      * Compute the nonbonded interactions.
+     * 
+     * @param forceGroups    the flags specifying which force groups to include
+     * @param includeForces  whether to compute forces
+     * @param includeEnergy  whether to compute the potential energy
      */
-    void computeInteractions(int forceGroups);
+    void computeInteractions(int forceGroups, bool includeForces, bool includeEnergy);
     /**
      * Check to see if the neighbor list arrays are large enough, and make them bigger if necessary.
      *
@@ -235,8 +239,10 @@ public:
      * @param useExclusions specifies whether exclusions are applied to this interaction
      * @param isSymmetric   specifies whether the interaction is symmetric
      * @param groups        the set of force groups this kernel is for
+     * @param includeForces whether this kernel should compute forces
+     * @param includeEnergy whether this kernel should compute potential energy
      */
-    CUfunction createInteractionKernel(const std::string& source, std::vector<ParameterInfo>& params, std::vector<ParameterInfo>& arguments, bool useExclusions, bool isSymmetric, int groups);
+    CUfunction createInteractionKernel(const std::string& source, std::vector<ParameterInfo>& params, std::vector<ParameterInfo>& arguments, bool useExclusions, bool isSymmetric, int groups, bool includeForces, bool includeEnergy);
     /**
      * Create the set of kernels that will be needed for a particular combination of force groups.
      * 
@@ -282,7 +288,8 @@ class CudaNonbondedUtilities::KernelSet {
 public:
     bool hasForces;
     double cutoffDistance;
-    CUfunction forceKernel;
+    std::string source;
+    CUfunction forceKernel, energyKernel, forceEnergyKernel;
     CUfunction findBlockBoundsKernel;
     CUfunction sortBoxDataKernel;
     CUfunction findInteractingBlocksKernel;

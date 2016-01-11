@@ -1,4 +1,3 @@
-
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -7,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2015 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -30,188 +29,8 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/internal/AssertionUtilities.h"
-#include "OpenCLPlatform.h"
-#include "openmm/Context.h"
-#include "openmm/HarmonicBondForce.h"
-#include "openmm/LocalEnergyMinimizer.h"
-#include "openmm/NonbondedForce.h"
-#include "openmm/VerletIntegrator.h"
-#include "openmm/VirtualSite.h"
-#include "sfmt/SFMT.h"
-#include <iostream>
-#include <vector>
+#include "OpenCLTests.h"
+#include "TestLocalEnergyMinimizer.h"
 
-using namespace OpenMM;
-using namespace std;
-
-static OpenCLPlatform platform;
-
-void testHarmonicBonds() {
-    const int numParticles = 10;
-    System system;
-    HarmonicBondForce* bonds = new HarmonicBondForce();
-    system.addForce(bonds);
-
-    // Create a chain of particles connected by harmonic bonds.
-
-    vector<Vec3> positions(numParticles);
-    for (int i = 0; i < numParticles; i++) {
-        system.addParticle(1.0);
-        positions[i] = Vec3(i, 0, 0);
-        if (i > 0)
-            bonds->addBond(i-1, i, 1+0.1*i, 1);
-    }
-
-    // Minimize it and check that all bonds are at their equilibrium distances.
-
-    VerletIntegrator integrator(0.01);
-    Context context(system, integrator, platform);
-    context.setPositions(positions);
-    LocalEnergyMinimizer::minimize(context, 1e-5);
-    State state = context.getState(State::Positions);
-    for (int i = 1; i < numParticles; i++) {
-        Vec3 delta = state.getPositions()[i]-state.getPositions()[i-1];
-        ASSERT_EQUAL_TOL(1+0.1*i, sqrt(delta.dot(delta)), 1e-4);
-    }
+void runPlatformTests() {
 }
-
-void testLargeSystem() {
-    const int numMolecules = 25;
-    const int numParticles = numMolecules*2;
-    const double cutoff = 2.0;
-    const double boxSize = 4.0;
-    const double tolerance = 10;
-    System system;
-    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
-    NonbondedForce* nonbonded = new NonbondedForce();
-    nonbonded->setCutoffDistance(cutoff);
-    nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
-    system.addForce(nonbonded);
-
-    // Create a cloud of molecules.
-
-    OpenMM_SFMT::SFMT sfmt;
-    init_gen_rand(0, sfmt);
-    vector<Vec3> positions(numParticles);
-    for (int i = 0; i < numMolecules; i++) {
-        system.addParticle(1.0);
-        system.addParticle(1.0);
-        nonbonded->addParticle(-1.0, 0.2, 0.2);
-        nonbonded->addParticle(1.0, 0.2, 0.2);
-        positions[2*i] = Vec3(boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt));
-        positions[2*i+1] = Vec3(positions[2*i][0]+1.0, positions[2*i][1], positions[2*i][2]);
-        system.addConstraint(2*i, 2*i+1, 1.0);
-    }
-
-    // Minimize it and verify that the energy has decreased.
-
-    VerletIntegrator integrator(0.01);
-    Context context(system, integrator, platform);
-    context.setPositions(positions);
-    State initialState = context.getState(State::Forces | State::Energy);
-    LocalEnergyMinimizer::minimize(context, tolerance);
-    State finalState = context.getState(State::Forces | State::Energy | State::Positions);
-    ASSERT(finalState.getPotentialEnergy() < initialState.getPotentialEnergy());
-
-    // Compute the force magnitude, subtracting off any component parallel to a constraint, and
-    // check that it satisfies the requested tolerance.
-
-    double forceNorm = 0.0;
-    for (int i = 0; i < numParticles; i += 2) {
-        Vec3 dir = finalState.getPositions()[i+1]-finalState.getPositions()[i];
-        double distance = sqrt(dir.dot(dir));
-        dir *= 1.0/distance;
-        Vec3 f = finalState.getForces()[i];
-        f -= dir*dir.dot(f);
-        forceNorm += f.dot(f);
-        f = finalState.getForces()[i+1];
-        f -= dir*dir.dot(f);
-        forceNorm += f.dot(f);
-    }
-    forceNorm = sqrt(forceNorm/(5*numMolecules));
-    ASSERT(forceNorm < 2*tolerance);
-}
-
-void testVirtualSites() {
-    const int numMolecules = 25;
-    const int numParticles = numMolecules*3;
-    const double cutoff = 2.0;
-    const double boxSize = 4.0;
-    const double tolerance = 10;
-    System system;
-    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
-    NonbondedForce* nonbonded = new NonbondedForce();
-    nonbonded->setCutoffDistance(cutoff);
-    nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
-    system.addForce(nonbonded);
-
-    // Create a cloud of molecules.
-
-    OpenMM_SFMT::SFMT sfmt;
-    init_gen_rand(0, sfmt);
-    vector<Vec3> positions(numParticles);
-    for (int i = 0; i < numMolecules; i++) {
-        system.addParticle(1.0);
-        system.addParticle(1.0);
-        system.addParticle(0.0);
-        nonbonded->addParticle(-1.0, 0.2, 0.2);
-        nonbonded->addParticle(0.5, 0.2, 0.2);
-        nonbonded->addParticle(0.5, 0.2, 0.2);
-        positions[3*i] = Vec3(boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt));
-        positions[3*i+1] = Vec3(positions[3*i][0]+1.0, positions[3*i][1], positions[3*i][2]);
-        positions[3*i+2] = Vec3();
-        system.addConstraint(3*i, 3*i+1, 1.0);
-        system.setVirtualSite(3*i+2, new TwoParticleAverageSite(3*i, 3*i+1, 0.5, 0.5));
-    }
-
-    // Minimize it and verify that the energy has decreased.
-    
-    VerletIntegrator integrator(0.01);
-    Context context(system, integrator, platform);
-    context.setPositions(positions);
-    context.applyConstraints(1e-5);
-    State initialState = context.getState(State::Forces | State::Energy);
-    LocalEnergyMinimizer::minimize(context, tolerance);
-    State finalState = context.getState(State::Forces | State::Energy | State::Positions);
-    ASSERT(finalState.getPotentialEnergy() < initialState.getPotentialEnergy());
-
-    // Compute the force magnitude, subtracting off any component parallel to a constraint, and
-    // check that it satisfies the requested tolerance.
-
-    double forceNorm = 0.0;
-    for (int i = 0; i < numParticles; i += 3) {
-        Vec3 dir = finalState.getPositions()[i+1]-finalState.getPositions()[i];
-        double distance = sqrt(dir.dot(dir));
-        dir *= 1.0/distance;
-        Vec3 f = finalState.getForces()[i];
-        f -= dir*dir.dot(f);
-        forceNorm += f.dot(f);
-        f = finalState.getForces()[i+1];
-        f -= dir*dir.dot(f);
-        forceNorm += f.dot(f);
-        
-        // Check the virtual site location.
-        
-        ASSERT_EQUAL_VEC((finalState.getPositions()[i+1]+finalState.getPositions()[i])*0.5, finalState.getPositions()[i+2], 1e-5);
-    }
-    forceNorm = sqrt(forceNorm/(5*numMolecules));
-    ASSERT(forceNorm < 2*tolerance);
-}
-
-int main(int argc, char* argv[]) {
-    try {
-        if (argc > 1)
-            platform.setPropertyDefaultValue("OpenCLPrecision", string(argv[1]));
-        testHarmonicBonds();
-        testLargeSystem();
-        testVirtualSites();
-    }
-    catch(const exception& e) {
-        cout << "exception: " << e.what() << endl;
-        return 1;
-    }
-    cout << "Done" << endl;
-    return 0;
-}
-

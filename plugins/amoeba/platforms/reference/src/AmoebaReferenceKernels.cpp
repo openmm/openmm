@@ -790,6 +790,15 @@ void ReferenceCalcAmoebaMultipoleForceKernel::copyParametersToContext(ContextImp
     }
 }
 
+void ReferenceCalcAmoebaMultipoleForceKernel::getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {
+    if (!usePme)
+        throw OpenMMException("getPMEParametersInContext: This Context is not using PME");
+    alpha = alphaEwald;
+    nx = pmeGridDimension[0];
+    ny = pmeGridDimension[1];
+    nz = pmeGridDimension[2];
+}
+
 /* -------------------------------------------------------------------------- *
  *                       AmoebaGeneralizedKirkwood                            *
  * -------------------------------------------------------------------------- */

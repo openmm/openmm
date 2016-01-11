@@ -89,6 +89,7 @@ public:
 
     void getSystemMultipoleMoments(ContextImpl& context, std::vector< double >& outputMultipoleMoments);
     void updateParametersInContext(ContextImpl& context);
+    void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
  
 
 private:

@@ -1,10 +1,44 @@
+%fragment("Vec3_to_PyVec3", "header") {
+/**
+ * Convert an OpenMM::Vec3 into a Python simtk.openmm.Vec3 object
+ *
+ * Returns a new reference.
+ */
+PyObject* Vec3_to_PyVec3(const OpenMM::Vec3& v) {
+    static PyObject *__s_mm = NULL;
+    static PyObject *__s_Vec3 = NULL;
+    if (__s_mm == NULL) {
+        __s_mm = PyImport_AddModule("simtk.openmm");
+        __s_Vec3 = PyObject_GetAttrString(__s_mm, "Vec3");
+    }
+    PyObject* tuple = Py_BuildValue("(d,d,d)", v[0], v[1], v[2]);
+    PyObject* PyVec3 = PyObject_CallObject(__s_Vec3, tuple);
+    Py_DECREF(tuple);
+    return PyVec3;
+}
+}
+
 %fragment("Py_StripOpenMMUnits", "header") {
 
-static PyObject *__s_Quantity = NULL;
-static PyObject *__s_md_unit_system_tuple = NULL;
-static PyObject *__s_bar_tuple = NULL;
-
+/**
+ * Strip any OpenMM units of an input PyObject.
+ *
+ * This is equivalent to the following Python code
+ *
+ * >>> from simtk import unit
+ * >>> if isinstance(input, unit.Quantity)
+ * ...     if input.is_compatible(unit.bar)
+ * ...         return input.value_in_unit(unit.bar)
+ * ...     return input.value_in_unit_system(unit.md_input_system)
+ * ... return input
+ *
+ * Returns a new reference.
+ */
 PyObject* Py_StripOpenMMUnits(PyObject *input) {
+    static PyObject *__s_Quantity = NULL;
+    static PyObject *__s_md_unit_system_tuple = NULL;
+    static PyObject *__s_bar_tuple = NULL;
+
     if (__s_Quantity == NULL) {
         PyObject* module = NULL;
         module = PyImport_ImportModule("simtk.unit");
@@ -137,6 +171,8 @@ int Py_SequenceToVecDouble(PyObject* obj, std::vector<double>& out) {
     while ((item = PyIter_Next(iterator))) {
         item1 = Py_StripOpenMMUnits(item);
         if (item1 == NULL) {
+            Py_DECREF(stripped);
+            Py_DECREF(iterator);
             Py_DECREF(item);
             return SWIG_ERROR;
         }
@@ -145,6 +181,8 @@ int Py_SequenceToVecDouble(PyObject* obj, std::vector<double>& out) {
         Py_DECREF(item1);
 
         if (PyErr_Occurred() != NULL) {
+            Py_DECREF(stripped);
+            Py_DECREF(iterator);
             return SWIG_ERROR;
         }
         out.push_back(d);
@@ -152,10 +190,134 @@ int Py_SequenceToVecDouble(PyObject* obj, std::vector<double>& out) {
     Py_DECREF(iterator);
     Py_DECREF(stripped);
     return SWIG_OK;
- }
+}
+}
+
+%fragment("Py_SequenceToVecVec3", "header", fragment="Py_SequenceToVec3") {
+int Py_SequenceToVecVec3(PyObject* obj, std::vector<Vec3>& out) {
+    int ret = 0;
+    PyObject* stripped = NULL;
+    PyObject* item = NULL;
+    PyObject* item1 = NULL;
+    PyObject* iterator = NULL;
+    stripped = Py_StripOpenMMUnits(obj);      // new reference
+    iterator = PyObject_GetIter(stripped);    // new reference
+
+    if (iterator == NULL) {
+        Py_DECREF(stripped);
+        return SWIG_ERROR;
+    }
+
+    while ((item = PyIter_Next(iterator))) {  // new reference
+        item1 = Py_StripOpenMMUnits(item);    // new reference
+        if (item1 == NULL) {
+            Py_DECREF(stripped);
+            Py_DECREF(iterator);
+            Py_DECREF(item);
+            return SWIG_ERROR;
+        }
+
+        OpenMM::Vec3 v = Py_SequenceToVec3(item1, ret);
+        Py_DECREF(item);
+        Py_DECREF(item1);
+
+        if (!SWIG_IsOK(ret)) {
+            Py_DECREF(stripped);
+            Py_DECREF(iterator);
+            return SWIG_ERROR;
+        }
+
+        out.push_back(v);
+    }
+
+    Py_DECREF(iterator);
+    Py_DECREF(stripped);
+    return SWIG_OK;
+}
+}
+
+%fragment("Py_SequenceToVecVecDouble", "header", fragment="Py_SequenceToVecDouble") {
+int Py_SequenceToVecVecDouble(PyObject* obj, std::vector<std::vector<double> >& out) {
+    PyObject* stripped = NULL;
+    PyObject* item = NULL;
+    PyObject* item1 = NULL;
+    PyObject* iterator = NULL;
+    stripped = Py_StripOpenMMUnits(obj);
+    iterator = PyObject_GetIter(stripped);
+
+    if (iterator == NULL) {
+        Py_DECREF(stripped);
+        return SWIG_ERROR;
+    }
+
+    while ((item = PyIter_Next(iterator))) {
+        item1 = Py_StripOpenMMUnits(item);
+        if (item1 == NULL) {
+            Py_DECREF(stripped);
+            Py_DECREF(iterator);
+            Py_DECREF(item);
+            return SWIG_ERROR;
+        }
+        std::vector<double> v;
+        int r2 = Py_SequenceToVecDouble(item1, v);
+        Py_DECREF(item);
+        Py_DECREF(item1);
+
+        if (!SWIG_IsOK(r2) || PyErr_Occurred() != NULL) {
+            Py_DECREF(stripped);
+            Py_DECREF(iterator);
+            return SWIG_ERROR;
+        }
+        out.push_back(v);
+    }
+    Py_DECREF(iterator);
+    Py_DECREF(stripped);
+    return SWIG_OK;
+}
+}
+
+%fragment("Py_SequenceToVecVecVecDouble", "header", fragment="Py_SequenceToVecVecDouble") {
+int Py_SequenceToVecVecVecDouble(PyObject* obj, std::vector<std::vector<std::vector<double> > >& out) {
+    PyObject* stripped = NULL;
+    PyObject* item = NULL;
+    PyObject* item1 = NULL;
+    PyObject* iterator = NULL;
+    stripped = Py_StripOpenMMUnits(obj);
+    iterator = PyObject_GetIter(stripped);
+
+    if (iterator == NULL) {
+        Py_DECREF(stripped);
+        return SWIG_ERROR;
+    }
+
+    while ((item = PyIter_Next(iterator))) {
+        item1 = Py_StripOpenMMUnits(item);
+        if (item1 == NULL) {
+            Py_DECREF(stripped);
+            Py_DECREF(iterator);
+            Py_DECREF(item);
+            return SWIG_ERROR;
+        }
+        std::vector<std::vector<double> >v;
+        int r2 = Py_SequenceToVecVecDouble(item1, v);
+        Py_DECREF(item);
+        Py_DECREF(item1);
+
+        if (!SWIG_IsOK(r2) || PyErr_Occurred() != NULL) {
+            Py_DECREF(stripped);
+            Py_DECREF(iterator);
+            return SWIG_ERROR;
+        }
+        out.push_back(v);
+    }
+    Py_DECREF(iterator);
+    Py_DECREF(stripped);
+    return SWIG_OK;
+}
 }
 
 
+// ------ typemap for double ----
 %typemap(typecheck, precedence=SWIG_TYPECHECK_DOUBLE, fragment="Py_StripOpenMMUnits") double {
     double argp = 0;
     PyObject* s = NULL;
@@ -163,7 +325,6 @@ int Py_SequenceToVecDouble(PyObject* obj, std::vector<double>& out) {
     $1 = (s != NULL) ? SWIG_IsOK(SWIG_AsVal_double(s, &argp)) : 0;
     Py_DECREF(s);
 }
-
 %typemap(in, noblock=1, fragment="Py_StripOpenMMUnits") double (double argp = 0, int res = 0,
     PyObject* stripped = NULL) {
 
@@ -179,6 +340,7 @@ int Py_SequenceToVecDouble(PyObject* obj, std::vector<double>& out) {
 }
 
 
+// ------ typemap for Vec3
 %typemap(in, fragment="Py_SequenceToVec3") Vec3 (int res=0){
     // typemap -- %typemap(in) Vec3
     $1 = Py_SequenceToVec3($input, res);
@@ -187,8 +349,14 @@ int Py_SequenceToVecDouble(PyObject* obj, std::vector<double>& out) {
         SWIG_fail;
     }
 }
+%typemap(typecheck, fragment="Py_SequenceToVec3") Vec3 {
+    int res = 0;
+    Py_SequenceToVec3($input, res);
+    $1 = SWIG_IsOK(res);
+}
 
 
+// typemap for const Vec3&
 %typemap(in, fragment="Py_SequenceToVec3") const Vec3& (OpenMM::Vec3 myVec, int res=0) {
     // typemap -- %typemap(in) Vec3
     myVec = Py_SequenceToVec3($input, res);
@@ -198,30 +366,63 @@ int Py_SequenceToVecDouble(PyObject* obj, std::vector<double>& out) {
     }
     $1 = &myVec;
 }
-
-
-/* Convert python list of tuples to C++ std::vector of Vec3 objects */
-%typemap(in, fragment="Py_SequenceToVec3") const std::vector<Vec3>& (std::vector<OpenMM::Vec3> vVec, PyObject* s=NULL, PyObject* o=NULL) {
-    int i, pLength, ret;
-    s = Py_StripOpenMMUnits($input);
-    pLength = (int)PySequence_Length(s);
-    for (i = 0; i < pLength; i++) {
-        o = PySequence_GetItem(s, i);
-        OpenMM::Vec3 v = Py_SequenceToVec3(o, ret);
-        if (!SWIG_IsOK(ret)) {
-          Py_DECREF(s);
-          Py_DECREF(o);
-          PyErr_SetString(PyExc_ValueError, "in method $symname, argument $argnum could not be converted to type $type");
-          SWIG_fail;
-        }
-        vVec.push_back(v);
-    }
-    $1 = &vVec;
-    Py_DECREF(s);
+%typemap(typecheck, fragment="Py_SequenceToVec3") const Vec3& {
+    int res = 0;
+    Py_SequenceToVec3($input, res);
+    $1 = SWIG_IsOK(res);
 }
 
 
+// typemap for const vector<vector<double> >
+%typemap(in, fragment="Py_SequenceToVecVecDouble") const std::vector<std::vector<double> >(std::vector<std::vector<double> > v, int res=0) {
+    res = Py_SequenceToVecVecDouble($input, v);
+    if (!SWIG_IsOK(res)) {
+        PyErr_SetString(PyExc_ValueError, "in method $symname, argument $argnum could not be converted to type $type");
+        SWIG_fail;
+    }
+    $1 = &v;
+}
+%typemap(typecheck, fragment="Py_SequenceToVecVecDouble") const std::vector<std::vector<double> > {
+    std::vector<std::vector<double> > v;
+    int res = Py_SequenceToVecVecDouble($input, v);
+    $1 = SWIG_IsOK(res);
+}
 
+
+// typemap for const vector<vector<vector<double> > >
+%typemap(in, fragment="Py_SequenceToVecVecVecDouble") const std::vector<std::vector<std::vector<double> > >(std::vector<std::vector<std::vector<double> > > v, int res=0) {
+    res = Py_SequenceToVecVecVecDouble($input, v);
+    if (!SWIG_IsOK(res)) {
+        PyErr_SetString(PyExc_ValueError, "in method $symname, argument $argnum could not be converted to type $type");
+        SWIG_fail;
+    }
+    $1 = &v;
+}
+%typemap(typecheck, fragment="Py_SequenceToVecVecVecDouble") const std::vector<std::vector<std::vector<double> > >{
+    std::vector<std::vector<std::vector<double> > > v;
+    int res = Py_SequenceToVecVecVecDouble($input, v);
+    $1 = SWIG_IsOK(res);
+}
+
+
+// typemap for vector<Vec3>
+%typemap(in, fragment="Py_SequenceToVecVec3") const std::vector<Vec3>& (std::vector<Vec3> v, int res=0) {
+    res = Py_SequenceToVecVec3($input, v);
+    if (!SWIG_IsOK(res)) {
+        PyErr_SetString(PyExc_ValueError, "in method $symname, argument $argnum could not be converted to type $type");
+        SWIG_fail;
+    }
+    $1 = &v;
+}
+%typemap(typecheck, precedence=SWIG_TYPECHECK_DOUBLE_ARRAY, fragment="Py_SequenceToVecVec3") const std::vector<Vec3>& {
+    std::vector<double> v;
+    int res=0;
+    res = Py_SequenceToVecVec3($input, v);
+    $1 = SWIG_IsOK(res);
+}
+
+
+// typemap for const vector<double>
 %typemap(in, fragment="Py_SequenceToVecDouble") const std::vector<double> & (std::vector<double> v, int res=0) {
     res = Py_SequenceToVecDouble($input, v);
     if (!SWIG_IsOK(res)) {
@@ -230,6 +431,14 @@ int Py_SequenceToVecDouble(PyObject* obj, std::vector<double>& out) {
     }
     $1 = &v;
 }
+%typemap(typecheck, precedence=SWIG_TYPECHECK_DOUBLE_ARRAY) const std::vector<double> & {
+    std::vector<double> v;
+    int res = 0;
+    res = Py_SequenceToVecDouble($input, v);
+    $1 = SWIG_IsOK(res);
+}
+
+
 
 /* The following two typemaps cause a non-const vector<Vec3>& to become a return value. */
 %typemap(in, numinputs=0) std::vector<Vec3>& (std::vector<Vec3> temp) {
@@ -237,19 +446,12 @@ int Py_SequenceToVecDouble(PyObject* obj, std::vector<double>& out) {
 }
 
 
-%typemap(argout) std::vector<Vec3>& {
-    int i, n;
-    PyObject *pyList;
-
-    n=(*$1).size();
-    pyList=PyList_New(n);
-    PyObject* mm = PyImport_AddModule("simtk.openmm");
-    PyObject* vec3 = PyObject_GetAttrString(mm, "Vec3");
-    for (i=0; i<n; i++) {
+%typemap(argout, fragment="Vec3_to_PyVec3") std::vector<Vec3>& {
+    int n = (*$1).size();
+    PyObject * pyList = PyList_New(n);
+    for (int i=0; i<n; i++) {
         OpenMM::Vec3& v = (*$1).at(i);
-        PyObject* args = Py_BuildValue("(d,d,d)", v[0], v[1], v[2]);
-        PyObject* pyVec = PyObject_CallObject(vec3, args);
-        Py_DECREF(args);
+        PyObject* pyVec = Vec3_to_PyVec3(v);
         PyList_SET_ITEM(pyList, i, pyVec);
     }
     $result = pyList;
@@ -260,52 +462,21 @@ int Py_SequenceToVecDouble(PyObject* obj, std::vector<double>& out) {
 %typemap(argout) const std::vector<Vec3>& {
 }
 
-/* Convert python tuple to C++ Vec3 object*/
-%typemap(typecheck) Vec3 {
-    // typemap -- %typemap(typecheck) Vec3
-    $1 = (PySequence_Length($input) >= 3 ? 1 : 0);
+
+%typemap(out, fragment="Vec3_to_PyVec3") Vec3 {
+    $result = Vec3_to_PyVec3(*$1);
 }
 
 
-%typemap(typecheck) const Vec3& {
-    // typemap -- %typemap(typecheck) Vec3
-    $1 = (PySequence_Length($input) >= 3 ? 1 : 0);
-}
-
-
-%typemap(out) Vec3 {
-    PyObject* mm = PyImport_AddModule("simtk.openmm");
-    PyObject* vec3 = PyObject_GetAttrString(mm, "Vec3");
-    PyObject* args = Py_BuildValue("(d,d,d)", ($1)[0], ($1)[1], ($1)[2]);
-    $result = PyObject_CallObject(vec3, args);
-    Py_DECREF(args);
-}
-
-
-%typemap(out) const Vec3& {
-    PyObject* mm = PyImport_AddModule("simtk.openmm");
-    PyObject* vec3 = PyObject_GetAttrString(mm, "Vec3");
-    PyObject* args = Py_BuildValue("(d,d,d)", (*$1)[0], (*$1)[1], (*$1)[2]);
-    $result = PyObject_CallObject(vec3, args);
-    Py_DECREF(args);
+%typemap(out, fragment="Vec3_to_PyVec3") const Vec3& {
+    $result = Vec3_to_PyVec3(*$1);
 }
 
 /* Convert C++ (Vec3&, Vec3&, Vec3&) object to python tuple or tuples */
-%typemap(argout) (Vec3& a, Vec3& b, Vec3& c) {
-    // %typemap(argout) (Vec3& a, Vec3& b, Vec3& c)
-    PyObject* mm = PyImport_AddModule("simtk.openmm");
-    PyObject* vec3 = PyObject_GetAttrString(mm, "Vec3");
-    PyObject* args1 = Py_BuildValue("(d,d,d)", (*$1)[0], (*$1)[1], (*$1)[2]);
-    PyObject* args2 = Py_BuildValue("(d,d,d)", (*$2)[0], (*$2)[1], (*$2)[2]);
-    PyObject* args3 = Py_BuildValue("(d,d,d)", (*$3)[0], (*$3)[1], (*$3)[2]);
-    PyObject* pyVec1 = PyObject_CallObject(vec3, args1);
-    PyObject* pyVec2 = PyObject_CallObject(vec3, args2);
-    PyObject* pyVec3 = PyObject_CallObject(vec3, args3);
-    Py_DECREF(args1);
-    Py_DECREF(args2);
-    Py_DECREF(args3);
-    Py_DECREF(mm);
-    Py_DECREF(vec3);
+%typemap(argout, fragment="Vec3_to_PyVec3") (Vec3& a, Vec3& b, Vec3& c) {
+    PyObject* pyVec1 = Vec3_to_PyVec3(*$1);
+    PyObject* pyVec2 = Vec3_to_PyVec3(*$2);
+    PyObject* pyVec3 = Vec3_to_PyVec3(*$3);
     PyObject *o, *o2, *o3;
     o = Py_BuildValue("[N, N, N]", pyVec1, pyVec2, pyVec3);
     if ((!$result) || ($result == Py_None)) {

@@ -104,12 +104,14 @@ class ForceField(object):
     def __init__(self, *files):
         """Load one or more XML files and create a ForceField object based on them.
 
-        Parameters:
-         - files (list) A list of XML files defining the force field.  Each entry may
-           be an absolute file path, a path relative to the current working
-           directory, a path relative to this module's data subdirectory
-           (for built in force fields), or an open file-like object with a
-           read() method from which the forcefield XML data can be loaded.
+        Parameters
+        ----------
+        files : list
+            A list of XML files defining the force field.  Each entry may
+            be an absolute file path, a path relative to the current working
+            directory, a path relative to this module's data subdirectory
+            (for built in force fields), or an open file-like object with a
+            read() method from which the forcefield XML data can be loaded.
         """
         self._atomTypes = {}
         self._templates = {}
@@ -117,24 +119,39 @@ class ForceField(object):
         self._atomClasses = {'':set()}
         self._forces = []
         self._scripts = []
+        self._templateGenerators = []
         for file in files:
             self.loadFile(file)
 
     def loadFile(self, file):
-        """Load an XML file and add the definitions from it to this FieldField.
+        """Load an XML file and add the definitions from it to this ForceField.
 
-        Parameters:
-         - file (string or file) An XML file containing force field definitions.  It may
-           be either an absolute file path, a path relative to the current working
-           directory, a path relative to this module's data subdirectory
-           (for built in force fields), or an open file-like object with a
-           read() method from which the forcefield XML data can be loaded.
+        Parameters
+        ----------
+        file : string or file
+            An XML file containing force field definitions.  It may be either an
+            absolute file path, a path relative to the current working
+            directory, a path relative to this module's data subdirectory (for
+            built in force fields), or an open file-like object with a read()
+            method from which the forcefield XML data can be loaded.
         """
         try:
             # this handles either filenames or open file-like objects
             tree = etree.parse(file)
         except IOError:
             tree = etree.parse(os.path.join(os.path.dirname(__file__), 'data', file))
+        except Exception as e:
+            # Fail with an error message about which file could not be read.
+            # TODO: Also handle case where fallback to 'data' directory encounters problems,
+            # but this is much less worrisome because we control those files.
+            msg  = str(e) + '\n'
+            if hasattr(file, 'name'):
+                filename = file.name
+            else:
+                filename = str(file)
+            msg += "ForceField.loadFile() encountered an error reading file '%s'\n" % filename
+            raise Exception(msg)
+
         root = tree.getroot()
 
         # Load the atom types.
@@ -149,16 +166,30 @@ class ForceField(object):
             for residue in root.find('Residues').findall('Residue'):
                 resName = residue.attrib['name']
                 template = ForceField._TemplateData(resName)
+                atomIndices = {}
                 for atom in residue.findall('Atom'):
-                    template.atoms.append(ForceField._TemplateAtomData(atom.attrib['name'], atom.attrib['type'], self._atomTypes[atom.attrib['type']][2]))
+                    params = {}
+                    for key in atom.attrib:
+                        if key not in ('name', 'type'):
+                            params[key] = _convertParameterToNumber(atom.attrib[key])
+                    atomName = atom.attrib['name']
+                    if atomName in atomIndices:
+                        raise ValueError('Residue '+resName+' contains multiple atoms named '+atomName)
+                    atomIndices[atomName] = len(template.atoms)
+                    typeName = atom.attrib['type']
+                    template.atoms.append(ForceField._TemplateAtomData(atomName, typeName, self._atomTypes[typeName].element, params))
                 for site in residue.findall('VirtualSite'):
-                    template.virtualSites.append(ForceField._VirtualSiteData(site))
+                    template.virtualSites.append(ForceField._VirtualSiteData(site, atomIndices))
                 for bond in residue.findall('Bond'):
-                    template.addBond(int(bond.attrib['from']), int(bond.attrib['to']))
+                    if 'atomName1' in bond.attrib:
+                        template.addBondByName(bond.attrib['atomName1'], bond.attrib['atomName2'])
+                    else:
+                        template.addBond(int(bond.attrib['from']), int(bond.attrib['to']))
                 for bond in residue.findall('ExternalBond'):
-                    b = int(bond.attrib['from'])
-                    template.externalBonds.append(b)
-                    template.atoms[b].externalBonds += 1
+                    if 'atomName' in bond.attrib:
+                        template.addExternalBondByName(bond.attrib['atomName'])
+                    else:
+                        template.addExternalBond(int(bond.attrib['from']))
                 self.registerResidueTemplate(template)
 
         # Load force definitions
@@ -192,7 +223,7 @@ class ForceField(object):
             element = parameters['element']
             if not isinstance(element, elem.Element):
                 element = elem.get_by_symbol(element)
-        self._atomTypes[name] = (atomClass, mass, element)
+        self._atomTypes[name] = ForceField._AtomType(name, atomClass, mass, element)
         if atomClass in self._atomClasses:
             typeSet = self._atomClasses[atomClass]
         else:
@@ -214,8 +245,66 @@ class ForceField(object):
         """Register a new script to be executed after building the System."""
         self._scripts.append(script)
 
+    def registerTemplateGenerator(self, generator):
+        """Register a residue template generator that can be used to parameterize residues that do not match existing forcefield templates.
+
+        This functionality can be used to add handlers to parameterize small molecules or unnatural/modified residues.
+
+        .. CAUTION:: This method is experimental, and its API is subject to change.
+
+        Parameters
+        ----------
+        generator : function
+            A function that will be called when a residue is encountered that does not match an existing forcefield template.
+
+        When a residue without a template is encountered, the `generator` function is called with:
+
+        ::
+           success = generator(forcefield, residue)
+        ```
+
+        where `forcefield` is the calling `ForceField` object and `residue` is a simtk.openmm.app.topology.Residue object.
+
+        `generator` must conform to the following API:
+        ::
+          Parameters
+           ----------
+           forcefield : simtk.openmm.app.ForceField
+               The ForceField object to which residue templates and/or parameters are to be added.
+           residue : simtk.openmm.app.Topology.Residue
+               The residue topology for which a template is to be generated.
+
+           Returns
+           -------
+           success : bool
+               If the generator is able to successfully parameterize the residue, `True` is returned.
+               If the generator cannot parameterize the residue, it should return `False` and not modify `forcefield`.
+
+           The generator should either register a residue template directly with `forcefield.registerResidueTemplate(template)`
+           or it should call `forcefield.loadFile(file)` to load residue definitions from an ffxml file.
+
+           It can also use the `ForceField` programmatic API to add additional atom types (via `forcefield.registerAtomType(parameters)`)
+           or additional parameters.
+
+        """
+        self._templateGenerators.append(generator)
+
     def _findAtomTypes(self, attrib, num):
-        """Parse the attributes on an XML tag to find the set of atom types for each atom it involves."""
+        """Parse the attributes on an XML tag to find the set of atom types for each atom it involves.
+
+        Parameters
+        ----------
+        attrib : dict of attributes
+            The dictionary of attributes for an XML parameter tag.
+        num : int
+            The number of atom specifiers (e.g. 'class1' through 'class4') to extract.
+
+        Returns
+        -------
+        types : list
+            A list of atom types that match.
+
+        """
         types = []
         for i in range(num):
             if num == 1:
@@ -256,6 +345,7 @@ class ForceField(object):
         """Inner class used to encapsulate data about the system being created."""
         def __init__(self):
             self.atomType = {}
+            self.atomParameters = {}
             self.atoms = []
             self.excludeAtomWith = []
             self.virtualSites = {}
@@ -265,6 +355,17 @@ class ForceField(object):
             self.impropers = []
             self.atomBonds = []
             self.isAngleConstrained = []
+            self.constraints = {}
+
+        def addConstraint(self, system, atom1, atom2, distance):
+            """Add a constraint to the system, avoiding duplicate constraints."""
+            key = (min(atom1, atom2), max(atom1, atom2))
+            if key in self.constraints:
+                if self.constraints(key) != distance:
+                    raise ValueError('Two constraints were specified between atoms %d and %d with different distances' % (atom1, atom2))
+            else:
+                self.constraints[key] = distance
+                system.addConstraint(atom1, atom2, distance)
 
     class _TemplateData:
         """Inner class used to encapsulate data about a residue template definition."""
@@ -275,17 +376,46 @@ class ForceField(object):
             self.bonds = []
             self.externalBonds = []
 
+        def getAtomIndexByName(self, atom_name):
+            """Look up an atom index by atom name, providing a helpful error message if not found."""
+            for (index, atom) in enumerate(self.atoms):
+                if atom.name == atom_name:
+                    return index
+
+            # Provide a helpful error message if atom name not found.
+            msg =  "Atom name '%s' not found in residue template '%s'.\n" % (atom_name, self.name)
+            msg += "Possible atom names are: %s" % str(atomIndices.keys())
+            raise ValueError(msg)
+
         def addBond(self, atom1, atom2):
+            """Add a bond between two atoms in a template given their indices in the template."""
             self.bonds.append((atom1, atom2))
             self.atoms[atom1].bondedTo.append(atom2)
             self.atoms[atom2].bondedTo.append(atom1)
 
+        def addBondByName(self, atom1_name, atom2_name):
+            """Add a bond between two atoms in a template given their atom names."""
+            atom1 = self.getAtomIndexByName(atom1_name)
+            atom2 = self.getAtomIndexByName(atom2_name)
+            self.addBond(atom1, atom2)
+
+        def addExternalBond(self, atom_index):
+            """Designate that an atom in a residue template has an external bond, using atom index within template."""
+            self.externalBonds.append(atom_index)
+            self.atoms[atom_index].externalBonds += 1
+
+        def addExternalBondByName(self, atom_name):
+            """Designate that an atom in a residue template has an external bond, using atom name within template."""
+            atom = self.getAtomIndexByName(atom_name)
+            self.addExternalBond(atom)
+
     class _TemplateAtomData:
         """Inner class used to encapsulate data about an atom in a residue template definition."""
-        def __init__(self, name, type, element):
+        def __init__(self, name, type, element, parameters={}):
             self.name = name
             self.type = type
             self.element = element
+            self.parameters = parameters
             self.bondedTo = []
             self.externalBonds = 0
 
@@ -299,50 +429,180 @@ class ForceField(object):
 
     class _VirtualSiteData:
         """Inner class used to encapsulate data about a virtual site."""
-        def __init__(self, node):
+        def __init__(self, node, atomIndices):
             attrib = node.attrib
-            self.index = int(attrib['index'])
             self.type = attrib['type']
             if self.type == 'average2':
-                self.atoms = [int(attrib['atom1']), int(attrib['atom2'])]
+                numAtoms = 2
                 self.weights = [float(attrib['weight1']), float(attrib['weight2'])]
             elif self.type == 'average3':
-                self.atoms = [int(attrib['atom1']), int(attrib['atom2']), int(attrib['atom3'])]
+                numAtoms = 3
                 self.weights = [float(attrib['weight1']), float(attrib['weight2']), float(attrib['weight3'])]
             elif self.type == 'outOfPlane':
-                self.atoms = [int(attrib['atom1']), int(attrib['atom2']), int(attrib['atom3'])]
+                numAtoms = 3
                 self.weights = [float(attrib['weight12']), float(attrib['weight13']), float(attrib['weightCross'])]
             elif self.type == 'localCoords':
-                self.atoms = [int(attrib['atom1']), int(attrib['atom2']), int(attrib['atom3'])]
+                numAtoms = 3
                 self.originWeights = [float(attrib['wo1']), float(attrib['wo2']), float(attrib['wo3'])]
                 self.xWeights = [float(attrib['wx1']), float(attrib['wx2']), float(attrib['wx3'])]
                 self.yWeights = [float(attrib['wy1']), float(attrib['wy2']), float(attrib['wy3'])]
                 self.localPos = [float(attrib['p1']), float(attrib['p2']), float(attrib['p3'])]
             else:
                 raise ValueError('Unknown virtual site type: %s' % self.type)
+            if 'siteName' in attrib:
+                self.index = atomIndices[attrib['siteName']]
+                self.atoms = [atomIndices[attrib['atomName%d'%(i+1)]] for i in range(numAtoms)]
+            else:
+                self.index = int(attrib['index'])
+                self.atoms = [int(attrib['atom%d'%(i+1)]) for i in range(numAtoms)]
             if 'excludeWith' in attrib:
                 self.excludeWith = int(attrib['excludeWith'])
             else:
                 self.excludeWith = self.atoms[0]
 
+    class _AtomType:
+        """Inner class used to record atom types and associated properties."""
+        def __init__(self, name, atomClass, mass, element):
+            self.name = name
+            self.atomClass = atomClass
+            self.mass = mass
+            self.element = element
+
+    class _AtomTypeParameters:
+        """Inner class used to record parameter values for atom types."""
+        def __init__(self, forcefield, forceName, atomTag, paramNames):
+            self.ff = forcefield
+            self.forceName = forceName
+            self.atomTag = atomTag
+            self.paramNames = paramNames
+            self.paramsForType = {}
+            self.extraParamsForType = {}
+
+        def registerAtom(self, parameters, expectedParams=None):
+            if expectedParams is None:
+                expectedParams = self.paramNames
+            types = self.ff._findAtomTypes(parameters, 1)
+            if None not in types:
+                values = {}
+                extraValues = {}
+                for key in parameters:
+                    if key in expectedParams:
+                        values[key] = _convertParameterToNumber(parameters[key])
+                    else:
+                        extraValues[key] = parameters[key]
+                if len(values) < len(expectedParams):
+                    for key in expectedParams:
+                        if key not in values:
+                            raise ValueError('%s: No value specified for "%s"' % (self.forceName, key))
+                for t in types[0]:
+                    self.paramsForType[t] = values
+                    self.extraParamsForType[t] = extraValues
+
+        def parseDefinitions(self, element):
+            """"Load the definitions from an XML element."""
+            expectedParams = list(self.paramNames)
+            excludedParams = [node.attrib['name'] for node in element.findall('UseAttributeFromResidue')]
+            for param in excludedParams:
+                if param not in expectedParams:
+                    raise ValueError('%s: <UseAttributeFromResidue> specified an invalid attribute: %s' % (self.forceName, param))
+                expectedParams.remove(param)
+            for atom in element.findall(self.atomTag):
+                for param in excludedParams:
+                    if param in atom.attrib:
+                        raise ValueError('%s: The attribute "%s" appeared in both <%s> and <UseAttributeFromResidue> tags' % (self.forceName, param, self.atomTag))
+                self.registerAtom(atom.attrib, expectedParams)
+
+        def getAtomParameters(self, atom, data):
+            """Get the parameter values for a particular atom."""
+            t = data.atomType[atom]
+            p = data.atomParameters[atom]
+            if t in self.paramsForType:
+                values = self.paramsForType[t]
+                result = [None]*len(self.paramNames)
+                for i, name in enumerate(self.paramNames):
+                    if name in values:
+                        result[i] = values[name]
+                    elif name in p:
+                        result[i] = p[name]
+                    else:
+                        raise ValueError('%s: No value specified for "%s"' % (self.forceName, name))
+                return result
+            else:
+                raise ValueError('%s: No parameters defined for atom type %s' % (self.forceName, t))
+
+        def getExtraParameters(self, atom, data):
+            """Get extra parameter values for an atom that appeared in the <Atom> tag but were not included in paramNames."""
+            t = data.atomType[atom]
+            if t in self.paramsForType:
+                return self.extraParamsForType[t]
+            else:
+                raise ValueError('%s: No parameters defined for atom type %s' % (self.forceName, t))
+
+
+    def _getResidueTemplateMatches(self, res, bondedToAtom):
+        """Return the residue template matches, or None if none are found.
+
+        Parameters
+        ----------
+        res : Topology.Residue
+            The residue for which template matches are to be retrieved.
+        bondedToAtom : list of set of int
+            bondedToAtom[i] is the set of atoms bonded to atom index i
+
+        Returns
+        -------
+        template : _ForceFieldTemplate
+            The matching forcefield residue template, or None if no matches are found.
+        matches : list
+            a list specifying which atom of the template each atom of the residue
+            corresponds to, or None if it does not match the template
+
+        """
+        template = None
+        matches = None
+        signature = _createResidueSignature([atom.element for atom in res.atoms()])
+        if signature in self._templateSignatures:
+            for t in self._templateSignatures[signature]:
+                matches = _matchResidue(res, t, bondedToAtom)
+                if matches is not None:
+                    template = t
+                    break
+        return [template, matches]
+
     def createSystem(self, topology, nonbondedMethod=NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
                      constraints=None, rigidWater=True, removeCMMotion=True, hydrogenMass=None, **args):
         """Construct an OpenMM System representing a Topology with this force field.
 
-        Parameters:
-         - topology (Topology) The Topology for which to create a System
-         - nonbondedMethod (object=NoCutoff) The method to use for nonbonded interactions.  Allowed values are
-           NoCutoff, CutoffNonPeriodic, CutoffPeriodic, Ewald, or PME.
-         - nonbondedCutoff (distance=1*nanometer) The cutoff distance to use for nonbonded interactions
-         - constraints (object=None) Specifies which bonds and angles should be implemented with constraints.
-           Allowed values are None, HBonds, AllBonds, or HAngles.
-         - rigidWater (boolean=True) If true, water molecules will be fully rigid regardless of the value passed for the constraints argument
-         - removeCMMotion (boolean=True) If true, a CMMotionRemover will be added to the System
-         - hydrogenMass (mass=None) The mass to use for hydrogen atoms bound to heavy atoms.  Any mass added to a hydrogen is
-           subtracted from the heavy atom to keep their total mass the same.
-         - args Arbitrary additional keyword arguments may also be specified.  This allows extra parameters to be specified that are specific to
-           particular force fields.
-        Returns: the newly created System
+        Parameters
+        ----------
+        topology : Topology
+            The Topology for which to create a System
+        nonbondedMethod : object=NoCutoff
+            The method to use for nonbonded interactions.  Allowed values are
+            NoCutoff, CutoffNonPeriodic, CutoffPeriodic, Ewald, or PME.
+        nonbondedCutoff : distance=1*nanometer
+            The cutoff distance to use for nonbonded interactions
+        constraints : object=None
+            Specifies which bonds and angles should be implemented with constraints.
+            Allowed values are None, HBonds, AllBonds, or HAngles.
+        rigidWater : boolean=True
+            If true, water molecules will be fully rigid regardless of the value
+            passed for the constraints argument
+        removeCMMotion : boolean=True
+            If true, a CMMotionRemover will be added to the System
+        hydrogenMass : mass=None
+            The mass to use for hydrogen atoms bound to heavy atoms.  Any mass
+            added to a hydrogen is subtracted from the heavy atom to keep
+            their total mass the same.
+        args
+             Arbitrary additional keyword arguments may also be specified.
+             This allows extra parameters to be specified that are specific to
+             particular force fields.
+
+        Returns
+        -------
+        system
+            the newly created System
         """
         data = ForceField._SystemData()
         data.atoms = list(topology.atoms())
@@ -368,23 +628,34 @@ class ForceField(object):
             data.atomBonds[bond.atom2].append(i)
 
         # Find the template matching each residue and assign atom types.
+        # If no templates are found, attempt to use residue template generators to create new templates (and potentially atom types/parameters).
 
         for chain in topology.chains():
             for res in chain.residues():
-                template = None
-                matches = None
-                signature = _createResidueSignature([atom.element for atom in res.atoms()])
-                if signature in self._templateSignatures:
-                    for t in self._templateSignatures[signature]:
-                        matches = _matchResidue(res, t, bondedToAtom)
-                        if matches is not None:
-                            template = t
-                            break
+                # Attempt to match one of the existing templates.
+                [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom)
+                if matches is None:
+                    # No existing templates match.  Try any registered residue template generators.
+                    for generator in self._templateGenerators:
+                        if generator(self, res):
+                            # This generator has registered a new residue template that should match.
+                            [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom)
+                            if matches is None:
+                                # Something went wrong because the generated template does not match the residue signature.
+                                raise Exception('The residue handler %s indicated it had correctly parameterized residue %s, but the generated template did not match the residue signature.' % (generator.__class__.__name__, str(res)))
+                            else:
+                                # We successfully generated a residue template.  Break out of the for loop.
+                                break
+
+                # Raise an exception if we have found no templates that match.
                 if matches is None:
                     raise ValueError('No template found for residue %d (%s).  %s' % (res.index+1, res.name, _findMatchErrors(self, res)))
+
+                # Store parameters for the matched residue template.
                 matchAtoms = dict(zip(matches, res.atoms()))
                 for atom, match in zip(res.atoms(), matches):
                     data.atomType[atom] = template.atoms[match].type
+                    data.atomParameters[atom] = template.atoms[match].parameters
                     for site in template.virtualSites:
                         if match == site.index:
                             data.virtualSites[atom] = (site, [matchAtoms[i].index for i in site.atoms], matchAtoms[site.excludeWith].index)
@@ -393,9 +664,22 @@ class ForceField(object):
 
         sys = mm.System()
         for atom in topology.atoms():
-            sys.addParticle(self._atomTypes[data.atomType[atom]][1])
+            # Look up the atom type name, returning a helpful error message if it cannot be found.
+            if atom not in data.atomType:
+                raise Exception("Could not identify atom type for atom '%s'." % str(atom))
+            typename = data.atomType[atom]
 
-        # Adjust masses.
+            # Look up the type name in the list of registered atom types, returning a helpful error message if it cannot be found.
+            if typename not in self._atomTypes:
+                msg  = "Could not find typename '%s' for atom '%s' in list of known atom types.\n" % (typename, str(atom))
+                msg += "Known atom types are: %s" % str(self._atomTypes.keys())
+                raise Exception(msg)
+
+            # Add the particle to the OpenMM system.
+            mass = self._atomTypes[typename].mass
+            sys.addParticle(mass)
+
+        # Adjust hydroten masses if requested.
 
         if hydrogenMass is not None:
             for atom1, atom2 in topology.bonds():
@@ -411,7 +695,7 @@ class ForceField(object):
         boxVectors = topology.getPeriodicBoxVectors()
         if boxVectors is not None:
             sys.setDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2])
-        elif nonbondedMethod is not NoCutoff and nonbondedMethod is not CutoffNonPeriodic:
+        elif nonbondedMethod not in [NoCutoff, CutoffNonPeriodic]:
             raise ValueError('Requested periodic boundary conditions for a Topology that does not specify periodic box dimensions')
 
         # Make a list of all unique angles
@@ -525,7 +809,7 @@ class ForceField(object):
         if removeCMMotion:
             sys.addForce(mm.CMMotionRemover())
 
-        # Let generators do postprocessing
+        # Let force generators do postprocessing
 
         for force in self._forces:
             if 'postprocessSystem' in dir(force):
@@ -569,12 +853,20 @@ def _createResidueSignature(elements):
 def _matchResidue(res, template, bondedToAtom):
     """Determine whether a residue matches a template and return a list of corresponding atoms.
 
-    Parameters:
-     - res (Residue) The residue to check
-     - template (_TemplateData) The template to compare it to
-     - bondedToAtom (list) Enumerates which other atoms each atom is bonded to
-    Returns: a list specifying which atom of the template each atom of the residue corresponds to,
-    or None if it does not match the template
+    Parameters
+    ----------
+    res : Residue
+        The residue to check
+    template : _TemplateData
+        The template to compare it to
+    bondedToAtom : list
+        Enumerates which other atoms each atom is bonded to
+
+    Returns
+    -------
+    list
+        a list specifying which atom of the template each atom of the residue
+        corresponds to, or None if it does not match the template
     """
     atoms = list(res.atoms())
     if len(atoms) != len(template.atoms):
@@ -645,7 +937,7 @@ def _findAtomMatches(atoms, template, bondedTo, externalBonds, matches, hasMatch
 def _findMatchErrors(forcefield, res):
     """Try to guess why a residue failed to match any template and return an error message."""
     residueCounts = _countResidueAtoms([atom.element for atom in res.atoms()])
-    numResidueAtoms = sum(residueCounts.itervalues())
+    numResidueAtoms = sum(residueCounts.values())
     numResidueHeavyAtoms = sum(residueCounts[element] for element in residueCounts if element not in (None, elem.hydrogen))
 
     # Loop over templates and see how closely each one might match.
@@ -664,7 +956,7 @@ def _findMatchErrors(forcefield, res):
 
         # If there are too many missing atoms, discard this template.
 
-        numTemplateAtoms = sum(templateCounts.itervalues())
+        numTemplateAtoms = sum(templateCounts.values())
         numTemplateHeavyAtoms = sum(templateCounts[element] for element in templateCounts if element not in (None, elem.hydrogen))
         if numTemplateAtoms > numBestMatchAtoms:
             continue
@@ -751,7 +1043,7 @@ class HarmonicBondGenerator:
                 if (type1 in types1 and type2 in types2) or (type1 in types2 and type2 in types1):
                     bond.length = self.length[i]
                     if bond.isConstrained:
-                        sys.addConstraint(bond.atom1, bond.atom2, self.length[i])
+                        data.addConstraint(sys, bond.atom1, bond.atom2, self.length[i])
                     elif self.k[i] != 0:
                         force.addBond(bond.atom1, bond.atom2, self.length[i], self.k[i])
                     break
@@ -824,7 +1116,7 @@ class HarmonicAngleGenerator:
                             l2 = data.bonds[bond2].length
                             if l1 is not None and l2 is not None:
                                 length = sqrt(l1*l1 + l2*l2 - 2*l1*l2*cos(self.angle[i]))
-                                sys.addConstraint(angle[0], angle[2], length)
+                                data.addConstraint(sys, angle[0], angle[2], length)
                     elif self.k[i] != 0:
                         force.addAngle(angle[0], angle[1], angle[2], self.angle[i], self.k[i])
                     break
@@ -1138,14 +1430,10 @@ class NonbondedGenerator:
         self.ff = forcefield
         self.coulomb14scale = coulomb14scale
         self.lj14scale = lj14scale
-        self.typeMap = {}
+        self.params = ForceField._AtomTypeParameters(forcefield, 'NonbondedForce', 'Atom', ('charge', 'sigma', 'epsilon'))
 
     def registerAtom(self, parameters):
-        types = self.ff._findAtomTypes(parameters, 1)
-        if None not in types:
-            values = (_convertParameterToNumber(parameters['charge']), _convertParameterToNumber(parameters['sigma']), _convertParameterToNumber(parameters['epsilon']))
-            for t in types[0]:
-                self.typeMap[t] = values
+        self.params.registerAtom(parameters)
 
     @staticmethod
     def parseElement(element, ff):
@@ -1158,8 +1446,7 @@ class NonbondedGenerator:
             generator = existing[0]
             if generator.coulomb14scale != float(element.attrib['coulomb14scale']) or generator.lj14scale != float(element.attrib['lj14scale']):
                 raise ValueError('Found multiple NonbondedForce tags with different 1-4 scales')
-        for atom in element.findall('Atom'):
-            generator.registerAtom(atom.attrib)
+        generator.params.parseDefinitions(element)
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         methodMap = {NoCutoff:mm.NonbondedForce.NoCutoff,
@@ -1171,12 +1458,8 @@ class NonbondedGenerator:
             raise ValueError('Illegal nonbonded method for NonbondedForce')
         force = mm.NonbondedForce()
         for atom in data.atoms:
-            t = data.atomType[atom]
-            if t in self.typeMap:
-                values = self.typeMap[t]
-                force.addParticle(values[0], values[1], values[2])
-            else:
-                raise ValueError('No nonbonded parameters defined for atom type '+t)
+            values = self.params.getAtomParameters(atom, data)
+            force.addParticle(values[0], values[1], values[2])
         force.setNonbondedMethod(methodMap[nonbondedMethod])
         force.setCutoffDistance(nonbondedCutoff)
         if 'ewaldErrorTolerance' in args:
@@ -1225,14 +1508,10 @@ class GBSAOBCGenerator:
 
     def __init__(self, forcefield):
         self.ff = forcefield
-        self.typeMap = {}
+        self.params = ForceField._AtomTypeParameters(forcefield, 'GBSAOBCForce', 'Atom', ('charge', 'radius', 'scale'))
 
     def registerAtom(self, parameters):
-        types = self.ff._findAtomTypes(parameters, 1)
-        if None not in types:
-            values = (_convertParameterToNumber(parameters['charge']), _convertParameterToNumber(parameters['radius']), _convertParameterToNumber(parameters['scale']))
-            for t in types[0]:
-                self.typeMap[t] = values
+        self.params.registerAtom(parameters)
 
     @staticmethod
     def parseElement(element, ff):
@@ -1243,8 +1522,7 @@ class GBSAOBCGenerator:
         else:
             # Multiple <GBSAOBCForce> tags were found, probably in different files.  Simply add more types to the existing one.
             generator = existing[0]
-        for atom in element.findall('Atom'):
-            generator.registerAtom(atom.attrib)
+        generator.params.parseDefinitions(element)
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         methodMap = {NoCutoff:mm.NonbondedForce.NoCutoff,
@@ -1254,12 +1532,8 @@ class GBSAOBCGenerator:
             raise ValueError('Illegal nonbonded method for GBSAOBCForce')
         force = mm.GBSAOBCForce()
         for atom in data.atoms:
-            t = data.atomType[atom]
-            if t in self.typeMap:
-                values = self.typeMap[t]
-                force.addParticle(values[0], values[1], values[2])
-            else:
-                raise ValueError('No GBSAOBC parameters defined for atom type '+t)
+            values = self.params.getAtomParameters(atom, data)
+            force.addParticle(values[0], values[1], values[2])
         force.setNonbondedMethod(methodMap[nonbondedMethod])
         force.setCutoffDistance(nonbondedCutoff)
         if 'soluteDielectric' in args:
@@ -1277,92 +1551,6 @@ class GBSAOBCGenerator:
 
 parsers["GBSAOBCForce"] = GBSAOBCGenerator.parseElement
 
-
-## @private
-class GBVIGenerator:
-
-    """A GBVIGenerator constructs a GBVIForce."""
-
-    def __init__(self,ff):
-        self.ff = ff
-        self.fixedParameters = {}
-        self.fixedParameters['soluteDielectric'] = 1.0
-        self.fixedParameters['solventDielectric'] = 78.3
-        self.fixedParameters['scalingMethod'] = 1
-        self.fixedParameters['quinticUpperBornRadiusLimit'] = 5.0
-        self.fixedParameters['quinticLowerLimitFactor'] = 0.8
-
-        self.typeMap = {}
-
-    @staticmethod
-    def parseElement(element, ff):
-        generator = GBVIGenerator(ff)
-        for key in generator.fixedParameters.iterkeys():
-            if (key in element.attrib):
-                generator.fixedParameters[key] = float(element.attrib[key])
-
-        ff.registerGenerator(generator)
-        for atom in element.findall('Atom'):
-            types = ff._findAtomTypes(atom.attrib, 1)
-            if None not in types:
-                values = (float(atom.attrib['charge']), float(atom.attrib['radius']), float(atom.attrib['gamma']))
-                for t in types[0]:
-                    generator.typeMap[t] = values
-
-    def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
-
-        methodMap = {NoCutoff:mm.NonbondedForce.NoCutoff,
-                     CutoffNonPeriodic:mm.NonbondedForce.CutoffNonPeriodic,
-                     CutoffPeriodic:mm.NonbondedForce.CutoffPeriodic}
-
-        if nonbondedMethod not in methodMap:
-            raise ValueError('Illegal nonbonded method for GB/VI Force')
-
-        # add particles
-
-        force = mm.GBVIForce()
-        for atom in data.atoms:
-            t = data.atomType[atom]
-            if t in self.typeMap:
-                values = self.typeMap[t]
-                force.addParticle(values[0], values[1], values[2])
-            else:
-                raise ValueError('No GB/VI parameters defined for atom type '+t)
-
-        # get HarmonicBond generator -- exit if not found
-
-        hbGenerator = 0
-        for generator in self.ff._forces:
-            if (generator.__class__.__name__ == 'HarmonicBondGenerator'):
-               hbGenerator = generator
-               break
-
-        if (hbGenerator == 0):
-            raise ValueError('HarmonicBondGenerator not found.')
-
-        # add bonds
-
-        for bond in data.bonds:
-            type1 = data.atomType[data.atoms[bond.atom1]]
-            type2 = data.atomType[data.atoms[bond.atom2]]
-            for i in range(len(hbGenerator.types1)):
-                types1 = hbGenerator.types1[i]
-                types2 = hbGenerator.types2[i]
-                if (type1 in types1 and type2 in types2) or (type1 in types2 and type2 in types1):
-                    #bond.length = hbGenerator.length[i]
-                    force.addBond(bond.atom1, bond.atom2, hbGenerator.length[i])
-
-        force.setNonbondedMethod(methodMap[nonbondedMethod])
-        force.setCutoffDistance(nonbondedCutoff)
-        force.setSolventDielectric(self.fixedParameters['solventDielectric'])
-        force.setSoluteDielectric(self.fixedParameters['soluteDielectric'])
-        force.setBornRadiusScalingMethod(self.fixedParameters['scalingMethod'])
-        force.setQuinticLowerLimitFactor(self.fixedParameters['quinticLowerLimitFactor'])
-        force.setQuinticUpperBornRadiusLimit(self.fixedParameters['quinticUpperBornRadiusLimit'])
-
-        sys.addForce(force)
-
-parsers["GBVIForce"] = GBVIGenerator.parseElement
 
 ## @private
 class CustomBondGenerator:
@@ -1577,7 +1765,6 @@ class CustomNonbondedGenerator:
         self.ff = forcefield
         self.energy = energy
         self.bondCutoff = bondCutoff
-        self.typeMap = {}
         self.globalParams = {}
         self.perParticleParams = []
         self.functions = []
@@ -1590,12 +1777,8 @@ class CustomNonbondedGenerator:
             generator.globalParams[param.attrib['name']] = float(param.attrib['defaultValue'])
         for param in element.findall('PerParticleParameter'):
             generator.perParticleParams.append(param.attrib['name'])
-        for atom in element.findall('Atom'):
-            types = ff._findAtomTypes(atom.attrib, 1)
-            if None not in types:
-                values = [float(atom.attrib[param]) for param in generator.perParticleParams]
-                for t in types[0]:
-                    generator.typeMap[t] = values
+        generator.params = ForceField._AtomTypeParameters(ff, 'CustomNonbondedForce', 'Atom', generator.perParticleParams)
+        generator.params.parseDefinitions(element)
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         methodMap = {NoCutoff:mm.CustomNonbondedForce.NoCutoff,
@@ -1622,11 +1805,8 @@ class CustomNonbondedGenerator:
             elif type == 'Discrete3D':
                 force.addTabulatedFunction(name, mm.Discrete2DFunction(params['xsize'], params['ysize'], params['zsize'], values))
         for atom in data.atoms:
-            t = data.atomType[atom]
-            if t in self.typeMap:
-                force.addParticle(self.typeMap[t])
-            else:
-                raise ValueError('No CustomNonbonded parameters defined for atom type '+t)
+            values = self.params.getAtomParameters(atom, data)
+            force.addParticle(values)
         force.setNonbondedMethod(methodMap[nonbondedMethod])
         force.setCutoffDistance(nonbondedCutoff)
         sys.addForce(force)
@@ -1671,7 +1851,6 @@ class CustomGBGenerator:
 
     def __init__(self, forcefield):
         self.ff = forcefield
-        self.typeMap = {}
         self.globalParams = {}
         self.perParticleParams = []
         self.computedValues = []
@@ -1686,12 +1865,8 @@ class CustomGBGenerator:
             generator.globalParams[param.attrib['name']] = float(param.attrib['defaultValue'])
         for param in element.findall('PerParticleParameter'):
             generator.perParticleParams.append(param.attrib['name'])
-        for atom in element.findall('Atom'):
-            types = ff._findAtomTypes(atom.attrib, 1)
-            if None not in types:
-                values = [float(atom.attrib[param]) for param in generator.perParticleParams]
-                for t in types[0]:
-                    generator.typeMap[t] = values
+        generator.params = ForceField._AtomTypeParameters(ff, 'CustomGBForce', 'Atom', generator.perParticleParams)
+        generator.params.parseDefinitions(element)
         computationMap = {"SingleParticle" : mm.CustomGBForce.SingleParticle,
                           "ParticlePair" : mm.CustomGBForce.ParticlePair,
                           "ParticlePairNoExclusions" : mm.CustomGBForce.ParticlePairNoExclusions}
@@ -1742,11 +1917,8 @@ class CustomGBGenerator:
             elif type == 'Discrete3D':
                 force.addTabulatedFunction(name, mm.Discrete2DFunction(params['xsize'], params['ysize'], params['zsize'], values))
         for atom in data.atoms:
-            t = data.atomType[atom]
-            if t in self.typeMap:
-                force.addParticle(self.typeMap[t])
-            else:
-                raise ValueError('No CustomGB parameters defined for atom type '+t)
+            values = self.params.getAtomParameters(atom, data)
+            force.addParticle(values)
         force.setNonbondedMethod(methodMap[nonbondedMethod])
         force.setCutoffDistance(nonbondedCutoff)
         sys.addForce(force)
@@ -1764,7 +1936,6 @@ class CustomManyParticleGenerator:
         self.energy = energy
         self.permutationMode = permutationMode
         self.bondCutoff = bondCutoff
-        self.typeMap = {}
         self.globalParams = {}
         self.perParticleParams = []
         self.functions = []
@@ -1782,12 +1953,8 @@ class CustomManyParticleGenerator:
             generator.perParticleParams.append(param.attrib['name'])
         for param in element.findall('TypeFilter'):
             generator.typeFilters.append((int(param.attrib['index']), [int(x) for x in param.attrib['types'].split(',')]))
-        for atom in element.findall('Atom'):
-            types = ff._findAtomTypes(atom.attrib, 1)
-            if None not in types:
-                values = [float(atom.attrib[param]) for param in generator.perParticleParams]
-                for t in types[0]:
-                    generator.typeMap[t] = (values, int(atom.attrib['filterType']))
+        generator.params = ForceField._AtomTypeParameters(ff, 'CustomManyParticleForce', 'Atom', generator.perParticleParams)
+        generator.params.parseDefinitions(element)
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         methodMap = {NoCutoff:mm.CustomManyParticleForce.NoCutoff,
@@ -1817,12 +1984,9 @@ class CustomManyParticleGenerator:
             elif type == 'Discrete3D':
                 force.addTabulatedFunction(name, mm.Discrete2DFunction(params['xsize'], params['ysize'], params['zsize'], values))
         for atom in data.atoms:
-            t = data.atomType[atom]
-            if t in self.typeMap:
-                values = self.typeMap[t]
-                force.addParticle(values[0], values[1])
-            else:
-                raise ValueError('No CustomManyParticle parameters defined for atom type '+t)
+            values = self.params.getAtomParameters(atom, data)
+            type = int(self.params.getExtraParameters(atom, data)['filterType'])
+            force.addParticle(values, type)
         force.setNonbondedMethod(methodMap[nonbondedMethod])
         force.setCutoffDistance(nonbondedCutoff)
         sys.addForce(force)
@@ -1954,7 +2118,7 @@ class AmoebaBondGenerator:
                 if (type1 in types1 and type2 in types2) or (type1 in types2 and type2 in types1):
                     bond.length = self.length[i]
                     if bond.isConstrained:
-                        sys.addConstraint(bond.atom1, bond.atom2, self.length[i])
+                        data.addConstraint(sys, bond.atom1, bond.atom2, self.length[i])
                     elif self.k[i] != 0:
                         force.addBond(bond.atom1, bond.atom2, self.length[i], self.k[i])
                     break
@@ -1986,7 +2150,7 @@ def addAngleConstraint(angle, idealAngle, data, sys):
             l2 = data.bonds[bond2].length
             if l1 is not None and l2 is not None:
                 length = sqrt(l1*l1 + l2*l2 - 2*l1*l2*cos(idealAngle))
-                sys.addConstraint(angle[0], angle[2], length)
+                data.addConstraint(sys, angle[0], angle[2], length)
                 return
 
 #=============================================================================================
@@ -2620,7 +2784,7 @@ class AmoebaPiTorsionGenerator:
             atom1 = bond.atom1
             atom2 = bond.atom2
 
-            if (len(data.atomBonds[atom1]) == 3 and len(data.atomBonds[atom1]) == 3):
+            if (len(data.atomBonds[atom1]) == 3 and len(data.atomBonds[atom2]) == 3):
 
                 type1 = data.atomType[data.atoms[atom1]]
                 type2 = data.atomType[data.atoms[atom2]]
@@ -2905,7 +3069,7 @@ class AmoebaTorsionTorsionGenerator:
 
                                 # match in reverse order
 
-                                if (type5 in types1 and type4 in types2 and type3 in types3 and type2 in types4 and type1 in types5):
+                                elif (type5 in types1 and type4 in types2 and type3 in types3 and type2 in types4 and type1 in types5):
                                     chiralAtomIndex = self.getChiralAtomIndex(data, sys, ib, ic, id)
                                     force.addTorsionTorsion(ie, id, ic, ib, ia, chiralAtomIndex, self.gridIndex[i])
 
@@ -3083,8 +3247,6 @@ class AmoebaVdwGenerator:
         self.vdw14Scale = vdw14Scale
         self.vdw15Scale = vdw15Scale
 
-        self.typeMap = {}
-
     #=============================================================================================
 
     @staticmethod
@@ -3097,30 +3259,9 @@ class AmoebaVdwGenerator:
         generator = AmoebaVdwGenerator(element.attrib['type'], element.attrib['radiusrule'], element.attrib['radiustype'], element.attrib['radiussize'], element.attrib['epsilonrule'],
                                         float(element.attrib['vdw-13-scale']), float(element.attrib['vdw-14-scale']), float(element.attrib['vdw-15-scale']))
         forceField._forces.append(generator)
+        generator.params = ForceField._AtomTypeParameters(forceField, 'AmoebaVdwForce', 'Vdw', ('sigma', 'epsilon', 'reduction'))
+        generator.params.parseDefinitions(element)
         two_six = 1.122462048309372
-
-        # types[] = [ sigma, epsilon, reductionFactor, class ]
-        # sigma is modified based on radiustype and radiussize
-
-        for atom in element.findall('Vdw'):
-            types = forceField._findAtomTypes(atom.attrib, 1)
-            if None not in types:
-
-                values = [float(atom.attrib['sigma']), float(atom.attrib['epsilon']), float(atom.attrib['reduction'])]
-
-
-                if (generator.radiustype == 'SIGMA'):
-                    values[0] *= two_six
-
-                if (generator.radiussize == 'DIAMETER'):
-                    values[0] *= 0.5
-
-                for t in types[0]:
-                    generator.typeMap[t] = values
-
-            else:
-                outputString = "AmoebaVdwGenerator: error getting type: %s" % (atom.attrib['class'])
-                raise ValueError(outputString)
 
     #=============================================================================================
 
@@ -3199,28 +3340,25 @@ class AmoebaVdwGenerator:
             force = existing[0]
 
         # add particles to force
-        # throw error if particle type not available
 
+        sigmaScale = 1
+        if self.radiustype == 'SIGMA':
+            sigmaScale = 1.122462048309372
+        if self.radiussize == 'DIAMETER':
+            sigmaScale = 0.5
         for (i, atom) in enumerate(data.atoms):
-            t = data.atomType[atom]
-            if t in self.typeMap:
+            values = self.params.getAtomParameters(atom, data)
+            # ivIndex = index of bonded partner for hydrogens; otherwise ivIndex = particle index
 
-                values = self.typeMap[t]
+            ivIndex = i
+            if atom.element == elem.hydrogen and len(data.atomBonds[i]) == 1:
+                bondIndex = data.atomBonds[i][0]
+                if (data.bonds[bondIndex].atom1 == i):
+                    ivIndex = data.bonds[bondIndex].atom2
+                else:
+                    ivIndex = data.bonds[bondIndex].atom1
 
-                # ivIndex = index of bonded partner for hydrogens; otherwise ivIndex = particle index
-
-                ivIndex = i
-                mass = sys.getParticleMass(i)/unit.dalton
-                if (mass < 1.9 and len(data.atomBonds[i]) == 1):
-                    bondIndex = data.atomBonds[i][0]
-                    if (data.bonds[bondIndex].atom1 == i):
-                        ivIndex = data.bonds[bondIndex].atom2
-                    else:
-                        ivIndex = data.bonds[bondIndex].atom1
-
-                force.addParticle(ivIndex, values[0], values[1], values[2])
-            else:
-                raise ValueError('No vdw type for atom %s' % (atom.name))
+            force.addParticle(ivIndex, values[0]*sigmaScale, values[1], values[2])
 
         # set combining rules
 
@@ -3937,8 +4075,6 @@ class AmoebaWcaDispersionGenerator:
         self.dispoff = dispoff
         self.shctd = shctd
 
-        self.typeMap = {}
-
     #=========================================================================================
 
     @staticmethod
@@ -3957,19 +4093,8 @@ class AmoebaWcaDispersionGenerator:
                                                   element.attrib['dispoff'],
                                                   element.attrib['shctd'])
         forceField._forces.append(generator)
-
-        # typeMap[] = [ radius, epsilon ]
-
-        for atom in element.findall('WcaDispersion'):
-            types = forceField._findAtomTypes(atom.attrib, 1)
-            if None not in types:
-
-                values = [float(atom.attrib['radius']), float(atom.attrib['epsilon'])]
-                for t in types[0]:
-                    generator.typeMap[t] = values
-            else:
-                outputString = "AmoebaWcaDispersionGenerator: error getting type: %s" % (atom.attrib['class'])
-                raise ValueError(outputString)
+        generator.params = ForceField._AtomTypeParameters(forceField, 'AmoebaWcaDispersionForce', 'WcaDispersion', ('radius', 'epsilon'))
+        generator.params.parseDefinitions(element)
 
     #=========================================================================================
 
@@ -3997,14 +4122,9 @@ class AmoebaWcaDispersionGenerator:
         force.setAwater( float(self.awater ))
         force.setShctd(  float(self.shctd  ))
 
-        for (i, atom) in enumerate(data.atoms):
-            t = data.atomType[atom]
-            if t in self.typeMap:
-
-                values = self.typeMap[t]
-                force.addParticle(values[0], values[1])
-            else:
-                raise ValueError('No WcaDispersion type for atom %s of %s %d' % (atom.name, atom.residue.name, atom.residue.index))
+        for atom in data.atoms:
+            values = self.params.getAtomParameters(atom, data)
+            force.addParticle(values[0], values[1])
 
 parsers["AmoebaWcaDispersionForce"] = AmoebaWcaDispersionGenerator.parseElement
 

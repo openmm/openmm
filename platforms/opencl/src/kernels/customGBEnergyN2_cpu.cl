@@ -16,7 +16,7 @@ __kernel void computeN2Energy(
 #else
         __global real4* restrict forceBuffers,
 #endif
-        __global real* restrict energyBuffer, __local real4* restrict local_force,
+        __global mixed* restrict energyBuffer, __local real4* restrict local_force,
         __global const real4* restrict posq, __local real4* restrict local_posq, __global const unsigned int* restrict exclusions,
         __global const ushort2* exclusionTiles,
 #ifdef USE_CUTOFF
@@ -27,7 +27,7 @@ __kernel void computeN2Energy(
         unsigned int numTiles
 #endif
         PARAMETER_ARGUMENTS) {
-    real energy = 0;
+    mixed energy = 0;
 
     // First loop: process tiles that contain exclusions.
     
@@ -279,6 +279,7 @@ __kernel void computeN2Energy(
                     real4 force = 0;
                     DECLARE_ATOM1_DERIVATIVES
                     real4 posq1 = posq[atom1];
+                    APPLY_PERIODIC_TO_POS_WITH_CENTER(posq1, blockCenterX)
                     LOAD_ATOM1_PARAMETERS
                     for (unsigned int j = 0; j < TILE_SIZE; j++) {
                         real4 posq2 = local_posq[j];
