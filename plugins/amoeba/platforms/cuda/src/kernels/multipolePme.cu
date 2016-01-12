@@ -643,8 +643,8 @@ extern "C" __global__ void computeInducedPotentialFromGrid(const real2* __restri
     // Process the atoms in spatially sorted order.  This improves cache performance when loading
     // the grid values.
     
-    for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < NUM_ATOMS; i += blockDim.x*gridDim.x) {
-        int m = pmeAtomGridIndex[i].x;
+    for (int atom = blockIdx.x*blockDim.x+threadIdx.x; atom < NUM_ATOMS; atom += blockDim.x*gridDim.x) {
+        int m = pmeAtomGridIndex[atom].x;
         real4 pos = posq[m];
         pos -= periodicBoxVecZ*floor(pos.z*recipBoxVecZ.z+0.5f);
         pos -= periodicBoxVecY*floor(pos.y*recipBoxVecY.z+0.5f);
@@ -1073,8 +1073,8 @@ extern "C" __global__ void computeInducedDipoleForceAndEnergy(real4* __restrict_
     energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] += 0.25f*EPSILON_FACTOR*energy;
 }
 
-extern "C" __global__ void recordInducedFieldDipoles(const real* __restrict__ phid, real* const __restrict__ phip,
-        long long* __restrict__ inducedField, long long* __restrict__ inducedFieldPolar,
+extern "C" __global__ void recordInducedFieldDipoles(const real* __restrict__ phid, real* const __restrict__ phip, long long* __restrict__ inducedField,
+        long long* __restrict__ inducedFieldPolar, const real* __restrict__ inducedDipole, const real* __restrict__ inducedDipolePolar,
 #ifdef EXTRAPOLATED_POLARIZATION
         unsigned long long* __restrict__ fieldGradient, unsigned long long* __restrict__ fieldGradientPolar,
 #endif
@@ -1092,13 +1092,14 @@ extern "C" __global__ void recordInducedFieldDipoles(const real* __restrict__ ph
         fracToCart[2][2] = GRID_SIZE_Z*recipBoxVecZ.z;
     }
     __syncthreads();
+    real selfDipoleScale = (4/(real) 3)*(EWALD_ALPHA*EWALD_ALPHA*EWALD_ALPHA)/SQRT_PI;
     for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < NUM_ATOMS; i += blockDim.x*gridDim.x) {
-        inducedField[i] -= (long long) (0x100000000*(phid[i+NUM_ATOMS]*fracToCart[0][0] + phid[i+NUM_ATOMS*2]*fracToCart[0][1] + phid[i+NUM_ATOMS*3]*fracToCart[0][2]));
-        inducedField[i+PADDED_NUM_ATOMS] -= (long long) (0x100000000*(phid[i+NUM_ATOMS]*fracToCart[1][0] + phid[i+NUM_ATOMS*2]*fracToCart[1][1] + phid[i+NUM_ATOMS*3]*fracToCart[1][2]));
-        inducedField[i+PADDED_NUM_ATOMS*2] -= (long long) (0x100000000*(phid[i+NUM_ATOMS]*fracToCart[2][0] + phid[i+NUM_ATOMS*2]*fracToCart[2][1] + phid[i+NUM_ATOMS*3]*fracToCart[2][2]));
-        inducedFieldPolar[i] -= (long long) (0x100000000*(phip[i+NUM_ATOMS]*fracToCart[0][0] + phip[i+NUM_ATOMS*2]*fracToCart[0][1] + phip[i+NUM_ATOMS*3]*fracToCart[0][2]));
-        inducedFieldPolar[i+PADDED_NUM_ATOMS] -= (long long) (0x100000000*(phip[i+NUM_ATOMS]*fracToCart[1][0] + phip[i+NUM_ATOMS*2]*fracToCart[1][1] + phip[i+NUM_ATOMS*3]*fracToCart[1][2]));
-        inducedFieldPolar[i+PADDED_NUM_ATOMS*2] -= (long long) (0x100000000*(phip[i+NUM_ATOMS]*fracToCart[2][0] + phip[i+NUM_ATOMS*2]*fracToCart[2][1] + phip[i+NUM_ATOMS*3]*fracToCart[2][2]));
+        inducedField[i] -= (long long) (0x100000000*(phid[i+NUM_ATOMS]*fracToCart[0][0] + phid[i+NUM_ATOMS*2]*fracToCart[0][1] + phid[i+NUM_ATOMS*3]*fracToCart[0][2] - selfDipoleScale*inducedDipole[3*i]));
+        inducedField[i+PADDED_NUM_ATOMS] -= (long long) (0x100000000*(phid[i+NUM_ATOMS]*fracToCart[1][0] + phid[i+NUM_ATOMS*2]*fracToCart[1][1] + phid[i+NUM_ATOMS*3]*fracToCart[1][2] - selfDipoleScale*inducedDipole[3*i+1]));
+        inducedField[i+PADDED_NUM_ATOMS*2] -= (long long) (0x100000000*(phid[i+NUM_ATOMS]*fracToCart[2][0] + phid[i+NUM_ATOMS*2]*fracToCart[2][1] + phid[i+NUM_ATOMS*3]*fracToCart[2][2] - selfDipoleScale*inducedDipole[3*i+2]));
+        inducedFieldPolar[i] -= (long long) (0x100000000*(phip[i+NUM_ATOMS]*fracToCart[0][0] + phip[i+NUM_ATOMS*2]*fracToCart[0][1] + phip[i+NUM_ATOMS*3]*fracToCart[0][2] - selfDipoleScale*inducedDipolePolar[3*i]));
+        inducedFieldPolar[i+PADDED_NUM_ATOMS] -= (long long) (0x100000000*(phip[i+NUM_ATOMS]*fracToCart[1][0] + phip[i+NUM_ATOMS*2]*fracToCart[1][1] + phip[i+NUM_ATOMS*3]*fracToCart[1][2] - selfDipoleScale*inducedDipolePolar[3*i+1]));
+        inducedFieldPolar[i+PADDED_NUM_ATOMS*2] -= (long long) (0x100000000*(phip[i+NUM_ATOMS]*fracToCart[2][0] + phip[i+NUM_ATOMS*2]*fracToCart[2][1] + phip[i+NUM_ATOMS*3]*fracToCart[2][2] - selfDipoleScale*inducedDipolePolar[3*i+2]));
 #ifdef EXTRAPOLATED_POLARIZATION
         // Compute and store the field gradients for later use.
 

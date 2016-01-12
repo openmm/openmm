@@ -1776,13 +1776,15 @@ void CudaCalcAmoebaMultipoleForceKernel::computeInducedField(void** recipBoxVect
         cu.executeKernel(pmeInducedPotentialKernel, pmeInducedPotentialArgs, cu.getNumAtoms());
         if (polarizationType == AmoebaMultipoleForce::Extrapolated) {
             void* pmeRecordInducedFieldDipolesArgs[] = {&pmePhid->getDevicePointer(), &pmePhip->getDevicePointer(),
-                &inducedField->getDevicePointer(), &inducedFieldPolar->getDevicePointer(), &inducedDipoleFieldGradient->getDevicePointer(),
-                &inducedDipoleFieldGradientPolar->getDevicePointer(), recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
+                &inducedField->getDevicePointer(), &inducedFieldPolar->getDevicePointer(), &inducedDipole->getDevicePointer(),
+                &inducedDipolePolar->getDevicePointer(), &inducedDipoleFieldGradient->getDevicePointer(), &inducedDipoleFieldGradientPolar->getDevicePointer(),
+                recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
             cu.executeKernel(pmeRecordInducedFieldDipolesKernel, pmeRecordInducedFieldDipolesArgs, cu.getNumAtoms());
         }
         else {
             void* pmeRecordInducedFieldDipolesArgs[] = {&pmePhid->getDevicePointer(), &pmePhip->getDevicePointer(),
-                &inducedField->getDevicePointer(), &inducedFieldPolar->getDevicePointer(), recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
+                &inducedField->getDevicePointer(), &inducedFieldPolar->getDevicePointer(), &inducedDipole->getDevicePointer(), &inducedDipolePolar->getDevicePointer(),
+                recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
             cu.executeKernel(pmeRecordInducedFieldDipolesKernel, pmeRecordInducedFieldDipolesArgs, cu.getNumAtoms());
         }
     }
@@ -1912,6 +1914,7 @@ void CudaCalcAmoebaMultipoleForceKernel::computeExtrapolatedDipoles(void** recip
     void* computeArgs[] = {&inducedDipole->getDevicePointer(), &inducedDipolePolar->getDevicePointer(), &extrapolatedDipole->getDevicePointer(),
             &extrapolatedDipolePolar->getDevicePointer()};
     cu.executeKernel(computeExtrapolatedKernel, computeArgs, extrapolatedDipole->getSize());
+    computeInducedField(recipBoxVectorPointer);
 }
 
 void CudaCalcAmoebaMultipoleForceKernel::ensureMultipolesValid(ContextImpl& context) {
