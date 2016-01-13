@@ -1239,6 +1239,8 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
         pmeDefines["SQRT_PI"] = cu.doubleToString(sqrt(M_PI));
         if (polarizationType == AmoebaMultipoleForce::Direct)
             pmeDefines["DIRECT_POLARIZATION"] = "";
+        else if (polarizationType == AmoebaMultipoleForce::Mutual)
+            pmeDefines["MUTUAL_POLARIZATION"] = "";
         else if (polarizationType == AmoebaMultipoleForce::Extrapolated)
             pmeDefines["EXTRAPOLATED_POLARIZATION"] = "";
         CUmodule module = cu.createModule(CudaKernelSources::vectorOps+CudaAmoebaKernelSources::multipolePme, pmeDefines);

@@ -365,7 +365,7 @@ __device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, bool has
     real iEIY = qiUinpI.x*Vijp[1] + qiUindI.x*Vijd[1] - qiUinpI.y*Vijp[0] - qiUindI.y*Vijd[0];
     real iEJY = qiUinpJ.x*Vjip[1] + qiUindJ.x*Vjid[1] - qiUinpJ.y*Vjip[0] - qiUindJ.y*Vjid[0];
 
-#ifdef USE_MUTUAL_POLARIZATION
+#ifdef MUTUAL_POLARIZATION
     // Uind-Uind terms (m=0)
     real eCoef = -fourThirds*rInvVec[3]*(3*(thole_d0 + bVec[3]) + alphaRVec[3]*X);
     real dCoef = rInvVec[4]*(6*(dthole_d0 + bVec[3]) + 4*alphaRVec[5]*X);

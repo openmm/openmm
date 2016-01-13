@@ -639,8 +639,8 @@ extern "C" __global__ void recordInducedDipolesForDIIS(const long long* __restri
             real oldDipole = inducedDipole[dipoleIndex];
             real oldDipolePolar = inducedDipolePolar[dipoleIndex];
             long long fixedS = (fixedFieldS == NULL ? (long long) 0 : fixedFieldS[fieldIndex]);
-            real newDipole = scale*((fixedField[fieldIndex]+fixedS+inducedField[fieldIndex])*fieldScale+ewaldScale*oldDipole);
-            real newDipolePolar = scale*((fixedFieldPolar[fieldIndex]+fixedS+inducedFieldPolar[fieldIndex])*fieldScale+ewaldScale*oldDipolePolar);
+            real newDipole = scale*((fixedField[fieldIndex]+fixedS+inducedField[fieldIndex])*fieldScale);
+            real newDipolePolar = scale*((fixedFieldPolar[fieldIndex]+fixedS+inducedFieldPolar[fieldIndex])*fieldScale);
             int storePrevIndex = dipoleIndex+min(iteration, MAX_PREV_DIIS_DIPOLES-1)*NUM_ATOMS*3;
             prevDipoles[storePrevIndex] = newDipole;
             prevDipolesPolar[storePrevIndex] = newDipolePolar;
