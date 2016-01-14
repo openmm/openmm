@@ -528,6 +528,7 @@ private:
     const System& system;
     bool includeSurfaceArea, hasInitializedKernels;
     int computeBornSumThreads, gkForceThreads, chainRuleThreads, ediffThreads;
+    AmoebaMultipoleForce::PolarizationType polarizationType;
     std::map<std::string, std::string> defines;
     CudaArray* params;
     CudaArray* bornSum;

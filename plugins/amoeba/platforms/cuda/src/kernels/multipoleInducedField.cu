@@ -721,7 +721,7 @@ extern "C" __global__ void initExtrapolatedDipoles(real* __restrict__ inducedDip
         real* __restrict__ inducedDipoleFieldGradientGk, real* __restrict__ inducedDipoleFieldGradientGkPolar
 #endif
         ) {
-    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < 3*NUM_ATOMS*MAX_EXTRAPOLATION_ORDER; index += blockDim.x*gridDim.x) {
+    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < 3*NUM_ATOMS; index += blockDim.x*gridDim.x) {
         extrapolatedDipole[index] = inducedDipole[index];
         extrapolatedDipolePolar[index] = inducedDipolePolar[index];
 #ifdef USE_GK
@@ -729,7 +729,7 @@ extern "C" __global__ void initExtrapolatedDipoles(real* __restrict__ inducedDip
         extrapolatedDipoleGkPolar[index] = inducedDipoleGkPolar[index];
 #endif
     }
-    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < 6*NUM_ATOMS*MAX_EXTRAPOLATION_ORDER; index += blockDim.x*gridDim.x) {
+    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < 6*NUM_ATOMS; index += blockDim.x*gridDim.x) {
         inducedDipoleFieldGradient[index] = 0;
         inducedDipoleFieldGradientPolar[index] = 0;
 #ifdef USE_GK
@@ -820,19 +820,35 @@ extern "C" __global__ void addExtrapolatedFieldGradientToForce(long long* __rest
             int index1 = 3*(l*NUM_ATOMS+atom);
             real dipole[] = {extrapolatedDipole[index1], extrapolatedDipole[index1+1], extrapolatedDipole[index1+2]};
             real dipolePolar[] = {extrapolatedDipolePolar[index1], extrapolatedDipolePolar[index1+1], extrapolatedDipolePolar[index1+2]};
+#ifdef USE_GK
+            real dipoleGk[] = {extrapolatedDipoleGk[index1], extrapolatedDipoleGk[index1+1], extrapolatedDipoleGk[index1+2]};
+            real dipoleGkPolar[] = {extrapolatedDipoleGkPolar[index1], extrapolatedDipoleGkPolar[index1+1], extrapolatedDipoleGkPolar[index1+2]};
+#endif
             for (int m = 0; m < MAX_EXTRAPOLATION_ORDER-1-l; m++) {
                 int index2 = 6*(m*NUM_ATOMS+atom);
+                real scale = 0.5f*coeff[l+m+1]*ENERGY_SCALE_FACTOR;
                 real gradient[] = {extrapolatedDipoleFieldGradient[index2], extrapolatedDipoleFieldGradient[index2+1], extrapolatedDipoleFieldGradient[index2+2],
                                    extrapolatedDipoleFieldGradient[index2+3], extrapolatedDipoleFieldGradient[index2+4], extrapolatedDipoleFieldGradient[index2+5]};
                 real gradientPolar[] = {extrapolatedDipoleFieldGradientPolar[index2], extrapolatedDipoleFieldGradientPolar[index2+1], extrapolatedDipoleFieldGradientPolar[index2+2],
                                         extrapolatedDipoleFieldGradientPolar[index2+3], extrapolatedDipoleFieldGradientPolar[index2+4], extrapolatedDipoleFieldGradientPolar[index2+5]};
-                real scale = 0.5f*coeff[l+m+1]*ENERGY_SCALE_FACTOR;
                 fx += scale*(dipole[0]*gradientPolar[0] + dipole[1]*gradientPolar[3] + dipole[2]*gradientPolar[4]);
                 fy += scale*(dipole[0]*gradientPolar[3] + dipole[1]*gradientPolar[1] + dipole[2]*gradientPolar[5]);
                 fz += scale*(dipole[0]*gradientPolar[4] + dipole[1]*gradientPolar[5] + dipole[2]*gradientPolar[2]);
                 fx += scale*(dipolePolar[0]*gradient[0] + dipolePolar[1]*gradient[3] + dipolePolar[2]*gradient[4]);
                 fy += scale*(dipolePolar[0]*gradient[3] + dipolePolar[1]*gradient[1] + dipolePolar[2]*gradient[5]);
                 fz += scale*(dipolePolar[0]*gradient[4] + dipolePolar[1]*gradient[5] + dipolePolar[2]*gradient[2]);
+#ifdef USE_GK
+                real gradientGk[] = {extrapolatedDipoleFieldGradient[index2], extrapolatedDipoleFieldGradient[index2+1], extrapolatedDipoleFieldGradient[index2+2],
+                                   extrapolatedDipoleFieldGradient[index2+3], extrapolatedDipoleFieldGradient[index2+4], extrapolatedDipoleFieldGradient[index2+5]};
+                real gradientGkPolar[] = {extrapolatedDipoleFieldGradientPolar[index2], extrapolatedDipoleFieldGradientPolar[index2+1], extrapolatedDipoleFieldGradientPolar[index2+2],
+                                        extrapolatedDipoleFieldGradientPolar[index2+3], extrapolatedDipoleFieldGradientPolar[index2+4], extrapolatedDipoleFieldGradientPolar[index2+5]};
+                fx += scale*(dipoleGk[0]*gradientGkPolar[0] + dipoleGk[1]*gradientGkPolar[3] + dipoleGk[2]*gradientGkPolar[4]);
+                fy += scale*(dipoleGk[0]*gradientGkPolar[3] + dipoleGk[1]*gradientGkPolar[1] + dipoleGk[2]*gradientGkPolar[5]);
+                fz += scale*(dipoleGk[0]*gradientGkPolar[4] + dipoleGk[1]*gradientGkPolar[5] + dipoleGk[2]*gradientGkPolar[2]);
+                fx += scale*(dipoleGkPolar[0]*gradientGk[0] + dipoleGkPolar[1]*gradientGk[3] + dipoleGkPolar[2]*gradientGk[4]);
+                fy += scale*(dipoleGkPolar[0]*gradientGk[3] + dipoleGkPolar[1]*gradientGk[1] + dipoleGkPolar[2]*gradientGk[5]);
+                fz += scale*(dipoleGkPolar[0]*gradientGk[4] + dipoleGkPolar[1]*gradientGk[5] + dipoleGkPolar[2]*gradientGk[2]);
+#endif
             }
         }
         forceBuffers[atom] += (long long) (fx*0x100000000);
