@@ -316,15 +316,6 @@ public:
      * This can be overridden by explicitly setting an alpha parameter and grid dimensions to use.
      */
     void setEwaldErrorTolerance(double tol);
-
-    /**
-     * Get the induced dipole moments of all particles.
-     *
-     * @param context         the Context for which to get the induced dipoles
-     * @param[out] dipoles    the induced dipole moment of particle i is stored into the i'th element
-     */
-    void getInducedDipoles(Context& context, std::vector<Vec3>& dipoles);
-
     /**
      * Get the fixed dipole moments of all particles in the global reference frame.
      *
@@ -332,6 +323,13 @@ public:
      * @param[out] dipoles    the fixed dipole moment of particle i is stored into the i'th element
      */
     void getLabFramePermanentDipoles(Context& context, std::vector<Vec3>& dipoles);
+    /**
+     * Get the induced dipole moments of all particles.
+     *
+     * @param context         the Context for which to get the induced dipoles
+     * @param[out] dipoles    the induced dipole moment of particle i is stored into the i'th element
+     */
+    void getInducedDipoles(Context& context, std::vector<Vec3>& dipoles);
 
     /**
      * Get the electrostatic potential.
