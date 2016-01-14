@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2015 Stanford University and the Authors.
+Portions copyright (c) 2012-2016 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors:
 
@@ -614,6 +614,7 @@ class Modeller(object):
             HID: Neutral form with a hydrogen on the ND1 atom
             HIE: Neutral form with a hydrogen on the NE2 atom
             HIP: Positively charged form with hydrogens on both ND1 and NE2
+            HIN: Negatively charged form without a hydrogen on either ND1 or NE2
 
         Lysine:
             LYN: Neutral form with two hydrogens on the zeta nitrogen
@@ -625,9 +626,14 @@ class Modeller(object):
         2. Any Cysteine that participates in a disulfide bond uses the CYX variant regardless of pH.
         3. For a neutral Histidine residue, the HID or HIE variant is selected based on which one forms a better hydrogen bond.
 
-        You can override these rules by explicitly specifying a variant for any residue.  Also keep in mind that this
-        function will only add hydrogens.  It will never remove ones that are already present in the model, regardless
-        of the specified pH.
+        You can override these rules by explicitly specifying a variant for any residue.  To do that, provide a list for the
+        'variants' parameter, and set the corresponding element to the name of the variant to use.
+
+        A special case is when the model already contains a hydrogen that should not be present in the desired variant.
+        If you explicitly specify a variant using the 'variants' parameter, the residue will be modified to match the
+        desired variant, removing hydrogens if necessary.  On the other hand, for residues whose variant is selected
+        automatically, this function will only add hydrogens.  It will never remove ones that are already present in the
+        model, regardless of the specified pH.
 
         Definitions for standard amino acids and nucleotides are built in.  You can call loadHydrogenDefinitions() to load
         additional definitions for other residue types.
@@ -771,6 +777,7 @@ class Modeller(object):
                     if variant is not None and variant not in spec.variants:
                         raise ValueError('Illegal variant for %s residue: %s' % (residue.name, variant))
                     actualVariants[residue.index] = variant
+                    removeExtraHydrogens = (variants[residue.index] is not None)
 
                     # Make a list of hydrogens that should be present in the residue.
 
@@ -783,6 +790,11 @@ class Modeller(object):
                     # Loop over atoms in the residue, adding them to the new topology along with required hydrogens.
 
                     for parent in residue.atoms():
+                        # Check whether this is a hydrogen that should be removed.
+
+                        if removeExtraHydrogens and parent.element == elem.hydrogen and not any(parent.name == h.name for h in hydrogens):
+                            continue
+
                         # Add the atom.
 
                         newAtom = newTopology.addAtom(parent.name, parent.element, newResidue)
