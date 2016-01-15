@@ -136,7 +136,7 @@ class PdbStructure(object):
             Whether to load every model of an NMR structure or trajectory, or
             just load the first model, to save memory.
         extraParticleIdentifier : string='EP'
-            if this value appears in the element column for an ATOM record, the Atom's element will be set to None to mark it as an extra particle
+            if this value appears in the element column for an ATOM record, the Atom's element will be set to 'EP' to mark it as an extra particle
         """
         # initialize models
         self.load_all_models = load_all_models
