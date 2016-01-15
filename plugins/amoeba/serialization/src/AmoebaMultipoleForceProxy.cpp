@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -68,9 +68,10 @@ void loadCovalentMap(const SerializationNode& map, std::vector< int >& covalentM
 }
 
 void AmoebaMultipoleForceProxy::serialize(const void* object, SerializationNode& node) const {
-    node.setIntProperty("version", 3);
+    node.setIntProperty("version", 4);
     const AmoebaMultipoleForce& force = *reinterpret_cast<const AmoebaMultipoleForce*>(object);
 
+    node.setIntProperty("forceGroup", force.getForceGroup());
     node.setIntProperty("nonbondedMethod",                  force.getNonbondedMethod());
     node.setIntProperty("polarizationType",                 force.getPolarizationType());
     //node.setIntProperty("pmeBSplineOrder",                  force.getPmeBSplineOrder());
@@ -133,12 +134,13 @@ void AmoebaMultipoleForceProxy::serialize(const void* object, SerializationNode&
 
 void* AmoebaMultipoleForceProxy::deserialize(const SerializationNode& node) const {
     int version = node.getIntProperty("version");
-    if (version < 0 || version > 3)
+    if (version < 0 || version > 4)
         throw OpenMMException("Unsupported version number");
     AmoebaMultipoleForce* force = new AmoebaMultipoleForce();
 
     try {
-
+        if (version > 3)
+            force->setForceGroup(node.getIntProperty("forceGroup", 0));
         force->setNonbondedMethod(static_cast<AmoebaMultipoleForce::NonbondedMethod>(node.getIntProperty("nonbondedMethod")));
         if (version >= 2)
             force->setPolarizationType(static_cast<AmoebaMultipoleForce::PolarizationType>(node.getIntProperty("polarizationType")));

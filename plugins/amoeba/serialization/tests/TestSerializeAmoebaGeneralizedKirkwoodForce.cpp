@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -45,6 +45,7 @@ void testSerialization() {
     // Create a Force.
 
     AmoebaGeneralizedKirkwoodForce force1;
+    force1.setForceGroup(3);
     force1.setSolventDielectric(  80.0);
     force1.setSoluteDielectric(   1.0);
     //force1.setDielectricOffset(   0.09);
@@ -64,6 +65,7 @@ void testSerialization() {
 
     // Compare the two forces to see if they are identical.  
     AmoebaGeneralizedKirkwoodForce& force2 = *copy;
+    ASSERT_EQUAL(force1.getForceGroup(), force2.getForceGroup());
     ASSERT_EQUAL(force1.getSolventDielectric(),    force2.getSolventDielectric());
     ASSERT_EQUAL(force1.getSoluteDielectric(),     force2.getSoluteDielectric());
     //ASSERT_EQUAL(force1.getDielectricOffset(),     force2.getDielectricOffset());
