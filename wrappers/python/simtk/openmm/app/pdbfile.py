@@ -59,7 +59,7 @@ class PDBFile(object):
     _residueNameReplacements = {}
     _atomNameReplacements = {}
 
-    def __init__(self, file):
+    def __init__(self, file, extraParticleIdentifier='EP'):
         """Load a PDB file.
 
         The atom positions and Topology can be retrieved by calling getPositions() and getTopology().
@@ -68,6 +68,8 @@ class PDBFile(object):
         ----------
         file : string
             the name of the file to load
+        extraParticleIdentifier : string='EP'
+            if this value appears in the element column for an ATOM record, the Atom's element will be set to None to mark it as an extra particle
         """
         
         metalElements = ['Al','As','Ba','Ca','Cd','Ce','Co','Cs','Cu','Dy','Fe','Gd','Hg','Ho','In','Ir','K','Li','Mg',
@@ -91,7 +93,7 @@ class PDBFile(object):
             if isinstance(file, str):
                 inputfile = open(file)
                 own_handle = True
-            pdb = PdbStructure(inputfile, load_all_models=True)
+            pdb = PdbStructure(inputfile, load_all_models=True, extraParticleIdentifier=extraParticleIdentifier)
             if own_handle:
                 inputfile.close()
         PDBFile._loadNameReplacementTables()
@@ -116,7 +118,9 @@ class PDBFile(object):
                         atomName = atomReplacements[atomName]
                     atomName = atomName.strip()
                     element = atom.element
-                    if element is None:
+                    if element == 'EP':
+                        element = None
+                    elif element is None:
                         # Try to guess the element.
 
                         upper = atomName.upper()
@@ -253,7 +257,7 @@ class PDBFile(object):
                 map[atom.attrib[id]] = name
 
     @staticmethod
-    def writeFile(topology, positions, file=sys.stdout, keepIds=False):
+    def writeFile(topology, positions, file=sys.stdout, keepIds=False, extraParticleIdentifier=' '):
         """Write a PDB file containing a single model.
 
         Parameters
@@ -269,9 +273,11 @@ class PDBFile(object):
             rather than generating new ones.  Warning: It is up to the caller to
             make sure these are valid IDs that satisfy the requirements of the
             PDB format.  Otherwise, the output file will be invalid.
+        extraParticleIdentifier : string=' '
+            String to write in the element column of the ATOM records for atoms whose element is None (extra particles)
         """
         PDBFile.writeHeader(topology, file)
-        PDBFile.writeModel(topology, positions, file, keepIds=keepIds)
+        PDBFile.writeModel(topology, positions, file, keepIds=keepIds, extraParticleIdentifier=extraParticleIdentifier)
         PDBFile.writeFooter(topology, file)
 
     @staticmethod
@@ -294,7 +300,7 @@ class PDBFile(object):
                     a*10, b*10, c*10, alpha*RAD_TO_DEG, beta*RAD_TO_DEG, gamma*RAD_TO_DEG), file=file)
 
     @staticmethod
-    def writeModel(topology, positions, file=sys.stdout, modelIndex=None, keepIds=False):
+    def writeModel(topology, positions, file=sys.stdout, modelIndex=None, keepIds=False, extraParticleIdentifier=' '):
         """Write out a model to a PDB file.
 
         Parameters
@@ -313,6 +319,8 @@ class PDBFile(object):
             rather than generating new ones.  Warning: It is up to the caller to
             make sure these are valid IDs that satisfy the requirements of the
             PDB format.  Otherwise, the output file will be invalid.
+        extraParticleIdentifier : string=' '
+            String to write in the element column of the ATOM records for atoms whose element is None (extra particles)
         """
 
         if len(list(topology.atoms())) != len(positions):
@@ -343,17 +351,17 @@ class PDBFile(object):
                 else:
                     resId = "%4d" % ((resIndex+1)%10000)
                 for atom in res.atoms():
-                    if len(atom.name) < 4 and atom.name[:1].isalpha() and (atom.element is None or len(atom.element.symbol) < 2):
+                    if atom.element is not None:
+                        symbol = atom.element.symbol
+                    else:
+                        symbol = extraParticleIdentifier
+                    if len(atom.name) < 4 and atom.name[:1].isalpha() and len(symbol) < 2:
                         atomName = ' '+atom.name
                     elif len(atom.name) > 4:
                         atomName = atom.name[:4]
                     else:
                         atomName = atom.name
                     coords = positions[posIndex]
-                    if atom.element is not None:
-                        symbol = atom.element.symbol
-                    else:
-                        symbol = ' '
                     line = "ATOM  %5d %-4s %3s %s%4s    %s%s%s  1.00  0.00          %2s  " % (
                         atomIndex%100000, atomName, resName, chainName, resId, _format_83(coords[0]),
                         _format_83(coords[1]), _format_83(coords[2]), symbol)
