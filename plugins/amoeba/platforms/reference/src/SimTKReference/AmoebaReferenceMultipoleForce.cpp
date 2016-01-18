@@ -647,20 +647,20 @@ void AmoebaReferenceMultipoleForce::applyRotationMatrix(vector<MultipoleParticle
     }
 }
 
-void AmoebaReferenceMultipoleForce::applyRotationMatrixPublic(vector<MultipoleParticleData>& particleData,
-                                                        const vector<int>& multipoleAtomXs,
-                                                        const vector<int>& multipoleAtomYs,
-                                                        const vector<int>& multipoleAtomZs,
-                                                        const vector<int>& axisTypes) const
-{
-
-    for (unsigned int ii = 0; ii < _numParticles; ii++) {
-        if (multipoleAtomZs[ii] >= 0 && multipoleAtomXs[ii] >= 0) {
-            applyRotationMatrixToParticle(particleData[ii], particleData[multipoleAtomZs[ii]], particleData[multipoleAtomXs[ii]],
-                                           multipoleAtomYs[ii] > -1 ? &particleData[multipoleAtomYs[ii]] : NULL, axisTypes[ii]);
-        }
-    }
-}
+//void AmoebaReferenceMultipoleForce::applyRotationMatrixPublic(vector<MultipoleParticleData>& particleData,
+//                                                        const vector<int>& multipoleAtomXs,
+//                                                        const vector<int>& multipoleAtomYs,
+//                                                        const vector<int>& multipoleAtomZs,
+//                                                        const vector<int>& axisTypes) const
+//{
+//
+//    for (unsigned int ii = 0; ii < _numParticles; ii++) {
+//        if (multipoleAtomZs[ii] >= 0 && multipoleAtomXs[ii] >= 0) {
+//            applyRotationMatrixToParticle(particleData[ii], particleData[multipoleAtomZs[ii]], particleData[multipoleAtomXs[ii]],
+//                                           multipoleAtomYs[ii] > -1 ? &particleData[multipoleAtomYs[ii]] : NULL, axisTypes[ii]);
+//        }
+//    }
+//}
 
 void AmoebaReferenceMultipoleForce::getAndScaleInverseRs(RealOpenMM dampI, RealOpenMM dampJ,
                                                          RealOpenMM tholeI, RealOpenMM tholeJ,
@@ -1816,6 +1816,33 @@ void AmoebaReferenceMultipoleForce::calculateInducedDipoles(const vector<RealVec
            dampingFactors, polarity, axisTypes, multipoleAtomZs, multipoleAtomXs, multipoleAtomYs,
            multipoleAtomCovalentInfo, particleData);
     outputInducedDipoles = _inducedDipole;
+}
+
+
+void AmoebaReferenceMultipoleForce::calculateLabFramePermanentDipoles(const vector<RealVec>& particlePositions,
+                                                            const vector<RealOpenMM>& charges,
+                                                            const vector<RealOpenMM>& dipoles,
+                                                            const vector<RealOpenMM>& quadrupoles,
+                                                            const vector<RealOpenMM>& tholes,
+                                                            const vector<RealOpenMM>& dampingFactors,
+                                                            const vector<RealOpenMM>& polarity,
+                                                            const vector<int>& axisTypes,
+                                                            const vector<int>& multipoleAtomZs,
+                                                            const vector<int>& multipoleAtomXs,
+                                                            const vector<int>& multipoleAtomYs,
+                                                            const vector< vector< vector<int> > >& multipoleAtomCovalentInfo,
+                                                            vector<RealVec>& outputRotatedPermanentDipoles) {
+    // setup, including calculating permanent dipoles
+
+    vector<MultipoleParticleData> particleData;
+    setup(particlePositions, charges, dipoles, quadrupoles, tholes,
+           dampingFactors, polarity, axisTypes, multipoleAtomZs, multipoleAtomXs, multipoleAtomYs,
+           multipoleAtomCovalentInfo, particleData);
+    for (int i = 0; i < _numParticles; i++)
+      {
+      _labFramePermanentDipole[i] = particleData[i].dipole;
+      }
+    outputRotatedPermanentDipoles = _labFramePermanentDipole;
 }
 
 void AmoebaReferenceMultipoleForce::calculateAmoebaSystemMultipoleMoments(const vector<RealOpenMM>& masses,
