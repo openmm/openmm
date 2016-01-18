@@ -723,7 +723,7 @@ void ReferenceCalcAmoebaMultipoleForceKernel::getLabFramePermanentDipoles(Contex
     
     vector<RealVec> labFramePermanentDipoles;
     amoebaReferenceMultipoleForce->calculateLabFramePermanentDipoles(posData, charges, dipoles, quadrupoles, tholes, 
-            dampingFactors, polarity, axisTypes, multipoleAtomsZs, multipoleAtomsXs, multipoleAtomsYs, multipoleAtomCovalentInfo, labFramePermanentDipoles);
+            dampingFactors, polarity, axisTypes, multipoleAtomZs, multipoleAtomXs, multipoleAtomYs, multipoleAtomCovalentInfo, labFramePermanentDipoles);
     for (int i = 0; i < numParticles; i++)
         outputDipoles[i] = labFramePermanentDipoles[i];
     delete amoebaReferenceMultipoleForce;
