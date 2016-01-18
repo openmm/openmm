@@ -719,14 +719,13 @@ void ReferenceCalcAmoebaMultipoleForceKernel::getLabFramePermanentDipoles(Contex
     AmoebaReferenceMultipoleForce* amoebaReferenceMultipoleForce = setupAmoebaReferenceMultipoleForce(context);
     vector<RealVec>& posData = extractPositions(context);
     
-    // Retrieve the induced dipoles.
+    // Retrieve the permanent dipoles in the lab frame.
     
-//    vector<RealVec> inducedDipoles;
-//    amoebaReferenceMultipoleForce->calculateInducedDipoles(posData, charges, dipoles, quadrupoles, tholes,
-//            dampingFactors, polarity, axisTypes, multipoleAtomZs, multipoleAtomXs, multipoleAtomYs, multipoleAtomCovalentInfo, inducedDipoles);
-//    for (int i = 0; i < numParticles; i++)
-//        outputDipoles[i] = inducedDipoles[i];
-//    delete amoebaReferenceMultipoleForce;
+    vector<RealVec> labFramePermanentDipoles;
+    amoebaReferenceMultipoleForce->applyRotationMatrix(particleData, multipoleAtomsXs, multipoleAtomsYs, multipoleAtomsZs, axisTypes);
+    for (int i = 0; i < numParticles; i++)
+        outputDipoles[i] = labFramePermanentDipoles[i];
+    delete amoebaReferenceMultipoleForce;
 }
 
 
