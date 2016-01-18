@@ -230,8 +230,8 @@ void AmoebaMultipoleForce::getCovalentMaps(int index, std::vector< std::vector<i
     }
 }
 
-void AmoebaMultipoleForce::getLabFramePermanentDipoles(Context& context, vector<Vec3>& dipoles) {
-    dynamic_cast<AmoebaMultipoleForceImpl&>(getImplInContext(context)).getLabFramePermanentDipoles(getContextImpl(context), dipoles);
+void AmoebaMultipoleForce::getInducedDipoles(Context& context, vector<Vec3>& dipoles) {
+    dynamic_cast<AmoebaMultipoleForceImpl&>(getImplInContext(context)).getInducedDipoles(getContextImpl(context), dipoles);
 }
 
 void AmoebaMultipoleForce::getLabFramePermanentDipoles(Context& context, vector<Vec3>& dipoles) {
