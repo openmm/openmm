@@ -1,0 +1,1872 @@
+* Toppar stream file for retinol and retinal parameters
+* A. Loccisano, A.M.W., J. Evanseck and A.D. MacKerell, Jr.
+* April, 2005
+* 
+
+!use with c36 protein force fields
+!top_all36_prot.rtf
+!par_all36_prot.prm
+
+read rtf card append
+* retinal/retinol and related model compounds
+*
+32  1
+
+DECL -CA
+DECL -C
+DECL -O
+DECL +N
+DECL +HN
+DECL +CA
+!DEFA FIRS NTER LAST CTER
+AUTO ANGLES DIHE
+
+MASS   425 CC1A  12.01100 C ! alkene conjugation
+MASS   426 CC1B  12.01100 C ! alkene conjugation
+MASS   427 CC2   12.01100 C ! alkene conjugation
+MASS   428 NS1   14.00700 N ! N for deprotonated Schiff's base
+MASS   429 NS2   14.00700 N ! N for protonated Schiff's base
+
+RESI BTE2       0.00 ! 2-Butene, adm jr.
+GROUP
+ATOM C1  CT3  -0.27 !  H12 H13
+ATOM H11 HA3   0.09 !    \ |
+ATOM H12 HA3   0.09 ! H13-C1      H31
+ATOM H13 HA3   0.09 !       \     /
+GROUP               !        C2=C3
+ATOM C2  CC1A -0.15 !       /     \
+ATOM H21 HE1   0.15 !     H21      C4-H41
+GROUP               !              | \
+ATOM C3  CC1A -0.15 !            H43 H42
+ATOM H31 HE1   0.15 !
+GROUP
+ATOM C4  CT3  -0.27
+ATOM H41 HA3   0.09
+ATOM H42 HA3   0.09
+ATOM H43 HA3   0.09
+
+BOND C1 H11  C1 H12  C1 H13 C1 C2   C2 H21
+DOUBLE C2 C3
+BOND C3 H31  C3 C4  C4 H41  C4 H42  C4 H43
+
+IC C1    C2    C3    C4     0.0000    0.00  180.00    0.00   0.0000
+IC H11   C2    *C1   H12    0.0000    0.00  120.00    0.00   0.0000
+IC H11   C2    *C1   H13    0.0000    0.00 -120.00    0.00   0.0000
+IC H11   C1    C2    C3     0.0000    0.00  180.00    0.00   0.0000
+IC C3    C1    *C2   H21    0.0000    0.00  180.00    0.00   0.0000
+IC C4    C2    *C3   H31    0.0000    0.00  180.00    0.00   0.0000
+IC C2    C3    C4    H41    0.0000    0.00  180.00    0.00   0.0000
+IC H41   C3    *C4   H42    0.0000    0.00  120.00    0.00   0.0000
+IC H41   C3    *C4   H43    0.0000    0.00 -120.00    0.00   0.0000
+
+PATC FIRS NONE LAST NONE
+
+RESI HEP3       0.00 ! 1,3,5-heptatriene
+!
+GROUP                
+ATOM C1   CC2  -0.42 !
+ATOM H11  HE2   0.21 ! H11     H21
+ATOM H12  HE2   0.21 !    \    /              
+ATOM C2   CC1A -0.15 !    C1=C2      H41
+ATOM H21  HE1   0.15 !    /    \     /
+GROUP                ! H12      C3=C4      H61
+ATOM C3   CC1B -0.15 !          /    \    /
+ATOM H31  HE1   0.15 !        H31     C5=C6
+ATOM C4   CC1B -0.15 !               /    \ 
+ATOM H41  HE1   0.15 !             H51     H62
+GROUP                !
+ATOM C5   CC1A -0.15
+ATOM H51  HE1   0.15
+GROUP
+ATOM C6   CC2  -0.42
+ATOM H61  HE2   0.21
+ATOM H62  HE2   0.21
+
+BOND C1   C2   C2   C3   C3   C4    C4   C5   C5   C6
+BOND C1   H11  C1   H12  C2   H21   C3   H31
+BOND C4   H41  C5   H51  C6   H61   C6   H62
+
+IC C1    C2    C3    C4     0.0000    0.00  180.00    0.00   0.0000
+IC C2    C3    C4    C5     0.0000    0.00  180.00    0.00   0.0000
+IC C3    C4    C5    C6     0.0000    0.00  180.00    0.00   0.0000
+IC H11   C2    *C1   H12    0.0000    0.00  180.00    0.00   0.0000
+IC H11   C1    C2    C3     0.0000    0.00  180.00    0.00   0.0000
+IC C3    C1    *C2   H21    0.0000    0.00  180.00    0.00   0.0000
+IC C4    C2    *C3   H31    0.0000    0.00  180.00    0.00   0.0000
+IC C5    C3    *C4   H41    0.0000    0.00  180.00    0.00   0.0000
+IC C6    C4    *C5   H51    0.0000    0.00  180.00    0.00   0.0000
+IC C4    C5    C6    H61    0.0000    0.00  180.00    0.00   0.0000
+IC H61   C5    *C6   H62    0.0000    0.00  180.00    0.00   0.0000
+
+PATCH FIRST NONE LAST NONE
+
+RESI 13DB       0.00 ! 1,3-dibutene
+!
+GROUP                
+ATOM C1   CC2  -0.42 ! H11     H21
+ATOM H11  HE2   0.21 !   \    /
+ATOM H12  HE2   0.21 !    C1=C2      H41
+GROUP                !   /    \     /
+ATOM C2   CC1A -0.15 ! H12     C3=C4
+ATOM H21  HE1   0.15 !        /     \
+ATOM C3   CC1B -0.15 !       H31     H42
+ATOM H31  HE1   0.15 !
+GROUP                !
+ATOM C4   CC2  -0.42 !
+ATOM H41  HE2   0.21 !
+ATOM H42  HE2   0.21 !
+
+BOND C1   C2   C2   C3   C3   C4
+BOND C1   H11  C1   H12  C2   H21   C3   H31
+BOND C4   H41  C4   H42
+
+IC  C1   C2   C3   C4   0.00 0.00  180.0 0.00 0.00
+IC  C2   C3   C4   H41  0.00 0.00  180.0 0.00 0.00
+IC  C3   C2   C1   H11  0.00 0.00  180.0 0.00 0.00
+IC  C2   H11  *C1  H12  0.00 0.00  180.0 0.00 0.00
+IC  C3   H41  *C4  H42  0.00 0.00  180.0 0.00 0.00
+IC  C1   C3   *C2  H21  0.00 0.00  180.0 0.00 0.00
+IC  C2   C4   *C3  H31  0.00 0.00  180.0 0.00 0.00
+PATCH FIRST NONE LAST NONE
+
+RESI 13DP       0.00 ! 1,3-dipentene
+!
+GROUP                
+ATOM C1   CC2  -0.42 !
+ATOM H11  HE2   0.21 ! H11     H21
+ATOM H12  HE2   0.21 !    \    /              
+ATOM C2   CC1A -0.15 !    C1=C2      H41
+ATOM H21  HE1   0.15 !    /    \     /
+GROUP                ! H12      C3=C4   H51                
+ATOM C3   CC1B -0.15 !          /    \  /                             
+ATOM H31  HE1   0.15 !        H31     C5-H52    
+ATOM C4   CC1B -0.15 !                 \
+ATOM H41  HE1   0.15 !                  H53
+GROUP                !
+ATOM C5   CT3  -0.27 !
+ATOM H51  HA3   0.09 !
+ATOM H52  HA3   0.09 !
+ATOM H53  HA3   0.09 !
+
+BOND C1   C2   C2   C3   C3   C4    C4   C5
+BOND C1   H11  C1   H12  C2   H21   C3   H31
+BOND C4   H41  C5   H51  C5   H52   C5   H53
+
+IC  C1   C2   C3   C4   0.00 0.00  180.0 0.00 0.00
+IC  C2   C3   C4   C5   0.00 0.00  180.0 0.00 0.00
+IC  C3   C4   C5   H51  0.00 0.00  180.0 0.00 0.00
+IC  C3   C2   C1   H11  0.00 0.00  180.0 0.00 0.00
+IC  C2   H11  *C1  H12  0.00 0.00  180.0 0.00 0.00
+IC  C1   C3   *C2  H21  0.00 0.00  180.0 0.00 0.00
+IC  C2   C4   *C3  H31  0.00 0.00  180.0 0.00 0.00
+IC  C3   C5   *C4  H41  0.00 0.00  180.0 0.00 0.00
+IC  C4   H51  *C5  H52  0.00 0.00  120.0 0.00 0.00
+IC  C4   H51  *C5  H53  0.00 0.00 -120.0 0.00 0.00
+PATCH FIRST NONE LAST NONE
+
+RESI DMB1       0.00 ! 2-methyl-1,3-butadiene
+!
+GROUP 
+ATOM C1   CC2  -0.42 !
+ATOM H11  HE2   0.21 !     H2M1 H2M2
+ATOM H12  HE2   0.21 !        \  /
+GROUP                ! H11     C2M-H2M3
+ATOM C2   CC1A  0.00 !    \    /
+ATOM C2M  CT3  -0.27 !    C1=C2      H41
+ATOM H2M1 HA3   0.09 !    /    \    /
+ATOM H2M2 HA3   0.09 ! H12     C3=C4
+ATOM H2M3 HA3   0.09 !         /    \                      
+GROUP                !       H31     H42  
+ATOM C3   CC1B -0.15 !
+ATOM H31  HE1   0.15 !
+GROUP                !                                    
+ATOM C4   CC2  -0.42 !
+ATOM H41  HE2   0.21 !
+ATOM H42  HE2   0.21 !
+
+BOND C1   C2   C2   C3   C3   C4    C2   C2M
+BOND C1   H11  C1   H12  C3   H31   C4   H41  C4   H42
+BOND C2M  H2M1 C2M  H2M2 C2M  H2M3
+
+IC  C1   C2   C3   C4   0.00 0.00  180.0 0.00 0.00
+IC  C2   C3   C4   H41  0.00 0.00  180.0 0.00 0.00
+IC  C3   C2   C1   H11  0.00 0.00  180.0 0.00 0.00
+IC  C2   H11  *C1  H12  0.00 0.00  180.0 0.00 0.00
+IC  C1   C3   *C2  C2M  0.00 0.00  180.0 0.00 0.00
+IC  C2   C4   *C3  H31  0.00 0.00  180.0 0.00 0.00
+IC  C3   H41  *C4  H42  0.00 0.00  180.0 0.00 0.00
+IC  C1   C2   C2M  H2M1 0.00 0.00  180.0 0.00 0.00
+IC  C2   H2M1 *C2M H2M2 0.00 0.00  120.0 0.00 0.00
+IC  C2   H2M1 *C2M H2M3 0.00 0.00 -120.0 0.00 0.00
+PATCH FIRST NONE LAST NONE
+
+RESI DMP1       0.00 ! 4-methyl-1,3-pentadiene
+!
+GROUP 
+ATOM C1   CC2  -0.42 !
+ATOM H11  HE2   0.21 ! H11     H21 H4M1 H4M2
+ATOM H12  HE2   0.21 !    \    /    \   /
+GROUP                !    C1=C2      C4M-H4M3
+ATOM C2   CC1A -0.15 !    /    \     /
+ATOM H21  HE1   0.15 ! H12      C3=C4   H51
+ATOM C3   CC1B -0.15 !         /     \  /
+ATOM H31  HE1   0.15 !       H31      C5-H52
+GROUP                !                 \
+ATOM C4   CC1B  0.00 !                 H53
+ATOM C4M  CT3  -0.27 !
+ATOM H4M1 HA3   0.09 !
+ATOM H4M2 HA3   0.09 !
+ATOM H4M3 HA3   0.09 !
+GROUP
+ATOM C5   CT3  -0.27 !
+ATOM H51  HA3   0.09 !
+ATOM H52  HA3   0.09 !
+ATOM H53  HA3   0.09 !
+
+BOND C1   C2   C2   C3   C3   C4    C4   C5   C4   C4M
+BOND C1   H11  C1   H12  C2   H21   C3   H31
+BOND C4M  H4M1 C4M  H4M2 C4M  H4M3
+BOND C5   H51  C5   H52  C5   H53
+
+IC  C1   C2   C3   C4   0.00 0.00  180.0 0.00 0.00
+IC  C2   C3   C4   C5   0.00 0.00  180.0 0.00 0.00
+IC  C3   C4   C5   H51  0.00 0.00  180.0 0.00 0.00
+IC  C3   C2   C1   H11  0.00 0.00  180.0 0.00 0.00
+IC  C2   H11  *C1  H12  0.00 0.00  180.0 0.00 0.00
+IC  C1   C3   *C2  H21  0.00 0.00  180.0 0.00 0.00
+IC  C2   C4   *C3  H31  0.00 0.00  180.0 0.00 0.00
+IC  C3   C5   *C4  C4M  0.00 0.00  180.0 0.00 0.00
+IC  C3   C4   C4M  H4M1 0.00 0.00  180.0 0.00 0.00
+IC  C4   H4M1 *C4M H4M2 0.00 0.00  120.0 0.00 0.00
+IC  C4   H4M1 *C4M H4M3 0.00 0.00 -120.0 0.00 0.00
+IC  C4   H51  *C5  H52  0.00 0.00  120.0 0.00 0.00
+IC  C4   H51  *C5  H53  0.00 0.00 -120.0 0.00 0.00
+PATCH FIRST NONE LAST NONE
+
+
+RESI DMP2       0.00 ! 2-methyl-1,3-pentadiene 
+!
+GROUP                !     H2M1 H2M2
+ATOM C1   CC2  -0.42 !        \  /
+ATOM H11  HE2   0.21 ! H11     C2M-H2M3
+ATOM H12  HE2   0.21 !    \    /
+GROUP                !    C1=C2      H41
+ATOM C2   CC1A  0.00 !    /    \     /
+ATOM C2M  CT3  -0.27 ! H12      C3=C4   H51
+ATOM H2M1 HA3   0.09 !          /    \  /
+ATOM H2M2 HA3   0.09 !         H31    C5-H52
+ATOM H2M3 HA3   0.09 !                 \
+ATOM C3   CC1B -0.15 !                  H53
+ATOM H31  HE1   0.15 !      
+GROUP                !             
+ATOM C4   CC1B -0.15 !
+ATOM H41  HE1   0.15 !
+ATOM C5   CT3  -0.27 !
+ATOM H51  HA3   0.09 !
+ATOM H52  HA3   0.09 !
+ATOM H53  HA3   0.09 !
+
+BOND C1   C2   C2   C3   C3   C4    C4   C5   C2  C2M
+BOND C1   H11  C1   H12  C3   H31   C4   H41  
+BOND C2M  H2M1 C2M  H2M2 C2M  H2M3
+BOND C5   H51  C5   H52  C5   H53
+
+IC  C1   C2   C3   C4   0.00 0.00  180.0 0.00 0.00
+IC  C2   C3   C4   C5   0.00 0.00  180.0 0.00 0.00
+IC  C3   C4   C5   H51  0.00 0.00  180.0 0.00 0.00
+IC  C3   C2   C1   H11  0.00 0.00  180.0 0.00 0.00
+IC  C2   H11  *C1  H12  0.00 0.00  180.0 0.00 0.00
+IC  C1   C3   *C2  C2M  0.00 0.00  180.0 0.00 0.00
+IC  C2   C4   *C3  H31  0.00 0.00  180.0 0.00 0.00
+IC  C3   C5   *C4  H41  0.00 0.00  180.0 0.00 0.00
+IC  C1   C2   C2M  H2M1 0.00 0.00  180.0 0.00 0.00
+IC  C2   H2M1 *C2M H2M2 0.00 0.00  120.0 0.00 0.00
+IC  C2   H2M1 *C2M H2M3 0.00 0.00 -120.0 0.00 0.00
+IC  C4   H51  *C5  H52  0.00 0.00  120.0 0.00 0.00
+IC  C4   H51  *C5  H53  0.00 0.00 -120.0 0.00 0.00
+PATCH FIRST NONE LAST NONE
+
+RESI CROT       0.00 ! 2-buteneamide,N,3-dimethyl (crotonamide)
+                     ! numbering as in fennretinide
+! note different atom types for N21 and C15: this is consistent
+! with differences in NMA and acetamide
+GROUP
+ATOM C12  CT3  -0.27 ! 
+ATOM H121 HA3   0.09 !       H202 H203
+ATOM H122 HA3   0.09 !          \  /
+ATOM H123 HA3   0.09 !     H201-C20
+GROUP                !           |
+ATOM C13  CC1A  0.00 !H121-C12--C13     O29
+ATOM C14  CC1A -0.15 !    /  |    \\     ||
+ATOM H141 HE1   0.15 !H122 H123    C14--C15
+GROUP                !            /        \
+ATOM C15  C     0.51 !         H141         N21-H211 (cis)
+ATOM O29  O    -0.51 !                       |
+GROUP                !                 H132-C16-H131
+ATOM N21  NH1  -0.47 !                       |
+ATOM H211 H     0.28 !                      H133
+ATOM C16  CT3  -0.08
+ATOM H131 HA3   0.09
+ATOM H132 HA3   0.09
+ATOM H133 HA3   0.09
+GROUP                !
+ATOM C20  CT3  -0.27 !
+ATOM H201 HA3   0.09 !
+ATOM H202 HA3   0.09 !
+ATOM H203 HA3   0.09 !
+
+BOND C12  C13   C13  C14   C14  C15  C15   N21  N21  C16  
+BOND C13  C20   C15  O29   C14  H141 N21  H211  
+BOND C16  H131  C16  H132  C16  H133
+BOND C12  H121  C12  H122  C12  H123
+BOND C20  H201  C20  H202  C20  H203
+
+IC C12   C13   C14   C15    0.0000    0.00  180.00    0.00   0.0000
+IC C13   C14   C15   N21    0.0000    0.00  180.00    0.00   0.0000
+IC C14   C15   N21   C16    0.0000    0.00  180.00    0.00   0.0000
+IC H121  C13   *C12  H122   0.0000    0.00  120.00    0.00   0.0000
+IC H121  C13   *C12  H123   0.0000    0.00 -120.00    0.00   0.0000
+IC H121  C12   C13   C14    0.0000    0.00  180.00    0.00   0.0000
+IC C14   C12   *C13  C20    0.0000    0.00  180.00    0.00   0.0000
+IC C15   C13   *C14  H141   0.0000    0.00  180.00    0.00   0.0000
+IC N21   C14   *C15  O29    0.0000    0.00  180.00    0.00   0.0000
+IC C16   C15   *N21  H211   0.0000    0.00  180.00    0.00   0.0000
+IC C15   N21   C16   H131   0.0000    0.00  180.00    0.00   0.0000
+IC H131  N21   *C16  H132   0.0000    0.00  120.00    0.00   0.0000
+IC H131  N21   *C16  H133   0.0000    0.00 -120.00    0.00   0.0000
+IC C12   C13   C20   H201   0.0000    0.00  180.00    0.00   0.0000
+IC H201  C13   *C20  H202   0.0000    0.00  120.00    0.00   0.0000
+IC H201  C13   *C20  H203   0.0000    0.00 -120.00    0.00   0.0000
+
+PATCH FIRST NONE LAST NONE
+
+RESI PACP       0.00 ! p-acetamide-phenol
+                     ! numbering as in fennretinide
+                     !
+ATOM C14  CT3  -0.27 !           H142
+ATOM H141 HA3   0.09 !            |
+ATOM H142 HA3   0.09 !       H141-C14-H143
+ATOM H143 HA3   0.09 !            |
+GROUP                !            C15=O29
+ATOM C15  C     0.52 !            |
+ATOM O29  O    -0.52 !            N21-H211
+GROUP                !            |
+ATOM N21  NH1  -0.47 !           C22                    
+ATOM H211 H     0.33 !          //  \
+ATOM C22  CA    0.14 !   H231-C23   C27-H271
+GROUP                !         |     ||
+ATOM C23  CA   -0.115!   H241-C24   C26-H261
+ATOM H231 HP    0.115!         \\   /
+GROUP                !           C25
+ATOM C24  CA   -0.115!            |
+ATOM H241 HP    0.115!           O28
+GROUP                !             \
+ATOM C26  CA   -0.115!              H281
+ATOM H261 HP    0.115
+GROUP
+ATOM C27  CA   -0.115
+ATOM H271 HP    0.115
+GROUP
+ATOM C25  CA    0.11
+ATOM O28  OH1  -0.54
+ATOM H281 H     0.43
+
+BOND C14  C15  C15  N21  N21  C22  C22  C23  C15  O29
+BOND C23  C24  C24  C25  C25  C26  C26  C27  C27  C22
+BOND C25  O28  O28  H281 N21  H211
+BOND C14  H141 C14  H142 C14  H143
+BOND C23  H231 C24  H241 C26  H261 C27  H271
+
+IC C14   C15   N21   C22    0.0000    0.00  180.00    0.00   0.0000
+IC C15   N21   C22   C27    0.0000    0.00    0.00    0.00   0.0000
+IC N21   C22   C23   C24    0.0000    0.00  180.00    0.00   0.0000
+IC C22   C23   C24   C25    0.0000    0.00    0.00    0.00   0.0000
+IC C23   C24   C25   O28    0.0000    0.00  180.00    0.00   0.0000
+IC H141  C15   *C14  H142   0.0000    0.00  120.00    0.00   0.0000
+IC H141  C15   *C14  H143   0.0000    0.00 -120.00    0.00   0.0000
+IC H141  C14   C15   N21    0.0000    0.00  180.00    0.00   0.0000
+IC N21   C14   *C15  O29    0.0000    0.00  180.00    0.00   0.0000
+IC C22   C15   *N21  H211   0.0000    0.00  180.00    0.00   0.0000
+IC C27   N21   *C22  C23    0.0000    0.00  180.00    0.00   0.0000
+IC C24   C22   *C23  H231   0.0000    0.00  180.00    0.00   0.0000
+IC C25   C23   *C24  H241   0.0000    0.00  180.00    0.00   0.0000
+IC O28   C24   *C25  C26    0.0000    0.00  180.00    0.00   0.0000
+IC C27   C25   *C26  H261   0.0000    0.00  180.00    0.00   0.0000
+IC C26   C22   *C27  H271   0.0000    0.00  180.00    0.00   0.0000
+IC C24   C25   O28   H281   0.0000    0.00  180.00    0.00   0.0000
+
+PATCH FIRST NONE LAST NONE
+
+RESI MECH       0.00 ! 1,6,6-trimethyl-2-ethene-cyclhexene
+                     ! using retinol numbering
+GROUP
+ATOM C1   CT    0.00 !H162 H163  H171 H172
+ATOM C2   CT2  -0.18 !    \  |    |  /
+ATOM H21  HA2   0.09 !H161-C16    C17-H173  H81
+ATOM H22  HA2   0.09 !        \  /           |
+ATOM C3   CT2  -0.18 !  H21    C1           C8-H82
+ATOM H31  HA2   0.09 !     \  /  \         //
+ATOM H32  HA2   0.09 !  H22-C2    C6------C7
+ATOM C4   CT2  -0.18 !      |     ||        \
+ATOM H41  HA2   0.09 !  H31-C3    C5   H181  H71
+ATOM H42  HA2   0.09 !     /  \  /  \  /    
+ATOM C5   CC1A  0.00 !  H32    C4    C18-H18
+ATOM C6   CC1A  0.00 !        /  \     \    
+GROUP                !      H41  H42   H183
+ATOM C7   CC1B -0.15 ! 
+ATOM H71  HE1   0.15 !
+ATOM C8   CC2  -0.42 !
+ATOM H81  HE2   0.21 !
+ATOM H82  HE2   0.21 !
+GROUP               !
+ATOM C16  CT3  -0.27 !
+ATOM H161 HA3   0.09 !
+ATOM H162 HA3   0.09 !
+ATOM H163 HA3   0.09 !
+GROUP                !
+ATOM C17  CT3  -0.27 !
+ATOM H171 HA3   0.09 !
+ATOM H172 HA3   0.09 !
+ATOM H173 HA3   0.09 !
+GROUP                !
+ATOM C18  CT3  -0.27 !
+ATOM H181 HA3   0.09 !
+ATOM H182 HA3   0.09 !
+ATOM H183 HA3   0.09 !
+
+BOND C1   C2   C2   C3   C3   C4   C4   C5   C5   C6   C6   C1
+BOND C6   C7   C7   C8   C1   C16  C1   C17  C5   C18
+BOND C2   H21  C2   H22  C3   H31  C3   H32  C4   H41  C4   H42
+BOND C16  H161 C16  H162 C16  H163 C17  H171 C17  H172 C17  H173
+BOND C7   H71  C8   H81  C8   H82  C18  H181 C18  H182 C18  H183
+
+!initial ring geometry is planar
+IC  C1   C2   C3   C4   0.00 0.00   63.0 0.00 0.00
+IC  C2   C3   C4   C5   0.00 0.00  -46.0 0.00 0.00
+IC  C3   C4   C5   C6   0.00 0.00   15.0 0.00 0.00
+IC  C1   C3   *C2  H21  0.00 0.00  120.0 0.00 0.00
+IC  C1   C3   *C2  H22  0.00 0.00 -120.0 0.00 0.00
+IC  C2   C4   *C3  H31  0.00 0.00  120.0 0.00 0.00
+IC  C2   C4   *C3  H32  0.00 0.00 -120.0 0.00 0.00
+IC  C3   C5   *C4  H41  0.00 0.00  120.0 0.00 0.00
+IC  C3   C5   *C4  H42  0.00 0.00 -120.0 0.00 0.00
+IC  C1   C5   *C6  C7   0.00 0.00  180.0 0.00 0.00
+IC  C5   C6   C7   C8   0.00 0.00   60.0 0.00 0.00
+IC  C6   C8   *C7  H71  0.00 0.00  180.0 0.00 0.00
+IC  C6   C7   C8   H81  0.00 0.00  180.0 0.00 0.00
+IC  C7   H81  *C8  H82  0.00 0.00  180.0 0.00 0.00
+IC  C6   C2   *C1  C16  0.00 0.00  120.0 0.00 0.00
+IC  C6   C2   *C1  C17  0.00 0.00 -120.0 0.00 0.00
+IC  C2   C1   C16  H161 0.00 0.00  180.0 0.00 0.00
+IC  C1   H161 *C16 H162 0.00 0.00  120.0 0.00 0.00
+IC  C1   H161 *C16 H163 0.00 0.00 -120.0 0.00 0.00
+IC  C2   C1   C17  H171 0.00 0.00  180.0 0.00 0.00
+IC  C1   H171 *C17 H172 0.00 0.00  120.0 0.00 0.00
+IC  C1   H171 *C17 H173 0.00 0.00 -120.0 0.00 0.00
+IC  C4   C6   *C5  C18  0.00 0.00  180.0 0.00 0.00
+IC  C4   C5   C18  H181 0.00 0.00  180.0 0.00 0.00
+IC  C5   H181 *C18 H182 0.00 0.00  120.0 0.00 0.00
+IC  C5   H181 *C18 H183 0.00 0.00 -120.0 0.00 0.00
+PATCH FIRST NONE LAST NONE
+
+RESI TMCH       0.00 ! 1,2,6,6-tetramethylcyclohexene
+                     ! using retinol numbering
+GROUP
+ATOM C1   CT    0.00 !H162 H163  H171 H172
+ATOM C2   CT2  -0.18 !    \  |    |  /
+ATOM H21  HA2   0.09 !H161-C16    C17-H173
+ATOM H22  HA2   0.09 !        \  /
+ATOM C3   CT2  -0.18 !  H21    C1        H71 H72
+ATOM H31  HA2   0.09 !     \  /  \        | /
+ATOM H32  HA2   0.09 !  H22-C2    C6------C7-H73
+ATOM C4   CT2  -0.18 !      |     ||
+ATOM H41  HA2   0.09 !  H31-C3    C5   H181
+ATOM H42  HA2   0.09 !     /  \  /  \  /
+ATOM C5   CC1A  0.00 !  H32    C4    C18-H18
+ATOM C6   CC1A  0.00 !        /  \     \
+GROUP                !      H41  H42   H183
+ATOM C7   CT3  -0.27 !
+ATOM H71  HA3   0.09 !
+ATOM H72  HA3   0.09 !
+ATOM H73  HA3   0.09 !
+GROUP                !
+ATOM C16  CT3  -0.27 !
+ATOM H161 HA3   0.09 !
+ATOM H162 HA3   0.09 !
+ATOM H163 HA3   0.09 !
+GROUP                !
+ATOM C17  CT3  -0.27 !
+ATOM H171 HA3   0.09 !
+ATOM H172 HA3   0.09 !
+ATOM H173 HA3   0.09 !
+GROUP                !
+ATOM C18  CT3  -0.27 !
+ATOM H181 HA3   0.09 !
+ATOM H182 HA3   0.09 !
+ATOM H183 HA3   0.09 !
+
+BOND C1   C2   C2   C3   C3   C4   C4   C5   C5   C6   C6   C1
+BOND C6   C7   C1   C16  C1   C17  C5   C18
+BOND C2   H21  C2   H22  C3   H31  C3   H32  C4   H41  C4   H42
+BOND C16  H161 C16  H162 C16  H163 C17  H171 C17  H172 C17  H173
+BOND C7   H71  C7   H72  C7   H73  C18  H181 C18  H182 C18  H183
+
+!initial geometry is planar
+IC  C1   C2   C3   C4   0.00 0.00  -63.0 0.00 0.00
+IC  C2   C3   C4   C5   0.00 0.00   46.0 0.00 0.00
+IC  C3   C4   C5   C6   0.00 0.00  -13.0 0.00 0.00
+IC  C1   C3   *C2  H21  0.00 0.00  120.0 0.00 0.00
+IC  C1   C3   *C2  H22  0.00 0.00 -120.0 0.00 0.00
+IC  C2   C4   *C3  H31  0.00 0.00  120.0 0.00 0.00
+IC  C2   C4   *C3  H32  0.00 0.00 -120.0 0.00 0.00
+IC  C3   C5   *C4  H41  0.00 0.00  120.0 0.00 0.00
+IC  C3   C5   *C4  H42  0.00 0.00 -120.0 0.00 0.00
+IC  C1   C5   *C6  C7   0.00 0.00  180.0 0.00 0.00
+IC  C5   C6   C7   H71  0.00 0.00  180.0 0.00 0.00
+IC  C6   H71  *C7  H72  0.00 0.00  120.0 0.00 0.00
+IC  C6   H71  *C7  H73  0.00 0.00 -120.0 0.00 0.00
+IC  C6   C2   *C1  C16  0.00 0.00  120.0 0.00 0.00
+IC  C6   C2   *C1  C17  0.00 0.00 -120.0 0.00 0.00
+IC  C2   C1   C16  H161 0.00 0.00  180.0 0.00 0.00
+IC  C1   H161 *C16 H162 0.00 0.00  120.0 0.00 0.00
+IC  C1   H161 *C16 H163 0.00 0.00 -120.0 0.00 0.00
+IC  C2   C1   C17  H171 0.00 0.00  180.0 0.00 0.00
+IC  C1   H171 *C17 H172 0.00 0.00  120.0 0.00 0.00
+IC  C1   H171 *C17 H173 0.00 0.00 -120.0 0.00 0.00
+IC  C4   C6   *C5  C18  0.00 0.00  180.0 0.00 0.00
+IC  C4   C5   C18  H181 0.00 0.00  180.0 0.00 0.00
+IC  C5   H181 *C18 H182 0.00 0.00  120.0 0.00 0.00
+IC  C5   H181 *C18 H183 0.00 0.00 -120.0 0.00 0.00
+PATCH FIRST NONE LAST NONE
+
+RESI FRET       0.00 ! fennretinide, nomenclature consistent with retinol
+!
+!
+!    
+GROUP
+ATOM C1   CT    0.00 
+ATOM C2   CT2  -0.18
+ATOM H21  HA2   0.09
+ATOM H22  HA2   0.09
+ATOM C3   CT2  -0.18
+ATOM H31  HA2   0.09
+ATOM H32  HA2   0.09
+ATOM C4   CT2  -0.18
+ATOM H41  HA2   0.09
+ATOM H42  HA2   0.09
+ATOM C5   CC1A  0.00 
+ATOM C6   CC1A  0.00
+GROUP
+ATOM C7   CC1B -0.15
+ATOM H71  HE1   0.15
+ATOM C8   CC1B -0.15
+ATOM H81  HE1   0.15
+ATOM C9   CC1A  0.00
+ATOM C10  CC1A -0.15
+ATOM H101 HE1   0.15
+GROUP
+ATOM C11  CC1B -0.15 !H162 H163  H171 H172
+ATOM H111 HE1   0.15 !    \  |    |  /
+ATOM C12  CC1B -0.15 !H161-C16    C17-H173            H191 H192
+ATOM H121 HE1   0.15 !        \  /                      \   /
+ATOM C13  CC1A  0.00 !  H21    C1        H71    H81      C19
+ATOM C14  CC1A -0.15 !     \  /  \        |      |       /  \
+ATOM H141 HE1   0.15 !  H22-C2    C6------C7=====C8----C9    H193
+GROUP                !      |     ||                   ||
+ATOM C16  CT3  -0.27 !  H31-C3    C5   H181            C10-H101 
+ATOM H161 HA3   0.09 !     /  \  /  \  /               |
+ATOM H162 HA3   0.09 !  H32    C4    C18-H182          C11-H111
+ATOM H163 HA3   0.09 !        /  \     \               ||
+GROUP                !      H41  H42   H183            C12-H121 H201
+ATOM C17  CT3  -0.27 !                                 |       /
+ATOM H171 HA3   0.09 !                                 C13---C20-H202
+ATOM H172 HA3   0.09 !                                 ||      \
+ATOM H173 HA3   0.09 !                                 C14-H141 H203
+GROUP                !                                 |
+ATOM C18  CT3  -0.27 !                                 C15=O29
+ATOM H181 HA3   0.09 !                                 |
+ATOM H182 HA3   0.09 !                                 N21-H211
+ATOM H183 HA3   0.09 !                                 |
+GROUP                !                                C22 
+ATOM C19  CT3  -0.27 !                               //  \
+ATOM H191 HA3   0.09 !                        H231-C23   C27-H271
+ATOM H192 HA3   0.09 !                              |     ||
+ATOM H193 HA3   0.09 !                        H241-C24   C26-H261
+GROUP                !                               \\  /
+ATOM C20  CT3  -0.27 !                                C25
+ATOM H201 HA3   0.09 !                                 |
+ATOM H202 HA3   0.09 !                                O28
+ATOM H203 HA3   0.09 !                                  \
+GROUP                !                                   H281
+ATOM C15  C     0.51 ! charges from CROT
+ATOM O29  O    -0.51 !
+GROUP
+ATOM N21  NH1  -0.47 !
+ATOM H211 H     0.33 ! charges from PACP
+ATOM C22  CA    0.14 !
+GROUP 
+ATOM C23  CA   -0.115
+ATOM H231 HP    0.115
+GROUP
+ATOM C24  CA   -0.115
+ATOM H241 HP    0.115
+GROUP
+ATOM C26  CA   -0.115
+ATOM H261 HP    0.115
+GROUP
+ATOM C27  CA   -0.115
+ATOM H271 HP    0.115
+GROUP
+ATOM C25  CA    0.11
+ATOM O28  OH1  -0.54
+ATOM H281 H     0.43
+
+BOND C1   C2   C2   C3   C3   C4   C4   C5   C5   C6   C6   C1
+BOND C6   C7   C7   C8   C8   C9   C9   C10  C10  C11  C11  C12
+BOND C12  C13  C13  C14  C14  C15  C15  N21  N21  C22  C22  C23
+BOND C23  C24  C24  C25  C25  C26  C26  C27  C27  C22
+BOND C1   C16  C1   C17  C5   C18  C9   C19  C13  C20  C15  O29
+BOND C25  O28  O28  H281 N21  H211
+BOND C2   H21  C2   H22  C3   H31  C3   H32  C4   H41  C4   H42
+BOND C7   H71  C8   H81  C10  H101 C11  H111 C12  H121 C14  H141
+BOND C16  H161 C16  H162 C16  H163 C17  H171 C17  H172 C17  H173
+BOND C18  H181 C18  H182 C18  H183 C19  H191 C19  H192 C19  H193
+BOND C20  H201 C20  H202 C20  H203
+BOND C23  H231 C24  H241 C26  H261 C27  H271
+
+IC C1    C2    C3    C4     0.0000    0.00    0.00    0.00   0.0000
+IC C2    C3    C4    C5     0.0000    0.00    0.00    0.00   0.0000
+IC C6    C1    C2    C3     0.0000    0.00    0.00    0.00   0.0000
+IC C1    C6    C7    C8     0.0000    0.00  180.00    0.00   0.0000
+IC C6    C7    C8    C9     0.0000    0.00  180.00    0.00   0.0000
+IC C7    C8    C9    C10    0.0000    0.00  180.00    0.00   0.0000
+IC C2    C6    *C1   C16    0.0000    0.00  120.00    0.00   0.0000
+IC C2    C6    *C1   C17    0.0000    0.00 -120.00    0.00   0.0000
+IC C3    C1    *C2   H21    0.0000    0.00  120.00    0.00   0.0000
+IC C3    C1    *C2   H22    0.0000    0.00 -120.00    0.00   0.0000
+IC C4    C2    *C3   H31    0.0000    0.00  120.00    0.00   0.0000
+IC C4    C2    *C3   H32    0.0000    0.00 -120.00    0.00   0.0000
+IC C5    C3    *C4   H41    0.0000    0.00  120.00    0.00   0.0000
+IC C5    C3    *C4   H42    0.0000    0.00 -120.00    0.00   0.0000
+IC C5    C1    *C6   C7     0.0000    0.00  180.00    0.00   0.0000
+IC C8    C6    *C7   H71    0.0000    0.00  180.00    0.00   0.0000
+IC C9    C7    *C8   H81    0.0000    0.00  180.00    0.00   0.0000
+IC C10   C8    *C9   C19    0.0000    0.00  180.00    0.00   0.0000
+IC C8    C9    C10   C11    0.0000    0.00  180.00    0.00   0.0000
+IC C11   C9    *C10  H101   0.0000    0.00  180.00    0.00   0.0000
+IC C9    C10   C11   C12    0.0000    0.00  180.00    0.00   0.0000
+IC C12   C10   *C11  H111   0.0000    0.00  180.00    0.00   0.0000
+IC C10   C11   C12   C13    0.0000    0.00  180.00    0.00   0.0000
+IC C13   C11   *C12  H121   0.0000    0.00  180.00    0.00   0.0000
+IC C11   C12   C13   C14    0.0000    0.00  180.00    0.00   0.0000
+IC C14   C12   *C13  C20    0.0000    0.00  180.00    0.00   0.0000
+IC C12   C13   C14   C15    0.0000    0.00  180.00    0.00   0.0000
+IC C15   C13   *C14  H141   0.0000    0.00  180.00    0.00   0.0000
+IC C6    C1    C16   H161   0.0000    0.00  180.00    0.00   0.0000
+IC H161  C1    *C16  H162   0.0000    0.00  120.00    0.00   0.0000
+IC H161  C1    *C16  H163   0.0000    0.00 -120.00    0.00   0.0000
+IC C6    C1    C17   H171   0.0000    0.00  180.00    0.00   0.0000
+IC H171  C1    *C17  H172   0.0000    0.00  120.00    0.00   0.0000
+IC H171  C1    *C17  H173   0.0000    0.00 -120.00    0.00   0.0000
+IC C6    C4    *C5   C18    0.0000    0.00  180.00    0.00   0.0000
+IC C4    C5    C18   H181   0.0000    0.00  180.00    0.00   0.0000
+IC H181  C5    *C18  H182   0.0000    0.00  120.00    0.00   0.0000
+IC H181  C5    *C18  H183   0.0000    0.00 -120.00    0.00   0.0000
+IC C8    C9    C19   H191   0.0000    0.00  180.00    0.00   0.0000
+IC H191  C9    *C19  H192   0.0000    0.00  120.00    0.00   0.0000
+IC H191  C9    *C19  H193   0.0000    0.00 -120.00    0.00   0.0000
+IC C12   C13   C20   H201   0.0000    0.00  180.00    0.00   0.0000
+IC H201  C13   *C20  H202   0.0000    0.00  120.00    0.00   0.0000
+IC H201  C13   *C20  H203   0.0000    0.00 -120.00    0.00   0.0000
+IC C13   C14   C15   N21    0.0000    0.00  180.00    0.00   0.0000
+IC N21   C14   *C15  O29    0.0000    0.00  180.00    0.00   0.0000
+IC C14   C15   N21   C22    0.0000    0.00  180.00    0.00   0.0000
+IC C22   C15   *N21  H211   0.0000    0.00  180.00    0.00   0.0000
+IC C15   N21   C22   C27    0.0000    0.00  180.00    0.00   0.0000
+IC C27   N21   *C22  C23    0.0000    0.00  180.00    0.00   0.0000
+IC N21   C22   C23   C24    0.0000    0.00  180.00    0.00   0.0000
+IC C24   C22   *C23  H231   0.0000    0.00  180.00    0.00   0.0000
+IC C22   C23   C24   C25    0.0000    0.00    0.00    0.00   0.0000
+IC C25   C23   *C24  H241   0.0000    0.00  180.00    0.00   0.0000
+IC C23   C24   C25   O28    0.0000    0.00  180.00    0.00   0.0000
+IC O28   C24   *C25  C26    0.0000    0.00  180.00    0.00   0.0000
+IC C27   C25   *C26  H261   0.0000    0.00  180.00    0.00   0.0000
+IC C26   C22   *C27  H271   0.0000    0.00  180.00    0.00   0.0000
+IC C24   C25   O28   H281   0.0000    0.00  180.00    0.00   0.0000
+
+PATCH FIRST NONE LAST NONE
+
+RESI RTOL       0.00 ! retinol, nomenclature from PDB
+!
+GROUP
+ATOM C1   CT    0.00
+ATOM C2   CT2  -0.18
+ATOM H21  HA2   0.09
+ATOM H22  HA2   0.09
+GROUP
+ATOM C3   CT2  -0.18
+ATOM H31  HA2   0.09
+ATOM H32  HA2   0.09
+GROUP
+ATOM C4   CT2  -0.18
+ATOM H41  HA2   0.09
+ATOM H42  HA2   0.09
+ATOM C5   CC1A  0.00
+ATOM C6   CC1A  0.00
+GROUP
+ATOM C7   CC1B -0.15
+ATOM H71  HE1   0.15
+ATOM C8   CC1B -0.15
+ATOM H81  HE1   0.15
+GROUP
+ATOM C9   CC1A  0.00
+ATOM C10  CC1A -0.15
+ATOM H101 HE1   0.15
+GROUP
+ATOM C11  CC1B -0.15
+ATOM H111 HE1   0.15
+GROUP
+ATOM C12  CC1B -0.15
+ATOM H121 HE1   0.15
+GROUP
+ATOM C13  CC1A  0.00
+ATOM C14  CC1A -0.15 !
+ATOM H141 HE1   0.15 !H162 H163  H171 H172
+GROUP                !    \  |    |  /
+ATOM C15  CT2   0.05 !H161-C16    C17-H173            H191 H192
+ATOM H151 HA2   0.09 !        \  /                      \   /
+ATOM H152 HA2   0.09 !  H21    C1        H71    H81      C19
+ATOM OR   OH1  -0.66 !     \  /  \        |      |       /  \
+ATOM HR   H     0.43 !  H22-C2    C6------C7=====C8----C9    H193
+GROUP                !      |     ||                   ||
+ATOM C16  CT3  -0.27 !  H31-C3    C5   H181            C10-H101 
+ATOM H161 HA3   0.09 !     /  \  /  \  /               |
+ATOM H162 HA3   0.09 !  H32    C4    C18-H182          C11-H111
+ATOM H163 HA3   0.09 !        /  \     \               ||
+GROUP                !      H41  H42   H183            C12-H121 H201
+ATOM C17  CT3  -0.27 !                                 |       /
+ATOM H171 HA3   0.09 !                                 C13---C20-H202
+ATOM H172 HA3   0.09 !                                 ||      \
+ATOM H173 HA3   0.09 !                                 C14-H141 H203
+GROUP                !                                 |
+ATOM C18  CT3  -0.27 !                            H151-C15-H152
+ATOM H181 HA3   0.09 !                                 |
+ATOM H182 HA3   0.09 !                                 OR   
+ATOM H183 HA3   0.09 !                                   \
+GROUP                !                                    HR
+ATOM C19  CT3  -0.27 !
+ATOM H191 HA3   0.09 !
+ATOM H192 HA3   0.09 !
+ATOM H193 HA3   0.09 !
+GROUP                !
+ATOM C20  CT3  -0.27 !
+ATOM H201 HA3   0.09 !
+ATOM H202 HA3   0.09 !
+ATOM H203 HA3   0.09 !
+
+BOND C1   C2   C2   C3   C3   C4   C4   C5   C5   C6   C6   C1
+BOND C6   C7   C7   C8   C8   C9   C9   C10  C10  C11  C11  C12
+BOND C12  C13  C13  C14  C14  C15  C15  OR
+BOND C1   C16  C1   C17  C5   C18  C9   C19  C13  C20
+BOND C2   H21  C2   H22  C3   H31  C3   H32  C4   H41  C4   H42
+BOND C7   H71  C8   H81  C10  H101 C11  H111 C12  H121 C14  H141
+BOND C15  H151 C15  H152 OR   HR
+BOND C16  H161 C16  H162 C16  H163 C17  H171 C17  H172 C17  H173
+BOND C18  H181 C18  H182 C18  H183 C19  H191 C19  H192 C19  H193
+BOND C20  H201 C20  H202 C20  H203
+
+IC C1    C2    C3    C4     0.0000    0.00    0.00    0.00   0.0000
+IC C6    C1    C2    C3     0.0000    0.00    0.00    0.00   0.0000
+IC C2    C3    C4    C5     0.0000    0.00    0.00    0.00   0.0000
+IC C1    C6    C7    C8     0.0000    0.00  180.00    0.00   0.0000
+IC C6    C7    C8    C9     0.0000    0.00  180.00    0.00   0.0000
+IC C7    C8    C9    C10    0.0000    0.00  180.00    0.00   0.0000
+IC C2    C6    *C1   C16    0.0000    0.00  120.00    0.00   0.0000
+IC C2    C6    *C1   C17    0.0000    0.00 -120.00    0.00   0.0000
+IC C3    C1    *C2   H21    0.0000    0.00  120.00    0.00   0.0000
+IC C3    C1    *C2   H22    0.0000    0.00 -120.00    0.00   0.0000
+IC C4    C2    *C3   H31    0.0000    0.00  120.00    0.00   0.0000
+IC C4    C2    *C3   H32    0.0000    0.00 -120.00    0.00   0.0000
+IC C5    C3    *C4   H41    0.0000    0.00  120.00    0.00   0.0000
+IC C5    C3    *C4   H42    0.0000    0.00 -120.00    0.00   0.0000
+IC C5    C1    *C6   C7     0.0000    0.00  180.00    0.00   0.0000
+IC C8    C6    *C7   H71    0.0000    0.00  180.00    0.00   0.0000
+IC C9    C7    *C8   H81    0.0000    0.00  180.00    0.00   0.0000
+IC C10   C8    *C9   C19    0.0000    0.00  180.00    0.00   0.0000
+IC C8    C9    C10   C11    0.0000    0.00  180.00    0.00   0.0000
+IC C11   C9    *C10  H101   0.0000    0.00  180.00    0.00   0.0000
+IC C9    C10   C11   C12    0.0000    0.00  180.00    0.00   0.0000
+IC C12   C10   *C11  H111   0.0000    0.00  180.00    0.00   0.0000
+IC C10   C11   C12   C13    0.0000    0.00  180.00    0.00   0.0000
+IC C13   C11   *C12  H121   0.0000    0.00  180.00    0.00   0.0000
+IC C11   C12   C13   C14    0.0000    0.00  180.00    0.00   0.0000
+IC C14   C12   *C13  C20    0.0000    0.00  180.00    0.00   0.0000
+IC C12   C13   C14   C15    0.0000    0.00  180.00    0.00   0.0000
+IC C15   C13   *C14  H141   0.0000    0.00  180.00    0.00   0.0000
+IC C13   C14   C15   OR     0.0000    0.00  180.00    0.00   0.0000
+IC OR    C14   *C15  H151   0.0000    0.00  120.00    0.00   0.0000
+IC OR    C14   *C15  H152   0.0000    0.00 -120.00    0.00   0.0000
+IC C14   C15   OR    HR     0.0000    0.00  180.00    0.00   0.0000
+IC C6    C1    C16   H161   0.0000    0.00  180.00    0.00   0.0000
+IC H161  C1    *C16  H162   0.0000    0.00  120.00    0.00   0.0000
+IC H161  C1    *C16  H163   0.0000    0.00 -120.00    0.00   0.0000
+IC C6    C1    C17   H171   0.0000    0.00  180.00    0.00   0.0000
+IC H171  C1    *C17  H172   0.0000    0.00  120.00    0.00   0.0000
+IC H171  C1    *C17  H173   0.0000    0.00 -120.00    0.00   0.0000
+IC C6    C4    *C5   C18    0.0000    0.00  180.00    0.00   0.0000
+IC C4    C5    C18   H181   0.0000    0.00  180.00    0.00   0.0000
+IC H181  C5    *C18  H182   0.0000    0.00  120.00    0.00   0.0000
+IC H181  C5    *C18  H183   0.0000    0.00 -120.00    0.00   0.0000
+IC C8    C9    C19   H191   0.0000    0.00  180.00    0.00   0.0000
+IC H191  C9    *C19  H192   0.0000    0.00  120.00    0.00   0.0000
+IC H191  C9    *C19  H193   0.0000    0.00 -120.00    0.00   0.0000
+IC C12   C13   C20   H201   0.0000    0.00  180.00    0.00   0.0000
+IC H201  C13   *C20  H202   0.0000    0.00  120.00    0.00   0.0000
+IC H201  C13   *C20  H203   0.0000    0.00 -120.00    0.00   0.0000
+
+PATCH FIRST NONE LAST NONE
+
+RESI RTAL       0.00 ! retinal, nomenclature from PDB based on retinol
+!
+GROUP
+ATOM C1   CT    0.00
+ATOM C2   CT2  -0.18
+ATOM H21  HA2   0.09
+ATOM H22  HA2   0.09
+ATOM C3   CT2  -0.18
+ATOM H31  HA2   0.09
+ATOM H32  HA2   0.09
+ATOM C4   CT2  -0.18
+ATOM H41  HA2   0.09
+ATOM H42  HA2   0.09
+ATOM C5   CC1A  0.00
+ATOM C6   CC1A  0.00
+GROUP
+ATOM C7   CC1B -0.15
+ATOM H71  HE1   0.15
+ATOM C8   CC1B -0.15
+ATOM H81  HE1   0.15
+ATOM C9   CC1A  0.00
+ATOM C10  CC1A -0.15
+ATOM H101 HE1   0.15
+GROUP
+ATOM C11  CC1B -0.15
+ATOM H111 HE1   0.15
+ATOM C12  CC1B -0.15
+ATOM H121 HE1   0.15 !
+ATOM C13  CC1A  0.00 !H162 H163  H171 H172
+GROUP                !    \  |    |  /
+ATOM C14  CC1A -0.01 !H161-C16    C17-H173            H191 H192
+ATOM H141 HE1   0.15 !        \  /                      \   /
+ATOM C15  CD    0.19 !  H21    C1        H71    H81      C19
+ATOM O15  O    -0.43 !     \  /  \        |      |       /  \
+ATOM H15  HR1   0.10 !  H22-C2    C6------C7=====C8----C9    H193
+GROUP                !      |     ||                   ||
+ATOM C16  CT3  -0.27 !  H31-C3    C5   H181            C10-H101 
+ATOM H161 HA3   0.09 !     /  \  /  \  /               |
+ATOM H162 HA3   0.09 !  H32    C4    C18-H182          C11-H111
+ATOM H163 HA3   0.09 !        /  \     \               ||
+GROUP                !      H41  H42   H183            C12-H121 H201
+ATOM C17  CT3  -0.27 !                                 |       /
+ATOM H171 HA3   0.09 !                                 C13---C20-H202
+ATOM H172 HA3   0.09 !                                 ||      \
+ATOM H173 HA3   0.09 !                                 C14-H141 H203
+GROUP                !                                 |
+ATOM C18  CT3  -0.27 !                                 C15
+ATOM H181 HA3   0.09 !                                /  \\
+ATOM H182 HA3   0.09 !                              H15   O15
+ATOM H183 HA3   0.09 !
+GROUP                !
+ATOM C19  CT3  -0.27 !
+ATOM H191 HA3   0.09 !
+ATOM H192 HA3   0.09 !
+ATOM H193 HA3   0.09 !
+GROUP                !
+ATOM C20  CT3  -0.27 !
+ATOM H201 HA3   0.09 !
+ATOM H202 HA3   0.09 !
+ATOM H203 HA3   0.09 !
+
+BOND C1   C2   C2   C3   C3   C4   C4   C5   C5   C6   C6   C1
+BOND C6   C7   C7   C8   C8   C9   C9   C10  C10  C11  C11  C12
+BOND C12  C13  C13  C14  C14  C15  C15  O15  C15  H15
+BOND C1   C16  C1   C17  C5   C18  C9   C19  C13  C20
+BOND C2   H21  C2   H22  C3   H31  C3   H32  C4   H41  C4   H42
+BOND C7   H71  C8   H81  C10  H101 C11  H111 C12  H121 C14  H141
+BOND C16  H161 C16  H162 C16  H163 C17  H171 C17  H172 C17  H173
+BOND C18  H181 C18  H182 C18  H183 C19  H191 C19  H192 C19  H193
+BOND C20  H201 C20  H202 C20  H203
+
+IC C1    C2    C3    C4     0.0000    0.00    0.00    0.00   0.0000
+IC C2    C3    C4    C5     0.0000    0.00    0.00    0.00   0.0000
+IC C6    C1    C2    C3     0.0000    0.00    0.00    0.00   0.0000
+IC C1    C6    C7    C8     0.0000    0.00  180.00    0.00   0.0000
+IC C6    C7    C8    C9     0.0000    0.00  180.00    0.00   0.0000
+IC C7    C8    C9    C10    0.0000    0.00  180.00    0.00   0.0000
+IC C8    C9    C10   C11    0.0000    0.00  180.00    0.00   0.0000
+IC C2    C6    *C1   C16    0.0000    0.00  120.00    0.00   0.0000
+IC C2    C6    *C1   C17    0.0000    0.00 -120.00    0.00   0.0000
+IC C3    C1    *C2   H21    0.0000    0.00  120.00    0.00   0.0000
+IC C3    C1    *C2   H22    0.0000    0.00 -120.00    0.00   0.0000
+IC C4    C2    *C3   H31    0.0000    0.00  120.00    0.00   0.0000
+IC C4    C2    *C3   H32    0.0000    0.00 -120.00    0.00   0.0000
+IC C5    C3    *C4   H41    0.0000    0.00  120.00    0.00   0.0000
+IC C5    C3    *C4   H42    0.0000    0.00 -120.00    0.00   0.0000
+IC C5    C1    *C6   C7     0.0000    0.00  180.00    0.00   0.0000
+IC C8    C6    *C7   H71    0.0000    0.00  180.00    0.00   0.0000
+IC C9    C7    *C8   H81    0.0000    0.00  180.00    0.00   0.0000
+IC C10   C8    *C9   C19    0.0000    0.00  180.00    0.00   0.0000
+IC C11   C9    *C10  H101   0.0000    0.00  180.00    0.00   0.0000
+IC C9    C10   C11   C12    0.0000    0.00  180.00    0.00   0.0000
+IC C12   C10   *C11  H111   0.0000    0.00  180.00    0.00   0.0000
+IC C10   C11   C12   C13    0.0000    0.00  180.00    0.00   0.0000
+IC C13   C11   *C12  H121   0.0000    0.00  180.00    0.00   0.0000
+IC C11   C12   C13   C14    0.0000    0.00  180.00    0.00   0.0000
+IC C14   C12   *C13  C20    0.0000    0.00  180.00    0.00   0.0000
+IC C12   C13   C14   C15    0.0000    0.00  180.00    0.00   0.0000
+IC C15   C13   *C14  H141   0.0000    0.00  180.00    0.00   0.0000
+IC C13   C14   C15   O15    0.0000    0.00  180.00    0.00   0.0000
+IC O15   C14   *C15  H15    0.0000    0.00  180.00    0.00   0.0000
+IC C6    C1    C16   H161   0.0000    0.00  180.00    0.00   0.0000
+IC H161  C1    *C16  H162   0.0000    0.00  120.00    0.00   0.0000
+IC H161  C1    *C16  H163   0.0000    0.00 -120.00    0.00   0.0000
+IC C6    C1    C17   H171   0.0000    0.00  180.00    0.00   0.0000
+IC H171  C1    *C17  H172   0.0000    0.00  120.00    0.00   0.0000
+IC H171  C1    *C17  H173   0.0000    0.00 -120.00    0.00   0.0000
+IC C6    C4    *C5   C18    0.0000    0.00  180.00    0.00   0.0000
+IC C4    C5    C18   H181   0.0000    0.00  180.00    0.00   0.0000
+IC H181  C5    *C18  H182   0.0000    0.00  120.00    0.00   0.0000
+IC H181  C5    *C18  H183   0.0000    0.00 -120.00    0.00   0.0000
+IC C8    C9    C19   H191   0.0000    0.00  180.00    0.00   0.0000
+IC H191  C9    *C19  H192   0.0000    0.00  120.00    0.00   0.0000
+IC H191  C9    *C19  H193   0.0000    0.00 -120.00    0.00   0.0000
+IC C12   C13   C20   H201   0.0000    0.00  180.00    0.00   0.0000
+IC H201  C13   *C20  H202   0.0000    0.00  120.00    0.00   0.0000
+IC H201  C13   *C20  H203   0.0000    0.00 -120.00    0.00   0.0000
+
+PATCH FIRST NONE LAST NONE
+
+RESI RTAC      -1.00 ! all-trans-retinoic acid, nomenclature from PDB
+!
+GROUP
+ATOM C1   CT    0.00 
+ATOM C16  CT3  -0.27
+ATOM H161 HA3   0.09
+ATOM H162 HA3   0.09
+ATOM H163 HA3   0.09
+ATOM C17  CT3  -0.27
+ATOM H171 HA3   0.09
+ATOM H172 HA3   0.09
+ATOM H173 HA3   0.09
+GROUP               
+ATOM C2   CT2  -0.18
+ATOM H21  HA2   0.09
+ATOM H22  HA2   0.09
+ATOM C3   CT2  -0.18
+ATOM H31  HA2   0.09
+ATOM H32  HA2   0.09
+ATOM C4   CT2  -0.18
+ATOM H41  HA2   0.09
+ATOM H42  HA2   0.09
+GROUP               
+ATOM C5   CC1A  0.00  
+ATOM C6   CC1A  0.00
+GROUP
+ATOM C18  CT3  -0.27
+ATOM H181 HA3   0.09
+ATOM H182 HA3   0.09
+ATOM H183 HA3   0.09
+GROUP
+ATOM C7   CC1B -0.15
+ATOM H71  HE1   0.15
+ATOM C8   CC1B -0.15
+ATOM H81  HE1   0.15
+GROUP
+ATOM C9   CC1A  0.00 
+ATOM C19  CT3  -0.27 !H162 H163  H171 H172
+ATOM H191 HA3   0.09 !    \  |    |  /
+ATOM H192 HA3   0.09 !H161-C16    C17-H173            H191 H192
+ATOM H193 HA3   0.09 !        \  /                      \   /
+ATOM C10  CC1A -0.15 !  H21    C1        H71    H81      C19
+ATOM H101 HE1   0.15 !     \  /  \        |      |       /  \
+GROUP                !  H22-C2    C6------C7=====C8----C9    H193
+ATOM C11  CC1B -0.15 !      |     ||                   ||
+ATOM H111 HE1   0.15 !  H31-C3    C5   H181            C10-H101 
+ATOM C12  CC1B -0.15 !     /  \  /  \  /               |
+ATOM H121 HE1   0.15 !  H32    C4    C18-H182          C11-H111
+GROUP                !        /  \     \               ||
+ATOM C13  CC1A  0.00 !      H41  H42   H183            C12-H121 H201
+ATOM C20  CT3  -0.27 !                                 |       /
+ATOM H201 HA3   0.09 !                                 C13---C20-H202
+ATOM H202 HA3   0.09 !                                 ||      \
+ATOM H203 HA3   0.09 !                                 C14-H141 H203
+GROUP                !                                 |
+ATOM C14  CC1A -0.25 !                                 C15=O29
+ATOM H141 HE1   0.15 !                                 |   (-)
+ATOM C15  CC    0.62 !                                 O29B
+ATOM O29  OC   -0.76 !
+ATOM O29B OC   -0.76
+
+BOND C1   C2   C2   C3   C3   C4   C4   C5   C5   C6   C6   C1
+BOND C6   C7   C7   C8   C8   C9   C9   C10  C10  C11  C11  C12
+BOND C12  C13  C13  C14  C14  C15  C15  O29  C15  O29B
+BOND C1   C16  C1   C17  C5   C18  C9   C19  C13  C20
+BOND C2   H21  C2   H22  C3   H31  C3   H32  C4   H41  C4   H42
+BOND C7   H71  C8   H81  C10  H101 C11  H111 C12  H121 C14  H141
+BOND C16  H161 C16  H162 C16  H163 C17  H171 C17  H172 C17  H173
+BOND C18  H181 C18  H182 C18  H183 C19  H191 C19  H192 C19  H193
+BOND C20  H201 C20  H202 C20  H203
+
+IC C1    C2    C3    C4     0.0000    0.00    0.00    0.00   0.0000
+IC C2    C3    C4    C5     0.0000    0.00    0.00    0.00   0.0000
+IC C6    C1    C2    C3     0.0000    0.00    0.00    0.00   0.0000
+IC C1    C6    C7    C8     0.0000    0.00  180.00    0.00   0.0000
+IC C6    C7    C8    C9     0.0000    0.00  180.00    0.00   0.0000
+IC C7    C8    C9    C10    0.0000    0.00  180.00    0.00   0.0000
+IC C2    C6    *C1   C16    0.0000    0.00  120.00    0.00   0.0000
+IC C2    C6    *C1   C17    0.0000    0.00 -120.00    0.00   0.0000
+IC C6    C1    C16   H161   0.0000    0.00  180.00    0.00   0.0000
+IC H161  C1    *C16  H162   0.0000    0.00  120.00    0.00   0.0000
+IC H161  C1    *C16  H163   0.0000    0.00 -120.00    0.00   0.0000
+IC C6    C1    C17   H171   0.0000    0.00  180.00    0.00   0.0000
+IC H171  C1    *C17  H172   0.0000    0.00  120.00    0.00   0.0000
+IC H171  C1    *C17  H173   0.0000    0.00 -120.00    0.00   0.0000
+IC C3    C1    *C2   H21    0.0000    0.00  120.00    0.00   0.0000
+IC C3    C1    *C2   H22    0.0000    0.00 -120.00    0.00   0.0000
+IC C4    C2    *C3   H31    0.0000    0.00  120.00    0.00   0.0000
+IC C4    C2    *C3   H32    0.0000    0.00 -120.00    0.00   0.0000
+IC C5    C3    *C4   H41    0.0000    0.00  120.00    0.00   0.0000
+IC C5    C3    *C4   H42    0.0000    0.00 -120.00    0.00   0.0000
+IC C6    C4    *C5   C18    0.0000    0.00  180.00    0.00   0.0000
+IC C4    C5    C18   H181   0.0000    0.00  180.00    0.00   0.0000
+IC H181  C5    *C18  H182   0.0000    0.00  120.00    0.00   0.0000
+IC H181  C5    *C18  H183   0.0000    0.00 -120.00    0.00   0.0000
+IC C5    C1    *C6   C7     0.0000    0.00  180.00    0.00   0.0000
+IC C8    C6    *C7   H71    0.0000    0.00  180.00    0.00   0.0000
+IC C9    C7    *C8   H81    0.0000    0.00  180.00    0.00   0.0000
+IC C10   C8    *C9   C19    0.0000    0.00  180.00    0.00   0.0000
+IC C8    C9    C19   H191   0.0000    0.00  180.00    0.00   0.0000
+IC H191  C9    *C19  H192   0.0000    0.00  120.00    0.00   0.0000
+IC H191  C9    *C19  H193   0.0000    0.00 -120.00    0.00   0.0000
+IC C8    C9    C10   C11    0.0000    0.00  180.00    0.00   0.0000
+IC C11   C9    *C10  H101   0.0000    0.00  180.00    0.00   0.0000
+IC C9    C10   C11   C12    0.0000    0.00  180.00    0.00   0.0000
+IC C12   C10   *C11  H111   0.0000    0.00  180.00    0.00   0.0000
+IC C10   C11   C12   C13    0.0000    0.00  180.00    0.00   0.0000
+IC C13   C11   *C12  H121   0.0000    0.00  180.00    0.00   0.0000
+IC C11   C12   C13   C14    0.0000    0.00  180.00    0.00   0.0000
+IC C14   C12   *C13  C20    0.0000    0.00  180.00    0.00   0.0000
+IC C12   C13   C20   H201   0.0000    0.00  180.00    0.00   0.0000
+IC H201  C13   *C20  H202   0.0000    0.00  120.00    0.00   0.0000
+IC H201  C13   *C20  H203   0.0000    0.00 -120.00    0.00   0.0000
+IC C12   C13   C14   C15    0.0000    0.00  180.00    0.00   0.0000
+IC C15   C13   *C14  H141   0.0000    0.00  180.00    0.00   0.0000
+IC C13   C14   C15   O29    0.0000    0.00  180.00    0.00   0.0000
+IC O29   C14   *C15  O29B   0.0000    0.00  180.00    0.00   0.0000
+
+PATCH FIRST NONE LAST NONE
+
+RESI PRAC      -1.00 ! 2-propenoic acid
+!
+GROUP
+ATOM C1  CC2   -0.42 !
+ATOM H11 HE2    0.21 !
+ATOM H12 HE2    0.21 !  H11    OD1 
+GROUP               !   \     ||
+ATOM C2  CC1A  -0.25 !   C1    CG
+ATOM H21 HE1    0.15 !   / \\ / \
+ATOM CG  CC     0.62 ! H12  C2  OD2 (-)
+ATOM OD1 OC    -0.76 !      |
+ATOM OD2 OC    -0.76 !     H21
+           
+BOND C1  H11  C1  H12  C1  C2   C2   H21
+BOND C2  CG   CG  OD1  CG  OD2
+
+IC C1    C2    CG    OD1    0.0000    0.00  180.00    0.00   0.0000
+IC OD1   C2    *CG   OD2    0.0000    0.00  180.00    0.00   0.0000
+IC H11   C1    C2    CG     0.0000    0.00  180.00    0.00   0.0000
+IC H11   C2    *C1   H12    0.0000    0.00  180.00    0.00   0.0000
+IC CG    C1    *C2   H21    0.0000    0.00  180.00    0.00   0.0000
+
+PATCH FIRST NONE LAST NONE 
+
+RESI PROL       0.00 ! 3-propenol (1-hydroxy-2-propene)
+!
+GROUP
+ATOM C1  CC2   -0.42 !
+ATOM H11 HE2    0.21 !  H11    H31 
+ATOM H12 HE2    0.21 !   \      |
+ATOM C2  CC1A  -0.15 !   C1    C3-OR
+ATOM H21 HE1    0.15 !   / \\ / |   \
+GROUP               ! H12  C2 H32  HR
+ATOM C3  CT2    0.05 !       |
+ATOM H31 HA2    0.09 !      H21
+ATOM H32 HA2    0.09
+ATOM OR  OH1   -0.66
+ATOM HR  H      0.43
+BOND C1   C2   C2   C3   C3   OR   OR   HR
+BOND H11  C1   H12  C1   H21  C2   H31  C3
+BOND H32  C3   
+
+IC C1    C2    C3    OR     0.0000    0.00    0.00    0.00   0.0000
+IC C2    C3    OR    HR     0.0000    0.00   60.00    0.00   0.0000
+IC H11   C1    C2    C3     0.0000    0.00  180.00    0.00   0.0000
+IC H11   C2    *C1   H12    0.0000    0.00  180.00    0.00   0.0000
+IC C3    C1    *C2   H21    0.0000    0.00  180.00    0.00   0.0000
+IC OR    C2    *C3   H31    0.0000    0.00  120.00    0.00   0.0000
+IC OR    C2    *C3   H32    0.0000    0.00 -120.00    0.00   0.0000
+
+PATCH FIRST NONE LAST NONE
+
+RESI PRAL       0.00 ! 1-propenal
+GROUP
+ATOM C1  CC2   -0.42 !
+ATOM H11 HE2    0.21 !  H11    OD1 
+ATOM H12 HE2    0.21 !   \     ||
+ATOM C2  CC1A  -0.01 !   C1    CG
+ATOM H21 HE1    0.15 !   / \\ / \
+ATOM CG  CD     0.19 ! H12  C2   H
+ATOM OD1 O     -0.43 !      |
+ATOM H   HR1    0.10 !     H21
+
+BOND C1  H11  C1  H12  C1  C2  C2  H21
+BOND C2  CG   CG  OD1  CG  H
+IMPR CG  C2   OD1 H
+
+IC C1    C2    CG    OD1    0.0000    0.00  180.00    0.00   0.0000
+IC H11   C1    C2    CG     0.0000    0.00  180.00    0.00   0.0000
+IC H11   C2    *C1   H12    0.0000    0.00  180.00    0.00   0.0000
+IC CG    C1    *C2   H21    0.0000    0.00  180.00    0.00   0.0000
+IC OD1   C2    *CG   H      0.0000    0.00  180.00    0.00   0.0000
+
+RESI SCH1       0.00 ! Schiff's base model compound 1, deprotonated
+!                   ! new atom type NS1
+GROUP
+ATOM C1  CT3   -0.05 !   H11         H31
+ATOM H11 HA3    0.09 !      \        /
+ATOM H12 HA3    0.09 !  H12--C1-N2=C3    H41
+ATOM H13 HA3    0.09 !      /        \  /
+ATOM N2  NS1   -0.60 !   H13          C4--H42
+ATOM C3  CC1B   0.23 !                  \
+ATOM H31 HE1    0.15 !                   H43
+GROUP               !
+ATOM C4  CT3   -0.27 !
+ATOM H41 HA3    0.09 !
+ATOM H42 HA3    0.09
+ATOM H43 HA3    0.09
+
+BOND C1  H11  C1  H12  C1  H13  
+BOND C1  N2   N2  C3   C3  H31
+BOND C3  C4   C4  H41  C4  H42  C4  H43
+
+IC C1    N2    C3    C4     0.0000    0.00  180.00    0.00   0.0000
+IC N2    C3    C4    H41    0.0000    0.00  180.00    0.00   0.0000
+IC C3    N2    C1    H11    0.0000    0.00    0.00    0.00   0.0000
+IC H11   N2    *C1   H12    0.0000    0.00  120.00    0.00   0.0000
+IC H11   N2    *C1   H13    0.0000    0.00 -120.00    0.00   0.0000
+IC C4    N2    *C3   H31    0.0000    0.00  180.00    0.00   0.0000
+IC H41   C3    *C4   H42    0.0000    0.00  120.00    0.00   0.0000
+IC H41   C3    *C4   H43    0.0000    0.00 -120.00    0.00   0.0000
+
+RESI SCH2       1.00 ! Schiff's base model compound 2, protonated
+!                    ! new atom type, NS2
+GROUP
+ATOM C1  CT3    0.18 !   H11   H21    H31
+ATOM H11 HA3    0.09 !      \   |    /
+ATOM H12 HA3    0.09 !  H12--C1-N2=C3    H41
+ATOM H13 HA3    0.09 !      /        \  /
+ATOM N2  NS2   -0.40 !   H13          C4--H42
+ATOM H21 HC     0.38 !                  \
+ATOM C3  CC1B   0.37 !                   H43
+ATOM H31 HR1    0.20 ! hydrogen with intermediate VDW radius
+GROUP               !
+ATOM C4  CT3   -0.27 !
+ATOM H41 HA3    0.09 !
+ATOM H42 HA3    0.09
+ATOM H43 HA3    0.09
+
+BOND C1  H11  C1  H12  C1  H13  
+BOND C1  N2   N2  H21  N2  C3   C3  H31
+BOND C3  C4   C4  H41  C4  H42  C4  H43
+
+IC C1    N2    C3    C4     0.0000    0.00  180.00    0.00   0.0000
+IC N2    C3    C4    H41    0.0000    0.00  180.00    0.00   0.0000
+IC C1    C3    *N2   H21    0.0000    0.00  180.00    0.00   0.0000
+IC C3    N2    C1    H11    0.0000    0.00    0.00    0.00   0.0000
+IC H11   N2    *C1   H12    0.0000    0.00  120.00    0.00   0.0000
+IC H11   N2    *C1   H13    0.0000    0.00 -120.00    0.00   0.0000
+IC C4    N2    *C3   H31    0.0000    0.00  180.00    0.00   0.0000
+IC H41   C3    *C4   H42    0.0000    0.00  120.00    0.00   0.0000
+IC H41   C3    *C4   H43    0.0000    0.00 -120.00    0.00   0.0000
+
+RESI SCH3       1.00 ! Schiff's base model compound 3, protonated
+!                   ! new atom type, NS2
+GROUP
+ATOM C1  CT3    0.18 !   H11   H21    H31
+ATOM H11 HA3    0.09 !      \   |    /
+ATOM H12 HA3    0.09 !  H12--C1-N2=C3      H51
+ATOM H13 HA3    0.09 !      /        \     /
+ATOM N2  NS2   -0.40 !   H13          C4=C5
+ATOM H21 HC     0.38 !               /     \
+ATOM C3  CC1B   0.37 !             H41     H52
+ATOM H31 HR1    0.20 ! hydrogen with intermediate VDW radius
+GROUP               !
+ATOM C4  CC1A  -0.15
+ATOM H41 HE1    0.15
+ATOM C5  CC2   -0.42
+ATOM H51 HE2    0.21
+ATOM H52 HE2    0.21
+
+BOND C1  H11  C1  H12  C1  H13
+BOND C1  N2   N2  H21  N2  C3   C3  H31
+BOND C3  C4   C4  H41  
+BOND C4  C5   C5  H51  C5  H52
+
+IC C1    N2    C3    C4     0.0000    0.00  180.00    0.00   0.0000
+IC N2    C3    C4    C5     0.0000    0.00  180.00    0.00   0.0000
+IC H11   C1    N2    C3     0.0000    0.00  180.00    0.00   0.0000
+IC H11   N2    *C1   H12    0.0000    0.00  120.00    0.00   0.0000
+IC H11   N2    *C1   H13    0.0000    0.00 -120.00    0.00   0.0000
+IC C3    C1    *N2   H21    0.0000    0.00  180.00    0.00   0.0000
+IC C4    N2    *C3   H31    0.0000    0.00  180.00    0.00   0.0000
+IC C5    C3    *C4   H41    0.0000    0.00  180.00    0.00   0.0000
+IC C3    C4    C5    H51    0.0000    0.00  180.00    0.00   0.0000
+IC H51   C4    *C5   H52    0.0000    0.00  180.00    0.00   0.0000
+
+PRES SCK0       0.00 ! patch to link lysine with retinal to form a
+                     ! deprotonated schiff's base
+                     ! follow with AUTOgenerate ANGLes DIHEdrals command
+! residue 1: lysine
+! residue 2: retinal
+!
+DELETE ATOM 1HZ1
+DELETE ATOM 1HZ2
+DELETE ATOM 1HZ3
+DELETE ATOM 2O15
+GROUP                !  HE1 HE2
+ATOM 1CE  CT2   0.04 !    \ /
+ATOM 1HE1 HA2   0.09 !  --1CE1       2H15
+ATOM 1HE2 HA2   0.09 !        \       /
+ATOM 1NZ  NS1  -0.60 !        1NZ=2C15
+ATOM 2C15 CC1B  0.23 !        /       \
+ATOM 2H15 HE1   0.15 !     2HZ1        2C14==
+GROUP                !                /
+ATOM 2C14 CC1A -0.15 !             2HE14
+ATOM 2H141 HE1  0.15
+
+BOND 1NZ 2C15 
+
+IC 1CD    1CE    1NZ    2C15    0.0000    0.00  180.00    0.00   0.0000
+IC 1CE    1NZ    2C15   2C14    0.0000    0.00  180.00    0.00   0.0000
+IC 1NZ    2C15   2C14   2C13    0.0000    0.00  180.00    0.00   0.0000
+IC 2C14   1NZ    *2C15  2H15    0.0000    0.00  180.00    0.00   0.0000
+IC 2C5    2C6    2C1    2C2     0.0000    0.00    0.00    0.00   0.0000 ! required to build retinal
+
+
+PRES SCK1       1.00 ! patch to link lysine with retinal to form a
+                     ! protonated schiff's base
+                     ! follow with AUTOgenerate ANGLes DIHEdrals command
+! residue 1: lysine
+! residue 2: retinal
+!
+DELETE ATOM 1HZ2
+DELETE ATOM 1HZ3
+DELETE ATOM 2O15
+GROUP                !  HE1 HE2
+ATOM 1CE  CT2   0.27 !    \ /
+ATOM 1HE1 HA2   0.09 !  --1CE1       2H15
+ATOM 1HE2 HA2   0.09 !        \       /
+ATOM 1NZ  NS2  -0.40 !        1NZ=2C15
+ATOM HZ1  HC    0.38 !        /       \
+ATOM 2C15 CC1B  0.37 !     2HZ1        2C14==
+ATOM 2H15 HR1   0.20 !                /
+GROUP                !             2HE14
+ATOM 2C14 CC1A -0.15
+ATOM 2H141 HE1  0.15
+
+BOND 1NZ 2C15 
+
+IC 1CD    1CE    1NZ    2C15    0.0000    0.00  180.00    0.00   0.0000
+IC 1CE    1NZ    2C15   2C14    0.0000    0.00  180.00    0.00   0.0000
+IC 1NZ    2C15   2C14   2C13    0.0000    0.00  180.00    0.00   0.0000
+IC 2C15   1CE    *1NZ   1HZ1    0.0000    0.00  180.00    0.00   0.0000
+IC 2C14   1NZ    *2C15  2H15    0.0000    0.00  180.00    0.00   0.0000
+IC 2C5    2C6    2C1    2C2     0.0000    0.00    0.00    0.00   0.0000 ! required to build retinal
+
+RESI LYR          1.00  ! PROTONATED SCHIFF BASE (modified Lysine with retinoic acid (RTAL))
+                        !
+GROUP                   !
+ATOM N     NH1    -0.47 !
+ATOM HN    H       0.31 !
+ATOM CA    CT1     0.07 !
+ATOM HA    HB1     0.09 !
+GROUP                   !
+ATOM C     C       0.51 !                  O   HA    H
+ATOM O     O      -0.51 !                  ||  |     |
+GROUP                   !                --C---CA----N--
+ATOM CB    CT2    -0.18 !                      |
+ATOM HB2   HA2     0.09 !                  HB3-CB-HB2
+ATOM HB3   HA2     0.09 !                      |
+GROUP                   !                      |
+ATOM CG    CT2    -0.18 !                      |
+ATOM HG2   HA2     0.09 !                  HG3-CG-HG2
+ATOM HG3   HA2     0.09 !                      |
+GROUP                   !                      |
+ATOM CD    CT2    -0.18 !                      |
+ATOM HD2   HA2     0.09 !                  HD3-CD-HD2
+ATOM HD3   HA2     0.09 !                      |
+GROUP                   !                      |
+ATOM CE    CT2     0.27 !                      |
+ATOM HE2   HA2     0.09 !                  HE3-CE-HE2
+ATOM HE3   HA2     0.09 !                      |
+ATOM NZ    NS2    -0.40 !                  HZ1-NZ+
+ATOM HZ1   HC      0.38 !                       \\
+ATOM C1    CC1B    0.37 !                        C1-H11
+ATOM H11   HR1     0.20 !                        |
+ATOM C2    CC1A   -0.15 !             H42        C2-HC2
+ATOM HC2   HE1     0.15 !               |       //
+ATOM C3    CC1A    0.00 !           H41-C4-----C3
+ATOM C4    CT3    -0.27 !               |       |
+ATOM H41   HA3     0.09 !              H43     C5-H5
+ATOM H42   HA3     0.09 !                        \\
+ATOM H43   HA3     0.09 !                     H6--C6
+ATOM C5    CC1B   -0.15 !                         |
+ATOM H5    HE1     0.15 !                 H82     C7-H7
+ATOM C6    CC1B   -0.15 !                  |      //
+ATOM H6    HE1     0.15 !             H81-C8----C80
+GROUP                   !                  |     |
+ATOM C7    CC1A   -0.15 !                H83     C9--H9
+ATOM H7    HE1     0.15 !                        ||
+ATOM C80   CC1A    0.00 !                        C10--H10
+ATOM C8    CT3    -0.27 !                        |
+ATOM H81   HA3     0.09 !                        |
+ATOM H82   HA3     0.09 !                        |
+ATOM H83   HA3     0.09 !                        |
+GROUP                   !                        |
+ATOM C9    CC1B   -0.15 !                        |
+ATOM H9    HE1     0.15 !                        |
+ATOM C10   CC1B   -0.15 !                        |
+ATOM H10   HE1     0.15 !                        C11   H191  H192
+GROUP                   !                      //   \    \ /
+ATOM C11   CC1A    0.00 !          H132       //     \  C19-H193
+GROUP                   !            |       //       \/
+ATOM C12   CC1A    0.00 !      H131-C13 -- C12        C17 -- C18-H181
+ATOM C13   CT3    -0.27 !            |      |          |    /  \
+ATOM H131  HA3     0.09 !          H133     |          |  H183  H182
+ATOM H132  HA3     0.09 !              H141-C14       C16-H161
+ATOM H133  HA3     0.09 !                  /  \      / \
+GROUP                   !              H142    \    /   H162
+ATOM C14   CT2    -0.18 !                       \  /
+ATOM H141  HA2     0.09 !                        C15
+ATOM H142  HA2     0.09 !                       / \
+ATOM C15   CT2    -0.18 !                    H151  H152
+ATOM H151  HA2     0.09 !
+ATOM H152  HA2     0.09 !
+ATOM C16   CT2    -0.18 !
+ATOM H161  HA2     0.09 !
+ATOM H162  HA2     0.09 !
+GROUP
+ATOM C17   CT      0.00 !
+ATOM C18   CT3    -0.27 !
+ATOM H181  HA3     0.09 !
+ATOM H182  HA3     0.09 !
+ATOM H183  HA3     0.09 !
+ATOM C19   CT3    -0.27 !
+ATOM H191  HA3     0.09 !
+ATOM H192  HA3     0.09 !
+ATOM H193  HA3     0.09 !
+
+BOND CB CA CG CB CD CG CE CD NZ CE
+BOND N HN N CA C CA
+BOND C +N CA HA CB HB2 CB HB3 CG HG2
+BOND CG HG3 CD HD2 CD HD3 CE HE2 CE HE3
+DOUBLE O C
+BOND NZ HZ1  NZ C1
+BOND C1  C2      C1  H11    C2  C3    C2  HC2
+BOND C3  C4      C3  C5
+BOND C4  H41     C4  H42    C4 H43
+BOND C5  H5      C5  C6     C6 H6
+BOND C6  C7      C7  H7
+BOND C7  C80
+BOND C80  C9     C80 C8
+BOND C8  H81     C8  H82    C8 H83
+BOND C9  C10     C9  H9
+BOND C10 C11     C10 H10
+BOND C11 C12     C11 C17
+BOND C12 C13     C12 C14
+BOND C13 H131    C13 H132   C13 H133
+BOND C14 C15     C14 H141   C14 H142
+BOND C15 C16     C15 H151   C15 H152
+BOND C16 C17     C16 H161   C16 H162
+BOND C17 C18     C17 C19
+BOND C18 H181    C18 H182   C18 H183
+BOND C19 H191    C19 H192   C19 H193
+IMPR N -C CA HN C CA +N O
+!IMPR C1 C2 NZ H11
+CMAP -C  N  CA  C   N  CA  C  +N
+DONOR HN N
+DONOR HZ1 NZ
+ACCEPTOR O C
+
+IC  -C     CA     *N     HN         1.3482  123.57  180.00  115.11   0.9988
+IC  -C     N      CA     C          1.3482  123.57  180.00  107.29   1.5187
+IC  N      CA     C      +N         1.4504  107.29  180.00  117.27   1.3478
+IC  +N     CA     *C     O          1.3478  117.27  180.00  120.79   1.2277
+IC  CA     C      +N     +CA        1.5187  117.27  180.00  124.91   1.4487
+IC  H      N      CA     CB         1.0324  112.92  142.43  101.17   1.5618
+IC  CB     N      *CA    C          1.5618  101.17  117.80  107.69   1.5262
+IC  CB     N      *CA    HA         1.5618  101.17 -122.25  112.37   1.0467
+IC  N      CA     C      O          1.4066  107.69  169.60  118.27   1.2329
+IC  N      CA     CB     CG         1.4066  101.17 -169.06  112.88   1.5547
+IC  CG     CA     *CB    HB2        1.5547  112.88  126.21  108.43   1.0751
+IC  CG     CA     *CB    HB3        1.5547  112.88 -130.02  106.34   1.0839
+IC  CA     CB     CG     CD         1.5618  112.88  174.79  116.20   1.5139
+IC  CD     CB     *CG    HG2        1.5139  116.20  120.63  108.82   1.1282
+IC  CD     CB     *CG    HG3        1.5139  116.20 -132.72  108.50   1.1196
+IC  CB     CG     CD     CE         1.5547  116.20  175.39  111.29   1.5392
+IC  CE     CG     *CD    HD2        1.5392  111.29  125.53  102.68   1.1194
+IC  CE     CG     *CD    HD3        1.5392  111.29 -125.66  112.29   1.1189
+IC  CG     CD     CE     NZ         1.5139  111.29  174.26  105.61   1.4410
+IC  NZ     CD     *CE    HE2        1.4410  105.61  123.94  110.33   1.1625
+IC  NZ     CD     *CE    HE3        1.4410  105.61 -109.92  106.40   1.1132
+IC  CD     CE     NZ     C1         1.5392  105.61 -173.60  119.52   1.3271
+IC  C1     CE     *NZ    HZ1        1.3271  119.52 -174.42  120.20   1.0043
+IC  CE     NZ     C1     C2         1.4410  119.52 -168.80  116.63   1.4576
+IC  C2     NZ     *C1    H11        1.4576  116.63  171.69  119.09   1.1531
+IC  NZ     C1     C2     C3         1.3271  116.63  177.00  124.67   1.3994
+IC  C3     C1     *C2    HC2        1.3994  124.67 -169.17  113.77   1.1613
+IC  C1     C2     C3     C5         1.4576  124.67 -177.59  121.54   1.4600
+IC  C5     C2     *C3    C4         1.4600  121.54 -179.13  122.30   1.5138
+IC  C2     C3     C4     H41        1.3994  122.30 -126.30  117.92   1.0593
+IC  H41    C3     *C4    H42        1.0593  117.92  125.50  111.68   1.0843
+IC  H41    C3     *C4    H43        1.0593  117.92 -122.89  110.24   1.0565
+IC  C2     C3     C5     C6         1.3994  121.54 -144.41  126.13   1.3528
+IC  C6     C3     *C5    H5         1.3528  126.13  178.20  115.08   1.0691
+IC  C3     C5     C6     C7         1.4600  126.13 -170.38  129.81   1.4627
+IC  C7     C5     *C6    H6         1.4627  129.81  160.66  117.13   1.1130
+IC  C5     C6     C7     C80        1.3528  129.81  149.05  126.38   1.3715
+IC  C80    C6     *C7    H7         1.3715  126.38 -178.79  116.07   1.0867
+IC  C6     C7     C80    C9         1.4627  126.38 -175.24  124.63   1.4493
+IC  C9     C7     *C80   C8         1.4493  124.63  174.01  123.87   1.5042
+IC  C7     C80    C8     H81        1.3715  123.87 -134.94  108.15   1.1456
+IC  H81    C80    *C8    H82        1.1456  108.15  115.44  112.77   1.1215
+IC  H81    C80    *C8    H83        1.1456  108.15 -122.35  113.48   1.1120
+IC  C7     C80    C9     C10        1.3715  124.63 -146.54  126.66   1.3362
+IC  C10    C80    *C9    H9         1.3362  126.66  164.41  111.19   1.1266
+IC  C80    C9     C10    C11        1.4493  126.66  157.81  124.53   1.4870
+IC  C11    C9     *C10   H10        1.4870  124.53 -167.09  126.78   1.1319
+IC  C9     C10    C11    C17        1.3362  124.53  137.85  113.43   1.5273
+IC  C17    C10    *C11   C12        1.5273  113.43  166.46  122.35   1.3683
+IC  C10    C11    C12    C14        1.4870  122.35 -179.02  118.60   1.5230
+IC  C14    C11    *C12   C13        1.5230  118.60  179.88  123.69   1.5824
+IC  C11    C12    C13    H131       1.3683  123.69 -153.00  111.62   1.0407
+IC  H131   C12    *C13   H132       1.0407  111.62  105.56  116.94   1.0845
+IC  H131   C12    *C13   H133       1.0407  111.62 -125.41  115.89   1.1306
+IC  C11    C12    C14    C15        1.3683  118.60   23.14  115.46   1.5309
+IC  C15    C12    *C14   H141       1.5309  115.46 -121.05  111.64   1.1634
+IC  C15    C12    *C14   H142       1.5309  115.46  120.98  110.16   1.1143
+IC  C12    C14    C15    C16        1.5230  115.46  -49.13  109.56   1.5340
+IC  C16    C14    *C15   H151       1.5340  109.56  121.30  103.64   1.0652
+IC  C16    C14    *C15   H152       1.5340  109.56 -121.68  117.50   1.1269
+IC  C17    C15    *C16   H161       1.5627  106.90  119.01  111.98   1.1082
+IC  C17    C15    *C16   H162       1.5627  106.90 -118.27  114.51   1.1242
+IC  C16    C11    *C17   C18        1.5627  111.91  117.06  109.86   1.6036
+IC  C16    C11    *C17   C19        1.5627  111.91 -125.37  107.71   1.5933
+IC  C11    C17    C18    H181       1.5273  109.86 -164.48  105.21   1.0701
+IC  H181   C17    *C18   H182       1.0701  105.21  113.55  119.15   1.0744
+IC  H181   C17    *C18   H183       1.0701  105.21 -120.08  114.03   1.1066
+IC  C11    C17    C19    H191       1.5273  107.71  157.89  106.35   1.1223
+IC  H191   C17    *C19   H192       1.1223  106.35  112.92  110.92   1.1415
+IC  H191   C17    *C19   H193       1.1223  106.35 -116.85  111.31   1.1313
+
+end
+
+read para card flex append
+* retinal/retinol and related parameters
+*
+
+ATOMS
+MASS   425 CC1A  12.01100 ! alkene conjugation
+MASS   426 CC1B  12.01100 ! alkene conjugation
+MASS   427 CC2   12.01100 ! alkene conjugation
+MASS   428 NS1   14.00700 ! N for deprotonated Schiff's base
+MASS   429 NS2   14.00700 ! N for protonated Schiff's base
+
+BONDS
+!
+!atom types  Kb          b0
+!
+!BTE2, 2-butene
+HE1   CC1A  360.500     1.100
+HE1   CC1B  360.500     1.100
+HE2   CC2   365.000     1.100
+CC1A  CC1A  440.000     1.340
+CC1B  CC1B  440.000     1.340
+!13DB, Butadiene
+CC1A  CC2   500.000     1.342
+CC1B  CC2   500.000     1.342
+CC1A  CC1B  300.000     1.470
+!13DP, 1,3-Pentadiene
+CC1B  CT3   383.000     1.504
+!MECH
+CC1A  CT2   365.000     1.502
+CC1A  CT    365.000     1.502
+CC1A  CT3   383.000     1.504
+!TMCH/MECH
+CT   CT2    222.500     1.538   
+CT   CT3    222.500     1.538
+!PACP
+CA    NH1   305.000     1.414
+!PRAL
+CC1A  CD    300.000     1.4798
+CD    HR1   330.000     1.110
+!PRAC
+CC1A  CC    440.000     1.489
+!CROT
+CC1A  C     440.000     1.489
+!SCH1, Schiff's base model compound 1, deprotonated
+CT3   NS1   310.000     1.440
+NS1   CC1B  500.000     1.276
+!SCH2, Schiff's base model compound 2, protonated
+HR1   CC1B  360.500     1.100
+CT3   NS2   300.000     1.453
+NS2   CC1B  470.000     1.283
+NS2   HC    455.000     1.000  
+!SCK0, deprotonated Schiff's base, lysine retinal patch
+CT2   NS1   310.000     1.440
+!SCK1, , Schiff's base, lysine retinal patch
+CT2   NS2   300.000     1.453
+
+ANGLES
+!
+!atom types     Ktheta    Theta0   Kub     S0
+!
+!BTE2, 2-butene
+CC1A CC1A CT3    48.00     123.50
+HA2  CT2  CC1A   45.00     111.50
+HA3  CT3  CC1A   42.00     111.50
+HA3  CT3  CC1B   42.00     111.50
+HE1  CC1A CC1A   42.00     119.00
+HE1  CC1B CC1B   42.00     119.00
+HE1  CC1A CT3    42.00     117.50
+HE1  CC1B CT3    22.00     117.50
+!13DB, 1,3-Butadiene
+HE1  CC1A CC2    42.00     118.00
+HE1  CC1B CC2    42.00     118.00
+HE2  CC2  CC1A   45.00     120.50 
+HE2  CC2  CC1B   45.00     120.50 
+HE1  CC1B CC1A   42.00     118.00 
+HE1  CC1A CC1B   42.00     118.00 
+CC1B CC1A CC2    48.00     123.50 
+CC1A CC1B CC2    48.00     123.50 
+HE2  CC2  HE2    19.00     119.00 
+!13DP, Pentadiene
+CC1A CC1B CC1B   48.00     123.50 
+CC1B CC1B CT3    48.00     123.50 
+!MECH
+CC1A CT   CT3    32.00     112.20 
+CC1A CT   CT2    32.00     112.20 
+CC1A CT2  CT2    32.00     112.20 
+CC1A CC1A CC1B   48.00     123.50 
+CC1A CC1A CT     48.00     123.50 
+CC1A CC1A CT2    48.00     123.50 
+CC1B CC1A CT     48.00     123.50 
+CT2  CC1A CT3    48.00     123.50 
+!DMB1, 2-methyl-1,3-butadiene
+CC2  CC1A CT3    48.00     123.50
+CC1B CC1A CT3    48.00     113.00
+!DMP1, 4-methyl-1,3-pentadiene
+CT3  CC1B CT3    47.00     113.00
+!TMCH/MECH
+CT2  CT   CT3    58.35     113.50   11.16   2.561
+CT3  CT   CT3    58.35     113.50   11.16   2.561
+CT   CT2  CT2    58.35     113.50   11.16   2.561
+CT   CT2  HA2    26.50     110.10   22.53   2.179
+CT   CT3  HA3    33.43     110.10   22.53   2.179
+CT   CC1A CT3    48.00     123.50
+!PACP
+CA   NH1  C      50.00     120.00 
+H    NH1  CA     34.00     117.00 
+NH1  CA   CA     40.00     120.00   35.00   2.4162
+!CROT
+CT3  CC1A CT3    47.00     125.20
+CC1A CC1A C      48.00     123.50
+HE1  CC1A C      52.00     119.50
+O    C    CC1A   80.00     122.50
+NH1  C    CC1A   80.00     116.50 
+! PROL
+HE1  CC1A CT2    40.00     116.00 
+OH1  CT2  CC1A   75.70     110.10 
+CT2  CC1A CC2    28.00     126.00
+!PRAL
+CC2  CC1A CD     60.00     120.00
+CC1A CC1A CD     60.00     120.00
+HE1  CC1A CD     32.00     122.00 ! sum=242
+CC1A CD   O      75.00     124.00
+CC1A CD   HR1    15.00     115.00  
+!PRAC
+HE1  CC1A CC     52.00     119.50 !
+CC2  CC1A CC     40.00     119.00   35.00   2.5267
+CC1A CC   OC     40.00     118.00   50.00   2.3880
+CC1A CC1A CC     48.00     123.50 !
+!SCH1, Schiff's base model compound 1, deprotonated
+CT3  NS1  CC1B   67.00     111.00
+NS1  CC1B CT3    52.00     123.00 !sum=242.5
+NS1  CC1B HE1    38.00     119.50 !
+HA3  CT3  NS1    42.00     113.50
+!SCH2, Schiff's base model compound 2, protonated
+CT3  NS2  CC1B   67.00     123.60
+CT3  NS2  HC     38.00     117.40
+CC1B NS2  HC     38.00     118.80
+NS2  CC1B CT3    40.00     125.60
+NS2  CC1B HR1    38.00     114.00
+CT3  CC1B HR1    42.00     120.40
+HA3  CT3  NS2    42.00     110.10
+!SCH3, Schiff's base model compound 3, protonated
+NS2  CC1B CC1A   40.00     125.60
+HR1  CC1B CC1A   42.00     120.40
+!SCK0, deprotonated Schiff's base, lysine retinal patch
+CT2  CT2  NS1    67.70     110.00 !from lysine
+HA2  CT2  NS1    42.00     113.50
+CT2  NS1  CC1B   67.00     111.00
+NS1  CC1B CC1A   40.00     123.00
+!SCK1, protonated Schiff's base, lysine retinal patch
+CT2  NS2  CC1B   67.00     123.60
+CT2  NS2  HC     38.00     117.40
+CT2  CT2  NS2    67.70     110.00 !from lysine
+HA2  CT2  NS2    42.00     110.10
+
+DIHEDRALS
+!
+!atom types             Kchi    n   delta
+!
+!BTE2, 2-butene
+HE1  CC1A CC1A HE1      5.2000  2   180.00
+CT3  CC1A CC1A HE1      5.2000  2   180.00
+CT3  CC1B CC1B HE1      5.2000  2   180.00
+CC1A CC1A CT3  HA3      0.3000  3   180.00 !Feller, 2008
+HE1  CC1A CT3  HA3      0.3000  3     0.00
+HE1  CC1B CT3  HA3      0.3000  3     0.00
+CT3  CC1A CC1A CT3     10.0000  2   180.00 !double bond
+CT2  CC1A CC1A CT3     10.0000  2   180.00 !double bond
+!13DB, 1,3-Butadiene
+CC2  CC1A CC1B CC2      0.4000  1   180.00 ! 
+CC2  CC1A CC1B CC2      0.4000  2   180.00 ! 
+CC2  CC1A CC1B CC2      1.3000  3     0.00 !
+CC2  CC1A CC1B HE1      1.0000  2   180.00 !
+HE1  CC1A CC1B CC2      1.0000  2   180.00 !
+HE1  CC1A CC1B CC1B     1.0000  2   180.00 !
+HE2  CC2  CC1A CC1B     5.0000  2   180.00 !double bond
+HE2  CC2  CC1B CC1A     5.0000  2   180.00 !double bond
+HE1  CC1B CC1B CC1A     5.2000  2   180.00 !double bond
+HE1  CC1B CC1A HE1      0.0000  2   180.00 !
+!HEP3, 1,3,5-heptatriene
+CC1A CC1A CC1B CC2      0.5000  1   180.00 ! 
+CC1A CC1A CC1B CC2      2.0000  2     0.00 !
+CC1A CC1A CC1B CC2      1.0000  3     0.00 !
+CC1A CC1A CC1B CC1B     0.5000  1   180.00 !
+CC1A CC1A CC1B CC1B     2.0000  2     0.00 !
+CC1A CC1A CC1B CC1B     1.0000  3     0.00 !
+CC1A CC1B CC1B CC1A     0.5600  1   180.00 !double bond
+CC1A CC1B CC1B CC1A     7.0000  2   180.00 !double bond
+CC1B CC1A CC1A CC1B     0.5600  1   180.00 !double bond
+CC1B CC1A CC1A CC1B     7.0000  2   180.00 !double bond
+HE1  CC1A CC2  HE2      5.2000  2   180.00 !double bond
+HE1  CC1B CC2  HE2      5.2000  2   180.00 !double bond
+HE1  CC1A CC1A CC1B     1.0000  2   180.00 !double bond
+!13DP, 1,3-Pentadiene
+CC1B CC1B CT3  HA3      0.3000  3     0.00
+HE1  CC1B CC1B HE1      0.0000  2   180.00 !
+CC1A CC1B CC1B CT3      0.5600  1   180.00 !double bond
+CC1A CC1B CC1B CT3      7.0000  2   180.00 !double bond
+CC2  CC1A CC1B CC1B     0.6000  1   180.00 ! also in DMB1, DMP1, DMP2
+CC2  CC1A CC1B CC1B     0.5000  2   180.00 ! comprise values obtained
+CC2  CC1A CC1B CC1B     1.0000  3     0.00 ! 
+!DMB1, 2-methyl-1,3-butadiene
+CC1B CC1A CT3  HA3      0.3000  3     0.00 !Feller, 2008
+CT3  CC1A CC2  HE2      1.0000  2   180.00
+CT3  CC1A CC1B HE1      1.0000  2   180.00
+CT3  CC1A CC1B CC2      1.1000  1   180.00 !see DMP1
+CT3  CC1A CC1B CC2      0.7000  2   180.00
+!DMP1, 4-methyl-1,3-pentadiene, no additional terms versus 13DP
+CT3  CC1B CT3  HA3      0.3000  3     0.00
+!DMP2, 2-methyl-1,3-pentadiene
+CT3  CC1A CC1B CC1B     1.1000  1   180.00 !see DMP1
+CT3  CC1A CC1B CC1B     0.7000  2   180.00
+CC2  CC1A CT3  HA3      0.3000  3     0.00
+!TMCH
+CT   CC1A CC1A CT2     10.0000  2   180.00 ! double bond
+CT   CC1A CC1A CT3     10.0000  2   180.00 ! double bond
+CC1A CC1A CT   CT2      0.5000  2     0.00 ! c2-c1-c6=c5
+CC1A CC1A CT   CT2      0.3000  3     0.00 ! c2-c1-c6=c5
+CC1A CC1A CT   CT3      0.5000  2     0.00 ! c16/c17-c1-c6=c5
+CC1A CC1A CT   CT3      0.4000  3     0.00 ! c16/c17-c1-c6=c5
+CC1A CC1A CT2  CT2      0.5000  2     0.00 ! c3-c4-c5=c6
+CC1A CC1A CT2  CT2      0.3000  3     0.00 ! c3-c4-c5=c6
+CT2  CT2  CC1A CT3      0.1900  3     0.00 ! c3-c4-c5-c18
+CT2  CT   CC1A CT3      0.4000  3     0.00 ! c2-c1-c6-c7
+CT3  CT   CC1A CT3      0.4000  3     0.00 ! c16/c17-c1-c6-c7
+CC1A CT2  CT2  CT2      0.1900  3     0.00 !
+CT2  CT2  CT   CC1A     0.2000  3     0.00 !
+CT2  CT2  CT   CT3      0.2000  3     0.00 !
+CT3  CC1A CT2  HA2      0.1900  3     0.00
+CC1A CT   CT2  HA2      0.1900  3     0.00
+CT3  CT   CT2  HA2      0.1900  3     0.00
+CC1A CT2  CT2  HA2      0.1900  3     0.00
+CT2  CC1A CT3  HA3      0.1600  3     0.00
+CT   CC1A CT3  HA3      0.1600  3     0.00
+CT2  CT   CT3  HA3      0.1600  3     0.00
+CC1A CT   CT3  HA3      0.1600  3     0.00
+CT3  CT   CT3  HA3      0.1600  3     0.00
+!MECH 
+CT   CC1A CC1B CC2      0.9000  1     0.00
+CT   CC1A CC1B CC2      2.1000  2   180.00
+CT   CC1A CC1B CC2      0.2200  3     0.00
+CT   CC1A CC1B CC2      0.2500  5   180.00
+CT   CC1A CC1B CC2      0.1000  6     0.00
+CT   CC1A CC1B CC1B     0.9000  1     0.00
+CT   CC1A CC1B CC1B     2.1000  2   180.00
+CT   CC1A CC1B CC1B     0.2200  3     0.00
+CT   CC1A CC1B CC1B     0.2500  5   180.00
+CT   CC1A CC1B CC1B     0.1000  6     0.00
+CC1B CC1A CT   CT2      0.3000  3     0.00
+CC1B CC1A CT   CT3      0.3000  3     0.00
+CC1B CC1A CC1A CT2      0.5600  1   180.00 ! double bond
+CC1B CC1A CC1A CT2      7.0000  2   180.00 ! double bond
+CC1B CC1A CC1A CT3      0.5600  1   180.00 ! double bond
+CC1B CC1A CC1A CT3      7.0000  2   180.00 ! double bond
+CT   CC1A CC1B HE1      1.0000  2   180.00
+CC1A CC1A CC1B HE1      1.0000  2   180.00
+!PACP
+O    C    NH1  CA       2.5000  2   180.00 !
+HP   CA   CA   NH1      4.2000  2   180.00 !
+CA   CA   CA   NH1      3.1000  2   180.00 !
+C    NH1  CA   CA       1.2000  2   180.00 !
+C    NH1  CA   CA       1.0000  3   180.00 !
+H    NH1  CA   CA       0.5000  2   180.00 !
+CA   NH1  C    CT3      2.5000  2   180.00 !
+!CROT
+CT3  CC1A CT3  HA3      0.3000  3     0.00 !
+CC1B CC1A CC1A C        0.5600  1   180.00 !double bond
+CC1B CC1A CC1A C        7.0000  2   180.00 !double bond
+O    C    CC1A CC1A     0.7000  1   180.00 !
+O    C    CC1A CC1A     1.2000  2   180.00 !
+O    C    CC1A CC1A     0.1000  3   180.00 !
+O    C    CC1A CC1A     0.2000  4     0.00 !
+NH1  C    CC1A CC1A     0.7000  1     0.00 !
+NH1  C    CC1A CC1A     1.2000  2   180.00 !
+NH1  C    CC1A CC1A     0.1000  3     0.00 !
+NH1  C    CC1A CC1A     0.1500  4     0.00 !
+HE1  CC1A C    NH1      0.3000  3   180.00 !
+HE1  CC1A C    O        0.3000  3   180.00 !
+CC1A C    NH1  H        2.5000  2   180.00
+CC1A C    NH1  CT3      1.6000  1     0.00
+CC1A C    NH1  CT3      2.5000  2   180.00 
+CC1A C    NH1  CA       1.6000  1     0.00 !FRET
+CC1A C    NH1  CA       2.5000  2   180.00 !FRET
+C    CC1A CC1A CT3      0.5600  1   180.00 !double bond
+C    CC1A CC1A CT3      7.0000  2   180.00 !double bond
+!PROL 
+CC2  CC1A CT2  OH1      1.9000  1   180.00
+CC2  CC1A CT2  OH1      0.4000  2   180.00
+CC2  CC1A CT2  OH1      0.6000  3   180.00
+CC1A CC1A CT2  OH1      1.9000  1   180.00
+CC1A CC1A CT2  OH1      0.4000  2   180.00
+CC1A CC1A CT2  OH1      0.6000  3   180.00
+CC1A CT2  OH1  H        1.3000  1     0.00
+CC1A CT2  OH1  H        0.7000  2     0.00
+CC1A CT2  OH1  H        0.5000  3     0.00
+HE1  CC1A CT2  OH1      0.2000  3     0.00
+HE1  CC1A CT2  HA2      0.2000  3     0.00
+CC2  CC1A CT2  HA2      0.0300  3     0.00
+CC1A CC1A CT2  HA2      0.0300  3     0.00
+HE2  CC2  CC1A CT2      5.2000  2   180.00
+!PRAL
+CC2  CC1A CD   O        1.0000  2  180.00 !
+CC1A CC1A CD   O        1.0000  2  180.00 !
+CC2  CC1A CD   HR1      3.2000  2  180.00
+CC1A CC1A CD   HR1      3.2000  2  180.00
+HE1  CC1A CD   O        0.0000  2  180.00
+HE1  CC1A CD   HR1      0.0000  2  180.00
+HE2  CC2  CC1A CD       3.2000  2  180.00 
+CT3  CC1A CC1A CD       0.5600  1  180.00 ! double bond
+CT3  CC1A CC1A CD       0.5000  2  180.00 ! db
+CC1B CC1A CC1A CD       0.5600  1  180.00 ! db
+CC1B CC1A CC1A CD       7.0000  2  180.00 ! db
+!PRAC
+CC2  CC1A CC   OC       1.3000  2  180.00
+CC1A CC1A CC   OC       1.3000  2  180.00
+HE2  CC2  CC1A CC       4.2000  2  180.00
+HE1  CC1A CC   OC       0.0000  2  180.00
+CC1B CC1A CC1A CC       0.5600  1  180.00 !double bond
+CC1B CC1A CC1A CC       7.0000  2  180.00 !double bond
+CC   CC1A CC1A CT3      0.5600  1  180.00 !double bond, rtac
+CC   CC1A CC1A CT3      7.0000  2  180.00 !double bond, rtac
+!SCH1, Schiff's base model compound 1, deprotonated
+CT3  NS1  CC1B HE1      8.5000  2   180.00
+CT3  NS1  CC1B CT3     12.0000  2   180.00
+NS1  CC1B CT3  HA3      0.1000  3   180.00
+CC1B NS1  CT3  HA3      0.3500  3   180.00
+!SCH2, Schiff's base model compound 2, protonated
+CT3  NS2  CC1B HR1      8.5000  2   180.00
+CT3  NS2  CC1B CT3      7.0000  2   180.00
+NS2  CC1B CT3  HA3      0.1500  3   180.00
+HR1  CC1B CT3  HA3      0.1500  3     0.00
+CC1B NS2  CT3  HA3      0.1500  3   180.00
+HA3  CT3  NS2  HC       0.1100  3     0.00
+HC   NS2  CC1B HR1      5.0000  2   180.00
+HC   NS2  CC1B CT3      5.0000  2   180.00
+!SCH3, Schiff's base model compound 3, protonated
+CT3  NS2  CC1B CC1A     7.0000  2   180.00
+HC   NS2  CC1B CC1A     5.0000  2   180.00
+NS2  CC1B CC1A HE1      1.0000  2   180.00
+NS2  CC1B CC1A CC2      0.5000  1     0.00 !opt
+NS2  CC1B CC1A CC2      2.2000  2   180.00 !opt
+NS2  CC1B CC1A CC2      1.1000  3     0.00 !opt
+NS2  CC1B CC1A CC2      0.6000  4     0.00 !opt
+HR1  CC1B CC1A HE1      0.0000  2   180.00
+HR1  CC1B CC1A CC2      1.0000  2   180.00
+!SCK0, deprotonated Schiff's base, lysine retinal patch
+CT2  CT2  NS1  CC1B     0.1000  3     0.00
+CT2  NS1  CC1B CC1A    12.0000  2   180.00 !from CT3  NS1  CC1B CT3
+CT2  NS1  CC1B HE1      8.5000  2   180.00 !from CT3  NS1  CC1B HE1
+HA2  CT2  NS1  CC1B     0.1000  3     0.00
+NS1  CC1B CC1A CC1A     0.5000  1     0.00 !from NS2  CC1B CC1A CC2
+NS1  CC1B CC1A CC1A     2.2000  2   180.00 !N=C-C=C dihedral not explicitly optimized
+NS1  CC1B CC1A CC1A     1.1000  3     0.00 !
+NS1  CC1B CC1A CC1A     0.6000  4     0.00 !
+NS1  CC1B CC1A HE1      1.0000  2   180.00
+!SCK1, Schiff's base, lysine retinal patch
+NS2  CC1B CC1A CC1A     0.5000  1     0.00 !from NS2  CC1B CC1A CC2
+NS2  CC1B CC1A CC1A     2.2000  2   180.00 !
+NS2  CC1B CC1A CC1A     1.1000  3     0.00 !
+NS2  CC1B CC1A CC1A     0.6000  4     0.00 !
+HR1  CC1B CC1A CC1A     1.0000  2   180.00
+CT2  CT2  NS2  CC1B     0.1000  3     0.00
+CT2  NS2  CC1B CC1A     7.0000  2   180.00
+CT2  NS2  CC1B HR1      8.5000  2   180.00
+HA2  CT2  NS2  CC1B     0.1000  3     0.00
+CT2  CT2  NS2  HC       0.1000  3     0.00
+HA2  CT2  NS2  HC       0.1000  3     0.00
+
+IMPROPER
+!atom types              Kpsi        psi0
+!PRAL
+CD   CC1A O   HR1      14.0000  0     0.00 ! 
+
+NONBONDED nbxmod  5 atom cdiel fshift vatom vdistance vfswitch -
+cutnb 14.0 ctofnb 12.0 ctonnb 10.0 eps 1.0 e14fac 1.0 wmin 1.5 
+                !adm jr., 5/08/91, suggested cutoff scheme
+!
+!atom  ignored    epsilon      Rmin/2   ignored   eps,1-4       Rmin/2,1-4
+!
+!Butadiene 
+CC1A   0.0   -0.0680     2.0900 !
+CC1B   0.0   -0.0680     2.0900 !
+CC2    0.0   -0.0640     2.0800 !
+!SCH1, SCH2
+NS1    0.000000  -0.200000     1.850000 !N for deprotonated Schiff's base
+NS2    0.000000  -0.200000     1.850000 !N for protonated Schiff's base
+
+end
+

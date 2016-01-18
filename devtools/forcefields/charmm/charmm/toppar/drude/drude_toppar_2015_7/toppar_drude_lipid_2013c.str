@@ -1,0 +1,1758 @@
+* $Id: toppar_drude_lipid.str 33 2015-08-04 14:44:59Z alex $
+* DRUDE topology and parameter stream file
+* Lipids
+* October 2013 
+* 
+
+!requires toppar_drude_master*.str
+
+ioformat extended
+
+!lipids
+
+!references
+!Chowdhary, J., Harder, E., Lopes, P.E.M., MacKerell, Jr., A.D, and
+!Roux, B., “A Polarizable Model for Phosphatidylcholine-Containing
+!Biological Membranes,” Journal of Physical Chemistry, B.,117:
+!9142-9160, 2013.
+
+read rtf card append 
+* Topology for Drude lipids
+* 
+38
+
+DEFA FIRS NONE LAST NONE 
+AUTOGENERATE ANGLES DIHEDRALS DRUDE  !note use of DRUDE 
+
+!! Lipids 
+!Atom nomenclature is based on that of Sundaralingan, M., 
+!Ann. N.Y. Acad. Sci. USA, 195:324-355, 1972 
+
+RESI EAS           0.000 ! ethylacetate, atom naming consistent with MAS 
+! 
+GROUP 
+ATOM C    CD2O3B   0.697  ALPHA -1.370  THOLE 1.747 !           H33 
+ATOM OM   OD30CL   0.000  ALPHA -0.732  THOLE 0.601 !            | 
+ATOM O    OD2C3B   0.000  ALPHA -0.904  THOLE 0.565 !       H31-C3-H32 
+ATOM C1   CD33C   -0.275  ALPHA -1.993  THOLE 0.410 !            | 
+ATOM H11  HDA3A    0.069 !                                  H21-C2-H22 
+ATOM H12  HDA3A    0.069 !                                        \ 
+ATOM H13  HDA3A    0.069 !                                         OM 
+ATOM C2   CD32C    0.086  ALPHA -1.797  THOLE 0.410 !             / 
+ATOM H21  HDA2A    0.116 !                                     O=C 
+ATOM H22  HDA2A    0.116 !                                       | 
+ATOM C3   CD33A   -0.177  ALPHA -2.051  THOLE 1.300 !       H11-C1-H12 
+ATOM H31  HDA3A    0.059 !                                       | 
+ATOM H32  HDA3A    0.059 !                                      H13 
+ATOM H33  HDA3A    0.059 ! 
+ATOM LP1A LPD     -0.349 ! 
+ATOM LP1B LPD     -0.258 ! 
+ATOM LPMA LPD     -0.170 
+ATOM LPMB LPD     -0.170 
+ 
+BOND C1   C       C    OM      C    O      OM    C2 
+BOND C1   H11     C1   H12     C1   H13 
+BOND C2   H21     C2   H22     C2   C3 
+BOND C3   H31     C3   H32     C3   H33 
+BOND O  LP1A O  LP1B 
+BOND OM LPMA OM LPMB 
+ 
+IMPR O C1 OM C 
+ 
+!carbonyl O LP positions and anisotropic polarizability from NMA 
+LONEPAIR relative LP1A O  C  C1 distance 0.30 angle 91.0 dihe   0.0 
+LONEPAIR relative LP1B O  C  C1 distance 0.30 angle 91.0 dihe 180.0 
+ANISOTROPY O C LP1A LP1B  A11 0.6968  A22 1.2194 
+ 
+!ether O LP positions and anisotropic polarizability from MeOH 
+LONEPAIR relative LPMA OM C  C2  distance 0.35 angle 110.9 dihe  91.0 
+LONEPAIR relative LPMB OM C  C2  distance 0.35 angle 110.9 dihe 269.0 
+ANISOTROPY OM C  LPMA LPMB A11 0.8108 A22 1.2162 
+ 
+IC C2     OM     C      C1       1.4420  113.44 -180.00  109.83   1.5046 
+IC C      OM     C2     C3       1.3413  113.44 -180.00  107.87   1.5290 
+IC O      OM     *C     C1       1.2022  124.56 -180.00  109.83   1.5046 
+IC OM     C      C1     H11      1.3413  109.83  180.00  110.49   1.1109 
+IC H11    C      *C1    H12      1.1109  110.49  119.96  109.94   1.1103 
+IC H11    C      *C1    H13      1.1109  110.49 -119.96  109.94   1.1103 
+IC C3     OM     *C2    H21      1.5290  107.87  119.98  110.33   1.1144 
+IC C3     OM     *C2    H22      1.5290  107.87 -119.98  110.33   1.1144 
+IC OM     C2     C3     H31      1.4420  107.87 -180.00  110.47   1.1107 
+IC H31    C2     *C3    H32      1.1107  110.47  120.05  110.43   1.1113 
+IC H31    C2     *C3    H33      1.1107  110.47 -120.05  110.43   1.1113 
+ 
+RESI MPRO          0.000 ! methylpropionate, atom names consistent with MAS 
+! 
+GROUP                    !                                     H23 
+ATOM C    CD2O3B   0.697  ALPHA -1.370  THOLE 1.747 !           | 
+ATOM OM   OD30CL   0.000  ALPHA -0.732  THOLE 0.601 !       H21-C2-H22 
+ATOM O    OD2C3B   0.000  ALPHA -0.904  THOLE 0.565 !             \ 
+ATOM C2   CD33D   -0.030  ALPHA -1.797  THOLE 0.410 !              OM 
+ATOM H21  HDA3A    0.116 !                                        / 
+ATOM H22  HDA3A    0.116 !                                     O=C 
+ATOM H23  HDA3A    0.116 !                                       | 
+ATOM C1   CD32C   -0.206  ALPHA -1.993  THOLE 0.410 !       H11-C1-H12 
+ATOM H11  HDA2A    0.069 !                                       | 
+ATOM H12  HDA2A    0.069 !                                  H31-C3-H32 
+ATOM C3   CD33A   -0.177  ALPHA -2.051  THOLE 1.300 !            | 
+ATOM H31  HDA3A    0.059 !                                      H33 
+ATOM H32  HDA3A    0.059 ! 
+ATOM H33  HDA3A    0.059 ! 
+ATOM LP1A LPD     -0.349 ! 
+ATOM LP1B LPD     -0.258 ! 
+ATOM LPMA LPD     -0.170 ! 
+ATOM LPMB LPD     -0.170 ! 
+ 
+BOND C1   C       C    OM      C    O      OM    C2 
+BOND C1   H11     C1   H12     C1   C3     C2    H23 
+BOND C2   H21     C2   H22 
+BOND C3   H31     C3   H32     C3   H33 
+BOND O    LP1A    O    LP1B 
+BOND OM   LPMA    OM   LPMB 
+ 
+IMPR O C1 OM C 
+ 
+!LP positions and anisotropic polarizability from NMA 
+LONEPAIR relative LP1A O  C  C1 distance 0.30 angle 91.0 dihe   0.0 
+LONEPAIR relative LP1B O  C  C1 distance 0.30 angle 91.0 dihe 180.0 
+ANISOTROPY O C LP1A LP1B  A11 0.6968  A22 1.2194 
+ 
+!LP positions and anisotropic polarizability from MeOH 
+LONEPAIR relative LPMA OM C  C2  distance 0.35 angle 110.9 dihe  91.0 
+LONEPAIR relative LPMB OM C  C2  distance 0.35 angle 110.9 dihe 269.0 
+ANISOTROPY OM C  LPMA LPMB A11 0.8108 A22 1.2162 
+ 
+IC C2     OM     C      C1        1.4469  122.96  178.85  109.19   1.5224 
+IC OM     C      C1     C3        1.3452  109.19 -179.20  111.90   1.5391 
+IC C1     OM     *C     O         1.5224  109.19  179.62  125.11   1.2034 
+IC C      OM     C2     H21       1.3452  122.96   94.60  110.01   1.1119 
+IC H21    OM     *C2    H22       1.1119  110.01 -120.55  111.55   1.1132 
+IC H21    OM     *C2    H23       1.1119  110.01  -94.09   68.64   5.2649 
+IC C3     C      *C1    H11       1.5391  111.90  121.09  108.59   1.1111 
+IC H11    C      *C1    H12       1.1111  108.59  117.79  108.58   1.1111 
+IC C      C1     C3     H31       1.5224  111.90  179.89  110.31   1.1111 
+IC H31    C1     *C3    H32       1.1111  110.31  119.85  110.66   1.1113 
+IC H31    C1     *C3    H33       1.1111  110.31 -119.85  110.65   1.1113 
+ 
+RESI MBU           0.000 ! methylbutyrate 
+! 
+GROUP                    !                                     H23 
+ATOM C    CD2O3B   0.697  ALPHA -1.370  THOLE 1.747 !           | 
+ATOM OM   OD30CL   0.000  ALPHA -0.732  THOLE 0.601 !       H21-C2-H22 
+ATOM O    OD2C3B   0.000  ALPHA -0.904  THOLE 0.565 !             \ 
+ATOM C2   CD33D   -0.030  ALPHA -1.797  THOLE 0.410 !              OM 
+ATOM H21  HDA3A    0.116 !                                        / 
+ATOM H22  HDA3A    0.116 !                                     O=C 
+ATOM H23  HDA3A    0.116 !                                       | 
+ATOM C1   CD32C   -0.206  ALPHA -1.993  THOLE 0.410 !       H11-C1-H12 
+ATOM H11  HDA2A    0.069 !                                       | 
+ATOM H12  HDA2A    0.069 !                                  H31-C3-H32 
+ATOM C3   CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !            | 
+ATOM H31  HDA2A    0.078 !                                  H41-C4-H42 
+ATOM H32  HDA2A    0.078 !                                       | 
+ATOM C4   CD33A   -0.177  ALPHA -2.051  THOLE 1.300 !           H43 
+ATOM H41  HDA3A    0.059 ! 
+ATOM H42  HDA3A    0.059 ! 
+ATOM H43  HDA3A    0.059 ! 
+ATOM LP1A LPD     -0.349 ! 
+ATOM LP1B LPD     -0.258 ! 
+ATOM LPMA LPD     -0.170 ! 
+ATOM LPMB LPD     -0.170 ! 
+ 
+BOND C1   C       C    OM      C    O      OM    C2 
+BOND C1   C3      C3   C4 
+BOND C1   H11     C1   H12 
+BOND C2   H21     C2   H22     C2   H23 
+BOND C3   H31     C3   H32 
+BOND C4   H41     C4   H42     C4   H43 
+BOND O    LP1A    O    LP1B 
+BOND OM   LPMA    OM   LPMB 
+ 
+IMPR O C1 OM C 
+ 
+!LP positions and anisotropic polarizability from NMA 
+LONEPAIR relative LP1A O  C  C1 distance 0.30 angle 91.0 dihe   0.0 
+LONEPAIR relative LP1B O  C  C1 distance 0.30 angle 91.0 dihe 180.0 
+ANISOTROPY O C LP1A LP1B  A11 0.6968  A22 1.2194 
+ 
+!LP positions and anisotropic polarizability from MeOH 
+LONEPAIR relative LPMA OM C  C2  distance 0.35 angle 110.9 dihe  91.0 
+LONEPAIR relative LPMB OM C  C2  distance 0.35 angle 110.9 dihe 269.0 
+ANISOTROPY OM C  LPMA LPMB A11 0.8108 A22 1.2162 
+ 
+!redo with IC generate 
+! internal coordinates from experiment for heavy atoms 
+IC C2     OM     C      C1        1.4469  122.96  178.85  109.19   1.5224 
+IC OM     C      C1     C3        1.3452  109.19 -179.20  111.90   1.5391 
+IC C1     OM     *C     O         1.5224  109.19  179.62  125.11   1.2034 
+IC C      OM     C2     H21       1.3452  122.96   94.60  110.01   1.1119 
+IC H21    OM     *C2    H22       1.1119  110.01 -120.55  111.55   1.1132 
+IC H21    OM     *C2    H23       1.1119  110.01  -94.09   68.64   5.2649 
+IC C3     C      *C1    H11       1.5391  111.90  121.09  108.59   1.1111 
+IC H11    C      *C1    H12       1.1111  108.59  117.79  108.58   1.1111 
+IC C      C1     C3     C4        1.5224  111.90  179.89  110.31   1.1111 
+IC C4     C1     *C3    H31       1.1111  110.31  119.85  110.66   1.1113 
+IC C4     C1     *C3    H32       1.1111  110.31 -119.85  110.65   1.1113 
+IC C1     C3     C4     H41       1.5224  111.90  179.89  110.31   1.1111 
+IC H41    C3     *C4    H42       1.1111  110.31  119.85  110.66   1.1113 
+IC H41    C3     *C4    H43       1.1111  110.31 -119.85  110.65   1.1113 
+ 
+RESI DMP          -1.000 ! Dimethylphosphate 
+!
+! lipid specific, differs from nucleic acid DMPN
+! 
+!           H11 
+!            | 
+!       H13- C1-H12 
+!             \ 
+!         O13  O11 
+!          \\ / 
+!      (-)   P1 
+!          // \ 
+!         O14  O12 
+!             / 
+!        H23-C2-H22 
+!            | 
+!           H21 
+! 
+GROUP 
+ATOM P    PD1A     1.191   ALPHA -0.974  THOLE 2.098 
+ATOM O13  OD2C2B  -0.876   ALPHA -0.931  THOLE 1.083 
+ATOM O14  OD2C2B  -0.876   ALPHA -0.931  THOLE 1.083 
+ATOM O11  OD30B   -0.470   ALPHA -0.901  THOLE 0.181 
+ATOM O12  OD30B   -0.470   ALPHA -0.901  THOLE 0.181 
+ATOM C1   CD33C    0.1725  ALPHA -1.642  THOLE 0.862 
+ATOM H11  HDA3A    0.026 
+ATOM H12  HDA3A    0.026 
+ATOM H13  HDA3A    0.026 
+ATOM C2   CD33C    0.1725  ALPHA -1.642  THOLE 0.862 
+ATOM H21  HDA3A    0.026 
+ATOM H22  HDA3A    0.026 
+ATOM H23  HDA3A    0.026 
+ 
+BOND P      O11    P      O12    P      O13    P      O14 
+BOND O11    C1     O12    C2 
+BOND C1     H11    C1     H12    C1     H13 
+BOND C2     H21    C2     H22    C2     H23 
+ 
+ANISOTROPY O11 O13 O12 O14 A11 1.0000  A22 0.6000 
+ANISOTROPY O12 O14 O11 O13 A11 1.0000  A22 0.6000 
+ANISOTROPY O13 P   O11 O12 A11 0.6000  A22 1.0000 
+ANISOTROPY O14 P   O12 O11 A11 0.6000  A22 1.0000 
+ 
+IC   O11 P   O12 C2      1.5837  102.73   72.47  116.87   1.4386 
+IC   O12 P   O11 C1      1.5843  102.73   72.47  116.85   1.4394 
+IC   O13 P   O11 C1      1.4910  107.70  -41.57  116.85   1.4394 
+IC   O14 P   O12 C2      1.4906  107.67  -41.56  116.87   1.4386 
+IC   H11 C1  O11 P       1.1128  110.79  -42.95  116.85   1.5837 
+IC   H12 C1  O11 P       1.1118  109.92   77.01  116.85   1.5837 
+IC   H13 C1  O11 P       1.1095  109.84 -163.26  116.85   1.5837 
+IC   H21 C2  O12 P       1.1125  110.79  -42.95  116.87   1.5843 
+IC   H22 C2  O12 P       1.1123  109.91   77.00  116.87   1.5843 
+IC   H23 C2  O12 P       1.1094  109.84 -163.30  116.87   1.5843 
+IC   O12 O11 *P  O13     1.5843  102.73 -114.04  107.70   1.4910 
+IC   O12 O11 *P  O14     1.5843  102.73  113.68  108.15   1.4906 
+IC   P   O11 C1  H11     1.5837  116.85  -42.95  110.79   1.1128 
+IC   H11 O11 *C1 H12     1.1128  110.79  119.96  109.92   1.1118 
+IC   H11 O11 *C1 H13     1.1128  110.79 -120.31  109.84   1.1095 
+IC   P   O12 C2  H21     1.5843  116.87  -42.95  110.79   1.1125 
+IC   H21 O12 *C2 H22     1.1125  110.79  119.95  109.91   1.1123 
+IC   H21 O12 *C2 H23     1.1125  110.79 -120.35  109.84   1.1094 
+patch first none last none 
+ 
+RESI PE            0.000 ! phosphatidylethanolamine 
+GROUP                    !                                    HN2 
+ATOM N    ND3P3A  -0.349  ALPHA -1.298  THOLE 0.895 !          | 
+ATOM C1   CD32AL   0.043  ALPHA -1.256  THOLE 0.895 !    HN1---N---HN3 (+) 
+ATOM HN1  HDP1B    0.340 !                                     | 
+ATOM HN2  HDP1B    0.340 !                                     | 
+ATOM HN3  HDP1B    0.340 !                                     | 
+ATOM H11  HDA2C    0.143 !                               H12---C1---H11 
+ATOM H12  HDA2C    0.143 !                                     | 
+GROUP                    !                                     | 
+ATOM C5   CD32AL   0.1985 ALPHA -1.642  THOLE 0.862 !          | 
+ATOM H51  HDA2A    0.026 !                               H52---C5---H51 
+ATOM H52  HDA2A    0.026 !                                     | 
+ATOM P1   PD1A     1.191  ALPHA -0.974  THOLE 2.098 ! (-) O3   O1 
+ATOM O3   OD2C2B  -0.876  ALPHA -0.931  THOLE 1.083 !       \ / 
+ATOM O4   OD2C2B  -0.876  ALPHA -0.931  THOLE 1.083 !        P1 (+) 
+ATOM O1   OD30B   -0.470  ALPHA -0.901  THOLE 0.181 !       / \ 
+ATOM O2   OD30B   -0.470  ALPHA -0.901  THOLE 0.181 ! (-) O4   O2 
+ATOM C6   CD33A    0.1725 ALPHA -1.642  THOLE 0.862 !          | 
+ATOM H61  HDA3A    0.026  !                                H63-C6-H62 
+ATOM H62  HDA3A    0.026  !                                    | 
+ATOM H63  HDA3A    0.026  !                                   H61 
+ 
+BOND N C1 N HN1 N HN2 N HN3 
+BOND C1 H11 C1 H12 C1 C5 
+BOND C5 H51 C5 H52 
+BOND P1   O1 
+BOND P1   O1     P1   O2    P1   O3    P1   O4    O1   C5    O2   C6 
+BOND C6   H61    C6   H62   C6   H63 
+ 
+ANISOTROPY O1 O3 O2 O4 A11 1.0000  A22 0.6000 
+ANISOTROPY O2 O4 O1 O3 A11 1.0000  A22 0.6000 
+ANISOTROPY O3 P1 O1 O2 A11 0.6000  A22 1.0000 
+ANISOTROPY O4 P1 O2 O1 A11 0.6000  A22 1.0000 
+ 
+! from crd snapshot of DMPC lipid 
+IC HN1   N     C1    C5     1.0200  114.21  -69.91  118.00   1.5484 ! via dmpc snapshot (alpha6) 
+IC C5    C1    N     HN2    1.5484  118.00   51.44  109.96   1.0200 ! via dmpc snapshot (alpha6) 
+IC C5    C1    N     HN3    1.5484  118.00  168.71  110.33   1.0200 ! via dmpc snapshot (alpha6) 
+IC HN1   N     C1    H11    1.0200  109.96  170.00  105.69   1.0800 
+IC HN2   N     C1    H12    1.0200  110.33  170.00  107.40   1.0800 
+IC N     C1    C5    H51    1.5691  118.00  -72.28  107.58   1.1110 
+IC N     C1    C5    H52    1.5691  118.00  173.53  110.91   1.1110 
+IC N     C1    C5    O1     1.5691  118.00   51.35  114.45   1.4136 ! dmpc snapshot (alpha5) 
+IC C1    C5    O1    P1     1.5484  114.45 -125.77  126.65   1.5528 ! dmpc snapshot (alpha4) 
+IC C5    O1    P1    O2     1.4136  126.65  -79.26  105.72   1.5948 ! dmpc snapshot (alpha3) 
+IC O3    P1    O1    C5     1.4635  108.40  164.76  126.65   1.4136 ! dmpc snapshot (alpha3) 
+IC O4    P1    O1    C5     1.4948  108.72   34.37  126.65   1.4136 ! dmpc snapshot (alpha3) 
+IC O1    P1    O2    C6     1.5528  105.72  -39.76  120.14   1.4507 ! dmpc snapshot (alpha2) 
+IC H61   C6    O2    P1     1.1110  109.78  -17.52  120.14   1.5948 
+IC H62   C6    O2    P1     1.1110  110.89 -131.34  120.14   1.5948 
+IC H63   C6    O2    P1     1.1000  110.00  107.02  120.14   1.5948 ! approximate geo for IC build (E.H) 
+ 
+RESI PC            0.000 ! phosphatidylcholine 
+GROUP 
+ATOM N    ND3P2A   0.688  ALPHA -0.829  THOLE 0.793 ! 
+ATOM C1   CD32AL  -0.166  ALPHA -1.393  THOLE 1.099 !           | 
+ATOM C2   CD33A   -0.288  ALPHA -1.793  THOLE 1.099 !          -C3- 
+ATOM C3   CD33A   -0.288  ALPHA -1.793  THOLE 1.099 !           | 
+ATOM C4   CD33A   -0.288  ALPHA -1.793  THOLE 1.099 !      |    |   | 
+ATOM H11  HDA2C    0.122  !                               -C2---N---C4-     (+) 
+ATOM H12  HDA2C    0.122  !                                |    |   | 
+ATOM H21  HDA3C    0.122  !                                     | 
+ATOM H22  HDA3C    0.122  !                                    -C1- 
+ATOM H23  HDA3C    0.122  !                                     | 
+ATOM H31  HDA3C    0.122  !                                     | 
+ATOM H32  HDA3C    0.122  !                                     | 
+ATOM H33  HDA3C    0.122  !                                     | 
+ATOM H41  HDA3C    0.122  !                                     | 
+ATOM H42  HDA3C    0.122  !                                     | 
+ATOM H43  HDA3C    0.122  !                                     | 
+GROUP                                               !           | 
+ATOM C5   CD32AL   0.1985 ALPHA -1.642  THOLE 0.862 !           | 
+ATOM H51  HDA2A    0.026                            !     H52---C5---H51 
+ATOM H52  HDA2A    0.026                            !           | 
+ATOM P1   PD1A     1.191  ALPHA -0.974  THOLE 2.098 !  (-) O3   O1 
+ATOM O3   OD2C2B  -0.876  ALPHA -0.931  THOLE 1.083 !        \ / 
+ATOM O4   OD2C2B  -0.876  ALPHA -0.931  THOLE 1.083 !         P1 (+) 
+ATOM O1   OD30B   -0.470  ALPHA -0.901  THOLE 0.181 !        / \ 
+ATOM O2   OD30B   -0.470  ALPHA -0.901  THOLE 0.181 !  (-) O4   O2 
+ATOM C6   CD33A    0.1725 ALPHA -1.642  THOLE 0.862 !           | 
+ATOM H61  HDA3A    0.026                            !       H63-C6-H62 
+ATOM H62  HDA3A    0.026                            !           | 
+ATOM H63  HDA3A    0.026                            !          H61 
+ 
+BOND N C1 N C2 N C3 N C4 
+BOND C1 H11 C1 H12 C1 C5 
+BOND C2 H21 C2 H22 C2 H23 
+BOND C3 H31 C3 H32 C3 H33 
+BOND C4 H41 C4 H42 C4 H43 
+BOND C5 H51 C5 H52 
+BOND P1   O1     P1   O2    P1   O3    P1   O4    O1   C5    O2   C6 
+BOND C6   H61    C6   H62   C6   H63 
+ 
+ANISOTROPY O1 O3 O2 O4 A11 1.0000  A22 0.6000 
+ANISOTROPY O2 O4 O1 O3 A11 1.0000  A22 0.6000 
+ANISOTROPY O3 P1 O1 O2 A11 0.6000  A22 1.0000 
+ANISOTROPY O4 P1 O2 O1 A11 0.6000  A22 1.0000 
+ 
+! from crd snapshot of DMPC lipid 
+IC C4    N     C1    C5     1.5287  114.21  -69.91  118.00   1.5484 ! dmpc snapshot (alpha6) 
+IC C5    C1    N     C2     1.5484  118.00   51.44  109.96   1.5245 ! dmpc snapshot (alpha6) 
+IC C5    C1    N     C3     1.5484  118.00  168.71  110.33   1.4813 ! dmpc snapshot (alpha6) 
+IC C2    N     C1    H11    1.5245  109.96  -72.71  105.69   1.0800 
+IC C3    N     C1    H12    1.4813  110.33  -64.78  107.40   1.0800 
+IC C1    N     C2    H21    1.5691  109.96 -177.49  105.79   1.0800 
+IC C3    N     C2    H22    1.4813  106.57  -59.07  111.14   1.0800 
+IC C4    N     C2    H23    1.5287  107.82   61.96  105.88   1.0800 
+IC C1    N     C3    H31    1.5691  110.33  -38.84  109.46   1.0800 
+IC C2    N     C3    H32    1.5245  106.57  -38.04  112.72   1.0800 
+IC C4    N     C3    H33    1.5287  107.63  -47.68  111.09   1.0800 
+IC C1    N     C4    H41    1.5691  114.21   82.27  104.85   1.0800 
+IC C2    N     C4    H42    1.5245  107.82 -162.05  102.16   1.0800 
+IC C3    N     C4    H43    1.4813  107.63  -41.86  106.62   1.0800 
+IC N     C1    C5    H51    1.5691  118.00  -72.28  107.58   1.1110 
+IC N     C1    C5    H52    1.5691  118.00  173.53  110.91   1.1110 
+IC N     C1    C5    O1     1.5691  118.00   51.35  114.45   1.4136 ! dmpc snapshot (alpha5) 
+IC C1    C5    O1    P1     1.5484  114.45 -125.77  126.65   1.5528 ! dmpc snapshot (alpha4) 
+IC C5    O1    P1    O2     1.4136  126.65  -79.26  105.72   1.5948 ! dmpc snapshot (alpha3) 
+IC O3    P1    O1    C5     1.4635  108.40  164.76  126.65   1.4136 ! dmpc snapshot (alpha3) 
+IC O4    P1    O1    C5     1.4948  108.72   34.37  126.65   1.4136 ! dmpc snapshot (alpha3) 
+IC O1    P1    O2    C6     1.5528  105.72  -39.76  120.14   1.4507 ! dmpc snapshot (alpha2) 
+IC H61   C6    O2    P1     1.1110  109.78  -17.52  120.14   1.5948 
+IC H62   C6    O2    P1     1.1110  110.89 -131.34  120.14   1.5948 
+IC H63   C6    O2    P1     1.1000  110.00  107.02  120.14   1.5948 ! approximate geo for IC build (E.H) 
+ 
+RESI GLYC          0.000 ! Model compound for glycerol headgroup the 
+                         ! aliphatic tail linker region 
+GROUP                    ! 
+ATOM C3   CD33A   -0.177  ALPHA -2.051  THOLE 1.300 ! 
+ATOM H31  HDA3A    0.059                            ! 
+ATOM H32  HDA3A    0.059                            ! 
+ATOM H33  HDA3A    0.059                            ! 
+GROUP                                               ! 
+ATOM C1   CD32C    0.086  ALPHA -1.797  THOLE 0.410 !         H12  H21 H33 
+ATOM H11  HDA2A    0.116                            !          |    |   | 
+ATOM H12  HDA2A    0.116                            !     H11--C1--C2--C3--H31 
+ATOM O4   OD30CL   0.000  ALPHA -0.732  THOLE 0.601 !          /    |   | 
+ATOM C5   CD2O3B   0.697  ALPHA -1.370  THOLE 1.747 !         O4   O8  H32 
+ATOM O6   OD2C3B   0.000  ALPHA -0.904  THOLE 0.565 !        /      \ 
+ATOM C7   CD33C   -0.275  ALPHA -1.993  THOLE 0.410 !    O6=C5      C9=O10 
+ATOM H71  HDA3A    0.069                            !      /          \ 
+ATOM H72  HDA3A    0.069                            ! H71-C7-H73  H113-C11-H111 
+ATOM H73  HDA3A    0.069                            !     |            | 
+ATOM LP4A LPD     -0.170                            !    H72          H112 
+ATOM LP4B LPD     -0.170                            ! 
+ATOM LP6A LPD     -0.349 
+ATOM LP6B LPD     -0.258 
+GROUP 
+ATOM C2   CD31C    0.202  ALPHA -1.797  THOLE 0.410 ! 
+ATOM H21  HDA1A    0.116                            ! 
+ATOM O8   OD30CL   0.000  ALPHA -0.732  THOLE 0.601 ! 
+ATOM C9   CD2O3B   0.697  ALPHA -1.370  THOLE 1.747 ! 
+ATOM O10  OD2C3B   0.000  ALPHA -0.904  THOLE 0.565 ! 
+ATOM C11  CD33C   -0.275  ALPHA -1.993  THOLE 0.410 ! 
+ATOM H111 HDA3A    0.069                            ! 
+ATOM H112 HDA3A    0.069                            ! 
+ATOM H113 HDA3A    0.069                            ! 
+ATOM LP8A LPD     -0.170                            ! 
+ATOM LP8B LPD     -0.170                            ! 
+ATOM LP1A LPD     -0.349 
+ATOM LP1B LPD     -0.258 
+ 
+BOND C1  C2    C2  C3 
+BOND C1  O4    O4  C5    C5  C7   C5 O6 
+BOND C2  O8    O8  C9    C9  C11  C9 O10 
+BOND C1  H11   C1  H12 
+BOND C2  H21 
+BOND C3  H31   C3  H32   C3  H33 
+BOND C7  H71   C7  H72   C7  H73 
+BOND C11 H111  C11 H112  C11 H113 
+BOND O4  LP4A O4  LP4B 
+BOND O6  LP6A O6  LP6B 
+BOND O8  LP8A O8  LP8B 
+BOND O10 LP1A O10 LP1B 
+ 
+IMPR O6 C7 O4 C5  O10 C11 O8 C9 
+ 
+!ether O LP positions and anisotropic polarizability from MeOH 
+LONEPAIR relative LP4A O4 C5 C1  distance 0.35 angle 110.9 dihe  91.0 
+LONEPAIR relative LP4B O4 C5 C1  distance 0.35 angle 110.9 dihe 269.0 
+ANISOTROPY O4 C5  LP4A LP4B A11 0.8108 A22 1.2162 
+ 
+!carbonyl O LP positions and anisotropic polarizability from NMA 
+LONEPAIR relative LP6A O6 C5 C7 distance 0.30 angle 91.0 dihe   0.0 
+LONEPAIR relative LP6B O6 C5 C7 distance 0.30 angle 91.0 dihe 180.0 
+ANISOTROPY O6 C5 LP6A LP6B  A11 0.6968  A22 1.2194 
+ 
+!ether O LP positions and anisotropic polarizability from MeOH 
+LONEPAIR relative LP8A O8 C9 C2  distance 0.35 angle 110.9 dihe  91.0 
+LONEPAIR relative LP8B O8 C9 C2  distance 0.35 angle 110.9 dihe 269.0 
+ANISOTROPY O8 C9  LP8A LP8B A11 0.8108 A22 1.2162 
+ 
+!carbonyl O LP positions and anisotropic polarizability from NMA 
+LONEPAIR relative LP1A O10 C9 C11 distance 0.30 angle 91.0 dihe   0.0 
+LONEPAIR relative LP1B O10 C9 C11 distance 0.30 angle 91.0 dihe 180.0 
+ANISOTROPY O10 C9 LP1A LP1B  A11 0.6968  A22 1.2194 
+ 
+! dmpc snapshot (E.H.) (beta2* and gamma2* definition unconventional) 
+IC O8    C2    C1   O4     1.4433  108.96   67.26  112.00   1.4482 ! crystal table (theta4) 
+IC C1    C3    *C2  O8     1.5416  111.86  117.87  104.73   1.4433 
+IC C1    C3    *C2  H21    1.5416  111.86 -120.45  111.42   1.1131 
+IC C3    C2    C1   O4     1.5260  111.86 -177.43  112.00   1.4482 ! crystal table (theta3)**start at diff angle 
+IC O4    C2    *C1  H11    1.4482  112.00 -119.53  108.04   1.1122 
+IC O4    C2    *C1  H12    1.4482  112.00  125.00  109.59   1.1124 
+IC C2    C1    O4   C5     1.5416  112.00   89.28  115.78   1.3407 ! dmpc snapshot (gamma1) 
+IC C1    O4    C5   O6     1.4482  115.78   -0.39  124.47   1.2022 ! crystal table (gamma2*) 
+IC O6    O4    *C5  C7     1.2022  124.47 -179.51  109.80   1.5034 
+IC O4    C5    C7   H71    1.3407  109.80   63.08  109.67   1.1111 
+IC H71   C5    *C7  H72    1.1111  109.67 -120.08  110.14   1.1101 
+IC H71   C5    *C7  H73    1.1111  109.67  119.72  110.52   1.1108 ! approximate geo 
+IC C3    C2    O8   C9     1.5260  104.73  140.03  118.41   1.3347 ! dmpc snapshot (beta1)**start at diff angle 
+IC C2    O8    C9   O10    1.4433  118.41    0.49  125.22   1.2016 ! crystal table (beta2*)**start at diff angle 
+IC O10   O8    *C9  C11    1.2016  125.22  179.82  109.49   1.5064 
+IC O8    C9    C11  H111   1.3347  109.49   59.03  109.95   1.1102 
+IC H111  C9    *C11 H112   1.1102  109.95 -120.13  109.88   1.1102 
+IC H111  C9    *C11 H113   1.1102  109.95  119.96  110.46   1.1108 ! approximate geo 
+IC H31   C3    C2   C1     1.1115  110.41 -178.97  111.86   1.5416 
+IC H31   C2    *C3  H32    1.1115  110.41  120.08  110.68   1.1112 
+IC H31   C2    *C3  H33    1.1115  110.41 -119.74  110.41   1.1108 ! approximate geo 
+ 
+RESI GLYP        -1.000 ! Model compound for glycerol headgroup the 
+                        ! aliphatic tail linker region, phosphorylated 
+GROUP                   ! 
+ATOM P1   PD1A     1.191  ALPHA -0.974  THOLE 2.098 
+ATOM OP3  OD2C2B  -0.876  ALPHA -0.931  THOLE 1.083 
+ATOM OP4  OD2C2B  -0.876  ALPHA -0.931  THOLE 1.083 !           HP11 
+ATOM OP1  OD30B   -0.470  ALPHA -0.901  THOLE 0.181 !            | 
+ATOM OP2  OD30B   -0.470  ALPHA -0.901  THOLE 0.181 !      HP13-CP1-HP12 
+                                                    !             \ 
+ATOM CP1  CD33A    0.1725 ALPHA -1.642  THOLE 0.862 !     (-)OP3  OP1 
+ATOM HP11 HDA3A    0.026                            !          \ / 
+ATOM HP12 HDA3A    0.026                            !           P1 (+) 
+ATOM HP13 HDA3A    0.026                            !          /  \ 
+                                                    !     (-)OP4   OP2 
+ATOM C3   CD32AL   0.1985 ALPHA -1.642  THOLE 0.862 !                \ 
+ATOM H31  HDA2A    0.026                            !                 \ 
+ATOM H32  HDA2A    0.026                            !                  \ 
+GROUP                                               !                   | 
+ATOM C1   CD32C    0.086  ALPHA -1.797  THOLE 0.410 !         H12  H21  | 
+ATOM H11  HDA2A    0.116                            !          |    |   | 
+ATOM H12  HDA2A    0.116                            !     H11--C1--C2--C3--H31 
+ATOM O4   OD30CL   0.000  ALPHA -0.732  THOLE 0.601 !          /    |   | 
+ATOM C5   CD2O3B   0.697  ALPHA -1.370  THOLE 1.747 !         O4   O8  H32 
+ATOM O6   OD2C3B   0.000  ALPHA -0.904  THOLE 0.565 !        /      \ 
+ATOM C7   CD33C   -0.275  ALPHA -1.993  THOLE 0.410 !    O6=C5      C9=O10 
+ATOM H71  HDA3A    0.069                            !      /          \ 
+ATOM H72  HDA3A    0.069                            ! H71-C7-H73  H113-C11-H111 
+ATOM H73  HDA3A    0.069                            !     |            | 
+ATOM LP4A LPD     -0.170                            !    H72          H112 
+ATOM LP4B LPD     -0.170                            ! 
+ATOM LP6A LPD     -0.349 
+ATOM LP6B LPD     -0.258 
+GROUP                                               ! 
+ATOM C2   CD31C    0.202  ALPHA -1.797  THOLE 0.410 ! 
+ATOM H21  HDA1A    0.116                            ! 
+ATOM O8   OD30CL   0.000  ALPHA -0.732  THOLE 0.601 ! 
+ATOM C9   CD2O3B   0.697  ALPHA -1.370  THOLE 1.747 ! 
+ATOM O10  OD2C3B   0.000  ALPHA -0.904  THOLE 0.565 ! 
+ATOM C11  CD33C   -0.275  ALPHA -1.993  THOLE 0.410 ! 
+ATOM H111 HDA3A    0.069                            ! 
+ATOM H112 HDA3A    0.069                            ! 
+ATOM H113 HDA3A    0.069                            ! 
+ATOM LP8A LPD     -0.170                            ! 
+ATOM LP8B LPD     -0.170                            ! 
+ATOM LP1A LPD     -0.349 
+ATOM LP1B LPD     -0.258 
+ 
+BOND P1   OP1    P1   OP2   P1   OP3   P1   OP4   OP1  CP1 
+BOND CP1  HP11   CP1  HP12  CP1  HP13  OP2  C3 
+BOND C1   C2     C2   C3 
+BOND C1   O4     O4   C5    C5   C7    C5   O6 
+BOND C2   O8     O8   C9    C9   C11   C9  O10 
+BOND C1   H11    C1   H12   C2   H21   C3  H31    C3   H32 
+BOND C7   H71    C7   H72   C7   H73 
+BOND C11  H111   C11  H112  C11  H113 
+BOND LP4A O4  LP4B O4 
+BOND LP6A O6  LP6B O6 
+BOND LP8A O8  LP8B O8 
+BOND LP1A O10 LP1B O10 
+ 
+IMPR O6 C7 O4 C5  O10 C11 O8 C9 
+ 
+!ether O LP positions and anisotropic polarizability from MeOH 
+LONEPAIR relative LP4A O4 C5 C1  distance 0.35 angle 110.9 dihe  91.0 
+LONEPAIR relative LP4B O4 C5 C1  distance 0.35 angle 110.9 dihe 269.0 
+ANISOTROPY O4 C5  LP4A LP4B A11 0.8108 A22 1.2162 
+ 
+!carbonyl O LP positions and anisotropic polarizability from NMA 
+LONEPAIR relative LP6A O6 C5 C7 distance 0.30 angle 91.0 dihe   0.0 
+LONEPAIR relative LP6B O6 C5 C7 distance 0.30 angle 91.0 dihe 180.0 
+ANISOTROPY O6 C5 LP6A LP6B  A11 0.6968  A22 1.2194 
+ 
+!ether O LP positions and anisotropic polarizability from MeOH 
+LONEPAIR relative LP8A O8 C9 C2  distance 0.35 angle 110.9 dihe  91.0 
+LONEPAIR relative LP8B O8 C9 C2  distance 0.35 angle 110.9 dihe 269.0 
+ANISOTROPY O8 C9  LP8A LP8B A11 0.8108 A22 1.2162 
+ 
+!carbonyl O LP positions and anisotropic polarizability from NMA 
+LONEPAIR relative LP1A O10 C9 C11 distance 0.30 angle 91.0 dihe   0.0 
+LONEPAIR relative LP1B O10 C9 C11 distance 0.30 angle 91.0 dihe 180.0 
+ANISOTROPY O10 C9 LP1A LP1B  A11 0.6968  A22 1.2194 
+ 
+ANISOTROPY OP1 OP3 OP2 OP4 A11 1.0000  A22 0.6000 
+ANISOTROPY OP2 OP4 OP1 OP3 A11 1.0000  A22 0.6000 
+ANISOTROPY OP3 P1  OP1 OP2 A11 0.6000  A22 1.0000 
+ANISOTROPY OP4 P1  OP2 OP1 A11 0.6000  A22 1.0000 
+ 
+! edited dmpc snapshot (E.H.) (beta2* and gamma2* definition unconventional) 
+IC CP1   OP1   P1   OP2    1.4186  112.33  -78.53  103.34   1.5770 ! crystal data (alpha3) 
+IC OP1   OP2   *P1  OP3    1.5812  103.34 -115.61  107.34   1.4868 
+IC OP1   OP2   *P1  OP4    1.5812  103.34  114.59  106.97   1.4890 
+IC P1    OP1   CP1  HP11   1.5812  112.33   44.89  112.05   1.1131 ! approximate geo 
+IC HP11  OP1   *CP1 HP12   1.1131  112.05  118.82  108.95   1.1108 
+IC HP11  OP1   *CP1 HP13   1.1131  112.05 -123.08  110.83   1.1122 
+IC OP1   P1    OP2  C3     1.5812  103.34  -63.74  113.53   1.4211 ! crystal data (alpha2) 
+IC P1    OP2   C3   C2     1.5770  113.53 -118.59  110.80   1.5411 ! dmpc snapshot (alpha1) 
+IC C2    OP2   *C3  H31    1.5411  110.80 -117.79  107.25   1.1126 
+IC C2    OP2   *C3  H32    1.5411  110.80  124.94  114.26   1.1129 
+IC OP2   C3    C2   C1     1.4211  110.80   66.66  113.75   1.5413 ! dmpc snapshot (theta1) 
+IC C1    C3    *C2  O8     1.5413  113.75  120.93  106.41   1.4493 
+IC C1    C3    *C2  H21    1.5413  113.75 -118.94  106.83   1.1155 
+IC C3    C2    C1   O4     1.5411  113.75  177.67  111.80   1.4509 ! crystal table (theta3) 
+IC O4    C2    *C1  H11    1.4509  111.80 -120.29  108.58   1.1124 
+IC O4    C2    *C1  H12    1.4509  111.80  124.04  109.30   1.1138 
+IC C2    C1    O4   C5     1.5413  111.80   93.38  117.70   1.3380 ! dmpc snapshot (gamma1) 
+IC C1    O4    C5   O6     1.4509  117.70   -1.20  125.29   1.2005 ! crystal table (gamma2*) 
+IC O6    O4    *C5  C7     1.2005  125.29 -179.32  109.42   1.5078 
+IC O4    C5    C7   H71    1.3380  109.42   63.59  109.44   1.1106 
+IC H71   C5    *C7  H72    1.1106  109.44 -120.01  109.93   1.1097 
+IC H71   C5    *C7  H73    1.1106  109.44  119.76  110.38   1.1102 ! approximate geo 
+IC C3    C2    O8   C9     1.5411  106.41  137.58  118.77   1.3280 ! dmpc snapshot (beta1) 
+IC C2    O8    C9   O10    1.4493  118.77   -0.90  125.92   1.2021 ! crystal table (beta2*) 
+IC O10   O8    *C9  C11    1.2021  125.92  179.92  109.19   1.5092 
+IC O8    C9    C11  H111   1.3280  109.19   59.28  109.75   1.1100 
+IC H111  C9    *C11 H112   1.1100  109.75 -119.89  109.63   1.1101 
+IC H111  C9    *C11 H113   1.1100  109.75  120.11  110.45   1.1101 ! approximate geo 
+ 
+RESI DMPC          0.000 ! 1,2 dimiristoyl-SN-glycero-3-Phosphorylcholine 
+! 
+! Polar Head and glycerol backbone 
+GROUP                     !                                   H15B 
+ATOM N    ND3P2A   0.688  ALPHA -0.829  THOLE 0.793 !           | 
+ATOM C13  CD33A   -0.288  ALPHA -1.793  THOLE 1.099 !     H15A-C15-H15C 
+ATOM H13A HDA3C    0.122  !                                     | 
+ATOM H13B HDA3C    0.122  !                               H13B  |    H14A 
+ATOM H13C HDA3C    0.122  !                                 |   |     | 
+ATOM C14  CD33A   -0.288  ALPHA -1.793  THOLE 1.099 ! H13A-C13--N--C14-H14B  (+) 
+ATOM H14A HDA3C    0.122  !                                 |   |   | 
+ATOM H14B HDA3C    0.122  !                               H13C  |  H14C 
+ATOM H14C HDA3C    0.122  !                                     | 
+ATOM C15  CD33A   -0.288  ALPHA -1.793  THOLE 1.099 !           | 
+ATOM H15A HDA3C    0.122  !                                     |    alpha6 
+ATOM H15B HDA3C    0.122  !                                     | 
+ATOM H15C HDA3C    0.122  !                                     | 
+ATOM C12  CD32AL  -0.166  ALPHA -1.393  THOLE 1.099 !    H12A--C12---H12B 
+ATOM H12A HDA2C    0.122  !                                     | 
+ATOM H12B HDA2C    0.122  !                                     | 
+GROUP                     !                                          alpha5 
+ATOM C11  CD32AL   0.1985 ALPHA -1.642  THOLE 0.862 !           | 
+ATOM H11A HDA2A    0.026  !                              H11A--C11---H11B 
+ATOM H11B HDA2A    0.026  !                                     |    alpha4 
+ATOM P    PD1A     1.191  ALPHA -0.974  THOLE 2.098 ! (-) O13  O12 
+ATOM O13  OD2C2B  -0.876  ALPHA -0.931  THOLE 1.083 !       \ /      alpha3 
+ATOM O14  OD2C2B  -0.876  ALPHA -0.931  THOLE 1.083 !        P (+) 
+ATOM O11  OD30B   -0.470  ALPHA -0.901  THOLE 0.181 !       / \      alpha2 
+ATOM O12  OD30B   -0.470  ALPHA -0.901  THOLE 0.181 ! (-) O14  O11 
+ATOM C1   CD32AL   0.1985 ALPHA -1.642  THOLE 0.862 !          |     alpha1 
+ATOM HA   HDA2A    0.026  !                              HA---C1---HB 
+ATOM HB   HDA2A    0.026  !                                    |     theta1 
+GROUP                     !                                     \ 
+ATOM C2   CD31C    0.202  ALPHA -1.797  THOLE 0.410 !      HS---C2- - - - - - - 
+ATOM HS   HDA1A    0.116  !                                      | beta1      | 
+ATOM O21  OD30CL   0.000  ALPHA -0.732  THOLE 0.601 !       O22  O21        theta3 
+ATOM C21  CD2O3B   0.697  ALPHA -1.370  THOLE 1.747 !        \\ /  beta2      | 
+ATOM O22  OD2C3B   0.000  ALPHA -0.904  THOLE 0.565 !          C21 
+ATOM C22  CD32C   -0.206  ALPHA -1.993  THOLE 0.410 !          |   beta3      | 
+ATOM H2R  HDA2A    0.069  !                             H2R---C22---H2S 
+ATOM H2S  HDA2A    0.069  !                                    |              | 
+ATOM LP1A LPD     -0.349  ! 
+ATOM LP1B LPD     -0.258  !                                    |              | 
+ATOM LPMA LPD     -0.170  ! 
+ATOM LPMB LPD     -0.170  !                                    |              | 
+GROUP                     !                                       beta4 
+ATOM C3   CD32C    0.086  ALPHA -1.797  THOLE 0.410 !          |              | 
+ATOM HX   HDA2A    0.116  !                                              HX---C3---HY 
+ATOM HY   HDA2A    0.116  !                                    |              |   gamma1 
+ATOM O31  OD30CL   0.000  ALPHA -0.732  THOLE 0.601 !                    O32  O31 
+ATOM C31  CD2O3B   0.697  ALPHA -1.370  THOLE 1.747 !          |          \\ /    gamma2 
+ATOM O32  OD2C3B   0.000  ALPHA -0.904  THOLE 0.565 !                       C31 
+ATOM C32  CD32C   -0.206  ALPHA -1.993  THOLE 0.410 !          |            |     gamma3 
+ATOM H2X  HDA2A    0.069  !                                          H2X---C32---H2Y 
+ATOM H2Y  HDA2A    0.069  !                                    |            | 
+ATOM LP1C LPD     -0.349  ! 
+ATOM LP1D LPD     -0.258  !                                    |            | 
+ATOM LPMC LPD     -0.170  ! 
+ATOM LPMD LPD     -0.170  !                                    |            | 
+GROUP                     !                                                      gamma4 
+ATOM C23  CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !          |            | 
+ATOM H3R  HDA2A    0.078  !                            H3R ---C23---H3S 
+ATOM H3S  HDA2A    0.078  !                                    |            | 
+GROUP                     ! 
+ATOM C24  CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !          | 
+ATOM H4R  HDA2A    0.078  !                            H4R ---C24---H4S     | 
+ATOM H4S  HDA2A    0.078  !                                    | 
+GROUP                     ! 
+ATOM C25  CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !          |            | 
+ATOM H5R  HDA2A    0.078  !                            H5R ---C25---H5S 
+ATOM H5S  HDA2A    0.078  !                                    |            | 
+GROUP                     ! 
+ATOM C26  CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !          | 
+ATOM H6R  HDA2A    0.078  !                            H6R ---C26---H6S     | 
+ATOM H6S  HDA2A    0.078  !                                    | 
+GROUP                     ! 
+ATOM C27  CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !          |            | 
+ATOM H7R  HDA2A    0.078  !                            H7R ---C27---H7S 
+ATOM H7S  HDA2A    0.078  !                                    |            | 
+GROUP                     ! 
+ATOM C28  CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !          | 
+ATOM H8R  HDA2A    0.078  !                            H8R ---C28---H8S     | 
+ATOM H8S  HDA2A    0.078  !                                    | 
+GROUP                     ! 
+ATOM C29  CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !          |            | 
+ATOM H9R  HDA2A    0.078  !                            H9R ---C29---H9S 
+ATOM H9S  HDA2A    0.078  !                                    |            | 
+GROUP                     ! 
+ATOM C210 CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !          | 
+ATOM H10R HDA2A    0.078  !                            H10R--C210--H10S     | 
+ATOM H10S HDA2A    0.078  !                                    | 
+GROUP                     ! 
+ATOM C211 CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !          |            | 
+ATOM H11R HDA2A    0.078  !                            H11R--C211--H11S 
+ATOM H11S HDA2A    0.078  !                                    |            | 
+GROUP                     ! 
+ATOM C212 CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !          | 
+ATOM H12R HDA2A    0.078  !                            H12R--C212--H12S     | 
+ATOM H12S HDA2A    0.078  !                                    | 
+GROUP                     ! 
+ATOM C213 CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !          |            | 
+ATOM H13R HDA2A    0.078  !                            H13R--C213--H13S 
+ATOM H13S HDA2A    0.078  !                                    |            | 
+GROUP                     ! 
+GROUP                     !                                                 | 
+ATOM C214 CD33A   -0.177  ALPHA -2.051  THOLE 1.300 !          | 
+ATOM H14R HDA3A    0.059  !                            H14R--C214--H14S     | 
+ATOM H14S HDA3A    0.059  !                                    | 
+ATOM H14T HDA3A    0.059  !                                  H14T           | 
+GROUP                     ! 
+ATOM C33  CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !                       | 
+ATOM H3X  HDA2A    0.078  !                                         H3X ---C33---H3Y 
+ATOM H3Y  HDA2A    0.078  !                                                 | 
+GROUP                     ! 
+ATOM C34  CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !                       | 
+ATOM H4X  HDA2A    0.078  !                                         H4X ---C34---H4Y 
+ATOM H4Y  HDA2A    0.078  !                                                 | 
+GROUP                     ! 
+ATOM C35  CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !                       | 
+ATOM H5X  HDA2A    0.078  !                                         H5X ---C35---H5Y 
+ATOM H5Y  HDA2A    0.078  !                                                 | 
+GROUP                     ! 
+ATOM C36  CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !                       | 
+ATOM H6X  HDA2A    0.078  !                                         H6X ---C36---H6Y 
+ATOM H6Y  HDA2A    0.078  !                                                 | 
+GROUP                     ! 
+ATOM C37  CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !                       | 
+ATOM H7X  HDA2A    0.078  !                                         H7X ---C37---H7Y 
+ATOM H7Y  HDA2A    0.078  !                                                 | 
+GROUP                     ! 
+ATOM C38  CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !                       | 
+ATOM H8X  HDA2A    0.078  !                                         H8X ---C38---H8Y 
+ATOM H8Y  HDA2A    0.078  !                                                 | 
+GROUP                     ! 
+ATOM C39  CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !                       | 
+ATOM H9X  HDA2A    0.078  !                                         H9X ---C39---H9Y 
+ATOM H9Y  HDA2A    0.078  !                                                 | 
+GROUP                     ! 
+ATOM C310 CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !                       | 
+ATOM H10X HDA2A    0.078  !                                         H10X--C310--H10Y 
+ATOM H10Y HDA2A    0.078  !                                                 | 
+GROUP                     ! 
+ATOM C311 CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !                       | 
+ATOM H11X HDA2A    0.078  !                                         H11X--C311--H11Y 
+ATOM H11Y HDA2A    0.078  !                                                 | 
+GROUP                     ! 
+ATOM C312 CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !                       | 
+ATOM H12X HDA2A    0.078  !                                         H12X--C312--H12Y 
+ATOM H12Y HDA2A    0.078  !                                                 | 
+GROUP                     ! 
+ATOM C313 CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !                       | 
+ATOM H13X HDA2A    0.078  !                                         H13X--C313--H13Y 
+ATOM H13Y HDA2A    0.078  !                                                 | 
+GROUP                     ! 
+ATOM C314 CD33A   -0.177  ALPHA -2.051  THOLE 1.300 !                       | 
+ATOM H14X HDA3A    0.059  !                                         H14X--C314--H14Y 
+ATOM H14Y HDA3A    0.059  !                                                 | 
+ATOM H14Z HDA3A    0.059  !                                               H14Z 
+ 
+! Polar Head 
+BOND  N    C13       N    C14       N    C15 
+BOND  C13  H13A      C13  H13B      C13  H13C 
+BOND  C14  H14A      C14  H14B      C14  H14C 
+BOND  C15  H15A      C15  H15B      C15  H15C 
+BOND  N    C12 
+BOND  C12  H12A      C12  H12B      C12  C11 
+BOND  C11  H11A      C11  H11B      C11  O12 
+BOND  O12  P         P    O11       P    O13    P   O14 
+! Glycerol Backbone 
+BOND  C1   HA        C1    HB       C1   C2     C1  O11 
+BOND  C2   HS        C2    C3       C2   O21 
+BOND  C3   HX        C3    HY       C3   O31 
+! Chain #2 
+BOND  O21  C21 
+BOND  C21  C22 
+BOND  C21  O22 
+BOND  LP1A O22       LP1B O22 
+BOND  LPMA O21       LPMB O21 
+BOND  C22  H2R       C22  H2S       C22  C23 
+BOND  C23  H3R       C23  H3S       C23  C24 
+BOND  C24  H4R       C24  H4S       C24  C25 
+BOND  C25  H5R       C25  H5S       C25  C26 
+BOND  C26  H6R       C26  H6S       C26  C27 
+BOND  C27  H7R       C27  H7S       C27  C28 
+BOND  C28  H8R       C28  H8S       C28  C29 
+BOND  C29  H9R       C29  H9S       C29  C210 
+BOND  C210 H10R      C210 H10S      C210 C211 
+BOND  C211 H11R      C211 H11S      C211 C212 
+BOND  C212 H12R      C212 H12S      C212 C213 
+BOND  C213 H13R      C213 H13S      C213 C214 
+BOND  C214 H14R      C214 H14S      C214 H14T 
+! Chain #3 
+BOND  O31  C31 
+BOND  C31  C32 
+BOND  C31  O32 
+BOND  LP1C O32       LP1D O32 
+BOND  LPMC O31       LPMD O31 
+BOND  C32  H2X       C32  H2Y       C32  C33 
+BOND  C33  H3X       C33  H3Y       C33  C34 
+BOND  C34  H4X       C34  H4Y       C34  C35 
+BOND  C35  H5X       C35  H5Y       C35  C36 
+BOND  C36  H6X       C36  H6Y       C36  C37 
+BOND  C37  H7X       C37  H7Y       C37  C38 
+BOND  C38  H8X       C38  H8Y       C38  C39 
+BOND  C39  H9X       C39  H9Y       C39  C310 
+BOND  C310 H10X      C310 H10Y      C310 C311 
+BOND  C311 H11X      C311 H11Y      C311 C312 
+BOND  C312 H12X      C312 H12Y      C312 C313 
+BOND  C313 H13X      C313 H13Y      C313 C314 
+BOND  C314 H14X      C314 H14Y      C314 H14Z 
+ 
+IMPR C21 O21 C22 O22   C31 O31 C32 O32 
+ 
+LONEPAIR relative LP1A O22 C21 C22 distance 0.30 angle 91.0 dihe   0.0 
+LONEPAIR relative LP1B O22 C21 C22 distance 0.30 angle 91.0 dihe 180.0 
+LONEPAIR relative LP1C O32 C31 C32 distance 0.30 angle 91.0 dihe   0.0 
+LONEPAIR relative LP1D O32 C31 C32 distance 0.30 angle 91.0 dihe 180.0 
+LONEPAIR relative LPMA O21 C21 C2  distance 0.35 angle 110.9 dihe  91.0 
+LONEPAIR relative LPMB O21 C21 C2  distance 0.35 angle 110.9 dihe 269.0 
+LONEPAIR relative LPMC O31 C31 C3  distance 0.35 angle 110.9 dihe  91.0 
+LONEPAIR relative LPMD O31 C31 C3  distance 0.35 angle 110.9 dihe 269.0 
+ 
+ANISOTROPY O22 C21 LP1A LP1B  A11 0.6968  A22 1.2194 
+ANISOTROPY O32 C31 LP1C LP1D  A11 0.6968  A22 1.2194 
+ANISOTROPY O21 C21 LPMA LPMB  A11 0.8108  A22 1.2162 
+ANISOTROPY O31 C31 LPMC LPMD  A11 0.8108  A22 1.2162 
+ 
+ANISOTROPY O12 O13 O11  O14   A11 1.0000  A22 0.6000 
+ANISOTROPY O11 O14 O12  O13   A11 1.0000  A22 0.6000 
+ANISOTROPY O13 P   O12  O11   A11 0.6000  A22 1.0000 
+ANISOTROPY O14 P   O11  O12   A11 0.6000  A22 1.0000 
+ 
+!IC table from IC generate, minimized geometry 
+IC C15    N      C12    C11        1.4976  109.72  180.00  116.86   1.5415 
+IC C13    C12    *N     C14        1.4955  110.64 -119.74  108.01   1.5030 
+IC C13    C12    *N     C15        1.4955  110.64  122.73  109.72   1.4976 
+IC C12    N      C13    H13A       1.5224  110.64 -177.67  111.18   1.0813 
+IC H13A   N      *C13   H13B       1.0813  111.18  119.03  109.35   1.0870 
+IC H13A   N      *C13   H13C       1.0813  111.18 -122.04  111.32   1.0813 
+IC C12    N      C14    H14A       1.5224  108.01   56.08  111.03   1.0952 
+IC H14A   N      *C14   H14B       1.0952  111.03  123.93  113.88   1.0740 
+IC H14A   N      *C14   H14C       1.0952  111.03 -112.36  110.24   1.0938 
+IC C12    N      C15    H15A       1.5224  109.72  176.74  110.89   1.0821 
+IC H15A   N      *C15   H15B       1.0821  110.89  121.45  111.48   1.0812 
+IC H15A   N      *C15   H15C       1.0821  110.89 -118.76  109.68   1.0875 
+IC C13    N      C12    C11        1.4955  110.64   57.27  116.86   1.5415 
+IC C11    N      *C12   H12A       1.5415  116.86 -126.38  111.91   1.0785 
+IC H12A   N      *C12   H12B       1.0785  111.91 -116.30  108.18   1.0972 
+IC N      C12    C11    O12        1.5224  116.86  127.42  108.31   1.4234 
+IC O12    C12    *C11   H11A       1.4234  108.31 -123.13  113.24   1.1138 
+IC H11A   C12    *C11   H11B       1.1138  113.24 -118.65  109.16   1.1130 
+IC C12    C11    O12    P          1.5415  108.31  -67.88  118.40   1.5875 
+IC C11    O12    P      O11        1.4234  118.40 -166.94  104.13   1.5782 
+IC O11    O12    *P     O13        1.5782  104.13  117.91  108.15   1.4793 
+IC O11    O12    *P     O14        1.5782  104.13 -117.27  106.75   1.4823 
+IC O12    P      O11    C1         1.5875  104.13  177.32  118.17   1.4318 
+IC P      O11    C1     C2         1.5782  118.17  167.65  110.87   1.5511 
+IC C2     O11    *C1    HA         1.5511  110.87 -119.11  111.42   1.1172 
+IC HA     O11    *C1    HB         1.1172  111.42 -120.82  110.01   1.1145 
+IC O11    C1     C2     C3         1.4318  110.87  177.69  110.63   1.5578 
+IC C3     C1     *C2    O21        1.5578  110.63  120.78  108.07   1.4415 !defines S chirality 
+IC C3     C1     *C2    HS         1.5578  110.63 -118.30  106.69   1.1168 !defines S chirality 
+IC C1     C2     O21    C21        1.5511  108.07  147.89  115.06   1.3179 
+IC C2     O21    C21    C22        1.4415  115.06  179.61  108.77   1.5289 
+IC C22    O21    *C21   O22        1.5289  108.77 -179.08  126.52   1.2183 
+IC O21    C21    C22    C23        1.3179  108.77 -173.00  112.01   1.5450 
+IC C23    C21    *C22   H2R        1.5450  112.01 -121.50  107.73   1.1091 
+IC H2R    C21    *C22   H2S        1.1091  107.73 -117.24  107.85   1.1091 
+IC C1     C2     C3     O31        1.5511  110.63  175.48  112.70   1.4436 
+IC O31    C2     *C3    HX         1.4436  112.70 -118.48  106.61   1.1129 
+IC HX     C2     *C3    HY         1.1129  106.61 -115.12  109.44   1.1145 
+IC C2     C3     O31    C31        1.5578  112.70   87.10  115.14   1.3313 
+IC C3     O31    C31    C32        1.4436  115.14 -172.45  108.40   1.5287 
+IC C32    O31    *C31   O32        1.5287  108.40 -178.98  125.63   1.2169 
+IC O31    C31    C32    C33        1.3313  108.40 -169.89  113.40   1.5448 
+IC C33    C31    *C32   H2X        1.5448  113.40 -121.09  107.19   1.1104 
+IC H2X    C31    *C32   H2Y        1.1104  107.19 -116.85  108.01   1.1089 
+IC C21    C22    C23    C24        1.5289  112.01  177.45  112.54   1.5336 
+IC C24    C22    *C23   H3R        1.5336  112.54 -120.79  109.48   1.1146 
+IC H3R    C22    *C23   H3S        1.1146  109.48 -117.62  109.70   1.1144 
+IC C22    C23    C24    C25        1.5450  112.54 -177.78  112.24   1.5346 
+IC C25    C23    *C24   H4R        1.5346  112.24 -121.51  109.37   1.1130 
+IC H4R    C23    *C24   H4S        1.1130  109.37 -117.64  109.09   1.1133 
+IC C23    C24    C25    C26        1.5336  112.24  178.33  112.83   1.5342 
+IC C26    C24    *C25   H5R        1.5342  112.83 -121.07  108.90   1.1136 
+IC H5R    C24    *C25   H5S        1.1136  108.90 -117.22  109.21   1.1132 
+IC C24    C25    C26    C27        1.5346  112.83 -177.92  112.39   1.5344 
+IC C27    C25    *C26   H6R        1.5344  112.39 -121.57  109.28   1.1129 
+IC H6R    C25    *C26   H6S        1.1129  109.28 -117.51  109.01   1.1133 
+IC C25    C26    C27    C28        1.5342  112.39  178.43  112.74   1.5342 
+IC C28    C26    *C27   H7R        1.5342  112.74 -121.06  108.92   1.1135 
+IC H7R    C26    *C27   H7S        1.1135  108.92 -117.29  109.22   1.1131 
+IC C26    C27    C28    C29        1.5344  112.74 -178.17  112.46   1.5345 
+IC C29    C27    *C28   H8R        1.5345  112.46 -121.56  109.25   1.1130 
+IC H8R    C27    *C28   H8S        1.1130  109.25 -117.46  109.01   1.1133 
+IC C27    C28    C29    C210       1.5342  112.46  178.92  112.68   1.5343 
+IC C210   C28    *C29   H9R        1.5343  112.68 -121.11  108.98   1.1135 
+IC H9R    C28    *C29   H9S        1.1135  108.98 -117.36  109.19   1.1131 
+IC C28    C29    C210   C211       1.5345  112.68 -178.62  112.55   1.5345 
+IC C211   C29    *C210  H10R       1.5345  112.55 -121.48  109.19   1.1130 
+IC H10R   C29    *C210  H10S       1.1130  109.19 -117.42  109.05   1.1132 
+IC C29    C210   C211   C212       1.5343  112.55  179.33  112.62   1.5345 
+IC C212   C210   *C211  H11R       1.5345  112.62 -121.19  109.03   1.1133 
+IC H11R   C210   *C211  H11S       1.1133  109.03 -117.37  109.14   1.1131 
+IC C210   C211   C212   C213       1.5345  112.62 -179.30  112.67   1.5338 
+IC C213   C211   *C212  H12R       1.5338  112.67 -121.40  109.15   1.1132 
+IC H12R   C211   *C212  H12S       1.1132  109.15 -117.41  109.09   1.1133 
+IC C211   C212   C213   C214       1.5345  112.67  179.80  113.26   1.5308 
+IC C214   C212   *C213  H13R       1.5308  113.26 -121.66  108.77   1.1142 
+IC H13R   C212   *C213  H13S       1.1142  108.77 -116.66  108.78   1.1140 
+IC C212   C213   C214   H14R       1.5338  113.26  -59.87  110.43   1.1113 
+IC H14R   C213   *C214  H14S       1.1113  110.43  119.85  110.46   1.1113 
+IC H14R   C213   *C214  H14T       1.1113  110.43 -120.04  110.62   1.1112 
+IC C31    C32    C33    C34        1.5287  113.40  179.64  111.32   1.5341 
+IC C34    C32    *C33   H3X        1.5341  111.32 -120.86  109.71   1.1137 
+IC H3X    C32    *C33   H3Y        1.1137  109.71 -118.09  109.81   1.1143 
+IC C32    C33    C34    C35        1.5448  111.32 -176.82  113.37   1.5345 
+IC C35    C33    *C34   H4X        1.5345  113.37 -121.80  109.05   1.1135 
+IC H4X    C33    *C34   H4Y        1.1135  109.05 -117.12  108.83   1.1136 
+IC C33    C34    C35    C36        1.5341  113.37  178.26  111.94   1.5348 
+IC C36    C34    *C35   H5X        1.5348  111.94 -120.83  109.02   1.1132 
+IC H5X    C34    *C35   H5Y        1.1132  109.02 -117.61  109.44   1.1129 
+IC C34    C35    C36    C37        1.5345  111.94 -176.79  113.19   1.5342 
+IC C37    C35    *C36   H6X        1.5342  113.19 -121.90  109.15   1.1132 
+IC H6X    C35    *C36   H6Y        1.1132  109.15 -117.14  108.76   1.1136 
+IC C35    C36    C37    C38        1.5348  113.19  177.72  112.13   1.5346 
+IC C38    C36    *C37   H7X        1.5346  112.13 -120.80  109.00   1.1133 
+IC H7X    C36    *C37   H7Y        1.1133  109.00 -117.59  109.40   1.1128 
+IC C36    C37    C38    C39        1.5342  112.13 -177.62  112.99   1.5342 
+IC C39    C37    *C38   H8X        1.5342  112.99 -121.75  109.20   1.1132 
+IC H8X    C37    *C38   H8Y        1.1132  109.20 -117.24  108.86   1.1136 
+IC C37    C38    C39    C310       1.5346  112.99  178.21  112.22   1.5344 
+IC C310   C38    *C39   H9X        1.5344  112.22 -120.97  109.07   1.1134 
+IC H9X    C38    *C39   H9Y        1.1134  109.07 -117.54  109.30   1.1130 
+IC C38    C39    C310   C311       1.5342  112.22 -178.81  112.83   1.5339 
+IC C311   C39    *C310  H10X       1.5339  112.83 -121.55  109.12   1.1132 
+IC H10X   C39    *C310  H10Y       1.1132  109.12 -117.29  108.97   1.1134 
+IC C39    C310   C311   C312       1.5344  112.83  179.12  112.41   1.5346 
+IC C312   C310   *C311  H11X       1.5346  112.41 -121.13  109.11   1.1132 
+IC H11X   C310   *C311  H11Y       1.1132  109.11 -117.49  109.19   1.1130 
+IC C310   C311   C312   C313       1.5339  112.41 -179.72  112.68   1.5336 
+IC C313   C311   *C312  H12X       1.5336  112.68 -121.39  109.14   1.1133 
+IC H12X   C311   *C312  H12Y       1.1133  109.14 -117.34  109.09   1.1133 
+IC C311   C312   C313   C314       1.5346  112.68  179.81  113.29   1.5308 
+IC C314   C312   *C313  H13X       1.5308  113.29 -121.66  108.73   1.1141 
+IC H13X   C312   *C313  H13Y       1.1141  108.73 -116.66  108.73   1.1141 
+IC C312   C313   C314   H14X       1.5336  113.29  -59.97  110.46   1.1113 
+IC H14X   C313   *C314  H14Y       1.1113  110.46  119.87  110.46   1.1113 
+IC H14X   C313   *C314  H14Z       1.1113  110.46 -120.06  110.59   1.1112 
+ 
+RESI DPPC          0.000 ! 
+! 
+! Polar Head and glycerol backbone 
+GROUP                       !                                   H15B 
+ATOM N    ND3P2A   0.688  ALPHA -0.829  THOLE 0.793 !           | 
+ATOM C13  CD33A   -0.288  ALPHA -1.793  THOLE 1.099 !     H15A-C15-H15C 
+ATOM H13A HDA3C    0.122  !                                     | 
+ATOM H13B HDA3C    0.122  !                               H13B  |    H14A 
+ATOM H13C HDA3C    0.122  !                                 |   |     | 
+ATOM C14  CD33A   -0.288  ALPHA -1.793  THOLE 1.099 ! H13A-C13--N--C14-H14B  (+) 
+ATOM H14A HDA3C    0.122  !                                 |   |   | 
+ATOM H14B HDA3C    0.122  !                               H13C  |  H14C 
+ATOM H14C HDA3C    0.122  !                                     | 
+ATOM C15  CD33A   -0.288  ALPHA -1.793  THOLE 1.099 !           | 
+ATOM H15A HDA3C    0.122  !                                     |    alpha6 
+ATOM H15B HDA3C    0.122  !                                     | 
+ATOM H15C HDA3C    0.122  !                                     | 
+ATOM C12  CD32AL  -0.166  ALPHA -1.393  THOLE 1.099 !    H12A--C12---H12B 
+ATOM H12A HDA2C    0.122  !                                     | 
+ATOM H12B HDA2C    0.122  !                                     | 
+GROUP                     !                                          alpha5 
+ATOM C11  CD32AL   0.1985 ALPHA -1.642  THOLE 0.862 !           | 
+ATOM H11A HDA2A    0.026  !                              H11A--C11---H11B 
+ATOM H11B HDA2A    0.026  !                                     |    alpha4 
+ATOM P    PD1A     1.191  ALPHA -0.974  THOLE 2.098 ! (-) O13  O12 
+ATOM O13  OD2C2B  -0.876  ALPHA -0.931  THOLE 1.083 !       \ /      alpha3 
+ATOM O14  OD2C2B  -0.876  ALPHA -0.931  THOLE 1.083 !        P (+) 
+ATOM O11  OD30B   -0.470  ALPHA -0.901  THOLE 0.181 !       / \      alpha2 
+ATOM O12  OD30B   -0.470  ALPHA -0.901  THOLE 0.181 ! (-) O14  O11 
+ATOM C1   CD32AL   0.1985 ALPHA -1.642  THOLE 0.862 !          |     alpha1 
+ATOM HA   HDA2A    0.026  !                              HA---C1---HB 
+ATOM HB   HDA2A    0.026  !                                    |     theta1 
+GROUP                     !                                    | 
+ATOM C2   CD31C    0.202  ALPHA -1.797  THOLE 0.410 !       HS---C2- - - - - - 
+ATOM HS   HDA1A    0.116  !                                      | beta1      | 
+ATOM O21  OD30CL   0.000  ALPHA -0.732  THOLE 0.601 !       O22  O21        theta3 
+ATOM C21  CD2O3B   0.697  ALPHA -1.370  THOLE 1.747 !        \\ /  beta2      | 
+ATOM O22  OD2C3B   0.000  ALPHA -0.904  THOLE 0.565 !          C21 
+ATOM C22  CD32C   -0.206  ALPHA -1.993  THOLE 0.410 !          |   beta3      | 
+ATOM H2R  HDA2A    0.069  !                             H2R---C22---H2S 
+ATOM H2S  HDA2A    0.069  !                                    |              | 
+ATOM LP1A LPD     -0.349  ! 
+ATOM LP1B LPD     -0.258  !                                    |              | 
+ATOM LPMA LPD     -0.170  ! 
+ATOM LPMB LPD     -0.170  !                                    |              | 
+GROUP                     !                                        beta4 
+ATOM C3   CD32C    0.086  ALPHA -1.797  THOLE 0.410 !          |              | 
+ATOM HX   HDA2A    0.116  !                                              HX---C3---HY 
+ATOM HY   HDA2A    0.116  !                                    |              |   gamma1 
+ATOM O31  OD30CL   0.000  ALPHA -0.732  THOLE 0.601 !                    O32  O31 
+ATOM C31  CD2O3B   0.697  ALPHA -1.370  THOLE 1.747 !          |          \\ /    gamma2 
+ATOM O32  OD2C3B   0.000  ALPHA -0.904  THOLE 0.565 !                       C31 
+ATOM C32  CD32C   -0.206  ALPHA -1.993  THOLE 0.410 !          |            |     gamma3 
+ATOM H2X  HDA2A    0.069  !                                          H2X---C32---H2Y 
+ATOM H2Y  HDA2A    0.069  !                                    |            | 
+ATOM LP1C LPD     -0.349  ! 
+ATOM LP1D LPD     -0.258  !                                    |            | 
+ATOM LPMC LPD     -0.170  ! 
+ATOM LPMD LPD     -0.170  !                                    |            | 
+GROUP                     !                                                       gamma4 
+ATOM C23  CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !          |            | 
+ATOM H3R  HDA2A    0.078  !                            H3R ---C23---H3S 
+ATOM H3S  HDA2A    0.078  !                                    |            | 
+GROUP                     ! 
+ATOM C24  CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !          | 
+ATOM H4R  HDA2A    0.078  !                            H4R ---C24---H4S      | 
+ATOM H4S  HDA2A    0.078  !                                    | 
+GROUP                     ! 
+ATOM C25  CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !          |            | 
+ATOM H5R  HDA2A    0.078  !                            H5R ---C25---H5S 
+ATOM H5S  HDA2A    0.078  !                                    |            | 
+GROUP                     ! 
+ATOM C26  CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !          | 
+ATOM H6R  HDA2A    0.078  !                            H6R ---C26---H6S      | 
+ATOM H6S  HDA2A    0.078  !                                    | 
+GROUP                     ! 
+ATOM C27  CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !          |            | 
+ATOM H7R  HDA2A    0.078  !                            H7R ---C27---H7S 
+ATOM H7S  HDA2A    0.078  !                                    |            | 
+GROUP                     ! 
+ATOM C28  CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 ! 
+ATOM H8R  HDA2A    0.078  !                            H8R ---C28---H8S     | 
+ATOM H8S  HDA2A    0.078  !                                    | 
+GROUP                     ! 
+ATOM C29  CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !          |            | 
+ATOM H9R  HDA2A    0.078  !                            H9R ---C29---H9S 
+ATOM H9S  HDA2A    0.078  !                                    |            | 
+GROUP                     ! 
+ATOM C210 CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !          | 
+ATOM H10R HDA2A    0.078  !                            H10R--C210--H10S     | 
+ATOM H10S HDA2A    0.078  !                                    | 
+GROUP                     ! 
+ATOM C211 CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !          |            | 
+ATOM H11R HDA2A    0.078  !                            H11R--C211--H11S 
+ATOM H11S HDA2A    0.078  !                                    |            | 
+GROUP                     ! 
+ATOM C212 CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !          | 
+ATOM H12R HDA2A    0.078  !                            H12R--C212--H12S     | 
+ATOM H12S HDA2A    0.078  !                                    | 
+GROUP                     ! 
+ATOM C213 CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !          |            | 
+ATOM H13R HDA2A    0.078  !                            H13R--C213--H13S 
+ATOM H13S HDA2A    0.078  !                                    |            | 
+GROUP                     ! 
+ATOM C214 CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !          | 
+ATOM H14R HDA2A    0.078  !                            H14R--C214--H14S     | 
+ATOM H14S HDA2A    0.078  !                                    | 
+GROUP                     ! 
+ATOM C215 CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !          | 
+ATOM H15R HDA2A    0.078  !                            H15R--C215--H15S     | 
+ATOM H15S HDA2A    0.078  !                                    | 
+GROUP                     !                                                 | 
+ATOM C216 CD33A   -0.177  ALPHA -2.051  THOLE 1.300 !          | 
+ATOM H16R HDA3A    0.059  !                            H16R--C216--H16S     | 
+ATOM H16S HDA3A    0.059  !                                    | 
+ATOM H16T HDA3A    0.059  !                                  H16T           | 
+GROUP                     ! 
+ATOM C33  CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !                       | 
+ATOM H3X  HDA2A    0.078  !                                         H3X ---C33---H3Y 
+ATOM H3Y  HDA2A    0.078  !                                                 | 
+GROUP                     ! 
+ATOM C34  CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !                       | 
+ATOM H4X  HDA2A    0.078  !                                         H4X ---C34---H4Y 
+ATOM H4Y  HDA2A    0.078  !                                                 | 
+GROUP                     ! 
+ATOM C35  CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !                       | 
+ATOM H5X  HDA2A    0.078  !                                         H5X ---C35---H5Y 
+ATOM H5Y  HDA2A    0.078  !                                                 | 
+GROUP                     ! 
+ATOM C36  CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !                       | 
+ATOM H6X  HDA2A    0.078  !                                         H6X ---C36---H6Y 
+ATOM H6Y  HDA2A    0.078  !                                                 | 
+GROUP                     ! 
+ATOM C37  CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !                       | 
+ATOM H7X  HDA2A    0.078  !                                         H7X ---C37---H7Y 
+ATOM H7Y  HDA2A    0.078  !                                                 | 
+GROUP                     ! 
+ATOM C38  CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !                       | 
+ATOM H8X  HDA2A    0.078  !                                         H8X ---C38---H8Y 
+ATOM H8Y  HDA2A    0.078  !                                                 | 
+GROUP                     ! 
+ATOM C39  CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !                       | 
+ATOM H9X  HDA2A    0.078  !                                         H9X ---C39---H9Y 
+ATOM H9Y  HDA2A    0.078  !                                                 | 
+GROUP                     ! 
+ATOM C310 CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !                       | 
+ATOM H10X HDA2A    0.078  !                                         H10X--C310--H10Y 
+ATOM H10Y HDA2A    0.078  !                                                 | 
+GROUP                     ! 
+ATOM C311 CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !                       | 
+ATOM H11X HDA2A    0.078  !                                         H11X--C311--H11Y 
+ATOM H11Y HDA2A    0.078  !                                                 | 
+GROUP                     ! 
+ATOM C312 CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !                       | 
+ATOM H12X HDA2A    0.078  !                                         H12X--C312--H12Y 
+ATOM H12Y HDA2A    0.078  !                                                 | 
+GROUP                     ! 
+ATOM C313 CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !                       | 
+ATOM H13X HDA2A    0.078  !                                         H13X--C313--H13Y 
+ATOM H13Y HDA2A    0.078  !                                                 | 
+GROUP                     ! 
+ATOM C314 CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !                       | 
+ATOM H14X HDA2A    0.078  !                                         H14X--C314--H14Y 
+ATOM H14Y HDA2A    0.078  !                                                 | 
+GROUP                     ! 
+ATOM C315 CD32AL  -0.156  ALPHA -1.660  THOLE 1.300 !                       | 
+ATOM H15X HDA2A    0.078  !                                         H15X--C315--H15Y 
+ATOM H15Y HDA2A    0.078  !                                                 | 
+GROUP                     ! 
+ATOM C316 CD33A   -0.177  ALPHA -2.051  THOLE 1.300 !                       | 
+ATOM H16X HDA3A    0.059  !                                         H16X--C316--H16Y 
+ATOM H16Y HDA3A    0.059  !                                                 | 
+ATOM H16Z HDA3A    0.059  !                                               H16Z 
+ 
+! Polar Head 
+BOND  N    C13       N    C14       N    C15 
+BOND  C13  H13A      C13  H13B      C13  H13C 
+BOND  C14  H14A      C14  H14B      C14  H14C 
+BOND  C15  H15A      C15  H15B      C15  H15C 
+BOND  N    C12 
+BOND  C12  H12A      C12  H12B      C12  C11 
+BOND  C11  H11A      C11  H11B      C11  O12 
+BOND  O12  P         P    O11       P    O13    P   O14 
+! Glycerol Backbone 
+BOND  C1   HA        C1    HB       C1   C2     C1  O11 
+BOND  C2   HS        C2    C3       C2   O21 
+BOND  C3   HX        C3    HY       C3   O31 
+! Chain #2 
+BOND  O21  C21 
+BOND  C21  C22 
+BOND  C21  O22 
+BOND  LP1A O22       LP1B O22 
+BOND  LPMA O21       LPMB O21 
+BOND  C22  H2R       C22  H2S       C22  C23 
+BOND  C23  H3R       C23  H3S       C23  C24 
+BOND  C24  H4R       C24  H4S       C24  C25 
+BOND  C25  H5R       C25  H5S       C25  C26 
+BOND  C26  H6R       C26  H6S       C26  C27 
+BOND  C27  H7R       C27  H7S       C27  C28 
+BOND  C28  H8R       C28  H8S       C28  C29 
+BOND  C29  H9R       C29  H9S       C29  C210 
+BOND  C210 H10R      C210 H10S      C210 C211 
+BOND  C211 H11R      C211 H11S      C211 C212 
+BOND  C212 H12R      C212 H12S      C212 C213 
+BOND  C213 H13R      C213 H13S      C213 C214 
+BOND  C214 H14R      C214 H14S      C214 C215 
+BOND  C215 H15R      C215 H15S      C215 C216 
+BOND  C216 H16R      C216 H16S      C216 H16T 
+! Chain #3 
+BOND  O31  C31 
+BOND  C31  C32 
+BOND  C31  O32 
+BOND  LP1C O32       LP1D O32 
+BOND  LPMC O31       LPMD O31 
+BOND  C32  H2X       C32  H2Y       C32  C33 
+BOND  C33  H3X       C33  H3Y       C33  C34 
+BOND  C34  H4X       C34  H4Y       C34  C35 
+BOND  C35  H5X       C35  H5Y       C35  C36 
+BOND  C36  H6X       C36  H6Y       C36  C37 
+BOND  C37  H7X       C37  H7Y       C37  C38 
+BOND  C38  H8X       C38  H8Y       C38  C39 
+BOND  C39  H9X       C39  H9Y       C39  C310 
+BOND  C310 H10X      C310 H10Y      C310 C311 
+BOND  C311 H11X      C311 H11Y      C311 C312 
+BOND  C312 H12X      C312 H12Y      C312 C313 
+BOND  C313 H13X      C313 H13Y      C313 C314 
+BOND  C314 H14X      C314 H14Y      C314 C315 
+BOND  C315 H15X      C315 H15Y      C315 C316 
+BOND  C316 H16X      C316 H16Y      C316 H16Z 
+ 
+IMPR C21 O21 C22 O22   C31 O31 C32 O32 
+ 
+LONEPAIR relative LP1A O22 C21 C22 distance 0.30 angle 91.0 dihe   0.0 
+LONEPAIR relative LP1B O22 C21 C22 distance 0.30 angle 91.0 dihe 180.0 
+LONEPAIR relative LP1C O32 C31 C32 distance 0.30 angle 91.0 dihe   0.0 
+LONEPAIR relative LP1D O32 C31 C32 distance 0.30 angle 91.0 dihe 180.0 
+LONEPAIR relative LPMA O21 C21 C2  distance 0.35 angle 110.9 dihe  91.0 
+LONEPAIR relative LPMB O21 C21 C2  distance 0.35 angle 110.9 dihe 269.0 
+LONEPAIR relative LPMC O31 C31 C3  distance 0.35 angle 110.9 dihe  91.0 
+LONEPAIR relative LPMD O31 C31 C3  distance 0.35 angle 110.9 dihe 269.0 
+ 
+ANISOTROPY O22 C21 LP1A LP1B  A11 0.6968  A22 1.2194 
+ANISOTROPY O32 C31 LP1C LP1D  A11 0.6968  A22 1.2194 
+ANISOTROPY O21 C21 LPMA LPMB  A11 0.8108  A22 1.2162 
+ANISOTROPY O31 C31 LPMC LPMD  A11 0.8108  A22 1.2162 
+ 
+ANISOTROPY O12 O13 O11  O14   A11 1.0000  A22 0.6000 
+ANISOTROPY O11 O14 O12  O13   A11 1.0000  A22 0.6000 
+ANISOTROPY O13 P   O12  O11   A11 0.6000  A22 1.0000 
+ANISOTROPY O14 P   O11  O12   A11 0.6000  A22 1.0000 
+ 
+!IC table from IC generate, minimized geometry 
+IC C15    N      C12    C11        1.4975  109.67 -179.96  116.86   1.5411 
+IC C13    C12    *N     C14        1.4954  110.61 -119.72  108.04   1.5030 
+IC C13    C12    *N     C15        1.4954  110.61  122.74  109.67   1.4975 
+IC C12    N      C13    H13A       1.5222  110.61 -177.62  111.18   1.0811 
+IC H13A   N      *C13   H13B       1.0811  111.18  119.00  109.33   1.0870 
+IC H13A   N      *C13   H13C       1.0811  111.18 -122.05  111.32   1.0813 
+IC C12    N      C14    H14A       1.5222  108.04   55.75  111.02   1.0953 
+IC H14A   N      *C14   H14B       1.0953  111.02  123.86  113.88   1.0740 
+IC H14A   N      *C14   H14C       1.0953  111.02 -112.40  110.25   1.0937 
+IC C12    N      C15    H15A       1.5222  109.67  176.85  110.89   1.0820 
+IC H15A   N      *C15   H15B       1.0820  110.89  121.48  111.48   1.0813 
+IC H15A   N      *C15   H15C       1.0820  110.89 -118.74  109.66   1.0876 
+IC C13    N      C12    C11        1.4954  110.61   57.30  116.86   1.5411 
+IC C11    N      *C12   H12A       1.5411  116.86 -126.39  111.90   1.0787 
+IC H12A   N      *C12   H12B       1.0787  111.90 -116.29  108.17   1.0973 
+IC N      C12    C11    O12        1.5222  116.86  127.40  108.21   1.4230 
+IC O12    C12    *C11   H11A       1.4230  108.21 -123.09  113.27   1.1137 
+IC H11A   C12    *C11   H11B       1.1137  113.27 -118.71  109.20   1.1129 
+IC C12    C11    O12    P          1.5411  108.21  -68.07  118.42   1.5874 
+IC C11    O12    P      O11        1.4230  118.42 -166.83  104.01   1.5775 
+IC O11    O12    *P     O13        1.5775  104.01  117.90  108.15   1.4792 
+IC O11    O12    *P     O14        1.5775  104.01 -117.24  106.77   1.4822 
+IC O12    P      O11    C1         1.5874  104.01  178.48  118.38   1.4312 
+IC P      O11    C1     C2         1.5775  118.38  167.50  110.65   1.5505 
+IC C2     O11    *C1    HA         1.5505  110.65 -119.12  111.48   1.1171 
+IC HA     O11    *C1    HB         1.1171  111.48 -120.88  110.00   1.1145 
+IC O11    C1     C2     C3         1.4312  110.65  176.57  110.77   1.5573 
+IC C3     C1     *C2    O21        1.5573  110.77  120.75  108.04   1.4418 !defines S chirality 
+IC C3     C1     *C2    HS         1.5573  110.77 -118.27  106.63   1.1170 !defines S chirality 
+IC C1     C2     O21    C21        1.5505  108.04  147.09  115.01   1.3179 
+IC C2     O21    C21    C22        1.4418  115.01  179.22  108.80   1.5292 
+IC C22    O21    *C21   O22        1.5292  108.80 -178.84  126.50   1.2187 
+IC O21    C21    C22    C23        1.3179  108.80 -177.42  111.91   1.5450 
+IC C23    C21    *C22   H2R        1.5450  111.91 -121.60  107.88   1.1091 
+IC H2R    C21    *C22   H2S        1.1091  107.88 -117.29  107.69   1.1091 
+IC C1     C2     C3     O31        1.5505  110.77  174.77  112.55   1.4433 
+IC O31    C2     *C3    HX         1.4433  112.55 -118.38  106.64   1.1128 
+IC HX     C2     *C3    HY         1.1128  106.64 -115.20  109.46   1.1144 
+IC C2     C3     O31    C31        1.5573  112.55   88.07  115.30   1.3310 
+IC C3     O31    C31    C32        1.4433  115.30 -172.19  108.29   1.5287 
+IC C32    O31    *C31   O32        1.5287  108.29 -179.12  125.69   1.2167 
+IC O31    C31    C32    C33        1.3310  108.29 -167.41  113.60   1.5449 
+IC C33    C31    *C32   H2X        1.5449  113.60 -121.15  107.11   1.1105 
+IC H2X    C31    *C32   H2Y        1.1105  107.11 -116.79  108.04   1.1091 
+IC C21    C22    C23    C24        1.5292  111.91  176.40  112.78   1.5339 
+IC C24    C22    *C23   H3R        1.5339  112.78 -120.84  109.53   1.1148 
+IC H3R    C22    *C23   H3S        1.1148  109.53 -117.51  109.55   1.1144 
+IC C22    C23    C24    C25        1.5450  112.78 -179.42  112.02   1.5348 
+IC C25    C23    *C24   H4R        1.5348  112.02 -121.40  109.42   1.1129 
+IC H4R    C23    *C24   H4S        1.1129  109.42 -117.70  109.09   1.1132 
+IC C23    C24    C25    C26        1.5339  112.02  177.20  113.15   1.5345 
+IC C26    C24    *C25   H5R        1.5345  113.15 -121.11  108.85   1.1137 
+IC H5R    C24    *C25   H5S        1.1137  108.85 -117.08  109.10   1.1133 
+IC C24    C25    C26    C27        1.5348  113.15 -179.00  112.16   1.5349 
+IC C27    C25    *C26   H6R        1.5349  112.16 -121.50  109.37   1.1128 
+IC H6R    C25    *C26   H6S        1.1128  109.37 -117.60  108.99   1.1133 
+IC C25    C26    C27    C28        1.5345  112.16  177.46  113.03   1.5345 
+IC C28    C26    *C27   H7R        1.5345  113.03 -121.07  108.86   1.1136 
+IC H7R    C26    *C27   H7S        1.1136  108.86 -117.16  109.14   1.1132 
+IC C26    C27    C28    C29        1.5349  113.03 -178.73  112.29   1.5348 
+IC C29    C27    *C28   H8R        1.5348  112.29 -121.53  109.34   1.1129 
+IC H8R    C27    *C28   H8S        1.1129  109.34 -117.54  108.99   1.1133 
+IC C27    C28    C29    C210       1.5345  112.29  177.77  112.89   1.5345 
+IC C210   C28    *C29   H9R        1.5345  112.89 -121.06  108.89   1.1135 
+IC H9R    C28    *C29   H9S        1.1135  108.89 -117.23  109.16   1.1131 
+IC C28    C29    C210   C211       1.5348  112.89 -178.85  112.40   1.5348 
+IC C211   C29    *C210  H10R       1.5348  112.40 -121.51  109.29   1.1130 
+IC H10R   C29    *C210  H10S       1.1130  109.29 -117.49  109.00   1.1133 
+IC C29    C210   C211   C212       1.5345  112.40  178.16  112.78   1.5345 
+IC C212   C210   *C211  H11R       1.5345  112.78 -121.11  108.96   1.1135 
+IC H11R   C210   *C211  H11S       1.1135  108.96 -117.30  109.16   1.1131 
+IC C210   C211   C212   C213       1.5348  112.78 -179.23  112.49   1.5347 
+IC C213   C211   *C212  H12R       1.5347  112.49 -121.45  109.24   1.1130 
+IC H12R   C211   *C212  H12S       1.1130  109.24 -117.45  109.03   1.1133 
+IC C211   C212   C213   C214       1.5345  112.49  178.82  112.71   1.5347 
+IC C214   C212   *C213  H13R       1.5347  112.71 -121.19  109.01   1.1133 
+IC H13R   C212   *C213  H13S       1.1133  109.01 -117.33  109.14   1.1131 
+IC C212   C213   C214   C215       1.5347  112.71 -179.59  112.61   1.5341 
+IC C215   C213   *C214  H14R       1.5341  112.61 -121.38  109.18   1.1131 
+IC H14R   C213   *C214  H14S       1.1131  109.18 -117.39  109.09   1.1133 
+IC C213   C214   C215   C216       1.5347  112.61  179.60  113.33   1.5309 
+IC C216   C214   *C215  H15R       1.5309  113.33 -121.65  108.72   1.1142 
+IC H15R   C214   *C215  H15S       1.1142  108.72 -116.62  108.76   1.1141 
+IC C214   C215   C216   H16R       1.5341  113.33  -59.94  110.45   1.1113 
+IC H16R   C215   *C216  H16S       1.1113  110.45  119.88  110.47   1.1113 
+IC H16R   C215   *C216  H16T       1.1113  110.45 -120.04  110.63   1.1112 
+IC C31    C32    C33    C34        1.5287  113.60  179.68  111.12   1.5341 
+IC C34    C32    *C33   H3X        1.5341  111.12 -120.80  109.72   1.1137 
+IC H3X    C32    *C33   H3Y        1.1137  109.72 -118.17  109.87   1.1142 
+IC C32    C33    C34    C35        1.5449  111.12 -176.44  113.54   1.5344 
+IC C35    C33    *C34   H4X        1.5344  113.54 -121.87  109.02   1.1135 
+IC H4X    C33    *C34   H4Y        1.1135  109.02 -117.04  108.81   1.1137 
+IC C33    C34    C35    C36        1.5341  113.54  178.53  111.77   1.5349 
+IC C36    C34    *C35   H5X        1.5349  111.77 -120.78  109.03   1.1132 
+IC H5X    C34    *C35   H5Y        1.1132  109.03 -117.69  109.50   1.1128 
+IC C34    C35    C36    C37        1.5344  111.77 -176.24  113.37   1.5344 
+IC C37    C35    *C36   H6X        1.5344  113.37 -122.00  109.13   1.1132 
+IC H6X    C35    *C36   H6Y        1.1132  109.13 -117.05  108.69   1.1137 
+IC C35    C36    C37    C38        1.5349  113.37  177.81  111.98   1.5349 
+IC C38    C36    *C37   H7X        1.5349  111.98 -120.73  108.96   1.1133 
+IC H7X    C36    *C37   H7Y        1.1133  108.96 -117.64  109.48   1.1127 
+IC C36    C37    C38    C39        1.5344  111.98 -176.74  113.17   1.5344 
+IC C39    C37    *C38   H8X        1.5344  113.17 -121.93  109.18   1.1131 
+IC H8X    C37    *C38   H8Y        1.1131  109.18 -117.13  108.74   1.1137 
+IC C37    C38    C39    C310       1.5349  113.17  177.75  112.16   1.5348 
+IC C310   C38    *C39   H9X        1.5348  112.16 -120.81  108.99   1.1133 
+IC H9X    C38    *C39   H9Y        1.1133  108.99 -117.58  109.40   1.1128 
+IC C38    C39    C310   C311       1.5344  112.16 -177.62  113.02   1.5345 
+IC C311   C39    *C310  H10X       1.5345  113.02 -121.78  109.17   1.1131 
+IC H10X   C39    *C310  H10Y       1.1131  109.17 -117.21  108.84   1.1136 
+IC C39    C310   C311   C312       1.5348  113.02  178.36  112.30   1.5348 
+IC C312   C310   *C311  H11X       1.5348  112.30 -120.94  109.01   1.1133 
+IC H11X   C310   *C311  H11Y       1.1133  109.01 -117.52  109.31   1.1129 
+IC C310   C311   C312   C313       1.5345  112.30 -178.23  112.89   1.5345 
+IC C313   C311   *C312  H12X       1.5345  112.89 -121.63  109.15   1.1131 
+IC H12X   C311   *C312  H12Y       1.1131  109.15 -117.28  108.93   1.1135 
+IC C311   C312   C313   C314       1.5348  112.89  178.95  112.43   1.5350 
+IC C314   C312   *C313  H13X       1.5350  112.43 -121.07  109.04   1.1133 
+IC H13X   C312   *C313  H13Y       1.1133  109.04 -117.48  109.23   1.1130 
+IC C312   C313   C314   C315       1.5345  112.43 -178.86  112.82   1.5338 
+IC C315   C313   *C314  H14X       1.5338  112.82 -121.48  109.14   1.1132 
+IC H14X   C313   *C314  H14Y       1.1132  109.14 -117.32  109.05   1.1133 
+IC C313   C314   C315   C316       1.5350  112.82  179.62  113.25   1.5310 
+IC C316   C314   *C315  H15X       1.5310  113.25 -121.59  108.75   1.1141 
+IC H15X   C314   *C315  H15Y       1.1141  108.75 -116.70  108.80   1.1140 
+IC C314   C315   C316   H16X       1.5338  113.25  -59.74  110.45   1.1114 
+IC H16X   C315   *C316  H16Y       1.1114  110.45  119.85  110.46   1.1113 
+IC H16X   C315   *C316  H16Z       1.1114  110.45 -120.06  110.62   1.1112 
+ 
+end
+
+read para card append 
+* Drude polarizable FF parameters 
+* 
+
+!All new model compound parameters should be included in the 
+!toppar_drude_master_protein stream file to avoid 
+!conflicts being generated
+
+BONDS 
+!atom type      Kb       b0 
+!============================================ 
+! 
+!from master file, for lipids, these parameters are idenical to parameters in the master file based
+!on the following atom type equivalencies
+!CD32A   to  CD32AL
+!CD2O3A  to  CD2O3B
+!OD2C3A  to  OC2C3B
+!OD30C   to  OD30CL
+CD32AL   CD32AL   222.50      1.530 ! alkanes, 3/92
+CD32AL   CD32C    222.50      1.530 ! alkane
+CD32AL   CD33A    222.50      1.528 ! alkanes, 3/92
+CD32AL   HDA2A    309.00      1.111 ! alkanes, 4/98
+CD32AL   LPD        0.00      0.000 ! 
+CD32AL   HDA2C    300.00      1.080 ! GLYP, NC4, qm, EH 2007
+CD31C    CD32AL   222.50      1.528 ! 3/92               %PEML oct09  alterado em nov09 
+CD32C    CD2O3B   200.00      1.510 ! MAS, csd, EH 2007, ACEH
+CD33C    CD2O3B   133.00      1.510 ! ACEH, PEML 
+ND3P2A   CD32AL   215.00      1.510 ! NC4, qm, EH 2007, ammonium cations
+ND3P3A   CD32AL   215.00      1.510 ! NC1, qm, EH 2007, ammonium cations
+OD30B    CD32AL   335.00      1.420 ! DMP, csd, EH/IV 2007
+OD31B    CD32AL   396.00      1.425 ! ETOH, ethanol
+OD30CL   CD2O3B   150.00      1.330 ! MAS, csd, EH 2007, PEML 2009 *** changed FC to match vibr. spectra *** 
+OD30CL   CD32C    340.00      1.440 ! MAS, csd, EH 2007
+OD30CL   CD33D    340.00      1.440 ! MAS, csd, EH 2007
+OD30CL   CD31C    340.00      1.440 ! MAS, csd, EH 2007
+OD30CL   LPD        0.00      0.000 ! MAS
+OD2C3B   CD2O3B   730.00      1.200 ! MAS, csd, EH 2007, PEML 2009  *** b0 should be 1.220 based on MP2/6-31g*, confirm 
+OD2C3B   LPD        0.00      0.000 ! MAS
+!end of identical parameters
+
+ANGLES 
+!atom types     Ktheta  Theta0   Kub     S0 
+!================================================== 
+!
+!from master file, for lipids, these parameters are idenical to parameters in the master file based
+!on the following atom type equivalencies
+!CD32A   to  CD32AL
+!CD2O3A  to  CD2O3B
+!OD2C3A  to  OC2C3B
+!OD30C   to  OD30CL
+OD2C3B   CD2O3B   OD30CL    90.00    123.00  160.00   2.2576 ! MAS, csd, EH 2007 
+OD2C3B   CD2O3B   CD32C     70.00    126.00   20.00   2.4420 ! MAS, csd, EH 2007
+OD2C3B   CD2O3B   CD33C     70.00    126.00   20.00   2.4420 ! MAS, csd, EH 2007
+OD30CL   CD2O3B   CD32C     55.00    111.00   20.00   2.3260 ! MAS, csd, EH 2007
+OD30CL   CD2O3B   CD33C     55.00    111.00   20.00   2.3260 ! MAS, csd, EH 2007 
+CD32AL   CD31C    CD32C     58.35    113.50   11.16   2.5610 ! GLYC, Lipid, alkane 
+CD32AL   CD31C    HDA1A     34.50    110.10   22.53   2.1790 ! GLYC, Lipid, alkane
+ND3P2A   CD31C    CD32AL    67.70    113.00                  ! CHOL, qm EH 2007, ammonium cations
+OD30C    CD31C    CD32AL    40.00    110.00 ! EAS, Lipid, EH 2007 
+OD30CL   CD31C    HDA1A     60.00    109.50 ! EAS, Lipid, charmm27 
+OD30CL   CD31C    CD32AL    40.00    110.00 ! EAS, Lipid, EH 2007 
+OD30CL   CD31C    CD32C     40.00    110.00 ! EAS, Lipid, EH 2007
+OD30CL   CD32C    CD31C     40.00    110.00 
+CD32AL   CD32C    HDA2A     26.50    110.10   22.53   2.1790 ! MBU, alkane
+OD30CL   CD32C    HDA2A     60.00    109.50                  ! MAS, charmm27
+OD30CL   CD32C    CD33A     40.00    110.00                  ! EAS, EH 2007
+CD2O3B   CD32C    HDA2A     33.00    109.50   30.00   2.1630 ! MPO, charmm27
+CD2O3B   CD32C    CD33A     52.00    108.00                  ! MPO, alkane 
+ND3P3A   CD32C    CD32AL    67.70    113.00                  ! ETAM, qm EH 2007, ammonium cations
+CD2O3B   CD32C    CD32AL    52.00    108.00                  ! MBU, alkane
+CD32AL   CD32AL   CD32AL    58.35    113.60   11.16   2.561  ! alkane, 3/92
+CD32AL   CD32AL   CD32C     58.35    113.60   11.16   2.5610 ! GLYC, Lipid, alkane
+CD32AL   CD32AL   CD33A     58.00    115.00    8.00   2.561  ! alkane, 3/92
+CD32AL   CD32AL   HDA2A     26.50    110.10   22.53   2.179  ! alkane, 4/98
+CD32AL   CD32AL   HDA2C     26.50    110.10   22.53   2.179  ! LYS, alkane, 4/98
+CD31C    CD32AL   HDA2A     34.60    110.10   22.53   2.1790 ! MBU, alkane 
+CD32C    CD32AL   HDA2A     34.60    110.10   22.53   2.1790 ! MBU, alkane
+CD32C    CD32AL   CD33A     58.00    115.00   8.00    2.5610 ! MBU, alkane
+CD33A    CD32AL   HDA2A     34.60    110.10   22.53   2.179  ! alkane, 4/98
+CD33A    CD32AL   HDA2C     26.50    110.10   22.53   2.1790 ! NC5, alkane, ammonium cations
+HDA2A    CD32AL   HDA2A     35.50    109.00    5.40   1.802  ! alkane, 3/92
+HDA2C    CD32AL   HDA2C     24.00    109.50   28.00   1.7670 ! NC4, charmm27
+ND3P2A   CD32AL   CD32AL    67.70    113.00                  ! CHOL, qm EH 2007, ammonium cations
+ND3P2A   CD32AL   CD33A     67.70    113.00                  ! NC5, qm EH 2007, ammonium cations
+ND3P2A   CD32AL   HDA2C     40.00    109.50   27.00   2.1300 ! NC4, charmm27, ammonium cations
+ND3P3A   CD32AL   CD2O1A    78.50     97.50                  ! NTER, PEML
+ND3P3A   CD32AL   CD32AL    67.70    113.00                  ! ETAM, qm EH 2007, ammonium cations
+ND3P3A   CD32AL   CD33A     67.70    113.00                  ! NH5, qm EH 2007, ammonium cations
+ND3P3A   CD32AL   HDA2A     40.00    109.50   27.00   2.1300 ! NC1, charmm27
+ND3P3A   CD32AL   HDA2C     40.00    109.50   27.00   2.1300 ! NC1, charmm27
+OD30B    CD32AL   CD31C     75.70    110.10                  ! DMP, Lipid, charmm27, need work**
+OD30B    CD32AL   HDA2A     60.00    109.50                  ! DMP, charmm27 
+OD30B    CD32AL   CD32AL    75.70    110.10                  ! DMP, Lipid, charmm27, need work** 
+CD32AL   CD33A    HDA3A     34.60    111.50   22.53   2.179  ! alkane, 4/98
+CD2O3B   CD33C    HDA3A     33.00    109.50   30.00   2.1630 ! MAS, charmm27
+OD30CL   CD33D    HDA3A     60.00    109.50                  ! MAS, charmm27
+CD32AL   ND3P2A   CD33A     60.00    109.50   26.00   2.4660 ! NC4, qm, EH 2007, ammonium cations 
+CD32AL   ND3P3A   HDP1B     33.00    109.50    4.00   2.0560 ! ETAM, charmm27, ammonium cations
+PD1A     OD30B    CD32AL    40.00    112.50                  ! DMP, csd, EH/IV 2007**better molvib fit 
+CD2O3B   OD30CL   CD31C     15.00    100.00   10.00   2.0151 ! MAS, csd, EH 2007 PEML 2009 **gives CSD/vibr spectra 
+CD2O3B   OD30CL   CD32C     15.00    100.00   10.00   2.0151 ! MAS, csd, EH 2007 PEML 2009 **gives CSD/vibr spectra
+CD2O3B   OD30CL   CD33D     15.00    100.00   10.00   2.0151 ! MAS, csd, EH 2007 PEML 2009 **gives CSD/vibr spectra
+!end of identical parameters
+
+DIHEDRALS 
+!atom types            Kchi     n     delta 
+!================================================= 
+! 
+!Please follow these conventions when fitting dihedral parameters
+!1) use positive force constants in all cases (switch the phase...) 
+!   (vary phase during fitting and keep force constants positive) 
+!2) maintain the phase at 0 or 180 if possiple. perform initial
+!   fitting with this contraint and, if necessary, only then
+!   vary the phases during fitting. note that if the phases
+!   are NOT 0 or 180 the parameters are NOT transferable across
+!   stereoisomers
+!3) refit with only individual multiplicities of 1 through 6 
+!4) maintain the number of significant figures used below
+! 
+!HDP1A    ND2A1    CD2O1A   OD2C1A      2.000    2   180.00 ! comment
+!from master file, for lipids, these parameters are idenical to parameters in the master file based
+!on the following atom type equivalencies
+!CD32A   to  CD32AL
+!CD2O3A  to  CD2O3B
+!OD2C3A  to  OC2C3B
+!OD30C   to  OD30CL
+OD30CL   CD2O3B   CD31C    HDA1A       0.200    3   180.00 ! CT1, MAS 
+OD30CL   CD2O3B   CD33C    HDA3A       0.000    3   180.00 ! MAS, PEML 2009 *** CHANGED *** 
+OD30CL   CD2O3B   CD32C    HDA2A       0.000    3   180.00 ! MAS, PEML 2009 *** CHANGED *** 
+OD2C3B   CD2O3B   CD32C    HDA2A       0.000    3   180.00 ! MAS, PEML 2009      
+OD2C3B   CD2O3B   CD33C    HDA3A       0.000    3   180.00 ! MAS, PEML 2009      
+OD2C3B   CD2O3B   OD30CL   CD33D       0.229    1     0.00 ! lipids       
+OD2C3B   CD2O3B   OD30CL   CD33D       3.567    2   180.00 ! lipids   
+OD2C3B   CD2O3B   OD30CL   CD33D       0.049    3   180.00 ! lipids 
+OD2C3B   CD2O3B   OD30CL   CD33D       0.040    6   180.00 ! lipids 
+CD32C    CD31C    CD32AL   HDA2A       0.190    3     0.00 ! GLYC, alkane 
+HDA1A    CD31C    CD32AL   HDA2A       0.200    3     0.00 ! GLN, IBUT, isobutane, 3/92 
+OD30CL   CD31C    CD32AL   HDA2A       0.190    3     0.00 ! EAS/Lipid-H, charmm27 
+CD32AL   CD31C    CD32C    HDA2A       0.200    3     0.00 ! GLYC, alkane, lipid
+HDA1A    CD31C    CD32C    OD30CL      0.200    3     0.00 ! EAS/Lipid-H, charmm27 
+OD30CL   CD31C    CD32C    HDA2A       0.190    3     0.00 ! EAS/Lipid-H, charmm27 
+CD32AL   CD32AL   CD32AL   HDA2A       0.190    3     0.00 ! BUTA, butane, 4/98, yin and mackerell 
+CD32AL   CD32AL   CD32AL   CD32C       0.083    2     0.00 ! Lipid, alkane 
+CD32AL   CD32AL   CD32AL   CD32C       0.139    3   180.00 ! Lipid, alkane 
+CD32AL   CD32AL   CD32AL   CD32C       0.078    4     0.00 ! Lipid, alkane 
+CD32AL   CD32AL   CD32AL   CD32C       0.136    5     0.00 ! Lipid, alkane 
+CD32C    CD32AL   CD32AL   HDA2A       0.160    3     0.00 ! Lipid-H, alkane, ester 
+CD33A    CD32AL   CD32AL   HDA2A       0.190    3     0.00 ! BUTA, butane, 4/98, yin and mackerell 
+HDA2A    CD32AL   CD32AL   HDA2A       0.190    3     0.00 ! BUTA, butane, 4/98, yin and mackerell
+HDA2A    CD32AL   CD32AL   HDA2C       0.190    3     0.00 ! LYS 
+ND3P2A   CD32AL   CD32AL   HDA2A       0.190    3     0.00 ! CHOL, charmm27, ammonium cation 
+ND3P3A   CD32AL   CD32AL   HDA2A       0.190    3     0.00 ! ETAM, charmm27, ammonium cation 
+ND3P3A   CD32AL   CD32AL   OD30B       1.000    1   180.00 ! ETAM, alpha5, qm, EH 2007 (chk pe) 
+ND3P3A   CD32AL   CD32AL   OD30B       0.500    2     0.00 ! ETAM, alpha5, qm, EH 2007 (chk pe) 
+ND3P3A   CD32AL   CD32AL   OD30B       0.500    3     0.00 ! ETAM, alpha5, qm, EH 2007 (chk pe) 
+OD30B    CD32AL   CD32AL   HDA2C       0.190    3     0.00 ! CHOL, charmm27, ammonium cation 
+CD32AL   CD32AL   CD33A    HDA3A       0.140    3     0.00 ! BUTA, butane, 10/07, va 
+HDA2A    CD32AL   CD33A    HDA3A       0.145    3     0.00 ! PROP, propane, butane, 10/07, va 
+CD32C    CD32AL   CD33A    HDA3A       0.160    3     0.00 ! MBU, alkane, ester 
+CD32AL   CD32AL   CD32C    CD2O3B      0.350    1     0.00 ! MBU, EH 2007, ester 
+CD32AL   CD32AL   CD32C    HDA2A       0.190    3     0.00 ! alkane, ester 
+CD33A    CD32AL   CD32C    HDA2A       0.190    3     0.00 ! alkane, ester 
+HDA2A    CD32AL   CD32C    HDA2A       0.190    3     0.00 ! alkane, ester
+HDA2A    CD32AL   CD32C    CD2O3B      0.200    3     0.00 ! alkane, ester 
+OD30CL   CD32C    CD33A    HDA3A       0.000    3   180.00 ! MAS, PEML 2009 *** CHANGED *** 
+CD2O3B   CD32C    CD33A    HDA3A       0.200    3     0.00 ! alkane, ester 
+CD32AL   ND3P2A   CD33A    HDA3C       0.230    3     0.00 ! NC4, charmm27 , ammonium cation 
+CD33A    ND3P2A   CD32AL   HDA2C       0.260    3     0.00 ! NC4, charmm27, ammonium cation 
+HDP1B    ND3P3A   CD32AL   CD33A       0.320    3     0.00 ! ETAM, qm, EH 2007, ammonium cation 
+HDP1B    ND3P3A   CD32AL   HDA2C       0.100    3     0.00 ! ETAM, charmm27, ammonium cation 
+CD2O3B   OD30CL   CD32C    HDA2A       0.200    3   180.00 ! MAS, PEML 2009 *** CHANGED ***
+CD2O3B   OD30CL   CD33D    HDA3A       0.200    3   180.00 ! MAS, PEML 2009 *** CHANGED ***
+CD33D    OD30CL   CD2O3B   CD32C       2.500    2   180.00 ! CT1, MAS
+!end of identical parameters
+!
+!start DPPC
+CD32AL   OD30B    PD1A     OD2C2B      0.000    1     0.00 ! MODIFIED BY JC 
+CD32AL   OD30B    PD1A     OD2C2B      1.669    2     0.00 ! MODIFIED BY JC 
+CD32AL   OD30B    PD1A     OD2C2B      0.634    3   180.00 ! MODIFIED BY JC 
+CD32AL   OD30B    PD1A     OD2C2B      1.430    4   180.00 ! MODIFIED BY JC 
+CD32AL   OD30B    PD1A     OD2C2B      1.037    5     0.00 ! MODIFIED BY JC 
+CD32AL   OD30B    PD1A     OD2C2B      0.192    6     0.00 ! MODIFIED BY JC 
+CD32AL   OD30B    PD1A     OD30B       3.797    1   180.00 ! MODIFIED BY JC 
+CD32AL   OD30B    PD1A     OD30B       0.000    2     0.00 ! MODIFIED BY JC 
+CD32AL   OD30B    PD1A     OD30B       0.477    3   180.00 ! MODIFIED BY JC 
+CD32AL   OD30B    PD1A     OD30B       0.755    4     0.00 ! MODIFIED BY JC 
+CD32AL   OD30B    PD1A     OD30B       1.712    5     0.00 ! MODIFIED BY JC 
+CD32AL   OD30B    PD1A     OD30B       0.000    6     0.00 ! MODIFIED BY JC 
+CD33A    OD30B    PD1A     OD2C2B     14.079    1   180.00 ! MODIFIED BY JC 
+CD33A    OD30B    PD1A     OD2C2B      5.853    2   180.00 ! MODIFIED BY JC 
+CD33A    OD30B    PD1A     OD2C2B      2.667    3   180.00 ! MODIFIED BY JC 
+CD33A    OD30B    PD1A     OD2C2B      0.064    4   180.00 ! MODIFIED BY JC 
+CD33A    OD30B    PD1A     OD2C2B      2.679    5   180.00 ! MODIFIED BY JC 
+CD33A    OD30B    PD1A     OD2C2B      0.000    6   180.00 ! MODIFIED BY JC 
+OD30B    PD1A     OD30B    CD33A      12.797    1   180.00 ! MODIFIED BY JC 
+OD30B    PD1A     OD30B    CD33A       8.757    2   180.00 ! MODIFIED BY JC 
+OD30B    PD1A     OD30B    CD33A       4.875    3     0.00 ! MODIFIED BY JC 
+OD30B    PD1A     OD30B    CD33A       0.006    4   180.00 ! MODIFIED BY JC 
+OD30B    PD1A     OD30B    CD33A       4.882    5   180.00 ! MODIFIED BY JC 
+OD30B    PD1A     OD30B    CD33A       0.008    6     0.00 ! MODIFIED BY JC 
+CD33C    OD30B    PD1A     OD2C2B      1.156    1     0.00 ! MODIFIED BY JC 
+CD33C    OD30B    PD1A     OD2C2B      7.183    2   180.00 ! MODIFIED BY JC 
+CD33C    OD30B    PD1A     OD2C2B      2.246    3   180.00 ! MODIFIED BY JC 
+CD33C    OD30B    PD1A     OD2C2B      0.115    4   180.00 ! MODIFIED BY JC 
+CD33C    OD30B    PD1A     OD2C2B      1.396    5     0.00 ! MODIFIED BY JC 
+CD33C    OD30B    PD1A     OD2C2B      0.442    6   180.00 ! MODIFIED BY JC 
+OD30B    PD1A     OD30B    CD33C       0.672    1     0.00 ! MODIFIED BY JC 
+OD30B    PD1A     OD30B    CD33C       8.699    2   180.00 ! MODIFIED BY JC 
+OD30B    PD1A     OD30B    CD33C       4.295    3     0.00 ! MODIFIED BY JC 
+OD30B    PD1A     OD30B    CD33C       0.358    4     0.00 ! MODIFIED BY JC 
+OD30B    PD1A     OD30B    CD33C       2.897    5     0.00 ! MODIFIED BY JC 
+OD30B    PD1A     OD30B    CD33C       0.616    6     0.00 ! MODIFIED BY JC 
+CD32AL   CD32AL   OD30B    PD1A        1.256    1   180.00 ! MODIFIED BY JC 
+CD32AL   CD32AL   OD30B    PD1A        3.317    2     0.00 ! MODIFIED BY JC 
+CD32AL   CD32AL   OD30B    PD1A        0.000    3     0.00 ! MODIFIED BY JC 
+CD32AL   CD32AL   OD30B    PD1A        0.663    4   180.00 ! MODIFIED BY JC 
+CD32AL   CD32AL   OD30B    PD1A        2.218    5     0.00 ! MODIFIED BY JC 
+CD32AL   CD32AL   OD30B    PD1A        1.838    6     0.00 ! MODIFIED BY JC 
+PD1A     OD30B    CD32AL   CD31C       4.563    1   180.00 ! MODIFIED BY JC 
+PD1A     OD30B    CD32AL   CD31C       2.274    2   180.00 ! MODIFIED BY JC 
+PD1A     OD30B    CD32AL   CD31C       0.017    3   180.00 ! MODIFIED BY JC 
+PD1A     OD30B    CD32AL   CD31C       0.000    4   180.00 ! MODIFIED BY JC 
+PD1A     OD30B    CD32AL   CD31C       0.615    5   180.00 ! MODIFIED BY JC 
+PD1A     OD30B    CD32AL   CD31C       1.078    6   180.00 ! MODIFIED BY JC 
+HDA1A    CD31C    CD32AL   OD30B       0.200    3     0.00 ! Lipid, charmm27 
+OD30B    CD32AL   CD31C    CD32C       5.284    1   180.00 ! MODIFIED BY JC 
+OD30B    CD32AL   CD31C    CD32C       0.000    2     0.00 ! MODIFIED BY JC 
+OD30B    CD32AL   CD31C    CD32C       0.000    3   180.00 ! MODIFIED BY JC 
+OD30B    CD32AL   CD31C    CD32C       0.000    4     0.00 ! MODIFIED BY JC 
+OD30B    CD32AL   CD31C    CD32C       0.000    5     0.00 ! MODIFIED BY JC 
+OD30B    CD32AL   CD31C    CD32C       0.713    6     0.00 ! MODIFIED BY JC 
+OD30B    CD32AL   CD31C    OD30CL      3.747    1   180.00 ! MODIFIED BY JC 
+OD30B    CD32AL   CD31C    OD30CL      0.167    2     0.00 ! MODIFIED BY JC 
+OD30B    CD32AL   CD31C    OD30CL      0.320    3   180.00 ! MODIFIED BY JC 
+OD30B    CD32AL   CD31C    OD30CL      0.917    4     0.00 ! MODIFIED BY JC 
+OD30B    CD32AL   CD31C    OD30CL      1.017    5   180.00 ! MODIFIED BY JC 
+OD30B    CD32AL   CD31C    OD30CL      0.000    6   180.00 ! MODIFIED BY JC 
+PD1A     OD30B    CD32AL   HDA2A       0.000    3     0.00 ! DMP, charmm27 
+HDP1A    OD30B    CD32AL   CD32AL      0.140    3     0.00 ! CHOL, charmm27, not necessary for lipid, ammonium cation 
+HDP1A    OD30B    CD32AL   HDA2A       0.140    3     0.00 ! CHOL, charmm27, not necessary for lipid, ammonium cation 
+PD1A     OD30B    CD33A    HDA3A       0.000    3     0.00 ! DMP, charmm27 
+PD1A     OD30B    CD33C    HDA3A       0.000    3     0.00 ! DMP, cmb, 06/09 
+CD31C    OD30CL   CD2O3B   OD2C3B      0.219    1   180.00 ! MODIFIED BY JC 
+CD31C    OD30CL   CD2O3B   OD2C3B      3.424    2   180.00 ! MODIFIED BY JC 
+CD31C    OD30CL   CD2O3B   OD2C3B      2.427    3     0.00 ! MODIFIED BY JC 
+CD31C    OD30CL   CD2O3B   OD2C3B      0.224    4     0.00 ! MODIFIED BY JC 
+CD31C    OD30CL   CD2O3B   OD2C3B      1.143    5     0.00 ! MODIFIED BY JC 
+CD31C    OD30CL   CD2O3B   OD2C3B      0.587    6   180.00 ! MODIFIED BY JC 
+CD31C    OD30CL   CD2O3B   CD32C       2.500    2   180.00 ! MAS, EH 2007 
+CD31C    OD30CL   CD2O3B   CD33C       0.485    1   180.00 ! MODIFIED BY JC 
+CD31C    OD30CL   CD2O3B   CD33C       2.552    2   180.00 ! MODIFIED BY JC 
+CD31C    OD30CL   CD2O3B   CD33C       2.803    3     0.00 ! MODIFIED BY JC 
+CD31C    OD30CL   CD2O3B   CD33C       0.000    4   180.00 ! MODIFIED BY JC 
+CD31C    OD30CL   CD2O3B   CD33C       1.377    5     0.00 ! MODIFIED BY JC 
+CD31C    OD30CL   CD2O3B   CD33C       0.000    6     0.00 ! MODIFIED BY JC 
+CD32C    OD30CL   CD2O3B   OD2C3B      0.017    1   180.00 ! MODIFIED BY JC 
+CD32C    OD30CL   CD2O3B   OD2C3B      3.011    2   180.00 ! MODIFIED BY JC 
+CD32C    OD30CL   CD2O3B   OD2C3B      0.486    3   180.00 ! MODIFIED BY JC 
+CD32C    OD30CL   CD2O3B   OD2C3B      0.073    4   180.00 ! MODIFIED BY JC 
+CD32C    OD30CL   CD2O3B   OD2C3B      0.823    5   180.00 ! MODIFIED BY JC 
+CD32C    OD30CL   CD2O3B   OD2C3B      0.251    6     0.00 ! MODIFIED BY JC 
+CD32C    OD30CL   CD2O3B   CD32C       2.500    2   180.00 ! MAS, EH 2007 
+CD32C    OD30CL   CD2O3B   CD33C       1.810    1   180.00 ! MODIFIED BY JC 
+CD32C    OD30CL   CD2O3B   CD33C       2.929    2   180.00 ! MODIFIED BY JC 
+CD32C    OD30CL   CD2O3B   CD33C       0.048    3     0.00 ! MODIFIED BY JC 
+CD32C    OD30CL   CD2O3B   CD33C       0.000    4     0.00 ! MODIFIED BY JC 
+CD32C    OD30CL   CD2O3B   CD33C       0.781    5   180.00 ! MODIFIED BY JC 
+CD32C    OD30CL   CD2O3B   CD33C       0.000    6     0.00 ! MODIFIED BY JC 
+CD33C    OD30CL   CD2O3B   OD2C3B      0.229    1     0.00 ! MODIFIED BY JC
+CD33C    OD30CL   CD2O3B   OD2C3B      3.567    2   180.00 ! MODIFIED BY JC
+CD33C    OD30CL   CD2O3B   OD2C3B      0.049    3   180.00 ! MODIFIED BY JC 
+CD33C    OD30CL   CD2O3B   OD2C3B      0.040    6   180.00 ! MODIFIED BY JC 
+CD33C    OD30CL   CD2O3B   CD31C       2.500    2   180.00 ! CT1, MAS 
+CD33C    OD30CL   CD2O3B   CD32C       1.872    1     0.00 ! MODIFIED BY JC 
+CD33C    OD30CL   CD2O3B   CD32C       3.045    2   180.00 ! MODIFIED BY JC 
+CD33C    OD30CL   CD2O3B   CD32C       0.748    3     0.00 ! MODIFIED BY JC 
+CD33C    OD30CL   CD2O3B   CD32C       0.217    4     0.00 ! MODIFIED BY JC 
+CD33C    OD30CL   CD2O3B   CD32C       0.000    5     0.00 ! MODIFIED BY JC 
+CD33C    OD30CL   CD2O3B   CD32C       0.048    6   180.00 ! MODIFIED BY JC 
+CD33C    CD2O3B   OD30CL   CD33C       0.340    1   180.00 ! MODIFIED BY JC 
+CD33C    CD2O3B   OD30CL   CD33C       3.517    2   180.00 ! MODIFIED BY JC 
+CD33C    CD2O3B   OD30CL   CD33C       0.300    3     0.00 ! MODIFIED BY JC 
+CD33C    CD2O3B   OD30CL   CD33C       0.226    4   180.00 ! MODIFIED BY JC 
+CD33C    CD2O3B   OD30CL   CD33C       0.162    5     0.00 ! MODIFIED BY JC 
+CD33C    CD2O3B   OD30CL   CD33C       0.000    6     0.00 ! MODIFIED BY JC 
+! Lipid-b1 
+!from toppar_drude_master_sep09f_rimp2_vtz.str,newtorfit 
+CD33A    CD31C    OD30CL   CD2O3B      2.133    1   180.00 ! MODIFIED BY JC 
+CD33A    CD31C    OD30CL   CD2O3B      0.022    2     0.00 ! MODIFIED BY JC 
+CD33A    CD31C    OD30CL   CD2O3B      0.090    3     0.00 ! MODIFIED BY JC 
+CD33A    CD31C    OD30CL   CD2O3B      0.000    4     0.00 ! MODIFIED BY JC 
+CD33A    CD31C    OD30CL   CD2O3B      0.177    5     0.00 ! MODIFIED BY JC 
+CD33A    CD31C    OD30CL   CD2O3B      0.000    6     0.00 ! MODIFIED BY JC 
+CD32AL   CD31C    OD30CL   CD2O3B      0.921    1   180.00 ! MODIFIED BY JC 
+CD32AL   CD31C    OD30CL   CD2O3B      0.911    2     0.00 ! MODIFIED BY JC 
+CD32AL   CD31C    OD30CL   CD2O3B      0.000    3     0.00 ! MODIFIED BY JC 
+CD32AL   CD31C    OD30CL   CD2O3B      0.000    4     0.00 ! MODIFIED BY JC 
+CD32AL   CD31C    OD30CL   CD2O3B      0.000    5   180.00 ! MODIFIED BY JC 
+CD32AL   CD31C    OD30CL   CD2O3B      0.701    6   180.00 ! MODIFIED BY JC 
+CD32C    CD31C    OD30CL   CD2O3B      1.029    1   180.00 ! MODIFIED BY JC 
+CD32C    CD31C    OD30CL   CD2O3B      0.676    2     0.00 ! MODIFIED BY JC 
+CD32C    CD31C    OD30CL   CD2O3B      0.000    3     0.00 ! MODIFIED BY JC 
+CD32C    CD31C    OD30CL   CD2O3B      0.251    4   180.00 ! MODIFIED BY JC 
+CD32C    CD31C    OD30CL   CD2O3B      0.249    5     0.00 ! MODIFIED BY JC 
+CD32C    CD31C    OD30CL   CD2O3B      0.000    6   180.00 ! MODIFIED BY JC 
+CD2O3B   OD30CL   CD31C    HDA1A       0.200    3   180.00 ! MAS, PEML 2009 
+CD2O3B   OD30CL   CD31C    HDA2A       0.200    3   180.00 ! IPRA from MAS, PEML 2009 
+! Lipid-g1 
+!from toppar_drude_master_sep09f_rimp2_vtz.str,newtorfit 
+CD31C    CD32C    OD30CL   CD2O3B      0.000    1     0.00 ! MODIFIED BY JC 
+CD31C    CD32C    OD30CL   CD2O3B      1.344    2     0.00 ! MODIFIED BY JC 
+CD31C    CD32C    OD30CL   CD2O3B      0.293    3   180.00 ! MODIFIED BY JC 
+CD31C    CD32C    OD30CL   CD2O3B      0.000    4   180.00 ! MODIFIED BY JC 
+CD31C    CD32C    OD30CL   CD2O3B      0.414    5     0.00 ! MODIFIED BY JC 
+CD31C    CD32C    OD30CL   CD2O3B      0.000    6   180.00 ! MODIFIED BY JC 
+!!!! Lipid-t3/t4 
+OD30CL   CD31C    CD32C    OD30CL      1.973    1   180.00 ! MODIFIED BY JC 
+OD30CL   CD31C    CD32C    OD30CL      0.216    2     0.00 ! MODIFIED BY JC 
+OD30CL   CD31C    CD32C    OD30CL      2.668    3   180.00 ! MODIFIED BY JC 
+OD30CL   CD31C    CD32C    OD30CL      0.680    4   180.00 ! MODIFIED BY JC 
+OD30CL   CD31C    CD32C    OD30CL      0.169    5   180.00 ! MODIFIED BY JC 
+OD30CL   CD31C    CD32C    OD30CL      0.321    6   180.00 ! MODIFIED BY JC 
+CD33A    CD31C    CD32C    OD30CL      1.154    1   180.00 ! MODIFIED BY JC 
+CD33A    CD31C    CD32C    OD30CL      1.522    2   180.00 ! MODIFIED BY JC 
+CD33A    CD31C    CD32C    OD30CL      1.886    3     0.00 ! MODIFIED BY JC 
+CD33A    CD31C    CD32C    OD30CL      0.127    4     0.00 ! MODIFIED BY JC 
+CD33A    CD31C    CD32C    OD30CL      0.000    5     0.00 ! MODIFIED BY JC 
+CD33A    CD31C    CD32C    OD30CL      0.000    6   180.00 ! MODIFIED BY JC 
+CD32AL   CD31C    CD32C    OD30CL      0.000    1     0.00 ! MODIFIED BY JC 
+CD32AL   CD31C    CD32C    OD30CL      0.000    2   180.00 ! MODIFIED BY JC 
+CD32AL   CD31C    CD32C    OD30CL      2.404    3     0.00 ! MODIFIED BY JC 
+CD32AL   CD31C    CD32C    OD30CL      0.256    4     0.00 ! MODIFIED BY JC 
+CD32AL   CD31C    CD32C    OD30CL      0.000    5     0.00 ! MODIFIED BY JC 
+CD32AL   CD31C    CD32C    OD30CL      0.026    6     0.00 ! MODIFIED BY JC 
+!end DPPC
+
+!new-dihe-terms  2013-oct-11 Hui 
+CD32AL   CD32AL   ND3P2A   CD33A       0.000    6   180.00 ! JC-v2-1, PC headgroup
+CD32AL   CD32AL   ND3P2A   CD33A       0.333    3     0.00 ! JC-v2-1
+CD32AL   CD32AL   ND3P2A   CD33A       0.462    5   180.00 ! JC-v2-1
+CD32AL   CD32AL   ND3P2A   CD33A       1.053    2   180.00 ! JC-v2-1
+CD32AL   CD32AL   ND3P2A   CD33A       3.568    4     0.00 ! JC-v2-1
+CD32AL   CD32AL   ND3P2A   CD33A       3.965    1   180.00 ! JC-v2-1
+HDP1B    ND3P3A   CD32AL   CD32AL      0.000    2     0.00 ! JC-v2-2, PE headgroup
+HDP1B    ND3P3A   CD32AL   CD32AL      0.047    6     0.00 ! JC-v2-2
+HDP1B    ND3P3A   CD32AL   CD32AL      0.276    3     0.00 ! JC-v2-2
+HDP1B    ND3P3A   CD32AL   CD32AL      0.305    1   180.00 ! JC-v2-2
+HDP1B    ND3P3A   CD32AL   CD32AL      0.934    4   180.00 ! JC-v2-2
+HDP1B    ND3P3A   CD32AL   CD32AL      1.670    5     0.00 ! JC-v2-2
+CD33A    CD32C    OD30CL   CD2O3B      0.106    5   180.00 ! JC-v2-3: EAS, ester to glycerol
+CD33A    CD32C    OD30CL   CD2O3B      0.119    6   180.00 ! JC-v2-3
+CD33A    CD32C    OD30CL   CD2O3B      0.231    2     0.00 ! JC-v2-3
+CD33A    CD32C    OD30CL   CD2O3B      0.278    4     0.00 ! JC-v2-3
+CD33A    CD32C    OD30CL   CD2O3B      0.425    3     0.00 ! JC-v2-3
+CD33A    CD32C    OD30CL   CD2O3B      1.138    1   180.00 ! JC-v2-3
+CD32AL   CD32C    CD2O3B   OD2C3B      0.031    2     0.00 ! JC-v2-9: ester to aliphatic tail
+CD32AL   CD32C    CD2O3B   OD2C3B      0.387    1   180.00 ! JC-v2-9
+CD32AL   CD32C    CD2O3B   OD2C3B      0.839    6     0.00 ! JC-v2-9
+CD32AL   CD32C    CD2O3B   OD2C3B      0.916    4     0.00 ! JC-v2-9
+CD32AL   CD32C    CD2O3B   OD2C3B      1.748    3     0.00 ! JC-v2-9
+CD32AL   CD32C    CD2O3B   OD2C3B      3.501    5   180.00 ! JC-v2-9
+CD33A    CD32C    CD2O3B   OD2C3B      0.000    4     0.00 ! JC-v2-10: ester to aliphatic tail, MPRO
+CD33A    CD32C    CD2O3B   OD2C3B      0.000    6     0.00 ! JC-v2-10
+CD33A    CD32C    CD2O3B   OD2C3B      0.142    1   180.00 ! JC-v2-10
+CD33A    CD32C    CD2O3B   OD2C3B      0.271    2   180.00 ! JC-v2-10
+CD33A    CD32C    CD2O3B   OD2C3B      1.017    3     0.00 ! JC-v2-10
+CD33A    CD32C    CD2O3B   OD2C3B      2.891    5   180.00 ! JC-v2-10
+OD30CL   CD2O3B   CD32C    CD32AL      0.218    1   180.00 ! JC-v2-11: ester to aliphatic tail
+OD30CL   CD2O3B   CD32C    CD32AL      0.303    2   180.00 ! JC-v2-11
+OD30CL   CD2O3B   CD32C    CD32AL      0.720    6   180.00 ! JC-v2-11
+OD30CL   CD2O3B   CD32C    CD32AL      0.983    4   180.00 ! JC-v2-11
+OD30CL   CD2O3B   CD32C    CD32AL      1.647    3     0.00 ! JC-v2-11
+OD30CL   CD2O3B   CD32C    CD32AL      3.430    5   180.00 ! JC-v2-11
+OD30CL   CD2O3B   CD32C    CD33A       0.000    4     0.00 ! JC-v2-12: ester to aliphatic tail, MPRO
+OD30CL   CD2O3B   CD32C    CD33A       0.012    6   180.00 ! JC-v2-12
+OD30CL   CD2O3B   CD32C    CD33A       0.086    1   180.00 ! JC-v2-12
+OD30CL   CD2O3B   CD32C    CD33A       0.154    2   180.00 ! JC-v2-12
+OD30CL   CD2O3B   CD32C    CD33A       1.008    3     0.00 ! JC-v2-12
+OD30CL   CD2O3B   CD32C    CD33A       2.828    5   180.00 ! JC-v2-12
+ND3P2A   CD32AL   CD32AL   OD30B       0.000    1     0.00 ! JC-v2-16: PC
+ND3P2A   CD32AL   CD32AL   OD30B       0.000    3   180.00 ! JC-v2-16
+ND3P2A   CD32AL   CD32AL   OD30B       0.000    4     0.00 ! JC-v2-16
+ND3P2A   CD32AL   CD32AL   OD30B       0.031    5     0.00 ! JC-v2-16
+ND3P2A   CD32AL   CD32AL   OD30B       0.646    6     0.00 ! JC-v2-16
+ND3P2A   CD32AL   CD32AL   OD30B       3.887    2     0.00 ! JC-v2-16
+CD33A    CD32AL   CD32C    CD2O3B      0.000    1   180.00 ! JC-v2-21: MBU
+CD33A    CD32AL   CD32C    CD2O3B      0.071    2     0.00 ! JC-v2-21
+CD33A    CD32AL   CD32C    CD2O3B      0.451    3   180.00 ! JC-v2-21
+CD33A    CD32AL   CD32C    CD2O3B      0.000    4   180.00 ! JC-v2-21
+CD33A    CD32AL   CD32C    CD2O3B      0.025    5     0.00 ! JC-v2-21
+CD33A    CD32AL   CD32C    CD2O3B      0.064    6   180.00 ! JC-v2-21
+!aliphatic chain
+CD33A    CD32AL   CD32AL   CD32AL      0.093    1     0.00 ! JC-v2-20, aliphatic chain, identical to master file
+CD33A    CD32AL   CD32AL   CD32AL      0.143    2     0.00 ! JC-v2-20
+CD33A    CD32AL   CD32AL   CD32AL      0.055    4     0.00 ! JC-v2-20
+CD33A    CD32AL   CD32AL   CD32AL      0.102    5     0.00 ! JC-v2-20
+!only 2,3 fold terms differ from master file
+CD32AL   CD32AL   CD32AL   CD32AL      0.073    1     0.00 ! HEXA/HEPT, hybrid CCSD(T)/cc-pVQZ surf. fit, va, 10/07   JC-v2-22, aliphatic chain
+CD32AL   CD32AL   CD32AL   CD32AL      0.104    2     0.00 ! HEXA/HEPT, hybrid CCSD(T)/cc-pVQZ surf. fit, va, 10/07   JC-v2-22
+CD32AL   CD32AL   CD32AL   CD32AL      0.058    3   180.00 ! HEXA/HEPT, hybrid CCSD(T)/cc-pVQZ surf. fit, va, 10/07   JC-v2-22
+CD32AL   CD32AL   CD32AL   CD32AL      0.098    4     0.00 ! HEXA/HEPT, hybrid CCSD(T)/cc-pVQZ surf. fit, va, 10/07   JC-v2-22
+CD32AL   CD32AL   CD32AL   CD32AL      0.046    5     0.00 ! HEXA/HEPT, hybrid CCSD(T)/cc-pVQZ surf. fit, va, 10/07   JC-v2-22
+!end new-dihe terms
+
+IMPROPER 
+! 
+!V(improper) = Kpsi(psi - psi0)**2 
+! 
+!Kpsi: kcal/mole/rad**2 
+!psi0: degrees 
+!note that the second column of numbers (0) is ignored 
+! 
+OD2C3B   CD33A    OD30CL   CD2O3B     85.000   0     0.00 ! MAS
+OD2C3B   CD32AL   OD30CL   CD2O3B     85.000   0     0.00 ! MAS
+OD2C3B   CD33C    OD30CL   CD2O3B     85.000   0     0.00 ! MAS
+OD2C3B   CD33D    OD30CL   CD2O3B     85.000   0     0.00 ! MAS
+OD2C3B   CD32C    OD30CL   CD2O3B     85.000   0     0.00 ! MAS
+OD2C3B   CD31C    OD30CL   CD2O3B     85.000   0     0.00 ! MAS, CT1
+
+NONBONDED nbxmod  5 atom vatom cdiel vdistance switch vswitch - 
+cutnb 16.0 ctofnb 12.0 ctonnb 10.0 eps 1.0 e14fac 1.0 wmin 1.5 
+
+NBFIX
+
+end

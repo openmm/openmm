@@ -1,0 +1,75 @@
+* Parameters for simulation of on crystal surfaces
+* 
+
+! Generation of n cells along U and m cells along V
+! Used to specify the surface size from the primitive cell
+! k is the number of replicas along Z
+
+set n 5 
+set m 8 
+set k 1
+
+calc nm = @n * @m * @k
+
+!                   
+!           U       |__2|     V       
+!|__1|__2| 1-->2    |__1|   1-->2 
+!
+!
+!    Q(M-1)*N+1 Q(M-1)*N+2     .....            QM*N
+!   ----------------------------------------
+!      .         .       .      .        .
+!      .         .       .      .        .
+!      .         .       .      .        .
+!   -----------------------------------------                          
+!    QN+1	QN+2
+!   -----------------------------------------                          
+!    Q1		Q2	Q3	Q4	Q5 .... QN
+!   -----------------------------------------
+!
+!
+! Based on the PBC for the surface one has to set the values of U (a-vector),
+! V (b-vector) and Z (c-vector). The angle between U and V is theta.
+
+!PBC    7.3000    4.9100  109.6517 (P1)
+
+set U = 7.3000
+set V = 4.9100
+set Z = 50.000           
+
+set theta = 109.6517 
+
+set radian = 57.29577951308232088
+calc theta = @theta - 90.0
+calc theta = @theta/@radian
+
+
+!unit cell translation parameters 
+set  u1 @U
+set  u2 0.0
+set  u3 0.0
+
+calc v1 @V*sin(@theta)
+calc v1 = -1*@v1
+calc v2 @V*cos(@theta)
+set  v3 0.0
+
+set  w1 0.0
+set  w2 0.0
+set  w3 @Z 
+
+!Define translational vectors for images
+
+calc bigu1 = @n * @u1
+calc bigu2 = @n * @u2
+calc bigu3 = @n * @u3
+
+calc bigv1 = @m * @v1
+calc bigv2 = @m * @v2
+calc bigv3 = @m * @v3
+
+calc bigw1 = @k * @w1
+calc bigw2 = @k * @w2
+calc bigw3 = @k * @w3
+
+

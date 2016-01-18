@@ -1,0 +1,70 @@
+* chloroform topper file in CHARMM format
+*
+
+! Chloroform based on the original DH model from Dietz and Heinzinger (DH model) 
+! (W. Dietz, K. Heinzinger, Ber. Bunsen-Ges. Phys. Chem 1985, 89, 968) 
+! Translated into CHARMM format for the following work
+! (Yu, W., He, X., Vanommeslaeghe, K. and MacKerell, A. D., J. Comput. Chem., 2012, 33, 2451–2468)
+! Tested in CHARMM and shown to be compatible with CHARMM protein and CGenFF force fields. 
+! Just use "stream toppar_chloroform_dh.str" in your CHARMM input file
+
+
+read rtf card append
+* chloroform 
+*
+
+MASS     480  HCM       1.0080  !
+MASS     481  CLCM     35.4500  ! 
+MASS     482  CCM      12.0110  ! 
+
+RESI CCL3         0.000
+GROUP
+ATOM C    CCM     0.179
+ATOM CL1  CLCM   -0.087
+ATOM CL2  CLCM   -0.087
+ATOM CL3  CLCM   -0.087
+ATOM HX   HCM	  0.082
+BOND C CL1 C CL2 C CL3 C HX	
+BOND CL1 CL2 CL1 CL3 !for shake 
+BOND CL1 HX  CL2 HX  CL3 HX  ! for shake
+ANGLE HX C CL1 HX C CL2 HX C CL3
+ANGLE CL1 C CL2 CL1 C CL3 CL2 C CL3
+PATCHING FIRS NONE LAST NONE
+
+END
+
+read param card flex append
+* chloroform
+*
+
+ATOMS
+MASS     480  HCM       1.0080  !
+MASS     481  CLCM     35.4500  !
+MASS     482  CCM      12.0110  !
+
+BONDS
+CCM   CLCM   500.0      1.758 
+CCM   HCM    500.0      1.100  
+CLCM  CLCM     0.0      2.9028314 
+HCM   CLCM     0.0      2.3383924  
+
+ANGLES
+CLCM  CCM  CLCM    0.0    111.30
+HCM   CCM  CLCM    0.0    107.57
+
+
+DIHEDRALS
+
+IMPROPERS
+
+NONBONDED nbxmod  5 atom cdiel fshift vatom vdistance vfswitch -
+cutnb 14.0 ctofnb 12.0 ctonnb 10.0 eps 1.0 e14fac 1.0 wmin 1.5
+
+CCM    0.0    -0.102     1.9082  ! 
+CLCM   0.0    -0.300     1.9306  !
+HCM    0.0    -0.020     1.2347  !
+
+END
+
+RETURN
+

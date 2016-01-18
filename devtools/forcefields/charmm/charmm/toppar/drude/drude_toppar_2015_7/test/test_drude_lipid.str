@@ -1,0 +1,86 @@
+* $Id: test_drude_lipid.str 28 2015-07-29 23:54:15Z alex $
+* Test case, Drude lipid toppar file
+*
+
+set boml 0 ! set to -1 if the series contains 3-membered rings
+
+set nres 8
+set resi1  dmp
+set resi2  eas
+set resi3  mpro
+set resi4  mbu
+set resi5  pe
+set resi6  pc
+set resi7  dmpc
+set resi8  dppc
+set seed1  1 O11 1 P   1 O12
+set seed2  1 C2  1 OM  1 C
+set seed3  1 C2  1 OM  1 C
+set seed4  1 C2  1 OM  1 C
+set seed5  1 HN1 1 N   1 C1
+set seed6  1 C4  1 N   1 C1
+set seed7  1 C15 1 N   1 C12
+set seed8  1 C15 1 N   1 C12
+
+set count 1
+label loop_lipid1
+
+set residue @resi@@count
+read sequence @residue 1
+
+bomlev @boml
+generate @residue first none last none setup warn drude dmass 0.4 !show
+bomlev 0
+
+ic param
+ic seed @seed@@count
+ic build 
+coor sdrude
+coor shake
+
+update inbfrq -1 ihbfrq 0 switch atom vatom vswitch cutnb 999.0 ctofnb 997.0 ctonnb 995.0
+
+if @mindr eq 0 then
+  energy
+ else
+  cons harm force 100000. sele .not. type D* end
+  mini ABNR nstep 200 nprint 20
+  cons harm clear
+ endif
+echo @residue starting E: ?ener
+
+if @?pdbdir eq 1 then
+  write psf card name @pdbdir/@residue.psf
+  write coor pdb name @pdbdir/@residue_start.pdb
+ endif
+
+if @mini ne 0 then
+  mini sd nstep 1000 tolgrd 0.0001 nprint 100
+  if ?grms gt 0.0001 mini abnr nstep 1000 tolgrd 0.0001
+  if ?grms gt 0.0001 then
+    echo FATAL ERROR: MINIMIZATION NOT CONVERGED
+    echu
+    echo FATAL ERROR: MINIMIZATION NOT CONVERGED
+    stop
+   endif
+  echo @residue minimized E: ?ener
+  if @?pdbdir eq 1 then ! cannot use 1-line syntax because substitution will fail
+    write coor pdb name @pdbdir/@residue_min.pdb
+   endif
+ endif
+
+coor orient
+coor dipole oxyz select all end 
+echo @residue dipole: ?rdip
+!! Check molecular polarizability
+!VIBRAN
+!diag dscf fini step 0.001
+!END
+
+shake off
+drude reset
+lone clear
+delete atom sele all end
+
+incr count
+if count le @nres goto loop_lipid1

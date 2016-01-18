@@ -1,0 +1,1594 @@
+*  AMBER ff14SB force field conversion
+*  See: http://pubs.acs.org/doi/abs/10.1021/acs.jctc.5b00255
+*  J. Chem. Theory Comput., DOI: 10.1021/acs.jctc.5b00255
+*
+
+!
+!  This is a semi-automatic conversion of the AMBER parm14SB force field, which
+!  is comprised of two following files:
+!   $AMBERHOME/dat/leap/parm/parm10.dat
+!   $AMBERHOME/dat/leap/parm/frcmod.ff14SB
+!  according to the description in $AMBERHOME/dat/leap/cmd/leaprc.ff14SB
+!
+!  Converted by Dr. Xibing He, Florida State University, in July 2015
+!  Email: <hexibing_at_gmail.com>
+!
+!  Years ago Dr. Jeff Klauda (Univ. of Maryland, College Park) converted the 
+!  AMBER99 & AMBER99SB force-field files to CHARMM format:
+!     http://terpconnect.umd.edu/~jbklauda/research/download.html
+!  His work was taken as reference to this conversion work.
+!
+!  All the atom type names are the same except where otherwise noted.
+!  Note: type N* renamed to NG 
+!        type C* renamed to CG
+!  In Dr. Klauda's conversion files of AMBER99, types N* is renamed to NS, and
+!      type C* renamed to CS. But in AMBER14SB, atom type CS already exists.
+!
+!  The VDW parameter of SOD (Na+), POT (K+) and CLA (Cl-) are copied from
+!   Dr. Cheatham's & Dr. Klauda's files. They cannot be found in parm10.dat or
+!   frcmod.ff14SB under the AMBER directory $AmberTools15/dat/leap/parm/, but
+!   still can be found in parm99.dat, and the parameters agree with those in
+!   Dr. Cheatham's & Dr. Klauda's files.
+!
+! The following remarks are copied from Dr. Klauda's conversion file of ff99SB:
+!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!  note: the HO and HW nonbonded parameters, although zero in 
+!  Cornell et al. should not have a 0.0 vdw radius in CHARMM 
+!  to avoid difficulties with the 0.0/0.0 in the FAST OFF 
+!  van der Waal code...
+!
+!  note: the default nonbonded options chosen here are to match AMBER.
+!  It is not recommended that users actually run with GROUP based 
+!  truncation and a switch unless really trying to match AMBER.  
+!  Better would be ATOM based FSHIFT VSHIFT, however note that this
+!  does modify the energies (and effectively the parameters).
+!
+!  Also note that long-range interactions are handeled differently between
+!  AMBER and CHARMM.  To avoid differences when comparing energies and
+!  forces the the cuttoffs were set to be large in the individule
+!  comparison input files, i.e. 80 Angs.
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!
+!
+
+ATOMS
+MASS   1  C  12.01   ! sp2 C carbonyl group
+MASS   2  CA 12.01   ! sp2 C pure aromatic (benzene)
+MASS   3  CB 12.01   ! sp2 aromatic C, 5&6 membered ring junction
+MASS   4  CC 12.01   ! sp2 aromatic C, 5 memb. ring HIS
+MASS   5  CD 12.01   ! sp2 C atom in the middle of: C=CD-CD=C
+MASS   6  CI 12.01   ! parmbsc0
+MASS   7  CK 12.01   ! sp2 C 5 memb.ring in purines (dA,dG)
+MASS   8  CP 12.01   ! sp2 C 5 memb.ring in purines (G)
+MASS   9  CM 12.01   ! sp2 C  pyrimidines in pos. 5 & 6 (dT,dC)
+MASS  10  CS 12.01   ! sp2 C  pyrimidines in pos. 5 & 6 (U)
+MASS  11  CN 12.01   ! sp2 C aromatic 5&6 memb.ring junct.(TRP)
+MASS  12  CQ 12.01   ! sp2 C in 5 mem.ring of purines between 2 N
+MASS  13  CR 12.01   ! sp2 arom as CQ but in HIS
+MASS  14  CT 12.01   ! sp3 aliphatic C
+MASS  15  CV 12.01   ! sp2 arom. 5 memb.ring w/1 N and 1 H (HIS)
+MASS  16  CW 12.01   ! sp2 arom. 5 memb.ring w/1 N-H and 1 H (HIS)
+MASS  17  CG 12.01   ! sp2 arom. 5 memb.ring w/1 subst. (TRP)
+MASS  18  CX 12.01   ! protein C-alpha (new to ff10)
+MASS  19  CY 12.01   ! nitrile C (Howard et al.JCC,16,243,1995)
+MASS  20  CZ 12.01   ! sp C (Howard et al.JCC,16,243,1995)
+MASS  21  C5 12.01   ! sp2 C 5 memb.ring in purines (A)
+MASS  22  C4 12.01   ! sp2 C  pyrimidines in pos. 5 & 6 (C)
+MASS  23  CO 12.01   ! sp2 C carboxylate group
+MASS  24  2C 12.01   ! sp3 aliphatic C with two (duo) heavy atoms
+MASS  25  3C 12.01   ! sp3 aliphatic C with three (tres) heavy atoms
+MASS  26  C8 12.01   ! sp3 aliphatic C basic AA side chain
+MASS  27  C0 40.08   ! calcium
+MASS  28  H  1.008   ! H bonded to nitrogen atoms
+MASS  29  HC 1.008   ! H aliph. bond. to C without electrwd.group
+MASS  30  H1 1.008   ! H aliph. bond. to C with 1 electrwd. group
+MASS  31  H2 1.008   ! H aliph. bond. to C with 2 electrwd.groups
+MASS  32  H3 1.008   ! H aliph. bond. to C with 3 eletrwd.groups
+MASS  33  HA 1.008   ! H arom. bond. to C without elctrwd. groups
+MASS  34  H4 1.008   ! H arom. bond. to C with 1 electrwd. group
+MASS  35  H5 1.008   ! H arom.at C with 2 elctrwd. gr,+HCOO group
+MASS  36  HO 1.008   ! hydroxyl group
+MASS  37  HS 1.008   ! hydrogen bonded to sulphur (pol?)
+MASS  38  HW 1.008   ! H in TIP3P water
+MASS  39  HP 1.008   ! H bonded to C next to positively charged gr
+MASS  40  HZ 1.008   ! H bond sp C (Howard et al.JCC,16,243,1995)
+MASS  41  F  19.00   ! fluorine (not fluoride!)
+MASS  42  Cl 35.45   ! chlorine  (Applequist) (not chloride!)
+MASS  43  Br 79.90   ! bromine  (Applequist) (not bromide!)
+MASS  44  I  126.9   ! iodine   (Applequist) (not iodide!)
+MASS  45  MG 24.305  ! magnesium
+MASS  46  N  14.01   ! sp2 nitrogen in amide groups
+MASS  47  NA 14.01   ! sp2 N in 5 memb.ring w/H atom (HIS)
+MASS  48  NB 14.01   ! sp2 N in 5 memb.ring w/LP (HIS,ADE,GUA)
+MASS  49  NC 14.01   ! sp2 N in 6 memb.ring w/LP (ADE,GUA)
+MASS  50  N2 14.01   ! sp2 N in amino groups
+MASS  51  N3 14.01   ! sp3 N for charged amino groups (Lys, etc)
+MASS  52  NT 14.01   ! sp3 N for amino groups amino groups
+MASS  53  NG 14.01   ! sp2 N
+MASS  54  NY 14.01   ! nitrile N (Howard et al.JCC,16,243,1995)
+MASS  55  O  16.00   ! carbonyl group oxygen
+MASS  56  O2 16.00   ! carboxyl and phosphate group oxygen
+MASS  57  OW 16.00   ! oxygen in TIP3P water
+MASS  58  OH 16.00   ! oxygen in hydroxyl group
+MASS  59  OS 16.00   ! ether and ester oxygen
+MASS  60  OP 16.00   ! 2- phosphate oxygen
+MASS  61  P  30.97   ! phosphate,pol:JACS,112,8543,90,K.J.Miller
+MASS  62  S  32.06   ! S in disulfide linkage,pol:JPC,102,2399,98
+MASS  63  SH 32.06   ! S in cystine
+!MASS  64  CU 63.55   ! copper
+!MASS  65  FE 55.00   ! iron
+MASS  66  Zn 65.4    ! Zn2+
+MASS  67  EP 0.00    ! extra point
+MASS  68 SOD 22.99   ! Na+
+MASS  69 POT 39.10   ! K+
+MASS  70 CLA 35.45   ! Cl-
+
+BONDS
+OW   HW  553.0    0.9572    !  TIP3P water
+HW   HW  553.0    1.5136    !  TIP3P water
+C    C   310.0    1.525     !  Junmei et al, 1999
+C    CA  469.0    1.409     !  JCC,7,(1986),230; (not used any more in TYR)
+C    CB  447.0    1.419     !  JCC,7,(1986),230; GUA
+C    CM  410.0    1.444     !  JCC,7,(1986),230; THY,URA
+C    CS  410.0    1.444     !  JCC,7,(1986),230; THY,URA
+C    CT  317.0    1.522     !  JCC,7,(1986),230; AA
+C    CX  317.0    1.522     !  JCC,7,(1986),230; AA (was C-CT)
+C    N   490.0    1.335     !  JCC,7,(1986),230; AA
+C    NG  424.0    1.383     !  JCC,7,(1986),230; CYT,URA
+C    NA  418.0    1.388     !  JCC,7,(1986),230; GUA.URA
+C    NC  457.0    1.358     !  JCC,7,(1986),230; CYT
+C    O   570.0    1.229     !  JCC,7,(1986),230; AA,CYT,GUA,THY,URA
+C    O2  656.0    1.250     !  JCC,7,(1986),230; GLU,ASP
+C    OH  450.0    1.364     !  JCC,7,(1986),230; (not used any more for TYR)
+C    OS  450.0    1.323     !  Junmei et al, 1999
+C    H4  367.0    1.080     !  Junmei et al, 1999
+C    H5  367.0    1.080     !  Junmei et al, 1999
+CA   CA  469.0    1.400     !  JCC,7,(1986),230; BENZENE,PHE,TRP,TYR
+CA   CB  469.0    1.404     !  JCC,7,(1986),230; ADE,TRP
+CA   CM  427.0    1.433     !  JCC,7,(1986),230; CYT
+CA   CS  427.0    1.433     !  JCC,7,(1986),230; CYT
+CA   CN  469.0    1.400     !  JCC,7,(1986),230; TRP
+CA   CT  317.0    1.510     !  JCC,7,(1986),230; PHE,TYR
+CA   HA  367.0    1.080     !  changed from 340. bsd on C6H6 nmodes; PHE,TRP,TYR
+CA   H4  367.0    1.080     !  changed from 340. bsd on C6H6 nmodes; no assigned
+CA   N2  481.0    1.340     !  JCC,7,(1986),230; ARG,CYT,GUA
+CA   NA  427.0    1.381     !  JCC,7,(1986),230; GUA
+CA   NC  483.0    1.339     !  JCC,7,(1986),230; ADE,CYT,GUA
+CA   OH  450.0    1.364     !  substituted for C-OH in tyr
+CB   CB  520.0    1.370     !  JCC,7,(1986),230; ADE,GUA
+CB   NG  436.0    1.374     !  JCC,7,(1986),230; ADE,GUA
+CB   NB  414.0    1.391     !  JCC,7,(1986),230; ADE,GUA
+CB   NC  461.0    1.354     !  JCC,7,(1986),230; ADE,GUA
+CD   HA  367.0    1.080     !  Junmei et al, 1999
+CD   CD  469.0    1.400     !  Junmei et al, 1999
+CD   CM  549.0    1.350     !  Junmei et al, 1999
+CD   CS  549.0    1.350     !  Junmei et al, 1999
+CD   CT  317.0    1.510     !  Junmei et al, 1999
+CK   H5  367.0    1.080     !  changed from 340. bsd on C6H6 nmodes; ADE,GUA
+CK   NG  440.0    1.371     !  JCC,7,(1986),230; ADE,GUA
+CK   NB  529.0    1.304     !  JCC,7,(1986),230; ADE,GUA
+CP   H5  367.0    1.080     !  changed from 340. bsd on C6H6 nmodes; ADE,GUA
+CP   NG  440.0    1.371     !  JCC,7,(1986),230; ADE,GUA
+CP   NB  529.0    1.304     !  JCC,7,(1986),230; ADE,GUA
+CM   CM  549.0    1.350     !  JCC,7,(1986),230; CYT,THY,URA
+CM   CT  317.0    1.510     !  JCC,7,(1986),230; THY
+CM   HA  367.0    1.080     !  changed from 340. bsd on C6H6 nmodes; CYT,URA
+CM   H4  367.0    1.080     !  changed from 340. bsd on C6H6 nmodes; CYT,URA
+CM   H5  367.0    1.080     !  changed from 340. bsd on C6H6 nmodes; not assigned
+CM   NG  448.0    1.365     !  JCC,7,(1986),230; CYT,THY,URA
+CM   OS  480.0    1.240     !  Junmei et al, 1999
+CS   CS  549.0    1.350     !  JCC,7,(1986),230; CYT,THY,URA
+CS   CT  317.0    1.510     !  JCC,7,(1986),230; THY
+CS   HA  367.0    1.080     !  changed from 340. bsd on C6H6 nmodes; CYT,URA
+CS   H4  367.0    1.080     !  changed from 340. bsd on C6H6 nmodes; CYT,URA
+CS   H5  367.0    1.080     !  changed from 340. bsd on C6H6 nmodes; not assigned
+CS   NG  448.0    1.365     !  JCC,7,(1986),230; CYT,THY,URA
+CS   OS  480.0    1.240     !  Junmei et al, 1999
+CQ   H5  367.0    1.080     !  changed from 340. bsd on C6H6 nmodes; ADE
+CQ   NC  502.0    1.324     !  JCC,7,(1986),230; ADE
+CT   CT  310.0    1.526     !  JCC,7,(1986),230; AA, SUGARS
+CX   CT  310.0    1.526     !  JCC,7,(1986),230; AA, SUGARS (was CT-CT)
+CT   HC  340.0    1.090     !  changed from 331 bsd on NMA nmodes; AA, SUGARS
+CT   H1  340.0    1.090     !  changed from 331 bsd on NMA nmodes; AA, RIBOSE
+CX   H1  340.0    1.090     !  changed from 331 bsd on NMA nmodes; AA, RIBOSE (was CT-H1)
+CT   H2  340.0    1.090     !  changed from 331 bsd on NMA nmodes; SUGARS
+CT   H3  340.0    1.090     !  changed from 331 bsd on NMA nmodes; not assigned
+CT   HP  340.0    1.090     !  changed from 331; AA-lysine, methyl ammonium cation
+CX   HP  340.0    1.090     !  changed from 331; AA-lysine, methyl ammonium cation (was CT-HP)
+CT   NG  337.0    1.475     !  JCC,7,(1986),230; ADE,CYT,GUA,THY,URA
+CT   N2  337.0    1.463     !  JCC,7,(1986),230; ARG
+CT   OH  320.0    1.410     !  JCC,7,(1986),230; SUGARS
+CT   OS  320.0    1.410     !  JCC,7,(1986),230; NUCLEIC ACIDS
+CG   HC  367.0    1.080     !  changed from 340. bsd on C6H6 nmodes, not needed AA
+CG   CB  388.0    1.459     !  JCC,7,(1986),230; TRP
+CG   CT  317.0    1.495     !  JCC,7,(1986),230; TRP
+CG   CW  546.0    1.352     !  JCC,7,(1986),230; TRP
+CB   CN  447.0    1.419     !  JCC,7,(1986),230; TRP
+CC   CT  317.0    1.504     !  JCC,7,(1986),230; HIS
+CC   CV  512.0    1.375     !  JCC,7,(1986),230; HIS(delta)
+CC   CW  518.0    1.371     !  JCC,7,(1986),230; HIS(epsilon)
+CC   NA  422.0    1.385     !  JCC,7,(1986),230; HIS
+CC   NB  410.0    1.394     !  JCC,7,(1986),230; HIS
+CN   NA  428.0    1.380     !  JCC,7,(1986),230; TRP
+CR   H5  367.0    1.080     !  changed from 340. bsd on C6H6 nmodes;HIS
+CR   NA  477.0    1.343     !  JCC,7,(1986),230; HIS
+CR   NB  488.0    1.335     !  JCC,7,(1986),230; HIS
+CT   N   337.0    1.449     !  JCC,7,(1986),230; AA
+CX   N   337.0    1.449     !  JCC,7,(1986),230; AA  (was CT-N)
+CT   N3  367.0    1.471     !  JCC,7,(1986),230; LYS
+CX   N3  367.0    1.471     !  JCC,7,(1986),230; LYS (was CT-N3)
+CT   NT  367.0    1.471     !  for neutral amines
+CT   S   227.0    1.810     !  changed from 222.0 based on dimethylS nmodes
+CT   SH  237.0    1.810     !  changed from 222.0 based on methanethiol nmodes
+CT   CY  400.0    1.458     !  Howard et al JCC.16,243,1995
+CT   CZ  400.0    1.459     !  Howard et al JCC,16,243,1995
+CV   H4  367.0    1.080     !  changed from 340. bsd on C6H6 nmodes; HIS
+CV   NB  410.0    1.394     !  JCC,7,(1986),230; HIS
+CW   H4  367.0    1.080     !  changed from 340. bsd on C6H6 nmodes;HIS(epsilon,+)
+CW   NA  427.0    1.381     !  JCC,7,(1986),230; HIS,TRP
+CY   NY  600.0    1.150     !  Howard et al JCC,16,243,1995
+CZ   CZ  600.0    1.206     !  Howard et al JCC,16,243,1995
+CZ   HZ  400.0    1.056     !  Howard et al JCC,16,243,1995
+OP   P   525.0    1.480     !  JCC,7,(1986),230; NA PHOSPHATES
+O2   P   525.0    1.480     !  JCC,7,(1986),230; NA PHOSPHATES
+OH   P   230.0    1.610     !  JCC,7,(1986),230; NA PHOSPHATES
+OS   P   230.0    1.610     !  JCC,7,(1986),230; NA PHOSPHATES
+NA   P   250.0    1.840     !  phosphohistidine
+H    N2  434.0    1.010     !  JCC,7,(1986),230; ADE,CYT,GUA,ARG
+H    NG  434.0    1.010     !  for plain unmethylated bases ADE,CYT,GUA,ARG
+H    NA  434.0    1.010     !  JCC,7,(1986),230; GUA,URA,HIS
+H    N   434.0    1.010     !  JCC,7,(1986),230; AA
+H    N3  434.0    1.010     !  JCC,7,(1986),230; LYS
+H    NT  434.0    1.010     !  for neutral amines
+HO   OH  553.0    0.960     !  JCC,7,(1986),230; SUGARS,SER,TYR
+HO   OS  553.0    0.960     !  JCC,7,(1986),230; NUCLEOTIDE ENDS
+HS   SH  274.0    1.336     !  JCC,7,(1986),230; CYS
+S    S   166.0    2.038     !  JCC,7,(1986),230; CYX   (SCHERAGA)
+F    CT  367.0    1.380     !  JCC,13,(1992),963;CF4; R0=1.332 FOR CHF3
+Cl   CT  232.0    1.766     !  6-31g* opt
+Br   CT  159.0    1.944     !  Junmei et al,99
+I    CT  148.0    2.166     !  Junmei et al,99
+F    CA  386.0    1.359     !  Junmei et al,99
+Cl   CA  193.0    1.727     !  Junmei et al,99
+I    CA  171.0    2.075     !  Junmei et al,99
+Br   CA  172.0    1.890     !  Junmei et al,99
+EP   O   600.0    0.200     !  or 0.35
+EP   OH  600.0    0.200     !  or 0.35
+EP   OS  600.0    0.200     !  or 0.35
+EP   N3  600.0    0.200     !  or 0.35
+EP   NT  600.0    0.200     !  or 0.35
+EP   NB  600.0    0.200     !  or 0.35 histidines, nucleic acids
+EP   NC  600.0    0.200     !  or 0.35 nucleic acids
+EP   S   600.0    0.700     !  cys,cyx,met
+EP   SH  600.0    0.700     !  cys,cyx
+CI   H1  340.0    1.090     !  parmbsc0
+CI   CT  310.0    1.526     !  parmbsc0
+OS   CI  320.0    1.410     !  parmbsc0
+OH   CI  320.0    1.410     !  parmbsc0
+C5   H5  367.0    1.080     !  changed from 340. bsd on C6H6 nmodes; ADE,GUA
+C5   NG  440.0    1.371     !  JCC,7,(1986),230; ADE,GUA
+C5   NB  529.0    1.304     !  JCC,7,(1986),230; ADE,GUA
+C    C4  410.0    1.444     !  JCC,7,(1986),230; THY,URA
+CA   C4  427.0    1.433     !  JCC,7,(1986),230; CYT
+C4   C4  549.0    1.350     !  JCC,7,(1986),230; CYT,THY,URA
+C4   CT  317.0    1.510     !  JCC,7,(1986),230; THY
+C4   HA  367.0    1.080     !  changed from 340. bsd on C6H6 nmodes; CYT,URA
+C4   H4  367.0    1.080     !  changed from 340. bsd on C6H6 nmodes; CYT,URA
+C4   NG  448.0    1.365     !  JCC,7,(1986),230; CYT,THY,URA
+C    2C  317.0    1.5220    !  
+CG   2C  317.0    1.4950    !  
+C8   C8  310.0    1.5260    !  
+C8   CX  310.0    1.5260    !  
+C8   H1  340.0    1.0900    !  
+C8   HC  340.0    1.0900    !  
+C8   HP  340.0    1.0900    !  
+C8   N2  337.0    1.4630    !  
+C8   N3  367.0    1.4710    !  
+CA   2C  317.0    1.5100    !  
+CC   2C  317.0    1.5040    !  
+CO   O2  656.0    1.2500    !  
+CO   2C  317.0    1.5220    !  
+CT   2C  310.0    1.5260    !  
+CT   3C  310.0    1.5260    !  
+CX   2C  310.0    1.5260    !  
+CX   3C  310.0    1.5260    !  
+H1   2C  340.0    1.0900    !  
+H1   3C  340.0    1.0900    !  
+HC   2C  340.0    1.0900    !  
+HC   3C  340.0    1.0900    !  
+OH   2C  320.0    1.4100    !  
+OH   3C  320.0    1.4100    !  
+S    2C  227.0    1.8100    !  
+SH   2C  237.0    1.8100    !  
+2C   2C  310.0    1.5260    !  
+2C   3C  310.0    1.5260    !  
+
+THETAS
+HW   OW   HW    100.      104.52  !  TIP3P water
+HW   HW   OW      0.      127.74  !  (found in crystallographic water with 3 bonds)
+C    C    O     80.0      120.00  !  Junmei et al, 1999 acrolein
+C    C    OH    80.0      120.00  !  Junmei et al, 1999
+CA   C    CA    63.0      120.00  !  changed from 85.0  bsd on C6H6 nmodes; AA
+CA   C    OH    70.0      120.00  !  AA (not used in tyr)
+CA   C    OS    70.0      120.00  !  phosphotyrosine
+CC   NA   P     76.7      125.10  !  phosphohistidine
+CR   NA   P     76.7      125.10  !  phosphohistidine
+NA   P    OP    42.9      102.38  !  phosphohistidine
+CB   C    NA    70.0      111.30  !  NA
+CB   C    O     80.0      128.80  !
+CM   C    NA    70.0      114.10  !
+CM   C    O     80.0      125.30  !
+CS   C    NA    70.0      114.10  !
+CS   C    O     80.0      125.30  !
+CT   C    O     80.0      120.40  !
+CX   C    O     80.0      120.40  !  (was CT-C-O)
+CT   C    O2    70.0      117.00  !
+CX   C    O2    70.0      117.00  !  (was CT-C -O2)
+CT   C    N     70.0      116.60  !  AA general
+CX   C    N     70.0      116.60  !  AA general  (was CT-C-N)
+CT   C    CT    63.0      117.00  !  Junmei et al, 1999
+CT   C    OS    80.0      115.00  !  Junmei et al, 1999
+CT   C    OH    80.0      110.00  !  Junmei et al, 1999
+CX   C    OH    80.0      110.00  !  Junmei et al, 1999 (was CT-C-OH)
+NG   C    NA    70.0      115.40  !
+NG   C    NC    70.0      118.60  !
+NG   C    O     80.0      120.90  !
+NA   C    O     80.0      120.60  !
+NC   C    O     80.0      122.50  !
+N    C    O     80.0      122.90  !  AA general
+O    C    O     80.0      126.00  !  AA COO- terminal residues
+O    C    OH    80.0      120.00  !  (check with Junmei for: theta0:120.0?)
+O    C    OS    80.0      125.00  !  Junmei et al, 1999
+O2   C    O2    80.0      126.00  !  AA GLU            (SCH JPC 79,2379)
+H4   C    C     50.0      120.00  !  Junmei et al, 1999 
+H4   C    CM    50.0      115.00  !  Junmei et al, 1999 
+H4   C    CS    50.0      115.00  !  Junmei et al, 1999 
+H4   C    CT    50.0      115.00  !  Junmei et al, 1999
+H4   C    O     50.0      120.00  !  Junmei et al, 1999
+H4   C    OH    50.0      120.00  !  Junmei et al, 1999
+H5   C    N     50.0      120.00  !  Junmei et al, 1999
+H5   C    O     50.0      119.00  !  Junmei et al, 1999
+H5   C    OH    50.0      107.00  !  Junmei et al, 1999
+H5   C    OS    50.0      107.00  !  Junmei et al, 1999
+C    CA   CA    63.0      120.00  !  changed from 85.0  bsd on C6H6 nmodes
+C    CA   HA    50.0      120.00  !  AA (not used in tyr)
+CA   CA   CA    63.0      120.00  !  changed from 85.0  bsd on C6H6 nmodes
+CA   CA   CB    63.0      120.00  !  changed from 85.0  bsd on C6H6 nmodes
+CA   CA   CT    70.0      120.00  !
+CA   CA   HA    50.0      120.00  !
+CA   CA   H4    50.0      120.00  !
+CA   CA   OH    70.0      120.00  !  replacement in tyr
+CA   CA   CN    63.0      120.00  !  changed from 85.0  bsd on C6H6 nmodes; AA trp
+CB   CA   HA    50.0      120.00  !
+CB   CA   H4    50.0      120.00  !
+CB   CA   N2    70.0      123.50  !
+CB   CA   NC    70.0      117.30  !
+CM   CA   N2    70.0      120.10  !
+CM   CA   NC    70.0      121.50  !
+CS   CA   N2    70.0      120.10  !
+CS   CA   NC    70.0      121.50  !
+CN   CA   HA    50.0      120.00  !  AA trp
+NA   CA   NC    70.0      123.30  !
+N2   CA   NA    70.0      116.00  !
+N2   CA   NC    70.0      119.30  !
+N2   CA   N2    70.0      120.00  !  AA arg
+F    CA   CA    70.0      121.00  !  Junmei et al,99 
+Cl   CA   CA    70.0      118.80  !  Junmei et al,99 
+Br   CA   CA    70.0      118.80  !  Junmei et al,99
+I    CA   CA    70.0      118.80  !  Junmei et al,99 
+C    CB   CB    63.0      119.20  !  changed from 85.0  bsd on C6H6 nmodes; NA gua
+C    CB   NB    70.0      130.00  !
+CA   CB   CB    63.0      117.30  !  changed from 85.0  bsd on C6H6 nmodes; NA ade
+CA   CB   NB    70.0      132.40  !  
+CB   CB   NG    70.0      106.20  !
+CB   CB   NB    70.0      110.40  !
+CB   CB   NC    70.0      127.70  !
+CG   CB   CA    63.0      134.90  !  changed from 85.0  bsd on C6H6 nmodes; AA trp
+CG   CB   CN    63.0      108.80  !  changed from 85.0  bsd on C6H6 nmodes; AA trp
+CA   CB   CN    63.0      116.20  !  changed from 85.0  bsd on C6H6 nmodes; AA trp
+NG   CB   NC    70.0      126.20  !
+CD   CD   CM    63.0      120.00  !  Junmei et al, 1999
+CD   CD   CS    63.0      120.00  !  Junmei et al, 1999
+CD   CD   CT    70.0      120.00  !  Junmei et al, 1999
+CM   CD   CT    70.0      120.00  !  Junmei et al, 1999
+CS   CD   CT    70.0      120.00  !  Junmei et al, 1999
+HA   CD   HA    35.0      119.00  !  Junmei et al, 1999
+HA   CD   CD    50.0      120.00  !  Junmei et al, 1999
+HA   CD   CM    50.0      120.00  !  Junmei et al, 1999
+HA   CD   CS    50.0      120.00  !  Junmei et al, 1999
+H5   CK   NG    50.0      123.05  !
+H5   CK   NB    50.0      123.05  !
+NG   CK   NB    70.0      113.90  !
+H5   CP   NG    50.0      123.05  !
+H5   CP   NB    50.0      123.05  !
+NG   CP   NB    70.0      113.90  !
+C    CM   CM    63.0      120.70  !  changed from 85.0  bsd on C6H6 nmodes; NA thy
+C    CM   CT    70.0      119.70  !
+C    CM   HA    50.0      119.70  !
+C    CM   H4    50.0      119.70  !
+CA   CM   CM    63.0      117.00  !  changed from 85.0  bsd on C6H6 nmodes; NA cyt
+CA   CM   HA    50.0      123.30  !
+CA   CM   H4    50.0      123.30  !
+CM   CM   CT    70.0      119.70  !
+CM   CM   HA    50.0      119.70  !
+CM   CM   H4    50.0      119.70  !
+CM   CM   NG    70.0      121.20  !
+CM   CM   OS    80.0      125.00  !  Junmei et al, 1999
+H4   CM   NG    50.0      119.10  !
+H4   CM   OS    50.0      113.00  !  Junmei et al, 1999
+HA   CM   HA    35.0      120.00  !  Junmei et al, 1999
+HA   CM   CD    50.0      120.00  !  Junmei et al, 1999
+HA   CM   CT    50.0      120.00  !  Junmei et al, 1999
+C    CS   CS    63.0      120.70  !  changed from 85.0  bsd on C6H6 nmodes; NA thy
+C    CS   CT    70.0      119.70  !
+C    CS   HA    50.0      119.70  !
+C    CS   H4    50.0      119.70  !
+CA   CS   CS    63.0      117.00  !  changed from 85.0  bsd on C6H6 nmodes; NA cyt
+CA   CS   HA    50.0      123.30  !
+CA   CS   H4    50.0      123.30  !
+CM   CS   CT    70.0      119.70  !
+CS   CS   HA    50.0      119.70  !
+CS   CS   H4    50.0      119.70  !
+CS   CS   NG    70.0      121.20  !
+CS   CS   OS    80.0      125.00  !  Junmei et al, 1999
+H4   CS   NG    50.0      119.10  !
+H4   CS   OS    50.0      113.00  !  Junmei et al, 1999
+HA   CS   HA    35.0      120.00  !  Junmei et al, 1999
+HA   CS   CD    50.0      120.00  !  Junmei et al, 1999
+HA   CS   CT    50.0      120.00  !  Junmei et al, 1999
+NC   CQ   NC    70.0      129.10  !
+H5   CQ   NC    50.0      115.45  !
+H1   CT   H1    35.0      109.50  !
+H1   CX   H1    35.0      109.50  !  (was H1-CT-H1)
+H1   CT   NG    50.0      109.50  !  changed based on NMA nmodes
+H1   CT   OH    50.0      109.50  !  changed based on NMA nmodes 
+H1   CT   OS    50.0      109.50  !  changed based on NMA nmodes 
+H1   CT   CM    50.0      109.50  !  Junmei et al, 1999 
+H1   CT   CS    50.0      109.50  !  Junmei et al, 1999 
+H1   CT   CY    50.0      110.00  !  Junmei et al, 1999
+H1   CT   CZ    50.0      110.00  !  Junmei et al, 1999
+H1   CT   N     50.0      109.50  !  AA general  changed based on NMA nmodes
+H1   CX   N     50.0      109.50  !  AA general  (was H1-CT-N)
+H1   CT   S     50.0      109.50  !  AA cys     changed based on NMA nmodes
+H1   CT   SH    50.0      109.50  !  AA cyx     changed based on NMA nmodes
+H1   CT   N2    50.0      109.50  !  AA arg     changed based on NMA nmodes
+H1   CT   NT    50.0      109.50  !  neutral amines 
+H2   CT   H2    35.0      109.50  !  AA lys
+H2   CT   NG    50.0      109.50  !  changed based on NMA nmodes
+H2   CT   OS    50.0      109.50  !  changed based on NMA nmodes
+HP   CT   HP    35.0      109.50  !  AA lys, ch3nh4+
+HP   CX   HP    35.0      109.50  !  AA lys, ch3nh4+ (was HP-CT-HP)
+HP   CT   N3    50.0      109.50  !  AA lys, ch3nh3+, changed based on NMA nmodes
+HP   CX   N3    50.0      109.50  !  AA lys, ch3nh3+, changed based on NMA nmodes (was HP-CT-N3)
+HC   CT   HC    35.0      109.50  !
+HC   CT   CM    50.0      109.50  !  changed based on NMA nmodes
+HC   CT   CS    50.0      109.50  !  changed based on NMA nmodes
+HC   CT   CD    50.0      109.50  !  Junmei et al, 1999
+HC   CT   CZ    50.0      110.00  !  Junmei et al, 1999
+C    CT   H1    50.0      109.50  !  AA general  changed based on NMA nmodes
+C    CX   H1    50.0      109.50  !  AA general  (was C-CT-H1)
+C    CT   HP    50.0      109.50  !  AA zwitterion  changed based on NMA nmodes
+C    CX   HP    50.0      109.50  !  AA zwitterion  changed based on NMA nmodes (was C -CT-HP)
+C    CT   HC    50.0      109.50  !  AA gln      changed based on NMA nmodes
+C    CT   N     63.0      110.10  !  AA general
+C    CX   N     63.0      110.10  !  AA general  (was C-CT-N)
+C    CT   N3    80.0      111.20  !  AA amino terminal residues
+C    CX   N3    80.0      111.20  !  AA amino terminal residues (was C -CT-N3)
+C    CT   CT    63.0      111.10  !  AA general
+C    CT   CX    63.0      111.10  !  AA general (was C -CT-CT)
+C    CX   CT    63.0      111.10  !  AA general  (was C-CT-CT)
+C    CT   OS    60.0      109.50  !  Junmei et al, 1999
+CA   CT   HC    50.0      109.50  !  AA tyr     changed based on NMA nmodes
+CC   CT   CT    63.0      113.10  !  AA his
+CC   CT   CX    63.0      113.10  !  AA his (was CC-CT-CT)
+CC   CT   HC    50.0      109.50  !  AA his     changed based on NMA nmodes
+CM   CT   CT    63.0      111.00  !  Junmei et al, 1999 (last change: Mar24,99)
+CM   CT   OS    50.0      109.50  !  Junmei et al, 1999
+CS   CT   CT    63.0      111.00  !  Junmei et al, 1999 (last change: Mar24,99)
+CS   CT   OS    50.0      109.50  !  Junmei et al, 1999
+CT   CT   CT    40.0      109.50  !
+CT   CT   CX    40.0      109.50  !  (was CT-CT-CT)
+CT   CT   HC    50.0      109.50  !  changed based on NMA nmodes
+CX   CT   HC    50.0      109.50  !  changed based on NMA nmodes (was CT-CT-HC)
+CT   CT   H1    50.0      109.50  !  changed based on NMA nmodes
+CT   CX   H1    50.0      109.50  !  changed based on NMA nmodes (was CT-CT-H1)
+CX   CT   H1    50.0      109.50  !  changed based on NMA nmodes (was CT-CT-H1)
+CT   CT   H2    50.0      109.50  !  changed based on NMA nmodes
+CT   CT   HP    50.0      109.50  !  changed based on NMA nmodes
+CT   CX   HP    50.0      109.50  !  changed based on NMA nmodes (was CT-CT-HP)
+CT   CT   NG    50.0      109.50  !
+CT   CT   OH    50.0      109.50  !
+CX   CT   OH    50.0      109.50  !  (was CT-CT-OH)
+CT   CT   OS    50.0      109.50  !
+CT   CT   S     50.0      114.70  !  AA cyx            (SCHERAGA  JPC 79,1428)
+CX   CT   S     50.0      114.70  !  AA cyx            (SCHERAGA  JPC 79,1428) (was CT-CT-S )
+CT   CT   SH    50.0      108.60  !  AA cys
+CX   CT   SH    50.0      108.60  !  AA cys (was CT-CT-SH)
+CT   CT   CA    63.0      114.00  !  AA phe tyr          (SCH JPC  79,2379)
+CX   CT   CA    63.0      114.00  !  AA phe tyr          (SCH JPC  79,2379) (was CT-CT-CA)
+CT   CT   N2    80.0      111.20  !  AA arg             (JCP 76, 1439)
+CT   CT   N     80.0      109.70  !  AA ala, general    (JACS 94, 2657)
+CT   CX   N     80.0      109.70  !  AA ala, general    (was CT-CT-N)
+CT   CT   N3    80.0      111.20  !  AA lys             (JCP 76, 1439)
+CT   CX   N3    80.0      111.20  !  AA lys             (JCP 76, 1439) (was CT-CT-N3)
+CT   CT   NT    80.0      111.20  !  neutral amines 
+CT   CT   CY    63.0      110.00  !  Junmei et al, 1999    
+CT   CT   CZ    63.0      110.00  !  Junmei et al, 1999
+CG   CT   CT    63.0      115.60  !  AA trp
+CG   CT   CX    63.0      115.60  !  AA trp (was C*-CT-CT)
+CG   CT   HC    50.0      109.50  !  AA trp    changed based on NMA nmodes
+OS   CT   OS   160.0      101.00  !  Junmei et al, 1999
+OS   CT   CY    50.0      110.00  !  Junmei et al, 1999
+OS   CT   CZ    50.0      110.00  !  Junmei et al, 1999
+OS   CT   NG    50.0      109.50  !
+F    CT   F     77.0      109.10  !  JCC,13,(1992),963;
+F    CT   H1    50.0      109.50  !  JCC,13,(1992),963;
+F    CT   CT    50.0      109.00  !  
+F    CT   H2    50.0      109.50  !
+Cl   CT   CT    50.0      108.50  !  (6-31g* opt value)
+Cl   CT   H1    50.0      108.50  !  (6-31g* opt value)  
+Br   CT   CT    50.0      108.00  !  Junmei et al 99 
+Br   CT   H1    50.0      106.50  !  Junmei et al 99 
+I    CT   CT    50.0      106.00  !  Junmei et al,99 
+CT   CC   NA    70.0      120.00  !  AA his
+CT   CC   CV    70.0      120.00  !  AA his
+CT   CC   NB    70.0      120.00  !  AA his
+CV   CC   NA    70.0      120.00  !  AA his
+CW   CC   NA    70.0      120.00  !  AA his
+CW   CC   NB    70.0      120.00  !  AA his
+CT   CC   CW    70.0      120.00  !  AA his
+H5   CR   NA    50.0      120.00  !  AA his
+H5   CR   NB    50.0      120.00  !  AA his
+NA   CR   NA    70.0      120.00  !  AA his
+NA   CR   NB    70.0      120.00  !  AA his
+CC   CV   H4    50.0      120.00  !  AA his
+CC   CV   NB    70.0      120.00  !  AA his
+H4   CV   NB    50.0      120.00  !  AA his
+CC   CW   H4    50.0      120.00  !  AA his
+CC   CW   NA    70.0      120.00  !  AA his
+CG   CW   H4    50.0      120.00  !  AA trp
+CG   CW   NA    70.0      108.70  !  AA trp
+H4   CW   NA    50.0      120.00  !  AA his
+CB   CG   CT    70.0      128.60  !  AA trp
+CB   CG   CW    63.0      106.40  !  changed from 85.0  bsd on C6H6 nmodes; AA trp
+CT   CG   CW    70.0      125.00  !  AA trp
+CA   CN   CB    63.0      122.70  !  changed from 85.0  bsd on C6H6 nmodes; AA trp
+CA   CN   NA    70.0      132.80  !  AA trp
+CB   CN   NA    70.0      104.40  !  AA trp
+CT   CY   NY    80.0      180.00  !  Junmei et al, 1999
+CT   CZ   CZ    80.0      180.00  !  Junmei et al, 1999
+CZ   CZ   HZ    50.0      180.00  !  Junmei et al, 1999
+C    N    CT    50.0      121.90  !  AA general
+C    N    CX    50.0      121.90  !  AA general  (was C-N-CT)
+C    N    H     50.0      120.00  !  AA general, gln, asn,changed based on NMA nmodes
+CT   N    H     50.0      118.04  !  AA general,     changed based on NMA nmodes
+CX   N    H     50.0      118.04  !  AA general,     (was CT-N-H)
+CT   N    CT    50.0      118.00  !  AA pro             (DETAR JACS 99,1232)
+CT   N    CX    50.0      118.00  !  AA pro             (DETAR JACS 99,1232) (was CT-N -CT)
+H    N    H     35.0      120.00  !  ade,cyt,gua,gln,asn     **
+C    NG   CM    70.0      121.60  !
+C    NG   CS    70.0      121.60  !
+C    NG   CT    70.0      117.60  !
+C    NG   H     50.0      119.20  !  changed based on NMA nmodes
+CB   NG   CK    70.0      105.40  !
+CB   NG   CP    70.0      105.40  !
+CB   NG   CT    70.0      125.80  !
+CB   NG   H     50.0      125.80  !  for unmethylated n.a. bases,chngd bsd NMA nmodes
+CK   NG   CT    70.0      128.80  !
+CK   NG   H     50.0      128.80  !  for unmethylated n.a. bases,chngd bsd NMA nmodes
+CP   NG   CT    70.0      128.80  !
+CP   NG   H     50.0      128.80  !  for unmethylated n.a. bases,chngd bsd NMA nmodes
+CM   NG   CT    70.0      121.20  !
+CM   NG   H     50.0      121.20  !  for unmethylated n.a. bases,chngd bsd NMA nmodes
+CS   NG   CT    70.0      121.20  !
+CS   NG   H     50.0      121.20  !  for unmethylated n.a. bases,chngd bsd NMA nmodes
+CA   N2   H     50.0      120.00  !  
+CA   N2   CT    50.0      123.20  !  AA arg
+CT   N2   H     50.0      118.40  !  AA arg
+H    N2   H     35.0      120.00  !  
+CT   N3   H     50.0      109.50  !  AA lys,     changed based on NMA nmodes
+CX   N3   H     50.0      109.50  !  AA lys,     changed based on NMA nmodes (was CT-N3-H )
+CT   N3   CT    50.0      109.50  !  AA pro/nt
+CT   N3   CX    50.0      109.50  !  AA pro/nt (was CT-N3-CT)
+H    N3   H     35.0      109.50  !  AA lys, AA(end)
+CT   NT   H     50.0      109.50  !  neutral amines 
+CT   NT   CT    50.0      109.50  !  neutral amines 
+H    NT   H     35.0      109.50  !  neutral amines 
+C    NA   C     70.0      126.40  !
+C    NA   CA    70.0      125.20  !
+C    NA   H     50.0      116.80  !  changed based on NMA nmodes
+CA   NA   H     50.0      118.00  !  changed based on NMA nmodes
+CC   NA   CR    70.0      120.00  !  AA his
+CC   NA   H     50.0      120.00  !  AA his,    changed based on NMA nmodes
+CR   NA   CW    70.0      120.00  !  AA his
+CR   NA   H     50.0      120.00  !  AA his,    changed based on NMA nmodes
+CW   NA   H     50.0      120.00  !  AA his,    changed based on NMA nmodes
+CN   NA   CW    70.0      111.60  !  AA trp
+CN   NA   H     50.0      123.10  !  AA trp,    changed based on NMA nmodes
+CB   NB   CK    70.0      103.80  !
+CB   NB   CP    70.0      103.80  !
+CC   NB   CR    70.0      117.00  !  AA his
+CR   NB   CV    70.0      117.00  !  AA his
+C    NC   CA    70.0      120.50  !
+CA   NC   CB    70.0      112.20  !
+CA   NC   CQ    70.0      118.60  !
+CB   NC   CQ    70.0      111.00  !
+C    OH   HO    50.0      113.00  !  (not used in tyr anymore)
+CA   OH   HO    50.0      113.00  !  replacement in tyr
+CT   OH   HO    55.0      108.50  !
+HO   OH   P     45.0      108.50  !
+C    OS   CT    60.0      117.00  !  Junmei et al, 1999
+CM   OS   CT    60.0      117.00  !  Junmei et al, 1999
+CS   OS   CT    60.0      117.00  !  Junmei et al, 1999
+CT   OS   CT    60.0      109.50  !
+CT   OS   P    100.0      120.50  !
+C    OS   P    100.0      120.50  !  phosphotyrosine
+P    OS   P    100.0      120.50  !
+O2   P    OH    45.0      108.23  !
+O2   P    O2   140.0      119.90  !
+OP   P    OP   140.0      119.90  !
+OP   P    OS   100.0      108.23  !
+O2   P    OS   100.0      108.23  !
+OH   P    OS    45.0      102.60  !
+OS   P    OS    45.0      102.60  !
+CT   S    CT    62.0       98.90  !  AA met
+CT   S    S     68.0      103.70  !  AA cyx             (SCHERAGA  JPC 79,1428)
+CT   SH   HS    43.0       96.00  !  changed from 44.0 based on methanethiol nmodes
+HS   SH   HS    35.0       92.07  !  AA cys
+CB   NB   EP   150.0       126.0  !  NA
+CC   NB   EP   150.0       126.0  !  his,NA
+CK   NB   EP   150.0       126.0  !  NA
+CP   NB   EP   150.0       126.0  !  NA
+CR   NB   EP   150.0       126.0  !  his,NA
+CV   NB   EP   150.0       126.0  !  his,NA
+C    NC   EP   150.0       120.0  !  NA
+CA   NC   EP   150.0       120.0  !  NA
+CB   NC   EP   150.0       120.0  !  NA
+CQ   NC   EP   150.0       120.0  !  NA
+CT   N3   EP   150.0       109.5  !  in neutral lysine
+H    N3   EP   150.0       109.5  !  in neutral lysine
+CT   NT   EP   150.0       109.5  !
+H    NT   EP   150.0       109.5  !
+C    O    EP   150.0       120.0  !
+EP   O    EP   150.0       120.0  !
+C    OH   EP   150.0       120.0  !
+CT   OH   EP   150.0       109.5  !
+HO   OH   EP   150.0       109.5  !
+EP   OH   EP   150.0       109.5  !
+C    OS   EP   150.0       109.5  !
+CM   OS   EP   150.0       109.5  !  methyl vinyl ether
+CS   OS   EP   150.0       109.5  !  methyl vinyl ether
+CT   OS   EP   150.0       109.5  !
+EP   OS   EP   150.0       109.5  !
+CT   S    EP   150.0        90.0  !  cys,cyx,met
+CT   SH   EP   150.0        90.0  !  cys,cyx,met
+P    OS   EP   150.0       109.5  !  NA
+EP   S    EP   150.0       180.0  !  cys,cyx,met
+EP   SH   EP   150.0       180.0  !  cys,cyx,met
+HS   SH   EP   150.0        90.0  !  cys  
+H1   CI   CT    50.0      109.50  !  parmbsc0
+H1   CI   H1    35.0      109.50  !  parmbsc0
+CI   CT   H1    50.0      109.50  !  parmbsc0
+CI   CT   OS    50.0      109.50  !  parmbsc0
+CI   CT   CT    40.0      109.50  !  parmbsc0
+OS   CI   H1    50.0      109.50  ! parmbsc0
+OS   CI   CT    50.0      109.50  ! parmbsc0
+P    OS   CI   100.0      120.50  ! parmbsc0
+OH   CI   H1    50.0      109.50  ! parmbsc0
+OH   CI   CT    50.0      109.50  ! parmbsc0
+HO   OH   CI    55.0      108.50  ! parmbsc0
+H5   C5   NG    50.0      123.05  !
+H5   C5   NB    50.0      123.05  !
+NG   C5   NB    70.0      113.90  !
+CB   NG   C5    70.0      105.40  !
+C5   NG   CT    70.0      128.80  !
+CB   NB   C5    70.0      103.80  !
+C4   C    NA    70.0      114.10  !
+C4   C    O     80.0      125.30  !
+C4   CA   N2    70.0      120.10  !
+C4   CA   NC    70.0      121.50  !
+C    C4   C4    63.0      120.70  !  changed from 85.0  bsd on C6H6 nmodes; NA thy
+C    C4   CT    70.0      119.70  !
+C    C4   HA    50.0      119.70  !
+C    C4   H4    50.0      119.70  !
+CA   C4   C4    63.0      117.00  !  changed from 85.0  bsd on C6H6 nmodes; NA cyt
+CA   C4   HA    50.0      123.30  !
+CA   C4   H4    50.0      123.30  !
+C4   C4   CT    70.0      119.70  !
+C4   C4   HA    50.0      119.70  !
+C4   C4   H4    50.0      119.70  !
+C4   C4   NG    70.0      121.20  !
+H4   C4   NG    50.0      119.10  !
+H1   CT   C4    50.0      109.50  !  Junmei et al, 1999 
+HC   CT   C4    50.0      109.50  !  changed based on NMA nmodes
+C    NG   C4    70.0      121.60  !
+C4   NG   CT    70.0      121.20  !
+EP   S    S    150.0       96.70  !  AA cyx (dac, from parm91 LP-S-S)
+N    C    2C    70.0      116.60  !
+O    C    2C    80.0      120.40  !
+OH   C    2C    80.0      110.00  !
+CB   CG   2C    70.0      128.60  !
+CW   CG   2C    70.0      125.00  !
+C8   C8   C8    40.0      109.50  !
+C8   C8   CX    40.0      109.50  !
+C8   C8   H1    50.0      109.50  !
+C8   C8   HC    50.0      109.50  !
+C8   C8   HP    50.0      109.50  !
+C8   C8   N2    80.0      111.20  !
+C8   C8   N3    80.0      111.20  !
+CX   C8   HC    50.0      109.50  !
+H1   C8   H1    35.0      109.50  !
+H1   C8   N2    50.0      109.50  !
+HC   C8   HC    35.0      109.50  !
+HP   C8   HP    35.0      109.50  !
+HP   C8   N3    50.0      109.50  !
+CA   CA   2C    70.0      120.00  !
+CV   CC   2C    70.0      120.00  !
+CW   CC   2C    70.0      120.00  !
+NA   CC   2C    70.0      120.00  !
+NB   CC   2C    70.0      120.00  !
+O2   CO   O2    80.0      126.00  !
+O2   CO   2C    70.0      117.00  !
+HC   CT   2C    50.0      109.50  !
+HC   CT   3C    50.0      109.50  !
+C    CX   C8    63.0      111.10  !
+C    CX   2C    63.0      111.10  !
+C    CX   3C    63.0      111.10  !
+C8   CX   H1    50.0      109.50  !
+C8   CX   N     80.0      109.70  !
+C8   CX   N3    80.0      111.20  !
+H1   CX   2C    50.0      109.50  !
+H1   CX   3C    50.0      109.50  !
+HP   CX   C8    50.0      109.50  !  changed based on NMA nmodes (was CT-CT-HP)
+HP   CX   CG    50.0      109.50  !  changed based on NMA nmodes (was CT-CT-HP)
+HP   CX   2C    50.0      109.50  !  changed based on NMA nmodes (was CT-CT-HP)
+HP   CX   3C    50.0      109.50  !  changed based on NMA nmodes (was CT-CT-HP)
+N    CX   2C    80.0      109.70  !
+N    CX   3C    80.0      109.70  !
+N3   CX   2C    80.0      111.20  !
+N3   CX   3C    80.0      111.20  !
+C8   N2   CA    50.0      123.20  !
+C8   N2   H     50.0      118.40  !
+C8   N3   H     50.0      109.50  !
+HO   OH   2C    55.0      108.50  !
+HO   OH   3C    55.0      108.50  !
+CT   S    2C    62.0       98.90  !
+2C   S    S     68.0      103.70  !
+HS   SH   2C    43.0       96.00  !
+C    2C   CX    63.0      111.10  !
+C    2C   HC    50.0      109.50  !
+C    2C   2C    63.0      111.10  !
+CG   2C   CX    63.0      115.60  !
+CG   2C   HC    50.0      109.50  !
+CA   2C   CX    63.0      114.00  !
+CA   2C   HC    50.0      109.50  !
+CC   2C   CX    63.0      113.10  !
+CC   2C   HC    50.0      109.50  !
+CO   2C   CX    63.0      111.10  !
+CO   2C   HC    50.0      109.50  !
+CO   2C   2C    63.0      111.10  !
+CT   2C   HC    50.0      109.50  !
+CT   2C   3C    40.0      109.50  !
+CX   2C   H1    50.0      109.50  !
+CX   2C   HC    50.0      109.50  !
+CX   2C   OH    50.0      109.50  !
+CX   2C   S     50.0      114.70  !
+CX   2C   SH    50.0      108.60  !
+CX   2C   2C    40.0      109.50  !
+CX   2C   3C    40.0      109.50  !
+H1   2C   H1    35.0      109.50  !
+H1   2C   OH    50.0      109.50  !
+H1   2C   S     50.0      109.50  !
+H1   2C   SH    50.0      109.50  !
+H1   2C   2C    50.0      109.50  !
+HC   2C   HC    35.0      109.50  !
+HC   2C   2C    50.0      109.50  !
+HC   2C   3C    50.0      109.50  !
+S    2C   2C    50.0      114.70  !
+CT   3C   CT    40.0      109.50  !
+CT   3C   CX    40.0      109.50  !
+CT   3C   H1    50.0      109.50  !
+CT   3C   HC    50.0      109.50  !
+CT   3C   OH    50.0      109.50  !
+CT   3C   2C    40.0      109.50  !
+CX   3C   H1    50.0      109.50  !
+CX   3C   HC    50.0      109.50  !
+CX   3C   OH    50.0      109.50  !
+CX   3C   2C    40.0      109.50  !
+H1   3C   OH    50.0      109.50  !
+HC   3C   2C    50.0      109.50  !
+
+PHI
+X   C   C   X    3.62500000     2   180.0   !  Junmei et al, 1999
+X   C   CA  X    3.62500000     2   180.0   !  intrpol.bsd.on C6H6
+X   C   CB  X    3.00000000     2   180.0   !  intrpol.bsd.on C6H6
+X   C   CM  X    2.17500000     2   180.0   !  intrpol.bsd.on C6H6
+X   C   CS  X    2.17500000     2   180.0   !  intrpol.bsd.on C6H6
+X   C   CT  X    0.00000000     2   0.000   !  JCC,7,(1986),230
+X   C   CX  X    0.00000000     2   0.000   !  JCC,7,(1986),230 (was X -C -CT-X )
+X   C   N   X    2.50000000     2   180.0   !  AA,NMA
+X   C   NG  X    1.45000000     2   180.0   !  JCC,7,(1986),230
+X   C   NA  X    1.35000000     2   180.0   !  JCC,7,(1986),230
+X   C   NC  X    4.00000000     2   180.0   !  JCC,7,(1986),230
+X   C   O   X    2.80000000     2   180.0   !  Junmei et al, 1999
+X   C   OH  X    2.30000000     2   180.0   !  Junmei et al, 1999
+X   C   OS  X    2.70000000     2   180.0   !  Junmei et al, 1999
+X   CA  CA  X    3.62500000     2   180.0   !  intrpol.bsd.on C6H6
+X   CA  CB  X    3.50000000     2   180.0   !  intrpol.bsd.on C6H6
+X   CA  CM  X    2.55000000     2   180.0   !  intrpol.bsd.on C6H6
+X   CA  CS  X    2.55000000     2   180.0   !  intrpol.bsd.on C6H6
+X   CA  CN  X    3.62500000     2   180.0   !  reinterpolated 93'
+X   CA  CT  X    0.00000000     2   0.000   !  JCC,7,(1986),230
+X   CA  N2  X    2.40000000     2   180.0   !  reinterpolated 93'
+X   CA  NA  X    1.50000000     2   180.0   !  JCC,7,(1986),230
+X   CA  NC  X    4.80000000     2   180.0   !  JCC,7,(1986),230
+X   CA  OH  X    0.90000000     2   180.0   !  Junmei et al, 99
+X   CB  CB  X    5.45000000     2   180.0   !  intrpol.bsd.on C6H6
+X   CB  CN  X    3.00000000     2   180.0   !  reinterpolated 93'
+X   CB  NG  X    1.65000000     2   180.0   !  JCC,7,(1986),230
+X   CB  NB  X    2.55000000     2   180.0   !  JCC,7,(1986),230
+X   CB  NC  X    4.15000000     2   180.0   !  JCC,7,(1986),230
+X   CC  CT  X    0.00000000     2   0.000   !  JCC,7,(1986),230
+X   CC  CV  X    5.15000000     2   180.0   !  intrpol.bsd.on C6H6
+X   CC  CW  X    5.37500000     2   180.0   !  intrpol.bsd.on C6H6
+X   CC  NA  X    1.40000000     2   180.0   !  JCC,7,(1986),230
+X   CC  NB  X    2.40000000     2   180.0   !  JCC,7,(1986),230
+X   CD  CD  X    1.00000000     2   180.0   !  Junmei et al, 1999
+X   CD  CT  X    0.00000000     2   0.000   !  Junmei et al, 1999
+X   CD  CM  X    6.65000000     2   180.0   !  Junmei et al, 1999
+X   CD  CS  X    6.65000000     2   180.0   !  Junmei et al, 1999
+X   CK  NG  X    1.70000000     2   180.0   !  JCC,7,(1986),230
+X   CK  NB  X    10.0000000     2   180.0   !  JCC,7,(1986),230
+X   CP  NG  X    1.70000000     2   180.0   !  JCC,7,(1986),230
+X   CP  NB  X    10.0000000     2   180.0   !  JCC,7,(1986),230
+X   CM  CM  X    6.65000000     2   180.0   !  intrpol.bsd.on C6H6
+X   CM  CT  X    0.00000000     3   0.000   !  JCC,7,(1986),230
+X   CM  NG  X    1.85000000     2   180.0   !  JCC,7,(1986),230
+X   CM  OS  X    1.05000000     2   180.0   !  Junmei et al, 1999
+X   CS  CS  X    6.65000000     2   180.0   !  intrpol.bsd.on C6H6
+X   CS  CT  X    0.00000000     3   0.000   !  JCC,7,(1986),230
+X   CS  NG  X    1.85000000     2   180.0   !  JCC,7,(1986),230
+X   CS  OS  X    1.05000000     2   180.0   !  Junmei et al, 1999
+X   CN  NA  X    1.52500000     2   180.0   !  reinterpolated 93'
+X   CQ  NC  X    6.80000000     2   180.0   !  JCC,7,(1986),230
+X   CT  CT  X    0.15555556     3   0.000   !  JCC,7,(1986),230
+X   CT  CX  X    0.15555556     3   0.000   !  JCC,7,(1986),230 (was X -CT-CT-X )
+X   CT  CY  X    0.00000000     1   0.000   !  Junmei et al, 1999
+X   CT  CZ  X    0.00000000     1   0.000   !  Junmei et al, 1999
+X   CT  N   X    0.00000000     2   0.000   !  JCC,7,(1986),230
+X   CX  N   X    0.00000000     2   0.000   !  JCC,7,(1986),230 (was X -CT-N -X )
+X   CT  NG  X    0.00000000     2   0.000   !  JCC,7,(1986),230
+X   CT  N2  X    0.00000000     3   0.000   !  JCC,7,(1986),230
+X   CT  NT  X    0.30000000     3   0.000   !  Junmei et al, 1999
+X   CT  N3  X    0.15555556     3   0.000   !  JCC,7,(1986),230
+X   CX  N3  X    0.15555556     3   0.000   !  JCC,7,(1986),230 (was X -CT-N3-X )
+X   CT  OH  X    0.16666667     3   0.000   !  JCC,7,(1986),230
+X   CT  OS  X    0.38333333     3   0.000   !  JCC,7,(1986),230
+X   CT  S   X    0.33333333     3   0.000   !  JCC,7,(1986),230
+X   CT  SH  X    0.25000000     3   0.000   !  JCC,7,(1986),230
+X   CG  CB  X    1.67500000     2   180.0   !  intrpol.bsd.onC6H6aa
+X   CG  CT  X    0.00000000     2   0.000   !  JCC,7,(1986),230
+X   CG  CW  X    6.52500000     2   180.0   !  intrpol.bsd.on C6H6
+X   CR  NA  X    2.32500000     2   180.0   !  JCC,7,(1986),230
+X   CR  NB  X    5.00000000     2   180.0   !  JCC,7,(1986),230
+X   CV  NB  X    2.40000000     2   180.0   !  JCC,7,(1986),230
+X   CW  NA  X    1.50000000     2   180.0   !  JCC,7,(1986),230
+X   OH  P   X    0.25000000     3   0.000   !  JCC,7,(1986),230
+X   OS  P   X    0.25000000     3   0.000   !  JCC,7,(1986),230
+X   CI  OS  X    0.38333333     3   0.000   ! 
+X   CI  OH  X    0.16666667     3   0.000   ! 
+X   CI  CT  X    0.15555556     3   0.000   ! 
+X   C5  NG  X    1.70000000     2   180.0   !  JCC,7,(1986),230
+X   C5  NB  X    10.0000000     2   180.0   !  JCC,7,(1986),230
+X   C   C4  X    2.17500000     2   180.0   !  intrpol.bsd.on C6H6
+X   CA  C4  X    2.55000000     2   180.0   !  intrpol.bsd.on C6H6
+X   C4  C4  X    6.65000000     2   180.0   !  intrpol.bsd.on C6H6
+X   C4  CT  X    0.00000000     3   0.000   !  JCC,7,(1986),230
+X   C4  NG  X    1.85000000     2   180.0   !  JCC,7,(1986),230
+CT  OS  CT  CI   0.38300000     3   0.000   ! 
+CT  OS  CT  CI   0.10000000     2   180.0   ! 
+H1  CI  CT  OS   0.25000000     1   0.000   ! 
+H1  CI  CT  OH   0.25000000     1   0.000   ! 
+H1  CT  CI  OS   0.25000000     1   0.000   ! 
+H1  CT  CI  OH   0.25000000     1   0.000   ! 
+CI  CT  CT  CT   0.18000000     3   0.000   ! 
+CI  CT  CT  CT   0.25000000     2   180.0   ! 
+CI  CT  CT  CT   0.20000000     1   180.0   ! 
+OP  P   OS  CA   0.00000000     1   180.0   !  phosphotyrosine
+CC  NA  P   OP   0.24000000     3   0.000   !  phosphohistidine
+CR  NA  P   OP   0.00000000     3   0.000   !  phosphohistidine
+OS  P   OS  CI   0.18518100     1   31.79508   !  alfa
+OS  P   OS  CI   1.25653100     2   351.95960   !  alfa
+OS  P   OS  CI   0.35485800     3   357.24748   !  alfa
+OH  P   OS  CI   0.18518100     1   31.79508   !  alfa
+OH  P   OS  CI   1.25653100     2   351.95960   !  alfa
+OH  P   OS  CI   0.35485800     3   357.24748   !  alfa
+CT  CT  CI  OS   1.17804000     1   190.97653   !  gamma
+CT  CT  CI  OS   0.09210200     2   295.63279   !  gamma
+CT  CT  CI  OS   0.96283000     3   348.09535   !  gamma
+CT  CT  CI  OH   1.17804000     1   190.97653   !  gamma
+CT  CT  CI  OH   0.09210200     2   295.63279   !  gamma
+CT  CT  CI  OH   0.96283000     3   348.09535   !  gamma
+HC  CT  C4  C4   0.38000000     3   180.0   !  Junmei et al, 1999
+HC  CT  C4  C4   1.15000000     1   0.000   !  Junmei et al, 1999
+C4  C4  C   O    2.17500000     2   180.0   !  Junmei et al, 1999
+C4  C4  C   O    0.30000000     3   0.000   !  Junmei et al, 1999
+OS  CT  NG  C5   0.96561000     1   68.7902   !  ol3 chi ade
+OS  CT  NG  C5   1.07403000     2   15.6360   !  ol3 chi ade
+OS  CT  NG  C5   0.45754000     3   171.5787   !  ol3 chi ade
+OS  CT  NG  C5   0.30917000     4   19.0921   !  ol3 chi ade
+OS  CT  NG  CP   0.70510000     1   74.7558   !  ol3 chi gua
+OS  CT  NG  CP   1.06546000     2   6.2286   !  ol3 chi gua
+OS  CT  NG  CP   0.44273000     3   168.6503   !  ol3 chi gua
+OS  CT  NG  CP   0.25602000     4   3.9746   !  ol3 chi gua
+OS  CT  NG  C4   1.22506000     1   146.9892   !  ol3 chi cyt
+OS  CT  NG  C4   1.63459000     2   16.4766   !  ol3 chi cyt
+OS  CT  NG  C4   0.93747000     3   185.8774   !  ol3 chi cyt
+OS  CT  NG  C4   0.31033000     4   32.1590   !  ol3 chi cyt
+OS  CT  NG  CS   1.02514000     1   149.8583   !  ol3 chi ura
+OS  CT  NG  CS   1.74876000     2   16.7648   !  ol3 chi ura
+OS  CT  NG  CS   0.58150000     3   179.3474   !  ol3 chi ura
+OS  CT  NG  CS   0.35148000     4   16.0016   !  ol3 chi ura
+C   N   CX  C    0.00000000     4   0.000   !  four amplitudes and
+C   N   CX  C    0.42000000     3   0.000   !  phases for phi
+C   N   CX  C    0.27000000     2   0.000   ! 
+C   N   CX  C    0.00000000     1   0.000   ! 
+N   CX  C   N    0.00000000     4   0.000   !  four amplitudes and
+N   CX  C   N    0.55000000     3   180.0   !  phases for psi
+N   CX  C   N    1.58000000     2   180.0   ! 
+N   CX  C   N    0.45000000     1   180.0   ! 
+CT  CT  N   C    0.00000000     4   0.000   !  four amplitudes and
+CT  CT  N   C    0.40000000     3   0.000   !  phases for phi'
+CT  CT  N   C    2.00000000     2   0.000   ! 
+CT  CT  N   C    2.00000000     1   0.000   ! 
+!CT  CX  N   C    0.00000000     4   0.000   !  four amplitudes and
+!CT  CX  N   C    0.40000000     3   0.000   !  phases for phi'
+!CT  CX  N   C    2.00000000     2   0.000   ! 
+!CT  CX  N   C    2.00000000     1   0.000   ! 
+CT  CT  C   N    0.00000000     4   0.000   !  four amplitudes and
+CT  CT  C   N    0.40000000     3   0.000   !  phases for psi'
+CT  CT  C   N    0.20000000     2   0.000   ! 
+CT  CT  C   N    0.20000000     1   0.000   ! 
+!CT  CX  C   N    0.00000000     4   0.000   !  four amplitudes and
+!CT  CX  C   N    0.40000000     3   0.000   !  phases for psi'
+!CT  CX  C   N    0.20000000     2   0.000   ! 
+!CT  CX  C   N    0.20000000     1   0.000   ! 
+CX  CT  C   N    0.00000000     4   0.000   !  four amplitudes and
+CX  CT  C   N    0.40000000     3   0.000   !  phases for psi'
+CX  CT  C   N    0.20000000     2   0.000   ! 
+CX  CT  C   N    0.20000000     1   0.000   ! 
+H   N   C   O    2.50000000     2   180.0   !  JCC,7,(1986),230
+H   N   C   O    2.00000000     1   0.000   !  J.C.cistrans-NMA DE
+CT  S   S   CT   3.50000000     2   0.000   !  JCC,7,(1986),230
+CT  S   S   CT   0.60000000     3   0.000   !  JCC,7,(1986),230
+OH  P   OS  CT   0.25000000     3   0.000   !  JCC,7,(1986),230
+OH  P   OS  CT   1.20000000     2   0.000   !  gg&gt ene.631g*/mp2
+OS  P   OS  CT   0.25000000     3   0.000   !  JCC,7,(1986),230
+OS  P   OS  CT   1.20000000     2   0.000   !  gg&gt ene.631g*/mp2
+H1  CT  C   O    0.80000000     1   0.000   !  Junmei et al, 1999
+H1  CT  C   O    0.00000000     2   0.000   !  Explicit of wild card X-C-CT-X
+H1  CT  C   O    0.08000000     3   180.0   !  Junmei et al, 1999
+H1  CX  C   O    0.80000000     1   0.000   !  Junmei et al, 1999 (was H1-CT-C -O )
+H1  CX  C   O    0.00000000     2   0.000   !  Explicit of wild card X-C-CT-X
+H1  CX  C   O    0.08000000     3   180.0   !  Junmei et al, 1999 (was H1-CT-C -O )
+HC  CT  C   O    0.80000000     1   0.000   !  Junmei et al, 1999
+HC  CT  C   O    0.00000000     2   0.000   !  Explicit of wild card X-C-CT-X
+HC  CT  C   O    0.08000000     3   180.0   !  Junmei et al, 1999
+HC  CT  CT  HC   0.15000000     3   0.000   !  Junmei et al, 1999
+HC  CT  CT  CT   0.16000000     3   0.000   !  Junmei et al, 1999
+HC  CT  CT  CX   0.16000000     3   0.000   !  Junmei et al, 1999 (was HC-CT-CT-CT)
+HC  CT  CM  CM   0.38000000     3   180.0   !  Junmei et al, 1999
+HC  CT  CM  CM   1.15000000     1   0.000   !  Junmei et al, 1999
+HC  CT  CS  CS   0.38000000     3   180.0   !  Junmei et al, 1999
+HC  CT  CS  CS   1.15000000     1   0.000   !  Junmei et al, 1999
+HO  OH  CT  CT   0.16000000     3   0.000   !  Junmei et al, 1999
+HO  OH  CT  CT   0.25000000     1   0.000   !  Junmei et al, 1999
+HO  OH  CT  CX   0.16000000     3   0.000   !  Junmei et al, 1999 (was HO-OH-CT-CT)
+HO  OH  CT  CX   0.25000000     1   0.000   !  Junmei et al, 1999 (was HO-OH-CT-CT)
+HO  OH  C   O    2.30000000     2   180.0   !  Junmei et al, 1999
+HO  OH  C   O    1.90000000     1   0.000   !  Junmei et al, 1999
+CM  CM  C   O    2.17500000     2   180.0   !  Junmei et al, 1999
+CM  CM  C   O    0.30000000     3   0.000   !  Junmei et al, 1999
+CT  CM  CM  CT   6.65000000     2   180.0   !  Junmei et al, 1999
+CT  CM  CM  CT   1.90000000     1   180.0   !  Junmei et al, 1999
+CS  CS  C   O    2.17500000     2   180.0   !  Junmei et al, 1999
+CS  CS  C   O    0.30000000     3   0.000   !  Junmei et al, 1999
+CT  CS  CS  CT   6.65000000     2   180.0   !  Junmei et al, 1999
+CT  CS  CS  CT   1.90000000     1   180.0   !  Junmei et al, 1999
+CT  CT  CT  CT   0.18000000     3   0.000   !  Junmei et al, 1999
+CT  CT  CT  CT   0.25000000     2   180.0   !  Junmei et al, 1999
+CT  CT  CT  CT   0.20000000     1   180.0   !  Junmei et al, 1999
+CX  CT  CT  CT   0.18000000     3   0.000   !  Junmei et al, 1999 (was CT-CT-CT-CT)
+CX  CT  CT  CT   0.25000000     2   180.0   !  Junmei et al, 1999 (was CT-CT-CT-CT)
+CX  CT  CT  CT   0.20000000     1   180.0   !  Junmei et al, 1999 (was CT-CT-CT-CT)
+CT  CT  NT  CT   0.30000000     3   0.000   !  Junmei et al, 1999
+CT  CT  NT  CT   0.48000000     2   180.0   !  Junmei et al, 1999
+CT  CT  OS  CT   0.38300000     3   0.000   ! 
+CT  CT  OS  CT   0.10000000     2   180.0   ! 
+CT  CT  OS  C    0.38300000     3   0.000   !  Junmei et al, 1999
+CT  CT  OS  C    0.80000000     1   180.0   !  Junmei et al, 1999
+CT  OS  CT  OS   0.10000000     3   0.000   !  Junmei et al, 1999
+CT  OS  CT  OS   0.85000000     2   180.0   !  Junmei et al, 1999
+CT  OS  CT  OS   1.35000000     1   180.0   !  Junmei et al, 1999
+CT  OS  CT  NG   0.38300000     3   0.000   !  parm98.dat, TC,PC,PAK
+CT  OS  CT  NG   0.65000000     2   0.000   !  Piotr et al.
+CT  CZ  CZ  HZ   0.00000000     1   0.000   !  Junmei et al, 1999
+O   C   OS  CT   2.70000000     2   180.0   !  Junmei et al, 1999
+O   C   OS  CT   1.40000000     1   180.0   !  Junmei et al, 1999
+OS  CT  NG  CK   0.00000000     2   0.000   !  parm98, TC,PC,PAK
+OS  CT  NG  CK   2.50000000     1   0.000   !  parm98, TC,PC,PAK
+OS  CT  NG  CM   0.00000000     2   0.000   !  parm98, TC,PC,PAK
+OS  CT  NG  CM   2.50000000     1   0.000   !  parm98, TC,PC,PAK
+OS  CT  CT  OS   0.14400000     3   0.000   !  parm98, TC,PC,PAK
+OS  CT  CT  OS   1.17500000     2   0.000   !  Piotr et al.
+OS  CT  CT  OH   0.14400000     3   0.000   !  parm98, TC,PC,PAK
+OS  CT  CT  OH   1.17500000     2   0.000   !  parm98, TC,PC,PAK
+OH  CT  CT  OH   0.14400000     3   0.000   !  parm98, TC,PC,PAK
+OH  CT  CT  OH   1.17500000     2   0.000   !  parm98, TC,PC,PAK
+F   CT  CT  F    0.00000000     3   0.000   !  JCC,7,(1986),230
+F   CT  CT  F    1.20000000     1   180.0   !  Junmei et al, 1999
+Cl  CT  CT  Cl   0.00000000     3   0.000   !  JCC,7,(1986),230
+Cl  CT  CT  Cl   0.45000000     1   180.0   !  Junmei et al, 1999
+Br  CT  CT  Br   0.00000000     3   0.000   !  JCC,7,(1986),230
+Br  CT  CT  Br   0.00000000     1   180.0   !  Junmei et al, 1999
+H1  CT  CT  OS   0.00000000     3   0.000   !  JCC,7,(1986),230
+H1  CT  CT  OS   0.25000000     1   0.000   !  Junmei et al, 1999
+H1  CT  CT  OH   0.00000000     3   0.000   !  JCC,7,(1986),230
+H1  CT  CT  OH   0.25000000     1   0.000   !  Junmei et al, 1999
+H1  CX  CT  OH   0.00000000     3   0.000   !  JCC,7,(1986),230 (was H1-CT-CT-OH)
+H1  CX  CT  OH   0.25000000     1   0.000   !  Junmei et al, 1999 (was H1-CT-CT-OH)
+H1  CT  CT  F    0.00000000     3   0.000   !  JCC,7,(1986),230
+H1  CT  CT  F    0.19000000     1   0.000   !  Junmei et al, 1999
+H1  CT  CT  Cl   0.00000000     3   0.000   !  JCC,7,(1986),230
+H1  CT  CT  Cl   0.25000000     1   0.000   !  Junmei et al, 1999
+H1  CT  CT  Br   0.00000000     3   0.000   !  JCC,7,(1986),230
+H1  CT  CT  Br   0.55000000     1   0.000   !  Junmei et al, 1999
+HC  CT  CT  OS   0.00000000     3   0.000   !  JCC,7,(1986),230
+HC  CT  CT  OS   0.25000000     1   0.000   !  Junmei et al, 1999
+HC  CT  CT  OH   0.00000000     3   0.000   !  JCC,7,(1986),230
+HC  CT  CT  OH   0.25000000     1   0.000   !  Junmei et al, 1999
+HC  CT  CT  F    0.00000000     3   0.000   !  JCC,7,(1986),230
+HC  CT  CT  F    0.19000000     1   0.000   !  Junmei et al, 1999
+HC  CT  CT  Cl   0.00000000     3   0.000   !  JCC,7,(1986),230
+HC  CT  CT  Cl   0.25000000     1   0.000   !  Junmei et al, 1999
+HC  CT  CT  Br   0.00000000     3   0.000   !  JCC,7,(1986),230
+HC  CT  CT  Br   0.55000000     1   0.000   !  Junmei et al, 1999
+H1  CT  NT  EP   0.00000000     3   0.000   ! 
+CT  CT  NT  EP   0.00000000     3   0.000   ! 
+CT  C   N   EP   0.00000000     2   180.000   ! 
+O   C   N   EP   0.00000000     2   180.000   ! 
+H1  CT  OH  EP   0.00000000     3   0.000   ! 
+CT  CT  OH  EP   0.00000000     3   0.000   ! 
+H1  CT  OS  EP   0.00000000     3   0.000   ! 
+H2  CT  OS  EP   0.00000000     3   0.000   ! 
+CT  CT  OS  EP   0.00000000     3   0.000   ! 
+CM  CM  OS  EP   0.00000000     2   180.000   ! 
+HA  CM  OS  EP   0.00000000     2   180.000   ! 
+H4  CM  OS  EP   0.00000000     2   180.000   ! 
+CS  CS  OS  EP   0.00000000     2   180.000   ! 
+HA  CS  OS  EP   0.00000000     2   180.000   ! 
+H4  CS  OS  EP   0.00000000     2   180.000   ! 
+N   CT  CT  OH   0.00000000     1   0.000   !  HYP
+N   CT  CT  OH   1.49000000     2   0.000   !  HYP  (JCC 26:1612,2005)
+N   CT  CT  OH   0.15600000     3   0.000   !  HYP
+N   CT  CT  OH   0.00000000     4   0.000   !  HYP
+EP  S   S   CT   0.00000000     3   0.000   !  cyx (dac)
+EP  S   S   EP   0.00000000     3   0.000   !  cyx (dac)
+C8  CX  N   C    0.00000000     4   0.000   !  phi'
+C8  CX  N   C    0.80000000     3   0.000   ! 
+C8  CX  N   C    1.80000000     2   0.000   ! 
+C8  CX  N   C    2.00000000     1   0.000   ! 
+CT  CX  N   C    0.00000000     4   0.000   ! 
+CT  CX  N   C    0.80000000     3   0.000   ! 
+CT  CX  N   C    1.80000000     2   0.000   ! 
+CT  CX  N   C    2.00000000     1   0.000   ! 
+2C  CX  N   C    0.00000000     4   0.000   ! 
+2C  CX  N   C    0.80000000     3   0.000   ! 
+2C  CX  N   C    1.80000000     2   0.000   ! 
+2C  CX  N   C    2.00000000     1   0.000   ! 
+3C  CX  N   C    0.00000000     4   0.000   ! 
+3C  CX  N   C    0.80000000     3   0.000   ! 
+3C  CX  N   C    1.80000000     2   0.000   ! 
+3C  CX  N   C    2.00000000     1   0.000   ! 
+N   C   CX  C8   0.00000000     4   0.000   !  psi'
+N   C   CX  C8   0.40000000     3   0.000   ! 
+N   C   CX  C8   0.20000000     2   0.000   ! 
+N   C   CX  C8   0.20000000     1   0.000   ! 
+N   C   CX  CT   0.00000000     4   0.000   ! 
+N   C   CX  CT   0.40000000     3   0.000   ! 
+N   C   CX  CT   0.20000000     2   0.000   ! 
+N   C   CX  CT   0.20000000     1   0.000   ! 
+N   C   CX  2C   0.00000000     4   0.000   ! 
+N   C   CX  2C   0.40000000     3   0.000   ! 
+N   C   CX  2C   0.20000000     2   0.000   ! 
+N   C   CX  2C   0.20000000     1   0.000   ! 
+N   C   CX  3C   0.00000000     4   0.000   ! 
+N   C   CX  3C   0.40000000     3   0.000   ! 
+N   C   CX  3C   0.20000000     2   0.000   ! 
+N   C   CX  3C   0.20000000     1   0.000   ! 
+N   C   2C  HC   0.00000000     2   0.000   !  JCC,7,(1986),230 (X -C -CT-X )
+O   C   2C  HC   0.08000000     3   180.0   !  Junmei et al, 1999 (HC-CT-C -O )
+O   C   2C  HC   0.00000000     2   0.000   ! 
+O   C   2C  HC   0.80000000     1   0.000   ! 
+OH  C   2C  HC   0.00000000     2   0.000   ! 
+CB  CG  2C  HC   0.00000000     2   0.000   !  JCC,7,(1986),230 (X -C*-CT-X )
+CW  CG  2C  HC   0.00000000     2   0.000   ! 
+X   C8  C8  X    0.15555556     3   0.000   !  JCC,7,(1986),230 (X -CT-CT-X )
+C8  C8  C8  HC   0.16000000     3   0.000   !  Junmei et al, 1999 (was HC-CT-CT-CT)
+CX  C8  C8  HC   0.16000000     3   0.000   ! 
+HC  C8  C8  HC   0.15000000     3   0.000   !  Junmei et al, 1999 (HC-CT-CT-HC)
+X   C8  CX  X    0.15555556     3   0.000   ! 
+X   C8  N2  X    0.00000000     3   0.000   !  JCC,7,(1986),230 (X -CT-N2-X )
+X   C8  N3  X    0.15555556     3   0.000   !  JCC,7,(1986),230 (was X -CT-N3-X )
+X   CA  2C  X    0.00000000     2   0.000   !  JCC,7,(1986),230 (was X -CA-CT-X )
+2C  CC  CV  H4   5.15000000     2   180.0   ! 
+2C  CC  CV  NB   5.15000000     2   180.0   ! 
+2C  CC  CW  H4   5.37500000     2   180.0   ! 
+2C  CC  CW  NA   5.37500000     2   180.0   ! 
+2C  CC  NA  CR   1.40000000     2   180.0   ! 
+2C  CC  NA  H    1.40000000     2   180.0   ! 
+2C  CC  NB  CR   2.40000000     2   180.0   ! 
+CV  CC  2C  HC   0.00000000     2   0.000   ! 
+CW  CC  2C  HC   0.00000000     2   0.000   ! 
+NA  CC  2C  HC   0.00000000     2   0.000   ! 
+NB  CC  2C  HC   0.00000000     2   0.000   ! 
+O2  CO  2C  HC   0.00000000     2   0.000   ! 
+H1  CT  S   2C   0.33333333     3   0.000   ! 
+HC  CT  2C  HC   0.15000000     3   0.000   ! 
+HC  CT  2C  3C   0.16000000     3   0.000   ! 
+HC  CT  3C  CT   0.16000000     3   0.000   ! 
+HC  CT  3C  CX   0.16000000     3   0.000   ! 
+HC  CT  3C  H1   0.15555556     3   0.000   ! 
+HC  CT  3C  HC   0.15000000     3   0.000   ! 
+HC  CT  3C  OH   0.00000000     3   0.000   ! 
+HC  CT  3C  OH   0.25000000     1   0.000   ! 
+HC  CT  3C  2C   0.16000000     3   0.000   ! 
+X   CX  2C  X    0.15555556     3   0.000   ! 
+H1  CX  2C  OH   0.00000000     3   0.000   ! 
+H1  CX  2C  OH   0.25000000     1   0.000   ! 
+X   CX  3C  X    0.15555556     3   0.000   ! 
+H1  CX  3C  OH   0.00000000     3   0.000   ! 
+H1  CX  3C  OH   0.25000000     1   0.000   ! 
+HO  OH  2C  H1   0.16666667     3   0.000   !       JCC,7,(1986),230
+HO  OH  3C  H1   0.16666667     3   0.000   ! 
+EP  S   S   2C   0.00000000     3   0.000   !  cyx (dac)
+X   S   2C  X    0.33333333     3   0.000   !  JCC,7,(1986),230 (X -CT-S -X )
+X   SH  2C  X    0.25000000     3   0.000   !  JCC,7,(1986),230 (X -CT-SH-X )
+X   2C  2C  X    0.15555556     3   0.000   ! 
+CX  2C  2C  HC   0.16000000     3   0.000   !  Junmei et al, 1999
+HC  2C  2C  HC   0.15000000     3   0.000   !  Junmei et al, 1999
+CT  2C  3C  HC   0.16000000     3   0.000   !  Junmei et al, 1999
+CX  2C  3C  HC   0.16000000     3   0.000   ! 
+HC  2C  3C  CT   0.16000000     3   0.000   ! 
+HC  2C  3C  CX   0.16000000     3   0.000   ! 
+HC  2C  3C  HC   0.15000000     3   0.000   ! 
+C   CX  C8  C8   0.15555556     3   0.000   !  Arg Lys
+N   CX  C8  C8   0.15555556     3   0.000   ! 
+N3  CX  C8  C8   0.15555556     3   0.000   ! 
+CX  C8  C8  C8   0.18000000     3   0.000   ! 
+CX  C8  C8  C8   0.25000000     2   180.0   ! 
+CX  C8  C8  C8   0.20000000     1   180.0   ! 
+C8  C8  C8  N2   0.15555556     3   0.000   ! 
+C8  C8  N2  CA   0.00000000     1   0.000   ! 
+C8  C8  C8  C8   0.18000000     3   0.000   ! 
+C8  C8  C8  C8   0.25000000     2   180.0   ! 
+C8  C8  C8  C8   0.20000000     1   180.0   ! 
+C8  C8  C8  N3   0.15555556     3   0.000   ! 
+C8  N2  CA  N2   0.00000000     4   0.000   !  Arg Lys copied
+C8  N2  CA  N2   2.40000000     2   180.0   ! 
+H   N2  CA  N2   0.00000000     4   0.000   ! 
+H   N2  CA  N2   2.40000000     2   180.0   ! 
+C8  C8  N3  H    0.15555556     3   0.000   ! 
+C   CX  2C  SH   0.07500000     4   0.000   !     C
+C   CX  2C  SH   0.25100000     3   0.000   ! 
+C   CX  2C  SH   0.33700000     2   180.0   ! 
+C   CX  2C  SH   0.26900000     1   180.0   ! 
+N   CX  2C  SH   0.03300000     4   0.000   ! 
+N   CX  2C  SH   0.25100000     3   0.000   ! 
+N   CX  2C  SH   0.48600000     2   180.0   ! 
+N   CX  2C  SH   0.15400000     1   0.000   ! 
+N3  CX  2C  SH   0.03300000     4   0.000   ! 
+N3  CX  2C  SH   0.25100000     3   0.000   ! 
+N3  CX  2C  SH   0.48600000     2   180.0   ! 
+N3  CX  2C  SH   0.15400000     1   0.000   ! 
+CX  2C  SH  HS   0.03000000     4   0.000   ! 
+CX  2C  SH  HS   0.25200000     3   0.000   ! 
+CX  2C  SH  HS   0.61200000     2   0.000   ! 
+CX  2C  SH  HS   0.09200000     1   0.000   ! 
+C   CX  2C  CO   0.15400000     4   0.000   !     D
+C   CX  2C  CO   0.05800000     3   0.000   ! 
+C   CX  2C  CO   0.45900000     2   180.0   ! 
+C   CX  2C  CO   0.42400000     1   0.000   ! 
+N   CX  2C  CO   0.08900000     4   0.000   ! 
+N   CX  2C  CO   0.05800000     3   0.000   ! 
+N   CX  2C  CO   0.64700000     2   180.0   ! 
+N   CX  2C  CO   2.15400000     1   180.0   ! 
+N3  CX  2C  CO   0.08900000     4   0.000   ! 
+N3  CX  2C  CO   0.05800000     3   0.000   ! 
+N3  CX  2C  CO   0.64700000     2   180.0   ! 
+N3  CX  2C  CO   2.15400000     1   180.0   ! 
+CX  2C  CO  O2   0.03100000     4   180.0   ! 
+CX  2C  CO  O2   0.00000000     3   0.000   ! 
+CX  2C  CO  O2   0.76900000     2   180.0   ! 
+CX  2C  CO  O2   0.00000000     1   0.000   ! 
+C   CX  2C  C    0.10700000     4   0.000   !     DhN
+C   CX  2C  C    0.03300000     3   0.000   ! 
+C   CX  2C  C    0.30300000     2   180.0   ! 
+C   CX  2C  C    1.04600000     1   0.000   ! 
+N   CX  2C  C    0.05900000     4   0.000   ! 
+N   CX  2C  C    0.03300000     3   0.000   ! 
+N   CX  2C  C    0.29700000     2   180.0   ! 
+N   CX  2C  C    0.68800000     1   180.0   ! 
+N3  CX  2C  C    0.05900000     4   0.000   ! 
+N3  CX  2C  C    0.03300000     3   0.000   ! 
+N3  CX  2C  C    0.29700000     2   180.0   ! 
+N3  CX  2C  C    0.68800000     1   180.0   ! 
+CX  2C  C   O    0.00000000     1   0.000   ! 
+CX  2C  C   OH   0.19900000     4   180.0   ! 
+CX  2C  C   OH   0.00800000     3   0.000   ! 
+CX  2C  C   OH   0.57500000     2   180.0   ! 
+CX  2C  C   OH   1.19900000     1   180.0   ! 
+2C  C   OH  HO   0.11300000     4   0.000   ! 
+2C  C   OH  HO   0.47900000     3   0.000   ! 
+2C  C   OH  HO   2.70600000     2   180.0   ! 
+2C  C   OH  HO   0.44800000     1   180.0   ! 
+CX  2C  C   N    0.00800000     4   0.000   ! 
+CX  2C  C   N    0.30100000     3   180.0   ! 
+CX  2C  C   N    0.48500000     2   180.0   ! 
+CX  2C  C   N    0.82800000     1   180.0   ! 
+C   CX  CT  CC   0.02500000     4   0.000   !     Hie,dp
+C   CX  CT  CC   0.21900000     3   0.000   ! 
+C   CX  CT  CC   0.24400000     2   180.0   ! 
+C   CX  CT  CC   0.14300000     1   180.0   ! 
+N   CX  CT  CC   0.08900000     4   0.000   ! 
+N   CX  CT  CC   0.21900000     3   0.000   ! 
+N   CX  CT  CC   0.22100000     2   180.0   ! 
+N   CX  CT  CC   0.30600000     1   180.0   ! 
+N3  CX  CT  CC   0.08900000     4   0.000   ! 
+N3  CX  CT  CC   0.21900000     3   0.000   ! 
+N3  CX  CT  CC   0.22100000     2   180.0   ! 
+N3  CX  CT  CC   0.30600000     1   180.0   ! 
+CX  CT  CC  NA   0.03700000     4   180.0   ! 
+CX  CT  CC  NA   0.68600000     3   0.000   ! 
+CX  CT  CC  NA   0.39200000     2   180.0   ! 
+CX  CT  CC  NA   0.16000000     1   180.0   ! 
+CX  CT  CC  CV   0.01000000     4   180.0   ! 
+CX  CT  CC  CV   0.12200000     3   180.0   ! 
+CX  CT  CC  CV   0.75000000     2   0.000   ! 
+CX  CT  CC  CV   0.67400000     1   180.0   ! 
+CX  CT  CC  NB   0.04700000     4   180.0   ! 
+CX  CT  CC  NB   0.74000000     3   0.000   ! 
+CX  CT  CC  NB   0.20400000     2   0.000   ! 
+CX  CT  CC  NB   0.69000000     1   0.000   ! 
+C   CX  3C  CT   0.11200000     4   0.000   !     ITV
+C   CX  3C  CT   0.14800000     3   0.000   ! 
+C   CX  3C  CT   0.28900000     2   180.0   ! 
+C   CX  3C  CT   0.40600000     1   180.0   ! 
+C   CX  3C  2C   0.11500000     4   0.000   ! 
+C   CX  3C  2C   0.11300000     3   0.000   ! 
+C   CX  3C  2C   0.73500000     2   180.0   ! 
+C   CX  3C  2C   0.16200000     1   0.000   ! 
+N   CX  3C  CT   0.00100000     4   180.0   ! 
+N   CX  3C  CT   0.14800000     3   0.000   ! 
+N   CX  3C  CT   0.21600000     2   180.0   ! 
+N   CX  3C  CT   0.33700000     1   0.000   ! 
+N   CX  3C  2C   0.09700000     4   180.0   ! 
+N   CX  3C  2C   0.11300000     3   0.000   ! 
+N   CX  3C  2C   0.14400000     2   180.0   ! 
+N   CX  3C  2C   0.31000000     1   0.000   ! 
+N3  CX  3C  CT   0.00100000     4   180.0   ! 
+N3  CX  3C  CT   0.14800000     3   0.000   ! 
+N3  CX  3C  CT   0.21600000     2   180.0   ! 
+N3  CX  3C  CT   0.33700000     1   0.000   ! 
+N3  CX  3C  2C   0.09700000     4   180.0   ! 
+N3  CX  3C  2C   0.11300000     3   0.000   ! 
+N3  CX  3C  2C   0.14400000     2   180.0   ! 
+N3  CX  3C  2C   0.31000000     1   0.000   ! 
+CX  3C  2C  CT   0.23000000     4   0.000   ! 
+CX  3C  2C  CT   0.10700000     3   0.000   ! 
+CX  3C  2C  CT   0.05300000     2   0.000   ! 
+CX  3C  2C  CT   0.44700000     1   0.000   ! 
+CT  3C  2C  CT   0.22400000     4   0.000   ! 
+CT  3C  2C  CT   0.10700000     3   0.000   ! 
+CT  3C  2C  CT   0.07700000     2   180.0   ! 
+CT  3C  2C  CT   0.20200000     1   0.000   ! 
+C   CX  3C  OH   0.15600000     4   0.000   ! 
+C   CX  3C  OH   0.31500000     3   0.000   ! 
+C   CX  3C  OH   0.11900000     2   180.0   ! 
+C   CX  3C  OH   0.69700000     1   180.0   ! 
+N   CX  3C  OH   0.09500000     4   0.000   ! 
+N   CX  3C  OH   0.31500000     3   0.000   ! 
+N   CX  3C  OH   0.00600000     2   0.000   ! 
+N   CX  3C  OH   0.67400000     1   0.000   ! 
+N3  CX  3C  OH   0.09500000     4   0.000   ! 
+N3  CX  3C  OH   0.31500000     3   0.000   ! 
+N3  CX  3C  OH   0.00600000     2   0.000   ! 
+N3  CX  3C  OH   0.67400000     1   0.000   ! 
+CX  3C  OH  HO   0.01300000     4   0.000   ! 
+CX  3C  OH  HO   0.23600000     3   0.000   ! 
+CX  3C  OH  HO   0.25100000     2   0.000   ! 
+CX  3C  OH  HO   0.00600000     1   180.0   ! 
+CT  3C  OH  HO   0.04800000     4   0.000   ! 
+CT  3C  OH  HO   0.23600000     3   0.000   ! 
+CT  3C  OH  HO   0.07900000     2   180.0   ! 
+CT  3C  OH  HO   0.64300000     1   0.000   ! 
+C   CX  2C  3C   0.19000000     4   0.000   !     L
+C   CX  2C  3C   0.14400000     3   0.000   ! 
+C   CX  2C  3C   0.62000000     2   180.0   ! 
+C   CX  2C  3C   0.70600000     1   0.000   ! 
+N   CX  2C  3C   0.07300000     4   0.000   ! 
+N   CX  2C  3C   0.14400000     3   0.000   ! 
+N   CX  2C  3C   0.25900000     2   180.0   ! 
+N   CX  2C  3C   0.09800000     1   0.000   ! 
+N3  CX  2C  3C   0.07300000     4   0.000   ! 
+N3  CX  2C  3C   0.14400000     3   0.000   ! 
+N3  CX  2C  3C   0.25900000     2   180.0   ! 
+N3  CX  2C  3C   0.09800000     1   0.000   ! 
+CX  2C  3C  CT   0.17900000     4   0.000   ! 
+CX  2C  3C  CT   0.14200000     3   0.000   ! 
+CX  2C  3C  CT   0.02700000     2   180.0   ! 
+CX  2C  3C  CT   0.37900000     1   0.000   ! 
+C   CX  2C  OH   0.12900000     4   0.000   !     S
+C   CX  2C  OH   0.40100000     3   0.000   ! 
+C   CX  2C  OH   0.21800000     2   180.0   ! 
+C   CX  2C  OH   0.66100000     1   180.0   ! 
+N   CX  2C  OH   0.16000000     4   0.000   ! 
+N   CX  2C  OH   0.40100000     3   0.000   ! 
+N   CX  2C  OH   0.24600000     2   180.0   ! 
+N   CX  2C  OH   0.66600000     1   0.000   ! 
+N3  CX  2C  OH   0.16000000     4   0.000   ! 
+N3  CX  2C  OH   0.40100000     3   0.000   ! 
+N3  CX  2C  OH   0.24600000     2   180.0   ! 
+N3  CX  2C  OH   0.66600000     1   0.000   ! 
+CX  2C  OH  HO   0.00700000     4   0.000   ! 
+CX  2C  OH  HO   0.26700000     3   0.000   ! 
+CX  2C  OH  HO   0.44400000     2   0.000   ! 
+CX  2C  OH  HO   0.21100000     1   0.000   ! 
+C   CX  CT  CG   0.07400000     4   0.000   !     W_CB
+C   CX  CT  CG   0.23400000     3   0.000   ! 
+C   CX  CT  CG   0.35300000     2   180.0   ! 
+C   CX  CT  CG   0.01700000     1   180.0   ! 
+N   CX  CT  CG   0.03100000     4   0.000   ! 
+N   CX  CT  CG   0.23400000     3   0.000   ! 
+N   CX  CT  CG   0.31300000     2   180.0   ! 
+N   CX  CT  CG   0.07900000     1   0.000   ! 
+N3  CX  CT  CG   0.03100000     4   0.000   ! 
+N3  CX  CT  CG   0.23400000     3   0.000   ! 
+N3  CX  CT  CG   0.31300000     2   180.0   ! 
+N3  CX  CT  CG   0.07900000     1   0.000   ! 
+CX  CT  CG  CB   0.09500000     4   180.0   ! 
+CX  CT  CG  CB   0.81900000     3   0.000   ! 
+CX  CT  CG  CB   0.40800000     2   0.000   ! 
+CX  CT  CG  CB   0.36500000     1   0.000   ! 
+CX  CT  CG  CW   0.00000000     4   0.000   ! 
+CX  CT  CG  CW   0.00000000     3   0.000   ! 
+CX  CT  CG  CW   0.00000000     2   0.000   ! 
+CX  CT  CG  CW   0.00000000     1   0.000   ! 
+C   CX  CT  CA   0.01200000     4   180.0   !     FY
+C   CX  CT  CA   0.19200000     3   0.000   ! 
+C   CX  CT  CA   0.46900000     2   180.0   ! 
+C   CX  CT  CA   0.05500000     1   0.000   ! 
+N   CX  CT  CA   0.00700000     4   180.0   ! 
+N   CX  CT  CA   0.19200000     3   0.000   ! 
+N   CX  CT  CA   0.29000000     2   180.0   ! 
+N   CX  CT  CA   0.01200000     1   180.0   ! 
+N3  CX  CT  CA   0.00700000     4   180.0   ! 
+N3  CX  CT  CA   0.19200000     3   0.000   ! 
+N3  CX  CT  CA   0.29000000     2   180.0   ! 
+N3  CX  CT  CA   0.01200000     1   180.0   ! 
+CX  CT  CA  CA   0.04800000     4   180.0   ! 
+CX  CT  CA  CA   0.00000000     3   0.000   ! 
+CX  CT  CA  CA   0.06900000     2   180.0   ! 
+CX  CT  CA  CA   0.00000000     1   0.000   ! 
+CA  C   OH  HO   0.06500000     4   0.000   ! 
+CA  C   OH  HO   0.00000000     3   0.000   ! 
+CA  C   OH  HO   0.88300000     2   180.0   ! 
+CA  C   OH  HO   0.00000000     1   0.000   ! 
+C   CX  2C  2C   0.14500000     4   0.000   !  Glh Gln Glu Met
+C   CX  2C  2C   0.14400000     3   0.000   ! 
+C   CX  2C  2C   0.39300000     2   180.0   ! 
+C   CX  2C  2C   0.42100000     1   180.0   ! 
+N   CX  2C  2C   0.07800000     4   0.000   ! 
+N   CX  2C  2C   0.14400000     3   0.000   ! 
+N   CX  2C  2C   0.18400000     2   180.0   ! 
+N   CX  2C  2C   0.10000000     1   180.0   ! 
+N3  CX  2C  2C   0.07800000     4   0.000   ! 
+N3  CX  2C  2C   0.14400000     3   0.000   ! 
+N3  CX  2C  2C   0.18400000     2   180.0   ! 
+N3  CX  2C  2C   0.10000000     1   180.0   ! 
+CX  2C  2C  C    0.13800000     4   0.000   ! 
+CX  2C  2C  C    0.41200000     3   180.0   ! 
+CX  2C  2C  C    0.08300000     2   0.000   ! 
+CX  2C  2C  C    0.19600000     1   180.0   ! 
+2C  2C  C   O    0.00000000     1   0.000   ! 
+2C  2C  C   OH   0.06600000     4   180.0   ! 
+2C  2C  C   OH   0.02500000     3   180.0   ! 
+2C  2C  C   OH   1.10400000     2   180.0   ! 
+2C  2C  C   OH   0.82400000     1   180.0   ! 
+2C  2C  C   N    0.04200000     4   0.000   ! 
+2C  2C  C   N    0.08500000     3   180.0   ! 
+2C  2C  C   N    0.84500000     2   180.0   ! 
+2C  2C  C   N    0.60900000     1   180.0   ! 
+CX  2C  2C  CO   0.05600000     4   180.0   ! 
+CX  2C  2C  CO   0.60800000     3   180.0   ! 
+CX  2C  2C  CO   0.22200000     2   180.0   ! 
+CX  2C  2C  CO   1.36700000     1   180.0   ! 
+2C  2C  CO  O2   0.06400000     4   0.000   ! 
+2C  2C  CO  O2   0.39000000     2   180.0   ! 
+CX  2C  2C  S    0.02800000     4   0.000   ! 
+CX  2C  2C  S    0.01600000     3   0.000   ! 
+CX  2C  2C  S    0.24500000     2   0.000   ! 
+CX  2C  2C  S    0.41700000     1   0.000   ! 
+2C  2C  S   CT   0.05700000     4   0.000   ! 
+2C  2C  S   CT   0.41400000     3   0.000   ! 
+2C  2C  S   CT   0.44200000     2   0.000   ! 
+2C  2C  S   CT   0.24700000     1   180.0   ! 
+C   CX  2C  S    0.27800000     4   0.000   !   C-C
+C   CX  2C  S    0.32300000     3   0.000   ! 
+C   CX  2C  S    0.39400000     2   180.0   ! 
+C   CX  2C  S    0.60200000     1   0.000   ! 
+N   CX  2C  S    0.06400000     4   0.000   ! 
+N   CX  2C  S    0.32300000     3   0.000   ! 
+N   CX  2C  S    0.02100000     2   180.0   ! 
+N   CX  2C  S    0.46900000     1   0.000   ! 
+N3  CX  2C  S    0.06400000     4   0.000   ! 
+N3  CX  2C  S    0.32300000     3   0.000   ! 
+N3  CX  2C  S    0.02100000     2   180.0   ! 
+N3  CX  2C  S    0.46900000     1   0.000   ! 
+CX  2C  S   S    0.13500000     4   180.0   ! 
+CX  2C  S   S    0.30200000     3   0.000   ! 
+CX  2C  S   S    0.66600000     2   0.000   ! 
+CX  2C  S   S    0.05600000     1   0.000   ! 
+2C  S   S   2C   0.37900000     4   0.000   ! 
+2C  S   S   2C   0.68200000     3   0.000   ! 
+2C  S   S   2C   4.48000000     2   0.000   ! 
+2C  S   S   2C   0.42000000     1   0.000   ! 
+
+IMPHI
+X   X   C   O   10.5   2   180.0  !  JCC,7,(1986),230
+X   O2  C   O2  10.5   2   180.0  !  JCC,7,(1986),230
+X   X   N   H   1.0    2   180.0  !  JCC,7,(1986),230
+X   X   N2  H   1.0    2   180.0  !  JCC,7,(1986),230
+X   X   NA  H   1.0    2   180.0  !  JCC,7,(1986),230
+X   N2  CA  N2  10.5   2   180.0  !  JCC,7,(1986),230
+X   CT  N   CT  1.0    2   180.0  !  JCC,7,(1986),230
+X   CT  N   CX  1.0    2   180.0  !  JCC,7,(1986),230 (was X -CT-N -CT)
+X   X   CA  HA  1.1    2   180.0  !  bsd.on C6H6 nmodes
+X   X   CW  H4  1.1    2   180.0  !
+X   X   CR  H5  1.1    2   180.0  !
+X   X   CV  H4  1.1    2   180.0  !
+X   X   CQ  H5  1.1    2   180.0  !
+X   X   CK  H5  1.1    2   180.0  !
+X   X   CP  H5  1.1    2   180.0  !
+X   X   CM  H4  1.1    2   180.0  !
+X   X   CM  HA  1.1    2   180.0  !
+X   X   CS  H4  1.1    2   180.0  !
+X   X   CS  HA  1.1    2   180.0  !
+X   X   CA  H4  1.1    2   180.0  !  bsd.on C6H6 nmodes
+X   X   CA  H5  1.1    2   180.0  !  bsd.on C6H6 nmodes
+CB  CK  NG  CT  1.0    2   180.0  !
+CB  CP  NG  CT  1.0    2   180.0  !
+C   CM  NG  CT  1.0    2   180.0  !  dac guess, 9/94
+C   CS  NG  CT  1.0    2   180.0  !  dac guess, 9/94
+C   CS  CM  CT  1.1    2   180.0  !
+CT  O   C   OH  10.5   2   180.0  !
+CT  CV  CC  NA  1.1    2   180.0  !
+CT  CW  CC  NB  1.1    2   180.0  !
+CT  CW  CC  NA  1.1    2   180.0  !
+CB  CT  CG  CW  1.1    2   180.0  !
+CA  CA  CA  CT  1.1    2   180.0  !
+C   CM  CM  CT  1.1    2   180.0  !  dac guess, 9/94
+C   CS  CS  CT  1.1    2   180.0  !  dac guess, 9/94
+CM  N2  CA  NC  1.1    2   180.0  !  dac guess, 9/94
+CS  N2  CA  NC  1.1    2   180.0  !  dac guess, 9/94
+CB  N2  CA  NC  1.1    2   180.0  !  dac, 10/94
+N2  NA  CA  NC  1.1    2   180.0  !  dac, 10/94
+CA  CA  C   OH  1.1    2   180.0  !  (not used in tyr!)
+CA  CA  CA  OH  1.1    2   180.0  !  in tyr
+H5  O   C   OH  1.1    2   180.0  !  Junmei et al.1999
+H5  O   C   OS  1.1    2   180.0  !
+CM  CT  CM  HA  1.1    2   180.0  !  Junmei et al.1999
+CS  CT  CS  HA  1.1    2   180.0  !  Junmei et al.1999
+Br  CA  CA  CA  1.1    2   180.0  !  Junmei et al.1999
+CM  H4  C   O   1.1    2   180.0  !  Junmei et al.1999
+CS  H4  C   O   1.1    2   180.0  !  Junmei et al.1999
+C   CT  N   H   1.1    2   180.0  !  Junmei et al.1999
+C   CX  N   H   1.1    2   180.0  !  Junmei et al.1999 (was C -CT-N -H )
+C   CT  N   O   1.1    2   180.0  !  Junmei et al.1999
+X   X   C5  H5  1.1    2   180.0  !
+CB  C5  NG  CT  1.0    2   180.0  !
+X   X   C4  H4  1.1    2   180.0  !
+X   X   C4  HA  1.1    2   180.0  !
+C   C4  NG  CT  1.0    2   180.0  !  dac guess, 9/94
+C   C4  C4  CT  1.1    2   180.0  !  dac guess, 9/94
+C4  N2  CA  NC  1.1    2   180.0  !  dac guess, 9/94
+CA  CA  C   OS  1.1    2   180.0  !  phosphotyrosine
+CR  CC  NA  P   1.1    2   180.0  !  phosphohistine
+X   O2  CO  O2  10.5   2   180.0  !
+2C  O   C   OH  10.5   2   180.0  !
+CA  CA  CA  2C  1.1    2   180.0  !
+
+!
+!  Note: the HO and HW parameters, although zero in Cornell et al.
+!  should not have a 0.0 vdw radius in CHARMM to avoid difficulties
+!  with the 0.0/0.0 in the FAST OFF van der Waal code...
+!
+!  NOTE: the defaults chosen here are to match AMBER.  It is not
+!  recommended that users actually run with GROUP based truncation
+!  and a switch.  Better would be ATOM based FSHIFT VSHIFT
+NONBONDED  NBXMOD 5  GROUP SWITCH CDIEL -
+     CUTNB 14.0  CTOFNB 12.0  CTONNB 10.0  EPS 1.0  E14FAC 0.83333333  WMIN 1.4
+!          Emin       Rmin/2         Emin/2      Rmin  (for 1-4's)
+!       (kcal/mol)     (A)
+H  0.0  -0.015700  0.600000  0.0  -0.0078500  0.600000  ! Ferguson base pair geom.
+HO 0.0  -0.000000  0.000000  0.0  -0.0000000  0.000000  ! OPLS Jorgensen, JACS,110,(1988),1657
+HS 0.0  -0.015700  0.600000  0.0  -0.0078500  0.600000  ! W. Cornell CH3SH --> CH3OH FEP
+HC 0.0  -0.015700  1.487000  0.0  -0.0078500  1.487000  ! OPLS
+H1 0.0  -0.015700  1.387000  0.0  -0.0078500  1.387000  ! Veenstra et al JCC,8,(1992),963
+H2 0.0  -0.015700  1.287000  0.0  -0.0078500  1.287000  ! Veenstra et al JCC,8,(1992),963
+H3 0.0  -0.015700  1.187000  0.0  -0.0078500  1.187000  ! Veenstra et al JCC,8,(1992),963
+HP 0.0  -0.015700  1.100000  0.0  -0.0078500  1.100000  ! Veenstra et al JCC,8,(1992),963
+HA 0.0  -0.015000  1.459000  0.0  -0.0075000  1.459000  ! Spellmeyer
+H4 0.0  -0.015000  1.409000  0.0  -0.0075000  1.409000  ! Spellmeyer, one electrowithdr. neighbor
+H5 0.0  -0.015000  1.359000  0.0  -0.0075000  1.359000  ! Spellmeyer, two electrowithdr. neighbor
+HW 0.0  -0.000000  0.000000  0.0  -0.0000000  0.000000  ! TIP3P water model
+HZ 0.0  -0.015000  1.459000  0.0  -0.0075000  1.459000  ! H bonded to sp C (Howard et al JCC 16)
+O  0.0  -0.210000  1.661200  0.0  -0.1050000  1.661200  ! OPLS
+O2 0.0  -0.210000  1.661200  0.0  -0.1050000  1.661200  ! OPLS
+OW 0.0  -0.152000  1.768300  0.0  -0.0760000  1.768300  ! TIP3P water model
+OH 0.0  -0.210400  1.721000  0.0  -0.1052000  1.721000  ! OPLS
+OS 0.0  -0.170000  1.683700  0.0  -0.0850000  1.683700  ! OPLS ether
+OP 0.0  -0.170000  1.850000  0.0  -0.0850000  1.850000  ! Steinbrecher/Latzer for 2- phosphate
+CG 0.0  -0.086000  1.908000  0.0  -0.0430000  1.908000  ! Spellmeyer
+CA 0.0  -0.086000  1.908000  0.0  -0.0430000  1.908000  ! Spellmeyer
+CB 0.0  -0.086000  1.908000  0.0  -0.0430000  1.908000  ! Spellmeyer
+CC 0.0  -0.086000  1.908000  0.0  -0.0430000  1.908000  ! Spellmeyer
+CD 0.0  -0.086000  1.908000  0.0  -0.0430000  1.908000  ! Spellmeyer
+CK 0.0  -0.086000  1.908000  0.0  -0.0430000  1.908000  ! Spellmeyer
+CM 0.0  -0.086000  1.908000  0.0  -0.0430000  1.908000  ! Spellmeyer
+CN 0.0  -0.086000  1.908000  0.0  -0.0430000  1.908000  ! Spellmeyer
+CQ 0.0  -0.086000  1.908000  0.0  -0.0430000  1.908000  ! Spellmeyer
+CR 0.0  -0.086000  1.908000  0.0  -0.0430000  1.908000  ! Spellmeyer
+CV 0.0  -0.086000  1.908000  0.0  -0.0430000  1.908000  ! Spellmeyer
+CW 0.0  -0.086000  1.908000  0.0  -0.0430000  1.908000  ! Spellmeyer
+CY 0.0  -0.086000  1.908000  0.0  -0.0430000  1.908000  ! Spellmeyer
+CZ 0.0  -0.086000  1.908000  0.0  -0.0430000  1.908000  ! Spellmeyer
+CP 0.0  -0.086000  1.908000  0.0  -0.0430000  1.908000  ! Spellmeyer
+CS 0.0  -0.086000  1.908000  0.0  -0.0430000  1.908000  ! Spellmeyer
+CI 0.0  -0.109400  1.908000  0.0  -0.0547000  1.908000  ! parmbsc0
+C5 0.0  -0.086000  1.908000  0.0  -0.0430000  1.908000  ! Spellmeyer
+C4 0.0  -0.086000  1.908000  0.0  -0.0430000  1.908000  ! Spellmeyer
+CT 0.0  -0.109400  1.908000  0.0  -0.0547000  1.908000  ! Spellmeyer
+CX 0.0  -0.109400  1.908000  0.0  -0.0547000  1.908000  ! Spellmeyer  (was CT)
+C  0.0  -0.086000  1.908000  0.0  -0.0430000  1.908000  ! OPLS
+N  0.0  -0.170000  1.824000  0.0  -0.0850000  1.824000  ! OPLS
+NA 0.0  -0.170000  1.824000  0.0  -0.0850000  1.824000  ! OPLS
+N2 0.0  -0.170000  1.824000  0.0  -0.0850000  1.824000  ! OPLS
+NG 0.0  -0.170000  1.824000  0.0  -0.0850000  1.824000  ! OPLS
+NC 0.0  -0.170000  1.824000  0.0  -0.0850000  1.824000  ! OPLS
+NB 0.0  -0.170000  1.824000  0.0  -0.0850000  1.824000  ! OPLS
+NT 0.0  -0.170000  1.824000  0.0  -0.0850000  1.824000  ! OPLS
+NY 0.0  -0.170000  1.824000  0.0  -0.0850000  1.824000  ! OPLS
+N3 0.0  -0.170000  1.824000  0.0  -0.0850000  1.824000  ! OPLS
+S  0.0  -0.250000  2.000000  0.0  -0.1250000  2.000000  ! W. Cornell CH3SH and CH3SCH3 FEP's
+SH 0.0  -0.250000  2.000000  0.0  -0.1250000  2.000000  ! W. Cornell CH3SH and CH3SCH3 FEP's
+P  0.0  -0.200000  2.100000  0.0  -0.1000000  2.100000  ! JCC,7,(1986),230;
+MG 0.0  -0.894700  0.792600  0.0  -0.4473500  0.792600  ! Mg2+ Aqvist JPC 1990,94,8021.(adapted)
+C0 0.0  -0.459789  1.713100  0.0  -0.2298945  1.713100  ! Ca2+ Aqvist JPC 1990,94,8021.(adapted)
+Zn 0.0  -0.012500  1.100000  0.0  -0.0062500  1.100000  ! Zn2+, Merz,PAK, JACS,113,8262,(1991)
+F  0.0  -0.061000  1.750000  0.0  -0.0305000  1.750000  ! Gough et al. JCC 13,(1992),963.
+Cl 0.0  -0.265000  1.948000  0.0  -0.1325000  1.948000  ! Fox, JPCB,102,8070,(98),flex.mdl CHCl3
+Br 0.0  -0.320000  2.220000  0.0  -0.1600000  2.220000  ! Junmei(?)
+I  0.0  -0.400000  2.350000  0.0  -0.2000000  2.350000  ! JCC,7,(1986),230;
+EP 0.0  -0.000000  0.000000  0.0  -0.0000000  0.000000  ! lone pair
+2C 0.0  -0.109400  1.908000  0.0  -0.0547000  1.908000  ! Spellmeyer
+3C 0.0  -0.109400  1.908000  0.0  -0.0547000  1.908000  ! Spellmeyer
+C8 0.0  -0.109400  1.908000  0.0  -0.0547000  1.908000  ! Spellmeyer
+CO 0.0  -0.086000  1.908000  0.0  -0.0430000  1.908000  ! OPLS
+SOD 0.0  -0.002770   1.8680    0.0  -0.001385   1.8680  ! Na+ Aqvist JPC 1990,94,8021. (adapted)
+POT 0.0  -0.000328   2.6580    0.0  -0.000164   2.6580  ! K+  Aqvist JPC 1990,94,8021. (adapted)
+CLA 0.0  -0.1        2.47      0.0  -0.05       2.47    ! Cl- Smith, JCP 1994,100:5,3757.
+
+
+END

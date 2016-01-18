@@ -1,0 +1,66 @@
+* stream file to read all the rtf, para and lipid stream files
+*
+
+! read water
+stream @water
+
+! lipid
+! read the topology
+open unit 9 read form name @a
+read rtf card append unit 9
+
+! read the parameters
+open unit 9 read form name @b
+read para card append flex unit 9
+
+!protein
+! append the topology
+open unit 9 read form name @c
+read rtf card append unit 9
+
+! append the parameters
+open unit 9 read form name @d
+read para card flex append unit 9
+
+! nucleic acid
+! append the topology
+open unit 9 read form name @e
+read rtf card append unit 9
+
+! append the parameters
+open unit 9 read form name @f
+read para card flex append unit 9
+
+! carbohydrate
+! append the topology
+open unit 9 read form name @g
+read rtf card append unit 9
+
+! append the parameters
+open unit 9 read form name @h
+read para card flex append unit 9
+
+! CGenFF
+! append the topology
+open unit 9 read form name @i
+read rtf card append unit 9
+
+! append the parameters
+open unit 9 read form name @j
+read para card flex append unit 9
+
+stream @toppar/stream/lipid/toppar_all36_lipid_bacterial.str
+stream @toppar/stream/lipid/toppar_all36_lipid_miscellaneous.str
+stream @toppar/stream/lipid/toppar_all36_lipid_cholesterol.str
+stream @toppar/stream/lipid/toppar_all36_lipid_detergent.str
+stream @toppar/stream/lipid/toppar_all36_lipid_yeast.str
+stream @toppar/stream/lipid/toppar_all36_lipid_sphingo.str
+stream @toppar/stream/lipid/toppar_all36_lipid_inositol.str
+stream @toppar/stream/lipid/toppar_all36_lipid_cardiolipin.str
+stream @toppar/stream/lipid/toppar_all36_lipid_glycolipid.str
+stream @toppar/stream/lipid/toppar_all36_lipid_model.str
+stream @toppar/stream/lipid/toppar_all36_lipid_llo.str
+stream @toppar/stream/lipid/toppar_all36_lipid_prot.str
+
+return
+

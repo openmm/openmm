@@ -1,0 +1,78 @@
+
+CHARMM force field parameters have been recently developed for
+silicates and aluminumsilicates.  This document shows how to set up
+input files for a slab of (011) quartz surface, taking advantage of
+the ability of CHARMM to perform MD simulations of peridic systems.
+
+Pedro Lopes and Alexander D. MacKerell, Jr.
+
+An auxiliary program, patchfind, has been developed to help in the
+definition of the patches between atoms in the primitive cell and
+neighbouring cells. Lists of bonds, angles and dihedrals, with the
+assignment of atoms along particular directions, are produced.  You
+can find patchfind.x in ./code directory.
+
+The topology and parameter file is in the ./toppar subdirectory
+
+Steps for successful use of silicates and aluminumsilicates parameters
+in modeling surfaces:
+
+1) Primitive unit cell of the surface in XYZ format (input.xyz): the
+surface has to be oriented along the X-Y plane. X is made to
+correspond to the crystalline a-vector and Y to the crystalline
+b-vector. c is orthogonal to a and b.
+
+2) crystal.dat file: contains the a, b, c, alpha, beta and gamma
+crystal parameters:
+
+7.3000
+4.9100
+44.5000
+90.0
+90.0
+109.6517
+
+3) run the program patchfind.x: if no mistakes were made it produces a
+list of bonds, angles and torsions that can be used to define the
+patches between the primitive and neigbouring cells. Common mistakes
+are made in the definition of the crystal parameters.  The space is
+divided according to the following drawing.  The priminitve cell is
+always 1. Replica along the a-vector is refered as XX or 2 and replica
+along the b-vector is refered as YY or 3. XY or 4 is the cell
+resulting from a+b.
+
+To run patchfind.x  ./code/patchfind.x > patches.dat
+
+-----------------------
+|          |          |
+|    3     |     4    |
+|   YY     |    XY    |
+|          |          |
+-----------------------
+|          |          |
+|    1     |     2    |
+|Primitive |    XX    |
+|          |          |
+-----------------------
+
+Example output is:
+
+Torsions along XX and YY
+   17    1    9   25      3  1  1  2
+   18   22   30   27      2  1  1  3
+ 
+In this case both torsions span tree cells: primitive, XX and YY.
+
+With this information the creation of the topology file is
+straightforward.
+
+4) Create topology file: an example for quartz (011),
+is available in ./toppar/top_silicates.inp
+
+5) A CHARMM input file, test.inp, is included. It reads the primitive
+cell, replicates 8x5 times the primitive cell to create the unit cell,
+then generates the images and patches the images. Required files are
+top_silicates.inp, par_silicates.inp, params.str, crystal.img and
+image_patch.str.
+
+

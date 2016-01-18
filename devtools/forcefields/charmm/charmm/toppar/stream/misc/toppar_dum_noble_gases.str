@@ -1,0 +1,62 @@
+* Toplogy and parameter information for helium, neon and a dummy atom.
+*
+
+!Testcase
+!test_dum_nobel_gases.inp
+
+!test "append" to determine if previous	toppar files have been read and
+!add append to "read rtf card" if true
+set nat ?NATC
+set app
+!We're exploiting what is arguably a bug in the parser. On the left hand side,
+!the quotes have proirity, so NAT is correctly substituted. On the right hand
+!side, the ? has priority and NATC" (sic) is not a valid substitution...
+if "@NAT" ne "?NATC" if @nat ne 0 set app append
+
+read rtf card @app
+* Topology for helium, neon and a dummy atom.
+*
+31  1
+
+MASS   495 HE     4.00260 ! helium
+MASS   496 NE    20.17970 ! neon
+MASS   497 DUM    0.00000 ! dummy atom
+
+RESI HE1       0.00 ! helium
+GROUP
+ATOM HE01  HE  0.00
+PATCHING FIRST NONE LAST NONE
+
+RESI NE1       0.00 ! neon
+GROUP
+ATOM NE01  NE  0.00
+PATCHING FIRST NONE LAST NONE
+
+RESI DUM       0.00 ! DUMMY ATOM
+GROUP
+ATOM DUM DUM   0.00
+PATCHING FIRST NONE LAST NONE
+
+end
+
+read para card flex @app
+* Parameters for helium, neon and a dummy atom.
+*
+
+ATOMS
+MASS   495 HE     4.00260 ! helium
+MASS   496 NE    20.17970 ! neon
+MASS   497 DUM    0.00000 ! dummy atom
+
+NONBONDED nbxmod  5 atom cdiel fshift vatom vdistance vfswitch -
+cutnb 14.0 ctofnb 12.0 ctonnb 10.0 eps 1.0 e14fac 1.0 wmin 1.5
+
+DUM    0.000000  -0.000000     0.000000
+HE     0.000000  -0.021270     1.480000
+NE     0.000000  -0.085450     1.530000
+
+end
+
+return
+
+

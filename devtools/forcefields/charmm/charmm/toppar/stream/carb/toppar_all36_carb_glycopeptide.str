@@ -1,0 +1,485 @@
+read rtf card append
+* Topology for glycopeptide linkages
+* 
+32 1
+
+!     |                         |            * change charges
+!  HN-N                      HN-N
+!     |   HB1                   |   HB1
+!     |   |                     |   | *   *
+!  HA-CA--CB--OG        ==>  HA-CA--CB--OG    
+!     |   |     \               |   |     \  * 
+!     |   HB2    HG1            |   HB2    C1(sugar)
+!   O=C                       O=C
+!     |                         |
+
+PRES SGPA           -0.07 ! for connecting SER at the alpha position
+dele atom 1HG1
+dele atom 2O1  
+dele atom 2HO1  
+
+GROUP
+
+ATOM 1CB   CT2      0.00     !Charge assigned by adding
+ATOM 1OG   OC301    -0.36  ! Charge from OMEA
+
+GROUP
+
+ATOM 2C1   CC3162    0.29  ! Charge from OMEA
+
+BOND 1OG 2C1    
+
+!    I    J    K    L      R(IK)   T(IKJ)    PHI   T(JKL)   R(KL)
+
+!IC   1CA  1CB  1OG  2C1    0.0000  0.0000  167.06  0.0000   0.0000
+!IC   1CB  1OG  2C1  2O5    0.0000  0.0000   71.26  0.0000   0.0000
+!IC   1CB  1OG  2C1  2H1    0.0000  0.0000  -50.07  0.0000   0.0000
+!IC   1OG  2C1  2O5  2C5    0.0000  0.0000   70.42  0.0000   0.0000  
+
+!Thermalized IC
+IC   1CA  1CB  1OG  2C1     1.5246  112.48 -174.87  115.72   1.4191 
+IC   1CB  1OG  2C1  2O5     1.4218  115.72   45.37  110.03   1.4241 
+IC   1CB  1OG  2C1  2H1     1.4218  115.72  -71.61  112.01   1.1125 
+IC   1OG  2C1  2O5  2C5     1.4191  110.03   63.29  109.91   1.4591 
+
+!     |                          |              
+!  HN-N                       HN-N
+!     |     OG1--HG1             |     OG1--C1(sugar)
+!     |    /                     |    /
+!  HA-CA--CB-HB          ==>  HA-CA--CB-HB   
+!     |    \                     |    \
+!     |     CG2--HG21            |     CG2--HG21
+!   O=C    / \                 O=C    / \
+!     | HG21 HG22                | HG21 HG22
+
+PRES TGPA            0.02 ! for connecting THR at the alpha position
+dele atom 1HG1
+dele atom 2O1
+dele atom 2HO1
+
+GROUP
+
+ATOM 1CB   CT1      0.09     !Charge assigned by adding
+ATOM 1OG1  OC301    -0.36  ! Charge from OMEA
+
+GROUP
+
+ATOM 2C1   CC3162    0.29  ! Charge from OMEA
+
+BOND 1OG1 2C1
+
+!    I    J    K    L      R(IK)   T(IKJ)    PHI   T(JKL)   R(KL)
+
+!IC   1CA  1CB  1OG1 2C1    0.0000  0.0000  167.06  0.0000   0.0000
+!IC   1CB  1OG1 2C1  2O5    0.0000  0.0000   71.26  0.0000   0.0000
+!IC   1CB  1OG1 2C1  2H1    0.0000  0.0000  -50.07  0.0000   0.0000
+!IC   1OG1 2C1  2O5  2C5    0.0000  0.0000   70.42  0.0000   0.0000
+
+!Thermalized IC
+IC    1CA  1CB  1OG1 2C1    1.5900  102.09  161.11  116.78   1.4047 
+IC    1CB  1OG1 2C1  2O5    1.5040  116.78   69.90  114.66   1.4346 
+IC    1CB  1OG1 2C1  2H1    1.5040  116.78  -51.01  110.33   1.1436 
+IC    1OG1 2C1  2O5  2C5    1.4047  114.66   71.63  114.71   1.4751 
+
+!     |                         |            * change charges
+!  HN-N                      HN-N
+!     |   HB1                   |   HB1
+!     |   |                     |   | *   *
+!  HA-CA--CB--OG        ==>  HA-CA--CB--OG
+!     |   |     \               |   |     \  *
+!     |   HB2    HG1            |   HB2    C1(sugar)
+!   O=C                       O=C
+!     |                         |
+
+PRES SGPB           -0.07 ! for connecting SER at the beta position
+dele atom 1HG1
+dele atom 2O1
+dele atom 2HO1
+
+GROUP
+
+ATOM 1CB   CT2      0.00     !Charge assigned by adding
+ATOM 1OG   OC301    -0.36  ! Charge from OMEA
+
+GROUP
+
+ATOM 2C1   CC3162    0.29  ! Charge from OMEA
+
+BOND 1OG 2C1
+
+!    I    J    K    L      R(IK)   T(IKJ)    PHI   T(JKL)   R(KL)
+
+!IC   1CA  1CB  1OG  2C1    0.0000  0.0000  167.06  0.0000   0.0000
+!IC   1CB  1OG  2C1  2O5    0.0000  0.0000   41.65  0.0000   0.0000
+!IC   1CB  1OG  2C1  2H1    0.0000  0.0000  164.59  0.0000   0.0000
+!IC   1OG  2C1  2O5  2C5    0.0000  0.0000  177.84  0.0000   0.0000
+
+!Thermalized IC
+IC   1CA  1CB  1OG  2C1     1.5288  114.42  160.15  116.19   1.4222 
+IC   1CB  1OG  2C1  2O5     1.5026  116.19   19.87  107.74   1.4694 
+IC   1CB  1OG  2C1  2H1     1.5026  116.19  149.79  108.46   1.1232 
+IC   1OG  2C1  2O5  2C5     1.4222  107.74  173.59  112.12   1.4637 
+
+!     |                          |
+!  HN-N                       HN-N
+!     |     OG1--HG1             |     OG1--C1(sugar)
+!     |    /                     |    /
+!  HA-CA--CB-HB          ==>  HA-CA--CB-HB
+!     |    \                     |    \
+!     |     CG2--HG21            |     CG2--HG21
+!   O=C    / \                 O=C    / \
+!     | HG21 HG22                | HG21 HG22
+
+PRES TGPB            0.02 ! for connecting THR at the beta position
+dele atom 1HG1
+dele atom 2O1
+dele atom 2HO1
+
+GROUP
+
+ATOM 1CB   CT1      0.09     !Charge assigned by adding
+ATOM 1OG1  OC301    -0.36  ! Charge from OMEA
+
+GROUP
+
+ATOM 2C1   CC3162    0.29  ! Charge from OMEA
+
+BOND 1OG1 2C1
+
+!    I    J    K    L      R(IK)   T(IKJ)    PHI   T(JKL)   R(KL)
+
+!IC   1CA  1CB  1OG1 2C1    0.0000  0.0000  167.06  0.0000   0.0000
+!IC   1CB  1OG1 2C1  2O5    0.0000  0.0000   41.65  0.0000   0.0000
+!IC   1CB  1OG1 2C1  2H1    0.0000  0.0000  164.59  0.0000   0.0000
+!IC   1OG1 2C1  2O5  2C5    0.0000  0.0000  177.84  0.0000   0.0000
+
+!Thermalized IC
+IC    1CA  1CB  1OG1 2C1    1.5466  109.42   84.79  119.34   1.4626 
+IC    1CB  1OG1 2C1  2O5    1.4452  119.34   33.16  108.68   1.4170 
+IC    1CB  1OG1 2C1  2H1    1.4452  119.34  142.21  103.58   1.0859 
+IC    1OG1 2C1  2O5  2C5    1.4626  108.68  167.53  109.99   1.4643 
+
+PRES NGLB          0.00 ! og make model compound 3 by adding equat
+dele atom 1HD21           !
+dele atom 2O1             !  O-methyl to C1; apply to THP2
+dele atom 2HO1            !  O-methyl to C1; apply to THP2
+
+GROUP                   
+ATOM 2C1   CC3162    0.27   !       |
+ATOM 2H1   HCA1      0.09   !    HN-N  
+ATOM 1ND2  NC2D1    -0.47   !       |   HB1 OD1    HD21 (cis to OD1)
+ATOM 1HD22 HCP1      0.31   !       |   |   ||    /
+ATOM 2C5   CC3163    0.11   !    HA-CA--CB--CG--ND2
+ATOM 2H5   HCA1      0.09   !       |   |         \
+ATOM 2O5   OC3C61   -0.40   !       |   HB2        HD22 (trans to OD1) 
+GROUP                       !     O=C  
+ATOM 1CG   CC2O1     0.510  !       |
+ATOM 1OD1  OC2D1    -0.510  !   
+GROUP                       !                          |              Sugar
+ATOM 1CB   CC321    -0.180  !                       HN-N              |  
+ATOM 1HB1  HCA2      0.090  !                          |   HB1 OD1    C1   (cis to OD1)
+ATOM 1HB2  HCA2      0.090  !                          |   |   ||    /
+                            !                       HA-CA--CB--CG--ND2
+                            !                          |   |         \
+                            !                          |   HB2        HD22 (trans to OD1) 
+                            !                        O=C  
+                            !                          |
+BOND 2C1  1ND2              !
+IMPR 1ND2  1CG  2C1  1HD22  !
+
+
+!    I     J    K    L      R(IK)   T(IKJ)    PHI   T(JKL)   R(KL)
+!IC   1CB   1CG  1ND2  2C1     1.4000  120.00  180.00  120.00   1.4000  
+!IC   1CG   1ND2 2C1   2O5     1.4000  120.00 -120.00  120.00   1.4000  
+!IC   1HD22 1ND2 2C1   2O5     1.4000  120.00    0.00  120.00   1.4000
+!IC   2C5   2O5  2C1   2H1     1.4773  111.49   60.14  108.74   1.0555
+!IC   1ND2  2C1  2O5   2C5     1.4000  120.00  180.00  120.00   1.4000  
+
+!Thermalized
+IC   1CB   1CG  1ND2  2C1         1.5479  118.86 -175.68  128.70   1.3783
+IC   1CG   1ND2 2C1   2O5         1.3126  128.70  -70.91  104.39   1.4413
+IC   1HD22 1ND2 2C1   2O5         1.0117  111.10  108.04  104.39   1.4413
+IC   2C5   2O5  2C1   2H1         1.4242  116.13   41.53  110.40   1.1136
+IC   1ND2  2C1  2O5   2C5         1.3783  104.39  165.66  116.13   1.4242
+
+PRES NGLA          0.00 ! og make model compound 3 by adding equat
+dele atom 1HD21           !
+dele atom 2O1             !  O-methyl to C1; apply to THP2
+dele atom 2HO1            !  O-methyl to C1; apply to THP2
+
+GROUP
+ATOM 2C1   CC3162    0.27   !       |
+ATOM 2H1   HCA1      0.09   !    HN-N
+ATOM 1ND2  NC2D1    -0.47   !       |   HB1 OD1    HD21 (cis to OD1)
+ATOM 1HD22 HCP1      0.31   !       |   |   ||    /
+ATOM 2C5   CC3163    0.11   !    HA-CA--CB--CG--ND2
+ATOM 2H5   HCA1      0.09   !       |   |         \
+ATOM 2O5   OC3C61   -0.40   !       |   HB2        HD22 (trans to OD1)
+GROUP                       !     O=C
+ATOM 1CG   CC2O1     0.510  !       |
+ATOM 1OD1  OC2D1    -0.510  !
+GROUP                       !                          |              Sugar
+ATOM 1CB   CC321    -0.180  !                       HN-N              |
+ATOM 1HB1  HCA2      0.090  !                          |   HB1 OD1    C1   (cis to OD1)
+ATOM 1HB2  HCA2      0.090  !                          |   |   ||    /
+                            !                       HA-CA--CB--CG--ND2
+                            !                          |   |         \
+                            !                          |   HB2        HD22 (trans to OD1)
+                            !                        O=C
+                            !                          |
+BOND 2C1  1ND2              !
+IMPR 1ND2  1CG  2C1  1HD22  !
+
+
+!    I     J    K    L      R(IK)   T(IKJ)    PHI   T(JKL)   R(KL)
+!IC   1CB   1CG  1ND2  2C1     1.4000  120.00  180.00  120.00   1.4000
+!IC   1CG   1ND2 2C1   2O5     1.4000  120.00 -180.00  120.00   1.4000
+!IC   1HD22 1ND2 2C1   2O5     1.4000  120.00    0.00  120.00   1.4000
+!IC   2C5   2O5  2C1   2H1     1.4773  111.49 -180.14  108.74   1.0555
+!IC   1ND2  2C1  2O5   2C5     1.4000  120.00   60.00  120.00   1.4000
+
+!Thermalized
+IC    1CB   1CG  1ND2  2C1         1.5278  116.61  179.92  128.01   1.4551
+IC    1CG   1ND2 2C1   2O5         1.3341  128.01  168.99  103.48   1.4210
+IC    1HD22 1ND2 2C1   2O5         0.9855  112.93  -12.55  103.48   1.4210
+IC    2C5   2O5  2C1   2H1         1.4292  117.47 -174.95  108.88   1.0797
+IC    1ND2  2C1  2O5   2C5         1.4551  103.48   75.29  117.47   1.4292
+
+END
+
+read param card flex append
+*    new parametes
+*
+BONDS
+
+!Nglycan
+CC311D   NC2D1   320.00  1.430   ! 320.00  1.430   ! par22 NH1 CT1
+CC3162   NC2D1   320.00  1.430   ! 320.00  1.430   ! par22 NH1 CT1 
+
+CC321    CT1      222.500     1.5380  ! CT2  CT1   222.500     1.5380 ! ALLOW   ALI 
+CC2O1    CC321    200.000     1.5220  ! CT2  CC    200.000     1.5220 ! ALLOW   POL 
+
+!Oglycan
+OC301    CT2	360.00  1.425  ! CC311   OC301    360.00  1.415   ! par35 CC32A OC30A 
+OC301    CT1	360.00  1.425  ! CC311   OC301    360.00  1.415   ! par35 CC32A OC30A 
+
+ANGLES
+
+!Nglycan
+NC2D1    CC311D   OC3C61  90.00   110.00  ! 90.00   110.00  ! OC301   CC311D  OC3C61   90.00   110.00
+HCA1     CC311D   NC2D1   48.00   108.00  ! par22 NH1  CT1  HB
+NC2D1    CC311D   CC321C  70.00   113.50  ! par22 NH1  CT1  CT1
+NC2D1    CC311D   CC311D  70.00   113.50  ! par22 NH1  CT1  CT1
+CC311D   NC2D1    HCP1    35.00   117.00  ! par22 H    NH1  CT1
+CC311D   NC2D1    CC2O1   50.00   120.00  ! par22 CT1  NH1  C
+NC2D1    CC3162   OC3C61  90.00   110.00  ! 90.00   110.00  ! OC301   CC311D  OC3C61   90.00   110.00  
+HCA1     CC3162   NC2D1   48.00   108.00  ! par22 NH1  CT1  HB   
+NC2D1    CC3162   CC3161  70.00   113.50  ! par22 NH1  CT1  CT1  
+CC3162   NC2D1    HCP1    35.00   117.00  ! par22 H    NH1  CT1 
+CC3162   NC2D1    CC2O1   50.00   120.00  ! par22 CT1  NH1  C
+
+NH3      CT1      CC321  67.700   110.0000 ! NH3  CT1  CT2    67.700   110.0000 ! ALLOW   ALI POL
+CC321    CT1      CC     52.000   108.0000 ! CT2  CT1  CC     52.000   108.0000 ! ALLOW   ALI PEP POL ARO
+NH1      CT1      CC321  70.000   113.5000 ! NH1  CT1  CT2    70.000   113.5000 ! ALLOW   ALI PEP POL ARO
+HB1      CT1      CC321  35.000   111.0000 ! HB   CT1  CT2    35.000   111.0000 ! ALLOW  PEP 
+CC321    CT1      C      52.000   108.0000 ! CT2  CT1  C      52.000   108.0000 ! ALLOW   ALI PEP POL ARO 
+CT1      CC321    CC2O1  52.000   108.0000 ! CT1  CT2  CC     52.000   108.0000 ! ALLOW   ALI PEP POL ARO 
+CT1      CC321    HCA2   33.430    110.10   22.53   2.17900 ! HA   CT2  CT1   33.430    110.10   22.53   2.17900 ! ALLOW   ALI 
+HCA2     CC321    CC2O1  33.000    109.50   30.00   2.16300 ! HA   CT2  CC    33.000    109.50   30.00   2.16300 ! ALLOW   ALI PEP POL ARO
+CC321    CC2O1    OC2D1  15.000    121.00   50.00   2.44000 ! O    CC   CT2   15.000    121.00   50.00   2.44000 ! ALLOW   ALI PEP POL ARO
+CC321    CC2O1    NC2D1  50.000    116.50   50.00   2.45000 ! NH2  CC   CT2   50.000    116.50   50.00   2.45000 ! ALLOW   ALI PEP POL ARO
+
+!Oglycan
+CT1      CT2      OC301   45.000   107.00  !    OC301   CC311   CC331    45.00   111.50  ! par35 OC30A CC32A  CC33A
+CT1      CT1      OC301   45.000   107.00  !    OC301   CC311   CC331    45.00   111.50  ! par35 OC30A CC32A  CC33A
+CT2      OC301    CC311D  95.00    110.70  !    CC311D  OC301   CC331    95.00   109.70  ! par35 CC33A  OC30A CC32A
+CT1      OC301    CC311D  95.00    110.70  !    CC311D  OC301   CC331    95.00   109.70  ! par35 CC33A  OC30A CC32A
+CT2      OC301    CC3162  95.00    110.70  !    CC3162  OC301   CC331    95.00   109.70  ! par35 CC33A  OC30A CC32A
+CT1      OC301    CC3162  95.00    110.70  !    CC3162  OC301   CC331    95.00   109.70  ! par35 CC33A  OC30A CC32A
+CT3      CT1      OC301   45.000   110.00  !    OC301   CC311   CC331    45.00   111.50  ! par35 OC30A CC32A  CC33A
+HA       CT2      OC301   60.00    109.50  !    HCA1    CC311   OC301    60.00   109.50  ! par34 HCA2 CC32A OC30A
+HA2      CT2      OC301   60.00    109.50  !    HCA1    CC311   OC301    60.00   109.50  ! par34 HCA2 CC32A OC30A
+HA       CT1      OC301   60.00    109.50  !    HCA1    CC311   OC301    60.00   109.50  ! par34 HCA2 CC32A OC30A
+HA1      CT1      OC301   60.00    109.50  !    HCA1    CC311   OC301    60.00   109.50  ! par34 HCA2 CC32A OC30A
+
+DIHEDRALS
+
+!Nglycan
+CC321C  OC3C61  CC311D  NC2D1    0.62  1    0.0 ! og OMeTHP compounds 2 and 3
+CC321C  OC3C61  CC311D  NC2D1    1.54  2    0.0 ! OC301    CC311D   OC3C61   CC321C
+CC321C  OC3C61  CC311D  NC2D1    0.48  3    0.0 ! "  MP2/cc-pVTZ//MP2/6-31G*
+HCP1    NC2D1   CC311D  OC3C61   0.00  1    0.0 ! par22 H NH1 CT1 CT1 
+NC2D1   CC311D  CC311D  NC2D1    0.59  1  180.0 ! OC301   CC3161  CC3162  OC301 ! par35 OC30A CC32A CC32A OC30A
+NC2D1   CC311D  CC311D  NC2D1    1.16  2    0.0 ! OC301   CC3161  CC3162  OC301 ! " og/rmv RESMOR and FABYOW10
+CC311D  NC2D1   CC2O1   OC2D1    2.50  2  180.0 ! par22 O C NH1 CT1
+CC311D  NC2D1   CC2O1   CC331    1.60  1    0.0 ! par22 CT1 NH1 C CT3
+CC311D  NC2D1   CC2O1   CC331    2.50  2  180.0 ! "
+HCP1    NC2D1   CC311D  HCA1     0.00  1    0.0 ! par22 HB CT1 NH1 H
+CC2O1   NC2D1   CC311D  HCA1     0.00  1    0.0 ! par22 HB CT1 NH1 C
+HCP1    NC2D1   CC311D  CC321C   0.00  1    0.0 ! par22 H NH1 CT1 CT1
+HCA2    CC321C  CC311D  NC2D1    0.20  3    0.0 ! par27 X CTL1 CTL1 X
+CC321C  CC321C  CC311D  NC2D1    0.20  3    0.0 ! par27 X CTL1 CTL1 X
+CC311D  CC311D  NC2D1   HCP1     0.00  1    0.0 ! par22 H NH1 CT1 CT1
+HCA1    CC311D  CC311D  NC2D1    0.20  3    0.0 ! par27 X CTL1 CTL1 X
+NC2D1   CC311D  CC311D  CC321C   0.20  3    0.0 ! par27 X CTL1 CTL1 X
+OC3C61  CC311D  CC311D  NC2D1    0.20  3    0.0 ! par27 X CTL1 CTL1 X
+NC2D1   CC3162  OC3C61  CC3163   0.62  1    0.0 ! og OMeTHP compounds 2 and 3 
+NC2D1   CC3162  OC3C61  CC3163   1.54  2    0.0 ! OC301    CC311D   OC3C61   CC321C
+NC2D1   CC3162  OC3C61  CC3163   0.48  3    0.0 ! "  MP2/cc-pVTZ//MP2/6-31G*
+NC2D1   CC3162  OC3C61  CC3263   0.62  1    0.0 ! og OMeTHP compounds 2 and 3 
+NC2D1   CC3162  OC3C61  CC3263   1.54  2    0.0 ! OC301    CC311D   OC3C61   CC321C
+NC2D1   CC3162  OC3C61  CC3263   0.48  3    0.0 ! "  MP2/cc-pVTZ//MP2/6-31G*
+HCP1    NC2D1   CC3162  OC3C61   0.00  1    0.0 ! par22 H NH1 CT1 CT1
+NC2D1   CC3162  CC3161  NC2D1    0.59  1  180.0 ! OC301   CC3161  CC3162  OC301 ! par35 OC30A CC32A CC32A OC30A
+NC2D1   CC3162  CC3161  NC2D1    1.16  2    0.0 ! OC301   CC3161  CC3162  OC301 ! " og/rmv RESMOR and FABYOW10
+CC3162  NC2D1   CC2O1   OC2D1    2.50  2  180.0 ! par22 O C NH1 CT1
+CC3162  NC2D1   CC2O1   CC331    1.60  1    0.0 ! par22 CT1 NH1 C CT3 
+CC3162  NC2D1   CC2O1   CC331    2.50  2  180.0 ! " 
+HCA1    CC3162  NC2D1   HCP1     0.00  1    0.0 ! par22 HB CT1 NH1 H 
+HCA1    CC3162  NC2D1   CC2O1    0.00  1    0.0 ! par22 HB CT1 NH1 C
+NC2D1   CC3162  CC3161  HCA1     0.20  3    0.0 ! par27 X CTL1 CTL1 X 
+NC2D1   CC3162  CC3161  CC3161   0.20  3    0.0 ! par27 X CTL1 CTL1 X 
+HCP1    NC2D1   CC3162  CC3161   0.00  1    0.0 ! par22 H NH1 CT1 CT1
+NC2D1   CC3162  CC3161  OC311    0.20  3    0.0 ! par27 X CTL1 CTL1 X
+CC311D  CC311D  NC2D1   CC2O1    0.50  1  180.0 ! og fit to IPAA
+CC2O1   NC2D1   CC311D  CC321C   0.50  1  180.0 ! og fit to IPAA
+CC2O1   NC2D1  CC311D  OC3C61    2.70  1    180.0
+CC2O1   NC2D1  CC311D  OC3C61    1.28  2      0.0
+CC2O1   NC2D1   CC3162  CC3161   0.50  1  180.0 ! og fit to IPAA
+CC2O1   NC2D1  CC3162  OC3C61    2.70  1    180.0
+CC2O1   NC2D1  CC3162  OC3C61    1.28  2      0.0
+
+NH3      CT1      CC321    HCA2    0.2000  3     0.0 ! X    CT1  CT2  X        0.2000  3     0.00 ! ALLOW   ALI
+NH1      CT1      CC321    HCA2    0.2000  3     0.0 ! X    CT1  CT2  X        0.2000  3     0.00 ! ALLOW   AL
+NH3      CT1      CC321    CC2O1   0.2000  3     0.0 ! X    CT1  CT2  X        0.2000  3     0.00 ! ALLOW   ALI   
+NH1      CT1      CC321    CC2O1   0.2000  3     0.0 ! X    CT1  CT2  X        0.2000  3     0.00 ! ALLOW   ALI
+CT1      CC321    CC2O1    OC2D1   0.0500  6   180.0 ! X    CT2  CC   X        0.0500  6   180.00 ! ALLOW   POL PEP
+CT1      CC321    CC2O1    NC2D1   0.0500  6   180.0 ! X    CT2  CC   X        0.0500  6   180.00 ! ALLOW   POL PEP
+HB1      CT1      CC321    HCA2    0.2000  3     0.0 ! X    CT1  CT2  X        0.2000  3     0.00 ! ALLOW   ALI    
+HB1      CT1      CC321    CC2O1   0.2000  3     0.0 ! X    CT1  CT2  X        0.2000  3     0.00 ! ALLOW   ALI    
+CC321    CC2O1    NC2D1    HCP1    2.50    2   180.0 ! HCP1    NC2D1   CC2O1   CC331    2.50  2  180.0 ! par22 H NH1 C   CT3
+CC321    CC2O1    NC2D1    CC3162  1.60    1     0.0 ! CC3161  NC2D1   CC2O1   CC331    1.60  1    0.0 ! par22 CT1 NH1 C CT3
+CC321    CC2O1    NC2D1    CC3162  2.50    2   180.0 ! CC3161  NC2D1   CC2O1   CC331    2.50  2  180.0 ! "
+HCA2     CC321    CT1      CC      0.2000  3     0.0 ! X    CT1  CT2  X        0.2000  3     0.00 ! ALLOW   ALI
+HCA2     CC321    CT1      C       0.2000  3     0.0 ! X    CT1  CT2  X        0.2000  3     0.00 ! ALLOW   ALI
+HCA2     CC321    CC2O1    OC2D1   0.00    3   180.0 ! HCA3    CC331   CC2O1   OC2D1    0.00  3  180.0 ! par22 O C    CT3  HA
+HCA2     CC321    CC2O1    NC2D1   0.00    3     0.0 ! NC2D1   CC2O1   CC331   HCA3     0.00  3    0.0 ! par22 NH1 C CT3 HA
+CC2O1    CC321    CT1      CC      0.2000  3     0.0 ! X    CT1  CT2  X        0.2000  3     0.00 ! ALLOW   ALI 
+CC2O1    CC321    CT1      C       0.2000  3     0.0 ! X    CT1  CT2  X        0.2000  3     0.00 ! ALLOW   ALI
+CC321    CT1      C        O       1.4000  1     0.0 ! O    C    CT1  CT2      1.4000  1     0.00 !   ALLOW PEP
+H        NH1      CT1      CC321   0.0000  1     0.0 ! H    NH1  CT1  CT2      0.0000  1     0.00 ! ALLOW PEP 
+C        NH1      CT1      CC321   1.8000  1     0.0 ! CT2  CT1  NH1  C        1.8000  1     0.00 ! ALLOW PEP 
+CC321    CT1      C        NH1     0.0000  1     0.0 ! NH1  C    CT1  CT2      0.0000  1     0.00 !   ALLOW PEP
+
+!Oglycan Transferred
+CC311D  OC301   CT2     HA       0.284 3    0.0   !CC311D  OC301   CC331   HCA3     0.284 3    0.0 ! par35 HCA3 CC33A OC30A CC32A
+CC311D  OC301   CT2     HA2      0.284 3    0.0   !CC311D  OC301   CC331   HCA3     0.284 3    0.0 ! par35 HCA3 CC33A OC30A CC32A
+HA      CT2     OC301   CC3162   0.284 3    0.0   !CC3162  OC301   CC331   HCA3     0.284 3    0.0 ! par35 HCA3 CC33A OC30A CC32A
+HA2     CT2     OC301   CC3162   0.284 3    0.0   !CC3162  OC301   CC331   HCA3     0.284 3    0.0 ! par35 HCA3 CC33A OC30A CC32A
+CC311D  OC301   CT1     HA       0.284 3    0.0   !CC311D  OC301   CC331   HCA3     0.284 3    0.0 ! par35 HCA3 CC33A OC30A CC32A
+CC311D  OC301   CT1     HA1      0.284 3    0.0   !CC311D  OC301   CC331   HCA3     0.284 3    0.0 ! par35 HCA3 CC33A OC30A CC32A
+HA      CT1     OC301   CC3162   0.284 3    0.0   !CC3162  OC301   CC331   HCA3     0.284 3    0.0 ! par35 HCA3 CC33A OC30A CC32A
+HA1     CT1     OC301   CC3162   0.284 3    0.0   !CC3162  OC301   CC331   HCA3     0.284 3    0.0 ! par35 HCA3 CC33A OC30A CC32A
+CT2     OC301   CC311D  HCA1     0.284 3    0.0   !CC331   OC301   CC311D  HCA1     0.284 3    0.0 ! par35 HCA2 CC32A OC30A CC32A
+CT2     OC301   CC3162  HCA1     0.284 3    0.0   !CC331   OC301   CC3162  HCA1     0.284 3    0.0 ! par35 HCA2 CC32A OC30A CC32A
+CT1     OC301   CC311D  HCA1     0.284 3    0.0   !CC331   OC301   CC311D  HCA1     0.284 3    0.0 ! par35 HCA2 CC32A OC30A CC32A
+CT1     OC301   CC3162  HCA1     0.284 3    0.0   !CC331   OC301   CC3162  HCA1     0.284 3    0.0 ! par35 HCA2 CC32A OC30A CC32A
+
+
+!Oglycan Optimized
+
+!!!C2 C1 OG CB
+CC321C   CC311D    OC301      CT2     1.38  1    180.0
+CC321C   CC311D    OC301      CT2     1.23  2    180.0
+CC321C   CC311D    OC301      CT2     0.25  3      0.0
+CC321C   CC311D    OC301      CT1     1.15  1    180.0
+CC321C   CC311D    OC301      CT1     1.54  2    180.0
+CC321C   CC311D    OC301      CT1     0.39  3      0.0
+
+!!O5 C1 OG CB
+CT2    OC301   CC311D   OC3C61     0.27  1      0.0
+CT2    OC301   CC311D   OC3C61     0.22  2      0.0
+CT2    OC301   CC311D   OC3C61     0.07  3      0.0
+CT1    OC301   CC311D   OC3C61     0.43  1    180.0
+CT1    OC301   CC311D   OC3C61     0.05  2      0.0
+CT1    OC301   CC311D   OC3C61     0.56  3    180.0
+
+!!C1 OG CB CG
+CC311D    OC301      CT1      CT3     1.52  1    180.0
+CC311D    OC301      CT1      CT3     0.04  2    180.0
+CC311D    OC301      CT1      CT3     0.45  3    180.0
+
+!!C1 OG CB CA
+CC311D    OC301      CT2      CT1     2.02  1    180.0
+CC311D    OC301      CT2      CT1     0.04  2      0.0
+CC311D    OC301      CT2      CT1     0.97  3    180.0
+CC311D    OC301      CT1      CT1     2.21  1    180.0
+CC311D    OC301      CT1      CT1     0.01  2    180.0
+CC311D    OC301      CT1      CT1     0.03  3      0.0
+
+!!N CA CB OG
+NH1      CT1      CT2    OC301     0.42  1    180.0
+NH1      CT1      CT2    OC301     0.68  2    180.0
+NH1      CT1      CT2    OC301     1.06  3      0.0
+NH1      CT1      CT1    OC301     0.47  1      0.0
+NH1      CT1      CT1    OC301     1.60  2      0.0
+NH1      CT1      CT1    OC301     0.39  3    180.0
+
+NH3      CT1      CT2    OC301     0.42  1    180.0
+NH3      CT1      CT2    OC301     0.68  2    180.0
+NH3      CT1      CT2    OC301     1.06  3      0.0
+NH3      CT1      CT1    OC301     0.47  1      0.0
+NH3      CT1      CT1    OC301     1.60  2      0.0
+NH3      CT1      CT1    OC301     0.39  3    180.0
+
+!!C CA CB OG
+C      CT1      CT2    OC301     0.41  1    180.0
+C      CT1      CT2    OC301     0.32  2    180.0
+C      CT1      CT2    OC301     1.19  3    180.0
+C      CT1      CT1    OC301     1.03  1      0.0
+C      CT1      CT1    OC301     1.41  2      0.0
+C      CT1      CT1    OC301     0.66  3      0.0
+
+!GALNAc
+!!!C2 C1 OG CB
+CC3161   CC3162    OC301      CT2     1.38  1    180.0
+CC3161   CC3162    OC301      CT2     1.23  2    180.0
+CC3161   CC3162    OC301      CT2     0.25  3      0.0
+CC3161   CC3162    OC301      CT1     1.15  1    180.0
+CC3161   CC3162    OC301      CT1     1.54  2    180.0
+CC3161   CC3162    OC301      CT1     0.39  3      0.0
+
+!!O5 C1 OG CB
+CT2    OC301   CC3162   OC3C61     0.27  1      0.0
+CT2    OC301   CC3162   OC3C61     0.22  2      0.0
+CT2    OC301   CC3162   OC3C61     0.07  3      0.0
+CT1    OC301   CC3162   OC3C61     0.43  1    180.0
+CT1    OC301   CC3162   OC3C61     0.05  2      0.0
+CT1    OC301   CC3162   OC3C61     0.56  3    180.0
+
+!!C1 OG CB CG
+CC3162    OC301      CT1      CT3     1.52  1    180.0
+CC3162    OC301      CT1      CT3     0.04  2    180.0
+CC3162    OC301      CT1      CT3     0.45  3    180.0
+
+!!C1 OG CB CA
+CC3162    OC301      CT2      CT1     2.02  1    180.0
+CC3162    OC301      CT2      CT1     0.04  2      0.0
+CC3162    OC301      CT2      CT1     0.97  3    180.0
+CC3162    OC301      CT1      CT1     2.21  1    180.0
+CC3162    OC301      CT1      CT1     0.01  2    180.0
+CC3162    OC301      CT1      CT1     0.03  3      0.0
+
+IMPROPER
+
+NC2D1   CC2O1   CC311D  HCP1    20.00  0   0.00 ! par22 NH1  X    X    H
+NC2D1   CC2O1   CC3162  HCP1    20.00  0   0.00 ! par22 NH1  X    X    H
+
+CC2O1    NC2D1    CC321    OC2D1   45.0000         0      0.0000 ! O    CT2  NH2  CC     45.0000         0      0.0000 ! ALLOW PEP POL
+CC2O1    CC321    NC2D1    OC2D1   45.0000         0      0.0000 ! O    NH2  CT2  CC     45.0000         0      0.0000 ! ALLOW PEP POL
+
+END 
+
+
+RETURN
+

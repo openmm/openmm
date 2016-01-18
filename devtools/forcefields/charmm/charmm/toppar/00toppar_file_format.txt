@@ -1,0 +1,299 @@
+
+Changes in the CHARMM toppar file format.
+updated July 2015
+
+As of July 2015 a new, additional version of the topology and
+parameter files has been created in which the MASS numbers are all set
+to -1.  This coincides with changes in version 39 of CHARMM and onward
+in which the MASS numbers are assigned as the new atom types are read.
+This avoid problems with overlapping mass numbers, which has become an
+issue as we have increased the number of atom types with CGenFF as
+well as other aspects of the force field.  As of July 2015 the default
+version of the toppar files will contain the traditional MASS numbers
+with a second version of the files included with "MASS -1".  This will
+allow for earlier versions of CHARMM to be used.  As of July 2016 we
+anticipate moving to "MASS -1" as the default for all the toppar
+files.
+
+!July 2013
+
+To facilitate the application of the CHARMM force field to
+heterogeneous systems the toppar files have been converted to a
+self-contained "stream" file format.  This allows for each of the
+individual sets of toppar files to be read in consequtively for
+complex systems.  For example, for a protein-inhibitor complex, the
+protein topology and parameter files would be read followed by the
+CGenFF topology and parameter files.  To perform this the append and
+flexible parameter reader are used, as shown below.  Note that this
+approach requires that the water and ion toppar files be read in
+explicitly as they are no longer included in any of the parent toppar
+files. To allow this approach the MASS numbers in each of the sets of
+toppar files is unique as required to read them individually.  The
+range of MASS numbers in the individual files is given below. Note
+that this file format has been tested on versions c34, c35 and c36 of
+CHARMM; however it should work on version c32 and all subsequent
+versions.
+
+Another significant change is in the terminal patching in the nucleic
+acids. See the top_all36_na.rtf for details.
+
+Reordering of atoms in PC (choline) containing lipids as required for
+new domain decomposition code in CHARMM
+
+Summary of toppar files
+
+toppar_water_ions.str: contains TIP3 water model and ion topology and
+parameter information.  This is now the only file that contains these
+entities.
+
+Toplogy files
+top_all22_prot.rtf    all atom additive RTF for proteins, CHARMM22 with CMAP
+top_all36_prot.rtf    all atom additive RTF for proteins, CHARMM36 version, July 2012
+top_all36_na.rtf      all atom additive RTF for nucleic acids, RNA/DNA updates
+top_all35_ethers.rtf  all atom additive RTF for ethers
+top_all36_carb.rtf    all atom additive RTF for carbohydrates
+top_all36_cgenff.rtf  all atom additive	RTF for general molecules
+top_all36_lipid.rtf   all atom additive	RTF for lipids
+toph19.inp            extended atom RTF for proteins
+
+Parameter files
+par_all22_prot.prm    all atom additive parameter for proteins, C22 with CMAP
+par_all36_prot.prm    all atom additive parameter for proteins, CHARMM36 version, July 2012
+par_all36_na.prm      all atom additive	parameter for nucleic acids, RNA/DNA updates
+par_all35_ethers.prm  all atom additive	parameter for ethers
+par_all36_carb.prm    all atom additive	parameter for carbohydrates
+par_all36_cgenff.prm  all atom additive	parameter for general molecules
+par_all36_lipid.prm   all atom additive	parameter for lipids
+param19.inp           extended atom parameters for proteins
+
+stream subdirecties: contain various molecules that have been
+parametrized in the context of the CHARMM additive force fields. These
+files require the specific "parent" toppar files be read prior to
+reading these files. The dependencies are indicated in the individual
+files.
+
+stream/prot
+
+toppar_all36_prot_aldehydes.str        small molecule aldehydes
+toppar_all36_prot_arg0.str             neutral arginine model compounds and patches
+toppar_all36_prot_d_amino_acids.str    d-amino acids with the c36 protein force field
+toppar_all36_prot_fluoro_alkanes.str   optimized fluoroalkanes, requires 
+                                       toppar_all22_prot_aliphatic_c27.str
+toppar_all36_prot_heme.str             heme, O2, CO, CO2 and related patches
+toppar_all36_prot_model.str            model compounds used in protein parameter 
+                                       development as well as additional compounds
+toppar_all36_prot_modify_res.str       various modifed amino acid residues/patches
+                                       include posttranslational modifications (see na combined)
+toppar_all36_prot_na_combined.str      residues and patches, including phosphotyrosine, 
+                                       serine and threonine that require both protein and
+                                       nucleic acid toppar parent files.
+toppar_all36_prot_pyridines.str        various substituted pyridines
+toppar_all36_prot_retinol.str          retinol, model compounds, Schiff's bases
+
+stream/na
+
+toppar_all36_na_modifications.str      various chemical modifications of bases, backbone
+                                       and sugars (including carbocyclic sugars)
+toppar_all36_na_model.str              model compounds used in na parameter development
+                                       including individual bases etc.
+toppar_all36_na_nad_ppi.str            NAD, NADH, ADP, ATP and others.  
+toppar_all36_na_reactive_rna.str       reactive species associated with phophate hydrolysis
+toppar_all36_na_rna_modified.str       modified RNA nucleotides (as in tRNA etc.)
+
+stream/lipid
+
+toppar_all36_lipid_bacterial.str      various lipids found in bacteria
+toppar_all36_lipid_cardiolipin.str    cardiolipin
+toppar_all36_lipid_cholesterol.str    cholesterol; note that old cholesterol used on Anton
+toppar_all36_lipid_detergent.str      various detergents
+toppar_all36_lipid_glycolipid.str     various glycolipids
+toppar_all36_lipid_inositol.str       lipids contain various inositol analogs
+toppar_all36_lipid_list.str           list of required files for running test cases
+toppar_all36_lipid_llo.str            lipid linked oligosaccharides
+toppar_all36_lipid_miscellaneous.str  various lipids
+toppar_all36_lipid_model.str          model compounds used in lipid parameter development
+toppar_all36_lipid_prot.str           protein residues modified with lipids
+toppar_all36_lipid_sphingo.str        Ceramide/sphingomylein
+toppar_all36_lipid_yeast.str          various lipids in yeast
+
+stream/carb
+
+toppar_all36_carb_glycolipid.str       model compounds for glycolipids
+                                       (some overlap with stream/lipid contents)
+toppar_all36_carb_glycopeptide.str     model compounds for glycoproteins
+toppar_all36_carb_model.str            model compounds using in carbohydrate parameter development
+
+stream/misc
+
+toppar_amines.str                      highly optimized neutral aliphatic amines
+toppar_dum_noble_gases.str             nobel gases and dummy atom
+toppar_hbond.str                       stream file to estimate hydrogen bond interactions
+toppar_ions_won.str                    extensive collection of ion parameters that covers
+                                       the majority of the periodic table.  Caution: use
+                                       optimized ions in toppar_water_ions.str when possible.
+
+(D) Parameters for the polarizable force field based on a classical
+Drude oscillator.  As this force field is currently under development
+such that the parameters have been placed in the "drude" subdirectory.
+It is suggested that these be obtained from the MacKerell lab force
+field web page.  Also accessible via the CHARMM Gui.  See the 00readme
+for details and the approriate references.
+
+(E) Parameters for selected silicate and aluminosilicate surfaces have
+been developed.  These parameters are designed to be compatible with
+the CHARMM22, 27 and 36 force fields allowing for biological
+molecule-silicate surface interactions.  As use of these parameters
+requires creation of the surface, which entails creation of the
+necessary patches, the parameters are included in the "silicates"
+subdirectory.  This directory also includes examples and code to
+create the extended surfaces. See the 00readme file for more details.
+
+ref: Lopes, P.E.M., Murashov, V. Tazi, M. Demchuk, E. MacKerell,
+A. D., Jr. "Development of an Empirical Force Field for
+Silica. Application to the Quartz-Water Interface," Journal of
+Physical Chemistry B, 110: 2782-2792, 2006.
+
+(F) Additional topology and parameter files from various sources are
+included in subdirectories of the toppar directory.  A description
+follows:
+
+subdirectory non_charmm: Contains toppar files for AMBER,
+Bristol-Myers Squibb (BMS) and OPLS force fields along with stream
+files for a variety of water models.  These files have been tested
+to the extent that they may be considered reliable representations of
+the original force fields, though potentially not exact
+representations.  These files are NOT maintained and, thus, use at
+your own risk.  See the 00readme files and note that AMBER requires a
+special version of CHARMM as described in the 00readme file.
+
+tamdfff: An internal coordinate force field (ICFF) that was built
+based on the CHARMM 22 protein force field.  Specifically, it provides
+a backbone covalent geometry suitable for torsion angle molecular
+dynamics (TAMD) and the necessary CMAP cross-term corrections to
+suppress distortions of the potential energy surface due to rigid
+covalent geometry.  Additional details can be found in tamd.doc.
+
+Ref. J. Chen, W. Im and C. L. Brooks III, J. Comp. Chem. 2005, 26,
+1565-1578.
+
+rush: A simple implicit-solvent protein force-field that adds terms to
+the bonded portion (bond + angle + dihe + impr + urey) of the all-atom
+CHARMM22 force field to account for volume-exclusion (_R_epulsion),
+the hydrophobic effect (_U_nburied _S_urface), and intra-molecular and
+protein-solvent hydrogen-bonding (_H_ydrogen-bonding) (hence _R_ _U_
+_S_ _H_).  Usage instructions are in doc/rush.doc
+
+gbsw: Optimized protein backbone parameters (par_all22_prot_gbsw.inp)
+and atomic input radii (radius_gbsw.str) for a balanced GBSW implicit
+solvent force field.  The backbone phi/psi cross-term (CMAP) and the
+atomic input radii have been re-optimized specifically to balance the
+solvation and intramolecular interactions and to capture experimental
+conformational equilibria of both helical peptides and
+beta-hairpins. Additional information can be found in gbsw.doc.
+
+Ref. J. Chen, W. Im and C. L. Brooks III, J. Am. Chem. Soc.  128,
+3728-36 (2006).
+
+ace: ACE2 solvation model developed by Michael Schaefer
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+Example of command to read protein, nucleic acid and water/ions in a
+CHARMM script
+
+*  Generate and energy of molecules that require a combined
+*  Example to read protein, nucleic acid and water/ion toppar information
+*
+
+set dir !set toppar directory
+
+set a @dir/top_all36_prot.rtf
+set b @dir/par_all36_prot.prm
+set c @dir/top_all36_na.rtf
+set d @dir/par_all36_na.prm
+set e @dir/toppar_water_ions.str
+
+! read the protein topology
+read rtf card name @a
+
+! read the protein parameters
+read para card flex name @b 
+
+! append the nucleic acid topology
+read rtf card append name @c 
+
+! append the nucleic acid parameters
+read para card flex append name @
+
+! append water and ion toppar information
+stream @e
+
+!remainder of charmm script.......
+
+stop
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+TOPPAR file MASS numbering
+
+Parent toppar files
+
+Water and ions: MASSes 1 to 20
+toppar_water_ions.str
+
+Proteins: MASSes 41 to 90
+top_all36_prot.rtf
+par_all36_prot.prm
+
+Nucleic acids: MASSes 91 to 135
+top_all36_na.rtf
+par_all36_na.prm
+
+Lipids: MASSes 136 to 170: 165-168 in toppar_all36_lipid_cer2.str
+top_all36_lipid.rtf
+par_all36_lipid.prm
+
+Carbohydrates: MASSes 171 to 230
+top_all36_carb.rtf
+par_all36_carb.prm
+
+Ethers: MASSes 241 to 260
+top_all35_ethers.rtf
+par_all35_ethers.prm
+
+CGenFF: MASSes 256 to 400
+top_all36_cgenff.rtf
+par_all36_cgenff.prm
+
+
+>>> Stream files subdirectory stream: Only those stream files that
+contain novel atom types are listed below.
+
+toppar_all36_prot_aldehydes.str:        MASSes 418
+
+toppar_all36_na_modifications.str:      MASSes 416 to 417, 469 to 483
+
+toppar_all36_prot_pyridines.str:        MASSes 419 to 424
+
+toppar_all36_prot_retinol.str:          MASSes 425 to 429
+
+toppar_all36_prot_fluoro_alkanes.str:   MASSes 430 to 437
+
+toppar_all36_prot_d_amino_acids.str     MASSes 438, 439
+
+toppar_amines.str:                      MASSes 446 to 458
+
+toppar_all36_na_nad_ppi.str:            MASSes 459 to 465
+
+toppar_all36_na_model.str:              MASSes 466 to 468
+
+toppar_all36_prot_na_combined.str:      MASSes 484 to 485
+
+toppar_all36_prot_heme.str:             MASSes 486 to 494
+
+toppar_dum_nobel_gases.str:             MASSes 495 to 499
+
+toppar_all36_prot_arg0.str              MASSes 501 to 509
+
+toppar_all36_na_reactive_rna.str        MASSes 510 to 521
+
+toppar_all36_lipid_cer2.str             MASSes 165 to 168

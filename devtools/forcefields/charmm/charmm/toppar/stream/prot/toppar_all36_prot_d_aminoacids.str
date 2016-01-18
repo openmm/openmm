@@ -1,0 +1,2555 @@
+*>>>>>>CHARMM36 All-Hydrogen Toppar File for D-Proteins <<<<<<< 
+*>>>>>>>>>>>>>>>>>>>>>>>>>> Feb 2012 <<<<<<<<<<<<<<<<<<<<<<<<<<<< 
+* All comments to the CHARMM web site: www.charmm.org 
+*             parameter set discussion forum 
+* 
+ 
+!toppar stream file for D-amino acids. Includes new residue 
+!names, inverted CMAP and additional parameters. 
+ 
+!Parent files that have to be read prior to streaming this file 
+!top_all36_prot.rtf 
+!par_all36_prot.prm 
+! 
+!Testcase 
+!test_all36_d_amino_acid.inp 
+ 
+!test "append" to determine if previous toppar files have been read and 
+!add append to "read rtf card" if true 
+set nat ?NATC 
+set app 
+!We're exploiting what is arguably a bug in the parser. On the left hand side, 
+!the quotes have priority, so NAT is correctly substituted. On the right hand 
+!side, the ? has priority and NATC" (sic) is not a valid substitution... 
+if "@NAT" ne "?NATC" if @nat ne 0 set app append 
+ 
+read rtf card @app 
+* Topology for D- aminoacids 
+* 
+36  1 
+ 
+MASS   438 CTD1  12.01100 ! added for D-amino acids 
+MASS   439 CPD1  12.01100 ! added for D-proline 
+ 
+DECL -CA 
+DECL -C 
+DECL -O 
+DECL +N 
+DECL +HN 
+DECL +CA 
+DEFA FIRS NTER LAST CTER 
+AUTO ANGLES DIHE 
+ 
+RESI ALDD        0.00 ! D-Alanine dipeptide, with CMAP term 
+                      ! AMG 2/27/08 -- changed alpha carbon type 
+                      ! and flipped the cmap term 
+GROUP 
+ATOM CL   CT3   -0.27 
+ATOM HL1  HA3    0.09 
+ATOM HL2  HA3    0.09 
+ATOM HL3  HA3    0.09 
+GROUP 
+ATOM CLP  C      0.51 
+ATOM OL   O     -0.51 
+GROUP 
+ATOM NL   NH1   -0.47 
+ATOM HL   H      0.31 
+ATOM CA   CTD1   0.07   ! THIS IS THE ONLY CHANGE 
+ATOM HA   HB1    0.09 
+GROUP 
+ATOM CB   CT3   -0.27  !     HL1     OL           OR           HR1 
+ATOM HB1  HA3    0.09  !       \     ||   HL  HA  ||   HR      / 
+ATOM HB2  HA3    0.09  !        \    ||   |   |   ||   |      / 
+ATOM HB3  HA3    0.09  !   HL2---CL--CLP--NL--CA--CRP--NR---CR---HR2 
+GROUP                  !        /             |               \ 
+ATOM CRP  C      0.51  !       /         HB1--CB--HB3          \ 
+ATOM OR   O     -0.51  !     HL3              |                HR3 
+GROUP                  !                     HB2 
+ATOM NR   NH1   -0.47 
+ATOM HR   H      0.31 
+ATOM CR   CT3   -0.11 
+ATOM HR1  HA3    0.09 
+ATOM HR2  HA3    0.09 
+ATOM HR3  HA3    0.09 
+ 
+BOND CL  CLP   CLP NL    NL  CA 
+BOND CA  CRP   CRP NR    NR  CR 
+DOUBLE  CLP OL    CRP OR 
+BOND NL  HL    NR  HR 
+BOND CA  HA    CA  CB 
+BOND CL  HL1   CL  HL2   CL  HL3 
+BOND CB  HB1   CB  HB2   CB  HB3 
+BOND CR  HR1   CR  HR2   CR  HR3 
+IMPR CLP CL NL OL    NL CLP CA HL 
+IMPR CRP CA NR OR    NR CRP CR HR 
+ 
+CMAP CLP NL CA CRP NL CA CRP NR 
+ 
+ic clp nl  ca  crp  0.0 0.0  180.0  0.0 0.0 ! Phi 
+ic ca  clp *nl hl   0.0 0.0  180.0  0.0 0.0 
+ic hl  nl  ca  crp  0.0 0.0    0.0  0.0 0.0 
+ic nl  ca  crp nr   0.0 0.0  180.0  0.0 0.0 ! Psi 
+ic ca  nr  *crp or  0.0 0.0  180.0  0.0 0.0 
+ic nl  ca  crp or   0.0 0.0    0.0  0.0 0.0 
+ic cl  clp nl  ca   0.0 0.0  180.0  0.0 0.0 ! Omega Left 
+ic nl  cl  *clp ol  0.0 0.0  180.0  0.0 0.0 
+ic ol  clp nl  ca   0.0 0.0    0.0  0.0 0.0 
+ic ca  crp nr  cr   0.0 0.0  180.0  0.0 0.0 ! Omega Right 
+ic crp cr  *nr hr   0.0 0.0  180.0  0.0 0.0 
+ic ca  crp nr  hr   0.0 0.0  180.0  0.0 0.0 
+ic nl  crp *ca ha   0.0 0.0  120.0  0.0 0.0 
+ic nl  crp *ca cb   0.0 0.0 -120.0  0.0 0.0 
+ic hl1 cl  clp nl   0.0 0.0  180.0  0.0 0.0 
+ic hl2 cl  clp nl   0.0 0.0   60.0  0.0 0.0 
+ic hl3 cl  clp ol   0.0 0.0  120.0  0.0 0.0 
+ic ha  ca  cb  hb1  0.0 0.0  180.0  0.0 0.0 
+ic nl  ca  cb  hb2  0.0 0.0  180.0  0.0 0.0 
+ic crp ca  cb  hb3  0.0 0.0  180.0  0.0 0.0 
+ic crp nr  cr  hr1  0.0 0.0  180.0  0.0 0.0 
+ic crp nr  cr  hr2  0.0 0.0   60.0  0.0 0.0 
+ic hr  nr  cr  hr3  0.0 0.0  120.0  0.0 0.0 
+ic ca  clp *nl hl   0.0 0.0  180.0  0.0 0.0 
+ic ca  nr  *crp or  0.0 0.0  180.0  0.0 0.0 
+ic hb1 hb2 *cb hb3  0.0 0.0  120.0  0.0 0.0 
+ic hl1 hl2 *cl hl3  0.0 0.0  240.0  0.0 0.0 
+ic hr1 hr2 *cr hr3  0.0 0.0  240.0  0.0 0.0 
+ic ha  ca  nl  hl   0.0 0.0  240.0  0.0 0.0 
+patch first none last none 
+ 
+RESI DALA         0.00 
+GROUP 
+ATOM N    NH1    -0.47  !     | 
+ATOM HN   H       0.31  !  HN-N 
+ATOM CA   CTD1    0.07  !     |     HB1 
+ATOM HA   HB1     0.09  !     |    / 
+GROUP                   !  HA-CA--CB-HB2 
+ATOM CB   CT3    -0.27  !     |    \ 
+ATOM HB1  HA3     0.09  !     |     HB3 
+ATOM HB2  HA3     0.09  !   O=C 
+ATOM HB3  HA3     0.09  !     | 
+GROUP                   ! 
+ATOM C    C       0.51 
+ATOM O    O      -0.51 
+BOND CB CA  N  HN  N  CA 
+BOND C  CA  C  +N  CA HA  CB HB1  CB HB2  CB HB3 
+DOUBLE O  C 
+IMPR N -C CA HN  C CA +N O 
+CMAP -C  N  CA  C   N  CA  C  +N 
+DONOR HN N 
+ACCEPTOR O C 
+IC -C   CA   *N   HN    1.3551 126.4900  180.0000 115.4200  0.9996 
+IC -C   N    CA   C     1.3551 126.4900  180.0000 114.4400  1.5390 !phi 
+IC N    CA   C    +N    1.4592 114.4400  180.0000 116.8400  1.3558 !psi 
+IC +N   CA   *C   O     1.3558 116.8400  180.0000 122.5200  1.2297 
+IC CA   C    +N   +CA   1.5390 116.8400  180.0000 126.7700  1.4613 
+IC N    C    *CA  CB    1.4592 114.4400 -123.2300 111.0900  1.5461 !D form 
+IC N    C    *CA  HA    1.4592 114.4400  120.4500 106.3900  1.0840 !D form 
+IC C    CA   CB   HB1   1.5390 111.0900  177.2500 109.6000  1.1109 
+IC HB1  CA   *CB  HB2   1.1109 109.6000  119.1300 111.0500  1.1119 
+IC HB1  CA   *CB  HB3   1.1109 109.6000 -119.5800 111.6100  1.1114 
+ 
+RESI DARG          1.00 
+GROUP 
+ATOM N    NH1    -0.47  !     |                      HH11 
+ATOM HN   H       0.31  !  HN-N                       | 
+ATOM CA   CTD1    0.07  !     |   HB1 HG1 HD1 HE     NH1-HH12 
+ATOM HA   HB1     0.09  !     |   |   |   |   |    //(+) 
+GROUP                   !  HA-CA--CB--CG--CD--NE--CZ 
+ATOM CB   CT2    -0.18  !     |   |   |   |         \ 
+ATOM HB1  HA2     0.09  !     |   HB2 HG2 HD2        NH2-HH22 
+ATOM HB2  HA2     0.09  !   O=C                       | 
+GROUP                   !     |                      HH21 
+ATOM CG   CT2    -0.18 
+ATOM HG1  HA2     0.09 
+ATOM HG2  HA2     0.09 
+GROUP 
+ATOM CD   CT2     0.20 
+ATOM HD1  HA2     0.09 
+ATOM HD2  HA2     0.09 
+ATOM NE   NC2    -0.70 
+ATOM HE   HC      0.44 
+ATOM CZ   C       0.64 
+ATOM NH1  NC2    -0.80 
+ATOM HH11 HC      0.46 
+ATOM HH12 HC      0.46 
+ATOM NH2  NC2    -0.80 
+ATOM HH21 HC      0.46 
+ATOM HH22 HC      0.46 
+GROUP 
+ATOM C    C       0.51 
+ATOM O    O      -0.51 
+BOND CB  CA  CG  CB  CD CG  NE CD  CZ NE 
+BOND NH2 CZ  N  HN  N  CA 
+BOND C   CA  C  +N  CA HA  CB HB1 
+BOND CB  HB2 CG  HG1 CG HG2 CD HD1 CD HD2 
+BOND NE  HE  NH1 HH11  NH1 HH12  NH2 HH21  NH2 HH22 
+DOUBLE O  C    CZ  NH1 
+IMPR N  -C  CA  HN   C CA +N O 
+IMPR CZ  NH1  NH2  NE 
+IMPR NH1 HH11 HH12 CZ 
+IMPR NH2 HH21 HH22 CZ 
+CMAP -C  N  CA  C   N  CA  C  +N 
+DONOR HN N 
+DONOR HE NE 
+DONOR HH11 NH1 
+DONOR HH12 NH1 
+DONOR HH21 NH2 
+DONOR HH22 NH2 
+ACCEPTOR O C 
+IC -C   CA   *N   HN    1.3496 122.4500  180.0000 116.6700  0.9973 
+IC -C   N    CA   C     1.3496 122.4500  180.0000 109.8600  1.5227 
+IC N    CA   C    +N    1.4544 109.8600  180.0000 117.1200  1.3511 
+IC +N   CA   *C   O     1.3511 117.1200  180.0000 121.4000  1.2271 
+IC CA   C    +N   +CA   1.5227 117.1200  180.0000 124.6700  1.4565 
+IC N    C    *CA  CB    1.4544 109.8600 -123.6400 112.2600  1.5552 !D form 
+IC N    C    *CA  HA    1.4544 109.8600  117.9300 106.6100  1.0836 !D form 
+IC N    CA   CB   CG    1.4544 110.7000  180.0000 115.9500  1.5475 
+IC CG   CA   *CB  HB1   1.5475 115.9500  120.0500 106.4000  1.1163 
+IC CG   CA   *CB  HB2   1.5475 115.9500 -125.8100 109.5500  1.1124 
+IC CA   CB   CG   CD    1.5552 115.9500  180.0000 114.0100  1.5384 
+IC CD   CB   *CG  HG1   1.5384 114.0100  125.2000 108.5500  1.1121 
+IC CD   CB   *CG  HG2   1.5384 114.0100 -120.3000 108.9600  1.1143 
+IC CB   CG   CD   NE    1.5475 114.0100  180.0000 107.0900  1.5034 
+IC NE   CG   *CD  HD1   1.5034 107.0900  120.6900 109.4100  1.1143 
+IC NE   CG   *CD  HD2   1.5034 107.0900 -119.0400 111.5200  1.1150 
+IC CG   CD   NE   CZ    1.5384 107.0900  180.0000 123.0500  1.3401 
+IC CZ   CD   *NE  HE    1.3401 123.0500  180.0000 113.1400  1.0065 
+IC CD   NE   CZ   NH1   1.5034 123.0500  180.0000 118.0600  1.3311 
+IC NE   CZ   NH1  HH11  1.3401 118.0600 -178.2800 120.6100  0.9903 
+IC HH11 CZ   *NH1 HH12  0.9903 120.6100  171.1900 116.2900  1.0023 
+IC NH1  NE   *CZ  NH2   1.3311 118.0600  178.6400 122.1400  1.3292 
+IC NE   CZ   NH2  HH21  1.3401 122.1400 -174.1400 119.9100  0.9899 
+IC HH21 CZ   *NH2 HH22  0.9899 119.9100  166.1600 116.8800  0.9914 
+ 
+RESI DASN         0.00 
+GROUP 
+ATOM N    NH1    -0.47  !     | 
+ATOM HN   H       0.31  !  HN-N 
+ATOM CA   CTD1    0.07  !     |   HB1 OD1    HD21 (cis to OD1) 
+ATOM HA   HB1     0.09  !     |   |   ||    / 
+GROUP                   !  HA-CA--CB--CG--ND2 
+ATOM CB   CT2    -0.18  !     |   |         \ 
+ATOM HB1  HA2     0.09  !     |   HB2        HD22 (trans to OD1) 
+ATOM HB2  HA2     0.09  !   O=C 
+GROUP                   !     | 
+ATOM CG   CC      0.55 
+ATOM OD1  O      -0.55 
+GROUP 
+ATOM ND2  NH2    -0.62 
+ATOM HD21 H       0.32 
+ATOM HD22 H       0.30 
+GROUP 
+ATOM C    C       0.51 
+ATOM O    O      -0.51 
+BOND CB CA  CG CB   ND2 CG 
+BOND N  HN  N  CA   C   CA    C +N 
+BOND CA HA  CB HB1  CB  HB2  ND2 HD21  ND2 HD22 
+DOUBLE C  O   CG  OD1 
+IMPR N   -C  CA   HN    C   CA +N   O 
+IMPR CG  ND2 CB   OD1   CG  CB ND2  OD1 
+IMPR ND2 CG  HD21 HD22  ND2 CG HD22 HD21 
+CMAP -C  N  CA  C   N  CA  C  +N 
+DONOR HN N 
+DONOR HD21 ND2 
+DONOR HD22 ND2 
+ACCEPTOR OD1 CG 
+ACCEPTOR O C 
+IC -C   CA   *N   HN    1.3480 124.0500  180.0000 114.4900  0.9992 
+IC -C   N    CA   C     1.3480 124.0500  180.0000 105.2300  1.5245 
+IC N    CA   C    +N    1.4510 105.2300  180.0000 117.3800  1.3467 
+IC +N   CA   *C   O     1.3467 117.3800  180.0000 120.3200  1.2282 
+IC CA   C    +N   +CA   1.5245 117.3800  180.0000 124.8800  1.4528 
+IC N    C    *CA  CB    1.4510 105.2300 -121.1800 113.0400  1.5627 !D form 
+IC N    C    *CA  HA    1.4510 105.2300  115.5200 107.6300  1.0848 !D form 
+IC N    CA   CB   CG    1.4510 110.9100  180.0000 114.3000  1.5319 
+IC CG   CA   *CB  HB1   1.5319 114.3000  119.1700 107.8200  1.1120 
+IC CG   CA   *CB  HB2   1.5319 114.3000 -123.7400 110.3400  1.1091 
+IC CA   CB   CG   OD1   1.5627 114.3000  180.0000 122.5600  1.2323 
+IC OD1  CB   *CG  ND2   1.2323 122.5600 -179.1900 116.1500  1.3521 
+IC CB   CG   ND2  HD21  1.5319 116.1500 -179.2600 117.3500  0.9963 
+IC HD21 CG   *ND2 HD22  0.9963 117.3500  178.0200 120.0500  0.9951 
+ 
+RESI DASP         -1.00 
+GROUP 
+ATOM N    NH1    -0.47  !     | 
+ATOM HN   H       0.31  !  HN-N 
+ATOM CA   CTD1    0.07  !     |   HB1   OD1 
+ATOM HA   HB1     0.09  !     |   |    // 
+GROUP                   !  HA-CA--CB--CG 
+ATOM CB   CT2    -0.28  !     |   |    \ 
+ATOM HB1  HA2     0.09  !     |   HB2   OD2(-) 
+ATOM HB2  HA2     0.09  !   O=C 
+ATOM CG   CC      0.62  !     | 
+ATOM OD1  OC     -0.76 
+ATOM OD2  OC     -0.76 
+GROUP 
+ATOM C    C       0.51 
+ATOM O    O      -0.51 
+BOND CB CA  CG CB  OD2 CG 
+BOND N  HN  N  CA   C   CA  C +N 
+BOND CA HA  CB HB1  CB HB2 
+DOUBLE  O   C   CG  OD1 
+IMPR N   -C CA  HN  C CA +N O 
+IMPR CG  CB OD2 OD1 
+CMAP -C  N  CA  C   N  CA  C  +N 
+DONOR HN N 
+ACCEPTOR OD1 CG 
+ACCEPTOR OD2 CG 
+ACCEPTOR O C 
+IC -C   CA   *N   HN    1.3465 125.3100  180.0000 112.9400  0.9966 
+IC -C   N    CA   C     1.3465 125.3100  180.0000 105.6300  1.5315 
+IC N    CA   C    +N    1.4490 105.6300  180.0000 117.0600  1.3478 
+IC +N   CA   *C   O     1.3478 117.0600  180.0000 120.7100  1.2330 
+IC CA   C    +N   +CA   1.5315 117.0600  180.0000 125.3900  1.4484 
+IC N    C    *CA  CB    1.4490 105.6300 -122.3300 114.1000  1.5619 !D form 
+IC N    C    *CA  HA    1.4490 105.6300  116.4000 106.7700  1.0841 !D form 
+IC N    CA   CB   CG    1.4490 111.1000  180.0000 112.6000  1.5218 
+IC CG   CA   *CB  HB1   1.5218 112.6000  119.2200 109.2300  1.1086 
+IC CG   CA   *CB  HB2   1.5218 112.6000 -121.6100 110.6400  1.1080 
+IC CA   CB   CG   OD1   1.5619 112.6000  180.0000 117.9900  1.2565 
+IC OD1  CB   *CG  OD2   1.2565 117.9900 -170.2300 117.7000  1.2541 
+ 
+RESI DCYS         0.00 
+GROUP 
+ATOM N    NH1    -0.47  !     | 
+ATOM HN   H       0.31  !  HN-N 
+ATOM CA   CTD1    0.07  !     |   HB1 
+ATOM HA   HB1     0.09  !     |   | 
+GROUP                   !  HA-CA--CB--SG 
+ATOM CB   CT2    -0.11  !     |   |     \ 
+ATOM HB1  HA2     0.09  !     |   HB2    HG1 
+ATOM HB2  HA2     0.09  !   O=C 
+ATOM SG   S      -0.23  !     | 
+ATOM HG1  HS      0.16 
+GROUP 
+ATOM C    C       0.51 
+ATOM O    O      -0.51 
+BOND CB CA   SG CB   N HN  N  CA 
+BOND C  CA   C +N  CA HA  CB HB1 
+BOND CB HB2  SG HG1 
+DOUBLE O  C 
+IMPR N -C CA HN  C CA +N O 
+CMAP -C  N  CA  C   N  CA  C  +N 
+DONOR HN N 
+DONOR HG1 SG 
+ACCEPTOR O C 
+IC -C   CA   *N   HN    1.3479 123.9300  180.0000 114.7700  0.9982 
+IC -C   N    CA   C     1.3479 123.9300  180.0000 105.8900  1.5202 
+IC N    CA   C    +N    1.4533 105.8900  180.0000 118.3000  1.3498 
+IC +N   CA   *C   O     1.3498 118.3000  180.0000 120.5900  1.2306 
+IC CA   C    +N   +CA   1.5202 118.3000  180.0000 124.5000  1.4548 
+IC N    C    *CA  CB    1.4533 105.8900 -121.7900 111.9800  1.5584 !D form 
+IC N    C    *CA  HA    1.4533 105.8900  116.3400 107.7100  1.0837 !D form 
+IC N    CA   CB   SG    1.4533 111.5600  180.0000 113.8700  1.8359 
+IC SG   CA   *CB  HB1   1.8359 113.8700  119.9100 107.2400  1.1134 
+IC SG   CA   *CB  HB2   1.8359 113.8700 -125.3200 109.8200  1.1124 
+IC CA   CB   SG   HG1   1.5584 113.8700  176.9600  97.1500  1.3341 
+ 
+RESI DGLN         0.00 
+GROUP 
+ATOM N    NH1    -0.47  !     | 
+ATOM HN   H       0.31  !  HN-N 
+ATOM CA   CTD1    0.07  !     |   HB1 HG1 OE1   HE21 (cis to OE1) 
+ATOM HA   HB1     0.09  !     |   |   |   ||    / 
+GROUP                   !  HA-CA--CB--CG--CD--NE2 
+ATOM CB   CT2    -0.18  !     |   |   |         \ 
+ATOM HB1  HA2     0.09  !     |   HB2 HG2       HE22 (trans to OE1) 
+ATOM HB2  HA2     0.09  !   O=C 
+GROUP                   !     | 
+ATOM CG   CT2    -0.18 
+ATOM HG1  HA2     0.09 
+ATOM HG2  HA2     0.09 
+GROUP 
+ATOM CD   CC      0.55 
+ATOM OE1  O      -0.55 
+GROUP 
+ATOM NE2  NH2    -0.62 
+ATOM HE21 H       0.32 
+ATOM HE22 H       0.30 
+GROUP 
+ATOM C    C       0.51 
+ATOM O    O      -0.51 
+BOND CB CA  CG  CB   CD  CG   NE2 CD 
+BOND N  HN  N   CA   C   CA 
+BOND C  +N  CA  HA   CB  HB1  CB  HB2  CG HG1 
+BOND CG HG2 NE2 HE21 NE2 HE22 
+DOUBLE O  C    CD  OE1 
+IMPR N   -C  CA   HN    C   CA +N   O 
+IMPR CD  NE2 CG   OE1   CD  CG NE2  OE1 
+IMPR NE2 CD  HE21 HE22  NE2 CD HE22 HE21 
+CMAP -C  N  CA  C   N  CA  C  +N 
+DONOR HN N 
+DONOR HE21 NE2 
+DONOR HE22 NE2 
+ACCEPTOR OE1 CD 
+ACCEPTOR O C 
+IC -C   CA   *N   HN    1.3477 123.9300  180.0000 114.4500  0.9984 
+IC -C   N    CA   C     1.3477 123.9300  180.0000 106.5700  1.5180 
+IC N    CA   C    +N    1.4506 106.5700  180.0000 117.7200  1.3463 
+IC +N   CA   *C   O     1.3463 117.7200  180.0000 120.5900  1.2291 
+IC CA   C    +N   +CA   1.5180 117.7200  180.0000 124.3500  1.4461 
+IC N    C    *CA  CB    1.4506 106.5700 -121.9100 111.6800  1.5538 !D form 
+IC N    C    *CA  HA    1.4506 106.5700  116.8200 107.5300  1.0832 !D form 
+IC N    CA   CB   CG    1.4506 111.4400  180.0000 115.5200  1.5534 
+IC CG   CA   *CB  HB1   1.5534 115.5200  120.9300 106.8000  1.1147 
+IC CG   CA   *CB  HB2   1.5534 115.5200 -124.5800 109.3400  1.1140 
+IC CA   CB   CG   CD    1.5538 115.5200  180.0000 112.5000  1.5320 
+IC CD   CB   *CG  HG1   1.5320 112.5000  118.6900 110.4100  1.1112 
+IC CD   CB   *CG  HG2   1.5320 112.5000 -121.9100 110.7400  1.1094 
+IC CB   CG   CD   OE1   1.5534 112.5000  180.0000 121.5200  1.2294 
+IC OE1  CG   *CD  NE2   1.2294 121.5200  179.5700 116.8400  1.3530 
+IC CG   CD   NE2  HE21  1.5320 116.8400 -179.7200 116.8600  0.9959 
+IC HE21 CD   *NE2 HE22  0.9959 116.8600 -178.9100 119.8300  0.9943 
+ 
+RESI DGLU         -1.00 
+GROUP 
+ATOM N    NH1    -0.47  !     | 
+ATOM HN   H       0.31  !  HN-N 
+ATOM CA   CTD1    0.07  !     |   HB1 HG1   OE1 
+ATOM HA   HB1     0.09  !     |   |   |    // 
+GROUP                   !  HA-CA--CB--CG--CD 
+ATOM CB   CT2A   -0.18  !     |   |   |    \ 
+ATOM HB1  HA2     0.09  !     |   HB2 HG2   OE2(-) 
+ATOM HB2  HA2     0.09  !   O=C 
+GROUP                   !     | 
+ATOM CG   CT2    -0.28 
+ATOM HG1  HA2     0.09 
+ATOM HG2  HA2     0.09 
+ATOM CD   CC      0.62 
+ATOM OE1  OC     -0.76 
+ATOM OE2  OC     -0.76 
+GROUP 
+ATOM C    C       0.51 
+ATOM O    O      -0.51 
+BOND CB CA  CG CB  CD CG  OE2 CD 
+BOND N  HN  N  CA C   CA 
+BOND C  +N  CA HA  CB HB1 CB  HB2 CG  HG1 
+BOND CG HG2 
+DOUBLE O  C   CD  OE1 
+IMPR N   -C CA  HN  C CA +N O 
+IMPR CD CG OE2 OE1 
+CMAP -C  N  CA  C   N  CA  C  +N 
+DONOR HN N 
+ACCEPTOR OE1 CD 
+ACCEPTOR OE2 CD 
+ACCEPTOR O C 
+IC -C   CA   *N   HN    1.3471 124.4500  180.0000 113.9900  0.9961 
+IC -C   N    CA   C     1.3471 124.4500  180.0000 107.2700  1.5216 
+IC N    CA   C    +N    1.4512 107.2700  180.0000 117.2500  1.3501 
+IC +N   CA   *C   O     1.3501 117.2500  180.0000 121.0700  1.2306 
+IC CA   C    +N   +CA   1.5216 117.2500  180.0000 124.3000  1.4530 
+IC N    C    *CA  CB    1.4512 107.2700 -121.9000 111.7100  1.5516 !D form 
+IC N    C    *CA  HA    1.4512 107.2700  118.0600 107.2600  1.0828 !D form 
+IC N    CA   CB   CG    1.4512 111.0400  180.0000 115.6900  1.5557 
+IC CG   CA   *CB  HB1   1.5557 115.6900  121.2200 108.1600  1.1145 
+IC CG   CA   *CB  HB2   1.5557 115.6900 -123.6500 109.8100  1.1131 
+IC CA   CB   CG   CD    1.5516 115.6900  180.0000 115.7300  1.5307 
+IC CD   CB   *CG  HG1   1.5307 115.7300  117.3800 109.5000  1.1053 
+IC CD   CB   *CG  HG2   1.5307 115.7300 -121.9600 111.0000  1.1081 
+IC CB   CG   CD   OE1   1.5557 115.7300  180.0000 114.9900  1.2590 
+IC OE1  CG   *CD  OE2   1.2590 114.9900 -179.1000 120.0800  1.2532 
+ 
+RESI DGLY         0.00 
+!GROUP 
+GROUP 
+ATOM N    NH1    -0.47  !     | 
+ATOM HN   H       0.31  !     N-H 
+ATOM CA   CT2    -0.02  !     | 
+ATOM HA1  HB2     0.09  !     | 
+ATOM HA2  HB2     0.09  ! HA1-CA-HA2 
+GROUP                   !     | 
+ATOM C    C       0.51  !     | 
+ATOM O    O      -0.51  !     C=O 
+                        !     | 
+BOND N HN  N  CA  C CA 
+BOND C +N  CA HA1 CA HA2 
+DOUBLE O  C 
+IMPR N -C  CA HN  C CA   +N O 
+CMAP -C  N  CA  C   N  CA  C  +N 
+DONOR HN N 
+ACCEPTOR O C 
+IC -C   CA   *N   HN    1.3475 122.8200  180.0000 115.6200  0.9992 
+IC -C   N    CA   C     1.3475 122.8200  180.0000 108.9400  1.4971 
+IC N    CA   C    +N    1.4553 108.9400  180.0000 117.6000  1.3479 
+IC +N   CA   *C   O     1.3479 117.6000  180.0000 120.8500  1.2289 
+IC CA   C    +N   +CA   1.4971 117.6000  180.0000 124.0800  1.4560 
+IC N    C    *CA  HA1   1.4553 108.9400  117.8600 108.0300  1.0814 
+IC N    C    *CA  HA2   1.4553 108.9400 -118.1200 107.9500  1.0817 
+PATCHING FIRS GLYP 
+ 
+RESI DHSD        0.00  ! neutral HIS, proton on ND1 
+GROUP 
+ATOM N    NH1    -0.47  !     |          HD1    HE1 
+ATOM HN   H       0.31  !  HN-N           |     / 
+ATOM CA   CTD1    0.07  !     |   HB1    ND1--CE1 
+ATOM HA   HB1     0.09  !     |   |     /      || 
+GROUP                   !  HA-CA--CB--CG       || 
+ATOM CB   CT2    -0.09  !     |   |     \\     || 
+ATOM HB1  HA2     0.09  !     |   HB2    CD2--NE2 
+ATOM HB2  HA2     0.09  !   O=C           | 
+ATOM ND1  NR1    -0.36  !     |          HD2 
+ATOM HD1  H       0.32 
+ATOM CG   CPH1   -0.05 
+GROUP 
+ATOM CE1  CPH2    0.25 
+ATOM HE1  HR1     0.13 
+ATOM NE2  NR2    -0.70 
+ATOM CD2  CPH1    0.22 
+ATOM HD2  HR3     0.10 
+GROUP 
+ATOM C    C       0.51 
+ATOM O    O      -0.51 
+BOND CB  CA   CG  CB   ND1 CG   CE1 ND1 
+BOND NE2 CD2  N   HN   N   CA 
+BOND C   CA   C   +N   CA  HA   CB  HB1 
+BOND CB  HB2  ND1 HD1  CD2 HD2  CE1 HE1 
+DOUBLE O  C   CG  CD2   CE1  NE2 
+IMPR ND1 CG CE1 HD1  CD2 CG  NE2 HD2  CE1 ND1 NE2 HE1 
+IMPR ND1 CE1 CG HD1  CD2 NE2 CG  HD2  CE1 NE2 ND1 HE1 
+IMPR N   -C  CA HN   C   CA  +N  O 
+CMAP -C  N  CA  C   N  CA  C  +N 
+DONOR HN N 
+DONOR HD1 ND1 
+ACCEPTOR NE2 
+ACCEPTOR O C 
+IC -C   CA   *N   HN    1.3475 123.2700  180.0000 115.2100  0.9988 
+IC -C   N    CA   C     1.3475 123.2700  180.0000 107.7000  1.5166 
+IC N    CA   C    +N    1.4521 107.7000  180.0000 117.5700  1.3509 
+IC +N   CA   *C   O     1.3509 117.5700  180.0000 120.2400  1.2273 
+IC CA   C    +N   +CA   1.5166 117.5700  180.0000 123.7200  1.4545 
+IC N    C    *CA  CB    1.4521 107.7000 -122.4600 109.9900  1.5519 !D form 
+IC N    C    *CA  HA    1.4521 107.7000  117.4900 107.3700  1.0830 !D form 
+IC N    CA   CB   CG    1.4521 112.1200  180.0000 114.0500  1.5041 
+IC CG   CA   *CB  HB1   1.5041 114.0500  121.1700 109.0100  1.1118 
+IC CG   CA   *CB  HB2   1.5041 114.0500 -122.3600 109.5300  1.1121 
+IC CA   CB   CG   ND1   1.5519 114.0500   90.0000 124.1000  1.3783 
+IC ND1  CB   *CG  CD2   1.3783 124.1000 -171.2900 129.6000  1.3597 
+IC CB   CG   ND1  CE1   1.5041 124.1000 -173.2100 107.0300  1.3549 
+IC CB   CG   CD2  NE2   1.5041 129.6000  171.9900 110.0300  1.3817 
+IC NE2  ND1  *CE1 HE1   1.3166 111.6300 -179.6300 123.8900  1.0932 
+IC CE1  CG   *ND1 HD1   1.3549 107.0300 -174.6500 126.2600  1.0005 
+IC NE2  CG   *CD2 HD2   1.3817 110.0300 -177.8500 129.6300  1.0834 
+ 
+RESI DHSE         0.00  ! neutral His, proton on NE2 
+GROUP 
+ATOM N    NH1    -0.47  !     |                 HE1 
+ATOM HN   H       0.31  !  HN-N             __  / 
+ATOM CA   CTD1    0.07  !     |   HB1    ND1--CE1 
+ATOM HA   HB1     0.09  !     |   |     /      | 
+GROUP                   !  HA-CA--CB--CG       | 
+ATOM CB   CT2    -0.08  !     |   |     \\     | 
+ATOM HB1  HA2     0.09  !     |   HB2    CD2--NE2 
+ATOM HB2  HA2     0.09  !   O=C           |     \ 
+ATOM ND1  NR2    -0.70  !     |          HD2    HE2 
+ATOM CG   CPH1    0.22 
+ATOM CE1  CPH2    0.25 
+ATOM HE1  HR1     0.13 
+GROUP 
+ATOM NE2  NR1    -0.36 
+ATOM HE2  H       0.32 
+ATOM CD2  CPH1   -0.05 
+ATOM HD2  HR3     0.09 
+GROUP 
+ATOM C    C       0.51 
+ATOM O    O      -0.51 
+BOND CB  CA   CG  CB   ND1 CG 
+BOND NE2 CD2  N   HN   N   CA 
+BOND C   CA   C   +N   NE2 CE1  CA  HA   CB HB1 
+BOND CB  HB2  NE2 HE2  CD2 HD2  CE1 HE1 
+DOUBLE   O   C   CD2 CG   CE1 ND1 
+IMPR NE2 CD2 CE1 HE2  CD2 CG  NE2 HD2  CE1 ND1 NE2 HE1 
+IMPR NE2 CE1 CD2 HE2  CD2 NE2 CG  HD2  CE1 NE2 ND1 HE1 
+IMPR N   -C  CA  HN   C   CA  +N  O 
+CMAP -C  N  CA  C   N  CA  C  +N 
+DONOR HN N 
+DONOR HE2 NE2 
+ACCEPTOR ND1 
+ACCEPTOR O C 
+IC -C   CA   *N   HN    1.3472 124.1600  180.0000 114.3600  0.9991 
+IC -C   N    CA   C     1.3472 124.1600  180.0000 106.4300  1.5166 
+IC N    CA   C    +N    1.4532 106.4300  180.0000 116.9700  1.3446 
+IC +N   CA   *C   O     1.3446 116.9700  180.0000 120.6800  1.2290 
+IC CA   C    +N   +CA   1.5166 116.9700  180.0000 124.9500  1.4505 
+IC N    C    *CA  CB    1.4532 106.4300 -123.5200 111.6700  1.5578 !D form 
+IC N    C    *CA  HA    1.4532 106.4300  116.4900 107.0800  1.0833 !D form 
+IC N    CA   CB   CG    1.4532 112.8200  180.0000 116.9400  1.5109 
+IC CG   CA   *CB  HB1   1.5109 116.9400  119.8000 107.9100  1.1114 
+IC CG   CA   *CB  HB2   1.5109 116.9400 -124.0400 109.5000  1.1101 
+IC CA   CB   CG   ND1   1.5578 116.9400   90.0000 120.1700  1.3859 
+IC ND1  CB   *CG  CD2   1.3859 120.1700 -178.2600 129.7100  1.3596 
+IC CB   CG   ND1  CE1   1.5109 120.1700 -179.2000 105.2000  1.3170 
+IC CB   CG   CD2  NE2   1.5109 129.7100  178.6600 105.8000  1.3782 
+IC NE2  ND1  *CE1 HE1   1.3539 111.7600  179.6900 124.5800  1.0929 
+IC CE1  CD2  *NE2 HE2   1.3539 107.1500 -178.6900 125.8600  0.9996 
+IC NE2  CG   *CD2 HD2   1.3782 105.8000 -179.3500 129.8900  1.0809 
+ 
+RESI DHSP          1.00  ! Protonated His 
+GROUP 
+ATOM N    NH1    -0.47  !     |          HD1    HE1 
+ATOM HN   H       0.31  !  HN-N           |     / 
+ATOM CA   CTD1    0.07  !     |   HB1    ND1--CE1 
+ATOM HA   HB1     0.09  !     |   |     /      || 
+GROUP                   !  HA-CA--CB--CG       || 
+ATOM CB   CT2A   -0.05  !     |   |     \\     || 
+ATOM HB1  HA2     0.09  !     |   HB2    CD2--NE2(+) 
+ATOM HB2  HA2     0.09  !   O=C           |     \ 
+ATOM CD2  CPH1    0.19  !     |          HD2    HE2 
+ATOM HD2  HR1     0.13 
+ATOM CG   CPH1    0.19 
+GROUP 
+ATOM NE2  NR3    -0.51 
+ATOM HE2  H       0.44 
+ATOM ND1  NR3    -0.51 
+ATOM HD1  H       0.44 
+ATOM CE1  CPH2    0.32 
+ATOM HE1  HR2     0.18 
+GROUP 
+ATOM C    C       0.51 
+ATOM O    O      -0.51 
+BOND CB  CA   CG  CB   ND1 CG   CE1 ND1 
+BOND NE2 CD2  N   HN   N   CA 
+BOND C   CA   C   +N  CA  HA  CB HB1 
+BOND CB  HB2  ND1 HD1  NE2 HE2  CD2 HD2 CE1 HE1 
+DOUBLE  O   C   CD2 CG     NE2 CE1 
+IMPR ND1 CG  CE1 HD1  ND1 CE1 CG  HD1 
+IMPR NE2 CD2 CE1 HE2  NE2 CE1 CD2 HE2 
+IMPR N   -C  CA  HN   C   CA  +N  O 
+CMAP -C  N  CA  C   N  CA  C  +N 
+DONOR HN N 
+DONOR HD1 ND1 
+DONOR HE2 NE2 
+ACCEPTOR O C 
+IC -C   CA   *N   HN    1.3489 123.9300  180.0000 118.8000  1.0041 
+IC -C   N    CA   C     1.3489 123.9300  180.0000 112.0300  1.5225 
+IC N    CA   C    +N    1.4548 112.0300  180.0000 116.4900  1.3464 
+IC +N   CA   *C   O     1.3464 116.4900  180.0000 121.2000  1.2284 
+IC CA   C    +N   +CA   1.5225 116.4900  180.0000 124.2400  1.4521 
+IC N    C    *CA  CB    1.4548 112.0300 -125.1300 109.3800  1.5533 !D form 
+IC N    C    *CA  HA    1.4548 112.0300  119.2000 106.7200  1.0832 !D form 
+IC N    CA   CB   CG    1.4548 112.2500  180.0000 114.1800  1.5168 
+IC CG   CA   *CB  HB1   1.5168 114.1800  122.5000 108.9900  1.1116 
+IC CG   CA   *CB  HB2   1.5168 114.1800 -121.5100 108.9700  1.1132 
+IC CA   CB   CG   ND1   1.5533 114.1800   90.0000 122.9400  1.3718 
+IC ND1  CB   *CG  CD2   1.3718 122.9400 -165.2600 128.9300  1.3549 
+IC CB   CG   ND1  CE1   1.5168 122.9400 -167.6200 108.9000  1.3262 
+IC CB   CG   CD2  NE2   1.5168 128.9300  167.1300 106.9300  1.3727 
+IC NE2  ND1  *CE1 HE1   1.3256 108.5000  178.3900 125.7600  1.0799 
+IC CE1  CD2  *NE2 HE2   1.3256 108.8200 -172.9400 125.5200  1.0020 
+IC CE1  CG   *ND1 HD1   1.3262 108.9000  171.4900 126.0900  1.0018 
+IC NE2  CG   *CD2 HD2   1.3727 106.9300 -174.4900 128.4100  1.0867 
+ 
+RESI DILE         0.00 
+GROUP 
+ATOM N    NH1    -0.47  !     |    HG21 HG22 
+ATOM HN   H       0.31  !  HN-N      | / 
+ATOM CA   CTD1    0.07  !     |     CG2--HG23 
+ATOM HA   HB1     0.09  !     |    / 
+GROUP                   !  HA-CA--CB-HB    HD1 
+ATOM CB   CT1    -0.09  !     |    \       / 
+ATOM HB   HA1     0.09  !     |     CG1--CD--HD2 
+GROUP                   !   O=C    / \     \	 
+ATOM CG2  CT3    -0.27  !     | HG11 HG12  HD3 
+ATOM HG21 HA3     0.09 
+ATOM HG22 HA3     0.09 
+ATOM HG23 HA3     0.09 
+GROUP 
+ATOM CG1  CT2    -0.18 
+ATOM HG11 HA2     0.09 
+ATOM HG12 HA2     0.09 
+GROUP 
+ATOM CD   CT3    -0.27 
+ATOM HD1  HA3     0.09 
+ATOM HD2  HA3     0.09 
+ATOM HD3  HA3     0.09 
+GROUP 
+ATOM C    C       0.51 
+ATOM O    O      -0.51 
+BOND CB  CA   CG1 CB   CG2 CB   CD  CG1 
+BOND N   HN   N   CA    C   CA   C   +N 
+BOND CA  HA   CB  HB   CG1 HG11 CG1 HG12 CG2 HG21 
+BOND CG2 HG22 CG2 HG23 CD  HD1  CD  HD2  CD  HD3 
+DOUBLE  O   C 
+IMPR N -C CA HN  C CA +N O 
+CMAP -C  N  CA  C   N  CA  C  +N 
+DONOR HN N 
+ACCEPTOR O C 
+IC -C   CA   *N   HN    1.3470 124.1600  180.0000 114.1900  0.9978 
+IC -C   N    CA   C     1.3470 124.1600  180.0000 106.3500  1.5190 
+IC N    CA   C    +N    1.4542 106.3500  180.0000 117.9700  1.3465 
+IC +N   CA   *C   O     1.3465 117.9700  180.0000 120.5900  1.2300 
+IC CA   C    +N   +CA   1.5190 117.9700  180.0000 124.2100  1.4467 
+IC N    C    *CA  CB    1.4542 106.3500 -124.2200 112.9300  1.5681 !D form 
+IC N    C    *CA  HA    1.4542 106.3500  115.6300 106.8100  1.0826 !D form 
+IC N    CA   CB   CG1   1.4542 112.7900  180.0000 113.6300  1.5498 
+IC CG1  CA   *CB  HB    1.5498 113.6300  114.5500 104.4800  1.1195 
+IC CG1  CA   *CB  CG2   1.5498 113.6300 -130.0400 113.9300  1.5452 
+IC CA   CB   CG2  HG21  1.5681 113.9300 -171.3000 110.6100  1.1100 
+IC HG21 CB   *CG2 HG22  1.1100 110.6100  119.3500 110.9000  1.1102 
+IC HG21 CB   *CG2 HG23  1.1100 110.6100 -120.0900 110.9700  1.1105 
+IC CA   CB   CG1  CD    1.5681 113.6300  180.0000 114.0900  1.5381 
+IC CD   CB   *CG1 HG11  1.5381 114.0900  122.3600 109.7800  1.1130 
+IC CD   CB   *CG1 HG12  1.5381 114.0900 -120.5900 108.8900  1.1141 
+IC CB   CG1  CD   HD1   1.5498 114.0900 -176.7800 110.3100  1.1115 
+IC HD1  CG1  *CD  HD2   1.1115 110.3100  119.7500 110.6500  1.1113 
+IC HD1  CG1  *CD  HD3   1.1115 110.3100 -119.7000 111.0200  1.1103 
+ 
+RESI DLEU         0.00 
+GROUP 
+ATOM N    NH1    -0.47  !     |        HD11 HD12 
+ATOM HN   H       0.31  !  HN-N          | / 
+ATOM CA   CTD1    0.07  !     |   HB1   CD1--HD13 
+ATOM HA   HB1     0.09  !     |   |    / 
+GROUP                   !  HA-CA--CB--CG-HG 
+ATOM CB   CT2    -0.18  !     |   |    \ 
+ATOM HB1  HA2     0.09  !     |   HB2   CD2--HD23 
+ATOM HB2  HA2     0.09  !   O=C          | \ 
+GROUP                   !     |        HD21 HD22 
+ATOM CG   CT1    -0.09 
+ATOM HG   HA1     0.09 
+GROUP 
+ATOM CD1  CT3    -0.27 
+ATOM HD11 HA3     0.09 
+ATOM HD12 HA3     0.09 
+ATOM HD13 HA3     0.09 
+GROUP 
+ATOM CD2  CT3    -0.27 
+ATOM HD21 HA3     0.09 
+ATOM HD22 HA3     0.09 
+ATOM HD23 HA3     0.09 
+GROUP 
+ATOM C    C       0.51 
+ATOM O    O      -0.51 
+BOND CB  CA   CG  CB   CD1 CG   CD2 CG 
+BOND N   HN   N   CA    C   CA   C +N 
+BOND CA  HA   CB  HB1  CB  HB2  CG  HG   CD1 HD11 
+BOND CD1 HD12 CD1 HD13 CD2 HD21 CD2 HD22 CD2 HD23 
+DOUBLE   O   C 
+IMPR N -C CA HN  C CA +N O 
+CMAP -C  N  CA  C   N  CA  C  +N 
+DONOR HN N 
+ACCEPTOR O C 
+IC -C   CA   *N   HN    1.3474 124.3100  180.0000 114.2600  0.9979 
+IC -C   N    CA   C     1.3474 124.3100  180.0000 106.0500  1.5184 
+IC N    CA   C    +N    1.4508 106.0500  180.0000 117.9300  1.3463 
+IC +N   CA   *C   O     1.3463 117.9300  180.0000 120.5600  1.2299 
+IC CA   C    +N   +CA   1.5184 117.9300  180.0000 124.2600  1.4467 
+IC N    C    *CA  CB    1.4508 106.0500 -121.5200 112.1200  1.5543 !D form 
+IC N    C    *CA  HA    1.4508 106.0500  116.5000 107.5700  1.0824 !D form 
+IC N    CA   CB   CG    1.4508 111.1900  180.0000 117.4600  1.5472 
+IC CG   CA   *CB  HB1   1.5472 117.4600  120.9800 107.1700  1.1145 
+IC CG   CA   *CB  HB2   1.5472 117.4600 -124.6700 108.9800  1.1126 
+IC CA   CB   CG   CD1   1.5543 117.4600  180.0000 110.4800  1.5361 
+IC CD1  CB   *CG  CD2   1.5361 110.4800  120.0000 112.5700  1.5360 
+IC CD1  CD2  *CG  HG    1.5361 110.2600  120.0000 108.0200  1.1168 
+IC CB   CG   CD1  HD11  1.5472 110.4800  177.3300 110.5400  1.1111 
+IC HD11 CG   *CD1 HD12  1.1111 110.5400  119.9600 110.6200  1.1112 
+IC HD11 CG   *CD1 HD13  1.1111 110.5400 -119.8500 110.6900  1.1108 
+IC CB   CG   CD2  HD21  1.5472 112.5700  178.9600 110.3200  1.1116 
+IC HD21 CG   *CD2 HD22  1.1116 110.3200  119.7100 111.6900  1.1086 
+IC HD21 CG   *CD2 HD23  1.1116 110.3200 -119.6100 110.4900  1.1115 
+ 
+RESI DLYS          1.00 
+GROUP 
+ATOM N    NH1    -0.47  !     | 
+ATOM HN   H       0.31  !  HN-N 
+ATOM CA   CTD1    0.07  !     |   HB1 HG1 HD1 HE1    HZ1 
+ATOM HA   HB1     0.09  !     |   |   |   |   |     / 
+GROUP                   !  HA-CA--CB--CG--CD--CE--NZ--HZ2 
+ATOM CB   CT2    -0.18  !     |   |   |   |   |     \ 
+ATOM HB1  HA2     0.09  !     |   HB2 HG2 HD2 HE2    HZ3 
+ATOM HB2  HA2     0.09  !   O=C 
+GROUP                   !     | 
+ATOM CG   CT2    -0.18 
+ATOM HG1  HA2     0.09 
+ATOM HG2  HA2     0.09 
+GROUP 
+ATOM CD   CT2    -0.18 
+ATOM HD1  HA2     0.09 
+ATOM HD2  HA2     0.09 
+GROUP 
+ATOM CE   CT2     0.21 
+ATOM HE1  HA2     0.05 
+ATOM HE2  HA2     0.05 
+ATOM NZ   NH3    -0.30 
+ATOM HZ1  HC      0.33 
+ATOM HZ2  HC      0.33 
+ATOM HZ3  HC      0.33 
+GROUP 
+ATOM C    C       0.51 
+ATOM O    O      -0.51 
+BOND CB CA   CG CB   CD CG   CE CD   NZ CE 
+BOND N  HN   N  CA    C  CA 
+BOND C  +N   CA HA   CB HB1  CB HB2  CG HG1 
+BOND CG HG2  CD HD1  CD HD2  CE HE1  CE HE2 
+DOUBLE   O  C 
+BOND NZ HZ1  NZ HZ2  NZ HZ3 
+IMPR N -C CA HN  C CA +N O 
+CMAP -C  N  CA  C   N  CA  C  +N 
+DONOR HN N 
+DONOR HZ1 NZ 
+DONOR HZ2 NZ 
+DONOR HZ3 NZ 
+ACCEPTOR O C 
+IC -C   CA   *N   HN    1.3482 123.5700  180.0000 115.1100  0.9988 
+IC -C   N    CA   C     1.3482 123.5700  180.0000 107.2900  1.5187 
+IC N    CA   C    +N    1.4504 107.2900  180.0000 117.2700  1.3478 
+IC +N   CA   *C   O     1.3478 117.2700  180.0000 120.7900  1.2277 
+IC CA   C    +N   +CA   1.5187 117.2700  180.0000 124.9100  1.4487 
+IC N    C    *CA  CB    1.4504 107.2900 -122.2300 111.3600  1.5568 !D form 
+IC N    C    *CA  HA    1.4504 107.2900  116.8800 107.3600  1.0833 !D form 
+IC N    CA   CB   CG    1.4504 111.4700  180.0000 115.7600  1.5435 
+IC CG   CA   *CB  HB1   1.5435 115.7600  120.9000 107.1100  1.1146 
+IC CG   CA   *CB  HB2   1.5435 115.7600 -124.4800 108.9900  1.1131 
+IC CA   CB   CG   CD    1.5568 115.7600  180.0000 113.2800  1.5397 
+IC CD   CB   *CG  HG1   1.5397 113.2800  120.7400 109.1000  1.1138 
+IC CD   CB   *CG  HG2   1.5397 113.2800 -122.3400 108.9900  1.1143 
+IC CB   CG   CD   CE    1.5435 113.2800  180.0000 112.3300  1.5350 
+IC CE   CG   *CD  HD1   1.5350 112.3300  122.2500 108.4100  1.1141 
+IC CE   CG   *CD  HD2   1.5350 112.3300 -121.5900 108.1300  1.1146 
+IC CG   CD   CE   NZ    1.5397 112.3300  180.0000 110.4600  1.4604 
+IC NZ   CD   *CE  HE1   1.4604 110.4600  119.9100 110.5100  1.1128 
+IC NZ   CD   *CE  HE2   1.4604 110.4600 -120.0200 110.5700  1.1123 
+IC CD   CE   NZ   HZ1   1.5350 110.4600  179.9200 110.0200  1.0404 
+IC HZ1  CE   *NZ  HZ2   1.0404 110.0200  120.2700 109.5000  1.0402 
+IC HZ1  CE   *NZ  HZ3   1.0404 110.0200 -120.1300 109.4000  1.0401 
+ 
+RESI DMET         0.00 
+GROUP 
+ATOM N    NH1    -0.47  !     | 
+ATOM HN   H       0.31  !  HN-N 
+ATOM CA   CTD1    0.07  !     |   HB1 HG1     HE1 
+ATOM HA   HB1     0.09  !     |   |   |       | 
+GROUP                   !  HA-CA--CB--CG--SD--CE--HE3 
+ATOM CB   CT2    -0.18  !     |   |   |       | 
+ATOM HB1  HA2     0.09  !     |   HB2 HG2     HE2 
+ATOM HB2  HA2     0.09  !   O=C 
+GROUP                   !     | 
+ATOM CG   CT2    -0.14 
+ATOM HG1  HA2     0.09 
+ATOM HG2  HA2     0.09 
+ATOM SD   S      -0.09 
+ATOM CE   CT3    -0.22 
+ATOM HE1  HA3     0.09 
+ATOM HE2  HA3     0.09 
+ATOM HE3  HA3     0.09 
+GROUP 
+ATOM C    C       0.51 
+ATOM O    O      -0.51 
+BOND CB CA   CG CB   SD CG   CE SD 
+BOND N  HN   N  CA    C  CA   C  +N 
+BOND CA HA   CB HB1  CB HB2  CG HG1  CG HG2 
+BOND CE HE1  CE HE2  CE HE3 
+DOUBLE   O  C 
+IMPR N -C CA HN  C CA +N O 
+CMAP -C  N  CA  C   N  CA  C  +N 
+DONOR HN N 
+ACCEPTOR O C 
+IC -C   CA   *N   HN    1.3478 124.2100  180.0000 114.3900  0.9978 
+IC -C   N    CA   C     1.3478 124.2100  180.0000 106.3100  1.5195 
+IC N    CA   C    +N    1.4510 106.3100  180.0000 117.7400  1.3471 
+IC +N   CA   *C   O     1.3471 117.7400  180.0000 120.6400  1.2288 
+IC CA   C    +N   +CA   1.5195 117.7400  180.0000 124.5200  1.4471 
+IC N    C    *CA  CB    1.4510 106.3100 -121.6200 111.8800  1.5546 !D form 
+IC N    C    *CA  HA    1.4510 106.3100  116.9800 107.5700  1.0832 !D form 
+IC N    CA   CB   CG    1.4510 111.2500  180.0000 115.9200  1.5460 
+IC CG   CA   *CB  HB1   1.5460 115.9200  120.5600 106.9000  1.1153 
+IC CG   CA   *CB  HB2   1.5460 115.9200 -124.8000 109.3800  1.1129 
+IC CA   CB   CG   SD    1.5546 115.9200  180.0000 110.2800  1.8219 
+IC SD   CB   *CG  HG1   1.8219 110.2800  120.5000 110.3400  1.1106 
+IC SD   CB   *CG  HG2   1.8219 110.2800 -121.1600 109.6400  1.1119 
+IC CB   CG   SD   CE    1.5460 110.2800  180.0000  98.9400  1.8206 
+IC CG   SD   CE   HE1   1.8219  98.9400 -179.4200 110.9100  1.1111 
+IC HE1  SD   *CE  HE2   1.1111 110.9100  119.9500 111.0300  1.1115 
+IC HE1  SD   *CE  HE3   1.1111 110.9100 -119.9500 111.0900  1.1112 
+ 
+RESI DPHE         0.00 
+GROUP 
+ATOM N    NH1    -0.47  !     |        HD1  HE1 
+ATOM HN   H       0.31  !  HN-N         |    | 
+ATOM CA   CTD1    0.07  !     |   HB1  CD1--CE1 
+ATOM HA   HB1     0.09  !     |   |    //     \\ 
+GROUP                   !  HA-CA--CB--CG      CZ--HZ 
+ATOM CB   CT2    -0.18  !     |   |    \  __  / 
+ATOM HB1  HA2     0.09  !     |   HB2  CD2--CE2 
+ATOM HB2  HA2     0.09  !   O=C         |    | 
+GROUP                   !     |        HD2  HE2 
+ATOM CG   CA      0.00 
+GROUP 
+ATOM CD1  CA     -0.115 
+ATOM HD1  HP      0.115 
+GROUP 
+ATOM CE1  CA     -0.115 
+ATOM HE1  HP      0.115 
+GROUP 
+ATOM CZ   CA     -0.115 
+ATOM HZ   HP      0.115 
+GROUP 
+ATOM CD2  CA     -0.115 
+ATOM HD2  HP      0.115 
+GROUP 
+ATOM CE2  CA     -0.115 
+ATOM HE2  HP      0.115 
+GROUP 
+ATOM C    C       0.51 
+ATOM O    O      -0.51 
+BOND CB  CA   CG CB   CD2 CG   CE1 CD1 
+BOND CZ  CE2  N   HN 
+BOND N   CA    C   CA   C   +N   CA  HA 
+BOND CB  HB1  CB HB2  CD1 HD1  CD2 HD2  CE1 HE1 
+DOUBLE   O  C    CD1 CG  CZ CE1   CE2 CD2 
+BOND CE2 HE2  CZ HZ 
+IMPR N -C CA HN  C CA +N O 
+CMAP -C  N  CA  C   N  CA  C  +N 
+DONOR HN N 
+ACCEPTOR O C 
+IC -C   CA   *N   HN    1.3476 123.8900  180.0000 114.4700  0.9987 
+IC -C   N    CA   C     1.3476 123.8900  180.0000 106.3800  1.5229 
+IC N    CA   C    +N    1.4504 106.3800  180.0000 117.6500  1.3483 
+IC +N   CA   *C   O     1.3483 117.6500  180.0000 120.4900  1.2287 
+IC CA   C    +N   +CA   1.5229 117.6500  180.0000 124.1000  1.4523 
+IC N    C    *CA  CB    1.4504 106.3800 -122.4900 112.4500  1.5594 !D form 
+IC N    C    *CA  HA    1.4504 106.3800  115.6300 107.0500  1.0832 !D form 
+IC N    CA   CB   CG    1.4504 111.6300  180.0000 112.7600  1.5109 
+IC CG   CA   *CB  HB1   1.5109 112.7600  118.2700 109.1000  1.1119 
+IC CG   CA   *CB  HB2   1.5109 112.7600 -123.8300 111.1100  1.1113 
+IC CA   CB   CG   CD1   1.5594 112.7600   90.0000 120.3200  1.4059 
+IC CD1  CB   *CG  CD2   1.4059 120.3200 -177.9600 120.7600  1.4062 
+IC CB   CG   CD1  CE1   1.5109 120.3200 -177.3700 120.6300  1.4006 
+IC CE1  CG   *CD1 HD1   1.4006 120.6300  179.7000 119.6500  1.0814 
+IC CB   CG   CD2  CE2   1.5109 120.7600  177.2000 120.6200  1.4002 
+IC CE2  CG   *CD2 HD2   1.4002 120.6200 -178.6900 119.9900  1.0811 
+IC CG   CD1  CE1  CZ    1.4059 120.6300   -0.1200 119.9300  1.4004 
+IC CZ   CD1  *CE1 HE1   1.4004 119.9300 -179.6900 120.0100  1.0808 
+IC CZ   CD2  *CE2 HE2   1.4000 119.9600 -179.9300 119.8700  1.0811 
+IC CE1  CE2  *CZ  HZ    1.4004 119.9800  179.5100 119.9700  1.0807 
+ 
+RESI DPRO         0.00 
+GROUP                   !       HD1 HD2 
+ATOM N    N      -0.29  !     |   \ / 
+ATOM CD   CP3     0.00  !     N---CD   HG1 
+ATOM HD1  HA2     0.09  !     |     \  / 
+ATOM HD2  HA2     0.09  !     |      CG 
+ATOM CA   CPD1    0.02  !     |     /  \ 
+ATOM HA   HB1     0.09  !  HA-CA--CB   HG2 
+GROUP                   !     |   / \ 
+ATOM CB   CP2    -0.18  !     | HB1 HB2 
+ATOM HB1  HA2     0.09  !   O=C 
+ATOM HB2  HA2     0.09  !     | 
+GROUP 
+ATOM CG   CP2    -0.18 
+ATOM HG1  HA2     0.09 
+ATOM HG2  HA2     0.09 
+GROUP 
+ATOM C    C       0.51 
+ATOM O    O      -0.51 
+BOND C  CA  C   +N 
+BOND N  CA  CA  CB  CB  CG  CG  CD  N   CD 
+BOND HA CA  HG1 CG  HG2 CG  HD1 CD  HD2 CD  HB1 CB  HB2 CB 
+DOUBLE   O  C 
+IMPR N -C CA CD 
+IMPR C CA +N O 
+CMAP -C  N  CA  C   N  CA  C  +N 
+ACCEPTOR O C 
+IC -C   CA   *N   CD    1.3366 122.9400  178.5100 112.7500  1.4624 
+IC -C   N    CA   C     1.3366 122.9400  -76.1200 110.8600  1.5399 
+IC N    CA   C    +N    1.4585 110.8600  180.0000 114.7500  1.3569 
+IC +N   CA   *C   O     1.3569 114.7500  177.1500 120.4600  1.2316 
+IC CA   C    +N   +CA   1.5399 116.1200  180.0000 124.8900  1.4517 
+IC N    C    *CA  CB    1.4585 110.8600 -113.7400 111.7400  1.5399 !D form 
+IC N    C    *CA  HA    1.4585 110.8600  122.4000 109.0900  1.0837 !D form 
+!IC N    CA   CB   CG    1.4585 102.5600   31.6100 104.3900  1.5322 
+!IC CA   CB   CG   CD    1.5399 104.3900  -34.5900 103.2100  1.5317 
+IC N    CA   CB   CG    1.4585 102.5600  -31.6100 104.3900  1.5322 !D form 
+IC CA   CB   CG   CD    1.5399 104.3900   34.5900 103.2100  1.5317 !D form 
+IC CA   CG   *CB  HB1   1.4585 102.5600  120.0000 109.0200  1.1131 
+IC CA   CG   *CB  HB2   1.4585 102.5600 -120.0000 109.0200  1.1131 
+IC CB   CD   *CG  HG1   1.5399 104.3900  120.0000 112.9500  1.1077 
+IC CB   CD   *CG  HG2   1.5399 104.3900 -120.0000 109.2200  1.1143 
+IC N    CG   *CD  HD1   1.5322 103.2100  120.0000 110.0300  1.1137 
+IC N    CG   *CD  HD2   1.5322 103.2100 -120.0000 110.0000  1.1144 
+PATCHING FIRS PROP 
+ 
+RESI DSER         0.00 
+GROUP 
+ATOM N    NH1    -0.47  !     | 
+ATOM HN   H       0.31  !  HN-N 
+ATOM CA   CTD1    0.07  !     |   HB1 
+ATOM HA   HB1     0.09  !     |   | 
+GROUP                   !  HA-CA--CB--OG 
+ATOM CB   CT2     0.05  !     |   |     \ 
+ATOM HB1  HA2     0.09  !     |   HB2    HG1 
+ATOM HB2  HA2     0.09  !   O=C 
+ATOM OG   OH1    -0.66  !     | 
+ATOM HG1  H       0.43 
+GROUP 
+ATOM C    C       0.51 
+ATOM O    O      -0.51 
+BOND CB CA   OG CB  N HN  N  CA 
+BOND C  CA  C +N  CA HA  CB HB1 
+BOND CB HB2  OG HG1 
+DOUBLE   O  C 
+IMPR N -C CA HN  C CA +N O 
+CMAP -C  N  CA  C   N  CA  C  +N 
+DONOR HN N 
+DONOR HG1 OG 
+ACCEPTOR OG 
+ACCEPTOR O C 
+IC -C   CA   *N   HN    1.3474 124.3700  180.0000 114.1800  0.9999 
+IC -C   N    CA   C     1.3474 124.3700  180.0000 105.8100  1.5166 
+IC N    CA   C    +N    1.4579 105.8100  180.0000 117.7200  1.3448 
+IC +N   CA   *C   O     1.3448 117.7200  180.0000 120.2500  1.2290 
+IC CA   C    +N   +CA   1.5166 117.7200  180.0000 124.6300  1.4529 
+IC N    C    *CA  CB    1.4579 105.8100 -124.7500 111.4000  1.5585 !D form 
+IC N    C    *CA  HA    1.4579 105.8100  115.5600 107.3000  1.0821 !D form 
+IC N    CA   CB   OG    1.4579 114.2800  180.0000 112.4500  1.4341 
+IC OG   CA   *CB  HB1   1.4341 112.4500  119.3200 108.1000  1.1140 
+IC OG   CA   *CB  HB2   1.4341 112.4500 -123.8600 110.3800  1.1136 
+IC CA   CB   OG   HG1   1.5585 112.4500  165.9600 107.0800  0.9655 
+ 
+RESI DTHR         0.00 
+GROUP 
+ATOM N    NH1    -0.47  !     | 
+ATOM HN   H       0.31  !  HN-N 
+ATOM CA   CTD1    0.07  !     |     OG1--HG1 
+ATOM HA   HB1     0.09  !     |    / 
+GROUP                   !  HA-CA--CB-HB 
+ATOM CB   CT1     0.14  !     |    \ 
+ATOM HB   HA1     0.09  !     |     CG2--HG21 
+ATOM OG1  OH1    -0.66  !   O=C    / \ 
+ATOM HG1  H       0.43  !     | HG21 HG22 
+GROUP 
+ATOM CG2  CT3    -0.27 
+ATOM HG21 HA3     0.09 
+ATOM HG22 HA3     0.09 
+ATOM HG23 HA3     0.09 
+GROUP 
+ATOM C    C       0.51 
+ATOM O    O      -0.51 
+BOND CB CA  OG1 CB   CG2 CB    N   HN 
+BOND N  CA    C   CA    C   +N    CA  HA 
+BOND CB HB  OG1 HG1  CG2 HG21  CG2 HG22  CG2 HG23 
+DOUBLE  O   C 
+IMPR N -C CA HN  C CA +N O 
+CMAP -C  N  CA  C   N  CA  C  +N 
+DONOR HN N 
+DONOR HG1 OG1 
+ACCEPTOR OG1 
+ACCEPTOR O C 
+IC -C   CA   *N   HN    1.3471 124.1200  180.0000 114.2600  0.9995 
+IC -C   N    CA   C     1.3471 124.1200  180.0000 106.0900  1.5162 
+IC N    CA   C    +N    1.4607 106.0900  180.0000 117.6900  1.3449 
+IC +N   CA   *C   O     1.3449 117.6900  180.0000 120.3000  1.2294 
+IC CA   C    +N   +CA   1.5162 117.6900  180.0000 124.6600  1.4525 
+IC N    C    *CA  CB    1.4607 106.0900 -126.4600 112.7400  1.5693 !D form 
+IC N    C    *CA  HA    1.4607 106.0900  114.9200 106.5300  1.0817 !D form 
+IC N    CA   CB   OG1   1.4607 114.8100  180.0000 112.1600  1.4252 
+IC OG1  CA   *CB  HB    1.4252 112.1600  116.3900 106.1100  1.1174 
+IC OG1  CA   *CB  CG2   1.4252 112.1600 -124.1300 115.9100  1.5324 
+IC CA   CB   OG1  HG1   1.5693 112.1600 -179.2800 105.4500  0.9633 
+IC CA   CB   CG2  HG21  1.5693 115.9100 -173.6500 110.8500  1.1104 
+IC HG21 CB   *CG2 HG22  1.1104 110.8500  119.5100 110.4100  1.1109 
+IC HG21 CB   *CG2 HG23  1.1104 110.8500 -120.3900 111.1100  1.1113 
+ 
+RESI DTRP         0.00 
+GROUP 
+ATOM N    NH1    -0.47  !     |                  HE3 
+ATOM HN   H       0.31  !  HN-N                   | 
+ATOM CA   CTD1    0.07  !     |   HB1            CE3 
+ATOM HA   HB1     0.09  !     |   |             /  \\ 
+GROUP                   !  HA-CA--CB---CG-----CD2   CZ3-HZ3 
+ATOM CB   CT2    -0.18  !     |   |    ||     ||     | 
+ATOM HB1  HA2     0.09  !     |   HB2  CD1    CE2   CH2-HH2 
+ATOM HB2  HA2     0.09  !   O=C       /   \   / \  // 
+GROUP                   !     |     HD1    NE1   CZ2 
+ATOM CG   CY     -0.03  !                   |     | 
+ATOM CD1  CA     -0.15  !                  HE1   HZ2 
+ATOM HD1  HP      0.22 
+ATOM NE1  NY     -0.51 
+ATOM HE1  H       0.37 
+ATOM CE2  CPT     0.24 
+ATOM CD2  CPT     0.11 
+ATOM CE3  CAI    -0.25 
+ATOM HE3  HP      0.17 
+ATOM CZ3  CA     -0.20 
+ATOM HZ3  HP      0.14 
+ATOM CZ2  CAI    -0.27 
+ATOM HZ2  HP      0.16 
+ATOM CH2  CA     -0.14 
+ATOM HH2  HP      0.14 
+GROUP 
+ATOM C    C       0.51 
+ATOM O    O      -0.51 
+BOND CB  CA   CG  CB   CD2 CG   NE1 CD1 
+BOND CZ2 CE2 
+BOND N   HN   N   CA     C   CA   C   +N 
+BOND CZ3 CH2  CD2 CE3  NE1 CE2  CA  HA   CB  HB1 
+BOND CB  HB2  CD1 HD1  NE1 HE1  CE3 HE3  CZ2 HZ2 
+BOND CZ3 HZ3  CH2 HH2 
+DOUBLE  O   C   CD1 CG   CE2 CD2  CZ3 CE3  CH2 CZ2 
+IMPR N -C CA HN  C CA +N O 
+CMAP -C  N  CA  C   N  CA  C  +N 
+DONOR HN N 
+DONOR HE1 NE1 
+ACCEPTOR O C 
+IC -C   CA   *N   HN    1.3482 123.5100  180.0000 115.0200  0.9972 
+IC -C   N    CA   C     1.3482 123.5100  180.0000 107.6900  1.5202 
+IC N    CA   C    +N    1.4507 107.6900  180.0000 117.5700  1.3505 
+IC +N   CA   *C   O     1.3505 117.5700  180.0000 121.0800  1.2304 
+IC CA   C    +N   +CA   1.5202 117.5700  180.0000 124.8800  1.4526 
+IC N    C    *CA  CB    1.4507 107.6900 -122.6800 111.2300  1.5560 !D form 
+IC N    C    *CA  HA    1.4507 107.6900  117.0200 106.9200  1.0835 !D form 
+IC N    CA   CB   CG    1.4507 111.6800  180.0000 115.1400  1.5233 
+IC CG   CA   *CB  HB1   1.5233 115.1400  119.1700 107.8400  1.1127 
+IC CG   CA   *CB  HB2   1.5233 115.1400 -124.7300 109.8700  1.1118 
+IC CA   CB   CG   CD2   1.5560 115.1400   90.0000 123.9500  1.4407 
+IC CD2  CB   *CG  CD1   1.4407 123.9500 -172.8100 129.1800  1.3679 
+IC CD1  CG   CD2  CE2   1.3679 106.5700   -0.0800 106.6500  1.4126 
+IC CG   CD2  CE2  NE1   1.4407 106.6500    0.1400 107.8700  1.3746 
+IC CE2  CG   *CD2 CE3   1.4126 106.6500  179.2100 132.5400  1.4011 
+IC CE2  CD2  CE3  CZ3   1.4126 120.8000   -0.2000 118.1600  1.4017 
+IC CD2  CE3  CZ3  CH2   1.4011 118.1600    0.1000 120.9700  1.4019 
+IC CE3  CZ3  CH2  CZ2   1.4017 120.9700    0.0100 120.8700  1.4030 
+IC CZ3  CD2  *CE3 HE3   1.4017 118.1600 -179.6200 121.8400  1.0815 
+IC CH2  CE3  *CZ3 HZ3   1.4019 120.9700 -179.8200 119.4500  1.0811 
+IC CZ2  CZ3  *CH2 HH2   1.4030 120.8700 -179.9200 119.5700  1.0811 
+IC CE2  CH2  *CZ2 HZ2   1.3939 118.4200  179.8700 120.0800  1.0790 
+IC CD1  CE2  *NE1 HE1   1.3752 108.8100  177.7800 124.6800  0.9767 
+IC CG   NE1  *CD1 HD1   1.3679 110.1000  178.1000 125.4300  1.0820 
+ 
+RESI DTYR         0.00 
+GROUP 
+ATOM N    NH1    -0.47  !     |        HD1  HE1 
+ATOM HN   H       0.31  !  HN-N         |    | 
+ATOM CA   CTD1    0.07  !     |   HB1  CD1--CE1 
+ATOM HA   HB1     0.09  !     |   |   //      \\ 
+GROUP                   !  HA-CA--CB--CG      CZ--OH 
+ATOM CB   CT2    -0.18  !     |   |    \  __  /     \ 
+ATOM HB1  HA2     0.09  !     |   HB2  CD2--CE2     HH 
+ATOM HB2  HA2     0.09  !   O=C         |    | 
+GROUP                   !     |        HD2  HE2 
+ATOM CG   CA      0.00 
+GROUP 
+ATOM CD1  CA     -0.115 
+ATOM HD1  HP      0.115 
+GROUP 
+ATOM CE1  CA     -0.115 
+ATOM HE1  HP      0.115 
+GROUP 
+ATOM CZ   CA      0.11 
+ATOM OH   OH1    -0.54 
+ATOM HH   H       0.43 
+GROUP 
+ATOM CD2  CA     -0.115 
+ATOM HD2  HP      0.115 
+GROUP 
+ATOM CE2  CA     -0.115 
+ATOM HE2  HP      0.115 
+GROUP 
+ATOM C    C       0.51 
+ATOM O    O      -0.51 
+BOND CB  CA   CG  CB   CD2 CG   CE1 CD1 
+BOND CZ  CE2  OH  CZ 
+BOND N   HN   N   CA    C   CA   C   +N 
+BOND CA  HA   CB  HB1  CB  HB2  CD1 HD1  CD2 HD2 
+BOND CE1 HE1  CE2 HE2  OH  HH 
+DOUBLE   O   C   CD1 CG  CE1  CZ  CE2 CD2 
+IMPR N -C CA HN  C CA +N O 
+CMAP -C  N  CA  C   N  CA  C  +N 
+DONOR HN N 
+DONOR HH OH 
+ACCEPTOR OH 
+ACCEPTOR O C 
+IC -C   CA   *N   HN    1.3476 123.8100  180.0000 114.5400  0.9986 
+IC -C   N    CA   C     1.3476 123.8100  180.0000 106.5200  1.5232 
+IC N    CA   C    +N    1.4501 106.5200  180.0000 117.3300  1.3484 
+IC +N   CA   *C   O     1.3484 117.3300  180.0000 120.6700  1.2287 
+IC CA   C    +N   +CA   1.5232 117.3300  180.0000 124.3100  1.4513 
+IC N    C    *CA  CB    1.4501 106.5200 -122.2700 112.3400  1.5606 !D form 
+IC N    C    *CA  HA    1.4501 106.5200  116.0400 107.1500  1.0833 !D form 
+IC N    CA   CB   CG    1.4501 111.4300  180.0000 112.9400  1.5113 
+IC CG   CA   *CB  HB1   1.5113 112.9400  118.8900 109.1200  1.1119 
+IC CG   CA   *CB  HB2   1.5113 112.9400 -123.3600 110.7000  1.1115 
+IC CA   CB   CG   CD1   1.5606 112.9400   90.0000 120.4900  1.4064 
+IC CD1  CB   *CG  CD2   1.4064 120.4900 -176.4600 120.4600  1.4068 
+IC CB   CG   CD1  CE1   1.5113 120.4900 -175.4900 120.4000  1.4026 
+IC CE1  CG   *CD1 HD1   1.4026 120.4000  178.9400 119.8000  1.0814 
+IC CB   CG   CD2  CE2   1.5113 120.4600  175.3200 120.5600  1.4022 
+IC CE2  CG   *CD2 HD2   1.4022 120.5600 -177.5700 119.9800  1.0813 
+IC CG   CD1  CE1  CZ    1.4064 120.4000   -0.1900 120.0900  1.3978 
+IC CZ   CD1  *CE1 HE1   1.3978 120.0900  179.6400 120.5800  1.0799 
+IC CZ   CD2  *CE2 HE2   1.3979 119.9200 -178.6900 119.7600  1.0798 
+IC CE1  CE2  *CZ  OH    1.3978 120.0500 -178.9800 120.2500  1.4063 
+IC CE1  CZ   OH   HH    1.3978 119.6800  175.4500 107.4700  0.9594 
+ 
+RESI DVAL         0.00 
+GROUP 
+ATOM N    NH1    -0.47  !     |    HG11 HG12 
+ATOM HN   H       0.31  !  HN-N      | / 
+ATOM CA   CTD1    0.07  !     |     CG1--HG13 
+ATOM HA   HB1     0.09  !     |    / 
+GROUP                   !  HA-CA--CB-HB 
+ATOM CB   CT1    -0.09  !     |    \ 
+ATOM HB   HA1     0.09  !     |     CG2--HG21 
+GROUP                   !   O=C    / \ 
+ATOM CG1  CT3    -0.27  !     | HG21 HG22 
+ATOM HG11 HA3     0.09 
+ATOM HG12 HA3     0.09 
+ATOM HG13 HA3     0.09 
+GROUP 
+ATOM CG2  CT3    -0.27 
+ATOM HG21 HA3     0.09 
+ATOM HG22 HA3     0.09 
+ATOM HG23 HA3     0.09 
+GROUP 
+ATOM C    C       0.51 
+ATOM O    O      -0.51 
+BOND CB  CA    CG1 CB    CG2 CB    N   HN 
+BOND N   CA     C   CA    C   +N    CA HA 
+BOND CB  HB    CG1 HG11  CG1 HG12  CG1 HG13  CG2 HG21 
+BOND CG2 HG22  CG2 HG23 
+DOUBLE    O   C 
+IMPR N -C CA HN C CA +N O 
+CMAP -C  N  CA  C   N  CA  C  +N 
+DONOR HN N 
+ACCEPTOR O C 
+IC -C   CA   *N   HN    1.3482 124.5700  180.0000 114.4100  0.9966 
+IC -C   N    CA   C     1.3482 124.5700  180.0000 105.5400  1.5180 
+IC N    CA   C    +N    1.4570 105.5400  180.0000 117.8300  1.3471 
+IC +N   CA   *C   O     1.3471 117.8300  180.0000 120.7000  1.2297 
+IC CA   C    +N   +CA   1.5180 117.8300  180.0000 124.0800  1.4471 
+IC N    C    *CA  CB    1.4570 105.5400 -122.9500 111.2300  1.5660 !D form 
+IC N    C    *CA  HA    1.4570 105.5400  117.2400 107.4600  1.0828 !D form 
+IC N    CA   CB   CG1   1.4570 113.0500  180.0000 113.9700  1.5441 
+IC CG1  CA   *CB  CG2   1.5441 113.9700  123.9900 112.1700  1.5414 
+IC CG1  CA   *CB  HB    1.5441 113.9700 -119.1700 107.5700  1.1178 
+IC CA   CB   CG1  HG11  1.5660 113.9700  177.8300 110.3000  1.1114 
+IC HG11 CB   *CG1 HG12  1.1114 110.3000  119.2500 111.6700  1.1097 
+IC HG11 CB   *CG1 HG13  1.1114 110.3000 -119.4900 110.7000  1.1110 
+IC CA   CB   CG2  HG21  1.5660 112.1700 -177.7800 110.7100  1.1108 
+IC HG21 CB   *CG2 HG22  1.1108 110.7100  120.0800 110.5600  1.1115 
+IC HG21 CB   *CG2 HG23  1.1108 110.7100 -119.5500 111.2300  1.1098 
+ 
+!PRES LTOD         0.00 ! patch to convert l amino acid to d 
+!                       ! needed for CMAP, AMG 2/27/2008 
+!                       ! follow with AUTOgen 
+!                       ! DOESN'T WORK AT THE MOMENT!!!!!!! 
+!GROUP 
+!ATOM CA   CTD1    0.07 
+!CMAP -C  N  CA  C   N  CA  C  +N 
+ 
+END 
+ 
+read para card flex @app 
+* Parameters for D- aminoacids 
+* 
+ 
+ATOMS 
+MASS   438 CTD1  12.01100 ! added for D-amino acids 
+MASS   439 CPD1  12.01100 ! added for D-proline 
+ 
+BONDS 
+! 
+!V(bond) = Kb(b - b0)**2 
+! 
+!Kb: kcal/mole/A**2 
+!b0: A 
+! 
+!atom type Kb          b0 
+! 
+ 
+! Added CTD1 -- new atom type for alpha carbon for d-amino acid, necessary 
+! for CMAP.  Just duplicated the CT1 parameters. 
+ 
+CTD1 C     250.000     1.4900 ! ALLOW   ALI PEP POL ARO 
+CTD1 CC    200.000     1.5220 ! ALLOW   POL 
+CTD1 CD    200.000     1.5220 ! ALLOW   POL 
+CT1  CTD1  222.500     1.5000 ! ALLOW   ALI 
+CT2  CTD1  222.500     1.5380 ! ALLOW   ALI 
+CT3  CTD1  222.500     1.5380 ! ALLOW   ALI 
+CT2A CTD1  222.500     1.5380 ! from CT2  CT1, Zhu 
+HA   CTD1  309.000     1.1110 ! ALLOW   ALI 
+HB1  CTD1  330.000     1.0800 ! ALLOW   PEP 
+NH1  CTD1  320.000     1.4300 ! ALLOW   ALI PEP POL ARO 
+NH3  CTD1  200.000     1.4800 ! ALLOW   ALI POL 
+OH1  CTD1  428.000     1.4200 ! ALLOW   ALI ALC ARO 
+CPD1 C     250.000     1.4900 ! ALLOW PRO 
+CP2  CPD1  222.500     1.5270 ! ALLOW PRO 
+HB1  CPD1  330.000     1.0800 ! ALLOW PRO 
+N    CPD1  320.000     1.4340 ! ALLOW PRO 
+ 
+ 
+ANGLES 
+! 
+!V(angle) = Ktheta(Theta - Theta0)**2 
+! 
+!V(Urey-Bradley) = Kub(S - S0)**2 
+! 
+!Ktheta: kcal/mole/rad**2 
+!Theta0: degrees 
+!Kub: kcal/mole/A**2 (Urey-Bradley) 
+!S0: A 
+! 
+ 
+! Added CTD1 -- new atom type for alpha carbon for d-amino acid, necessary 
+! for CMAP.  Just duplicated the CT1 parameters.  AMG 2/27/08 
+ 
+HA3  CT3  CTD1   33.430  110.10   22.53   2.17900 ! ALLOW   ALI 
+                ! alkane frequencies (MJF), alkane geometries (SF) 
+ 
+CT1  CTD1 C      52.000   108.0000 ! ALLOW   ALI PEP POL ARO 
+CTD1 CT2  CA     51.800   107.5000 ! ALLOW   ALI ARO 
+CTD1 CT2  CC     52.000   108.0000 ! ALLOW   ALI PEP POL ARO 
+CTD1 CT2  CD     52.000   108.0000 ! ALLOW   ALI PEP POL ARO 
+CTD1 CT2  CPH1   58.350   113.0000 ! ALLOW ARO 
+CTD1 CT2  CT1    58.350   113.50   11.16   2.56100 ! ALLOW   ALI 
+CTD1 CD   OH1    55.000   110.50              ! From ASPP CT2-CD-OH1 
+CTD1 NH1  C      50.000   120.0000 ! ALLOW   ALI PEP POL ARO 
+CT2  CTD1 C      52.000   108.0000 ! ALLOW   ALI PEP POL ARO 
+CT2  CTD1 CC     52.000   108.0000 ! ALLOW   ALI PEP POL ARO 
+CT2  CTD1 CD     52.000   108.0000 ! ALLOW   ALI PEP POL ARO 
+CT2  CT1  CTD1   53.350   111.00    8.00   2.56100 ! ALLOW   ALI 
+CT2  CT2  CTD1   58.350   113.50   11.16   2.56100 ! ALLOW   ALI 
+CT2  CT3  CTD1   58.350   113.50   11.16   2.56100 ! ALLOW   ALI 
+CT2A CTD1 CC     52.000   108.0000 ! ALLOW   ALI PEP POL ARO 
+CT3  CTD1 C      52.000   108.0000 ! ALLOW   ALI PEP POL ARO 
+CT3  CTD1 CC     52.000   108.0000 ! ALLOW   ALI PEP POL ARO 
+CT3  CTD1 CT1    53.350   108.50    8.00   2.56100 ! ALLOW   ALI 
+CT3  CTD1 CT2    53.350   114.00    8.00   2.56100 ! ALLOW   ALI 
+CT3  CTD1 CT3    53.350   114.00    8.00   2.56100 ! ALLOW   ALI 
+CT3  CT2  CTD1   58.350   113.50   11.16   2.56100 ! ALLOW   ALI 
+CT3  CT1  CTD1   53.350   108.50    8.00   2.56100 ! ALLOW   ALI 
+CY   CT2  CTD1   58.350   114.0000 ! ALLOW ARO 
+H    NH1  CTD1   35.000   117.0000 ! ALLOW   PEP POL ARO ALI 
+H    OH1  CTD1   57.500   106.0000 ! ALLOW   ALC ARO ALI 
+HA   CTD1 C      33.000   109.50   30.00   2.16300 ! ALLOW   ALI PEP POL ARO 
+HA   CTD1 CD     33.000   109.50   30.00   2.16300 ! ALLOW   ALI PEP POL ARO 
+HA   CTD1 CT1    34.500   110.10   22.53   2.17900 ! ALLOW   ALI 
+HA   CTD1 CT2    34.500   110.10   22.53   2.17900 ! ALLOW   ALI 
+HA   CTD1 CT3    34.500   110.10   22.53   2.17900 ! ALLOW   ALI 
+HA   CTD1 HA     35.500   109.00    5.40   1.80200 ! TEST for test cpd 
+HA   CT2  CTD1   33.430   110.10   22.53   2.17900 ! ALLOW   ALI 
+HA   CT3  CTD1   33.430   110.10   22.53   2.17900 ! ALLOW   ALI 
+HA1  CT1  CTD1   34.500   110.10   22.53   2.17900 ! ALLOW   ALI 
+HA2  CT2  CTD1   26.500   110.10   22.53   2.17900 ! ALLOW   ALI 
+HB1  CTD1 C      50.000   109.5000 ! ALLOW  PEP 
+HB1  CTD1 CC     50.000   109.5000 ! ALLOW  PEP POL 
+HB1  CTD1 CD     50.000   109.5000 ! ALLOW  PEP POL 
+HB1  CTD1 CT1    35.000   111.0000 ! ALLOW  PEP 
+HB1  CTD1 CT2    35.000   111.0000 ! ALLOW  PEP 
+HB1  CTD1 CT3    35.000   111.0000 ! ALLOW  PEP 
+HC   NH3  CTD1   30.000   109.50   20.00   2.07400 ! ALLOW   POL ALI 
+N    C    CTD1   20.000   112.5000 ! ALLOW ALI PEP POL ARO PRO 
+NH1  C    CTD1   80.000   116.5000 ! ALLOW   ALI PEP POL ARO 
+NH1  CTD1 C      50.000   107.0000 ! ALLOW   PEP POL ARO ALI 
+NH1  CTD1 CC     50.000   107.0000 ! ALLOW   PEP POL ARO ALI 
+NH1  CTD1 CD     50.000   107.0000 ! ALLOW   PEP POL ARO ALI 
+NH1  CTD1 CT1    70.000   113.5000 ! ALLOW   ALI PEP POL ARO 
+NH1  CTD1 CT2    70.000   113.5000 ! ALLOW   ALI PEP POL ARO 
+NH1  CTD1 CT3    70.000   113.5000 ! ALLOW   ALI PEP POL ARO 
+NH1  CTD1 HB1    48.000   108.0000 ! ALLOW PEP 
+NH2  CC   CTD1   50.000   116.50   50.00   2.45000 ! ALLOW   ALI PEP POL ARO 
+NH3  CTD1 C      43.700   110.0000 ! ALLOW   PEP POL ARO ALI 
+NH3  CTD1 CC     43.700   110.0000 ! ALLOW   PEP POL ARO ALI 
+NH3  CTD1 CT1    67.700   110.0000 ! ALLOW   ALI POL 
+NH3  CTD1 CT2    67.700   110.0000 ! ALLOW   ALI POL 
+NH3  CTD1 CT3    67.700   110.0000 ! ALLOW   ALI POL 
+NH3  CTD1 HB1    51.500   107.5000 ! ALLOW   ALI POL PEP 
+O    C    CTD1   80.000   121.0000 ! ALLOW   ALI PEP POL ARO 
+O    CC   CTD1   15.000   121.00   50.00   2.44000 ! ALLOW   ALI PEP POL ARO 
+OB   CD   CTD1   70.000   125.00   20.00   2.44200 ! ALLOW   ALI PEP POL ARO 
+OC   CC   CTD1   40.000   118.00   50.00   2.38800 ! ALLOW   ALI PEP POL ARO ION 
+OH1  CT1  CTD1   75.700   110.1000 ! ALLOW   ALI ALC ARO 
+OH1  CT2  CTD1   75.700   110.1000 ! ALLOW   ALI ALC ARO 
+ 
+OS   CD   CTD1   55.000   109.00   20.00   2.32600 ! ALLOW POL PEP 
+S    CT2  CTD1   58.000   112.5000 ! ALLOW   ALI SUL ION 
+SM   CT2  CTD1   58.000   112.5000 ! ALLOW   ALI SUL ION 
+ 
+!For GLU/HSP, Zhu transfer to D-FORM 
+NH1  CTD1 CT2A   70.000   113.5000 ! from NH1  CT1  CT2 
+HB1  CTD1 CT2A   35.000   111.0000 ! from HB1  CT1  CT2 
+CT2A CTD1 C      52.000   108.0000 ! from CT2  CT1  C 
+CTD1 CT2A HA2    26.500   110.1000  22.53   2.17900 ! from HA2  CT2  CT1 
+CTD1 CT2A CT2    58.350   113.5000  11.16   2.56100 ! from CT2  CT2  CT1 
+CTD1 CT2A CPH1   58.350   113.0000 ! from CT1  CT2  CPH1 
+ 
+!D-Proline 
+C    N    CPD1   60.000   117.0000 
+N    C    CPD1   20.000   112.5000 
+N    CPD1 HB1    48.000   112.0000 
+N    CPD1 CP2    70.000   110.8000 
+N    CPD1 C      50.000   108.2000 
+N    CPD1 CC     50.000   108.2000 
+N    CPD1 CD     50.000   108.2000 
+NH1  C    CPD1   80.000   116.5000 
+NH2  CC   CPD1   80.000   112.5000 
+NP   CPD1 C      50.000   106.0000 
+NP   CPD1 CC     50.000   106.0000 
+NP   CPD1 CD     50.000   106.0000 
+NP   CPD1 CP2    70.000   108.5000 
+NP   CPD1 HB1    51.500   107.5000 
+HB1  CPD1 CP2    35.000   118.0000 
+HB1  CPD1 C      50.000   112.0000 
+HB1  CPD1 CC     50.000   112.0000 
+HB1  CPD1 CD     50.000   112.0000 
+HC   NP   CPD1   33.000   109.50    4.00   2.05600 
+CP2  CPD1 C      52.000   112.3000 
+CP2  CPD1 CC     52.000   112.3000 
+CP2  CPD1 CD     50.000   112.3000 
+CP2  CP2  CPD1   70.000   108.5000 
+CPD1 CP2  HA2    33.430   110.10   22.53   2.17900 
+CPD1 C    O      80.000   118.0000 
+CPD1 CC   O      80.000   118.0000 
+CP3  N    CPD1  100.000   114.2000 
+CP3  NP   CPD1  100.000   111.0000 
+OB   CD   CPD1  70.000    125.00   20.00   2.44200 
+OC   CC   CPD1  40.000    118.00   50.00   2.38800 
+OS   CD   CPD1  55.000    109.00   20.00   2.32600 
+ 
+DIHEDRALS 
+! 
+!V(dihedral) = Kchi(1 + cos(n(chi) - delta)) 
+! 
+!Kchi: kcal/mole 
+!n: multiplicity 
+!delta: degrees 
+! 
+!atom types             Kchi    n   delta 
+! 
+ 
+! Added CTD1 -- new atom type for alpha carbon for d-amino acid, necessary 
+C    CTD1 NH1  C        0.2000  1   180.00 ! ALLOW PEP 
+CC   CTD1 CT2  CA       0.0400  3     0.00 ! ALLOW   ARO 
+CC   CTD1 NH1  C        0.2000  1   180.00 ! ALLOW PEP POL 
+CD   CTD1 NH1  C        0.2000  1   180.00 ! ALLOW PEP POL 
+CTD1 C    N    CP1      2.7500  2   180.00 ! ALLOW PRO 
+CTD1 C    N    CP1      0.3000  4     0.00 ! ALLOW PRO 
+CTD1 C    N    CP3      2.7500  2   180.00 ! ALLOW PRO 
+CTD1 C    N    CP3      0.3000  4     0.00 ! ALLOW PRO 
+CTD1 C    NH1  CTD1     1.6000  1     0.00 ! ALLOW PEP 
+CTD1 C    NH1  CTD1     2.5000  2   180.00 ! ALLOW PEP 
+CTD1 C    NH1  CT1      1.6000  1     0.00 ! ALLOW PEP 
+CTD1 C    NH1  CT1      2.5000  2   180.00 ! ALLOW PEP 
+CT1  C    NH1  CTD1     1.6000  1     0.00 ! ALLOW PEP ! mix L and D 
+CT1  C    NH1  CTD1     2.5000  2   180.00 ! ALLOW PEP ! mix L and D 
+CT1  CTD1 NH1  C        1.8000  1     0.00 ! ALLOW PEP ! mix L and D 
+CTD1 CT1  NH1  C        1.8000  1     0.00 ! ALLOW PEP ! mix L and D 
+CTD1 NH1  C    CP1      1.6000  1     0.00 ! ALLOW PEP PRO 
+CTD1 NH1  C    CP1      2.5000  2   180.00 ! ALLOW PEP PRO 
+CT2  C    NH1  CTD1     1.6000  1     0.00 ! ALLOW PEP 
+CT2  C    NH1  CTD1     2.5000  2   180.00 ! ALLOW PEP 
+CT2  CTD1 NH1  C        1.8000  1     0.00 ! ALLOW PEP 
+CT2  NH1  C    CTD1     1.6000  1     0.00 ! ALLOW PEP 
+CT2  NH1  C    CTD1     2.5000  2   180.00 ! ALLOW PEP 
+CT3  C    NH1  CTD1     1.6000  1     0.00 ! ALLOW PEP 
+CT3  C    NH1  CTD1     2.5000  2   180.00 ! ALLOW PEP 
+CT3  CTD1 NH1  C        1.8000  1     0.00 ! ALLOW PEP 
+CT3  NH1  C    CTD1     1.6000  1     0.00 ! ALLOW PEP 
+CT3  NH1  C    CTD1     2.5000  2   180.00 ! ALLOW PEP 
+H    NH1  C    CTD1     2.5000  2   180.00 ! ALLOW PEP 
+H    NH1  CTD1 C        0.0000  1     0.00 ! ALLOW PEP 
+H    NH1  CTD1 CC       0.0000  1     0.00 ! ALLOW PEP POL 
+H    NH1  CTD1 CD       0.0000  1     0.00 ! ALLOW PEP POL 
+H    NH1  CTD1 CTD1     0.0000  1     0.00 ! ALLOW PEP 
+H    NH1  CT1  CTD1     0.0000  1     0.00 ! ALLOW PEP ! mix L and D 
+H    NH1  CTD1 CT1      0.0000  1     0.00 ! ALLOW PEP 
+H    NH1  CTD1 CT2      0.0000  1     0.00 ! ALLOW PEP 
+H    NH1  CTD1 CT3      0.0000  1     0.00 ! ALLOW PEP 
+H    NH2  CC   CTD1     1.4000  2   180.00 ! ALLOW   PEP POL ARO PRO 
+H    OH1  CTD1 CT1      1.3300  1     0.00 ! ALLOW ALC ! mix L and D 
+H    OH1  CTD1 CT1      0.1800  2     0.00 ! ALLOW ALC ! mix L and D 
+H    OH1  CTD1 CT1      0.3200  3     0.00 ! ALLOW ALC ! mix L and D 
+H    OH1  CTD1 CT3      1.3300  1     0.00 ! ALLOW ALC 
+H    OH1  CTD1 CT3      0.1800  2     0.00 ! ALLOW ALC 
+H    OH1  CTD1 CT3      0.3200  3     0.00 ! ALLOW ALC 
+HA   CTD1 CT2  CA       0.0400  3     0.00 ! ALLOW   ARO 
+HB1  CTD1 NH1  C        0.0000  1     0.00 ! ALLOW PEP 
+HB1  CTD1 NH1  H        0.0000  1     0.00 ! ALLOW PEP 
+N    C    CT1  CTD1     0.0000  1     0.00 ! ALLOW PEP PRO ! mix L and D 
+N    C    CTD1 CT1      0.0000  1     0.00 ! ALLOW PEP PRO ! mix L and D 
+N    C    CTD1 CT2      0.0000  1     0.00 ! ALLOW PEP PRO 
+N    C    CTD1 CT3      0.0000  1     0.00 ! ALLOW PEP PRO 
+N    C    CTD1 HB1      0.0000  1     0.00 ! ALLOW PEP PRO 
+N    CTD1  CT2 CA       0.0400  3     0.00 ! ALLOW   ARO 
+NH1  C    CT1  CTD1     0.0000  1     0.00 ! ALLOW PEP ! mix L and D 
+NH1  C    CTD1 CT1      0.0000  1     0.00 ! ALLOW PEP ! mix L and D 
+NH1  C    CTD1 CT2      0.0000  1     0.00 ! ALLOW PEP 
+NH1  C    CTD1 CT3      0.0000  1     0.00 ! ALLOW PEP 
+NH1  C    CTD1 HB1      0.0000  1     0.00 ! ALLOW PEP 
+NH1  C    CTD1 NH1      0.6000  1     0.00 ! ALLOW PEP 
+NH1  CTD1 C    N        0.4000  1     0.00 ! ALLOW PEP PRO 
+NH3  CTD1 C    N        0.4000  1     0.00 ! ALLOW PEP PRO 
+NH3  CTD1 C    NH1      0.6000  1     0.00 ! ALLOW PEP PRO 
+NH3  CTD1 CC   NH2      0.4000  1     0.00 ! ALLOW PEP PRO 
+NR3  CPH1 CT2  CTD1     0.1900  3     0.00 ! ALLOW ARO 
+!!!!O    C    CTD1  CTD1      1.4000  1     0.00 !   ALLOW PEP 
+O    C    CT1  CTD1     1.4000  1     0.00 ! ALLOW PEP ! mix L and D 
+O    C    CTD1 CT1      1.4000  1     0.00 ! ALLOW PEP ! mix L and D 
+O    C    CTD1 CT2      1.4000  1     0.00 ! ALLOW PEP 
+O    C    CTD1 CT3      1.4000  1     0.00 ! ALLOW PEP 
+O    C    CTD1 HB1      0.0000  1     0.00 ! ALLOW PEP 
+O    C    CTD1 NH1      0.0000  1     0.00 ! ALLOW PEP 
+O    C    CTD1 NH3      0.0000  1     0.00 ! ALLOW PEP PRO 
+O    C    NH1  CTD1     2.5000  2   180.00 ! ALLOW PEP 
+OC   CC   CTD1 NH3      3.2000  2   180.00 ! ALLOW PEP PRO 
+SM   SM   CT2  CTD1     0.3100  3     0.00 ! ALLOW  SUL ALI 
+ 
+X    CTD1 CT2  X        0.2000  3     0.00 ! ALLOW   ALI 
+X    CTD1 CT3  X        0.2000  3     0.00 ! ALLOW   ALI 
+X    CTD1 CD   X        0.0000  6   180.00 ! ALLOW   POL PEP 
+X    CTD1 CC   X        0.0500  6   180.00 ! ALLOW   POL PEP 
+ 
+!D-amino acid side chain parameters 
+!chi1/chi2 fitting, Zhu, 2011 for D-FORM 
+!directly transferred parameters 
+NH1  CTD1 CT1  HA1      0.2000  3     0.00 ! From X    CT1  CT1  X 
+HB1  CTD1 CT1  HA1      0.2000  3     0.00 ! From X    CT1  CT1  X 
+HB1  CTD1 CT1  CT3      0.2000  3     0.00 ! From X    CT1  CT1  X 
+HA1  CT1  CTD1 C        0.2000  3     0.00 ! From X    CT1  CT1  X 
+NH1  CTD1 CT2  HA2      0.2000  3     0.00 ! From X    CT1  CT2  X 
+HB1  CTD1 CT2  HA2      0.2000  3     0.00 ! From X    CT1  CT2  X 
+HB1  CTD1 CT2  OH1      0.2000  3     0.00 ! From X    CT1  CT2  X 
+HB1  CTD1 CT2  CT2      0.2000  3     0.00 ! From X    CT1  CT2  X 
+HA2  CT2  CTD1  C       0.2000  3     0.00 ! From X    CT1  CT2  X 
+HB1  CTD1 CT2  S        0.2000  3     0.00 ! From X    CT1  CT2  X 
+!Asn 
+HB1  CTD1 CT2  CC       0.2000  3     0.00 ! From X    CT1  CT2  X 
+!Trp 
+HB1  CTD1 CT2  CY       0.2000  3     0.00 ! From X    CT1  CT2  X 
+!Hsd/Hse 
+HB1  CTD1 CT2  CPH1     0.2000  3     0.00 ! From X    CT1  CT2  X 
+!Ile,Leu,Val 
+HB1  CTD1 CT1  CT2      0.2000  3     0.00 ! From X    CT1  CT1  X 
+HB1  CTD1 CT2  CT1      0.2000  3     0.00 ! From X    CT1  CT2  X 
+!Tyr/Phe 
+HB1  CTD1 CT2  CA       0.2000  3     0.00 ! From X    CT1  CT2  X 
+!Thr 
+HB1  CTD1 CT1  OH1      0.2000  3     0.00 ! From X    CT1  CT1  X 
+!Glu/Hsp 
+NH1  CTD1 CT2A HA2      0.2000  3     0.00 ! From X    CT1  CT2  X 
+CTD1 CT2A CT2  HA2      0.1900  3     0.00 ! From X    CT2  CT2  X 
+HB1  CTD1 CT2A HA2      0.2000  3     0.00 ! From X    CT1  CT2  X 
+HB1  CTD1 CT2A CT2      0.2000  3     0.00 ! From X    CT1  CT2  X 
+HA2  CT2A CTD1 C        0.2000  3     0.00 ! From X    CT1  CT2  X 
+HA2  CT2A CTD1 CC       0.2000  3     0.00 ! RB: added for C-ter Glu 
+HB1  CTD1 CT2A CPH1     0.2000  3     0.00 ! From X    CT1  CT2  X 
+C    NH1  CTD1 CT2A     1.8000  1     0.00 ! from CT2  CT1  NH1  C 
+H    NH1  CTD1 CT2A     0.0000  1     0.00 ! from H    NH1  CT1  CT2 
+CT2A CTD1 C    O        1.4000  1     0.00 ! from O    C    CT1  CT2 
+CT2A CTD1 C    NH1      0.0000  1     0.00 ! NH1  C    CT1  CT2 
+CT2A CTD1 C    N        0.0000  1     0.00 ! RB: added for GLU-PRO in UBQ 
+! Glup 
+CTD1 CT2A CT2  CD       0.1900  3     0.00 ! From X    CT2  CT2  X 
+! Sidechain dihedrals: PEML transfered from L- to D- form 
+! Group-fitted for Lys/Arg/Gln/Met 
+C    CTD1 CT2  CT2      0.3500  1   180.00 ! -180, +60 
+C    CTD1 CT2  CT2      0.4200  2   180.00 ! -180, +60 
+C    CTD1 CT2  CT2      1.9100  3   180.00 
+CT2  CT2  CTD1 NH1      0.8800  1   180.00 
+CT2  CT2  CTD1 NH1      0.0000  2   180.00 ! (-180), +60 
+CT2  CT2  CTD1 NH1      1.9000  3     0.00 
+CC   CT2  CT2  CTD1     1.8400  1   180.00 ! (-180), -60, +60 
+CC   CT2  CT2  CTD1     0.8400  2   180.00 
+CC   CT2  CT2  CTD1     0.3900  3   180.00 
+CTD1 CT2  CT2  CT2      0.6300  1   180.00 
+CTD1 CT2  CT2  CT2      0.0100  2     0.00 
+CTD1 CT2  CT2  CT2      0.1500  3     0.00 
+CTD1 CT2  CT2  S        0.1400  1   180.00 
+CTD1 CT2  CT2  S        0.5400  2     0.00 
+CTD1 CT2  CT2  S        0.6900  3     0.00 
+! Group-fitted for Asn/Asp 
+C    CTD1 CT2  CC       1.4100  1   180.00     !     | 
+C    CTD1 CT2  CC       1.2900  2   180.00     !  HN-N 
+C    CTD1 CT2  CC       0.5900  3   180.00     !     |   HB1 OD1    HD21 (cis to OD1) 
+CC   CT2  CTD1 NH1      0.2800  1   180.00     !     |   |   ||    / 
+CC   CT2  CTD1 NH1      0.5000  2   180.00     !  HA-CA--CB--CG--ND2 
+CC   CT2  CTD1 NH1      0.3800  3     0.00     !     |   |         \ 
+CTD1 CT2  CC   NH2      0.6200  1   180.00     !     |   HB2        HD22 (trans to OD1) 
+CTD1 CT2  CC   NH2      0.6600  2   180.00     !   O=C 
+CTD1 CT2  CC   NH2      0.7200  3   180.00     !     | 
+CTD1 CT2  CC   O        0.4200  1   180.00 
+CTD1 CT2  CC   O        0.1500  2   180.00 
+CTD1 CT2  CC   O        0.9500  3   180.00 
+CTD1 CT2  CC   OC       0.8400  1     0.00 
+CTD1 CT2  CC   OC       0.9800  2   180.00 
+CTD1 CT2  CC   OC       1.4600  3     0.00 
+! Fitted Cys 
+CTD1 CT2  S    HS       0.2000  1     0.00                           !     | 
+CTD1 CT2  S    HS       0.6500  2     0.00                           !  HN-N 
+CTD1 CT2  S    HS       0.2200  3     0.00                           !     |   HB1 
+C    CTD1 CT2  S        0.2400  1   180.00                           !     |   | 
+C    CTD1 CT2  S        0.7500  2   180.00                           !  HA-CA--CB--SG 
+C    CTD1 CT2  S        1.3500  3   180.00                           !     |   |     \ 
+NH1  CTD1 CT2  S        0.3400  1     0.00                           !     |   HB2    HG1 
+NH1  CTD1 CT2  S        0.5000  2   180.00                           !   O=C 
+NH1  CTD1 CT2  S        1.4300  3     0.00                           !     | 
+! Fitted Glu, 1/12 adjustment 
+CC   CT2  CT2A CTD1     0.0000  1   180.00                           !     | 
+CC   CT2  CT2A CTD1     0.3800  2   180.00                           !  HN-N 
+CC   CT2  CT2A CTD1     0.5900  3   180.00                           !     |   HB1 HG1   OE1 
+C    CTD1 CT2A CT2      0.1100  1     0.00                           !     |   |   |    // 
+C    CTD1 CT2A CT2      0.9800  2   180.00                           !  HA-CA--CB--CG--CD 
+C    CTD1 CT2A CT2      1.6000  3   180.00                           !     |   |   |    \ 
+CC   CTD1 CT2A CT2      1.6000  3   180.00                           !     |   HB2 HG2   OE2(-) 
+CT2  CT2A CTD1 NH1      0.3000  1     0.00 ! (-180), (-60)           !   O=C 
+CT2  CT2A CTD1 NH1      0.3500  2     0.00 ! -180                    !     | 
+CT2  CT2A CTD1 NH1      1.7600  3     0.00 
+! Group-fitted for Hsd/Hse 
+CPH1 CPH1 CT2  CTD1     1.7400  1     0.00                           !     |          HD1    HE1 
+CPH1 CPH1 CT2  CTD1     0.1500  2     0.00                           !  HN-N           |     / 
+CPH1 CPH1 CT2  CTD1     0.7700  3   180.00                           !     |   HB1    ND1--CE1 
+CTD1 CT2  CPH1 NR1      1.4900  1     0.00                           !     |   |     /      || 
+CTD1 CT2  CPH1 NR1      0.0900  2   180.00                           !  HA-CA--CB--CG       || 
+CTD1 CT2  CPH1 NR1      0.7900  3   180.00                           !     |   |     \\     || 
+CTD1 CT2  CPH1 NR2      1.0900  1     0.00                           !     |   HB2    CD2--NE2 
+CTD1 CT2  CPH1 NR2      0.0900  2     0.00                           !   O=C           | 
+CTD1 CT2  CPH1 NR2      0.6700  3   180.00                           !     |          HD2 
+C    CTD1 CT2  CPH1     0.1800  1   180.00 
+C    CTD1 CT2  CPH1     0.6400  2   180.00 
+C    CTD1 CT2  CPH1     0.8700  3   180.00 
+CPH1 CT2  CTD1 NH1      0.0000  1     0.00 
+CPH1 CT2  CTD1 NH1      0.0000  2   180.00 
+CPH1 CT2  CTD1 NH1      0.9000  3     0.00 
+! Group-fitted for Hsp 
+CPH1 CPH1 CT2A CTD1     2.0400  1     0.00 
+CPH1 CPH1 CT2A CTD1     0.4400  2     0.00                           !     |          HD1    HE1 
+CPH1 CPH1 CT2A CTD1     0.1300  3   180.00                           !  HN-N           |     / 
+CTD1 CT2A CPH1 NR3      0.5300  1   180.00                           !     |   HB1    ND1--CE1 
+CTD1 CT2A CPH1 NR3      0.4200  2   180.00                           !     |   |     /      || 
+CTD1 CT2A CPH1 NR3      0.3000  3   180.00                           !  HA-CA--CB--CG       || 
+C    CTD1 CT2A CPH1     1.7500  1   180.00                           !     |   |     \\     || 
+C    CTD1 CT2A CPH1     0.1300  2     0.00                           !     |   HB2    CD2--NE2(+) 
+C    CTD1 CT2A CPH1     1.8600  3   180.00                           !   O=C           |     \ 
+CPH1 CT2A CTD1 NH1      1.0900  1   180.00                           !     |          HD2    HE2 
+CPH1 CT2A CTD1 NH1      0.2200  2   180.00 
+CPH1 CT2A CTD1 NH1      2.3200  3     0.00 
+! Group-fitted for Ile/Thr 
+CTD1 CT1  CT2  CT3      0.3800  1   180.00                           !     |    HG21 HG22 
+CTD1 CT1  CT2  CT3      0.1300  2   180.00                           !  HN-N      | / 
+CTD1 CT1  CT2  CT3      0.2900  3   180.00                           !     |     CG2--HG23 
+C    CTD1 CT1  CT2      0.1000  1   180.00 ! -180,-,+60              !     |    / 
+C    CTD1 CT1  CT2      0.5200  2   180.00                           !  HA-CA--CB-HB    HD1 
+C    CTD1 CT1  CT2      0.2900  3   180.00                           !     |    \       / 
+CT2  CT1  CTD1 NH1      0.1200  1   180.00                           !     |     CG1--CD--HD2 
+CT2  CT1  CTD1 NH1      0.3600  2   180.00 ! -180,-,-                !   O=C    / \     \	 
+CT2  CT1  CTD1 NH1      0.4100  3     0.00                           !     | HG11 HG12  HD3 
+! Fitted Leu 
+CTD1 CT2  CT1  CT3      0.0500  1     0.00                           !     |        HD11 HD12 
+CTD1 CT2  CT1  CT3      0.1000  2   180.00                           !  HN-N          | / 
+CTD1 CT2  CT1  CT3      0.0100  3   180.00                           !     |   HB1   CD1--HD13 
+C    CTD1 CT2  CT1      0.3200  1   180.00                           !     |   |    / 
+C    CTD1 CT2  CT1      0.6100  2   180.00 ! -60                     !  HA-CA--CB--CG-HG 
+C    CTD1 CT2  CT1      0.7200  3   180.00                           !     |   |    \ 
+CT1  CT2  CTD1 NH1      0.4800  1   180.00                           !     |   HB2   CD2--HD23 
+CT1  CT2  CTD1 NH1      0.4200  2   180.00                           !   O=C          | \ 
+CT1  CT2  CTD1 NH1      0.6500  3     0.00                           !     |        HD21 HD22 
+! Group-fitted for Phe/Tyr 
+CA   CA   CT2  CTD1     1.0700  1     0.00 
+CA   CA   CT2  CTD1     0.2400  2   180.00 
+CA   CA   CT2  CTD1     0.1700  3   180.00 
+C    CTD1 CT2  CA       1.2800  1   180.00 ! (-180),-60,+60 
+C    CTD1 CT2  CA       0.9400  2   180.00 ! -60 
+C    CTD1 CT2  CA       1.5700  3   180.00 ! all 
+CA   CT2  CTD1 NH1      0.5200  1   180.00 ! -60,+60 
+CA   CT2  CTD1 NH1      0.6200  2   180.00 ! -60,+60 
+CA   CT2  CTD1 NH1      1.5800  3     0.00 ! none 
+! Fitted Ser 
+CTD1 CT2  OH1  H        0.0200  1     0.00                           !     | 
+CTD1 CT2  OH1  H        0.5600  2     0.00                           !  HN-N 
+CTD1 CT2  OH1  H        0.4900  3     0.00                           !     |   HB1 
+C    CTD1 CT2  OH1      0.6500  1   180.00                           !     |   | 
+C    CTD1 CT2  OH1      0.2500  2   180.00                           !  HA-CA--CB--OG 
+C    CTD1 CT2  OH1      1.1700  3   180.00                           !     |   |     \ 
+NH1  CTD1 CT2  OH1      0.1800  1   180.00                           !     |   HB2    HG1 
+NH1  CTD1 CT2  OH1      0.1900  2   180.00                           !   O=C 
+NH1  CTD1 CT2  OH1      1.4600  3     0.00                           !     | 
+! Group-fitted for Ile/Thr 
+CTD1 CT1  OH1  H        0.1800  1     0.00                              !     | 
+CTD1 CT1  OH1  H        0.0600  2     0.00                              !  HN-N 
+CTD1 CT1  OH1  H        0.2500  3     0.00                              !     |     OG1--HG1 
+C    CTD1 CT1  OH1      0.7900  1   180.00 ! raise                      !     |    / 
+C    CTD1 CT1  OH1      0.3900  2   180.00 !lower this value if needed  !  HA-CA--CB-HB 
+C    CTD1 CT1  OH1      0.9900  3   180.00                              !     |    \ 
+NH1  CTD1 CT1  OH1      0.0900  1     0.00 ! raise to lower -180        !     |     CG2--HG21 
+NH1  CTD1 CT1  OH1      0.1900  2   180.00                              !   O=C    / \ 
+NH1  CTD1 CT1  OH1      0.1700  3     0.00                              !     | HG21 HG22 
+! Fitted Trp side-chain 
+CA   CY   CT2  CTD1     0.0300  1     0.00 
+CA   CY   CT2  CTD1     0.5500  2     0.00                              !     |                  HE3 
+CA   CY   CT2  CTD1     0.3900  3   180.00                              !  HN-N                   | 
+CPT  CY   CT2  CTD1     0.3600  1   180.00                              !     |   HB1            CE3 
+CPT  CY   CT2  CTD1     0.0500  2     0.00                              !     |   |             /  \\ 
+CPT  CY   CT2  CTD1     0.1900  3   180.00                              !  HA-CA--CB---CG-----CD2   CZ3-HZ3 
+C    CTD1 CT2  CY       1.0900  1   180.00 ! modulates -180, +60        !     |   |    ||     ||     | 
+C    CTD1 CT2  CY       0.5000  2   180.00 ! modulates -180, +60        !     |   HB2  CD1    CE2   CH2-HH2 
+C    CTD1 CT2  CY       1.1700  3   180.00                              !   O=C       /   \   / \  // 
+CY   CT2  CTD1 NH1      0.2900  1   180.00 ! modulates -180             !     |     HD1    NE1   CZ2 
+CY   CT2  CTD1 NH1      0.6600  2   180.00 ! modulates -60,60           !                   |     | 
+CY   CT2  CTD1 NH1      1.1700  3     0.00                              !                  HE1   HZ2 
+! Fitted Val 
+C    CTD1 CT1  CT3      0.1400  1   180.00                              !     |    HG11 HG12 
+C    CTD1 CT1  CT3      0.2600  2   180.00                              !  HN-N      | / 
+C    CTD1 CT1  CT3      0.3300  3   180.00                              !     |     CG1--HG13 
+CT3  CT1  CTD1 NH1      0.1800  1     0.00                              !     |    / 
+CT3  CT1  CTD1 NH1      0.0600  2     0.00                              !  HA-CA--CB-HB 
+CT3  CT1  CTD1 NH1      0.5900  3     0.00                              !     |    \ 
+!                                                                       !     |     CG2--HG21 
+!D-proline 
+C    N    CPD1 C        0.8000  3     0.00 
+CC   CPD1 N    C        0.8000  3     0.00 
+CD   CPD1 N    C        0.0000  1   180.00 
+CP1  C    N    CPD1     2.7500  2   180.00 
+CP1  C    N    CPD1     0.3000  4     0.00 
+CPD1 C    N    CPD1     2.7500  2   180.00 
+CPD1 C    N    CPD1     0.3000  4     0.00 
+CP2  CPD1 N    C        0.8000  3     0.00 
+CP2  CP3  N    CPD1     0.1000  3     0.00 
+CP2  CP3  NP   CPD1     0.0800  3     0.00 
+CP3  N    C    CPD1     2.7500  2   180.00 
+CP3  N    C    CPD1     0.3000  4     0.00 
+CP3  N    CPD1 C        0.1000  3     0.00 
+CP3  N    CPD1 CC       0.1000  3     0.00 
+CP3  N    CPD1 CP2      0.1000  3     0.00 
+CP3  NP   CPD1 C        0.0800  3     0.00 
+CP3  NP   CPD1 CC       0.0800  3     0.00 
+CP3  NP   CPD1 CD       0.0800  3     0.00 
+CP3  NP   CPD1 CP2      0.0800  3     0.00 
+CT1  C    N    CPD1     2.7500  2   180.00 
+CT1  C    N    CPD1     0.3000  4     0.00 
+CTD1 C    N    CPD1     2.7500  2   180.00 
+CTD1 C    N    CPD1     0.3000  4     0.00 
+CT1  NH1  C    CPD1     1.6000  1     0.00 
+CT1  NH1  C    CPD1     2.5000  2   180.00 
+CTD1 NH1  C    CPD1     1.6000  1     0.00 
+CTD1 NH1  C    CPD1     2.5000  2   180.00 
+CT2  C    N    CPD1     2.7500  2   180.00 
+CT2  C    N    CPD1     0.3000  4     0.00 
+CT2  NH1  C    CPD1     1.6000  1     0.00 
+CT2  NH1  C    CPD1     2.5000  2   180.00 
+CT3  C    N    CPD1     2.7500  2   180.00 
+CT3  C    N    CPD1     0.3000  4     0.00 
+CT3  NH1  C    CPD1     1.6000  1     0.00 
+CT3  NH1  C    CPD1     2.5000  2   180.00 
+H    NH1  C    CPD1     2.5000  2   180.00 
+H    NH2  CC   CPD1     2.5000  2   180.00 
+HA2  CP3  N    CPD1     0.1000  3     0.00 
+HA2  CP3  NP   CPD1     0.0800  3     0.00 
+HB1  CPD1 N    C        0.8000  3     0.00 
+HB1  CPD1 N    CP3      0.1000  3     0.00 
+HB1  CPD1 NP   CP3      0.0800  3     0.00 
+HC   NP   CPD1 C        0.0800  3     0.00 
+HC   NP   CPD1 CC       0.0800  3     0.00 
+HC   NP   CPD1 CD       0.0800  3     0.00 
+HC   NP   CPD1 CP2      0.0800  3     0.00 
+HC   NP   CPD1 HB1      0.0800  3     0.00 
+N    C    CPD1 CP2      0.4000  1     0.00 
+N    C    CPD1 CP2      0.6000  2     0.00 
+N    C    CPD1 HB1      0.4000  1   180.00 
+N    C    CPD1 HB1      0.6000  2     0.00 
+N    C    CPD1 N        0.3000  1     0.00 
+N    C    CPD1 N       -0.3000  4     0.00 
+NH1  C    CPD1 CP2      0.4000  1     0.00 
+NH1  C    CPD1 CP2      0.6000  2     0.00 
+NH1  C    CPD1 HB1      0.4000  1   180.00 
+NH1  C    CPD1 HB1      0.6000  2     0.00 
+NH1  C    CPD1 N        0.3000  1     0.00 
+NH1  C    CPD1 N       -0.3000  4     0.00 
+NH2  CC   CPD1 CP2      0.4000  1     0.00 
+NH2  CC   CPD1 CP2      0.6000  2     0.00 
+NH2  CC   CPD1 HB1      0.4000  1   180.00 
+NH2  CC   CPD1 HB1      0.6000  2     0.00 
+NH2  CC   CPD1 N        0.3000  1     0.00 
+NH2  CC   CPD1 N       -0.3000  4     0.00 
+NP   CPD1 C    N        0.3000  1     0.00 
+NP   CPD1 C    NH1      0.3000  1     0.00 
+NP   CPD1 CC   NH2      0.3000  1     0.00 
+O    C    CPD1 CP2      0.4000  1   180.00 
+O    C    CPD1 CP2      0.6000  2     0.00 
+O    C    CPD1 HB1      0.4000  1     0.00 
+O    C    CPD1 HB1      0.6000  2     0.00 
+O    C    CPD1 N       -0.3000  4     0.00 
+O    C    N    CPD1     2.7500  2   180.00 
+O    C    N    CPD1     0.3000  4     0.00 
+O    CC   CPD1 CP2      0.4000  1   180.00 
+O    CC   CPD1 CP2      0.6000  2     0.00 
+O    CC   CPD1 HB1      0.4000  1     0.00 
+O    CC   CPD1 HB1      0.6000  2     0.00 
+O    CC   CPD1 N       -0.3000  4     0.00 
+OC   CC   CPD1 CP2      0.1600  3     0.00 
+OC   CC   CPD1 HB1      0.1600  3     0.00 
+OC   CC   CPD1 N        0.1600  3     0.00 
+OC   CC   CPD1 NP       0.1600  3     0.00 
+X    CPD1 C    X        0.0000  6   180.00 
+X    CPD1 CC   X        0.0000  6   180.00 
+X    CPD1 CD   X        0.0000  6   180.00 
+X    CPD1 CP2  X        0.1400  3     0.00 
+ 
+IMPROPER 
+! 
+!V(improper) = Kpsi(psi - psi0)**2 
+! 
+!Kpsi: kcal/mole/rad**2 
+!psi0: degrees 
+!note that the second column of numbers (0) is ignored 
+! 
+!atom types           Kpsi                   psi0 
+! 
+ 
+! Added CTD1 -- new atom type for alpha carbon for d-amino acid, necessary 
+CC   X    X    CTD1   96.0000         0      0.0000 
+O    CTD1  NH2  CC    45.0000         0      0.0000 
+O    NH2  CTD1  CC    45.0000         0      0.0000 
+!D-proline 
+N    C    CPD1 CP3     0.0000         0      0.0000 
+O    CPD1 NH2  CC     45.0000         0      0.0000 
+O    NH2  CPD1 CC     45.0000         0      0.0000 
+ 
+CMAP 
+! 2D grid correction data. 
+! Finalfix3, Feig/Best/MacKerell 2010 
+ 
+!The following D CMAPs have been generated by calculating the L alanine dipeptide 
+!or L-proline dipeptide 2D surfaces, inverting those surfaces to create the 
+!corresponding D surfaces, calculating the D-alanine dipeptide or D-proline dipeptide 
+!2D surfaces without CMAP and then taking the differences between those surfaces 
+!and the target 2D surfaces to obtain the D CMAPs included below.  This is due to 
+!the presence of some dihedral parameters that are chiral specific such that 
+!simple inversion of the L CMAP does not yield the target 2D surfaces. 
+ 
+!CMAPS needed for D-proline 
+!C    N    CPD1 C    N    CPD1   C    NH1 24 
+!C    N    CPD1 C    N    CPD1   C    N 24 
+ 
+! D-alanine map-- 
+! note the new type for the alpha carbon 
+C    NH1  CTD1  C    NH1  CTD1  C    NH1   24 
+ 
+!-180 
+      0.310000       0.146800      -0.765900      -1.335400      -2.148300 
+     -2.160810      -2.267870      -2.598220      -2.580830      -3.404490 
+     -4.725700      -4.634360      -4.642900      -2.019850       1.185000 
+     -0.506550       0.962840       1.972890       2.272970       2.903840 
+      2.303100       1.434000       1.155000       0.952300 
+ 
+!-165 
+     -0.625300      -1.626900      -2.562900      -3.059740      -3.363110 
+     -3.369180      -3.658050      -3.481580      -4.008160      -4.954840 
+     -5.702850      -6.222600      -4.395030      -0.566050      -2.557530 
+     -0.905700       0.815560       1.703550       1.882100       1.825080 
+      1.460990       0.726400       0.562500       0.112000 
+ 
+!-150 
+     -1.573410      -2.752750      -3.840310      -3.843910      -3.941180 
+     -3.858850      -3.931510      -4.005960      -4.599800      -5.206800 
+     -5.569900      -4.928200      -1.583900       2.007100      -2.982380 
+     -1.301530       0.109760       1.131600       1.544510       1.447380 
+      0.817370       0.545310       0.207220      -0.219950 
+ 
+!-135 
+     -1.928130      -3.000390      -3.981520      -4.259580      -4.312100 
+     -4.116730      -4.702500      -4.659100      -4.814000      -4.817600 
+     -3.869800      -1.741200      -5.950460      -4.778710      -3.285200 
+     -1.647090       0.016510       0.808120       1.121900       1.268740 
+      0.498800       0.176030      -0.139660      -0.985460 
+ 
+!-120 
+     -1.786080      -2.568620      -3.232880      -3.821130      -4.261120 
+     -4.664200      -5.178700      -5.003200      -4.330800      -3.519500 
+     -6.554900      -6.867890      -5.939310      -4.822740      -3.181440 
+     -1.688890      -0.151100       0.495340       0.940770       1.221510 
+      0.945970       0.032380      -0.357300      -0.933600 
+ 
+!-105 
+     -1.667230      -2.227460      -3.090890      -3.903200      -4.417500 
+     -4.533100      -4.851800      -4.620100      -3.730800      -5.554900 
+     -6.688200      -6.679400      -5.868360      -4.295520      -2.829080 
+     -1.497990      -0.675160      -0.037500       0.667700       1.066940 
+      1.188250       0.311660      -0.261780      -0.909050 
+ 
+!-90 
+     -1.537340      -2.468080      -2.974040      -3.586520      -3.916200 
+     -4.290500      -3.975500      -3.728500      -4.893330      -5.581720 
+     -6.433700      -6.109550      -5.025400      -3.641890      -2.606990 
+     -1.590500      -0.603900      -0.154300       0.664300       0.985700 
+      0.990600       0.461020      -0.245250      -0.994560 
+ 
+!-75 
+     -2.065760      -2.436560      -3.552960      -3.542900      -3.987800 
+     -3.969000      -3.502300      -3.637400      -4.559880      -5.545520 
+     -5.417180      -5.412800      -4.299920      -3.235850      -2.120400 
+     -1.009000      -0.189300       0.169500       0.699100       1.006300 
+      0.818600       0.222200      -0.828030      -1.458240 
+ 
+!-60 
+     -3.168670      -3.158360      -3.268800      -3.457100      -3.575500 
+     -3.328300      -2.658500      -3.598610      -4.825150      -5.344130 
+     -4.913630      -4.385710      -3.731190      -3.036880      -1.860800 
+      1.809200       2.575000       0.619700       0.849600       0.906100 
+     -0.074100      -1.056100      -2.132610      -2.799340 
+ 
+!-45 
+     -3.840570      -3.414100      -3.485300      -3.243700      -2.681600 
+     -2.185900      -2.685300      -3.859600      -4.965010      -5.105430 
+     -4.429480      -3.696680      -3.108310      -0.240270       0.945060 
+      2.085400       0.687300       0.935100       0.996000       0.545500 
+     -0.800500      -2.148880      -3.179090      -3.651610 
+ 
+!-30 
+     -2.792100      -2.282900      -1.446000      -0.889700      -1.785100 
+     -2.780900      -3.585400      -4.315070      -4.527310      -3.981470 
+     -3.438700      -1.305240      -0.228490       0.736810       1.705860 
+      2.643640       1.148840       1.573550       1.609320       0.519540 
+     -0.940730      -2.216020      -3.260840      -3.309000 
+ 
+!-15 
+     -0.625600       0.489500       1.929300      -2.617500      -3.277500 
+     -3.728700      -4.086240      -4.011710      -3.071050      -2.002500 
+     -0.611300      -0.352880      -0.053690       0.861790       1.619750 
+      2.630720       1.540220       2.405800       1.865840       0.366370 
+     -0.865770      -1.669500      -1.879400      -1.742900 
+ 
+!0 
+      3.014700      -0.768400      -2.522000      -3.436500      -3.752600 
+     -3.606780      -2.558970      -1.663820      -1.029810      -1.386800 
+      0.304110       0.253110       0.302940       0.959290       1.789360 
+      2.702090       1.827350       1.854590       1.422100       1.156660 
+      0.803300       0.650700       0.488800       0.929000 
+ 
+!15 
+      0.424300      -1.576500      -2.975500      -3.626390      -3.601470 
+     -2.372160      -0.428870       0.366920      -0.158800       1.802290 
+      1.205890       0.925440       0.695070       1.026880       1.797480 
+      0.831650       1.037850       1.564000       1.769580       2.691460 
+      3.442800       3.386500       3.901300       5.767700 
+ 
+!30 
+     -1.004100      -2.478530      -3.092900      -3.362600      -2.661700 
+     -1.410650       0.514510       0.715820       0.376320       2.397690 
+      2.094840       1.701890       1.492380      -0.526880       0.456830 
+      0.174590       0.947880       1.501990       2.957710       4.981370 
+      6.248700       6.927100       4.349400       1.199300 
+ 
+!45 
+     -1.001170      -1.811860      -1.794070      -1.768200      -1.396500 
+     -0.707200       0.429800       0.561500       0.136900       0.447400 
+      0.259700      -0.406400      -0.619250       0.034980       0.189600 
+      0.288000       1.304750       2.639510       4.558270       5.569990 
+      5.552690       4.374600       2.513200       0.258400 
+ 
+!60 
+      0.424150      -0.019600      -1.296600      -1.349500      -0.764200 
+     -0.481900       0.493400       0.504500       0.451500       0.323600 
+      0.010100      -0.639500      -0.174100       0.142600      -0.224500 
+     -0.302300       2.447550       3.854930       4.456530       4.570800 
+      4.387830       3.348500       1.899320       1.418240 
+ 
+!75 
+      1.556500       0.651200      -0.070000      -0.007000      -0.070300 
+      0.375100       0.734600       0.485000       0.606000       0.409600 
+     -0.415400      -0.246400       0.058000      -0.499900       0.275700 
+      1.870300       3.716330       4.395340       3.761880       3.881870 
+      3.995780       3.244770       2.537360       3.529830 
+ 
+!90 
+      1.632400       0.931100       0.463300       0.200200       0.111700 
+      0.328800       0.641900       1.090400       0.598400       0.162700 
+     -0.779000      -1.438300      -1.329900      -0.425400       1.092300 
+      2.621950       3.516850       4.080640       3.362660       3.526760 
+      3.632110       3.339060       2.921140       2.928700 
+ 
+!105 
+      2.225900       0.915200       0.496800       0.018100      -0.133800 
+      0.057900       1.221900       0.954800       0.265200       0.389500 
+     -1.273400      -2.058300      -1.908700      -0.643700       1.087400 
+      2.307110       3.139350       3.086180       3.255960       3.734380 
+      3.553270       3.271080       3.000500       2.726600 
+ 
+!120 
+      1.538400       0.630500      -0.067800      -0.674100      -0.785300 
+     -0.365800       1.093700       0.622200       0.121400      -0.242100 
+     -1.620400      -2.445900      -1.937400      -0.605300       0.888090 
+      1.810940       2.902470       2.956230       2.821830       3.740670 
+      3.881230       3.219850       2.880700       2.140100 
+ 
+!135 
+      1.108400      -0.261000      -0.384100      -0.800400      -0.970500 
+     -0.336500       0.496400       0.205100      -0.749500      -1.156900 
+     -1.775800      -2.095600      -1.813400      -1.001570       0.298350 
+      2.035200       2.240490       2.370360       2.643460       3.100740 
+      3.293120       2.727800       2.423400       1.703000 
+ 
+!150 
+      0.264300      -0.634000      -1.110300      -1.102000      -0.584700 
+     -0.043100       0.252100      -0.543700      -1.170600      -1.707200 
+     -2.368220      -2.822210      -2.400180      -1.632680      -0.043000 
+      2.646740       1.738700       2.168300       2.504200       2.899100 
+      2.836100       2.228900       1.806800       1.601800 
+ 
+!165 
+      0.053200      -0.940700      -0.896100      -0.025800      -0.455600 
+     -0.676900      -0.917000      -1.316700      -2.115050      -2.417720 
+     -3.234770      -3.950500      -3.824950      -2.618000       0.441310 
+      0.824250       1.269700       2.111910       2.619590       2.669100 
+      2.581400       2.054500       1.759900       1.558700 
+ 
+ 
+! alanine before proline map 
+! D-alanine map-- 
+! note the new type for the alpha carbon 
+C    NH1  CTD1  C    NH1  CTD1  C    N     24 
+ 
+!-180 
+      0.310000       0.146800      -0.765900      -1.335400      -2.148300 
+     -2.160810      -2.267870      -2.598220      -2.580830      -3.404490 
+     -4.725700      -4.634360      -4.642900      -2.019850       1.185000 
+     -0.506550       0.962840       1.972890       2.272970       2.903840 
+      2.303100       1.434000       1.155000       0.952300 
+ 
+!-165 
+     -0.625300      -1.626900      -2.562900      -3.059740      -3.363110 
+     -3.369180      -3.658050      -3.481580      -4.008160      -4.954840 
+     -5.702850      -6.222600      -4.395030      -0.566050      -2.557530 
+     -0.905700       0.815560       1.703550       1.882100       1.825080 
+      1.460990       0.726400       0.562500       0.112000 
+ 
+!-150 
+     -1.573410      -2.752750      -3.840310      -3.843910      -3.941180 
+     -3.858850      -3.931510      -4.005960      -4.599800      -5.206800 
+     -5.569900      -4.928200      -1.583900       2.007100      -2.982380 
+     -1.301530       0.109760       1.131600       1.544510       1.447380 
+      0.817370       0.545310       0.207220      -0.219950 
+ 
+!-135 
+     -1.928130      -3.000390      -3.981520      -4.259580      -4.312100 
+     -4.116730      -4.702500      -4.659100      -4.814000      -4.817600 
+     -3.869800      -1.741200      -5.950460      -4.778710      -3.285200 
+     -1.647090       0.016510       0.808120       1.121900       1.268740 
+      0.498800       0.176030      -0.139660      -0.985460 
+ 
+!-120 
+     -1.786080      -2.568620      -3.232880      -3.821130      -4.261120 
+     -4.664200      -5.178700      -5.003200      -4.330800      -3.519500 
+     -6.554900      -6.867890      -5.939310      -4.822740      -3.181440 
+     -1.688890      -0.151100       0.495340       0.940770       1.221510 
+      0.945970       0.032380      -0.357300      -0.933600 
+ 
+!-105 
+     -1.667230      -2.227460      -3.090890      -3.903200      -4.417500 
+     -4.533100      -4.851800      -4.620100      -3.730800      -5.554900 
+     -6.688200      -6.679400      -5.868360      -4.295520      -2.829080 
+     -1.497990      -0.675160      -0.037500       0.667700       1.066940 
+      1.188250       0.311660      -0.261780      -0.909050 
+ 
+!-90 
+     -1.537340      -2.468080      -2.974040      -3.586520      -3.916200 
+     -4.290500      -3.975500      -3.728500      -4.893330      -5.581720 
+     -6.433700      -6.109550      -5.025400      -3.641890      -2.606990 
+     -1.590500      -0.603900      -0.154300       0.664300       0.985700 
+      0.990600       0.461020      -0.245250      -0.994560 
+ 
+!-75 
+     -2.065760      -2.436560      -3.552960      -3.542900      -3.987800 
+     -3.969000      -3.502300      -3.637400      -4.559880      -5.545520 
+     -5.417180      -5.412800      -4.299920      -3.235850      -2.120400 
+     -1.009000      -0.189300       0.169500       0.699100       1.006300 
+      0.818600       0.222200      -0.828030      -1.458240 
+ 
+!-60 
+     -3.168670      -3.158360      -3.268800      -3.457100      -3.575500 
+     -3.328300      -2.658500      -3.598610      -4.825150      -5.344130 
+     -4.913630      -4.385710      -3.731190      -3.036880      -1.860800 
+      1.809200       2.575000       0.619700       0.849600       0.906100 
+     -0.074100      -1.056100      -2.132610      -2.799340 
+ 
+!-45 
+     -3.840570      -3.414100      -3.485300      -3.243700      -2.681600 
+     -2.185900      -2.685300      -3.859600      -4.965010      -5.105430 
+     -4.429480      -3.696680      -3.108310      -0.240270       0.945060 
+      2.085400       0.687300       0.935100       0.996000       0.545500 
+     -0.800500      -2.148880      -3.179090      -3.651610 
+ 
+!-30 
+     -2.792100      -2.282900      -1.446000      -0.889700      -1.785100 
+     -2.780900      -3.585400      -4.315070      -4.527310      -3.981470 
+     -3.438700      -1.305240      -0.228490       0.736810       1.705860 
+      2.643640       1.148840       1.573550       1.609320       0.519540 
+     -0.940730      -2.216020      -3.260840      -3.309000 
+ 
+!-15 
+     -0.625600       0.489500       1.929300      -2.617500      -3.277500 
+     -3.728700      -4.086240      -4.011710      -3.071050      -2.002500 
+     -0.611300      -0.352880      -0.053690       0.861790       1.619750 
+      2.630720       1.540220       2.405800       1.865840       0.366370 
+     -0.865770      -1.669500      -1.879400      -1.742900 
+ 
+!0 
+      3.014700      -0.768400      -2.522000      -3.436500      -3.752600 
+     -3.606780      -2.558970      -1.663820      -1.029810      -1.386800 
+      0.304110       0.253110       0.302940       0.959290       1.789360 
+      2.702090       1.827350       1.854590       1.422100       1.156660 
+      0.803300       0.650700       0.488800       0.929000 
+ 
+!15 
+      0.424300      -1.576500      -2.975500      -3.626390      -3.601470 
+     -2.372160      -0.428870       0.366920      -0.158800       1.802290 
+      1.205890       0.925440       0.695070       1.026880       1.797480 
+      0.831650       1.037850       1.564000       1.769580       2.691460 
+      3.442800       3.386500       3.901300       5.767700 
+ 
+!30 
+     -1.004100      -2.478530      -3.092900      -3.362600      -2.661700 
+     -1.410650       0.514510       0.715820       0.376320       2.397690 
+      2.094840       1.701890       1.492380      -0.526880       0.456830 
+      0.174590       0.947880       1.501990       2.957710       4.981370 
+      6.248700       6.927100       4.349400       1.199300 
+ 
+!45 
+     -1.001170      -1.811860      -1.794070      -1.768200      -1.396500 
+     -0.707200       0.429800       0.561500       0.136900       0.447400 
+      0.259700      -0.406400      -0.619250       0.034980       0.189600 
+      0.288000       1.304750       2.639510       4.558270       5.569990 
+      5.552690       4.374600       2.513200       0.258400 
+ 
+!60 
+      0.424150      -0.019600      -1.296600      -1.349500      -0.764200 
+     -0.481900       0.493400       0.504500       0.451500       0.323600 
+      0.010100      -0.639500      -0.174100       0.142600      -0.224500 
+     -0.302300       2.447550       3.854930       4.456530       4.570800 
+      4.387830       3.348500       1.899320       1.418240 
+ 
+!75 
+      1.556500       0.651200      -0.070000      -0.007000      -0.070300 
+      0.375100       0.734600       0.485000       0.606000       0.409600 
+     -0.415400      -0.246400       0.058000      -0.499900       0.275700 
+      1.870300       3.716330       4.395340       3.761880       3.881870 
+      3.995780       3.244770       2.537360       3.529830 
+ 
+!90 
+      1.632400       0.931100       0.463300       0.200200       0.111700 
+      0.328800       0.641900       1.090400       0.598400       0.162700 
+     -0.779000      -1.438300      -1.329900      -0.425400       1.092300 
+      2.621950       3.516850       4.080640       3.362660       3.526760 
+      3.632110       3.339060       2.921140       2.928700 
+ 
+!105 
+      2.225900       0.915200       0.496800       0.018100      -0.133800 
+      0.057900       1.221900       0.954800       0.265200       0.389500 
+     -1.273400      -2.058300      -1.908700      -0.643700       1.087400 
+      2.307110       3.139350       3.086180       3.255960       3.734380 
+      3.553270       3.271080       3.000500       2.726600 
+ 
+!120 
+      1.538400       0.630500      -0.067800      -0.674100      -0.785300 
+     -0.365800       1.093700       0.622200       0.121400      -0.242100 
+     -1.620400      -2.445900      -1.937400      -0.605300       0.888090 
+      1.810940       2.902470       2.956230       2.821830       3.740670 
+      3.881230       3.219850       2.880700       2.140100 
+ 
+!135 
+      1.108400      -0.261000      -0.384100      -0.800400      -0.970500 
+     -0.336500       0.496400       0.205100      -0.749500      -1.156900 
+     -1.775800      -2.095600      -1.813400      -1.001570       0.298350 
+      2.035200       2.240490       2.370360       2.643460       3.100740 
+      3.293120       2.727800       2.423400       1.703000 
+ 
+!150 
+      0.264300      -0.634000      -1.110300      -1.102000      -0.584700 
+     -0.043100       0.252100      -0.543700      -1.170600      -1.707200 
+     -2.368220      -2.822210      -2.400180      -1.632680      -0.043000 
+      2.646740       1.738700       2.168300       2.504200       2.899100 
+      2.836100       2.228900       1.806800       1.601800 
+ 
+!165 
+      0.053200      -0.940700      -0.896100      -0.025800      -0.455600 
+     -0.676900      -0.917000      -1.316700      -2.115050      -2.417720 
+     -3.234770      -3.950500      -3.824950      -2.618000       0.441310 
+      0.824250       1.269700       2.111910       2.619590       2.669100 
+      2.581400       2.054500       1.759900       1.558700 
+ 
+ 
+! D-proline 
+!mp2/aug-cc-pVDZ//RIMP2/VTZ/VQZ CBS map 
+C    N    CPD1 C    N    CPD1   C    NH1 24 
+
+!-180
+     -2.696400      -4.118700      -5.989200      -6.966100      -6.655600
+     -5.831000      -5.341300      -5.479400      -5.867700      -5.845800
+     -5.515200      -5.432500      -5.698700      -6.001300      -6.177900
+     -6.293300      -6.185400      -5.431400      -4.905300      -4.920000
+     -4.646300      -3.563700      -2.606600      -2.319300
+ 
+ ! -165.00 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 
+ 
+ ! -150.00 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 
+ 
+ ! -135.00 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 
+ 
+ ! -120.00 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 
+ 
+ ! -105.00 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 
+ 
+ !  -90.00 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 
+ 
+ !  -75.00 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 
+ 
+ !  -60.00 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 
+ 
+ !  -45.00 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 
+ 
+!-30 
+      1.792800       2.239800      -3.278800      -3.391000      -3.519700 
+     -3.665500      -4.200100      -4.906500      -4.744100      -3.234400 
+     -2.611900      -2.515300      -2.459200      -2.785100      -3.328900 
+     -3.572700      -3.159800      -2.502000      -2.989900      -4.402700 
+     -5.277500      -4.772500      -2.990600      -0.650500 
+ 
+!-15 
+      0.918300      -1.233800      -2.695000      -3.174500      -3.681500 
+     -4.098600      -4.400900      -4.161300      -3.159500      -2.804600 
+     -3.060400      -2.927300      -2.902500      -3.327000      -3.944600 
+     -4.144100      -3.544500      -3.283500      -4.217800      -4.832800 
+     -4.646800      -3.775000      -2.473700      -0.558300 
+ 
+!0 
+      2.331500      -0.875500      -2.927700      -4.233600      -4.931600 
+     -4.758100      -3.631500      -2.100800      -1.646400      -2.243700 
+     -2.340400      -2.172100      -2.249400      -2.796200      -3.529500 
+     -3.772900      -3.681400      -4.264800      -4.155300      -3.532600 
+     -2.890400      -2.278500      -0.743100       2.322800 
+ 
+!15 
+      1.327300       3.224600       1.412700      -0.091200      -0.374000 
+      0.883400       3.229500       4.961800       5.052500      -0.071900 
+     -0.018500       0.015000      -0.377200      -1.271600      -2.153400 
+     -2.573600      -3.429500      -3.258400      -2.017700      -0.897900 
+     -0.396300       0.533600       6.471000      -0.194500 
+ 
+!30 
+      3.146400       1.208100      -0.786800      -1.675500      -1.010800 
+      1.025000       3.225100       4.369300       4.722600       4.845600 
+      4.899500       4.801600       4.245700       3.161200       1.895800 
+      0.185400      -0.361900       1.011400       2.954500       4.572000 
+      5.958500       7.467700       7.858100       5.419300 
+ 
+!45 
+      2.611300       0.891700      -0.341600      -0.637000       0.275100 
+      1.887000       3.213100       3.878700       4.162600       4.264900 
+      4.303000       4.243300       3.910600       3.213200       1.730200 
+      0.593300       1.164800       2.771800       4.153500       4.899400 
+      5.379500       5.883700       5.305600       4.164600 
+ 
+!60 
+      2.116700       1.410500       0.649000       0.415900       0.881800 
+      1.571700       2.019600       2.275100       2.490300       2.670400 
+      2.931600       3.250400       3.393900       2.782600       1.645000 
+      1.258500       2.049200       3.363700       5.105400       4.364500 
+      3.792600       3.332100       2.821200       2.500700 
+ 
+!75 
+      3.387800       2.478100       1.402000       0.860500       1.265800 
+      2.022300       2.201700       1.407200       0.353800      -0.159600 
+     -0.149800       0.306600       1.192500       1.143300      -0.313700 
+     -1.397200      -1.297900      -0.209800       1.390800       1.705600 
+      1.865600       2.687100       3.698500       3.940100 
+ 
+!90 
+      0.851400       0.276700      -0.551600      -0.976800      -0.989300 
+     -1.166400      -1.696100      -2.157500      -2.207200      -1.764100 
+     -0.784600       0.084000       0.008800      -0.558300      -1.168000 
+     -1.143100      -0.329300       0.334700      -0.228700      -1.516100 
+     -1.793200      -1.116800      -0.118100       0.670800 
+ 
+!105 
+      3.528100       2.472500       0.933000      -0.136000      -0.007300 
+      0.906900       1.473600       0.927800      -0.180300      -0.470600 
+      0.122500       1.167100       0.821000      -0.612200      -2.245500 
+     -3.073100      -2.398100      -0.432300       1.104700       1.115900 
+      1.283800      -2.898100      -1.136700       0.090800 
+ 
+!120 
+      2.394900       1.212200      -0.433200      -1.623500      -1.650900 
+     -0.844200       0.000600       0.102200      -0.210400       0.000600 
+      0.494300       0.335600      -0.698000      -2.351600      -3.942500 
+     -4.461000      -3.390000      -1.302300      -0.791000      -0.755400 
+     -0.181200       0.866900       2.036600       2.757600 
+ 
+!135 
+      1.906100       0.591400      -1.101900      -2.270900      -2.225300 
+     -1.428300      -0.802700      -0.510000      -0.132300       0.268400 
+      0.110800      -0.444300      -1.784500      -3.565300      -4.934200 
+     -4.954000      -3.505900      -1.277400      -1.170100      -1.287800 
+     -0.921300       0.174600       1.624200       2.432900 
+ 
+!150 
+      1.033700      -0.093000      -1.657100      -2.686900      -2.619600 
+     -1.868900      -1.170000      -0.882700      -1.017200      -1.172300 
+     -1.114400      -1.353900      -1.937600      -2.557200      -2.888100 
+     -2.718300      -2.418200      -2.275000      -1.885900      -1.673900 
+     -1.281100      -0.328600       0.726400       1.254400 
+ 
+!165 
+     -0.033900      -1.362700      -3.181500      -4.276800      -4.053400 
+     -3.154400      -2.470200      -2.374600      -2.687200      -2.834600 
+     -2.713100      -2.899100      -3.581000      -4.255500      -4.552600 
+     -4.226900      -4.035800      -3.392600      -2.858000      -2.697800 
+     -2.315700      -1.240400      -0.146600       0.301300 
+ 
+!180 
+     -2.696400      -4.118700      -5.989200      -6.966100      -6.655600 
+     -5.831000      -5.341300      -5.479400      -5.867700      -5.845800 
+     -5.515200      -5.432500      -5.698700      -6.001300      -6.177900 
+     -6.293300      -6.185400      -5.431400      -4.905300      -4.920000 
+     -4.646300      -3.563700      -2.606600      -2.319300 
+ 
+ 
+!2 adjacent prolines 
+! mp2/aug-cc-pVDZ//RIMP2/VTZ/VQZ CBS map 
+C    N    CPD1 C    N    CPD1   C    N 24 
+
+!-180
+     -2.696400      -4.118700      -5.989200      -6.966100      -6.655600
+     -5.831000      -5.341300      -5.479400      -5.867700      -5.845800
+     -5.515200      -5.432500      -5.698700      -6.001300      -6.177900
+     -6.293300      -6.185400      -5.431400      -4.905300      -4.920000
+     -4.646300      -3.563700      -2.606600      -2.319300
+ 
+ ! -165.00 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 
+ 
+ ! -150.00 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 
+ 
+ ! -135.00 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 
+ 
+ ! -120.00 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 
+ 
+ ! -105.00 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 
+ 
+ !  -90.00 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 
+ 
+ !  -75.00 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 
+ 
+ !  -60.00 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 
+ 
+ !  -45.00 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 0.000000 
+ 0.000000 0.000000 0.000000 0.000000 
+ 
+!-30 
+      1.792800       2.239800      -3.278800      -3.391000      -3.519700 
+     -3.665500      -4.200100      -4.906500      -4.744100      -3.234400 
+     -2.611900      -2.515300      -2.459200      -2.785100      -3.328900 
+     -3.572700      -3.159800      -2.502000      -2.989900      -4.402700 
+     -5.277500      -4.772500      -2.990600      -0.650500 
+ 
+!-15 
+      0.918300      -1.233800      -2.695000      -3.174500      -3.681500 
+     -4.098600      -4.400900      -4.161300      -3.159500      -2.804600 
+     -3.060400      -2.927300      -2.902500      -3.327000      -3.944600 
+     -4.144100      -3.544500      -3.283500      -4.217800      -4.832800 
+     -4.646800      -3.775000      -2.473700      -0.558300 
+ 
+!0 
+      2.331500      -0.875500      -2.927700      -4.233600      -4.931600 
+     -4.758100      -3.631500      -2.100800      -1.646400      -2.243700 
+     -2.340400      -2.172100      -2.249400      -2.796200      -3.529500 
+     -3.772900      -3.681400      -4.264800      -4.155300      -3.532600 
+     -2.890400      -2.278500      -0.743100       2.322800 
+ 
+!15 
+      1.327300       3.224600       1.412700      -0.091200      -0.374000 
+      0.883400       3.229500       4.961800       5.052500      -0.071900 
+     -0.018500       0.015000      -0.377200      -1.271600      -2.153400 
+     -2.573600      -3.429500      -3.258400      -2.017700      -0.897900 
+     -0.396300       0.533600       6.471000      -0.194500 
+ 
+!30 
+      3.146400       1.208100      -0.786800      -1.675500      -1.010800 
+      1.025000       3.225100       4.369300       4.722600       4.845600 
+      4.899500       4.801600       4.245700       3.161200       1.895800 
+      0.185400      -0.361900       1.011400       2.954500       4.572000 
+      5.958500       7.467700       7.858100       5.419300 
+ 
+!45 
+      2.611300       0.891700      -0.341600      -0.637000       0.275100 
+      1.887000       3.213100       3.878700       4.162600       4.264900 
+      4.303000       4.243300       3.910600       3.213200       1.730200 
+      0.593300       1.164800       2.771800       4.153500       4.899400 
+      5.379500       5.883700       5.305600       4.164600 
+ 
+!60 
+      2.116700       1.410500       0.649000       0.415900       0.881800 
+      1.571700       2.019600       2.275100       2.490300       2.670400 
+      2.931600       3.250400       3.393900       2.782600       1.645000 
+      1.258500       2.049200       3.363700       5.105400       4.364500 
+      3.792600       3.332100       2.821200       2.500700 
+ 
+!75 
+      3.387800       2.478100       1.402000       0.860500       1.265800 
+      2.022300       2.201700       1.407200       0.353800      -0.159600 
+     -0.149800       0.306600       1.192500       1.143300      -0.313700 
+     -1.397200      -1.297900      -0.209800       1.390800       1.705600 
+      1.865600       2.687100       3.698500       3.940100 
+ 
+!90 
+      0.851400       0.276700      -0.551600      -0.976800      -0.989300 
+     -1.166400      -1.696100      -2.157500      -2.207200      -1.764100 
+     -0.784600       0.084000       0.008800      -0.558300      -1.168000 
+     -1.143100      -0.329300       0.334700      -0.228700      -1.516100 
+     -1.793200      -1.116800      -0.118100       0.670800 
+ 
+!105 
+      3.528100       2.472500       0.933000      -0.136000      -0.007300 
+      0.906900       1.473600       0.927800      -0.180300      -0.470600 
+      0.122500       1.167100       0.821000      -0.612200      -2.245500 
+     -3.073100      -2.398100      -0.432300       1.104700       1.115900 
+      1.283800      -2.898100      -1.136700       0.090800 
+ 
+!120 
+      2.394900       1.212200      -0.433200      -1.623500      -1.650900 
+     -0.844200       0.000600       0.102200      -0.210400       0.000600 
+      0.494300       0.335600      -0.698000      -2.351600      -3.942500 
+     -4.461000      -3.390000      -1.302300      -0.791000      -0.755400 
+     -0.181200       0.866900       2.036600       2.757600 
+ 
+!135 
+      1.906100       0.591400      -1.101900      -2.270900      -2.225300 
+     -1.428300      -0.802700      -0.510000      -0.132300       0.268400 
+      0.110800      -0.444300      -1.784500      -3.565300      -4.934200 
+     -4.954000      -3.505900      -1.277400      -1.170100      -1.287800 
+     -0.921300       0.174600       1.624200       2.432900 
+ 
+!150 
+      1.033700      -0.093000      -1.657100      -2.686900      -2.619600 
+     -1.868900      -1.170000      -0.882700      -1.017200      -1.172300 
+     -1.114400      -1.353900      -1.937600      -2.557200      -2.888100 
+     -2.718300      -2.418200      -2.275000      -1.885900      -1.673900 
+     -1.281100      -0.328600       0.726400       1.254400 
+ 
+!165 
+     -0.033900      -1.362700      -3.181500      -4.276800      -4.053400 
+     -3.154400      -2.470200      -2.374600      -2.687200      -2.834600 
+     -2.713100      -2.899100      -3.581000      -4.255500      -4.552600 
+     -4.226900      -4.035800      -3.392600      -2.858000      -2.697800 
+     -2.315700      -1.240400      -0.146600       0.301300 
+ 
+!180 
+     -2.696400      -4.118700      -5.989200      -6.966100      -6.655600 
+     -5.831000      -5.341300      -5.479400      -5.867700      -5.845800 
+     -5.515200      -5.432500      -5.698700      -6.001300      -6.177900 
+     -6.293300      -6.185400      -5.431400      -4.905300      -4.920000 
+     -4.646300      -3.563700      -2.606600      -2.319300 
+ 
+ 
+ 
+NONBONDED nbxmod  5 atom cdiel fshift vatom vdistance vfswitch - 
+cutnb 14.0 ctofnb 12.0 ctonnb 10.0 eps 1.0 e14fac 1.0 wmin 1.5 
+                !adm jr., 2013 correction 
+! 
+!V(Lennard-Jones) = Eps,i,j[(Rmin,i,j/ri,j)**12 - 2(Rmin,i,j/ri,j)**6] 
+! 
+!epsilon: kcal/mole, Eps,i,j = sqrt(eps,i * eps,j) 
+!Rmin/2: A, Rmin,i,j = Rmin/2,i + Rmin/2,j 
+! 
+!atom  ignored    epsilon      Rmin/2   ignored   eps,1-4       Rmin/2,1-4 
+! 
+!carbons 
+ 
+! Added CTD1 -- new atom type for alpha carbon for d-amino acid, necessary 
+! for CMAP.  Just duplicated the CT1 parameters.  AMG 2/27/08 
+ 
+CTD1    0.000000  -0.032000     2.000000   0.000000  -0.010000     1.900000 ! alkane, 4/07, viv 
+CPD1    0.000000  -0.020000     2.275000   0.000000  -0.010000     1.900000 ! ALLOW   ALI 
+ 
+ 
+HBOND CUTHB 0.5  ! If you want to do hbond analysis (only), then use 
+                 ! READ PARAM APPEND CARD 
+                 ! to append hbond parameters from the file: par_hbond.inp 
+ 
+END 

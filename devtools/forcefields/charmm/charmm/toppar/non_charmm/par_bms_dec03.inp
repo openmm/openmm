@@ -1,0 +1,684 @@
+*  \\\\\\\ All-Hydrogen Nucleic Acid Topology File ////////
+*  \\\\\\\\\\\\\\\\\\ Developmental ///////////////////////
+*                    David R. Langley
+*                Version 1.00, August 1995
+*                Version 1.05, June 1999
+*                Version 1.10, November 2000
+*                Version 1.15, April 2003         
+*..................................................................
+*..................................................................
+* David R. Langley, Molecular Dynamic Simulations of Environment
+* and Sequence Dependent DNA Conformations: The Development of
+* the BMS Nucleic Acid Force Field and Comparison with Experimental
+* Results.  J. Biomol. Struct. Dyn., 1998, 16, 487-509.
+*..................................................................
+*..................................................................
+* Parameters for 2'-deoxy-6-thioguanine (patch residue id: TG) were added 11-22-00.
+* -
+* The modeified TIPS3P WATER MODEL with 5% reduced charges (residue id: T95)
+* provides stable (4M NaCl) A-DNA simulations by balancing the                            
+* Na-H2O, Cl-H2O, DNA-Na, DNA-Cl, DNA-H2O interactions.
+*
+
+BONDS  !    FORCE       EQUI
+CK   CF     302.0       1.425   !U,T,  par_a4 JWK 9/30/91
+CK   CB     302.0       1.360   !G,  JWK, adm jr., 7/24/91
+CK   NSP    302.0       1.400   !C,U, JWK, adm jr., 7/24/91
+CK   NAG    340.0       1.410   !G, par_a4 JWK 9/30/91
+CK   NAT    340.0       1.410   !U, par_a4 JWK 9/30/91
+CK   NC     400.0       1.358   !C, par_a6 JWK 9/30/91
+CK   OK     620.0       1.235   !U,A,G par_a4 adm jr., 10/2/91
+CK   OKC    620.0       1.245   !C, adm jr., 10/2/91
+CK   OKG    620.0       1.235   !G, DRL
+CK   S      523.0       1.664   !TG, DRL, B3LYP/6-31+G** (1.664A)
+CA   CF     302.0       1.420   !C, JWK, adm jr., 7/24/91
+CA   CB     302.0       1.360   !A, JWK, adm jr., 10/2/91
+CA   NAN    400.0       1.365   !C,A,G JWK, adm jr., 10/2/91
+CA   NAG    400.0       1.400   !G, JWK, adm jr., 7/24/91
+CA   NC     400.0       1.340   !C, par_a6 JWK 9/30/91
+CA   NCA    320.0       1.340   !A, par_a8 JWK 9/30/91
+CF   CF     560.0       1.335   !C, par_a4 JWK 9/30/91
+CF   CTT    230.0       1.480   !T, par_51, adm jr., 7/24/91
+CF   HAR    350.0       1.09    !C,U, JWK
+CF   NSP    302.0       1.365   !C,U, JWK, adm jr., 7/24/91
+CE   HAR    380.0       1.09    !G,A, JWK par_a7 9/30/91
+CE   NS     300.0       1.365   !G,A, JWK, adm jr., 7/24/91
+CE   NAG    350.0       1.365   !Inosine, adm jr., 2/94
+CE   NCA    310.0       1.310   !A, JWK, par_a7 9/30/91
+CE   NB     400.0       1.308   !G,A, JWK par_a8 9/30/91
+CE   NBG    400.0       1.308   !G, DRL
+CB   CB     320.0       1.370   !G,A, JWK par_a8 9/30/91
+CB   NS     302.0       1.408   !G,A, JWK, adm jr., 7/24/91
+CB   NCA    350.0       1.336   !A, JWK par_a8 9/30/91
+CB   NB     350.0       1.360   !G,A, JWK, par_a8 9/30/91
+CB   NBG    350.0       1.360   !G, DRL
+HNA  NAN    488.0       1.00    !A,C,G, JWK, adm jr., 7/24/91
+HB   NS     474.0       1.01    !C,U, JWK
+HB   NSP    474.0       1.01    !C,U, JWK
+HB   NAG    471.0       1.01    !G, JWK, par_a12 9/30/91
+HB   NAT    474.0       1.01    !U, JWK, adm jr., 7/24/91
+!
+!for RNA
+CK   NSR    302.0       1.400   !DRL
+CF   NSR    302.0       1.365   !DRL
+CE   NSR    300.0       1.365   !DRL
+CB   NSR    302.0       1.408   !DRL
+HB   NSR    474.0       1.01    !DRL
+CTT  NAG    400.0       1.46    !DRL for 1methylguanine
+CF   CT5    230.0       1.480   !PSU, DRL
+!
+OS   P      270.0       1.60    !DMP, ADM Jr.
+OCP  P      580.0       1.48    !DMP, ADM Jr.
+OHP  P      237.0       1.58    !MP_1, ADM Jr.
+HOP  OHP    545.0       0.960   !MP_1, ADM Jr.
+CT5  NS     300.0       1.48    !DRL/quanta
+CT5  NSR    300.0       1.48    !DRL/quanta
+CT5  NSP    300.0       1.48    !DRL/quanta
+CTT  NS     400.0       1.46    !DRL/quanta
+CTT  NSR    400.0       1.46    !DRL/quanta
+CTT  NSP    400.0       1.46    !DRL/quanta
+HAT  CTT    340.0       1.09    !DRL/quanta
+CTT  CTT    268.0       1.529   !DRL/quanta
+CTT  CT5    268.0       1.529   !DRL/quanta
+CTT  OS     393.0       1.42    !DRL/quanta
+CTT  OH     375.0       1.405   !DRL/quanta
+HA5  CT5    340.0       1.09    !DRL/quanta
+CT5  CT5    320.0       1.5483  !DRL !MP2 1.5483A
+CT5  OE     340.0       1.4415  !DRL !MP2 1.4415A
+CT5  OS     393.0       1.42    !DRL/quanta
+CT5  OH     375.0       1.405   !DRL/quanta
+HO   OH     505.0       0.948   !DRL/quanta
+!TIPS3P
+HT   HT       0.0       1.5139  !TIPS3P (for SHAKE w/PARM)
+HT   OT     450.0       0.9572  !TIPS3P
+!AMBER TIP3P water
+HW   HW     553.0       1.5136    !  TIP3P water
+OW   HW     553.0       0.9572    !  TIP3P water
+!ethanol and trifloroethanol
+CT   CT     268.0       1.529   !quanta
+HA   CT     340.0       1.09    !quanta
+CT   OT     375.0       1.405   !quanta
+HO   OT     505.0       0.948   !quanta
+CF3  CT     208.0       1.52    !quanta
+CF3  XF     275.0       1.32    !quanta
+
+THETAS  !         FORCE    EQUI
+CF   CK   NAT     67.0     113.4  !U,T, JWK, adm jr., 7/24/91
+CF   CK   OK     100.0     124.7  !U,T, par_a3 JWK 9/30/91
+CB   CK   NAG     67.0     109.4  !G, JWK, adm jr., 7/24/91
+!!!CB   CK   OK     100.0     125.6  !G, par_a3 adm jr., 10/2/91
+CB   CK   OKG    100.0     125.6  !G, DRL
+CB   CK   S      100.0     128.26 ! 80.0     128.8  !TG, DRL, B3LYP/6-31+G** (130.26)
+NSP  CK   NAT     67.0     114.6  !U,T, JWK, adm jr., 7/24/91
+NSP  CK   NC      70.0     116.4  !C, JWK, adm jr., 7/24/91
+NSP  CK   OK     100.0     123.5  !C,U,G par_a3 JWK 9/30/91
+NSP  CK   OKC    100.0     121.5  !C, adm jr., 10/2/91
+!!!NAG  CK   OK     100.0     125.0  !G, par_a4 adm jr., 10/2/91
+NAG  CK   OKG    100.0     125.0  !G, DRL
+NAG  CK   S      100.0     121.45 ! 80.0     120.6  !TG, DRL, B3LYP/6-31+G** (119.45)
+NAT  CK   OK     100.0     121.9  !U, par_a3 JWK 9/30/91
+NC   CK   OKC    100.0     122.1  !C, par_a3 JWK 9/30/91
+CF   CA   NAN     70.0     117.9  !C, JWK, adm jr., 7/24/91
+CF   CA   NC      70.0     119.8  !C, JWK, adm jr., 7/24/91
+CB   CA   NAN     70.0     119.1  !A, adm jr., 6/7/92
+CB   CA   NCA     80.0     112.6  !A, JWK   par_a9 9/30/91
+NAN  CA   NAG     70.0     114.8  20.  2.30 !G, JWK, adm jr., 7/24/91
+NAN  CA   NC      70.0     122.3  !C, JWK, adm jr., 7/24/91
+NAN  CA   NCA     70.0     128.3  !A, adm jr., 6/7/92
+NAG  CA   NCA     70.0     122.9  !G, JWK   par_49, par_a11 9/30/91
+CK   CF   CF     125.0     118.0  !U,T, JWK, adm jr., 7/24/91
+CK   CF   CTT     70.0     118.3  !T, JWK, adm jr., 7/24/91
+CK   CF   HAR     30.0     120.0  !C,U, JWK, adm jr., 7/24/91
+CA   CF   CF     125.0     119.3  !C, JWK, adm jr., 7/24/91
+CA   CF   HAR     30.0     118.7  !C, JWK, adm jr., 7/24/91
+CF   CF   CTT     70.0     123.7  !T, JWK, adm jr., 7/24/91
+CF   CF   HAR     30.0     122.0  !C,U, JWK, adm jr., 7/24/91
+CF   CF   NSP    125.0     124.2  !C,U, JWK, adm jr., 7/24/91
+HAR  CF   NSP     30.0     113.8  !C,U, JWK, adm jr., 7/24/91
+HAR  CE   NS      40.0     119.0  !G,A, JWK, par_a9 9/30/91
+HAR  CE   NCA     35.0     114.75 !A, JWK, par_a9 9/30/91
+HAR  CE   NAG     35.0     114.75 !Inosine, adm jr., 2/94
+HAR  CE   NB      40.0     126.7  !G,A, JWK, par_a9 9/30/91
+HAR  CE   NBG     40.0     126.7  !G, DRL
+NS   CE   NB     100.0     114.3  !G,A, JWK, par_a9 9/30/91
+NS   CE   NBG    100.0     114.3  !G, DRL
+NCA  CE   NCA     80.0     130.5  !A, JWK, par_a9 9/30/91
+CK   CB   CB     125.0     119.5  !G, JWK, adm jr., 7/24/91
+!!!CK   CB   NB     125.0     128.8  !G, JWK, adm jr., 7/24/91
+CK   CB   NBG    125.0     128.8  !G, DRL
+CA   CB   CB     100.0     119.7  !A, JWK, par_a7 9/30/91
+CA   CB   NB     120.0     128.6  !A, JWK, par_a9 9/30/91
+CB   CB   NS     100.0     105.1  !G,A, JWK, par_a9 9/30/91
+CB   CB   NCA    100.0     127.5  !A, JWK, par_a7 9/30/91
+CB   CB   NB     100.0     111.7  !G,A, JWK, par_a7 9/30/91
+CB   CB   NBG    100.0     111.7  !G, DRL
+NS   CB   NCA    140.0     127.4  !A, JWK, par_a9 9/30/91
+CA   NAN  HNA     40.0     120.0  ! par_a6 JWK 9/30/91
+HNA  NAN  HNA     32.0     120.0  ! par_a5 JWK 9/30/91
+CK   NSP  CT5     70.0     128.4  !from CN4 NN2 CN7, adm jr., 7/24/91
+CK   NSP  CF     125.0     120.6  !C,U, JWK
+CK   NSP  CTT     70.0     117.7  !1-M-T XTAL, adm jr., 7/24/91
+CK   NSP  HB      40.5     122.0  !C,U  JWK, adm jr., 7/24/91
+CF   NSP  CT5     70.0     121.7  !from CN3 NN2 CN7, adm jr., 7/24/91
+CF   NSP  CTT     70.0     121.7  !1-M-T XTAL, adm jr., 7/24/91
+CF   NSP  HB      32.0     117.4  !C,U, JWK, adm jr., 7/24/91
+CE   NS   CB     110.0     105.6  !G,A, JWK, par_a9 9/30/91
+CE   NS   CT5     70.0     128.4  !from CN4 NN2 CN7, adm jr., 7/24/91
+CE   NS   CTT     70.0     128.4  !9-M-ADE, adm jr., 7/24/91
+CE   NS   HB      30.0     125.0  !G,A, JWK, par_a9 9/30/91
+CB   NS   CT5     70.0     126.0  !from CN5 NN2 CN7, adm jr., 7/24/91
+CB   NS   CTT     70.0     126.0  !9-M-ADE, adm jr., 7/24/91
+CB   NS   HB      30.0     129.4  !G,A, JWK, par_a9 9/30/91
+CK   NAG  CA     125.0     128.7  !G, JWK, adm jr., 7/24/91
+CK   NAG  CE     125.0     129.7  !Inosine, adm jr., 2/94
+CK   NAG  HB      40.5     114.3  !G, adm jr., 7/24/91
+CA   NAG  HB      40.5     117.0  !G par_49, adm jr., 7/24/91
+CE   NAG  HB      40.5     116.0  !Inosine, adm jr., 2/94
+CK   NAT  CK      90.0     129.2  !U,T, par_a4 JWK 9/30/91
+CK   NAT  HB      40.5     115.4  !T,U, JWK, adm jr., 7/24/91
+CK   NC   CA      70.0     119.7  !C, JWK, adm jr., 7/24/91
+CA   NCA  CB      90.0     112.0  !G, JWK, par_a11 9/30/91
+CA   NCA  CE      90.0     119.9  !A, JWK, par_a9 9/30/91
+CE   NCA  CB      90.0     110.3  !A, JWK, par_a9 9/30/91
+CE   NB   CB     110.0     103.3  !G,A, JWK, par_a9 9/30/91
+CE   NBG  CB     110.0     103.3  !G, DRL
+CF   CTT  HAT     33.43    110.1   22.53 2.179 ! Alkanes, sacred
+!
+CT5  OS   P       20.0     120.0  35.0  2.33 !DMP, ADM JR.
+CTT  OS   P       20.0     120.0  35.0  2.33 !DMP, ADM Jr.
+P    OS   P       15.0     140.0 -40.0  2.80 !nad/ppi, jjp1/adm jr. 7/95
+HOP  OHP  P       30.0     115.0  40.0  2.35 !MP_1, ADM Jr.
+!
+OS   P    OS      45.0     102.6     !DRL/amber4.1
+OS   P    OCP    100.0     108.23    !DRL/amber4.1
+OCP  P    OCP    140.0     119.9     !DRL/amber4.1
+!
+OS   P    OHP     48.1     108.0  !MP_1, ADM Jr. |
+OCP  P    OHP     98.9     108.23 !MP_1, ADM Jr. |DRL untested
+OHP  P    OHP     98.9     104.0  !MP_0, ADM Jr. |
+!
+OE   CT5  NS      70.0     108.0  !ADM Jr.
+HA5  CT5  NS      43.0     111.0  !ADM Jr.
+CT5  CT5  NS      70.0     113.7  !ADM Jr.
+OE   CT5  NSP     70.0     108.0  !ADM Jr.
+HA5  CT5  NSP     43.0     111.0  !ADM Jr.
+CT5  CT5  NSP     70.0     113.7  !ADM Jr.
+!
+HAT  CTT  HAT     33.0     107.8  !quanta !MP2 108.075
+HAT  CTT  CTT     37.5     110.7  !quanta
+HAT  CTT  CT5     37.5     110.7  !quanta !MP2 111.425
+CTT  CT5  CT5     38.35    112.7  !DRL    !MP2 102.9
+CTT  CT5  HA5     37.5     110.7  !quanta
+CTT  CT5  OE      57.0     110.0  !quanta !MP2 107.6
+HAT  CTT  OS      59.0     108.25 !quanta
+CTT  CTT  OS      80.0     109.47 !quanta
+CT5  CTT  OS      80.0     109.47 !quanta
+HAT  CTT  OH      55.0     108.0  !quanta
+CT5  CTT  OH      45.0     110.5  !quanta
+HO   OH   CTT     59.0     106.7  !quanta
+HA5  CT5  HA5     33.0     107.8  !quanta !MP2 108.075
+HA5  CT5  CT5     37.5     110.7  !quanta !MP2 111.425
+CT5  CT5  CT5     38.35    112.7  !DRL
+HA5  CT5  OE      55.5     109.47 !quanta !MP2 109.3
+CT5  CT5  OE      37.0     112.0  !DRL
+CT5  OE   CT5     33.0     108.0  !DRL
+HA5  CT5  OS      59.0     108.25 !quanta
+CT5  CT5  OS      80.0     109.47 !quanta
+HA5  CT5  OH      55.0     108.0  !quanta
+CT5  CT5  OH      45.0     110.5  !quanta
+HO   OH   CT5     59.0     106.7  !quanta
+!
+!RNA
+NSR  CK   NAT     67.0     114.6  !DRL
+NSR  CK   NC      70.0     116.4  !DRL
+NSR  CK   OK     100.0     123.5  !DRL
+NSR  CK   OKC    100.0     121.5  !DRL
+CF   CF   NSR    125.0     124.2  !DRL
+HAR  CF   NSR     30.0     113.8  !DRL
+HAR  CE   NSR     40.0     119.0  !DRL
+NSR  CE   NB     100.0     114.3  !DRL
+NSR  CE   NBG    100.0     114.3  !DRL
+CB   CB   NSR    100.0     105.1  !DRL
+NSR  CB   NCA    140.0     127.4  !DRL
+CK   NSR  CT5     70.0     128.4  !DRL
+CK   NSR  CF     125.0     120.6  !DRL
+CK   NSR  CTT     70.0     117.7  !DRL
+CK   NSR  HB      40.5     122.0  !DRL
+CF   NSR  CT5     70.0     121.7  !DRL
+CF   NSR  CTT     70.0     121.7  !DRL
+CF   NSR  HB      32.0     117.4  !DRL
+CE   NSR  CB     110.0     105.6  !DRL
+CE   NSR  CT5     70.0     128.4  !DRL
+CE   NSR  CTT     70.0     128.4  !DRL
+CE   NSR  HB      30.0     125.0  !DRL
+CB   NSR  CT5     70.0     126.0  !DRL
+CB   NSR  CTT     70.0     126.0  !DRL
+CB   NSR  HB      30.0     129.4  !DRL
+OE   CT5  NSR     70.0     108.0  !DRL
+HA5  CT5  NSR     43.0     111.0  !DRL
+CT5  CT5  NSR     70.0     113.7  !DRL
+CK   NAG  CTT     40.5     114.3  !G, DRL for 1-methylguanine
+CA   NAG  CTT     40.5     117.0  !G, DRL for 1-methylguanine
+HAT  CTT  NAG     43.0     111.0  !G, DRL for 1-methylguanine
+CF   CF   CT5     70.0     123.7  !PSU, DRL
+CK   CF   CT5     70.0     118.3  !PSU, DRL
+OE   CT5  CF      70.0     108.0  !PSU, DRL
+HA5  CT5  CF      43.0     111.0  !PSU, DRL
+CT5  CT5  CF      70.0     113.7  !PSU, DRL
+!TIPS3P
+HT   OT   HT      55.0     104.52 ! FROM TIPS3P GEOMETRY
+!AMBER TIP3P water
+HW   OW   HW     100.      104.52  !  TIP3P water
+HW   HW   OW       0.      127.74  !  (found in crystallographic water with 3 bonds)
+!ethanol and trifloroethanol
+HA   CT   CT      37.5     110.7  !quanta
+HA   CT   HA      33.0     107.8  !quanta
+CT   CT   OT      45.0     110.5  !quanta
+HA   CT   OT      55.0     108.0  !quanta
+HO   OT   CT      59.0     106.7  !quanta
+CT  CF3   XF      75.0     115.0  !quanta
+XF  CF3   XF     110.0     112.3  !quanta
+CF3  CT   OT      57.0     103.0  !quanta
+HA   CT  CF3      37.5     109.47 !quanta
+
+PHI  !                 FORCE  PERIOD PHASE
+   X   CTT  CTT   X     0.15  3    0.0
+!
+   X   CT5  CT5   X     0.15  3    0.0    !cyclohexane
+   X   CT5  OE    X     0.27  3    0.0    !THF
+  CT5  CT5  OE  CT5     0.27  3    0.0    !
+  CT5  CT5  OE  CT5    -0.025 4    0.0    !
+  CT5  CT5  CT5  OE    -0.10  2    0.0    !
+!
+! X-angle between BASES and RIBOSE
+   X   NS   CT5  X      0.0  3     0.0    !chi for ADE and GUA
+  CB   NS   CT5  CT5    0.1  4     0.0
+  CB   NS   CT5  CT5    1.5  1     0.0
+  CB   NS   CT5  OE    -0.30 4     0.0
+! 
+   X   NSP  CT5  X      0.0  3     0.0    !chi for THY, CYT, URA
+  CK   NSP  CT5  CT5    1.3  1     0.0
+  CK   NSP  CT5  OE     0.2  1     0.0
+  CK   NSP  CT5  OE    -0.65 4     0.0
+!
+
+X    CF   CT5  X        0.15  3    0.0    !chi test for PSU
+
+!
+!Special terms for controling relative minimum energy for ribose.
+! CT5  CT5  CT5  NS    -0.4  1     0.0  !-0.3 1 0.0 favors C2'-endo
+! CT5  CT5  CT5  NSP   -0.4  1     0.0  !-0.5 1 0.0 favors C3'-endo
+!
+!Special terms for controling energy barrier between minimum
+! CT5  CT5  CT5  NS    -0.5  4     0.0  !-0.3  4    0.0 !The second term if used
+! CT5  CT5  CT5  NSP   -0.5  4     0.0  !-0.3  4    0.0 !lowers barrier between
+! OH   CT5  CT5  CTT    3.80 1     0.0  ! 3.46 1    0.0 !C2'-endo and C3'-endo.
+! OS   CT5  CT5  CTT    3.80 1     0.0  ! 3.46 1    0.0 !
+!
+!!Special Terms must be adjusted below to avoid errors!!
+!!when using versions of CHARMM newer than version 23.x.!!
+!
+  CT5  OE   CT5  NS    -0.5  3     0.0    !v0
+  CT5  OE   CT5  NSP   -0.5  3     0.0
+!
+  CT5  CT5  CT5  NS    -0.3  6     0.0    !v1
+  CT5  CT5  CT5  NS    -0.5  4     0.0
+  CT5  CT5  CT5  NS    -0.4  1     0.0
+  CT5  CT5  CT5  NSP   -0.3  6     0.0
+  CT5  CT5  CT5  NSP   -0.5  4     0.0
+  CT5  CT5  CT5  NSP   -0.4  1     0.0
+!
+  CT5  CT5  CT5  OH     0.1  3     0.0    !v2
+  CT5  CT5  CT5  OS     0.1  3     0.0
+!
+  CT5  CT5  CT5  CTT    0.20 1     0.0    !v3'
+  CT5  CT5  CT5  CTT    0.18 3     0.0
+  OE   CT5  CT5  OH     0.10 1     0.0    !v3
+  OE   CT5  CT5  OH     0.39 2     0.0
+  OE   CT5  CT5  OH     0.24 3     0.0
+  OE   CT5  CT5  OS     0.10 1     0.0
+  OE   CT5  CT5  OS     0.39 2     0.0
+  OE   CT5  CT5  OS     0.24 3     0.0
+  OH   CT5  CT5  CTT   -0.80 4     0.0    !v3 delta
+  OH   CT5  CT5  CTT   -0.50 3     0.0
+  OH   CT5  CT5  CTT    3.80 1     0.0
+  OS   CT5  CT5  CTT   -0.80 4     0.0
+  OS   CT5  CT5  CTT   -0.50 3     0.0
+  OS   CT5  CT5  CTT    3.80 1     0.0
+! 
+  CT5  OE   CT5  CTT    0.95 1     0.0    !v4
+  CT5  OE   CT5  CTT    0.16 3     0.0
+!
+   X   CTT  OS    X    -0.10 3     0.0    !beta    dimethylphosphate
+  CT5  CTT  OS    P     0.10 3     0.0    !        C4'-C5'-O5'-P
+   X   CT5  OS    X    -0.10 3     0.0    !epsilon C4'-C3'-O3'-P
+  CT5  CT5  OS    P     0.10 3     0.0    !
+!
+   X   CT5  CTT   X     0.28 3     0.0    !gamma
+  OE   CT5  CTT  OH     1.00 2     0.0
+  OE   CT5  CTT  OH     0.15 3     0.0
+  OE   CT5  CTT  OS     1.00 2     0.0
+  OE   CT5  CTT  OS     0.15 3     0.0
+!
+   X   CTT  OH    X     0.25 3     0.0    !5'-hydroxyl of ribose
+  HAT  CTT  OH   HO     0.05 3     0.0    
+  CT5  CTT  OH   HO     0.35 1     0.0    
+  CT5  CTT  OH   HO     0.35 3     0.0    
+!
+   X   CT5  OH    X     0.25 3     0.0    !3'-hydroxyl of ribose
+  HA5  CT5  OH   HO     0.05 3     0.0    
+  CT5  CT5  OH   HO     0.35 1     0.0    
+  CT5  CT5  OH   HO     0.35 3     0.0    
+!
+! RNA May Need More Work
+!
+   X   NSR  CT5  X      0.0  3    0.0
+  CK   NSR  CT5  OE    -0.4  4    0.0
+  CB   NSR  CT5  OE     0.2  2    0.0
+!
+  CT5  CT5  CT5  NSR    0.1  6    0.0
+  CT5  CT5  CT5  NSR    0.7  2    0.0
+!
+  OH   CT5  CT5  NSR    0.1  6    0.0
+  OH   CT5  CT5  NSR    1.3  1    0.0
+!
+
+  CT5  CT5  CT5  CF     0.1  6    0.0     !PSU, DRL
+  CT5  CT5  CT5  CF     0.7  2    0.0     !PSU, DRL
+!
+  OH   CT5  CT5  CF     0.1  6    0.0     !PSU, DRL
+  OH   CT5  CT5  CF     1.3  1    0.0     !PSU, DRL
+!
+! PHOSPHATE
+   X   OS  P      X     0.25 3    0.0     !DRL/MP2/6-31+G*
+  CT5  OS  P     OS     0.23 3    0.0     !DRL/MP2/6-31+G*
+  CT5  OS  P     OS     1.10 2    0.0     !DRL/MP2/6-31+G*
+  CT5  OS  P     OS    -0.10 1    0.0     !DRL/MP2/6-31+G*
+  CTT  OS  P     OS     0.23 3    0.0     !DRL/MP2/6-31+G*
+  CTT  OS  P     OS     1.10 2    0.0     !DRL/MP2/6-31+G*
+  CTT  OS  P     OS    -0.10 1    0.0     !DRL/MP2/6-31+G*
+!
+   X   OH  P      X     0.25 3    0.0     !
+  CT5  OS  P     OHP    0.23 3    0.0     !
+  CT5  OS  P     OHP    1.10 2    0.0     !
+  CT5  OS  P     OHP   -0.10 1    0.0     !
+  CTT  OS  P     OHP    0.23 3    0.0     !
+  CTT  OS  P     OHP    1.10 2    0.0     !
+  CTT  OS  P     OHP   -0.10 1    0.0     !
+!
+! BASES                     
+! Uracil 
+NSP  CF   CF   CK       4.0     2   180.0  ! par_31
+NSR  CF   CF   CK       4.0     2   180.0  !DRL
+CF   CF   CK   NAT      3.0     2   180.0  ! par_a1 JWK 9/30/91
+CF   CK   NSP  CK       3.5     2   180.0  ! PAR_32
+CF   CK   NSR  CK       3.5     2   180.0  !DRL
+CK   NAT  CK   NSP      3.5     2   180.0  ! PAR_32
+CK   NAT  CK   NSR      3.5     2   180.0  !DRL
+CK   NSP  CF   CF       3.5     2   180.0  ! PAR_32
+CK   NSR  CF   CF       3.5     2   180.0  !DRL
+NAT  CK   NSP  CF       3.0     2   180.0  ! par_a1 JWK 9/30/91
+NAT  CK   NSR  CF       3.0     2   180.0  !DRL
+HAR  CF   CF   HAR      3.0     2   180.0  ! par_34
+HAR  CF   CK   OK       4.0     2   180.0  ! par_a1 JWK 9/30/91
+OK   CK   NSP  HB       3.0     2   180.0  ! par_a1 JWK 9/30/91
+OK   CK   NSR  HB       3.0     2   180.0  !DRL
+!!!OK   CK   NAG  HB       3.0     2   180.0  ! PAR_36, adm jr., 7/24/91
+OKG  CK   NAG  HB       3.0     2   180.0  !G, DRL
+OK   CK   NAT  HB       2.5     2   180.0  ! par_a2 JWK 9/30/91
+HB   NSP  CF   HAR      1.8     2   180.0  ! PAR_36
+HB   NSR  CF   HAR      1.8     2   180.0  !DRL
+NSP  CK   NAT  HB       1.8     2   180.0  ! par_a2 JWK 9/30/91
+NSR  CK   NAT  HB       1.8     2   180.0  !DRL
+CF   CK   NAT  HB       1.8     2   180.0  ! par_a2 JWK 9/30/91
+!Thymine
+NSP  CK   CF   CTT  3.00  3  0.0 !  par_51
+NSR  CK   CF   CTT  3.00  3  0.0 !DRL
+NSP  CF   CF   CTT  3.00  3  0.0 !  par_51
+NSR  CF   CF   CTT  3.00  3  0.0 !DRL
+CK   CF   CTT  HAT  0.00  3  0.0 !  par_51, adm jr. 8/1/91
+CF   CF   CTT  HAT  0.00  3  0.0 !  par_51, adm jr. 8/1/91
+! Cytosine 
+NSP  CF   CF   CA       4.0     2   180.0  ! par_7
+NSR  CF   CF   CA       4.0     2   180.0  !DRL
+CF   CF   CA   NC       4.0     2   180.0  ! par_39
+CF   CA   NC   CK       4.5     2   180.0  ! par_13
+CA   NC   CK   NSP      4.5     2   180.0  ! par_13
+CA   NC   CK   NSR      4.5     2   180.0  !DRL
+NC   CK   NSP  CF       3.5     2   180.0  ! par_39
+NC   CK   NSR  CF       3.5     2   180.0  !DRL
+NC   CA   NAN  HNA      2.0     2   180.0  ! par_40
+CF   CA   NAN  HNA      2.0     2   180.0  ! par_40
+NAN  CA   CF   HAR      2.0     2   180.0  ! par_39
+OKC  CK   NSP  HB       3.0     2   180.0  ! par_a1 adm jr., 10/2/91
+OKC  CK   NSR  HB       3.0     2   180.0  !DRL
+X    CA   NC   X        1.0     2   180.0  ! par_41
+! 5-methylcytosine
+! Adenine  
+NCA  CA   CB   CB       6.0     2   180.0  ! par_24 par_a7 9/30/91
+CB   CA   NCA  CE       6.0     2   180.0  ! par_24 par_a7 9/30/91
+NB   CE   NS   CB      10.0     2   180.0  ! par_47 par_a7 9/30/91
+NBG  CE   NS   CB      10.0     2   180.0  !DRL
+NB   CE   NSR  CB      10.0     2   180.0  !DRL
+NBG  CE   NSR  CB      10.0     2   180.0  !DRL
+NCA  CE   NCA  CB       6.0     2   180.0  ! par_24 par_a7 9/30/91
+NCA  CE   NCA  CA       8.0     2   180.0  ! par_43 par_a7 9/30/91
+NS   CE   NB   CB       8.0     2   180.0  ! par_25 par_a7 9/30/91
+NS   CE   NBG  CB       8.0     2   180.0  !DRL
+NSR  CE   NB   CB       8.0     2   180.0  !DRL
+NSR  CE   NBG  CB       8.0     2   180.0  !DRL
+CA   CB   CB   NCA      6.0     2   180.0  ! par_24 par_a7 9/30/91
+NB   CB   CB   NS       8.0     2   180.0  ! par_25 par_a7 9/30/91
+NBG  CB   CB   NS       8.0     2   180.0  !DRL
+NB   CB   CB   NSR      8.0     2   180.0  !DRL
+NBG  CB   CB   NSR      8.0     2   180.0  !DRL
+CB   CB   NS   CE      10.0     2   180.0  ! par_47 par_a7 9/30/91
+CB   CB   NSR  CE      10.0     2   180.0  !DRL
+CB   CB   NCA  CE       6.0     2   180.0  ! par_24 par_a7 9/30/91
+CB   CB   NB   CE       8.0     2   180.0  ! par_25 par_a7 9/30/91
+CB   CB   NBG  CE       8.0     2   180.0  !DRL
+CB   CA   NAN  HNA      2.5     2   180.0  ! par_26 par_a10 9/30/91
+HB   NS   CE   HAR      1.5     2   180.0  ! par_44 par_a7 9/30/91
+HB   NSR  CE   HAR      1.5     2   180.0  !DRL
+NCA  CA   NAN  HNA      2.5     2   180.0  ! par_40 par_a10 9/30/91
+! Butterfly motion
+NCA  CB   CB   NB      20.0     2   180.0  !A, par_24 par_a7 9/30/91
+NCA  CB   CB   NBG     20.0     2   180.0  !G, DRL
+CA   CB   CB   NS      20.0     2   180.0  !A, par_24
+CA   CB   CB   NSR     20.0     2   180.0  !DRL
+! Guanine 
+NAG  CK   CB   CB       6.0     2   180.0  ! par_49
+CB   CK   NAG  CA       6.0     2   180.0  ! par_49
+CK   NAG  CA   NCA      6.0     2   180.0  ! par_49
+NAG  CA   NCA  CB       6.0     2   180.0  ! par_49
+CA   NCA  CB   CB       6.0     2   180.0  ! par_49
+CK   CB   CB   NCA      6.0     2   180.0  ! par_49
+NAG  CA   NAN  HNA      2.0     2   180.0  ! par_49
+! Butterfly motion
+CK   CB   CB   NS      20.0     2   180.0  ! par_49
+CK   CB   CB   NSR     20.0     2   180.0  !DRL
+! inosine, adm jr., 2/94
+HAR  CE   NAG  HB       1.5     2   180.0
+HAR  CE   NAG  CK       1.5     2   180.0
+! Wild cards for inosine
+! Wild cards for uracil, thymine and cytosine
+X    CK   NC   X        1.0     2   180.0  ! par_39
+X    CK   NSP  X        0.9     2   180.0  ! par_36
+X    CK   NSR  X        0.9     2   180.0  !DRL
+X    CK   NAG  X        0.9     2   180.0  ! par_36
+X    CK   NAT  X        0.9     2   180.0  ! par_36
+X    CF   NSP  X        1.0     2   180.0  ! par_36
+X    CF   NSR  X        1.0     2   180.0  !DRL
+X    CF   CF   X        1.0     2   180.0  ! par_36
+X    CK   CF   X        1.0     2   180.0  ! par_36
+X    CA   CF   X        0.8     2   180.0  ! par_39
+! Wild cards for adenine and guanine
+X    CK   CB   X        1.0     2   180.0  ! par_49
+X    CA   NAG  X        1.0     2   180.0  ! par_49
+X    CA   CB   X        1.0     2   180.0  ! par_41
+X    CE   NS   X        1.5     2   180.0  ! par_44
+X    CE   NSR  X        1.5     2   180.0  !DRL
+X    CE   NCA  X        3.5     2   180.0  ! par_47 par_a7 9/30/91
+X    CE   NB   X        1.0     2   180.0  ! par_41
+X    CE   NBG  X        1.0     2   180.0  !DRL
+X    CB   CB   X        0.0     2   180.0  ! par_20
+X    CB   NS   X        1.5     2   180.0  ! par_44
+X    CB   NSR  X        1.5     2   180.0  !DRL
+X    CB   NCA  X        1.0     2   180.0  ! par_41 par_a7 9/30/91
+X    CB   NB   X        1.0     2   180.0  ! par_41
+X    CB   NBG  X        1.0     2   180.0  !DRL
+X    CA   NCA  X        1.0     2   180.0  ! par_41 par_a7 9/30/91
+! MISC.          
+CK   NSP  CTT  HAT  0.19  3  0.0 ! 1-M-THY
+CK   NSR  CTT  HAT  0.19  3  0.0 !DRL
+CF   NSP  CTT  HAT  0.00  3  0.0 ! 1-M-THY
+CF   NSR  CTT  HAT  0.00  3  0.0 !DRL
+CE   NS   CTT  HAT  0.00  3  0.0 ! 9-M-ADE
+CE   NSR  CTT  HAT  0.00  3  0.0 !DRL
+CB   NS   CTT  HAT  0.19  3  0.0 ! 9-M-ADE
+CB   NSR  CTT  HAT  0.19  3  0.0 !DRL
+CA   NAG  CTT  HAT  0.19  3  0.0 !DRL for 1-methylguanine
+CK   NAG  CTT  HAT  0.19  3  0.0 !DRL for 1-methylguanine
+!ethanol and trifloroethanol
+  CT   CT   OT   HO     0.35 1    0.0     !quanta
+  CT   CT   OT   HO     0.35 3    0.0     !quanta
+  HA   CT   OT   HO     0.05 3    0.0     !quanta
+   X   CT   CT    X     0.15 3    0.0     !quanta
+   X   CT   OT    X     0.25 3    0.0     !quanta
+   X  CF3   CT    X     0.12 3    0.0     !quanta
+
+IMPHI  !               FORCE   PERIOD  PHASE  
+HB   CE   CB   NS       7.0     0     0.0     !A, JWK par_42
+HB   CE   CB   NSR      7.0     0     0.0     !DRL
+HB   CK   CK   NAT      4.0     0     0.0     !U, JWK par_35
+HB   X    X    NS       0.3     0     0.0     !C,U, JWK par_15
+HB   X    X    NSP      0.3     0     0.0     !C,U, JWK par_15
+HB   X    X    NSR      0.3     0     0.0     !DRL
+HB   X    X    NAG      0.3     0     0.0     !G, JWK par_15
+HB   CE   CK   NAG      0.8     0     0.0     !Inosine, adm jr., 2/94
+HNA  X    X    NAN      2.0     0     0.0     !C, JWK par_40
+HAR  CK   CF   CF      18.0     0     0.0     !   JWK par_37
+HAR  X    X    CF      15.0     0     0.0     !C, JWK par_37
+CK   X    X    OK      70.0     0     0.0     !U, JWK par_32
+CK   X    X    OKC     70.0     0     0.0     !C, par_32, adm jr., 10/2/91
+CK   X    X    OKG     70.0     0     0.0     !G, DRL
+CK   X    X    S       70.0     0     0.0     !TG, DRL, B3LYP/6-31+G**
+CA   X    X    NAN     90.0     0     0.0     !C, JWK par_15
+HAR  X    X    CE      20.0     0     0.0     !A, JWK par_42
+CTT  X    X    CF      20.0     0     0.0     !T par_51
+CTT  X    X    NAG     20.0     0     0.0     !G, DRL for 1-methylguanine
+NONBONDED  NBXMOD 5  ATOM CDIEL FSHIFT VATOM VDISTANCE VSWITCH -
+     CUTNB 13.0  CTOFNB 12.0  CTONNB 10.0  EPS 1.0  E14FAC 1.0 WMIN 1.5
+!                    Emin     Rmin/2
+!                 (kcal/mol)    (A)
+HNA      0.0       -0.0460    0.2245 
+HB       0.0       -0.0460    0.2245 
+HOP      0.0       -0.0460    0.2245
+HO       0.0       -0.0460    0.2245
+HAR      0.0       -0.0420    1.320
+HA5      0.1       -0.0420    1.330
+HAT      0.1       -0.0420    1.330
+!                           
+NAN      0.0       -0.20      1.85
+NS       0.0       -0.20      1.85
+NSP      0.0       -0.20      1.85
+NSR      0.0       -0.20      1.85
+NAG      0.0       -0.20      1.85
+NAT      0.0       -0.20      1.85
+NC       0.0       -0.20      1.85
+NCA      0.0       -0.20      1.85 
+NB       0.0       -0.20      1.85
+NBG      0.0       -0.20      1.85    !DRL
+!
+OK       0.0       -0.1200    1.70  
+OKC      0.0       -0.1200    1.70 
+OKG      0.0       -0.1200    1.70    !DRL
+OS       0.84      -0.1591    1.600   0.84   -0.20  1.36
+OCP      0.0       -0.2100    1.6612  !amber4.1
+OHP      0.0       -0.1521    1.77  
+OH       0.84      -0.1521    1.550   0.84   -0.20  1.48
+OE       0.84      -0.1591    1.600   0.84   -0.20  1.36
+!
+!TIP3P water model, J. Chem. Phys., 79, 926, 1983.
+!  As in OPLS and AMBER
+OW       0.0       -0.1521    1.76825 !OPLS TIP3P water model
+HW       0.0       -0.0000    0.0000  !OPLS TIP3P water model
+!
+!OW       0.0       -0.1520    1.7683 !AMBER TIP3P water model
+!HW       0.0       -0.0000    0.0000 !AMBER TIP3P water model
+! 
+OT       0.0       -0.1521    1.7682 !CHARMM TIP3P
+HT       0.0       -0.0460    0.2245 !CHARMM TIP3P
+!
+CK       0.0       -0.14      1.800
+CA       0.0       -0.14      1.800
+CF       0.0       -0.18      1.800
+CE       0.0       -0.12      1.800
+CB       0.0       -0.12      1.800
+CT5      1.65      -0.0903    1.800   1.65  -0.1   1.75  !quanta
+CTT      1.65      -0.0903    1.800   1.65  -0.1   1.75  !quanta
+!
+S        0.00      -0.2500    2.0000    0.00   -0.1250    2.0000     !W. Cornell CH3SH and CH3SCH3 FEP's
+P        0.0       -0.2000    2.100   !amber4.1
+!
+!ethanol and trifloroethanol
+CT       1.65      -0.0903    1.800    1.65  -0.1   1.75 !quanta
+CF3      1.65      -0.0903    1.800    1.65  -0.1   1.75 !quanta
+HA       0.1       -0.0420    1.330                      !quanta
+XF       0.32      -0.1000    1.700    0.32  -0.15  1.55 !quanta
+!
+!Ions
+!
+K        0.00    -0.000328    2.6580   !K+  Aqvist JPC 1990,94,8021. (adapted)
+MG       0.0     -0.001       1.65     !Blaise Prodhom
+
+!SOD      0.0     -1.607       0.9485   !Na+ JACS 106, 903 (1984) oplsaa
+!XCl      0.0     -0.11779     2.20862  !Cl- JACS 106, 903 (1984) oplsaa
+!
+!SOD      0.0     -0.002772    1.665222 !Na+ Aqvist's cation/oplsaa
+!SOD      0.0     -0.00277     1.8680   !Na+ Aqvist JPC 1990,94,8021. (AMBER4.1)
+!SOD      0.0     -0.1000      1.532    !from Benoit Roux, CHARMM22
+!XCL      0.00    -0.1         2.47    0.00  -0.05  2.47  !Smith & Dang, JCP 1994,100:5,3757, AMBER
+!
+!SOD      0.0     -0.0469      1.36375  !Na+ D. Beglovd and B. Roux, dA=-100.8 kcal/mol
+!XCL      0.0     -0.150       2.27     !Cl- D. Beglovd and B. Roux, dA=-83.87+4.46 = -79.40 kcal/mol
+!
+! the SOD and XCL prameters below are being tested to do away with the NBFIX terms required when using Benoit Roux Na+ (SOD).
+ SOD      0.0     -0.3100      1.163    !Na+ DRL !Na-OH2 -25.6814@2.2365(RHF/6-31G**++) or -25.6807@2.23678(RHF/CSDZ**++)
+                                        !free energy of solvation for Na+ = -101.41859 + 0.32836 = -101.09023 kcal/mol
+ XCL      0.0     -0.090       2.50     !Cl- DRL !Cl-OH2 -12.3925@2.3828((RHF/6-31G**++) or -12.3985@2.3794(RHF/CSDZ**++)
+                                        !free energy of solvation for CL- = -72.78375 + 3.16320 = -69.62055 kcal/mol
+!
+!Noble Gases
+!
+HE       0.0       -0.000414175 1.575   !DRL -0.0.000414175kcal/mol at 3.15A He<->He, HF/6-31+G**
+NE       0.0       -0.0441795 1.64009   !DRL -0.0441795kcal/mol at 3.280A Ne<->Ne, UHF/6-31+G**
+AR       0.0       -0.0240273 2.285639  !DRL 
+!
+DUM      0.0       -0.000     1.00      !dummy atom
+
+NBFIX
+!               Emin        Rmin
+!            (kcal/mol)     (A)
+!
+! Only use these with Benoit Roux Na+ (SOD)
+!SOD   OT      -0.5831     2.6880 ! from Benoit Roux
+!SOD   OKG     -2.0000     2.4500 ! DRL Use with Benoit Roux Na+
+!SOD   NBG     -2.0        2.5500 ! DRL Use with Benoit Roux Na+
+!ethanol and trifloroethanol
+CT   HO     -0.15      3.00 !quanta
+HA   HO     -0.05      3.10 !quanta
+!
+! Note: HAEX AND AAEX SHOULD BE SET TO 4 AND 2 FOR HBONDS TO 
+! BE ANALYZED.
+!
+HBOND AEXP 4 REXP 6 HAEX 0 AAEX 0   NOACCEPTORS  HBNOEXCLUSIONS  ALL  -
+   CUTHB 0.5 CTOFHB 5.0 CTONHB 4.0  CUTHA 90.0  CTOFHA 90.0  CTONHA 90.0
+!
+H*    N*      -0.0       2.0 
+H*    O*      -0.0       2.0 
+N*    N*      -0.0       3.0
+N*    O*      -0.0       2.9
+O*    N*      -0.0       2.85
+O*    O*      -0.0       2.75
+END

@@ -1,0 +1,233 @@
+* $Id: test_drude_model.str 28 2015-07-29 23:54:15Z alex $
+* Test case, Drude model compounds ("model") toppar file
+*
+
+set boml 0 ! set to -1 if the series contains 3-membered rings
+
+set count 1
+set nres 72
+
+!ethers
+set resi1  DEET
+set resi2  DME
+set resi3  DMET
+set resi4  MEET
+set resi5  THF
+set resi6  TF2M
+set resi7  THP
+set resi8  MPET
+set resi9  MBET
+set resi10 EPET
+!alkanes
+set resi11 ETHA
+set resi12 PROP1
+set resi13 IBUT
+set resi14 BUTA
+set resi15 PENT
+set resi16 HEXA
+set resi17 HEPT
+set resi18 CPEN
+set resi19 CHEX
+set resi20 MEOH
+set resi21 ETOH
+set resi22 PRO1
+set resi23 BUO1
+set resi24 PRO2
+set resi25 BUO2
+!aromatics
+set resi26 BENZ
+set resi27 TOLU
+!amides
+set resi28 ACEM
+set resi29 NMA
+set resi30 DMA
+!heterocycles
+set resi31 PYR
+set resi32 PYRM
+set resi33 PYRR
+set resi34 IMID
+set resi35 INDO
+set resi36 PUR1
+set resi37 PUR0
+set resi38 4MIM
+set resi39 MIND
+!misc
+set resi40 MAS
+set resi41 ACEH
+!charged
+set resi42 IMIM
+set resi43 GUAN
+set resi44 MGUAN
+set resi45 PHEN
+!sulfur containing
+set resi46 MESH
+set resi47 ETSH
+set resi48 PRSH
+set resi49 BUSH
+set resi50 DMDS
+set resi51 DMS
+set resi52 EMS
+!lipid model compounds
+set resi53 NC4
+set resi54 NH5
+set resi55 NC5
+set resi56 ACET
+set resi57 ETAM
+set resi58 NEOP
+set resi59 BU2M
+set resi60 BU22M
+set resi61 BU23M
+set resi62 CPNM
+set resi63 CHXM
+set resi64 DIOX
+set resi65 CRES
+set resi66 B3MO1
+set resi67 CPO1
+set resi68 BGUAN
+set resi69 CHOL
+!misc alkanes
+set resi70 DECA
+set resi71 PEND
+set resi72 OCTD
+
+set seed1  1 C1 1 C2 1 O3
+set seed2  1 C1 1 O2 1 C3
+set seed3  1 C1 1 O2 1 C3
+set seed4  1 C1 1 C2 1 O3
+set seed5  1 O1 1 C1 1 C2
+set seed6  1 O1 1 C1 1 C2
+set seed7  1 O1 1 C1 1 C2
+set seed8  1 C1 1 O2 1 C3
+set seed9  1 C1 1 O2 1 C3
+set seed10 1 C1 1 C2 1 O3
+set seed11 1 H11 1 C1 1 C2
+set seed12 1 C1 1 C2 1 C3
+set seed13 1 C1 1 CT 1 C2
+set seed14 1 C1 1 C2 1 C3
+set seed15 1 C1 1 C2 1 C3
+set seed16 1 C1 1 C2 1 C3
+set seed17 1 C1 1 C2 1 C3
+set seed18 1 C1 1 C2 1 C3
+set seed19 1 C1 1 C2 1 C3
+set seed20 1 HO1 1 O1 1 C1
+set seed21 1 HO1 1 O1 1 C1
+set seed22 1 HO1 1 O1 1 C1
+set seed23 1 HO1 1 O1 1 C1
+set seed24 1 HO2 1 O2 1 C2
+set seed25 1 HO2 1 O2 1 C2
+set seed26 1 CG 1 CD1 1 CE1
+set seed27 1 CG 1 CD1 1 CE1
+set seed28 1 N 1 C 1 CL
+set seed29 1 N 1 C 1 CL
+set seed30 1 N 1 C 1 CL
+set seed31 1 CG 1 CD1 1 CE1
+set seed32 1 C4 1 C5 1 C6
+set seed33 1 N5 1 C1 1 C2
+set seed34 1 ND1 1 CG 1 CD2
+set seed35 1 CG 1 CD1 1 NE1
+set seed36 1 C6 1 C5 1 C4
+set seed37 1 C6 1 C5 1 C4
+set seed38 1 ND1 1 CG 1 CB
+set seed39 1 CG 1 CD1 1 NE1
+set seed40 1 C1 1 C 1 OM
+set seed41 1 O2 1 C2 1 C1
+set seed42 1 CG 1 CD2 1 NE2
+set seed43 1 N1 1 C 1 N2
+set seed44 1 N1 1 C 1 N2
+set seed45 1 CG 1 CD1 1 CE1
+set seed46 1 HS1 1 S1 1 C1
+set seed47 1 HS1 1 S1 1 C1
+set seed48 1 HS1 1 S1 1 C1
+set seed49 1 HS1 1 S1 1 C1
+set seed50 1 H11 1 C1 1 S1
+set seed51 1 H21 1 C2 1 S1
+set seed52 1 H31 1 C3 1 C2
+set seed53 1 C1 1 N 1 C2
+set seed54 1 HN4 1 N 1 C1
+set seed55 1 C4 1 N 1 C1
+set seed56 1 O1 1 C2 1 C1
+set seed57 1 N 1 C1 1 C5
+set seed58 1 C2 1 CT 1 C1
+set seed59 1 C1 1 CT 1 C2
+set seed60 1 C4 1 CT 1 C1
+set seed61 1 C1 1 CT 1 C2
+set seed62 1 C1 1 C2 1 C3
+set seed63 1 C1 1 C2 1 C3
+set seed64 1 O1 1 C1 1 C2
+set seed65 1 CG 1 CD1 1 CE1
+set seed66 1 C1 1 C2 1 C3
+set seed67 1 C1 1 C2 1 C3
+set seed68 1 CA 1 CB 1 CG
+set seed69 1 C4 1 N 1 C1
+set seed70 1 C1 1 C2 1 C3
+set seed71 1 C1 1 C2 1 C3
+set seed72 1 C1 1 C2 1 C3
+
+label loop_model1
+
+set residue @resi@@count
+read sequence @residue 1
+
+bomlev @boml
+generate @residue first none last none setup warn drude dmass 0.4 !show
+
+!temporary
+!if @count ge 70 then
+!IC GENERATE
+!endif
+
+ic param
+ic seed @seed@@count
+ic build 
+!ic print
+coor sdrude
+coor shake
+!coor print
+bomlev 0
+
+update inbfrq -1 ihbfrq 0 switch atom vatom vswitch cutnb 999.0 ctofnb 997.0 ctonnb 995.0
+
+if @mindr eq 0 then
+  energy
+ else
+  cons harm force 100000. sele .not. type D* end
+  mini ABNR nstep 200 nprint 20
+  cons harm clear
+ endif
+echo @residue starting E: ?ener
+
+if @?pdbdir eq 1 then
+  write psf card name @pdbdir/@residue.psf
+  write coor pdb name @pdbdir/@residue_start.pdb
+ endif
+
+if @mini ne 0 then
+  mini sd nstep 1000 tolgrd 0.0001 nprint 100
+  if ?grms gt 0.0001 mini abnr nstep 1000 tolgrd 0.0001
+  if ?grms gt 0.0001 then
+    echo FATAL ERROR: MINIMIZATION NOT CONVERGED
+    echu
+    echo FATAL ERROR: MINIMIZATION NOT CONVERGED
+    stop
+   endif
+  echo @residue minimized E: ?ener
+  if @?pdbdir eq 1 then ! cannot use 1-line syntax because substitution will fail
+    write coor pdb name @pdbdir/@residue_min.pdb
+   endif
+ endif
+
+coor orient
+coor dipole oxyz select all end 
+echo @residue dipole: ?rdip
+!! Check molecular polarizability
+!VIBRAN
+!diag dscf fini step 0.001
+!END
+
+shake off
+drude reset
+lone clear
+delete atom sele all end
+
+incr count
+if count le @nres goto loop_model1

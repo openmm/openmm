@@ -1,0 +1,20 @@
+* $Id: toppar_defs.str 26 2015-07-27 18:26:03Z alex $
+* Streams all drude stream files
+*
+
+! Requires the variable "toppar"
+
+set streamfiles 5
+set str1 toppar_drude_master_protein_2013c.str
+set str2 toppar_drude_lipid_2013c.str
+set str3 toppar_drude_carbohydrate_2013c.str
+set str4 toppar_drude_model_2013c.str
+set str5 toppar_drude_nucleic_acid_2013c_no_rna.str
+
+set i 1
+label loop_streams
+stream @toppar/@str@@i
+incr i
+if @i le @streamfiles goto loop_streams
+
+return

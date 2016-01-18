@@ -1,0 +1,245 @@
+* $Id: test_drude_nucleic_acids.str 28 2015-07-29 23:54:15Z alex $
+* Test case, Drude carbohydrate toppar file
+*
+
+set boml 0 ! set to -1 if the series contains 3-membered rings
+
+!loop for nucleotides
+set nres 4
+set resi1  ade
+set resi2  cyt
+set resi3  thy
+set resi4  gua
+
+set seed1  1 c5' 1 c4' 1 c3'
+set seed2  1 c5' 1 c4' 1 c3'
+set seed3  1 c5' 1 c4' 1 c3'
+set seed4  1 c5' 1 c4' 1 c3'
+
+
+set count 1
+label loop_na1
+
+set residue @resi@@count
+read sequence @residue 1
+
+bomlev @boml
+generate @residue first 5ter last 3ter setup warn drude dmass 0.4 !show
+bomlev 0
+
+patch deox @residue 1 setup warn
+
+autogenerate angles dihedrals
+
+ic param
+ic seed @seed@@count
+ic build 
+coor sdrude
+coor shake
+
+update inbfrq -1 ihbfrq 0 switch atom vatom vswitch cutnb 999.0 ctofnb 997.0 ctonnb 995.0
+
+if @mindr eq 0 then
+  energy
+ else
+  cons harm force 100000. sele .not. type D* end
+  mini ABNR nstep 200 nprint 20
+  cons harm clear
+ endif
+echo @residue starting E: ?ener
+
+if @?pdbdir eq 1 then
+  write psf card name @pdbdir/@residue.psf
+  write coor pdb name @pdbdir/@residue_start.pdb
+ endif
+
+if @mini ne 0 then
+  mini sd nstep 1000 tolgrd 0.0001 nprint 100
+  if ?grms gt 0.0001 mini abnr nstep 1000 tolgrd 0.0001
+  if ?grms gt 0.0001 then
+    echo FATAL ERROR: MINIMIZATION NOT CONVERGED
+    echu
+    echo FATAL ERROR: MINIMIZATION NOT CONVERGED
+    stop
+   endif
+  echo @residue minimized E: ?ener
+  if @?pdbdir eq 1 then ! cannot use 1-line syntax because substitution will fail
+    write coor pdb name @pdbdir/@residue_min.pdb
+   endif
+ endif
+
+coor orient
+coor dipole oxyz select all end 
+echo @residue dipole: ?rdip
+!! Check molecular polarizability
+!VIBRAN
+!diag dscf fini step 0.001
+!END
+
+shake off
+drude reset
+lone clear
+delete atom sele all end
+
+incr count
+if count le @nres goto loop_na1
+
+! various NA model compounds
+set nres 12
+!set nres 13
+set resi1 adeb
+set resi2 made
+set resi3 cytb
+set resi4 mcyt
+set resi5 thyb
+set resi6 mthy
+set resi7 guab
+set resi8 urab
+set resi9 t3ps
+set resi10 t3pm
+set resi11 dmpn
+!set resi12 bribna ! RNA doesn't run
+!set resi13 bdeona
+!set resi12 bribna
+set resi12 bdeona
+
+set seed1 1 c4 1 n9 1 C8
+set seed2 1 c4 1 n9 1 C8
+set seed3 1 c2 1 n1 1 C6
+set seed4 1 c2 1 n1 1 C6
+set seed5 1 c2 1 n1 1 C6
+set seed6 1 c2 1 n1 1 C6
+set seed7 1 c4 1 n9 1 C8
+set seed8 1 c2 1 n1 1 C6
+set seed9 1 c4A 1 O4A 1 C1A
+set seed10 1 c4' 1 O4' 1 C1'
+set seed11 1 o11 1 p 1 o12
+set seed12 1 c4 1 o4 1 c1
+set seed13 1 c4 1 o4 1 c1
+
+set count 1
+label loop_na2
+
+set residue @resi@@count
+read sequence @residue 1
+
+bomlev @boml
+generate @residue first none last none setup warn drude dmass 0.4 !show
+bomlev 0
+
+ic param
+ic seed @seed@@count
+ic build 
+coor sdrude
+coor shake
+
+update inbfrq -1 ihbfrq 0 switch atom vatom vswitch cutnb 999.0 ctofnb 997.0 ctonnb 995.0
+
+if @mindr eq 0 then
+  energy
+ else
+  cons harm force 100000. sele .not. type D* end
+  mini ABNR nstep 200 nprint 20
+  cons harm clear
+ endif
+echo @residue starting E: ?ener
+
+if @?pdbdir eq 1 then
+  write psf card name @pdbdir/@residue.psf
+  write coor pdb name @pdbdir/@residue_start.pdb
+ endif
+
+if @mini ne 0 then
+  mini sd nstep 1000 tolgrd 0.0001 nprint 100
+  if ?grms gt 0.0001 mini abnr nstep 1000 tolgrd 0.0001
+  if ?grms gt 0.0001 then
+    echo FATAL ERROR: MINIMIZATION NOT CONVERGED
+    echu
+    echo FATAL ERROR: MINIMIZATION NOT CONVERGED
+    stop
+   endif
+  echo @residue minimized E: ?ener
+  if @?pdbdir eq 1 then ! cannot use 1-line syntax because substitution will fail
+    write coor pdb name @pdbdir/@residue_min.pdb
+   endif
+ endif
+
+coor orient
+coor dipole oxyz select all end 
+echo @residue dipole: ?rdip
+!! Check molecular polarizability
+!VIBRAN
+!diag dscf fini step 0.001
+!END
+
+shake off
+drude reset
+lone clear
+delete atom sele all end
+
+incr count
+if count le @nres goto loop_na2
+
+
+!oligonucleotides, RNA not yet tested
+
+read sequence card
+* 1bna, strand 1
+*
+12
+cyt gua cyt gua ade ade thy thy cyt gua cyt gua
+
+generate a first 5ter last 3ter setup warn drude dmass 0.4 !show
+
+! patch for deoxy
+patch deox a 1 setup warn
+patch deox a 2 setup warn
+patch deox a 3 setup warn
+patch deox a 4 setup warn
+patch deox a 5 setup warn
+patch deox a 6 setup warn
+patch deox a 7 setup warn
+patch deox a 8 setup warn
+patch deox a 9 setup warn
+patch deox a 10 setup warn
+patch deox a 11 setup warn
+patch deox a 12 setup warn
+
+autogenerate angles dihedrals
+
+ic para
+ic seed 1 C5' 1 C4' 1 C3'
+ic build
+
+coor sdrude
+coor shake
+coor print
+
+update inbfrq -1 ihbfrq 0 switch atom vatom vswitch cutnb 999.0 ctofnb 997.0 ctonnb 995.0
+
+cons harm force 100000. sele .not. type D* end
+mini ABNR nstep 200 nprint 20
+cons harm clear
+energy
+
+echo @residue starting E: ?ener
+
+set residue oligomer_dna
+
+echo @residue starting E: ?ener
+
+if @?pdbdir eq 1 then
+  write psf card name @pdbdir/@residue.psf
+  write coor pdb name @pdbdir/@residue_start.pdb
+endif
+
+!write data to check
+!write title unit 90
+!* @residue @enetmp minimized E: ?ener ?rdip
+!*
+
+shake off
+drude reset
+lone clear
+delete atom sele all end
+

@@ -1,0 +1,1575 @@
+* Toppar file for various modified residues and patches, including
+* patches to covalently link residues to ions to work the the 
+* additive C36 protein force field
+*
+
+!Acetyllysine (ALY)
+!Norleucine (NLE) and
+! residues and patches for Zn-protein interactions modeled using
+! bond and angles between the protein and Zn.
+
+read rtf card append
+* Toppar file protein modifications
+*
+36  1
+
+DECL -CA  
+DECL -C  
+DECL -O  
+DECL +N  
+DECL +HN  
+DECL +CA  
+DEFA FIRS NTER LAST CTER   
+AUTO ANGLES DIHE
+
+RESI ALY          0.00 !acetylated Lysine
+GROUP   
+ATOM N    NH1    -0.47 !     |                   
+ATOM HN   H       0.31 !  HN-N                   
+ATOM CA   CT1     0.07 !     |   HB1 HG1 HD1 HE1    HZ1
+ATOM HA   HB1     0.09 !     |   |   |   |   |     /   
+GROUP                  !  HA-CA--CB--CG--CD--CE--NZ   CT-(HT1,HT2,HT3)
+ATOM CB   CT2    -0.18 !     |   |   |   |   |     \  /
+ATOM HB1  HA2     0.09 !     |   HB2 HG2 HD2 HE2    CH
+ATOM HB2  HA2     0.09 !   O=C                      ||
+GROUP                  !     |                      OT
+ATOM CG   CT2    -0.18
+ATOM HG1  HA2     0.09
+ATOM HG2  HA2     0.09
+GROUP   
+ATOM CD   CT2    -0.18
+ATOM HD1  HA2     0.09
+ATOM HD2  HA2     0.09
+GROUP   
+ATOM CE   CT2    -0.02
+ATOM HE1  HA2     0.09
+ATOM HE2  HA2     0.09
+ATOM NZ   NH1    -0.47
+ATOM HZ1  H       0.31
+GROUP
+ATOM CH   C       0.51
+ATOM OH   O      -0.51
+GROUP
+ATOM CH3  CT3    -0.27
+ATOM HH31 HA3     0.09
+ATOM HH32 HA3     0.09
+ATOM HH33 HA3     0.09
+GROUP   
+ATOM C    C       0.51
+ATOM O    O      -0.51
+
+BOND CB CA   CG CB   CD CG   CE CD   NZ CE   
+BOND N  HN   N  CA    C  CA   
+BOND C  +N   CA HA   CB HB1  CB HB2  CG HG1   
+BOND CG HG2  CD HD1  CD HD2  CE HE1  CE HE2 
+DOUB O  C   
+BOND NZ  HZ1  NZ  CH   CH  OH   CH CH3
+BOND CH3 HH31 CH3 HH32 CH3 HH33
+
+IMPR N -C CA HN  C CA +N O   
+IMPR NZ CH CE HZ1  CH CH3 NZ OH
+
+CMAP -C  N  CA  C   N  CA  C  +N
+DONOR HN N   
+DONOR HZ1 NZ   
+ACCEPTOR O C   
+IC -C   CA   *N   HN    1.3482 123.5700  180.0000 115.1100  0.9988
+IC -C   N    CA   C     1.3482 123.5700  180.0000 107.2900  1.5187
+IC N    CA   C    +N    1.4504 107.2900  180.0000 117.2700  1.3478
+IC +N   CA   *C   O     1.3478 117.2700  180.0000 120.7900  1.2277
+IC CA   C    +N   +CA   1.5187 117.2700  180.0000 124.9100  1.4487
+IC N    C    *CA  CB    1.4504 107.2900  122.2300 111.3600  1.5568
+IC N    C    *CA  HA    1.4504 107.2900 -116.8800 107.3600  1.0833
+IC N    CA   CB   CG    1.4504 111.4700  180.0000 115.7600  1.5435
+IC CG   CA   *CB  HB1   1.5435 115.7600  120.9000 107.1100  1.1146
+IC CG   CA   *CB  HB2   1.5435 115.7600 -124.4800 108.9900  1.1131
+IC CA   CB   CG   CD    1.5568 115.7600  180.0000 113.2800  1.5397
+IC CD   CB   *CG  HG1   1.5397 113.2800  120.7400 109.1000  1.1138
+IC CD   CB   *CG  HG2   1.5397 113.2800 -122.3400 108.9900  1.1143
+IC CB   CG   CD   CE    1.5435 113.2800  180.0000 112.3300  1.5350
+IC CE   CG   *CD  HD1   1.5350 112.3300  122.2500 108.4100  1.1141
+IC CE   CG   *CD  HD2   1.5350 112.3300 -121.5900 108.1300  1.1146
+IC CG   CD   CE   NZ    1.5397 112.3300  180.0000 110.4600  1.4604
+IC NZ   CD   *CE  HE1   1.4604 110.4600  119.9100 110.5100  1.1128
+IC NZ   CD   *CE  HE2   1.4604 110.4600 -120.0200 110.5700  1.1123
+IC CD   CE   NZ   HZ1   1.5350 110.4600  179.9200 110.0200  1.0404
+IC HZ1  CE   *NZ  CH    1.0404 110.0200  180.0000 109.5000  1.35
+IC CE   NZ   CH   CH3   0.0000   0.0000  180.0000   0.0000  0.0000
+IC CH3  NZ   *CH  OH    0.0000   0.0000  180.0000   0.0000  0.0000
+IC NZ   CH   CH3  HH31  0.0000   0.0000  180.0000   0.0000  0.0000
+IC HH31 CH   *CH3 HH32  0.0000   0.0000  120.0000   0.0000  0.0000
+IC HH31 CH   *CH3 HH33  0.0000   0.0000 -120.0000   0.0000  0.0000
+
+RESI DORN         1.00 ! "(delta)ornithine" (chemical name formally incorrect)
+                       ! based on LYS with atoms mass-renamed, kevo
+GROUP     ! Copy-pasted from NTER
+ATOM NT   NH3    -0.30
+ATOM HT1  HC      0.33
+ATOM HT2  HC      0.33 !    HT2
+ATOM HT3  HC      0.33 !     |
+ATOM CD   CT1     0.21 ! HT1-NT-HT3
+ATOM HD   HB1     0.10 !     |
+GROUP                  !     |   HG1 HB1 HA1 H
+ATOM CG   CT2    -0.18 !     |   |   |   |   |
+ATOM HG1  HA2     0.09 !  HD-CD--CG--CB--CA--N--
+ATOM HG2  HA2     0.09 !     |   |   |   |
+GROUP                  !     |   HG2 HB2 HA2
+ATOM CB   CT2    -0.18 !   O=C
+ATOM HB1  HA2     0.09 !     |
+ATOM HB2  HA2     0.09
+GROUP     ! Copy-pasted from GLY
+ATOM CA   CT2    -0.02
+ATOM HA1  HA2     0.09 ! Changed HB2 to HA2 because it's not backbone. LJ is different but
+ATOM HA2  HA2     0.09 ! default charge is 0.09 in both cases; it's probably an improvement.
+ATOM N    NH1    -0.47
+ATOM HN   H       0.31
+GROUP
+ATOM C    C       0.51
+ATOM O    O      -0.51
+
+BOND CG CD   CB CG   CA CB   N  CA
+BOND N  HN   NT CD   C  CD
+BOND C  +N   CD HD   CG HG1  CG HG2  CB HB1
+BOND CB HB2  CA HA1  CA HA2
+DOUBLE   O  C
+BOND NT HT1  NT HT2  NT HT3
+IMPR N -C CA HN  C CD +N O
+DONOR HN N
+DONOR HT1 NT
+DONOR HT2 NT
+DONOR HT3 NT
+ACCEPTOR O C
+IC HT1  NT   CD   C     0.0000   0.0000  180.0000   0.0000  0.0000
+IC HT1  CD   *NT  HT2   1.0404 110.0200  120.2700 109.5000  1.0402
+IC HT1  CD   *NT  HT3   1.0404 110.0200 -120.1300 109.4000  1.0401
+IC NT   CD   C    +N    1.4504 107.2900  180.0000 117.2700  1.3478
+IC +N   CD   *C   O     1.3478 117.2700  180.0000 120.7900  1.2277
+IC CD   C    +N   +CA   1.5187 117.2700  180.0000 124.9100  1.4487
+IC C    NT   *CD  CG    0.0000   0.0000 -120.0000   0.0000  0.0000
+IC C    NT   *CD  HD    0.0000   0.0000  120.0000   0.0000  0.0000
+IC NT   CD   CG   CB    1.4504 111.4700  180.0000 115.7600  1.5435
+IC CB   CD   *CG  HG1   1.5435 115.7600  120.9000 107.1100  1.1146
+IC CB   CD   *CG  HG2   1.5435 115.7600 -124.4800 108.9900  1.1131
+IC CD   CG   CB   CA    1.5568 115.7600  180.0000 113.2800  1.5397
+IC CA   CG   *CB  HB1   1.5397 113.2800  120.7400 109.1000  1.1138
+IC CA   CG   *CB  HB2   1.5397 113.2800 -122.3400 108.9900  1.1143
+IC CG   CB   CA   N     1.5435 113.2800  180.0000 112.3300  1.5350
+IC N    CB   *CA  HA1   1.5350 112.3300  122.2500 108.4100  1.1141
+IC N    CB   *CA  HA2   1.5350 112.3300 -121.5900 108.1300  1.1146
+IC -C   CA   *N   HN    1.3482 123.5700  180.0000 115.1100  0.9988
+IC -C   N    CA   CB    0.0000   0.0000  180.0000   0.0000  0.0000
+
+RESI NLE          0.00 !Nor-leucine
+GROUP   
+ATOM N    NH1    -0.47 !     |                   
+ATOM HN   H       0.31 !  HN-N                   
+ATOM CA   CT1     0.07 !     |   HB1 HG1 HD1 HE1
+ATOM HA   HB1     0.09 !     |   |   |   |   |   
+GROUP                  !  HA-CA--CB--CG--CD--CE--HE3
+ATOM CB   CT2    -0.18 !     |   |   |   |   |   
+ATOM HB1  HA2     0.09 !     |   HB2 HG2 HD2 HE2 
+ATOM HB2  HA2     0.09 !   O=C                   
+GROUP                  !     |                   
+ATOM CG   CT2    -0.18
+ATOM HG1  HA2     0.09
+ATOM HG2  HA2     0.09
+GROUP   
+ATOM CD   CT2    -0.18
+ATOM HD1  HA2     0.09
+ATOM HD2  HA2     0.09
+GROUP   
+ATOM CE   CT3    -0.27
+ATOM HE1  HA3     0.09
+ATOM HE2  HA3     0.09
+ATOM HE3  HA3     0.09
+GROUP   
+ATOM C    C       0.51
+ATOM O    O      -0.51
+
+BOND CB CA   CG CB   CD CG   CE CD
+BOND N  HN   N  CA    C  CA   
+BOND C  +N   CA HA   CB HB1  CB HB2  CG HG1   
+BOND CG HG2  CD HD1  CD HD2  CE HE1  CE HE2 CE HE3
+DOUBLE   O  C   
+
+IMPR N -C CA HN  C CA +N O   
+
+CMAP -C  N  CA  C   N  CA  C  +N
+ACCEPTOR O C   
+IC -C   CA   *N   HN    1.3482 123.5700  180.0000 115.1100  0.9988
+IC -C   N    CA   C     1.3482 123.5700  180.0000 107.2900  1.5187
+IC N    CA   C    +N    1.4504 107.2900  180.0000 117.2700  1.3478
+IC +N   CA   *C   O     1.3478 117.2700  180.0000 120.7900  1.2277
+IC CA   C    +N   +CA   1.5187 117.2700  180.0000 124.9100  1.4487
+IC N    C    *CA  CB    1.4504 107.2900  122.2300 111.3600  1.5568
+IC N    C    *CA  HA    1.4504 107.2900 -116.8800 107.3600  1.0833
+IC N    CA   CB   CG    1.4504 111.4700  180.0000 115.7600  1.5435
+IC CG   CA   *CB  HB1   1.5435 115.7600  120.9000 107.1100  1.1146
+IC CG   CA   *CB  HB2   1.5435 115.7600 -124.4800 108.9900  1.1131
+IC CA   CB   CG   CD    1.5568 115.7600  180.0000 113.2800  1.5397
+IC CD   CB   *CG  HG1   1.5397 113.2800  120.7400 109.1000  1.1138
+IC CD   CB   *CG  HG2   1.5397 113.2800 -122.3400 108.9900  1.1143
+IC CB   CG   CD   CE    1.5435 113.2800  180.0000 112.3300  1.5350
+IC CE   CG   *CD  HD1   1.5350 112.3300  122.2500 108.4100  1.1141
+IC CE   CG   *CD  HD2   1.5350 112.3300 -121.5900 108.1300  1.1146
+IC CG   CD   CE   HE1   1.5397 112.3300  180.0000 110.4600  1.11
+IC HE1  CD   *CE  HE2   1.4604 110.4600  119.9100 110.5100  1.1128
+IC HE1  CD   *CE  HE3   1.4604 110.4600 -120.0200 110.5700  1.1123
+
+PRES KAC         0.00 ! patch for Lys (K) acetylation, kevo
+DELETE ATOM HZ2       ! follow with AUTOgenerate ANGLes DIHEdrals command
+DELETE ATOM HZ3
+GROUP
+ATOM CE   CT2    -0.02 ! Transfered from NMA by summing
+ATOM HE1  HA2     0.09 ! deleted hydrogen charge into parent.
+ATOM HE2  HA2     0.09 ! Apply standard charges to now-nonpolar hydrogens.
+ATOM NZ   NH1    -0.47 ! From NMA
+ATOM HZ1  H       0.31
+GROUP
+ATOM CH   C       0.51 ! from NMA / patch ACE
+ATOM OH   O      -0.51
+GROUP
+ATOM CH3  CT3    -0.27 ! standard CH3 as found in NMA / patch ACE
+ATOM HH31 HA3     0.09
+ATOM HH32 HA3     0.09
+ATOM HH33 HA3     0.09
+
+BOND NZ   CH    CH   OH    CH   CH3
+BOND CH3  HH31  CH3  HH32  CH3  HH33
+IMPR NZ   CH   CE   HZ1
+IMPR CH   CH3  NZ   OH
+IC CD    CE    NZ    CH      0.0000    0.00  180.00    0.00  0.0000
+IC CE    CH    *NZ   HZ1     0.0000    0.00  180.00    0.00  0.0000
+IC CE    NZ    CH    CH3     0.0000    0.00  180.00    0.00  0.0000
+IC NZ    CH3   *CH   OH      0.0000    0.00  180.00    0.00  0.0000
+IC NZ    CH    CH3   HH31    0.0000    0.00  180.00    0.00  0.0000
+IC HH31  CH    *CH3  HH32    0.0000    0.00  120.00    0.00  0.0000
+IC HH32  CH    *CH3  HH33    0.0000    0.00 -120.00    0.00  0.0000
+
+PRES DKAM       -0.18 ! Patch to create AMide bond between Asp (D) and Lys (K), kevo
+DELETE ATOM 1OD2      ! follow with AUTOgenerate ANGLes DIHEdrals command
+DELETE ATOM 2HZ2
+DELETE ATOM 2HZ3
+ATOM 1CB   CT2   -0.18 ! Neutralize CB. This causes total -0.18 charge above.
+GROUP
+ATOM 1CG   C      0.51 ! from NMA
+ATOM 1OD1  O     -0.51
+GROUP
+ATOM 2NZ   NH1   -0.47 ! From NMA
+ATOM 2HZ1  H      0.31
+ATOM 2CE   CT2   -0.02 ! Transfered from NMA by summing
+ATOM 2HE1  HA2    0.09 ! deleted hydrogen charge into parent.
+ATOM 2HE2  HA2    0.09 ! Apply standard charges to now-nonpolar hydrogens.
+
+BOND 1CG   2NZ
+IMPR 2NZ   1CG   2CE   2HZ1
+IMPR 1CG   1CB   2NZ   1OD1
+IC 1CA    1CB    1CG    2NZ      0.0000    0.00  180.00    0.00  0.0000
+IC 1CB    2NZ    *1CG   1OD1     0.0000    0.00  180.00    0.00  0.0000
+IC 2CD    2CE    2NZ    1CG      0.0000    0.00  180.00    0.00  0.0000
+IC 2CE    1CG    *2NZ   2HZ1     0.0000    0.00  180.00    0.00  0.0000
+IC 1CB    1CG    2NZ    2CE      0.0000    0.00  180.00    0.00  0.0000
+
+! 2-Aminoisobutyric acid (AIB), compatible with CHARMM36
+! by Kenno Vanommeslaeghe (kevo)
+! IMPORTANT: depends on stream/toppar_all36_prot_retinol.str
+
+RESI AIBD         0.00 ! 2-Aminoisobutyric acid (AIB) dipeptide, kevo
+GROUP
+ATOM C1   CT3    -0.27
+ATOM H11  HA3     0.09
+ATOM H12  HA3     0.09
+ATOM H13  HA3     0.09
+GROUP
+ATOM C2   C       0.51
+ATOM O2   O      -0.51
+GROUP
+ATOM N3   NH1    -0.47
+ATOM H3   H       0.31
+ATOM C4   CT      0.16
+GROUP
+ATOM C41  CT3    -0.27
+ATOM H411 HA3     0.09
+ATOM H412 HA3     0.09
+ATOM H413 HA3     0.09
+GROUP
+ATOM C42  CT3    -0.27 !  H12    H11          H71    H72
+ATOM H421 HA3     0.09 !     \  /                \  /
+ATOM H422 HA3     0.09 ! H13--C1      H3 O5       C7--H73
+ATOM H423 HA3     0.09 !        \     /   \\     /
+GROUP                  !         C2--N3    C5--N6
+ATOM C5   C       0.51 !        //     \  /     \
+ATOM O5   O      -0.51 !       O2       C4       H6
+GROUP                  !               /  \
+ATOM N6   NH1    -0.47 !      H411--C41    C42--H421
+ATOM H6   H       0.31 !           / |      | \
+ATOM C7   CT3    -0.11 !       H412 H413  H423 H422
+ATOM H71  HA3     0.09
+ATOM H72  HA3     0.09
+ATOM H73  HA3     0.09
+
+BOND C1  C2   C1  H11  C1  H12  C1  H13  C2  N3   C2  O2
+BOND N3  C4   N3  H3   C4  C5   C4  C41  C4  C42  C5  O5
+BOND C41 H411 C41 H412 C41 H413 C42 H421 C42 H422 C42 H423
+BOND C5  N6   N6  C7   N6  H6   C7  H71  C7  H72  C7  H73
+IMPR C2  C1  N3  O2   N3  C2  C4  H3
+IMPR C5  C4  N6  O5   N6  C5  C7  H6
+CMAP C2  N3  C4  C5   N3  C4  C5  N6
+IC    N3   C4   C5   N6   0.0000    0.00   70.00    0.00   0.0000 ! Psi !
+IC    C5   C4   N3   C2   0.0000    0.00 -130.00    0.00   0.0000 ! Phi !
+IC    C4   N3   C2   C1   0.0000    0.00  180.00    0.00   0.0000 ! Omega(N)
+IC    C4   C5   N6   C7   0.0000    0.00  180.00    0.00   0.0000 ! Omega(C)
+IC    N3   C5   *C4  C41  0.0000    0.00  120.00    0.00   0.0000
+IC    N3   C5   *C4  C42  0.0000    0.00 -120.00    0.00   0.0000
+IC    C1   N3   *C2  O2   0.0000    0.00  180.00    0.00   0.0000
+IC    C4   N6   *C5  O5   0.0000    0.00  180.00    0.00   0.0000
+IC    C2   C4   *N3  H3   0.0000    0.00  180.00    0.00   0.0000
+IC    C5   C7   *N6  H6   0.0000    0.00  180.00    0.00   0.0000
+IC    N3   C2   C1   H13  0.0000    0.00  180.00    0.00   0.0000
+IC    C2   H13  *C1  H11  0.0000    0.00  120.00    0.00   0.0000
+IC    C2   H13  *C1  H12  0.0000    0.00 -120.00    0.00   0.0000
+IC    C5   N6   C7   H73  0.0000    0.00    0.00    0.00   0.0000
+IC    N6   H73  *C7  H71  0.0000    0.00  120.00    0.00   0.0000
+IC    N6   H73  *C7  H72  0.0000    0.00 -120.00    0.00   0.0000
+IC    N3   C4   C41  H413 0.0000    0.00  180.00    0.00   0.0000
+IC    C4   H413 *C41 H411 0.0000    0.00  120.00    0.00   0.0000
+IC    C4   H413 *C41 H412 0.0000    0.00 -120.00    0.00   0.0000
+IC    N3   C4   C42  H423 0.0000    0.00  180.00    0.00   0.0000
+IC    C4   H423 *C42 H421 0.0000    0.00  120.00    0.00   0.0000
+IC    C4   H423 *C42 H422 0.0000    0.00 -120.00    0.00   0.0000
+
+RESI AIB          0.00 ! 2-Aminoisobutyric acid (AIB), kevo
+GROUP
+ATOM N    NH1    -0.47
+ATOM HN   H       0.31
+ATOM CA   CT      0.16
+GROUP
+ATOM CB1  CT3    -0.27 !         HN  O
+ATOM HB11 HA3     0.09 !         |   \\
+ATOM HB12 HA3     0.09 !       _-N    C--
+ATOM HB13 HA3     0.09 !          \  /
+GROUP                  !           CA
+ATOM CB2  CT3    -0.27 !          /  \
+ATOM HB21 HA3     0.09 ! HB11--CB1    CB2--HB21
+ATOM HB22 HA3     0.09 !      / |      | \
+ATOM HB23 HA3     0.09 !  HB12 HB13  HB23 HB22
+GROUP
+ATOM C    C       0.51
+ATOM O    O      -0.51
+BOND N   HN   N   CA   CA  C    C   +N
+BOND CA  CB1  CB1 HB11 CB1 HB12 CB1 HB13
+BOND CA  CB2  CB2 HB21 CB2 HB22 CB2 HB23
+DOUBLE C O
+IMPR N -C CA HN  C CA +N O
+CMAP -C  N  CA  C   N  CA  C  +N
+DONOR HN N
+ACCEPTOR O C
+IC -C   CA   *N   HN    1.3551 126.4900  180.0000 115.4200  0.9996
+IC -C   N    CA   C     1.3551 126.4900  180.0000 114.4400  1.5390
+IC N    CA   C    +N    1.4592 114.4400  180.0000 116.8400  1.3558
+IC +N   CA   *C   O     1.3558 116.8400  180.0000 122.5200  1.2297
+IC CA   C    +N   +CA   1.5390 116.8400  180.0000 126.7700  1.4613
+IC N    C    *CA  CB1   1.4592 114.4400  123.2300 111.0900  1.5461
+IC N    C    *CA  CB2   1.4592 114.4400 -123.2300 111.0900  1.5461
+IC C    CA   CB1  HB11  1.5390 111.0900  177.2500 109.6000  1.1109
+IC HB11 CA   *CB1 HB12  1.1109 109.6000  119.1300 111.0500  1.1119
+IC HB11 CA   *CB1 HB13  1.1109 109.6000 -119.5800 111.6100  1.1114
+IC C    CA   CB2  HB21  1.5390 111.0900  177.2500 109.6000  1.1109
+IC HB21 CA   *CB2 HB22  1.1109 109.6000  119.1300 111.0500  1.1119
+IC HB21 CA   *CB2 HB23  1.1109 109.6000 -119.5800 111.6100  1.1114
+!PATCH FIRST QCNT LAST CTER
+
+PRES QCNT         1.00 ! Quaternary C N-terminus (AIB,...), kevo
+GROUP                  ! use in generate statement
+ATOM N    NH3    -0.30 !   R     HT1
+ATOM HT1  HC      0.33 !   | (+)/
+ATOM HT2  HC      0.33 ! --CA--N--HT2
+ATOM HT3  HC      0.33 !   |    \
+ATOM CA   CT      0.31 !   R'    HT3
+DELETE ATOM HN   
+BOND HT1 N HT2 N HT3 N   
+DONOR HT1 N   
+DONOR HT2 N   
+DONOR HT3 N   
+IC HT1  N    CA   C     0.0000  0.0000  180.0000  0.0000  0.0000
+IC HT2  CA   *N   HT1   0.0000  0.0000  120.0000  0.0000  0.0000
+IC HT3  CA   *N   HT2   0.0000  0.0000  120.0000  0.0000  0.0000
+
+
+PRES K7CS         0.32 ! K (lysine) to 7-Carbon Staple
+DELETE ATOM 1HA        ! ^             ^ ^      ^
+DELETE ATOM 1NZ
+!DELETE ATOM 1HZ1 ! CHARMM doesn't like creating atoms with the same
+!DELETE ATOM 1HZ2 ! name as deleted ones, so we transmute them instead.
+DELETE ATOM 1HZ3
+DELETE ATOM 2HA
+DELETE ATOM 2NZ
+!DELETE ATOM 2HZ1
+!DELETE ATOM 2HZ2
+DELETE ATOM 2HZ3
+ATOM 1CA   CT     0.16 ! sum deleted hydrogen charge into parent. This
+ATOM 2CA   CT     0.16 ! is the source of the total +0.32 charge above.
+GROUP
+ATOM 1CB'  CT3   -0.27
+ATOM 1HB1' HA3    0.09
+ATOM 1HB2' HA3    0.09
+ATOM 1HB3' HA3    0.09
+GROUP                  ! adjusts charges
+ATOM 1CE   CT2   -0.18
+ATOM 1HE1  HA2    0.09
+ATOM 1HE2  HA2    0.09
+GROUP
+ATOM 1CZ   CT2   -0.18
+ATOM 1HZ1  HA2    0.09
+ATOM 1HZ2  HA2    0.09
+GROUP
+ATOM 1CH   CC1A  -0.15
+ATOM 1HH   HE1    0.15
+GROUP
+ATOM 2CB'  CT3   -0.27
+ATOM 2HB1' HA3    0.09
+ATOM 2HB2' HA3    0.09
+ATOM 2HB3' HA3    0.09
+GROUP                  ! adjusts charges
+ATOM 2CE   CT2   -0.18
+ATOM 2HE1  HA2    0.09
+ATOM 2HE2  HA2    0.09
+GROUP
+ATOM 2CZ   CT2   -0.18
+ATOM 2HZ1  HA2    0.09
+ATOM 2HZ2  HA2    0.09
+GROUP
+ATOM 2CH   CC1A  -0.15
+ATOM 2HH   HE1    0.15
+
+BOND 1CA   1CB'   1CB'  1HB1'  1CB'  1HB2'  1CB'  1HB3'
+BOND 1CE   1CZ    1CZ   1HZ1   1CZ   1HZ2   1CZ   1CH    1CH   1HH
+BOND 2CA   2CB'   2CB'  2HB1'  2CB'  2HB2'  2CB'  2HB3'
+BOND 2CE   2CZ    2CZ   2HZ1   2CZ   2HZ2   2CZ   2CH    2CH   2HH
+BOND 1CH   2CH
+IC 1N     1C     *1CA   1CB'     0.0000    0.00 -120.00    0.00  0.0000 ! do not change
+IC 1N     1CA    1CB'   1HB3'    0.0000    0.00  180.00    0.00  0.0000
+IC 1CA    1HB3'  *1CB'  1HB1'    0.0000    0.00  120.00    0.00  0.0000
+IC 1CA    1HB3'  *1CB'  1HB2'    0.0000    0.00 -120.00    0.00  0.0000
+IC 1CG    1CD    1CE    1CZ      0.0000    0.00  180.00    0.00  0.0000
+IC 1CD    1CZ    *1CE   1HE1     0.0000    0.00  120.00    0.00  0.0000
+IC 1CD    1CZ    *1CE   1HE2     0.0000    0.00 -120.00    0.00  0.0000
+IC 1CD    1CE    1CZ    1CH      0.0000    0.00  180.00    0.00  0.0000
+IC 1CE    1CH    *1CZ   1HZ1     0.0000    0.00  120.00    0.00  0.0000
+IC 1CE    1CH    *1CZ   1HZ2     0.0000    0.00 -120.00    0.00  0.0000
+IC 1CE    1CZ    1CH    2CH      0.0000    0.00  180.00    0.00  0.0000
+IC 1CZ    2CH    *1CH   1HH      0.0000    0.00  180.00    0.00  0.0000
+IC 2N     2C     *2CA   2CB'     0.0000    0.00 -120.00    0.00  0.0000 ! do not change
+IC 2N     2CA    2CB'   2HB3'    0.0000    0.00  180.00    0.00  0.0000
+IC 2CA    2HB3'  *2CB'  2HB1'    0.0000    0.00  120.00    0.00  0.0000
+IC 2CA    2HB3'  *2CB'  2HB2'    0.0000    0.00 -120.00    0.00  0.0000
+IC 2CG    2CD    2CE    2CZ      0.0000    0.00  180.00    0.00  0.0000
+IC 2CD    2CZ    *2CE   2HE1     0.0000    0.00  120.00    0.00  0.0000
+IC 2CD    2CZ    *2CE   2HE2     0.0000    0.00 -120.00    0.00  0.0000
+IC 2CD    2CE    2CZ    2CH      0.0000    0.00  180.00    0.00  0.0000
+IC 2CE    2CH    *2CZ   2HZ1     0.0000    0.00  120.00    0.00  0.0000
+IC 2CE    2CH    *2CZ   2HZ2     0.0000    0.00 -120.00    0.00  0.0000
+IC 2CE    2CZ    2CH    1CH      0.0000    0.00  180.00    0.00  0.0000
+IC 2CZ    1CH    *2CH   2HH      0.0000    0.00  180.00    0.00  0.0000
+IC 1CZ    1CH    2CH    2CZ      0.0000    0.00  180.00    0.00  0.0000 ! trans
+
+!toppar_nmgly
+! N-Methylated Glycine, compatible with CHARMM36
+! Kenno Vanommeslaeghe (kevo) based on DMA by Wenbo Yu (xxwy)
+
+RESI NMGLYD       0.00 ! N-methylglycine dipeptide, kevo
+GROUP
+ATOM C1   CT3    -0.19
+ATOM H11  HA3     0.09
+ATOM H12  HA3     0.09
+ATOM H13  HA3     0.09
+ATOM C2   C       0.43
+ATOM O2   O      -0.52
+ATOM N3   N      -0.35
+ATOM C3   CT3    -0.09 !         H32  H33
+ATOM H31  HA3     0.09 !           \  /
+ATOM H32  HA3     0.09 !   H11 H31--C3    O5    H71
+ATOM H33  HA3     0.09 !     \      |     ||    |
+ATOM C4   CT2     0.08 ! H12--C1    N3    C5    C7--H72
+ATOM H41  HB2     0.09 !     /  \  /  \  /  \  /  \
+ATOM H42  HB2     0.09 !   H13   C2    C4    N6    H73
+ATOM C5   C       0.43 !         ||   /  \   |
+ATOM O5   O      -0.52 !         O2 H41  H42 C6--H63
+ATOM N6   N      -0.35 !                    /  \
+ATOM C6   CT3    -0.09 !                  H61  H62
+ATOM H61  HA3     0.09
+ATOM H62  HA3     0.09
+ATOM H63  HA3     0.09
+ATOM C7   CT3    -0.09
+ATOM H71  HA3     0.09
+ATOM H72  HA3     0.09
+ATOM H73  HA3     0.09
+
+BOND C1  C2   C1  H11  C1  H12  C1  H13  C2  N3   C2  O2
+BOND N3  C4   N3  C3   C3  H31  C3  H32  C3  H33  C4  C5
+BOND C4  H41  C4  H42  C5  O5   C5  N6   N6  C7   N6  C6
+BOND C6  H61  C6  H62  C6  H63  C7  H71  C7  H72  C7  H73
+IMPR C2  C1  N3  O2
+IMPR C5  C4  N6  O5
+CMAP C2  N3  C4  C5   N3  C4  C5  N6
+IC    N3   C4   C5   N6   0.0000    0.00   70.00    0.00   0.0000 ! Psi !
+IC    C5   C4   N3   C2   0.0000    0.00 -130.00    0.00   0.0000 ! Phi !
+IC    C4   N3   C2   C1   0.0000    0.00  180.00    0.00   0.0000 ! Omega(N)
+IC    C4   C5   N6   C7   0.0000    0.00  180.00    0.00   0.0000 ! Omega(C)
+IC    C2   C4   *N3  C3   0.0000    0.00  180.00    0.00   0.0000 ! OOP(left)
+IC    C5   C7   *N6  C6   0.0000    0.00  180.00    0.00   0.0000 ! OOP(right)
+IC    N3   C2   C1   H13  0.0000    0.00  180.00    0.00   0.0000
+IC    C2   H13  *C1  H11  0.0000    0.00  120.00    0.00   0.0000
+IC    C2   H13  *C1  H12  0.0000    0.00 -120.00    0.00   0.0000
+IC    C1   N3   *C2  O2   0.0000    0.00  180.00    0.00   0.0000
+IC    C4   N3   C3   H33  0.0000    0.00  -90.00    0.00   0.0000
+IC    N3   H33  *C3  H31  0.0000    0.00  120.00    0.00   0.0000
+IC    N3   H33  *C3  H32  0.0000    0.00 -120.00    0.00   0.0000
+IC    N3   C5   *C4  H41  0.0000    0.00  120.00    0.00   0.0000
+IC    N3   C5   *C4  H42  0.0000    0.00 -120.00    0.00   0.0000
+IC    C4   N6   *C5  O5   0.0000    0.00  180.00    0.00   0.0000
+IC    C5   N6   C6   H63  0.0000    0.00   90.00    0.00   0.0000 ! 104.2
+IC    N6   H63  *C6  H61  0.0000    0.00  120.00    0.00   0.0000
+IC    N6   H63  *C6  H62  0.0000    0.00 -120.00    0.00   0.0000
+IC    C5   N6   C7   H73  0.0000    0.00    0.00    0.00   0.0000 !  13.5
+IC    N6   H73  *C7  H71  0.0000    0.00  120.00    0.00   0.0000
+IC    N6   H73  *C7  H72  0.0000    0.00 -120.00    0.00   0.0000
+
+RESI MGY          0.00 ! N-methylglycine, kevo
+                       ! Currently only of utility for polyglycine with 
+                       ! AMGY and DMCT termini
+GROUP
+ATOM N    N      -0.35 !   HN2  HN3
+ATOM CN   CT3    -0.09 !     \  /
+ATOM HN1  HA3     0.09 ! HN1--CN   O
+ATOM HN2  HA3     0.09 !      |    ||
+ATOM HN3  HA3     0.09 !      N    C
+ATOM CA   CT2     0.08 !     / \  / \
+ATOM HA1  HB2     0.09 !        CA
+ATOM HA2  HB2     0.09 !       /  \
+ATOM C    C       0.43 !     HA1  HA2
+ATOM O    O      -0.52
+
+BOND -C  N    N   CN   CN  HN1  CN  HN2  CN  HN3
+BOND N   CA   CA  C    CA  HA1  CA  HA2  C   +N
+DOUBLE C O
+IMPR C   CA  +N  O
+CMAP -C  N   CA  C    N   CA  C   +N
+ACCEPTOR O C
+IC    N    CA   C    +N   0.0000    0.00   70.00    0.00   0.0000 ! Psi !
+IC    C    CA   N    -C   0.0000    0.00 -130.00    0.00   0.0000 ! Phi !
+IC    CA   C    +N   +CA  0.0000    0.00  180.00    0.00   0.0000 ! Omega(C)
+IC    -C   CA   *N   CN   0.0000    0.00  180.00    0.00   0.0000 ! OOP(left)
+IC    CA   N    CN   HN3  0.0000    0.00  -90.00    0.00   0.0000
+IC    N    HN3  *CN  HN1  0.0000    0.00  120.00    0.00   0.0000
+IC    N    HN3  *CN  HN2  0.0000    0.00 -120.00    0.00   0.0000
+IC    N    C    *CA  HA1  0.0000    0.00  120.00    0.00   0.0000
+IC    N    C    *CA  HA2  0.0000    0.00 -120.00    0.00   0.0000
+IC    CA   +N   *C   O    0.0000    0.00  180.00    0.00   0.0000
+PATCH FIRST AMGY LAST DMCT
+
+PRES AMGY        -0.01 ! acetylated N-terminus for N-methylglycine, kevo
+ATOM CAY  CT3    -0.19 ! do NOT use to create dipeptides; see NMGLYD
+ATOM HY1  HA3     0.09 !      HY1
+ATOM HY2  HA3     0.09 !       |     /
+ATOM HY3  HA3     0.09 ! HY2--CAY--CY
+ATOM CY   C       0.43 !       |    \\
+ATOM OY   O      -0.52 !      HY3    OY
+
+BOND CAY CY   CAY HY1  CAY HY2  CAY HY3  CY  N
+DOUBLE CY OY
+IMPR CY  CAY N   OY
+CMAP CY  N   CA  C    N   CA  C   +N
+ACCEPTOR OY CY
+IC    C    CA   N    CY   0.0000    0.00 -130.00    0.00   0.0000 ! Phi !
+IC    CA   N    CY   CAY  0.0000    0.00  180.00    0.00   0.0000 ! Omega(N)
+IC    CY   CA   *N   CN   0.0000    0.00  180.00    0.00   0.0000 ! OOP(left)
+IC    N    CY   CAY  HY3  0.0000    0.00  180.00    0.00   0.0000
+IC    CY   HY3  *CAY HY1  0.0000    0.00  120.00    0.00   0.0000
+IC    CY   HY3  *CAY HY2  0.0000    0.00 -120.00    0.00   0.0000
+IC    CAY  N    *CY  OY   0.0000    0.00  180.00    0.00   0.0000
+
+PRES DMCT         0.01 ! dimethylamine C-terminus for N-methylglycine, kevo
+ATOM NT   N      -0.35 !       HT1
+ATOM CNT  CT3    -0.09 !       |
+ATOM H91  HA3     0.09 !       CAT--HT2
+ATOM H92  HA3     0.09 !   \  /  \
+ATOM H93  HA3     0.09 !    NT    HT3
+ATOM CAT  CT3    -0.09 !    |
+ATOM HT1  HA3     0.09 !    CNT--H93
+ATOM HT2  HA3     0.09 !   /  \
+ATOM HT3  HA3     0.09 ! H91  H92
+
+BOND C   NT   NT  CAT  CAT HT1  CAT HT2  CAT HT3
+BOND NT  CNT  CNT H91  CNT H92  CNT H93
+IMPR C   CA  NT  O 
+CMAP -C  N   CA  C    N   CA  C   NT
+IC    N    CA   C    NT   0.0000    0.00   70.00    0.00   0.0000 ! Psi !
+IC    CA   C    NT   CAT  0.0000    0.00  180.00    0.00   0.0000 ! Omega(C)
+IC    C    CAT  *NT  CNT  0.0000    0.00  180.00    0.00   0.0000 ! OOP(right)
+IC    CA   NT   *C   O    0.0000    0.00  180.00    0.00   0.0000
+IC    C    NT   CNT  H93  0.0000    0.00   90.00    0.00   0.0000 ! 104.2
+IC    NT   H93  *CNT H91  0.0000    0.00  120.00    0.00   0.0000
+IC    NT   H93  *CNT H92  0.0000    0.00 -120.00    0.00   0.0000
+IC    C    NT   CAT  HT3  0.0000    0.00    0.00    0.00   0.0000 !  13.5
+IC    NT   HT3  *CAT HT1  0.0000    0.00  120.00    0.00   0.0000
+IC    NT   HT3  *CAT HT2  0.0000    0.00 -120.00    0.00   0.0000
+
+! Link lysine and histidine (HSE) with a triazole staple
+!
+! follow with AUTOgenerate ANGLes DIHEdrals command
+PRES KHTZ        -0.10 ! K (lysine) to HSE (histidine) TriaZole staple, kevo
+DELETE ATOM 1NZ        ! previous line: HSE CB-H2 has a +0.10 charge...
+DELETE ATOM 1HZ1
+DELETE ATOM 1HZ2
+DELETE ATOM 1HZ3
+DELETE ATOM 2CE1
+DELETE ATOM 2HE1
+DELETE ATOM 2HE2
+DELETE IMPR 2CD2 2CG  2NE2 2HD2
+DELETE IMPR 2CD2 2NE2 2CG  2HD2
+ATOM 1CE   CT2      0.11 ! net charge from TRZ3 H5
+ATOM 1HE1  HA2      0.09
+ATOM 1HE2  HA2      0.09
+! transmute prot indole to TRZ3 from CGenFF
+ATOM 2CG   CG2R51   0.26 ! TRZ3 C2 slightly polar ==> sum H into parent, then substact HSE CB-H2
+ATOM 2ND1  NG2R50  -0.41 ! TRZ3 N3
+ATOM 2CD2  CG2R51  -0.35 ! TRZ3 C1
+ATOM 2HD2  HGR52    0.20 ! TRZ3 H1
+ATOM 2NE1  NG2R50  -0.37 ! TRZ3 N4
+ATOM 2NE2  NG2R51   0.28 ! TRZ3 N5 polar ==> sum H into substituent
+
+! establish link and repair damage done by deleting 2CE1
+BOND 1CE   2NE2   2NE2  2NE1   2NE1  2ND1
+! no new impropers because the ring is CGenFF
+IC 1CG    1CD    1CE    2NE2     0.0000    0.00  180.00    0.00  0.0000
+IC 1CD    2NE2   *1CE   1HE1     0.0000    0.00  120.00    0.00  0.0000
+IC 1CD    2NE2   *1CE   1HE2     0.0000    0.00 -120.00    0.00  0.0000
+IC 2CB    2CG    2ND1   2NE1     0.0000    0.00  180.00    0.00  0.0000
+IC 2CD2   2NE1   *2NE2  1CE      0.0000    0.00  180.00    0.00  0.0000
+IC 1CD    1CE     2NE2  2CD2     0.0000    0.00   90.00    0.00  0.0000
+
+!Patches to create covalent bonds to from Cys or His to Zn2+
+!Zn-Cys and Zn-His equilibrium parameters based on PDB survey by Lei Fang, 2015
+!of 180+ structures in the PDB.
+!FCs are estimates to allow for flexibility of the artificial bonds/angles
+
+PRES CSN         -1.00 ! patch for anionic Cys: identical to patch CYSD in top_all36_prot.rtf
+                       ! use in a patch statement
+                       ! Doesn't require AUTOgenerate
+!delete atom and reassign charges
+DELETE ATOM HG1
+GROUP
+ATOM CB   CS     -0.38
+ATOM HB1  HA2     0.09
+ATOM HB2  HA2     0.09
+ATOM SG   SS     -0.80
+
+!S-Zn distances in SIRT3 xtal: 2.37, 2.32, 2.31, 2.21
+PRES ZN_C         0.00 ! patch to covalently link anionic Cys to Zn
+                       ! Patch is 1-Cys and 2-Zn
+! Use AUTOgenerate ANGLes DIHEdrals after invoking the patch to create 
+! the angles and dihedrals.  The angle and dihedral parameter force constants
+! are set below.  Currently, there are angles parameters being used, but the
+! diherdral force constants are set to zero.
+BOND 1SG 2ZN
+
+PRES ZNHD         0.00 ! patch to covalently link HSD to Zn
+                       ! Patch is 1-HSD and 2-Zn
+BOND 1NE2 2ZN
+
+PRES ZNHE         0.00 ! patch to covalently link HSE to Zn
+                       ! Patch is 1-Hse and 2-Zn
+BOND 1ND1 2ZN
+
+!Following is an example to create covalent bonds between 4 Cys residues and
+!a Zn ion.  The Cys residues are initially converted to the anionic ionization
+!state and then the bonds to the zn are created followed by autogenerate
+
+!Need to patch Cys 256, 259, 280, 283 to make them anionic
+!as required to be ligands of the Zn+2
+!patch csn proa 256 setup warn
+!patch csn proa 259 setup warn
+!patch csn proa 280 setup warn
+!patch csn proa 283 setup warn
+
+!Patch to create covalent bond between Cys residues and Zn
+!patch zn_c proa 256 hetc 405 setup warn
+!patch zn_c proa 259 hetc 405 setup warn
+!patch zn_c proa 280 hetc 405 setup warn
+!patch zn_c proa 283 hetc 405 setup warn
+
+!Patch to create covalent bond between Hse residues and Zn
+!patch znhe proa 179 heta 301 setup warn
+
+!Following is important
+!autogenerate angles dihedrals
+
+RESI HYP           0.00 ! hydroxyproline
+!
+!Domene, C., Jorgensen, C., Vanommeslaeghe, K., Schofield, C.,
+!MacKerell, A.D., Jr., “Quantifying the binding interaction between the
+!hypoxia-inducible transcription factor and the von Hippel Lindau
+!suppressor,” Journal of Chemical Theory and Computation, In Press,
+!2015, DOI: 10.1021/acs.jctc.5b00411
+!
+GROUP                   !       HD1 HD2
+ATOM N     N     -0.29  !     |   \ /
+ATOM CD    CP3    0.00  !     N---CD   HG
+ATOM HD1   HA2    0.09  !     |    \   /
+ATOM HD2   HA2    0.09  !     |     CG
+ATOM CA    CP1    0.02  !     |    /  \
+ATOM HA    HB1    0.09  !  HA-CA--CB  OE-HE
+GROUP                   !     |   / \
+ATOM CB    CP2   -0.18  !     | HB1 HB2
+ATOM HB1   HA2    0.09  !   0=C
+ATOM HB2   HA2    0.09  !     |
+GROUP
+ATOM CG    CP2    0.14  !note use of CP2
+ATOM HG    HA1    0.09
+ATOM OE    OH1   -0.66
+ATOM HE    H      0.43
+GROUP
+ATOM C     C      0.51
+ATOM O     O     -0.51
+BOND C  CA  C   +N
+BOND N  CA
+BOND CA CB
+BOND CG CB
+BOND CG CD
+BOND CD N
+BOND HA CA
+BOND CG HG
+BOND CG OE
+BOND OE HE
+BOND CD HD1
+BOND CD HD2
+BOND CB HB1
+BOND CB HB2
+DOUBLE   O  C
+IMPR N -C CA CD
+IMPR C CA +N O
+CMAP -C  N  CA  C   N  CA  C  +N
+ACCEPTOR O C
+IC -C   CA   *N   CD    1.3366 122.9400  178.5100 112.7500  1.4624
+IC -C   N    CA   C     1.3366 122.9400  -76.1200 110.8600  1.5399
+IC N    CA   C    +N    1.4585 110.8600  180.0000 114.7500  1.3569
+IC +N   CA   *C   O     1.3569 114.7500  177.1500 120.4600  1.2316
+IC CA   C    +N   +CA   1.5399 116.1200  180.0000 124.8900  1.4517
+IC N    C    *CA  CB    1.4585 110.8600  113.7400 111.7400  1.5399
+IC N    C    *CA  HA    1.4585 110.8600 -122.4000 109.0900  1.0837
+IC N    CA   CB   CG    1.4585 102.5600   31.6100 104.3900  1.5322
+IC CA   CG   *CB  HB1   0.00     0.00    120.00     0.00    0.00
+IC CA   CG   *CB  HB2   0.00     0.00    240.00     0.00    0.00
+IC CA   CB   CG   CD    1.5399 104.3900  -34.5900 103.2100  1.5317
+IC CA   CB   CG   HG    1.5399 104.3900 -156.7200 112.9500  1.1077
+IC CA   CB   CG   OE    1.5399 104.3900   81.2600 109.2200  1.1143
+IC CB   CG   OE   HE    0.00     0.00    240.00     0.00    0.00
+IC CB   CG   CD   HD1   1.5322 103.2100  -93.5500 110.0300  1.1137
+IC CB   CG   CD   HD2   1.5322 103.2100  144.5200 110.0000  1.1144
+PATCHING FIRS PROP
+
+END
+
+read para card append flex
+
+BOND
+SS   ZN     20.000     2.32   ! Anionic Cys-Zn bond to maintain coordination
+! HSE (HSD) - Zn
+NR2  ZN     20.000     2.07   ! Neutral His-Zn bond to maintain coordination
+!! For AIB and longer residues
+CT   C     250.000     1.4900 ! ALLOW   ALI PEP POL ARO
+CT3  CT    222.500     1.5380 ! ALLOW   ALI
+NH1  CT    320.000     1.4300 ! ALLOW   ALI PEP POL ARO
+CT2A CT    222.500     1.5380 ! from CT2  CT1, Zhu
+! For termini
+NH2  CT    240.000     1.4550 ! From LSN NH2-CT2
+CT   CC    200.000     1.5220 ! ALLOW   POL
+CT   CD    200.000     1.5220 ! ALLOW   POL
+NH3  CT    200.000     1.4800 ! ALLOW   ALI POL
+!! for NMGLY
+CT3  N     315.000     1.4340 ! DMA, Dimethylacetamide, xxwy
+CT2  N     315.000     1.4340 ! NMGLYD; from CT3 N, DMA; kevo
+!! triazole staple
+CT2    NG2R51  400.00     1.4580 ! protrz, from CG331 NG2R51, penalty= 6
+CT2    CG2R51  229.63     1.5000 ! from CT2 CPH1, kevo
+!! hydroxyproline
+CP2    OH1     428.000    1.4300
+HA1    CP2     309.000    1.1110
+
+ANGLE
+CT1  CT2  C      52.000   108.0000 ! DKAM, from CT1  CT2  CC , kevo
+SS   ZN   SS    100.000   111.7700 ! Anionic Cys-Zn bond, equilibrium value based on PDB survey data
+CS   SS   ZN     20.000    95.0000 ! Anionic Cys-Zn bond, Ao from ethylmethylsulfide CT2-S-CT3, FC guess
+! HSE (HSD) - Zn
+! Equilibrium value is the average value of 40 PDB p53 structures
+CPH2 NR2  ZN     20.000   120.6500
+CPH1 NR2  ZN     20.000   125.9800
+SS   ZN   NR2   100.000   108.1100 ! Cys-Zn-His, equilibrium value based on PDB survey data
+! Equilibrium value is the average value of 98.00
+NR2  ZN   NR2   100.000   107.85   ! His-Zn-His, equilibrium value based on PDB survey data but
+                                   ! but standard deviation is large (SD = 10.32)
+!! For AIB
+CT   NH1  C      50.000   120.0000 ! ALLOW   ALI PEP POL ARO
+CT3  CT   C      52.000   108.0000 ! ALLOW   ALI PEP POL ARO
+H    NH1  CT     35.000   117.0000 ! ALLOW   PEP POL ARO ALI
+NH1  C    CT     80.000   116.5000 ! ALLOW   ALI PEP POL ARO
+NH1  CT   C      50.000   107.0000 ! ALLOW   PEP POL ARO ALI
+NH1  CT   CT3    70.000   113.5000 ! ALLOW   ALI PEP POL ARO
+O    C    CT     80.000   121.0000 ! ALLOW   ALI PEP POL ARO
+!! AIB, for longer residues
+CY   CT2  CT    58.350    114.00 ! from TRP crystal, JWK
+CT   CT2  CA     51.800   107.5000 ! ALLOW   ALI ARO
+CT   CT2  CC     52.000   108.0000 ! ALLOW   ALI PEP POL ARO
+CT   CT2  CD     52.000   108.0000 ! ALLOW   ALI PEP POL ARO
+CT   CT2  CPH1   58.350   113.0000 ! ALLOW ARO
+CT2  CT   C      52.000   108.0000 ! ALLOW   ALI PEP POL ARO
+CT3  CT2  CT     58.350   113.5000   11.16   2.56100 ! ALLOW   ALI
+NH1  CT   CT2    70.000   113.5000 ! ALLOW   ALI PEP POL ARO
+OH1  CT2  CT     75.700   110.1000 ! ALLOW   ALI ALC ARO
+S    CT2  CT     58.000   112.5000 ! ALLOW   ALI SUL ION
+SM   CT2  CT     58.000   112.5000 ! ALLOW   ALI SUL ION
+NH1  CT   CT2A   70.000   113.5000 ! from NH1  CT1  CT2
+CT2A CT   C      52.000   108.0000 ! from CT2  CT1  C
+CT   CT2A HA2    26.500   110.1000  22.53   2.17900 ! from HA2  CT2  CT1
+CT   CT2A CT2    58.350   113.5000  11.16   2.56100 ! from CT2  CT2  CT1
+CT   CT2A CPH1   58.350   113.0000 ! from CT1  CT2  CPH1
+CT   CT2A CC     52.000   108.0000 ! from CT1  CT2  CC
+CT1  CT2  CT     58.350   113.50   11.16   2.56100 ! ALLOW   ALI
+!! AIB, for longer residues with termini
+NH2  CT   CT2    67.700   110.0000 ! From LSN NH2-CT2-CT2
+CT2  CT   CC     52.000   108.0000 ! ALLOW   ALI PEP POL ARO
+CT2A CT   CC     52.000   108.0000 ! ALLOW   ALI PEP POL ARO
+CT2  CT   CD     52.000   108.0000 ! ALLOW   ALI PEP POL ARO
+NH3  CT   CT2    67.700   110.0000 ! ALLOW   ALI POL
+NH3  CT   CT2A   67.700   110.0000 ! from NH3  CT1  CT2
+CT2A CT   CD     52.000   108.0000 ! from CT2  CT1  CD
+!! For termini
+H    NH2  CT     50.000   111.0000 ! From LSN HC-NH2-CT2
+NH2  CT   CT3    67.700   110.0000 ! From LSN NH2-CT2-CT2
+CT   CD   OH1    55.000   110.5000 ! From ASPP CT2-CD-OH1
+CT3  CT   CD     52.000   108.0000 ! Ala cter
+NH2  CT   C      50.000   107.0000 ! From ALA Dipep. NH1-CT2-C
+CT3  CT   CC     52.000   108.0000 ! ALLOW   ALI PEP POL ARO
+HC   NH3  CT     30.000   109.5000 20.00   2.07400 ! ALLOW   POL ALI
+NH1  CT   CC     50.000   107.0000 ! ALLOW   PEP POL ARO ALI
+NH1  CT   CD     50.000   107.0000 ! ALLOW   PEP POL ARO ALI
+NH2  CC   CT     50.000   116.5000 50.00   2.45000 ! ALLOW   ALI PEP POL ARO
+NH3  CT   C      43.700   110.0000 ! ALLOW   PEP POL ARO ALI
+NH3  CT   CC     43.700   110.0000 ! ALLOW   PEP POL ARO ALI
+NH3  CT   CT3    67.700   110.0000 ! ALLOW   ALI POL
+O    CC   CT     15.000   121.0000 50.00   2.44000 ! ALLOW   ALI PEP POL ARO
+OB   CD   CT     70.000   125.0000 20.00   2.44200 ! ALLOW   ALI PEP POL ARO
+OC   CC   CT     40.000   118.0000 50.00   2.38800 ! ALLOW   ALI PEP POL ARO ION
+OS   CD   CT     55.000   109.0000 20.00   2.32600 ! ALLOW POL PEP
+N    C    CT     20.000   112.5000 ! From N   C   CT  For attachment to Pro
+!! for NMGLY
+C    N    CT3    42.00    119.50 ! DMA, dimethylacetamide, xxwy
+C    N    CT2    42.00    119.50 ! NMGLYD; from C N CT3, DMA (and angsum); kevo
+CT3  N    CT3    45.00    121.00 ! DMA, dimethylacetamide, xxwy
+CT2  N    CT3    45.00    121.00 ! NMGLYD; from CT3 N CT3, DMA (and angsum); kevo
+N    CT3  HA3    50.00    105.00 ! DMA, dimethylacetamide, xxwy
+N    CT2  HB2    48.00    108.00 ! NMGLYD; from NH1 CT2 HB2 (and closer to DMA); kevo
+N    CT2  C      50.00    107.00 ! NMGLYD; from CG2O1 CG321 NG2S1 & NH1 CT2 C; kevo
+!! triazole staple
+CT2    CT2    NG2R51   70.00    113.50 ! protrz, from CG321 CG321 NG2S1, penalty= 11
+NG2R51 CT2    HA2      33.43    110.10 ! protrz, from NG2R51 CG331 HGA3, penalty= 6
+CG2R51 NG2R51 CT2      70.00    127.10 ! ETRZ, 1-Ethyl-1,2,3-trizaole, kevo
+CT2    NG2R51 NG2R50   70.00    117.90 ! ETRZ, 1-Ethyl-1,2,3-trizaole, kevo
+CT1    CT2    CG2R51   58.350   113.00 ! from CT1  CT2  CPH1, kevo
+CT2    CG2R51 CG2R51   45.800   130.00 ! from CT2  CPH1 CPH1, kevo
+HA2    CT2    CG2R51   33.430   109.50 ! from HA2  CT2  CPH1, kevo
+NG2R50 CG2R51 CT2      45.800   120.00 ! from NR2  CPH1 CT2 , kevo
+!! hydroxyproline
+CP3    CP2    OH1      50.000   112.2000 
+CP2    CP2    OH1      50.000   112.5000 
+CP2    OH1    H        65.900   109.5000 
+HA1    CP2    OH1      45.900   111.0000 
+HA1    CP2    CP3      26.500   110.1000  22.53   2.17900 ! 
+HA1    CP2    CP2      26.500   110.1000  22.53   2.17900 ! 
+
+DIHE
+CT1  CT2  C    NH1      0.0500  6   180.00 ! DKAM, from CT2 CT2 CC NH2 , kevo
+CT1  CT2  C    O        0.0500  6   180.00 ! DKAM, from CT2 CT2 CC O   , kevo
+! Cys (CSN) - Zn
+X    CT1  CS   X        0.2000  3     0.00 ! From X    CT1  CT2  X
+!terminal CS
+!CS   CT1  NH1  C        1.8000  1     0.00 ! ALLOW PEP
+!H    NH1  CT1  CS       0.0000  1     0.00 ! ALLOW PEP
+!O    C    CT1  CS       1.4000  1     0.00 ! ALLOW PEP
+!NH1  C    CT1  CS       0.0000  1     0.00 ! ALLOW PEP
+!N    C    CT1  CS       0.0000  1     0.00 ! ALLOW PEP
+CS   SS   ZN   SS       0.0000  3     0.00 ! Dummy for Anionic Cys-Zn bond 
+HA2  CS   SS   ZN       0.0000  3     0.00 ! Dummy for Anionic Cys-Zn bond 
+CT1  CS   SS   ZN       0.0000  3     0.00 ! Dummy for Anionic Cys-Zn bond 
+! HSE (HSD) - Zn
+SS   ZN   NR2  CPH1     0.0000  3     0.00     
+SS   ZN   NR2  CPH2     0.0000  3     0.00   
+CT2  SS   ZN   NR2      0.0000  3     0.00     
+ZN   NR2  CPH2 NR1      0.0000  3     0.00     
+ZN   NR2  CPH1 CPH1     0.0000  3     0.00     
+ZN   NR2  CPH1 CT2      0.0000  3     0.00     
+ZN   NR2  CPH2 HR1      0.0000  3     0.00     
+CS   SS   ZN   NR2      0.0000  3     0.00   
+! HSE(HSD) - Zn - HSE(HSD) (2 His ligands)
+NR2  ZN   NR2  CPH1     0.0000  3     0.00
+NR2  ZN   NR2  CPH2     0.0000  3     0.00
+HR3  CPH1 NR2  ZN       0.0000  3     0.00
+!! For AIB
+C     CT   NH1  C       1.0900  1   180.00 ! RMSE = 1.10565
+C     CT   NH1  C       0.3200  2   180.00 ! RMSE = 1.10565
+C     CT   NH1  C       0.1000  3     0.00 ! RMSE = 1.10565
+NH1   C    CT   NH1     0.0400  1     0.00 ! RMSE = 1.10565
+NH1   C    CT   NH1     1.0700  2   180.00 ! RMSE = 1.10565
+NH1   C    CT   NH1     0.2500  3   180.00 ! RMSE = 1.10565
+CT3  CT   NH1  C        0.0000  1     0.00 ! decided to set these to zero in RMSE = 1.10565 fit
+O    C    CT   CT3      0.0000  1     0.00 ! decided to set these to zero in RMSE = 1.10565 fit
+NH1  C    CT   CT3      0.0000  1     0.00 ! decided to set these to zero in RMSE = 1.10565 fit
+O    C    CT   NH1      0.0000  1     0.00 ! decided to set these to zero in RMSE = 1.10565 fit
+H    NH1  CT   C        0.0000  1     0.00 ! ALLOW PEP
+H    NH1  CT   CT3      0.0000  1     0.00 ! ALLOW PEP
+H    NH1  C    CT       2.5000  2   180.00 ! ALLOW PEP
+O    C    NH1  CT       2.5000  2   180.00 ! ALLOW PEP
+NH1  CT   CT3  HA3      0.2000  3     0.00 ! ALLOW ALI
+C    CT   CT3  HA3      0.2000  3     0.00 ! ALLOW ALI
+!! For dipeptide
+CT3  C    NH1  CT       1.6000  1     0.00 !  ALLOW PEP
+CT3  C    NH1  CT       2.5000  2   180.00 !  ALLOW PEP
+CT3  NH1  C    CT       1.6000  1     0.00 !  ALLOW PEP
+CT3  NH1  C    CT       2.5000  2   180.00 !  ALLOW PEP
+!! For polypeptide
+CT1  C    NH1  CT       1.6000  1     0.00 !  ALLOW PEP
+CT1  C    NH1  CT       2.5000  2   180.00 !  ALLOW PEP
+CT   C    NH1  CT1      1.6000  1     0.00 !  ALLOW PEP
+CT   C    NH1  CT1      2.5000  2   180.00 !  ALLOW PEP
+CT   C    NH1  CT       1.6000  1     0.00 !  ALLOW PEP
+CT   C    NH1  CT       2.5000  2   180.00 !  ALLOW PEP
+!! For longer residues
+CT2  CT   NH1  C        0.0000  1     0.00 ! Set to 0 because same as CT3 CT NH1 C 1.8 1 0 ; kevo
+C    NH1  CT   CT2A     0.0000  1     0.00 ! Set to 0 because same as CT3 CT NH1 C 1.8 1 0 ; kevo
+O    C    CT   CT2      0.0000  1     0.00 ! Set to 0 because same as O C CT CT3 1.4 1 0 ; kevo
+CT2A CT   C    O        0.0000  1     0.00 ! Set to 0 because same as O C CT CT3 1.4 1 0 ; kevo
+N    C    CT   CT2      0.0000  1     0.00 ! Same as NH1 C CT CT3 ; kevo
+NH1  C    CT   CT2      0.0000  1     0.00 ! Same as NH1 C CT CT3 ; kevo
+CT2A CT   C    NH1      0.0000  1     0.00 ! Same as NH1 C CT CT3 ; kevo
+CT2A CT   C    N        0.0000  1     0.00 ! Same as NH1 C CT CT3 ; kevo
+H    NH1  CT   CT2      0.0000  1     0.00 ! Same as H NH1 CT CT3 ; kevo
+H    NH1  CT   CT2A     0.0000  1     0.00 ! Same as H NH1 CT CT3 ; kevo
+NH1  CT   CT2  HA2      0.2000  3     0.00 ! Same as NH1 CT CT3 HA3 ; kevo
+NH1  CT   CT2A HA2      0.2000  3     0.00 ! Same as NH1 CT CT3 HA3 ; kevo
+HA2  CT2  CT   C        0.2000  3     0.00 ! Same as C CT CT3 HA3 ; kevo
+HA2  CT2A CT   C        0.2000  3     0.00 ! Same as C CT CT3 HA3 ; kevo
+SM   SM   CT2  CT       0.3100  3     0.00 ! Terminal CA ==> ALLOW  SUL ALI
+CT   CT2  CT2  HA2      0.1900  3     0.00 ! Terminal CA ==> From X    CT2  CT2  X
+CT   CT2A CT2  HA2      0.1900  3     0.00 ! Terminal CA ==> From X    CT2  CT2  X
+CT   CT2A CT2  CD       0.1900  3     0.00 ! Terminal CA ==> From X    CT2  CT2  X
+! Group-fitted for Lys/Arg/Gln/Met
+C    CT   CT2  CT2      0.3500  1   180.00 ! Beyond CH3
+C    CT   CT2  CT2      0.4200  2   180.00 ! Beyond CH3
+C    CT   CT2  CT2      1.9100  3   180.00 ! Beyond CH3
+CT2  CT2  CT   NH1      0.8800  1   180.00 ! Beyond CH3
+CT2  CT2  CT   NH1      0.0000  2   180.00 ! Beyond CH3
+CT2  CT2  CT   NH1      1.9000  3     0.00 ! Beyond CH3
+CC   CT2  CT2  CT       1.8400  1   180.00 ! Terminal CA
+CC   CT2  CT2  CT       0.8400  2   180.00 ! Terminal CA
+CC   CT2  CT2  CT       0.3900  3   180.00 ! Terminal CA
+CT   CT2  CT2  CT2      0.6300  1   180.00 ! Terminal CA
+CT   CT2  CT2  CT2      0.0100  2     0.00 ! Terminal CA
+CT   CT2  CT2  CT2      0.1500  3     0.00 ! Terminal CA
+CT   CT2  CT2  S        0.1400  1   180.00 ! Terminal CA
+CT   CT2  CT2  S        0.5400  2     0.00 ! Terminal CA
+CT   CT2  CT2  S        0.6900  3     0.00 ! Terminal CA
+! Fitted Asn
+C    CT   CT2  CC       1.4100  1   180.00 ! Beyond CH3
+C    CT   CT2  CC       1.2900  2   180.00 ! Beyond CH3
+C    CT   CT2  CC       0.5900  3   180.00 ! Beyond CH3
+CC   CT2  CT   NH1      0.2800  1   180.00 ! Beyond CH3
+CC   CT2  CT   NH1      0.5000  2   180.00 ! Beyond CH3
+CC   CT2  CT   NH1      0.3800  3     0.00 ! Beyond CH3
+CT   CT2  CC   NH2      0.6200  1   180.00 ! Terminal CA
+CT   CT2  CC   NH2      0.6600  2   180.00 ! Terminal CA
+CT   CT2  CC   NH2      0.7200  3   180.00 ! Terminal CA
+CT   CT2  CC   O        0.4200  1   180.00 ! Terminal CA
+CT   CT2  CC   O        0.1500  2   180.00 ! Terminal CA
+CT   CT2  CC   O        0.9500  3   180.00 ! Terminal CA
+! Fitted Asp
+C    CT   CT2A CC       1.6100  1   180.00 ! Beyond CH3
+C    CT   CT2A CC       1.2900  2   180.00 ! Beyond CH3
+C    CT   CT2A CC       0.5900  3   180.00 ! Beyond CH3
+CC   CT2A CT   NH1      0.6800  1   180.00 ! Beyond CH3
+CC   CT2A CT   NH1      0.1000  2   180.00 ! Beyond CH3
+CC   CT2A CT   NH1      0.3800  3     0.00 ! Beyond CH3
+CT   CT2A CC   OC       0.8400  1     0.00 ! Terminal CA
+CT   CT2A CC   OC       0.9800  2   180.00 ! Terminal CA
+CT   CT2A CC   OC       1.4600  3     0.00 ! Terminal CA
+! Fitted Cys
+CT   CT2  S    HS       0.2000  1     0.00 ! Terminal CA
+CT   CT2  S    HS       0.6500  2     0.00 ! Terminal CA
+CT   CT2  S    HS       0.2200  3     0.00 ! Terminal CA
+C    CT   CT2  S        0.2400  1   180.00 ! Beyond CH3
+C    CT   CT2  S        0.7500  2   180.00 ! Beyond CH3
+C    CT   CT2  S        1.3500  3   180.00 ! Beyond CH3
+NH1  CT   CT2  S        0.3400  1     0.00 ! Beyond CH3
+NH1  CT   CT2  S        0.5000  2   180.00 ! Beyond CH3
+NH1  CT   CT2  S        1.4300  3     0.00 ! Beyond CH3
+! Fitted Glu
+CC   CT2  CT2A CT       0.0000  1   180.00 ! Terminal CA
+CC   CT2  CT2A CT       0.3800  2   180.00 ! Terminal CA
+CC   CT2  CT2A CT       0.5900  3   180.00 ! Terminal CA
+C    CT   CT2A CT2      0.1100  1     0.00 ! Beyond CH3
+C    CT   CT2A CT2      0.9800  2   180.00 ! Beyond CH3
+C    CT   CT2A CT2      1.6000  3   180.00 ! Beyond CH3
+CC   CT   CT2A CT2      1.6000  3   180.00 ! Beyond CH3
+CT2  CT2A CT   NH1      0.3000  1     0.00 ! Beyond CH3
+CT2  CT2A CT   NH1      0.3500  2     0.00 ! Beyond CH3
+CT2  CT2A CT   NH1      1.7600  3     0.00 ! Beyond CH3
+! Group-fitted for Hsd/Hse
+CPH1 CPH1 CT2  CT       1.7400  1     0.00 ! Terminal CA
+CPH1 CPH1 CT2  CT       0.1500  2     0.00 ! Terminal CA
+CPH1 CPH1 CT2  CT       0.7700  3   180.00 ! Terminal CA
+CT   CT2  CPH1 NR1      1.4900  1     0.00 ! Terminal CA
+CT   CT2  CPH1 NR1      0.0900  2   180.00 ! Terminal CA
+CT   CT2  CPH1 NR1      0.7900  3   180.00 ! Terminal CA
+CT   CT2  CPH1 NR2      1.0900  1     0.00 ! Terminal CA
+CT   CT2  CPH1 NR2      0.0900  2     0.00 ! Terminal CA
+CT   CT2  CPH1 NR2      0.6700  3   180.00 ! Terminal CA
+C    CT   CT2  CPH1     0.1800  1   180.00 ! Beyond CH3
+C    CT   CT2  CPH1     0.6400  2   180.00 ! Beyond CH3
+C    CT   CT2  CPH1     0.8700  3   180.00 ! Beyond CH3
+CPH1 CT2  CT   NH1      0.0000  1     0.00 ! Beyond CH3
+CPH1 CT2  CT   NH1      0.0000  2   180.00 ! Beyond CH3
+CPH1 CT2  CT   NH1      0.9000  3     0.00 ! Beyond CH3
+! Fitted Hsp
+CPH1 CPH1 CT2A CT       2.0400  1     0.00 ! Terminal CA
+CPH1 CPH1 CT2A CT       0.4400  2     0.00 ! Terminal CA
+CPH1 CPH1 CT2A CT       0.1300  3   180.00 ! Terminal CA
+CT   CT2A CPH1 NR3      0.5300  1   180.00 ! Terminal CA
+CT   CT2A CPH1 NR3      0.4200  2   180.00 ! Terminal CA
+CT   CT2A CPH1 NR3      0.3000  3   180.00 ! Terminal CA
+C    CT   CT2A CPH1     1.7500  1   180.00 ! Beyond CH3
+C    CT   CT2A CPH1     0.1300  2     0.00 ! Beyond CH3
+C    CT   CT2A CPH1     1.8600  3   180.00 ! Beyond CH3
+CPH1 CT2A CT   NH1      1.0900  1   180.00 ! Beyond CH3
+CPH1 CT2A CT   NH1      0.2200  2   180.00 ! Beyond CH3
+CPH1 CT2A CT   NH1      2.3200  3     0.00 ! Beyond CH3
+! Group-fitted for Phe/Tyr
+CA   CA   CT2  CT       1.0700  1     0.00 ! Terminal CA
+CA   CA   CT2  CT       0.2400  2   180.00 ! Terminal CA
+CA   CA   CT2  CT       0.1700  3   180.00 ! Terminal CA
+C    CT   CT2  CA       1.2800  1   180.00 ! Beyond CH3
+C    CT   CT2  CA       0.9400  2   180.00 ! Beyond CH3
+C    CT   CT2  CA       1.5700  3   180.00 ! Beyond CH3
+CA   CT2  CT   NH1      0.5200  1   180.00 ! Beyond CH3
+CA   CT2  CT   NH1      0.6200  2   180.00 ! Beyond CH3
+CA   CT2  CT   NH1      1.5800  3     0.00 ! Beyond CH3
+! Fitted Ser
+CT   CT2  OH1  H        0.0200  1     0.00 ! Terminal CA
+CT   CT2  OH1  H        0.5600  2     0.00 ! Terminal CA
+CT   CT2  OH1  H        0.4900  3     0.00 ! Terminal CA
+C    CT   CT2  OH1      0.6500  1   180.00 ! Beyond CH3
+C    CT   CT2  OH1      0.2500  2   180.00 ! Beyond CH3
+C    CT   CT2  OH1      1.1700  3   180.00 ! Beyond CH3
+NH1  CT   CT2  OH1      0.1800  1   180.00 ! Beyond CH3
+NH1  CT   CT2  OH1      0.1900  2   180.00 ! Beyond CH3
+NH1  CT   CT2  OH1      1.4600  3     0.00 ! Beyond CH3
+! Fitted Trp
+CA   CY   CT2  CT       0.0300  1     0.00 ! Terminal CA
+CA   CY   CT2  CT       0.5500  2     0.00 ! Terminal CA
+CA   CY   CT2  CT       0.3900  3   180.00 ! Terminal CA
+CPT  CY   CT2  CT       0.3600  1   180.00 ! Terminal CA
+CPT  CY   CT2  CT       0.0500  2     0.00 ! Terminal CA
+CPT  CY   CT2  CT       0.1900  3   180.00 ! Terminal CA
+C    CT   CT2  CY       1.0900  1   180.00 ! Beyond CH3
+C    CT   CT2  CY       0.5000  2   180.00 ! Beyond CH3
+C    CT   CT2  CY       1.1700  3   180.00 ! Beyond CH3
+CY   CT2  CT   NH1      0.2900  1   180.00 ! Beyond CH3
+CY   CT2  CT   NH1      0.6600  2   180.00 ! Beyond CH3
+CY   CT2  CT   NH1      1.1700  3     0.00 ! Beyond CH3
+!! For longer residues with termini
+H    NH2  CT   CT2      0.1100  3     0.00 ! From LSN HC-NH2-CT2-CT2; didn't change H NH1 CT CT3 so won't change this; kevo
+CC   CT   CT2  CA       0.0400  3     0.00 ! ALLOW ARO; beyond CH3; kevo
+NH3  CT   CT2A CT2      0.2000  3     0.00 ! From X    CT1  CT2  X !N terminus ; beyond CH3; kevo
+HA2  CT2A CT   CC       0.2000  3     0.00 ! RB: added for C-ter Glu; same as C CT CT3 HA3; kevo
+HA2  CT2A CT   CD       0.2000  3     0.00 ! Same as C CT CT3 HA3 ; kevo
+NH3  CT   CT2A HA2      0.2000  3     0.00 ! Same as NH1 CT CT3 HA3 ; kevo
+NH3  CT   CT2A CC       0.2000  3     0.00 ! Beyond CH3
+CC   CT2A CT   CC       0.2000  3     0.00 ! Beyond CH3
+CPH1 CT2A CT   CC       0.2000  3     0.00 ! Beyond CH3
+CPH1 CT2A CT   NH3      0.2000  3     0.00 ! Beyond CH3
+CPH1 CT2A CT   CD       0.2000  3     0.00 ! Beyond CH3
+CT2  CT2A CT   CD       0.2000  3     0.00 ! Beyond CH3
+!! For termini
+CC   CT   NH1  C        0.2000  1   180.00 ! ALLOW PEP POL; would benefit from refitting; kevo
+CD   CT   NH1  C        0.2000  1   180.00 ! ALLOW PEP POL; would benefit from refitting; kevo
+H    NH1  CT   CC       0.0000  1     0.00 ! ALLOW PEP POL; same as H NH1 CT C; kevo
+H    NH1  CT   CD       0.0000  1     0.00 ! ALLOW PEP POL; same as H NH1 CT C; kevo
+H    NH2  CC   CT       1.4000  2   180.00 ! ALLOW PEP POL ARO PRO; terminal CA; just as transferable as H NH1 C CT ; kevo
+NH3  CT   C    N        0.4000  1     0.00 ! ALLOW PEP PRO; would benefit from refitting; kevo
+NH3  CT   C    NH1      0.6000  1     0.00 ! ALLOW PEP PRO; would benefit from refitting; kevo
+O    C    CT   NH3      0.0000  1     0.00 ! ALLOW PEP PRO; would benefit from refitting; kevo
+NH3  CT   CT3  HA3      0.2000  3     0.00
+CC   CT   CT3  HA3      0.2000  3     0.00
+CT3  CT   CC   OC       0.0500  6   180.00
+NH1  CT   CC   OC       0.0500  6   180.00
+CT3  CT   NH3  HC       0.1000  3     0.00
+C    CT   NH3  HC       0.1000  3     0.00
+! for the free AA, which we only generated as a sanity check and don't actually support.
+NH3  CT   CC   OC       0.0500  6   180.00
+CC   CT   NH3  HC       0.1000  3     0.00
+!! For attachment to Pro, Gly
+CT   C    N    CP1      2.7500  2   180.00 ! ALLOW PRO; terminal CA; just as transferable as CT3 C NH1 CT ; kevo
+CT   C    N    CP1      0.3000  4     0.00 ! ALLOW PRO; terminal CA; just as transferable as CT3 C NH1 CT ; kevo
+CT   C    N    CP3      2.7500  2   180.00 ! ALLOW PRO; terminal CA; just as transferable as CT3 C NH1 CT ; kevo
+CT   C    N    CP3      0.3000  4     0.00 ! ALLOW PRO; terminal CA; just as transferable as CT3 C NH1 CT ; kevo
+CT   NH1  C    CP1      1.6000  1     0.00 ! ALLOW PEP PRO; terminal CA; kevo
+CT   NH1  C    CP1      2.5000  2   180.00 ! ALLOW PEP PRO; terminal CA; kevo
+CT2  C    NH1  CT       1.6000  1     0.00 !  ALLOW PEP; terminal CA; same as CT3 C NH1 CT ; kevo
+CT2  C    NH1  CT       2.5000  2   180.00 !  ALLOW PEP; terminal CA; same as CT3 C NH1 CT ; kevo
+CT2  NH1  C    CT       1.6000  1     0.00 !  ALLOW PEP; terminal CA; same as CT3 NH1 C CT ; kevo
+CT2  NH1  C    CT       2.5000  2   180.00 !  ALLOW PEP; terminal CA; same as CT3 NH1 C CT ; kevo
+N    C    CT   CT3      0.0000  1     0.00 ! ALLOW PEP PRO; same as NH1 C CT CT3; kevo
+N    C    CT   NH1      0.1600  1   180.00 ! Optimized by kevo with -0.2 offset
+N    C    CT   NH1      1.0700  2   180.00 ! Optimized by kevo
+N    C    CT   NH1      0.2500  3   180.00 ! Optimized by kevo
+!! Leu side chain
+CT   CT2  CT1  HA1      0.2000  3     0.00 ! From X    CT1  CT2  X
+CT   CT2  CT1  CT3      0.0500  1     0.00 ! Beyond CH3
+CT   CT2  CT1  CT3      0.1000  2   180.00 ! Beyond CH3
+CT   CT2  CT1  CT3      0.0100  3   180.00 ! Beyond CH3
+C    CT   CT2  CT1      0.3200  1   180.00 ! Terminal CA
+C    CT   CT2  CT1      0.6100  2   180.00 ! Terminal CA
+C    CT   CT2  CT1      0.7200  3   180.00 ! Terminal CA
+CT1  CT2  CT   NH1      0.4800  1   180.00 ! Terminal CA
+CT1  CT2  CT   NH1      0.4200  2   180.00 ! Terminal CA
+CT1  CT2  CT   NH1      0.6500  3     0.00 ! Terminal CA
+!!! for side chain of patch K7CS , (S)-alpha-(2'-heptenyl)alanine based hydrocarbon staple
+CT2  CC1A CC1A CT2     10.0000  2   180.00 ! from CT3  CC1A CC1A CT3 (double bond)
+CT2  CC1A CC1A HE1      5.2000  2   180.00 ! from CT3  CC1A CC1A HE1 (double bond)
+HE1  CC1A CT2  CT2      0.1200  3     0.00 ! from lipid HEL1 CEL1 CTL2 CTL2 (same in CGenFF)
+
+!! for NMGLY
+CT3  C    N    CT3      2.6000  2   180.00 ! DMA, dimethylacetamide, xxwy
+CT2  C    N    CT2      2.6000  2   180.00 ! MGY; from CT3 C N CT3, DMA; kevo
+CT2  C    N    CT3      2.6000  2   180.00 ! NMGLYD; from CT3 C N CT3, DMA; kevo
+CT3  C    N    CT2      2.6000  2   180.00 ! NMGLYD; from CT3 C N CT3, DMA; kevo
+O    C    N    CT3      2.6000  2   180.00 ! DMA, dimethylacetamide, xxwy
+O    C    N    CT2      2.6000  2   180.00 ! NMGLYD; from CT3 C N CT3, DMA; kevo
+HA3  CT3  N    CT3      0.4200  3     0.00 ! DMA, dimethylacetamide, xxwy
+HA3  CT3  N    CT2      0.4200  3     0.00 ! NMGLYD; from CT3 C N CT3, DMA; kevo
+HA3  CT3  N    C        0.0000  3     0.00 ! DMA, dimethylacetamide; sp2-methyl, no torsion potential; xxwy & jhs
+HB2  CT2  N    C        0.0000  3     0.00 ! NMGLYD; from HA3 CT3 N C, DMA and HB2 CT2 NH1 C; kevo
+HB2  CT2  N    CT3      0.4200  3     0.00 ! NMGLYD; from HA3 CT3 N   CT3, DMA; kevo
+C    CT2  N    C        1.2000  1   180.00 ! NMGLYD, N-methylglycine dipeptide, kevo
+C    CT2  N    C        0.4600  2   180.00 ! NMGLYD, N-methylglycine dipeptide, kevo
+C    CT2  N    C        0.0500  3   180.00 ! NMGLYD, N-methylglycine dipeptide, kevo
+C    CT2  N    CT3      1.5000  1     0.00 ! NMGLYD, N-methylglycine dipeptide, kevo
+N    C    CT2  N        0.1100  1   180.00 ! NMGLYD, N-methylglycine dipeptide, kevo
+N    C    CT2  N        0.9500  2   180.00 ! NMGLYD, N-methylglycine dipeptide, kevo
+N    C    CT2  N        0.2900  3   180.00 ! NMGLYD, N-methylglycine dipeptide, kevo
+O    C    CT2  N        0.2100  1     0.00 ! NMGLYD, N-methylglycine dipeptide, kevo
+O    C    CT2  N        1.0800  2   180.00 ! NMGLYD, N-methylglycine dipeptide, kevo
+O    C    CT2  N        0.3000  3     0.00 ! NMGLYD, N-methylglycine dipeptide, kevo
+!! triazole staple
+CG2R51 CG2R51 NG2R51 CT2        0.0000  1     0.00 ! protrz, from CG2R51 CG2R51 NG2R51 CG3C51, penalty= 31.4
+HGR52  CG2R51 NG2R51 CT2        0.0000  2   180.00 ! protrz, from HGR52 CG2R53 NG2R51 CG331, penalty= 28.9
+CT2    CT2    CT2    NG2R51     0.2000  3     0.00 ! protrz, from CG321 CG321 CG321 NG2S1, penalty= 11.9
+NG2R51 CT2    CT2    HA2        0.1950  3     0.00 ! protrz, from NG2S1 CG321 CG321 HGA2, penalty= 11
+NG2R50 NG2R50 NG2R51 CT2        2.5000  2   180.00 ! protrz, from NG2R50 NG2R50 NG2R51 HGP1, kevo
+CT2    CT2    NG2R51 CG2R51     0.3850  1     0.00 ! ETRZ, 1-Ethyl-1,2,3-trizaole, kevo
+CT2    CT2    NG2R51 CG2R51     0.4200  2     0.00 ! ETRZ, 1-Ethyl-1,2,3-trizaole, kevo
+CT2    CT2    NG2R51 CG2R51     0.0800  3     0.00 ! ETRZ, 1-Ethyl-1,2,3-trizaole, kevo
+CT2    CT2    NG2R51 CG2R51     0.0550  4     0.00 ! ETRZ, 1-Ethyl-1,2,3-trizaole, kevo
+CT2    CT2    NG2R51 NG2R50     0.3850  1   180.00 ! ETRZ, 1-Ethyl-1,2,3-trizaole, kevo
+CT2    CT2    NG2R51 NG2R50     0.4200  2     0.00 ! ETRZ, 1-Ethyl-1,2,3-trizaole, kevo
+CT2    CT2    NG2R51 NG2R50     0.0800  3   180.00 ! ETRZ, 1-Ethyl-1,2,3-trizaole, kevo
+CT2    CT2    NG2R51 NG2R50     0.0550  4     0.00 ! ETRZ, 1-Ethyl-1,2,3-trizaole, kevo
+HA2    CT2    NG2R51 CG2R51     0.0000  3     0.00 ! protrz, from HGA3 CG331 NG2R51 CG2R53, penalty= 9
+HA2    CT2    NG2R51 NG2R50     0.0000  3     0.00 ! protrz, from HGA3 CG331 NG2R51 CG2R53, kevo
+CT2    CG2R51 NG2R50 NG2R50     3.0000  2   180.00 ! from CT2  CPH1 NR2 _CPH2_, kevo
+HA2    CT2    CG2R51 CG2R51     0.0000  3     0.00 ! from HA2  CT2  CPH1 CPH1, kevo
+HGR52  CG2R51 CG2R51 CT2        2.0000  2   180.00 ! from HR3  CPH1 CPH1 CT2 , kevo
+NG2R51 CG2R51 CG2R51 CT2        3.0000  2   180.00 ! from NR1  CPH1 CPH1 CT2 , kevo
+NG2R50 CG2R51 CT2    HA2        0.1900  3     0.00 ! from NR2  CPH1 CT2  HA2 , kevo
+CG2R51 CG2R51 CT2    CT1        1.7400  1     0.00 ! from CPH1 CPH1 CT2  CT1 , kevo
+CG2R51 CG2R51 CT2    CT1        0.1500  2     0.00 ! from CPH1 CPH1 CT2  CT1 , kevo
+CG2R51 CG2R51 CT2    CT1        0.7700  3   180.00 ! from CPH1 CPH1 CT2  CT1 , kevo
+CT1    CT2    CG2R51 NG2R50     1.0900  1     0.00 ! from CT1  CT2  CPH1 NR2 , kevo
+CT1    CT2    CG2R51 NG2R50     0.0900  2     0.00 ! from CT1  CT2  CPH1 NR2 , kevo
+CT1    CT2    CG2R51 NG2R50     0.6700  3   180.00 ! from CT1  CT2  CPH1 NR2 , kevo
+! Use specific parameters from CHARMM36 side chain parametrization project
+HB1    CT1    CT2    CG2R51     0.2000  3     0.00 ! from HB1  CT1  CT2  CPH1, kevo
+C      CT1    CT2    CG2R51     0.1800  1   180.00 ! from C    CT1  CT2  CPH1, kevo
+C      CT1    CT2    CG2R51     0.6400  2   180.00 ! from C    CT1  CT2  CPH1, kevo
+C      CT1    CT2    CG2R51     0.8700  3   180.00 ! from C    CT1  CT2  CPH1, kevo
+CG2R51 CT2    CT1    NH1        0.0000  1     0.00 ! from CPH1 CT2  CT1  NH1 , kevo
+CG2R51 CT2    CT1    NH1        0.0000  2   180.00 ! from CPH1 CT2  CT1  NH1 , kevo
+CG2R51 CT2    CT1    NH1        0.9000  3     0.00 ! from CPH1 CT2  CT1  NH1 , kevo
+!! hydroxyproline
+HA1    CP2    OH1    H          0.1400  3     0.00 ! 0.14 3 0 
+N      CP3    CP2    OH1        2.0100  1   180.00
+N      CP3    CP2    OH1        2.5600  2     0.00
+N      CP3    CP2    OH1        2.3900  3     0.00
+CP3    CP2    OH1    H          0.5700  1     0.00
+CP3    CP2    OH1    H          0.1500  2   180.00
+CP3    CP2    OH1    H          0.1100  3   180.00
+CP2    CP2    OH1    H          1.0200  1     0.00
+CP2    CP2    OH1    H          0.4300  2   180.00
+CP2    CP2    OH1    H          0.8500  3     0.00
+CP1    CP2    CP2    OH1        0.9800  1     0.00
+CP1    CP2    CP2    OH1        0.9700  2   180.00
+CP1    CP2    CP2    OH1        0.0600  3   180.00
+
+IMPROPERS
+!! for NMGLY
+C    CT3  N    O       71.0000  0     0.00 ! DMA, Dimethylacetamide, xxwy
+C    CT2  N    O       71.0000  0     0.00 ! NMGLYD; from C CT3 N O, DMA; kevo
+
+
+CMAP
+
+! 2-Aminoisobutyric acid (AIB) map, kevo 2014
+C    NH1  CT   C    NH1  CT   C    NH1   24
+
+! phi = -180.0
+     0.615200      0.428100     -0.010900     -0.364800     -0.521900
+    -0.406200     -0.075000      0.050300     -0.413200     -1.158300
+    -1.803200     -2.219100     -1.693100     -2.219100     -1.803200
+    -1.158300     -0.413200      0.050300     -0.075000     -0.406200
+    -0.521900     -0.364800     -0.010900      0.428100
+
+! phi = -165.0
+     0.370000     -0.157200     -0.778100     -1.155300     -1.221100
+    -0.993500     -0.618900     -0.542600     -0.962400     -1.684500
+    -2.273800     -2.377000     -2.089200     -1.937500     -1.485600
+    -0.884900     -0.217000      0.244400      0.146800     -0.105100
+    -0.150400      0.041600      0.323700      0.545400
+
+! phi = -150.0
+     0.028200     -0.675900     -1.349900     -1.653300     -1.571500
+    -1.263500     -1.000300     -1.135100     -1.494700     -1.926000
+    -2.102000     -2.058800     -2.219100     -1.770000     -1.311300
+    -0.776800     -0.180200      0.222400      0.096700     -0.135600
+    -0.129200      0.069200      0.280900      0.351600
+
+! phi = -135.0
+    -0.094600     -0.634400     -1.147900     -1.322900     -1.219900
+    -1.149500     -1.405300     -1.682500     -1.655900     -1.338200
+    -0.169900     -2.481100     -2.136400     -1.570800     -1.061000
+    -0.542400     -0.036600      0.212100      0.043800     -0.173400
+    -0.172000     -0.041300      0.081500      0.132600
+
+! phi = -120.0
+     0.019300     -0.160600     -0.469000     -0.738700     -1.006700
+    -1.424500     -1.840600     -1.886000     -1.285400     -1.472500
+    -2.435200     -2.440900     -1.875100     -1.250700     -0.707800
+    -0.231800     -0.015900      0.066500      0.071000     -0.079100
+    -0.114000     -0.076000     -0.055700      0.006000
+
+! phi = -105.0
+     0.265600      0.267200     -0.069800     -0.579900     -1.092400
+    -1.582000     -1.843500     -1.520900     -0.416400     -2.244400
+    -2.625700     -2.228400     -1.462000     -0.728100     -0.240500
+    -0.426700     -0.770500     -0.747400     -0.066500      0.188900
+     0.147800      0.102900      0.039600      0.093300
+
+! phi =  -90.0
+     0.255100      0.212700     -0.116200     -0.585400     -1.009800
+    -1.341700     -1.351300     -0.973700     -1.878800     -2.622100
+    -2.641400     -1.913400     -0.862100     -0.158600     -0.403000
+    -0.698900     -0.986200     -1.174700     -0.481500      0.289100
+     0.418500      0.333100      0.181800      0.154300
+
+! phi =  -75.0
+    -0.358500     -0.406300     -0.528900     -0.676700     -0.771600
+    -0.802400     -0.570000     -1.033800     -2.255800     -2.883500
+    -2.521700     -1.343600     -0.115300      0.036600      0.005900
+    -0.052900     -0.317100     -0.688800     -0.574500     -0.076600
+     0.084600      0.008800     -0.205800     -0.341100
+
+! phi =  -60.0
+    -1.685200     -1.514900     -1.178600     -0.766800     -0.372900
+    -0.082400      0.192600     -1.158300     -2.647100     -3.048400
+    -2.054900     -0.363900      0.289400      0.545700      0.661000
+     0.613700      0.185100     -0.215700     -0.467400     -0.503600
+    -0.843900     -1.248800     -1.561200     -1.712000
+
+! phi =  -45.0
+    -2.865400     -2.172000     -1.192100     -0.176300      0.593300
+     0.879100      0.385400     -1.611200     -3.020600     -2.747000
+    -1.013800      0.268500      0.738700      1.122100      1.187500
+     0.950500      0.460500     -0.031700     -0.337600     -0.993300
+    -2.071700     -2.883600     -3.247300     -3.227300
+
+! phi =  -30.0
+    -2.466200     -1.100100      0.452100      1.766100      1.716800
+     0.746500     -0.672500     -2.239400     -2.778400     -1.529500
+     0.180800      0.621600      1.177300      1.473700      1.392600
+     1.040500      0.606900      0.366100     -0.025700     -1.458900
+    -3.003700     -3.790600     -3.875200     -3.423600
+
+! phi =  -15.0
+    -0.407300      1.606600      1.873200     -0.150900     -0.659300
+    -1.209600     -1.785700     -2.102800     -1.409400      0.209000
+     0.357200      0.784400      1.223300      1.301300      1.056500
+     0.747700      0.697900      0.731400     -0.500400     -2.152600
+    -3.213600     -3.427800     -3.065200     -2.103000
+
+! phi =    0.0
+     1.776300      0.025300     -1.484300     -2.108300     -2.399100
+    -2.302600     -1.679000     -0.775000      0.509400      0.419100
+     0.554200      0.946700      1.149700      0.946700      0.554200
+     0.419100      0.509400     -0.775000     -1.679000     -2.302600
+    -2.399100     -2.108300     -1.484300      0.025300
+
+! phi =   15.0
+    -0.407300     -2.103000     -3.065200     -3.427800     -3.213600
+    -2.152600     -0.500400      0.731400      0.697900      0.747700
+     1.056500      1.301300      1.223300      0.784400      0.357200
+     0.209000     -1.409400     -2.102800     -1.785700     -1.209600
+    -0.659300     -0.150900      1.873200      1.606600
+
+! phi =   30.0
+    -2.466200     -3.423600     -3.875200     -3.790600     -3.003700
+    -1.458900     -0.025700      0.366100      0.606900      1.040500
+     1.392600      1.473700      1.177300      0.621600      0.180800
+    -1.529500     -2.778400     -2.239400     -0.672500      0.746500
+     1.716800      1.766100      0.452100     -1.100100
+
+! phi =   45.0
+    -2.865400     -3.227300     -3.247300     -2.883600     -2.071700
+    -0.993300     -0.337600     -0.031700      0.460500      0.950500
+     1.187500      1.122100      0.738700      0.268500     -1.013800
+    -2.747000     -3.020600     -1.611200      0.385400      0.879100
+     0.593300     -0.176300     -1.192100     -2.172000
+
+! phi =   60.0
+    -1.685200     -1.712000     -1.561200     -1.248800     -0.843900
+    -0.503600     -0.467400     -0.215700      0.185100      0.613700
+     0.661000      0.545700      0.289400     -0.363900     -2.054900
+    -3.048400     -2.647100     -1.158300      0.192600     -0.082400
+    -0.372900     -0.766800     -1.178600     -1.514900
+
+! phi =   75.0
+    -0.358500     -0.341100     -0.205800      0.008800      0.084600
+    -0.076600     -0.574500     -0.688800     -0.317100     -0.052900
+     0.005900      0.036600     -0.115300     -1.343600     -2.521700
+    -2.883500     -2.255800     -1.033800     -0.570000     -0.802400
+    -0.771600     -0.676700     -0.528900     -0.406300
+
+! phi =   90.0
+     0.255100      0.154300      0.181800      0.333100      0.418500
+     0.289100     -0.481500     -1.174700     -0.986200     -0.698900
+    -0.403000     -0.158600     -0.862100     -1.913400     -2.641400
+    -2.622100     -1.878800     -0.973700     -1.351300     -1.341700
+    -1.009800     -0.585400     -0.116200      0.212700
+
+! phi =  105.0
+     0.265600      0.093300      0.039600      0.102900      0.147800
+     0.188900     -0.066500     -0.747400     -0.770500     -0.426700
+    -0.240500     -0.728100     -1.462000     -2.228400     -2.625700
+    -2.244400     -0.416400     -1.520900     -1.843500     -1.582000
+    -1.092400     -0.579900     -0.069800      0.267200
+
+! phi =  120.0
+     0.019300      0.006000     -0.055700     -0.076000     -0.114000
+    -0.079100      0.071000      0.066500     -0.015900     -0.231800
+    -0.707800     -1.250700     -1.875100     -2.440900     -2.435200
+    -1.472500     -1.285400     -1.886000     -1.840600     -1.424500
+    -1.006700     -0.738700     -0.469000     -0.160600
+
+! phi =  135.0
+    -0.094600      0.132600      0.081500     -0.041300     -0.172000
+    -0.173400      0.043800      0.212100     -0.036600     -0.542400
+    -1.061000     -1.570800     -2.136400     -2.481100     -0.169900
+    -1.338200     -1.655900     -1.682500     -1.405300     -1.149500
+    -1.219900     -1.322900     -1.147900     -0.634400
+
+! phi =  150.0
+     0.028200      0.351600      0.280900      0.069200     -0.129200
+    -0.135600      0.096700      0.222400     -0.180200     -0.776800
+    -1.311300     -1.770000     -2.219100     -2.058800     -2.102000
+    -1.926000     -1.494700     -1.135100     -1.000300     -1.263500
+    -1.571500     -1.653300     -1.349900     -0.675900
+
+! phi =  165.0
+     0.370000      0.545400      0.323700      0.041600     -0.150400
+    -0.105100      0.146800      0.244400     -0.217000     -0.884900
+    -1.485600     -1.937500     -2.089200     -2.377000     -2.273800
+    -1.684500     -0.962400     -0.542600     -0.618900     -0.993500
+    -1.221100     -1.155300     -0.778100     -0.157200
+
+!! for NMGLY
+! n-methylglycine map, kevo 2014
+C    N    CT2  C    N    CT2  C    N     24
+
+! phi = -180.0
+     2.625600      2.072300      1.975000      1.264000      1.598000
+     1.354900      0.720200     -0.021400     -0.588000     -1.063100
+    -1.713200     -2.669400     -3.847900     -2.669400     -1.713200
+    -1.063100     -0.588000     -0.021400      0.720200      1.354900
+     1.598000      1.264000      1.975000      2.072300
+
+! phi = -165.0
+     0.848700      0.910300      1.269000      0.915600      1.228900
+     1.136700      0.391200     -0.580300     -1.530100     -2.457900
+    -3.315300     -4.027400     -2.511800     -1.197400     -0.417400
+    -0.206500     -0.061100      0.339700      0.988300      1.484900
+     1.581000      1.821000      2.061500      1.626000
+
+! phi = -150.0
+     0.082300      0.767500      0.957000      1.315800      0.967100
+     1.076100      0.409300     -0.689000     -1.682600     -2.118000
+    -4.379400     -2.887600     -1.256300     -0.072100      0.111400
+    -0.144000     -0.172300      0.091100      0.536400      0.834600
+     0.741500      0.557500      0.901400      0.606000
+
+! phi = -135.0
+     0.269800      0.540900      0.923700      0.997300      0.600500
+     0.724500      0.543000     -0.041900     -0.610400     -0.672200
+    -3.282700     -1.656500     -0.130200      0.367800     -0.025100
+    -0.369200     -0.414400     -0.317600     -0.000400      0.206600
+     0.027200     -0.442700      0.356900      0.258200
+
+! phi = -120.0
+     0.349900      0.465000      0.634800      0.560200      0.281400
+     0.324600      0.149500     -0.476200     -0.993200     -2.930700
+    -1.847200     -0.388300      0.538600      0.288000     -0.128100
+    -0.313600     -0.164400      0.062600      0.033800      0.096500
+    -0.107900     -0.609600      0.470400      0.406100
+
+! phi = -105.0
+     0.496800      0.335900      0.257700      0.045100     -0.208600
+     0.059600      0.113300     -0.380000     -0.709800     -0.746500
+    -0.269100      0.769800      0.597600      0.351200      0.077200
+     0.132300      0.352900      0.596800      0.613300      0.233500
+     0.096700     -0.156500      0.798700      0.711400
+
+! phi =  -90.0
+     0.267900     -0.177600     -0.437200     -0.649100     -0.676300
+     0.003900      0.195600     -0.029600     -0.307300      0.035500
+     1.607100      1.482100      1.396000      1.224200      1.036700
+     0.838900      0.635300      0.573000      0.560900      0.393700
+     0.081400     -0.025000      0.975600      0.770600
+
+! phi =  -75.0
+    -0.802100     -1.346400     -1.524800     -1.383300     -0.839500
+     0.281100      0.520100     -0.142800     -0.244300      0.216100
+     1.139000      2.171100      2.068500      1.347200      2.921400
+     0.984600      0.439000      0.143500      0.166100      0.182200
+    -0.280200     -0.678200      0.218500     -0.105400
+
+! phi =  -60.0
+    -2.242500     -2.445000     -2.055900     -1.170400      0.242800
+     1.167600      0.499600     -0.157000     -0.309300      0.108700
+     1.130600      1.869400      1.603200      0.633400      1.865800
+     1.267200      0.732100      0.380100      0.226500     -0.050500
+    -1.030800     -1.602100     -1.446700     -1.683200
+
+! phi =  -45.0
+    -2.153000     -1.615300     -0.441900      0.936200      1.911200
+     1.490300      0.295700     -0.524500     -0.650700      0.024900
+     1.102900      1.807700      1.624500      0.996100      3.298700
+     2.646700      2.152000      1.958700      1.575800      0.267300
+    -1.613300     -2.780600     -2.390400     -2.163300
+
+! phi =  -30.0
+     0.398200      1.536200      3.062400      1.351900      0.832200
+    -0.010500     -1.122200     -1.482000     -0.770400      0.307800
+     1.794800      2.656300      2.827700      2.688700      3.260900
+     2.673300      2.324200      1.782300      1.166400     -0.312100
+    -2.246200     -2.491200     -1.212500     -0.253300
+
+! phi =  -15.0
+     3.317800      6.837300      5.812700      0.585000     -0.371700
+    -1.518700     -2.115200     -1.334400     -0.300600      1.425400
+     2.864800      3.605500      3.919700      4.023100      3.418500
+     2.717100      1.860300      0.575200     -0.293300     -1.683600
+    -2.535800     -1.544100      0.606400      2.365600
+
+! phi =    0.0
+     4.812400      4.069300      2.073500     -0.550600     -1.744000
+    -2.289700     -1.617300     -0.493100      0.905900      2.379300
+     3.350700      4.670900      4.422300      4.670900      3.350700
+     2.379300      0.905900     -0.493100     -1.617300     -2.289700
+    -1.744000     -0.550600      2.073500      4.069300
+
+! phi =   15.0
+     3.317800      2.365600      0.606400     -1.544100     -2.535800
+    -1.683600     -0.293300      0.575200      1.860300      2.717100
+     3.418500      4.023100      3.919700      3.605500      2.864800
+     1.425400     -0.300600     -1.334400     -2.115200     -1.518700
+    -0.371700      0.585000      5.812700      6.837300
+
+! phi =   30.0
+     0.398200     -0.253300     -1.212500     -2.491200     -2.246200
+    -0.312100      1.166400      1.782300      2.324200      2.673300
+     3.260900      2.688700      2.827700      2.656300      1.794800
+     0.307800     -0.770400     -1.482000     -1.122200     -0.010500
+     0.832200      1.351900      3.062400      1.536200
+
+! phi =   45.0
+    -2.153000     -2.163300     -2.390400     -2.780600     -1.613300
+     0.267300      1.575800      1.958700      2.152000      2.646700
+     3.298700      0.996100      1.624500      1.807700      1.102900
+     0.024900     -0.650700     -0.524500      0.295700      1.490300
+     1.911200      0.936200     -0.441900     -1.615300
+
+! phi =   60.0
+    -2.242500     -1.683200     -1.446700     -1.602100     -1.030800
+    -0.050500      0.226500      0.380100      0.732100      1.267200
+     1.865800      0.633400      1.603200      1.869400      1.130600
+     0.108700     -0.309300     -0.157000      0.499600      1.167600
+     0.242800     -1.170400     -2.055900     -2.445000
+
+! phi =   75.0
+    -0.802100     -0.105400      0.218500     -0.678200     -0.280200
+     0.182200      0.166100      0.143500      0.439000      0.984600
+     2.921400      1.347200      2.068500      2.171100      1.139000
+     0.216100     -0.244300     -0.142800      0.520100      0.281100
+    -0.839500     -1.383300     -1.524800     -1.346400
+
+! phi =   90.0
+     0.267900      0.770600      0.975600     -0.025000      0.081400
+     0.393700      0.560900      0.573000      0.635300      0.838900
+     1.036700      1.224200      1.396000      1.482100      1.607100
+     0.035500     -0.307300     -0.029600      0.195600      0.003900
+    -0.676300     -0.649100     -0.437200     -0.177600
+
+! phi =  105.0
+     0.496800      0.711400      0.798700     -0.156500      0.096700
+     0.233500      0.613300      0.596800      0.352900      0.132300
+     0.077200      0.351200      0.597600      0.769800     -0.269100
+    -0.746500     -0.709800     -0.380000      0.113300      0.059600
+    -0.208600      0.045100      0.257700      0.335900
+
+! phi =  120.0
+     0.349900      0.406100      0.470400     -0.609600     -0.107900
+     0.096500      0.033800      0.062600     -0.164400     -0.313600
+    -0.128100      0.288000      0.538600     -0.388300     -1.847200
+    -2.930700     -0.993200     -0.476200      0.149500      0.324600
+     0.281400      0.560200      0.634800      0.465000
+
+! phi =  135.0
+     0.269800      0.258200      0.356900     -0.442700      0.027200
+     0.206600     -0.000400     -0.317600     -0.414400     -0.369200
+    -0.025100      0.367800     -0.130200     -1.656500     -3.282700
+    -0.672200     -0.610400     -0.041900      0.543000      0.724500
+     0.600500      0.997300      0.923700      0.540900
+
+! phi =  150.0
+     0.082300      0.606000      0.901400      0.557500      0.741500
+     0.834600      0.536400      0.091100     -0.172300     -0.144000
+     0.111400     -0.072100     -1.256300     -2.887600     -4.379400
+    -2.118000     -1.682600     -0.689000      0.409300      1.076100
+     0.967100      1.315800      0.957000      0.767500
+
+! phi =  165.0
+     0.848700      1.626000      2.061500      1.821000      1.581000
+     1.484900      0.988300      0.339700     -0.061100     -0.206500
+    -0.417400     -1.197400     -2.511800     -4.027400     -3.315300
+    -2.457900     -1.530100     -0.580300      0.391200      1.136700
+     1.228900      0.915600      1.269000      0.910300
+
+end
+
+return

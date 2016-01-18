@@ -1,0 +1,602 @@
+* Topology and Parameter Stream File for heme and related
+* ligands and patches.
+*
+
+!Parent files that have to be read prior to streaming this file
+!top_all36_prot.rtf
+!par_all36_prot.prm
+
+!Testcase
+!test_all36_prot_heme.inp
+
+read rtf card append
+* Topology for heme and related compounds and patches
+*
+31  1
+
+MASS   486 CPA   12.01100 C ! heme alpha-C
+MASS   487 CPB   12.01100 C ! heme beta-C
+MASS   488 CPM   12.01100 C ! heme meso-C
+MASS   489 CM    12.01100 C ! heme CO carbon
+MASS   490 CST   12.01100 C ! CO2 carbon 
+MASS   491 NPH   14.00700 N ! heme pyrrole N
+MASS   492 OM    15.99900 O ! heme CO/O2 oxygen
+MASS   493 OST   15.99900 O ! CO2 oxygen
+MASS   494 FE    55.84700 Fe ! heme iron 56
+
+RESI HEME        -2.00 ! 6-liganded planar heme
+GROUP   
+ATOM FE   FE      0.24 !       O2A   O1A             O2D  O1D
+ATOM NA   NPH    -0.18 !         \\ //                 \\ //
+ATOM NB   NPH    -0.18 !          CGA                   CGD
+ATOM NC   NPH    -0.18 !           |                     |
+ATOM ND   NPH    -0.18 !    HBA1--CBA--HBA2  HA   HBD1--CBD--HBD2
+ATOM C1A  CPA     0.12 !           |          |          |
+ATOM C2A  CPB    -0.06 !    HAA1--CAA-HAA2  _CHA_ HAD1--CAD--HAD2
+ATOM C3A  CPB    -0.06 !           |       /     \       |
+ATOM C4A  CPA     0.12 !          C2A---C1A       C4D---C3D
+ATOM C1B  CPA     0.12 !           |     |         |     |
+ATOM C2B  CPB    -0.06 !HMA1\      |     |         |     |      /HMD1
+ATOM C3B  CPB    -0.06 !HMA2-CMA--C3A    NA       ND    C2D--CMD-HMD2
+ATOM C4B  CPA     0.12 !HMA3/       \   / \       / \   /       \HMD3
+ATOM C1C  CPA     0.12 !             C4A   \     /   C1D
+ATOM C2C  CPB    -0.06 !            /       \   /       \
+ATOM C3C  CPB    -0.06 !      HB--CHB        FE         CHD--HD
+ATOM C4C  CPA     0.12 !            \       /   \       /
+ATOM C1D  CPA     0.12 !             C1B   /     \   C4C        HAC
+ATOM C2D  CPB    -0.06 !HMB1\       /   \ /       \ /   \       /
+ATOM C3D  CPB    -0.06 !HMB2-CMB--C2B    NB       NC    C3C--CAC
+ATOM C4D  CPA     0.12 !HMB3/      |     |         |     |     \\  /HBC1
+GROUP                  !           |     |         |     |      CBC
+ATOM CHA  CPM    -0.10 !          C3B---C4B       C1C---C2C        \HBC2
+ATOM HA   HA      0.10 !           |       \_CHC_/       |
+GROUP                  !          CAB         |         CMC--HMC3
+ATOM CHB  CPM    -0.10 !         //  \        HC       /  | 
+ATOM HB   HA      0.10 !        CBB  HAB           HMC1  HMC2
+GROUP                  !       /   \
+ATOM CHC  CPM    -0.10 !    HBB1  HBB2
+ATOM HC   HA      0.10 !
+GROUP   
+ATOM CHD  CPM    -0.10
+ATOM HD   HA      0.10
+GROUP   
+ATOM CMA  CT3    -0.27
+ATOM HMA1 HA3     0.09
+ATOM HMA2 HA3     0.09
+ATOM HMA3 HA3     0.09
+GROUP   
+ATOM CAA  CT2    -0.18
+ATOM HAA1 HA2     0.09
+ATOM HAA2 HA2     0.09
+GROUP   
+ATOM CBA  CT2    -0.28
+ATOM HBA1 HA2     0.09
+ATOM HBA2 HA2     0.09
+ATOM CGA  CC      0.62
+ATOM O1A  OC     -0.76
+ATOM O2A  OC     -0.76
+GROUP   
+ATOM CMB  CT3    -0.27
+ATOM HMB1 HA3     0.09
+ATOM HMB2 HA3     0.09
+ATOM HMB3 HA3     0.09
+GROUP   
+ATOM CAB  CE1    -0.15 !vinyl parameters updated, adm jr., May 2002
+ATOM HAB  HE1     0.15
+GROUP
+ATOM CBB  CE2    -0.42
+ATOM HBB1 HE2     0.21
+ATOM HBB2 HE2     0.21
+GROUP   
+ATOM CMC  CT3    -0.27
+ATOM HMC1 HA3     0.09
+ATOM HMC2 HA3     0.09
+ATOM HMC3 HA3     0.09
+GROUP   
+ATOM CAC  CE1    -0.15
+ATOM HAC  HE1     0.15
+GROUP
+ATOM CBC  CE2    -0.42
+ATOM HBC1 HE2     0.21
+ATOM HBC2 HE2     0.21
+GROUP   
+ATOM CMD  CT3    -0.27
+ATOM HMD1 HA3     0.09
+ATOM HMD2 HA3     0.09
+ATOM HMD3 HA3     0.09
+GROUP   
+ATOM CAD  CT2    -0.18
+ATOM HAD1 HA2     0.09
+ATOM HAD2 HA2     0.09
+GROUP   
+ATOM CBD  CT2    -0.28
+ATOM HBD1 HA2     0.09
+ATOM HBD2 HA2     0.09
+ATOM CGD  CC      0.62
+ATOM O1D  OC     -0.76
+ATOM O2D  OC     -0.76
+BOND FE  NA    FE  NB    FE  NC    FE  ND    NA  C1A   
+BOND C1A C2A   C2A C3A   C3A C4A   NA  C4A   C2A CAA   
+BOND CAA CBA   CBA CGA   CGA O1A   CGA O2A   C3A CMA   
+BOND CHB C4A   CHB C1B   NB  C1B   C1B C2B   C2B C3B   
+BOND C3B C4B   NB  C4B   C2B CMB   C3B CAB   CAB CBB   
+BOND CHC C4B   CHC C1C   NC  C1C   C1C C2C   C2C C3C   
+BOND C3C C4C   NC  C4C   C2C CMC   C3C CAC   CAC CBC   
+BOND CHD C4C   CHD C1D   ND  C1D   C1D C2D   C2D C3D   
+BOND C3D C4D   ND  C4D   C2D CMD   C3D CAD   CAD CBD   
+BOND CBD CGD   CGD O1D   CGD O2D   CHA C4D   CHA C1A   
+BOND CHA HA    CHB HB    CHC HC    CHD HD   
+BOND CAA HAA1  CAA HAA2  CBA HBA1  CBA HBA2   
+BOND CMA HMA1  CMA HMA2  CMA HMA3   
+BOND CMB HMB1  CMB HMB2  CMB HMB3   
+BOND CAB HAB   CBB HBB1  CBB HBB2   
+BOND CMC HMC1  CMC HMC2  CMC HMC3   
+BOND CAC HAC   CBC HBC1  CBC HBC2   
+BOND CMD HMD1  CMD HMD2  CMD HMD3   
+BOND CAD HAD1  CAD HAD2  CBD HBD1  CBD HBD2   
+IMPR C2A C1A C3A CAA  C3A C2A C4A CMA  C2B C1B C3B CMB   
+IMPR C3B C2B C4B CAB  C2C C1C C3C CMC  C3C C2C C4C CAC   
+IMPR C2D C1D C3D CMD  C3D C2D C4D CAD  
+IMPR CGA CBA O2A O1A  CGD CBD O2D O1D
+IMPR C4A NA C1A C2A  C1A NA C4A C3A   
+IMPR C4B NB C1B C2B  C1B NB C4B C3B   
+IMPR C4C NC C1C C2C  C1C NC C4C C3C   
+IMPR C4D ND C1D C2D  C1D ND C4D C3D   
+IMPR NA C1A C2A C3A  NA C4A C3A C2A   
+IMPR NB C1B C2B C3B  NB C4B C3B C2B   
+IMPR NC C1C C2C C3C  NC C4C C3C C2C   
+IMPR ND C1D C2D C3D  ND C4D C3D C2D   
+IMPR NA C1A CHA C4D  NA C4A CHB C1B   
+IMPR NB C1B CHB C4A  NB C4B CHC C1C   
+IMPR NC C1C CHC C4B  NC C4C CHD C1D   
+IMPR ND C1D CHD C4C  ND C4D CHA C1A   
+IMPR CHA C1A C4D HA   
+IMPR CHB C1B C4A HB   
+IMPR CHC C1C C4B HC   
+IMPR CHD C1D C4C HD   
+IMPR C1A C2A CHA NA  C4A C3A CHB NA   
+IMPR C1B C2B CHB NB  C4B C3B CHC NB   
+IMPR C1C C2C CHC NC  C4C C3C CHD NC   
+IMPR C1D C2D CHD ND  C4D C3D CHA ND   
+IMPR NA C1A C4A FE   
+IMPR NB C1B C4B FE   
+IMPR NC C1C C4C FE   
+IMPR ND C1D C4D FE   
+!No vinyl impropers in update
+!IMPR CAB CBB C3B HAB  HAB CAB CBB HBB2  CAB CBB HBB2 HBB1   
+!IMPR CAC CBC C3C HAC  HAC CAC CBC HBC2  CAC CBC HBC2 HBC1   
+ACCEPTOR NA   
+ACCEPTOR O1A    ! CGA
+ACCEPTOR O2A    ! CGA
+ACCEPTOR NB   
+ACCEPTOR NC   
+ACCEPTOR ND   
+ACCEPTOR O1D    ! CGD
+ACCEPTOR O2D    ! CGD
+IC FE   NA   C4A  C3A   0.0000  0.0000  180.0000  0.0000  0.0000
+IC C3A  C4A  NA   C1A   0.0000  0.0000    0.0000  0.0000  0.0000
+IC FE   NA   C1A  C2A   0.0000  0.0000  180.0000  0.0000  0.0000
+IC C4A  NA   FE   NB    0.0000  0.0000    0.0000  0.0000  0.0000
+IC NA   FE   NB   C1B   0.0000  0.0000    0.0000  0.0000  0.0000
+IC FE   NB   C1B  C2B   0.0000  0.0000  180.0000  0.0000  0.0000
+IC C2B  C1B  NB   C4B   0.0000  0.0000    0.0000  0.0000  0.0000
+IC FE   NB   C4B  C3B   0.0000  0.0000  180.0000  0.0000  0.0000
+IC C4B  NB   FE   NC    0.0000  0.0000    0.0000  0.0000  0.0000
+IC NB   FE   NC   C1C   0.0000  0.0000    0.0000  0.0000  0.0000
+IC FE   NC   C1C  C2C   0.0000  0.0000  180.0000  0.0000  0.0000
+IC C2C  C1C  NC   C4C   0.0000  0.0000    0.0000  0.0000  0.0000
+IC FE   NC   C4C  C3C   0.0000  0.0000  180.0000  0.0000  0.0000
+IC C4C  NC   FE   ND    0.0000  0.0000    0.0000  0.0000  0.0000
+IC NC   FE   ND   C1D   0.0000  0.0000    0.0000  0.0000  0.0000
+IC FE   ND   C1D  C2D   0.0000  0.0000  180.0000  0.0000  0.0000
+IC C2D  C1D  ND   C4D   0.0000  0.0000    0.0000  0.0000  0.0000
+IC FE   ND   C4D  C3D   0.0000  0.0000  180.0000  0.0000  0.0000
+IC C4A  NA   FE   CHB   0.0000  0.0000    0.0000  0.0000  0.0000
+IC NA   FE   CHB  HB    0.0000  0.0000    0.0000  0.0000  0.0000
+IC C4B  NB   FE   CHC   0.0000  0.0000    0.0000  0.0000  0.0000
+IC NB   FE   CHC  HC    0.0000  0.0000    0.0000  0.0000  0.0000
+IC C4C  NC   FE   CHD   0.0000  0.0000    0.0000  0.0000  0.0000
+IC NC   FE   CHD  HD    0.0000  0.0000    0.0000  0.0000  0.0000
+IC C4D  ND   FE   CHA   0.0000  0.0000    0.0000  0.0000  0.0000
+IC ND   FE   CHA  HA    0.0000  0.0000    0.0000  0.0000  0.0000
+IC C3B  C1B  *C2B CMB   0.0000  0.0000  180.0000  0.0000  0.0000
+IC C4B  C2B  *C3B CAB   0.0000  0.0000  180.0000  0.0000  0.0000
+IC C2B  C3B  CAB  CBB   0.0000  0.0000  -45.0000  0.0000  0.0000 ! PREVENTS VINYL COLLISION
+IC CHC  C1C  C2C  CMC   0.0000  0.0000    0.0000  0.0000  0.0000
+IC C4C  C2C  *C3C CAC   0.0000  0.0000  180.0000  0.0000  0.0000
+IC C2C  C3C  CAC  CBC   0.0000  0.0000  -45.0000  0.0000  0.0000 ! PREVENTS VINYL COLLISION
+IC C4D  C2D  *C3D CAD   0.0000  0.0000  180.0000  0.0000  0.0000
+IC C3D  C1D  *C2D CMD   0.0000  0.0000  180.0000  0.0000  0.0000
+IC C2D  C3D  CAD  CBD   0.0000  0.0000 -120.0000  0.0000  0.0000
+IC C3D  CAD  CBD  CGD   0.0000  0.0000  180.0000  0.0000  0.0000
+IC CAD  CBD  CGD  O1D   0.0000  0.0000    0.0000  0.0000  0.0000
+IC CAD  CBD  CGD  O2D   0.0000  0.0000  180.0000  0.0000  0.0000
+IC C4A  C2A  *C3A CMA   0.0000  0.0000  180.0000  0.0000  0.0000
+IC C3A  C1A  *C2A CAA   0.0000  0.0000  180.0000  0.0000  0.0000
+IC C1A  C2A  CAA  CBA   0.0000  0.0000  120.0000  0.0000  0.0000
+IC C2A  CAA  CBA  CGA   0.0000  0.0000  180.0000  0.0000  0.0000
+IC CAA  CBA  CGA  O1A   0.0000  0.0000    0.0000  0.0000  0.0000
+IC CAA  CBA  CGA  O2A   0.0000  0.0000  180.0000  0.0000  0.0000
+IC C3C  C1C  *C2C CMC   0.0000  0.0000  180.0000  0.0000  0.0000
+IC CBA  O1A  *CGA O2A   0.0000  0.0000  180.0000  0.0000  0.0000
+IC CBD  O1D  *CGD O2D   0.0000  0.0000  180.0000  0.0000  0.0000
+PATCHING FIRS NONE LAST NONE   
+
+RESI O2           0.00 ! O2 ligand for heme
+GROUP                
+ATOM O1   OM      0.021
+ATOM O2   OM     -0.021
+BOND O1 O2   
+PATCHING FIRS NONE LAST NONE   
+
+RESI CO           0.00 ! CO ligand for heme
+GROUP   
+ATOM C    CM      0.021
+ATOM O    OM     -0.021
+TRIPLE C O   
+PATCHING FIRS NONE LAST NONE   
+
+RESI CO2             0.00 ! Carbon Dioxide, John Straub
+GROUP                     ! requires AUTOgenerate ANGLes
+ATOM C      CST      0.596
+ATOM OC1    OST     -0.298
+ATOM OC2    OST     -0.298
+BOND OC1 C   OC2 C
+!ANGLE OC1 C OC2
+PATCHING FIRS NONE LAST NONE
+
+PRES FHEM         0.00 ! FIX UP THE HEME BY DELETING UNWANTED AUTOGENERATED ANGLES
+                       ! unliganded heme patch
+                       ! do NOT use AUTOgenerate ANGLes DIHEdrals after this patch
+DELETE ANGLE 1NA 1FE 1NC  1NB 1FE 1ND   
+
+PRES PHEM         0.00 ! Patch for HEME to His link.
+                       ! Patch residues must be 1-HIS, and 2-HEME.
+                       ! do NOT use AUTOgenerate ANGLes DIHEdrals after this patch
+DELETE ANGLE 2NA 2FE 2NC  2NB 2FE 2ND 
+BOND 1NE2 2FE   
+ANGLE 1CD2 1NE2 2FE  1CE1 1NE2 2FE  1NE2 2FE 2NA  1NE2 2FE 2NB   
+ANGLE 1NE2 2FE  2NC  1NE2 2FE  2ND   
+DIHE 1CD2  1NE2  2FE  2NA
+IC 1CD2 1NE2 2FE  2NA   0.0000  0.0000    0.0000  0.0000  0.0000
+IC 1CD2 1NE2 2FE  2NB   0.0000  0.0000    0.0000  0.0000  0.0000
+IC 1CD2 1NE2 2FE  2NB   0.0000  0.0000    0.0000  0.0000  0.0000
+IC 1CD2 1NE2 2FE  2NB   0.0000  0.0000    0.0000  0.0000  0.0000
+IC 1CE1 1NE2 2FE  2NA   0.0000  0.0000    0.0000  0.0000  0.0000
+
+PRES PLOH         0.00 ! Patch residue for Heme ligand.  Residues must be
+                       ! 1-Tyr , 2-HEME , and 3-HIS
+                       ! OH of the Tyr is bonded to the iron.
+                       ! do NOT use AUTOgenerate ANGLes DIHEdrals after this patch
+BOND 1OH 2FE        
+ANGLE 1HH 1OH 2FE
+ANGLE 1OH 2FE 2NA  1OH 2FE 2NB !1CZ 1OH 2FE  
+ANGLE 1OH 2FE 2NC  1OH 2FE 2ND 
+!DIHE 1CZ 1OH 2FE 2NA   
+IC 1CZ  1OH  2FE  2NA   0.0000  0.0000    0.0000  0.0000  0.0000
+IC 1CZ  1OH  2FE  3NE2  0.0000  0.0000    0.0000  0.0000  0.0000
+
+PRES PLO2         0.00 ! Patch residue for Heme ligand.  Residues must be
+                       ! 1-O2 , 2-HEME , and 3-HIS
+                       ! O1 of the oxygen is bonded to the iron.
+                       ! do NOT use AUTOgenerate ANGLes DIHEdrals after this patch
+BOND 1O1 2FE        
+ANGLE 1O2 1O1 2FE  1O1 2FE 2NA  1O1 2FE 2NB 
+ANGLE 1O1 2FE 2NC  1O1 2FE 2ND   
+DIHE 1O2 1O1 2FE 2NA   
+IC 1O2  1O1  2FE  2NA   0.0000  0.0000    0.0000  0.0000  0.0000
+IC 1O2  1O1  2FE  3NE2  0.0000  0.0000    0.0000  0.0000  0.0000
+
+PRES PLIG         0.00 ! Patch residue for Heme ligand. Residues must be,
+                       ! 1-CO , 2-HEME , and 3-HIS
+                       ! do NOT use AUTOgenerate ANGLes DIHEdrals after this patch
+BOND 1C 2FE          
+ANGLE 1C 2FE 3NE2    
+ANGLE 1O 1C  2FE  
+ANGLE 1C 2FE 2NA  1C 2FE 2NB   
+ANGLE 1C 2FE 2NC  1C 2FE 2ND   
+DIHE 1O  1C  2FE  2NA
+IC 1O   1C   2FE  2NA   0.0000  0.0000    0.0000  0.0000  0.0000
+IC 1O   1C   2FE  3NE2  0.0000  0.0000    0.0000  0.0000  0.0000
+
+!added from top_all22_model_b5i.inp for heme-S-CH3 patch
+RESI MES1       -1.00 ! methylthiolate, adm jr.
+GROUP
+ATOM S    SS    -0.80 !  H11
+ATOM C1   CS    -0.47 !     \
+ATOM H11  HA     0.09 ! H12--C1--S (-)
+ATOM H12  HA     0.09 !     /
+ATOM H13  HA     0.09 !  H13
+                      !
+BOND  S  C1  C1 H11 C1 H12 C1 H13
+IC BLNK H11  C1   S     0.0000  0.0000  60.0000  0.0000  0.0000
+IC S    H11 *C1   H12   0.0000  0.0000 120.0000  0.0000  0.0000
+IC S    H11 *C1   H13   0.0000  0.0000 -120.0000  0.0000  0.0000
+IC H12  H13 *C1   H11   0.0000  0.0000  120.0000  0.0000  0.0000
+patch first none last none
+
+PRES PSUL         0.00 ! Patch for HEME to thiolate (MES1) link
+                       ! Patch residues must be 1-MES1, and 2-HEME.
+                       ! do NOT use AUTOgenerate ANGLes DIHEdrals after this patch
+DELETE ANGLE 2NA 2FE 2NC  2NB 2FE 2ND
+BOND 1S 2FE
+ANGLE 1C1 1S  2FE  1C1 1S  2FE  
+ANGLE 1S  2FE 2NA  1S  2FE 2NB 1S  2FE  2NC  1S  2FE  2ND
+IC 1C1 1S  2FE  2NA   0.0000  0.0000    0.0000  0.0000  0.0000
+IC 1C1 1S  2FE  2NB   0.0000  0.0000    0.0000  0.0000  0.0000
+IC 1C1 1S  2FE  2NB   0.0000  0.0000    0.0000  0.0000  0.0000
+IC 1C1 1S  2FE  2NB   0.0000  0.0000    0.0000  0.0000  0.0000
+
+end
+
+read para card flex append
+* additional parameters for heme
+*
+
+ATOMS
+MASS   486 CPA   12.01100 ! heme alpha-C
+MASS   487 CPB   12.01100 ! heme beta-C
+MASS   488 CPM   12.01100 ! heme meso-C
+MASS   489 CM    12.01100 ! heme CO carbon
+MASS   490 CST   12.01100 ! CO2 carbon 
+MASS   491 NPH   14.00700 ! heme pyrrole N
+MASS   492 OM    15.99900 ! heme CO/O2 oxygen
+MASS   493 OST   15.99900 ! CO2 oxygen
+MASS   494 FE    55.84700 ! heme iron 56
+
+BONDS
+!
+!V(bond) = Kb(b - b0)**2
+!
+!Kb: kcal/mole/A**2
+!b0: A
+!
+!atom type Kb          b0
+!
+C    C     600.000     1.3350 ! ALLOW ARO HEM???
+                ! Heme vinyl substituent (KK, from propene (JCS))
+!HA   C     330.000     1.1000 ! ALLOW ARO HEM???
+                ! Heme vinyl substituent (KK, from propene (JCS))
+!Carbon Dioxide
+CST  OST   937.96      1.1600 ! JES
+!Heme to Sulfate (PSUL) link
+SS   FE    250.0       2.3200 !force constant a guess
+           !equilbrium bond length optimized to reproduce 
+           !CSD survey values of
+           !2.341pm0.01 (mean, standard error)
+           !adm jr., 7/01
+CPB  CE1   450.000     1.3800 ! ALLOW HEM
+                ! Heme (6-liganded): substituents (KK 05/13/91)
+CPB  CPA   299.800     1.4432 ! ALLOW HEM
+                ! Heme (6-liganded): porphyrin macrocycle (KK 05/13/91)
+CPB  CPB   340.700     1.3464 ! ALLOW HEM
+                ! Heme (6-liganded): porphyrin macrocycle (KK 05/13/91)
+CPM  CPA   360.000     1.3716 ! ALLOW HEM
+                ! Heme (6-liganded): porphyrin macrocycle (KK 05/13/91)
+CT2  CPB   230.000     1.4900 ! ALLOW HEM
+                ! Heme (6-liganded): substituents (KK 05/13/91)
+CT3  CPB   230.000     1.4900 ! ALLOW HEM
+                ! Heme (6-liganded): substituents (KK 05/13/91)
+FE   CM    258.000     1.9000 ! ALLOW HEM
+                ! Heme (6-liganded): CO ligand (KK 05/13/91)
+FE   CPM     0.000     3.3814 ! ALLOW HEM
+                ! Heme (6-liganded): for "ic para" only (KK 05/13/91)
+HA   CPM   367.600     1.0900 ! ALLOW HEM
+                ! Heme (6-liganded): porphyrin macrocycle (KK 05/13/91)
+NPH  CPA   377.200     1.3757 ! ALLOW HEM
+                ! Heme (6-liganded): porphyrin macrocycle (KK 05/13/91)
+NPH  FE    270.200     1.9580 ! ALLOW HEM
+                ! Heme (6-liganded): porphyrin macrocycle (KK 05/13/91)
+NR2  FE     65.000     2.2000 ! ALLOW HEM
+                ! Heme (6-liganded): His ligand (KK 05/13/91)
+OM   CM   1115.000     1.1280 ! ALLOW HEM
+                ! Heme (6-liganded): CO ligand (KK 05/13/91)
+OM   FE    250.000     1.8000 ! ALLOW HEM
+                ! Heme (6-liganded): O2 ligand (KK 05/13/91)
+OM   OM    600.000     1.2300 ! ALLOW HEM
+                ! Heme (6-liganded): O2 ligand (KK 05/13/91)
+OH1  FE    250.000     2.0000 ! patch PLOH
+
+ANGLES
+!
+!V(angle) = Ktheta(Theta - Theta0)**2
+!
+!V(Urey-Bradley) = Kub(S - S0)**2
+!
+!Ktheta: kcal/mole/rad**2
+!Theta0: degrees
+!Kub: kcal/mole/A**2 (Urey-Bradley)
+!S0: A
+!
+!atom types     Ktheta    Theta0   Kub     S0
+!
+!HA   C    C      50.000   120.5000 ! ALLOW   PEP POL ARO???
+                ! Heme vinyl substituent (KK from propene (JCS))
+!HA   C    HA     50.000   118.0000 ! ALLOW   PEP POL ARO???
+                ! Heme vinyl substituent (KK from propene (JCS))
+!Carbon Dioxide, JES
+OST  CST  OST    3000.00  180.0000 ! CO2, JES
+!Heme to Sulfate (PSUL) link
+CS   SS   FE    50.0      100.6    !force constant a guess
+                !equilibrium angle optimized to reproduce
+                !CSD survey values
+                !107.5pm0.6 (mean, standard error)
+                !adm jr., 7/01
+SS   FE   NPH   100.0       90.0    !force constant a guess
+                !adm jr., 7/01
+CPA  CPB  CE1    70.000   126.7400 ! ALLOW HEM
+                ! Heme (6-liganded): substituents (KK 05/13/91)
+CPA  CPM  CPA    94.200   125.1200 ! ALLOW HEM
+                ! Heme (6-liganded): porphyrin macrocycle (KK 05/13/91)
+CPA  NPH  CPA   139.300   103.9000 ! ALLOW HEM
+                ! Heme (6-liganded): porphyrin macrocycle (KK 05/13/91)
+CPB  CE1  CE2    70.000   121.5000 ! ALLOW HEM
+                ! Heme (6-liganded): substituents (KK 05/13/91)
+CPB  CPB  CE1    70.000   126.7500 ! ALLOW HEM
+                ! Heme (6-liganded): substituents (KK 05/13/91)
+CPB  CPB  CPA    30.800   106.5100 ! ALLOW HEM
+                ! Heme (6-liganded): porphyrin macrocycle (KK 05/13/91)
+CPM  CPA  CPB    61.600   124.0700 ! ALLOW HEM
+                ! Heme (6-liganded): porphyrin macrocycle (KK 05/13/91)
+CT2  CPB  CPA    65.000   126.7400 ! ALLOW HEM
+                ! Heme (6-liganded): substituents (KK 05/13/91)
+CT2  CPB  CPB    65.000   126.7500 ! ALLOW HEM
+                ! Heme (6-liganded): substituents (KK 05/13/91)
+CT2  CT2  CPB    70.000   113.0000 ! ALLOW HEM
+                ! Heme (6-liganded): substituents (KK 05/13/91)
+CT3  CPB  CPA    65.000   126.7400 ! ALLOW HEM
+                ! Heme (6-liganded): substituents (KK 05/13/91)
+CT3  CPB  CPB    65.000   126.7500 ! ALLOW HEM
+                ! Heme (6-liganded): substituents (KK 05/13/91)
+FE   NPH  CPA    96.150   128.0500 ! ALLOW HEM
+                ! Heme (6-liganded): porphyrin macrocycle (KK 05/13/91)
+FE   NR2  CPH1   30.000   133.0000 ! ALLOW HEM
+                ! Heme (6-liganded): ligand links (KK 05/13/91)
+FE   NR2  CPH2   30.000   123.0000 ! ALLOW HEM
+                ! Heme (6-liganded): ligand links (KK 05/13/91)
+!HA   C    CPB    50.000   120.0000 ! ALLOW HEM
+                ! Heme (6-liganded): substituents (KK 05/13/91)
+HA   CPM  CPA    12.700   117.4400 ! ALLOW HEM
+                ! Heme (6-liganded): porphyrin macrocycle (KK 05/13/91)
+HA   CPM  FE      0.000   180.0000 ! ALLOW HEM
+                ! Heme (6-liganded): for "ic para" only (KK 05/13/91)
+HA2  CT2  CPB    50.000   109.5000 ! ALLOW HEM
+                ! Heme (6-liganded): substituents (KK 05/13/91)
+HA3  CT3  CPB    50.000   109.5000 ! ALLOW HEM
+                ! Heme (6-liganded): substituents (KK 05/13/91)
+HE1  CE1  CPB    50.000   120.0000 ! ALLOW HEM
+                ! Heme (6-liganded): substituents (KK 05/13/91)
+NPH  CPA  CPB   122.000   111.5400 ! ALLOW HEM
+                ! Heme (6-liganded): porphyrin macrocycle (KK 05/13/91)
+NPH  CPA  CPM    88.000   124.3900 ! ALLOW HEM
+                ! Heme (6-liganded): porphyrin macrocycle (KK 05/13/91)
+NPH  FE   CM     50.000    90.0000 ! ALLOW HEM
+                ! Heme (6-liganded): ligand links (KK 05/13/91)
+NPH  FE   CPM     0.000    45.0000 ! ALLOW HEM
+                ! Heme (6-liganded): for "ic para" only  (KK 05/13/91)
+NPH  FE   NPH    14.390    90.0000 ! ALLOW HEM
+                ! Heme (6-liganded): porphyrin macrocycle (KK 05/13/91)
+NR2  FE   CM     50.000   180.0000 ! ALLOW HEM
+                ! Heme (6-liganded): ligand links (KK 05/13/91)
+NR2  FE   NPH    50.000    90.0000 ! ALLOW HEM
+                ! Heme (6-liganded): ligand links (KK 05/13/91)
+OM   CM   FE     35.000   180.0000 ! ALLOW HEM
+                ! Heme (6-liganded): ligand links (KK 05/13/91)
+OM   FE   NPH     5.000    90.0000 ! ALLOW HEM
+                ! Heme (6-liganded): ligand links (KK 05/13/91)
+OM   OM   FE      0.000   180.0000 ! ALLOW HEM
+                ! Heme (6-liganded): ligand links (KK 05/13/91)
+H    OH1  FE     65.000   108.0000 ! patch PLOH
+OH1  FE   NPH     5.000    90.0000 ! patch PLOH
+
+DIHEDRALS
+!
+!V(dihedral) = Kchi(1 + cos(n(chi) - delta))
+!
+!Kchi: kcal/mole
+!n: multiplicity
+!delta: degrees
+!
+!atom types             Kchi    n   delta
+!
+!HA   C    C    HA     20.0000         0      0.0000 ! ALLOW   PEP POL ARO???
+                ! Heme vinyl substituent (KK, from propene (JCS))
+!HA   HA   C    C      20.0000         0    180.0000 ! ALLOW   PEP POL ARO???
+                ! Heme vinyl substituent (KK, from propene (JCS))
+HE2  CE2  CE1  CPB      5.2000  2   180.00 !
+                ! for vinyl, from butene, yin/adm jr., 12/95
+!Heme to Sulfate (PSUL) link
+X    FE   SS   X        0.0000  4     0.00 ! guess
+                !adm jr., 7/01
+!X    CS   SS   X        0.0000  3     0.20 ! guess
+                !from methanethiol, HS S CT3 HA
+                !adm jr., 7/01
+!X    C    C    X        4.0000  2   180.00 ! ALLOW HEM
+                ! Heme (6-liganded): substituents (KK 05/13/91)
+X    CPA  CPB  X        0.0000  2     0.00 ! ALLOW HEM
+                ! Heme (6-liganded): dummy for "auto dihe" (KK 05/13/91)
+X    CPA  CPM  X        0.0000  2     0.00 ! ALLOW HEM
+                ! Heme (6-liganded): dummy for "auto dihe" (KK 05/13/91)
+X    CPB  CE1  X        3.0000  2   180.00 ! ALLOW HEM
+                ! Heme (6-liganded): substituents (KK 05/13/91)
+X    CPB  CPB  X        0.0000  2     0.00 ! ALLOW HEM
+                ! Heme (6-liganded): dummy for "auto dihe" (KK 05/13/91)
+X    CPB  CT2  X        0.0000  6     0.00 ! ALLOW HEM
+                ! Heme (6-liganded): substituents (KK 05/13/91)
+X    CPB  CT3  X        0.0000  6     0.00 ! ALLOW HEM
+                ! Heme (6-liganded): substituents (KK 05/13/91)
+X    FE   CM   X        0.0500  4     0.00 ! ALLOW HEM
+                ! Heme (6-liganded): ligands (KK 05/13/91)
+X    FE   NPH  X        0.0000  2     0.00 ! ALLOW HEM
+                ! Heme (6-liganded): for "ic para" only (KK 05/13/91)
+X    FE   NR2  X        0.0500  4     0.00 ! ALLOW HEM
+                ! Heme (6-liganded): from param19.inp
+X    FE   OM   X        0.0000  4     0.00 ! ALLOW HEM
+                ! Heme (6-liganded): ligands (KK 05/13/91)
+X    NPH  CPA  X        0.0000  2     0.00 ! ALLOW HEM
+                ! Heme (6-liganded): dummy for "auto dihe" (KK 05/13/91)
+
+IMPROPER
+!
+!V(improper) = Kpsi(psi - psi0)**2
+!
+!Kpsi: kcal/mole/rad**2
+!psi0: degrees
+!note that the second column of numbers (0) is ignored
+!
+!atom types           Kpsi                   psi0
+!
+CPB  CPA  NPH  CPA    20.8000         0      0.0000 ! ALLOW HEM
+                ! Heme (6-liganded): porphyrin macrocycle (KK 05/13/91)
+CPB  X    X    CE1    90.0000         0      0.0000 ! ALLOW HEM
+                ! Heme (6-liganded): substituents (KK 05/13/91)
+CT2  X    X    CPB    90.0000         0      0.0000 ! ALLOW HEM
+                ! Heme (6-liganded): substituents (KK 05/13/91)
+CT3  X    X    CPB    90.0000         0      0.0000 ! ALLOW HEM
+                ! Heme (6-liganded): substituents (KK 05/13/91)
+HA   CPA  CPA  CPM    29.4000         0      0.0000 ! ALLOW HEM
+                ! Heme (6-liganded): porphyrin macrocycle (KK 05/13/91)
+!HA   CPB  C    C      20.0000         0      0.0000 ! ALLOW HEM ARO
+                ! Heme (6-liganded): substituents (KK 05/13/91)
+NPH  CPA  CPA  FE    137.4000         0      0.0000 ! ALLOW HEM
+                ! Heme (6-liganded): porphyrin macrocycle (KK 05/13/91)
+NPH  CPA  CPB  CPB    40.6000         0      0.0000 ! ALLOW HEM
+                ! Heme (6-liganded): porphyrin macrocycle (KK 05/13/91)
+NPH  CPA  CPM  CPA    18.3000         0      0.0000 ! ALLOW HEM
+                ! Heme (6-liganded): porphyrin macrocycle (KK 05/13/91)
+NPH  CPM  CPB  CPA    32.7000         0      0.0000 ! ALLOW HEM
+                ! Heme (6-liganded): porphyrin macrocycle (KK 05/13/91)
+
+NONBONDED nbxmod  5 atom cdiel fshift vatom vdistance vfswitch -
+cutnb 14.0 ctofnb 12.0 ctonnb 10.0 eps 1.0 e14fac 1.0 wmin 1.5
+                !adm jr., 5/08/91, suggested cutoff scheme
+!
+!V(Lennard-Jones) = Eps,i,j[(Rmin,i,j/ri,j)**12 - 2(Rmin,i,j/ri,j)**6]
+!
+!epsilon: kcal/mole, Eps,i,j = sqrt(eps,i * eps,j)
+!Rmin/2: A, Rmin,i,j = Rmin/2,i + Rmin/2,j
+!
+!atom  ignored    epsilon      Rmin/2   ignored   eps,1-4       Rmin/2,1-4
+!
+CPA    0.000000  -0.090000     1.800000 ! ALLOW HEM
+                ! Heme (6-liganded): porphyrin macrocycle (KK 05/13/91)
+CPB    0.000000  -0.090000     1.800000 ! ALLOW HEM
+                ! Heme (6-liganded): porphyrin macrocycle (KK 05/13/91)
+CPM    0.000000  -0.090000     1.800000 ! ALLOW HEM
+                ! Heme (6-liganded): porphyrin macrocycle (KK 05/13/91)
+CM     0.000000  -0.110000     2.100000 ! ALLOW HEM
+                ! Heme (6-liganded): CO ligand carbon (KK 05/13/91)
+CST    0.000000  -0.058000     1.563000 ! 
+                ! carbon dioxide, JES
+NPH    0.000000  -0.200000     1.850000 ! ALLOW HEM
+                ! Heme (6-liganded): porphyrin macrocycle (KK 05/13/91)
+OM     0.000000  -0.120000     1.700000 ! ALLOW HEM
+                ! Heme (6-liganded): CO ligand oxygen (KK 05/13/91)
+OST    0.000000  -0.165000     1.692000 ! 
+                ! carbon dioxide, JES
+FE     0.010000   0.000000     0.650000 ! ALLOW HEM
+                ! Heme (6-liganded): Iron atom (KK 05/13/91)
+
+end
+
+return

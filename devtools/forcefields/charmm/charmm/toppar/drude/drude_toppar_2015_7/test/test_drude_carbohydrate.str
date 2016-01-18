@@ -1,0 +1,168 @@
+* $Id: test_drude_carbohydrate.str 28 2015-07-29 23:54:15Z alex $
+* Test case, Drude carbohydrate toppar file
+*
+
+set boml 0 ! set to -1 if the series contains 3-membered rings
+
+set nres 47
+
+!polyols
+set resi1 egly 
+set seed1 1 O1 1 C1 1 C2
+set resi2 mglyol 
+set seed2 1 C1 1 C2 1 C3
+set resi3 meryol
+set seed3 1 C1 1 C2 1 C3
+set resi4 dthrol
+set seed4 1 C1 1 C2 1 C3
+set resi5 lthrol
+set seed5 1 C1 1 C2 1 C3
+set resi6 mribol
+set seed6 1 C1 1 C2 1 C3
+set resi7 daraol
+set seed7 1 C1 1 C2 1 C3
+set resi8 laraol
+set seed8 1 C1 1 C2 1 C3
+set resi9 mxylol
+set seed9 1 C1 1 C2 1 C3
+set resi10 mallol 
+set seed10 1 C1 1 C2 1 C3
+set resi11 daltol
+set seed11 1 C1 1 C2 1 C3
+set resi12 laltol
+set seed12 1 C1 1 C2 1 C3
+set resi13 dgluol 
+set seed13 1 C1 1 C2 1 C3
+set resi14 lgluol
+set seed15 1 C1 1 C2 1 C3
+set resi15 dmanol
+set seed15 1 C1 1 C2 1 C3
+set resi16 lmanol
+set seed16 1 C1 1 C2 1 C3
+set resi17 dgulol 
+set seed17 1 C1 1 C2 1 C3
+set resi18 lgulol
+set seed18 1 C1 1 C2 1 C3
+set resi19 didiol 
+set seed19 1 C1 1 C2 1 C3
+set resi20 lidiol
+set seed20 1 C1 1 C2 1 C3
+set resi21 mgalol
+set seed21 1 C1 1 C2 1 C3
+!hexapyranoses
+set resi22 aglc
+set seed22 1 O5 1 C1 1 C2
+set resi23 bglc
+set seed23 1 O5 1 C1 1 C2
+set resi24 aalt
+set seed24 1 O5 1 C1 1 C2
+set resi25 balt
+set seed25 1 O5 1 C1 1 C2
+set resi26 aall
+set seed26 1 O5 1 C1 1 C2
+set resi27 ball
+set seed27 1 O5 1 C1 1 C2
+set resi28 agal
+set seed28 1 O5 1 C1 1 C2
+set resi29 bgal
+set seed29 1 O5 1 C1 1 C2
+set resi30 agul
+set seed30 1 O5 1 C1 1 C2
+set resi31 bgul
+set seed31 1 O5 1 C1 1 C2
+set resi32 aido
+set seed32 1 O5 1 C1 1 C2
+set resi33 bido
+set seed33 1 O5 1 C1 1 C2
+set resi34 aman
+set seed34 1 O5 1 C1 1 C2
+set resi35 bman
+set seed35 1 O5 1 C1 1 C2
+set resi36 atal
+set seed36 1 O5 1 C1 1 C2
+set resi37 btal
+set seed37 1 O5 1 C1 1 C2
+!furanoses
+set resi38 ARIB
+set seed38 1 C4 1 O4 1 C1
+set resi39 BRIB
+set seed39 1 C4 1 O4 1 C1
+set resi40 AARB
+set seed40 1 C4 1 O4 1 C1
+set resi41 BARB
+set seed41 1 C4 1 O4 1 C1
+set resi42 AXYF
+set seed42 1 C4 1 O4 1 C1
+set resi43 BXYF
+set seed43 1 C4 1 O4 1 C1
+set resi44 ALYF
+set seed44 1 C4 1 O4 1 C1
+set resi45 BLYF
+set seed45 1 C4 1 O4 1 C1
+set resi46 ADEO
+set seed46 1 C4 1 O4 1 C1
+set resi47 BDEO
+set seed47 1 C4 1 O4 1 C1
+
+set count 1
+label loop_carb1
+
+set residue @resi@@count
+read sequence @residue 1
+
+bomlev @boml
+generate @residue first none last none setup warn drude dmass 0.4 !show
+bomlev 0
+
+ic param
+ic seed @seed@@count
+ic build 
+coor sdrude
+coor shake
+
+update inbfrq -1 ihbfrq 0 switch atom vatom vswitch cutnb 999.0 ctofnb 997.0 ctonnb 995.0
+
+if @mindr eq 0 then
+  energy
+ else
+  cons harm force 100000. sele .not. type D* end
+  mini ABNR nstep 200 nprint 20
+  cons harm clear
+ endif
+echo @residue starting E: ?ener
+
+if @?pdbdir eq 1 then
+  write psf card name @pdbdir/@residue.psf
+  write coor pdb name @pdbdir/@residue_start.pdb
+ endif
+
+if @mini ne 0 then
+  mini sd nstep 1000 tolgrd 0.0001 nprint 100
+  if ?grms gt 0.0001 mini abnr nstep 1000 tolgrd 0.0001
+  if ?grms gt 0.0001 then
+    echo FATAL ERROR: MINIMIZATION NOT CONVERGED
+    echu
+    echo FATAL ERROR: MINIMIZATION NOT CONVERGED
+    stop
+   endif
+  echo @residue minimized E: ?ener
+  if @?pdbdir eq 1 then ! cannot use 1-line syntax because substitution will fail
+    write coor pdb name @pdbdir/@residue_min.pdb
+   endif
+ endif
+
+coor orient
+coor dipole oxyz select all end 
+echo @residue dipole: ?rdip
+!! Check molecular polarizability
+!VIBRAN
+!diag dscf fini step 0.001
+!END
+
+shake off
+drude reset
+lone clear
+delete atom sele all end
+
+incr count
+if count le @nres goto loop_carb1

@@ -1,0 +1,231 @@
+* Topology and parameters for neutral, aliphatic amines.
+*
+
+!Testcase
+!test_amines.inp
+
+!Reference
+!Chen, I.-J., Yin, D. and MacKerell, Jr., A.D., "Combined Ab
+!initio/Empirical Approach for Optimization of Lennard-Jones Parameters
+!for Polar-Neutral Compounds," Journal of Computational Chemistry,
+!2002, 23:199-213.
+!
+!Note that these parameters are higly optimized to reproduce the
+!corresponding condensed phase properties and have not been incorporated
+!into the CHARMM22 or CHARMM27 biomolecular force fields
+
+!test "append" to determine if previous toppar files have been read and
+!add append to "read rtf card" if true
+set nat ?NATC
+set app
+!We're exploiting what is arguably a bug in the parser. On the left hand side,
+!the quotes have proirity, so NAT is correctly substituted. On the right hand
+!side, the ? has priority and NATC" (sic) is not a valid substitution...
+if "@NAT" ne "?NATC" if @nat ne 0 set app append
+
+read rtf card @app
+* Topology for amines
+*
+31  1
+
+MASS   446 HNT0   1.00800 H ! N-ter H (ammonia)
+MASS   447 HNT1   1.00800 H ! N-ter H (methylamine)
+MASS   448 HNT2   1.00800 H ! N-ter H (dimethylamine)
+MASS   449 HNA1   1.00800 H ! Aliphatic H
+MASS   450 HNA2   1.00800 H ! Aliphatic H
+MASS   451 HNA3   1.00800 H ! Aliphatic H
+MASS   452 N0    14.00700 N ! ammonia nitrogen
+MASS   453 N1    14.00700 N ! methylamine nitrogen
+MASS   454 N2    14.00700 N ! dimethylamine nitrogen
+MASS   455 N3    14.00700 N ! trimethylamine nitrogen
+MASS   456 CNT1  12.01100 C ! methylamine methyl carbon
+MASS   457 CNT2  12.01100 C ! dimethylamine methyl carbon
+MASS   458 CNT3  12.01100 C ! trimethylamine methyl carbon
+
+default first none last none
+
+autogenerate angles dihedrals ! 2/05 update
+
+RESI AMM1   0.00  ! Ammonia
+GROUP
+ATOM N1   N0   -1.125
+ATOM H11  HNT0  0.375
+ATOM H12  HNT0  0.375
+ATOM H13  HNT0  0.375
+BOND N1 H11 N1 H12 N1 H13
+IC  H13  H11 N1  H12    0.0   0.0   180.   0.0  0.0
+IC  H11  H12 N1  H13    0.0   0.0   180.   0.0  0.0
+IC  H12  H13 N1  H11    0.0   0.0   180.   0.0  0.0
+PATC FIRS NONE LAST NONE
+
+RESI MAM1        0.00  !
+GROUP
+ATOM N1   N1    -0.99  !
+ATOM C1   CNT1  -0.06  !  HC1       HN1
+ATOM HN1  HNT1   0.39  !     \      /
+ATOM HN2  HNT1   0.39  ! HC2-C1---N1
+ATOM HC1  HNA1   0.09  !     /      \
+ATOM HC2  HNA1   0.09  !  HC3       HN2
+ATOM HC3  HNA1   0.09  !
+BOND N1  C1  N1  HN1  N1  HN2
+BOND C1 HC1  C1  HC2  C1  HC3
+IMPH N1 HN2 HN1  C1  
+IC  BLNK HN1 N1  C1    0.0   0.0   180.   0.0  0.0
+IC  HN1  N1  C1  HC1   0.0   0.0   180.   0.0  0.0
+IC  HN1  N1  C1  HC2   0.0   0.0    60.   0.0  0.0
+IC  HN1  N1  C1  HC3   0.0   0.0   300.   0.0  0.0
+IC  HC1  C1  N1  HN2   0.0   0.0     0.   0.0  0.0
+PATCHING FIRS NONE LAST NONE
+
+RESI DMAM        0.00 !
+GROUP
+ATOM N1   N2    -0.82 !
+ATOM HN1  HNT2   0.40 !
+ATOM C1   CNT2  -0.06 !  H11       HN1
+ATOM C2   CNT2  -0.06 !     \      /
+ATOM H11  HNA2   0.09 ! H12-C1---N1
+ATOM H12  HNA2   0.09 !     /      \
+ATOM H13  HNA2   0.09 !  H13       C2-H23
+ATOM H21  HNA2   0.09 !           / \
+ATOM H22  HNA2   0.09 !         H21 H22
+ATOM H23  HNA2   0.09 !
+BOND N1 HN1  N1  C1   N1  C2
+BOND C1 H11  C1  H12  C1  H13
+BOND C2 H21  C2  H22  C2  H23
+IC  BLNK HN1 N1  C1    0.0   0.0   180.   0.0  0.0
+IC  HN1  N1  C1  H11   0.0   0.0   180.   0.0  0.0
+IC  HN1  N1  C1  H12   0.0   0.0    60.   0.0  0.0
+IC  HN1  N1  C1  H13   0.0   0.0   300.   0.0  0.0
+IC  C2   *N1 HN1 C1    0.0   0.0   120.   0.0  0.0
+IC  H11  C1  N1  C2    0.0   0.0   180.   0.0  0.0
+IC  HN1  N1  C2  H21   0.0   0.0   180.   0.0  0.0
+IC  HN1  N1  C2  H22   0.0   0.0    60.   0.0  0.0
+IC  HN1  N1  C2  H23   0.0   0.0   300.   0.0  0.0
+PATCHING FIRS NONE LAST NONE
+
+RESI TMAM        0.00 ! trimethylamine, adm jr.
+GROUP                 !         H31  H32
+ATOM N1   N3    -0.63 !           \  /
+ATOM C1   CNT3  -0.06 !   H11     C3-H33
+ATOM C2   CNT3  -0.06 !     \     /
+ATOM C3   CNT3  -0.06 ! H12-C1---N1
+ATOM H11  HNA3   0.09 !     /     \
+ATOM H12  HNA3   0.09 !    H13    C2-H23
+ATOM H13  HNA3   0.09 !          /  \
+ATOM H21  HNA3   0.09 !        H21  H22
+ATOM H22  HNA3   0.09 !
+ATOM H23  HNA3   0.09 !
+ATOM H31  HNA3   0.09 !
+ATOM H32  HNA3   0.09 !
+ATOM H33  HNA3   0.09 !
+BOND N1  C1  N1  C2   N1  C3
+BOND C1 H11  C1  H12  C1  H13
+BOND C2 H21  C2  H22  C2  H23
+BOND C3 H31  C3  H32  C3  H33
+IC  BLNK C3  N1  C1    0.0   0.0   180.   0.0  0.0
+IC  C3   N1  C1  H11   0.0   0.0   180.   0.0  0.0
+IC  C3   N1  C1  H12   0.0   0.0    60.   0.0  0.0
+IC  C3   N1  C1  H13   0.0   0.0   300.   0.0  0.0
+IC  H11  C1  N1  C2    0.0   0.0     0.   0.0  0.0
+IC  C3   N1  C2  H21   0.0   0.0   180.   0.0  0.0
+IC  C3   N1  C2  H22   0.0   0.0    60.   0.0  0.0
+IC  C3   N1  C2  H23   0.0   0.0   300.   0.0  0.0
+IC  C2   N1  C3  H31   0.0   0.0   180.   0.0  0.0
+IC  C2   N1  C3  H32   0.0   0.0    60.   0.0  0.0
+IC  C2   N1  C3  H33   0.0   0.0   300.   0.0  0.0
+PATCHING FIRS NONE LAST NONE
+
+end
+
+read para card flex @app
+* All-Atom Amine Parameters
+* Ammonia, Methylamine, Dimethylamine and Trimethylamine
+*
+
+ATOMS
+MASS   446 HNT0   1.00800 ! N-ter H (ammonia)
+MASS   447 HNT1   1.00800 ! N-ter H (methylamine)
+MASS   448 HNT2   1.00800 ! N-ter H (dimethylamine)
+MASS   449 HNA1   1.00800 ! Aliphatic H
+MASS   450 HNA2   1.00800 ! Aliphatic H
+MASS   451 HNA3   1.00800 ! Aliphatic H
+MASS   452 N0    14.00700 ! ammonia nitrogen
+MASS   453 N1    14.00700 ! methylamine nitrogen
+MASS   454 N2    14.00700 ! dimethylamine nitrogen
+MASS   455 N3    14.00700 ! trimethylamine nitrogen
+MASS   456 CNT1  12.01100 ! methylamine methyl carbon
+MASS   457 CNT2  12.01100 ! dimethylamine methyl carbon
+MASS   458 CNT3  12.01100 ! trimethylamine methyl carbon
+
+BONDS
+!atom type      Kb       b0
+!============================================
+N0   HNT0    455.500   1.0140
+N1   HNT1    453.100   1.0140
+N2   HNT2    447.800   1.0190
+N1   CNT1    263.000   1.4740
+N2   CNT2    255.000   1.4630
+N3   CNT3    235.000   1.4540
+HNA1 CNT1    314.500   1.0930
+HNA2 CNT2    313.800   1.0980
+HNA3 CNT3    311.000   1.1110
+!dum  HNT1    100.000   1.0000
+
+ANGLES
+!atom types     Ktheta  Theta0   Kub     S0
+!==================================================
+HNT0 N0   HNT0  29.000  107.10
+HNT1 N1   HNT1  29.500  105.85
+HNA1 CNT1 HNA1  35.000  109.47    5.40   1.80200
+HNA2 CNT2 HNA2  35.800  109.00    5.40   1.80200
+HNA3 CNT3 HNA3  35.500  108.40    5.40   1.80200
+HNT1 N1   CNT1  41.000  112.10
+HNT2 N2   CNT2  42.100  108.90    5.00   2.0292
+N1   CNT1 HNA1  32.400  109.50   50.00   2.14000
+N2   CNT2 HNA2  30.500  109.70   50.00   2.14000
+N3   CNT3 HNA3  35.000  109.50   50.00   2.14000
+CNT2 N2   CNT2  40.500  112.20    5.00   2.42170
+CNT3 N3   CNT3  53.000  110.90
+!CNT3 N3   CNT3  65.000  110.90 ! 2/05 update
+!dum  HNT1 N1   100.000   90.00
+
+DIHEDRALS
+!atom types            Kchi     n     delta
+!==================================================
+HNA1 CNT1 N1  HNT1     0.1600   3     0.00    !fitting to exptl data
+HNA2 CNT2 N2  HNT2     0.4200   3     0.0000  !fitting to exptl data
+HNA2 CNT2 N2  CNT2     0.0800   3     0.0000  !fitting to HF/6-31G(d) surface
+HNA3 CNT3 N3  CNT3     0.3150   3     0.00    !fitting to exptl data
+
+IMPROPER
+!atom types            Kpsi     0      psi0
+!==================================================
+N1   HNT1 HNT1 CNT1   34.8000   0     0.0000 !methylamine
+
+NONBONDED nbxmod  5 atom cdiel fshift vatom vdistance vfswitch -
+cutnb 14.0 ctofnb 12.0 ctonnb 10.0 eps 1.0 e14fac 1.0 wmin 1.5
+
+!NOTE: the omission of the 1,4 LJ terms for the different 
+!types of methyl groups is essential, adm. jr, april 2005
+
+N0     0.000000  -0.070000     1.980000
+N1     0.000000  -0.060000     1.990000
+N2     0.000000  -0.045000     2.000000 !correction, 1/09
+N3     0.000000  -0.035000     2.000000
+HNT0   0.000000  -0.012000     0.870000
+HNT1   0.000000  -0.010000     0.875000
+HNT2   0.000000  -0.009000     0.875000
+CNT1   0.000000  -0.080000     1.990000 ! 0.00  -0.01     1.90
+CNT2   0.000000  -0.078000     1.980000 ! 0.00  -0.01     1.90 
+CNT3   0.000000  -0.070000     1.970000 ! 0.00  -0.01     1.90
+HNA1   0.000000  -0.040000     1.260000
+HNA2   0.000000  -0.028000     1.280000
+HNA3   0.000000  -0.028000     1.280000
+
+END
+
+return
+
+
+
+

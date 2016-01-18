@@ -1,0 +1,1583 @@
+*>>>>>>>>>>>  OPLS All-atom Toplogy File for Proteins  <<<<<<<<<
+*>>>>>>>>>>>>>>>>>>>>>>>>  Nov 2000  <<<<<<<<<<<<<<<<<<<<<<<<<<<
+*>>>>>>  Generated automatically from pepz database files  <<<<<
+*>>>>>>>>>>  script in perl, available from D. Price  <<<<<<<<<<
+*>>>>>>>>>>>>>>>>  email: priced at scripps.edu  <<<<<<<<<<<<<<<
+*
+27 1
+
+!README for CHARMM topology/parameter files for OPLS-AA (opls.rtf, opls.prm)
+!** reference for OPLS-AA for proteins: 
+!** Jorgensen, W.L. et al., J. Am. Chem. Soc. 118:11225-11236 (1996) 
+!and see additional reference below
+!
+!Proper usage of these files requires CHARMM software version c28b1 or greater.
+!If you are presently using c28b1, please check that you have the latest release,
+!as not all of the pertinant code was included in the initial release, but was 
+!included in a later bugfix.  Compilation of CHARMM requires that the OPLS
+!keyword be included in pref.dat at compile time.  The relevant code has added 
+!the ability to combine Lennard-Jones radii with a geometric average, and use 
+!V2-Fourier terms for improper dihedrals.  The CHARMM program compiled with the 
+!OPLS option in pref.dat can still use all other previously released topology and
+!parameter files (CHARMM22, CHARMM19, etc.).
+!
+!Atom and residue names in the OPLS-AA topology file agree with that in CHARMM22.
+!Consequently, any CHARMM script that reads CHARMM22 topology and parameter files
+!can be converted to using OPLS-AA by adjusting the appropriate file OPEN
+!statements.  The atom types have the OPLS atom type embedded within them for
+!easy cross-reference.  For example, type H140 in opls.rtf and opls.prm is 
+!type 140 the OPLS-AA parameter files available from Prof. Jorgensen.
+!
+!The topology and parameter files here include only the protein portion of the
+!OPLS-AA force field.  User-defined topology and parameter files are required for
+!other functionalities.
+!
+!While the OPLS-AA topology and parameter files are compatible with all
+!functionality within CHARMM that is also compatible with CHARMM22, minimizations
+!and simulations with a distance-dependent dielectric (RDIE) is not recommended 
+!as collapse of atoms with hydrogens on heteroatoms is possible, causing
+!unreasonable structures and energies.  Also, there is no current 
+!optimzied parameter set for the linearized form of the Generalized Born equation
+!as currently implemented in CHARMM.
+!
+!Any questions, email priced@scripps.edu
+!
+!**** These files were created in the laboratory of:
+!**** Prof. C.L. Brooks III
+!**** Dept. of Mol. Biol.
+!**** The Scripps Research Institute
+!
+!**** OPLS-AA is developed in the laboratory of: 
+!**** Prof. W.L. Jorgensen
+!**** Dept. of Chemistry
+!**** Yale University
+
+!Additional References
+!
+!OPLS All-Atom Model for Amines: Resolution of the Amine Hydration
+!Problem. R. C. Rizzo and W. L. Jorgensen, J. Am. Chem. Soc., 121,
+!4827-4836 (1999).
+!
+!Gas-Phase and Liquid-State Properties of Esters, Nitriles, and Nitro
+!Compounds with the OPLS-AA Force Field. M. L. P. Price, D. Ostrovsky,
+!and W. L. Jorgensen, J. Comput. Chem., 22, 1340-1352 (2001).
+!
+!Evaluation and Reparameterization of the OPLS-AA Force Field for
+!Proteins via Comparison with Accurate Quantum Chemical Calculations on
+!Peptides. G. Kaminski, R. A. Friesner, J. Tirado-Rives and W. L.
+!Jorgensen, J. Phys. Chem. B, 105, 6474-6487 (2001).
+!
+!Perfluoroalkanes: Conformational Analysis and Liquid-State Properties
+!from Ab Initio and Monte Carlo Calculations. E. K. Watkins and
+!W. L. Jorgensen, J. Phys. Chem. A, 105, 4118-4125 (2001).
+!
+!Accuracy of Free Energies of Hydration from CM1 and CM3 Atomic
+!Charges.Blagovif, M. U.; Jorgensen, W. L., J. Comput. Chem. 2004, 25,
+!0000-0000.  Submitted.
+!
+!A five-site model for liquid water and the reproduction of the density
+!anomaly by rigid, non-polarizable models. M. W. Mahoney and
+!W. L. Jorgensen, J. Chem. Phys., 112, 8910-8922 (2000).
+!
+!Diffusion constant of the TIP5P model of liquid water. M. W. Mahoney
+!and W. L. Jorgensen, J. Chem. Phys., 114, 363-366 (2001).
+!
+!Rapid Estimation of Electronic Degrees of Freedom in Monte Carlo
+!Calculations for Polarizable Models of Liquid Water. M. W. Mahoney and
+!W. L. Jorgensen, J. Chem. Phys., 114, 9337-9349 (2001).
+!
+!Quantum, intramolecular flexibility, and polarizability effects on the
+!reproduction of the density anomaly of liquid water by simple
+!potential functions. M. W. Mahoney and W. L. Jorgensen,
+!J. Chem. Phys., 115, 10758-10768 (2001).
+!
+
+MASS     1 C135  12.01100  C ! CH3 all-atom C: alkanes ALL-ATOM
+MASS     2 C136  12.01100  C ! CH2 all-atom C: alkanes PARAMETERS
+MASS     3 C137  12.01100  C ! CH all-atom C: alkanes FROM HERE ON
+MASS     4 C145  12.01100  C ! Benzene C - 12 site JACS,112,4768-90
+MASS     5 C149  12.01100  C ! all-atom C: CH2, ethyl benzene
+MASS     6 C157  12.01100  C ! all-atom C: CH3 & CH2, alcohols
+MASS     7 C158  12.01100  C ! all-atom C: CH, alcohols
+MASS     8 C166  12.01100  C ! C(OH) phenol Use with all
+MASS     9 C206  12.01100  C ! all-atom C: CH2, thiols
+MASS    10 C209  12.01100  C ! all-atom C: CH3, sulfides
+MASS    11 C210  12.01100  C ! all-atom C: CH2, sulfides
+MASS    12 C214  12.01100  C ! all-atom C: CH2, disulfides
+MASS    13 C223  12.01100  C ! C in RCH2NH2 and Gly CA (See 900 for amines)
+MASS    14 C224  12.01100  C ! C in R2CHNH2 and Ala CA
+MASS    15 C235  12.01100  C ! C: C=O in amide. Acyl R in amides
+MASS    16 C242  12.01100  C ! C on N: secondary N-Me amide
+MASS    17 C245  12.01100  C ! C on N: tertiary N-CH2R amide (Pro Cdelta)
+MASS    18 C246  12.01100  C ! C on N: tertiary N-CHR2 amide (Pro Calpha)
+MASS    19 C267  12.01100  C ! Co in CCOOH carboxylic acid
+MASS    20 C271  12.01100  C ! C in COO- carboxylate
+MASS    21 C274  12.01100  C ! C: CH2, carboxylate ion
+MASS    22 C283  12.01100  C ! AA C-alpha on C-terminal ALA
+MASS    23 C284  12.01100  C ! AA C-alpha on C-terminal GLY
+MASS    24 C285  12.01100  C ! AA C-alpha on C-terminal PRO
+MASS    25 C292  12.01100  C ! C in RCH2NH3+ & CA in N-term Gly
+MASS    26 C293  12.01100  C ! C in R2CHNH3+ & CA in N-term Ala, etc.
+MASS    27 C295  12.01100  C ! AA:C-alpha in N-term PRO
+MASS    28 C296  12.01100  C ! AA:C-delta in N-term PRO
+MASS    29 C302  12.01100  C ! C: guanidinium C+
+MASS    30 C307  12.01100  C ! C: CH2(D), ARG, ethylguanidinium
+MASS    31 C308  12.01100  C ! C: CH2(G), ARG
+MASS    32 C500  12.01100  C ! CG in TRP
+MASS    33 C501  12.01100  C ! CD C in TRP
+MASS    34 C502  12.01100  C ! CE C in TRP
+MASS    35 C505  12.01100  C ! CB in HIS
+MASS    36 C506  12.01100  C ! CE1 in HID, HIE
+MASS    37 C507  12.01100  C ! CD2 in HID, CG in HIE
+MASS    38 C508  12.01100  C ! CG in HID, CD2 in HIE
+MASS    39 C509  12.01100  C ! CE1 in HIP
+MASS    40 C510  12.01100  C ! CG, CD2 in HIP
+MASS    41 C514  12.01100  C ! CD1 in TRP
+MASS    42 C748  12.01100  C ! CD of neutral ARG
+MASS    43 C752  12.01100  C ! CZ " " "
+MASS    44 C906  12.01100  C ! CH2(N) primary aliphatic amines, H(C) type 911
+MASS    45 H140   1.00800  H ! H all-atom H: alkanes
+MASS    46 H146   1.00800  H ! Benzene H - 12 site "
+MASS    47 H155   1.00800  H ! all-atom H(O): mono alcohols
+MASS    48 H168   1.00800  H ! H phenol 145 & 146
+MASS    49 H204   1.00800  H ! all-atom H(S): thiols (mod 11/99)
+MASS    50 H240   1.00800  H ! H on N: primary amide
+MASS    51 H241   1.00800  H ! H on N: secondary amide
+MASS    52 H270   1.00800  H ! H in CCOOH
+MASS    53 H290   1.00800  H ! H (RNH3+) "
+MASS    54 H301   1.00800  H ! H: guanidinium NH2
+MASS    55 H304   1.00800  H ! H: guanidinium NHR
+MASS    56 H310   1.00800  H ! H (R2NH2+)
+MASS    57 H504   1.00800  H ! H on NE in TRP
+MASS    58 H513   1.00800  H ! H on N in HIP
+MASS    59 H909   1.00800  H ! H(N) primary amines
+MASS    60 H910   1.00800  H ! H(N) secondary amines
+MASS    61 H911   1.00800  H ! H(C) for Carbons directly bonded to N in amines, diamines
+MASS    62 N237  14.00700  N ! N: primary amide. alkane parameters.
+MASS    63 N238  14.00700  N ! N: secondary amide 279 for formyl H.
+MASS    64 N239  14.00700  N ! N: tertiary amide
+MASS    65 N287  14.00700  N ! N (RNH3+) "
+MASS    66 N300  14.00700  N ! N: guanidinium NH2
+MASS    67 N303  14.00700  N ! N: guanidinium NHR
+MASS    68 N309  14.00700  N ! N (R2NH2+)
+MASS    69 N503  14.00700  N ! NE in TRP
+MASS    70 N511  14.00700  N ! NE in HID, ND in HIE
+MASS    71 N512  14.00700  N ! N in HIP
+MASS    72 N749  14.00700  N ! NE "
+MASS    73 N750  14.00700  N ! N1 " " " (HN=CZ)
+MASS    74 N751  14.00700  N ! N2 " " " (H2N-CZ)
+MASS    75 N900  14.00700  N ! N primary amines
+MASS    76 O154  15.99940  O ! all-atom O: mono alcohols
+MASS    77 O167  15.99940  O ! O phenol atom C, H
+MASS    78 O236  15.99940  O ! O: C=O in amide. is neutral - use
+MASS    79 O268  15.99940  O ! Oh in CCOOH R in RCOOH is
+MASS    80 O269  15.99940  O ! Oc in CCOOH neutral; use 135-140
+MASS    81 O272  15.99940  O ! O: O in COO- carboxylate
+MASS    82 S200  32.06000  S ! all-atom S: thiols (mod 11/99)
+MASS    83 S202  32.06000  S ! all-atom S: sulfides
+MASS    84 S203  32.06000  S ! all-atom S: disulfides
+MASS    85 OT    15.99940  O
+MASS    86 HT     1.00800  H
+
+DECL -CA
+DECL -C
+DECL -O
+DECL +N
+DECL +HN
+DECL +CA
+DEFA FIRS NTER LAST CTER
+AUTO ANGLES DIHE
+
+RESI ALA          0.00
+GROUP   
+ATOM N    N238   -0.500 !     |
+ATOM HN   H241    0.300 !  HN-N
+ATOM CA   C224    0.140 !     |     HB1
+ATOM HA   H140    0.060 !     |    /
+GROUP                   !  HA-CA--CB-HB2
+ATOM CB   C135   -0.180 !     |    \
+ATOM HB1  H140    0.060 !     |     HB3
+ATOM HB2  H140    0.060 !   O=C
+ATOM HB3  H140    0.060 !     |
+GROUP                   !
+ATOM C    C235    0.500 !
+ATOM O    O236   -0.500 !
+BOND CB CA  N  HN  N  CA  
+BOND C  CA  C  +N  CA HA  CB HB1  CB HB2  CB HB3 
+DOUBLE O  C 
+IMPR HN N -C CA   O C CA +N  
+DONOR HN N   
+ACCEPTOR O C   
+IC -C   CA   *N   HN    1.3551 126.4900  180.0000 115.4200  0.9996
+IC -C   N    CA   C     1.3551 126.4900  180.0000 114.4400  1.5390
+IC N    CA   C    +N    1.4592 114.4400  180.0000 116.8400  1.3558
+IC +N   CA   *C   O     1.3558 116.8400  180.0000 122.5200  1.2297
+IC CA   C    +N   +CA   1.5390 116.8400  180.0000 126.7700  1.4613
+IC N    C    *CA  CB    1.4592 114.4400  123.2300 111.0900  1.5461
+IC N    C    *CA  HA    1.4592 114.4400 -120.4500 106.3900  1.0840
+IC C    CA   CB   HB1   1.5390 111.0900  177.2500 109.6000  1.1109
+IC HB1  CA   *CB  HB2   1.1109 109.6000  119.1300 111.0500  1.1119
+IC HB1  CA   *CB  HB3   1.1109 109.6000 -119.5800 111.6100  1.1114
+
+RESI ARG          1.00
+GROUP   
+ATOM N    N238   -0.500 !     |                      HH11
+ATOM HN   H241    0.300 !  HN-N                       |
+ATOM CA   C224    0.140 !     |   HB1 HG1 HD1 HE     NH1-HH12
+ATOM HA   H140    0.060 !     |   |   |   |   |    //(+)  
+GROUP                   !  HA-CA--CB--CG--CD--NE--CZ
+ATOM CB   C136   -0.120 !     |   |   |   |         \
+ATOM HB1  H140    0.060 !     |   HB2 HG2 HD2        NH2-HH22
+ATOM HB2  H140    0.060 !   O=C                       |
+GROUP                   !     |                      HH21
+ATOM CG   C308   -0.050 !
+ATOM HG1  H140    0.060 !
+ATOM HG2  H140    0.060 !
+ATOM CD   C307    0.190 !
+ATOM HD1  H140    0.060 !
+ATOM HD2  H140    0.060 !
+ATOM NE   N303   -0.700 !
+ATOM HE   H304    0.440 !
+ATOM CZ   C302    0.640 !
+ATOM NH1  N300   -0.800 !
+ATOM HH11 H301    0.460 !
+ATOM HH12 H301    0.460 !
+ATOM NH2  N300   -0.800 !
+ATOM HH21 H301    0.460 !
+ATOM HH22 H301    0.460 !
+GROUP   
+ATOM C    C235    0.500 !
+ATOM O    O236   -0.500 !
+BOND CB  CA  CG  CB  CD CG  NE CD  CZ NE   
+BOND NH2 CZ  N  HN  N  CA   
+BOND C   CA  C  +N  CA HA  CB HB1   
+BOND CB  HB2 CG  HG1 CG HG2 CD HD1 CD HD2   
+BOND NE  HE  NH1 HH11  NH1 HH12  NH2 HH21  NH2 HH22 
+DOUBLE O  C    CZ  NH1  
+IMPR HN N -C CA   O C CA +N  
+IMPR NH2 CZ NE NH1  HE NE CD CZ
+IMPR HH12 NH1 CZ HH11 HH22 NH2 CZ HH21
+DONOR HN N   
+DONOR HE NE   
+DONOR HH11 NH1   
+DONOR HH12 NH1   
+DONOR HH21 NH2   
+DONOR HH22 NH2   
+ACCEPTOR O C   
+IC -C   CA   *N   HN    1.3496 122.4500  180.0000 116.6700  0.9973
+IC -C   N    CA   C     1.3496 122.4500  180.0000 109.8600  1.5227
+IC N    CA   C    +N    1.4544 109.8600  180.0000 117.1200  1.3511
+IC +N   CA   *C   O     1.3511 117.1200  180.0000 121.4000  1.2271
+IC CA   C    +N   +CA   1.5227 117.1200  180.0000 124.6700  1.4565
+IC N    C    *CA  CB    1.4544 109.8600  123.6400 112.2600  1.5552
+IC N    C    *CA  HA    1.4544 109.8600 -117.9300 106.6100  1.0836
+IC N    CA   CB   CG    1.4544 110.7000  180.0000 115.9500  1.5475
+IC CG   CA   *CB  HB1   1.5475 115.9500  120.0500 106.4000  1.1163
+IC CG   CA   *CB  HB2   1.5475 115.9500 -125.8100 109.5500  1.1124
+IC CA   CB   CG   CD    1.5552 115.9500  180.0000 114.0100  1.5384
+IC CD   CB   *CG  HG1   1.5384 114.0100  125.2000 108.5500  1.1121
+IC CD   CB   *CG  HG2   1.5384 114.0100 -120.3000 108.9600  1.1143
+IC CB   CG   CD   NE    1.5475 114.0100  180.0000 107.0900  1.5034
+IC NE   CG   *CD  HD1   1.5034 107.0900  120.6900 109.4100  1.1143
+IC NE   CG   *CD  HD2   1.5034 107.0900 -119.0400 111.5200  1.1150
+IC CG   CD   NE   CZ    1.5384 107.0900  180.0000 123.0500  1.3401
+IC CZ   CD   *NE  HE    1.3401 123.0500  180.0000 113.1400  1.0065
+IC CD   NE   CZ   NH1   1.5034 123.0500  180.0000 118.0600  1.3311
+IC NE   CZ   NH1  HH11  1.3401 118.0600 -178.2800 120.6100  0.9903
+IC HH11 CZ   *NH1 HH12  0.9903 120.6100  171.1900 116.2900  1.0023
+IC NH1  NE   *CZ  NH2   1.3311 118.0600  178.6400 122.1400  1.3292
+IC NE   CZ   NH2  HH21  1.3401 122.1400 -174.1400 119.9100  0.9899
+IC HH21 CZ   *NH2 HH22  0.9899 119.9100  166.1600 116.8800  0.9914 
+
+RESI ASN          0.00
+GROUP   
+ATOM N    N238   -0.500 !     |       
+ATOM HN   H241    0.300 !  HN-N       
+ATOM CA   C224    0.140 !     |   HB1 OD1    HD21 (cis to OD1)
+ATOM HA   H140    0.060 !     |   |   ||    /
+GROUP                   !  HA-CA--CB--CG--ND2
+ATOM CB   C136   -0.120 !     |   |         \
+ATOM HB1  H140    0.060 !     |   HB2        HD22 (trans to OD1)
+ATOM HB2  H140    0.060 !   O=C           
+GROUP                   !     |           
+ATOM CG   C235    0.500 !
+ATOM OD1  O236   -0.500 !
+GROUP   
+ATOM ND2  N237   -0.760 !
+ATOM HD21 H240    0.380 !
+ATOM HD22 H240    0.380 !
+GROUP   
+ATOM C    C235    0.500 !
+ATOM O    O236   -0.500 !
+BOND CB CA  CG CB   ND2 CG   
+BOND N  HN  N  CA   C   CA    C +N   
+BOND CA HA  CB HB1  CB  HB2  ND2 HD21  ND2 HD22 
+DOUBLE C  O   CG  OD1  
+IMPR HN N -C CA   O C CA +N  
+IMPR OD1 CG CB ND2
+IMPR HD22 ND2 CG HD21  
+DONOR HN N   
+DONOR HD21 ND2   
+DONOR HD22 ND2   
+ACCEPTOR OD1 CG   
+ACCEPTOR O C   
+IC -C   CA   *N   HN    1.3480 124.0500  180.0000 114.4900  0.9992
+IC -C   N    CA   C     1.3480 124.0500  180.0000 105.2300  1.5245
+IC N    CA   C    +N    1.4510 105.2300  180.0000 117.3800  1.3467
+IC +N   CA   *C   O     1.3467 117.3800  180.0000 120.3200  1.2282
+IC CA   C    +N   +CA   1.5245 117.3800  180.0000 124.8800  1.4528
+IC N    C    *CA  CB    1.4510 105.2300  121.1800 113.0400  1.5627
+IC N    C    *CA  HA    1.4510 105.2300 -115.5200 107.6300  1.0848
+IC N    CA   CB   CG    1.4510 110.9100  180.0000 114.3000  1.5319
+IC CG   CA   *CB  HB1   1.5319 114.3000  119.1700 107.8200  1.1120
+IC CG   CA   *CB  HB2   1.5319 114.3000 -123.7400 110.3400  1.1091
+IC CA   CB   CG   OD1   1.5627 114.3000  180.0000 122.5600  1.2323
+IC OD1  CB   *CG  ND2   1.2323 122.5600 -179.1900 116.1500  1.3521
+IC CB   CG   ND2  HD21  1.5319 116.1500 -179.2600 117.3500  0.9963
+IC HD21 CG   *ND2 HD22  0.9963 117.3500  178.0200 120.0500  0.9951
+
+RESI ASP         -1.00
+GROUP   
+ATOM N    N238   -0.500 !     |       
+ATOM HN   H241    0.300 !  HN-N       
+ATOM CA   C224    0.140 !     |   HB1   OD1
+ATOM HA   H140    0.060 !     |   |    //
+GROUP                   !  HA-CA--CB--CG
+ATOM CB   C274   -0.220 !     |   |    \
+ATOM HB1  H140    0.060 !     |   HB2   OD2(-)
+ATOM HB2  H140    0.060 !   O=C           
+ATOM CG   C271    0.700 !     |           
+ATOM OD1  O272   -0.800 !
+ATOM OD2  O272   -0.800 !
+GROUP   
+ATOM C    C235    0.500 !
+ATOM O    O236   -0.500 !
+BOND CB CA  CG CB  OD2 CG   
+BOND N  HN  N  CA   C   CA  C +N   
+BOND CA HA  CB HB1  CB HB2   
+DOUBLE  O   C   CG  OD1
+IMPR HN N -C CA   O C CA +N  
+IMPR OD2 CG CB OD1  
+DONOR HN N   
+ACCEPTOR OD1 CG   
+ACCEPTOR OD2 CG   
+ACCEPTOR O C   
+IC -C   CA   *N   HN    1.3465 125.3100  180.0000 112.9400  0.9966
+IC -C   N    CA   C     1.3465 125.3100  180.0000 105.6300  1.5315
+IC N    CA   C    +N    1.4490 105.6300  180.0000 117.0600  1.3478
+IC +N   CA   *C   O     1.3478 117.0600  180.0000 120.7100  1.2330
+IC CA   C    +N   +CA   1.5315 117.0600  180.0000 125.3900  1.4484
+IC N    C    *CA  CB    1.4490 105.6300  122.3300 114.1000  1.5619
+IC N    C    *CA  HA    1.4490 105.6300 -116.4000 106.7700  1.0841
+IC N    CA   CB   CG    1.4490 111.1000  180.0000 112.6000  1.5218
+IC CG   CA   *CB  HB1   1.5218 112.6000  119.2200 109.2300  1.1086
+IC CG   CA   *CB  HB2   1.5218 112.6000 -121.6100 110.6400  1.1080
+IC CA   CB   CG   OD1   1.5619 112.6000  180.0000 117.9900  1.2565
+IC OD1  CB   *CG  OD2   1.2565 117.9900 -170.2300 117.7000  1.2541
+
+RESI CYS          0.00
+GROUP   
+ATOM N    N238   -0.500 !     |       
+ATOM HN   H241    0.300 !  HN-N       
+ATOM CA   C224    0.140 !     |   HB1
+ATOM HA   H140    0.060 !     |   |  
+GROUP                   !  HA-CA--CB--SG
+ATOM CB   C206    0.060 !     |   |     \
+ATOM HB1  H140    0.060 !     |   HB2    HG1
+ATOM HB2  H140    0.060 !   O=C           
+ATOM SG   S200   -0.335 !     |           
+ATOM HG1  H204    0.155 !
+GROUP   
+ATOM C    C235    0.500 !
+ATOM O    O236   -0.500 !
+BOND CB CA   SG CB   N HN  N  CA   
+BOND C  CA   C +N  CA HA  CB HB1   
+BOND CB HB2  SG HG1
+DOUBLE O  C   
+IMPR HN N -C CA   O C CA +N  
+DONOR HN N   
+DONOR HG1 SG   
+ACCEPTOR O C   
+IC -C   CA   *N   HN    1.3479 123.9300  180.0000 114.7700  0.9982
+IC -C   N    CA   C     1.3479 123.9300  180.0000 105.8900  1.5202
+IC N    CA   C    +N    1.4533 105.8900  180.0000 118.3000  1.3498
+IC +N   CA   *C   O     1.3498 118.3000  180.0000 120.5900  1.2306
+IC CA   C    +N   +CA   1.5202 118.3000  180.0000 124.5000  1.4548
+IC N    C    *CA  CB    1.4533 105.8900  121.7900 111.9800  1.5584
+IC N    C    *CA  HA    1.4533 105.8900 -116.3400 107.7100  1.0837
+IC N    CA   CB   SG    1.4533 111.5600  180.0000 113.8700  1.8359
+IC SG   CA   *CB  HB1   1.8359 113.8700  119.9100 107.2400  1.1134
+IC SG   CA   *CB  HB2   1.8359 113.8700 -125.3200 109.8200  1.1124
+IC CA   CB   SG   HG1   1.5584 113.8700  176.9600  97.1500  1.3341
+
+RESI GLN          0.00
+GROUP   
+ATOM N    N238   -0.500 !     |          
+ATOM HN   H241    0.300 !  HN-N          
+ATOM CA   C224    0.140 !     |   HB1 HG1 OE1   HE21 (cis to OE1)
+ATOM HA   H140    0.060 !     |   |   |   ||    /
+GROUP                   !  HA-CA--CB--CG--CD--NE2
+ATOM CB   C136   -0.120 !     |   |   |         \
+ATOM HB1  H140    0.060 !     |   HB2 HG2       HE22 (trans to OE1)
+ATOM HB2  H140    0.060 !   O=C          
+GROUP                   !     |          
+ATOM CG   C136   -0.120 !
+ATOM HG1  H140    0.060 !
+ATOM HG2  H140    0.060 !
+GROUP   
+ATOM CD   C235    0.500 !
+ATOM OE1  O236   -0.500 !
+GROUP   
+ATOM NE2  N237   -0.760 !
+ATOM HE21 H240    0.380 !
+ATOM HE22 H240    0.380 !
+GROUP   
+ATOM C    C235    0.500 !
+ATOM O    O236   -0.500 !
+BOND CB CA  CG  CB   CD  CG   NE2 CD   
+BOND N  HN  N   CA   C   CA   
+BOND C  +N  CA  HA   CB  HB1  CB  HB2  CG HG1   
+BOND CG HG2 NE2 HE21 NE2 HE22   
+DOUBLE O  C    CD  OE1  
+IMPR HN N -C CA   O C CA +N  
+IMPR OE1 CD CG NE2
+IMPR HE22 NE2 CD HE21  
+DONOR HN N   
+DONOR HE21 NE2   
+DONOR HE22 NE2   
+ACCEPTOR OE1 CD   
+ACCEPTOR O C   
+IC -C   CA   *N   HN    1.3477 123.9300  180.0000 114.4500  0.9984
+IC -C   N    CA   C     1.3477 123.9300  180.0000 106.5700  1.5180
+IC N    CA   C    +N    1.4506 106.5700  180.0000 117.7200  1.3463
+IC +N   CA   *C   O     1.3463 117.7200  180.0000 120.5900  1.2291
+IC CA   C    +N   +CA   1.5180 117.7200  180.0000 124.3500  1.4461
+IC N    C    *CA  CB    1.4506 106.5700  121.9100 111.6800  1.5538
+IC N    C    *CA  HA    1.4506 106.5700 -116.8200 107.5300  1.0832
+IC N    CA   CB   CG    1.4506 111.4400  180.0000 115.5200  1.5534
+IC CG   CA   *CB  HB1   1.5534 115.5200  120.9300 106.8000  1.1147
+IC CG   CA   *CB  HB2   1.5534 115.5200 -124.5800 109.3400  1.1140
+IC CA   CB   CG   CD    1.5538 115.5200  180.0000 112.5000  1.5320
+IC CD   CB   *CG  HG1   1.5320 112.5000  118.6900 110.4100  1.1112
+IC CD   CB   *CG  HG2   1.5320 112.5000 -121.9100 110.7400  1.1094
+IC CB   CG   CD   OE1   1.5534 112.5000  180.0000 121.5200  1.2294
+IC OE1  CG   *CD  NE2   1.2294 121.5200  179.5700 116.8400  1.3530
+IC CG   CD   NE2  HE21  1.5320 116.8400 -179.7200 116.8600  0.9959
+IC HE21 CD   *NE2 HE22  0.9959 116.8600 -178.9100 119.8300  0.9943
+
+RESI GLU         -1.00
+GROUP   
+ATOM N    N238   -0.500 !     |          
+ATOM HN   H241    0.300 !  HN-N          
+ATOM CA   C224    0.140 !     |   HB1 HG1   OE1
+ATOM HA   H140    0.060 !     |   |   |    //
+GROUP                   !  HA-CA--CB--CG--CD
+ATOM CB   C136   -0.120 !     |   |   |    \
+ATOM HB1  H140    0.060 !     |   HB2 HG2   OE2(-)
+ATOM HB2  H140    0.060 !   O=C          
+GROUP                   !     |          
+ATOM CG   C274   -0.220 !
+ATOM HG1  H140    0.060 !
+ATOM HG2  H140    0.060 !
+ATOM CD   C271    0.700 !
+ATOM OE1  O272   -0.800 !
+ATOM OE2  O272   -0.800 !
+GROUP   
+ATOM C    C235    0.500 !
+ATOM O    O236   -0.500 !
+BOND CB CA  CG CB  CD CG  OE2 CD   
+BOND N  HN  N  CA C   CA   
+BOND C  +N  CA HA  CB HB1 CB  HB2 CG  HG1   
+BOND CG HG2  
+DOUBLE O  C   CD  OE1 
+IMPR HN N -C CA   O C CA +N  
+IMPR OE2 CD CG OE1  
+DONOR HN N   
+ACCEPTOR OE1 CD   
+ACCEPTOR OE2 CD   
+ACCEPTOR O C   
+IC -C   CA   *N   HN    1.3471 124.4500  180.0000 113.9900  0.9961
+IC -C   N    CA   C     1.3471 124.4500  180.0000 107.2700  1.5216
+IC N    CA   C    +N    1.4512 107.2700  180.0000 117.2500  1.3501
+IC +N   CA   *C   O     1.3501 117.2500  180.0000 121.0700  1.2306
+IC CA   C    +N   +CA   1.5216 117.2500  180.0000 124.3000  1.4530
+IC N    C    *CA  CB    1.4512 107.2700  121.9000 111.7100  1.5516
+IC N    C    *CA  HA    1.4512 107.2700 -118.0600 107.2600  1.0828
+IC N    CA   CB   CG    1.4512 111.0400  180.0000 115.6900  1.5557
+IC CG   CA   *CB  HB1   1.5557 115.6900  121.2200 108.1600  1.1145
+IC CG   CA   *CB  HB2   1.5557 115.6900 -123.6500 109.8100  1.1131
+IC CA   CB   CG   CD    1.5516 115.6900  180.0000 115.7300  1.5307
+IC CD   CB   *CG  HG1   1.5307 115.7300  117.3800 109.5000  1.1053
+IC CD   CB   *CG  HG2   1.5307 115.7300 -121.9600 111.0000  1.1081
+IC CB   CG   CD   OE1   1.5557 115.7300  180.0000 114.9900  1.2590
+IC OE1  CG   *CD  OE2   1.2590 114.9900 -179.1000 120.0800  1.2532
+
+RESI GLY          0.00
+GROUP   
+ATOM N    N238   -0.500 !     |
+ATOM HN   H241    0.300 !     N-H
+ATOM CA   C223    0.080 !     |  
+ATOM HA1  H140    0.060 !     |  
+ATOM HA2  H140    0.060 ! HA1-CA-HA2
+GROUP                   !     |  
+ATOM C    C235    0.500 !     |  
+ATOM O    O236   -0.500 !     C=O
+                        !     |
+BOND N HN  N  CA  C CA   
+BOND C +N  CA HA1 CA HA2  
+DOUBLE O  C 
+IMPR HN N -C CA   O C CA +N  
+DONOR HN N   
+ACCEPTOR O C   
+IC -C   CA   *N   HN    1.3475 122.8200  180.0000 115.6200  0.9992
+IC -C   N    CA   C     1.3475 122.8200  180.0000 108.9400  1.4971
+IC N    CA   C    +N    1.4553 108.9400  180.0000 117.6000  1.3479
+IC +N   CA   *C   O     1.3479 117.6000  180.0000 120.8500  1.2289
+IC CA   C    +N   +CA   1.4971 117.6000  180.0000 124.0800  1.4560
+IC N    C    *CA  HA1   1.4553 108.9400  117.8600 108.0300  1.0814
+IC N    C    *CA  HA2   1.4553 108.9400 -118.1200 107.9500  1.0817
+PATCHING FIRS GLYP LAST GLYC
+
+RESI HSD          0.00  ! neutral HIS, proton on ND1
+GROUP   
+ATOM N    N238   -0.500 !     |          HD1    HE1
+ATOM HN   H241    0.300 !  HN-N           |     /
+ATOM CA   C224    0.140 !     |   HB1    ND1--CE1
+ATOM HA   H140    0.060 !     |   |     /      ||
+GROUP                   !  HA-CA--CB--CG       ||
+ATOM CB   C505   -0.005 !     |   |     \\     ||
+ATOM HB1  H140    0.060 !     |   HB2    CD2--NE2
+ATOM HB2  H140    0.060 !   O=C           |
+ATOM ND1  N503   -0.570 !     |          HD2
+ATOM HD1  H504    0.420 !
+ATOM CG   C508    0.015 !
+ATOM CE1  C506    0.295 !
+ATOM HE1  H146    0.115 !
+ATOM NE2  N511   -0.490 !
+ATOM CD2  C507   -0.015 !
+ATOM HD2  H146    0.115 !
+GROUP   
+ATOM C    C235    0.500 !
+ATOM O    O236   -0.500 !
+BOND CB  CA   CG  CB   ND1 CG   CE1 ND1   
+BOND NE2 CD2  N   HN   N   CA   
+BOND C   CA   C   +N   CA  HA   CB  HB1   
+BOND CB  HB2  ND1 HD1  CD2 HD2  CE1 HE1  
+DOUBLE O  C   CG  CD2   CE1  NE2 
+IMPR HD1 ND1 CG CE1   HD2 CD2 NE2 CG   HE1 CE1 ND1 NE2  
+IMPR CB CG ND1 CD2
+IMPR HN N -C CA   O C CA +N  
+DONOR HN N   
+DONOR HD1 ND1   
+ACCEPTOR NE2   
+ACCEPTOR O C   
+IC -C   CA   *N   HN    1.3475 123.2700  180.0000 115.2100  0.9988
+IC -C   N    CA   C     1.3475 123.2700  180.0000 107.7000  1.5166
+IC N    CA   C    +N    1.4521 107.7000  180.0000 117.5700  1.3509
+IC +N   CA   *C   O     1.3509 117.5700  180.0000 120.2400  1.2273
+IC CA   C    +N   +CA   1.5166 117.5700  180.0000 123.7200  1.4545
+IC N    C    *CA  CB    1.4521 107.7000  122.4600 109.9900  1.5519
+IC N    C    *CA  HA    1.4521 107.7000 -117.4900 107.3700  1.0830
+IC N    CA   CB   CG    1.4521 112.1200  180.0000 114.0500  1.5041
+IC CG   CA   *CB  HB1   1.5041 114.0500  121.1700 109.0100  1.1118
+IC CG   CA   *CB  HB2   1.5041 114.0500 -122.3600 109.5300  1.1121
+IC CA   CB   CG   ND1   1.5519 114.0500   90.0000 124.1000  1.3783
+IC ND1  CB   *CG  CD2   1.3783 124.1000 -171.2900 129.6000  1.3597
+IC CB   CG   ND1  CE1   1.5041 124.1000 -173.2100 107.0300  1.3549
+IC CB   CG   CD2  NE2   1.5041 129.6000  171.9900 110.0300  1.3817
+IC NE2  ND1  *CE1 HE1   1.3166 111.6300 -179.6300 123.8900  1.0932
+IC CE1  CG   *ND1 HD1   1.3549 107.0300 -174.6500 126.2600  1.0005
+IC NE2  CG   *CD2 HD2   1.3817 110.0300 -177.8500 129.6300  1.0834
+
+RESI HSE          0.00  ! neutral His, proton on NE2
+GROUP   
+ATOM N    N238   -0.500 !     |                 HE1
+ATOM HN   H241    0.300 !  HN-N             __  /
+ATOM CA   C224    0.140 !     |   HB1    ND1--CE1
+ATOM HA   H140    0.060 !     |   |     /      |
+GROUP                   !  HA-CA--CB--CG       |
+ATOM CB   C505   -0.005 !     |   |     \\     |
+ATOM HB1  H140    0.060 !     |   HB2    CD2--NE2
+ATOM HB2  H140    0.060 !   O=C           |     \
+ATOM ND1  N511   -0.490 !     |          HD2    HE2
+ATOM CG   C507   -0.015 !
+ATOM CE1  C506    0.295 !
+ATOM HE1  H146    0.115 !
+ATOM NE2  N503   -0.570 !
+ATOM HE2  H504    0.420 !
+ATOM CD2  C508    0.015 !
+ATOM HD2  H146    0.115 !
+GROUP   
+ATOM C    C235    0.500 !
+ATOM O    O236   -0.500 !
+BOND CB  CA   CG  CB   ND1 CG     
+BOND NE2 CD2  N   HN   N   CA      
+BOND C   CA   C   +N   NE2 CE1  CA  HA   CB HB1   
+BOND CB  HB2  NE2 HE2  CD2 HD2  CE1 HE1 
+DOUBLE   O   C   CD2 CG   CE1 ND1
+IMPR HE2 NE2 CE1 CD2   HD2 CD2 NE2 CG   HE1 CE1 ND1 NE2  
+IMPR CB CG ND1 CD2
+IMPR HN N -C CA   O C CA +N  
+DONOR HN N   
+DONOR HE2 NE2   
+ACCEPTOR ND1   
+ACCEPTOR O C   
+IC -C   CA   *N   HN    1.3472 124.1600  180.0000 114.3600  0.9991
+IC -C   N    CA   C     1.3472 124.1600  180.0000 106.4300  1.5166
+IC N    CA   C    +N    1.4532 106.4300  180.0000 116.9700  1.3446
+IC +N   CA   *C   O     1.3446 116.9700  180.0000 120.6800  1.2290
+IC CA   C    +N   +CA   1.5166 116.9700  180.0000 124.9500  1.4505
+IC N    C    *CA  CB    1.4532 106.4300  123.5200 111.6700  1.5578
+IC N    C    *CA  HA    1.4532 106.4300 -116.4900 107.0800  1.0833
+IC N    CA   CB   CG    1.4532 112.8200  180.0000 116.9400  1.5109
+IC CG   CA   *CB  HB1   1.5109 116.9400  119.8000 107.9100  1.1114
+IC CG   CA   *CB  HB2   1.5109 116.9400 -124.0400 109.5000  1.1101
+IC CA   CB   CG   ND1   1.5578 116.9400   90.0000 120.1700  1.3859
+IC ND1  CB   *CG  CD2   1.3859 120.1700 -178.2600 129.7100  1.3596
+IC CB   CG   ND1  CE1   1.5109 120.1700 -179.2000 105.2000  1.3170
+IC CB   CG   CD2  NE2   1.5109 129.7100  178.6600 105.8000  1.3782
+IC NE2  ND1  *CE1 HE1   1.3539 111.7600  179.6900 124.5800  1.0929
+IC CE1  CD2  *NE2 HE2   1.3539 107.1500 -178.6900 125.8600  0.9996
+IC NE2  CG   *CD2 HD2   1.3782 105.8000 -179.3500 129.8900  1.0809
+
+RESI HSP          1.00  ! Protonated His
+GROUP   
+ATOM N    N238   -0.500 !     |          HD1    HE1
+ATOM HN   H241    0.300 !  HN-N           |     /
+ATOM CA   C224    0.140 !     |   HB1    ND1--CE1
+ATOM HA   H140    0.060 !     |   |     /      ||
+GROUP                   !  HA-CA--CB--CG       ||
+ATOM CB   C505   -0.005 !     |   |     \\     ||
+ATOM HB1  H140    0.060 !     |   HB2    CD2--NE2(+)
+ATOM HB2  H140    0.060 !   O=C           |     \
+ATOM CD2  C510    0.215 !     |          HD2    HE2
+ATOM HD2  H146    0.115 !
+ATOM CG   C510    0.215 !
+ATOM NE2  N512   -0.540 !
+ATOM HE2  H513    0.460 !
+ATOM ND1  N512   -0.540 !
+ATOM HD1  H513    0.460 !
+ATOM CE1  C509    0.385 !
+ATOM HE1  H146    0.115 !
+GROUP   
+ATOM C    C235    0.500 !
+ATOM O    O236   -0.500 !
+BOND CB  CA   CG  CB   ND1 CG   CE1 ND1   
+BOND NE2 CD2  N   HN   N   CA   
+BOND C   CA   C   +N  CA  HA  CB HB1   
+BOND CB  HB2  ND1 HD1  NE2 HE2  CD2 HD2 CE1 HE1
+DOUBLE  O   C   CD2 CG     NE2 CE1
+IMPR HD1 ND1 CG CE1  HE1 CE1 ND1 NE2 
+IMPR HE2 NE2 CE1 CD2 HD2 CD2 NE2 CG 
+IMPR CB CG ND1 CD2
+IMPR HN N -C CA   O C CA +N  
+DONOR HN N   
+DONOR HD1 ND1   
+DONOR HE2 NE2   
+ACCEPTOR O C   
+IC -C   CA   *N   HN    1.3489 123.9300  180.0000 118.8000  1.0041
+IC -C   N    CA   C     1.3489 123.9300  180.0000 112.0300  1.5225
+IC N    CA   C    +N    1.4548 112.0300  180.0000 116.4900  1.3464
+IC +N   CA   *C   O     1.3464 116.4900  180.0000 121.2000  1.2284
+IC CA   C    +N   +CA   1.5225 116.4900  180.0000 124.2400  1.4521
+IC N    C    *CA  CB    1.4548 112.0300  125.1300 109.3800  1.5533
+IC N    C    *CA  HA    1.4548 112.0300 -119.2000 106.7200  1.0832
+IC N    CA   CB   CG    1.4548 112.2500  180.0000 114.1800  1.5168
+IC CG   CA   *CB  HB1   1.5168 114.1800  122.5000 108.9900  1.1116
+IC CG   CA   *CB  HB2   1.5168 114.1800 -121.5100 108.9700  1.1132
+IC CA   CB   CG   ND1   1.5533 114.1800   90.0000 122.9400  1.3718
+IC ND1  CB   *CG  CD2   1.3718 122.9400 -165.2600 128.9300  1.3549
+IC CB   CG   ND1  CE1   1.5168 122.9400 -167.6200 108.9000  1.3262
+IC CB   CG   CD2  NE2   1.5168 128.9300  167.1300 106.9300  1.3727
+IC NE2  ND1  *CE1 HE1   1.3256 108.5000  178.3900 125.7600  1.0799
+IC CE1  CD2  *NE2 HE2   1.3256 108.8200 -172.9400 125.5200  1.0020
+IC CE1  CG   *ND1 HD1   1.3262 108.9000  171.4900 126.0900  1.0018
+IC NE2  CG   *CD2 HD2   1.3727 106.9300 -174.4900 128.4100  1.0867
+
+RESI ILE          0.00
+GROUP   
+ATOM N    N238   -0.500 !     |    HG21 HG22
+ATOM HN   H241    0.300 !  HN-N      | / 
+ATOM CA   C224    0.140 !     |     CG2--HG23
+ATOM HA   H140    0.060 !     |    /
+GROUP                   !  HA-CA--CB-HB    HD1
+ATOM CB   C137   -0.060 !     |    \       /
+ATOM HB   H140    0.060 !     |     CG1--CD--HD2
+GROUP                   !   O=C    / \     \	 
+ATOM CG2  C135   -0.180 !     | HG11 HG12  HD3
+ATOM HG21 H140    0.060 !
+ATOM HG22 H140    0.060 !
+ATOM HG23 H140    0.060 !
+GROUP   
+ATOM CG1  C136   -0.120 !
+ATOM HG11 H140    0.060 !
+ATOM HG12 H140    0.060 !
+GROUP   
+ATOM CD   C135   -0.180 !
+ATOM HD1  H140    0.060 !
+ATOM HD2  H140    0.060 !
+ATOM HD3  H140    0.060 !
+GROUP   
+ATOM C    C235    0.500 !
+ATOM O    O236   -0.500 !
+BOND CB  CA   CG1 CB   CG2 CB   CD  CG1   
+BOND N   HN   N   CA    C   CA   C   +N   
+BOND CA  HA   CB  HB   CG1 HG11 CG1 HG12 CG2 HG21   
+BOND CG2 HG22 CG2 HG23 CD  HD1  CD  HD2  CD  HD3 
+DOUBLE  O   C
+IMPR HN N -C CA   O C CA +N  
+DONOR HN N   
+ACCEPTOR O C   
+IC -C   CA   *N   HN    1.3470 124.1600  180.0000 114.1900  0.9978
+IC -C   N    CA   C     1.3470 124.1600  180.0000 106.3500  1.5190
+IC N    CA   C    +N    1.4542 106.3500  180.0000 117.9700  1.3465
+IC +N   CA   *C   O     1.3465 117.9700  180.0000 120.5900  1.2300
+IC CA   C    +N   +CA   1.5190 117.9700  180.0000 124.2100  1.4467
+IC N    C    *CA  CB    1.4542 106.3500  124.2200 112.9300  1.5681
+IC N    C    *CA  HA    1.4542 106.3500 -115.6300 106.8100  1.0826
+IC N    CA   CB   CG1   1.4542 112.7900  180.0000 113.6300  1.5498
+IC CG1  CA   *CB  HB    1.5498 113.6300  114.5500 104.4800  1.1195
+IC CG1  CA   *CB  CG2   1.5498 113.6300 -130.0400 113.9300  1.5452
+IC CA   CB   CG2  HG21  1.5681 113.9300 -171.3000 110.6100  1.1100
+IC HG21 CB   *CG2 HG22  1.1100 110.6100  119.3500 110.9000  1.1102
+IC HG21 CB   *CG2 HG23  1.1100 110.6100 -120.0900 110.9700  1.1105
+IC CA   CB   CG1  CD    1.5681 113.6300  180.0000 114.0900  1.5381
+IC CD   CB   *CG1 HG11  1.5381 114.0900  122.3600 109.7800  1.1130
+IC CD   CB   *CG1 HG12  1.5381 114.0900 -120.5900 108.8900  1.1141
+IC CB   CG1  CD   HD1   1.5498 114.0900 -176.7800 110.3100  1.1115
+IC HD1  CG1  *CD  HD2   1.1115 110.3100  119.7500 110.6500  1.1113
+IC HD1  CG1  *CD  HD3   1.1115 110.3100 -119.7000 111.0200  1.1103
+
+RESI LEU          0.00
+GROUP   
+ATOM N    N238   -0.500 !     |        HD11 HD12
+ATOM HN   H241    0.300 !  HN-N          | /
+ATOM CA   C224    0.140 !     |   HB1   CD1--HD13
+ATOM HA   H140    0.060 !     |   |    /
+GROUP                   !  HA-CA--CB--CG-HG
+ATOM CB   C136   -0.120 !     |   |    \ 
+ATOM HB1  H140    0.060 !     |   HB2   CD2--HD23
+ATOM HB2  H140    0.060 !   O=C          | \
+GROUP                   !     |        HD21 HD22
+ATOM CG   C137   -0.060 !
+ATOM HG   H140    0.060 !
+GROUP   
+ATOM CD1  C135   -0.180 !
+ATOM HD11 H140    0.060 !
+ATOM HD12 H140    0.060 !
+ATOM HD13 H140    0.060 !
+GROUP   
+ATOM CD2  C135   -0.180 !
+ATOM HD21 H140    0.060 !
+ATOM HD22 H140    0.060 !
+ATOM HD23 H140    0.060 !
+GROUP   
+ATOM C    C235    0.500 !
+ATOM O    O236   -0.500 !
+BOND CB  CA   CG  CB   CD1 CG   CD2 CG   
+BOND N   HN   N   CA    C   CA   C +N   
+BOND CA  HA   CB  HB1  CB  HB2  CG  HG   CD1 HD11   
+BOND CD1 HD12 CD1 HD13 CD2 HD21 CD2 HD22 CD2 HD23
+DOUBLE   O   C
+IMPR HN N -C CA   O C CA +N  
+DONOR HN N   
+ACCEPTOR O C   
+IC -C   CA   *N   HN    1.3474 124.3100  180.0000 114.2600  0.9979
+IC -C   N    CA   C     1.3474 124.3100  180.0000 106.0500  1.5184
+IC N    CA   C    +N    1.4508 106.0500  180.0000 117.9300  1.3463
+IC +N   CA   *C   O     1.3463 117.9300  180.0000 120.5600  1.2299
+IC CA   C    +N   +CA   1.5184 117.9300  180.0000 124.2600  1.4467
+IC N    C    *CA  CB    1.4508 106.0500  121.5200 112.1200  1.5543
+IC N    C    *CA  HA    1.4508 106.0500 -116.5000 107.5700  1.0824
+IC N    CA   CB   CG    1.4508 111.1900  180.0000 117.4600  1.5472
+IC CG   CA   *CB  HB1   1.5472 117.4600  120.9800 107.1700  1.1145
+IC CG   CA   *CB  HB2   1.5472 117.4600 -124.6700 108.9800  1.1126
+IC CA   CB   CG   CD1   1.5543 117.4600  180.0000 110.4800  1.5361
+IC CD1  CB   *CG  CD2   1.5361 110.4800 -123.7500 112.5700  1.5360
+IC CD1  CD2  *CG  HG    1.5361 110.2600 -116.6300 108.0200  1.1168
+IC CB   CG   CD1  HD11  1.5472 110.4800  177.3300 110.5400  1.1111
+IC HD11 CG   *CD1 HD12  1.1111 110.5400  119.9600 110.6200  1.1112
+IC HD11 CG   *CD1 HD13  1.1111 110.5400 -119.8500 110.6900  1.1108
+IC CB   CG   CD2  HD21  1.5472 112.5700  178.9600 110.3200  1.1116
+IC HD21 CG   *CD2 HD22  1.1116 110.3200  119.7100 111.6900  1.1086
+IC HD21 CG   *CD2 HD23  1.1116 110.3200 -119.6100 110.4900  1.1115
+
+RESI LYS          1.00
+GROUP   
+ATOM N    N238   -0.500 !     |                   
+ATOM HN   H241    0.300 !  HN-N                   
+ATOM CA   C224    0.140 !     |   HB1 HG1 HD1 HE1    HZ1
+ATOM HA   H140    0.060 !     |   |   |   |   |     /   
+GROUP                   !  HA-CA--CB--CG--CD--CE--NZ--HZ2
+ATOM CB   C136   -0.120 !     |   |   |   |   |     \
+ATOM HB1  H140    0.060 !     |   HB2 HG2 HD2 HE2    HZ3
+ATOM HB2  H140    0.060 !   O=C                  
+GROUP                   !     |                  
+ATOM CG   C136   -0.120 !
+ATOM HG1  H140    0.060 !
+ATOM HG2  H140    0.060 !
+GROUP   
+ATOM CD   C136   -0.120 !
+ATOM HD1  H140    0.060 !
+ATOM HD2  H140    0.060 !
+GROUP   
+ATOM CE   C292    0.190 !
+ATOM HE1  H140    0.060 !
+ATOM HE2  H140    0.060 !
+ATOM NZ   N287   -0.300 !
+ATOM HZ1  H290    0.330 !
+ATOM HZ2  H290    0.330 !
+ATOM HZ3  H290    0.330 !
+GROUP   
+ATOM C    C235    0.500 !
+ATOM O    O236   -0.500 !
+BOND CB CA   CG CB   CD CG   CE CD   NZ CE   
+BOND N  HN   N  CA    C  CA   
+BOND C  +N   CA HA   CB HB1  CB HB2  CG HG1   
+BOND CG HG2  CD HD1  CD HD2  CE HE1  CE HE2 
+DOUBLE   O  C   
+BOND NZ HZ1  NZ HZ2  NZ HZ3   
+IMPR HN N -C CA   O C CA +N  
+DONOR HN N   
+DONOR HZ1 NZ   
+DONOR HZ2 NZ   
+DONOR HZ3 NZ   
+ACCEPTOR O C   
+IC -C   CA   *N   HN    1.3482 123.5700  180.0000 115.1100  0.9988
+IC -C   N    CA   C     1.3482 123.5700  180.0000 107.2900  1.5187
+IC N    CA   C    +N    1.4504 107.2900  180.0000 117.2700  1.3478
+IC +N   CA   *C   O     1.3478 117.2700  180.0000 120.7900  1.2277
+IC CA   C    +N   +CA   1.5187 117.2700  180.0000 124.9100  1.4487
+IC N    C    *CA  CB    1.4504 107.2900  122.2300 111.3600  1.5568
+IC N    C    *CA  HA    1.4504 107.2900 -116.8800 107.3600  1.0833
+IC N    CA   CB   CG    1.4504 111.4700  180.0000 115.7600  1.5435
+IC CG   CA   *CB  HB1   1.5435 115.7600  120.9000 107.1100  1.1146
+IC CG   CA   *CB  HB2   1.5435 115.7600 -124.4800 108.9900  1.1131
+IC CA   CB   CG   CD    1.5568 115.7600  180.0000 113.2800  1.5397
+IC CD   CB   *CG  HG1   1.5397 113.2800  120.7400 109.1000  1.1138
+IC CD   CB   *CG  HG2   1.5397 113.2800 -122.3400 108.9900  1.1143
+IC CB   CG   CD   CE    1.5435 113.2800  180.0000 112.3300  1.5350
+IC CE   CG   *CD  HD1   1.5350 112.3300  122.2500 108.4100  1.1141
+IC CE   CG   *CD  HD2   1.5350 112.3300 -121.5900 108.1300  1.1146
+IC CG   CD   CE   NZ    1.5397 112.3300  180.0000 110.4600  1.4604
+IC NZ   CD   *CE  HE1   1.4604 110.4600  119.9100 110.5100  1.1128
+IC NZ   CD   *CE  HE2   1.4604 110.4600 -120.0200 110.5700  1.1123
+IC CD   CE   NZ   HZ1   1.5350 110.4600  179.9200 110.0200  1.0404
+IC HZ1  CE   *NZ  HZ2   1.0404 110.0200  120.2700 109.5000  1.0402
+IC HZ1  CE   *NZ  HZ3   1.0404 110.0200 -120.1300 109.4000  1.0401
+
+RESI MET          0.00
+GROUP   
+ATOM N    N238   -0.500 !     |                   
+ATOM HN   H241    0.300 !  HN-N                   
+ATOM CA   C224    0.140 !     |   HB1 HG1     HE1 
+ATOM HA   H140    0.060 !     |   |   |       |   
+GROUP                   !  HA-CA--CB--CG--SD--CE--HE3
+ATOM CB   C136   -0.120 !     |   |   |       |   
+ATOM HB1  H140    0.060 !     |   HB2 HG2     HE2 
+ATOM HB2  H140    0.060 !   O=C                  
+GROUP                   !     |                  
+ATOM CG   C210    0.0975 !
+ATOM HG1  H140    0.060 !
+ATOM HG2  H140    0.060 !
+ATOM SD   S202   -0.435 !
+ATOM CE   C209    0.0375 !
+ATOM HE1  H140    0.060 !
+ATOM HE2  H140    0.060 !
+ATOM HE3  H140    0.060 !
+GROUP   
+ATOM C    C235    0.500 !
+ATOM O    O236   -0.500 !
+BOND CB CA   CG CB   SD CG   CE SD   
+BOND N  HN   N  CA    C  CA   C  +N   
+BOND CA HA   CB HB1  CB HB2  CG HG1  CG HG2   
+BOND CE HE1  CE HE2  CE HE3  
+DOUBLE   O  C   
+IMPR HN N -C CA   O C CA +N  
+DONOR HN N   
+ACCEPTOR O C   
+IC -C   CA   *N   HN    1.3478 124.2100  180.0000 114.3900  0.9978
+IC -C   N    CA   C     1.3478 124.2100  180.0000 106.3100  1.5195
+IC N    CA   C    +N    1.4510 106.3100  180.0000 117.7400  1.3471
+IC +N   CA   *C   O     1.3471 117.7400  180.0000 120.6400  1.2288
+IC CA   C    +N   +CA   1.5195 117.7400  180.0000 124.5200  1.4471
+IC N    C    *CA  CB    1.4510 106.3100  121.6200 111.8800  1.5546
+IC N    C    *CA  HA    1.4510 106.3100 -116.9800 107.5700  1.0832
+IC N    CA   CB   CG    1.4510 111.2500  180.0000 115.9200  1.5460
+IC CG   CA   *CB  HB1   1.5460 115.9200  120.5600 106.9000  1.1153
+IC CG   CA   *CB  HB2   1.5460 115.9200 -124.8000 109.3800  1.1129
+IC CA   CB   CG   SD    1.5546 115.9200  180.0000 110.2800  1.8219
+IC SD   CB   *CG  HG1   1.8219 110.2800  120.5000 110.3400  1.1106
+IC SD   CB   *CG  HG2   1.8219 110.2800 -121.1600 109.6400  1.1119
+IC CB   CG   SD   CE    1.5460 110.2800  180.0000  98.9400  1.8206
+IC CG   SD   CE   HE1   1.8219  98.9400 -179.4200 110.9100  1.1111
+IC HE1  SD   *CE  HE2   1.1111 110.9100  119.9500 111.0300  1.1115
+IC HE1  SD   *CE  HE3   1.1111 110.9100 -119.9500 111.0900  1.1112
+
+RESI PHE          0.00
+GROUP   
+ATOM N    N238   -0.500 !     |        HD1  HE1    
+ATOM HN   H241    0.300 !  HN-N         |    |   
+ATOM CA   C224    0.140 !     |   HB1  CD1--CE1
+ATOM HA   H140    0.060 !     |   |    //     \\
+GROUP                   !  HA-CA--CB--CG      CZ--HZ
+ATOM CB   C149   -0.005 !     |   |    \  __  /
+ATOM HB1  H140    0.060 !     |   HB2  CD2--CE2
+ATOM HB2  H140    0.060 !   O=C         |    |  
+ATOM CG   C145   -0.115 !     |        HD2  HE2   
+GROUP   
+ATOM CD1  C145   -0.115 !
+ATOM HD1  H146    0.115 !
+GROUP   
+ATOM CE1  C145   -0.115 !
+ATOM HE1  H146    0.115 !
+GROUP
+ATOM CZ   C145   -0.115 !
+ATOM HZ   H146    0.115 !
+GROUP
+ATOM CD2  C145   -0.115 !
+ATOM HD2  H146    0.115 !
+GROUP
+ATOM CE2  C145   -0.115 !
+ATOM HE2  H146    0.115 !
+GROUP   
+ATOM C    C235    0.500 !
+ATOM O    O236   -0.500 !
+BOND CB  CA   CG CB   CD2 CG   CE1 CD1   
+BOND CZ  CE2  N   HN   
+BOND N   CA    C   CA   C   +N   CA  HA   
+BOND CB  HB1  CB HB2  CD1 HD1  CD2 HD2  CE1 HE1  
+DOUBLE   O  C    CD1 CG  CZ CE1   CE2 CD2
+BOND CE2 HE2  CZ HZ   
+IMPR HN N -C CA   O C CA +N  
+IMPR HD1 CD1 CG CE1  HE1 CE1 CD1 CZ  HZ CZ CE1 CE2
+IMPR CB CG CD1 CD2   HD2 CD2 CE2 CG  HE2 CE2 CZ CD2
+DONOR HN N   
+ACCEPTOR O C   
+IC -C   CA   *N   HN    1.3476 123.8900  180.0000 114.4700  0.9987
+IC -C   N    CA   C     1.3476 123.8900  180.0000 106.3800  1.5229
+IC N    CA   C    +N    1.4504 106.3800  180.0000 117.6500  1.3483
+IC +N   CA   *C   O     1.3483 117.6500  180.0000 120.4900  1.2287
+IC CA   C    +N   +CA   1.5229 117.6500  180.0000 124.1000  1.4523
+IC N    C    *CA  CB    1.4504 106.3800  122.4900 112.4500  1.5594
+IC N    C    *CA  HA    1.4504 106.3800 -115.6300 107.0500  1.0832
+IC N    CA   CB   CG    1.4504 111.6300  180.0000 112.7600  1.5109
+IC CG   CA   *CB  HB1   1.5109 112.7600  118.2700 109.1000  1.1119
+IC CG   CA   *CB  HB2   1.5109 112.7600 -123.8300 111.1100  1.1113
+IC CA   CB   CG   CD1   1.5594 112.7600   90.0000 120.3200  1.4059
+IC CD1  CB   *CG  CD2   1.4059 120.3200 -177.9600 120.7600  1.4062
+IC CB   CG   CD1  CE1   1.5109 120.3200 -177.3700 120.6300  1.4006
+IC CE1  CG   *CD1 HD1   1.4006 120.6300  179.7000 119.6500  1.0814
+IC CB   CG   CD2  CE2   1.5109 120.7600  177.2000 120.6200  1.4002
+IC CE2  CG   *CD2 HD2   1.4002 120.6200 -178.6900 119.9900  1.0811
+IC CG   CD1  CE1  CZ    1.4059 120.6300   -0.1200 119.9300  1.4004
+IC CZ   CD1  *CE1 HE1   1.4004 119.9300 -179.6900 120.0100  1.0808
+IC CZ   CD2  *CE2 HE2   1.4000 119.9600 -179.9300 119.8700  1.0811
+IC CE1  CE2  *CZ  HZ    1.4004 119.9800  179.5100 119.9700  1.0807
+
+RESI PRO          0.00
+GROUP                   !       HD1 HD2
+ATOM N    N239   -0.140 !     |   \ /
+ATOM CD   C245   -0.050 !     N---CD   HG1  ATOM CA   CP1     0.02
+ATOM HD1  H140    0.060 !     |     \  /
+ATOM HD2  H140    0.060 !     |      CG
+ATOM CA   C246    0.010 !     |     /  \
+ATOM HA   H140    0.060 !  HA-CA--CB   HG2
+GROUP                   !     |   / \
+ATOM CB   C136   -0.120 !     | HB1 HB2
+ATOM HB1  H140    0.060 !   O=C
+ATOM HB2  H140    0.060 !     |
+GROUP
+ATOM CG   C136   -0.120 !
+ATOM HG1  H140    0.060 !
+ATOM HG2  H140    0.060 !
+GROUP   
+ATOM C    C235    0.500 !
+ATOM O    O236   -0.500 !
+BOND C  CA  C   +N   
+BOND N  CA  CA  CB  CB  CG  CG  CD  N   CD   
+BOND HA CA  HG1 CG  HG2 CG  HD1 CD  HD2 CD  HB1 CB  HB2 CB
+DOUBLE   O  C       
+IMPR CD N -C CA  
+IMPR O C CA +N  
+ACCEPTOR O C   
+IC -C   CA   *N   CD    1.3366 122.9400  178.5100 112.7500  1.4624
+IC -C   N    CA   C     1.3366 122.9400  -76.1200 110.8600  1.5399
+IC N    CA   C    +N    1.4585 110.8600  180.0000 114.7500  1.3569
+IC +N   CA   *C   O     1.3569 114.7500  177.1500 120.4600  1.2316
+IC CA   C    +N   +CA   1.5399 116.1200  180.0000 124.8900  1.4517
+IC N    C    *CA  CB    1.4585 110.8600  113.7400 111.7400  1.5399
+IC N    C    *CA  HA    1.4585 110.8600 -122.4000 109.0900  1.0837
+IC N    CA   CB   CG    1.4585 102.5600   31.6100 104.3900  1.5322
+IC CA   CB   CG   CD    1.5399 104.3900  -34.5900 103.2100  1.5317
+IC N    CA   CB   HB1   1.4585 102.5600  -84.9400 109.0200  1.1131
+IC N    CA   CB   HB2   1.4585 102.5600  153.9300 112.7400  1.1088
+IC CA   CB   CG   HG1   1.5399 104.3900 -156.7200 112.9500  1.1077
+IC CA   CB   CG   HG2   1.5399 104.3900   81.2600 109.2200  1.1143
+IC CB   CG   CD   HD1   1.5322 103.2100  -93.5500 110.0300  1.1137
+IC CB   CG   CD   HD2   1.5322 103.2100  144.5200 110.0000  1.1144
+PATCHING FIRS PROP LAST PROC
+
+RESI SER          0.00
+GROUP   
+ATOM N    N238   -0.500 !     |       
+ATOM HN   H241    0.300 !  HN-N       
+ATOM CA   C224    0.140 !     |   HB1
+ATOM HA   H140    0.060 !     |   |  
+GROUP                   !  HA-CA--CB--OG
+ATOM CB   C157    0.145 !     |   |     \
+ATOM HB1  H140    0.060 !     |   HB2    HG1
+ATOM HB2  H140    0.060 !   O=C           
+ATOM OG   O154   -0.683 !     |           
+ATOM HG1  H155    0.418 !
+GROUP   
+ATOM C    C235    0.500 !
+ATOM O    O236   -0.500 !
+BOND CB CA   OG CB  N HN  N  CA   
+BOND C  CA  C +N  CA HA  CB HB1   
+BOND CB HB2  OG HG1  
+DOUBLE   O  C      
+IMPR HN N -C CA   O C CA +N  
+DONOR HN N   
+DONOR HG1 OG   
+ACCEPTOR OG   
+ACCEPTOR O C   
+IC -C   CA   *N   HN    1.3474 124.3700  180.0000 114.1800  0.9999
+IC -C   N    CA   C     1.3474 124.3700  180.0000 105.8100  1.5166
+IC N    CA   C    +N    1.4579 105.8100  180.0000 117.7200  1.3448
+IC +N   CA   *C   O     1.3448 117.7200  180.0000 120.2500  1.2290
+IC CA   C    +N   +CA   1.5166 117.7200  180.0000 124.6300  1.4529
+IC N    C    *CA  CB    1.4579 105.8100  124.7500 111.4000  1.5585
+IC N    C    *CA  HA    1.4579 105.8100 -115.5600 107.3000  1.0821
+IC N    CA   CB   OG    1.4579 114.2800  180.0000 112.4500  1.4341
+IC OG   CA   *CB  HB1   1.4341 112.4500  119.3200 108.1000  1.1140
+IC OG   CA   *CB  HB2   1.4341 112.4500 -123.8600 110.3800  1.1136
+IC CA   CB   OG   HG1   1.5585 112.4500  165.9600 107.0800  0.9655
+
+RESI THR          0.00
+GROUP   
+ATOM N    N238   -0.500 !     |  
+ATOM HN   H241    0.300 !  HN-N  
+ATOM CA   C224    0.140 !     |     OG1--HG1
+ATOM HA   H140    0.060 !     |    /
+GROUP                   !  HA-CA--CB-HB  
+ATOM CB   C158    0.205 !     |    \     
+ATOM HB   H140    0.060 !     |     CG2--HG21
+ATOM OG1  O154   -0.683 !   O=C    / \    
+ATOM HG1  H155    0.418 !     | HG21 HG22 
+GROUP                 
+ATOM CG2  C135   -0.180 !
+ATOM HG21 H140    0.060 !
+ATOM HG22 H140    0.060 !
+ATOM HG23 H140    0.060 !
+GROUP   
+ATOM C    C235    0.500 !
+ATOM O    O236   -0.500 !
+BOND CB CA  OG1 CB   CG2 CB    N   HN   
+BOND N  CA    C   CA    C   +N    CA  HA   
+BOND CB HB  OG1 HG1  CG2 HG21  CG2 HG22  CG2 HG23
+DOUBLE  O   C    
+IMPR HN N -C CA   O C CA +N  
+DONOR HN N   
+DONOR HG1 OG1   
+ACCEPTOR OG1   
+ACCEPTOR O C   
+IC -C   CA   *N   HN    1.3471 124.1200  180.0000 114.2600  0.9995
+IC -C   N    CA   C     1.3471 124.1200  180.0000 106.0900  1.5162
+IC N    CA   C    +N    1.4607 106.0900  180.0000 117.6900  1.3449
+IC +N   CA   *C   O     1.3449 117.6900  180.0000 120.3000  1.2294
+IC CA   C    +N   +CA   1.5162 117.6900  180.0000 124.6600  1.4525
+IC N    C    *CA  CB    1.4607 106.0900  126.4600 112.7400  1.5693
+IC N    C    *CA  HA    1.4607 106.0900 -114.9200 106.5300  1.0817
+IC N    CA   CB   OG1   1.4607 114.8100  180.0000 112.1600  1.4252
+IC OG1  CA   *CB  HB    1.4252 112.1600  116.3900 106.1100  1.1174
+IC OG1  CA   *CB  CG2   1.4252 112.1600 -124.1300 115.9100  1.5324
+IC CA   CB   OG1  HG1   1.5693 112.1600 -179.2800 105.4500  0.9633
+IC CA   CB   CG2  HG21  1.5693 115.9100 -173.6500 110.8500  1.1104
+IC HG21 CB   *CG2 HG22  1.1104 110.8500  119.5100 110.4100  1.1109
+IC HG21 CB   *CG2 HG23  1.1104 110.8500 -120.3900 111.1100  1.1113
+
+RESI TRP          0.00
+GROUP   
+ATOM N    N238   -0.500 !     |                  HE3
+ATOM HN   H241    0.300 !  HN-N                   |
+ATOM CA   C224    0.140 !     |   HB1            CE3
+ATOM HA   H140    0.060 !     |   |             /  \\
+GROUP                   !  HA-CA--CB---CG-----CD2   CZ3-HZ3
+ATOM CB   C136   -0.120 !     |   |    ||     ||     |
+ATOM HB1  H140    0.060 !     |   HB2  CD1    CE2   CH2-HH2
+ATOM HB2  H140    0.060 !   O=C       /   \   / \  //
+GROUP                   !     |     HD1    NE1   CZ2
+ATOM CG   C500    0.075 !                   |     |
+ATOM CD1  C514   -0.115 !                  HE1   HZ2
+ATOM HD1  H146    0.115 !
+ATOM NE1  N503   -0.570 !
+ATOM HE1  H504    0.420 !
+ATOM CE2  C502    0.130 !
+ATOM CD2  C501   -0.055 !
+GROUP
+ATOM CE3  C145   -0.115 !
+ATOM HE3  H146    0.115 !
+GROUP
+ATOM CZ3  C145   -0.115 !
+ATOM HZ3  H146    0.115 !
+GROUP
+ATOM CZ2  C145   -0.115 !
+ATOM HZ2  H146    0.115 !
+GROUP
+ATOM CH2  C145   -0.115 !
+ATOM HH2  H146    0.115 !
+GROUP   
+ATOM C    C235    0.500 !
+ATOM O    O236   -0.500 !
+BOND CB  CA   CG  CB   CD2 CG   NE1 CD1   
+BOND CZ2 CE2   
+BOND N   HN   N   CA     C   CA   C   +N   
+BOND CZ3 CH2  CD2 CE3  NE1 CE2  CA  HA   CB  HB1   
+BOND CB  HB2  CD1 HD1  NE1 HE1  CE3 HE3  CZ2 HZ2   
+BOND CZ3 HZ3  CH2 HH2
+DOUBLE  O   C   CD1 CG   CE2 CD2  CZ3 CE3  CH2 CZ2     
+IMPR HN N -C CA   O C CA +N  
+IMPR CB CG CD1 CD2   HD1 CD1 CG NE1  HE1 NE1 CD1 CE2
+IMPR HZ2 CZ2 CE2 CH2 HH2 CH2 CZ2 CZ3 HZ3 CZ3 CH2 CE3
+IMPR HE3 CE3 CZ3 CD2 CE2 CD2 CE3 CG  CZ2 CE2 CD2 NE1
+DONOR HN N   
+DONOR HE1 NE1   
+ACCEPTOR O C   
+IC -C   CA   *N   HN    1.3482 123.5100  180.0000 115.0200  0.9972
+IC -C   N    CA   C     1.3482 123.5100  180.0000 107.6900  1.5202
+IC N    CA   C    +N    1.4507 107.6900  180.0000 117.5700  1.3505
+IC +N   CA   *C   O     1.3505 117.5700  180.0000 121.0800  1.2304
+IC CA   C    +N   +CA   1.5202 117.5700  180.0000 124.8800  1.4526
+IC N    C    *CA  CB    1.4507 107.6900  122.6800 111.2300  1.5560
+IC N    C    *CA  HA    1.4507 107.6900 -117.0200 106.9200  1.0835
+IC N    CA   CB   CG    1.4507 111.6800  180.0000 115.1400  1.5233
+IC CG   CA   *CB  HB1   1.5233 115.1400  119.1700 107.8400  1.1127
+IC CG   CA   *CB  HB2   1.5233 115.1400 -124.7300 109.8700  1.1118
+IC CA   CB   CG   CD2   1.5560 115.1400   90.0000 123.9500  1.4407
+IC CD2  CB   *CG  CD1   1.4407 123.9500 -172.8100 129.1800  1.3679
+IC CD1  CG   CD2  CE2   1.3679 106.5700   -0.0800 106.6500  1.4126
+IC CG   CD2  CE2  NE1   1.4407 106.6500    0.1400 107.8700  1.3746
+IC CE2  CG   *CD2 CE3   1.4126 106.6500  179.2100 132.5400  1.4011
+IC CE2  CD2  CE3  CZ3   1.4126 120.8000   -0.2000 118.1600  1.4017
+IC CD2  CE3  CZ3  CH2   1.4011 118.1600    0.1000 120.9700  1.4019
+IC CE3  CZ3  CH2  CZ2   1.4017 120.9700    0.0100 120.8700  1.4030
+IC CZ3  CD2  *CE3 HE3   1.4017 118.1600 -179.6200 121.8400  1.0815
+IC CH2  CE3  *CZ3 HZ3   1.4019 120.9700 -179.8200 119.4500  1.0811
+IC CZ2  CZ3  *CH2 HH2   1.4030 120.8700 -179.9200 119.5700  1.0811
+IC CE2  CH2  *CZ2 HZ2   1.3939 118.4200  179.8700 120.0800  1.0790
+IC CD1  CE2  *NE1 HE1   1.3752 108.8100  177.7800 124.6800  0.9767
+IC CG   NE1  *CD1 HD1   1.3679 110.1000  178.1000 125.4300  1.0820
+
+RESI TYR          0.00
+GROUP   
+ATOM N    N238   -0.500 !     |        HD1  HE1    
+ATOM HN   H241    0.300 !  HN-N         |    |   
+ATOM CA   C224    0.140 !     |   HB1  CD1--CE1
+ATOM HA   H140    0.060 !     |   |   //      \\
+GROUP                   !  HA-CA--CB--CG      CZ--OH
+ATOM CB   C149   -0.005 !     |   |    \  __  /     \
+ATOM HB1  H140    0.060 !     |   HB2  CD2--CE2     HH
+ATOM HB2  H140    0.060 !   O=C         |    |  
+ATOM CG   C145   -0.115 !     |        HD2  HE2   
+GROUP   
+ATOM CD1  C145   -0.115 !
+ATOM HD1  H146    0.115 !
+GROUP   
+ATOM CE1  C145   -0.115 !
+ATOM HE1  H146    0.115 !
+GROUP
+ATOM CZ   C166    0.150 !
+ATOM OH   O167   -0.585 !
+ATOM HH   H168    0.435 !
+GROUP
+ATOM CD2  C145   -0.115 !
+ATOM HD2  H146    0.115 !
+GROUP
+ATOM CE2  C145   -0.115 !
+ATOM HE2  H146    0.115 !
+GROUP   
+ATOM C    C235    0.500 !
+ATOM O    O236   -0.500 !
+BOND CB  CA   CG  CB   CD2 CG   CE1 CD1   
+BOND CZ  CE2  OH  CZ   
+BOND N   HN   N   CA    C   CA   C   +N   
+BOND CA  HA   CB  HB1  CB  HB2  CD1 HD1  CD2 HD2   
+BOND CE1 HE1  CE2 HE2  OH  HH
+DOUBLE   O   C   CD1 CG  CE1  CZ  CE2 CD2      
+IMPR HN N -C CA   O C CA +N  
+IMPR HD1 CD1 CG CE1  HE1 CE1 CD1 CZ  OH CZ CE1 CE2
+IMPR CB CG CD1 CD2   HD2 CD2 CE2 CG  HE2 CE2 CZ CD2
+DONOR HN N   
+DONOR HH OH   
+ACCEPTOR OH   
+ACCEPTOR O C   
+IC -C   CA   *N   HN    1.3476 123.8100  180.0000 114.5400  0.9986
+IC -C   N    CA   C     1.3476 123.8100  180.0000 106.5200  1.5232
+IC N    CA   C    +N    1.4501 106.5200  180.0000 117.3300  1.3484
+IC +N   CA   *C   O     1.3484 117.3300  180.0000 120.6700  1.2287
+IC CA   C    +N   +CA   1.5232 117.3300  180.0000 124.3100  1.4513
+IC N    C    *CA  CB    1.4501 106.5200  122.2700 112.3400  1.5606
+IC N    C    *CA  HA    1.4501 106.5200 -116.0400 107.1500  1.0833
+IC N    CA   CB   CG    1.4501 111.4300  180.0000 112.9400  1.5113
+IC CG   CA   *CB  HB1   1.5113 112.9400  118.8900 109.1200  1.1119
+IC CG   CA   *CB  HB2   1.5113 112.9400 -123.3600 110.7000  1.1115
+IC CA   CB   CG   CD1   1.5606 112.9400   90.0000 120.4900  1.4064
+IC CD1  CB   *CG  CD2   1.4064 120.4900 -176.4600 120.4600  1.4068
+IC CB   CG   CD1  CE1   1.5113 120.4900 -175.4900 120.4000  1.4026
+IC CE1  CG   *CD1 HD1   1.4026 120.4000  178.9400 119.8000  1.0814
+IC CB   CG   CD2  CE2   1.5113 120.4600  175.3200 120.5600  1.4022
+IC CE2  CG   *CD2 HD2   1.4022 120.5600 -177.5700 119.9800  1.0813
+IC CG   CD1  CE1  CZ    1.4064 120.4000   -0.1900 120.0900  1.3978
+IC CZ   CD1  *CE1 HE1   1.3978 120.0900  179.6400 120.5800  1.0799
+IC CZ   CD2  *CE2 HE2   1.3979 119.9200 -178.6900 119.7600  1.0798
+IC CE1  CE2  *CZ  OH    1.3978 120.0500 -178.9800 120.2500  1.4063
+IC CE1  CZ   OH   HH    1.3978 119.6800  175.4500 107.4700  0.9594
+
+RESI VAL          0.00
+GROUP   
+ATOM N    N238   -0.500 !     |    HG11 HG12
+ATOM HN   H241    0.300 !  HN-N      | / 
+ATOM CA   C224    0.140 !     |     CG1--HG13
+ATOM HA   H140    0.060 !     |    /
+GROUP                   !  HA-CA--CB-HB  
+ATOM CB   C137   -0.060 !     |    \     
+ATOM HB   H140    0.060 !     |     CG2--HG21
+GROUP                   !   O=C    / \   
+ATOM CG1  C135   -0.180 !     | HG21 HG22
+ATOM HG11 H140    0.060 !
+ATOM HG12 H140    0.060 !
+ATOM HG13 H140    0.060 !
+GROUP   
+ATOM CG2  C135   -0.180 !
+ATOM HG21 H140    0.060 !
+ATOM HG22 H140    0.060 !
+ATOM HG23 H140    0.060 !
+GROUP   
+ATOM C    C235    0.500 !
+ATOM O    O236   -0.500 !
+BOND CB  CA    CG1 CB    CG2 CB    N   HN   
+BOND N   CA     C   CA    C   +N    CA HA   
+BOND CB  HB    CG1 HG11  CG1 HG12  CG1 HG13  CG2 HG21   
+BOND CG2 HG22  CG2 HG23
+DOUBLE    O   C   
+IMPR HN N -C CA   O C CA +N  
+DONOR HN N   
+ACCEPTOR O C   
+IC -C   CA   *N   HN    1.3482 124.5700  180.0000 114.4100  0.9966
+IC -C   N    CA   C     1.3482 124.5700  180.0000 105.5400  1.5180
+IC N    CA   C    +N    1.4570 105.5400  180.0000 117.8300  1.3471
+IC +N   CA   *C   O     1.3471 117.8300  180.0000 120.7000  1.2297
+IC CA   C    +N   +CA   1.5180 117.8300  180.0000 124.0800  1.4471
+IC N    C    *CA  CB    1.4570 105.5400  122.9500 111.2300  1.5660
+IC N    C    *CA  HA    1.4570 105.5400 -117.2400 107.4600  1.0828
+IC N    CA   CB   CG1   1.4570 113.0500  180.0000 113.9700  1.5441
+IC CG1  CA   *CB  CG2   1.5441 113.9700  123.9900 112.1700  1.5414
+IC CG1  CA   *CB  HB    1.5441 113.9700 -119.1700 107.5700  1.1178
+IC CA   CB   CG1  HG11  1.5660 113.9700  177.8300 110.3000  1.1114
+IC HG11 CB   *CG1 HG12  1.1114 110.3000  119.2500 111.6700  1.1097
+IC HG11 CB   *CG1 HG13  1.1114 110.3000 -119.4900 110.7000  1.1110
+IC CA   CB   CG2  HG21  1.5660 112.1700 -177.7800 110.7100  1.1108
+IC HG21 CB   *CG2 HG22  1.1108 110.7100  120.0800 110.5600  1.1115
+IC HG21 CB   *CG2 HG23  1.1108 110.7100 -119.5500 111.2300  1.1098
+
+PRES NTER         1.00 ! standard N-terminus
+GROUP                  ! use in generate statement
+ATOM N    N287   -0.300 !
+ATOM HT1  H290    0.330 !         HT1	
+ATOM HT2  H290    0.330 !     (+)/
+ATOM HT3  H290    0.330 ! --CA--N--HT2
+ATOM CA   C293    0.250 !   |    \
+ATOM HA   H140    0.060 !   HA    HT3
+DELETE ATOM HN   
+BOND HT1 N HT2 N HT3 N   
+DONOR HT1 N   
+DONOR HT2 N   
+DONOR HT3 N   
+IC HT1  N    CA   C     0.0000  0.0000  180.0000  0.0000  0.0000
+IC HT2  CA   *N   HT1   0.0000  0.0000  120.0000  0.0000  0.0000
+IC HT3  CA   *N   HT2   0.0000  0.0000  120.0000  0.0000  0.0000
+
+PRES GLYP         1.00 ! Glycine N-terminus
+GROUP                  ! use in generate statement
+ATOM N    N287   -0.300 !
+ATOM HT1  H290    0.330 !   HA1   HT1
+ATOM HT2  H290    0.330 !   | (+)/
+ATOM HT3  H290    0.330 ! --CA--N--HT2
+ATOM CA   C292    0.190 !   |    \
+ATOM HA1  H140    0.060 !   HA2   HT3
+ATOM HA2  H140    0.060 !
+DELETE ATOM HN   
+BOND HT1 N HT2 N HT3 N   
+DONOR HT1 N   
+DONOR HT2 N   
+DONOR HT3 N   
+IC HT1  N    CA   C     0.0000  0.0000  180.0000  0.0000  0.0000
+IC HT2  CA   *N   HT1   0.0000  0.0000  120.0000  0.0000  0.0000
+IC HT3  CA   *N   HT2   0.0000  0.0000  120.0000  0.0000  0.0000
+
+PRES PROP         1.00 ! Proline N-Terminal
+GROUP                  ! use in generate statement
+ATOM N    N309   -0.200 !   HA
+ATOM HN1  H310    0.310 !   |
+ATOM HN2  H310    0.310 !  -CA   HN1
+ATOM CD   C296    0.170 !  /  \ /
+ATOM HD1  H140    0.060 !       N(+)
+ATOM HD2  H140    0.060 !      / \
+ATOM CA   C295    0.230 !  -CD    HN2
+ATOM HA   H140    0.060 !   | \
+BOND HN1 N HN2 N       !  HD1 HD2
+DONOR HN1 N   
+DONOR HN2 N   
+IC HN1  CA   *N   CD    0.0000  0.0000  120.0000  0.0000  0.0000
+IC HN2  CA   *N   HN1   0.0000  0.0000  120.0000  0.0000  0.0000
+
+PRES ACE          0.00 ! acetylated N-terminus
+GROUP                  ! use in generate statement
+ATOM CAY  C135   -0.180 !
+ATOM HY1  H140    0.060 ! HY1 HY2 HY3
+ATOM HY2  H140    0.060 !    \ | /
+ATOM HY3  H140    0.060 !     CAY
+GROUP                  !      |
+ATOM CY   C235    0.500 !      CY=OY
+ATOM OY   O236   -0.500 !      |
+                       !
+BOND CY CAY CY N CAY HY1 CAY HY2 CAY HY3
+DOUBLE OY CY  
+IMPR OY CY CAY N  
+IMPR HN N CY CA  
+ACCEPTOR OY CY   
+IC CY   N    CA   C     0.0000  0.0000  -60.0000  0.0000  0.0000
+IC CY   CA   *N   HN    0.0000  0.0000  180.0000  0.0000  0.0000
+IC CAY  CY   N    CA    0.0000  0.0000  180.0000  0.0000  0.0000
+IC N    CAY  *CY  OY    0.0000  0.0000  180.0000  0.0000  0.0000
+IC OY   CY   CAY  HY1   0.0000  0.0000  180.0000  0.0000  0.0000
+IC OY   CY   CAY  HY2   0.0000  0.0000   60.0000  0.0000  0.0000
+IC OY   CY   CAY  HY3   0.0000  0.0000  -60.0000  0.0000  0.0000
+
+PRES ACP          0.00 ! acetylated N-terminus for proline
+GROUP                  ! use in generate statement
+ATOM CAY  C135   -0.180 !
+ATOM HY1  H140    0.060 ! HY1 HY2 HY3
+ATOM HY2  H140    0.060 !    \ | /
+ATOM HY3  H140    0.060 !     CAY
+GROUP                  !      |
+ATOM CY   C235    0.500 !      CY=OY
+ATOM OY   O236   -0.500 !      |
+                       !
+BOND CY CAY CY N CAY HY1 CAY HY2 CAY HY3
+DOUBLE OY CY
+IMPR OY CY CAY N  
+IMPR CD N CY CA  
+ACCEPTOR OY CY  
+IC CY   N    CA   C     0.0000  0.0000  -60.0000  0.0000  0.0000
+IC CY   CA   *N   CD    0.0000  0.0000  180.0000  0.0000  0.0000
+IC CAY  CY   N    CA    0.0000  0.0000  180.0000  0.0000  0.0000
+IC N    CAY  *CY  OY    0.0000  0.0000  180.0000  0.0000  0.0000
+IC OY   CY   CAY  HY1   0.0000  0.0000  180.0000  0.0000  0.0000
+IC OY   CY   CAY  HY2   0.0000  0.0000   60.0000  0.0000  0.0000 
+IC OY   CY   CAY  HY3   0.0000  0.0000  -60.0000  0.0000  0.0000
+
+PRES CTER        -0.86 ! standard C-terminus
+GROUP                  ! use in generate statement
+ATOM CA   C283    0.040 ! line added in template for script pepz2rtf
+ATOM C    C271    0.700 !   OT2(-)
+ATOM OT1  O272   -0.800 !  /
+ATOM OT2  O272   -0.800 ! -C
+DELETE ATOM O          !  \\
+BOND C OT2             !   OT1
+DOUBLE  C OT1
+IMPR OT2 C CA OT1  
+ACCEPTOR OT1 C   
+ACCEPTOR OT2 C   
+IC N    CA   C    OT2   0.0000  0.0000  180.0000  0.0000  0.0000
+IC OT2  CA   *C   OT1   0.0000  0.0000  180.0000  0.0000  0.0000
+
+PRES CT3          0.00 ! N-Methylamide C-terminus use in generate statement
+GROUP                  !      C=O
+ATOM NT   N238   -0.500 !      | 
+ATOM HNT  H241    0.300 !      NT-HNT
+ATOM CAT  C242    0.020 !      |
+ATOM HT1  H140    0.060 ! HT1-CAT-HT3
+ATOM HT2  H140    0.060 !      | 
+ATOM HT3  H140    0.060 !     HT2
+                       !
+BOND C NT  NT HNT  NT CAT  CAT HT1  CAT HT2  CAT HT3   
+!DIHE CA C NT CAT   
+IMPR HNT NT C CAT   O C CA NT  
+DONOR HNT NT   
+IC N    CA   C    O     0.0000  0.0000  180.0000  0.0000  0.0000
+IC NT   CA   *C   O     0.0000  0.0000  180.0000  0.0000  0.0000
+IC C    CAT  *NT  HNT   0.0000  0.0000  180.0000  0.0000  0.0000
+IC CA   C    NT   CAT   0.0000  0.0000  180.0000  0.0000  0.0000
+IC C    NT   CAT  HT1   0.0000  0.0000   60.0000  0.0000  0.0000
+IC C    NT   CAT  HT2   0.0000  0.0000  180.0000  0.0000  0.0000
+IC C    NT   CAT  HT3   0.0000  0.0000  -60.0000  0.0000  0.0000
+
+PRES GLYC        -0.92 ! standard C-terminus
+GROUP                  ! use in generate statement
+ATOM CA   C284   -0.020 ! line added in template for script pepz2rtf
+ATOM C    C271    0.700 !   OT2(-)
+ATOM OT1  O272   -0.800 !  /
+ATOM OT2  O272   -0.800 ! -C
+DELETE ATOM O          !  \\
+BOND C OT2             !   OT1
+DOUBLE  C OT1
+IMPR OT1 C CA OT2  
+ACCEPTOR OT1 C   
+ACCEPTOR OT2 C   
+IC N    CA   C    OT2   0.0000  0.0000  180.0000  0.0000  0.0000
+IC OT2  CA   *C   OT1   0.0000  0.0000  180.0000  0.0000  0.0000
+
+PRES PROC        -0.99 ! standard C-terminus
+GROUP                  ! use in generate statement
+ATOM CA   C285   -0.090 ! line added in template for script pepz2rtf
+ATOM C    C271    0.700 !   OT2(-)
+ATOM OT1  O272   -0.800 !  /
+ATOM OT2  O272   -0.800 ! -C
+DELETE ATOM O          !  \\
+BOND C OT2             !   OT1
+DOUBLE  C OT1
+IMPR OT1 C CA OT2  
+ACCEPTOR OT1 C   
+ACCEPTOR OT2 C   
+IC N    CA   C    OT2   0.0000  0.0000  180.0000  0.0000  0.0000
+IC OT2  CA   *C   OT1   0.0000  0.0000  180.0000  0.0000  0.0000
+
+PRES ASPP         0.00 ! patch for protonated aspartic acid, proton on od2
+GROUP                  ! via acetic acid, use in a patch statement
+ATOM CB   C136   -0.120 !
+ATOM HB1  H140    0.060 ! HB1    OD1
+ATOM HB2  H140    0.060 !  |    //
+ATOM CG   C267    0.520 ! -CB--CG
+ATOM OD1  O269   -0.440 !  |     \
+ATOM OD2  O268   -0.530 ! HB2     OD2-HD2
+ATOM HD2  H270    0.450 !
+BOND OD2 HD2   
+ANGLE HD2 OD2 CG   
+DIHE HD2 OD2 CG OD1  HD2 OD2 CG CB   
+DONOR HD2 OD2   
+IC HD2  OD2  CG   OD1   0.0000  0.0000  0.0000  0.0000  0.0000
+
+PRES GLUP         0.00 ! patch for protonated glutamic acid, proton on oe2
+GROUP                  ! via acetic acid, use in a patch statement
+ATOM CG   C136   -0.120 !
+ATOM HG1  H140    0.060 ! HG1    OE1
+ATOM HG2  H140    0.060 !  |    //
+ATOM CD   C267    0.520 ! -CG--CD
+ATOM OE1  O269   -0.440 !  |     \
+ATOM OE2  O268   -0.530 ! HG2     OE2-HE2
+ATOM HE2  H270    0.450 !
+BOND OE2 HE2   
+ANGLE HE2 OE2 CD   
+DIHE HE2 OE2 CD OE1  HE2 OE2 CD CG   
+DONOR HE2 OE2   
+IC HE2  OE2  CD   OE1   0.0000  0.0000  0.0000  0.0000  0.0000
+
+PRES LINK         0.00 ! linkage for IMAGES or for joining segments
+                       ! 1 refers to previous (N terminal)
+                       ! 2 refers to next (C terminal)
+                       ! use in a patch statement
+BOND 1C 2N   
+ANGLE 1C 2N 2CA  1CA 1C 2N   
+ANGLE 1O 1C 2N   1C  2N 2HN   
+DIHE 1C  2N  2CA 2C   1C  2N  2CA 2HA  1C  2N  2CA 2CB   
+DIHE 1HA 1CA 1C  2N   1N  1CA 1C  2N   1CB 1CA 1C  2N   
+DIHE 1CA 1C  2N  2HN  1CA 1C  2N  2CA   
+DIHE 1O  1C  2N  2HN  1O  1C  2N  2CA   
+IMPR 2HN 2N 1C 2CA   1O 1C 1CA 2N  
+IC 1N   1CA  1C   2N    0.0000  0.0000  180.0000  0.0000  0.0000
+IC 2N   1CA  *1C  1O    0.0000  0.0000  180.0000  0.0000  0.0000
+IC 1CA  1C   2N   2CA   0.0000  0.0000  180.0000  0.0000  0.0000
+IC 1C   2N   2CA  2C    0.0000  0.0000  180.0000  0.0000  0.0000
+IC 1C   2CA  *2N  2HN   0.0000  0.0000  180.0000  0.0000  0.0000
+
+PRES DISU        -0.24 ! patch for disulfides. Patch must be 1-CYS and 2-CYS.
+GROUP                  ! use in a patch statement
+ATOM 1CB  C214    0.0975!
+ATOM 1SG  S203   -0.2175 !           2SG--2CB--
+ATOM 2SG  S203   -0.2175 !          /
+ATOM 2CB  C214    0.0975!  -1CB--1SG
+DELETE ATOM 1HG1   
+DELETE ATOM 2HG1   
+BOND 1SG 2SG   
+ANGLE 1CB 1SG 2SG 1SG 2SG 2CB   
+DIHE 1HB1 1CB 1SG 2SG 1HB2 1CB 1SG 2SG   
+DIHE 2HB1 2CB 2SG 1SG 2HB2 2CB 2SG 1SG   
+DIHE 1CA 1CB 1SG 2SG 1SG 2SG 2CB 2CA   
+DIHE 1CB 1SG 2SG 2CB   
+IC 1CA  1CB  1SG  2SG   0.0000  0.0000  180.0000  0.0000  0.0000
+IC 1CB  1SG  2SG  2CB   0.0000  0.0000   90.0000  0.0000  0.0000
+IC 1SG  2SG  2CB  2CA   0.0000  0.0000  180.0000  0.0000  0.0000
+
+PRES LIG1     0.00000 ! linkage for cyclic peptide
+                !       1 refers to the C terminus which is a glycine
+                !       2 refers to the N terminus 
+                !       use in a patch statement, perform initial
+                !       generation using first NONE last NONE
+BOND 1C 2N
+ANGLE 1C 2N 2CA 1CA 1C 2N
+ANGLE 1O 1C 2N 1C 2N 2HN
+DIHE 1C 2N 2CA 2C 1C 2N 2CA 2HA 1C 2N 2CA 2CB
+DIHE 1HA1 1CA 1C 2N 1N 1CA 1C 2N 1HA2 1CA 1C 2N
+DIHE 1CA 1C 2N 2HN 1CA 1C 2N 2CA
+DIHE 1O 1C 2N 2HN 1O 1C 2N 2CA
+DIHE 1CA 1C 2N 2CA
+IMPR 2HN 2N 1C 2CA   1O 1C 1CA 2N  
+IC 1N   1CA  1C   2N    0.0000  0.0000 180.0000  0.0000  0.0000
+IC 2N   1CA  *1C  1O    0.0000  0.0000 180.0000  0.0000  0.0000
+IC 1CA  1C   2N   2CA   0.0000  0.0000 180.0000  0.0000  0.0000
+IC 1C   2N   2CA  2C    0.0000  0.0000 180.0000  0.0000  0.0000
+IC 1C   2CA  *2N  2HN   0.0000  0.0000 180.0000  0.0000  0.0000
+
+PRES LIG2     0.00000 ! linkage for cyclic peptide
+                !       1 refers to the C terminus
+                !       2 refers to the N terminus which is a glycine
+                !       use in a patch statement, perform initial
+                !       generation using first NONE last NONE
+BOND 1C 2N
+ANGLE 1C 2N 2CA 1CA 1C 2N
+ANGLE 1O 1C 2N 1C 2N 2HN
+DIHE 1C 2N 2CA 2C 1C 2N 2CA 2HA1 1C 2N 2CA 2HA2
+DIHE 1HA 1CA 1C 2N 1N 1CA 1C 2N 1CB 1CA 1C 2N
+DIHE 1CA 1C 2N 2HN 1CA 1C 2N 2CA
+DIHE 1O 1C 2N 2HN 1O 1C 2N 2CA
+DIHE 1CA 1C 2N 2CA
+IMPR 2HN 2N 1C 2CA   1O 1C 1CA 2N  
+IC 1N   1CA  1C   2N    0.0000  0.0000 180.0000  0.0000  0.0000
+IC 2N   1CA  *1C  1O    0.0000  0.0000 180.0000  0.0000  0.0000
+IC 1CA  1C   2N   2CA   0.0000  0.0000 180.0000  0.0000  0.0000
+IC 1C   2N   2CA  2C    0.0000  0.0000 180.0000  0.0000  0.0000
+IC 1C   2CA  *2N  2HN   0.0000  0.0000 180.0000  0.0000  0.0000
+
+PRES LIG3     0.00000 ! linkage for cyclic peptide
+                !       1 refers to the C terminus which is a glycine
+                !       2 refers to the N terminus which is a glycine
+                !       use in a patch statement, perform initial
+                !       generation using first NONE last NONE
+BOND 1C 2N
+ANGLE 1C 2N 2CA 1CA 1C 2N
+ANGLE 1O 1C 2N 1C 2N 2HN
+DIHE 1C 2N 2CA 2C 1C 2N 2CA 2HA1 1C 2N 2CA 2HA2
+DIHE 1HA1 1CA 1C 2N 1N 1CA 1C 2N 1HA2 1CA 1C 2N
+DIHE 1CA 1C 2N 2HN 1CA 1C 2N 2CA
+DIHE 1O 1C 2N 2HN 1O 1C 2N 2CA
+DIHE 1CA 1C 2N 2CA
+IMPR 2HN 2N 1C 2CA   1O 1C 1CA 2N  
+IC 1N   1CA  1C   2N    0.0000  0.0000 180.0000  0.0000  0.0000
+IC 2N   1CA  *1C  1O    0.0000  0.0000 180.0000  0.0000  0.0000
+IC 1CA  1C   2N   2CA   0.0000  0.0000 180.0000  0.0000  0.0000
+IC 1C   2N   2CA  2C    0.0000  0.0000 180.0000  0.0000  0.0000
+IC 1C   2CA  *2N  2HN   0.0000  0.0000 180.0000  0.0000  0.0000
+
+RESI TIP3         0.000 ! tip3p water model, generate using noangle nodihedral
+GROUP
+ATOM OH2  OT     -0.834
+ATOM H1   HT      0.417
+ATOM H2   HT      0.417
+BOND OH2 H1 OH2 H2 H1 H2    ! the last bond is needed for shake
+ANGLE H1 OH2 H2             ! required
+ACCEPTOR OH2
+PATCHING FIRS NONE LAST NONE
+
+END

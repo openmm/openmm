@@ -1,0 +1,1249 @@
+* $Id: test_drude_ions.str 23 2014-08-12 22:20:19Z alex $
+* Test case, Drude ions in several toppar stream files
+*
+
+set boml 0 ! set to -1 if the series contains 3-membered rings
+
+! 1) amino acid - ion pairs
+set ion = 1 
+
+label ionloop_aa
+
+if ion eq 1 then
+ set molec LI
+endif
+
+if ion eq 2 then
+ set molec POT
+endif
+
+if ion eq 3 then
+ set molec SOD
+endif
+
+if ion eq 4 then
+ set molec RB
+endif
+
+if ion eq 5 then
+ set molec CS
+endif
+
+if ion eq 6 then
+ set molec F
+endif
+
+if ion eq 7 then
+ set molec CLA
+endif
+
+if ion eq 8 then
+ set molec BR
+endif
+
+if ion eq 9 then
+ set molec I
+endif
+
+if ion eq 10 then
+ set molec ZN
+endif
+
+if ion eq 11 then
+ set molec MAG
+endif
+
+if ion eq 12 then
+ set molec CAL
+endif
+
+if ion eq 13 then
+ set molec SR
+endif
+
+if ion eq 14 then
+ set molec BA
+endif
+
+read sequence card
+* peptide for interactions with ions
+*
+5
+val gly tyr gly asp
+
+gene PROA setup first NTER last CTER DRUDE DMASS 0.4 
+
+!write coor pdb name temp.pdb
+
+read coor pdb
+REMARK peptide for interactions with ions
+ATOM      1  N   VAL     1      -4.600   2.198   7.058  1.00  0.00      PROA
+ATOM      2  DN  VAL     1      -4.609   2.196   6.942  1.00  0.00      PROA
+ATOM      3  HT1 VAL     1      -4.555   1.264   7.477  1.00  0.00      PROA
+ATOM      4  HT2 VAL     1      -4.651   2.206   6.034  1.00  0.00      PROA
+ATOM      5  HT3 VAL     1      -5.415   2.638   7.494  1.00  0.00      PROA
+ATOM      6  CA  VAL     1      -3.424   2.965   7.600  1.00  0.00      PROA
+ATOM      7  DCA VAL     1      -3.403   2.973   7.597  1.00  0.00      PROA
+ATOM      8  HA  VAL     1      -2.600   2.637   6.980  1.00  0.00      PROA
+ATOM      9  C   VAL     1      -3.244   2.455   9.046  1.00  0.00      PROA
+ATOM     10  DC  VAL     1      -3.275   2.430   8.986  1.00  0.00      PROA
+ATOM     11  O   VAL     1      -2.091   2.303   9.512  1.00  0.00      PROA
+ATOM     12  DO  VAL     1      -2.095   2.289   9.491  1.00  0.00      PROA
+ATOM     13 LPOA VAL     1      -1.969   2.396   9.254  1.00  0.00      PROA
+ATOM     14 LPOB VAL     1      -2.204   2.209   9.774  1.00  0.00      PROA
+ATOM     15  CB  VAL     1      -3.656   4.447   7.376  1.00  0.00      PROA
+ATOM     16  DCB VAL     1      -3.694   4.401   7.293  1.00  0.00      PROA
+ATOM     17  HB  VAL     1      -3.844   4.621   6.286  1.00  0.00      PROA
+ATOM     18  CG1 VAL     1      -4.871   4.978   8.160  1.00  0.00      PROA
+ATOM     19 DCG1 VAL     1      -4.843   4.951   8.090  1.00  0.00      PROA
+ATOM     20 HG11 VAL     1      -4.712   4.850   9.252  1.00  0.00      PROA
+ATOM     21 HG12 VAL     1      -5.008   6.066   7.978  1.00  0.00      PROA
+ATOM     22 HG13 VAL     1      -5.814   4.466   7.881  1.00  0.00      PROA
+ATOM     23  CG2 VAL     1      -2.388   5.237   7.743  1.00  0.00      PROA
+ATOM     24 DCG2 VAL     1      -2.443   5.207   7.779  1.00  0.00      PROA
+ATOM     25 HG21 VAL     1      -2.552   6.325   7.572  1.00  0.00      PROA
+ATOM     26 HG22 VAL     1      -2.133   5.085   8.815  1.00  0.00      PROA
+ATOM     27 HG23 VAL     1      -1.526   4.919   7.117  1.00  0.00      PROA
+ATOM     28  N   GLY     2      -4.393   2.033   9.663  1.00  0.00      PROA
+ATOM     29  DN  GLY     2      -4.429   2.027   9.507  1.00  0.00      PROA
+ATOM     30  HN  GLY     2      -5.106   2.733   9.917  1.00  0.00      PROA
+ATOM     31  CA  GLY     2      -4.400   0.819  10.446  1.00  0.00      PROA
+ATOM     32  DCA GLY     2      -4.409   0.825  10.439  1.00  0.00      PROA
+ATOM     33  HA1 GLY     2      -3.923   0.002   9.859  1.00  0.00      PROA
+ATOM     34  HA2 GLY     2      -5.450   0.511  10.638  1.00  0.00      PROA
+ATOM     35  C   GLY     2      -3.689   1.075  11.743  1.00  0.00      PROA
+ATOM     36  DC  GLY     2      -3.675   1.072  11.703  1.00  0.00      PROA
+ATOM     37  O   GLY     2      -2.909   0.156  12.141  1.00  0.00      PROA
+ATOM     38  DO  GLY     2      -2.878   0.170  12.146  1.00  0.00      PROA
+ATOM     39 LPOA GLY     2      -2.974  -0.011  11.900  1.00  0.00      PROA
+ATOM     40 LPOB GLY     2      -2.838   0.315  12.385  1.00  0.00      PROA
+ATOM     41  N   TYR     3      -3.908   2.248  12.305  1.00  0.00      PROA
+ATOM     42  DN  TYR     3      -3.857   2.255  12.184  1.00  0.00      PROA
+ATOM     43  HN  TYR     3      -4.904   2.503  12.513  1.00  0.00      PROA
+ATOM     44  CA  TYR     3      -2.872   2.730  13.210  1.00  0.00      PROA
+ATOM     45  DCA TYR     3      -2.843   2.727  13.235  1.00  0.00      PROA
+ATOM     46  HA  TYR     3      -1.916   2.621  12.647  1.00  0.00      PROA
+ATOM     47  C   TYR     3      -2.808   1.881  14.491  1.00  0.00      PROA
+ATOM     48  DC  TYR     3      -2.758   1.875  14.461  1.00  0.00      PROA
+ATOM     49  O   TYR     3      -1.737   1.821  15.112  1.00  0.00      PROA
+ATOM     50  DO  TYR     3      -1.703   1.778  15.080  1.00  0.00      PROA
+ATOM     51 LPOA TYR     3      -1.605   2.002  14.912  1.00  0.00      PROA
+ATOM     52 LPOB TYR     3      -1.860   1.640  15.317  1.00  0.00      PROA
+ATOM     53  CB  TYR     3      -2.995   4.207  13.650  1.00  0.00      PROA
+ATOM     54  DCB TYR     3      -2.981   4.239  13.566  1.00  0.00      PROA
+ATOM     55  HB1 TYR     3      -3.920   4.336  14.257  1.00  0.00      PROA
+ATOM     56  HB2 TYR     3      -2.142   4.462  14.316  1.00  0.00      PROA
+ATOM     57  CG  TYR     3      -3.020   5.220  12.540  1.00  0.00      PROA
+ATOM     58  DCG TYR     3      -2.976   5.267  12.491  1.00  0.00      PROA
+ATOM     59  CD1 TYR     3      -4.252   5.771  12.121  1.00  0.00      PROA
+ATOM     60 DCD1 TYR     3      -4.217   5.745  12.111  1.00  0.00      PROA
+ATOM     61  HD1 TYR     3      -5.169   5.410  12.564  1.00  0.00      PROA
+ATOM     62  CD2 TYR     3      -1.815   5.734  11.994  1.00  0.00      PROA
+ATOM     63 DCD2 TYR     3      -1.786   5.748  11.973  1.00  0.00      PROA
+ATOM     64  HD2 TYR     3      -0.882   5.325  12.343  1.00  0.00      PROA
+ATOM     65  CE1 TYR     3      -4.289   6.840  11.201  1.00  0.00      PROA
+ATOM     66 DCE1 TYR     3      -4.273   6.849  11.168  1.00  0.00      PROA
+ATOM     67  HE1 TYR     3      -5.228   7.284  10.909  1.00  0.00      PROA
+ATOM     68  CE2 TYR     3      -1.843   6.802  11.065  1.00  0.00      PROA
+ATOM     69 DCE2 TYR     3      -1.810   6.878  10.986  1.00  0.00      PROA
+ATOM     70  HE2 TYR     3      -0.926   7.196  10.668  1.00  0.00      PROA
+ATOM     71  CZ  TYR     3      -3.087   7.343  10.681  1.00  0.00      PROA
+ATOM     72  DCZ TYR     3      -3.073   7.352  10.660  1.00  0.00      PROA
+ATOM     73  OH  TYR     3      -3.112   8.372   9.732  1.00  0.00      PROA
+ATOM     74  DOH TYR     3      -3.122   8.361   9.725  1.00  0.00      PROA
+ATOM     75  HH  TYR     3      -2.210   8.686   9.624  1.00  0.00      PROA
+ATOM     76 LP1A TYR     3      -3.072   8.244   9.408  1.00  0.00      PROA
+ATOM     77 LP1B TYR     3      -3.168   8.681   9.885  1.00  0.00      PROA
+ATOM     78  N   GLY     4      -3.863   1.093  14.769  1.00  0.00      PROA
+ATOM     79  DN  GLY     4      -3.734   1.075  14.703  1.00  0.00      PROA
+ATOM     80  HN  GLY     4      -4.797   1.426  14.435  1.00  0.00      PROA
+ATOM     81  CA  GLY     4      -3.890   0.093  15.807  1.00  0.00      PROA
+ATOM     82  DCA GLY     4      -3.905   0.074  15.805  1.00  0.00      PROA
+ATOM     83  HA1 GLY     4      -2.919   0.027  16.347  1.00  0.00      PROA
+ATOM     84  HA2 GLY     4      -4.060  -0.901  15.339  1.00  0.00      PROA
+ATOM     85  C   GLY     4      -5.038   0.414  16.735  1.00  0.00      PROA
+ATOM     86  DC  GLY     4      -5.000   0.419  16.712  1.00  0.00      PROA
+ATOM     87  O   GLY     4      -4.839   0.178  17.950  1.00  0.00      PROA
+ATOM     88  DO  GLY     4      -4.839   0.178  17.939  1.00  0.00      PROA
+ATOM     89 LPOA GLY     4      -4.562   0.079  17.891  1.00  0.00      PROA
+ATOM     90 LPOB GLY     4      -5.114   0.275  18.019  1.00  0.00      PROA
+ATOM     91  N   ASP     5      -6.092   0.960  16.186  1.00  0.00      PROA
+ATOM     92  DN  ASP     5      -5.958   0.997  16.146  1.00  0.00      PROA
+ATOM     93  HN  ASP     5      -6.325   0.642  15.238  1.00  0.00      PROA
+ATOM     94  CA  ASP     5      -7.012   1.902  16.800  1.00  0.00      PROA
+ATOM     95  DCA ASP     5      -7.057   1.942  16.832  1.00  0.00      PROA
+ATOM     96  HA  ASP     5      -6.654   2.026  17.846  1.00  0.00      PROA
+ATOM     97  C   ASP     5      -8.528   1.413  16.746  1.00  0.00      PROA
+ATOM     98  DC  ASP     5      -8.497   1.391  16.752  1.00  0.00      PROA
+ATOM     99  CB  ASP     5      -6.814   3.289  16.116  1.00  0.00      PROA
+ATOM    100  DCB ASP     5      -6.679   3.298  15.964  1.00  0.00      PROA
+ATOM    101  HB1 ASP     5      -7.629   3.948  16.494  1.00  0.00      PROA
+ATOM    102  HB2 ASP     5      -5.926   3.702  16.655  1.00  0.00      PROA
+ATOM    103  CG  ASP     5      -6.550   3.523  14.613  1.00  0.00      PROA
+ATOM    104  DCG ASP     5      -6.516   3.451  14.487  1.00  0.00      PROA
+ATOM    105  OD1 ASP     5      -6.640   4.730  14.229  1.00  0.00      PROA
+ATOM    106 DOD1 ASP     5      -6.630   4.723  14.235  1.00  0.00      PROA
+ATOM    107  OD2 ASP     5      -6.135   2.575  13.875  1.00  0.00      PROA
+ATOM    108 DOD2 ASP     5      -6.036   2.511  13.819  1.00  0.00      PROA
+ATOM    109 LP1A ASP     5      -6.722   4.936  14.500  1.00  0.00      PROA
+ATOM    110 LP1B ASP     5      -6.575   4.751  13.886  1.00  0.00      PROA
+ATOM    111 LP2A ASP     5      -6.098   2.283  14.064  1.00  0.00      PROA
+ATOM    112 LP2B ASP     5      -6.094   2.689  13.546  1.00  0.00      PROA
+ATOM    113  OT1 ASP     5      -9.361   2.260  17.176  1.00  0.00      PROA
+ATOM    114 DOT1 ASP     5      -9.357   2.247  17.161  1.00  0.00      PROA
+ATOM    115  OT2 ASP     5      -8.783   0.245  16.310  1.00  0.00      PROA
+ATOM    116 DOT2 ASP     5      -8.779   0.241  16.306  1.00  0.00      PROA
+ATOM    117 LPT1 ASP     5      -9.685   2.128  17.160  1.00  0.00      PROA
+ATOM    118 LPT2 ASP     5      -9.195   2.552  17.274  1.00  0.00      PROA
+ATOM    119 LPT3 ASP     5      -9.128   0.184  16.324  1.00  0.00      PROA
+ATOM    120 LPT4 ASP     5      -8.487   0.086  16.213  1.00  0.00      PROA
+END
+
+read sequence card
+* ion
+*
+1
+@molec
+
+gene ION setup first none last none DRUDE DMASS 0.4
+
+if ion eq 1 then
+read coor pdb resid
+REMARK  LOOP FOR CALCULATE SINGLE POINT ENERGY OF AMINO ACID - CATION PAIRS           
+REMARK   DATE:     7/18/14      0: 9:19      CREATED BY USER: hue                     
+ATOM      1 LI   LI   1         -0.164   0.175  13.644  1.00  0.00      ION 
+ATOM      2 DLI  LI   1         -0.126   0.157  13.626  1.00  0.00      ION
+END
+endif
+
+if ion eq 2 then
+read coor pdb resid
+REMARK  LOOP FOR CALCULATE SINGLE POINT ENERGY OF AMINO ACID - CATION PAIRS
+REMARK   DATE:     7/18/14      0: 9:19      CREATED BY USER: hue
+ATOM      1 POT  POT  1         -0.164   0.175  13.644  1.00  0.00      ION
+ATOM      2 DPOT POT  1         -0.126   0.157  13.626  1.00  0.00      ION
+END
+endif
+
+if ion eq 3 then
+read coor pdb resid
+REMARK  LOOP FOR CALCULATE SINGLE POINT ENERGY OF AMINO ACID - CATIONPAIRS           
+REMARK   DATE:     7/18/14      0: 9:19      CREATED BY USER: hue                     
+ATOM      1  SOD SOD  1         -0.164   0.175  13.644  1.00  0.00      ION 
+ATOM      2 DSOD SOD  1         -0.126   0.157  13.626  1.00  0.00      ION 
+END
+endif
+
+if ion eq 4 then
+read coor pdb resid
+REMARK  LOOP FOR CALCULATE SINGLE POINT ENERGY OF AMINO ACID - CATIONPAIRS           
+REMARK   DATE:     7/18/14      0: 9:19      CREATED BY USER: hue                     
+ATOM      1   RB RB   1         -0.164   0.175  13.644  1.00  0.00      ION 
+ATOM      2  DRB RB   1         -0.126   0.157  13.626  1.00  0.00      ION 
+END
+endif
+
+if ion eq 5 then
+read coor pdb resid
+REMARK  LOOP FOR CALCULATE SINGLE POINT ENERGY OF AMINO ACID - CATIONPAIRS           
+REMARK   DATE:     7/18/14      0: 9:19      CREATED BY USER: hue                     
+ATOM      1   CS  CS  1         -0.164   0.175  13.644  1.00  0.00      ION 
+ATOM      2  DCS  CS  1         -0.126   0.157  13.626  1.00  0.00      ION 
+END
+endif
+
+if ion eq 6 then
+read coor pdb resid
+REMARK  LOOP FOR CALCULATE SINGLE POINT ENERGY OF AMINO ACID - CATIONPAIRS           
+REMARK   DATE:     7/18/14      0: 9:19      CREATED BY USER: hue                     
+ATOM      1    F   F  1         -0.164   0.175  13.644  1.00  0.00      ION 
+ATOM      2   DF   F  1         -0.126   0.157  13.626  1.00  0.00      ION 
+END
+endif
+
+if ion eq 7 then
+read coor pdb resid
+REMARK  LOOP FOR CALCULATE SINGLE POINT ENERGY OF AMINO ACID - CATIONPAIRS           
+REMARK   DATE:     7/18/14      0: 9:19      CREATED BY USER: hue                     
+ATOM      1  CLA CLA  1         -0.164   0.175  13.644  1.00  0.00      ION 
+ATOM      2 DCLA CLA  1         -0.126   0.157  13.626  1.00  0.00      ION 
+END
+endif
+
+if ion eq 8 then
+read coor pdb resid
+REMARK  LOOP FOR CALCULATE SINGLE POINT ENERGY OF AMINO ACID - CATIONPAIRS           
+REMARK   DATE:     7/18/14      0: 9:19      CREATED BY USER: hue                     
+ATOM      1   BR  BR  1         -0.164   0.175  13.644  1.00  0.00      ION 
+ATOM      2  DBR  BR  1         -0.126   0.157  13.626  1.00  0.00      ION 
+END
+endif
+
+if ion eq 9 then
+read coor pdb resid
+REMARK  LOOP FOR CALCULATE SINGLE POINT ENERGY OF AMINO ACID - CATIONPAIRS           
+REMARK   DATE:     7/18/14      0: 9:19      CREATED BY USER: hue                     
+ATOM      1    I   I  1         -0.164   0.175  13.644  1.00  0.00      ION 
+ATOM      2   DI   I  1         -0.126   0.157  13.626  1.00  0.00      ION 
+END
+endif
+
+if ion eq 10 then
+read coor pdb resid
+REMARK  LOOP FOR CALCULATE SINGLE POINT ENERGY OF AMINO ACID - CATIONPAIRS           
+REMARK   DATE:     7/18/14      0: 9:19      CREATED BY USER: hue                     
+ATOM      1   ZN  ZN  1         -0.164   0.175  13.644  1.00  0.00      ION 
+ATOM      2  DZN  ZN  1         -0.126   0.157  13.626  1.00  0.00      ION 
+END
+endif
+
+if ion eq 11 then
+read coor pdb resid
+REMARK  LOOP FOR CALCULATE SINGLE POINT ENERGY OF AMINO ACID - CATIONPAIRS           
+REMARK   DATE:     7/18/14      0: 9:19      CREATED BY USER: hue                     
+ATOM      1  MAG MAG  1         -0.164   0.175  13.644  1.00  0.00      ION 
+ATOM      2 DMAG MAG  1         -0.126   0.157  13.626  1.00  0.00      ION 
+END
+endif
+
+if ion eq 12 then
+read coor pdb resid
+REMARK  LOOP FOR CALCULATE SINGLE POINT ENERGY OF AMINO ACID - CATIONPAIRS
+REMARK   DATE:     7/18/14      0: 9:19      CREATED BY USER: hue
+ATOM      1  CAL CAL  1         -0.164   0.175  13.644  1.00  0.00      ION
+ATOM      2 DCAL CAL  1         -0.126   0.157  13.626  1.00  0.00      ION
+END
+endif
+
+if ion eq 13 then
+read coor pdb resid
+REMARK  LOOP FOR CALCULATE SINGLE POINT ENERGY OF AMINO ACID - CATIONPAIRS           
+REMARK   DATE:     7/18/14      0: 9:19      CREATED BY USER: hue                     
+ATOM      1   SR  SR  1         -0.164   0.175  13.644  1.00  0.00      ION 
+ATOM      2  DSR  SR  1         -0.126   0.157  13.626  1.00  0.00      ION 
+END
+endif
+
+if ion eq 14 then
+read coor pdb resid
+REMARK  LOOP FOR CALCULATE SINGLE POINT ENERGY OF AMINO ACID - CATIONPAIRS
+REMARK   DATE:     7/18/14      0: 9:19      CREATED BY USER: hue
+ATOM      1   BA  BA  1         -0.164   0.175  13.644  1.00  0.00      ION
+ATOM      2  DBA  BA  1         -0.126   0.157  13.626  1.00  0.00      ION
+END
+endif
+
+          coor shake
+          energy
+
+echo @molec energy: ?ener
+
+         shake off
+         drude reset
+         lone clear
+         delete atom sele all end
+
+incr  ion  by 1 
+if @ion .le. 14 goto ionloop_aa
+
+!2) nucleic acid - ions pairs
+!
+!Note multiple loops
+!
+
+set ion = 1
+
+! at_od2c2c
+
+label ionloop_na1
+
+if ion eq 1 then
+ set molec LI
+endif
+
+if ion eq 2 then
+ set molec SOD
+endif
+
+if ion eq 3 then
+ set molec POT
+endif
+
+if ion eq 4 then
+ set molec RB
+endif
+
+
+read sequence card
+* ssdna for interactions with ions
+*
+2
+ade thy 
+
+generate DNA1 first 5TER last 3TER setup warn drude dmass 0.4 
+
+patch deox dna1 1 setup warn
+patch deox dna1 2 setup warn
+
+AUTOGENERATE ANGLES DIHEDRALS
+
+read coor pdb
+REMARK peptide for interactions with ions
+ATOM      1  H5T ADE     1       0.733  -8.612  -1.330  1.00  0.00      DNA1
+ATOM      2  O5' ADE     1       0.427  -7.826  -1.788  1.00  0.00      DNA1
+ATOM      3 DO5' ADE     1       0.410  -7.824  -1.779  1.00  0.00      DNA1
+ATOM      4  C5' ADE     1       1.443  -7.510  -2.756  1.00  0.00      DNA1
+ATOM      5 DC5' ADE     1       1.438  -7.502  -2.751  1.00  0.00      DNA1
+ATOM      6  H5' ADE     1       1.059  -6.719  -3.435  1.00  0.00      DNA1
+ATOM      7 H5'' ADE     1       1.675  -8.423  -3.345  1.00  0.00      DNA1
+ATOM      8 LP5A ADE     1       0.492  -7.659  -1.487  1.00  0.00      DNA1
+ATOM      9 LP5B ADE     1       0.187  -8.037  -1.931  1.00  0.00      DNA1
+ATOM     10  N9  ADE     1       1.098  -4.468  -0.370  1.00  0.00      DNA1
+ATOM     11  DN9 ADE     1       1.105  -4.465  -0.368  1.00  0.00      DNA1
+ATOM     12  C4  ADE     1       1.091  -3.102  -0.262  1.00  0.00      DNA1
+ATOM     13  DC4 ADE     1       1.102  -3.130  -0.258  1.00  0.00      DNA1
+ATOM     14  N3  ADE     1       2.168  -2.292  -0.209  1.00  0.00      DNA1
+ATOM     15  DN3 ADE     1       2.151  -2.297  -0.202  1.00  0.00      DNA1
+ATOM     16  LP3 ADE     1       2.502  -2.396  -0.221  1.00  0.00      DNA1
+ATOM     17  C2  ADE     1       1.802  -1.033  -0.105  1.00  0.00      DNA1
+ATOM     18  DC2 ADE     1       1.819  -1.030  -0.103  1.00  0.00      DNA1
+ATOM     19  H2  ADE     1       2.617  -0.311  -0.056  1.00  0.00      DNA1
+ATOM     20  N1  ADE     1       0.575  -0.516  -0.051  1.00  0.00      DNA1
+ATOM     21  DN1 ADE     1       0.531  -0.535  -0.051  1.00  0.00      DNA1
+ATOM     22  LP1 ADE     1       0.531  -0.170  -0.023  1.00  0.00      DNA1
+ATOM     23  C6  ADE     1      -0.482  -1.346  -0.105  1.00  0.00      DNA1
+ATOM     24  DC6 ADE     1      -0.497  -1.337  -0.107  1.00  0.00      DNA1
+ATOM     25  N6  ADE     1      -1.719  -0.832  -0.051  1.00  0.00      DNA1
+ATOM     26  DN6 ADE     1      -1.708  -0.825  -0.054  1.00  0.00      DNA1
+ATOM     27  H61 ADE     1      -2.530  -1.416  -0.089  1.00  0.00      DNA1
+ATOM     28  H62 ADE     1      -1.873   0.153   0.029  1.00  0.00      DNA1
+ATOM     29  C5  ADE     1      -0.219  -2.721  -0.217  1.00  0.00      DNA1
+ATOM     30  DC5 ADE     1      -0.223  -2.686  -0.217  1.00  0.00      DNA1
+ATOM     31  N7  ADE     1      -1.050  -3.830  -0.296  1.00  0.00      DNA1
+ATOM     32  DN7 ADE     1      -1.064  -3.854  -0.301  1.00  0.00      DNA1
+ATOM     33  LP7 ADE     1      -1.399  -3.853  -0.294  1.00  0.00      DNA1
+ATOM     34  C8  ADE     1      -0.229  -4.831  -0.385  1.00  0.00      DNA1
+ATOM     35  DC8 ADE     1      -0.244  -4.822  -0.376  1.00  0.00      DNA1
+ATOM     36  H8  ADE     1      -0.534  -5.874  -0.465  1.00  0.00      DNA1
+ATOM     37  C4' ADE     1       2.695  -7.020  -2.053  1.00  0.00      DNA1
+ATOM     38 DC4' ADE     1       2.684  -7.036  -2.010  1.00  0.00      DNA1
+ATOM     39  H4' ADE     1       3.593  -7.149  -2.693  1.00  0.00      DNA1
+ATOM     40  O4' ADE     1       2.477  -5.630  -1.823  1.00  0.00      DNA1
+ATOM     41 DO4' ADE     1       2.473  -5.632  -1.825  1.00  0.00      DNA1
+ATOM     42 LPRA ADE     1       2.149  -5.593  -1.939  1.00  0.00      DNA1
+ATOM     43 LPRB ADE     1       2.798  -5.501  -1.879  1.00  0.00      DNA1
+ATOM     44  LPX ADE     1       2.480  -5.699  -1.751  1.00  0.00      DNA1
+ATOM     45  C1' ADE     1       2.308  -5.333  -0.452  1.00  0.00      DNA1
+ATOM     46 DC1' ADE     1       2.316  -5.363  -0.445  1.00  0.00      DNA1
+ATOM     47  H1' ADE     1       3.214  -4.806  -0.084  1.00  0.00      DNA1
+ATOM     48  C2' ADE     1       2.148  -6.679   0.247  1.00  0.00      DNA1
+ATOM     49 DC2' ADE     1       2.203  -6.695   0.256  1.00  0.00      DNA1
+ATOM     50 H2'' ADE     1       1.082  -6.985   0.301  1.00  0.00      DNA1
+ATOM     51  H2' ADE     1       2.569  -6.656   1.275  1.00  0.00      DNA1
+ATOM     52  C3' ADE     1       2.950  -7.607  -0.665  1.00  0.00      DNA1
+ATOM     53 DC3' ADE     1       2.937  -7.606  -0.702  1.00  0.00      DNA1
+ATOM     54  H3' ADE     1       2.579  -8.652  -0.616  1.00  0.00      DNA1
+ATOM     55  O3' ADE     1       4.324  -7.545  -0.307  1.00  0.00      DNA1
+ATOM     56 DO3' ADE     1       4.352  -7.537  -0.197  1.00  0.00      DNA1
+ATOM     57  P   THY     2       4.728  -7.626   1.238  1.00  0.00      DNA1
+ATOM     58  DP  THY     2       4.732  -7.863   1.551  1.00  0.00      DNA1
+ATOM     59  O1P THY     2       6.009  -8.356   1.380  1.00  0.00      DNA1
+ATOM     60 DO1P THY     2       5.861  -8.344   1.473  1.00  0.00      DNA1
+ATOM     61  O2P THY     2       3.592  -8.164   2.021  1.00  0.00      DNA1
+ATOM     62 DO2P THY     2       3.891  -8.201   2.072  1.00  0.00      DNA1
+ATOM     63  O5' THY     2       4.945  -6.081   1.592  1.00  0.00      DNA1
+ATOM     64 DO5' THY     2       4.915  -6.179   1.579  1.00  0.00      DNA1
+ATOM     65  C5' THY     2       5.582  -5.227   0.624  1.00  0.00      DNA1
+ATOM     66 DC5' THY     2       5.575  -5.199   0.645  1.00  0.00      DNA1
+ATOM     67  H5' THY     2       4.811  -4.810  -0.059  1.00  0.00      DNA1
+ATOM     68 H5'' THY     2       6.308  -5.824   0.032  1.00  0.00      DNA1
+ATOM     69  N1  THY     2       3.515  -2.969   3.010  1.00  0.00      DNA1
+ATOM     70  DN1 THY     2       3.495  -2.965   3.014  1.00  0.00      DNA1
+ATOM     71  C6  THY     2       2.818  -4.148   2.980  1.00  0.00      DNA1
+ATOM     72  DC6 THY     2       2.825  -4.215   2.983  1.00  0.00      DNA1
+ATOM     73  H6  THY     2       3.425  -5.049   2.894  1.00  0.00      DNA1
+ATOM     74  C2  THY     2       2.884  -1.752   3.115  1.00  0.00      DNA1
+ATOM     75  DC2 THY     2       2.904  -1.746   3.122  1.00  0.00      DNA1
+ATOM     76  O2  THY     2       3.489  -0.694   3.143  1.00  0.00      DNA1
+ATOM     77  DO2 THY     2       3.475  -0.701   3.146  1.00  0.00      DNA1
+ATOM     78 LP2A THY     2       3.263  -0.428   3.171  1.00  0.00      DNA1
+ATOM     79 LP2B THY     2       3.833  -0.752   3.120  1.00  0.00      DNA1
+ATOM     80  N3  THY     2       1.506  -1.802   3.189  1.00  0.00      DNA1
+ATOM     81  DN3 THY     2       1.518  -1.818   3.190  1.00  0.00      DNA1
+ATOM     82  H3  THY     2       1.029  -0.916   3.267  1.00  0.00      DNA1
+ATOM     83  C4  THY     2       0.726  -2.941   3.166  1.00  0.00      DNA1
+ATOM     84  DC4 THY     2       0.716  -2.970   3.165  1.00  0.00      DNA1
+ATOM     85  O4  THY     2      -0.502  -2.859   3.239  1.00  0.00      DNA1
+ATOM     86  DO4 THY     2      -0.472  -2.838   3.239  1.00  0.00      DNA1
+ATOM     87 LP4A THY     2      -0.644  -3.179   3.228  1.00  0.00      DNA1
+ATOM     88 LP4B THY     2      -0.598  -2.523   3.264  1.00  0.00      DNA1
+ATOM     89  C5  THY     2       1.477  -4.168   3.053  1.00  0.00      DNA1
+ATOM     90  DC5 THY     2       1.484  -4.132   3.052  1.00  0.00      DNA1
+ATOM     91  C5M THY     2       0.707  -5.455   3.022  1.00  0.00      DNA1
+ATOM     92 DC5M THY     2       0.737  -5.489   3.011  1.00  0.00      DNA1
+ATOM     93  H51 THY     2       1.400  -6.317   3.116  1.00  0.00      DNA1
+ATOM     94  H52 THY     2       0.158  -5.544   2.060  1.00  0.00      DNA1
+ATOM     95  H53 THY     2      -0.013  -5.485   3.867  1.00  0.00      DNA1
+ATOM     96  C4' THY     2       6.306  -4.095   1.327  1.00  0.00      DNA1
+ATOM     97 DC4' THY     2       6.299  -4.110   1.357  1.00  0.00      DNA1
+ATOM     98  H4' THY     2       7.108  -3.671   0.688  1.00  0.00      DNA1
+ATOM     99  O4' THY     2       5.313  -3.099   1.557  1.00  0.00      DNA1
+ATOM    100 DO4' THY     2       5.301  -3.098   1.566  1.00  0.00      DNA1
+ATOM    101 LPRA THY     2       5.026  -3.262   1.441  1.00  0.00      DNA1
+ATOM    102 LPRB THY     2       5.497  -2.806   1.501  1.00  0.00      DNA1
+ATOM    103  LPX THY     2       5.356  -3.153   1.629  1.00  0.00      DNA1
+ATOM    104  C1' THY     2       5.002  -2.958   2.928  1.00  0.00      DNA1
+ATOM    105 DC1' THY     2       5.018  -2.996   2.923  1.00  0.00      DNA1
+ATOM    106  H1' THY     2       5.425  -2.000   3.296  1.00  0.00      DNA1
+ATOM    107  C2' THY     2       5.664  -4.141   3.627  1.00  0.00      DNA1
+ATOM    108 DC2' THY     2       5.656  -4.132   3.616  1.00  0.00      DNA1
+ATOM    109 H2'' THY     2       4.981  -5.015   3.681  1.00  0.00      DNA1
+ATOM    110  H2' THY     2       5.991  -3.875   4.655  1.00  0.00      DNA1
+ATOM    111  C3' THY     2       6.858  -4.420   2.715  1.00  0.00      DNA1
+ATOM    112 DC3' THY     2       6.864  -4.418   2.723  1.00  0.00      DNA1
+ATOM    113  H3' THY     2       7.172  -5.484   2.764  1.00  0.00      DNA1
+ATOM    114  O3' THY     2       7.933  -3.562   3.073  1.00  0.00      DNA1
+ATOM    115 DO3' THY     2       7.928  -3.566   3.078  1.00  0.00      DNA1
+ATOM    116  H3T THY     2       7.621  -2.654   3.075  1.00  0.00      DNA1
+ATOM    117 LP3A THY     2       7.944  -3.523   3.421  1.00  0.00      DNA1
+ATOM    118 LP3B THY     2       8.110  -3.465   2.787  1.00  0.00      DNA1
+END
+
+read sequence card
+* ion
+*
+1
+@molec   
+
+gene ION setup first none last none NOANGLE NODIHEDRAL DRUDE DMASS 0.4 
+
+
+if ion eq 1 then
+read coor pdb resid
+REMARK  LOOP FOR CALCULATE SINGLE POINT ENERGY OF NUCLEIC ACID - CATION PAIRS           
+REMARK   DATE:     7/18/14      0: 9:19      CREATED BY USER: hue                     
+ATOM     63  LI  LI      1       4.792  -8.165   2.022  1.00  0.00      ION 
+ATOM     64 DLI  LI      1       4.890  -8.255   2.223  1.00  0.00      ION 
+END
+endif
+
+
+
+if ion eq 2 then
+read coor pdb resid
+REMARK  LOOP FOR CALCULATE SINGLE POINT ENERGY OF NUCLEIC ACID - CATION PAIRS
+REMARK   DATE:     7/18/14      0: 9:19      CREATED BY USER: hue
+ATOM     63  SOD SOD     1       4.792  -8.165   2.022  1.00  0.00      ION 
+ATOM     64 DSOD SOD     1       4.890  -8.255   2.223  1.00  0.00      ION 
+END
+endif
+
+if ion eq 3 then
+read coor pdb resid
+REMARK  LOOP FOR CALCULATE SINGLE POINT ENERGY OF NUCLEIC ACID - CATIONPAIRS           
+REMARK   DATE:     7/18/14      0: 9:19      CREATED BY USER: hue                     
+ATOM     63  POT POT     1       4.792  -8.165   2.022  1.00  0.00      ION 
+ATOM     64 DPOT POT     1       4.890  -8.255   2.223  1.00  0.00      ION 
+END
+endif
+
+if ion eq 4 then
+read coor pdb resid
+REMARK  LOOP FOR CALCULATE SINGLE POINT ENERGY OF NUCLEIC ACID - CATIONPAIRS           
+REMARK   DATE:     7/18/14      0: 9:19      CREATED BY USER: hue                     
+ATOM     63  RB  RB      1       4.792  -8.165   2.022  1.00  0.00      ION 
+ATOM     64 DRB  RB      1       4.890  -8.255   2.223  1.00  0.00      ION 
+END
+endif
+
+          coor shake
+          energy
+
+         shake off
+         drude reset
+         lone clear
+         delete atom sele all end
+
+incr  ion  by 1 
+if @ion .le. 4 goto ionloop_na1
+
+!at_od30bn
+
+set ion = 1
+
+label ionloop_na2
+
+if ion eq 1 then
+ set molec LI
+endif
+
+if ion eq 2 then
+ set molec SOD
+endif
+
+if ion eq 3 then
+ set molec POT
+endif
+
+if ion eq 4 then
+ set molec RB
+endif
+
+read sequence card
+* ssdna for interactions with ions
+*
+2
+ade thy 
+
+generate DNA1 first 5TER last 3TER setup warn drude dmass 0.4 
+
+patch deox dna1 1 setup warn
+patch deox dna1 2 setup warn
+
+AUTOGENERATE ANGLES DIHEDRALS DRUDE  !note use of DRUDE
+
+read coor pdb
+REMARK peptide for interactions with ions
+ATOM      1  H5T ADE     1       0.733  -8.612  -1.330  1.00  0.00      DNA1
+ATOM      2  O5' ADE     1       0.427  -7.826  -1.788  1.00  0.00      DNA1
+ATOM      3 DO5' ADE     1       0.411  -7.822  -1.783  1.00  0.00      DNA1
+ATOM      4  C5' ADE     1       1.443  -7.510  -2.756  1.00  0.00      DNA1
+ATOM      5 DC5' ADE     1       1.438  -7.501  -2.752  1.00  0.00      DNA1
+ATOM      6  H5' ADE     1       1.059  -6.719  -3.435  1.00  0.00      DNA1
+ATOM      7 H5'' ADE     1       1.675  -8.423  -3.345  1.00  0.00      DNA1
+ATOM      8 LP5A ADE     1       0.492  -7.659  -1.487  1.00  0.00      DNA1
+ATOM      9 LP5B ADE     1       0.187  -8.037  -1.931  1.00  0.00      DNA1
+ATOM     10  N9  ADE     1       1.098  -4.468  -0.370  1.00  0.00      DNA1
+ATOM     11  DN9 ADE     1       1.110  -4.461  -0.367  1.00  0.00      DNA1
+ATOM     12  C4  ADE     1       1.091  -3.102  -0.262  1.00  0.00      DNA1
+ATOM     13  DC4 ADE     1       1.108  -3.123  -0.257  1.00  0.00      DNA1
+ATOM     14  N3  ADE     1       2.168  -2.292  -0.209  1.00  0.00      DNA1
+ATOM     15  DN3 ADE     1       2.159  -2.295  -0.200  1.00  0.00      DNA1
+ATOM     16  LP3 ADE     1       2.502  -2.396  -0.221  1.00  0.00      DNA1
+ATOM     17  C2  ADE     1       1.802  -1.033  -0.105  1.00  0.00      DNA1
+ATOM     18  DC2 ADE     1       1.821  -1.033  -0.102  1.00  0.00      DNA1
+ATOM     19  H2  ADE     1       2.617  -0.311  -0.056  1.00  0.00      DNA1
+ATOM     20  N1  ADE     1       0.575  -0.516  -0.051  1.00  0.00      DNA1
+ATOM     21  DN1 ADE     1       0.537  -0.532  -0.050  1.00  0.00      DNA1
+ATOM     22  LP1 ADE     1       0.531  -0.170  -0.023  1.00  0.00      DNA1
+ATOM     23  C6  ADE     1      -0.482  -1.346  -0.105  1.00  0.00      DNA1
+ATOM     24  DC6 ADE     1      -0.495  -1.338  -0.106  1.00  0.00      DNA1
+ATOM     25  N6  ADE     1      -1.719  -0.832  -0.051  1.00  0.00      DNA1
+ATOM     26  DN6 ADE     1      -1.707  -0.825  -0.054  1.00  0.00      DNA1
+ATOM     27  H61 ADE     1      -2.530  -1.416  -0.089  1.00  0.00      DNA1
+ATOM     28  H62 ADE     1      -1.873   0.153   0.029  1.00  0.00      DNA1
+ATOM     29  C5  ADE     1      -0.219  -2.721  -0.217  1.00  0.00      DNA1
+ATOM     30  DC5 ADE     1      -0.225  -2.684  -0.216  1.00  0.00      DNA1
+ATOM     31  N7  ADE     1      -1.050  -3.830  -0.296  1.00  0.00      DNA1
+ATOM     32  DN7 ADE     1      -1.069  -3.850  -0.300  1.00  0.00      DNA1
+ATOM     33  LP7 ADE     1      -1.399  -3.853  -0.294  1.00  0.00      DNA1
+ATOM     34  C8  ADE     1      -0.229  -4.831  -0.385  1.00  0.00      DNA1
+ATOM     35  DC8 ADE     1      -0.248  -4.825  -0.378  1.00  0.00      DNA1
+ATOM     36  H8  ADE     1      -0.534  -5.874  -0.465  1.00  0.00      DNA1
+ATOM     37  C4' ADE     1       2.695  -7.020  -2.053  1.00  0.00      DNA1
+ATOM     38 DC4' ADE     1       2.685  -7.028  -2.017  1.00  0.00      DNA1
+ATOM     39  H4' ADE     1       3.593  -7.149  -2.693  1.00  0.00      DNA1
+ATOM     40  O4' ADE     1       2.477  -5.630  -1.823  1.00  0.00      DNA1
+ATOM     41 DO4' ADE     1       2.475  -5.630  -1.821  1.00  0.00      DNA1
+ATOM     42 LPRA ADE     1       2.149  -5.593  -1.939  1.00  0.00      DNA1
+ATOM     43 LPRB ADE     1       2.798  -5.501  -1.879  1.00  0.00      DNA1
+ATOM     44  LPX ADE     1       2.480  -5.699  -1.751  1.00  0.00      DNA1
+ATOM     45  C1' ADE     1       2.308  -5.333  -0.452  1.00  0.00      DNA1
+ATOM     46 DC1' ADE     1       2.325  -5.351  -0.445  1.00  0.00      DNA1
+ATOM     47  H1' ADE     1       3.214  -4.806  -0.084  1.00  0.00      DNA1
+ATOM     48  C2' ADE     1       2.148  -6.679   0.247  1.00  0.00      DNA1
+ATOM     49 DC2' ADE     1       2.188  -6.667   0.241  1.00  0.00      DNA1
+ATOM     50 H2'' ADE     1       1.082  -6.985   0.301  1.00  0.00      DNA1
+ATOM     51  H2' ADE     1       2.569  -6.656   1.275  1.00  0.00      DNA1
+ATOM     52  C3' ADE     1       2.950  -7.607  -0.665  1.00  0.00      DNA1
+ATOM     53 DC3' ADE     1       2.927  -7.587  -0.724  1.00  0.00      DNA1
+ATOM     54  H3' ADE     1       2.579  -8.652  -0.616  1.00  0.00      DNA1
+ATOM     55  O3' ADE     1       4.324  -7.545  -0.307  1.00  0.00      DNA1
+ATOM     56 DO3' ADE     1       4.356  -7.509  -0.253  1.00  0.00      DNA1
+ATOM     57  P   THY     2       4.728  -7.626   1.239  1.00  0.00      DNA1
+ATOM     58  DP  THY     2       4.816  -7.518   1.270  1.00  0.00      DNA1
+ATOM     59  O1P THY     2       6.009  -8.356   1.380  1.00  0.00      DNA1
+ATOM     60 DO1P THY     2       6.000  -8.236   1.391  1.00  0.00      DNA1
+ATOM     61  O2P THY     2       3.592  -8.164   2.021  1.00  0.00      DNA1
+ATOM     62 DO2P THY     2       3.630  -8.118   2.014  1.00  0.00      DNA1
+ATOM     63  O5' THY     2       4.945  -6.081   1.592  1.00  0.00      DNA1
+ATOM     64 DO5' THY     2       5.292  -6.192   1.610  1.00  0.00      DNA1
+ATOM     65  C5' THY     2       5.582  -5.227   0.624  1.00  0.00      DNA1
+ATOM     66 DC5' THY     2       5.647  -5.328   0.784  1.00  0.00      DNA1
+ATOM     67  H5' THY     2       4.811  -4.810  -0.059  1.00  0.00      DNA1
+ATOM     68 H5'' THY     2       6.308  -5.824   0.032  1.00  0.00      DNA1
+ATOM     69  N1  THY     2       3.515  -2.969   3.010  1.00  0.00      DNA1
+ATOM     70  DN1 THY     2       3.511  -2.972   3.013  1.00  0.00      DNA1
+ATOM     71  C6  THY     2       2.818  -4.148   2.980  1.00  0.00      DNA1
+ATOM     72  DC6 THY     2       2.841  -4.207   2.982  1.00  0.00      DNA1
+ATOM     73  H6  THY     2       3.425  -5.049   2.894  1.00  0.00      DNA1
+ATOM     74  C2  THY     2       2.884  -1.752   3.115  1.00  0.00      DNA1
+ATOM     75  DC2 THY     2       2.905  -1.745   3.124  1.00  0.00      DNA1
+ATOM     76  O2  THY     2       3.489  -0.694   3.143  1.00  0.00      DNA1
+ATOM     77  DO2 THY     2       3.476  -0.708   3.147  1.00  0.00      DNA1
+ATOM     78 LP2A THY     2       3.263  -0.428   3.171  1.00  0.00      DNA1
+ATOM     79 LP2B THY     2       3.833  -0.752   3.120  1.00  0.00      DNA1
+ATOM     80  N3  THY     2       1.506  -1.802   3.189  1.00  0.00      DNA1
+ATOM     81  DN3 THY     2       1.517  -1.816   3.192  1.00  0.00      DNA1
+ATOM     82  H3  THY     2       1.029  -0.916   3.267  1.00  0.00      DNA1
+ATOM     83  C4  THY     2       0.726  -2.941   3.166  1.00  0.00      DNA1
+ATOM     84  DC4 THY     2       0.716  -2.964   3.167  1.00  0.00      DNA1
+ATOM     85  O4  THY     2      -0.502  -2.859   3.239  1.00  0.00      DNA1
+ATOM     86  DO4 THY     2      -0.467  -2.841   3.240  1.00  0.00      DNA1
+ATOM     87 LP4A THY     2      -0.644  -3.179   3.228  1.00  0.00      DNA1
+ATOM     88 LP4B THY     2      -0.598  -2.523   3.264  1.00  0.00      DNA1
+ATOM     89  C5  THY     2       1.477  -4.168   3.053  1.00  0.00      DNA1
+ATOM     90  DC5 THY     2       1.489  -4.136   3.054  1.00  0.00      DNA1
+ATOM     91  C5M THY     2       0.707  -5.455   3.022  1.00  0.00      DNA1
+ATOM     92 DC5M THY     2       0.736  -5.479   3.015  1.00  0.00      DNA1
+ATOM     93  H51 THY     2       1.400  -6.317   3.116  1.00  0.00      DNA1
+ATOM     94  H52 THY     2       0.158  -5.544   2.060  1.00  0.00      DNA1
+ATOM     95  H53 THY     2      -0.013  -5.485   3.867  1.00  0.00      DNA1
+ATOM     96  C4' THY     2       6.306  -4.095   1.327  1.00  0.00      DNA1
+ATOM     97 DC4' THY     2       6.290  -4.185   1.371  1.00  0.00      DNA1
+ATOM     98  H4' THY     2       7.108  -3.671   0.688  1.00  0.00      DNA1
+ATOM     99  O4' THY     2       5.313  -3.099   1.557  1.00  0.00      DNA1
+ATOM    100 DO4' THY     2       5.311  -3.122   1.572  1.00  0.00      DNA1
+ATOM    101 LPRA THY     2       5.026  -3.262   1.441  1.00  0.00      DNA1
+ATOM    102 LPRB THY     2       5.497  -2.806   1.501  1.00  0.00      DNA1
+ATOM    103  LPX THY     2       5.356  -3.153   1.629  1.00  0.00      DNA1
+ATOM    104  C1' THY     2       5.002  -2.958   2.928  1.00  0.00      DNA1
+ATOM    105 DC1' THY     2       5.031  -3.016   2.915  1.00  0.00      DNA1
+ATOM    106  H1' THY     2       5.425  -2.000   3.296  1.00  0.00      DNA1
+ATOM    107  C2' THY     2       5.664  -4.141   3.627  1.00  0.00      DNA1
+ATOM    108 DC2' THY     2       5.667  -4.157   3.583  1.00  0.00      DNA1
+ATOM    109 H2'' THY     2       4.981  -5.015   3.681  1.00  0.00      DNA1
+ATOM    110  H2' THY     2       5.991  -3.875   4.655  1.00  0.00      DNA1
+ATOM    111  C3' THY     2       6.858  -4.420   2.715  1.00  0.00      DNA1
+ATOM    112 DC3' THY     2       6.840  -4.459   2.694  1.00  0.00      DNA1
+ATOM    113  H3' THY     2       7.172  -5.484   2.764  1.00  0.00      DNA1
+ATOM    114  O3' THY     2       7.933  -3.562   3.073  1.00  0.00      DNA1
+ATOM    115 DO3' THY     2       7.915  -3.581   3.069  1.00  0.00      DNA1
+ATOM    116  H3T THY     2       7.621  -2.654   3.075  1.00  0.00      DNA1
+ATOM    117 LP3A THY     2       7.944  -3.523   3.421  1.00  0.00      DNA1
+ATOM    118 LP3B THY     2       8.110  -3.465   2.787  1.00  0.00      DNA1
+END
+
+read sequence card
+* ion
+*
+1
+@molec   
+
+gene ION setup first none last none NOANGLE NODIHEDRAL DRUDE DMASS 0.4 
+
+if ion eq 1 then
+read coor pdb resid
+REMARK  LOOP FOR CALCULATE SINGLE POINT ENERGY OF NUCLEIC ACID - CATION PAIRS           
+REMARK   DATE:     7/18/14      0: 9:19      CREATED BY USER: hue                     
+ATOM     63  LI  LI      1       5.945  -6.381   1.592  1.00  0.00      ION 
+ATOM     64 DLI  LI      1       5.988  -6.387   1.581  1.00  0.00      ION 
+END
+endif
+
+if ion eq 2 then
+read coor pdb resid
+REMARK  LOOP FOR CALCULATE SINGLE POINT ENERGY OF NUCLEIC ACID - CATION PAIRS
+REMARK   DATE:     7/18/14      0: 9:19      CREATED BY USER: hue
+ATOM     63  SOD SOD     1       5.945  -6.381   1.592  1.00  0.00      ION 
+ATOM     64 DSOD SOD     1       5.988  -6.387   1.581  1.00  0.00      ION 
+END
+endif
+
+if ion eq 3 then
+read coor pdb resid
+REMARK  LOOP FOR CALCULATE SINGLE POINT ENERGY OF NUCLEIC ACID - CATIONPAIRS           
+REMARK   DATE:     7/18/14      0: 9:19      CREATED BY USER: hue                     
+ATOM     63  POT POT     1       5.945  -6.381   1.592  1.00  0.00      ION 
+ATOM     64 DPOT POT     1       5.988  -6.387   1.581  1.00  0.00      ION 
+END
+endif
+
+if ion eq 4 then
+read coor pdb resid
+REMARK  LOOP FOR CALCULATE SINGLE POINT ENERGY OF NUCLEIC ACID - CATIONPAIRS           
+REMARK   DATE:     7/18/14      0: 9:19      CREATED BY USER: hue                     
+ATOM     63  RB  RB      1       5.945  -6.381   1.592  1.00  0.00      ION 
+ATOM     64 DRB  RB      1       5.988  -6.387   1.581  1.00  0.00      ION 
+END
+endif
+
+         coor shake
+         energy
+
+         shake off
+         drude reset
+         lone clear
+         delete atom sele all end
+
+incr  ion  by 1 
+if @ion .le. 4 goto ionloop_na2
+
+!gua_nd2b1
+
+set ion = 1
+
+label ionloop_na3
+
+if ion eq 1 then
+ set molec LI
+endif
+
+if ion eq 2 then
+ set molec SOD
+endif
+
+if ion eq 3 then
+ set molec POT
+endif
+
+if ion eq 4 then
+ set molec RB
+endif
+
+
+read sequence card
+* ssdna for interactions with ions
+*
+1
+gua
+
+generate DNA1 first 5TER last 3TER setup warn drude dmass 0.4 
+
+patch deox dna1 1 setup warn
+
+AUTOGENERATE ANGLES DIHEDRALS DRUDE  !note use of DRUDE
+
+read coor pdb
+REMARK peptide for interactions with ions
+ATOM      1  H5T GUA     1      -0.377  -7.979  -2.289  1.00  0.00      DNA1
+ATOM      2  O5' GUA     1       0.427  -7.826  -1.788  1.00  0.00      DNA1
+ATOM      3 DO5' GUA     1       0.424  -7.822  -1.778  1.00  0.00      DNA1
+ATOM      4  C5' GUA     1       1.443  -7.510  -2.756  1.00  0.00      DNA1
+ATOM      5 DC5' GUA     1       1.441  -7.500  -2.748  1.00  0.00      DNA1
+ATOM      6  H5' GUA     1       1.059  -6.719  -3.435  1.00  0.00      DNA1
+ATOM      7 H5'' GUA     1       1.675  -8.423  -3.345  1.00  0.00      DNA1
+ATOM      8 LP5A GUA     1       0.422  -8.171  -1.728  1.00  0.00      DNA1
+ATOM      9 LP5B GUA     1       0.270  -7.533  -1.679  1.00  0.00      DNA1
+ATOM     10  N9  GUA     1       1.098  -4.468  -0.370  1.00  0.00      DNA1
+ATOM     11  DN9 GUA     1       1.111  -4.448  -0.371  1.00  0.00      DNA1
+ATOM     12  C4  GUA     1       1.101  -3.094  -0.261  1.00  0.00      DNA1
+ATOM     13  DC4 GUA     1       1.122  -3.092  -0.265  1.00  0.00      DNA1
+ATOM     14  N3  GUA     1       2.214  -2.317  -0.212  1.00  0.00      DNA1
+ATOM     15  DN3 GUA     1       2.242  -2.231  -0.225  1.00  0.00      DNA1
+ATOM     16  LP3 GUA     1       2.542  -2.438  -0.225  1.00  0.00      DNA1
+ATOM     17  C2  GUA     1       1.921  -1.023  -0.106  1.00  0.00      DNA1
+ATOM     18  DC2 GUA     1       2.031  -0.936  -0.192  1.00  0.00      DNA1
+ATOM     19  N1  GUA     1       0.628  -0.540  -0.053  1.00  0.00      DNA1
+ATOM     20  DN1 GUA     1       0.744  -0.523  -0.083  1.00  0.00      DNA1
+ATOM     21  H1  GUA     1       0.489   0.456   0.028  1.00  0.00      DNA1
+ATOM     22  N2  GUA     1       2.891  -0.108  -0.040  1.00  0.00      DNA1
+ATOM     23  DN2 GUA     1       2.875  -0.110  -0.449  1.00  0.00      DNA1
+ATOM     24  H21 GUA     1       3.856  -0.367  -0.073  1.00  0.00      DNA1
+ATOM     25  H22 GUA     1       2.685   0.867   0.037  1.00  0.00      DNA1
+ATOM     26  C6  GUA     1      -0.532  -1.326  -0.103  1.00  0.00      DNA1
+ATOM     27  DC6 GUA     1      -0.525  -1.318  -0.109  1.00  0.00      DNA1
+ATOM     28  O6  GUA     1      -1.635  -0.790  -0.047  1.00  0.00      DNA1
+ATOM     29  DO6 GUA     1      -1.600  -0.774  -0.049  1.00  0.00      DNA1
+ATOM     30 LP6A GUA     1      -1.887  -1.032  -0.064  1.00  0.00      DNA1
+ATOM     31 LP6B GUA     1      -1.598  -0.443  -0.020  1.00  0.00      DNA1
+ATOM     32  C5  GUA     1      -0.218  -2.705  -0.216  1.00  0.00      DNA1
+ATOM     33  DC5 GUA     1      -0.167  -2.659  -0.218  1.00  0.00      DNA1
+ATOM     34  N7  GUA     1      -1.059  -3.814  -0.295  1.00  0.00      DNA1
+ATOM     35  DN7 GUA     1      -1.053  -3.820  -0.296  1.00  0.00      DNA1
+ATOM     36  LP7 GUA     1      -1.408  -3.834  -0.293  1.00  0.00      DNA1
+ATOM     37  C8  GUA     1      -0.232  -4.827  -0.384  1.00  0.00      DNA1
+ATOM     38  DC8 GUA     1      -0.239  -4.813  -0.380  1.00  0.00      DNA1
+ATOM     39  H8  GUA     1      -0.543  -5.869  -0.463  1.00  0.00      DNA1
+ATOM     40  C4' GUA     1       2.695  -7.020  -2.053  1.00  0.00      DNA1
+ATOM     41 DC4' GUA     1       2.680  -7.012  -2.031  1.00  0.00      DNA1
+ATOM     42  H4' GUA     1       3.593  -7.149  -2.693  1.00  0.00      DNA1
+ATOM     43  O4' GUA     1       2.477  -5.630  -1.823  1.00  0.00      DNA1
+ATOM     44 DO4' GUA     1       2.472  -5.620  -1.827  1.00  0.00      DNA1
+ATOM     45 LPRA GUA     1       2.149  -5.593  -1.939  1.00  0.00      DNA1
+ATOM     46 LPRB GUA     1       2.798  -5.501  -1.879  1.00  0.00      DNA1
+ATOM     47  LPX GUA     1       2.480  -5.699  -1.751  1.00  0.00      DNA1
+ATOM     48  C1' GUA     1       2.308  -5.333  -0.452  1.00  0.00      DNA1
+ATOM     49 DC1' GUA     1       2.304  -5.325  -0.454  1.00  0.00      DNA1
+ATOM     50  H1' GUA     1       3.214  -4.806  -0.084  1.00  0.00      DNA1
+ATOM     51  C2' GUA     1       2.148  -6.679   0.247  1.00  0.00      DNA1
+ATOM     52 DC2' GUA     1       2.177  -6.675   0.254  1.00  0.00      DNA1
+ATOM     53 H2'' GUA     1       1.082  -6.985   0.301  1.00  0.00      DNA1
+ATOM     54  H2' GUA     1       2.569  -6.656   1.275  1.00  0.00      DNA1
+ATOM     55  C3' GUA     1       2.950  -7.607  -0.665  1.00  0.00      DNA1
+ATOM     56 DC3' GUA     1       2.956  -7.594  -0.666  1.00  0.00      DNA1
+ATOM     57  H3' GUA     1       2.579  -8.652  -0.616  1.00  0.00      DNA1
+ATOM     58  O3' GUA     1       4.324  -7.545  -0.307  1.00  0.00      DNA1
+ATOM     59 DO3' GUA     1       4.320  -7.535  -0.302  1.00  0.00      DNA1
+ATOM     60  H3T GUA     1       4.402  -7.620   0.647  1.00  0.00      DNA1
+ATOM     61 LP3A GUA     1       4.463  -7.866  -0.310  1.00  0.00      DNA1
+ATOM     62 LP3B GUA     1       4.419  -7.212  -0.255  1.00  0.00      DNA1
+END
+
+read sequence card
+* ion
+*
+1
+@molec   
+
+gene ION setup first none last none NOANGLE NODIHEDRAL DRUDE DMASS 0.4 
+
+
+if ion eq 1 then
+read coor pdb resid
+REMARK  LOOP FOR CALCULATE SINGLE POINT ENERGY OF NUCLEIC ACID - CATION PAIRS           
+REMARK   DATE:     7/18/14      0: 9:19      CREATED BY USER: hue                     
+ATOM     63  LI  LI      1       2.891  -0.108  -1.045  1.00  0.00      ION 
+ATOM     64 DLI  LI      1       2.891  -0.105  -1.121  1.00  0.00      ION 
+END
+endif
+
+
+
+if ion eq 2 then
+read coor pdb resid
+REMARK  LOOP FOR CALCULATE SINGLE POINT ENERGY OF NUCLEIC ACID - CATION PAIRS
+REMARK   DATE:     7/18/14      0: 9:19      CREATED BY USER: hue
+ATOM     63  SOD SOD     1       2.891  -0.108  -1.045  1.00  0.00      ION 
+ATOM     64 DSOD SOD     1       2.891  -0.105  -1.121  1.00  0.00      ION 
+END
+endif
+
+if ion eq 3 then
+read coor pdb resid
+REMARK  LOOP FOR CALCULATE SINGLE POINT ENERGY OF NUCLEIC ACID - CATIONPAIRS           
+REMARK   DATE:     7/18/14      0: 9:19      CREATED BY USER: hue                     
+ATOM     63  POT POT     1       2.891  -0.108  -1.045  1.00  0.00      ION 
+ATOM     64 DPOT POT     1       2.891  -0.105  -1.121  1.00  0.00      ION 
+END
+endif
+
+if ion eq 4 then
+read coor pdb resid
+REMARK  LOOP FOR CALCULATE SINGLE POINT ENERGY OF NUCLEIC ACID - CATIONPAIRS           
+REMARK   DATE:     7/18/14      0: 9:19      CREATED BY USER: hue                     
+ATOM     63  RB  RB      1       2.891  -0.108  -1.045  1.00  0.00      ION 
+ATOM     64 DRB  RB      1       2.891  -0.105  -1.121  1.00  0.00      ION 
+END
+endif
+
+          coor shake
+          energy
+
+         shake off
+         drude reset
+         lone clear
+         delete atom sele all end
+
+incr  ion  by 1 
+if @ion .le. 4 goto ionloop_na3
+
+!gua_nd2r6b
+
+set ion = 1
+
+label ionloop_na4
+
+if ion eq 1 then
+ set molec LI
+endif
+
+if ion eq 2 then
+ set molec SOD
+endif
+
+if ion eq 3 then
+ set molec POT
+endif
+
+if ion eq 4 then
+ set molec RB
+endif
+
+read sequence card
+* ssdna for interactions with ions
+*
+1
+gua
+
+generate DNA1 first 5TER last 3TER setup warn drude dmass 0.4 
+
+patch deox dna1 1 setup warn
+
+AUTOGENERATE ANGLES DIHEDRALS DRUDE  !note use of DRUDE
+
+read coor pdb
+REMARK peptide for interactions with ions
+ATOM      1  H5T GUA     1      -0.377  -7.979  -2.289  1.00  0.00      DNA1
+ATOM      2  O5' GUA     1       0.427  -7.826  -1.788  1.00  0.00      DNA1
+ATOM      3 DO5' GUA     1       0.425  -7.817  -1.773  1.00  0.00      DNA1
+ATOM      4  C5' GUA     1       1.443  -7.510  -2.756  1.00  0.00      DNA1
+ATOM      5 DC5' GUA     1       1.442  -7.496  -2.743  1.00  0.00      DNA1
+ATOM      6  H5' GUA     1       1.059  -6.719  -3.435  1.00  0.00      DNA1
+ATOM      7 H5'' GUA     1       1.675  -8.423  -3.345  1.00  0.00      DNA1
+ATOM      8 LP5A GUA     1       0.422  -8.171  -1.728  1.00  0.00      DNA1
+ATOM      9 LP5B GUA     1       0.270  -7.533  -1.679  1.00  0.00      DNA1
+ATOM     10  N9  GUA     1       1.098  -4.468  -0.370  1.00  0.00      DNA1
+ATOM     11  DN9 GUA     1       1.117  -4.410  -0.370  1.00  0.00      DNA1
+ATOM     12  C4  GUA     1       1.101  -3.094  -0.261  1.00  0.00      DNA1
+ATOM     13  DC4 GUA     1       1.255  -3.037  -0.331  1.00  0.00      DNA1
+ATOM     14  N3  GUA     1       2.214  -2.317  -0.210  1.00  0.00      DNA1
+ATOM     15  DN3 GUA     1       2.234  -2.326  -0.556  1.00  0.00      DNA1
+ATOM     16  LP3 GUA     1       2.542  -2.438  -0.222  1.00  0.00      DNA1
+ATOM     17  C2  GUA     1       1.921  -1.023  -0.106  1.00  0.00      DNA1
+ATOM     18  DC2 GUA     1       1.976  -1.167  -0.167  1.00  0.00      DNA1
+ATOM     19  N1  GUA     1       0.628  -0.540  -0.053  1.00  0.00      DNA1
+ATOM     20  DN1 GUA     1       0.733  -0.583  -0.070  1.00  0.00      DNA1
+ATOM     21  H1  GUA     1       0.489   0.456   0.028  1.00  0.00      DNA1
+ATOM     22  N2  GUA     1       2.891  -0.108  -0.043  1.00  0.00      DNA1
+ATOM     23  DN2 GUA     1       2.832  -0.176  -0.060  1.00  0.00      DNA1
+ATOM     24  H21 GUA     1       3.856  -0.367  -0.073  1.00  0.00      DNA1
+ATOM     25  H22 GUA     1       2.685   0.867   0.037  1.00  0.00      DNA1
+ATOM     26  C6  GUA     1      -0.532  -1.326  -0.103  1.00  0.00      DNA1
+ATOM     27  DC6 GUA     1      -0.529  -1.343  -0.103  1.00  0.00      DNA1
+ATOM     28  O6  GUA     1      -1.635  -0.790  -0.047  1.00  0.00      DNA1
+ATOM     29  DO6 GUA     1      -1.592  -0.779  -0.046  1.00  0.00      DNA1
+ATOM     30 LP6A GUA     1      -1.887  -1.032  -0.064  1.00  0.00      DNA1
+ATOM     31 LP6B GUA     1      -1.598  -0.443  -0.020  1.00  0.00      DNA1
+ATOM     32  C5  GUA     1      -0.218  -2.705  -0.216  1.00  0.00      DNA1
+ATOM     33  DC5 GUA     1      -0.101  -2.675  -0.215  1.00  0.00      DNA1
+ATOM     34  N7  GUA     1      -1.059  -3.814  -0.295  1.00  0.00      DNA1
+ATOM     35  DN7 GUA     1      -1.036  -3.806  -0.292  1.00  0.00      DNA1
+ATOM     36  LP7 GUA     1      -1.408  -3.834  -0.293  1.00  0.00      DNA1
+ATOM     37  C8  GUA     1      -0.232  -4.827  -0.384  1.00  0.00      DNA1
+ATOM     38  DC8 GUA     1      -0.226  -4.793  -0.375  1.00  0.00      DNA1
+ATOM     39  H8  GUA     1      -0.543  -5.869  -0.463  1.00  0.00      DNA1
+ATOM     40  C4' GUA     1       2.695  -7.020  -2.053  1.00  0.00      DNA1
+ATOM     41 DC4' GUA     1       2.673  -7.002  -2.022  1.00  0.00      DNA1
+ATOM     42  H4' GUA     1       3.593  -7.149  -2.693  1.00  0.00      DNA1
+ATOM     43  O4' GUA     1       2.477  -5.630  -1.823  1.00  0.00      DNA1
+ATOM     44 DO4' GUA     1       2.468  -5.608  -1.824  1.00  0.00      DNA1
+ATOM     45 LPRA GUA     1       2.149  -5.593  -1.939  1.00  0.00      DNA1
+ATOM     46 LPRB GUA     1       2.798  -5.501  -1.879  1.00  0.00      DNA1
+ATOM     47  LPX GUA     1       2.480  -5.699  -1.751  1.00  0.00      DNA1
+ATOM     48  C1' GUA     1       2.308  -5.333  -0.452  1.00  0.00      DNA1
+ATOM     49 DC1' GUA     1       2.291  -5.297  -0.455  1.00  0.00      DNA1
+ATOM     50  H1' GUA     1       3.214  -4.806  -0.084  1.00  0.00      DNA1
+ATOM     51  C2' GUA     1       2.148  -6.679   0.247  1.00  0.00      DNA1
+ATOM     52 DC2' GUA     1       2.177  -6.660   0.252  1.00  0.00      DNA1
+ATOM     53 H2'' GUA     1       1.082  -6.985   0.301  1.00  0.00      DNA1
+ATOM     54  H2' GUA     1       2.569  -6.656   1.275  1.00  0.00      DNA1
+ATOM     55  C3' GUA     1       2.950  -7.607  -0.665  1.00  0.00      DNA1
+ATOM     56 DC3' GUA     1       2.953  -7.589  -0.667  1.00  0.00      DNA1
+ATOM     57  H3' GUA     1       2.579  -8.652  -0.616  1.00  0.00      DNA1
+ATOM     58  O3' GUA     1       4.324  -7.545  -0.307  1.00  0.00      DNA1
+ATOM     59 DO3' GUA     1       4.315  -7.532  -0.302  1.00  0.00      DNA1
+ATOM     60  H3T GUA     1       4.402  -7.620   0.647  1.00  0.00      DNA1
+ATOM     61 LP3A GUA     1       4.463  -7.866  -0.310  1.00  0.00      DNA1
+ATOM     62 LP3B GUA     1       4.419  -7.212  -0.255  1.00  0.00      DNA1
+END
+
+read sequence card
+* ion
+*
+1
+@molec   
+
+gene ION setup first none last none NOANGLE NODIHEDRAL DRUDE DMASS 0.4 
+
+if ion eq 1 then
+read coor pdb resid
+REMARK  LOOP FOR CALCULATE SINGLE POINT ENERGY OF NUCLEIC ACID - CATION PAIRS           
+REMARK   DATE:     7/18/14      0: 9:19      CREATED BY USER: hue                     
+ATOM     63  LI  LI      1       2.214  -2.317  -1.213  1.00  0.00      ION 
+ATOM     64 DLI  LI      1       2.184  -2.308  -1.411  1.00  0.00      ION 
+END
+endif
+
+if ion eq 2 then
+read coor pdb resid
+REMARK  LOOP FOR CALCULATE SINGLE POINT ENERGY OF NUCLEIC ACID - CATION PAIRS
+REMARK   DATE:     7/18/14      0: 9:19      CREATED BY USER: hue
+ATOM     63  SOD SOD     1       2.214  -2.317  -1.213  1.00  0.00      ION 
+ATOM     64 DSOD SOD     1       2.184  -2.308  -1.411  1.00  0.00      ION 
+END
+endif
+
+if ion eq 3 then
+read coor pdb resid
+REMARK  LOOP FOR CALCULATE SINGLE POINT ENERGY OF NUCLEIC ACID - CATIONPAIRS           
+REMARK   DATE:     7/18/14      0: 9:19      CREATED BY USER: hue                     
+ATOM     63  POT POT     1       2.214  -2.317  -1.213  1.00  0.00      ION 
+ATOM     64 DPOT POT     1       2.184  -2.308  -1.411  1.00  0.00      ION 
+END
+endif
+
+if ion eq 4 then
+read coor pdb resid
+REMARK  LOOP FOR CALCULATE SINGLE POINT ENERGY OF NUCLEIC ACID - CATIONPAIRS           
+REMARK   DATE:     7/18/14      0: 9:19      CREATED BY USER: hue                     
+ATOM     63  RB  RB      1       2.214  -2.317  -1.213  1.00  0.00      ION 
+ATOM     64 DRB  RB      1       2.184  -2.308  -1.411  1.00  0.00      ION 
+END
+endif
+
+         coor shake
+         energy
+
+         shake off
+         drude reset
+         lone clear
+         delete atom sele all end
+
+incr  ion  by 1 
+if @ion .le. 4 goto ionloop_na4
+
+!gua_nd2r6c
+
+set ion = 1
+
+label ionloop_na5
+
+if ion eq 1 then
+ set molec LI
+endif
+
+if ion eq 2 then
+ set molec SOD
+endif
+
+if ion eq 3 then
+ set molec POT
+endif
+
+if ion eq 4 then
+ set molec RB
+endif
+
+read sequence card
+* ssdna for interactions with ions
+*
+1
+gua
+
+generate DNA1 first 5TER last 3TER setup warn drude dmass 0.4 
+
+patch deox dna1 1 setup warn
+
+AUTOGENERATE ANGLES DIHEDRALS DRUDE  !note use of DRUDE
+
+read coor pdb
+REMARK peptide for interactions with ions
+ATOM      1  H5T GUA     1      -0.377  -7.979  -2.289  1.00  0.00      DNA1
+ATOM      2  O5' GUA     1       0.427  -7.826  -1.788  1.00  0.00      DNA1
+ATOM      3 DO5' GUA     1       0.422  -7.820  -1.777  1.00  0.00      DNA1
+ATOM      4  C5' GUA     1       1.443  -7.510  -2.756  1.00  0.00      DNA1
+ATOM      5 DC5' GUA     1       1.439  -7.499  -2.747  1.00  0.00      DNA1
+ATOM      6  H5' GUA     1       1.059  -6.719  -3.435  1.00  0.00      DNA1
+ATOM      7 H5'' GUA     1       1.675  -8.423  -3.345  1.00  0.00      DNA1
+ATOM      8 LP5A GUA     1       0.422  -8.171  -1.728  1.00  0.00      DNA1
+ATOM      9 LP5B GUA     1       0.270  -7.533  -1.679  1.00  0.00      DNA1
+ATOM     10  N9  GUA     1       1.098  -4.468  -0.370  1.00  0.00      DNA1
+ATOM     11  DN9 GUA     1       1.102  -4.440  -0.372  1.00  0.00      DNA1
+ATOM     12  C4  GUA     1       1.101  -3.094  -0.261  1.00  0.00      DNA1
+ATOM     13  DC4 GUA     1       1.094  -3.066  -0.274  1.00  0.00      DNA1
+ATOM     14  N3  GUA     1       2.214  -2.317  -0.212  1.00  0.00      DNA1
+ATOM     15  DN3 GUA     1       2.195  -2.242  -0.223  1.00  0.00      DNA1
+ATOM     16  LP3 GUA     1       2.542  -2.438  -0.225  1.00  0.00      DNA1
+ATOM     17  C2  GUA     1       1.921  -1.023  -0.106  1.00  0.00      DNA1
+ATOM     18  DC2 GUA     1       1.821  -0.980  -0.188  1.00  0.00      DNA1
+ATOM     19  N1  GUA     1       0.628  -0.540  -0.052  1.00  0.00      DNA1
+ATOM     20  DN1 GUA     1       0.650  -0.538  -0.439  1.00  0.00      DNA1
+ATOM     21  H1  GUA     1       0.489   0.456   0.028  1.00  0.00      DNA1
+ATOM     22  N2  GUA     1       2.891  -0.108  -0.043  1.00  0.00      DNA1
+ATOM     23  DN2 GUA     1       2.800  -0.126  -0.071  1.00  0.00      DNA1
+ATOM     24  H21 GUA     1       3.856  -0.367  -0.073  1.00  0.00      DNA1
+ATOM     25  H22 GUA     1       2.685   0.867   0.037  1.00  0.00      DNA1
+ATOM     26  C6  GUA     1      -0.532  -1.326  -0.103  1.00  0.00      DNA1
+ATOM     27  DC6 GUA     1      -0.457  -1.262  -0.175  1.00  0.00      DNA1
+ATOM     28  O6  GUA     1      -1.635  -0.790  -0.047  1.00  0.00      DNA1
+ATOM     29  DO6 GUA     1      -1.567  -0.771  -0.065  1.00  0.00      DNA1
+ATOM     30 LP6A GUA     1      -1.887  -1.032  -0.064  1.00  0.00      DNA1
+ATOM     31 LP6B GUA     1      -1.598  -0.443  -0.020  1.00  0.00      DNA1
+ATOM     32  C5  GUA     1      -0.218  -2.705  -0.216  1.00  0.00      DNA1
+ATOM     33  DC5 GUA     1      -0.162  -2.601  -0.239  1.00  0.00      DNA1
+ATOM     34  N7  GUA     1      -1.059  -3.814  -0.295  1.00  0.00      DNA1
+ATOM     35  DN7 GUA     1      -1.050  -3.806  -0.299  1.00  0.00      DNA1
+ATOM     36  LP7 GUA     1      -1.408  -3.834  -0.293  1.00  0.00      DNA1
+ATOM     37  C8  GUA     1      -0.232  -4.827  -0.384  1.00  0.00      DNA1
+ATOM     38  DC8 GUA     1      -0.243  -4.801  -0.381  1.00  0.00      DNA1
+ATOM     39  H8  GUA     1      -0.543  -5.869  -0.463  1.00  0.00      DNA1
+ATOM     40  C4' GUA     1       2.695  -7.020  -2.053  1.00  0.00      DNA1
+ATOM     41 DC4' GUA     1       2.676  -7.012  -2.030  1.00  0.00      DNA1
+ATOM     42  H4' GUA     1       3.593  -7.149  -2.693  1.00  0.00      DNA1
+ATOM     43  O4' GUA     1       2.477  -5.630  -1.823  1.00  0.00      DNA1
+ATOM     44 DO4' GUA     1       2.468  -5.620  -1.827  1.00  0.00      DNA1
+ATOM     45 LPRA GUA     1       2.149  -5.593  -1.939  1.00  0.00      DNA1
+ATOM     46 LPRB GUA     1       2.798  -5.501  -1.879  1.00  0.00      DNA1
+ATOM     47  LPX GUA     1       2.480  -5.699  -1.751  1.00  0.00      DNA1
+ATOM     48  C1' GUA     1       2.308  -5.333  -0.452  1.00  0.00      DNA1
+ATOM     49 DC1' GUA     1       2.296  -5.325  -0.455  1.00  0.00      DNA1
+ATOM     50  H1' GUA     1       3.214  -4.806  -0.084  1.00  0.00      DNA1
+ATOM     51  C2' GUA     1       2.148  -6.679   0.247  1.00  0.00      DNA1
+ATOM     52 DC2' GUA     1       2.173  -6.674   0.254  1.00  0.00      DNA1
+ATOM     53 H2'' GUA     1       1.082  -6.985   0.301  1.00  0.00      DNA1
+ATOM     54  H2' GUA     1       2.569  -6.656   1.275  1.00  0.00      DNA1
+ATOM     55  C3' GUA     1       2.950  -7.607  -0.665  1.00  0.00      DNA1
+ATOM     56 DC3' GUA     1       2.954  -7.594  -0.666  1.00  0.00      DNA1
+ATOM     57  H3' GUA     1       2.579  -8.652  -0.616  1.00  0.00      DNA1
+ATOM     58  O3' GUA     1       4.324  -7.545  -0.307  1.00  0.00      DNA1
+ATOM     59 DO3' GUA     1       4.318  -7.536  -0.302  1.00  0.00      DNA1
+ATOM     60  H3T GUA     1       4.402  -7.620   0.647  1.00  0.00      DNA1
+ATOM     61 LP3A GUA     1       4.463  -7.866  -0.310  1.00  0.00      DNA1
+ATOM     62 LP3B GUA     1       4.419  -7.212  -0.255  1.00  0.00      DNA1
+END
+
+read sequence card
+* ion
+*
+1
+@molec   
+
+gene ION setup first none last none NOANGLE NODIHEDRAL DRUDE DMASS 0.4 
+
+if ion eq 1 then
+read coor pdb resid
+REMARK  LOOP FOR CALCULATE SINGLE POINT ENERGY OF NUCLEIC ACID - CATION PAIRS           
+REMARK   DATE:     7/18/14      0: 9:19      CREATED BY USER: hue                     
+ATOM     63  LI  LI      1       0.628  -0.540  -1.054  1.00  0.00      ION 
+ATOM     64 DLI  LI      1       0.638  -0.536  -1.115  1.00  0.00      ION 
+END
+endif
+
+if ion eq 2 then
+read coor pdb resid
+REMARK  LOOP FOR CALCULATE SINGLE POINT ENERGY OF NUCLEIC ACID - CATION PAIRS
+REMARK   DATE:     7/18/14      0: 9:19      CREATED BY USER: hue
+ATOM     63  SOD SOD     1       0.628  -0.540  -1.054  1.00  0.00      ION 
+ATOM     64 DSOD SOD     1       0.638  -0.536  -1.115  1.00  0.00      ION 
+END
+endif
+
+if ion eq 3 then
+read coor pdb resid
+REMARK  LOOP FOR CALCULATE SINGLE POINT ENERGY OF NUCLEIC ACID - CATIONPAIRS           
+REMARK   DATE:     7/18/14      0: 9:19      CREATED BY USER: hue                     
+ATOM     63  POT POT     1       0.628  -0.540  -1.054  1.00  0.00      ION 
+ATOM     64 DPOT POT     1       0.638  -0.536  -1.115  1.00  0.00      ION 
+END
+endif
+
+if ion eq 4 then
+read coor pdb resid
+REMARK  LOOP FOR CALCULATE SINGLE POINT ENERGY OF NUCLEIC ACID - CATIONPAIRS           
+REMARK   DATE:     7/18/14      0: 9:19      CREATED BY USER: hue                     
+ATOM     63  RB  RB      1       0.628  -0.540  -1.054  1.00  0.00      ION 
+ATOM     64 DRB  RB      1       0.638  -0.536  -1.115  1.00  0.00      ION 
+END
+endif
+
+         coor shake
+         energy
+
+         shake off
+         drude reset
+         lone clear
+         delete atom sele all end
+
+incr  ion  by 1 
+if @ion .le. 4 goto ionloop_na5

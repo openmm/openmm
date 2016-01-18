@@ -1,0 +1,242 @@
+* Topology and Parameter Stream File for aldehydes
+*
+
+!Parent files that have to be read prior to streaming this file
+!top_all36_prot.rtf
+!par_all36_prot.prm
+!
+!Testcase
+!test_all36_prot_aldehydes.inp
+
+!reference
+!Wymore, T., Hempel, J., Cho, S.S., MacKerell, Jr., A.D.
+!Nicholas, Jr., H.B., Deerfield, II, D.W.  Molecular 
+!Recognition of Aldehydes by Aldehyde Dehydrogenase and
+!Mechanism of Nucleophile Activation, Submitted for
+!publication.
+
+read rtf card append
+* Topology for aldehydes
+*
+31  1
+
+MASS 418   CLAL 35.453000 CL ! Chlorine Atom
+
+!acetaldehyde additions, ssc & adm, jr., 2/01
+RESI AALD        0.00 ! Acetaldehyde
+GROUP                 !
+ATOM HA  HR1     0.06 !   HB3
+ATOM C   CD      0.12 !    |
+ATOM O   O      -0.32 !HB1-CB-HB2
+ATOM CB  CT3    -0.13 !    |
+ATOM HB1 HA3     0.09 !  O=C
+ATOM HB2 HA3     0.09 !    |
+ATOM HB3 HA3     0.09 !    HA
+BOND HA C  C CB  CB HB1  CB HB2
+BOND CB HB3
+DOUBLE C O
+IMPH CB C O HA
+ACCE O
+IC o c cb hb1       0.0     0.0     0.0      0.0   0.0
+IC hb2 cb c o       0.0     0.0   120.0      0.0   0.0
+IC hb3 cb c o       0.0     0.0  -120.0      0.0   0.0
+IC ha  o  *c  cb    0.0     0.0   180.0      0.0   0.0
+PATCHING FIRST NONE LAST NONE
+
+RESI PALD        0.00 ! Propionaldehyde
+GROUP                 !
+ATOM O   O      -0.32 !   HG3
+ATOM C   CD      0.12 !    |
+ATOM CB  CT2    -0.04 !HG1-CG-HG2
+ATOM HB1 HA2     0.09 !    |
+ATOM HB2 HA2     0.09 !HB1-CB-HB2
+ATOM HA  HR1     0.06 !    |
+GROUP                 !  O=C
+ATOM CG  CT3    -0.27 !    |
+ATOM HG1 HA3     0.09 !    HA
+ATOM HG2 HA3     0.09 !
+ATOM HG3 HA3     0.09
+BOND HA C  C CB  CB HB1  CB HB2
+BOND CB CG  CG HG1  CG HG3  CG HG2
+DOUBLE C O
+IMPH CB C O HA
+ACCE O
+IC o c cb cg        0.0     0.0     0.0      0.0   0.0
+IC cg cb c ha       0.0     0.0   180.0      0.0   0.0
+IC hb1 cb c o       0.0     0.0   120.0      0.0   0.0
+IC hb2 cb c o       0.0     0.0  -120.0      0.0   0.0
+IC c cb cg hg1      0.0     0.0   180.0      0.0   0.0
+IC c cb cg hg2      0.0     0.0    60.0      0.0   0.0
+IC c cb cg hg3      0.0     0.0   -60.0      0.0   0.0
+PATCHING FIRST NONE LAST NONE
+
+RESI CALD        0.00 ! Chloroacetaldehyde
+GROUP                 !    CL
+ATOM O   O      -0.34 !    |
+ATOM C   CD      0.19 !HB1-CB-HB2
+ATOM CB  CT2    -0.08 !    |
+ATOM HB1 HA2     0.09 !  O=C
+ATOM HB2 HA2     0.09 !    |
+ATOM CL  CLAL   -0.04 !    HA
+ATOM HA  HR1     0.09
+BOND HA C  C CB  CB HB1  CB HB2
+BOND CB CL
+DOUBLE C O
+IMPH CB C O HA
+ACCE O
+IC o   c  cb  cl       0.0     0.0   180.0      0.0   0.0
+IC cl  cb c   ha       0.0     0.0     0.0      0.0   0.0
+IC ha  o  *c  cb       0.0     0.0     0.0      0.0   0.0
+IC cl  c  *cb hb1      0.0     0.0   120.0      0.0   0.0
+IC hb1 c  *cb hb2      0.0     0.0   120.0      0.0   0.0
+PATCHING FIRST NONE LAST NONE
+
+!benzaldehyde additions, ssc & adm, jr., 2/01
+RESI BALD        0.00  ! Benzaldehyde
+GROUP                  !
+ATOM HA  HR1     0.05  !       HZ
+ATOM C   CD      0.16  !       |
+ATOM O   O      -0.33  !       CZ
+ATOM CG  CA      0.12  !     //  \
+GROUP                  !HE1-CE1  CE2-HE2
+ATOM CD1  CA    -0.115 !     |    ||
+ATOM HD1  HP     0.115 !HD1-CD1  CD2-HD2
+GROUP                  !     \\  /
+ATOM CE1  CA    -0.115 !       CG
+ATOM HE1  HP     0.115 !       |
+GROUP                  !     O=C
+ATOM CZ   CA    -0.115 !       |
+ATOM HZ   HP     0.115 !       HA
+GROUP
+ATOM CD2  CA    -0.115
+ATOM HD2  HP     0.115
+GROUP
+ATOM CE2  CA    -0.115
+ATOM HE2  HP     0.115
+BOND HA C  C CG  CG CD1 CG CD2
+BOND CD1 HD1  CD2 HD2  CD1 CE1 CD2 CE2
+BOND CE1 HE1  CE2 HE2  CE1 CZ CE2 CZ
+BOND CZ HZ
+DOUBLE C O
+IMPH CG C O HA
+ACCE O
+IC O    C    CG   CD1   0.0      0.0       0.0      0.0     0.0
+IC HA   O    *C   CG    0.0      0.0     180.0      0.0     0.0
+IC CD1  C    *CG  CD2   0.0      0.0    -177.9600   0.0     0.0
+IC C    CG   CD1  CE1   0.0      0.0    -177.3700   0.0     0.0
+IC CE1  CG   *CD1 HD1   0.0      0.0     179.7000   0.0     0.0
+IC C    CG   CD2  CE2   0.0      0.0     177.2000   0.0     0.0
+IC CE2  CG   *CD2 HD2   0.0      0.0    -178.6900   0.0     0.0
+IC CG   CD1  CE1  CZ    0.0      0.0      -0.1200   0.0     0.0
+IC CZ   CD1  *CE1 HE1   0.0      0.0    -179.6900   0.0     0.0
+IC CZ   CD2  *CE2 HE2   0.0      0.0    -179.9300   0.0     0.0
+IC CE1  CE2  *CZ  HZ    0.0      0.0     179.5100   0.0     0.0
+PATCHING FIRST NONE LAST NONE
+
+end
+
+read para card flex append
+* additional parameters for aldehydes
+*
+
+ATOMS
+MASS 418   CLAL 35.453000 ! Chlorine Atom
+
+BONDS
+!
+!V(bond) = Kb(b - b0)**2
+!
+!Kb: kcal/mole/A**2
+!b0: A
+!
+!atom type Kb          b0
+!
+!benzaldehyde and model compounds, the RESI names on each line indicate the
+!model compound that should be used to parametrize the particular term
+!NOTE: only change terms in the benzaldehyde section. DO NOT change any other
+!terms.
+!
+CD   CA    300.000     1.4798 ! benzaldehyde
+CT2  CLAL  220.000     1.7768 ! chloroacetaldehyde
+!********************************
+
+ANGLES
+!
+!V(angle) = Ktheta(Theta - Theta0)**2
+!
+!V(Urey-Bradley) = Kub(S - S0)**2
+!
+!Ktheta: kcal/mole/rad**2
+!Theta0: degrees
+!Kub: kcal/mole/A**2 (Urey-Bradley)
+!S0: A
+!
+!atom types     Ktheta    Theta0   Kub     S0
+!
+HR1  CD   CT3    20.000   116.0000 ! acetaldehyde
+O    CD   CT3   140.000   123.0000 ! acetaldehyde
+CT3  CT2  CD     60.000   113.8000 ! propionaldehyde
+O    CD   CT2   140.000   125.0000 ! propionaldehyde. DIFFERENT COPY OF SAME PARAMETER IN toppar_all27_na_bkb_modifications.str
+HR1  CD   CT2    35.000   115.0000 ! propionaldehyde
+CD   CT2  CLAL   65.000   111.8215 ! chloroacetaldehyde
+HA2  CT2  CLAL   35.000   108.9905 ! chloroacetaldehyde
+HR1  CD   CA     15.000   115.0000 ! benzaldehyde
+O    CD   CA     75.000   124.0000 ! benzaldehyde
+CD   CA   CA     45.000   119.8000 ! benzaldehyde
+!********************************************
+
+DIHEDRALS
+!
+!V(dihedral) = Kchi(1 + cos(n(chi) - delta))
+!
+!Kchi: kcal/mole
+!n: multiplicity
+!delta: degrees
+!
+!atom types             Kchi    n   delta
+!
+O    CD   CT2  CT3      1.050   1  180.00 ! propionaldehyde
+O    CD   CT2  CT3      0.400   2  180.00 !
+O    CD   CT2  CT3      0.600   3  180.00 !
+O    CD   CT2  CT3      0.100   4  180.00 !
+O    CD   CT2  CLAL     0.100   1    0.00 ! chloracetaldehyde
+O    CD   CT2  CLAL     1.000   2  180.00 ! 
+O    CD   CT2  CLAL     0.550   3  180.00 ! 
+O    CD   CA   CA       1.000   2    0.00 ! benzaldehyde
+HR1  CD   CA   CA       3.2000  2  180.00 ! benzaldehyde
+CD   CA   CA   HP       4.2000  2  180.00 ! benzaldehyde
+CD   CA   CA   CA       3.1000  2  180.00 ! benzaldehyde
+!********************************************
+
+IMPROPER
+!
+!V(improper) = Kpsi(psi - psi0)**2
+!
+!Kpsi: kcal/mole/rad**2
+!psi0: degrees
+!note that the second column of numbers (0) is ignored
+!
+!atom types           Kpsi                   psi0
+!
+CT3  CD   O    HR1    28.0000         0    180.0000 ! acetaldehyde
+CT2  CD   O    HR1    28.0000         0    180.0000 ! propionaldehyde
+CA   CD   O    HR1    14.0000         0    180.0000 ! benzaldehyde
+!*****************************
+
+NONBONDED nbxmod  5 atom cdiel fshift vatom vdistance vfswitch -
+cutnb 14.0 ctofnb 12.0 ctonnb 10.0 eps 1.0 e14fac 1.0 wmin 1.5
+                !adm jr., 5/08/91, suggested cutoff scheme
+!
+!V(Lennard-Jones) = Eps,i,j[(Rmin,i,j/ri,j)**12 - 2(Rmin,i,j/ri,j)**6]
+!
+!epsilon: kcal/mole, Eps,i,j = sqrt(eps,i * eps,j)
+!Rmin/2: A, Rmin,i,j = Rmin/2,i + Rmin/2,j
+!
+!atom  ignored    epsilon      Rmin/2   ignored   eps,1-4       Rmin/2,1-4
+!
+CLAL   0.000000  -0.030000     1.908200 ! from Jorgensen/BOSS
+                ! for choroacetaldehyde
+
+end
+
+return
