@@ -722,7 +722,7 @@ void ReferenceCalcAmoebaMultipoleForceKernel::getLabFramePermanentDipoles(Contex
     // Retrieve the permanent dipoles in the lab frame.
     
     vector<RealVec> labFramePermanentDipoles;
-    amoebaReferenceMultipoleForce->applyRotationMatrix(particleData, multipoleAtomsXs, multipoleAtomsYs, multipoleAtomsZs, axisTypes);
+    amoebaReferenceMultipoleForce->applyRotationMatrixPublic(particleData, multipoleAtomsXs, multipoleAtomsYs, multipoleAtomsZs, axisTypes);
     for (int i = 0; i < numParticles; i++)
         outputDipoles[i] = labFramePermanentDipoles[i];
     delete amoebaReferenceMultipoleForce;

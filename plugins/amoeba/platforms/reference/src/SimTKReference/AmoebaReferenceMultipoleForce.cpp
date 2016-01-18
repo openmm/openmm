@@ -647,6 +647,21 @@ void AmoebaReferenceMultipoleForce::applyRotationMatrix(vector<MultipoleParticle
     }
 }
 
+void AmoebaReferenceMultipoleForce::applyRotationMatrixPublic(vector<MultipoleParticleData>& particleData,
+                                                        const vector<int>& multipoleAtomXs,
+                                                        const vector<int>& multipoleAtomYs,
+                                                        const vector<int>& multipoleAtomZs,
+                                                        const vector<int>& axisTypes) const
+{
+
+    for (unsigned int ii = 0; ii < _numParticles; ii++) {
+        if (multipoleAtomZs[ii] >= 0 && multipoleAtomXs[ii] >= 0) {
+            applyRotationMatrixToParticle(particleData[ii], particleData[multipoleAtomZs[ii]], particleData[multipoleAtomXs[ii]],
+                                           multipoleAtomYs[ii] > -1 ? &particleData[multipoleAtomYs[ii]] : NULL, axisTypes[ii]);
+        }
+    }
+}
+
 void AmoebaReferenceMultipoleForce::getAndScaleInverseRs(RealOpenMM dampI, RealOpenMM dampJ,
                                                          RealOpenMM tholeI, RealOpenMM tholeJ,
                                                          RealOpenMM r, vector<RealOpenMM>& rrI) const
