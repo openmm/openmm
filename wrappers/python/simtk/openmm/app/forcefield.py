@@ -322,7 +322,7 @@ class ForceField(object):
                     types.append(self._atomClasses[attrib[classAttrib]])
             elif typeAttrib in attrib:
                 if attrib[typeAttrib] == '':
-                    types.append(self._atomClasses['']):
+                    types.append(self._atomClasses[''])
                 elif attrib[typeAttrib] not in self._atomTypes:
                     types.append(None) # Unknown atom type
                 else:
