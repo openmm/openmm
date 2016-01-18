@@ -538,19 +538,19 @@ public:
      * @param outputMultipoleMoments    output multipole moments
      */
 
-    void AmoebaReferenceMultipoleForce::calculateLabFramePermanentDipoles(const vector<RealVec>& particlePositions,
-                                                                          const vector<RealOpenMM>& charges,
-                                                                          const vector<RealOpenMM>& dipoles,
-                                                                          const vector<RealOpenMM>& quadrupoles,
-                                                                          const vector<RealOpenMM>& tholes,
-                                                                          const vector<RealOpenMM>& dampingFactors,
-                                                                          const vector<RealOpenMM>& polarity,
-                                                                          const vector<int>& axisTypes,
-                                                                          const vector<int>& multipoleAtomZs,
-                                                                          const vector<int>& multipoleAtomXs,
-                                                                          const vector<int>& multipoleAtomYs,
-                                                                          const vector< vector< vector<int> > >& multipoleAtomCovalentInfo,
-                                                                          vector<RealVec>& outputRotatedPermanentDipoles);
+    void calculateLabFramePermanentDipoles(const vector<RealVec>& particlePositions,
+                                           const vector<RealOpenMM>& charges,
+                                           const vector<RealOpenMM>& dipoles,
+                                           const vector<RealOpenMM>& quadrupoles,
+                                           const vector<RealOpenMM>& tholes,
+                                           const vector<RealOpenMM>& dampingFactors,
+                                           const vector<RealOpenMM>& polarity,
+                                           const vector<int>& axisTypes,
+                                           const vector<int>& multipoleAtomZs,
+                                           const vector<int>& multipoleAtomXs,
+                                           const vector<int>& multipoleAtomYs,
+                                           const vector< vector< vector<int> > >& multipoleAtomCovalentInfo,
+                                           vector<RealVec>& outputRotatedPermanentDipoles);
 
     /**
      * Calculate system multipole moments.
@@ -617,25 +617,6 @@ public:
                                          const std::vector< std::vector< std::vector<int> > >& multipoleAtomCovalentInfo,
                                          const std::vector<RealVec>& inputGrid,
                                          std::vector<RealOpenMM>& outputPotential);
-
-
-    /**
-     * Apply rotation matrix to molecular dipole/quadrupoles to get corresponding lab frame values.
-     * This is the public redeclaration of the original applyRotationMatrix function which is protected, since
-     * I need to access it from outside.
-     * 
-     * @param particleData            vector of parameters (charge, labFrame dipoles, quadrupoles, ...) for particles
-     *                                dipole and quadrupole entries are modified
-     * @param multipoleAtomXs         vector of z-particle indices used to map molecular frame to lab frame
-     * @param multipoleAtomYs         vector of x-particle indices used to map molecular frame to lab frame
-     * @param multipoleAtomZs         vector of y-particle indices used to map molecular frame to lab frame
-     * @param axisType                axis type
-     */
-    void applyRotationMatrixPublic(std::vector<MultipoleParticleData>& particleData, 
-                             const std::vector<int>& multipoleAtomXs,
-                             const std::vector<int>& multipoleAtomYs,
-                             const std::vector<int>& multipoleAtomZs,
-                             const std::vector<int>& axisTypes) const;
 
 protected:
 
