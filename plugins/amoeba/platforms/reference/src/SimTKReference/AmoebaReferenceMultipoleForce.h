@@ -1013,7 +1013,7 @@ protected:
      * 
      * @param particleData      vector of particle positions and parameters (charge, labFrame dipoles, quadrupoles, ...)
      */
-    virtual void calculateLabFramePermanantDipoles(const std::vector<MultipoleParticleData>& particleData);
+    virtual void calculateLabFramePermanentDipoles(const std::vector<MultipoleParticleData>& particleData);
 
     /**
      * Setup: 
