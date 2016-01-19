@@ -362,7 +362,7 @@ class TestForceField(unittest.TestCase):
         # Check results.
         self.assertEqual(len(unmatched_residues), 1)
         self.assertEqual(unmatched_residues[0].name, 'TMP')
-        self.assertEqual(unmatched_residues[0].id, 163)
+        self.assertEqual(unmatched_residues[0].id, '163')
 
         # Load the PDB file.
         pdb = PDBFile(os.path.join('systems', 'ala_ala_ala.pdb'))
@@ -374,7 +374,7 @@ class TestForceField(unittest.TestCase):
         self.assertEqual(len(unmatched_residues), 3)
         self.assertEqual(unmatched_residues[0].name, 'ALA')
         self.assertEqual(unmatched_residues[0].chain, 'X')
-        self.assertEqual(unmatched_residues[0].id, 1)
+        self.assertEqual(unmatched_residues[0].id, '1')
 
     def test_getUniqueUnmatchedResidues(self):
         """Test retrieval of list of residues for which no templates are available."""
