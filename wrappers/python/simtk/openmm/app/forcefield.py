@@ -569,6 +569,89 @@ class ForceField(object):
                     break
         return [template, matches]
 
+    def getUnmatchedResidues(self, topology):
+        """Return a list of Residue objects from specified topology for which no forcefield templates are available.
+
+        Parameters
+        ----------
+        topology : Topology
+            The Topology for which to create a System
+
+        Returns
+        -------
+        unmatched_residues : list of Residue
+            List of residue templates from `topology` for which no forcefield residue templates are available.
+            Note that multiple instances of the same residue appearing at different points in the topology may be returned.
+
+        This method may be of use in generating missing residue templates or diagnosing parameterization failures.
+        """
+        # Find the template matching each residue, compiling a list of residues for which no templates are available.
+        unmatched_residues = list() # list of unmatched residues
+        for chain in topology.chains():
+            for res in chain.residues():
+                # Attempt to match one of the existing templates.
+                [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom)
+                if matches is None:
+                    # No existing templates match.
+                    unmatched_residues.append(res)
+
+        return unmatched_residues
+
+    def getUniqueUnmatchedResidues(self, topology):
+        """Returns a unique list of Residue objects from specified topology for which no forcefield templates are available.
+
+        Parameters
+        ----------
+        topology : Topology
+            The Topology for which to create a System
+
+        Returns
+        -------
+        unmatched_residues : list of Residue
+            List of residue templates from `topology` for which no forcefield residue templates are available.
+            Note that only a single instances each missing residue type will be returned.
+
+        This method may be of use in generating missing residue templates.
+        """
+        # Get a non-unique list of unmatched residues.
+        unmatched_residues = self.getUnmatchedResidues(topology)
+        # Record which atoms are bonded to each other atom
+        bondedToAtom = []
+        for atom in topology.atoms():
+            bondedToAtom.append(set())
+        for bond in topology.bonds():
+            bondedToAtom[bond.atom1.index].add(bond.atom2.index)
+            bondedToAtom[bond.atom2.index].add(bond.atom1.index)
+        # Generate a unique list of unmatched residues by comparing fingerprints.
+        unique_unmatched_residues = list()
+        signatures = set()
+        for residue in unmatched_residues:
+            signature = _createResidueSignature([ atom.element for atom in residue.atoms() ])
+            is_unique = True
+            if signature in signatures:
+                # Signature is the same as an existing residue; check connectivity.
+                template = ForceField._TemplateData(residue.name)
+                for atom in residue.atoms():
+                    template.atoms.append(ForceField._TemplateAtomData(atom.name, None, atom.element))
+                for (atom1,atom2) in residue.internal_bonds():
+                    template.addBondByName(atom1.name, atom2.name)
+                residue_atoms = [ atom for atom in residue.atoms() ]
+                for (atom1,atom2) in residue.external_bonds():
+                    if atom1 in residue_atoms:
+                        template.addExternalBondByName(atom1.name)
+                    elif atom2 in residue_atoms:
+                        template.addExternalBondByName(atom2.name)
+                for check_residue in unique_unmatched_residues:
+                    matches = _matchResidue(check_residue, template, bondedToAtom)
+                    if matches is not None:
+                        is_unique = False
+            if is_unique:
+                # Residue is unique.
+                unique_unmatched_residues.append(residue)
+                signatures.add(signature)
+
+        return unique_unmatched_residues
+
     def createSystem(self, topology, nonbondedMethod=NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
                      constraints=None, rigidWater=True, removeCMMotion=True, hydrogenMass=None, **args):
         """Construct an OpenMM System representing a Topology with this force field.
