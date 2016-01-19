@@ -922,29 +922,33 @@ If :code:`vdwCutoff` is not specified, then the value of
 Specifying the Polarization Method
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-OpenMM allows the setting of several other parameters particular to the AMOEBA
-force field.  The :code:`mutualInducedTargetEpsilon` option allows you to
-specify the accuracy to which the induced dipoles are calculated at each time
-step; the default value is 0.01.  The :code:`polarization` setting
-determines whether the calculation of the induced dipoles is continued until the
-dipoles are self-consistent to within the tolerance specified by
-:code:`mutualInducedTargetEpsilon` or whether a quick estimate of the induced
-dipoles is used instead.  The first option corresponds to the
-:code:`polarization='mutual'` setting and is the default; the quick estimate
-option is given by :code:`polarization='direct'` and in this case,
-:code:`mutualInducedTargetEpsilon` is ignored, if provided.  Simulations using
-:code:`polarization='direct'` will be significantly faster than those with
-:code:`polarization='mutual'`\ , but less accurate.  Examples using the two
-options are given below:
+When using the AMOEBA force field, OpenMM allows the induced dipoles to be
+calculated in any of three different ways.  The slowest but potentially most
+accurate method is to iterate the calculation until the dipoles converge to a
+specified tolerance.  To select this, specify :code:`polarization='mutual'`.
+Use the :code:`mutualInducedTargetEpsilon` option to select the tolerance; for
+most situations, a value of 0.00001 works well.  Alternatively you can specify
+:code:`polarization='extrapolated'`.  This uses an analytic approximation
+:cite:`Simmonett2015` to estimate what the fully converged dipoles will be without
+actually continuing the calculation to convergence.  In many cases this can be
+significantly faster with only a small loss in accuracy.  Finally, you can
+specify :code:`polarization='direct'` to use the direct polarization
+approximation, in which induced dipoles depend only on the fixed multipoles, not
+on other induced dipoles.  This is even faster, but it produces very different
+forces from mutual polarization, so it should only be used with force fields
+that have been specifically parameterized for use with this approximation.
+
+Here are examples of using each method:
 ::
 
-    system = forcefield.createSystem(nonbondedMethod=PME,
-        nonbondedCutoff=1*nanometer,ewaldErrorTolerance=0.00001,
-        vdwCutoff=1.2*nanometer, mutualInducedTargetEpsilon=0.01)
+    system = forcefield.createSystem(nonbondedMethod=PME, nonbondedCutoff=1*nanometer,
+        vdwCutoff=1.2*nanometer, polarization='mutual', mutualInducedTargetEpsilon=0.00001)
 
-    system = forcefield.createSystem(nonbondedMethod=PME,
-        nonbondedCutoff=1*nanometer,ewaldErrorTolerance=0.00001,
-        vdwCutoff=1.2*nanometer, polarization ='direct')
+    system = forcefield.createSystem(nonbondedMethod=PME, nonbondedCutoff=1*nanometer,
+        vdwCutoff=1.2*nanometer, polarization='extrapolated')
+
+    system = forcefield.createSystem(nonbondedMethod=PME, nonbondedCutoff=1*nanometer,
+        vdwCutoff=1.2*nanometer, polarization='direct')
 
 
 Implicit Solvent and Solute Dielectrics

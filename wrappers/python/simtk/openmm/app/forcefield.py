@@ -3760,6 +3760,8 @@ class AmoebaMultipoleGenerator:
                 polarizationType = args['polarization']
                 if (polarizationType.lower() == 'direct'):
                     force.setPolarizationType(mm.AmoebaMultipoleForce.Direct)
+                elif (polarizationType.lower() == 'extrapolated'):
+                    force.setPolarizationType(mm.AmoebaMultipoleForce.Extrapolated)
                 else:
                     force.setPolarizationType(mm.AmoebaMultipoleForce.Mutual)
 

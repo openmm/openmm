@@ -92,6 +92,15 @@ void testCheckpoint() {
     integrator.step(10);
     State s4 = context.getState(State::Positions | State::Velocities | State::Parameters);
     compareStates(s2, s4);
+    
+    // See if a checkpoint created from one Context can be loaded into a different one.
+    
+    VerletIntegrator integrator2(0.001);
+    Context context2(system, integrator2, platform);
+    stream1.seekg(0, stream1.beg);
+    context2.loadCheckpoint(stream1);
+    State s5 = context2.getState(State::Positions | State::Velocities | State::Parameters | State::Energy);
+    compareStates(s1, s5);
 }
 
 void runPlatformTests() {

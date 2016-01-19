@@ -903,6 +903,29 @@ class TestModeller(unittest.TestCase):
         validate_equivalence(self, topology_LYN, topology_after)
 
 
+    def test_removeExtraHydrogens(self):
+        """Test that addHydrogens() can remove hydrogens that shouldn't be there. """
+
+        topology_start = self.topology_start3
+        positions = self.positions3
+        modeller = Modeller(topology_start, positions)
+
+        # Add hydrogens, forcing residue 1 to be ASH.
+
+        variants = [None]*25
+        variants[1] = 'ASH'
+        modeller.addHydrogens(self.forcefield, variants=variants)
+        residue = list(modeller.topology.residues())[1]
+        self.assertTrue(any(a.name == 'HD2' for a in residue.atoms()))
+
+        # Now force it to be ASP and see if HD2 gets removed.
+
+        variants[1] = 'ASP'
+        modeller.addHydrogens(self.forcefield, variants=variants)
+        residue = list(modeller.topology.residues())[1]
+        self.assertFalse(any(a.name == 'HD2' for a in residue.atoms()))
+
+
     def test_addExtraParticles(self):
         """Test addExtraParticles()."""
 

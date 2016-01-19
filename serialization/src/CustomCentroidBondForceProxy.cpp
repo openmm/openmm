@@ -64,7 +64,8 @@ void CustomCentroidBondForceProxy::serialize(const void* object, SerializationNo
         for (int j = 0; j < (int) particles.size(); j++) {
             SerializationNode& node = group.createChildNode("Particle");
             node.setIntProperty("p", particles[j]);
-            node.setDoubleProperty("weight", weights[j]);
+            if (j < weights.size())
+                node.setDoubleProperty("weight", weights[j]);
         }
     }
     SerializationNode& bonds = node.createChildNode("Bonds");
@@ -115,7 +116,8 @@ void* CustomCentroidBondForceProxy::deserialize(const SerializationNode& node) c
             vector<double> weights;
             for (int j = 0; j < (int) group.getChildren().size(); j++) {
                 particles.push_back(group.getChildren()[j].getIntProperty("p"));
-                weights.push_back(group.getChildren()[j].getDoubleProperty("weight"));
+                if (group.getChildren()[j].hasProperty("weight"))
+                    weights.push_back(group.getChildren()[j].getDoubleProperty("weight"));
             }
             force->addGroup(particles, weights);
         }

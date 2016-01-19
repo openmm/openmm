@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -59,6 +59,7 @@ void testSerialization() {
     // Create a Force.
 
     AmoebaMultipoleForce force1;
+    force1.setForceGroup(3);
     force1.setNonbondedMethod(AmoebaMultipoleForce::NoCutoff);
     force1.setCutoffDistance(0.9);
     force1.setAEwald(0.544);
@@ -74,6 +75,12 @@ void testSerialization() {
     force1.setMutualInducedTargetEpsilon(1.0e-05); 
     //force1.setElectricConstant(138.93); 
     force1.setEwaldErrorTolerance(1.0e-05); 
+    
+    vector<double> coeff;
+    coeff.push_back(0.0);
+    coeff.push_back(-0.1);
+    coeff.push_back(1.1);
+    force1.setExtrapolationCoefficients(coeff);
 
     std::vector<std::string> covalentTypes;
     getCovalentTypes(covalentTypes);
@@ -105,6 +112,7 @@ void testSerialization() {
     // Compare the two forces to see if they are identical.  
     AmoebaMultipoleForce& force2 = *copy;
 
+    ASSERT_EQUAL(force1.getForceGroup(), force2.getForceGroup());
     ASSERT_EQUAL(force1.getCutoffDistance(),                force2.getCutoffDistance());
     ASSERT_EQUAL(force1.getNonbondedMethod(),               force2.getNonbondedMethod());
     ASSERT_EQUAL(force1.getAEwald(),                        force2.getAEwald());
@@ -124,6 +132,8 @@ void testSerialization() {
     for (unsigned int jj = 0; jj < gridDimension1.size(); jj++) {
         ASSERT_EQUAL(gridDimension1[jj], gridDimension2[jj]);
     }
+    
+    ASSERT_EQUAL_CONTAINERS(force1.getExtrapolationCoefficients(), force2.getExtrapolationCoefficients());
     
     ASSERT_EQUAL(force1.getNumMultipoles(),  force2.getNumMultipoles());
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(force1.getNumMultipoles()); ii++) {

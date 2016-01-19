@@ -51,7 +51,8 @@ void testSerialization() {
         vector<double> weights;
         for (int j = 0; j < i+1; j++) {
             particles.push_back(i+j);
-            weights.push_back(1.0/(i+1));
+            if (i < 2)
+                weights.push_back(1.0/(i+1));
         }
         force.addGroup(particles, weights);
     }

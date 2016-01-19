@@ -70,6 +70,20 @@ class TestPdbFile(unittest.TestCase):
         pdb = PDBFile(open('systems/triclinic.pdb', 'rb'))
         self.assertEqual(len(pdb.positions), 8)
 
+    def test_ExtraParticles(self):
+        """Test reading, and writing and re-reading of a file containing extra particle atoms."""
+        pdb = PDBFile('systems/tip5p.pdb')  
+        for atom in pdb.topology.atoms():
+            if atom.index > 2:
+                self.assertEqual(None, atom.element)
+        output = StringIO()
+        PDBFile.writeFile(pdb.topology, pdb.positions, output)
+        input = StringIO(output.getvalue())
+        pdb = PDBFile(input, extraParticleIdentifier = '')
+        for atom in pdb.topology.atoms():
+            if atom.index > 2:
+                self.assertEqual(None, atom.element)
+
 
     def assertVecAlmostEqual(self, p1, p2, tol=1e-7):
         unit = p1.unit
