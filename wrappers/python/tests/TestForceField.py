@@ -349,9 +349,6 @@ class TestForceField(unittest.TestCase):
 
     def test_getUnmatchedResidues(self):
         """Test retrieval of list of residues for which no templates are available."""
-        #
-        # Test where we generate parameters for only a ligand.
-        #
 
         # Load the PDB file.
         pdb = PDBFile(os.path.join('systems', 'T4-lysozyme-L99A-p-xylene-implicit.pdb'))
