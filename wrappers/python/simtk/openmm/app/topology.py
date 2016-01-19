@@ -71,20 +71,17 @@ class Topology(object):
     def getNumAtoms(self):
         """Return the number of atoms in the Topology.
         """
-        natom = self._numAtoms
-        return natom
+        return self._numAtoms
 
     def getNumResidues(self):
         """Return the number of residues in the Topology.
         """
-        nres = self._numResidues
-        return nres
+        return self._numResidues
 
     def getNumChains(self):
         """Return the number of chains in the Topology.
         """
-        nchain = len(self._chains)
-        return nchain
+        return len(self._chains)
 
     def addChain(self, id=None):
         """Create a new Chain and add it to the Topology.

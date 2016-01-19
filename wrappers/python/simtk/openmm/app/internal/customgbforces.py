@@ -29,10 +29,11 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
-from __future__ import division
-from __future__ import absolute_import
+from __future__ import division, absolute_import
 
+from collections import defaultdict
 import copy
+from simtk.openmm.app import element as E
 from simtk.openmm import CustomGBForce, Continuous2DFunction
 import simtk.unit as u
 
@@ -196,6 +197,141 @@ for i in range (len(d0)):
     d0[i]=d0[i]/10
     m0[i]=m0[i]*10
 
+def _get_bonded_atom_list(topology):
+    """ Returns a list of atoms bonded to each other atom in a dict """
+    bondeds = defaultdict(list)
+    for a1, a2 in topology.bonds():
+        bondeds[a1].append(a2)
+        bondeds[a2].append(a1)
+    return bondeds
+
+def _is_carboxylateO(atom, all_bonds):
+    if atom is not E.oxygen: return False
+    bondeds = all_bonds[atom]
+    if len(bondeds) != 1:
+        return False
+    if bondeds[0].element is not E.carbon:
+        return False
+    bondedsC = all_bonds[bondeds[0]]
+    if len(bondedsC) != 3:
+        return False
+    for a3 in bondedsC:
+        if a3 is atom: continue
+        if a3.element is E.oxygen:
+            break
+    else:
+        return False
+    # If we got here, must be a carboxylate
+    return True
+
+def _bondi_radii(topology):
+    """ Sets the bondi radii """
+    radii = [0.0 for atom in topology.atoms()]
+    for i, atom in enumerate(topology.atoms()):
+        if atom.element is E.carbon:
+            radii[i] = 1.7
+        elif atom.element in (E.hydrogen, E.deuterium):
+            radii[i] = 1.2
+        elif atom.element is E.nitrogen:
+            radii[i] = 1.55
+        elif atom.element is E.oxygen:
+            radii[i] = 1.5
+        elif atom.element is E.fluorine:
+            radii[i] = 1.5
+        elif atom.element is E.silicon:
+            radii[i] = 2.1
+        elif atom.element is E.phosphorus:
+            radii[i] = 1.85
+        elif atom.element is E.sulfur:
+            radii[i] = 1.8
+        elif atom.element is E.chlorine:
+            radii[i] = 1.5
+        else:
+            radii[i] = 1.5
+    return radii  # converted to nanometers above
+
+def _mbondi_radii(topology):
+    """ Sets the mbondi radii """
+    radii = [0.0 for atom in topology.atoms()]
+    all_bonds = _get_bonded_atom_list(topology)
+    for i, atom in enumerate(topology.atoms()):
+        # Radius of H atom depends on element it is bonded to
+        if atom.element in (E.hydrogen, E.deuterium):
+            bondeds = all_bonds[atom]
+            if bondeds[0].element in (E.carbon, E.nitrogen):
+                radii[i] = 1.3
+            elif bondeds[0].type.atomic_number in (E.oxygen, E.sulfur):
+                radii[i] = 0.8
+            else:
+                radii[i] = 1.2
+        # Radius of C atom depends on what type it is
+        elif atom.element is E.carbon:
+            radii[i] = 1.7
+        # All other elements have fixed radii for all types/partners
+        elif atom.element is E.nitrogen:
+            radii[i] = 1.55
+        elif atom.element is E.oxygen:
+            radii[i] = 1.5
+        elif atom.element is E.fluorine:
+            radii[i] = 1.5
+        elif atom.element is E.silicon:
+            radii[i] = 2.1
+        elif atom.element is E.phosphorus:
+            radii[i] = 1.85
+        elif atom.element is E.sulfur:
+            radii[i] = 1.8
+        elif atom.element is E.chlorine:
+            radii[i] = 1.5
+        else:
+            radii[i] = 1.5
+    return radii  # converted to nanometers above
+
+def _mbondi2_radii(topology):
+    """ Sets the mbondi2 radii """
+    radii = [0.0 for atom in topology.atoms()]
+    all_bonds = _get_bonded_atom_list(topology)
+    for i, atom in enumerate(topology.atoms()):
+        # Radius of H atom depends on element it is bonded to
+        if atom.element in (E.hydrogen, E.deuterium):
+            bondeds = all_bonds[atom]
+            if bondeds[0].element is E.nitrogen:
+                radii[i] = 1.3
+            else:
+                radii[i] = 1.2
+        # Radius of C atom depends on what type it is
+        elif atom.element is E.carbon:
+            radii[i] = 1.7
+        # All other elements have fixed radii for all types/partners
+        elif atom.element is E.nitrogen:
+            radii[i] = 1.55
+        elif atom.element is E.oxygen:
+            radii[i] = 1.5
+        elif atom.element is E.fluorine:
+            radii[i] = 1.5
+        elif atom.element is E.silicon:
+            radii[i] = 2.1
+        elif atom.element == E.phosphorus:
+            radii[i] = 1.85
+        elif atom.element == E.sulfur:
+            radii[i] = 1.8
+        elif atom.element == E.chlorine:
+            radii[i] = 1.5
+        else:
+            radii[i] = 1.5
+    return radii  # Converted to nanometers above
+
+def _mbondi3_radii(topology):
+    """ Sets the mbondi3 radii """
+    radii = _mbondi2_radii(topology)
+    all_bonds = _get_bonded_atom_list(topology)
+    for i, atom in enumerate(topology.atoms()):
+        # carboxylate and HH/HE (ARG)
+        if _is_carboxylateO(atom, all_bonds):
+            radii[i] = 1.4
+        elif atom.residue.name == 'ARG':
+            if atom.name.startswith('HH') or atom.name.startswith('HE'):
+                radii[i] = 1.17
+    return radii  # Converted to nanometers above
 
 def _createEnergyTerms(force, solventDielectric, soluteDielectric, SA, cutoff, kappa, offset):
     # Add the energy terms to the CustomGBForce.  These are identical for all the GB models.
@@ -231,6 +367,22 @@ def _createEnergyTerms(force, solventDielectric, soluteDielectric, SA, cutoff, k
             force.addEnergyTerm("-138.935485*(1/soluteDielectric-1/solventDielectric)*q1*q2*(1/f-"+str(1/cutoff)+");"
                                 "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))"+params, CustomGBForce.ParticlePairNoExclusions)
 
+_SCREEN_PARAMETERS = { # normal, GBn, GBn2
+        E.hydrogen : (0.85, 1.09085413633, 1.425952),
+        E.carbon : (0.72, 0.48435382330, 1.058554),
+        E.nitrogen : (0.79, 0.700147318409, 0.733599),
+        E.oxygen : (0.85, 1.06557401132, 1.061039),
+        E.fluorine : (0.88, 0.5, 0.5),
+        E.phosphorus : (0.86, 0.5, 0.5),
+        E.sulfur : (0.96, 0.602256336067, -0.703469),
+        None : (0.8, 0.5, 0.5) # default
+}
+_SCREEN_PARAMETERS[E.deuterium] = _SCREEN_PARAMETERS[E.hydrogen]
+def _screen_parameter(atom):
+    if atom.element in _SCREEN_PARAMETERS:
+        return _SCREEN_PARAMETERS[atom.element]
+    return _SCREEN_PARAMETERS[None]
+
 class CustomAmberGBForce(CustomGBForce):
 
     OFFSET = 0.009
@@ -254,6 +406,24 @@ class CustomAmberGBForce(CustomGBForce):
         CustomGBForce.addParticle(self, params)
         return params
 
+    @staticmethod
+    def getStandardParameters(topology):
+        """ Gets list of standard parameters for this GB model based on an input Topology
+
+        Parameters
+        ----------
+        topology : simtk.openmm.app.Topology
+            Topology of the system to get parameters for
+
+        Returns
+        -------
+        list of float
+            List of all parameters needed for this GB model. These can be passed
+            to addParticle or setParticleParameters after the charge is inserted
+            at the beginning of the list
+        """
+        raise NotImplementedError('Must override getStandardParameters in subclasses')
+
 """
 Amber Equivalent: igb = 1
 """
@@ -274,6 +444,13 @@ class GBSAHCTForce(CustomAmberGBForce):
 
         self.addComputedValue("B", "1/(1/or-I)", CustomGBForce.SingleParticle)
         _createEnergyTerms(self, solventDielectric, soluteDielectric, SA, cutoff, kappa, 0.009)
+
+    @staticmethod
+    def getStandardParameters(topology):
+        radii = [[x/10] for x in _mbondi_radii(topology)]
+        for i, atom in enumerate(topology.atoms()):
+            radii[i].append(_screen_parameter(atom)[0])
+        return radii
 
 """
 Amber Equivalents: igb = 2
@@ -297,10 +474,17 @@ class GBSAOBC1Force(CustomAmberGBForce):
                                    "psi=I*or; radius=or+offset; offset=0.009", CustomGBForce.SingleParticle)
         _createEnergyTerms(self, solventDielectric, soluteDielectric, SA, cutoff, kappa, 0.009)
 
+    @staticmethod
+    def getStandardParameters(topology):
+        radii = [[x/10] for x in _mbondi2_radii(topology)]
+        for i, atom in enumerate(topology.atoms()):
+            radii[i].append(_screen_parameter(atom)[0])
+        return radii
+
 """
 Amber Equivalents: igb = 5
 """
-class GBSAOBC2Force(CustomAmberGBForce):
+class GBSAOBC2Force(GBSAOBC1Force):
 
     def __init__(self, solventDielectric=78.5, soluteDielectric=1, SA=None,
                  cutoff=None, kappa=0.0):
@@ -359,6 +543,13 @@ class GBSAGBnForce(CustomAmberGBForce):
         if parameters[1] < 0.1 or parameters[1] > 0.2:
             raise ValueError('Radii must be between 1 and 2 Angstroms for neck lookup')
 
+    @staticmethod
+    def getStandardParameters(topology):
+        radii = [[x/10] for x in _bondi_radii(topology)]
+        for i, atom in enumerate(topology.atoms()):
+            radii[i].append(_screen_parameter(atom)[1])
+        return radii
+
 """
 Amber Equivalents: igb = 8
 """
@@ -393,3 +584,22 @@ class GBSAGBn2Force(GBSAGBnForce):
         self.addComputedValue("B", "1/(1/or-tanh(alpha*psi-beta*psi^2+gamma*psi^3)/radius);"
                                      "psi=I*or; radius=or+offset; offset=0.0195141", CustomGBForce.SingleParticle)
         _createEnergyTerms(self, solventDielectric, soluteDielectric, SA, cutoff, kappa, 0.0195141)
+
+    @staticmethod
+    def getStandardParameters(topology):
+        radii = [[x/10] for x in _mbondi3_radii(topology)]
+        for i, atom in enumerate(topology.atoms()):
+            radii[i].append(_screen_parameter(atom)[2])
+            if atom.element in (E.hydrogen, E.deuterium):
+                radii[i].extend([0.788440, 0.798699, 0.437334])
+            elif atom.element is E.carbon:
+                radii[i].extend([0.733756, 0.506378, 0.205844])
+            elif atom.element is E.nitrogen:
+                radii[i].extend([0.503364, 0.316828, 0.192915])
+            elif atom.element is E.oxygen:
+                radii[i].extend([0.867814, 0.876635, 0.387882])
+            elif atom.element is E.sulfur:
+                radii[i].extend([0.867814, 0.876635, 0.387882])
+            else:
+                radii[i].extend([0.8, 4.85, 0.5])
+        return radii
