@@ -1710,8 +1710,6 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                     result = cufftPlan3d(&fftBackward, gridSizeX, gridSizeY, gridSizeZ, cu.getUseDoublePrecision() ? CUFFT_Z2D : CUFFT_C2R);
                     if (result != CUFFT_SUCCESS)
                         throw OpenMMException("Error initializing FFT: "+cu.intToString(result));
-                    cufftSetCompatibilityMode(fftForward, CUFFT_COMPATIBILITY_NATIVE);
-                    cufftSetCompatibilityMode(fftBackward, CUFFT_COMPATIBILITY_NATIVE);
                 }
                 else
                     fft = new CudaFFT3D(cu, gridSizeX, gridSizeY, gridSizeZ, true);
