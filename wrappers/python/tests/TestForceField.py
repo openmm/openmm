@@ -370,7 +370,7 @@ class TestForceField(unittest.TestCase):
         # Check results.
         self.assertEqual(len(unmatched_residues), 3)
         self.assertEqual(unmatched_residues[0].name, 'ALA')
-        self.assertEqual(unmatched_residues[0].chain, 'X')
+        self.assertEqual(unmatched_residues[0].chain.id, 'X')
         self.assertEqual(unmatched_residues[0].id, '1')
 
     def test_getUniqueUnmatchedResidues(self):
