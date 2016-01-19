@@ -261,19 +261,10 @@ class TestForceField(unittest.TestCase):
             from uuid import uuid4
             template_name = uuid4()
             # Create residue template.
-            template = ForceField._TemplateData(template_name)
-            for atom in residue.atoms():
-                typename = 'XXX'
-                atom_template = ForceField._TemplateAtomData(atom.name, typename, atom.element)
-                template.atoms.append(atom_template)
-            for (atom1,atom2) in residue.internal_bonds():
-                template.addBondByName(atom1.name, atom2.name)
-            residue_atoms = [ atom for atom in residue.atoms() ]
-            for (atom1,atom2) in residue.external_bonds():
-                if atom1 in residue_atoms:
-                    template.addExternalBondByName(atom1.name)
-                elif atom2 in residue_atoms:
-                    template.addExternalBondByName(atom2.name)
+            template = ForceField._createResidueTemplate(residue)
+            template.name = template_name
+            for (template_atom, residue_atom) in zip(template.atoms, residue.atoms()):
+                template_atom.type = 'XXX'
             # Register the template.
             forcefield.registerResidueTemplate(template)
 
@@ -385,13 +376,18 @@ class TestForceField(unittest.TestCase):
         forcefield = ForceField('tip3p.xml')
         # Get list of unmatched residues.
         unmatched_residues = forcefield.getUnmatchedResidues(pdb.topology)
-        unique_unmatched_residues = forcefield.getUniqueUnmatchedResidues(pdb.topology)
+        [unique_unmatched_residues, templates] = forcefield.getUniqueUnmatchedResidues(pdb.topology)
         # Check results.
         self.assertEqual(len(unmatched_residues), 24)
         self.assertEqual(len(unique_unmatched_residues), 2)
         unique_names = set([ residue.name for residue in unique_unmatched_residues ])
+        self.assertTrue('HOH' not in unique_names)
         self.assertTrue('NA' in unique_names)
         self.assertTrue('CL' in unique_names)
+        template_names = set([ template.name for template in templates ])
+        self.assertTrue('HOH' not in template_names)
+        self.assertTrue('NA' in template_names)
+        self.assertTrue('CL' in template_names)
 
 class AmoebaTestForceField(unittest.TestCase):
     """Test the ForceField.createSystem() method with the AMOEBA forcefield."""

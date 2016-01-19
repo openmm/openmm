@@ -640,24 +640,15 @@ class ForceField(object):
         unmatched_residues = self.getUnmatchedResidues(topology)
         # Generate a unique list of unmatched residues by comparing fingerprints.
         bondedToAtom = self._buildBondedToAtomList(topology)
-        unique_unmatched_residues = list()
+        unique_unmatched_residues = list() # list of unique unmatched Residue objects from topology
+        templates = list() # corresponding _TemplateData templates
         signatures = set()
         for residue in unmatched_residues:
             signature = _createResidueSignature([ atom.element for atom in residue.atoms() ])
+            template = _createResidueTemplate(residue)
             is_unique = True
             if signature in signatures:
                 # Signature is the same as an existing residue; check connectivity.
-                template = ForceField._TemplateData(residue.name)
-                for atom in residue.atoms():
-                    template.atoms.append(ForceField._TemplateAtomData(atom.name, 'X', atom.element))
-                for (atom1,atom2) in residue.internal_bonds():
-                    template.addBondByName(atom1.name, atom2.name)
-                residue_atoms = [ atom for atom in residue.atoms() ]
-                for (atom1,atom2) in residue.external_bonds():
-                    if atom1 in residue_atoms:
-                        template.addExternalBondByName(atom1.name)
-                    elif atom2 in residue_atoms:
-                        template.addExternalBondByName(atom2.name)
                 for check_residue in unique_unmatched_residues:
                     matches = _matchResidue(check_residue, template, bondedToAtom)
                     if matches is not None:
@@ -667,7 +658,7 @@ class ForceField(object):
                 unique_unmatched_residues.append(residue)
                 signatures.add(signature)
 
-        return unique_unmatched_residues
+        return [unique_unmatched_residues, templates]
 
     def createSystem(self, topology, nonbondedMethod=NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
                      constraints=None, rigidWater=True, removeCMMotion=True, hydrogenMass=None, **args):
@@ -949,7 +940,6 @@ def _createResidueSignature(elements):
         s += element.symbol+str(count)
     return s
 
-
 def _matchResidue(res, template, bondedToAtom):
     """Determine whether a residue matches a template and return a list of corresponding atoms.
 
@@ -1094,6 +1084,34 @@ def _findMatchErrors(forcefield, res):
         return 'The set of atoms is similar to %s, but it is missing %d atoms.' % (bestMatchName, numBestMatchAtoms-numResidueAtoms)
     return 'This might mean your input topology is missing some atoms or bonds, or possibly that you are using the wrong force field.'
 
+def _createResidueTemplate(residue):
+    """Create a _TemplateData template from a Residue object.
+
+    Parameters
+    ----------
+    residue : Residue
+        The Residue from which the template is to be constructed.
+
+    Returns
+    -------
+    template : _TemplateData
+        The residue template, with atom types set to None.
+
+    This method may be useful in creating new residue templates for residues without templates defined by the ForceField.
+
+    """
+    template = ForceField._TemplateData(residue.name)
+    for atom in residue.atoms():
+        template.atoms.append(ForceField._TemplateAtomData(atom.name, 'X', atom.element))
+    for (atom1,atom2) in residue.internal_bonds():
+        template.addBondByName(atom1.name, atom2.name)
+    residue_atoms = [ atom for atom in residue.atoms() ]
+    for (atom1,atom2) in residue.external_bonds():
+        if atom1 in residue_atoms:
+            template.addExternalBondByName(atom1.name)
+        elif atom2 in residue_atoms:
+            template.addExternalBondByName(atom2.name)
+    return template
 
 # The following classes are generators that know how to create Force subclasses and add them to a System that is being
 # created.  Each generator class must define two methods: 1) a static method that takes an etree Element and a ForceField,
