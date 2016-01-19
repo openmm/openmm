@@ -569,13 +569,34 @@ class ForceField(object):
                     break
         return [template, matches]
 
+    def _buildBondedToAtomList(self, topology):
+        """Build a list of which atom indices are bonded to each atom.
+
+        Parameters
+        ----------
+        topology : Topology
+            The Topology whose bonds are to be indexed.
+
+        Returns
+        -------
+        bondedToAtom : list of set of int
+            bondedToAtom[index] is the set of atom indices bonded to atom `index`
+
+        """
+        bondedToAtom = []
+        for atom in topology.atoms():
+            bondedToAtom.append(set())
+        for bond in topology.bonds():
+            bondedToAtom[bond.atom1.index].add(bond.atom2.index)
+            bondedToAtom[bond.atom2.index].add(bond.atom1.index)
+
     def getUnmatchedResidues(self, topology):
         """Return a list of Residue objects from specified topology for which no forcefield templates are available.
 
         Parameters
         ----------
         topology : Topology
-            The Topology for which to create a System
+            The Topology whose residues are to be checked against the forcefield residue templates.
 
         Returns
         -------
@@ -586,6 +607,7 @@ class ForceField(object):
         This method may be of use in generating missing residue templates or diagnosing parameterization failures.
         """
         # Find the template matching each residue, compiling a list of residues for which no templates are available.
+        bondedToAtom = self._buildBondedToAtomList(topology)
         unmatched_residues = list() # list of unmatched residues
         for chain in topology.chains():
             for res in chain.residues():
@@ -603,7 +625,7 @@ class ForceField(object):
         Parameters
         ----------
         topology : Topology
-            The Topology for which to create a System
+            The Topology whose residues are to be checked against the forcefield residue templates.
 
         Returns
         -------
@@ -615,14 +637,8 @@ class ForceField(object):
         """
         # Get a non-unique list of unmatched residues.
         unmatched_residues = self.getUnmatchedResidues(topology)
-        # Record which atoms are bonded to each other atom
-        bondedToAtom = []
-        for atom in topology.atoms():
-            bondedToAtom.append(set())
-        for bond in topology.bonds():
-            bondedToAtom[bond.atom1.index].add(bond.atom2.index)
-            bondedToAtom[bond.atom2.index].add(bond.atom1.index)
         # Generate a unique list of unmatched residues by comparing fingerprints.
+        bondedToAtom = self._buildBondedToAtomList(topology)
         unique_unmatched_residues = list()
         signatures = set()
         for residue in unmatched_residues:
