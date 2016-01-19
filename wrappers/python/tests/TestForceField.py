@@ -390,7 +390,7 @@ class TestForceField(unittest.TestCase):
         unmatched_residues = forcefield.getUnmatchedResidues(pdb.topology)
         unique_unmatched_residues = forcefield.getUniqueUnmatchedResidues(pdb.topology)
         # Check results.
-        self.assertEqual(len(unmatched_residues), 14)
+        self.assertEqual(len(unmatched_residues), 24)
         self.assertEqual(len(unique_unmatched_residues), 2)
         unique_names = set([ residue.name for residue in unique_unmatched_residues ])
         self.assertTrue('NA' in unique_names)
