@@ -988,23 +988,28 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
             gb = customgb.GBSAGBn2Force(solventDielectric, soluteDielectric, 'ACE', cutoff, implicitSolventKappa)
         else:
             raise ValueError("Illegal value specified for implicit solvent model")
-        gb_parms = gb.getStandardParameters(gbmodel, elements)
+        if isinstance(gb, mm.GBSAOBCForce):
+            # Built-in GBSAOBCForce does not have getStandardParameters, so use
+            # the one from the equivalent CustomGBForce
+            gb_parms = customgb.GBSAOBC2Force.getStandardParameters(topology)
+        else:
+            gb_parms = type(gb).getStandardParameters(topology)
         # Replace radii and screen, but screen *only* gets replaced by the
         # prmtop contents for HCT, OBC1, and OBC2. GBn and GBn2 both override
         # the prmtop screen factors from LEaP in sander and pmemd
         if gbmodel in ('HCT', 'OBC1', 'OBC2'):
-            screen = [float(s) for s in self._raw_data['SCREEN']]
+            screen = [float(s) for s in prmtop._raw_data['SCREEN']]
         else:
             screen = [gb_parm[1] for gb_parm in gb_parms]
-        radii = [float(r)/10 for r in self._raw_data['RADII']]
+        radii = [float(r)/10 for r in prmtop._raw_data['RADII']]
         warned = False
         for i, (r, s) in enumerate(zip(radii, screen)):
-            if abs(r - gb_parms[0]) > 1e-4 or abs(s - gb_parms[1]) > 1e-4:
+            if abs(r - gb_parms[i][0]) > 1e-4 or abs(s - gb_parms[i][1]) > 1e-4:
                 if not warned:
                     warnings.warn('Non-optimal GB parameters detected for GB '
                                   'model %s' % gbmodel)
                     warned = True
-            gb_parms[0], gb_parms[1] = r, s
+            gb_parms[i][0], gb_parms[i][1] = r, s
 
         for charge, gb_parm in zip(charges, gb_parms):
             if gbmodel == 'OBC2' and implicitSolventKappa == 0:

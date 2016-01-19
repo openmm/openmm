@@ -33,7 +33,7 @@ from __future__ import division, absolute_import
 
 from collections import defaultdict
 import copy
-import simtk.openmm.app.element as E
+from simtk.openmm.app import element as E
 from simtk.openmm import CustomGBForce, Continuous2DFunction
 import simtk.unit as u
 
@@ -226,8 +226,8 @@ def _is_carboxylateO(atom, all_bonds):
 
 def _bondi_radii(topology):
     """ Sets the bondi radii """
-    radii = [0.0 for atom in topology.getAtoms()]
-    for i, atom in enumerate(topology.getAtoms()):
+    radii = [0.0 for atom in topology.atoms()]
+    for i, atom in enumerate(topology.atoms()):
         if atom.element is E.carbon:
             radii[i] = 1.7
         elif atom.element in (E.hydrogen, E.deuterium):
@@ -252,9 +252,9 @@ def _bondi_radii(topology):
 
 def _mbondi_radii(topology):
     """ Sets the mbondi radii """
-    radii = [0.0 for atom in topology.getAtoms()]
+    radii = [0.0 for atom in topology.atoms()]
     all_bonds = _get_bonded_atom_list(topology)
-    for i, atom in enumerate(topology.getAtoms()):
+    for i, atom in enumerate(topology.atoms()):
         # Radius of H atom depends on element it is bonded to
         if atom.element in (E.hydrogen, E.deuterium):
             bondeds = all_bonds[atom]
@@ -288,9 +288,9 @@ def _mbondi_radii(topology):
 
 def _mbondi2_radii(topology):
     """ Sets the mbondi2 radii """
-    radii = [0.0 for atom in topology.getAtoms()]
+    radii = [0.0 for atom in topology.atoms()]
     all_bonds = _get_bonded_atom_list(topology)
-    for i, atom in enumerate(topology.getAtoms()):
+    for i, atom in enumerate(topology.atoms()):
         # Radius of H atom depends on element it is bonded to
         if atom.element in (E.hydrogen, E.deuterium):
             bondeds = all_bonds[atom]
@@ -324,7 +324,7 @@ def _mbondi3_radii(topology):
     """ Sets the mbondi3 radii """
     radii = _mbondi2_radii(topology)
     all_bonds = _get_bonded_atom_list(topology)
-    for i, atom in enumerate(topology.getAtoms()):
+    for i, atom in enumerate(topology.atoms()):
         # carboxylate and HH/HE (ARG)
         if _is_carboxylateO(atom, all_bonds):
             radii[i] = 1.4
@@ -448,7 +448,7 @@ class GBSAHCTForce(CustomAmberGBForce):
     @staticmethod
     def getStandardParameters(topology):
         radii = [[x/10] for x in _mbondi_radii(topology)]
-        for i, atom in zip(topology.getAtoms()):
+        for i, atom in enumerate(topology.atoms()):
             radii[i].append(_screen_parameter(atom)[0])
         return radii
 
@@ -477,7 +477,7 @@ class GBSAOBC1Force(CustomAmberGBForce):
     @staticmethod
     def getStandardParameters(topology):
         radii = [[x/10] for x in _mbondi2_radii(topology)]
-        for i, atom in zip(topology.getAtoms()):
+        for i, atom in enumerate(topology.atoms()):
             radii[i].append(_screen_parameter(atom)[0])
         return radii
 
@@ -546,7 +546,7 @@ class GBSAGBnForce(CustomAmberGBForce):
     @staticmethod
     def getStandardParameters(topology):
         radii = [[x/10] for x in _bondi_radii(topology)]
-        for i, atom in zip(topology.getAtoms()):
+        for i, atom in enumerate(topology.atoms()):
             radii[i].append(_screen_parameter(atom)[1])
         return radii
 
@@ -588,7 +588,7 @@ class GBSAGBn2Force(GBSAGBnForce):
     @staticmethod
     def getStandardParameters(topology):
         radii = [[x/10] for x in _mbondi3_radii(topology)]
-        for i, atom in zip(topology.getAtoms()):
+        for i, atom in enumerate(topology.atoms()):
             radii[i].append(_screen_parameter(atom)[2])
             if atom.element in (E.hydrogen, E.deuterium):
                 radii[i].extend([0.788440, 0.798699, 0.437334])
