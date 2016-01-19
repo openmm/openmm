@@ -264,7 +264,7 @@ class Modeller(object):
         2. Water molecules are removed if their distance to any solute atom is less than the sum of their van der Waals radii.
         3. If the solute is charged and neutralize=True, enough positive or negative ions are added to neutralize it.  Each ion is added by
            randomly selecting a water molecule and replacing it with the ion.
-        4. Ion pairs are added to give the requested total ionic strength.
+        4. Ion pairs are added to give the requested total ionic strength.  Note that only monovalent ions are currently supported.
 
         The box size can be specified in any of several ways:
 
@@ -298,6 +298,7 @@ class Modeller(object):
         ionicStrength : concentration=0*molar
             the total concentration of ions (both positive and negative) to add.  This
             does not include ions that are added to neutralize the system.
+            Note that only monovalent ions are currently supported.
         neutralize : bool=True
             whether to add ions to neutralize the system
         """
@@ -522,7 +523,7 @@ class Modeller(object):
         # Add ions based on the desired ionic strength.
 
         numIons = len(addedWaters)*ionicStrength/(55.4*molar) # Pure water is about 55.4 molar (depending on temperature)
-        numPairs = int(floor(numIons/2+0.5))
+        numPairs = int(floor(numIons+0.5))
         for i in range(numPairs):
             addIon(positiveElement)
         for i in range(numPairs):
@@ -1103,7 +1104,7 @@ class Modeller(object):
                             else:
                                 a2 = newAtoms[matchingAtoms[atom2]]
                             newTopology.addBond(a1, a2)
-                            
+
         for bond in self.topology.bonds():
             if bond[0] in newAtoms and bond[1] in newAtoms:
                 newTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]])
@@ -1135,6 +1136,6 @@ class Modeller(object):
                     delta *= (distance-length)/length
                     newPositions[atom1] -= weights[0]*delta
                     newPositions[atom2] += weights[1]*delta
-                
+
         self.topology = newTopology
         self.positions = newPositions
