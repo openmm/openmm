@@ -586,9 +586,9 @@ class ForceField(object):
         bondedToAtom = []
         for atom in topology.atoms():
             bondedToAtom.append(set())
-        for bond in topology.bonds():
-            bondedToAtom[bond.atom1.index].add(bond.atom2.index)
-            bondedToAtom[bond.atom2.index].add(bond.atom1.index)
+        for (atom1, atom2) in topology.bonds():
+            bondedToAtom[atom1.index].add(atom2.index)
+            bondedToAtom[atom2.index].add(atom1.index)
 
     def getUnmatchedResidues(self, topology):
         """Return a list of Residue objects from specified topology for which no forcefield templates are available.
