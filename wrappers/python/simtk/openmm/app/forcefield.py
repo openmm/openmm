@@ -589,6 +589,7 @@ class ForceField(object):
         for (atom1, atom2) in topology.bonds():
             bondedToAtom[atom1.index].add(atom2.index)
             bondedToAtom[atom2.index].add(atom1.index)
+        return bondedToAtom
 
     def getUnmatchedResidues(self, topology):
         """Return a list of Residue objects from specified topology for which no forcefield templates are available.
@@ -648,7 +649,7 @@ class ForceField(object):
                 # Signature is the same as an existing residue; check connectivity.
                 template = ForceField._TemplateData(residue.name)
                 for atom in residue.atoms():
-                    template.atoms.append(ForceField._TemplateAtomData(atom.name, None, atom.element))
+                    template.atoms.append(ForceField._TemplateAtomData(atom.name, 'X', atom.element))
                 for (atom1,atom2) in residue.internal_bonds():
                     template.addBondByName(atom1.name, atom2.name)
                 residue_atoms = [ atom for atom in residue.atoms() ]
