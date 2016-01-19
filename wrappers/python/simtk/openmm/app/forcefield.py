@@ -4552,3 +4552,5 @@ class DrudeGenerator:
                     drude.addScreenedPair(drude1, drude2, thole1+thole2)
 
 parsers["DrudeForce"] = DrudeGenerator.parseElement
+
+#=============================================================================================
