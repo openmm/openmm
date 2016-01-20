@@ -657,6 +657,7 @@ class ForceField(object):
                 # Residue is unique.
                 unique_unmatched_residues.append(residue)
                 signatures.add(signature)
+                templates.append(template)
 
         return [unique_unmatched_residues, templates]
 

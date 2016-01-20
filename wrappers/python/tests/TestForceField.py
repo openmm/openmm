@@ -261,10 +261,10 @@ class TestForceField(unittest.TestCase):
             from uuid import uuid4
             template_name = uuid4()
             # Create residue template.
-            template = ForceField._createResidueTemplate(residue)
-            template.name = template_name
+            template = ForceField._createResidueTemplate(residue) # use helper function
+            template.name = template_name # replace template name
             for (template_atom, residue_atom) in zip(template.atoms, residue.atoms()):
-                template_atom.type = 'XXX'
+                template_atom.type = 'XXX' # replace atom type
             # Register the template.
             forcefield.registerResidueTemplate(template)
 
@@ -380,6 +380,7 @@ class TestForceField(unittest.TestCase):
         # Check results.
         self.assertEqual(len(unmatched_residues), 24)
         self.assertEqual(len(unique_unmatched_residues), 2)
+        self.assertEqual(len(templates), 2)
         unique_names = set([ residue.name for residue in unique_unmatched_residues ])
         self.assertTrue('HOH' not in unique_names)
         self.assertTrue('NA' in unique_names)
