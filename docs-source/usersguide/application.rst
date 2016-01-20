@@ -1965,7 +1965,7 @@ Missing residue templates
 =========================
 
 .. CAUTION::
-   This feature is experimental, and its API is subject to change.
+   These features are experimental, and its API is subject to change.
 
 You can use the :method:`getUnmatchedResidues()` method to get a list of residues
 in the provided :code:`topology` object that do not currently have a matching
@@ -1981,12 +1981,18 @@ with residue template definitions, or identifying which additional residues need
 to be parameterized.
 
 As a convenience for parameterizing new residues, you can also get a list of
-residues and empty residue templates using :method:`getUniqueUnmatchedResidues`
+residues and empty residue templates using :method:`generateTemplatesForUnmatchedResidues`
 ::
 
     pdb = PDBFile('input.pdb')
     forcefield = ForceField('amber99sb.xml', 'tip3p.xml')
-    [residues, templates] = forcefield.getUniqueUnmatchedResidues(topology)
+    [templates, residues] = forcefield.generateTemplatesForUnmatchedResidues(topology)
+    # Se the atom types
+    for template in templates:
+        for atom in template.atoms:
+            atom.type = ... # set the atom types here
+        # Register the template with the forcefield.
+        forcefield.registerResidueTemplate(template)
 
 <HarmonicBondForce>
 ===================

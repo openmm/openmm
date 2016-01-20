@@ -365,8 +365,8 @@ class TestForceField(unittest.TestCase):
         self.assertEqual(unmatched_residues[0].chain.id, 'X')
         self.assertEqual(unmatched_residues[0].id, '1')
 
-    def test_getUniqueUnmatchedResidues(self):
-        """Test retrieval of list of residues for which no templates are available."""
+    def test_ggenerateTemplatesForUnmatchedResidues(self):
+        """Test generation of blank forcefield residue templates for unmatched residues."""
         #
         # Test where we generate parameters for only a ligand.
         #
@@ -377,12 +377,12 @@ class TestForceField(unittest.TestCase):
         forcefield = ForceField('tip3p.xml')
         # Get list of unmatched residues.
         unmatched_residues = forcefield.getUnmatchedResidues(pdb.topology)
-        [unique_unmatched_residues, templates] = forcefield.getUniqueUnmatchedResidues(pdb.topology)
+        [templates, residues] = forcefield.generateTemplatesForUnmatchedResidues(pdb.topology)
         # Check results.
         self.assertEqual(len(unmatched_residues), 24)
-        self.assertEqual(len(unique_unmatched_residues), 2)
+        self.assertEqual(len(residues), 2)
         self.assertEqual(len(templates), 2)
-        unique_names = set([ residue.name for residue in unique_unmatched_residues ])
+        unique_names = set([ residue.name for residue in residues ])
         self.assertTrue('HOH' not in unique_names)
         self.assertTrue('NA' in unique_names)
         self.assertTrue('CL' in unique_names)
@@ -419,7 +419,7 @@ class TestForceField(unittest.TestCase):
         # Create a ForceField object.
         forcefield = ForceField('amber99sb.xml', 'tip3p.xml', StringIO(simple_ffxml_contents))
         # Get list of unique unmatched residues.
-        [residues, templates] = forcefield.getUniqueUnmatchedResidues(pdb.topology)
+        [templates, residues] = forcefield.generateTemplatesForUnmatchedResidues(pdb.topology)
         # Add residue templates to forcefield.
         for template in templates:
             # Replace atom types.

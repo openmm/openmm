@@ -602,7 +602,7 @@ class ForceField(object):
         Returns
         -------
         unmatched_residues : list of Residue
-            List of residue templates from `topology` for which no forcefield residue templates are available.
+            List of Residue objects from `topology` for which no forcefield residue templates are available.
             Note that multiple instances of the same residue appearing at different points in the topology may be returned.
 
         This method may be of use in generating missing residue templates or diagnosing parameterization failures.
@@ -620,8 +620,8 @@ class ForceField(object):
 
         return unmatched_residues
 
-    def getUniqueUnmatchedResidues(self, topology):
-        """Returns a unique list of Residue objects from specified topology for which no forcefield templates are available.
+    def generateTemplatesForUnmatchedResidues(self, topology):
+        """Generate forcefield residue templates for residues in specified topology for which no forcefield templates are available.
 
         Parameters
         ----------
@@ -630,11 +630,13 @@ class ForceField(object):
 
         Returns
         -------
-        unmatched_residues : list of Residue
-            List of residue templates from `topology` for which no forcefield residue templates are available.
-            Note that only a single instances each missing residue type will be returned.
+        templates : list of _TemplateData
+            List of forcefield residue templates corresponding to residues in `topology` for which no forcefield templates are currently available.
+            Atom types will be set to `None`, but template name, atom names, elements, and connectivity will be taken from corresponding Residue objects.
+        residues : list of Residue
+            List of Residue objects that were used to generate the templates.
+            `residues[index]` is the Residue that was used to generate the template `templates[index]`
 
-        This method may be of use in generating missing residue templates.
         """
         # Get a non-unique list of unmatched residues.
         unmatched_residues = self.getUnmatchedResidues(topology)
@@ -659,7 +661,7 @@ class ForceField(object):
                 signatures.add(signature)
                 templates.append(template)
 
-        return [unique_unmatched_residues, templates]
+        return [templates, unique_unmatched_residues]
 
     def createSystem(self, topology, nonbondedMethod=NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
                      constraints=None, rigidWater=True, removeCMMotion=True, hydrogenMass=None, **args):
