@@ -450,10 +450,10 @@ class AmoebaTestForceField(unittest.TestCase):
  </PeriodicTorsionForce>
 </ForceField>"""
 
-       ff = ForceField(StringIO(xml))
+        ff = ForceField(StringIO(xml))
 
-       self.assertEqual(len(ff._forces[0].proper), 1)
-       self.assertEqual(len(ff._forces[0].improper), 1)
+        self.assertEqual(len(ff._forces[0].proper), 1)
+        self.assertEqual(len(ff._forces[0].improper), 1)
 
        # Use wildcards in classes
         xml = """
@@ -468,10 +468,11 @@ class AmoebaTestForceField(unittest.TestCase):
  </PeriodicTorsionForce>
 </ForceField>"""
 
-       ff = ForceField(StringIO(xml))
+        ff = ForceField(StringIO(xml))
 
-       self.assertEqual(len(ff._forces[0].proper), 1)
-       self.assertEqual(len(ff._forces[0].improper), 1)
+        self.assertEqual(len(ff._forces[0].proper), 1)
+        self.assertEqual(len(ff._forces[0].improper), 1)
 
 if __name__ == '__main__':
     unittest.main()
+
