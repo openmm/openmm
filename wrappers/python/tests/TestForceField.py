@@ -261,7 +261,8 @@ class TestForceField(unittest.TestCase):
             from uuid import uuid4
             template_name = uuid4()
             # Create residue template.
-            template = ForceField._createResidueTemplate(residue) # use helper function
+            from simtk.openmm.app.forcefield import _createResidueTemplate
+            template = _createResidueTemplate(residue) # use helper function
             template.name = template_name # replace template name
             for (template_atom, residue_atom) in zip(template.atoms, residue.atoms()):
                 template_atom.type = 'XXX' # replace atom type
