@@ -81,7 +81,7 @@ public:
      * @param covalentDegree      covalent degrees for the CovalentEnd lists
      */
     static void getCovalentDegree(const AmoebaMultipoleForce& force, std::vector<int>& covalentDegree);
-    void getLabFramePermanentDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
+//    void getLabFramePermanentDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
     void getInducedDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
 
     void getElectrostaticPotential(ContextImpl& context, const std::vector< Vec3 >& inputGrid,

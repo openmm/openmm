@@ -380,7 +380,7 @@ public:
      * @param context    the Context for which to get the fixed dipoles
      * @param dipoles    the fixed dipole moment of particle i is stored into the i'th element
      */
-    void getLabFramePermanentDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
+//    void getLabFramePermanentDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
     /** 
      * Calculate the electrostatic potential given vector of grid coordinates.
      *

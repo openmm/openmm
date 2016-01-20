@@ -538,19 +538,19 @@ public:
      * @param outputMultipoleMoments    output multipole moments
      */
 
-    void calculateLabFramePermanentDipoles(const vector<RealVec>& particlePositions,
-                                           const vector<RealOpenMM>& charges,
-                                           const vector<RealOpenMM>& dipoles,
-                                           const vector<RealOpenMM>& quadrupoles,
-                                           const vector<RealOpenMM>& tholes,
-                                           const vector<RealOpenMM>& dampingFactors,
-                                           const vector<RealOpenMM>& polarity,
-                                           const vector<int>& axisTypes,
-                                           const vector<int>& multipoleAtomZs,
-                                           const vector<int>& multipoleAtomXs,
-                                           const vector<int>& multipoleAtomYs,
-                                           const vector< vector< vector<int> > >& multipoleAtomCovalentInfo,
-                                           vector<RealVec>& outputRotatedPermanentDipoles);
+//    void calculateLabFramePermanentDipoles(const vector<RealVec>& particlePositions,
+//                                           const vector<RealOpenMM>& charges,
+//                                           const vector<RealOpenMM>& dipoles,
+//                                           const vector<RealOpenMM>& quadrupoles,
+//                                           const vector<RealOpenMM>& tholes,
+//                                           const vector<RealOpenMM>& dampingFactors,
+//                                           const vector<RealOpenMM>& polarity,
+//                                           const vector<int>& axisTypes,
+//                                           const vector<int>& multipoleAtomZs,
+//                                           const vector<int>& multipoleAtomXs,
+//                                           const vector<int>& multipoleAtomYs,
+//                                           const vector< vector< vector<int> > >& multipoleAtomCovalentInfo,
+//                                           vector<RealVec>& outputRotatedPermanentDipoles);
 
     /**
      * Calculate system multipole moments.
@@ -1013,7 +1013,7 @@ protected:
      * 
      * @param particleData      vector of particle positions and parameters (charge, labFrame dipoles, quadrupoles, ...)
      */
-    virtual void calculateLabFramePermanentDipoles(const std::vector<MultipoleParticleData>& particleData);
+//    virtual void calculateLabFramePermanentDipoles(const std::vector<MultipoleParticleData>& particleData);
 
     /**
      * Setup: 
@@ -1268,7 +1268,7 @@ private:
      * 
      * @param particleData      vector of particle positions and parameters (charge, labFrame dipoles, quadrupoles, ...)
      */
-    void calculateLabFramePermanentDipoles(const std::vector<MultipoleParticleData>& particleData);
+//    void calculateLabFramePermanentDipoles(const std::vector<MultipoleParticleData>& particleData);
 
     /**
      * Calculate fields due induced dipoles at each site.
