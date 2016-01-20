@@ -411,7 +411,7 @@ class TestForceField(unittest.TestCase):
 </ForceField>"""
 
         #
-        # Test where we generate parameters for only a ligand.
+        # Test the pre-geenration of missing residue template for a ligand.
         #
 
         # Load the PDB file.
