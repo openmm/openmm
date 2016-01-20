@@ -191,7 +191,7 @@ CudaPlatform::PlatformData::PlatformData(ContextImpl* context, const System& sys
     try {
         for (int i = 0; i < (int) devices.size(); i++) {
             if (devices[i].length() > 0) {
-                unsigned int deviceIndex;
+                int deviceIndex;
                 stringstream(devices[i]) >> deviceIndex;
                 contexts.push_back(new CudaContext(system, deviceIndex, blocking, precisionProperty, compilerProperty, tempProperty, hostCompilerProperty, *this));
             }
