@@ -391,6 +391,46 @@ class TestForceField(unittest.TestCase):
         self.assertTrue('NA' in template_names)
         self.assertTrue('CL' in template_names)
 
+        # Define forcefield parameters using returned templates.
+        # NOTE: This parameter definition file will currently only work for residues that either have
+        # no external bonds or external bonds to other residues parameterized by the simpleTemplateGenerator.
+        simple_ffxml_contents = """
+<ForceField>
+ <AtomTypes>
+  <Type name="XXX" class="XXX" element="C" mass="12.0"/>
+ </AtomTypes>
+ <HarmonicBondForce>
+  <Bond type1="XXX" type2="XXX" length="0.1409" k="392459.2"/>
+ </HarmonicBondForce>
+ <HarmonicAngleForce>
+  <Angle type1="XXX" type2="XXX" type3="XXX" angle="2.09439510239" k="527.184"/>
+ </HarmonicAngleForce>
+ <NonbondedForce coulomb14scale="0.833333" lj14scale="0.5">
+  <Atom type="XXX" charge="0.000" sigma="0.315" epsilon="0.635"/>
+ </NonbondedForce>
+</ForceField>"""
+
+        #
+        # Test where we generate parameters for only a ligand.
+        #
+
+        # Load the PDB file.
+        pdb = PDBFile(os.path.join('systems', 'T4-lysozyme-L99A-p-xylene-implicit.pdb'))
+        # Create a ForceField object.
+        forcefield = ForceField('amber99sb.xml', 'tip3p.xml', StringIO(simple_ffxml_contents))
+        # Get list of unique unmatched residues.
+        [unique_unmatched_residues, templates] = forcefield.getUniqueUnmatchedResidues(pdb.topology)
+        # Add residue templates to forcefield.
+        for template in templates:
+            # Replace atom types.
+            for (template_atom, residue_atom) in zip(template.atoms, residue.atoms()):
+                template_atom.type = 'XXX'
+            # Register the template.
+            forcefield.registerResidueTemplate(template)
+        # Parameterize system.
+        system = forcefield.createSystem(pdb.topology, nonbondedMethod=NoCutoff)
+        # TODO: Test energies are finite?
+
 class AmoebaTestForceField(unittest.TestCase):
     """Test the ForceField.createSystem() method with the AMOEBA forcefield."""
 
