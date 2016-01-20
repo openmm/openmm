@@ -1103,7 +1103,7 @@ def _createResidueTemplate(residue):
     """
     template = ForceField._TemplateData(residue.name)
     for atom in residue.atoms():
-        template.atoms.append(ForceField._TemplateAtomData(atom.name, 'X', atom.element))
+        template.atoms.append(ForceField._TemplateAtomData(atom.name, None, atom.element))
     for (atom1,atom2) in residue.internal_bonds():
         template.addBondByName(atom1.name, atom2.name)
     residue_atoms = [ atom for atom in residue.atoms() ]

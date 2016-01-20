@@ -419,12 +419,12 @@ class TestForceField(unittest.TestCase):
         # Create a ForceField object.
         forcefield = ForceField('amber99sb.xml', 'tip3p.xml', StringIO(simple_ffxml_contents))
         # Get list of unique unmatched residues.
-        [unique_unmatched_residues, templates] = forcefield.getUniqueUnmatchedResidues(pdb.topology)
+        [residues, templates] = forcefield.getUniqueUnmatchedResidues(pdb.topology)
         # Add residue templates to forcefield.
         for template in templates:
             # Replace atom types.
-            for (template_atom, residue_atom) in zip(template.atoms, residue.atoms()):
-                template_atom.type = 'XXX'
+            for atom in template.atoms:
+                atom.type = 'XXX'
             # Register the template.
             forcefield.registerResidueTemplate(template)
         # Parameterize system.
