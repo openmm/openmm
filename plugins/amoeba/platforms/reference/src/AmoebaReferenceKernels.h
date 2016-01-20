@@ -374,7 +374,7 @@ public:
      * @param dipoles    the induced dipole moment of particle i is stored into the i'th element
      */
     void getInducedDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
-    /**
+    /*
      * Get the fixed dipole moments of all particles in the global reference frame.
      * 
      * @param context    the Context for which to get the fixed dipoles

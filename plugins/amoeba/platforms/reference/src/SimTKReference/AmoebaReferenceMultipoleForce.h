@@ -519,7 +519,7 @@ public:
                                  const std::vector< std::vector< std::vector<int> > >& multipoleAtomCovalentInfo,
                                  std::vector<RealVec>& outputInducedDipoles);
 
-    /**
+    /*
      * Calculate particle permanent dipoles rotated in the lab frame.
      *
      * @param masses                    particle masses

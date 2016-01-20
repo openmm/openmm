@@ -316,7 +316,7 @@ public:
      * This can be overridden by explicitly setting an alpha parameter and grid dimensions to use.
      */
     void setEwaldErrorTolerance(double tol);
-    /**
+    /*
      * Get the fixed dipole moments of all particles in the global reference frame.
      *
      * @param context         the Context for which to get the fixed dipoles
