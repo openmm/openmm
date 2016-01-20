@@ -434,6 +434,45 @@ class AmoebaTestForceField(unittest.TestCase):
             diff = norm(f1-f2)
             self.assertTrue(diff < 0.1 or diff/norm(f1) < 1e-3)
 
+    def test_Wildcard(self):
+        """Test that PeriodicTorsionForces using wildcard ('') for atom types / classes in the ffxml are correctly registered"""
+
+        # Use wildcards in types
+        xml = """
+<ForceField>
+ <AtomTypes>
+  <Type name="C" class="C" element="C" mass="12.010000"/>
+  <Type name="O" class="O" element="O" mass="16.000000"/>
+ </AtomTypes>
+ <PeriodicTorsionForce>
+  <Proper type1="" type2="C" type3="C" type4="" periodicity1="2" phase1="3.141593" k1="15.167000"/>
+  <Improper type1="C" type2="" type3="" type4="O" periodicity1="2" phase1="3.141593" k1="43.932000"/>
+ </PeriodicTorsionForce>
+</ForceField>"""
+
+        ff = ForceField(StringIO(xml))
+
+        self.assertEqual(len(ff._forces[0].proper), 1)
+        self.assertEqual(len(ff._forces[0].improper), 1)
+
+       # Use wildcards in classes
+        xml = """
+<ForceField>
+ <AtomTypes>
+  <Type name="C" class="C" element="C" mass="12.010000"/>
+  <Type name="O" class="O" element="O" mass="16.000000"/>
+ </AtomTypes>
+ <PeriodicTorsionForce>
+  <Proper class1="" class2="C" class3="C" class4="" periodicity1="2" phase1="3.141593" k1="15.167000"/>
+  <Improper class1="C" class2="" class3="" class4="O" periodicity1="2" phase1="3.141593" k1="43.932000"/>
+ </PeriodicTorsionForce>
+</ForceField>"""
+
+        ff = ForceField(StringIO(xml))
+
+        self.assertEqual(len(ff._forces[0].proper), 1)
+        self.assertEqual(len(ff._forces[0].improper), 1)
+
 if __name__ == '__main__':
     unittest.main()
 
