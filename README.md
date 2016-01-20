@@ -11,9 +11,9 @@ Getting Help
 
 Need Help? Check out the [documentation](http://docs.openmm.org/) and [discussion forums](https://simtk.org/forums/viewforum.php?f=161).
 
-[C++ API Reference](https://simtk.org/api_docs/openmm/api6_0/c++/)
+[C++ API Reference](http://docs.openmm.org/6.3.0/api-c++/namespaceOpenMM.html)
 
-[Python API Reference](https://simtk.org/api_docs/openmm/api6_0/python/)
+[Python API Reference](http://docs.openmm.org/6.3.0/api-python/annotated.html)
 
 Badges
 ------
