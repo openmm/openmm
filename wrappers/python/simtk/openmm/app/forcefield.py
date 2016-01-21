@@ -320,11 +320,15 @@ class ForceField(object):
                     types.append(None) # Unknown atom class
                 else:
                     types.append(self._atomClasses[attrib[classAttrib]])
-            else:
-                if typeAttrib not in attrib or attrib[typeAttrib] not in self._atomTypes:
+            elif typeAttrib in attrib:
+                if attrib[typeAttrib] == '':
+                    types.append(self._atomClasses[''])
+                elif attrib[typeAttrib] not in self._atomTypes:
                     types.append(None) # Unknown atom type
                 else:
                     types.append([attrib[typeAttrib]])
+            else:
+                types.append(None) # Unknown atom type
         return types
 
     def _parseTorsion(self, attrib):
