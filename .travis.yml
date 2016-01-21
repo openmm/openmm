@@ -125,7 +125,7 @@ before_install:
 
   - if [[ "$CUDA" == "true" ]]; then
       wget "http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1404/x86_64/cuda-repo-ubuntu1404_${CUDA_VERSION}_amd64.deb";
-      sudo dpkg -i cuda-repo-ubuntu1204_${CUDA_VERSION}_amd64.deb;
+      sudo dpkg -i cuda-repo-ubuntu1404_${CUDA_VERSION}_amd64.deb;
       sudo apt-get update -qq;
       export CUDA_APT=${CUDA_VERSION%-*};
       export CUDA_APT=${CUDA_APT/./-};
