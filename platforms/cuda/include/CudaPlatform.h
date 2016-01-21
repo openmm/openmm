@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -109,19 +109,27 @@ public:
         static const std::string key = "CudaTempDirectory";
         return key;
     }
+    /**
+     * This is the name of the parameter for selecting whether to disable use of a separate stream for PME.
+     */
+    static const std::string& CudaDisablePmeStream() {
+        static const std::string key = "CudaDisablePmeStream";
+        return key;
+    }
 };
 
 class OPENMM_EXPORT_CUDA CudaPlatform::PlatformData {
 public:
     PlatformData(ContextImpl* context, const System& system, const std::string& deviceIndexProperty, const std::string& blockingProperty, const std::string& precisionProperty,
-            const std::string& cpuPmeProperty, const std::string& compilerProperty, const std::string& tempProperty, const std::string& hostCompilerProperty);
+            const std::string& cpuPmeProperty, const std::string& compilerProperty, const std::string& tempProperty, const std::string& hostCompilerProperty,
+            const std::string& pmeStreamProperty);
     ~PlatformData();
     void initializeContexts(const System& system);
     void syncContexts();
     ContextImpl* context;
     std::vector<CudaContext*> contexts;
     std::vector<double> contextEnergy;
-    bool hasInitializedContexts, removeCM, peerAccessSupported, useCpuPme;
+    bool hasInitializedContexts, removeCM, peerAccessSupported, useCpuPme, disablePmeStream;
     int cmMotionFrequency;
     int stepCount, computeForceCount;
     double time;
