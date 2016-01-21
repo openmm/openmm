@@ -140,6 +140,7 @@ script:
   - cmake . $CMAKE_FLAGS -DCMAKE_INSTALL_PREFIX=$HOME/OpenMM
   # DEBUG
   - cat CMakeCache.txt
+  - ls -l /usr/local/
   - make -j2 install
   - if [[ "$OPENCL" == "true" ]]; then ./TestOpenCLDeviceQuery; fi
   - if [[ "$OPENCL" == "false" && "$CUDA" == "false" ]]; then
