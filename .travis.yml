@@ -52,7 +52,12 @@ matrix:
              -DOPENMM_BUILD_SERIALIZATION_TESTS=OFF
              -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF
              -DOPENMM_BUILD_EXAMPLES=OFF
-             -DOPENCL_LIBRARY=/usr/local/cuda-7.5/lib64/libOpenCL.so"
+             -DOPENCL_LIBRARY=/usr/local/cuda-7.5/lib64/libOpenCL.so
+             -DCUDA_CUDART_LIBRARY=/usr/local/cuda-7.5/lib64/libcudart.so
+             -DCUDA_NVCC_EXECUTABLE=/usr/local/cuda-7.5/bin/nvcc
+             -DCUDA_SDK_ROOT_DIR=/usr/local/cuda-7.5/
+             -DCUDA_TOOLKIT_INCLUDE=/usr/local/cuda-7.5/include
+             -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-7.5/"
       addons: {apt: {packages: []}}
 
     - language: objective-c
@@ -133,6 +138,8 @@ before_install:
 
 script:
   - cmake . $CMAKE_FLAGS -DCMAKE_INSTALL_PREFIX=$HOME/OpenMM
+  # DEBUG
+  - cat CMakeCache.txt
   - make -j2 install
   - if [[ "$OPENCL" == "true" ]]; then ./TestOpenCLDeviceQuery; fi
   - if [[ "$OPENCL" == "false" && "$CUDA" == "false" ]]; then
