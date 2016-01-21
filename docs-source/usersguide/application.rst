@@ -723,7 +723,7 @@ For the main force field, OpenMM provides the following options:
 .. tabularcolumns:: |l|L|
 
 =============================  ================================================================================
-File                           Force Field                                                                     
+File                           Force Field
 =============================  ================================================================================
 :code:`amber96.xml`            Amber96\ :cite:`Kollman1997`
 :code:`amber99sb.xml`          Amber99\ :cite:`Wang2000` with modified backbone torsions\ :cite:`Hornak2006`
@@ -731,7 +731,7 @@ File                           Force Field
 :code:`amber99sbnmr.xml`       Amber99SB with modifications to fit NMR data\ :cite:`Li2010`
 :code:`amber03.xml`            Amber03\ :cite:`Duan2003`
 :code:`amber10.xml`            Amber10 (documented in the AmberTools_ manual as `ff10`)
-:code:`amoeba2009.xml`         AMOEBA 2009\ :cite:`Ren2002`.  This force field is deprecated.  It is 
+:code:`amoeba2009.xml`         AMOEBA 2009\ :cite:`Ren2002`.  This force field is deprecated.  It is
                                recommended to use AMOEBA 2013 instead.
 :code:`amoeba2013.xml`         AMOEBA 2013\ :cite:`Shi2013`
 :code:`charmm_polar_2013.xml`  CHARMM 2013 polarizable force field\ :cite:`Lopes2013`
@@ -746,14 +746,14 @@ files:
 .. tabularcolumns:: |l|L|
 
 ===================  ============================================
-File                 Water Model                                 
+File                 Water Model
 ===================  ============================================
-:code:`tip3p.xml`    TIP3P water model\ :cite:`Jorgensen1983`  
-:code:`tip3pfb.xml`  TIP3P-FB water model\ :cite:`Wang2014`    
-:code:`tip4pew.xml`  TIP4P-Ew water model\ :cite:`Horn2004`    
-:code:`tip4pfb.xml`  TIP4P-FB water model\ :cite:`Wang2014`    
-:code:`tip5p.xml`    TIP5P water model\ :cite:`Mahoney2000`    
-:code:`spce.xml`     SPC/E water model\ :cite:`Berendsen1987`  
+:code:`tip3p.xml`    TIP3P water model\ :cite:`Jorgensen1983`
+:code:`tip3pfb.xml`  TIP3P-FB water model\ :cite:`Wang2014`
+:code:`tip4pew.xml`  TIP4P-Ew water model\ :cite:`Horn2004`
+:code:`tip4pfb.xml`  TIP4P-FB water model\ :cite:`Wang2014`
+:code:`tip5p.xml`    TIP5P water model\ :cite:`Mahoney2000`
+:code:`spce.xml`     SPC/E water model\ :cite:`Berendsen1987`
 :code:`swm4ndp.xml`  SWM4-NDP water model\ :cite:`Lamoureux2006`
 ===================  ============================================
 
@@ -769,7 +769,7 @@ the following files:
 .. tabularcolumns:: |l|L|
 
 =========================  =================================================================================================
-File                       Implicit Solvation Model                                                                      
+File                       Implicit Solvation Model
 =========================  =================================================================================================
 :code:`amber96_obc.xml`    GBSA-OBC solvation model\ :cite:`Onufriev2004` for use with Amber96 force field
 :code:`amber99_obc.xml`    GBSA-OBC solvation model for use with Amber99 force fields
@@ -821,15 +821,15 @@ allowed values for :code:`implicitSolvent`\ :
 .. tabularcolumns:: |l|L|
 
 =============  ==================================================================================================================================
-Value          Meaning                                                                                                                                                                                                          
+Value          Meaning
 =============  ==================================================================================================================================
-:code:`None`   No implicit solvent is used.                                                                                                                                                                                     
-:code:`HCT`    Hawkins-Cramer-Truhlar GBSA model\ :cite:`Hawkins1995` (corresponds to igb=1 in AMBER)                                                                                                                         
-:code:`OBC1`   Onufriev-Bashford-Case GBSA model\ :cite:`Onufriev2004` using the GB\ :sup:`OBC`\ I parameters (corresponds to igb=2 in AMBER).                                                                                
+:code:`None`   No implicit solvent is used.
+:code:`HCT`    Hawkins-Cramer-Truhlar GBSA model\ :cite:`Hawkins1995` (corresponds to igb=1 in AMBER)
+:code:`OBC1`   Onufriev-Bashford-Case GBSA model\ :cite:`Onufriev2004` using the GB\ :sup:`OBC`\ I parameters (corresponds to igb=2 in AMBER).
 :code:`OBC2`   Onufriev-Bashford-Case GBSA model\ :cite:`Onufriev2004` using the GB\ :sup:`OBC`\ II parameters (corresponds to igb=5 in AMBER).
                This is the same model used by the GBSA-OBC files described in Section :ref:`force-fields`.
-:code:`GBn`    GBn solvation model\ :cite:`Mongan2007` (corresponds to igb=7 in AMBER).                                                                                                                                       
-:code:`GBn2`   GBn2 solvation model\ :cite:`Nguyen2013` (corresponds to igb=8 in AMBER).                                                                                                                                      
+:code:`GBn`    GBn solvation model\ :cite:`Mongan2007` (corresponds to igb=7 in AMBER).
+:code:`GBn2`   GBn2 solvation model\ :cite:`Nguyen2013` (corresponds to igb=8 in AMBER).
 =============  ==================================================================================================================================
 
 
@@ -867,13 +867,13 @@ The :code:`nonbondedMethod` parameter can have any of the following values:
 .. tabularcolumns:: |l|L|
 
 =========================  ===========================================================================================================================================================================================================================================
-Value                      Meaning                                                                                                                                                                                                                                    
+Value                      Meaning
 =========================  ===========================================================================================================================================================================================================================================
-:code:`NoCutoff`           No cutoff is applied.                                                                                                                                                                                                                      
-:code:`CutoffNonPeriodic`  The reaction field method is used to eliminate all interactions beyond a cutoff distance.  Not valid for AMOEBA.                                                                                                                           
+:code:`NoCutoff`           No cutoff is applied.
+:code:`CutoffNonPeriodic`  The reaction field method is used to eliminate all interactions beyond a cutoff distance.  Not valid for AMOEBA.
 :code:`CutoffPeriodic`     The reaction field method is used to eliminate all interactions beyond a cutoff distance.  Periodic boundary conditions are applied, so each atom interacts only with the nearest periodic copy of every other atom.  Not valid for AMOEBA.
-:code:`Ewald`              Periodic boundary conditions are applied.  Ewald summation is used to compute long range interactions.  (This option is rarely used, since PME is much faster for all but the smallest systems.)  Not valid for AMOEBA.                    
-:code:`PME`                Periodic boundary conditions are applied.  The Particle Mesh Ewald method is used to compute long range interactions.                                                                                                                      
+:code:`Ewald`              Periodic boundary conditions are applied.  Ewald summation is used to compute long range interactions.  (This option is rarely used, since PME is much faster for all but the smallest systems.)  Not valid for AMOEBA.
+:code:`PME`                Periodic boundary conditions are applied.  The Particle Mesh Ewald method is used to compute long range interactions.
 =========================  ===========================================================================================================================================================================================================================================
 
 
@@ -988,11 +988,11 @@ The :code:`constraints` parameter can have any of the following values:
 .. tabularcolumns:: |l|L|
 
 ================  =============================================================================================================================================
-Value             Meaning                                                                                                                                      
+Value             Meaning
 ================  =============================================================================================================================================
-:code:`None`      No constraints are applied.  This is the default value.                                                                                      
-:code:`HBonds`    The lengths of all bonds that involve a hydrogen atom are constrained.                                                                       
-:code:`AllBonds`  The lengths of all bonds are constrained.                                                                                                    
+:code:`None`      No constraints are applied.  This is the default value.
+:code:`HBonds`    The lengths of all bonds that involve a hydrogen atom are constrained.
+:code:`AllBonds`  The lengths of all bonds are constrained.
 :code:`HAngles`   The lengths of all bonds are constrained.  In addition, all angles of the form H-X-H or H-O-X (where X is an arbitrary atom) are constrained.
 ================  =============================================================================================================================================
 
@@ -1678,19 +1678,19 @@ Here is the definition of the :class:`ForceReporter` class:
 
 .. samepage::
     ::
-    
+
         class ForceReporter(object):
             def __init__(self, file, reportInterval):
                 self._out = open(file, 'w')
                 self._reportInterval = reportInterval
-        
+
             def __del__(self):
                 self._out.close()
-            
+
             def describeNextReport(self, simulation):
                 steps = self._reportInterval - simulation.currentStep%self._reportInterval
                 return (steps, False, False, True, False)
-            
+
             def report(self, simulation, state):
                 forces = state.getForces().value_in_unit(kilojoules/mole/nanometer)
                 for f in forces:
@@ -1961,6 +1961,38 @@ are :code:`wo1`\ , :code:`wo2`\ , :code:`wo3`\ , :code:`wx1`\ , :code:`wx2`\ ,
 :code:`wx3`\ , :code:`wy1`\ , :code:`wy2`\ , :code:`wy3`\ , :code:`p1`\ ,
 :code:`p2`\ , and :code:`p3`\ .
 
+Missing residue templates
+=========================
+
+.. CAUTION::
+   These features are experimental, and its API is subject to change.
+
+You can use the :method:`getUnmatchedResidues()` method to get a list of residues
+in the provided :code:`topology` object that do not currently have a matching
+residue template defined in the :class:`ForceField`.
+::
+
+    pdb = PDBFile('input.pdb')
+    forcefield = ForceField('amber99sb.xml', 'tip3p.xml')
+    unmatched_residues = forcefield.getUnmatchedResidues(topology)
+
+This is useful for idenfitying issues with prepared systems, debugging issues
+with residue template definitions, or identifying which additional residues need
+to be parameterized.
+
+As a convenience for parameterizing new residues, you can also get a list of
+residues and empty residue templates using :method:`generateTemplatesForUnmatchedResidues`
+::
+
+    pdb = PDBFile('input.pdb')
+    forcefield = ForceField('amber99sb.xml', 'tip3p.xml')
+    [templates, residues] = forcefield.generateTemplatesForUnmatchedResidues(topology)
+    # Se the atom types
+    for template in templates:
+        for atom in template.atoms:
+            atom.type = ... # set the atom types here
+        # Register the template with the forcefield.
+        forcefield.registerResidueTemplate(template)
 
 <HarmonicBondForce>
 ===================

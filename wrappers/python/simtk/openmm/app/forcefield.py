@@ -573,6 +573,104 @@ class ForceField(object):
                     break
         return [template, matches]
 
+    def _buildBondedToAtomList(self, topology):
+        """Build a list of which atom indices are bonded to each atom.
+
+        Parameters
+        ----------
+        topology : Topology
+            The Topology whose bonds are to be indexed.
+
+        Returns
+        -------
+        bondedToAtom : list of set of int
+            bondedToAtom[index] is the set of atom indices bonded to atom `index`
+
+        """
+        bondedToAtom = []
+        for atom in topology.atoms():
+            bondedToAtom.append(set())
+        for (atom1, atom2) in topology.bonds():
+            bondedToAtom[atom1.index].add(atom2.index)
+            bondedToAtom[atom2.index].add(atom1.index)
+        return bondedToAtom
+
+    def getUnmatchedResidues(self, topology):
+        """Return a list of Residue objects from specified topology for which no forcefield templates are available.
+
+        .. CAUTION:: This method is experimental, and its API is subject to change.
+
+        Parameters
+        ----------
+        topology : Topology
+            The Topology whose residues are to be checked against the forcefield residue templates.
+
+        Returns
+        -------
+        unmatched_residues : list of Residue
+            List of Residue objects from `topology` for which no forcefield residue templates are available.
+            Note that multiple instances of the same residue appearing at different points in the topology may be returned.
+
+        This method may be of use in generating missing residue templates or diagnosing parameterization failures.
+        """
+        # Find the template matching each residue, compiling a list of residues for which no templates are available.
+        bondedToAtom = self._buildBondedToAtomList(topology)
+        unmatched_residues = list() # list of unmatched residues
+        for chain in topology.chains():
+            for res in chain.residues():
+                # Attempt to match one of the existing templates.
+                [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom)
+                if matches is None:
+                    # No existing templates match.
+                    unmatched_residues.append(res)
+
+        return unmatched_residues
+
+    def generateTemplatesForUnmatchedResidues(self, topology):
+        """Generate forcefield residue templates for residues in specified topology for which no forcefield templates are available.
+
+        .. CAUTION:: This method is experimental, and its API is subject to change.
+
+        Parameters
+        ----------
+        topology : Topology
+            The Topology whose residues are to be checked against the forcefield residue templates.
+
+        Returns
+        -------
+        templates : list of _TemplateData
+            List of forcefield residue templates corresponding to residues in `topology` for which no forcefield templates are currently available.
+            Atom types will be set to `None`, but template name, atom names, elements, and connectivity will be taken from corresponding Residue objects.
+        residues : list of Residue
+            List of Residue objects that were used to generate the templates.
+            `residues[index]` is the Residue that was used to generate the template `templates[index]`
+
+        """
+        # Get a non-unique list of unmatched residues.
+        unmatched_residues = self.getUnmatchedResidues(topology)
+        # Generate a unique list of unmatched residues by comparing fingerprints.
+        bondedToAtom = self._buildBondedToAtomList(topology)
+        unique_unmatched_residues = list() # list of unique unmatched Residue objects from topology
+        templates = list() # corresponding _TemplateData templates
+        signatures = set()
+        for residue in unmatched_residues:
+            signature = _createResidueSignature([ atom.element for atom in residue.atoms() ])
+            template = _createResidueTemplate(residue)
+            is_unique = True
+            if signature in signatures:
+                # Signature is the same as an existing residue; check connectivity.
+                for check_residue in unique_unmatched_residues:
+                    matches = _matchResidue(check_residue, template, bondedToAtom)
+                    if matches is not None:
+                        is_unique = False
+            if is_unique:
+                # Residue is unique.
+                unique_unmatched_residues.append(residue)
+                signatures.add(signature)
+                templates.append(template)
+
+        return [templates, unique_unmatched_residues]
+
     def createSystem(self, topology, nonbondedMethod=NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
                      constraints=None, rigidWater=True, removeCMMotion=True, hydrogenMass=None, **args):
         """Construct an OpenMM System representing a Topology with this force field.
@@ -853,7 +951,6 @@ def _createResidueSignature(elements):
         s += element.symbol+str(count)
     return s
 
-
 def _matchResidue(res, template, bondedToAtom):
     """Determine whether a residue matches a template and return a list of corresponding atoms.
 
@@ -998,6 +1095,34 @@ def _findMatchErrors(forcefield, res):
         return 'The set of atoms is similar to %s, but it is missing %d atoms.' % (bestMatchName, numBestMatchAtoms-numResidueAtoms)
     return 'This might mean your input topology is missing some atoms or bonds, or possibly that you are using the wrong force field.'
 
+def _createResidueTemplate(residue):
+    """Create a _TemplateData template from a Residue object.
+
+    Parameters
+    ----------
+    residue : Residue
+        The Residue from which the template is to be constructed.
+
+    Returns
+    -------
+    template : _TemplateData
+        The residue template, with atom types set to None.
+
+    This method may be useful in creating new residue templates for residues without templates defined by the ForceField.
+
+    """
+    template = ForceField._TemplateData(residue.name)
+    for atom in residue.atoms():
+        template.atoms.append(ForceField._TemplateAtomData(atom.name, None, atom.element))
+    for (atom1,atom2) in residue.internal_bonds():
+        template.addBondByName(atom1.name, atom2.name)
+    residue_atoms = [ atom for atom in residue.atoms() ]
+    for (atom1,atom2) in residue.external_bonds():
+        if atom1 in residue_atoms:
+            template.addExternalBondByName(atom1.name)
+        elif atom2 in residue_atoms:
+            template.addExternalBondByName(atom2.name)
+    return template
 
 # The following classes are generators that know how to create Force subclasses and add them to a System that is being
 # created.  Each generator class must define two methods: 1) a static method that takes an etree Element and a ForceField,
@@ -4558,3 +4683,5 @@ class DrudeGenerator:
                     drude.addScreenedPair(drude1, drude2, thole1+thole2)
 
 parsers["DrudeForce"] = DrudeGenerator.parseElement
+
+#=============================================================================================
