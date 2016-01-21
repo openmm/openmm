@@ -598,6 +598,8 @@ class ForceField(object):
     def getUnmatchedResidues(self, topology):
         """Return a list of Residue objects from specified topology for which no forcefield templates are available.
 
+        .. CAUTION:: This method is experimental, and its API is subject to change.
+
         Parameters
         ----------
         topology : Topology
@@ -626,6 +628,8 @@ class ForceField(object):
 
     def generateTemplatesForUnmatchedResidues(self, topology):
         """Generate forcefield residue templates for residues in specified topology for which no forcefield templates are available.
+
+        .. CAUTION:: This method is experimental, and its API is subject to change.
 
         Parameters
         ----------
