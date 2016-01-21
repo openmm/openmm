@@ -443,9 +443,9 @@ class TestForceField(unittest.TestCase):
         # Check results.
         residues = [ residue for residue in pdb.topology.residues() ]
         self.assertEqual(len(templates), len(residues))
-        self.assertEqual(unmatched_residues[0].name, 'NALA')
-        self.assertEqual(unmatched_residues[1].name, 'ALA')
-        self.assertEqual(unmatched_residues[2].name, 'CALA')
+        self.assertEqual(templates[0].name, 'NALA')
+        self.assertEqual(templates[1].name, 'ALA')
+        self.assertEqual(templates[2].name, 'CALA')
 
 class AmoebaTestForceField(unittest.TestCase):
     """Test the ForceField.createSystem() method with the AMOEBA forcefield."""
