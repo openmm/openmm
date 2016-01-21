@@ -38,18 +38,61 @@ Follow these instructions to install OpenMM.  There also is an online
 troubleshooting guide that describes common problems and how to fix them
 (http://wiki.simtk.org/openmm/FAQApp).
 
+
+Installing with Conda
+*********************
+
+There are two ways to install OpenMM: using the Conda package manager, or with
+standalone installers.  (A third option is to compile it from source, which is
+discussed in Chapter :ref:`compiling-openmm-from-source-code`.)  Using Conda is
+the easier method, and is recommended for most users.  It is described first,
+and then the following sections describe how to use the standalone installers
+for various platforms.
+
+Conda is included as part of the Anaconda Python distribution, which you can
+download from http://docs.continuum.io/anaconda/install.  This is a Python
+distribution specifically designed for scientific applications, with many of the
+most popular mathematical and scientific packages preinstalled.  Alternatively
+you can use Miniconda (available from http://conda.pydata.org/miniconda.html),
+which includes only Python itself, plus the Conda package manager.  That offers
+a much smaller initial download, with the ability to then install only the
+packages you want.
+
+1. Begin by installing the most recent 64 bit, Python 3.x version of either
+Anaconda or Miniconda.
+
+2. (Optional) If you want to run OpenMM on a GPU, install CUDA and/or OpenCL.
+
+  * If you have an Nvidia GPU, download CUDA 7.5 from
+    https://developer.nvidia.com/cuda-downloads.  Be sure to install both the
+    drivers and toolkit.  OpenCL is included with the CUDA drivers.
+  * If you have an AMD GPU and are using Linux or Windows, download the latest
+    version of the Catalyst driver from http://support.amd.com.  On OS X, OpenCL
+    is included with the operating system and is supported on OS X 10.10.5 or
+    later.
+
+3. Open a command line terminal and type the following command
+::
+
+    conda install -c omnia openmm
+
+4. Verify your installation by typing the following command:
+::
+
+    python -m simtk.testInstallation
+
+This command confirms that OpenMM is installed, checks whether GPU acceleration
+is available (via the OpenCL and/or CUDA platforms), and verifies that all
+platforms produce consistent results.
+
+
 .. _installing-on-mac-os-x:
 
 Installing on Mac OS X
 **********************
 
-OpenMM works on Mac OS X 10.7 or later.
-
-.. note::
-   The OpenCL implementations on all recent versions of Mac OS X contain serious
-   bugs that make them unsuitable for use with OpenMM.  GPU acceleration is
-   therefore only supported with the CUDA platform.  This limits it to only Nvidia
-   GPUs, not AMD or Intel GPUs.
+OpenMM works on Mac OS X 10.7 or later.  OpenCL is supported on OS X 10.10.5 or
+later.
 
 1. Download the pre-compiled binary of OpenMM for Mac OS X, then double click
 the .zip file to expand it.
@@ -61,7 +104,7 @@ and tell it to install the command line tools.  With Xcode 4.2 and earlier, the
 command line tools are automatically installed when you install Xcode.)
 
 3. (Optional) If you have an Nvidia GPU and want to use the CUDA platform,
-download CUDA 7.0 from https://developer.nvidia.com/cuda-downloads.  Be sure to
+download CUDA 7.5 from https://developer.nvidia.com/cuda-downloads.  Be sure to
 install both the drivers and toolkit.
 
 4. (Optional) If you plan to use the CPU platform, it is recommended that you
@@ -126,7 +169,7 @@ into a console window.
 
 3. (Optional) If you want to run OpenMM on a GPU, install CUDA and/or OpenCL.
 
-  * If you have an Nvidia GPU, download CUDA 7.0 from
+  * If you have an Nvidia GPU, download CUDA 7.5 from
     https://developer.nvidia.com/cuda-downloads.  Be sure to install both the
     drivers and toolkit.  OpenCL is included with the CUDA drivers.
   * If you have an AMD GPU, download the latest version of the Catalyst driver
@@ -197,7 +240,7 @@ and ignore it.)
 
 4. (Optional) If you want to run OpenMM on a GPU, install CUDA and/or OpenCL.
 
-  * If you have an Nvidia GPU, download CUDA 7.0 from
+  * If you have an Nvidia GPU, download CUDA 7.5 from
     https://developer.nvidia.com/cuda-downloads.  Be sure to install both the
     drivers and toolkit.  OpenCL is included with the CUDA drivers.
   * If you have an AMD GPU, download the latest version of the Catalyst driver
