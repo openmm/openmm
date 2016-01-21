@@ -38,16 +38,16 @@ Follow these instructions to install OpenMM.  There also is an online
 troubleshooting guide that describes common problems and how to fix them
 (http://wiki.simtk.org/openmm/FAQApp).
 
-
-Installing with Conda
-*********************
-
-There are two ways to install OpenMM: using the Conda package manager, or with
-standalone installers.  (A third option is to compile it from source, which is
+There are two ways to install OpenMM: using the Conda package manager (http://conda.pydata.org),
+or with standalone installers.  (A third option is to compile it from source, which is
 discussed in Chapter :ref:`compiling-openmm-from-source-code`.)  Using Conda is
 the easier method, and is recommended for most users.  It is described first,
 and then the following sections describe how to use the standalone installers
 for various platforms.
+
+
+Installing with Conda
+*********************
 
 Conda is included as part of the Anaconda Python distribution, which you can
 download from http://docs.continuum.io/anaconda/install.  This is a Python
@@ -94,7 +94,8 @@ Installing on Mac OS X
 OpenMM works on Mac OS X 10.7 or later.  OpenCL is supported on OS X 10.10.5 or
 later.
 
-1. Download the pre-compiled binary of OpenMM for Mac OS X, then double click
+1. Download the pre-compiled binary of OpenMM for Mac OS X from
+https://simtk.org/project/xml/downloads.xml?group_id=161, then double click
 the .zip file to expand it.
 
 2. If you have not already done so, install Apple’s Xcode developer tools from
@@ -159,7 +160,8 @@ produce an error.  You will only see this option if your laptop has two GPUs
 Installing on Linux
 *******************
 
-1. Download the pre-compiled binary of OpenMM for Linux, then double click the
+1. Download the pre-compiled binary of OpenMM for Linux from
+https://simtk.org/project/xml/downloads.xml?group_id=161, then double click the
 .zip file to expand it.
 
 2. Make sure you have Python 2.6 or higher (earlier versions will not work) and
@@ -223,7 +225,8 @@ platforms produce consistent results.
 Installing on Windows
 *********************
 
-1. Download the pre-compiled binary of OpenMM for Windows, then double click the
+1. Download the pre-compiled binary of OpenMM for Windows from
+https://simtk.org/project/xml/downloads.xml?group_id=161, then double click the
 .zip file to expand it.  Move the files to :file:`C:\\Program Files\\OpenMM`.
 
 2. Make sure you have the 64-bit version of Python 3.3 or 3.4 (other versions will not
