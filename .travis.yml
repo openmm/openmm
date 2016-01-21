@@ -37,10 +37,11 @@ matrix:
       addons: {apt: {packages: []}}
 
     - sudo: required
+      dist: trusty
       env: ==CUDA_COMPILE==
            CUDA=true
            OPENCL=false
-           CUDA_VERSION="7.0-28"
+           CUDA_VERSION="7.5-18"
            CC=$CCACHE/gcc
            CXX=$CCACHE/g++
            CMAKE_FLAGS="
@@ -51,7 +52,7 @@ matrix:
              -DOPENMM_BUILD_SERIALIZATION_TESTS=OFF
              -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF
              -DOPENMM_BUILD_EXAMPLES=OFF
-             -DOPENCL_LIBRARY=/usr/local/cuda-7.0/lib64/libOpenCL.so"
+             -DOPENCL_LIBRARY=/usr/local/cuda-7.5/lib64/libOpenCL.so"
       addons: {apt: {packages: []}}
 
     - language: objective-c
@@ -75,7 +76,7 @@ matrix:
 
     - sudo: false
       python: 2.7_with_system_site_packages
-      env: ==PYTNON_2==
+      env: ==PYTHON_2==
            OPENCL=false
            CUDA=false
            CC=$CCACHE/clang
@@ -118,7 +119,7 @@ before_install:
     fi
 
   - if [[ "$CUDA" == "true" ]]; then
-      wget "http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1204/x86_64/cuda-repo-ubuntu1204_${CUDA_VERSION}_amd64.deb";
+      wget "http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1404/x86_64/cuda-repo-ubuntu1404_${CUDA_VERSION}_amd64.deb";
       sudo dpkg -i cuda-repo-ubuntu1204_${CUDA_VERSION}_amd64.deb;
       sudo apt-get update -qq;
       export CUDA_APT=${CUDA_VERSION%-*};
