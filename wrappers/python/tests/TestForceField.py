@@ -431,6 +431,22 @@ class TestForceField(unittest.TestCase):
         system = forcefield.createSystem(pdb.topology, nonbondedMethod=NoCutoff)
         # TODO: Test energies are finite?
 
+    def test_getMatchingTemplates(self):
+        """Test retrieval of list of templates that match residues in a topology."""
+
+        # Load the PDB file.
+        pdb = PDBFile(os.path.join('systems', 'ala_ala_ala.pdb'))
+        # Create a ForceField object.
+        forcefield = ForceField('amber99sb.xml')
+        # Get list of matching residue templates.
+        templates = forcefield.getMatchingTemplates(pdb.topology)
+        # Check results.
+        residues = [ residue for residue in pdb.topology.residues() ]
+        self.assertEqual(len(templates), len(residues))
+        self.assertEqual(templates[0].name, 'NALA')
+        self.assertEqual(templates[1].name, 'ALA')
+        self.assertEqual(templates[2].name, 'CALA')
+
 class AmoebaTestForceField(unittest.TestCase):
     """Test the ForceField.createSystem() method with the AMOEBA forcefield."""
 

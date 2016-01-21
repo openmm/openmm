@@ -1976,7 +1976,7 @@ residue template defined in the :class:`ForceField`.
     forcefield = ForceField('amber99sb.xml', 'tip3p.xml')
     unmatched_residues = forcefield.getUnmatchedResidues(topology)
 
-This is useful for idenfitying issues with prepared systems, debugging issues
+This is useful for identifying issues with prepared systems, debugging issues
 with residue template definitions, or identifying which additional residues need
 to be parameterized.
 
@@ -1993,6 +1993,17 @@ residues and empty residue templates using :method:`generateTemplatesForUnmatche
             atom.type = ... # set the atom types here
         # Register the template with the forcefield.
         forcefield.registerResidueTemplate(template)
+
+If you find that templates seem to be incorrectly matched, another useful
+function :method:`getMatchingTemplates()` can help you identify which templates
+are being matched:
+::
+
+    pdb = PDBFile('input.pdb')
+    forcefield = ForceField('amber99sb.xml', 'tip3p.xml')
+    templates = forcefield.getMatchingTemplates(topology)
+    for (residue, template) in zip(pdb.topology.residues(), templates):
+        print "Residue %d %s matched template %s" % (residue.id, residue.name, template.name)
 
 <HarmonicBondForce>
 ===================

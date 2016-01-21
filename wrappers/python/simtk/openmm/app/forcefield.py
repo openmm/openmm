@@ -616,15 +616,46 @@ class ForceField(object):
         # Find the template matching each residue, compiling a list of residues for which no templates are available.
         bondedToAtom = self._buildBondedToAtomList(topology)
         unmatched_residues = list() # list of unmatched residues
-        for chain in topology.chains():
-            for res in chain.residues():
-                # Attempt to match one of the existing templates.
-                [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom)
-                if matches is None:
-                    # No existing templates match.
-                    unmatched_residues.append(res)
+        for res in topology.residues():
+            # Attempt to match one of the existing templates.
+            [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom)
+            if matches is None:
+                # No existing templates match.
+                unmatched_residues.append(res)
 
         return unmatched_residues
+
+    def getMatchingTemplates(self, topology):
+        """Return a list of forcefield residue templates matching residues in the specified topology.
+
+        .. CAUTION:: This method is experimental, and its API is subject to change.
+
+        Parameters
+        ----------
+        topology : Topology
+            The Topology whose residues are to be checked against the forcefield residue templates.
+
+        Returns
+        -------
+        templates : list of _TemplateData
+            List of forcefield residue templates corresponding to residues in the topology.
+            templates[index] is template corresponding to residue `index` in topology.residues()
+
+        This method may be of use in debugging issues related to parameter assignment.
+        """
+        # Find the template matching each residue, compiling a list of residues for which no templates are available.
+        bondedToAtom = self._buildBondedToAtomList(topology)
+        templates = list() # list of templates matching the corresponding residues
+        for res in topology.residues():
+            # Attempt to match one of the existing templates.
+            [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom)
+            # Raise an exception if we have found no templates that match.
+            if matches is None:
+                raise ValueError('No template found for residue %d (%s).  %s' % (res.index+1, res.name, _findMatchErrors(self, res)))
+            else:
+                templates.append(template)
+
+        return templates
 
     def generateTemplatesForUnmatchedResidues(self, topology):
         """Generate forcefield residue templates for residues in specified topology for which no forcefield templates are available.
