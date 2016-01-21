@@ -441,7 +441,7 @@ class TestForceField(unittest.TestCase):
         # Get list of matching residue templates.
         templates = forcefield.getMatchingTemplates(pdb.topology)
         # Check results.
-        residues = [ residue for residue in topology.residues() ]
+        residues = [ residue for residue in pdb.topology.residues() ]
         self.assertEqual(len(templates), len(residues))
         self.assertEqual(unmatched_residues[0].name, 'NALA')
         self.assertEqual(unmatched_residues[1].name, 'ALA')
