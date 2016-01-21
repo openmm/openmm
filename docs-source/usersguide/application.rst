@@ -68,7 +68,7 @@ Anaconda or Miniconda.
     drivers and toolkit.  OpenCL is included with the CUDA drivers.
   * If you have an AMD GPU and are using Linux or Windows, download the latest
     version of the Catalyst driver from http://support.amd.com.  On OS X, OpenCL
-    is included with the operating system and is supported on OS X 10.10.5 or
+    is included with the operating system and is supported on OS X 10.10.3 or
     later.
 
 3. Open a command line terminal and type the following command
@@ -91,7 +91,7 @@ platforms produce consistent results.
 Installing on Mac OS X
 **********************
 
-OpenMM works on Mac OS X 10.7 or later.  OpenCL is supported on OS X 10.10.5 or
+OpenMM works on Mac OS X 10.7 or later.  OpenCL is supported on OS X 10.10.3 or
 later.
 
 1. Download the pre-compiled binary of OpenMM for Mac OS X from
