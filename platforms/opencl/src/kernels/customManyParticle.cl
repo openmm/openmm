@@ -307,6 +307,7 @@ __kernel void computeNeighborStartIndices(__global int* restrict numNeighborsFor
             numNeighborsForAtom[globalIndex] = 0; // Clear this so the next kernel can use it as a counter
         }
         globalOffset += posBuffer[get_local_size(0)-1];
+        barrier(CLK_LOCAL_MEM_FENCE);
     }
     if (get_local_id(0) == 0)
         neighborStartIndex[0] = 0;
