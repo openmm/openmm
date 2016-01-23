@@ -710,24 +710,24 @@ void ReferenceCalcAmoebaMultipoleForceKernel::getInducedDipoles(ContextImpl& con
     delete amoebaReferenceMultipoleForce;
 }
 
-//void ReferenceCalcAmoebaMultipoleForceKernel::getLabFramePermanentDipoles(ContextImpl& context, vector<Vec3>& outputDipoles) {
-//    int numParticles = context.getSystem().getNumParticles();
-//    outputDipoles.resize(numParticles);
-//
-//    // Create an AmoebaReferenceMultipoleForce to do the calculation.
-//    
-//    AmoebaReferenceMultipoleForce* amoebaReferenceMultipoleForce = setupAmoebaReferenceMultipoleForce(context);
-//    vector<RealVec>& posData = extractPositions(context);
-//    
-//    // Retrieve the permanent dipoles in the lab frame.
-//    
-//    vector<RealVec> labFramePermanentDipoles;
-//    amoebaReferenceMultipoleForce->calculateLabFramePermanentDipoles(posData, charges, dipoles, quadrupoles, tholes, 
-//            dampingFactors, polarity, axisTypes, multipoleAtomZs, multipoleAtomXs, multipoleAtomYs, multipoleAtomCovalentInfo, labFramePermanentDipoles);
-//    for (int i = 0; i < numParticles; i++)
-//        outputDipoles[i] = labFramePermanentDipoles[i];
-//    delete amoebaReferenceMultipoleForce;
-//}
+void ReferenceCalcAmoebaMultipoleForceKernel::getLabFramePermanentDipoles(ContextImpl& context, vector<Vec3>& outputDipoles) {
+    int numParticles = context.getSystem().getNumParticles();
+    outputDipoles.resize(numParticles);
+
+    // Create an AmoebaReferenceMultipoleForce to do the calculation.
+    
+    AmoebaReferenceMultipoleForce* amoebaReferenceMultipoleForce = setupAmoebaReferenceMultipoleForce(context);
+    vector<RealVec>& posData = extractPositions(context);
+    
+    // Retrieve the permanent dipoles in the lab frame.
+    
+    vector<RealVec> labFramePermanentDipoles;
+    amoebaReferenceMultipoleForce->calculateLabFramePermanentDipoles(posData, charges, dipoles, quadrupoles, tholes, 
+            dampingFactors, polarity, axisTypes, multipoleAtomZs, multipoleAtomXs, multipoleAtomYs, multipoleAtomCovalentInfo, labFramePermanentDipoles);
+    for (int i = 0; i < numParticles; i++)
+        outputDipoles[i] = labFramePermanentDipoles[i];
+    delete amoebaReferenceMultipoleForce;
+}
 
 
 

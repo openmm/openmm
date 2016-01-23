@@ -234,9 +234,9 @@ void AmoebaMultipoleForce::getInducedDipoles(Context& context, vector<Vec3>& dip
     dynamic_cast<AmoebaMultipoleForceImpl&>(getImplInContext(context)).getInducedDipoles(getContextImpl(context), dipoles);
 }
 
-//void AmoebaMultipoleForce::getLabFramePermanentDipoles(Context& context, vector<Vec3>& dipoles) {
-//    dynamic_cast<AmoebaMultipoleForceImpl&>(getImplInContext(context)).getLabFramePermanentDipoles(getContextImpl(context), dipoles);
-//}
+void AmoebaMultipoleForce::getLabFramePermanentDipoles(Context& context, vector<Vec3>& dipoles) {
+    dynamic_cast<AmoebaMultipoleForceImpl&>(getImplInContext(context)).getLabFramePermanentDipoles(getContextImpl(context), dipoles);
+}
 
 void AmoebaMultipoleForce::getElectrostaticPotential(const std::vector< Vec3 >& inputGrid, Context& context, std::vector< double >& outputElectrostaticPotential) {
     dynamic_cast<AmoebaMultipoleForceImpl&>(getImplInContext(context)).getElectrostaticPotential(getContextImpl(context), inputGrid, outputElectrostaticPotential);

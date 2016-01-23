@@ -1819,31 +1819,31 @@ void AmoebaReferenceMultipoleForce::calculateInducedDipoles(const vector<RealVec
 }
 
 
-//void AmoebaReferenceMultipoleForce::calculateLabFramePermanentDipoles(const vector<RealVec>& particlePositions,
-//                                                                      const vector<RealOpenMM>& charges,
-//                                                                      const vector<RealOpenMM>& dipoles,
-//                                                                      const vector<RealOpenMM>& quadrupoles,
-//                                                                      const vector<RealOpenMM>& tholes,
-//                                                                      const vector<RealOpenMM>& dampingFactors,
-//                                                                      const vector<RealOpenMM>& polarity,
-//                                                                      const vector<int>& axisTypes,
-//                                                                      const vector<int>& multipoleAtomZs,
-//                                                                      const vector<int>& multipoleAtomXs,
-//                                                                      const vector<int>& multipoleAtomYs,
-//                                                                      const vector< vector< vector<int> > >& multipoleAtomCovalentInfo,
-//                                                                      vector<RealVec>& outputRotatedPermanentDipoles) {
-//    // setup, including calculating permanent dipoles
-//
-//    vector<MultipoleParticleData> particleData;
-//    setup(particlePositions, charges, dipoles, quadrupoles, tholes,
-//           dampingFactors, polarity, axisTypes, multipoleAtomZs, multipoleAtomXs, multipoleAtomYs,
-//           multipoleAtomCovalentInfo, particleData);
-//    for (int i = 0; i < _numParticles; i++)
-//      {
-//      _labFramePermanentDipole[i] = particleData[i].dipole;
-//      }
-//    outputRotatedPermanentDipoles = _labFramePermanentDipole;
-//}
+void AmoebaReferenceMultipoleForce::calculateLabFramePermanentDipoles(const vector<RealVec>& particlePositions,
+                                                                      const vector<RealOpenMM>& charges,
+                                                                      const vector<RealOpenMM>& dipoles,
+                                                                      const vector<RealOpenMM>& quadrupoles,
+                                                                      const vector<RealOpenMM>& tholes,
+                                                                      const vector<RealOpenMM>& dampingFactors,
+                                                                      const vector<RealOpenMM>& polarity,
+                                                                      const vector<int>& axisTypes,
+                                                                      const vector<int>& multipoleAtomZs,
+                                                                      const vector<int>& multipoleAtomXs,
+                                                                      const vector<int>& multipoleAtomYs,
+                                                                      const vector< vector< vector<int> > >& multipoleAtomCovalentInfo,
+                                                                      vector<RealVec>& outputRotatedPermanentDipoles) {
+    // setup, including calculating permanent dipoles
+
+    vector<MultipoleParticleData> particleData;
+    setup(particlePositions, charges, dipoles, quadrupoles, tholes,
+           dampingFactors, polarity, axisTypes, multipoleAtomZs, multipoleAtomXs, multipoleAtomYs,
+           multipoleAtomCovalentInfo, particleData);
+    for (int i = 0; i < _numParticles; i++)
+      {
+      _labFramePermanentDipole[i] = particleData[i].dipole;
+      }
+    outputRotatedPermanentDipoles = _labFramePermanentDipole;
+}
 
 void AmoebaReferenceMultipoleForce::calculateAmoebaSystemMultipoleMoments(const vector<RealOpenMM>& masses,
                                                                           const vector<RealVec>& particlePositions,

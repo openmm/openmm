@@ -183,9 +183,9 @@ void AmoebaMultipoleForceImpl::getCovalentDegree(const AmoebaMultipoleForce& for
     return;
 }
 
-//void AmoebaMultipoleForceImpl::getLabFramePermanentDipoles(ContextImpl& context, vector<Vec3>& dipoles) {
-//    kernel.getAs<CalcAmoebaMultipoleForceKernel>().getLabFramePermanentDipoles(context, dipoles);
-//}
+void AmoebaMultipoleForceImpl::getLabFramePermanentDipoles(ContextImpl& context, vector<Vec3>& dipoles) {
+    kernel.getAs<CalcAmoebaMultipoleForceKernel>().getLabFramePermanentDipoles(context, dipoles);
+}
 
 void AmoebaMultipoleForceImpl::getInducedDipoles(ContextImpl& context, vector<Vec3>& dipoles) {
     kernel.getAs<CalcAmoebaMultipoleForceKernel>().getInducedDipoles(context, dipoles);
