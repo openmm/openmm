@@ -1838,6 +1838,7 @@ void AmoebaReferenceMultipoleForce::calculateLabFramePermanentDipoles(const vect
     setup(particlePositions, charges, dipoles, quadrupoles, tholes,
            dampingFactors, polarity, axisTypes, multipoleAtomZs, multipoleAtomXs, multipoleAtomYs,
            multipoleAtomCovalentInfo, particleData);
+    cout << "This is a dipole test uniqueString" << particleData[0].dipole[0] << endl;
     for (int i = 0; i < _numParticles; i++)
       {
       _labFramePermanentDipole[i] = particleData[i].dipole;
