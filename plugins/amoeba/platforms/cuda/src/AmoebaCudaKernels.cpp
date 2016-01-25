@@ -1944,6 +1944,17 @@ void CudaCalcAmoebaMultipoleForceKernel::computeSystemMultipoleMoments(ContextIm
     outputMultipoleMoments[12] = 100.0*zzqdp*debye;
 }
 
+
+void CudaCalcAmoebaMultipoleForceKernel::getLabFramePermanentDipoles(ContextImpl& context, vector<double>& outputMultipoleMoments) {
+    ensureMultipolesValid(context);
+    if (cu.getUseDoublePrecision())
+        computeSystemMultipoleMoments<double, double4, double4>(context, outputMultipoleMoments);
+    else if (cu.getUseMixedPrecision())
+        computeSystemMultipoleMoments<float, float4, double4>(context, outputMultipoleMoments);
+    else
+        computeSystemMultipoleMoments<float, float4, float4>(context, outputMultipoleMoments);
+}
+
 void CudaCalcAmoebaMultipoleForceKernel::getSystemMultipoleMoments(ContextImpl& context, vector<double>& outputMultipoleMoments) {
     ensureMultipolesValid(context);
     if (cu.getUseDoublePrecision())
