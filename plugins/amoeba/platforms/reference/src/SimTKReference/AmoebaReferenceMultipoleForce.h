@@ -1008,12 +1008,12 @@ protected:
      */
     virtual void calculateInducedDipoles(const std::vector<MultipoleParticleData>& particleData);
 
-    /**
+    /*
      * Calculate permanent dipoles rotated in the lab frame.
      * 
      * @param particleData      vector of particle positions and parameters (charge, labFrame dipoles, quadrupoles, ...)
      */
-    virtual void calculateLabFramePermanentDipoles(const std::vector<MultipoleParticleData>& particleData);
+ //   virtual void calculateLabFramePermanentDipoles(const std::vector<MultipoleParticleData>& particleData);
 
     /**
      * Setup: 
@@ -1263,12 +1263,12 @@ private:
      */
     void calculateInducedDipoles(const std::vector<MultipoleParticleData>& particleData);
 
-    /**
+    /*
      * Calculate fixed dipoles rotated in the lab frame.
      * 
      * @param particleData      vector of particle positions and parameters (charge, labFrame dipoles, quadrupoles, ...)
      */
-    void calculateLabFramePermanentDipoles(const std::vector<MultipoleParticleData>& particleData);
+ //   void calculateLabFramePermanentDipoles(const std::vector<MultipoleParticleData>& particleData);
 
     /**
      * Calculate fields due induced dipoles at each site.
