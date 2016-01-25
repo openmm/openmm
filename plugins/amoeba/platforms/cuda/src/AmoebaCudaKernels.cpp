@@ -1772,6 +1772,27 @@ void CudaCalcAmoebaMultipoleForceKernel::ensureMultipolesValid(ContextImpl& cont
         context.calcForcesAndEnergy(false, false, -1);
 }
 
+
+void CudaCalcAmoebaMultipoleForceKernel::getLabFramePermanentDipoles(ContextImpl& context, vector<Vec3>& dipoles) {
+    ensureMultipolesValid(context);
+    int numParticles = cu.getNumAtoms();
+    dipoles.resize(numParticles);
+    const vector<int>& order = cu.getAtomIndex();
+    if (cu.getUseDoublePrecision()) {
+        vector<double> d;
+        inducedDipole->download(d);
+        for (int i = 0; i < numParticles; i++)
+            dipoles[order[i]] = Vec3(d[3*i], d[3*i+1], d[3*i+2]);
+    }
+    else {
+        vector<float> d;
+        inducedDipole->download(d);
+        for (int i = 0; i < numParticles; i++)
+            dipoles[order[i]] = Vec3(d[3*i], d[3*i+1], d[3*i+2]);
+    }
+}
+
+
 void CudaCalcAmoebaMultipoleForceKernel::getInducedDipoles(ContextImpl& context, vector<Vec3>& dipoles) {
     ensureMultipolesValid(context);
     int numParticles = cu.getNumAtoms();
@@ -1944,16 +1965,6 @@ void CudaCalcAmoebaMultipoleForceKernel::computeSystemMultipoleMoments(ContextIm
     outputMultipoleMoments[12] = 100.0*zzqdp*debye;
 }
 
-
-void CudaCalcAmoebaMultipoleForceKernel::getLabFramePermanentDipoles(ContextImpl& context, vector<double>& outputMultipoleMoments) {
-    ensureMultipolesValid(context);
-    if (cu.getUseDoublePrecision())
-        computeSystemMultipoleMoments<double, double4, double4>(context, outputMultipoleMoments);
-    else if (cu.getUseMixedPrecision())
-        computeSystemMultipoleMoments<float, float4, double4>(context, outputMultipoleMoments);
-    else
-        computeSystemMultipoleMoments<float, float4, float4>(context, outputMultipoleMoments);
-}
 
 void CudaCalcAmoebaMultipoleForceKernel::getSystemMultipoleMoments(ContextImpl& context, vector<double>& outputMultipoleMoments) {
     ensureMultipolesValid(context);
