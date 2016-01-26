@@ -185,7 +185,7 @@ add_custom_command(
     COMMENT "Creating OpenMM Python swig input files..."
 )
 
-INSTALL_FILES(/include FILES "${SWIG_OPENMM_DIR}/OpenMMSwigHeaders.i")
+INSTALL_FILES(/include/swig FILES "${SWIG_OPENMM_DIR}/OpenMMSwigHeaders.i" "${SWIG_OPENMM_DIR}/swig_lib/python/typemaps.i")
 
 #~ swig -python -c++ \
 #~      -outdir $PYTHON_PACKAGE_DIR \
