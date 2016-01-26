@@ -1360,14 +1360,16 @@ class PeriodicTorsionGenerator:
             type2 = data.atomType[data.atoms[torsion[1]]]
             type3 = data.atomType[data.atoms[torsion[2]]]
             type4 = data.atomType[data.atoms[torsion[3]]]
-            done = False
+            match = None
             for tordef in self.improper:
-                if done:
-                    break
                 types1 = tordef.types1
                 types2 = tordef.types2
                 types3 = tordef.types3
                 types4 = tordef.types4
+                hasWildcard = (wildcard in (types1, types2, types3, types4))
+                if match is not None and hasWildcard:
+                    # Prefer specific definitions over ones with wildcards
+                    continue
                 if type1 in types1:
                     for (t2, t3, t4) in itertools.permutations(((type2, 1), (type3, 2), (type4, 3))):
                         if t2[0] in types2 and t3[0] in types3 and t4[0] in types4:
@@ -1382,11 +1384,13 @@ class PeriodicTorsionGenerator:
                                 (a1, a2) = (a2, a1)
                             elif e1 != elem.carbon and (e2 == elem.carbon or e1.mass < e2.mass):
                                 (a1, a2) = (a2, a1)
-                            for i in range(len(tordef.phase)):
-                                if tordef.k[i] != 0:
-                                    force.addTorsion(a1, a2, torsion[0], torsion[t4[1]], tordef.periodicity[i], tordef.phase[i], tordef.k[i])
-                            done = True
+                            match = (a1, a2, torsion[0], torsion[t4[1]], tordef)
                             break
+            if match is not None:
+                (a1, a2, a3, a4, tordef) = match
+                for i in range(len(tordef.phase)):
+                    if tordef.k[i] != 0:
+                        force.addTorsion(a1, a2, a3, a4, tordef.periodicity[i], tordef.phase[i], tordef.k[i])
 
 parsers["PeriodicTorsionForce"] = PeriodicTorsionGenerator.parseElement
 
@@ -1457,18 +1461,20 @@ class RBTorsionGenerator:
             type2 = data.atomType[data.atoms[torsion[1]]]
             type3 = data.atomType[data.atoms[torsion[2]]]
             type4 = data.atomType[data.atoms[torsion[3]]]
-            done = False
+            match = None
             for tordef in self.improper:
-                if done:
-                    break
                 types1 = tordef.types1
                 types2 = tordef.types2
                 types3 = tordef.types3
                 types4 = tordef.types4
+                hasWildcard = (wildcard in (types1, types2, types3, types4))
+                if match is not None and hasWildcard:
+                    # Prefer specific definitions over ones with wildcards
+                    continue
                 if type1 in types1:
                     for (t2, t3, t4) in itertools.permutations(((type2, 1), (type3, 2), (type4, 3))):
                         if t2[0] in types2 and t3[0] in types3 and t4[0] in types4:
-                            if wildcard in (types1, types2, types3, types4):
+                            if hasWildcard:
                                 # Workaround to be more consistent with AMBER.  It uses wildcards to define most of its
                                 # impropers, which leaves the ordering ambiguous.  It then follows some bizarre rules
                                 # to pick the order.
@@ -1480,12 +1486,14 @@ class RBTorsionGenerator:
                                     (a1, a2) = (a2, a1)
                                 elif e1 != elem.carbon and (e2 == elem.carbon or e1.mass < e2.mass):
                                     (a1, a2) = (a2, a1)
-                                force.addTorsion(a1, a2, torsion[0], torsion[t4[1]], tordef.c[0], tordef.c[1], tordef.c[2], tordef.c[3], tordef.c[4], tordef.c[5])
+                                match = (a1, a2, torsion[0], torsion[t4[1]], tordef)
                             else:
                                 # There are no wildcards, so the order is unambiguous.
-                                force.addTorsion(torsion[0], torsion[t2[1]], torsion[t3[1]], torsion[t4[1]], tordef.c[0], tordef.c[1], tordef.c[2], tordef.c[3], tordef.c[4], tordef.c[5])
-                            done = True
+                                match = (torsion[0], torsion[t2[1]], torsion[t3[1]], torsion[t4[1]], tordef)
                             break
+            if match is not None:
+                (a1, a2, a3, a4, tordef) = match
+                force.addTorsion(a1, a2, a3, a4, tordef.c[0], tordef.c[1], tordef.c[2], tordef.c[3], tordef.c[4], tordef.c[5])
 
 parsers["RBTorsionForce"] = RBTorsionGenerator.parseElement
 
@@ -1884,18 +1892,20 @@ class CustomTorsionGenerator:
             type2 = data.atomType[data.atoms[torsion[1]]]
             type3 = data.atomType[data.atoms[torsion[2]]]
             type4 = data.atomType[data.atoms[torsion[3]]]
-            done = False
+            match = None
             for tordef in self.improper:
-                if done:
-                    break
                 types1 = tordef.types1
                 types2 = tordef.types2
                 types3 = tordef.types3
                 types4 = tordef.types4
+                hasWildcard = (wildcard in (types1, types2, types3, types4))
+                if match is not None and hasWildcard:
+                    # Prefer specific definitions over ones with wildcards
+                    continue
                 if type1 in types1:
                     for (t2, t3, t4) in itertools.permutations(((type2, 1), (type3, 2), (type4, 3))):
                         if t2[0] in types2 and t3[0] in types3 and t4[0] in types4:
-                            if wildcard in (types1, types2, types3, types4):
+                            if hasWildcard:
                                 # Workaround to be more consistent with AMBER.  It uses wildcards to define most of its
                                 # impropers, which leaves the ordering ambiguous.  It then follows some bizarre rules
                                 # to pick the order.
@@ -1907,12 +1917,14 @@ class CustomTorsionGenerator:
                                     (a1, a2) = (a2, a1)
                                 elif e1 != elem.carbon and (e2 == elem.carbon or e1.mass < e2.mass):
                                     (a1, a2) = (a2, a1)
-                                force.addTorsion(a1, a2, torsion[0], torsion[t4[1]], tordef.paramValues)
+                                match = (a1, a2, torsion[0], torsion[t4[1]], tordef)
                             else:
                                 # There are no wildcards, so the order is unambiguous.
-                                force.addTorsion(torsion[0], torsion[t2[1]], torsion[t3[1]], torsion[t4[1]], tordef.paramValues)
-                            done = True
+                                match = (torsion[0], torsion[t2[1]], torsion[t3[1]], torsion[t4[1]], tordef)
                             break
+            if match is not None:
+                (a1, a2, a3, a4, tordef) = match
+                force.addTorsion(a1, a2, a3, a4, tordef.paramValues)
 
 parsers["CustomTorsionForce"] = CustomTorsionGenerator.parseElement
 
