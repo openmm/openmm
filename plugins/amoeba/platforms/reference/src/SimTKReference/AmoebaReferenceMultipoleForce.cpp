@@ -1842,6 +1842,7 @@ void AmoebaReferenceMultipoleForce::calculateLabFramePermanentDipoles(const vect
     cout << "This is a dipole test uniqueString size of Particle Data" << particleData.size() << endl;
     for (int i = 0; i < _numParticles; i++)
       {
+      cout << "This is a dipole test uniqueString dipole moment i = " << i << " in x beforeAssign = " << particleData[i].dipole[0] << endl; 
       outputRotatedPermanentDipoles[i] = particleData[i].dipole;
 //      _labFramePermanentDipole[i] = particleData[i].dipole;
       cout << "This is a dipole test uniqueString dipole moment i = " << i << " in x = " << particleData[i].dipole[0] << endl; 
