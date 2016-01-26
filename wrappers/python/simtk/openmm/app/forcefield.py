@@ -28,8 +28,8 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
-from __future__ import absolute_import
-from __future__ import print_function
+from __future__ import absolute_import, print_function
+
 __author__ = "Peter Eastman"
 __version__ = "1.0"
 
@@ -812,9 +812,11 @@ class ForceField(object):
             mass = self._atomTypes[typename].mass
             sys.addParticle(mass)
 
-        # Adjust hydroten masses if requested.
+        # Adjust hydrogen masses if requested.
 
         if hydrogenMass is not None:
+            if not unit.is_quantity(hydrogenMass):
+                hydrogenMass *= unit.dalton
             for atom1, atom2 in topology.bonds():
                 if atom1.element == elem.hydrogen:
                     (atom1, atom2) = (atom2, atom1)
