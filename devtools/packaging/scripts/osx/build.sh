@@ -37,7 +37,7 @@ fi
 mkdir build
 cd build
 cmake ../openmm $CMAKE_FLAGS
-make -j4 all DoxygenApiDocs sphinxpdf
+make -j4 all C++ApiDocs PythonApiDocs sphinxpdf
 
 # Install.
 make install
