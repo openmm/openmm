@@ -42,6 +42,29 @@ class TestSimulation(unittest.TestCase):
         self.assertEqual(initialState.getVelocities(), state.getVelocities())
 
 
+    def testLoadFromXML(self):
+        """ Test creating a Simulation from XML files """
+        pdb = PDBFile('systems/alanine-dipeptide-implicit.pdb')
+        ff = ForceField('amber99sb.xml', 'tip3p.xml')
+        system = ff.createSystem(pdb.topology)
+        integrator = VerletIntegrator(0.001*picoseconds)
+        context = Context(system, integrator)
+        context.setPositions(pdb.positions)
+        state = context.getState(getPositions=True, getForces=True,
+                                 getVelocities=True, getEnergy=True)
+        systemfn = tempfile.mktemp()
+        integratorfn = tempfile.mktemp()
+        statefn = tempfile.mktemp()
+        with open(systemfn, 'w') as f:
+            f.write(XmlSerializer.serialize(system))
+        with open(integratorfn, 'w') as f:
+            f.write(XmlSerializer.serialize(integrator))
+        with open(statefn, 'w') as f:
+            f.write(XmlSerializer.serialize(state))
+
+        # Now create a Simulation
+        sim = Simulation.fromXmlFiles(systemfn, integratorfn, state=statefn)
+
     def testSaveState(self):
         """Test that saving States works correctly."""
         pdb = PDBFile('systems/alanine-dipeptide-implicit.pdb')
