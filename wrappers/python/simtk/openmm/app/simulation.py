@@ -95,17 +95,17 @@ class Simulation(object):
         self.reporters = []
         if platform is None:
             ## The Context containing the current state of the simulation
-            self.context = mm.Context(system, integrator)
+            self.context = mm.Context(self.system, self.integrator)
         elif platformProperties is None:
-            self.context = mm.Context(system, integrator, platform)
+            self.context = mm.Context(self.system, self.integrator, platform)
         else:
-            self.context = mm.Context(system, integrator, platform, platformProperties)
+            self.context = mm.Context(self.system, self.integrator, platform, platformProperties)
         if state is not None:
             with open(state, 'r') as f:
                 self.context.setState(mm.XmlSerializer.deserialize(f.read()))
         ## Determines whether or not we are using PBC. If no Topology is provided, take it from the System
         if topology is None:
-            self._usesPBC = system.usesPeriodicBoundaryConditions()
+            self._usesPBC = self.system.usesPeriodicBoundaryConditions()
         else:
             self._usesPBC = topology.getUnitCellDimensions() is not None
 
