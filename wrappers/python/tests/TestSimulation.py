@@ -63,7 +63,7 @@ class TestSimulation(unittest.TestCase):
             f.write(XmlSerializer.serialize(state))
 
         # Now create a Simulation
-        sim = Simulation.fromXmlFiles(systemfn, integratorfn, state=statefn)
+        sim = Simulation(pdb.topology, systemfn, integratorfn, state=statefn)
 
     def testSaveState(self):
         """Test that saving States works correctly."""

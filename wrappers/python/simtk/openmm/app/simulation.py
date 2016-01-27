@@ -74,9 +74,12 @@ class Simulation(object):
         platformProperties : map=None
             If not None, a set of platform-specific properties to pass to the
             Context's constructor
-        state : XML file name
-            The name of an XML file containing a serialized State
+        state : XML file name=None
+            The name of an XML file containing a serialized State. If not None,
+            the information stored in state will be transferred to the generated
+            Simulation object.
         """
+        self.topology = topology
         ## The System being simulated
         if isinstance(system, string_types):
             with open(system, 'r') as f:
@@ -103,31 +106,12 @@ class Simulation(object):
         if state is not None:
             with open(state, 'r') as f:
                 self.context.setState(mm.XmlSerializer.deserialize(f.read()))
-        ## Determines whether or not we are using PBC. If no Topology is provided, take it from the System
-        if topology is None:
+        ## Determines whether or not we are using PBC. Try from the System first,
+        ## fall back to Topology if that doesn't work
+        try:
             self._usesPBC = self.system.usesPeriodicBoundaryConditions()
-        else:
+        except Exception: # OpenMM just raises Exception if it's not implemented everywhere
             self._usesPBC = topology.getUnitCellDimensions() is not None
-
-    @classmethod
-    def fromXmlFiles(cls, system, integrator, state=None, platform=None, platformProperties=None):
-        """ Initialize a Simulation object from a set of XML files
-
-        Parameters
-        ----------
-        system : str (or mm.System)
-            XML file name containing a serialized OpenMM System object
-        integrator : str (or mm.Integrator)
-            XML file name containing a serialized OpenMM Integrator subclass
-        state : str, optional
-            XML file name containing a serialized OpenMM State
-        platform : Platform=None
-            If not None, the OpenMM Platform to use
-        platformProperties : map=None
-            If not None, a set of platform-specific properties to pass to the
-            Context's constructor
-        """
-        return cls(None, system, integrator, platform, platformProperties, state=state)
 
     def minimizeEnergy(self, tolerance=10*unit.kilojoule/unit.mole, maxIterations=0):
         """Perform a local energy minimization on the system.
