@@ -1394,9 +1394,9 @@ If you are hoping to save more information than just positions, you can use
 simulation, including positions, velocities, box dimensions and much more in an
 XML file. This same file can be loaded back into OpenMM and used to continue
 the simulation. Importantly, because this file is a text file, it can be
-transfered between different platforms. A potential downside to this approach
-is that state files are often quite large, and may not fit all use cases.
-Here's an example of how to use it:
+transfered between different platforms and different versions of OpenMM. A
+potential downside to this approach is that state files are often quite large,
+and may not fit all use cases. Here's an example of how to use it:
 ::
 
     simulation.saveState('output.xml')
@@ -1412,8 +1412,9 @@ continue a simulation if the need arises (though whether the simulation is
 deterministic depends on platform and methods, see
 :ref:`platform-specific-properties-determinism`). There are important caveats
 to this approach, however. This binary can only be used to restart simulations
-on machines with the same hardware and software as the one that saved it.
-Therefore, it should only be used when it's clear that won't be an issue.
+on machines with the same hardware and the same OpenMM version as the one that
+saved it. Therefore, it should only be used when it's clear that won't be an
+issue.
 ::
 
     simulation.saveCheckpoint('state.chk')
