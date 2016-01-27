@@ -6,10 +6,8 @@ from simtk.unit import *
 import simtk.openmm.app.element as elem
 import simtk.openmm.app.forcefield as forcefield
 import math
-if sys.version_info >= (3, 0):
-    from io import StringIO
-else:
-    from cStringIO import StringIO
+from io import StringIO
+import os
 
 class TestForceField(unittest.TestCase):
     """Test the ForceField.createSystem() method."""
@@ -572,6 +570,11 @@ class AmoebaTestForceField(unittest.TestCase):
 
         self.assertEqual(len(ff._forces[0].proper), 1)
         self.assertEqual(len(ff._forces[0].improper), 1)
+
+    def test_ScalingFactorCombining(self):
+        """ Tests that FFs can be combined if their scaling factors are very close """
+        forcefield = ForceField('amber99sb.xml', os.path.join('systems', 'test_amber_ff.xml'))
+        # This would raise an exception if it didn't work
 
 if __name__ == '__main__':
     unittest.main()
