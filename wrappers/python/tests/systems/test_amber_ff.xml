@@ -6221,7 +6221,7 @@
   <Improper type1="ca" type2="c2" type3="n2" type4="n2" periodicity1="2" phase1="3.141593" k1="4.602400"/>
   <Improper type1="ca" type2="n2" type3="n2" type4="na" periodicity1="2" phase1="3.141593" k1="4.602400"/>
  </PeriodicTorsionForce>
- <NonbondedForce coulomb14scale="0.833333" lj14scale="0.500000">
+ <NonbondedForce coulomb14scale="0.833333333333" lj14scale="0.5">
   <UseAttributeFromResidue name="charge"/>
   <Atom type="c" sigma="0.339967" epsilon="0.359824"/>
   <Atom type="c1" sigma="0.339967" epsilon="0.878640"/>
