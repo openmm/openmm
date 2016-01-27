@@ -38,20 +38,64 @@ Follow these instructions to install OpenMM.  There also is an online
 troubleshooting guide that describes common problems and how to fix them
 (http://wiki.simtk.org/openmm/FAQApp).
 
+There are two ways to install OpenMM: using the Conda package manager (http://conda.pydata.org),
+or with standalone installers.  (A third option is to compile it from source, which is
+discussed in Chapter :ref:`compiling-openmm-from-source-code`.)  Using Conda is
+the easier method, and is recommended for most users.  It is described first,
+and then the following sections describe how to use the standalone installers
+for various platforms.
+
+
+Installing with Conda
+*********************
+
+Conda is included as part of the Anaconda Python distribution, which you can
+download from http://docs.continuum.io/anaconda/install.  This is a Python
+distribution specifically designed for scientific applications, with many of the
+most popular mathematical and scientific packages preinstalled.  Alternatively
+you can use Miniconda (available from http://conda.pydata.org/miniconda.html),
+which includes only Python itself, plus the Conda package manager.  That offers
+a much smaller initial download, with the ability to then install only the
+packages you want.
+
+1. Begin by installing the most recent 64 bit, Python 3.x version of either
+Anaconda or Miniconda.
+
+2. (Optional) If you want to run OpenMM on a GPU, install CUDA and/or OpenCL.
+
+  * If you have an Nvidia GPU, download CUDA 7.5 from
+    https://developer.nvidia.com/cuda-downloads.  Be sure to install both the
+    drivers and toolkit.  OpenCL is included with the CUDA drivers.
+  * If you have an AMD GPU and are using Linux or Windows, download the latest
+    version of the Catalyst driver from http://support.amd.com.  On OS X, OpenCL
+    is included with the operating system and is supported on OS X 10.10.3 or
+    later.
+
+3. Open a command line terminal and type the following command
+::
+
+    conda install -c omnia openmm
+
+4. Verify your installation by typing the following command:
+::
+
+    python -m simtk.testInstallation
+
+This command confirms that OpenMM is installed, checks whether GPU acceleration
+is available (via the OpenCL and/or CUDA platforms), and verifies that all
+platforms produce consistent results.
+
+
 .. _installing-on-mac-os-x:
 
 Installing on Mac OS X
 **********************
 
-OpenMM works on Mac OS X 10.7 or later.
+OpenMM works on Mac OS X 10.7 or later.  OpenCL is supported on OS X 10.10.3 or
+later.
 
-.. note::
-   The OpenCL implementations on all recent versions of Mac OS X contain serious
-   bugs that make them unsuitable for use with OpenMM.  GPU acceleration is
-   therefore only supported with the CUDA platform.  This limits it to only Nvidia
-   GPUs, not AMD or Intel GPUs.
-
-1. Download the pre-compiled binary of OpenMM for Mac OS X, then double click
+1. Download the pre-compiled binary of OpenMM for Mac OS X from
+https://simtk.org/project/xml/downloads.xml?group_id=161, then double click
 the .zip file to expand it.
 
 2. If you have not already done so, install Apple’s Xcode developer tools from
@@ -61,7 +105,7 @@ and tell it to install the command line tools.  With Xcode 4.2 and earlier, the
 command line tools are automatically installed when you install Xcode.)
 
 3. (Optional) If you have an Nvidia GPU and want to use the CUDA platform,
-download CUDA 7.0 from https://developer.nvidia.com/cuda-downloads.  Be sure to
+download CUDA 7.5 from https://developer.nvidia.com/cuda-downloads.  Be sure to
 install both the drivers and toolkit.
 
 4. (Optional) If you plan to use the CPU platform, it is recommended that you
@@ -116,7 +160,8 @@ produce an error.  You will only see this option if your laptop has two GPUs
 Installing on Linux
 *******************
 
-1. Download the pre-compiled binary of OpenMM for Linux, then double click the
+1. Download the pre-compiled binary of OpenMM for Linux from
+https://simtk.org/project/xml/downloads.xml?group_id=161, then double click the
 .zip file to expand it.
 
 2. Make sure you have Python 2.6 or higher (earlier versions will not work) and
@@ -126,7 +171,7 @@ into a console window.
 
 3. (Optional) If you want to run OpenMM on a GPU, install CUDA and/or OpenCL.
 
-  * If you have an Nvidia GPU, download CUDA 7.0 from
+  * If you have an Nvidia GPU, download CUDA 7.5 from
     https://developer.nvidia.com/cuda-downloads.  Be sure to install both the
     drivers and toolkit.  OpenCL is included with the CUDA drivers.
   * If you have an AMD GPU, download the latest version of the Catalyst driver
@@ -180,7 +225,8 @@ platforms produce consistent results.
 Installing on Windows
 *********************
 
-1. Download the pre-compiled binary of OpenMM for Windows, then double click the
+1. Download the pre-compiled binary of OpenMM for Windows from
+https://simtk.org/project/xml/downloads.xml?group_id=161, then double click the
 .zip file to expand it.  Move the files to :file:`C:\\Program Files\\OpenMM`.
 
 2. Make sure you have the 64-bit version of Python 3.3 or 3.4 (other versions will not
@@ -197,7 +243,7 @@ and ignore it.)
 
 4. (Optional) If you want to run OpenMM on a GPU, install CUDA and/or OpenCL.
 
-  * If you have an Nvidia GPU, download CUDA 7.0 from
+  * If you have an Nvidia GPU, download CUDA 7.5 from
     https://developer.nvidia.com/cuda-downloads.  Be sure to install both the
     drivers and toolkit.  OpenCL is included with the CUDA drivers.
   * If you have an AMD GPU, download the latest version of the Catalyst driver
@@ -723,7 +769,7 @@ For the main force field, OpenMM provides the following options:
 .. tabularcolumns:: |l|L|
 
 =============================  ================================================================================
-File                           Force Field                                                                     
+File                           Force Field
 =============================  ================================================================================
 :code:`amber96.xml`            Amber96\ :cite:`Kollman1997`
 :code:`amber99sb.xml`          Amber99\ :cite:`Wang2000` with modified backbone torsions\ :cite:`Hornak2006`
@@ -731,7 +777,7 @@ File                           Force Field
 :code:`amber99sbnmr.xml`       Amber99SB with modifications to fit NMR data\ :cite:`Li2010`
 :code:`amber03.xml`            Amber03\ :cite:`Duan2003`
 :code:`amber10.xml`            Amber10 (documented in the AmberTools_ manual as `ff10`)
-:code:`amoeba2009.xml`         AMOEBA 2009\ :cite:`Ren2002`.  This force field is deprecated.  It is 
+:code:`amoeba2009.xml`         AMOEBA 2009\ :cite:`Ren2002`.  This force field is deprecated.  It is
                                recommended to use AMOEBA 2013 instead.
 :code:`amoeba2013.xml`         AMOEBA 2013\ :cite:`Shi2013`
 :code:`charmm_polar_2013.xml`  CHARMM 2013 polarizable force field\ :cite:`Lopes2013`
@@ -746,14 +792,14 @@ files:
 .. tabularcolumns:: |l|L|
 
 ===================  ============================================
-File                 Water Model                                 
+File                 Water Model
 ===================  ============================================
-:code:`tip3p.xml`    TIP3P water model\ :cite:`Jorgensen1983`  
-:code:`tip3pfb.xml`  TIP3P-FB water model\ :cite:`Wang2014`    
-:code:`tip4pew.xml`  TIP4P-Ew water model\ :cite:`Horn2004`    
-:code:`tip4pfb.xml`  TIP4P-FB water model\ :cite:`Wang2014`    
-:code:`tip5p.xml`    TIP5P water model\ :cite:`Mahoney2000`    
-:code:`spce.xml`     SPC/E water model\ :cite:`Berendsen1987`  
+:code:`tip3p.xml`    TIP3P water model\ :cite:`Jorgensen1983`
+:code:`tip3pfb.xml`  TIP3P-FB water model\ :cite:`Wang2014`
+:code:`tip4pew.xml`  TIP4P-Ew water model\ :cite:`Horn2004`
+:code:`tip4pfb.xml`  TIP4P-FB water model\ :cite:`Wang2014`
+:code:`tip5p.xml`    TIP5P water model\ :cite:`Mahoney2000`
+:code:`spce.xml`     SPC/E water model\ :cite:`Berendsen1987`
 :code:`swm4ndp.xml`  SWM4-NDP water model\ :cite:`Lamoureux2006`
 ===================  ============================================
 
@@ -769,7 +815,7 @@ the following files:
 .. tabularcolumns:: |l|L|
 
 =========================  =================================================================================================
-File                       Implicit Solvation Model                                                                      
+File                       Implicit Solvation Model
 =========================  =================================================================================================
 :code:`amber96_obc.xml`    GBSA-OBC solvation model\ :cite:`Onufriev2004` for use with Amber96 force field
 :code:`amber99_obc.xml`    GBSA-OBC solvation model for use with Amber99 force fields
@@ -821,15 +867,15 @@ allowed values for :code:`implicitSolvent`\ :
 .. tabularcolumns:: |l|L|
 
 =============  ==================================================================================================================================
-Value          Meaning                                                                                                                                                                                                          
+Value          Meaning
 =============  ==================================================================================================================================
-:code:`None`   No implicit solvent is used.                                                                                                                                                                                     
-:code:`HCT`    Hawkins-Cramer-Truhlar GBSA model\ :cite:`Hawkins1995` (corresponds to igb=1 in AMBER)                                                                                                                         
-:code:`OBC1`   Onufriev-Bashford-Case GBSA model\ :cite:`Onufriev2004` using the GB\ :sup:`OBC`\ I parameters (corresponds to igb=2 in AMBER).                                                                                
+:code:`None`   No implicit solvent is used.
+:code:`HCT`    Hawkins-Cramer-Truhlar GBSA model\ :cite:`Hawkins1995` (corresponds to igb=1 in AMBER)
+:code:`OBC1`   Onufriev-Bashford-Case GBSA model\ :cite:`Onufriev2004` using the GB\ :sup:`OBC`\ I parameters (corresponds to igb=2 in AMBER).
 :code:`OBC2`   Onufriev-Bashford-Case GBSA model\ :cite:`Onufriev2004` using the GB\ :sup:`OBC`\ II parameters (corresponds to igb=5 in AMBER).
                This is the same model used by the GBSA-OBC files described in Section :ref:`force-fields`.
-:code:`GBn`    GBn solvation model\ :cite:`Mongan2007` (corresponds to igb=7 in AMBER).                                                                                                                                       
-:code:`GBn2`   GBn2 solvation model\ :cite:`Nguyen2013` (corresponds to igb=8 in AMBER).                                                                                                                                      
+:code:`GBn`    GBn solvation model\ :cite:`Mongan2007` (corresponds to igb=7 in AMBER).
+:code:`GBn2`   GBn2 solvation model\ :cite:`Nguyen2013` (corresponds to igb=8 in AMBER).
 =============  ==================================================================================================================================
 
 
@@ -867,13 +913,13 @@ The :code:`nonbondedMethod` parameter can have any of the following values:
 .. tabularcolumns:: |l|L|
 
 =========================  ===========================================================================================================================================================================================================================================
-Value                      Meaning                                                                                                                                                                                                                                    
+Value                      Meaning
 =========================  ===========================================================================================================================================================================================================================================
-:code:`NoCutoff`           No cutoff is applied.                                                                                                                                                                                                                      
-:code:`CutoffNonPeriodic`  The reaction field method is used to eliminate all interactions beyond a cutoff distance.  Not valid for AMOEBA.                                                                                                                           
+:code:`NoCutoff`           No cutoff is applied.
+:code:`CutoffNonPeriodic`  The reaction field method is used to eliminate all interactions beyond a cutoff distance.  Not valid for AMOEBA.
 :code:`CutoffPeriodic`     The reaction field method is used to eliminate all interactions beyond a cutoff distance.  Periodic boundary conditions are applied, so each atom interacts only with the nearest periodic copy of every other atom.  Not valid for AMOEBA.
-:code:`Ewald`              Periodic boundary conditions are applied.  Ewald summation is used to compute long range interactions.  (This option is rarely used, since PME is much faster for all but the smallest systems.)  Not valid for AMOEBA.                    
-:code:`PME`                Periodic boundary conditions are applied.  The Particle Mesh Ewald method is used to compute long range interactions.                                                                                                                      
+:code:`Ewald`              Periodic boundary conditions are applied.  Ewald summation is used to compute long range interactions.  (This option is rarely used, since PME is much faster for all but the smallest systems.)  Not valid for AMOEBA.
+:code:`PME`                Periodic boundary conditions are applied.  The Particle Mesh Ewald method is used to compute long range interactions.
 =========================  ===========================================================================================================================================================================================================================================
 
 
@@ -922,29 +968,33 @@ If :code:`vdwCutoff` is not specified, then the value of
 Specifying the Polarization Method
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-OpenMM allows the setting of several other parameters particular to the AMOEBA
-force field.  The :code:`mutualInducedTargetEpsilon` option allows you to
-specify the accuracy to which the induced dipoles are calculated at each time
-step; the default value is 0.01.  The :code:`polarization` setting
-determines whether the calculation of the induced dipoles is continued until the
-dipoles are self-consistent to within the tolerance specified by
-:code:`mutualInducedTargetEpsilon` or whether a quick estimate of the induced
-dipoles is used instead.  The first option corresponds to the
-:code:`polarization='mutual'` setting and is the default; the quick estimate
-option is given by :code:`polarization='direct'` and in this case,
-:code:`mutualInducedTargetEpsilon` is ignored, if provided.  Simulations using
-:code:`polarization='direct'` will be significantly faster than those with
-:code:`polarization='mutual'`\ , but less accurate.  Examples using the two
-options are given below:
+When using the AMOEBA force field, OpenMM allows the induced dipoles to be
+calculated in any of three different ways.  The slowest but potentially most
+accurate method is to iterate the calculation until the dipoles converge to a
+specified tolerance.  To select this, specify :code:`polarization='mutual'`.
+Use the :code:`mutualInducedTargetEpsilon` option to select the tolerance; for
+most situations, a value of 0.00001 works well.  Alternatively you can specify
+:code:`polarization='extrapolated'`.  This uses an analytic approximation
+:cite:`Simmonett2015` to estimate what the fully converged dipoles will be without
+actually continuing the calculation to convergence.  In many cases this can be
+significantly faster with only a small loss in accuracy.  Finally, you can
+specify :code:`polarization='direct'` to use the direct polarization
+approximation, in which induced dipoles depend only on the fixed multipoles, not
+on other induced dipoles.  This is even faster, but it produces very different
+forces from mutual polarization, so it should only be used with force fields
+that have been specifically parameterized for use with this approximation.
+
+Here are examples of using each method:
 ::
 
-    system = forcefield.createSystem(nonbondedMethod=PME,
-        nonbondedCutoff=1*nanometer,ewaldErrorTolerance=0.00001,
-        vdwCutoff=1.2*nanometer, mutualInducedTargetEpsilon=0.01)
+    system = forcefield.createSystem(nonbondedMethod=PME, nonbondedCutoff=1*nanometer,
+        vdwCutoff=1.2*nanometer, polarization='mutual', mutualInducedTargetEpsilon=0.00001)
 
-    system = forcefield.createSystem(nonbondedMethod=PME,
-        nonbondedCutoff=1*nanometer,ewaldErrorTolerance=0.00001,
-        vdwCutoff=1.2*nanometer, polarization ='direct')
+    system = forcefield.createSystem(nonbondedMethod=PME, nonbondedCutoff=1*nanometer,
+        vdwCutoff=1.2*nanometer, polarization='extrapolated')
+
+    system = forcefield.createSystem(nonbondedMethod=PME, nonbondedCutoff=1*nanometer,
+        vdwCutoff=1.2*nanometer, polarization='direct')
 
 
 Implicit Solvent and Solute Dielectrics
@@ -984,11 +1034,11 @@ The :code:`constraints` parameter can have any of the following values:
 .. tabularcolumns:: |l|L|
 
 ================  =============================================================================================================================================
-Value             Meaning                                                                                                                                      
+Value             Meaning
 ================  =============================================================================================================================================
-:code:`None`      No constraints are applied.  This is the default value.                                                                                      
-:code:`HBonds`    The lengths of all bonds that involve a hydrogen atom are constrained.                                                                       
-:code:`AllBonds`  The lengths of all bonds are constrained.                                                                                                    
+:code:`None`      No constraints are applied.  This is the default value.
+:code:`HBonds`    The lengths of all bonds that involve a hydrogen atom are constrained.
+:code:`AllBonds`  The lengths of all bonds are constrained.
 :code:`HAngles`   The lengths of all bonds are constrained.  In addition, all angles of the form H-X-H or H-O-X (where X is an arbitrary atom) are constrained.
 ================  =============================================================================================================================================
 
@@ -1730,19 +1780,19 @@ Here is the definition of the :class:`ForceReporter` class:
 
 .. samepage::
     ::
-    
+
         class ForceReporter(object):
             def __init__(self, file, reportInterval):
                 self._out = open(file, 'w')
                 self._reportInterval = reportInterval
-        
+
             def __del__(self):
                 self._out.close()
-            
+
             def describeNextReport(self, simulation):
                 steps = self._reportInterval - simulation.currentStep%self._reportInterval
                 return (steps, False, False, True, False)
-            
+
             def report(self, simulation, state):
                 forces = state.getForces().value_in_unit(kilojoules/mole/nanometer)
                 for f in forces:
@@ -2013,6 +2063,49 @@ are :code:`wo1`\ , :code:`wo2`\ , :code:`wo3`\ , :code:`wx1`\ , :code:`wx2`\ ,
 :code:`wx3`\ , :code:`wy1`\ , :code:`wy2`\ , :code:`wy3`\ , :code:`p1`\ ,
 :code:`p2`\ , and :code:`p3`\ .
 
+Missing residue templates
+=========================
+
+.. CAUTION::
+   These features are experimental, and its API is subject to change.
+
+You can use the :method:`getUnmatchedResidues()` method to get a list of residues
+in the provided :code:`topology` object that do not currently have a matching
+residue template defined in the :class:`ForceField`.
+::
+
+    pdb = PDBFile('input.pdb')
+    forcefield = ForceField('amber99sb.xml', 'tip3p.xml')
+    unmatched_residues = forcefield.getUnmatchedResidues(topology)
+
+This is useful for identifying issues with prepared systems, debugging issues
+with residue template definitions, or identifying which additional residues need
+to be parameterized.
+
+As a convenience for parameterizing new residues, you can also get a list of
+residues and empty residue templates using :method:`generateTemplatesForUnmatchedResidues`
+::
+
+    pdb = PDBFile('input.pdb')
+    forcefield = ForceField('amber99sb.xml', 'tip3p.xml')
+    [templates, residues] = forcefield.generateTemplatesForUnmatchedResidues(topology)
+    # Se the atom types
+    for template in templates:
+        for atom in template.atoms:
+            atom.type = ... # set the atom types here
+        # Register the template with the forcefield.
+        forcefield.registerResidueTemplate(template)
+
+If you find that templates seem to be incorrectly matched, another useful
+function :method:`getMatchingTemplates()` can help you identify which templates
+are being matched:
+::
+
+    pdb = PDBFile('input.pdb')
+    forcefield = ForceField('amber99sb.xml', 'tip3p.xml')
+    templates = forcefield.getMatchingTemplates(topology)
+    for (residue, template) in zip(pdb.topology.residues(), templates):
+        print "Residue %d %s matched template %s" % (residue.id, residue.name, template.name)
 
 <HarmonicBondForce>
 ===================
@@ -2715,6 +2808,9 @@ The ForceField class is designed to be modular and extensible.  This means you
 can add support for entirely new force types, such as ones implemented with
 plugins.
 
+Adding new force types
+======================
+
 For every force class, there is a “generator” class that parses the
 corresponding XML tag, then creates Force objects and adds them to the System.
 ForceField maintains a map of tag names to generator classes.  When a ForceField
@@ -2778,3 +2874,58 @@ parsing it.
 Now you can simply create a ForceField object as usual.  If an XML file contains
 a :code:`<MyForce>` tag, it will be recognized and processed correctly.
 
+Adding residue template generators
+==================================
+
+.. CAUTION::
+   This feature is experimental, and its API is subject to change.
+
+Typically, when :class:`ForceField` encounters a residue it does not have a template for,
+it simply raises an :code:`Exception`, since it does not know how to assign atom types for
+the unknown residue.
+
+However, :class:`ForceField` has an API for registering *residue template generators* that are
+called when a residue without an existing template is encountered.  These generators
+may create new residue templates that match existing atom types and parameters, or can
+even create new atom types and new parameters that are added to :class:`ForceField`. This
+functionality can be useful for adding residue template generators that are able to
+parameterize small molecules that are not represented in a protein or nucleic acid
+forcefield, for example, or for creating new residue templates for post-translationally
+modified residues, covalently-bound ligands, or unnatural amino acids or bases.
+
+To register a new residue template generator named :code:`generator`, simply call the
+:meth:`registerTemplateGenerator` method on an existing :class:`ForceField` object:
+::
+
+    forcefield.registerTemplateGenerator(generator)
+
+This :code:`generator` function must conform to the following API:
+::
+
+    def generator(forcefield, residue):
+        """
+        Parameters
+        ----------
+        forcefield : simtk.openmm.app.ForceField
+            The ForceField object to which residue templates and/or parameters are to be added.
+        residue : simtk.openmm.app.Topology.Residue
+            The residue topology for which a template is to be generated.
+
+        Returns
+        -------
+        success : bool
+            If the generator is able to successfully parameterize the residue, `True` is returned.
+            If the generator cannot parameterize the residue, it should return `False` and not modify `forcefield`.
+
+        The generator should either register a residue template directly with `forcefield.registerResidueTemplate(template)`
+        or it should call `forcefield.loadFile(file)` to load residue definitions from an ffxml file.
+
+        It can also use the `ForceField` programmatic API to add additional atom types (via `forcefield.registerAtomType(parameters)`)
+        or additional parameters.
+
+        """
+
+The :code:`ForceField` object will be modified by the residue template generator as residues without previously
+defined templates are encountered.  Because these templates are added to `ForceField` as new residue
+types are encountered, subsequent residues will be parameterized using the same residue templates without
+calling the :code:`generator` again.

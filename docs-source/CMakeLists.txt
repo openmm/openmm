@@ -3,77 +3,18 @@
 #
 
 find_package(Doxygen QUIET)
-mark_as_advanced(CLEAR DOXYGEN_EXECUTABLE)
+set(OPENMM_GENERATE_API_DOCS OFF CACHE BOOL "Whether to create API documentation using Doxygen")
+
 IF(DOXYGEN_EXECUTABLE)
     # Generate C++ API documentation
-
-    SET(DOXY_CONFIG_C++ "${CMAKE_BINARY_DIR}/DoxyfileC++")
-    CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/DoxyfileC++.in 
-          ${DOXY_CONFIG_C++}
-          @ONLY )
-    FILE(GLOB_RECURSE OPENMM_INCLUDES "openmm/include/*.h")
-    FILE(GLOB_RECURSE OLLA_INCLUDES "olla/include/*.h")
-    ADD_CUSTOM_COMMAND(
-        OUTPUT "${CMAKE_BINARY_DIR}/api-c++/index.html"
-        COMMAND ${DOXYGEN_EXECUTABLE} ${DOXY_CONFIG_C++}
-        DEPENDS ${OPENMM_INCLUDES} ${OLLA_INCLUDES}
-        WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
-        COMMENT "Generating C++ API documentation using Doxygen")
-    ADD_CUSTOM_TARGET(C++ApiDocs 
-        DEPENDS "${CMAKE_BINARY_DIR}/api-c++/index.html"
-        COMMENT "Generating C++ API documentation using Doxygen"
-        SOURCES 
-            "${CMAKE_CURRENT_SOURCE_DIR}/DoxyfileC++.in"
-            ${OPENMM_INCLUDES}
-            ${OLLA_INCLUDES}
-    ) 
-    FILE(MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/api-c++/")
-    INSTALL(DIRECTORY "${PROJECT_BINARY_DIR}/api-c++/"
-            DESTINATION "docs/api-c++/")
-    INSTALL(FILES "C++ API Reference.html"
-            DESTINATION "docs/")
-    ADD_CUSTOM_TARGET(DoxygenApiDocs
-        DEPENDS "${CMAKE_BINARY_DIR}/api-c++/index.html"
-        COMMENT "Generating C++ API documentation using Doxygen"
-        SOURCES 
-        "${CMAKE_CURRENT_SOURCE_DIR}/DoxyfileC++.in"
-        "${CMAKE_CURRENT_SOURCE_DIR}/DoxyfilePython.in"
-        ${OPENMM_INCLUDES}
-        ${OLLA_INCLUDES}
-    )
-    set(OPENMM_GENERATE_API_DOCS OFF CACHE BOOL "Whether to create API documentation using Doxygen")
     IF (OPENMM_GENERATE_API_DOCS)
-        SET_TARGET_PROPERTIES(DoxygenApiDocs PROPERTIES EXCLUDE_FROM_ALL FALSE)
+        ADD_SUBDIRECTORY(api-c++)
     ENDIF (OPENMM_GENERATE_API_DOCS)
 
     # Generate Python API documentation
-
-    IF (OPENMM_BUILD_PYTHON_WRAPPERS)
-        SET(DOXY_CONFIG_PYTHON "${CMAKE_BINARY_DIR}/DoxyfilePython")
-        CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/DoxyfilePython.in 
-            ${DOXY_CONFIG_PYTHON}
-            @ONLY )
-        ADD_CUSTOM_COMMAND(
-            OUTPUT "${CMAKE_BINARY_DIR}/api-python/index.html"
-            COMMAND ${DOXYGEN_EXECUTABLE} ${DOXY_CONFIG_PYTHON}
-            DEPENDS RunSwig
-            WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
-            COMMENT "Generating Python API documentation using Doxygen")
-        ADD_CUSTOM_TARGET(PythonApiDocs 
-            DEPENDS "${CMAKE_BINARY_DIR}/api-python/index.html"
-            COMMENT "Generating Python API documentation using Doxygen"
-            SOURCES 
-                "${CMAKE_CURRENT_SOURCE_DIR}/DoxyfilePython.in"
-                ${OPENMM_INCLUDES}
-                ${OLLA_INCLUDES}
-        ) 
-        FILE(MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/api-python/")
-        INSTALL(DIRECTORY "${PROJECT_BINARY_DIR}/api-python/"
-                DESTINATION "docs/api-python/")
-        INSTALL(FILES "Python API Reference.html"
-                DESTINATION "docs/")
-        ADD_DEPENDENCIES(DoxygenApiDocs PythonApiDocs)
-    ENDIF (OPENMM_BUILD_PYTHON_WRAPPERS)
+    IF (OPENMM_BUILD_PYTHON_WRAPPERS AND OPENMM_GENERATE_API_DOCS)
+        ADD_SUBDIRECTORY(api-python)
+    ENDIF (OPENMM_BUILD_PYTHON_WRAPPERS AND OPENMM_GENERATE_API_DOCS)
 ENDIF(DOXYGEN_EXECUTABLE)
 
 

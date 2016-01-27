@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -45,6 +45,7 @@ void testSerialization() {
     // Create a Force.
 
     AmoebaStretchBendForce force1;
+    force1.setForceGroup(3);
     force1.addStretchBend(0, 1, 3, 1.0, 1.2, 150.1, 83.2, 100.);
     force1.addStretchBend(2, 4, 4, 1.1, 2.2, 180.1, 89.2, 100.);
     force1.addStretchBend(5, 0, 1, 3.1, 8.2, 140.1, 98.2, 100.);
@@ -57,6 +58,7 @@ void testSerialization() {
 
     // Compare the two forces to see if they are identical.  
     AmoebaStretchBendForce& force2 = *copy;
+    ASSERT_EQUAL(force1.getForceGroup(), force2.getForceGroup());
     ASSERT_EQUAL(force1.getNumStretchBends(), force2.getNumStretchBends());
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(force1.getNumStretchBends()); ii++) {
         int p11, p12, p13;

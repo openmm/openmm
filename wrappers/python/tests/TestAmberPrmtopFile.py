@@ -296,6 +296,38 @@ class TestAmberPrmtopFile(unittest.TestCase):
                 diff = norm(f1-f2)
                 self.assertTrue(diff < 0.1 or diff/norm(f1) < 1e-4)
 
+    def testSwitchFunction(self):
+        """ Tests the switching function option in AmberPrmtopFile """
+        system = prmtop1.createSystem(nonbondedMethod=PME,
+                                      nonbondedCutoff=1*nanometer,
+                                      switchDistance=0.8*nanometer)
+        for force in system.getForces():
+            if isinstance(force, NonbondedForce):
+                self.assertTrue(force.getUseSwitchingFunction())
+                self.assertEqual(force.getSwitchingDistance(), 0.8*nanometer)
+                break
+        else:
+            assert False, 'Did not find expected nonbonded force!'
+
+        # Check error handling
+        system = prmtop1.createSystem(nonbondedMethod=PME,
+                                      nonbondedCutoff=1*nanometer)
+        for force in system.getForces():
+            if isinstance(force, NonbondedForce):
+                self.assertFalse(force.getUseSwitchingFunction())
+                break
+        else:
+            assert False, 'Did not find expected nonbonded force!'
+
+        self.assertRaises(ValueError, lambda:
+                prmtop1.createSystem(nonbondedMethod=PME,
+                    nonbondedCutoff=1*nanometer, switchDistance=-1)
+        )
+        self.assertRaises(ValueError, lambda:
+                prmtop1.createSystem(nonbondedMethod=PME,
+                    nonbondedCutoff=1*nanometer, switchDistance=1.2)
+        )
+
     def test_with_dcd_reporter(self):
         """Check that an amber simulation like the docs example works with a DCD reporter."""
 

@@ -345,11 +345,16 @@ public:
          */
         Mutual = 0,
 
-        /** 
+        /**
          * Direct polarization
          */
-        Direct = 1 
-    };  
+        Direct = 1,
+
+        /**
+         * Extrapolated perturbation theory
+         */
+        Extrapolated = 2
+    };
 
     /**
      * Constructor
@@ -421,6 +426,15 @@ public:
      *
      */
     RealOpenMM getMutualInducedDipoleEpsilon() const;
+
+    /**
+     * Set the coefficients for the µ_0, µ_1, µ_2, µ_n terms in the extrapolation
+     * theory algorithm for induced dipoles
+     *
+     * @param optCoefficients a vector whose mth entry specifies the coefficient for µ_m
+     *
+     */
+    void setExtrapolationCoefficients(const std::vector<RealOpenMM> &coefficients);
 
     /**
      * Set the target epsilon for converging mutual induced dipoles.
@@ -624,10 +638,13 @@ protected:
      * Helper class used in calculating induced dipoles
      */
     struct UpdateInducedDipoleFieldStruct {
-            UpdateInducedDipoleFieldStruct(std::vector<OpenMM::RealVec>& inputFixed_E_Field, std::vector<OpenMM::RealVec>& inputInducedDipoles);
+            UpdateInducedDipoleFieldStruct(std::vector<OpenMM::RealVec>& inputFixed_E_Field, std::vector<OpenMM::RealVec>& inputInducedDipoles, std::vector<std::vector<RealVec> >& extrapolatedDipoles, std::vector<std::vector<RealOpenMM> >& extrapolatedDipoleFieldGradient);
             std::vector<OpenMM::RealVec>* fixedMultipoleField;
             std::vector<OpenMM::RealVec>* inducedDipoles;
+            std::vector<std::vector<RealVec> >* extrapolatedDipoles;
+            std::vector<std::vector<RealOpenMM> >* extrapolatedDipoleFieldGradient;
             std::vector<OpenMM::RealVec> inducedDipoleField;
+            std::vector<std::vector<RealOpenMM> > inducedDipoleFieldGradient;
     };
 
     unsigned int _numParticles;
@@ -651,10 +668,17 @@ protected:
     std::vector<RealVec> _fixedMultipoleFieldPolar;
     std::vector<RealVec> _inducedDipole;
     std::vector<RealVec> _inducedDipolePolar;
+    std::vector<std::vector<RealVec> > _ptDipoleP;
+    std::vector<std::vector<RealVec> > _ptDipoleD;
+    std::vector<std::vector<RealOpenMM> > _ptDipoleFieldGradientP;
+    std::vector<std::vector<RealOpenMM> > _ptDipoleFieldGradientD;
 
     int _mutualInducedDipoleConverged;
     int _mutualInducedDipoleIterations;
     int _maximumMutualInducedDipoleIterations;
+    int _maxPTOrder;
+    std::vector<RealOpenMM>  _extrapolationCoefficients;
+    std::vector<RealOpenMM>  _extPartCoefficients;
     RealOpenMM  _mutualInducedDipoleEpsilon;
     RealOpenMM  _mutualInducedDipoleTargetEpsilon;
     RealOpenMM  _polarSOR;
@@ -904,7 +928,7 @@ protected:
 
     /**
      * Calculate fields due induced dipoles at each site.
-     * 
+     *
      * @param particleI                 positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle I
      * @param particleJ                 positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle J
      * @param updateInducedDipoleFields vector of UpdateInducedDipoleFieldStruct containing input induced dipoles and output fields
@@ -920,6 +944,14 @@ protected:
      */
     virtual void calculateInducedDipoleFields(const std::vector<MultipoleParticleData>& particleData,
                                               std::vector<UpdateInducedDipoleFieldStruct>& updateInducedDipoleFields);
+    /**
+     * Calculated induced dipoles using extrapolated perturbation theory.
+     *
+     * @param particleData              vector of particle positions and parameters (charge, labFrame dipoles, quadrupoles, ...)
+     * @param updateInducedDipoleFields vector of UpdateInducedDipoleFieldStruct containing input induced dipoles and output fields
+     */
+    void convergeInduceDipolesByExtrapolation(const std::vector<MultipoleParticleData>& particleData,
+                                              std::vector<UpdateInducedDipoleFieldStruct>& calculateInducedDipoleField);
     /**
      * Converge induced dipoles.
      * 
@@ -1191,6 +1223,10 @@ private:
     std::vector<RealVec> _gkField;
     std::vector<RealVec> _inducedDipoleS;
     std::vector<RealVec> _inducedDipolePolarS;
+    std::vector<std::vector<RealVec> > _ptDipolePS;
+    std::vector<std::vector<RealVec> > _ptDipoleDS;
+    std::vector<std::vector<RealOpenMM> > _ptDipoleFieldGradientPS;
+    std::vector<std::vector<RealOpenMM> > _ptDipoleFieldGradientDS;
 
     int _includeCavityTerm;
     RealOpenMM _probeRadius;

@@ -1035,7 +1035,7 @@ void OpenCLContext::invalidateMolecules() {
 
 void OpenCLContext::reorderAtoms() {
     atomsWereReordered = false;
-    if (numAtoms == 0 || nonbonded == NULL || !nonbonded->getUseCutoff() || stepsSinceReorder < 100) {
+    if (numAtoms == 0 || nonbonded == NULL || !nonbonded->getUseCutoff() || stepsSinceReorder < 250) {
         stepsSinceReorder++;
         return;
     }

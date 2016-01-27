@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -100,11 +100,13 @@ CudaPlatform::CudaPlatform() {
     platformProperties.push_back(CudaCompiler());
     platformProperties.push_back(CudaTempDirectory());
     platformProperties.push_back(CudaHostCompiler());
+    platformProperties.push_back(CudaDisablePmeStream());
     setPropertyDefaultValue(CudaDeviceIndex(), "");
     setPropertyDefaultValue(CudaDeviceName(), "");
     setPropertyDefaultValue(CudaUseBlockingSync(), "true");
     setPropertyDefaultValue(CudaPrecision(), "single");
     setPropertyDefaultValue(CudaUseCpuPme(), "false");
+    setPropertyDefaultValue(CudaDisablePmeStream(), "false");
 #ifdef _MSC_VER
     char* bindir = getenv("CUDA_BIN_PATH");
     string nvcc = (bindir == NULL ? "nvcc.exe" : string(bindir)+"\\nvcc.exe");
@@ -163,14 +165,17 @@ void CudaPlatform::contextCreated(ContextImpl& context, const map<string, string
             getPropertyDefaultValue(CudaTempDirectory()) : properties.find(CudaTempDirectory())->second);
     const string& hostCompilerPropValue = (properties.find(CudaHostCompiler()) == properties.end() ?
             getPropertyDefaultValue(CudaHostCompiler()) : properties.find(CudaHostCompiler())->second);
+    string pmeStreamPropValue = (properties.find(CudaDisablePmeStream()) == properties.end() ?
+            getPropertyDefaultValue(CudaDisablePmeStream()) : properties.find(CudaDisablePmeStream())->second);
     transform(blockingPropValue.begin(), blockingPropValue.end(), blockingPropValue.begin(), ::tolower);
     transform(precisionPropValue.begin(), precisionPropValue.end(), precisionPropValue.begin(), ::tolower);
     transform(cpuPmePropValue.begin(), cpuPmePropValue.end(), cpuPmePropValue.begin(), ::tolower);
+    transform(pmeStreamPropValue.begin(), pmeStreamPropValue.end(), pmeStreamPropValue.begin(), ::tolower);
     vector<string> pmeKernelName;
     pmeKernelName.push_back(CalcPmeReciprocalForceKernel::Name());
     if (!supportsKernels(pmeKernelName))
         cpuPmePropValue = "false";
-    context.setPlatformData(new PlatformData(&context, context.getSystem(), devicePropValue, blockingPropValue, precisionPropValue, cpuPmePropValue, compilerPropValue, tempPropValue, hostCompilerPropValue));
+    context.setPlatformData(new PlatformData(&context, context.getSystem(), devicePropValue, blockingPropValue, precisionPropValue, cpuPmePropValue, compilerPropValue, tempPropValue, hostCompilerPropValue, pmeStreamPropValue));
 }
 
 void CudaPlatform::contextDestroyed(ContextImpl& context) const {
@@ -179,7 +184,7 @@ void CudaPlatform::contextDestroyed(ContextImpl& context) const {
 }
 
 CudaPlatform::PlatformData::PlatformData(ContextImpl* context, const System& system, const string& deviceIndexProperty, const string& blockingProperty, const string& precisionProperty,
-            const string& cpuPmeProperty, const string& compilerProperty, const string& tempProperty, const string& hostCompilerProperty) : context(context), removeCM(false), stepCount(0), computeForceCount(0), time(0.0), hasInitializedContexts(false) {
+            const string& cpuPmeProperty, const string& compilerProperty, const string& tempProperty, const string& hostCompilerProperty, const string& pmeStreamProperty) : context(context), removeCM(false), stepCount(0), computeForceCount(0), time(0.0), hasInitializedContexts(false) {
     bool blocking = (blockingProperty == "true");
     vector<string> devices;
     size_t searchPos = 0, nextPos;
@@ -191,7 +196,7 @@ CudaPlatform::PlatformData::PlatformData(ContextImpl* context, const System& sys
     try {
         for (int i = 0; i < (int) devices.size(); i++) {
             if (devices[i].length() > 0) {
-                unsigned int deviceIndex;
+                int deviceIndex;
                 stringstream(devices[i]) >> deviceIndex;
                 contexts.push_back(new CudaContext(system, deviceIndex, blocking, precisionProperty, compilerProperty, tempProperty, hostCompilerProperty, *this));
             }
@@ -218,6 +223,7 @@ CudaPlatform::PlatformData::PlatformData(ContextImpl* context, const System& sys
         deviceName << name;
     }
     useCpuPme = (cpuPmeProperty == "true" && !contexts[0]->getUseDoublePrecision());
+    disablePmeStream = (pmeStreamProperty == "true");
     propertyValues[CudaPlatform::CudaDeviceIndex()] = deviceIndex.str();
     propertyValues[CudaPlatform::CudaDeviceName()] = deviceName.str();
     propertyValues[CudaPlatform::CudaUseBlockingSync()] = blocking ? "true" : "false";
@@ -226,6 +232,7 @@ CudaPlatform::PlatformData::PlatformData(ContextImpl* context, const System& sys
     propertyValues[CudaPlatform::CudaCompiler()] = compilerProperty;
     propertyValues[CudaPlatform::CudaTempDirectory()] = tempProperty;
     propertyValues[CudaPlatform::CudaHostCompiler()] = hostCompilerProperty;
+    propertyValues[CudaPlatform::CudaDisablePmeStream()] = disablePmeStream ? "true" : "false";
     contextEnergy.resize(contexts.size());
     
     // Determine whether peer-to-peer copying is supported, and enable it if so.

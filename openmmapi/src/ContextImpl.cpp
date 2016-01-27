@@ -449,4 +449,5 @@ void ContextImpl::loadCheckpoint(istream& stream) {
         parameters[name] = value;
     }
     updateStateDataKernel.getAs<UpdateStateDataKernel>().loadCheckpoint(*this, stream);
+    hasSetPositions = true;
 }

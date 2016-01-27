@@ -20,7 +20,6 @@ set(STAGING_OUTPUT_FILES "") # Will contain all required package files
 file(GLOB STAGING_INPUT_FILES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
     "${CMAKE_CURRENT_SOURCE_DIR}/MANIFEST.in"
     "${CMAKE_CURRENT_SOURCE_DIR}/README.txt"
-    "${CMAKE_CURRENT_SOURCE_DIR}/filterPythonFiles.py"
 )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/setup.py ${OPENMM_PYTHON_STAGING_DIR}/setup.py)
 
@@ -51,6 +50,7 @@ foreach(SUBDIR ${SUBDIRS})
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*README.txt"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.py"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.i"
+        "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.ini"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.sh"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.xml"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.pdb"
@@ -185,7 +185,7 @@ add_custom_command(
     COMMENT "Creating OpenMM Python swig input files..."
 )
 
-INSTALL_FILES(/include FILES "${SWIG_OPENMM_DIR}/OpenMMSwigHeaders.i")
+INSTALL_FILES(/include/swig FILES "${SWIG_OPENMM_DIR}/OpenMMSwigHeaders.i" "${SWIG_OPENMM_DIR}/swig_lib/python/typemaps.i")
 
 #~ swig -python -c++ \
 #~      -outdir $PYTHON_PACKAGE_DIR \

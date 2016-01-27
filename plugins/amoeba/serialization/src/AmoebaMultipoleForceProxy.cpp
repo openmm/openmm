@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -68,9 +68,10 @@ void loadCovalentMap(const SerializationNode& map, std::vector< int >& covalentM
 }
 
 void AmoebaMultipoleForceProxy::serialize(const void* object, SerializationNode& node) const {
-    node.setIntProperty("version", 2);
+    node.setIntProperty("version", 4);
     const AmoebaMultipoleForce& force = *reinterpret_cast<const AmoebaMultipoleForce*>(object);
 
+    node.setIntProperty("forceGroup", force.getForceGroup());
     node.setIntProperty("nonbondedMethod",                  force.getNonbondedMethod());
     node.setIntProperty("polarizationType",                 force.getPolarizationType());
     //node.setIntProperty("pmeBSplineOrder",                  force.getPmeBSplineOrder());
@@ -87,6 +88,14 @@ void AmoebaMultipoleForceProxy::serialize(const void* object, SerializationNode&
     force.getPmeGridDimensions(gridDimensions);
     SerializationNode& gridDimensionsNode  = node.createChildNode("MultipoleParticleGridDimension");
     gridDimensionsNode.setIntProperty("d0", gridDimensions[0]).setIntProperty("d1", gridDimensions[1]).setIntProperty("d2", gridDimensions[2]); 
+    
+    SerializationNode& coefficients = node.createChildNode("ExtrapolationCoefficients");
+    vector<double> coeff = force.getExtrapolationCoefficients();
+    for (int i = 0; i < coeff.size(); i++) {
+        stringstream key;
+        key << "c" << i;
+        coefficients.setDoubleProperty(key.str(), coeff[i]);
+    }
 
     std::vector<std::string> covalentTypes;
     getCovalentTypes(covalentTypes);
@@ -124,16 +133,17 @@ void AmoebaMultipoleForceProxy::serialize(const void* object, SerializationNode&
 }
 
 void* AmoebaMultipoleForceProxy::deserialize(const SerializationNode& node) const {
-    if (node.getIntProperty("version") > 2)
+    int version = node.getIntProperty("version");
+    if (version < 0 || version > 4)
         throw OpenMMException("Unsupported version number");
     AmoebaMultipoleForce* force = new AmoebaMultipoleForce();
 
     try {
-
+        if (version > 3)
+            force->setForceGroup(node.getIntProperty("forceGroup", 0));
         force->setNonbondedMethod(static_cast<AmoebaMultipoleForce::NonbondedMethod>(node.getIntProperty("nonbondedMethod")));
-        if (node.getIntProperty("version") == 2) {
+        if (version >= 2)
             force->setPolarizationType(static_cast<AmoebaMultipoleForce::PolarizationType>(node.getIntProperty("polarizationType")));
-        }
         //force->setPmeBSplineOrder(node.getIntProperty("pmeBSplineOrder"));
         //force->setMutualInducedIterationMethod(static_cast<AmoebaMultipoleForce::MutualInducedIterationMethod>(node.getIntProperty("mutualInducedIterationMethod")));
         force->setMutualInducedMaxIterations(node.getIntProperty("mutualInducedMaxIterations"));
@@ -151,6 +161,18 @@ void* AmoebaMultipoleForceProxy::deserialize(const SerializationNode& node) cons
         gridDimensions.push_back(gridDimensionsNode.getIntProperty("d2"));
         force->setPmeGridDimensions(gridDimensions);
     
+        if (version >= 3) {
+            const SerializationNode& coefficients = node.getChildNode("ExtrapolationCoefficients");
+            vector<double> coeff;
+            for (int i = 0; ; i++) {
+                stringstream key;
+                key << "c" << i;
+                if (coefficients.getProperties().find(key.str()) == coefficients.getProperties().end())
+                    break;
+                coeff.push_back(coefficients.getDoubleProperty(key.str()));
+            }
+            force->setExtrapolationCoefficients(coeff);
+        }
         std::vector<std::string> covalentTypes;
         getCovalentTypes(covalentTypes);
 

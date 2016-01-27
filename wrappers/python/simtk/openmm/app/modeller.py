@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2015 Stanford University and the Authors.
+Portions copyright (c) 2012-2016 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors:
 
@@ -264,7 +264,7 @@ class Modeller(object):
         2. Water molecules are removed if their distance to any solute atom is less than the sum of their van der Waals radii.
         3. If the solute is charged and neutralize=True, enough positive or negative ions are added to neutralize it.  Each ion is added by
            randomly selecting a water molecule and replacing it with the ion.
-        4. Ion pairs are added to give the requested total ionic strength.
+        4. Ion pairs are added to give the requested total ionic strength.  Note that only monovalent ions are currently supported.
 
         The box size can be specified in any of several ways:
 
@@ -298,6 +298,7 @@ class Modeller(object):
         ionicStrength : concentration=0*molar
             the total concentration of ions (both positive and negative) to add.  This
             does not include ions that are added to neutralize the system.
+            Note that only monovalent ions are currently supported.
         neutralize : bool=True
             whether to add ions to neutralize the system
         """
@@ -522,7 +523,7 @@ class Modeller(object):
         # Add ions based on the desired ionic strength.
 
         numIons = len(addedWaters)*ionicStrength/(55.4*molar) # Pure water is about 55.4 molar (depending on temperature)
-        numPairs = int(floor(numIons/2+0.5))
+        numPairs = int(floor(numIons+0.5))
         for i in range(numPairs):
             addIon(positiveElement)
         for i in range(numPairs):
@@ -614,6 +615,7 @@ class Modeller(object):
             HID: Neutral form with a hydrogen on the ND1 atom
             HIE: Neutral form with a hydrogen on the NE2 atom
             HIP: Positively charged form with hydrogens on both ND1 and NE2
+            HIN: Negatively charged form without a hydrogen on either ND1 or NE2
 
         Lysine:
             LYN: Neutral form with two hydrogens on the zeta nitrogen
@@ -625,9 +627,14 @@ class Modeller(object):
         2. Any Cysteine that participates in a disulfide bond uses the CYX variant regardless of pH.
         3. For a neutral Histidine residue, the HID or HIE variant is selected based on which one forms a better hydrogen bond.
 
-        You can override these rules by explicitly specifying a variant for any residue.  Also keep in mind that this
-        function will only add hydrogens.  It will never remove ones that are already present in the model, regardless
-        of the specified pH.
+        You can override these rules by explicitly specifying a variant for any residue.  To do that, provide a list for the
+        'variants' parameter, and set the corresponding element to the name of the variant to use.
+
+        A special case is when the model already contains a hydrogen that should not be present in the desired variant.
+        If you explicitly specify a variant using the 'variants' parameter, the residue will be modified to match the
+        desired variant, removing hydrogens if necessary.  On the other hand, for residues whose variant is selected
+        automatically, this function will only add hydrogens.  It will never remove ones that are already present in the
+        model, regardless of the specified pH.
 
         Definitions for standard amino acids and nucleotides are built in.  You can call loadHydrogenDefinitions() to load
         additional definitions for other residue types.
@@ -771,6 +778,7 @@ class Modeller(object):
                     if variant is not None and variant not in spec.variants:
                         raise ValueError('Illegal variant for %s residue: %s' % (residue.name, variant))
                     actualVariants[residue.index] = variant
+                    removeExtraHydrogens = (variants[residue.index] is not None)
 
                     # Make a list of hydrogens that should be present in the residue.
 
@@ -783,6 +791,11 @@ class Modeller(object):
                     # Loop over atoms in the residue, adding them to the new topology along with required hydrogens.
 
                     for parent in residue.atoms():
+                        # Check whether this is a hydrogen that should be removed.
+
+                        if removeExtraHydrogens and parent.element == elem.hydrogen and not any(parent.name == h.name for h in hydrogens):
+                            continue
+
                         # Add the atom.
 
                         newAtom = newTopology.addAtom(parent.name, parent.element, newResidue)
@@ -1091,7 +1104,7 @@ class Modeller(object):
                             else:
                                 a2 = newAtoms[matchingAtoms[atom2]]
                             newTopology.addBond(a1, a2)
-                            
+
         for bond in self.topology.bonds():
             if bond[0] in newAtoms and bond[1] in newAtoms:
                 newTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]])
@@ -1109,7 +1122,7 @@ class Modeller(object):
 
             # Now run a few iterations of SHAKE to try to select reasonable positions.
 
-            for iteration in range(10):
+            for iteration in range(15):
                 for atom1, atom2, distance in bonds:
                     if atom1 in missingPositions:
                         if atom2 in missingPositions:
@@ -1123,6 +1136,6 @@ class Modeller(object):
                     delta *= (distance-length)/length
                     newPositions[atom1] -= weights[0]*delta
                     newPositions[atom2] += weights[1]*delta
-                
+
         self.topology = newTopology
         self.positions = newPositions

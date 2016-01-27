@@ -432,6 +432,7 @@ private:
 
     int mutualInducedMaxIterations;
     RealOpenMM mutualInducedTargetEpsilon;
+    std::vector<double> extrapolationCoefficients;
 
     bool usePme;
     RealOpenMM alphaEwald;
