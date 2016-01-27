@@ -6,7 +6,10 @@ from simtk.unit import *
 import simtk.openmm.app.element as elem
 import simtk.openmm.app.forcefield as forcefield
 import math
-from io import StringIO
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from io import StringIO
 import os
 
 class TestForceField(unittest.TestCase):
