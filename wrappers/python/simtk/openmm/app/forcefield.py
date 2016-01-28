@@ -120,88 +120,99 @@ class ForceField(object):
         self._forces = []
         self._scripts = []
         self._templateGenerators = []
-        for file in files:
-            self.loadFile(file)
+        self.loadFile(files)
 
-    def loadFile(self, file):
+    def loadFile(self, files):
         """Load an XML file and add the definitions from it to this ForceField.
 
         Parameters
         ----------
-        file : string or file
-            An XML file containing force field definitions.  It may be either an
-            absolute file path, a path relative to the current working
+        files : string or file or tuple
+            An XML file or tuple of XML files containing force field definitions.
+            Each entry may be either an absolute file path, a path relative to the current working
             directory, a path relative to this module's data subdirectory (for
             built in force fields), or an open file-like object with a read()
             method from which the forcefield XML data can be loaded.
         """
-        try:
-            # this handles either filenames or open file-like objects
-            tree = etree.parse(file)
-        except IOError:
-            tree = etree.parse(os.path.join(os.path.dirname(__file__), 'data', file))
-        except Exception as e:
-            # Fail with an error message about which file could not be read.
-            # TODO: Also handle case where fallback to 'data' directory encounters problems,
-            # but this is much less worrisome because we control those files.
-            msg  = str(e) + '\n'
-            if hasattr(file, 'name'):
-                filename = file.name
-            else:
-                filename = str(file)
-            msg += "ForceField.loadFile() encountered an error reading file '%s'\n" % filename
-            raise Exception(msg)
 
-        root = tree.getroot()
+        if not isinstance(files, tuple):
+            files = (files,)
+
+        trees = []
+
+        for file in files:
+            try:
+                # this handles either filenames or open file-like objects
+                tree = etree.parse(file)
+            except IOError:
+                tree = etree.parse(os.path.join(os.path.dirname(__file__), 'data', file))
+            except Exception as e:
+                # Fail with an error message about which file could not be read.
+                # TODO: Also handle case where fallback to 'data' directory encounters problems,
+                # but this is much less worrisome because we control those files.
+                msg  = str(e) + '\n'
+                if hasattr(file, 'name'):
+                    filename = file.name
+                else:
+                    filename = str(file)
+                msg += "ForceField.loadFile() encountered an error reading file '%s'\n" % filename
+                raise Exception(msg)
+
+            trees.append(tree)
+
 
         # Load the atom types.
 
-        if tree.getroot().find('AtomTypes') is not None:
-            for type in tree.getroot().find('AtomTypes').findall('Type'):
-                self.registerAtomType(type.attrib)
+        for tree in trees:
+            if tree.getroot().find('AtomTypes') is not None:
+                for type in tree.getroot().find('AtomTypes').findall('Type'):
+                    self.registerAtomType(type.attrib)
 
         # Load the residue templates.
 
-        if tree.getroot().find('Residues') is not None:
-            for residue in root.find('Residues').findall('Residue'):
-                resName = residue.attrib['name']
-                template = ForceField._TemplateData(resName)
-                atomIndices = {}
-                for atom in residue.findall('Atom'):
-                    params = {}
-                    for key in atom.attrib:
-                        if key not in ('name', 'type'):
-                            params[key] = _convertParameterToNumber(atom.attrib[key])
-                    atomName = atom.attrib['name']
-                    if atomName in atomIndices:
-                        raise ValueError('Residue '+resName+' contains multiple atoms named '+atomName)
-                    atomIndices[atomName] = len(template.atoms)
-                    typeName = atom.attrib['type']
-                    template.atoms.append(ForceField._TemplateAtomData(atomName, typeName, self._atomTypes[typeName].element, params))
-                for site in residue.findall('VirtualSite'):
-                    template.virtualSites.append(ForceField._VirtualSiteData(site, atomIndices))
-                for bond in residue.findall('Bond'):
-                    if 'atomName1' in bond.attrib:
-                        template.addBondByName(bond.attrib['atomName1'], bond.attrib['atomName2'])
-                    else:
-                        template.addBond(int(bond.attrib['from']), int(bond.attrib['to']))
-                for bond in residue.findall('ExternalBond'):
-                    if 'atomName' in bond.attrib:
-                        template.addExternalBondByName(bond.attrib['atomName'])
-                    else:
-                        template.addExternalBond(int(bond.attrib['from']))
-                self.registerResidueTemplate(template)
+        for tree in trees:
+            if tree.getroot().find('Residues') is not None:
+                for residue in tree.getroot().find('Residues').findall('Residue'):
+                    resName = residue.attrib['name']
+                    template = ForceField._TemplateData(resName)
+                    atomIndices = {}
+                    for atom in residue.findall('Atom'):
+                        params = {}
+                        for key in atom.attrib:
+                            if key not in ('name', 'type'):
+                                params[key] = _convertParameterToNumber(atom.attrib[key])
+                        atomName = atom.attrib['name']
+                        if atomName in atomIndices:
+                            raise ValueError('Residue '+resName+' contains multiple atoms named '+atomName)
+                        atomIndices[atomName] = len(template.atoms)
+                        typeName = atom.attrib['type']
+                        template.atoms.append(ForceField._TemplateAtomData(atomName, typeName, self._atomTypes[typeName].element, params))
+                    for site in residue.findall('VirtualSite'):
+                        template.virtualSites.append(ForceField._VirtualSiteData(site, atomIndices))
+                    for bond in residue.findall('Bond'):
+                        if 'atomName1' in bond.attrib:
+                            template.addBondByName(bond.attrib['atomName1'], bond.attrib['atomName2'])
+                        else:
+                            template.addBond(int(bond.attrib['from']), int(bond.attrib['to']))
+                    for bond in residue.findall('ExternalBond'):
+                        if 'atomName' in bond.attrib:
+                            template.addExternalBondByName(bond.attrib['atomName'])
+                        else:
+                            template.addExternalBond(int(bond.attrib['from']))
+                    self.registerResidueTemplate(template)
 
         # Load force definitions
 
-        for child in root:
-            if child.tag in parsers:
-                parsers[child.tag](child, self)
+        for tree in trees:
+            for child in tree.getroot():
+                if child.tag in parsers:
+                    parsers[child.tag](child, self)
 
         # Load scripts
 
-        for node in tree.getroot().findall('Script'):
-            self.registerScript(node.text)
+        for tree in trees:
+            for node in tree.getroot().findall('Script'):
+                self.registerScript(node.text)
 
     def getGenerators(self):
         """Get the list of all registered generators."""
