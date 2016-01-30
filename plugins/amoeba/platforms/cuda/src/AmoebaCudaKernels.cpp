@@ -1779,16 +1779,16 @@ void CudaCalcAmoebaMultipoleForceKernel::getLabFramePermanentDipoles(ContextImpl
     dipoles.resize(numParticles);
     const vector<int>& order = cu.getAtomIndex();
     if (cu.getUseDoublePrecision()) {
-        vector<double> d;
-        inducedDipole->download(d);
+        vector<double> labDipoleVec;
+        labFrameDipoles->download(labDipoleVec);
         for (int i = 0; i < numParticles; i++)
-            dipoles[order[i]] = Vec3(d[3*i], d[3*i+1], d[3*i+2]);
+            dipoles[order[i]] = Vec3(labDipoleVec[3*i], labDipoleVec[3*i+1], labDipoleVec[3*i+2]);
     }
     else {
-        vector<float> d;
-        inducedDipole->download(d);
+        vector<float> labDipoleVec;
+        labFrameDipoles->download(labDipoleVec);
         for (int i = 0; i < numParticles; i++)
-            dipoles[order[i]] = Vec3(d[3*i], d[3*i+1], d[3*i+2]);
+            dipoles[order[i]] = Vec3(labDipoleVec[3*i], labDipoleVec[3*i+1], labDipoleVec[3*i+2]);
     }
 }
 
