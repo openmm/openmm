@@ -22,3 +22,5 @@ for file in charmm_files:
 # convert stream files to ffxml
 for file in stream_files:
     param = CharmmParameterSet(file)
+    param_omm = openmm.OpenMMParameterSet.from_parameterset(param)
+    param_omm.write('ffxml/%s.xml' % file[14:-4])
