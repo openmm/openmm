@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -158,8 +158,8 @@ public:
             float scale1 = floorf(yperiodic*recipBoxSize[1]);
             yperiodic -= periodicBoxVectors[1][0]*scale1;
         }
-        int y = min(ny-1, int(floorf(yperiodic / voxelSizeY)));
-        int z = min(nz-1, int(floorf(zperiodic / voxelSizeZ)));
+        int y = max(0, min(ny-1, int(floorf(yperiodic / voxelSizeY))));
+        int z = max(0, min(nz-1, int(floorf(zperiodic / voxelSizeZ))));
         
         return VoxelIndex(y, z);
     }
