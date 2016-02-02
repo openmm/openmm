@@ -47,9 +47,9 @@ class MTSIntegrator(CustomIntegrator):
     of the force group and the frequency (as a fraction of the outermost time step) at
     which to evaluate it.  For example:
 
-    <pre>
+    ```
     integrator = MTSIntegrator(4*femtoseconds, [(0,1), (1,2), (2,8)])
-    </pre>
+    ```
 
     This specifies that the outermost time step is 4 fs, so each step of the integrator
     will advance time by that much.  It also says that force group 0 should be evaluated
@@ -62,11 +62,11 @@ class MTSIntegrator(CustomIntegrator):
     own force group, and then creates an integrator that evaluates them once every 4 fs,
     but all other interactions every 2 fs.
 
-    <pre>
+    ```
     nonbonded = [f for f in system.getForces() if isinstance(f, NonbondedForce)][0]
     nonbonded.setReciprocalSpaceForceGroup(1)
     integrator = MTSIntegrator(4*femtoseconds, [(1,1), (0,2)])
-    </pre>
+    ```
 
     For details, see Tuckerman et al., J. Chem. Phys. 97(3) pp. 1990-2001 (1992).
     """
