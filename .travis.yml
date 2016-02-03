@@ -110,7 +110,7 @@ before_install:
   - if [[ "$OPENCL" == "true" ]]; then
       sudo add-apt-repository "deb http://archive.ubuntu.com/ubuntu $(lsb_release -sc) main universe restricted multiverse";
       sudo apt-get -yq update > /dev/null 2>&1 ;
-      sudo apt-get install -qq 2:15.200-0ubuntu0.5 opencl-headers;
+      sudo apt-get install -qq fglrx=2:15.200-0ubuntu0.5 opencl-headers;
     fi
   # Install swig for Python wrappers. However, testing CUDA and OpenCL, we
   # skip the Python wrapper for speed. We're not using anaconda python,
