@@ -350,6 +350,7 @@ public:
 
     virtual void getLabFramePermanentDipoles(ContextImpl& context, std::vector<Vec3>& dipoles) = 0;
     virtual void getInducedDipoles(ContextImpl& context, std::vector<Vec3>& dipoles) = 0;
+    virtual void getTotalDipoles(ContextImpl& context, std::vector<Vec3>& dipoles) = 0;
 
     virtual void getElectrostaticPotential(ContextImpl& context, const std::vector< Vec3 >& inputGrid,
                                            std::vector< double >& outputElectrostaticPotential) = 0;

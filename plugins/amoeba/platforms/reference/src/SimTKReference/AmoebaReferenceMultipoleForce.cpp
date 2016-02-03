@@ -1819,6 +1819,8 @@ void AmoebaReferenceMultipoleForce::calculateInducedDipoles(const vector<RealVec
 }
 
 
+
+
 void AmoebaReferenceMultipoleForce::calculateLabFramePermanentDipoles(const vector<RealVec>& particlePositions,
                                                                       const vector<RealOpenMM>& charges,
                                                                       const vector<RealOpenMM>& dipoles,
@@ -1842,6 +1844,35 @@ void AmoebaReferenceMultipoleForce::calculateLabFramePermanentDipoles(const vect
     for (int i = 0; i < _numParticles; i++)
       {
       outputRotatedPermanentDipoles[i] = particleData[i].dipole;
+      }
+}
+
+void AmoebaReferenceMultipoleForce::calculateTotalDipoles(const vector<RealVec>& particlePositions,
+                                                          const vector<RealOpenMM>& charges,
+                                                          const vector<RealOpenMM>& dipoles,
+                                                          const vector<RealOpenMM>& quadrupoles,
+                                                          const vector<RealOpenMM>& tholes,
+                                                          const vector<RealOpenMM>& dampingFactors,
+                                                          const vector<RealOpenMM>& polarity,
+                                                          const vector<int>& axisTypes,
+                                                          const vector<int>& multipoleAtomZs,
+                                                          const vector<int>& multipoleAtomXs,
+                                                          const vector<int>& multipoleAtomYs,
+                                                          const vector< vector< vector<int> > >& multipoleAtomCovalentInfo,
+                                                          vector<RealVec>& outputTotalDipoles) {
+    // setup, including calculating permanent dipoles
+
+    vector<MultipoleParticleData> particleData;
+    setup(particlePositions, charges, dipoles, quadrupoles, tholes,
+           dampingFactors, polarity, axisTypes, multipoleAtomZs, multipoleAtomXs, multipoleAtomYs,
+           multipoleAtomCovalentInfo, particleData);
+    outputTotalDipoles.resize(_numParticles);
+    for (int i = 0; i < _numParticles; i++)
+      {
+      for (int j = 0; j < 3; j++)
+        {
+        outputTotalDipoles[i][j] = particleData[i].position[j] * particleData[i].charge + particleData[i].dipole[j] + _inducedDipole[j];
+        }
       }
 }
 

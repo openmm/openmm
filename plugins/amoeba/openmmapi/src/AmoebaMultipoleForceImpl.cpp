@@ -191,6 +191,10 @@ void AmoebaMultipoleForceImpl::getInducedDipoles(ContextImpl& context, vector<Ve
     kernel.getAs<CalcAmoebaMultipoleForceKernel>().getInducedDipoles(context, dipoles);
 }
 
+void AmoebaMultipoleForceImpl::getTotalDipoles(ContextImpl& context, vector<Vec3>& dipoles) {
+    kernel.getAs<CalcAmoebaMultipoleForceKernel>().getTotalDipoles(context, dipoles);
+}
+
 void AmoebaMultipoleForceImpl::getElectrostaticPotential(ContextImpl& context, const std::vector< Vec3 >& inputGrid,
                                                          std::vector< double >& outputElectrostaticPotential) {
     kernel.getAs<CalcAmoebaMultipoleForceKernel>().getElectrostaticPotential(context, inputGrid, outputElectrostaticPotential);

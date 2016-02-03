@@ -730,6 +730,27 @@ void ReferenceCalcAmoebaMultipoleForceKernel::getLabFramePermanentDipoles(Contex
 }
 
 
+void ReferenceCalcAmoebaMultipoleForceKernel::getTotalDipoles(ContextImpl& context, vector<Vec3>& outputDipoles) {
+    int numParticles = context.getSystem().getNumParticles();
+    outputDipoles.resize(numParticles);
+
+    // Create an AmoebaReferenceMultipoleForce to do the calculation.
+    
+    AmoebaReferenceMultipoleForce* amoebaReferenceMultipoleForce = setupAmoebaReferenceMultipoleForce(context);
+    vector<RealVec>& posData = extractPositions(context);
+    
+    // Retrieve the permanent dipoles in the lab frame.
+    
+    vector<RealVec> totalDipoles;
+    amoebaReferenceMultipoleForce->calculateTotalDipoles(posData, charges, dipoles, quadrupoles, tholes,
+            dampingFactors, polarity, axisTypes, multipoleAtomZs, multipoleAtomXs, multipoleAtomYs, multipoleAtomCovalentInfo, inducedDipoles);
+
+    for (int i = 0; i < numParticles; i++)
+        outputDipoles[i] = totalDipoles[i];
+    delete amoebaReferenceMultipoleForce;
+}
+
+
 
 void ReferenceCalcAmoebaMultipoleForceKernel::getElectrostaticPotential(ContextImpl& context, const std::vector< Vec3 >& inputGrid,
                                                                         std::vector< double >& outputElectrostaticPotential) {

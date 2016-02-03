@@ -519,7 +519,7 @@ public:
                                  const std::vector< std::vector< std::vector<int> > >& multipoleAtomCovalentInfo,
                                  std::vector<RealVec>& outputInducedDipoles);
 
-    /*
+    /**
      * Calculate particle permanent dipoles rotated in the lab frame.
      *
      * @param masses                    particle masses
@@ -538,19 +538,55 @@ public:
      * @param outputMultipoleMoments    output multipole moments
      */
 
-    void calculateLabFramePermanentDipoles(const vector<RealVec>& particlePositions,
-                                           const vector<RealOpenMM>& charges,
-                                           const vector<RealOpenMM>& dipoles,
-                                           const vector<RealOpenMM>& quadrupoles,
-                                           const vector<RealOpenMM>& tholes,
-                                           const vector<RealOpenMM>& dampingFactors,
-                                           const vector<RealOpenMM>& polarity,
-                                           const vector<int>& axisTypes,
-                                           const vector<int>& multipoleAtomZs,
-                                           const vector<int>& multipoleAtomXs,
-                                           const vector<int>& multipoleAtomYs,
-                                           const vector< vector< vector<int> > >& multipoleAtomCovalentInfo,
-                                           vector<RealVec>& outputRotatedPermanentDipoles);
+    void calculateLabFramePermanentDipoles(const std::vector<RealVec>& particlePositions,
+                                           const std::vector<RealOpenMM>& charges,
+                                           const std::vector<RealOpenMM>& dipoles,
+                                           const std::vector<RealOpenMM>& quadrupoles,
+                                           const std::vector<RealOpenMM>& tholes,
+                                           const std::vector<RealOpenMM>& dampingFactors,
+                                           const std::vector<RealOpenMM>& polarity,
+                                           const std::vector<int>& axisTypes,
+                                           const std::vector<int>& multipoleAtomZs,
+                                           const std::vector<int>& multipoleAtomXs,
+                                           const std::vector<int>& multipoleAtomYs,
+                                           const std::vector< vector< vector<int> > >& multipoleAtomCovalentInfo,
+                                           std::vector<RealVec>& outputRotatedPermanentDipoles);
+
+    /**
+     * Calculate particle total dipoles.
+     *
+     * @param masses                    particle masses
+     * @param particlePositions         Cartesian coordinates of particles
+     * @param charges                   scalar charges for each particle
+     * @param dipoles                   molecular frame dipoles for each particle
+     * @param quadrupoles               molecular frame quadrupoles for each particle
+     * @param tholes                    Thole factors for each particle
+     * @param dampingFactors            dampling factors for each particle
+     * @param polarity                  polarity for each particle
+     * @param axisTypes                 axis type (Z-then-X, ...) for each particle
+     * @param multipoleAtomZs           indicies of particle specifying the molecular frame z-axis for each particle
+     * @param multipoleAtomXs           indicies of particle specifying the molecular frame x-axis for each particle
+     * @param multipoleAtomYs           indicies of particle specifying the molecular frame y-axis for each particle
+     * @param multipoleAtomCovalentInfo covalent info needed to set scaling factors
+     * @param outputMultipoleMoments    output multipole moments
+     */
+
+
+    void calculateTotalDipoles(const std::vector<RealVec>& particlePositions,
+                                           const std::vector<RealOpenMM>& charges,
+                                           const std::vector<RealOpenMM>& dipoles,
+                                           const std::vector<RealOpenMM>& quadrupoles,
+                                           const std::vector<RealOpenMM>& tholes,
+                                           const std::vector<RealOpenMM>& dampingFactors,
+                                           const std::vector<RealOpenMM>& polarity,
+                                           const std::vector<int>& axisTypes,
+                                           const std::vector<int>& multipoleAtomZs,
+                                           const std::vector<int>& multipoleAtomXs,
+                                           const std::vector<int>& multipoleAtomYs,
+                                           const std::vector< vector< vector<int> > >& multipoleAtomCovalentInfo,
+                                           std::vector<RealVec>& outputRotatedPermanentDipoles);
+
+
 
     /**
      * Calculate system multipole moments.
@@ -641,6 +677,10 @@ protected:
             RealOpenMM thole;
             RealOpenMM dampingFactor;
             RealOpenMM polarity;
+
+            std::vector<RealOpenMM> xDipoleTraj;
+            std::vector<RealOpenMM> yDipoleTraj;
+            std::vector<RealOpenMM> zDipoleTraj;
     };
     
     /**

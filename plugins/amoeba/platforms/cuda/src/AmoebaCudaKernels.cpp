@@ -1812,6 +1812,48 @@ void CudaCalcAmoebaMultipoleForceKernel::getInducedDipoles(ContextImpl& context,
     }
 }
 
+
+void CudaCalcAmoebaMultipoleForceKernel::getTotalDipoles(ContextImpl& context, vector<Vec3>& dipoles) {
+    ensureMultipolesValid(context);
+    int numParticles = cu.getNumAtoms();
+    dipoles.resize(numParticles);
+    const vector<int>& order = cu.getAtomIndex();
+    if (cu.getUseDoublePrecision()) {
+        vector<double> posqVec;
+        vector<double> labDipoleVec;
+        vector<double> inducedDipoleVec;
+        vector<double> totalDipoleVecX(numParticles);
+        vector<double> totalDipoleVecY(numParticles);
+        vector<double> totalDipoleVecZ(numParticles);
+        inducedDipole->download(inducedDipoleVec);
+        labFrameDipoles->download(labDipoleVec);
+        cu.getPosq().download(posqVec);
+        for (int i = 0; i < numParticles; i++) {
+            totalDipoleVecX[i] = posqVec[i].x * posqVec[i].w + labDipoleVec[3*i] + inducedDipoleVec[3*i];
+            totalDipoleVecY[i] = posqVec[i].y * posqVec[i].w + labDipoleVec[3*i+1] + inducedDipoleVec[3*i+1];
+            totalDipoleVecZ[i] = posqVec[i].z * posqVec[i].w + labDipoleVec[3*i+2] + inducedDipoleVec[3*i+2];
+            dipoles[order[i]] = Vec3(totalDipoleVecX[i], totalDipoleVecY[i], totalDipoleVecZ[i]);
+        }
+    }
+    else {
+        vector<float> posqVec;
+        vector<float> labFramePermanentDipolesVec;
+        vector<float> inducedDipolesVec;
+        vector<float> totalDipoleVecX(numParticles);
+        vector<float> totalDipoleVecY(numParticles);
+        vector<float> totalDipoleVecZ(numParticles);
+        inducedDipole->download(inducedDipoleVec);
+        labFrameDipoles->download(labDipoleVec);
+        cu.getPosq().download(posqVec);
+        for (int i = 0; i < numParticles; i++) {
+            totalDipoleVecX[i] = posqVec[i].x * posqVec[i].w + labDipoleVec[3*i] + inducedDipoleVec[3*i];
+            totalDipoleVecY[i] = posqVec[i].y * posqVec[i].w + labDipoleVec[3*i+1] + inducedDipoleVec[3*i+1];
+            totalDipoleVecZ[i] = posqVec[i].z * posqVec[i].w + labDipoleVec[3*i+2] + inducedDipoleVec[3*i+2];
+            dipoles[order[i]] = Vec3(totalDipoleVecX[i], totalDipoleVecY[i], totalDipoleVecZ[i]);
+        }
+    }
+}
+
 void CudaCalcAmoebaMultipoleForceKernel::getElectrostaticPotential(ContextImpl& context, const vector<Vec3>& inputGrid, vector<double>& outputElectrostaticPotential) {
     ensureMultipolesValid(context);
     int numPoints = inputGrid.size();

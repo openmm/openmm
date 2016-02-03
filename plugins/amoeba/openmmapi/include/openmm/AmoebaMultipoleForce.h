@@ -332,6 +332,14 @@ public:
     void getInducedDipoles(Context& context, std::vector<Vec3>& dipoles);
 
     /**
+     * Get the total dipole moments of all particles.
+     *
+     * @param context         the Context for which to get the induced dipoles
+     * @param[out] dipoles    the induced dipole moment of particle i is stored into the i'th element
+     */
+    void getTotalDipoles(Context& context, std::vector<Vec3>& dipoles);
+
+    /**
      * Get the electrostatic potential.
      *
      * @param inputGrid    input grid points over which the potential is to be evaluated

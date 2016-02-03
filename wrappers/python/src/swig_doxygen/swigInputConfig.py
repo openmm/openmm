@@ -125,6 +125,7 @@ NO_OUTPUT_ARGS = [('LocalEnergyMinimizer', 'minimize', 'context'),
                   ('AmoebaMultipoleForce', 'getElectrostaticPotential', 'context'),
                   ('AmoebaMultipoleForce', 'getInducedDipoles', 'context'),
                   ('AmoebaMultipoleForce', 'getLabFramePermanentDipoles', 'context'),
+                  ('AmoebaMultipoleForce', 'getTotalDipoles', 'context'),
 ]
 
 # SWIG assumes the target language shadow class owns the C++ class
@@ -275,6 +276,7 @@ UNITS = {
 ("AmoebaMultipoleForce",                 "getElectrostaticPotential")                     :  ( None, ()),
 ("AmoebaMultipoleForce",                 "getInducedDipoles")                             :  ( None, ()),
 ("AmoebaMultipoleForce",                 "getLabFramePermanentDipoles")                   :  ( None, ()),
+("AmoebaMultipoleForce",                 "getTotalDipoles")                               :  ( None, ()),
 ("AmoebaMultipoleForce",                 "getSystemMultipoleMoments")                     :  ( None, ()),
 
 ("AmoebaOutOfPlaneBendForce",            "getNumOutOfPlaneBends")                         :  ( None, ()),
