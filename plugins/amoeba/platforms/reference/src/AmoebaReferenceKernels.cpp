@@ -743,7 +743,7 @@ void ReferenceCalcAmoebaMultipoleForceKernel::getTotalDipoles(ContextImpl& conte
     
     vector<RealVec> totalDipoles;
     amoebaReferenceMultipoleForce->calculateTotalDipoles(posData, charges, dipoles, quadrupoles, tholes,
-            dampingFactors, polarity, axisTypes, multipoleAtomZs, multipoleAtomXs, multipoleAtomYs, multipoleAtomCovalentInfo, inducedDipoles);
+            dampingFactors, polarity, axisTypes, multipoleAtomZs, multipoleAtomXs, multipoleAtomYs, multipoleAtomCovalentInfo, totalDipoles);
 
     for (int i = 0; i < numParticles; i++)
         outputDipoles[i] = totalDipoles[i];
