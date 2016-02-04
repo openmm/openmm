@@ -29,6 +29,7 @@
 
 #include "openmm/Platform.h"
 #include "openmm/System.h"
+#include "openmm/internal/ThreadPool.h"
 #include "windowsExportCuda.h"
 
 namespace OpenMM {
@@ -122,7 +123,7 @@ class OPENMM_EXPORT_CUDA CudaPlatform::PlatformData {
 public:
     PlatformData(ContextImpl* context, const System& system, const std::string& deviceIndexProperty, const std::string& blockingProperty, const std::string& precisionProperty,
             const std::string& cpuPmeProperty, const std::string& compilerProperty, const std::string& tempProperty, const std::string& hostCompilerProperty,
-            const std::string& pmeStreamProperty);
+            const std::string& pmeStreamProperty, int numThreads);
     ~PlatformData();
     void initializeContexts(const System& system);
     void syncContexts();
@@ -134,6 +135,7 @@ public:
     int stepCount, computeForceCount;
     double time;
     std::map<std::string, std::string> propertyValues;
+    ThreadPool threads;
 };
 
 } // namespace OpenMM

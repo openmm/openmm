@@ -29,6 +29,7 @@
 
 #include "openmm/Platform.h"
 #include "openmm/System.h"
+#include "openmm/internal/ThreadPool.h"
 #include "windowsExportOpenCL.h"
 namespace OpenMM {
     
@@ -107,7 +108,7 @@ public:
 class OPENMM_EXPORT_OPENCL OpenCLPlatform::PlatformData {
 public:
     PlatformData(const System& system, const std::string& platformPropValue, const std::string& deviceIndexProperty, const std::string& precisionProperty,
-            const std::string& cpuPmeProperty, const std::string& pmeStreamProperty);
+            const std::string& cpuPmeProperty, const std::string& pmeStreamProperty, int numThreads);
     ~PlatformData();
     void initializeContexts(const System& system);
     void syncContexts();
@@ -119,6 +120,7 @@ public:
     int stepCount, computeForceCount;
     double time;
     std::map<std::string, std::string> propertyValues;
+    ThreadPool threads;
 };
 
 } // namespace OpenMM
