@@ -391,9 +391,11 @@ void testSum() {
     }
     CustomIntegrator integrator(0.005);
     integrator.addGlobalVariable("ke", 0);
+    integrator.addGlobalVariable("kecopy", 0);
     integrator.addComputePerDof("v", "v+dt*f/m");
     integrator.addComputePerDof("x", "x+dt*v");
     integrator.addComputeSum("ke", "m*v*v/2");
+    integrator.addComputeGlobal("kecopy", "ke");
     Context context(system, integrator, platform);
     context.setPositions(positions);
     
@@ -402,6 +404,7 @@ void testSum() {
     for (int i = 0; i < 100; ++i) {
         State state = context.getState(State::Energy);
         ASSERT_EQUAL_TOL(state.getKineticEnergy(), integrator.getGlobalVariable(0), 1e-5);
+        ASSERT_EQUAL(integrator.getGlobalVariable(0), integrator.getGlobalVariable(1));
         integrator.step(1);
     }
 }
