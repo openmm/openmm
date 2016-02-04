@@ -1819,7 +1819,7 @@ void CudaCalcAmoebaMultipoleForceKernel::getTotalDipoles(ContextImpl& context, v
     dipoles.resize(numParticles);
     const vector<int>& order = cu.getAtomIndex();
     if (cu.getUseDoublePrecision()) {
-        vector<double> posqVec;
+        vector<double4> posqVec;
         vector<double> labDipoleVec;
         vector<double> inducedDipoleVec;
         vector<double> totalDipoleVecX(numParticles);
@@ -1836,7 +1836,7 @@ void CudaCalcAmoebaMultipoleForceKernel::getTotalDipoles(ContextImpl& context, v
         }
     }
     else {
-        vector<float> posqVec;
+        vector<float4> posqVec;
         vector<float> labFramePermanentDipolesVec;
         vector<float> inducedDipolesVec;
         vector<float> totalDipoleVecX(numParticles);
