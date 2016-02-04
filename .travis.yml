@@ -181,5 +181,6 @@ deploy:
       condition: '! -z "${DOCS_DEPLOY}" && "${DOCS_DEPLOY}" = "true"'
 
 cache:
+  apt: true
   directories:
     - $HOME/.ccache
