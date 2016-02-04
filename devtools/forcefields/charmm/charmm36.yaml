@@ -1,27 +1,13 @@
-charmm36_prot.xml:
-  load:
-    - charmm/toppar/top_all36_prot.rtf
-    - charmm/toppar/par_all36_prot.prm
-charmm36_lipid.xml:
-  load:
-    - charmm/toppar/top_all36_lipid.rtf
-    - charmm/toppar/par_all36_lipid.prm
-charmm36_carb.xml:
-  load:
-    - charmm/toppar/top_all36_carb.rtf
-    - charmm/toppar/par_all36_carb.prm
-charmm36_na.xml:
-  load:
-    - charmm/toppar/top_all36_na.rtf
-    - charmm/toppar/par_all36_na.rtf
-charmm36_cgenff.xml:
-  load:
-    - charmm/toppar/top_all36_cgenff.rtf
-    - charmm/toppar/par_all36_cgenff.prm
 charmm36.xml:
   include:
-    - ffxml/charmm36_prot.xml
-    - ffxml/charmm36_lipid.xml
-    - ffxml/charmm36_carb.xml
-    - ffxml/charmm36_na.xml
-    - ffxml/charmm36_cgenff.xml
+    - charmm/toppar/top_all36_carb.rtf
+    - charmm/toppar/par_all36_carb.prm
+    - charmm/toppar/top_all36_cgenff.rtf
+    - charmm/toppar/par_all36_cgenff.prm
+    - charmm/toppar/top_all36_lipid.rtf
+    - charmm/toppar/par_all36_lipid.prm
+    - charmm/toppar/top_all36_na.rtf
+    - charmm/toppar/par_all36_na.prm
+    - charmm/toppar/top_all36_prot.rtf
+    - charmm/toppar/par_all36_prot.prm
+    - charmm/toppar/toppar_water_ions.str
