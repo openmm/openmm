@@ -6661,12 +6661,12 @@ void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrat
             if (cu.getUseDoublePrecision() || cu.getUseMixedPrecision()) {
                 double value;
                 summedValue->download(&value);
-                globalValuesDouble[stepTarget[step].variableIndex] = value;
+                recordGlobalValue(value, stepTarget[step]);
             }
             else {
                 float value;
                 summedValue->download(&value);
-                globalValuesDouble[stepTarget[step].variableIndex] = value;
+                recordGlobalValue(value, stepTarget[step]);
             }
         }
         else if (stepType[step] == CustomIntegrator::UpdateContextState) {
