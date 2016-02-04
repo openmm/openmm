@@ -1837,8 +1837,8 @@ void CudaCalcAmoebaMultipoleForceKernel::getTotalDipoles(ContextImpl& context, v
     }
     else {
         vector<float4> posqVec;
-        vector<float> labFramePermanentDipolesVec;
-        vector<float> inducedDipolesVec;
+        vector<float> labDipoleVec;
+        vector<float> inducedDipoleVec;
         vector<float> totalDipoleVecX(numParticles);
         vector<float> totalDipoleVecY(numParticles);
         vector<float> totalDipoleVecZ(numParticles);
