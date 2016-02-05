@@ -29,9 +29,10 @@
 #include "CudaPlatform.h"
 #include "CudaKernelFactory.h"
 #include "CudaKernels.h"
-#include "openmm/internal/ContextImpl.h"
 #include "openmm/Context.h"
 #include "openmm/System.h"
+#include "openmm/internal/ContextImpl.h"
+#include "openmm/internal/hardware.h"
 #include <algorithm>
 #include <cctype>
 #include <sstream>
@@ -175,7 +176,11 @@ void CudaPlatform::contextCreated(ContextImpl& context, const map<string, string
     pmeKernelName.push_back(CalcPmeReciprocalForceKernel::Name());
     if (!supportsKernels(pmeKernelName))
         cpuPmePropValue = "false";
-    context.setPlatformData(new PlatformData(&context, context.getSystem(), devicePropValue, blockingPropValue, precisionPropValue, cpuPmePropValue, compilerPropValue, tempPropValue, hostCompilerPropValue, pmeStreamPropValue));
+    int threads = getNumProcessors();
+    char* threadsEnv = getenv("OPENMM_CPU_THREADS");
+    if (threadsEnv != NULL)
+        stringstream(threadsEnv) >> threads;
+    context.setPlatformData(new PlatformData(&context, context.getSystem(), devicePropValue, blockingPropValue, precisionPropValue, cpuPmePropValue, compilerPropValue, tempPropValue, hostCompilerPropValue, pmeStreamPropValue, threads));
 }
 
 void CudaPlatform::contextDestroyed(ContextImpl& context) const {
@@ -184,7 +189,8 @@ void CudaPlatform::contextDestroyed(ContextImpl& context) const {
 }
 
 CudaPlatform::PlatformData::PlatformData(ContextImpl* context, const System& system, const string& deviceIndexProperty, const string& blockingProperty, const string& precisionProperty,
-            const string& cpuPmeProperty, const string& compilerProperty, const string& tempProperty, const string& hostCompilerProperty, const string& pmeStreamProperty) : context(context), removeCM(false), stepCount(0), computeForceCount(0), time(0.0), hasInitializedContexts(false) {
+            const string& cpuPmeProperty, const string& compilerProperty, const string& tempProperty, const string& hostCompilerProperty, const string& pmeStreamProperty, int numThreads) :
+                context(context), removeCM(false), stepCount(0), computeForceCount(0), time(0.0), hasInitializedContexts(false), threads(numThreads) {
     bool blocking = (blockingProperty == "true");
     vector<string> devices;
     size_t searchPos = 0, nextPos;

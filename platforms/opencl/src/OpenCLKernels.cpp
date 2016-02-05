@@ -165,42 +165,75 @@ void OpenCLUpdateStateDataKernel::setTime(ContextImpl& context, double time) {
         contexts[i]->setTime(time);
 }
 
+class OpenCLUpdateStateDataKernel::GetPositionsTask : public ThreadPool::Task {
+public:
+    GetPositionsTask(OpenCLContext& cl, vector<Vec3>& positions, vector<mm_float4>& posCorrection) : cl(cl), positions(positions), posCorrection(posCorrection) {
+    }
+    void execute(ThreadPool& threads, int threadIndex) {
+        // Compute the position of each particle to return to the user.  This is done in parallel for speed.
+        
+        const vector<int>& order = cl.getAtomIndex();
+        int numParticles = cl.getNumAtoms();
+        Vec3 boxVectors[3];
+        cl.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+        int numThreads = threads.getNumThreads();
+        int start = threadIndex*numParticles/numThreads;
+        int end = (threadIndex+1)*numParticles/numThreads;
+        if (cl.getUseDoublePrecision()) {
+            mm_double4* posq = (mm_double4*) cl.getPinnedBuffer();
+            for (int i = start; i < end; ++i) {
+                mm_double4 pos = posq[i];
+                mm_int4 offset = cl.getPosCellOffsets()[i];
+                positions[order[i]] = Vec3(pos.x, pos.y, pos.z)-boxVectors[0]*offset.x-boxVectors[1]*offset.y-boxVectors[2]*offset.z;
+            }
+        }
+        else if (cl.getUseMixedPrecision()) {
+            mm_float4* posq = (mm_float4*) cl.getPinnedBuffer();
+            for (int i = start; i < end; ++i) {
+                mm_float4 pos1 = posq[i];
+                mm_float4 pos2 = posCorrection[i];
+                mm_int4 offset = cl.getPosCellOffsets()[i];
+                positions[order[i]] = Vec3((double)pos1.x+(double)pos2.x, (double)pos1.y+(double)pos2.y, (double)pos1.z+(double)pos2.z)-boxVectors[0]*offset.x-boxVectors[1]*offset.y-boxVectors[2]*offset.z;
+            }
+        }
+        else {
+            mm_float4* posq = (mm_float4*) cl.getPinnedBuffer();
+            for (int i = start; i < end; ++i) {
+                mm_float4 pos = posq[i];
+                mm_int4 offset = cl.getPosCellOffsets()[i];
+                positions[order[i]] = Vec3(pos.x, pos.y, pos.z)-boxVectors[0]*offset.x-boxVectors[1]*offset.y-boxVectors[2]*offset.z;
+            }
+        }
+    }
+    OpenCLContext& cl;
+    vector<Vec3>& positions;
+    vector<mm_float4>& posCorrection;
+};
+
 void OpenCLUpdateStateDataKernel::getPositions(ContextImpl& context, vector<Vec3>& positions) {
-    const vector<cl_int>& order = cl.getAtomIndex();
     int numParticles = context.getSystem().getNumParticles();
     positions.resize(numParticles);
-    Vec3 boxVectors[3];
-    cl.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+    vector<mm_float4> posCorrection;
     if (cl.getUseDoublePrecision()) {
         mm_double4* posq = (mm_double4*) cl.getPinnedBuffer();
         cl.getPosq().download(posq);
-        for (int i = 0; i < numParticles; ++i) {
-            mm_double4 pos = posq[i];
-            mm_int4 offset = cl.getPosCellOffsets()[i];
-            positions[order[i]] = Vec3(pos.x, pos.y, pos.z)-boxVectors[0]*offset.x-boxVectors[1]*offset.y-boxVectors[2]*offset.z;
-        }
     }
     else if (cl.getUseMixedPrecision()) {
         mm_float4* posq = (mm_float4*) cl.getPinnedBuffer();
-        vector<mm_float4> posCorrection;
-        cl.getPosq().download(posq);
+        cl.getPosq().download(posq, false);
+        posCorrection.resize(numParticles);
         cl.getPosqCorrection().download(posCorrection);
-        for (int i = 0; i < numParticles; ++i) {
-            mm_float4 pos1 = posq[i];
-            mm_float4 pos2 = posCorrection[i];
-            mm_int4 offset = cl.getPosCellOffsets()[i];
-            positions[order[i]] = Vec3((double)pos1.x+(double)pos2.x, (double)pos1.y+(double)pos2.y, (double)pos1.z+(double)pos2.z)-boxVectors[0]*offset.x-boxVectors[1]*offset.y-boxVectors[2]*offset.z;
-        }
     }
     else {
         mm_float4* posq = (mm_float4*) cl.getPinnedBuffer();
         cl.getPosq().download(posq);
-        for (int i = 0; i < numParticles; ++i) {
-            mm_float4 pos = posq[i];
-            mm_int4 offset = cl.getPosCellOffsets()[i];
-            positions[order[i]] = Vec3(pos.x, pos.y, pos.z)-boxVectors[0]*offset.x-boxVectors[1]*offset.y-boxVectors[2]*offset.z;
-        }
     }
+    
+    // Filling in the output array is done in parallel for speed.
+    
+    GetPositionsTask task(cl, positions, posCorrection);
+    cl.getPlatformData().threads.execute(task);
+    cl.getPlatformData().threads.waitForThreads();
 }
 
 void OpenCLUpdateStateDataKernel::setPositions(ContextImpl& context, const vector<Vec3>& positions) {
@@ -6906,12 +6939,12 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
             if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision()) {
                 double value;
                 summedValue->download(&value);
-                globalValuesDouble[stepTarget[step].variableIndex] = value;
+                recordGlobalValue(value, stepTarget[step]);
             }
             else {
                 float value;
                 summedValue->download(&value);
-                globalValuesDouble[stepTarget[step].variableIndex] = value;
+                recordGlobalValue(value, stepTarget[step]);
             }
         }
         else if (stepType[step] == CustomIntegrator::UpdateContextState) {

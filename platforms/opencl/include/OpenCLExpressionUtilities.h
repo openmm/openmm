@@ -74,7 +74,7 @@ public:
      */
     std::string createExpressions(const std::map<std::string, Lepton::ParsedExpression>& expressions, const std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& variables,
             const std::vector<const TabulatedFunction*>& functions, const std::vector<std::pair<std::string, std::string> >& functionNames,
-            const std::string& prefix, const std::string& tempType="float");
+            const std::string& prefix, const std::string& tempType="real");
     /**
      * Calculate the spline coefficients for a tabulated function that appears in expressions.
      *
