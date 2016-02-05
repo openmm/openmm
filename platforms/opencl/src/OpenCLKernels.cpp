@@ -7053,6 +7053,7 @@ void OpenCLIntegrateCustomStepKernel::recordGlobalValue(double value, GlobalTarg
         case DT:
             if (value != globalValuesDouble[dtVariableIndex])
                 deviceGlobalsAreCurrent = false;
+            expressionSet.setVariable(dtVariableIndex, value);
             globalValuesDouble[dtVariableIndex] = value;
             cl.getIntegrationUtilities().setNextStepSize(value);
             break;
