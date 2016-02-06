@@ -16,7 +16,7 @@ env:
 
 matrix:
   allow_failures:
-      - env: ==CPU_OPENCL==
+      - env: OPENCL=true
   include:
     - sudo: required
       env: ==CPU_OPENCL==
