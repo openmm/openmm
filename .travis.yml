@@ -35,6 +35,7 @@ matrix:
            -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF
            -DOPENMM_BUILD_EXAMPLES=OFF"
       addons: {apt: {packages: []}}
+      allow_failure: true
 
     - sudo: required
       dist: trusty
@@ -97,10 +98,6 @@ matrix:
            CC=$CCACHE/gcc
            CXX=$CCACHE/g++
            CMAKE_FLAGS=""
-
-matrix:
-  allow_failures:
-      - env: OPENCL=true
 
 before_install:
   - START_TIME=$(date +%s)
