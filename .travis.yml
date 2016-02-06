@@ -15,8 +15,6 @@ env:
 
 
 matrix:
-  allow_failures:
-      - env: OPENCL=true
   include:
     - sudo: required
       env: ==CPU_OPENCL==
@@ -99,6 +97,9 @@ matrix:
            CC=$CCACHE/gcc
            CXX=$CCACHE/g++
            CMAKE_FLAGS=""
+
+  allow_failures:
+      - env: OPENCL=true
 
 before_install:
   - START_TIME=$(date +%s)
