@@ -35,7 +35,7 @@ matrix:
            -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF
            -DOPENMM_BUILD_EXAMPLES=OFF"
       addons: {apt: {packages: []}}
-      allow_failure: true
+      allow_failures: on
 
     - sudo: required
       dist: trusty
