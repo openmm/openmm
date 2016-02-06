@@ -97,8 +97,10 @@ matrix:
            CC=$CCACHE/gcc
            CXX=$CCACHE/g++
            CMAKE_FLAGS=""
+
+matrix:
   allowfailures:
-    - env: ==CPU_OPENCL==
+    - env: OPENCL=true
 
 before_install:
   - START_TIME=$(date +%s)
