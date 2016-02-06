@@ -6775,6 +6775,7 @@ void CudaIntegrateCustomStepKernel::recordGlobalValue(double value, GlobalTarget
         case DT:
             if (value != globalValuesDouble[dtVariableIndex])
                 deviceGlobalsAreCurrent = false;
+            expressionSet.setVariable(dtVariableIndex, value);
             globalValuesDouble[dtVariableIndex] = value;
             cu.getIntegrationUtilities().setNextStepSize(value);
             break;
