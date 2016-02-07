@@ -22,6 +22,7 @@ CMAKE_FLAGS="-DCMAKE_INSTALL_PREFIX=$INSTALL"
 CMAKE_FLAGS+=" -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++"
 CMAKE_FLAGS+=" -DCMAKE_OSX_DEPLOYMENT_TARGET=10.9"
 CMAKE_FLAGS+=" -DCMAKE_OSX_SYSROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.9.sdk"
+CMAKE_FLAGS+=" -DOPENMM_GENERATE_API_DOCS=ON"
 
 # Build in subdirectory.
 # Set location for FFTW3
