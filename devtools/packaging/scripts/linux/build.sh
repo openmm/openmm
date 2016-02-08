@@ -41,7 +41,8 @@ fi
 mkdir build
 cd build
 cmake ../openmm $CMAKE_FLAGS
-make -j4 all PythonInstall C++ApiDocs PythonApiDocs sphinxpdf
+make -j4 all install
+make -j4 PythonInstall C++ApiDocs PythonApiDocs sphinxpdf
 
 # Install.
 make install
