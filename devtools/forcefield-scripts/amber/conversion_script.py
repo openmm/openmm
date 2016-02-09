@@ -130,10 +130,14 @@ quit""" % (leaprc_name, villin_top[1], villin_crd[1])
     print('Done!')
 
 if __name__ == '__main__':
+    if not find_executable('tleap'):
+        raise RuntimeError('tleap not available from PATH')
     if os.getenv('AMBERHOME'):
         AMBERHOME = os.getenv('AMBERHOME')
     else:
-        raise RuntimeError('$AMBERHOME not set')
+        tleap_path = find_executable('tleap')
+        AMBERHOME = os.path.split(tleap_path)[0]
+        AMBERHOME = os.path.join(AMBERHOME, '../')
     if not os.path.exists('ffxml/'):
         os.mkdir('ffxml')
     data = yaml.load(open('files/master.yaml'))
