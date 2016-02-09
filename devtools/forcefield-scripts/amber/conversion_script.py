@@ -17,22 +17,26 @@ warnings.filterwarnings('error')
 
 _loadoffre = re.compile(r'loadoff (\S*)', re.I)
 
-def convert(filename, ignore={}, reference=None):
-    f = open(filename)
+def convert(filename, ignore=None, reference=''):
     basename = os.path.basename(filename)
+    if not os.path.exists('ffxml/'):
+        os.mkdir('ffxml')
     ffxml_name = 'ffxml/' + '.'.join((basename.split('.')[1:] + ['xml']))
     provenance = {}
-    if reference is not None:
-        provenance['Reference'] = reference
+    provenance['Reference'] = reference
     print('Preparing %s for conversion...' % basename)
-    lines = map(lambda line:
-            line if '#' not in line else line[:line.index('#')], f)
-    new_lines = []
-    for line in lines:
-        if _loadoffre.findall(line) and _loadoffre.findall(line)[0] in ignore:
-            continue
-        else:
-            new_lines.append(line)
+    with open(filename) as f:
+        lines = map(lambda line:
+                    line if '#' not in line else line[:line.index('#')], f)
+    if ignore is not None:
+        new_lines = []
+        for line in lines:
+            if _loadoffre.findall(line) and _loadoffre.findall(line)[0] in ignore:
+                continue
+            else:
+                new_lines.append(line)
+    else:
+        new_lines = lines
     leaprc = StringIO(''.join(new_lines))
     print('Converting to ffxml...')
     params = parmed.amber.AmberParameterSet.from_leaprc(leaprc)
@@ -115,7 +119,7 @@ quit""" % (leaprc_name, villin_top[1], villin_crd[1])
             counter += 1
     print('Ala_ala_ala energy validation successful!')
 
-    print('Assering villin headpiece energies...')
+    print('Asserting villin headpiece energies...')
     counter = 0
     for i, j in zip(villin_amber_energies, villin_omm_energies):
         if counter != 3: # Not Impropers
@@ -138,8 +142,6 @@ if __name__ == '__main__':
         tleap_path = find_executable('tleap')
         AMBERHOME = os.path.split(tleap_path)[0]
         AMBERHOME = os.path.join(AMBERHOME, '../')
-    if not os.path.exists('ffxml/'):
-        os.mkdir('ffxml')
     data = yaml.load(open('files/master.yaml'))
     ignore = {'solvents.lib', 'atomic_ions.lib', 'ions94.lib', 'ions91.lib'}
     for entry in data:
