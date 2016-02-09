@@ -1674,6 +1674,95 @@ class NonbondedGenerator(object):
 
 parsers["NonbondedForce"] = NonbondedGenerator.parseElement
 
+class NBFixGenerator(object):
+    """A NBFix generator to construct the L-J force with NBFIX implemented as a lookup table"""
+
+    def __init__(self, forcefield):
+        self.ff = forcefield
+        self.parmas = ForceField._AtomTypeParameters(forcefield, 'NonbondedForce', 'Atom', ('charge', 'sigma', 'epsilon'))
+        # I don't need charge but if I don't list it I get an error when calling parseDefinitions. ValueError:
+        # NonBondedForce: <UseAttributeFromResidue> specified an invalid attribute: charge
+        self.types1 = []
+        self.types2 = []
+        self.emin = []
+        self.rmin = []
+
+    def registerNBFix(self, parameters):
+        types = self.ff._findAtomTypes(parameters, 2)
+        if None not in types:
+            self.types1.append(types[0])
+            self.types2.append(types[1])
+            self.emin.append(_convertParameterToNumber(parameters['emin']))
+            self.rmin.append(_convertParameterToNumber(parameters['rmin']))
+
+
+    @staticmethod
+    def parseElement(element, ff):
+        existing = [f for f in ff._forces if isinstance(f, NBFixGenerator)]
+        if len(existing) == 0:
+            generator = NBFixGenerator(ff)
+            ff.registerGenerator(generator)
+        else:
+            # Multiple <NBFixForce> tags were found, probably in different files
+            generator = existing[0]
+
+        for nbfix in element.findall('NBFix'):
+            generator.registerNBFix(nbfix.attrib)
+        generator.params.parseDefinitions(element)
+
+    def createForce(self, sys, data, nonbfrc, nonbondedMethod):
+        """
+        Parameters
+        ----------
+        sys
+        data
+        nonbfrc: NonbondedForce
+            NonBondedForce for the "standard" nonbonded interactions. This will be modified (specifically, L-J ixns
+            will be zeroed)
+        nonbondedMethod: NonbondedMethod (e.g., NoCutoff, PME, etc)
+            The nonbonded method to apply here. Ewald and PME will be interpreted as CutoffPeriodic for the
+            CustomNonbondedForce
+        """
+        # We need a CustomNonbondedForce to implement the NBFIX functionality.
+        # First derive the lookup tables
+        lj_indx_list = [0 for atom in data.atoms]
+        li_radii, lj_depths = [], []
+        num_lj_types= 0
+        lj_type_list = []
+        for i, atom in enumerate(data.atoms):
+            atype = data.atomTypes[atom]
+            values = self.params.paramsForType[atype]
+            if lj_indx_list[i]: continue # already assigned
+            num_lj_types += 1
+            lj_indx_list[i] = num_lj_types
+            ljtype = (values['sigma'], abs(values['epsilon']))
+            lj_type_list.append(atype)
+            lj_radii.append(values['sigma'])
+            lj_depths.append(abs(values['epsilon']))
+            for j in range(i+1, len(data.atoms)):
+                atype2 = data.atomTypes[data.atoms[j]]
+                if lj_indx_list[j] > 0: continue # already assigned
+                if atype2 is atype:
+                    lj_indx_list[j] = num_lj_types
+                elif not atype in self.types1 or self.types2:
+                    # Only non-NBFix atom types can be compressed
+                    values = self.params.paramsForType[atype2]
+                    ljtype2 = (values['sigma'], abs(values['epsilon']))
+                    if ljtype == ljtype2:
+                        lj_indx_list[j] = num_lj_types
+        # Now everything is assigned. Create the A- and B-coefficient arrays
+        acoef = [0 for i in range(num_lj_types*num_lj_types)]
+        bcoef = acoef[:]
+        for i in range(num_lj_types):
+            for j in range(num_lj_types):
+                namej = lj_type_list[j].name # this might not work...
+                try:
+                    rij, wdij, rij14, wdij14 = lj_type_list[i].nbfix[namej]
+
+
+
+
+parsers["NBFixForce"] = NBFixGenerator.parseElement
 
 ## @private
 class GBSAOBCGenerator(object):
