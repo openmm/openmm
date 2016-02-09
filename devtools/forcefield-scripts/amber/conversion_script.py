@@ -1,9 +1,6 @@
 from __future__ import print_function
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from io import StringIO
 import parmed
+from parmed.utils.six.moves import StringIO, zip
 import simtk.openmm.app as app
 from simtk.unit import *
 import os
