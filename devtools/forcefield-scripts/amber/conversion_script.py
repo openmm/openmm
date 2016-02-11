@@ -12,7 +12,8 @@ from distutils.spawn import find_executable
 import hashlib
 from collections import OrderedDict
 import warnings
-warnings.filterwarnings('error')
+from parmed.exceptions import ParameterWarning
+warnings.filterwarnings('error', category=ParameterWarning)
 
 _loadoffre = re.compile(r'loadoff (\S*)', re.I)
 
