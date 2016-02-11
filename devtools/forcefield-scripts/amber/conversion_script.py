@@ -162,7 +162,11 @@ if __name__ == '__main__':
         print('Converting %s to ffxml...' % leaprc_name)
         ffxml_name = convert(filename, ignore=ignore, provenance=provenance)
         print('Validating the conversion...')
+        tested = False
         for test in leaprc_test:
             if test == 'protein':
                 print('Protein tests...')
                 validate_protein(ffxml_name, leaprc_name)
+                tested = True
+        if not tested:
+            raise RuntimeError('No validation tests have been run')
