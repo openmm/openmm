@@ -169,4 +169,4 @@ if __name__ == '__main__':
                 validate_protein(ffxml_name, leaprc_name)
                 tested = True
         if not tested:
-            raise RuntimeError('No validation tests have been run')
+            raise RuntimeError('No validation tests have been run for %s' % leaprc_name)
