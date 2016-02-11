@@ -143,7 +143,10 @@ if __name__ == '__main__':
     data = yaml.load(open('files/master.yaml'))
     source_pack = data[0]['sourcePackage']
     source_pack_ver = data[0]['sourcePackageVersion']
-    ignore = {'solvents.lib', 'atomic_ions.lib', 'ions94.lib', 'ions91.lib'}
+    # solvents and ions converted separately; leaprc.ff10 calls phosphoaa10.lib
+    # which does not exist anymore, LeAP skips it on error so we do too
+    ignore = {'solvents.lib', 'atomic_ions.lib', 'ions94.lib', 'ions91.lib',
+              'phosphoaa10.lib'}
     for entry in data[1:]:
         leaprc_name = entry['Source']
         leaprc_reference = entry['Reference']
