@@ -1,6 +1,7 @@
 <ForceField>
  <Info>
-  <DateGenerated>2016-02-08</DateGenerated>
+  <DateGenerated>2016-02-11</DateGenerated>
+  <Source md5hash="9b958c38ef60d0d0fb3c027980be07c5" sourcePackage="AmberTools" sourcePackageVersion="15">leaprc.ff14SB.redq</Source>
   <Reference>Maier, J.A., Martinez, C., Kasavajhala, K., Wickstrom, L., Hauser, K.E., and Simmerling, C. (2015). ff14SB: Improving the Accuracy of Protein Side Chain and Backbone Parameters from ff99SB. J. Chem. Theory Comput. 11, 3696-3713.</Reference>
  </Info>
  <AtomTypes>

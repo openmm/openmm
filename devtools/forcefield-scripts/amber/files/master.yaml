@@ -1,40 +1,55 @@
-# AMBER --> OpenMM ffxml conversion YAML
-# Structure: one dictionary / leaprc, all dictionaries nested in a list
-# Dictionary structure: Source: leaprc name, Reference : self-explanatory
-
+# YAML
+- sourcePackage: AmberTools
+  sourcePackageVersion: 15
 - Source: leaprc.ff14SB
-  Reference: >-
-             Maier, J.A., Martinez, C., Kasavajhala, K., Wickstrom, L., Hauser, K.E., and Simmerling, C. (2015).
-             ff14SB: Improving the Accuracy of Protein Side Chain and Backbone Parameters from ff99SB. J. Chem. Theory Comput. 11, 3696-3713.
+  Reference: 
+  - >-
+    Maier, J.A., Martinez, C., Kasavajhala, K., Wickstrom, L., Hauser, K.E., and Simmerling, C. (2015).
+    ff14SB: Improving the Accuracy of Protein Side Chain and Backbone Parameters from ff99SB. J. Chem. Theory Comput. 11, 3696-3713.
+  Test: 
+  - protein
 - Source: leaprc.ff14SB.redq
-  Reference: >-
-             Maier, J.A., Martinez, C., Kasavajhala, K., Wickstrom, L., Hauser, K.E., and Simmerling, C. (2015).
-             ff14SB: Improving the Accuracy of Protein Side Chain and Backbone Parameters from ff99SB. J. Chem. Theory Comput. 11, 3696-3713.
+  Reference: 
+  - >-
+    Maier, J.A., Martinez, C., Kasavajhala, K., Wickstrom, L., Hauser, K.E., and Simmerling, C. (2015).
+    ff14SB: Improving the Accuracy of Protein Side Chain and Backbone Parameters from ff99SB. J. Chem. Theory Comput. 11, 3696-3713.
+  Test:
+  - protein           
 - Source: leaprc.ff14SBonlysc
-  Reference: >-
-             Maier, J.A., Martinez, C., Kasavajhala, K., Wickstrom, L., Hauser, K.E., and Simmerling, C. (2015).
-             ff14SB: Improving the Accuracy of Protein Side Chain and Backbone Parameters from ff99SB. J. Chem. Theory Comput. 11, 3696-3713.
-             
-             Hornak, V., Abel, R., Okur, A., Strockbine, B., Roitberg, A., and Simmerling, C. (2006).
-             Comparison of multiple Amber force fields and development of improved protein backbone parameters. Proteins 65, 712-725.
+  Reference: 
+  - >-
+    Maier, J.A., Martinez, C., Kasavajhala, K., Wickstrom, L., Hauser, K.E., and Simmerling, C. (2015).
+    ff14SB: Improving the Accuracy of Protein Side Chain and Backbone Parameters from ff99SB. J. Chem. Theory Comput. 11, 3696-3713.
+  - >-
+    Hornak, V., Abel, R., Okur, A., Strockbine, B., Roitberg, A., and Simmerling, C. (2006).
+    Comparison of multiple Amber force fields and development of improved protein backbone parameters. Proteins 65, 712-725.
+  Test: 
+  - protein           
+# Mixed dihedrals entries issue 
 #- Source: leaprc.ff14ipq
 #  Reference: >-
 #             Cerutti, D.S., Rice, J.E., Swope, W.C., and Case, D.A. (2013).
 #             Derivation of Fixed Partial Charges for Amino Acids Accommodating a Specific Water Model and Implicit Polarization. J. Phys. Chem. B 117, 2328-2338.
-             
+
 #             Cerutti, D.S., Swope, W.C., Rice, J.E., and Case, D.A. (2014).
 #             ff14ipq: A Self-Consistent Force Field for Condensed-Phase Simulations of Proteins. J. Chem. Theory Comput. 10, 4515-4534.
 - Source: leaprc.ff12SB
-  Reference: >-
-             Maier, J.A., Martinez, C., Kasavajhala, K., Wickstrom, L., Hauser, K.E., and Simmerling, C. (2015).
-             ff14SB: Improving the Accuracy of Protein Side Chain and Backbone Parameters from ff99SB. J. Chem. Theory Comput. 11, 3696-3713.
+  Reference: 
+  - >-
+    Maier, J.A., Martinez, C., Kasavajhala, K., Wickstrom, L., Hauser, K.E., and Simmerling, C. (2015).
+    ff14SB: Improving the Accuracy of Protein Side Chain and Backbone Parameters from ff99SB. J. Chem. Theory Comput. 11, 3696-3713.
+  Test: 
+  - protein           
 - Source: leaprc.ff03.r1
-  Reference: >-
-             Duan, Y., Wu, C., Chowdhury, S., Lee, M.C., Xiong, G., Zhang, W., Yang, R., Cieplak, P., Luo, R., Lee, T., et al. (2003).
-             A point-charge force field for molecular mechanics simulations of proteins based on condensed-phase quantum mechanical calculations. J. Comput. Chem. 24, 1999-2012.
-             
-             Lee, M.C., and Duan, Y. (2004). Distinguish protein decoys by Using a scoring function based on a new AMBER force field,
-             short molecular dynamics simulations, and the generalized born solvent model. Proteins 55, 620-634.
+  Reference: 
+  - >-
+    Duan, Y., Wu, C., Chowdhury, S., Lee, M.C., Xiong, G., Zhang, W., Yang, R., Cieplak, P., Luo, R., Lee, T., et al. (2003).
+    A point-charge force field for molecular mechanics simulations of proteins based on condensed-phase quantum mechanical calculations. J. Comput. Chem. 24, 1999-2012.
+  - >-
+    Lee, M.C., and Duan, Y. (2004). Distinguish protein decoys by Using a scoring function based on a new AMBER force field,
+    short molecular dynamics simulations, and the generalized born solvent model. Proteins 55, 620-634.
+  Test: 
+  - protein           
 #- Source: leaprc.ff03ua
 #  Reference: >-
 #             Yang, L., Tan, C., Hsieh, M.-J., Wang, J., Duan, Y., Cieplak, P., Caldwell, J., Kollman, P.A., and Luo, R. (2006).
@@ -43,9 +58,13 @@
 #  Reference: >-
 #             Wang, J., Wolf, R.M., Caldwell, J.W., Kollman, P.A., and Case, D.A. (2004).
 #             Development and testing of a general amber force field. J. Comput. Chem. 25, 1157-1174.
-
-         
-
-
-
-  
+# Equivalencing vs separate nonbonded params issue
+#- Source: leaprc.ffAM1
+#  Reference: >-
+#             Wollacott, A.M., and Merz, K.M. (2006). Development of a Parametrized Force Field To Reproduce Semiempirical Geometries.
+#             J. Chem. Theory Comput. 2, 1070-1077.
+# Equivalencing vs separate nonbonded params issue
+#- Source: leaprc.ffPM3
+#  Reference: >-
+#             Wollacott, A.M., and Merz, K.M. (2006). Development of a Parametrized Force Field To Reproduce Semiempirical Geometries.
+#             J. Chem. Theory Comput. 2, 1070-1077.

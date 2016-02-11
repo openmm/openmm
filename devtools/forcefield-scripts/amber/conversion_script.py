@@ -9,22 +9,22 @@ from numpy import testing
 import tempfile
 import yaml
 from distutils.spawn import find_executable
+import hashlib
+from collections import OrderedDict
 import warnings
 warnings.filterwarnings('error')
 
 _loadoffre = re.compile(r'loadoff (\S*)', re.I)
 
-def convert(filename, ignore=None, reference=''):
+def convert(filename, ignore=None, provenance=None):
     basename = os.path.basename(filename)
     if not os.path.exists('ffxml/'):
         os.mkdir('ffxml')
     ffxml_name = 'ffxml/' + '.'.join((basename.split('.')[1:] + ['xml']))
-    provenance = {}
-    provenance['Reference'] = reference
     print('Preparing %s for conversion...' % basename)
     with open(filename) as f:
         lines = map(lambda line:
-                    line if '#' not in line else line[:line.index('#')], f)
+                line if '#' not in line else line[:line.index('#')], f)
     if ignore is not None:
         new_lines = []
         for line in lines:
@@ -140,12 +140,29 @@ if __name__ == '__main__':
         AMBERHOME = os.path.split(tleap_path)[0]
         AMBERHOME = os.path.join(AMBERHOME, '../')
     data = yaml.load(open('files/master.yaml'))
+    source_pack = data[0]['sourcePackage']
+    source_pack_ver = data[0]['sourcePackageVersion']
     ignore = {'solvents.lib', 'atomic_ions.lib', 'ions94.lib', 'ions91.lib'}
-    for entry in data:
+    for entry in data[1:]:
         leaprc_name = entry['Source']
         leaprc_reference = entry['Reference']
-        print('Converting %s to ffxml...' % leaprc_name)
+        leaprc_test = entry['Test']
         filename = os.path.join(AMBERHOME, 'dat/leap/cmd', leaprc_name)
-        ffxml_name = convert(filename, ignore=ignore, reference=leaprc_reference)
+        provenance = OrderedDict()
+        source = provenance['Source'] = OrderedDict()
+        source['Source'] = leaprc_name
+        md5 = hashlib.md5()
+        with open(filename) as f:
+            md5.update(f.read())
+        md5 = md5.hexdigest()
+        source['md5hash'] = md5
+        source['sourcePackage'] = source_pack
+        source['sourcePackageVersion'] = source_pack_ver
+        provenance['Reference'] = leaprc_reference
+        print('Converting %s to ffxml...' % leaprc_name)
+        ffxml_name = convert(filename, ignore=ignore, provenance=provenance)
         print('Validating the conversion...')
-        validate_protein(ffxml_name, leaprc_name)
+        for test in leaprc_test:
+            if test == 'protein':
+                print('Protein tests...')
+                validate_protein(ffxml_name, leaprc_name)

@@ -1,8 +1,9 @@
 <ForceField>
  <Info>
-  <DateGenerated>2016-02-08</DateGenerated>
-  <Reference>Maier, J.A., Martinez, C., Kasavajhala, K., Wickstrom, L., Hauser, K.E., and Simmerling, C. (2015). ff14SB: Improving the Accuracy of Protein Side Chain and Backbone Parameters from ff99SB. J. Chem. Theory Comput. 11, 3696-3713.
-Hornak, V., Abel, R., Okur, A., Strockbine, B., Roitberg, A., and Simmerling, C. (2006). Comparison of multiple Amber force fields and development of improved protein backbone parameters. Proteins 65, 712-725.</Reference>
+  <DateGenerated>2016-02-11</DateGenerated>
+  <Source md5hash="1222331a1e9b9489e23d172b54c35d57" sourcePackage="AmberTools" sourcePackageVersion="15">leaprc.ff14SBonlysc</Source>
+  <Reference>Maier, J.A., Martinez, C., Kasavajhala, K., Wickstrom, L., Hauser, K.E., and Simmerling, C. (2015). ff14SB: Improving the Accuracy of Protein Side Chain and Backbone Parameters from ff99SB. J. Chem. Theory Comput. 11, 3696-3713.</Reference>
+  <Reference>Hornak, V., Abel, R., Okur, A., Strockbine, B., Roitberg, A., and Simmerling, C. (2006). Comparison of multiple Amber force fields and development of improved protein backbone parameters. Proteins 65, 712-725.</Reference>
  </Info>
  <AtomTypes>
   <Type name="C" class="C" element="C" mass="12.01"/>
