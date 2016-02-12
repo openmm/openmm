@@ -1,43 +1,194 @@
-language: cpp
-compiler:
-  - clang
+language: python
+
+addons:
+  apt:
+    packages:
+      - gromacs
+      - doxygen
+      - python-numpy
+      - python-scipy
+      - libfftw3-dev
 
 env:
   global:
-    # encrypted AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY to push docs to s3
-    - secure: "VVKz+yOMbKsskR+PfU1HfKBWdGYYrmIXNWQz4nqXCjtg2MRCQmjDulFZaPVDvsBzis9BUhnzAQrBYUrAtN8bZSTYRg7ADFVGdPFicg3Sv0owcghTQwokIvbw3G+HDz/WAnFmqEhqm3t5pNVWNinyHpMM3zYZOVKagyj53cwAM0M="
-    - secure: "W2iPU6ooMujfzJNw9ElaEB8Go1rlNFJ5zEldr3FaH7SDRwqtqNOEp9CegCeG/hHtjg1j8TMyytQtvW+OaMKFIbq7Qqu7nIfwIFTV45vBHW6uwT/jAq/J3EgZ8K7JGyysVVHk86D8jT+xu90YVH5Tx/w97luxHOQGfSK8alhCszw="
+    - CCACHE=$HOME/ccache/lib/ccache/bin
+
+
+matrix:
+  include:
+    - sudo: required
+      dist: trusty
+      env: ==CPU_OPENCL==
+           OPENCL=true
+           CUDA=false
+           CC=$CCACHE/gcc
+           CXX=$CCACHE/g++
+           CMAKE_FLAGS="
+           -OPENMM_BUILD_OPENCL_LIB=ON
+           -DOPENMM_BUILD_OPENCL_TESTS=ON
+           -DOPENMM_BUILD_STATIC_LIB=OFF
+           -DOPENMM_BUILD_CPU_LIB=OFF
+           -DOPENMM_BUILD_REFERENCE_TESTS=OFF
+           -DOPENMM_BUILD_SERIALIZATION_TESTS=OFF
+           -DOPENMM_BUILD_PME_PLUGIN=OFF
+           -DOPENMM_BUILD_AMOEBA_PLUGIN=OFF
+           -DOPENMM_BUILD_PYTHON_WRAPPERS=OFF
+           -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF
+           -DOPENMM_BUILD_EXAMPLES=OFF
+           -DOPENCL_INCLUDE_DIR=$HOME/AMDAPPSDK/include
+           -DOPENCL_LIBRARY=$HOME/AMDAPPSDK/lib/x86_64/libOpenCL.so"
+      addons: {apt: {packages: []}}
+
+    - sudo: required
+      dist: trusty
+      env: ==CUDA_COMPILE==
+           CUDA=true
+           OPENCL=false
+           CUDA_VERSION="7.5-18"
+           CC=$CCACHE/gcc
+           CXX=$CCACHE/g++
+           CMAKE_FLAGS="
+             -DOPENMM_BUILD_CUDA_TESTS=OFF
+             -DOPENMM_BUILD_OPENCL_TESTS=OFF
+             -DOPENMM_BUILD_PYTHON_WRAPPERS=OFF
+             -DOPENMM_BUILD_REFERENCE_TESTS=OFF
+             -DOPENMM_BUILD_SERIALIZATION_TESTS=OFF
+             -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF
+             -DOPENMM_BUILD_EXAMPLES=OFF
+             -DOPENCL_LIBRARY=/usr/local/cuda-7.5/lib64/libOpenCL.so
+             -DCUDA_CUDART_LIBRARY=/usr/local/cuda-7.5/lib64/libcudart.so
+             -DCUDA_NVCC_EXECUTABLE=/usr/local/cuda-7.5/bin/nvcc
+             -DCUDA_SDK_ROOT_DIR=/usr/local/cuda-7.5/
+             -DCUDA_TOOLKIT_INCLUDE=/usr/local/cuda-7.5/include
+             -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-7.5/"
+      addons: {apt: {packages: []}}
+
+    - language: objective-c
+      os: osx
+      env: ==OSX==
+           OPENCL=false
+           CUDA=false
+           CMAKE_FLAGS="
+             -DOPENMM_BUILD_OPENCL_TESTS=OFF
+             -DSWIG_EXECUTABLE=/usr/local/Cellar/swig/3.0.2/bin/swig"
+      addons: {apt: {packages: []}}
+
+    - sudo: false
+      python: 2.7_with_system_site_packages
+      env: ==STATIC_LIB==
+           OPENCL=false
+           CUDA=false
+           CC=$CCACHE/clang
+           CXX=$CCACHE/clang++
+           CMAKE_FLAGS="-DOPENMM_BUILD_STATIC_LIB=ON"
+
+    - sudo: false
+      python: 2.7_with_system_site_packages
+      env: ==PYTHON_2==
+           OPENCL=false
+           CUDA=false
+           CC=$CCACHE/clang
+           CXX=$CCACHE/clang++
+           DOCS_DEPLOY=true
+           CMAKE_FLAGS="-DOPENMM_GENERATE_API_DOCS=ON"
+
+    - sudo: false
+      python: 3.4
+      env: ==PYTHON_3==
+           OPENCL=false
+           CUDA=false
+           CC=$CCACHE/gcc
+           CXX=$CCACHE/g++
+           CMAKE_FLAGS=""
 
 before_install:
-  - sudo apt-get update -qq
-  - sudo apt-get install -qq libpcre3 libpcre3-dev gromacs
-  - sudo apt-get install -qq swig doxygen llvm-3.3
-  - sudo apt-get install -qq python-numpy python-scipy python-pip
-  - sudo pip install nose
-  - export ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer-3.3
+  - START_TIME=$(date +%s)
+  - wget https://anaconda.org/omnia/ccache/3.2.4/download/${TRAVIS_OS_NAME}-64/ccache-3.2.4-0.tar.bz2
+  - mkdir -p $HOME/ccache && tar xf ccache-3.2.4-0.tar.bz2 -C $HOME/ccache
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+      brew install doxygen swig fftw;
+      sudo easy_install pytest;
+    fi
+  - if [[ "$OPENCL" == "true" ]]; then
+      wget https://jenkins.choderalab.org/userContent/AMD-APP-SDKInstaller-v3.0.130.135-GA-linux64.tar.bz2;
+      tar -xjf AMD-APP-SDK*.tar.bz2;
+      AMDAPPSDK=${HOME}/AMDAPPSDK;
+      export OPENCL_VENDOR_PATH=${AMDAPPSDK}/etc/OpenCL/vendors;
+      mkdir -p ${OPENCL_VENDOR_PATH};
+      sh AMD-APP-SDK*.sh --tar -xf -C ${AMDAPPSDK};
+      echo libamdocl64.so > ${OPENCL_VENDOR_PATH}/amdocl64.icd;
+      export LD_LIBRARY_PATH=${AMDAPPSDK}/lib/x86_64:${LD_LIBRARY_PATH};
+      chmod +x ${AMDAPPSDK}/bin/x86_64/clinfo;
+      ${AMDAPPSDK}/bin/x86_64/clinfo;
+    fi
+  # Install swig for Python wrappers. However, testing CUDA and OpenCL, we
+  # skip the Python wrapper for speed. We're not using anaconda python,
+  # but this is a fast way to get an apparently functional precompiled
+  # build of swig that's more modern than what's in apt.
+  - if [[ "$OPENCL" == "false" && "$CUDA" == "false" && "$TRAVIS_OS_NAME" == "linux" ]]; then
+      wget https://anaconda.org/omnia/swig/3.0.7/download/linux-64/swig-3.0.7-0.tar.bz2;
+      mkdir $HOME/swig;
+      tar -xjvf swig-3.0.7-0.tar.bz2 -C $HOME/swig;
+      export PATH=$HOME/swig/bin:$PATH;
+      export SWIG_LIB=$HOME/swig/share/swig/3.0.7;
+    fi
+
+  - if [[ "$CUDA" == "true" ]]; then
+      wget "http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1404/x86_64/cuda-repo-ubuntu1404_${CUDA_VERSION}_amd64.deb";
+      sudo dpkg -i cuda-repo-ubuntu1404_${CUDA_VERSION}_amd64.deb;
+      sudo apt-get update -qq;
+      export CUDA_APT=${CUDA_VERSION%-*};
+      export CUDA_APT=${CUDA_APT/./-};
+      sudo apt-get install -y cuda-drivers cuda-core-${CUDA_APT} cuda-cudart-dev-${CUDA_APT} cuda-cufft-dev-${CUDA_APT};
+      sudo apt-get clean;
+      export CUDA_HOME=/usr/local/cuda-${CUDA_VERSION%%-*};
+      export LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH};
+      export PATH=${CUDA_HOME}/bin:${PATH};
+    fi
 
 script:
-  - cmake -DCMAKE_INSTALL_PREFIX=$HOME/OpenMM .
-  - make -j2
+  - cmake . $CMAKE_FLAGS -DCMAKE_INSTALL_PREFIX=$HOME/OpenMM
   - make -j2 install
-  - sudo make PythonInstall
-  - # Run the testInstallation script
-  - python -m simtk.testInstallation
-  - # run all of the tests, making sure failures at this stage don't cause travis failures
-  - ctest -j2 -V || true
-  - # get a list of all of the failed tests into this stupid ctest format
-  - python -c 'fn = "Testing/Temporary/LastTestsFailed.log"; import os; os.path.exists(fn) or exit(0); l = [line.split(":")[0] for line in open(fn)]; triplets = zip(l, l, [","]*len(l)); print "".join(",".join(t) for t in triplets)' > FailedTests.log
-  - # rerun all of the failed tests
-  - if [ -s FailedTests.log ]; then ctest -V -I FailedTests.log; fi;
-  - # run the python tests too
-  - cd python/tests
-  - nosetests -vv --processes=-1 --process-timeout=200
+  - if [[ "$OPENCL" == "true" ]]; then ./TestOpenCLDeviceQuery; fi
+  - if [[ "$OPENCL" == "false" && "$CUDA" == "false" ]]; then
+      if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+          sudo make PythonInstall;
+      else
+          make PythonInstall;
+      fi;
+      python -m simtk.testInstallation;
+      (cd python/tests && py.test -v);
+    fi
 
-after_success:
-  # Get libraries necessary for building docs and pushing
-  # them to S3
-  - sudo apt-get install python-sphinx python-yaml
-  - sudo pip install sphinxcontrib-bibtex boto
-  - make DoxygenApiDocs
-  - make sphinxhtml
-  - python devtools/ci/push-docs-to-s3.py
+  # Run the tests, and rerun any failing tests.
+  - python devtools/run-ctest.py --start-time $START_TIME
+
+  - if [[ ! -z "${DOCS_DEPLOY}" && "${DOCS_DEPLOY}" = "true" ]]; then
+      pip install sphinx sphinxcontrib-bibtex sphinxcontrib-lunrsearch sphinxcontrib-autodoc_doxygen;
+      make sphinxhtml;
+      make C++ApiDocs PythonApiDocs;
+      mkdir -p api-docs;
+      mv sphinx-docs/userguide/html api-docs/userguide;
+      mv sphinx-docs/developerguide/html api-docs/developerguide;
+      mv api-python api-docs;
+      mv api-c++ api-docs;
+    fi
+
+deploy:
+  - provider: s3
+    access_key_id:
+      secure: "AjE3nuj6kVuf21mOf0aZydW/3S/uCWsaoXC/huRxkxrmsNlnHBNGHZ9N48san1IxZAQM5pyaf7Yo9gkHur9obgq+e3lNgGvPp2mfkNXtLYcLJ46JF4kYliAtutjLWskrLg25Gu3xzF4EQkqSe0Le/oWldWWbTgvvH+KRq/vTHzI="
+    secret_access_key:
+      secure: "ISDQNSG2t0666PULtffo4wsKLFdu622EzuZxmiTxvLkjQGQlqm5+qn1Gd5UMLk7Ts2E0psdnmSrf6LVVCfrrQO/hcZHiJw3ZslMPDBBlRr8Epwdldn98ULhVoyQKtjXjCPzroa2UZCl1RFs4Nwb/VdDlI490XV0Lp4Woj1AT8tY="
+    bucket: "docs.openmm.org"
+    skip_cleanup: true
+    region: us-west-1
+    local_dir: api-docs/
+    upload_dir: development
+    on:
+      branch: master
+      condition: '! -z "${DOCS_DEPLOY}" && "${DOCS_DEPLOY}" = "true"'
+
+cache:
+  directories:
+    - $HOME/.ccache

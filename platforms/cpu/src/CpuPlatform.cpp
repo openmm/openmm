@@ -61,6 +61,7 @@ map<const ContextImpl*, CpuPlatform::PlatformData*> CpuPlatform::contextData;
 CpuPlatform::CpuPlatform() {
     CpuKernelFactory* factory = new CpuKernelFactory();
     registerKernelFactory(CalcForcesAndEnergyKernel::Name(), factory);
+    registerKernelFactory(CalcHarmonicAngleForceKernel::Name(), factory);
     registerKernelFactory(CalcPeriodicTorsionForceKernel::Name(), factory);
     registerKernelFactory(CalcRBTorsionForceKernel::Name(), factory);
     registerKernelFactory(CalcNonbondedForceKernel::Name(), factory);

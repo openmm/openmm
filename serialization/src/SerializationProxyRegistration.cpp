@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -33,8 +33,10 @@
 #include "openmm/BrownianIntegrator.h"
 #include "openmm/CMAPTorsionForce.h"
 #include "openmm/CMMotionRemover.h"
+#include "openmm/CompoundIntegrator.h"
 #include "openmm/CustomAngleForce.h"
 #include "openmm/CustomBondForce.h"
+#include "openmm/CustomCentroidBondForce.h"
 #include "openmm/CustomCompoundBondForce.h"
 #include "openmm/CustomExternalForce.h"
 #include "openmm/CustomGBForce.h"
@@ -44,7 +46,6 @@
 #include "openmm/CustomNonbondedForce.h"
 #include "openmm/CustomTorsionForce.h"
 #include "openmm/GBSAOBCForce.h"
-#include "openmm/GBVIForce.h"
 #include "openmm/HarmonicAngleForce.h"
 #include "openmm/HarmonicBondForce.h"
 #include "openmm/LangevinIntegrator.h"
@@ -65,8 +66,10 @@
 #include "openmm/serialization/AndersenThermostatProxy.h"
 #include "openmm/serialization/CMAPTorsionForceProxy.h"
 #include "openmm/serialization/CMMotionRemoverProxy.h"
+#include "openmm/serialization/CompoundIntegratorProxy.h"
 #include "openmm/serialization/CustomAngleForceProxy.h"
 #include "openmm/serialization/CustomBondForceProxy.h"
+#include "openmm/serialization/CustomCentroidBondForceProxy.h"
 #include "openmm/serialization/CustomCompoundBondForceProxy.h"
 #include "openmm/serialization/CustomExternalForceProxy.h"
 #include "openmm/serialization/CustomGBForceProxy.h"
@@ -76,7 +79,6 @@
 #include "openmm/serialization/CustomNonbondedForceProxy.h"
 #include "openmm/serialization/CustomTorsionForceProxy.h"
 #include "openmm/serialization/GBSAOBCForceProxy.h"
-#include "openmm/serialization/GBVIForceProxy.h"
 #include "openmm/serialization/HarmonicAngleForceProxy.h"
 #include "openmm/serialization/HarmonicBondForceProxy.h"
 #include "openmm/serialization/LangevinIntegratorProxy.h"
@@ -112,11 +114,13 @@ extern "C" void registerSerializationProxies() {
     SerializationProxy::registerProxy(typeid(BrownianIntegrator), new BrownianIntegratorProxy());
     SerializationProxy::registerProxy(typeid(CMAPTorsionForce), new CMAPTorsionForceProxy());
     SerializationProxy::registerProxy(typeid(CMMotionRemover), new CMMotionRemoverProxy());
+    SerializationProxy::registerProxy(typeid(CompoundIntegrator), new CompoundIntegratorProxy());
     SerializationProxy::registerProxy(typeid(Continuous1DFunction), new Continuous1DFunctionProxy());
     SerializationProxy::registerProxy(typeid(Continuous2DFunction), new Continuous2DFunctionProxy());
     SerializationProxy::registerProxy(typeid(Continuous3DFunction), new Continuous3DFunctionProxy());
     SerializationProxy::registerProxy(typeid(CustomAngleForce), new CustomAngleForceProxy());
     SerializationProxy::registerProxy(typeid(CustomBondForce), new CustomBondForceProxy());
+    SerializationProxy::registerProxy(typeid(CustomCentroidBondForce), new CustomCentroidBondForceProxy());
     SerializationProxy::registerProxy(typeid(CustomCompoundBondForce), new CustomCompoundBondForceProxy());
     SerializationProxy::registerProxy(typeid(CustomExternalForce), new CustomExternalForceProxy());
     SerializationProxy::registerProxy(typeid(CustomGBForce), new CustomGBForceProxy());
@@ -129,7 +133,6 @@ extern "C" void registerSerializationProxies() {
     SerializationProxy::registerProxy(typeid(Discrete2DFunction), new Discrete2DFunctionProxy());
     SerializationProxy::registerProxy(typeid(Discrete3DFunction), new Discrete3DFunctionProxy());
     SerializationProxy::registerProxy(typeid(GBSAOBCForce), new GBSAOBCForceProxy());
-    SerializationProxy::registerProxy(typeid(GBVIForce), new GBVIForceProxy());
     SerializationProxy::registerProxy(typeid(HarmonicAngleForce), new HarmonicAngleForceProxy());
     SerializationProxy::registerProxy(typeid(HarmonicBondForce), new HarmonicBondForceProxy());
     SerializationProxy::registerProxy(typeid(LangevinIntegrator), new LangevinIntegratorProxy());

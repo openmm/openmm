@@ -2,9 +2,9 @@
  * Reduce the derivatives computed in the N^2 energy kernel, and compute all per-particle energy terms.
  */
 
-extern "C" __global__ void computePerParticleEnergy(long long* __restrict__ forceBuffers, real* __restrict__ energyBuffer, const real4* __restrict__ posq
+extern "C" __global__ void computePerParticleEnergy(long long* __restrict__ forceBuffers, mixed* __restrict__ energyBuffer, const real4* __restrict__ posq
         PARAMETER_ARGUMENTS) {
-    real energy = 0;
+    mixed energy = 0;
     for (unsigned int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_ATOMS; index += blockDim.x*gridDim.x) {
         // Load the derivatives
 

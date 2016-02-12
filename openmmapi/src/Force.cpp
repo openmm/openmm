@@ -61,6 +61,14 @@ ForceImpl& Force::getImplInContext(Context& context) {
     throw OpenMMException("getImplInContext: This Force is not present in the Context");
 }
 
+const ForceImpl& Force::getImplInContext(const Context& context) const {
+    const vector<ForceImpl*>& impls = context.getImpl().getForceImpls();
+    for (int i = 0; i < (int) impls.size(); i++)
+        if (&impls[i]->getOwner() == this)
+            return *impls[i];
+    throw OpenMMException("getImplInContext: This Force is not present in the Context");
+}
+
 ContextImpl& Force::getContextImpl(Context& context) {
     return context.getImpl();
 }

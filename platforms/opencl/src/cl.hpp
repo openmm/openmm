@@ -143,6 +143,7 @@
  */
 #ifndef CL_HPP_
 #define CL_HPP_
+#define CL_USE_DEPRECATED_OPENCL_2_0_APIS
 
 #ifdef _WIN32
 

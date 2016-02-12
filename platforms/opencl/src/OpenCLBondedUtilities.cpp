@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -33,7 +33,7 @@
 using namespace OpenMM;
 using namespace std;
 
-OpenCLBondedUtilities::OpenCLBondedUtilities(OpenCLContext& context) : context(context), numForceBuffers(0), maxBonds(0), hasInitializedKernels(false) {
+OpenCLBondedUtilities::OpenCLBondedUtilities(OpenCLContext& context) : context(context), numForceBuffers(0), maxBonds(0), allGroups(0), hasInitializedKernels(false) {
 }
 
 OpenCLBondedUtilities::~OpenCLBondedUtilities() {
@@ -48,6 +48,7 @@ void OpenCLBondedUtilities::addInteraction(const vector<vector<int> >& atoms, co
         forceAtoms.push_back(atoms);
         forceSource.push_back(source);
         forceGroup.push_back(group);
+        allGroups |= 1<<group;
         int width = 1;
         while (width < (int) atoms[0].size())
             width *= 2;
@@ -73,7 +74,7 @@ void OpenCLBondedUtilities::initialize(const System& system) {
     if (numForces == 0)
         return;
     
-    // Build the lists of atom indicse and buffer indices.
+    // Build the lists of atom indices and buffer indices.
     
     vector<vector<cl_uint> > bufferVec(numForces);
     vector<vector<int> > bufferCounter(numForces, vector<int>(system.getNumParticles(), 0));
@@ -180,7 +181,7 @@ void OpenCLBondedUtilities::initialize(const System& system) {
         for (int i = 0; i < (int) prefixCode.size(); i++)
             s<<prefixCode[i];
         string bufferType = (context.getSupports64BitGlobalAtomics() ? "long" : "real4");
-        s<<"__kernel void computeBondedForces(__global "<<bufferType<<"* restrict forceBuffers, __global real* restrict energyBuffer, __global const real4* restrict posq, int groups";
+        s<<"__kernel void computeBondedForces(__global "<<bufferType<<"* restrict forceBuffers, __global mixed* restrict energyBuffer, __global const real4* restrict posq, int groups, real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ";
         for (int i = 0; i < setSize; i++) {
             int force = set[i];
             string indexType = "uint"+(indexWidth[force] == 1 ? "" : context.intToString(indexWidth[force]));
@@ -190,7 +191,7 @@ void OpenCLBondedUtilities::initialize(const System& system) {
         for (int i = 0; i < (int) arguments.size(); i++)
             s<<", __global "<<argTypes[i]<<"* customArg"<<(i+1);
         s<<") {\n";
-        s<<"real energy = 0.0f;\n";
+        s<<"mixed energy = 0;\n";
         for (int i = 0; i < setSize; i++) {
             int force = set[i];
             s<<createForceSource(i, forceAtoms[force].size(), forceAtoms[force][0].size(), forceGroup[force], forceSource[force]);
@@ -253,6 +254,8 @@ string OpenCLBondedUtilities::createForceSource(int forceIndex, int numBonds, in
 }
 
 void OpenCLBondedUtilities::computeInteractions(int groups) {
+    if ((groups&allGroups) == 0)
+        return;
     if (!hasInitializedKernels) {
         hasInitializedKernels = true;
         for (int i = 0; i < (int) forceSets.size(); i++) {
@@ -264,7 +267,7 @@ void OpenCLBondedUtilities::computeInteractions(int groups) {
                 kernel.setArg<cl::Buffer>(index++, context.getForceBuffers().getDeviceBuffer());
             kernel.setArg<cl::Buffer>(index++, context.getEnergyBuffer().getDeviceBuffer());
             kernel.setArg<cl::Buffer>(index++, context.getPosq().getDeviceBuffer());
-            index++;
+            index += 6;
             for (int j = 0; j < (int) forceSets[i].size(); j++) {
                 kernel.setArg<cl::Buffer>(index++, atomIndices[forceSets[i][j]]->getDeviceBuffer());
                 kernel.setArg<cl::Buffer>(index++, bufferIndices[forceSets[i][j]]->getDeviceBuffer());
@@ -274,7 +277,22 @@ void OpenCLBondedUtilities::computeInteractions(int groups) {
         }
     }
     for (int i = 0; i < (int) kernels.size(); i++) {
-        kernels[i].setArg<cl_int>(3, groups);
+        cl::Kernel& kernel = kernels[i];
+        kernel.setArg<cl_int>(3, groups);
+        if (context.getUseDoublePrecision()) {
+            kernel.setArg<mm_double4>(4, context.getPeriodicBoxSizeDouble());
+            kernel.setArg<mm_double4>(5, context.getInvPeriodicBoxSizeDouble());
+            kernel.setArg<mm_double4>(6, context.getPeriodicBoxVecXDouble());
+            kernel.setArg<mm_double4>(7, context.getPeriodicBoxVecYDouble());
+            kernel.setArg<mm_double4>(8, context.getPeriodicBoxVecZDouble());
+        }
+        else {
+            kernel.setArg<mm_float4>(4, context.getPeriodicBoxSize());
+            kernel.setArg<mm_float4>(5, context.getInvPeriodicBoxSize());
+            kernel.setArg<mm_float4>(6, context.getPeriodicBoxVecX());
+            kernel.setArg<mm_float4>(7, context.getPeriodicBoxVecY());
+            kernel.setArg<mm_float4>(8, context.getPeriodicBoxVecZ());
+        }
         context.executeKernel(kernels[i], maxBonds);
     }
 }

@@ -74,6 +74,18 @@ public:
     static T* deserialize(std::istream& stream) {
         return reinterpret_cast<T*>(deserializeStream(stream));
     }
+    /**
+     * Clone an object by first serializing it, then deserializing it again.  This method constructs the
+     * new object directly from the SerializationNodes without first converting them to XML.  This means
+     * it is faster and uses less memory than making separate calls to serialize() and deserialize().
+     */
+    template <class T>
+    static T* clone(const T& object) {
+        const SerializationProxy& proxy = SerializationProxy::getProxy(typeid(object));
+        SerializationNode node;
+        proxy.serialize(&object, node);
+        return reinterpret_cast<T*>(proxy.deserialize(node));
+    }
 private:
     class StreamReader;
     static void serialize(const SerializationNode& node, std::ostream& stream);

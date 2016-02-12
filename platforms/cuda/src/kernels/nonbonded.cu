@@ -100,7 +100,7 @@ static __inline__ __device__ long long real_shfl(long long var, int srcLane) {
  *
  */
 extern "C" __global__ void computeNonbonded(
-        unsigned long long* __restrict__ forceBuffers, real* __restrict__ energyBuffer, const real4* __restrict__ posq, const tileflags* __restrict__ exclusions,
+        unsigned long long* __restrict__ forceBuffers, mixed* __restrict__ energyBuffer, const real4* __restrict__ posq, const tileflags* __restrict__ exclusions,
         const ushort2* __restrict__ exclusionTiles, unsigned int startTileIndex, unsigned int numTileIndices
 #ifdef USE_CUTOFF
         , const int* __restrict__ tiles, const unsigned int* __restrict__ interactionCount,real4 periodicBoxSize, real4 invPeriodicBoxSize, 
@@ -112,7 +112,7 @@ extern "C" __global__ void computeNonbonded(
     const unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/TILE_SIZE; // global warpIndex
     const unsigned int tgx = threadIdx.x & (TILE_SIZE-1); // index within the warp
     const unsigned int tbx = threadIdx.x - tgx;           // block warpIndex
-    real energy = 0.0f;
+    mixed energy = 0;
     // used shared memory if the device cannot shuffle
 #ifndef ENABLE_SHUFFLE
     __shared__ AtomData localData[THREAD_BLOCK_SIZE];
@@ -175,6 +175,7 @@ extern "C" __global__ void computeNonbonded(
                 real tempEnergy = 0.0f;
                 COMPUTE_INTERACTION
                 energy += 0.5f*tempEnergy;
+#ifdef INCLUDE_FORCES
 #ifdef USE_SYMMETRIC
                 force.x -= delta.x*dEdR;
                 force.y -= delta.y*dEdR;
@@ -183,6 +184,7 @@ extern "C" __global__ void computeNonbonded(
                 force.x -= dEdR1.x;
                 force.y -= dEdR1.y;
                 force.z -= dEdR1.z;
+#endif
 #endif
 #ifdef USE_EXCLUSIONS
                 excl >>= 1;
@@ -241,6 +243,7 @@ extern "C" __global__ void computeNonbonded(
                 real tempEnergy = 0.0f;
                 COMPUTE_INTERACTION
                 energy += tempEnergy;
+#ifdef INCLUDE_FORCES
 #ifdef USE_SYMMETRIC
                 delta *= dEdR;
                 force.x -= delta.x;
@@ -270,11 +273,12 @@ extern "C" __global__ void computeNonbonded(
                 localData[tbx+tj].fz += dEdR2.z;
 #endif 
 #endif // end USE_SYMMETRIC
-#ifdef USE_EXCLUSIONS
-                excl >>= 1;
-#endif
 #ifdef ENABLE_SHUFFLE
                 SHUFFLE_WARP_DATA
+#endif
+#endif
+#ifdef USE_EXCLUSIONS
+                excl >>= 1;
 #endif
                 // cycles the indices
                 // 0 1 2 3 4 5 6 7 -> 1 2 3 4 5 6 7 0
@@ -282,6 +286,7 @@ extern "C" __global__ void computeNonbonded(
             }
             const unsigned int offset = y*TILE_SIZE + tgx;
             // write results for off diagonal tiles
+#ifdef INCLUDE_FORCES
 #ifdef ENABLE_SHUFFLE
             atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (shflForce.x*0x100000000)));
             atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (shflForce.y*0x100000000)));
@@ -291,12 +296,15 @@ extern "C" __global__ void computeNonbonded(
             atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fy*0x100000000)));
             atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fz*0x100000000)));
 #endif
+#endif
         }
         // Write results for on and off diagonal tiles
+#ifdef INCLUDE_FORCES
         const unsigned int offset = x*TILE_SIZE + tgx;
         atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (force.x*0x100000000)));
         atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (force.y*0x100000000)));
         atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (force.z*0x100000000)));
+#endif
     }
 
     // Second loop: tiles without exclusions, either from the neighbor list (with cutoff) or just enumerating all
@@ -330,9 +338,9 @@ extern "C" __global__ void computeNonbonded(
         if (numTiles <= maxTiles) {
             x = tiles[pos];
             real4 blockSizeX = blockSize[x];
-            singlePeriodicCopy = (0.5f*periodicBoxSize.x-blockSizeX.x >= CUTOFF &&
-                                  0.5f*periodicBoxSize.y-blockSizeX.y >= CUTOFF &&
-                                  0.5f*periodicBoxSize.z-blockSizeX.z >= CUTOFF);
+            singlePeriodicCopy = (0.5f*periodicBoxSize.x-blockSizeX.x >= MAX_CUTOFF &&
+                                  0.5f*periodicBoxSize.y-blockSizeX.y >= MAX_CUTOFF &&
+                                  0.5f*periodicBoxSize.z-blockSizeX.z >= MAX_CUTOFF);
         }
         else
 #endif
@@ -441,6 +449,7 @@ extern "C" __global__ void computeNonbonded(
                     real tempEnergy = 0.0f;
                     COMPUTE_INTERACTION
                     energy += tempEnergy;
+#ifdef INCLUDE_FORCES
 #ifdef USE_SYMMETRIC
                     delta *= dEdR;
                     force.x -= delta.x;
@@ -472,6 +481,7 @@ extern "C" __global__ void computeNonbonded(
 #endif // end USE_SYMMETRIC
 #ifdef ENABLE_SHUFFLE
                     SHUFFLE_WARP_DATA
+#endif
 #endif
                     tj = (tj + 1) & (TILE_SIZE - 1);
                 }
@@ -509,6 +519,7 @@ extern "C" __global__ void computeNonbonded(
                     real tempEnergy = 0.0f;
                     COMPUTE_INTERACTION
                     energy += tempEnergy;
+#ifdef INCLUDE_FORCES
 #ifdef USE_SYMMETRIC
                     delta *= dEdR;
                     force.x -= delta.x;
@@ -541,11 +552,13 @@ extern "C" __global__ void computeNonbonded(
 #ifdef ENABLE_SHUFFLE
                     SHUFFLE_WARP_DATA
 #endif
+#endif
                     tj = (tj + 1) & (TILE_SIZE - 1);
                 }
             }
 
             // Write results.
+#ifdef INCLUDE_FORCES
             atomicAdd(&forceBuffers[atom1], static_cast<unsigned long long>((long long) (force.x*0x100000000)));
             atomicAdd(&forceBuffers[atom1+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (force.y*0x100000000)));
             atomicAdd(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (force.z*0x100000000)));
@@ -565,8 +578,11 @@ extern "C" __global__ void computeNonbonded(
                 atomicAdd(&forceBuffers[atom2+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fz*0x100000000)));
 #endif
             }
+#endif
         }
         pos++;
     }
+#ifdef INCLUDE_ENERGY
     energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] += energy;
+#endif
 }

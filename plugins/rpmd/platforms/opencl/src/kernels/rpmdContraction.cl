@@ -23,13 +23,16 @@ __kernel void contractPositions(__global mixed4* posq, __global mixed4* contract
     const int indexInBlock = get_local_id(0)-blockStart;
     __local mixed4 q[2*THREAD_BLOCK_SIZE];
     __local mixed4 temp[2*THREAD_BLOCK_SIZE];
-    __local mixed2 w[NUM_COPIES];
+    __local mixed2 w1[NUM_COPIES];
+    __local mixed2 w2[NUM_CONTRACTED_COPIES];
     __local mixed4* qreal = &q[blockStart];
     __local mixed4* qimag = &q[blockStart+get_local_size(0)];
     __local mixed4* tempreal = &temp[blockStart];
     __local mixed4* tempimag = &temp[blockStart+get_local_size(0)];
     if (get_local_id(0) < NUM_COPIES)
-        w[indexInBlock] = (mixed2) (cos(-indexInBlock*2*M_PI/NUM_COPIES), sin(-indexInBlock*2*M_PI/NUM_COPIES));
+        w1[indexInBlock] = (mixed2) (cos(-indexInBlock*2*M_PI/NUM_COPIES), sin(-indexInBlock*2*M_PI/NUM_COPIES));
+    if (get_local_id(0) < NUM_CONTRACTED_COPIES)
+        w2[indexInBlock] = (mixed2) (cos(-indexInBlock*2*M_PI/NUM_CONTRACTED_COPIES), sin(-indexInBlock*2*M_PI/NUM_CONTRACTED_COPIES));
     barrier(CLK_LOCAL_MEM_FENCE);
     for (int particle = get_global_id(0)/NUM_COPIES; particle < NUM_ATOMS; particle += numBlocks) {
         // Load the particle position.
@@ -41,6 +44,7 @@ __kernel void contractPositions(__global mixed4* posq, __global mixed4* contract
         // Forward FFT.
         
         barrier(CLK_LOCAL_MEM_FENCE);
+        __local mixed2* w = w1;
         FFT_Q_FORWARD
         if (NUM_CONTRACTED_COPIES > 1) {
             // Compress the data to remove high frequencies.
@@ -54,6 +58,7 @@ __kernel void contractPositions(__global mixed4* posq, __global mixed4* contract
                 qimag[indexInBlock] = tempimag[indexInBlock < start ? indexInBlock : indexInBlock+(NUM_COPIES-NUM_CONTRACTED_COPIES)];
             }
             barrier(CLK_LOCAL_MEM_FENCE);
+            w = w2;
             FFT_Q_BACKWARD
         }
         
@@ -73,13 +78,16 @@ __kernel void contractForces(__global real4* force, __global real4* contracted) 
     const int indexInBlock = get_local_id(0)-blockStart;
     __local mixed4 f[2*THREAD_BLOCK_SIZE];
     __local mixed4 temp[2*THREAD_BLOCK_SIZE];
-    __local mixed2 w[NUM_COPIES];
+    __local mixed2 w1[NUM_COPIES];
+    __local mixed2 w2[NUM_CONTRACTED_COPIES];
     __local mixed4* freal = &f[blockStart];
     __local mixed4* fimag = &f[blockStart+get_local_size(0)];
     __local mixed4* tempreal = &temp[blockStart];
     __local mixed4* tempimag = &temp[blockStart+get_local_size(0)];
     if (get_local_id(0) < NUM_COPIES)
-        w[indexInBlock] = (mixed2) (cos(-indexInBlock*2*M_PI/NUM_COPIES), sin(-indexInBlock*2*M_PI/NUM_COPIES));
+        w1[indexInBlock] = (mixed2) (cos(-indexInBlock*2*M_PI/NUM_COPIES), sin(-indexInBlock*2*M_PI/NUM_COPIES));
+    if (get_local_id(0) < NUM_CONTRACTED_COPIES)
+        w2[indexInBlock] = (mixed2) (cos(-indexInBlock*2*M_PI/NUM_CONTRACTED_COPIES), sin(-indexInBlock*2*M_PI/NUM_CONTRACTED_COPIES));
     barrier(CLK_LOCAL_MEM_FENCE);
     for (int particle = get_global_id(0)/NUM_COPIES; particle < NUM_ATOMS; particle += numBlocks) {
         // Load the force.
@@ -93,6 +101,7 @@ __kernel void contractForces(__global real4* force, __global real4* contracted) 
 
         // Forward FFT.
         
+        __local mixed2* w = w2;
         if (NUM_CONTRACTED_COPIES > 1) {
             FFT_F_FORWARD
         }
@@ -109,6 +118,7 @@ __kernel void contractForces(__global real4* force, __global real4* contracted) 
             fimag[indexInBlock] = (indexInBlock < end ? (mixed4) (0.0f, 0.0f, 0.0f, 0.0f) : tempimag[indexInBlock-(NUM_COPIES-NUM_CONTRACTED_COPIES)]);
         }
         barrier(CLK_LOCAL_MEM_FENCE);
+        w = w1;
         FFT_F_BACKWARD
         
         // Store results.

@@ -8,7 +8,7 @@ Medical Research, grant U54 GM072970. See https://simtk.org.
 
 Portions copyright (c) 2014 Stanford University and the Authors.
 Authors: Robert McGibbon
-Contributors: 
+Contributors:
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -28,6 +28,7 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
+from __future__ import absolute_import
 __author__ = "Robert McGibbon"
 __version__ = "1.0"
 
@@ -70,14 +71,16 @@ class CheckpointReporter(object):
     def __init__(self, file, reportInterval):
         """Create a CheckpointReporter.
 
-        Parameters:
-         - file (string or open file object) The file to write to. Any current
-           contents will be overwritten.
-         - reportInterval (int) The interval (in time steps) at which to write checkpoints
+        Parameters
+        ----------
+        file : string or open file object
+            The file to write to. Any current contents will be overwritten.
+        reportInterval : int
+            The interval (in time steps) at which to write checkpoints.
         """
 
         self._reportInterval = reportInterval
-        if isinstance(file, basestring):
+        if isinstance(file, str):
             self._own_handle = True
             self._out = open(file, 'w+b', 0)
         else:
@@ -87,12 +90,18 @@ class CheckpointReporter(object):
     def describeNextReport(self, simulation):
         """Get information about the next report this object will generate.
 
-        Parameters:
-         - simulation (Simulation) The Simulation to generate a report for
+        Parameters
+        ----------
+        simulation : Simulation
+            The Simulation to generate a report for
 
-        Returns: A five element tuple.  The first element is the number of steps until the
-        next report.  The remaining elements specify whether that report will require
-        positions, velocities, forces, and energies respectively.
+        Returns
+        -------
+        tuple
+            A five element tuple. The first element is the number of steps
+            until the next report. The remaining elements specify whether
+            that report will require positions, velocities, forces, and
+            energies respectively.
         """
         steps = self._reportInterval - simulation.currentStep%self._reportInterval
         return (steps, False, False, False, False)
@@ -100,9 +109,12 @@ class CheckpointReporter(object):
     def report(self, simulation, state):
         """Generate a report.
 
-        Parameters:
-         - simulation (Simulation) The Simulation to generate a report for
-         - state (State) The current state of the simulation
+        Parameters
+        ----------
+        simulation : Simulation
+            The Simulation to generate a report for
+        state : State
+            The current state of the simulation
         """
         self._out.seek(0)
         chk = simulation.context.createCheckpoint()

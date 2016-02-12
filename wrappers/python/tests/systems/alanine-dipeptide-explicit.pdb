@@ -1,4 +1,6 @@
 REMARK   1 CREATED WITH OPENMM 5.2, 2013-10-01
+REMARK   1 CRYST1 ADDED MANUALLY BY JDC 2016-06-02
+CRYST1   32.853   32.862   31.855  90.00  90.00  90.00 P 1           1
 ATOM      1  H1  ACE A   1      15.908  11.969  16.089  1.00  0.00           H  
 ATOM      2  CH3 ACE A   1      15.377  12.899  15.886  1.00  0.00           C  
 ATOM      3  H2  ACE A   1      14.471  12.940  16.490  1.00  0.00           H  

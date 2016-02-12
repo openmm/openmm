@@ -1,4 +1,0 @@
-__kernel void computeGlobal(__global mixed2* restrict dt, __global mixed* restrict globals, __global mixed* restrict params,
-        float uniform, float gaussian, const real energy) {
-    COMPUTE_STEP
-}

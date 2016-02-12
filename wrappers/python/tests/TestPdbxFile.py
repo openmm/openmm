@@ -3,6 +3,7 @@ from simtk.openmm.app import *
 from simtk.openmm import *
 from simtk.unit import *
 import simtk.openmm.app.element as elem
+import os
 
 class TestPdbxFile(unittest.TestCase):
     """Test the PDBx/mmCIF file parser"""
@@ -48,6 +49,71 @@ class TestPdbxFile(unittest.TestCase):
             diff = abs(p1[i]-p2[i])/scale
             self.assertTrue(diff < tol)
 
+    def testReporterImplicit(self):
+        """ Tests the PDBxReporter without PBC """
+        parm = AmberPrmtopFile('systems/alanine-dipeptide-implicit.prmtop')
+        system = parm.createSystem()
+        sim = Simulation(parm.topology, system, VerletIntegrator(1*femtoseconds),
+                         Platform.getPlatformByName('Reference'))
+        sim.context.setPositions(PDBFile('systems/alanine-dipeptide-implicit.pdb').getPositions())
+        sim.reporters.append(PDBxReporter('test.cif', 1))
+        sim.step(10)
+        pdb = PDBxFile('test.cif')
+        self.assertEqual(len(list(pdb.topology.atoms())), len(list(parm.topology.atoms())))
+        self.assertEqual(len(list(pdb.topology.residues())), len(list(parm.topology.residues())))
+        for res1, res2 in zip(pdb.topology.residues(), parm.topology.residues()):
+            self.assertEqual(res1.name, res2.name)
+            for atom1, atom2 in zip(res1.atoms(), res2.atoms()):
+                self.assertEqual(atom1.name, atom2.name)
+        positions = pdb.getPositions(frame=9)
+        self.assertFalse(all(x1 == x2 for x1, x2 in zip(positions, pdb.getPositions(frame=0))))
+        # There should only be 10 frames (0 through 9)
+        self.assertRaises(IndexError, lambda: pdb.getPositions(frame=10))
+        self.assertIs(pdb.topology.getPeriodicBoxVectors(), None)
+        del sim
+        os.unlink('test.cif')
+
+    def assertAlmostEqualVec(self, vec1, vec2, *args, **kwargs):
+        if is_quantity(vec1):
+            vec1 = vec1.value_in_unit_system(md_unit_system)
+        if is_quantity(vec2):
+            vec2 = vec2.value_in_unit_system(md_unit_system)
+        for x, y in zip(vec1, vec2):
+            self.assertAlmostEqual(x, y, *args, **kwargs)
+
+    def testReporterExplicit(self):
+        """ Tests the PDBxReporter with PBC """
+        parm = AmberPrmtopFile('systems/alanine-dipeptide-explicit.prmtop')
+        system = parm.createSystem(nonbondedCutoff=1.0, nonbondedMethod=PME)
+        sim = Simulation(parm.topology, system, VerletIntegrator(1*femtoseconds),
+                         Platform.getPlatformByName('Reference'))
+        orig_pdb = PDBFile('systems/alanine-dipeptide-explicit.pdb')
+        sim.context.setPositions(orig_pdb.getPositions())
+        sim.context.setPeriodicBoxVectors(*parm.topology.getPeriodicBoxVectors())
+        sim.reporters.append(PDBxReporter('test.cif', 1))
+        sim.step(10)
+        pdb = PDBxFile('test.cif')
+        self.assertEqual(len(list(pdb.topology.atoms())), len(list(parm.topology.atoms())))
+        self.assertEqual(len(list(pdb.topology.residues())), len(list(parm.topology.residues())))
+        for res1, res2 in zip(pdb.topology.residues(), parm.topology.residues()):
+            self.assertEqual(res1.name, res2.name)
+            for atom1, atom2 in zip(res1.atoms(), res2.atoms()):
+                self.assertEqual(atom1.name, atom2.name)
+        positions = pdb.getPositions(frame=9)
+        self.assertFalse(all(x1 == x2 for x1, x2 in zip(positions, pdb.getPositions(frame=0))))
+        # There should only be 10 frames (0 through 9)
+        self.assertRaises(IndexError, lambda: pdb.getPositions(frame=10))
+        self.assertAlmostEqualVec(parm.topology.getPeriodicBoxVectors()[0],
+                                  pdb.topology.getPeriodicBoxVectors()[0],
+                                  places=5)
+        self.assertAlmostEqualVec(parm.topology.getPeriodicBoxVectors()[1],
+                                  pdb.topology.getPeriodicBoxVectors()[1],
+                                  places=5)
+        self.assertAlmostEqualVec(parm.topology.getPeriodicBoxVectors()[2],
+                                  pdb.topology.getPeriodicBoxVectors()[2],
+                                  places=5)
+        del sim
+        os.unlink('test.cif')
 
 if __name__ == '__main__':
     unittest.main()

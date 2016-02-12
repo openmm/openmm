@@ -24,6 +24,7 @@
 
 #include "SimTKOpenMMUtilities.h"
 #include "CpuNonbondedForceVec4.h"
+#include <algorithm>
 
 using namespace std;
 using namespace OpenMM;

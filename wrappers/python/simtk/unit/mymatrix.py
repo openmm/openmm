@@ -28,6 +28,7 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
+from __future__ import print_function, division, absolute_import
 
 import sys
 
@@ -41,9 +42,9 @@ def eye(size):
      [0, 0, 1]]
     """
     result = []
-    for row in range(0, size):
+    for row in range(size):
         r = []
-        for col in range(0, size):
+        for col in range(size):
             if row == col:
                 r.append(1)
             else:
@@ -63,9 +64,9 @@ def zeros(m, n=None):
     if n is None:
         n = m
     result = []
-    for row in range(0, m):
+    for row in range(m):
         r = []
-        for col in range(0, n):
+        for col in range(n):
             r.append(0)
         result.append(r)
     return MyMatrix(result)
@@ -171,7 +172,7 @@ class MyMatrix(MyVector):
     def __str__(self):
         result = ""
         start_char = "["
-        for m in range(0, self.numRows()):
+        for m in range(self.numRows()):
             result += start_char
             result += str(self[m])
             if m < self.numRows() - 1:
@@ -226,9 +227,9 @@ class MyMatrix(MyVector):
         if self.numCols() != r:
             raise ArithmeticError("Matrix multplication size mismatch (%d vs %d)" % (self.numCols(), r))
         result = zeros(m, n)
-        for i in range(0, m):
-            for j in range(0, n):
-                for k in range(0, r):
+        for i in range(m):
+            for j in range(n):
+                for k in range(r):
                     result[i][j] += self[i][k]*rhs[k][j]
         return result
 
@@ -245,8 +246,8 @@ class MyMatrix(MyVector):
         assert len(rhs) == m
         assert len(rhs[0]) == n
         result = zeros(m,n)
-        for i in range(0,m):
-            for j in range(0,n):
+        for i in range(m):
+            for j in range(n):
                 result[i][j] = self[i][j] + rhs[i][j]
         return result
 
@@ -263,8 +264,8 @@ class MyMatrix(MyVector):
         assert len(rhs) == m
         assert len(rhs[0]) == n
         result = zeros(m,n)
-        for i in range(0,m):
-            for j in range(0,n):
+        for i in range(m):
+            for j in range(n):
                 result[i][j] = self[i][j] - rhs[i][j]
         return result
 
@@ -275,8 +276,8 @@ class MyMatrix(MyVector):
         m = self.numRows()
         n = self.numCols()
         result = zeros(m, n)
-        for i in range(0,m):
-            for j in range(0,n):
+        for i in range(m):
+            for j in range(n):
                 result[i][j] = -self[i][j]
         return result
 
@@ -358,7 +359,7 @@ class MyMatrix(MyVector):
                 ipiv[icol] += 1
                 # We now have the pivot element, so we interchange rows...
                 if irow != icol:
-                    for l in range(0,n):
+                    for l in range(n):
                         temp = a[irow][l]
                         a[irow][l] = a[icol][l]
                         a[icol][l] = temp
@@ -368,20 +369,20 @@ class MyMatrix(MyVector):
                     raise ArithmeticError("Cannot invert singular matrix")
                 pivinv = 1.0/a[icol][icol]
                 a[icol][icol] = 1.0
-                for l in range(0,n):
+                for l in range(n):
                     a[icol][l] *= pivinv
-                for ll in range(0,n): # next we reduce the rows
+                for ll in range(n): # next we reduce the rows
                     if ll == icol:
                         continue # except the pivot one, of course
                     dum = a[ll][icol]
                     a[ll][icol] = 0.0
-                    for l in range(0,n):
+                    for l in range(n):
                         a[ll][l] -= a[icol][l]*dum
             # Unscramble the permuted columns
             for l in range(n-1, -1, -1):
                 if indxr[l] == indxc[l]:
                     continue
-                for k in range(0,n):
+                for k in range(n):
                     temp = a[k][indxr[l]]
                     a[k][indxr[l]] = a[k][indxc[l]]
                     a[k][indxc[l]] = temp
@@ -415,7 +416,7 @@ class MyMatrixTranspose(MyMatrix):
             return MyVector(result)
 
     def __setitem__(self, key, rhs):
-        for n in range(0, len(self.data)):
+        for n in range(len(self.data)):
             self.data[n][key] = rhs[n]
 
     def __str__(self):
@@ -423,11 +424,11 @@ class MyMatrixTranspose(MyMatrix):
             return "[[]]"
         start_char = "["
         result = ""
-        for m in range(0, len(self.data[0])):
+        for m in range(len(self.data[0])):
             result += start_char
             result += "["
             sep_char = ""
-            for n in range(0, len(self.data)):
+            for n in range(len(self.data)):
                 result += sep_char
                 result += str(self.data[n][m])
                 sep_char = ", "
@@ -443,11 +444,11 @@ class MyMatrixTranspose(MyMatrix):
             return "MyMatrixTranspose([[]])"
         start_char = "["
         result = 'MyMatrixTranspose('
-        for m in range(0, len(self.data[0])):
+        for m in range(len(self.data[0])):
             result += start_char
             result += "["
             sep_char = ""
-            for n in range(0, len(self.data)):
+            for n in range(len(self.data)):
                 result += sep_char
                 result += repr(self.data[n][m])
                 sep_char = ", "

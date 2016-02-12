@@ -27,9 +27,9 @@
 
 #include "ReferenceForce.h"
 #include "ReferenceBondIxn.h"
-#include "CompiledExpressionSet.h"
 #include "CpuNeighborList.h"
 #include "openmm/CustomManyParticleForce.h"
+#include "openmm/internal/CompiledExpressionSet.h"
 #include "openmm/internal/ThreadPool.h"
 #include "openmm/internal/vectorize.h"
 #include "lepton/CompiledExpression.h"

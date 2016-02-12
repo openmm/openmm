@@ -198,8 +198,8 @@ string OpenCLParameterSet::getParameterSuffix(int index, const std::string& extr
  * Define template instantiations for float and double versions of getParameterValues() and setParameterValues().
  */
 namespace OpenMM {
-template void OpenCLParameterSet::getParameterValues<float>(vector<vector<float> >& values) const;
-template void OpenCLParameterSet::setParameterValues<float>(const vector<vector<float> >& values);
-template void OpenCLParameterSet::getParameterValues<double>(vector<vector<double> >& values) const;
-template void OpenCLParameterSet::setParameterValues<double>(const vector<vector<double> >& values);
+template OPENMM_EXPORT_OPENCL void OpenCLParameterSet::getParameterValues<float>(vector<vector<float> >& values) const;
+template OPENMM_EXPORT_OPENCL void OpenCLParameterSet::setParameterValues<float>(const vector<vector<float> >& values);
+template OPENMM_EXPORT_OPENCL void OpenCLParameterSet::getParameterValues<double>(vector<vector<double> >& values) const;
+template OPENMM_EXPORT_OPENCL void OpenCLParameterSet::setParameterValues<double>(const vector<vector<double> >& values);
 }

@@ -37,13 +37,14 @@
 #include "SimTKOpenMMRealType.h"
 #include "ReferenceNeighborList.h"
 #include "lepton/CompiledExpression.h"
+#include "lepton/CustomFunction.h"
 #include "lepton/ExpressionProgram.h"
 
 namespace OpenMM {
 
 class ReferenceObc;
-class ReferenceGBVI;
 class ReferenceAndersenThermostat;
+class ReferenceCustomCentroidBondIxn;
 class ReferenceCustomCompoundBondIxn;
 class ReferenceCustomHbondIxn;
 class ReferenceCustomManyParticleIxn;
@@ -577,6 +578,15 @@ public:
      * @param force      the NonbondedForce to copy the parameters from
      */
     void copyParametersToContext(ContextImpl& context, const NonbondedForce& force);
+    /**
+     * Get the parameters being used for PME.
+     * 
+     * @param alpha   the separation parameter
+     * @param nx      the number of grid points along the X axis
+     * @param ny      the number of grid points along the Y axis
+     * @param nz      the number of grid points along the Z axis
+     */
+    void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
 private:
     int numParticles, num14;
     int **bonded14IndexArray;
@@ -673,37 +683,6 @@ private:
 };
 
 /**
- * This kernel is invoked by GBVIForce to calculate the forces acting on the system.
- */
-class ReferenceCalcGBVIForceKernel : public CalcGBVIForceKernel {
-public:
-    ReferenceCalcGBVIForceKernel(std::string name, const Platform& platform) : CalcGBVIForceKernel(name, platform) {
-    }
-    ~ReferenceCalcGBVIForceKernel();
-    /**
-     * Initialize the kernel.
-     * 
-     * @param system       the System this kernel will be applied to
-     * @param force        the GBVIForce this kernel will be used for
-     * @param scaled radii the scaled radii (Eq. 5 of Labute paper)
-     */
-    void initialize(const System& system, const GBVIForce& force, const std::vector<double> & scaledRadii);
-    /**
-     * Execute the kernel to calculate the forces and/or energy.
-     *
-     * @param context        the context in which to execute this kernel
-     * @param includeForces  true if forces should be calculated
-     * @param includeEnergy  true if the energy should be calculated
-     * @return the potential energy due to the force
-     */
-    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-private:
-    ReferenceGBVI * gbvi;
-    std::vector<RealOpenMM> charges;
-    bool isPeriodic;
-};
-
-/**
  * This kernel is invoked by CustomGBForce to calculate the forces acting on the system.
  */
 class ReferenceCalcCustomGBForceKernel : public CalcCustomGBForceKernel {
@@ -785,11 +764,23 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const CustomExternalForce& force);
 private:
+    class PeriodicDistanceFunction;
     int numParticles;
     std::vector<int> particles;
     RealOpenMM **particleParamArray;
     Lepton::CompiledExpression energyExpression, forceExpressionX, forceExpressionY, forceExpressionZ;
     std::vector<std::string> parameterNames, globalParameterNames;
+    RealVec* boxVectors;
+};
+
+class ReferenceCalcCustomExternalForceKernel::PeriodicDistanceFunction : public Lepton::CustomFunction {
+public:
+    RealVec** boxVectorHandle;
+    PeriodicDistanceFunction(RealVec** boxVectorHandle);
+    int getNumArguments() const;
+    double evaluate(const double* arguments) const;
+    double evaluateDerivative(const double* arguments, const int* derivOrder) const;
+    Lepton::CustomFunction* clone() const;
 };
 
 /**
@@ -834,6 +825,44 @@ private:
 };
 
 /**
+ * This kernel is invoked by CustomCentroidBondForce to calculate the forces acting on the system.
+ */
+class ReferenceCalcCustomCentroidBondForceKernel : public CalcCustomCentroidBondForceKernel {
+public:
+    ReferenceCalcCustomCentroidBondForceKernel(std::string name, const Platform& platform) : CalcCustomCentroidBondForceKernel(name, platform), ixn(NULL) {
+    }
+    ~ReferenceCalcCustomCentroidBondForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomCentroidBondForce this kernel will be used for
+     */
+    void initialize(const System& system, const CustomCentroidBondForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomCentroidBondForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const CustomCentroidBondForce& force);
+private:
+    int numBonds, numParticles;
+    RealOpenMM **bondParamArray;
+    ReferenceCustomCentroidBondIxn* ixn;
+    std::vector<std::string> globalParameterNames;
+};
+
+/**
  * This kernel is invoked by CustomCompoundBondForce to calculate the forces acting on the system.
  */
 class ReferenceCalcCustomCompoundBondForceKernel : public CalcCustomCompoundBondForceKernel {
@@ -865,7 +894,7 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const CustomCompoundBondForce& force);
 private:
-    int numBonds, numParticles;
+    int numBonds;
     RealOpenMM **bondParamArray;
     ReferenceCustomCompoundBondIxn* ixn;
     std::vector<std::string> globalParameterNames;

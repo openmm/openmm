@@ -62,10 +62,10 @@ private:
     bool useDouble;
 };
 
-CudaNonbondedUtilities::CudaNonbondedUtilities(CudaContext& context) : context(context), cutoff(-1.0), useCutoff(false), usePeriodic(false), anyExclusions(false), usePadding(true),
+CudaNonbondedUtilities::CudaNonbondedUtilities(CudaContext& context) : context(context), useCutoff(false), usePeriodic(false), anyExclusions(false), usePadding(true),
         exclusionIndices(NULL), exclusionRowIndices(NULL), exclusionTiles(NULL), exclusions(NULL), interactingTiles(NULL), interactingAtoms(NULL),
         interactionCount(NULL), blockCenter(NULL), blockBoundingBox(NULL), sortedBlocks(NULL), sortedBlockCenter(NULL), sortedBlockBoundingBox(NULL),
-        oldPositions(NULL), rebuildNeighborList(NULL), blockSorter(NULL), nonbondedForceGroup(0), forceRebuildNeighborList(true) {
+        oldPositions(NULL), rebuildNeighborList(NULL), blockSorter(NULL), forceRebuildNeighborList(true), lastCutoff(0.0), groupFlags(0) {
     // Decide how many thread blocks to use.
 
     string errorMessage = "Error initializing nonbonded utilities";
@@ -109,24 +109,28 @@ CudaNonbondedUtilities::~CudaNonbondedUtilities() {
 }
 
 void CudaNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic, bool usesExclusions, double cutoffDistance, const vector<vector<int> >& exclusionList, const string& kernel, int forceGroup) {
-    if (cutoff != -1.0) {
+    if (groupCutoff.size() > 0) {
         if (usesCutoff != useCutoff)
             throw OpenMMException("All Forces must agree on whether to use a cutoff");
         if (usesPeriodic != usePeriodic)
             throw OpenMMException("All Forces must agree on whether to use periodic boundary conditions");
-        if (cutoffDistance != cutoff)
-            throw OpenMMException("All Forces must use the same cutoff distance");
-        if (forceGroup != nonbondedForceGroup)
-            throw OpenMMException("All nonbonded forces must be in the same force group");
+        if (usesCutoff && groupCutoff.find(forceGroup) != groupCutoff.end() && groupCutoff[forceGroup] != cutoffDistance)
+            throw OpenMMException("All Forces in a single force group must use the same cutoff distance");
     }
     if (usesExclusions)
         requestExclusions(exclusionList);
     useCutoff = usesCutoff;
     usePeriodic = usesPeriodic;
-    cutoff = cutoffDistance;
-    if (kernel.size() > 0)
-        kernelSource += kernel+"\n";
-    nonbondedForceGroup = forceGroup;
+    groupCutoff[forceGroup] = cutoffDistance;
+    groupFlags |= 1<<forceGroup;
+    if (kernel.size() > 0) {
+        if (groupKernelSource.find(forceGroup) == groupKernelSource.end())
+            groupKernelSource[forceGroup] = "";
+        map<string, string> replacements;
+        replacements["CUTOFF"] = "CUTOFF_"+context.intToString(forceGroup);
+        replacements["CUTOFF_SQUARED"] = "CUTOFF_"+context.intToString(forceGroup)+"_SQUARED";
+        groupKernelSource[forceGroup] += context.replaceStrings(kernel, replacements)+"\n";
+    }
 }
 
 void CudaNonbondedUtilities::addParameter(const ParameterInfo& parameter) {
@@ -213,6 +217,9 @@ void CudaNonbondedUtilities::initialize(const System& system) {
         exclusionIndicesVec.insert(exclusionIndicesVec.end(), exclusionBlocksForBlock[i].begin(), exclusionBlocksForBlock[i].end());
         exclusionRowIndicesVec[i+1] = exclusionIndicesVec.size();
     }
+    maxExclusions = 0;
+    for (int i = 0; i < (int) exclusionBlocksForBlock.size(); i++)
+        maxExclusions = (maxExclusions > exclusionBlocksForBlock[i].size() ? maxExclusions : exclusionBlocksForBlock[i].size());
     exclusionIndices = CudaArray::create<unsigned int>(context, exclusionIndicesVec.size(), "exclusionIndices");
     exclusionRowIndices = CudaArray::create<unsigned int>(context, exclusionRowIndicesVec.size(), "exclusionRowIndices");
     exclusionIndices->upload(exclusionIndicesVec);
@@ -270,29 +277,33 @@ void CudaNonbondedUtilities::initialize(const System& system) {
         interactionCount->upload(count);
     }
 
-    // Create kernels.
+    // Record arguments for kernels.
 
-    if (kernelSource.size() > 0)
-        forceKernel = createInteractionKernel(kernelSource, parameters, arguments, true, true);
+    forceArgs.push_back(&context.getForce().getDevicePointer());
+    forceArgs.push_back(&context.getEnergyBuffer().getDevicePointer());
+    forceArgs.push_back(&context.getPosq().getDevicePointer());
+    forceArgs.push_back(&exclusions->getDevicePointer());
+    forceArgs.push_back(&exclusionTiles->getDevicePointer());
+    forceArgs.push_back(&startTileIndex);
+    forceArgs.push_back(&numTiles);
     if (useCutoff) {
-        double padding = (usePadding ? 0.1*cutoff : 0.0);
-        double paddedCutoff = cutoff+padding;
-        map<string, string> defines;
-        defines["TILE_SIZE"] = context.intToString(CudaContext::TileSize);
-        defines["NUM_BLOCKS"] = context.intToString(context.getNumAtomBlocks());
-        defines["NUM_ATOMS"] = context.intToString(context.getNumAtoms());
-        defines["PADDING"] = context.doubleToString(padding);
-        defines["PADDED_CUTOFF"] = context.doubleToString(paddedCutoff);
-        defines["PADDED_CUTOFF_SQUARED"] = context.doubleToString(paddedCutoff*paddedCutoff);
-        defines["NUM_TILES_WITH_EXCLUSIONS"] = context.intToString(exclusionTiles->getSize());
-        if (usePeriodic)
-            defines["USE_PERIODIC"] = "1";
-        int maxExclusions = 0;
-        for (int i = 0; i < (int) exclusionBlocksForBlock.size(); i++)
-            maxExclusions = (maxExclusions > exclusionBlocksForBlock[i].size() ? maxExclusions : exclusionBlocksForBlock[i].size());
-        defines["MAX_EXCLUSIONS"] = context.intToString(maxExclusions);
-        CUmodule interactingBlocksProgram = context.createModule(CudaKernelSources::vectorOps+CudaKernelSources::findInteractingBlocks, defines);
-        findBlockBoundsKernel = context.getKernel(interactingBlocksProgram, "findBlockBounds");
+        forceArgs.push_back(&interactingTiles->getDevicePointer());
+        forceArgs.push_back(&interactionCount->getDevicePointer());
+        forceArgs.push_back(context.getPeriodicBoxSizePointer());
+        forceArgs.push_back(context.getInvPeriodicBoxSizePointer());
+        forceArgs.push_back(context.getPeriodicBoxVecXPointer());
+        forceArgs.push_back(context.getPeriodicBoxVecYPointer());
+        forceArgs.push_back(context.getPeriodicBoxVecZPointer());
+        forceArgs.push_back(&maxTiles);
+        forceArgs.push_back(&blockCenter->getDevicePointer());
+        forceArgs.push_back(&blockBoundingBox->getDevicePointer());
+        forceArgs.push_back(&interactingAtoms->getDevicePointer());
+    }
+    for (int i = 0; i < (int) parameters.size(); i++)
+        forceArgs.push_back(&parameters[i].getMemory());
+    for (int i = 0; i < (int) arguments.size(); i++)
+        forceArgs.push_back(&arguments[i].getMemory());
+    if (useCutoff) {
         findBlockBoundsArgs.push_back(&numAtoms);
         findBlockBoundsArgs.push_back(context.getPeriodicBoxSizePointer());
         findBlockBoundsArgs.push_back(context.getInvPeriodicBoxSizePointer());
@@ -304,7 +315,6 @@ void CudaNonbondedUtilities::initialize(const System& system) {
         findBlockBoundsArgs.push_back(&blockBoundingBox->getDevicePointer());
         findBlockBoundsArgs.push_back(&rebuildNeighborList->getDevicePointer());
         findBlockBoundsArgs.push_back(&sortedBlocks->getDevicePointer());
-        sortBoxDataKernel = context.getKernel(interactingBlocksProgram, "sortBoxData");
         sortBoxDataArgs.push_back(&sortedBlocks->getDevicePointer());
         sortBoxDataArgs.push_back(&blockCenter->getDevicePointer());
         sortBoxDataArgs.push_back(&blockBoundingBox->getDevicePointer());
@@ -315,7 +325,6 @@ void CudaNonbondedUtilities::initialize(const System& system) {
         sortBoxDataArgs.push_back(&interactionCount->getDevicePointer());
         sortBoxDataArgs.push_back(&rebuildNeighborList->getDevicePointer());
         sortBoxDataArgs.push_back(&forceRebuildNeighborList);
-        findInteractingBlocksKernel = context.getKernel(interactingBlocksProgram, "findBlocksWithInteractions");
         findInteractingBlocksArgs.push_back(context.getPeriodicBoxSizePointer());
         findInteractingBlocksArgs.push_back(context.getInvPeriodicBoxSizePointer());
         findInteractingBlocksArgs.push_back(context.getPeriodicBoxVecXPointer());
@@ -338,42 +347,66 @@ void CudaNonbondedUtilities::initialize(const System& system) {
     }
 }
 
-void CudaNonbondedUtilities::prepareInteractions() {
+double CudaNonbondedUtilities::getMaxCutoffDistance() {
+    double cutoff = 0.0;
+    for (map<int, double>::const_iterator iter = groupCutoff.begin(); iter != groupCutoff.end(); ++iter)
+        cutoff = max(cutoff, iter->second);
+    return cutoff;
+}
+
+void CudaNonbondedUtilities::prepareInteractions(int forceGroups) {
+    if ((forceGroups&groupFlags) == 0)
+        return;
+    if (groupKernels.find(forceGroups) == groupKernels.end())
+        createKernelsForGroups(forceGroups);
     if (!useCutoff)
         return;
     if (numTiles == 0)
         return;
+    KernelSet& kernels = groupKernels[forceGroups];
     if (usePeriodic) {
         double4 box = context.getPeriodicBoxSize();
-        double minAllowedSize = 1.999999*cutoff;
+        double minAllowedSize = 1.999999*kernels.cutoffDistance;
         if (box.x < minAllowedSize || box.y < minAllowedSize || box.z < minAllowedSize)
             throw OpenMMException("The periodic box size has decreased to less than twice the nonbonded cutoff.");
     }
 
     // Compute the neighbor list.
 
-    context.executeKernel(findBlockBoundsKernel, &findBlockBoundsArgs[0], context.getNumAtoms());
-    blockSorter->sort(*sortedBlocks);
-    context.executeKernel(sortBoxDataKernel, &sortBoxDataArgs[0], context.getNumAtoms());
-    context.executeKernel(findInteractingBlocksKernel, &findInteractingBlocksArgs[0], context.getNumAtoms(), 256);
-    forceRebuildNeighborList = false;
+    if (lastCutoff != kernels.cutoffDistance)
+        forceRebuildNeighborList = true;
+    bool rebuild = false;
+    do {
+        context.executeKernel(kernels.findBlockBoundsKernel, &findBlockBoundsArgs[0], context.getNumAtoms());
+        blockSorter->sort(*sortedBlocks);
+        context.executeKernel(kernels.sortBoxDataKernel, &sortBoxDataArgs[0], context.getNumAtoms());
+        context.executeKernel(kernels.findInteractingBlocksKernel, &findInteractingBlocksArgs[0], context.getNumAtoms(), 256);
+        forceRebuildNeighborList = false;
+        if (context.getComputeForceCount() == 1)
+            rebuild = updateNeighborListSize(); // This is the first time step, so check whether our initial guess was large enough.
+    } while(rebuild);
+    lastCutoff = kernels.cutoffDistance;
 }
 
-void CudaNonbondedUtilities::computeInteractions() {
-    if (kernelSource.size() > 0) {
-        context.executeKernel(forceKernel, &forceArgs[0], numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
-        if (context.getComputeForceCount() == 1)
-            updateNeighborListSize(); // This is the first time step, so check whether our initial guess was large enough.
+void CudaNonbondedUtilities::computeInteractions(int forceGroups, bool includeForces, bool includeEnergy) {
+    if ((forceGroups&groupFlags) == 0)
+        return;
+    KernelSet& kernels = groupKernels[forceGroups];
+    if (kernels.hasForces) {
+        CUfunction& kernel = (includeForces ? (includeEnergy ? kernels.forceEnergyKernel : kernels.forceKernel) : kernels.energyKernel);
+        if (kernel == NULL)
+            kernel = createInteractionKernel(kernels.source, parameters, arguments, true, true, forceGroups, includeForces, includeEnergy);
+        context.executeKernel(kernel, &forceArgs[0], numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
     }
 }
 
-void CudaNonbondedUtilities::updateNeighborListSize() {
+bool CudaNonbondedUtilities::updateNeighborListSize() {
     if (!useCutoff)
-        return;
+        return false;
     unsigned int* pinnedInteractionCount = (unsigned int*) context.getPinnedBuffer();
     interactionCount->download(pinnedInteractionCount);
     if (pinnedInteractionCount[0] <= (unsigned int) maxTiles)
-        return;
+        return false;
 
     // The most recent timestep had too many interactions to fit in the arrays.  Make the arrays bigger to prevent
     // this from happening in the future.
@@ -395,6 +428,7 @@ void CudaNonbondedUtilities::updateNeighborListSize() {
         forceArgs[17] = &interactingAtoms->getDevicePointer();
     findInteractingBlocksArgs[7] = &interactingAtoms->getDevicePointer();
     forceRebuildNeighborList = true;
+    return true;
 }
 
 void CudaNonbondedUtilities::setUsePadding(bool padding) {
@@ -411,7 +445,43 @@ void CudaNonbondedUtilities::setAtomBlockRange(double startFraction, double endF
     forceRebuildNeighborList = true;
 }
 
-CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source, vector<ParameterInfo>& params, vector<ParameterInfo>& arguments, bool useExclusions, bool isSymmetric) {
+void CudaNonbondedUtilities::createKernelsForGroups(int groups) {
+    KernelSet kernels;
+    double cutoff = 0.0;
+    string source;
+    for (int i = 0; i < 32; i++) {
+        if ((groups&(1<<i)) != 0) {
+            cutoff = max(cutoff, groupCutoff[i]);
+            source += groupKernelSource[i];
+        }
+    }
+    kernels.hasForces = (source.size() > 0);
+    kernels.cutoffDistance = cutoff;
+    kernels.source = source;
+    kernels.forceKernel = kernels.energyKernel = kernels.forceEnergyKernel = NULL;
+    if (useCutoff) {
+        double padding = (usePadding ? 0.1*cutoff : 0.0);
+        double paddedCutoff = cutoff+padding;
+        map<string, string> defines;
+        defines["TILE_SIZE"] = context.intToString(CudaContext::TileSize);
+        defines["NUM_BLOCKS"] = context.intToString(context.getNumAtomBlocks());
+        defines["NUM_ATOMS"] = context.intToString(context.getNumAtoms());
+        defines["PADDING"] = context.doubleToString(padding);
+        defines["PADDED_CUTOFF"] = context.doubleToString(paddedCutoff);
+        defines["PADDED_CUTOFF_SQUARED"] = context.doubleToString(paddedCutoff*paddedCutoff);
+        defines["NUM_TILES_WITH_EXCLUSIONS"] = context.intToString(exclusionTiles->getSize());
+        if (usePeriodic)
+            defines["USE_PERIODIC"] = "1";
+        defines["MAX_EXCLUSIONS"] = context.intToString(maxExclusions);
+        CUmodule interactingBlocksProgram = context.createModule(CudaKernelSources::vectorOps+CudaKernelSources::findInteractingBlocks, defines);
+        kernels.findBlockBoundsKernel = context.getKernel(interactingBlocksProgram, "findBlockBounds");
+        kernels.sortBoxDataKernel = context.getKernel(interactingBlocksProgram, "sortBoxData");
+        kernels.findInteractingBlocksKernel = context.getKernel(interactingBlocksProgram, "findBlocksWithInteractions");
+    }
+    groupKernels[groups] = kernels;
+}
+
+CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source, vector<ParameterInfo>& params, vector<ParameterInfo>& arguments, bool useExclusions, bool isSymmetric, int groups, bool includeForces, bool includeEnergy) {
     map<string, string> replacements;
     replacements["COMPUTE_INTERACTION"] = source;
     const string suffixes[] = {"x", "y", "z", "w"};
@@ -587,9 +657,21 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
         defines["USE_SYMMETRIC"] = "1";
     if (useShuffle)
         defines["ENABLE_SHUFFLE"] = "1";
+    if (includeForces)
+        defines["INCLUDE_FORCES"] = "1";
+    if (includeEnergy)
+        defines["INCLUDE_ENERGY"] = "1";
     defines["THREAD_BLOCK_SIZE"] = context.intToString(forceThreadBlockSize);
-    defines["CUTOFF_SQUARED"] = context.doubleToString(cutoff*cutoff);
-    defines["CUTOFF"] = context.doubleToString(cutoff);
+    double maxCutoff = 0.0;
+    for (int i = 0; i < 32; i++) {
+        if ((groups&(1<<i)) != 0) {
+            double cutoff = groupCutoff[i];
+            maxCutoff = max(maxCutoff, cutoff);
+            defines["CUTOFF_"+context.intToString(i)+"_SQUARED"] = context.doubleToString(cutoff*cutoff);
+            defines["CUTOFF_"+context.intToString(i)] = context.doubleToString(cutoff);
+        }
+    }
+    defines["MAX_CUTOFF"] = context.doubleToString(maxCutoff);
     defines["NUM_ATOMS"] = context.intToString(context.getNumAtoms());
     defines["PADDED_NUM_ATOMS"] = context.intToString(context.getPaddedNumAtoms());
     defines["NUM_BLOCKS"] = context.intToString(context.getNumAtomBlocks());
@@ -605,33 +687,5 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
         defines["PARAMETER_SIZE_IS_EVEN"] = "1";
     CUmodule program = context.createModule(CudaKernelSources::vectorOps+context.replaceStrings(CudaKernelSources::nonbonded, replacements), defines);
     CUfunction kernel = context.getKernel(program, "computeNonbonded");
-
-    // Set arguments to the Kernel.
-
-    int index = 0;
-    forceArgs.push_back(&context.getForce().getDevicePointer());
-    forceArgs.push_back(&context.getEnergyBuffer().getDevicePointer());
-    forceArgs.push_back(&context.getPosq().getDevicePointer());
-    forceArgs.push_back(&exclusions->getDevicePointer());
-    forceArgs.push_back(&exclusionTiles->getDevicePointer());
-    forceArgs.push_back(&startTileIndex);
-    forceArgs.push_back(&numTiles);
-    if (useCutoff) {
-        forceArgs.push_back(&interactingTiles->getDevicePointer());
-        forceArgs.push_back(&interactionCount->getDevicePointer());
-        forceArgs.push_back(context.getPeriodicBoxSizePointer());
-        forceArgs.push_back(context.getInvPeriodicBoxSizePointer());
-        forceArgs.push_back(context.getPeriodicBoxVecXPointer());
-        forceArgs.push_back(context.getPeriodicBoxVecYPointer());
-        forceArgs.push_back(context.getPeriodicBoxVecZPointer());
-        forceArgs.push_back(&maxTiles);
-        forceArgs.push_back(&blockCenter->getDevicePointer());
-        forceArgs.push_back(&blockBoundingBox->getDevicePointer());
-        forceArgs.push_back(&interactingAtoms->getDevicePointer());
-    }
-    for (int i = 0; i < (int) params.size(); i++)
-        forceArgs.push_back(&params[i].getMemory());
-    for (int i = 0; i < (int) arguments.size(); i++)
-        forceArgs.push_back(&arguments[i].getMemory());
     return kernel;
 }

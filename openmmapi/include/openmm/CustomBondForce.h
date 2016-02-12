@@ -159,7 +159,7 @@ public:
      * Set the default value of a global parameter.
      *
      * @param index          the index of the parameter for which to set the default value
-     * @param name           the default value of the parameter
+     * @param defaultValue   the default value of the parameter
      */
     void setGlobalParameterDefaultValue(int index, double defaultValue);
     /**
@@ -170,14 +170,14 @@ public:
      * @param parameters    the list of parameters for the new bond
      * @return the index of the bond that was added
      */
-    int addBond(int particle1, int particle2, const std::vector<double>& parameters);
+    int addBond(int particle1, int particle2, const std::vector<double>& parameters=std::vector<double>());
     /**
      * Get the force field parameters for a bond term.
      *
-     * @param index         the index of the bond for which to get parameters
-     * @param particle1     the index of the first particle connected by the bond
-     * @param particle2     the index of the second particle connected by the bond
-     * @param parameters    the list of parameters for the bond
+     * @param      index         the index of the bond for which to get parameters
+     * @param[out] particle1     the index of the first particle connected by the bond
+     * @param[out] particle2     the index of the second particle connected by the bond
+     * @param[out] parameters    the list of parameters for the bond
      */
     void getBondParameters(int index, int& particle1, int& particle2, std::vector<double>& parameters) const;
     /**
@@ -188,13 +188,13 @@ public:
      * @param particle2     the index of the second particle connected by the bond
      * @param parameters    the list of parameters for the bond
      */
-    void setBondParameters(int index, int particle1, int particle2, const std::vector<double>& parameters);
+    void setBondParameters(int index, int particle1, int particle2, const std::vector<double>& parameters=std::vector<double>());
     /**
      * Update the per-bond parameters in a Context to match those stored in this Force object.  This method provides
      * an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
      * Simply call setBondParameters() to modify this object's parameters, then call updateParametersInContext()
      * to copy them over to the Context.
-     * 
+     *
      * This method has several limitations.  The only information it updates is the values of per-bond parameters.
      * All other aspects of the Force (such as the energy function) are unaffected and can only be changed by reinitializing
      * the Context.  The set of particles involved in a bond cannot be changed, nor can new bonds be added.

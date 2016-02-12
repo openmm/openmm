@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -81,6 +81,7 @@ void testSerialization() {
 
     AmoebaTorsionTorsionForce force1;
 
+    force1.setForceGroup(3);
     for (unsigned int ii = 0; ii < 5; ii++) {
         std::vector< std::vector< std::vector<double> > > gridVector;
         loadTorsionTorsionGrid(gridVector);
@@ -99,6 +100,7 @@ void testSerialization() {
     // Compare the two force1s to see if they are identical.  
 
     AmoebaTorsionTorsionForce & force2 = *copy;
+    ASSERT_EQUAL(force1.getForceGroup(), force2.getForceGroup());
     ASSERT_EQUAL(force1.getNumTorsionTorsions(), force2.getNumTorsionTorsions());
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(force1.getNumTorsionTorsions()); ii++) {
 

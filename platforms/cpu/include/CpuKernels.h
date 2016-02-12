@@ -93,6 +93,46 @@ private:
 };
 
 /**
+ * This kernel is invoked by HarmonicAngleForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CpuCalcHarmonicAngleForceKernel : public CalcHarmonicAngleForceKernel {
+public:
+    CpuCalcHarmonicAngleForceKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data) :
+            CalcHarmonicAngleForceKernel(name, platform), data(data), angleIndexArray(NULL), angleParamArray(NULL) {
+    }
+    ~CpuCalcHarmonicAngleForceKernel();
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param force      the HarmonicAngleForce this kernel will be used for
+     */
+    void initialize(const System& system, const HarmonicAngleForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the HarmonicAngleForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force);
+private:
+    CpuPlatform::PlatformData& data;
+    int numAngles;
+    int **angleIndexArray;
+    RealOpenMM **angleParamArray;
+    CpuBondForce bondForce;
+};
+
+/**
  * This kernel is invoked by PeriodicTorsionForce to calculate the forces acting on the system and the energy of the system.
  */
 class CpuCalcPeriodicTorsionForceKernel : public CalcPeriodicTorsionForceKernel {
@@ -204,6 +244,15 @@ public:
      * @param force      the NonbondedForce to copy the parameters from
      */
     void copyParametersToContext(ContextImpl& context, const NonbondedForce& force);
+    /**
+     * Get the parameters being used for PME.
+     * 
+     * @param alpha   the separation parameter
+     * @param nx      the number of grid points along the X axis
+     * @param ny      the number of grid points along the Y axis
+     * @param nz      the number of grid points along the Z axis
+     */
+    void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
 private:
     class PmeIO;
     CpuPlatform::PlatformData& data;
@@ -220,6 +269,7 @@ private:
     CpuNeighborList* neighborList;
     CpuNonbondedForce* nonbonded;
     Kernel optimizedPme;
+    CpuBondForce bondForce;
 };
 
 /**

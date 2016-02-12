@@ -33,6 +33,7 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
+from __future__ import absolute_import
 import os
 from simtk.openmm.app.internal.charmm._charmmfile import (
             CharmmFile, CharmmStreamFile)
@@ -50,41 +51,43 @@ class CharmmParameterSet(object):
     the information found in the MASS section of the CHARMM topology file
     (TOP/RTF) and all of the information in the parameter files (PAR)
 
-    Parameters:
-        - filenames : List of topology, parameter, and stream files to load into
-          the parameter set. The following file type suffixes are recognized.
-          Unrecognized file types raise a TypeError
-            .rtf, .top -- Residue topology file
-            .par, .prm -- Parameter file
-            .str -- Stream file
-            .inp -- If "par" is in the file name, it is a parameter file. If
+    Parameters
+    ----------
+    filenames : List of topology, parameter, and stream files to load into the parameter set.
+        The following file type suffixes are recognized. Unrecognized file types raise a TypeError
+          * .rtf, .top -- Residue topology file
+          * .par, .prm -- Parameter file
+          * .str -- Stream file
+          * .inp -- If "par" is in the file name, it is a parameter file. If
                     "top" is in the file name, it is a topology file. Otherwise,
                     raise TypeError
 
-    Attributes:
-        All type lists are dictionaries whose keys are tuples (with however
-        many elements are needed to define that type of parameter). The types
-        that can be in any order are SORTED.
-        
-        - atom_types_str
-        - atom_types_int
-        - atom_types_tuple
-        - bond_types
-        - angle_types
-        - urey_bradley_types
-        - dihedral_types
-        - improper_types
-        - cmap_types
-        - nbfix_types
+    Attributes
+    ----------
+    All type lists are dictionaries whose keys are tuples (with however
+    many elements are needed to define that type of parameter). The types
+    that can be in any order are SORTED.
 
-        The dihedral types can be multiterm, so the values for each dict key is
-        actually a list of DihedralType instances. The atom_types are dicts that
-        match the name (str), number (int), or (name, number) tuple (tuple) to
-        the atom type. The tuple is guaranteed to be the most robust, although
-        when only the integer or string is available the other dictionaries are
-        helpful
+    - atom_types_str
+    - atom_types_int
+    - atom_types_tuple
+    - bond_types
+    - angle_types
+    - urey_bradley_types
+    - dihedral_types
+    - improper_types
+    - cmap_types
+    - nbfix_types
 
-    Example:
+    The dihedral types can be multiterm, so the values for each dict key is
+    actually a list of DihedralType instances. The atom_types are dicts that
+    match the name (str), number (int), or (name, number) tuple (tuple) to
+    the atom type. The tuple is guaranteed to be the most robust, although
+    when only the integer or string is available the other dictionaries are
+    helpful
+
+    Examples
+    --------
     >>> params = CharmmParameterSet('charmm22.top', 'charmm22.par', 'file.str')
     """
 
@@ -99,7 +102,7 @@ class CharmmParameterSet(object):
         except ValueError:
             raise CharmmFileError('Could not convert %s to %s' % (msg, type))
 
-    def __init__(self, *args):
+    def __init__(self, *args, **kwargs):
         # Instantiate the list types
         self.atom_types_str = dict()
         self.atom_types_int = dict()
@@ -134,37 +137,51 @@ class CharmmParameterSet(object):
                     raise TypeError('Unrecognized file type: %s' % arg)
             else:
                 raise TypeError('Unrecognized file type: %s' % arg)
+
+        permissive=kwargs.pop("permissive", False)
+        if len(kwargs):
+            raise TypeError('Unrecognised named argument')
+
         for top in tops: self.readTopologyFile(top)
-        for par in pars: self.readParameterFile(par)
+        for par in pars: self.readParameterFile(par, permissive=permissive)
         for strf in strs: self.readStreamFile(strf)
 
     @classmethod
-    def loadSet(cls, tfile=None, pfile=None, sfiles=[]):
+    def loadSet(cls, tfile=None, pfile=None, sfiles=[], permissive=False):
         """
         Instantiates a CharmmParameterSet from a Topology file and a Parameter
         file (or just a Parameter file if it has all information)
 
-        Parameters:
-            - tfile (str) : Name of the Topology (RTF/TOP) file
-            - pfile (str) : Name of the Parameter (PAR) file
-            - sfiles (list of str) : List or tuple of stream (STR) file names.
+        Parameters
+        -----------
+        tfile : str
+            Name of the Topology (RTF/TOP) file
+        pfile : str
+            Name of the Parameter (PAR) file
+        sfiles : list of str
+            List or tuple of stream (STR) file names.
+        permissive : bool=False
+            Accept non-bonbded parameters for undefined atom types
 
-        Returns:
+        Returns
+        -------
+        CharmmParameterSet
             New CharmmParameterSet populated with the parameters found in the
             provided files.
-            
-        Notes:
-            The RTF file is read first (if provided), followed by the PAR file,
-            followed by the list of stream files (in the order they are
-            provided). Parameters in each stream file will overwrite those that
-            came before (or simply append to the existing set if they are
-            different)
+
+        Notes
+        -----
+        The RTF file is read first (if provided), followed by the PAR file,
+        followed by the list of stream files (in the order they are
+        provided). Parameters in each stream file will overwrite those that
+        came before (or simply append to the existing set if they are
+        different)
         """
         inst = cls()
         if tfile is not None:
             inst.readTopologyFile(tfile)
         if pfile is not None:
-            inst.readParameterFile(pfile)
+            inst.readParameterFile(pfile, permissive=permissive)
         if isinstance(sfiles, str):
             # The API docstring requests a list, but allow for users to pass a
             # string with a single filename instead
@@ -174,20 +191,25 @@ class CharmmParameterSet(object):
                 inst.readStreamFile(sfile)
         return inst
 
-    def readParameterFile(self, pfile):
-        """
-        Reads all of the parameters from a parameter file. Versions 36 and
-        later of the CHARMM force field files have an ATOMS section defining
-        all of the atom types.  Older versions need to load this information
-        from the RTF/TOP files.
+    def readParameterFile(self, pfile, permissive=False):
+        """Reads all of the parameters from a parameter file. Versions 36 and later
+        of the CHARMM force field files have an ATOMS section defining all of
+        the atom types.  Older versions need to load this information from the
+        RTF/TOP files.
 
-        Parameters:
-            - pfile (str) : Name of the CHARMM PARameter file to read
+        Parameters
+        ----------
+        pfile : str
+            Name of the CHARMM PARameter file to read
+        permissive : bool
+            Accept non-bonbded parameters for undefined atom types (default:
+            False).
 
-        Notes: The atom types must all be loaded by the end of this routine.
-        Either supply a PAR file with atom definitions in them or read in a
-        RTF/TOP file first. Failure to do so will result in a raised
-        RuntimeError.
+        Notes
+        -----
+        The atom types must all be loaded by the end of this routine. Either
+        supply a PAR file with atom definitions in them or read in a RTF/TOP
+        file first. Failure to do so will result in a raised RuntimeError.
         """
         conv = CharmmParameterSet._convert
         if isinstance(pfile, str):
@@ -343,7 +365,7 @@ class CharmmParameterSet(object):
                         if dtype.per == dihedral.per:
                             # Replace. Warn if they are different
                             if dtype != dihedral:
-                                warnings.warn('Replacing dihedral %r with %r' % 
+                                warnings.warn('Replacing dihedral %r with %r' %
                                               (dtype, dihedral))
                             self.dihedral_types[key]
                             replaced = True
@@ -428,7 +450,7 @@ class CharmmParameterSet(object):
                     # soldier on
                     if not read_first_nonbonded: continue
                     raise CharmmFileError('Could not parse nonbonded terms.')
-                except CharmmFileError, e:
+                except CharmmFileError as e:
                     if not read_first_nonbonded: continue
                     raise CharmmFileError(str(e))
                 else:
@@ -476,6 +498,23 @@ class CharmmParameterSet(object):
         if current_cmap is not None:
             ty = CmapType(current_cmap_res, current_cmap_data)
             self.cmap_types[current_cmap] = ty
+
+        # If in permissive mode create an atomtype for every type used in
+        # the nonbonded parameters. This is a work-around for when all that's
+        # available is a CHARMM22 inp file, which has no ATOM/MASS fields
+
+        if permissive:
+            try:
+               idx = max(self.atom_types_int.keys())+1000
+            except ValueError:
+               idx = 10000
+            for key in nonbonded_types:
+                if not key in self.atom_types_str:
+                    atype =AtomType(name=key, number=idx, mass= float('NaN'), atomic_number= 1 )
+                    self.atom_types_str[key] = atype
+                    self.atom_types_int[idx] = atype
+                    idx=idx+1
+
         # Now we're done. Load the nonbonded types into the relevant AtomType
         # instances. In order for this to work, all keys in nonbonded_types
         # must be in the self.atom_types_str dict. Raise a RuntimeError if this
@@ -486,18 +525,22 @@ class CharmmParameterSet(object):
         except KeyError:
             raise RuntimeError('Atom type %s not present in AtomType list' %
                                key)
+
         if parameterset is not None: self.parametersets.append(parameterset)
         if own_handle: f.close()
 
     def readTopologyFile(self, tfile):
-        """
-        Reads _only_ the atom type definitions from a topology file. This is
+        """Reads _only_ the atom type definitions from a topology file. This is
         unnecessary for versions 36 and later of the CHARMM force field.
 
-        Parameters:
-            - tfile (str) : Name of the CHARMM TOPology file to read
+        Parameters
+        ----------
+        tfile : str
+            : Name of the CHARMM TOPology file to read
 
-        Note: The CHARMM TOPology file is also called a Residue Topology File
+        Notes
+        -----
+        The CHARMM TOPology file is also called a Residue Topology File
         """
         conv = CharmmParameterSet._convert
         if isinstance(tfile, str):
@@ -536,12 +579,13 @@ class CharmmParameterSet(object):
         if own_handle: f.close()
 
     def readStreamFile(self, sfile):
-        """
-        Reads RTF and PAR sections from a stream file and dispatches the
+        """Reads RTF and PAR sections from a stream file and dispatches the
         sections to readTopologyFile or readParameterFile
 
-        Parameters:
-            - sfile (str or CharmmStreamFile) : Stream file to parse
+        Parameters
+        ----------
+        sfile : str or CharmmStreamFile
+            Stream file to parse
         """
         if isinstance(sfile, CharmmStreamFile):
             f = sfile
@@ -566,14 +610,8 @@ class CharmmParameterSet(object):
         bond, angle, dihedral, improper, or cmap type will pair with EVERY key
         in the type mapping dictionaries that points to the equivalent type
 
-        Returns:
-            - Returns the instance that is being condensed.
-
-        Notes:
-            The return value allows you to condense the types at construction
-            time.
-
-        Example:
+        Example
+        -------
         >>> params = CharmmParameterSet('charmm.prm').condense()
         """
         # First scan through all of the bond types
@@ -587,7 +625,7 @@ class CharmmParameterSet(object):
         # multiterm dihedral have to have a DIFFERENT periodicity, we don't have
         # to condense _within_ a single list of torsions assigned to the same
         # key (they're guaranteed to be different)
-        keylist = self.dihedral_types.keys()
+        keylist = list(self.dihedral_types.keys())
         for i in range(len(keylist) - 1):
             key1 = keylist[i]
             for dihedral in self.dihedral_types[key1]:
@@ -603,10 +641,12 @@ class CharmmParameterSet(object):
         """
         Loops through the given dict and condenses all types.
 
-        Parameter:
-            - typedict : Type dictionary to condense
+        Parameters
+        ----------
+        typedict
+            Type dictionary to condense
         """
-        keylist = typedict.keys()
+        keylist = list(typedict.keys())
         for i in range(len(keylist) - 1):
             key1 = keylist[i]
             for j in range(i+1, len(keylist)):

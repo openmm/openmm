@@ -22,7 +22,7 @@ for filename in $( cat openmm/devtools/packaging/manifests/binary/manifest.txt )
 done
 
 # Add the install.sh script
-CMD="cp -r openmm/install.sh $PACKAGE_DIR/$PACKAGE_SUBDIR"
+CMD="cp -r openmm/devtools/packaging/install.sh $PACKAGE_DIR/$PACKAGE_SUBDIR"
 echo $CMD
 `$CMD`
 

@@ -28,12 +28,18 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
+from __future__ import absolute_import
 __author__ = "Christopher M. Bruns"
 __version__ = "1.0"
 
+import sys
 from collections import OrderedDict
 from simtk.unit import daltons, is_quantity
-import copy_reg
+if sys.version_info >= (3, 0):
+    import copyreg
+else:
+    import copy_reg as copyreg
+
 
 class Element(object):
     """An Element represents a chemical element.
@@ -52,11 +58,16 @@ class Element(object):
     def __init__(self, number, name, symbol, mass):
         """Create a new element
 
-        Parameters:
-        number (int) The atomic number of the element
-        name (string) The name of the element
-        symbol (string) The chemical symbol of the element
-        mass (float) The atomic mass of the element
+        Parameters
+        ----------
+        number : int
+            The atomic number of the element
+        name : string
+            The name of the element
+        symbol : string
+            The chemical symbol of the element
+        mass : float
+            The atomic mass of the element
         """
         ## The atomic number of the element
         self._atomic_number = number
@@ -109,7 +120,7 @@ class Element(object):
 
         Returns
         -------
-        element : Element
+        Element
             The element whose atomic mass is closest to the input mass
         """
         # Assume masses are in daltons if they are not units
@@ -123,17 +134,17 @@ class Element(object):
             Element._elements_by_mass = OrderedDict()
             for elem in sorted(Element._elements_by_symbol.values(),
                                key=lambda x: x.mass):
-                Element._elements_by_mass[elem.mass] = elem
+                Element._elements_by_mass[elem.mass.value_in_unit(daltons)] = elem
 
         diff = mass
         best_guess = None
 
-        for elemmass, element in Element._elements_by_mass.iteritems():
-            massdiff = abs(elemmass._value - mass)
+        for elemmass, element in _iteritems(Element._elements_by_mass):
+            massdiff = abs(elemmass - mass)
             if massdiff < diff:
                 best_guess = element
                 diff = massdiff
-            if elemmass._value > mass:
+            if elemmass > mass:
                 # Elements are only getting heavier, so bail out early
                 return best_guess
 
@@ -172,7 +183,7 @@ def get_by_symbol(symbol):
 def _pickle_element(element):
     return (get_by_symbol, (element.symbol,))
 
-copy_reg.pickle(Element, _pickle_element)
+copyreg.pickle(Element, _pickle_element)
 
 # NOTE: getElementByMass assumes all masses are Quantity instances with unit
 # "daltons". All elements need to obey this assumption, or that method will
@@ -299,3 +310,10 @@ ununhexium =     Element(116, "ununhexium",     "Uuh", 292*daltons)
 # relational operators will work with any chosen name
 sulphur = sulfur
 aluminium = aluminum
+
+if sys.version_info >= (3, 0):
+    def _iteritems(dict):
+        return dict.items()
+else:
+    def _iteritems(dict):
+        return dict.iteritems()

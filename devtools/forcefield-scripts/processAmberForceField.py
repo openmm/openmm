@@ -405,8 +405,10 @@ for index, type in enumerate(types):
             sigma = (params[0]/params[1])**(1.0/6.0)
             epsilon = 4.184*params[1]*params[1]/(4*params[0])
     else:
-        sigma = 0
+        sigma = 1
         epsilon = 0
+    if sigma == 0 or epsilon == 0:
+        sigma, epsilon = 1, 0
     if q != 0 or epsilon != 0:
         print """  <Atom type="%d" charge="%s" sigma="%s" epsilon="%s"/>""" % (index, q, sigma, epsilon)
 print " </NonbondedForce>"

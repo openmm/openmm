@@ -70,14 +70,14 @@ KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name, const Pla
         return new ReferenceCalcCustomTorsionForceKernel(name, platform);
     if (name == CalcGBSAOBCForceKernel::Name())
         return new ReferenceCalcGBSAOBCForceKernel(name, platform);
-    if (name == CalcGBVIForceKernel::Name())
-        return new ReferenceCalcGBVIForceKernel(name, platform);
     if (name == CalcCustomGBForceKernel::Name())
         return new ReferenceCalcCustomGBForceKernel(name, platform);
     if (name == CalcCustomExternalForceKernel::Name())
         return new ReferenceCalcCustomExternalForceKernel(name, platform);
     if (name == CalcCustomHbondForceKernel::Name())
         return new ReferenceCalcCustomHbondForceKernel(name, platform);
+    if (name == CalcCustomCentroidBondForceKernel::Name())
+        return new ReferenceCalcCustomCentroidBondForceKernel(name, platform);
     if (name == CalcCustomCompoundBondForceKernel::Name())
         return new ReferenceCalcCustomCompoundBondForceKernel(name, platform);
     if (name == CalcCustomManyParticleForceKernel::Name())

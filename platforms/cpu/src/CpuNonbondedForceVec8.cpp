@@ -26,6 +26,7 @@
 #include "CpuNonbondedForceVec8.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/hardware.h"
+#include <algorithm>
 
 using namespace std;
 using namespace OpenMM;

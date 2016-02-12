@@ -77,23 +77,23 @@ public:
     int addTorsion(int particle1, int particle2, int particle3, int particle4, double c0, double c1, double c2, double c3, double c4, double c5);
     /**
      * Get the force field parameters for a Ryckaert-Bellemans torsion term.
-     * 
-     * @param index        the index of the torsion for which to get parameters
-     * @param particle1    the index of the first particle forming the torsion
-     * @param particle2    the index of the second particle forming the torsion
-     * @param particle3    the index of the third particle forming the torsion
-     * @param particle4    the index of the fourth particle forming the torsion
-     * @param c0           the coefficient of the constant term, measured in kJ/mol
-     * @param c1           the coefficient of the 1st order term, measured in kJ/mol
-     * @param c2           the coefficient of the 2nd order term, measured in kJ/mol
-     * @param c3           the coefficient of the 3rd order term, measured in kJ/mol
-     * @param c4           the coefficient of the 4th order term, measured in kJ/mol
-     * @param c5           the coefficient of the 5th order term, measured in kJ/mol
+     *
+     * @param index             the index of the torsion for which to get parameters
+     * @param[out] particle1    the index of the first particle forming the torsion
+     * @param[out] particle2    the index of the second particle forming the torsion
+     * @param[out] particle3    the index of the third particle forming the torsion
+     * @param[out] particle4    the index of the fourth particle forming the torsion
+     * @param[out] c0           the coefficient of the constant term, measured in kJ/mol
+     * @param[out] c1           the coefficient of the 1st order term, measured in kJ/mol
+     * @param[out] c2           the coefficient of the 2nd order term, measured in kJ/mol
+     * @param[out] c3           the coefficient of the 3rd order term, measured in kJ/mol
+     * @param[out] c4           the coefficient of the 4th order term, measured in kJ/mol
+     * @param[out] c5           the coefficient of the 5th order term, measured in kJ/mol
      */
     void getTorsionParameters(int index, int& particle1, int& particle2, int& particle3, int& particle4, double& c0, double& c1, double& c2, double& c3, double& c4, double& c5) const;
     /**
      * Set the force field parameters for a Ryckaert-Bellemans torsion term.
-     * 
+     *
      * @param index        the index of the torsion for which to set parameters
      * @param particle1    the index of the first particle forming the torsion
      * @param particle2    the index of the second particle forming the torsion
@@ -112,7 +112,7 @@ public:
      * an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
      * Simply call setTorsionParameters() to modify this object's parameters, then call updateParametersInContext()
      * to copy them over to the Context.
-     * 
+     *
      * The only information this method updates is the values of per-torsion parameters.  The set of particles involved
      * in a torsion cannot be changed, nor can new torsions be added.
      */

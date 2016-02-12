@@ -623,6 +623,10 @@ void CudaParallelCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& 
         getKernel(i).copyParametersToContext(context, force);
 }
 
+void CudaParallelCalcNonbondedForceKernel::getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {
+    dynamic_cast<const CudaCalcNonbondedForceKernel&>(kernels[0].getImpl()).getPMEParameters(alpha, nx, ny, nz);
+}
+
 class CudaParallelCalcCustomNonbondedForceKernel::Task : public CudaContext::WorkTask {
 public:
     Task(ContextImpl& context, CudaCalcCustomNonbondedForceKernel& kernel, bool includeForce,

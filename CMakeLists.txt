@@ -1,5 +1,5 @@
 #---------------------------------------------------
-# OpenMM 
+# OpenMM
 #
 # Creates OpenMM library.
 #
@@ -12,7 +12,8 @@
 #   libOpenMM_static.a
 #----------------------------------------------------
 
-find_program(PYTHON_EXECUTABLE NAMES python)
+find_package(PythonInterp)
+mark_as_advanced(CLEAR PYTHON_EXECUTABLE)
 
 # Don't create a new project name if this is part of a mega-build from the
 # parent directory
@@ -21,6 +22,9 @@ IF( NOT PROJECT_NAME )
 ENDIF( NOT PROJECT_NAME )
 
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
+if("${CMAKE_VERSION}" VERSION_GREATER "3.0" OR "${CMAKE_VERSION}" VERSION_EQUAL "3.0")
+    CMAKE_POLICY(SET CMP0042 OLD)
+endif()
 
 #SET(CMAKE_VERBOSE_MAKEFILE 1)
 
@@ -42,11 +46,11 @@ SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake_modules")
 # (cmake 2.4.7 is OK)
 if(COMMAND cmake_policy)
     if(CMAKE_MAJOR_VERSION GREATER 2 OR CMAKE_MINOR_VERSION GREATER 5)
-        cmake_policy(SET CMP0003 NEW) 
-        cmake_policy(SET CMP0005 NEW) 
+        cmake_policy(SET CMP0003 NEW)
+        cmake_policy(SET CMP0005 NEW)
     endif(CMAKE_MAJOR_VERSION GREATER 2 OR CMAKE_MINOR_VERSION GREATER 5)
     if(CMAKE_MAJOR_VERSION GREATER 2 OR CMAKE_MINOR_VERSION GREATER 6 OR CMAKE_PATCH_VERSION GREATER 2)
-        cmake_policy(SET CMP0011 NEW) 
+        cmake_policy(SET CMP0011 NEW)
     endif(CMAKE_MAJOR_VERSION GREATER 2 OR CMAKE_MINOR_VERSION GREATER 6 OR CMAKE_PATCH_VERSION GREATER 2)
 endif(COMMAND cmake_policy)
 
@@ -61,6 +65,11 @@ ELSE(WIN32)
     ENDIF(NOT OPENMM_INSTALL_PREFIX)
 ENDIF(WIN32)
 
+IF(WIN32)
+    ADD_DEFINITIONS(-DWIN32)
+ENDIF(WIN32)
+
+
 # Include CPU-Features for Android
 IF (ANDROID)
     INCLUDE_DIRECTORIES(${ANDROID_NDK}/sources/cpufeatures)
@@ -69,7 +78,7 @@ ENDIF (ANDROID)
 # It seems that on linux and mac, everything is trying to be installed in /usr/local/openmm
 # But if every install target is prefixed with /openmm/, on Windows the install files
 # end up in C:/Program Files/OpenMM/openmm/ which is ugly.
-# Better to set CMAKE_INSTALL_PREFIX to /usr/local/openmm and leave /openmm/ off the 
+# Better to set CMAKE_INSTALL_PREFIX to /usr/local/openmm and leave /openmm/ off the
 # install target names.  Plus, the user now has the opportunity to install into /usr/local/
 # if she so chooses.  --cmb
 IF(${CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT})
@@ -78,7 +87,7 @@ ENDIF(${CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT})
 
 # The source is organized into subdirectories, but we handle them all from
 # this CMakeLists file rather than letting CMake visit them as SUBDIRS.
-SET(OPENMM_SOURCE_SUBDIRS . openmmapi olla libraries/jama libraries/quern libraries/lepton libraries/sfmt libraries/lbfgs libraries/hilbert libraries/csha1 platforms/reference serialization libraries/validate libraries/irrxml)
+SET(OPENMM_SOURCE_SUBDIRS . openmmapi olla libraries/jama libraries/quern libraries/lepton libraries/sfmt libraries/lbfgs libraries/hilbert libraries/csha1 platforms/reference serialization libraries/irrxml libraries/vecmath)
 IF(WIN32)
     SET(OPENMM_SOURCE_SUBDIRS ${OPENMM_SOURCE_SUBDIRS} libraries/pthreads)
 ELSE(WIN32)
@@ -105,6 +114,7 @@ ELSE( CMAKE_SIZEOF_VOID_P EQUAL 8 )
   SET( LIB64  )
 ENDIF( CMAKE_SIZEOF_VOID_P EQUAL 8 )
 
+
 IF (APPLE AND (NOT PNACL))
     # Build 64 bit binaries compatible with OS X 10.7
     IF (NOT CMAKE_OSX_DEPLOYMENT_TARGET)
@@ -113,6 +123,14 @@ IF (APPLE AND (NOT PNACL))
     IF (NOT CMAKE_OSX_ARCHITECTURES)
         SET (CMAKE_OSX_ARCHITECTURES "x86_64" CACHE STRING "The processor architectures to build for" FORCE)
     ENDIF (NOT CMAKE_OSX_ARCHITECTURES)
+    IF (NOT CMAKE_OSX_SYSROOT)
+        EXECUTE_PROCESS(COMMAND "xcrun" "--show-sdk-path" OUTPUT_VARIABLE XCRUN_OSX_SYSROOT RESULT_VARIABLE XCRUN_OSX_SYSROOT_STATUS OUTPUT_STRIP_TRAILING_WHITESPACE)
+        IF (XCRUN_OSX_SYSROOT_STATUS EQUAL 0)
+            SET (CMAKE_OSX_SYSROOT "${XCRUN_OSX_SYSROOT}" CACHE STRING "SDK Path" FORCE)
+        ENDIF (XCRUN_OSX_SYSROOT_STATUS EQUAL 0)
+        UNSET(XCRUN_OSX_SYSROOT)
+        UNSET(XCRUN_OSX_SYSROOT_STATUS)
+    ENDIF (NOT CMAKE_OSX_SYSROOT)
 
     # Improve the linking behavior of Mac libraries
     SET (CMAKE_INSTALL_NAME_DIR "@rpath")
@@ -120,6 +138,12 @@ IF (APPLE AND (NOT PNACL))
 ELSE (APPLE AND (NOT PNACL))
     IF (MSVC OR ANDROID OR PNACL)
         SET(EXTRA_COMPILE_FLAGS)
+        IF (MSVC)
+            # Use warning level 2, not whatever warning level CMake picked.
+            STRING(REGEX REPLACE "/W[0-4]" "/W2" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+            # Explicitly suppress warnings 4305 and 4244.
+            SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4305 /wd4244")
+        ENDIF (MSVC)
     ELSE (MSVC OR ANDROID OR PNACL)
         SET(EXTRA_COMPILE_FLAGS "-msse2")
     ENDIF (MSVC OR ANDROID OR PNACL)
@@ -138,7 +162,7 @@ IF (NOT CMAKE_CXX_FLAGS_RELEASE)
         SET(CMAKE_CXX_FLAGS_RELEASE "-mfloat-abi=softfp -march=armv7-a -mfpu=neon -funsafe-math-optimizations -O3 -DNDEBUG" CACHE STRING
         "To use when CMAKE_BUILD_TYPE=Release" FORCE)
     ELSE (ANDROID)
-        SET(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG" CACHE STRING 
+        SET(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG" CACHE STRING
         "To use when CMAKE_BUILD_TYPE=Release" FORCE)
     ENDIF (ANDROID)
 ENDIF (NOT CMAKE_CXX_FLAGS_RELEASE)
@@ -149,8 +173,8 @@ ENDIF (NOT CMAKE_CXX_FLAGS_RELEASE)
 # and make it available to the code so it can be built into the binaries.
 
 SET(OPENMM_LIBRARY_NAME OpenMM)
-SET(OPENMM_MAJOR_VERSION 6)
-SET(OPENMM_MINOR_VERSION 3)
+SET(OPENMM_MAJOR_VERSION 7)
+SET(OPENMM_MINOR_VERSION 0)
 SET(OPENMM_BUILD_VERSION 0)
 
 SET(OPENMM_COPYRIGHT_YEARS "2008-2015")
@@ -201,11 +225,11 @@ SET(STATIC_TARGET ${OPENMM_LIBRARY_NAME}_static)
 ## If no one says otherwise, change the executable path to drop into the same binary
 ## location as the DLLs so that the test cases will use the just-build DLLs.
 IF(NOT EXECUTABLE_OUTPUT_PATH)
-  SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR} 
+  SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}
       CACHE INTERNAL "Single output directory for building all executables.")
 ENDIF(NOT EXECUTABLE_OUTPUT_PATH)
 IF(NOT LIBRARY_OUTPUT_PATH)
-  SET(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR} 
+  SET(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}
       CACHE INTERNAL "Single output directory for building all libraries.")
 ENDIF(NOT LIBRARY_OUTPUT_PATH)
 SET(${PROJECT_NAME}_EXECUTABLE_DIR ${EXECUTABLE_OUTPUT_PATH}/${CMAKE_CFG_INTDIR})
@@ -220,7 +244,7 @@ SET(API_INCLUDE_DIRS) # start empty
 FOREACH(subdir ${OPENMM_SOURCE_SUBDIRS})
     # append
     SET(API_INCLUDE_DIRS ${API_INCLUDE_DIRS}
-                         ${CMAKE_CURRENT_SOURCE_DIR}/${subdir}/include 
+                         ${CMAKE_CURRENT_SOURCE_DIR}/${subdir}/include
                          ${CMAKE_CURRENT_SOURCE_DIR}/${subdir}/include/openmm
                          ${CMAKE_CURRENT_SOURCE_DIR}/${subdir}/include/openmm/internal)
 ENDFOREACH(subdir)
@@ -286,17 +310,20 @@ IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
         SET(EXTRA_LINK_FLAGS "${EXTRA_LINK_FLAGS} -Wl,--no-as-needed -lrt")
     ENDIF (NOT ANDROID)
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+IF (MSVC)
+    SET(EXTRA_LINK_FLAGS)
+ENDIF (MSVC)
 
 IF(OPENMM_BUILD_SHARED_LIB)
     ADD_LIBRARY(${SHARED_TARGET} SHARED ${SOURCE_FILES} ${SOURCE_INCLUDE_FILES} ${API_ABS_INCLUDE_FILES})
-    SET_TARGET_PROPERTIES(${SHARED_TARGET} PROPERTIES LINK_FLAGS "${EXTRA_LINK_FLAGS}" COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS} -DOPENMM_BUILDING_SHARED_LIBRARY -DLEPTON_BUILDING_SHARED_LIBRARY -DOPENMM_VALIDATE_BUILDING_SHARED_LIBRARY -DPTHREAD_BUILDING_SHARED_LIBRARY")
+    SET_TARGET_PROPERTIES(${SHARED_TARGET} PROPERTIES LINK_FLAGS "${EXTRA_LINK_FLAGS}" COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS} -DOPENMM_BUILDING_SHARED_LIBRARY -DLEPTON_BUILDING_SHARED_LIBRARY -DPTHREAD_BUILDING_SHARED_LIBRARY")
 ENDIF(OPENMM_BUILD_SHARED_LIB)
 
 SET(OPENMM_BUILD_STATIC_LIB OFF CACHE BOOL "Whether to build static OpenMM libraries")
 IF(OPENMM_BUILD_STATIC_LIB)
     ADD_LIBRARY(${STATIC_TARGET} STATIC ${SOURCE_FILES} ${SOURCE_INCLUDE_FILES} ${API_ABS_INCLUDE_FILES})
     SET(EXTRA_COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS} -DOPENMM_USE_STATIC_LIBRARIES -DLEPTON_USE_STATIC_LIBRARIES -DPTW32_STATIC_LIB")
-    SET_TARGET_PROPERTIES(${STATIC_TARGET} PROPERTIES LINK_FLAGS "${EXTRA_LINK_FLAGS}" COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS} -DOPENMM_BUILDING_STATIC_LIBRARY -DLEPTON_BUILDING_STATIC_LIBRARY -DOPENMMM_VALIDATE_BUILDING_STATIC_LIBRARY -DOPENMM_VALIDATE_BUILDING_STATIC_LIBRARY -DPTHREAD_BUILDING_STATIC_LIBRARY")
+    SET_TARGET_PROPERTIES(${STATIC_TARGET} PROPERTIES LINK_FLAGS "${EXTRA_LINK_FLAGS}" COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS} -DOPENMM_BUILDING_STATIC_LIBRARY -DLEPTON_BUILDING_STATIC_LIBRARY -DPTHREAD_BUILDING_STATIC_LIBRARY")
 ENDIF(OPENMM_BUILD_STATIC_LIB)
 
 IF(OPENMM_BUILD_C_AND_FORTRAN_WRAPPERS)
@@ -327,8 +354,14 @@ ELSE(DL_LIBRARY)
 ENDIF(DL_LIBRARY)
 
 IF(BUILD_TESTING)
-    ADD_SUBDIRECTORY(platforms/reference/tests)
+    INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/tests)
 ENDIF(BUILD_TESTING)
+
+set(OPENMM_BUILD_REFERENCE_TESTS TRUE CACHE BOOL "Whether to build Reference platform test cases")
+MARK_AS_ADVANCED(OPENMM_BUILD_REFERENCE_TESTS)
+IF(BUILD_TESTING AND OPENMM_BUILD_REFERENCE_TESTS)
+    ADD_SUBDIRECTORY(platforms/reference/tests)
+ENDIF(BUILD_TESTING AND OPENMM_BUILD_REFERENCE_TESTS)
 
 # Which hardware platforms to build
 
@@ -357,7 +390,7 @@ IF(CUDA_FOUND)
     SET(OPENMM_BUILD_CUDA_LIB ON CACHE BOOL "Build OpenMMCuda library for Nvidia GPUs")
 
     # I wish I was not hardcoding /MD here
-    # Avoid strange windows link error with cuda free energy 
+    # Avoid strange windows link error with cuda free energy
     # plugin by specifying /MD to CUDA_NVCC_FLAGS
     MARK_AS_ADVANCED(CLEAR CUDA_NVCC_FLAGS)
     IF(MSVC)
@@ -373,7 +406,7 @@ IF(CUDA_FOUND)
             if(CUDA_NVCC_FLAGS)
                 set(new_flags "${CUDA_NVCC_FLAGS};${new_flags}")
             endif(CUDA_NVCC_FLAGS)
-            SET(CUDA_NVCC_FLAGS "${new_flags}" 
+            SET(CUDA_NVCC_FLAGS "${new_flags}"
                 CACHE STRING "Semicolon delimit multiple arguments" FORCE)
         ENDIF(NOT HAS_NVCC_FLAG)
     ENDIF(MSVC)
@@ -386,6 +419,7 @@ ENDIF(OPENMM_BUILD_CUDA_LIB)
 MARK_AS_ADVANCED(CUDA_VERBOSE_BUILD)
 MARK_AS_ADVANCED(CUDA_BUILD_CUBIN)
 MARK_AS_ADVANCED(CUDA_BUILD_EMULATION)
+MARK_AS_ADVANCED(CUDA_HOST_COMPILER CUDA_HOST_COMPILER_OPTIONS)
 
 FIND_PACKAGE(OpenCL QUIET)
 IF(OPENCL_FOUND)
@@ -470,10 +504,14 @@ FILE(GLOB CORE_HEADERS     include/*.h          */include/*.h)
 FILE(GLOB TOP_HEADERS      include/openmm/*.h          */include/openmm/*.h)
 FILE(GLOB INTERNAL_HEADERS include/openmm/internal/*.h */include/openmm/internal/*.h )
 FILE(GLOB REFERENCE_HEADERS platforms/reference/include/*.h)
+FILE(GLOB LEPTON_HEADERS   libraries/lepton/include/lepton/*.h)
+FILE(GLOB SFMT_HEADERS     libraries/sfmt/include/sfmt/SFMT.h)
 INSTALL_FILES(/include                 FILES ${CORE_HEADERS})
 INSTALL_FILES(/include/openmm          FILES ${TOP_HEADERS})
 INSTALL_FILES(/include/openmm/internal FILES ${INTERNAL_HEADERS})
 INSTALL_FILES(/include/openmm/reference FILES ${REFERENCE_HEADERS})
+INSTALL_FILES(/include/lepton          FILES ${LEPTON_HEADERS})
+INSTALL_FILES(/include/sfmt            FILES ${SFMT_HEADERS})
 
 # Serialization support
 
@@ -496,6 +534,8 @@ IF(OPENMM_BUILD_PYTHON_WRAPPERS)
     ENDIF(NOT OPENMM_BUILD_DRUDE_PLUGIN)
     ADD_SUBDIRECTORY(wrappers/python)
 ENDIF(OPENMM_BUILD_PYTHON_WRAPPERS)
+
+
 
 
 #
@@ -528,6 +568,10 @@ ADD_SUBDIRECTORY(docs-source)
 IF(BUILD_TESTING)
     ADD_SUBDIRECTORY(tests)
 ENDIF(BUILD_TESTING)
-ADD_SUBDIRECTORY(examples)
+
+SET(OPENMM_BUILD_EXAMPLES ON CACHE BOOL "Build example executables")
+IF(OPENMM_BUILD_EXAMPLES)
+  ADD_SUBDIRECTORY(examples)
+ENDIF(OPENMM_BUILD_EXAMPLES)
 
 ENDIF(NOT cmv EQUAL "2.4") # This whole file...

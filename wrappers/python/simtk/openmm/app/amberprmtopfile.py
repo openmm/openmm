@@ -28,6 +28,7 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
+from __future__ import absolute_import
 __author__ = "Peter Eastman"
 __version__ = "1.0"
 
@@ -35,9 +36,9 @@ from math import sqrt
 from simtk.openmm.app import Topology
 from simtk.openmm.app import PDBFile
 from simtk.openmm.app.internal import amber_file_parser
-import forcefield as ff
-import element as elem
-import simtk.unit as unit
+from . import forcefield as ff
+from . import element as elem
+import simtk.unit as u
 import simtk.openmm as mm
 from simtk.openmm.app.internal.unitcell import computePeriodicBoxVectors
 
@@ -67,6 +68,15 @@ class GBn2(object):
     def __repr__(self):
         return 'GBn2'
 GBn2 = GBn2()
+
+def _strip_optunit(thing, unit):
+    """
+    Strips optional units, converting to specified unit type. If no unit
+    present, it just returns the number
+    """
+    if u.is_quantity(thing):
+        return thing.value_in_unit(unit)
+    return thing
 
 class AmberPrmtopFile(object):
     """AmberPrmtopFile parses an AMBER prmtop file and constructs a Topology and (optionally) an OpenMM System from it."""
@@ -144,35 +154,64 @@ class AmberPrmtopFile(object):
             box = prmtop.getBoxBetaAndDimensions()
             top.setPeriodicBoxVectors(computePeriodicBoxVectors(*(box[1:4] + box[0:1]*3)))
 
-    def createSystem(self, nonbondedMethod=ff.NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
+    def createSystem(self, nonbondedMethod=ff.NoCutoff, nonbondedCutoff=1.0*u.nanometer,
                      constraints=None, rigidWater=True, implicitSolvent=None,
-                     implicitSolventSaltConc=0.0*(unit.moles/unit.liter),
-                     implicitSolventKappa=None, temperature=298.15*unit.kelvin,
+                     implicitSolventSaltConc=0.0*(u.moles/u.liter),
+                     implicitSolventKappa=None, temperature=298.15*u.kelvin,
                      soluteDielectric=1.0, solventDielectric=78.5,
-                     removeCMMotion=True, hydrogenMass=None, ewaldErrorTolerance=0.0005):
-        """Construct an OpenMM System representing the topology described by this prmtop file.
+                     removeCMMotion=True, hydrogenMass=None, ewaldErrorTolerance=0.0005,
+                     switchDistance=0.0*u.nanometer):
+        """Construct an OpenMM System representing the topology described by this
+        prmtop file.
 
-        Parameters:
-         - nonbondedMethod (object=NoCutoff) The method to use for nonbonded interactions.  Allowed values are
-           NoCutoff, CutoffNonPeriodic, CutoffPeriodic, Ewald, or PME.
-         - nonbondedCutoff (distance=1*nanometer) The cutoff distance to use for nonbonded interactions
-         - constraints (object=None) Specifies which bonds angles should be implemented with constraints.
-           Allowed values are None, HBonds, AllBonds, or HAngles.
-         - rigidWater (boolean=True) If true, water molecules will be fully rigid regardless of the value passed for the constraints argument
-         - implicitSolvent (object=None) If not None, the implicit solvent model to use.  Allowed values are HCT, OBC1, OBC2, GBn, or GBn2.
-         - implicitSolventSaltConc (float=0.0*unit.moles/unit.liter) The salt concentration for GB 
-                    calculations (modelled as a debye screening parameter). It is converted to the debye length (kappa)
-                    using the provided temperature and solventDielectric
-         - temperature (float=300*kelvin) Temperature of the system. Only used to compute the Debye length from
-                    implicitSolventSoltConc
-         - implicitSolventKappa (float units of 1/length) If this value is set, implicitSolventSaltConc will be ignored.
-         - soluteDielectric (float=1.0) The solute dielectric constant to use in the implicit solvent model.
-         - solventDielectric (float=78.5) The solvent dielectric constant to use in the implicit solvent model.
-         - removeCMMotion (boolean=True) If true, a CMMotionRemover will be added to the System
-         - hydrogenMass (mass=None) The mass to use for hydrogen atoms bound to heavy atoms.  Any mass added to a hydrogen is
-           subtracted from the heavy atom to keep their total mass the same.
-         - ewaldErrorTolerance (float=0.0005) The error tolerance to use if nonbondedMethod is Ewald or PME.
-        Returns: the newly created System
+        Parameters
+        ----------
+        nonbondedMethod : object=NoCutoff
+            The method to use for nonbonded interactions.  Allowed values are
+            NoCutoff, CutoffNonPeriodic, CutoffPeriodic, Ewald, or PME.
+        nonbondedCutoff : distance=1*nanometer
+            The cutoff distance to use for nonbonded interactions
+        constraints : object=None
+            Specifies which bonds angles should be implemented with constraints.
+            Allowed values are None, HBonds, AllBonds, or HAngles.
+        rigidWater : boolean=True
+            If true, water molecules will be fully rigid regardless of the value
+            passed for the constraints argument
+        implicitSolvent : object=None
+            If not None, the implicit solvent model to use.  Allowed values are
+            HCT, OBC1, OBC2, GBn, or GBn2.
+        implicitSolventSaltConc : float=0.0*unit.moles/unit.liter
+            The salt concentration for GB calculations (modelled as a debye
+            screening parameter). It is converted to the debye length (kappa)
+            using the provided temperature and solventDielectric
+        temperature : float=300*kelvin
+            Temperature of the system. Only used to compute the Debye length
+            from implicitSolventSoltConc
+        implicitSolventKappa : float units of 1/length
+            If this value is set, implicitSolventSaltConc will be ignored.
+        soluteDielectric : float=1.0
+            The solute dielectric constant to use in the implicit solvent model.
+        solventDielectric : float=78.5
+            The solvent dielectric constant to use in the implicit solvent
+            model.
+        removeCMMotion : boolean=True
+            If true, a CMMotionRemover will be added to the System
+        hydrogenMass : mass=None
+            The mass to use for hydrogen atoms bound to heavy atoms.  Any mass
+            added to a hydrogen is subtracted from the heavy atom to keep their
+            total mass the same.
+        ewaldErrorTolerance : float=0.0005
+            The error tolerance to use if nonbondedMethod is Ewald or PME.
+        switchDistance : float=0*nanometers
+            The distance at which the potential energy switching function is
+            turned on for Lennard-Jones interactions. If the switchDistance is 0
+            or evaluates to boolean False, no switching function will be used.
+            Values greater than nonbondedCutoff or less than 0 raise ValueError
+
+        Returns
+        -------
+        System
+            the newly created System
         """
         if self._prmtop.chamber:
             raise ValueError("CHAMBER-style topology file detected. CHAMBER "
@@ -213,10 +252,10 @@ class AmberPrmtopFile(object):
             raise ValueError('Illegal value for implicit solvent model')
         # If implicitSolventKappa is None, compute it from the salt concentration
         if implicitSolvent is not None and implicitSolventKappa is None:
-            if unit.is_quantity(implicitSolventSaltConc):
-                implicitSolventSaltConc = implicitSolventSaltConc.value_in_unit(unit.moles/unit.liter)
-            if unit.is_quantity(temperature):
-                temperature = temperature.value_in_unit(unit.kelvin)
+            if u.is_quantity(implicitSolventSaltConc):
+                implicitSolventSaltConc = implicitSolventSaltConc.value_in_unit(u.moles/u.liter)
+            if u.is_quantity(temperature):
+                temperature = temperature.value_in_unit(u.kelvin)
             # The constant is 1 / sqrt( epsilon_0 * kB / (2 * NA * q^2 * 1000) )
             # where NA is avogadro's number, epsilon_0 is the permittivity of
             # free space, q is the elementary charge (this number matches
@@ -247,4 +286,17 @@ class AmberPrmtopFile(object):
                 force.setEwaldErrorTolerance(ewaldErrorTolerance)
         if removeCMMotion:
             sys.addForce(mm.CMMotionRemover())
+
+        if switchDistance and nonbondedMethod is not ff.NoCutoff:
+            # make sure it's legal
+            if (_strip_optunit(switchDistance, u.nanometer) >=
+                    _strip_optunit(nonbondedCutoff, u.nanometer)):
+                raise ValueError('switchDistance is too large compared '
+                                 'to the cutoff!')
+            if _strip_optunit(switchDistance, u.nanometer) < 0:
+                # Detects negatives for both Quantity and float
+                raise ValueError('switchDistance must be non-negative!')
+            force.setUseSwitchingFunction(True)
+            force.setSwitchingDistance(switchDistance)
+
         return sys

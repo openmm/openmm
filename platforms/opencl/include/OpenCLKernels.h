@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -34,6 +34,9 @@
 #include "OpenCLParameterSet.h"
 #include "OpenCLSort.h"
 #include "openmm/kernels.h"
+#include "openmm/internal/CompiledExpressionSet.h"
+#include "openmm/internal/CustomIntegratorUtilities.h"
+#include "lepton/CompiledExpression.h"
 #include "openmm/System.h"
 
 namespace OpenMM {
@@ -167,6 +170,7 @@ public:
      */
     void loadCheckpoint(ContextImpl& context, std::istream& stream);
 private:
+    class GetPositionsTask;
     OpenCLContext& cl;
 };
 
@@ -567,7 +571,7 @@ public:
     OpenCLCalcNonbondedForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcNonbondedForceKernel(name, platform),
             hasInitializedKernel(false), cl(cl), sigmaEpsilon(NULL), exceptionParams(NULL), cosSinSums(NULL), pmeGrid(NULL),
             pmeGrid2(NULL), pmeBsplineModuliX(NULL), pmeBsplineModuliY(NULL), pmeBsplineModuliZ(NULL), pmeBsplineTheta(NULL),
-            pmeAtomRange(NULL), pmeAtomGridIndex(NULL), sort(NULL), fft(NULL), pmeio(NULL) {
+            pmeAtomRange(NULL), pmeAtomGridIndex(NULL), pmeEnergyBuffer(NULL), sort(NULL), fft(NULL), pmeio(NULL) {
     }
     ~OpenCLCalcNonbondedForceKernel();
     /**
@@ -595,6 +599,15 @@ public:
      * @param force      the NonbondedForce to copy the parameters from
      */
     void copyParametersToContext(ContextImpl& context, const NonbondedForce& force);
+    /**
+     * Get the parameters being used for PME.
+     * 
+     * @param alpha   the separation parameter
+     * @param nx      the number of grid points along the X axis
+     * @param ny      the number of grid points along the Y axis
+     * @param nz      the number of grid points along the Z axis
+     */
+    void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
 private:
     class SortTrait : public OpenCLSort::SortTrait {
         int getDataSize() const {return 8;}
@@ -624,12 +637,14 @@ private:
     OpenCLArray* pmeBsplineTheta;
     OpenCLArray* pmeAtomRange;
     OpenCLArray* pmeAtomGridIndex;
+    OpenCLArray* pmeEnergyBuffer;
     OpenCLSort* sort;
     cl::CommandQueue pmeQueue;
     cl::Event pmeSyncEvent;
     OpenCLFFT3D* fft;
     Kernel cpuPme;
     PmeIO* pmeio;
+    SyncQueuePostComputation* syncQueue;
     cl::Kernel ewaldSumsKernel;
     cl::Kernel ewaldForcesKernel;
     cl::Kernel pmeGridIndexKernel;
@@ -644,7 +659,9 @@ private:
     std::map<std::string, std::string> pmeDefines;
     std::vector<std::pair<int, int> > exceptionAtoms;
     double ewaldSelfEnergy, dispersionCoefficient, alpha;
+    int gridSizeX, gridSizeY, gridSizeZ;
     bool hasCoulomb, hasLJ, usePmeQueue;
+    NonbondedMethod nonbondedMethod;
     static const int PmeOrder = 5;
 };
 
@@ -732,7 +749,7 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const GBSAOBCForce& force);
 private:
-    double prefactor, surfaceAreaFactor;
+    double prefactor, surfaceAreaFactor, cutoff;
     bool hasCreatedKernels;
     int maxTiles;
     OpenCLContext& cl;
@@ -783,6 +800,7 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const CustomGBForce& force);
 private:
+    double cutoff;
     bool hasInitializedKernels, needParameterGradient;
     int maxTiles, numComputedValues;
     OpenCLContext& cl;
@@ -898,6 +916,57 @@ private:
     std::vector<OpenCLArray*> tabulatedFunctions;
     const System& system;
     cl::Kernel donorKernel, acceptorKernel;
+};
+
+/**
+ * This kernel is invoked by CustomCentroidBondForce to calculate the forces acting on the system.
+ */
+class OpenCLCalcCustomCentroidBondForceKernel : public CalcCustomCentroidBondForceKernel {
+public:
+    OpenCLCalcCustomCentroidBondForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcCustomCentroidBondForceKernel(name, platform),
+            cl(cl), params(NULL), globals(NULL), groupParticles(NULL), groupWeights(NULL), groupOffsets(NULL), groupForces(NULL), bondGroups(NULL), centerPositions(NULL), system(system) {
+    }
+    ~OpenCLCalcCustomCentroidBondForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomCentroidBondForce this kernel will be used for
+     */
+    void initialize(const System& system, const CustomCentroidBondForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomCentroidBondForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const CustomCentroidBondForce& force);
+
+private:
+    int numGroups, numBonds;
+    OpenCLContext& cl;
+    OpenCLParameterSet* params;
+    OpenCLArray* globals;
+    OpenCLArray* groupParticles;
+    OpenCLArray* groupWeights;
+    OpenCLArray* groupOffsets;
+    OpenCLArray* groupForces;
+    OpenCLArray* bondGroups;
+    OpenCLArray* centerPositions;
+    std::vector<std::string> globalParamNames;
+    std::vector<cl_float> globalParamValues;
+    std::vector<OpenCLArray*> tabulatedFunctions;
+    cl::Kernel computeCentersKernel, groupForcesKernel, applyForcesKernel;
+    const System& system;
 };
 
 /**
@@ -1037,7 +1106,6 @@ public:
     double computeKineticEnergy(ContextImpl& context, const VerletIntegrator& integrator);
 private:
     OpenCLContext& cl;
-    double prevStepSize;
     bool hasInitializedKernels;
     cl::Kernel kernel1, kernel2;
 };
@@ -1202,9 +1270,10 @@ private:
  */
 class OpenCLIntegrateCustomStepKernel : public IntegrateCustomStepKernel {
 public:
+    enum GlobalTargetType {DT, VARIABLE, PARAMETER};
     OpenCLIntegrateCustomStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateCustomStepKernel(name, platform), cl(cl),
-            hasInitializedKernels(false), localValuesAreCurrent(false), globalValues(NULL), contextParameterValues(NULL), sumBuffer(NULL), potentialEnergy(NULL),
-            kineticEnergy(NULL), uniformRandoms(NULL), randomSeed(NULL), perDofValues(NULL) {
+            hasInitializedKernels(false), localValuesAreCurrent(false), globalValues(NULL), sumBuffer(NULL), summedValue(NULL), uniformRandoms(NULL),
+            randomSeed(NULL), perDofValues(NULL) {
     }
     ~OpenCLIntegrateCustomStepKernel();
     /**
@@ -1268,20 +1337,21 @@ public:
     void setPerDofVariable(ContextImpl& context, int variable, const std::vector<Vec3>& values);
 private:
     class ReorderListener;
-    std::string createGlobalComputation(const std::string& variable, const Lepton::ParsedExpression& expr, CustomIntegrator& integrator, const std::string& energyName);
+    class GlobalTarget;
     std::string createPerDofComputation(const std::string& variable, const Lepton::ParsedExpression& expr, int component, CustomIntegrator& integrator, const std::string& forceName, const std::string& energyName);
     void prepareForComputation(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid);
+    void recordGlobalValue(double value, GlobalTarget target);
     void recordChangedParameters(ContextImpl& context);
+    bool evaluateCondition(int step);
     OpenCLContext& cl;
-    double prevStepSize, energy;
+    double energy;
+    float energyFloat;
     int numGlobalVariables;
-    bool hasInitializedKernels, deviceValuesAreCurrent, modifiesParameters, keNeedsForce;
+    bool hasInitializedKernels, deviceValuesAreCurrent, deviceGlobalsAreCurrent, modifiesParameters, keNeedsForce, hasAnyConstraints;
     mutable bool localValuesAreCurrent;
     OpenCLArray* globalValues;
-    OpenCLArray* contextParameterValues;
     OpenCLArray* sumBuffer;
-    OpenCLArray* potentialEnergy;
-    OpenCLArray* kineticEnergy;
+    OpenCLArray* summedValue;
     OpenCLArray* uniformRandoms;
     OpenCLArray* randomSeed;
     std::map<int, OpenCLArray*> savedForces;
@@ -1289,20 +1359,41 @@ private:
     OpenCLParameterSet* perDofValues;
     mutable std::vector<std::vector<cl_float> > localPerDofValuesFloat;
     mutable std::vector<std::vector<cl_double> > localPerDofValuesDouble;
-    std::vector<float> contextValuesFloat;
-    std::vector<double> contextValuesDouble;
-    std::vector<float> contextValues;
+    std::vector<float> globalValuesFloat;
+    std::vector<double> globalValuesDouble;
+    std::vector<double> initialGlobalVariables;
     std::vector<std::vector<cl::Kernel> > kernels;
     cl::Kernel randomKernel, kineticEnergyKernel, sumKineticEnergyKernel;
     std::vector<CustomIntegrator::ComputationType> stepType;
+    std::vector<CustomIntegratorUtilities::Comparison> comparisons;
+    std::vector<std::vector<Lepton::CompiledExpression> > globalExpressions;
+    CompiledExpressionSet expressionSet;
+    std::vector<bool> needsGlobals;
     std::vector<bool> needsForces;
     std::vector<bool> needsEnergy;
+    std::vector<bool> computeBothForceAndEnergy;
     std::vector<bool> invalidatesForces;
     std::vector<bool> merged;
-    std::vector<int> forceGroup;
+    std::vector<int> forceGroupFlags;
+    std::vector<int> blockEnd;
     std::vector<int> requiredGaussian;
     std::vector<int> requiredUniform;
+    std::vector<int> stepEnergyVariableIndex;
+    std::vector<int> globalVariableIndex;
+    std::vector<int> parameterVariableIndex;
+    int gaussianVariableIndex, uniformVariableIndex, dtVariableIndex;
     std::vector<std::string> parameterNames;
+    std::vector<GlobalTarget> stepTarget;
+};
+
+class OpenCLIntegrateCustomStepKernel::GlobalTarget {
+public:
+    OpenCLIntegrateCustomStepKernel::GlobalTargetType type;
+    int variableIndex;
+    GlobalTarget() {
+    }
+    GlobalTarget(OpenCLIntegrateCustomStepKernel::GlobalTargetType type, int variableIndex) : type(type), variableIndex(variableIndex) {
+    }
 };
 
 /**

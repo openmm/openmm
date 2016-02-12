@@ -565,6 +565,8 @@ void ReferenceCalcAmoebaMultipoleForceKernel::initialize(const System& system, c
     if (polarizationType == AmoebaMultipoleForce::Mutual) {
         mutualInducedMaxIterations = force.getMutualInducedMaxIterations();
         mutualInducedTargetEpsilon = force.getMutualInducedTargetEpsilon();
+    } else if (polarizationType == AmoebaMultipoleForce::Extrapolated) {
+        extrapolationCoefficients = force.getExtrapolationCoefficients();
     }
 
     // PME
@@ -667,6 +669,9 @@ AmoebaReferenceMultipoleForce* ReferenceCalcAmoebaMultipoleForceKernel::setupAmo
         amoebaReferenceMultipoleForce->setMaximumMutualInducedDipoleIterations(mutualInducedMaxIterations);
     } else if (polarizationType == AmoebaMultipoleForce::Direct) {
         amoebaReferenceMultipoleForce->setPolarizationType(AmoebaReferenceMultipoleForce::Direct);
+    } else if (polarizationType == AmoebaMultipoleForce::Extrapolated) {
+        amoebaReferenceMultipoleForce->setPolarizationType(AmoebaReferenceMultipoleForce::Extrapolated);
+        amoebaReferenceMultipoleForce->setExtrapolationCoefficients(extrapolationCoefficients);
     } else {
         throw OpenMMException("Polarization type not recognzied.");
     }
@@ -788,6 +793,15 @@ void ReferenceCalcAmoebaMultipoleForceKernel::copyParametersToContext(ContextImp
         quadrupoles[quadrupoleIndex++] = (RealOpenMM) quadrupolesD[7];
         quadrupoles[quadrupoleIndex++] = (RealOpenMM) quadrupolesD[8];
     }
+}
+
+void ReferenceCalcAmoebaMultipoleForceKernel::getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {
+    if (!usePme)
+        throw OpenMMException("getPMEParametersInContext: This Context is not using PME");
+    alpha = alphaEwald;
+    nx = pmeGridDimension[0];
+    ny = pmeGridDimension[1];
+    nz = pmeGridDimension[2];
 }
 
 /* -------------------------------------------------------------------------- *

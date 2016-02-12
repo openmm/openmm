@@ -41,6 +41,8 @@ KernelImpl* CpuKernelFactory::createKernelImpl(std::string name, const Platform&
     CpuPlatform::PlatformData& data = CpuPlatform::getPlatformData(context);
     if (name == CalcForcesAndEnergyKernel::Name())
         return new CpuCalcForcesAndEnergyKernel(name, platform, data, context);
+    if (name == CalcHarmonicAngleForceKernel::Name())
+        return new CpuCalcHarmonicAngleForceKernel(name, platform, data);
     if (name == CalcPeriodicTorsionForceKernel::Name())
         return new CpuCalcPeriodicTorsionForceKernel(name, platform, data);
     if (name == CalcRBTorsionForceKernel::Name())

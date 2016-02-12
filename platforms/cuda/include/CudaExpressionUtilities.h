@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -89,6 +89,10 @@ public:
      * @param function   the function for which to get a placeholder
      */
     Lepton::CustomFunction* getFunctionPlaceholder(const TabulatedFunction& function);
+    /**
+     * Get a Lepton::CustomFunction that can be used to represent the periodicdistance() function when parsing expressions.
+     */
+    Lepton::CustomFunction* getPeriodicDistancePlaceholder();
 private:
     class FunctionPlaceholder : public Lepton::CustomFunction {
         public:
@@ -114,13 +118,13 @@ private:
             const std::vector<const TabulatedFunction*>& functions, const std::vector<std::pair<std::string, std::string> >& functionNames,
             const std::string& prefix, const std::vector<std::vector<double> >& functionParams, const std::vector<Lepton::ParsedExpression>& allExpressions, const std::string& tempType);
     std::string getTempName(const Lepton::ExpressionTreeNode& node, const std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& temps);
-    void findRelatedTabulatedFunctions(const Lepton::ExpressionTreeNode& node, const Lepton::ExpressionTreeNode& searchNode,
+    void findRelatedCustomFunctions(const Lepton::ExpressionTreeNode& node, const Lepton::ExpressionTreeNode& searchNode,
             std::vector<const Lepton::ExpressionTreeNode*>& nodes);
     void findRelatedPowers(const Lepton::ExpressionTreeNode& node, const Lepton::ExpressionTreeNode& searchNode,
             std::map<int, const Lepton::ExpressionTreeNode*>& powers);
     std::vector<std::vector<double> > computeFunctionParameters(const std::vector<const TabulatedFunction*>& functions);
     CudaContext& context;
-    FunctionPlaceholder fp1, fp2, fp3;
+    FunctionPlaceholder fp1, fp2, fp3, periodicDistance;
 };
 
 } // namespace OpenMM

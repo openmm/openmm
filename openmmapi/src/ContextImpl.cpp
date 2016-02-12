@@ -41,6 +41,7 @@
 #include "openmm/Context.h"
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <iostream>
 #include <map>
 #include <utility>
@@ -115,6 +116,11 @@ ContextImpl::ContextImpl(Context& owner, const System& system, Integrator& integ
     // Select a platform to use.
     
     vector<pair<double, Platform*> > candidatePlatforms;
+    if (platform == NULL) {
+        char* defaultPlatform = getenv("OPENMM_DEFAULT_PLATFORM");
+        if (defaultPlatform != NULL)
+            platform = &Platform::getPlatformByName(string(defaultPlatform));
+    }
     if (platform == NULL) {
         for (int i = 0; i < Platform::getNumPlatforms(); i++) {
             Platform& p = Platform::getPlatform(i);
@@ -443,4 +449,5 @@ void ContextImpl::loadCheckpoint(istream& stream) {
         parameters[name] = value;
     }
     updateStateDataKernel.getAs<UpdateStateDataKernel>().loadCheckpoint(*this, stream);
+    hasSetPositions = true;
 }

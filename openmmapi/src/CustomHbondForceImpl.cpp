@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -215,19 +215,28 @@ ParsedExpression CustomHbondForceImpl::prepareExpression(const CustomHbondForce&
     atoms["d1"] = 3;
     atoms["d2"] = 4;
     atoms["d3"] = 5;
-    return ParsedExpression(replaceFunctions(expression.getRootNode(), atoms, distances, angles, dihedrals)).optimize();
+    set<string> variables;
+    for (int i = 0; i < force.getNumPerDonorParameters(); i++)
+        variables.insert(force.getPerDonorParameterName(i));
+    for (int i = 0; i < force.getNumPerAcceptorParameters(); i++)
+        variables.insert(force.getPerAcceptorParameterName(i));
+    for (int i = 0; i < force.getNumGlobalParameters(); i++)
+        variables.insert(force.getGlobalParameterName(i));
+    return ParsedExpression(replaceFunctions(expression.getRootNode(), atoms, distances, angles, dihedrals, variables)).optimize();
 }
 
 ExpressionTreeNode CustomHbondForceImpl::replaceFunctions(const ExpressionTreeNode& node, map<string, int> atoms,
-        map<string, vector<int> >& distances, map<string, vector<int> >& angles, map<string, vector<int> >& dihedrals) {
+        map<string, vector<int> >& distances, map<string, vector<int> >& angles, map<string, vector<int> >& dihedrals, set<string>& variables) {
     const Operation& op = node.getOperation();
+    if (op.getId() == Operation::VARIABLE && variables.find(op.getName()) == variables.end())
+        throw OpenMMException("CustomHBondForce: Unknown variable '"+op.getName()+"'");
     if (op.getId() != Operation::CUSTOM || op.getNumArguments() < 2)
     {
         // This is not an angle or dihedral, so process its children.
 
         vector<ExpressionTreeNode> children;
         for (int i = 0; i < (int) node.getChildren().size(); i++)
-            children.push_back(replaceFunctions(node.getChildren()[i], atoms, distances, angles, dihedrals));
+            children.push_back(replaceFunctions(node.getChildren()[i], atoms, distances, angles, dihedrals, variables));
         return ExpressionTreeNode(op.clone(), children);
     }
     const Operation::Custom& custom = static_cast<const Operation::Custom&>(op);

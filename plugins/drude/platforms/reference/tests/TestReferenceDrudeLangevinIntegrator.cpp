@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013 Stanford University and the Authors.           *
+ * Portions copyright (c) 2013-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -60,6 +60,7 @@ void testSinglePair() {
     const double mass2 = 0.1;
     const double totalMass = mass1+mass2;
     const double reducedMass = (mass1*mass2)/(mass1+mass2);
+    const double maxDistance = 0.05;
     System system;
     system.addParticle(mass1);
     system.addParticle(mass2);
@@ -70,6 +71,7 @@ void testSinglePair() {
     positions[0] = Vec3(0, 0, 0);
     positions[1] = Vec3(0, 0, 0);
     DrudeLangevinIntegrator integ(temperature, 20.0, temperatureDrude, 20.0, 0.003);
+    integ.setMaxDrudeDistance(maxDistance);
     Platform& platform = Platform::getPlatformByName("Reference");
     Context context(system, integ, platform);
     context.setPositions(positions);
@@ -84,12 +86,15 @@ void testSinglePair() {
     int numSteps = 10000;
     for (int i = 0; i < numSteps; i++) {
         integ.step(10);
-        State state = context.getState(State::Velocities);
+        State state = context.getState(State::Velocities | State::Positions);
         const vector<Vec3>& vel = state.getVelocities();
         Vec3 velCM = vel[0]*(mass1/totalMass) + vel[1]*(mass2/totalMass);
         keCM += 0.5*totalMass*velCM.dot(velCM);
         Vec3 velInternal = vel[0]-vel[1];
         keInternal += 0.5*reducedMass*velInternal.dot(velInternal);
+        Vec3 delta = state.getPositions()[0]-state.getPositions()[1];
+        double distance = sqrt(delta.dot(delta));
+        ASSERT(distance <= maxDistance*(1+1e-6));
     }
     ASSERT_USUALLY_EQUAL_TOL(3*0.5*BOLTZ*temperature, keCM/numSteps, 0.1);
     ASSERT_USUALLY_EQUAL_TOL(3*0.5*BOLTZ*temperatureDrude, keInternal/numSteps, 0.01);
@@ -171,7 +176,7 @@ void testWater() {
     int numDrudeDof = 3*numMolecules;
     int numDof = numStandardDof+numDrudeDof;
     double expectedTemp = (numStandardDof*temperature+numDrudeDof*temperatureDrude)/numDof;
-    ASSERT_USUALLY_EQUAL_TOL(expectedTemp, ke/(0.5*numDof*BOLTZ), 0.02);
+    ASSERT_USUALLY_EQUAL_TOL(expectedTemp, ke/(0.5*numDof*BOLTZ), 0.03);
 }
 
 int main() {

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -28,9 +28,10 @@
 #include "OpenCLPlatform.h"
 #include "OpenCLKernelFactory.h"
 #include "OpenCLKernels.h"
-#include "openmm/internal/ContextImpl.h"
 #include "openmm/Context.h"
 #include "openmm/System.h"
+#include "openmm/internal/ContextImpl.h"
+#include "openmm/internal/hardware.h"
 #include <algorithm>
 #include <cctype>
 #include <sstream>
@@ -74,6 +75,7 @@ OpenCLPlatform::OpenCLPlatform() {
     registerKernelFactory(CalcCustomGBForceKernel::Name(), factory);
     registerKernelFactory(CalcCustomExternalForceKernel::Name(), factory);
     registerKernelFactory(CalcCustomHbondForceKernel::Name(), factory);
+    registerKernelFactory(CalcCustomCentroidBondForceKernel::Name(), factory);
     registerKernelFactory(CalcCustomCompoundBondForceKernel::Name(), factory);
     registerKernelFactory(CalcCustomManyParticleForceKernel::Name(), factory);
     registerKernelFactory(IntegrateVerletStepKernel::Name(), factory);
@@ -91,12 +93,14 @@ OpenCLPlatform::OpenCLPlatform() {
     platformProperties.push_back(OpenCLPlatformName());
     platformProperties.push_back(OpenCLPrecision());
     platformProperties.push_back(OpenCLUseCpuPme());
+    platformProperties.push_back(OpenCLDisablePmeStream());
     setPropertyDefaultValue(OpenCLDeviceIndex(), "");
     setPropertyDefaultValue(OpenCLDeviceName(), "");
     setPropertyDefaultValue(OpenCLPlatformIndex(), "");
     setPropertyDefaultValue(OpenCLPlatformName(), "");
     setPropertyDefaultValue(OpenCLPrecision(), "single");
     setPropertyDefaultValue(OpenCLUseCpuPme(), "false");
+    setPropertyDefaultValue(OpenCLDisablePmeStream(), "false");
 }
 
 double OpenCLPlatform::getSpeed() const {
@@ -153,13 +157,20 @@ void OpenCLPlatform::contextCreated(ContextImpl& context, const map<string, stri
             getPropertyDefaultValue(OpenCLPrecision()) : properties.find(OpenCLPrecision())->second);
     string cpuPmePropValue = (properties.find(OpenCLUseCpuPme()) == properties.end() ?
             getPropertyDefaultValue(OpenCLUseCpuPme()) : properties.find(OpenCLUseCpuPme())->second);
+    string pmeStreamPropValue = (properties.find(OpenCLDisablePmeStream()) == properties.end() ?
+            getPropertyDefaultValue(OpenCLDisablePmeStream()) : properties.find(OpenCLDisablePmeStream())->second);
     transform(precisionPropValue.begin(), precisionPropValue.end(), precisionPropValue.begin(), ::tolower);
     transform(cpuPmePropValue.begin(), cpuPmePropValue.end(), cpuPmePropValue.begin(), ::tolower);
+    transform(pmeStreamPropValue.begin(), pmeStreamPropValue.end(), pmeStreamPropValue.begin(), ::tolower);
     vector<string> pmeKernelName;
     pmeKernelName.push_back(CalcPmeReciprocalForceKernel::Name());
     if (!supportsKernels(pmeKernelName))
         cpuPmePropValue = "false";
-    context.setPlatformData(new PlatformData(context.getSystem(), platformPropValue, devicePropValue, precisionPropValue, cpuPmePropValue));
+    int threads = getNumProcessors();
+    char* threadsEnv = getenv("OPENMM_CPU_THREADS");
+    if (threadsEnv != NULL)
+        stringstream(threadsEnv) >> threads;
+    context.setPlatformData(new PlatformData(context.getSystem(), platformPropValue, devicePropValue, precisionPropValue, cpuPmePropValue, pmeStreamPropValue, threads));
 }
 
 void OpenCLPlatform::contextDestroyed(ContextImpl& context) const {
@@ -168,7 +179,8 @@ void OpenCLPlatform::contextDestroyed(ContextImpl& context) const {
 }
 
 OpenCLPlatform::PlatformData::PlatformData(const System& system, const string& platformPropValue, const string& deviceIndexProperty,
-        const string& precisionProperty, const string& cpuPmeProperty) : removeCM(false), stepCount(0), computeForceCount(0), time(0.0)  {
+        const string& precisionProperty, const string& cpuPmeProperty, const string& pmeStreamProperty, int numThreads) :
+            removeCM(false), stepCount(0), computeForceCount(0), time(0.0), hasInitializedContexts(false), threads(numThreads)  {
     int platformIndex = -1;
     if (platformPropValue.length() > 0)
         stringstream(platformPropValue) >> platformIndex;
@@ -182,7 +194,7 @@ OpenCLPlatform::PlatformData::PlatformData(const System& system, const string& p
     try {
         for (int i = 0; i < (int) devices.size(); i++) {
             if (devices[i].length() > 0) {
-                unsigned int deviceIndex;
+                int deviceIndex;
                 stringstream(devices[i]) >> deviceIndex;
                 contexts.push_back(new OpenCLContext(system, platformIndex, deviceIndex, precisionProperty, *this));
             }
@@ -209,6 +221,7 @@ OpenCLPlatform::PlatformData::PlatformData(const System& system, const string& p
     platformIndex = contexts[0]->getPlatformIndex();
 
     useCpuPme = (cpuPmeProperty == "true" && !contexts[0]->getUseDoublePrecision());
+    disablePmeStream = (pmeStreamProperty == "true");
     propertyValues[OpenCLPlatform::OpenCLDeviceIndex()] = deviceIndex.str();
     propertyValues[OpenCLPlatform::OpenCLDeviceName()] = deviceName.str();
     propertyValues[OpenCLPlatform::OpenCLPlatformIndex()] = contexts[0]->intToString(platformIndex);
@@ -217,6 +230,7 @@ OpenCLPlatform::PlatformData::PlatformData(const System& system, const string& p
     propertyValues[OpenCLPlatform::OpenCLPlatformName()] = platforms[platformIndex].getInfo<CL_PLATFORM_NAME>();
     propertyValues[OpenCLPlatform::OpenCLPrecision()] = precisionProperty;
     propertyValues[OpenCLPlatform::OpenCLUseCpuPme()] = useCpuPme ? "true" : "false";
+    propertyValues[OpenCLPlatform::OpenCLDisablePmeStream()] = disablePmeStream ? "true" : "false";
     contextEnergy.resize(contexts.size());
 }
 
@@ -226,8 +240,11 @@ OpenCLPlatform::PlatformData::~PlatformData() {
 }
 
 void OpenCLPlatform::PlatformData::initializeContexts(const System& system) {
+    if (hasInitializedContexts)
+        return;
     for (int i = 0; i < (int) contexts.size(); i++)
         contexts[i]->initialize();
+    hasInitializedContexts = true;
 }
 
 void OpenCLPlatform::PlatformData::syncContexts() {

@@ -31,8 +31,7 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
-
-from __future__ import division
+from __future__ import division, print_function, absolute_import
 
 __author__ = "Christopher M. Bruns"
 __version__ = "0.5"
@@ -40,21 +39,27 @@ __version__ = "0.5"
 
 import math
 import sys
-from mymatrix import MyMatrix, zeros
-from basedimension import BaseDimension
-from baseunit import BaseUnit
-from standard_dimensions import *
+from .mymatrix import MyMatrix, zeros
+from .basedimension import BaseDimension
+from .baseunit import BaseUnit
+from .standard_dimensions import *
 
 class Unit(object):
     """
     Physical unit such as meter or ampere.
     """
+
+    __array_priority__ = 100
+
     def __init__(self, base_or_scaled_units):
         """Create a new Unit.
 
-        Parameters:
-         - self (Unit) The newly created Unit.
-         - base_or_scaled_units (dict) Keys are BaseUnits or ScaledUnits.  Values are exponents (numbers).
+        Parameters
+        ----------
+        self : Unit
+            The newly created Unit.
+        base_or_scaled_units : dict
+            Keys are BaseUnits or ScaledUnits.  Values are exponents (numbers).
         """
         # Unit contents are of two types: BaseUnits and ScaledUnits
         self._top_base_units = {}
@@ -100,10 +105,10 @@ class Unit(object):
         # TODO - also handle non-simple units, i.e. units with multiple BaseUnits/ScaledUnits
         assert len(self._top_base_units) == 1
         assert len(self._scaled_units) == 0
-        dimension = self._top_base_units.iterkeys().next()
+        dimension = next(iter(self._top_base_units))
         base_unit_dict = self._top_base_units[dimension]
         assert len(base_unit_dict) == 1
-        parent_base_unit = base_unit_dict.iterkeys().next()
+        parent_base_unit = next(iter(base_unit_dict))
         parent_exponent = base_unit_dict[parent_base_unit]
         new_base_unit = BaseUnit(parent_base_unit.dimension, name, symbol)
         # BaseUnit scale might be different depending on exponent
@@ -119,10 +124,8 @@ class Unit(object):
         Yields (BaseDimension, exponent) tuples comprising this unit.
         """
         # There might be two units with the same dimension? No.
-        for dimension in sorted(self._all_base_units.iterkeys()):
-            exponent = 0
-            for base_unit in sorted(self._all_base_units[dimension].iterkeys()):
-                exponent += self._all_base_units[dimension][base_unit]
+        for dimension in sorted(self._all_base_units.keys()):
+            exponent = sum(self._all_base_units[dimension].values())
             if exponent != 0:
                 yield (dimension, exponent)
 
@@ -133,8 +136,8 @@ class Unit(object):
 
         There might be multiple BaseUnits with the same dimension.
         """
-        for dimension in sorted(self._all_base_units.iterkeys()):
-            for base_unit in sorted(self._all_base_units[dimension].iterkeys()):
+        for dimension in sorted(self._all_base_units.keys()):
+            for base_unit in sorted(self._all_base_units[dimension].keys()):
                 exponent = self._all_base_units[dimension][base_unit]
                 yield (base_unit, exponent)
 
@@ -142,8 +145,8 @@ class Unit(object):
         """
         Yields (BaseUnit, exponent) tuples in this Unit, excluding those within BaseUnits.
         """
-        for dimension in sorted(self._top_base_units.iterkeys()):
-            for unit in sorted(self._top_base_units[dimension].iterkeys()):
+        for dimension in sorted(self._top_base_units.keys()):
+            for unit in sorted(self._top_base_units[dimension].keys()):
                 exponent = self._top_base_units[dimension][unit]
                 yield (unit, exponent)
 
@@ -389,7 +392,8 @@ class Unit(object):
         Strips off any ScaledUnits in the Unit, leaving only BaseUnits.
 
         Parameters
-         - system: a dictionary of (BaseDimension, BaseUnit) pairs
+        ----------
+        system : a dictionary of (BaseDimension, BaseUnit) pairs
         """
         return system.express_unit(self)
 
@@ -495,6 +499,8 @@ class ScaledUnit(object):
     ScaledUnit and BaseUnit are both used in the internals of Unit.  They
     should only be used during the construction of Units.
     """
+    __array_priority__ = 100
+
     def __init__(self, factor, master, name, symbol):
         self.factor = factor
         # Convert to one base_unit per dimension
@@ -514,7 +520,7 @@ class ScaledUnit(object):
         self.symbol = symbol
 
     def __iter__(self):
-        for dim in sorted(self.base_units.iterkeys()):
+        for dim in sorted(self.base_units.keys()):
             yield self.base_units[dim]
 
     def iter_base_units(self):
@@ -576,6 +582,14 @@ class ScaledUnit(object):
                 + ", symbol=" + repr(self.symbol) + ")"
 
 class UnitSystem(object):
+    """
+    A complete system of units defining the *base* unit in each dimension
+
+    Parameters
+    ----------
+    units : list
+        List of base units from which to construct the unit system
+    """
     def __init__(self, units):
         self.units = units
         self._unit_conversion_cache = {}
@@ -590,8 +604,7 @@ class UnitSystem(object):
         if not len(self.base_units) == len(self.units):
             raise ArithmeticError("UnitSystem must have same number of units as base dimensions")
         # self.dimensions is a dict of {BaseDimension: index}
-        dimensions = base_units.keys()
-        dimensions.sort()
+        dimensions = sorted(base_units.keys())
         self.dimensions = {}
         for d in range(len(dimensions)):
             self.dimensions[dimensions[d]] = d
@@ -669,7 +682,7 @@ def is_unit(x):
     Returns True if x is a Unit, False otherwise.
 
     Examples
-
+    --------
     >>> is_unit(16)
     False
     """

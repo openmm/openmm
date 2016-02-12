@@ -545,6 +545,9 @@ extern "C" __global__ void computeFixedField(
                     localData[tbx+tj].field += fields[2];
                     localData[tbx+tj].fieldPolar += fields[3];
 #ifdef USE_GK
+                }
+                if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
+                    real3 fields[2];
                     computeOneGkInteraction(data, localData[tbx+tj], delta, fields);
                     data.gkField += fields[0];
                     localData[tbx+tj].gkField += fields[1];
@@ -684,6 +687,9 @@ extern "C" __global__ void computeFixedField(
                     localData[tbx+tj].field += fields[2];
                     localData[tbx+tj].fieldPolar += fields[3];
 #ifdef USE_GK
+                }
+                if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
+                    real3 fields[2];
                     computeOneGkInteraction(data, localData[tbx+tj], delta, fields);
                     data.gkField += fields[0];
                     localData[tbx+tj].gkField += fields[1];

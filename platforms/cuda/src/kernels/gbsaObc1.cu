@@ -33,9 +33,9 @@ extern "C" __global__ void reduceBornSum(float alpha, float beta, float gamma, c
  * Reduce the Born force.
  */
 
-extern "C" __global__ void reduceBornForce(long long* __restrict__ bornForce, real* __restrict__ energyBuffer,
+extern "C" __global__ void reduceBornForce(long long* __restrict__ bornForce, mixed* __restrict__ energyBuffer,
         const float2* __restrict__ params, const real* __restrict__ bornRadii, const real* __restrict__ obcChain) {
-    real energy = 0;
+    mixed energy = 0;
     for (unsigned int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_ATOMS; index += blockDim.x*gridDim.x) {
         // Get summed Born force
 
@@ -402,7 +402,7 @@ typedef struct {
  */
 
 extern "C" __global__ void computeGBSAForce1(unsigned long long* __restrict__ forceBuffers, unsigned long long* __restrict__ global_bornForce,
-        real* __restrict__ energyBuffer, const real4* __restrict__ posq, const real* __restrict__ global_bornRadii,
+        mixed* __restrict__ energyBuffer, const real4* __restrict__ posq, const real* __restrict__ global_bornRadii,
 #ifdef USE_CUTOFF
         const int* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, const real4* __restrict__ blockCenter,
@@ -415,7 +415,7 @@ extern "C" __global__ void computeGBSAForce1(unsigned long long* __restrict__ fo
     const unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/TILE_SIZE;
     const unsigned int tgx = threadIdx.x & (TILE_SIZE-1);
     const unsigned int tbx = threadIdx.x - tgx;
-    real energy = 0;
+    mixed energy = 0;
     __shared__ AtomData2 localData[FORCE_WORK_GROUP_SIZE];
 
     // First loop: process tiles that contain exclusions.

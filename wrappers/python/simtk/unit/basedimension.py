@@ -1,6 +1,4 @@
 #!/bin/env python
-
-
 """
 Module simtk.unit.basedimension
 
@@ -34,6 +32,7 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
+from __future__ import print_function, division
 
 __author__ = "Christopher M. Bruns"
 __version__ = "0.6"

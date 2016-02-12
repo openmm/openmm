@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
  * Authors:                                                                   *
  * Contributors:                                                              *
  *                                                                            *
@@ -43,6 +43,10 @@ AmoebaMultipoleForce::AmoebaMultipoleForce() : nonbondedMethod(NoCutoff), polari
                                                mutualInducedTargetEpsilon(1.0e-02), scalingDistanceCutoff(100.0), electricConstant(138.9354558456), aewald(0.0) {
     pmeGridDimension.resize(3);
     pmeGridDimension[0] = pmeGridDimension[1] = pmeGridDimension[2];
+    extrapolationCoefficients.push_back(0.0);
+    extrapolationCoefficients.push_back(-0.3);
+    extrapolationCoefficients.push_back(0.0);
+    extrapolationCoefficients.push_back(1.3);
 }
 
 AmoebaMultipoleForce::NonbondedMethod AmoebaMultipoleForce::getNonbondedMethod() const {
@@ -59,6 +63,14 @@ AmoebaMultipoleForce::PolarizationType AmoebaMultipoleForce::getPolarizationType
 
 void AmoebaMultipoleForce::setPolarizationType(AmoebaMultipoleForce::PolarizationType type) {
     polarizationType = type;
+}
+
+void AmoebaMultipoleForce::setExtrapolationCoefficients(const std::vector<double> &coefficients) {
+    extrapolationCoefficients = coefficients;
+}
+
+const std::vector<double> & AmoebaMultipoleForce::getExtrapolationCoefficients() const {
+    return extrapolationCoefficients;
 }
 
 double AmoebaMultipoleForce::getCutoffDistance() const {
@@ -102,6 +114,10 @@ void AmoebaMultipoleForce::setPmeGridDimensions(const std::vector<int>& gridDime
     pmeGridDimension[2] = gridDimension[2];
     return;
 } 
+
+void AmoebaMultipoleForce::getPMEParametersInContext(const Context& context, double& alpha, int& nx, int& ny, int& nz) const {
+    dynamic_cast<const AmoebaMultipoleForceImpl&>(getImplInContext(context)).getPMEParameters(alpha, nx, ny, nz);
+}
 
 int AmoebaMultipoleForce::getMutualInducedMaxIterations() const {
     return mutualInducedMaxIterations;

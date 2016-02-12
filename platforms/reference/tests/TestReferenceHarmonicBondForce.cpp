@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2015 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -29,79 +29,8 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-/**
- * This tests all the different force terms in the reference implementation of HarmonicBondForce.
- */
+#include "ReferenceTests.h"
+#include "TestHarmonicBondForce.h"
 
-#include "openmm/internal/AssertionUtilities.h"
-#include "openmm/Context.h"
-#include "ReferencePlatform.h"
-#include "openmm/HarmonicBondForce.h"
-#include "openmm/System.h"
-#include "openmm/VerletIntegrator.h"
-#include "SimTKOpenMMRealType.h"
-#include <iostream>
-#include <vector>
-
-using namespace OpenMM;
-using namespace std;
-
-ReferencePlatform platform;
-
-const double TOL = 1e-5;
-
-void testBonds() {
-    System system;
-    system.addParticle(1.0);
-    system.addParticle(1.0);
-    system.addParticle(1.0);
-    VerletIntegrator integrator(0.01);
-    HarmonicBondForce* forceField = new HarmonicBondForce();
-    forceField->addBond(0, 1, 1.5, 0.8);
-    forceField->addBond(1, 2, 1.2, 0.7);
-    system.addForce(forceField);
-    ASSERT(!forceField->usesPeriodicBoundaryConditions());
-    ASSERT(!system.usesPeriodicBoundaryConditions());
-    Context context(system, integrator, platform);
-    vector<Vec3> positions(3);
-    positions[0] = Vec3(0, 2, 0);
-    positions[1] = Vec3(0, 0, 0);
-    positions[2] = Vec3(1, 0, 0);
-    context.setPositions(positions);
-    State state = context.getState(State::Forces | State::Energy);
-    {
-        const vector<Vec3>& forces = state.getForces();
-        ASSERT_EQUAL_VEC(Vec3(0, -0.8*0.5, 0), forces[0], TOL);
-        ASSERT_EQUAL_VEC(Vec3(0.7*0.2, 0, 0), forces[2], TOL);
-        ASSERT_EQUAL_VEC(Vec3(-forces[0][0]-forces[2][0], -forces[0][1]-forces[2][1], -forces[0][2]-forces[2][2]), forces[1], TOL);
-        ASSERT_EQUAL_TOL(0.5*0.8*0.5*0.5 + 0.5*0.7*0.2*0.2, state.getPotentialEnergy(), TOL);
-    }
-    
-    // Try changing the bond parameters and make sure it's still correct.
-    
-    forceField->setBondParameters(0, 0, 1, 1.6, 0.9);
-    forceField->setBondParameters(1, 1, 2, 1.3, 0.8);
-    forceField->updateParametersInContext(context);
-    state = context.getState(State::Forces | State::Energy);
-    {
-        const vector<Vec3>& forces = state.getForces();
-        ASSERT_EQUAL_VEC(Vec3(0, -0.9*0.4, 0), forces[0], TOL);
-        ASSERT_EQUAL_VEC(Vec3(0.8*0.3, 0, 0), forces[2], TOL);
-        ASSERT_EQUAL_VEC(Vec3(-forces[0][0]-forces[2][0], -forces[0][1]-forces[2][1], -forces[0][2]-forces[2][2]), forces[1], TOL);
-        ASSERT_EQUAL_TOL(0.5*0.9*0.4*0.4 + 0.5*0.8*0.3*0.3, state.getPotentialEnergy(), TOL);
-    }
-}
-
-int main() {
-    try {
-        cout << "Running test..." << endl;
-        testBonds();
-    }
-    catch(const exception& e) {
-        cout << "exception: " << e.what() << endl;
-        cout << "FAIL - ERROR.  Test failed." << endl;
-        return 1;
-    }
-    cout << "PASS - Test succeeded." << endl;
-    return 0;
+void runPlatformTests() {
 }

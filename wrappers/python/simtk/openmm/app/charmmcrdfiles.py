@@ -1,7 +1,7 @@
 """
 Provides a class for parsing CHARMM-style coordinate files, namely CHARMM .crd
 (coordinate) files and CHARMM .rst (restart) file. Uses CharmmFile class in
-_charmmfile.py for reading files 
+_charmmfile.py for reading files
 
 This file is part of the OpenMM molecular simulation toolkit originating from
 Simbios, the NIH National Center for Physics-Based Simulation of Biological
@@ -33,6 +33,8 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
+from __future__ import absolute_import
+from __future__ import print_function
 
 from simtk.openmm.app.internal.charmm.exceptions import CharmmFileError
 import simtk.unit as u
@@ -47,12 +49,17 @@ class CharmmCrdFile(object):
     Reads and parses a CHARMM coordinate file (.crd) into its components,
     namely the coordinates, CHARMM atom types, resid, resname, etc.
 
-    Main attributes:
-        - natom (int) : Number of atoms in the system
-        - resname (list) : Names of all residues
-        - positions (list) : All cartesian coordinates [x1, y1, z1, x2, ...]
+    Attributes
+    ----------
+    natom : int
+        Number of atoms in the system
+    resname : list
+        Names of all residues
+    positions : list
+        All cartesian coordinates [x1, y1, z1, x2, ...]
 
-    Example:
+    Examples
+    --------
     >>> chm = CharmmCrdFile('testfiles/1tnm.crd')
     >>> print '%d atoms; %d coords' % (chm.natom, len(chm.positions))
     1414 atoms; 1414 coords
@@ -89,15 +96,15 @@ class CharmmCrdFile(object):
                 intitle = False
             elif line.strip()[0] != '*':
                 intitle = False
-            else: 
+            else:
                 intitle = True
 
         while len(line.strip()) == 0:      # Skip whitespace
             line = crdfile.readline()
-        
+
         try:
             self.natom = int(line.strip().split()[0])
-            
+
             for row in range(self.natom):
                 line = crdfile.readline().strip().split()
                 self.atomno.append(int(line[0]))
@@ -117,7 +124,7 @@ class CharmmCrdFile(object):
                                        len(self.positions))
                 )
 
-        except (ValueError, IndexError), e:
+        except (ValueError, IndexError) as e:
             raise CharmmFileError('Error parsing CHARMM coordinate file')
 
         # Apply units to the positions now. Do it this way to allow for
@@ -129,14 +136,21 @@ class CharmmRstFile(object):
     Reads and parses data, velocities and coordinates from a CHARMM restart
     file (.rst) of file name 'fname' into class attributes
 
-    Main attributes:
-        - natom (int) : Number of atoms in the system
-        - resname (list) : Names of all residues
-        - positions (list) : All cartesian coordinates [x1, y1, z1, x2, ...]
-        - positionsold (list) : Old cartesian coordinates
-        - velocities (list) : List of all cartesian velocities
+    Attributes
+    ----------
+    natom : int
+        Number of atoms in the system
+    resname : list
+        Names of all residues
+    positions : list
+        All cartesian coordinates [x1, y1, z1, x2, ...]
+    positionsold : list
+        Old cartesian coordinates
+    velocities : list
+        List of all cartesian velocities
 
-    Example:
+    Examples
+    --------
     >>> chm = CharmmRstFile('testfiles/sample-charmm.rst')
     >>> print chm.header[0]
     REST    37     1
@@ -153,7 +167,7 @@ class CharmmRstFile(object):
         self.positionsold = []
         self.positions = []
         self.velocities = []
-        
+
         self.ff_version = 0
         self.natom = 0
         self.npriv = 0
@@ -167,7 +181,7 @@ class CharmmRstFile(object):
     def _parse(self, fname):
 
         crdfile = open(fname, 'r')
-        readingHeader = True 
+        readingHeader = True
 
         while readingHeader:
             line = crdfile.readline()
@@ -175,7 +189,7 @@ class CharmmRstFile(object):
                 raise CharmmFileError('Premature end of file')
             line = line.strip()
             words = line.split()
-            if len(line) != 0:  
+            if len(line) != 0:
                 if words[0] == 'ENERGIES' or words[0] == '!ENERGIES':
                     readingHeader = False
                 else:
@@ -189,15 +203,15 @@ class CharmmRstFile(object):
                 if line[0][0:5] == 'NATOM' or line[0][0:6] == '!NATOM':
                     try:
                         line = self.header[row+1].strip().split()
-                        self.natom = int(line[0])     
+                        self.natom = int(line[0])
                         self.npriv = int(line[1])     # num. previous steps
-                        self.nstep = int(line[2])     # num. steps in file  
-                        self.nsavc = int(line[3])     # coord save frequency 
+                        self.nstep = int(line[2])     # num. steps in file
+                        self.nsavc = int(line[3])     # coord save frequency
                         self.nsavv = int(line[4])     # velocities "
                         self.jhstrt = int(line[5])    # Num total steps?
                         break
-                   
-                    except (ValueError, IndexError), e:
+
+                    except (ValueError, IndexError) as e:
                         raise CharmmFileError('Problem parsing CHARMM restart')
 
         self._scan(crdfile, '!XOLD')
@@ -242,7 +256,7 @@ class CharmmRstFile(object):
             if len(line) < 3*CHARMMLEN:
                 raise CharmmFileError("Less than 3 coordinates present in "
                                       "coordinate row or positions may be "
-                                      "truncated.") 
+                                      "truncated.")
 
             line = line.replace('D','E')     # CHARMM uses 'D' for exponentials
 
@@ -255,9 +269,9 @@ class CharmmRstFile(object):
 
     def printcoords(self, crds):
         for crd in range(len(crds)):
-            print crds[crd],
+            print(crds[crd], end=' ')
             if not (crd+1) % 3:
-                print '\n',
+                print('\n', end=' ')
 
 if __name__ == '__main__':
     import doctest

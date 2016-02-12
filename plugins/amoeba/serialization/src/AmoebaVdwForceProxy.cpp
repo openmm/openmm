@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -42,9 +42,10 @@ AmoebaVdwForceProxy::AmoebaVdwForceProxy() : SerializationProxy("AmoebaVdwForce"
 }
 
 void AmoebaVdwForceProxy::serialize(const void* object, SerializationNode& node) const {
-    node.setIntProperty("version", 1);
+    node.setIntProperty("version", 2);
     const AmoebaVdwForce& force = *reinterpret_cast<const AmoebaVdwForce*>(object);
 
+    node.setIntProperty("forceGroup", force.getForceGroup());
     node.setStringProperty("SigmaCombiningRule", force.getSigmaCombiningRule());
     node.setStringProperty("EpsilonCombiningRule", force.getEpsilonCombiningRule());
     node.setDoubleProperty("VdwCutoff", force.getCutoff());
@@ -72,11 +73,13 @@ void AmoebaVdwForceProxy::serialize(const void* object, SerializationNode& node)
 }
 
 void* AmoebaVdwForceProxy::deserialize(const SerializationNode& node) const {
-    if (node.getIntProperty("version") != 1)
+    int version = node.getIntProperty("version");
+    if (version < 1 || version > 2)
         throw OpenMMException("Unsupported version number");
     AmoebaVdwForce* force = new AmoebaVdwForce();
     try {
-
+        if (version > 1)
+            force->setForceGroup(node.getIntProperty("forceGroup", 0));
         force->setSigmaCombiningRule(node.getStringProperty("SigmaCombiningRule"));
         force->setEpsilonCombiningRule(node.getStringProperty("EpsilonCombiningRule"));
         force->setCutoff(node.getDoubleProperty("VdwCutoff"));
