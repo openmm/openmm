@@ -51,14 +51,19 @@
     short molecular dynamics simulations, and the generalized born solvent model. Proteins 55, 620-634.
   Test:
   - protein
-#- Source: leaprc.ff03ua
-#  Reference: >-
-#             Yang, L., Tan, C., Hsieh, M.-J., Wang, J., Duan, Y., Cieplak, P., Caldwell, J., Kollman, P.A., and Luo, R. (2006).
-#             New-Generation Amber United-Atom Force Field. J. Phys. Chem. B 110, 13166-13176.
+- Source: leaprc.ff03ua
+  Reference: >-
+             Yang, L., Tan, C., Hsieh, M.-J., Wang, J., Duan, Y., Cieplak, P., Caldwell, J., Kollman, P.A., and Luo, R. (2006).
+             New-Generation Amber United-Atom Force Field. J. Phys. Chem. B 110, 13166-13176.
+  Test:
+  - protein_ua
+# Waiting on the gaff frcmod issue in ForceField
 #- Source: leaprc.gaff
 #  Reference: >-
 #             Wang, J., Wolf, R.M., Caldwell, J.W., Kollman, P.A., and Case, D.A. (2004).
 #             Development and testing of a general amber force field. J. Comput. Chem. 25, 1157-1174.
+#  Test:
+#  - mol2
 - Source: leaprc.ffAM1
   Reference:
   - >-

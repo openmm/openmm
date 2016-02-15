@@ -1,6 +1,6 @@
 <ForceField>
  <Info>
-  <DateGenerated>2016-02-11</DateGenerated>
+  <DateGenerated>2016-02-15</DateGenerated>
   <Source md5hash="a05fb768205ab9e6f69b8e85cead8af4" sourcePackage="AmberTools" sourcePackageVersion="15">oldff/leaprc.ff99</Source>
   <Reference>Wang, J., Cieplak, P., and Kollman, P.A. (2000). How well does a restrained electrostatic potential (RESP) model perform in calculating conformational energies of organic and biological molecules? J. Comput. Chem. 21, 1049-1074.</Reference>
  </Info>

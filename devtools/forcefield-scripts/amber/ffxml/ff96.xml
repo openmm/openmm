@@ -1,6 +1,6 @@
 <ForceField>
  <Info>
-  <DateGenerated>2016-02-11</DateGenerated>
+  <DateGenerated>2016-02-15</DateGenerated>
   <Source md5hash="1659bf2849f8834ea819a3dc4ae3a871" sourcePackage="AmberTools" sourcePackageVersion="15">oldff/leaprc.ff96</Source>
   <Reference>Kollman, P., Dixon, R., Cornell, W., Fox, T., Chipot, C., and Pohorille, A. (1997). The development/application of a minimalist molecular mechanics force field using a combination of ab initio calculations and experimental data. Computer Simulations of Biomolecular Systems: Computer Simulations of Biomolecular Systems, ESCOM.</Reference>
  </Info>

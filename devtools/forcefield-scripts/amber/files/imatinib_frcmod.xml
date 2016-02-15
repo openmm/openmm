@@ -1,0 +1,22 @@
+<ForceField>
+ <Info>
+  <DateGenerated>2016-02-14</DateGenerated>
+ </Info>
+ <PeriodicTorsionForce>
+  <Proper type1="cp" type2="cp" type3="nb" type4="ca" periodicity1="2" phase1="3.14159265359" k1="20.0832"/>
+  <Proper type1="ca" type2="cp" type3="nb" type4="ca" periodicity1="2" phase1="3.14159265359" k1="20.0832"/>
+  <Improper type1="n" type2="c" type3="ca" type4="hn" periodicity1="2" phase1="3.14159265359" k1="4.6024"/>
+  <Improper type1="nh" type2="ca" type3="ca" type4="hn" periodicity1="2" phase1="3.14159265359" k1="4.6024"/>
+  <Improper type1="ca" type2="ca" type3="ca" type4="ha" periodicity1="2" phase1="3.14159265359" k1="4.6024"/>
+  <Improper type1="ca" type2="c" type3="ca" type4="ca" periodicity1="2" phase1="3.14159265359" k1="4.6024"/>
+  <Improper type1="c" type2="ca" type3="n" type4="o" periodicity1="2" phase1="3.14159265359" k1="43.932"/>
+  <Improper type1="ca" type2="ca" type3="ca" type4="n" periodicity1="2" phase1="3.14159265359" k1="4.6024"/>
+  <Improper type1="ca" type2="ca" type3="ca" type4="nh" periodicity1="2" phase1="3.14159265359" k1="4.6024"/>
+  <Improper type1="ca" type2="nb" type3="nb" type4="nh" periodicity1="2" phase1="3.14159265359" k1="43.932"/>
+  <Improper type1="cp" type2="ca" type3="cp" type4="nb" periodicity1="2" phase1="3.14159265359" k1="4.6024"/>
+  <Improper type1="cp" type2="ca" type3="ca" type4="cp" periodicity1="2" phase1="3.14159265359" k1="4.6024"/>
+  <Improper type1="ca" type2="ca" type3="cp" type4="ha" periodicity1="2" phase1="3.14159265359" k1="4.6024"/>
+  <Improper type1="ca" type2="ca" type3="h4" type4="nb" periodicity1="2" phase1="3.14159265359" k1="4.6024"/>
+  <Improper type1="ca" type2="cp" type3="h4" type4="nb" periodicity1="2" phase1="3.14159265359" k1="4.6024"/>
+ </PeriodicTorsionForce>
+</ForceField>
