@@ -6,10 +6,10 @@
 export WORKSPACE=`pwd`
 
 # Install miniconda
-export VERSION="Latest"
+export VERSION="latest"
 export PLATFORM="Linux"
 export ARCH="x86_64"
-export MINICONDA="Miniconda-$VERSION-$PLATFORM-$ARCH.sh"
+export MINICONDA="Miniconda2-$VERSION-$PLATFORM-$ARCH.sh"
 if [ -f miniconda ];
 then
    echo "miniconda already exists"
@@ -27,4 +27,4 @@ export PATH=$WORKSPACE/miniconda/bin:$PATH
 # Ensure configuration is up to date.
 conda config --add channels http://conda.binstar.org/omnia
 conda install --yes --quiet swig fftw3f pip
-pip install sphinxcontrib-bibtex
+pip install sphinxcontrib-bibtex sphinxcontrib-lunrsearch sphinxcontrib-autodoc_doxygen
