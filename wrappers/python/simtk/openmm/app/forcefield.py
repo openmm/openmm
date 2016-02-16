@@ -940,6 +940,18 @@ class ForceField(object):
         # Add forces to the System
 
         for force in self._forces:
+            NBFIX = False
+            # check if at least 2 atoms have nbfix and only then call the NBFixGenerator
+            if isinstance(force, NBFixGenerator):
+                for a in data.atoms:
+                    atype = data.atomType[a]
+                    if atype in force.types1:
+                        for b in data.atoms:
+                            btype = data.atomType[b]
+                            if btype in force.type2:
+                                NBFIX = True
+            if not NBFIX and isinstance(force, NBFixGenerator):
+                continue
             force.createForce(sys, data, nonbondedMethod, nonbondedCutoff, args)
         if removeCMMotion:
             sys.addForce(mm.CMMotionRemover())
@@ -948,6 +960,8 @@ class ForceField(object):
 
         for force in self._forces:
             if 'postprocessSystem' in dir(force):
+                if not NBFIX and isinstance(force, NBFixGenerator):
+                    continue
                 force.postprocessSystem(sys, data, args)
 
         # Execute scripts found in the XML files.
@@ -1742,7 +1756,7 @@ class NBFixGenerator(object):
                 if lj_indx_list[j] > 0: continue
                 if atype2 == atype:
                     lj_indx_list[j] = num_lj_types
-                elif not atype in (self.types1 or atype in self.types2):
+                elif not (atype in self.types1) or (atype in self.types2):
                     # only non NBFIX types can be compressed
                     values = self.lj_types.paramsForType[atype2]
                     ljtype2 = (values['sigma'], abs(values['epsilon']))
@@ -1797,6 +1811,20 @@ class NBFixGenerator(object):
         for i in range(nonbonded.getNumParticles()):
             chg, sig, eps = nonbonded.getParticleParameters(i)
             nonbonded.setParticleParameters(i, chg, 0.5, 0.0)
+        self.force.setUseLongRangeCorrection(True)
+        if nonbondedMethod is NoCutoff:
+            self.force.setNonbondedMethod(mm.CustomNonbondedForce.NoCutoff)
+        elif nonbondedMethod is CutoffNonPeriodic:
+            self.force.setNonbondedMethod(mm.CustomNonbondedForce.CutoffNonPeriodic)
+        elif nonbondedMethod in (PME, Ewald, CutoffPeriodic):
+            self.force.setNonbondedMethod(mm.CustomNonbondedForce.CutoffPeriodic)
+        else:
+            raise AssertionError('Unsupported nonbonded method %s' %
+                                nonbondedMethod)
+        self.force.setCutoffDistance(nonbonded.getCutoffDistance())
+        if nonbonded.getUseSwitchingFunction():
+            self.force.setUseSwitchingFunction(True)
+            self.force.setSwitchingDistance(nonbonded.getSwitchingDistance())
         sys.addForce(self.force)
 
     def postprocessSystem(self, sys, data, args):
@@ -1807,20 +1835,7 @@ class NBFixGenerator(object):
             i, j, qq, ss, ee = nonbonded.getExceptionParameters(ii)
             self.force.addExclusion(i, j)
         # Now transfer the other properties (cutoff, switching function, etc.)
-        self.force.setUseLongRangeCorrection(True)
-        # if nonbondedMethod is NoCutoff:
-        #     self.force.setNonbondedMethod(mm.CustomNonbondedForce.NoCutoff)
-        # elif nonbondedMethod is CutoffNonPeriodic:
-        #     self.force.setNonbondedMethod(mm.CustomNonbondedForce.CutoffNonPeriodic)
-        # elif nonbondedMethod in (PME, Ewald, CutoffPeriodic):
-        #     self.force.setNonbondedMethod(mm.CustomNonbondedForce.CutoffPeriodic)
-        # else:
-        #     raise AssertionError('Unsupported nonbonded method %s' %
-        #                         nonbondedMethod)
-        self.force.setCutoffDistance(nonbonded.getCutoffDistance())
-        if nonbonded.getUseSwitchingFunction():
-            self.force.setUseSwitchingFunction(True)
-            self.force.setSwitchingDistance(nonbonded.getSwitchingDistance())
+
 
 
 
