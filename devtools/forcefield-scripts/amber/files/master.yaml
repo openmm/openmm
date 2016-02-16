@@ -8,6 +8,7 @@
     ff14SB: Improving the Accuracy of Protein Side Chain and Backbone Parameters from ff99SB. J. Chem. Theory Comput. 11, 3696-3713.
   Test:
   - protein
+  - nucleic
 - Source: leaprc.ff14SB.redq
   Reference:
   - >-
@@ -15,6 +16,7 @@
     ff14SB: Improving the Accuracy of Protein Side Chain and Backbone Parameters from ff99SB. J. Chem. Theory Comput. 11, 3696-3713.
   Test:
   - protein
+  - nucleic
 - Source: leaprc.ff14SBonlysc
   Reference:
   - >-
@@ -25,6 +27,7 @@
     Comparison of multiple Amber force fields and development of improved protein backbone parameters. Proteins 65, 712-725.
   Test:
   - protein
+  - nucleic
 # Mixed dihedrals entries issue
 #- Source: leaprc.ff14ipq
 #  Reference: >-
@@ -40,6 +43,7 @@
     ff14SB: Improving the Accuracy of Protein Side Chain and Backbone Parameters from ff99SB. J. Chem. Theory Comput. 11, 3696-3713.
   Test:
   - protein
+  - nucleic
 - Source: leaprc.ff03.r1
   Reference:
   - >-
@@ -51,6 +55,7 @@
     short molecular dynamics simulations, and the generalized born solvent model. Proteins 55, 620-634.
   Test:
   - protein
+  - nucleic
 - Source: leaprc.ff03ua
   Reference: >-
              Yang, L., Tan, C., Hsieh, M.-J., Wang, J., Duan, Y., Cieplak, P., Caldwell, J., Kollman, P.A., and Luo, R. (2006).
@@ -71,6 +76,7 @@
     J. Chem. Theory Comput. 2, 1070-1077.
   Test:
   - protein
+  - nucleic
 - Source: leaprc.ffPM3
   Reference:
   - >-
@@ -78,6 +84,7 @@
     J. Chem. Theory Comput. 2, 1070-1077.
   Test:
   - protein
+  - nucleic
 - Source: oldff/leaprc.ff99
   Reference:
   - >-
@@ -86,6 +93,7 @@
     J. Comput. Chem. 21, 1049-1074.
   Test:
   - protein
+  - nucleic
 - Source: oldff/leaprc.ff99SB
   Reference:
   - >-
@@ -93,6 +101,7 @@
     Comparison of multiple Amber force fields and development of improved protein backbone parameters. Proteins 65, 712-725.
   Test:
   - protein
+  - nucleic
 - Source: oldff/leaprc.ff99SBildn
   Reference:
   - >-
@@ -100,6 +109,7 @@
     Improved side-chain torsion potentials for the Amber ff99SB protein force field. Proteins 78, 1950-1958.
   Test:
   - protein
+  - nucleic
 - Source: oldff/leaprc.ff03
   Reference:
   - >-
@@ -111,6 +121,7 @@
     short molecular dynamics simulations, and the generalized born solvent model. Proteins 55, 620-634.
   Test:
   - protein
+  - nucleic
 - Source: oldff/leaprc.ff10
   Reference:
   - >-
@@ -128,6 +139,7 @@
     J. Chem. Theory. Comput. 7, 2886-2902.
   Test:
   - protein
+  - nucleic
 - Source: oldff/leaprc.ff94
   Reference:
   - >-
@@ -135,6 +147,7 @@
     A Second Generation Force Field for the Simulation of Proteins, Nucleic Acids, and Organic Molecules. J. Am. Chem. Soc. 117, 5179-5197.
   Test:
   - protein
+  - nucleic
 - Source: oldff/leaprc.ff96
   Reference:
   - >-
@@ -143,6 +156,7 @@
     Computer Simulations of Biomolecular Systems: Computer Simulations of Biomolecular Systems, ESCOM.
   Test:
   - protein
+  - nucleic
 - Source: oldff/leaprc.ff98
   Reference:
   - >-
@@ -151,6 +165,7 @@
     Journal of Biomolecular Structure and Dynamics 16, 845-862.
   Test:
   - protein
+  - nucleic
 - Source: oldff/leaprc.ff99SBnmr
   Reference:
   - >-
@@ -158,6 +173,7 @@
     Iterative Optimization of Molecular Mechanics Force Fields from NMR Data of Full-Length Proteins. J. Chem. Theory Comput. 7, 1773-1782.
   Test:
   - protein
+  - nucleic
 - Source: oldff/leaprc.ff99bsc0
   Reference:
   - >-
@@ -165,3 +181,4 @@
     Refinement of the AMBER Force Field for Nucleic Acids: Improving the Description of alpha/gamma Conformers. Biophysical Journal 92, 3817-3829.
   Test:
   - protein
+  - nucleic

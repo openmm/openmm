@@ -157,6 +157,75 @@ quit""" % (leaprc_name, villin_top[1], villin_crd[1])
     print('Villin headpiece energy validation successful!')
     print('Done!')
 
+def validate_nucleic(ffxml_name, leaprc_name):
+    if not find_executable('tleap'):
+        raise RuntimeError('tleap not available from PATH')
+    print('Preparing temporary files for validation...')
+    dna_top = tempfile.mkstemp()
+    dna_crd = tempfile.mkstemp()
+    leap_script_dna_file = tempfile.mkstemp()
+
+    print('Preparing LeaP scripts...')
+    leap_script_dna_string = """addPdbResMap {
+{ 0 "DG" "DG5"  } { 1 "DG" "DG3"  }
+{ 0 "DA" "DA5"  } { 1 "DA" "DA3"  }
+{ 0 "DC" "DC5"  } { 1 "DC" "DC3"  }
+{ 0 "DT" "DT5"  } { 1 "DT" "DT3"  }
+}
+addPdbAtomMap {
+{ "H1'" "H1*" }
+{ "H2'" "H2'1" }
+{ "H2''" "H2'2" }
+{ "H3'" "H3*" }
+{ "H4'" "H4*" }
+{ "H5'" "H5'1" }
+{ "H5''" "H5'2" }
+{ "HO2'" "HO'2" }
+{ "HO5'" "H5T"  }
+{ "HO3'" "H3T" }
+{ "OP1" "O1P" }
+{ "OP2" "O2P" }
+}
+source %s
+x = loadPdb files/4rzn_dna.pdb
+saveAmberParm x %s %s
+quit""" % (leaprc_name, dna_top[1], dna_crd[1])
+    os.write(leap_script_dna_file[0], leap_script_dna_string)
+
+    print('Running LEaP...')
+    os.system('tleap -f %s' % leap_script_dna_file[1])
+    if os.path.getsize(dna_top[1]) == 0 or os.path.getsize(dna_crd[1]) == 0:
+        raise RuntimeError('DNA LEaP fail for %s' % leaprc_name)
+
+    print('Calculating DNA energies...')
+    # AMBER
+    parm_amber = parmed.load_file(dna_top[1], dna_crd[1])
+    system_amber = parm_amber.createSystem(splitDihedrals=True)
+    dna_amber_energies = parmed.openmm.energy_decomposition_system(parm_amber, system_amber, nrg=kilojoules_per_mole)
+    # OpenMM
+    ff = app.ForceField(ffxml_name)
+    system_omm = ff.createSystem(parm_amber.topology)
+    parm_omm = parmed.openmm.load_topology(parm_amber.topology, system_omm, xyz=parm_amber.positions)
+    system_omm = parm_omm.createSystem(splitDihedrals=True)
+    dna_omm_energies = parmed.openmm.energy_decomposition_system(parm_omm, system_omm, nrg=kilojoules_per_mole)
+
+    print('Deleting temp files...')
+    for f in (dna_top, dna_crd, leap_script_dna_file):
+        os.unlink(f[1])
+
+    print('Asserting DNA energies...')
+    counter = 0
+    for i, j in zip(dna_amber_energies, dna_omm_energies):
+        if counter != 3: # Not Impropers
+            testing.assert_allclose(j[1], i[1], rtol=1e-5,
+            err_msg=('DNA energies outside of allowed tolerance for %s' % ffxml_name))
+            counter += 1
+        else: # Impropers - higher tolerance
+            testing.assert_allclose(j[1], i[1], rtol=1e-2,
+            err_msg=('DNA energies outside of allowed tolerance for %s' % ffxml_name))
+            counter += 1
+    print('DNA energy validation successful!')
+
 def validate_gaff(ffxml_name, leaprc_name):
     if not find_executable('tleap'):
         raise RuntimeError('tleap not available from PATH')
@@ -241,6 +310,10 @@ if __name__ == '__main__':
             if test == 'protein':
                 print('Protein tests...')
                 validate_protein(ffxml_name, leaprc_name)
+                tested = True
+            elif test == 'nucleic':
+                print('Nucleic acid tests...')
+                validate_nucleic(ffxml_name, leaprc_name)
                 tested = True
             elif test == 'protein_ua':
                 print('United-atom protein tests...')
