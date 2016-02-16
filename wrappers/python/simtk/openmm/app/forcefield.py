@@ -1683,7 +1683,7 @@ class NBFixGenerator(object):
         self.types2 = []
         self.emin = []
         self.rmin = []
-        self.lj_types = [f for f in forcefield._forces if isinstance(f, NonbondedGenerator)][0]
+        self.lj_types = [f for f in forcefield._forces if isinstance(f, NonbondedGenerator)][0].params
 
     def registerNBFix(self, parameters):
         types = self.ff._findAtomTypes(parameters, 2)
@@ -1718,13 +1718,13 @@ class NBFixGenerator(object):
             CustomNonbondedForce
         """
         # NonBondedForce for 'standard' nonbonded interactions. This will be modified
-        nonbfrc = [f for f in sys.getForces if isinstance(f, mm.openmm.NonbondedForce)][0]
+        nonbonded = [f for f in sys.getForces() if isinstance(f, mm.openmm.NonbondedForce)][0]
 
         # We need a CustomNonbondedForce to implement the NBFIX functionality.
         # First derive the lookup tables
 
         lj_indx_list = [0 for atom in data.atoms]
-        li_radii, lj_depths = [], []
+        lj_radii, lj_depths = [], []
         num_lj_types= 0
         lj_type_list = []
         for i, atom in enumerate(data.atoms):
@@ -1772,50 +1772,58 @@ class NBFixGenerator(object):
                         acoef[m+num_lj_types*n] = math.sqrt(wdij) * rij6
                         bcoef[m+num_lj_types*n] = 2 * wdij * rij6
 
-        force = mm.CustomNonbondedForce('(a/r6)^2-b/r6; r6=r2*r2*r2; r2=r^2; '
+        self.force = mm.CustomNonbondedForce('(a/r6)^2-b/r6; r6=r2*r2*r2; r2=r^2; '
                                 'a=acoef(type1, type2); '
                                 'b=bcoef(type1, type2)')
-        force.addTabulatedFunction('acoef',
+        self.force.addTabulatedFunction('acoef',
                 mm.Discrete2DFunction(num_lj_types, num_lj_types, acoef))
-        force.addTabulatedFunction('bcoef',
+        self.force.addTabulatedFunction('bcoef',
                 mm.Discrete2DFunction(num_lj_types, num_lj_types, bcoef))
-        force.addPerParticleParameter('type')
+        self.force.addPerParticleParameter('type')
         if (nonbondedMethod is PME or nonbondedMethod is Ewald or
                 nonbondedMethod is CutoffPeriodic):
-            force.setNonbondedMethod(mm.CustomNonbondedForce.CutoffPeriodic)
+            self.force.setNonbondedMethod(mm.CustomNonbondedForce.CutoffPeriodic)
         elif nonbondedMethod is NoCutoff:
-            force.setNonbondedMethod(mm.CustomNonbondedForce.NoCutoff)
+            self.force.setNonbondedMethod(mm.CustomNonbondedForce.NoCutoff)
         elif nonbondedMethod is CutoffNonPeriodic:
-            force.setNonbondedMethod(mm.CustomNonbondedForce.CutoffNonPeriodic)
+            self.force.setNonbondedMethod(mm.CustomNonbondedForce.CutoffNonPeriodic)
         else:
             raise AssertionError('Unrecognized nonbonded method [%s]' %
                                  nonbondedMethod)
         # Add the particles
         for i in lj_indx_list:
-            force.addParticle((i-1,))
+            self.force.addParticle((i-1,))
         # Now wipe out the L-J parameters in the nonbonded force
-        for i in range(nonbfrc.getNumParticles()):
-            chg, sig, eps = nonbfrc.getParticleParameters(i)
-            nonbfrc.setParticleParameters(i, chg, 0.5, 0.0)
-        # Now transfer the exclusions
-        for ii in range(nonbfrc.getNumExceptions()):
-            i, j, qq, ss, ee = nonbfrc.getExceptionParameters(ii)
-            force.addExclusion(i, j)
+        for i in range(nonbonded.getNumParticles()):
+            chg, sig, eps = nonbonded.getParticleParameters(i)
+            nonbonded.setParticleParameters(i, chg, 0.5, 0.0)
+        sys.addForce(self.force)
+
+    def postprocessSystem(self, sys, data, args):
+        nonbonded = [f for f in sys.getForces() if isinstance(f, mm.NonbondedForce)][0]
+
+        # transfer the exclusions from NonBonded
+        for ii in range(nonbonded.getNumExceptions()):
+            i, j, qq, ss, ee = nonbonded.getExceptionParameters(ii)
+            self.force.addExclusion(i, j)
         # Now transfer the other properties (cutoff, switching function, etc.)
-        force.setUseLongRangeCorrection(True)
-        if nonbondedMethod is NoCutoff:
-            force.setNonbondedMethod(mm.CustomNonbondedForce.NoCutoff)
-        elif nonbondedMethod is CutoffNonPeriodic:
-            force.setNonbondedMethod(mm.CustomNonbondedForce.CutoffNonPeriodic)
-        elif nonbondedMethod in (PME, Ewald, CutoffPeriodic):
-            force.setNonbondedMethod(mm.CustomNonbondedForce.CutoffPeriodic)
-        else:
-            raise AssertionError('Unsupported nonbonded method %s' %
-                                nonbondedMethod)
-        force.setCutoffDistance(nonbfrc.getCutoffDistance())
-        if nonbfrc.getUseSwitchingFunction():
-            force.setUseSwitchingFunction(True)
-            force.setSwitchingDistance(nonbfrc.getSwitchingDistance())
+        self.force.setUseLongRangeCorrection(True)
+        # if nonbondedMethod is NoCutoff:
+        #     self.force.setNonbondedMethod(mm.CustomNonbondedForce.NoCutoff)
+        # elif nonbondedMethod is CutoffNonPeriodic:
+        #     self.force.setNonbondedMethod(mm.CustomNonbondedForce.CutoffNonPeriodic)
+        # elif nonbondedMethod in (PME, Ewald, CutoffPeriodic):
+        #     self.force.setNonbondedMethod(mm.CustomNonbondedForce.CutoffPeriodic)
+        # else:
+        #     raise AssertionError('Unsupported nonbonded method %s' %
+        #                         nonbondedMethod)
+        self.force.setCutoffDistance(nonbonded.getCutoffDistance())
+        if nonbonded.getUseSwitchingFunction():
+            self.force.setUseSwitchingFunction(True)
+            self.force.setSwitchingDistance(nonbonded.getSwitchingDistance())
+
+
+
 
 parsers["NBFixForce"] = NBFixGenerator.parseElement
 
