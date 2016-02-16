@@ -1707,7 +1707,7 @@ class NBFixGenerator(object):
         for nbfix in element.findall('NBFix'):
             generator.registerNBFix(nbfix.attrib)
 
-    def createForce(self, sys, data, nonbondedMethod):
+    def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         """
         Parameters
         ----------
