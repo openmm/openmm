@@ -62,6 +62,7 @@
              New-Generation Amber United-Atom Force Field. J. Phys. Chem. B 110, 13166-13176.
   Test:
   - protein_ua
+  - nucleic
 # Waiting on the gaff frcmod issue in ForceField
 #- Source: leaprc.gaff
 #  Reference: >-
