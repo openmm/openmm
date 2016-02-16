@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -49,6 +49,7 @@
 #include "ReferenceCustomNonbondedIxn.h"
 #include "ReferenceCustomManyParticleIxn.h"
 #include "ReferenceCustomTorsionIxn.h"
+#include "ReferenceGayBerneForce.h"
 #include "ReferenceHarmonicBondIxn.h"
 #include "ReferenceLJCoulomb14.h"
 #include "ReferenceLJCoulombIxn.h"
@@ -1858,6 +1859,25 @@ void ReferenceCalcCustomManyParticleForceKernel::copyParametersToContext(Context
         for (int j = 0; j < numParameters; j++)
             particleParamArray[i][j] = static_cast<RealOpenMM>(parameters[j]);
     }
+}
+
+ReferenceCalcGayBerneForceKernel::~ReferenceCalcGayBerneForceKernel() {
+    if (ixn != NULL)
+        delete ixn;
+}
+
+void ReferenceCalcGayBerneForceKernel::initialize(const System& system, const GayBerneForce& force) {
+    ixn = new ReferenceGayBerneForce(force);
+}
+
+double ReferenceCalcGayBerneForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    return ixn->calculateForce(extractPositions(context), extractForces(context), extractBoxVectors(context));
+}
+
+void ReferenceCalcGayBerneForceKernel::copyParametersToContext(ContextImpl& context, const GayBerneForce& force) {
+    delete ixn;
+    ixn = NULL;
+    ixn = new ReferenceGayBerneForce(force);
 }
 
 ReferenceIntegrateVerletStepKernel::~ReferenceIntegrateVerletStepKernel() {

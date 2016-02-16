@@ -48,7 +48,7 @@ namespace OpenMM {
  * ellipsoid along each axis.  It also has three scale factors e_x, e_y, and e_z that scale the strength
  * of the interaction along each axis.  You can think of this force as a Lennard-Jones interaction computed
  * based on the distance between the nearest points on two ellipsoids.  If two particles each have all their
- * radii set to 0 and all their scale factors set 1, the interaction simplifies to a standard Lennard-Jones
+ * radii set to sigma/2 and all their scale factors set 1, the interaction simplifies to a standard Lennard-Jones
  * force between point particles.
  *
  * The orientation of a particle's ellipsoid is determined based on the positions of two other particles.
@@ -248,8 +248,9 @@ public:
      * This method has several limitations.  The only information it updates is the parameters of particles and exceptions.
      * All other aspects of the Force (the nonbonded method, the cutoff distance, etc.) are unaffected and can only be
      * changed by reinitializing the Context.  Furthermore, only the sigma and epsilon values of an exception can be
-     * changed; the pair of particles involved in the exception cannot change.  Finally, this method cannot be used to
-     * add new particles or exceptions, only to change the parameters of existing ones.
+     * changed; the pair of particles involved in the exception cannot change.  Likewise, the xparticle and yparticle
+     * defining the orientation of an ellipse cannot be changed.  Finally, this method cannot be used to add new
+     * particles or exceptions, only to change the parameters of existing ones.
      */
     void updateParametersInContext(Context& context);
     /**

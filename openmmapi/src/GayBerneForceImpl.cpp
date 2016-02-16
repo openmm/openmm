@@ -73,12 +73,6 @@ void GayBerneForceImpl::initialize(ContextImpl& context) {
             msg << yparticle;
             throw OpenMMException(msg.str());
         }
-        if (yparticle == -1 && (ry != rz || ey != ez))
-            throw OpenMMException("GayBerneForce: yparticle is -1 for a particle that is not axially symmetric");
-        if (xparticle == -1 && (rx != rz || ex != ez))
-            throw OpenMMException("GayBerneForce: xparticle is -1 for a particle that is not spherical");
-        if (xparticle == -1 && yparticle != -1)
-            throw OpenMMException("GayBerneForce: xparticle cannot be -1 if yparticle is not also -1");
     }
     vector<set<int> > exceptions(owner.getNumParticles());
     for (int i = 0; i < owner.getNumExceptions(); i++) {
@@ -119,7 +113,8 @@ void GayBerneForceImpl::initialize(ContextImpl& context) {
 }
 
 double GayBerneForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
-    return kernel.getAs<CalcGayBerneForceKernel>().execute(context, includeForces, includeEnergy);
+    if ((groups&(1<<owner.getForceGroup())) != 0)
+        return kernel.getAs<CalcGayBerneForceKernel>().execute(context, includeForces, includeEnergy);
 }
 
 std::vector<std::string> GayBerneForceImpl::getKernelNames() {

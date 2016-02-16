@@ -83,6 +83,12 @@ void GayBerneForce::setSwitchingDistance(double distance) {
 }
 
 int GayBerneForce::addParticle(double sigma, double epsilon, int xparticle, int yparticle, double rx, double ry, double rz, double ex, double ey, double ez) {
+    if (yparticle == -1 && (ry != rz || ey != ez))
+        throw OpenMMException("GayBerneForce: yparticle is -1 for a particle that is not axially symmetric");
+    if (xparticle == -1 && (rx != rz || ex != ez))
+        throw OpenMMException("GayBerneForce: xparticle is -1 for a particle that is not spherical");
+    if (xparticle == -1 && yparticle != -1)
+        throw OpenMMException("GayBerneForce: xparticle cannot be -1 if yparticle is not also -1");
     particles.push_back(ParticleInfo(sigma, epsilon, xparticle, yparticle, rx, ry, rz, ex, ey, ez));
     return particles.size()-1;
 }
@@ -103,6 +109,12 @@ void GayBerneForce::getParticleParameters(int index, double& sigma, double& epsi
 
 void GayBerneForce::setParticleParameters(int index, double sigma, double epsilon, int xparticle, int yparticle, double rx, double ry, double rz, double ex, double ey, double ez) {
     ASSERT_VALID_INDEX(index, particles);
+    if (yparticle == -1 && (ry != rz || ey != ez))
+        throw OpenMMException("GayBerneForce: yparticle is -1 for a particle that is not axially symmetric");
+    if (xparticle == -1 && (rx != rz || ex != ez))
+        throw OpenMMException("GayBerneForce: xparticle is -1 for a particle that is not spherical");
+    if (xparticle == -1 && yparticle != -1)
+        throw OpenMMException("GayBerneForce: xparticle cannot be -1 if yparticle is not also -1");
     particles[index].sigma = sigma;
     particles[index].epsilon = epsilon;
     particles[index].xparticle = xparticle;
