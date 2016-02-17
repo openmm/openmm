@@ -1,4 +1,4 @@
-#!/bin/tcsh
+#!/bin/bash
 
 # Prepare for build by ensuring necessary prerequisites are locally installed.
 
@@ -15,7 +15,7 @@ then
    echo "miniconda already exists"
 else
    echo "Downloading miniconda..."
-   rm -rf Miniconda-*
+   rm -rf Miniconda-* miniconda ~/.condarc
    wget --quiet http://repo.continuum.io/miniconda/${MINICONDA}
    bash ${MINICONDA} -b -p miniconda
    PIP_ARGS="-U"
@@ -25,6 +25,6 @@ fi
 export PATH=$WORKSPACE/miniconda/bin:$PATH
 
 # Ensure configuration is up to date.
-conda config --add channels http://conda.binstar.org/omnia
-conda install --yes --quiet swig fftw3f pip
-pip install sphinxcontrib-bibtex sphinxcontrib-lunrsearch sphinxcontrib-autodoc_doxygen
+conda config --add channels omnia
+conda install --yes --quiet swig fftw3f pip doxygen sphinx sphinxcontrib-bibtex sphinxcontrib-lunrsearch sphinxcontrib-autodoc_doxygen lxml cmake
+
