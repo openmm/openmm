@@ -940,18 +940,6 @@ class ForceField(object):
         # Add forces to the System
 
         for force in self._forces:
-            NBFIX = False
-            # check if at least 2 atoms have nbfix and only then call the NBFixGenerator
-            if isinstance(force, NBFixGenerator):
-                for a in data.atoms:
-                    atype = data.atomType[a]
-                    if atype in force.types1:
-                        for b in data.atoms:
-                            btype = data.atomType[b]
-                            if btype in force.type2:
-                                NBFIX = True
-            if not NBFIX and isinstance(force, NBFixGenerator):
-                continue
             force.createForce(sys, data, nonbondedMethod, nonbondedCutoff, args)
         if removeCMMotion:
             sys.addForce(mm.CMMotionRemover())
@@ -960,8 +948,6 @@ class ForceField(object):
 
         for force in self._forces:
             if 'postprocessSystem' in dir(force):
-                if not NBFIX and isinstance(force, NBFixGenerator):
-                    continue
                 force.postprocessSystem(sys, data, args)
 
         # Execute scripts found in the XML files.
@@ -1731,6 +1717,17 @@ class NBFixGenerator(object):
             The nonbonded method to apply here. Ewald and PME will be interpreted as CutoffPeriodic for the
             CustomNonbondedForce
         """
+        # First check if there are at least two atoms in the system that need nbfix
+        self.NBFIX = False
+        for a in data.atoms:
+            atype = data.atomType[a]
+            if atype in self.types1:
+                for b in data.atoms:
+                    btype = data.atomType[b]
+                    if btype in self.type2:
+                        self.NBFIX = True
+        if not self.NBFIX:
+            return
         # NonBondedForce for 'standard' nonbonded interactions. This will be modified
         nonbonded = [f for f in sys.getForces() if isinstance(f, mm.openmm.NonbondedForce)][0]
 
@@ -1828,6 +1825,8 @@ class NBFixGenerator(object):
         sys.addForce(self.force)
 
     def postprocessSystem(self, sys, data, args):
+        if not self.NBFIX:
+            return
         nonbonded = [f for f in sys.getForces() if isinstance(f, mm.NonbondedForce)][0]
 
         # transfer the exclusions from NonBonded
