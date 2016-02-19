@@ -1688,8 +1688,8 @@ class NBFixGenerator(object):
     def registerNBFix(self, parameters):
         types = self.ff._findAtomTypes(parameters, 2)
         if None not in types:
-            self.types1.append(types[0])
-            self.types2.append(types[1])
+            self.types1.append(types[0][0])
+            self.types2.append(types[1][0])
             self.emin.append(_convertParameterToNumber(parameters['emin']))
             self.rmin.append(_convertParameterToNumber(parameters['rmin']))
 
@@ -1724,7 +1724,7 @@ class NBFixGenerator(object):
             if atype in self.types1:
                 for b in data.atoms:
                     btype = data.atomType[b]
-                    if btype in self.type2:
+                    if btype in self.types2:
                         self.NBFIX = True
         if not self.NBFIX:
             return
@@ -1744,9 +1744,10 @@ class NBFixGenerator(object):
             if lj_indx_list[i]: continue
             num_lj_types +=1
             lj_indx_list[i] = num_lj_types
-            ljtype = (values['sigma'], abs(values['epsilon']))
+            rmin = values['sigma'] * 2**(1.0/6) / 2
+            ljtype = (rmin, abs(values['epsilon']))
             lj_type_list.append(atype)
-            lj_radii.append(values['sigma'])
+            lj_radii.append(rmin)
             lj_depths.append(abs(values['epsilon']))
             for j in range(i+1, len(data.atoms)):
                 atype2 = data.atomType[data.atoms[j]]
@@ -1756,7 +1757,7 @@ class NBFixGenerator(object):
                 elif not (atype in self.types1) or (atype in self.types2):
                     # only non NBFIX types can be compressed
                     values = self.lj_types.paramsForType[atype2]
-                    ljtype2 = (values['sigma'], abs(values['epsilon']))
+                    ljtype2 = (values['sigma']* 2**(1.0/6) / 2, abs(values['epsilon']))
                     if ljtype == ljtype2:
                         lj_indx_list[j] = num_lj_types
         # Now everything is assigned. Create the A- and B-coefficient arrays
@@ -1808,20 +1809,6 @@ class NBFixGenerator(object):
         for i in range(nonbonded.getNumParticles()):
             chg, sig, eps = nonbonded.getParticleParameters(i)
             nonbonded.setParticleParameters(i, chg, 0.5, 0.0)
-        self.force.setUseLongRangeCorrection(True)
-        if nonbondedMethod is NoCutoff:
-            self.force.setNonbondedMethod(mm.CustomNonbondedForce.NoCutoff)
-        elif nonbondedMethod is CutoffNonPeriodic:
-            self.force.setNonbondedMethod(mm.CustomNonbondedForce.CutoffNonPeriodic)
-        elif nonbondedMethod in (PME, Ewald, CutoffPeriodic):
-            self.force.setNonbondedMethod(mm.CustomNonbondedForce.CutoffPeriodic)
-        else:
-            raise AssertionError('Unsupported nonbonded method %s' %
-                                nonbondedMethod)
-        self.force.setCutoffDistance(nonbonded.getCutoffDistance())
-        if nonbonded.getUseSwitchingFunction():
-            self.force.setUseSwitchingFunction(True)
-            self.force.setSwitchingDistance(nonbonded.getSwitchingDistance())
         sys.addForce(self.force)
 
     def postprocessSystem(self, sys, data, args):
@@ -1834,10 +1821,11 @@ class NBFixGenerator(object):
             i, j, qq, ss, ee = nonbonded.getExceptionParameters(ii)
             self.force.addExclusion(i, j)
         # Now transfer the other properties (cutoff, switching function, etc.)
-
-
-
-
+        self.force.setUseLongRangeCorrection(True)
+        self.force.setCutoffDistance(nonbonded.getCutoffDistance())
+        if nonbonded.getUseSwitchingFunction():
+            self.force.setUseSwitchingFunction(True)
+            self.force.setSwitchingDistance(nonbonded.getSwitchingDistance())
 
 parsers["NBFixForce"] = NBFixGenerator.parseElement
 
