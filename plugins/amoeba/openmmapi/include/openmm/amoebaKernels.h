@@ -493,6 +493,35 @@ public:
     virtual void copyParametersToContext(ContextImpl& context, const AmoebaWcaDispersionForce& force) = 0;
 };
 
+class CalcAmoebaStretchTorsionForceKernel : public KernelImpl {
+public:
+
+	static std::string Name() {
+		return "CalcAmoebaStretchTorsionForce";
+	}
+
+	CalcAmoebaStretchTorsionForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+	}
+
+	virtual void initialize(const System& system, const AmoebaStretchTorsionForce& force) = 0;
+	virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
+	virtual void copyParametersToContext(ContextImpl& context, const AmoebaStretchTorsionForce& force) = 0;
+};
+
+class CalcAmoebaAngleTorsionForceKernel : public KernelImpl {
+public:
+	static std::string Name() {
+		return "CalcAmoebaAngleTorsionForce";
+	}
+
+	CalcAmoebaAngleTorsionForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+	}
+
+	virtual void initialize(const System& system, const AmoebaAngleTorsionForce& force) = 0;
+	virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
+	virtual void copyParametersToContext(ContextImpl& context, const AmoebaAngleTorsionForce& force) = 0;
+};
+
 } // namespace OpenMM
 
 #endif /*AMOEBA_OPENMM_KERNELS_H*/

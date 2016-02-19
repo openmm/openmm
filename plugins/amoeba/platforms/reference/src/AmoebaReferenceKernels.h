@@ -670,6 +670,58 @@ private:
     const System& system;
 };
 
+class ReferenceCalcAmoebaStretchTorsionForceKernel : public CalcAmoebaStretchTorsionForceKernel {
+public:
+	ReferenceCalcAmoebaStretchTorsionForceKernel(std::string name, const Platform& platform, const System& system);
+	~ReferenceCalcAmoebaStretchTorsionForceKernel();
+	void initialize(const System& system, const AmoebaStretchTorsionForce& force);
+	double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+	void copyParametersToContext(ContextImpl& context, const AmoebaStretchTorsionForce& force);
+private:
+	int numStretchTorsions;
+	std::vector<int> particle1;
+	std::vector<int> particle2;
+	std::vector<int> particle3;
+	std::vector<int> particle4;
+	std::vector<RealOpenMM> lengthBAParameters;
+	std::vector<RealOpenMM> lengthCBParameters;
+	std::vector<RealOpenMM> lengthDCParameters;
+	std::vector<RealOpenMM> k1Parameters;
+	std::vector<RealOpenMM> k2Parameters;
+	std::vector<RealOpenMM> k3Parameters;
+	std::vector<RealOpenMM> k4Parameters;
+	std::vector<RealOpenMM> k5Parameters;
+	std::vector<RealOpenMM> k6Parameters;
+	std::vector<RealOpenMM> k7Parameters;
+	std::vector<RealOpenMM> k8Parameters;
+	std::vector<RealOpenMM> k9Parameters;
+	const System& system;
+};
+
+class ReferenceCalcAmoebaAngleTorsionForceKernel : public CalcAmoebaAngleTorsionForceKernel {
+public:
+	ReferenceCalcAmoebaAngleTorsionForceKernel(std::string name, const Platform& platform, const System& system);
+	~ReferenceCalcAmoebaAngleTorsionForceKernel();
+	void initialize(const System& system, const AmoebaAngleTorsionForce& force);
+	double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+	void copyParametersToContext(ContextImpl& context, const AmoebaAngleTorsionForce& force);
+private:
+	int numAngleTorsions;
+	std::vector<int> particle1;
+	std::vector<int> particle2;
+	std::vector<int> particle3;
+	std::vector<int> particle4;
+	std::vector<RealOpenMM> angleCBAParameters;
+	std::vector<RealOpenMM> angleDCBParameters;
+	std::vector<RealOpenMM> k1Parameters;
+	std::vector<RealOpenMM> k2Parameters;
+	std::vector<RealOpenMM> k3Parameters;
+	std::vector<RealOpenMM> k4Parameters;
+	std::vector<RealOpenMM> k5Parameters;
+	std::vector<RealOpenMM> k6Parameters;
+	const System& system;
+};
+
 } // namespace OpenMM
 
 #endif /*AMOEBA_OPENMM_REFERENCE_KERNELS_H*/
