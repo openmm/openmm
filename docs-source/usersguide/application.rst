@@ -2070,7 +2070,7 @@ Missing residue templates
 .. CAUTION::
    These features are experimental, and its API is subject to change.
 
-You can use the :method:`getUnmatchedResidues()` method to get a list of residues
+You can use the :meth:`getUnmatchedResidues()` method to get a list of residues
 in the provided :code:`topology` object that do not currently have a matching
 residue template defined in the :class:`ForceField`.
 ::
@@ -2084,7 +2084,7 @@ with residue template definitions, or identifying which additional residues need
 to be parameterized.
 
 As a convenience for parameterizing new residues, you can also get a list of
-residues and empty residue templates using :method:`generateTemplatesForUnmatchedResidues`
+residues and empty residue templates using :meth:`generateTemplatesForUnmatchedResidues`
 ::
 
     pdb = PDBFile('input.pdb')
@@ -2098,7 +2098,7 @@ residues and empty residue templates using :method:`generateTemplatesForUnmatche
         forcefield.registerResidueTemplate(template)
 
 If you find that templates seem to be incorrectly matched, another useful
-function :method:`getMatchingTemplates()` can help you identify which templates
+function :meth:`getMatchingTemplates()` can help you identify which templates
 are being matched:
 ::
 

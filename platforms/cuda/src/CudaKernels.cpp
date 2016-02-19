@@ -141,43 +141,76 @@ void CudaUpdateStateDataKernel::setTime(ContextImpl& context, double time) {
         contexts[i]->setTime(time);
 }
 
+class CudaUpdateStateDataKernel::GetPositionsTask : public ThreadPool::Task {
+public:
+    GetPositionsTask(CudaContext& cu, vector<Vec3>& positions, vector<float4>& posCorrection) : cu(cu), positions(positions), posCorrection(posCorrection) {
+    }
+    void execute(ThreadPool& threads, int threadIndex) {
+        // Compute the position of each particle to return to the user.  This is done in parallel for speed.
+        
+        const vector<int>& order = cu.getAtomIndex();
+        int numParticles = cu.getNumAtoms();
+        Vec3 boxVectors[3];
+        cu.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+        int numThreads = threads.getNumThreads();
+        int start = threadIndex*numParticles/numThreads;
+        int end = (threadIndex+1)*numParticles/numThreads;
+        if (cu.getUseDoublePrecision()) {
+            double4* posq = (double4*) cu.getPinnedBuffer();
+            for (int i = start; i < end; ++i) {
+                double4 pos = posq[i];
+                int4 offset = cu.getPosCellOffsets()[i];
+                positions[order[i]] = Vec3(pos.x, pos.y, pos.z)-boxVectors[0]*offset.x-boxVectors[1]*offset.y-boxVectors[2]*offset.z;
+            }
+        }
+        else if (cu.getUseMixedPrecision()) {
+            float4* posq = (float4*) cu.getPinnedBuffer();
+            for (int i = start; i < end; ++i) {
+                float4 pos1 = posq[i];
+                float4 pos2 = posCorrection[i];
+                int4 offset = cu.getPosCellOffsets()[i];
+                positions[order[i]] = Vec3((double)pos1.x+(double)pos2.x, (double)pos1.y+(double)pos2.y, (double)pos1.z+(double)pos2.z)-boxVectors[0]*offset.x-boxVectors[1]*offset.y-boxVectors[2]*offset.z;
+            }
+        }
+        else {
+            float4* posq = (float4*) cu.getPinnedBuffer();
+            for (int i = start; i < end; ++i) {
+                float4 pos = posq[i];
+                int4 offset = cu.getPosCellOffsets()[i];
+                positions[order[i]] = Vec3(pos.x, pos.y, pos.z)-boxVectors[0]*offset.x-boxVectors[1]*offset.y-boxVectors[2]*offset.z;
+            }
+        }
+    }
+    CudaContext& cu;
+    vector<Vec3>& positions;
+    vector<float4>& posCorrection;
+};
+
 void CudaUpdateStateDataKernel::getPositions(ContextImpl& context, vector<Vec3>& positions) {
     cu.setAsCurrent();
-    const vector<int>& order = cu.getAtomIndex();
     int numParticles = context.getSystem().getNumParticles();
     positions.resize(numParticles);
-    Vec3 boxVectors[3];
-    cu.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+    vector<float4> posCorrection;
     if (cu.getUseDoublePrecision()) {
         double4* posq = (double4*) cu.getPinnedBuffer();
         cu.getPosq().download(posq);
-        for (int i = 0; i < numParticles; ++i) {
-            double4 pos = posq[i];
-            int4 offset = cu.getPosCellOffsets()[i];
-            positions[order[i]] = Vec3(pos.x, pos.y, pos.z)-boxVectors[0]*offset.x-boxVectors[1]*offset.y-boxVectors[2]*offset.z;
-        }
     }
     else if (cu.getUseMixedPrecision()) {
         float4* posq = (float4*) cu.getPinnedBuffer();
-        vector<float4> posCorrection;
-        cu.getPosq().download(posq);
+        cu.getPosq().download(posq, false);
+        posCorrection.resize(numParticles);
         cu.getPosqCorrection().download(posCorrection);
-        for (int i = 0; i < numParticles; ++i) {
-            float4 pos1 = posq[i];
-            float4 pos2 = posCorrection[i];
-            int4 offset = cu.getPosCellOffsets()[i];
-            positions[order[i]] = Vec3((double)pos1.x+(double)pos2.x, (double)pos1.y+(double)pos2.y, (double)pos1.z+(double)pos2.z)-boxVectors[0]*offset.x-boxVectors[1]*offset.y-boxVectors[2]*offset.z;
-        }
     }
     else {
         float4* posq = (float4*) cu.getPinnedBuffer();
         cu.getPosq().download(posq);
-        for (int i = 0; i < numParticles; ++i) {
-            float4 pos = posq[i];
-            int4 offset = cu.getPosCellOffsets()[i];
-            positions[order[i]] = Vec3(pos.x, pos.y, pos.z)-boxVectors[0]*offset.x-boxVectors[1]*offset.y-boxVectors[2]*offset.z;
-        }
     }
+    
+    // Filling in the output array is done in parallel for speed.
+    
+    GetPositionsTask task(cu, positions, posCorrection);
+    cu.getPlatformData().threads.execute(task);
+    cu.getPlatformData().threads.waitForThreads();
 }
 
 void CudaUpdateStateDataKernel::setPositions(ContextImpl& context, const vector<Vec3>& positions) {
@@ -6628,12 +6661,12 @@ void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrat
             if (cu.getUseDoublePrecision() || cu.getUseMixedPrecision()) {
                 double value;
                 summedValue->download(&value);
-                globalValuesDouble[stepTarget[step].variableIndex] = value;
+                recordGlobalValue(value, stepTarget[step]);
             }
             else {
                 float value;
                 summedValue->download(&value);
-                globalValuesDouble[stepTarget[step].variableIndex] = value;
+                recordGlobalValue(value, stepTarget[step]);
             }
         }
         else if (stepType[step] == CustomIntegrator::UpdateContextState) {
@@ -6742,6 +6775,7 @@ void CudaIntegrateCustomStepKernel::recordGlobalValue(double value, GlobalTarget
         case DT:
             if (value != globalValuesDouble[dtVariableIndex])
                 deviceGlobalsAreCurrent = false;
+            expressionSet.setVariable(dtVariableIndex, value);
             globalValuesDouble[dtVariableIndex] = value;
             cu.getIntegrationUtilities().setNextStepSize(value);
             break;

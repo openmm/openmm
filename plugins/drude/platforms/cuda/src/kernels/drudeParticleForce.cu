@@ -32,7 +32,7 @@ if (k1 != 0) {
 // Compute the second anisotropic force.
 
 if (k2 != 0) {
-    real3 dir = make_real3(pos3.x-pos4.x, pos3.y-pos4.y, pos3.z-pos4.z);
+    real3 dir = make_real3(pos4.x-pos5.x, pos4.y-pos5.y, pos4.z-pos5.z);
     real invDist = RSQRT(dot(dir, dir));
     dir *= invDist;
     real rprime = dot(dir, delta);

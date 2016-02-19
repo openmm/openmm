@@ -28,9 +28,10 @@
 #include "OpenCLPlatform.h"
 #include "OpenCLKernelFactory.h"
 #include "OpenCLKernels.h"
-#include "openmm/internal/ContextImpl.h"
 #include "openmm/Context.h"
 #include "openmm/System.h"
+#include "openmm/internal/ContextImpl.h"
+#include "openmm/internal/hardware.h"
 #include <algorithm>
 #include <cctype>
 #include <sstream>
@@ -165,7 +166,11 @@ void OpenCLPlatform::contextCreated(ContextImpl& context, const map<string, stri
     pmeKernelName.push_back(CalcPmeReciprocalForceKernel::Name());
     if (!supportsKernels(pmeKernelName))
         cpuPmePropValue = "false";
-    context.setPlatformData(new PlatformData(context.getSystem(), platformPropValue, devicePropValue, precisionPropValue, cpuPmePropValue, pmeStreamPropValue));
+    int threads = getNumProcessors();
+    char* threadsEnv = getenv("OPENMM_CPU_THREADS");
+    if (threadsEnv != NULL)
+        stringstream(threadsEnv) >> threads;
+    context.setPlatformData(new PlatformData(context.getSystem(), platformPropValue, devicePropValue, precisionPropValue, cpuPmePropValue, pmeStreamPropValue, threads));
 }
 
 void OpenCLPlatform::contextDestroyed(ContextImpl& context) const {
@@ -174,7 +179,8 @@ void OpenCLPlatform::contextDestroyed(ContextImpl& context) const {
 }
 
 OpenCLPlatform::PlatformData::PlatformData(const System& system, const string& platformPropValue, const string& deviceIndexProperty,
-        const string& precisionProperty, const string& cpuPmeProperty, const string& pmeStreamProperty) : removeCM(false), stepCount(0), computeForceCount(0), time(0.0), hasInitializedContexts(false)  {
+        const string& precisionProperty, const string& cpuPmeProperty, const string& pmeStreamProperty, int numThreads) :
+            removeCM(false), stepCount(0), computeForceCount(0), time(0.0), hasInitializedContexts(false), threads(numThreads)  {
     int platformIndex = -1;
     if (platformPropValue.length() > 0)
         stringstream(platformPropValue) >> platformIndex;

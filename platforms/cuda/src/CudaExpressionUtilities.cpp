@@ -351,7 +351,7 @@ void CudaExpressionUtilities::processExpression(stringstream& out, const Express
             break;
         }
         case Operation::POWER:
-            out << "pow(" << getTempName(node.getChildren()[0], temps) << ", " << getTempName(node.getChildren()[1], temps) << ")";
+            out << "pow((" << tempType << ") " << getTempName(node.getChildren()[0], temps) << ", (" << tempType << ") " << getTempName(node.getChildren()[1], temps) << ")";
             break;
         case Operation::NEGATE:
             out << "-" << getTempName(node.getChildren()[0], temps);
@@ -488,14 +488,14 @@ void CudaExpressionUtilities::processExpression(stringstream& out, const Express
                 out << "}";
             }
             else
-                out << "pow(" << getTempName(node.getChildren()[0], temps) << ", " << context.doubleToString(exponent) << ")";
+                out << "pow((" << tempType << ") " << getTempName(node.getChildren()[0], temps) << ", (" << tempType << ") " << context.doubleToString(exponent) << ")";
             break;
         }
         case Operation::MIN:
-            out << "min(" << getTempName(node.getChildren()[0], temps) << ", " << getTempName(node.getChildren()[1], temps) << ")";
+            out << "min((" << tempType << ") " << getTempName(node.getChildren()[0], temps) << ", (" << tempType << ") " << getTempName(node.getChildren()[1], temps) << ")";
             break;
         case Operation::MAX:
-            out << "max(" << getTempName(node.getChildren()[0], temps) << ", " << getTempName(node.getChildren()[1], temps) << ")";
+            out << "max((" << tempType << ") " << getTempName(node.getChildren()[0], temps) << ", (" << tempType << ") " << getTempName(node.getChildren()[1], temps) << ")";
             break;
         case Operation::ABS:
             out << "fabs(" << getTempName(node.getChildren()[0], temps) << ")";
