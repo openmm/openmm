@@ -47,7 +47,9 @@ namespace OpenMM {
  * sigma and epsilon parameters, each particle has three radii r_x, r_y, and r_z that give the size of the
  * ellipsoid along each axis.  It also has three scale factors e_x, e_y, and e_z that scale the strength
  * of the interaction along each axis.  You can think of this force as a Lennard-Jones interaction computed
- * based on the distance between the nearest points on two ellipsoids.  If two particles each have all their
+ * based on the distance between the nearest points on two ellipsoids.  The interpretation of the scale
+ * factors is slightly complicated, but roughly speaking, the strength of the interaction along the ellipsoid's
+ * x axis is divided by e_x^2, and likewise for the other axes.  If two particles each have all their
  * radii set to sigma/2 and all their scale factors set 1, the interaction simplifies to a standard Lennard-Jones
  * force between point particles.
  *

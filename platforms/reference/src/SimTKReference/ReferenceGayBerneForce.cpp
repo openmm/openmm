@@ -45,8 +45,6 @@ ReferenceGayBerneForce::ReferenceGayBerneForce(const GayBerneForce& force) {
     for (int i = 0; i < numParticles; i++) {
         ParticleInfo& p = particles[i];
         force.getParticleParameters(i, p.sigma, p.epsilon, p.xparticle, p.yparticle, p.rx, p.ry, p.rz, p.ex, p.ey, p.ez);
-        p.radiiAreZero = (p.rx == 0 && p.ry == 0 && p.rz == 0);
-        p.scalesAreZero = (p.ex == 0 && p.ey == 0 && p.ez == 0);
     }
     int numExceptions = force.getNumExceptions();
     exceptions.resize(numExceptions);
@@ -90,14 +88,19 @@ RealOpenMM ReferenceGayBerneForce::calculateForce(const vector<RealVec>& positio
 
     RealOpenMM energy = 0;
     int numParticles = particles.size();
-    for (int i = 1; i < numParticles; i++)
+    for (int i = 1; i < numParticles; i++) {
+        if (particles[i].epsilon == 0.0)
+            continue;
         for (int j = 0; j < i; j++) {
+            if (particles[j].epsilon == 0.0)
+                continue;
             if (exclusions.find(make_pair(j, i)) != exclusions.end())
                 continue; // This interaction will be handled by an exception.
             RealOpenMM sigma = 0.5*(particles[i].sigma+particles[j].sigma);
             RealOpenMM epsilon = SQRT(particles[i].epsilon*particles[j].epsilon);
             energy += computeOneInteraction(i, j, sigma, epsilon, positions, forces, boxVectors);
         }
+    }
 
     // Compute exceptions.
 
@@ -173,38 +176,42 @@ RealOpenMM ReferenceGayBerneForce::computeOneInteraction(int particle1, int part
         ReferenceForce::getDeltaRPeriodic(positions[particle2], positions[particle1], boxVectors, deltaR);
     else
         ReferenceForce::getDeltaR(positions[particle2], positions[particle1], deltaR);
-    RealOpenMM dist = deltaR[ReferenceForce::RIndex];
-    if (nonbondedMethod != GayBerneForce::NoCutoff && dist >= cutoffDistance)
+    RealOpenMM r = deltaR[ReferenceForce::RIndex];
+    if (nonbondedMethod != GayBerneForce::NoCutoff && r >= cutoffDistance)
         return 0;
 
     // Compute vectors and matrices we'll be needing.
 
+    RealOpenMM rInv = 1/r;
     RealVec dr(deltaR[ReferenceForce::XIndex], deltaR[ReferenceForce::YIndex], deltaR[ReferenceForce::ZIndex]);
-    RealVec drUnit = dr/dist;
+    RealVec drUnit = dr*rInv;
     Matrix B12 = B[particle1]+B[particle2];
     Matrix G12 = G[particle1]+G[particle2];
     Matrix B12inv = B12.inverse();
     Matrix G12inv = G12.inverse();
 
-    // Estimate the distance between the ellipsoids and compute the first term in the energy.
+    // Estimate the distance between the ellipsoids and compute the first terms needed for the energy.
 
     ParticleInfo& p1 = particles[particle1];
     ParticleInfo& p2 = particles[particle2];
-    RealOpenMM h12 = dist;
-    if (!p1.radiiAreZero || !p2.radiiAreZero)
-        h12 -= 1/SQRT(0.5*drUnit.dot(G12inv*drUnit));
+    RealOpenMM sigma12 = 1/SQRT(0.5*drUnit.dot(G12inv*drUnit));
+    RealOpenMM h12 = r - sigma12;
     RealOpenMM rho = sigma/(h12+sigma);
     RealOpenMM rho2 = rho*rho;
     RealOpenMM rho6 = rho2*rho2*rho2;
     RealOpenMM u = 4*epsilon*(rho6*rho6-rho6);
-
-    // Compute the second term in the energy.
-
     RealOpenMM eta = SQRT(2*s[particle1]*s[particle2]/G12.determinant());
-
-    // Compute the third term in the energy.
-
     RealOpenMM chi = 2*drUnit.dot(B12inv*drUnit);
     chi *= chi;
+
+    // Compute the terms needed for the force.
+
+    RealVec kappa = G12inv*dr;
+    RealVec iota = B12inv*dr;
+    RealVec dudr = (drUnit + (kappa-drUnit*kappa.dot(drUnit))*(0.5*sigma12*sigma12*sigma12*rInv*rInv))*(24*epsilon*(2*rho6-1)*rho6*rho/sigma);
+    RealVec dchidr = (iota-drUnit*iota.dot(drUnit))*(-8*rInv*rInv*SQRT(chi));
+    RealVec force = (dchidr*u + dudr*chi)*eta;
+    forces[particle1] += force;
+    forces[particle2] -= force;
     return u*eta*chi;
 }

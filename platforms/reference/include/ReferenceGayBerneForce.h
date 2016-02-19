@@ -77,7 +77,6 @@ private:
 struct ReferenceGayBerneForce::ParticleInfo {
     int xparticle, yparticle;
     RealOpenMM sigma, epsilon, rx, ry, rz, ex, ey, ez;
-    bool radiiAreZero, scalesAreZero;
 };
 
 struct ReferenceGayBerneForce::ExceptionInfo {
