@@ -1708,16 +1708,9 @@ class NBFixGenerator(object):
             generator.registerNBFix(nbfix.attrib)
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
-        """
-        Parameters
-        ----------
-        sys
-        data
-        nonbondedMethod: NonbondedMethod (e.g., NoCutoff, PME, etc)
-            The nonbonded method to apply here. Ewald and PME will be interpreted as CutoffPeriodic for the
-            CustomNonbondedForce
-        """
-        # First check if there are at least two atoms in the system that need nbfix
+        """ Ewald and PME will be interpreted as CutoffPeriodic for the CustomNonbondedForce """
+
+        # First check if there are at least two atoms in the system that have nbfix
         self.NBFIX = False
         for a in data.atoms:
             atype = data.atomType[a]
