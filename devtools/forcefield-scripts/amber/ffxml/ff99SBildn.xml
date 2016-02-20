@@ -1,6 +1,6 @@
 <ForceField>
  <Info>
-  <DateGenerated>2016-02-16</DateGenerated>
+  <DateGenerated>2016-02-20</DateGenerated>
   <Source md5hash="0fe6670b9380968bcd1d31dea6ecb7cc" sourcePackage="AmberTools" sourcePackageVersion="15">oldff/leaprc.ff99SBildn</Source>
   <Reference>Lindorff-Larsen, K., Piana, S., Palmo, K., Maragakis, P., Klepeis, J.L., Dror, R.O., and Shaw, D.E. (2010). Improved side-chain torsion potentials for the Amber ff99SB protein force field. Proteins 78, 1950-1958.</Reference>
  </Info>

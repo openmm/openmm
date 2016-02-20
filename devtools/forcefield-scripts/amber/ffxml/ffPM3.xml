@@ -1,6 +1,6 @@
 <ForceField>
  <Info>
-  <DateGenerated>2016-02-16</DateGenerated>
+  <DateGenerated>2016-02-20</DateGenerated>
   <Source md5hash="a7627494b5bf7ccf58ac17734c520ce8" sourcePackage="AmberTools" sourcePackageVersion="15">leaprc.ffPM3</Source>
   <Reference>Wollacott, A.M., and Merz, K.M. (2006). Development of a Parametrized Force Field To Reproduce Semiempirical Geometries. J. Chem. Theory Comput. 2, 1070-1077.</Reference>
  </Info>
