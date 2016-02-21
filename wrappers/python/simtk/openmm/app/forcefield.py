@@ -1194,8 +1194,12 @@ class HarmonicBondGenerator(object):
 
     @staticmethod
     def parseElement(element, ff):
-        generator = HarmonicBondGenerator(ff)
-        ff.registerGenerator(generator)
+        existing = [f for f in ff._forces if isinstance(f, HarmonicBondGenerator)]
+        if len(existing) == 0:
+            generator = HarmonicBondGenerator(ff)
+            ff.registerGenerator(generator)
+        else:
+            generator = existing[0]
         for bond in element.findall('Bond'):
             generator.registerBond(bond.attrib)
 
@@ -1247,8 +1251,12 @@ class HarmonicAngleGenerator(object):
 
     @staticmethod
     def parseElement(element, ff):
-        generator = HarmonicAngleGenerator(ff)
-        ff.registerGenerator(generator)
+        existing = [f for f in ff._forces if isinstance(f, HarmonicAngleGenerator)]
+        if len(existing) == 0:
+            generator = HarmonicAngleGenerator(ff)
+            ff.registerGenerator(generator)
+        else:
+            generator = existing[0]
         for angle in element.findall('Angle'):
             generator.registerAngle(angle.attrib)
 
@@ -1331,8 +1339,12 @@ class PeriodicTorsionGenerator(object):
 
     @staticmethod
     def parseElement(element, ff):
-        generator = PeriodicTorsionGenerator(ff)
-        ff.registerGenerator(generator)
+        existing = [f for f in ff._forces if isinstance(f, PeriodicTorsionGenerator)]
+        if len(existing) == 0:
+            generator = PeriodicTorsionGenerator(ff)
+            ff.registerGenerator(generator)
+        else:
+            generator = existing[0]
         for torsion in element.findall('Proper'):
             generator.registerProperTorsion(torsion.attrib)
         for torsion in element.findall('Improper'):
@@ -1430,8 +1442,12 @@ class RBTorsionGenerator(object):
 
     @staticmethod
     def parseElement(element, ff):
-        generator = RBTorsionGenerator(ff)
-        ff.registerGenerator(generator)
+        existing = [f for f in ff._forces if isinstance(f, RBTorsionGenerator)]
+        if len(existing) == 0:
+            generator = RBTorsionGenerator(ff)
+            ff.registerGenerator(generator)
+        else:
+            generator = existing[0]
         for torsion in element.findall('Proper'):
             types = ff._findAtomTypes(torsion.attrib, 4)
             if None not in types:
@@ -1534,8 +1550,12 @@ class CMAPTorsionGenerator(object):
 
     @staticmethod
     def parseElement(element, ff):
-        generator = CMAPTorsionGenerator(ff)
-        ff.registerGenerator(generator)
+        existing = [f for f in ff._forces if isinstance(f, CMAPTorsionGenerator)]
+        if len(existing) == 0:
+            generator = CMAPTorsionGenerator(ff)
+            ff.registerGenerator(generator)
+        else:
+            generator = existing[0]
         for map in element.findall('Map'):
             values = [float(x) for x in map.text.split()]
             size = sqrt(len(values))
