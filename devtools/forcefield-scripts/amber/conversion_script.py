@@ -329,6 +329,7 @@ def validate_gaff(ffxml_name, leaprc_name):
 
     print('Preparing LeaP scripts...')
     leap_script_imatinib_string = """source %s
+loadamberparams files/frcmod.imatinib
 x = loadMol2 files/imatinib.mol2
 saveAmberParm x %s %s
 quit""" % (leaprc_name, imatinib_top[1], imatinib_crd[1])
@@ -342,13 +343,13 @@ quit""" % (leaprc_name, imatinib_top[1], imatinib_crd[1])
     print('Calculating imatinib energies...')
     # AMBER
     parm_amber = parmed.load_file(imatinib_top[1], imatinib_crd[1])
-    system_amber = parm_amber.createSystem()
+    system_amber = parm_amber.createSystem(splitDihedrals=True)
     imatinib_amber_energies = parmed.openmm.energy_decomposition_system(parm_amber, system_amber, nrg=kilojoules_per_mole)
     # OpenMM
     ff = app.ForceField(ffxml_name, 'files/imatinib_frcmod.xml', 'files/imatinib.xml')
     system_omm = ff.createSystem(parm_amber.topology)
     parm_omm = parmed.openmm.load_topology(parm_amber.topology, system_omm, xyz=parm_amber.positions)
-    system_omm = parm_omm.createSystem()
+    system_omm = parm_omm.createSystem(splitDihedrals=True)
     imatinib_omm_energies = parmed.openmm.energy_decomposition_system(parm_omm, system_omm, nrg=kilojoules_per_mole)
 
     print('Deleting temp files...')
@@ -356,9 +357,16 @@ quit""" % (leaprc_name, imatinib_top[1], imatinib_crd[1])
         os.unlink(f[1])
 
     print('Asserting imatinib energies...')
+    counter = 0
     for i, j in zip(imatinib_amber_energies, imatinib_omm_energies):
-        testing.assert_allclose(j[1], i[1], rtol=1e-5,
-        err_msg=('Imatinib energies outside of allowed tolerance for %s' % ffxml_name))
+        if counter != 3:
+            testing.assert_allclose(j[1], i[1], rtol=1e-5,
+            err_msg=('Imatinib energies outside of allowed tolerance for %s' % ffxml_name))
+            counter += 1
+        else: # impropers - higher tolerance
+            testing.assert_allclose(j[1], i[1], rtol=1e-2,
+            err_msg=('Imatinib energies outside of allowed tolerance for %s' % ffxml_name))
+            counter += 1
     print('Imatinib energy validation successful!')
     print('Done!')
 
