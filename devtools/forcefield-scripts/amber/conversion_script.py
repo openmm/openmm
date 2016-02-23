@@ -11,13 +11,14 @@ import yaml
 from distutils.spawn import find_executable
 import hashlib
 from collections import OrderedDict
+import glob
 import warnings
 from parmed.exceptions import ParameterWarning
 warnings.filterwarnings('error', category=ParameterWarning)
 
 _loadoffre = re.compile(r'loadoff (\S*)', re.I)
 
-def convert(filename, ignore=None, provenance=None):
+def convert(filename, ignore=None, provenance=None, write_unused=False, filter_warnings='error'):
     basename = os.path.basename(filename)
     if not os.path.exists('ffxml/'):
         os.mkdir('ffxml')
@@ -39,11 +40,11 @@ def convert(filename, ignore=None, provenance=None):
     print('Converting to ffxml...')
     params = parmed.amber.AmberParameterSet.from_leaprc(leaprc)
     params = parmed.openmm.OpenMMParameterSet.from_parameterset(params)
-    # If there are no residue templates (GAFF) - write_unused must be True
-    if params.residues:
-        params.write(ffxml_name, provenance=provenance, write_unused=False)
-    else:
-        params.write(ffxml_name, provenance=provenance, write_unused=True)
+    if filter_warnings is not 'error':
+        warnings.filterwarnings('default', category=ParameterWarning)
+    params.write(ffxml_name, provenance=provenance, write_unused=write_unused)
+    if filter_warnings is not 'error':
+        warnings.filterwarnings('error', category=ParameterWarning)
     print('Ffxml successfully written!')
     return ffxml_name
 
@@ -156,6 +157,66 @@ quit""" % (leaprc_name, villin_top[1], villin_crd[1])
                 counter += 1
     print('Villin headpiece energy validation successful!')
     print('Done!')
+
+def validate_phospho(ffxml_name, leaprc_name):
+    if not find_executable('tleap'):
+        raise RuntimeError('tleap not available from PATH')
+
+    for pdbname in glob.iglob('files/phospho/*.pdb'):
+        print('Preparing temporary files for validation...')
+        top = tempfile.mkstemp()
+        crd = tempfile.mkstemp()
+        leap_script_file = tempfile.mkstemp()
+
+        print('Preparing LeaP scripts...')
+        leap_script_string = """source leaprc.ff14SB
+source %s
+x = loadPdb %s
+saveAmberParm x %s %s
+quit""" % (leaprc_name, pdbname, top[1], crd[1])
+
+        os.write(leap_script_file[0], leap_script_string)
+
+        print('Running LEaP...')
+        os.system('tleap -f %s' % leap_script_file[1])
+        if os.path.getsize(top[1]) == 0 or os.path.getsize(crd[1]) == 0:
+            raise RuntimeError('LEaP fail for %s' % leaprc_name)
+
+        print('Calculating energies...')
+        # AMBER
+        parm_amber = parmed.load_file(top[1], crd[1])
+        system_amber = parm_amber.createSystem(splitDihedrals=True)
+        amber_energies = parmed.openmm.energy_decomposition_system(parm_amber, system_amber, nrg=kilojoules_per_mole)
+        # OpenMM
+        ff = app.ForceField('ffxml/ff14SB.xml', ffxml_name)
+        system_omm = ff.createSystem(parm_amber.topology)
+        parm_omm = parmed.openmm.load_topology(parm_amber.topology, system_omm, xyz=parm_amber.positions)
+        system_omm = parm_omm.createSystem(splitDihedrals=True)
+        omm_energies = parmed.openmm.energy_decomposition_system(parm_omm, system_omm, nrg=kilojoules_per_mole)
+
+        print('Deleting temp files...')
+        for f in (top, crd, leap_script_file):
+            os.close(f[0])
+            os.unlink(f[1])
+
+        print('Asserting energies...')
+        counter = 0
+        for i, j in zip(amber_energies, omm_energies):
+            if counter != 3: # Not Impropers
+                testing.assert_allclose(j[1], i[1], rtol=1e-5,
+                err_msg=('Energies outside of allowed tolerance for %s' % ffxml_name))
+                counter += 1
+            else: # Impropers - higher tolerance
+                try:
+                    testing.assert_allclose(j[1], i[1], rtol=1e-2)
+                except AssertionError:
+                    testing.assert_allclose(j[1], i[1], rtol=2e-2,
+                    err_msg=('Energies outside of allowed tolerance for %s' % ffxml_name))
+                    warnings.warn('Impropers failed assertion at 1% tolerance, but '
+                                  'have been asserted at the higher 2% tolerance')
+                finally:
+                    counter += 1
+        print('Phosphorylated protein energy validation successful!')
 
 def validate_nucleic(ffxml_name, leaprc_name):
     if not find_executable('tleap'):
@@ -370,6 +431,58 @@ quit""" % (leaprc_name, imatinib_top[1], imatinib_crd[1])
     print('Imatinib energy validation successful!')
     print('Done!')
 
+def validate_modrna(ffxml_name, leaprc_name):
+    if not find_executable('tleap'):
+        raise RuntimeError('tleap not available from PATH')
+    print('Preparing temporary files for validation...')
+    top = tempfile.mkstemp()
+    crd = tempfile.mkstemp()
+    leap_script_file = tempfile.mkstemp()
+
+    print('Preparing LeaP scripts...')
+    leap_script_string = """source leaprc.ff14SB
+source %s
+x = loadPdb files/6tna_modrna.pdb
+saveAmberParm x %s %s
+quit""" % (ffxml_name, leaprc_name, top[1], crd[1])
+
+    os.write(leap_script_file[0], leap_script_string)
+
+    print('Running LEaP...')
+    os.system('tleap -f %s' % leap_script_file[1])
+    if os.path.getsize(top[1]) == 0 or os.path.getsize(crd[1]) == 0:
+        raise RuntimeError('LEaP fail for %s' % leaprc_name)
+
+    print('Calculating energies...')
+    # AMBER
+    parm_amber = parmed.load_file(top[1], crd[1])
+    system_amber = parm_amber.createSystem(splitDihedrals=True)
+    amber_energies = parmed.openmm.energy_decomposition_system(parm_amber, system_amber, nrg=kilojoules_per_mole)
+    # OpenMM
+    ff = app.ForceField('ffxml/ff14SB.xml', ffxml_name)
+    system_omm = ff.createSystem(parm_amber.topology)
+    parm_omm = parmed.openmm.load_topology(parm_amber.topology, system_omm, xyz=parm_amber.positions)
+    system_omm = parm_omm.createSystem(splitDihedrals=True)
+    omm_energies = parmed.openmm.energy_decomposition_system(parm_omm, system_omm, nrg=kilojoules_per_mole)
+
+    print('Deleting temp files...')
+    for f in (top, crd, leap_script_file):
+        os.close(f[0])
+        os.unlink(f[1])
+
+    print('Asserting energies...')
+    counter = 0
+    for i, j in zip(amber_energies, omm_energies):
+        if counter != 3: # Not Impropers
+            testing.assert_allclose(j[1], i[1], rtol=1e-5,
+            err_msg=('Energies outside of allowed tolerance for %s' % ffxml_name))
+            counter += 1
+        else: # Impropers - higher tolerance - RNA - for now turn off
+            #testing.assert_allclose(j[1], i[1], rtol=2e-2,
+            #err_msg=('Energies outside of allowed tolerance for %s' % ffxml_name))
+            counter += 1
+    print('Modified RNA energy validation successful!')
+
 if __name__ == '__main__':
     if not find_executable('tleap'):
         raise RuntimeError('tleap not available from PATH')
@@ -403,8 +516,22 @@ if __name__ == '__main__':
         source['sourcePackage'] = source_pack
         source['sourcePackageVersion'] = source_pack_ver
         provenance['Reference'] = leaprc_reference
+        # set default conversion options
+        write_unused = False
+        filter_warnings = 'error'
+        # set conversion options if present
+        if 'Options' in entry:
+            for option in entry['Options']:
+                if option == 'write_unused':
+                    write_unused = entry['Options'][option]
+                elif option == 'filter_warnings':
+                    filter_warnings = entry['Options'][option]
+                else:
+                    raise RuntimeError("Wrong option used in Options for %s"
+                                       % leaprc_name)
         print('Converting %s to ffxml...' % leaprc_name)
-        ffxml_name = convert(filename, ignore=ignore, provenance=provenance)
+        ffxml_name = convert(filename, ignore=ignore, provenance=provenance,
+                     write_unused=write_unused, filter_warnings=filter_warnings)
         print('Validating the conversion...')
         tested = False
         for test in leaprc_test:
@@ -424,5 +551,12 @@ if __name__ == '__main__':
                 print('Small molecule (GAFF) tests...')
                 validate_gaff(ffxml_name, leaprc_name)
                 tested = True
+            elif test == 'phospho':
+                print('Phosphorylated protein tests...')
+                validate_phospho(ffxml_name, leaprc_name)
+                tested = True
+            elif test == 'modrna'
+                print('Modified RNA tests...')
+                validate_modrna(ffxml_name, leaprc_name)
         if not tested:
             raise RuntimeError('No validation tests have been run for %s' % leaprc_name)

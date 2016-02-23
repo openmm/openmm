@@ -68,6 +68,8 @@
 #  Reference: >-
 #             Wang, J., Wolf, R.M., Caldwell, J.W., Kollman, P.A., and Case, D.A. (2004).
 #             Development and testing of a general amber force field. J. Comput. Chem. 25, 1157-1174.
+#  Options:
+#    write_unused: True
 #  Test:
 #  - mol2
 - Source: leaprc.ffAM1
@@ -183,3 +185,45 @@
   Test:
   - protein
   - nucleic
+- Source: leaprc.phosaa10
+  Reference:
+  - >-
+    Steinbrecher, T., Latzer, J., and Case, D.A. (2012). Revised AMBER parameters for bioorganic phosphates.
+    J. Chem. Theory Comput. 8, 4405-4412.
+  Options:
+    filter_warnings: default
+  Test:
+  - phospho
+- Source: leaprc.modrna08
+  Reference:
+  - >-
+    Aduri, R., Psciuk, B.T., Saro, P., Taniga, H., Schlegel, H.B., and SantaLucia, J. (2007).
+    AMBER Force Field Parameters for the Naturally Occurring Modified Nucleosides in RNA. J. Chem. Theory Comput. 3, 1464-1475.
+  Test:
+  - modrna
+#- Source: leaprc.lipid11
+#  Reference:
+#  - >-
+#    Skjevik, Å.A., Madej, B.D., Walker, R.C., and Teigen, K. (2012). LIPID11: A Modular Framework for Lipid Simulations Using Amber.
+#    J. Phys. Chem. B 116, 11124-11136.
+#  Test:
+#  - lipid
+#- Source: leaprc.lipid14
+#  Reference:
+#  - >-
+#    Dickson, C.J., Madej, B.D., Skjevik, Å.A., Betz, R.M., Teigen, K., Gould, I.R., and Walker, R.C. (2014).
+#    Lipid14: The Amber Lipid Force Field. J. Chem. Theory Comput. 10, 865-879.
+  #Test:
+  #- lipid
+# waiting for source command support in parmed from_leaprc
+#- Source: oldff/leaprc.parmCHI_YIL.bsc
+#  Reference:
+#  - >-
+#    Pérez, A., Marchán, I., Svozil, D., Sponer, J., Cheatham, T.E., Laughton, C.A., and Orozco, M. (2007).
+#    Refinement of the AMBER Force Field for Nucleic Acids: Improving the Description of α/γ Conformers. Biophysical Journal 92, 3817-3829.
+#  - >-
+#    Yildirim, I., Stern, H.A., Kennedy, S.D., Tubbs, J.D., and Turner, D.H. (2010).
+#    Reparameterization of RNA χ Torsion Parameters for the AMBER Force Field and Comparison to NMR Spectra for Cytidine and Uridine. J. Chem. Theory Comput. 6, 1520-1531.
+#  Test:
+#  - protein
+#  - nucleic
