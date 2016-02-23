@@ -448,6 +448,83 @@ class TestForceField(unittest.TestCase):
         self.assertEqual(templates[1].name, 'ALA')
         self.assertEqual(templates[2].name, 'CALA')
 
+    def test_Wildcard(self):
+        """Test that PeriodicTorsionForces using wildcard ('') for atom types / classes in the ffxml are correctly registered"""
+
+        # Use wildcards in types
+        xml = """
+<ForceField>
+ <AtomTypes>
+  <Type name="C" class="C" element="C" mass="12.010000"/>
+  <Type name="O" class="O" element="O" mass="16.000000"/>
+ </AtomTypes>
+ <PeriodicTorsionForce>
+  <Proper type1="" type2="C" type3="C" type4="" periodicity1="2" phase1="3.141593" k1="15.167000"/>
+  <Improper type1="C" type2="" type3="" type4="O" periodicity1="2" phase1="3.141593" k1="43.932000"/>
+ </PeriodicTorsionForce>
+</ForceField>"""
+
+        ff = ForceField(StringIO(xml))
+
+        self.assertEqual(len(ff._forces[0].proper), 1)
+        self.assertEqual(len(ff._forces[0].improper), 1)
+
+       # Use wildcards in classes
+        xml = """
+<ForceField>
+ <AtomTypes>
+  <Type name="C" class="C" element="C" mass="12.010000"/>
+  <Type name="O" class="O" element="O" mass="16.000000"/>
+ </AtomTypes>
+ <PeriodicTorsionForce>
+  <Proper class1="" class2="C" class3="C" class4="" periodicity1="2" phase1="3.141593" k1="15.167000"/>
+  <Improper class1="C" class2="" class3="" class4="O" periodicity1="2" phase1="3.141593" k1="43.932000"/>
+ </PeriodicTorsionForce>
+</ForceField>"""
+
+        ff = ForceField(StringIO(xml))
+
+        self.assertEqual(len(ff._forces[0].proper), 1)
+        self.assertEqual(len(ff._forces[0].improper), 1)
+
+    def test_ScalingFactorCombining(self):
+        """ Tests that FFs can be combined if their scaling factors are very close """
+        forcefield = ForceField('amber99sb.xml', os.path.join('systems', 'test_amber_ff.xml'))
+        # This would raise an exception if it didn't work
+
+    def test_MultipleFilesandForceTags(self):
+        """Test loading multiple ffxml files - make sure no generators are duplicated
+           and that atom types are not required to be defined in the first files
+           called"""
+        ffxml = """<ForceField>
+ <PeriodicTorsionForce>
+  <Proper class1="" class2="C" class3="N" class4="" periodicity1="2" phase1="3.14159265359" k1="10.46"/>
+  <Proper class1="" class2="C" class3="CM" class4="" periodicity1="2" phase1="3.14159265359" k1="9.1002"/>
+  <Proper class1="" class2="C" class3="CB" class4="" periodicity1="2" phase1="3.14159265359" k1="12.552"/>
+  <Proper class1="" class2="C" class3="CA" class4="" periodicity1="2" phase1="3.14159265359" k1="15.167"/>
+  <Proper class1="" class2="C" class3="C" class4="" periodicity1="2" phase1="3.14159265359" k1="15.167"/>
+  <Improper class1="C5" class2="" class3="" class4="O" periodicity1="2" phase1="3.14159265359" k1="43.932"/>
+  <Improper class1="C6" class2="" class3="O2" class4="O2" periodicity1="2" phase1="3.14159265359" k1="43.932"/>
+  <Improper class1="N" class2="C5" class3="CT" class4="H" periodicity1="2" phase1="3.14159265359" k1="4.6024"/>
+  <Improper class1="N" class2="C5" class3="CT" class4="O" periodicity1="2" phase1="3.14159265359" k1="4.6024"/>
+  <Improper class1="N" class2="C" class3="CT" class4="O" periodicity1="2" phase1="3.14159265359" k1="4.6024"/>
+ </PeriodicTorsionForce>
+ </ForceField>"""
+
+        ff1 = ForceField(StringIO(ffxml), 'amber99sbildn.xml')
+        ff2 = ForceField('amber99sbildn.xml', StringIO(ffxml))
+
+        self.assertEqual(len(ff1._forces), 4)
+        self.assertEqual(len(ff2._forces), 4)
+
+        pertorsion1 = ff1._forces[0]
+        pertorsion2 = ff2._forces[2]
+
+        self.assertEqual(len(pertorsion1.proper), 114)
+        self.assertEqual(len(pertorsion1.improper), 46)
+        self.assertEqual(len(pertorsion2.proper), 114)
+        self.assertEqual(len(pertorsion2.improper), 46)
+
 class AmoebaTestForceField(unittest.TestCase):
     """Test the ForceField.createSystem() method with the AMOEBA forcefield."""
 
@@ -534,50 +611,6 @@ class AmoebaTestForceField(unittest.TestCase):
         for f1, f2, in zip(state1.getForces().value_in_unit(kilojoules_per_mole/nanometer), state2.getForces().value_in_unit(kilojoules_per_mole/nanometer)):
             diff = norm(f1-f2)
             self.assertTrue(diff < 0.1 or diff/norm(f1) < 1e-3)
-
-    def test_Wildcard(self):
-        """Test that PeriodicTorsionForces using wildcard ('') for atom types / classes in the ffxml are correctly registered"""
-
-        # Use wildcards in types
-        xml = """
-<ForceField>
- <AtomTypes>
-  <Type name="C" class="C" element="C" mass="12.010000"/>
-  <Type name="O" class="O" element="O" mass="16.000000"/>
- </AtomTypes>
- <PeriodicTorsionForce>
-  <Proper type1="" type2="C" type3="C" type4="" periodicity1="2" phase1="3.141593" k1="15.167000"/>
-  <Improper type1="C" type2="" type3="" type4="O" periodicity1="2" phase1="3.141593" k1="43.932000"/>
- </PeriodicTorsionForce>
-</ForceField>"""
-
-        ff = ForceField(StringIO(xml))
-
-        self.assertEqual(len(ff._forces[0].proper), 1)
-        self.assertEqual(len(ff._forces[0].improper), 1)
-
-       # Use wildcards in classes
-        xml = """
-<ForceField>
- <AtomTypes>
-  <Type name="C" class="C" element="C" mass="12.010000"/>
-  <Type name="O" class="O" element="O" mass="16.000000"/>
- </AtomTypes>
- <PeriodicTorsionForce>
-  <Proper class1="" class2="C" class3="C" class4="" periodicity1="2" phase1="3.141593" k1="15.167000"/>
-  <Improper class1="C" class2="" class3="" class4="O" periodicity1="2" phase1="3.141593" k1="43.932000"/>
- </PeriodicTorsionForce>
-</ForceField>"""
-
-        ff = ForceField(StringIO(xml))
-
-        self.assertEqual(len(ff._forces[0].proper), 1)
-        self.assertEqual(len(ff._forces[0].improper), 1)
-
-    def test_ScalingFactorCombining(self):
-        """ Tests that FFs can be combined if their scaling factors are very close """
-        forcefield = ForceField('amber99sb.xml', os.path.join('systems', 'test_amber_ff.xml'))
-        # This would raise an exception if it didn't work
 
 if __name__ == '__main__':
     unittest.main()
