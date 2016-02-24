@@ -493,23 +493,32 @@ class TestForceField(unittest.TestCase):
         # This would raise an exception if it didn't work
 
     def test_MultipleFilesandForceTags(self):
-        """Test loading multiple ffxml files - make sure no generators are duplicated
-           and that atom types are not required to be defined in the first files
-           called"""
+        """Test that the order of listing of multiple ffxmls does not matter.
+           Tests that one generator per force type is created and that the ffxml
+           defining atom types does not have to be listed first"""
+
         ffxml = """<ForceField>
+ <Residues>
+  <Residue name="ACE-Test">
+   <Atom name="HH31" type="710"/>
+   <Atom name="CH3" type="711"/>
+   <Atom name="HH32" type="710"/>
+   <Atom name="HH33" type="710"/>
+   <Atom name="C" type="712"/>
+   <Atom name="O" type="713"/>
+   <Bond from="0" to="1"/>
+   <Bond from="1" to="2"/>
+   <Bond from="1" to="3"/>
+   <Bond from="1" to="4"/>
+   <Bond from="4" to="5"/>
+   <ExternalBond from="4"/>
+  </Residue>
+ </Residues>
  <PeriodicTorsionForce>
-  <Proper class1="" class2="C" class3="N" class4="" periodicity1="2" phase1="3.14159265359" k1="10.46"/>
-  <Proper class1="" class2="C" class3="CM" class4="" periodicity1="2" phase1="3.14159265359" k1="9.1002"/>
-  <Proper class1="" class2="C" class3="CB" class4="" periodicity1="2" phase1="3.14159265359" k1="12.552"/>
-  <Proper class1="" class2="C" class3="CA" class4="" periodicity1="2" phase1="3.14159265359" k1="15.167"/>
-  <Proper class1="" class2="C" class3="C" class4="" periodicity1="2" phase1="3.14159265359" k1="15.167"/>
-  <Improper class1="C5" class2="" class3="" class4="O" periodicity1="2" phase1="3.14159265359" k1="43.932"/>
-  <Improper class1="C6" class2="" class3="O2" class4="O2" periodicity1="2" phase1="3.14159265359" k1="43.932"/>
-  <Improper class1="N" class2="C5" class3="CT" class4="H" periodicity1="2" phase1="3.14159265359" k1="4.6024"/>
-  <Improper class1="N" class2="C5" class3="CT" class4="O" periodicity1="2" phase1="3.14159265359" k1="4.6024"/>
-  <Improper class1="N" class2="C" class3="CT" class4="O" periodicity1="2" phase1="3.14159265359" k1="4.6024"/>
+  <Proper class1="C" class2="C" class3="C" class4="C" periodicity1="2" phase1="3.14159265359" k1="10.46"/>
+  <Improper class1="C" class2="C" class3="C" class4="C" periodicity1="2" phase1="3.14159265359" k1="43.932"/>
  </PeriodicTorsionForce>
- </ForceField>"""
+</ForceField>"""
 
         ff1 = ForceField(StringIO(ffxml), 'amber99sbildn.xml')
         ff2 = ForceField('amber99sbildn.xml', StringIO(ffxml))
@@ -520,10 +529,10 @@ class TestForceField(unittest.TestCase):
         pertorsion1 = ff1._forces[0]
         pertorsion2 = ff2._forces[2]
 
-        self.assertEqual(len(pertorsion1.proper), 114)
-        self.assertEqual(len(pertorsion1.improper), 46)
-        self.assertEqual(len(pertorsion2.proper), 114)
-        self.assertEqual(len(pertorsion2.improper), 46)
+        self.assertEqual(len(pertorsion1.proper), 110)
+        self.assertEqual(len(pertorsion1.improper), 42)
+        self.assertEqual(len(pertorsion2.proper), 110)
+        self.assertEqual(len(pertorsion2.improper), 42)
 
 class AmoebaTestForceField(unittest.TestCase):
     """Test the ForceField.createSystem() method with the AMOEBA forcefield."""
