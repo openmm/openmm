@@ -2,7 +2,7 @@ from __future__ import print_function
 import parmed
 from parmed.utils.six.moves import StringIO, zip
 import simtk.openmm.app as app
-from simtk.unit import *
+import simtk.unit as u
 import os
 import re
 from numpy import testing
@@ -48,7 +48,7 @@ def convert(filename, ignore=None, provenance=None, write_unused=False, filter_w
                     if _loadoffre.findall(line) and _loadoffre.findall(line)[0] in ignore:
                         continue
                     else:
-                        new_lines.append(line)
+                        fil_new_lines.append(line)
             else:
                 fil_new_lines = lines
             new_lines += fil_new_lines
@@ -123,25 +123,25 @@ quit""" % (leaprc_name, villin_top[1], villin_crd[1])
     # AMBER
     parm_amber = parmed.load_file(ala3_top[1], ala3_crd[1])
     system_amber = parm_amber.createSystem(splitDihedrals=True)
-    ala3_amber_energies = parmed.openmm.energy_decomposition_system(parm_amber, system_amber, nrg=kilojoules_per_mole)
+    ala3_amber_energies = parmed.openmm.energy_decomposition_system(parm_amber, system_amber, nrg=u.kilojoules_per_mole)
     # OpenMM
     ff = app.ForceField(ffxml_name)
     system_omm = ff.createSystem(parm_amber.topology)
     parm_omm = parmed.openmm.load_topology(parm_amber.topology, system_omm, xyz=parm_amber.positions)
     system_omm = parm_omm.createSystem(splitDihedrals=True)
-    ala3_omm_energies = parmed.openmm.energy_decomposition_system(parm_omm, system_omm, nrg=kilojoules_per_mole)
+    ala3_omm_energies = parmed.openmm.energy_decomposition_system(parm_omm, system_omm, nrg=u.kilojoules_per_mole)
 
     print('Calculating villin headpiece energies...')
     # AMBER
     parm_amber = parmed.load_file(villin_top[1], villin_crd[1])
     system_amber = parm_amber.createSystem(splitDihedrals=True)
-    villin_amber_energies = parmed.openmm.energy_decomposition_system(parm_amber, system_amber, nrg=kilojoules_per_mole)
+    villin_amber_energies = parmed.openmm.energy_decomposition_system(parm_amber, system_amber, nrg=u.kilojoules_per_mole)
     # OpenMM
     ff = app.ForceField(ffxml_name)
     system_omm = ff.createSystem(parm_amber.topology)
     parm_omm = parmed.openmm.load_topology(parm_amber.topology, system_omm, xyz=parm_amber.positions)
     system_omm = parm_omm.createSystem(splitDihedrals=True)
-    villin_omm_energies = parmed.openmm.energy_decomposition_system(parm_omm, system_omm, nrg=kilojoules_per_mole)
+    villin_omm_energies = parmed.openmm.energy_decomposition_system(parm_omm, system_omm, nrg=u.kilojoules_per_mole)
 
     print('Deleting temp files...')
     for f in (ala3_top, ala3_crd, villin_top, villin_crd, leap_script_ala3_file,
@@ -215,13 +215,13 @@ quit""" % (leaprc_name, pdbname, top[1], crd[1])
         # AMBER
         parm_amber = parmed.load_file(top[1], crd[1])
         system_amber = parm_amber.createSystem(splitDihedrals=True)
-        amber_energies = parmed.openmm.energy_decomposition_system(parm_amber, system_amber, nrg=kilojoules_per_mole)
+        amber_energies = parmed.openmm.energy_decomposition_system(parm_amber, system_amber, nrg=u.kilojoules_per_mole)
         # OpenMM
         ff = app.ForceField('ffxml/ff14SB.xml', ffxml_name)
         system_omm = ff.createSystem(parm_amber.topology)
         parm_omm = parmed.openmm.load_topology(parm_amber.topology, system_omm, xyz=parm_amber.positions)
         system_omm = parm_omm.createSystem(splitDihedrals=True)
-        omm_energies = parmed.openmm.energy_decomposition_system(parm_omm, system_omm, nrg=kilojoules_per_mole)
+        omm_energies = parmed.openmm.energy_decomposition_system(parm_omm, system_omm, nrg=u.kilojoules_per_mole)
 
         print('Deleting temp files...')
         for f in (top, crd, leap_script_file):
@@ -356,25 +356,25 @@ quit""" % (leaprc_name, rna_top[1], rna_crd[1])
     # AMBER
     parm_amber = parmed.load_file(dna_top[1], dna_crd[1])
     system_amber = parm_amber.createSystem(splitDihedrals=True)
-    dna_amber_energies = parmed.openmm.energy_decomposition_system(parm_amber, system_amber, nrg=kilojoules_per_mole)
+    dna_amber_energies = parmed.openmm.energy_decomposition_system(parm_amber, system_amber, nrg=u.kilojoules_per_mole)
     # OpenMM
     ff = app.ForceField(ffxml_name)
     system_omm = ff.createSystem(parm_amber.topology)
     parm_omm = parmed.openmm.load_topology(parm_amber.topology, system_omm, xyz=parm_amber.positions)
     system_omm = parm_omm.createSystem(splitDihedrals=True)
-    dna_omm_energies = parmed.openmm.energy_decomposition_system(parm_omm, system_omm, nrg=kilojoules_per_mole)
+    dna_omm_energies = parmed.openmm.energy_decomposition_system(parm_omm, system_omm, nrg=u.kilojoules_per_mole)
 
     print('Calculating RNA energies...')
     # AMBER
     parm_amber = parmed.load_file(rna_top[1], rna_crd[1])
     system_amber = parm_amber.createSystem(splitDihedrals=True)
-    rna_amber_energies = parmed.openmm.energy_decomposition_system(parm_amber, system_amber, nrg=kilojoules_per_mole)
+    rna_amber_energies = parmed.openmm.energy_decomposition_system(parm_amber, system_amber, nrg=u.kilojoules_per_mole)
     # OpenMM
     ff = app.ForceField(ffxml_name)
     system_omm = ff.createSystem(parm_amber.topology)
     parm_omm = parmed.openmm.load_topology(parm_amber.topology, system_omm, xyz=parm_amber.positions)
     system_omm = parm_omm.createSystem(splitDihedrals=True)
-    rna_omm_energies = parmed.openmm.energy_decomposition_system(parm_omm, system_omm, nrg=kilojoules_per_mole)
+    rna_omm_energies = parmed.openmm.energy_decomposition_system(parm_omm, system_omm, nrg=u.kilojoules_per_mole)
 
     print('Deleting temp files...')
     for f in (dna_top, dna_crd, leap_script_dna_file, rna_top, rna_crd,
@@ -434,13 +434,13 @@ quit""" % (leaprc_name, imatinib_top[1], imatinib_crd[1])
     # AMBER
     parm_amber = parmed.load_file(imatinib_top[1], imatinib_crd[1])
     system_amber = parm_amber.createSystem(splitDihedrals=True)
-    imatinib_amber_energies = parmed.openmm.energy_decomposition_system(parm_amber, system_amber, nrg=kilojoules_per_mole)
+    imatinib_amber_energies = parmed.openmm.energy_decomposition_system(parm_amber, system_amber, nrg=u.kilojoules_per_mole)
     # OpenMM
     ff = app.ForceField(ffxml_name, 'files/imatinib_frcmod.xml', 'files/imatinib.xml')
     system_omm = ff.createSystem(parm_amber.topology)
     parm_omm = parmed.openmm.load_topology(parm_amber.topology, system_omm, xyz=parm_amber.positions)
     system_omm = parm_omm.createSystem(splitDihedrals=True)
-    imatinib_omm_energies = parmed.openmm.energy_decomposition_system(parm_omm, system_omm, nrg=kilojoules_per_mole)
+    imatinib_omm_energies = parmed.openmm.energy_decomposition_system(parm_omm, system_omm, nrg=u.kilojoules_per_mole)
 
     print('Deleting temp files...')
     for f in (imatinib_top, imatinib_crd, leap_script_imatinib_file):
@@ -522,7 +522,7 @@ addPdbResMap {
 }
 x = loadPdb files/6tna_modrna.pdb
 saveAmberParm x %s %s
-quit""" % (leaprc_name[0], leaprc_name[1], top[1], crd[1])
+quit""" % (leaprc_name[1], leaprc_name[0], top[1], crd[1])
 
     os.write(leap_script_file[0], leap_script_string)
     os.write(leap_script_file_alt[0], leap_script_string_alt)
@@ -539,13 +539,13 @@ quit""" % (leaprc_name[0], leaprc_name[1], top[1], crd[1])
     # AMBER
     parm_amber = parmed.load_file(top[1], crd[1])
     system_amber = parm_amber.createSystem(splitDihedrals=True)
-    amber_energies = parmed.openmm.energy_decomposition_system(parm_amber, system_amber, nrg=kilojoules_per_mole)
+    amber_energies = parmed.openmm.energy_decomposition_system(parm_amber, system_amber, nrg=u.kilojoules_per_mole)
     # OpenMM
     ff = app.ForceField(ffxml_name)
     system_omm = ff.createSystem(parm_amber.topology)
     parm_omm = parmed.openmm.load_topology(parm_amber.topology, system_omm, xyz=parm_amber.positions)
     system_omm = parm_omm.createSystem(splitDihedrals=True)
-    omm_energies = parmed.openmm.energy_decomposition_system(parm_omm, system_omm, nrg=kilojoules_per_mole)
+    omm_energies = parmed.openmm.energy_decomposition_system(parm_omm, system_omm, nrg=u.kilojoules_per_mole)
 
     print('Deleting temp files...')
     for f in (top, crd, leap_script_file, leap_script_file_alt):

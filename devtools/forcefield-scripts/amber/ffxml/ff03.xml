@@ -3043,7 +3043,6 @@
    <Bond atomName1="N" atomName2="HN1"/>
    <Bond atomName1="N" atomName2="HN2"/>
    <ExternalBond atomName="N"/>
-   <ExternalBond atomName="N"/>
   </Residue>
   <Residue name="NME">
    <Atom name="N" type="N" charge="-0.423888"/>

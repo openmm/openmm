@@ -1,8 +1,8 @@
 <ForceField>
  <Info>
   <DateGenerated>2016-02-24</DateGenerated>
-  <Source md5hash="461553ef914f415cacddc4f70f33517f" sourcePackage="AmberTools" sourcePackageVersion="15">['leaprc.ff14SB', 'leaprc.modrna08']</Source>
-  <Source md5hash="3cc05908cf28b3a282be5c58efb66f0c" sourcePackage="AmberTools" sourcePackageVersion="15">['leaprc.ff14SB', 'leaprc.modrna08']</Source>
+  <Source md5hash="461553ef914f415cacddc4f70f33517f" sourcePackage="AmberTools" sourcePackageVersion="15">leaprc.ff14SB</Source>
+  <Source md5hash="3cc05908cf28b3a282be5c58efb66f0c" sourcePackage="AmberTools" sourcePackageVersion="15">leaprc.modrna08</Source>
   <Reference>Maier, J.A., Martinez, C., Kasavajhala, K., Wickstrom, L., Hauser, K.E., and Simmerling, C. (2015). ff14SB: Improving the Accuracy of Protein Side Chain and Backbone Parameters from ff99SB. J. Chem. Theory Comput. 11, 3696-3713.</Reference>
   <Reference>Aduri, R., Psciuk, B.T., Saro, P., Taniga, H., Schlegel, H.B., and SantaLucia, J. (2007). AMBER Force Field Parameters for the Naturally Occurring Modified Nucleosides in RNA. J. Chem. Theory Comput. 3, 1464-1475.</Reference>
  </Info>
