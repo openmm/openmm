@@ -17,6 +17,7 @@ from parmed.exceptions import ParameterWarning
 warnings.filterwarnings('error', category=ParameterWarning)
 
 _loadoffre = re.compile(r'loadoff (\S*)', re.I)
+_sourcere = re.compile(r'source (\S*)', re.I)
 
 def convert(filename, ignore=None, provenance=None, write_unused=False, filter_warnings='error'):
     if isinstance(filename, list):
@@ -36,35 +37,35 @@ def convert(filename, ignore=None, provenance=None, write_unused=False, filter_w
     if not os.path.exists('ffxml/'):
         os.mkdir('ffxml')
     print('Preparing %s for conversion...' % basename)
-    if isinstance(filename, list):
-        new_lines = []
-        for fil in filename:
-            with open(fil) as f:
-                lines = map(lambda line:
-                        line if '#' not in line else line[:line.index('#')], f)
-            if ignore is not None:
-                fil_new_lines = []
-                for line in lines:
-                    if _loadoffre.findall(line) and _loadoffre.findall(line)[0] in ignore:
-                        continue
-                    else:
-                        fil_new_lines.append(line)
-            else:
-                fil_new_lines = lines
-            new_lines += fil_new_lines
-    else:
-        with open(filename) as f:
+    if not isinstance(filename, list):
+        filename = [filename]
+    # do source processing
+    new_filename = []
+    for fil in filename:
+        with open(fil) as f:
             lines = map(lambda line:
                     line if '#' not in line else line[:line.index('#')], f)
-        if ignore is not None:
-            new_lines = []
-            for line in lines:
-                if _loadoffre.findall(line) and _loadoffre.findall(line)[0] in ignore:
-                    continue
-                else:
-                    new_lines.append(line)
-        else:
-            new_lines = lines
+        for line in lines:
+            if _sourcere.findall(line):
+                replace_leaprc = _sourcere.findall(line)[0]
+                replace_leaprc_path = os.path.join(os.path.join(AMBERHOME,
+                'dat/leap/cmd', replace_leaprc))
+                new_filename.append(replace_leaprc_path)
+        new_filename.append(fil)
+    # now ignore processing and join multiple leaprc's
+    filename = new_filename
+    new_lines = []
+    for fil in filename:
+        with open(fil) as f:
+            lines = map(lambda line:
+                    line if '#' not in line else line[:line.index('#')], f)
+        fil_new_lines = []
+        for line in lines:
+            if (ignore is not None and _loadoffre.findall(line) and
+            _loadoffre.findall(line)[0] in ignore):
+                continue
+            fil_new_lines += line
+        new_lines += fil_new_lines
     leaprc = StringIO(''.join(new_lines))
     print('Converting to ffxml...')
     params = parmed.amber.AmberParameterSet.from_leaprc(leaprc)

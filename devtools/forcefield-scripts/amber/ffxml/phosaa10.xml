@@ -1,6 +1,6 @@
 <ForceField>
  <Info>
-  <DateGenerated>2016-02-24</DateGenerated>
+  <DateGenerated>2016-02-25</DateGenerated>
   <Source md5hash="01ba3baf2968794c2686deafb418c43a" sourcePackage="AmberTools" sourcePackageVersion="15">leaprc.phosaa10</Source>
   <Reference>Steinbrecher, T., Latzer, J., and Case, D.A. (2012). Revised AMBER parameters for bioorganic phosphates. J. Chem. Theory Comput. 8, 4405-4412.</Reference>
  </Info>
