@@ -19,29 +19,58 @@ warnings.filterwarnings('error', category=ParameterWarning)
 _loadoffre = re.compile(r'loadoff (\S*)', re.I)
 
 def convert(filename, ignore=None, provenance=None, write_unused=False, filter_warnings='error'):
-    basename = os.path.basename(filename)
+    if isinstance(filename, list):
+        basename = ''
+        for f in filename:
+            f_basename = os.path.basename(f)
+            f_basename = f_basename.split('.')[1]
+            if not basename:
+                basename = f_basename
+            else:
+                basename += '_'
+                basename += f_basename
+        ffxml_name = 'ffxml/' + basename + '.xml'
+    else:
+        basename = os.path.basename(filename)
+        ffxml_name = 'ffxml/' + '.'.join((basename.split('.')[1:] + ['xml']))
     if not os.path.exists('ffxml/'):
         os.mkdir('ffxml')
-    ffxml_name = 'ffxml/' + '.'.join((basename.split('.')[1:] + ['xml']))
     print('Preparing %s for conversion...' % basename)
-    with open(filename) as f:
-        lines = map(lambda line:
-                line if '#' not in line else line[:line.index('#')], f)
-    if ignore is not None:
+    if isinstance(filename, list):
         new_lines = []
-        for line in lines:
-            if _loadoffre.findall(line) and _loadoffre.findall(line)[0] in ignore:
-                continue
+        for fil in filename:
+            with open(fil) as f:
+                lines = map(lambda line:
+                        line if '#' not in line else line[:line.index('#')], f)
+            if ignore is not None:
+                fil_new_lines = []
+                for line in lines:
+                    if _loadoffre.findall(line) and _loadoffre.findall(line)[0] in ignore:
+                        continue
+                    else:
+                        new_lines.append(line)
             else:
-                new_lines.append(line)
+                fil_new_lines = lines
+            new_lines += fil_new_lines
     else:
-        new_lines = lines
+        with open(filename) as f:
+            lines = map(lambda line:
+                    line if '#' not in line else line[:line.index('#')], f)
+        if ignore is not None:
+            new_lines = []
+            for line in lines:
+                if _loadoffre.findall(line) and _loadoffre.findall(line)[0] in ignore:
+                    continue
+                else:
+                    new_lines.append(line)
+        else:
+            new_lines = lines
     leaprc = StringIO(''.join(new_lines))
     print('Converting to ffxml...')
     params = parmed.amber.AmberParameterSet.from_leaprc(leaprc)
     params = parmed.openmm.OpenMMParameterSet.from_parameterset(params)
     if filter_warnings is not 'error':
-        warnings.filterwarnings('default', category=ParameterWarning)
+        warnings.filterwarnings(filter_warnings, category=ParameterWarning)
     params.write(ffxml_name, provenance=provenance, write_unused=write_unused)
     if filter_warnings is not 'error':
         warnings.filterwarnings('error', category=ParameterWarning)
@@ -438,18 +467,71 @@ def validate_modrna(ffxml_name, leaprc_name):
     top = tempfile.mkstemp()
     crd = tempfile.mkstemp()
     leap_script_file = tempfile.mkstemp()
+    leap_script_file_alt = tempfile.mkstemp()
 
     print('Preparing LeaP scripts...')
-    leap_script_string = """source leaprc.ff14SB
+    leap_script_string = """
+addPdbAtomMap {
+{ "H1'" "H1*" }
+{ "H2'" "H2'1" }
+{ "H2''" "H2'2" }
+{ "H3'" "H3*" }
+{ "H4'" "H4*" }
+{ "H5'" "H5'1" }
+{ "H5''" "H5'2" }
+{ "HO2'" "HO'2" }
+{ "HO5'" "H5T"  }
+{ "HO3'" "H3T" }
+{ "OP1" "O1P" }
+{ "OP2" "O2P" }
+}
 source %s
+source %s
+addPdbResMap {
+{ 0 "G" "G5"  } { 1 "G" "G3"  } { "G" "G" }
+{ 0 "A" "A5"  } { 1 "A" "A3"  } { "A" "A" }
+{ 0 "C" "C5"  } { 1 "C" "C3"  } { "C" "C" }
+{ 0 "U" "U5"  } { 1 "U" "U3"  } { "U" "U" }
+}
 x = loadPdb files/6tna_modrna.pdb
 saveAmberParm x %s %s
-quit""" % (ffxml_name, leaprc_name, top[1], crd[1])
+quit""" % (leaprc_name[0], leaprc_name[1], top[1], crd[1])
+
+    leap_script_string_alt = """
+addPdbAtomMap {
+{ "H1'" "H1*" }
+{ "H2'" "H2'1" }
+{ "H2''" "H2'2" }
+{ "H3'" "H3*" }
+{ "H4'" "H4*" }
+{ "H5'" "H5'1" }
+{ "H5''" "H5'2" }
+{ "HO2'" "HO'2" }
+{ "HO5'" "H5T"  }
+{ "HO3'" "H3T" }
+{ "OP1" "O1P" }
+{ "OP2" "O2P" }
+}
+source %s
+source %s
+addPdbResMap {
+{ 0 "G" "RG5"  } { 1 "G" "RG3"  } { "G" "RG" }
+{ 0 "A" "RA5"  } { 1 "A" "RA3"  } { "A" "RA" }
+{ 0 "C" "RC5"  } { 1 "C" "RC3"  } { "C" "RC" }
+{ 0 "U" "RU5"  } { 1 "U" "RU3"  } { "U" "RU" }
+}
+x = loadPdb files/6tna_modrna.pdb
+saveAmberParm x %s %s
+quit""" % (leaprc_name[0], leaprc_name[1], top[1], crd[1])
 
     os.write(leap_script_file[0], leap_script_string)
+    os.write(leap_script_file_alt[0], leap_script_string_alt)
 
     print('Running LEaP...')
     os.system('tleap -f %s' % leap_script_file[1])
+    if os.path.getsize(top[1]) == 0 or os.path.getsize(crd[1]) == 0:
+        # try alternative atom name mapping
+        os.system('tleap -f %s' % leap_script_file_alt[1])
     if os.path.getsize(top[1]) == 0 or os.path.getsize(crd[1]) == 0:
         raise RuntimeError('LEaP fail for %s' % leaprc_name)
 
@@ -459,16 +541,20 @@ quit""" % (ffxml_name, leaprc_name, top[1], crd[1])
     system_amber = parm_amber.createSystem(splitDihedrals=True)
     amber_energies = parmed.openmm.energy_decomposition_system(parm_amber, system_amber, nrg=kilojoules_per_mole)
     # OpenMM
-    ff = app.ForceField('ffxml/ff14SB.xml', ffxml_name)
+    ff = app.ForceField(ffxml_name)
     system_omm = ff.createSystem(parm_amber.topology)
     parm_omm = parmed.openmm.load_topology(parm_amber.topology, system_omm, xyz=parm_amber.positions)
     system_omm = parm_omm.createSystem(splitDihedrals=True)
     omm_energies = parmed.openmm.energy_decomposition_system(parm_omm, system_omm, nrg=kilojoules_per_mole)
 
     print('Deleting temp files...')
-    for f in (top, crd, leap_script_file):
+    for f in (top, crd, leap_script_file, leap_script_file_alt):
         os.close(f[0])
         os.unlink(f[1])
+
+    # dev
+    print(amber_energies)
+    print(omm_energies)
 
     print('Asserting energies...')
     counter = 0
@@ -504,17 +590,33 @@ if __name__ == '__main__':
         leaprc_name = entry['Source']
         leaprc_reference = entry['Reference']
         leaprc_test = entry['Test']
-        filename = os.path.join(AMBERHOME, 'dat/leap/cmd', leaprc_name)
         provenance = OrderedDict()
-        source = provenance['Source'] = OrderedDict()
-        source['Source'] = leaprc_name
-        md5 = hashlib.md5()
-        with open(filename) as f:
-            md5.update(f.read())
-        md5 = md5.hexdigest()
-        source['md5hash'] = md5
-        source['sourcePackage'] = source_pack
-        source['sourcePackageVersion'] = source_pack_ver
+        if isinstance(leaprc_name, list):
+            filename = []
+            source = provenance['Source'] = []
+            for leaprc in leaprc_name:
+                _filename = os.path.join(AMBERHOME, 'dat/leap/cmd', leaprc)
+                filename.append(_filename)
+                source.append(OrderedDict())
+                source[-1]['Source'] = leaprc
+                md5 = hashlib.md5()
+                with open(_filename) as f:
+                    md5.update(f.read())
+                md5 = md5.hexdigest()
+                source[-1]['md5hash'] = md5
+                source[-1]['sourcePackage'] = source_pack
+                source[-1]['sourcePackageVersion'] = source_pack_ver
+        else:
+            filename = os.path.join(AMBERHOME, 'dat/leap/cmd', leaprc_name)
+            source = provenance['Source'] = OrderedDict()
+            source['Source'] = leaprc_name
+            md5 = hashlib.md5()
+            with open(filename) as f:
+                md5.update(f.read())
+            md5 = md5.hexdigest()
+            source['md5hash'] = md5
+            source['sourcePackage'] = source_pack
+            source['sourcePackageVersion'] = source_pack_ver
         provenance['Reference'] = leaprc_reference
         # set default conversion options
         write_unused = False
@@ -555,8 +657,13 @@ if __name__ == '__main__':
                 print('Phosphorylated protein tests...')
                 validate_phospho(ffxml_name, leaprc_name)
                 tested = True
-            elif test == 'modrna'
+            elif test == 'modrna':
                 print('Modified RNA tests...')
                 validate_modrna(ffxml_name, leaprc_name)
-        if not tested:
-            raise RuntimeError('No validation tests have been run for %s' % leaprc_name)
+                tested = True
+            elif test == 'lipid':
+                print('Lipid tests...')
+                validate_lipid(ffxml_name, leaprc_name)
+                tested = True
+            if not tested:
+                raise RuntimeError('No validation tests have been run for %s' % leaprc_name)

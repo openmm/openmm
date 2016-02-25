@@ -194,13 +194,19 @@
     filter_warnings: default
   Test:
   - phospho
-- Source: leaprc.modrna08
+- Source:
+  - leaprc.ff14SB
+  - leaprc.modrna08
   Reference:
+  - >-
+    Maier, J.A., Martinez, C., Kasavajhala, K., Wickstrom, L., Hauser, K.E., and Simmerling, C. (2015).
+    ff14SB: Improving the Accuracy of Protein Side Chain and Backbone Parameters from ff99SB. J. Chem. Theory Comput. 11, 3696-3713.
   - >-
     Aduri, R., Psciuk, B.T., Saro, P., Taniga, H., Schlegel, H.B., and SantaLucia, J. (2007).
     AMBER Force Field Parameters for the Naturally Occurring Modified Nucleosides in RNA. J. Chem. Theory Comput. 3, 1464-1475.
   Test:
   - modrna
+# Mixed scaling factors
 #- Source: leaprc.lipid11
 #  Reference:
 #  - >-
@@ -208,6 +214,7 @@
 #    J. Phys. Chem. B 116, 11124-11136.
 #  Test:
 #  - lipid
+# Dihedrals problem
 #- Source: leaprc.lipid14
 #  Reference:
 #  - >-
