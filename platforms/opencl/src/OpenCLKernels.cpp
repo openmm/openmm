@@ -1502,9 +1502,9 @@ public:
             events[0] = event;
             event = cl::Event();
             cl.getQueue().enqueueWaitForEvents(events);
+            if (includeEnergy)
+                cl.executeKernel(addEnergyKernel, pmeEnergyBuffer.getSize());
         }
-        if (includeEnergy)
-            cl.executeKernel(addEnergyKernel, pmeEnergyBuffer.getSize());
         return 0.0;
     }
 private:
