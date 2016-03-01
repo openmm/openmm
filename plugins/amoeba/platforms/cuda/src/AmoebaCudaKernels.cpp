@@ -2502,10 +2502,10 @@ public:
     }
     bool areParticlesIdentical(int particle1, int particle2) {
         int iv1, iv2;
-        double sigma1, sigma2, epsilon1, epsilon2, reduction1, reduction2;
-        force.getParticleParameters(particle1, iv1, sigma1, epsilon1, reduction1);
-        force.getParticleParameters(particle2, iv2, sigma2, epsilon2, reduction2);
-        return (sigma1 == sigma2 && epsilon1 == epsilon2 && reduction1 == reduction2);
+        double sigma1, sigma2, epsilon1, epsilon2, reduction1, reduction2, lambda1, lambda2;
+        force.getParticleParameters(particle1, iv1, sigma1, epsilon1, reduction1,lambda1);
+        force.getParticleParameters(particle2, iv2, sigma2, epsilon2, reduction2,lambda2);
+        return (sigma1 == sigma2 && epsilon1 == epsilon2 && reduction1 == reduction2 && lambda1==lambda2);
     }
 private:
     const AmoebaVdwForce& force;

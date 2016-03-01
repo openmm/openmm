@@ -271,6 +271,7 @@ RealOpenMM AmoebaReferenceVdwForce::calculateForceAndEnergy(int numParticles,
                                                             const std::vector<RealOpenMM>& sigmas,
                                                             const std::vector<RealOpenMM>& epsilons,
                                                             const std::vector<RealOpenMM>& reductions,
+							    const std::vector<RealOpenMM>& lambdas,
                                                             const std::vector< std::set<int> >& allExclusions,
                                                             vector<RealVec>& forces) const {
 
@@ -352,6 +353,7 @@ RealOpenMM AmoebaReferenceVdwForce::calculateForceAndEnergy(int numParticles,
                                                             const std::vector<RealOpenMM>& sigmas,
                                                             const std::vector<RealOpenMM>& epsilons,
                                                             const std::vector<RealOpenMM>& reductions,
+							    const std::vector<RealOpenMM>& lambdas,
                                                             const NeighborList& neighborList,
                                                             vector<RealVec>& forces) const {
 

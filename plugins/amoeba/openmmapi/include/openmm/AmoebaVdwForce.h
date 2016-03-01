@@ -91,6 +91,7 @@ public:
      * @param epsilon         vdw epsilon
      * @param reductionFactor the fraction of the distance along the line from the parent particle to this particle
      *                        at which the interaction site should be placed
+     * @param lambda current simulation lambda
      */
     void setParticleParameters(int particleIndex, int parentIndex, double sigma, double epsilon, double reductionFactor, double lambda);
 
@@ -103,6 +104,7 @@ public:
      * @param epsilon         vdw epsilon
      * @param reductionFactor the fraction of the distance along the line from the parent particle to this particle
      *                        at which the interaction site should be placed
+     * @param lambda current simulation lambda 
      */
     void getParticleParameters(int particleIndex, int& parentIndex, double& sigma, double& epsilon, double& reductionFactor, double& lambda) const;
 
@@ -114,6 +116,7 @@ public:
      * @param sigma           vdw sigma
      * @param epsilon         vdw epsilon
      * @param reductionFactor the fraction of the distance along the line from the parent particle to this particle
+     * @param lambda current simulation lambda 
      *                        at which the interaction site should be placed
      * @return index of added particle
      */
