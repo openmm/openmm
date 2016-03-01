@@ -190,6 +190,7 @@ public:
        @param sigmas                  particle sigmas 
        @param epsilons                particle epsilons
        @param reductions              particle reduction factors
+       @param lambdas                 particle lambdas
        @param vdwExclusions           particle exclusions
        @param forces                  add forces to this vector
     
@@ -200,7 +201,7 @@ public:
     RealOpenMM calculateForceAndEnergy(int numParticles, const std::vector<OpenMM::RealVec>& particlePositions,
                                        const std::vector<int>& indexIVs, 
                                        const std::vector<RealOpenMM>& sigmas, const std::vector<RealOpenMM>& epsilons,
-                                       const std::vector<RealOpenMM>& reductions,
+                                       const std::vector<RealOpenMM>& reductions,const std::vector<RealOpenMM>& lambdas,
                                        const std::vector< std::set<int> >& vdwExclusions,
                                        std::vector<OpenMM::RealVec>& forces) const;
          
@@ -225,6 +226,7 @@ public:
                                        const std::vector<int>& indexIVs, 
                                        const std::vector<RealOpenMM>& sigmas, const std::vector<RealOpenMM>& epsilons,
                                        const std::vector<RealOpenMM>& reductions,
+				       const std::vector<RealOpenMM>& lambdas,
                                        const NeighborList& neighborList,
                                        std::vector<OpenMM::RealVec>& forces) const;
          
@@ -309,6 +311,7 @@ private:
     
        @param  combindedSigma       combined sigmas
        @param  combindedEpsilon     combined epsilons
+       @param  combindedLambda      combined lambda
        @param  particleIPosition    particle I position 
        @param  particleJPosition    particle J position 
        @param  force                output force
@@ -317,7 +320,7 @@ private:
 
        --------------------------------------------------------------------------------------- */
     
-    RealOpenMM calculatePairIxn(RealOpenMM combindedSigma, RealOpenMM combindedEpsilon,
+    RealOpenMM calculatePairIxn(RealOpenMM combindedSigma, RealOpenMM combindedEpsilon, RealOpenMM combindedLambda,
                                 const Vec3& particleIPosition, const Vec3& particleJPosition,
                                 Vec3& force) const;
 

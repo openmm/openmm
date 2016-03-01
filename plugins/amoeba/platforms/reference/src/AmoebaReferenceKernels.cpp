@@ -956,14 +956,14 @@ void ReferenceCalcAmoebaVdwForceKernel::initialize(const System& system, const A
     sigmas.resize(numParticles);
     epsilons.resize(numParticles);
     reductions.resize(numParticles);
-
+    lambdas.resize(numParticles);
     for (int ii = 0; ii < numParticles; ii++) {
 
         int indexIV;
-        double sigma, epsilon, reduction;
+        double sigma, epsilon, reduction,lambda;
         std::vector<int> exclusions;
 
-        force.getParticleParameters(ii, indexIV, sigma, epsilon, reduction);
+        force.getParticleParameters(ii, indexIV, sigma, epsilon, reduction, lambda);
         force.getParticleExclusions(ii, exclusions);
         for (unsigned int jj = 0; jj < exclusions.size(); jj++) {
            allExclusions[ii].insert(exclusions[jj]);
@@ -973,6 +973,7 @@ void ReferenceCalcAmoebaVdwForceKernel::initialize(const System& system, const A
         sigmas[ii]        = static_cast<RealOpenMM>(sigma);
         epsilons[ii]      = static_cast<RealOpenMM>(epsilon);
         reductions[ii]    = static_cast<RealOpenMM>(reduction);
+	lambdas[ii] = static_cast<RealOpenMM>(lambda);
     }   
     sigmaCombiningRule     = force.getSigmaCombiningRule();
     epsilonCombiningRule   = force.getEpsilonCombiningRule();
@@ -1001,14 +1002,14 @@ double ReferenceCalcAmoebaVdwForceKernel::execute(ContextImpl& context, bool inc
                 throw OpenMMException("The periodic box size has decreased to less than twice the cutoff.");
             }
             vdwForce.setPeriodicBox(boxVectors);
-            energy  = vdwForce.calculateForceAndEnergy(numParticles, posData, indexIVs, sigmas, epsilons, reductions, *neighborList, forceData);
+            energy  = vdwForce.calculateForceAndEnergy(numParticles, posData, indexIVs, sigmas, epsilons, reductions, lambdas, *neighborList, forceData);
             energy += dispersionCoefficient/(boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2]);
         } else {
             vdwForce.setNonbondedMethod(AmoebaReferenceVdwForce::CutoffNonPeriodic);
         }
     } else {
         vdwForce.setNonbondedMethod(AmoebaReferenceVdwForce::NoCutoff);
-        energy = vdwForce.calculateForceAndEnergy(numParticles, posData, indexIVs, sigmas, epsilons, reductions, allExclusions, forceData);
+        energy = vdwForce.calculateForceAndEnergy(numParticles, posData, indexIVs, sigmas, epsilons, reductions, lambdas, allExclusions, forceData);
     }
     return static_cast<double>(energy);
 }
@@ -1021,12 +1022,13 @@ void ReferenceCalcAmoebaVdwForceKernel::copyParametersToContext(ContextImpl& con
 
     for (int i = 0; i < numParticles; ++i) {
         int indexIV;
-        double sigma, epsilon, reduction;
-        force.getParticleParameters(i, indexIV, sigma, epsilon, reduction);
+        double sigma, epsilon, reduction, lambda;
+        force.getParticleParameters(i, indexIV, sigma, epsilon, reduction, lambda);
         indexIVs[i] = indexIV;
         sigmas[i] = (RealOpenMM) sigma;
         epsilons[i] = (RealOpenMM) epsilon;
         reductions[i]= (RealOpenMM) reduction;
+        lambdas[i]= (RealOpenMM) lambda;
     }
 }
 

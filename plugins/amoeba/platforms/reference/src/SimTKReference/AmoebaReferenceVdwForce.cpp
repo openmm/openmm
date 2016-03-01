@@ -178,7 +178,7 @@ void AmoebaReferenceVdwForce::addReducedForce(unsigned int particleI, unsigned i
     forces[particleIV][2] += sign*force[2]*(one - reduction);
 }
 
-RealOpenMM AmoebaReferenceVdwForce::calculatePairIxn(RealOpenMM combinedSigma, RealOpenMM combinedEpsilon,
+RealOpenMM AmoebaReferenceVdwForce::calculatePairIxn(RealOpenMM combinedSigma, RealOpenMM combinedEpsilon, RealOpenMM combinedLambda,
                                                      const Vec3& particleIPosition,
                                                      const Vec3& particleJPosition,
                                                      Vec3& force) const {
@@ -204,26 +204,25 @@ RealOpenMM AmoebaReferenceVdwForce::calculatePairIxn(RealOpenMM combinedSigma, R
 
     RealOpenMM r_ij_2       = deltaR[ReferenceForce::R2Index];
     RealOpenMM r_ij         = deltaR[ReferenceForce::RIndex];
-    RealOpenMM sigma_7      = combinedSigma*combinedSigma*combinedSigma;
-               sigma_7      = sigma_7*sigma_7*combinedSigma;
-
-    RealOpenMM r_ij_6       = r_ij_2*r_ij_2*r_ij_2;
-    RealOpenMM r_ij_7       = r_ij_6*r_ij;
-
-    RealOpenMM rho          = r_ij_7 + ghal*sigma_7;
-
-    RealOpenMM tau          = (dhal + one)/(r_ij + dhal*combinedSigma);
-    RealOpenMM tau_7        = tau*tau*tau;
-               tau_7        = tau_7*tau_7*tau;
-
-    RealOpenMM dtau         = tau/(dhal + one);
-
-    RealOpenMM ratio        = (sigma_7/rho);
-    RealOpenMM gtau         = combinedEpsilon*tau_7*r_ij_6*(ghal+one)*ratio*ratio;
-
-    RealOpenMM energy       = combinedEpsilon*tau_7*sigma_7*((ghal+one)*sigma_7/rho - two);
-
-    RealOpenMM dEdR         = -seven*(dtau*energy + gtau);
+    RealOpenMM comblambda2= combinedLambda*combinedLambda;
+    combinedEpsilon = combinedEpsilon * comblambda2*comblambda2*combinedLambda;
+    RealOpenMM rho = r_ij/combinedSigma;
+    RealOpenMM rho2= rho*rho;
+    RealOpenMM rho6= rho2*rho2*rho2;
+    RealOpenMM rhoplus= rho+0.07;
+    RealOpenMM rhodec2=(rhoplus)*(rhoplus);
+    RealOpenMM rhodec = rhodec2*rhodec2*rhodec2;
+    RealOpenMM  scal = 0.7*(1-combinedLambda)*(1-combinedLambda);
+    RealOpenMM s1  = 1/(scal+rhodec*rhoplus);
+    RealOpenMM s2 =  1/(scal+rho6*rho+0.12);
+    RealOpenMM point72= 1.07*1.07;
+    RealOpenMM t1 = 1.07*point72*point72*point72*s1;
+    RealOpenMM t2= 1.12*s2;
+    RealOpenMM t2min= t2-2;
+    RealOpenMM dt1= -7.0*rhodec*t1*s1;
+    RealOpenMM dt2 = -7.0*rho6*t2*s2;
+    RealOpenMM energy       = combinedEpsilon*t1*(t2min);
+    RealOpenMM dEdR         = combinedEpsilon*(dt1*(t2-2)+t1*dt2)*1/(combinedSigma);
 
     // tapering
 
@@ -312,9 +311,12 @@ RealOpenMM AmoebaReferenceVdwForce::calculateForceAndEnergy(int numParticles,
 
                 RealOpenMM combinedSigma   = (this->*_combineSigmas)(sigmaI, sigmas[jj]);
                 RealOpenMM combinedEpsilon = (this->*_combineEpsilons)(epsilonI, epsilons[jj]);
-
+		RealOpenMM combindedLambda=1.0;
+                if(lambdas[ii]!=lambdas[jj]){
+                    combindedLambda= std::min(lambdas[ii],lambdas[jj]);
+                }
                 Vec3 force;
-                energy                     += calculatePairIxn(combinedSigma, combinedEpsilon,
+                energy                     += calculatePairIxn(combinedSigma, combinedEpsilon, combindedLambda,
                                                                reducedPositions[ii], reducedPositions[jj],
                                                                force);
                 
@@ -381,9 +383,13 @@ RealOpenMM AmoebaReferenceVdwForce::calculateForceAndEnergy(int numParticles,
 
         RealOpenMM combinedSigma   = (this->*_combineSigmas)(sigmas[siteI], sigmas[siteJ]);
         RealOpenMM combinedEpsilon = (this->*_combineEpsilons)(epsilons[siteI], epsilons[siteJ]);
+	RealOpenMM combindedLambda=1.0;
+        if(lambdas[siteI]!=lambdas[siteJ]){
+                    combindedLambda= std::min(lambdas[siteI],lambdas[siteJ]);
+        }
 
         Vec3 force;
-        energy                     += calculatePairIxn(combinedSigma, combinedEpsilon,
+        energy                     += calculatePairIxn(combinedSigma, combinedEpsilon, combindedLambda,
                                                        reducedPositions[siteI], reducedPositions[siteJ], force);
                 
         if (indexIVs[siteI] == siteI) {

@@ -3515,6 +3515,41 @@ class AmoebaVdwGenerator(object):
 
         else:
             force = existing[0]
+	if ('lambdaFile' in args):
+            LambdaOpen= open(args['lambdaFile'],'r')
+            lines=[]
+            for line in LambdaOpen:
+                lines.append(line)
+            vlambda= float(lines[0].split()[1])
+            ligAtomlist =[]
+            for line in lines[2:]:
+                min = line.split("-")[0]
+                max = line.split("-")[1]
+                for i in range(int(min),int(max)+1):
+                        ligAtomlist.append(int(i))
+
+            for (i, atom) in enumerate(data.atoms):
+                t = data.atomType[atom]
+                if t in self.typeMap:
+
+                    values = self.typeMap[t]
+
+                # ivIndex = index of bonded partner for hydrogens; otherwise ivIndex = particle index
+
+                    ivIndex = i
+                    mass = sys.getParticleMass(i)/unit.dalton
+                    if (mass < 1.9 and len(data.atomBonds[i]) == 1):
+                        bondIndex = data.atomBonds[i][0]
+                        if (data.bonds[bondIndex].atom1 == i):
+                            ivIndex = data.bonds[bondIndex].atom2
+                        else:
+                            ivIndex = data.bonds[bondIndex].atom1
+                    if int(atom.id.strip()) in ligAtomlist:
+                        force.addParticle(ivIndex, values[0], values[1], values[2],vlambda)
+                    else:
+                        force.addParticle(ivIndex, values[0], values[1], values[2],1.0)
+ #                else:
+ #                   raise ValueError('No vdw type for atom %s' % (atom.name))
 
         # add particles to force
 
@@ -3953,7 +3988,18 @@ class AmoebaMultipoleGenerator(object):
 
             if ('mutualInducedTargetEpsilon' in args):
                 force.setMutualInducedTargetEpsilon(float(args['mutualInducedTargetEpsilon']))
-
+	    if ('lambdaFile' in args):
+                LambdaOpen= open(args['lambdaFile'],'r')
+		lines=[]
+                for line in LambdaOpen:
+                    lines.append(line)
+                vlambda= float(lines[1].split()[1])
+                ligAtomlist =[]
+                for line in lines[2:]:
+                        min = line.split("-")[0]
+                        max = line.split("-")[1]
+                        for i in range ( int(min), int(max)+1):
+                                ligAtomlist.append(i)
         else:
             force = existing[0]
 
@@ -4214,8 +4260,25 @@ class AmoebaMultipoleGenerator(object):
 
                     atom.multipoleDict = savedMultipoleDict
                     atom.polarizationGroups = dict()
-                    newIndex = force.addMultipole(savedMultipoleDict['charge'], savedMultipoleDict['dipole'], savedMultipoleDict['quadrupole'], savedMultipoleDict['axisType'],
+                    if ('lambdaFile' in args):
+                        if int(atom.id) in ligAtomlist:
+                            dipole = savedMultipoleDict['dipole']
+                            newdipole=[]
+                            for i in range(len(dipole)):
+                                newdipole.append(dipole[i]*vlambda)
+                            quad= savedMultipoleDict['quadrupole']
+                            newquad=[]
+                            for i in range(len(quad)):
+                                newquad.append(quad[i] * vlambda)
+                            newIndex = force.addMultipole(vlambda*savedMultipoleDict['charge'],newdipole,newquad, savedMultipoleDict['axisType'],
+                                                                zaxis, xaxis, yaxis,savedMultipoleDict['thole'],savedMultipoleDict['pdamp'], vlambda* savedMultipoleDict['polarizability'])
+                        else:
+                             newIndex = force.addMultipole(savedMultipoleDict['charge'], savedMultipoleDict['dipole'], savedMultipoleDict['quadrupole'], savedMultipoleDict['axisType'],
                                                                  zaxis, xaxis, yaxis, savedMultipoleDict['thole'], savedMultipoleDict['pdamp'], savedMultipoleDict['polarizability'])
+                    else:
+                        newIndex = force.addMultipole(savedMultipoleDict['charge'], savedMultipoleDict['dipole'], savedMultipoleDict['quadrupole'], savedMultipoleDict['axisType'],
+                                                       zaxis, xaxis, yaxis, savedMultipoleDict['thole'], savedMultipoleDict['pdamp'], savedMultipoleDict['polarizability'])
+
                     if (atomIndex == newIndex):
                         force.setCovalentMap(atomIndex, mm.AmoebaMultipoleForce.Covalent12, tuple(bonded12ParticleSets[atomIndex]))
                         force.setCovalentMap(atomIndex, mm.AmoebaMultipoleForce.Covalent13, tuple(bonded13ParticleSets[atomIndex]))

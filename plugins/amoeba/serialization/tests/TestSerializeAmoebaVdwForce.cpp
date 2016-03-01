@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -45,15 +45,14 @@ void testSerialization() {
     // Create a Force.
 
     AmoebaVdwForce force1;
-    force1.setForceGroup(3);
     force1.setSigmaCombiningRule("GEOMETRIC");
     force1.setEpsilonCombiningRule("GEOMETRIC");
     force1.setCutoff(0.9);
     force1.setNonbondedMethod(AmoebaVdwForce::CutoffPeriodic);
 
-    force1.addParticle(0, 1.0, 2.0, 0.9);
-    force1.addParticle(1, 1.1, 2.1, 0.9);
-    force1.addParticle(2, 1.3, 4.1, 0.9);
+    force1.addParticle(0, 1.0, 2.0, 0.9,1.0);
+    force1.addParticle(1, 1.1, 2.1, 0.9,1.0);
+    force1.addParticle(2, 1.3, 4.1, 0.9,1.0);
     for (unsigned int ii = 0; ii < 3; ii++) {
         std::vector< int > exclusions;
         exclusions.push_back(ii);
@@ -71,7 +70,6 @@ void testSerialization() {
     // Compare the two forces to see if they are identical.  
     AmoebaVdwForce& force2 = *copy;
 
-    ASSERT_EQUAL(force1.getForceGroup(), force2.getForceGroup());
     ASSERT_EQUAL(force1.getSigmaCombiningRule(),    force2.getSigmaCombiningRule());
     ASSERT_EQUAL(force1.getEpsilonCombiningRule(),  force2.getEpsilonCombiningRule());
     ASSERT_EQUAL(force1.getCutoff(),                force2.getCutoff());
@@ -84,16 +82,17 @@ void testSerialization() {
         int ivIndex1;
         int ivIndex2;
 
-        double sigma1, epsilon1, reductionFactor1;
-        double sigma2, epsilon2, reductionFactor2;
+        double sigma1, epsilon1, reductionFactor1, lambda1;
+        double sigma2, epsilon2, reductionFactor2,lambda2;
 
-        force1.getParticleParameters(ii, ivIndex1, sigma1, epsilon1, reductionFactor1);
-        force2.getParticleParameters(ii, ivIndex2, sigma2, epsilon2, reductionFactor2);
+        force1.getParticleParameters(ii, ivIndex1, sigma1, epsilon1, reductionFactor1, lambda1);
+        force2.getParticleParameters(ii, ivIndex2, sigma2, epsilon2, reductionFactor2,lambda2);
 
         ASSERT_EQUAL(ivIndex1,          ivIndex2);
         ASSERT_EQUAL(sigma1,            sigma2);
         ASSERT_EQUAL(epsilon1,          epsilon2);
         ASSERT_EQUAL(reductionFactor1,  reductionFactor2);
+        ASSERT_EQUAL(lambda1,  lambda2);
     }
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(force1.getNumParticles()); ii++) {
 

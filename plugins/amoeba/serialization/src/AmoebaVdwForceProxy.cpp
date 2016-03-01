@@ -56,11 +56,11 @@ void AmoebaVdwForceProxy::serialize(const void* object, SerializationNode& node)
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(force.getNumParticles()); ii++) {
 
         int ivIndex;
-        double sigma, epsilon, reductionFactor;
-        force.getParticleParameters(ii, ivIndex, sigma, epsilon, reductionFactor);
+        double sigma, epsilon, reductionFactor, lambda;
+        force.getParticleParameters(ii, ivIndex, sigma, epsilon, reductionFactor, lambda);
 
         SerializationNode& particle = particles.createChildNode("Particle");
-        particle.setIntProperty("ivIndex", ivIndex).setDoubleProperty("sigma", sigma).setDoubleProperty("epsilon", epsilon).setDoubleProperty("reductionFactor", reductionFactor);
+        particle.setIntProperty("ivIndex", ivIndex).setDoubleProperty("sigma", sigma).setDoubleProperty("epsilon", epsilon).setDoubleProperty("reductionFactor", reductionFactor).setDoubleProperty("lambda", lambda);
 
         std::vector< int > exclusions;
         force.getParticleExclusions(ii,  exclusions);
@@ -88,7 +88,7 @@ void* AmoebaVdwForceProxy::deserialize(const SerializationNode& node) const {
         const SerializationNode& particles = node.getChildNode("VdwParticles");
         for (unsigned int ii = 0; ii < particles.getChildren().size(); ii++) {
             const SerializationNode& particle = particles.getChildren()[ii];
-            force->addParticle(particle.getIntProperty("ivIndex"), particle.getDoubleProperty("sigma"), particle.getDoubleProperty("epsilon"), particle.getDoubleProperty("reductionFactor"));
+            force->addParticle(particle.getIntProperty("ivIndex"), particle.getDoubleProperty("sigma"), particle.getDoubleProperty("epsilon"), particle.getDoubleProperty("reductionFactor"), particle.getDoubleProperty("lambda"));
 
             // exclusions
 

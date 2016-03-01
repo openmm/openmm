@@ -439,7 +439,7 @@ private:
     RealOpenMM cutoffDistance;
     std::vector<int> pmeGridDimension;
 
-    const System& system;
+   const System& system;
 };
 
 /**
@@ -483,6 +483,7 @@ private:
     std::vector<RealOpenMM> sigmas;
     std::vector<RealOpenMM> epsilons;
     std::vector<RealOpenMM> reductions;
+    std::vector<RealOpenMM> lambdas;
     std::string sigmaCombiningRule;
     std::string epsilonCombiningRule;
     const System& system;

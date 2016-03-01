@@ -92,24 +92,24 @@ public:
      * @param reductionFactor the fraction of the distance along the line from the parent particle to this particle
      *                        at which the interaction site should be placed
      */
-    void setParticleParameters(int particleIndex, int parentIndex, double sigma, double epsilon, double reductionFactor);
+    void setParticleParameters(int particleIndex, int parentIndex, double sigma, double epsilon, double reductionFactor, double lambda);
 
     /**
      * Get the force field parameters for a vdw particle.
-     *
-     * @param particleIndex        the particle index
-     * @param[out] parentIndex     the index of the parent particle
-     * @param[out] sigma           vdw sigma
-     * @param[out] epsilon         vdw epsilon
-     * @param[out] reductionFactor the fraction of the distance along the line from the parent particle to this particle
-     *                             at which the interaction site should be placed
+     * 
+     * @param particleIndex   the particle index
+     * @param parentIndex     the index of the parent particle
+     * @param sigma           vdw sigma
+     * @param epsilon         vdw epsilon
+     * @param reductionFactor the fraction of the distance along the line from the parent particle to this particle
+     *                        at which the interaction site should be placed
      */
-    void getParticleParameters(int particleIndex, int& parentIndex, double& sigma, double& epsilon, double& reductionFactor) const;
+    void getParticleParameters(int particleIndex, int& parentIndex, double& sigma, double& epsilon, double& reductionFactor, double& lambda) const;
 
 
     /**
      * Add the force field parameters for a vdw particle.
-     *
+     * 
      * @param parentIndex     the index of the parent particle
      * @param sigma           vdw sigma
      * @param epsilon         vdw epsilon
@@ -117,32 +117,32 @@ public:
      *                        at which the interaction site should be placed
      * @return index of added particle
      */
-    int addParticle(int parentIndex, double sigma, double epsilon, double reductionFactor);
+    int addParticle(int parentIndex, double sigma, double epsilon, double reductionFactor, double lambda);
 
     /**
      * Set sigma combining rule
-     *
+     * 
      * @param sigmaCombiningRule   sigma combining rule:  'ARITHMETIC', 'GEOMETRIC'. 'CUBIC-MEAN'
      */
     void setSigmaCombiningRule(const std::string& sigmaCombiningRule);
 
     /**
      * Get sigma combining rule
-     *
+     * 
      * @return sigmaCombiningRule   sigma combining rule:  'ARITHMETIC', 'GEOMETRIC'. 'CUBIC-MEAN'
      */
     const std::string& getSigmaCombiningRule(void) const;
 
     /**
      * Set epsilon combining rule
-     *
+     * 
      * @param epsilonCombiningRule   epsilon combining rule:   'ARITHMETIC', 'GEOMETRIC'. 'HARMONIC', 'HHG'
      */
     void setEpsilonCombiningRule(const std::string& epsilonCombiningRule);
 
     /**
      * Get epsilon combining rule
-     *
+     * 
      * @return epsilonCombiningRule   epsilon combining rule:  'ARITHMETIC', 'GEOMETRIC'. 'HARMONIC', 'HHG'
      */
     const std::string& getEpsilonCombiningRule(void) const;
@@ -169,7 +169,7 @@ public:
 
     /**
      * Set exclusions for specified particle
-     *
+     * 
      * @param particleIndex particle index
      * @param exclusions vector of exclusions
      */
@@ -177,9 +177,9 @@ public:
 
     /**
      * Get exclusions for specified particle
-     *
-     * @param particleIndex   particle index
-     * @param[out] exclusions vector of exclusions
+     * 
+     * @param particleIndex particle index
+     * @param exclusions vector of exclusions
      */
     void getParticleExclusions(int particleIndex, std::vector<int>& exclusions) const;
 
@@ -207,7 +207,7 @@ public:
      * an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
      * Simply call setParticleParameters() to modify this object's parameters, then call updateParametersInContext()
      * to copy them over to the Context.
-     *
+     * 
      * The only information this method updates is the values of per-particle parameters.  All other aspects of the Force
      * (the nonbonded method, the cutoff distance, etc.) are unaffected and can only be changed by reinitializing the Context.
      */
@@ -245,15 +245,16 @@ private:
 class AmoebaVdwForce::VdwInfo {
 public:
     int parentIndex;
-    double reductionFactor, sigma, epsilon, cutoff;
+    double reductionFactor, sigma, epsilon, cutoff,lambda;
     VdwInfo() {
         parentIndex = -1;
         reductionFactor      = 0.0;
         sigma                = 1.0;
         epsilon              = 0.0;
+	lambda = 1.0 ;
     }
-    VdwInfo(int parentIndex, double sigma, double epsilon, double reductionFactor) :
-        parentIndex(parentIndex), reductionFactor(reductionFactor), sigma(sigma), epsilon(epsilon)  {
+    VdwInfo(int parentIndex, double sigma, double epsilon, double reductionFactor, double lambda) :
+        parentIndex(parentIndex), sigma(sigma), epsilon(epsilon), reductionFactor(reductionFactor) , lambda(lambda)  {
     }
 };
 

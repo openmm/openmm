@@ -1,3 +1,4 @@
+
 /* -------------------------------------------------------------------------- *
  *                                   OpenMMAmoeba                             *
  * -------------------------------------------------------------------------- *
@@ -69,7 +70,7 @@ void testVdw() {
     amoebaVdwForce->setEpsilonCombiningRule(epsilonCombiningRule);
     for (int ii = 0; ii < numberOfParticles; ii++) {
         int indexIV;
-        double mass, sigma, epsilon, reduction;
+        double mass, sigma, epsilon, reduction, lambda;
         std::vector< int > exclusions;
         if (ii == 0 || ii == 3) {
             mass        = 16.0;
@@ -77,6 +78,7 @@ void testVdw() {
             sigma       = 1.70250E+00;
             epsilon     = 1.10000E-01;
             reduction   = 0.0;
+	    lambda = 1.0;
         }
         else {
             mass        = 1.0;
@@ -84,6 +86,7 @@ void testVdw() {
             sigma       = 1.32750E+00;
             epsilon     = 1.35000E-02;
             reduction   = 0.91;
+	    lambda =1.0;
         }
 
         // exclusions
@@ -99,7 +102,7 @@ void testVdw() {
             exclusions.push_back (5);
         }
         system.addParticle(mass);
-        amoebaVdwForce->addParticle(indexIV, sigma, epsilon, reduction);
+        amoebaVdwForce->addParticle(indexIV, sigma, epsilon, reduction, lambda);
         amoebaVdwForce->setParticleExclusions(ii, exclusions);
     }
     LangevinIntegrator integrator(0.0, 0.1, 0.01);
@@ -141,11 +144,11 @@ void testVdw() {
     }
     for (int ii = 0; ii < amoebaVdwForce->getNumParticles();  ii++) {
         int indexIV;
-        double sigma, epsilon, reduction;
-        amoebaVdwForce->getParticleParameters(ii, indexIV, sigma, epsilon, reduction);
+        double sigma, epsilon, reduction,lambda;
+        amoebaVdwForce->getParticleParameters(ii, indexIV, sigma, epsilon, reduction, lambda);
         sigma        *= AngstromToNm;
         epsilon      *= CalToJoule;
-        amoebaVdwForce->setParticleParameters(ii, indexIV, sigma, epsilon, reduction);
+        amoebaVdwForce->setParticleParameters(ii, indexIV, sigma, epsilon, reduction,lambda);
     }
     platformName = "Reference";
     Context context(system, integrator, Platform::getPlatformByName(platformName));
@@ -172,9 +175,9 @@ void testVdw() {
     
     for (int i = 0; i < numberOfParticles; i++) {
         int indexIV;
-        double mass, sigma, epsilon, reduction;
-        amoebaVdwForce->getParticleParameters(i, indexIV, sigma, epsilon, reduction);
-        amoebaVdwForce->setParticleParameters(i, indexIV, 0.9*sigma, 2.0*epsilon, 0.95*reduction);
+        double mass, sigma, epsilon, reduction,lambda;
+        amoebaVdwForce->getParticleParameters(i, indexIV, sigma, epsilon, reduction,lambda);
+        amoebaVdwForce->setParticleParameters(i, indexIV, 0.9*sigma, 2.0*epsilon, 0.95*reduction,lambda);
     }
     LangevinIntegrator integrator2(0.0, 0.1, 0.01);
     Context context2(system, integrator2, Platform::getPlatformByName(platformName));
@@ -225,28 +228,28 @@ void setupAndGetForcesEnergyVdwAmmonia(const std::string& sigmaCombiningRule, co
     // addParticle: ivIndex, radius, epsilon, reductionFactor
 
     system.addParticle( 1.4007000e+01);
-    amoebaVdwForce->addParticle(0,   1.8550000e-01,   4.3932000e-01,   0.0000000e+00);
+    amoebaVdwForce->addParticle(0,   1.8550000e-01,   4.3932000e-01,   0.0000000e+00,1.0);
 
     system.addParticle( 1.0080000e+00);
-    amoebaVdwForce->addParticle(0,   1.3500000e-01,   8.3680000e-02,   9.1000000e-01);
+    amoebaVdwForce->addParticle(0,   1.3500000e-01,   8.3680000e-02,   9.1000000e-01,1.0);
 
     system.addParticle( 1.0080000e+00);
-    amoebaVdwForce->addParticle(0,   1.3500000e-01,   8.3680000e-02,   9.1000000e-01);
+    amoebaVdwForce->addParticle(0,   1.3500000e-01,   8.3680000e-02,   9.1000000e-01,1.0);
 
     system.addParticle( 1.0080000e+00);
-    amoebaVdwForce->addParticle(0,   1.3500000e-01,   8.3680000e-02,   9.1000000e-01);
+    amoebaVdwForce->addParticle(0,   1.3500000e-01,   8.3680000e-02,   9.1000000e-01,1.0);
 
     system.addParticle( 1.4007000e+01);
-    amoebaVdwForce->addParticle(4,   1.8550000e-01,   4.3932000e-01,   0.0000000e+00);
+    amoebaVdwForce->addParticle(4,   1.8550000e-01,   4.3932000e-01,   0.0000000e+00,1.0);
 
     system.addParticle( 1.0080000e+00);
-    amoebaVdwForce->addParticle(4,   1.3500000e-01,   8.3680000e-02,   9.1000000e-01);
+    amoebaVdwForce->addParticle(4,   1.3500000e-01,   8.3680000e-02,   9.1000000e-01,1.0);
 
     system.addParticle( 1.0080000e+00);
-    amoebaVdwForce->addParticle(4,   1.3500000e-01,   8.3680000e-02,   9.1000000e-01);
+    amoebaVdwForce->addParticle(4,   1.3500000e-01,   8.3680000e-02,   9.1000000e-01,1.0);
 
     system.addParticle( 1.0080000e+00);
-    amoebaVdwForce->addParticle(4,   1.3500000e-01,   8.3680000e-02,   9.1000000e-01);
+    amoebaVdwForce->addParticle(4,   1.3500000e-01,   8.3680000e-02,   9.1000000e-01,1.0);
 
     // ParticleExclusions
 
@@ -563,13 +566,13 @@ void setupAndGetForcesEnergyVdwWater(const std::string& sigmaCombiningRule, cons
     for (int ii = 0; ii < numberOfParticles; ii += 3) {
 
        system.addParticle( 1.5995000e+01);
-       amoebaVdwForce->addParticle(ii, 1.7025000e-01,   4.6024000e-01,   0.0000000e+00);
+       amoebaVdwForce->addParticle(ii, 1.7025000e-01,   4.6024000e-01,   0.0000000e+00,1.0);
 
        system.addParticle( 1.0080000e+00);
-       amoebaVdwForce->addParticle(ii, 1.3275000e-01,   5.6484000e-02,   9.1000000e-01);
+       amoebaVdwForce->addParticle(ii, 1.3275000e-01,   5.6484000e-02,   9.1000000e-01,1.0);
 
        system.addParticle( 1.0080000e+00);
-       amoebaVdwForce->addParticle(ii, 1.3275000e-01,   5.6484000e-02,   9.1000000e-01);
+       amoebaVdwForce->addParticle(ii, 1.3275000e-01,   5.6484000e-02,   9.1000000e-01,1.0);
    }
 
     // exclusions
@@ -1979,8 +1982,8 @@ void testTriclinic() {
     LangevinIntegrator integrator(0.0, 0.1, 0.01);
     AmoebaVdwForce* vdw = new AmoebaVdwForce();
     vdw->setUseDispersionCorrection(false);
-    vdw->addParticle(0, 0.5, 1.0, 0.0);
-    vdw->addParticle(1, 0.5, 1.0, 0.0);
+    vdw->addParticle(0, 0.5, 1.0, 0.0,1.0);
+    vdw->addParticle(1, 0.5, 1.0, 0.0,1.0);
     vdw->setNonbondedMethod(AmoebaVdwForce::CutoffPeriodic);
     const double cutoff = 1.5;
     vdw->setCutoff(cutoff);

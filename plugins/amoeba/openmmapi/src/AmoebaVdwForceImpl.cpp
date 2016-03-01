@@ -37,6 +37,7 @@
 #include "openmm/amoebaKernels.h"
 #include <map>
 #include <cmath>
+#include <iostream>
 
 using namespace OpenMM;
 using namespace std;
@@ -81,25 +82,42 @@ double AmoebaVdwForceImpl::calcDispersionCorrection(const System& system, const 
 
     // Amoeba VdW dispersion correction implemented by LPW
     // There is no dispersion correction if PBC is off or the cutoff is set to the default value of ten billion (AmoebaVdwForce.cpp)
-    if (force.getNonbondedMethod() == AmoebaVdwForce::NoCutoff)
+    if (force.getNonbondedMethod() == AmoebaVdwForce::NoCutoff){
         return 0.0;
-
+    }
     // Identify all particle classes (defined by sigma and epsilon and reduction), and count the number of
     // particles in each class.
-
-    map<pair<double, double>, int> classCounts;
+    double V1lambda=1;
+    map<pair<double, double>, int> NonLigclassCounts;
+    map<pair<double, double>, int> LigclassCounts;
     for (int i = 0; i < force.getNumParticles(); i++) {
-        double sigma, epsilon, reduction;
+        double sigma, epsilon, reduction,vlambda;
         // The variables reduction, ivindex are not used.
         int ivindex;
         // Get the sigma and epsilon parameters, ignoring everything else.
-        force.getParticleParameters(i, ivindex, sigma, epsilon, reduction);
+        force.getParticleParameters(i, ivindex, sigma, epsilon, reduction,vlambda);
         pair<double, double> key = make_pair(sigma, epsilon);
-        map<pair<double, double>, int>::iterator entry = classCounts.find(key);
-        if (entry == classCounts.end())
-            classCounts[key] = 1;
-        else
-            entry->second++;
+	if (vlambda < 1.0 ) {
+	      	V1lambda=vlambda;
+		map<pair<double, double>, int>::iterator entry = LigclassCounts.find(key);
+        	if (entry == LigclassCounts.end()){
+            		LigclassCounts[key]=1;
+			NonLigclassCounts[key]=0;
+		}
+        	else{
+            		entry->second++ ;
+		}
+   	}
+	else{ 
+                map<pair<double, double>, int>::iterator entry = NonLigclassCounts.find(key);
+                if (entry == NonLigclassCounts.end()){
+                        LigclassCounts[key] = 0;
+                        NonLigclassCounts[key] = 1 ;
+                }
+                else{
+                        entry->second++;
+		}
+	}
     }
 
     // Compute the VdW tapering coefficients.  Mostly copied from amoebaCudaGpu.cpp.
@@ -161,9 +179,9 @@ double AmoebaVdwForceImpl::calcDispersionCorrection(const System& system, const 
     // Double loop over different atom types.
     std::string sigmaCombiningRule = force.getSigmaCombiningRule();
     std::string epsilonCombiningRule = force.getEpsilonCombiningRule();
-    for (map<pair<double, double>, int>::const_iterator class1 = classCounts.begin(); class1 != classCounts.end(); ++class1) {
+    for (map<pair<double, double>, int>::iterator class1 = NonLigclassCounts.begin(); class1 != NonLigclassCounts.end(); ++class1) {
         k = 0;
-        for (map<pair<double, double>, int>::const_iterator class2 = classCounts.begin(); class2 != classCounts.end(); ++class2) { 
+        for (map<pair<double, double>, int>::const_iterator class2 = NonLigclassCounts.begin(); class2 != NonLigclassCounts.end(); ++class2) { 
             // AMOEBA combining rules, copied over from the CUDA code.
             double iSigma = class1->first.first;
             double jSigma = class2->first.first;
@@ -207,11 +225,22 @@ double AmoebaVdwForceImpl::calcDispersionCorrection(const System& system, const 
                 epsilon = 0.0;
               }
             }
-            int count = class1->second * class2->second;
             // Below is an exact copy of stuff from the previous block.
+	    pair<double, double> key1= class1->first;
+	    pair<double, double> key2 = class2->first;
+	    int countNon1 = class1-> second;
+	    int countNon2 = class2-> second;
+	    map<pair<double, double>, int>::iterator Ligclass1 = LigclassCounts.find(key1);
+	    int countLig1 = Ligclass1 ->second;
+	    map<pair<double, double>, int>::iterator Ligclass2 = LigclassCounts.find(key2);
+	    int countLig2 = Ligclass2 ->second;
             double rv = sigma;
-            double termik = 2.0 * M_PI * count; // termik is equivalent to 2 * pi * count.
-            double rv2 = rv * rv;
+	    int total1= countNon1+ countLig1;
+	    total1 *= 2.0*M_PI;
+	 
+	    int	total2= countNon2+countLig1;
+            double termik = total1*total2-(1-V1lambda)*(countLig1*total2+(total1-countLig1)*countLig2); // termik is equivalent to 2 * pi*count.
+	    double rv2 = rv * rv;
             double rv6 = rv2 * rv2 * rv2;
             double rv7 = rv6 * rv;
             double etot = 0.0;
@@ -222,17 +251,10 @@ double AmoebaVdwForceImpl::calcDispersionCorrection(const System& system, const 
                 double r3 = r2 * r;
                 double r6 = r3 * r3;
                 double r7 = r6 * r;
-                // The following is for buffered 14-7 only.
-                /*
                 double rho = r/rv;
                 double term1 = pow(((dhal + 1.0) / (dhal + rho)),7);
                 double term2 = ((ghal + 1.0) / (ghal + pow(rho,7))) - 2.0;
                 e = epsilon * term1 * term2;
-                */
-                double rho = r7 + ghal*rv7;
-                double tau = (dhal + 1.0) / (r + dhal * rv);
-                double tau7 = pow(tau, 7);
-                e = epsilon * rv7 * tau7 * ((ghal + 1.0) * rv7 / rho - 2.0);
                 double taper = 0.0;
                 if (r < off) {
                     double r4 = r2 * r2;

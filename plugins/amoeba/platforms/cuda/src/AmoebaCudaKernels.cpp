@@ -2534,7 +2534,7 @@ CudaCalcAmoebaVdwForceKernel::~CudaCalcAmoebaVdwForceKernel() {
 
 void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const AmoebaVdwForce& force) {
     cu.setAsCurrent();
-    sigmaEpsilon = CudaArray::create<float2>(cu, cu.getPaddedNumAtoms(), "sigmaEpsilon");
+    sigmaEpsilon = CudaArray::create<float3>(cu, cu.getPaddedNumAtoms(), "sigmaEpsilon");
     bondReductionAtoms = CudaArray::create<int>(cu, cu.getPaddedNumAtoms(), "bondReductionAtoms");
     bondReductionFactors = CudaArray::create<float>(cu, cu.getPaddedNumAtoms(), "sigmaEpsilon");
     tempPosq = new CudaArray(cu, cu.getPaddedNumAtoms(), cu.getUseDoublePrecision() ? sizeof(double4) : sizeof(float4), "tempPosq");
@@ -2542,15 +2542,15 @@ void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const Amoeba
     
     // Record atom parameters.
     
-    vector<float2> sigmaEpsilonVec(cu.getPaddedNumAtoms(), make_float2(0, 1));
+    vector<float3> sigmaEpsilonVec(cu.getPaddedNumAtoms(), make_float3(0, 1,1));
     vector<int> bondReductionAtomsVec(cu.getPaddedNumAtoms(), 0);
     vector<float> bondReductionFactorsVec(cu.getPaddedNumAtoms(), 0);
     vector<vector<int> > exclusions(cu.getNumAtoms());
     for (int i = 0; i < force.getNumParticles(); i++) {
         int ivIndex;
-        double sigma, epsilon, reductionFactor;
-        force.getParticleParameters(i, ivIndex, sigma, epsilon, reductionFactor);
-        sigmaEpsilonVec[i] = make_float2((float) sigma, (float) epsilon);
+        double sigma, epsilon, reductionFactor, vlambda;
+        force.getParticleParameters(i, ivIndex, sigma, epsilon, reductionFactor,vlambda);
+        sigmaEpsilonVec[i] = make_float3((float) sigma, (float) epsilon, (float) vlambda);
         bondReductionAtomsVec[i] = ivIndex;
         bondReductionFactorsVec[i] = (float) reductionFactor;
         force.getParticleExclusions(i, exclusions[i]);
@@ -2569,7 +2569,7 @@ void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const Amoeba
     // this force, so it will have its own neighbor list and interaction kernel.
     
     nonbonded = new CudaNonbondedUtilities(cu);
-    nonbonded->addParameter(CudaNonbondedUtilities::ParameterInfo("sigmaEpsilon", "float", 2, sizeof(float2), sigmaEpsilon->getDevicePointer()));
+    nonbonded->addParameter(CudaNonbondedUtilities::ParameterInfo("sigmaEpsilon", "float", 3, sizeof(float3), sigmaEpsilon->getDevicePointer()));
     
     // Create the interaction kernel.
     
@@ -2644,14 +2644,14 @@ void CudaCalcAmoebaVdwForceKernel::copyParametersToContext(ContextImpl& context,
     
     // Record the per-particle parameters.
     
-    vector<float2> sigmaEpsilonVec(cu.getPaddedNumAtoms(), make_float2(0, 1));
+    vector<float3> sigmaEpsilonVec(cu.getPaddedNumAtoms(), make_float3(0, 1,1));
     vector<int> bondReductionAtomsVec(cu.getPaddedNumAtoms(), 0);
     vector<float> bondReductionFactorsVec(cu.getPaddedNumAtoms(), 0);
     for (int i = 0; i < force.getNumParticles(); i++) {
         int ivIndex;
-        double sigma, epsilon, reductionFactor;
-        force.getParticleParameters(i, ivIndex, sigma, epsilon, reductionFactor);
-        sigmaEpsilonVec[i] = make_float2((float) sigma, (float) epsilon);
+        double sigma, epsilon, reductionFactor,vlambda;
+        force.getParticleParameters(i, ivIndex, sigma, epsilon, reductionFactor, vlambda);
+        sigmaEpsilonVec[i] = make_float3((float) sigma, (float) epsilon, (float) vlambda);
         bondReductionAtomsVec[i] = ivIndex;
         bondReductionFactorsVec[i] = (float) reductionFactor;
     }
