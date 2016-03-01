@@ -856,13 +856,13 @@ class ForceField(object):
         uniquePropers = set()
         for angle in data.angles:
             for atom in bondedToAtom[angle[0]]:
-                if atom != angle[1]:
+                if atom not in angle:
                     if atom < angle[2]:
                         uniquePropers.add((atom, angle[0], angle[1], angle[2]))
                     else:
                         uniquePropers.add((angle[2], angle[1], angle[0], atom))
             for atom in bondedToAtom[angle[2]]:
-                if atom != angle[1]:
+                if atom not in angle:
                     if atom > angle[0]:
                         uniquePropers.add((angle[0], angle[1], angle[2], atom))
                     else:
