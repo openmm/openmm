@@ -1,6 +1,6 @@
 <ForceField>
  <Info>
-  <DateGenerated>2016-02-25</DateGenerated>
+  <DateGenerated>2016-03-01</DateGenerated>
   <Source md5hash="89dad92b0bf878a24c9763751b0104a2" sourcePackage="AmberTools" sourcePackageVersion="15">leaprc.ff03ua</Source>
   <Reference>Yang, L., Tan, C., Hsieh, M.-J., Wang, J., Duan, Y., Cieplak, P., Caldwell, J., Kollman, P.A., and Luo, R. (2006). New-Generation Amber United-Atom Force Field. J. Phys. Chem. B 110, 13166-13176.</Reference>
  </Info>
